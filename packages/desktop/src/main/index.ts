@@ -165,6 +165,8 @@ import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
+import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
+import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
@@ -227,6 +229,8 @@ import {
   resolveDesktopAutomationJobWorkspace,
 } from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
+import { DesktopNotifier } from "./desktop-notifier.js";
+import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
@@ -573,6 +577,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+let desktopNotifier: DesktopNotifier | null = null;
 let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 /**
  * Sessions backed by Codex / Claude Code instead of the native Engine.
@@ -1595,15 +1600,6 @@ async function createWindow(): Promise<BrowserWindow> {
       worker: bridge,
       launcher: petWorkDelegationHost,
       onTaskClosed: async (task) => {
-        if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
-        await petSegmentController.onDelegationClosed({
-          dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
-          objective: task.objective,
-          outcome: task.status === "completed" ? "completed" : "failed",
-          ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
-          sessionRef: task.sessionId,
-        });
-
         let message = formatPetLongTaskClosureMessage(task);
         let continued = false;
         let closureHostActions: PetHostActionExecution[] | undefined;
@@ -1648,15 +1644,16 @@ async function createWindow(): Promise<BrowserWindow> {
           });
           message = enriched.text;
           const completionAttachments = enriched.attachments;
+          const deliveryKey = createHash("sha256")
+            .update("pet-task-closure\0")
+            .update(task.id)
+            .update("\0")
+            .update(String(task.attempt))
+            .update("\0")
+            .update(task.status)
+            .digest("hex");
           await publishGatewayControlEvent({
-            deliveryKey: createHash("sha256")
-              .update("pet-task-closure\0")
-              .update(task.id)
-              .update("\0")
-              .update(String(task.attempt))
-              .update("\0")
-              .update(task.status)
-              .digest("hex"),
+            deliveryKey,
             type: completed
               ? "pet.task.completed"
               : cancelled
@@ -1714,18 +1711,28 @@ async function createWindow(): Promise<BrowserWindow> {
             );
           }
 
-          try {
-            if (!BrowserWindow.getFocusedWindow() && Notification.isSupported()) {
-              new Notification({
-                title,
-                body: message.replace(/\s+/gu, " ").trim().slice(0, 180),
-              }).show();
-            }
-          } catch {
-            // Desktop notifications are best-effort; the durable Mimi reply and
-            // targeted IM receipt above remain the authoritative delivery paths.
-          }
+          await desktopNotifications.notifyPetTaskClosure(desktopNotifier, {
+            deliveryKey,
+            title,
+            message,
+            taskId: task.id,
+          });
         }
+      },
+      onTaskWorkMemory: async (task) => {
+        const recorded = await recordPetDelegationClosureBestEffort(
+          petSegmentController,
+          {
+            dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
+            objective: task.objective,
+            outcome: task.status === "completed" ? "completed" : "failed",
+            ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
+            sessionRef: task.sessionId,
+          },
+          (error) =>
+            dlog("main", "pet.longTask.memory.failed", { taskId: task.id, error: String(error) }),
+        );
+        if (!recorded) throw new Error("Pet work-memory distillation remains pending");
       },
       onBackgroundError: (operation, error) => {
         dlog("main", `pet.longTask.${operation}.failed`, { error: String(error) });
@@ -2052,14 +2059,15 @@ async function createWindow(): Promise<BrowserWindow> {
       startWorkSession: (delegation) => longTaskCoordinator.startDelegation(delegation),
     });
     const processingPetReports = new Set<string>();
-    const deliveredPetReports = new Set<string>();
+    const deliveredPetReports = new PetReportReceiptStore(
+      resolve(app.getPath("userData"), "pet", "report-receipts.json"),
+    );
     unsubscribePetReportStream = bridge.subscribePetReports(async (event) => {
-      if (processingPetReports.has(event.reportId) || deliveredPetReports.has(event.reportId)) {
-        return;
-      }
+      if (processingPetReports.has(event.reportId)) return;
       processingPetReports.add(event.reportId);
       try {
-        const task = longTaskStore.latestForSession(event.sessionId);
+        if (await deliveredPetReports.has(event.reportId)) return;
+        const task = longTaskStore.activeForSession(event.sessionId);
         if (!petDispatchService) throw new Error("Mimi dispatch service is unavailable");
         const report = await petDispatchService.reportSessionMessage(
           {
@@ -2131,11 +2139,7 @@ async function createWindow(): Promise<BrowserWindow> {
             },
           });
         }
-        deliveredPetReports.add(event.reportId);
-        if (deliveredPetReports.size > 1_000) {
-          const oldest = deliveredPetReports.values().next().value;
-          if (oldest) deliveredPetReports.delete(oldest);
-        }
+        await deliveredPetReports.mark(event.reportId);
         dlog("main", "pet.report.delivered_to_mimi", {
           reportId: event.reportId,
           sourceSessionId: event.sessionId,
@@ -3027,6 +3031,14 @@ function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buff
 
 app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
+  desktopNotifier = new DesktopNotifier(
+    resolve(app.getPath("userData"), "notifications", "delivered.json"),
+    {
+      hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
+      isSupported: () => Notification.isSupported(),
+      show: (input) => new Notification(input).show(),
+    },
+  );
   await projectStore.warm();
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
@@ -3185,19 +3197,8 @@ app.whenReady().then(async () => {
         return { text: r?.text ?? "", reason: r?.reason ?? "done" };
       }
       if (res.code === ErrorCodes.SessionNotFound) {
-        // Tell the user their scheduled "continue this conversation" job was
-        // stopped because its target conversation is gone — best-effort, fires
-        // even when focused since it's a rare, consequential state change.
-        try {
-          if (Notification.isSupported()) {
-            new Notification({
-              title: "定时任务已停止",
-              body: "续接的对话已被删除,该定时任务已自动停用。可在自动化面板查看或删除。",
-            }).show();
-          }
-        } catch {
-          // Notifications are best-effort.
-        }
+        // A missing bound conversation is rare and consequential, so notify even while focused.
+        await desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job);
         return {
           text: "",
           reason: "resume-target-missing",
@@ -3218,17 +3219,7 @@ app.whenReady().then(async () => {
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
-        if (event.type !== "job_missed") return;
-        try {
-          if (Notification.isSupported()) {
-            new Notification({
-              title: notification.title ?? "定时任务已错过",
-              body: notification.text,
-            }).show();
-          }
-        } catch {
-          // A missed-run notice is best-effort and must never affect re-arming.
-        }
+        desktopNotifications.notifyMissedAutomation(desktopNotifier, notification, event);
       },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
@@ -3237,24 +3228,9 @@ app.whenReady().then(async () => {
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
 
-    // Surface background-agent completions (incl. automation runs) as desktop
-    // notifications when the app isn't focused, so unattended jobs are visible.
-    agentNotificationBus.subscribe((_sessionId, event) => {
-      try {
-        // The bus now also carries agent_heartbeat (liveness pings) — only a
-        // background-agent COMPLETION should raise a desktop notification.
-        if (event.type !== "background_agent_completed") return;
-        if (BrowserWindow.getFocusedWindow()) return; // user is watching; skip
-        const ok = event.status === "completed";
-        const cancelled = event.status === "cancelled";
-        new Notification({
-          title: ok ? "自动化任务完成" : cancelled ? "自动化任务已取消" : "自动化任务失败",
-          body: event.description?.slice(0, 120) ?? "",
-        }).show();
-      } catch {
-        // Notifications are best-effort.
-      }
-    });
+    agentNotificationBus.subscribe((envelope) =>
+      desktopNotifications.notifyBackgroundResult(desktopNotifier, envelope),
+    );
   } catch (err) {
     // Automation is non-critical to the GUI — never block startup on it.
     console.error("automation: failed to start", err);

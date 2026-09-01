@@ -421,6 +421,78 @@ describe("PetLongTaskCoordinator", () => {
     afterAck.stop();
   });
 
+  test("retries failed work-memory distillation without replaying delivered closure effects", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pet-long-task-coordinator-"));
+    roots.push(root);
+    const filePath = join(root, "tasks.json");
+    const seed = new PetLongTaskStore(filePath, () => 1_000);
+    await seed.load();
+    const task = await seed.create({
+      id: "pet-task-memory-retry",
+      originClientMessageId: "message-memory-retry",
+      objective: "Persist the closure memory",
+      workspacePath: "/work/app",
+      sessionId: "session-memory-retry",
+      at: 1_000,
+    });
+    await seed.transition(task.id, { kind: "completed", at: 2_000, summary: "done" });
+
+    const closureDeliveries: string[] = [];
+    let memoryAttempts = 0;
+    const first = new PetLongTaskCoordinator({
+      store: new PetLongTaskStore(filePath, () => 3_000),
+      projection: fakeProjection(),
+      worker: {
+        hasLiveWorker: () => false,
+        requestWorker: async () => ({ ok: false as const, message: "no worker" }),
+      },
+      launcher: { start: async () => ({ sessionId: task.sessionId, cwd: "/work/app" }) },
+      now: () => 3_000,
+      onTaskClosed: async (closedTask) => {
+        closureDeliveries.push(closedTask.id);
+      },
+      onTaskWorkMemory: async () => {
+        memoryAttempts += 1;
+        throw new Error("memory unavailable");
+      },
+    });
+    await first.start();
+    expect(first.context().recent[0]).toMatchObject({ taskId: task.id });
+    expect(closureDeliveries).toEqual([task.id]);
+    expect(memoryAttempts).toBe(1);
+    first.stop();
+
+    const replay = new PetLongTaskCoordinator({
+      store: new PetLongTaskStore(filePath, () => 4_000),
+      projection: fakeProjection(),
+      worker: {
+        hasLiveWorker: () => false,
+        requestWorker: async () => ({ ok: false as const, message: "no worker" }),
+      },
+      launcher: { start: async () => ({ sessionId: task.sessionId, cwd: "/work/app" }) },
+      now: () => 4_000,
+      onTaskClosed: async (closedTask) => {
+        closureDeliveries.push(closedTask.id);
+      },
+      onTaskWorkMemory: async () => {
+        memoryAttempts += 1;
+      },
+    });
+    await replay.start();
+
+    expect(closureDeliveries).toEqual([task.id]);
+    expect(memoryAttempts).toBe(2);
+    expect(replay.context().recent[0]).toMatchObject({ taskId: task.id });
+    replay.stop();
+
+    const persisted = new PetLongTaskStore(filePath);
+    await persisted.load();
+    expect(persisted.get(task.id)).toMatchObject({
+      closureRecordedAt: 3_000,
+      workMemoryRecordedAt: 4_000,
+    });
+  });
+
   test("keeps launch running, checkpoints output, and closes only on real completion", async () => {
     const h = await harness();
     const launch = await h.coordinator.startDelegation({

@@ -8,6 +8,30 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-09-01
+
+### Added
+
+- Persisted completed background-agent, shell, video, and coding-runtime results so they can
+  wake the originating conversation after an application restart.
+
+### Changed
+
+- Unified desktop notifications behind one focus-aware, rate-limited delivery path with durable
+  semantic-key deduplication.
+- Treat work that is still executing when the desktop process exits as resumable `interrupted`
+  work; independently hosted execution is deferred to the local task center.
+
+### Fixed
+
+- Quarantined malformed notification and Mimi receipt stores without permanently disabling later
+  delivery, and made transient read failures retryable.
+- Removed notification persistence races and duplicate Mimi reports, transcript messages, closure
+  side effects, and system notifications across process restarts.
+- Retried missing Mimi work-memory distillation independently from the closure watermark.
+- Serialized onboarding settings updates, made memory-body writes atomic, and bounded headless
+  WebSocket payloads and pending requests.
+
 ## [0.9.2] - 2026-08-31
 
 ### Added

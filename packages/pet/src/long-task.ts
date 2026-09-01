@@ -70,7 +70,8 @@ export type PetLongTaskEventKind =
   | "cancelled"
   | "closure-decided"
   | "continuation-started"
-  | "closure-recorded";
+  | "closure-recorded"
+  | "work-memory-recorded";
 
 export interface PetLongTaskEvent {
   id: string;
@@ -106,8 +107,10 @@ export interface PetLongTask {
   updatedAt: number;
   startedAt?: number;
   completedAt?: number;
-  /** The current attempt's terminal outcome reached durable Pet work memory. */
+  /** User-visible closure effects finished and are safe to deduplicate on replay. */
   closureRecordedAt?: number;
+  /** The current attempt's terminal outcome reached durable Pet work memory. */
+  workMemoryRecordedAt?: number;
   /** Durable Mimi closure decision, persisted before any continuation side effect. */
   closureDecision?: PetLongTaskClosureDecision;
   /** Latest assistant-authored result/checkpoint, kept separate from UI progress text. */
@@ -219,7 +222,13 @@ export type PetLongTaskTransition =
       sessionId: string;
       taskId?: string;
     }
-  | { kind: "closure-recorded"; at: number };
+  | {
+      kind: "closure-recorded" | "work-memory-recorded";
+      at: number;
+      /** Optional optimistic fence for async closure side effects. */
+      attempt?: number;
+      status?: PetLongTaskStatus;
+    };
 
 const TERMINAL = new Set<PetLongTaskStatus>(["completed", "failed", "cancelled"]);
 
@@ -437,7 +446,8 @@ export function transitionPetLongTask(
     transition.kind !== "background-wait-recovered" &&
     transition.kind !== "closure-decided" &&
     transition.kind !== "continuation-started" &&
-    transition.kind !== "closure-recorded"
+    transition.kind !== "closure-recorded" &&
+    transition.kind !== "work-memory-recorded"
   ) {
     return current;
   }
@@ -446,7 +456,17 @@ export function transitionPetLongTask(
     transition.kind !== "retrying" &&
     transition.kind !== "closure-decided" &&
     transition.kind !== "continuation-started" &&
-    transition.kind !== "closure-recorded"
+    transition.kind !== "closure-recorded" &&
+    transition.kind !== "work-memory-recorded"
+  ) {
+    return current;
+  }
+  if (
+    (transition.kind === "closure-recorded" || transition.kind === "work-memory-recorded") &&
+    (!TERMINAL.has(current.status) ||
+      (transition.attempt !== undefined && transition.attempt !== current.attempt) ||
+      (transition.status !== undefined && transition.status !== current.status) ||
+      (transition.kind === "work-memory-recorded" && current.closureRecordedAt === undefined))
   ) {
     return current;
   }
@@ -568,6 +588,7 @@ export function transitionPetLongTask(
         startedAt: undefined,
         completedAt: undefined,
         closureRecordedAt: undefined,
+        workMemoryRecordedAt: undefined,
         closureDecision: undefined,
         waitingFor: undefined,
         nextAction: "Retry from the existing work session and checkpoint",
@@ -642,6 +663,7 @@ export function transitionPetLongTask(
         startedAt: Math.max(current.createdAt, transition.attemptStartedAt),
         completedAt: undefined,
         closureRecordedAt: undefined,
+        workMemoryRecordedAt: undefined,
         closureDecision: undefined,
         waitingFor: bounded(transition.reason, 500),
         nextAction: "Resume from the durable work session",
@@ -808,6 +830,15 @@ export function transitionPetLongTask(
         kind: transition.kind,
         at: transition.at,
         phase: current.phase,
+        message: "Terminal closure delivered",
+      };
+      break;
+    case "work-memory-recorded":
+      Object.assign(next, { workMemoryRecordedAt: transition.at });
+      event = {
+        kind: transition.kind,
+        at: transition.at,
+        phase: current.phase,
         message: "Terminal outcome recorded in Pet work memory",
       };
       break;
@@ -861,6 +892,7 @@ function isEventKind(value: unknown): value is PetLongTaskEventKind {
       "closure-decided",
       "continuation-started",
       "closure-recorded",
+      "work-memory-recorded",
     ].includes(value)
   );
 }
@@ -1041,6 +1073,9 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
     ...(typeof record.completedAt === "number" ? { completedAt: record.completedAt } : {}),
     ...(typeof record.closureRecordedAt === "number"
       ? { closureRecordedAt: record.closureRecordedAt }
+      : {}),
+    ...(typeof record.workMemoryRecordedAt === "number"
+      ? { workMemoryRecordedAt: record.workMemoryRecordedAt }
       : {}),
     ...(closureDecision ? { closureDecision } : {}),
     ...(typeof record.resultSummary === "string"

@@ -44,6 +44,7 @@ interface PetLongTaskCoordinatorOptions {
   launcher: { start(delegation: PetAutoDelegation): Promise<PetWorkDelegationLaunch> };
   now?: () => number;
   onTaskClosed?: (task: PetLongTask) => Promise<void>;
+  onTaskWorkMemory?: (task: PetLongTask) => Promise<void>;
   onBackgroundError?: (operation: string, error: unknown) => void;
 }
 
@@ -232,6 +233,7 @@ export class PetLongTaskCoordinator {
   private started = false;
   private readonly lastProgressAt = new Map<string, number>();
   private readonly closedNotifications = new Map<string, Promise<void>>();
+  private readonly workMemoryNotifications = new Map<string, Promise<void>>();
 
   constructor(private readonly options: PetLongTaskCoordinatorOptions) {
     this.now = options.now ?? Date.now;
@@ -254,7 +256,13 @@ export class PetLongTaskCoordinator {
       });
     }
     for (const task of this.options.store.getSnapshot().tasks) {
-      if (isTerminal(task) && !task.closureRecordedAt) await this.notifyClosed(task);
+      if (
+        isTerminal(task) &&
+        (!task.closureRecordedAt ||
+          (this.options.onTaskWorkMemory !== undefined && !task.workMemoryRecordedAt))
+      ) {
+        await this.notifyClosed(task);
+      }
     }
     this.unsubscribeProjection = this.options.projection.subscribe((event) => {
       void this.observeProjectionEvent(event).catch((error) =>
@@ -1024,24 +1032,66 @@ export class PetLongTaskCoordinator {
   }
 
   private async notifyClosed(task: PetLongTask): Promise<void> {
-    if (!isTerminal(task) || task.closureRecordedAt) return;
+    if (!isTerminal(task)) return;
     const key = `${task.id}:${task.attempt}:${task.status}`;
-    const existing = this.closedNotifications.get(key);
+    if (!task.closureRecordedAt) {
+      const existing = this.closedNotifications.get(key);
+      if (existing) {
+        await existing;
+      } else {
+        const operation = (async () => {
+          try {
+            await this.options.onTaskClosed?.(task);
+            await this.options.store.transition(task.id, {
+              kind: "closure-recorded",
+              at: this.now(),
+              attempt: task.attempt,
+              status: task.status,
+            });
+          } catch (error) {
+            this.options.onBackgroundError?.("task-closed", error);
+          } finally {
+            this.closedNotifications.delete(key);
+          }
+        })();
+        this.closedNotifications.set(key, operation);
+        await operation;
+      }
+    }
+
+    const latest = this.options.store.get(task.id) ?? task;
+    if (
+      latest.attempt === task.attempt &&
+      latest.status === task.status &&
+      latest.closureRecordedAt &&
+      !latest.workMemoryRecordedAt
+    ) {
+      await this.recordTaskWorkMemory(latest, key);
+    }
+  }
+
+  private async recordTaskWorkMemory(task: PetLongTask, key: string): Promise<void> {
+    if (!this.options.onTaskWorkMemory) return;
+    const existing = this.workMemoryNotifications.get(key);
     if (existing) return existing;
     const operation = (async () => {
       try {
-        await this.options.onTaskClosed?.(task);
+        await this.options.onTaskWorkMemory?.(task);
         await this.options.store.transition(task.id, {
-          kind: "closure-recorded",
+          kind: "work-memory-recorded",
           at: this.now(),
+          attempt: task.attempt,
+          status: task.status,
         });
       } catch (error) {
-        this.options.onBackgroundError?.("task-closed", error);
+        // Keep the dedicated watermark absent. Startup retries only this
+        // idempotent distillation step without repeating closure delivery.
+        this.options.onBackgroundError?.("task-work-memory", error);
       } finally {
-        this.closedNotifications.delete(key);
+        this.workMemoryNotifications.delete(key);
       }
     })();
-    this.closedNotifications.set(key, operation);
+    this.workMemoryNotifications.set(key, operation);
     await operation;
   }
 }

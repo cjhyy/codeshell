@@ -5,7 +5,7 @@
  * pure(-ish) helpers it consumes, so there's a single input stack.
  */
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { userHome } from "./settings/manager.js";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
@@ -21,6 +21,7 @@ import {
 export { PROVIDERS, type ProviderDef };
 import { sanitizeApiKey } from "./llm/api-key-sanitize.js";
 import { getMergedCatalog } from "./model-catalog/index.js";
+import { mutateJsonFile } from "./utils/file-mutex.js";
 
 export interface OnboardingResult {
   /**
@@ -149,7 +150,7 @@ export async function validateApiKey(baseUrl: string, apiKey: string): Promise<b
         headers: { Authorization: `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(10_000),
       });
-      const data = await res.json() as any;
+      const data = (await res.json()) as any;
       return !data.error;
     }
     const url = baseUrl.replace(/\/$/, "") + "/models";
@@ -169,10 +170,7 @@ export async function validateApiKey(baseUrl: string, apiKey: string): Promise<b
  * Resolve an API key from the canonical fallback chain.
  * Priority: 1) command-line option  2) settings.json  3) all provider env vars
  */
-export function resolveApiKey(
-  optionsApiKey?: string,
-  settingsApiKey?: string,
-): string | undefined {
+export function resolveApiKey(optionsApiKey?: string, settingsApiKey?: string): string | undefined {
   if (optionsApiKey) return optionsApiKey;
   if (settingsApiKey) return settingsApiKey;
   for (const p of PROVIDERS) {
@@ -196,16 +194,20 @@ export function hasApiKey(): boolean {
   // Reads ~/.code-shell/ only — ~/.claude/ compat was dropped because Claude
   // Code's settings schema diverges and merging broke boot.
   const p = join(userHome(), ".code-shell", "settings.json");
+  // This is only a boot-time hint. A slightly stale read can show onboarding
+  // once; all mutations below still re-read under the shared file lock.
   if (existsSync(p)) {
     try {
       const data = JSON.parse(readFileSync(p, "utf-8"));
-      if (Array.isArray(data?.credentials) && data.credentials.some((c: any) => c?.apiKey)) return true;
+      if (Array.isArray(data?.credentials) && data.credentials.some((c: any) => c?.apiKey))
+        return true;
       if (Array.isArray(data?.modelConnections) && data.modelConnections.length > 0) return true;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   return false;
 }
-
 
 // ─── Model pool helpers ───────────────────────────────────────────
 // KNOWN_MAX_OUTPUT / KNOWN_CONTEXT_WINDOWS now live in data/model-metadata.json
@@ -284,7 +286,16 @@ export function deriveModelPoolKey(
 export function buildModelPool(
   provider: ProviderDef,
   apiKey: string,
-): Array<{ key: string; label: string; provider: string; model: string; baseUrl: string; apiKey: string; maxOutputTokens?: number; maxContextTokens?: number }> {
+): Array<{
+  key: string;
+  label: string;
+  provider: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+  maxOutputTokens?: number;
+  maxContextTokens?: number;
+}> {
   const models = resolveProviderModels(provider);
   const used: string[] = [];
   return models.map((m) => {
@@ -337,7 +348,7 @@ export function appendOnboardingResult(opts: {
   /** 本次新增的模型实例(每个成为一个 modelConnection + credential)。 */
   models: Array<{
     instanceId: string;
-    kind: string;          // provider kind → 映射 catalogId
+    kind: string; // provider kind → 映射 catalogId
     model: string;
     apiKey?: string;
     baseUrl?: string;
@@ -349,53 +360,69 @@ export function appendOnboardingResult(opts: {
   const tag = opts.tag ?? "text";
   const dir = join(userHome(), ".code-shell");
   const file = join(dir, "settings.json");
-  mkdirSync(dir, { recursive: true });
+  mutateJsonFile<Record<string, unknown>>(file, {
+    parse: (raw) => {
+      if (raw === undefined) return {};
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (error) {
+        throw new Error("settings.json is unreadable; onboarding did not overwrite it", {
+          cause: error,
+        });
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("settings.json must contain a JSON object");
+      }
+      return parsed as Record<string, unknown>;
+    },
+    serialize: (value) => `${JSON.stringify(value, null, 2)}\n`,
+    mutation: (existing) => {
+      const creds = Array.isArray(existing.credentials)
+        ? [...(existing.credentials as Array<Record<string, unknown>>)]
+        : [];
+      const conns = Array.isArray(existing.modelConnections)
+        ? [...(existing.modelConnections as Array<Record<string, unknown>>)]
+        : [];
 
-  let existing: Record<string, unknown> = {};
-  if (existsSync(file)) {
-    try { existing = JSON.parse(readFileSync(file, "utf-8")); } catch { /* corrupt → replace */ }
-  }
+      for (const model of opts.models) {
+        const catalogId = catalogIdForKind(model.kind);
+        const credentialId = `${model.instanceId}-key`;
+        if (!creds.some((credential) => credential?.id === credentialId)) {
+          creds.push({
+            id: credentialId,
+            catalogId,
+            apiKey: model.apiKey,
+            baseUrl: model.baseUrl,
+          });
+        }
+        if (!conns.some((connection) => connection?.id === model.instanceId)) {
+          conns.push({
+            id: model.instanceId,
+            catalogId,
+            tag,
+            model: model.model,
+            credentialId,
+            ...(model.baseUrl ? { baseUrl: model.baseUrl } : {}),
+          });
+        }
+      }
 
-  const creds = Array.isArray((existing as any).credentials)
-    ? [...((existing as any).credentials as Array<Record<string, unknown>>)] : [];
-  const conns = Array.isArray((existing as any).modelConnections)
-    ? [...((existing as any).modelConnections as Array<Record<string, unknown>>)] : [];
-
-  for (const m of opts.models) {
-    const catalogId = catalogIdForKind(m.kind);
-    const credId = `${m.instanceId}-key`;
-    if (!creds.some((c) => c?.id === credId)) {
-      creds.push({ id: credId, catalogId, apiKey: m.apiKey, baseUrl: m.baseUrl });
-    }
-    if (!conns.some((c) => c?.id === m.instanceId)) {
-      conns.push({
-        id: m.instanceId, catalogId, tag, model: m.model, credentialId: credId,
-        ...(m.baseUrl ? { baseUrl: m.baseUrl } : {}),
-      });
-    }
-  }
-
-  const existingDefaults = (typeof (existing as any).defaults === "object" && (existing as any).defaults)
-    ? (existing as any).defaults as Record<string, unknown> : {};
-
-  const updated: Record<string, unknown> = {
-    ...existing,
-    credentials: creds,
-    modelConnections: conns,
-    defaults: { ...existingDefaults, [tag]: opts.activeId },
-  };
-
-  // Atomic write: tmp file in the same dir, then rename (atomic on POSIX).
-  // mode 0o600 — settings.json holds plaintext API keys, must be owner-only.
-  const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
-  try {
-    renameSync(tmp, file);
-  } catch {
-    // Fallback: best-effort direct write if rename fails (e.g. cross-device),
-    // then remove the orphaned temp file the failed rename left behind.
-    writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
-    rmSync(tmp, { force: true });
-  }
+      const existingDefaults =
+        existing.defaults &&
+        typeof existing.defaults === "object" &&
+        !Array.isArray(existing.defaults)
+          ? (existing.defaults as Record<string, unknown>)
+          : {};
+      return {
+        value: {
+          ...existing,
+          credentials: creds,
+          modelConnections: conns,
+          defaults: { ...existingDefaults, [tag]: opts.activeId },
+        },
+      };
+    },
+    mode: 0o600,
+  });
 }
-

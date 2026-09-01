@@ -110,6 +110,32 @@ describe("Pet host-action completion", () => {
     });
   });
 
+  test("does not append a duplicate assistant receipt for the same client message", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-host-completion-dedupe-"));
+    roots.push(root);
+    const service = new PetHostActionReceiptService({
+      sessionsRootDir: root,
+      qrDir: join(root, "qr"),
+    });
+    const input = {
+      petSessionId: "pet-one",
+      clientMessageId: "im:wechat:dedupe-one",
+      executions: [],
+      authoritativeMessage: "只保留一条回执。",
+      replaceAssistant: true,
+    } as const;
+
+    await service.record(input);
+    await service.record(input);
+
+    const rows = readFileSync(join(root, "pet-one", "transcript.jsonl"), "utf-8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows.filter((row) => row.data.role === "assistant")).toHaveLength(1);
+    expect(rows[0]?.data.clientMessageId).toBe("pet-host-action-replace-im:wechat:dedupe-one");
+  });
+
   test("persists a host-handled control turn before its authoritative reply", async () => {
     const root = mkdtempSync(join(tmpdir(), "pet-control-completion-"));
     roots.push(root);

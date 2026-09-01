@@ -210,7 +210,8 @@ export const pet = {
           cancelled: "任务取消",
           "closure-decided": "Mimi 已记录收口决定",
           "continuation-started": "后续任务已启动",
-          "closure-recorded": "结果已记入工作记忆",
+          "closure-recorded": "任务结果已送达",
+          "work-memory-recorded": "结果已记入工作记忆",
         },
       },
       session: {
@@ -552,7 +553,8 @@ export const pet = {
           cancelled: "Task cancelled",
           "closure-decided": "Mimi recorded the closure decision",
           "continuation-started": "Continuation started",
-          "closure-recorded": "Outcome recorded in work memory",
+          "closure-recorded": "Task outcome delivered",
+          "work-memory-recorded": "Outcome recorded in work memory",
         },
       },
       session: {

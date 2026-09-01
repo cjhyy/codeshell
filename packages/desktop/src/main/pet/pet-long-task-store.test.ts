@@ -75,6 +75,32 @@ describe("PetLongTaskStore", () => {
     expect(value.getSnapshot().tasks).toHaveLength(1);
   });
 
+  test("returns only an active task for report routing", async () => {
+    const { value } = await store();
+    const ended = await value.create({
+      id: "task-ended",
+      originClientMessageId: "message-ended",
+      objective: "Old route",
+      workspacePath: null,
+      sessionId: "shared-session",
+      at: 100,
+    });
+    await value.transition(ended.id, { kind: "completed", at: 200 });
+    const active = await value.create({
+      id: "task-active",
+      originClientMessageId: "message-active",
+      objective: "Current route",
+      workspacePath: null,
+      sessionId: "shared-session",
+      at: 300,
+    });
+
+    expect(value.activeForSession("shared-session")?.id).toBe(active.id);
+    await value.transition(active.id, { kind: "cancelled", at: 400 });
+    expect(value.activeForSession("shared-session")).toBeUndefined();
+    expect(value.latestForSession("shared-session")?.id).toBe(active.id);
+  });
+
   test("ignores corrupt rows while preserving valid tasks", async () => {
     const { root, value } = await store();
     const task = await value.create({
