@@ -27,7 +27,7 @@
     },
     "packages/arena": {
       "name": "@cjhyy/code-shell-arena",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
         "zod": "^3.24.2",
@@ -35,11 +35,11 @@
     },
     "packages/cdp": {
       "name": "@cjhyy/code-shell-cdp",
-      "version": "0.9.2",
+      "version": "0.9.3",
     },
     "packages/chat": {
       "name": "@cjhyy/code-shell-chat",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "bin": {
         "code-shell-chat": "./dist/cli.js",
       },
@@ -62,14 +62,14 @@
     },
     "packages/coding": {
       "name": "@cjhyy/code-shell-capability-coding",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@cjhyy/code-shell-core",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@modelcontextprotocol/sdk": "^1.12.1",
@@ -92,7 +92,7 @@
     },
     "packages/desktop": {
       "name": "@cjhyy/code-shell-desktop",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
@@ -157,18 +157,18 @@
     },
     "packages/link": {
       "name": "@cjhyy/code-shell-link",
-      "version": "0.9.2",
+      "version": "0.9.3",
     },
     "packages/pet": {
       "name": "@cjhyy/code-shell-pet",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
       },
     },
     "packages/server": {
       "name": "@cjhyy/code-shell-server",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "bin": {
         "code-shell-serve": "./dist/bin/code-shell-serve.js",
       },
@@ -182,7 +182,7 @@
     },
     "packages/tui": {
       "name": "@cjhyy/code-shell-tui",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "bin": {
         "code-shell": "./dist/cli/main.js",
       },
@@ -219,7 +219,7 @@
     },
     "packages/web": {
       "name": "@cjhyy/code-shell-web",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
       },
