@@ -156,6 +156,7 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
         if (hostActions.some((existing) => existing.kind === request.kind)) {
           return {
             ok: false,
+            reason: "already_accepted",
             error:
               request.kind === "gatewayReply"
                 ? "GatewayReply was already accepted for this Mimi turn. End the turn now without calling it again."

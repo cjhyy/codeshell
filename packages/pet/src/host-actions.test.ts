@@ -49,9 +49,16 @@ function context(
       petGatewayReply: gatewayReply,
       requestPetHostAction: (request: { kind: string; payload: Record<string, unknown> }) => {
         if (kinds.has(request.kind)) {
+          // Mirror the host's real refusal (see profile.ts): the structured
+          // `reason` is what the tool branches on, and the prose is what the
+          // model reads.
           return {
             ok: false,
-            error: `only one ${request.kind} request is allowed per Mimi turn`,
+            reason: "already_accepted" as const,
+            error:
+              request.kind === "gatewayReply"
+                ? "GatewayReply was already accepted for this Mimi turn. End the turn now without calling it again."
+                : `only one ${request.kind} request is allowed per Mimi turn`,
           };
         }
         kinds.add(request.kind);
@@ -513,5 +520,36 @@ describe("pet profile host-action integration", () => {
     const { ctx, recorded } = context();
     expect(await mobileRemoteTool({ action: "open" }, ctx)).toContain("accepted");
     expect(recorded).toEqual([{ kind: "mobileRemote", payload: { action: "open" } }]);
+  });
+});
+
+describe("GatewayReply repeat rejection ends the turn", () => {
+  test("forces termination once the host has already accepted a reply", async () => {
+    // Real WeChat transcripts show 20+ GatewayReply calls in three minutes: the
+    // host rejects each repeat, but a rejection was only an error STRING, so
+    // nothing stopped the model from rewording and trying again. The reply text
+    // degraded into "我在，卡密sama。继续发任务即可。" over and over.
+    // A rejected repeat must therefore request termination itself.
+    const { ctx, yields } = context();
+
+    expect(await gatewayReplyTool({ text: "第一次回复" }, ctx)).toContain("ACCEPTED EXACTLY ONCE");
+    expect(yields).toEqual(["reply_committed"]);
+
+    const repeat = await gatewayReplyTool({ text: "换个说法再发一次" }, ctx);
+    expect(repeat).toContain("already accepted");
+    // The barrier is re-raised so the turn loop stops this round even though
+    // the first reply_committed was already consumed to let a steer re-drive.
+    expect(yields).toEqual(["reply_committed", "reply_committed"]);
+  });
+
+  test("a genuine host rejection still does not fake a committed reply", async () => {
+    // Distinct from a repeat: the route was closed, nothing was delivered, so
+    // the turn must stay open for the model to report the failure.
+    const { ctx, yields } = context(richGatewayReply, () => ({
+      ok: false,
+      error: "route closed",
+    }));
+    expect(await gatewayReplyTool({ text: "不会发送" }, ctx)).toContain("route closed");
+    expect(yields).toEqual([]);
   });
 });

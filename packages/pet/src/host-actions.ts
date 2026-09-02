@@ -37,6 +37,13 @@ export interface PetHostActionRequest {
 export interface PetHostActionDecision {
   ok: boolean;
   error?: string;
+  /**
+   * Why the host refused, as a code rather than prose. `already_accepted` means
+   * this kind was already recorded for the turn, so the work is done and the
+   * turn should end; every other refusal leaves the turn open. Callers branch
+   * on this, never on `error` — that text is for the model to read.
+   */
+  reason?: "already_accepted";
 }
 
 export type PetHostActionService = (request: PetHostActionRequest) => PetHostActionDecision;
@@ -380,7 +387,22 @@ export async function gatewayReplyTool(
     }
   }
   const decision = request({ kind: "gatewayReply", payload });
-  if (!decision.ok) return `Error: ${decision.error ?? "Gateway reply was rejected"}`;
+  if (!decision.ok) {
+    // A repeat call means the authoritative reply is ALREADY recorded, so the
+    // turn has nothing left to do. Returning only an error string let the model
+    // reword and retry indefinitely — real WeChat transcripts show 20+ calls in
+    // three minutes, degrading into "我在，卡密sama。继续发任务即可。". Re-raise
+    // the reply barrier so the turn loop stops this round; the host's
+    // per-turn dedupe still prevents a second delivery.
+    //
+    // Only for the repeat case: a genuine rejection (closed route, bad
+    // capability) delivered nothing, so that turn must stay open for the model
+    // to report the failure.
+    if (decision.reason === "already_accepted") {
+      ctx?.runYield?.request("reply_committed");
+    }
+    return `Error: ${decision.error ?? "Gateway reply was rejected"}`;
+  }
   ctx?.runYield?.request("reply_committed");
   return (
     "ACCEPTED EXACTLY ONCE — NOT SENT YET. The Gateway reply was recorded for host validation " +
