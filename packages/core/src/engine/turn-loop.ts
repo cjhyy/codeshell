@@ -1586,6 +1586,16 @@ export class TurnLoop {
         // the next model round-trip — large tool outputs can move it sharply.
         this.emitCtxFromMessages(messages);
 
+        if (
+          this.deps.peekToolRunYield?.() === "reply_committed" &&
+          this.deps.consumeToolRunYield?.() === "reply_committed"
+        ) {
+          tlog.info("turn.gateway_reply_committed", { cat: "turn" });
+          this.finalizeModelTurn();
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return { text: finalText, reason: "completed", messages };
+        }
+
         // A trusted tool launched asynchronous work whose completion is routed
         // back into this Session. End this run at the tool boundary instead of
         // asking the model for another step with no new evidence; the queued

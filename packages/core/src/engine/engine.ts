@@ -2837,18 +2837,29 @@ export class Engine {
         publishGoalJudgeContext: (context) => {
           publishGoalJudgeContext(context);
         },
-        // A background_notification yield parks the run until the Session is
-        // woken by the completion notification. Only a top-level interactive
-        // session can be woken (server refuses headless; sub-agent sessions
-        // are not in chatManager) — everywhere else honouring the yield would
-        // end the run early and orphan the background result, so the loop
-        // never sees the request and the model keeps its full turn.
-        ...(this.isHeadless() || this.config.isSubAgent === true
-          ? {}
-          : {
-              peekToolRunYield: () => toolCtx.runYield?.peek?.(),
-              consumeToolRunYield: () => toolCtx.runYield?.consume(),
-            }),
+        // Only a top-level interactive Session can be woken for a background
+        // notification. A committed Gateway reply is different: the host owns
+        // the visible reply, so every caller must terminate the model loop.
+        peekToolRunYield: () => {
+          const reason = toolCtx.runYield?.peek?.();
+          if (
+            reason === "background_notification" &&
+            (this.isHeadless() || this.config.isSubAgent === true)
+          ) {
+            return undefined;
+          }
+          return reason;
+        },
+        consumeToolRunYield: () => {
+          const reason = toolCtx.runYield?.peek?.();
+          if (
+            reason === "background_notification" &&
+            (this.isHeadless() || this.config.isSubAgent === true)
+          ) {
+            return undefined;
+          }
+          return toolCtx.runYield?.consume();
+        },
         ctxOverheadStore: {
           get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
           set: (s, n) => {

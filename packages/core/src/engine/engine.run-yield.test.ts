@@ -39,7 +39,11 @@ function registerYieldProvider(name: string): { provider: string } {
 function makeEngine(
   dir: string,
   provider: string,
-  opts: { headless: boolean; isSubAgent?: boolean },
+  opts: {
+    headless: boolean;
+    isSubAgent?: boolean;
+    yieldReason?: "background_notification" | "reply_committed";
+  },
 ): Engine {
   const engine = new Engine({
     llm: { provider, model: `${provider}-model`, apiKey: "test" } as never,
@@ -61,7 +65,10 @@ function makeEngine(
       permissionDefault: "allow",
     },
     async (_args, ctx?: ToolContext) => {
-      ctx?.runYield?.request("background_notification");
+      if (opts.yieldReason === "reply_committed") {
+        ctx?.runYield?.request("background_notification");
+      }
+      ctx?.runYield?.request(opts.yieldReason ?? "background_notification");
       return "background work started";
     },
   );
@@ -153,4 +160,38 @@ describe("Engine tool run yield gating", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  for (const mode of [
+    { label: "interactive", headless: false, isSubAgent: false },
+    { label: "headless", headless: true, isSubAgent: false },
+    { label: "sub-agent", headless: false, isSubAgent: true },
+  ]) {
+    it(`terminates ${mode.label} runs after a committed gateway reply`, async () => {
+      const dir = mkdtempSync(join(tmpdir(), "engine-reply-committed-"));
+      const { provider } = registerYieldProvider(`fake-reply-committed-${mode.label}`);
+      const events: StreamEvent[] = [];
+
+      try {
+        const engine = makeEngine(dir, provider, {
+          headless: mode.headless,
+          isSubAgent: mode.isSubAgent,
+          yieldReason: "reply_committed",
+        });
+        const result = await engine.run("send the gateway reply", {
+          cwd: dir,
+          onStream: (event) => events.push(event),
+        });
+
+        expect(result.text).toBe("launching");
+        expect(result.reason).toBe("completed");
+        expect(modelRounds(events)).toBe(1);
+        const completes = turnCompletes(events);
+        expect(completes).toHaveLength(1);
+        expect(completes[0]!.reason).toBe("completed");
+        expect(completes[0]!.completionKind).toBeUndefined();
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
 });

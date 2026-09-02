@@ -26,6 +26,7 @@ const TEST_META: WorkerFrameMeta = { origin: "host", producer: "worker-bridge-te
 //   - requests (with id) are answered {id, result:{method, echo: params ?? null}}
 //     (method "test/error" answers an error; "test/never" never answers)
 //   - notifications are mirrored back as {method:"test/received", params:{line}}
+//   - method "test/duplicate" answers twice with the same id
 //   - method "test/exit" exits 0
 const WORKER_SCRIPT = `
 let buf = "";
@@ -40,6 +41,11 @@ process.stdin.on("data", (chunk) => {
     try { msg = JSON.parse(line); } catch { continue; }
     if (msg.method === "test/exit") process.exit(0);
     if (msg.method === "test/never") continue;
+    if (msg.method === "test/duplicate") {
+      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { sequence: 1 } }) + "\\n");
+      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { sequence: 2 } }) + "\\n");
+      continue;
+    }
     if (msg.id !== undefined) {
       const reply = msg.method === "test/error"
         ? { jsonrpc: "2.0", id: msg.id, error: { code: -32000, message: "boom" } }
@@ -77,6 +83,14 @@ function makeCore(
   const core = new WorkerBridgeCore({ entryPath, fallbackCwd: () => dir, ...opts });
   cores.push(core);
   return core;
+}
+
+function pendingRequestCount(core: WorkerBridgeCore): number {
+  return (
+    core as unknown as {
+      pendingRequests: Map<string | number, unknown>;
+    }
+  ).pendingRequests.size;
 }
 
 /** Wait until the worker's boot notification arrives (worker is live). */
@@ -133,6 +147,7 @@ describe("WorkerBridgeCore", () => {
       { id: "req-1", timeoutMs: 5_000, meta: TEST_META },
     );
     expect(outcome).toEqual({ status: "result", result: { method: "test/echo", echo: { x: 1 } } });
+    expect(pendingRequestCount(core)).toBe(0);
     // consume:false — the exact response line still reached line listeners.
     expect(seen.some((l) => l.includes('"req-1"'))).toBe(true);
   });
@@ -179,6 +194,7 @@ describe("WorkerBridgeCore", () => {
       },
     );
     expect(outcome).toEqual({ status: "timeout" });
+    expect(pendingRequestCount(core)).toBe(0);
   });
 
   test("request(): failFast settles sendFailed immediately with no worker", async () => {
@@ -194,6 +210,27 @@ describe("WorkerBridgeCore", () => {
       },
     );
     expect(outcome.status).toBe("sendFailed");
+    expect(pendingRequestCount(core)).toBe(0);
+  });
+
+  test("request(): a thrown send settles fail-fast exactly once and clears correlation", async () => {
+    const core = makeCore({
+      prepareInbound: () => {
+        throw new Error("write failed");
+      },
+    });
+    const outcome = await core.request(
+      "test/echo",
+      {},
+      {
+        id: "req-send-throws",
+        timeoutMs: 30_000,
+        failFast: true,
+        meta: TEST_META,
+      },
+    );
+    expect(outcome).toMatchObject({ status: "sendFailed" });
+    expect(pendingRequestCount(core)).toBe(0);
   });
 
   test("request(): ensureWorker spawns a dead worker before sending, so the request is answered", async () => {
@@ -214,6 +251,29 @@ describe("WorkerBridgeCore", () => {
       result: { method: "test/echo", echo: { woke: true } },
     });
     expect(core.hasLiveWorker()).toBe(true);
+  });
+
+  test("request(): only the first duplicate response settles the correlation", async () => {
+    const core = makeCore();
+    await waitForHello(core);
+
+    const outcome = await core.request(
+      "test/duplicate",
+      {},
+      {
+        id: "req-duplicate",
+        timeoutMs: 5_000,
+        consume: true,
+        settleOnExit: true,
+        meta: TEST_META,
+      },
+    );
+    const marker = waitForLine(core, (line) => line.includes("test/marker-after-duplicate"));
+    core.sendLine(JSON.stringify({ jsonrpc: "2.0", method: "test/marker-after-duplicate" }));
+    await marker;
+
+    expect(outcome).toEqual({ status: "result", result: { sequence: 1 } });
+    expect(pendingRequestCount(core)).toBe(0);
   });
 
   test("request(): prepareInbound registers and strips host-only agent/run metadata", async () => {
@@ -284,6 +344,7 @@ describe("WorkerBridgeCore", () => {
     );
     core.sendLine(JSON.stringify({ jsonrpc: "2.0", method: "test/exit" }));
     expect(await pending).toEqual({ status: "workerExit" });
+    expect(pendingRequestCount(core)).toBe(0);
     expect(exits).toEqual([{ code: 0, signal: null, clean: true, gaveUp: false }]);
     expect(core.hasLiveWorker()).toBe(false);
   });

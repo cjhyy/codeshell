@@ -76,7 +76,9 @@ export function buildRunToolContext(args: {
     },
     runYield: {
       request(reason) {
-        pendingRunYield ??= reason;
+        if (reason === "reply_committed" || pendingRunYield === undefined) {
+          pendingRunYield = reason;
+        }
       },
       peek() {
         return pendingRunYield;

@@ -228,7 +228,7 @@ export interface ExternalFileChangesRecord {
   originClientMessageId?: string;
 }
 
-export type ToolRunYieldReason = "background_notification";
+export type ToolRunYieldReason = "background_notification" | "reply_committed";
 
 /** Run-scoped handoff from a trusted tool to the owning turn loop. */
 export interface ToolRunYieldController {

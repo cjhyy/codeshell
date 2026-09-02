@@ -31,10 +31,20 @@ const richGatewayReply = {
   maxAttachmentBytes: 10 * 1024 * 1024,
 };
 
-function context(gatewayReply = richGatewayReply) {
+function context(
+  gatewayReply = richGatewayReply,
+  decide: (request: { kind: string; payload: Record<string, unknown> }) => {
+    ok: boolean;
+    error?: string;
+  } = () => ({ ok: true }),
+) {
   const recorded: Array<{ kind: string; payload: Record<string, unknown> }> = [];
+  const yields: string[] = [];
   const kinds = new Set<string>();
   const ctx = {
+    runYield: {
+      request: (reason: string) => yields.push(reason),
+    },
     runScopedServices: {
       petGatewayReply: gatewayReply,
       requestPetHostAction: (request: { kind: string; payload: Record<string, unknown> }) => {
@@ -46,11 +56,11 @@ function context(gatewayReply = richGatewayReply) {
         }
         kinds.add(request.kind);
         recorded.push(request);
-        return { ok: true };
+        return decide(request);
       },
     },
   } as unknown as ToolContext;
-  return { ctx, recorded };
+  return { ctx, recorded, yields };
 }
 
 describe("ControlLongTask tool", () => {
@@ -143,7 +153,7 @@ describe("Memory tool", () => {
 
 describe("GatewayReply tool", () => {
   test("records one complete text, button, and attachment reply", async () => {
-    const { ctx, recorded } = context();
+    const { ctx, recorded, yields } = context();
     expect(
       await gatewayReplyTool(
         {
@@ -164,6 +174,18 @@ describe("GatewayReply tool", () => {
         },
       },
     ]);
+    expect(yields).toEqual(["reply_committed"]);
+  });
+
+  test("requests termination only after the host accepts the reply", async () => {
+    const { ctx, recorded, yields } = context(richGatewayReply, () => ({
+      ok: false,
+      error: "route closed",
+    }));
+
+    expect(await gatewayReplyTool({ text: "不会发送" }, ctx)).toContain("route closed");
+    expect(recorded).toEqual([{ kind: "gatewayReply", payload: { text: "不会发送" } }]);
+    expect(yields).toEqual([]);
   });
 
   test("rejects invalid inputs and attachments outside the declared route capability", async () => {
@@ -184,6 +206,7 @@ describe("GatewayReply tool", () => {
       ),
     ).toContain("Error");
     expect(invalid.recorded).toEqual([]);
+    expect(invalid.yields).toEqual([]);
 
     const textOnly = context({
       button: "link",
@@ -199,6 +222,7 @@ describe("GatewayReply tool", () => {
       ),
     ).toContain("cannot send attachments");
     expect(textOnly.recorded).toEqual([]);
+    expect(textOnly.yields).toEqual([]);
   });
 
   test("rewrites the visible schema to the exact Gateway route", () => {
