@@ -40,6 +40,12 @@ export const messagesNs = {
         answer: "回答",
         timedOut: "未回答,已自动继续",
       },
+      // per-turn token spend line
+      turnUsage: {
+        tokens: "{count} tokens",
+        cached: "{count} 缓存命中",
+        cacheWrite: "{count} 缓存写入",
+      },
       // turn-end marker line
       turnEnd: {
         stoppedAt: "你在 {time} 后停止了",
@@ -163,6 +169,11 @@ export const messagesNs = {
         submit: "Submit",
         answer: "Answer",
         timedOut: "No answer — continued automatically",
+      },
+      turnUsage: {
+        tokens: "{count} tokens",
+        cached: "{count} cached",
+        cacheWrite: "{count} cache write",
       },
       turnEnd: {
         stoppedAt: "You stopped this turn after {time}",

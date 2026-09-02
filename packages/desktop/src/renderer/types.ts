@@ -208,6 +208,21 @@ export interface TurnEndMessage {
   detail?: string;
 }
 
+/**
+ * What one completed turn consumed. The TUI has always printed this after each
+ * turn; the desktop showed nothing, so an expensive run (one real session spent
+ * 17.8M tokens over 35 turns) left no cost trace in the conversation. The
+ * ContextRing is a context-window gauge, not a spend record.
+ */
+export interface TurnUsageMessage {
+  kind: "turn_usage";
+  id: string;
+  /** Prompt tokens for this turn alone, not the session total. */
+  promptTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+}
+
 export interface AskUserOption {
   label: string;
   description: string;
@@ -301,6 +316,7 @@ export type Message =
   | GoalProgressMessage
   | AskUserMessage
   | TurnEndMessage
+  | TurnUsageMessage
   | FilesChangedSummaryMessage;
 
 export interface AgentRuntime {
@@ -1388,6 +1404,29 @@ export function applyStreamEvent(
           totalAdded: card.totalAdded,
           totalRemoved: card.totalRemoved,
         });
+      }
+
+      // 4. Report what this turn consumed. Like the files-changed card, drop any
+      //    prior summary for this task first so repeated turn_complete events
+      //    don't stack. Only when something was actually spent — a no-op turn
+      //    adds no line.
+      if (lastUserIdx >= 0) {
+        finalized = finalized.filter((m, i) => !(i > lastUserIdx && m.kind === "turn_usage"));
+      }
+      const turnPromptTokens = state.singleTurnPromptTokens;
+      const turnCacheRead = state.singleTurnCacheReadTokens;
+      const turnCacheCreation = state.singleTurnCacheCreationTokens;
+      if (turnPromptTokens > 0 || turnCacheRead > 0 || turnCacheCreation > 0) {
+        finalized = [
+          ...finalized,
+          {
+            kind: "turn_usage",
+            id: freshId("turn-usage"),
+            promptTokens: turnPromptTokens,
+            cacheReadTokens: turnCacheRead,
+            cacheCreationTokens: turnCacheCreation,
+          },
+        ];
       }
 
       // Only a cleanly completed turn bumps turnEpoch — that counter is what

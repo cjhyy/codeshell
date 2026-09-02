@@ -1526,3 +1526,37 @@ describe("persistent goal lifecycle (reducer)", () => {
     expect(afterCurrentClear.activeGoal).toBeNull();
   });
 });
+
+describe("completed-turn token summary", () => {
+  test("a completed turn reports the tokens it consumed", () => {
+    // The TUI prints "duration · N tokens · N cached · $cost" after every turn
+    // (App.tsx), but the desktop printed nothing on a clean completion — only a
+    // turn_end marker for stop/timeout/error. A 35-turn research run that
+    // consumed 17.8M tokens therefore finished with no indication of its cost
+    // anywhere in the conversation; the ContextRing shows the context window,
+    // not what a turn spent.
+    const s = dispatch(INITIAL_STATE, [
+      ev("usage_update", {
+        promptTokens: 120_000,
+        singleTurnPromptTokens: 120_000,
+        cacheReadTokens: 90_000,
+        cacheCreationTokens: 10_000,
+      } as any),
+      ev("turn_complete", { reason: "completed" } as any),
+    ]);
+
+    const summary = s.messages.find((m) => m.kind === "turn_usage");
+    expect(summary).toBeDefined();
+    expect(summary).toMatchObject({
+      kind: "turn_usage",
+      promptTokens: 120_000,
+      cacheReadTokens: 90_000,
+      cacheCreationTokens: 10_000,
+    });
+  });
+
+  test("a turn that consumed nothing adds no summary line", () => {
+    const s = dispatch(INITIAL_STATE, [ev("turn_complete", { reason: "completed" } as any)]);
+    expect(s.messages.find((m) => m.kind === "turn_usage")).toBeUndefined();
+  });
+});
