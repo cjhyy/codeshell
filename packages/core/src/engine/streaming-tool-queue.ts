@@ -19,14 +19,19 @@ import type { ToolExecutor } from "../tool-system/executor.js";
 
 export class StreamingToolQueue {
   private readonly executor: ToolExecutor;
+  private readonly pendingUnsafeSkipReason?: () => string | undefined;
   private readonly pending = new Map<string, Promise<ToolResult>>();
   private readonly unsafeQueue: ToolCall[] = [];
   private readonly callOrder: string[] = [];
   private readonly toolNameById = new Map<string, string>();
   private draining = false;
 
-  constructor(executor: ToolExecutor) {
+  constructor(
+    executor: ToolExecutor,
+    options?: { pendingUnsafeSkipReason?: () => string | undefined },
+  ) {
     this.executor = executor;
+    this.pendingUnsafeSkipReason = options?.pendingUnsafeSkipReason;
   }
 
   /**
@@ -70,8 +75,21 @@ export class StreamingToolQueue {
     const resultMap = new Map<string, ToolResult>();
 
     // Execute unsafe tools sequentially. A rejection here must not stop the
-    // remaining unsafe tools from running.
+    // remaining unsafe tools from running. A trusted terminal boundary may,
+    // however, skip calls that have not started yet. We still synthesize one
+    // result per call so tool_use/tool_result history remains structurally
+    // complete even though the run will stop after this batch.
     for (const call of this.unsafeQueue) {
+      const skipReason = this.pendingUnsafeSkipReason?.();
+      if (skipReason) {
+        resultMap.set(call.id, {
+          id: call.id,
+          toolName: call.toolName,
+          error: `Tool execution skipped: ${skipReason}`,
+          isError: true,
+        });
+        continue;
+      }
       const p = this.executor.executeSingle(call);
       this.pending.set(call.id, p);
       resultMap.set(call.id, await this.toResult(call.id, call.toolName, p));

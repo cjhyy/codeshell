@@ -142,11 +142,11 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
   it("yields after an async tool handoff instead of issuing another model request", async () => {
     const { deps, modelCalls } = makeDeps([toolResp(), summaryResp()]);
     let pending = true;
-    deps.peekToolRunYield = () => (pending ? "background_notification" : undefined);
-    deps.consumeToolRunYield = () => {
-      if (!pending) return undefined;
+    deps.peekToolRunYield = (reason) => pending && reason === "background_notification";
+    deps.consumeToolRunYield = (reason) => {
+      if (!pending || reason !== "background_notification") return false;
       pending = false;
-      return "background_notification";
+      return true;
     };
 
     const result = await new TurnLoop(deps, {

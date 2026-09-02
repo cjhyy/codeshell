@@ -230,12 +230,17 @@ export interface ExternalFileChangesRecord {
 
 export type ToolRunYieldReason = "background_notification" | "reply_committed";
 
-/** Run-scoped handoff from a trusted tool to the owning turn loop. */
+/**
+ * Run-scoped handoff from a trusted tool to the owning turn loop. Distinct
+ * reasons accumulate independently: one batch may both commit a host reply
+ * and launch background work, and the loop decides boundary precedence.
+ */
 export interface ToolRunYieldController {
   request(reason: ToolRunYieldReason): void;
   /** Inspect without clearing so the loop can prioritize an accepted steer. */
-  peek?(): ToolRunYieldReason | undefined;
-  consume(): ToolRunYieldReason | undefined;
+  peek(reason: ToolRunYieldReason): boolean;
+  /** Clear one pending reason; true if it was pending. */
+  consume(reason: ToolRunYieldReason): boolean;
 }
 
 export interface ToolContext {

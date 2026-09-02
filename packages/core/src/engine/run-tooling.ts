@@ -45,7 +45,7 @@ export function buildRunToolContext(args: {
   reportResult: (key: string, value: unknown) => void;
 }): ToolContext {
   const { options, profile, profileParams } = args;
-  let pendingRunYield: import("../tool-system/context.js").ToolRunYieldReason | undefined;
+  const pendingRunYield = new Set<import("../tool-system/context.js").ToolRunYieldReason>();
   // sessionId is filled in after the session bundle is resolved below
   // (the session may be cold-started or resumed). Until then this is
   // intentionally shaped as a mutable local; we treat it as immutable
@@ -75,18 +75,16 @@ export function buildRunToolContext(args: {
       toolCtx.cwd = nextCwd;
     },
     runYield: {
+      // Reasons accumulate independently — a batch may both commit a host
+      // reply and launch background work; the turn loop decides precedence.
       request(reason) {
-        if (reason === "reply_committed" || pendingRunYield === undefined) {
-          pendingRunYield = reason;
-        }
+        pendingRunYield.add(reason);
       },
-      peek() {
-        return pendingRunYield;
+      peek(reason) {
+        return pendingRunYield.has(reason);
       },
-      consume() {
-        const reason = pendingRunYield;
-        pendingRunYield = undefined;
-        return reason;
+      consume(reason) {
+        return pendingRunYield.delete(reason);
       },
     },
     skillAllowlist:

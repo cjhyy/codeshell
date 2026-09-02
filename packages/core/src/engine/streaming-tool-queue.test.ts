@@ -70,4 +70,39 @@ describe("StreamingToolQueue.drain result integrity", () => {
     expect(results[0].isError).toBe(true);
     expect((results[1] as ToolResult).result).toBe("ok-y");
   });
+
+  test("a terminal boundary skips later unsafe tools without leaving result holes", async () => {
+    const ran: string[] = [];
+    let terminalReason: string | undefined;
+    const exec = fakeExecutor({
+      concurrencySafe: () => false,
+      behavior: async (c) => {
+        ran.push(c.id);
+        if (c.id === "commit") terminalReason = "the reply is already committed";
+        return { id: c.id, toolName: c.toolName, result: `ok-${c.id}` } as ToolResult;
+      },
+    });
+    const q = new StreamingToolQueue(exec, {
+      pendingUnsafeSkipReason: () => terminalReason,
+    });
+    q.enqueue(call("commit", "GatewayReply"));
+    q.enqueue(call("duplicate", "GatewayReply"));
+    q.enqueue(call("side-effect", "Write"));
+
+    const results = await q.drain();
+
+    expect(ran).toEqual(["commit"]);
+    expect(results.map((result) => result.id)).toEqual(["commit", "duplicate", "side-effect"]);
+    expect(results[0].isError).not.toBe(true);
+    expect(results[1]).toMatchObject({
+      toolName: "GatewayReply",
+      isError: true,
+      error: expect.stringContaining("reply is already committed"),
+    });
+    expect(results[2]).toMatchObject({
+      toolName: "Write",
+      isError: true,
+      error: expect.stringContaining("reply is already committed"),
+    });
+  });
 });

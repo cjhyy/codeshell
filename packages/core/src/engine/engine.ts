@@ -1041,6 +1041,21 @@ export class Engine {
     return this.config.headless === true;
   }
 
+  /**
+   * A background_notification park only makes sense where the Session can be
+   * woken by the completion later (server refuses headless; sub-agent sessions
+   * are not in chatManager) — everywhere else honouring it would end the run
+   * early and orphan the background result. A reply_committed boundary is
+   * synchronous and never suppressed.
+   */
+  private suppressesRunYield(
+    reason: import("../tool-system/context.js").ToolRunYieldReason,
+  ): boolean {
+    return (
+      reason === "background_notification" && (this.isHeadless() || this.config.isSubAgent === true)
+    );
+  }
+
   get permissionMode(): NonNullable<EngineConfig["permissionMode"]> {
     return this.permissionController.permissionMode;
   }
@@ -2837,29 +2852,14 @@ export class Engine {
         publishGoalJudgeContext: (context) => {
           publishGoalJudgeContext(context);
         },
-        // Only a top-level interactive Session can be woken for a background
-        // notification. A committed Gateway reply is different: the host owns
-        // the visible reply, so every caller must terminate the model loop.
-        peekToolRunYield: () => {
-          const reason = toolCtx.runYield?.peek?.();
-          if (
-            reason === "background_notification" &&
-            (this.isHeadless() || this.config.isSubAgent === true)
-          ) {
-            return undefined;
-          }
-          return reason;
-        },
-        consumeToolRunYield: () => {
-          const reason = toolCtx.runYield?.peek?.();
-          if (
-            reason === "background_notification" &&
-            (this.isHeadless() || this.config.isSubAgent === true)
-          ) {
-            return undefined;
-          }
-          return toolCtx.runYield?.consume();
-        },
+        // A background_notification yield is visible only where the Session
+        // can be woken later. A committed host reply is a synchronous terminal
+        // boundary, so it must remain visible in headless and sub-agent runs.
+        // One predicate serves peek and consume so they can never disagree.
+        peekToolRunYield: (reason) =>
+          !this.suppressesRunYield(reason) && toolCtx.runYield?.peek(reason) === true,
+        consumeToolRunYield: (reason) =>
+          !this.suppressesRunYield(reason) && toolCtx.runYield?.consume(reason) === true,
         ctxOverheadStore: {
           get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
           set: (s, n) => {
