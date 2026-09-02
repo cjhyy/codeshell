@@ -315,3 +315,43 @@ describe("SessionIndex", () => {
     expect(index.get("work-a")?.summary).toBeUndefined();
   });
 });
+
+describe("crash-orphaned active sessions", () => {
+  const orphan = [
+    {
+      sessionId: "work-orphan",
+      title: "Crashed run",
+      workspaceDisplayName: "alpha",
+      updatedAt: 100,
+      origin: "desktop" as const,
+      kind: "work" as const,
+      status: "active" as const,
+    },
+  ];
+
+  test("does not present a long-idle active session as resumable", () => {
+    // status "active" is written when a session starts and never repaired, so a
+    // crash/quit leaves it active forever. Mapping that to "dormant" told Mimi
+    // the session was merely idle and safe to reuse — the journal records her
+    // reusing dead sessions ("错误复用休眠 Session") and the task being
+    // cancelled with no output. 31 of 33 active sessions on disk were >1 day
+    // idle, one 91 days.
+    const index = new SessionIndex();
+    // Observed 48h after the session last wrote anything, with no live worker.
+    index.replaceCatalog({
+      owner: "local-user",
+      sessions: orphan,
+      observedAt: 100 + 48 * 60 * 60 * 1000,
+    });
+
+    const [projection] = index.list();
+    expect(projection?.runState).toBe("terminal");
+    expect(projection?.terminal?.status).toBe("failed");
+  });
+
+  test("keeps a recently-active session dormant so a live resume still works", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: orphan, observedAt: 100 + 60_000 });
+    expect(index.list()[0]?.runState).toBe("dormant");
+  });
+});

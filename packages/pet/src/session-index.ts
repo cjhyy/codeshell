@@ -32,8 +32,27 @@ function terminalStatus(reason: TerminalReason): PetTerminalStatus {
   return "failed";
 }
 
-function diskTerminalStatus(status: PetCatalogSession["status"]): PetTerminalStatus | undefined {
-  if (!status || status === "active" || status === "paused") return undefined;
+/**
+ * How long a disk session may claim `active` with no live worker before this
+ * projection treats it as a crashed run. `active` is written when a session
+ * starts and is never repaired, so a crash or quit leaves it active forever;
+ * without this, such a session reads as merely idle and therefore resumable,
+ * and Mimi delegates into a dead session that can never answer. Generous
+ * enough that a genuinely running session is never misjudged — a live worker
+ * reports its own state and never reaches this path.
+ */
+const STALE_ACTIVE_AFTER_MS = 6 * 60 * 60 * 1000;
+
+function diskTerminalStatus(
+  status: PetCatalogSession["status"],
+  idleForMs: number,
+): PetTerminalStatus | undefined {
+  if (!status || status === "paused") return undefined;
+  if (status === "active") {
+    // Only a stale claim becomes terminal; a recent one stays dormant so a
+    // legitimate resume still works.
+    return idleForMs >= STALE_ACTIVE_AFTER_MS ? "failed" : undefined;
+  }
   return terminalStatus(status);
 }
 
@@ -53,7 +72,9 @@ function baseProjection(
   workerState: PetWorkerState,
 ): PetSessionProjection {
   const completionKind = catalog.status === "completed" ? catalog.completionKind : undefined;
-  const status = completionKind ? undefined : diskTerminalStatus(catalog.status);
+  const status = completionKind
+    ? undefined
+    : diskTerminalStatus(catalog.status, Math.max(0, observedAt - catalog.updatedAt));
   return {
     owner: LOCAL_PET_OWNER,
     agentSessionId: catalog.sessionId,
