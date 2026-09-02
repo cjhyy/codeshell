@@ -8,7 +8,11 @@ import {
   compactWasNoop,
 } from "../chat/compactFeedback";
 import { titleFromWire } from "../chat/attachments";
-import { toCorePermissionMode, type PermissionMode } from "../chat/PermissionPill";
+import {
+  toCorePermissionMode,
+  toExternalRuntimePermission,
+  type PermissionMode,
+} from "../chat/PermissionPill";
 import {
   bindEngineSession,
   bucketKey,
@@ -46,6 +50,7 @@ import { NO_REPO_KEY } from "../transcripts";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models";
 import {
   buildExternalRuntimeHandoff,
+  noteExternalRuntimeStopped,
   resolveRunSessionId,
   runExternalRuntimeTurn,
 } from "../externalRuntimeRun";
@@ -421,8 +426,7 @@ export function useRunController({
           text,
           clientMessageId,
           attachments: opts.attachments,
-          permissionMode: opts.permissionMode,
-          planMode: false,
+          ...toExternalRuntimePermission(opts.permissionMode),
           hasGoal: !!activeGoal,
           initialContext: buildExternalRuntimeHandoff(state.messages),
           ...(externalDeveloperInstructions
@@ -948,18 +952,36 @@ export function useRunController({
     void window.codeshell.cancel(engineSessionId);
   };
 
+  // A Panel App submission may replace a session's external runtime from main.
+  // Drop this renderer's "already started" binding so its next chat send asks
+  // main again instead of sending into a runtime configured by someone else.
+  // Optional chaining only because renderer tests stub window.codeshell partially.
+  useEffect(
+    () =>
+      window.codeshell.externalRuntime?.onSessionState?.(({ sessionId, active }) => {
+        if (!active) noteExternalRuntimeStopped(sessionId);
+      }),
+    [],
+  );
+
   const resolveEngineSessionIdForBucket = useCallback(
     (bucket: string): string | undefined => {
       const quickChatSessionId = quickChatSessionIdFromBucket(bucket);
       if (quickChatSessionId) return quickChatSessionId;
       const { projectBucketSegment, projectId, sessionId: uiSessionId } = parsePanelBucket(bucket);
+      const configuredModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
+      // Provider thread ids are resume keys, never CodeShell session ids. This
+      // also self-heals legacy indices that persisted a Codex/Claude id in the
+      // old engineSessionId slot: Stop, Panel Apps and host routing all stay on
+      // the stable UI session identity while an external model is selected.
+      if (uiSessionId && parseExternalRuntimeModelKey(configuredModelKey)) return uiSessionId;
       const summary = uiSessionId
         ? (sessionIndices[projectBucketSegment]?.sessions.find((s) => s.id === uiSessionId) ??
           loadSessionIndex(projectId).sessions.find((s) => s.id === uiSessionId))
         : undefined;
       return summary?.engineSessionId ?? uiSessionId ?? undefined;
     },
-    [sessionIndices],
+    [defaultActiveModelKey, modelOverrides, sessionIndices],
   );
 
   // Resolve the engine sessionId for the currently-running bucket (same logic

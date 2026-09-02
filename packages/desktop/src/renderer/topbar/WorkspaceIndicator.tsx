@@ -671,18 +671,22 @@ export function WorkspaceIndicator({
 
   if (!canLoad) return null;
   const unavailable = visibleAuthorityState?.status === "unavailable";
+  // A freshly-created UI conversation can exist briefly before Main has
+  // materialized its Session state. Authority lookup is then unavailable,
+  // which is not evidence that a directory was removed. Keep the control
+  // fail-closed without presenting a destructive, false diagnosis; a real
+  // root_removed/dir_missing status still renders the repair badge below.
+  if (unavailable) return profileBadge;
   const failedRootStatus =
-    unavailable || (authority?.rootStatus !== undefined && authority.rootStatus !== "ok")
-      ? unavailable
-        ? "unavailable"
-        : authority!.rootStatus
+    authority?.rootStatus !== undefined && authority.rootStatus !== "ok"
+      ? authority.rootStatus
       : null;
   if (failedRootStatus) {
     return (
       <>
         <span
           data-session-root-status={failedRootStatus}
-          title={unavailable ? visibleAuthorityState?.error : authority?.rootStatusMessage}
+          title={authority?.rootStatusMessage}
           className="no-drag ml-1 inline-flex h-7 items-center rounded-sm bg-destructive/10 px-2 text-xs font-medium text-destructive"
         >
           {t(

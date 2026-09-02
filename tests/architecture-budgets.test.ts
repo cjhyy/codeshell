@@ -23,7 +23,15 @@ describe("architecture growth budgets", () => {
     // extracted PTY composite-id assertion at the IPC boundary. The Panel task
     // host and saved-cookie authorization then landed in v0.8.17; the follow-up
     // security pass removed nine lines while retaining those reviewed seams.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_925);
+    // Panel App submissions that target an external runtime are then wired
+    // through main: the bridge receives the runtime service and the transcript
+    // handoff builder (implemented in external-runtime-handoff.ts), and the
+    // service reports session start/stop to the owning window through the
+    // shared sendToOwnerWindow helper that emit already uses (+9 lines). The
+    // service also receives main's exact-root project resolver so external
+    // runtime sessions persist the same stable project identity as native
+    // Engine sessions (+9 lines).
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_942);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );
@@ -46,8 +54,12 @@ describe("architecture growth budgets", () => {
     expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_506);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
-    // extracted to engine-workspace-authority.ts.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_262);
+    // extracted to engine-workspace-authority.ts. The run-yield visibility
+    // filter then moved from a construction-time spread to per-reason
+    // peek/consume closures sharing one suppressesRunYield predicate, so a
+    // committed host reply stays terminal in headless and sub-agent runs and
+    // peek/consume can never disagree (+12 reviewed lines).
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_274);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

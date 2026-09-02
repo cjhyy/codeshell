@@ -64,7 +64,10 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       isReadOnly: false,
       isConcurrencySafe: false,
       timeoutMs: DRIVE_AGENT_TOOL_TIMEOUT_MS,
-      pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
+      pathPolicy: [
+        { kind: "arg", arg: "attachmentPaths", operation: "read" },
+        { kind: "arg", arg: "additionalReadDirs", operation: "read" },
+      ],
     },
     driveAgentTool,
     { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },
@@ -88,7 +91,10 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       isReadOnly: false,
       isConcurrencySafe: false,
       timeoutMs: DRIVE_AGENT_TOOL_TIMEOUT_MS,
-      pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
+      pathPolicy: [
+        { kind: "arg", arg: "attachmentPaths", operation: "read" },
+        { kind: "arg", arg: "additionalReadDirs", operation: "read" },
+      ],
     },
     driveClaudeCodeTool,
     { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },

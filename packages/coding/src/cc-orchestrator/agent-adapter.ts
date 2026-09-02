@@ -9,6 +9,10 @@ export interface BuildArgsOpts {
   permissionMode: PermissionMode;
   cwd: string;
   imagePaths?: string[];
+  /** Explicit extra directories the external agent may inspect. Claude Code
+   * maps these to --add-dir; callers keep them read-only by pairing them with
+   * permissionMode:"default". */
+  additionalReadDirs?: string[];
   codexImageInputSupported?: boolean;
 }
 
@@ -53,6 +57,9 @@ export const claudeAdapter: AgentAdapter = {
     const args = ["-p", opts.prompt, "--output-format", "stream-json", "--verbose"];
     if (opts.model) args.push("--model", opts.model);
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
+    if (opts.additionalReadDirs?.length) {
+      args.push("--add-dir", ...opts.additionalReadDirs);
+    }
     // Hard-disallow Workflow: driving CC unattended (esp. bypassPermissions),
     // CC's Workflow tool fans out a FLEET of agents — the real token-burn culprit
     // (user: "自动了 2 个 workflow token 就烧没了"). A single Task (one sub-agent)

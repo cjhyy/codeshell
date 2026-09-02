@@ -6,10 +6,13 @@
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { SessionManager } from "@cjhyy/code-shell-core";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
 const closed: string[] = [];
+/** When set, the next fake provider send rejects the way a dead process does. */
+let failNextSend = false;
 
 /** A session stub that records what it was asked to do. */
 function fakeSession(args: StartArgs) {
@@ -23,7 +26,13 @@ function fakeSession(args: StartArgs) {
       const names = exposure ? [...(exposure.toolNames ?? [])] : ["Panel"];
       return names.map((name) => ({ name, description: "", inputSchema: {} }));
     },
-    send: async () => ({ done: Promise.resolve() }),
+    send: async () => {
+      if (failNextSend) {
+        failNextSend = false;
+        throw new Error("provider process exited");
+      }
+      return { done: Promise.resolve() };
+    },
     interrupt: async () => {},
     close: async () => {
       closed.push(String(args.businessSessionId));
@@ -47,6 +56,11 @@ const { ExternalRuntimeService } = await import("./external-runtime-service.js")
 const claims: Array<{ sessionId: string; webContentsId?: number }> = [];
 const released: string[] = [];
 const emitted: Array<{ sessionId: string; type: string; eventSessionId?: string }> = [];
+const stateChanges: Array<{
+  sessionId: string;
+  active: boolean;
+  ownerWebContentsId?: number;
+}> = [];
 
 function service(
   flags: Record<string, boolean>,
@@ -57,12 +71,15 @@ function service(
     featureFlags: () => flags as never,
     registerSession: (sessionId, _cwd, webContentsId) => claims.push({ sessionId, webContentsId }),
     releaseSession: (sessionId) => released.push(sessionId),
+    resolveProjectBinding: () => undefined,
     emit: (sessionId, event) =>
       emitted.push({
         sessionId,
         type: event.type,
         ...(event.type === "session_started" ? { eventSessionId: event.sessionId } : {}),
       }),
+    sessionStateChanged: (sessionId, active, ownerWebContentsId) =>
+      stateChanges.push({ sessionId, active, ownerWebContentsId }),
     projectTrust: () => trust,
     ...(requestApproval ? { requestApproval } : {}),
     ...overrides,
@@ -82,6 +99,8 @@ beforeEach(() => {
   claims.length = 0;
   released.length = 0;
   emitted.length = 0;
+  stateChanges.length = 0;
+  failNextSend = false;
   trust = "trusted";
 });
 afterEach(() => {
@@ -120,6 +139,8 @@ describe("ExternalRuntimeService", () => {
     };
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgent");
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgentJobs");
+    expect(starts[0]!.developerInstructions).toContain('DriveAgent with cli="codex"');
+    expect(starts[0]!.developerInstructions).toContain('permissionMode="acceptEdits"');
   });
 
   test("dontAsk disables approval prompts but preserves user questions", async () => {
@@ -145,6 +166,18 @@ describe("ExternalRuntimeService", () => {
     trust = "untrusted";
     await svc.start({ ...request, sessionId: "sess-2" });
     expect(starts[1]!.projectTrusted).toBe(false);
+  });
+
+  test("persists the stable project binding resolved by Desktop main", async () => {
+    const sessionId = "external-service-project-binding";
+    const project = { projectId: "project-1", mainRootId: "root-1" };
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      resolveProjectBinding: () => project,
+    });
+
+    await svc.start({ ...request, sessionId });
+
+    expect(new SessionManager().readSessionState(sessionId)?.project).toEqual(project);
   });
 
   test("claims the panel owner BEFORE starting the runtime", async () => {
@@ -211,6 +244,83 @@ describe("ExternalRuntimeService", () => {
     await svc.start(request);
     expect(closed).toEqual(["sess-1"]);
     expect(starts).toHaveLength(2);
+  });
+
+  test("ensure reuses a matching runtime instead of restarting it", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    expect(svc.isCompatible(request)).toBe(false);
+    const first = await svc.ensure(request);
+    expect(svc.isCompatible(request)).toBe(true);
+    expect(svc.isCompatible({ ...request, planMode: true })).toBe(false);
+    expect(svc.isCompatible({ ...request, developerInstructions: "new renderer context" })).toBe(
+      true,
+    );
+    const second = await svc.ensure(request);
+
+    expect(second).toBe(first);
+    expect(starts).toHaveLength(1);
+    expect(closed).toEqual([]);
+  });
+
+  test("ensure replaces a runtime whose last turn failed on the provider", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.ensure(request);
+    failNextSend = true;
+    await expect(svc.send("sess-1", "first")).resolves.toMatchObject({
+      ok: false,
+      reason: "model_error",
+    });
+
+    // The renderer drops its binding on that failure and starts again. Handing
+    // back the dead provider would fail every later turn the same way.
+    expect(svc.isCompatible(request)).toBe(false);
+    await svc.ensure(request);
+    expect(starts).toHaveLength(2);
+    expect(closed).toEqual(["sess-1"]);
+    await expect(svc.send("sess-1", "second")).resolves.toMatchObject({ ok: true });
+  });
+
+  test("a main-originated turn announces its user message to the renderer", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.ensure(request);
+    await svc.send("sess-1", {
+      text: "full task",
+      displayText: "【App】 short",
+      clientMessageId: "c1",
+    });
+    // The chat renderer appends its own bubble before sending: no echo for it.
+    await svc.send("sess-1", { text: "renderer turn", clientMessageId: "c2" });
+
+    expect(emitted.filter((event) => event.type === "session_user_message")).toHaveLength(1);
+  });
+
+  test("serializes concurrent ensure calls into one runtime start", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    const [first, second] = await Promise.all([svc.ensure(request), svc.ensure(request)]);
+
+    expect(second).toBe(first);
+    expect(starts).toHaveLength(1);
+    expect(closed).toEqual([]);
+  });
+
+  test("ensure replaces a runtime when an execution setting changes", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.ensure(request);
+    await svc.ensure({ ...request, permissionMode: "acceptEdits" });
+
+    expect(starts).toHaveLength(2);
+    expect(closed).toEqual(["sess-1"]);
+  });
+
+  test("notifies the owning renderer when a main-started runtime starts and stops", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.ensure(request);
+    await svc.stop("sess-1");
+
+    expect(stateChanges).toEqual([
+      { sessionId: "sess-1", active: true, ownerWebContentsId: 77 },
+      { sessionId: "sess-1", active: false, ownerWebContentsId: 77 },
+    ]);
   });
 
   test("serializes concurrent starts for the same business session", async () => {

@@ -25,6 +25,10 @@ export function PanelAppHost({
   projectPath,
   cwd,
   engineSessionId,
+  modelKey,
+  permissionMode,
+  planMode,
+  hasGoal,
   visible,
 }: {
   descriptor: PanelAppDescriptor;
@@ -34,6 +38,10 @@ export function PanelAppHost({
   projectPath: string | null;
   cwd: string | null;
   engineSessionId: string | null;
+  modelKey: string | null;
+  permissionMode: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+  planMode: boolean;
+  hasGoal: boolean;
   visible: boolean;
 }) {
   const { lang } = useT();
@@ -86,6 +94,10 @@ export function PanelAppHost({
           cwd,
           visible,
           busy,
+          modelKey,
+          permissionMode,
+          planMode,
+          hasGoal,
           theme,
           locale: lang,
         })
@@ -120,6 +132,10 @@ export function PanelAppHost({
     descriptor.id,
     engineSessionId,
     lang,
+    hasGoal,
+    modelKey,
+    permissionMode,
+    planMode,
     prepared,
     projectPath,
     tabId,

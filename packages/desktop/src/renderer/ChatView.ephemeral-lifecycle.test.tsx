@@ -186,6 +186,57 @@ afterEach(async () => {
 });
 
 describe("ChatView ephemeral async lifecycle", () => {
+  test("clears the file-drop overlay when a drag leaves from a child element", async () => {
+    const mounted = await mountChatView({
+      codeshell: { sttAvailable: async () => ({ available: false }) },
+    });
+    const chatRoot = findElement(mounted, (props) => props["data-chat-variant"] === "quickChat");
+    const child = chatRoot.childNodes[0];
+
+    await act(async () => {
+      reactProps(chatRoot).onDragEnter({
+        preventDefault() {},
+        dataTransfer: { items: [{ kind: "file" }], types: [] },
+      });
+      await flushMicrotasks();
+    });
+    expect(reactProps(chatRoot).className).toContain("ring-2");
+
+    await act(async () => {
+      reactProps(chatRoot).onDragLeave({
+        currentTarget: chatRoot,
+        target: child,
+        relatedTarget: null,
+      });
+      await flushMicrotasks();
+    });
+
+    expect(reactProps(chatRoot).className).not.toContain("ring-2");
+  });
+
+  test("clears the file-drop overlay when the window loses focus", async () => {
+    const mounted = await mountChatView({
+      codeshell: { sttAvailable: async () => ({ available: false }) },
+    });
+    const chatRoot = findElement(mounted, (props) => props["data-chat-variant"] === "quickChat");
+
+    await act(async () => {
+      reactProps(chatRoot).onDragEnter({
+        preventDefault() {},
+        dataTransfer: { items: [{ kind: "file" }], types: [] },
+      });
+      await flushMicrotasks();
+    });
+    expect(reactProps(chatRoot).className).toContain("ring-2");
+
+    await act(async () => {
+      window.dispatchEvent(new Event("blur"));
+      await flushMicrotasks();
+    });
+
+    expect(reactProps(chatRoot).className).not.toContain("ring-2");
+  });
+
   test("sends a dropped PDF as an exact path-only turn", async () => {
     const onSend = mock(() => undefined);
     const mounted = await mountChatView({

@@ -48,6 +48,10 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   busy: boolean;
   visible: boolean;
   foregroundVisible: boolean;
+  modelKey: string | null;
+  permissionMode: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+  planMode: boolean;
+  hasGoal: boolean;
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
@@ -330,7 +334,19 @@ export function replacePanelApps(
           inputSchema: { ...tool.inputSchema },
         })),
         enabled: ({ projectPath }) => Boolean(projectPath) && boundPaths.has(projectPath!),
-        render: ({ tabId, bucket, busy, projectPath, cwd, engineSessionId, foregroundVisible }) =>
+        render: ({
+          tabId,
+          bucket,
+          busy,
+          projectPath,
+          cwd,
+          engineSessionId,
+          foregroundVisible,
+          modelKey,
+          permissionMode,
+          planMode,
+          hasGoal,
+        }) =>
           createElement(PanelAppHost, {
             descriptor,
             tabId,
@@ -339,6 +355,10 @@ export function replacePanelApps(
             projectPath,
             cwd,
             engineSessionId,
+            modelKey,
+            permissionMode,
+            planMode,
+            hasGoal,
             visible: foregroundVisible,
           }),
       };

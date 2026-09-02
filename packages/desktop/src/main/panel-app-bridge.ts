@@ -19,7 +19,9 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from "node:path";
 import type { AgentBridge } from "./agent-bridge.js";
+import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
+import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
 import {
@@ -117,6 +119,19 @@ interface GuestBinding {
    * over until the worker acknowledges it.
    */
   agentSubmitInFlight?: boolean;
+  /** Trusted renderer→main execution routing; never exposed to the Panel guest. */
+  execution: {
+    /**
+     * The project path the chat renderer routes its own runs by. External
+     * runtimes key session reuse on cwd, so a Panel submission must present
+     * the same value as a chat send or the two paths restart each other.
+     */
+    cwd: string;
+    modelKey?: string;
+    permissionMode: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+    planMode: boolean;
+    hasGoal: boolean;
+  };
 }
 
 interface PendingAgentToolCall {
@@ -132,6 +147,9 @@ export interface PanelAppBridgeOptions {
   /** Rechecked on prepare, bind, Agent invocation, and every Host call. */
   isPanelAppBound(projectPath: string, appId: string): boolean;
   getAgentBridge(): AgentBridge | null;
+  getExternalRuntimeService?(): ExternalRuntimeService | null;
+  /** Canonical transcript handoff used only when a fresh external thread starts. */
+  externalRuntimeInitialContext?(sessionId: string): Promise<string | undefined>;
   /** Secret-free configured text connections available to isolated Panel Tasks. */
   agentTaskModels?(cwd: string): PanelAgentTaskModelCatalog | Promise<PanelAgentTaskModelCatalog>;
   /** Shows a system notification; injected so tests avoid Electron Notification. */
@@ -548,6 +566,12 @@ export class PanelAppBridge {
       callTimes: [],
       notifyTimes: [],
       projectPath,
+      execution: {
+        cwd: projectPath,
+        permissionMode: "default",
+        planMode: false,
+        hasGoal: false,
+      },
     };
     this.guests.set(guest.id, binding);
     guest.once("destroyed", () => this.revokeGuest(guest.id));
@@ -773,6 +797,20 @@ export class PanelAppBridge {
     ) {
       throw new Error("invalid Panel App context");
     }
+    if (
+      (input.modelKey != null &&
+        (typeof input.modelKey !== "string" ||
+          !input.modelKey ||
+          input.modelKey.length > 512 ||
+          input.modelKey.includes("\0"))) ||
+      (input.permissionMode !== undefined &&
+        input.permissionMode !== "default" &&
+        input.permissionMode !== "acceptEdits" &&
+        input.permissionMode !== "bypassPermissions" &&
+        input.permissionMode !== "dontAsk")
+    ) {
+      throw new Error("invalid Panel App execution context");
+    }
     const bindingProjectPath = resolvePanelAppBindingProjectPath(input.projectPath);
     if (bindingProjectPath !== binding.projectPath) {
       throw new Error("Panel App project binding does not match its prepared scope");
@@ -783,6 +821,13 @@ export class PanelAppBridge {
     this.assertProjectBinding(binding);
     binding.bucket = input.bucket;
     binding.cwd = typeof input.cwd === "string" && input.cwd.length > 0 ? input.cwd : undefined;
+    binding.execution = {
+      cwd: input.projectPath,
+      ...(typeof input.modelKey === "string" ? { modelKey: input.modelKey } : {}),
+      permissionMode: input.permissionMode ?? "default",
+      planMode: input.planMode === true,
+      hasGoal: input.hasGoal === true,
+    };
     binding.context = {
       appId: binding.resource.descriptor.appId,
       visible: input.visible === true,
@@ -1733,37 +1778,91 @@ export class PanelAppBridge {
     // no second call can interleave between the check and this assignment.
     binding.agentSubmitInFlight = true;
 
-    void bridge
-      .requestWorker(
-        "agent/run",
-        {
-          task: task.trim(),
-          displayText,
-          clientMessageId,
-          sessionId,
-          cwd,
-          bucket: binding.bucket,
-        },
-        PANEL_AGENT_RUN_TIMEOUT_MS,
-        // This RPC is a fire-and-forget backstop, not the completion signal —
-        // real progress arrives on the session stream. The 24h timeout exists
-        // only so the correlation is eventually reclaimed, so release it as soon
-        // as the worker is known to be gone instead of holding it for a day.
-        {
-          settleOnExit: true,
-          failFast: true,
-          meta: { origin: "host", producer: "panel-submit-prompt" },
-        },
-      )
+    // Snapshot the route before the first await. A renderer re-bind may update
+    // the selected model while handoff context is loading; one submission must
+    // never mix the old provider kind with a new model key.
+    const execution = { ...binding.execution };
+    const parsedRuntime = execution.modelKey
+      ? parseExternalRuntimeModelKey(execution.modelKey)
+      : null;
+    const dispatch = parsedRuntime
+      ? async (): Promise<{ ok: boolean; message?: string; failureStreamed: boolean }> => {
+          const service = this.options.getExternalRuntimeService?.();
+          if (!service) throw new Error("external runtime service is unavailable");
+          if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+          // Not the permission-gated workspace cwd: the runtime route must match
+          // what the chat renderer sends for this session (see execution.cwd).
+          const startRequest = {
+            kind: parsedRuntime.kind,
+            sessionId,
+            cwd: execution.cwd,
+            modelKey: execution.modelKey!,
+            permissionMode: execution.permissionMode,
+            planMode: execution.planMode,
+            hasGoal: execution.hasGoal,
+            ...(parsedRuntime.model ? { model: parsedRuntime.model } : {}),
+            ownerWindow: owner,
+          };
+          if (!service.isCompatible(startRequest)) {
+            const initialContext = await this.options.externalRuntimeInitialContext?.(sessionId);
+            await service.ensure({
+              ...startRequest,
+              ...(initialContext ? { initialContext } : {}),
+            });
+          }
+          const outcome = await service.send(sessionId, {
+            text: task.trim(),
+            displayText,
+            clientMessageId,
+          });
+          return {
+            ok: outcome.ok,
+            ...(outcome.text ? { message: outcome.text } : {}),
+            // The recorder has already emitted the provider's failure into the
+            // shared stream. Do not duplicate it through AgentBridge.
+            failureStreamed: true,
+          };
+        }
+      : async (): Promise<{ ok: boolean; message?: string; failureStreamed: boolean }> => {
+          const result = await bridge.requestWorker(
+            "agent/run",
+            {
+              task: task.trim(),
+              displayText,
+              clientMessageId,
+              sessionId,
+              cwd,
+              bucket: binding.bucket,
+              ...(execution.modelKey ? { model: execution.modelKey } : {}),
+            },
+            PANEL_AGENT_RUN_TIMEOUT_MS,
+            // This RPC is a fire-and-forget backstop, not the completion signal —
+            // real progress arrives on the session stream. The 24h timeout exists
+            // only so the correlation is eventually reclaimed, so release it as soon
+            // as the worker is known to be gone instead of holding it for a day.
+            {
+              settleOnExit: true,
+              failFast: true,
+              meta: { origin: "host", producer: "panel-submit-prompt" },
+            },
+          );
+          return {
+            ok: result.ok,
+            ...(!result.ok ? { message: result.message } : {}),
+            failureStreamed: false,
+          };
+        };
+
+    void dispatch()
       .then((result) => {
         // Release once the worker has answered. By now either the run finished
         // or it failed; in the success case `context.busy` has long since been
         // pushed by the renderer, so there is no gap to re-open.
         binding.agentSubmitInFlight = false;
-        if (result.ok) return;
+        if (result.ok || result.failureStreamed) return;
         bridge.ingestExternalEvent(sessionId, {
           type: "error",
-          error: `Panel App request failed: ${result.message}`,
+          error: `Panel App request failed: ${result.message ?? "unknown error"}`,
         });
       })
       .catch((error: unknown) => {

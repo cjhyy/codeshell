@@ -8,6 +8,8 @@ export interface ExternalRuntimeAttachment {
 
 export interface ExternalRuntimeTurnInput {
   text: string;
+  /** Optional shorter text persisted/rendered for this turn; `text` still reaches the runtime. */
+  displayText?: string;
   clientMessageId?: string;
   attachments?: readonly ExternalRuntimeAttachment[];
   /** Host-injected continuation (for example, a background-job completion). */

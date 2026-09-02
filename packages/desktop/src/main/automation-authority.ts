@@ -80,14 +80,15 @@ async function resolveResumeSessionAuthority(
   sessionId: string,
   input: AutomationWorkspaceAuthorityInput,
   deps: AutomationAuthorityDeps,
-  options: { allowLegacy: boolean },
+  options: { allowLegacy: boolean; role: "resume" | "creator" },
 ): Promise<ResolvedAutomationAuthority> {
+  const sessionLabel = `${options.role} Session`;
   const session = await deps.resolveSessionAuthority(sessionId);
-  if (!session) throw new Error(`resume Session is missing: ${sessionId}`);
+  if (!session) throw new Error(`${sessionLabel} is missing: ${sessionId}`);
 
   if (session.projectId || session.rootId) {
     if (!session.projectId || !session.rootId) {
-      throw new Error("resume Session has an incomplete stable project root binding");
+      throw new Error(`${sessionLabel} has an incomplete stable project root binding`);
     }
     const resolved = deps.resolveProjectRootById(session.projectId, session.rootId);
     if (hasOwn(input, "projectId") && input.projectId !== session.projectId) {
@@ -116,7 +117,9 @@ async function resolveResumeSessionAuthority(
   }
 
   if (!options.allowLegacy) {
-    throw new Error("resume Session has no stable project root binding");
+    throw new Error(
+      `${sessionLabel} has no stable project root binding; changing cwd or switching workspace cannot repair it`,
+    );
   }
   if (hasOwn(input, "projectId") || hasOwn(input, "rootId")) {
     throw new Error("legacy resume Session cannot accept stable ids from the caller");
@@ -177,14 +180,20 @@ export function resolveAutomationCreateAuthority(
 ): Promise<ResolvedAutomationAuthority> {
   const sessionId = nonEmptyResumeSessionId(input);
   if (sessionId) {
-    return resolveResumeSessionAuthority(sessionId, input, deps, { allowLegacy: false });
+    return resolveResumeSessionAuthority(sessionId, input, deps, {
+      allowLegacy: false,
+      role: "resume",
+    });
   }
   const authoritySessionId =
     typeof input.authoritySessionId === "string" && input.authoritySessionId.length > 0
       ? input.authoritySessionId
       : undefined;
   if (authoritySessionId) {
-    return resolveResumeSessionAuthority(authoritySessionId, input, deps, { allowLegacy: false });
+    return resolveResumeSessionAuthority(authoritySessionId, input, deps, {
+      allowLegacy: false,
+      role: "creator",
+    });
   }
   return resolveStandaloneAuthority(input, deps, false);
 }
@@ -202,7 +211,10 @@ export function resolveAutomationUpdateAuthority(
   }
   const sessionId = nonEmptyResumeSessionId(existing);
   if (sessionId) {
-    return resolveResumeSessionAuthority(sessionId, patch, deps, { allowLegacy: false });
+    return resolveResumeSessionAuthority(sessionId, patch, deps, {
+      allowLegacy: false,
+      role: "resume",
+    });
   }
   const authorityInput = hasWorkspaceInput(patch) ? patch : existing;
   return resolveStandaloneAuthority(authorityInput, deps, true);

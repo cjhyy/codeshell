@@ -190,6 +190,14 @@ function installCodeshellStub(): void {
     log: () => undefined,
     isWindowFullscreen: async () => false,
     onWindowFullscreenChange: () => unsubscribe,
+    // useRunController subscribes in an effect and React invokes the returned
+    // unsubscribe on cleanup, so this must be present on the base stub — not
+    // only on the per-test Object.assign patches below.
+    externalRuntime: {
+      available: async () => [],
+      onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) =>
+        unsubscribe,
+    },
     projectRegistry: {
       list: async () => [project],
       beginLegacyMigration: async () => ({ completed: true }),
@@ -485,7 +493,11 @@ describe("App compact session UI", () => {
             return () => undefined;
           },
         },
-        externalRuntime: { available: async () => [] },
+        externalRuntime: {
+          available: async () => [],
+          onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) =>
+            () => undefined,
+        },
         getSessionWorkspaceAuthority: async (sessionId: string) =>
           sessionId === "engine-old" && oldSessionRootStatus !== "ok"
             ? {

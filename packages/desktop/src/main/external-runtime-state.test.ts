@@ -35,6 +35,7 @@ describe("external runtime durable state", () => {
     );
     recorder.beginTurn({
       text: "inspect this",
+      displayText: "【Panel】 Inspect resume",
       clientMessageId: "client-1",
       attachments: [{ path: "/tmp/project/resume.pdf", kind: "file" }],
     });
@@ -80,6 +81,7 @@ describe("external runtime durable state", () => {
     ).toHaveLength(1);
     const user = events.find((event) => event.type === "message" && event.data.role === "user");
     expect(JSON.stringify(user?.data.content)).toContain("/tmp/project/resume.pdf");
+    expect(user?.data.displayText).toBe("【Panel】 Inspect resume");
     expect(persistedState).toMatchObject({
       status: "completed",
       turnCount: 1,
@@ -147,6 +149,57 @@ describe("external runtime durable state", () => {
           "codex",
         ),
     ).toThrow(/project mismatch/);
+  });
+
+  test("persists stable project authority for a new external runtime session", () => {
+    const project = { projectId: "project-1", mainRootId: "root-1" };
+    new ExternalRuntimeSessionRecorder(
+      "external-project-binding-test",
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+      project,
+    );
+
+    expect(new SessionManager().readSessionState("external-project-binding-test")?.project).toEqual(
+      project,
+    );
+  });
+
+  test("safely upgrades a matching cwd-only external runtime session", () => {
+    const sessionId = "external-project-upgrade-test";
+    const project = { projectId: "project-1", mainRootId: "root-1" };
+    new SessionManager().create("/tmp/project", "codex/gpt-test", "codex", sessionId);
+
+    new ExternalRuntimeSessionRecorder(
+      sessionId,
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+      project,
+    );
+
+    expect(new SessionManager().readSessionState(sessionId)).toMatchObject({
+      cwd: "/tmp/project",
+      workspace: { root: "/tmp/project", kind: "main" },
+      project,
+    });
+  });
+
+  test("refuses to replace an existing stable project binding", () => {
+    const sessionId = "external-project-binding-fence-test";
+    new ExternalRuntimeSessionRecorder(sessionId, "/tmp/project", "codex/gpt-test", "codex", {
+      projectId: "project-1",
+      mainRootId: "root-1",
+    });
+
+    expect(
+      () =>
+        new ExternalRuntimeSessionRecorder(sessionId, "/tmp/project", "codex/gpt-test", "codex", {
+          projectId: "project-2",
+          mainRootId: "root-2",
+        }),
+    ).toThrow(/project binding mismatch/);
   });
 
   test("cleans up the atomic-write temp file when binding replacement fails", () => {

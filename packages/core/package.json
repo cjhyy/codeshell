@@ -38,6 +38,7 @@
   ],
   "scripts": {
     "build": "bun run clean && tsc -p tsconfig.json && bun run copy-assets",
+    "test": "bun test --timeout 30000 src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json",
     "dev": "bun run copy-assets && tsc -p tsconfig.json --watch --preserveWatchOutput",

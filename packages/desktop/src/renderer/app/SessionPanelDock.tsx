@@ -10,7 +10,11 @@ import {
 import { anchorsIn, type AnchorsByBucket } from "../chat/anchorBuckets";
 import type { ImageAttachment } from "../chat/attachments";
 import type { ModelOption } from "../chat/ModelPill";
-import type { PermissionMode } from "../chat/PermissionPill";
+import {
+  toCorePermissionMode,
+  toExternalRuntimePermission,
+  type PermissionMode,
+} from "../chat/PermissionPill";
 import { quickChatTabKey, type QuickChatSessionRef } from "../quickChatSession";
 import type { TrackedProject } from "../projects";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
@@ -51,6 +55,8 @@ interface SessionPanelDockProps {
   permissionOverrides: Record<string, PermissionMode>;
   defaultPermissionMode: PermissionMode | null;
   modelOverrides: Record<string, string>;
+  /** Default model for the owning Session (separate from Quick Chat's default). */
+  defaultSessionModelKey: string | null;
   defaultActiveModelKey: string | null;
   quickChatDrafts: Record<string, string>;
   quickChatAttachments: Record<string, ImageAttachment[]>;
@@ -160,6 +166,13 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
     const panelEngineSessionId = props.resolveEngineSessionIdForBucket(panelBucket) ?? null;
     const hidden = !isActivePanelBucket || !props.isChatView || !panelState.open;
     const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !props.isChatView);
+    const uiPermissionMode =
+      props.permissionOverrides[panelBucket] ?? props.defaultPermissionMode ?? "default";
+    // Same derivation as the chat send in useRunController: main keys external
+    // runtime reuse on these values, so a Panel submission that computed them
+    // differently would restart the live Codex/Claude thread.
+    const panelPermission = toExternalRuntimePermission(toCorePermissionMode(uiPermissionMode));
+    const panelHasGoal = Boolean(props.transcripts[panelBucket]?.activeGoal);
 
     return (
       <PanelArea
@@ -195,6 +208,10 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
         onUpdateBrowserAnchor={isActivePanelBucket ? props.updateAnchorComment : undefined}
         engineSessionId={panelEngineSessionId}
         busy={props.busyKeys.has(panelBucket)}
+        modelKey={props.modelOverrides[panelBucket] ?? props.defaultSessionModelKey}
+        permissionMode={panelPermission.permissionMode}
+        planMode={panelPermission.planMode}
+        hasGoal={panelHasGoal}
         tabs={panelState.tabs}
         setTabs={(next) =>
           props.updatePanelBucket(panelBucket, (state) => {

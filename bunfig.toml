@@ -1,0 +1,9 @@
+[test]
+# The repository's supported test command already uses a 30s per-test timeout.
+# Keep direct `bun test <path>` invocations consistent so a loaded full-suite
+# run does not fall back to Bun's 5s default and report timing noise as a
+# product regression.
+timeout = 30000
+# Root-level discovery must use the same isolated CodeShell home as package-
+# local Core tests, so test sessions never leak into the user's real sidebar.
+preload = ["./packages/core/test-setup.ts"]

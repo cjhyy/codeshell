@@ -196,6 +196,28 @@ describe.serial("external agent driver", () => {
       expect(receivedModel).toBe("review-model-override");
     });
 
+    it.serial("passes additional read directories into adapter.buildArgs", async () => {
+      let receivedDirectories: string[] | undefined;
+      const catAdapter: AgentAdapter = {
+        kind: "cat",
+        promptViaStdin: true,
+        buildArgs: (opts) => {
+          receivedDirectories = opts.additionalReadDirs;
+          return [];
+        },
+        parseResult: (lines) => ({ sessionId: "", finalText: lines.join("\n"), isError: false }),
+      };
+
+      await runAgentOnce(catAdapter, {
+        command: "cat",
+        prompt: "read-dir wiring",
+        cwd: process.cwd(),
+        additionalReadDirs: ["/logs/one", "/logs/two"],
+      });
+
+      expect(receivedDirectories).toEqual(["/logs/one", "/logs/two"]);
+    });
+
     it.serial("reports the Codex thread id before the process exits", async () => {
       const dir = mkdtempSync(join(tmpdir(), "codex-live-session-id-"));
       const script = join(dir, "fake-codex");

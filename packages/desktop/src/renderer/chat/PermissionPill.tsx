@@ -35,6 +35,19 @@ export function toCorePermissionMode(mode: PermissionMode): CorePermissionMode {
   }
 }
 
+/**
+ * External Agent Runtimes take plan mode as a separate flag, not a permission
+ * level. Both the chat send and Panel App submissions route through this so
+ * main sees one spelling and never restarts a runtime over a mapping drift.
+ */
+export function toExternalRuntimePermission(mode: CorePermissionMode | undefined): {
+  permissionMode: Exclude<CorePermissionMode, "plan">;
+  planMode: boolean;
+} {
+  if (mode === "plan") return { permissionMode: "default", planMode: true };
+  return { permissionMode: mode ?? "default", planMode: false };
+}
+
 export function fromSettingsPermissionMode(raw: unknown): PermissionMode {
   switch (raw) {
     case "plan":

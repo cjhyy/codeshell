@@ -246,6 +246,7 @@ export function runAgentOnce(
         permissionMode: opts.permissionMode ?? "default",
         cwd: opts.cwd,
         imagePaths: opts.imagePaths,
+        additionalReadDirs: opts.additionalReadDirs,
         codexImageInputSupported,
       });
       throwIfAborted(signal);

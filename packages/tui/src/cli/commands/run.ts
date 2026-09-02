@@ -20,16 +20,17 @@ import { SettingsManager } from "@cjhyy/code-shell-core";
 import { personalizationFrom } from "@cjhyy/code-shell-core";
 import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
+import { compileComposition } from "@cjhyy/code-shell-core";
+import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
 import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import { defaultSandboxConfig, type SandboxConfig } from "@cjhyy/code-shell-core/internal";
 import {
-  asyncAgentRegistry,
   buildNotificationMessage,
   buildNotificationSummary,
 } from "@cjhyy/code-shell-core/internal";
-import { drainBackgroundNotifications } from "./drain-notifications.js";
+import { drainBackgroundNotifications, hasRunningBackgroundWork } from "./drain-notifications.js";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
 
 export interface RunOptions {
@@ -50,7 +51,7 @@ export interface RunOptions {
    * completion notifications into the output. Default true.
    */
   waitBackgroundAgents?: boolean;
-  /** Max ms to wait for background agents (see waitBackgroundAgents). Default 5000. */
+  /** Max ms to wait for background work (see waitBackgroundAgents). Default 5 minutes. */
   backgroundWaitMs?: number;
 }
 
@@ -65,6 +66,19 @@ export function writeLastMessage(file: string, text: string): void {
   } catch (err) {
     console.error(`Warning: failed to write --output-last-message file: ${(err as Error).message}`);
   }
+}
+
+/**
+ * Headless `run` is a CodeShell product entrypoint, not a bare Core harness.
+ * Keep its composition aligned with the coding surface used by the REPL so
+ * product presets and tools such as DriveAgent do not disappear only because
+ * the same task was launched non-interactively.
+ */
+export function createRunComposition() {
+  return compileComposition({
+    modules: [createCodingModule()],
+    expectedModules: ["coding"],
+  });
 }
 
 export async function runCommand(options: RunOptions): Promise<void> {
@@ -106,9 +120,11 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   const sandboxConfig = mergeSandboxConfig(settings.sandbox, "auto");
   const maxContextTokens = resolveMaxContextTokens(llmConfig, settings.context.maxTokens);
+  const composition = createRunComposition();
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {
+    composition,
     preset: options.preset ?? settings.agent.preset,
     enabledBuiltinTools: settings.agent.enabledBuiltinTools,
     disabledBuiltinTools: settings.agent.disabledBuiltinTools,
@@ -136,7 +152,13 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   // 1. Seed engine — populates model pool + tool registry via
   //    populateModelPoolFromSettings() in ctor. Discarded after extraction.
-  const seedEngine = new Engine({ llm: llmConfig, cwd, headless: true, settingsScope: "full" });
+  const seedEngine = new Engine({
+    llm: llmConfig,
+    cwd,
+    composition,
+    headless: true,
+    settingsScope: "full",
+  });
 
   // 2. Extract shared resources
   const modelPool = seedEngine.getModelPool();
@@ -217,24 +239,26 @@ export async function runCommand(options: RunOptions): Promise<void> {
       turnCount: result.turnCount,
     });
 
-    // ── Background-agent completions (Phase 1, headless tail) ────────
+    // ── Background-work completions (Phase 1, headless tail) ─────────
     // Headless has no idle loop to drain the notification queue, so do it
     // here — BEFORE closing the server/client, or a background agent that
-    // finishes late loses its result. Default: wait briefly for in-flight
-    // agents; --no-wait-background-agents skips the wait.
+    // finishes late loses its result. This includes both native Agent children
+    // and notification-backed jobs such as DriveAgent. The five-minute default
+    // covers the latter's foreground-to-background handoff; callers that need
+    // an immediate one-shot result can pass --no-wait-background-agents.
     const wait = options.waitBackgroundAgents ?? true;
     const notifications = await drainBackgroundNotifications(runSessionId, {
       wait,
-      timeoutMs: options.backgroundWaitMs ?? 5000,
+      timeoutMs: options.backgroundWaitMs ?? 5 * 60_000,
     });
     if (notifications.length > 0) {
       // Human-facing summary on stderr (stdout stays the main result / JSON).
       process.stderr.write("\n" + buildNotificationSummary(notifications) + "\n");
-    } else if (wait && asyncAgentRegistry.hasRunning()) {
+    } else if (wait && hasRunningBackgroundWork(runSessionId)) {
       // Waited out the timeout with agents still running — say so explicitly
       // rather than exiting as if everything completed.
       process.stderr.write(
-        "\n⏱  background agents still running at timeout — their results were not captured.\n",
+        "\n⏱  background work still running at timeout — its results were not captured.\n",
       );
     }
 

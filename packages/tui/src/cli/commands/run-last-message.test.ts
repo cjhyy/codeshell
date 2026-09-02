@@ -2,7 +2,8 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { writeLastMessage } from "./run.js";
+import { Engine } from "@cjhyy/code-shell-core";
+import { createRunComposition, writeLastMessage } from "./run.js";
 
 let dir: string;
 
@@ -32,5 +33,19 @@ describe("writeLastMessage (--output-last-message)", () => {
     const file = join(dir, "no-such-dir", "out.txt");
     expect(() => writeLastMessage(file, "x")).not.toThrow();
     expect(existsSync(file)).toBe(false);
+  });
+});
+
+describe("headless run product composition", () => {
+  test("uses the coding default preset and exposes DriveAgent", () => {
+    const composition = createRunComposition();
+    const engine = new Engine({
+      llm: { provider: "openai", model: "test", apiKey: "test" },
+      composition,
+      settingsScope: "isolated",
+    });
+
+    expect(composition.engine.defaultPreset).toBe("terminal-coding");
+    expect(engine.getToolRegistry().hasTool("DriveAgent")).toBe(true);
   });
 });

@@ -466,6 +466,20 @@ const externalApprovalIds = new Set<string>();
  * which keeps the renderer's Stop handler untouched.
  */
 const externalRuntimeSessions = new Set<string>();
+const externalRuntimeSessionStateListeners = new Set<
+  (payload: { sessionId: string; active: boolean }) => void
+>();
+ipcRenderer.on(
+  "externalRuntime:sessionState",
+  (_e, payload: { sessionId?: unknown; active?: unknown }) => {
+    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    if (!sessionId || typeof payload?.active !== "boolean") return;
+    if (payload.active) externalRuntimeSessions.add(sessionId);
+    else externalRuntimeSessions.delete(sessionId);
+    const active = payload.active;
+    externalRuntimeSessionStateListeners.forEach((cb) => cb({ sessionId, active }));
+  },
+);
 ipcRenderer.on(
   "externalRuntime:approvalRequest",
   (_e, payload: { sessionId?: unknown; requestId?: unknown; request?: unknown }) => {
@@ -1507,6 +1521,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     stop: (sessionId: string): Promise<void> => {
       externalRuntimeSessions.delete(sessionId);
       return ipcRenderer.invoke("externalRuntime:stop", sessionId);
+    },
+    /** Main-side runtime start/stop for a session (e.g. a Panel App replaced it). */
+    onSessionState: (
+      cb: (payload: { sessionId: string; active: boolean }) => void,
+    ): (() => void) => {
+      externalRuntimeSessionStateListeners.add(cb);
+      return () => {
+        externalRuntimeSessionStateListeners.delete(cb);
+      };
     },
   },
   /** Probe common localhost dev-server ports via real TCP connect in main.

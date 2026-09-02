@@ -53,6 +53,7 @@ describe("DriveAgent tool", () => {
     expect((driveAgentToolDef.inputSchema as any).properties.background).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.model).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.effectiveWorkspaceCwd).toBeDefined();
+    expect((driveAgentToolDef.inputSchema as any).properties.additionalReadDirs).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.cli.enum).toEqual(["claude", "codex"]);
   });
 
@@ -113,6 +114,9 @@ describe("DriveAgent tool", () => {
     expect(drive?.timeoutMs).toBeGreaterThan(120_000);
     expect(alias?.timeoutMs).toBe(drive?.timeoutMs);
     expect(jobs?.name).toBe("DriveAgentJobs");
+    expect(drive?.pathPolicy).toEqual(
+      expect.arrayContaining([{ kind: "arg", arg: "additionalReadDirs", operation: "read" }]),
+    );
     const quickChatContext = {
       cwd: "/tmp",
       hasGoal: false,
@@ -187,6 +191,66 @@ describe("DriveAgent tool", () => {
         { cwd: tmp, sessionId: "S-CTX" } as any,
       );
       expect(out).toContain("outside cwd");
+      expect(ran).toBe(false);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("passes explicitly authorized outside directories to a read-only diagnostic run", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-read-cwd-"));
+    const outside = mkdtempSync(join(tmpdir(), "drive-read-outside-"));
+    try {
+      let seenPrompt = "";
+      let seenDirectories: string[] | undefined;
+      const tool = makeDriveAgentTool(async (o) => {
+        seenPrompt = o.prompt;
+        seenDirectories = o.additionalReadDirs;
+        return { sessionId: "S", finalText: "ok", isError: false, exitCode: 0, lines: [] };
+      });
+      const out = await tool(
+        {
+          prompt: "inspect transcript",
+          cwd: tmp,
+          background: false,
+          permissionMode: "default",
+          additionalReadDirs: [outside, outside],
+        } as any,
+        { cwd: tmp, sessionId: "S-CTX" } as any,
+      );
+
+      expect(out).toContain("Claude Code 完成");
+      expect(seenDirectories).toEqual([realpathSync(outside)]);
+      expect(seenPrompt).toContain("Additional read-only directories");
+      expect(seenPrompt).toContain(realpathSync(outside));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects outside read directories for writable runs before launching the runner", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-read-write-cwd-"));
+    const outside = mkdtempSync(join(tmpdir(), "drive-read-write-out-"));
+    try {
+      let ran = false;
+      const tool = makeDriveAgentTool(async () => {
+        ran = true;
+        return { sessionId: "S", finalText: "ok", isError: false, exitCode: 0, lines: [] };
+      });
+      const out = await tool(
+        {
+          prompt: "inspect and edit",
+          cwd: tmp,
+          background: false,
+          permissionMode: "acceptEdits",
+          additionalReadDirs: [outside],
+        } as any,
+        { cwd: tmp, sessionId: "S-CTX" } as any,
+      );
+
+      expect(out).toContain("require permissionMode:'default'");
       expect(ran).toBe(false);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
@@ -322,6 +386,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.prompt).toBeDefined();
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.background).toBeDefined();
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.model).toBeDefined();
+    expect((driveClaudeCodeToolDef.inputSchema as any).properties.additionalReadDirs).toBeDefined();
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.cli).toBeUndefined();
   });
 
@@ -333,6 +398,35 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     });
     await tool({ prompt: "p", cwd: "/x", background: false, model: "claude-x" } as any);
     expect(seen).toBe("claude-x");
+  });
+
+  it("passes additionalReadDirs through the legacy claude runner adapter", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-legacy-cwd-"));
+    const outside = mkdtempSync(join(tmpdir(), "drive-legacy-read-"));
+    try {
+      let seenDirectories: string[] | undefined;
+      const tool = makeDriveClaudeCodeTool(async (o) => {
+        seenDirectories = o.additionalReadDirs;
+        return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+      });
+      // The alias schema advertises additionalReadDirs and the prompt tells the
+      // driven CLI the directories were authorized — so the adapter must hand
+      // them to the runner rather than silently dropping them.
+      await tool(
+        {
+          prompt: "p",
+          cwd: tmp,
+          background: false,
+          permissionMode: "default",
+          additionalReadDirs: [outside],
+        } as any,
+        { cwd: tmp, sessionId: "S-LEGACY" } as any,
+      );
+      expect(seenDirectories).toEqual([realpathSync(outside)]);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   // CC tasks are typically long (minutes → hours), so the tool runs in the

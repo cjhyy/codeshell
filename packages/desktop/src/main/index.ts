@@ -110,6 +110,7 @@ import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-codi
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
 import { removeExternalRuntimeBinding } from "./external-runtime-state.js";
 import {
   ExternalRuntimeApprovals,
@@ -550,6 +551,12 @@ registerPanelAppSchemePrivileges();
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
 const mainWindows = new Set<BrowserWindow>();
+/** Deliver to the one live window owning `webContentsId`; other windows never see it. */
+function sendToOwnerWindow(webContentsId: number | undefined, channel: string, payload: unknown) {
+  [...mainWindows]
+    .find((window) => !window.isDestroyed() && window.webContents.id === webContentsId)
+    ?.webContents.send(channel, payload);
+}
 let petWidgetWindow: BrowserWindow | null = null;
 let petWidgetWindowCreation: Promise<BrowserWindow> | null = null;
 let petWidgetShouldBeVisible = false;
@@ -595,6 +602,9 @@ const panelAppBridge = new PanelAppBridge({
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
   isPanelAppBound: isPanelAppBoundToProject,
   getAgentBridge: () => bridge,
+  getExternalRuntimeService: () => externalRuntimeService,
+  externalRuntimeInitialContext: async (sessionId) =>
+    buildExternalRuntimeHandoffFromEvents(await getSessionEvents(sessionId)),
   agentTaskModels: (cwd) =>
     buildPanelAgentTaskModelCatalog(
       new SettingsManager(cwd, "full", getTrustCachedSync(cwd) === "trusted").get(),
@@ -1441,15 +1451,23 @@ async function createWindow(): Promise<BrowserWindow> {
       registerSession: (sessionId, cwd, webContentsId) =>
         externalBridge.registerExternalSession(sessionId, cwd, webContentsId),
       releaseSession: (sessionId) => externalBridge.releaseExternalSession(sessionId),
+      resolveProjectBinding: (cwd) => {
+        const resolved = getProjectStore().resolveExactRootSync(cwd);
+        return resolved
+          ? {
+              projectId: resolved.project.id,
+              mainRootId: resolved.mainRoot.id,
+            }
+          : undefined;
+      },
       // Route events to the window that owns the session, not every window: a
       // second window showing a different session must not receive its stream.
       emit: (sessionId, event) => {
         const ownerId = externalBridge.panelOwnerWebContentsId(sessionId);
-        const owner = [...mainWindows].find(
-          (window) => !window.isDestroyed() && window.webContents.id === ownerId,
-        );
-        owner?.webContents.send("externalRuntime:event", { sessionId, event });
+        sendToOwnerWindow(ownerId, "externalRuntime:event", { sessionId, event });
       },
+      sessionStateChanged: (sessionId, active, ownerId) =>
+        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active }),
       // The host seams the exposed tools need. `panels` points at the same
       // requestPanelHost the native protocol line reaches, so owner routing,
       // the timeout and invoke's fail-closed behaviour are shared rather than
@@ -5877,7 +5895,7 @@ ipcMain.handle(
     if (!ownerWindow || ownerWindow.isDestroyed()) {
       throw new Error("external runtime requires a live owner window");
     }
-    const session = await service.start({
+    const session = await service.ensure({
       kind: parsed.kind,
       sessionId,
       cwd,

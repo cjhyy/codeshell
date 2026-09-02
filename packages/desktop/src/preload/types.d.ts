@@ -1419,6 +1419,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }>;
     interrupt(sessionId: string): Promise<void>;
     stop(sessionId: string): Promise<void>;
+    /** Main started or stopped a runtime for a session. Returns unsubscribe. */
+    onSessionState(cb: (payload: { sessionId: string; active: boolean }) => void): () => void;
     // No onEvent: translated events are delivered through `onStreamEvent`,
     // the same subscription the native path uses.
   }>;

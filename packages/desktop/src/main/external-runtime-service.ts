@@ -29,6 +29,7 @@ import {
   BUILTIN_TOOLS,
   ToolRegistry,
   type PermissionMode,
+  type SessionProjectBinding,
   type StreamEvent,
 } from "@cjhyy/code-shell-core";
 import { isFeatureEnabled, type FeatureFlagOverrides } from "@cjhyy/code-shell-core/extension";
@@ -40,6 +41,8 @@ import {
   writeExternalRuntimeBinding,
   type ExternalRuntimeTurnOutcome,
 } from "./external-runtime-state.js";
+
+type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & { displayText?: string };
 
 export interface ExternalRuntimeStartRequest {
   kind: ExternalRuntimeKind;
@@ -86,6 +89,10 @@ export interface ExternalRuntimeServiceDeps {
   releaseSession: (sessionId: string) => void;
   /** Forward translated events to the renderer. */
   emit: (sessionId: string, event: StreamEvent) => void;
+  /** Resolve stable project authority from Desktop's main-owned registry. */
+  resolveProjectBinding: (cwd: string) => SessionProjectBinding | undefined;
+  /** Keep renderer-side Stop routing in sync even when main starts the runtime. */
+  sessionStateChanged?: (sessionId: string, active: boolean, ownerWebContentsId?: number) => void;
   /** Injectable for deterministic tests; production reads the fail-closed sync cache. */
   projectTrust?: (cwd: string) => "trusted" | "untrusted" | "unknown";
   /** Host seams the exposed tools need (panels, browser, …). */
@@ -125,12 +132,19 @@ export class ExternalRuntimeService {
       kind: ExternalRuntimeKind;
       cwd: string;
       model?: string;
+      routingKey: string;
+      configurationKey: string;
       ownerWebContentsId?: number;
       forwardEvent: (event: StreamEvent) => void;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
-      /** Invalidated before close so late provider events cannot enter a replacement session. */
-      lifecycle: { active: boolean; turnActive: boolean };
+      /**
+       * Invalidated before close so late provider events cannot enter a
+       * replacement session. `faulted` marks a runtime whose last turn ended in
+       * a provider error: it stays reachable for stop/interrupt, but ensure()
+       * and isCompatible() treat it as gone so the next turn replaces it.
+       */
+      lifecycle: { active: boolean; turnActive: boolean; faulted: boolean };
     }
   >();
   /** Serializes start/stop for one business id, including concurrent IPC calls. */
@@ -163,6 +177,24 @@ export class ExternalRuntimeService {
 
   get(sessionId: string): ExternalRuntimeSession | undefined {
     return this.sessions.get(sessionId)?.session;
+  }
+
+  /**
+   * Whether an existing runtime can accept a turn with this route as-is.
+   * Developer instructions are intentionally excluded: a Panel submission that
+   * carries no instruction snapshot must reuse the live session rather than
+   * restart it and discard richer instructions supplied by the chat renderer.
+   */
+  isCompatible(request: ExternalRuntimeStartRequest): boolean {
+    if (request.ownerWindow?.isDestroyed?.()) return false;
+    const ownerId = request.ownerWindow?.webContents.id;
+    this.assertOwner(request.sessionId, ownerId);
+    const entry = this.sessions.get(request.sessionId);
+    return (
+      entry !== undefined &&
+      !entry.lifecycle.faulted &&
+      entry.routingKey === this.routingKey(request)
+    );
   }
 
   /** Canonical project root for validating renderer-supplied turn attachments. */
@@ -205,6 +237,42 @@ export class ExternalRuntimeService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  private notifySessionStateSafely(
+    sessionId: string,
+    active: boolean,
+    ownerWebContentsId?: number,
+  ): void {
+    try {
+      this.deps.sessionStateChanged?.(sessionId, active, ownerWebContentsId);
+    } catch (error) {
+      dlog("external-runtime", "session_state.emit_failed", {
+        sessionId,
+        active,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private routingKey(request: ExternalRuntimeStartRequest): string {
+    return JSON.stringify({
+      kind: request.kind,
+      cwd: request.cwd,
+      model: request.model ?? null,
+      modelKey: request.modelKey ?? null,
+      permissionMode: request.permissionMode ?? "default",
+      planMode: request.planMode === true,
+      hasGoal: request.hasGoal === true,
+      ownerWebContentsId: request.ownerWindow?.webContents.id ?? null,
+    });
+  }
+
+  private configurationKey(request: ExternalRuntimeStartRequest): string {
+    return JSON.stringify({
+      routingKey: this.routingKey(request),
+      developerInstructions: request.developerInstructions ?? null,
+    });
   }
 
   private persistBindingSafely(
@@ -291,6 +359,42 @@ export class ExternalRuntimeService {
     return this.enqueueLifecycle(request.sessionId, () => this.startExclusive(request));
   }
 
+  /**
+   * Reuse an already-compatible runtime, otherwise replace it.
+   *
+   * Main-originated Panel submissions and renderer-originated chat sends do not
+   * share an in-memory start cache. This method makes their common boundary
+   * idempotent so the second caller cannot accidentally restart a live Codex
+   * thread before sending its turn.
+   */
+  ensure(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
+    return this.enqueueLifecycle(request.sessionId, async () => {
+      if (!this.isEnabled()) {
+        throw new Error(
+          "External Agent Runtimes are disabled. Enable the `external_agent_runtime` " +
+            "feature flag to run a session on Codex or Claude Code.",
+        );
+      }
+      if (request.ownerWindow?.isDestroyed?.()) {
+        throw new Error(`external runtime owner window is closed: ${request.sessionId}`);
+      }
+      const ownerId = request.ownerWindow?.webContents.id;
+      this.assertOwner(request.sessionId, ownerId);
+      const entry = this.sessions.get(request.sessionId);
+      // A faulted runtime is never reused: the caller has already been told its
+      // turn failed and dropped its own binding expecting the next start to
+      // replace the provider, not to hand back the one that just broke.
+      if (
+        entry &&
+        !entry.lifecycle.faulted &&
+        entry.configurationKey === this.configurationKey(request)
+      ) {
+        return entry.session;
+      }
+      return this.startExclusive(request);
+    });
+  }
+
   private async startExclusive(
     request: ExternalRuntimeStartRequest,
   ): Promise<ExternalRuntimeSession> {
@@ -346,7 +450,18 @@ export class ExternalRuntimeService {
     const developerInstructions = [
       "You are running as an Agent Runtime inside CodeShell. Prefer the " +
         "mcp__codeshell_tools__* host tools for CodeShell panels, browser state, " +
-        "credentials, memory, skills, and DriveAgent delegation. Do not use the " +
+        "credentials, memory, skills, and DriveAgent delegation. It is supported " +
+        "and often useful for this Codex runtime to delegate a bounded independent " +
+        'coding task through DriveAgent with cli="codex"; that launches a fresh ' +
+        "Codex worker rather than asking CodeShell's native Agent to redo the work. " +
+        'From a Codex runtime, use cli="codex" by default and choose Claude only ' +
+        "when the user explicitly asks for it. For delegated tasks that require " +
+        'edits, pass permissionMode="acceptEdits" when the current CodeShell ' +
+        "permission allows edits; never request bypassPermissions unless the user " +
+        "explicitly granted that level. " +
+        "Give that worker a self-contained prompt because it does not inherit this " +
+        "runtime's conversation or host bridge. Default to one worker and use more " +
+        "only for truly independent workstreams. Do not use the " +
         "Codex desktop in-app-browser plugin: this host provides browser_navigate, " +
         "browser_observe, and browser_act with the owning CodeShell session. Never " +
         "claim that a sub-agent was dispatched unless DriveAgent returned success. " +
@@ -369,8 +484,9 @@ export class ExternalRuntimeService {
       request.cwd,
       request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
       request.kind,
+      this.deps.resolveProjectBinding(request.cwd),
     );
-    const lifecycle = { active: true, turnActive: false };
+    const lifecycle = { active: true, turnActive: false, faulted: false };
     const forwardEvent = (event: StreamEvent): void => {
       // A provider process may flush buffered output while close() is in flight.
       // Once this concrete runtime has been stopped/replaced, its events belong
@@ -539,12 +655,15 @@ export class ExternalRuntimeService {
       recorder,
       kind: request.kind,
       cwd: request.cwd,
+      routingKey: this.routingKey(request),
+      configurationKey: this.configurationKey(request),
       turnTail: Promise.resolve(),
       lifecycle,
       forwardEvent,
       ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
     });
+    this.notifySessionStateSafely(request.sessionId, true, ownerId);
     if (session.runtimeSessionId) {
       this.persistBindingSafely(request.sessionId, {
         kind: request.kind,
@@ -566,14 +685,14 @@ export class ExternalRuntimeService {
 
   async send(
     sessionId: string,
-    input: ExternalRuntimeTurnInput | string,
+    input: DesktopExternalRuntimeTurnInput | string,
     callerWebContentsId?: number,
   ): Promise<ExternalRuntimeTurnOutcome> {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
     const turnInput = typeof input === "string" ? { text: input } : input;
-    const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
+    const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
       if (this.sessions.get(sessionId) !== entry) {
         throw new Error(
           `external runtime session was replaced before its queued turn: ${sessionId}`,
@@ -583,6 +702,18 @@ export class ExternalRuntimeService {
       try {
         try {
           entry.recorder.beginTurn(turnInput);
+          // `displayText` is only set by main-originated turns (Panel Apps). The
+          // chat renderer appends its own bubble before calling send, so it must
+          // not receive this event; a Panel submission has no local dispatch and
+          // would otherwise be invisible in the live transcript. Same contract
+          // as the native protocol server's session_user_message.
+          if (turnInput.displayText) {
+            this.emitSafely(sessionId, {
+              type: "session_user_message",
+              text: turnInput.displayText,
+              ...(turnInput.clientMessageId ? { clientMessageId: turnInput.clientMessageId } : {}),
+            });
+          }
           const turn = await entry.session.send(turnInput);
           await turn.done;
         } catch (error) {
@@ -616,6 +747,16 @@ export class ExternalRuntimeService {
       } finally {
         entry.lifecycle.turnActive = false;
       }
+    };
+    const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
+      const outcome = await runTurnExclusive();
+      // The renderer drops its start binding on a provider error and expects the
+      // next start to replace the runtime. Record that here so ensure() cannot
+      // hand the broken provider back as "already compatible".
+      if (outcome.reason === "model_error" && this.sessions.get(sessionId) === entry) {
+        entry.lifecycle.faulted = true;
+      }
+      return outcome;
     };
     const outcome = entry.turnTail.then(runTurn, runTurn);
     entry.turnTail = outcome.then(
@@ -670,6 +811,7 @@ export class ExternalRuntimeService {
     // as this method returns.
     entry.lifecycle.active = false;
     this.sessions.delete(sessionId);
+    this.notifySessionStateSafely(sessionId, false, entry.ownerWebContentsId);
     let closeError: unknown;
     try {
       await entry.session.close();

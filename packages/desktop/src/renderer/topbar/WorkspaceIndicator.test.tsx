@@ -568,6 +568,40 @@ describe("WorkspaceIndicator", () => {
     ).not.toBeNull();
   });
 
+  test("does not mislabel a not-yet-materialized conversation as root removed", async () => {
+    ensureMiniDom();
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: async () => {
+        throw new Error("unknown session");
+      },
+      listProfiles: async () => [],
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator
+          sessionId="new-conversation"
+          projectPath="/current-primary"
+          projectName="current-primary"
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).not.toMatch(/主目录已移除|Root removed/);
+    expect(
+      findElement(container, (node) =>
+        Boolean(
+          (node as { attributes?: Map<string, string> }).attributes?.has(
+            "data-session-root-status",
+          ),
+        ),
+      ),
+    ).toBeNull();
+  });
+
   test("keeps old Session Git, profile, and label bound when the project primary becomes non-Git", async () => {
     ensureMiniDom();
     const calls: string[] = [];
@@ -1356,7 +1390,7 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).not.toContain("worktree/initial");
   });
 
-  test("fails closed when a same-target authority refresh becomes unavailable", async () => {
+  test("fails closed without inventing root removal when authority refresh is unavailable", async () => {
     ensureMiniDom();
     let changed: ((event: { sessionId: string }) => void) | undefined;
     let authorityCalls = 0;
@@ -1403,7 +1437,7 @@ describe("WorkspaceIndicator", () => {
       refresh.reject(new Error("authority offline"));
       await flushMicrotasks();
     });
-    expect(textOf(container)).toMatch(/主目录已移除|Root removed/);
+    expect(textOf(container)).not.toMatch(/主目录已移除|Root removed/);
     expect(textOf(container)).not.toContain("authority offline");
     expect(
       findElement(container, (node) =>
@@ -1413,7 +1447,7 @@ describe("WorkspaceIndicator", () => {
           ),
         ),
       ),
-    ).not.toBeNull();
+    ).toBeNull();
   });
 
   test("authority identity changes clear rows and invalidate old diffs", async () => {

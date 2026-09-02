@@ -355,4 +355,56 @@ describe("DriveAgent worktree isolation lifecycle", () => {
       rmSync(join(root, ".worktrees"), { recursive: true, force: true });
     }
   });
+
+  test("a worktree-isolated writable run accepts additionalReadDirs inside the caller's workspace", async () => {
+    const { root, repo } = createRepo("drive-wt-readdirs-");
+    try {
+      // Present in the original workspace but not committed, so the worktree
+      // copy does not contain it — the caller's relative path must still work.
+      mkdirSync(join(repo, "logs"));
+      writeFileSync(join(repo, "logs", "app.log"), "line\n");
+      const store = new ExternalAgentSessionStore(join(root, "sessions.json"));
+      let runnerCwd = "";
+      let seenDirectories: string[] | undefined;
+      const tool = makeDriveAgentTool(
+        async (options) => {
+          runnerCwd = options.cwd;
+          seenDirectories = options.additionalReadDirs;
+          return {
+            sessionId: "external-readdirs",
+            finalText: "finished",
+            isError: false,
+            exitCode: 0,
+            lines: [],
+          };
+        },
+        undefined,
+        { sessionStore: store },
+      );
+
+      const output = await tool(
+        {
+          prompt: "read the workspace logs",
+          cwd: repo,
+          isolation: "worktree",
+          cleanup: "auto",
+          background: false,
+          additionalReadDirs: ["logs"],
+        },
+        { cwd: repo, sessionId: "codeshell-readdirs" } as any,
+      );
+
+      // Resolution and containment must share one base (the caller's original
+      // workspace): a directory inside it is authorized even though the run
+      // itself executes in the worktree copy.
+      expect(output).not.toContain("require permissionMode:'default'");
+      expect(runnerCwd).not.toBe(repo);
+      expect(seenDirectories).toEqual([realpathSync(join(repo, "logs"))]);
+      // The clean run's worktree is auto-discarded by cleanup:"auto".
+      expect(existsSync(runnerCwd)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(join(root, ".worktrees"), { recursive: true, force: true });
+    }
+  });
 });

@@ -2552,6 +2552,7 @@ function App() {
                   permissionOverrides={permissionOverrides}
                   defaultPermissionMode={defaultPermissionMode}
                   modelOverrides={modelOverrides}
+                  defaultSessionModelKey={defaultActiveModelKey}
                   defaultActiveModelKey={quickChatDefaultModelKey}
                   quickChatDrafts={quickChatDrafts}
                   quickChatAttachments={quickChatAttachments}

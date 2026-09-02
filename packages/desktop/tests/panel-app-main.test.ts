@@ -1662,6 +1662,191 @@ describeIsolated("PanelAppBridge", () => {
     expect(ownerClaim).toEqual({ sessionId: "session-1", webContentsId: 1 });
   });
 
+  test("agent.submitPrompt routes a Codex session to the external runtime only", async () => {
+    let nativeRuns = 0;
+    const starts: Array<Record<string, unknown>> = [];
+    const sends: Array<{ sessionId: string; input: Record<string, unknown> }> = [];
+    const neverSettles = new Promise<never>(() => undefined);
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => {
+            nativeRuns += 1;
+            return { ok: true };
+          },
+          claimSessionPanelOwner: () => undefined,
+          ingestExternalEvent: () => undefined,
+        }) as any,
+      getExternalRuntimeService: () =>
+        ({
+          isCompatible: () => false,
+          ensure: async (input: Record<string, unknown>) => {
+            starts.push(input);
+            return {};
+          },
+          send: (sessionId: string, input: Record<string, unknown>) => {
+            sends.push({ sessionId, input });
+            return neverSettles;
+          },
+        }) as any,
+      externalRuntimeInitialContext: async () => "recent transcript",
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(27);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(27, {
+      // The runtime route is the project path (what the chat renderer sends),
+      // not the permission-gated workspace cwd: without context.cwd the Panel
+      // has no workspace cwd at all, and the route must still resolve.
+      cwd: null,
+      modelKey: "codex/gpt-5.6-sol",
+      permissionMode: "acceptEdits",
+      planMode: false,
+      hasGoal: true,
+    });
+
+    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+      { sender: guest },
+      "agent.submitPrompt",
+      { prompt: "full task", displayText: "short task" },
+    )) as { accepted: boolean };
+    expect(accepted.accepted).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(nativeRuns).toBe(0);
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toMatchObject({
+      kind: "codex",
+      sessionId: "session-1",
+      cwd: "/repo",
+      model: "gpt-5.6-sol",
+      modelKey: "codex/gpt-5.6-sol",
+      permissionMode: "acceptEdits",
+      hasGoal: true,
+      initialContext: "recent transcript",
+    });
+    expect(sends).toHaveLength(1);
+    expect(sends[0]).toMatchObject({
+      sessionId: "session-1",
+      input: {
+        text: "full task",
+        displayText: "【Dashboard】 short task",
+      },
+    });
+  });
+
+  test("a Codex startup failure is surfaced without falling back to the native worker", async () => {
+    let nativeRuns = 0;
+    const ingested: Array<{ sessionId: string; event: unknown }> = [];
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => {
+            nativeRuns += 1;
+            return { ok: true };
+          },
+          claimSessionPanelOwner: () => undefined,
+          ingestExternalEvent: (sessionId: string, event: unknown) =>
+            ingested.push({ sessionId, event }),
+        }) as any,
+      getExternalRuntimeService: () =>
+        ({
+          isCompatible: () => false,
+          ensure: async () => {
+            throw new Error("Codex executable unavailable");
+          },
+          send: async () => ({ ok: true, streamed: true }),
+        }) as any,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(28);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(28, { modelKey: "codex/gpt-5.6-sol" });
+
+    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+      { sender: guest },
+      "agent.submitPrompt",
+      { prompt: "run on Codex" },
+    )) as { accepted: boolean };
+    expect(accepted.accepted).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(nativeRuns).toBe(0);
+    expect(ingested).toHaveLength(1);
+    expect((ingested[0]!.event as { error: string }).error).toContain(
+      "Codex executable unavailable",
+    );
+  });
+
+  test("a Panel turn reuses a compatible live Codex runtime without rebuilding handoff", async () => {
+    let ensureCalls = 0;
+    let handoffCalls = 0;
+    let sendCalls = 0;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => ({ ok: true }),
+          claimSessionPanelOwner: () => undefined,
+          ingestExternalEvent: () => undefined,
+        }) as any,
+      getExternalRuntimeService: () =>
+        ({
+          isCompatible: () => true,
+          ensure: async () => {
+            ensureCalls += 1;
+            return {};
+          },
+          send: async () => {
+            sendCalls += 1;
+            return { ok: true, reason: "completed", streamed: true };
+          },
+        }) as any,
+      externalRuntimeInitialContext: async () => {
+        handoffCalls += 1;
+        return "unused";
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(29);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(29, { modelKey: "codex/gpt-5.6-sol" });
+
+    await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+      { sender: guest },
+      "agent.submitPrompt",
+      { prompt: "continue" },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(sendCalls).toBe(1);
+    expect(ensureCalls).toBe(0);
+    expect(handoffCalls).toBe(0);
+  });
+
   test("agent.submitPrompt rejects a second submit while the first is in flight", async () => {
     // context.busy is pushed from the renderer, so it lags. Once submitPrompt
     // started returning as soon as the worker accepts, two rapid calls both saw

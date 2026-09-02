@@ -93,6 +93,11 @@ interface Props {
   engineSessionId?: string | null;
   /** Whether this panel bucket currently owns an in-flight top-level turn. */
   busy?: boolean;
+  /** Session execution settings used by installed Panel Apps. */
+  modelKey?: string | null;
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+  planMode?: boolean;
+  hasGoal?: boolean;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
   width: number;
   /** Drag the divider: report the new width (parent clamps + persists). */
@@ -146,6 +151,10 @@ function ResolvedPanelArea({
   onOpenCliSessionConsumed,
   engineSessionId,
   busy = false,
+  modelKey = null,
+  permissionMode = "default",
+  planMode = false,
+  hasGoal = false,
   width,
   onResizeStart,
   onAttachImage,
@@ -450,6 +459,10 @@ function ResolvedPanelArea({
                     reviewFiles={reviewFiles}
                     reviewDiff={reviewDiff}
                     engineSessionId={engineSessionId}
+                    modelKey={modelKey}
+                    permissionMode={permissionMode}
+                    planMode={planMode}
+                    hasGoal={hasGoal}
                     browserAnchors={browserAnchors}
                     revealFile={revealFile}
                     onRevealConsumed={onRevealConsumed}
@@ -528,6 +541,10 @@ function PanelBody({
   openCliSession,
   onOpenCliSessionConsumed,
   engineSessionId,
+  modelKey,
+  permissionMode,
+  planMode,
+  hasGoal,
   onAttachImage,
   browserAnchors,
   onRemoveBrowserAnchor,
@@ -551,6 +568,10 @@ function PanelBody({
   openCliSession?: OpenCliSessionRequest;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   engineSessionId?: string | null;
+  modelKey: string | null;
+  permissionMode: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+  planMode: boolean;
+  hasGoal: boolean;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
@@ -571,6 +592,10 @@ function PanelBody({
     busy,
     visible,
     foregroundVisible,
+    modelKey,
+    permissionMode,
+    planMode,
+    hasGoal,
     projectPath,
     project,
     cwd,

@@ -126,6 +126,16 @@ export function forgetExternalRuntimeSession(sessionId: string): void {
   sessionEpochs.set(sessionId, (sessionEpochs.get(sessionId) ?? 0) + 1);
 }
 
+/**
+ * Main reported that a runtime for this session stopped (a Panel App submission
+ * replaced it, or it was closed elsewhere). Only the start binding is dropped:
+ * the session itself lives on, so the next send re-runs start() and lets main
+ * decide whether the current runtime already matches this renderer's config.
+ */
+export function noteExternalRuntimeStopped(sessionId: string): void {
+  startedSessions.delete(sessionId);
+}
+
 /** Test seam — the module-level cache would otherwise leak between cases. */
 export function resetExternalRuntimeSessions(): void {
   startedSessions.clear();
@@ -153,7 +163,9 @@ export function resolveRunSessionId(
  * resolution as "the turn is over", and resolving early would clear busy while
  * the model is still streaming.
  */
-export function runExternalRuntimeTurn(args: ExternalRuntimeTurnArgs): Promise<ExternalRuntimeRunResult> {
+export function runExternalRuntimeTurn(
+  args: ExternalRuntimeTurnArgs,
+): Promise<ExternalRuntimeRunResult> {
   const { sessionId } = args;
   const epoch = sessionEpochs.get(sessionId) ?? 0;
   const previous = turnTails.get(sessionId) ?? Promise.resolve();
@@ -172,20 +184,23 @@ export function runExternalRuntimeTurn(args: ExternalRuntimeTurnArgs): Promise<E
   return result;
 }
 
-async function runExternalRuntimeTurnExclusive({
-  sessionId,
-  cwd,
-  modelKey,
-  text,
-  clientMessageId,
-  attachments,
-  permissionMode,
-  planMode,
-  hasGoal,
-  initialContext,
-  developerInstructions,
-  runtime,
-}: ExternalRuntimeTurnArgs, epoch: number): Promise<ExternalRuntimeRunResult> {
+async function runExternalRuntimeTurnExclusive(
+  {
+    sessionId,
+    cwd,
+    modelKey,
+    text,
+    clientMessageId,
+    attachments,
+    permissionMode,
+    planMode,
+    hasGoal,
+    initialContext,
+    developerInstructions,
+    runtime,
+  }: ExternalRuntimeTurnArgs,
+  epoch: number,
+): Promise<ExternalRuntimeRunResult> {
   try {
     if ((sessionEpochs.get(sessionId) ?? 0) !== epoch) {
       return {
@@ -194,10 +209,17 @@ async function runExternalRuntimeTurnExclusive({
         text: "External runtime session was closed before its queued turn started.",
       };
     }
-    // Restart only when the model actually changed. Switching Codex → Claude
-    // mid-session has to rebuild the backend; re-sending on the same one must
-    // not, or every turn would begin with an empty context.
-    const configurationKey = JSON.stringify({ modelKey, permissionMode, planMode });
+    // Restart only when a startup-relevant setting changed. Switching Codex →
+    // Claude, permissions, plan/goal state, or session instructions has to
+    // rebuild the backend; an identical follow-up must not lose live context.
+    const configurationKey = JSON.stringify({
+      cwd,
+      modelKey,
+      permissionMode,
+      planMode,
+      hasGoal,
+      developerInstructions,
+    });
     if (startedSessions.get(sessionId) !== configurationKey) {
       await runtime.start({
         sessionId,
@@ -224,11 +246,7 @@ async function runExternalRuntimeTurnExclusive({
       ...(clientMessageId ? { clientMessageId } : {}),
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
     });
-    if (
-      result &&
-      !result.ok &&
-      (sessionEpochs.get(sessionId) ?? 0) === epoch
-    ) {
+    if (result && !result.ok && (sessionEpochs.get(sessionId) ?? 0) === epoch) {
       startedSessions.delete(sessionId);
     }
     return result ?? { ok: true };

@@ -58,6 +58,8 @@ export const driveAgentToolDef: ToolDefinition = {
     "If the external agent is explicitly expected to write a workspace other than its launch cwd, " +
     "set effectiveWorkspaceCwd so cross-session conflict checks use that declared workspace; omit " +
     "it when the run writes in cwd. " +
+    "For read-only diagnosis that needs logs or transcripts outside cwd, explicitly pass their " +
+    "directories in additionalReadDirs together with permissionMode:'default'. " +
     "For a quick task where you want the answer inline, pass background:false. " +
     "It has NO time concept of its own: for 'in N minutes' / 'every N' / looping, use CronCreate " +
     "instead (never sleep). A scheduled CronCreate job runs one codeshell turn whose prompt can " +
@@ -134,6 +136,12 @@ export const driveAgentToolDef: ToolDefinition = {
         description:
           "Optional local file paths to hand to the driven agent. Paths must resolve inside cwd. Images are also passed to Codex with -i when the installed Codex CLI supports it; otherwise all paths are listed in the prompt.",
       },
+      additionalReadDirs: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Optional existing directories outside cwd that a read-only diagnostic run may inspect (for example, a transcript directory). Requires permissionMode:'default'; writable modes are rejected so this cannot silently widen their write scope. Claude Code receives these via --add-dir; all CLIs also receive the canonical paths in the prompt.",
+      },
       permissionMode: {
         type: "string",
         enum: ["default", "acceptEdits", "bypassPermissions"],
@@ -160,6 +168,7 @@ type Runner = (opts: {
   permissionMode?: PermMode;
   signal?: AbortSignal;
   imagePaths?: string[];
+  additionalReadDirs?: string[];
   onSessionId?: (sessionId: string) => void;
 }) => Promise<AgentRunResult>;
 type SessionStore = {
@@ -215,6 +224,7 @@ const defaultRunner: Runner = (opts) => {
       cwd: opts.cwd,
       permissionMode: opts.permissionMode ?? "default",
       imagePaths: opts.imagePaths,
+      additionalReadDirs: opts.additionalReadDirs,
       onSessionId: opts.onSessionId,
     },
     opts.signal,
@@ -551,6 +561,57 @@ function resolveAttachmentPaths(raw: unknown, cwd: string): { paths: string[]; e
   return { paths };
 }
 
+function isPathInside(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`));
+}
+
+function resolveAdditionalReadDirs(
+  raw: unknown,
+  cwd: string,
+  permissionMode: PermMode,
+): { directories: string[]; error?: string } {
+  if (raw === undefined) return { directories: [] };
+  if (!Array.isArray(raw)) {
+    return { directories: [], error: "additionalReadDirs must be an array of strings" };
+  }
+  // Resolution and containment share one base — the caller's workspace, same
+  // as resolveAttachmentPaths. A worktree-isolated run rebinds its execution
+  // cwd, but a directory inside the caller's own workspace is still an
+  // authorized read, not a widening.
+  const containmentRoot = realpathSync(cwd);
+  const seen = new Set<string>();
+  const directories: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string" || !item.trim()) {
+      return {
+        directories: [],
+        error: "additionalReadDirs must contain only non-empty strings",
+      };
+    }
+    const candidate = isAbsolute(item) ? item : resolve(cwd, item);
+    if (!existsSync(candidate)) {
+      return { directories: [], error: `additional read directory not found: ${item}` };
+    }
+    const real = realpathSync(candidate);
+    if (!statSync(real).isDirectory()) {
+      return { directories: [], error: `additional read path is not a directory: ${item}` };
+    }
+    if (!isPathInside(containmentRoot, real) && permissionMode !== "default") {
+      return {
+        directories: [],
+        error:
+          "additionalReadDirs outside cwd require permissionMode:'default'; refusing to widen a writable DriveAgent run",
+      };
+    }
+    if (!seen.has(real)) {
+      seen.add(real);
+      directories.push(real);
+    }
+  }
+  return { directories };
+}
+
 const DRIVE_IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
 
 function appendAttachmentPrompt(prompt: string, paths: string[]): string {
@@ -561,6 +622,13 @@ function appendAttachmentPrompt(prompt: string, paths: string[]): string {
     lines.push(`- ${path} (${kind})`);
   }
   return `${prompt}\n${lines.join("\n")}`;
+}
+
+function appendAdditionalReadDirsPrompt(prompt: string, directories: string[]): string {
+  if (directories.length === 0) return prompt;
+  return `${prompt}\n\nAdditional read-only directories explicitly authorized for this diagnostic run:\n${directories
+    .map((path) => `- ${path}`)
+    .join("\n")}`;
 }
 
 async function recordSuccessfulSession(
@@ -1135,7 +1203,20 @@ export function makeDriveAgentTool(
       return `Error: ${resolvedAttachmentPaths.error}`;
     }
     const attachmentPaths = resolvedAttachmentPaths.paths;
-    const promptWithAttachments = appendAttachmentPrompt(prompt, attachmentPaths);
+    const resolvedAdditionalReadDirs = resolveAdditionalReadDirs(
+      args.additionalReadDirs,
+      attachmentSourceCwd,
+      permissionMode,
+    );
+    if (resolvedAdditionalReadDirs.error) {
+      safeFinalizeDriveWorktree(managedWorktree);
+      return `Error: ${resolvedAdditionalReadDirs.error}`;
+    }
+    const additionalReadDirs = resolvedAdditionalReadDirs.directories;
+    const promptWithAttachments = appendAdditionalReadDirsPrompt(
+      appendAttachmentPrompt(prompt, attachmentPaths),
+      additionalReadDirs,
+    );
     const imagePaths =
       cli === "codex"
         ? attachmentPaths.filter((path) => DRIVE_IMAGE_EXTS.has(extname(path).toLowerCase()))
@@ -1150,6 +1231,7 @@ export function makeDriveAgentTool(
       cwd,
       permissionMode,
       imagePaths,
+      additionalReadDirs,
     };
     const foregroundHandoffMs = externalRuntime
       ? Number.POSITIVE_INFINITY
@@ -1597,6 +1679,7 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
       effectiveWorkspaceCwd: (driveAgentToolDef.inputSchema as any).properties
         .effectiveWorkspaceCwd,
       attachmentPaths: (driveAgentToolDef.inputSchema as any).properties.attachmentPaths,
+      additionalReadDirs: (driveAgentToolDef.inputSchema as any).properties.additionalReadDirs,
       permissionMode: (driveAgentToolDef.inputSchema as any).properties.permissionMode,
       background: (driveAgentToolDef.inputSchema as any).properties.background,
     },
@@ -1615,12 +1698,16 @@ type LegacyRunner = (opts: {
   permissionMode?: PermMode;
   signal?: AbortSignal;
   onSessionId?: (sessionId: string) => void;
+  // Newer optional fields the alias schema advertises; forwarded so a runner
+  // that honors them receives them (older fakes simply ignore extra fields).
+  additionalReadDirs?: string[];
+  imagePaths?: string[];
 }) => Promise<AgentRunResult>;
 export function makeDriveClaudeCodeTool(runner?: LegacyRunner, options?: DriveAgentToolOptions) {
-  const generic: Runner | undefined = runner
-    ? ({ prompt, resumeSessionId, model, cwd, permissionMode, signal, onSessionId }) =>
-        runner({ prompt, resumeSessionId, model, cwd, permissionMode, signal, onSessionId })
-    : undefined;
+  // Forward the full option set (minus `cli`, which is pinned to claude) so
+  // validated inputs like additionalReadDirs actually reach the runner instead
+  // of being silently dropped while the prompt claims they were authorized.
+  const generic: Runner | undefined = runner ? ({ cli: _cli, ...opts }) => runner(opts) : undefined;
   return makeDriveAgentTool(generic ?? defaultRunner, "claude", options);
 }
 

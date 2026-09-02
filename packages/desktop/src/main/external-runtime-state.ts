@@ -16,6 +16,7 @@ import {
   SessionManager,
   sessionsRoot,
   type ContentBlock,
+  type SessionProjectBinding,
   type StreamEvent,
   type TerminalReason,
 } from "@cjhyy/code-shell-core";
@@ -24,6 +25,8 @@ import {
   type ExternalRuntimeKind,
   type ExternalRuntimeTurnInput,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+
+type RecordedExternalRuntimeTurnInput = ExternalRuntimeTurnInput & { displayText?: string };
 
 const BINDING_FILE = "external-runtime.json";
 const MAX_BINDING_BYTES = 64 * 1024;
@@ -213,12 +216,32 @@ export class ExternalRuntimeSessionRecorder {
     cwd: string,
     private readonly model: string,
     private readonly provider: ExternalRuntimeKind,
+    projectBinding?: SessionProjectBinding,
   ) {
     const bundle = this.manager.exists(sessionId)
       ? this.manager.resume(sessionId)
       : this.manager.create(cwd, model, provider, sessionId, null, "desktop");
     if (canonicalCwd(bundle.state.cwd) !== canonicalCwd(cwd)) {
       throw new Error(`external runtime session project mismatch: ${sessionId}`);
+    }
+    const persistedProject = bundle.state.project;
+    if (persistedProject && !projectBinding) {
+      throw new Error(`external runtime session project authority is unavailable: ${sessionId}`);
+    }
+    if (
+      persistedProject &&
+      projectBinding &&
+      (persistedProject.projectId !== projectBinding.projectId ||
+        persistedProject.mainRootId !== projectBinding.mainRootId)
+    ) {
+      throw new Error(`external runtime session project binding mismatch: ${sessionId}`);
+    }
+    // External runtimes bypass agent/run, so Desktop must persist the same
+    // stable project identity that the native Engine writes on cold start.
+    // The resolver is main-owned and exact-root-only; this also safely upgrades
+    // older cwd-only external sessions without trusting model/renderer input.
+    if (!persistedProject && projectBinding) {
+      this.manager.migrateSessionMainRoot(sessionId, projectBinding, cwd);
     }
     this.transcript = bundle.transcript;
     const sameModel = bundle.state.model === model && bundle.state.provider === provider;
@@ -240,7 +263,7 @@ export class ExternalRuntimeSessionRecorder {
     }
   }
 
-  beginTurn(input: ExternalRuntimeTurnInput): void {
+  beginTurn(input: RecordedExternalRuntimeTurnInput): void {
     this.textBuffer = "";
     this.finalText = "";
     this.pendingToolBlocks = [];
@@ -252,6 +275,7 @@ export class ExternalRuntimeSessionRecorder {
     const persistedText = textWithAttachmentReferences(input);
     this.transcript.appendMessage("user", persistedText, {
       ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
+      ...(input.displayText ? { displayText: input.displayText } : {}),
       ...(input.injected === true ? { injected: true } : {}),
     });
     const state = this.manager.readSessionState(this.sessionId);

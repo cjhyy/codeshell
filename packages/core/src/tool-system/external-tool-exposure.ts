@@ -119,8 +119,9 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
   },
   // ── Delegation and state-machine exceptions ──────────────────────
   // Agent and the two plan-state tools remain structurally excluded. DriveAgent
-  // is the reviewed exception because the external host forces it into a
-  // foreground, one-level handoff with an observable result.
+  // is the reviewed exception because the child does not inherit the host
+  // bridge and background work is allowed only when the host guarantees an
+  // observable completion handoff.
   {
     tool: "Agent",
     kind: "self-contained",
@@ -137,20 +138,20 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
     status: "exposed",
     reason:
       "Delegates one bounded task to an installed Codex/Claude CLI. External " +
-      "sessions force foreground execution and disable automatic background " +
-      "handoff, so the parent turn receives the result instead of losing a wake-up " +
-      "inside the native Engine queue. The child CLI does not inherit this host " +
-      "bridge, which bounds nesting at one level; the outer call still requires " +
-      "the normal DriveAgent approval.",
+      "sessions may detach it only when the Desktop host promises to drain the " +
+      "completion queue and inject a continuation into the same Session; other " +
+      "hosts fail closed and require foreground execution. The child CLI does not " +
+      "inherit this host bridge, which bounds nesting at one level; the outer call " +
+      "still requires the normal DriveAgent approval.",
   },
   {
     tool: "DriveAgentJobs",
     kind: "self-contained",
     status: "exposed",
     reason:
-      "Lets the runtime inspect or cancel retained DriveAgent jobs. New external " +
-      "delegations run in the foreground, but retained jobs from the same Session " +
-      "still need an observable cleanup surface.",
+      "Lets the runtime inspect or cancel retained DriveAgent jobs, including " +
+      "Desktop-backed background delegations whose completion is delivered through " +
+      "the owning Session.",
   },
   {
     tool: "EnterPlanMode",

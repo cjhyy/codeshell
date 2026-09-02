@@ -174,6 +174,15 @@ describe("automation Main workspace authority", () => {
     ).rejects.toThrow(/stable project root binding/i);
   });
 
+  test("creator authority errors identify the creator Session and discourage ineffective retries", async () => {
+    await expect(
+      resolveAutomationCreateAuthority(
+        { authoritySessionId: "session-1", cwd: "/legacy" },
+        deps({ cwd: "/legacy" }),
+      ),
+    ).rejects.toThrow(/creator Session.*changing cwd or switching workspace cannot repair it/i);
+  });
+
   test("trigger validation rereads Session authority and fails closed after migration", async () => {
     const job = {
       cwd: "/primary",

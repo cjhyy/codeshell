@@ -33,51 +33,114 @@ class PetBehaviorClient extends LLMClientBase {
       systemPrompt: options.systemPrompt,
       messages: structuredClone(options.messages),
     });
-    const response: LLMResponse =
-      modelCalls.length === 1 && this.model.startsWith("gateway-reply-")
-        ? {
-            text: "",
-            toolCalls: [
-              {
-                id: "gateway-reply",
-                toolName: "GatewayReply",
-                args: {
-                  text: "工具回复",
-                  button: { text: "打开", url: "https://example.test/result" },
-                },
-              },
-            ],
-            stopReason: "tool_use",
-            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-          }
-        : modelCalls.length === 1
+    const gatewayReplyRound = modelCalls.filter((call) =>
+      call.tools.includes("GatewayReply"),
+    ).length;
+    const response: LLMResponse = this.model.startsWith("gateway-reply-batch-")
+      ? {
+          text: "",
+          toolCalls: [
+            {
+              id: "gateway-reply",
+              toolName: "GatewayReply",
+              args: { text: "工具回复" },
+            },
+            {
+              id: "duplicate-gateway-reply",
+              toolName: "GatewayReply",
+              args: { text: "重复回复" },
+            },
+          ],
+          stopReason: "tool_use",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        }
+      : this.model.startsWith("gateway-reply-runaway-")
+        ? !modelCalls.at(-1)!.tools.includes("GatewayReply")
+          ? {
+              text: "session title",
+              toolCalls: [],
+              stopReason: "stop",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            }
+          : gatewayReplyRound === 1
+            ? {
+                text: "",
+                toolCalls: [
+                  {
+                    id: "gateway-reply",
+                    toolName: "GatewayReply",
+                    args: {
+                      text: "工具回复",
+                      button: { text: "打开", url: "https://example.test/result" },
+                    },
+                  },
+                ],
+                stopReason: "tool_use",
+                usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+              }
+            : gatewayReplyRound === 2
+              ? {
+                  text: "stray assistant text after the accepted reply",
+                  toolCalls: [
+                    {
+                      id: "duplicate-gateway-reply",
+                      toolName: "GatewayReply",
+                      args: { text: "duplicate reply" },
+                    },
+                  ],
+                  stopReason: "tool_use",
+                  usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+                }
+              : {
+                  text: "more stray assistant text",
+                  toolCalls: [],
+                  stopReason: "stop",
+                  usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+                }
+        : modelCalls.length === 1 && this.model.startsWith("gateway-reply-")
           ? {
               text: "",
               toolCalls: [
                 {
-                  id: "forbidden-write",
-                  toolName: "Write",
-                  args: { file_path: "should-not-exist.txt", content: "blocked" },
-                },
-                {
-                  id: "delegate-work",
-                  toolName: "DelegateWork",
+                  id: "gateway-reply",
+                  toolName: "GatewayReply",
                   args: {
-                    workspace_id: "workspace-codeshell",
-                    session_id: "session-existing",
-                    objective: "inspect CodeShell",
+                    text: "工具回复",
+                    button: { text: "打开", url: "https://example.test/result" },
                   },
                 },
               ],
               stopReason: "tool_use",
               usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
             }
-          : {
-              text: "safe answer",
-              toolCalls: [],
-              stopReason: "stop",
-              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-            };
+          : modelCalls.length === 1
+            ? {
+                text: "",
+                toolCalls: [
+                  {
+                    id: "forbidden-write",
+                    toolName: "Write",
+                    args: { file_path: "should-not-exist.txt", content: "blocked" },
+                  },
+                  {
+                    id: "delegate-work",
+                    toolName: "DelegateWork",
+                    args: {
+                      workspace_id: "workspace-codeshell",
+                      session_id: "session-existing",
+                      objective: "inspect CodeShell",
+                    },
+                  },
+                ],
+                stopReason: "tool_use",
+                usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+              }
+            : {
+                text: "safe answer",
+                toolCalls: [],
+                stopReason: "stop",
+                usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+              };
     this.recordUsage(response.usage!, options);
     return response;
   }
@@ -283,6 +346,119 @@ describe("Engine pet behavior", () => {
           },
         },
       ],
+    });
+  });
+
+  test("stops after the first accepted GatewayReply even when the model would continue", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-pet-gateway-reply-stop-"));
+    tempDirs.push(cwd);
+    const model = `gateway-reply-runaway-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const events: StreamEvent[] = [];
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      modules: [createPetModule()],
+      sessionStorageDir: join(cwd, "sessions"),
+      permissionMode: "bypassPermissions",
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 4,
+    });
+    (engine as any).hooks.clear();
+
+    const result = await engine.run("请通过 Gateway 回复", {
+      sessionId: "gateway-pet-runaway",
+      kind: "pet",
+      behaviorMode: "pet",
+      onStream: (event) => events.push(event),
+      profileParams: {
+        hostActions: ["gatewayReply"],
+        gatewayReply: {
+          button: "link",
+          attachments: [],
+          maxTextLength: 8_000,
+          maxAttachments: 4,
+          maxAttachmentBytes: 10 * 1024 * 1024,
+        },
+        sessionsRootDir: join(cwd, "sessions"),
+      },
+    });
+
+    expect(events.filter((event) => event.type === "stream_request_start")).toHaveLength(1);
+    expect(calls.get(model)!.filter((call) => call.tools.includes("GatewayReply"))).toHaveLength(1);
+    expect(result.reason).toBe("completed");
+    expect(result.text).toBe("");
+    expect(result.extensions?.pet).toEqual({
+      hostActions: [
+        {
+          kind: "gatewayReply",
+          payload: {
+            text: "工具回复",
+            button: { text: "打开", url: "https://example.test/result" },
+          },
+        },
+      ],
+    });
+    expect(events.find((event) => event.type === "turn_complete")).toEqual({
+      type: "turn_complete",
+      reason: "completed",
+    });
+  });
+
+  test("skips duplicate GatewayReply calls left in the same model batch", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-pet-gateway-reply-batch-"));
+    tempDirs.push(cwd);
+    const model = `gateway-reply-batch-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const events: StreamEvent[] = [];
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      modules: [createPetModule()],
+      sessionStorageDir: join(cwd, "sessions"),
+      permissionMode: "bypassPermissions",
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 4,
+    });
+    (engine as any).hooks.clear();
+
+    const result = await engine.run("请通过 Gateway 回复", {
+      sessionId: "gateway-pet-batch",
+      kind: "pet",
+      behaviorMode: "pet",
+      onStream: (event) => events.push(event),
+      profileParams: {
+        hostActions: ["gatewayReply"],
+        gatewayReply: {
+          button: "link",
+          attachments: [],
+          maxTextLength: 8_000,
+          maxAttachments: 4,
+          maxAttachmentBytes: 10 * 1024 * 1024,
+        },
+        sessionsRootDir: join(cwd, "sessions"),
+      },
+    });
+
+    const toolResults = events
+      .filter(
+        (event): event is Extract<StreamEvent, { type: "tool_result" }> =>
+          event.type === "tool_result",
+      )
+      .map((event) => event.result);
+    expect(events.filter((event) => event.type === "stream_request_start")).toHaveLength(1);
+    expect(result.reason).toBe("completed");
+    expect(result.extensions?.pet).toEqual({
+      hostActions: [{ kind: "gatewayReply", payload: { text: "工具回复" } }],
+    });
+    expect(toolResults).toHaveLength(2);
+    expect(toolResults[0]).toMatchObject({ id: "gateway-reply", isError: false });
+    expect(toolResults[1]).toMatchObject({
+      id: "duplicate-gateway-reply",
+      isError: true,
+      error: expect.stringContaining("authoritative host reply was already committed"),
     });
   });
 });

@@ -53,6 +53,17 @@ describe("claudeAdapter.buildArgs", () => {
     const args = claudeAdapter.buildArgs({ prompt: "go", permissionMode: "default", cwd: "/x" });
     expect(args).not.toContain("--model");
   });
+  it("passes explicitly authorized read directories via --add-dir", () => {
+    const args = claudeAdapter.buildArgs({
+      prompt: "inspect",
+      permissionMode: "default",
+      cwd: "/workspace",
+      additionalReadDirs: ["/logs/one", "/logs/two"],
+    });
+    const i = args.indexOf("--add-dir");
+    expect(i).toBeGreaterThan(-1);
+    expect(args.slice(i + 1, i + 3)).toEqual(["/logs/one", "/logs/two"]);
+  });
 });
 
 describe("claudeAdapter.parseResult", () => {
@@ -178,6 +189,16 @@ describe("codexAdapter.buildArgs", () => {
     });
     expect(args).not.toContain("-i");
     expect(args).not.toContain("/x/a.png");
+  });
+  it("does not pass Claude-only --add-dir flags to Codex", () => {
+    const args = codexAdapter.buildArgs({
+      prompt: "inspect",
+      permissionMode: "default",
+      cwd: "/workspace",
+      additionalReadDirs: ["/logs"],
+    });
+    expect(args).not.toContain("--add-dir");
+    expect(args).not.toContain("/logs");
   });
   it("claude adapter ignores image paths rather than passing unknown flags", () => {
     const args = claudeAdapter.buildArgs({

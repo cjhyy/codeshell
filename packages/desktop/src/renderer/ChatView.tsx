@@ -419,6 +419,23 @@ export function ChatView({
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
 
+  // A native file drag can leave the BrowserWindow and finish in another app.
+  // Electron does not guarantee that the original element receives a drop or
+  // dragend in that case, so never let the full-screen drop affordance survive
+  // a window blur. dragend/drop cover drags that originate or finish here.
+  useEffect(() => {
+    if (!dragOver) return;
+    const clearDragOver = (): void => setDragOver(false);
+    window.addEventListener("blur", clearDragOver);
+    window.addEventListener("dragend", clearDragOver);
+    window.addEventListener("drop", clearDragOver);
+    return () => {
+      window.removeEventListener("blur", clearDragOver);
+      window.removeEventListener("dragend", clearDragOver);
+      window.removeEventListener("drop", clearDragOver);
+    };
+  }, [dragOver]);
+
   // ─── Voice input (听写) ───────────────────────────────────────────────
   // Record the mic → transcribe via core (window.codeshell.transcribeAudio) →
   // append the text to the draft for the user to edit (NOT auto-send). idle →
@@ -1324,7 +1341,8 @@ export function ChatView({
     // Only kill the highlight when the cursor exits the chat surface
     // entirely — sub-element transitions fire dragleave/dragenter pairs
     // that we don't want to interpret as "left, then re-entered".
-    if (e.target === e.currentTarget) setDragOver(false);
+    const next = e.relatedTarget as Node | null;
+    if (!next || !e.currentTarget.contains(next)) setDragOver(false);
   };
   const onChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();

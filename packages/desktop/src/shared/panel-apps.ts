@@ -114,6 +114,12 @@ export interface PanelAppBindInput {
   cwd?: string | null;
   visible: boolean;
   busy?: boolean;
+  /** Host-private execution routing. Never exposed through context.get(). */
+  modelKey?: string | null;
+  /** Core permission spelling; plan mode is carried separately. */
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+  planMode?: boolean;
+  hasGoal?: boolean;
   theme: "light" | "dark" | "system";
   locale: string;
 }

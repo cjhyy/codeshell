@@ -426,6 +426,9 @@ function installCodeshellStub(
       stop: async (sessionId: string) => {
         externalRuntimeStopCalls.push(sessionId);
       },
+      // Must return an unsubscribe fn: useRunController registers this in an
+      // effect, and React calls the return value on cleanup.
+      onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) => () => {},
     },
     markAttachmentsSent: async (payload: Record<string, unknown>) => {
       markAttachmentsSentCalls.push(payload);

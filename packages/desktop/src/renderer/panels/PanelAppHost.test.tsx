@@ -45,6 +45,10 @@ async function render(visible = true): Promise<void> {
         projectPath="/repo"
         cwd="/repo"
         engineSessionId="session-1"
+        modelKey="codex/gpt-5.6-sol"
+        permissionMode="acceptEdits"
+        planMode={false}
+        hasGoal={true}
         visible={visible}
       />,
     );
@@ -140,6 +144,10 @@ describe("PanelAppHost webview readiness", () => {
       appDescriptorId: descriptor.id,
       projectPath: "/repo",
       visible: true,
+      modelKey: "codex/gpt-5.6-sol",
+      permissionMode: "acceptEdits",
+      planMode: false,
+      hasGoal: true,
     });
   });
 

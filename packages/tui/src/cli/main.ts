@@ -71,6 +71,15 @@ function addCommonOptions(cmd: Command): Command {
   );
 }
 
+/** Options shared by both ways of entering interactive mode:
+ * `code-shell repl` and the command-less `code-shell` default. Keeping these
+ * in one builder prevents the two entry points from silently drifting apart. */
+function addInteractiveOptions(cmd: Command): Command {
+  return cmd
+    .option("--resume <sessionId>", "Resume a previous session")
+    .option("--prefill <text>", "Pre-fill the input box without submitting");
+}
+
 // ─── run ──────────────────────────────────────────────────────────
 
 addCommonOptions(
@@ -83,10 +92,10 @@ addCommonOptions(
 )
   .option("--resume <sessionId>", "Resume a previous session")
   .option("--output-last-message <file>", "Write the final assistant message to a file")
-  .option("--no-wait-background-agents", "Exit without waiting for in-flight background agents")
+  .option("--no-wait-background-agents", "Exit without waiting for in-flight background work")
   .option(
     "--background-wait-ms <ms>",
-    "Max ms to wait for background agents to finish",
+    "Max ms to wait for background work to finish (default: 300000)",
     positiveIntOption("--background-wait-ms"),
   )
   .action(async (task: string | undefined, opts) => {
@@ -106,11 +115,11 @@ addCommonOptions(
 
 // ─── repl (default) ──────────────────────────────────────────────
 
-addCommonOptions(program.command("repl").description("Interactive REPL mode (default)")).action(
-  async (opts) => {
-    await replCommand(resolveOpts(opts));
-  },
-);
+addInteractiveOptions(
+  addCommonOptions(program.command("repl").description("Interactive REPL mode (default)")),
+).action(async (opts) => {
+  await replCommand({ ...resolveOpts(opts), prefill: opts.prefill as string | undefined });
+});
 
 // ─── sessions ─────────────────────────────────────────────────────
 
@@ -177,27 +186,15 @@ import { createPluginCommand } from "./commands/plugin.js";
 program.addCommand(createPluginCommand());
 
 // ─── Default: if no command, go to REPL or run ───────────────────
-// Don't use addCommonOptions on the root program — Commander shares
-// the option namespace between the root and subcommands, causing
-// subcommand options (e.g. --output on `run`) to get the root's
-// default instead of the user-supplied value. Duplicate the options
-// inline and enable passThroughOptions so subcommands parse their own.
+// Register root options after subcommands and keep passThroughOptions enabled:
+// Commander otherwise lets root parsing/defaults interfere with subcommand
+// options that use the same names (for example `run --output`). The option
+// builders are safe here because registration order + pass-through preserve
+// the subcommand namespace while sharing one source of truth.
 
-program
-  .argument("[task]", "Task to execute (or omit for REPL mode)")
-  .option("-m, --model <model>", "Model name (e.g. anthropic/claude-opus-4-6)")
-  // No "openai" default — see addCommonOptions: the default would shadow the
-  // user's settings.model.provider via the ?? fallback in repl.ts/run.ts.
-  .option("-p, --provider <provider>", "LLM provider (anthropic, openai)")
-  .option("--preset <preset>", "Agent preset (general, terminal-coding)")
-  .option("--base-url <url>", "LLM API base URL (e.g. https://openrouter.ai/api/v1)")
-  .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
-  .option("--permission-mode <mode>", "Permission mode (default, acceptEdits, bypassPermissions)")
-  .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
-  .option("--max-turns <n>", "Maximum turns", positiveIntOption("--max-turns"), 100)
-  .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high")
-  .option("--resume <sessionId>", "Resume a previous session")
-  .option("--prefill <text>", "Pre-fill the input box without submitting")
+addInteractiveOptions(
+  addCommonOptions(program.argument("[task]", "Task to execute (or omit for REPL mode)")),
+)
   .passThroughOptions()
   .action(async (task: string | undefined, opts) => {
     const resolved = resolveOpts(opts);

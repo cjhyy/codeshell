@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
   forgetExternalRuntimeSession,
+  noteExternalRuntimeStopped,
   resolveRunSessionId,
   resetExternalRuntimeSessions,
   runExternalRuntimeTurn,
@@ -50,6 +51,17 @@ describe("runExternalRuntimeTurn", () => {
     expect(sends.map((s) => s.text)).toEqual(["one", "two"]);
   });
 
+  test("asks main to start again after it reported the runtime stopped", async () => {
+    // A Panel App submission can replace the runtime from main with its own
+    // configuration. Keeping the old binding would send later chat turns into
+    // that runtime without ever presenting this renderer's instructions.
+    const { impl, starts } = bridge();
+    await runExternalRuntimeTurn({ ...base, text: "one", runtime: impl });
+    noteExternalRuntimeStopped(base.sessionId);
+    await runExternalRuntimeTurn({ ...base, text: "two", runtime: impl });
+    expect(starts).toHaveLength(2);
+  });
+
   test("serializes concurrent first turns so they start the runtime only once", async () => {
     let releaseStart!: () => void;
     const startReady = new Promise<void>((resolve) => {
@@ -87,6 +99,26 @@ describe("runExternalRuntimeTurn", () => {
       runtime: impl,
     });
     expect(starts.map((s) => s.modelKey)).toEqual(["codex/gpt-5.6-sol", "claude-code/sonnet"]);
+  });
+
+  test("restarts when startup permissions or goal instructions change", async () => {
+    const { impl, starts } = bridge();
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "one",
+      permissionMode: "default",
+      hasGoal: false,
+      runtime: impl,
+    });
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "two",
+      permissionMode: "acceptEdits",
+      hasGoal: true,
+      developerInstructions: "Active goal: ship it",
+      runtime: impl,
+    });
+    expect(starts).toHaveLength(2);
   });
 
   test("tracks sessions independently", async () => {
