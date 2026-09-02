@@ -341,3 +341,49 @@ describe("external runtime durable state", () => {
     });
   });
 });
+
+describe("external runtime tool argument recording", () => {
+  test("records the arguments that arrive after tool_use_start", () => {
+    // Codex/Claude Code open a tool item BEFORE its arguments are known: the
+    // codex translator sees `query: ""` on item/started, and the claude-code
+    // translator opens with `args: {}` and streams the real input later as a
+    // tool_use_args_delta. The recorder used to persist only the opening
+    // snapshot, so transcripts showed `webSearch {"query": ""}` and
+    // `Bash {}` — the runtime's actual commands were unauditable.
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "external-args-test",
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+    );
+    recorder.beginTurn({ text: "search it", clientMessageId: "client-args" });
+    recorder.onEvent({
+      type: "tool_use_start",
+      toolCall: { id: "tool-1", toolName: "webSearch", args: { query: "" } },
+    });
+    recorder.onEvent({
+      type: "tool_use_args_delta",
+      toolCallId: "tool-1",
+      args: { query: "紫金矿业 2026 半年报" },
+    });
+    recorder.onEvent({
+      type: "tool_result",
+      result: { id: "tool-1", toolName: "webSearch", result: "ok" },
+    });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    recorder.finishIfMissing();
+
+    const events = new SessionManager().resume("external-args-test").transcript.getEvents();
+    const toolUses = events.filter((event) => event.type === "tool_use");
+    expect(toolUses).toHaveLength(1);
+    expect(toolUses[0]?.data.args).toEqual({ query: "紫金矿业 2026 半年报" });
+    // The assistant message block must carry the real input too — that block is
+    // what a resumed turn replays back to the model.
+    const block = events
+      .flatMap((event) =>
+        event.type === "message" && Array.isArray(event.data.content) ? event.data.content : [],
+      )
+      .find((b) => b.type === "tool_use");
+    expect(block?.input).toEqual({ query: "紫金矿业 2026 半年报" });
+  });
+});

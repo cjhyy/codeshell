@@ -403,3 +403,73 @@ describe("CodexEventTranslator", () => {
     ).toEqual([]);
   });
 });
+
+describe("codex tool arguments that only appear on completion", () => {
+  test("emits the settled arguments when item/started carried none", () => {
+    // Codex allocates a webSearch item before the query is known: item/started
+    // reports `query: ""` and the real query only appears on item/completed.
+    // Without a follow-up args event the transcript keeps the empty snapshot,
+    // which is what made `webSearch {"query": ""}` unauditable in real
+    // sessions.
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    t.translate({
+      method: "item/started",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: { id: "w1", type: "webSearch", query: "" },
+      },
+    });
+
+    const completed = t.translate({
+      method: "item/completed",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: { id: "w1", type: "webSearch", query: "紫金矿业 2026 半年报" },
+      },
+    });
+
+    expect(completed).toEqual([
+      {
+        type: "tool_use_args_delta",
+        toolCallId: "w1",
+        args: { query: "紫金矿业 2026 半年报" },
+      },
+      { type: "tool_result", result: { id: "w1", toolName: "webSearch" } },
+    ]);
+  });
+
+  test("does not emit an args delta when the arguments never changed", () => {
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    t.translate({
+      method: "item/started",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: { id: "c1", type: "commandExecution", command: "ls -la" },
+      },
+    });
+    const completed = t.translate({
+      method: "item/completed",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: {
+          id: "c1",
+          type: "commandExecution",
+          command: "ls -la",
+          aggregatedOutput: "total 0",
+        },
+      },
+    });
+    expect(completed).toEqual([
+      {
+        type: "tool_result",
+        result: { id: "c1", toolName: "commandExecution", result: "total 0" },
+      },
+    ]);
+  });
+});

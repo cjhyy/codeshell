@@ -64,6 +64,33 @@ function str(value: unknown): string | undefined {
 }
 
 /**
+ * A thread item's fields minus its identity, i.e. the tool's arguments. Output
+ * fields are excluded so a completed item's arguments can be compared against
+ * the ones seen when it opened.
+ */
+const ITEM_OUTPUT_KEYS = new Set([
+  "id",
+  "type",
+  "aggregatedOutput",
+  "output",
+  "text",
+  "result",
+  "changes",
+  "error",
+  "status",
+  "startedAtMs",
+  "completedAtMs",
+]);
+
+function toolArgsOf(item: Record<string, unknown>): Record<string, unknown> {
+  const args: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(item)) {
+    if (!ITEM_OUTPUT_KEYS.has(key)) args[key] = value;
+  }
+  return args;
+}
+
+/**
  * Map a Codex turn status onto a CodeShell `TerminalReason`.
  *
  * `interrupted` must not become `completed`: a stopped turn that reports success
@@ -88,6 +115,13 @@ export class CodexEventTranslator {
   private activeTurnId: string | undefined;
   /** Turns that reached a terminal state. Late events for these are dropped. */
   private readonly finishedTurns = new Set<string>();
+  /**
+   * Serialized arguments each tool item was OPENED with, keyed by item id.
+   * Codex allocates an item before its arguments are known (a webSearch opens
+   * with `query: ""`), so on completion we compare and emit the settled values
+   * when they differ — otherwise the transcript keeps the empty snapshot.
+   */
+  private readonly openedToolArgs = new Map<string, string>();
 
   constructor(options: CodexEventTranslatorOptions) {
     this.threadId = options.threadId;
@@ -154,6 +188,9 @@ export class CodexEventTranslator {
       const oldest = this.finishedTurns.values().next().value;
       if (oldest !== undefined) this.finishedTurns.delete(oldest);
     }
+    // A tool item opened but never completed (interrupt, crash) would otherwise
+    // keep its entry forever on this long-lived translator.
+    this.openedToolArgs.clear();
   }
 
   private onTurnStarted(params: Record<string, unknown>): StreamEvent[] {
@@ -276,7 +313,8 @@ export class CodexEventTranslator {
     if (!item || !id || !type) return [];
     if (!TOOL_ITEM_TYPES.has(type)) return [];
     if (this.isCodeshellHostTool(item)) return [];
-    const { id: _id, type: _type, ...args } = item;
+    const args = toolArgsOf(item);
+    this.openedToolArgs.set(id, JSON.stringify(args));
     return [{ type: "tool_use_start", toolCall: { id, toolName: type, args } }];
   }
 
@@ -301,16 +339,26 @@ export class CodexEventTranslator {
     }
     const error = asRecord(item.error);
     const errorMessage = str(error?.message) ?? str(item.error);
-    return [
-      {
-        type: "tool_result",
-        result: {
-          id,
-          toolName: type,
-          ...(output !== undefined ? { result: output } : {}),
-          ...(errorMessage ? { error: errorMessage, isError: true } : {}),
-        },
+    const events: StreamEvent[] = [];
+    // Correct the arguments first when they only materialized now, so the
+    // recorded call shows what actually ran before its result.
+    const openedArgs = this.openedToolArgs.get(id);
+    this.openedToolArgs.delete(id);
+    if (openedArgs !== undefined) {
+      const settledArgs = toolArgsOf(item);
+      if (Object.keys(settledArgs).length > 0 && JSON.stringify(settledArgs) !== openedArgs) {
+        events.push({ type: "tool_use_args_delta", toolCallId: id, args: settledArgs });
+      }
+    }
+    events.push({
+      type: "tool_result",
+      result: {
+        id,
+        toolName: type,
+        ...(output !== undefined ? { result: output } : {}),
+        ...(errorMessage ? { error: errorMessage, isError: true } : {}),
       },
-    ];
+    });
+    return events;
   }
 }

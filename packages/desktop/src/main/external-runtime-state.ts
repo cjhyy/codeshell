@@ -199,6 +199,16 @@ export class ExternalRuntimeSessionRecorder {
   private textBuffer = "";
   private finalText = "";
   private pendingToolBlocks: ContentBlock[] = [];
+  /**
+   * Tool calls opened but not yet written to the append-only transcript, keyed
+   * by tool call id. Held until the arguments settle (a tool_use_args_delta, or
+   * the tool resolving) so the persisted record carries the real input rather
+   * than the runtime's empty opening snapshot.
+   */
+  private readonly deferredToolUses = new Map<
+    string,
+    { toolName: string; args: Record<string, unknown>; block: ContentBlock }
+  >();
   private readonly unresolvedTools = new Map<string, string>();
   private usage: UsageSnapshot = {
     promptTokens: 0,
@@ -293,26 +303,49 @@ export class ExternalRuntimeSessionRecorder {
   onEvent(event: StreamEvent): void {
     switch (event.type) {
       case "text_delta":
+        // Assistant prose after a tool call closes that call's block, so settle
+        // any held tool_use first to keep transcript order faithful.
+        this.commitAllDeferredToolUses();
         this.flushToolUseMessage();
         this.textBuffer += event.text;
         this.finalText += event.text;
         break;
-      case "tool_use_start":
+      case "tool_use_start": {
         this.flushAssistantText();
-        this.transcript.appendToolUse(
-          event.toolCall.toolName,
-          event.toolCall.id,
-          event.toolCall.args,
-        );
-        this.pendingToolBlocks.push({
+        // Do NOT write the transcript record yet. Both external runtimes open a
+        // tool before its arguments are known (codex reports `query: ""` on
+        // item/started; claude-code opens with `{}` and streams the input as a
+        // later tool_use_args_delta). The transcript is append-only, so a record
+        // written now cannot be corrected — persisting it here is what produced
+        // unauditable `webSearch {"query": ""}` / `Bash {}` history. Hold the
+        // opening args and commit once they settle.
+        const block: ContentBlock = {
           type: "tool_use",
           id: event.toolCall.id,
           name: event.toolCall.toolName,
           input: event.toolCall.args,
+        };
+        this.pendingToolBlocks.push(block);
+        this.deferredToolUses.set(event.toolCall.id, {
+          toolName: event.toolCall.toolName,
+          args: event.toolCall.args,
+          block,
         });
         this.unresolvedTools.set(event.toolCall.id, event.toolCall.toolName);
         break;
+      }
+      case "tool_use_args_delta": {
+        // The runtime now knows the real input. Overwrite the held args and the
+        // assistant block that a resumed turn replays back to the model.
+        const deferred = this.deferredToolUses.get(event.toolCallId);
+        if (deferred) {
+          deferred.args = event.args;
+          deferred.block.input = event.args;
+        }
+        break;
+      }
       case "tool_result":
+        this.commitDeferredToolUse(event.result.id);
         this.flushToolUseMessage();
         this.transcript.appendToolResult(
           event.result.id,
@@ -395,9 +428,34 @@ export class ExternalRuntimeSessionRecorder {
     this.pendingToolBlocks = [];
   }
 
+  /**
+   * Write one held tool_use record with its settled arguments. Idempotent, so a
+   * tool that both streams args and resolves is recorded exactly once.
+   */
+  private commitDeferredToolUse(toolCallId: string): void {
+    const deferred = this.deferredToolUses.get(toolCallId);
+    if (!deferred) return;
+    this.deferredToolUses.delete(toolCallId);
+    this.transcript.appendToolUse(deferred.toolName, toolCallId, deferred.args);
+  }
+
+  /**
+   * Commit every still-held tool call, in open order. A turn can end while a
+   * tool is unresolved (interrupt, crash, a runtime that never reports a
+   * result); those calls must still appear in history rather than vanish.
+   */
+  private commitAllDeferredToolUses(): void {
+    for (const toolCallId of [...this.deferredToolUses.keys()]) {
+      this.commitDeferredToolUse(toolCallId);
+    }
+  }
+
   private finish(reason: TerminalReason): void {
     if (this.outcome) return;
     this.flushAssistantText();
+    // Before the synthetic results below: a tool_use record must precede its
+    // tool_result in the transcript.
+    this.commitAllDeferredToolUses();
     this.flushToolUseMessage();
     for (const [toolCallId, toolName] of this.unresolvedTools) {
       this.transcript.appendToolResult(
