@@ -1,0 +1,8 @@
+[test]
+# Match the repository-level test contract even when tests are launched with
+# packages/cdp as the working directory.
+timeout = 30000
+# Redirect .code-shell home to a temp dir so a test that reaches
+# sessionsRoot()/codeShellHome() without an explicit dir cannot write into the
+# developer's real ~/.code-shell. See packages/core/test-setup.ts.
+preload = ["../core/test-setup.ts"]

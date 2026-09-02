@@ -1,0 +1,11 @@
+[test]
+# Match the repository-level test contract even when tests are launched with
+# packages/desktop as the working directory.
+timeout = 30000
+# Redirect .code-shell home to a temp dir for the whole test run. Desktop's
+# main-process code (external-runtime-state, transcript-reader) resolves
+# sessionsRoot() from CODE_SHELL_HOME, so without this a plain
+# `bun test src` here writes fixture sessions ("sess-1", cwd /tmp/project)
+# into the developer's real ~/.code-shell/sessions and they show up in the
+# sidebar. See packages/core/test-setup.ts.
+preload = ["../core/test-setup.ts"]
