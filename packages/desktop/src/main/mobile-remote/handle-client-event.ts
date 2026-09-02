@@ -112,6 +112,23 @@ export interface OrchestratorCtx {
  * model.set for an invalid model or a rejected goal.extend must NOT be reported
  * to the phone as ok.
  */
+/**
+ * A control op (model.set, goal.extend/clear) is a near-instant worker state
+ * change, so a short budget keeps the phone responsive on a bad input.
+ *
+ * `agent/run` is categorically different: it drives an ENTIRE turn — tool
+ * calls, delegation, model inference. Sharing the control-op budget meant a
+ * perfectly healthy Mimi turn was declared dead after 5s and surfaced to the
+ * user as "Mimi Pet 处理失败：worker did not respond" while the worker was
+ * still working. Match agent-bridge's own 120s request budget instead.
+ */
+const CONTROL_OP_TIMEOUT_MS = 10_000;
+const AGENT_RUN_TIMEOUT_MS = 120_000;
+
+export function agentRunTimeoutMs(method: string): number {
+  return method === "agent/run" ? AGENT_RUN_TIMEOUT_MS : CONTROL_OP_TIMEOUT_MS;
+}
+
 // Monotonic suffix so two requests for the same method in the same millisecond
 // get distinct ids (Date.now() alone collides under concurrency → reply串台).
 let mobileRequestSeq = 0;
@@ -120,6 +137,7 @@ export function injectAndAwaitResult(
   method: string,
   params: Record<string, unknown>,
   meta: WorkerFrameMeta,
+  timeoutMs: number = agentRunTimeoutMs(method),
 ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
   const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}-${mobileRequestSeq++}`;
   return new Promise((resolveResult) => {
@@ -154,7 +172,10 @@ export function injectAndAwaitResult(
     });
     // Fallback: if the worker never answers (dead/slow), report failure rather
     // than hanging — the phone keeps showing its prior state.
-    const timer = setTimeout(() => done({ ok: false, message: "worker did not respond" }), 5000);
+    const timer = setTimeout(
+      () => done({ ok: false, message: "worker did not respond" }),
+      timeoutMs,
+    );
     b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }), meta);
   });
 }

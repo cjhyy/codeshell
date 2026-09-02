@@ -4,7 +4,9 @@ import type { AgentBridge } from "../agent-bridge.js";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import type { SessionCwdIndexEntry } from "../session-cwd-index.js";
 import {
+  agentRunTimeoutMs,
   handleClientEvent,
+  injectAndAwaitResult,
   type OrchestratorCtx,
 } from "./handle-client-event.js";
 
@@ -164,8 +166,47 @@ describe("mobile existing-session workspace authorization", () => {
     expect(refreshes).toBe(1);
     expect(harness.preparedRuns).toHaveLength(0);
     expect(harness.replies).toContainEqual(
-      expect.objectContaining({ type: "error", message: expect.stringContaining("does not match") }),
+      expect.objectContaining({
+        type: "error",
+        message: expect.stringContaining("does not match"),
+      }),
     );
     expect(harness.replies.some((event) => event.type === "chat.accepted")).toBe(false);
+  });
+});
+
+describe("injectAndAwaitResult timeouts", () => {
+  /** A bridge whose worker never answers, so only the timeout can settle. */
+  function silentBridge() {
+    const injected: string[] = [];
+    return {
+      injected,
+      bridge: {
+        subscribeOutbound: () => () => undefined,
+        injectWorkerMessage: (line: string) => {
+          injected.push(line);
+        },
+      } as unknown as AgentBridge,
+    };
+  }
+
+  const meta: WorkerFrameMeta = { origin: "host", producer: "test" };
+
+  test("gives a full agent turn far longer than a control op before declaring no response", async () => {
+    // agent/run drives a whole Mimi turn (delegate + describe + inference).
+    // The old blanket 5s killed live turns and surfaced them to the user as
+    // "worker did not respond", so it must get a turn-scale budget.
+    expect(agentRunTimeoutMs("agent/run")).toBeGreaterThanOrEqual(120_000);
+    // Control ops stay snappy: the phone should not spin for two minutes on a
+    // bad model name.
+    expect(agentRunTimeoutMs("agent/configure")).toBeLessThanOrEqual(15_000);
+    expect(agentRunTimeoutMs("agent/goalExtend")).toBeLessThanOrEqual(15_000);
+  });
+
+  test("still reports a non-answering worker once its budget elapses", async () => {
+    const { bridge, injected } = silentBridge();
+    const result = await injectAndAwaitResult(bridge, "agent/configure", { model: "x" }, meta, 20);
+    expect(result).toEqual({ ok: false, message: "worker did not respond" });
+    expect(injected).toHaveLength(1);
   });
 });
