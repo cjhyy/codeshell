@@ -41,6 +41,7 @@ import {
   normalizeLocalFilePaths,
   pathForRendererFile,
 } from "../chat/localFilePaths";
+import { describePetChatActivity } from "./petChatActivity";
 
 export const MAX_PET_PATH_ATTACHMENTS = MAX_LOCAL_FILE_PATHS;
 
@@ -721,6 +722,10 @@ export function PetChatHost({
     () => selectPetChatRows(chatState.messages, segments, delegationReceipts, hostActionReceipts),
     [chatState.messages, delegationReceipts, hostActionReceipts, segments],
   );
+  const chatActivity = React.useMemo(
+    () => describePetChatActivity(chatState.messages, t),
+    [chatState.messages, t],
+  );
   const latestHistoryBoundary = latestHistoryBoundaryIndex(rows);
   const historyBoundary = latestHistoryBoundary >= 0 ? rows[latestHistoryBoundary] : undefined;
   const historyRows = latestHistoryBoundary > 0 ? rows.slice(0, latestHistoryBoundary) : [];
@@ -1032,8 +1037,21 @@ export function PetChatHost({
                     className="h-6 w-6 select-none object-contain"
                   />
                 </span>
-                <div className="rounded-2xl rounded-tl-md border border-border/60 bg-background px-3.5 py-2.5 text-xs text-muted-foreground shadow-sm">
-                  {t("pet.chat.organizing")}
+                <div
+                  className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-border/60 bg-background px-3.5 py-2.5 text-xs text-muted-foreground shadow-sm"
+                  role="status"
+                  aria-live="polite"
+                  data-pet-chat-activity={chatActivity.phase}
+                  {...(chatActivity.toolName
+                    ? { "data-pet-chat-tool": chatActivity.toolName }
+                    : {})}
+                >
+                  <LoaderCircle
+                    size={13}
+                    className="shrink-0 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  <span>{chatActivity.text}</span>
                 </div>
               </div>
             )}
