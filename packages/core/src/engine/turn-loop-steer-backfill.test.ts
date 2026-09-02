@@ -115,11 +115,11 @@ describe("TurnLoop steer finalize backfill", () => {
       text: "include this update",
     });
     let pendingYield = true;
-    deps.peekToolRunYield = () => (pendingYield ? "background_notification" : undefined);
-    deps.consumeToolRunYield = () => {
-      if (!pendingYield) return undefined;
+    deps.peekToolRunYield = (reason) => pendingYield && reason === "background_notification";
+    deps.consumeToolRunYield = (reason) => {
+      if (!pendingYield || reason !== "background_notification") return false;
       pendingYield = false;
-      return "background_notification";
+      return true;
     };
 
     const result = await new TurnLoop(deps, {

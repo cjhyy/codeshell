@@ -381,6 +381,7 @@ export async function gatewayReplyTool(
   }
   const decision = request({ kind: "gatewayReply", payload });
   if (!decision.ok) return `Error: ${decision.error ?? "Gateway reply was rejected"}`;
+  ctx?.runYield?.request("reply_committed");
   return (
     "ACCEPTED EXACTLY ONCE — NOT SENT YET. The Gateway reply was recorded for host validation " +
     "after this turn. End the turn now without producing any assistant text; do not call " +

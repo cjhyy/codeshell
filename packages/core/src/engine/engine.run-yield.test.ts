@@ -7,7 +7,7 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, StreamEvent } from "../types.js";
-import type { ToolContext } from "../tool-system/context.js";
+import type { ToolContext, ToolRunYieldReason } from "../tool-system/context.js";
 import { Engine } from "./engine.js";
 
 /** Per-test provider whose call #1 requests YieldTool; every later call is a
@@ -40,6 +40,8 @@ function makeEngine(
   dir: string,
   provider: string,
   opts: { headless: boolean; isSubAgent?: boolean },
+  reason: ToolRunYieldReason | ToolRunYieldReason[] = "background_notification",
+  onYieldToolRun?: (engine: Engine, ctx: ToolContext | undefined) => void,
 ): Engine {
   const engine = new Engine({
     llm: { provider, model: `${provider}-model`, apiKey: "test" } as never,
@@ -61,7 +63,10 @@ function makeEngine(
       permissionDefault: "allow",
     },
     async (_args, ctx?: ToolContext) => {
-      ctx?.runYield?.request("background_notification");
+      for (const r of Array.isArray(reason) ? reason : [reason]) {
+        ctx?.runYield?.request(r);
+      }
+      onYieldToolRun?.(engine, ctx);
       return "background work started";
     },
   );
@@ -144,6 +149,103 @@ describe("Engine tool run yield gating", () => {
         },
       });
 
+      expect(result.text).toBe("launching");
+      expect(modelRounds(events)).toBe(1);
+      const completes = turnCompletes(events);
+      expect(completes).toHaveLength(1);
+      expect(completes[0]!.completionKind).toBe("background_wait");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("honours a committed reply stop in interactive, headless, and sub-agent runs", async () => {
+    const modes = [
+      ["interactive", { headless: false }],
+      ["headless", { headless: true }],
+      ["subagent", { headless: false, isSubAgent: true }],
+    ] as const;
+
+    for (const [label, opts] of modes) {
+      const dir = mkdtempSync(join(tmpdir(), `engine-reply-committed-${label}-`));
+      const { provider } = registerYieldProvider(`fake-reply-committed-${label}`);
+      const events: StreamEvent[] = [];
+
+      try {
+        const engine = makeEngine(dir, provider, opts, "reply_committed");
+        const result = await engine.run("commit the host reply", {
+          cwd: dir,
+          onStream: (event) => {
+            events.push(event);
+          },
+        });
+
+        expect(result.text).toBe("launching");
+        expect(modelRounds(events)).toBe(1);
+        expect(turnCompletes(events)).toEqual([{ type: "turn_complete", reason: "completed" }]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("re-drives a steer that arrived while the reply-committing batch was executing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-reply-steer-"));
+    const { provider } = registerYieldProvider("fake-reply-committed-steer");
+    const events: StreamEvent[] = [];
+
+    try {
+      const engine = makeEngine(
+        dir,
+        provider,
+        { headless: false },
+        "reply_committed",
+        (eng, ctx) => {
+          // Simulates a user message landing mid-batch: the run is active, so
+          // the steer is accepted into the queue.
+          const steer = eng.enqueueSteer(ctx?.sessionId ?? "", "second user message", "steer-1");
+          expect(steer.accepted).toBe(true);
+        },
+      );
+      const result = await engine.run("commit the host reply", {
+        cwd: dir,
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      // The committed reply answered the previous content only; the queued
+      // steer must be injected and answered by a re-driven model round, not
+      // stranded in the engine's steer queue until dispose.
+      expect(events.some((e) => e.type === "steer_injected")).toBe(true);
+      expect(modelRounds(events)).toBe(2);
+      expect(result.text).toBe("finished after yield");
+      expect(turnCompletes(events)).toEqual([{ type: "turn_complete", reason: "completed" }]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the background_wait park when the same batch also committed a reply", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-reply-bg-"));
+    const { provider } = registerYieldProvider("fake-reply-committed-bg");
+    const events: StreamEvent[] = [];
+
+    try {
+      const engine = makeEngine(dir, provider, { headless: false }, [
+        "background_notification",
+        "reply_committed",
+      ]);
+      const result = await engine.run("reply and launch background work", {
+        cwd: dir,
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      // Background work is still running: the run must park as background_wait
+      // so its completion notification finds a parked session — the committed
+      // reply must not downgrade the result to a plain completion.
       expect(result.text).toBe("launching");
       expect(modelRounds(events)).toBe(1);
       const completes = turnCompletes(events);

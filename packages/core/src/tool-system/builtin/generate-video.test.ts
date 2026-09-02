@@ -63,7 +63,12 @@ describe("GenerateVideo", () => {
       request: (reason) => {
         yielded = reason;
       },
-      consume: () => undefined,
+      peek: (reason) => yielded === reason,
+      consume: (reason) => {
+        if (yielded !== reason) return false;
+        yielded = undefined;
+        return true;
+      },
     };
     const out = (await generateVideoTool(
       { prompt: "a sunset", pollIntervalMs: 10 },

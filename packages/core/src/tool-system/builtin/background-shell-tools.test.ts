@@ -52,7 +52,12 @@ describe("Bash run_in_background", () => {
       request: (reason) => {
         yielded = reason;
       },
-      consume: () => undefined,
+      peek: (reason) => yielded === reason,
+      consume: (reason) => {
+        if (yielded !== reason) return false;
+        yielded = undefined;
+        return true;
+      },
     };
     const out = await bashTool({ command: "sleep 100", run_in_background: true }, context);
     expect(text(out)).toBeTypeOf("string");

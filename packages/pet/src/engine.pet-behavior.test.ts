@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { LLMClientBase } from "@cjhyy/code-shell-core/extension";
 import { registerProvider } from "@cjhyy/code-shell-core/extension";
 import type { CreateMessageOptions } from "@cjhyy/code-shell-core/extension";
-import type { LLMResponse, Message } from "@cjhyy/code-shell-core/extension";
+import type { LLMResponse, Message, StreamEvent } from "@cjhyy/code-shell-core/extension";
 import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { Engine } from "@cjhyy/code-shell-core";
 import { createPetModule } from "./capability.js";
@@ -219,6 +219,7 @@ describe("Engine pet behavior", () => {
       maxTurns: 3,
     });
     (engine as any).hooks.clear();
+    const events: StreamEvent[] = [];
 
     const result = await engine.run("请通过 Gateway 回复", {
       sessionId: "gateway-pet",
@@ -255,6 +256,7 @@ describe("Engine pet behavior", () => {
         },
         sessionsRootDir: join(cwd, "sessions"),
       },
+      onStream: (event) => events.push(event),
     });
 
     const first = calls.get(model)![0]!;
@@ -269,6 +271,8 @@ describe("Engine pet behavior", () => {
       enum: ["search", "describe"],
     });
     expect(first.toolDefinitions[1]?.inputSchema.properties).not.toHaveProperty("attachment_paths");
+    expect(events.filter((event) => event.type === "stream_request_start")).toHaveLength(1);
+    expect(result.reason).toBe("completed");
     expect(result.extensions?.pet).toEqual({
       hostActions: [
         {

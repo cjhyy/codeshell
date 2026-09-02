@@ -213,10 +213,10 @@ export interface TurnLoopDeps {
    * built-in judge closure; it is never added to the public on_stop context.
    */
   publishGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
-  /** Inspect a trusted tool's pending run yield without clearing it. */
-  peekToolRunYield?: () => import("../tool-system/context.js").ToolRunYieldReason | undefined;
-  /** Consume a trusted tool's request to yield until an async notification. */
-  consumeToolRunYield?: () => import("../tool-system/context.js").ToolRunYieldReason | undefined;
+  /** Whether a trusted tool has a specific run boundary pending (not cleared). */
+  peekToolRunYield?: (reason: import("../tool-system/context.js").ToolRunYieldReason) => boolean;
+  /** Consume a specific pending run boundary; true if it was pending. */
+  consumeToolRunYield?: (reason: import("../tool-system/context.js").ToolRunYieldReason) => boolean;
 }
 
 export interface TurnLoopResult {
@@ -983,7 +983,16 @@ export class TurnLoop {
         this.streamedToolIds.clear();
         // Tool queue is created before the call, but enqueue happens only after
         // the complete LLMResponse is available below.
-        const streamingQueue = new StreamingToolQueue(this.deps.toolExecutor);
+        const streamingQueue = new StreamingToolQueue(this.deps.toolExecutor, {
+          // Once a trusted reply tool commits the authoritative host response,
+          // later sequential calls from the same model batch must not execute.
+          // Concurrency-safe calls may already be running; drain still awaits
+          // those so the transcript remains complete.
+          pendingUnsafeSkipReason: () =>
+            this.deps.peekToolRunYield?.("reply_committed")
+              ? "an authoritative host reply was already committed"
+              : undefined,
+        });
         let response;
         try {
           response = await this.callModelWithFallback(messages, assistantMessageId);
@@ -1282,7 +1291,7 @@ export class TurnLoop {
           // answered before parking the run. Keep the tool's yield request
           // pending across that extra model round, then park once the model
           // has replied and there is still no background result to consume.
-          if (this.deps.consumeToolRunYield?.() === "background_notification") {
+          if (this.deps.consumeToolRunYield?.("background_notification")) {
             tlog.info("turn.background_notification_wait_after_steer", { cat: "turn" });
             messages = this.redactConsumedSensitiveToolResults(messages);
             return {
@@ -1586,32 +1595,46 @@ export class TurnLoop {
         // the next model round-trip — large tool outputs can move it sharply.
         this.emitCtxFromMessages(messages);
 
-        // A trusted tool launched asynchronous work whose completion is routed
-        // back into this Session. End this run at the tool boundary instead of
-        // asking the model for another step with no new evidence; the queued
-        // completion notification will wake the Session and continue normally.
-        // This precedes complete_goal so a single batch cannot launch unfinished
-        // background work and simultaneously claim the enclosing Goal is done.
-        if (this.deps.peekToolRunYield?.() === "background_notification") {
+        // A trusted tool marked a run boundary. reply_committed: the
+        // authoritative user-facing reply is recorded — another model request
+        // could only produce duplicate tools or stray assistant text.
+        // background_notification: async work was launched whose completion
+        // notification will wake this Session, so the run parks instead of
+        // asking the model for another step with no new evidence. One batch
+        // may pend both; the park wins so the completion finds a parked run.
+        const replyCommitted = this.deps.peekToolRunYield?.("reply_committed") === true;
+        const backgroundWait = this.deps.peekToolRunYield?.("background_notification") === true;
+        if (replyCommitted || backgroundWait) {
           // Close the current model turn before a queued steer re-drives it;
           // interrupt-and-redrive swaps the turn signal at this boundary.
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            // A user message arrived while the batch was executing. The
+            // committed reply answered the previous content only — lift the
+            // reply barrier so the re-driven round can answer the new message
+            // (the host itself rejects duplicate authoritative replies), and
+            // keep any background park pending across the extra round.
+            if (replyCommitted) this.deps.consumeToolRunYield?.("reply_committed");
             continue;
           }
-        }
-        if (
-          this.deps.peekToolRunYield?.() === "background_notification" &&
-          this.deps.consumeToolRunYield?.() === "background_notification"
-        ) {
-          tlog.info("turn.background_notification_wait", { cat: "turn" });
-          messages = this.redactConsumedSensitiveToolResults(messages);
-          return {
-            text: finalText,
-            reason: "completed",
-            messages,
-            completionKind: "background_wait",
-          };
+          // Park before complete_goal so a single batch cannot launch
+          // unfinished background work and simultaneously claim the enclosing
+          // Goal is done.
+          if (backgroundWait && this.deps.consumeToolRunYield?.("background_notification")) {
+            tlog.info("turn.background_notification_wait", { cat: "turn" });
+            messages = this.redactConsumedSensitiveToolResults(messages);
+            return {
+              text: finalText,
+              reason: "completed",
+              messages,
+              completionKind: "background_wait",
+            };
+          }
+          if (replyCommitted && this.deps.consumeToolRunYield?.("reply_committed")) {
+            tlog.info("turn.reply_committed_stop", { cat: "turn" });
+            messages = this.redactConsumedSensitiveToolResults(messages);
+            return { text: finalText, reason: "completed", messages };
+          }
         }
 
         // Goal mode P0: explicit completion. If the model called complete_goal,

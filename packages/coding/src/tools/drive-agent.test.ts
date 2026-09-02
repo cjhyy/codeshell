@@ -217,7 +217,15 @@ describe("DriveAgent tool", () => {
         {
           cwd: tmp,
           sessionId: "S-YIELD",
-          runYield: { request: (reason: string) => (yielded = reason), consume: () => undefined },
+          runYield: {
+            request: (reason: string) => (yielded = reason),
+            peek: (reason: string) => yielded === reason,
+            consume: (reason: string) => {
+              if (yielded !== reason) return false;
+              yielded = undefined;
+              return true;
+            },
+          },
         } as any,
       );
 
