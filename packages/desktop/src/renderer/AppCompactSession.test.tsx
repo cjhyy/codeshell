@@ -495,8 +495,8 @@ describe("App compact session UI", () => {
         },
         externalRuntime: {
           available: async () => [],
-          onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) =>
-            () => undefined,
+          onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) => () =>
+            undefined,
         },
         getSessionWorkspaceAuthority: async (sessionId: string) =>
           sessionId === "engine-old" && oldSessionRootStatus !== "ok"
