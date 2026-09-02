@@ -3,6 +3,7 @@
  */
 
 import type { LLMClientBase } from "../llm/client-base.js";
+import type { PromptCacheRequestContext } from "../llm/prompt-cache.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
 import { logger, getCurrentSid } from "../logging/logger.js";
@@ -20,6 +21,8 @@ import {
 
 export interface ModelCallRecordingOptions {
   sensitiveToolResultRedactions?: ReadonlyMap<string, string>;
+  /** Cache boundary metadata; scopeId is filled from the active session. */
+  promptCache?: Omit<PromptCacheRequestContext, "scopeId">;
 }
 
 let _reqSeq = 0;
@@ -128,6 +131,7 @@ export class ModelFacade {
           }
         },
         signal,
+        promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
       });
     } catch (err) {
       recordLLMError(sid, reqId, err, Date.now() - startMs);
@@ -201,6 +205,7 @@ export class ModelFacade {
         tools,
         stream: false,
         signal,
+        promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
       });
     } catch (err) {
       recordLLMError(sid, reqId, err, Date.now() - startMs);

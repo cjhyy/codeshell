@@ -3,6 +3,7 @@
  */
 
 import type { Message, ToolDefinition, LLMResponse, LLMStreamChunk, TokenUsage } from "../types.js";
+import type { PromptCacheRequestContext } from "./prompt-cache.js";
 
 export interface CreateMessageOptions {
   systemPrompt: string;
@@ -35,6 +36,8 @@ export interface CreateMessageOptions {
    * the client's capability layer.
    */
   reasoning?: import("./reasoning-setting.js").ReasoningSetting;
+  /** Provider-neutral prompt-cache context supplied by the model facade. */
+  promptCache?: PromptCacheRequestContext;
 }
 
 export interface LLMUsageTracker {

@@ -79,12 +79,12 @@ describe("OpenAIClient OpenRouter+Anthropic prompt-cache breakpoints", () => {
     }).client;
 
     expect(anthropic.getPromptCacheConfigIdentity()).toMatchObject({
-      cacheStrategy: "openrouter-anthropic-explicit",
-      cacheLayoutVersion: "system-history-v1",
+      cacheStrategy: "anthropic-explicit",
+      cacheLayoutVersion: "system-stable-rolling-v2",
     });
     expect(ordinary.getPromptCacheConfigIdentity()).toMatchObject({
-      cacheStrategy: "provider-automatic",
-      cacheLayoutVersion: "automatic-v1",
+      cacheStrategy: "openai-implicit",
+      cacheLayoutVersion: "implicit-affinity-v1",
     });
   });
 

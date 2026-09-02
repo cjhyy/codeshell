@@ -1,11 +1,13 @@
 # Prompt 缓存优化 — 对标 Claude Code
 
-> 状态:步骤 1(命中率可见)+ 步骤 2(tools 断点)+ 步骤 3(messages 末尾断点)已落地;步骤 4 待整体设计。2026-06-26 整理,2026-07-02 更新。
+> 状态:步骤 1–4 已落地;GPT-5.6 Responses API 迁移与线上命中率验收仍待专项推进。2026-06-26 整理,2026-09-02 更新。
 > 背景:codeshell 当前缓存覆盖面极窄,且命中率不可见。本稿记录 CC 的真实做法
 > (扒自 CC sourcemap)、codeshell 现状差距、以及分步计划。
 > 关联记忆 `project_prompt_cache_gaps`。
 
-## 一、codeshell 现状(已核实)
+## 一、优化前基线(历史记录)
+
+> 本节保留用于解释当时的低命中率；当前实现以第四节为准。
 
 - **只有一个缓存断点**:Anthropic provider 在 systemPrompt 末尾挂了一个
   `cache_control: ephemeral`(`packages/core/src/llm/providers/anthropic.ts:187, 234`)。
@@ -22,6 +24,7 @@
 ## 二、CC 的做法(扒自 CC sourcemap,带出处)
 
 ### 断点布局:3 处,不平均撒
+
 - **System prompt**:按内容**分块**挂(静态/动态分离),非整块一个。
 - **Tools 数组**:**整体当一个稳定块**,不单独挂标记;动态工具(Advisor/MCP)
   **追加在尾部**,开关工具只churn尾巴、不破前缀(`services/api/claude.ts:1387`)。
@@ -31,10 +34,12 @@
   注释强调一个请求挂 2 个反而坏事(KV page eviction)。
 
 ### 历史断点:固定最后一条,**不滚动**(反直觉)
+
 前缀本来就稳定,断点放末尾 = 声明"到此为止全缓存"。下一轮历史变长,
 断点自然移到新末尾,新增部分成为下次的缓存写入。无需手动滚动。
 
 ### 静态/动态分离(省 token 核心)
+
 system prompt 埋边界标记 `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`(`utils/api.ts:362`):
 边界前(规则等不变内容)→ 缓存;边界后(当前时间、session 特定)→ 不缓存。
 → 把易变内容**刻意放到断点之后**,前缀永远稳定。
@@ -42,30 +47,34 @@ system prompt 埋边界标记 `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`(`utils/api.ts:362
 天然在 system cache 块之外,见 `composer.ts:88`。)
 
 ### 粘性锁定防中途失效
+
 任何进缓存键的动态开关(fast/afk mode、TTL 资格)一旦开启就**整个 session 锁定**
 (claude.ts:1405, 393)。中途翻转 = 缓存键变 = ~20K token 白烧。
 
 ### 断点预算:最多 4 个
+
 API 限制 4 个 cache_control。CC 标准用 2-3 个(system 1 + message 1,
 全局缓存模式下 system 拆 2-3 块),留余量(`yoloClassifier.ts:1100`)。
 
 ### 命中率上报 + 破坏检测
+
 - 命中率 = `cache_read / (cache_read + cache_creation + input)`(`forkedAgent.ts:653`)。
 - 专门的 `promptCacheBreakDetection.ts`:请求前 hash 记录 system/tools/config,
   响应后对比 cache_read_tokens 暴跌(>5% 且 >2000 token)就诊断哪个因素破了缓存并打点。
 
 ## 三、codeshell 可抄清单 + 优先级
 
-| CC 做法 | codeshell 现状 | 可抄性 |
-|---|---|---|
-| 命中率可见 + 修 OpenAI cached_tokens 字段 | 字段读错、无上报 | ⭐ **先做**(没数据无法验证其他改动) |
-| tools 整体当稳定块 + 动态工具追加尾部 | tools 完全没缓存 | ⭐ 高(仅 Anthropic 有效) |
-| messages 末尾固定挂 1 个断点 | messages 没断点 | 高,但仅 Anthropic 有效、需避坑(见下) |
-| 静态/动态分离(system 内部分块) | system 单块;时间/memory 已在 user message | 中 |
-| 粘性锁定动态开关 | 未审计有无易变量进前缀 | 中 |
-| 破坏检测系统 | 无 | 低(运维级,可选) |
+| CC 做法                                   | codeshell 现状                            | 可抄性                               |
+| ----------------------------------------- | ----------------------------------------- | ------------------------------------ |
+| 命中率可见 + 修 OpenAI cached_tokens 字段 | 字段读错、无上报                          | ⭐ **先做**(没数据无法验证其他改动)  |
+| tools 整体当稳定块 + 动态工具追加尾部     | tools 完全没缓存                          | ⭐ 高(仅 Anthropic 有效)             |
+| messages 末尾固定挂 1 个断点              | messages 没断点                           | 高,但仅 Anthropic 有效、需避坑(见下) |
+| 静态/动态分离(system 内部分块)            | system 单块;时间/memory 已在 user message | 中                                   |
+| 粘性锁定动态开关                          | 未审计有无易变量进前缀                    | 中                                   |
+| 破坏检测系统                              | 无                                        | 低(运维级,可选)                      |
 
 ### messages 断点的坑(动手前必读)
+
 1. 挂在最后一条 message 的**最后一个 content block**,且排除 thinking 块,否则 400/不生效。
 2. 别破坏 tool_result 紧邻 tool_use 的配对不变量(见记忆 `project_compaction_toolpair_invariant`)。
 3. cache_control 是"写缓存",首次比普通 input 贵 25%;短对话可能 write 成本 > 收益。
@@ -88,7 +97,24 @@ API 限制 4 个 cache_control。CC 标准用 2-3 个(system 1 + message 1,
    只标注不重排,tool_use/tool_result 配对不变量不动。测试 `anthropic-history-cache.test.ts`。
    **已做(本次)。** 断点固定末尾不滚动——历史变长时"最后一条"自然右移,新尾巴成为下次写入。
    当前 cache_control 用量 = system 1 + tools 1 + history 1 = 3,在 API 上限 4 之内。
-4. 静态/动态分离、粘性锁定、破坏检测 → 进记忆系统/性能专项整体设计,别零敲碎打。
+4. ✅ **统一缓存层 + 模型差异化策略**:
+   - 新增 provider-neutral 的 `llm/prompt-cache.ts`,统一产出会话亲和键、缓存策略与
+     system/tools/stable-history/rolling-history 语义断点；供应商仅负责 wire translation。
+   - GPT-5.6+ 走 explicit caching(`prompt_cache_key`、30m TTL、最多 3 个显式断点)；
+     较早 OpenAI 模型保留自动缓存,但增加稳定的会话亲和键。
+   - Anthropic direct 使用 system/tools/稳定历史/滚动历史 4 个断点；OpenRouter Claude
+     使用 3 个断点,避免超过供应商预算。
+   - 其他 OpenAI-compatible 模型采用 provider-managed 策略,不发送未知字段,但共享
+     append-only prompt 布局。
+   - 动态上下文不再每轮从历史中删除后搬到末尾；仅在真正压缩/重写上下文时重新布局,
+     避免每次工具循环都破坏前缀。
+   - OpenRouter/兼容网关若 400 拒绝 GPT-5.6 显式字段,客户端会粘性降级到自动缓存并重试；
+     affinity key 若也不支持再单独关闭。
+   - 统一缓存 key 使用会话 ID 的 SHA-256 摘要,不向供应商暴露原始 session ID。
+5. ⏳ **后续验收/协议升级**:用真实长会话对不同模型分别采集 cache read/write/input,
+   按第二轮开始的稳态命中率验收；评估将原生 OpenAI 工具工作流迁移到 Responses API,
+   以便进一步复用服务端 conversation state。该迁移涉及流式事件与工具调用协议,不与本轮
+   Chat Completions 缓存修复混做。
 
 > ⚠️ 缓存断点打错位置会**负优化**(贵价 cache write 却永不命中)。
 > 整体顺序铁律:**先可见,再优化**;盲调缓存 = 浪费。

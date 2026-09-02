@@ -76,6 +76,22 @@ describe("AnthropicClient history prompt-cache breakpoint", () => {
     expect(first.content).toBe("first");
   });
 
+  it("keeps a durable boundary before volatile context and a rolling tail boundary", async () => {
+    const { client, lastBody } = clientCapturing();
+    await client.createMessage({
+      ...opts([
+        { role: "user", content: "durable history" },
+        { role: "user", content: "volatile context" },
+        { role: "assistant", content: "rolling tail" },
+      ]),
+      promptCache: { scopeId: "s-cache", stablePrefixMessageCount: 1 },
+    });
+    const sent = lastBody().messages;
+    expect(sent[0].content[0].cache_control).toEqual({ type: "ephemeral" });
+    expect(sent[1].content).toBe("volatile context");
+    expect(sent[2].content[0].cache_control).toEqual({ type: "ephemeral" });
+  });
+
   it("marks the tool_result block when it is the last block (pairing intact)", async () => {
     const { client, lastBody } = clientCapturing();
     await client.createMessage(

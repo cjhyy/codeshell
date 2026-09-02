@@ -9,7 +9,14 @@
  */
 
 import OpenAI from "openai";
-import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
+import type {
+  ClientDefaults,
+  LLMConfig,
+  LLMResponse,
+  ToolCall,
+  ToolDefinition,
+  TokenUsage,
+} from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
 import type { ReasoningSetting } from "../reasoning-setting.js";
 import { LLMClientBase } from "../client-base.js";
@@ -22,9 +29,12 @@ import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 import type { ProviderKindName } from "../provider-kinds.js";
 import {
-  STREAM_WATCHDOG_CONFIG,
-  StreamIdleTimeoutError,
-} from "../stream-watchdog.js";
+  resolvePromptCachePolicy,
+  uniquePromptCacheBreakpointIndexes,
+  type PromptCachePolicy,
+  type PromptCacheRequestContext,
+} from "../prompt-cache.js";
+import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
 
 /**
  * Extract prompt-cache counts from an OpenAI-compatible usage object.
@@ -41,7 +51,10 @@ import {
  * reports no value — keeping the field `undefined` rather than a misleading 0.
  * See docs/todo/prompt-cache-optimization.md.
  */
-function cachedTokensOf(usage: unknown): { cacheReadTokens?: number; cacheCreationTokens?: number } {
+function cachedTokensOf(usage: unknown): {
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+} {
   const details = (
     usage as
       | { prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number } }
@@ -126,11 +139,8 @@ export async function runStreamWithWatchdog<T = any>(
   // disableWatchdog (per-call override) if set, else the env default.
   const watchdogActive =
     opts.idleTimeoutMs !== undefined ||
-    (opts.disableWatchdog === undefined
-      ? STREAM_WATCHDOG_CONFIG.enabled
-      : !opts.disableWatchdog);
-  const idleTimeoutMs =
-    opts.idleTimeoutMs ?? STREAM_WATCHDOG_CONFIG.idleTimeoutMs;
+    (opts.disableWatchdog === undefined ? STREAM_WATCHDOG_CONFIG.enabled : !opts.disableWatchdog);
+  const idleTimeoutMs = opts.idleTimeoutMs ?? STREAM_WATCHDOG_CONFIG.idleTimeoutMs;
   let text = "";
 
   // Fast path: watchdog disabled AND caller did not override → no overhead.
@@ -287,6 +297,9 @@ export class OpenAIClient extends LLMClientBase {
   // succeed. Omitting the field just means "model default reasoning", which is
   // fine for our background/aux calls.
   private _dropReasoningEffort = false;
+  /** Compatibility fallbacks for OpenAI-compatible gateways that lag the API. */
+  private _disableExplicitPromptCache = false;
+  private _disablePromptCacheKey = false;
 
   constructor(
     config: LLMConfig,
@@ -337,31 +350,27 @@ export class OpenAIClient extends LLMClientBase {
     return this._capability;
   }
 
-  /**
-   * True when this client routes an Anthropic-family model through OpenRouter's
-   * OpenAI-compatible endpoint. Anthropic caching is EXPLICIT — nothing is
-   * cached unless the request carries `cache_control` breakpoints (verified live
-   * 2026-07-02: plain requests to anthropic/claude-opus-4.7-fast via OpenRouter
-   * report cached_tokens 0 on every repeat; a single system-block breakpoint
-   * turns the whole stable prefix — tools + system — into a cache hit, ~89%
-   * cheaper on the follow-up). OpenAI and other OpenRouter models cache
-   * automatically, so they must NOT get breakpoints. The slug arrives resolved
-   * (e.g. "anthropic/claude-opus-4.7-fast") or as the router alias
-   * ("~anthropic/claude-opus-latest") — both start with an optional "~" then
-   * "anthropic/".
-   */
-  private get isOpenRouterAnthropic(): boolean {
-    return this.config.providerKind === "openrouter" && /^~?anthropic\//.test(this.model);
+  private promptCachePolicy(request?: PromptCacheRequestContext): PromptCachePolicy {
+    const policy = resolvePromptCachePolicy({
+      provider: this.provider,
+      providerKind: this.config.providerKind,
+      model: this.model,
+      request,
+      explicitDisabled: this._disableExplicitPromptCache,
+    });
+    return this._disablePromptCacheKey && policy.cacheKey
+      ? { ...policy, cacheKey: undefined }
+      : policy;
   }
 
   override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {
     const capability = this.capability;
+    const cachePolicy = this.promptCachePolicy();
     return {
       ...super.getPromptCacheConfigIdentity(),
-      cacheStrategy: this.isOpenRouterAnthropic
-        ? "openrouter-anthropic-explicit"
-        : "provider-automatic",
-      cacheLayoutVersion: this.isOpenRouterAnthropic ? "system-history-v1" : "automatic-v1",
+      cacheStrategy: cachePolicy.strategy,
+      cacheLayoutVersion: cachePolicy.layoutVersion,
+      cacheBreakpoints: cachePolicy.breakpoints,
       tokenLimitField: this._forceMaxCompletionTokens
         ? "max_completion_tokens"
         : capability.tokenLimitField,
@@ -369,50 +378,57 @@ export class OpenAIClient extends LLMClientBase {
       rejectedParams: [...capability.rejectedParams].sort(),
       forceMaxCompletionTokens: this._forceMaxCompletionTokens,
       dropReasoningEffort: this._dropReasoningEffort,
+      disableExplicitPromptCache: this._disableExplicitPromptCache,
+      disablePromptCacheKey: this._disablePromptCacheKey,
     };
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
-    return this.withRetry(async (requestSignal) => {
-      // requestSignal = caller's cancel signal composed with a per-request
-      // hard deadline (withRetry). Hand it to the SDK so a wedged socket is
-      // torn down instead of hanging for tens of minutes.
-      // Per-call reasoning wins; otherwise fall back to provider default
-      // (settings.providers[].reasoning, threaded through LLMConfig).
-      const reasoning = options.reasoning ?? this.config.reasoning;
-      const messages = this.buildMessages(
-        options.systemPrompt,
-        options.messages,
-        reasoning,
-      );
-      const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
+    return this.withRetry(
+      async (requestSignal) => {
+        // requestSignal = caller's cancel signal composed with a per-request
+        // hard deadline (withRetry). Hand it to the SDK so a wedged socket is
+        // torn down instead of hanging for tens of minutes.
+        // Per-call reasoning wins; otherwise fall back to provider default
+        // (settings.providers[].reasoning, threaded through LLMConfig).
+        const reasoning = options.reasoning ?? this.config.reasoning;
+        const messages = this.buildMessages(
+          options.systemPrompt,
+          options.messages,
+          reasoning,
+          options.promptCache,
+        );
+        const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
 
-      const span = logger.span("llm.request", {
-        cat: "llm",
-        provider: this.provider,
-        model: this.model,
-        stream: !!(options.stream && options.onChunk),
-        messageCount: messages.length,
-        toolCount: tools?.length ?? 0,
-      });
-      try {
-        const response =
-          options.stream && options.onChunk
-            ? await this.streamMessage(options, messages, tools, reasoning, requestSignal)
-            : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
-        span.end({
-          stopReason: response.stopReason,
-          promptTokens: response.usage?.promptTokens,
-          completionTokens: response.usage?.completionTokens,
-          cacheReadTokens: response.usage?.cacheReadTokens,
-          cacheCreationTokens: response.usage?.cacheCreationTokens,
+        const span = logger.span("llm.request", {
+          cat: "llm",
+          provider: this.provider,
+          model: this.model,
+          stream: !!(options.stream && options.onChunk),
+          messageCount: messages.length,
+          toolCount: tools?.length ?? 0,
+          cacheStrategy: this.promptCachePolicy(options.promptCache).strategy,
         });
-        return response;
-      } catch (err) {
-        span.fail(err);
-        throw err;
-      }
-    }, { signal: options.signal });
+        try {
+          const response =
+            options.stream && options.onChunk
+              ? await this.streamMessage(options, messages, tools, reasoning, requestSignal)
+              : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
+          span.end({
+            stopReason: response.stopReason,
+            promptTokens: response.usage?.promptTokens,
+            completionTokens: response.usage?.completionTokens,
+            cacheReadTokens: response.usage?.cacheReadTokens,
+            cacheCreationTokens: response.usage?.cacheCreationTokens,
+          });
+          return response;
+        } catch (err) {
+          span.fail(err);
+          throw err;
+        }
+      },
+      { signal: options.signal },
+    );
   }
 
   /**
@@ -428,6 +444,7 @@ export class OpenAIClient extends LLMClientBase {
     stream: boolean,
   ): Record<string, unknown> {
     const cap = this.capability;
+    const cachePolicy = this.promptCachePolicy(options.promptCache);
     // Clamp to the model's known output ceiling so a stale catalog value
     // (e.g. 384000 inherited after a hot model switch) can't 400 a
     // smaller-cap model. No known cap → send the value as-is.
@@ -541,10 +558,12 @@ export class OpenAIClient extends LLMClientBase {
     // requested summary level to that object. For the bare `reasoning_effort`
     // shape there's no summary field on chat-completions, so we skip it rather
     // than send an unknown top-level param.
-    if (this.config.reasoningSummary && reasoningBody.reasoning &&
-        typeof reasoningBody.reasoning === "object") {
-      (reasoningBody.reasoning as Record<string, unknown>).summary =
-        this.config.reasoningSummary;
+    if (
+      this.config.reasoningSummary &&
+      reasoningBody.reasoning &&
+      typeof reasoningBody.reasoning === "object"
+    ) {
+      (reasoningBody.reasoning as Record<string, unknown>).summary = this.config.reasoningSummary;
     }
 
     // Catalog-driven passthrough params (temperature/top_p/thinking etc, already
@@ -583,6 +602,12 @@ export class OpenAIClient extends LLMClientBase {
       ...paramBody,
       // service_tier (TODO 7.2): passed through verbatim when configured.
       ...(this.config.serviceTier ? { service_tier: this.config.serviceTier } : {}),
+      ...(options.promptCache && cachePolicy.cacheKey
+        ? { prompt_cache_key: cachePolicy.cacheKey }
+        : {}),
+      ...(options.promptCache && cachePolicy.promptCacheOptions
+        ? { prompt_cache_options: cachePolicy.promptCacheOptions }
+        : {}),
       ...(tools ? { tools } : {}),
       ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
     };
@@ -879,6 +904,7 @@ export class OpenAIClient extends LLMClientBase {
     systemPrompt: string,
     messages: import("../../types.js").Message[],
     reasoning?: ReasoningSetting,
+    promptCache?: PromptCacheRequestContext,
   ): OpenAI.ChatCompletionMessageParam[] {
     const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
 
@@ -888,6 +914,12 @@ export class OpenAIClient extends LLMClientBase {
     // below and 400s ("unknown variant `image_url`") after a model switch.
     // Identity-preserving on the common path (vision models / no images).
     messages = stripVisionFromHistory(messages, this.capability.supportsVision);
+    const stablePrefixMessageCount = Math.max(
+      0,
+      Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
+    );
+    let stablePrefixEndMessage: OpenAI.ChatCompletionMessageParam | undefined =
+      stablePrefixMessageCount === 0 ? result[0] : undefined;
 
     // Reasoning-content echo-back contract — driven by capability:
     //   "when-tools"  : backfill an empty placeholder if the prior assistant
@@ -905,12 +937,14 @@ export class OpenAIClient extends LLMClientBase {
         m.content.some((b) => b.type === "tool_use" || b.type === "tool_result"),
     );
     const needsReasoningBackfill =
-      reasoning?.mode !== "off" &&
-      cap.echoReasoning === "when-tools" &&
-      hasTools;
+      reasoning?.mode !== "off" && cap.echoReasoning === "when-tools" && hasTools;
     const stripReasoning = cap.echoReasoning === "never";
 
-    for (const msg of messages) {
+    for (let sourceIndex = 0; sourceIndex < messages.length; sourceIndex++) {
+      if (sourceIndex === stablePrefixMessageCount) {
+        stablePrefixEndMessage = result[result.length - 1];
+      }
+      const msg = messages[sourceIndex]!;
       if (msg.role === "system") continue;
 
       if (msg.role === "assistant") {
@@ -1087,58 +1121,81 @@ export class OpenAIClient extends LLMClientBase {
       }
     }
 
+    stablePrefixEndMessage ??= result[result.length - 1];
     const normalized = normalizeOpenAIToolMessagePairs(result);
-    if (this.isOpenRouterAnthropic) {
-      this.applyAnthropicCacheBreakpoints(normalized);
+    const stablePrefixEndIndex = stablePrefixEndMessage
+      ? normalized.indexOf(stablePrefixEndMessage)
+      : undefined;
+    const cachePolicy = this.promptCachePolicy(promptCache);
+    if (promptCache || cachePolicy.strategy === "anthropic-explicit") {
+      this.applyPromptCacheBreakpoints(
+        normalized,
+        cachePolicy,
+        stablePrefixEndIndex !== undefined && stablePrefixEndIndex >= 0
+          ? stablePrefixEndIndex
+          : undefined,
+      );
     }
 
     return normalized;
   }
 
   /**
-   * In-place: add prompt-cache breakpoints for Anthropic-over-OpenRouter.
-   * Mirrors the native anthropic provider (≤4 breakpoints):
-   *   1. System block  — the stable prefix. Anthropic sees tools BEFORE the
-   *      system prompt, so one marker on the system block caches tools too
-   *      (verified live: system-only marker cached 3511/3952 prompt tokens
-   *      including tool defs).
-   *   2. Last message  — one rolling breakpoint so the growing conversation
-   *      history becomes a cached prefix. Not scrolled: as history grows the
-   *      "last message" naturally advances and its tail is the next write.
-   * A string `content` is lifted to a single-element `[{type:"text",...}]`
-   * array so it can carry `cache_control`; OpenRouter accepts this OpenAI
-   * multimodal wire form for text.
+   * Translate semantic prefix boundaries to the active wire format. Both
+   * formats annotate content blocks without reordering messages.
    */
-  private applyAnthropicCacheBreakpoints(messages: OpenAI.ChatCompletionMessageParam[]): void {
-    const mark = (m: OpenAI.ChatCompletionMessageParam | undefined): void => {
-      if (!m) return;
+  private applyPromptCacheBreakpoints(
+    messages: OpenAI.ChatCompletionMessageParam[],
+    policy: PromptCachePolicy,
+    stablePrefixEndIndex: number | undefined,
+  ): void {
+    if (policy.strategy !== "anthropic-explicit" && policy.strategy !== "openai-explicit") {
+      return;
+    }
+
+    const markedMessages = new Set<OpenAI.ChatCompletionMessageParam>();
+    const mark = (index: number): void => {
+      let cursor = Math.min(index, messages.length - 1);
+      let m: OpenAI.ChatCompletionMessageParam | undefined;
+      while (cursor >= 0) {
+        const candidate = messages[cursor]!;
+        if (
+          (typeof candidate.content === "string" && candidate.content.length > 0) ||
+          (Array.isArray(candidate.content) && candidate.content.length > 0)
+        ) {
+          m = candidate;
+          break;
+        }
+        cursor--;
+      }
+      if (!m || markedMessages.has(m)) return;
+      markedMessages.add(m);
+
+      const marker =
+        policy.strategy === "anthropic-explicit"
+          ? { cache_control: { type: "ephemeral" as const } }
+          : { prompt_cache_breakpoint: { mode: "explicit" as const } };
       // Lift a plain-string content to a text-block array so it can carry the
-      // marker. Non-text content (tool messages, image arrays) already uses an
-      // array of parts — mark the last part instead.
+      // marker. Non-text content already uses an array of parts.
       if (typeof m.content === "string") {
-        (m as { content: unknown }).content = [
-          { type: "text", text: m.content, cache_control: { type: "ephemeral" } },
-        ];
+        (m as { content: unknown }).content = [{ type: "text", text: m.content, ...marker }];
         return;
       }
       if (Array.isArray(m.content) && m.content.length > 0) {
-        // cache_control is an Anthropic-via-OpenRouter extension field, not in
-        // the OpenAI content-part union — attach through `unknown`.
         const last = m.content[m.content.length - 1] as unknown as {
           cache_control?: { type: "ephemeral" };
+          prompt_cache_breakpoint?: { mode: "explicit" };
         };
-        last.cache_control = { type: "ephemeral" };
+        Object.assign(last, marker);
       }
     };
 
-    // 1. System block (always index 0 — buildMessages seeds it first).
-    const sys = messages[0];
-    if (sys && sys.role === "system") mark(sys);
-
-    // 2. Rolling history breakpoint on the very last message. Skip if it IS the
-    //    system message (no conversation yet) — one breakpoint already covers it.
-    const last = messages[messages.length - 1];
-    if (last && last !== sys) mark(last);
+    const requested = uniquePromptCacheBreakpointIndexes([
+      policy.breakpoints.includes("system") ? 0 : undefined,
+      policy.breakpoints.includes("stable-history") ? stablePrefixEndIndex : undefined,
+      policy.breakpoints.includes("rolling-history") ? messages.length - 1 : undefined,
+    ]);
+    for (const index of requested) mark(index);
   }
 
   private convertTools(tools: ToolDefinition[]): OpenAI.ChatCompletionTool[] {
@@ -1175,6 +1232,36 @@ export class OpenAIClient extends LLMClientBase {
       // the corrected body — fixing the call that triggered it, not just the
       // next one.
       let selfCorrected = false;
+
+      // New GPT-5.6 cache fields may reach an OpenAI-compatible gateway before
+      // that gateway supports them. Downgrade sticky-per-client and retry once:
+      // first explicit -> implicit, then omit the affinity key only if that is
+      // also rejected. Native OpenAI keeps the optimized path.
+      if (err.status === 400 && msg.includes("prompt_cache")) {
+        if (
+          (msg.includes("prompt_cache_options") || msg.includes("prompt_cache_breakpoint")) &&
+          !this._disableExplicitPromptCache
+        ) {
+          this._disableExplicitPromptCache = true;
+          selfCorrected = true;
+          logger.warn("llm.prompt_cache_explicit_unsupported", {
+            cat: "llm",
+            provider: this.provider,
+            providerKind: this.config.providerKind,
+            model: this.model,
+          });
+        }
+        if (msg.includes("prompt_cache_key") && !this._disablePromptCacheKey) {
+          this._disablePromptCacheKey = true;
+          selfCorrected = true;
+          logger.warn("llm.prompt_cache_key_unsupported", {
+            cat: "llm",
+            provider: this.provider,
+            providerKind: this.config.providerKind,
+            model: this.model,
+          });
+        }
+      }
 
       // o-series / gpt-5+ reject `max_tokens` and demand
       // `max_completion_tokens`. The id-based regex catches the common
@@ -1255,8 +1342,12 @@ function deepMergeInto(
   for (const [k, v] of Object.entries(src)) {
     const cur = dst[k];
     if (
-      v && typeof v === "object" && !Array.isArray(v) &&
-      cur && typeof cur === "object" && !Array.isArray(cur)
+      v &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      cur &&
+      typeof cur === "object" &&
+      !Array.isArray(cur)
     ) {
       deepMergeInto(cur as Record<string, unknown>, v as Record<string, unknown>);
     } else {

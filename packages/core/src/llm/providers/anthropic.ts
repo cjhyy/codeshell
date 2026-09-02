@@ -21,6 +21,12 @@ import { capabilitiesFor, type Capability } from "../capabilities/index.js";
 import type { ProviderKindName } from "../provider-kinds.js";
 import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
+import {
+  resolvePromptCachePolicy,
+  uniquePromptCacheBreakpointIndexes,
+  type PromptCachePolicy,
+  type PromptCacheRequestContext,
+} from "../prompt-cache.js";
 
 /**
  * Anthropic's `max_tokens` is required, so unlike OpenAI we can't omit it when
@@ -104,12 +110,23 @@ export class AnthropicClient extends LLMClientBase {
     return this._capability;
   }
 
+  private promptCachePolicy(request?: PromptCacheRequestContext): PromptCachePolicy {
+    return resolvePromptCachePolicy({
+      provider: this.provider,
+      providerKind: this.config.providerKind,
+      model: this.model,
+      request,
+    });
+  }
+
   override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {
+    const cachePolicy = this.promptCachePolicy();
     return {
       ...super.getPromptCacheConfigIdentity(),
-      cacheStrategy: "anthropic-explicit",
-      cacheLayoutVersion: "system-tools-history-v1",
-      breakpointCount: 3,
+      cacheStrategy: cachePolicy.strategy,
+      cacheLayoutVersion: cachePolicy.layoutVersion,
+      cacheBreakpoints: cachePolicy.breakpoints,
+      breakpointCount: cachePolicy.breakpoints.length,
       reasoningShape: this.capability.reasoning,
     };
   }
@@ -171,8 +188,9 @@ export class AnthropicClient extends LLMClientBase {
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     return this.withRetry(
       async (requestSignal) => {
-        const messages = this.buildMessages(options.messages);
-        const tools = options.tools ? this.convertTools(options.tools) : undefined;
+        const cachePolicy = this.promptCachePolicy(options.promptCache);
+        const messages = this.buildMessages(options.messages, options.promptCache, cachePolicy);
+        const tools = options.tools ? this.convertTools(options.tools, cachePolicy) : undefined;
 
         // One span per outbound LLM request. Begin emits debug-level so the
         // info log isn't spammed during normal operation; end emits info with
@@ -185,6 +203,7 @@ export class AnthropicClient extends LLMClientBase {
           stream: !!(options.stream && options.onChunk),
           messageCount: messages.length,
           toolCount: tools?.length ?? 0,
+          cacheStrategy: cachePolicy.strategy,
         });
         try {
           const response =
@@ -224,13 +243,10 @@ export class AnthropicClient extends LLMClientBase {
         {
           model: this.model,
           max_tokens: maxTokens,
-          system: [
-            {
-              type: "text" as const,
-              text: options.systemPrompt,
-              cache_control: { type: "ephemeral" as const },
-            },
-          ],
+          system: this.buildSystem(
+            options.systemPrompt,
+            this.promptCachePolicy(options.promptCache),
+          ),
           messages,
           ...(tools?.length ? { tools } : {}),
           ...(thinking ? { thinking } : {}),
@@ -265,13 +281,10 @@ export class AnthropicClient extends LLMClientBase {
         {
           model: this.model,
           max_tokens: maxTokens,
-          system: [
-            {
-              type: "text" as const,
-              text: options.systemPrompt,
-              cache_control: { type: "ephemeral" as const },
-            },
-          ],
+          system: this.buildSystem(
+            options.systemPrompt,
+            this.promptCachePolicy(options.promptCache),
+          ),
           messages,
           ...(tools?.length ? { tools } : {}),
           ...(thinking ? { thinking } : {}),
@@ -385,11 +398,36 @@ export class AnthropicClient extends LLMClientBase {
     };
   }
 
-  private buildMessages(messages: import("../../types.js").Message[]): Anthropic.MessageParam[] {
+  private buildSystem(systemPrompt: string, policy: PromptCachePolicy): Anthropic.TextBlockParam[] {
+    return [
+      {
+        type: "text",
+        text: systemPrompt,
+        ...(policy.breakpoints.includes("system")
+          ? { cache_control: { type: "ephemeral" as const } }
+          : {}),
+      },
+    ];
+  }
+
+  private buildMessages(
+    messages: import("../../types.js").Message[],
+    promptCache: PromptCacheRequestContext | undefined,
+    policy: PromptCachePolicy,
+  ): Anthropic.MessageParam[] {
     messages = stripVisionFromHistory(messages, this.capability.supportsVision);
     const result: Anthropic.MessageParam[] = [];
+    const stablePrefixMessageCount = Math.max(
+      0,
+      Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
+    );
+    let stablePrefixEndMessage: Anthropic.MessageParam | undefined;
 
-    for (const msg of messages) {
+    for (let sourceIndex = 0; sourceIndex < messages.length; sourceIndex++) {
+      if (sourceIndex === stablePrefixMessageCount) {
+        stablePrefixEndMessage = result[result.length - 1];
+      }
+      const msg = messages[sourceIndex]!;
       if (msg.role === "system") continue;
 
       const role = msg.role === "tool" ? "user" : msg.role;
@@ -463,41 +501,46 @@ export class AnthropicClient extends LLMClientBase {
       }
     }
 
-    // Prompt-cache breakpoint on the history: mark the LAST content block of
-    // the LAST message. The API caches everything up to the marker, so the
-    // stable prefix (all prior turns) is reused; only the growing tail is
-    // re-billed. CC does exactly this (one marker at messages.length - 1) and
-    // warns a second history marker causes KV page eviction. We only ANNOTATE
-    // the tail block — never reorder — so the tool_use/tool_result adjacency
-    // invariant is untouched. A string-content message is lifted to a single
-    // text block so it can carry cache_control. See
-    // docs/todo/prompt-cache-optimization.md.
-    const lastMsg = result[result.length - 1];
-    if (lastMsg) {
-      if (typeof lastMsg.content === "string") {
-        lastMsg.content = [
-          {
-            type: "text",
-            text: lastMsg.content,
-            cache_control: { type: "ephemeral" },
-          },
-        ];
-      } else {
-        const lastBlock = lastMsg.content[lastMsg.content.length - 1];
-        // Skip thinking/redacted_thinking blocks: they reject cache_control and
-        // marking them would 400. buildMessages never emits them today (thinking
-        // is a top-level request field, not history content), but guard anyway
-        // so a future block type can't silently break the request.
-        if (lastBlock && lastBlock.type !== "thinking" && lastBlock.type !== "redacted_thinking") {
-          lastBlock.cache_control = { type: "ephemeral" };
-        }
-      }
+    stablePrefixEndMessage ??= result[result.length - 1];
+    const stablePrefixEndIndex = stablePrefixEndMessage
+      ? result.indexOf(stablePrefixEndMessage)
+      : undefined;
+    const breakpointIndexes = uniquePromptCacheBreakpointIndexes([
+      policy.breakpoints.includes("stable-history") && stablePrefixEndIndex !== undefined
+        ? stablePrefixEndIndex
+        : undefined,
+      policy.breakpoints.includes("rolling-history") ? result.length - 1 : undefined,
+    ]);
+    for (const index of breakpointIndexes) {
+      this.markAnthropicCacheBreakpoint(result[index]);
     }
 
     return result;
   }
 
-  private convertTools(tools: ToolDefinition[]): Anthropic.Tool[] {
+  private markAnthropicCacheBreakpoint(message: Anthropic.MessageParam | undefined): void {
+    if (!message) return;
+    if (typeof message.content === "string") {
+      message.content = [
+        {
+          type: "text",
+          text: message.content,
+          cache_control: { type: "ephemeral" },
+        },
+      ];
+      return;
+    }
+    for (let index = message.content.length - 1; index >= 0; index--) {
+      const block = message.content[index]!;
+      // Thinking blocks reject cache_control. Walk backward so a preceding
+      // cacheable text/tool block can still anchor the prefix.
+      if (block.type === "thinking" || block.type === "redacted_thinking") continue;
+      block.cache_control = { type: "ephemeral" };
+      return;
+    }
+  }
+
+  private convertTools(tools: ToolDefinition[], policy: PromptCachePolicy): Anthropic.Tool[] {
     const converted: Anthropic.Tool[] = tools.map((t) => ({
       name: t.name,
       description: t.description,
@@ -510,7 +553,9 @@ export class AnthropicClient extends LLMClientBase {
     // not per-tool); a second marker here would waste a scarce cache_control
     // slot (max 4) and risk KV eviction. See docs/todo/prompt-cache-optimization.md.
     const last = converted[converted.length - 1];
-    if (last) last.cache_control = { type: "ephemeral" };
+    if (last && policy.breakpoints.includes("tools")) {
+      last.cache_control = { type: "ephemeral" };
+    }
     return converted;
   }
 

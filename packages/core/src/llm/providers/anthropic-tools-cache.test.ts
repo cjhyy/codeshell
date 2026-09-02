@@ -49,12 +49,12 @@ const opts = (tools: CreateMessageOptions["tools"]): CreateMessageOptions => ({
 });
 
 describe("AnthropicClient tools prompt-cache breakpoint", () => {
-  it("reports its explicit three-breakpoint cache layout", () => {
+  it("reports its explicit four-boundary cache layout", () => {
     const { client } = clientCapturing();
     expect(client.getPromptCacheConfigIdentity()).toMatchObject({
       cacheStrategy: "anthropic-explicit",
-      cacheLayoutVersion: "system-tools-history-v1",
-      breakpointCount: 3,
+      cacheLayoutVersion: "system-tools-stable-rolling-v2",
+      breakpointCount: 4,
     });
   });
 

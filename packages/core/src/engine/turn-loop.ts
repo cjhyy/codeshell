@@ -574,9 +574,43 @@ export class TurnLoop {
     return changed ? stripped : messages;
   }
 
-  private appendVolatileContextMessages(messages: Message[]): Message[] {
-    if (this.volatileContextMessages.size === 0) return messages;
-    return [...this.stripVolatileContextMessages(messages), ...this.volatileContextMessages];
+  /**
+   * Keep volatile context out of compaction/summarization without moving it on
+   * every model round. If context management is a no-op, return the original
+   * array so the provider sees a strictly append-only prompt. A real rewrite
+   * (dedupe/compaction/truncation) already invalidates the old prefix, so start
+   * a fresh append-only segment with the volatile snapshot at the new tail.
+   */
+  private restoreVolatileAfterContextManagement(
+    original: Message[],
+    stableInput: Message[],
+    managedStable: Message[],
+  ): Message[] {
+    const unchanged =
+      stableInput.length === managedStable.length &&
+      stableInput.every((message, index) => managedStable[index] === message);
+    if (unchanged) return original;
+
+    const volatile = original.filter((message) => this.volatileContextMessages.has(message));
+    return [...managedStable, ...volatile];
+  }
+
+  private async manageContextMessages(messages: Message[]): Promise<Message[]> {
+    if (this.volatileContextMessages.size === 0) {
+      return this.deps.contextManager.manageAsync(messages, this.config.signal);
+    }
+    const stable = this.stripVolatileContextMessages(messages);
+    const managed = await this.deps.contextManager.manageAsync(stable, this.config.signal);
+    return this.restoreVolatileAfterContextManagement(messages, stable, managed);
+  }
+
+  private manageContextMessagesSync(messages: Message[]): Message[] {
+    if (this.volatileContextMessages.size === 0) {
+      return this.deps.contextManager.manage(messages);
+    }
+    const stable = this.stripVolatileContextMessages(messages);
+    const managed = this.deps.contextManager.manage(stable);
+    return this.restoreVolatileAfterContextManagement(messages, stable, managed);
   }
 
   private markPendingImagesConsumed(messages: Message[]): Message[] {
@@ -604,10 +638,17 @@ export class TurnLoop {
     return redacted;
   }
 
-  private modelCallRecordingOptions(): ModelCallRecordingOptions | undefined {
-    if (this.sensitiveToolResultRedactions.size === 0) return undefined;
+  private modelCallRecordingOptions(messages: Message[]): ModelCallRecordingOptions {
+    const volatileIndex = messages.findIndex((message) =>
+      this.volatileContextMessages.has(message),
+    );
     return {
-      sensitiveToolResultRedactions: new Map(this.sensitiveToolResultRedactions),
+      ...(this.sensitiveToolResultRedactions.size > 0
+        ? { sensitiveToolResultRedactions: new Map(this.sensitiveToolResultRedactions) }
+        : {}),
+      promptCache: {
+        stablePrefixMessageCount: volatileIndex >= 0 ? volatileIndex : messages.length,
+      },
     };
   }
 
@@ -916,7 +957,6 @@ export class TurnLoop {
         // pendingImageMessages are preserved through this next model request.
         const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
         messages = this.prepareMessagesForModel(messages);
-        messages = this.stripVolatileContextMessages(messages);
 
         if (hasPendingSensitiveToolResults) {
           tlog.info("turn.sensitive_tool_result_context_management_skipped", {
@@ -925,7 +965,7 @@ export class TurnLoop {
           });
         } else {
           // Context management (async — may trigger LLM summarization)
-          messages = await this.deps.contextManager.manageAsync(messages, this.config.signal);
+          messages = await this.manageContextMessages(messages);
 
           // manageAsync can itself issue an LLM summarization call lasting several
           // seconds; if the signal aborted during it, stop here rather than
@@ -971,8 +1011,6 @@ export class TurnLoop {
           messages = this.redactConsumedSensitiveToolResults(messages);
           return { text: finalText, reason: "completed", messages };
         }
-        messages = this.appendVolatileContextMessages(messages);
-
         // Model call (with streaming fallback and max_output_tokens continuation)
         this.config.onStream?.({
           type: "stream_request_start",
@@ -1174,12 +1212,14 @@ export class TurnLoop {
               },
             ];
             try {
+              const preparedContinuationMessages = this.prepareMessagesForModel(contMessages);
               const contResponse = await this.deps.model.call(
                 this.deps.systemPrompt,
-                this.prepareMessagesForModel(contMessages),
+                preparedContinuationMessages,
                 this.deps.tools,
                 this.config.onStream,
                 this.config.signal,
+                this.modelCallRecordingOptions(preparedContinuationMessages),
               );
               // Continuations are separate provider responses, so preserve the
               // same structural tool_use invariant before processing this one.
@@ -1856,7 +1896,7 @@ export class TurnLoop {
         phase: "max_turns_summary",
       });
     } else {
-      messages = this.deps.contextManager.manage(messages);
+      messages = this.manageContextMessagesSync(messages);
     }
     if (this.goalControlStopRequested) {
       messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1874,13 +1914,14 @@ export class TurnLoop {
         messages = this.redactConsumedSensitiveToolResults(messages);
         return { text: finalText, reason: "completed", messages };
       }
+      const summaryMessages = this.prepareMessagesForModel(messages);
       const summaryResponse = await this.deps.model.call(
         this.deps.systemPrompt,
-        this.prepareMessagesForModel(messages),
+        summaryMessages,
         [], // No tools available for summary turn
         this.config.onStream,
         this.config.signal,
-        this.modelCallRecordingOptions(),
+        this.modelCallRecordingOptions(summaryMessages),
       );
       if (summaryResponse.usage?.promptTokens !== undefined) {
         this.recordResponseUsage(summaryResponse.usage, "primary", false);
@@ -1970,7 +2011,7 @@ export class TurnLoop {
         this.deps.tools,
         wrappedStream,
         this.config.signal,
-        this.modelCallRecordingOptions(),
+        this.modelCallRecordingOptions(messages),
       );
     } catch (err) {
       // If it's a context or rate limit error, don't fallback — propagate
@@ -2024,7 +2065,7 @@ export class TurnLoop {
         messages,
         this.deps.tools,
         this.config.signal,
-        this.modelCallRecordingOptions(),
+        this.modelCallRecordingOptions(messages),
       );
     }
   }
