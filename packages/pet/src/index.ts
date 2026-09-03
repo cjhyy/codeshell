@@ -73,8 +73,12 @@ export {
   currentTimeAvailability,
 } from "./current-time.js";
 export {
+  BIND_CONVERSATION_SESSION_TOOL_NAME,
   MANAGE_SESSIONS_TOOL_NAME,
   WATCH_SESSION_TOOL_NAME,
+  bindConversationSessionToolDef,
+  bindConversationSessionTool,
+  bindConversationSessionAvailability,
   manageSessionsToolDef,
   manageSessionsTool,
   manageSessionsAvailability,
@@ -128,4 +132,5 @@ export { createPetModule } from "./capability.js";
 export * from "./topic-segment.js";
 export * from "./segment-closure.js";
 export * from "./long-task.js";
+export * from "./conversation-session-route.js";
 export * from "./migration-summary.js";

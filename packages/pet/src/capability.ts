@@ -32,6 +32,9 @@ import { gatewayAvailability, gatewayTool, gatewayToolDef } from "./gateway.js";
 import { sessionsAvailability, sessionsTool, sessionsToolDef } from "./sessions-tool.js";
 import { currentTimeAvailability, currentTimeTool, currentTimeToolDef } from "./current-time.js";
 import {
+  bindConversationSessionAvailability,
+  bindConversationSessionTool,
+  bindConversationSessionToolDef,
   manageSessionsAvailability,
   manageSessionsTool,
   manageSessionsToolDef,
@@ -329,6 +332,23 @@ function buildPetParts(): PetParts {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: manageSessionsToolDef.name, decision: "allow" }],
           availability: manageSessionsAvailability,
+        },
+      },
+      {
+        definition: {
+          ...bindConversationSessionToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: bindConversationSessionTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [
+            { tool: bindConversationSessionToolDef.name, decision: "allow" },
+          ],
+          availability: bindConversationSessionAvailability,
         },
       },
       {

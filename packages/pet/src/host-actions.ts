@@ -21,6 +21,7 @@ export const PET_HOST_ACTION_KINDS = [
   "followUpMutation",
   "sessionWatch",
   "sessionArchive",
+  "sessionBind",
   "outboundMessage",
 ] as const;
 export type PetHostActionKind = (typeof PET_HOST_ACTION_KINDS)[number];
