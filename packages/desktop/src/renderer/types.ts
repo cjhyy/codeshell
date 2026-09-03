@@ -673,7 +673,7 @@ export function applyStreamEvent(
       if (event.id) {
         let matched = false;
         const messages = state.messages.map((m) => {
-          if (m.kind === "user" && m.steerId === event.id) {
+          if (m.kind === "user" && (m.steerId === event.id || m.clientMessageId === event.id)) {
             matched = true;
             return { ...m, pending: false, text: event.text, injected: true };
           }

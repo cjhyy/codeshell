@@ -61,6 +61,24 @@ const richChannelCapabilities = {
   },
 };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
+
+function imSource(senderId: string) {
+  return {
+    kind: "im-gateway" as const,
+    channel: "wechat",
+    target: "chat-one",
+    senderId,
+    capabilities: textOnlyChannelCapabilities,
+  };
+}
+
 describe("PetDispatchService", () => {
   test("keeps deterministic commands off the model and reuses safe navigation", async () => {
     let workerCalls = 0;
@@ -3063,6 +3081,175 @@ describe("PetDispatchService", () => {
       ],
     });
     expect(mutations).toBe(0);
+  });
+
+  test("steers consecutive messages from the same IM route into one Mimi turn", async () => {
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const runStarted = deferred<void>();
+    let outbound:
+      | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+      | undefined;
+    const calls: string[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        subscribeOutbound: (listener) => {
+          outbound = listener;
+          return () => undefined;
+        },
+        requestWorker: async (method, params) => {
+          calls.push(method);
+          if (method === "agent/run") {
+            runStarted.resolve();
+            return firstRun.promise;
+          }
+          if (method === "agent/steer") {
+            outbound?.("", {
+              sessionId: "pet-one",
+              event: { type: "steer_injected", id: params.id, text: params.text },
+            });
+            return { ok: true, result: { accepted: true } };
+          }
+          throw new Error(`unexpected worker method: ${method}`);
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+
+    const leader = service.dispatch({
+      type: "chat",
+      message: "first",
+      clientMessageId: "wechat-1",
+      source: imSource("user-one"),
+    });
+    await runStarted.promise;
+    const follower = service.dispatch({
+      type: "chat",
+      message: "and also this",
+      clientMessageId: "wechat-2",
+      source: imSource("user-one"),
+    });
+    await Promise.resolve();
+    firstRun.resolve({ ok: true, result: { text: "combined reply" } });
+
+    expect(await leader).toMatchObject({
+      ok: true,
+      type: "chat",
+      inputDisposition: "turn",
+    });
+    expect(await follower).toMatchObject({
+      ok: true,
+      type: "chat",
+      inputDisposition: "steered",
+      suppressReply: true,
+    });
+    expect(calls).toEqual(["agent/run", "agent/steer"]);
+  });
+
+  test("queues different IM senders as isolated Mimi turns", async () => {
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const firstRunStarted = deferred<void>();
+    const secondRunStarted = deferred<void>();
+    const calls: string[] = [];
+    let runCount = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method) => {
+          calls.push(method);
+          if (method !== "agent/run") throw new Error(`unexpected worker method: ${method}`);
+          runCount += 1;
+          if (runCount === 1) {
+            firstRunStarted.resolve();
+            return firstRun.promise;
+          }
+          secondRunStarted.resolve();
+          return { ok: true, result: { text: "second reply" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+
+    const first = service.dispatch({
+      type: "chat",
+      message: "from user one",
+      clientMessageId: "wechat-user-1",
+      source: imSource("user-one"),
+    });
+    await firstRunStarted.promise;
+    const second = service.dispatch({
+      type: "chat",
+      message: "from user two",
+      clientMessageId: "wechat-user-2",
+      source: imSource("user-two"),
+    });
+    await Promise.resolve();
+    expect(calls).toEqual(["agent/run"]);
+
+    firstRun.resolve({ ok: true, result: { text: "first reply" } });
+    await secondRunStarted.promise;
+    expect(await first).toMatchObject({ inputDisposition: "turn" });
+    expect(await second).toMatchObject({ inputDisposition: "turn" });
+    expect(calls).toEqual(["agent/run", "agent/run"]);
+  });
+
+  test("retries a late unconsumed steer as the next normal turn", async () => {
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const firstRunStarted = deferred<void>();
+    const secondRunStarted = deferred<void>();
+    const calls: string[] = [];
+    let runCount = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method) => {
+          calls.push(method);
+          if (method === "agent/steer") return { ok: true, result: { accepted: true } };
+          if (method === "agent/unsteer") return { ok: true, result: { removed: true } };
+          if (method !== "agent/run") throw new Error(`unexpected worker method: ${method}`);
+          runCount += 1;
+          if (runCount === 1) {
+            firstRunStarted.resolve();
+            return firstRun.promise;
+          }
+          secondRunStarted.resolve();
+          return { ok: true, result: { text: "follow-up reply" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+
+    const first = service.dispatch({
+      type: "chat",
+      message: "first",
+      clientMessageId: "desktop-1",
+    });
+    await firstRunStarted.promise;
+    const late = service.dispatch({
+      type: "chat",
+      message: "too late for this turn",
+      clientMessageId: "desktop-2",
+    });
+    await Promise.resolve();
+    firstRun.resolve({ ok: true, result: { text: "first reply" } });
+    await secondRunStarted.promise;
+
+    expect(await first).toMatchObject({ inputDisposition: "turn" });
+    expect(await late).toMatchObject({ inputDisposition: "turn" });
+    expect(await late).not.toHaveProperty("suppressReply");
+    expect(calls).toEqual(["agent/run", "agent/steer", "agent/unsteer", "agent/run"]);
   });
 });
 

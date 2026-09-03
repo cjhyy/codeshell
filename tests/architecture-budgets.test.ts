@@ -30,8 +30,15 @@ describe("architecture growth budgets", () => {
     // shared sendToOwnerWindow helper that emit already uses (+9 lines). The
     // service also receives main's exact-root project resolver so external
     // runtime sessions persist the same stable project identity as native
-    // Engine sessions (+9 lines).
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_942);
+    // Engine sessions (+9 lines). Concurrent IM messages on one route are then
+    // folded into the running Mimi turn via steer: the dispatch source carries
+    // senderId so the route key can distinguish two people in one group chat,
+    // and a steered follower returns early instead of emitting a second IM
+    // reply for the same turn (+9 lines). Both are early-exit branches inside
+    // the existing dispatchGatewayPetChat, so extracting them would split one
+    // request path across two files for no gain; the steer/unsteer scheduler
+    // itself already lives in pet-dispatch-service.ts.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_951);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );

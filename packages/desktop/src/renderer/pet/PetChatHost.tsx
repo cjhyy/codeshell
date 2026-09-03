@@ -81,6 +81,8 @@ export interface PetChatRow {
   delegation?: PetDelegationReceipt;
   deliveryLabel?: string;
   images?: PetChatImage[];
+  /** This user input is waiting to join the active Mimi turn. */
+  pending?: boolean;
 }
 
 export interface PetChatImage {
@@ -305,6 +307,7 @@ export function selectPetChatRows(
         text: content.text,
         ...(content.images.length > 0 ? { images: content.images } : {}),
         ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
+        ...(message.pending ? { pending: true } : {}),
       };
       const boundary =
         (message.clientMessageId ? boundaries.get(message.clientMessageId) : undefined) ??
@@ -643,6 +646,11 @@ function PetChatRowView({
               {row.text}
             </div>
           )}
+          {row.pending && (
+            <div className="mt-1.5 text-[10px] leading-4 text-primary-foreground/70">
+              {t("pet.chat.inputQueued")}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -709,6 +717,7 @@ export function PetChatHost({
   const [pathAttachments, setPathAttachments] = React.useState<string[]>([]);
   const endRef = React.useRef<HTMLDivElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const pendingDispatchesRef = React.useRef(0);
   const historyRequestPendingRef = React.useRef(false);
   const pendingHistoryAnchorRef = React.useRef<{
     loadedBytes: number;
@@ -846,8 +855,10 @@ export function PetChatHost({
       pathAttachments,
       t("pet.chat.localFilePaths"),
     );
-    if (!message || !petSessionId || chatBusy) return;
+    if (!message || !petSessionId) return;
     const clientMessageId = `pet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const queued = chatBusy || pendingDispatchesRef.current > 0;
+    pendingDispatchesRef.current += 1;
     setDraft("");
     setPathAttachments([]);
     setError(null);
@@ -856,6 +867,7 @@ export function PetChatHost({
       bucket: PET_CHAT_BUCKET,
       text: message,
       clientMessageId,
+      ...(queued ? { steerId: clientMessageId, pending: true } : {}),
     });
     setChatBusy(true);
     try {
@@ -873,7 +885,17 @@ export function PetChatHost({
     } catch (dispatchError) {
       setError(dispatchError instanceof Error ? dispatchError.message : t("pet.chat.failed"));
     } finally {
-      setChatBusy(false);
+      // A rejected/late steer is retried by the host as a normal next turn.
+      // Either way, the completed dispatch no longer needs the queued badge.
+      chatDispatch({
+        type: "user_message",
+        bucket: PET_CHAT_BUCKET,
+        text: message,
+        clientMessageId,
+        pending: false,
+      });
+      pendingDispatchesRef.current = Math.max(0, pendingDispatchesRef.current - 1);
+      if (pendingDispatchesRef.current === 0) setChatBusy(false);
     }
   };
 
@@ -1110,7 +1132,7 @@ export function PetChatHost({
             className="w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground/75"
             placeholder={t("pet.chat.placeholder")}
             aria-label={t("pet.chat.placeholder")}
-            disabled={!petSessionId || chatBusy}
+            disabled={!petSessionId}
           />
           <div className="flex items-end justify-between gap-3 px-1 pb-0.5">
             <p className="flex min-w-0 items-center gap-1.5 text-[10px] leading-4 text-muted-foreground">
@@ -1120,11 +1142,7 @@ export function PetChatHost({
             <button
               type="button"
               className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-40"
-              disabled={
-                (!state.chatDraft.trim() && pathAttachments.length === 0) ||
-                !petSessionId ||
-                chatBusy
-              }
+              disabled={(!state.chatDraft.trim() && pathAttachments.length === 0) || !petSessionId}
               onClick={() => void submitToPet()}
             >
               <ArrowUp size={13} aria-hidden="true" />

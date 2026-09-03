@@ -72,6 +72,27 @@ describe("PetChatHost", () => {
     ]);
   });
 
+  test("projects queued Mimi input status into the user row", () => {
+    expect(
+      selectPetChatRows([
+        {
+          kind: "user",
+          id: "queued-user",
+          text: "再补充一点",
+          clientMessageId: "pet-queued-1",
+          pending: true,
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "queued-user",
+        role: "user",
+        text: "再补充一点",
+        pending: true,
+      },
+    ]);
+  });
+
   test("hides a partially streamed automatic-routing marker", () => {
     expect(
       selectPetChatRows([

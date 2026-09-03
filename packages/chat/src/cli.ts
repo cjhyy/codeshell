@@ -16,6 +16,7 @@ import {
   CODE_SHELL_REMOTE_COMMANDS,
   createCodeShellRemoteCommands,
   createMimiPetChat,
+  MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
 } from "./gateway.js";
 import { loginCodeShellWechat } from "./wechat-login.js";
 import { defaultWechatDataDirectory } from "./wechat-storage.js";
@@ -82,7 +83,10 @@ async function main(args = process.argv.slice(2)): Promise<void> {
         path: config.runtime.inboxPath,
         maxPending: config.runtime.maxPending,
         maxConcurrent: config.runtime.maxConcurrent,
-        maxPerTarget: config.runtime.maxPerTarget,
+        maxPerTarget: Math.max(
+          config.runtime.maxPerTarget,
+          MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
+        ),
       },
       adapterRestart: {
         baseMs: config.runtime.adapterRestartBaseMs,

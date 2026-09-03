@@ -110,6 +110,8 @@ export interface PetChatResult {
   text: string;
   petSessionId: string;
   reason?: string;
+  /** This input joined an in-flight Mimi turn; the earlier request owns the combined reply. */
+  suppressReply?: boolean;
   /** GatewayReply URL action; rendered natively or as a labelled link by the adapter. */
   button?: { text: string; url: string };
   /** Host-produced reply attachments; same host-local path shape as event attachments. */

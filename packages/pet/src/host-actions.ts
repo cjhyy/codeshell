@@ -406,9 +406,10 @@ export async function gatewayReplyTool(
   ctx?.runYield?.request("reply_committed");
   return (
     "ACCEPTED EXACTLY ONCE — NOT SENT YET. The Gateway reply was recorded for host validation " +
-    "after this turn. End the turn now without producing any assistant text; do not call " +
-    "GatewayReply again, repeat the user-facing reply, or claim sent, attached, or delivered. " +
-    "The host will supply the only visible reply."
+    "after this turn. End the turn now without producing any assistant text. If a later user " +
+    "message is injected before the turn ends, call GatewayReply once with a complete replacement " +
+    "for the merged inputs; otherwise do not call it again. Never repeat the user-facing reply or " +
+    "claim sent, attached, or delivered. The host will supply the only visible reply."
   );
 }
 

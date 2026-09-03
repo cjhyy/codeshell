@@ -31,6 +31,13 @@ export interface MimiPetChatOptions {
 
 const MIMI_REPLY_CACHE_MAX_ENTRIES = 2_048;
 
+/**
+ * Mimi can accept several messages from one conversation while one model turn
+ * is running. The host folds same-route followers into that turn via steer;
+ * ordinary adapter replies remain bounded by the Gateway's global concurrency.
+ */
+export const MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET = 4;
+
 interface MimiCachedReply {
   outgoing: Promise<OutgoingMessage[]>;
   nextSendIndex: number;
@@ -241,6 +248,7 @@ async function buildMimiOutgoingReplies(
       channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),
     },
   });
+  if (result.suppressReply) return [];
   const chunks = splitNotificationTextForChannel(
     result.text || "Mimi Pet 已处理，但没有返回文字内容。",
     message.channel,

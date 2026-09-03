@@ -171,6 +171,8 @@ export interface PetChatControlResult {
   text: string;
   petSessionId: string;
   reason?: string;
+  /** This input joined an in-flight Mimi turn; no separate channel reply is due. */
+  suppressReply?: boolean;
   button?: { text: string; url: string };
   /** Host-produced reply attachments for attachment-capable channels. */
   attachments?: GatewayControlEventAttachment[];

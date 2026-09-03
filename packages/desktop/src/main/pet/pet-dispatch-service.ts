@@ -124,6 +124,8 @@ export type PetDispatchCommand =
         kind: "im-gateway";
         channel: string;
         target?: string;
+        /** Authenticated sender within the target (important for group chats). */
+        senderId?: string;
         capabilities: PetImChannelCapabilities;
         channels?: readonly PetImGatewayChannel[];
       };
@@ -183,6 +185,10 @@ export type PetDispatchResult =
       authoritativeReply?: string;
       /** True when the host handled /clear without calling the manager model. */
       contextCleared?: boolean;
+      /** How this input entered Mimi's durable Session. */
+      inputDisposition?: "turn" | "steered";
+      /** The input joined another in-flight turn, so this request owns no separate reply. */
+      suppressReply?: boolean;
       delegation?: PetStartedDelegation;
       delegations?: PetStartedDelegation[];
       /**
@@ -208,6 +214,10 @@ interface PetDispatchOptions {
       params: Record<string, unknown>,
       options: { meta: WorkerFrameMeta },
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
+    /** Optional live stream tap used to confirm that a queued steer was actually consumed. */
+    subscribeOutbound?(
+      listener: (line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void,
+    ): () => void;
   };
   hostCwd: string;
   /** On-disk sessions root backing Mimi's read-only Sessions disclosure tool. */
@@ -660,8 +670,207 @@ function replaceRunResultText(result: unknown, text: string): unknown {
     : { text };
 }
 
+interface PetQueuedSteer {
+  id: string;
+  injected: boolean;
+}
+
+interface PetActiveChatTurn {
+  routeKey: string;
+  sessionId: string;
+  runSettled: boolean;
+  followerCount: number;
+  steers: Map<string, PetQueuedSteer>;
+  runDone: Promise<void>;
+  resolveRunDone: () => void;
+  fullyDone: Promise<void>;
+  resolveFullyDone: () => void;
+}
+
+type PetChatCommand = Extract<PetDispatchCommand, { type: "chat" }>;
+
+function petChatRouteKey(command: PetChatCommand): string {
+  if (!command.source) return "desktop";
+  const target = command.source.target?.trim();
+  const senderId = command.source.senderId?.trim();
+  // Missing route identity must fail closed for steering: two anonymous
+  // messages may share a channel name without belonging to the same chat.
+  if (!target || !senderId) {
+    return `im:${command.source.channel}:isolated:${command.clientMessageId ?? randomUUID()}`;
+  }
+  return `im:${command.source.channel}\0${target}\0${senderId}`;
+}
+
+function isPetContextControl(command: PetChatCommand): boolean {
+  return command.message.trim().toLowerCase() === "/clear";
+}
+
+function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return undefined;
+  const value = (result as Record<string, unknown>)[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
 export class PetDispatchService {
-  constructor(private readonly options: PetDispatchOptions) {}
+  private activeChatTurn?: PetActiveChatTurn;
+  private chatAdmissionTail: Promise<void> = Promise.resolve();
+
+  constructor(private readonly options: PetDispatchOptions) {
+    options.worker.subscribeOutbound?.((_line, snapshotEntry) => {
+      const active = this.activeChatTurn;
+      if (!active || snapshotEntry?.sessionId !== active.sessionId) return;
+      const event = snapshotEntry.event;
+      if (!event || typeof event !== "object" || Array.isArray(event)) return;
+      const record = event as Record<string, unknown>;
+      if (record.type !== "steer_injected" || typeof record.id !== "string") return;
+      const steer = active.steers.get(record.id);
+      if (steer) steer.injected = true;
+    });
+  }
+
+  private async withChatAdmission<T>(operation: () => Promise<T> | T): Promise<T> {
+    const previous = this.chatAdmissionTail;
+    let release!: () => void;
+    this.chatAdmissionTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
+
+  private createActiveChatTurn(routeKey: string, sessionId: string): PetActiveChatTurn {
+    let resolveRunDone!: () => void;
+    let resolveFullyDone!: () => void;
+    return {
+      routeKey,
+      sessionId,
+      runSettled: false,
+      followerCount: 0,
+      steers: new Map(),
+      runDone: new Promise<void>((resolve) => {
+        resolveRunDone = resolve;
+      }),
+      resolveRunDone,
+      fullyDone: new Promise<void>((resolve) => {
+        resolveFullyDone = resolve;
+      }),
+      resolveFullyDone,
+    };
+  }
+
+  private finishActiveChatTurnIfDrained(active: PetActiveChatTurn): void {
+    if (!active.runSettled || active.followerCount > 0) return;
+    if (this.activeChatTurn === active) this.activeChatTurn = undefined;
+    active.resolveFullyDone();
+  }
+
+  private steeredChatResult(sessionId: string): PetDispatchResult {
+    return {
+      ok: true,
+      type: "chat",
+      petSessionId: sessionId,
+      result: { text: "", reason: "steered" },
+      inputDisposition: "steered",
+      suppressReply: true,
+    };
+  }
+
+  private async dispatchScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
+    const sessionId = (await this.options.metadata.ensure()).petSessionId;
+    const routeKey = petChatRouteKey(command);
+
+    for (;;) {
+      const admission = await this.withChatAdmission(() => {
+        const active = this.activeChatTurn;
+        if (!active) {
+          const leader = this.createActiveChatTurn(routeKey, sessionId);
+          this.activeChatTurn = leader;
+          return { kind: "leader" as const, active: leader };
+        }
+        if (active.routeKey === routeKey && !isPetContextControl(command)) {
+          const id = command.clientMessageId ?? `pet-steer-${randomUUID()}`;
+          const steer = { id, injected: false };
+          active.followerCount += 1;
+          active.steers.set(id, steer);
+          return { kind: "steer" as const, active, steer };
+        }
+        return { kind: "wait" as const, active };
+      });
+
+      if (admission.kind === "leader") {
+        try {
+          const result = await this.dispatchNow(command);
+          return result.ok && result.type === "chat"
+            ? { ...result, inputDisposition: result.inputDisposition ?? "turn" }
+            : result;
+        } finally {
+          await this.withChatAdmission(() => {
+            admission.active.runSettled = true;
+            admission.active.resolveRunDone();
+            this.finishActiveChatTurnIfDrained(admission.active);
+          });
+        }
+      }
+
+      if (admission.kind === "wait") {
+        await admission.active.fullyDone;
+        continue;
+      }
+
+      let accepted = false;
+      try {
+        const steerResponse = await this.options.worker.requestWorker(
+          "agent/steer",
+          {
+            sessionId: admission.active.sessionId,
+            text: command.message.trim(),
+            id: admission.steer.id,
+            ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
+            ...(command.attachments?.length ? { attachments: command.attachments } : {}),
+          },
+          { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+        );
+        accepted = steerResponse.ok && readWorkerBoolean(steerResponse.result, "accepted") === true;
+      } catch {
+        // A bridge restart is equivalent to a rejected steer. The stable
+        // clientMessageId lets the normal queued turn retry safely below.
+      }
+
+      if (accepted) await admission.active.runDone;
+
+      let consumed = accepted && admission.steer.injected;
+      if (accepted && !consumed) {
+        try {
+          const revoke = await this.options.worker.requestWorker(
+            "agent/unsteer",
+            { sessionId: admission.active.sessionId, id: admission.steer.id },
+            { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+          );
+          // removed=false means the running loop already consumed the steer.
+          // This also confirms consumption for bridges without live snapshots.
+          consumed = revoke.ok && readWorkerBoolean(revoke.result, "removed") === false;
+        } catch {
+          // Unknown consumption state falls back to a normal idempotent turn.
+        }
+      }
+
+      await this.withChatAdmission(() => {
+        admission.active.steers.delete(admission.steer.id);
+        admission.active.followerCount = Math.max(0, admission.active.followerCount - 1);
+        this.finishActiveChatTurnIfDrained(admission.active);
+      });
+
+      if (consumed) return this.steeredChatResult(admission.active.sessionId);
+      await admission.active.fullyDone;
+      // The turn ended before consuming this input (or steering was rejected).
+      // Retry admission as a normal queued turn; the stable clientMessageId
+      // keeps transcript/host-action replay idempotent.
+    }
+  }
 
   private async currentPersonalization(): Promise<PetPersonalization | undefined> {
     try {
@@ -1189,6 +1398,12 @@ export class PetDispatchService {
   }
 
   async dispatch(command: PetDispatchCommand): Promise<PetDispatchResult> {
+    return command?.type === "chat"
+      ? this.dispatchScheduledChat(command)
+      : this.dispatchNow(command);
+  }
+
+  private async dispatchNow(command: PetDispatchCommand): Promise<PetDispatchResult> {
     if (!command || typeof command !== "object" || typeof command.type !== "string") {
       return { ok: false, code: "invalid-command" };
     }

@@ -244,6 +244,26 @@ describe("CodeShell remote command integration", () => {
     expect(adapter.replies[0]?.message.text).toBe("看到了图片");
   });
 
+  test("does not send a second channel reply for an input merged into the active Mimi turn", async () => {
+    const adapter = fakeAdapter();
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createMimiPetChat({
+        desktop: {
+          petChat: async () => ({
+            text: "",
+            petSessionId: "pet-1",
+            reason: "steered",
+            suppressReply: true,
+          }),
+        },
+      }),
+    );
+
+    await gateway.dispatch(adapter, message("还有一点"));
+    expect(adapter.replies).toEqual([]);
+  });
+
   test("delivers image attachments from the Mimi result back to the channel", async () => {
     const root = await mkdtemp(join(tmpdir(), "gateway-pet-reply-"));
     try {

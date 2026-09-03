@@ -41,6 +41,7 @@ import {
   CODE_SHELL_REMOTE_COMMANDS,
   createCodeShellRemoteCommands,
   createMimiPetChat,
+  MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
   type ConfiguredChannel,
   type DesktopControlEvent,
   defaultGatewayConfigPath,
@@ -454,7 +455,10 @@ export class ImGatewayService {
           path: config.runtime.inboxPath,
           maxPending: config.runtime.maxPending,
           maxConcurrent: config.runtime.maxConcurrent,
-          maxPerTarget: config.runtime.maxPerTarget,
+          maxPerTarget: Math.max(
+            config.runtime.maxPerTarget,
+            MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
+          ),
         },
         adapterRestart: {
           baseMs: config.runtime.adapterRestartBaseMs,

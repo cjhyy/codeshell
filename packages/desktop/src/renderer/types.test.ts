@@ -46,6 +46,32 @@ describe("steer_injected → user bubble (引导不打断注入)", () => {
     });
   });
 
+  test("matches a Mimi queued bubble by client message id", () => {
+    const pending = appendUserMessage(
+      INITIAL_STATE,
+      "queued Mimi message",
+      100,
+      false,
+      false,
+      undefined,
+      true,
+      "pet-client-1",
+    );
+    const next = applyStreamEvent(pending, {
+      type: "steer_injected",
+      id: "pet-client-1",
+      text: "queued Mimi message",
+    } as StreamEvent);
+
+    expect(next.messages).toHaveLength(1);
+    expect(next.messages[0]).toMatchObject({
+      kind: "user",
+      clientMessageId: "pet-client-1",
+      pending: false,
+      injected: true,
+    });
+  });
+
   test("drops only matching pending steer bubbles when a queued steer is revoked", () => {
     let s = appendUserMessage(INITIAL_STATE, "keep", 1, false, true, "keep", true);
     s = appendUserMessage(s, "drop", 2, false, true, "drop", true);

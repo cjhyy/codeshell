@@ -142,6 +142,7 @@ export function PetDesktopWindow() {
   const [chatError, setChatError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const conversationEndRef = React.useRef<HTMLDivElement>(null);
+  const pendingDispatchesRef = React.useRef(0);
   const chatRows = React.useMemo(
     () =>
       selectMiniChatRows(
@@ -185,8 +186,10 @@ export function PetDesktopWindow() {
 
   const sendChat = async (): Promise<void> => {
     const message = draft.trim();
-    if (!message || chatBusy || !petSessionId) return;
+    if (!message || !petSessionId) return;
     const clientMessageId = `pet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const queued = chatBusy || pendingDispatchesRef.current > 0;
+    pendingDispatchesRef.current += 1;
     setDraft("");
     setChatError(null);
     chatDispatch({
@@ -194,6 +197,7 @@ export function PetDesktopWindow() {
       bucket: PET_CHAT_BUCKET,
       text: message,
       clientMessageId,
+      ...(queued ? { steerId: clientMessageId, pending: true } : {}),
     });
     setChatBusy(true);
     try {
@@ -205,7 +209,15 @@ export function PetDesktopWindow() {
     } catch (error) {
       setChatError(error instanceof Error ? error.message : t("pet.chat.failed"));
     } finally {
-      setChatBusy(false);
+      chatDispatch({
+        type: "user_message",
+        bucket: PET_CHAT_BUCKET,
+        text: message,
+        clientMessageId,
+        pending: false,
+      });
+      pendingDispatchesRef.current = Math.max(0, pendingDispatchesRef.current - 1);
+      if (pendingDispatchesRef.current === 0) setChatBusy(false);
     }
   };
 
@@ -361,7 +373,12 @@ export function PetDesktopWindow() {
                   {row.role === "assistant" ? (
                     <PetMiniMarkdown text={row.text} />
                   ) : (
-                    <p>{row.text}</p>
+                    <>
+                      <p>{row.text}</p>
+                      {row.pending && (
+                        <p className="mt-1 text-[9px] opacity-70">{t("pet.chat.inputQueued")}</p>
+                      )}
+                    </>
                   )}
                 </div>
               ),
@@ -384,12 +401,12 @@ export function PetDesktopWindow() {
               onChange={(event) => setDraft(event.target.value)}
               className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary/50"
               placeholder={t("pet.widget.placeholder")}
-              disabled={chatBusy || !petSessionId}
+              disabled={!petSessionId}
             />
             <button
               type="submit"
               className="rounded-lg bg-primary px-2.5 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
-              disabled={!draft.trim() || chatBusy || !petSessionId}
+              disabled={!draft.trim() || !petSessionId}
             >
               {t("pet.widget.send")}
             </button>

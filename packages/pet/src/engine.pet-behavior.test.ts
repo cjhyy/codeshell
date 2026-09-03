@@ -36,6 +36,42 @@ class PetBehaviorClient extends LLMClientBase {
     const gatewayReplyRound = modelCalls.filter((call) =>
       call.tools.includes("GatewayReply"),
     ).length;
+    if (this.model.startsWith("gateway-reply-steer-")) {
+      const response: LLMResponse = !modelCalls.at(-1)!.tools.includes("GatewayReply")
+        ? {
+            text: "session title",
+            toolCalls: [],
+            stopReason: "stop",
+            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          }
+        : gatewayReplyRound === 1
+          ? {
+              text: "",
+              toolCalls: [
+                {
+                  id: "gateway-reply-before-steer",
+                  toolName: "GatewayReply",
+                  args: { text: "旧回复" },
+                },
+              ],
+              stopReason: "tool_use",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            }
+          : {
+              text: "",
+              toolCalls: [
+                {
+                  id: "gateway-reply-after-steer",
+                  toolName: "GatewayReply",
+                  args: { text: "合并后的新回复" },
+                },
+              ],
+              stopReason: "tool_use",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            };
+      this.recordUsage(response.usage!, options);
+      return response;
+    }
     const response: LLMResponse = this.model.startsWith("gateway-reply-batch-")
       ? {
           text: "",
@@ -403,6 +439,71 @@ describe("Engine pet behavior", () => {
     expect(events.find((event) => event.type === "turn_complete")).toEqual({
       type: "turn_complete",
       reason: "completed",
+    });
+  });
+
+  test("replaces a pending GatewayReply when a steer joins the same turn", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-pet-gateway-reply-steer-"));
+    tempDirs.push(cwd);
+    const model = `gateway-reply-steer-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const events: StreamEvent[] = [];
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      modules: [createPetModule()],
+      sessionStorageDir: join(cwd, "sessions"),
+      permissionMode: "bypassPermissions",
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 4,
+    });
+    (engine as any).hooks.clear();
+    let steered = false;
+
+    const result = await engine.run("先回复这条", {
+      sessionId: "gateway-pet-steer",
+      kind: "pet",
+      behaviorMode: "pet",
+      onStream: (event) => {
+        events.push(event);
+        if (
+          !steered &&
+          event.type === "tool_use_start" &&
+          event.toolCall.id === "gateway-reply-before-steer"
+        ) {
+          steered = true;
+          expect(
+            engine.enqueueSteer(
+              "gateway-pet-steer",
+              "补充要求",
+              "gateway-steer-1",
+              "gateway-client-2",
+            ).accepted,
+          ).toBe(true);
+        }
+      },
+      profileParams: {
+        hostActions: ["gatewayReply"],
+        gatewayReply: {
+          button: "link",
+          attachments: [],
+          maxTextLength: 8_000,
+          maxAttachments: 4,
+          maxAttachmentBytes: 10 * 1024 * 1024,
+        },
+        sessionsRootDir: join(cwd, "sessions"),
+      },
+    });
+
+    expect(events).toContainEqual({
+      type: "steer_injected",
+      text: "补充要求",
+      id: "gateway-steer-1",
+    });
+    expect(calls.get(model)!.filter((call) => call.tools.includes("GatewayReply"))).toHaveLength(2);
+    expect(result.extensions?.pet).toEqual({
+      hostActions: [{ kind: "gatewayReply", payload: { text: "合并后的新回复" } }],
     });
   });
 

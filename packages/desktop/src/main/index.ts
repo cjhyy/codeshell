@@ -2960,6 +2960,7 @@ async function dispatchGatewayPetChat(
     source: {
       kind: "im-gateway",
       channel: sourceChannel,
+      ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
       capabilities: request.origin?.capabilities ?? {
         inbound: { text: true, attachments: [] },
         outbound: { text: true, button: "link", attachments: [] },
@@ -2971,6 +2972,14 @@ async function dispatchGatewayPetChat(
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
   await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
+  if (result.suppressReply) {
+    return {
+      text: "",
+      petSessionId: result.petSessionId,
+      reason: "steered",
+      suppressReply: true,
+    };
+  }
   const worker = result.result as { text?: unknown; reason?: unknown } | undefined;
   // Host-executed action outcomes (real tunnel address + pairing QR, task
   // state changes, memory confirmations) are appended here so the IM reply
