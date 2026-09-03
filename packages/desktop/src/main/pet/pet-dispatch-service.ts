@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { isAbsolute } from "node:path";
+import { resolveSteerOutcome } from "./session-turn-scheduler.js";
 import type {
   PetNavigationRequest,
   PetNavigationResult,
@@ -821,42 +822,39 @@ export class PetDispatchService {
         continue;
       }
 
-      let accepted = false;
-      try {
-        const steerResponse = await this.options.worker.requestWorker(
-          "agent/steer",
-          {
-            sessionId: admission.active.sessionId,
-            text: command.message.trim(),
-            id: admission.steer.id,
-            ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
-            ...(command.attachments?.length ? { attachments: command.attachments } : {}),
-          },
-          { meta: { origin: "host", producer: "pet-dispatch-steer" } },
-        );
-        accepted = steerResponse.ok && readWorkerBoolean(steerResponse.result, "accepted") === true;
-      } catch {
-        // A bridge restart is equivalent to a rejected steer. The stable
-        // clientMessageId lets the normal queued turn retry safely below.
-      }
-
-      if (accepted) await admission.active.runDone;
-
-      let consumed = accepted && admission.steer.injected;
-      if (accepted && !consumed) {
-        try {
-          const revoke = await this.options.worker.requestWorker(
+      // Same ask-then-confirm sequence the IM bridge uses; see
+      // session-turn-scheduler.ts for why unsteer is the confirmation.
+      const outcome = await resolveSteerOutcome({
+        steer: async () => {
+          const response = await this.options.worker.requestWorker(
+            "agent/steer",
+            {
+              sessionId: admission.active.sessionId,
+              text: command.message.trim(),
+              id: admission.steer.id,
+              ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
+              ...(command.attachments?.length ? { attachments: command.attachments } : {}),
+            },
+            { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+          );
+          return {
+            accepted: response.ok && readWorkerBoolean(response.result, "accepted") === true,
+          };
+        },
+        wasInjected: () => admission.steer.injected,
+        unsteer: async () => {
+          const response = await this.options.worker.requestWorker(
             "agent/unsteer",
             { sessionId: admission.active.sessionId, id: admission.steer.id },
             { meta: { origin: "host", producer: "pet-dispatch-steer" } },
           );
-          // removed=false means the running loop already consumed the steer.
-          // This also confirms consumption for bridges without live snapshots.
-          consumed = revoke.ok && readWorkerBoolean(revoke.result, "removed") === false;
-        } catch {
-          // Unknown consumption state falls back to a normal idempotent turn.
-        }
-      }
+          return {
+            removed: !response.ok || readWorkerBoolean(response.result, "removed") !== false,
+          };
+        },
+        runDone: () => admission.active.runDone,
+      });
+      const consumed = outcome === "consumed";
 
       await this.withChatAdmission(() => {
         admission.active.steers.delete(admission.steer.id);
