@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-tui",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
   "license": "MIT",
   "repository": {
