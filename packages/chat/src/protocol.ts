@@ -26,6 +26,7 @@ export interface DesktopControlEvent {
     | "pet.task.failed"
     | "pet.task.cancelled"
     | "pet.task.reported"
+    | "session.reply"
     | "automation.completed"
     | "automation.failed"
     | "automation.stopped"

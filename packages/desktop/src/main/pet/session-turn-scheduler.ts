@@ -93,3 +93,24 @@ export class AdmissionGate {
  * next-turn case and an external runtime that has no steer support at all.
  */
 export type InboundDisposition = "ran" | "steered" | "queued";
+
+/**
+ * Stable identity for one IM conversation: channel, target and sender.
+ *
+ * Shared by Mimi's scheduler and the bound-Session bridge so both agree on
+ * what "the same conversation" means. Returns undefined when target or sender
+ * is missing, which is a hard stop rather than a fallback: two anonymous
+ * messages on one channel are indistinguishable, so guessing could fold a
+ * stranger's message into someone else's turn or deliver a reply to the wrong
+ * person.
+ */
+export function imConversationRouteKey(input: {
+  channel: string;
+  target?: string;
+  senderId?: string;
+}): string | undefined {
+  const target = input.target?.trim();
+  const senderId = input.senderId?.trim();
+  if (!input.channel.trim() || !target || !senderId) return undefined;
+  return `im:${input.channel}\u0000${target}\u0000${senderId}`;
+}

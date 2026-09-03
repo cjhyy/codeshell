@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { isAbsolute } from "node:path";
-import { resolveSteerOutcome } from "./session-turn-scheduler.js";
+import { imConversationRouteKey, resolveSteerOutcome } from "./session-turn-scheduler.js";
 import type {
   PetNavigationRequest,
   PetNavigationResult,
@@ -692,14 +692,14 @@ type PetChatCommand = Extract<PetDispatchCommand, { type: "chat" }>;
 
 function petChatRouteKey(command: PetChatCommand): string {
   if (!command.source) return "desktop";
-  const target = command.source.target?.trim();
-  const senderId = command.source.senderId?.trim();
   // Missing route identity must fail closed for steering: two anonymous
   // messages may share a channel name without belonging to the same chat.
-  if (!target || !senderId) {
-    return `im:${command.source.channel}:isolated:${command.clientMessageId ?? randomUUID()}`;
-  }
-  return `im:${command.source.channel}\0${target}\0${senderId}`;
+  // The shared builder returns undefined for exactly that case, and an
+  // isolated key keeps such a message in its own turn.
+  return (
+    imConversationRouteKey(command.source) ??
+    `im:${command.source.channel}:isolated:${command.clientMessageId ?? randomUUID()}`
+  );
 }
 
 function isPetContextControl(command: PetChatCommand): boolean {
