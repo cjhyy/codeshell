@@ -133,4 +133,7 @@ export * from "./topic-segment.js";
 export * from "./segment-closure.js";
 export * from "./long-task.js";
 export * from "./conversation-session-route.js";
+export * from "./im-session-list.js";
+export * from "./session-visit-receipt.js";
+export * from "./bound-session-commands.js";
 export * from "./migration-summary.js";
