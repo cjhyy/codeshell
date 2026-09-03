@@ -111,3 +111,10 @@ video-output/
 /data/market-insights/
 /data/news/
 /portfolio/
+
+# Privacy-filtered personal eval exports. The README/schema stay tracked, but
+# generated cases and trace snapshots remain local unless deliberately moved
+# into a separately access-controlled dataset repository.
+/evals/personal-sanitized/*
+!/evals/personal-sanitized/README.md
+!/evals/personal-sanitized/SCHEMA.md
