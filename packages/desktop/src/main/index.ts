@@ -181,6 +181,12 @@ import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import {
+  createBoundSessionHealth,
+  createBoundSessionRunner,
+  createSessionBridgeWiring,
+  type SessionBridgeWiring,
+} from "./pet/session-bridge-wiring.js";
+import {
   petChatModelKeyFromSettings,
   petMemoryAutoExtractFromSettings,
   petMemoryAutoExtractSettingsPatch,
@@ -903,6 +909,7 @@ const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
 let gatewayControlServer: GatewayControlServer | undefined;
+let sessionBridge: SessionBridgeWiring | undefined;
 
 /**
  * Publish once, then opportunistically hand the same event to the standalone
@@ -1798,6 +1805,18 @@ async function createWindow(): Promise<BrowserWindow> {
       summaryService: petSummaryService,
       inbox: petWorkInbox,
     });
+    // Entering a Work Session from a chat: the store, bridge, bind executor
+    // and reply delivery are composed in session-bridge-wiring.ts so this
+    // root only names the collaborators it already owns.
+    sessionBridge = createSessionBridgeWiring({
+      routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
+      resolveSelector: createReusableSessionResolver(petSessionsRootDir),
+      runner: createBoundSessionRunner(bridge, aggregator),
+      health: createBoundSessionHealth(aggregator, petSessionsRootDir),
+      describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
+      publish: (event) => publishGatewayControlEvent(event),
+    });
+    await sessionBridge.recoverOnStartup().catch(() => undefined);
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
@@ -1945,6 +1964,10 @@ async function createWindow(): Promise<BrowserWindow> {
           }
           return petFollowUps.mutate({ action, followUpId });
         },
+        sessionBind: async (payload, context) =>
+          sessionBridge
+            ? sessionBridge.sessionBindExecutor(payload, context)
+            : Promise.reject(new Error("session bridge is unavailable")),
         sessionArchive: async (payload) => {
           if (payload.action !== "archive" || !Array.isArray(payload.sessionIds)) {
             throw new Error("invalid session archive request");
@@ -3097,6 +3120,8 @@ app.whenReady().then(async () => {
     status: () => getMobileRemoteGatewayStatus(),
     pairingUrl: () => createMobileRemotePairingUrl(),
     petChat: (request) => dispatchGatewayPetChat(request),
+    routeSession: async (request) =>
+      sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" },
   });
   await gatewayControlServer.start().catch((error) => {
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });

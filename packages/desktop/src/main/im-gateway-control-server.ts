@@ -69,6 +69,8 @@ export interface GatewayControlServerOptions {
     | Promise<{ pairingUrl: string; expiresAt: number }>
     | { pairingUrl: string; expiresAt: number };
   petChat?: (request: PetChatControlRequest) => Promise<PetChatControlResult>;
+  /** Where one inbound IM message should go: a bound Session, or Mimi. */
+  routeSession?: (request: SessionRouteControlRequest) => Promise<unknown>;
 }
 
 export interface GatewayControlEventInput {
@@ -407,6 +409,11 @@ export class GatewayControlServer {
       if (req.method === "POST" && req.url === "/v1/pairing-url") {
         req.resume();
         sendJson(res, 200, await this.opts.pairingUrl());
+        return;
+      }
+      if (req.method === "POST" && req.url === "/v1/session/route" && this.opts.routeSession) {
+        const body = parseSessionRouteRequest(await readJsonBody(req, 64 * 1024));
+        sendJson(res, 200, await this.opts.routeSession(body));
         return;
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat" && this.opts.petChat) {
@@ -1131,4 +1138,41 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 async function closeServer(server: Server): Promise<void> {
   server.closeAllConnections?.();
   await new Promise<void>((resolve) => server.close(() => resolve()));
+}
+
+export interface SessionRouteControlRequest {
+  channel: string;
+  target: string;
+  senderId: string;
+  messageId?: string;
+  text: string;
+  isDirectMessage: boolean;
+}
+
+function boundedField(value: unknown, max: number): string {
+  if (typeof value !== "string" || !value.trim() || value.length > max) {
+    throw new GatewayControlRequestError("invalid session route request", 400);
+  }
+  return value;
+}
+
+function parseSessionRouteRequest(body: unknown): SessionRouteControlRequest {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new GatewayControlRequestError("invalid session route request", 400);
+  }
+  const input = body as Record<string, unknown>;
+  if (typeof input.isDirectMessage !== "boolean") {
+    throw new GatewayControlRequestError("invalid session route request", 400);
+  }
+  if (input.messageId !== undefined && typeof input.messageId !== "string") {
+    throw new GatewayControlRequestError("invalid session route request", 400);
+  }
+  return {
+    channel: boundedField(input.channel, 64),
+    target: boundedField(input.target, 256),
+    senderId: boundedField(input.senderId, 256),
+    ...(input.messageId ? { messageId: input.messageId.slice(0, 256) } : {}),
+    text: boundedField(input.text, 32_000),
+    isDirectMessage: input.isDirectMessage,
+  };
 }

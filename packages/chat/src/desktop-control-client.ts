@@ -3,6 +3,7 @@ import { chmod, lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promis
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
+import type { BoundSessionDisposition } from "./bound-session-chat.js";
 import type { DesktopGatewayConfig } from "./config.js";
 import {
   DESKTOP_CONTROL_PROTOCOL_VERSION,
@@ -100,6 +101,23 @@ export class DesktopControlClient {
   async petChat(input: PetChatRequest): Promise<PetChatResult> {
     await this.ensureDesktopAvailable();
     return this.request("POST", "/v1/pet/chat", 150_000, input);
+  }
+
+  /**
+   * Ask the host where one inbound message should go. Short timeout on
+   * purpose: this only records the routing decision, and the Session's answer
+   * returns later through the durable outbox.
+   */
+  async routeBoundSessionMessage(input: {
+    channel: string;
+    target: string;
+    senderId: string;
+    messageId?: string;
+    text: string;
+    isDirectMessage: boolean;
+  }): Promise<BoundSessionDisposition> {
+    await this.ensureDesktopAvailable();
+    return this.request("POST", "/v1/session/route", 20_000, input);
   }
 
   events(after = 0, waitMs = 25_000, signal?: AbortSignal): Promise<DesktopControlEventPage> {

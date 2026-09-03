@@ -38,7 +38,13 @@ describe("architecture growth budgets", () => {
     // the existing dispatchGatewayPetChat, so extracting them would split one
     // request path across two files for no gain; the steer/unsteer scheduler
     // itself already lives in pet-dispatch-service.ts.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_951);
+    // Entering a Work Session from a chat then adds its composition root
+    // (+26): the store, bridge, bind executor, reply delivery, runner and
+    // health probe all live in pet/session-bridge-wiring.ts, so this file
+    // only names collaborators it already owns, registers one host-action
+    // key, and answers one control-plane route. Extracting further would
+    // split the host-action table itself.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_977);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );

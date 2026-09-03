@@ -40,6 +40,7 @@ import {
 import {
   CODE_SHELL_REMOTE_COMMANDS,
   createCodeShellRemoteCommands,
+  createBoundSessionChat,
   createMimiPetChat,
   MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
   type ConfiguredChannel,
@@ -506,6 +507,19 @@ export class ImGatewayService {
       gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
       gateway.use(createImGatewayActivityMiddleware((activity) => this.recordActivity(activity)));
       gateway.use(createCodeShellRemoteCommands({ desktop }));
+      // Enters before Mimi: a conversation bound to a Work Session routes
+      // there instead, and everything else (including an unreachable bridge)
+      // falls through to the manager exactly as before.
+      gateway.use(
+        createBoundSessionChat({
+          desktop: {
+            routeBoundSessionMessage: (input) =>
+              desktop.routeBoundSessionMessage
+                ? desktop.routeBoundSessionMessage(input)
+                : Promise.resolve({ kind: "not-bound" as const }),
+          },
+        }),
+      );
       gateway.use(createMimiPetChat({ desktop, channels: adapters }));
 
       this.lastError = undefined;

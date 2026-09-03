@@ -92,6 +92,13 @@ export interface PetHostActionContext {
   requestedAt: number;
   /** Host-authenticated route of the current IM turn, never model supplied. */
   completionTarget?: PetLongTaskCompletionTarget;
+  /**
+   * Host-authenticated sender within the target. completionTarget addresses a
+   * conversation for delivery, but binding also needs to know WHO is speaking:
+   * a group target is shared, so routing by target alone would let one
+   * member's binding capture another member's messages.
+   */
+  senderId?: string;
 }
 
 /** Host-side executor for one Mimi host-action kind; throws to signal failure. */
@@ -1843,6 +1850,7 @@ export class PetDispatchService {
               ...(entry.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
               ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
               ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
+              ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
             }),
           );
           // A delegation-launch failure must not discard Mimi's already-generated
@@ -1910,6 +1918,7 @@ export class PetDispatchService {
             originClientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
             requestedAt,
             ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
+            ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
           },
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns
