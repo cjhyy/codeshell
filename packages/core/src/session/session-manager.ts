@@ -402,13 +402,45 @@ export function codeShellHome(): string {
   return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
 }
 
+/** True when this process is a test runner. `bun test` sets NODE_ENV itself. */
+function isTestRunner(): boolean {
+  return process.env.NODE_ENV === "test" || process.env.BUN_TEST === "1";
+}
+
+/** The real per-user home, ignoring any CODE_SHELL_HOME override. */
+function defaultHome(): string {
+  return join(homedir(), ".code-shell");
+}
+
 /**
  * Canonical root for every persisted CodeShell session. An explicit `home`
  * (a `~/.code-shell`-equivalent data root) overrides the default resolution;
  * absent → `codeShellHome()` exactly as before.
  */
 export function sessionsRoot(home?: string): string {
-  return join(home ?? codeShellHome(), "sessions");
+  const resolvedHome = home ?? codeShellHome();
+  // Fail closed rather than write fixture sessions into the developer's real
+  // store. The bunfig preload only applies when Bun resolves a bunfig.toml:
+  // `bun test <file>` from a subdirectory, or an IDE/CI runner with its own
+  // cwd, finds none and silently fell through to ~/.code-shell — which is how
+  // ~700 `test-model` sessions ended up in the real store and the sidebar.
+  //
+  // Guarded here rather than in codeShellHome() because the home is also the
+  // legitimate root for settings/projects/trust that many tests read by
+  // design; only the SESSIONS root is the one tests corrupt.
+  if (isTestRunner() && resolvedHome === defaultHome()) {
+    // Prefer the preload's sandbox. Many test files delete CODE_SHELL_HOME in
+    // cleanup, and bun shares one process across files, so isolation would
+    // otherwise vanish for every later suite.
+    const sandbox = process.env.CODE_SHELL_TEST_HOME;
+    if (sandbox) return join(sandbox, "sessions");
+    throw new SessionError(
+      "Refusing to use the real ~/.code-shell/sessions from a test. Set CODE_SHELL_HOME " +
+        "to a temp dir (packages/core/test-setup.ts does this via the bunfig preload) " +
+        "or pass an explicit storageDir.",
+    );
+  }
+  return join(resolvedHome, "sessions");
 }
 
 function isSessionWorkspace(value: unknown): value is SessionWorkspace {

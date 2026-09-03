@@ -16,3 +16,11 @@ import { join } from "node:path";
 if (!process.env.CODE_SHELL_HOME) {
   process.env.CODE_SHELL_HOME = mkdtempSync(join(tmpdir(), "codeshell-test-home-"));
 }
+
+// 49 test files `delete process.env.CODE_SHELL_HOME` in their cleanup. Bun runs
+// every test file in ONE process, so the first such cleanup strips this
+// isolation for every suite that runs afterwards — which is how fixture
+// sessions reached the real ~/.code-shell/sessions even with the preload
+// active. Publish the sandbox separately under a name no test manages, so
+// sessionsRoot() can fall back to it instead of the developer's real store.
+process.env.CODE_SHELL_TEST_HOME = process.env.CODE_SHELL_HOME;
