@@ -80,7 +80,11 @@ describe("architecture growth budgets", () => {
       "packages/core/src/index.internal.ts": 81,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
-      "packages/pet/src/index.ts": 24,
+      // +1 for conversation-session.ts, which re-exports the four modules
+      // behind entering a Work Session from a chat (route record, IM list,
+      // visit receipt, deterministic commands). They are one feature and are
+      // consumed together, so the barrel gains a single line rather than four.
+      "packages/pet/src/index.ts": 25,
       "packages/server/src/index.ts": 4,
       "packages/web/src/index.ts": 14,
     };
