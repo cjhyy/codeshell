@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,10 +26,21 @@ describe("MemoryManager atomic body writes", () => {
     });
     const id = manager.loadAll()[0]!.id!;
     const file = join(baseDir, "memory", "user", fileName);
-    const script = `
+    // The writer rebuilds both bodies from their own source rather than
+    // receiving them inline. Embedding two 256 KiB strings made the -e argument
+    // ~512 KiB, and Linux caps a single argv entry at MAX_ARG_STRLEN (128 KiB),
+    // so Bun.spawn failed with E2BIG on CI while macOS's far larger limit let
+    // it pass locally. Writing the script to a file keeps argv tiny.
+    const scriptPath = join(baseDir, "writer.ts");
+    writeFileSync(
+      scriptPath,
+      `
       import { MemoryManager } from ${JSON.stringify(join(import.meta.dir, "memory.ts"))};
       const manager = new MemoryManager({ baseDir: ${JSON.stringify(baseDir)}, scope: "user" });
-      const bodies = [${JSON.stringify(bodyA)}, ${JSON.stringify(bodyB)}];
+      const bodies = [
+        \`BEGIN-A\\n\${"a".repeat(256 * 1024)}\\nEND-A\`,
+        \`BEGIN-B\\n\${"b".repeat(256 * 1024)}\\nEND-B\`,
+      ];
       for (let index = 0; index < 40; index += 1) {
         manager.save({
           id: ${JSON.stringify(id)},
@@ -39,8 +50,10 @@ describe("MemoryManager atomic body writes", () => {
           content: bodies[index % 2],
         });
       }
-    `;
-    const writer = Bun.spawn([process.execPath, "-e", script], {
+    `,
+      "utf8",
+    );
+    const writer = Bun.spawn([process.execPath, scriptPath], {
       stdout: "pipe",
       stderr: "pipe",
     });
