@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "ba584594cbd4bcaac4f240da944c774de288fcb4",
+  "baselineCommit": "da3bdef4916352ff9110323e4449adfe32af9c81",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -673,6 +673,15 @@
       },
       {
         "name": "ManageSessions",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "BindConversationSession",
         "moduleId": "pet",
         "exposure": "preset-tags",
         "presetTags": [
