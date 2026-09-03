@@ -18,6 +18,7 @@ const HOST_ACTION_LABELS: Record<string, string> = {
   followUpMutation: "跟进项",
   sessionWatch: "任务订阅",
   sessionArchive: "Session 归档",
+  sessionBind: "进入 Session",
   outboundMessage: "主动消息",
 };
 
