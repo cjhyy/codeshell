@@ -170,10 +170,23 @@ export async function delegateWorkTool(
     ? reusableSessions.find((candidate) => candidate?.id === reusableSessionId)
     : undefined;
   if (reusableSessionId && !reusableSession) {
-    return `Error: unknown session_id ${JSON.stringify(reusableSessionId)}. Copy one exact id from the reusable Session list or omit session_id.`;
+    return (
+      `Error: unknown session_id ${JSON.stringify(reusableSessionId)}. ` +
+      "Do not send it again. Omit session_id to start a new Session, or copy one exact id " +
+      "from the reusable Session list above."
+    );
   }
   if (reusableSession && reusableSession.workspaceId !== workspaceId) {
-    return "Error: session_id does not belong to workspace_id.";
+    // A bare "does not belong" is a dead end: the model has no action to take
+    // and re-sends the same pair. Name both halves and the two ways out, so
+    // the next call is a correction rather than a repeat.
+    return (
+      `Error: session_id ${JSON.stringify(reusableSessionId)} belongs to Workspace ` +
+      `${JSON.stringify(reusableSession.workspaceId)}, not ${JSON.stringify(workspaceId)}. ` +
+      "Do not send this pair again. Either omit session_id to start a new Session in " +
+      `${JSON.stringify(workspaceId)}, or set workspace_id to ` +
+      `${JSON.stringify(reusableSession.workspaceId)} if you meant to continue that Session.`
+    );
   }
   const decision = services.requestPetWorkDelegation({
     workspaceId,

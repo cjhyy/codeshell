@@ -156,7 +156,9 @@ describe("DelegateWork", () => {
         { workspace_id: "workspace-b", session_id: "session-alpha-login", objective: "wrong" },
         second.ctx,
       ),
-    ).toContain("does not belong");
+      // The refusal now names the owning Workspace and both corrections, so a
+      // rejected pair cannot be re-sent unchanged (delegate-work.mismatch).
+    ).toContain("belongs to Workspace");
     expect(second.recorded).toEqual([]);
   });
 
