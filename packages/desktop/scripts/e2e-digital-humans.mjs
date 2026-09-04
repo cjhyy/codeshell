@@ -54,6 +54,15 @@ const profiles = [
   },
 ];
 
+async function dismissStartupTrustDialog(win) {
+  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
+  const opened = await viewOnly
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (opened) await viewOnly.click();
+}
+
 async function seedFixture() {
   await mkdir(isolated.codeShellHome, { recursive: true });
   await mkdir(fixtureProjectPath, { recursive: true });
@@ -197,6 +206,10 @@ try {
   const rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1_440, height: 960 });
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
+  // A seeded project raises the trust prompt at startup, over a modal overlay
+  // that hides the sidebar. The existing handler below only covers the prompt
+  // raised by clicking the project, which is one dialog too late.
+  await dismissStartupTrustDialog(win);
   const fixtureProject = win
     .locator("aside")
     .getByRole("button", { name: "Digital Human Lab", exact: true });

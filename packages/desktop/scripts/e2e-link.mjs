@@ -27,6 +27,20 @@ const screenshotDir = process.env.CODESHELL_LINK_SCREENSHOT_DIR;
 let app;
 let win;
 
+/**
+ * The first launch in an isolated home raises the trust prompt over a modal
+ * overlay that swallows every click, so it must be dismissed before any
+ * navigation. Same guard the other e2e scripts carry.
+ */
+async function dismissTrustDialog(win) {
+  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
+  const opened = await viewOnly
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (opened) await viewOnly.click();
+}
+
 async function seedFixture() {
   await mkdir(projectPath, { recursive: true });
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
@@ -98,6 +112,7 @@ try {
   const rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1_440, height: 960 });
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
+  await dismissTrustDialog(win);
 
   await win.getByRole("button", { name: /^(凭证|Credentials)$/i }).click();
   await win

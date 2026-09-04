@@ -54,7 +54,23 @@ async function seedFixture() {
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
 }
 
+/**
+ * The first launch in an isolated home raises the trust prompt over a modal
+ * overlay that swallows every click. This script already dismissed it, but only
+ * inside a later helper — by then openSettings has already timed out waiting
+ * for a button the overlay was covering.
+ */
+async function dismissTrustDialog(win) {
+  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
+  const opened = await viewOnly
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (opened) await viewOnly.click();
+}
+
 async function openSettings(win) {
+  await dismissTrustDialog(win);
   const settings = win.getByRole("button", { name: /设置|Settings/i }).last();
   await settings.waitFor({ state: "visible", timeout: 20_000 });
   await settings.click();

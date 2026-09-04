@@ -92,6 +92,43 @@ async function writeFixtureConfig() {
   );
 }
 
+/**
+ * Guarantee an active session before typing. Idempotent: with a conversation
+ * already open the empty-state button is absent and this returns immediately.
+ */
+async function dismissTrustDialog(win) {
+  const dialog = win
+    .getByRole("dialog")
+    .filter({ has: win.getByRole("heading", { name: /信任此项目|Trust this project/i }) });
+  const opened = await dialog
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!opened) return;
+  await dialog.getByRole("button", { name: /信任并继续|Trust and continue/i }).click();
+  await dialog.waitFor({ state: "hidden" });
+}
+
+async function ensureConversation(win) {
+  // The first launch in an isolated home raises the trust prompt over a modal
+  // overlay that swallows every click, so it must go before anything else.
+  // The other e2e scripts already do this; this one never did.
+  await dismissTrustDialog(win);
+  const newChat = win
+    .locator("button")
+    .filter({ hasText: /直接新建对话|New chat|新建对话/ })
+    .first();
+  if ((await newChat.count()) === 0) return;
+  if (!(await newChat.isVisible().catch(() => false))) return;
+  await newChat.click();
+  // The composer only becomes usable once the session exists.
+  await win.waitForFunction(
+    () => [...document.querySelectorAll("textarea")].some((n) => n.offsetParent !== null),
+    undefined,
+    { timeout: 20_000 },
+  );
+}
+
 async function sendScenario(win, modelKey, prompt) {
   const modelButton = win.locator("button[data-active-model]");
   await modelButton.waitFor({ state: "visible", timeout: 20_000 });
@@ -108,6 +145,12 @@ async function sendScenario(win, modelKey, prompt) {
     );
   }
   const before = await win.locator('[data-message-kind="assistant"]').count();
+  // A fresh isolated home has no project and no session, and the composer on
+  // that welcome screen has nowhere to send: pressing Enter clears the textarea
+  // and silently drops the input, so the run stalls waiting for a reply that
+  // was never requested (the mock provider records zero requests). Create the
+  // conversation first when none exists.
+  await ensureConversation(win);
   const composer = win.locator("textarea:visible").last();
   await composer.waitFor({ state: "visible", timeout: 10_000 });
   await composer.fill(prompt);
@@ -139,7 +182,10 @@ async function mountCorePanels(win) {
   for (const panel of ["files", "browser", "review", "terminal"]) {
     const active = win.locator(`[data-panel-id="${panel}"][data-panel-active="true"]`);
     if ((await active.count()) === 0) {
-      await win.locator('[role="menu"]:visible').waitFor({ state: "detached", timeout: 2_000 }).catch(() => undefined);
+      await win
+        .locator('[role="menu"]:visible')
+        .waitFor({ state: "detached", timeout: 2_000 })
+        .catch(() => undefined);
       const plus = win.locator('[data-panel-action="new-tab"]:visible');
       await plus.click();
       const menuItem = win.locator(`[data-panel-menu-kind="${panel}"]`);
@@ -217,13 +263,10 @@ try {
 
   await sendScenario(win, "mock-tool-call", "Run the provider tool-call smoke scenario.");
   try {
-    await win
-      .locator('[data-message-kind="process"][data-tool-names~="Glob"]')
-      .last()
-      .waitFor({
-        state: "attached",
-        timeout: 20_000,
-      });
+    await win.locator('[data-message-kind="process"][data-tool-names~="Glob"]').last().waitFor({
+      state: "attached",
+      timeout: 20_000,
+    });
   } catch (error) {
     const providerRequests = mock.requests
       .filter((request) => request.scenario === "tool-call")
@@ -231,7 +274,10 @@ try {
         protocol: request.protocol,
         roles: request.body.messages?.map((message) => message.role),
       }));
-    const mainText = await win.locator("main").innerText().catch(() => "");
+    const mainText = await win
+      .locator("main")
+      .innerText()
+      .catch(() => "");
     throw new Error(
       `tool-call card was not rendered; providerRequests=${JSON.stringify(providerRequests)} ` +
         `main=${JSON.stringify(mainText.slice(-1_000))}`,
