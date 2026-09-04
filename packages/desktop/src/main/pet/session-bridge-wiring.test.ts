@@ -50,7 +50,7 @@ function wiring(overrides: Partial<SessionBridgeWiringDeps> = {}) {
         title: "修复登录问题",
         updatedAt: NOW,
       }) as PetReusableSessionCandidate,
-    runner,
+    createRunner: () => runner,
     health: { check: async () => ({ ok: true }) },
     // The workspace check is real; these fixtures use a path that does not
     // exist on disk, so the seam stands in for a live worktree.

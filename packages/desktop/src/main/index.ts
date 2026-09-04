@@ -1808,14 +1808,11 @@ async function createWindow(): Promise<BrowserWindow> {
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
+    const worker = bridge;
     sessionBridge = createSessionBridgeWiring({
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
-      runner: createBoundSessionRunner(bridge, aggregator, (turn) => {
-        // The Session's answer is produced long after the inbound request
-        // returned, so it goes back through the durable outbox.
-        void sessionBridge?.deliverSessionReply(turn).catch(() => undefined);
-      }),
+      createRunner: (onTurn) => createBoundSessionRunner(worker, aggregator, onTurn),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),

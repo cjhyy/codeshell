@@ -36,7 +36,13 @@ export interface SessionBridgeWiringDeps {
    * exercise the wiring without creating a worktree on disk.
    */
   directoryExists?(path: string): Promise<boolean>;
-  runner: BoundSessionRunner;
+  /**
+   * Build the runner, receiving the callback that routes a finished turn back
+   * to the conversation. Taking a factory rather than a runner keeps the
+   * reply loop closed here instead of in the composition root, which cannot
+   * reference the wiring it is still constructing.
+   */
+  createRunner(onTurn: (result: BoundSessionTurnResult) => void): BoundSessionRunner;
   health: BoundSessionHealth;
   /** Human-readable status for /session, without waking a model. */
   describeStatus(route: ConversationSessionRoute): Promise<string>;
@@ -73,9 +79,38 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     resolveSelector: deps.resolveSelector,
     ...(deps.directoryExists ? { directoryExists: deps.directoryExists } : {}),
   });
+  async function deliverSessionReply({
+    sessionId,
+    turnId,
+    text,
+  }: BoundSessionTurnResult): Promise<void> {
+    if (!text.trim()) return;
+    for (const route of await routes.notifyRoutesForSession(sessionId)) {
+      await deps.publish({
+        // Stable across retries and restarts so one turn is delivered once.
+        deliveryKey: createHash("sha256")
+          .update("session-reply\u0000")
+          .update(sessionId)
+          .update("\u0000")
+          .update(turnId)
+          .update("\u0000")
+          .update(route.id)
+          .digest("hex"),
+        type: "session.reply",
+        text,
+        target: { channel: route.channel, target: route.target },
+      });
+    }
+  }
+
+  const runner = deps.createRunner((turn) => {
+    // The Session's answer is produced long after the inbound request
+    // returned, so it goes back through the durable outbox.
+    void deliverSessionReply(turn).catch(() => undefined);
+  });
   const bridge = new SessionConversationBridge({
     routes,
-    runner: deps.runner,
+    runner,
     health: deps.health,
     describeStatus: deps.describeStatus,
   });
@@ -109,25 +144,7 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
       return { ...result };
     },
     routeInbound: (inbound) => bridge.accept(inbound),
-    deliverSessionReply: async ({ sessionId, turnId, text }) => {
-      if (!text.trim()) return;
-      for (const route of await routes.notifyRoutesForSession(sessionId)) {
-        await deps.publish({
-          // Stable across retries and restarts so one turn is delivered once.
-          deliveryKey: createHash("sha256")
-            .update("session-reply\u0000")
-            .update(sessionId)
-            .update("\u0000")
-            .update(turnId)
-            .update("\u0000")
-            .update(route.id)
-            .digest("hex"),
-          type: "session.reply",
-          text,
-          target: { channel: route.channel, target: route.target },
-        });
-      }
-    },
+    deliverSessionReply,
     recoverOnStartup: async () => {
       await routes.expireStaleBoundRoutes();
     },
