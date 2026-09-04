@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { ErrorCodes } from "@cjhyy/code-shell-core";
 import type { PetLongTaskStatus } from "@cjhyy/code-shell-pet";
 import type {
   DesktopPetProjectionEvent,
@@ -1159,6 +1160,43 @@ describe("PetLongTaskCoordinator", () => {
     expect(result).toMatchObject({ ok: false, code: "worker-error" });
     expect(store.get(launch.taskId)?.status).toBe("running");
     expect(errors[0]).toContain("worker refused cancel");
+  });
+
+  test("closes the ledger when cancellation finds the Session already gone", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pet-long-task-cancel-missing-session-"));
+    roots.push(root);
+    const store = new PetLongTaskStore(join(root, "tasks.json"), () => 1_000);
+    const coordinator = new PetLongTaskCoordinator({
+      store,
+      projection: fakeProjection(),
+      worker: {
+        hasLiveWorker: () => true,
+        requestWorker: async (method) =>
+          method === "agent/cancel"
+            ? {
+                ok: false as const,
+                message: "No such session: s-already-gone",
+                code: ErrorCodes.SessionClosed,
+              }
+            : { ok: true as const, result: {} },
+      },
+      launcher: {
+        start: async () => ({ sessionId: "s-already-gone", cwd: "/work/app" }),
+      },
+      now: () => 1_000,
+    });
+    await coordinator.start();
+    const launch = await coordinator.startDelegation({
+      clientMessageId: "message-cancel-missing-session",
+      task: "Close a stale Mimi task",
+      workspacePath: "/work/app",
+      targetSessionId: "s-already-gone",
+    });
+
+    const result = await coordinator.control({ taskId: launch.taskId, action: "cancel" });
+
+    expect(result.ok && result.task).toMatchObject({ status: "cancelled" });
+    expect(store.get(launch.taskId)?.status).toBe("cancelled");
   });
 
   test("persists core Goal pause and wakes it in place when the worker is live", async () => {

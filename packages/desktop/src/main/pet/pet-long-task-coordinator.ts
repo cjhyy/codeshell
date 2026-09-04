@@ -23,6 +23,7 @@ import type {
 } from "./pet-state-aggregator.js";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
+import { ErrorCodes } from "@cjhyy/code-shell-core";
 
 const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
 const PROJECTION_LAUNCH_GRACE_MS = 2_000;
@@ -147,6 +148,16 @@ function wasClosedWhileWaitingForBackgroundResult(task: PetLongTask): boolean {
 
 function isControllable(task: PetLongTask): boolean {
   return !isTerminal(task);
+}
+
+/**
+ * Cancelling an already-gone Session is idempotent success: there is no live
+ * run left to orphan, so the durable Mimi task can safely be closed.
+ */
+function isMissingSessionCancelOutcome(
+  outcome: { ok: true; result: unknown } | { ok: false; message: string; code?: number },
+): boolean {
+  return !outcome.ok && outcome.code === ErrorCodes.SessionClosed;
 }
 
 /** Earliest timestamp that can belong to the current retry/reuse attempt. */
@@ -1001,7 +1012,9 @@ export class PetLongTaskCoordinator {
           15_000,
           { meta: { origin: "host", producer: "pet-long-task-cancel" } },
         );
-        if (!outcome.ok) throw new Error(outcome.message);
+        if (!outcome.ok && !isMissingSessionCancelOutcome(outcome)) {
+          throw new Error(outcome.message);
+        }
       } catch (error) {
         this.options.onBackgroundError?.("cancel-run", error);
         return {

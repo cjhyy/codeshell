@@ -149,7 +149,17 @@ export class SessionConversationBridge {
       ? boundSessionStalePrompt(route.sessionTitle).hint
       : undefined;
 
-    await this.deliver(route, inbound);
+    try {
+      await this.deliver(route, inbound);
+    } catch {
+      // Never report success for a message that did not land. Telling the user
+      // is the whole point: a silent "accepted" loses their input with no
+      // trace, which is worse than an honest failure they can retry.
+      return {
+        kind: "suspended",
+        text: `「${route.sessionTitle}」暂时无法接收消息，刚才那条没有发送出去。稍后再试，或发送 /mimi 退出。`,
+      };
+    }
     await this.deps.routes.recordInbound(route.id);
     this.deps.onVisitInbound?.(route);
     return notice ? { kind: "accepted", notice } : { kind: "accepted" };
@@ -205,6 +215,8 @@ export class SessionConversationBridge {
     });
     if (!started.started) {
       // A refused start must not vanish; queue it so the next turn picks it up.
+      // queueNextTurn throws when it too is refused, and accept() turns that
+      // into a visible failure rather than a false acknowledgement.
       await this.deps.runner.queueNextTurn({
         sessionId: route.sessionId,
         text,

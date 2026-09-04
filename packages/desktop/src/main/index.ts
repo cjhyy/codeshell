@@ -1811,7 +1811,11 @@ async function createWindow(): Promise<BrowserWindow> {
     sessionBridge = createSessionBridgeWiring({
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
-      runner: createBoundSessionRunner(bridge, aggregator),
+      runner: createBoundSessionRunner(bridge, aggregator, (turn) => {
+        // The Session's answer is produced long after the inbound request
+        // returned, so it goes back through the durable outbox.
+        void sessionBridge?.deliverSessionReply(turn).catch(() => undefined);
+      }),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),

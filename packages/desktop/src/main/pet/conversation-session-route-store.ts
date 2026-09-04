@@ -70,12 +70,17 @@ export class ConversationSessionRouteStore {
     return [...this.routes.values()];
   }
 
-  /** Every route that still wants this Session's terminal outcome. */
+  /**
+   * Every route that still wants this Session's terminal outcome.
+   *
+   * Suspended routes are INCLUDED. Suspension stops a conversation from
+   * routing new messages into a Session, but the completion the user was
+   * already waiting for is exactly what they still need — dropping it here
+   * meant one transient health blip permanently silenced the answer.
+   */
   async notifyRoutesForSession(sessionId: string): Promise<ConversationSessionRoute[]> {
     await this.load();
-    return [...this.routes.values()].filter(
-      (route) => route.sessionId === sessionId && route.status === "active",
-    );
+    return [...this.routes.values()].filter((route) => route.sessionId === sessionId);
   }
 
   /**

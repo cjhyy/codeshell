@@ -118,12 +118,15 @@ describe("bound routing", () => {
     expect(await shared.notifyRoutesForSession("s-login")).toHaveLength(1);
   });
 
-  test("a suspended route stops both routing and notification", async () => {
+  test("a suspended route stops routing but still expects the completion", async () => {
+    // Suspension means "do not send new messages here", not "forget the answer
+    // this user is waiting for". Dropping the notify half let one transient
+    // health blip permanently silence the Session's result.
     const shared = store();
     const bound = await shared.upsert(input({ mode: "bound", origin: "enter" }));
     await shared.suspend(bound.id, "worktree-missing");
     expect(await shared.boundRoute(ROUTE_KEY)).toBeUndefined();
-    expect(await shared.notifyRoutesForSession("s-login")).toEqual([]);
+    expect(await shared.notifyRoutesForSession("s-login")).toHaveLength(1);
   });
 });
 
