@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-pet",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Pet (top-level personal assistant) capability for CodeShell — projection state machine, DelegateWork contract, Mimi behavior profile.",
   "type": "module",
   "main": "./dist/index.js",
