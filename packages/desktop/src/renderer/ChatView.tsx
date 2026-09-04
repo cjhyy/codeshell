@@ -53,8 +53,10 @@ import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
 import {
+  buildLoopCommandPrompt,
   completedSlashCommandDraft,
   filterSlashCommandItems,
+  parseLoopSlashInvocation,
   parsePluginSlashInvocation,
   toPluginSlashCommandItems,
   type SlashCommandItem,
@@ -95,6 +97,7 @@ interface Props {
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
       displayText?: string;
+      suppressGoal?: boolean;
     },
   ) => void;
   onQueueInput?: (
@@ -104,6 +107,7 @@ interface Props {
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
       displayText?: string;
+      suppressGoal?: boolean;
     },
   ) => void;
   onForceSend?: (
@@ -113,6 +117,7 @@ interface Props {
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
       displayText?: string;
+      suppressGoal?: boolean;
     },
   ) => void;
   onCompactCommand?: () => void;
@@ -688,13 +693,22 @@ export function ChatView({
         description: t("chat.slash.compactDescription"),
       });
     }
+    if (variant === "main") {
+      commands.push({
+        kind: "builtin",
+        name: "/loop",
+        title: t("chat.slash.loopTitle"),
+        description: t("chat.slash.loopDescription"),
+        argumentHint: "<objective>",
+      });
+    }
     commands.push(
       ...toPluginSlashCommandItems(pluginCommands, (pluginName) =>
         t("chat.slash.pluginProvidedBy", { plugin: pluginName }),
       ),
     );
     return commands;
-  }, [onCompactCommand, pluginCommands, t]);
+  }, [onCompactCommand, pluginCommands, t, variant]);
   const slashItems = useMemo(() => {
     if (!slash) return [];
     return filterSlashCommandItems(slashCommands, slash.query);
@@ -968,6 +982,11 @@ export function ChatView({
       executeSlashCommand(pluginInvocation.command, pluginInvocation.rawArguments);
       return;
     }
+    const loopInvocation = parseLoopSlashInvocation(draft, slashCommands);
+    if (loopInvocation && busy) {
+      toast({ message: t("chat.slash.loopBusy"), variant: "error" });
+      return;
+    }
     // Some embedded variants (quick chat) intentionally do not support the
     // main session's queued-input pipeline. Keep the draft intact while busy.
     if (busy && !onQueueInput) return;
@@ -995,15 +1014,22 @@ export function ChatView({
       setAttachmentError(t("chat.attachment.missingPath"));
       return;
     }
+    const engineText = loopInvocation ? buildLoopCommandPrompt(loopInvocation.rawArguments) : text;
     const withLocalFiles = buildMessageWithLocalFilePaths(
-      text,
+      engineText,
       localFilePaths,
       t("chat.composer.localFilePaths"),
     );
     // Anchors (diff/browser/file comments) are prepended as a structured block
     // so the model can pin each comment to its exact location.
     const withAnchors = encodeAnchorsForWire(withLocalFiles, anchors);
-    const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
+    const displayWithLocalFiles = buildMessageWithLocalFilePaths(
+      text,
+      localFilePaths,
+      t("chat.composer.localFilePaths"),
+    );
+    const displayWithAnchors = encodeAnchorsForWire(displayWithLocalFiles, anchors);
+    const displayPayload = encodeAttachmentsForWire(displayWithAnchors, attachments);
     const runAttachments = [...toRunAttachments(attachments), ...inputReferences];
     const routeOpts = sendBucket ? { bucket: sendBucket } : undefined;
     if (busy)
@@ -1017,6 +1043,7 @@ export function ChatView({
         ...routeOpts,
         attachments: runAttachments,
         displayText: displayPayload,
+        suppressGoal: loopInvocation !== null,
       });
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);

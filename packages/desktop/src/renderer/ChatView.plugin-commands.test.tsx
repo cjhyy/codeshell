@@ -36,6 +36,92 @@ afterEach(async () => {
 });
 
 describe("ChatView plugin slash commands", () => {
+  test("/loop sends a skill prompt and bypasses the Goal toggle", async () => {
+    ensureMiniDom();
+    const onSend = mock(() => undefined);
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      writable: true,
+      value: {
+        sttAvailable: async () => ({ available: false }),
+        listPluginCommands: async () => [],
+        getProjectGitBranches: async () => ({ current: "main", branches: ["main"] }),
+        onPluginCommandsChanged: () => () => undefined,
+      },
+    });
+
+    const container = document.createElement("div");
+    root = createRoot(container);
+    function Host() {
+      const [draft, setDraft] = React.useState("");
+      return (
+        <ChatView
+          variant="main"
+          messages={[]}
+          onSend={onSend}
+          onStop={() => undefined}
+          busy={false}
+          activeProjectId="project-1"
+          permissionMode="plan"
+          onPermissionChange={() => undefined}
+          goalEnabled
+          onGoalToggle={() => undefined}
+          modelOptions={[
+            { key: "test-model", label: "Test", provider: "test", supportsVision: true },
+          ]}
+          activeModelKey="test-model"
+          onModelChange={() => undefined}
+          contextTokens={0}
+          projects={[]}
+          onSelectProject={() => undefined}
+          onAddProject={() => undefined}
+          configurationTarget={{ projectId: "project-1" }}
+          configurationAvailable
+          conversationRoot="/tmp/project"
+          conversationRootId="root-1"
+          draft={draft}
+          onDraftChange={setDraft}
+          attachments={[]}
+          onAttachmentsChange={() => undefined}
+        />
+      );
+    }
+
+    await act(async () => {
+      root?.render(<Host />);
+      await flushMicrotasks();
+    });
+    let textarea = findComposer(container);
+    await act(async () => {
+      reactProps(textarea).onChange({
+        target: { value: "/loop night fix flaky tests", selectionStart: 27 },
+      });
+      await flushMicrotasks();
+    });
+    textarea = findComposer(container);
+    await act(async () => {
+      reactProps(textarea).onKeyDown({
+        key: "Enter",
+        shiftKey: false,
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+        nativeEvent: { isComposing: false },
+        preventDefault: () => undefined,
+      });
+      await flushMicrotasks();
+    });
+
+    expect(onSend).toHaveBeenCalledTimes(1);
+    const [prompt, opts] = onSend.mock.calls[0] as unknown as [string, Record<string, unknown>];
+    expect(prompt).toContain("loop-mode");
+    expect(prompt).toContain("Original command: /loop night fix flaky tests");
+    expect(opts).toMatchObject({
+      displayText: "/loop night fix flaky tests",
+      suppressGoal: true,
+    });
+  });
+
   test("an external composer seed preserves an existing draft and never submits", async () => {
     ensureMiniDom();
     Object.assign(globalThis, {

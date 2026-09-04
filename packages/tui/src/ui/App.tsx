@@ -22,10 +22,7 @@ import { AgentClient } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
-import type {
-  ArenaParticipantEntry,
-  ProviderManagerEntry,
-} from "./components/ModelManager.js";
+import type { ArenaParticipantEntry, ProviderManagerEntry } from "./components/ModelManager.js";
 import type { SessionPickerEntry } from "./components/SessionPicker.js";
 import {
   TuiControlSurface,
@@ -50,10 +47,9 @@ import { utilityCommands } from "../cli/commands/builtin/utility-commands.js";
 import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
-import {
-  goalCommand,
-} from "../cli/commands/builtin/goal-command.js";
+import { goalCommand } from "../cli/commands/builtin/goal-command.js";
 import { imageCommand } from "../cli/commands/builtin/image-command.js";
+import { loopCommand } from "../cli/commands/builtin/loop-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { ApprovalRequest, TaskInfo } from "@cjhyy/code-shell-core/internal";
@@ -125,6 +121,7 @@ commandRegistry.registerAll(extraCommands);
 commandRegistry.registerAll(moreCommands);
 commandRegistry.register(imageCommand);
 commandRegistry.register(goalCommand);
+commandRegistry.register(loopCommand);
 commandRegistry.registerAll(buildPluginSlashCommands());
 
 // ChatEntry types and createEntry() are in ./store.ts
@@ -1458,7 +1455,13 @@ export function App({
   const submitToEngine = useCallback(
     async (
       message: string,
-      opts: { asInjection: boolean; chatSummary?: string; goal?: string },
+      opts: {
+        asInjection: boolean;
+        chatSummary?: string;
+        goal?: string;
+        displayText?: string;
+        disableGoal?: boolean;
+      },
     ): Promise<boolean> => {
       const guardToken = queryGuard.reserve();
       if (guardToken === null) return false;
@@ -1507,7 +1510,10 @@ export function App({
           }),
         ]);
       } else {
-        chatStore.update((prev) => [...prev, entry({ type: "user", text: message })]);
+        chatStore.update((prev) => [
+          ...prev,
+          entry({ type: "user", text: opts.displayText ?? message }),
+        ]);
       }
 
       let streamPresentationFinalized = false;
@@ -1557,13 +1563,16 @@ export function App({
             streamPresentationFinalized = true;
           }
         };
-        const result = goal
-          ? await client.run(
-              { task: engineMessage, sessionId: sessionId ?? "", goal },
-              undefined,
-              handleTransportResponse,
-            )
-          : await client.run(engineMessage, sessionId, handleTransportResponse);
+        const result = await client.run(
+          {
+            task: engineMessage,
+            sessionId: sessionId ?? "",
+            ...(goal ? { goal } : {}),
+            ...(opts.disableGoal ? { disableGoal: true } : {}),
+          },
+          undefined,
+          handleTransportResponse,
+        );
 
         // ESC / Ctrl+C took us through the optimistic-cancel path — UI is
         // already idle, history rewound. Don't append turn-duration / status
@@ -1882,6 +1891,16 @@ export function App({
             },
           );
         },
+        submitPrompt: (
+          prompt: string,
+          displayText?: string,
+          promptOpts: { disableGoal?: boolean } = {},
+        ) =>
+          submitToEngine(prompt, {
+            asInjection: false,
+            displayText,
+            disableGoal: promptOpts.disableGoal,
+          }),
         updateGoal: async (patch: { objective?: string; paused?: boolean }) => {
           const goalSessionId = sidRef.current ?? sessionId;
           const expectedGoalId = activeGoalIdRef.current;

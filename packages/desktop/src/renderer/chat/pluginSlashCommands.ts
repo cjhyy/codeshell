@@ -3,9 +3,10 @@ import type { PluginCommandDescriptor } from "../../shared/plugin-commands";
 export type SlashCommandItem =
   | {
       kind: "builtin";
-      name: "/compact";
+      name: "/compact" | "/loop";
       title: string;
       description: string;
+      argumentHint?: string;
     }
   | {
       kind: "plugin";
@@ -49,7 +50,30 @@ export function filterSlashCommandItems(
 }
 
 export function completedSlashCommandDraft(command: SlashCommandItem): string {
-  return command.kind === "plugin" && command.argumentHint ? `${command.name} ` : command.name;
+  return command.argumentHint ? `${command.name} ` : command.name;
+}
+
+export function parseLoopSlashInvocation(
+  draft: string,
+  commands: readonly SlashCommandItem[],
+): { rawArguments: string } | null {
+  const command = commands.find((item) => item.kind === "builtin" && item.name === "/loop");
+  if (!command) return null;
+  const input = draft.trim();
+  if (!input.startsWith(command.name)) return null;
+  const boundary = input.charAt(command.name.length);
+  if (boundary && !/\s/u.test(boundary)) return null;
+  return { rawArguments: input.slice(command.name.length).trim() };
+}
+
+export function buildLoopCommandPrompt(rawArguments: string): string {
+  const command = rawArguments.trim() ? `/loop ${rawArguments.trim()}` : "/loop";
+  return [
+    "Handle the following CodeShell standalone /loop command.",
+    "Use the project skill named loop-mode and follow its command semantics and durable .loop state contract.",
+    "This is not Goal mode: do not create, update, resume, pause, delete, or depend on a CodeShell Goal.",
+    `Original command: ${command}`,
+  ].join("\n");
 }
 
 export function parsePluginSlashInvocation(

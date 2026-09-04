@@ -22,6 +22,21 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 describe("ChatSession.enqueueGoalResumeTurn", () => {
+  it("forwards a one-turn request to disable Goal mode", async () => {
+    const runs: Array<{ disableGoal?: boolean }> = [];
+    const engine = {
+      async run(_task: string, opts: { disableGoal?: boolean }): Promise<EngineResult> {
+        runs.push(opts);
+        return result("standalone-loop-session");
+      },
+    } as unknown as Engine;
+    const session = new ChatSession({ id: "standalone-loop-session", engine });
+
+    await session.enqueueTurn("standalone loop", { disableGoal: true });
+
+    expect(runs).toEqual([expect.objectContaining({ disableGoal: true })]);
+  });
+
   it("runs one synthetic turn when the matching resumed goal is idle", async () => {
     const goal: GoalConfig = {
       objective: "finish the audit",

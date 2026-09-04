@@ -180,6 +180,7 @@ export function useRunController({
       attachments?: InputAttachmentMeta[];
       workspaceProfile?: string;
       displayText?: string;
+      suppressGoal?: boolean;
     } = {},
   ): Promise<void> => {
     // createSession persists to localStorage synchronously, so reading
@@ -256,7 +257,7 @@ export function useRunController({
       type: "user_message",
       bucket,
       text: displayText,
-      isGoal: sendGoalEnabled && !!text.trim(),
+      isGoal: !sendOpts.suppressGoal && sendGoalEnabled && !!text.trim(),
       clientMessageId,
     });
     setBusyForKey(bucket, true);
@@ -285,6 +286,7 @@ export function useRunController({
       browserPartition?: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
       goal?: string;
+      disableGoal?: boolean;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
       workspaceProfile?: string;
@@ -360,10 +362,11 @@ export function useRunController({
     // toggle left on would make every follow-up REPLACE the goal with its own
     // text (one active goal per session), which is never what the user wants.
     // The active goal stays visible in the TopBar popover; clear it there.
-    if (sendGoalEnabled && text.trim()) {
+    if (!sendOpts.suppressGoal && sendGoalEnabled && text.trim()) {
       opts.goal = text;
       setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
     }
+    if (sendOpts.suppressGoal) opts.disableGoal = true;
     if (opts.cwd && opts.attachments && opts.attachments.length > 0) {
       void window.codeshell
         .markAttachmentsSent({
@@ -402,7 +405,9 @@ export function useRunController({
     // — busy clearing, error surfacing, the whole .then chain below — because
     // the two paths differ only in who produces the stream, and duplicating the
     // bookkeeping is how one path ends up permanently "busy" after a failure.
-    const activeGoal = opts.goal ?? state.activeGoal?.objective;
+    const activeGoal = sendOpts.suppressGoal
+      ? undefined
+      : (opts.goal ?? state.activeGoal?.objective);
     const externalDeveloperInstructions = [
       opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
       activeGoal ? `Active CodeShell goal:\n${activeGoal}` : undefined,

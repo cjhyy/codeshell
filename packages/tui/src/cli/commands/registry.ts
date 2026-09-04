@@ -39,6 +39,12 @@ export interface CommandContext {
    * working toward it until met or cleared. Used by the /goal command.
    */
   submitGoal?: (objective: string) => void;
+  /** Submit a normal model turn while keeping a shorter user-facing command bubble. */
+  submitPrompt?: (
+    prompt: string,
+    displayText?: string,
+    opts?: { disableGoal?: boolean },
+  ) => Promise<boolean> | boolean | void;
   /** Clear the session's active persistent goal (/goal clear). */
   clearGoal?: () => Promise<boolean>;
   /** Edit or pause/resume the active goal at the next safe turn boundary. */

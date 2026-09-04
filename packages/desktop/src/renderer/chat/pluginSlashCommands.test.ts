@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   completedSlashCommandDraft,
+  buildLoopCommandPrompt,
   filterSlashCommandItems,
+  parseLoopSlashInvocation,
   parsePluginSlashInvocation,
   toPluginSlashCommandItems,
   type SlashCommandItem,
@@ -53,5 +55,21 @@ describe("plugin slash command helpers", () => {
       description: "Compact context",
     };
     expect(parsePluginSlashInvocation("/compact", [builtin, ...items])).toBeNull();
+  });
+
+  test("parses /loop at a command boundary and builds its standalone prompt", () => {
+    const loop: SlashCommandItem = {
+      kind: "builtin",
+      name: "/loop",
+      title: "Loop",
+      description: "Long loop",
+      argumentHint: "<objective>",
+    };
+    expect(completedSlashCommandDraft(loop)).toBe("/loop ");
+    expect(parseLoopSlashInvocation("/loop night fix tests", [loop])).toEqual({
+      rawArguments: "night fix tests",
+    });
+    expect(parseLoopSlashInvocation("/loopx", [loop])).toBeNull();
+    expect(buildLoopCommandPrompt("fix tests")).toContain("Original command: /loop fix tests");
   });
 });

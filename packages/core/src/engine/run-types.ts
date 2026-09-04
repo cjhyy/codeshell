@@ -134,6 +134,8 @@ export interface EngineRunOptions {
   planMode?: boolean;
   approvalRouter?: ApprovalRouter;
   goal?: string | GoalConfig;
+  /** Run this standalone turn without explicit, persisted, or configured Goal mode. */
+  disableGoal?: boolean;
   injected?: boolean;
   clientMessageId?: string;
   /**

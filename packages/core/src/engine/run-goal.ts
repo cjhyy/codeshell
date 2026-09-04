@@ -51,10 +51,14 @@ export function resolveRunGoal(args: {
   onStream: StreamCallback | undefined;
 }): { normalizedGoal: GoalConfig | undefined; persistedRunGoal: GoalConfig | undefined } {
   const { options, session, sessionManager, configGoal, isSubAgent, sid, onStream } = args;
-  const explicitGoal = normalizeGoal(options?.goal);
+  const goalDisabled = options?.disableGoal === true;
+  const explicitGoal = goalDisabled ? undefined : normalizeGoal(options?.goal);
   const storedLifecycle = session.state.goalLifecycle;
   const storedGoal =
-    isSubAgent !== true && storedLifecycle && isGoalLifecycleCurrent(storedLifecycle)
+    !goalDisabled &&
+    isSubAgent !== true &&
+    storedLifecycle &&
+    isGoalLifecycleCurrent(storedLifecycle)
       ? goalConfigFromLifecycle(storedLifecycle)
       : undefined;
   if (
@@ -94,7 +98,7 @@ export function resolveRunGoal(args: {
       replaced,
     });
   }
-  const fallbackGoal = normalizeGoal(configGoal);
+  const fallbackGoal = goalDisabled ? undefined : normalizeGoal(configGoal);
   if (fallbackGoal && !fallbackGoal.goalId) fallbackGoal.goalId = randomUUID();
   if (fallbackGoal && !fallbackGoal.revision) fallbackGoal.revision = 1;
   const normalizedGoal =

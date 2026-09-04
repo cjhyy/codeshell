@@ -1683,6 +1683,7 @@ export class AgentServer {
           (params.goal != null && typeof params.goal === "object")
             ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
             : undefined,
+        disableGoal: params.disableGoal === true,
         onStream: (event: StreamEvent) => {
           this.observeSessionStream(sid, event);
           this.notify(Methods.StreamEvent, { sessionId: sid, event });
