@@ -231,7 +231,7 @@ const driver = driverForGuest(guest);     // :211  执行
 | **6**     | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                                                                            | 3    | 浏览器任务可跑在服务端                                   |
 | ~~**7**~~ | ✅ **已落地** `525ccbb2`/`62f750de`/`82bb54bd`/`a191cb23`：工具面身份暴露（§8.3）+ Cookie UI 的 profile 可见性（§8.4 三条）             | 1    | Agent 知道自己以谁的身份在点；换号 UI 说得清写进哪个身份 |
 
-> **Phase 2/3 的落地范围说明**：`5a70d797` 只落了**模型与存储**（`browser-workspace.ts` / `tab-control.ts`，各自带测试），**没有改任何调用点**——`active-guest.ts` 的三个 Map 和 `automation-host.ts` 的门链都还是原样。这样做是为了让新模型先被测试证明，再单独做一次替换；替换是行为变更，需要单独的真机验收。接线剩余工作：(a) `active-guest` 的 `guestIdsByBucket`/`bucketBySessionId` 改由 `BrowserWorkspaceRegistry` 承担；(b) `TabControl.validate()` 插进 `automation-host.ts:157` 与 `:211` 之间（§3.2）。
+> **Phase 2/3 的落地范围说明**：`5a70d797` 只落了**模型与存储**（`browser-workspace.ts` / `tab-control.ts`，各自带测试），**没有改任何调用点**——`active-guest.ts` 的三个 Map 和 `automation-host.ts` 的门链都还是原样。这样做是为了让新模型先被测试证明，再单独做一次替换；替换是行为变更，需要单独的真机验收。接线进度：(a) `active-guest` 的 `guestIdsByBucket`/`bucketBySessionId` 改由 `BrowserWorkspaceRegistry` 承担——**待做**；(b) `TabControl.validate()` 插进门链——**已落地** `a58e4c32`：`AutomationDeps.validateTabControl` 是最后一道门，只对写动作生效（`isWriteAction`，未知动作按写处理），桌面暂未安装 validator 所以行为不变。
 
 Phase 0 先做的理由：不收口，后面每改一次 partition 规则都要改两个地方，且两处会静默漂移。
 
