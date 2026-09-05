@@ -220,18 +220,18 @@ const driver = driverForGuest(guest);     // :211  执行
 
 ## 5. 落地顺序
 
-| 阶段      | 内容                                                                                                                                    | 依赖 | 用户可感收益                                             |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---- | -------------------------------------------------------- |
-| ~~**0**~~ | ✅ **已落地** `29330223`：两份 `browserPartitionForBucket` + 两份 Quick Chat 前缀收口成一处                                             | —    | 无（纯重构，零行为变化）                                 |
-| ~~**1**~~ | ✅ **已落地** `ca4f9739`：partition 由 profile 派生；默认 project 级 `shared-auth`；显式 profile 可隔离/可跨项目共享；按决定**不迁移**  | 0    | **新 Session 不再丢登录态**                              |
-| ~~**2**~~ | ✅ **模型已落地** `5a70d797`：`BrowserWorkspaceRegistry` + `SessionBrowserBinding`（不含 `role`）；尚未替换 `active-guest` 的三个 Map   | 1    | 页面归属与 Session 解耦                                  |
-| ~~**3**~~ | ✅ **模型已落地** `5a70d797`：`TabControlStore`（async）+ 四项校验（browserId/tabId/origin/titleHash）；尚未接进 `automation-host` 门链 | 2    | 不再误操作已导航的页面                                   |
-| **4**     | `claim-tab` 显式移交                                                                                                                    | 3    | 跨 Session 交接具体页面                                  |
-| **5**     | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                                                               | 3    | 复用用户真实登录态                                       |
-| **6**     | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                                                                            | 3    | 浏览器任务可跑在服务端                                   |
-| ~~**7**~~ | ✅ **已落地** `525ccbb2`/`62f750de`/`82bb54bd`/`a191cb23`：工具面身份暴露（§8.3）+ Cookie UI 的 profile 可见性（§8.4 三条）             | 1    | Agent 知道自己以谁的身份在点；换号 UI 说得清写进哪个身份 |
+| 阶段      | 内容                                                                                                                                   | 依赖 | 用户可感收益                                             |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---- | -------------------------------------------------------- |
+| ~~**0**~~ | ✅ **已落地** `29330223`：两份 `browserPartitionForBucket` + 两份 Quick Chat 前缀收口成一处                                            | —    | 无（纯重构，零行为变化）                                 |
+| ~~**1**~~ | ✅ **已落地** `ca4f9739`：partition 由 profile 派生；默认 project 级 `shared-auth`；显式 profile 可隔离/可跨项目共享；按决定**不迁移** | 0    | **新 Session 不再丢登录态**                              |
+| ~~**2**~~ | ✅ **模型已落地** `5a70d797`：`BrowserWorkspaceRegistry` + `SessionBrowserBinding`（不含 `role`）；尚未替换 `active-guest` 的三个 Map  | 1    | 页面归属与 Session 解耦                                  |
+| ~~**3**~~ | ✅ **已落地** `5a70d797` + `a58e4c32`：`TabControlStore`（async）+ 四项校验；门链座子已接，桌面暂未安装 validator                      | 2    | 不再误操作已导航的页面                                   |
+| **4**     | `claim-tab` 显式移交                                                                                                                   | 3    | 跨 Session 交接具体页面                                  |
+| **5**     | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                                                              | 3    | 复用用户真实登录态                                       |
+| **6**     | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                                                                           | 3    | 浏览器任务可跑在服务端                                   |
+| ~~**7**~~ | ✅ **已落地** `525ccbb2`/`62f750de`/`82bb54bd`/`a191cb23`：工具面身份暴露（§8.3）+ Cookie UI 的 profile 可见性（§8.4 三条）            | 1    | Agent 知道自己以谁的身份在点；换号 UI 说得清写进哪个身份 |
 
-> **Phase 2/3 的落地范围说明**：`5a70d797` 只落了**模型与存储**（`browser-workspace.ts` / `tab-control.ts`，各自带测试），**没有改任何调用点**——`active-guest.ts` 的三个 Map 和 `automation-host.ts` 的门链都还是原样。这样做是为了让新模型先被测试证明，再单独做一次替换；替换是行为变更，需要单独的真机验收。接线进度：(a) `active-guest` 的 `guestIdsByBucket`/`bucketBySessionId` 改由 `BrowserWorkspaceRegistry` 承担——**待做**；(b) `TabControl.validate()` 插进门链——**已落地** `a58e4c32`：`AutomationDeps.validateTabControl` 是最后一道门，只对写动作生效（`isWriteAction`，未知动作按写处理），桌面暂未安装 validator 所以行为不变。
+> **Phase 2/3 的落地范围说明**：`5a70d797` 只落了**模型与存储**（`browser-workspace.ts` / `tab-control.ts`，各自带测试），**没有改任何调用点**——`active-guest.ts` 的三个 Map 和 `automation-host.ts` 的门链都还是原样。这样做是为了让新模型先被测试证明，再单独做一次替换；替换是行为变更，需要单独的真机验收。接线进度：(a) `active-guest` 的 `bucketBySessionId` 改由 `BrowserWorkspaceRegistry` 承担——**已落地** `c730e495`（`sessionIdsForBucket` 从 O(n) 扫描变为索引查找；先补特征测试再重构，行为不变）；(b) `TabControl.validate()` 插进门链——**已落地** `a58e4c32`：`AutomationDeps.validateTabControl` 是最后一道门，只对写动作生效（`isWriteAction`，未知动作按写处理），桌面暂未安装 validator 所以行为不变。
 
 Phase 0 先做的理由：不收口，后面每改一次 partition 规则都要改两个地方，且两处会静默漂移。
 
