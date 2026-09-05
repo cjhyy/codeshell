@@ -57,19 +57,27 @@ describe("bucket-aware browser guest registry", () => {
   test("tracks active guest independently per bucket and per session", () => {
     const a = guest(1, "https://a.example/", "A");
     const b = guest(2, "https://b.example/", "B");
-    registerSessionBucket("session-a", "repo::session-a", "persist:browser:repo::session-a");
-    registerSessionBucket("session-b", "repo::session-b", "persist:browser:repo::session-b");
+    registerSessionBucket(
+      "session-a",
+      "repo::session-a",
+      browserPartitionForBucket("repo::session-a"),
+    );
+    registerSessionBucket(
+      "session-b",
+      "repo::session-b",
+      browserPartitionForBucket("repo::session-b"),
+    );
     registerGuest({
       guest: a,
       bucket: "repo::session-a",
-      partition: "persist:browser:repo::session-a",
+      partition: browserPartitionForBucket("repo::session-a"),
       engineSessionId: "session-a",
       source: "panel",
     });
     registerGuest({
       guest: b,
       bucket: "repo::session-b",
-      partition: "persist:browser:repo::session-b",
+      partition: browserPartitionForBucket("repo::session-b"),
       engineSessionId: "session-b",
       source: "panel",
     });
@@ -79,7 +87,7 @@ describe("bucket-aware browser guest registry", () => {
     expect(activeGuestForBucket("repo::session-a")?.guest).toBe(a);
     expect(activeGuestForBucket("repo::session-b")?.guest).toBe(b);
     expect(activeGuestForSession("session-a")?.guest).toBe(a);
-    expect(partitionForSession("session-a")).toBe("persist:browser:repo::session-a");
+    expect(partitionForSession("session-a")).toBe(browserPartitionForBucket("repo::session-a"));
     expect(sessionIdsForBucket("repo::session-a")).toEqual(["session-a"]);
     expect(sessionIdsForBucket("missing")).toEqual([]);
   });
@@ -87,7 +95,8 @@ describe("bucket-aware browser guest registry", () => {
   test("uses an in-memory partition for Quick Chat and releases its registry mapping", () => {
     const bucket = "__quick_chat__::qchat-owned";
     const partition = browserPartitionForBucket(bucket);
-    expect(partition).toBe("browser:qchat:__quick_chat__::qchat-owned");
+    // Non-persistent: a quick chat's browser state must not outlive the window.
+    expect(partition.startsWith("persist:")).toBe(false);
     registerSessionBucket("qchat-owned", bucket, partition);
     expect(partitionForSession("qchat-owned")).toBe(partition);
 
@@ -103,13 +112,13 @@ describe("bucket-aware browser guest registry", () => {
     registerGuest({
       guest: a,
       bucket: "bucket-a",
-      partition: "persist:browser:bucket-a",
+      partition: browserPartitionForBucket("bucket-a"),
       source: "panel",
     });
     registerGuest({
       guest: b,
       bucket: "bucket-b",
-      partition: "persist:browser:bucket-b",
+      partition: browserPartitionForBucket("bucket-b"),
       source: "panel",
     });
 
@@ -128,13 +137,13 @@ describe("bucket-aware browser guest registry", () => {
     registerGuest({
       guest: a,
       bucket: "bucket-a",
-      partition: "persist:browser:bucket-a",
+      partition: browserPartitionForBucket("bucket-a"),
       source: "panel",
     });
     registerGuest({
       guest: b,
       bucket: "bucket-b",
-      partition: "persist:browser:bucket-b",
+      partition: browserPartitionForBucket("bucket-b"),
       source: "panel",
     });
 
@@ -162,13 +171,13 @@ describe("bucket-aware browser guest registry", () => {
     rememberAttachedGuest({
       guest: a,
       windowId: 7,
-      partition: "persist:browser:bucket-a",
+      partition: browserPartitionForBucket("bucket-a"),
     });
     registerAttachedGuestMetadata({
       guestId: 51,
       windowId: 7,
       bucket: "bucket-a",
-      partition: "persist:browser:bucket-a",
+      partition: browserPartitionForBucket("bucket-a"),
       source: "panel",
     });
 
@@ -182,21 +191,21 @@ describe("bucket-aware browser guest registry", () => {
         guestId: 999,
         windowId: 1,
         bucket: "bucket-a",
-        partition: "persist:browser:bucket-a",
+        partition: browserPartitionForBucket("bucket-a"),
       }),
     ).toThrow(/not attached|different window/);
 
     rememberAttachedGuest({
       guest: a,
       windowId: 1,
-      partition: "persist:browser:bucket-a",
+      partition: browserPartitionForBucket("bucket-a"),
     });
     expect(() =>
       registerAttachedGuestMetadata({
         guestId: 61,
         windowId: 2,
         bucket: "bucket-a",
-        partition: "persist:browser:bucket-a",
+        partition: browserPartitionForBucket("bucket-a"),
       }),
     ).toThrow(/different window/);
     expect(() =>
@@ -208,19 +217,19 @@ describe("bucket-aware browser guest registry", () => {
       }),
     ).toThrow(/partition/i);
 
-    registerSessionBucket("session-a", "bucket-a", "persist:browser:bucket-a");
+    registerSessionBucket("session-a", "bucket-a", browserPartitionForBucket("bucket-a"));
     const b = guest(62, "https://b.example/", "B");
     rememberAttachedGuest({
       guest: b,
       windowId: 1,
-      partition: "persist:browser:bucket-b",
+      partition: browserPartitionForBucket("bucket-b"),
     });
     expect(() =>
       registerAttachedGuestMetadata({
         guestId: 62,
         windowId: 1,
         bucket: "bucket-b",
-        partition: "persist:browser:bucket-b",
+        partition: browserPartitionForBucket("bucket-b"),
         engineSessionId: "session-a",
       }),
     ).toThrow(/session bucket mismatch/);

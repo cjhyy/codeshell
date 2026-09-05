@@ -12,10 +12,8 @@ import type { Session, WebContents } from "electron";
 // One definition shared with the renderer: a partition is the cookie jar, so a
 // second copy here could silently point the two processes at different login
 // state. See shared/browser-partition.ts.
-import {
-  browserPartitionForBucket as sharedPartitionForBucket,
-  sanitizeBrowserBucket as sharedSanitizeBucket,
-} from "../../shared/browser-partition.js";
+import { sanitizeBrowserBucket as sharedSanitizeBucket } from "../../shared/browser-partition.js";
+import { browserPartitionForBucket as sharedPartitionForBucket } from "../../shared/browser-profile.js";
 
 const LEGACY_BUCKET = "__legacy__";
 

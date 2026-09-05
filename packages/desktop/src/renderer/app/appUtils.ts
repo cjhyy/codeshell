@@ -112,7 +112,7 @@ export function parsePanelBucket(bucket: string): {
  * import path. The definition MUST stay single: a partition is the cookie jar,
  * and main compares this string for equality across IPC.
  */
-export { browserPartitionForBucket } from "../../shared/browser-partition";
+export { browserPartitionForBucket } from "../../shared/browser-profile";
 
 export function quickChatLiveTurnActive(state: MessagesReducerState, busy: boolean): boolean {
   const lastMessage = state.messages[state.messages.length - 1];

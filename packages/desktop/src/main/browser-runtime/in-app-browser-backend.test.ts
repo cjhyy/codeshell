@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
-import { forgetSession, registerSessionBucket } from "../browser-driver/active-guest.js";
+import {
+  browserPartitionForBucket,
+  forgetSession,
+  registerSessionBucket,
+} from "../browser-driver/active-guest.js";
 import { InAppBrowserBackend } from "./in-app-browser-backend.js";
 
 function bridge(): BrowserBridge {
@@ -52,7 +56,11 @@ describe("InAppBrowserBackend", () => {
       });
 
       await backend.acquire({ ownerId: `interactive:${sessionId}`, profileId: sessionId });
-      expect(partitions).toEqual(["persist:browser:project::in-app-backend-test-session"]);
+      // The registered bucket's partition, not a literal: Phase 1 derives it
+      // from the project profile, so the sessionId is no longer part of it.
+      expect(partitions).toEqual([
+        browserPartitionForBucket("project::in-app-backend-test-session"),
+      ]);
     } finally {
       forgetSession(sessionId);
     }

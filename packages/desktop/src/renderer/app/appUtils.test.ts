@@ -14,9 +14,11 @@ describe("panel dock lazy fallback visibility", () => {
 
 describe("browser partition ownership", () => {
   test("keeps Quick Chat browser state process-local", () => {
-    expect(browserPartitionForBucket("repo::session-a")).toBe("persist:browser:repo::session-a");
-    expect(browserPartitionForBucket("__quick_chat__::qchat-a")).toBe(
-      "browser:qchat:__quick_chat__::qchat-a",
+    // Two Sessions in one project share a jar (Phase 1); Quick Chat never
+    // persists. The exact strings are pinned in shared/browser-profile.test.ts.
+    expect(browserPartitionForBucket("repo::session-a")).toBe(
+      browserPartitionForBucket("repo::session-b"),
     );
+    expect(browserPartitionForBucket("__quick_chat__::qchat-a").startsWith("persist:")).toBe(false);
   });
 });

@@ -42,16 +42,6 @@ export function isQuickChatBucket(bucket: string): boolean {
   return bucket.startsWith(QUICK_CHAT_BUCKET_PREFIX);
 }
 
-/**
- * Electron partition for one browser bucket.
- *
- * NOTE: the bucket is still `projectId::sessionId` today, so the partition —
- * and therefore the cookie jar — is per-Session. See
- * `docs/todo/browser-profile-workspace-lease-design.md`: Phase 1 changes this
- * to derive from a profile id instead, which is the whole point of that design.
- * Keep this the only place that decides the shape.
- */
-export function browserPartitionForBucket(bucket: string): string {
-  const prefix = isQuickChatBucket(bucket) ? QUICK_CHAT_PARTITION_PREFIX : BROWSER_PARTITION_PREFIX;
-  return `${prefix}:${sanitizeBrowserBucket(bucket)}`;
-}
+// The bucket → partition entry point lives in ./browser-profile.ts: the
+// partition is derived from the PROFILE, and that module imports these
+// primitives, so putting it here would create an import cycle.
