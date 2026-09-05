@@ -209,6 +209,8 @@ const driver = driverForGuest(guest);     // :211  执行
 
 迁移代码必须按**实际落盘名**匹配，不能按未编码的逻辑名去找目录（`%3A` = `:`）。
 
+> **实际决定（2026-09-06）**：选了第三条——**不迁移**。旧 partition 全部留在磁盘不再使用，用户重新登录一次即可。因此 Phase 1 的实现里没有任何目录扫描与编码名匹配。下面两个方案保留作为记录。
+
 必须二选一，并且写进设计而不是留给实现时临场决定：
 
 - **方案 A（推荐）**：一次性迁移。每个 project 选「最近使用过的 session partition」提升为该 project 的 profile partition，其余保留在磁盘上不删。
@@ -218,15 +220,16 @@ const driver = driverForGuest(guest);     // :211  执行
 
 ## 5. 落地顺序
 
-| 阶段  | 内容                                                                                       | 依赖 | 用户可感收益                |
-| ----- | ------------------------------------------------------------------------------------------ | ---- | --------------------------- |
-| **0** | 把 renderer / main 两份 `browserPartitionForBucket` 收口成一处                             | —    | 无（纯重构，零行为变化）    |
-| **1** | `BrowserProfile`：partition 由 `profileId` 派生；默认 project 级 `shared-auth`；含 §4 迁移 | 0    | **新 Session 不再丢登录态** |
-| **2** | `BrowserWorkspace` + `SessionBrowserBinding`（不含 `role`）                                | 1    | 页面归属与 Session 解耦     |
-| **3** | 稳定 `tabId` + `TabControl` 排他写 + §3.2 校验 + §3.3 四种处置                             | 2    | 不再误操作已导航的页面      |
-| **4** | `claim-tab` 显式移交                                                                       | 3    | 跨 Session 交接具体页面     |
-| **5** | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                  | 3    | 复用用户真实登录态          |
-| **6** | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                               | 3    | 浏览器任务可跑在服务端      |
+| 阶段      | 内容                                                                                                                                   | 依赖 | 用户可感收益                                               |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------- |
+| ~~**0**~~ | ✅ **已落地** `29330223`：两份 `browserPartitionForBucket` + 两份 Quick Chat 前缀收口成一处                                            | —    | 无（纯重构，零行为变化）                                   |
+| ~~**1**~~ | ✅ **已落地** `ca4f9739`：partition 由 profile 派生；默认 project 级 `shared-auth`；显式 profile 可隔离/可跨项目共享；按决定**不迁移** | 0    | **新 Session 不再丢登录态**                                |
+| **2**     | `BrowserWorkspace` + `SessionBrowserBinding`（不含 `role`）                                                                            | 1    | 页面归属与 Session 解耦                                    |
+| **3**     | 稳定 `tabId` + `TabControl` 排他写 + §3.2 校验 + §3.3 四种处置                                                                         | 2    | 不再误操作已导航的页面                                     |
+| **4**     | `claim-tab` 显式移交                                                                                                                   | 3    | 跨 Session 交接具体页面                                    |
+| **5**     | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                                                              | 3    | 复用用户真实登录态                                         |
+| **6**     | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                                                                           | 3    | 浏览器任务可跑在服务端                                     |
+| **7**     | 工具面身份暴露（§8.3）+ 「登录后抓取另存」回路（§8.4）                                                                                 | 1    | Agent 知道自己以谁的身份在点；小号登录态可搬进独立 profile |
 
 Phase 0 先做的理由：不收口，后面每改一次 partition 规则都要改两个地方，且两处会静默漂移。
 
@@ -331,7 +334,63 @@ Codex 的接管校验包含**浏览器 ID**，不只是 tabId。理由同 §3.2�
 
 反过来，**现在不必做**的：不要为了服务端提前抽象 `browser-driver/` 里那 4 个 Electron 文件。它们本来就是「桌面实现」，服务端会有自己的实现文件，强行共用只会让两边都别扭。
 
-## 8. 未决问题
+## 8. 工具面与既有 Cookie 能力
+
+前面几节讲的是 host 侧的数据模型。但 Agent 是通过**工具**看世界的——模型看不见 partition，只看得见工具签名。这一节把两者接起来。
+
+### 8.1 现状核实
+
+| 能力                                                   | 位置                                                                                                          | 现状        |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------- |
+| `browser_observe` / `browser_act` / `browser_navigate` | `core/tool-system/builtin/browser-tools.ts:50,214,380`                                                        | ✅ 存在     |
+| `InjectCredential`（把已存 cookie 注回浏览器）         | `core/tool-system/context.ts:499`，执行在 `agent-bridge.ts:1005`                                              | ✅ 存在     |
+| Cookie 抓取 / 恢复 / 租约                              | `desktop/main/credentials-service.ts`（`captureCookieJar` / `restoreCookiesToBrowser` / `createCookieLease`） | ✅ 存在     |
+| 「从所有活动浏览器会话抓 cookie」                      | `index.ts:4317` → `captureAllCookiesFromSessions(listGuestSessions())`                                        | ✅ 存在     |
+| **工具层能选/能看 profile**                            | 三个 browser 工具的入参                                                                                       | ❌ **没有** |
+
+也就是说：**Cookie 的抓取与注入早就有了，缺的是"以哪个身份"这一层没有暴露到工具面。**
+
+### 8.2 Phase 1 对既有 Cookie 能力的影响（已验证，无破坏）
+
+- `InjectCredential` 经 `partitionForSession()` 解析目标，而该函数已走 Phase 1 的派生，所以**注入的 cookie 现在落到 project profile**，下一个 Session 直接可用——这正是想要的，比原来每次注入只对单个 Session 有效更好。
+- `isBrowserPartition()` 接受新格式：`persist:browser:p:<project>` / `persist:browser:u:<name>` / `browser:qchat:q:<bucket>` 四种全部实测通过。
+- `captureAllCookiesFromSessions` 枚举的是**活动 guest**（`listGuestSessions()`），不是磁盘 partition，因此不受 partition 改名影响；副作用是要去重的 jar 变少了。
+- `credentials-service` / `cookie-credential-browser` 全部 24 个测试通过。
+
+### 8.3 缺口一：工具看不见身份
+
+三个 browser 工具都没有 profile 参数，模型无法知道、也无法选择自己在用谁的登录态。这在 §6 引入外部浏览器后会变成安全问题：模型不知道自己是在沙箱里点，还是在用户的真实 Chrome 里点。
+
+最小改法（不新增工具）：
+
+1. **`browser_observe` 的返回里带上身份**——`{ profileId, sourceKind, isUserBrowser }`。模型据此在敏感动作前自己收敛，也让 transcript 可审计。
+2. **`browser_navigate` 增加可选 `profile` 入参**，语义等同 §3.1 的显式选择；不传就是 project 默认。用于"这一步用小号"的场景。
+3. 不要给 `browser_act` 加 profile 参数——身份应在打开页面时确定，而不是每次点击都能换。
+
+### 8.4 缺口二：登录态的获取路径不完整
+
+现在只有「注入已存的 cookie」，没有「把刚登录的状态存下来」这条**回路**。用户手动完成登录（§3.3 的 `requestHumanTakeover` 已经能把浏览器交给人）之后，那份登录态只活在 partition 里，没有被抓成可复用的凭证。
+
+补齐需要一个动作（可以是工具，也可以是 UI 按钮）：
+
+```text
+人工登录完成 → 抓取当前 profile 的 cookie（captureCookieJar，已存在）
+             → 存为命名凭证（凭证系统已存在）
+             → 之后 InjectCredential 可注入任意 profile（已存在）
+```
+
+**三块都已存在，缺的只是把它们串起来的那一步**。这也是 §3.1 `isolated` 的实用前提：没有"抓取并另存"，用户就没法把小号登录态搬进独立 profile。
+
+### 8.5 外部浏览器的 Cookie 边界（§6 的前置约束）
+
+一旦支持 attach 用户日常 Chrome：
+
+- **禁止从 `attached-chrome` 批量抓 cookie**。那是用户全部的真实登录态，抓走等于导出他整个浏览器身份。按域名、按需、经审批可以；`captureAllCookies` 式的全量抓取必须对外部来源关闭。
+- `InjectCredential` **不应**注入外部浏览器：往用户日常 Chrome 里写 cookie 会污染他的真实登录。注入只对内置 profile 开放。
+
+这两条不是实现细节，是 §6.3 分级权限的具体内容。
+
+## 9. 未决问题
 
 1. **Profile 默认粒度**：project 级是否够？跨 project 复用同一登录（例如公司 SSO）需要 profile 可跨 project 引用，这会让 §4 的迁移映射更复杂。
 2. **`shared-workspace` 是否要做**：目前没有明确用例；若不做，`role` 字段永久不需要。
@@ -340,7 +399,7 @@ Codex 的接管校验包含**浏览器 ID**，不只是 tabId。理由同 §3.2�
 5. **attach 用户 Chrome 的落地方式**（§6）：走 `--remote-debugging-port` 还是浏览器扩展？端口方式要求用户以特殊参数重启 Chrome，扩展方式要过商店审核。Codex 用的是扩展。
 6. **服务端的 Profile 归属**（§7）：容器内 user-data-dir 是每租户一个，还是每 project 一个？涉及多租户隔离，比桌面的 project 级默认严格得多。
 
-## 9. 核实状态
+## 10. 核实状态
 
 2026-09-04 逐条核实，全部**引用行号与代码一致**（§6/§7 于 2026-09-05 补核）：
 
