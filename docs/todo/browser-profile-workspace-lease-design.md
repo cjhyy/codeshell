@@ -109,6 +109,7 @@ interface BrowserProfile {
 
 interface BrowserWorkspace {
   id: string;
+  /** 内置来源填 profileId；外部来源见 §6.1 的 BrowserSource。 */
   profileId: string;
   /** 稳定 tab 身份，见 §3.2；不是 webContents.id。 */
   tabIds: string[];
@@ -130,6 +131,8 @@ interface TabControl {
   /** 防「同一 tab 导航走了」，见 §3.2 */
   expectedOrigin: string;
   expectedTitleHash: string;
+  /** 防「外部浏览器重启了」，见 §6.2；内置来源填固定值。 */
+  browserId: string;
 }
 ```
 
@@ -222,8 +225,12 @@ const driver = driverForGuest(guest);     // :211  执行
 | **2** | `BrowserWorkspace` + `SessionBrowserBinding`（不含 `role`）                                | 1    | 页面归属与 Session 解耦     |
 | **3** | 稳定 `tabId` + `TabControl` 排他写 + §3.2 校验 + §3.3 四种处置                             | 2    | 不再误操作已导航的页面      |
 | **4** | `claim-tab` 显式移交                                                                       | 3    | 跨 Session 交接具体页面     |
+| **5** | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                  | 3    | 复用用户真实登录态          |
+| **6** | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                               | 3    | 浏览器任务可跑在服务端      |
 
 Phase 0 先做的理由：不收口，后面每改一次 partition 规则都要改两个地方，且两处会静默漂移。
+
+**Phase 5 / 6 都只依赖 Phase 3**，彼此独立，可并行也可只做其一。但 §7.3 的两条准备工作（`TabControlStore` 接口 async 化、`BrowserSource.endpoint` 字段）必须在 **Phase 3 就位**——事后补会改到所有调用点。
 
 ### 5.1 Phase 边界上的验证
 
@@ -242,27 +249,115 @@ Phase 1 必须同时给出「当前 Profile」的可见性，否则共享登录�
 - 能看到「这个 Profile 还被哪些 Session 使用」；
 - 切换到 `isolated` 是一个显式动作，不是隐式推断。
 
-## 6. 未决问题
+## 6. 浏览器来源：选择流程必须可识别
+
+前面几节默认「浏览器」就是 Electron 内置的 `<webview>` guest。实际上有四种来源，而**当前代码只认识第一种**：
+
+| 来源                          | 现状                       | 登录态            |
+| ----------------------------- | -------------------------- | ----------------- |
+| 内置面板 guest（`<webview>`） | ✅ 唯一实现                | 由 partition 决定 |
+| 内置后台无头 target           | ✅ `background-runtime.ts` | 同上              |
+| 用户日常 Chrome（CDP attach） | ❌ 无任何代码              | 用户真实登录态    |
+| 远端/服务端浏览器             | ❌ 无任何代码              | 服务端 profile    |
+
+核实：全仓 grep `connectOverCDP` / `remoteDebugging` / `9222` / `externalBrowser` **零命中**；`chooseBrowser` / `selectBrowser` 之类的选择流程也不存在。
+
+### 6.1 `BrowserSource` 必须是显式一等概念
+
+「用哪个浏览器」现在是隐含的（`deps.activeGuest()` 给什么就是什么）。加入外部来源后，它必须成为可识别、可展示、可审计的字段：
+
+```ts
+type BrowserSource =
+  | { kind: "builtin-panel"; profileId: string } // 面板 guest
+  | { kind: "builtin-headless"; profileId: string } // 后台 target
+  | { kind: "attached-chrome"; endpoint: string; browserId: string } // 用户的 Chrome
+  | { kind: "remote"; endpoint: string; browserId: string }; // 服务端
+
+interface BrowserWorkspace {
+  id: string;
+  source: BrowserSource; // ← 取代 profileId 单字段
+  tabIds: string[];
+}
+```
+
+`profileId` 只对内置两种有意义——**attach 到用户 Chrome 时登录态不归 CodeShell 管**，这正是要区分的原因。
+
+### 6.2 识别必须贯穿全流程，不只在选择那一刻
+
+Codex 的接管校验包含**浏览器 ID**，不只是 tabId。理由同 §3.2：外部浏览器会重启，`browserId` 变了而 endpoint 没变。因此：
+
+- `TabControl` 增加 `browserId`，校验时四项齐验（browserId + tabId + origin + titleHash）；
+- 每次动作前确认 `BrowserSource` 仍是取得控制权时的那个；
+- **UI 必须显示当前来源**：用户需要一眼看出「Agent 正在操作我的日常 Chrome」还是「内置沙箱」。这是安全属性，不是体验优化——在用户真实登录态里点击的后果完全不同。
+
+### 6.3 权限门必须按来源分级
+
+§7 已核实：`loadBrowserAutomationPolicy()` 是全局的，不区分来源。加入 `attached-chrome` 后这不再够：
+
+- 内置 partition 里点错，最坏是污染一个沙箱 Cookie jar；
+- 用户日常 Chrome 里点错，可能是真实转账、真实发帖、真实删库。
+
+因此 `attached-chrome` / `remote` 至少要求：默认更严的白名单、敏感动作**强制**审批（不可被 learned-ref 放行）、并在会话记录里标注来源。
+
+## 7. 服务端部署
+
+### 7.1 结论：`packages/cdp` 已经可以，`browser-driver` 不行
+
+已核实：
+
+- `packages/cdp/package.json` **不依赖 electron**（CODESHELL.md 称其为 "env-agnostic CDP browser action layer"）；
+- `BrowserBridge` 接口定义在 **core**（`tool-system/browser-bridge.ts:168`），是纯 Promise 方法集，无 Electron 类型；
+- 而 `browser-driver/` 下 4 个文件直接 `from "electron"`：`automation-host.ts`、`background-runtime.ts`、`active-guest.ts`、`electron-cdp.ts`。
+
+也就是说**分层已经对了**：core 定接口、cdp 做动作、desktop 提供 Electron 实现。服务端要做的是**给 `BrowserBridge` 加第二个实现**，而不是改造上层。
+
+### 7.2 本设计与服务端的关系
+
+四层模型在服务端**语义不变，实现改绑**：
+
+| 层                      | 桌面               | 服务端                      |
+| ----------------------- | ------------------ | --------------------------- |
+| `BrowserProfile`        | Electron partition | 容器内 user-data-dir        |
+| `BrowserWorkspace`      | guest 集合         | 远端 browser context        |
+| `SessionBrowserBinding` | 内存 Map           | 需持久化（跨进程/跨实例）   |
+| `TabControl`            | 内存               | **必须持久化 + 跨实例互斥** |
+
+**这是唯一一处服务端会推翻桌面假设的地方**：桌面的 `TabControl` 可以是内存对象，因为只有一个 main 进程；服务端多实例时，租约必须落在共享存储上，否则两个实例会同时授予同一个 tab 的写权，`mode: "control"` 的单写者保证就破了。
+
+### 7.3 因此现在就要做的两件事（不是现在实现服务端）
+
+1. **`TabControl` 的接口从一开始就设计成可持久化**：不要把它写成一个内存 `Map<string, TabControl>` 直接散在模块里，而是走一个 `TabControlStore` 接口（`acquire` / `validate` / `release`，全部 async）。桌面给内存实现，服务端给共享存储实现。**async 是关键**——事后从同步改异步要动所有调用点。
+2. **`BrowserSource` 里的 `endpoint` 从一开始就存在**（§6.1）。桌面内置来源填不填都行，但字段在，服务端就不用改类型。
+
+反过来，**现在不必做**的：不要为了服务端提前抽象 `browser-driver/` 里那 4 个 Electron 文件。它们本来就是「桌面实现」，服务端会有自己的实现文件，强行共用只会让两边都别扭。
+
+## 8. 未决问题
 
 1. **Profile 默认粒度**：project 级是否够？跨 project 复用同一登录（例如公司 SSO）需要 profile 可跨 project 引用，这会让 §4 的迁移映射更复杂。
 2. **`shared-workspace` 是否要做**：目前没有明确用例；若不做，`role` 字段永久不需要。
 3. **Quick Chat**：现在走独立的 `browser:qchat:` 前缀（非 persist）。它应该有自己的临时 Profile，还是共享 project Profile？涉及「临时会话是否该继承登录态」的产品判断。
 4. **`markDeliverable` 的页面归属**：结果页释放控制后仍属于原 workspace，还是升格为「用户的页面」？影响下一轮清理是否会关掉它。
+5. **attach 用户 Chrome 的落地方式**（§6）：走 `--remote-debugging-port` 还是浏览器扩展？端口方式要求用户以特殊参数重启 Chrome，扩展方式要过商店审核。Codex 用的是扩展。
+6. **服务端的 Profile 归属**（§7）：容器内 user-data-dir 是每租户一个，还是每 project 一个？涉及多租户隔离，比桌面的 project 级默认严格得多。
 
-## 7. 核实状态
+## 9. 核实状态
 
-2026-09-04 逐条核实，全部**引用行号与代码一致**：
+2026-09-04 逐条核实，全部**引用行号与代码一致**（§6/§7 于 2026-09-05 补核）：
 
-| 声称                                   | 位置                                                                      | 结果                                        |
-| -------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------- |
-| partition 由 bucket 派生（renderer）   | `appUtils.ts:111-114`                                                     | ✅                                          |
-| 同一逻辑在 main 侧有第二份实现         | `active-guest.ts:93-98`                                                   | ✅ 前缀常量同值（`:13-14`）                 |
-| `bucket = projectId :: sessionId`      | `transcripts.ts:199-201`                                                  | ✅ 分隔符是 `::`，已修正正文                |
-| Workspace/Binding/Profile 已是三个 Map | `active-guest.ts:72-76`                                                   | ✅                                          |
-| `tabId` 是 `webContents.id`            | `active-guest.ts:287`                                                     | ✅                                          |
-| 既有 `leases` 是进程引用计数           | `background-runtime.ts:169`（`leases += 1` + idleTimer，按 `ownerId` 计） | ✅ 与写权无关                               |
-| 动作目标无归属校验                     | `automation-host.ts:157` `deps.activeGuest()`                             | ✅ 比原先表述更强，见 §3.2                  |
-| 落盘 partition 现状                    | `~/Library/Application Support/code-shell/Partitions/`                    | ✅ 72 目录 / 1.9 GB / 单 project 最多 13 份 |
+| 声称                                             | 位置                                                                                      | 结果                                                            |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| partition 由 bucket 派生（renderer）             | `appUtils.ts:111-114`                                                                     | ✅                                                              |
+| 同一逻辑在 main 侧有第二份实现                   | `active-guest.ts:93-98`                                                                   | ✅ 前缀常量同值（`:13-14`）                                     |
+| `bucket = projectId :: sessionId`                | `transcripts.ts:199-201`                                                                  | ✅ 分隔符是 `::`，已修正正文                                    |
+| Workspace/Binding/Profile 已是三个 Map           | `active-guest.ts:72-76`                                                                   | ✅                                                              |
+| `tabId` 是 `webContents.id`                      | `active-guest.ts:287`                                                                     | ✅                                                              |
+| 既有 `leases` 是进程引用计数                     | `background-runtime.ts:169`（`leases += 1` + idleTimer，按 `ownerId` 计）                 | ✅ 与写权无关                                                   |
+| 动作目标无归属校验                               | `automation-host.ts:157` `deps.activeGuest()`                                             | ✅ 比原先表述更强，见 §3.2                                      |
+| 落盘 partition 现状                              | `~/Library/Application Support/code-shell/Partitions/`                                    | ✅ 72 目录 / 1.9 GB / 单 project 最多 13 份                     |
+| 外部浏览器/选择流程零实现（§6）                  | grep `connectOverCDP`/`remoteDebugging`/`externalBrowser`/`chooseBrowser`/`selectBrowser` | ✅ 全仓 0 命中                                                  |
+| `packages/cdp` 不依赖 electron（§7）             | `packages/cdp/package.json`                                                               | ✅ 依赖为空对象，可直接跑在服务端                               |
+| `BrowserBridge` 在 core 且无 Electron 类型（§7） | `core/src/tool-system/browser-bridge.ts:168`                                              | ✅ 纯 Promise 方法集                                            |
+| `browser-driver/` 绑定 Electron（§7）            | 4 个文件 `from "electron"`                                                                | ✅ automation-host/background-runtime/active-guest/electron-cdp |
 
 补充核实的两项：
 
