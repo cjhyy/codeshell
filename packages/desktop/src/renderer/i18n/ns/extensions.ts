@@ -516,6 +516,11 @@ export const extensions = {
           "抓全部会合并当前还活着的所有浏览器面板;不同会话若登了同站不同账号会混号。",
         captureBrowserTitle: "从内置浏览器拓取",
         captureBrowserMessage: "给这份 cookie 起个账号名(可留空)",
+        captureBrowserFromProfile: "来源身份：{profile}",
+        switchIntoProfile: "将写入身份：{profile}",
+        profileScopeProject: "项目共享({name})",
+        profileScopeNamed: "独立身份({name})",
+        profileScopeTemporary: "临时(不保留)",
         historyChipTip: "点击回填到登录地址",
         browserSectionTitle: "或:从内置浏览器全量拓取",
         captureHint:
@@ -1472,6 +1477,11 @@ export const extensions = {
           "Capture all merges every currently live browser panel; if different sessions are logged into different accounts on the same site, accounts may mix.",
         captureBrowserTitle: "Capture from built-in browser",
         captureBrowserMessage: "Name this cookie set (optional)",
+        captureBrowserFromProfile: "Captured from: {profile}",
+        switchIntoProfile: "Will be written into: {profile}",
+        profileScopeProject: "shared across project ({name})",
+        profileScopeNamed: "separate identity ({name})",
+        profileScopeTemporary: "temporary (not kept)",
         historyChipTip: "Click to fill the login URL",
         browserSectionTitle: "Or: capture all from the built-in browser",
         captureHint:

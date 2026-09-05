@@ -115,3 +115,26 @@ export function browserPartitionForProfile(profileId: string): string {
 export function browserPartitionForBucket(bucket: string, chosenProfileId?: unknown): string {
   return browserPartitionForProfile(resolveBrowserProfileId(bucket, chosenProfileId));
 }
+
+/**
+ * How a profile should be described to a person.
+ *
+ * The capture/inject UI has to state the SCOPE of a cookie jar, not just its
+ * id: users were previously told they were capturing "this session" while the
+ * jar was in fact shared by every session in the project.
+ */
+export interface BrowserProfileLabel {
+  scope: "project" | "named" | "temporary" | "unknown";
+  /** The project id, the chosen name, or the raw id when unrecognised. */
+  name: string;
+}
+
+export function browserProfileLabel(profileId: string): BrowserProfileLabel {
+  const cut = profileId.indexOf(":");
+  const prefix = cut >= 0 ? profileId.slice(0, cut) : "";
+  const rest = cut >= 0 ? profileId.slice(cut + 1) : profileId;
+  if (prefix === PROJECT_PROFILE_PREFIX) return { scope: "project", name: rest };
+  if (prefix === NAMED_PROFILE_PREFIX) return { scope: "named", name: rest };
+  if (prefix === QUICK_CHAT_PROFILE_PREFIX) return { scope: "temporary", name: rest };
+  return { scope: "unknown", name: profileId };
+}

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { browserProfileIdForBucket, browserProfileLabel } from "../../shared/browser-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,24 +61,34 @@ function pushUrlHistory(url: string): string[] {
  *     session,把 cookie 整包存成一条凭证(适合已在面板登过的站)。
  *
  * 账号卡片:切换 / 编辑(重命名)/ 重新登录 / 删除;逐条「AI 可自动取用」「AI 可自动注入浏览器」
- * 开关 + 逐条「切换策略」(清空再注入 / 只覆盖同名)。
+ * 「自动更新 Cookie」开关 + 逐条「切换策略」(清空再注入 / 只覆盖同名)。
  */
 export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: string | null }) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
   const prompt = usePrompt();
+  /** Localized "which identity am I capturing from" text for one bucket. */
+  const describeProfile = (bucket: string): string => {
+    const { scope, name } = browserProfileLabel(browserProfileIdForBucket(bucket));
+    if (scope === "project") return t("ext.cookie.profileScopeProject", { name });
+    if (scope === "named") return t("ext.cookie.profileScopeNamed", { name });
+    if (scope === "temporary") return t("ext.cookie.profileScopeTemporary");
+    return name;
+  };
   const [items, setItems] = useState<MaskedCredentialView[]>([]);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [urlHistory, setUrlHistory] = useState<string[]>(() => readUrlHistory());
 
   const load = useCallback(() => {
-    void window.codeshell.credentials
+    return window.codeshell.credentials
       .list(cwd)
       .then((all) => setItems(all.filter((c) => c.type === "cookie")));
   }, [cwd]);
-  useEffect(load, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   /** platform__slug(label):同一平台多账号不撞键;slug 只保留安全字符。 */
   const buildId = (platform: string, name: string): string => {
@@ -113,8 +124,10 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     fixed?: {
       id: string;
       label: string;
+      storeScope?: "user" | "project";
       autoUseByAI?: boolean;
       autoInjectByAI?: boolean;
+      autoRefreshFromBrowser?: boolean;
       switchMode?: SwitchMode;
     };
   }): Promise<boolean> => {
@@ -150,7 +163,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         ? opts.fixed.label
         : res.suggestedLabel || t("ext.cookie.defaultAccountName");
       const id = opts.fixed ? opts.fixed.id : buildId(platform, accountName);
-      await window.codeshell.credentials.save(cwd, "user", {
+      await window.codeshell.credentials.save(cwd, opts.fixed?.storeScope ?? "user", {
         id,
         type: "cookie",
         label: accountName,
@@ -162,6 +175,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           domain: res.domain,
           scope: "all",
           switchMode: opts.fixed?.switchMode ?? "merge",
+          autoRefreshFromBrowser: opts.fixed?.autoRefreshFromBrowser ?? false,
         },
       });
       toast({
@@ -191,9 +205,17 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     capture: () => Promise<{ jar: unknown[]; count: number }>;
     emptyMessage: string;
   }) => {
+    // Name the identity being captured. The jar's scope is not obvious — a
+    // project profile is shared by every session in that project — so the user
+    // has to see it before deciding what to call the credential.
+    const profileText = activeBucket ? describeProfile(activeBucket) : null;
     const name = await prompt({
       title: t("ext.cookie.captureBrowserTitle"),
-      message: t("ext.cookie.captureBrowserMessage"),
+      message: profileText
+        ? `${t("ext.cookie.captureBrowserMessage")}\n${t("ext.cookie.captureBrowserFromProfile", {
+            profile: profileText,
+          })}`
+        : t("ext.cookie.captureBrowserMessage"),
       defaultValue: "",
     });
     if (name === null) return;
@@ -251,8 +273,10 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
       fixed: {
         id: c.id,
         label: c.label,
+        storeScope: c.storeScope,
         autoUseByAI: c.autoUseByAI,
         autoInjectByAI: c.autoInjectByAI,
+        autoRefreshFromBrowser: c.meta?.autoRefreshFromBrowser,
         switchMode: c.meta?.switchMode,
       },
     });
@@ -263,7 +287,17 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     const ok = await confirm({
       title: t("ext.cookie.switchTitle"),
       message: t("ext.cookie.switchMessage", { label: c.label }),
-      detail: merge ? t("ext.cookie.switchDetailMerge") : t("ext.cookie.switchDetailClear"),
+      // Say WHERE the jar lands. A project profile is shared by every session in
+      // that project, so switching accounts here changes the login for all of
+      // them — the user must see that before confirming.
+      detail: [
+        merge ? t("ext.cookie.switchDetailMerge") : t("ext.cookie.switchDetailClear"),
+        activeBucket
+          ? t("ext.cookie.switchIntoProfile", { profile: describeProfile(activeBucket) })
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
       confirmLabel: t("ext.cookie.switchConfirm"),
     });
     if (!ok) return;
@@ -294,7 +328,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     if (!trimmed || trimmed === c.label) return;
     setBusy(true);
     try {
-      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { label: trimmed });
+      await window.codeshell.credentials.patchMeta(cwd, c.storeScope ?? "user", c.id, {
+        label: trimmed,
+      });
       load();
     } finally {
       setBusy(false);
@@ -313,9 +349,11 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   ) => {
     setBusy(true);
     try {
-      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, fields);
-      load();
+      await window.codeshell.credentials.patchMeta(cwd, c.storeScope ?? "user", c.id, fields);
+      await load();
       if (toastMsg) toast({ message: toastMsg });
+    } catch (error) {
+      toast({ message: t("ext.cookie.updateFailed", { error: String(error) }), variant: "error" });
     } finally {
       setBusy(false);
     }
@@ -339,6 +377,15 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         : t("ext.cookie.aiAutoInjectOffToast", { label: c.label }),
     );
 
+  const toggleAutoRefresh = (c: MaskedCredentialView, next: boolean) =>
+    void patch(
+      c,
+      { meta: { ...c.meta, autoRefreshFromBrowser: next } },
+      next
+        ? t("ext.cookie.autoRefreshOnToast", { label: c.label })
+        : t("ext.cookie.autoRefreshOffToast", { label: c.label }),
+    );
+
   /** 切换策略:写回 meta.switchMode(保留其余 meta 字段)。 */
   const setSwitchMode = (c: MaskedCredentialView, mode: SwitchMode) =>
     void patch(c, { meta: { ...c.meta, switchMode: mode } });
@@ -351,7 +398,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
       }))
     )
       return;
-    await window.codeshell.credentials.remove(cwd, "user", c.id);
+    await window.codeshell.credentials.remove(cwd, c.storeScope ?? "user", c.id);
     load();
   };
 
@@ -608,6 +655,13 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
                           checked={c.autoInjectByAI === true}
                           disabled={busy}
                           onCheckedChange={(next) => toggleAiInject(c, next)}
+                        />
+                        <CookiePermissionSwitch
+                          title={t("ext.cookie.autoRefresh")}
+                          description={t("ext.cookie.autoRefreshDescription")}
+                          checked={c.meta?.autoRefreshFromBrowser === true}
+                          disabled={busy}
+                          onCheckedChange={(next) => toggleAutoRefresh(c, next)}
                         />
                         <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0">
