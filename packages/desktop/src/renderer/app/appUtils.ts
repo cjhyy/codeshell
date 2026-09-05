@@ -5,7 +5,6 @@ import type { PermissionMode } from "../chat/PermissionPill";
 import type { MessagesReducerState } from "../types";
 import type { PanelTab } from "../view";
 import { loadPanelState, NO_REPO_KEY } from "../transcripts";
-import { QUICK_CHAT_BUCKET_PREFIX } from "../quickChatSession";
 
 export function stablePromptHash(text: string): string {
   let h = 2166136261;
@@ -108,10 +107,12 @@ export function parsePanelBucket(bucket: string): {
   };
 }
 
-export function browserPartitionForBucket(bucket: string): string {
-  const prefix = bucket.startsWith(QUICK_CHAT_BUCKET_PREFIX) ? "browser:qchat" : "persist:browser";
-  return `${prefix}:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`;
-}
+/**
+ * Re-exported from shared/ so the renderer's existing call sites keep their
+ * import path. The definition MUST stay single: a partition is the cookie jar,
+ * and main compares this string for equality across IPC.
+ */
+export { browserPartitionForBucket } from "../../shared/browser-partition";
 
 export function quickChatLiveTurnActive(state: MessagesReducerState, busy: boolean): boolean {
   const lastMessage = state.messages[state.messages.length - 1];

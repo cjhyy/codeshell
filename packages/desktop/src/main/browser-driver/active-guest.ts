@@ -9,10 +9,14 @@
  */
 
 import type { Session, WebContents } from "electron";
+// One definition shared with the renderer: a partition is the cookie jar, so a
+// second copy here could silently point the two processes at different login
+// state. See shared/browser-partition.ts.
+import {
+  browserPartitionForBucket as sharedPartitionForBucket,
+  sanitizeBrowserBucket as sharedSanitizeBucket,
+} from "../../shared/browser-partition.js";
 
-const BROWSER_PARTITION_PREFIX = "persist:browser";
-const QUICK_CHAT_PARTITION_PREFIX = "browser:qchat";
-const QUICK_CHAT_BUCKET_PREFIX = "__quick_chat__::";
 const LEGACY_BUCKET = "__legacy__";
 
 export type BrowserBucket = string;
@@ -87,14 +91,11 @@ const pendingAttachedGuests = new Map<
 >();
 
 export function sanitizeBrowserBucket(bucket: string): string {
-  return bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_");
+  return sharedSanitizeBucket(bucket);
 }
 
 export function browserPartitionForBucket(bucket: string): BrowserPartition {
-  const prefix = bucket.startsWith(QUICK_CHAT_BUCKET_PREFIX)
-    ? QUICK_CHAT_PARTITION_PREFIX
-    : BROWSER_PARTITION_PREFIX;
-  return `${prefix}:${sanitizeBrowserBucket(bucket)}`;
+  return sharedPartitionForBucket(bucket);
 }
 
 export function registerSessionBucket(

@@ -1,5 +1,8 @@
-export const QUICK_CHAT_REPO_KEY = "__quick_chat__";
-export const QUICK_CHAT_BUCKET_PREFIX = `${QUICK_CHAT_REPO_KEY}::`;
+// Defined in shared/ and re-exported here: main derives browser partitions from
+// the same prefix, so a second literal would let the two processes disagree
+// about which buckets are process-local Quick Chats.
+export { QUICK_CHAT_REPO_KEY, QUICK_CHAT_BUCKET_PREFIX } from "../shared/browser-partition";
+import { QUICK_CHAT_BUCKET_PREFIX } from "../shared/browser-partition";
 
 export type QuickChatContextMode = "full" | "blank";
 export type QuickChatCreationStatus = "creating" | "ready" | "error";
