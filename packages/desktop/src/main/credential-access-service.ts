@@ -90,21 +90,22 @@ export function materializeCredentialCookieForWorker(req: CredentialMaterializeC
 
 function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapshotEntry {
   const store = new CredentialStore(cwd);
+  const full = store.listWithStatus("full");
+  const project = store.listWithStatus("project");
   return {
     cwd,
-    full: store.list("full").map(toMetadata),
-    project: store.list("project").map(toMetadata),
-    envFull: envExposures(store, "full"),
-    envProject: envExposures(store, "project"),
+    full: full.credentials.map(toMetadata),
+    project: project.credentials.map(toMetadata),
+    readableFull: full.readable,
+    readableProject: project.readable,
+    envFull: envExposures(full.credentials),
+    envProject: envExposures(project.credentials),
   };
 }
 
-function envExposures(
-  store: CredentialStore,
-  scope: CredentialAccessScope,
-): Record<string, string> {
+function envExposures(credentials: Credential[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const cred of store.list(scope)) {
+  for (const cred of credentials) {
     if (!credentialAllowsEnvExposure(cred.type)) continue;
     const name = cred.exposeAsEnv?.trim();
     if (name && isCredentialSecretAvailable(cred.secret)) {

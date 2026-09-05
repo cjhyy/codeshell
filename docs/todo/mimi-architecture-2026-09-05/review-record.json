@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-05",
+  "diagramType": "architecture",
+  "validation": {
+    "passed": 9,
+    "errors": 0,
+    "warnings": 0
+  },
+  "visualInspection": {
+    "status": "reviewed",
+    "screenshots": [
+      "mimi.architecture.visual-check.1440x900.light.png",
+      "mimi.architecture.visual-check.1440x900.dark.png",
+      "mimi.architecture.visual-check.2048x1320.light.png",
+      "mimi.architecture.visual-check.2048x1320.dark.png"
+    ],
+    "observations": [
+      "Inspected all four screenshots: main path and direct reply branch are visible, with no clipped cards or node overlaps.",
+      "Smallest viewport uses compact secondary text; viewer zoom is available for detail.",
+      "Automated visual-check receipt intentionally retains visualReview=pending; this separate record documents assistant inspection."
+    ]
+  },
+  "baselineTests": {
+    "passed": 47,
+    "failed": 0,
+    "assertions": 208,
+    "files": [
+      "packages/pet/src/engine.pet-behavior.test.ts",
+      "packages/pet/src/host-actions.test.ts",
+      "packages/pet/src/delegate-work.mismatch.test.ts",
+      "packages/desktop/src/main/pet/pet-segment-controller.test.ts"
+    ]
+  },
+  "implementationStatus": "Proposal only; no runtime changes."
+}

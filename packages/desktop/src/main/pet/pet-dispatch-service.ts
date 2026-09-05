@@ -186,9 +186,9 @@ export type PetDispatchResult =
       petSessionId: string;
       result: unknown;
       /**
-       * Host-authored reply produced only after DelegateWork launch outcomes
-       * are known. Consumers use this instead of the model's pre-launch status
-       * guess and persist it as a replacement in Mimi's visible transcript.
+       * Host-authored reply after a launch or incomplete run outcome is known.
+       * Consumers use this instead of the model's speculative status and
+       * persist it as a replacement in Mimi's visible transcript.
        */
       authoritativeReply?: string;
       /** True when the host handled /clear without calling the manager model. */
@@ -1896,6 +1896,28 @@ export class PetDispatchService {
             }
           }
         }
+        const runReason =
+          response.result && typeof response.result === "object"
+            ? (response.result as { reason?: unknown }).reason
+            : undefined;
+        const incompleteReply =
+          runReason === "max_turns"
+            ? "这次没能处理好你的请求，我已停止重试。请重新发送，或用 /clear 开始新的对话。"
+            : runReason === "model_error"
+              ? "Mimi 这次没能回复，请稍后重试。"
+              : undefined;
+        const blockedActions = new Map<string, string>();
+        if (workDelegations.length > 0) {
+          blockedActions.set(
+            "followUpMutation",
+            "Work Session 刚刚启动，跟进项只能在真实完成后再标记已处理",
+          );
+        }
+        // A committed reply normally ends the run. If a steer reopens the
+        // turn and the next round fails/exhausts the budget, the old draft may
+        // still be in the collector but no longer answers all accepted input.
+        // Do not execute it as an answer to the revised input.
+        if (incompleteReply) blockedActions.set("gatewayReply", incompleteReply);
         // Host actions Mimi requested (mobile remote, long-task control,
         // memory, ...) run only after her turn; failures stay non-fatal so the
         // reply survives and carries each real outcome instead.
@@ -1909,11 +1931,7 @@ export class PetDispatchService {
             petSessionId: metadata.petSessionId,
             ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
           },
-          workDelegations.length > 0
-            ? new Map([
-                ["followUpMutation", "Work Session 刚刚启动，跟进项只能在真实完成后再标记已处理"],
-              ])
-            : undefined,
+          blockedActions,
           {
             originClientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
             requestedAt,
@@ -1925,11 +1943,18 @@ export class PetDispatchService {
         // the real terminal signal and records work memory only after a worker
         // completion/failure/cancellation event is observed.
         const delegation = delegations[0];
-        const authoritativeReply = formatDelegationLaunchReply(
-          delegations,
-          resolvedDelegations.length,
-          Boolean(command.source?.target),
-        );
+        // A no-tools summary after exhausting the manager budget is not proof
+        // of success. Preserve real launch/action receipts, but replace the
+        // model's speculative text with an honest terminal reply. Likewise an
+        // unavailable model must not appear as "processed with no text" in IM.
+        const authoritativeReply =
+          formatDelegationLaunchReply(
+            delegations,
+            resolvedDelegations.length,
+            Boolean(command.source?.target),
+          ) ||
+          incompleteReply ||
+          undefined;
         return {
           ok: true,
           type: "chat",

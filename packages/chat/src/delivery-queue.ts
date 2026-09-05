@@ -178,7 +178,9 @@ export class DeliveryQueue {
           const persistent = Boolean(
             this.config.path && (!message.attachments?.length || spooled !== undefined),
           );
-          const safeMessage = persistent ? serializableMessage(message, spooled) : message;
+          const safeMessage = persistent
+            ? serializableMessage(message, this.rehydrateAttachments(spooled))
+            : message;
           record = {
             id,
             ...(dedupeKey ? { dedupeKey } : {}),
@@ -585,7 +587,7 @@ function targetKey(message: ChannelMessage): string {
 
 function serializableMessage(
   message: ChannelMessage,
-  spooled?: SpooledAttachment[],
+  acceptedAttachments?: ChannelMessage["attachments"],
 ): ChannelMessage {
   // Drop `attachments` before serializing: each carries a `load()` closure that
   // JSON silently discards, which would leave a persisted message claiming
@@ -597,10 +599,11 @@ function serializableMessage(
     throw new Error("Chat Gateway message is not persistable or exceeds 1 MiB");
   }
   const parsed = JSON.parse(serialized) as ChannelMessage;
-  // Keep the live attachments for THIS process; the spool only matters after a
-  // restart, and re-reading from disk while the originals are in hand is waste.
-  if (message.attachments?.length && spooled) {
-    return { ...parsed, attachments: message.attachments };
+  // Use the bytes already accepted into the durable inbox. The original load()
+  // usually fetches a short-lived remote URL, so keeping it here would download
+  // twice and could lose a successfully spooled image before Mimi sees it.
+  if (acceptedAttachments?.length) {
+    return { ...parsed, attachments: acceptedAttachments };
   }
   return parsed;
 }

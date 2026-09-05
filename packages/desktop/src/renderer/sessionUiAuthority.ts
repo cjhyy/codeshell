@@ -77,7 +77,9 @@ export function useSessionUiAuthority({
   }
 
   const refresh = useCallback(async (): Promise<void> => {
-    if (!sessionId) return;
+    // A previous Session's subscription can still fire between the next
+    // render and passive effect cleanup. Never attach its lookup to a new key.
+    if (!sessionId || requestKeyRef.current !== requestKey) return;
     const requestId = ++requestIdRef.current;
     const requestTargetKey = requestKeyRef.current;
     try {
@@ -111,6 +113,25 @@ export function useSessionUiAuthority({
     if (!sessionId || typeof subscribe !== "function") return;
     return subscribe((event) => {
       if (event.sessionId === sessionId) void refresh();
+    });
+  }, [refresh, sessionId]);
+
+  useEffect(() => {
+    const subscribe = window.codeshell.onStreamEvent;
+    if (!sessionId || typeof subscribe !== "function") return;
+    return subscribe((envelope) => {
+      const event = envelope.event;
+      if (
+        envelope.sessionId !== sessionId ||
+        event.type !== "session_started" ||
+        event.sessionId !== sessionId ||
+        ("agentId" in event && event.agentId !== undefined)
+      ) {
+        return;
+      }
+      // A local tab can exist before its first run persists the Session.
+      // session_started is the first chance to recover an unknown lookup.
+      void refresh();
     });
   }, [refresh, sessionId]);
 

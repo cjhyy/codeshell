@@ -12,6 +12,7 @@ import { homedir } from "node:os";
 import {
   credentialAllowsEnvExposure,
   credentialSecretHint,
+  isCredentialSecretAvailable,
   type Credential,
   type CredentialStoreFile,
 } from "./types.js";
@@ -380,6 +381,36 @@ export class CredentialStore {
     });
   }
 
+  /**
+   * Update an existing record while holding the store lock. The callback sees
+   * the latest decrypted record and may return undefined to decline the write.
+   * Unlike save(), this never recreates a deleted credential.
+   */
+  updateExisting(
+    scope: CredentialScope,
+    id: string,
+    update: (current: Credential) => Credential | undefined,
+  ): boolean {
+    if (typeof id !== "string" || !id || id.length > MAX_CREDENTIAL_ID_CHARS || id.includes("\0")) {
+      throw new Error("invalid credential id");
+    }
+    let changed = false;
+    this.mutate(scope, (file) => {
+      const idx = file.credentials.findIndex((credential) => credential.id === id);
+      if (idx < 0) return false;
+      const next = update(normalizeCredential(file.credentials[idx], true)!);
+      if (!next) return false;
+      const normalized = normalizeCredential(next, true)!;
+      if (normalized.id !== id) throw new Error("credential update cannot change id");
+      file.credentials[idx] = credentialAllowsEnvExposure(normalized.type)
+        ? normalized
+        : { ...normalized, exposeAsEnv: undefined };
+      changed = true;
+      return true;
+    });
+    return changed;
+  }
+
   remove(scope: CredentialScope, id: string): void {
     if (typeof id !== "string" || !id || id.length > MAX_CREDENTIAL_ID_CHARS || id.includes("\0")) {
       throw new Error("invalid credential id");
@@ -401,12 +432,23 @@ export class CredentialStore {
    *     same host-isolation contract as {@link envExposures} and top-level env.
    */
   list(scope: "full" | "project" = "full"): Credential[] {
+    return this.listWithStatus(scope).credentials;
+  }
+
+  /** Preserve read failures so diagnostics can distinguish unknown state from an empty store. */
+  listWithStatus(scope: "full" | "project" = "full"): {
+    credentials: Credential[];
+    readable: boolean;
+  } {
     const byId = new Map<string, Credential>();
-    if (scope === "full") {
-      for (const c of this.read("user").credentials) byId.set(c.id, c);
+    let readable = true;
+    const scopes: CredentialScope[] = scope === "full" ? ["user", "project"] : ["project"];
+    for (const layer of scopes) {
+      const result = this.readGuarded(layer);
+      readable = readable && result.readable;
+      for (const credential of result.file.credentials) byId.set(credential.id, credential);
     }
-    for (const c of this.read("project").credentials) byId.set(c.id, c); // project wins
-    return [...byId.values()];
+    return { credentials: [...byId.values()], readable };
   }
 
   resolve(id: string, scope: "full" | "project" = "full"): Credential | undefined {
@@ -449,11 +491,12 @@ export class CredentialStore {
   listMasked(scope: "full" | "project" = "full"): MaskedCredential[] {
     return this.list(scope).map((c) => {
       const { secret, ...rest } = c;
+      const available = isCredentialSecretAvailable(secret);
       return {
         ...rest,
         ...(credentialAllowsEnvExposure(c.type) ? {} : { exposeAsEnv: undefined }),
-        hasSecret: typeof secret === "string" && secret.length > 0,
-        secretHint: credentialSecretHint(c.type, secret),
+        hasSecret: available,
+        secretHint: available ? credentialSecretHint(c.type, secret) : undefined,
         ...(c.type === "oauth" || isBrowserOAuthLinkCredential(c)
           ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
           : {}),

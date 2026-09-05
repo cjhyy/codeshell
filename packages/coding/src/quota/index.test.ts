@@ -79,6 +79,66 @@ describe("queryClaudeQuota", () => {
     ]);
   });
 
+  /**
+   * REGRESSION (2026-09-06): captured verbatim from a real probe on a team /
+   * default_claude_max_5x account running on overage. There is NO 5h or 7d
+   * header here — the old hardcoded 5h/7d lookup found zero windows and the
+   * feature reported "响应头无 rate-limit 字段" while the API was answering fine.
+   */
+  it("overage account: reads the overage window when 5h/7d are absent", async () => {
+    const fetchImpl = claudeResponse({
+      "anthropic-ratelimit-unified-status": "allowed",
+      "anthropic-ratelimit-unified-overage-status": "allowed",
+      "anthropic-ratelimit-unified-overage-reset": "1790812800",
+      "anthropic-ratelimit-unified-overage-utilization": "0.07",
+      "anthropic-ratelimit-unified-representative-claim": "overage",
+      "anthropic-ratelimit-unified-fallback-percentage": "0.5",
+      "anthropic-ratelimit-unified-reset": "1790812800",
+      "anthropic-ratelimit-unified-overage-in-use": "true",
+    });
+    const q = await queryClaudeQuota(CREDS, fetchImpl, NEVER_ABORT);
+    expect(q.error).toBeUndefined();
+    expect(q.windows).toEqual([
+      { kind: "overage", usedPercent: 7, resetsAt: 1790812800, representative: true },
+    ]);
+  });
+
+  it("flags the representative window, mapping five_hour → 5h", async () => {
+    const fetchImpl = claudeResponse({
+      "anthropic-ratelimit-unified-5h-utilization": "0.018416969696969696",
+      "anthropic-ratelimit-unified-5h-reset": "1764554400",
+      "anthropic-ratelimit-unified-7d-utilization": "0.7370692663445869",
+      "anthropic-ratelimit-unified-7d-reset": "1764615600",
+      "anthropic-ratelimit-unified-representative-claim": "five_hour",
+    });
+    const q = await queryClaudeQuota(CREDS, fetchImpl, NEVER_ABORT);
+    const byKind = Object.fromEntries((q.windows ?? []).map((w) => [w.kind, w]));
+    expect(byKind["5h"]?.representative).toBe(true);
+    expect(byKind["7d"]?.representative).toBeUndefined();
+  });
+
+  it("ignores envelope headers that are not windows", async () => {
+    // Only `-utilization` marks a window; status/reset/claim must not become one.
+    const fetchImpl = claudeResponse({
+      "anthropic-ratelimit-unified-status": "allowed",
+      "anthropic-ratelimit-unified-reset": "1790812800",
+      "anthropic-ratelimit-unified-representative-claim": "five_hour",
+      "anthropic-ratelimit-unified-fallback-percentage": "0.5",
+    });
+    const q = await queryClaudeQuota(CREDS, fetchImpl, NEVER_ABORT);
+    expect(q.windows).toBeUndefined();
+    expect(q.error).toContain("无 rate-limit 字段");
+  });
+
+  it("picks up an unknown future window name", async () => {
+    const fetchImpl = claudeResponse({
+      "anthropic-ratelimit-unified-7d_sonnet-utilization": "0.42",
+      "anthropic-ratelimit-unified-7d_sonnet-reset": "1790000000",
+    });
+    const q = await queryClaudeQuota(CREDS, fetchImpl, NEVER_ABORT);
+    expect(q.windows).toEqual([{ kind: "7d_sonnet", usedPercent: 42, resetsAt: 1790000000 }]);
+  });
+
   it("no token → error, no probe sent", async () => {
     let called = false;
     const fetchImpl = (async () => {
@@ -123,6 +183,32 @@ describe("formatQuota", () => {
     expect(out).toContain("Codex [team]");
     expect(out).toContain("5h 用了 21%");
     expect(out).toContain("1h0m 后");
+  });
+
+  it("renders multi-day resets in days, not hundreds of hours", () => {
+    const out = formatQuota(
+      {
+        claude: {
+          provider: "claude",
+          windows: [{ kind: "overage", usedPercent: 7, resetsAt: now + 86400 * 25 + 3600 * 6 }],
+        },
+      },
+      now,
+    );
+    expect(out).toContain("25d6h 后");
+  });
+
+  it("stars the binding window", () => {
+    const out = formatQuota(
+      {
+        claude: {
+          provider: "claude",
+          windows: [{ kind: "overage", usedPercent: 7, resetsAt: null, representative: true }],
+        },
+      },
+      now,
+    );
+    expect(out).toContain("overage* 用了 7%");
   });
 
   it("renders failures", () => {

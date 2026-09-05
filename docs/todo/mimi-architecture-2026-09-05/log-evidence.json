@@ -1,0 +1,164 @@
+{
+  "scope": "Historical log observations; request counts are not unique tokens or billing totals.",
+  "managerSessionId": "pet-fd77a637-c033-4fc3-a6eb-b968b1cd9ef3",
+  "days": [
+    {
+      "date": "2026-09-02",
+      "source": "/Users/admin/.code-shell/logs/engine-2026-09-02.log",
+      "streamRequests": 124,
+      "minPromptTokens": 90616,
+      "maxPromptTokens": 107841,
+      "lastRequests": [
+        {
+          "line": 15322,
+          "utc": "2026-09-02T12:41:49.385Z",
+          "promptTokens": 107511,
+          "cacheReadTokens": 0,
+          "cacheHitRate": 0
+        },
+        {
+          "line": 15457,
+          "utc": "2026-09-02T12:41:55.235Z",
+          "promptTokens": 107709,
+          "cacheReadTokens": 15699,
+          "cacheHitRate": 0.14575383672673592
+        },
+        {
+          "line": 15488,
+          "utc": "2026-09-02T12:42:01.566Z",
+          "promptTokens": 107841,
+          "cacheReadTokens": 15699,
+          "cacheHitRate": 0.14557543049489527
+        }
+      ],
+      "replyCommittedStops": [],
+      "errors": [
+        {
+          "tool": "GatewayReply",
+          "message": "Error: GatewayReply was already accepted for this Mimi turn. End the turn now without calling it again.",
+          "count": 75
+        },
+        {
+          "tool": "Sessions",
+          "message": "Error: Sessions describe requires session_id and accepts nothing else.",
+          "count": 5
+        },
+        {
+          "tool": "DelegateWork",
+          "message": "Error: only one delegation is allowed per Mimi turn",
+          "count": 1
+        },
+        {
+          "tool": "FollowUps",
+          "message": "Error: FollowUps get requires follow_up_id and accepts no query.",
+          "count": 24
+        }
+      ]
+    },
+    {
+      "date": "2026-09-03",
+      "source": "/Users/admin/.code-shell/logs/engine-2026-09-03.log",
+      "streamRequests": 30,
+      "minPromptTokens": 108220,
+      "maxPromptTokens": 116978,
+      "lastRequests": [
+        {
+          "line": 78050,
+          "utc": "2026-09-03T09:48:31.612Z",
+          "promptTokens": 116100,
+          "cacheReadTokens": 16136,
+          "cacheHitRate": 0.1389836347975883
+        },
+        {
+          "line": 78061,
+          "utc": "2026-09-03T09:48:37.560Z",
+          "promptTokens": 116533,
+          "cacheReadTokens": 16136,
+          "cacheHitRate": 0.13846721529523826
+        },
+        {
+          "line": 78072,
+          "utc": "2026-09-03T09:48:44.400Z",
+          "promptTokens": 116978,
+          "cacheReadTokens": 16136,
+          "cacheHitRate": 0.13794046743832172
+        }
+      ],
+      "replyCommittedStops": [],
+      "errors": [
+        {
+          "tool": "DelegateWork",
+          "message": "Error: session_id does not belong to workspace_id.",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "date": "2026-09-04",
+      "source": "/Users/admin/.code-shell/logs/engine-2026-09-04.log",
+      "streamRequests": 34,
+      "minPromptTokens": 18109,
+      "maxPromptTokens": 123128,
+      "lastRequests": [
+        {
+          "line": 10087,
+          "utc": "2026-09-04T09:08:51.218Z",
+          "promptTokens": 18109,
+          "cacheReadTokens": 0,
+          "cacheHitRate": 0
+        },
+        {
+          "line": 10119,
+          "utc": "2026-09-04T09:18:31.348Z",
+          "promptTokens": 27063,
+          "cacheReadTokens": 0,
+          "cacheHitRate": 0
+        },
+        {
+          "line": 10129,
+          "utc": "2026-09-04T09:18:42.698Z",
+          "promptTokens": 27112,
+          "cacheReadTokens": 24268,
+          "cacheHitRate": 0.8951017999409855
+        }
+      ],
+      "replyCommittedStops": [
+        {
+          "line": 10093,
+          "utc": "2026-09-04T09:08:51.506Z"
+        },
+        {
+          "line": 10135,
+          "utc": "2026-09-04T09:18:42.994Z"
+        }
+      ],
+      "errors": [
+        {
+          "tool": "GatewayReply",
+          "message": "Error: GatewayReply was already accepted for this Mimi turn. End the turn now without calling it again.",
+          "count": 3
+        },
+        {
+          "tool": "DelegateWork",
+          "message": "Error: session_id does not belong to workspace_id.",
+          "count": 19
+        },
+        {
+          "tool": "Sessions",
+          "message": "Error: Sessions list accepts no other arguments.",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "date": "2026-09-05",
+      "source": "/Users/admin/.code-shell/logs/engine-2026-09-05.log",
+      "streamRequests": 0,
+      "minPromptTokens": null,
+      "maxPromptTokens": null,
+      "lastRequests": [],
+      "replyCommittedStops": [],
+      "errors": []
+    }
+  ]
+}

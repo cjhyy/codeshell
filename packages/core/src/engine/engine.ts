@@ -380,6 +380,8 @@ export class Engine {
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
    */
   private activeTurnLoop: TurnLoop | null = null;
+  /** Frozen behavior-profile ceiling for the live run's Goal controls. */
+  private activeProfileMaxTurns: number | undefined;
   /**
    * The goal-stop hook of the in-flight goal run, exposed so clearGoal() can
    * unregister it mid-run (the closure holds the now-cleared goal and would
@@ -1566,6 +1568,12 @@ export class Engine {
         task,
         cwd,
         options,
+        profileMaxTurns:
+          typeof profile?.maxTurns === "number" &&
+          Number.isSafeInteger(profile.maxTurns) &&
+          profile.maxTurns > 0
+            ? profile.maxTurns
+            : undefined,
         toolCtx,
         toolExecutor,
         contextManager,
@@ -1599,7 +1607,10 @@ export class Engine {
           this.activeRuntimeGoal = null;
           this.activePersistedRunGoal = null;
         }
-        if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
+        if (this.activeTurnLoop === turnLoop) {
+          this.activeTurnLoop = null;
+          this.activeProfileMaxTurns = undefined;
+        }
         if (this.activeRunSession === session) this.activeRunSession = null;
         // Run-scoped too: this handler is re-registered every run(), so it must be
         // dropped here or it stacks duplicates that re-snapshot on every tool.
@@ -2195,6 +2206,7 @@ export class Engine {
     task: string;
     cwd: string;
     options: EngineRunOptions | undefined;
+    profileMaxTurns: number | undefined;
     toolCtx: ToolContext;
     toolExecutor: import("../tool-system/executor.js").ToolExecutor;
     contextManager: ContextManager;
@@ -2226,6 +2238,7 @@ export class Engine {
       task,
       cwd,
       options,
+      profileMaxTurns,
       toolCtx,
       toolExecutor,
       contextManager,
@@ -2365,6 +2378,7 @@ export class Engine {
       toolDefs,
       sid,
       options,
+      profileMaxTurns,
       cwd,
       claimClientMessageId,
       releaseClientMessageId,
@@ -2385,7 +2399,10 @@ export class Engine {
 
     // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
     // a sub-agent's loop is its own concern and isn't user-extendable.
-    if (this.config.isSubAgent !== true) this.activeTurnLoop = turnLoop;
+    if (this.config.isSubAgent !== true) {
+      this.activeTurnLoop = turnLoop;
+      this.activeProfileMaxTurns = profileMaxTurns;
+    }
     // Expose this run's session bundle so a mid-run clearGoal() wipes the goal
     // on the very instance this loop keeps saving (see field doc). Top-level
     // only — sub-agents don't carry user-clearable persistent goals.
@@ -2697,6 +2714,7 @@ export class Engine {
     toolDefs: import("../types.js").ToolDefinition[];
     sid: string;
     options: EngineRunOptions | undefined;
+    profileMaxTurns: number | undefined;
     cwd: string;
     claimClientMessageId: (
       bundle: SessionBundle,
@@ -2724,6 +2742,7 @@ export class Engine {
       toolDefs,
       sid,
       options,
+      profileMaxTurns,
       cwd,
       claimClientMessageId,
       releaseClientMessageId,
@@ -2816,6 +2835,9 @@ export class Engine {
         releaseClientMessageId,
         setOriginClientMessageId: (clientMessageId) => {
           toolCtx.originClientMessageId = clientMessageId;
+          const profileId = toolCtx.toolVisibility?.behaviorProfile;
+          const profile = profileId ? this.behaviorProfiles.get(profileId) : undefined;
+          profile?.onUserInputChanged?.(toolCtx.runScopedServices ?? {});
         },
         recordCumulativeUsage,
         onAgentUsage: (usage) => options?.onAgentProgress?.({ type: "usage", usage }),
@@ -2872,7 +2894,7 @@ export class Engine {
         // getting re-blocked by the stop-hook until it's done, and the 100
         // interactive default would silently truncate a long objective. The
         // real backstops are the goal token/time budgets + maxStopBlocks.
-        maxTurns: resolveMaxTurns(this.config.maxTurns, normalizedGoal),
+        maxTurns: this.resolveRunMaxTurns(normalizedGoal, profileMaxTurns),
         // Consecutive stop-block cap: config override > goal.maxStopBlocks >
         // GOAL_DEFAULT_MAX_STOP_BLOCKS(25). The old hardcoded 8 was too tight
         // for complex goals that legitimately get re-blocked while advancing.
@@ -2929,6 +2951,14 @@ export class Engine {
       },
     );
     return turnLoop;
+  }
+
+  private resolveRunMaxTurns(
+    goal: GoalConfig | undefined,
+    profileMaxTurns: number | undefined,
+  ): number {
+    const resolved = resolveMaxTurns(this.config.maxTurns, goal);
+    return profileMaxTurns === undefined ? resolved : Math.min(resolved, profileMaxTurns);
   }
 
   private buildSummarizeFn(
@@ -3455,7 +3485,7 @@ export class Engine {
               ? `目标已恢复：${next.objective}`
               : undefined,
           {
-            maxTurns: resolveMaxTurns(this.config.maxTurns, next),
+            maxTurns: this.resolveRunMaxTurns(next, this.activeProfileMaxTurns),
             maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
           },
         );
@@ -3956,6 +3986,21 @@ export class Engine {
     maxStopBlocks: number;
   } | null {
     if (!this.activeTurnLoop) return null;
+    if (
+      this.activeProfileMaxTurns !== undefined &&
+      typeof opts.addTurns === "number" &&
+      Number.isFinite(opts.addTurns) &&
+      opts.addTurns > 0 &&
+      opts.addTurns <= Number.MAX_SAFE_INTEGER
+    ) {
+      // An empty extension is a no-op that returns the live ceilings. Goal
+      // budgets may still grow, but a behavior-profile ceiling cannot.
+      const currentMaxTurns = this.activeTurnLoop.extend({}).maxTurns;
+      return this.activeTurnLoop.extend({
+        ...opts,
+        addTurns: Math.min(opts.addTurns, this.activeProfileMaxTurns - currentMaxTurns),
+      });
+    }
     return this.activeTurnLoop.extend(opts);
   }
 

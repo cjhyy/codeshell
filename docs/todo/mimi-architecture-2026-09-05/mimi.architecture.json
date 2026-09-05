@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Mimi 架构演进提案",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1240,
+      790
+    ]
+  },
+  "components": [
+    {
+      "id": "channels",
+      "type": "frontend",
+      "label": "微信与桌面入口",
+      "sublabel": "保留来源与消息身份",
+      "pos": [
+        50,
+        55
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "admission",
+      "type": "messagebus",
+      "label": "消息接纳与路由",
+      "sublabel": "去重 · 串行 · 已绑定直达",
+      "tag": "沿用并加强",
+      "pos": [
+        485,
+        55
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "manager",
+      "type": "backend",
+      "label": "Mimi 管理回合",
+      "sublabel": "澄清 · 调度 · 状态解释",
+      "tag": "短回合预算",
+      "pos": [
+        920,
+        55
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "context",
+      "type": "database",
+      "label": "会话上下文视图",
+      "sublabel": "近期消息 · 相关任务 · 记忆引用",
+      "tag": "按来源与 token 选取",
+      "pos": [
+        920,
+        325
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "decision",
+      "type": "security",
+      "label": "宿主决策提交",
+      "sublabel": "新任务隔离 · 延续核验 · 终止",
+      "tag": "结构化契约",
+      "pos": [
+        485,
+        325
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "work",
+      "type": "backend",
+      "label": "独立 Work Session",
+      "sublabel": "Core 引擎 · 工具 · 检查点",
+      "tag": "执行预算独立",
+      "pos": [
+        50,
+        325
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "任务账本与结果引用",
+      "sublabel": "真实终态 · 摘要 · 原文按需读取",
+      "tag": "复用现有持久层",
+      "pos": [
+        50,
+        595
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "delivery",
+      "type": "messagebus",
+      "label": "交付记录与发送重试",
+      "sublabel": "已受理 ≠ 已发送 ≠ 已送达",
+      "tag": "复用回执并补恢复",
+      "pos": [
+        485,
+        595
+      ],
+      "size": [
+        270,
+        110
+      ]
+    },
+    {
+      "id": "receipt",
+      "type": "frontend",
+      "label": "用户收到真实结果",
+      "sublabel": "回复 · 进度 · 失败或待处理",
+      "pos": [
+        920,
+        595
+      ],
+      "size": [
+        270,
+        110
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "channels",
+      "to": "admission",
+      "label": "用户消息",
+      "variant": "emphasis"
+    },
+    {
+      "from": "admission",
+      "to": "manager",
+      "label": "未绑定会话",
+      "variant": "emphasis"
+    },
+    {
+      "from": "context",
+      "to": "manager",
+      "label": "有界输入",
+      "variant": "dashed"
+    },
+    {
+      "from": "manager",
+      "to": "decision",
+      "label": "提交意图",
+      "fromSide": "left",
+      "toSide": "top",
+      "variant": "emphasis"
+    },
+    {
+      "from": "decision",
+      "to": "work",
+      "label": "执行任务",
+      "variant": "emphasis"
+    },
+    {
+      "from": "work",
+      "to": "ledger",
+      "label": "检查点与终态",
+      "variant": "emphasis",
+      "labelDy": 85
+    },
+    {
+      "from": "ledger",
+      "to": "delivery",
+      "label": "完成事件",
+      "variant": "emphasis"
+    },
+    {
+      "from": "decision",
+      "to": "delivery",
+      "label": "直接回复",
+      "variant": "dashed",
+      "labelDy": 85
+    },
+    {
+      "from": "delivery",
+      "to": "receipt",
+      "label": "渠道回执",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "保留已有边界",
+      "items": [
+        "Pet 拥有管理规则；Core 拥有通用执行与预算",
+        "已绑定会话沿用现有直达 Work Session 路径"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "本次建议重点",
+      "items": [
+        "新目标使用新上下文；续办保留精确任务身份",
+        "按 token 与任务状态收缩上下文，不等待长时间空闲"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "交付与诊断",
+      "items": [
+        "发送失败只重试交付，不重新运行模型或任务",
+        "分开记录 Mimi、Work、辅助模型与缓存用量"
+      ]
+    }
+  ]
+}

@@ -63,8 +63,8 @@ import {
   type PetProjectionSnapshotResult,
   type PetReportToMimiEvent,
 } from "@cjhyy/code-shell-pet";
-import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
+import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import {
   buildCredentialSnapshot,
   materializeCredentialCookieForWorker,
@@ -103,6 +103,7 @@ import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
+import { resolveSessionRunWorkspace } from "./session-run-workspace.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
 import {
@@ -1039,11 +1040,13 @@ export class AgentBridge implements PetStateBridge {
             throw new Error(`no browser partition registered for session ${parsed.sessionId}`);
           }
           const targetSession = target?.guest.session ?? targetPartition ?? undefined;
-          const { count } = await restoreCookiesToBrowser(
-            resolved.jar as ElectronCookieLike[],
-            resolved.switchMode,
+          const { count } = await restoreCookieCredentialToBrowser({
             targetSession,
-          );
+            sessionCwd,
+            credentialId: parsed.credentialId,
+            credentialScope: parsed.credentialScope,
+            resolved,
+          });
           for (const w of BrowserWindow.getAllWindows()) {
             if (!w.isDestroyed()) w.webContents.send("browser:reload", { bucket });
           }
@@ -1067,6 +1070,18 @@ export class AgentBridge implements PetStateBridge {
       let resultJson: string;
       try {
         if (!parsed.sessionId) throw new Error("workspace action requires sessionId");
+        if (parsed.action === "resolve_session_run") {
+          if (this.sessionMainRootMigrationClaims.has(parsed.target)) {
+            throw new Error(`Session ${parsed.target} root migration is in progress; retry the message`);
+          }
+          const workspace = resolveSessionRunWorkspace(
+            { sourceSessionId: parsed.sessionId, targetSessionId: parsed.target },
+            this.agentRunMetadataDeps(),
+          );
+          this.sessionCwd.set(parsed.target, workspace.cwd);
+          this.core.sendLine(buildWorkspaceActionReply(parsed, JSON.stringify(workspace)));
+          return;
+        }
         if (parsed.action !== "switch")
           throw new Error(`unsupported workspace action: ${parsed.action}`);
         const cwd = this.cwdForSessionOrThrow(parsed.sessionId);
@@ -1598,11 +1613,13 @@ export class AgentBridge implements PetStateBridge {
         throw new Error(`no browser partition registered for session ${sessionId}`);
       }
       const targetSession = target?.guest.session ?? targetPartition ?? undefined;
-      const { count } = await restoreCookiesToBrowser(
-        resolved.jar as ElectronCookieLike[],
-        resolved.switchMode,
+      const { count } = await restoreCookieCredentialToBrowser({
         targetSession,
-      );
+        sessionCwd,
+        credentialId,
+        credentialScope,
+        resolved,
+      });
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
       }

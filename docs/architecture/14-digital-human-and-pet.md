@@ -90,8 +90,10 @@ a profile-memory write and does not attach a digital human to the Pet Session.
 Cross-Session collaboration is one ordinary tool call, not a separate data
 model. The Desktop supplies the current project's Sessions as a closed target
 catalog. `SendMessageToSession(target_session_id, message)` can address only a
-Session in that catalog and only when its workspace root exactly matches the
-source Session.
+Session in that catalog and within the source Session's authorized project.
+Bound Sessions may use different mounted roots of the same project; legacy
+Sessions must share the same main root. Catalog paths cannot override persisted
+project bindings or grant access to another project.
 
 The protocol host enqueues `message` on the target `ChatSession` exactly as a
 normal user turn. If the target is idle or has never run, work starts; if it is
@@ -102,10 +104,36 @@ turn without the user opening it first; only that first turn carries the
 renderer-selected initial binding. Messages to an existing Session never
 overwrite a later profile switch.
 
-There is no Handoff record, version, subscription, delivery sidecar, special
-context event, or manual Handoff UI. The sent text simply appears as a user
-message in the target Session. If the source later learns something new, it
-calls the tool again and sends another message, just as a person would.
+Cross-Session startup resolves the target's complete host-authorized
+`WorkspaceContext`, including its project identity and allowed workspace roots,
+through the same workspace resolution path as ordinary turns. Passing only
+`cwd` is insufficient when reloading a Session bound to a project. Workspace
+resolution and startup errors must reach the sender instead of being reported
+as queued work.
+
+Each dispatch receives a distinct `messageId` and an execution receipt:
+`queued` means the turn has not yet been confirmed started, `started` means the
+target accepted execution, and `completed` includes the answer if the turn
+finishes before dispatch returns. A resolved engine promise is not proof of
+success: a zero-turn result is a startup failure even if its terminal reason
+is `completed`; other non-completion reasons report failure or cancellation.
+Custom hosts using the older router contract may omit receipts, in which case
+the tool reports only acceptance and explicitly says execution status and
+automatic reply delivery are unavailable.
+
+For queued or started turns, the protocol host returns that turn's answer,
+failure, or cancellation through the existing result notification mailbox to
+the source Session. The envelope uses the dispatch `messageId` as both its
+correlation ID and work ID, so separate messages to the same target retain
+separate replies. Delivery uses the existing `idle-drain` path, and notification
+rendering escapes target-supplied text. This is one result per dispatched turn,
+not a subscription to unrelated future target turns; callers do not need to
+send the same request again to poll for its answer.
+
+There is no Handoff record, version, delivery sidecar, or manual Handoff UI.
+The sent text appears as a user message in the target Session. If the source
+later learns something new, it calls the tool again and sends another message,
+just as a person would.
 
 ## Pet host-action envelopes
 

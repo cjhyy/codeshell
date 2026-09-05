@@ -342,8 +342,8 @@ async function runSubAgent(
   uiStream?: StreamCallback,
   /**
    * Optional override for the spawned child Engine's per-event stream.
-   * Background path passes a transcriptSink here so per-event detail is
-   * captured into the agent's transcript rather than the main feed. Sync
+   * Background path mirrors per-event detail into its transcript and the
+   * parent stream, where agentId keeps it scoped to the child card. Sync
    * calls leave undefined; engine.ts falls back to `spawner.parentStream`
    * (the parent UI), preserving the inline rendering of synchronous
    * sub-agents.
@@ -490,12 +490,27 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
     // (per-instance closure state), so it doesn't interleave with other
     // agents.
     //
-    // Sub-agent runs detached from the parent turn — the parent feed only
-    // sees the agent_start / agent_end markers via `parentStream` (the
-    // 4th arg to runSubAgent); per-event detail goes through the
-    // `streamOverride` (5th arg → SubAgentSpawnRequest.streamOverride →
-    // engine.ts spawn closure routes to it instead of the main UI).
+    // Also forward the agent-scoped events so a desktop child card can show
+    // live operations even after the spawning parent turn has finished.
     const transcriptSink: StreamCallback = createTranscriptTranslator(agentId);
+    const detailSink: StreamCallback = (event) => {
+      transcriptSink(event);
+      safeEmit(parentStream, event);
+    };
+    const lifecycleSink: StreamCallback = (event) => {
+      safeEmit(parentStream, event);
+      if (event.type === "agent_start") {
+        // Mark detached before spawn can emit any detail. Otherwise the parent
+        // turn's completion sweep prematurely seals this still-running card.
+        safeEmit(parentStream, {
+          type: "agent_backgrounded",
+          agentId,
+          name,
+          description,
+          agentType: overrides.resolvedType,
+        });
+      }
+    };
 
     void runSubAgent(
       spawner,
@@ -538,8 +553,8 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
         onAgentProgress: progressTracker.onRuntime,
         signal: controller.signal,
       },
-      parentStream, // uiStream: agent_start/end → main feed
-      transcriptSink, // streamOverride: per-event detail → transcript
+      lifecycleSink,
+      detailSink,
     )
       .then((text) => {
         if (controller.signal.aborted) {

@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, statSync } f
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { isBrowserPartition } from "../shared/browser-partition.js";
 
 /** Subset of Electron's Cookie we rely on (keeps the formatter unit-testable). */
 export interface ElectronCookieLike {
@@ -12,6 +13,46 @@ export interface ElectronCookieLike {
   expirationDate?: number;
   name: string;
   value: string;
+}
+
+/** Validate the complete input before clear-mode restoration can change storage. */
+export function isRestorableCookieJar(value: unknown): value is ElectronCookieLike[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const cookie = item as Partial<ElectronCookieLike>;
+      if (
+        typeof cookie.name !== "string" ||
+        typeof cookie.value !== "string" ||
+        typeof cookie.domain !== "string" ||
+        /[\x00-\x20\x7f]/.test(cookie.domain)
+      )
+        return false;
+      if (
+        cookie.path !== undefined &&
+        (typeof cookie.path !== "string" || !cookie.path.startsWith("/"))
+      )
+        return false;
+      const host = cookie.domain.replace(/^\./, "").toLowerCase();
+      if (!host || host.length > 253) return false;
+      try {
+        const parsed = new URL(`https://${host}`);
+        return (
+          parsed.hostname === host &&
+          parsed.pathname === "/" &&
+          !parsed.username &&
+          !parsed.password &&
+          !parsed.search &&
+          !parsed.hash &&
+          !parsed.port
+        );
+      } catch {
+        return false;
+      }
+    })
+  );
 }
 
 export const BROWSER_PARTITION = "persist:browser";
@@ -42,10 +83,9 @@ export function formatNetscapeCookies(cookies: ElectronCookieLike[]): string {
 }
 
 export function sanitizeBrowserPartition(partition?: string): string {
-  if (partition === BROWSER_PARTITION || partition?.startsWith(`${BROWSER_PARTITION}:`)) {
-    return partition;
-  }
-  return BROWSER_PARTITION;
+  if (partition === undefined) return BROWSER_PARTITION;
+  if (!isBrowserPartition(partition)) throw new Error("Invalid browser Cookie partition");
+  return partition;
 }
 
 /**
@@ -58,6 +98,13 @@ async function browserSession(target?: string | Electron.Session): Promise<Elect
   if (target && typeof target !== "string") return target;
   const { session } = await import("electron");
   return session.fromPartition(sanitizeBrowserPartition(target));
+}
+
+/** Resolve the concrete Electron Session behind a persistent partition target. */
+export async function browserSessionForCookies(
+  target?: string | Electron.Session,
+): Promise<Electron.Session> {
+  return browserSession(target);
 }
 
 /** List distinct (leading-dot-stripped) domains that have cookies in the partition. */
@@ -156,6 +203,7 @@ export async function restoreCookiesToBrowser(
   mode: "clear" | "merge" = "merge",
   partition?: string | Electron.Session,
 ): Promise<{ count: number }> {
+  if (!isRestorableCookieJar(jar)) throw new Error("Cookie credential is empty or malformed");
   const sess = await browserSession(partition);
   if (mode !== "merge") await sess.clearStorageData({ storages: ["cookies"] });
   let count = 0;
@@ -170,7 +218,9 @@ export async function restoreCookiesToBrowser(
         url,
         name: c.name,
         value: c.value,
-        domain: c.domain,
+        // Passing domain turns a host-only cookie into a domain cookie, leaving
+        // two same-name identities (and breaks Chromium's __Host- cookies).
+        ...(c.hostOnly === true ? {} : { domain: c.domain }),
         path: c.path ?? "/",
         secure: c.secure,
         httpOnly: (c as { httpOnly?: boolean }).httpOnly,

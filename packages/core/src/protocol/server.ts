@@ -37,13 +37,25 @@ import {
   createNotification,
   isRequest,
 } from "./types.js";
-import type { Engine, EngineConfig } from "../engine/engine.js";
+import type { Engine, EngineConfig, EngineResult } from "../engine/engine.js";
 import { diskDefaultsFrom } from "../engine/engine.js";
 import { ISOLATED_TASK_BEHAVIOR_MODE } from "../engine/run-types.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
-import type { RouteSessionMessageInput } from "../session/session-message.js";
+import type {
+  RouteSessionMessageInput,
+  SessionMessageReceipt,
+} from "../session/session-message.js";
+import {
+  sessionMessageOutcome,
+  sessionMessageFailure,
+  sessionMessageResultNotification,
+  type SessionMessageOutcome,
+} from "./session-message-result.js";
+import { resolveSessionMessageWorkspace } from "./session-message-workspace.js";
+import { validateWorkspaceContext, workspacePrimaryRoot } from "../workspace/workspace-context.js";
+import { canonicalKey } from "../workspace/canonical-key.js";
 import {
   type ApprovalRouteTarget,
   type ApprovalRouter,
@@ -852,6 +864,13 @@ export class AgentServer {
       approvalRouter: this.approvalRouter,
       onStream: (event) => this.notify(Methods.StreamEvent, { sessionId, event }),
       notificationMailbox: this.notificationMailbox,
+      resolveWorkspace: this.workspaceBridgeEnabled
+        ? async (session) => {
+            const slice = await this.resolveHostSessionWorkspace(session, sessionId);
+            this.rememberSessionSlice(sessionId, slice);
+            return slice;
+          }
+        : undefined,
     });
   }
 
@@ -882,7 +901,8 @@ export class AgentServer {
         return null;
       }
 
-      const session = await this.chatManager.getOrCreate(sessionId, slice);
+      const session = await this.chatManager.getOrCreate(sessionId, slice, { allowReopen: false });
+      session.engine.restoreSessionModel?.(sessionId);
       this.wireInteractiveSession(session, sessionId);
       logger.debug("bg_wakeup.rehydrated_session", {
         sessionId,
@@ -935,7 +955,10 @@ export class AgentServer {
   }
 
   /** Queue a model-sent message as an ordinary user turn in another Session. */
-  private async routeSessionMessage(input: RouteSessionMessageInput): Promise<void> {
+  private async routeSessionMessage(
+    input: RouteSessionMessageInput,
+  ): Promise<SessionMessageReceipt> {
+    input.signal?.throwIfAborted();
     const manager = this.chatManager;
     if (!manager) throw new Error("cross-Session messaging requires a multi-session host");
     const targetId = input.target.sessionId;
@@ -943,12 +966,52 @@ export class AgentServer {
       throw new Error(`target Session is closing or closed: ${targetId}`);
     }
     const sourceSlice = this.lastSliceBySession.get(input.sourceSessionId);
-    const targetSlice = {
-      cwd: input.target.workspaceRoot,
-      projectTrusted: sourceSlice?.projectTrusted ?? false,
-    } as EngineConfigSlice;
+    const sourceSession = manager.get(input.sourceSessionId);
+    const assertStillAuthorized = () => {
+      input.signal?.throwIfAborted();
+      if (this.disconnected || manager.isUnavailable(targetId)) {
+        throw new Error(`target Session is closing or closed: ${targetId}`);
+      }
+      if (
+        sourceSession &&
+        (manager.get(input.sourceSessionId) !== sourceSession ||
+          sourceSession.wasCancelledSinceLastTurn())
+      ) {
+        throw new Error("source Session was cancelled or closed before the message was queued");
+      }
+    };
+    let targetSlice: EngineConfigSlice;
+    if (this.workspaceBridgeEnabled) {
+      if (!sourceSession) throw new Error("source Session is no longer available");
+      targetSlice = await this.resolveHostSessionWorkspace(sourceSession, targetId);
+    } else {
+      const sessionManager =
+        sourceSession?.engine.getSessionManager?.() ??
+        (this.diskSessionReader ??= new SessionManager(this.sessionDiskRoot));
+      const sourceWorkspace = sourceSession?.engine.resolveSessionRunWorkspace?.(
+        input.sourceSessionId,
+      );
+      targetSlice = resolveSessionMessageWorkspace({
+        sessionManager,
+        sourceSessionId: input.sourceSessionId,
+        targetSessionId: targetId,
+        sourceWorkspace: {
+          cwd: sourceWorkspace?.cwd ?? sourceSlice?.cwd ?? input.target.workspaceRoot,
+          workspaceContext: sourceWorkspace?.workspaceContext ?? sourceSlice?.workspaceContext,
+          projectTrusted: sourceSlice?.projectTrusted ?? false,
+        },
+      });
+    }
+    assertStillAuthorized();
     const targetAlreadyExists = manager.sessionExistsOnDisk(targetId, targetSlice);
-    const targetSession = await manager.getOrCreate(targetId, targetSlice);
+    const targetWasResident = manager.get(targetId) !== undefined;
+    const targetSession = await manager.getOrCreate(targetId, targetSlice, {
+      allowReopen: false,
+      signal: input.signal,
+    });
+    assertStillAuthorized();
+    if (targetAlreadyExists && !targetWasResident)
+      targetSession.engine.restoreSessionModel?.(targetId);
     const approvalRegistration = this.approvalRouter.register(targetId, this.connectionId);
     if (!approvalRegistration.ok) {
       throw new Error(`target Session ${targetId} is owned by another connection`);
@@ -957,6 +1020,48 @@ export class AgentServer {
     this.observeSessionAttached(targetId, targetSession.lastActivityAt);
     this.wireInteractiveSession(targetSession, targetId);
 
+    const messageId = `session-message-${nanoid(12)}`;
+    const state: {
+      started: boolean;
+      acknowledged: boolean;
+      errorStreamed: boolean;
+      outcome?: SessionMessageOutcome;
+      result?: EngineResult;
+    } = { started: false, acknowledged: false, errorStreamed: false };
+    const finish = (outcome: SessionMessageOutcome, result?: EngineResult) => {
+      state.outcome = outcome;
+      state.result = result;
+      if (state.started) this.observeRunBoundary(targetId, "end");
+      if (outcome.status !== "completed") {
+        logger.warn("session_message.turn_failed", {
+          sourceSessionId: input.sourceSessionId,
+          targetSessionId: targetId,
+          messageId,
+          error: outcome.error,
+        });
+        // Setup can return a failure without ever emitting an error event.
+        // UI observation must not prevent the durable reply from being queued.
+        try {
+          if (!state.errorStreamed) {
+            this.notify(Methods.StreamEvent, {
+              sessionId: targetId,
+              event: { type: "error", error: outcome.error ?? "cross-Session message failed" },
+            });
+          }
+        } catch (error) {
+          logger.warn("session_message.error_observation_failed", {
+            messageId,
+            error: String(error),
+          });
+        }
+      }
+      if (state.acknowledged) {
+        this.notificationMailbox.enqueue(
+          sessionMessageResultNotification(input, messageId, outcome),
+        );
+      }
+      if (result && result.turnCount > 0) void this.maybeWakeIdleSession(targetId);
+    };
     const userMessageEvent = {
       type: "session_user_message",
       text: input.message,
@@ -964,50 +1069,44 @@ export class AgentServer {
     this.observeSessionStream(targetId, userMessageEvent);
     this.notify(Methods.StreamEvent, { sessionId: targetId, event: userMessageEvent });
     const run = targetSession.enqueueTurn(input.message, {
-      cwd: input.target.workspaceRoot,
+      cwd: targetSlice.cwd,
+      workspaceContext: targetSlice.workspaceContext,
       // A planned Session needs its renderer-selected initial profile. Once a
       // Session exists, omitting this field makes Engine use the target's own
       // persisted binding, so a stale source catalog cannot switch it back.
       workspaceProfile: targetAlreadyExists ? undefined : input.target.workspaceProfile,
       sessionMessageTargets: input.catalog,
       onStream: (event: StreamEvent) => {
+        if (event.type === "session_started" && !state.started) {
+          state.started = true;
+          this.observeRunBoundary(targetId, "start");
+        }
+        if (event.type === "error") state.errorStreamed = true;
         this.observeSessionStream(targetId, event);
         this.notify(Methods.StreamEvent, { sessionId: targetId, event });
       },
       approvalRouter: this.approvalRouter,
     });
-    // The turn itself must NOT block the sender — a member's work can take
-    // minutes and the lead has more to dispatch. But a turn that fails to *start*
-    // (most often: the target's digital human is not installed, so run-setup
-    // throws "Workspace profile ... is unavailable") used to be reported only to
-    // the log while SendMessageToSession still answered "has queued the turn".
-    // A real lead then waited two hours and re-sent, never learning the reason.
-    // So: surface an immediate failure to the caller, keep a slow turn detached.
-    let startupError: unknown;
-    const tracked = run
-      .then(() => this.maybeWakeIdleSession(targetId))
-      .catch((error) => {
-        startupError = error;
-        logger.warn("session_message.turn_failed", {
-          sourceSessionId: input.sourceSessionId,
-          targetSessionId: targetId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        this.notify(Methods.StreamEvent, {
-          sessionId: targetId,
-          event: {
-            type: "error",
-            error: error instanceof Error ? error.message : "cross-Session message failed",
-          },
-        });
-      });
-    // One macrotask is enough for a synchronous-throw path to settle; anything
-    // still running by then is genuine work and stays detached.
+    const tracked = run.then(
+      (result) => finish(sessionMessageOutcome(result), result),
+      (error) => finish(sessionMessageFailure(error)),
+    );
+    // Acknowledge promptly, but never infer "started" from elapsed time. If
+    // setup/work is still pending, its eventual outcome takes the mailbox path.
     await Promise.race([tracked, new Promise((resolve) => setTimeout(resolve, 0))]);
-    if (startupError) {
-      throw startupError instanceof Error ? startupError : new Error(String(startupError));
+    if (state.outcome) {
+      if (state.outcome.status !== "completed") throw new Error(state.outcome.error);
+      return {
+        messageId,
+        status: "completed",
+        result: { text: state.outcome.text, reason: state.result!.reason },
+      };
     }
-    void tracked;
+    state.acknowledged = true;
+    void tracked.catch((error) => {
+      logger.warn("session_message.result_delivery_failed", { messageId, error: String(error) });
+    });
+    return { messageId, status: state.started ? "started" : "queued" };
   }
 
   // ─── Request Dispatch ───────────────────────────────────────────
@@ -4088,11 +4187,60 @@ export class AgentServer {
     });
   }
 
-  private requestWorkspaceSwitchForSession(
+  private async requestWorkspaceSwitchForSession(
     session: import("./chat-session.js").ChatSession,
     sessionId: string,
     target: string,
   ): Promise<import("../types.js").SessionWorkspace> {
+    return (await this.requestWorkspaceActionForSession(
+      session,
+      sessionId,
+      "switch",
+      target,
+    )) as import("../types.js").SessionWorkspace;
+  }
+
+  /** The same host authority resolves both dispatched turns and their reply wakeups. */
+  private async resolveHostSessionWorkspace(
+    source: ChatSession,
+    targetId: string,
+  ): Promise<EngineConfigSlice> {
+    const registration = this.approvalRouter.register(source.id, this.connectionId);
+    if (!registration.ok)
+      throw new Error(`source Session ${source.id} is owned by another connection`);
+    const resolved = (await this.requestWorkspaceActionForSession(
+      source,
+      source.id,
+      "resolve_session_run",
+      targetId,
+    )) as { cwd?: unknown; workspaceContext?: unknown; projectTrusted?: unknown };
+    if (
+      typeof resolved.cwd !== "string" ||
+      !resolved.cwd ||
+      typeof resolved.projectTrusted !== "boolean"
+    ) {
+      throw new Error("host returned an invalid Session workspace");
+    }
+    const workspaceContext =
+      resolved.workspaceContext === undefined
+        ? undefined
+        : validateWorkspaceContext(resolved.workspaceContext);
+    if (
+      workspaceContext &&
+      canonicalKey(workspacePrimaryRoot(workspaceContext).path) !== canonicalKey(resolved.cwd)
+    ) {
+      throw new Error("host Session workspace does not match its working directory");
+    }
+    return { cwd: resolved.cwd, workspaceContext, projectTrusted: resolved.projectTrusted };
+  }
+
+  private requestWorkspaceActionForSession(
+    session: ChatSession,
+    sessionId: string,
+    action: "switch" | "resolve_session_run",
+    target: string,
+  ): Promise<unknown> {
+    const label = action === "switch" ? "workspace switch" : "Session workspace resolution";
     return new Promise((resolve, reject) => {
       const requestId = nanoid(12);
       const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
@@ -4101,14 +4249,12 @@ export class AgentServer {
         this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__workspace_action__"),
         (decision: unknown) => {
           this.clearApprovalTimer(requestId);
-          const outcome = parseHostLoopbackDecision(decision, "workspace switch");
+          const outcome = parseHostLoopbackDecision(decision, label);
           if (!outcome.ok) {
             reject(new Error(outcome.detail));
             return;
           }
-          const parsed = outcome.value as
-            | import("../types.js").SessionWorkspace
-            | { ok?: false; error?: string };
+          const parsed = outcome.value as { ok?: false; error?: string };
           // A workspace is always an object. Reject any other JSON shape rather
           // than resolving it: `null` / a bare number / a string would otherwise
           // be handed to setSessionWorkspace as if the switch had succeeded,
@@ -4116,14 +4262,14 @@ export class AgentServer {
           // parsed` TypeError happened to be caught and turned into a rejection;
           // this states the requirement instead of relying on that.)
           if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            reject(new Error(`workspace switch ${HOST_LOOPBACK_FAILURE_DETAIL.malformed}`));
+            reject(new Error(`${label} ${HOST_LOOPBACK_FAILURE_DETAIL.malformed}`));
             return;
           }
           if ("ok" in parsed && parsed.ok === false) {
-            reject(new Error(parsed.error ?? "workspace switch failed"));
+            reject(new Error(parsed.error ?? `${label} failed`));
             return;
           }
-          resolve(parsed as import("../types.js").SessionWorkspace);
+          resolve(parsed);
         },
       );
 
@@ -4132,7 +4278,7 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
-          reject(new Error(`workspace switch ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`));
+          reject(new Error(`${label} ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`));
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
@@ -4141,8 +4287,8 @@ export class AgentServer {
         ...routeEnvelope,
         request: {
           toolName: "__workspace_action__",
-          args: { action: "switch", target },
-          description: `workspace:switch:${target}`,
+          args: { action, target },
+          description: `workspace:${action}:${target}`,
           riskLevel: "low" as const,
         },
       });

@@ -134,13 +134,20 @@ export function createAuthorizedSessionMessageService(options: {
   const targets = catalog.filter((target) => target.sessionId !== sourceSessionId);
   return {
     targets,
-    send: async ({ targetSessionId, message }) => {
+    send: async ({ targetSessionId, message, signal }) => {
+      signal?.throwIfAborted();
       const target = targets.find((candidate) => candidate.sessionId === targetSessionId);
       if (!target) throw new Error("target Session is not in the host-authorized project list");
       if (!message.trim()) throw new Error("message is required");
       if (message.length > 48_000) throw new Error("message exceeds 48000 characters");
-      await router({ sourceSessionId, target, message, catalog });
-      return target;
+      const receipt = await router({
+        sourceSessionId,
+        target,
+        message,
+        catalog,
+        ...(signal ? { signal } : {}),
+      });
+      return receipt ? { ...target, receipt } : target;
     },
   };
 }

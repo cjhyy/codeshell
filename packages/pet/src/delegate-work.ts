@@ -10,6 +10,7 @@ import {
   type PetWorkspaceOption,
 } from "./delegation.js";
 import type { PetRunScopedServices } from "./profile.js";
+import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
 // Keep the wire/domain type forward-compatible with persisted "codex"
 // decisions, but advertise only backends the current host actually launches.
@@ -23,6 +24,7 @@ export const delegateWorkToolDef: ToolDefinition = {
     "Before calling, decide whether this is the same concrete work thread as one reusable Session. " +
     "Pass session_id only for a clear continuation; omit it to create a new Session. " +
     "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity. " +
+    "If the user asked for a new Session, omit session_id regardless of how continuous the work looks. " +
     "workspace_id must be copied exactly from the available Workspace list.",
   inputSchema: {
     type: "object",
@@ -46,7 +48,7 @@ export const delegateWorkToolDef: ToolDefinition = {
       session_id: {
         type: "string",
         description:
-          "Optional exact id from the reusable Session list. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work. The host never infers an omitted id.",
+          "Optional exact id from the reusable Session list. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work, and whenever the user asked to start a new Session. The host never infers an omitted id.",
       },
     },
     required: ["workspace_id", "objective"],
@@ -109,7 +111,7 @@ export function delegateWorkToolDefFor(
     .properties as Record<string, unknown>;
   return {
     ...delegateWorkToolDef,
-    description: `${delegateWorkToolDef.description}\n\nAvailable Workspaces:\n${workspaceListing}\n\nReusable Sessions:\n${sessionListing}`,
+    description: `${delegateWorkToolDef.description}\n\nAvailable Workspaces:\n${workspaceListing}\n\nReusable Sessions (candidates only — listing one here is not a reason to reuse it):\n${sessionListing}`,
     inputSchema: {
       ...delegateWorkToolDef.inputSchema,
       properties: {
@@ -125,7 +127,7 @@ export function delegateWorkToolDefFor(
                 type: "string",
                 enum: sessions.map((session) => session.id),
                 description:
-                  "Optional exact id from the reusable Session list. Pass it only for a clear continuation of the same concrete work thread; omit it to create a new Session. The host never infers an omitted id.",
+                  "Optional exact id from the reusable Session list. Pass it only for a clear continuation of the same concrete work thread; omit it to create a new Session, including whenever the user asked for a new one. The host never infers an omitted id.",
               },
             }
           : {}),
@@ -146,11 +148,28 @@ export async function delegateWorkTool(
   if (!services?.requestPetWorkDelegation || !workspaces || !reusableSessions) {
     return "Error: DelegateWork is available only in a Mimi manager turn.";
   }
+  if (
+    !hasOnlyDeclaredToolArguments(args, ["workspace_id", "objective", "executor", "session_id"])
+  ) {
+    return "Error: DelegateWork accepts only workspace_id, objective, executor, and session_id.";
+  }
   const workspaceId = typeof args.workspace_id === "string" ? args.workspace_id.trim() : "";
   const objective = typeof args.objective === "string" ? args.objective.trim() : "";
   const executor = args.executor === undefined ? "codeshell" : args.executor;
   const reusableSessionId = typeof args.session_id === "string" ? args.session_id.trim() : "";
   if (!workspaceId) return "Error: workspace_id is required.";
+  if (args.workspace_id !== workspaceId) {
+    return "Error: workspace_id must be copied exactly from the available Workspace list.";
+  }
+  if (
+    args.session_id !== undefined &&
+    (!reusableSessionId || args.session_id !== reusableSessionId)
+  ) {
+    return (
+      "Error: session_id must be one exact non-blank reusable Session id. " +
+      "For a continuation, copy the existing Session id; omit session_id only to request new work."
+    );
+  }
   if (!objective) return "Error: objective is required.";
   if (objective.length > 8_000) return "Error: objective is too long (maximum 8000 characters).";
   if (executor === "codex") {
@@ -173,7 +192,8 @@ export async function delegateWorkTool(
     return (
       `Error: unknown session_id ${JSON.stringify(reusableSessionId)}. ` +
       "Do not send it again. Omit session_id to start a new Session, or copy one exact id " +
-      "from the reusable Session list above."
+      "from the reusable Session list above. If the user asked to continue existing work, " +
+      "identify that Session first; do not silently create a replacement."
     );
   }
   if (reusableSession && reusableSession.workspaceId !== workspaceId) {

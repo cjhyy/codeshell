@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   CredentialStore,
+  createInProcessTransport,
+  createIpcCredentialAccess,
   PlaintextCipher,
   setDefaultCredentialCipher,
   type EncryptionCipher,
@@ -147,6 +149,42 @@ describe("desktop credential access service", () => {
     expect(() =>
       resolveCredentialValueForWorker({ cwd, id: "figma", scope: "full", purpose: "use" }),
     ).toThrow(/unavailable/);
+  });
+
+  test("a corrupt store reaches the worker as unknown while readable project Links remain visible", () => {
+    const store = new CredentialStore(cwd);
+    store.save("project", {
+      id: "project-github",
+      type: "link",
+      label: "Project GitHub",
+      secret: "fake-project-token",
+      meta: { linkProvider: "github", linkExecutionRuntime: "local" },
+    });
+    const userDirectory = join(home, ".code-shell");
+    mkdirSync(userDirectory, { recursive: true });
+    const userPath = join(userDirectory, "credentials.json");
+    const malformed = '{"version":1,"credentials":[';
+    writeFileSync(userPath, malformed);
+
+    const snapshot = buildCredentialSnapshot([cwd], 11);
+    const entry = snapshot.entries.find((item) => item.cwd === cwd)!;
+    expect(entry.readableFull).toBe(false);
+    expect(entry.readableProject).toBe(true);
+    expect(entry.full.map((credential) => credential.id)).toEqual(["project-github"]);
+    expect(entry.project).toEqual(entry.full);
+    expect(JSON.stringify(snapshot)).not.toContain("fake-project-token");
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    main.send({ jsonrpc: "2.0", method: "desktop/credentialSnapshot", params: { ...snapshot } });
+    expect(access.listMaskedWithStatus!(cwd, "full")).toEqual({
+      credentials: entry.full,
+      readable: false,
+    });
+    expect(access.listMaskedWithStatus!(cwd, "project")).toEqual({
+      credentials: entry.project,
+      readable: true,
+    });
+    expect(readFileSync(userPath, "utf8")).toBe(malformed);
   });
 
   test("oauth credentials never expose their full secret to the worker", () => {

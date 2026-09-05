@@ -7,6 +7,7 @@ import {
   getSessionTranscript,
   getSessionTranscriptPage,
 } from "./transcript-reader";
+import { foldTranscript } from "../renderer/automation/foldTranscript";
 
 function line(type: string, data: Record<string, unknown>): string {
   return JSON.stringify({ id: "x", type, timestamp: 1, turnNumber: 0, data });
@@ -563,6 +564,177 @@ describe("getSessionTranscript", () => {
     ) as { event: { error?: string; text?: string } } | undefined;
     expect(end!.event.error).toBeUndefined(); // completed → no error
     expect(end!.event.text).toContain("01-director-analysis.md");
+  });
+
+  it("replays child tools, outputs and prose inside their own card with original timing", async () => {
+    const parent = path.join(dir, "parent-details");
+    fs.mkdirSync(parent, { recursive: true });
+    fs.writeFileSync(
+      path.join(parent, "transcript.jsonl"),
+      [
+        line("session_meta", { sessionId: "parent-details" }),
+        line("message", { role: "user", content: "parent request" }),
+        line("subagent", { agentId: "child-details", description: "inspect the project" }),
+        line("message", { role: "assistant", content: "parent answer" }),
+      ].join("\n"),
+    );
+    writeSub("child-details", "completed", "");
+    const image = {
+      type: "image",
+      source: { type: "base64", media_type: "image/png", data: "aW1hZ2U=" },
+    };
+    const timedLine = (type: string, data: Record<string, unknown>, timestamp: number) =>
+      JSON.stringify({ id: `event-${timestamp}`, type, timestamp, turnNumber: 1, data });
+    fs.writeFileSync(
+      path.join(dir, "child-details", "transcript.jsonl"),
+      [
+        timedLine("session_meta", { sessionId: "child-details" }, 5),
+        timedLine("message", { role: "user", content: "private child instruction" }, 10),
+        timedLine("message", { role: "assistant", content: "Reading the configuration." }, 20),
+        timedLine(
+          "tool_use",
+          { toolCallId: "read", toolName: "Read", args: { file_path: "/repo/config.json" } },
+          30,
+        ),
+        timedLine(
+          "tool_result",
+          {
+            toolCallId: "read",
+            toolName: "Read",
+            result: "configuration contents",
+            contentBlocks: [image],
+          },
+          80,
+        ),
+        timedLine(
+          "tool_use",
+          { toolCallId: "check", toolName: "Bash", args: { command: "bun test" } },
+          100,
+        ),
+        timedLine(
+          "tool_result",
+          {
+            toolCallId: "check",
+            toolName: "Bash",
+            result: "test output",
+            error: "one check failed",
+          },
+          140,
+        ),
+        // Neither a child task list nor its run boundaries can affect the parent.
+        timedLine(
+          "tool_use",
+          {
+            toolCallId: "todo",
+            toolName: "TodoWrite",
+            args: { todos: [{ content: "child work", status: "in_progress" }] },
+          },
+          150,
+        ),
+        timedLine("turn_boundary", {}, 160),
+        timedLine(
+          "message",
+          { role: "assistant", content: [{ type: "text", text: "Inspection complete." }] },
+          180,
+        ),
+      ].join("\n"),
+    );
+
+    const full = await getSessionTranscript("parent-details", dir);
+    const paged = await getSessionTranscriptPage("parent-details", {}, dir);
+    expect(paged.items).toEqual(full);
+    const state = foldTranscript(full);
+    expect(state.sessionId).toBe("parent-details");
+    expect(state.messages.filter((m) => m.kind === "user").map((m) => m.text)).toEqual([
+      "parent request",
+    ]);
+    expect(state.messages.filter((m) => m.kind === "assistant").map((m) => m.text)).toEqual([
+      "parent answer",
+    ]);
+    expect(state.messages.some((m) => m.kind === "tool" || m.kind === "task_list")).toBe(false);
+    const agent = state.messages.find((m) => m.kind === "agent");
+    expect(agent?.kind).toBe("agent");
+    if (agent?.kind !== "agent") throw new Error("missing child card");
+    expect(agent.text).toBe("Reading the configuration.\n\nInspection complete.");
+    expect(agent.textBuffer).toBe("");
+    expect(agent.done).toBe(true);
+    expect(agent.error).toBeUndefined();
+    expect(agent.endedAt).toBe(180);
+    expect(agent.toolCalls.map((tool) => tool.id)).toEqual(["read", "check", "todo"]);
+    expect(agent.toolCalls[0]).toMatchObject({
+      args: JSON.stringify({ file_path: "/repo/config.json" }),
+      result: "configuration contents",
+      status: "succeeded",
+      startedAt: 30,
+      endedAt: 80,
+      durationMs: 50,
+      images: [{ mediaType: "image/png", data: "aW1hZ2U=" }],
+    });
+    expect(agent.toolCalls[1]).toMatchObject({
+      result: "test output",
+      error: "one check failed",
+      status: "failed",
+      durationMs: 40,
+    });
+    expect(agent.toolCalls[2]?.status).not.toBe("running");
+  });
+
+  it("keeps failed child errors on the child card and preserves the parent answer", async () => {
+    const parent = path.join(dir, "parent-failed-child");
+    fs.mkdirSync(parent, { recursive: true });
+    fs.writeFileSync(
+      path.join(parent, "transcript.jsonl"),
+      [
+        line("subagent", { agentId: "child-failed", description: "inspect" }),
+        line("message", { role: "assistant", content: "parent can continue" }),
+      ].join("\n"),
+    );
+    writeSub("child-failed", "model_error", "partial progress");
+    fs.appendFileSync(
+      path.join(dir, "child-failed", "transcript.jsonl"),
+      line("error", { error: "provider unavailable" }) + "\n",
+    );
+
+    const state = foldTranscript(await getSessionTranscript("parent-failed-child", dir));
+    expect(state.messages.find((m) => m.kind === "agent")).toMatchObject({
+      done: true,
+      text: "partial progress",
+      error: "provider unavailable",
+    });
+    expect(state.messages.some((m) => m.kind === "system")).toBe(false);
+    expect(state.messages.find((m) => m.kind === "assistant")).toMatchObject({
+      text: "parent can continue",
+    });
+  });
+
+  it("retains child tools when assistant prose is missing or a transcript line is malformed", async () => {
+    const parent = path.join(dir, "parent-tools-only");
+    fs.mkdirSync(parent, { recursive: true });
+    fs.writeFileSync(
+      path.join(parent, "transcript.jsonl"),
+      line("subagent", { agentId: "child-tools-only", description: "run a check" }),
+    );
+    writeSub("child-tools-only", "cancelled", "");
+    fs.writeFileSync(
+      path.join(dir, "child-tools-only", "transcript.jsonl"),
+      [
+        "{malformed",
+        JSON.stringify({ type: "message", data: [] }),
+        line("tool_use", { toolCallId: "call", toolName: "Bash", args: { command: "bun test" } }),
+        line("tool_result", {
+          toolCallId: "call",
+          toolName: "Bash",
+          result: "interrupted",
+          isError: true,
+        }),
+      ].join("\n"),
+    );
+
+    const state = foldTranscript(await getSessionTranscript("parent-tools-only", dir));
+    const agent = state.messages.find((m) => m.kind === "agent");
+    expect(agent).toMatchObject({ done: true, error: "子代理已取消", toolCount: 1 });
+    if (agent?.kind !== "agent") throw new Error("missing child card");
+    expect(agent.toolCalls[0]).toMatchObject({ result: "interrupted", status: "failed" });
   });
 
   it("rebuilds an INTERRUPTED (stuck active) sub-agent into an interrupted card", async () => {

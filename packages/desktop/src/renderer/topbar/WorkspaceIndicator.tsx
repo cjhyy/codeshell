@@ -563,17 +563,35 @@ export function WorkspaceIndicator({
   }, [authority?.mainRoot, refreshGitProbe, projectPath]);
 
   useEffect(() => {
-    const subscribe = window.codeshell.onWorkspaceChanged;
-    if (typeof subscribe !== "function" || !sessionId) return;
-    return subscribe((event) => {
-      if (event.sessionId !== sessionId) return;
+    if (!sessionId) return;
+    const refresh = () => {
+      if (requestTargetKeyRef.current !== requestTargetKey) return;
       void refreshCurrent().then((ready) => {
         if (!ready) return;
         void refreshGitProbeRef.current();
         if (openRef.current) void refreshListRef.current();
       });
+    };
+    const offWorkspace = window.codeshell.onWorkspaceChanged?.((event) => {
+      if (event.sessionId === sessionId) refresh();
     });
-  }, [refreshCurrent, sessionId]);
+    // The first lookup can precede Session persistence. Busy already became
+    // true before that lookup, so refresh when the worker confirms startup
+    // instead of waiting for the first turn to finish.
+    const offStream = window.codeshell.onStreamEvent?.(({ sessionId: ownerId, event }) => {
+      if (
+        ownerId === sessionId &&
+        event.type === "session_started" &&
+        event.sessionId === sessionId
+      ) {
+        refresh();
+      }
+    });
+    return () => {
+      offWorkspace?.();
+      offStream?.();
+    };
+  }, [refreshCurrent, requestTargetKey, sessionId]);
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);

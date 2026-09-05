@@ -2,7 +2,7 @@ import { afterEach, describe, test, expect } from "bun:test";
 import { isWebSearchAvailable } from "./web-search.js";
 import { isGenerateImageAvailable } from "./generate-image.js";
 import { isGenerateVideoAvailable } from "./generate-video.js";
-import { BUILTIN_TOOL_GUARDS } from "./index.js";
+import { BUILTIN_TOOLS, BUILTIN_TOOL_GUARDS } from "./index.js";
 import { resolveBuiltinToolNames } from "../../preset/index.js";
 import { setDefaultCredentialAccess, type CredentialAccess } from "../../credentials/access.js";
 
@@ -100,34 +100,12 @@ describe("builtin tool availability guards", () => {
     ).toBe(false);
   });
 
-  test("LinkAction is visible only when a usable local Link connection exists", () => {
-    const access: CredentialAccess = {
-      listMasked: () => [
-        {
-          id: "link-github-fine-grained-pat",
-          type: "link",
-          label: "GitHub local",
-          hasSecret: true,
-          meta: { linkProvider: "github", linkExecutionRuntime: "local" },
-        },
-      ],
-      resolveMeta: () => undefined,
-      envExposures: () => ({}),
-    };
-    setDefaultCredentialAccess(access);
-    expect(BUILTIN_TOOL_GUARDS.get("LinkAction")!({ cwd: "/repo", hasGoal: false })).toBe(true);
-
-    access.listMasked = () => [
-      {
-        id: "link-github-app",
-        type: "link",
-        label: "GitHub browser OAuth",
-        hasSecret: true,
-        oauthStatus: { state: "expired", hasRefreshToken: true },
-        meta: { linkProvider: "github", linkExecutionRuntime: "local" },
-      },
-    ];
-    expect(BUILTIN_TOOL_GUARDS.get("LinkAction")!({ cwd: "/repo", hasGoal: false })).toBe(false);
+  test("LinkAction remains discoverable before connecting without adding a separate status tool", () => {
+    const general = resolveBuiltinToolNames({ preset: "general" });
+    expect(general).toContain("LinkAction");
+    expect(general).not.toContain("LinkStatus");
+    expect(BUILTIN_TOOLS.some((tool) => tool.definition.name === "LinkStatus")).toBe(false);
+    expect(BUILTIN_TOOL_GUARDS.has("LinkAction")).toBe(false);
   });
 
   test("ungated tools have no guard entry (so they're always visible)", () => {

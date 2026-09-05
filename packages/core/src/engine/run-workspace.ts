@@ -123,32 +123,14 @@ export async function resolveRunWorkspace(args: {
       ? await args.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
       : undefined;
   if (workspaceResume && !workspaceResume.ok) {
-    return {
-      ok: false,
-      result: {
-        text: `ERROR: ${workspaceResume.message}`,
-        reason: "completed",
-        sessionId: options!.sessionId!,
-        turnCount: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-      },
-    };
+    return workspaceError(options?.sessionId, workspaceResume.message);
   }
   if (
     workspaceResume?.ok &&
     workspaceResume.reason === "worktree_missing_branch_gone" &&
     workspaceResume.message
   ) {
-    return {
-      ok: false,
-      result: {
-        text: workspaceResume.message,
-        reason: "completed",
-        sessionId: options!.sessionId!,
-        turnCount: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-      },
-    };
+    return workspaceError(options?.sessionId, workspaceResume.message);
   }
 
   // Existing P1 sessions resolve cwd from SessionWorkspace, even if the host
@@ -177,7 +159,10 @@ export async function resolveRunWorkspace(args: {
       ? validateWorkspaceContext(rawWorkspaceContext)
       : legacySingleRootWorkspace(cwd);
   } catch (error) {
-    return workspaceError(options?.sessionId, error instanceof Error ? error.message : String(error));
+    return workspaceError(
+      options?.sessionId,
+      error instanceof Error ? error.message : String(error),
+    );
   }
   const authoritativeWorkspaceContext = rawWorkspaceContext !== undefined;
   const primary = workspacePrimaryRoot(workspaceContext);
@@ -192,20 +177,29 @@ export async function resolveRunWorkspace(args: {
     workspaceResume.reason !== "legacy" &&
     canonicalKey(workspaceResume.workspace.root) !== canonicalKey(primary.path)
   ) {
-    return workspaceError(options?.sessionId, "WorkspaceContext primary does not match SessionWorkspace");
+    return workspaceError(
+      options?.sessionId,
+      "WorkspaceContext primary does not match SessionWorkspace",
+    );
   }
   const binding = options?.sessionId
     ? args.sessionManager.readSessionProjectBinding(options.sessionId)
     : undefined;
   if (binding && !authoritativeWorkspaceContext) {
-    return workspaceError(options?.sessionId, "bound Session requires an authoritative WorkspaceContext");
+    return workspaceError(
+      options?.sessionId,
+      "bound Session requires an authoritative WorkspaceContext",
+    );
   }
   if (
     binding &&
     (binding.projectId !== workspaceContext.projectId ||
       binding.mainRootId !== workspaceContext.sessionMainRootId)
   ) {
-    return workspaceError(options?.sessionId, "WorkspaceContext does not match persisted project binding");
+    return workspaceError(
+      options?.sessionId,
+      "WorkspaceContext does not match persisted project binding",
+    );
   }
   const profileState = profile?.disableWorkspaceProfile
     ? {
@@ -241,7 +235,9 @@ function workspaceError(sessionId: string | undefined, message: string): Resolve
     ok: false,
     result: {
       text: `ERROR: ${message}`,
-      reason: "completed",
+      // Like other initialization failures, this run never reached a model
+      // turn. Hosts must see a failure rather than report a completed delivery.
+      reason: "model_error",
       sessionId: sessionId ?? "workspace-invalid",
       turnCount: 0,
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },

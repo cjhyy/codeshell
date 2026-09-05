@@ -226,7 +226,11 @@ export class ChatSession {
     // Drain queued turns as cancelled
     const drained = this.queue.splice(0);
     for (const t of drained) {
-      t.reject(new Error("cancelled: session aborted before turn ran"));
+      t.reject(
+        Object.assign(new Error("cancelled: session aborted before turn ran"), {
+          name: "AbortError",
+        }),
+      );
     }
   }
 

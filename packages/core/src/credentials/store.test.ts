@@ -88,11 +88,73 @@ describe("CredentialStore", () => {
     expect(store.list().map((c) => c.id)).toContain("u");
   });
 
+  test.each(["user", "project"] as const)(
+    "read diagnostics retain the other scope when the %s store is corrupt",
+    (corruptScope) => {
+      const store = new CredentialStore(cwd);
+      expect(store.listWithStatus()).toEqual({ credentials: [], readable: true });
+      const readableScope = corruptScope === "user" ? "project" : "user";
+      store.save(readableScope, {
+        id: "readable-link",
+        type: "link",
+        label: "Readable Link",
+        secret: "fake-readable-token",
+        meta: { linkProvider: "github", linkExecutionRuntime: "local" },
+      });
+      const corruptDirectory = join(corruptScope === "user" ? home : cwd, ".code-shell");
+      mkdirSync(corruptDirectory, { recursive: true });
+      const corruptPath = join(corruptDirectory, "credentials.json");
+      const corruptContents = '{"version":1,"credentials":[';
+      writeFileSync(corruptPath, corruptContents);
+
+      const full = store.listWithStatus("full");
+      expect(full.readable).toBe(false);
+      expect(full.credentials.map((credential) => credential.id)).toEqual(["readable-link"]);
+      expect(store.list("full")).toEqual(full.credentials);
+      const project = store.listWithStatus("project");
+      expect(project.readable).toBe(corruptScope !== "project");
+      expect(project.credentials.map((credential) => credential.id)).toEqual(
+        corruptScope === "user" ? ["readable-link"] : [],
+      );
+      const masked = localCredentialAccess.listMaskedWithStatus!(cwd, "full");
+      expect(masked.readable).toBe(false);
+      expect(masked.credentials).toEqual(store.listMasked("full"));
+      expect(JSON.stringify(masked)).not.toContain("fake-readable-token");
+      expect(readFileSync(corruptPath, "utf8")).toBe(corruptContents);
+    },
+  );
+
   test("remove deletes from the given scope", () => {
     const store = new CredentialStore(cwd);
     store.save("user", { id: "tok-a", type: "token", label: "A", secret: "s1" });
     store.remove("user", "tok-a");
     expect(store.resolve("tok-a")).toBeUndefined();
+  });
+
+  test("conditional updates use the latest record and never recreate a removed credential", () => {
+    const store = new CredentialStore(cwd);
+    const other = new CredentialStore(cwd);
+    store.save("project", { id: "login", type: "cookie", label: "Old", secret: "original" });
+    other.patch("project", "login", { label: "Renamed", meta: { autoRefreshFromBrowser: false } });
+    expect(
+      store.updateExisting("project", "login", (current) => {
+        expect(current.label).toBe("Renamed");
+        return { ...current, secret: "rotated" };
+      }),
+    ).toBe(true);
+    expect(store.resolve("login", "project")).toMatchObject({
+      label: "Renamed",
+      secret: "rotated",
+      meta: { autoRefreshFromBrowser: false },
+    });
+    expect(store.updateExisting("project", "login", () => undefined)).toBe(false);
+    other.remove("project", "login");
+    expect(
+      store.updateExisting("project", "login", () => {
+        throw new Error("deleted records must not reach the update callback");
+      }),
+    ).toBe(false);
+    expect(store.resolve("login", "project")).toBeUndefined();
   });
 
   test("keeps valid credentials when a sibling row on disk is malformed", () => {
@@ -313,6 +375,41 @@ describe("CredentialStore", () => {
     expect(m.secretHint).toMatch(/\*\*\*\*/);
     // only the last 4 chars are revealed
     expect(m.secretHint).toBe("****alue");
+  });
+
+  test("masked status keeps unreadable credentials visible without a usable secret or hint", () => {
+    const store = new CredentialStore(cwd);
+    const path = join(home, ".code-shell", "credentials.json");
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    const credentials = ["token", "link", "oauth", "cookie"].map((type) => ({
+      id: `unreadable-${type}`,
+      type,
+      label: type,
+      secret: "enc:foreign:unreadable-ciphertext",
+    }));
+    credentials.push({
+      id: "readable",
+      type: "token",
+      label: "Readable",
+      secret: "plain:usable",
+    });
+    const original = JSON.stringify({ version: 1, credentials });
+    writeFileSync(path, original);
+
+    const masked = store.listMasked();
+    expect(masked).toHaveLength(5);
+    expect(masked).toEqual(localCredentialAccess.listMasked(cwd, "full"));
+    for (const credential of masked.filter((entry) => entry.id.startsWith("unreadable-"))) {
+      expect(credential.hasSecret).toBe(false);
+      expect(credential.secretHint).toBeUndefined();
+      expect(credential).not.toHaveProperty("secret");
+    }
+    expect(masked.find((entry) => entry.id === "readable")).toMatchObject({
+      hasSecret: true,
+      secretHint: "****able",
+    });
+    expect(JSON.stringify(masked)).not.toContain("ciphertext");
+    expect(readFileSync(path, "utf8")).toBe(original);
   });
 
   // A short secret must NOT leak in full through the hint: `"ab".slice(-4)`

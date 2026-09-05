@@ -40,8 +40,21 @@ code-shell run "summarize the changes in this repo and list follow-ups"
 | `runs` | List and inspect long-running automation runs. |
 | `arena` | Multi-model review arena — the agent gathers context, then multiple models discuss (a differentiator: review/compare across models). |
 | `plugin` | Manage installed plugins: `install`, `list`, `update`, and `uninstall`. |
+| `link status [provider]` | Check saved Link connections and local CLI login; add `--json` for structured output. |
 
 Skill management and the model registry are surfaced **inside** the REPL (slash commands, `@`-mentions) and in the desktop app, rather than as top-level CLI subcommands.
+
+### Link status
+
+```bash
+code-shell link status
+code-shell link status github
+code-shell link status github --json
+```
+
+Status works without a model connection and does not log in, install tools, or change configuration. It reads user and project connection metadata and checks supported local CLIs. A saved connection marked `ready` has usable metadata; status does not revalidate its token or account binding. `LinkAction` checks access when it runs.
+
+Saved Link availability and CLI authentication appear separately: an unreadable stored credential does not mean `gh` is logged out, and an authenticated CLI does not prove a saved Link action is usable. The terminal process may be unable to decrypt credentials saved by the desktop app; that limitation is reported alongside the CLI result. A successful query exits normally even when a provider is disconnected; scripts should inspect the JSON status fields.
 
 ### Interactive features
 

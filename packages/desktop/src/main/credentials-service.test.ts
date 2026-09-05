@@ -230,12 +230,21 @@ describe("browser partition cookie capture", () => {
     expect(jar).toEqual(partitionCookies.get(partition));
   });
 
-  test("falls back to the default partition for non-browser partition input", async () => {
+  test("rejects an invalid explicit partition without touching the default login", async () => {
     registerMockedSession(BROWSER_PARTITION);
 
-    await captureAllCookies("persist:browser2");
+    await expect(captureAllCookies("persist:browser2")).rejects.toThrow(
+      "Invalid browser Cookie partition",
+    );
+    expect(partitionCalls).toEqual([]);
+  });
 
-    expect(partitionCalls).toEqual([BROWSER_PARTITION]);
+  test("keeps Quick Chat cookies in the ephemeral partition", async () => {
+    const partition = "browser:qchat:__quick_chat__::qchat-1";
+    partitionCookies.set(partition, [{ domain: "example.com", name: "sid", value: "quick-chat" }]);
+    registerMockedSession(partition);
+    expect(await captureAllCookies(partition)).toEqual(partitionCookies.get(partition));
+    expect(partitionCalls).toEqual([partition]);
   });
 
   test("captures multiple partitions and dedupes by domain name and path", async () => {
@@ -267,6 +276,48 @@ describe("browser partition cookie capture", () => {
 });
 
 describe("restoreCookiesToBrowser", () => {
+  test("rejects malformed jars before clear mode touches an existing login", async () => {
+    for (const domain of [
+      "",
+      "example.com/other",
+      "user@example.com",
+      "example.com:8443",
+      "example.com\0",
+    ]) {
+      await expect(
+        restoreCookiesToBrowser(
+          [{ domain, name: "sid", value: "bad" }],
+          "clear",
+          mockedSession(BROWSER_PARTITION),
+        ),
+      ).rejects.toThrow("malformed");
+    }
+    await expect(
+      restoreCookiesToBrowser([], "clear", mockedSession(BROWSER_PARTITION)),
+    ).rejects.toThrow("empty");
+    expect(clearCalls).toEqual([]);
+    expect(setCalls).toEqual([]);
+  });
+
+  test("preserves host-only identity instead of creating a broader duplicate cookie", async () => {
+    await restoreCookiesToBrowser(
+      [
+        {
+          domain: "example.com",
+          hostOnly: true,
+          name: "__Host-sid",
+          value: "host-login",
+          path: "/",
+          secure: true,
+        },
+      ],
+      "merge",
+      mockedSession(BROWSER_PARTITION),
+    );
+    expect(setCalls[0].cookie).toMatchObject({ url: "https://example.com/", name: "__Host-sid" });
+    expect(setCalls[0].cookie).not.toHaveProperty("domain");
+  });
+
   test("defaults to merge mode and does not clear existing cookies", async () => {
     const browserSession = mockedSession(BROWSER_PARTITION);
 

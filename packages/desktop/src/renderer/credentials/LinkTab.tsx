@@ -193,7 +193,7 @@ function linkCredentialRuntime(credential: MaskedCredentialView): LinkExecutionR
 
 function linkCredentialIsUsable(credential: MaskedCredentialView | undefined): boolean {
   if (!credential?.hasSecret) return false;
-  return credential.oauthStatus?.state !== "expired" && credential.oauthStatus?.state !== "invalid";
+  return !credential.oauthStatus || credential.oauthStatus.state === "valid";
 }
 
 function linkMethodStateKey(
@@ -572,7 +572,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
           const available =
             method.availability === "available" &&
             (method.authKind === "token" || Boolean(method.oauthProfileId));
-          if (filter === "connected" && !credential) continue;
+          if (filter === "connected" && !linkCredentialIsUsable(credential)) continue;
           if (filter === "planned" && (credential || available)) continue;
           if (needle) {
             const haystack = `${item.name} ${method.displayName} ${item.description} ${t(category.titleKey)}`;
@@ -603,10 +603,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
   );
 
   const localConnectedCount = credentials.filter(
-    (credential) => linkCredentialRuntime(credential) === "local",
+    (credential) =>
+      linkCredentialRuntime(credential) === "local" && linkCredentialIsUsable(credential),
   ).length;
   const serverConnectedCount = credentials.filter(
-    (credential) => linkCredentialRuntime(credential) === "server",
+    (credential) =>
+      linkCredentialRuntime(credential) === "server" && linkCredentialIsUsable(credential),
   ).length;
   const connectedCount = localConnectedCount + serverConnectedCount;
 
@@ -2023,25 +2025,28 @@ function LinkMethodCard({
   const { item, method, credential, preferredRuntime } = entry;
   const Icon = INTEGRATION_ICONS[item.icon];
   const local = method.executionRuntime === "local";
-  const state = credential?.oauthStatus?.state ?? (credential ? "valid" : "missing");
+  const usable = linkCredentialIsUsable(credential);
+  const state =
+    credential && !credential.hasSecret
+      ? "unavailable"
+      : (credential?.oauthStatus?.state ?? (credential ? "valid" : "missing"));
   const primaryAction = linkOAuthPrimaryAction(credential, Boolean(method.oauthProfileId));
   const status =
-    local && credential && !credential.oauthStatus
-      ? t("ext.link.localCredentialSaved")
-      : state === "valid"
-        ? t("ext.link.oauthStatusValid")
-        : state === "expired"
-          ? t("ext.link.oauthStatusExpired")
-          : state === "invalid"
-            ? t("ext.link.oauthStatusInvalid")
-            : t("ext.link.oauthStatusMissing");
+    state === "unavailable"
+      ? t("ext.link.credentialUnavailable")
+      : local && usable && !credential?.oauthStatus
+        ? t("ext.link.localCredentialSaved")
+        : state === "valid"
+          ? t("ext.link.oauthStatusValid")
+          : state === "expired"
+            ? t("ext.link.oauthStatusExpired")
+            : state === "invalid"
+              ? t("ext.link.oauthStatusInvalid")
+              : t("ext.link.oauthStatusMissing");
   const available =
     method.availability === "available" &&
     (method.authKind === "token" || Boolean(method.oauthProfileId));
-  const preferred =
-    Boolean(credential) &&
-    preferredRuntime === method.executionRuntime &&
-    linkCredentialIsUsable(credential);
+  const preferred = Boolean(credential) && preferredRuntime === method.executionRuntime && usable;
 
   return (
     <article
@@ -2071,7 +2076,7 @@ function LinkMethodCard({
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                  credential && state === "valid"
+                  usable
                     ? "bg-status-ok/10 text-status-ok"
                     : credential && state !== "missing"
                       ? "bg-status-err/10 text-status-err"
@@ -2116,7 +2121,7 @@ function LinkMethodCard({
                 ? ` · ${new Date(credential.oauthStatus.expiresAt).toLocaleString()}`
                 : ""}
             </div>
-            {local && credential.meta?.linkAccountLabel ? (
+            {local && usable && credential.meta?.linkAccountLabel ? (
               <div className="mt-1 truncate text-status-ok">
                 <ShieldCheck className="mr-1 inline size-3" aria-hidden />
                 {t("ext.link.localCredentialVerified", {
@@ -2124,12 +2129,18 @@ function LinkMethodCard({
                 })}
               </div>
             ) : null}
-            {local && credential.meta?.linkExecutionBackend === "cli" && method.quickAuth ? (
+            {local &&
+            usable &&
+            credential.meta?.linkExecutionBackend === "cli" &&
+            method.quickAuth ? (
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {t("ext.link.connectedViaCli", { command: method.quickAuth.command })}
               </div>
             ) : null}
-            {local && credential.meta?.linkResourceLabels?.length ? (
+            {state === "unavailable" ? (
+              <p className="mt-1 text-status-err">{t("ext.link.credentialUnavailableHint")}</p>
+            ) : null}
+            {local && usable && credential.meta?.linkResourceLabels?.length ? (
               <div className="mt-2" data-link-resource-preview={item.id}>
                 <div className="text-[10px] font-medium text-muted-foreground">
                   {t("ext.link.resourcePreview")}

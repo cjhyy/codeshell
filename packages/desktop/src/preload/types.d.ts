@@ -644,6 +644,7 @@ export interface CredentialView {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    autoRefreshFromBrowser?: boolean;
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
@@ -672,6 +673,7 @@ export interface CredentialView {
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
+  storeScope?: "user" | "project";
   hasSecret: boolean;
   secretHint?: string;
   oauthStatus?: {
@@ -1341,6 +1343,7 @@ export interface CodeshellApi extends ProjectAuthorityApi {
           domain?: string;
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
+          autoRefreshFromBrowser?: boolean;
           linkProvider?: string;
           linkConnectionMethod?: string;
           linkExecutionRuntime?: "local" | "server";

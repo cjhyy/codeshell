@@ -18,7 +18,7 @@
  * recent live turn extends to the turn end so the user watches progress.
  */
 
-import type { Message, ThinkingMessage, ToolMessage } from "../types";
+import type { AgentMessage, Message, ThinkingMessage, ToolMessage } from "../types";
 import type { AgentGroup } from "./agentGroup";
 import { describeActivity } from "../topbar/liveActivity";
 import { translate } from "../i18n/translate";
@@ -244,37 +244,23 @@ export function buildStreamItems(
  * its own message-identity change independently of the group wrapper.
  */
 /**
- * Per-inner-item signature token. Usually just the id — that's stable from the
- * reducer and is all the wrapper card needs. BUT an `agent` message mutates in
- * place (its nested toolCalls / textBuffer / done / error change while its id
- * stays fixed): a subagent fires more tools, streams text, then finishes. If we
- * keyed only on its id, an unchanged signature would make reconcileStreamItems
- * reuse the PREVIOUS group object — which still holds the STALE AgentMessage —
- * and the memoized card would render a frozen subagent (stuck at "1 tools",
- * never flipping to done). So fold the agent's renderable mutable shape into
- * the token. Leaf tool content is still owned by the memoized ToolCard and need
- * not be hashed here. (fix: subagent-card-stale-during-run)
- *
- * The card also shows a live "what it's doing now" line derived from its LAST
- * toolCall, so the token additionally captures that tool's id + status + a
- * cheap args fingerprint — otherwise the line wouldn't flip from "正在读取" to
- * the next action when a tool completes or its streamed args change without the
- * toolCount changing.
+ * Agent messages are immutable reducer snapshots with stable ids. Their object
+ * identity changes for nested tool results, text and lifecycle updates, even
+ * after completion. Use that identity without hashing large results, so groups
+ * expose every updated detail and still reuse unchanged live or settled cards.
+ * Weak keys let discarded transcript snapshots be garbage-collected.
  */
-let liveAgentToken = 0;
+const agentTokens = new WeakMap<AgentMessage, number>();
+let nextAgentToken = 0;
 function innerItemToken(it: Message | ToolGroup): string {
   if (it.kind === "tool_group") return "tg(" + it.items.map((x) => x.id).join(",") + ")";
   if (it.kind === "agent") {
-    // A LIVE (not-done) agent mutates in place every 50ms flush — its tool
-    // status flips, streamed args grow, the live activity line changes — in
-    // ways a content hash can't fully capture cheaply. The reducer hands us a
-    // fresh AgentMessage object each time anyway, so just force a unique token
-    // per build: the wrapping group is never reused while the agent is live,
-    // so the card always re-renders the latest. Once done/errored its content
-    // is stable, so we hash the renderable shape and reuse normally (lets the
-    // memo skip a settled card on later batches).
-    if (!it.done && !it.error) return `a-live(${it.id}:${(liveAgentToken += 1)})`;
-    return `a(${it.id}:1:${it.error ? 1 : 0}:${it.toolCount}:${(it.text ?? "").length})`;
+    let token = agentTokens.get(it);
+    if (token === undefined) {
+      token = ++nextAgentToken;
+      agentTokens.set(it, token);
+    }
+    return `a(${it.id}:${token})`;
   }
   if (it.kind === "user") {
     // An in-group steer bubble mutates in place on confirmation: same id, but

@@ -823,7 +823,17 @@ export function applyStreamEvent(
               : [{ ...message, done: true, doneAt: message.doneAt ?? startedAt }];
           })
         : state.messages;
-      return { ...state, messages: [...messages, toolMsg] };
+      // Removing an empty assistant can shift agents that were started before
+      // this tool arrived. Keep indexed child events attached to their owner.
+      const agentMessageIndex =
+        messages.length === state.messages.length
+          ? state.agentMessageIndex
+          : Object.fromEntries(
+              messages.flatMap((message, index) =>
+                message.kind === "agent" ? [[message.id, index]] : [],
+              ),
+            );
+      return { ...state, messages: [...messages, toolMsg], agentMessageIndex };
     }
 
     case "tool_use_args_delta": {
@@ -1447,6 +1457,9 @@ export function applyStreamEvent(
     }
 
     case "error": {
+      // Child failures are finalized in their agent_end card. A child error
+      // must not stop the parent's stream or append an unrelated main error.
+      if (event.agentId) return state;
       // An empty error would render as a bare "Error: " block. Drop the
       // message but still clear streaming ids (the turn is over either way).
       const errText = (event.error ?? "").trim();

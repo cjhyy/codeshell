@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   credentialAllowsEnvExposure,
   credentialSecretHint,
+  isCredentialSecretAvailable,
   type Credential,
   type CredentialType,
 } from "./types.js";
@@ -39,6 +40,11 @@ export interface CredentialMetadata {
 
 export interface CredentialAccess {
   listMasked(cwd: string | undefined, scope: CredentialAccessScope): CredentialMetadata[];
+  /** Optional read diagnostics. False means the list may be incomplete, not that it is empty. */
+  listMaskedWithStatus?(
+    cwd: string | undefined,
+    scope: CredentialAccessScope,
+  ): { credentials: CredentialMetadata[]; readable: boolean };
   resolveMeta(
     cwd: string | undefined,
     id: string,
@@ -70,6 +76,9 @@ export interface CredentialSnapshotEntry {
   cwd?: string;
   full: CredentialMetadata[];
   project: CredentialMetadata[];
+  /** Older hosts omit these; their credential-store readability is unknown. */
+  readableFull?: boolean;
+  readableProject?: boolean;
   envFull: Record<string, string>;
   envProject: Record<string, string>;
 }
@@ -161,6 +170,14 @@ export function createIpcCredentialAccess(
       if (!entry) return [];
       return scope === "project" ? cloneMetadata(entry.project) : cloneMetadata(entry.full);
     },
+    listMaskedWithStatus(cwd, scope) {
+      const entry = entryFor(cwd);
+      if (!entry) return { credentials: [], readable: false };
+      return {
+        credentials: cloneMetadata(scope === "project" ? entry.project : entry.full),
+        readable: (scope === "project" ? entry.readableProject : entry.readableFull) === true,
+      };
+    },
     resolveMeta(cwd, id, scope) {
       const entry = entryFor(cwd);
       if (!entry) return undefined;
@@ -220,9 +237,7 @@ export function credentialAccessScope(scope: SettingsScope | undefined): Credent
   return scope === "full" || scope === undefined ? "full" : "project";
 }
 
-export function isCredentialSecretAvailable(secret: string | undefined): secret is string {
-  return typeof secret === "string" && secret.length > 0 && !secret.startsWith("enc:");
-}
+export { isCredentialSecretAvailable } from "./types.js";
 
 function toMetadata(cred: Credential): CredentialMetadata {
   const secret = cred.secret;
@@ -250,6 +265,10 @@ function storeFor(cwd: string | undefined): CredentialStore {
 export const localCredentialAccess: CredentialAccess = {
   listMasked(cwd, scope) {
     return storeFor(cwd).list(scope).map(toMetadata);
+  },
+  listMaskedWithStatus(cwd, scope) {
+    const result = storeFor(cwd).listWithStatus(scope);
+    return { credentials: result.credentials.map(toMetadata), readable: result.readable };
   },
   resolveMeta(cwd, id, scope) {
     const cred = storeFor(cwd).resolve(id, scope);

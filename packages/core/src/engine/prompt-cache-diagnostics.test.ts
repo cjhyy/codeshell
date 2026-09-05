@@ -7,6 +7,7 @@ import {
   diffPromptPrefix,
   hashSystemPrompt,
   hashToolDefinitions,
+  type PromptCacheDiagnosticSample,
   type PromptPrefixFingerprint,
 } from "./prompt-cache-diagnostics.js";
 
@@ -24,6 +25,14 @@ function fingerprint(overrides: Partial<PromptPrefixFingerprint> = {}): PromptPr
     toolsHash: "tools",
     configHash: "config",
     ...overrides,
+  };
+}
+
+function cacheSample(cacheReadTokens: number, promptTokens = 300_000): PromptCacheDiagnosticSample {
+  return {
+    usage: { promptTokens, completionTokens: 1, totalTokens: promptTokens + 1, cacheReadTokens },
+    fingerprint: fingerprint(),
+    requestKind: "primary",
   };
 }
 
@@ -152,6 +161,66 @@ describe("prompt cache diagnostics", () => {
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2, cacheReadTokens: 0 },
         fingerprint: { ...fingerprint({ cacheScopeHash: "new-scope" }), version: 2 as 1 },
         requestKind: "primary",
+      }).kind,
+    ).toBe("schema_changed");
+  });
+
+  it("detects a large partial loss even when tens of thousands of tokens stay cached", () => {
+    const recorder = new PromptCacheDiagnosticRecorder();
+    recorder.record("sid", cacheSample(256_193), 1000);
+
+    const drop = recorder.record("sid", cacheSample(27_131), 2000);
+    expect(drop).toMatchObject({
+      kind: "drop",
+      previous: { cacheReadTokens: 256_193, sampledAtMs: 1000 },
+      current: { cacheReadTokens: 27_131, sampledAtMs: 2000 },
+      attribution: { cause: "no_tracked_prefix_change", changedPrefixes: [] },
+    });
+    if (drop.kind === "drop") {
+      expect(drop.dropRatio).toBeCloseTo(27_131 / 256_193);
+    }
+    expect(recorder.record("sid", cacheSample(27_131), 3000).kind).toBe("updated");
+  });
+
+  it("requires both a large relative and absolute loss for partial cache drops", () => {
+    const cases = [
+      { previous: 8192, current: 4096, expected: "drop" },
+      { previous: 8192, current: 4097, expected: "updated" },
+      { previous: 8190, current: 4095, expected: "updated" },
+      { previous: 256_000, current: 240_000, expected: "updated" },
+      { previous: 1200, current: 120, expected: "updated" },
+      { previous: 1200, current: 64, expected: "drop" },
+    ];
+    for (const { previous, current, expected } of cases) {
+      const recorder = new PromptCacheDiagnosticRecorder();
+      recorder.record("sid", cacheSample(previous));
+      expect(recorder.record("sid", cacheSample(current)).kind).toBe(expected);
+    }
+  });
+
+  it("does not report cold starts, warm-up, or lower hit rates from appended input", () => {
+    const recorder = new PromptCacheDiagnosticRecorder();
+    expect(recorder.record("sid", cacheSample(0, 10_000)).kind).toBe("baseline");
+    expect(recorder.record("sid", cacheSample(0, 10_000)).kind).toBe("updated");
+    expect(recorder.record("sid", cacheSample(8192, 10_000)).kind).toBe("updated");
+    expect(recorder.record("sid", cacheSample(8192, 100_000)).kind).toBe("updated");
+    expect(recorder.record("sid", cacheSample(16_384, 200_000)).kind).toBe("updated");
+  });
+
+  it("resets partial-drop comparisons on scope and fingerprint schema changes", () => {
+    const recorder = new PromptCacheDiagnosticRecorder();
+    recorder.record("scope", cacheSample(256_193));
+    expect(
+      recorder.record("scope", {
+        ...cacheSample(27_131),
+        fingerprint: fingerprint({ cacheScopeHash: "new-model" }),
+      }).kind,
+    ).toBe("scope_changed");
+    recorder.record("schema", cacheSample(256_193));
+    expect(
+      recorder.record("schema", {
+        ...cacheSample(27_131),
+        fingerprint: { ...fingerprint(), version: 2 as 1 },
       }).kind,
     ).toBe("schema_changed");
   });

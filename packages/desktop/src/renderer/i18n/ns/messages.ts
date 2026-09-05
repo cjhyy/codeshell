@@ -23,6 +23,13 @@ export const messagesNs = {
         toolCount: "{count} tools",
         backgrounded: "转后台 · 运行中",
         mayBeLost: "可能失联",
+        showDetails: "查看详情",
+        hideDetails: "收起详情",
+        task: "任务",
+        activity: "执行过程",
+        operationCount: "{count} 次操作",
+        output: "输出",
+        waitingForActivity: "子代理运行中，执行过程将在这里显示。",
       },
       // agent fan-out group card
       agentGroup: {
@@ -155,6 +162,13 @@ export const messagesNs = {
         toolCount: "{count} tools",
         backgrounded: "Backgrounded · running",
         mayBeLost: "may be lost",
+        showDetails: "View details",
+        hideDetails: "Hide details",
+        task: "Task",
+        activity: "Activity",
+        operationCount: "{count} operations",
+        output: "Output",
+        waitingForActivity: "The agent is running. Its activity will appear here.",
       },
       agentGroup: {
         count: "{count} sub-agents",

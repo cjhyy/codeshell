@@ -74,6 +74,7 @@ deep import，未列出的源码模块均为内部实现。
 - Pet 包不得运行时依赖 Desktop、TUI、Server、Web 或其他产品包。
 - `DelegateWork` 的启动回执不等于完成；只有真实 Work Session 终态才能关闭长程任务。
 - `GatewayReply`、`SendMessage` 和其他宿主动作只登记请求；成功/失败措辞只能来自宿主执行回执。
+- Mimi 管理回合最多执行 6 个模型工具轮次；参数纠错耗尽预算后停止，执行任务仍交给 Work Session。
 - “需要跟进”只有一个 canonical service 和 durable state；不得重新增加独立 Todo store/tool/UI。
 
 ## 长程任务宿主契约
@@ -81,9 +82,9 @@ deep import，未列出的源码模块均为内部实现。
 `long-task.ts` 只定义可移植的领域状态机。Desktop 当前负责把它接到真实运行时：
 
 - 每次委派先原子写入 `pet/long-tasks.json`，再启动 Work Session；
-- Work Session 使用 core Goal 模式持续执行，Pet 不复制第二套执行循环；
+- Work Session 默认运行普通回合；只有显式启用 Goal 的任务使用 core Goal 模式持续执行，Pet 不复制第二套执行循环；
 - 顶层 stream event 提供 checkpoint 和可信的 `goal_progress(met/exhausted)` 终态，Pet projection 提供待审批/断线状态；
-- 暂停会持久化 Goal 的 paused 状态并停止当前 turn，恢复/重试继续同一 durable Session；
+- 暂停会停止当前 turn；启用 Goal 时同时持久化其 paused 状态，恢复/重试继续同一 durable Session；
 - 进程重启后，未观察到终态的任务进入 `interrupted`，用户可从原 Session 恢复；
 - 终态先写入去重的工作记忆，再确认交付；中途崩溃会在启动时安全重放；
 - 每个 Mimi turn 只注入有界 `longTasks` 摘要，不回灌完整 transcript 或工具参数。
@@ -97,3 +98,9 @@ bunx eslint packages/pet/src --max-warnings=0
 ```
 
 `build` 会先清空 `dist/`，避免删除或重命名源码后把陈旧产物发布出去。
+
+`engine.chat-replay.test.ts` 用脚本替换 LLM，保留真实 Engine 历史、Sessions/FollowUps
+读取、委托校验和宿主请求记录，回放多轮续聊、错误项目纠正、列表参数纠正、重复错误上限，
+以及报时转发、记忆、远程遥控和会话完成通知等历史输入。
+这类测试不连接微信或真实模型，也不执行宿主副作用；它验证接线与状态契约，不能代替真实
+模型的语言理解评估。修改 core 后先构建 core，因为这些集成测试从公开包入口加载它。

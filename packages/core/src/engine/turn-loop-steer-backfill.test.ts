@@ -299,7 +299,7 @@ describe("TurnLoop steer finalize backfill", () => {
   });
 
   it("switches external file-change attribution from the original submit to the consumed steer", async () => {
-    const { deps } = makeDeps([stop("first answer"), toolUse(), stop("continued")], {
+    const { deps, appended } = makeDeps([stop("first answer"), toolUse(), stop("continued")], {
       id: "steer-origin",
       text: "now edit the file",
       clientMessageId: "client-steer",
@@ -307,6 +307,11 @@ describe("TurnLoop steer finalize backfill", () => {
     let activeOrigin: string | undefined = "client-submit";
     const originsSeenByTools: Array<string | undefined> = [];
     deps.setOriginClientMessageId = (clientMessageId) => {
+      expect(appended.at(-1)).toMatchObject({
+        role: "user",
+        content: "now edit the file",
+        opts: { clientMessageId: "client-steer" },
+      });
       activeOrigin = clientMessageId;
     };
     deps.toolExecutor.executeSingle = async (call: ToolCall) => {

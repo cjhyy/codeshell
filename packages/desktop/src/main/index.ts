@@ -271,12 +271,14 @@ import {
   captureCookieJar,
   captureAllCookies,
   captureAllCookiesFromSessions,
-  restoreCookiesToBrowser,
   cleanupLease,
   sweepStaleLeases,
   BROWSER_PARTITION,
-  type ElectronCookieLike,
 } from "./credentials-service.js";
+import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
+import { isBrowserPartition } from "../shared/browser-partition.js";
+import { resolveCookieCredentialForBrowser } from "./credential-action.js";
+import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
   archiveDiskSession,
@@ -664,12 +666,15 @@ const panelAppBridge = new PanelAppBridge({
           ? `${providerLabel} · ${capture.suggestedLabel.trim().slice(0, 80)}`
           : `${providerLabel} 登录`;
       const store = new CredentialStore(cwd);
+      const previous = new CredentialStore().resolve(credentialId);
+      cookieCredentialAutoRefresh.detachForCredential(cwd, credentialId, "user");
       store.save("user", {
         id: credentialId,
         type: "cookie",
         label: accountLabel,
         secret: JSON.stringify(capture.jar),
         meta: {
+          ...(previous?.type === "cookie" ? previous.meta : {}),
           appUrl: url,
           platform: providerLabel,
           domain: capture.domain,
@@ -682,11 +687,16 @@ const panelAppBridge = new PanelAppBridge({
       let restoredCount = 0;
       const partition = browserPartitionForBucket(bucket);
       if (partition) {
-        const restored = await restoreCookiesToBrowser(
-          capture.jar as ElectronCookieLike[],
-          "merge",
-          partition,
-        );
+        // Resolve the user record just saved, without project shadowing.
+        const resolved = resolveCookieCredentialForBrowser(undefined, credentialId, "full");
+        if (!resolved.ok) throw new Error(resolved.error);
+        const restored = await restoreCookieCredentialToBrowser({
+          targetSession: partition,
+          sessionCwd: cwd,
+          credentialId,
+          credentialScope: "full",
+          resolved,
+        });
         restoredCount = restored.count;
         for (const window of BrowserWindow.getAllWindows()) {
           if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
@@ -710,20 +720,15 @@ const panelAppBridge = new PanelAppBridge({
       const partition = browserPartitionForBucket(bucket);
       if (!partition) throw new Error("Cookie restore requires an active task browser");
       await migrateCredentialStore(cwd);
-      const credential = new CredentialStore(cwd).resolve(credentialId);
-      if (!credential || credential.type !== "cookie") {
-        throw new Error(`No saved Cookie login: ${credentialId}`);
-      }
-      let jar: ElectronCookieLike[];
-      try {
-        const parsed = JSON.parse(credential.secret ?? "[]");
-        if (!Array.isArray(parsed)) throw new Error("not an array");
-        jar = parsed as ElectronCookieLike[];
-      } catch {
-        return { invalid: true };
-      }
-      const mode = credential.meta?.switchMode === "clear" ? "clear" : "merge";
-      const result = await restoreCookiesToBrowser(jar, mode, partition);
+      const resolved = resolveCookieCredentialForBrowser(cwd, credentialId, "full");
+      if (!resolved.ok) return { invalid: true };
+      const result = await restoreCookieCredentialToBrowser({
+        targetSession: partition,
+        sessionCwd: cwd,
+        credentialId,
+        credentialScope: "full",
+        resolved,
+      });
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
       }
@@ -1164,10 +1169,7 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // an arbitrary partition, e.g. the app's own default session); anything else
     // → the shared browser partition.
     const wantPartition = typeof params.partition === "string" ? params.partition : "";
-    params.partition =
-      wantPartition === BROWSER_PARTITION || wantPartition.startsWith(`${BROWSER_PARTITION}:`)
-        ? wantPartition
-        : BROWSER_PARTITION;
+    params.partition = isBrowserPartition(wantPartition) ? wantPartition : BROWSER_PARTITION;
     pendingWebviews.push({ kind: "browser", partition: String(params.partition) });
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
@@ -3699,13 +3701,19 @@ ipcMain.handle("panel-apps:listForProjects", async (_e, projectPaths: string[], 
 ipcMain.handle("credentials:list", async (_e, cwd: string) => {
   const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
   await migrateCredentialStore(authorizedCwd || undefined);
-  return new CredentialStore(authorizedCwd || undefined).listMasked();
+  const store = new CredentialStore(authorizedCwd || undefined);
+  const projectIds = new Set(store.list("project").map((credential) => credential.id));
+  return store.listMasked().map((credential) => ({
+    ...credential,
+    storeScope: projectIds.has(credential.id) ? "project" : "user",
+  }));
 });
 ipcMain.handle(
   "credentials:save",
   async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
     new CredentialStore(authorizedCwd || undefined).save(scope, cred);
+    cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
@@ -3714,6 +3722,7 @@ ipcMain.handle(
   async (_e, cwd: string, scope: CredentialScope, id: string) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
     new CredentialStore(authorizedCwd || undefined).remove(scope, id);
+    cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
@@ -4020,6 +4029,21 @@ ipcMain.handle(
       throw new Error("credentials:patchMeta requires fields");
     }
     new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
+    if (fields.meta && typeof fields.meta === "object" && "autoRefreshFromBrowser" in fields.meta) {
+      if (fields.meta.autoRefreshFromBrowser === true) {
+        cookieCredentialAutoRefresh.requestRefreshForCredential(
+          authorizedCwd || undefined,
+          id,
+          scope,
+        );
+      } else {
+        cookieCredentialAutoRefresh.cancelRefreshForCredential(
+          authorizedCwd || undefined,
+          id,
+          scope,
+        );
+      }
+    }
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
@@ -4302,21 +4326,15 @@ ipcMain.handle(
       throw new Error("credentials:restoreCookieToBrowser requires id");
     const partition = requireRendererBrowserPartition(bucket, event.sender.id);
     await migrateCredentialStore(authorizedCwd || undefined);
-    const cred = new CredentialStore(authorizedCwd || undefined).resolve(id);
-    if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
-    let jar: ElectronCookieLike[];
-    try {
-      const parsed = JSON.parse(cred.secret ?? "[]");
-      // A non-array (valid JSON but wrong shape) is corrupt too: silently falling
-      // through to an empty jar would CLEAR the browser's cookies (clear mode) and
-      // restore nothing — i.e. log the user out with no error. Treat it as corrupt.
-      if (!Array.isArray(parsed)) throw new Error("not an array");
-      jar = parsed as ElectronCookieLike[];
-    } catch {
-      throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
-    }
-    const mode = cred.meta?.switchMode === "clear" ? "clear" : "merge";
-    const { count } = await restoreCookiesToBrowser(jar, mode, partition);
+    const resolved = resolveCookieCredentialForBrowser(authorizedCwd || undefined, id, "full");
+    if (!resolved.ok) throw new Error(resolved.error);
+    const { count } = await restoreCookieCredentialToBrowser({
+      targetSession: partition,
+      sessionCwd: authorizedCwd || undefined,
+      credentialId: id,
+      credentialScope: "full",
+      resolved,
+    });
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send("browser:reload", { bucket });
     }
@@ -6611,7 +6629,11 @@ ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: bool
   await getSessionCwdIndex().refresh(id);
 });
 async function deleteDesktopSession(id: string): Promise<void> {
-  const ephemeralBrowserPartition = id.startsWith("qchat-") ? partitionForSession(id) : null;
+  const browserPartition = partitionForSession(id);
+  const ephemeralBrowserPartition = id.startsWith("qchat-") ? browserPartition : null;
+  if (browserPartition && isBrowserPartition(browserPartition)) {
+    cookieCredentialAutoRefresh.unbind(session.fromPartition(browserPartition));
+  }
   // Reap the session's background shells (if any) before dropping it —
   // explicit delete is the one tab-close path that DOES kill (core §6).
   await bridge?.closeSession(id);
@@ -6921,6 +6943,8 @@ app.on("before-quit", (event) => {
   if (quitCleanupDone) return;
   event.preventDefault();
   if (quitCleanupPromise) return;
+  // Drain the last debounced rotations before the browser contexts are closed.
+  const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
   browserRuntime.closeAll();
   bridge?.kill();
   petStateAggregator?.stop();
@@ -6963,6 +6987,7 @@ app.on("before-quit", (event) => {
       petWorkInboxFlush,
       petLongTaskFlush,
       externalRuntimeShutdown,
+      cookieRefreshShutdown,
       chromeExtensionRuntimeService.stop(),
     ]);
     gatewayControlServer = undefined;

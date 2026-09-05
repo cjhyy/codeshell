@@ -28,6 +28,18 @@ export const BROWSER_PARTITION_PREFIX = "persist:browser";
  */
 export const QUICK_CHAT_PARTITION_PREFIX = "browser:qchat";
 
+/** Browser storage identities accepted by both the webview host and Cookie services. */
+export function isBrowserPartition(partition: string): boolean {
+  if (partition === BROWSER_PARTITION_PREFIX) return true;
+  return (
+    partition.length <= 1_024 &&
+    /^[a-zA-Z0-9_:.@-]+$/.test(partition) &&
+    [BROWSER_PARTITION_PREFIX, QUICK_CHAT_PARTITION_PREFIX].some(
+      (prefix) => partition.startsWith(`${prefix}:`) && partition.length > prefix.length + 1,
+    )
+  );
+}
+
 /**
  * Restrict a bucket to characters that are safe in an Electron partition name.
  * Applied with no trimming: the result is compared for equality across the IPC

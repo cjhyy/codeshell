@@ -6,6 +6,12 @@ const DEFAULT_MAX_SESSIONS = 256;
 const DROP_MIN_PREVIOUS_TOKENS = 100;
 const DROP_MAX_CURRENT_TOKENS = 64;
 const DROP_RATIO = 0.1;
+// Partial cache invalidation can leave thousands of tokens cached. Require
+// both a halving and a meaningful absolute loss to avoid reporting small
+// fluctuations. Compare cache reads, not hit rates: appending uncached input
+// can lower the hit rate while the reusable prefix remains fully cached.
+const PARTIAL_DROP_MAX_RETAINED_RATIO = 0.5;
+const PARTIAL_DROP_MIN_LOST_TOKENS = 4096;
 
 /**
  * Session stickiness audit. Semantic, capability, and security switches must
@@ -230,7 +236,11 @@ export class PromptCacheDiagnosticRecorder {
     if (previous.cacheReadTokens < DROP_MIN_PREVIOUS_TOKENS) return { kind: "updated" };
 
     const dropRatio = previous.cacheReadTokens > 0 ? cacheReadTokens / previous.cacheReadTokens : 1;
-    if (cacheReadTokens > DROP_MAX_CURRENT_TOKENS || dropRatio > DROP_RATIO) {
+    const nearColdDrop = cacheReadTokens <= DROP_MAX_CURRENT_TOKENS && dropRatio <= DROP_RATIO;
+    const partialDrop =
+      dropRatio <= PARTIAL_DROP_MAX_RETAINED_RATIO &&
+      previous.cacheReadTokens - cacheReadTokens >= PARTIAL_DROP_MIN_LOST_TOKENS;
+    if (!nearColdDrop && !partialDrop) {
       return { kind: "updated" };
     }
     return {

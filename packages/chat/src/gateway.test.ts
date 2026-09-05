@@ -396,6 +396,93 @@ describe("CodeShell remote command integration", () => {
     }
   });
 
+  test("concurrent redelivery shares one pending Mimi reply and one platform send", async () => {
+    let petCalls = 0;
+    let sendCalls = 0;
+    let releaseSend!: () => void;
+    const pendingSend = new Promise<void>((resolve) => {
+      releaseSend = resolve;
+    });
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const delivered: string[] = [];
+    const adapter: ChannelAdapter = {
+      channel: "wechat",
+      capabilities: BUILTIN_CHANNEL_CAPABILITIES.wechat,
+      run: async () => undefined,
+      send: async (_target, outgoing) => {
+        sendCalls += 1;
+        markStarted();
+        await pendingSend;
+        delivered.push(outgoing.text);
+      },
+    };
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createMimiPetChat({
+        desktop: {
+          petChat: async () => {
+            petCalls += 1;
+            return { text: "只回复一次", petSessionId: "pet-1" };
+          },
+        },
+      }),
+    );
+    const stable = { ...message("你好 Mimi"), channel: "wechat", messageId: "same-inbound" };
+    const concurrent = Promise.all([
+      gateway.dispatch(adapter, stable),
+      gateway.dispatch(adapter, stable),
+    ]);
+    await started;
+    releaseSend();
+    await concurrent;
+
+    expect(petCalls).toBe(1);
+    expect(sendCalls).toBe(1);
+    expect(delivered).toEqual(["只回复一次"]);
+  });
+
+  test("concurrent redelivery shares a failed send and retries the cached reply later", async () => {
+    let petCalls = 0;
+    let sendCalls = 0;
+    const delivered: string[] = [];
+    const adapter: ChannelAdapter = {
+      channel: "wechat",
+      capabilities: BUILTIN_CHANNEL_CAPABILITIES.wechat,
+      run: async () => undefined,
+      send: async (_target, outgoing) => {
+        sendCalls += 1;
+        if (sendCalls === 1) throw new Error("shared send failed");
+        delivered.push(outgoing.text);
+      },
+    };
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createMimiPetChat({
+        desktop: {
+          petChat: async () => {
+            petCalls += 1;
+            return { text: "稍后补发这条回复", petSessionId: "pet-1" };
+          },
+        },
+      }),
+    );
+    const stable = { ...message("你好 Mimi"), channel: "wechat", messageId: "same-failed" };
+    const outcomes = await Promise.allSettled([
+      gateway.dispatch(adapter, stable),
+      gateway.dispatch(adapter, stable),
+    ]);
+    expect(outcomes.map(({ status }) => status)).toEqual(["rejected", "rejected"]);
+    expect(sendCalls).toBe(1);
+
+    await gateway.dispatch(adapter, stable);
+    expect(petCalls).toBe(1);
+    expect(sendCalls).toBe(2);
+    expect(delivered).toEqual(["稍后补发这条回复"]);
+  });
+
   test("resumes a chunked GatewayReply after the failed chunk without duplicating earlier text", async () => {
     let petCalls = 0;
     let sendCalls = 0;

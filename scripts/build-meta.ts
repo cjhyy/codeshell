@@ -8,7 +8,7 @@
  *
  * IMPORTANT: nuke dist/ first. Earlier monorepo iterations left
  * thousands of stale tsup chunks here (anthropic-*.js, chunk-*.js, ...).
- * Without the wipe, `bun run build` would ADD our three files alongside
+ * Without the wipe, `bun run build` would ADD our entry files alongside
  * those stale chunks, and `npm publish` would tarball the whole mess.
  */
 
@@ -29,3 +29,10 @@ await writeFile(resolve(dist, "index.d.ts"), 'export * from "@cjhyy/code-shell-c
 const cliPath = resolve(dist, "cli.js");
 await writeFile(cliPath, '#!/usr/bin/env node\nimport "@cjhyy/code-shell-tui/cli";\n');
 await chmod(cliPath, 0o755);
+
+// Existing global links may still target the pre-metapackage bin path. Keep
+// that launcher working after a rebuild without retaining old bundled code.
+const legacyCliPath = resolve(dist, "cli", "main.js");
+await mkdir(dirname(legacyCliPath), { recursive: true });
+await writeFile(legacyCliPath, '#!/usr/bin/env node\nimport "../cli.js";\n');
+await chmod(legacyCliPath, 0o755);

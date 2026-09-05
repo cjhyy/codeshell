@@ -9,7 +9,9 @@ export const sendMessageToSessionToolDef: ToolDefinition = {
   description:
     "Send a message to another host-authorized Session in the current project. " +
     "Use this exactly like a person sending a message in that Session: the message becomes the target Session's next user turn and queues or starts its work. " +
-    "When you have later additions, call this tool again with another message. The call creates no persistent relationship or automatic subscription.",
+    "The result reports whether this turn is queued, started, or already completed. " +
+    "For queued or started turns, that turn's answer or failure is returned to this Session automatically; do not poll by sending the task again. " +
+    "When you have later additions, call this tool again with another message. This does not subscribe to unrelated future target turns.",
   inputSchema: {
     type: "object",
     properties: {
@@ -66,8 +68,22 @@ export async function sendMessageToSessionTool(
   if (!message.trim()) return "Error: message is required.";
   if (message.length > 48_000) return "Error: message exceeds 48000 characters.";
   try {
-    const target = await service.send({ targetSessionId, message });
-    return `Message sent to "${target.title}" (${target.sessionId}); its Session has queued the turn.`;
+    const target = await service.send({
+      targetSessionId,
+      message,
+      ...(ctx?.signal ? { signal: ctx.signal } : {}),
+    });
+    const receipt = target.receipt;
+    const label = `"${target.title}" (${target.sessionId})`;
+    if (!receipt) {
+      // Compatibility with custom hosts that implement the original router.
+      return `Message accepted by ${label}. This host did not provide execution status or automatic reply delivery.`;
+    }
+    if (receipt.status === "completed") {
+      return `Message ${receipt.messageId} completed in ${label}.\n\n${receipt.result?.text ?? ""}`;
+    }
+    const status = receipt.status === "started" ? "started" : "queued (not yet confirmed started)";
+    return `Message ${receipt.messageId} accepted by ${label}; status: ${status}. This turn's answer or failure will be returned to this Session automatically.`;
   } catch (error) {
     return `Error: ${error instanceof Error ? error.message : String(error)}`;
   }

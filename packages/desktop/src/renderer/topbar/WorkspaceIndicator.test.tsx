@@ -11,6 +11,7 @@ import type {
   SessionWorkspaceAuthority,
   SessionWorkspaceList,
   SessionWorkspaceWorktreeInfo,
+  StreamEventEnvelope,
 } from "../../preload/types";
 
 const PopoverTestContext = React.createContext<{
@@ -568,13 +569,25 @@ describe("WorkspaceIndicator", () => {
     ).not.toBeNull();
   });
 
-  test("does not mislabel a not-yet-materialized conversation as root removed", async () => {
+  test("recovers a not-yet-materialized conversation on session start without a false removal badge", async () => {
     ensureMiniDom();
+    let onStream: ((event: StreamEventEnvelope) => void) | undefined;
+    let authorityCalls = 0;
+    const initial = deferred<SessionWorkspaceAuthority>();
+    const ready = deferred<SessionWorkspaceAuthority>();
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getSessionWorkspaceAuthority: async () => {
-        throw new Error("unknown session");
+      getSessionWorkspaceAuthority: () => {
+        authorityCalls += 1;
+        return authorityCalls === 1 ? initial.promise : ready.promise;
       },
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
       listProfiles: async () => [],
+      onStreamEvent: (callback: (event: StreamEventEnvelope) => void) => {
+        onStream = callback;
+        return () => {
+          onStream = undefined;
+        };
+      },
     };
     const container = document.createElement("div");
     root = createRoot(container);
@@ -585,21 +598,65 @@ describe("WorkspaceIndicator", () => {
           sessionId="new-conversation"
           projectPath="/current-primary"
           projectName="current-primary"
+          sessionBusy
         />,
       );
       await flushMicrotasks();
     });
 
-    expect(textOf(container)).not.toMatch(/主目录已移除|Root removed/);
-    expect(
-      findElement(container, (node) =>
-        Boolean(
-          (node as { attributes?: Map<string, string> }).attributes?.has(
-            "data-session-root-status",
+    const expectNoRemovalBadge = () => {
+      expect(textOf(container)).not.toMatch(/主目录已移除|Root removed/);
+      expect(
+        findElement(container, (node) =>
+          Boolean(
+            (node as { attributes?: Map<string, string> }).attributes?.has(
+              "data-session-root-status",
+            ),
           ),
         ),
-      ),
-    ).toBeNull();
+      ).toBeNull();
+    };
+    expectNoRemovalBadge();
+    await act(async () => {
+      initial.reject(new Error("unknown session"));
+      await flushMicrotasks();
+    });
+    expectNoRemovalBadge();
+    await act(async () => {
+      onStream?.({
+        sessionId: "other-conversation",
+        event: { type: "session_started", sessionId: "other-conversation", promptTokens: 0 },
+      });
+      onStream?.({
+        sessionId: "new-conversation",
+        event: { type: "text_delta", text: "hello" },
+      });
+      await flushMicrotasks();
+    });
+    expect(authorityCalls).toBe(1);
+    await act(async () => {
+      onStream?.({
+        sessionId: "new-conversation",
+        event: { type: "session_started", sessionId: "new-conversation", promptTokens: 0 },
+      });
+      await flushMicrotasks();
+    });
+    expect(authorityCalls).toBe(2);
+    expectNoRemovalBadge();
+    await act(async () => {
+      ready.resolve(
+        sessionAuthority("new-conversation", { root: "/current-primary", kind: "main" }),
+      );
+      await flushMicrotasks();
+    });
+    expectNoRemovalBadge();
+    expect(textOf(container)).toContain("main");
+
+    await act(async () => {
+      root?.unmount();
+      root = null;
+    });
+    expect(onStream).toBeUndefined();
   });
 
   test("keeps old Session Git, profile, and label bound when the project primary becomes non-Git", async () => {

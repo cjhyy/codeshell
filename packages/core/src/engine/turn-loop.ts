@@ -576,20 +576,44 @@ export class TurnLoop {
 
   /**
    * Keep volatile context out of compaction/summarization without moving it on
-   * every model round. If context management is a no-op, return the original
-   * array so the provider sees a strictly append-only prompt. A real rewrite
-   * (dedupe/compaction/truncation) already invalidates the old prefix, so start
-   * a fresh append-only segment with the volatile snapshot at the new tail.
+   * every model round. Normalizing a newly appended tool result must not move
+   * an earlier volatile snapshot and invalidate an otherwise unchanged prefix.
+   * Keep its position when the preceding stable messages remain intact; reset
+   * to the tail when that boundary was rewritten or compaction changed length.
    */
   private restoreVolatileAfterContextManagement(
     original: Message[],
     stableInput: Message[],
     managedStable: Message[],
   ): Message[] {
-    const unchanged =
-      stableInput.length === managedStable.length &&
-      stableInput.every((message, index) => managedStable[index] === message);
-    if (unchanged) return original;
+    if (stableInput.length === managedStable.length) {
+      // Some cleanup passes copy messages even when their final content is
+      // unchanged. Object identity is only a fast path, not a cache boundary.
+      const firstChangedIndex = stableInput.findIndex(
+        (message, index) =>
+          managedStable[index] !== message &&
+          JSON.stringify(managedStable[index]) !== JSON.stringify(message),
+      );
+      if (firstChangedIndex === -1) return original;
+
+      let stableIndex = 0;
+      let lastVolatileBoundary = 0;
+      for (const message of original) {
+        if (this.volatileContextMessages.has(message)) {
+          lastVolatileBoundary = stableIndex;
+        } else {
+          stableIndex++;
+        }
+      }
+      if (firstChangedIndex >= lastVolatileBoundary) {
+        // Apply the managed tail in place, including its persisted/truncated
+        // results. Never restore old payloads just to preserve cache hits.
+        stableIndex = 0;
+        return original.map((message) =>
+          this.volatileContextMessages.has(message) ? message : managedStable[stableIndex++]!,
+        );
+      }
+    }
 
     const volatile = original.filter((message) => this.volatileContextMessages.has(message));
     return [...managedStable, ...volatile];
@@ -2132,11 +2156,11 @@ export class TurnLoop {
         break;
       }
       consumed = true;
-      this.deps.setOriginClientMessageId?.(clientMessageId);
       const message: Message = { role: "user", content };
       messages.push(message);
       this.trackFreshImageMessage(message);
       this.deps.transcript.appendMessage("user", content, { steerId: id, clientMessageId });
+      this.deps.setOriginClientMessageId?.(clientMessageId);
       this.config.onStream?.({ type: "steer_injected", text, id });
     }
     return consumed;

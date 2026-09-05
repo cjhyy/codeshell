@@ -185,6 +185,11 @@ program.addCommand(createRunsCommand());
 import { createPluginCommand } from "./commands/plugin.js";
 program.addCommand(createPluginCommand());
 
+// ─── link ────────────────────────────────────────────────────────
+
+import { createLinkCommand, isLinkStatusCommand } from "./commands/link.js";
+program.addCommand(createLinkCommand());
+
 // ─── Default: if no command, go to REPL or run ───────────────────
 // Register root options after subcommands and keep passThroughOptions enabled:
 // Commander otherwise lets root parsing/defaults interfere with subcommand
@@ -233,7 +238,10 @@ function resolveOpts(opts: Record<string, unknown>) {
 // headless commands (run, arena) check for a key in their own action and
 // error out if missing. This keeps the input stack unified on Ink and
 // avoids the raw-mode/Ink stdin handoff we used to have to do.
-program.hook("preAction", async (thisCommand) => {
+program.hook("preAction", async (thisCommand, actionCommand) => {
+  // This diagnostic only reads connection metadata and CLI login. Shared setup
+  // rotates logs and writes the settings schema, neither of which it needs.
+  if (isLinkStatusCommand(actionCommand)) return;
   const opts = thisCommand.opts();
   await setup({
     cwd: process.cwd(),

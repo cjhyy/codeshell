@@ -14,6 +14,11 @@ export function credentialAllowsEnvExposure(type: CredentialType): boolean {
   return type === "token" || type === "link";
 }
 
+/** An unreadable encrypted value is preserved on disk, but is not a usable secret. */
+export function isCredentialSecretAvailable(secret: string | undefined): secret is string {
+  return typeof secret === "string" && secret.length > 0 && !secret.startsWith("enc:");
+}
+
 /** Build a renderer-safe hint without deriving bytes from structured JSON. */
 export function credentialSecretHint(
   type: CredentialType,
@@ -127,6 +132,8 @@ export interface Credential {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    /** Opt in to writing browser-side cookie rotations back to this saved credential. */
+    autoRefreshFromBrowser?: boolean;
     /** Link provider id for credentials owned by a local/server app connection. */
     linkProvider?: string;
     /** Provider-specific connection method, e.g. fine-grained-pat or github-app. */

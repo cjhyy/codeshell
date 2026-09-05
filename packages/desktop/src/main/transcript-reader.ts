@@ -47,6 +47,10 @@ const MAX_SUBAGENT_STATE_BYTES = 2 * 1024 * 1024;
 const MAX_FOLD_ITEMS = 100_000;
 const MAX_ENRICHED_SUBAGENTS = 1_000;
 const MAX_SUBAGENT_RESULT_CHARS = 2 * 1024 * 1024;
+// Child details are part of one parent hydration response. Bound their total
+// size as well as each individual read, even for a transcript with many agents.
+const MAX_SUBAGENT_ENRICHMENT_BYTES = 64 * 1024 * 1024;
+const MAX_SUBAGENT_DETAIL_ITEMS = 100_000;
 
 function isSafeSessionId(value: unknown): value is string {
   return (
@@ -324,6 +328,14 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
               result: d.result as string | undefined,
               error: d.error as string | undefined,
               isError: d.isError as boolean | undefined,
+              ...(Array.isArray(d.contentBlocks)
+                ? {
+                    contentBlocks: d.contentBlocks.filter(
+                      (block): block is ContentBlock =>
+                        !!block && typeof block === "object" && typeof block.type === "string",
+                    ),
+                  }
+                : {}),
             },
           },
           timestamp: ts,
@@ -566,7 +578,7 @@ const SUBAGENT_DONE_STATUSES = new Set([
 /**
  * Expand each replayed sub-agent `agent_start` (from a "subagent" anchor) into a
  * full card by reading the sub-agent's own session (sessions/<agentId>/):
- *   - its final output  = last assistant message in its transcript → text_delta
+ *   - assistant messages + tool calls/results → agent-scoped detail events
  *   - terminal status   → agent_end (done) — completed shows ✓, others ✗
  *   - stuck "active"     → agent_end{error:"中断"} so the card reads interrupted,
  *                          not a forever-spinning "running"
@@ -577,6 +589,8 @@ const SUBAGENT_DONE_STATUSES = new Set([
 async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<FoldItem[]> {
   const out: FoldItem[] = [];
   let enriched = 0;
+  let remainingBytes = MAX_SUBAGENT_ENRICHMENT_BYTES;
+  let remainingDetails = MAX_SUBAGENT_DETAIL_ITEMS;
   for (const item of items) {
     out.push(item);
     if (item.kind !== "stream" || item.event.type !== "agent_start") continue;
@@ -586,6 +600,8 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
 
     let status: string;
     let resultText = "";
+    let resultError: string | undefined;
+    let endedAt = item.timestamp;
     try {
       const agentDir = path.join(baseDir, agentId);
       const agentDirInfo = await fs.lstat(agentDir);
@@ -604,37 +620,46 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
       const transcriptFile = path.join(baseDir, agentId, "transcript.jsonl");
       const transcriptInfo = await fs.lstat(transcriptFile);
       if (transcriptInfo.isSymbolicLink() || !transcriptInfo.isFile()) throw new Error("invalid");
-      const subJsonl = await readTailFile(transcriptFile, MAX_SUBAGENT_TRANSCRIPT_SCAN_BYTES);
-      // Last assistant message in the sub-agent's own transcript = its output.
-      for (const raw of subJsonl.split("\n")) {
-        const line = raw.trim();
-        if (!line) continue;
-        let ev: TranscriptEvent;
-        try {
-          const parsed = JSON.parse(line) as unknown;
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-          ev = parsed as TranscriptEvent;
-        } catch {
-          continue;
-        }
-        if (ev.type === "message" && (ev.data as { role?: string })?.role === "assistant") {
-          resultText = textOf((ev.data as { content?: unknown }).content).slice(
-            -MAX_SUBAGENT_RESULT_CHARS,
-          );
+      if (remainingBytes > 0 && remainingDetails > 0) {
+        const page = await readTailWindow(
+          transcriptFile,
+          Math.min(MAX_SUBAGENT_TRANSCRIPT_SCAN_BYTES, remainingBytes),
+        );
+        remainingBytes -= page.loadedBytes;
+        // Reuse the normal transcript parser for validation and tool-result
+        // fidelity. Only detail events belong to the child card: replaying its
+        // users, session_started, turn_complete or errors directly would mutate
+        // the parent's conversation, run state or task list.
+        for (const detail of transcriptToFoldItems(page.text)) {
+          if (detail.timestamp && detail.timestamp > (endedAt ?? 0)) {
+            endedAt = detail.timestamp;
+          }
+          if (detail.kind !== "stream") continue;
+          const event = detail.event;
+          if (event.type === "error") {
+            resultError = event.error;
+            continue;
+          }
+          if (event.type === "text_delta" && event.text.trim()) {
+            const text = (resultText ? "\n\n" : "") + event.text;
+            resultText = (resultText + text).slice(-MAX_SUBAGENT_RESULT_CHARS);
+            if (remainingDetails > 0) {
+              out.push({ ...detail, event: { ...event, text, agentId } });
+              remainingDetails -= 1;
+            }
+          } else if (
+            remainingDetails > 0 &&
+            (event.type === "tool_use_start" || event.type === "tool_result")
+          ) {
+            out.push({ ...detail, event: { ...event, agentId } });
+            remainingDetails -= 1;
+          }
         }
       }
     } catch {
       /* no transcript → empty result, still mark terminal/interrupted below */
     }
 
-    const ts = item.timestamp;
-    if (resultText) {
-      out.push({
-        kind: "stream",
-        event: { type: "text_delta", text: resultText, agentId },
-        timestamp: ts,
-      });
-    }
     if (SUBAGENT_DONE_STATUSES.has(status)) {
       out.push({
         kind: "stream",
@@ -643,8 +668,11 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
           agentId,
           description: item.event.description,
           text: resultText || undefined,
+          ...(status !== "completed"
+            ? { error: resultError || (status === "cancelled" ? "子代理已取消" : "子代理未完成") }
+            : {}),
         },
-        timestamp: ts,
+        timestamp: endedAt,
       });
     } else {
       // Stuck "active" — never wrapped up → interrupted. agent_end{error} so the
@@ -657,7 +685,7 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
           description: item.event.description,
           error: "上次会话中断,未完成",
         },
-        timestamp: ts,
+        timestamp: endedAt,
       });
     }
   }

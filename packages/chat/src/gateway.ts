@@ -41,8 +41,7 @@ export const MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET = 4;
 interface MimiCachedReply {
   outgoing: Promise<OutgoingMessage[]>;
   nextSendIndex: number;
-  activeSends: number;
-  sendFailed: boolean;
+  sendTask?: Promise<void>;
 }
 
 export const CODE_SHELL_REMOTE_COMMANDS = [
@@ -165,8 +164,6 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
           const entry: MimiCachedReply = {
             outgoing: pending,
             nextSendIndex: 0,
-            activeSends: 0,
-            sendFailed: false,
           };
           replies.set(cacheKey, entry);
           cacheEntry = entry;
@@ -197,34 +194,28 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
     }
     // Adapter failures must escape to DeliveryQueue. Catching them above would
     // turn a failed real reply into a successful generic error and lose it.
-    if (cacheEntry) {
-      if (cacheEntry.activeSends === 0) cacheEntry.sendFailed = false;
-      cacheEntry.activeSends += 1;
-    }
-    try {
+    const sendOutgoing = async () => {
       let index = cacheEntry?.nextSendIndex ?? 0;
       while (index < outgoing.length) {
         await reply(outgoing[index]!);
         index += 1;
         if (cacheEntry) cacheEntry.nextSendIndex = index;
       }
-    } catch (error) {
-      if (cacheEntry) cacheEntry.sendFailed = true;
-      throw error;
-    } finally {
-      if (cacheEntry) {
-        cacheEntry.activeSends -= 1;
-        // DeliveryQueue now owns a durable completed-message dedupe record.
-        // Keep memory proportional to failed/in-flight sends, not successful chat.
-        if (
-          cacheKey &&
-          cacheEntry.activeSends === 0 &&
-          !cacheEntry.sendFailed &&
-          replies.get(cacheKey) === cacheEntry
-        ) {
-          replies.delete(cacheKey);
-        }
+    };
+    // Sharing model work alone is insufficient: overlapping deliveries can
+    // both observe nextSendIndex=0 while the first platform send is in flight.
+    // Share that send too, including its failure, then let a later queue retry
+    // resume from the first unfinished chunk.
+    const sendTask = cacheEntry ? (cacheEntry.sendTask ??= sendOutgoing()) : sendOutgoing();
+    try {
+      await sendTask;
+      // DeliveryQueue now owns a durable completed-message dedupe record.
+      // Keep memory proportional to failed/in-flight sends, not successful chat.
+      if (cacheKey && cacheEntry && replies.get(cacheKey) === cacheEntry) {
+        replies.delete(cacheKey);
       }
+    } finally {
+      if (cacheEntry?.sendTask === sendTask) cacheEntry.sendTask = undefined;
     }
   };
 }

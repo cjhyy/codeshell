@@ -16,7 +16,12 @@ import {
 } from "./host-actions.js";
 import { mobileRemoteAvailability, mobileRemoteTool } from "./mobile-remote.js";
 import { GATEWAY_TOOL_NAME } from "./gateway.js";
-import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE, PET_SYSTEM_PROMPT } from "./profile.js";
+import {
+  PET_ALLOWED_TOOL_NAMES,
+  PET_BEHAVIOR_PROFILE,
+  PET_SYSTEM_PROMPT,
+  type PetRunScopedServices,
+} from "./profile.js";
 import {
   WATCH_SESSION_TOOL_NAME,
   watchSessionAvailability,
@@ -419,6 +424,59 @@ describe("host-action envelope validation", () => {
 });
 
 describe("pet profile host-action integration", () => {
+  test("new input invalidates only an unsent GatewayReply while preserving accepted actions", () => {
+    const reported: Record<string, unknown> = {};
+    let reportCount = 0;
+    const services = PET_BEHAVIOR_PROFILE.createRunServices!({
+      profileParams: {
+        hostActions: ["gatewayReply", "memory"],
+        gatewayReply: richGatewayReply,
+      },
+      reportResult: (key, value) => {
+        reportCount++;
+        reported[key] = value;
+      },
+    });
+    const pet = services as unknown as PetRunScopedServices;
+    pet.requestPetHostAction({ kind: "gatewayReply", payload: { text: "旧回复" } });
+    const previousSnapshot = reported.hostActions;
+    PET_BEHAVIOR_PROFILE.onUserInputChanged!(services);
+    expect(reported.hostActions).toEqual([]);
+    expect(previousSnapshot).toEqual([{ kind: "gatewayReply", payload: { text: "旧回复" } }]);
+
+    const noReplyReportCount = reportCount;
+    PET_BEHAVIOR_PROFILE.onUserInputChanged!(services);
+    expect(reportCount).toBe(noReplyReportCount);
+
+    const memory = { kind: "memory" as const, payload: { action: "remember", text: "先给题目" } };
+    const delegation = {
+      workspaceId: "ws-one",
+      objective: "继续原工作",
+      reusableSessionId: "session-one",
+    };
+    expect(pet.requestPetHostAction(memory).ok).toBe(true);
+    expect(pet.requestPetWorkDelegation(delegation).ok).toBe(true);
+    expect(
+      pet.requestPetHostAction({ kind: "gatewayReply", payload: { text: "第二版回复" } }).ok,
+    ).toBe(true);
+    PET_BEHAVIOR_PROFILE.onUserInputChanged!(services);
+
+    expect(reported.hostActions).toEqual([memory]);
+    expect(reported.workDelegation).toEqual(delegation);
+    expect(pet.requestPetHostAction(memory)).toMatchObject({
+      ok: false,
+      reason: "already_accepted",
+    });
+    expect(pet.requestPetWorkDelegation(delegation).ok).toBe(false);
+    expect(
+      pet.requestPetHostAction({ kind: "gatewayReply", payload: { text: "最终回复" } }).ok,
+    ).toBe(true);
+    expect(reported.hostActions).toEqual([
+      memory,
+      { kind: "gatewayReply", payload: { text: "最终回复" } },
+    ]);
+  });
+
   test("requires Mimi to decide semantically between Session reuse and creation", () => {
     expect(PET_SYSTEM_PROMPT).toContain(
       "decide whether the execution belongs to an existing Session or needs a new one",

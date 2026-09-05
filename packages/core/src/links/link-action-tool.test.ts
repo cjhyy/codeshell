@@ -260,40 +260,51 @@ describe("path template hardening", () => {
 });
 
 describe("LinkAction tool", () => {
-  test("lists only connected providers and never exposes the raw token", async () => {
+  test("lists provider status and available actions without exposing the raw token", async () => {
     const state = { connected: true, resolveCalls: 0 };
     setDefaultCredentialAccess(githubAccess(state));
     const result = await linkActionTool({}, context());
-    expect(JSON.parse(result)).toMatchObject({
-      kind: "connected_providers",
-      providers: [{ id: "github", account: "octocat" }],
+    const parsed = JSON.parse(result);
+    expect(parsed.kind).toBe("providers");
+    expect(
+      parsed.providers.find((provider: { id: string }) => provider.id === "github"),
+    ).toMatchObject({
+      id: "github",
+      account: "octocat",
+      connections: [{ state: "ready" }],
     });
     expect(result).not.toContain("github_pat_private");
     expect(state.resolveCalls).toBe(0);
   });
 
-  test("does not offer an expired browser OAuth connection", async () => {
-    const state = { connected: true, resolveCalls: 0 };
-    const access = githubAccess(state);
-    const credential = access.listMasked(cwd, "full")[0]!;
-    access.listMasked = () => [
-      {
-        ...credential,
-        oauthStatus: {
-          state: "expired",
-          accessTokenExpiresAt: "2026-08-01T00:00:00.000Z",
-          hasRefreshToken: true,
+  test.each(["expired", "invalid", "missing"] as const)(
+    "shows a browser OAuth connection in state %s without offering actions",
+    async (oauthState) => {
+      const state = { connected: true, resolveCalls: 0 };
+      const access = githubAccess(state);
+      const credential = access.listMasked(cwd, "full")[0]!;
+      access.listMasked = () => [
+        {
+          ...credential,
+          oauthStatus: {
+            state: oauthState,
+            accessTokenExpiresAt: "2026-08-01T00:00:00.000Z",
+            hasRefreshToken: true,
+          },
         },
-      },
-    ];
-    setDefaultCredentialAccess(access);
+      ];
+      setDefaultCredentialAccess(access);
 
-    expect(JSON.parse(await linkActionTool({}, context()))).toMatchObject({
-      kind: "connected_providers",
-      providers: [],
-    });
-    expect(state.resolveCalls).toBe(0);
-  });
+      const result = JSON.parse(await linkActionTool({}, context()));
+      expect(
+        result.providers.find((provider: { id: string }) => provider.id === "github"),
+      ).toMatchObject({
+        connections: [{ state: oauthState === "missing" ? "unavailable" : oauthState }],
+        actions: [],
+      });
+      expect(state.resolveCalls).toBe(0);
+    },
+  );
 
   test("resolves the credential live and fails immediately after disconnect", async () => {
     const state = { connected: true, resolveCalls: 0 };
@@ -327,7 +338,8 @@ describe("LinkAction tool", () => {
         ),
       );
       expect(disconnected.kind).toBe("error");
-      expect(disconnected.error).toContain("not connected locally");
+      expect(disconnected.error).toContain("No usable saved GitHub Link");
+      expect(disconnected.error).toContain("LinkAction");
       expect(fetchCalls).toBe(1);
     } finally {
       globalThis.fetch = previousFetch;
@@ -454,7 +466,7 @@ describe("LinkAction tool", () => {
           cliContext,
         ),
       );
-      expect(next.error).toContain("not connected locally");
+      expect(next.error).toContain("No usable saved GitHub Link");
     } finally {
       process.env.PATH = previousPath;
       rmSync(directory, { recursive: true, force: true });

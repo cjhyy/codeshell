@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/todo/mimi-architecture-2026-09-05/mimi.architecture.json",
+  "output": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/todo/mimi-architecture-2026-09-05/mimi.architecture.html",
+  "specification": {
+    "sha256": "b1b94a9950e2e5b79d9e1604aa84fc507b58d230c5217c58b25826d0e0c03701",
+    "bytes": 4755
+  },
+  "artifact": {
+    "sha256": "0e48fb85cc205d0f2cb9929aeedd049d5de75b931b36361ed1317c2b9c87bf6a",
+    "bytes": 715149
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

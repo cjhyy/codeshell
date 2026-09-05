@@ -28,6 +28,13 @@ export interface RunBehaviorProfile {
   systemPromptAppend?: string;
   /** Hard tool allowlist for the run (model visibility + execution gate). */
   allowedToolNames?: ReadonlySet<string>;
+  /**
+   * Positive safe-integer ceiling on model/tool turns. Clamps the existing
+   * resolved config/Goal limit, including during live Goal edits/extensions.
+   * Invalid values are ignored. The existing no-tools final summary may run
+   * once after this ceiling is reached.
+   */
+  maxTurns?: number;
   /** When set, the run's permission mode is locked to this value. */
   forcePermissionMode?: NonNullable<EngineConfig["permissionMode"]>;
   /** When true, per-run planMode requests are ignored. */
@@ -72,6 +79,13 @@ export interface RunBehaviorProfile {
     profileParams: Readonly<Record<string, unknown>>;
     reportResult: (key: string, value: unknown) => void;
   }) => Record<string, unknown>;
+  /**
+   * Called with this run's services after each new steered user message is
+   * persisted, before its injection event and the next model step. Profiles
+   * may invalidate deferred drafts that answered an earlier input revision.
+   * Initial input, queued/revoked steers and duplicate messages do not call it.
+   */
+  onUserInputChanged?: (services: Record<string, unknown>) => void;
   /**
    * Per-run metadata exposed to builtin availability guards / definition
    * rewriters via ToolVisibilityContext.profileMeta.

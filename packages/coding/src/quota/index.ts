@@ -6,9 +6,11 @@
  *            rate_limit.{primary_window,secondary_window}.{used_percent,reset_at}.
  *            Zero cost (no message sent).
  *   - Claude: POST /v1/messages (max_tokens:1) → response headers
- *            anthropic-ratelimit-unified-{5h,7d}-{utilization,reset}.
- *            Costs ~1 output token (Claude exposes quota only via response
- *            headers — there is no standalone usage endpoint).
+ *            anthropic-ratelimit-unified-<window>-{utilization,reset}, where
+ *            <window> is discovered from the headers (5h / 7d / overage / …)
+ *            rather than assumed — see parseClaudeWindows (re-verified
+ *            2026-09-06). Costs ~1 output token (Claude exposes quota only via
+ *            response headers — there is no standalone usage endpoint).
  *
  * The `fetch` and credentials are injected so this is unit-testable offline and
  * so the host owns secret resolution (see types.ts boundary note).
@@ -137,19 +139,67 @@ export async function queryClaudeQuota(
       error: `HTTP ${resp.status}${resp.status === 401 ? " (token 可能已过期)" : ""}`,
     };
   }
-  const h = resp.headers;
-  const windows: QuotaWindow[] = [];
-  const map: [string, string, "5h" | "7d"][] = [
-    ["anthropic-ratelimit-unified-5h-utilization", "anthropic-ratelimit-unified-5h-reset", "5h"],
-    ["anthropic-ratelimit-unified-7d-utilization", "anthropic-ratelimit-unified-7d-reset", "7d"],
-  ];
-  for (const [utilKey, resetKey, kind] of map) {
-    const util = num(h.get(utilKey)); // 0–1
-    if (util == null) continue;
-    windows.push({ kind, usedPercent: util * 100, resetsAt: num(h.get(resetKey)) });
-  }
+  const windows = parseClaudeWindows(resp.headers);
   if (windows.length === 0) return { provider: "claude", error: "响应头无 rate-limit 字段" };
   return { provider: "claude", windows };
+}
+
+const UNIFIED_PREFIX = "anthropic-ratelimit-unified-";
+
+/**
+ * Map `representative-claim` values onto the window names used in the headers.
+ * The claim spells a window out ("five_hour"); the window headers abbreviate it
+ * ("5h"). An unlisted claim value falls through to an exact `kind` match, which
+ * is how "overage" already lines up.
+ */
+const CLAIM_TO_KIND: Record<string, string> = {
+  five_hour: "5h",
+  seven_day: "7d",
+  seven_day_sonnet: "7d_sonnet",
+};
+
+/**
+ * Discover every rate-limit window from the unified headers.
+ *
+ * Windows are found by PREFIX, not from a hardcoded list, because which ones
+ * the API sends depends on the account. A normal subscription reports 5h + 7d;
+ * an account on overage reports `overage` and omits 5h/7d entirely. Matching a
+ * fixed list is what silently broke this lookup before (see types.ts).
+ *
+ * Each window contributes `<prefix><name>-utilization` (0–1) and an optional
+ * `<prefix><name>-reset` (epoch seconds). Bare `<prefix>reset` / `<prefix>status`
+ * are envelope fields, not windows, so anything without a `-utilization` suffix
+ * is skipped.
+ */
+export function parseClaudeWindows(h: Headers): QuotaWindow[] {
+  const windows: QuotaWindow[] = [];
+  for (const [rawKey, rawVal] of h.entries()) {
+    const key = rawKey.toLowerCase();
+    if (!key.startsWith(UNIFIED_PREFIX) || !key.endsWith("-utilization")) continue;
+    const kind = key.slice(UNIFIED_PREFIX.length, -"-utilization".length);
+    if (!kind) continue; // guard a bare `<prefix>utilization`
+    const util = num(rawVal); // 0–1
+    if (util == null) continue;
+    windows.push({
+      // Round to 4dp: `0.07 * 100` is 7.000000000000001 in binary float, which
+      // leaks into equality checks and any raw (unformatted) display.
+      kind,
+      usedPercent: Math.round(util * 100 * 1e4) / 1e4,
+      resetsAt: num(h.get(`${UNIFIED_PREFIX}${kind}-reset`)),
+    });
+  }
+  // Stable order so output does not shuffle between identical probes.
+  windows.sort((a, b) => a.kind.localeCompare(b.kind));
+
+  // Flag the binding window. A request is throttled on this one, so it is what
+  // an orchestrator should plan against when windows disagree.
+  const claim = h.get(`${UNIFIED_PREFIX}representative-claim`)?.trim().toLowerCase();
+  if (claim) {
+    const want = CLAIM_TO_KIND[claim] ?? claim;
+    const hit = windows.find((w) => w.kind === want);
+    if (hit) hit.representative = true;
+  }
+  return windows;
 }
 
 /** Query both providers (or the subset requested), concurrently. */
@@ -180,17 +230,27 @@ export function formatQuota(result: QuotaResult, nowSec: number): string {
     const plan = pq.planType ? ` [${pq.planType}]` : "";
     const parts = pq.windows.map((w) => {
       const reset = w.resetsAt != null ? ` (重置 ${formatReset(w.resetsAt - nowSec)})` : "";
-      return `${w.kind} 用了 ${w.usedPercent.toFixed(0)}%${reset}`;
+      // Star the binding window so a reader/agent knows which one throttles.
+      const star = w.representative ? "*" : "";
+      return `${w.kind}${star} 用了 ${w.usedPercent.toFixed(0)}%${reset}`;
     });
     lines.push(`${name}${plan}: ${parts.join("，")}`);
   }
   return lines.length ? lines.join("\n") : "(无可用额度信息)";
 }
 
-/** "2h13m" / "45m" / "已重置" from a seconds delta. */
+/**
+ * "3d2h" / "2h13m" / "45m" / "已重置" from a seconds delta.
+ *
+ * The day unit matters: this only ever had to render 5h/7d windows, but an
+ * overage window can reset weeks out, and "606h0m 后" is not a readable way to
+ * say 25 days.
+ */
 function formatReset(deltaSec: number): string {
   if (deltaSec <= 0) return "已重置";
-  const h = Math.floor(deltaSec / 3600);
+  const d = Math.floor(deltaSec / 86400);
+  const h = Math.floor((deltaSec % 86400) / 3600);
   const m = Math.floor((deltaSec % 3600) / 60);
+  if (d > 0) return `${d}d${h}h 后`;
   return h > 0 ? `${h}h${m}m 后` : `${m}m 后`;
 }

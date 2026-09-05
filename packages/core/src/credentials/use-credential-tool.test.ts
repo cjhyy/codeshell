@@ -69,7 +69,12 @@ describe("UseCredential tool", () => {
       },
     });
     const list = parse(await useCredentialTool({}, ctxWith(cwd, "允许本次")));
-    expect(list).toEqual({ kind: "list", credentials: [] });
+    expect(list).toMatchObject({ kind: "list", credentials: [] });
+    expect(list.notice).toContain('LinkAction({provider: "github"})');
+    expect(list.notice).not.toContain("LinkStatus");
+    expect(useCredentialToolDef.description).toContain("Call LinkAction with provider only");
+    expect(useCredentialToolDef.description).not.toContain("LinkStatus");
+    expect(list.notice).toContain("does not mean the service is signed out");
     const direct = parse(
       await useCredentialTool({ id: "link-github-fine-grained-pat" }, ctxWith(cwd, "允许本次")),
     );

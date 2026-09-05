@@ -29,9 +29,12 @@ import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 import type { ProviderKindName } from "../provider-kinds.js";
 import {
+  createPromptCacheKey,
+  PromptCacheHistory,
   resolvePromptCachePolicy,
   uniquePromptCacheBreakpointIndexes,
   type PromptCachePolicy,
+  type PromptCacheHistoryPlan,
   type PromptCacheRequestContext,
 } from "../prompt-cache.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
@@ -43,8 +46,8 @@ import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchd
  *   top-level field). Both OpenAI and OpenRouter report this.
  * - Cache WRITES (first-time prefix ingestion) are reported by OpenRouter as
  *   `prompt_tokens_details.cache_write_tokens` (verified live 2026-07-02).
- *   OpenAI's automatic caching has no separate write charge and omits it. We
- *   map it to `cacheCreationTokens` so the UI can show "writing cache" on the
+ *   Earlier OpenAI models omit it; GPT-5.6+ reports separately billed writes.
+ *   We map it to `cacheCreationTokens` so the UI can show "writing cache" on the
  *   first turn, not just hits on later turns.
  *
  * Returns a spreadable partial so callers omit each key entirely when the API
@@ -226,6 +229,10 @@ export async function runStreamWithWatchdog<T = any>(
 const MISSING_TOOL_RESULT_WIRE_TEXT =
   "Error: Tool execution did not complete before the conversation resumed.";
 
+// Clients are recreated between Engine runs. Keep only bounded, expiring
+// boundary hashes across those recreations; never retain conversation text.
+const sharedPromptCacheHistory = new PromptCacheHistory();
+
 /**
  * OpenAI requires each assistant tool_calls batch to be followed immediately
  * by exactly one role:tool message per id. Normalize at the provider boundary
@@ -284,6 +291,7 @@ function normalizeOpenAIToolMessagePairs(
 
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
+  private readonly promptCacheHistory: PromptCacheHistory;
   private readonly dangerouslyAllowBrowser: boolean;
   // Sticky override: once the endpoint tells us `max_tokens` is rejected for
   // this model, switch to `max_completion_tokens` for the lifetime of the
@@ -304,9 +312,13 @@ export class OpenAIClient extends LLMClientBase {
   constructor(
     config: LLMConfig,
     defaults?: ClientDefaults,
-    runtimeOptions: { dangerouslyAllowBrowser?: boolean } = {},
+    runtimeOptions: {
+      dangerouslyAllowBrowser?: boolean;
+      promptCacheHistory?: PromptCacheHistory;
+    } = {},
   ) {
     super(config, defaults);
+    this.promptCacheHistory = runtimeOptions.promptCacheHistory ?? sharedPromptCacheHistory;
     this.dangerouslyAllowBrowser = runtimeOptions.dangerouslyAllowBrowser === true;
   }
 
@@ -392,13 +404,56 @@ export class OpenAIClient extends LLMClientBase {
         // Per-call reasoning wins; otherwise fall back to provider default
         // (settings.providers[].reasoning, threaded through LLMConfig).
         const reasoning = options.reasoning ?? this.config.reasoning;
-        const messages = this.buildMessages(
+        const { messages, stablePrefixEndIndex } = this.buildMessages(
           options.systemPrompt,
           options.messages,
           reasoning,
           options.promptCache,
         );
         const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
+        const cachePolicy = this.promptCachePolicy(options.promptCache);
+        let cachePlan: PromptCacheHistoryPlan | undefined;
+        if (cachePolicy.strategy === "openai-hybrid" && options.promptCache?.scopeId) {
+          let latestEligibleIndex = -1;
+          for (let index = messages.length - 1; index >= 0; index--) {
+            const message = messages[index]!;
+            if (
+              (message.role === "user" || message.role === "tool") &&
+              (typeof message.content === "string"
+                ? message.content.length > 0
+                : Array.isArray(message.content) && message.content.length > 0)
+            ) {
+              latestEligibleIndex = index;
+              break;
+            }
+          }
+          // Hash the effective request settings, including tools and passthrough
+          // schemas. Transport streaming does not alter the rendered prefix.
+          const { messages: _cacheMessages, ...requestIdentity } = this.buildRequestBody(
+            options,
+            messages,
+            tools,
+            reasoning,
+            false,
+          );
+          cachePlan = this.promptCacheHistory.prepare({
+            scopeKey: createPromptCacheKey(
+              options.promptCache.scopeId,
+              JSON.stringify(this.getPromptCacheScopeIdentity()),
+            ),
+            messages,
+            latestBoundaryIndex: latestEligibleIndex,
+            requestIdentity,
+          });
+        }
+        if (options.promptCache || cachePolicy.strategy === "anthropic-explicit") {
+          this.applyPromptCacheBreakpoints(
+            messages,
+            cachePolicy,
+            stablePrefixEndIndex,
+            cachePlan?.readBoundaryIndex,
+          );
+        }
 
         const span = logger.span("llm.request", {
           cat: "llm",
@@ -407,13 +462,16 @@ export class OpenAIClient extends LLMClientBase {
           stream: !!(options.stream && options.onChunk),
           messageCount: messages.length,
           toolCount: tools?.length ?? 0,
-          cacheStrategy: this.promptCachePolicy(options.promptCache).strategy,
+          cacheStrategy: cachePolicy.strategy,
         });
         try {
           const response =
             options.stream && options.onChunk
               ? await this.streamMessage(options, messages, tools, reasoning, requestSignal)
               : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
+          if (cachePlan && !requestSignal?.aborted && (response.usage?.promptTokens ?? 0) > 0) {
+            this.promptCacheHistory.commit(cachePlan);
+          }
           span.end({
             stopReason: response.stopReason,
             promptTokens: response.usage?.promptTokens,
@@ -905,7 +963,10 @@ export class OpenAIClient extends LLMClientBase {
     messages: import("../../types.js").Message[],
     reasoning?: ReasoningSetting,
     promptCache?: PromptCacheRequestContext,
-  ): OpenAI.ChatCompletionMessageParam[] {
+  ): {
+    messages: OpenAI.ChatCompletionMessageParam[];
+    stablePrefixEndIndex?: number;
+  } {
     const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
 
     // Drop historical image blocks when the active model can't accept vision.
@@ -1126,18 +1187,13 @@ export class OpenAIClient extends LLMClientBase {
     const stablePrefixEndIndex = stablePrefixEndMessage
       ? normalized.indexOf(stablePrefixEndMessage)
       : undefined;
-    const cachePolicy = this.promptCachePolicy(promptCache);
-    if (promptCache || cachePolicy.strategy === "anthropic-explicit") {
-      this.applyPromptCacheBreakpoints(
-        normalized,
-        cachePolicy,
+    return {
+      messages: normalized,
+      stablePrefixEndIndex:
         stablePrefixEndIndex !== undefined && stablePrefixEndIndex >= 0
           ? stablePrefixEndIndex
           : undefined,
-      );
-    }
-
-    return normalized;
+    };
   }
 
   /**
@@ -1148,8 +1204,13 @@ export class OpenAIClient extends LLMClientBase {
     messages: OpenAI.ChatCompletionMessageParam[],
     policy: PromptCachePolicy,
     stablePrefixEndIndex: number | undefined,
+    previousBoundaryIndex?: number,
   ): void {
-    if (policy.strategy !== "anthropic-explicit" && policy.strategy !== "openai-explicit") {
+    if (
+      policy.strategy !== "anthropic-explicit" &&
+      policy.strategy !== "openai-explicit" &&
+      policy.strategy !== "openai-hybrid"
+    ) {
       return;
     }
 
@@ -1193,7 +1254,14 @@ export class OpenAIClient extends LLMClientBase {
     const requested = uniquePromptCacheBreakpointIndexes([
       policy.breakpoints.includes("system") ? 0 : undefined,
       policy.breakpoints.includes("stable-history") ? stablePrefixEndIndex : undefined,
-      policy.breakpoints.includes("rolling-history") ? messages.length - 1 : undefined,
+      // Hybrid uses at most three explicit boundaries (system, stable, prior
+      // successful tail), leaving the fourth write slot for the implicit tail.
+      // Retaining the previous boundary lets this request read the last write.
+      policy.strategy === "openai-hybrid"
+        ? previousBoundaryIndex
+        : policy.breakpoints.includes("rolling-history")
+          ? messages.length - 1
+          : undefined,
     ]);
     for (const index of requested) mark(index);
   }

@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 
 export type PromptCacheStrategy =
   | "openai-explicit"
+  | "openai-hybrid"
   | "openai-implicit"
   | "anthropic-explicit"
   | "provider-managed";
@@ -33,8 +34,8 @@ export interface PromptCachePolicy {
   breakpoints: readonly PromptCacheBreakpoint[];
   /** Opaque and <=64 chars, as required by OpenAI's prompt_cache_key. */
   cacheKey?: string;
-  /** GPT-5.6+ explicit-cache request mode. */
-  promptCacheOptions?: { mode: "explicit"; ttl: "30m" };
+  /** GPT-5.6+ request mode; implicit also permits explicit read boundaries. */
+  promptCacheOptions?: { mode: "explicit" | "implicit"; ttl: "30m" };
 }
 
 export interface ResolvePromptCachePolicyInput {
@@ -114,11 +115,11 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   const openAIRoute = kind === "openai" || (kind === "openrouter" && isOpenAIModel(model));
   if (openAIRoute && supportsOpenAIExplicitCaching(model) && input.explicitDisabled !== true) {
     return {
-      strategy: "openai-explicit",
-      layoutVersion: "system-stable-rolling-v1",
+      strategy: "openai-hybrid",
+      layoutVersion: "system-stable-previous-implicit-v2",
       breakpoints: OPENAI_EXPLICIT_BREAKPOINTS,
       ...(key ? { cacheKey: key } : {}),
-      promptCacheOptions: { mode: "explicit", ttl: "30m" },
+      promptCacheOptions: { mode: "implicit", ttl: "30m" },
     };
   }
 
@@ -150,4 +151,89 @@ export function uniquePromptCacheBreakpointIndexes(
     result.push(index);
   }
   return result;
+}
+
+interface PromptCacheHistoryBoundary {
+  index: number;
+  prefixHash: string;
+}
+
+export interface PromptCacheHistoryPlan {
+  scopeKey: string;
+  requestOrder: number;
+  /** Prior successful boundary, only when its entire request prefix still matches. */
+  readBoundaryIndex?: number;
+  nextBoundary?: PromptCacheHistoryBoundary;
+}
+
+/**
+ * Remember one successful rolling boundary per scope, without retaining prompt
+ * text. Preparing a request is read-only: failed requests must not advance the
+ * boundary. The provider supplies normalized, unmarked messages and the index
+ * of the latest eligible message, then commits only after a successful response.
+ */
+export class PromptCacheHistory {
+  private readonly boundaries = new Map<
+    string,
+    PromptCacheHistoryBoundary & { requestOrder: number; updatedAt: number }
+  >();
+  private requestOrder = 0;
+
+  constructor(
+    private readonly maxScopes = 128,
+    private readonly ttlMs = 30 * 60 * 1000,
+  ) {}
+
+  prepare(
+    input: {
+      scopeKey: string;
+      messages: readonly unknown[];
+      latestBoundaryIndex: number;
+      requestIdentity: unknown;
+    },
+    now = Date.now(),
+  ): PromptCacheHistoryPlan {
+    const plan: PromptCacheHistoryPlan = {
+      scopeKey: input.scopeKey,
+      requestOrder: ++this.requestOrder,
+    };
+    const stored = this.boundaries.get(input.scopeKey);
+    const previous = stored && now - stored.updatedAt < this.ttlMs ? stored : undefined;
+    // Include tools and request settings as well as message content: identical
+    // history with different reasoning or tools is not the same rendered prefix.
+    const hash = createHash("sha256")
+      .update("codeshell-cache-history-v1\0")
+      .update(JSON.stringify(input.requestIdentity) ?? "null")
+      .update("\0");
+    for (let index = 0; index < input.messages.length; index++) {
+      hash.update(JSON.stringify(input.messages[index]) ?? "null").update("\0");
+      if (index === previous?.index || index === input.latestBoundaryIndex) {
+        const prefixHash = hash.copy().digest("hex");
+        if (index === previous?.index && prefixHash === previous.prefixHash) {
+          plan.readBoundaryIndex = index;
+        }
+        if (index === input.latestBoundaryIndex) {
+          plan.nextBoundary = { index, prefixHash };
+        }
+      }
+    }
+    return plan;
+  }
+
+  commit(plan: PromptCacheHistoryPlan, now = Date.now()): void {
+    // Concurrent requests can finish in reverse order. An older request must
+    // not replace the boundary established by a newer successful request.
+    if ((this.boundaries.get(plan.scopeKey)?.requestOrder ?? -1) > plan.requestOrder) return;
+    this.boundaries.delete(plan.scopeKey);
+    if (plan.nextBoundary && this.maxScopes > 0) {
+      this.boundaries.set(plan.scopeKey, {
+        ...plan.nextBoundary,
+        requestOrder: plan.requestOrder,
+        updatedAt: now,
+      });
+    }
+    while (this.boundaries.size > this.maxScopes && this.boundaries.size > 0) {
+      this.boundaries.delete(this.boundaries.keys().next().value!);
+    }
+  }
 }

@@ -262,6 +262,90 @@ describe("LinkTab integrations", () => {
     ).toBeNull();
   });
 
+  test.each([undefined, { state: "valid" as const }])(
+    "shows an unreadable saved Link as unavailable despite cached verification (%j)",
+    async (oauthStatus) => {
+      ensureMiniDom();
+      const credentials: MaskedCredentialView[] = [
+        {
+          id: "github-local",
+          type: "link",
+          label: "GitHub local",
+          hasSecret: false,
+          oauthStatus,
+          meta: {
+            linkProvider: "github",
+            linkExecutionRuntime: "local",
+            linkAccountLabel: "previous-account",
+            linkExecutionBackend: "cli",
+            linkResourceLabels: ["previous-repository"],
+          },
+        },
+        {
+          id: "figma-local",
+          type: "link",
+          label: "Figma local",
+          hasSecret: true,
+          meta: {
+            linkProvider: "figma",
+            linkExecutionRuntime: "local",
+            linkAccountLabel: "current-account",
+          },
+        },
+      ];
+      Object.assign(window, {
+        codeshell: {
+          credentials: { list: async () => credentials },
+          links: { listLocalProviders: async () => LINK_PROVIDER_FIXTURES },
+        },
+      });
+      const container = document.createElement("div") as unknown as HTMLElement;
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(
+          <DialogProvider>
+            <LinkTab cwd="/repo" />
+          </DialogProvider>,
+        );
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+
+      const github = findElements(container, "ARTICLE").find(
+        (card) =>
+          reactPropsOf(card)["data-link-integration"] === "github" &&
+          reactPropsOf(card)["data-link-runtime"] === "local",
+      );
+      expect(github).toBeDefined();
+      const badge = findElements(github, "SPAN").find(
+        (span) => reactChildText(reactPropsOf(span).children) === "凭据不可用",
+      );
+      expect(badge).toBeDefined();
+      expect(reactPropsOf(badge).className).toContain("text-status-err");
+      const githubText = reactChildText(reactPropsOf(github).children);
+      expect(githubText).toContain("凭据缺失或当前设备无法读取，请重新连接。");
+      expect(githubText).not.toContain("已验证");
+      expect(githubText).not.toContain("previous-repository");
+      expect(githubText).not.toContain("通过本机 gh");
+      expect(buttonWithLabel(github, "重新连接")).toBeDefined();
+      expect(
+        findElements(container, "DIV").some(
+          (div) => reactChildText(reactPropsOf(div).children) === "1已连接",
+        ),
+      ).toBe(true);
+
+      const connected = buttonWithLabel(container, "已连接");
+      await act(async () => {
+        reactPropsOf(connected).onClick();
+        await flushMicrotasks();
+      });
+      const cards = findElements(container, "ARTICLE");
+      expect(cards).toHaveLength(1);
+      expect(reactPropsOf(cards[0])["data-link-integration"]).toBe("figma");
+      expect(reactChildText(reactPropsOf(cards[0]).children)).toContain("已验证 current-account");
+    },
+  );
+
   test("renders Link apps and the independent Chat Gateway, then starts configured channels", async () => {
     ensureMiniDom();
     let starts = 0;

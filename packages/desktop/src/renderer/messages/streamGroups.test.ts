@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { StreamEvent } from "@cjhyy/code-shell-core";
 import {
   buildStreamItems,
   processGroupActivityLabel,
@@ -10,6 +11,7 @@ import {
   type TurnProcessGroup,
 } from "./streamGroups";
 import type { AgentMessage, AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
+import { applyStreamEvent, INITIAL_STATE } from "../types";
 
 let idCounter = 0;
 function freshId(prefix: string): string {
@@ -589,7 +591,7 @@ describe("reconcileStreamItems", () => {
     expect(recGroup).not.toBe(prevGroup);
   });
 
-  test("does NOT reuse a stale group when an inner agent message mutates in place", () => {
+  test("does NOT reuse a stale group when an inner agent message is updated", () => {
     // A live turn containing a subagent. The agent's id is stable while its
     // toolCalls/toolCount grow as it runs. Keying the group signature only on
     // inner ids would reuse the previous (stale) group object and freeze the
@@ -607,6 +609,58 @@ describe("reconcileStreamItems", () => {
     const recon3 = reconcileStreamItems(recon2, built3);
     expect(findAgentIn(recon3)?.done).toBe(true);
   });
+
+  for (const done of [false, true]) {
+    test(`exposes a child tool result while the agent is ${done ? "completed" : "running"}`, () => {
+      const child = agent("a1", 1, { done });
+      const messages = [user(), tool("Agent", 1, 2), child];
+      const prev = buildStreamItems(messages, { liveTurnActive: true });
+      const updated = applyStreamEvent(
+        { ...INITIAL_STATE, messages, agentMessageIndex: { a1: 2 } },
+        {
+          type: "tool_result",
+          agentId: "a1",
+          result: { id: "a1-t0", toolName: "Read", result: "child file contents" },
+        } as StreamEvent,
+        () => 20,
+      );
+      const reconciled = reconcileStreamItems(
+        prev,
+        buildStreamItems(updated.messages, { liveTurnActive: true }),
+      );
+
+      expect(processGroups(reconciled)[0]).not.toBe(processGroups(prev)[0]);
+      expect(findAgentIn(reconciled)?.toolCalls[0]).toMatchObject({
+        status: "succeeded",
+        result: "child file contents",
+      });
+    });
+  }
+
+  test("exposes an equal-length replacement of settled child text", () => {
+    const u = user();
+    const t = tool("Agent", 1, 2);
+    const settled = { ...agent("a1", 1, { done: true }), text: "before" };
+    const prev = buildStreamItems([u, t, settled], { liveTurnActive: true });
+    const replacement = { ...settled, text: "after!" };
+    const reconciled = reconcileStreamItems(
+      prev,
+      buildStreamItems([u, t, replacement], { liveTurnActive: true }),
+    );
+
+    expect(findAgentIn(reconciled)).toBe(replacement);
+  });
+
+  for (const done of [false, true]) {
+    test(`reuses a group containing an unchanged ${done ? "settled" : "live"} child`, () => {
+      const messages = [user(), tool("Agent", 1, 2), agent("a1", 1, { done })];
+      const prev = buildStreamItems(messages, { liveTurnActive: true });
+      const next = buildStreamItems(messages, { liveTurnActive: true });
+      const reconciled = reconcileStreamItems(prev, next);
+
+      expect(processGroups(reconciled)[0]).toBe(processGroups(prev)[0]);
+    });
+  }
 
   // An in-group steer bubble flips pending→confirmed in place (same id). The
   // group signature MUST change so the memoized card re-renders — otherwise the

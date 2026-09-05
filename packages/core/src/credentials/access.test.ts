@@ -3,6 +3,46 @@ import { createInProcessTransport } from "../protocol/transport.js";
 import { createIpcCredentialAccess, type CredentialSnapshot } from "./access.js";
 
 describe("createIpcCredentialAccess", () => {
+  test("propagates scoped read failures and treats missing or legacy snapshots as unknown", () => {
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    expect(access.listMaskedWithStatus!("/repo", "full")).toEqual({
+      credentials: [],
+      readable: false,
+    });
+    const credential = { id: "link", type: "link" as const, label: "Link", hasSecret: true };
+    const snapshot: CredentialSnapshot = {
+      revision: 1,
+      entries: [
+        {
+          cwd: "/repo",
+          full: [credential],
+          project: [credential],
+          readableFull: false,
+          readableProject: true,
+          envFull: {},
+          envProject: {},
+        },
+        { cwd: "/legacy", full: [], project: [], envFull: {}, envProject: {} },
+      ],
+    };
+    main.send({ jsonrpc: "2.0", method: "desktop/credentialSnapshot", params: { ...snapshot } });
+
+    expect(access.listMaskedWithStatus!("/repo", "full")).toEqual({
+      credentials: [credential],
+      readable: false,
+    });
+    expect(access.listMaskedWithStatus!("/repo", "project")).toEqual({
+      credentials: [credential],
+      readable: true,
+    });
+    expect(access.listMaskedWithStatus!("/legacy", "full")).toEqual({
+      credentials: [],
+      readable: false,
+    });
+    expect(access.listMasked("/repo", "full")).toEqual([credential]);
+  });
+
   test("uses snapshots for metadata/env and internal requests for secret operations", async () => {
     const [main, worker] = createInProcessTransport();
     const access = createIpcCredentialAccess(worker);

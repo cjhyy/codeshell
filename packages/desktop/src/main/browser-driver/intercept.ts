@@ -155,7 +155,7 @@ export function buildCredentialActionReply(
 export interface ParsedWorkspaceAction {
   sessionId?: string;
   requestId: string;
-  /** Currently only "switch". */
+  /** "switch" or the read-only "resolve_session_run" host action. */
   action: string;
   target: string;
 }

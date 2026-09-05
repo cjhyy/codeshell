@@ -24,6 +24,7 @@
     "dev:bigtranscript": "bun run scripts/render-bigtranscript-dev.ts",
     "test": "bun test --timeout 30000 tests packages",
     "test:core": "bun test --timeout 30000 packages/core/src",
+    "test:mimi-chat": "bun test --timeout 30000 tests/mimi-chat-replay.test.ts packages/chat/src packages/pet/src packages/desktop/src/main/pet packages/desktop/src/main/im-gateway-service.test.ts packages/core/src/engine/engine.profile-max-turns.test.ts packages/core/src/engine/engine.profile-input-change.test.ts packages/core/src/engine/turn-loop-steer-backfill.test.ts",
     "test:coverage": "bun test --timeout 30000 --config ./bunfig.coverage.toml packages/core/src/tool-system/builtin packages/core/src/tool-system/testing --coverage --coverage-reporter=text",
     "test:e2e": "bun run build && bun run --cwd packages/desktop build && bun run --cwd packages/desktop test:e2e",
     "smoke": "bun run build && bun run --cwd packages/desktop build && bun run --cwd packages/desktop smoke",

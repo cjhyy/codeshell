@@ -162,6 +162,59 @@ describe("DelegateWork", () => {
     expect(second.recorded).toEqual([]);
   });
 
+  test.each([null, 42, false, "", " ", " session-alpha-login", "session-alpha-login "])(
+    "does not turn a malformed continuation selector (%j) into new work",
+    async (sessionId) => {
+      const { ctx, recorded } = context();
+      expect(
+        await delegateWorkTool(
+          {
+            workspace_id: "workspace-a",
+            session_id: sessionId,
+            objective: "continue the login fix",
+          },
+          ctx,
+        ),
+      ).toStartWith("Error:");
+      expect(recorded).toEqual([]);
+
+      await delegateWorkTool(
+        {
+          workspace_id: "workspace-a",
+          session_id: "session-alpha-login",
+          objective: "continue the login fix",
+          __signal: new AbortController().signal,
+        },
+        ctx,
+      );
+      expect(recorded).toEqual([
+        {
+          workspaceId: "workspace-a",
+          reusableSessionId: "session-alpha-login",
+          objective: "continue the login fix",
+        },
+      ]);
+    },
+  );
+
+  test("rejects undeclared routing controls instead of silently discarding them", async () => {
+    const { ctx, recorded } = context();
+    expect(
+      await delegateWorkTool(
+        {
+          workspace_id: "workspace-a",
+          objective: "continue",
+          session_selector: "session-alpha-login",
+        },
+        ctx,
+      ),
+    ).toStartWith("Error:");
+    expect(
+      await delegateWorkTool({ workspace_id: " workspace-a", objective: "continue" }, ctx),
+    ).toStartWith("Error:");
+    expect(recorded).toEqual([]);
+  });
+
   test("fails closed for malformed run-scoped services instead of throwing", async () => {
     const ctx = {
       runScopedServices: {

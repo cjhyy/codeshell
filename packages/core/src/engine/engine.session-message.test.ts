@@ -98,6 +98,7 @@ describe("Engine SendMessageToSession wiring", () => {
     expect(seenTargetEnums.get(model)).toEqual(["ui-session"]);
     expect(routed).toEqual({
       sourceSessionId: "prd-session",
+      signal: expect.any(AbortSignal),
       target: catalog[1],
       message: "  Read docs/prd.md and design the UI.  ",
       catalog,

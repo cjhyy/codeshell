@@ -89,6 +89,34 @@ export interface ChatSessionManagerOptions {
   dataRoot?: string;
 }
 
+export interface GetOrCreateSessionOptions {
+  /** Only explicit user opens may clear a closed Session's tombstone. */
+  allowReopen?: boolean;
+  /** Cancel lifecycle waits without creating or reopening the Session. */
+  signal?: AbortSignal;
+}
+
+function waitForSessionTransition(transition: Promise<void>, signal?: AbortSignal): Promise<void> {
+  if (!signal) return transition;
+  signal.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const finish = (failed = false, error?: unknown) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener("abort", onAbort);
+      if (failed) reject(error);
+      else resolve();
+    };
+    const onAbort = () => finish(true, signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    transition.then(
+      () => finish(),
+      (error) => finish(true, error),
+    );
+  });
+}
+
 export interface LiveChatSessionSnapshot {
   generation: number;
   /** Identity scope of the manager that produced this snapshot. */
@@ -184,29 +212,41 @@ export class ChatSessionManager {
     });
   }
 
-  async getOrCreate(sessionId: string, slice: EngineConfigSlice): Promise<ChatSession> {
+  async getOrCreate(
+    sessionId: string,
+    slice: EngineConfigSlice,
+    options: GetOrCreateSessionOptions = {},
+  ): Promise<ChatSession> {
+    const assertAccess = () => {
+      options.signal?.throwIfAborted();
+      if (options.allowReopen === false && this.isUnavailable(sessionId)) {
+        throw new Error(`target Session is closing or closed: ${sessionId}`);
+      }
+    };
     // A non-resident migration claim is a short ownership handoff to Main.
     // Wait rather than fail the user's run: once Main atomically commits (or
     // aborts) and releases the token, the Engine is created from current disk.
     for (;;) {
+      assertAccess();
       const residentMigration = this.residentMigrations.get(sessionId);
       if (residentMigration) {
-        await residentMigration.released;
+        await waitForSessionTransition(residentMigration.released, options.signal);
         continue;
       }
       const claim = this.migrationClaims.get(sessionId);
       if (claim) {
-        await claim.released;
+        await waitForSessionTransition(claim.released, options.signal);
         continue;
       }
       const closing = this.closingSessions.get(sessionId);
       if (closing) {
-        await closing;
+        await waitForSessionTransition(closing, options.signal);
         continue;
       }
       // No await separates the final claim check from getOrCreateNow. On this
       // process's event loop, either this creates the resident owner first or
       // beginSessionMigration installs the fence first; both cannot win.
+      assertAccess();
       return this.getOrCreateNow(sessionId, slice);
     }
   }
@@ -451,12 +491,19 @@ export class ChatSessionManager {
   }
 
   private closeSession(sessionId: string, markClosed: boolean): Promise<void> {
-    const migration = this.residentMigrations.get(sessionId);
-    if (migration) {
-      return migration.released.then(() => this.closeSession(sessionId, markClosed));
-    }
     const alreadyClosing = this.closingSessions.get(sessionId);
     if (alreadyClosing) return alreadyClosing;
+    const migration = this.residentMigrations.get(sessionId);
+    if (migration) {
+      // Publish closing intent before waiting so internal senders cannot
+      // acquire the migrated owner ahead of this deferred close operation.
+      const closing = migration.released.then(() => {
+        this.closingSessions.delete(sessionId);
+        return this.closeSession(sessionId, markClosed);
+      });
+      this.closingSessions.set(sessionId, closing);
+      return closing;
+    }
     const s = this.sessions.get(sessionId);
     if (!s) {
       if (sessionId.startsWith("qchat-")) {

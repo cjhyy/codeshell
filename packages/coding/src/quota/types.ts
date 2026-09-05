@@ -11,14 +11,30 @@
  * Keychain / wham endpoints / `anthropic-ratelimit-*` header names.
  */
 
-/** A single rolling limit window (e.g. the 5-hour or 7-day window). */
+/**
+ * A single rolling limit window.
+ *
+ * `kind` is NOT a closed set. Claude reports whichever windows apply to the
+ * account: usually "5h" and "7d", but an account running on overage reports an
+ * "overage" window INSTEAD of those (verified 2026-09-06 against a team /
+ * default_claude_max_5x account). New window names appear without notice, so
+ * the parser discovers them from the header prefix rather than matching a
+ * hardcoded list. Renderers must treat `kind` as an opaque label.
+ */
 export interface QuotaWindow {
-  /** Which window this is. */
-  kind: "5h" | "7d";
+  /** Which window this is: "5h" | "7d" | "overage" | any future name. */
+  kind: string;
   /** Percent of the window's limit already used, 0–100. */
   usedPercent: number;
   /** Unix epoch seconds when this window resets, or null if unknown. */
   resetsAt: number | null;
+  /**
+   * True for the window the API named as the binding constraint via
+   * `anthropic-ratelimit-unified-representative-claim`. Claude only; a request
+   * is throttled on THIS window, so it is the one to act on when several
+   * windows disagree.
+   */
+  representative?: boolean;
 }
 
 /** Quota for one provider (claude | codex). */

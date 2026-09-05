@@ -14,6 +14,7 @@ export interface CredentialView {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    autoRefreshFromBrowser?: boolean;
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
@@ -41,6 +42,7 @@ export interface CredentialView {
   };
 }
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
+  storeScope?: "user" | "project";
   hasSecret: boolean;
   secretHint?: string;
   oauthStatus?: {

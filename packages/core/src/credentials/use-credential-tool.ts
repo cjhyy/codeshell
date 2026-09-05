@@ -38,7 +38,10 @@ const BASE_DESCRIPTION =
   "or manually exporting credentials. Before `--cookies-from-browser` or retrying an " +
   "authentication failure, check stored credentials here. If `Currently available` names a " +
   "matching id, fetch it directly; otherwise call with NO arguments first to list available " +
-  "credentials (id + label + type), then call again with `id`. Token/link credentials return their secret " +
+  "credentials (id + label + type), then call again with `id`. Provider-owned Link connections " +
+  "and existing CLI sessions are not listed here. Call LinkAction with provider only to check " +
+  "those before concluding " +
+  "a service is disconnected or asking the user to log in. Exposable token credentials return their secret " +
   "value; cookie credentials are materialized to a temporary Netscape cookies.txt file " +
   "(use it as `yt-dlp --cookies <cookiesFile>` / `curl -b <cookiesFile>`). " +
   "Each use is gated by a quick user approval unless auto-approve is on.";
@@ -92,7 +95,7 @@ export function useCredentialToolDefFor(cwd: string): ToolDefinition {
 
 /** 取用结果(JSON 序列化后回给 AI)。 */
 type UseCredentialResult =
-  | { kind: "list"; credentials: { id: string; label: string; type: string }[] }
+  | { kind: "list"; credentials: { id: string; label: string; type: string }[]; notice: string }
   | { kind: "value"; value: string }
   | { kind: "cookie"; cookiesFile: string; count: number }
   | { kind: "error"; error: string };
@@ -160,7 +163,15 @@ export async function useCredentialTool(
       .listMasked(cwd, scope)
       .filter(isAgentExposableCredential)
       .map((c) => ({ id: c.id, label: c.label, type: c.type }));
-    return json({ kind: "list", credentials });
+    return json({
+      kind: "list",
+      credentials,
+      notice:
+        "This list excludes provider-owned Link credentials and CLI login sessions. " +
+        'Call LinkAction with provider only, for example LinkAction({provider: "github"}), ' +
+        "to check saved connections and current CLI authentication; " +
+        "an absent credential here does not mean the service is signed out.",
+    });
   }
 
   const cred = access.resolveMeta(cwd, id, scope);

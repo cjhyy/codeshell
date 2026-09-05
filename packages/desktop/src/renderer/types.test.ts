@@ -488,6 +488,86 @@ describe("applyStreamEvent — tool_summary routing", () => {
 });
 
 describe("applyStreamEvent — subagent isolation", () => {
+  test("keeps child events routed after a main tool removes an empty assistant", () => {
+    const s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ...mainTurn(),
+      startAgent("B"),
+      startAgent("C"),
+      ev("tool_use_start", {
+        toolCall: { id: "parent-tool", toolName: "Bash", args: {} },
+      } as any),
+      ev("text_delta", { agentId: "A", text: "first child" } as any),
+      ev("text_delta", { agentId: "B", text: "second child" } as any),
+      ev("text_delta", { agentId: "C", text: "third child" } as any),
+      ev("tool_use_start", {
+        agentId: "B",
+        toolCall: { id: "child-tool", toolName: "Read", args: {} },
+      } as any),
+      ev("tool_use_args_delta", {
+        agentId: "B",
+        toolCallId: "child-tool",
+        args: { file: "child.ts" },
+      } as any),
+      ev("tool_result", {
+        agentId: "B",
+        result: { id: "child-tool", toolName: "Read", result: "child file contents" },
+      } as any),
+      ev("agent_end", { agentId: "B" } as any),
+      ev("text_delta", { text: "parent continues" } as any),
+    ]);
+
+    for (const agentId of ["A", "B", "C"]) {
+      expect(s.messages[s.agentMessageIndex[agentId]!]).toBe(findAgent(s, agentId));
+    }
+    expect(findAgent(s, "A").textBuffer).toBe("first child");
+    expect(findAgent(s, "C").textBuffer).toBe("third child");
+    expect(findAgent(s, "C").toolCalls).toHaveLength(0);
+    expect(findAgent(s, "B")).toMatchObject({
+      done: true,
+      text: "second child",
+      textBuffer: "",
+      toolCount: 1,
+      toolCalls: [
+        {
+          id: "child-tool",
+          argsLive: { file: "child.ts" },
+          result: "child file contents",
+          status: "succeeded",
+        },
+      ],
+    });
+    expect(findMainAssistant(s).text).toBe("parent continues");
+  });
+
+  test("a child error preserves the parent stream and is shown on the child terminal card", () => {
+    const before = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent" } as any),
+      ev("thinking_delta", { text: "working" } as any),
+      startAgent("A"),
+    ]);
+    const after = applyStreamEvent(
+      before,
+      ev("error", { agentId: "A", error: "child failed" } as any),
+    );
+    expect(after).toBe(before);
+
+    const continued = dispatch(after, [
+      ev("text_delta", { text: " continues" } as any),
+      ev("thinking_delta", { text: " still" } as any),
+      ev("agent_end", { agentId: "A", error: "child failed" } as any),
+    ]);
+    expect(findMainAssistant(continued).text).toBe("parent continues");
+    expect(continued.streamingThinkingId).toBe(before.streamingThinkingId);
+    expect(continued.messages.find((m) => m.id === before.streamingThinkingId)).toMatchObject({
+      text: "working still",
+      done: false,
+    });
+    expect(findAgent(continued, "A")).toMatchObject({ done: true, error: "child failed" });
+    expect(continued.messages.some((m) => m.kind === "system")).toBe(false);
+  });
+
   test("1. text_delta with agentId does not touch main assistant", () => {
     const s = dispatch(INITIAL_STATE, [
       ...mainTurn(),
