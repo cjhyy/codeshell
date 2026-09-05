@@ -508,7 +508,7 @@ export const extensions = {
         processing: "处理中…",
         loginAndSave: "弹窗登录并保存",
         captureFromBrowser: "从内置浏览器全量拓取",
-        captureCurrentSession: "抓当前会话",
+        captureCurrentSession: "抓当前浏览器身份",
         captureAllSessions: "抓全部",
         captureFromBrowserTitle:
           "抓当前会话的浏览器分区,或兜底合并当前活着的所有浏览器面板 cookie,存成一条凭证。",
@@ -562,7 +562,8 @@ export const extensions = {
         captureAllFromBrowser: "全量拓取(整个分区)",
         capturedAllToast: "已保存「{label}」(全量 {count} 个 cookie)",
         noCookieAtAll: "内置浏览器分区当前没有任何 cookie。请先在内置浏览器登录后再拓取。",
-        noCookieCurrentSession: "请先在本会话浏览器面板登录。",
+        noCookieCurrentSession:
+          "请先在浏览器面板登录。登录态按项目共享，同项目的其他会话也会用到它。",
         noCookieAllSessions: "当前活着的浏览器面板没有任何 cookie。请先在内置浏览器登录后再拓取。",
         actionEdit: "编辑",
         renameTitle: "重命名账号",
@@ -573,6 +574,13 @@ export const extensions = {
         aiAutoInject: "AI 可自动注入浏览器",
         aiAutoInjectOnToast: "「{label}」已设为 AI 可自动注入浏览器(免审批)",
         aiAutoInjectOffToast: "「{label}」已恢复注入前审批",
+        autoRefresh: "自动更新 Cookie",
+        autoRefreshDescription:
+          "绑定内置浏览器后，自动保存网站更新的 Cookie。已绑定账号可直接开关，无需再次注入。",
+        autoRefreshOnToast:
+          "「{label}」已开启 Cookie 自动更新；已绑定的浏览器立即同步，未绑定时需先切换账号",
+        autoRefreshOffToast: "「{label}」已关闭 Cookie 自动更新",
+        updateFailed: "保存设置失败：{error}",
         switchModeLabel: "切换时",
         switchModeClear: "清空再注入",
         switchModeMerge: "只覆盖同名",
@@ -639,6 +647,8 @@ export const extensions = {
         localSaved: "已连接 {name} 的本地方式",
         localDisconnected: "已断开 {name} 的本地方式",
         localCredentialSaved: "本地连接已保存",
+        credentialUnavailable: "凭据不可用",
+        credentialUnavailableHint: "凭据缺失或当前设备无法读取，请重新连接。",
         legacySection: "旧版凭据",
         legacySectionDescription:
           "由旧版通用表单创建、未关联具体应用的 Link 凭据；不再支持编辑，只能删除。",
@@ -1454,7 +1464,7 @@ export const extensions = {
         processing: "Processing…",
         loginAndSave: "Log in via popup & save",
         captureFromBrowser: "Capture all from built-in browser",
-        captureCurrentSession: "Capture current session",
+        captureCurrentSession: "Capture current identity",
         captureAllSessions: "Capture all",
         captureFromBrowserTitle:
           "Capture the current chat session's browser partition, or merge cookies from all currently live browser panels as one credential.",
@@ -1514,7 +1524,8 @@ export const extensions = {
         capturedAllToast: 'Saved "{label}" (full, {count} cookies)',
         noCookieAtAll:
           "The built-in browser partition has no cookies yet. Log in via the built-in browser first, then capture.",
-        noCookieCurrentSession: "Log in through this session's browser panel first.",
+        noCookieCurrentSession:
+          "Log in through the browser panel first. Login state is shared per project, so other sessions in this project use it too.",
         noCookieAllSessions:
           "No live browser panel has cookies right now. Log in through the built-in browser first, then capture.",
         actionEdit: "Edit",
@@ -1526,6 +1537,13 @@ export const extensions = {
         aiAutoInject: "AI may inject into browser",
         aiAutoInjectOnToast: '"{label}" set to auto-inject into browser by AI (no approval)',
         aiAutoInjectOffToast: '"{label}" restored to approval before inject',
+        autoRefresh: "Automatically update cookies",
+        autoRefreshDescription:
+          "Save updated cookies from the linked in-app browser. Toggle linked accounts without injecting again.",
+        autoRefreshOnToast:
+          'Cookie auto-update enabled for "{label}"; linked browsers sync now, otherwise switch to the account first',
+        autoRefreshOffToast: 'Cookie auto-update disabled for "{label}"',
+        updateFailed: "Could not save settings: {error}",
         switchModeLabel: "On switch",
         switchModeClear: "Clear then inject",
         switchModeMerge: "Overwrite same-name",
@@ -1594,6 +1612,9 @@ export const extensions = {
         localSaved: "Connected {name} locally",
         localDisconnected: "Disconnected the local {name} connection",
         localCredentialSaved: "Local connection saved",
+        credentialUnavailable: "Credential unavailable",
+        credentialUnavailableHint:
+          "The credential is missing or unreadable on this device. Reconnect to restore access.",
         legacySection: "Legacy credentials",
         legacySectionDescription:
           "Link credentials created by the old generic form without an app binding; they can no longer be edited, only deleted.",
