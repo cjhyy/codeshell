@@ -308,6 +308,7 @@ export type { MemoryEntry, MemoryOrigin, MemoryScope } from "./session/memory.js
 export type {
   RouteSessionMessageInput,
   SessionMessageRouter,
+  SessionMessageReceipt,
   SessionMessageTarget,
   SessionMessageToolService,
 } from "./session/session-message.js";
@@ -663,6 +664,13 @@ export {
   linkActionToolDef,
   linkActionTool,
   isLinkActionAvailable,
+  getLinkStatus,
+  type LinkStatusOptions,
+  type LinkStatusDependencies,
+  type LinkConnectionStatus,
+  type LinkCliStatus,
+  type LinkProviderStatus,
+  type LinkStatusResult,
   type LinkActionRisk,
   type LocalLinkIdentity,
   type LocalLinkValidationResult,
@@ -721,6 +729,7 @@ export {
 export type {
   BrowserBridge,
   BrowserElement,
+  BrowserIdentity,
   BrowserSnapshot,
   BrowserResult,
   BrowserResultCode,

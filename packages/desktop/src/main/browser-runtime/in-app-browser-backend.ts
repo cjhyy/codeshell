@@ -8,6 +8,7 @@ import type {
   BrowserRuntimeBackendAcquireOptions,
   BrowserRuntimeBackendLease,
 } from "./backend.js";
+import type { BrowserBridge, BrowserIdentity, BrowserSnapshot } from "@cjhyy/code-shell-core";
 
 interface InAppTargetPool {
   acquire(options: { ownerId: string; partition: string; initialUrl?: string; title?: string }): {
@@ -62,7 +63,13 @@ export class InAppBrowserBackend implements BrowserRuntimeBackend {
     });
     return {
       kind: this.kind,
-      bridge: lease.bridge,
+      // Stamp the identity the model sees. Only this layer knows which
+      // partition the session resolved to, and browser_observe renders it so
+      // the model can tell a sandbox from a real logged-in browser.
+      bridge: withIdentity(lease.bridge, {
+        profileId: partition,
+        sourceKind: "builtin-panel",
+      }),
       canReveal: true,
       show: () => lease.show(),
       hide: () => lease.hide(),
@@ -82,3 +89,24 @@ export class InAppBrowserBackend implements BrowserRuntimeBackend {
 export const inAppBrowserBackend = new InAppBrowserBackend({
   targetPool: backgroundBrowserRuntime as BackgroundBrowserRuntime,
 });
+
+/**
+ * Wrap a bridge so every snapshot reports which identity produced it, leaving
+ * all other behavior — and every other method — untouched.
+ */
+function withIdentity(inner: BrowserBridge, identity: BrowserIdentity): BrowserBridge {
+  return new Proxy(inner, {
+    get(target, prop, receiver) {
+      if (prop !== "snapshot") return Reflect.get(target, prop, receiver);
+      return async (...args: unknown[]) => {
+        const snap = await (target.snapshot as (...a: unknown[]) => Promise<BrowserSnapshot>).apply(
+          target,
+          args,
+        );
+        // A bridge that already knows its identity (a future external source)
+        // wins: it knows more than this backend does.
+        return snap.identity ? snap : { ...snap, identity };
+      };
+    },
+  });
+}

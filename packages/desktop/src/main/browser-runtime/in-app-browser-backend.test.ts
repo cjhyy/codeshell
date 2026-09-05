@@ -135,3 +135,71 @@ describe("InAppBrowserBackend", () => {
     ).rejects.toThrow("no in-app browser profile");
   });
 });
+
+describe("InAppBrowserBackend identity", () => {
+  test("stamps the profile identity onto every snapshot", async () => {
+    // The tool layer renders snapshot.identity so the model can tell a sandbox
+    // partition from a real logged-in browser. The backend is the only layer
+    // that knows which partition a session resolved to, so it must supply it.
+    const sessionId = "identity-test-session";
+    registerSessionBucket(sessionId, "project::identity-test-session");
+    try {
+      const backend = new InAppBrowserBackend({
+        targetPool: {
+          acquire: () => ({
+            bridge: bridge(),
+            show: async () => undefined,
+            hide: () => undefined,
+            release: () => undefined,
+          }),
+          close: () => undefined,
+          closeAll: () => undefined,
+        },
+      });
+
+      const lease = await backend.acquire({
+        ownerId: `interactive:${sessionId}`,
+        profileId: sessionId,
+      });
+      const snap = await lease.bridge.snapshot();
+      expect(snap.identity?.profileId).toBe(
+        browserPartitionForBucket("project::identity-test-session"),
+      );
+      // The built-in panel is NOT the user's own browser: acting here must not
+      // be described as touching their real accounts.
+      expect(snap.identity?.sourceKind).toBe("builtin-panel");
+      expect(snap.identity?.isUserBrowser).toBeFalsy();
+    } finally {
+      forgetSession(sessionId);
+    }
+  });
+
+  test("leaves the rest of the snapshot untouched", async () => {
+    const sessionId = "identity-passthrough-session";
+    registerSessionBucket(sessionId, "project::identity-passthrough-session");
+    try {
+      const backend = new InAppBrowserBackend({
+        targetPool: {
+          acquire: () => ({
+            bridge: bridge(),
+            show: async () => undefined,
+            hide: () => undefined,
+            release: () => undefined,
+          }),
+          close: () => undefined,
+          closeAll: () => undefined,
+        },
+      });
+      const lease = await backend.acquire({
+        ownerId: `interactive:${sessionId}`,
+        profileId: sessionId,
+      });
+      const direct = await bridge().snapshot();
+      const wrapped = await lease.bridge.snapshot();
+      expect(wrapped.url).toBe(direct.url);
+      expect(wrapped.elements).toEqual(direct.elements);
+    } finally {
+      forgetSession(sessionId);
+    }
+  });
+});
