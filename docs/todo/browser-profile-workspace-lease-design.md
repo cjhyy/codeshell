@@ -220,16 +220,16 @@ const driver = driverForGuest(guest);     // :211  执行
 
 ## 5. 落地顺序
 
-| 阶段      | 内容                                                                                                                                   | 依赖 | 用户可感收益                                               |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------- |
-| ~~**0**~~ | ✅ **已落地** `29330223`：两份 `browserPartitionForBucket` + 两份 Quick Chat 前缀收口成一处                                            | —    | 无（纯重构，零行为变化）                                   |
-| ~~**1**~~ | ✅ **已落地** `ca4f9739`：partition 由 profile 派生；默认 project 级 `shared-auth`；显式 profile 可隔离/可跨项目共享；按决定**不迁移** | 0    | **新 Session 不再丢登录态**                                |
-| **2**     | `BrowserWorkspace` + `SessionBrowserBinding`（不含 `role`）                                                                            | 1    | 页面归属与 Session 解耦                                    |
-| **3**     | 稳定 `tabId` + `TabControl` 排他写 + §3.2 校验 + §3.3 四种处置                                                                         | 2    | 不再误操作已导航的页面                                     |
-| **4**     | `claim-tab` 显式移交                                                                                                                   | 3    | 跨 Session 交接具体页面                                    |
-| **5**     | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                                                              | 3    | 复用用户真实登录态                                         |
-| **6**     | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                                                                           | 3    | 浏览器任务可跑在服务端                                     |
-| **7**     | 工具面身份暴露（§8.3）+ 「登录后抓取另存」回路（§8.4）                                                                                 | 1    | Agent 知道自己以谁的身份在点；小号登录态可搬进独立 profile |
+| 阶段      | 内容                                                                                                                                   | 依赖 | 用户可感收益                                           |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------ |
+| ~~**0**~~ | ✅ **已落地** `29330223`：两份 `browserPartitionForBucket` + 两份 Quick Chat 前缀收口成一处                                            | —    | 无（纯重构，零行为变化）                               |
+| ~~**1**~~ | ✅ **已落地** `ca4f9739`：partition 由 profile 派生；默认 project 级 `shared-auth`；显式 profile 可隔离/可跨项目共享；按决定**不迁移** | 0    | **新 Session 不再丢登录态**                            |
+| **2**     | `BrowserWorkspace` + `SessionBrowserBinding`（不含 `role`）                                                                            | 1    | 页面归属与 Session 解耦                                |
+| **3**     | 稳定 `tabId` + `TabControl` 排他写 + §3.2 校验 + §3.3 四种处置                                                                         | 2    | 不再误操作已导航的页面                                 |
+| **4**     | `claim-tab` 显式移交                                                                                                                   | 3    | 跨 Session 交接具体页面                                |
+| **5**     | `BrowserSource` 外部来源（attach 用户 Chrome）+ §6.2 识别 + §6.3 分级权限                                                              | 3    | 复用用户真实登录态                                     |
+| **6**     | 服务端 `BrowserBridge` 实现 + `TabControlStore` 共享存储实现                                                                           | 3    | 浏览器任务可跑在服务端                                 |
+| **7**     | 工具面身份暴露（§8.3）✅ 已落地；Cookie UI 的 profile 维度适配（§8.4 三条待做）                                                        | 1    | Agent 知道自己以谁的身份在点；换号 UI 说得清是哪个身份 |
 
 Phase 0 先做的理由：不收口，后面每改一次 partition 规则都要改两个地方，且两处会静默漂移。
 
@@ -367,19 +367,27 @@ Codex 的接管校验包含**浏览器 ID**，不只是 tabId。理由同 §3.2�
 2. **`browser_navigate` 增加可选 `profile` 入参**，语义等同 §3.1 的显式选择；不传就是 project 默认。用于"这一步用小号"的场景。
 3. 不要给 `browser_act` 加 profile 参数——身份应在打开页面时确定，而不是每次点击都能换。
 
-### 8.4 缺口二：登录态的获取路径不完整
+### 8.4 登录态回路：已经完整（更正）
 
-现在只有「注入已存的 cookie」，没有「把刚登录的状态存下来」这条**回路**。用户手动完成登录（§3.3 的 `requestHumanTakeover` 已经能把浏览器交给人）之后，那份登录态只活在 partition 里，没有被抓成可复用的凭证。
+**本节的初稿写错了**，说「只有注入、没有抓取另存」。实际逐条核实后，回路是**通的**：
 
-补齐需要一个动作（可以是工具，也可以是 UI 按钮）：
+| 环节                | 位置                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 人工登录            | `requestHumanTakeover`（`browser-bridge.ts:171`）                                                                  |
+| 抓取当前分区 cookie | `captureCookieJar` / `captureAllCookies`（`credentials-service.ts:131,145`）                                       |
+| IPC                 | `credentials:captureCookieJar` / `captureAllCookies` / `captureAllCookiesAllSessions`（`index.ts:4295,4311,4316`） |
+| UI 抓取并另存为凭证 | `renderer/credentials/CookieTab.tsx:233,241` → `credentials.save(...)`（`:213`）                                   |
+| 注回浏览器          | `restoreCookieToBrowser`（`CookieTab.tsx:279`）/ `InjectCredential`（Agent 侧）                                    |
 
-```text
-人工登录完成 → 抓取当前 profile 的 cookie（captureCookieJar，已存在）
-             → 存为命名凭证（凭证系统已存在）
-             → 之后 InjectCredential 可注入任意 profile（已存在）
-```
+所以 §3.1 `isolated` 的实用前提**已经满足**：用户可以在一个 profile 里登录小号、抓取另存，再注入到另一个 profile。
 
-**三块都已存在，缺的只是把它们串起来的那一步**。这也是 §3.1 `isolated` 的实用前提：没有"抓取并另存"，用户就没法把小号登录态搬进独立 profile。
+**真正剩下的只是 profile 维度的适配**（Phase 1 之后才出现的新问题）：
+
+1. `CookieTab` 的抓取按钮以 `activeBucket` 为目标，而 bucket 现在映射到 project profile。文案应从「当前会话的浏览器」改为「当前 profile」，否则用户会以为抓的是这个 Session 独有的。
+2. 抓取/注入的 UI 里**看不到 profile 名**（§5.2 的可见性要求同样适用于这里）——用户需要知道自己正在从哪个身份抓、往哪个身份注。
+3. 没有「把这条凭证注入到**指定** profile」的入口，只能注入当前会话所属的 profile。做 `isolated` 换号时这一步是必要的。
+
+这三条都是 UI/文案层面的适配，不需要新的底层能力。
 
 ### 8.5 外部浏览器的 Cookie 边界（§6 的前置约束）
 

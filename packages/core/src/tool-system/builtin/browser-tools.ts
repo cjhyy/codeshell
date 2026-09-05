@@ -27,7 +27,7 @@
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import type { BuiltinToolReturn } from "./index.js";
-import type { BrowserImageData } from "../browser-bridge.js";
+import type { BrowserImageData, BrowserSnapshot } from "../browser-bridge.js";
 import { renderElementList } from "../browser-bridge.js";
 import { capabilitiesFor } from "../../llm/capabilities/index.js";
 import type { ProviderKindName } from "../../llm/provider-kinds.js";
@@ -41,6 +41,23 @@ function bridge(ctx?: ToolContext) {
 
 const STALE = (ref: string) =>
   `Error: ref ${ref} is no longer valid (page changed). Re-run browser_observe.`;
+
+/**
+ * One line naming the login identity this page is being viewed as.
+ *
+ * A profile id alone does not convey risk, so the user's own browser gets an
+ * explicit warning: actions there hit their real accounts, not a sandbox.
+ * Renders nothing when the host reports no identity, so hosts that only drive
+ * their own sandbox are unaffected.
+ */
+function renderIdentity(identity: BrowserSnapshot["identity"]): string {
+  if (!identity) return "";
+  const source = identity.sourceKind ? ` (${identity.sourceKind})` : "";
+  const warning = identity.isUserBrowser
+    ? " — this is the user's own browser: actions here affect their real accounts"
+    : "";
+  return `\nIdentity: ${identity.profileId}${source}${warning}`;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // browser_observe — observe the page (snapshot / read / extract)
@@ -119,7 +136,7 @@ export async function browserObserveTool(
     case "snapshot": {
       const snap = await b.snapshot();
       if (snap.detail) return `Error: ${snap.detail}`;
-      const header = `URL: ${snap.url}${snap.title ? `\nTitle: ${snap.title}` : ""}`;
+      const header = `URL: ${snap.url}${snap.title ? `\nTitle: ${snap.title}` : ""}${renderIdentity(snap.identity)}`;
       const human = snap.needsHuman
         ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser window, then continue.`
         : "";

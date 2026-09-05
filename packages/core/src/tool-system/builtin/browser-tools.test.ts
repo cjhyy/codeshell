@@ -371,3 +371,51 @@ describe("browser_act request_takeover", () => {
     expect(out).toContain("cannot reveal");
   });
 });
+
+describe("browser identity is visible to the model", () => {
+  test("snapshot reports which browser identity the page is being viewed as", async () => {
+    // The model previously could not see, let alone choose, whose login it was
+    // browsing with. That is merely awkward for the built-in sandbox and
+    // becomes a safety problem once an external browser can be attached: a
+    // click in a throwaway partition and a click in the user's real Chrome
+    // have very different consequences.
+    const ctx = ctxWith({
+      snapshot: async () => ({
+        url: "https://github.com/settings",
+        title: "Settings",
+        elements: [{ ref: "e1", role: "button", name: "Delete" }],
+        identity: { profileId: "p:my-project", sourceKind: "builtin-panel" },
+      }),
+    });
+    const out = await browserObserveTool({}, ctx);
+    expect(out).toContain("p:my-project");
+  });
+
+  test("browsing the user's own browser is called out, not just labelled", async () => {
+    // A profile id alone does not tell the model that actions here are real.
+    const ctx = ctxWith({
+      snapshot: async () => ({
+        url: "https://mail.example/inbox",
+        elements: [],
+        identity: {
+          profileId: "u:personal",
+          sourceKind: "attached-chrome",
+          isUserBrowser: true,
+        },
+      }),
+    });
+    const out = await browserObserveTool({}, ctx);
+    expect(out).toMatch(/user'?s own browser|real browser|真实浏览器/i);
+  });
+
+  test("a bridge that reports no identity still renders normally", async () => {
+    // Older/simpler bridges (and every current test double) omit it.
+    const ctx = ctxWith({
+      snapshot: async () => ({ url: "https://x.example/", elements: [] }),
+    });
+    const out = await browserObserveTool({}, ctx);
+    expect(out).toContain("https://x.example/");
+    expect(out).not.toContain("undefined");
+    expect(out).not.toContain("Identity");
+  });
+});

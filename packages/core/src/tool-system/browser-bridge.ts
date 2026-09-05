@@ -27,6 +27,23 @@ export interface BrowserElement {
   value?: string;
 }
 
+/**
+ * Which browser identity a page is being viewed as.
+ *
+ * The model cannot otherwise tell a throwaway sandbox partition from the user's
+ * real logged-in browser, and the consequences of a click differ sharply
+ * between them. Optional so a host that only ever drives its own sandbox need
+ * not supply it. See docs/todo/browser-profile-workspace-lease-design.md §8.3.
+ */
+export interface BrowserIdentity {
+  /** Profile the partition is derived from (e.g. "p:<project>" / "u:<name>"). */
+  profileId: string;
+  /** Where the browser itself comes from. */
+  sourceKind?: "builtin-panel" | "builtin-headless" | "attached-chrome" | "remote";
+  /** True when this is the user's own browser, carrying their real logins. */
+  isUserBrowser?: boolean;
+}
+
 export interface BrowserSnapshot {
   url: string;
   title?: string;
@@ -40,6 +57,8 @@ export interface BrowserSnapshot {
   /** Set when the page needs the user to act (login wall / 2FA) — agent should
    *  hand control back to the user rather than retry. */
   needsHuman?: string;
+  /** Which login identity this page is being viewed as (§8.3). */
+  identity?: BrowserIdentity;
 }
 
 export type BrowserResultCode =
