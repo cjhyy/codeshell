@@ -87,6 +87,12 @@ export class BrowserWorkspaceRegistry {
     return [...(this.sessionsByWorkspace.get(workspaceId) ?? [])];
   }
 
+  /** Forget every binding. For host/test teardown. */
+  clear(): void {
+    this.bySession.clear();
+    this.sessionsByWorkspace.clear();
+  }
+
   /** Drop a Session's binding. A no-op when it was never bound. */
   unbind(sessionId: string): void {
     const existing = this.bySession.get(sessionId);

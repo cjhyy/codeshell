@@ -73,3 +73,16 @@ describe("BrowserWorkspaceRegistry", () => {
     expect(reg.bindingFor("s-aaa")?.profileId).toBe("u:second-account");
   });
 });
+
+describe("clear", () => {
+  test("drops every binding and its workspace membership", () => {
+    // Used by test/teardown resets; leaving membership behind would let a
+    // stale session authorize operations on a workspace it no longer holds.
+    const reg = new BrowserWorkspaceRegistry();
+    reg.bind("s-aaa", "proj-1::s-aaa");
+    reg.bind("s-bbb", "proj-1::s-bbb");
+    reg.clear();
+    expect(reg.bindingFor("s-aaa")).toBeUndefined();
+    expect(reg.sessionsFor(workspaceIdForBucket("proj-1::s-aaa"))).toEqual([]);
+  });
+});

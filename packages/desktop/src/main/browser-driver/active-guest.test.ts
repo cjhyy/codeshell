@@ -237,3 +237,51 @@ describe("bucket-aware browser guest registry", () => {
     expect(activeGuestForBucket("bucket-b")).toBeNull();
   });
 });
+
+describe("session ↔ bucket mapping (renderer authorization seam)", () => {
+  test("lists every session sharing a bucket, and nothing for an unknown one", () => {
+    // sessionIdsForBucket authorizes renderer browser operations, so both the
+    // positive and the empty answer are security-relevant.
+    registerSessionBucket("s-1", "proj::b1");
+    registerSessionBucket("s-2", "proj::b1");
+    registerSessionBucket("s-3", "proj::b2");
+    expect(sessionIdsForBucket("proj::b1").sort()).toEqual(["s-1", "s-2"]);
+    expect(sessionIdsForBucket("proj::b2")).toEqual(["s-3"]);
+    expect(sessionIdsForBucket("proj::never")).toEqual([]);
+    expect(sessionIdsForBucket(undefined)).toEqual([]);
+    forgetSession("s-1");
+    forgetSession("s-2");
+    forgetSession("s-3");
+  });
+
+  test("rebinding a session moves it out of its old bucket", () => {
+    registerSessionBucket("s-move", "proj::from");
+    registerSessionBucket("s-move", "proj::to");
+    expect(sessionIdsForBucket("proj::from")).toEqual([]);
+    expect(sessionIdsForBucket("proj::to")).toEqual(["s-move"]);
+    forgetSession("s-move");
+  });
+
+  test("forgetting one session keeps the bucket's other members addressable", () => {
+    registerSessionBucket("s-a", "proj::shared");
+    registerSessionBucket("s-b", "proj::shared");
+    forgetSession("s-a");
+    expect(sessionIdsForBucket("proj::shared")).toEqual(["s-b"]);
+    expect(partitionForSession("s-b")).toBe(browserPartitionForBucket("proj::shared"));
+    forgetSession("s-b");
+  });
+
+  test("the partition mapping survives until the last session leaves", () => {
+    // forgetSession drops the partition only when nothing references the
+    // bucket any more; dropping it early would strand a live guest.
+    registerSessionBucket("s-x", "proj::last");
+    registerSessionBucket("s-y", "proj::last");
+    forgetSession("s-x");
+    expect(partitionForSession("s-y")).toBe(browserPartitionForBucket("proj::last"));
+    forgetSession("s-y");
+  });
+
+  test("forgetting an unknown session is a no-op", () => {
+    expect(() => forgetSession("never-registered")).not.toThrow();
+  });
+});

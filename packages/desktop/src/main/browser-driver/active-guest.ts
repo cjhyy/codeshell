@@ -14,6 +14,7 @@ import type { Session, WebContents } from "electron";
 // state. See shared/browser-partition.ts.
 import { sanitizeBrowserBucket as sharedSanitizeBucket } from "../../shared/browser-partition.js";
 import { browserPartitionForBucket as sharedPartitionForBucket } from "../../shared/browser-profile.js";
+import { BrowserWorkspaceRegistry } from "../../shared/browser-workspace.js";
 
 const LEGACY_BUCKET = "__legacy__";
 
@@ -74,7 +75,14 @@ export interface GuestTab {
 const byGuestId = new Map<number, GuestRecord>();
 const guestIdsByBucket = new Map<BrowserBucket, Set<number>>();
 const activeGuestIdByBucket = new Map<BrowserBucket, number>();
-const bucketBySessionId = new Map<string, BrowserBucket>();
+/**
+ * Session → workspace bindings. The workspace id IS the bucket here: this
+ * registry replaces a bare Map so the binding layer has one owner, and so
+ * "which sessions share this workspace" is an indexed lookup rather than a
+ * scan of every session — that question authorizes renderer browser
+ * operations (sessionIdsForBucket). See shared/browser-workspace.ts.
+ */
+const workspaces = new BrowserWorkspaceRegistry();
 const partitionByBucket = new Map<BrowserBucket, BrowserPartition>();
 const wiredGuestIds = new Set<number>();
 const pendingAttachedGuests = new Map<
@@ -103,7 +111,7 @@ export function registerSessionBucket(
 ): void {
   if (!sessionId || !bucket) throw new Error("registerSessionBucket requires sessionId and bucket");
   assertExpectedPartition(bucket, partition);
-  bucketBySessionId.set(sessionId, bucket);
+  workspaces.bindTo(sessionId, bucket, partition);
   partitionByBucket.set(bucket, partition);
 }
 
@@ -159,7 +167,8 @@ export function registerAttachedGuestMetadata(input: RegisterAttachedGuestMetada
 
   assertSessionMetadata(input.engineSessionId, input.bucket);
   const engineSessionId =
-    input.engineSessionId && bucketBySessionId.get(input.engineSessionId) === input.bucket
+    input.engineSessionId &&
+    workspaces.bindingFor(input.engineSessionId)?.workspaceId === input.bucket
       ? input.engineSessionId
       : undefined;
   registerGuest({
@@ -216,7 +225,9 @@ export function registerGuest(input: RegisterGuestInput | WebContents): void {
   ids.add(guestId);
   activeGuestIdByBucket.set(bucket, guestId);
   partitionByBucket.set(bucket, partition);
-  if (record.engineSessionId) bucketBySessionId.set(record.engineSessionId, bucket);
+  if (record.engineSessionId) {
+    workspaces.bindTo(record.engineSessionId, bucket, partitionByBucket.get(bucket) ?? bucket);
+  }
   wireGuest(record.guest);
 }
 
@@ -237,23 +248,19 @@ export function activeGuestForBucket(bucket: BrowserBucket): GuestTarget | null 
 
 export function activeGuestForSession(sessionId: string | undefined): GuestTarget | null {
   if (!sessionId) return null;
-  const bucket = bucketBySessionId.get(sessionId);
+  const bucket = workspaces.bindingFor(sessionId)?.workspaceId;
   return bucket ? activeGuestForBucket(bucket) : null;
 }
 
 export function bucketForSession(sessionId: string | undefined): BrowserBucket | null {
   if (!sessionId) return null;
-  return bucketBySessionId.get(sessionId) ?? null;
+  return workspaces.bindingFor(sessionId)?.workspaceId ?? null;
 }
 
 /** Session identities currently mapped to a browser bucket (renderer authorization seam). */
 export function sessionIdsForBucket(bucket: string | undefined): string[] {
   if (!bucket) return [];
-  const ids: string[] = [];
-  for (const [sessionId, candidate] of bucketBySessionId) {
-    if (candidate === bucket) ids.push(sessionId);
-  }
-  return ids;
+  return workspaces.sessionsFor(bucket);
 }
 
 export function bucketForGuestId(guestId: number): BrowserBucket | null {
@@ -319,11 +326,12 @@ export function focusGuestForSession(sessionId: string | undefined, tabId: strin
 }
 
 export function forgetSession(sessionId: string): void {
-  const bucket = bucketBySessionId.get(sessionId);
-  bucketBySessionId.delete(sessionId);
+  const bucket = workspaces.bindingFor(sessionId)?.workspaceId;
+  workspaces.unbind(sessionId);
   if (!bucket) return;
-  const stillReferenced = [...bucketBySessionId.values()].some((candidate) => candidate === bucket);
-  if (!stillReferenced) partitionByBucket.delete(bucket);
+  // Keep the partition while any other session still uses this workspace;
+  // dropping it early would strand their live guests.
+  if (workspaces.sessionsFor(bucket).length === 0) partitionByBucket.delete(bucket);
 }
 
 /** Legacy: current global automation target, kept for non-automation callers/tests. */
@@ -387,7 +395,7 @@ function assertExpectedPartition(bucket: string, partition: string): void {
 
 function assertSessionMetadata(sessionId: string | undefined, bucket: string): void {
   if (!sessionId) return;
-  const existing = bucketBySessionId.get(sessionId);
+  const existing = workspaces.bindingFor(sessionId)?.workspaceId;
   if (existing !== undefined && existing !== bucket) {
     throw new Error(
       `browser session bucket mismatch for session "${sessionId}": expected ${existing}`,
@@ -490,7 +498,7 @@ export function _resetGuests(): void {
   byGuestId.clear();
   guestIdsByBucket.clear();
   activeGuestIdByBucket.clear();
-  bucketBySessionId.clear();
+  workspaces.clear();
   partitionByBucket.clear();
   wiredGuestIds.clear();
   pendingAttachedGuests.clear();
