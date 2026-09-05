@@ -90,3 +90,28 @@ function looksLikeSecret(text: string): boolean {
 }
 
 export { SENSITIVE_WORDS };
+
+/**
+ * Whether an action can change the page or submit something, and therefore
+ * needs exclusive write control over the tab.
+ *
+ * Reads stay lock-free: making a snapshot contend for a writer lock would make
+ * ordinary observation fail whenever another Session happens to hold the tab.
+ * Unknown actions count as writes so a newly added one cannot silently bypass
+ * the gate by not being listed here.
+ */
+const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
+  "snapshot",
+  "readContent",
+  "extractLinks",
+  "fetchImages",
+  "screenshot",
+  "listTabs",
+  "scroll",
+  "waitForLoad",
+  "hover",
+]);
+
+export function isWriteAction(action: string): boolean {
+  return !READ_ONLY_ACTIONS.has(action);
+}

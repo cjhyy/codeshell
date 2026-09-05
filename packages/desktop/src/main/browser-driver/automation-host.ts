@@ -17,6 +17,7 @@ import { attachDebugger, detachDebugger } from "./electron-cdp.js";
 import {
   isDomainAllowed,
   isSensitiveAction,
+  isWriteAction,
   SENSITIVE_WORDS,
   type BrowserAutomationPolicy,
 } from "./policy.js";
@@ -109,6 +110,13 @@ export interface AutomationDeps {
    * human is needed. Policy enforcement remains the bridge owner's job.
    */
   backgroundBridge?: BrowserBridge;
+  /**
+   * Ask whether this Session may still WRITE the active tab (§3.2). Optional:
+   * a host with no lease wiring stays permissive, exactly as before.
+   * Read-only actions never consult it — observation must not contend for a
+   * writer lock.
+   */
+  validateTabControl?: () => Promise<{ ok: true } | { ok: false; reason: string }>;
   /** Domain whitelist / policy (read from settings). */
   policy: () => BrowserAutomationPolicy;
   /** Ask the user to approve a sensitive/off-whitelist action. Resolves true to
@@ -198,12 +206,23 @@ export async function handleBrowserAction(
   }
 
   // Sensitive action approval (click/type on payment/delete/credential surfaces).
-  const learnedSensitiveRef = Boolean(
-    req.ref && sensitiveRefsByGuest.get(guest.id)?.has(req.ref),
-  );
+  const learnedSensitiveRef = Boolean(req.ref && sensitiveRefsByGuest.get(guest.id)?.has(req.ref));
   if (isSensitiveAction(req) || learnedSensitiveRef) {
     const ok = await requestApproval(deps, `敏感浏览器操作:${req.action} ${req.ref ?? ""}`);
     if (!ok) return JSON.stringify({ ok: false, detail: "sensitive action declined" });
+  }
+
+  // Exclusive-writer check, last gate before execution. Only writes consult
+  // it: the dangerous case is not a stolen tab but a MOVED one — the user
+  // navigates between turns and the agent resumes typing into another page.
+  if (deps.validateTabControl && isWriteAction(req.action)) {
+    const control = await deps.validateTabControl();
+    if (!control.ok) {
+      return JSON.stringify({
+        ok: false,
+        detail: `browser tab control unavailable: ${control.reason}`,
+      });
+    }
   }
 
   // Reuse the per-guest driver so the snapshot's ref map survives into the
@@ -222,8 +241,7 @@ export async function handleBrowserAction(
           new Set(
             (result as BrowserSnapshot).elements
               .filter(
-                (element) =>
-                  element.sensitive === true || hasHighConsequenceName(element.name),
+                (element) => element.sensitive === true || hasHighConsequenceName(element.name),
               )
               .map((element) => element.ref),
           ),

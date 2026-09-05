@@ -190,10 +190,7 @@ describe("handleBrowserAction", () => {
     expect(snap.elements[1].ref).toBe("s1:e2");
     expect(debuggerState).toMatchObject({ attached: false, attaches: 1, detaches: 1 });
 
-    const out = await handleBrowserAction(
-      { action: "click", ref: snap.elements[1].ref },
-      d,
-    );
+    const out = await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
     expect(JSON.parse(out)).toMatchObject({ ok: true });
     expect(debuggerState).toMatchObject({ attached: false, attaches: 2, detaches: 2 });
   });
@@ -204,10 +201,7 @@ describe("handleBrowserAction", () => {
     expect(snap.elements[1].ref).toBe("s1:e2");
     // The per-guest driver (id:1) persists across calls, so e2's ref map survives
     // into this separate click call — it must NOT be stale.
-    const out = await handleBrowserAction(
-      { action: "click", ref: snap.elements[1].ref },
-      d,
-    );
+    const out = await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
     expect(JSON.parse(out)).toMatchObject({ ok: true });
   });
 
@@ -281,10 +275,7 @@ describe("handleBrowserAction", () => {
     });
 
     const snapshot = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
-    const out = await handleBrowserAction(
-      { action: "click", ref: snapshot.elements[0].ref },
-      d,
-    );
+    const out = await handleBrowserAction({ action: "click", ref: snapshot.elements[0].ref }, d);
 
     expect(JSON.parse(out)).toMatchObject({ ok: false, detail: "sensitive action declined" });
     expect(approvalRequests).toBe(1);
@@ -294,3 +285,44 @@ describe("handleBrowserAction", () => {
 
 // The reveal decision is owned by BackgroundBrowserRuntime, which calls
 // host.show() at each takeover point; see background-runtime.test.ts.
+
+describe("tab control gate", () => {
+  /** A snapshot first: refs only resolve against the latest snapshot. */
+  async function clickWith(over: Partial<AutomationDeps>): Promise<string> {
+    const d = deps(over);
+    const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d)) as {
+      elements: Array<{ ref: string }>;
+    };
+    return handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
+  }
+
+  test("refuses a write when control validation fails", async () => {
+    // The gate chain already checks domain and sensitivity per action; this
+    // adds "may this Session write THIS tab, still showing THIS page".
+    const parsed = JSON.parse(
+      await clickWith({ validateTabControl: async () => ({ ok: false, reason: "navigated" }) }),
+    ) as { ok: boolean; detail?: string };
+    expect(parsed.ok).toBe(false);
+    expect(parsed.detail).toContain("navigated");
+  });
+
+  test("lets reads through even when control is unavailable", async () => {
+    // Observation must not contend for a writer lock, or ordinary reading
+    // breaks whenever another Session holds the tab.
+    const out = await handleBrowserAction(
+      { action: "snapshot" },
+      deps({ validateTabControl: async () => ({ ok: false, reason: "held" }) }),
+    );
+    expect(JSON.parse(out).elements).toBeDefined();
+  });
+
+  test("allows writes when validation passes", async () => {
+    const out = await clickWith({ validateTabControl: async () => ({ ok: true }) });
+    expect(JSON.parse(out)).toMatchObject({ ok: true });
+  });
+
+  test("stays permissive when the host installs no validator", async () => {
+    // Desktop today has no lease wiring; adding the seam must not break it.
+    expect(JSON.parse(await clickWith({}))).toMatchObject({ ok: true });
+  });
+});

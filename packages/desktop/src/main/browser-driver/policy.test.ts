@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isDomainAllowed, isSensitiveAction, DEFAULT_POLICY } from "./policy";
+import { isDomainAllowed, isSensitiveAction, isWriteAction, DEFAULT_POLICY } from "./policy";
 
 describe("isDomainAllowed", () => {
   test("empty whitelist → allow all (permissive default)", () => {
@@ -39,5 +39,38 @@ describe("isSensitiveAction", () => {
   test("non-type actions are not flagged by this cheap gate", () => {
     expect(isSensitiveAction({ action: "click", ref: "e1" })).toBe(false);
     expect(isSensitiveAction({ action: "snapshot" })).toBe(false);
+  });
+});
+
+describe("write actions require tab control", () => {
+  test("classifies page-mutating actions as writes", () => {
+    // Only these can change the page or submit something, so only these need an
+    // exclusive-writer check. Reads must stay cheap and lock-free.
+    for (const action of ["click", "type", "navigate", "selectOption", "pressKey"]) {
+      expect(isWriteAction(action)).toBe(true);
+    }
+  });
+
+  test("observation and navigation-state actions are not writes", () => {
+    // scroll and waitForLoad move the viewport / wait, but submit nothing;
+    // gating them would make ordinary reading contend for a lock.
+    for (const action of [
+      "snapshot",
+      "readContent",
+      "extractLinks",
+      "fetchImages",
+      "screenshot",
+      "listTabs",
+      "scroll",
+      "waitForLoad",
+      "hover",
+    ]) {
+      expect(isWriteAction(action)).toBe(false);
+    }
+  });
+
+  test("an unknown action is treated as a write, not waved through", () => {
+    // Fail closed: a newly added action must not silently bypass the gate.
+    expect(isWriteAction("teleport")).toBe(true);
   });
 });
