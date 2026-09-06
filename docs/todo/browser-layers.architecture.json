@@ -1,0 +1,415 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CodeShell 浏览器分层：Profile / Workspace / TabControl",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1300,
+      760
+    ]
+  },
+  "components": [
+    {
+      "id": "session",
+      "type": "external",
+      "label": "Work Session",
+      "sublabel": "bucket = project::session",
+      "pos": [
+        50,
+        260
+      ],
+      "size": [
+        250,
+        84
+      ]
+    },
+    {
+      "id": "tools",
+      "type": "frontend",
+      "label": "browser_observe / act",
+      "sublabel": "模型看见的工具面",
+      "pos": [
+        650,
+        90
+      ],
+      "size": [
+        280,
+        84
+      ]
+    },
+    {
+      "id": "identity",
+      "type": "security",
+      "label": "BrowserIdentity",
+      "sublabel": "snapshot 告知以谁的身份在点",
+      "pos": [
+        330,
+        90
+      ],
+      "size": [
+        260,
+        84
+      ],
+      "tag": "Phase 7"
+    },
+    {
+      "id": "binding",
+      "type": "backend",
+      "label": "SessionBrowserBinding",
+      "sublabel": "哪个 Session 用哪组页面",
+      "pos": [
+        330,
+        260
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "workspace",
+      "type": "backend",
+      "label": "BrowserWorkspace",
+      "sublabel": "一组标签页（每 Session 独立）",
+      "pos": [
+        330,
+        430
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "profile",
+      "type": "database",
+      "label": "BrowserProfile",
+      "sublabel": "登录态 · 默认按项目共享",
+      "pos": [
+        330,
+        600
+      ],
+      "size": [
+        260,
+        84
+      ],
+      "tag": "Phase 1"
+    },
+    {
+      "id": "partition",
+      "type": "database",
+      "label": "Electron partition",
+      "sublabel": "persist:browser:p:<project>",
+      "pos": [
+        50,
+        600
+      ],
+      "size": [
+        250,
+        84
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "security",
+      "label": "写操作门链",
+      "sublabel": "白名单 → 审批 → TabControl",
+      "pos": [
+        650,
+        260
+      ],
+      "size": [
+        280,
+        84
+      ],
+      "tag": "Phase 3"
+    },
+    {
+      "id": "tabcontrol",
+      "type": "security",
+      "label": "TabControlStore",
+      "sublabel": "排他写锁 · 全 async",
+      "pos": [
+        650,
+        430
+      ],
+      "size": [
+        280,
+        84
+      ],
+      "tag": "Phase 3"
+    },
+    {
+      "id": "validate",
+      "type": "security",
+      "label": "四项校验",
+      "sublabel": "browserId/tabId/origin/title",
+      "pos": [
+        650,
+        600
+      ],
+      "size": [
+        280,
+        84
+      ]
+    },
+    {
+      "id": "driver",
+      "type": "backend",
+      "label": "CDP Driver",
+      "sublabel": "packages/cdp · 不依赖 Electron",
+      "pos": [
+        970,
+        260
+      ],
+      "size": [
+        250,
+        84
+      ]
+    },
+    {
+      "id": "builtin",
+      "type": "cloud",
+      "label": "内置浏览器",
+      "sublabel": "面板 guest / 后台无头",
+      "pos": [
+        970,
+        90
+      ],
+      "size": [
+        250,
+        84
+      ]
+    },
+    {
+      "id": "external",
+      "type": "cloud",
+      "label": "用户日常 Chrome",
+      "sublabel": "Phase 5 · 待做",
+      "pos": [
+        970,
+        430
+      ],
+      "size": [
+        250,
+        84
+      ],
+      "tag": "待做"
+    },
+    {
+      "id": "remote",
+      "type": "cloud",
+      "label": "服务端浏览器",
+      "sublabel": "Phase 6 · 租约需共享存储",
+      "pos": [
+        970,
+        600
+      ],
+      "size": [
+        250,
+        84
+      ],
+      "tag": "待做"
+    },
+    {
+      "id": "cookie",
+      "type": "backend",
+      "label": "Cookie 凭证",
+      "sublabel": "抓取 → 另存 → 注回（已有）",
+      "pos": [
+        50,
+        430
+      ],
+      "size": [
+        250,
+        84
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "已落地（Phase 0/1/2/3/7）",
+      "wraps": [
+        "binding",
+        "workspace",
+        "profile",
+        "partition",
+        "identity"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "单写者保证",
+      "wraps": [
+        "gate",
+        "tabcontrol",
+        "validate"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "session",
+      "to": "binding",
+      "label": "绑定",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "binding",
+      "to": "workspace",
+      "label": "拥有",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 44
+    },
+    {
+      "from": "workspace",
+      "to": "profile",
+      "label": "使用身份",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 44
+    },
+    {
+      "from": "profile",
+      "to": "partition",
+      "label": "派生",
+      "variant": "emphasis",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "from": "tools",
+      "to": "gate",
+      "label": "每个动作",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 44
+    },
+    {
+      "from": "gate",
+      "to": "tabcontrol",
+      "label": "写动作才校验",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 44
+    },
+    {
+      "from": "tabcontrol",
+      "to": "validate",
+      "label": "写前重验",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 44
+    },
+    {
+      "from": "gate",
+      "to": "driver",
+      "label": "放行",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "driver",
+      "to": "builtin",
+      "label": "CDP",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "driver",
+      "to": "external",
+      "label": "attach",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 44
+    },
+    {
+      "from": "driver",
+      "to": "remote",
+      "label": "远端",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          1240,
+          302
+        ],
+        [
+          1240,
+          642
+        ]
+      ]
+    },
+    {
+      "from": "identity",
+      "to": "tools",
+      "label": "回传身份",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "profile",
+      "to": "identity",
+      "label": "身份来源",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          600,
+          642
+        ],
+        [
+          600,
+          132
+        ]
+      ]
+    },
+    {
+      "from": "partition",
+      "to": "cookie",
+      "label": "登录态",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "为什么要拆开",
+      "items": [
+        "partition 就是 Cookie jar",
+        "原由 bucket（含 sessionId）派生 → 每开新 Session 登录态归零",
+        "实测 72 个 partition / 1.9 GB，单项目最多 14 份互不相认"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "共享登录，隔离页面",
+      "items": [
+        "同项目 Session 共享 profile：一次登录处处可用",
+        "各自持有 workspace：不抢对方标签页",
+        "要隔离就显式指定 u:<name>，也可跨项目共享（SSO）"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "危险的不是抢 tab，是 tab 被导航走",
+      "items": [
+        "用户两轮之间点到别处，Agent 可能往错页面提交表单",
+        "写前重验：origin / titleHash 不符即失效",
+        "未做：Phase 5 外部浏览器 / Phase 6 服务端（需产品决策）"
+      ]
+    }
+  ]
+}
