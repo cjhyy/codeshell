@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -12,6 +12,16 @@ import {
 import { DialogProvider } from "../ui/DialogProvider";
 
 describe("SettingsPage", () => {
+  // The page restores its last-opened module from localStorage. This file has
+  // no DOM of its own, so it inherits whatever `window` a previously-loaded
+  // test file installed on globalThis — bun shares one process across files.
+  // Whichever suite ran first therefore decided which section rendered here,
+  // which is why the project-overview assertion passed locally and failed in
+  // CI purely on file order.
+  beforeEach(() => {
+    (globalThis as { window?: { localStorage?: Storage } }).window?.localStorage?.clear();
+  });
+
   test("matches modules by localized label or group title", () => {
     expect(matchesSettingsModule("MCP", "MCP 服务器", "扩展能力")).toBe(true);
     expect(matchesSettingsModule("扩展", "子代理", "扩展能力")).toBe(true);

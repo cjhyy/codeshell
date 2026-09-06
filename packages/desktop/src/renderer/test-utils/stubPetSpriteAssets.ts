@@ -24,9 +24,25 @@ export const PET_SPRITE_ASSET_SPECIFIERS = [
   ),
 ] as const;
 
-/** Register a harmless string for every sprite asset petSprite imports. */
+/**
+ * The stub url for one asset — DISTINCT per asset, deliberately.
+ *
+ * A single shared value made every sprite compare equal, so petSprite's own
+ * test ("left and right walk frames differ") failed whenever a stubbing suite
+ * happened to run first. `mock.module` rewrites the registry for the whole
+ * `bun test` process, so this stub reaches petSprite's tests too and must
+ * preserve the property they assert on: different assets are different.
+ *
+ * That is why this was a CI-only failure — file order there put a stubbing
+ * suite ahead of petSprite.test.ts; locally it ran the other way round.
+ */
+export function stubValueFor(specifier: string): string {
+  return `stub:${specifier.replace(/^\.\.\//, "")}`;
+}
+
+/** Register a harmless, per-asset-unique string for every sprite import. */
 export function stubPetSpriteAssets(): void {
   for (const specifier of PET_SPRITE_ASSET_SPECIFIERS) {
-    mock.module(specifier, () => ({ default: "sprite.png" }));
+    mock.module(specifier, () => ({ default: stubValueFor(specifier) }));
   }
 }
