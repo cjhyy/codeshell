@@ -2,6 +2,10 @@
 
 > 状态：详细迭代设计稿（Draft for review）  
 > 日期：2026-08-28  
+> 修订：v2（2026-09-06，按 0.9.6 源码复核）——**I0–I4 全部未开工**（§1.0）；
+> §1.2「两套浏览器协议」中 serve 侧的"原始 RPC 直通"表述已证伪，实为 3 方法白名单
+> （见上游 v3 §2.1）；§1.2 桌面 mobile-remote 面被少算 2 文件 14 事件族（§1.3）；
+> IPC 计数与全文 file:line 锚点重校（§1.4）  
 > 上游文档：`codeshell-hub-remote-service-architecture.md`（方向稿 v2，本文实现其 Phase 1–3）  
 > 交叉文档：`multi-folder-local-project-plan.md`（多目录本地项目，实施中，见 §8）  
 > 硬约束：① 兼容服务端部署；② 桌面端（Electron）零回归；③ 客户端与执行面尽量一套代码两种宿主
@@ -26,6 +30,110 @@ golden 不变作为验收门。
 
 ## 1. 现状盘点（已核验，这是设计的地基）
 
+### 1.0 落地进度（2026-09-06）
+
+**I0–I4 全部未开工。** 本文自 2026-08-28（`476a0c14`）写成后未被修改，
+其列出的新增落点一个都不存在：`packages/web/src/client/`、`packages/server/src/hub/`、
+`packages/server/src/mobile-remote/remote-host-bridge.ts`、`Dockerfile`、
+`docker-compose.yml` 均无；`RemoteHostBridge` 这个标识符全仓没有任何声明。
+
+下面 §1.1–§1.2 的"地基"结论**大体仍然成立**，但有三处必须更正
+（§1.2 的直通表述、§1.2 的桌面面规模、IPC 计数），否则会按错误前提排期。
+
+### 1.1a 锚点漂移（v1 → 0.9.6）
+
+`headless-server.ts` 因 `cb94334e`/`fe7b48ef` 从约 440 行增至 573 行，
+该文件所有锚点整体下移约 50 行。逐条更正：
+
+| v1 引用                                    | 0.9.6 实际                                                   | 内容是否仍成立         |
+| ------------------------------------------ | ------------------------------------------------------------ | ---------------------- |
+| `agent-bridge.ts:110`（组合 core）         | `:206` 类声明 / `:208` 字段（`:110` 是 import）              | 是                     |
+| `agent-bridge.ts:162`（worker 入口）       | `:163`                                                       | 是                     |
+| `agent-bridge.ts:207`                      | `:208`                                                       | 是                     |
+| `agent-bridge.ts:306`                      | `:307`                                                       | 是                     |
+| `agent-bridge.ts:308-315`（能力包）        | `:313-316`（URL 解析 `:170-172`）                            | 是                     |
+| `headless-server.ts:89-94`                 | `:90-100`                                                    | 是                     |
+| `headless-server.ts:113-117`               | `:122-129`                                                   | 是                     |
+| `headless-server.ts:163-169`（数据根注入） | `:219-229`（`CODE_SHELL_DATA_ROOT` 在 `:225`）               | 是                     |
+| `headless-server.ts:273`                   | `:192-217`                                                   | 是                     |
+| `headless-server.ts:286-289`               | `:302`、`:307`                                               | 是                     |
+| **`headless-server.ts:307`（注入点）**     | **`:383-384`**                                               | **表述有误，见 §1.2a** |
+| `headless-server.ts:364-440`               | `:465`/`:523`/`:529`                                         | 是                     |
+| `worker-bridge-core.ts:177-179`            | `:177-181` spawn（`ensureWorker` `:167`）                    | 是                     |
+| `mobile-remote-types.ts:97-325`            | client union `:97-207`；server union `:209`-约`:330`         | 区间超出 139 行        |
+| `handle-client-event.ts:210-517`           | `:226-560`（`daed4836` 后 +23 行）                           | 是                     |
+| `preload/index.ts:370-421`                 | `:395-428`                                                   | 是                     |
+| `preload/index.ts:521`（`timeoutMs=0`）    | `:535`                                                       | 是                     |
+| `web/package.json:18-24`                   | `exports` `:8-14`、`files` `:15-18`（`:18-24` 现为 scripts） | 是                     |
+| `renderer/uiLanguage.ts:13`                | `:7-13`                                                      | 是                     |
+| `web/app/App.tsx:14-20`                    | `:13-20`                                                     | 是                     |
+| `useRemoteSocket.ts:155-193`               | `:150-195`                                                   | 是                     |
+
+另：§1.1「数据根注入」一行的证据配错了——`CODE_SHELL_DATA_ROOT` 由
+`headless-server.ts:225` 注入，`serve/cli.ts:62,72` 只是算出 `dataDir`。
+
+### 1.2a 更正：serve 侧不是「原始 Core JSON-RPC 直通」
+
+§1.2 表格把 serve SPA 描述为"原始 Core JSON-RPC 行 + 白名单"，并在多处以
+"浏览器持有完整 Core RPC 直通"作为 I2 的紧迫性论据。**按源码这是高估。**
+
+实际浏览器面 = **3 方法**（`headless-server.ts:523`
+`agent/run`|`agent/approve`|`agent/cancel`，其余 `-32601`）+ **强制 `cwd` 改写**
+（`:348-355`，覆写为部署 workspace）+ **宿主直答会话查询**（`:465`）+
+**每 tab 64 在途上限**（`:359-368`，`cb94334e` 新增）。
+
+对 I2 的影响：
+
+- **仍要做**：两宿主一套 handler、两客户端一套 hooks 的收敛价值不变。
+- **但紧迫性论据要换**：不是"关掉一个危险的完整直通"，而是"现有 3 方法面没有
+  账号 ownership 维度，且 `cwd` 钉死单 workspace，多用户走不通"。
+- **I2 第 3 条**"原始 RPC 直通白名单收敛为空"的描述可保留，但要知道它今天已经
+  只有 3 项，不是全量协议。
+
+### 1.3 更正：桌面 mobile-remote 面被少算
+
+§1.2 只提 `handle-client-event.ts`，实际桌面侧是 **3 文件 26 个事件族**：
+
+| 文件                                                           | 事件族数 | 例                                                                   |
+| -------------------------------------------------------------- | -------- | -------------------------------------------------------------------- |
+| `handle-client-event.ts`（`:226` 分发）                        | 12       | `chat.send` `:332`、`approval.respond` `:384`、`session.sync` `:471` |
+| `handle-cc-room-event.ts`（`handle-client-event.ts:254` 委派） | 7        | `ccRoom.probe` `:35`、`ccRoom.openSession` `:61`                     |
+| `handle-room-event.ts`（`:259` 委派）                          | 7        | `room.create` `:78`、`room.send` `:125`                              |
+
+D4「desktop 内嵌 mobile host 改为消费下沉后的共享 handler」必须把这 3 个文件都算进去，
+**I2 的工作量估计据此上调**。
+
+有利的反向证据（D4 可行性）：`auth.device` / `pair.complete` 两族**已经在服务端**，
+由 `packages/server/src/mobile-remote/remote-host-manager.ts` 处理
+（validator 见 `mobile-client-event-validator.ts`，`remote-host-manager.ts:14` 引入）。
+且 `packages/server/src/` 全目录**零 electron import**，已下沉模块共 20 个
+（见 `packages/server/src/index.mobile-remote.ts:2-21`），远多于 §1.1 只提的两个。
+
+### 1.4 更正：IPC 计数
+
+| §1.2 原文                         | 实际（0.9.6）                                                                                                                                            |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 347 个 `ipcMain.handle`           | **346** 个调用点（`packages/desktop/src/main`，排除 test）；含 test 347；**去重后 250 个频道名**                                                         |
+| 约 298 个 `window.codeshell` 方法 | **偏低**。`CodeshellApi`（`preload/types.d.ts:1024-2394`）函数成员 343 个；另继承 `ProjectAuthorityApi`（`project-authority-types.ts:78-158`）再加 44 个 |
+| 30+ 命名空间                      | **57** 个                                                                                                                                                |
+
+D6「不承诺 347 个 IPC 全量对等」应改为 **346**（或按去重口径 250）。
+
+### 1.5 v1 之后落地、本文未反映的改动
+
+- `cb94334e`（2026-09-01）WS 在途请求上限 64 + TTL reaper（`headless-server.ts:104-111,359-368`）
+- `fe7b48ef`（2026-09-01）per-tab send 隔离（`:130` `sendToTab`）
+- `daed4836`（2026-09-02）**给 `agent/run` 换成 turn-scale 超时，直接改了
+  `handle-client-event.ts`**。这条对 **D3 不利**：D3 论证"只有 Electron 的
+  `agent:msg` 路径针对长回合调优过（`preload/index.ts:535` `timeoutMs=0`）"，
+  但现在语义协议路径也有了 turn-scale 超时处理——**这反而是 D2/D4 的正面论据**，
+  应在下一版 D3 里重新权衡。
+- `9c396c42`/`43c0e116` 静态资源按 realpath 收敛——与 I4 的 Panel Asset Host 相关。
+- 多目录方案已部分落地：`handle-client-event.ts:200-221`
+  （`resolveMobileSessionCreateTarget`）已实现 `projectId`/`rootId` V2 身份 +
+  legacy `cwd` 回退（对应 `mobile-remote-types.ts:119-129`）。**§8 称其"实施中"
+  对 mobile session.create 这条路径已过时。**
+
 ### 1.1 已经是"一套代码"的部分（不动，只复用）
 
 | 层                            | 事实                                                                                                                                                                                 | 证据                                                                                              |
@@ -43,15 +151,16 @@ golden 不变作为验收门。
 
 **两套浏览器协议**：
 
-|         | serve SPA（`web/app`）                                                                                                                                         | mobile PWA（`desktop/src/mobile` + `web/src` hooks）                                                       |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 协议    | 原始 Core JSON-RPC 行，服务端投影：`agent/query` 的 sessions 由 host 直答，其余白名单 `run/approve/cancel`，`cwd` 强制改写，请求 id 翻译为 `serve-<tabId>-<n>` | 语义化 client event（`chat.send`/`approval.respond`/`session.sync`…），desktop Main 翻译成 RPC 后注入      |
-| 证据    | `headless-server.ts:273,286-289,364-440,113-117,307`                                                                                                           | `handle-client-event.ts:210-517`                                                                           |
-| 认证    | passcode + remember-cookie（`access-passcode.ts`）                                                                                                             | pairing + device credential（`useRemoteSocket.ts:155-193`）                                                |
-| HTTP 面 | 仅静态 SPA + passcode 网关，无 `/health`、无上传                                                                                                               | `/health`、`PUT /api/mobile/uploads/:id`、静态 `/mobile/*`（`remote-host-manager.ts:150-186,158,164-171`） |
+|         | serve SPA（`web/app`）                                                                                                                                         | mobile PWA（`desktop/src/mobile` + `web/src` hooks）                                                           |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 协议    | 原始 Core JSON-RPC 行，服务端投影：`agent/query` 的 sessions 由 host 直答，其余白名单 `run/approve/cancel`，`cwd` 强制改写，请求 id 翻译为 `serve-<tabId>-<n>` | 语义化 client event（`chat.send`/`approval.respond`/`session.sync`…），desktop Main 翻译成 RPC 后注入          |
+| 证据    | `headless-server.ts:192-217,302,465/523/529,122-129,383-384`（锚点已按 0.9.6 重校，见 §1.1a）                                                                  | `handle-client-event.ts:226-560` + `handle-cc-room-event.ts` + `handle-room-event.ts`（3 文件 26 族，见 §1.3） |
+| 认证    | passcode + remember-cookie（`access-passcode.ts`）                                                                                                             | pairing + device credential（`useRemoteSocket.ts:155-193`）                                                    |
+| HTTP 面 | 仅静态 SPA + passcode 网关，无 `/health`、无上传                                                                                                               | `/health`（`remote-host-manager.ts:158`）、`PUT` 上传（`:163-170`）、静态 `/mobile/*`（`:180`）                |
 
-**两套宿主服务面**：桌面 renderer 依赖 `window.codeshell` 上约 298 个方法 / 347 个
-`ipcMain.handle`（30+ 命名空间：sessions/projects/git/review/panel-apps/automation/pet/…）。
+**两套宿主服务面**：桌面 renderer 依赖 `window.codeshell` 上 343+44 个函数成员 / 346 个
+`ipcMain.handle` 调用点（去重 250 个频道名，**57** 个命名空间：
+sessions/projects/git/review/panel-apps/automation/pet/…）。计数口径与更正见 §1.4。
 agent 流量不走 handle，走 `agent:msg` 通道上的**原始 JSON-RPC 行**（`preload/index.ts:6-9`），
 统一封装 `rpc()` 在 preload（`:395`，`agent/run` 显式 `timeoutMs=0` 永不超时 `:521`）。
 
@@ -118,7 +227,7 @@ adapter：`ElectronAgentTransport`（现 preload `rpc()` 语义）与 `HubSocket
 `CODE_SHELL_DATA_ROOT=data/users/<userId>`（沿用 serve 已有机制），空闲逐出、崩溃只影响
 所属用户。不改 worker 入口、不改 core 的单进程假设。
 
-### D6 宿主服务面按 Tier 收敛，不承诺 347 个 IPC 全量对等
+### D6 宿主服务面按 Tier 收敛，不承诺 346 个 IPC 全量对等（去重 250 个频道，见 §1.4）
 
 - **Tier 0（Hub MVP 必须）**：会话列表/历史/同步、run/steer/stop、审批、上传、
   permission mode、model 选择——语义协议已全部覆盖。
@@ -311,7 +420,9 @@ bun run --filter '@cjhyy/code-shell-core' build && bun test packages/core/src/se
 
 ## 8. 与在途方案的关系
 
-- **多目录本地项目方案**（feature branch 实施中）：本设计 I1–I2 与其零文件重叠原则——
+- **多目录本地项目方案**（**部分已落地，非"实施中"**——`handle-client-event.ts:200-221`
+  的 `resolveMobileSessionCreateTarget` 已实现 `projectId`/`rootId` V2 身份 + legacy `cwd`
+  回退，对应 `mobile-remote-types.ts:119-129`；见 §1.5）：本设计 I1–I2 与其零文件重叠原则——
   其改动集中在 desktop main / core engine / project-store，本设计集中在 server/hub、web、
   mobile-remote 下沉。唯一交叉点是 `WorkerFrameMeta`（origin 透传，已在 main）与
   `handle-client-event.ts`（其 Phase 2 会加测试用例）。**I2 的 handler 下沉必须在其
