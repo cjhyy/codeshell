@@ -316,3 +316,43 @@ describe("theme installer", () => {
     );
   }, 60_000);
 });
+
+describe("themesRoot refuses the real home from a test", () => {
+  let prevHome: string | undefined;
+  let prevNodeEnv: string | undefined;
+  beforeEach(() => {
+    prevHome = process.env.CODE_SHELL_HOME;
+    prevNodeEnv = process.env.NODE_ENV;
+    delete process.env.CODE_SHELL_HOME;
+  });
+  afterEach(() => {
+    if (prevHome === undefined) delete process.env.CODE_SHELL_HOME;
+    else process.env.CODE_SHELL_HOME = prevHome;
+    if (prevNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = prevNodeEnv;
+  });
+
+  test("throws rather than installing into ~/.code-shell/themes", async () => {
+    // This is not hypothetical: eight "concurrent-N" fixture themes reached a
+    // real machine's theme picker on 2026-09-06 and the user asked why their
+    // settings were full of strange packs. themesRoot resolved HOME on its own
+    // instead of going through codeShellHome(), so the sessions-root guard did
+    // not cover it.
+    process.env.NODE_ENV = "test";
+    const { themesRoot } = await import("./paths.js");
+    expect(() => themesRoot()).toThrow(/CODE_SHELL_HOME/);
+  });
+
+  test("an explicit CODE_SHELL_HOME is honoured", async () => {
+    process.env.NODE_ENV = "test";
+    process.env.CODE_SHELL_HOME = "/tmp/cs-theme-home";
+    const { themesRoot } = await import("./paths.js");
+    expect(themesRoot()).toBe("/tmp/cs-theme-home/.code-shell/themes");
+  });
+
+  test("a real host run still resolves the real home", async () => {
+    process.env.NODE_ENV = "production";
+    const { themesRoot } = await import("./paths.js");
+    expect(themesRoot()).toContain(".code-shell");
+  });
+});
