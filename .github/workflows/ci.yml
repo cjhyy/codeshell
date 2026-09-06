@@ -75,8 +75,21 @@ jobs:
           # Whole package dirs, not `<pkg>/src`: three suites live outside src
           # (web/app, desktop/tests, desktop/scripts) and scoping to src would
           # silently drop 48 tests while still reporting green.
-          - shard: core
+          #
+          # core is split three ways because scope size — not the tests — is
+          # what fails. Measured on this runner: the three engine suites that
+          # time out pass in 0.99s alone, the whole engine dir in 3.4s, and
+          # engine + tool-system (1469 tests) in 8.6s, yet the undivided
+          # `packages/core` takes 553s and times those same tests out at 30s
+          # each. Keeping each invocation small keeps them fast.
+          - shard: core-engine
+            paths: packages/core/src/engine packages/core/src/tool-system
+          # Exclusion, not an enumerated list: a hand-written directory list
+          # silently drops any subtree or top-level test file added later, and
+          # bun errors out entirely if one listed path has no tests.
+          - shard: core-rest
             paths: packages/core
+            ignore: "--path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**"
           - shard: desktop
             paths: packages/desktop
           - shard: rest
@@ -101,7 +114,7 @@ jobs:
       - name: build workspace packages
         run: bun run build
       - name: test shard
-        run: bun test --timeout 30000 ${{ matrix.paths }}
+        run: bun test --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
 
   coverage:
     name: builtin integration coverage
