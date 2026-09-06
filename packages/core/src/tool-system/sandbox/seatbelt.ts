@@ -15,10 +15,43 @@
  * working OS-level sandbox on macOS and is what Codex CLI / Cursor use today.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SandboxBackend, SandboxConfig } from "./index.js";
+
+/**
+ * Per-user MDS (Module Directory Service) scratch directory.
+ *
+ * Security.framework opens the keychain through MDS, which needs to write a
+ * lock file under the per-user Darwin cache dir. Without it *any* keychain
+ * read fails — see the `(allow file-write* …/mds)` clause in buildProfile()
+ * for why that matters and how it presents.
+ *
+ * `getconf DARWIN_USER_CACHE_DIR` reports the `/var/folders/…` form, but
+ * Seatbelt matches subpaths canonically (`/private/var/folders/…`), so the
+ * result is realpath'd — the same footgun expandConfig() handles for
+ * writableRoots. Resolved once per process; the value is stable for a user.
+ */
+let mdsCacheDir: string | null | undefined;
+function resolveMdsCacheDir(): string | null {
+  if (mdsCacheDir !== undefined) return mdsCacheDir;
+  try {
+    const cacheDir = execFileSync("/usr/bin/getconf", ["DARWIN_USER_CACHE_DIR"], {
+      encoding: "utf-8",
+      timeout: 5_000,
+    }).trim();
+    // Bail rather than emit a bogus rule if getconf returns something odd.
+    mdsCacheDir = cacheDir ? realpathSync(join(cacheDir, "mds")) : null;
+  } catch {
+    // getconf missing/failed, or no mds dir yet on this host. Keychain reads
+    // stay broken, but that's strictly the pre-existing behavior — never fail
+    // the whole sandbox over it.
+    mdsCacheDir = null;
+  }
+  return mdsCacheDir;
+}
 
 export function createSeatbeltBackend(config: SandboxConfig): SandboxBackend {
   return {
@@ -46,6 +79,22 @@ export function createSeatbeltBackend(config: SandboxConfig): SandboxBackend {
       };
     },
     hintForBlockedOutput(stderr) {
+      // Keychain denials never say "sandbox" or "Operation not permitted" —
+      // they surface as an MDS error, or as a downstream tool blaming its own
+      // credentials ("token invalid") after silently falling back off the
+      // keyring. Match the MDS string specifically so the model stops
+      // recommending a re-login for what is a sandbox problem. This is a
+      // deterministic error string from Security.framework, not prose.
+      if (/Module Directory Service error/.test(stderr)) {
+        return (
+          "\n[sandbox:seatbelt] A keychain read failed inside the sandbox " +
+          "(Security.framework/MDS). Any 'invalid token' / 'not logged in' " +
+          "message above is likely bogus — the credential is in the macOS " +
+          "keychain and was unreadable, NOT wrong. Do not re-run `auth login`. " +
+          "If this host has an unusual DARWIN_USER_CACHE_DIR, ask the user to " +
+          "add its `mds` dir to sandbox.writableRoots in settings.json."
+        );
+      }
       if (/Operation not permitted|sandbox/.test(stderr)) {
         return (
           "\n[sandbox:seatbelt] A syscall was blocked by the sandbox. " +
@@ -62,6 +111,28 @@ function buildProfile(config: SandboxConfig): string {
   const writeAllows = config.writableRoots.map((p) => `  (subpath ${quote(p)})`).join("\n");
   const readDenies = config.deniedReads.map((p) => `  (subpath ${quote(p)})`).join("\n");
   const networkClause = config.network === "deny" ? "(deny network-outbound)" : "(allow network*)";
+
+  // Keychain access. Tools that store credentials in the macOS keychain
+  // (`gh`, `az`, `docker login`, anything calling /usr/bin/security) shell
+  // out to Security.framework, which reaches the keychain via MDS — and MDS
+  // needs to write a lock file under the per-user Darwin cache dir. That dir
+  // is outside the workspace, so a write-restricted profile blocks it.
+  //
+  // The failure is worth spelling out because it does NOT look like a
+  // sandbox denial: `security` exits 44 with "A Module Directory Service
+  // error has occurred", and callers treat that as "no keychain" and fall
+  // back to their plaintext config. `gh` then reports "The token in default
+  // is invalid" — pointing at the token, which is fine, instead of at the
+  // sandbox. Users burn a lot of time re-running `gh auth login` here.
+  //
+  // Verified empirically: this single clause is the minimal delta that makes
+  // `gh auth status` report `(keyring)` instead of `(default)` under an
+  // otherwise unchanged profile. Reads of ~/.ssh and writes outside the
+  // workspace stay denied — the grant is one scratch dir, not a hole.
+  const mdsDir = resolveMdsCacheDir();
+  const keychainClause = mdsDir
+    ? `\n;; Keychain (Security.framework/MDS scratch)\n(allow file-write* (subpath ${quote(mdsDir)}))\n`
+    : "";
 
   // SBPL evaluation note: when a broad `(allow file-read*)` and a specific
   // `(deny file-read* (subpath …))` both match, the more specific subpath
@@ -94,7 +165,7 @@ ${writeAllows})
   (literal "/dev/random")
   (literal "/dev/urandom")
   (literal "/dev/dtracehelper"))
-
+${keychainClause}
 ;; IPC & system services common tools need
 (allow mach-lookup)
 (allow ipc-posix-shm)

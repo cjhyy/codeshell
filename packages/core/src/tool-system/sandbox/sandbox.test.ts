@@ -67,6 +67,45 @@ describe("detectSandboxCapabilities", () => {
   });
 });
 
+describe("seatbelt keychain access", () => {
+  // Regression: a write-restricted profile blocked Security.framework's MDS
+  // scratch dir, so every keychain read failed inside the sandbox. Tools hid
+  // it badly — `gh` fell back off the keyring and reported "The token in
+  // default is invalid", sending users to re-run `auth login` for a token
+  // that was fine. See the clause comment in seatbelt.ts.
+  const maybe = process.platform === "darwin" ? test : test.skip;
+
+  maybe("profile grants write access to the MDS cache dir", async () => {
+    const { createSeatbeltBackend } = await import("./seatbelt.js");
+    const { readFileSync } = await import("node:fs");
+    const cfg = expandConfig(defaultSandboxConfig("seatbelt"), process.cwd());
+    const backend = createSeatbeltBackend(cfg);
+    const wrapped = backend.wrap("true", { cwd: process.cwd(), shell: "/bin/sh" });
+    const profile = readFileSync(wrapped.args[1]!, "utf-8");
+    wrapped.cleanup?.();
+    // Canonical (/private/...) form — Seatbelt matches subpaths post-realpath,
+    // so a /var/folders/... rule would silently never match.
+    expect(profile).toMatch(
+      /\(allow file-write\* \(subpath "\/private\/var\/folders\/.*\/mds"\)\)/,
+    );
+  });
+
+  maybe("hint calls out a keychain denial instead of blaming the token", async () => {
+    const { createSeatbeltBackend } = await import("./seatbelt.js");
+    const backend = createSeatbeltBackend(defaultSandboxConfig("seatbelt"));
+    // The real stderr from `security` — note it contains neither "sandbox"
+    // nor "Operation not permitted", which is why the generic matcher missed it.
+    const hint = backend.hintForBlockedOutput?.(
+      "security: SecKeychainSearchCreateFromAttributes: A Module Directory Service error has occurred.",
+    );
+    expect(hint).toBeDefined();
+    expect(hint).toContain("keychain");
+    expect(hint).toContain("sandbox");
+    // Unrelated failures must stay unannotated.
+    expect(backend.hintForBlockedOutput?.("fatal: not a git repository")).toBeUndefined();
+  });
+});
+
 describe("resolveSandboxBackend", () => {
   test("off mode always resolves to the off backend", async () => {
     const backend = await resolveSandboxBackend(defaultSandboxConfig("off"), "/proj");
