@@ -682,7 +682,14 @@ export const extensions = {
           "由旧版通用表单创建、未关联具体应用的 Link 凭据；不再支持编辑，只能删除。",
         legacyDelete: "删除",
         legacyDeleted: "已删除旧版凭据「{label}」",
-        localCredentialVerified: "已验证 {account}",
+        localCredentialVerified: "连接账号 {account}",
+        localCredentialVerifiedAt: "上次验证于 {time}",
+        cliLivenessChecking: "正在检查本机 {command} 登录…",
+        cliLivenessOk: "本机 {command} 实时已确认：{account}",
+        cliLivenessMismatch:
+          "本机 {command} 当前登录的是 {account}，与此连接绑定的账号不一致，请重新连接。",
+        cliLivenessUnknown:
+          "无法确认本机 {command} 登录状态（可能是网络或服务问题，不代表已登出）。",
         connectedViaGithubCli: "通过本机 GitHub CLI 授权",
         connectedViaCli: "通过本机 {command} 会话执行；Link 不保存服务商 Token",
         githubLocalConnectionLabel: "GitHub · 本地连接",
@@ -1676,7 +1683,14 @@ export const extensions = {
           "Link credentials created by the old generic form without an app binding; they can no longer be edited, only deleted.",
         legacyDelete: "Delete",
         legacyDeleted: "Deleted legacy credential “{label}”",
-        localCredentialVerified: "Verified {account}",
+        localCredentialVerified: "Connected as {account}",
+        localCredentialVerifiedAt: "Last verified {time}",
+        cliLivenessChecking: "Checking the local {command} sign-in…",
+        cliLivenessOk: "Local {command} confirmed live: {account}",
+        cliLivenessMismatch:
+          "Local {command} is signed in as {account}, which does not match this connection. Reconnect this Link.",
+        cliLivenessUnknown:
+          "The local {command} sign-in could not be confirmed (a network or service issue, not proof of a signed-out account).",
         connectedViaGithubCli: "Authorized through GitHub CLI on this device",
         connectedViaCli:
           "Runs through the local {command} session; Link does not store the provider token",

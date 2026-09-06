@@ -342,7 +342,7 @@ describe("LinkTab integrations", () => {
       const cards = findElements(container, "ARTICLE");
       expect(cards).toHaveLength(1);
       expect(reactPropsOf(cards[0])["data-link-integration"]).toBe("figma");
-      expect(reactChildText(reactPropsOf(cards[0]).children)).toContain("已验证 current-account");
+      expect(reactChildText(reactPropsOf(cards[0]).children)).toContain("连接账号 current-account");
     },
   );
 
@@ -905,5 +905,132 @@ describe("LinkTab integrations", () => {
       serverMethod.oauthProfileId = previousProfileId;
       serverMethod.availability = previousAvailability;
     }
+  });
+
+  test("probes the CLI on page entry and flags a stale card when the live account differs", async () => {
+    ensureMiniDom();
+    const credentials: MaskedCredentialView[] = [
+      {
+        id: "github-local",
+        type: "link",
+        label: "GitHub local",
+        hasSecret: true,
+        meta: {
+          linkProvider: "github",
+          linkExecutionRuntime: "local",
+          linkExecutionBackend: "cli",
+          linkAccountId: "cjhyy",
+          linkAccountLabel: "cjhyy",
+          linkLastVerifiedAt: "2026-09-06T05:41:00.000Z",
+        },
+      },
+    ];
+    let cliStatusCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        openExternal: async () => undefined,
+        credentials: { list: async () => credentials },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          cliStatus: async () => {
+            cliStatusCalls += 1;
+            return {
+              providerId: "github",
+              command: "gh",
+              installed: true,
+              authenticated: true,
+              account: "someone-else",
+            };
+          },
+        },
+      },
+    });
+
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <DialogProvider>
+          <LinkTab cwd="/repo" />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    // The card must probe on entry, without the connect dialog being opened.
+    expect(cliStatusCalls).toBe(1);
+
+    const github = findElements(container, "ARTICLE").find(
+      (card) =>
+        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-runtime"] === "local",
+    );
+    if (!github) throw new Error("missing GitHub local card");
+    const liveness = findElements(github, "DIV").find(
+      (node) => reactPropsOf(node)["data-link-liveness"] === "github",
+    );
+    expect(reactPropsOf(liveness ?? {})["data-link-liveness-state"]).toBe("mismatch");
+
+    // The stored binding marker must survive an out-of-band probe: LinkAction
+    // treats any change to it as a disconnect.
+    expect(credentials[0]!.meta?.linkLastVerifiedAt).toBe("2026-09-06T05:41:00.000Z");
+  });
+
+  test("reports unknown, not failure, when the CLI probe cannot confirm the account", async () => {
+    ensureMiniDom();
+    const credentials: MaskedCredentialView[] = [
+      {
+        id: "github-local",
+        type: "link",
+        label: "GitHub local",
+        hasSecret: true,
+        meta: {
+          linkProvider: "github",
+          linkExecutionRuntime: "local",
+          linkExecutionBackend: "cli",
+          linkAccountId: "cjhyy",
+          linkAccountLabel: "cjhyy",
+        },
+      },
+    ];
+    Object.assign(window, {
+      codeshell: {
+        openExternal: async () => undefined,
+        credentials: { list: async () => credentials },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          cliStatus: async () => {
+            throw new Error("network unreachable");
+          },
+        },
+      },
+    });
+
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <DialogProvider>
+          <LinkTab cwd="/repo" />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const github = findElements(container, "ARTICLE").find(
+      (card) =>
+        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-runtime"] === "local",
+    );
+    if (!github) throw new Error("missing GitHub local card");
+    const liveness = findElements(github, "DIV").find(
+      (node) => reactPropsOf(node)["data-link-liveness"] === "github",
+    );
+    // A failed probe is not proof of a signed-out account.
+    expect(reactPropsOf(liveness ?? {})["data-link-liveness-state"]).toBe("unknown");
   });
 });

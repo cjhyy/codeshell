@@ -217,6 +217,29 @@ export function resolvePreferredLinkRuntime(
   return linkCredentialIsUsable(server) ? "server" : null;
 }
 
+/**
+ * Live CLI login state for a Link card. Held in renderer memory only: it must
+ * never be written back to the credential, because LinkAction treats any change
+ * to meta.linkLastVerifiedAt as a disconnect and aborts in-flight actions.
+ */
+export type CliLivenessState = "checking" | "ok" | "mismatch" | "unknown";
+
+export interface CliLiveness {
+  state: CliLivenessState;
+  command: string;
+  account?: string;
+}
+
+/** A failed probe is a network/service failure, not proof of a signed-out account. */
+export function resolveCliLiveness(
+  status: { installed: boolean; authenticated: boolean; account?: string } | null,
+  expectedAccountId: string | undefined,
+): Exclude<CliLivenessState, "checking"> {
+  if (!status || !status.installed || !status.authenticated) return "unknown";
+  if (!expectedAccountId || !status.account) return "unknown";
+  return status.account === expectedAccountId ? "ok" : "mismatch";
+}
+
 interface LinkMethodEntry {
   item: LinkIntegration;
   method: LinkConnectionMethod;
@@ -424,6 +447,8 @@ export function LinkTab({ cwd }: { cwd: string }) {
     null,
   );
   const [cliChecking, setCliChecking] = useState(false);
+  const [cliLiveness, setCliLiveness] = useState<Record<string, CliLiveness>>({});
+  const [livenessNonce, setLivenessNonce] = useState(0);
   const [cliInstalling, setCliInstalling] = useState(false);
   const [browserAuthStatus, setBrowserAuthStatus] = useState<BrowserLinkAuthStatusView | null>(
     null,
@@ -457,6 +482,78 @@ export function LinkTab({ cwd }: { cwd: string }) {
   useEffect(() => {
     void load().catch(() => undefined);
   }, [load]);
+
+  // Saved CLI connections carry only a local binding marker, so the stored card
+  // cannot show whether the provider CLI is still signed in to that account.
+  // Probe once per provider on entry and on manual refresh, never on a timer.
+  const cliConnections = useMemo(() => {
+    const byProvider = new Map<string, string | undefined>();
+    for (const credential of credentials) {
+      const meta = credential.meta;
+      if (!meta?.linkProvider || meta.linkExecutionBackend !== "cli") continue;
+      if (!credential.hasSecret) continue;
+      if (!byProvider.has(meta.linkProvider)) {
+        byProvider.set(meta.linkProvider, meta.linkAccountId);
+      }
+    }
+    return Array.from(byProvider, ([providerId, accountId]) => ({ providerId, accountId }));
+  }, [credentials]);
+
+  const cliCommands = useMemo(() => {
+    const commands = new Map<string, string>();
+    for (const provider of providerViews) {
+      for (const method of provider.connectionMethods) {
+        if (method.quickAuth?.kind === "cli-session") {
+          commands.set(provider.id, method.quickAuth.command);
+          break;
+        }
+      }
+    }
+    return commands;
+  }, [providerViews]);
+
+  useEffect(() => {
+    const statusLoader = window.codeshell.links?.cliStatus;
+    const targets = cliConnections.filter(({ providerId }) => cliCommands.has(providerId));
+    if (!statusLoader || targets.length === 0) {
+      setCliLiveness({});
+      return;
+    }
+    let cancelled = false;
+    setCliLiveness(
+      Object.fromEntries(
+        targets.map(({ providerId }) => [
+          providerId,
+          { state: "checking" as const, command: cliCommands.get(providerId) ?? "" },
+        ]),
+      ),
+    );
+    for (const { providerId, accountId } of targets) {
+      const command = cliCommands.get(providerId) ?? "";
+      void statusLoader(providerId, cwd)
+        .then((status) => {
+          if (cancelled) return;
+          setCliLiveness((current) => ({
+            ...current,
+            [providerId]: {
+              state: resolveCliLiveness(status, accountId),
+              command: status.command || command,
+              account: status.account,
+            },
+          }));
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setCliLiveness((current) => ({
+            ...current,
+            [providerId]: { state: "unknown", command },
+          }));
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [cliCommands, cliConnections, cwd, livenessNonce]);
 
   const localDialogProviderId = localDialog?.item.id;
   const localDialogQuickAuth = localDialog?.method.quickAuth;
@@ -964,7 +1061,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
               size="sm"
               variant="outline"
               disabled={loading}
-              onClick={() => void load().catch(() => undefined)}
+              onClick={() => {
+                setLivenessNonce((value) => value + 1);
+                void load().catch(() => undefined);
+              }}
             >
               <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
               {t("ext.link.retry")}
@@ -1003,6 +1103,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
           <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
             <RuntimeLinkSection
               runtime="local"
+              cliLiveness={cliLiveness}
               entries={entries.local}
               busyId={busyId}
               errors={errors}
@@ -1014,6 +1115,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
             />
             <RuntimeLinkSection
               runtime="server"
+              cliLiveness={cliLiveness}
               entries={entries.server}
               busyId={busyId}
               errors={errors}
@@ -1906,6 +2008,7 @@ function LinkStat({ value, label }: { value: number; label: string }) {
 }
 
 interface RuntimeLinkSectionProps {
+  cliLiveness: Record<string, CliLiveness>;
   runtime: LinkExecutionRuntime;
   entries: LinkMethodEntry[];
   busyId: string | null;
@@ -1991,6 +2094,7 @@ function RuntimeLinkSection(props: RuntimeLinkSectionProps) {
               <LinkMethodCard
                 key={`${entry.item.id}:${entry.method.id}`}
                 entry={entry}
+                liveness={props.cliLiveness[entry.item.id]}
                 busy={props.busyId === key}
                 error={props.errors[key]}
                 onLocalConnect={() => props.onLocalConnect(entry)}
@@ -2015,6 +2119,7 @@ function RuntimeLinkSection(props: RuntimeLinkSectionProps) {
 
 function LinkMethodCard({
   entry,
+  liveness,
   busy,
   error,
   onLocalConnect,
@@ -2024,6 +2129,7 @@ function LinkMethodCard({
   onServerLogout,
 }: {
   entry: LinkMethodEntry;
+  liveness?: CliLiveness;
   busy: boolean;
   error?: string;
   onLocalConnect: () => void;
@@ -2135,11 +2241,46 @@ function LinkMethodCard({
                 : ""}
             </div>
             {local && usable && credential.meta?.linkAccountLabel ? (
-              <div className="mt-1 truncate text-status-ok">
-                <ShieldCheck className="mr-1 inline size-3" aria-hidden />
+              <div className="mt-1 truncate text-muted-foreground">
                 {t("ext.link.localCredentialVerified", {
                   account: credential.meta.linkAccountLabel,
                 })}
+                {credential.meta.linkLastVerifiedAt
+                  ? ` · ${t("ext.link.localCredentialVerifiedAt", {
+                      time: new Date(credential.meta.linkLastVerifiedAt).toLocaleString(),
+                    })}`
+                  : ""}
+              </div>
+            ) : null}
+            {local && usable && credential.meta?.linkExecutionBackend === "cli" && liveness ? (
+              <div
+                data-link-liveness={item.id}
+                data-link-liveness-state={liveness.state}
+                className={cn(
+                  "mt-1",
+                  liveness.state === "ok"
+                    ? "text-status-ok"
+                    : liveness.state === "mismatch"
+                      ? "text-status-err"
+                      : "text-muted-foreground",
+                )}
+              >
+                {liveness.state === "ok" ? (
+                  <ShieldCheck className="mr-1 inline size-3" aria-hidden />
+                ) : null}
+                {liveness.state === "checking"
+                  ? t("ext.link.cliLivenessChecking", { command: liveness.command })
+                  : liveness.state === "ok"
+                    ? t("ext.link.cliLivenessOk", {
+                        command: liveness.command,
+                        account: liveness.account ?? "",
+                      })
+                    : liveness.state === "mismatch"
+                      ? t("ext.link.cliLivenessMismatch", {
+                          command: liveness.command,
+                          account: liveness.account ?? "",
+                        })
+                      : t("ext.link.cliLivenessUnknown", { command: liveness.command })}
               </div>
             ) : null}
             {local &&
