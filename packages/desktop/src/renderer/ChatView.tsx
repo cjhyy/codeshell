@@ -1449,12 +1449,16 @@ export function ChatView({
       )}
 
       {!contextSelectionOpen && (openAsk || showStickyApproval) && (
-        <div className="px-4">
+        <div>
+          {/* AskUserMessageView carries its own column padding so it lines up
+              with the message stream; ApprovalCard has none of its own. */}
           {openAsk && (
             <AskUserMessageView message={openAsk} onAnswer={onAskUserAnswer ?? (() => undefined)} />
           )}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
-            <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
+            <div className="px-4">
+              <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
+            </div>
           )}
         </div>
       )}

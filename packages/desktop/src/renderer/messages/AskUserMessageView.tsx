@@ -39,15 +39,29 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
     // is what keeps a "拒绝" answer from rendering with the approve styling.
     const echo = toneEchoStyle(resolveAnswerTone(message.answer, message.options));
     return (
-      <div className="my-2 max-w-[720px] rounded-md border bg-muted/30 p-3 text-sm">
-        <div className="mb-2 flex flex-col gap-1">
-          {message.header && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{message.header}</span>}
-          <span className="font-medium text-foreground">{message.question}</span>
-        </div>
-        <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium", echo.className)}>
-          {echo.icon === "check" && <Check size={12} />}
-          {echo.icon === "cross" && <X size={12} />}
-          {message.answer}
+      // Sit in the same padded column as every other message view. A fixed
+      // pixel width left this card narrower than the surrounding cards and
+      // flush against the viewport edge at wide window sizes.
+      <div className="min-w-0 max-w-full px-4 py-1">
+        <div className="my-2 min-w-0 rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="mb-2 flex flex-col gap-1">
+            {message.header && (
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {message.header}
+              </span>
+            )}
+            <span className="font-medium text-foreground">{message.question}</span>
+          </div>
+          <div
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium",
+              echo.className,
+            )}
+          >
+            {echo.icon === "check" && <Check size={12} />}
+            {echo.icon === "cross" && <X size={12} />}
+            {message.answer}
+          </div>
         </div>
       </div>
     );
@@ -68,142 +82,147 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   };
 
   return (
-    <div className="my-2 max-w-[720px] rounded-md border bg-card p-3 text-sm shadow-sm">
-      <div className="mb-3 flex flex-col gap-1">
-        {message.header && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{message.header}</span>}
-        <span className="font-medium text-foreground">{message.question}</span>
-      </div>
+    <div className="min-w-0 max-w-full px-4 py-1">
+      <div className="my-2 min-w-0 rounded-md border bg-card p-3 text-sm shadow-sm">
+        <div className="mb-3 flex flex-col gap-1">
+          {message.header && (
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {message.header}
+            </span>
+          )}
+          <span className="font-medium text-foreground">{message.question}</span>
+        </div>
 
-      {hasOptions ? (
-        <>
-          <ul className="flex flex-col gap-2">
-            {message.options!.map((o, i) => {
-              const isPicked = picked.has(i);
-              return (
-                <li
-                  key={i}
-                  className={cn(
-                    "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
-                    isPicked && "border-primary bg-primary/10",
-                  )}
-                  onClick={() => {
-                    if (message.multiSelect) {
-                      setPicked((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(i)) next.delete(i);
-                        else next.add(i);
-                        return next;
-                      });
-                    } else {
-                      submit(o.label);
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    {message.multiSelect && (
-                      <span className={cn(
-                        "flex h-4 w-4 items-center justify-center rounded-sm border text-primary",
-                        isPicked && "border-primary bg-primary/10",
-                      )}>
-                        {isPicked ? <Check size={11} /> : null}
-                      </span>
+        {hasOptions ? (
+          <>
+            <ul className="flex flex-col gap-2">
+              {message.options!.map((o, i) => {
+                const isPicked = picked.has(i);
+                return (
+                  <li
+                    key={i}
+                    className={cn(
+                      "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
+                      isPicked && "border-primary bg-primary/10",
                     )}
-                    <span
-                      className={cn(
-                        "font-medium text-foreground",
-                        o.tone === "danger" && "text-status-err",
-                        o.tone === "ok" && "text-status-ok",
+                    onClick={() => {
+                      if (message.multiSelect) {
+                        setPicked((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(i)) next.delete(i);
+                          else next.add(i);
+                          return next;
+                        });
+                      } else {
+                        submit(o.label);
+                      }
+                    }}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      {message.multiSelect && (
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded-sm border text-primary",
+                            isPicked && "border-primary bg-primary/10",
+                          )}
+                        >
+                          {isPicked ? <Check size={11} /> : null}
+                        </span>
                       )}
-                    >
-                      {o.label}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{o.description}</div>
-                </li>
-              );
-            })}
-            {/* Closed-set prompts (optionsOnly) hide the free-text escape
+                      <span
+                        className={cn(
+                          "min-w-0 break-words font-medium text-foreground",
+                          o.tone === "danger" && "text-status-err",
+                          o.tone === "ok" && "text-status-ok",
+                        )}
+                      >
+                        {o.label}
+                      </span>
+                    </div>
+                    <div className="mt-1 break-words text-xs text-muted-foreground">
+                      {o.description}
+                    </div>
+                  </li>
+                );
+              })}
+              {/* Closed-set prompts (optionsOnly) hide the free-text escape
                 hatch: their answer is matched by exact label, so a typed
                 answer like "允许" would never match and silently fail. */}
-            {!message.optionsOnly && (
-              <li
-                className={cn(
-                  "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
-                  otherOpen && "border-primary bg-primary/10",
-                )}
-                onClick={() => setOtherOpen((o) => !o)}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">{t("msg.ask.other")}</span>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">{t("msg.ask.otherDesc")}</div>
-              </li>
-            )}
-          </ul>
-          {(otherOpen || message.multiSelect) && (
-            <div className="mt-3 flex items-center gap-2">
-              {otherOpen && (
-                <Input
-                  autoFocus
-                  placeholder={t("msg.ask.otherPlaceholder")}
-                  value={otherDraft}
-                  onChange={(e) => setOtherDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !message.multiSelect) {
-                      e.preventDefault();
-                      submit(otherDraft);
-                    }
-                  }}
-                />
-              )}
-              {message.multiSelect ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={picked.size === 0 && !otherDraft.trim()}
-                  onClick={submitMulti}
+              {!message.optionsOnly && (
+                <li
+                  className={cn(
+                    "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
+                    otherOpen && "border-primary bg-primary/10",
+                  )}
+                  onClick={() => setOtherOpen((o) => !o)}
                 >
-                  {t("msg.ask.submit")}
-                </Button>
-              ) : (
-                otherOpen && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">{t("msg.ask.other")}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">{t("msg.ask.otherDesc")}</div>
+                </li>
+              )}
+            </ul>
+            {(otherOpen || message.multiSelect) && (
+              <div className="mt-3 flex items-center gap-2">
+                {otherOpen && (
+                  <Input
+                    autoFocus
+                    placeholder={t("msg.ask.otherPlaceholder")}
+                    value={otherDraft}
+                    onChange={(e) => setOtherDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !message.multiSelect) {
+                        e.preventDefault();
+                        submit(otherDraft);
+                      }
+                    }}
+                  />
+                )}
+                {message.multiSelect ? (
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!otherDraft.trim()}
-                    onClick={() => submit(otherDraft)}
+                    disabled={picked.size === 0 && !otherDraft.trim()}
+                    onClick={submitMulti}
                   >
-                    {t("msg.ask.answer")}
+                    {t("msg.ask.submit")}
                   </Button>
-                )
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Input
-            autoFocus
-            placeholder={t("msg.ask.answerPlaceholder")}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submit(draft);
-              }
-            }}
-          />
-          <Button
-            type="button"
-            size="sm"
-            disabled={!draft.trim()}
-            onClick={() => submit(draft)}
-          >
-            {t("msg.ask.answer")}
-          </Button>
-        </div>
-      )}
+                ) : (
+                  otherOpen && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!otherDraft.trim()}
+                      onClick={() => submit(otherDraft)}
+                    >
+                      {t("msg.ask.answer")}
+                    </Button>
+                  )
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              placeholder={t("msg.ask.answerPlaceholder")}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submit(draft);
+                }
+              }}
+            />
+            <Button type="button" size="sm" disabled={!draft.trim()} onClick={() => submit(draft)}>
+              {t("msg.ask.answer")}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
