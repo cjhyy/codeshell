@@ -111,6 +111,13 @@ export interface AutomationDeps {
    */
   backgroundBridge?: BrowserBridge;
   /**
+   * Whether the active browser is external (the user's own Chrome, or a remote
+   * one), so every WRITE needs explicit approval rather than only the ones
+   * isSensitiveAction() flags. Optional: built-in sources omit it and keep the
+   * existing behavior. See shared/browser-source.ts §6.3.
+   */
+  strictApproval?: () => boolean;
+  /**
    * Ask whether this Session may still WRITE the active tab (§3.2). Optional:
    * a host with no lease wiring stays permissive, exactly as before.
    * Read-only actions never consult it — observation must not contend for a
@@ -206,8 +213,14 @@ export async function handleBrowserAction(
   }
 
   // Sensitive action approval (click/type on payment/delete/credential surfaces).
+  // An external browser escalates this: inside the sandbox an ordinary click is
+  // harmless, but the same click in the user's real Chrome can be a real
+  // purchase or post, so EVERY write is approved there. Reads stay unprompted —
+  // observing changes nothing, and prompting on every snapshot would train the
+  // user to click through approvals.
+  const externalWrite = deps.strictApproval?.() === true && isWriteAction(req.action);
   const learnedSensitiveRef = Boolean(req.ref && sensitiveRefsByGuest.get(guest.id)?.has(req.ref));
-  if (isSensitiveAction(req) || learnedSensitiveRef) {
+  if (externalWrite || isSensitiveAction(req) || learnedSensitiveRef) {
     const ok = await requestApproval(deps, `敏感浏览器操作:${req.action} ${req.ref ?? ""}`);
     if (!ok) return JSON.stringify({ ok: false, detail: "sensitive action declined" });
   }

@@ -326,3 +326,65 @@ describe("tab control gate", () => {
     expect(JSON.parse(await clickWith({}))).toMatchObject({ ok: true });
   });
 });
+
+describe("approval strictness by browser source", () => {
+  async function clickIn(over: Partial<AutomationDeps>): Promise<string> {
+    const d = deps(over);
+    const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d)) as {
+      elements: Array<{ ref: string }>;
+    };
+    return handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
+  }
+
+  test("every write in the user's own browser needs approval", async () => {
+    // Inside the sandbox an ordinary click is not sensitive. In the user's real
+    // Chrome the same click can be a real purchase, so it must be approved even
+    // though isSensitiveAction() says no.
+    const asked: string[] = [];
+    const out = await clickIn({
+      strictApproval: () => true,
+      approve: async (reason: string) => {
+        asked.push(reason);
+        return false;
+      },
+    });
+    expect(JSON.parse(out)).toMatchObject({ ok: false });
+    expect(asked).toHaveLength(1);
+  });
+
+  test("an approved write in the user's browser proceeds", async () => {
+    const out = await clickIn({ strictApproval: () => true, approve: async () => true });
+    expect(JSON.parse(out)).toMatchObject({ ok: true });
+  });
+
+  test("reads in the user's browser are not gated", async () => {
+    // Observing cannot change anything, and prompting on every snapshot would
+    // train the user to click through approvals.
+    const asked: string[] = [];
+    const out = await handleBrowserAction(
+      { action: "snapshot" },
+      deps({
+        strictApproval: () => true,
+        approve: async (reason: string) => {
+          asked.push(reason);
+          return true;
+        },
+      }),
+    );
+    expect(JSON.parse(out).elements).toBeDefined();
+    expect(asked).toEqual([]);
+  });
+
+  test("built-in sources keep the existing behavior", async () => {
+    // No strictApproval installed: an ordinary click stays unprompted.
+    const asked: string[] = [];
+    const out = await clickIn({
+      approve: async (reason: string) => {
+        asked.push(reason);
+        return true;
+      },
+    });
+    expect(JSON.parse(out)).toMatchObject({ ok: true });
+    expect(asked).toEqual([]);
+  });
+});
