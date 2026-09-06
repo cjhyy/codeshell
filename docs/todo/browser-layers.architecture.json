@@ -188,7 +188,7 @@
       "id": "external",
       "type": "cloud",
       "label": "用户日常 Chrome",
-      "sublabel": "Phase 5 · 待做",
+      "sublabel": "调试端口 · 仅回环 · 写必审批",
       "pos": [
         970,
         430
@@ -197,13 +197,13 @@
         250,
         84
       ],
-      "tag": "待做"
+      "tag": "Phase 5 地基"
     },
     {
       "id": "remote",
       "type": "cloud",
       "label": "服务端浏览器",
-      "sublabel": "Phase 6 · 租约需共享存储",
+      "sublabel": "每租户 container · 项目分 profile",
       "pos": [
         970,
         600
@@ -212,7 +212,7 @@
         250,
         84
       ],
-      "tag": "待做"
+      "tag": "Phase 6 地基"
     },
     {
       "id": "cookie",
@@ -409,7 +409,7 @@
       "items": [
         "用户两轮之间点到别处，Agent 可能往错页面提交表单",
         "写前重验：origin / titleHash 不符即失效",
-        "移交是持有者赠予，接收方仍受同样校验"
+        "外部浏览器：每次写都审批（沙箱里的普通点击在真账号里不普通）"
       ]
     }
   ]
