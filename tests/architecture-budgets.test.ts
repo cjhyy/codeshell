@@ -43,8 +43,10 @@ describe("architecture growth budgets", () => {
     // health probe all live in pet/session-bridge-wiring.ts, so this file
     // only names collaborators it already owns, registers one host-action
     // key, and answers one control-plane route. Extracting further would
-    // split the host-action table itself.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_977);
+    // split the host-action table itself. (The rationale above was written
+    // when the change landed but the number was never raised; 7_002 is the
+    // measured size of that reviewed wiring.)
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_002);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );
@@ -60,11 +62,21 @@ describe("architecture growth budgets", () => {
     // transcript-page method adds its bounded response shape without widening
     // the renderer's direct imports.
     expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_852);
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_686);
+    // The responsive-sidebar work extracts ResponsiveSidebar (132),
+    // useResponsiveSidebar (61) and useSessionHistorySync (127) into
+    // renderer/app/, so the 320 lines of behaviour live outside this file and
+    // the +64 here is the composition root naming them plus the narrow-window
+    // view transitions it already owns.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_750);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_506);
+    // Routing an IM message into a bound Work Session adds its protocol
+    // ingress here (+87): the outcome shapes and workspace resolution are
+    // extracted to session-message-result.ts (59) and
+    // session-message-workspace.ts (84), so this file validates and dispatches
+    // rather than implementing the routing.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_593);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -72,7 +84,12 @@ describe("architecture growth budgets", () => {
     // peek/consume closures sharing one suppressesRunYield predicate, so a
     // committed host reply stays terminal in headless and sub-agent runs and
     // peek/consume can never disagree (+12 reviewed lines).
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_274);
+    // A behavior profile's maxTurns is now frozen for the live run so Goal
+    // extension cannot raise a ceiling the profile set (+44). This is engine
+    // state with an engine lifetime — it is cleared when the turn loop it
+    // belongs to ends — so there is nothing to extract without separating the
+    // value from the loop that owns it.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_318);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
