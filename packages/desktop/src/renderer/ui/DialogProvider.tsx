@@ -15,7 +15,14 @@
  * The queueing/resolver logic lives in the pure ./dialogState reducer (unit
  * tested); this file is the thin React + shadcn rendering shell.
  */
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,17 +54,45 @@ const DialogContextRef = createContext<DialogApi | null>(null);
 
 export function DialogProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState(initialDialogState);
+  const openerRef = useRef<HTMLElement | null | undefined>(undefined);
+  const pendingRef = useRef(new Set<DialogRequest>());
 
   const open = useCallback(
     (req: Omit<DialogRequest, "resolve">) =>
       new Promise<unknown>((resolve) => {
-        setState((s) => enqueue(s, { ...req, resolve }));
+        if (openerRef.current === undefined) {
+          openerRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        }
+        const request = { ...req, resolve };
+        pendingRef.current.add(request);
+        setState((s) => enqueue(s, request));
       }),
     [],
   );
 
-  const close = useCallback((value: unknown) => {
-    setState((s) => resolveActive(s, value));
+  const close = useCallback((request: DialogRequest, value: unknown) => {
+    // An old event or repeated callback belongs only to the dialog that
+    // produced it; it must never resolve the next item in the queue.
+    setState((s) => {
+      if (s.active !== request) return s;
+      pendingRef.current.delete(request);
+      return resolveActive(s, value);
+    });
+  }, []);
+
+  const restoreFocus = useCallback((event: Event) => {
+    // Imperative dialogs have no Radix Trigger. Keep the batch's persistent
+    // opener until its final request closes, including newly queued requests
+    // that have not rendered yet.
+    event.preventDefault();
+    if (pendingRef.current.size > 0) return;
+    const opener = openerRef.current;
+    openerRef.current = undefined;
+    const focused = document.activeElement;
+    if (opener?.isConnected && (!focused || focused === document.body || !focused.isConnected)) {
+      opener.focus({ preventScroll: true });
+    }
   }, []);
 
   const api: DialogApi = {
@@ -73,18 +108,27 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
       {children}
       {active?.kind === "confirm" && (
         <ConfirmModal
+          request={active}
           options={active.options as ConfirmDialogOptions}
-          onResult={(ok) => close(ok)}
+          onResult={(ok) => close(active, ok)}
+          onCloseAutoFocus={restoreFocus}
         />
       )}
       {active?.kind === "alert" && (
         <AlertModal
+          request={active}
           options={active.options as AlertDialogOptions}
-          onClose={() => close(undefined)}
+          onClose={() => close(active, undefined)}
+          onCloseAutoFocus={restoreFocus}
         />
       )}
       {active?.kind === "prompt" && (
-        <PromptModal options={active.options as PromptDialogOptions} onResult={(v) => close(v)} />
+        <PromptModal
+          request={active}
+          options={active.options as PromptDialogOptions}
+          onResult={(v) => close(active, v)}
+          onCloseAutoFocus={restoreFocus}
+        />
       )}
     </DialogContextRef.Provider>
   );
@@ -145,18 +189,24 @@ function ModalHead({
 }
 
 function ConfirmModal({
+  request,
   options,
   onResult,
+  onCloseAutoFocus,
 }: {
+  request: DialogRequest;
   options: ConfirmDialogOptions;
   onResult: (ok: boolean) => void;
+  onCloseAutoFocus: (event: Event) => void;
 }) {
   const { t } = useT();
+  const confirmRef = useDialogButtonFocus(request);
   return (
     <Dialog open onOpenChange={(o) => !o && onResult(false)}>
       <DialogContent
         className={options.detail?.includes("\n") ? "max-w-2xl" : "max-w-sm"}
-        onEscapeKeyDown={() => onResult(false)}
+        onEscapeKeyDown={preventComposingEscape}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <ModalHead title={options.title} message={options.message} detail={options.detail} />
         <DialogFooter>
@@ -164,6 +214,7 @@ function ConfirmModal({
             {options.cancelLabel ?? t("misc.dialog.cancel")}
           </Button>
           <Button
+            ref={confirmRef}
             variant={options.destructive ? "destructive" : "solid"}
             onClick={() => onResult(true)}
             autoFocus
@@ -176,14 +227,29 @@ function ConfirmModal({
   );
 }
 
-function AlertModal({ options, onClose }: { options: AlertDialogOptions; onClose: () => void }) {
+function AlertModal({
+  request,
+  options,
+  onClose,
+  onCloseAutoFocus,
+}: {
+  request: DialogRequest;
+  options: AlertDialogOptions;
+  onClose: () => void;
+  onCloseAutoFocus: (event: Event) => void;
+}) {
   const { t } = useT();
+  const okRef = useDialogButtonFocus(request);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm" onEscapeKeyDown={() => onClose()}>
+      <DialogContent
+        className="max-w-sm"
+        onEscapeKeyDown={preventComposingEscape}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <ModalHead title={options.title} message={options.message} detail={options.detail} />
         <DialogFooter>
-          <Button variant="solid" onClick={onClose} autoFocus>
+          <Button ref={okRef} variant="solid" onClick={onClose} autoFocus>
             {options.okLabel ?? t("misc.dialog.ok")}
           </Button>
         </DialogFooter>
@@ -193,33 +259,55 @@ function AlertModal({ options, onClose }: { options: AlertDialogOptions; onClose
 }
 
 function PromptModal({
+  request,
   options,
   onResult,
+  onCloseAutoFocus,
 }: {
+  request: DialogRequest;
   options: PromptDialogOptions;
   onResult: (value: string | null) => void;
+  onCloseAutoFocus: (event: Event) => void;
 }) {
   const { t } = useT();
   const [value, setValue] = useState(options.defaultValue ?? "");
   const inputRef = useRef<HTMLInputElement>(null);
-  // Select the prefilled text on open so editing/replacing is one keystroke.
-  useEffect(() => {
-    const id = requestAnimationFrame(() => inputRef.current?.select());
-    return () => cancelAnimationFrame(id);
-  }, []);
+  const composingRef = useRef(false);
+  // Consecutive prompts reuse this component, even when they share options.
+  // Reset before paint, then select the new draft after Radix moves focus.
+  useLayoutEffect(() => {
+    setValue(options.defaultValue ?? "");
+    composingRef.current = false;
+    const id = window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [request, options.defaultValue]);
 
   const submit = () => onResult(value);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onResult(null)}>
-      <DialogContent className="max-w-sm" onEscapeKeyDown={() => onResult(null)}>
+      <DialogContent
+        className="max-w-sm"
+        onEscapeKeyDown={(event) => preventComposingEscape(event, composingRef.current)}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <ModalHead title={options.title} message={options.message} detail={options.detail} />
         <Input
           ref={inputRef}
           value={value}
           placeholder={options.placeholder}
           onChange={(e) => setValue(e.target.value)}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            composingRef.current = false;
+          }}
           onKeyDown={(e) => {
+            if (composingRef.current || e.nativeEvent.isComposing || e.keyCode === 229) return;
             if (e.key === "Enter") {
               e.preventDefault();
               submit();
@@ -237,4 +325,18 @@ function PromptModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** Radix handles dismissal through onOpenChange; composition only vetoes it. */
+function preventComposingEscape(event: KeyboardEvent, composing = false) {
+  if (composing || event.isComposing || event.keyCode === 229) event.preventDefault();
+}
+
+function useDialogButtonFocus(request: DialogRequest) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const frame = window.requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [request]);
+  return ref;
 }

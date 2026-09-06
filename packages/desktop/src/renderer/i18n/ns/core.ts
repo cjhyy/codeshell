@@ -79,6 +79,7 @@ export const core = {
       },
     },
     sidebar: {
+      navigation: "导航",
       newConversation: "新对话",
       search: "搜索",
       extensions: "扩展",
@@ -230,6 +231,7 @@ export const core = {
       },
     },
     sidebar: {
+      navigation: "Navigation",
       newConversation: "New chat",
       search: "Search",
       extensions: "Extensions",

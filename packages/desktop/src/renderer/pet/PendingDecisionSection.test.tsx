@@ -23,7 +23,7 @@ describe("PendingDecisionSection", () => {
     const html = renderToStaticMarkup(<PendingDecisionSection pending={[pending]} />);
     expect(html).toContain("待你决定");
     expect(html).toContain("Bash needs a decision");
-    expect(html).toContain("high risk");
+    expect(html).toContain("高风险");
     expect(html).toContain("打开并处理");
     expect(html).not.toContain("批准");
     expect(html).not.toContain("拒绝");

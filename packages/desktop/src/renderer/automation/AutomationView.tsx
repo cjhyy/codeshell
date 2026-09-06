@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { AutomationSummary, AutomationPermissionLevel, RunSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock3, Link2, Loader2, PackageOpen, Play, Plus, Trash2 } from "lucide-react";
+import { Clock3, Link2, Loader2, PackageOpen, Play, Plus, Repeat2, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import {
   parseSchedule,
@@ -87,8 +87,35 @@ function runStatusLabel(t: TFunction, status?: string): string {
     case "queued":
       return t("auto.runStatus.queued");
     default:
-      return status || "session";
+      return status || t("auto.runStatus.session");
   }
+}
+
+function scheduleLabel(job: AutomationSummary, t: TFunction): string {
+  return job.once
+    ? job.nextRun
+      ? t("auto.schedule.onceAt", { time: new Date(job.nextRun).toLocaleString() })
+      : t("auto.schedule.once")
+    : describeSchedule(job.schedule);
+}
+
+function RunStatus({ status, t }: { status?: string; t: TFunction }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+        status === "failed"
+          ? "bg-status-err/10 text-status-err"
+          : status === "completed"
+            ? "bg-status-ok/10 text-status-ok"
+            : status === "running" || status === "queued"
+              ? "bg-primary/10 text-primary"
+              : "bg-muted text-muted-foreground",
+      )}
+    >
+      {runStatusLabel(t, status)}
+    </span>
+  );
 }
 
 type AutomationSessionLink = {
@@ -220,6 +247,7 @@ export function AutomationView({
   projects: TrackedProject[];
 }) {
   const { t } = useT();
+  const detailId = useId();
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [diskSessions, setDiskSessions] = useState<DiskSessionMeta[]>([]);
@@ -274,8 +302,10 @@ export function AutomationView({
 
   if (error) {
     return (
-      <div className="flex flex-col items-start gap-3 p-6 text-sm text-status-err">
-        {error}
+      <div className="m-4 flex min-w-0 flex-col items-start gap-3 rounded-2xl border border-status-err/20 bg-status-err/5 p-5 text-sm">
+        <p role="alert" className="break-words text-status-err">
+          {error}
+        </p>
         <Button
           variant="outline"
           size="sm"
@@ -290,64 +320,113 @@ export function AutomationView({
     );
   }
   if (!jobs)
-    return <div className="p-6 text-sm text-muted-foreground">{t("auto.view.loading")}</div>;
+    return (
+      <div role="status" className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+        <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+        {t("auto.view.loading")}
+      </div>
+    );
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{t("auto.view.title")}</h2>
-          <p className="text-xs text-muted-foreground">
-            {t("auto.view.jobCount", { count: jobs.length })}
-          </p>
+    <div className="@container/automation flex h-full min-h-0 min-w-0 flex-col bg-background">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-5 @min-[760px]/automation:px-6">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              {t("auto.view.title")}
+            </h1>
+            <span className="rounded-full border border-border/70 bg-card px-2.5 py-0.5 text-xs tabular-nums text-muted-foreground">
+              {t("auto.view.jobCount", { count: jobs.length })}
+            </span>
+          </div>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("auto.view.subtitle")}</p>
         </div>
-        <Button size="sm" onClick={onCreateConversational}>
-          <Plus size={14} />
-          {t("auto.view.create")}
-        </Button>
+        {jobs.length > 0 && (
+          <Button className="rounded-xl" onClick={onCreateConversational}>
+            <Plus size={14} />
+            {t("auto.view.create")}
+          </Button>
+        )}
       </div>
 
       {jobs.length === 0 ? (
-        <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-          {t("auto.view.empty")}
+        <div className="mx-4 mb-4 flex min-h-0 flex-1 items-center justify-center overflow-y-auto rounded-2xl border border-border/70 bg-card/70 p-6 @min-[760px]/automation:mx-6">
+          <div className="max-w-sm text-center">
+            <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Repeat2 size={22} aria-hidden="true" />
+            </span>
+            <h2 className="text-base font-semibold text-foreground">{t("auto.view.emptyTitle")}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("auto.view.empty")}
+            </p>
+            <Button className="mt-5 rounded-xl" onClick={onCreateConversational}>
+              <Plus size={16} aria-hidden="true" />
+              {t("auto.view.create")}
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(220px,280px)_1fr] gap-4">
-          <ul className="min-h-0 overflow-y-auto rounded-md border bg-card p-1">
+        <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(112px,0.35fr)_minmax(0,1fr)] gap-4 px-4 pb-4 @min-[760px]/automation:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] @min-[760px]/automation:grid-rows-1 @min-[760px]/automation:px-6 @min-[760px]/automation:pb-6">
+          <ul
+            aria-label={t("auto.view.jobList")}
+            className="min-h-0 min-w-0 space-y-1 overflow-y-auto rounded-2xl border border-border/70 bg-card/70 p-2"
+          >
             {jobs.map((j) => (
-              <li
-                key={j.id}
-                onClick={() => setSelected(j.id)}
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent",
-                  selected === j.id && "bg-accent text-accent-foreground",
-                )}
-              >
-                <span
+              <li key={j.id}>
+                <button
+                  type="button"
+                  aria-pressed={selected === j.id}
+                  aria-controls={detailId}
+                  onClick={() => setSelected(j.id)}
                   className={cn(
-                    "h-2.5 w-2.5 shrink-0 rounded-full",
-                    j.enabled ? "bg-status-ok" : "bg-muted-foreground",
+                    "flex w-full min-w-0 flex-col gap-2 rounded-xl border px-3 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                    selected === j.id
+                      ? "border-primary/20 bg-primary/8 text-foreground"
+                      : "border-transparent hover:bg-accent",
                   )}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{j.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {j.enabled ? t("auto.view.active") : t("auto.view.paused")} ·{" "}
-                    {t("auto.view.runCount", { count: j.runCount })}
+                >
+                  <span className="w-full min-w-0">
+                    <span className="block truncate font-medium" title={j.name}>
+                      {j.name}
+                    </span>
+                    <span
+                      className="mt-1 block truncate text-xs text-muted-foreground"
+                      title={scheduleLabel(j, t)}
+                    >
+                      {scheduleLabel(j, t)}
+                    </span>
                   </span>
-                </span>
-                <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">
-                  {j.once
-                    ? j.nextRun
-                      ? t("auto.schedule.onceAt", { time: new Date(j.nextRun).toLocaleString() })
-                      : t("auto.schedule.once")
-                    : describeSchedule(j.schedule)}
-                </span>
+                  <span className="flex w-full flex-wrap items-center justify-between gap-2 text-xs">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5",
+                        j.enabled ? "text-status-ok" : "text-muted-foreground",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          j.enabled ? "bg-status-ok" : "bg-muted-foreground",
+                        )}
+                      />
+                      {j.enabled ? t("auto.view.active") : t("auto.view.paused")}
+                    </span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {t("auto.view.runCount", { count: j.runCount })}
+                    </span>
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
 
-          <div className="min-h-0 overflow-y-auto">
+          <div
+            id={detailId}
+            role="region"
+            aria-label={detail?.name ?? t("auto.view.selectJob")}
+            className="min-h-0 min-w-0 overflow-y-auto rounded-2xl"
+          >
             {detail ? (
               <AutomationDetail
                 t={t}
@@ -381,7 +460,7 @@ export function AutomationView({
                 onOpenSession={onOpenSession}
               />
             ) : (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
                 {t("auto.view.selectJob")}
               </div>
             )}
@@ -394,9 +473,15 @@ export function AutomationView({
 
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-border py-2.5 text-sm last:border-b-0">
-      <span className="text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2 font-medium">{children}</div>
+    <div
+      role="group"
+      aria-label={label}
+      className="grid min-w-0 items-start gap-2 border-b border-border/70 py-3 text-sm last:border-b-0 @min-[520px]/automation-detail:grid-cols-[100px_minmax(0,1fr)] @min-[520px]/automation-detail:items-center"
+    >
+      <span aria-hidden="true" className="text-muted-foreground">
+        {label}
+      </span>
+      <div className="flex min-w-0 flex-wrap items-center gap-2 font-medium">{children}</div>
     </div>
   );
 }
@@ -439,6 +524,10 @@ export function AutomationDetail(props: {
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
+  const promptHeadingId = useId();
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
+  const editPromptRef = useRef<HTMLButtonElement>(null);
+  const restorePromptFocus = useRef<string | null>(null);
 
   // Frequency UI model derived from the stored cron string. Edits rebuild the
   // cron and save it; the raw input only shows for the "custom" cadence.
@@ -451,6 +540,19 @@ export function AutomationDetail(props: {
     setSched(parseSchedule(job.schedule));
     setCustomDraft(job.schedule);
   }, [job.id, job.prompt, job.schedule]);
+
+  useEffect(() => {
+    if (editingPrompt) promptInputRef.current?.focus();
+    else {
+      if (restorePromptFocus.current === job.id) editPromptRef.current?.focus();
+      restorePromptFocus.current = null;
+    }
+  }, [editingPrompt]);
+
+  const closePromptEditor = () => {
+    restorePromptFocus.current = job.id;
+    setEditingPrompt(false);
+  };
 
   // Apply a new schedule model: rebuild the cron string and save if changed.
   const commitSchedule = (next: Schedule) => {
@@ -510,43 +612,63 @@ export function AutomationDetail(props: {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-md border bg-card p-4">
+    <div className="@container/automation-detail flex min-w-0 flex-col gap-4">
+      <div className="rounded-2xl border border-border/70 bg-card p-4 @min-[520px]/automation-detail:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <span
-              className={cn(
-                "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
-                job.enabled ? "bg-status-ok" : "bg-muted-foreground",
-              )}
-            />
+          <div className="flex min-w-0 flex-1 basis-52 items-start gap-3">
             <div className="flex min-w-0 flex-col">
-              <h3 className="truncate text-base font-semibold text-foreground">{job.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                {describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}
+              <h2 className="break-words text-lg font-semibold leading-snug tracking-tight text-foreground [overflow-wrap:anywhere]">
+                {job.name}
+              </h2>
+              <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">
+                {scheduleLabel(job, t)} · {job.timezone ?? "UTC"}
               </p>
-              {job.resumeSessionId && (
-                <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                  <Link2 size={11} />
-                  {t("auto.detail.resumeBadge")}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span
+                  className={cn(
+                    "inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
+                    job.enabled
+                      ? "bg-status-ok/10 text-status-ok"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      job.enabled ? "bg-status-ok" : "bg-muted-foreground",
+                    )}
+                  />
+                  {job.enabled ? t("auto.detail.statusActive") : t("auto.detail.statusPaused")}
                 </span>
-              )}
-              {job.templateSource && (
-                <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  <PackageOpen size={11} />
-                  {t("auto.detail.pluginTemplateBadge")}
-                </span>
-              )}
+                {job.resumeSessionId && (
+                  <span className="inline-flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    <Link2 size={11} aria-hidden="true" />
+                    {t("auto.detail.resumeBadge")}
+                  </span>
+                )}
+                {job.templateSource && (
+                  <span className="inline-flex w-fit items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    <PackageOpen size={11} aria-hidden="true" />
+                    {t("auto.detail.pluginTemplateBadge")}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Switch
               checked={job.enabled}
               onCheckedChange={(v) => props.onToggleEnabled(v)}
               disabled={props.toggleBusy}
-              aria-label={job.enabled ? t("auto.detail.enabled") : t("auto.detail.pausedAria")}
+              aria-label={t("auto.detail.enableAutomation")}
             />
-            <Button size="sm" onClick={props.onRunNow} disabled={props.runNowBusy}>
+            <Button
+              size="sm"
+              className="rounded-lg"
+              onClick={props.onRunNow}
+              disabled={props.runNowBusy}
+            >
               {props.runNowBusy ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
@@ -562,10 +684,11 @@ export function AutomationDetail(props: {
             <Button
               size="sm"
               variant="ghost"
-              className="text-status-err"
+              className="size-8 rounded-lg p-0 text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
               onClick={props.onDelete}
               disabled={props.deleteBusy}
               aria-label={t("auto.detail.delete")}
+              title={t("auto.detail.delete")}
             >
               <Trash2 size={14} />
             </Button>
@@ -573,93 +696,125 @@ export function AutomationDetail(props: {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-md border bg-card p-3">
+      <div className="grid min-w-0 grid-cols-2 gap-3 @min-[520px]/automation-detail:grid-cols-3">
+        <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.nextRun")}</span>
           <strong className="mt-1 block text-sm text-foreground">
             {fmtRelative(job.nextRun, t)}
           </strong>
           {job.nextRun != null && (
-            <span className="block text-[10px] text-muted-foreground tabular-nums">
+            <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
               {fmtTime(job.nextRun)}
             </span>
           )}
         </div>
-        <div className="rounded-md border bg-card p-3">
+        <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.lastRun")}</span>
           <strong className="mt-1 block text-sm text-foreground">
             {fmtRelative(job.lastRun, t)}
           </strong>
           {job.lastRun != null && (
-            <span className="block text-[10px] text-muted-foreground tabular-nums">
+            <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
               {fmtTime(job.lastRun)}
             </span>
           )}
         </div>
-        <div className="rounded-md border bg-card p-3">
+        <div className="col-span-2 min-w-0 rounded-2xl border border-border/70 bg-card p-3 @min-[520px]/automation-detail:col-span-1">
           <span className="text-xs text-muted-foreground">{t("auto.detail.runTimes")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{job.runCount}</strong>
+          <strong className="mt-1 block text-sm text-foreground tabular-nums">
+            {job.runCount}
+          </strong>
         </div>
       </div>
 
       {/* Prompt — edit button reveals an inline textarea (long text). */}
-      {editingPrompt ? (
-        <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
-          <Textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={5} />
-          <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setEditingPrompt(false);
-                setPromptDraft(job.prompt);
-              }}
-            >
-              {t("auto.detail.cancel")}
-            </Button>
-            <Button
-              size="sm"
-              disabled={props.saveBusy || !promptDraft.trim()}
-              onClick={() => {
-                if (promptDraft.trim() !== job.prompt) props.onSave({ prompt: promptDraft.trim() });
-                setEditingPrompt(false);
-              }}
-            >
-              {props.saveBusy ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  {t("auto.detail.saving")}
-                </>
-              ) : (
-                t("auto.detail.save")
-              )}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
-          <pre className="m-0 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 text-sm">
-            {job.prompt}
-          </pre>
-          <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>
+      <section
+        aria-labelledby={promptHeadingId}
+        className="flex min-w-0 flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id={promptHeadingId} className="text-sm font-semibold text-foreground">
+            {t("auto.detail.prompt")}
+          </h3>
+          <Button
+            ref={editPromptRef}
+            size="sm"
+            variant="ghost"
+            className="rounded-lg"
+            disabled={editingPrompt}
+            onClick={() => setEditingPrompt(true)}
+          >
             {t("auto.detail.edit")}
           </Button>
         </div>
-      )}
+        {editingPrompt ? (
+          <>
+            <Textarea
+              ref={promptInputRef}
+              aria-labelledby={promptHeadingId}
+              className="min-h-36 rounded-xl leading-relaxed"
+              value={promptDraft}
+              onChange={(e) => setPromptDraft(e.target.value)}
+              rows={5}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  closePromptEditor();
+                  setPromptDraft(job.prompt);
+                }}
+              >
+                {t("auto.detail.cancel")}
+              </Button>
+              <Button
+                size="sm"
+                disabled={props.saveBusy || !promptDraft.trim()}
+                onClick={() => {
+                  if (promptDraft.trim() !== job.prompt)
+                    props.onSave({ prompt: promptDraft.trim() });
+                  closePromptEditor();
+                }}
+              >
+                {props.saveBusy ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    {t("auto.detail.saving")}
+                  </>
+                ) : (
+                  t("auto.detail.save")
+                )}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <pre
+            tabIndex={0}
+            aria-labelledby={promptHeadingId}
+            className="m-0 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-muted/40 p-3 font-sans text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [overflow-wrap:anywhere]"
+          >
+            {job.prompt}
+          </pre>
+        )}
+      </section>
 
-      <div className="rounded-md border bg-card p-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-4">
+        <h3 className="mb-1 text-sm font-semibold text-foreground">
           {t("auto.detail.configSection")}
-        </p>
+        </h3>
 
         <FieldRow label={t("auto.detail.frequency")}>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {/* Step 1: cadence type. */}
             <Select
               value={sched.kind}
               onValueChange={(v) => onCadenceChange(v as Schedule["kind"])}
             >
-              <SelectTrigger className="h-8 w-[120px]">
+              <SelectTrigger
+                aria-label={t("auto.detail.frequency")}
+                className="h-9 w-[140px] max-w-full rounded-lg"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -677,7 +832,10 @@ export function AutomationDetail(props: {
                 value={String(sched.weekday)}
                 onValueChange={(v) => commitSchedule({ ...sched, weekday: Number(v) })}
               >
-                <SelectTrigger className="h-8 w-[96px]">
+                <SelectTrigger
+                  aria-label={t("auto.detail.weekday")}
+                  className="h-9 w-[110px] max-w-full rounded-lg"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -693,7 +851,8 @@ export function AutomationDetail(props: {
             {(sched.kind === "daily" || sched.kind === "weekdays" || sched.kind === "weekly") && (
               <Input
                 type="time"
-                className="h-8 w-[120px]"
+                aria-label={t("auto.detail.time")}
+                className="h-9 w-[130px] max-w-full rounded-lg"
                 value={sched.time}
                 onChange={(e) => {
                   if (e.target.value) commitSchedule({ ...sched, time: e.target.value });
@@ -706,7 +865,10 @@ export function AutomationDetail(props: {
                 value={String(sched.everyHours)}
                 onValueChange={(v) => commitSchedule({ kind: "hourly", everyHours: Number(v) })}
               >
-                <SelectTrigger className="h-8 w-[120px]">
+                <SelectTrigger
+                  aria-label={t("auto.detail.interval")}
+                  className="h-9 w-[140px] max-w-full rounded-lg"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -721,7 +883,8 @@ export function AutomationDetail(props: {
 
             {sched.kind === "custom" && (
               <Input
-                className="h-8 w-[180px] font-mono"
+                aria-label={t("auto.detail.customSchedule")}
+                className="h-9 w-[200px] max-w-full rounded-lg font-mono"
                 value={customDraft}
                 placeholder={t("auto.detail.cronPlaceholder")}
                 onChange={(e) => setCustomDraft(e.target.value)}
@@ -735,12 +898,12 @@ export function AutomationDetail(props: {
         </FieldRow>
 
         <FieldRow label={t("auto.detail.timezone")}>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
             <Combobox
               options={offsetOptions}
               value={tzOffsetFilter === "all" ? "all" : String(tzOffsetFilter)}
               onChange={(v) => setTzOffsetFilter(v === "all" ? "all" : Number(v))}
-              triggerClassName="w-[110px]"
+              triggerClassName="h-9 w-[130px] max-w-full rounded-lg"
               searchPlaceholder={t("auto.detail.tzSearch")}
             />
             <Combobox
@@ -749,7 +912,7 @@ export function AutomationDetail(props: {
               onChange={(v) => {
                 if (v !== job.timezone) props.onSave({ timezone: v });
               }}
-              triggerClassName="w-[200px]"
+              triggerClassName="h-9 w-[220px] min-w-0 max-w-full rounded-lg"
               searchPlaceholder={t("auto.detail.tzSearch")}
               emptyText={t("auto.detail.tzEmpty")}
             />
@@ -765,7 +928,10 @@ export function AutomationDetail(props: {
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[160px]">
+            <SelectTrigger
+              aria-label={t("auto.detail.permission")}
+              className="h-9 w-full max-w-[360px] min-w-0 rounded-lg"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -821,7 +987,10 @@ export function AutomationDetail(props: {
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[220px]">
+            <SelectTrigger
+              aria-label={t("auto.detail.project")}
+              className="h-9 w-full max-w-[360px] min-w-0 rounded-lg"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -837,7 +1006,7 @@ export function AutomationDetail(props: {
         {job.templateSource && (
           <FieldRow label={t("auto.detail.templateSource")}>
             <span
-              className="max-w-[320px] truncate font-mono text-xs"
+              className="min-w-0 break-words font-mono text-xs [overflow-wrap:anywhere]"
               title={`${job.templateSource.installKey}/${job.templateSource.templateId}\n${job.templateSource.revision}`}
             >
               {job.templateSource.installKey}/{job.templateSource.templateId} ·{" "}
@@ -848,17 +1017,17 @@ export function AutomationDetail(props: {
       </div>
 
       {job.resumeSessionId ? (
-        <div className="rounded-md border bg-card p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-4">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">
             {t("auto.detail.boundConversation")}
-          </p>
+          </h3>
           {(() => {
             const bound = sessions.find(
               (l) => (l.session.engineSessionId ?? l.session.id) === job.resumeSessionId,
             );
             if (!bound)
               return (
-                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm leading-relaxed text-muted-foreground">
                   {t("auto.detail.boundNotFound")}
                 </div>
               );
@@ -868,35 +1037,40 @@ export function AutomationDetail(props: {
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
+                className="h-auto min-w-0 w-full flex-wrap justify-start gap-2 whitespace-normal rounded-xl px-3 py-3 text-left"
                 onClick={() => {
                   if (bound.needsImport && bound.run) props.onOpenRunSession(bound.run);
                   else if (bound.disk) props.onOpenDiskSession(bound.disk);
                   else props.onOpenSession(bound.projectId, bound.session.id);
                 }}
               >
-                <Link2 size={14} />
-                <span className="min-w-0 flex-1">
+                <Link2 size={16} aria-hidden="true" className="text-muted-foreground" />
+                <span className="min-w-0 flex-1 basis-40">
                   <span className="block truncate text-sm font-medium">
                     {bound.session.title || t("auto.detail.untitled")}
                   </span>
-                  <small className="block truncate text-xs text-muted-foreground">
-                    {shortDate(when)} · {runStatusLabel(t, status)}
-                  </small>
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <small className="text-xs text-muted-foreground tabular-nums">
+                      {shortDate(when)}
+                    </small>
+                    <RunStatus status={status} t={t} />
+                  </span>
                 </span>
-                <span className="text-xs text-primary">{t("auto.detail.openConversation")} →</span>
+                <span className="shrink-0 text-xs text-primary">
+                  {t("auto.detail.openConversation")} →
+                </span>
               </Button>
             );
           })()}
         </div>
       ) : (
-        <div className="rounded-md border bg-card p-3">
+        <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-sm font-semibold text-foreground">
+              <h3 className="text-sm font-semibold text-foreground">
                 {t("auto.detail.runSession")}
-              </h4>
-              <p className="text-xs text-muted-foreground">
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {lastSession
                   ? t("auto.detail.recentAt", {
                       when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt),
@@ -911,7 +1085,7 @@ export function AutomationDetail(props: {
                 never rendered. Automation history IS the session list below. */}
           </div>
           {sessions.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm leading-relaxed text-muted-foreground">
               {t("auto.detail.noJumpableSession")}
             </div>
           ) : (
@@ -929,21 +1103,26 @@ export function AutomationDetail(props: {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
+                      className="h-auto min-w-0 w-full flex-wrap justify-start gap-2 whitespace-normal rounded-xl px-3 py-3 text-left"
                       onClick={() => {
                         if (needsImport && run) props.onOpenRunSession(run);
                         else if (disk) props.onOpenDiskSession(disk);
                         else props.onOpenSession(projectId, session.id);
                       }}
                     >
-                      <Clock3 size={14} />
-                      <span className="min-w-0 flex-1">
+                      <Clock3 size={16} aria-hidden="true" className="text-muted-foreground" />
+                      <span className="min-w-0 flex-1 basis-40">
                         <span className="block truncate text-sm font-medium">{session.title}</span>
-                        <small className="block truncate text-xs text-muted-foreground">
-                          {shortDate(when)} · {runStatusLabel(t, status)}
-                        </small>
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          <small className="text-xs text-muted-foreground tabular-nums">
+                            {shortDate(when)}
+                          </small>
+                          <RunStatus status={status} t={t} />
+                        </span>
                       </span>
-                      <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
+                      <span className="shrink-0 text-xs text-primary">
+                        {t("auto.detail.sessionView")}
+                      </span>
                     </Button>
                   </li>
                 );

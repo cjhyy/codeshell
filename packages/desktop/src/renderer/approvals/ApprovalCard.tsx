@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { ChevronDown, Check, X } from "lucide-react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { RiskPill, riskFor } from "./RiskPill";
@@ -16,11 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import {
-  approveOptionsFor,
-  type ApproveChoice,
-  type ApprovePathScope,
-} from "./approvalDecision";
+import { approveOptionsFor, type ApproveChoice, type ApprovePathScope } from "./approvalDecision";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
@@ -64,6 +60,7 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   const { t } = useT();
   const { request } = envelope;
   const [showRaw, setShowRaw] = useState(false);
+  const rawArgsId = useId();
   const [denyReason, setDenyReason] = useState<string>("");
   // Optimistic terminal state: set the instant the user clicks so the card
   // shows a confirmation and disables its controls immediately, regardless of
@@ -76,8 +73,9 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   const argsJson = JSON.stringify(request.args ?? {});
   // Engine supplies riskLevel authoritatively; fall back to heuristic
   // only if missing (e.g. older worker versions).
-  const risk = (request.riskLevel as "low" | "medium" | "high" | undefined)
-    ?? riskFor(request.toolName, argsJson);
+  const risk =
+    (request.riskLevel as "low" | "medium" | "high" | undefined) ??
+    riskFor(request.toolName, argsJson);
   const summary = summarizeRequest(request, t);
 
   // Path-scoped options for file tools (Write/Edit) — pulls file_path so the
@@ -105,7 +103,7 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   };
 
   return (
-    <div className="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
+    <div className="min-w-0 rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
       <div className="flex items-center gap-2">
         <span className="font-mono text-sm font-semibold">{request.toolName}</span>
         <RiskPill level={risk} />
@@ -118,16 +116,25 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
       <div className="mt-2 break-all font-mono text-sm">{summary}</div>
 
       <button
-        className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+        type="button"
+        aria-expanded={showRaw}
+        aria-controls={rawArgsId}
+        className="mt-2 rounded-sm text-xs text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setShowRaw((s) => !s)}
       >
         {showRaw ? t("auto.approvalCard.hideRaw") : t("auto.approvalCard.showRaw")}
       </button>
-      {showRaw && (
-        <pre className="mt-1 overflow-x-auto rounded-md bg-muted/40 p-2 text-xs">
-          {JSON.stringify(request.args ?? {}, null, 2)}
-        </pre>
-      )}
+      <div id={rawArgsId} hidden={!showRaw}>
+        {showRaw && (
+          <pre
+            tabIndex={0}
+            aria-label={t("auto.approvalCard.rawArgs")}
+            className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/40 p-3 text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [overflow-wrap:anywhere]"
+          >
+            {JSON.stringify(request.args ?? {}, null, 2)}
+          </pre>
+        )}
+      </div>
 
       {decided ? (
         <div
@@ -175,9 +182,7 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
                       onSelect={() => approve(o.scope, o.pathScope, o.label)}
                     >
                       <span>{o.label}</span>
-                      {o.hint && (
-                        <span className="text-xs text-muted-foreground">{o.hint}</span>
-                      )}
+                      {o.hint && <span className="text-xs text-muted-foreground">{o.hint}</span>}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -198,7 +203,9 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
               </SelectTrigger>
               <SelectContent>
                 {DENY_PRESETS.map((r) => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -218,7 +225,14 @@ function summarizeRequest(req: ApprovalRequestEnvelope["request"], t: TFunction)
       resource: stringArg(args.resource),
     });
   }
-  const candidates: Array<keyof typeof args> = ["command", "file_path", "path", "url", "pattern", "query"];
+  const candidates: Array<keyof typeof args> = [
+    "command",
+    "file_path",
+    "path",
+    "url",
+    "pattern",
+    "query",
+  ];
   for (const k of candidates) {
     const v = args[k];
     if (typeof v === "string") return v;

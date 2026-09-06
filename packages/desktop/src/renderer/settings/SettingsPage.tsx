@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Search,
@@ -26,6 +26,7 @@ import {
   MessageSquare,
   Gauge,
   UsersRound,
+  ChevronRight,
   X,
 } from "lucide-react";
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
@@ -112,6 +113,50 @@ interface ModuleGroup {
   /** Section header shown above the group; "" renders no header. */
   title: string;
   modules: Module[];
+}
+
+function SettingsSearchField({
+  inputRef,
+  query,
+  onChange,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  query: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useT();
+  return (
+    <div className="relative">
+      <Search
+        className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+        aria-hidden
+      />
+      <Input
+        ref={inputRef}
+        value={query}
+        type="search"
+        className="h-9 rounded-lg border-border/70 bg-background pl-8 pr-8 text-xs shadow-none [&::-webkit-search-cancel-button]:hidden"
+        placeholder={t("settingsX.page.searchPlaceholder")}
+        aria-label={t("settingsX.page.searchPlaceholder")}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {query ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-1 top-1 size-7 text-muted-foreground"
+          aria-label={t("settingsX.page.clearSearch")}
+          onClick={() => {
+            onChange("");
+            inputRef.current?.focus();
+          }}
+        >
+          <X className="size-3.5" aria-hidden />
+        </Button>
+      ) : null}
+    </div>
+  );
 }
 
 export function moduleSupportsScope(
@@ -356,6 +401,9 @@ export function SettingsPage({
   });
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const narrowSearchRef = useRef<HTMLInputElement>(null);
+  const moduleHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusModuleHeading = useRef(false);
   const [scopeState, setScopeState] = useState<SettingsScope>(() =>
     initialProjectPath ? { kind: "project", path: initialProjectPath } : { kind: "user" },
   );
@@ -375,6 +423,7 @@ export function SettingsPage({
   );
   const showTrafficLightGutter = isMac && !isFullscreen;
   const activeModule = MODULES.find((module) => module.id === active) ?? MODULES[0];
+  const ActiveModuleIcon = activeModule?.Icon ?? SettingsIcon;
   const activeUsesPageScope = activeModule ? moduleUsesPageScope(activeModule) : true;
   const activeGroup =
     MODULE_GROUPS.find((group) => group.modules.some((module) => module.id === active))?.title ??
@@ -424,8 +473,14 @@ export function SettingsPage({
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "f") {
+        // Both responsive layouts stay mounted. Use their actual visibility so
+        // resizing never directs the shortcut into the hidden desktop sidebar.
+        const input = [searchRef.current, narrowSearchRef.current].find(
+          (candidate) => candidate && candidate.getClientRects().length > 0,
+        );
+        if (!input) return;
         event.preventDefault();
-        searchRef.current?.focus();
+        input.focus();
       }
     };
     window.addEventListener("keydown", focusSearch);
@@ -436,6 +491,12 @@ export function SettingsPage({
     setActive(id);
     setQuery("");
   };
+
+  useLayoutEffect(() => {
+    if (!focusModuleHeading.current) return;
+    focusModuleHeading.current = false;
+    moduleHeadingRef.current?.focus();
+  }, [active]);
 
   const changeScope = (next: SettingsScope) => {
     setActive((current) =>
@@ -463,109 +524,108 @@ export function SettingsPage({
       .map((module) => ({ value: module.id, label: module.label })),
   })).filter((group) => group.options.length > 0);
 
+  const moduleNavigation = (
+    <>
+      {query ? (
+        <p className="mb-3 px-2 text-[11px] text-muted-foreground" role="status">
+          {t("settingsX.page.searchResults", { count: resultCount })}
+        </p>
+      ) : null}
+
+      {filteredGroups.map((group) => (
+        <div key={group.title || "_top"} className="mb-5 last:mb-0">
+          {group.title && (
+            <div className="mb-2 px-2.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
+              {group.title}
+            </div>
+          )}
+          {group.modules.map(({ id, label, Icon }) => (
+            <Button
+              key={id}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "mb-0.5 h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-normal",
+                active === id
+                  ? "bg-primary/10 font-medium text-primary hover:bg-primary/15 hover:text-primary"
+                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+              )}
+              aria-current={active === id ? "page" : undefined}
+              onClick={() => selectModule(id)}
+            >
+              <Icon size={15} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+              {active === id && (
+                <ChevronRight size={12} className="shrink-0 opacity-60" aria-hidden />
+              )}
+            </Button>
+          ))}
+        </div>
+      ))}
+
+      {filteredGroups.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/60 px-3 py-6 text-center">
+          <Search className="mx-auto mb-3 size-5 text-muted-foreground/60" aria-hidden />
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("settingsX.page.noSearchResults")}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 h-7 rounded-lg text-xs"
+            onClick={() => setQuery("")}
+          >
+            {t("settingsX.page.clearSearch")}
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
+
   return (
-    <div className="h-full bg-background">
+    <div className="h-full min-w-0 bg-background">
       <div className="flex h-full max-[720px]:flex-col">
         <nav
           aria-label={t("settingsX.page.settingsNav")}
           className={cn(
-            "w-64 shrink-0 overflow-y-auto border-r border-border bg-muted/20 px-3 pb-4 max-[720px]:hidden",
-            showTrafficLightGutter ? "pt-8" : "pt-4",
+            "flex w-60 shrink-0 flex-col border-r border-border/70 bg-muted/25 max-[1100px]:w-56 max-[720px]:hidden",
+            showTrafficLightGutter ? "pt-8" : "pt-3",
           )}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mb-4 w-full justify-start gap-1.5 px-2 text-muted-foreground"
-            onClick={onBack}
-          >
-            <ArrowLeft size={14} />
-            <span>{t("settingsX.page.back")}</span>
-          </Button>
+          <div className="shrink-0 border-b border-border/60 px-3 pb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mb-3 h-8 w-full justify-start gap-2 rounded-lg px-2 text-xs text-muted-foreground"
+              onClick={onBack}
+            >
+              <ArrowLeft size={14} />
+              <span>{t("settingsX.page.back")}</span>
+            </Button>
 
-          <div className="relative mb-3">
-            <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              ref={searchRef}
-              value={query}
-              type="search"
-              className="h-8 pl-8 pr-8 text-xs"
-              placeholder={t("settingsX.page.searchPlaceholder")}
-              aria-label={t("settingsX.page.searchPlaceholder")}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            {query ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0.5 top-0.5 size-7 text-muted-foreground"
-                aria-label={t("settingsX.page.clearSearch")}
-                onClick={() => {
-                  setQuery("");
-                  searchRef.current?.focus();
-                }}
-              >
-                <X className="size-3.5" aria-hidden />
-              </Button>
-            ) : null}
+            <div className="mb-4 flex items-center gap-2.5 px-2">
+              <span className="flex size-8 items-center justify-center rounded-xl border border-border/70 bg-card text-foreground shadow-sm">
+                <SettingsIcon className="size-4" aria-hidden />
+              </span>
+              <span className="text-base font-semibold tracking-tight">
+                {t("settingsX.page.settings")}
+              </span>
+            </div>
+
+            <SettingsSearchField inputRef={searchRef} query={query} onChange={setQuery} />
           </div>
 
-          {query ? (
-            <p className="mb-2 px-2 text-[11px] text-muted-foreground">
-              {t("settingsX.page.searchResults", { count: resultCount })}
-            </p>
-          ) : null}
-
-          {filteredGroups.map((group) => (
-            <div key={group.title || "_top"} className="mb-3">
-              {group.title && (
-                <div className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {group.title}
-                </div>
-              )}
-              {group.modules.map(({ id, label, Icon }) => (
-                <Button
-                  key={id}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "mb-0.5 h-8 w-full justify-start gap-2 px-2 text-sm font-normal",
-                    active === id
-                      ? "bg-accent font-medium text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                  aria-current={active === id ? "page" : undefined}
-                  onClick={() => selectModule(id)}
-                >
-                  <Icon size={13} />
-                  <span className="truncate">{label}</span>
-                </Button>
-              ))}
-            </div>
-          ))}
-
-          {filteredGroups.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border p-3 text-center">
-              <p className="text-xs text-muted-foreground">{t("settingsX.page.noSearchResults")}</p>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="mt-1 h-auto px-0"
-                onClick={() => setQuery("")}
-              >
-                {t("settingsX.page.clearSearch")}
-              </Button>
-            </div>
-          ) : null}
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">{moduleNavigation}</div>
         </nav>
 
-        <div className="hidden shrink-0 border-b border-border bg-card px-3 py-2 max-[720px]:flex max-[720px]:flex-col max-[720px]:gap-2">
+        <div
+          className={cn(
+            "hidden shrink-0 border-b border-border/70 bg-muted/25 px-3 pb-3 max-[720px]:flex max-[720px]:flex-col max-[720px]:gap-2",
+            showTrafficLightGutter ? "pt-9" : "pt-3",
+          )}
+        >
           <div className="flex w-full items-center gap-2">
             <Button
               variant="ghost"
@@ -580,29 +640,49 @@ export function SettingsPage({
               value={active}
               options={mobileOptions}
               ariaLabel={t("settingsX.page.settingsNav")}
-              className="min-w-0 flex-1"
+              className="min-w-0 flex-1 rounded-lg bg-background"
               onChange={selectModule}
             />
           </div>
+          <SettingsSearchField inputRef={narrowSearchRef} query={query} onChange={setQuery} />
+          {query.trim() && (
+            <nav
+              aria-label={t("settingsX.page.settingsNav")}
+              className="max-h-[40vh] overflow-y-auto rounded-xl border border-border/70 bg-background p-2"
+            >
+              {moduleNavigation}
+            </nav>
+          )}
         </div>
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[720px]:px-4 max-[720px]:pt-5">
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[1100px]:px-6 max-[720px]:px-4 max-[720px]:pt-5">
           <div className="mx-auto w-full max-w-5xl">
-            <div className="mb-6 border-b border-border pb-4">
-              {activeGroup ? (
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {activeGroup}
-                </p>
-              ) : null}
-              <h1 className="text-xl font-semibold tracking-tight">{activeModule?.label}</h1>
+            <div className="mb-7 rounded-2xl border border-border/70 bg-muted/20 p-5 max-[720px]:p-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/10 text-primary">
+                  <ActiveModuleIcon size={21} aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="mb-1 text-[11px] font-medium tracking-wide text-muted-foreground">
+                    {activeGroup || t("settingsX.page.settings")}
+                  </p>
+                  <h1
+                    ref={moduleHeadingRef}
+                    tabIndex={-1}
+                    className="break-words text-xl font-semibold tracking-tight focus:outline-none"
+                  >
+                    {activeModule?.label}
+                  </h1>
+                </div>
+              </div>
               {activeUsesPageScope && scopeState.kind === "project" ? (
-                <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                <p className="mt-4 border-t border-border/60 pt-3 text-xs leading-5 text-muted-foreground">
                   {t("settingsX.page.projectScopeHint")}
                 </p>
               ) : null}
               {activeUsesPageScope && scopeProjectPath ? (
                 <p
-                  className="mt-1 truncate font-mono text-xs text-muted-foreground"
+                  className="mt-1 break-all font-mono text-[11px] leading-5 text-muted-foreground"
                   title={scopeProjectPath}
                 >
                   {scopeProject ? `${projectLabel(scopeProject)} · ` : ""}
@@ -614,11 +694,17 @@ export function SettingsPage({
             <div key={contentTargetKey} className="flex flex-col gap-6">
               {active === "project-overview" && (
                 <ProjectOverviewSection
-                  modules={MODULES.filter(
-                    (module) =>
-                      module.id !== "project-overview" && moduleSupportsScope(module, scopeState),
-                  )}
-                  onSelect={selectModule}
+                  groups={MODULE_GROUPS.map((group) => ({
+                    title: group.title || t("projectConfig.overview.basics"),
+                    modules: group.modules.filter(
+                      (module) =>
+                        module.id !== "project-overview" && moduleSupportsScope(module, scopeState),
+                    ),
+                  }))}
+                  onSelect={(id) => {
+                    focusModuleHeading.current = true;
+                    selectModule(id);
+                  }}
                 />
               )}
               {active === "general" && (
@@ -681,7 +767,7 @@ export function SettingsPage({
                   onOpenDigitalHumans={onOpenDigitalHumans}
                 />
               )}
-              {active === "shortcuts" && <ShortcutsSection />}
+              {active === "shortcuts" && <ShortcutsSection isMac={isMac} />}
               {active === "capabilities" && (
                 <CapabilitiesOverviewSection
                   scope={scope}
@@ -735,6 +821,7 @@ export function SettingsPage({
                 <ExtensionsPage
                   activeProjectPath={scopeProjectPath ?? activeProjectPath}
                   showDiscover={false}
+                  embedded
                 />
               )}
               {active === "agents" && <AgentsSection projects={projects} />}

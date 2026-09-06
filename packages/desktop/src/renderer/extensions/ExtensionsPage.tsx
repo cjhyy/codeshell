@@ -3,16 +3,19 @@ import { DiscoverHome } from "./DiscoverHome";
 import { ManagePage, type TabKey } from "./ManagePage";
 import { useT } from "../i18n/I18nProvider";
 import { requireProjectConfigurationTarget } from "../configurationTarget";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   activeProjectPath: string | null;
   /**
    * When true (default), opens to the discovery home and lets the user drill
-   * into the management page. When false, renders the management page only —
-   * used by the Settings page, which wants the bare tabbed manager with no
-   * discovery home. The sidebar entry keeps the home.
+   * into the management page. When false, renders the management page directly.
+   * Both the sidebar entry and Settings use the direct management page.
    */
   showDiscover?: boolean;
+  /** Settings supplies its own heading, spacing, and scroll container. */
+  embedded?: boolean;
 }
 
 type View = { mode: "home" } | { mode: "manage"; tab: TabKey; query?: string };
@@ -23,7 +26,11 @@ type View = { mode: "home" } | { mode: "manage"; tab: TabKey; query?: string };
  * submitting a search switches into the tabbed management page. With
  * showDiscover=false it renders the management page directly.
  */
-export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props) {
+export function ExtensionsPage({
+  activeProjectPath,
+  showDiscover = true,
+  embedded = false,
+}: Props) {
   const { t } = useT();
   const [noRepoCwd, setNoRepoCwd] = useState<string | null>(null);
   useEffect(() => {
@@ -46,45 +53,61 @@ export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props
   );
   const [view, setView] = useState<View>({ mode: "home" });
 
-  if (!cwd) return null;
-
-  if (!showDiscover) {
+  if (!cwd) {
     return (
-      <div className="h-full overflow-y-auto p-6">
-        <ManagePage
-          cwd={cwd}
-          configurationTarget={configurationTarget}
-          activeProjectPath={activeProjectPath}
-        />
+      <div
+        className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
+        role="status"
+      >
+        <Loader2 size={16} className="animate-spin" aria-hidden />
+        {t("ext.common.loading")}
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
-      {view.mode === "home" ? (
-        <DiscoverHome
-          cwd={cwd}
-          configurationTarget={configurationTarget}
-          onOpenManage={(tab, query) => setView({ mode: "manage", tab, query })}
-        />
-      ) : (
-        <>
-          <button
-            className="mb-3 text-sm text-muted-foreground hover:text-foreground"
-            onClick={() => setView({ mode: "home" })}
-          >
-            ‹ {t("ext.common.back")}
-          </button>
+    <div
+      className={
+        embedded ? "min-w-0" : "h-full min-w-0 overflow-y-auto bg-muted/10 px-4 py-6 sm:px-6"
+      }
+    >
+      <div className={embedded ? "min-w-0" : "mx-auto min-w-0 max-w-5xl"}>
+        {!showDiscover ? (
           <ManagePage
             cwd={cwd}
             configurationTarget={configurationTarget}
             activeProjectPath={activeProjectPath}
-            initialTab={view.tab}
-            initialQuery={view.query}
+            showHeading={!embedded}
           />
-        </>
-      )}
+        ) : view.mode === "home" ? (
+          <DiscoverHome
+            cwd={cwd}
+            configurationTarget={configurationTarget}
+            onOpenManage={(tab, query) => setView({ mode: "manage", tab, query })}
+          />
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mb-4 gap-2 rounded-lg text-muted-foreground"
+              onClick={() => setView({ mode: "home" })}
+            >
+              <ArrowLeft size={14} aria-hidden />
+              {t("ext.common.back")}
+            </Button>
+            <ManagePage
+              cwd={cwd}
+              configurationTarget={configurationTarget}
+              activeProjectPath={activeProjectPath}
+              initialTab={view.tab}
+              initialQuery={view.query}
+              showHeading={!embedded}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }

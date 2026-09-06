@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { Activity, FileClock, Loader2, RefreshCw } from "lucide-react";
 import type { RunSummary, RunDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,56 +9,120 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { useT, type TFunction } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/dict";
 
-const STATUS_TONES: Record<string, string> = {
-  queued: "bg-status-idle",
-  running: "bg-status-running",
-  waiting_input: "bg-status-warn",
-  waiting_approval: "bg-status-warn",
-  blocked: "bg-status-warn",
-  completed: "bg-status-ok",
-  failed: "bg-status-err",
-  cancelled: "bg-status-warn",
+const STATUSES: Record<string, { tone: string; label: TranslationKey }> = {
+  queued: { tone: "text-muted-foreground", label: "auto.runs.statusQueued" },
+  running: { tone: "text-status-running", label: "auto.runs.statusRunning" },
+  waiting_input: { tone: "text-status-warn", label: "auto.runs.statusWaitingInput" },
+  waiting_approval: { tone: "text-status-warn", label: "auto.runs.statusWaitingApproval" },
+  blocked: { tone: "text-status-warn", label: "auto.runs.statusBlocked" },
+  completed: { tone: "text-status-ok", label: "auto.runs.statusCompleted" },
+  failed: { tone: "text-status-err", label: "auto.runs.statusFailed" },
+  cancelled: { tone: "text-muted-foreground", label: "auto.runs.statusCancelled" },
 };
 
-/**
- * Detail-pane request state. Explicit states keep the three failure modes
- * distinguishable: before this, a rejected or slow `getRun` was indistinguishable
- * from "nothing selected", and the previous run's detail stayed on screen.
- */
+const EVENT_LABELS: Record<string, TranslationKey> = {
+  run_created: "auto.runs.eventCreated",
+  run_queued: "auto.runs.eventQueued",
+  run_started: "auto.runs.eventStarted",
+  session_linked: "auto.runs.eventSessionLinked",
+  checkpoint_written: "auto.runs.eventCheckpoint",
+  artifact_recorded: "auto.runs.eventArtifact",
+  approval_requested: "auto.runs.eventApprovalRequested",
+  approval_resolved: "auto.runs.eventApprovalResolved",
+  run_blocked: "auto.runs.eventBlocked",
+  run_resumed: "auto.runs.eventResumed",
+  run_completed: "auto.runs.eventCompleted",
+  run_failed: "auto.runs.eventFailed",
+  run_cancelled: "auto.runs.eventCancelled",
+};
+
 type DetailState =
   | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "ready"; detail: RunDetail }
-  | { kind: "missing" }
-  | { kind: "error"; message: string };
+  | { kind: "loading"; runId: string }
+  | { kind: "ready"; runId: string; detail: RunDetail }
+  | { kind: "missing"; runId: string }
+  | { kind: "error"; runId: string; message: string };
+
+function statusLabel(status: string, t: TFunction): string {
+  return STATUSES[status] ? t(STATUSES[status].label) : status || t("auto.runs.none");
+}
+
+function RunStatus({ status, t }: { status: string; t: TFunction }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 text-xs font-medium",
+        STATUSES[status]?.tone ?? "text-muted-foreground",
+      )}
+      title={status}
+    >
+      <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+      {statusLabel(status, t)}
+    </span>
+  );
+}
+
+function formatTime(timestamp: number, lang: string, compact = false): string {
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime())) return "—";
+  return date.toLocaleString(
+    lang === "zh" ? "zh-CN" : "en-US",
+    compact
+      ? {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      : undefined,
+  );
+}
 
 export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const detailId = useId();
+  const detailRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLButtonElement>(null);
+  const refreshRef = useRef<HTMLButtonElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
+  const [listLoading, setListLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(initialRunId ?? null);
   const [detail, setDetail] = useState<DetailState>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState("all");
+  const [revision, setRevision] = useState(0);
+  const [detailAttempt, setDetailAttempt] = useState(0);
 
-  const refresh = async () => {
-    try {
-      const list = await window.codeshell.listRuns();
-      setRuns(list);
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+  useEffect(() => {
+    let cancelled = false;
+    setListLoading(true);
+    setError(null);
+    void (async () => {
+      try {
+        const list = await window.codeshell.listRuns();
+        if (!cancelled) setRuns(list);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setListLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [revision]);
+
+  // A deep link can target a run outside the default list page.
+  useEffect(() => {
+    if (initialRunId) {
+      setSelected(initialRunId);
+      setFilter("all");
     }
-  };
-
-  useEffect(() => {
-    void refresh();
-  }, []);
-
-  // Jump-from-automation: when the parent hands us a new run id (e.g. the
-  // 自动化 detail's 「查看」 button), select it so its detail renders.
-  useEffect(() => {
-    if (initialRunId) setSelected(initialRunId);
   }, [initialRunId]);
 
   useEffect(() => {
@@ -66,87 +131,229 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
       return;
     }
     let cancelled = false;
-    // Clear immediately so the previous run's detail is never shown under the
-    // newly selected id while the request is in flight.
-    setDetail({ kind: "loading" });
-    void window.codeshell
-      .getRun(selected)
-      .then((d) => {
-        if (cancelled) return;
-        // A run reachable by id but absent from the default list page (e.g.
-        // opened straight from an automation) must read as "not found" rather
-        // than silently falling back to the empty-selection hint.
-        setDetail(d ? { kind: "ready", detail: d } : { kind: "missing" });
-      })
-      .catch((e: unknown) => {
-        // Previously unhandled: a rejected getRun left the pane on whatever was
-        // there before, so a failed load looked like a successful one.
-        if (cancelled) return;
-        setDetail({ kind: "error", message: e instanceof Error ? e.message : String(e) });
-      });
-    return () => { cancelled = true; };
-  }, [selected]);
+    setDetail({ kind: "loading", runId: selected });
+    void (async () => {
+      try {
+        const result = await window.codeshell.getRun(selected);
+        if (!cancelled)
+          setDetail(
+            result
+              ? { kind: "ready", runId: selected, detail: result }
+              : { kind: "missing", runId: selected },
+          );
+      } catch (e) {
+        if (!cancelled)
+          setDetail({
+            kind: "error",
+            runId: selected,
+            message: e instanceof Error ? e.message : String(e),
+          });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, revision, detailAttempt]);
 
-  if (error) return <div className="p-6 text-sm text-status-err">{error}</div>;
-  if (!runs) return <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.loading")}</div>;
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [selected, runs, filter]);
 
-  const filtered = filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  const filtered = (runs ?? []).filter((run) => filter === "all" || run.status === filter);
+  const selectionFilteredOut =
+    filter !== "all" &&
+    runs?.some((run) => run.runId === selected) &&
+    !filtered.some((run) => run.runId === selected);
+  const visibleDetail: DetailState =
+    selected && (detail.kind === "idle" || detail.runId !== selected)
+      ? { kind: "loading", runId: selected }
+      : detail;
+  const refresh = () => {
+    if (listLoading) return;
+    refreshRef.current?.focus({ preventScroll: true });
+    setRevision((value) => value + 1);
+  };
+  const retryDetail = () => {
+    detailRef.current?.focus({ preventScroll: true });
+    setDetailAttempt((value) => value + 1);
+  };
 
   return (
-    <div className="flex h-full flex-col gap-3 p-6">
-      <div className="flex items-center gap-2">
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="h-8 w-[180px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("auto.runs.filterAll")}</SelectItem>
-            {Object.keys(STATUS_TONES).map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span className="flex-1" />
-        <Button size="sm" variant="outline" onClick={() => void refresh()}>{t("auto.runs.refresh")}</Button>
-      </div>
-
-      <div className="flex min-h-0 flex-1 gap-6">
-        <ul className="w-80 shrink-0 space-y-1 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <li className="p-3 text-sm text-muted-foreground">{t("auto.runs.noMatch")}</li>
+    <div className="@container/runs flex h-full min-h-0 min-w-0 flex-col bg-background">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-5 @min-[760px]/runs:px-6">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl font-semibold tracking-tight">{t("auto.runs.title")}</h1>
+            {runs && (
+              <span className="rounded-full border border-border/70 bg-card px-2.5 py-0.5 text-xs tabular-nums text-muted-foreground">
+                {t("auto.runs.count", { count: runs.length })}
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("auto.runs.subtitle")}</p>
+        </div>
+        <Button
+          ref={refreshRef}
+          size="sm"
+          variant="outline"
+          className="h-9 gap-2 rounded-xl aria-disabled:cursor-wait aria-disabled:opacity-60"
+          aria-disabled={listLoading}
+          onClick={refresh}
+        >
+          {listLoading ? (
+            <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden />
           ) : (
-            filtered.map((r) => (
-              <li
-                key={r.runId}
-                onClick={() => setSelected(r.runId)}
+            <RefreshCw size={14} aria-hidden />
+          )}
+          {t("auto.runs.refresh")}
+        </Button>
+      </div>
+      {error && (
+        <div className="mx-4 mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/20 bg-status-err/5 p-3 @min-[760px]/runs:mx-6">
+          <p role="alert" className="min-w-0 flex-1 break-words text-sm text-status-err">
+            {t("auto.runs.listFailed", { message: error })}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-lg"
+            disabled={listLoading}
+            onClick={refresh}
+          >
+            {t("auto.runs.retry")}
+          </Button>
+        </div>
+      )}
+      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(128px,0.4fr)_minmax(0,1fr)] gap-4 px-4 pb-4 @min-[760px]/runs:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] @min-[760px]/runs:grid-rows-1 @min-[760px]/runs:px-6 @min-[760px]/runs:pb-6">
+        <section
+          aria-label={t("auto.runs.list")}
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/70"
+        >
+          <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2.5">
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger
+                ref={filterRef}
+                aria-label={t("auto.runs.filterLabel")}
+                className="h-8 min-w-0 flex-1 rounded-lg text-xs"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("auto.runs.filterAll")}</SelectItem>
+                {Object.entries(STATUSES).map(([status, { label }]) => (
+                  <SelectItem key={status} value={status}>
+                    {t(label)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {runs && (
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                {filtered.length}
+              </span>
+            )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-2" aria-busy={listLoading}>
+            {!runs && listLoading ? (
+              <RunPlaceholder loading>{t("auto.runs.loading")}</RunPlaceholder>
+            ) : !runs && error ? (
+              <RunPlaceholder>{t("auto.runs.listUnavailable")}</RunPlaceholder>
+            ) : filtered.length === 0 ? (
+              <RunPlaceholder>
+                <strong className="font-medium text-foreground">
+                  {t(filter === "all" ? "auto.runs.emptyTitle" : "auto.runs.noMatch")}
+                </strong>
+                {filter === "all" ? (
+                  <p>{t("auto.runs.emptyHint")}</p>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-1 rounded-lg"
+                    onClick={() => {
+                      setFilter("all");
+                      filterRef.current?.focus();
+                    }}
+                  >
+                    {t("auto.runs.clearFilter")}
+                  </Button>
+                )}
+              </RunPlaceholder>
+            ) : (
+              <ul className="space-y-1">
+                {filtered.map((run) => (
+                  <li key={run.runId}>
+                    <button
+                      ref={selected === run.runId ? selectedRef : undefined}
+                      type="button"
+                      aria-pressed={selected === run.runId}
+                      aria-controls={detailId}
+                      onClick={() => setSelected(run.runId)}
+                      className={cn(
+                        "flex w-full min-w-0 flex-col gap-2 rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                        selected === run.runId
+                          ? "border-primary/20 bg-primary/8"
+                          : "border-transparent hover:bg-accent",
+                      )}
+                    >
+                      <span
+                        className="line-clamp-2 w-full break-words text-sm font-medium"
+                        title={run.objective}
+                      >
+                        {run.objective || t("auto.runs.noObjective")}
+                      </span>
+                      <span className="flex w-full flex-wrap items-center justify-between gap-2">
+                        <RunStatus status={run.status} t={t} />
+                        <span
+                          className="text-[11px] tabular-nums text-muted-foreground"
+                          title={formatTime(run.updatedAt, lang)}
+                        >
+                          {formatTime(run.updatedAt, lang, true)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+        <div
+          ref={detailRef}
+          id={detailId}
+          role="region"
+          aria-label={t("auto.runs.details")}
+          aria-busy={visibleDetail.kind === "loading"}
+          tabIndex={0}
+          className="@container/run-detail min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-border/70 bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        >
+          {selectionFilteredOut && (
+            <p className="border-b border-border/70 bg-muted/30 px-4 py-2.5 text-xs leading-relaxed text-muted-foreground">
+              {t("auto.runs.selectionFilteredOut")}
+            </p>
+          )}
+          {visibleDetail.kind === "ready" ? (
+            <RunDetailView detail={visibleDetail.detail} t={t} lang={lang} />
+          ) : visibleDetail.kind === "loading" ? (
+            <RunPlaceholder loading>{t("auto.runs.detailLoading")}</RunPlaceholder>
+          ) : visibleDetail.kind === "missing" || visibleDetail.kind === "error" ? (
+            <RunPlaceholder>
+              <p
+                role={visibleDetail.kind === "error" ? "alert" : undefined}
                 className={
-                  "flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent " +
-                  (selected === r.runId ? "bg-accent ring-1 ring-border" : "")
+                  visibleDetail.kind === "error" ? "break-words text-status-err" : undefined
                 }
               >
-                <span
-                  className={"h-2 w-2 shrink-0 rounded-full " + (STATUS_TONES[r.status] ?? "bg-status-idle")}
-                  title={r.status}
-                />
-                <span className="flex-1 truncate">{r.objective || t("auto.runs.noObjective")}</span>
-                <span className="text-xs text-muted-foreground">{new Date(r.updatedAt).toLocaleString()}</span>
-              </li>
-            ))
-          )}
-        </ul>
-        <div className="min-w-0 flex-1 overflow-y-auto">
-          {detail.kind === "ready" ? (
-            <RunDetailView detail={detail.detail} t={t} />
-          ) : detail.kind === "loading" ? (
-            <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.detailLoading")}</div>
-          ) : detail.kind === "missing" ? (
-            <div className="p-6 text-sm text-muted-foreground">
-              {t("auto.runs.detailNotFound")}
-            </div>
-          ) : detail.kind === "error" ? (
-            <div className="p-6 text-sm text-status-err">
-              {t("auto.runs.detailFailed", { message: detail.message })}
-            </div>
+                {visibleDetail.kind === "missing"
+                  ? t("auto.runs.detailNotFound")
+                  : t("auto.runs.detailFailed", { message: visibleDetail.message })}
+              </p>
+              <Button size="sm" variant="outline" className="mt-1 rounded-lg" onClick={retryDetail}>
+                {t("auto.runs.retryDetail")}
+              </Button>
+            </RunPlaceholder>
           ) : (
-            <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.selectRun")}</div>
+            <RunPlaceholder>{t("auto.runs.selectRun")}</RunPlaceholder>
           )}
         </div>
       </div>
@@ -154,74 +361,159 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
   );
 }
 
-function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+function RunPlaceholder({
+  children,
+  loading = false,
+}: {
+  children: React.ReactNode;
+  loading?: boolean;
+}) {
   return (
-    <div className="mb-4">
-      <h3 className="mb-1.5 text-sm font-semibold">
-        {title}{count !== undefined ? ` (${count})` : ""}
-      </h3>
+    <div
+      role="status"
+      className="flex min-w-0 flex-col items-center gap-3 px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground"
+    >
+      {loading ? (
+        <Loader2 size={20} className="animate-spin motion-reduce:animate-none" aria-hidden />
+      ) : (
+        <FileClock size={24} className="opacity-60" aria-hidden />
+      )}
       {children}
     </div>
   );
 }
 
-function RunDetailView({ detail, t }: { detail: RunDetail; t: TFunction }) {
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <strong className="text-base">{detail.objective}</strong>
-        <span className="text-xs text-muted-foreground">{detail.status}</span>
+    <section className="min-w-0 border-t border-border/70 pt-4">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        {title}
+        {count !== undefined && (
+          <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
+        )}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; lang: string }) {
+  const metadata = [
+    { label: t("auto.runs.runId"), value: detail.runId },
+    { label: t("auto.runs.updatedAt"), value: formatTime(detail.updatedAt, lang) },
+    { label: t("auto.runs.cwd"), value: detail.cwd },
+    ...(detail.preset ? [{ label: t("auto.runs.preset"), value: detail.preset }] : []),
+    ...(detail.sessionId ? [{ label: t("auto.runs.sessionId"), value: detail.sessionId }] : []),
+    { label: t("auto.runs.attempts"), value: String(detail.attemptCount) },
+  ];
+  return (
+    <div className="flex min-w-0 flex-col gap-5 p-4 @min-[520px]/run-detail:p-5">
+      <div className="flex min-w-0 flex-col items-start gap-3">
+        <span className="flex size-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/5 text-primary">
+          <Activity size={19} aria-hidden />
+        </span>
+        <h2 className="w-full break-words text-lg font-semibold leading-snug">
+          {detail.objective || t("auto.runs.noObjective")}
+        </h2>
+        <RunStatus status={detail.status} t={t} />
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>runId <code className="font-mono text-foreground">{detail.runId}</code></span>
-        <span>cwd <code className="font-mono text-foreground">{detail.cwd}</code></span>
-        {detail.preset && <span>preset <code className="font-mono text-foreground">{detail.preset}</code></span>}
-        {detail.sessionId && <span>session <code className="font-mono text-foreground">{detail.sessionId.slice(0, 12)}</code></span>}
-        <span>attempts {detail.attemptCount}</span>
-      </div>
-      {detail.error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{detail.error}</div>}
+      <dl className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-3 rounded-xl bg-muted/40 p-3 @min-[520px]/run-detail:grid-cols-2">
+        {metadata.map(({ label, value }) => (
+          <div key={label} className="min-w-0">
+            <dt className="mb-1 text-[11px] text-muted-foreground">{label}</dt>
+            <dd className="break-all text-xs leading-5 text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {detail.error && (
+        <div
+          role="alert"
+          className="whitespace-pre-wrap break-words rounded-xl border border-status-err/20 bg-status-err/5 p-3 text-sm text-status-err"
+        >
+          {detail.error}
+        </div>
+      )}
       {detail.summary && (
-        <Section title={t("auto.runs.summary")}><div className="text-sm">{detail.summary}</div></Section>
+        <Section title={t("auto.runs.summary")}>
+          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+            {detail.summary}
+          </p>
+        </Section>
       )}
       <Section title={t("auto.runs.checkpoints")} count={detail.checkpoints.length}>
         {detail.checkpoints.length === 0 ? (
-          <div className="text-sm text-muted-foreground">{t("auto.runs.none")}</div>
+          <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
         ) : (
-          <ul className="space-y-2">
-            {detail.checkpoints.map((c) => (
-              <li key={c.checkpointId} className="rounded-md border p-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <strong>{c.phase}</strong>
-                  <span className="text-xs text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
+          <ol className="space-y-2">
+            {detail.checkpoints.map((checkpoint) => (
+              <li
+                key={checkpoint.checkpointId}
+                className="min-w-0 rounded-xl border border-border/70 p-3 text-sm"
+              >
+                <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
+                  <strong className="break-all text-xs font-medium">
+                    {statusLabel(checkpoint.phase, t)}
+                  </strong>
+                  <span className="text-[11px] tabular-nums text-muted-foreground">
+                    {formatTime(checkpoint.createdAt, lang)}
+                  </span>
                 </div>
-                <div>{c.summary}</div>
-                {c.nextAction && <div className="mt-1 text-xs text-muted-foreground">{t("auto.runs.nextStep", { action: c.nextAction })}</div>}
+                <p className="whitespace-pre-wrap break-words leading-relaxed">
+                  {checkpoint.summary}
+                </p>
+                {checkpoint.nextAction && (
+                  <p className="mt-2 break-words text-xs leading-relaxed text-muted-foreground">
+                    {t("auto.runs.nextStep", { action: checkpoint.nextAction })}
+                  </p>
+                )}
               </li>
             ))}
-          </ul>
+          </ol>
         )}
       </Section>
       <Section title={t("auto.runs.artifacts")} count={detail.artifacts.length}>
         {detail.artifacts.length === 0 ? (
-          <div className="text-sm text-muted-foreground">{t("auto.runs.none")}</div>
+          <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
         ) : (
-          <ul className="space-y-1 text-sm">
-            {detail.artifacts.map((a) => (<li key={a}><code className="font-mono">{a}</code></li>))}
+          <ul className="space-y-2">
+            {detail.artifacts.map((artifact) => (
+              <li key={artifact} className="min-w-0 rounded-lg bg-muted/40 px-3 py-2">
+                <code className="break-all text-xs leading-5">{artifact}</code>
+              </li>
+            ))}
           </ul>
         )}
       </Section>
       <Section title={t("auto.runs.events")} count={detail.events.length}>
         {detail.events.length === 0 ? (
-          <div className="text-sm text-muted-foreground">{t("auto.runs.none")}</div>
+          <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
         ) : (
-          <ul className="space-y-1">
-            {detail.events.slice().reverse().map((e) => (
-              <li key={e.eventId} className="flex items-center justify-between text-sm">
-                <span className="font-mono text-xs">{e.type}</span>
-                <span className="text-xs text-muted-foreground">{new Date(e.timestamp).toLocaleTimeString()}</span>
-              </li>
-            ))}
-          </ul>
+          <ol className="divide-y divide-border/60">
+            {detail.events
+              .slice()
+              .reverse()
+              .map((event) => (
+                <li
+                  key={event.eventId}
+                  className="flex min-w-0 flex-wrap items-center justify-between gap-2 py-2 text-xs"
+                >
+                  <span className="min-w-0 break-all" title={event.type}>
+                    {EVENT_LABELS[event.type] ? t(EVENT_LABELS[event.type]) : event.type}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatTime(event.timestamp, lang)}
+                  </span>
+                </li>
+              ))}
+          </ol>
         )}
       </Section>
     </div>

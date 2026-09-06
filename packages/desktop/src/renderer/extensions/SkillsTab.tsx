@@ -11,6 +11,7 @@ import {
   Loader2,
   PanelTop,
   Plug,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
@@ -101,7 +102,10 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
       );
     } catch (e) {
       // Atomic in main — the old version is kept on failure.
-      void alert({ title: t("ext.skills.updateFailedTitle"), message: String((e as Error)?.message ?? e) });
+      void alert({
+        title: t("ext.skills.updateFailedTitle"),
+        message: String((e as Error)?.message ?? e),
+      });
     } finally {
       setBusy(null);
     }
@@ -130,22 +134,36 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
   if (error) {
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        {t("ext.common.loadFailed", { error })} <Button size="sm" variant="outline" onClick={retry}>{t("ext.common.retry")}</Button>
+        {t("ext.common.loadFailed", { error })}{" "}
+        <Button size="sm" variant="outline" onClick={retry}>
+          {t("ext.common.retry")}
+        </Button>
       </div>
     );
   }
-  if (skills === null) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
+  if (skills === null)
+    return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
 
   const q = query.trim().toLowerCase();
   const rows = q
     ? skills.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          (s.description ?? "").toLowerCase().includes(q),
+        (s) => s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q),
       )
     : skills;
   if (rows.length === 0)
-    return <div className="p-4 text-sm text-muted-foreground">{t("ext.skills.noMatch")}</div>;
+    return (
+      <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-10 text-center">
+        {q ? (
+          <Search className="mx-auto mb-3 size-6 text-muted-foreground" aria-hidden />
+        ) : (
+          <FileText className="mx-auto mb-3 size-6 text-muted-foreground" aria-hidden />
+        )}
+        <p className="text-sm font-medium">
+          {t(q ? "ext.skills.noMatch" : "ext.skills.emptyList")}
+        </p>
+        {q && <p className="mt-2 text-xs text-muted-foreground">{t("ext.common.searchHint")}</p>}
+      </div>
+    );
 
   const updatableCount = rows.filter((s) => updatable[s.filePath]).length;
   const standaloneRows = rows
@@ -159,10 +177,13 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
     pluginGroups.set(owner, list);
   }
   const pluginGroupEntries = [...pluginGroups.entries()]
-    .map(([owner, list]) => [
-      owner,
-      list.sort((a, b) => displaySkillName(a).localeCompare(displaySkillName(b))),
-    ] as const)
+    .map(
+      ([owner, list]) =>
+        [
+          owner,
+          list.sort((a, b) => displaySkillName(a).localeCompare(displaySkillName(b))),
+        ] as const,
+    )
     .sort(([a], [b]) => a.localeCompare(b));
 
   const sourceLabel = (s: SkillSummary) => {
@@ -197,38 +218,52 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
     return (
       <li
         key={s.filePath}
-        className="flex cursor-pointer items-center gap-3 rounded-lg border bg-card p-3 text-sm hover:bg-accent/50"
-        onClick={() => setOpen(s)}
+        className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-sm transition-colors hover:border-primary/25"
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
-          {isPluginSkill ? (
-            <Plug className="h-4 w-4" aria-hidden="true" />
-          ) : isPanelAppSkill ? (
-            <PanelTop className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <FileText className="h-4 w-4" aria-hidden="true" />
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="truncate font-medium">{displaySkillName(s)}</div>
-            {isPluginSkill || isPanelAppSkill ? (
-              <Badge variant="info" className="shrink-0">{owner ?? t("ext.skills.unknownPlugin")}</Badge>
+        <button
+          type="button"
+          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => setOpen(s)}
+          aria-label={t("ext.skills.openDetails", { name: displaySkillName(s) })}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
+            {isPluginSkill ? (
+              <Plug className="h-4 w-4" aria-hidden="true" />
+            ) : isPanelAppSkill ? (
+              <PanelTop className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <Badge variant={s.source === "project" ? "accent" : "secondary"} className="shrink-0">
-                {sourceLabel(s)}
-              </Badge>
+              <FileText className="h-4 w-4" aria-hidden="true" />
             )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="max-w-full truncate font-medium group-hover:text-primary">
+                {displaySkillName(s)}
+              </div>
+              {isPluginSkill || isPanelAppSkill ? (
+                <Badge variant="info" className="max-w-full truncate">
+                  {owner ?? t("ext.skills.unknownPlugin")}
+                </Badge>
+              ) : (
+                <Badge
+                  variant={s.source === "project" ? "accent" : "secondary"}
+                  className="shrink-0"
+                >
+                  {sourceLabel(s)}
+                </Badge>
+              )}
+            </div>
+            <div className="mt-1 line-clamp-2 break-words text-xs leading-5 text-muted-foreground">
+              {(s.description ?? "").split("\n")[0]}
+            </div>
           </div>
-          <div className="truncate text-xs text-muted-foreground">
-            {(s.description ?? "").split("\n")[0]}
-          </div>
-        </div>
+        </button>
         {updatable[s.filePath] && (
           <Button
             size="icon"
             variant="ghost"
             title={t("ext.skills.hasUpdateTip")}
+            aria-label={`${t("ext.skills.hasUpdateTip")} · ${s.name}`}
             className="text-status-running hover:text-status-running"
             disabled={busy === s.filePath}
             onClick={(e) => {
@@ -244,7 +279,11 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
           </Button>
         )}
         <span onClick={(e) => e.stopPropagation()}>
-          <Switch checked={isEnabled(s)} onCheckedChange={(v) => onToggle(s, v)} />
+          <Switch
+            aria-label={t("ext.skills.toggle", { name: displaySkillName(s) })}
+            checked={isEnabled(s)}
+            onCheckedChange={(v) => onToggle(s, v)}
+          />
         </span>
       </li>
     );
@@ -279,9 +318,7 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
               t("ext.skills.standaloneDesc"),
               standaloneRows.length,
             )}
-            <ul className="space-y-1">
-              {standaloneRows.map(renderSkillRow)}
-            </ul>
+            <ul className="space-y-1">{standaloneRows.map(renderSkillRow)}</ul>
           </section>
         )}
         {pluginGroupEntries.length > 0 && (
@@ -301,9 +338,7 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
                       {t("ext.skills.groupSkillCount", { count: list.length })}
                     </span>
                   </div>
-                  <ul className="space-y-1">
-                    {list.map(renderSkillRow)}
-                  </ul>
+                  <ul className="space-y-1">{list.map(renderSkillRow)}</ul>
                 </div>
               ))}
             </div>

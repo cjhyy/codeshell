@@ -19,9 +19,8 @@ interface Props {
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
   /**
-   * Monotonic per-turn counter. When this value changes the card
-   * re-collapses, even if the user had opened it during streaming —
-   * Codex-style "turn ends, details fold back out of the way."
+   * Monotonic per-turn counter. A card that ran during this epoch folds
+   * at its end; manually opened historical cards keep their state.
    */
   turnEpoch?: number;
 }
@@ -38,9 +37,20 @@ export function ToolCardShell({
   turnEpoch,
 }: Props) {
   const [open, setOpen] = React.useState(false);
+  const detailsId = React.useId();
+  const previousEpochRef = React.useRef(turnEpoch);
+  const ranInEpochRef = React.useRef(false);
+  const running = message.status === "running";
   React.useEffect(() => {
-    if (turnEpoch !== undefined) setOpen(false);
-  }, [turnEpoch]);
+    if (turnEpoch !== undefined && previousEpochRef.current !== turnEpoch) {
+      if (ranInEpochRef.current) setOpen(false);
+      ranInEpochRef.current = false;
+    }
+    // Tool results usually arrive before turn completion. Keep this flag until
+    // the epoch changes rather than checking only the latest terminal status.
+    if (running) ranInEpochRef.current = true;
+    previousEpochRef.current = turnEpoch;
+  }, [running, turnEpoch]);
   const status: Status =
     message.status === "running"
       ? "running"
@@ -62,12 +72,14 @@ export function ToolCardShell({
     >
       <div className="flex items-center">
         <button
-          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           onClick={(e) => {
             e.stopPropagation();
             setOpen((o) => !o);
           }}
           aria-expanded={open}
+          aria-controls={details ? detailsId : undefined}
         >
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <StatusDot status={status} title={message.status} />
@@ -84,7 +96,11 @@ export function ToolCardShell({
         {headerAction && <div className="shrink-0 pr-3">{headerAction}</div>}
       </div>
       {preview && <div className="border-t border-border px-3 py-2">{preview}</div>}
-      {open && details && <div className="border-t border-border px-3 py-2">{details}</div>}
+      {details && (
+        <div id={detailsId} hidden={!open} className="border-t border-border px-3 py-2">
+          {open ? details : null}
+        </div>
+      )}
       {message.summary && (
         <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
           {message.summary}

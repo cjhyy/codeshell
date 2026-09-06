@@ -2,6 +2,14 @@
 export const messagesNs = {
   zh: {
     msg: {
+      copyFailed: "复制失败，请重试。",
+      toolOutput: {
+        preview: "预览已截取",
+        expand: "展开完整内容",
+        collapse: "收起为预览",
+        copy: "复制完整内容",
+        empty: "无内容",
+      },
       // user message bubble
       user: {
         goal: "目标",
@@ -116,10 +124,11 @@ export const messagesNs = {
       },
       // markdown code block
       markdown: {
-        copyCode: "复制代码",
+        table: "表格，可横向滚动",
+        copyCode: "代码已复制",
         copyCodeAria: "复制代码",
-        copy: "copy",
-        copied: "copied",
+        copy: "复制",
+        copied: "已复制",
         expandAll: "展开全部 ({count} 行)",
         collapse: "收起",
       },
@@ -145,6 +154,14 @@ export const messagesNs = {
   },
   en: {
     msg: {
+      copyFailed: "Could not copy. Please try again.",
+      toolOutput: {
+        preview: "Preview truncated",
+        expand: "Show full content",
+        collapse: "Show preview",
+        copy: "Copy full content",
+        empty: "No content",
+      },
       user: {
         goal: "Goal",
       },
@@ -249,6 +266,7 @@ export const messagesNs = {
         close: "Close",
       },
       markdown: {
+        table: "Table, scroll horizontally for more",
         copyCode: "Code copied",
         copyCodeAria: "Copy code",
         copy: "copy",

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { ReactElement } from "react";
-import { PAGE_REGISTRY, PageRegistry, type PageEntry } from "./PageRegistry";
+import {
+  PAGE_REGISTRY,
+  PageRegistry,
+  type PageEntry,
+  type PageRenderContext,
+} from "./PageRegistry";
 
 describe("PageRegistry", () => {
   it("pins the builtin sidebar nav in product order", () => {
@@ -107,13 +112,13 @@ describe("PageRegistry", () => {
 });
 
 describe("migrated builtin pages", () => {
-  it("registers logs and runs as render-only pages (no nav item)", () => {
-    const logs = PAGE_REGISTRY.get("logs")!;
-    const runs = PAGE_REGISTRY.get("runs")!;
-    expect(logs.nav).toBeUndefined();
-    expect(runs.nav).toBeUndefined();
-    expect(logs.render).toBeFunction();
-    expect(runs.render).toBeFunction();
+  it("registers logs, runs, and sessions as render-only pages (no nav item)", () => {
+    for (const key of ["logs", "runs", "sessions"]) {
+      const page = PAGE_REGISTRY.get(key)!;
+      expect(PAGE_REGISTRY.has(key)).toBe(true);
+      expect(page.nav).toBeUndefined();
+      expect(page.render).toBeFunction();
+    }
     // Render-only pages must not add entries beyond the intended first-level set.
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
       "extensions",
@@ -129,5 +134,19 @@ describe("migrated builtin pages", () => {
       activeProjectPath: null,
     }) as ReactElement<{ initialRunId?: string | null }>;
     expect(element.props.initialRunId).toBe("run-42");
+  });
+
+  it("passes session mutation notifications through the history route", () => {
+    const notifications = {
+      onSessionRenamed: (_id: string, _title: string) => undefined,
+      onSessionDeleted: (_id: string) => undefined,
+    };
+    const element = PAGE_REGISTRY.get("sessions")!.render!({
+      runsInitialRunId: null,
+      activeProjectPath: null,
+      ...notifications,
+    }) as ReactElement<PageRenderContext>;
+    expect(element.props.onSessionRenamed).toBe(notifications.onSessionRenamed);
+    expect(element.props.onSessionDeleted).toBe(notifications.onSessionDeleted);
   });
 });

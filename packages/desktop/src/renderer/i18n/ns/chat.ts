@@ -3,6 +3,23 @@ export const chat = {
   zh: {
     chat: {
       loadingSession: "正在加载会话…",
+      starters: {
+        label: "选择一个开始的方向",
+        projectTitle: "了解项目",
+        projectDescription: "梳理结构与关键内容",
+        projectPrompt: "帮我了解当前项目：梳理目录结构、关键内容，以及值得先阅读的文件。",
+        ideaTitle: "整理思路",
+        ideaDescription: "把零散想法变得清晰",
+        ideaPrompt: "帮我整理一个想法。请先问我想达成的目标、已有的信息和目前的困惑，再一起梳理。",
+        planTitle: "制定计划",
+        planDescription: "拆解目标，明确下一步",
+        planPrompt:
+          "帮我把一个目标拆成可执行的计划。先和我确认目标、时间和限制，再列出步骤与优先级。",
+        compareTitle: "比较方案",
+        compareDescription: "看清差异与取舍",
+        comparePrompt: "帮我比较几个方案。请先问我要比较的选项和最看重的条件，再整理优缺点与取舍。",
+      },
+
       composer: {
         placeholderBusy: "要求后续变更",
         placeholderCompacting: "正在压缩上下文…",
@@ -243,6 +260,26 @@ export const chat = {
   en: {
     chat: {
       loadingSession: "Loading conversation…",
+      starters: {
+        label: "Choose a starting point",
+        projectTitle: "Explore this project",
+        projectDescription: "Find your way around",
+        projectPrompt:
+          "Help me understand this project: outline its structure, key content, and the files worth reading first.",
+        ideaTitle: "Organize an idea",
+        ideaDescription: "Give your thoughts some shape",
+        ideaPrompt:
+          "Help me organize an idea. Start by asking about my goal, what I already know, and where I feel stuck.",
+        planTitle: "Make a plan",
+        planDescription: "Turn a goal into next steps",
+        planPrompt:
+          "Help me turn a goal into an actionable plan. First ask about my goal, timeline, and constraints, then outline steps and priorities.",
+        compareTitle: "Compare options",
+        compareDescription: "Understand the tradeoffs",
+        comparePrompt:
+          "Help me compare a few options. First ask which options I am considering and what matters most, then lay out their pros, cons, and tradeoffs.",
+      },
+
       composer: {
         placeholderBusy: "Request a follow-up change",
         placeholderCompacting: "Compacting context…",

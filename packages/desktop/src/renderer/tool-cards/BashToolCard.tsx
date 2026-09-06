@@ -1,6 +1,7 @@
 import React from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
+import { ToolOutputBlock } from "./ToolOutputBlock";
 import { SandboxBadge } from "./SandboxBadge";
 import { classifyBashLines, parsedArgs, truncate } from "./utils";
 
@@ -32,8 +33,7 @@ export function BashToolCard({ message, onSelect, selected, turnEpoch }: Props) 
   const a = parsedArgs(message);
   const command = typeof a.command === "string" ? a.command : "";
   const cwd = typeof a.cwd === "string" ? a.cwd : undefined;
-  const description =
-    typeof a.description === "string" ? a.description : undefined;
+  const description = typeof a.description === "string" ? a.description : undefined;
 
   const summary = (
     <span>
@@ -44,28 +44,21 @@ export function BashToolCard({ message, onSelect, selected, turnEpoch }: Props) 
 
   const details = (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">command</span>
-        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{command || "(empty)"}</pre>
-      </div>
+      <ToolOutputBlock label="command" text={command} />
       {cwd && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">cwd</span>
-          <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{cwd}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            cwd
+          </span>
+          <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
+            {cwd}
+          </span>
         </div>
       )}
       {message.result !== undefined && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">stdout</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{renderBashOutput(message.result)}</pre>
-        </div>
+        <ToolOutputBlock label="stdout" text={message.result} renderText={renderBashOutput} />
       )}
-      {message.error && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">error</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{message.error}</pre>
-        </div>
-      )}
+      {message.error && <ToolOutputBlock label="error" text={message.error} tone="error" />}
     </div>
   );
 

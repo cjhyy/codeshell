@@ -6,7 +6,7 @@
  * desktop and mobile widths. Optional screenshots are written when
  * CODESHELL_SETTINGS_SCREENSHOT_DIR is set.
  */
-/* global document, getComputedStyle, localStorage */
+/* global document, getComputedStyle, localStorage, window */
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { dirname } from "node:path";
@@ -180,8 +180,66 @@ async function assertNoHorizontalOverflow(win, label) {
 async function screenshot(win, filename) {
   if (!screenshotDir) return;
   const output = join(screenshotDir, filename);
-  await win.screenshot({ path: output, fullPage: true });
+  await win.screenshot({ path: output, fullPage: true, animations: "disabled", scale: "css" });
   console.log(`settings visual: ${output}`);
+}
+
+async function checkShortcuts(win) {
+  await win.getByRole("button", { name: /键盘快捷键|Keyboard shortcuts/i }).click();
+  const heading = win.getByRole("heading", { name: /键盘快捷键|Keyboard shortcuts/i, level: 1 });
+  await heading.waitFor();
+  const section = win.getByRole("region", { name: /快捷键|Keyboard shortcuts/i });
+  await section.waitFor();
+  for (const lang of ["zh", "en"]) {
+    await win.evaluate((value) => {
+      localStorage.setItem("codeshell.uiLanguage", value);
+      window.dispatchEvent(new window.Event("codeshell:language-changed"));
+    }, lang);
+    await win
+      .getByRole("heading", {
+        name: lang === "zh" ? "键盘快捷键" : "Keyboard shortcuts",
+        level: 1,
+        exact: true,
+      })
+      .waitFor();
+    assert(
+      (await section.getByRole("heading", { level: 2 }).count()) >= 2,
+      "Shortcuts are not grouped",
+    );
+    const keys = await section.locator("kbd").allTextContents();
+    assert(
+      keys.some((key) => key.includes(process.platform === "darwin" ? "⌘" : "Ctrl")),
+      "Shortcut modifiers do not match the host platform",
+    );
+    for (const width of [1280, 820, 390]) {
+      await win.setViewportSize({ width, height: 820 });
+      const main = win.locator("main").filter({ has: section });
+      await main.evaluate((node) => {
+        node.scrollTop = 0;
+      });
+      for (const dark of [false, true]) {
+        await win.evaluate(
+          (value) => document.documentElement.classList.toggle("dark", value),
+          dark,
+        );
+        await assertNoHorizontalOverflow(win, `shortcuts ${width} ${lang}`);
+        const overflow = await section.evaluate((node) =>
+          Array.from(node.querySelectorAll("div,section,dl,li")).some(
+            (child) => child.clientWidth > 0 && child.scrollWidth > child.clientWidth + 1,
+          ),
+        );
+        assert(!overflow, `Shortcut rows overflowed at ${width}px (${lang})`);
+        await screenshot(win, `settings-shortcuts-${width}-${lang}${dark ? "-dark" : ""}.png`);
+      }
+    }
+  }
+  await win.evaluate(() => {
+    localStorage.setItem("codeshell.uiLanguage", "zh");
+    window.dispatchEvent(new window.Event("codeshell:language-changed"));
+    document.documentElement.classList.remove("dark");
+  });
+  await win.setViewportSize({ width: 1440, height: 960 });
+  console.log("PASS shortcuts: platform keys, grouped rows, three widths and two languages/themes");
 }
 
 try {
@@ -221,6 +279,8 @@ try {
     "settings search did not filter unrelated navigation items",
   );
   await search.fill("");
+
+  await checkShortcuts(win);
 
   await win.getByRole("button", { name: /外观|Appearance/i }).click();
   await win.getByRole("heading", { name: /外观|Appearance/i }).waitFor({ state: "visible" });

@@ -1,6 +1,7 @@
 import React from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
+import { ToolOutputBlock } from "./ToolOutputBlock";
 import { parsedArgs, truncate } from "./utils";
 import { classifyPath } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
@@ -53,8 +54,12 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, 
   const details = (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">path</span>
-        <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{path}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+          path
+        </span>
+        <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
+          {path}
+        </span>
         {path && (
           <OpenWithMenu path={path} align="end">
             <Button
@@ -72,29 +77,18 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, 
       </div>
       {variant === "edit" && (
         <>
-          {oldStr !== undefined && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">- old</span>
-              <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{truncate(oldStr, 800)}</pre>
-            </div>
-          )}
-          {newStr !== undefined && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">+ new</span>
-              <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-ok/10 p-2 font-mono text-xs text-status-ok">{truncate(newStr, 800)}</pre>
-            </div>
-          )}
+          {oldStr !== undefined && <ToolOutputBlock label="- old" text={oldStr} tone="error" />}
+          {newStr !== undefined && <ToolOutputBlock label="+ new" text={newStr} tone="added" />}
         </>
       )}
       {variant === "write" && content !== undefined && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">content</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(content, 800)}</pre>
-        </div>
+        <ToolOutputBlock label="content" text={content} />
       )}
       {variant === "write" && path && writeAttachmentKind(path, message) && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">file</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            file
+          </span>
           <div className="flex flex-wrap gap-2">
             <AttachmentCard
               attachment={{ path, kind: writeAttachmentKind(path, message)! }}
@@ -104,17 +98,9 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, 
         </div>
       )}
       {message.result !== undefined && variant === "read" && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">content</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(message.result, 800)}</pre>
-        </div>
+        <ToolOutputBlock label="content" text={message.result} />
       )}
-      {message.error && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">error</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{message.error}</pre>
-        </div>
-      )}
+      {message.error && <ToolOutputBlock label="error" text={message.error} tone="error" />}
     </div>
   );
 

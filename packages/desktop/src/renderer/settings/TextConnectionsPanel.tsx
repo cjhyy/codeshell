@@ -1,6 +1,6 @@
 /** Thin shell for text/image/video/audio model connection settings. */
 import React from "react";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -48,6 +48,11 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
     auxId,
     showKey,
     sttFallback,
+    pending,
+    loading,
+    hasLoaded,
+    loadFailed,
+    credentialCommitRevision,
     textTemplates,
     entryById,
     load,
@@ -62,18 +67,77 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
     toggleShowKey,
   } = useModelConnections(scope, projectPath, tag);
 
-  // Load on mount + on scope/tag switch (deps=[load]) + auto-refresh when
-  // catalog/settings change anywhere. Listeners live in one place — see
-  // useRefreshOnSettingsChange.
-  useRefreshOnSettingsChange(() => void load(), [load]);
+  const panelRef = React.useRef<HTMLFieldSetElement>(null);
+  const addButtonRef = React.useRef<HTMLButtonElement>(null);
+  const auxSelectorRef = React.useRef<HTMLDivElement>(null);
+  const headingRef = React.useRef<HTMLHeadingElement>(null);
+  const [completedFocus, setCompletedFocus] = React.useState<{ source: HTMLElement } | null>(null);
+  const withFocusRestore = async (
+    operation: () => Promise<void>,
+    portalOpener?: HTMLElement | null,
+  ) => {
+    const active = document.activeElement;
+    const source =
+      active instanceof HTMLElement && panelRef.current?.contains(active)
+        ? active
+        : (portalOpener ?? null);
+    try {
+      await operation();
+    } finally {
+      if (source) setCompletedFocus({ source });
+    }
+  };
+  const addWithFocusRestore: typeof addFromTemplate = (entry, model) =>
+    withFocusRestore(() => addFromTemplate(entry, model), addButtonRef.current);
+
+  // Automatic reads lock the same fieldset as manual retries. Preserve the
+  // current control's focus when native disabling temporarily blurs it.
+  useRefreshOnSettingsChange(() => void withFocusRestore(load), [load]);
+
+  React.useLayoutEffect(() => {
+    if (pending || loading || !completedFocus) return;
+    setCompletedFocus(null);
+    const { source } = completedFocus;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== source) return;
+    const target =
+      source.isConnected && !source.matches(":disabled")
+        ? source
+        : (addButtonRef.current ?? headingRef.current);
+    target?.focus({ preventScroll: true });
+  }, [completedFocus, pending, loading]);
 
   return (
-    <section className="mb-6 flex flex-col gap-3">
+    <fieldset
+      ref={panelRef}
+      disabled={pending || loading}
+      aria-busy={pending || loading}
+      aria-label={heading}
+      onPointerDownCapture={(event) => {
+        // Disabled fieldsets still emit pointerdown. Radix opens its portalled
+        // menus on that event, beyond the fieldset's native disabled boundary.
+        if (!pending && !loading) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      className="mb-6 flex min-w-0 flex-col gap-3 border-0 p-0"
+    >
+      {pending ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          {t("settingsX.textConn.updating")}
+        </p>
+      ) : null}
       <header className="flex items-center justify-between">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{heading}</h3>
+        <h3
+          ref={headingRef}
+          tabIndex={-1}
+          className="m-0 text-[0.95rem] font-semibold text-foreground"
+        >
+          {heading}
+        </h3>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>
+          <DropdownMenuTrigger asChild disabled={!hasLoaded}>
+            <Button ref={addButtonRef} disabled={!hasLoaded}>
               <Plus />
               {t("settingsX.textConn.addModel")}
             </Button>
@@ -87,7 +151,7 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
                     {entry.modelPresets.map((p) => (
                       <DropdownMenuItem
                         key={p.value}
-                        onClick={() => void addFromTemplate(entry, p.value)}
+                        onClick={() => void addWithFocusRestore(entry, p.value)}
                       >
                         {p.label ?? p.value}
                       </DropdownMenuItem>
@@ -95,7 +159,7 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
               ) : (
-                <DropdownMenuItem key={entry.id} onClick={() => void addFromTemplate(entry)}>
+                <DropdownMenuItem key={entry.id} onClick={() => void addWithFocusRestore(entry)}>
                   {entry.displayName}
                 </DropdownMenuItem>
               ),
@@ -104,21 +168,53 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
         </DropdownMenu>
       </header>
 
-      {tag === "text" && instances.length > 0 && (
-        <AuxModelSelector
-          auxId={auxId}
-          instances={instances}
-          entryById={entryById}
-          onSetAux={setAux}
-        />
+      {loading && (
+        <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 size={14} className="animate-spin" aria-hidden />
+          {t("settingsX.textConn.loading")}
+        </p>
+      )}
+      {loadFailed && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-status-err/25 bg-status-err/5 p-3"
+        >
+          <p className="min-w-0 flex-1 basis-48 text-sm text-status-err">
+            {t(hasLoaded ? "settingsX.textConn.refreshFailed" : "settingsX.textConn.readFailed")}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void withFocusRestore(load)}
+          >
+            {t("settingsX.textConn.retryRead")}
+          </Button>
+        </div>
       )}
 
-      {instances.length === 0 ? (
+      {hasLoaded && tag === "text" && instances.length > 0 && (
+        <div ref={auxSelectorRef}>
+          <AuxModelSelector
+            auxId={auxId}
+            instances={instances}
+            entryById={entryById}
+            onSetAux={(id) =>
+              withFocusRestore(
+                () => setAux(id),
+                auxSelectorRef.current?.querySelector<HTMLElement>('[role="combobox"]'),
+              )
+            }
+          />
+        </div>
+      )}
+
+      {!hasLoaded ? null : instances.length === 0 ? (
         <ConnectionsEmptyState
           heading={heading}
           sttFallback={sttFallback}
           textTemplates={textTemplates}
-          onAddFromTemplate={addFromTemplate}
+          onAddFromTemplate={addWithFocusRestore}
         />
       ) : (
         <ConnCardGrid>
@@ -129,19 +225,20 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
               entry={entryById(inst.catalogId)}
               catalog={catalog}
               credentials={credentials}
+              credentialCommitRevision={credentialCommitRevision}
               isDefault={inst.id === defaultId}
               showKey={Boolean(showKey[inst.id])}
               onPatch={patch}
               onSetConnectionKey={setConnectionKey}
               onToggleShowKey={toggleShowKey}
-              onSaveInstance={saveInstance}
-              onRemoveInstance={removeInstance}
-              onRemoveCredential={removeCredential}
-              onSetDefault={setDefaultInstance}
+              onSaveInstance={(id) => withFocusRestore(() => saveInstance(id))}
+              onRemoveInstance={(id) => withFocusRestore(() => removeInstance(id))}
+              onRemoveCredential={(id) => withFocusRestore(() => removeCredential(id))}
+              onSetDefault={(id) => void withFocusRestore(() => setDefaultInstance(id))}
             />
           ))}
         </ConnCardGrid>
       )}
-    </section>
+    </fieldset>
   );
 }

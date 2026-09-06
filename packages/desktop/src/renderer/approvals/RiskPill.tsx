@@ -1,4 +1,5 @@
 import React from "react";
+import { useT } from "../i18n/I18nProvider";
 
 export type RiskLevel = "low" | "medium" | "high";
 
@@ -9,9 +10,12 @@ const RISK_TONE: Record<RiskLevel, string> = {
 };
 
 export function RiskPill({ level }: { level: RiskLevel }) {
+  const { t } = useT();
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${RISK_TONE[level]}`}>
-      {level} risk
+    <span
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold ${RISK_TONE[level]}`}
+    >
+      {t(`auto.approvalCard.risk.${level}`)}
     </span>
   );
 }
@@ -24,7 +28,13 @@ export function riskFor(toolName: string, args: string): RiskLevel {
     if (/\b(rm|mv|cp|chmod|chown|kill|reboot|shutdown)\b/.test(args)) return "medium";
     return "low";
   }
-  if (name === "write" || name === "edit" || name === "multiedit" || name === "applypatch" || name === "apply_patch") {
+  if (
+    name === "write" ||
+    name === "edit" ||
+    name === "multiedit" ||
+    name === "applypatch" ||
+    name === "apply_patch"
+  ) {
     return "medium";
   }
   if (name === "webfetch" || name === "websearch" || name === "fetch") {

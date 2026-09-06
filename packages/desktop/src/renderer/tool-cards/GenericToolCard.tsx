@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
+import { ToolOutputBlock } from "./ToolOutputBlock";
 import { SandboxBadge } from "./SandboxBadge";
 import { parsedArgs, truncate } from "./utils";
 import { detectAttachments } from "./attachments";
@@ -42,24 +43,8 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
 
   const details = (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
-          args
-        </span>
-        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
-          {JSON.stringify(args, null, 2)}
-        </pre>
-      </div>
-      {message.result !== undefined && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
-            result
-          </span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
-            {truncate(message.result, 1500)}
-          </pre>
-        </div>
-      )}
+      <ToolOutputBlock label="args" text={JSON.stringify(args, null, 2)} />
+      {message.result !== undefined && <ToolOutputBlock label="result" text={message.result} />}
       {images.length > 0 && (
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
@@ -96,16 +81,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
           </div>
         </div>
       )}
-      {message.error && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
-            error
-          </span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">
-            {message.error}
-          </pre>
-        </div>
-      )}
+      {message.error && <ToolOutputBlock label="error" text={message.error} tone="error" />}
     </div>
   );
 

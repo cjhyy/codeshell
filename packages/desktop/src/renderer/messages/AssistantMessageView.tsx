@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo } from "react";
 import { Copy, Check } from "lucide-react";
 import { StreamingMarkdown } from "./StreamingMarkdown";
 import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
@@ -7,6 +7,8 @@ import type { AssistantMessage } from "../types";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import type { MarkdownRootStatus } from "../Markdown";
+import { useCopyFeedback } from "../ui/useCopyFeedback";
+import { useToast } from "../ui/ToastProvider";
 
 interface Props {
   message: AssistantMessage;
@@ -36,7 +38,8 @@ function AssistantMessageViewImpl({
   rootStatus,
 }: Props) {
   const { t } = useT();
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyFeedback(message.id);
+  const toast = useToast();
   // Nothing to draw without text — this view renders only `message.text`
   // (tool calls are separate ToolMessages). A streaming assistant starts
   // empty (suppress until the first token), and replay emits a done empty
@@ -46,11 +49,9 @@ function AssistantMessageViewImpl({
   // case let those render as blank bubbles after refresh. Suppress both.
   if (message.text === "") return null;
 
-  const onCopy = (): void => {
+  const onCopy = async (): Promise<void> => {
     const plain = stripMarkdownToPlain(message.text);
-    void navigator.clipboard.writeText(plain);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    if (!(await copy(plain))) toast({ message: t("msg.copyFailed"), variant: "error" });
   };
 
   return (
@@ -68,7 +69,7 @@ function AssistantMessageViewImpl({
         rootStatus={rootStatus}
       />
       {message.done && (
-        <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="cs-message-actions mt-1 flex min-h-7 items-center gap-2">
           {(() => {
             // Footer shows the absolute answer time (today→time, 昨天,
             // weekday this week, else full date) — not the process/elapsed
@@ -81,7 +82,7 @@ function AssistantMessageViewImpl({
             type="button"
             variant="ghost"
             size="sm"
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={onCopy}
             aria-label={t("msg.assistant.copyAria")}
           >

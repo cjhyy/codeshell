@@ -89,8 +89,8 @@ interface Props {
   trailingKey?: string | null;
   /**
    * Monotonic counter incremented on each turn_complete. Forwarded to
-   * ToolCard and ToolGroupCard so they force-collapse on each turn
-   * boundary.
+   * ToolCard and ToolGroupCard so cards that ran in that turn collapse
+   * at its boundary while manually opened history stays open.
    */
   turnEpoch?: number;
   /** Engine session id — the latest Files-Changed card uses it for turn undo/redo. */
@@ -406,13 +406,15 @@ export function MessageStream({
                 </CollapsibleContent>
               )}
               {images.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {images.map((img, i) => (
-                    <img
+                    <button
                       key={i}
-                      src={img.dataUrl}
-                      alt={img.name || "image"}
-                      title={img.name || undefined}
+                      type="button"
+                      className="max-w-full cursor-zoom-in overflow-hidden rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      aria-label={t("chat.composer.imageClickToZoom", {
+                        name: img.name || t("chat.composer.imageFallbackName"),
+                      })}
                       onClick={() =>
                         setZoomed({
                           items: images.map((g) => ({
@@ -423,7 +425,14 @@ export function MessageStream({
                           index: i,
                         })
                       }
-                    />
+                    >
+                      <img
+                        className="h-20 max-w-full object-cover"
+                        src={img.dataUrl}
+                        alt={img.name || t("chat.composer.imageFallbackName")}
+                        title={img.name || undefined}
+                      />
+                    </button>
                   ))}
                 </div>
               )}
@@ -521,7 +530,7 @@ export function MessageStream({
           className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto"
           ref={ref}
         >
-          <div className="min-w-0 max-w-full">
+          <div className="cs-chat-transcript w-full min-w-0">
             {selectionOpen &&
               displayGroups.map((group) => {
                 const index = group.selectionIndex;

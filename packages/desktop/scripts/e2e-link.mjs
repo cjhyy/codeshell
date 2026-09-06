@@ -24,6 +24,13 @@ const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-link-e2e-");
 const projectPath = join(isolated.home, "link-project");
 const screenshotDir = process.env.CODESHELL_LINK_SCREENSHOT_DIR;
+// Each category now includes a localized description in its accessible name.
+const credentialTabNames = {
+  cookie: /^Cookie(?:\s|$)/i,
+  token: /^Permission Token(?:\s|$)/i,
+  channels: /^(沟通渠道|Channels)(?:\s|$)/i,
+  link: /^Link(?:\s|$)/i,
+};
 let app;
 let win;
 
@@ -124,17 +131,17 @@ try {
   await assertNoHorizontalOverflow("desktop Cookie page");
   await screenshot("credentials-cookie.png");
 
-  await win.getByRole("tab", { name: /^Permission Token$/i }).click();
+  await win.getByRole("tab", { name: credentialTabNames.token }).click();
   await win.locator("[data-token-page]").waitFor({ state: "visible", timeout: 20_000 });
   await assertNoHorizontalOverflow("desktop Permission Token page");
   await screenshot("credentials-token.png");
 
-  await win.getByRole("tab", { name: /^(沟通渠道|Channels)$/i }).click();
+  await win.getByRole("tab", { name: credentialTabNames.channels }).click();
   await win.locator("[data-channel-page]").waitFor({ state: "visible", timeout: 20_000 });
   await assertNoHorizontalOverflow("desktop Channels page");
   await screenshot("credentials-channels.png");
 
-  await win.getByRole("tab", { name: /^Link$/i }).click();
+  await win.getByRole("tab", { name: credentialTabNames.link }).click();
   await win.locator("[data-link-page]").waitFor({ state: "visible", timeout: 20_000 });
 
   assert(
@@ -175,20 +182,20 @@ try {
 
   await win.setViewportSize({ width: 700, height: 900 });
   const responsiveTabs = [
-    [/^Cookie$/i, "[data-cookie-page]", "Cookie", "credentials-cookie-mobile.png"],
+    [credentialTabNames.cookie, "[data-cookie-page]", "Cookie", "credentials-cookie-mobile.png"],
     [
-      /^Permission Token$/i,
+      credentialTabNames.token,
       "[data-token-page]",
       "Permission Token",
       "credentials-token-mobile.png",
     ],
     [
-      /^(沟通渠道|Channels)$/i,
+      credentialTabNames.channels,
       "[data-channel-page]",
       "Channels",
       "credentials-channels-mobile.png",
     ],
-    [/^Link$/i, "[data-link-page]", "Link", "link-mobile.png"],
+    [credentialTabNames.link, "[data-link-page]", "Link", "link-mobile.png"],
   ];
   for (const [name, selector, label, screenshotName] of responsiveTabs) {
     await win.getByRole("tab", { name }).click();

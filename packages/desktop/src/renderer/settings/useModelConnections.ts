@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readScopedSettings } from "../settingsAuthority";
 import type { CatalogEntry } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
@@ -36,6 +36,11 @@ export interface UseModelConnectionsResult {
   auxId: string;
   showKey: Record<string, boolean>;
   sttFallback: SttFallback | null;
+  pending: boolean;
+  loading: boolean;
+  hasLoaded: boolean;
+  loadFailed: boolean;
+  credentialCommitRevision: number;
   textTemplates: CatalogEntry[];
   entryById: (id: string) => CatalogEntry | undefined;
   load: () => Promise<void>;
@@ -47,7 +52,7 @@ export interface UseModelConnectionsResult {
   removeInstance: (id: string) => Promise<void>;
   removeCredential: (id: string) => Promise<void>;
   setAux: (id: string) => Promise<void>;
-  setDefaultInstance: (id: string) => void;
+  setDefaultInstance: (id: string) => Promise<void>;
   toggleShowKey: (id: string) => void;
 }
 
@@ -70,51 +75,80 @@ export function useModelConnections(
   const [auxId, setAuxId] = useState<string>("");
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [sttFallback, setSttFallback] = useState<SttFallback | null>(null);
+  const [pending, setPending] = useState(false);
+  const [credentialCommitRevision, setCredentialCommitRevision] = useState(0);
+  const mutationLock = useRef(false);
+  const loadGeneration = useRef(0);
+  const mounted = useRef(true);
+  const currentScope = useRef(cacheKey);
+  currentScope.current = cacheKey;
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      loadGeneration.current += 1;
+    };
+  }, [cacheKey]);
 
   const textTemplates = useMemo(() => catalog.filter((e) => e.tag === tag), [catalog, tag]);
   const entryById = useCallback((id: string) => catalog.find((e) => e.id === id), [catalog]);
 
   const load = useCallback(async () => {
-    const cat = (await window.codeshell.getModelCatalog().catch(() => [])) as CatalogEntry[];
-    setCatalog(cat);
-    const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
-      string,
-      unknown
-    >;
-    const conns = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
-    const mine = conns.filter((c) => c.tag === tag);
-    setInstances(mine);
-    cacheSet(cacheKey, mine);
-    setCredentials(Array.isArray(s.credentials) ? (s.credentials as Credential[]) : []);
-    const defaults = (s.defaults ?? {}) as Record<string, string | undefined>;
-    setDefaultId(defaults[tag] ?? "");
-    setAuxId(defaults.auxText ?? "");
-    if (tag === "audio") {
-      try {
-        const d = await window.codeshell.sttDescribe(projectPath ?? "");
-        setSttFallback(
-          d.source === "fallback"
+    if (!mounted.current || currentScope.current !== cacheKey) return;
+    const generation = ++loadGeneration.current;
+    const isCurrent = () =>
+      mounted.current && currentScope.current === cacheKey && generation === loadGeneration.current;
+    setLoadingKey(cacheKey);
+    try {
+      // Catalog and settings are one editable snapshot. Neither may be applied
+      // alone, or a failed read could replace a real connection with an empty UI.
+      const [cat, settings] = await Promise.all([
+        window.codeshell.getModelCatalog(),
+        readScopedSettings(scope, projectPath),
+      ]);
+      const s = (settings ?? {}) as Record<string, unknown>;
+      let fallback: SttFallback | null = null;
+      if (tag === "audio") {
+        const d = await window.codeshell.sttDescribe(projectPath ?? "").catch(() => null);
+        fallback =
+          d?.source === "fallback"
             ? {
                 model: d.model,
                 maskedKey: d.maskedKey,
                 reusedCredentialCatalogId: d.reusedCredentialCatalogId,
               }
-            : null,
-        );
-      } catch {
-        setSttFallback(null);
+            : null;
       }
-    } else {
-      setSttFallback(null);
+      if (!isCurrent()) return;
+      const conns = Array.isArray(s.modelConnections)
+        ? (s.modelConnections as ModelInstance[])
+        : [];
+      const mine = conns.filter((c) => c.tag === tag);
+      const defaults = (s.defaults ?? {}) as Record<string, string | undefined>;
+      setCatalog(cat as CatalogEntry[]);
+      setInstances(mine);
+      cacheSet(cacheKey, mine);
+      setCredentials(Array.isArray(s.credentials) ? (s.credentials as Credential[]) : []);
+      setDefaultId(defaults[tag] ?? "");
+      setAuxId(defaults.auxText ?? "");
+      setSttFallback(fallback);
+      setLoadedKey(cacheKey);
+      setFailedKey(null);
+    } catch {
+      // Never expose raw read errors, which may contain credential data.
+      if (isCurrent()) setFailedKey(cacheKey);
+    } finally {
+      if (isCurrent()) setLoadingKey(null);
     }
   }, [scope, projectPath, cacheKey, tag]);
 
   const persist = useCallback(
     async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {
-      const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
-        string,
-        unknown
-      >;
+      const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<string, unknown>;
       const all = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
       const others = all.filter((c) => c.tag !== tag);
       const defaults = (s.defaults ?? {}) as Record<string, unknown>;
@@ -127,47 +161,72 @@ export function useModelConnections(
         },
         projectPath,
       );
+      // Every connection write commits the whole credential collection, even
+      // when initiated from another card. End draft editing across the panel.
+      setCredentialCommitRevision((revision) => revision + 1);
     },
     [scope, projectPath, tag],
   );
 
-  const setAux = useCallback(
-    async (id: string) => {
-      setAuxId(id);
-      const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
-        string,
-        unknown
-      >;
-      const defaults = (s.defaults ?? {}) as Record<string, unknown>;
-      await writeSettings(
-        scope,
-        { defaults: { ...defaults, auxText: id || undefined } },
-        projectPath,
-      );
-      toast({
-        message: id
-          ? t("settingsX.textConn.toastAuxSet", { id })
-          : t("settingsX.textConn.toastAuxFollow"),
-        variant: "success",
-      });
+  const runMutation = useCallback(
+    async (operation: () => Promise<string | false | undefined>, failureMessage: string) => {
+      if (mutationLock.current) return;
+      mutationLock.current = true;
+      // Reads begun before this action must not overwrite its retained draft.
+      loadGeneration.current += 1;
+      setLoadingKey(null);
+      setPending(true);
+      try {
+        const message = await operation();
+        if (message === false) return;
+        // Complete a newer read before unlocking; writeSettings also broadcasts
+        // an automatic refresh, which may arrive after this one.
+        await load().catch(() => {});
+        if (message) toast({ message, variant: "success" });
+      } catch {
+        // Storage errors can contain credential values. Only show safe text.
+        toast({ message: failureMessage, variant: "error" });
+      } finally {
+        mutationLock.current = false;
+        setPending(false);
+      }
     },
-    [scope, projectPath, t, toast],
+    [load, toast],
+  );
+
+  const setAux = useCallback(
+    (id: string) =>
+      runMutation(async () => {
+        const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<string, unknown>;
+        const defaults = (s.defaults ?? {}) as Record<string, unknown>;
+        await writeSettings(
+          scope,
+          { defaults: { ...defaults, auxText: id || undefined } },
+          projectPath,
+        );
+        setAuxId(id);
+        return id
+          ? t("settingsX.textConn.toastAuxSet", { id })
+          : t("settingsX.textConn.toastAuxFollow");
+      }, t("settingsX.textConn.toastAuxFailed")),
+    [scope, projectPath, runMutation, t],
   );
 
   const addFromTemplate = useCallback(
-    async (entry: CatalogEntry, model?: string) => {
-      const taken = new Set(instances.map((i) => i.id));
-      const inst = buildInstance(entry, model, taken, tag);
-      const existing = credentialCandidates(credentials, entry.id, catalog)[0];
-      if (existing) inst.credentialId = existing.id;
-      const next = [...instances, inst];
-      const nextDefault = defaultId || inst.id;
-      setInstances(next);
-      setDefaultId(nextDefault);
-      await persist(next, credentials, nextDefault);
-      toast({ message: t("settingsX.textConn.toastAdded", { id: inst.id }), variant: "success" });
-    },
-    [catalog, credentials, defaultId, instances, persist, t, tag, toast],
+    (entry: CatalogEntry, model?: string) =>
+      runMutation(async () => {
+        const taken = new Set(instances.map((i) => i.id));
+        const inst = buildInstance(entry, model, taken, tag);
+        const existing = credentialCandidates(credentials, entry.id, catalog)[0];
+        if (existing) inst.credentialId = existing.id;
+        const next = [...instances, inst];
+        const nextDefault = defaultId || inst.id;
+        await persist(next, credentials, nextDefault);
+        setInstances(next);
+        setDefaultId(nextDefault);
+        return t("settingsX.textConn.toastAdded", { id: inst.id });
+      }, t("settingsX.textConn.toastAddFailed")),
+    [catalog, credentials, defaultId, instances, persist, runMutation, t, tag],
   );
 
   const patch = useCallback(
@@ -196,86 +255,104 @@ export function useModelConnections(
 
   const saveInstance = useCallback(
     async (id: string) => {
-      await persist(instances, credentials, defaultId || id);
-      if (!defaultId) setDefaultId(id);
-      toast({ message: t("settingsX.textConn.toastSaved"), variant: "success" });
+      if (mutationLock.current) return;
+      mutationLock.current = true;
+      setPending(true);
+      try {
+        await persist(instances, credentials, defaultId || id);
+        if (!defaultId) setDefaultId(id);
+        // The write broadcasts a refresh. Complete a newer read while the
+        // form is locked so that delayed readbacks cannot erase later edits.
+        await load().catch(() => {});
+        toast({ message: t("settingsX.textConn.toastSaved"), variant: "success" });
+      } catch {
+        // Persistence errors may include credential data. Keep the editable
+        // draft and report a safe message without echoing the backend error.
+        toast({ message: t("settingsX.textConn.toastSaveFailed"), variant: "error" });
+      } finally {
+        mutationLock.current = false;
+        setPending(false);
+      }
     },
-    [credentials, defaultId, instances, persist, t, toast],
+    [credentials, defaultId, instances, load, persist, t, toast],
   );
 
   const removeInstance = useCallback(
     async (id: string) => {
-      const ok = await confirm({
-        message: t("settingsX.textConn.confirmRemoveMsg", { id }),
-        detail: t("settingsX.textConn.confirmRemoveDetail"),
-        destructive: true,
-      });
-      if (!ok) return;
-      const next = instances.filter((i) => i.id !== id);
-      const nextDefault = defaultId === id ? (next[0]?.id ?? "") : defaultId;
-      setInstances(next);
-      setDefaultId(nextDefault);
-      await persist(next, credentials, nextDefault);
-      toast({ message: t("settingsX.textConn.toastRemoved", { id }), variant: "success" });
+      if (mutationLock.current) return;
+      mutationLock.current = true;
+      try {
+        const ok = await confirm({
+          message: t("settingsX.textConn.confirmRemoveMsg", { id }),
+          detail: t("settingsX.textConn.confirmRemoveDetail"),
+          destructive: true,
+        });
+        if (!ok) return;
+        setPending(true);
+        const next = instances.filter((i) => i.id !== id);
+        const nextDefault = defaultId === id ? (next[0]?.id ?? "") : defaultId;
+        await persist(next, credentials, nextDefault);
+        setInstances((current) => current.filter((instance) => instance.id !== id));
+        setDefaultId((current) => (current === id ? (next[0]?.id ?? "") : current));
+        await load().catch(() => {});
+        toast({ message: t("settingsX.textConn.toastRemoved", { id }), variant: "success" });
+      } catch {
+        toast({ message: t("settingsX.textConn.toastRemoveFailed"), variant: "error" });
+      } finally {
+        mutationLock.current = false;
+        setPending(false);
+      }
     },
-    [confirm, credentials, defaultId, instances, persist, t, toast],
+    [confirm, credentials, defaultId, instances, load, persist, t, toast],
   );
 
   const removeCredential = useCallback(
-    async (id: string) => {
-      const settings = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
-        string,
-        unknown
-      >;
-      const allConnections = Array.isArray(settings.modelConnections)
-        ? (settings.modelConnections as ModelInstance[])
-        : [];
-      const allCredentials = Array.isArray(settings.credentials)
-        ? (settings.credentials as Credential[])
-        : [];
-      if (!allCredentials.some((credential) => credential.id === id)) return;
-      const next = removeCredentialAndReferences(allCredentials, allConnections, id);
-      const ok = await confirm({
-        message: t("settingsX.textConn.confirmRemoveCredentialMsg", { id }),
-        detail: t("settingsX.textConn.confirmRemoveCredentialDetail", {
-          count: next.affectedConnectionIds.length,
-        }),
-        destructive: true,
-      });
-      if (!ok) return;
+    (id: string) =>
+      runMutation(async () => {
+        const settings = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const allConnections = Array.isArray(settings.modelConnections)
+          ? (settings.modelConnections as ModelInstance[])
+          : [];
+        const allCredentials = Array.isArray(settings.credentials)
+          ? (settings.credentials as Credential[])
+          : [];
+        if (!allCredentials.some((credential) => credential.id === id)) return false;
+        const next = removeCredentialAndReferences(allCredentials, allConnections, id);
+        const ok = await confirm({
+          message: t("settingsX.textConn.confirmRemoveCredentialMsg", { id }),
+          detail: t("settingsX.textConn.confirmRemoveCredentialDetail", {
+            count: next.affectedConnectionIds.length,
+          }),
+          destructive: true,
+        });
+        if (!ok) return false;
 
-      await writeSettings(
-        scope,
-        { credentials: next.credentials, modelConnections: next.connections },
-        projectPath,
-      );
-      const mine = next.connections.filter((connection) => connection.tag === tag);
-      setCredentials(next.credentials);
-      setInstances(mine);
-      cacheSet(cacheKey, mine);
-      toast({
-        message: t("settingsX.textConn.toastCredentialRemoved", { id }),
-        variant: "success",
-      });
-    },
-    [cacheKey, confirm, projectPath, scope, t, tag, toast],
+        await writeSettings(
+          scope,
+          { credentials: next.credentials, modelConnections: next.connections },
+          projectPath,
+        );
+        const mine = next.connections.filter((connection) => connection.tag === tag);
+        setCredentials(next.credentials);
+        setInstances(mine);
+        cacheSet(cacheKey, mine);
+        setCredentialCommitRevision((revision) => revision + 1);
+        return t("settingsX.textConn.toastCredentialRemoved", { id });
+      }, t("settingsX.textConn.toastCredentialRemoveFailed")),
+    [cacheKey, confirm, projectPath, runMutation, scope, t, tag],
   );
 
   const setDefaultInstance = useCallback(
-    (id: string) => {
-      const prevDefault = defaultId;
-      setDefaultId(id);
-      void persist(instances, credentials, id).catch((e) => {
-        setDefaultId(prevDefault);
-        toast({
-          message: `${t("settingsX.textConn.setCurrentFailed")}: ${
-            e instanceof Error ? e.message : String(e)
-          }`,
-          variant: "error",
-        });
-      });
-    },
-    [credentials, defaultId, instances, persist, t, toast],
+    (id: string) =>
+      runMutation(async () => {
+        await persist(instances, credentials, id);
+        setDefaultId(id);
+        return undefined;
+      }, t("settingsX.textConn.setCurrentFailed")),
+    [credentials, instances, persist, runMutation, t],
   );
 
   const toggleShowKey = useCallback(
@@ -291,6 +368,11 @@ export function useModelConnections(
     auxId,
     showKey,
     sttFallback,
+    pending,
+    loading: loadingKey === cacheKey,
+    hasLoaded: loadedKey === cacheKey,
+    loadFailed: failedKey === cacheKey,
+    credentialCommitRevision,
     textTemplates,
     entryById,
     load,

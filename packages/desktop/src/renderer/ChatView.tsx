@@ -22,6 +22,7 @@ import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { Lightbox, type LightboxItem } from "./chat/Lightbox";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
+import { WelcomeSuggestions } from "./chat/WelcomeSuggestions";
 import { BranchPicker } from "./chat/BranchPicker";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
@@ -1472,12 +1473,17 @@ export function ChatView({
           contextSelectionOpen
             ? "hidden"
             : isNewChat
-              ? "flex min-w-0 max-w-full flex-1 flex-col items-center justify-center px-4"
+              ? cn(
+                  "flex min-w-0 max-w-full flex-1 flex-col items-center px-4",
+                  variant === "main" ? "cs-new-chat" : "justify-center",
+                )
               : "contents"
         }
       >
         {isNewChat && welcomeNode && (
-          <div className="mb-4 flex flex-col items-center">{welcomeNode}</div>
+          <div className="mb-5 flex w-full min-w-0 shrink-0 flex-col items-center">
+            {welcomeNode}
+          </div>
         )}
 
         {/* shrink-0: the composer is a flex sibling of the message stream; without
@@ -1486,7 +1492,14 @@ export function ChatView({
             collapsing the input row by row. Pinning shrink to 0 keeps it at its
             content height regardless of how tall the stream gets. */}
         <div
-          className={isNewChat ? "w-full min-w-0 max-w-2xl p-3" : "min-w-0 max-w-full shrink-0 p-3"}
+          className={
+            isNewChat
+              ? "w-full min-w-0 max-w-2xl shrink-0 p-3"
+              : cn(
+                  "min-w-0 shrink-0 p-3",
+                  variant === "main" ? "mx-auto w-full max-w-3xl" : "max-w-full",
+                )
+          }
         >
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
@@ -1571,7 +1584,8 @@ export function ChatView({
               // overflow. Keep this card out of the container-query tree: putting
               // container-type on the textarea's ancestor has collapsed the
               // composer during session/dock reflow.
-              "min-w-0 max-w-full rounded-xl border bg-card p-2 shadow-sm sm:min-w-[300px]" +
+              "cs-chat-composer min-w-0 max-w-full border bg-card sm:min-w-[300px]" +
+              (variant === "main" ? "" : " rounded-xl p-2 shadow-sm") +
               (dragOver ? " ring-2 ring-primary/40" : "")
             }
           >
@@ -1843,7 +1857,10 @@ export function ChatView({
                 placeholder={placeholder}
                 disabled={inputDisabled}
                 rows={1}
-                className="max-h-[200px] min-h-[36px] w-full resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:opacity-60"
+                className={cn(
+                  "max-h-[200px] w-full resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:opacity-60",
+                  isNewChat && variant === "main" ? "min-h-[72px]" : "min-h-[36px]",
+                )}
               />
             </div>
 
@@ -2077,7 +2094,7 @@ export function ChatView({
             already tied to the existing project). Use the sidebar to
             jump projects after a session has started. */}
           {isNewChat && variant === "main" && !engineSessionId && (
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
               <ProjectPicker
                 projects={projects}
                 activeProjectId={activeProjectId}
@@ -2099,6 +2116,23 @@ export function ChatView({
                 disabled={controlsDisabled}
               />
             </div>
+          )}
+          {isNewChat && variant === "main" && !engineSessionId && (
+            <WelcomeSuggestions
+              hasProject={activeProjectId !== null}
+              disabled={inputDisabled}
+              onSelect={(prompt) => {
+                setDraft((current) => (current.trim() ? `${current}\n\n${prompt}` : prompt));
+                setHistoryCursor(-1);
+                closeMention();
+                closeSlash();
+                requestAnimationFrame(() => {
+                  const textarea = textareaRef.current;
+                  textarea?.focus();
+                  textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+                });
+              }}
+            />
           )}
         </div>
       </div>

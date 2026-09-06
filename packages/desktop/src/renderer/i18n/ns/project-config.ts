@@ -3,6 +3,11 @@ export const projectConfig = {
   zh: {
     projectConfig: {
       open: "项目配置",
+      overview: {
+        basics: "基础设置",
+        navigation: "项目配置模块",
+        empty: "当前项目没有可用的配置项。",
+      },
       dataSources: {
         title: "数据源",
         subtitle: "上传项目资料，或从全局连接库绑定当前项目可见的范围。",
@@ -61,12 +66,23 @@ export const projectConfig = {
         open: "在编辑器打开",
         create: "创建并打开",
         opening: "正在打开…",
+        unknown: "尚未确认文件状态",
+        checkFailed: "无法检查指令文件：{error}",
+        retry: "重新检查",
+        openNamed: "在编辑器打开 {name}",
+        createNamed: "创建并打开 {name}",
+        openFailed: "无法打开 {name}：{error}",
       },
     },
   },
   en: {
     projectConfig: {
       open: "Project settings",
+      overview: {
+        basics: "Basics",
+        navigation: "Project settings modules",
+        empty: "No settings are available for this project.",
+      },
       dataSources: {
         title: "Data sources",
         subtitle:
@@ -132,6 +148,12 @@ export const projectConfig = {
         open: "Open in editor",
         create: "Create and open",
         opening: "Opening…",
+        unknown: "File status not confirmed",
+        checkFailed: "Could not check instruction files: {error}",
+        retry: "Check again",
+        openNamed: "Open {name} in editor",
+        createNamed: "Create and open {name}",
+        openFailed: "Could not open {name}: {error}",
       },
     },
   },

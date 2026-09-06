@@ -328,8 +328,8 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
-      <nav className="flex flex-col gap-0.5 p-2">
+    <aside className="flex h-full w-60 max-w-full shrink-0 flex-col border-r border-border/70 bg-muted/25">
+      <nav className="flex flex-col gap-1 px-3 pb-3 pt-2">
         <PetSidebarEntry
           active={
             viewMode === "pet" ||
@@ -341,12 +341,13 @@ export function Sidebar({
           runningCount={petRunningCount}
           onOpen={onOpenPetPage}
         />
-        <div className="my-1 border-t border-border/70" aria-hidden="true" />
+        <div className="my-1 border-t border-border/60" aria-hidden="true" />
         <SidebarItem
           label={t("sidebar.newConversation")}
-          Icon={MessageSquare}
+          Icon={PenSquare}
           onClick={onNewConversation}
           active={false}
+          prominent
         />
         <SidebarItem
           label={t("sidebar.search")}
@@ -369,8 +370,8 @@ export function Sidebar({
       </nav>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="flex items-center justify-between px-4 pb-1 pt-2">
+          <span className="text-[11px] font-semibold tracking-wide text-muted-foreground">
             {t("sidebar.projects")}
           </span>
           <Button
@@ -386,9 +387,9 @@ export function Sidebar({
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {orderedProjects.length === 0 && noRepoSessions.length === 0 && (
-            <div className="mx-1 rounded-lg border border-dashed border-border px-3 py-4 text-center">
+            <div className="mt-1 rounded-xl border border-dashed border-border bg-card/60 px-3 py-5 text-center">
               <FolderOpen className="mx-auto size-5 text-muted-foreground" aria-hidden />
               <p className="mt-2 text-xs font-medium text-foreground">{t("sidebar.emptyTitle")}</p>
               <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
@@ -481,11 +482,12 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="border-t border-border p-2">
+      <div className="border-t border-border/70 bg-card/40 px-3 py-2">
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <SettingsMenu
               onOpenSettingsPage={onOpenSettingsPage}
+              onNavigate={onNavigate}
               sidebarCollapsed={sidebarCollapsed}
               petWidgetVisible={petWidgetVisible}
               onTogglePetWidget={onTogglePetWidget}
@@ -721,12 +723,14 @@ function SidebarItem({
   onClick,
   active,
   badge,
+  prominent = false,
 }: {
   label: string;
   Icon: React.ComponentType<{ size?: number }>;
   onClick: () => void;
   active: boolean;
   badge?: number;
+  prominent?: boolean;
 }) {
   return (
     <Button
@@ -734,14 +738,18 @@ function SidebarItem({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-8 w-full justify-start gap-2 px-2 text-sm font-normal",
-        active ? "bg-accent font-medium text-foreground" : "text-muted-foreground",
+        "h-8 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-normal transition-colors",
+        prominent
+          ? "mb-1 h-9 bg-primary font-medium text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground"
+          : active
+            ? "bg-primary/10 font-medium text-primary hover:bg-primary/15 hover:text-primary"
+            : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
       )}
       aria-current={active ? "page" : undefined}
       onClick={onClick}
     >
       <Icon size={14} />
-      <span className="flex-1 text-left">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
       {badge !== undefined && badge > 0 && <Badge count={badge} />}
     </Button>
   );
@@ -770,7 +778,10 @@ export function sessionMainRootLabel(
   );
 }
 
-function useProjectBranch(projectId: string, projectPath: string): {
+function useProjectBranch(
+  projectId: string,
+  projectPath: string,
+): {
   branch: string | undefined;
   refresh: () => void;
 } {
@@ -948,11 +959,11 @@ export function ProjectGroup({
   );
 
   return (
-    <div className="mb-1">
+    <div className="mb-2">
       <div
         className={cn(
-          "group flex items-center gap-1 rounded-md px-1 text-sm",
-          isActiveProject ? "bg-accent" : "hover:bg-accent/60",
+          "group flex items-center gap-1 rounded-lg px-1 text-[13px] transition-colors",
+          isActiveProject ? "bg-accent/70" : "hover:bg-accent/60",
         )}
         onContextMenu={onProjectContextMenu}
       >
@@ -960,7 +971,7 @@ export function ProjectGroup({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 min-w-0 flex-1 justify-start gap-1.5 px-1 hover:bg-transparent"
+          className="h-8 min-w-0 flex-1 justify-start gap-2 px-1.5 text-[13px] hover:bg-transparent"
           aria-expanded={!collapsed}
           onClick={() => {
             setShowMore(false);
@@ -1017,7 +1028,7 @@ export function ProjectGroup({
       {!collapsed && (
         <>
           {live.length > 0 && (
-            <ul className="ml-3 mt-0.5 space-y-0.5 pl-2">
+            <ul className="ml-3 mt-1 space-y-0.5 border-l border-border/60 pl-2">
               {visibleLive.map((s, i) => {
                 const sessionWorkspace = s.engineSessionId
                   ? sessionWorkspaces[s.engineSessionId]
@@ -1131,7 +1142,7 @@ function NoRepoSection({
   if (sessions.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="px-1 pb-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
         {t("sidebar.conversations")}
       </div>
       <ul className="space-y-0.5">
@@ -1329,8 +1340,10 @@ const SessionRow = React.memo(
           ref={rowRef}
           aria-describedby={hoverCardOpen ? hoverCardId : undefined}
           className={cn(
-            "group flex items-center gap-1 rounded-md px-1 text-sm",
-            isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60",
+            "group flex items-center gap-1 rounded-lg px-1 text-[13px] transition-colors",
+            isActive
+              ? "bg-primary/10 text-foreground shadow-[inset_2px_0_0_0_hsl(var(--cs-primary))]"
+              : "text-muted-foreground hover:bg-accent/60",
             s.archived && "opacity-60",
           )}
           onContextMenu={onContextMenu}
@@ -1353,7 +1366,10 @@ const SessionRow = React.memo(
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 font-normal hover:bg-transparent"
+            className={cn(
+              "h-8 min-w-0 flex-1 justify-start gap-1.5 px-1.5 text-[13px] hover:bg-transparent",
+              isActive ? "font-medium" : "font-normal",
+            )}
             aria-current={isActive ? "page" : undefined}
             onClick={onClick}
           >

@@ -4,6 +4,43 @@
 /* Dark mode is driven by a `.dark` class on <html> (see theme.ts). */
 @custom-variant dark (&:is(.dark *));
 
+/* The vendor syntax sheet is unlayered. Scope these overrides to our code
+   blocks so its white background and light-only colors do not escape the theme. */
+.cs-code-block .hljs {
+  padding: 0;
+  background: transparent;
+  color: hsl(var(--cs-foreground));
+}
+
+.dark .cs-code-block :is(.hljs-keyword, .hljs-selector-tag, .hljs-meta) {
+  color: hsl(var(--cs-primary));
+}
+
+.dark .cs-code-block :is(.hljs-string, .hljs-regexp, .hljs-attr, .hljs-addition) {
+  color: hsl(var(--cs-status-ok));
+}
+
+.dark .cs-code-block :is(.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet) {
+  color: hsl(var(--cs-status-warn));
+}
+
+.dark .cs-code-block :is(.hljs-title, .hljs-type, .hljs-built_in, .hljs-variable) {
+  color: hsl(var(--cs-status-running));
+}
+
+.dark .cs-code-block :is(.hljs-comment, .hljs-quote) {
+  color: hsl(var(--cs-muted-foreground));
+}
+
+.dark .cs-code-block .hljs-addition {
+  background: hsl(var(--cs-status-ok) / 0.1);
+}
+
+.dark .cs-code-block .hljs-deletion {
+  color: hsl(var(--cs-status-err));
+  background: hsl(var(--cs-status-err) / 0.1);
+}
+
 /* A calm "breathing" idle: a tiny, slow vertical bob with no rotation. The
    earlier version tilted ±1deg which read as wobbly/odd; a subtle rise-and-fall
    alone feels alive without drawing the eye. */
@@ -53,6 +90,108 @@
  * Writing the rules by hand, scoped to a class, is deterministic and correct.
  */
 @layer components {
+  [data-chat-variant="main"] .cs-chat-transcript {
+    max-width: 48rem;
+    margin-inline: auto;
+    padding-block: 1rem;
+  }
+
+  .cs-message-actions {
+    opacity: 1;
+    transition: opacity 150ms ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cs-message-actions {
+      opacity: 0;
+    }
+
+    .group:hover > .cs-message-actions,
+    .group:focus-within > .cs-message-actions {
+      opacity: 1;
+    }
+  }
+
+  /* Main-chat surfaces keep the shared quick-chat and pet composers compact. */
+  [data-chat-variant="main"] .cs-new-chat {
+    justify-content: safe center;
+    overflow-y: auto;
+    padding-block: clamp(1.5rem, 4vh, 3rem);
+  }
+
+  [data-chat-variant="main"] .cs-chat-composer {
+    border-radius: 1.125rem;
+    border-color: hsl(var(--cs-border) / 0.85);
+    padding: 0.75rem;
+    box-shadow:
+      0 8px 28px hsl(var(--cs-foreground) / 0.035),
+      0 1px 3px hsl(var(--cs-foreground) / 0.04);
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  [data-chat-variant="main"] .cs-chat-composer:focus-within {
+    border-color: hsl(var(--cs-primary) / 0.45);
+    box-shadow:
+      0 0 0 3px hsl(var(--cs-primary) / 0.07),
+      0 8px 28px hsl(var(--cs-foreground) / 0.045);
+  }
+
+  .cs-welcome-suggestions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.625rem;
+    margin-top: 1.5rem;
+  }
+
+  .cs-welcome-suggestion {
+    min-width: 0;
+    border: 1px solid hsl(var(--cs-border) / 0.7);
+    border-radius: 0.875rem;
+    background: hsl(var(--cs-card) / 0.5);
+    padding: 0.875rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .cs-welcome-suggestion:hover:not(:disabled) {
+    border-color: hsl(var(--cs-primary) / 0.3);
+    background: hsl(var(--cs-primary) / 0.04);
+  }
+
+  .cs-welcome-suggestion:focus-visible {
+    outline: 2px solid hsl(var(--cs-ring));
+    outline-offset: 3px;
+  }
+
+  .cs-welcome-suggestion:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 640px) {
+    .cs-welcome-suggestions {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .cs-welcome-suggestion {
+      padding: 0.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-chat-variant="main"] .cs-chat-composer,
+    .cs-welcome-suggestion {
+      transition: none;
+    }
+  }
+
   .digital-human-page-shell {
     background:
       radial-gradient(circle at 78% -8%, hsl(var(--cs-primary) / 0.08), transparent 30rem),
@@ -325,6 +464,7 @@
  * dense desktop panes keep clear depth without adding decorative chrome.
  */
 :root {
+  color-scheme: light;
   --cs-background: 240 20% 99%;
   --cs-foreground: 240 10% 3.9%;
   --cs-card: 0 0% 100%;
@@ -333,7 +473,7 @@
   --cs-popover-foreground: 240 10% 3.9%;
   /* Warm orange accent (the original brand #b85c2b) for primary buttons,
      switch-on, focus ring — over the neutral zinc base. */
-  --cs-primary: 19 63% 45%;
+  --cs-primary: 19 63% 39%;
   --cs-primary-foreground: 0 0% 98%;
   --cs-secondary: 240 5% 96%;
   --cs-secondary-foreground: 240 5.9% 10%;
@@ -345,7 +485,7 @@
   --cs-destructive-foreground: 0 0% 98%;
   --cs-border: 240 5% 78%;
   --cs-input: 240 5% 78%;
-  --cs-ring: 19 63% 45%;
+  --cs-ring: 19 63% 39%;
   --radius: 0.5rem;
 
   /* Meaningful status colors. Keep them separate from the brand primary. */
@@ -357,6 +497,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --cs-background: 240 9% 5.5%;
   --cs-foreground: 0 0% 98%;
   --cs-card: 240 7% 8.5%;
@@ -364,7 +505,7 @@
   --cs-popover: 240 7% 9.5%;
   --cs-popover-foreground: 0 0% 98%;
   --cs-primary: 22 70% 55%;
-  --cs-primary-foreground: 0 0% 100%;
+  --cs-primary-foreground: 22 30% 8%;
   --cs-secondary: 240 4% 15%;
   --cs-secondary-foreground: 0 0% 98%;
   --cs-muted: 240 4% 15%;

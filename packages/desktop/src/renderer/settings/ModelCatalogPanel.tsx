@@ -6,8 +6,8 @@
  * are shadcn (Button/Input/Switch/SimpleSelect). The renderer imports no core —
  * types come from preload/types and ADAPTER_KINDS from catalogEditor.
  */
-import React, { useCallback, useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Plus, Trash2, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import type { CatalogEntry, ModelPreset, ParamSpec } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,39 +56,137 @@ export function ModelCatalogPanel(_props: Props) {
   // not-yet-saved "新建 provider" card. `draft` is the editing copy.
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<CatalogEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [readError, setReadError] = useState(false);
+  const [completedRead, setCompletedRead] = useState(0);
+  const [pending, setPending] = useState<"save" | "delete" | "reset" | null>(null);
+  const [mutationError, setMutationError] = useState<"save" | "delete" | null>(null);
+  const mounted = useRef(true);
+  const readVersion = useRef(0);
+  const mutationLock = useRef(false);
+  const refreshRequested = useRef(false);
+  const retryButton = useRef<HTMLButtonElement>(null);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const retryFocus = useRef<HTMLElement | null>(null);
+  const panel = useRef<HTMLFieldSetElement>(null);
+  const triggers = useRef(new Map<string, HTMLButtonElement>());
+  const completedFocus = useRef<{ source: HTMLElement; entryId?: string | null } | null>(null);
 
-  const load = useCallback(async () => {
-    const [c, o] = await Promise.all([
-      window.codeshell.getModelCatalog().catch(() => [] as CatalogEntry[]),
-      window.codeshell.getCatalogOrigins().catch(() => ({}) as Origins),
-    ]);
-    setEntries(c as CatalogEntry[]);
-    setOrigins(o as Origins);
+  useLayoutEffect(() => {
+    if (pending || !completedFocus.current) return;
+    const { source, entryId } = completedFocus.current;
+    completedFocus.current = null;
+    const focused = document.activeElement;
+    if (focused === source || focused === document.body || focused === null) {
+      const target =
+        entryId === undefined
+          ? source
+          : entryId
+            ? (triggers.current.get(entryId) ?? addButton.current)
+            : addButton.current;
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    }
+  }, [expandedId, pending, mutationError]);
+
+  useLayoutEffect(() => {
+    if (loading || !retryFocus.current) return;
+    const previous = retryFocus.current;
+    retryFocus.current = null;
+    const focused = document.activeElement;
+    if (focused === previous || focused === document.body) {
+      (readError
+        ? retryButton.current
+        : addButton.current?.disabled
+          ? heading.current
+          : addButton.current
+      )?.focus({
+        preventScroll: true,
+      });
+    }
+  }, [completedRead, loading, readError]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      readVersion.current++;
+    };
+  }, []);
+
+  const load = useCallback(async (afterMutation = false) => {
+    if (!mounted.current) return;
+    if (mutationLock.current && !afterMutation) {
+      refreshRequested.current = true;
+      return;
+    }
+    refreshRequested.current = false;
+    const version = ++readVersion.current;
+    setLoading(true);
+    try {
+      // Entries and origins form one snapshot: guessing a missing origin could
+      // offer deletion for a built-in template. Keep the last complete read.
+      const [c, o] = await Promise.all([
+        window.codeshell.getModelCatalog(),
+        window.codeshell.getCatalogOrigins(),
+      ]);
+      if (!mounted.current || version !== readVersion.current) return;
+      setEntries(c as CatalogEntry[]);
+      setOrigins(o as Origins);
+      setHasLoaded(true);
+      setReadError(false);
+    } catch {
+      if (mounted.current && version === readVersion.current) setReadError(true);
+    } finally {
+      if (mounted.current && version === readVersion.current) {
+        setLoading(false);
+        setCompletedRead(version);
+      }
+    }
   }, []);
 
   useRefreshOnSettingsChange(() => void load(), [load]);
 
   const collapse = () => {
+    const focused = document.activeElement;
+    if (
+      !mutationLock.current &&
+      focused instanceof HTMLElement &&
+      panel.current?.contains(focused)
+    ) {
+      completedFocus.current = {
+        source: focused,
+        entryId: expandedId === NEW_SENTINEL ? null : expandedId,
+      };
+    }
     setExpandedId(null);
     setDraft(null);
+    setMutationError(null);
   };
 
   const startNew = () => {
+    if (mutationLock.current) return;
+    retryFocus.current = null;
+    setMutationError(null);
     setDraft(blankCatalogEntry("text"));
     setExpandedId(NEW_SENTINEL);
   };
 
   const toggle = (entry: CatalogEntry) => {
+    if (mutationLock.current) return;
+    retryFocus.current = null;
     if (expandedId === entry.id) {
       collapse();
       return;
     }
+    setMutationError(null);
     setDraft(structuredClone(entry));
     setExpandedId(entry.id);
   };
 
   const save = async () => {
-    if (!draft) return;
+    if (!draft || mutationLock.current) return;
     const missing = validateEntry(draft);
     if (missing.length > 0) {
       // validateEntry returns field-name tokens; map to localized labels here
@@ -103,67 +201,190 @@ export function ModelCatalogPanel(_props: Props) {
       toast({ message: `${t("settingsX.catalog.validationFailed")}: ${labels}`, variant: "error" });
       return;
     }
-    const r = await window.codeshell.saveCatalogEntry(draft);
-    if (!r.ok) {
-      toast({
-        message: `${t("settingsX.catalog.toastSaveFailed")}: ${r.error ?? ""}`,
-        variant: "error",
-      });
-      return;
+    mutationLock.current = true;
+    retryFocus.current = null;
+    const focused = document.activeElement;
+    const focusSource =
+      focused instanceof HTMLElement && panel.current?.contains(focused) ? focused : null;
+    readVersion.current++;
+    setLoading(false);
+    setPending("save");
+    setMutationError(null);
+    try {
+      const r = await window.codeshell.saveCatalogEntry(draft);
+      if (!r.ok) throw new Error("Catalog save failed");
+      if (!mounted.current) return;
+      // A successful write is authoritative even if the following read fails.
+      setEntries((current) =>
+        current.some((entry) => entry.id === draft.id)
+          ? current.map((entry) => (entry.id === draft.id ? structuredClone(draft) : entry))
+          : [...current, structuredClone(draft)],
+      );
+      setOrigins((current) => ({
+        ...current,
+        [draft.id]:
+          current[draft.id] === "builtin"
+            ? "user-override-of-builtin"
+            : (current[draft.id] ?? "user"),
+      }));
+      if (focusSource) completedFocus.current = { source: focusSource, entryId: draft.id };
+      collapse();
+      toast({ message: t("settingsX.catalog.toastSaved"), variant: "success" });
+      await load(true);
+    } catch {
+      if (mounted.current) {
+        if (focusSource) completedFocus.current = { source: focusSource };
+        setMutationError("save");
+      }
+    } finally {
+      mutationLock.current = false;
+      if (mounted.current) setPending(null);
     }
-    toast({ message: t("settingsX.catalog.toastSaved"), variant: "success" });
-    collapse();
-    await load();
   };
 
   const removeOrReset = async (entry: CatalogEntry) => {
+    if (mutationLock.current) return;
     const action = deleteAction(origins[entry.id] ?? "user");
     if (action === "none") return;
-    const ok = await confirm({
-      message:
-        action === "reset"
-          ? t("settingsX.catalog.confirmResetMsg")
-          : t("settingsX.catalog.confirmDeleteMsg"),
-      detail:
-        action === "reset"
-          ? t("settingsX.catalog.confirmResetDetail")
-          : t("settingsX.catalog.confirmDeleteDetail"),
-      destructive: true,
-    });
-    if (!ok) return;
-    const r = await window.codeshell.deleteCatalogEntry(entry.id);
-    if (!r.ok) {
-      toast({
-        message: `${t("settingsX.catalog.toastDeleteFailed")}: ${r.error ?? ""}`,
-        variant: "error",
+    mutationLock.current = true;
+    refreshRequested.current ||= loading;
+    retryFocus.current = null;
+    const focused = document.activeElement;
+    const focusSource =
+      focused instanceof HTMLElement && panel.current?.contains(focused) ? focused : null;
+    readVersion.current++;
+    setLoading(false);
+    let didMutate = false;
+    try {
+      const ok = await confirm({
+        message:
+          action === "reset"
+            ? t("settingsX.catalog.confirmResetMsg")
+            : t("settingsX.catalog.confirmDeleteMsg"),
+        detail:
+          action === "reset"
+            ? t("settingsX.catalog.confirmResetDetail")
+            : t("settingsX.catalog.confirmDeleteDetail"),
+        destructive: true,
       });
-      return;
+      if (!ok || !mounted.current) return;
+      didMutate = true;
+      setPending(action);
+      setMutationError(null);
+      const r = await window.codeshell.deleteCatalogEntry(entry.id);
+      if (!r.ok) throw new Error("Catalog removal failed");
+      if (!mounted.current) return;
+      if (action === "delete")
+        setEntries((current) => current.filter((item) => item.id !== entry.id));
+      if (focusSource)
+        completedFocus.current = {
+          source: focusSource,
+          entryId: action === "delete" ? null : entry.id,
+        };
+      collapse();
+      toast({
+        message:
+          action === "reset"
+            ? t("settingsX.catalog.toastReset")
+            : t("settingsX.catalog.toastDeleted"),
+        variant: "success",
+      });
+      await load(true);
+    } catch {
+      if (mounted.current) {
+        if (focusSource) completedFocus.current = { source: focusSource };
+        setMutationError("delete");
+      }
+    } finally {
+      mutationLock.current = false;
+      if (mounted.current) setPending(null);
+      if (!didMutate && refreshRequested.current) void load();
     }
-    toast({
-      message:
-        action === "reset"
-          ? t("settingsX.catalog.toastReset")
-          : t("settingsX.catalog.toastDeleted"),
-      variant: "success",
-    });
-    collapse();
-    await load();
   };
 
+  const mutationNotice = mutationError ? (
+    <p
+      role="alert"
+      className="rounded-lg border border-status-err/25 bg-status-err/5 px-3 py-2 text-sm text-status-err"
+    >
+      {t(
+        mutationError === "save"
+          ? "settingsX.catalog.toastSaveFailed"
+          : "settingsX.catalog.toastDeleteFailed",
+      )}
+    </p>
+  ) : null;
+
   return (
-    <section className="mb-6 flex flex-col gap-3">
-      <header className="flex items-center justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+    <fieldset
+      ref={panel}
+      disabled={pending !== null}
+      aria-busy={pending !== null || loading}
+      aria-label={t("settingsX.catalog.title")}
+      onPointerDownCapture={(event) => {
+        if (!pending) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      className="mb-6 flex min-w-0 flex-col gap-3 border-0 p-0"
+    >
+      <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
+          <h3
+            ref={heading}
+            tabIndex={-1}
+            className="m-0 text-[0.95rem] font-semibold text-foreground"
+          >
             {t("settingsX.catalog.title")}
           </h3>
-          <p className="m-0 text-xs text-muted-foreground">{t("settingsX.catalog.desc")}</p>
+          <p className="m-0 text-xs leading-relaxed text-muted-foreground">
+            {t("settingsX.catalog.desc")}
+          </p>
         </div>
-        <Button onClick={startNew} disabled={expandedId === NEW_SENTINEL}>
+        <Button
+          ref={addButton}
+          className="shrink-0"
+          onClick={startNew}
+          disabled={!hasLoaded || expandedId === NEW_SENTINEL}
+        >
           <Plus />
           {t("settingsX.catalog.addProvider")}
         </Button>
       </header>
+
+      {pending ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t("settingsX.catalog.updating")}
+        </p>
+      ) : loading ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t("settingsX.catalog.loading")}
+        </p>
+      ) : null}
+      {readError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/25 bg-status-err/5 p-3"
+        >
+          <p className="min-w-0 flex-1 basis-56 text-sm text-status-err">
+            {t(hasLoaded ? "settingsX.catalog.refreshFailed" : "settingsX.catalog.readFailed")}
+          </p>
+          <Button
+            ref={retryButton}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            onClick={() => {
+              retryFocus.current =
+                document.activeElement === retryButton.current ? retryButton.current : null;
+              void load();
+            }}
+          >
+            <RefreshCw className="size-3.5" aria-hidden />
+            {t("settingsX.catalog.retry")}
+          </Button>
+        </div>
+      )}
 
       {expandedId === NEW_SENTINEL && draft && (
         <ConnCard>
@@ -174,6 +395,7 @@ export function ModelCatalogPanel(_props: Props) {
             <Badge variant="accent">{t("settingsX.catalog.originUser")}</Badge>
           </header>
           <EntryForm draft={draft} setDraft={setDraft} t={t} idLocked={false} />
+          {mutationNotice}
           <ConnCardFooter>
             <Button size="sm" onClick={() => void save()}>
               {t("settingsX.catalog.save")}
@@ -185,7 +407,11 @@ export function ModelCatalogPanel(_props: Props) {
         </ConnCard>
       )}
 
-      {entries.length === 0 && expandedId !== NEW_SENTINEL ? (
+      {hasLoaded &&
+      !loading &&
+      !readError &&
+      entries.length === 0 &&
+      expandedId !== NEW_SENTINEL ? (
         <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
           {t("settingsX.catalog.empty")}
         </div>
@@ -204,17 +430,22 @@ export function ModelCatalogPanel(_props: Props) {
             return (
               <ConnCard key={entry.id} className="gap-0 p-0">
                 <Button
+                  ref={(node) => {
+                    if (node) triggers.current.set(entry.id, node);
+                    else triggers.current.delete(entry.id);
+                  }}
                   type="button"
                   variant="ghost"
                   onClick={() => toggle(entry)}
-                  className="h-auto w-full min-w-0 justify-start gap-2 rounded-none px-4 py-3 text-left"
+                  aria-expanded={isOpen}
+                  className="h-auto w-full min-w-0 flex-wrap justify-start gap-2 rounded-none px-4 py-3 text-left"
                 >
                   {isOpen ? (
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                   ) : (
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   )}
-                  <strong className="truncate text-sm font-medium text-foreground">
+                  <strong className="min-w-0 flex-1 basis-32 whitespace-normal break-words text-sm font-medium text-foreground">
                     {entry.displayName || entry.id}
                   </strong>
                   <Badge variant="secondary">
@@ -228,6 +459,7 @@ export function ModelCatalogPanel(_props: Props) {
                 {isOpen && draft && (
                   <div className="flex flex-col gap-2.5 border-t border-border px-4 pb-4 pt-3">
                     <EntryForm draft={draft} setDraft={setDraft} t={t} idLocked />
+                    {mutationNotice}
                     <ConnCardFooter>
                       <Button size="sm" onClick={() => void save()}>
                         {t("settingsX.catalog.save")}
@@ -257,11 +489,37 @@ export function ModelCatalogPanel(_props: Props) {
           })}
         </div>
       )}
-    </section>
+    </fieldset>
   );
 }
 
 type TFn = ReturnType<typeof useT>["t"];
+
+/** Keep punctuation while typing; the catalog receives normalized options. */
+function EnumOptionsInput({
+  options,
+  onChange,
+}: {
+  options: string[] | undefined;
+  onChange: (options: string[]) => void;
+}) {
+  const [draft, setDraft] = useState<{ text: string; options: string[] } | null>(null);
+  return (
+    <Input
+      value={draft && draft.options === options ? draft.text : (options ?? []).join(",")}
+      onChange={(event) => {
+        const text = event.target.value;
+        const next = text
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        setDraft({ text, options: next });
+        onChange(next);
+      }}
+      onBlur={() => setDraft(null)}
+    />
+  );
+}
 
 /** The base-field + models edit form, bound to `draft`. */
 function EntryForm({
@@ -385,20 +643,22 @@ function EntryForm({
       </label>
 
       {/* MODELS sub-list */}
-      <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background/50 p-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground">
+      <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/20 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-xs font-semibold text-foreground">
             {t("settingsX.catalog.modelsHeading")}
-          </span>
+          </h4>
           <Button variant="ghost" size="sm" onClick={addModel}>
             <Plus />
             {t("settingsX.catalog.addModel")}
           </Button>
         </div>
         {presets.map((m, idx) => (
-          <div key={idx} className="rounded-md border border-border bg-card">
-            <div className="flex min-w-0 items-center gap-2 px-2.5 py-1.5">
-              <code className="truncate font-mono text-xs text-foreground">{m.value || "—"}</code>
+          <div key={idx} className="min-w-0 rounded-lg border border-border bg-card">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 px-2.5 py-2">
+              <code className="min-w-0 flex-1 basis-28 break-all font-mono text-xs text-foreground">
+                {m.value || "—"}
+              </code>
               {m.maxContextTokens != null && (
                 <Badge variant="secondary">
                   {t("settingsX.catalog.ctx", { n: m.maxContextTokens })}
@@ -411,6 +671,7 @@ function EntryForm({
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-expanded={openPreset === idx}
                   onClick={() => setOpenPreset(openPreset === idx ? null : idx)}
                 >
                   {t("settingsX.catalog.edit")}
@@ -419,6 +680,7 @@ function EntryForm({
                   variant="ghost"
                   size="icon"
                   className="text-muted-foreground hover:text-status-err"
+                  aria-label={t("settingsX.catalog.deleteModel", { model: m.value || "—" })}
                   onClick={() => removePreset(idx)}
                 >
                   <Trash2 />
@@ -493,11 +755,11 @@ function ModelPresetEditor({
       </label>
 
       {/* PARAMS editor (MVP: name/control/options/default/wire.field; min/max/doc omitted) */}
-      <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background/50 p-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground">
+      <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-muted/20 p-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h5 className="text-xs font-semibold text-foreground">
             {t("settingsX.catalog.paramsHeading")}
-          </span>
+          </h5>
           <Button variant="ghost" size="sm" onClick={addParam}>
             <Plus />
             {t("settingsX.catalog.addParam")}
@@ -526,16 +788,9 @@ function ModelPresetEditor({
               </ConnField>
               {p.control === "enum" && (
                 <ConnField label={t("settingsX.catalog.paramOptions")}>
-                  <Input
-                    value={(p.options ?? []).join(",")}
-                    onChange={(e) =>
-                      patchParam(idx, {
-                        options: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
+                  <EnumOptionsInput
+                    options={p.options}
+                    onChange={(options) => patchParam(idx, { options })}
                   />
                 </ConnField>
               )}

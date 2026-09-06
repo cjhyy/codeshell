@@ -33,6 +33,8 @@ interface SessionPanelDockProps {
   panelByBucket: Record<string, PanelBucketState>;
   activeBucket: string;
   isChatView: boolean;
+  /** The shared app host owns the TopBar opener used after the focused last tab closes. */
+  onRestorePanelFocus?: () => void;
   projects: TrackedProject[];
   updatePanelBucket: (
     bucket: string,
@@ -179,6 +181,7 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
         key={panelBucket}
         hidden={hidden}
         keepActiveBodyLive={keepActiveBodyLive}
+        onRestoreFocus={props.onRestorePanelFocus}
         projectPath={panelProject?.path ?? null}
         project={panelProject}
         onClose={() =>

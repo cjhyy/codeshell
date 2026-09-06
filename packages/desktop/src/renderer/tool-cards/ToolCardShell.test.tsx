@@ -17,16 +17,10 @@ function msg(): ToolMessage {
 
 describe("ToolCardShell — turnEpoch prop", () => {
   test("accepts turnEpoch prop without crashing", () => {
-    // Real force-collapse-on-epoch-change behavior is exercised in
-    // manual UI verification (Task 9); static markup just confirms
-    // the prop is wired and the card renders.
+    // Stateful collapse behavior is covered by toolDisclosureState.test.tsx;
+    // static markup confirms the prop is wired and the card renders.
     const html = renderToStaticMarkup(
-      <ToolCardShell
-        message={msg()}
-        summary="hello"
-        details={<div>body</div>}
-        turnEpoch={5}
-      />,
+      <ToolCardShell message={msg()} summary="hello" details={<div>body</div>} turnEpoch={5} />,
     );
     expect(html).toContain("Read");
     expect(html).toContain("hello");
@@ -35,9 +29,7 @@ describe("ToolCardShell — turnEpoch prop", () => {
   });
 
   test("works with turnEpoch undefined (back-compat)", () => {
-    const html = renderToStaticMarkup(
-      <ToolCardShell message={msg()} summary="hi" />,
-    );
+    const html = renderToStaticMarkup(<ToolCardShell message={msg()} summary="hi" />);
     expect(html).toContain("Read");
   });
 });

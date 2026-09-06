@@ -14,7 +14,7 @@
  * background.
  */
 
-import React, { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import React, { memo, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -143,6 +143,7 @@ import {
 } from "./markdown/remarkPathLinks";
 import { classifyPath } from "./tool-cards/attachments";
 import { Lightbox } from "./chat/Lightbox";
+import { useCopyFeedback } from "./ui/useCopyFeedback";
 import { openFileTarget } from "./chat/openWith";
 import { useToast } from "./ui/ToastProvider";
 import { useT } from "./i18n/I18nProvider";
@@ -170,7 +171,7 @@ interface Props {
 }
 
 export const markdownBodyClassName =
-  "min-w-0 max-w-[720px] text-sm leading-relaxed text-foreground " +
+  "min-w-0 max-w-[720px] text-sm leading-relaxed text-foreground [overflow-wrap:anywhere] " +
   "[&_p]:my-2 [&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-xl [&_h1]:font-semibold " +
   "[&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-lg [&_h2]:font-semibold " +
   "[&_h3]:mb-1.5 [&_h3]:mt-2.5 [&_h3]:text-base [&_h3]:font-semibold " +
@@ -192,8 +193,14 @@ export const markdownBodyClassName =
 type MarkdownTableProps = React.ComponentPropsWithoutRef<"table"> & { node?: unknown };
 
 export function MarkdownTable({ node: _node, className, ...props }: MarkdownTableProps) {
+  const { t } = useT();
   return (
-    <div className="my-2 min-w-0 max-w-full overflow-x-auto">
+    <div
+      className="my-3 min-w-0 max-w-full overflow-x-auto rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      tabIndex={0}
+      role="region"
+      aria-label={t("msg.markdown.table")}
+    >
       <table className={cn("w-max min-w-full border-collapse text-xs", className)} {...props} />
     </div>
   );
@@ -230,10 +237,7 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
           // detect:false — auto-detection only pays off with the full grammar
           // bundle; with an explicit set an unlabelled block is better left as
           // plain text than guessed from a partial language list.
-          [
-            rehypeHighlight,
-            { detect: false, ignoreMissing: true, languages: HIGHLIGHT_LANGUAGES },
-          ],
+          [rehypeHighlight, { detect: false, ignoreMissing: true, languages: HIGHLIGHT_LANGUAGES }],
         ]}
         urlTransform={(url) =>
           url.startsWith(CODESHELL_PATH_SCHEME) ? url : defaultUrlTransform(url)
@@ -547,10 +551,12 @@ function InlineImageLink({
   rootStatus?: MarkdownRootStatus;
   alt?: string;
 }) {
+  const { t } = useT();
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
   const filename = path.split("/").pop() ?? path;
+  const imageLabel = alt?.trim() || filename;
   // Resolve to an absolute path, then load via the images:readDataUrl IPC.
   // We can't use `file://` directly — webSecurity blocks it and the CSP only
   // allows `img-src 'self' data:`. Main reads the bytes and returns a
@@ -622,14 +628,20 @@ function InlineImageLink({
 
   return (
     <span className="my-2 inline-flex max-w-full flex-col gap-1 align-top">
-      <img
-        className="max-h-80 max-w-full cursor-zoom-in rounded-md border object-contain"
-        src={src}
-        alt={alt ?? filename}
-        loading="lazy"
-        onError={() => setFailed(true)}
+      <button
+        type="button"
+        className="max-w-full cursor-zoom-in self-start rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label={t("chat.composer.imageClickToZoom", { name: imageLabel })}
         onClick={() => setZoomed(true)}
-      />
+      >
+        <img
+          className="max-h-80 max-w-full rounded-lg border object-contain"
+          src={src}
+          alt={imageLabel}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      </button>
       <Button
         type="button"
         variant="link"
@@ -642,7 +654,7 @@ function InlineImageLink({
       {zoomed && (
         <Lightbox
           src={src}
-          alt={alt ?? filename}
+          alt={imageLabel}
           path={path}
           cwd={cwd}
           name={filename}
@@ -659,15 +671,11 @@ const CODE_COLLAPSE_LINES = 24;
 
 function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
   const preRef = useRef<HTMLPreElement>(null);
-  const [copied, setCopied] = useState(false);
+  const codeId = useId();
+  const { copied, copy } = useCopyFeedback();
   const [expanded, setExpanded] = useState(false);
-  const copyTimer = useRef<number | undefined>(undefined);
   const toast = useToast();
   const { t } = useT();
-
-  // Clear the "copied" reset timer on unmount so it doesn't fire setCopied on
-  // an unmounted component (React warning / leak).
-  useEffect(() => () => window.clearTimeout(copyTimer.current), []);
 
   let lang = "";
   // Read the language off the inner <code> className.
@@ -686,18 +694,18 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
   const collapsible = lineCount > CODE_COLLAPSE_LINES;
   const collapsed = collapsible && !expanded;
 
-  const onCopy = (): void => {
+  const onCopy = async (): Promise<void> => {
     const text = preRef.current?.textContent ?? "";
-    void navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast({ message: t("msg.markdown.copyCode"), variant: "success" });
-    window.clearTimeout(copyTimer.current);
-    copyTimer.current = window.setTimeout(() => setCopied(false), 1500);
+    const success = await copy(text);
+    toast({
+      message: t(success ? "msg.markdown.copyCode" : "msg.copyFailed"),
+      variant: success ? "success" : "error",
+    });
   };
 
   return (
-    <div className="my-2 overflow-hidden rounded-md border bg-muted/30">
-      <div className="flex min-h-8 items-center justify-between gap-2 border-b bg-muted/50 px-2 py-1">
+    <div className="cs-code-block my-3 overflow-hidden rounded-xl border border-border/80 bg-muted/20">
+      <div className="flex min-h-9 items-center justify-between gap-2 border-b border-border/70 bg-muted/40 px-3 py-1">
         {lang && (
           <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
             {lang}
@@ -716,7 +724,12 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
       <pre
         ref={preRef}
         {...rest}
-        className={cn("overflow-x-auto p-3 text-xs", collapsed && "max-h-96 overflow-y-auto")}
+        id={codeId}
+        tabIndex={0}
+        className={cn(
+          "overflow-x-auto p-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+          collapsed && "max-h-96 overflow-y-auto",
+        )}
       >
         {children}
       </pre>
@@ -725,7 +738,9 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 w-full rounded-none border-t text-xs text-muted-foreground"
+          className="h-8 w-full rounded-none border-t text-xs text-muted-foreground"
+          aria-expanded={expanded}
+          aria-controls={codeId}
           onClick={() => setExpanded((v) => !v)}
         >
           {collapsed

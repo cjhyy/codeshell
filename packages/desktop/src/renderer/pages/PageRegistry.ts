@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   KeyRound,
+  MessageSquare,
   PlayCircle,
   Puzzle,
   ScrollText,
@@ -47,6 +48,11 @@ export interface PageRenderContext {
   runsInitialRunId: string | null;
   /** Active repository, used by project-aware standalone pages. */
   activeProjectPath: string | null;
+  /** Start a conversation from a standalone page through the host's normal flow. */
+  onNewSession?: () => void;
+  /** Update the host's cached session metadata after successful history-page mutations. */
+  onSessionRenamed?: (id: string, title: string) => void;
+  onSessionDeleted?: (id: string) => void;
 }
 
 export interface PageEntry {
@@ -78,6 +84,11 @@ const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
 );
 const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null }>> = lazy(() =>
   import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
+);
+const SessionsView: LazyExoticComponent<
+  ComponentType<Pick<PageRenderContext, "onNewSession" | "onSessionRenamed" | "onSessionDeleted">>
+> = lazy(() =>
+  import("../sessions/SessionsView").then((module) => ({ default: module.SessionsView })),
 );
 const ExtensionsPage: LazyExoticComponent<
   ComponentType<{ activeProjectPath: string | null; showDiscover?: boolean }>
@@ -142,6 +153,13 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     title: { kind: "i18n", key: "panels.palette.openRuns" },
     icon: PlayCircle,
     render: ({ runsInitialRunId }) => createElement(RunsView, { initialRunId: runsInitialRunId }),
+  }),
+  builtin({
+    key: "sessions",
+    title: { kind: "i18n", key: "panels.palette.openSessions" },
+    icon: MessageSquare,
+    render: ({ onNewSession, onSessionRenamed, onSessionDeleted }) =>
+      createElement(SessionsView, { onNewSession, onSessionRenamed, onSessionDeleted }),
   }),
 ];
 

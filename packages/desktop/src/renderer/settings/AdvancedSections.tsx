@@ -276,35 +276,7 @@ export function InstructionFilesSection({ scope, activeProjectPath }: ScopedProp
   );
 }
 
-export function ShortcutsSection() {
-  const { t } = useT();
-  const rows = [
-    ["⌘K", t("settingsX.adv.scCommandPalette")],
-    ["⌘F", t("settingsX.adv.scSearchConv")],
-    ["⌘P", t("settingsX.adv.scSearchAll")],
-    ["⌘⇧N", t("settingsX.adv.scNewWindow")],
-    ["Enter", t("settingsX.adv.scSend")],
-    ["Shift Enter", t("settingsX.adv.scNewline")],
-  ];
-  return (
-    <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
-        {t("settingsX.adv.shortcutsTitle")}
-      </h3>
-      <div className="rounded-md border p-2">
-        {rows.map(([key, label]) => (
-          <div
-            className="grid grid-cols-[minmax(120px,0.35fr)_1fr] gap-3 border-b py-2 text-sm last:border-b-0"
-            key={key}
-          >
-            <kbd>{key}</kbd>
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+export { ShortcutsSection } from "./ShortcutsSection";
 
 /** Hook event names a user can pick for a hand-written hook. Aligned with the
  *  events plugin hooks map to (core EVENT_NAME_MAP), plus the engine's own

@@ -22,9 +22,13 @@ interface Props {
   busy: boolean;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
+  sidebarToggleRef?: React.Ref<HTMLButtonElement>;
+  sidebarControlsId?: string;
+  sidebarIsDialog?: boolean;
   /** Right-side panel dock (files/browser/review/terminal) open state + toggle. */
   panelOpen: boolean;
   onTogglePanel: () => void;
+  panelToggleRef?: React.Ref<HTMLButtonElement>;
   isMac: boolean;
   isFullscreen: boolean;
   /** Whether the panel dock can be opened on the current surface. Draft chats
@@ -79,8 +83,12 @@ function TopBarImpl({
   busy,
   sidebarCollapsed,
   onToggleSidebar,
+  sidebarToggleRef,
+  sidebarControlsId,
+  sidebarIsDialog,
   panelOpen,
   onTogglePanel,
+  panelToggleRef,
   isMac,
   isFullscreen,
   panelAvailable = true,
@@ -104,22 +112,35 @@ function TopBarImpl({
     // children (the sidebar toggle, the status badge) must opt back out
     // with `no-drag`, otherwise the drag region swallows their clicks.
     <header
-      className="flex h-11 items-center justify-between border-b border-border px-3 text-sm"
+      className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-background/90 px-3 text-[13px]"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {isMac && !isFullscreen && <span className="w-[68px] shrink-0" aria-hidden="true" />}
         <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
+            ref={sidebarToggleRef}
             label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}
+            active={!sidebarCollapsed}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls={sidebarControlsId}
+            aria-haspopup={sidebarIsDialog ? "dialog" : undefined}
+            data-sidebar-action="toggle"
             onClick={onToggleSidebar}
           >
             <PanelLeft size={14} />
           </IconButton>
         </span>
-        <span className="shrink-0 font-semibold">code-shell</span>
-        {projectName && <span className="shrink-0 text-muted-foreground">/</span>}
-        {projectName && <span className="shrink-0 text-foreground">{projectName}</span>}
+        <span className="shrink-0 text-xs font-semibold tracking-tight">code-shell</span>
+        {projectName && <span className="shrink-0 text-border">/</span>}
+        {projectName && (
+          <span
+            className="min-w-0 max-w-[18vw] truncate font-medium text-foreground"
+            title={projectName}
+          >
+            {projectName}
+          </span>
+        )}
         {projectName && sessionId && projectPath && (
           <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <WorkspaceIndicator
@@ -132,11 +153,9 @@ function TopBarImpl({
             />
           </span>
         )}
-        {sessionTitle && <span className="shrink-0 text-muted-foreground">·</span>}
-        {/* Only the title shrinks + ellipsizes. min-w-0 is required for
-            truncate to work inside a flex row — without it the span keeps its
-            intrinsic width and pushes the right-side status/GOAL icons out of
-            the header. */}
+        {sessionTitle && <span className="shrink-0 text-border">/</span>}
+        {/* Both identity labels may shrink so long project names leave room
+            for the session title and the fixed right-side controls. */}
         {sessionTitle && (
           <span className="min-w-0 truncate text-muted-foreground" title={sessionTitle}>
             {sessionTitle}
@@ -144,20 +163,20 @@ function TopBarImpl({
         )}
         {(workspaceProfile || (sessionId && workspaceProfiles.length > 0)) && (
           <span
-            className="flex shrink-0 items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-[11px] text-primary"
+            className="flex min-w-0 max-w-40 items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] text-primary"
             title={t("digitalHumans.sessionBinding.description")}
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            <UserRound size={11} />
+            <UserRound size={11} className="shrink-0" />
             {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
               // The last native <select> in the renderer — it rendered as a raw
               // OS control, visually detached from the shadcn theme. SimpleSelect
               // is the drop-in adapter for this value/onChange/options shape.
-              <span data-session-profile-switch="true" className="contents">
+              <span data-session-profile-switch="true" className="min-w-0">
                 <SimpleSelect
                   size="sm"
                   ariaLabel={t("digitalHumans.sessionBinding.label")}
-                  className="h-6 max-w-40 border-0 bg-transparent px-1 text-[11px] font-medium text-primary shadow-none focus:ring-0"
+                  className="h-6 min-w-0 max-w-full border-0 bg-transparent px-1 text-[11px] font-medium text-primary shadow-none focus:ring-0"
                   placeholder={t("digitalHumans.sessionBinding.pick")}
                   value={workspaceProfile ?? ""}
                   disabled={workspaceProfileSwitchDisabled}
@@ -188,12 +207,12 @@ function TopBarImpl({
                 />
               </span>
             ) : (
-              workspaceProfile
+              <span className="truncate">{workspaceProfile}</span>
             )}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1 border-l border-border/60 pl-2">
         {contextSelectionAvailable && onSelectContext && (
           <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <IconButton
@@ -220,6 +239,7 @@ function TopBarImpl({
         {panelAvailable && (
           <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <IconButton
+              ref={panelToggleRef}
               label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
               data-panel-action="toggle"
               onClick={onTogglePanel}
@@ -401,9 +421,13 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.isMac === b.isMac &&
     a.isFullscreen === b.isFullscreen &&
     a.onToggleSidebar === b.onToggleSidebar &&
+    a.sidebarToggleRef === b.sidebarToggleRef &&
+    a.sidebarControlsId === b.sidebarControlsId &&
+    a.sidebarIsDialog === b.sidebarIsDialog &&
     a.panelOpen === b.panelOpen &&
     a.panelAvailable === b.panelAvailable &&
     a.onTogglePanel === b.onTogglePanel &&
+    a.panelToggleRef === b.panelToggleRef &&
     a.statusAvailable === b.statusAvailable &&
     a.contextSelectionAvailable === b.contextSelectionAvailable &&
     a.onSelectContext === b.onSelectContext &&

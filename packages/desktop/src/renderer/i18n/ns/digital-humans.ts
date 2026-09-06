@@ -26,6 +26,7 @@ export const digitalHumans = {
       },
       search: "搜索数字人或团队",
       searchLabel: "搜索数字人或团队",
+      clearSearch: "清除搜索",
       loading: "正在加载数字人库",
       loadingDescription: "正在读取数字人、团队和已安装 Skills。",
       refreshing: "正在刷新数字人库…",
@@ -113,6 +114,8 @@ export const digitalHumans = {
       summon: "开始使用",
       summonTeam: "开始使用团队",
       market: {
+        noTeams: "广场中还没有团队",
+        noTeamsDescription: "先浏览数字人，也可以到数字人团队中创建自己的阵容。",
         featuredTitle: "精选场景",
         featuredDescription: "按任务场景找到合适的数字人，不必从空白配置开始。",
         browseTitle: "数字人中心",
@@ -442,6 +445,7 @@ export const digitalHumans = {
       },
       search: "Search digital humans or teams",
       searchLabel: "Search digital humans or teams",
+      clearSearch: "Clear search",
       loading: "Loading digital-human library",
       loadingDescription: "Reading digital humans, teams, and installed Skills.",
       refreshing: "Refreshing digital-human library…",
@@ -531,6 +535,8 @@ export const digitalHumans = {
       summon: "Start using",
       summonTeam: "Start using team",
       market: {
+        noTeams: "No teams in the market yet",
+        noTeamsDescription: "Browse digital humans, or create your own roster in Teams.",
         featuredTitle: "Featured scenarios",
         featuredDescription: "Start from the work you need done instead of a blank configuration.",
         browseTitle: "Digital-human center",

@@ -3,6 +3,8 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./app/AppSidebar";
+import { ResponsiveSidebar, SIDEBAR_NAVIGATION_ID } from "./app/ResponsiveSidebar";
+import { useResponsiveSidebar } from "./app/useResponsiveSidebar";
 import { PetPage } from "./pet/PetPage";
 import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
@@ -118,6 +120,7 @@ import { useBucketOverrides } from "./app/useBucketOverrides";
 import { useTranscriptBuckets } from "./app/useTranscriptBuckets";
 import { useAutomationSessionImport } from "./app/useAutomationSessionImport";
 import { useSessionNavigation } from "./app/useSessionNavigation";
+import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { usePanelBuckets } from "./app/usePanelBuckets";
@@ -194,6 +197,8 @@ function App() {
   const [profileSwitchBusy, setProfileSwitchBusy] = useState(false);
   const [compactingBuckets, setCompactingBuckets] = useState<Set<string>>(() => new Set());
   const compactingBucketsRef = useRef<Set<string>>(new Set());
+  const panelToggleRef = useRef<HTMLButtonElement>(null);
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
   // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
   // to fire on the next busy=false tick. State (not a ref) so `liveTurnActive`
@@ -213,6 +218,21 @@ function App() {
     loadActiveProjectId(),
   );
   const [view, setView] = useState<ViewState>(() => loadView((mode) => PAGE_REGISTRY.has(mode)));
+  // Settings replace the chrome, while the wide-window navigation preference
+  // remains independent of the temporary narrow-window drawer.
+  const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
+  const toggleDesktopSidebar = useCallback(
+    () => setView((current) => ({ ...current, sidebarCollapsed: !current.sidebarCollapsed })),
+    [],
+  );
+  const {
+    narrow: isNarrowWindow,
+    visible: sidebarVisible,
+    toggle: toggleSidebar,
+    close: closeSidebarDrawer,
+    navigate: navigateFromSidebar,
+    afterClose: afterSidebarDrawerClose,
+  } = useResponsiveSidebar(view.sidebarCollapsed, toggleDesktopSidebar, !isSettingsPage);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -949,7 +969,11 @@ function App() {
         requestNonce: state.requestNonce + 1,
         requestKind: "ccRoom",
       }));
-      setView((current) => ({ ...current, viewMode: "chat", sidebarCollapsed: false }));
+      setView((current) => ({
+        ...current,
+        viewMode: "chat",
+        sidebarCollapsed: isNarrowWindow ? current.sidebarCollapsed : false,
+      }));
       markViewedPetCompletions(request.agentSessionId);
       return;
     }
@@ -985,7 +1009,7 @@ function App() {
     setView((current) => ({
       ...current,
       viewMode: "pet",
-      sidebarCollapsed: false,
+      sidebarCollapsed: isNarrowWindow ? current.sidebarCollapsed : false,
     }));
   };
 
@@ -994,9 +1018,9 @@ function App() {
     setView((current) => ({
       ...current,
       viewMode: "pet",
-      sidebarCollapsed: false,
+      sidebarCollapsed: isNarrowWindow ? current.sidebarCollapsed : false,
     }));
-  }, [petDispatch]);
+  }, [petDispatch, isNarrowWindow]);
 
   useEffect(() => {
     let disposed = false;
@@ -1312,8 +1336,25 @@ function App() {
     setRunsInitialRunId,
   });
 
-  const toggleSidebar = (): void =>
-    setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
+  const { onSessionRenamed, onSessionDeleted } = useSessionHistorySync({
+    untitledTitle: t("auto.sessions.untitled"),
+    sessionIndicesRef,
+    setSessionIndices,
+    activeBucketRef,
+    setPanelByBucket,
+    transcriptsRef,
+    dispatch,
+    engineToBucketRef,
+    runningBucketRef,
+    coalescersRef,
+    coalescerSeqRef,
+    appliedSeqRef,
+    setBusyForKey,
+    setUnreadBuckets,
+    setQueuedInputs,
+    setComposerDrafts,
+  });
+
   // toggleInspector retained as a no-op for menu/palette wiring that
   // still references the action verb but the panel itself is gone.
   const toggleInspector = (): void => undefined;
@@ -1337,13 +1378,13 @@ function App() {
           !!t.closest(".xterm"));
       if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setPaletteOpen((o) => !o);
+        navigateFromSidebar(() => setPaletteOpen((o) => !o));
       } else if (mod && e.key.toLowerCase() === "p") {
         e.preventDefault();
-        setSessionSearchOpen(true);
+        navigateFromSidebar(() => setSessionSearchOpen(true));
       } else if (mod && e.key.toLowerCase() === "f") {
         e.preventDefault();
-        setSearchOpen(true);
+        navigateFromSidebar(() => setSearchOpen(true));
       } else if (mod && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleSidebar();
@@ -1354,7 +1395,7 @@ function App() {
         const target = idx?.sessions[n];
         if (target) {
           e.preventDefault();
-          handleSelectSession(activeProjectId, target.id);
+          navigateFromSidebar(() => handleSelectSession(activeProjectId, target.id));
         }
       } else if (e.key === "Escape") {
         if (paletteOpen) setPaletteOpen(false);
@@ -1364,7 +1405,16 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeProjectId, view.viewMode]);
+  }, [
+    paletteOpen,
+    searchOpen,
+    sessionSearchOpen,
+    sessionIndices,
+    activeProjectId,
+    view.viewMode,
+    toggleSidebar,
+    navigateFromSidebar,
+  ]);
 
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
@@ -1394,10 +1444,10 @@ function App() {
           break;
         }
         case "find":
-          setSearchOpen(true);
+          navigateFromSidebar(() => setSearchOpen(true));
           break;
         case "palette":
-          setPaletteOpen(true);
+          navigateFromSidebar(() => setPaletteOpen(true));
           break;
         case "toggle-sidebar":
           toggleSidebar();
@@ -1411,7 +1461,7 @@ function App() {
       }
     });
     return off;
-  }, [projects]);
+  }, [projects, toggleSidebar, navigateFromSidebar]);
 
   // Refresh model list + active selection + permission from settings.
   useEffect(() => {
@@ -2024,9 +2074,6 @@ function App() {
   };
 
   const platformClass = isMac ? "platform-darwin" : "";
-  // Both settings routes replace the entire application chrome. Keep this
-  // shared flag so the expensive session tree stays mounted but hidden.
-  const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
   const isPetView = view.viewMode === "pet";
   const isPetSettingsView = view.viewMode === "pet_settings";
   const isPetPersonalizationView = view.viewMode === "pet_personalization";
@@ -2075,7 +2122,7 @@ function App() {
     petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
   return (
-    <AppShell platformClass={platformClass} sidebarCollapsed={view.sidebarCollapsed}>
+    <AppShell platformClass={platformClass} sidebarCollapsed={!sidebarVisible}>
       <div
         className={isSettingsPage ? "hidden" : "flex min-h-0 flex-1 flex-col"}
         aria-hidden={isSettingsPage}
@@ -2093,10 +2140,14 @@ function App() {
               void handleSessionWorkspaceProfileChange(profileName);
             }}
             busy={isPetSurface ? false : busy}
-            sidebarCollapsed={view.sidebarCollapsed}
+            sidebarCollapsed={!sidebarVisible}
             onToggleSidebar={toggleSidebar}
+            sidebarToggleRef={sidebarToggleRef}
+            sidebarControlsId={SIDEBAR_NAVIGATION_ID}
+            sidebarIsDialog={isNarrowWindow}
             panelOpen={activePanelState.open}
             onTogglePanel={togglePanel}
+            panelToggleRef={panelToggleRef}
             isMac={isMac}
             isFullscreen={isFullscreen}
             // Opening a panel is allowed from a draft and materializes its
@@ -2117,56 +2168,66 @@ function App() {
         </div>
 
         <div className="flex min-h-0 flex-1">
-          {!view.sidebarCollapsed && (
-            <div className="flex shrink-0 overflow-hidden">
-              <Sidebar
-                projects={projects}
-                sessions={sessionIndices}
-                activeProjectId={activeProjectId}
-                activeSessionId={activeSessionId}
-                collapsedProjects={collapsedProjects}
-                sidebarCollapsed={view.sidebarCollapsed}
-                petPendingCount={petPendingCount}
-                petRunningCount={petRunningCount}
-                petWidgetVisible={petWidgetVisible}
-                sessionHistoryLoading={diskSessionCatalog.loading}
-                hasMoreSessionHistory={
-                  diskSessionCatalog.initialized && diskSessionCatalog.nextCursor !== null
-                }
-                sessionStatuses={sessionStatusMap}
-                onSelectProject={setActiveProjectId}
-                onSelectSession={handleSelectSession}
-                onToggleProject={handleToggleProject}
-                onAddProject={() => {
-                  void handleAddProject();
-                }}
-                onRemoveProject={handleRemoveProject}
-                onPinProject={handlePinProject}
-                onRenameProject={handleRenameProject}
-                onArchiveAllSessions={handleArchiveAllSessions}
-                onNewConversationForProject={handleNewConversationForProject}
-                onNewConversation={handleNewConversation}
-                onOpenSearch={() => setSessionSearchOpen(true)}
-                onNavigate={setViewMode}
-                onOpenProjectConfig={(projectId) => {
+          <ResponsiveSidebar
+            narrow={isNarrowWindow}
+            open={sidebarVisible}
+            onClose={closeSidebarDrawer}
+            onAfterClose={afterSidebarDrawerClose}
+            toggleRef={sidebarToggleRef}
+          >
+            <Sidebar
+              projects={projects}
+              sessions={sessionIndices}
+              activeProjectId={activeProjectId}
+              activeSessionId={activeSessionId}
+              collapsedProjects={collapsedProjects}
+              sidebarCollapsed={false}
+              petPendingCount={petPendingCount}
+              petRunningCount={petRunningCount}
+              petWidgetVisible={petWidgetVisible}
+              sessionHistoryLoading={diskSessionCatalog.loading}
+              hasMoreSessionHistory={
+                diskSessionCatalog.initialized && diskSessionCatalog.nextCursor !== null
+              }
+              sessionStatuses={sessionStatusMap}
+              onSelectProject={setActiveProjectId}
+              onSelectSession={(projectId, sessionId) =>
+                navigateFromSidebar(() => handleSelectSession(projectId, sessionId))
+              }
+              onToggleProject={handleToggleProject}
+              onAddProject={() => {
+                void handleAddProject();
+              }}
+              onRemoveProject={handleRemoveProject}
+              onPinProject={handlePinProject}
+              onRenameProject={handleRenameProject}
+              onArchiveAllSessions={handleArchiveAllSessions}
+              onNewConversationForProject={(projectId) =>
+                navigateFromSidebar(() => handleNewConversationForProject(projectId))
+              }
+              onNewConversation={() => navigateFromSidebar(handleNewConversation)}
+              onOpenSearch={() => navigateFromSidebar(() => setSessionSearchOpen(true))}
+              onNavigate={(mode) => navigateFromSidebar(() => setViewMode(mode))}
+              onOpenProjectConfig={(projectId) => {
+                navigateFromSidebar(() => {
                   setActiveProjectId(projectId);
                   setViewMode("project_config");
-                }}
-                onOpenSettingsPage={() => setViewMode("settings_page")}
-                onOpenPetPage={openPetPage}
-                onTogglePetWidget={togglePetWidget}
-                onLoadMoreSessionHistory={() =>
-                  void loadDiskSessionCatalogPage(diskSessionCatalog.nextCursor ?? undefined)
-                }
-                onRenameSession={handleRenameSession}
-                onPinSession={handlePinSession}
-                onArchiveSession={handleArchiveSession}
-                onDeleteSession={handleDeleteSession}
-                activeProjectPath={activeProject?.path ?? null}
-                viewMode={view.viewMode}
-              />
-            </div>
-          )}
+                });
+              }}
+              onOpenSettingsPage={() => navigateFromSidebar(() => setViewMode("settings_page"))}
+              onOpenPetPage={() => navigateFromSidebar(openPetPage)}
+              onTogglePetWidget={togglePetWidget}
+              onLoadMoreSessionHistory={() =>
+                void loadDiskSessionCatalogPage(diskSessionCatalog.nextCursor ?? undefined)
+              }
+              onRenameSession={handleRenameSession}
+              onPinSession={handlePinSession}
+              onArchiveSession={handleArchiveSession}
+              onDeleteSession={handleDeleteSession}
+              activeProjectPath={activeProject?.path ?? null}
+              viewMode={view.viewMode}
+            />
+          </ResponsiveSidebar>
 
           {/* Chat column + dock share a relative container so a maximized panel can
           overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
@@ -2225,6 +2286,9 @@ function App() {
                   {registeredPageRender({
                     runsInitialRunId,
                     activeProjectPath: activeProject?.path ?? null,
+                    onNewSession: handleNewConversation,
+                    onSessionRenamed,
+                    onSessionDeleted,
                   })}
                 </React.Suspense>
               ) : view.viewMode === "approvals" ? (
@@ -2482,23 +2546,25 @@ function App() {
                     repoClean={activeGitMeta.clean}
                     welcomeNode={
                       showWelcome ? (
-                        <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="cs-chat-welcome flex w-full min-w-0 max-w-xl flex-col items-center gap-3 text-center">
                           <img
                             src={dogIcon}
                             alt="CodeShell"
                             draggable={false}
-                            className="h-32 w-32 select-none rounded-2xl object-contain"
+                            className="size-16 select-none rounded-2xl object-contain"
                           />
-                          <div className="text-3xl font-semibold tracking-tight text-foreground">
+                          <h1 className="w-full text-balance break-words text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                             {activeProject
                               ? t("misc.app.welcomeTitleRepo", { name: activeProject.name })
                               : t("misc.app.welcomeTitleNoRepo")}
-                          </div>
-                          {!activeProject && (
-                            <div className="text-sm text-muted-foreground">
-                              {t("misc.app.welcomeHintNoRepo")}
-                            </div>
-                          )}
+                          </h1>
+                          <p className="max-w-md text-balance text-sm leading-6 text-muted-foreground">
+                            {t(
+                              activeProject
+                                ? "misc.app.welcomeHintRepo"
+                                : "misc.app.welcomeHintNoRepo",
+                            )}
+                          </p>
                         </div>
                       ) : null
                     }
@@ -2533,6 +2599,7 @@ function App() {
                   panelByBucket={panelByBucket}
                   activeBucket={activeBucket}
                   isChatView={isChatView}
+                  onRestorePanelFocus={() => panelToggleRef.current?.focus({ preventScroll: true })}
                   projects={projects}
                   updatePanelBucket={updatePanelBucket}
                   onRevealConsumed={onRevealConsumed}

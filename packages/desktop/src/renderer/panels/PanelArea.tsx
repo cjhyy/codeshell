@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { CircleOff, X, Plus, Maximize2, Minimize2 } from "lucide-react";
+import React, { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { CircleOff, Plus, Maximize2, Minimize2, PanelsTopLeft, LoaderCircle } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +29,7 @@ import {
   DesktopPanelLifecycleBoundary,
   type DesktopBuiltinPanelAppHost,
 } from "./DesktopBuiltinPanelApp";
+import { PanelTabStrip } from "./PanelTabStrip";
 
 export interface OpenTab {
   id: string;
@@ -58,6 +59,8 @@ interface Props {
   keepActiveBodyLive?: boolean;
   /** Called when the dock should close (last tab closed). */
   onClose: () => void;
+  /** Restore keyboard focus to the host's dock toggle after closing the focused last tab. */
+  onRestoreFocus?: () => void;
   /** Controlled open tabs (owned by App so they survive a close→reopen). */
   tabs: OpenTab[];
   setTabs: React.Dispatch<React.SetStateAction<OpenTab[]>>;
@@ -140,6 +143,7 @@ function ResolvedPanelArea({
   hidden = false,
   keepActiveBodyLive = false,
   onClose,
+  onRestoreFocus,
   requestNonce,
   requestKind,
   reviewFiles,
@@ -170,6 +174,7 @@ function ResolvedPanelArea({
   workspace,
 }: Props & { workspace: PanelWorkspaceState }) {
   const { t } = useT();
+  const panelDomId = useId();
   const panelRegistryRevision = useSyncExternalStore(
     PANEL_REGISTRY.subscribe,
     PANEL_REGISTRY.snapshot,
@@ -311,7 +316,7 @@ function ResolvedPanelArea({
   return (
     <div
       className={cn(
-        "relative flex min-h-0 flex-col bg-background",
+        "relative flex min-h-0 min-w-0 flex-col bg-background",
         maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border",
       )}
       // Closed docks use display:none so BrowserPanel may idle-evict. Temporary
@@ -319,6 +324,7 @@ function ResolvedPanelArea({
       // guests to stay alive instead of returning blank after display:none.
       style={panelStyle}
       aria-hidden={hidden || undefined}
+      inert={hidden || undefined}
     >
       {/* Drag handle on the left edge to resize the dock — hidden when maximized. */}
       {!maximized && (
@@ -332,96 +338,88 @@ function ResolvedPanelArea({
             const target = e.currentTarget.parentElement;
             if (target) onResizeStart(e.clientX, width, target);
           }}
-          className="absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-primary/40"
+          className="absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-primary/40"
         />
       )}
       {/* Tab strip */}
-      <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5 py-1">
-        {activeTabs.map((tab) => {
-          const entry = getPanelEntry(tab.kind);
-          const Icon = entry?.icon ?? CircleOff;
-          const label = entry
-            ? panelEntryTitle(entry, (key) => t(key as never))
-            : t("panels.area.unavailable");
-          const active = tab.id === visibleActiveId;
-          return (
-            <div
-              key={tab.id}
-              className={cn(
-                "group flex shrink-0 items-center gap-1.5 rounded-md py-1 pl-2.5 pr-1.5 text-xs font-medium transition-colors",
-                active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50",
-              )}
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-auto gap-1.5 p-0 hover:bg-transparent"
-                onClick={() => setActiveId(tab.id)}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </Button>
-              <Button
-                type="button"
-                aria-label={t("panels.common.closeTab")}
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 opacity-0 hover:bg-background/60 group-hover:opacity-100"
-                onClick={() => closeTab(tab.id)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          );
-        })}
-
-        {/* + menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              aria-label={t("panels.area.newTab")}
-              data-panel-action="new-tab"
-              size="icon"
-              variant="ghost"
-              className="ml-0.5 h-7 w-7 shrink-0 text-muted-foreground"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {enabledPanels.map((entry) => {
-              const Icon = entry.icon;
-              return (
-                <DropdownMenuItem
-                  key={entry.key}
-                  data-panel-menu-kind={entry.key}
-                  onSelect={() => addTab(entry.key)}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  <span className="flex-1">{panelEntryTitle(entry, (key) => t(key as never))}</span>
-                </DropdownMenuItem>
-              );
+      <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-border/80 bg-muted/35 px-1.5 py-0.5">
+        {activeTabs.length > 0 ? (
+          <PanelTabStrip
+            tabs={activeTabs.map((tab) => {
+              const entry = getPanelEntry(tab.kind);
+              return {
+                id: tab.id,
+                label: entry
+                  ? panelEntryTitle(entry, (key) => t(key as never))
+                  : t("panels.area.unavailable"),
+                icon: entry?.icon ?? CircleOff,
+              };
             })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            activeId={visibleActiveId}
+            idPrefix={panelDomId}
+            hidden={hidden}
+            label={t("panels.area.tabsLabel")}
+            closeLabel={t("panels.common.closeTab")}
+            onActivate={setActiveId}
+            onClose={closeTab}
+            onRestoreFocus={hidden ? undefined : onRestoreFocus}
+          />
+        ) : (
+          <div className="flex h-10 min-w-0 flex-1 items-center gap-2 px-2 text-xs font-medium text-muted-foreground">
+            <PanelsTopLeft className="size-3.5 shrink-0" />
+            <span className="truncate">{t("panels.area.title")}</span>
+          </div>
+        )}
 
-        <div className="flex-1" />
-        <Button
-          type="button"
-          onClick={() => setMaximized((v) => !v)}
-          aria-label={maximized ? t("panels.area.restore") : t("panels.area.maximize")}
-          title={maximized ? t("panels.area.restoreTitle") : t("panels.area.maximizeTitle")}
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 shrink-0 text-muted-foreground"
-        >
-          {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
-        {/* No close-whole-panel ✕ — close tabs to close the dock (the last tab
+        <div className="flex shrink-0 items-center gap-0.5 border-l border-border/70 pl-1.5">
+          {/* Dock actions stay visible when the tab list overflows. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                aria-label={t("panels.area.newTab")}
+                title={t("panels.area.newTab")}
+                data-panel-action="new-tab"
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 rounded-lg text-muted-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              {enabledPanels.map((entry) => {
+                const Icon = entry.icon;
+                return (
+                  <DropdownMenuItem
+                    key={entry.key}
+                    data-panel-menu-kind={entry.key}
+                    onSelect={() => addTab(entry.key)}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span className="flex-1">
+                      {panelEntryTitle(entry, (key) => t(key as never))}
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            type="button"
+            onClick={() => setMaximized((v) => !v)}
+            aria-label={maximized ? t("panels.area.restore") : t("panels.area.maximize")}
+            title={maximized ? t("panels.area.restoreTitle") : t("panels.area.maximizeTitle")}
+            aria-pressed={maximized}
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0 rounded-lg text-muted-foreground"
+          >
+            {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+          {/* No close-whole-panel ✕ — close tabs to close the dock (the last tab
             closing calls onClose). Keeps one consistent "close" affordance. */}
+        </div>
       </div>
 
       {/* Bodies. This PanelArea belongs to exactly one session bucket. App keeps
@@ -434,7 +432,13 @@ function ResolvedPanelArea({
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
           const workspacePresentation = panelWorkspacePresentation(workspace);
           return (
-            <Slot key={panelTab.id} active={activeTab} panelId={panelTab.kind}>
+            <Slot
+              key={panelTab.id}
+              active={activeTab}
+              panelId={panelTab.kind}
+              id={`${panelDomId}-body-${panelTab.id}`}
+              labelledBy={`${panelDomId}-tab-${panelTab.id}`}
+            >
               <DesktopPanelLifecycleBoundary
                 entry={getPanelEntry(panelTab.kind)}
                 host={builtinPanelAppHost}
@@ -477,7 +481,11 @@ function ResolvedPanelArea({
                 )}
               </DesktopPanelLifecycleBoundary>
               {workspacePresentation.showLoading && (
-                <div className="absolute inset-0 z-20 flex min-h-0 flex-1 items-center justify-center bg-background text-sm text-muted-foreground">
+                <div
+                  role="status"
+                  className="absolute inset-0 z-20 flex min-h-0 flex-1 items-center justify-center gap-2 bg-background text-sm text-muted-foreground"
+                >
+                  <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
                   {t("panels.common.loading")}
                 </div>
               )}
@@ -499,25 +507,40 @@ function PanelLanding({
 }) {
   const { t } = useT();
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center p-6">
-      <div className="grid w-full max-w-md grid-cols-2 gap-3">
-        {entries.map((entry) => {
-          const Icon = entry.icon;
-          return (
-            <Button
-              key={entry.key}
-              type="button"
-              onClick={() => onPick(entry.key)}
-              variant="outline"
-              className="flex h-auto flex-col items-center gap-2 rounded-lg bg-card px-4 py-6 text-center hover:border-primary/50"
-            >
-              <Icon className="h-7 w-7 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">
-                {panelEntryTitle(entry, (key) => t(key as never))}
-              </span>
-            </Button>
-          );
-        })}
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-muted/15 px-5 py-7">
+      <div className="mx-auto my-auto w-full max-w-lg">
+        <div className="mb-6">
+          <div className="mb-4 flex size-11 items-center justify-center rounded-2xl border border-border/80 bg-background text-primary shadow-sm">
+            <PanelsTopLeft className="size-5" />
+          </div>
+          <h2 className="text-base font-semibold tracking-tight text-foreground">
+            {t("panels.area.title")}
+          </h2>
+          <p className="mt-2 max-w-sm text-xs leading-relaxed text-muted-foreground">
+            {t("panels.area.landingHint")}
+          </p>
+        </div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2.5">
+          {entries.map((entry) => {
+            const Icon = entry.icon;
+            return (
+              <Button
+                key={entry.key}
+                type="button"
+                onClick={() => onPick(entry.key)}
+                variant="outline"
+                className="group flex h-auto min-w-0 flex-col items-start gap-4 whitespace-normal rounded-xl bg-background px-4 py-4 text-left shadow-sm hover:border-primary/35 hover:bg-primary/5"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <Icon className="size-4" />
+                </span>
+                <span className="break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">
+                  {panelEntryTitle(entry, (key) => t(key as never))}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -621,15 +644,23 @@ function Slot({
   active,
   children,
   panelId,
+  id,
+  labelledBy,
 }: {
   active: boolean;
   children: React.ReactNode;
   panelId: PanelTab;
+  id: string;
+  labelledBy: string;
 }) {
   return (
     <div
+      role="tabpanel"
+      id={id}
+      aria-labelledby={labelledBy}
       className={cn("absolute inset-0 flex min-h-0 flex-col", active ? "z-10" : "-z-10 opacity-0")}
       aria-hidden={!active}
+      inert={!active || undefined}
       data-panel-id={panelId}
       data-panel-active={active ? "true" : "false"}
       style={active ? undefined : { pointerEvents: "none" }}

@@ -91,9 +91,10 @@ export const misc = {
         notifyAgentDone: "agent 已完成",
         automationSeed:
           "我想设置一个自动化。先简要说明自动化如何运作,然后问我几个问题,以了解我希望它做什么、以及何时运行(包括时区)。明确后用 CronCreate 工具帮我创建。",
-        welcomeTitleRepo: "要在 {name} 中构建什么?",
-        welcomeTitleNoRepo: "开始一个无项目对话",
-        welcomeHintNoRepo: "在下方选择一个项目，或直接在「不使用项目」模式开始",
+        welcomeTitleRepo: "一起推进 {name}",
+        welcomeHintRepo: "从一个问题、一个想法，或一项具体任务开始。",
+        welcomeTitleNoRepo: "今天想完成什么？",
+        welcomeHintNoRepo: "写下目标，或选一个方向开始。处理本地文件时，可以在下方选择项目。",
       },
       session: {
         defaultTitle: "新对话",
@@ -202,9 +203,11 @@ export const misc = {
         notifyAgentDone: "Agent finished",
         automationSeed:
           "I want to set up an automation. First briefly explain how automation works, then ask me a few questions to understand what I want it to do and when it should run (including time zone). Once it's clear, use the CronCreate tool to create it for me.",
-        welcomeTitleRepo: "What do you want to build in {name}?",
-        welcomeTitleNoRepo: "Start a conversation without a project",
-        welcomeHintNoRepo: "Pick a project below, or just start in “no project” mode",
+        welcomeTitleRepo: "Let’s move {name} forward",
+        welcomeHintRepo: "Start with a question, an idea, or a task you want to tackle.",
+        welcomeTitleNoRepo: "What would you like to get done?",
+        welcomeHintNoRepo:
+          "Describe your goal or choose a starting point. Pick a project below to work with local files.",
       },
       session: {
         defaultTitle: "New chat",

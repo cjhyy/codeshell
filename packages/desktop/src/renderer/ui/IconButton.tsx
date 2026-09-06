@@ -16,6 +16,7 @@ const ICON_BTN_BASE =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: React.Ref<HTMLButtonElement>;
   label: string;
   /**
    * Toggle/selected state — when true the button shows a persistent "on" look:
@@ -30,9 +31,7 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function IconButton({ label, children, className = "", active = false, ...rest }: Props) {
-  const activeCls = active
-    ? "!bg-foreground/15 hover:!bg-foreground/20"
-    : "";
+  const activeCls = active ? "!bg-foreground/15 hover:!bg-foreground/20" : "";
   return (
     <button
       type="button"

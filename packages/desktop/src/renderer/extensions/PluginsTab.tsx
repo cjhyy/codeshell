@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import type { LocalPluginPreview, PluginMediaDto, PluginSummary, RendererConfigurationTarget } from "../../preload/types";
+import type {
+  LocalPluginPreview,
+  PluginMediaDto,
+  PluginSummary,
+  RendererConfigurationTarget,
+} from "../../preload/types";
 import { resolveUninstallTarget } from "./uninstallTarget";
 import { PluginDetailView } from "./PluginDetailView";
 import { PluginInstallReviewDialog } from "./PluginInstallReviewDialog";
@@ -11,6 +16,7 @@ import {
   Loader2,
   MoreHorizontal,
   Puzzle,
+  Search,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -35,7 +41,14 @@ interface Props {
   onChanged: () => void;
 }
 
-export function PluginsTab({ cwd, configurationTarget, query, isEnabled, onToggle, onChanged }: Props) {
+export function PluginsTab({
+  cwd,
+  configurationTarget,
+  query,
+  isEnabled,
+  onToggle,
+  onChanged,
+}: Props) {
   const { t } = useT();
   const [plugins, setPlugins] = useState<PluginSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -306,8 +319,8 @@ export function PluginsTab({ cwd, configurationTarget, query, isEnabled, onToggl
     : plugins;
   const updatableCount = rows.filter((p) => updatable[p.installKey]).length;
   const localInstallBar = (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed bg-muted/20 p-3">
-      <div className="min-w-[180px] flex-1">
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
+      <div className="min-w-0 basis-44 flex-1">
         <div className="text-sm font-medium text-foreground">
           {t("ext.plugins.localInstallTitle")}
         </div>
@@ -374,13 +387,23 @@ export function PluginsTab({ cwd, configurationTarget, query, isEnabled, onToggl
         </div>
       )}
       {rows.length === 0 ? (
-        <div className="p-4 text-sm text-muted-foreground">{t("ext.plugins.empty")}</div>
+        <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-10 text-center">
+          {q ? (
+            <Search className="mx-auto mb-3 size-6 text-muted-foreground" aria-hidden />
+          ) : (
+            <Puzzle className="mx-auto mb-3 size-6 text-muted-foreground" aria-hidden />
+          )}
+          <p className="text-sm font-medium">
+            {t(q ? "ext.plugins.noMatch" : "ext.plugins.empty")}
+          </p>
+          {q && <p className="mt-2 text-xs text-muted-foreground">{t("ext.common.searchHint")}</p>}
+        </div>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-2">
           {rows.map((p) => (
             <li
               key={p.installKey}
-              className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-sm transition-colors hover:border-primary/25"
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background text-muted-foreground"
@@ -396,7 +419,7 @@ export function PluginsTab({ cwd, configurationTarget, query, isEnabled, onToggl
               </span>
               <button
                 type="button"
-                className="group flex min-w-0 flex-1 items-center gap-1 text-left"
+                className="group flex min-w-0 basis-40 flex-1 items-center gap-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setSelected(p.installKey)}
                 title={t("ext.plugins.viewContentTip")}
               >
@@ -408,55 +431,66 @@ export function PluginsTab({ cwd, configurationTarget, query, isEnabled, onToggl
                     {p.sourceLabel} · {t("ext.plugins.skillCount", { count: p.skillCount })}
                   </div>
                 </div>
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100 group-focus-visible:opacity-100" />
               </button>
-              {updatable[p.installKey] && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  title={t("ext.plugins.hasUpdateTip")}
-                  className="text-status-running hover:text-status-running"
-                  disabled={busy === p.installKey}
-                  onClick={() => void update(p)}
-                >
-                  {busy === p.installKey ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowUpCircle className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {p.marketplace ?? t("ext.plugins.local")}
-              </span>
-              <Switch checked={isEnabled(p)} onCheckedChange={(v) => onToggle(p, v)} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <div className="ml-auto flex max-w-full shrink-0 items-center gap-2">
+                {updatable[p.installKey] && (
                   <Button
                     size="icon"
                     variant="ghost"
-                    title={t("ext.plugins.moreActions")}
+                    title={t("ext.plugins.hasUpdateTip")}
+                    aria-label={`${t("ext.plugins.hasUpdateTip")} · ${p.displayName}`}
+                    className="text-status-running hover:text-status-running"
                     disabled={busy === p.installKey}
+                    onClick={() => void update(p)}
                   >
                     {busy === p.installKey ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <MoreHorizontal className="h-4 w-4" />
+                      <ArrowUpCircle className="h-4 w-4" />
                     )}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => void update(p)}>
-                    {t("ext.common.update")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-status-err focus:text-status-err"
-                    onSelect={() => void uninstall(p)}
-                  >
-                    {t("ext.common.uninstall")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                )}
+                <span
+                  className="max-w-28 truncate text-xs text-muted-foreground"
+                  title={p.marketplace ?? t("ext.plugins.local")}
+                >
+                  {p.marketplace ?? t("ext.plugins.local")}
+                </span>
+                <Switch
+                  aria-label={t("ext.plugins.toggle", { name: p.displayName })}
+                  checked={isEnabled(p)}
+                  onCheckedChange={(v) => onToggle(p, v)}
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title={t("ext.plugins.moreActions")}
+                      aria-label={`${t("ext.plugins.moreActions")} · ${p.displayName}`}
+                      disabled={busy === p.installKey}
+                    >
+                      {busy === p.installKey ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <MoreHorizontal className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => void update(p)}>
+                      {t("ext.common.update")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-status-err focus:text-status-err"
+                      onSelect={() => void uninstall(p)}
+                    >
+                      {t("ext.common.uninstall")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </li>
           ))}
         </ul>

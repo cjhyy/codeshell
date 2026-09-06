@@ -19,6 +19,7 @@ import {
   Upload,
   UserRound,
   UsersRound,
+  X,
 } from "lucide-react";
 import {
   DIGITAL_HUMAN_TEAM_DESCRIPTION_LIMIT,
@@ -135,6 +136,11 @@ export function DigitalHumansView({
     useDigitalHumansLibrary(configurationTarget);
   const operations = useDigitalHumanOperations(refresh);
   const [query, setQuery] = React.useState("");
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  const clearSearch = () => {
+    setQuery("");
+    searchRef.current?.focus();
+  };
   const [activeTab, setActiveTab] = React.useState<DigitalHumanTab>("mine");
   const [marketKind, setMarketKind] = React.useState<MarketKind>("single");
   const [detail, setDetail] = React.useState<DigitalHumanDetail | null>(null);
@@ -670,7 +676,7 @@ export function DigitalHumansView({
 
   return (
     <section className="digital-human-page-shell flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-8 lg:py-7">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-7">
         <div className="mx-auto w-full max-w-7xl">
           <header className="digital-human-hero relative overflow-hidden rounded-2xl border border-border/70 px-5 py-5 sm:px-7 sm:py-6">
             <div className="relative z-10 flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
@@ -691,13 +697,13 @@ export function DigitalHumansView({
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <dl className="grid grid-cols-3 gap-5 border-y border-border/60 py-3 sm:border-y-0 sm:border-r sm:py-0 sm:pr-5">
                   <HeroMetric value={profiles.length} label={t("digitalHumans.metrics.people")} />
                   <HeroMetric value={teams.length} label={t("digitalHumans.metrics.teams")} />
                   <HeroMetric value={repoCount} label={t("digitalHumans.metrics.sources")} />
                 </dl>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -750,30 +756,36 @@ export function DigitalHumansView({
                 >
                   <TabsTrigger
                     value="mine"
-                    className="digital-human-nav-item h-11 justify-start gap-2.5 px-3"
+                    className="digital-human-nav-item h-auto min-h-14 min-w-0 flex-col gap-1.5 whitespace-normal px-2 py-2 text-center text-xs leading-4 sm:flex-row sm:justify-start sm:text-sm lg:min-h-11 lg:gap-2.5 lg:px-3 lg:text-left"
                   >
                     <UserRound size={15} aria-hidden="true" />
-                    <span className="min-w-0 truncate">{t("digitalHumans.tabs.mine")}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      {t("digitalHumans.tabs.mine")}
+                    </span>
                     <span className="ml-auto hidden text-xs tabular-nums text-muted-foreground lg:inline">
                       {profiles.length}
                     </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="teams"
-                    className="digital-human-nav-item h-11 justify-start gap-2.5 px-3"
+                    className="digital-human-nav-item h-auto min-h-14 min-w-0 flex-col gap-1.5 whitespace-normal px-2 py-2 text-center text-xs leading-4 sm:flex-row sm:justify-start sm:text-sm lg:min-h-11 lg:gap-2.5 lg:px-3 lg:text-left"
                   >
                     <UsersRound size={15} aria-hidden="true" />
-                    <span className="min-w-0 truncate">{t("digitalHumans.tabs.teams")}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      {t("digitalHumans.tabs.teams")}
+                    </span>
                     <span className="ml-auto hidden text-xs tabular-nums text-muted-foreground lg:inline">
                       {teams.length}
                     </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="market"
-                    className="digital-human-nav-item h-11 justify-start gap-2.5 px-3"
+                    className="digital-human-nav-item h-auto min-h-14 min-w-0 flex-col gap-1.5 whitespace-normal px-2 py-2 text-center text-xs leading-4 sm:flex-row sm:justify-start sm:text-sm lg:min-h-11 lg:gap-2.5 lg:px-3 lg:text-left"
                   >
                     <Sparkles size={15} aria-hidden="true" />
-                    <span className="min-w-0 truncate">{t("digitalHumans.tabs.market")}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      {t("digitalHumans.tabs.market")}
+                    </span>
                     <span className="ml-auto hidden text-xs tabular-nums text-muted-foreground lg:inline">
                       {catalog.length + CURATED_DIGITAL_HUMAN_TEAMS.length}
                     </span>
@@ -810,7 +822,7 @@ export function DigitalHumansView({
                     className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-status-err/30 bg-status-err/5 px-3 py-2 text-sm text-status-err"
                     role="alert"
                   >
-                    <span>{error}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{error}</span>
                     <Button size="sm" variant="outline" onClick={() => void refresh()}>
                       <RefreshCw size={13} aria-hidden="true" />
                       {t("digitalHumans.retry")}
@@ -827,8 +839,8 @@ export function DigitalHumansView({
                   </div>
                 ) : null}
 
-                <div className="mb-5 flex flex-col justify-between gap-3 border-b border-border/60 pb-4 lg:flex-row lg:items-end">
-                  <div>
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-border/60 pb-4">
+                  <div className="min-w-0 flex-1 basis-64">
                     <div className="flex items-center gap-2">
                       <h2 className="text-lg font-semibold tracking-tight">
                         {activeSection.title}
@@ -839,19 +851,33 @@ export function DigitalHumansView({
                       {activeSection.description}
                     </p>
                   </div>
-                  <div className="relative w-full shrink-0 sm:w-64">
+                  <div className="relative w-full sm:w-64 sm:max-w-full">
                     <Search
                       size={15}
                       className="pointer-events-none absolute left-3 top-2.5 text-muted-foreground"
                       aria-hidden="true"
                     />
                     <Input
+                      ref={searchRef}
+                      type="search"
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
-                      className="bg-background/80 pl-9"
+                      className="bg-background/80 pl-9 pr-9 [&::-webkit-search-cancel-button]:appearance-none"
                       placeholder={t("digitalHumans.search")}
                       aria-label={t("digitalHumans.searchLabel")}
                     />
+                    {query ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-1 top-1 h-7 w-7"
+                        aria-label={t("digitalHumans.clearSearch")}
+                        onClick={clearSearch}
+                      >
+                        <X size={14} aria-hidden="true" />
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -900,6 +926,7 @@ export function DigitalHumansView({
                             size="sm"
                             variant={marketKind === "single" ? "secondary" : "ghost"}
                             className="h-7"
+                            aria-pressed={marketKind === "single"}
                             onClick={() => setMarketKind("single")}
                           >
                             <UserRound size={13} aria-hidden="true" />
@@ -910,6 +937,7 @@ export function DigitalHumansView({
                             size="sm"
                             variant={marketKind === "team" ? "secondary" : "ghost"}
                             className="h-7"
+                            aria-pressed={marketKind === "team"}
                             onClick={() => setMarketKind("team")}
                             data-testid="digital-human-market-teams"
                           >
@@ -923,9 +951,9 @@ export function DigitalHumansView({
                         visibleCatalog.length === 0 ? (
                           // Reachable only when a filter/search hid everything —
                           // the "nothing shipped" case short-circuits above.
-                          <SearchEmptyState />
+                          <SearchEmptyState onClear={normalizedQuery ? clearSearch : undefined} />
                         ) : (
-                          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
                             {visibleCatalog.map((entry) => (
                               <CatalogCard
                                 key={entry.name}
@@ -937,10 +965,26 @@ export function DigitalHumansView({
                             ))}
                           </div>
                         )
+                      ) : visibleCuratedTeams.length === 0 &&
+                        CURATED_DIGITAL_HUMAN_TEAMS.length > 0 ? (
+                        <SearchEmptyState onClear={normalizedQuery ? clearSearch : undefined} />
                       ) : visibleCuratedTeams.length === 0 ? (
-                        <SearchEmptyState />
+                        <EmptyState
+                          Icon={UsersRound}
+                          title={t("digitalHumans.market.noTeams")}
+                          description={t("digitalHumans.market.noTeamsDescription")}
+                          action={
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setMarketKind("single")}
+                            >
+                              {t("digitalHumans.market.singles")}
+                            </Button>
+                          }
+                        />
                       ) : (
-                        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
                           {visibleCuratedTeams.map((team) => (
                             <CuratedTeamCard
                               key={team.id}
@@ -966,9 +1010,9 @@ export function DigitalHumansView({
                       importBusy={importPickerBusy}
                     />
                   ) : visibleProfiles.length === 0 ? (
-                    <SearchEmptyState />
+                    <SearchEmptyState onClear={clearSearch} />
                   ) : (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
                       {visibleProfiles.map((profile) => (
                         <ProfileCard
                           key={profile.name}
@@ -1056,9 +1100,9 @@ export function DigitalHumansView({
                       }
                     />
                   ) : visibleTeams.length === 0 ? (
-                    <SearchEmptyState />
+                    <SearchEmptyState onClear={clearSearch} />
                   ) : (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4">
                       {visibleTeams.map((team) => (
                         <TeamCard
                           key={team.id}
@@ -1411,7 +1455,7 @@ function CatalogCard({
   const { t } = useT();
   return (
     <Card
-      className="digital-human-card group flex min-h-52 flex-col overflow-hidden transition-all"
+      className="digital-human-card group flex min-w-0 min-h-52 flex-col overflow-hidden transition-all"
       data-digital-human-card={entry.name}
     >
       <CardHeader className="pb-3">
@@ -1419,7 +1463,9 @@ function CatalogCard({
           <DigitalHumanAvatar id={entry.name} label={entry.label} category={entry.category} />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <CardTitle className="truncate text-sm">{entry.label}</CardTitle>
+              <CardTitle className="min-w-0 text-sm [overflow-wrap:anywhere]">
+                {entry.label}
+              </CardTitle>
               {entry.installed ? (
                 <Badge variant="success" className="shrink-0">
                   <Check size={11} className="mr-1" aria-hidden="true" />
@@ -1435,18 +1481,18 @@ function CatalogCard({
             </p>
           </div>
         </div>
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
           {entry.description}
         </p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 pb-3">
         {entry.tags.map((tag) => (
-          <Badge key={tag} variant="secondary">
+          <Badge key={tag} variant="secondary" className="max-w-full [overflow-wrap:anywhere]">
             {tag}
           </Badge>
         ))}
       </CardContent>
-      <CardFooter className="justify-between gap-2 border-t border-border/60 bg-muted/15 p-3.5">
+      <CardFooter className="flex-wrap justify-between gap-2 border-t border-border/60 bg-muted/15 p-3.5">
         <Button size="sm" variant="ghost" className="px-2" onClick={onDetails}>
           {t("digitalHumans.market.details")}
           <ChevronRight size={13} aria-hidden="true" />
@@ -1486,7 +1532,7 @@ function CuratedTeamCard({
   const { t } = useT();
   return (
     <Card
-      className="digital-human-card group flex min-h-60 flex-col overflow-hidden transition-all"
+      className="digital-human-card group flex min-w-0 min-h-60 flex-col overflow-hidden transition-all"
       data-curated-team-card={team.id}
     >
       <CardHeader className="pb-3">
@@ -1494,15 +1540,17 @@ function CuratedTeamCard({
           <DigitalHumanAvatar id={team.id} label={team.name} category={team.category} team />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <CardTitle className="truncate text-sm">{team.name}</CardTitle>
+              <CardTitle className="min-w-0 text-sm [overflow-wrap:anywhere]">
+                {team.name}
+              </CardTitle>
               {installed ? <Badge variant="success">{t("digitalHumans.installed")}</Badge> : null}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
               {team.members.length} {t("digitalHumans.market.members")}
             </p>
           </div>
         </div>
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
           {team.description}
         </p>
       </CardHeader>
@@ -1523,13 +1571,13 @@ function CuratedTeamCard({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {team.tags.map((tag) => (
-            <Badge key={tag} variant="secondary">
+            <Badge key={tag} variant="secondary" className="max-w-full [overflow-wrap:anywhere]">
               {tag}
             </Badge>
           ))}
         </div>
       </CardContent>
-      <CardFooter className="justify-between gap-2 border-t border-border/60 bg-muted/15 p-3.5">
+      <CardFooter className="flex-wrap justify-between gap-2 border-t border-border/60 bg-muted/15 p-3.5">
         <Button size="sm" variant="ghost" className="px-2" onClick={onDetails}>
           {t("digitalHumans.market.details")}
           <ChevronRight size={13} aria-hidden="true" />
@@ -1587,7 +1635,7 @@ function ProfileCard({
     <Card
       data-digital-human-card={profile.name}
       className={cn(
-        "digital-human-card group flex min-h-64 flex-col overflow-hidden transition-all",
+        "digital-human-card group flex min-w-0 min-h-64 flex-col overflow-hidden transition-all",
         profile.active && "border-primary/35",
       )}
     >
@@ -1599,11 +1647,14 @@ function ProfileCard({
             className="h-12 w-12 rounded-xl text-sm"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <CardTitle className="line-clamp-2 pt-0.5 text-base leading-5">
+            <div className="flex flex-col items-start gap-2">
+              <CardTitle
+                className="line-clamp-2 pt-0.5 text-base leading-5 [overflow-wrap:anywhere]"
+                title={profile.label}
+              >
                 {profile.label}
               </CardTitle>
-              <div className="flex shrink-0 flex-col items-end gap-1">
+              <div className="flex flex-wrap gap-1">
                 <Badge variant="success">
                   <Check size={11} className="mr-1" aria-hidden="true" />
                   {t("digitalHumans.localInstalled")}
@@ -1620,7 +1671,7 @@ function ProfileCard({
             </p>
           </div>
         </div>
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
           {profile.description ?? t("digitalHumans.noDescription")}
         </p>
       </CardHeader>
@@ -1738,7 +1789,7 @@ function TeamCard({
   return (
     <Card
       data-digital-human-team-card={team.id}
-      className="digital-human-card group flex min-h-60 flex-col overflow-hidden transition-all"
+      className="digital-human-card group flex min-w-0 min-h-60 flex-col overflow-hidden transition-all"
     >
       <CardHeader className="p-5 pb-3">
         <div className="flex items-start gap-3">
@@ -1749,28 +1800,33 @@ function TeamCard({
             className="h-12 w-12 rounded-xl"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <CardTitle className="line-clamp-2 pt-0.5 text-base leading-5">{team.name}</CardTitle>
+            <div className="flex flex-col items-start gap-2">
+              <CardTitle
+                className="line-clamp-2 pt-0.5 text-base leading-5 [overflow-wrap:anywhere]"
+                title={team.name}
+              >
+                {team.name}
+              </CardTitle>
               <Badge variant="info" className="shrink-0">
                 {team.lead
                   ? t("digitalHumans.team.leadConfigured")
                   : t("digitalHumans.team.parallel")}
               </Badge>
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
               {memberLabels.length} {t("digitalHumans.market.members")}
               {team.sourceRepo ? ` · ${team.sourceRepo}` : ""}
               {team.localOverride ? ` · ${t("digitalHumans.team.localOverride")}` : ""}
             </p>
           </div>
         </div>
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
           {team.description ?? t("digitalHumans.team.defaultDescription")}
         </p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 px-5 pb-4">
         {memberLabels.map((label) => (
-          <Badge key={label} variant="secondary">
+          <Badge key={label} variant="secondary" className="max-w-full [overflow-wrap:anywhere]">
             {label}
           </Badge>
         ))}
@@ -2661,13 +2717,20 @@ function LibraryEmptyState({
   );
 }
 
-function SearchEmptyState() {
+function SearchEmptyState({ onClear }: { onClear?: () => void }) {
   const { t } = useT();
   return (
     <EmptyState
       Icon={Search}
       title={t("digitalHumans.noSearchResults")}
       description={t("digitalHumans.noSearchResultsDescription")}
+      action={
+        onClear ? (
+          <Button type="button" size="sm" variant="outline" onClick={onClear}>
+            {t("digitalHumans.clearSearch")}
+          </Button>
+        ) : undefined
+      }
     />
   );
 }
@@ -2700,6 +2763,8 @@ function AddRepoRow({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const addLock = React.useRef(false);
+  const composing = React.useRef(false);
+  const feedbackId = React.useId();
   const normalizedRepo = normalizeDigitalHumanSkillRepo(input);
   const repoInvalid = input.trim().length > 0 && normalizedRepo === null;
 
@@ -2734,7 +2799,7 @@ function AddRepoRow({
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground">
           <GitFork size={16} aria-hidden="true" />
         </span>
-        <div className="min-w-52 flex-1">
+        <div className="min-w-0 flex-1 basis-52">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-medium text-foreground">{t("digitalHumans.repos.title")}</p>
             {repoCount > 0 ? (
@@ -2754,12 +2819,27 @@ function AddRepoRow({
             if (error) setError(null);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") void add();
+            if (
+              event.key === "Enter" &&
+              !composing.current &&
+              !event.nativeEvent.isComposing &&
+              event.keyCode !== 229
+            ) {
+              event.preventDefault();
+              void add();
+            }
+          }}
+          onCompositionStart={() => {
+            composing.current = true;
+          }}
+          onCompositionEnd={() => {
+            composing.current = false;
           }}
           placeholder="owner/repo"
           aria-label={t("digitalHumans.repos.title")}
           aria-invalid={repoInvalid}
-          className="h-8 w-full min-w-48 sm:w-64"
+          aria-describedby={repoInvalid || error ? feedbackId : undefined}
+          className="h-8 w-full min-w-0 sm:w-64 sm:max-w-full"
           disabled={busy}
         />
         <Button size="sm" onClick={() => void add()} disabled={busy || !normalizedRepo}>
@@ -2776,10 +2856,15 @@ function AddRepoRow({
           </Button>
         ) : null}
       </div>
-      {repoInvalid ? (
-        <p className="mt-1.5 text-xs text-status-err">{t("digitalHumans.repos.invalid")}</p>
+      {repoInvalid || error ? (
+        <p
+          id={feedbackId}
+          role="alert"
+          className="mt-1.5 text-xs text-status-err [overflow-wrap:anywhere]"
+        >
+          {repoInvalid ? t("digitalHumans.repos.invalid") : error}
+        </p>
       ) : null}
-      {error ? <p className="mt-1.5 text-xs text-status-err">{error}</p> : null}
     </div>
   );
 }
@@ -2828,7 +2913,9 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
           <RefreshCw size={20} aria-hidden="true" />
         </span>
         <h3 className="text-sm font-medium">{t("digitalHumans.loadFailed")}</h3>
-        <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">{error}</p>
+        <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground [overflow-wrap:anywhere]">
+          {error}
+        </p>
         <Button className="mt-4" size="sm" variant="outline" onClick={onRetry}>
           <RefreshCw size={13} aria-hidden="true" />
           {t("digitalHumans.retry")}

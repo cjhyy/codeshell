@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -68,6 +68,18 @@ function renderCardMarkup(card: React.ReactElement): string {
 
 let root: Root | null = null;
 let container: HTMLElement | null = null;
+let requestFrameBefore: PropertyDescriptor | undefined;
+let cancelFrameBefore: PropertyDescriptor | undefined;
+
+beforeEach(() => {
+  ensureMiniDom();
+  requestFrameBefore = Object.getOwnPropertyDescriptor(window, "requestAnimationFrame");
+  cancelFrameBefore = Object.getOwnPropertyDescriptor(window, "cancelAnimationFrame");
+  // This suite verifies decisions through a simplified Dialog. Native focus
+  // and queued-dialog timing are covered by DialogProvider's isolated fixtures.
+  window.requestAnimationFrame = () => 1;
+  window.cancelAnimationFrame = () => undefined;
+});
 
 afterEach(async () => {
   if (root) {
@@ -79,6 +91,11 @@ afterEach(async () => {
   root = null;
   if (container?.parentNode) container.parentNode.removeChild(container);
   container = null;
+  if (requestFrameBefore)
+    Object.defineProperty(window, "requestAnimationFrame", requestFrameBefore);
+  else Reflect.deleteProperty(window, "requestAnimationFrame");
+  if (cancelFrameBefore) Object.defineProperty(window, "cancelAnimationFrame", cancelFrameBefore);
+  else Reflect.deleteProperty(window, "cancelAnimationFrame");
 });
 
 function task(status: PetLongTask["status"]): PetLongTask {

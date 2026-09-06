@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -410,6 +410,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [providerViews, setProviderViews] = useState<LocalLinkProviderView[]>([]);
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<IntegrationFilter>("all");
   const [localDialog, setLocalDialog] = useState<{
     item: LinkIntegration;
@@ -895,15 +896,16 @@ export function LinkTab({ cwd }: { cwd: string }) {
         </div>
 
         <div className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-2.5 lg:flex-row lg:items-center">
-          <div className="relative min-w-52 flex-1">
+          <div className="relative min-w-0 flex-1" role="search">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden
             />
             <Input
+              ref={searchRef}
               value={query}
               type="search"
-              className="h-9 border-transparent bg-muted/55 pl-9 pr-9 focus-visible:bg-background"
+              className="h-9 border-transparent bg-muted/55 pl-9 pr-9 focus-visible:bg-background [&::-webkit-search-cancel-button]:appearance-none"
               placeholder={t("ext.link.searchPlaceholder")}
               aria-label={t("ext.link.searchPlaceholder")}
               onChange={(event) => setQuery(event.target.value)}
@@ -915,14 +917,17 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 size="icon"
                 className="absolute right-0.5 top-0.5 size-8 text-muted-foreground"
                 aria-label={t("ext.link.clearSearch")}
-                onClick={() => setQuery("")}
+                onClick={() => {
+                  setQuery("");
+                  searchRef.current?.focus();
+                }}
               >
                 <X className="size-3.5" aria-hidden />
               </Button>
             ) : null}
           </div>
           <div
-            className="flex items-center gap-1 rounded-lg bg-muted/55 p-1"
+            className="flex min-w-0 flex-wrap items-center gap-1 rounded-lg bg-muted/55 p-1"
             role="group"
             aria-label={t("ext.link.filterAria")}
           >
@@ -988,6 +993,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
               onClick={() => {
                 setQuery("");
                 setFilter("all");
+                searchRef.current?.focus();
               }}
             >
               {t("ext.link.resetFilters")}
@@ -1243,6 +1249,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
 }
 
 export function ChatGatewayTab() {
+  const channelDetailsId = useId();
   const { t, lang } = useT();
   const toast = useToast();
   const [status, setStatus] = useState<ImGatewayStatus | null>(null);
@@ -1576,6 +1583,7 @@ export function ChatGatewayTab() {
               className="h-auto w-full justify-between rounded-none bg-muted/25 px-3 py-2 text-left text-xs font-normal whitespace-normal"
               onClick={() => setChannelsOpen((open) => !open)}
               aria-expanded={channelsOpen}
+              aria-controls={channelsOpen ? channelDetailsId : undefined}
               aria-label={t("ext.link.gatewayToggleChannels")}
             >
               <span>
@@ -1596,7 +1604,10 @@ export function ChatGatewayTab() {
               />
             </Button>
             {channelsOpen && (
-              <div className="grid gap-px bg-border/60 sm:grid-cols-2">
+              <div
+                id={channelDetailsId}
+                className="grid min-w-0 gap-px bg-border/60 sm:grid-cols-2"
+              >
                 {channelStatuses.map((channelStatus) => {
                   const guide = CHANNEL_GUIDES[channelStatus.channel];
                   const capabilityLabels = channelStatus.capabilities
@@ -2053,13 +2064,13 @@ function LinkMethodCard({
       data-link-integration={item.id}
       data-link-runtime={method.executionRuntime}
       className={cn(
-        "link-card group flex min-h-48 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all",
+        "link-card group flex min-h-48 min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all",
         item.featured &&
           local &&
           "border-status-ok/20 bg-gradient-to-br from-status-ok/[0.045] via-card to-card",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div
             className={cn(
@@ -2072,7 +2083,9 @@ function LinkMethodCard({
           </div>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h5 className="text-sm font-semibold tracking-tight text-foreground">{item.name}</h5>
+              <h5 className="min-w-0 break-words text-sm font-semibold tracking-tight text-foreground [overflow-wrap:anywhere]">
+                {item.name}
+              </h5>
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-medium",

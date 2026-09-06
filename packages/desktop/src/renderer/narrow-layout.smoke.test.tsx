@@ -9,13 +9,15 @@
  * gallery (the data path that feeds Lightbox prev/next).
  */
 import { describe, expect, test } from "bun:test";
-import React from "react";
+import React, { act } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { createRoot } from "react-dom/client";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MessageStream } from "./MessageStream";
 import { Lightbox } from "./chat/Lightbox";
 import type { Message } from "./types";
+import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 
 // A 1x1 transparent PNG data URL — enough for decodeWireForDisplay to keep the
 // block (non-empty body) and for the thumbnail <img> to render.
@@ -56,13 +58,40 @@ describe("narrow layout — multi-image gallery renders fully", () => {
 });
 
 describe("narrow layout — lightbox", () => {
-  test("lightbox image stays viewport-relative so it never exceeds a narrow screen", () => {
-    const html = renderToStaticMarkup(
-      <Lightbox src={PNG} alt="preview.png" onClose={() => {}} />,
-    );
-    expect(html).toContain("max-h-full");
-    expect(html).toContain("max-w-full");
-    expect(html).toContain("object-contain");
+  test("lightbox image stays viewport-relative so it never exceeds a narrow screen", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const findImage = (node: Node): HTMLElement | undefined => {
+      if ((node as HTMLElement).tagName === "IMG") return node as HTMLElement;
+      for (const child of Array.from(node.childNodes)) {
+        const found = findImage(child);
+        if (found) return found;
+      }
+      return undefined;
+    };
+    try {
+      await act(async () => {
+        root.render(<Lightbox src={PNG} alt="preview.png" onClose={() => {}} />);
+        await flushMicrotasks();
+      });
+      // Dialog content lives in a body portal, outside any transcript size /
+      // content-visibility containment. SSR markup cannot inspect that image.
+      const image = findImage(document.body);
+      expect(image).toBeDefined();
+      expect(container.contains(image!)).toBe(false);
+      const classes = image!.getAttribute("class");
+      expect(classes).toContain("max-h-full");
+      expect(classes).toContain("max-w-full");
+      expect(classes).toContain("object-contain");
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      document.body.removeChild(container);
+    }
   });
 
   // The lightbox now has a SINGLE close button (the toolbar one). The old

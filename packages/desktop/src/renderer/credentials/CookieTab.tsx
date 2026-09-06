@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { browserProfileIdForBucket, browserProfileLabel } from "../../shared/browser-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { useToast } from "../ui/ToastProvider";
 import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
 import { useT } from "../i18n/I18nProvider";
+import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
 
 type SwitchMode = "clear" | "merge";
 
@@ -80,6 +81,13 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [urlHistory, setUrlHistory] = useState<string[]>(() => readUrlHistory());
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const loginUrlRef = useRef<HTMLInputElement>(null);
+  const clearSearch = () => {
+    setQuery("");
+    searchRef.current?.focus();
+  };
 
   const load = useCallback(() => {
     return window.codeshell.credentials
@@ -411,9 +419,16 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   }
 
   const autoInjectCount = items.filter((item) => item.autoInjectByAI === true).length;
+  const visibleGroups = [...groups.entries()]
+    .map(
+      ([platform, accounts]) =>
+        [platform, accounts.filter((item) => credentialMatchesQuery(item, query))] as const,
+    )
+    .filter(([, accounts]) => accounts.length > 0);
+  const visibleCount = visibleGroups.reduce((total, [, accounts]) => total + accounts.length, 0);
 
   return (
-    <div className="space-y-5" data-cookie-page>
+    <div className="min-w-0 space-y-5" data-cookie-page>
       <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
@@ -481,6 +496,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
             <div className="mt-5 flex-1 space-y-2">
               <Label htmlFor="cookie-login-url">{t("ext.cookie.urlLabel")}</Label>
               <Input
+                ref={loginUrlRef}
                 id="cookie-login-url"
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
@@ -492,7 +508,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
               {urlHistory.length > 0 ? (
                 <div className="flex items-start gap-2 pt-1">
                   <History className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
                     {urlHistory.map((historyUrl) => (
                       <Button
                         key={historyUrl}
@@ -565,7 +581,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
       </section>
 
       <section className="space-y-4" aria-labelledby="cookie-accounts-title">
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex min-w-0 items-end justify-between gap-3">
           <div className="flex items-start gap-2.5">
             <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <UserRound className="size-4" aria-hidden />
@@ -579,8 +595,22 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
               </p>
             </div>
           </div>
-          <span className="text-xs tabular-nums text-muted-foreground">{items.length}</span>
+          <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs tabular-nums text-muted-foreground">
+            {items.length}
+          </span>
         </div>
+
+        {items.length > 0 && (
+          <CredentialSearch
+            query={query}
+            onChange={setQuery}
+            onClear={clearSearch}
+            inputRef={searchRef}
+            placeholder={t("ext.credentials.cookieSearch")}
+            count={visibleCount}
+            total={items.length}
+          />
+        )}
 
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
@@ -591,22 +621,35 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
             <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
               {t("ext.cookie.emptyAccounts")}
             </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => loginUrlRef.current?.focus()}
+            >
+              <LogIn className="size-3.5" aria-hidden />
+              {t("ext.credentials.addCookie")}
+            </Button>
           </div>
+        ) : visibleCount === 0 ? (
+          <CredentialNoMatches onClear={clearSearch} />
         ) : (
           <div className="space-y-5">
-            {[...groups.entries()].map(([platform, accounts]) => (
+            {visibleGroups.map(([platform, accounts]) => (
               <div key={platform} className="space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <h4 className="min-w-0 break-words text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground [overflow-wrap:anywhere]">
                     {platform}
                   </h4>
                   <span className="text-[10px] text-muted-foreground">{accounts.length}</span>
                 </div>
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,22rem),1fr))] gap-3">
                   {accounts.map((c) => (
                     <article
                       key={c.id}
-                      className="credential-card flex flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all"
+                      aria-label={c.label}
+                      className="credential-card flex min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all"
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
@@ -673,6 +716,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
                             </p>
                           </div>
                           <SimpleSelect
+                            ariaLabel={`${t("ext.cookie.switchModeLabel")} · ${c.label}`}
                             value={c.meta?.switchMode === "clear" ? "clear" : "merge"}
                             onChange={(value) => setSwitchMode(c, value as SwitchMode)}
                             options={[

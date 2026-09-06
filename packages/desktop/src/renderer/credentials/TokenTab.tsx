@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { useToast } from "../ui/ToastProvider";
 import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import type { MaskedCredentialView } from "./types";
+import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
 
 /**
  * Standalone Permission Token credential CRUD. Link authorization has its own
@@ -33,6 +34,13 @@ export function TokenTab({ cwd }: { cwd: string }) {
   const [label, setLabel] = useState("");
   const [secret, setSecret] = useState("");
   const [exposeAsEnv, setExposeAsEnv] = useState("");
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const idInputRef = useRef<HTMLInputElement>(null);
+  const clearSearch = () => {
+    setQuery("");
+    searchRef.current?.focus();
+  };
 
   const load = useCallback(() => {
     void window.codeshell.credentials
@@ -124,9 +132,10 @@ export function TokenTab({ cwd }: { cwd: string }) {
 
   const autoUseCount = items.filter((item) => item.autoUseByAI === true).length;
   const envCount = items.filter((item) => Boolean(item.exposeAsEnv)).length;
+  const visibleItems = items.filter((item) => credentialMatchesQuery(item, query));
 
   return (
-    <div className="space-y-5" data-token-page>
+    <div className="min-w-0 space-y-5" data-token-page>
       <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
@@ -179,6 +188,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
             <div className="space-y-1.5">
               <Label htmlFor="token-id">{t("ext.token.idLabel")}</Label>
               <Input
+                ref={idInputRef}
                 id="token-id"
                 value={id}
                 onChange={(event) => setId(event.target.value)}
@@ -259,8 +269,22 @@ export function TokenTab({ cwd }: { cwd: string }) {
               </p>
             </div>
           </div>
-          <span className="text-xs tabular-nums text-muted-foreground">{items.length}</span>
+          <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs tabular-nums text-muted-foreground">
+            {items.length}
+          </span>
         </div>
+
+        {items.length > 0 && (
+          <CredentialSearch
+            query={query}
+            onChange={setQuery}
+            onClear={clearSearch}
+            inputRef={searchRef}
+            placeholder={t("ext.credentials.tokenSearch")}
+            count={visibleItems.length}
+            total={items.length}
+          />
+        )}
 
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
@@ -271,13 +295,26 @@ export function TokenTab({ cwd }: { cwd: string }) {
             <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
               {t("ext.token.emptyTokens")}
             </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => idInputRef.current?.focus()}
+            >
+              <Plus className="size-3.5" aria-hidden />
+              {t("ext.credentials.addToken")}
+            </Button>
           </div>
+        ) : visibleItems.length === 0 ? (
+          <CredentialNoMatches onClear={clearSearch} />
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {items.map((c) => (
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,22rem),1fr))] gap-3">
+            {visibleItems.map((c) => (
               <article
                 key={c.id}
-                className="credential-card flex flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all"
+                aria-label={c.label}
+                className="credential-card flex min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -303,6 +340,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
                     disabled={busy}
                     onClick={() => void del(c.id)}
                     title={t("ext.token.delete")}
+                    aria-label={`${t("ext.token.delete")} · ${c.label}`}
                   >
                     <Trash2 className="size-4" aria-hidden />
                     <span className="sr-only">{t("ext.token.delete")}</span>
@@ -316,10 +354,12 @@ export function TokenTab({ cwd }: { cwd: string }) {
                     {c.hasSecret ? t("ext.token.secretStored") : t("ext.token.noSecret")}
                   </span>
                   {c.exposeAsEnv ? (
-                    <span className="credential-status-muted font-mono">env · {c.exposeAsEnv}</span>
+                    <span className="credential-status-muted max-w-full font-mono [overflow-wrap:anywhere]">
+                      env · {c.exposeAsEnv}
+                    </span>
                   ) : null}
                 </div>
-                <div className="mt-3 min-h-9 rounded-xl border border-border/55 bg-muted/30 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
+                <div className="mt-3 min-h-9 rounded-xl border border-border/55 bg-muted/30 px-3 py-2 text-[11px] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
                   {c.hasSecret ? c.secretHint : t("ext.token.secretMissing")}
                   {c.meta?.appUrl ? ` · ${c.meta.appUrl}` : ""}
                 </div>

@@ -1,195 +1,220 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Settings as SettingsIcon,
   Globe,
-  Check,
   ArrowRight,
-  ChevronRight,
   Ghost,
+  History,
+  MessageSquare,
+  Activity,
+  ShieldCheck,
+  ScrollText,
 } from "lucide-react";
-import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
+import { saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+export type ActivityPage = "sessions" | "runs" | "approvals" | "logs";
+
 interface Props {
-  /** Switch to the full-page Settings view. */
   onOpenSettingsPage: () => void;
+  /** History pages also stay available from the global command palette. */
+  onNavigate?: (page: ActivityPage) => void;
   /** When sidebar is collapsed the trigger goes straight to settings. */
   sidebarCollapsed?: boolean;
-  /** Floating Pet state and toggle live in this bottom menu, not under Pet navigation. */
   petWidgetVisible: boolean;
   onTogglePetWidget: () => void;
 }
 
 const LANGUAGES: UILanguage[] = ["zh", "en"];
 
-/**
- * Bottom-left settings entry.
- *
- * Clicking opens an upward popover with navigation, Pet visibility and
- * language controls. Language reveals a cascading submenu on the right after
- * an explicit click, so merely moving the pointer across it cannot leave the
- * submenu stuck open.
- *
- * The submenu is `position: fixed` and anchored to the hovered item's
- * bounding rect, so it escapes the sidebar's `overflow: hidden` instead
- * of being clipped by it (same approach as the project ContextMenu).
- */
+/** Bottom settings menu, with explicit click/keyboard submenus and native menu focus. */
 export function SettingsMenu({
   onOpenSettingsPage,
+  onNavigate,
   sidebarCollapsed,
   petWidgetVisible,
   onTogglePetWidget,
 }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [open, setOpen] = useState(false);
-  const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
-  const [submenu, setSubmenu] = useState<{ left: number; bottom: number } | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open]);
-
-  // Closing the whole popover also retracts the submenu.
-  useEffect(() => {
-    if (!open) setSubmenu(null);
-  }, [open]);
-
-  const openSubmenu = (element: HTMLElement): void => {
-    const r = element.getBoundingClientRect();
-    // Anchor the submenu's BOTTOM to the trigger item's bottom so it grows
-    // upward — the settings menu lives in the bottom-left corner, so a
-    // downward submenu would overflow the viewport. Clamp left into the
-    // viewport in case the sidebar is wide.
-    const left = Math.min(r.right + 4, window.innerWidth - 176 - 8);
-    setSubmenu({ left: Math.max(8, left), bottom: window.innerHeight - r.bottom - 4 });
-  };
-
-  const toggleSubmenu = (element: HTMLElement): void => {
-    if (submenu) {
-      setSubmenu(null);
-      return;
-    }
-    openSubmenu(element);
-  };
-
-  const chooseLanguage = (next: UILanguage): void => {
-    setLang(next);
-    saveUILanguage(next);
+  const [submenu, setSubmenu] = useState<"activity" | "language" | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const pendingNavigationRef = useRef<(() => void) | null>(null);
+  const activityRef = useRef<HTMLDivElement>(null);
+  const languageRef = useRef<HTMLDivElement>(null);
+  const closeThenNavigate = (navigate: () => void) => {
+    pendingNavigationRef.current = navigate;
+    setSubmenu(null);
     setOpen(false);
   };
+  const closeSubmenu = (event: KeyboardEvent, kind: "activity" | "language") => {
+    event.preventDefault();
+    if (event.isComposing || event.keyCode === 229) return;
+    setSubmenu(null);
+    (kind === "activity" ? activityRef : languageRef).current?.focus();
+  };
+  const trigger = (
+    <Button
+      ref={triggerRef}
+      type="button"
+      variant="ghost"
+      className={cn(
+        "h-9 w-full justify-start gap-2 rounded-lg px-2 text-sm text-muted-foreground",
+        open && "bg-accent text-accent-foreground",
+      )}
+      onClick={sidebarCollapsed ? onOpenSettingsPage : undefined}
+    >
+      <SettingsIcon size={14} className="shrink-0" aria-hidden />
+      <span className="truncate">{t("settingsX.menu.settings")}</span>
+    </Button>
+  );
+  if (sidebarCollapsed) return trigger;
 
   return (
-    <div className="relative" ref={ref}>
-      <Button
-        type="button"
-        variant="ghost"
-        className={cn(
-          "h-9 w-full justify-start gap-2 px-2 text-sm text-muted-foreground",
-          open && "bg-accent text-accent-foreground",
-        )}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        if (next) pendingNavigationRef.current = null;
+        setOpen(next);
+        if (!next) setSubmenu(null);
+      }}
+    >
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        aria-label={t("settingsX.menu.settings")}
+        side="top"
+        align="start"
+        className="w-60 max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5"
+        onCloseAutoFocus={(event) => {
+          const navigate = pendingNavigationRef.current;
+          if (!navigate) return;
+          pendingNavigationRef.current = null;
+          event.preventDefault();
+          triggerRef.current?.focus({ preventScroll: true });
+          // Let the menu release its modal pointer/focus locks before its
+          // parent drawer closes or the settings surface replaces the chrome.
+          navigate();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (event.isComposing || event.keyCode === 229) event.preventDefault();
+        }}
       >
-        <SettingsIcon size={14} className="shrink-0" />
-        <span className="truncate">{t("settingsX.menu.settings")}</span>
-      </Button>
-      {open && (
-        <ul
-          role="menu"
-          className="cs-popup-surface absolute bottom-full left-0 z-40 mb-2 min-w-56 rounded-md p-1"
-        >
-          <li role="none">
-            <Button
-              type="button"
-              role="menuitem"
-              variant="ghost"
-              size="sm"
-              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
-              onClick={() => {
-                onTogglePetWidget();
-                setOpen(false);
+        {onNavigate && (
+          <DropdownMenuSub
+            open={submenu === "activity"}
+            onOpenChange={(next) => setSubmenu(next ? "activity" : null)}
+          >
+            <DropdownMenuSubTrigger
+              ref={activityRef}
+              className="gap-2 rounded-lg py-2"
+              onPointerMove={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.preventDefault();
+                setSubmenu((current) => (current === "activity" ? null : "activity"));
               }}
             >
-              <Ghost size={14} />
-              <span>{t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}</span>
-            </Button>
-          </li>
-          <li role="none">
-            <Button
-              type="button"
-              role="menuitem"
-              variant="ghost"
-              size="sm"
-              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
-              aria-haspopup="menu"
-              aria-expanded={submenu !== null}
-              onClick={(event) => toggleSubmenu(event.currentTarget)}
-            >
-              <Globe size={13} />
-              <span>{t("settingsX.menu.switchLanguage")}</span>
-              <ChevronRight size={12} className="ml-auto text-muted-foreground" />
-            </Button>
-          </li>
-          <li role="separator" className="my-1 h-px bg-border" />
-          <li role="none">
-            <Button
-              type="button"
-              role="menuitem"
-              variant="ghost"
-              size="sm"
-              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-medium text-primary"
-              onClick={() => {
-                setOpen(false);
-                onOpenSettingsPage();
-              }}
-            >
-              <SettingsIcon size={13} />
-              <span>{t("settingsX.menu.openSettings")}</span>
-              <ArrowRight size={11} className="ml-auto text-muted-foreground" />
-            </Button>
-          </li>
-        </ul>
-      )}
-      {open && submenu && (
-        <ul
-          role="menu"
-          className="cs-popup-surface fixed z-50 min-w-44 rounded-md p-1"
-          style={{ left: submenu.left, bottom: submenu.bottom }}
-        >
-          {LANGUAGES.map((code) => (
-            <li key={code} role="none">
-              <Button
-                type="button"
-                role="menuitemradio"
-                aria-checked={lang === code}
-                variant="ghost"
-                size="sm"
-                className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
-                onClick={() => chooseLanguage(code)}
+              <History size={14} aria-hidden />
+              {t("settingsX.menu.activity")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent
+                aria-label={t("settingsX.menu.activity")}
+                className="w-48 min-w-0 max-w-[min(var(--radix-dropdown-menu-content-available-width),calc(100vw-1.5rem))] rounded-xl p-1.5"
+                onEscapeKeyDown={(event) => closeSubmenu(event, "activity")}
               >
-                <span className="flex-1 text-left">{languageLabel(code)}</span>
-                <span className="text-primary">{lang === code && <Check size={12} />}</span>
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+                {[
+                  {
+                    page: "sessions" as const,
+                    label: t("auto.sessions.title"),
+                    Icon: MessageSquare,
+                  },
+                  { page: "runs" as const, label: t("auto.runs.title"), Icon: Activity },
+                  {
+                    page: "approvals" as const,
+                    label: t("auto.approvals.title"),
+                    Icon: ShieldCheck,
+                  },
+                  { page: "logs" as const, label: t("auto.logs.title"), Icon: ScrollText },
+                ].map(({ page, label, Icon }) => (
+                  <DropdownMenuItem
+                    key={page}
+                    className="rounded-lg py-2"
+                    onSelect={() => closeThenNavigate(() => onNavigate(page))}
+                  >
+                    <Icon size={14} aria-hidden />
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+        )}
+        <DropdownMenuItem className="rounded-lg py-2" onSelect={onTogglePetWidget}>
+          <Ghost size={14} aria-hidden />
+          {t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}
+        </DropdownMenuItem>
+        <DropdownMenuSub
+          open={submenu === "language"}
+          onOpenChange={(next) => setSubmenu(next ? "language" : null)}
+        >
+          <DropdownMenuSubTrigger
+            ref={languageRef}
+            className="gap-2 rounded-lg py-2"
+            onPointerMove={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.preventDefault();
+              setSubmenu((current) => (current === "language" ? null : "language"));
+            }}
+          >
+            <Globe size={14} aria-hidden />
+            {t("settingsX.menu.switchLanguage")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent
+              aria-label={t("settingsX.menu.switchLanguage")}
+              className="w-44 min-w-0 max-w-[min(var(--radix-dropdown-menu-content-available-width),calc(100vw-1.5rem))] rounded-xl p-1.5"
+              onEscapeKeyDown={(event) => closeSubmenu(event, "language")}
+            >
+              <DropdownMenuRadioGroup
+                value={lang}
+                onValueChange={(value) => {
+                  if (LANGUAGES.includes(value as UILanguage)) saveUILanguage(value as UILanguage);
+                }}
+              >
+                {LANGUAGES.map((code) => (
+                  <DropdownMenuRadioItem key={code} value={code} className="rounded-lg py-2">
+                    {languageLabel(code)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="rounded-lg py-2 font-medium text-primary"
+          onSelect={() => closeThenNavigate(onOpenSettingsPage)}
+        >
+          <SettingsIcon size={14} aria-hidden />
+          {t("settingsX.menu.openSettings")}
+          <ArrowRight size={12} className="ml-auto" aria-hidden />
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -21,9 +21,9 @@ describe("decidedLabel", () => {
     expect(decidedLabel({ kind: "approve" })).toBe("已批准");
   });
   test("approve session/project → suffixed with the chosen option's label", () => {
-    expect(
-      decidedLabel({ kind: "approve", scope: "session", label: "本会话允许写 src/ 下" }),
-    ).toBe("已批准 · 本会话允许写 src/ 下");
+    expect(decidedLabel({ kind: "approve", scope: "session", label: "本会话允许写 src/ 下" })).toBe(
+      "已批准 · 本会话允许写 src/ 下",
+    );
     // No label → falls back to the bare scope name.
     expect(decidedLabel({ kind: "approve", scope: "project" })).toBe("已批准 · project");
   });
@@ -56,6 +56,6 @@ describe("ApprovalCard render", () => {
     const html = renderToStaticMarkup(<ApprovalCard envelope={envelope} onDecide={() => {}} />);
 
     expect(html).toContain("读取数据源 team-docs · 范围 handbook · 资源 onboarding.md");
-    expect(html).toContain("show raw args");
+    expect(html).toContain("展开原始参数");
   });
 });

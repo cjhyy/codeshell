@@ -9,6 +9,7 @@ import { ConnCard, ConnCardFooter, ConnField, ConnFooterRight, SecretKeyInput } 
 import { formatTok } from "./connFormat";
 import { ParamControls } from "./ParamControls";
 import { SignupLink } from "./SignupLink";
+import type { SetConnectionKeyResult } from "./useModelConnections";
 import {
   credentialCandidates,
   credentialLabel,
@@ -21,10 +22,11 @@ export interface ConnectionInstanceCardProps {
   entry: CatalogEntry | undefined;
   catalog: CatalogEntry[];
   credentials: Credential[];
+  credentialCommitRevision: number;
   isDefault: boolean;
   showKey: boolean;
   onPatch: (id: string, p: Partial<ModelInstance>) => void;
-  onSetConnectionKey: (inst: ModelInstance, apiKey: string) => void;
+  onSetConnectionKey: (inst: ModelInstance, apiKey: string) => SetConnectionKeyResult;
   onToggleShowKey: (id: string) => void;
   onSaveInstance: (id: string) => Promise<void>;
   onRemoveInstance: (id: string) => Promise<void>;
@@ -37,6 +39,7 @@ export function ConnectionInstanceCard({
   entry,
   catalog,
   credentials,
+  credentialCommitRevision,
   isDefault,
   showKey,
   onPatch,
@@ -48,6 +51,14 @@ export function ConnectionInstanceCard({
   onSetDefault,
 }: ConnectionInstanceCardProps) {
   const { t } = useT();
+  // A newly typed key is immediately assigned a credential id. Keep its
+  // input mounted while authoring that credential instead of losing focus
+  // after the first character. Saving or selecting a credential ends this
+  // editing session so a persisted, potentially shared key stays protected.
+  const [editingKeyId, setEditingKeyId] = React.useState<string>();
+  React.useLayoutEffect(() => {
+    setEditingKeyId(undefined);
+  }, [credentialCommitRevision]);
   const preset = entry?.modelPresets?.find((p) => p.value === inst.model);
   const credChoices = credentialCandidates(credentials, inst.catalogId, catalog);
   const boundCred = credentials.find((c) => c.id === inst.credentialId);
@@ -104,7 +115,10 @@ export function ConnectionInstanceCard({
                 <SimpleSelect
                   className="min-w-0 flex-1"
                   value={inst.credentialId ?? ""}
-                  onChange={(v) => onPatch(inst.id, { credentialId: v || undefined })}
+                  onChange={(v) => {
+                    setEditingKeyId(undefined);
+                    onPatch(inst.id, { credentialId: v || undefined });
+                  }}
                   options={[
                     ...displayedCredChoices.map((c) => ({
                       value: c.id,
@@ -128,12 +142,12 @@ export function ConnectionInstanceCard({
               </div>
             </ConnField>
           )}
-          {!inst.credentialId && (
+          {(!inst.credentialId || inst.credentialId === editingKeyId) && (
             <ConnField label="API Key">
               <SecretKeyInput
                 value={boundCred?.apiKey ?? ""}
                 show={showKey}
-                onChange={(v) => onSetConnectionKey(inst, v)}
+                onChange={(v) => setEditingKeyId(onSetConnectionKey(inst, v).credId)}
                 onToggleShow={() => onToggleShowKey(inst.id)}
               />
             </ConnField>

@@ -20,7 +20,7 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
       className={cn(
-        "cs-popup-surface z-50 max-h-[min(var(--radix-dropdown-menu-content-available-height),24rem)] min-w-[10rem] overflow-y-auto rounded-md p-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "cs-popup-surface z-50 max-h-[min(var(--radix-dropdown-menu-content-available-height),24rem)] min-w-[min(10rem,calc(100vw-1.5rem))] max-w-[min(var(--radix-dropdown-menu-content-available-width),24rem,calc(100vw-1.5rem))] overflow-y-auto whitespace-normal rounded-md p-1 [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         className,
       )}
       {...props}
@@ -36,7 +36,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "cs-menu-item relative cursor-default select-none gap-2 px-2 py-1.5 text-sm transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4",
+      "cs-menu-item relative min-w-0 cursor-default select-none gap-2 px-2 py-1.5 text-sm transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
@@ -96,7 +96,11 @@ const DropdownMenuLabel = React.forwardRef<
 >(({ className, inset, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
-    className={cn("px-2 py-1.5 text-xs font-medium text-muted-foreground", inset && "pl-8", className)}
+    className={cn(
+      "px-2 py-1.5 text-xs font-medium text-muted-foreground",
+      inset && "pl-8",
+      className,
+    )}
     {...props}
   />
 ));
@@ -121,14 +125,14 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "cs-menu-item cursor-default select-none px-2 py-1.5 text-sm data-[state=open]:bg-accent",
+      "cs-menu-item min-w-0 cursor-default select-none gap-2 px-2 py-1.5 text-sm data-[state=open]:bg-accent [&_svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto h-4 w-4" />
+    <ChevronRight className="ml-auto h-4 w-4 shrink-0" />
   </DropdownMenuPrimitive.SubTrigger>
 ));
 DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
@@ -142,7 +146,10 @@ const DropdownMenuSubContent = React.forwardRef<
     sideOffset={sideOffset}
     collisionPadding={collisionPadding}
     className={cn(
-      "cs-popup-surface z-50 max-h-[min(var(--radix-dropdown-menu-content-available-height),24rem)] min-w-[10rem] overflow-y-auto rounded-md p-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+      // If neither side has room for a readable menu, overlap the parent by
+      // only the missing width. Using this menu's actual width also respects
+      // callers that explicitly opt into a smaller menu.
+      "cs-popup-surface z-50 max-h-[min(var(--radix-dropdown-menu-content-available-height),24rem)] min-w-[min(10rem,calc(100vw-1.5rem))] max-w-[min(24rem,max(var(--radix-dropdown-menu-content-available-width),10rem),calc(100vw-1.5rem))] overflow-y-auto whitespace-normal rounded-md p-1 [overflow-wrap:anywhere] data-[side=right]:[translate:min(0px,calc(var(--radix-dropdown-menu-content-available-width)_-_100%))_0] data-[side=left]:[translate:max(0px,calc(100%_-_var(--radix-dropdown-menu-content-available-width)))_0] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
       className,
     )}
     {...props}

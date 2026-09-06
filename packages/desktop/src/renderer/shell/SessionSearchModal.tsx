@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import { ArrowUpRight, FileSearch, LoaderCircle, MessageSquare, Search } from "lucide-react";
 import type { TrackedProject } from "../projects";
 import { projectLabel } from "../projects";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
-import type { SessionContentSearchMatch, SessionContentSearchResult } from "../../preload/types";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import type { SessionContentSearchMatch } from "../../preload/types";
+import { Button } from "@/components/ui/button";
+import { Command, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import { parseContentQuery, resolveContentMatch } from "./sessionContentSearch";
+import { SearchDialog } from "./SearchDialog";
+import { useSessionContentSearch } from "./useSessionContentSearch";
 
 interface Props {
   open: boolean;
@@ -17,7 +19,6 @@ interface Props {
   projects: TrackedProject[];
   sessions: Record<string, SessionIndex>;
   activeProjectId: string | null;
-  /** Caller switches to the chosen session. */
   onPick: (projectId: string | null, sessionId: string) => void;
 }
 
@@ -27,25 +28,7 @@ interface Hit {
   session: SessionSummary;
 }
 
-const CONTENT_DEBOUNCE_MS = 300;
-
-/**
- * Cmd-K style global session search overlay (matches the
- * session-search reference screenshot).
- *
- * - Centered dim-backdropped modal.
- * - Input is focused on open.
- * - Before typing: shows recent sessions across all projects + no-repo.
- * - While typing: substring match on session title + repo label.
- * - Prefix the query with '>' to switch to TRANSCRIPT CONTENT search:
- *   the '>' term (>= 2 chars) is grepped over on-disk transcripts via
- *   `window.codeshell.searchSessionContent`, and each match opens the same
- *   way a title hit does (engine sessionId mapped back to its local session).
- * - Up/Down to navigate, Enter to pick, Esc to close.
- *
- * Search corpus excludes archived sessions — those have their own
- * dedicated path through the per-project '已归档' group.
- */
+/** Global session picker. The legacy `>` prefix still switches to content search. */
 export function SessionSearchModal({
   open,
   onClose,
@@ -56,306 +39,247 @@ export function SessionSearchModal({
 }: Props) {
   const { t } = useT();
   const [filter, setFilter] = useState("");
-  const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Content-search mode state. `contentResult` is null until a query resolves.
-  const [contentResult, setContentResult] = useState<SessionContentSearchResult | null>(null);
-  const [contentLoading, setContentLoading] = useState(false);
-  // Monotonic guard so a slow earlier query can't overwrite a newer result.
-  const contentSeqRef = useRef(0);
-
-  const {
-    contentMode,
-    term: contentTerm,
-    ready: contentTermReady,
-  } = parseContentQuery(filter);
+  const { contentMode, term: contentTerm, ready } = parseContentQuery(filter);
+  const query = contentMode ? contentTerm : filter;
+  const { result, loading, failed, retry } = useSessionContentSearch(
+    open && contentMode && ready,
+    contentTerm,
+  );
 
   useEffect(() => {
-    if (!open) return;
-    setFilter("");
-    setCursor(0);
-    setContentResult(null);
-    setContentLoading(false);
-    contentSeqRef.current++;
-    setTimeout(() => inputRef.current?.focus(), 0);
+    if (open) setFilter("");
   }, [open]);
 
-  // Content-search effect: debounce, stale-guard, and only fire once the term
-  // clears the minimum length. Short/empty terms clear any prior result so the
-  // hint shows instead of stale matches.
-  useEffect(() => {
-    if (!open) return;
-    if (!contentMode) {
-      setContentResult(null);
-      setContentLoading(false);
-      return;
-    }
-    if (!contentTermReady) {
-      contentSeqRef.current++; // cancel any in-flight query
-      setContentResult(null);
-      setContentLoading(false);
-      return;
-    }
-    const seq = ++contentSeqRef.current;
-    setContentLoading(true);
-    const timer = setTimeout(() => {
-      void window.codeshell
-        .searchSessionContent(contentTerm)
-        .then((result) => {
-          if (seq !== contentSeqRef.current) return; // superseded
-          setContentResult(result);
-          setContentLoading(false);
-          setCursor(0);
-        })
-        .catch(() => {
-          if (seq !== contentSeqRef.current) return;
-          setContentResult({ matches: [], scannedSessions: 0, truncated: false });
-          setContentLoading(false);
-        });
-    }, CONTENT_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [open, contentMode, contentTermReady, contentTerm]);
-
-  // Flatten all live sessions across all projects into a single ranked list.
-  const allHits: Hit[] = useMemo(() => {
-    const out: Hit[] = [];
-    for (const r of projects) {
-      const idx = sessions[r.id];
-      if (!idx) continue;
-      for (const s of idx.sessions) {
-        if (s.archived) continue;
-        out.push({ projectId: r.id, projectLabel: projectLabel(r), session: s });
+  const allHits = useMemo(() => {
+    const hits: Hit[] = [];
+    for (const project of projects) {
+      for (const session of sessions[project.id]?.sessions ?? []) {
+        if (!session.archived) {
+          hits.push({ projectId: project.id, projectLabel: projectLabel(project), session });
+        }
       }
     }
-    const noRepoIdx = sessions[NO_REPO_KEY];
-    if (noRepoIdx) {
-      for (const s of noRepoIdx.sessions) {
-        if (s.archived) continue;
-        out.push({ projectId: null, projectLabel: t("panels.search.noRepoLabel"), session: s });
+    for (const session of sessions[NO_REPO_KEY]?.sessions ?? []) {
+      if (!session.archived) {
+        hits.push({ projectId: null, projectLabel: t("panels.search.noRepoLabel"), session });
       }
     }
-    // Default sort: most-recently-updated first.
-    out.sort((a, b) => b.session.updatedAt - a.session.updatedAt);
-    return out;
+    return hits.sort((a, b) => b.session.updatedAt - a.session.updatedAt);
   }, [projects, sessions, t]);
 
   const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return allHits.slice(0, 20);
+    const needle = filter.trim().toLowerCase();
+    if (!needle) return allHits.slice(0, 20);
     return allHits
       .filter(
-        (h) =>
-          h.session.title.toLowerCase().includes(q) || h.projectLabel.toLowerCase().includes(q),
+        (hit) =>
+          hit.session.title.toLowerCase().includes(needle) ||
+          hit.projectLabel.toLowerCase().includes(needle),
       )
       .slice(0, 50);
   }, [allHits, filter]);
 
-  const contentMatches = contentMode ? (contentResult?.matches ?? []) : [];
-  const navLength = contentMode ? contentMatches.length : filtered.length;
-
-  useEffect(() => {
-    if (cursor >= navLength) setCursor(Math.max(0, navLength - 1));
-  }, [cursor, navLength]);
-
-  if (!open) return null;
-
-  const pick = (h: Hit): void => {
-    onPick(h.projectId, h.session.id);
+  const pick = (projectId: string | null, sessionId: string) => {
+    onPick(projectId, sessionId);
     onClose();
   };
-
-  // A content match carries an ENGINE sessionId; map it back to the local UI
-  // session (engineSessionId or id) so we can reuse the exact title-mode open
-  // path (onPick expects the local session id + its project).
-  const pickContent = (match: SessionContentSearchMatch): void => {
+  const pickContent = (match: SessionContentSearchMatch) => {
     const resolved = resolveContentMatch(match, projects, sessions);
-    // No in-memory session maps to this engine id (disk-only). The title-mode
-    // open path can't reach it; leave the modal open so the user can retry.
-    if (!resolved) return;
-    onPick(resolved.projectId, resolved.sessionId);
-    onClose();
+    if (resolved) pick(resolved.projectId, resolved.sessionId);
   };
-
-  const onEnter = (): void => {
-    if (contentMode) {
-      const m = contentMatches[cursor];
-      if (m) pickContent(m);
-    } else {
-      const h = filtered[cursor];
-      if (h) pick(h);
-    }
+  const setContentMode = (enabled: boolean) => {
+    setFilter(enabled ? `> ${query}` : query);
+    inputRef.current?.focus();
   };
-
-  const headerLabel = contentMode
-    ? t("panels.search.results")
-    : filter
-      ? t("panels.search.results")
-      : t("panels.search.recent");
+  const header = t(contentMode || filter.trim() ? "panels.search.results" : "panels.search.recent");
+  const matches = result?.matches ?? [];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 px-4 pt-[14vh]"
-      onMouseDown={onClose}
+    <SearchDialog
+      open={open}
+      onClose={onClose}
+      title={t("panels.search.placeholder")}
+      inputRef={inputRef}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
+        className="flex shrink-0 gap-1 px-4 pb-2"
+        role="group"
+        aria-label={t("panels.search.mode")}
       >
-        <div className="flex items-center gap-2 border-b px-3 py-2">
-          <Search size={14} className="text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            placeholder={t("panels.search.placeholder")}
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value);
-              setCursor(0);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onClose();
-              else if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setCursor((c) => Math.min(c + 1, navLength - 1));
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setCursor((c) => Math.max(c - 1, 0));
-              } else if (e.key === "Enter") {
-                e.preventDefault();
-                onEnter();
-              }
-            }}
-          />
-        </div>
-        <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {headerLabel}
-        </div>
-        {contentMode ? (
-          <ContentResults
-            term={contentTerm}
-            ready={contentTermReady}
-            loading={contentLoading}
-            result={contentResult}
-            cursor={cursor}
-            matches={contentMatches}
-            onHover={setCursor}
-            onSelect={pickContent}
-            t={t}
-          />
-        ) : (
-          <ul className="max-h-[55vh] overflow-y-auto px-2 pb-2">
-            {filtered.length === 0 && (
-              <li className="px-2 py-6 text-center text-sm text-muted-foreground">
-                {t("panels.search.noMatch")}
-              </li>
-            )}
-            {filtered.map((h, i) => {
-              const isActive = activeProjectId === h.projectId && false; // hits not "active" in the picker — only the cursor is.
-              void isActive;
-              return (
-                <li
-                  key={`${h.projectId ?? "_"}::${h.session.id}`}
-                  className={cn(
-                    "flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm",
-                    i === cursor ? "bg-accent text-accent-foreground" : "hover:bg-accent/70",
-                  )}
-                  onMouseEnter={() => setCursor(i)}
-                  onClick={() => pick(h)}
-                >
-                  <span className="min-w-0 truncate font-medium">{h.session.title}</span>
-                  <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                    <span className="max-w-32 truncate">{h.projectLabel}</span>
-                    <span className="tabular-nums">{formatRelative(h.session.updatedAt)}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        {[
+          { enabled: false, label: t("panels.search.titleMode"), Icon: MessageSquare },
+          { enabled: true, label: t("panels.search.contentMode"), Icon: FileSearch },
+        ].map(({ enabled, label, Icon }) => (
+          <Button
+            key={label}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary"
+            aria-pressed={contentMode === enabled}
+            onClick={() => setContentMode(enabled)}
+          >
+            <Icon className="size-3.5" aria-hidden />
+            {label}
+          </Button>
+        ))}
       </div>
+      <Command
+        label={t("panels.search.placeholder")}
+        shouldFilter={false}
+        vimBindings={false}
+        className="min-h-0 rounded-none bg-transparent"
+      >
+        <CommandInput
+          ref={inputRef}
+          className="h-12 text-sm"
+          placeholder={t(
+            contentMode ? "panels.search.contentPlaceholder" : "panels.search.placeholder",
+          )}
+          value={query}
+          onValueChange={(value) => setFilter(contentMode ? `> ${value}` : value)}
+        />
+        <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-1 pt-3 text-[11px] font-medium text-muted-foreground">
+          <span>{header}</span>
+          {!loading && (
+            <span className="tabular-nums">{contentMode ? matches.length : filtered.length}</span>
+          )}
+        </div>
+        <CommandList label={header} aria-busy={loading} className="min-h-0 max-h-[55vh] px-2 pb-2">
+          {contentMode ? (
+            !ready ? (
+              <SearchState
+                icon={<FileSearch className="size-6" />}
+                text={t("panels.search.contentHint")}
+              />
+            ) : loading ? (
+              <SearchState
+                icon={<LoaderCircle className="size-6 animate-spin motion-reduce:animate-none" />}
+                text={t("panels.search.contentLoading")}
+              />
+            ) : failed ? (
+              <SearchState
+                icon={<Search className="size-6" />}
+                text={t("panels.search.contentFailed")}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 h-8 rounded-lg"
+                  onClick={retry}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  {t("panels.common.retry")}
+                </Button>
+              </SearchState>
+            ) : (
+              <>
+                {result?.truncated && (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">
+                    {t("panels.search.contentTruncated")}
+                  </p>
+                )}
+                {matches.length === 0 && (
+                  <SearchState
+                    icon={<FileSearch className="size-6" />}
+                    text={t("panels.search.contentNoMatch")}
+                  />
+                )}
+                {matches.map((match) => {
+                  const available = resolveContentMatch(match, projects, sessions) !== null;
+                  const snippet = match.snippets[0]?.text;
+                  return (
+                    <CommandItem
+                      key={match.sessionId}
+                      value={match.sessionId}
+                      disabled={!available}
+                      onSelect={() => pickContent(match)}
+                      className="min-w-0 flex-col items-start gap-1 rounded-lg px-3 py-2.5"
+                    >
+                      <span className="w-full truncate text-sm font-medium">{match.title}</span>
+                      {snippet && (
+                        <span className="line-clamp-2 w-full break-words text-xs leading-5 text-muted-foreground">
+                          {snippet}
+                        </span>
+                      )}
+                      {!available && (
+                        <span className="text-[11px] text-muted-foreground">
+                          {t("panels.search.unavailable")}
+                        </span>
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </>
+            )
+          ) : filtered.length === 0 ? (
+            <SearchState
+              icon={<MessageSquare className="size-6" />}
+              text={t(filter.trim() ? "panels.search.noMatch" : "panels.search.noRecent")}
+            />
+          ) : (
+            filtered.map((hit) => (
+              <CommandItem
+                key={`${hit.projectId ?? "_"}::${hit.session.id}`}
+                value={`${hit.projectId ?? "_"}::${hit.session.id}`}
+                onSelect={() => pick(hit.projectId, hit.session.id)}
+                className="min-w-0 gap-3 rounded-lg px-3 py-2.5"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-muted-foreground">
+                  <MessageSquare className="size-4" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{hit.session.title}</div>
+                  <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                    <span className="min-w-0 truncate">{hit.projectLabel}</span>
+                    {hit.projectId !== null && hit.projectId === activeProjectId && (
+                      <span className="shrink-0 text-primary">
+                        {t("panels.search.currentProject")}
+                      </span>
+                    )}
+                    <span className="shrink-0 tabular-nums">
+                      {formatRelative(hit.session.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+                <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              </CommandItem>
+            ))
+          )}
+        </CommandList>
+      </Command>
+    </SearchDialog>
+  );
+}
+
+function SearchState({
+  icon,
+  text,
+  children,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center gap-3 px-4 py-9 text-center text-sm text-muted-foreground"
+    >
+      <span className="opacity-60" aria-hidden>
+        {icon}
+      </span>
+      <p>{text}</p>
+      {children}
     </div>
   );
 }
 
-interface ContentResultsProps {
-  term: string;
-  ready: boolean;
-  loading: boolean;
-  result: SessionContentSearchResult | null;
-  cursor: number;
-  matches: SessionContentSearchMatch[];
-  onHover: (i: number) => void;
-  onSelect: (match: SessionContentSearchMatch) => void;
-  t: ReturnType<typeof useT>["t"];
-}
-
-function ContentResults({
-  ready,
-  loading,
-  result,
-  cursor,
-  matches,
-  onHover,
-  onSelect,
-  t,
-}: ContentResultsProps) {
-  if (!ready) {
-    return (
-      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-        {t("panels.search.contentHint")}
-      </div>
-    );
-  }
-  if (loading && !result) {
-    return (
-      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-        {t("panels.search.contentLoading")}
-      </div>
-    );
-  }
-  return (
-    <>
-      {result?.truncated && (
-        <div className="px-3 pb-1 text-xs text-muted-foreground">
-          {t("panels.search.contentTruncated")}
-        </div>
-      )}
-      <ul className="max-h-[55vh] overflow-y-auto px-2 pb-2">
-        {matches.length === 0 && (
-          <li className="px-2 py-6 text-center text-sm text-muted-foreground">
-            {t("panels.search.contentNoMatch")}
-          </li>
-        )}
-        {matches.map((m, i) => {
-          const snippet = m.snippets[0]?.text ?? "";
-          return (
-            <li
-              key={m.sessionId}
-              className={cn(
-                "flex cursor-pointer flex-col gap-0.5 rounded-md px-2 py-2 text-sm",
-                i === cursor ? "bg-accent text-accent-foreground" : "hover:bg-accent/70",
-              )}
-              onMouseEnter={() => onHover(i)}
-              onClick={() => onSelect(m)}
-            >
-              <span className="min-w-0 truncate font-medium">{m.title}</span>
-              {snippet && (
-                <span className="truncate text-xs text-muted-foreground">{snippet}</span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </>
-  );
-}
-
 function formatRelative(ts: number): string {
-  // Module-level helper (no hook): translate against the stored language.
   const lang = loadUILanguage();
-  const delta = Date.now() - ts;
-  const sec = Math.floor(delta / 1000);
+  const sec = Math.floor(Math.max(0, Date.now() - ts) / 1000);
   if (sec < 60) return translate(lang, "panels.search.sec", { n: sec });
   const min = Math.floor(sec / 60);
   if (min < 60) return translate(lang, "panels.search.min", { n: min });
@@ -365,6 +289,5 @@ function formatRelative(ts: number): string {
   if (day < 30) return translate(lang, "panels.search.day", { n: day });
   const month = Math.floor(day / 30);
   if (month < 12) return translate(lang, "panels.search.month", { n: month });
-  const year = Math.floor(day / 365);
-  return translate(lang, "panels.search.year", { n: year });
+  return translate(lang, "panels.search.year", { n: Math.floor(day / 365) });
 }

@@ -7,8 +7,8 @@
  * empty market, desktop layout, and narrow layout. Optional screenshots are written when
  * CODESHELL_DIGITAL_HUMANS_SCREENSHOT_DIR is set.
  */
-/* global document */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+/* global document, getComputedStyle, window */
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -191,8 +191,199 @@ async function screenshot(win, filename) {
   await win.waitForTimeout(300);
   await settleRenderer(win);
   const output = join(screenshotDir, filename);
-  await win.screenshot({ path: output });
+  await win.screenshot({ path: output, animations: "disabled", scale: "css" });
   console.log(`digital-human visual: ${output}`);
+}
+
+async function checkResponsiveLayouts(id, heading) {
+  for (const [width, height] of [
+    [1280, 820],
+    [820, 760],
+    [390, 760],
+  ]) {
+    await win.setViewportSize({ width, height });
+    for (const dark of [false, true]) {
+      await win.evaluate((value) => document.documentElement.classList.toggle("dark", value), dark);
+      await settleRenderer(win);
+      await assertNoHorizontalOverflow(win, `${id} ${width}px`);
+      const overflow = await win.evaluate(() =>
+        Array.from(document.querySelectorAll("div, section, article, main, ul, pre"))
+          .filter((node) => {
+            const style = getComputedStyle(node);
+            return (
+              node.getClientRects().length > 0 &&
+              node.clientWidth > 0 &&
+              ["auto", "scroll"].includes(style.overflowX) &&
+              node.scrollWidth > node.clientWidth + 1
+            );
+          })
+          .map((node) => ({
+            tag: node.tagName,
+            className: node.className,
+            width: node.clientWidth,
+            scrollWidth: node.scrollWidth,
+          })),
+      );
+      assert(
+        overflow.length === 0,
+        `${id} ${width}px internal overflow: ${JSON.stringify(overflow)}`,
+      );
+      const box = await win
+        .getByRole("heading", { name: heading, level: 1, exact: true })
+        .boundingBox();
+      assert(box && box.x >= 0 && box.x + box.width <= width + 1, `${id} heading fits ${width}px`);
+      await screenshot(win, `${id}-${width}${dark ? "-dark" : ""}.png`);
+    }
+  }
+  await win.setViewportSize({ width: 1440, height: 960 });
+  await win.evaluate(() => document.documentElement.classList.remove("dark"));
+  console.log(`PASS: ${id} light/dark layouts at 1280, 820, and 390px`);
+}
+
+async function checkProjectConfiguration(projectButton) {
+  const target = await win.evaluate(
+    async (paths) => {
+      const projects = await window.codeshell.projectRegistry.list();
+      const project = projects.find((entry) =>
+        entry.roots.some((root) => paths.includes(root.path)),
+      );
+      if (!project)
+        throw new Error(`Isolated fixture project was not registered: ${JSON.stringify(projects)}`);
+      return { projectId: project.id, rootId: project.primaryRootId };
+    },
+    [fixtureProjectPath, await realpath(fixtureProjectPath)],
+  );
+  await app.evaluate(({ ipcMain }, fixtureTarget) => {
+    const exists = ipcMain._invokeHandlers.get("fsRoot:exists");
+    const editor = ipcMain._invokeHandlers.get("shell:openInEditor");
+    if (!exists || !editor) throw new Error("Project fixture IPC handlers were not ready");
+    const fixture = { ...fixtureTarget, fail: true, reads: [], opens: 0, exists, editor };
+    globalThis.__projectConfigFixture = fixture;
+    ipcMain.removeHandler("fsRoot:exists");
+    ipcMain.handle("fsRoot:exists", (event, projectId, rootId, path) => {
+      if (
+        projectId !== fixture.projectId ||
+        rootId !== fixture.rootId ||
+        !["CODESHELL.md", "CLAUDE.md", "AGENTS.md"].includes(path)
+      )
+        return exists(event, projectId, rootId, path);
+      fixture.reads.push({ projectId, rootId, path });
+      if (fixture.fail) throw new Error("synthetic project instruction read failure");
+      return path === "CODESHELL.md";
+    });
+    ipcMain.removeHandler("shell:openInEditor");
+    ipcMain.handle("shell:openInEditor", () => {
+      fixture.opens += 1;
+      throw new Error("External editors must stay closed during the project configuration fixture");
+    });
+  }, target);
+  try {
+    await projectButton.click({ button: "right" });
+    await win.getByRole("menuitem", { name: "项目配置", exact: true }).click();
+    await win.getByRole("heading", { name: "项目概览", level: 1, exact: true }).waitFor();
+    const overview = win.getByRole("navigation", { name: "项目配置模块", exact: true });
+    for (const name of [/^基础设置/, /^扩展能力/, /^环境与连接/])
+      await overview.getByRole("heading", { name, level: 2 }).waitFor();
+    assert(
+      (await overview.getByRole("button", { name: "外观", exact: true }).count()) === 0,
+      "Project overview omits global-only appearance settings",
+    );
+    await checkResponsiveLayouts("project-config-overview", "项目概览");
+    const openInstructions = overview.getByRole("button", { name: "指令文件", exact: true });
+    await openInstructions.focus();
+    await openInstructions.press("Enter");
+    const heading = win.getByRole("heading", { name: "指令文件", level: 1, exact: true });
+    await heading.waitFor();
+    assert(
+      await heading.evaluate((node) => node === document.activeElement),
+      "Project overview navigation moves focus into the selected module",
+    );
+    const instructions = win.getByRole("region", { name: "项目指令", exact: true });
+    await instructions
+      .getByRole("alert")
+      .filter({ hasText: "synthetic project instruction read failure" })
+      .waitFor();
+    assert(
+      (await instructions.getByText("尚未确认文件状态", { exact: true }).count()) === 3,
+      "Failed file checks leave explicit unknown states",
+    );
+    for (const file of ["CODESHELL.md", "CLAUDE.md", "AGENTS.md"])
+      assert(
+        await instructions
+          .getByRole("button", { name: `在编辑器打开 ${file}`, exact: true })
+          .isDisabled(),
+        "Unknown instruction files cannot be opened as if their status were known",
+      );
+    await screenshot(win, "project-config-instructions-error.png");
+    await app.evaluate(() => {
+      globalThis.__projectConfigFixture.fail = false;
+    });
+    const retry = instructions.getByRole("button", { name: "重新检查", exact: true });
+    await retry.focus();
+    await retry.press("Enter");
+    await instructions.getByRole("alert").waitFor({ state: "hidden" });
+    await instructions.getByText("文件已存在", { exact: true }).waitFor();
+    assert(
+      (await instructions.getByText("文件不存在", { exact: true }).count()) === 2,
+      "Retry confirms both missing compatibility files",
+    );
+    assert(
+      await retry.evaluate((node) => node === document.activeElement),
+      "File-check retry retains keyboard focus",
+    );
+    assert(
+      await instructions
+        .getByRole("button", { name: "在编辑器打开 CODESHELL.md", exact: true })
+        .isEnabled(),
+      "Known instruction file action is available",
+    );
+    await checkResponsiveLayouts("project-config-instructions", "指令文件");
+    const counts = await app.evaluate(() => ({
+      reads: globalThis.__projectConfigFixture.reads.length,
+      opens: globalThis.__projectConfigFixture.opens,
+    }));
+    assert(
+      counts.reads === 6 && counts.opens === 0,
+      `Only two read-only checks ran: ${JSON.stringify(counts)}`,
+    );
+    await win.getByRole("button", { name: "返回应用", exact: true }).click();
+    await projectButton.waitFor({ state: "visible" });
+    console.log(
+      "PASS: project configuration groups, scoped file-check retry, keyboard focus, and no external editor",
+    );
+  } finally {
+    await app.evaluate(({ ipcMain }) => {
+      const fixture = globalThis.__projectConfigFixture;
+      ipcMain.removeHandler("fsRoot:exists");
+      ipcMain.handle("fsRoot:exists", fixture.exists);
+      ipcMain.removeHandler("shell:openInEditor");
+      ipcMain.handle("shell:openInEditor", fixture.editor);
+      delete globalThis.__projectConfigFixture;
+    });
+  }
+}
+
+async function checkDigitalHumanLibraryLayouts() {
+  const search = win.getByRole("searchbox", { name: "搜索数字人或团队", exact: true });
+  for (const [id, tabName] of [
+    ["mine", /我的数字人|My digital humans/i],
+    ["teams", /数字人团队|Teams/i],
+    ["market", /数字人广场|Market/i],
+  ]) {
+    await win.getByRole("tab", { name: tabName }).click();
+    await search.fill("no-match-synthetic-ui-filter");
+    const clear = win.getByRole("button", { name: "清除搜索", exact: true }).first();
+    await clear.focus();
+    await clear.press("Enter");
+    assert(
+      (await search.inputValue()) === "" &&
+        (await search.evaluate((node) => node === document.activeElement)),
+      `${id} search clear restores the field and focus`,
+    );
+    await checkResponsiveLayouts(`digital-humans-${id}`, "数字人");
+  }
+  await win.getByRole("tab", { name: /我的数字人|My digital humans/i }).click();
+  console.log("PASS: digital-human library search clearing across mine, teams, and market");
 }
 
 try {
@@ -227,6 +418,8 @@ try {
     await trustDialog.waitFor({ state: "hidden" });
   }
 
+  await checkProjectConfiguration(fixtureProject);
+
   const navButton = win.locator("aside").getByRole("button", { name: /数字人|Digital humans/i });
   await navButton.waitFor({ state: "visible", timeout: 20_000 });
   await navButton.click();
@@ -249,7 +442,9 @@ try {
   );
   await screenshot(win, "digital-humans-mine.png");
 
-  const search = win.getByRole("textbox", { name: /搜索数字人或团队|Search digital humans/i });
+  await checkDigitalHumanLibraryLayouts();
+
+  const search = win.getByRole("searchbox", { name: /搜索数字人或团队|Search digital humans/i });
   await search.fill("Critical");
   await win.getByText("Critical Reviewer", { exact: true }).waitFor({ state: "visible" });
   assert(
