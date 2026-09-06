@@ -188,3 +188,97 @@ describe("validation before every write", () => {
     expect(v.reason).toBe("not_holder");
   });
 });
+
+describe("explicit handoff (claim-tab)", () => {
+  test("the holder can hand its tab to another Session", async () => {
+    // The point of claim-tab: pass ONE precise tab across a Session boundary
+    // without exposing the whole browser to the receiver.
+    const store = new InMemoryTabControlStore();
+    await store.acquire(claim(), 1_000);
+    const handed = await store.handoff("tab-1", "s-aaa", "s-bbb", 1_000);
+    expect(handed.ok).toBe(true);
+
+    // The receiver may now write.
+    const receiver = await store.validate({
+      tabId: "tab-1",
+      holderSessionId: "s-bbb",
+      browserId: "browser-1",
+      currentOrigin: "https://shop.example",
+      currentTitleHash: "hash-checkout",
+    });
+    expect(receiver.ok).toBe(true);
+  });
+
+  test("the previous holder loses control immediately", async () => {
+    // Otherwise both sides could write and the single-writer rule is broken.
+    const store = new InMemoryTabControlStore();
+    await store.acquire(claim(), 1_000);
+    await store.handoff("tab-1", "s-aaa", "s-bbb", 1_000);
+    const old = await store.validate({
+      tabId: "tab-1",
+      holderSessionId: "s-aaa",
+      browserId: "browser-1",
+      currentOrigin: "https://shop.example",
+      currentTitleHash: "hash-checkout",
+    });
+    expect(old.ok).toBe(false);
+    expect(old.reason).toBe("not_holder");
+  });
+
+  test("a non-holder cannot give away someone else's tab", async () => {
+    // Handoff must be a GIFT from the holder, never a grab by the receiver,
+    // or claim-tab becomes a way to steal an in-progress checkout page.
+    const store = new InMemoryTabControlStore();
+    await store.acquire(claim(), 1_000);
+    const stolen = await store.handoff("tab-1", "s-ccc", "s-ccc", 1_000);
+    expect(stolen.ok).toBe(false);
+    expect(stolen.reason).toBe("not_holder");
+    // The original holder still writes.
+    expect(
+      (
+        await store.validate({
+          tabId: "tab-1",
+          holderSessionId: "s-aaa",
+          browserId: "browser-1",
+          currentOrigin: "https://shop.example",
+          currentTitleHash: "hash-checkout",
+        })
+      ).ok,
+    ).toBe(true);
+  });
+
+  test("an expired lease cannot be handed off", async () => {
+    // A crashed holder must not be able to donate a tab it no longer owns.
+    let now = 1_000;
+    const store = new InMemoryTabControlStore(() => now);
+    await store.acquire(claim(), 50);
+    now = 1_100;
+    const handed = await store.handoff("tab-1", "s-aaa", "s-bbb", 1_000);
+    expect(handed.ok).toBe(false);
+    expect(handed.reason).toBe("expired");
+  });
+
+  test("handing off an unclaimed tab is refused", async () => {
+    const store = new InMemoryTabControlStore();
+    const handed = await store.handoff("never-claimed", "s-aaa", "s-bbb", 1_000);
+    expect(handed.ok).toBe(false);
+    expect(handed.reason).toBe("no_lease");
+  });
+
+  test("the handed tab keeps its page identity, so the receiver is still checked", async () => {
+    // Receiving control must not waive the navigated-away check: the page can
+    // move between the gift and the receiver's first write.
+    const store = new InMemoryTabControlStore();
+    await store.acquire(claim(), 1_000);
+    await store.handoff("tab-1", "s-aaa", "s-bbb", 1_000);
+    const moved = await store.validate({
+      tabId: "tab-1",
+      holderSessionId: "s-bbb",
+      browserId: "browser-1",
+      currentOrigin: "https://elsewhere.example",
+      currentTitleHash: "hash-checkout",
+    });
+    expect(moved.ok).toBe(false);
+    expect(moved.reason).toBe("navigated");
+  });
+});

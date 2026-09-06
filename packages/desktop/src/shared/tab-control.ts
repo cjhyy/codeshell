@@ -63,6 +63,21 @@ export interface TabControlStore {
   acquire(claim: TabControlClaim, ttlMs: number): Promise<TabControlResult>;
   validate(check: TabControlCheck): Promise<TabControlValidation>;
   release(tabId: string, holderSessionId: string): Promise<void>;
+  /**
+   * Hand one precise tab from its holder to another Session (claim-tab).
+   *
+   * A GIFT from the holder, never a grab by the receiver: `fromSessionId` must
+   * currently hold the tab, or an unrelated Session could seize an in-progress
+   * checkout page simply by asking for it. The page identity carries over
+   * unchanged, so the receiver is still subject to the navigated-away check
+   * before its first write.
+   */
+  handoff(
+    tabId: string,
+    fromSessionId: string,
+    toSessionId: string,
+    ttlMs: number,
+  ): Promise<TabControlResult>;
 }
 
 /**
@@ -133,6 +148,29 @@ export class InMemoryTabControlStore implements TabControlStore {
       return { ok: false, reason: "navigated" };
     }
     return { ok: true };
+  }
+
+  async handoff(
+    tabId: string,
+    fromSessionId: string,
+    toSessionId: string,
+    ttlMs: number,
+  ): Promise<TabControlResult> {
+    const record = this.controllers.get(tabId);
+    if (!record) return { ok: false, reason: "no_lease" };
+    // Only the current holder may donate, and only while it still holds.
+    if (record.holderSessionId !== fromSessionId) return { ok: false, reason: "not_holder" };
+    if (record.expiresAt <= this.now()) return { ok: false, reason: "expired" };
+    // Keep the page identity (origin/titleHash/browserId): receiving control is
+    // not a licence to write a page that moved in the meantime.
+    const next: TabControlRecord = {
+      ...record,
+      holderSessionId: toSessionId,
+      expiresAt: this.now() + ttlMs,
+      generation: ++this.generation,
+    };
+    this.controllers.set(tabId, next);
+    return { ok: true, record: next };
   }
 
   async release(tabId: string, holderSessionId: string): Promise<void> {
