@@ -17,12 +17,18 @@ type Scenario = {
   onTurn?: (turn: number) => void;
 };
 const scenarios = new Map<string, Scenario>();
+/** Monotonic, so a model key is unique regardless of clock resolution. */
+let nextScenarioId = 0;
 
 class ProfileTurnCeilingClient extends LLMClientBase {
   protected initClient(): void {}
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
-    const scenario = scenarios.get(this.model)!;
+    const scenario = scenarios.get(this.model);
+    // Fail loudly rather than via `!`: a missing scenario used to surface as a
+    // 30s timeout with no explanation, because the throw happened inside the
+    // engine's retry loop instead of failing the test.
+    if (!scenario) throw new Error(`missing profile-ceiling scenario: ${this.model}`);
     let response: LLMResponse = {
       text: "auxiliary response",
       toolCalls: [],
@@ -69,7 +75,12 @@ describe("Engine behavior-profile turn ceiling", () => {
     const root = mkdtempSync(join(tmpdir(), "profile-turn-ceiling-"));
     roots.push(root);
     const scenario: Scenario = { turns: 0, summaries: 0, summaryTools: [] };
-    const model = `${provider}-${roots.length}-${Date.now()}`;
+    // roots.length alone repeats across tests and Date.now() has millisecond
+    // resolution, so two setups in the same tick collided on one scenario key —
+    // the loser's client then read a scenario another test had replaced or
+    // cleared, and its run never terminated (30s timeouts in CI, where the
+    // whole suite shares one process).
+    const model = `${provider}-${roots.length}-${nextScenarioId++}`;
     scenarios.set(model, scenario);
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
