@@ -5150,8 +5150,8 @@
         <text data-detail="fine" x="790" y="336" class="t-security" font-size="7" text-anchor="middle">Phase 3</text>
         </g>
 
-        <g id="node-tabcontrol" data-node-id="tabcontrol" data-node-label="TabControlStore" tabindex="0" role="button" aria-label="聚焦TabControlStore，排他写锁 · 全 async, 单写者保证" aria-pressed="false" data-node-kind="security" data-node-sublabel="排他写锁 · 全 async" data-node-tag="Phase 3" data-node-context="单写者保证">
-          <title>TabControlStore · 排他写锁 · 全 async · 单写者保证 · Phase 3</title>
+        <g id="node-tabcontrol" data-node-id="tabcontrol" data-node-label="TabControlStore" tabindex="0" role="button" aria-label="聚焦TabControlStore，排他写锁 · 可移交 · 全 async, 单写者保证" aria-pressed="false" data-node-kind="security" data-node-sublabel="排他写锁 · 可移交 · 全 async" data-node-tag="Phase 3/4" data-node-context="单写者保证">
+          <title>TabControlStore · 排他写锁 · 可移交 · 全 async · 单写者保证 · Phase 3/4</title>
           <rect x="650" y="430" width="280" height="84" rx="6" class="c-mask"/>
           <rect x="650" y="430" width="280" height="84" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(656 436) scale(0.6875)">
@@ -5159,12 +5159,12 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="790" y="470" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">TabControlStore</text>
-        <text data-detail="context" x="790" y="486" class="t-muted" font-size="9" text-anchor="middle">排他写锁 · 全 async</text>
-        <text data-detail="fine" x="790" y="506" class="t-security" font-size="7" text-anchor="middle">Phase 3</text>
+        <text data-detail="context" x="790" y="486" class="t-muted" font-size="9" text-anchor="middle">排他写锁 · 可移交 · 全 async</text>
+        <text data-detail="fine" x="790" y="506" class="t-security" font-size="7" text-anchor="middle">Phase 3/4</text>
         </g>
 
-        <g id="node-validate" data-node-id="validate" data-node-label="四项校验" tabindex="0" role="button" aria-label="聚焦四项校验，browserId/tabId/origin/title, 单写者保证" aria-pressed="false" data-node-kind="security" data-node-sublabel="browserId/tabId/origin/title" data-node-context="单写者保证">
-          <title>四项校验 · browserId/tabId/origin/title · 单写者保证</title>
+        <g id="node-validate" data-node-id="validate" data-node-label="四项校验" tabindex="0" role="button" aria-label="聚焦四项校验，browserId/tabId/origin/title, 单写者保证" aria-pressed="false" data-node-kind="security" data-node-sublabel="browserId/tabId/origin/title" data-node-tag="Phase 3" data-node-context="单写者保证">
+          <title>四项校验 · browserId/tabId/origin/title · 单写者保证 · Phase 3</title>
           <rect x="650" y="600" width="280" height="84" rx="6" class="c-mask"/>
           <rect x="650" y="600" width="280" height="84" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(656 606) scale(0.6875)">
@@ -5173,6 +5173,7 @@
           </g>
           <text data-node-label="" data-detail-anchor="" x="790" y="640" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">四项校验</text>
         <text data-detail="context" x="790" y="656" class="t-muted" font-size="9" text-anchor="middle">browserId/tabId/origin/title</text>
+        <text data-detail="fine" x="790" y="676" class="t-security" font-size="7" text-anchor="middle">Phase 3</text>
         </g>
 
         <g id="node-driver" data-node-id="driver" data-node-label="CDP Driver" tabindex="0" role="button" aria-label="聚焦CDP Driver，packages/cdp · 不依赖 Electron, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="packages/cdp · 不依赖 Electron" data-node-context="架构组件">
@@ -5547,7 +5548,7 @@
         <ul>
           <li>&bull; 用户两轮之间点到别处，Agent 可能往错页面提交表单</li>
           <li>&bull; 写前重验：origin / titleHash 不符即失效</li>
-          <li>&bull; 未做：Phase 5 外部浏览器 / Phase 6 服务端（需产品决策）</li>
+          <li>&bull; 移交是持有者赠予，接收方仍受同样校验</li>
         </ul>
       </div>
     </div>

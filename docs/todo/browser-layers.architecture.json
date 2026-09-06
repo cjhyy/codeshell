@@ -130,7 +130,7 @@
       "id": "tabcontrol",
       "type": "security",
       "label": "TabControlStore",
-      "sublabel": "排他写锁 · 全 async",
+      "sublabel": "排他写锁 · 可移交 · 全 async",
       "pos": [
         650,
         430
@@ -139,7 +139,7 @@
         280,
         84
       ],
-      "tag": "Phase 3"
+      "tag": "Phase 3/4"
     },
     {
       "id": "validate",
@@ -153,7 +153,8 @@
       "size": [
         280,
         84
-      ]
+      ],
+      "tag": "Phase 3"
     },
     {
       "id": "driver",
@@ -408,7 +409,7 @@
       "items": [
         "用户两轮之间点到别处，Agent 可能往错页面提交表单",
         "写前重验：origin / titleHash 不符即失效",
-        "未做：Phase 5 外部浏览器 / Phase 6 服务端（需产品决策）"
+        "移交是持有者赠予，接收方仍受同样校验"
       ]
     }
   ]
