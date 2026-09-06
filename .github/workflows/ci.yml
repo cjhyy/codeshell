@@ -47,9 +47,43 @@ jobs:
         # this also works on a clean checkout before the no-emit workspace pass.
         run: bun run typecheck
 
+  # The suite is split across parallel shards rather than run as one job.
+  #
+  # WHY: bun runs every file of an invocation in ONE process, so a 10k-test
+  # invocation makes files contend for that process. On this runner the single
+  # full-suite job took ~650s and dragged unrelated suites past the 30s
+  # per-test timeout — five suites (engine auto-compaction, profile ceiling,
+  # prompt-cache, petWalkFrames, SettingsPage) failed purely on time while
+  # passing in 2-3s when run alone. That reads as broken code and is not.
+  #
+  # Shard boundaries follow measured cost, not package tidiness:
+  #   core     3781 tests / 566 files / ~120s
+  #   desktop  3331 tests / 443 files / ~83s
+  #   rest     the remaining packages plus tests/, ~62s + change
+  # Each shard keeps the repository-scoped entry point so project-local
+  # .agents Skills cannot inject upstream tests, and each stays well inside
+  # the per-test timeout with headroom for a slower runner.
   tests:
-    name: tests (full suite)
+    name: tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
+    strategy:
+      # One shard's failure must not cancel the others: a red CI should show
+      # every failing area at once, not just whichever tripped first.
+      fail-fast: false
+      matrix:
+        include:
+          # Whole package dirs, not `<pkg>/src`: three suites live outside src
+          # (web/app, desktop/tests, desktop/scripts) and scoping to src would
+          # silently drop 48 tests while still reporting green.
+          - shard: core
+            paths: packages/core
+          - shard: desktop
+            paths: packages/desktop
+          - shard: rest
+            paths: >-
+              tests packages/coding packages/tui packages/pet packages/server
+              packages/chat packages/web packages/arena packages/cdp
+              packages/link
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -66,10 +100,8 @@ jobs:
       # the same package boundary that consumers receive.
       - name: build workspace packages
         run: bun run build
-      - name: full test suite
-        # Use the repository-scoped entry point so project-local .agents Skills
-        # cannot inject their own upstream tests into CodeShell's suite.
-        run: bun run test
+      - name: test shard
+        run: bun test --timeout 30000 ${{ matrix.paths }}
 
   coverage:
     name: builtin integration coverage
