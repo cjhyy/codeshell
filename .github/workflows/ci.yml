@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual run, for diagnosing a CI-only failure on a real runner without
+  # pushing to main. Earned its place: the engine-suite timeouts could not be
+  # reproduced on any dev machine, and bisecting scope ON the runner is what
+  # showed the tests were fine and the invocation size was not.
+  workflow_dispatch:
 
 # Standard §S7 + Gate 4: the gates this workflow protects are
 #   - safety guards (engine-bypass scan, sandbox tests, SSRF tests)
