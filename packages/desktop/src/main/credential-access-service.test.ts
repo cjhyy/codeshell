@@ -370,7 +370,12 @@ describe("desktop credential access service", () => {
     expect(serialized).not.toContain(sentinelRefresh);
     expect(serialized).not.toContain(sentinelClientSecret);
     expect(serialized).not.toContain("sentinel-cookie-K7WQ");
-    expect(serialized).not.toContain("9Z");
+    // Deliberately NOT a bare "9Z" tail check. That two-character fragment of
+    // sentinelClientSecret adds no coverage — line above already asserts the
+    // whole secret is absent — but it does collide with mkdtemp's random
+    // suffix: CI produced /tmp/cs-main-cred-cwd-9Z21PG and the snapshot
+    // legitimately contains its own cwd, so the test failed on the directory
+    // name rather than on a leaked secret.
     expect(() =>
       resolveCredentialValueForWorker({
         cwd,
