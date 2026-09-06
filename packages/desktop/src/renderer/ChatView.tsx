@@ -1449,7 +1449,7 @@ export function ChatView({
       )}
 
       {!contextSelectionOpen && (openAsk || showStickyApproval) && (
-        <div>
+        <div className="cs-chat-sticky w-full min-w-0">
           {/* AskUserMessageView carries its own column padding so it lines up
               with the message stream; ApprovalCard has none of its own. */}
           {openAsk && (

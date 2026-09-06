@@ -96,6 +96,16 @@
     padding-block: 1rem;
   }
 
+  /* The sticky ask/approval region renders outside .cs-chat-transcript (it must
+     stay pinned below the scrolling stream), so it does not inherit the
+     transcript's centered column and would otherwise stretch the full viewport
+     while the messages above it sit in a 48rem column. Match that column here
+     so the two line up. */
+  [data-chat-variant="main"] .cs-chat-sticky {
+    max-width: 48rem;
+    margin-inline: auto;
+  }
+
   .cs-message-actions {
     opacity: 1;
     transition: opacity 150ms ease;

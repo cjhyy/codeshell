@@ -8,11 +8,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 // @ts-expect-error Bun supports query-suffixed TypeScript module imports.
 const { ChatView } = await import("./ChatView.tsx?composer-variant-render-test");
 
-function renderComposer(variant: "main" | "quickChat" | "pet", permissionMode = "plan") {
+function renderComposer(
+  variant: "main" | "quickChat" | "pet",
+  permissionMode = "plan",
+  messages: unknown[] = [],
+) {
   return renderToStaticMarkup(
     <ChatView
       variant={variant}
-      messages={[]}
+      messages={messages as never}
       onSend={() => undefined}
       onStop={() => undefined}
       busy={false}
@@ -89,5 +93,26 @@ describe("ChatView composer variants", () => {
     expect(html).not.toContain('aria-label="添加本地文件"');
     expect(html).not.toContain(">Goal<");
     expect(html).not.toContain('data-composer-control="context-usage"');
+  });
+});
+
+describe("ChatView sticky ask column", () => {
+  // The sticky ask/approval region renders outside .cs-chat-transcript, so it
+  // does not inherit that element's centered 48rem column. Without its own
+  // column class it stretched the full viewport while the messages above it
+  // stayed centered, so the ask card sat flush against the left edge.
+  const pendingAsk = {
+    kind: "ask_user",
+    id: "q1",
+    requestId: "r1",
+    question: "继续吗？",
+    multiSelect: false,
+    options: [{ label: "继续", description: "继续执行" }],
+  };
+
+  test("wraps the pending ask in the shared transcript column", () => {
+    const html = renderComposer("main", "default", [pendingAsk]);
+    expect(html).toContain("继续吗？");
+    expect(html).toContain("cs-chat-sticky");
   });
 });
