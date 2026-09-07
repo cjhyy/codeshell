@@ -39,7 +39,7 @@ describe("release workflow guards", () => {
     expect(publishRun).toContain("scripts/publish-release-packages.ts");
     expect(publishRun).toContain("--execute");
     expect(publisherSource).toContain("PUBLIC_RELEASE_PACKAGES.map");
-    expect(publisherSource).toContain("verifyReleaseVersions(rootVersion)");
+    expect(publisherSource).toContain("verifyReleaseVersions(rootVersion, options.repoRoot)");
   });
 
   test("release write permissions are isolated to the GitHub Release job", () => {
