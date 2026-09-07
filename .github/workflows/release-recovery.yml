@@ -1,0 +1,127 @@
+name: recover an existing release
+
+# Reuse installers from a verified tag run after a partial npm/GitHub outage.
+# The current workflow/helper is reviewed separately from the immutable source tag.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing immutable release tag (for example v0.9.7)"
+        required: true
+        type: string
+      source_run_id:
+        description: "Completed release.yml run with successful verification and all three installers"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-recovery-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+    steps:
+      - name: checkout reviewed recovery tooling
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: validate immutable source and successful prerequisites
+        id: source
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { validateReleaseRecovery } = require('./scripts/validate-release-recovery.cjs');
+            const source = await validateReleaseRecovery({
+              github, context, tag: process.env.RELEASE_TAG, sourceRunId: process.env.SOURCE_RUN_ID,
+            });
+            core.setOutput('sha', source.sha);
+            core.setOutput('artifact-ids', source.artifactIds);
+            core.info(`Recovering ${process.env.RELEASE_TAG} from verified commit ${source.sha}`);
+
+      - name: checkout exact release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          path: release-source
+          persist-credentials: false
+
+      - name: download original native installers
+        uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+          artifact-ids: ${{ steps.source.outputs.artifact-ids }}
+          path: artifacts
+
+      - name: validate downloaded assets before publishing
+        run: |
+          node - <<'NODE'
+          const { collectReleaseAssets } = require('./scripts/validate-release-recovery.cjs');
+          const assets = collectReleaseAssets('artifacts', process.env.RELEASE_TAG.slice(1));
+          console.log(`Verified ${assets.length} original release assets across all three platforms`);
+          NODE
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: install and build npm packages from the original tag
+        working-directory: release-source
+        run: |
+          set -euo pipefail
+          bun run scripts/verify-release-versions.ts "${RELEASE_TAG#v}"
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: recheck source tag before publication
+        uses: actions/github-script@v8
+        env:
+          VERIFIED_SHA: ${{ steps.source.outputs.sha }}
+        with:
+          script: |
+            const { validateReleaseRecovery } = require('./scripts/validate-release-recovery.cjs');
+            const source = await validateReleaseRecovery({
+              github, context, tag: process.env.RELEASE_TAG, sourceRunId: process.env.SOURCE_RUN_ID,
+            });
+            if (source.sha !== process.env.VERIFIED_SHA) throw new Error('Source changed during recovery');
+
+      - name: publish only missing npm package versions
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          NPM_TAG=latest
+          case "$RELEASE_TAG" in *-*) NPM_TAG=next ;; esac
+          bun run scripts/publish-release-packages.ts \
+            --repo-root "$GITHUB_WORKSPACE/release-source" --tag "$NPM_TAG" --execute
+
+      - name: publish GitHub Release with the original installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > "$RUNNER_TEMP/recovery-assets"
+          const { collectReleaseAssets } = require('./scripts/validate-release-recovery.cjs');
+          for (const asset of collectReleaseAssets('artifacts', process.env.RELEASE_TAG.slice(1))) {
+            process.stdout.write(asset + '\0');
+          }
+          NODE
+          mapfile -d '' -t ASSETS < "$RUNNER_TEMP/recovery-assets"
+          PRERELEASE=()
+          case "$RELEASE_TAG" in *-*) PRERELEASE=(--prerelease) ;; esac
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
+              --generate-notes "${PRERELEASE[@]}"
+          fi
+          gh release upload "$RELEASE_TAG" "${ASSETS[@]}" --clobber
