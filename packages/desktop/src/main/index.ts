@@ -477,7 +477,8 @@ import {
 import { GithubSkillReviewStore } from "./github-skill-review.js";
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
-import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
+import { deleteRunDir } from "./runs-service.js";
+import { listRunsForUi, getRunHistory } from "./run-history-service.js";
 import {
   initUpdater,
   checkForUpdate,
@@ -6752,10 +6753,12 @@ ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
   return tailLog(bucket, boundedLines);
 });
 
-ipcMain.handle("runs:list", async () => listRuns());
+ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
+  listRunsForUi(options),
+);
 ipcMain.handle("runs:get", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
-  return getRun(runId);
+  return getRunHistory(runId);
 });
 registerSessionTranscriptIpc(ipcMain);
 ipcMain.handle(

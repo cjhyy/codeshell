@@ -3,7 +3,12 @@ import { existsSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
-import { cleanupStaleQuickChatSessions, deleteSession, listDiskSessions } from "./sessions-service";
+import {
+  cleanupStaleQuickChatSessions,
+  deleteSession,
+  listDiskSessions,
+  listSessions,
+} from "./sessions-service";
 
 describe("desktop session services CODE_SHELL_HOME routing", () => {
   let previousHome: string | undefined;
@@ -31,6 +36,7 @@ describe("desktop session services CODE_SHELL_HOME routing", () => {
     manager.create(cwd, "model", "provider", "panel-task-legacy", null, "desktop");
 
     expect(sessionsRoot()).toBe(join(codeShellHome, "sessions"));
+    expect((await listSessions()).map((session) => session.id)).toEqual(["normal-in-custom-home"]);
     expect((await listDiskSessions({ limit: 10 })).sessions.map((session) => session.id)).toEqual([
       "normal-in-custom-home",
     ]);

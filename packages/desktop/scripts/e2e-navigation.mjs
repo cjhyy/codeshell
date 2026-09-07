@@ -252,6 +252,12 @@ try {
   await language.press("ArrowRight");
   await languageMenu.waitFor();
   await expectMenuInsideWindow(win, "切换语言");
+  await languageMenu.getByRole("menuitemradio").first().hover();
+  await settingsMenu
+    .getByRole("menuitem", { name: /^打开设置/ })
+    .hover({ position: { x: 12, y: 12 } });
+  await win.waitForTimeout(400); // Beyond Radix's pointer grace and exit animation.
+  assert(await languageMenu.isVisible(), "Hovering past a child keeps the language menu open");
   await languageMenu.getByRole("menuitemradio").first().dispatchEvent("keydown", {
     key: "Escape",
     isComposing: true,
@@ -288,6 +294,12 @@ try {
   const activityMenu = win.getByRole("menu", { name: "活动记录", exact: true });
   await activityMenu.waitFor();
   await expectMenuInsideWindow(win, "活动记录");
+  await activityMenu.getByRole("menuitem", { name: "日志", exact: true }).hover();
+  await language.hover({ position: { x: 12, y: 12 } });
+  await win.waitForTimeout(400);
+  assert(await activityMenu.isVisible(), "Hovering past a child keeps the activity menu open");
+  assert(!(await languageMenu.isVisible()), "Hover does not switch the active submenu");
+  await activityMenu.getByRole("menuitem").first().focus();
   await screenshot(win, "navigation-narrow-activity.png");
   await win.keyboard.press("ArrowLeft");
   await activityMenu.waitFor({ state: "hidden" });

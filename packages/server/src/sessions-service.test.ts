@@ -2,7 +2,95 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { cleanupStaleQuickChatSessions, deleteSessionDir, listSessions } from "./sessions-service";
+
+describe("listSessions history", () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "cs-session-history-"));
+  });
+  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it("reads the actual SessionManager layout with persisted titles and transcript activity", async () => {
+    const manager = new SessionManager(dir);
+    const { state, transcript } = manager.create(
+      dir,
+      "model",
+      "provider",
+      "modern",
+      null,
+      "desktop",
+    );
+    state.title = "真实会话标题";
+    state.archivedAt = Date.now();
+    manager.saveState(state);
+    transcript.append("user", { content: "hello" });
+    const transcriptFile = path.join(dir, "modern", "transcript.jsonl");
+    const updated = new Date(Date.now() + 5000);
+    fs.utimesSync(transcriptFile, updated, updated);
+
+    const sessions = await listSessions(dir);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      id: "modern",
+      title: "真实会话标题",
+      file: transcriptFile,
+      createdAt: state.startedAt,
+    });
+    expect(sessions[0]!.updatedAt).toBeCloseTo(updated.getTime(), 0);
+    expect(sessions[0]!.size).toBe(
+      fs.statSync(transcriptFile).size + fs.statSync(path.join(dir, "modern", "state.json")).size,
+    );
+  });
+
+  it("merges legacy files without duplicating a migrated session and sorts by recent activity", async () => {
+    fs.writeFileSync(path.join(dir, "legacy.jsonl"), "old transcript");
+    fs.utimesSync(path.join(dir, "legacy.jsonl"), new Date(1000), new Date(1000));
+    fs.mkdirSync(path.join(dir, "modern"));
+    fs.writeFileSync(
+      path.join(dir, "modern", "state.json"),
+      JSON.stringify({ summary: "fallback title" }),
+    );
+    fs.writeFileSync(path.join(dir, "modern.jsonl"), "old copy");
+    const sessions = await listSessions(dir);
+    expect(sessions.map((session) => session.id)).toEqual(["modern", "legacy"]);
+    expect(sessions[0]!.title).toBe("fallback title");
+    expect(sessions[0]!.file).toBe(path.join(dir, "modern", "state.json"));
+  });
+
+  it("omits internal, staged, corrupt and linked records without hiding readable sessions", async () => {
+    for (const [id, state] of Object.entries({
+      work: {},
+      pet: { kind: "pet" },
+      child: { parentSessionId: "work" },
+      ephemeral: { ephemeral: true },
+      "qchat-hidden": {},
+      "panel-task-hidden": {},
+      ".pending-fork-hidden": {},
+    })) {
+      fs.mkdirSync(path.join(dir, id));
+      fs.writeFileSync(path.join(dir, id, "state.json"), JSON.stringify(state));
+    }
+    fs.mkdirSync(path.join(dir, "corrupt"));
+    fs.writeFileSync(path.join(dir, "corrupt", "state.json"), "{");
+    fs.mkdirSync(path.join(dir, "not-a-session"));
+    // Windows commonly requires elevated permission to create symbolic links.
+    if (process.platform !== "win32") {
+      fs.symlinkSync(path.join(dir, "work"), path.join(dir, "linked"));
+      fs.mkdirSync(path.join(dir, "linked-state"));
+      fs.symlinkSync(
+        path.join(dir, "work", "state.json"),
+        path.join(dir, "linked-state", "state.json"),
+      );
+    }
+    expect((await listSessions(dir)).map((session) => session.id)).toEqual(["work"]);
+  });
+
+  it("returns empty for a missing root", async () => {
+    expect(await listSessions(path.join(dir, "missing"))).toEqual([]);
+  });
+});
 
 describe("deleteSessionDir", () => {
   let dir: string;

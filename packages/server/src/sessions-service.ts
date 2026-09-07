@@ -12,6 +12,8 @@ export interface DesktopSessionSummary {
   id: string;
   /** Path to the session file on disk. */
   file: string;
+  /** Durable title/summary; UI-side renamed titles can override it. */
+  title?: string;
   size: number;
   createdAt: number;
   updatedAt: number;
@@ -20,6 +22,7 @@ export interface DesktopSessionSummary {
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 const QUICK_CHAT_SESSION_PREFIX = "qchat-";
 const PANEL_TASK_SESSION_PREFIX = "panel-task-";
+const MAX_HISTORY_STATE_BYTES = 2 * 1024 * 1024;
 
 function isQuickChatSessionId(id: string): boolean {
   return id.startsWith(QUICK_CHAT_SESSION_PREFIX);
@@ -34,31 +37,79 @@ export async function listSessions(
 ): Promise<DesktopSessionSummary[]> {
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
-    const summaries: DesktopSessionSummary[] = [];
-    for (const e of entries) {
-      if (!e.isFile()) continue;
-      if (!e.name.endsWith(".jsonl") && !e.name.endsWith(".json")) continue;
-      const id = e.name.replace(/\.jsonl?$/, "");
-      if (isInternalEphemeralSessionId(id)) continue;
-      const full = path.join(baseDir, e.name);
-      try {
-        const st = await fs.stat(full);
-        summaries.push({
-          id,
-          file: full,
-          size: st.size,
-          createdAt: st.birthtimeMs || st.mtimeMs,
-          updatedAt: st.mtimeMs,
-        });
-      } catch {
-        // Skip files we cannot stat (race with delete, permissions).
+    // Prefer the current directory layout when a migration left a flat copy.
+    const candidates = entries.sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()));
+    const summaries = new Map<string, DesktopSessionSummary>();
+    for (let offset = 0; offset < candidates.length; offset += 32) {
+      const batch = await Promise.all(
+        candidates.slice(offset, offset + 32).map((entry) => readHistorySummary(entry, baseDir)),
+      );
+      for (const summary of batch) {
+        if (summary && !summaries.has(summary.id)) summaries.set(summary.id, summary);
       }
     }
-    summaries.sort((a, b) => b.updatedAt - a.updatedAt);
-    return summaries;
+    return [...summaries.values()].sort(
+      (a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id),
+    );
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw e;
+  }
+}
+
+async function readHistorySummary(
+  entry: fsSync.Dirent,
+  baseDir: string,
+): Promise<DesktopSessionSummary | null> {
+  const directory = entry.isDirectory();
+  if (!directory && (!entry.isFile() || !/\.jsonl?$/.test(entry.name))) return null;
+  const id = directory ? entry.name : entry.name.replace(/\.jsonl?$/, "");
+  if (
+    !SAFE_ID.test(id) ||
+    id.startsWith(".") ||
+    id.includes("..") ||
+    id.length > 128 ||
+    isInternalEphemeralSessionId(id)
+  )
+    return null;
+
+  try {
+    const file = path.join(baseDir, entry.name, ...(directory ? ["state.json"] : []));
+    const info = await fs.lstat(file);
+    if (!info.isFile() || info.isSymbolicLink()) return null;
+    const summary: DesktopSessionSummary = {
+      id,
+      file,
+      size: info.size,
+      createdAt: info.birthtimeMs || info.mtimeMs,
+      updatedAt: info.mtimeMs,
+    };
+    if (!directory) return summary;
+    if (info.size > MAX_HISTORY_STATE_BYTES) return null;
+    const state = JSON.parse(await fs.readFile(file, "utf8")) as Record<string, unknown> | null;
+    if (!state || typeof state !== "object" || Array.isArray(state)) return null;
+    // History includes archived/legacy sessions, but internal conversations
+    // and temporary forks must stay out of the user-facing catalog.
+    if (state.ephemeral === true || state.kind === "pet" || state.parentSessionId) return null;
+    const title = typeof state.title === "string" && state.title ? state.title : state.summary;
+    if (typeof title === "string" && title) summary.title = title.slice(0, 1024);
+    if (typeof state.startedAt === "number" && Number.isFinite(new Date(state.startedAt).getTime()))
+      summary.createdAt = state.startedAt;
+    const transcript = path.join(baseDir, id, "transcript.jsonl");
+    try {
+      const transcriptInfo = await fs.lstat(transcript);
+      if (!transcriptInfo.isFile() || transcriptInfo.isSymbolicLink()) return null;
+      summary.file = transcript;
+      summary.size += transcriptInfo.size;
+      summary.updatedAt = Math.max(info.mtimeMs, transcriptInfo.mtimeMs);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      // A newly persisted session may not have a transcript yet.
+    }
+    return summary;
+  } catch {
+    // One corrupt/unreadable session or a concurrent delete cannot hide the rest.
+    return null;
   }
 }
 

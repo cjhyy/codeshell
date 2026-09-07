@@ -1635,7 +1635,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   listSessionTitles(): Promise<Record<string, string>>;
   renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
-  listRuns(): Promise<RunSummary[]>;
+  /** Session receipts are opt-in; automation migration consumes legacy managed runs only. */
+  listRuns(options?: { includeSessions?: boolean }): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
   getSessionTranscriptPage?(
@@ -2455,6 +2456,7 @@ export type UpdaterStatus =
 export interface DesktopSessionSummary {
   id: string;
   file: string;
+  title?: string;
   size: number;
   createdAt: number;
   updatedAt: number;

@@ -74,7 +74,8 @@ describe("RunsView loading and selection", () => {
     Object.defineProperty(window, "codeshell", {
       configurable: true,
       value: {
-        listRuns: () => {
+        listRuns: (options?: { includeSessions?: boolean }) => {
+          expect(options).toEqual({ includeSessions: true });
           const request = deferred<RunSummary[]>();
           lists.push(request);
           return request.promise;
@@ -227,7 +228,7 @@ describe("RunsView loading and selection", () => {
     expect(document.activeElement === pane()).toBe(true);
     expect(textOf(pane())).not.toContain("detail failed");
     await settle(() => details[1].request.resolve(null));
-    expect(textOf(pane())).toContain("找不到这个托管运行");
+    expect(textOf(pane())).toContain("找不到这次运行");
     await click(button("重试详情"));
     await settle(() => details[2].request.resolve(run("a")));
     expect(textOf(pane())).toContain("摘要 a");

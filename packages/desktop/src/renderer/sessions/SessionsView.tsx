@@ -58,7 +58,10 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
       ]);
       if (!mounted.current || version !== readVersion.current) return;
       setSessions(list);
-      setTitles(titleMap);
+      setTitles({
+        ...Object.fromEntries(list.map((session) => [session.id, session.title ?? ""])),
+        ...titleMap,
+      });
       setReadError(null);
     } catch (error) {
       if (mounted.current && version === readVersion.current) setReadError(errorMessage(error));
@@ -128,9 +131,12 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
     setEditing((current) => current && { ...current, error: null });
     try {
       await window.codeshell.renameSession(id, title);
-      onSessionRenamed?.(id, title);
+      // An empty title removes the UI override; show the durable title now,
+      // just as the next refresh will, and keep the sidebar in sync.
+      const displayTitle = title || sessions?.find((session) => session.id === id)?.title || "";
+      onSessionRenamed?.(id, displayTitle);
       if (!mounted.current) return;
-      setTitles((current) => ({ ...current, [id]: title }));
+      setTitles((current) => ({ ...current, [id]: displayTitle }));
       closeEditor(id);
     } catch (error) {
       if (!mounted.current) return;

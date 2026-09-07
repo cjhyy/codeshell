@@ -206,6 +206,21 @@ describe("SessionsView editing and recovery", () => {
     expect(reads).toBe(1);
   });
 
+  test("shows and searches durable session titles before any UI-side rename exists", async () => {
+    sessions = [
+      { ...FIRST, title: "持久化会话标题" },
+      { ...SECOND, title: "Original title" },
+    ];
+    titles = { [SECOND.id]: "Renamed title" };
+    await render();
+    expect(textOf(rows()[0])).toContain("持久化会话标题");
+    expect(textOf(rows()[1])).toContain("Renamed title");
+    await change(search(), "持久化");
+    expect(rows()).toHaveLength(1);
+    await click(button("重命名"));
+    expect(props(editor()!).value).toBe("持久化会话标题");
+  });
+
   test("focuses editing, preserves drafts on blur and IME keys, and cancels without a write", async () => {
     await render();
     await click(button("重命名"));
@@ -232,6 +247,22 @@ describe("SessionsView editing and recovery", () => {
     await click(button("取消"));
     expect(renames).toHaveLength(0);
     expect(document.activeElement === button("重命名")).toBe(true);
+  });
+
+  test("clearing a renamed title restores the durable title immediately and after refresh", async () => {
+    sessions = [{ ...FIRST, title: "Durable title" }];
+    const notifications: Array<[string, string]> = [];
+    await render(undefined, { onSessionRenamed: (id, title) => notifications.push([id, title]) });
+    await click(button("重命名"));
+    await change(editor()!, "");
+    await key("Enter");
+    expect(renames[0].title).toBe("");
+    await finish(renames[0].result);
+    delete titles[FIRST.id]; // The title registry removes empty overrides.
+    expect(textOf(rows()[0])).toContain("Durable title");
+    expect(notifications).toEqual([[FIRST.id, "Durable title"]]);
+    await click(button("刷新"));
+    expect(textOf(rows()[0])).toContain("Durable title");
   });
 
   test("deduplicates pending Enter saves and preserves a failed draft for a successful retry", async () => {

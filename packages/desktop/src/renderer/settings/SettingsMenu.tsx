@@ -117,7 +117,9 @@ export function SettingsMenu({
         {onNavigate && (
           <DropdownMenuSub
             open={submenu === "activity"}
-            onOpenChange={(next) => setSubmenu(next ? "activity" : null)}
+            onOpenChange={(next) =>
+              setSubmenu((current) => (next ? "activity" : current === "activity" ? null : current))
+            }
           >
             <DropdownMenuSubTrigger
               ref={activityRef}
@@ -135,6 +137,10 @@ export function SettingsMenu({
               <DropdownMenuSubContent
                 aria-label={t("settingsX.menu.activity")}
                 className="w-48 min-w-0 max-w-[min(var(--radix-dropdown-menu-content-available-width),calc(100vw-1.5rem))] rounded-xl p-1.5"
+                // Click-open menus stay open while pointer travel moves focus
+                // through the parent. Explicit keys, selection and outside
+                // clicks still dismiss through their existing handlers.
+                onFocusOutside={(event) => event.preventDefault()}
                 onEscapeKeyDown={(event) => closeSubmenu(event, "activity")}
               >
                 {[
@@ -170,7 +176,9 @@ export function SettingsMenu({
         </DropdownMenuItem>
         <DropdownMenuSub
           open={submenu === "language"}
-          onOpenChange={(next) => setSubmenu(next ? "language" : null)}
+          onOpenChange={(next) =>
+            setSubmenu((current) => (next ? "language" : current === "language" ? null : current))
+          }
         >
           <DropdownMenuSubTrigger
             ref={languageRef}
@@ -188,6 +196,7 @@ export function SettingsMenu({
             <DropdownMenuSubContent
               aria-label={t("settingsX.menu.switchLanguage")}
               className="w-44 min-w-0 max-w-[min(var(--radix-dropdown-menu-content-available-width),calc(100vw-1.5rem))] rounded-xl p-1.5"
+              onFocusOutside={(event) => event.preventDefault()}
               onEscapeKeyDown={(event) => closeSubmenu(event, "language")}
             >
               <DropdownMenuRadioGroup

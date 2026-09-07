@@ -111,9 +111,9 @@ import {
   resolveMainComposerBucket,
   shouldShowPanelDockFallback,
   toMobilePermissionMode,
-  type ApprovalHistoryEntry,
   type ComposerDraftsMap,
 } from "./app/appUtils";
+import { useApprovalHistory } from "./approvals/useApprovalHistory";
 import { useBucketOverrides } from "./app/useBucketOverrides";
 import { useTranscriptBuckets } from "./app/useTranscriptBuckets";
 import { useAutomationSessionImport } from "./app/useAutomationSessionImport";
@@ -189,7 +189,7 @@ function App() {
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
-  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
+  const [approvalHistory, setApprovalHistory] = useApprovalHistory();
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());

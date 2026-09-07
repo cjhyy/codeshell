@@ -22,6 +22,7 @@ const STATUSES: Record<string, { tone: string; label: TranslationKey }> = {
   completed: { tone: "text-status-ok", label: "auto.runs.statusCompleted" },
   failed: { tone: "text-status-err", label: "auto.runs.statusFailed" },
   cancelled: { tone: "text-muted-foreground", label: "auto.runs.statusCancelled" },
+  unknown: { tone: "text-muted-foreground", label: "auto.runs.statusUnknown" },
 };
 
 const EVENT_LABELS: Record<string, TranslationKey> = {
@@ -38,6 +39,12 @@ const EVENT_LABELS: Record<string, TranslationKey> = {
   run_completed: "auto.runs.eventCompleted",
   run_failed: "auto.runs.eventFailed",
   run_cancelled: "auto.runs.eventCancelled",
+  run_result: "auto.runs.eventResult",
+  message: "auto.runs.eventMessage",
+  tool_use: "auto.runs.eventToolUse",
+  tool_result: "auto.runs.eventToolResult",
+  turn_boundary: "auto.runs.eventTurnBoundary",
+  turn_stopped: "auto.runs.eventCancelled",
 };
 
 type DetailState =
@@ -104,7 +111,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
     setError(null);
     void (async () => {
       try {
-        const list = await window.codeshell.listRuns();
+        const list = await window.codeshell.listRuns({ includeSessions: true });
         if (!cancelled) setRuns(list);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));

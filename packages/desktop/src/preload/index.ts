@@ -948,7 +948,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
     ipcRenderer.invoke("logs:tail", bucket, lines),
-  listRuns: () => ipcRenderer.invoke("runs:list"),
+  listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   getSessionTranscript: (sessionId: string) => ipcRenderer.invoke("sessions:transcript", sessionId),
   getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
