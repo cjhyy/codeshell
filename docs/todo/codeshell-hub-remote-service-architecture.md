@@ -3,7 +3,10 @@
 > 状态：方向设计稿，非实现承诺  
 > 日期：2026-08-28  
 > 适用范围：CodeShell Core、Server、Web、Desktop、Panel Apps、Skills、Plugins 与 MCP  
-> 修订：v2（2026-08-28，按源码核验补齐：Phase 顺序与 RPC 直通的关系 §7.1/§10、
+> 修订：v3（2026-09-06，按源码重新核验：**§2「完整 Core RPC 直通」的表述已被证伪**——
+> serve 的浏览器面早已收敛为 3 方法白名单 + 强制 `cwd` + 64 在途上限，详见 §2.1；
+> 全文 file:line 锚点按 0.9.6 重校；Hub 侧代码仍为零，无任何 Phase 落地）
+> v2（2026-08-28，按源码核验补齐：Phase 顺序与 RPC 直通的关系 §7.1/§10、
 > workspace 内配置发现的钳制 §4.4、会话索引对账 §4.3、命名与在途方案对齐 §6.4）
 
 ## 0. 结论
@@ -48,7 +51,7 @@ CodeShell 可以演进成一个可一键部署的个人或团队 AI 工作台：
 
 | 领域           | 当前基础                                                                          | 主要缺口                                                                                                                                                                                                                                                                       |
 | -------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Headless 服务  | `packages/server` 已有 `code-shell-serve`、HTTP/WS、passcode 和 stdio worker      | 单 Workspace、共享口令、无正式账号和多租户；WS 帧原样注入 worker（`headless-server.ts:307`），即浏览器持有完整 Core RPC 直通与任意 `cwd` 提交能力                                                                                                                              |
+| Headless 服务  | `packages/server` 已有 `code-shell-serve`、HTTP/WS、passcode 和 stdio worker      | 单 Workspace、共享口令、无正式账号和多租户。~~WS 帧原样注入 worker，浏览器持有完整 Core RPC 直通与任意 `cwd`~~ **已证伪，见 §2.1**：实为 3 方法白名单 + 强制 `cwd` + 64 在途上限                                                                                               |
 | Web 客户端     | `packages/web` 已有会话、流式输出、审批、停止和重连能力                           | 尚未成为完整 Desktop Shell，也没有 Web Panel Host                                                                                                                                                                                                                              |
 | Core Runtime   | Core 已有 transport-agnostic 协议、多 Session、durable session 和 permission gate | `sessionId`、设置、凭据、Memory 和部分 singleton 没有产品用户维度；`codeShellHome()` 是进程级 env 解析（`session-manager.ts:401`），Hub 控制面要跨 N 个用户数据根读索引，必须把路径入口参数化（`sessionsRoot(home?)` 已支持，credentials、settings、panel storage 等入口尚未） |
 | Panel Apps     | Manifest v2 已支持权限、Agent Tools 和 bundled Skills                             | 当前宿主主要依赖 Electron bridge、用户 HOME 和本地进程                                                                                                                                                                                                                         |
@@ -56,6 +59,62 @@ CodeShell 可以演进成一个可一键部署的个人或团队 AI 工作台：
 | 远程移动端     | 已有 Browser UI、WebSocket、上传、重连和审批经验                                  | 当前更接近单用户桌面遥控，不是多用户服务                                                                                                                                                                                                                                       |
 
 因此最短路径是扩展现有 Server/Web，而不是重写 Core 或把 Electron 整体搬到服务器。
+
+### 2.1 更正：浏览器面不是「完整 Core RPC 直通」（2026-09-06 复核）
+
+v2 全文（本节、§7.1、§10 Phase 1 风险接受）都建立在一个论断上：
+"serve 把 WS 帧原样注入 worker，浏览器持有完整 Core RPC 直通与任意 `cwd` 提交能力"，
+并引 `headless-server.ts:307` 为证。**按 0.9.6 源码复核，这个论断不成立。**
+
+先纠正锚点：`headless-server.ts:307` 现在是 `const tabId = nextTabId++;`。
+真正的注入点是 `headless-server.ts:383-384`：
+
+```ts
+bridge.ensureWorker(opts.cwd);
+bridge.injectWorkerMessage(workerLine, { origin: "serve", producer: "serve-ws" });
+```
+
+但帧在抵达这两行之前要过四道闸：
+
+| 闸                  | 位置                         | 作用                                                                 |
+| ------------------- | ---------------------------- | -------------------------------------------------------------------- |
+| 宿主直答            | `headless-server.ts:337-341` | `agent/query` 的 sessions/session_detail 由宿主答，不进 worker       |
+| **方法白名单**      | `:343-347` → `:523,:529-545` | 只放行 `agent/run` / `agent/approve` / `agent/cancel`，其余 `-32601` |
+| **强制 `cwd` 改写** | `:348-355`                   | `agent/run` 的 `cwd` 一律覆写为部署时的 `workspaceCwd`               |
+| 空 id 拒绝 + 背压   | `:356-358`、`:359-368`       | 每 tab 在途请求上限 64，超出 `-32000`                                |
+
+白名单原文（`headless-server.ts:523`）：
+
+```ts
+const SERVE_ALLOWED_WORKER_METHODS = new Set(["agent/run", "agent/approve", "agent/cancel"]);
+```
+
+`cwd` 改写原文（`:348-355`）连注释一并保留了设计意图：
+
+> This host intentionally exposes one workspace. A browser must not be
+> able to escape it by supplying another cwd, and a missing cwd must
+> not silently become the worker's global no-repo conversation.
+
+**所以浏览器持有的是一个 3 方法、单 `cwd`、带背压的受限面，不是完整 Core 协议。**
+其中 64 在途上限是 v2 写完之后才落地的（`cb94334e`，2026-09-01），
+连同 `fe7b48ef`（send race 隔离）一起，把 `headless-server.ts` 从约 440 行推到 573 行——
+这也是 v2 在该文件里的所有锚点整体下移约 50 行的原因。
+
+### 2.2 这对 Phase 顺序意味着什么
+
+§7.1 与 §10 把 "Application API Gateway" 列为 "Phase 2 开启多用户的硬前置"，
+其论证前提是"直通 = 完整 Core RPC"。前提既已收窄，**结论需要重新表述**：
+
+- **仍然成立**：多用户之前必须有 Gateway。理由不再是"关闭完整直通"，而是
+  ①`cwd` 被钉死在单一部署 workspace，多用户天然需要按 `workspaceId` 解析；
+  ②3 个方法里没有任何 ownership 校验——`agent/approve` / `agent/cancel` 目前
+  不区分请求来自哪个账号；③会话列表由宿主直答且只按 `cwd` 过滤（`:479,:503`），
+  没有用户维度。
+- **不再成立**：把 Phase 1 的现状描述为"高危直通、必须尽快关闭"。
+  单用户形态下这个 3 方法面是可接受的，Phase 1 的"显式风险接受"可以降级为
+  "已知限制"。
+
+§10 Phase 1 末尾的**显式风险接受**条目据此改写为 §10 的「Phase 1 已知限制」。
 
 ## 3. 总体架构
 
@@ -442,10 +501,14 @@ data/users/<userId>/
 
 浏览器不能直接访问完整 Core RPC。Gateway 只投影明确允许的会话、审批、Panel 和管理操作。
 
-**现状与迁移**：今天 `code-shell-serve` 的 WS 把浏览器帧原样注入 worker
-（`headless-server.ts:307`），即完整 Core RPC 直通。这个直通只允许存在于 Phase 1 的
-单用户形态（浏览器 = 部署者本人，见 §10 的显式风险接受）；Application API Gateway 是
-**Phase 2 开启多用户的硬前置**——任何第二个账号出现之前，直通必须已被 Gateway 取代。
+**现状与迁移**（v3 更正，详见 §2.1）：今天 `code-shell-serve` 的 WS **不是**完整 Core RPC
+直通——帧要过宿主直答、3 方法白名单（`headless-server.ts:523`）、强制 `cwd` 改写
+（`:348-355`）和 64 在途背压（`:359-368`）四道闸，注入点在 `:383-384`。
+
+Application API Gateway 仍是 **Phase 2 开启多用户的硬前置**，但理由换成 ownership：
+现有 3 个方法不携带也不校验账号身份，`agent/approve`/`agent/cancel` 无法区分请求来自
+哪个用户，会话直答只按 `cwd` 过滤（`:479,:503`）而无用户维度。任何第二个账号出现之前，
+必须先有按用户解析 `workspaceId` 与校验 ownership 的 Gateway。
 
 ### 7.2 Hub 到 Runtime
 
@@ -518,6 +581,27 @@ Runtime 支持空闲休眠、按需恢复、资源限额和节点调度。只有
 
 ## 10. 实施阶段
 
+### 10.0 落地进度（2026-09-06 核验）
+
+**四个 Phase 一个都没有开工。** 自本文 v2 写成（2026-08-28，commit `476a0c14`）至今，
+`packages/server` 只收到加固与发版提交，无任何 Hub 方向的新增：
+
+| 组件                                                      | 状态                                              |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| `packages/server/src/hub/`                                | **不存在**                                        |
+| `packages/web/src/client/`                                | **不存在**                                        |
+| `packages/server/src/mobile-remote/remote-host-bridge.ts` | **不存在**（`RemoteHostBridge` 标识符全仓无声明） |
+| `Dockerfile` / `docker-compose.yml`                       | **不存在**                                        |
+
+期间落地的 server 相关提交只有：`cb94334e`（WS 在途请求上限）、`fe7b48ef`（send race 隔离）、
+`9c396c42`+`43c0e116`（静态资源按 realpath 收敛）、以及 0.9.1→0.9.6 若干发版。
+
+**相关新增文档**（本轮同批）：
+
+- `link-headless-server-feasibility.md` —— Link 在 headless 下的阻塞点核验（结论：
+  不是 Electron 卡的，是 `agent-server-stdio.ts:394` 一行无条件 IPC 注入）。
+- `codex-cloud-remote-tasks-design.md` —— Codex Cloud 云端任务接入的现状核验与路线取舍。
+
 ### Phase 1：个人远程闭环
 
 - 将现有 `code-shell-serve` 打包为可部署镜像。
@@ -526,12 +610,16 @@ Runtime 支持空闲休眠、按需恢复、资源限额和节点调度。只有
 - 保持单 Workspace、单用户 Worker。
 - 定义审批 lease 的多设备语义（§5.2）并随审批闭环一起验收。
 - 验证会话、流式输出、审批、停止和重启恢复。
-- **显式风险接受**：本阶段浏览器经登录后仍是完整 Core RPC 直通（含任意 `cwd`）。
-  单用户下浏览器等同部署者本人，可以接受；该风险由 Phase 2 的 Application API 关闭。
+- **Phase 1 已知限制**（v3 修订，原为「显式风险接受」）：本阶段浏览器面是
+  `agent/run|approve|cancel` 3 方法 + 单一强制 `cwd` + 64 在途上限（§2.1），
+  不是完整 Core RPC 直通。单用户下浏览器等同部署者本人，该面可接受。
+  缺的是 ownership 维度（无账号校验、会话仅按 `cwd` 过滤），由 Phase 2 的
+  Application API Gateway 补齐。
 
 ### Phase 2：多用户与 Capability Profile
 
-- **前置**：落地 §7.1 Application API Gateway，关闭浏览器直连 Core RPC 与任意 `cwd` 提交。
+- **前置**：落地 §7.1 Application API Gateway，给浏览器面补上账号 ownership 校验与
+  按 `workspaceId` 的路径解析（不是"关闭完整直通"——那个直通并不存在，见 §2.1）。
   此项完成前不得创建第二个账号。
 - 增加 User、Workspace Registry、ACL、Profile 和 ProfileBinding。
 - 落地 §4.4：管理员 trust 策略与 workspace 内配置发现的 Profile 钳制。
