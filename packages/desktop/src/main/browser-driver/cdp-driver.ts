@@ -15,6 +15,7 @@
  * Spec: docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md §4.2.
  */
 
+import { randomUUID } from "node:crypto";
 import {
   CdpActionsDriver,
   type CdpSender as PkgCdpSender,
@@ -43,9 +44,14 @@ export class CdpBrowserDriver implements BrowserBridge {
   private refMap: Record<string, number> = {};
   private latestDocumentId: string | undefined;
   private snapshotCounter = 0;
+  /** A new physical target or grant must never reuse a previous target's refs. */
+  private readonly instanceId = randomUUID();
 
   constructor(send: CdpSender, pageInfo: () => Promise<PageInfo> | PageInfo) {
-    this.inner = new CdpActionsDriver(send, pageInfo);
+    this.inner = new CdpActionsDriver(send, pageInfo, {
+      keyboardPlatform: process.platform === "darwin" ? "mac" : "other",
+      documentNamespace: this.instanceId,
+    });
   }
 
   resetDomains(): void {
@@ -56,7 +62,7 @@ export class CdpBrowserDriver implements BrowserBridge {
     const raw = await this.inner.snapshot();
     const flattened = flattenAxTree((raw.nodes ?? []) as AXNode[]);
     this.snapshotCounter += 1;
-    const snapshotId = `s${this.snapshotCounter}`;
+    const snapshotId = `${this.instanceId}:s${this.snapshotCounter}`;
     const elements = flattened.elements.map((element) => ({
       ...element,
       ref: `${snapshotId}:${element.ref}`,

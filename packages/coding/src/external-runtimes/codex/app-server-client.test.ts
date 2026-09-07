@@ -160,4 +160,13 @@ describe("CodexAppServerClient", () => {
     await expect(client.request("ping")).rejects.toThrow(/closed/i);
     expect(client.isClosed).toBe(true);
   });
+
+  test("close returns when the server has already exited from a signal", async () => {
+    const client = inlineClient(`setOnLine(() => { process.kill(process.pid, "SIGTERM"); });`);
+    client.onNotification(() => {});
+    client.start();
+    await expect(client.request("ping")).rejects.toThrow(/exited/);
+    await client.close();
+    expect(client.isClosed).toBe(true);
+  });
 });

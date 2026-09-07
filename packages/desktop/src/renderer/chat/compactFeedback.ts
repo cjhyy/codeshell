@@ -9,6 +9,7 @@ export interface CompactFeedbackInput {
 const STRATEGY_LABEL_KEYS = {
   compacted: "chat.compact.strategy.compacted",
   summary: "chat.compact.strategy.summary",
+  notes: "chat.compact.strategy.notes",
   snip: "chat.compact.strategy.snip",
   window: "chat.compact.strategy.window",
   micro: "chat.compact.strategy.micro",
@@ -47,10 +48,7 @@ export function compactPromptTokensWithBaseline(
   // omit system prompt, tool schema, memory, and provider framing. Preserve the
   // last displayed fixed baseline so the context ring does not drop to a pure
   // message-body estimate after manual compaction.
-  const baseline = Math.max(
-    0,
-    safeTokenCount(currentPromptTokens) - safeTokenCount(result.before),
-  );
+  const baseline = Math.max(0, safeTokenCount(currentPromptTokens) - safeTokenCount(result.before));
   return safeTokenCount(result.after) + baseline;
 }
 

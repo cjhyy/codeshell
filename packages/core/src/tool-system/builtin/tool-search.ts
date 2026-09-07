@@ -10,6 +10,8 @@ import type { ToolDefinition, RegisteredTool } from "../../types.js";
 import type { ToolRegistry } from "../registry.js";
 import type { ToolContext } from "../context.js";
 import { isRegisteredMcpToolAllowed } from "../mcp-tool-policy.js";
+import { browserDiscoveryScore, isBuiltinBrowserTool } from "../browser-discovery.js";
+import { PLAN_MODE_ALLOWED_TOOLS } from "../plan-mode-allowlist.js";
 
 export const toolSearchToolDef: ToolDefinition = {
   name: "ToolSearch",
@@ -73,7 +75,14 @@ export async function toolSearchTool(
   // its server is in this session's allowedMcpServers. Undefined set = no
   // gating (sub-agents / hosts that don't populate it).
   const visible = (tool: RegisteredTool): boolean => {
-    if (tool.source !== "mcp") return true;
+    if (ctx.disabledBuiltins?.has(tool.name)) return false;
+    if (ctx.allowedToolNames && !ctx.allowedToolNames.has(tool.name)) return false;
+    if (ctx.planMode && !PLAN_MODE_ALLOWED_TOOLS.has(tool.name)) return false;
+    if (tool.source !== "mcp") {
+      if (isBuiltinBrowserTool(tool) && !ctx.browser) return false;
+      const guard = ctx.toolRegistry!.getAvailabilityGuard(tool.name);
+      return !guard || !ctx.toolVisibility || guard(ctx.toolVisibility);
+    }
     const allowed = ctx.allowedMcpServers;
     return (
       (!allowed || allowed.has(tool.serverName ?? "")) &&
@@ -167,7 +176,7 @@ function searchDetailedTools(
 
   // Score each tool
   const scored = allTools.map((tool) => {
-    let score = 0;
+    let score = browserDiscoveryScore(tool, query);
     const nameLower = tool.name.toLowerCase();
     const descLower = tool.description.toLowerCase();
 

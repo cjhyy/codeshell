@@ -27,6 +27,7 @@ import type {
   BrowserTab,
 } from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
+import { randomUUID } from "node:crypto";
 import {
   openBrowserHost,
   type BrowserHostHandle,
@@ -45,6 +46,17 @@ import {
 const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_TARGETS = 3;
 const BACKGROUND_TAB_ID = "background";
+const DEFAULT_CONTINUITY_TTL_MS = 60 * 60 * 1000;
+const DEFAULT_MAX_REMEMBERED_TARGETS = 128;
+
+interface TargetContinuity {
+  partition: string;
+  tabId: string;
+  url: string;
+  title: string;
+  reason: "idle" | "capacity" | "closed";
+  expiresAt: number;
+}
 
 type BrowserDriver = CdpBrowserDriver;
 
@@ -83,6 +95,11 @@ interface RuntimeEntry {
   initialUrl: string;
   title: string;
   leases: number;
+  tabId: string;
+  lastUrl: string;
+  lastTitle: string;
+  recovery?: TargetContinuity["reason"];
+  pendingOperations: number;
   lastUsedAt: number;
   target?: BackgroundTarget;
   opening?: Promise<BackgroundTarget>;
@@ -106,6 +123,9 @@ interface BackgroundBrowserRuntimeDeps {
 export interface BackgroundBrowserRuntimeOptions {
   idleTtlMs?: number;
   maxTargets?: number;
+  /** Bounded metadata only; these do not retain Chromium targets or DOM refs. */
+  continuityTtlMs?: number;
+  maxRememberedTargets?: number;
   /** Test seams; production callers should omit. */
   deps?: Partial<BackgroundBrowserRuntimeDeps>;
 }
@@ -117,12 +137,20 @@ export function backgroundBrowserPartition(ownerId: string): string {
 
 export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
   private readonly entries = new Map<string, RuntimeEntry>();
+  private readonly continuity = new Map<string, TargetContinuity>();
+  private readonly continuityTtlMs: number;
+  private readonly maxRememberedTargets: number;
   private readonly idleTtlMs: number;
   private readonly maxTargets: number;
   private readonly deps: BackgroundBrowserRuntimeDeps;
 
   constructor(options: BackgroundBrowserRuntimeOptions = {}) {
     this.idleTtlMs = positiveFiniteOr(options.idleTtlMs, DEFAULT_IDLE_TTL_MS);
+    this.continuityTtlMs = positiveFiniteOr(options.continuityTtlMs, DEFAULT_CONTINUITY_TTL_MS);
+    this.maxRememberedTargets = Math.max(
+      1,
+      Math.floor(positiveFiniteOr(options.maxRememberedTargets, DEFAULT_MAX_REMEMBERED_TARGETS)),
+    );
     this.maxTargets = Math.max(
       1,
       Math.floor(positiveFiniteOr(options.maxTargets, DEFAULT_MAX_TARGETS)),
@@ -144,6 +172,11 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     if (!ownerId) throw new Error("background browser ownerId is required");
     if (!partition) throw new Error("background browser partition is required");
 
+    this.pruneContinuity();
+    const remembered = this.continuity.get(ownerId);
+    if (remembered && remembered.partition !== partition) {
+      throw new Error(`background browser owner ${ownerId} is already bound to another partition`);
+    }
     let entry = this.entries.get(ownerId);
     if (entry && entry.partition !== partition) {
       throw new Error(`background browser owner ${ownerId} is already bound to another partition`);
@@ -155,11 +188,17 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         initialUrl: options.initialUrl?.trim() || "about:blank",
         title: options.title?.trim() || "CodeShell 后台浏览器",
         leases: 0,
+        tabId: remembered?.tabId ?? `task-tab-${randomUUID()}`,
+        lastUrl: remembered?.url ?? options.initialUrl?.trim() ?? "about:blank",
+        lastTitle: remembered?.title ?? "",
+        recovery: remembered?.reason,
+        pendingOperations: 0,
         lastUsedAt: this.deps.now(),
         interactiveOnlyRefs: new Set(),
         tail: Promise.resolve(),
       };
       this.entries.set(ownerId, entry);
+      this.continuity.delete(ownerId);
     }
 
     if (entry.idleTimer) {
@@ -169,15 +208,20 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     entry.leases += 1;
     entry.lastUsedAt = this.deps.now();
 
-    const bridge = this.bridgeFor(entry);
     let released = false;
+    const bridge = this.bridgeFor(entry, () => !released);
     return {
       bridge,
       show: async () => {
-        const target = await this.enqueue(entry!, () => this.ensureTarget(entry!));
+        const target = await this.enqueue(entry!, () => {
+          if (released) throw new Error("background browser lease has been released");
+          return this.ensureTarget(entry!);
+        });
         target.host.show();
       },
-      hide: () => entry?.target?.host.hide(),
+      hide: () => {
+        if (!released) entry?.target?.host.hide();
+      },
       release: () => {
         if (released) return;
         released = true;
@@ -189,10 +233,12 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
   /** Immediately closes every hidden target. Used during app shutdown and tests. */
   closeAll(): void {
     for (const entry of [...this.entries.values()]) this.disposeEntry(entry);
+    this.continuity.clear();
   }
 
   /** Immediately close one owner's target, for example when a session is deleted. */
   close(ownerId: string): void {
+    this.continuity.delete(ownerId);
     const entry = this.entries.get(ownerId);
     if (entry) this.disposeEntry(entry);
   }
@@ -207,15 +253,25 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     };
   }
 
-  private bridgeFor(entry: RuntimeEntry): BrowserBridge {
-    const use = <T>(operation: (target: BackgroundTarget) => Promise<T>): Promise<T> =>
-      this.enqueue(entry, async () => {
-        const target = await this.ensureTarget(entry);
+  private bridgeFor(entry: RuntimeEntry, isActive: () => boolean): BrowserBridge {
+    const queue = <T>(operation: () => Promise<T>) =>
+      this.enqueue(entry, () => {
+        if (!isActive()) throw new Error("background browser lease has been released");
+        return operation();
+      });
+    const use = <T>(
+      operation: (target: BackgroundTarget) => Promise<T>,
+      recover = false,
+    ): Promise<T> =>
+      queue(async () => {
+        const target = await this.ensureTarget(entry, recover);
         entry.lastUsedAt = this.deps.now();
         const attached = this.deps.attach(target.host.webContents);
         try {
           return await operation(target);
         } finally {
+          entry.lastUrl = safeCall(() => target.host.webContents.getURL()) ?? entry.lastUrl;
+          entry.lastTitle = safeCall(() => target.host.webContents.getTitle()) ?? entry.lastTitle;
           if (attached) {
             this.deps.detach(target.host.webContents);
             target.driver.resetDomains();
@@ -311,7 +367,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
               const result = await target.driver.navigate(url);
               if (result.ok) entry.interactiveOnlyRefs.clear();
               return result;
-            }),
+            }, true),
           failResult,
         ),
       scroll: (dir, amount) =>
@@ -439,47 +495,66 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
       listTabs: () =>
         safely(
           () =>
-            this.enqueue<BrowserTab[]>(entry, async () => {
+            queue<BrowserTab[]>(async () => {
+              if (!entry.target && entry.recovery) {
+                return [
+                  {
+                    tabId: entry.tabId,
+                    url: entry.lastUrl,
+                    title: entry.lastTitle,
+                    active: false,
+                    status: "closed",
+                  },
+                ];
+              }
               const target = await this.ensureTarget(entry);
               const page = currentPage(target);
               return [
                 {
-                  tabId: String(target.host.webContents.id || BACKGROUND_TAB_ID),
+                  tabId: entry.tabId,
                   url: page.url,
                   title: page.title ?? "",
                   active: true,
+                  status: "open",
                 },
-              ] satisfies BrowserTab[];
+              ];
             }),
           () => [],
         ),
       switchTab: (tabId) =>
         safely(
           () =>
-            this.enqueue<BrowserResult>(entry, async () => {
-              const target = await this.ensureTarget(entry);
-              const ownId = String(target.host.webContents.id || BACKGROUND_TAB_ID);
-              return tabId === ownId || tabId === BACKGROUND_TAB_ID
-                ? ({ ok: true } satisfies BrowserResult)
-                : ({ ok: false, detail: `tab ${tabId} not found` } satisfies BrowserResult);
+            queue<BrowserResult>(async () => {
+              // Never create a target just to reject an unrelated/stale handle.
+              if (tabId !== entry.tabId && tabId !== BACKGROUND_TAB_ID) {
+                return {
+                  ok: false,
+                  code: "FAILED",
+                  retryable: false,
+                  detail: `tab ${tabId} is not owned by this task. Use browser_act with action "list_tabs" for this task's current handle; do not retry the old ID.`,
+                };
+              }
+              await this.ensureTarget(entry);
+              return { ok: true, code: "OK" };
             }),
           failResult,
         ),
     };
   }
 
-  private async ensureTarget(entry: RuntimeEntry): Promise<BackgroundTarget> {
-    if (entry.target) return entry.target;
-    if (entry.opening) return entry.opening;
+  private async ensureTarget(entry: RuntimeEntry, recover = false): Promise<BackgroundTarget> {
     if (entry.disposed || this.entries.get(entry.ownerId) !== entry) {
       throw new Error("background browser lease is no longer active");
     }
+    if (entry.target) return entry.target;
+    if (entry.opening) return entry.opening;
+    if (entry.recovery && !recover) throw new Error(recoveryDetail(entry));
     this.makeTargetCapacity(entry);
 
     const opening = this.deps
       .openHost({
         kind: "window",
-        url: entry.initialUrl,
+        url: entry.recovery ? "about:blank" : entry.initialUrl,
         partition: entry.partition,
         title: entry.title,
         show: false,
@@ -493,9 +568,12 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         const target = { host, driver: this.deps.createDriver(host.webContents) };
         entry.target = target;
         entry.opening = undefined;
+        entry.recovery = undefined;
         host.onClosed(() => {
           if (entry.target?.host === host) {
             entry.target = undefined;
+            entry.recovery = "closed";
+            entry.interactiveOnlyRefs.clear();
           }
         });
         return target;
@@ -509,7 +587,15 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
   }
 
   private enqueue<T>(entry: RuntimeEntry, operation: () => Promise<T>): Promise<T> {
-    const result = entry.tail.then(operation, operation);
+    entry.pendingOperations += 1;
+    const guarded = () => {
+      if (entry.disposed || this.entries.get(entry.ownerId) !== entry)
+        throw new Error("background browser lease is no longer active");
+      return operation();
+    };
+    const result = entry.tail.then(guarded, guarded).finally(() => {
+      entry.pendingOperations -= 1;
+    });
     entry.tail = result.then(
       () => undefined,
       () => undefined,
@@ -530,6 +616,10 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     entry.idleTimer = setTimeout(() => {
       entry.idleTimer = undefined;
       if (entry.leases > 0) return;
+      if (entry.pendingOperations > 0) {
+        this.scheduleIdleEviction(entry);
+        return;
+      }
       // A revealed target is under human control. Keep it alive (and keep its
       // DOM/session/ref state intact) until the user hides/closes it.
       if (entry.target?.host.isVisible()) {
@@ -537,7 +627,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         this.scheduleIdleEviction(entry);
         return;
       }
-      this.disposeEntry(entry);
+      this.disposeEntry(entry, "idle");
     }, this.idleTtlMs);
     if (typeof entry.idleTimer === "object" && "unref" in entry.idleTimer) {
       entry.idleTimer.unref();
@@ -554,11 +644,12 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         (entry) =>
           entry !== requestingEntry &&
           entry.leases === 0 &&
+          entry.pendingOperations === 0 &&
           entry.target?.host.isVisible() !== true &&
           (entry.target !== undefined || entry.opening !== undefined),
       )
       .sort((a, b) => a.lastUsedAt - b.lastUsedAt);
-    if (idle[0]) this.disposeEntry(idle[0]);
+    if (idle[0]) this.disposeEntry(idle[0], "capacity");
     const afterEviction = [...this.entries.values()].filter(
       (entry) => entry.target !== undefined || entry.opening !== undefined,
     ).length;
@@ -567,8 +658,20 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     }
   }
 
-  private disposeEntry(entry: RuntimeEntry): void {
+  private disposeEntry(entry: RuntimeEntry, reason?: "idle" | "capacity"): void {
     if (this.entries.get(entry.ownerId) !== entry) return;
+    if (reason && (entry.target || entry.recovery)) {
+      this.continuity.delete(entry.ownerId);
+      this.continuity.set(entry.ownerId, {
+        partition: entry.partition,
+        tabId: entry.tabId,
+        url: safeCall(() => entry.target?.host.webContents.getURL()) ?? entry.lastUrl,
+        title: safeCall(() => entry.target?.host.webContents.getTitle()) ?? entry.lastTitle,
+        reason,
+        expiresAt: this.deps.now() + this.continuityTtlMs,
+      });
+      this.pruneContinuity();
+    }
     this.entries.delete(entry.ownerId);
     entry.disposed = true;
     if (entry.idleTimer) clearTimeout(entry.idleTimer);
@@ -576,6 +679,22 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     entry.target?.host.close();
     entry.target = undefined;
   }
+
+  private pruneContinuity(): void {
+    for (const [ownerId, value] of this.continuity) {
+      if (value.expiresAt <= this.deps.now()) this.continuity.delete(ownerId);
+    }
+    while (this.continuity.size > this.maxRememberedTargets) {
+      this.continuity.delete(this.continuity.keys().next().value!);
+    }
+  }
+}
+
+function recoveryDetail(entry: RuntimeEntry): string {
+  return (
+    `TARGET_CLOSED: this task's tab ${entry.tabId} was ${entry.recovery === "idle" ? "reclaimed after idle time" : entry.recovery === "capacity" ? "reclaimed to free browser capacity" : "closed"}. ` +
+    `Its last URL was ${entry.lastUrl || "about:blank"}. Use browser_navigate with the intended URL to reopen this same task-owned tab, then take a new snapshot. The tabId remains valid; all old element refs and read cursors have expired. Do not retry the previous action or switch to another task's page.`
+  );
 }
 
 export const backgroundBrowserRuntime = new BackgroundBrowserRuntime();
@@ -604,7 +723,13 @@ function hostOf(url: string): string {
 }
 
 function failResult(detail: string): BrowserResult {
-  return { ok: false, detail };
+  return {
+    ok: false,
+    detail,
+    ...(detail.startsWith("TARGET_CLOSED:")
+      ? { code: "TARGET_CLOSED" as const, retryable: false }
+      : {}),
+  };
 }
 
 function failImage(detail: string): BrowserImageData {

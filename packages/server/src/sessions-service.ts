@@ -153,8 +153,10 @@ export interface DiskSessionMeta {
   cwd: string;
   title: string;
   updatedAt: number;
-  /** Session origin — only "desktop" / "automation" are listed (see filter). */
-  origin: "desktop" | "automation";
+  /** Sub-agents are returned only by an explicit parentSessionId query. */
+  origin: "desktop" | "automation" | "subagent";
+  /** Present only when listing the direct children of a session. */
+  parentSessionId?: string;
   /** Normalized durable status for Pet/display consumers. */
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
   /** Exceptional completed-run boundary; absent means a normal final answer. */
@@ -192,16 +194,33 @@ function decodeDiskSessionCursor(value: string | undefined): DiskSessionCursor |
 }
 
 /**
- * List top-level (non-sub-agent) sessions from disk, newest first, paginated.
+ * List sessions from disk, newest first, paginated. The default catalog is
+ * top-level only; parentSessionId selects direct children for transcript views.
  * Filter on state.json `parentSessionId`:
  *   - key absent  → legacy → skip (存量 not auto-rebuilt)
- *   - null / ""   → top-level → show
- *   - non-empty   → sub-agent → filter out
+ *   - null / ""   → top-level → show only in the default catalog
+ *   - non-empty   → sub-agent → show only for the matching parent query
  */
 export async function listDiskSessions(
-  opts: { limit: number; cursor?: string; includeArchived?: boolean },
+  opts: {
+    limit: number;
+    cursor?: string;
+    includeArchived?: boolean;
+    parentSessionId?: string;
+  },
   baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
+  const parentSessionId = opts.parentSessionId;
+  if (
+    parentSessionId !== undefined &&
+    (typeof parentSessionId !== "string" ||
+      !SAFE_ID.test(parentSessionId) ||
+      parentSessionId.length > 128 ||
+      parentSessionId === "." ||
+      parentSessionId.includes(".."))
+  ) {
+    throw new Error("invalid parent session id");
+  }
   // Async fs throughout: this is an IPC handler on the Electron main thread
   // (sessions:listDisk). The previous synchronous statSync/readFileSync loops
   // never yielded the event loop and froze the UI while enumerating sessions.
@@ -267,11 +286,22 @@ export async function listDiskSessions(
     if (state.ephemeral === true) continue;
     if (state.kind === "pet") continue;
     if (!("parentSessionId" in state)) continue; // legacy → skip
-    if (state.parentSessionId) continue; // sub-agent (non-empty) → filter
-    // Only desktop + automation belong in the desktop sidebar. tui / missing
-    // origin are filtered out (tui shares ~/.code-shell; legacy has no origin).
+    if (parentSessionId !== undefined) {
+      if (state.parentSessionId !== parentSessionId) continue;
+    } else if (state.parentSessionId) {
+      continue;
+    }
+    // Only desktop + automation belong in the desktop sidebar. Targeted
+    // queries additionally expose subagent origin. tui / missing origins stay
+    // filtered out (tui shares ~/.code-shell; legacy has no origin).
     const origin = state.origin;
-    if (origin !== "desktop" && origin !== "automation") continue;
+    if (
+      origin !== "desktop" &&
+      origin !== "automation" &&
+      !(parentSessionId !== undefined && origin === "subagent")
+    ) {
+      continue;
+    }
     // Skip sessions whose project root has been deleted. Listing them led the
     // renderer's disk-rebuild to call createRepoForCwd → the deleted project
     // reappeared in the sidebar, and any subsequent write under that cwd
@@ -279,7 +309,9 @@ export async function listDiskSessions(
     // is intentionally NOT filtered here — the renderer handles that via
     // isNoRepoCwd. (deleted-project resurrection)
     const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
-    if (cwdStr && !(await pathExists(cwdStr))) continue;
+    // A child transcript remains useful after its temporary worktree is gone;
+    // targeted reads do not rebuild projects in the sidebar.
+    if (parentSessionId === undefined && cwdStr && !(await pathExists(cwdStr))) continue;
     // Archived sessions are hidden from the default catalog. Filtering happens
     // before the push (like every other skip above), so the mtime cursor —
     // derived from the dirs[] position, not from how many rows we kept — keeps
@@ -299,6 +331,7 @@ export async function listDiskSessions(
         (typeof state.summary === "string" && state.summary ? state.summary : id),
       updatedAt: mtime,
       origin,
+      ...(parentSessionId !== undefined ? { parentSessionId } : {}),
       status:
         state.status === "active" || state.status === "paused" || state.status === "completed"
           ? state.status

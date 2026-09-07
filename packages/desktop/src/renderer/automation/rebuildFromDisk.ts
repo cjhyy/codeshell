@@ -14,7 +14,8 @@ export interface DiskSessionMeta {
   title: string;
   updatedAt: number;
   /** Session origin from disk; "automation" sessions get the ⚙ source mark. */
-  origin?: "desktop" | "automation";
+  origin?: "desktop" | "automation" | "subagent";
+  parentSessionId?: string;
   workspaceProfile?: string;
 }
 
@@ -40,6 +41,9 @@ export function planDiskRebuild(
   deps: RebuildDeps,
 ): RebuildPlacement[] {
   return sessions.flatMap((s) => {
+    // Child queries feed transcript views only, even if a caller accidentally
+    // passes their results through the ordinary sidebar rebuild.
+    if (s.parentSessionId || s.origin === "subagent") return [];
     const cwd = deps.resolveCwd?.(s.cwd) ?? s.cwd;
     // The internal no-repo sandbox is a no-project chat, never a real repo.
     const mainResolution = deps.resolvedForCwd?.get(cwd);

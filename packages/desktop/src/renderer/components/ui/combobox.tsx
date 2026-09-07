@@ -19,6 +19,8 @@ export interface ComboboxProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyText?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
   className?: string;
   triggerClassName?: string;
 }
@@ -32,6 +34,8 @@ export function Combobox({
   placeholder = "Select…",
   searchPlaceholder = "Search…",
   emptyText = "No results.",
+  ariaLabel,
+  disabled = false,
   className,
   triggerClassName,
 }: ComboboxProps) {
@@ -43,14 +47,18 @@ export function Combobox({
         <Button
           variant="outline"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
+          disabled={disabled}
           className={cn("h-8 justify-between font-normal", triggerClassName)}
         >
           <span className="truncate">{current ? current.label : placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn("w-[var(--radix-popover-trigger-width)] min-w-[200px]", className)}>
+      <PopoverContent
+        className={cn("w-[var(--radix-popover-trigger-width)] min-w-[200px]", className)}
+      >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -58,12 +66,21 @@ export function Combobox({
             {options.map((o) => (
               <CommandItem
                 key={o.value}
-                value={`${o.label} ${o.hint ?? ""}`}
-                onSelect={() => { onChange(o.value); setOpen(false); }}
+                value={`${o.value} ${o.label} ${o.hint ?? ""}`}
+                onSelect={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
               >
-                <Check className={cn("mr-2 h-4 w-4", o.value === value ? "opacity-100" : "opacity-0")} />
+                <Check
+                  className={cn("mr-2 h-4 w-4", o.value === value ? "opacity-100" : "opacity-0")}
+                />
                 <span className="truncate">{o.label}</span>
-                {o.hint && <span className="ml-auto text-xs text-muted-foreground">{o.hint}</span>}
+                {o.hint && (
+                  <span className="ml-auto max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">
+                    {o.hint}
+                  </span>
+                )}
               </CommandItem>
             ))}
           </CommandList>

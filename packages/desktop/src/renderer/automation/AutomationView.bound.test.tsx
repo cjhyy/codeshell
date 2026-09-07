@@ -38,6 +38,15 @@ const mk = (resumeSessionId: string | null, sessions: unknown[] = []) =>
     job: { ...baseJob, resumeSessionId },
     projects: [],
     sessions,
+    conversations: sessions.map((link: any) => ({
+      sessionId: link.session.engineSessionId,
+      title: link.session.title,
+      updatedAt: link.session.updatedAt,
+      projectId: link.projectId,
+      projectLabel: "无项目（对话）",
+      archived: false,
+      session: link.session,
+    })),
     toggleBusy: false,
     runNowBusy: false,
     deleteBusy: false,
@@ -53,15 +62,26 @@ const mk = (resumeSessionId: string | null, sessions: unknown[] = []) =>
   }) as never;
 
 describe("AutomationDetail bound-session branch", () => {
-  test("resumeSessionId set → 续接对话 badge + 绑定的对话 card, no history list header", () => {
+  test("bound ordinary conversation is displayed with inherited settings and an open action", () => {
     const html = renderToStaticMarkup(<AutomationDetail {...mk("sess-9", [boundSession])} />);
     expect(html).toContain("续接对话");
     expect(html).toContain("绑定的对话");
     expect(html).not.toContain("运行 session");
+    expect(html).toContain("我的对话");
+    expect(html).toContain("打开对话");
+    expect(html).toContain("沿用绑定对话的权限和工具设置");
+    expect(html).toContain("跟随绑定的对话");
+    expect(html).not.toContain("暂时找不到绑定的对话");
   });
   test("resumeSessionId null → history list present, no 续接对话 badge", () => {
     const html = renderToStaticMarkup(<AutomationDetail {...mk(null, [boundSession])} />);
     expect(html).not.toContain("续接对话");
     expect(html).toContain("运行 session");
+  });
+  test("missing bindings offer recovery without claiming the conversation has never run", () => {
+    const html = renderToStaticMarkup(<AutomationDetail {...mk("deleted-session")} />);
+    expect(html).toContain("暂时找不到绑定的对话");
+    expect(html).toContain("每次新建对话");
+    expect(html).not.toContain("尚未运行过");
   });
 });

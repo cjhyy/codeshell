@@ -24,6 +24,8 @@ export type RunBehaviorMode = string;
  */
 export interface RunBehaviorProfile {
   id: string;
+  /** Default context policy; explicit Engine/settings choices take precedence. */
+  contextStrategy?: "summary" | "notes";
   /** Appended to the system prompt after config.appendSystemPrompt. */
   systemPromptAppend?: string;
   /** Hard tool allowlist for the run (model visibility + execution gate). */
@@ -223,6 +225,8 @@ export type AgentRuntimeProgressEvent =
   | { type: "usage"; usage: TokenUsage };
 
 export interface ChildEngineRuntime {
+  /** Release child-local resources after the entire supervised lifetime settles. */
+  dispose?(): void | Promise<void>;
   run(task: string, options?: EngineRunOptions): Promise<EngineResult>;
   setAgentControlStateListener(listener: ((state: LiveChildState) => void) | undefined): void;
   setAgentDirectionsDeliveredListener?(

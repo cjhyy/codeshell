@@ -125,6 +125,25 @@ function deferred<T>() {
 }
 
 describe("PetStateAggregator", () => {
+  test("keeps sub-agent catalog rows out of Mimi's ordinary work view", async () => {
+    const aggregator = new PetStateAggregator({
+      bridge: new FakeBridge(),
+      listDiskSessions: pagedCatalog([
+        disk("parent"),
+        disk("child", { parentSessionId: "parent", origin: "subagent" }),
+        disk("legacy-child", { parentSessionId: "parent" }),
+        disk("orphan-child", { origin: "subagent" }),
+      ]).list,
+    });
+
+    await aggregator.start();
+
+    expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
+      "parent",
+    ]);
+    aggregator.stop();
+  });
+
   test("filters quick chats from both disk and live worker projections", async () => {
     const bridge = new FakeBridge();
     bridge.active = true;

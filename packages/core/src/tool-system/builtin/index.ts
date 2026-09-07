@@ -47,6 +47,14 @@ import {
 } from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
 import { todoWriteToolDef, todoWriteTool } from "./task.js";
+import {
+  saveContextNoteToolDef,
+  saveContextNoteTool,
+  newContextToolDef,
+  newContextTool,
+  searchHistoryToolDef,
+  searchHistoryTool,
+} from "./context-notes.js";
 import { sleepToolDef } from "./sleep.definition.js";
 import { sleepTool } from "./sleep.js";
 import { configToolDef, configTool } from "./config.js";
@@ -591,6 +599,49 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     execute: todoWriteTool,
     exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(todoWriteToolDef.name) }),
   },
+  {
+    definition: {
+      ...saveContextNoteToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: saveContextNoteTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(saveContextNoteToolDef.name),
+      availability: (ctx) => ctx.contextStrategy === "notes",
+    }),
+  },
+  {
+    definition: {
+      ...newContextToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: newContextTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(newContextToolDef.name),
+      availability: (ctx) => ctx.contextStrategy === "notes",
+      requires: [saveContextNoteToolDef.name, searchHistoryToolDef.name],
+    }),
+  },
+  {
+    definition: {
+      ...searchHistoryToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: searchHistoryTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(searchHistoryToolDef.name),
+      availability: (ctx) => ctx.contextStrategy === "notes",
+    }),
+  },
   // ─── Phase 4: Multi-Agent + Worktree ───────────────────────────
   // ─── Phase 5: Utility Tools ────────────────────────────────────
   {
@@ -906,6 +957,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     execute: browserObserveTool,
     exposure: expose(GENERAL_TAGS, {
       defaultPermissionRules: allow(browserObserveToolDef.name),
+      availability: (ctx) => ctx.hasBrowserAutomation === true,
       promptSections: ["browser"],
     }),
   },
@@ -920,6 +972,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: browserActTool,
     exposure: expose(GENERAL_TAGS, {
+      availability: (ctx) => ctx.hasBrowserAutomation === true,
       defaultPermissionRules: [
         {
           tool: browserActToolDef.name,
@@ -942,6 +995,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     execute: browserNavigateTool,
     exposure: expose(GENERAL_TAGS, {
       defaultPermissionRules: allow(browserNavigateToolDef.name),
+      availability: (ctx) => ctx.hasBrowserAutomation === true,
       promptSections: ["browser"],
     }),
   },

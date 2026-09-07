@@ -9,6 +9,7 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { ModelPool } from "../llm/model-pool.js";
 import { registerProvider } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
+import { MCPManager } from "../tool-system/mcp-manager.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, SessionState, StreamEvent } from "../types.js";
@@ -57,17 +58,25 @@ class InitLifecycleClient extends LLMClientBase {
 
 registerProvider(provider, InitLifecycleClient);
 
-class FakeMcpPool {
+class FakeMcpPool extends MCPManager {
   connectCalls = 0;
+  syncCalls: Parameters<MCPManager["syncToolsToRegistry"]>[] = [];
 
-  constructor(private readonly connectImpl: () => Promise<void>) {}
-
-  async connectAll(): Promise<void> {
-    this.connectCalls++;
-    await this.connectImpl();
+  constructor(private readonly connectImpl: (attempt: number) => Promise<void>) {
+    super(new ToolRegistry({ builtinTools: [] }));
   }
 
-  async disconnectAll(): Promise<void> {}
+  override async connectAll(..._args: Parameters<MCPManager["connectAll"]>): Promise<void> {
+    this.connectCalls++;
+    await this.connectImpl(this.connectCalls);
+  }
+
+  override syncToolsToRegistry(...args: Parameters<MCPManager["syncToolsToRegistry"]>): void {
+    this.syncCalls.push(args);
+    // Discovery is deliberately empty in this initialization fixture. Still
+    // use the real refresh contract so the Engine's local registry is checked.
+    super.syncToolsToRegistry(...args);
+  }
 }
 
 function makeEngine(dir: string, model: string, mcpPool: FakeMcpPool): Engine {
@@ -75,7 +84,7 @@ function makeEngine(dir: string, model: string, mcpPool: FakeMcpPool): Engine {
     modelPool: new ModelPool(),
     toolRegistry: new ToolRegistry({ builtinTools: [] }),
     settings: {} as EngineRuntimeOptions["settings"],
-    mcpPool: mcpPool as unknown as EngineRuntimeOptions["mcpPool"],
+    mcpPool,
     costTracker: {} as EngineRuntimeOptions["costTracker"],
   });
   const engine = new Engine({
@@ -97,7 +106,7 @@ function makeEngine(dir: string, model: string, mcpPool: FakeMcpPool): Engine {
   return engine;
 }
 
-function setup(initFailures: number, connectImpl: () => Promise<void>) {
+function setup(initFailures: number, connectImpl: (attempt: number) => Promise<void>) {
   const dir = mkdtempSync(join(tmpdir(), "engine-init-lifecycle-"));
   tempDirs.push(dir);
   const model = `${provider}-${Date.now()}-${Math.random()}`;
@@ -179,8 +188,8 @@ describe("Engine initialization lifecycle", () => {
   });
 
   it("persists model_error for MCP initialization failure and releases the run guard", async () => {
-    const fixture = setup(0, async () => {
-      throw new Error("MCP connection failed");
+    const fixture = setup(0, async (attempt) => {
+      if (attempt === 1) throw new Error("MCP connection failed");
     });
     const events: StreamEvent[] = [];
 
@@ -202,13 +211,19 @@ describe("Engine initialization lifecycle", () => {
     expect(errors).toEqual([]);
     expect(events).toContainEqual({ type: "error", error: "MCP connection failed" });
     expect((fixture.engine as any).runInProgress).toBe(false);
+    expect(fixture.mcpPool.syncCalls).toHaveLength(0);
 
     const recovered = await fixture.engine.run("second run", {
       sessionId: "mcp-init-recovered",
       cwd: fixture.dir,
     });
     expect(recovered.reason).toBe("completed");
-    expect(fixture.mcpPool.connectCalls).toBe(1);
+    expect(fixture.mcpPool.connectCalls).toBe(2);
+    expect(fixture.mcpPool.syncCalls).toHaveLength(1);
+    const [registry, context, allowedServers] = fixture.mcpPool.syncCalls[0];
+    expect(registry).toBe(fixture.engine.getToolRegistry());
+    expect(context?.cwd).toBe(fixture.dir);
+    expect(allowedServers).toEqual(new Set(["test"]));
   });
 
   it("preserves the successful initialization path", async () => {

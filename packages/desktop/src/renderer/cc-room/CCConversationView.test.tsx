@@ -287,3 +287,124 @@ describe("CCConversationView transcript ownership", () => {
     ]);
   });
 });
+
+function renderedText(node: any): string {
+  if (node.nodeType === 3) return node.nodeValue ?? node.textContent ?? "";
+  return node.childNodes?.length
+    ? node.childNodes.map(renderedText).join("")
+    : (node.textContent ?? "");
+}
+
+describe("CCConversationView existing external subtask records", () => {
+  async function renderRoom(messages: unknown[]) {
+    ensureMiniDom();
+    let receive: (event: { roomId: string; msg: unknown }) => void = () => undefined;
+    let nativeReads = 0;
+    const off = () => undefined;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionTranscript: async () => {
+        nativeReads += 1;
+        throw new Error("External IDs must not query native storage");
+      },
+      listDiskSessions: async () => {
+        nativeReads += 1;
+        throw new Error("External rooms must not query native storage");
+      },
+      ccRoom: {
+        onApprovalRequest: () => off,
+        onApprovalResolved: () => off,
+        onRoomMessage: (listener: typeof receive) => {
+          receive = listener;
+          return off;
+        },
+        subscribeTranscript: async () => ({ messages, roomCursor: 0 }),
+        unsubscribeTranscript: async () => undefined,
+        roomHistory: async () => [],
+        send: async () => undefined,
+        respondApproval: async () => undefined,
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root!.render(
+        <CCConversationView
+          roomId="external-room"
+          sessionId="external-session"
+          cwd="/external-repo"
+          mode="default"
+          onBack={() => undefined}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    return {
+      container,
+      nativeReads: () => nativeReads,
+      emit: async (msg: unknown) => {
+        await act(async () => {
+          receive({ roomId: "external-room", msg });
+          await flushMicrotasks();
+        });
+      },
+      openSubtask: async () => {
+        const button = findElementByProp(container, "data-cc-subagent");
+        expect(button).toBeDefined();
+        await act(async () => {
+          reactPropsOf(button).onClick();
+          await flushMicrotasks();
+        });
+      },
+    };
+  }
+
+  test("a real normalized history Agent tool opens its captured request without native-store fallback", async () => {
+    const view = await renderRoom([
+      {
+        role: "assistant",
+        text: "",
+        tools: [
+          {
+            name: "Agent",
+            summary: "",
+            args: {
+              description: "Inspect external document",
+              prompt: "Verify the complete permission trail",
+              subagent_type: "general-purpose",
+            },
+          },
+        ],
+      },
+    ]);
+    await view.openSubtask();
+    expect(renderedText(view.container)).toContain("Verify the complete permission trail");
+    expect(renderedText(view.container)).toContain("内部对话尚未收录");
+    expect(view.nativeReads()).toBe(0);
+  });
+
+  test("real room tool events create an entry and its open detail receives the matching result", async () => {
+    const view = await renderRoom([]);
+    await view.emit({
+      seq: 1,
+      from: "agent",
+      type: "tool",
+      toolId: "delegate-call",
+      tool: "Task",
+      args: { description: "Read external document", prompt: "Check external login" },
+    });
+    await view.openSubtask();
+    expect(renderedText(view.container)).toContain("Check external login");
+    await view.emit({
+      seq: 2,
+      from: "agent",
+      type: "tool_result",
+      toolId: "delegate-call",
+      summary: "Permission denied by external browser",
+      isError: true,
+    });
+    expect(renderedText(view.container)).toContain("Permission denied by external browser");
+    await view.emit({ seq: 3, from: "agent", type: "text", text: "Unrelated parent response" });
+    expect(renderedText(view.container)).not.toContain("Unrelated parent response");
+    expect(view.nativeReads()).toBe(0);
+  });
+});

@@ -262,12 +262,14 @@ export class CodexAppServerClient {
     return this.closed;
   }
 
-  /** Graceful stop: stdin EOF (the Rust app-server exits on it), SIGTERM after. */
+  /** Stop via stdin EOF, then SIGTERM and SIGKILL if the server does not exit. */
   async close(): Promise<void> {
     const child = this.child;
     this.failAll("app-server client closed");
     this.lines?.close();
-    if (!child) return;
+    // Failed spawns have no pid and never emit `exit`. A process already killed
+    // by a signal likewise has no numeric exitCode and will not emit it again.
+    if (!child || !child.pid || child.exitCode !== null || child.signalCode !== null) return;
     try {
       child.stdin.end();
     } catch {
@@ -277,8 +279,18 @@ export class CodexAppServerClient {
       if (child.exitCode !== null) return resolve();
       child.once("exit", () => resolve());
     });
-    const timer = setTimeout(() => child.kill("SIGTERM"), 2_000);
-    await exited;
-    clearTimeout(timer);
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
+    const terminateTimer = setTimeout(() => {
+      child.kill("SIGTERM");
+      // Cleanup must finish even when an unresponsive server ignores SIGTERM.
+      // Keep awaiting its actual exit so callers never leave an orphan behind.
+      killTimer = setTimeout(() => child.kill("SIGKILL"), 500);
+    }, 2_000);
+    try {
+      await exited;
+    } finally {
+      clearTimeout(terminateTimer);
+      if (killTimer) clearTimeout(killTimer);
+    }
   }
 }

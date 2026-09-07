@@ -5,6 +5,7 @@ import { ToolCard } from "../tool-cards";
 import { StreamingMarkdown } from "./StreamingMarkdown";
 import { summarizeAgentActivity, describeActivity } from "../topbar/liveActivity";
 import { useT } from "../i18n/I18nProvider";
+import { useSubagentNavigation } from "../subagents/SubagentNavigation";
 
 // Text deltas keep the tools array stable. Avoid walking the operation list on
 // every token; ToolCard also memoizes individual calls when one tool changes.
@@ -28,6 +29,7 @@ const AgentToolCalls = memo(function AgentToolCalls({ tools }: { tools: ToolMess
 
 function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const { t } = useT();
+  const navigation = useSubagentNavigation();
   const [expanded, setExpanded] = useState(false);
   const status = message.error ? "err" : message.done ? "ok" : "running";
 
@@ -50,7 +52,8 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const bodyText = (message.text ?? "") + (message.textBuffer ?? "");
   const hasText = bodyText.trim().length > 0;
   const hasTools = message.toolCalls.length > 0;
-  const hasBody = hasTools || hasText || !!message.error || !!message.description.trim();
+  const hasBody =
+    hasTools || hasText || !!message.error || !!message.description.trim() || !!navigation;
 
   return (
     <div className="min-w-0 max-w-full px-4 py-1">
@@ -109,6 +112,22 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
             id={`agent-body-${message.id}`}
             className="flex min-w-0 flex-col gap-3 border-t border-border p-3"
           >
+            {navigation && (
+              <button
+                type="button"
+                className="self-start rounded px-2 py-1 text-xs text-primary hover:bg-accent"
+                onClick={() =>
+                  navigation.onView({
+                    agentId: message.id,
+                    parentSessionId: navigation.sessionId,
+                    label: message.description || message.name,
+                    running: !message.done,
+                  })
+                }
+              >
+                {t("msg.agent.transcript")}
+              </button>
+            )}
             {message.description.trim() && (
               <section aria-label={t("msg.agent.task")} className="min-w-0">
                 <div className="mb-1 text-xs font-medium text-muted-foreground">

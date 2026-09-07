@@ -33,6 +33,9 @@ import {
 } from "./timezones";
 import { cn } from "@/lib/utils";
 import { fmtRelative } from "./relativeTime";
+import { AutomationExecutionSettings } from "./AutomationExecutionSettings";
+import { buildAutomationConversations, type AutomationConversation } from "./sessionOptions";
+import { isCaseInsensitivePlatform } from "./pathMatch";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
 
@@ -251,29 +254,64 @@ export function AutomationView({
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [diskSessions, setDiskSessions] = useState<DiskSessionMeta[]>([]);
+  const [diskCursor, setDiskCursor] = useState<string | null>(null);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const conversationsLoadingRef = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [bindingError, setBindingError] = useState<string | null>(null);
   /** Per-action in-flight flags, keyed by "<action>:<jobId>". */
   const [pending, setPending] = useState<Record<string, boolean>>({});
+  const pendingKeys = useRef(new Set<string>());
 
   const refresh = async () => {
     try {
-      const [list, runList, diskPage] = await Promise.all([
+      const [list, runList] = await Promise.all([
         window.codeshell.listAutomations(),
         window.codeshell.listRuns(),
-        window.codeshell.listDiskSessions({ limit: 100 }),
       ]);
       setJobs(list);
       setRuns(runList);
-      setDiskSessions(diskPage.sessions);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
   };
 
+  const loadConversations = async (cursor?: string) => {
+    if (conversationsLoadingRef.current) return;
+    conversationsLoadingRef.current = true;
+    setLoadingConversations(true);
+    setError(null);
+    try {
+      const page = await window.codeshell.listDiskSessions({
+        limit: 100,
+        ...(cursor ? { cursor } : {}),
+      });
+      setDiskSessions((previous) => (cursor ? [...previous, ...page.sessions] : page.sessions));
+      setDiskCursor(page.nextCursor ?? null);
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      conversationsLoadingRef.current = false;
+      setLoadingConversations(false);
+    }
+  };
+
   useEffect(() => {
     void refresh();
+    void loadConversations();
   }, []);
+
+  const conversations = useMemo(
+    () =>
+      buildAutomationConversations(sessionIndices, diskSessions, projects, {
+        includeArchived: true,
+        caseInsensitive: isCaseInsensitivePlatform(),
+        noProjectLabel: t("auto.projectOptions.noProject"),
+        unknownProjectLabel: t("auto.detail.unknownProject"),
+      }),
+    [sessionIndices, diskSessions, projects, t],
+  );
 
   const detail = jobs?.find((j) => j.id === selected) ?? null;
 
@@ -287,20 +325,24 @@ export function AutomationView({
   // a quick double-click on 立即运行 submit multiple runs), while distinct
   // actions/jobs stay independent. The finally always clears the key so a
   // failed request can't leave a button stuck disabled.
-  const act = async (key: string, fn: () => Promise<unknown>) => {
-    if (pending[key]) return;
+  const act = async (key: string, fn: () => Promise<unknown>, binding = false) => {
+    if (pendingKeys.current.has(key)) return;
+    pendingKeys.current.add(key);
     setPending((p) => ({ ...p, [key]: true }));
+    setError(null);
+    setBindingError(null);
     try {
       await fn();
       await refresh();
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      (binding ? setBindingError : setError)(String(e instanceof Error ? e.message : e));
     } finally {
+      pendingKeys.current.delete(key);
       setPending((p) => ({ ...p, [key]: false }));
     }
   };
 
-  if (error) {
+  if (error && !jobs) {
     return (
       <div className="m-4 flex min-w-0 flex-col items-start gap-3 rounded-2xl border border-status-err/20 bg-status-err/5 p-5 text-sm">
         <p role="alert" className="break-words text-status-err">
@@ -377,7 +419,11 @@ export function AutomationView({
                   type="button"
                   aria-pressed={selected === j.id}
                   aria-controls={detailId}
-                  onClick={() => setSelected(j.id)}
+                  onClick={() => {
+                    setSelected(j.id);
+                    setError(null);
+                    setBindingError(null);
+                  }}
                   className={cn(
                     "flex w-full min-w-0 flex-col gap-2 rounded-xl border px-3 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                     selected === j.id
@@ -427,12 +473,28 @@ export function AutomationView({
             aria-label={detail?.name ?? t("auto.view.selectJob")}
             className="min-h-0 min-w-0 overflow-y-auto rounded-2xl"
           >
+            {error && (
+              <p
+                role="alert"
+                className="mb-3 break-words rounded-xl border border-status-err/20 bg-status-err/5 p-3 text-sm text-status-err [overflow-wrap:anywhere]"
+              >
+                {error}
+              </p>
+            )}
             {detail ? (
               <AutomationDetail
                 t={t}
                 job={detail}
                 projects={projects}
                 sessions={automationSessionLinks(detail, sessionIndices, runs, diskSessions)}
+                conversations={conversations}
+                bindingError={bindingError}
+                onClearBindingError={() => setBindingError(null)}
+                conversationsLoading={loadingConversations}
+                onRefreshConversations={() => void loadConversations()}
+                onLoadMoreConversations={
+                  diskCursor ? () => void loadConversations(diskCursor) : undefined
+                }
                 onToggleEnabled={(next) =>
                   act("toggle:" + detail.id, () =>
                     next
@@ -447,8 +509,10 @@ export function AutomationView({
                   act("runNow:" + detail.id, () => window.codeshell.runAutomationNow(detail.id))
                 }
                 onSave={(patch) =>
-                  act("save:" + detail.id, () =>
-                    window.codeshell.updateAutomation(detail.id, patch),
+                  act(
+                    "save:" + detail.id,
+                    () => window.codeshell.updateAutomation(detail.id, patch),
+                    patch.resumeSessionId !== undefined,
                   )
                 }
                 runNowBusy={!!pending["runNow:" + detail.id]}
@@ -502,8 +566,15 @@ export function AutomationDetail(props: {
     projectId?: string | null;
     rootId?: string | null;
     permissionLevel?: AutomationPermissionLevel;
-  }) => void;
+    resumeSessionId?: string | null;
+  }) => void | Promise<unknown>;
   sessions: AutomationSessionLink[];
+  conversations?: AutomationConversation[];
+  bindingError?: string | null;
+  onClearBindingError?: () => void;
+  conversationsLoading?: boolean;
+  onRefreshConversations?: () => void;
+  onLoadMoreConversations?: () => void;
   runNowBusy: boolean;
   deleteBusy: boolean;
   toggleBusy: boolean;
@@ -521,6 +592,10 @@ export function AutomationDetail(props: {
   const t = props.t ?? fallback.t;
   const sessions = props.sessions ?? [];
   const lastSession = sessions[0];
+  const conversations = props.conversations ?? [];
+  const boundConversation = conversations.find(
+    (conversation) => conversation.sessionId === job.resumeSessionId,
+  );
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
@@ -660,14 +735,14 @@ export function AutomationDetail(props: {
             <Switch
               checked={job.enabled}
               onCheckedChange={(v) => props.onToggleEnabled(v)}
-              disabled={props.toggleBusy}
+              disabled={props.toggleBusy || props.saveBusy}
               aria-label={t("auto.detail.enableAutomation")}
             />
             <Button
               size="sm"
               className="rounded-lg"
               onClick={props.onRunNow}
-              disabled={props.runNowBusy}
+              disabled={props.runNowBusy || props.saveBusy || props.deleteBusy}
             >
               {props.runNowBusy ? (
                 <>
@@ -686,7 +761,7 @@ export function AutomationDetail(props: {
               variant="ghost"
               className="size-8 rounded-lg p-0 text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
               onClick={props.onDelete}
-              disabled={props.deleteBusy}
+              disabled={props.deleteBusy || props.saveBusy}
               aria-label={t("auto.detail.delete")}
               title={t("auto.detail.delete")}
             >
@@ -799,6 +874,25 @@ export function AutomationDetail(props: {
         )}
       </section>
 
+      <AutomationExecutionSettings
+        key={job.id}
+        resumeSessionId={job.resumeSessionId}
+        conversations={conversations}
+        busy={props.saveBusy || props.runNowBusy}
+        error={props.bindingError}
+        onClearError={props.onClearBindingError}
+        loading={props.conversationsLoading}
+        onRefresh={props.onRefreshConversations}
+        onLoadMore={props.onLoadMoreConversations}
+        t={t}
+        onSave={props.onSave}
+        onOpen={(conversation) => {
+          if (conversation.session)
+            props.onOpenSession(conversation.projectId, conversation.session.id);
+          else if (conversation.disk) props.onOpenDiskSession(conversation.disk);
+        }}
+      />
+
       <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-4">
         <h3 className="mb-1 text-sm font-semibold text-foreground">
           {t("auto.detail.configSection")}
@@ -808,6 +902,7 @@ export function AutomationDetail(props: {
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {/* Step 1: cadence type. */}
             <Select
+              disabled={props.saveBusy}
               value={sched.kind}
               onValueChange={(v) => onCadenceChange(v as Schedule["kind"])}
             >
@@ -829,6 +924,7 @@ export function AutomationDetail(props: {
             {/* Step 2: per-cadence detail. */}
             {sched.kind === "weekly" && (
               <Select
+                disabled={props.saveBusy}
                 value={String(sched.weekday)}
                 onValueChange={(v) => commitSchedule({ ...sched, weekday: Number(v) })}
               >
@@ -850,6 +946,7 @@ export function AutomationDetail(props: {
 
             {(sched.kind === "daily" || sched.kind === "weekdays" || sched.kind === "weekly") && (
               <Input
+                disabled={props.saveBusy}
                 type="time"
                 aria-label={t("auto.detail.time")}
                 className="h-9 w-[130px] max-w-full rounded-lg"
@@ -862,6 +959,7 @@ export function AutomationDetail(props: {
 
             {sched.kind === "hourly" && (
               <Select
+                disabled={props.saveBusy}
                 value={String(sched.everyHours)}
                 onValueChange={(v) => commitSchedule({ kind: "hourly", everyHours: Number(v) })}
               >
@@ -883,6 +981,7 @@ export function AutomationDetail(props: {
 
             {sched.kind === "custom" && (
               <Input
+                disabled={props.saveBusy}
                 aria-label={t("auto.detail.customSchedule")}
                 className="h-9 w-[200px] max-w-full rounded-lg font-mono"
                 value={customDraft}
@@ -900,6 +999,7 @@ export function AutomationDetail(props: {
         <FieldRow label={t("auto.detail.timezone")}>
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
             <Combobox
+              disabled={props.saveBusy}
               options={offsetOptions}
               value={tzOffsetFilter === "all" ? "all" : String(tzOffsetFilter)}
               onChange={(v) => setTzOffsetFilter(v === "all" ? "all" : Number(v))}
@@ -907,6 +1007,7 @@ export function AutomationDetail(props: {
               searchPlaceholder={t("auto.detail.tzSearch")}
             />
             <Combobox
+              disabled={props.saveBusy}
               options={tzCityOptions}
               value={job.timezone ?? "UTC"}
               onChange={(v) => {
@@ -920,87 +1021,109 @@ export function AutomationDetail(props: {
         </FieldRow>
 
         <FieldRow label={t("auto.detail.permission")}>
-          <Select
-            value={job.permissionLevel ?? "read-only"}
-            onValueChange={(v) => {
-              if (v !== (job.permissionLevel ?? "read-only")) {
-                props.onSave({ permissionLevel: v as AutomationPermissionLevel });
-              }
-            }}
-          >
-            <SelectTrigger
-              aria-label={t("auto.detail.permission")}
-              className="h-9 w-full max-w-[360px] min-w-0 rounded-lg"
+          {job.resumeSessionId ? (
+            <span className="text-sm text-muted-foreground">
+              {t("auto.detail.inheritedPermission")}
+            </span>
+          ) : (
+            <Select
+              disabled={props.saveBusy}
+              value={job.permissionLevel ?? "read-only"}
+              onValueChange={(v) => {
+                if (v !== (job.permissionLevel ?? "read-only")) {
+                  props.onSave({ permissionLevel: v as AutomationPermissionLevel });
+                }
+              }}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PERMISSION_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-block h-2 w-2 rounded-full",
-                        p.tone === "ok"
-                          ? "bg-status-ok"
-                          : p.tone === "warn"
-                            ? "bg-status-warn"
-                            : "bg-status-err",
-                      )}
-                    />
-                    {t(p.labelKey)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                aria-label={t("auto.detail.permission")}
+                className="h-9 w-full max-w-[360px] min-w-0 rounded-lg"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PERMISSION_OPTIONS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "inline-block h-2 w-2 rounded-full",
+                          p.tone === "ok"
+                            ? "bg-status-ok"
+                            : p.tone === "warn"
+                              ? "bg-status-warn"
+                              : "bg-status-err",
+                        )}
+                      />
+                      {t(p.labelKey)}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </FieldRow>
 
         <FieldRow label={t("auto.detail.project")}>
-          <Select
-            value={selectedProjectValue(job.cwd)}
-            onValueChange={(v) => {
-              const nextCwd = cwdFromSelection(v);
-              const project = props.projects.find(
-                (candidate) =>
-                  candidate.path === nextCwd ||
-                  candidate.roots.some((root) => root.path === nextCwd),
-              );
-              const root = project?.roots.find((candidate) => candidate.path === nextCwd);
-              if (project && root) {
-                if (
-                  nextCwd !== (job.cwd ?? "") ||
-                  project.id !== job.projectId ||
-                  root.id !== job.rootId
-                ) {
+          {job.resumeSessionId ? (
+            <div className="min-w-0">
+              <span className="block break-words text-sm [overflow-wrap:anywhere]">
+                {boundConversation?.projectLabel ??
+                  buildProjectOptions(props.projects, job.cwd).find(
+                    (option) => option.value === selectedProjectValue(job.cwd),
+                  )?.label}
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {t("auto.detail.inheritedProject")}
+              </span>
+            </div>
+          ) : (
+            <Select
+              disabled={props.saveBusy}
+              value={selectedProjectValue(job.cwd)}
+              onValueChange={(v) => {
+                const nextCwd = cwdFromSelection(v);
+                const project = props.projects.find(
+                  (candidate) =>
+                    candidate.path === nextCwd ||
+                    candidate.roots.some((root) => root.path === nextCwd),
+                );
+                const root = project?.roots.find((candidate) => candidate.path === nextCwd);
+                if (project && root) {
+                  if (
+                    nextCwd !== (job.cwd ?? "") ||
+                    project.id !== job.projectId ||
+                    root.id !== job.rootId
+                  ) {
+                    props.onSave({
+                      cwd: root.path,
+                      projectId: project.id,
+                      rootId: root.id,
+                    });
+                  }
+                } else if (nextCwd !== (job.cwd ?? "") || job.projectId || job.rootId) {
                   props.onSave({
-                    cwd: root.path,
-                    projectId: project.id,
-                    rootId: root.id,
+                    cwd: nextCwd,
+                    ...(nextCwd ? {} : { projectId: null, rootId: null }),
                   });
                 }
-              } else if (nextCwd !== (job.cwd ?? "") || job.projectId || job.rootId) {
-                props.onSave({
-                  cwd: nextCwd,
-                  ...(nextCwd ? {} : { projectId: null, rootId: null }),
-                });
-              }
-            }}
-          >
-            <SelectTrigger
-              aria-label={t("auto.detail.project")}
-              className="h-9 w-full max-w-[360px] min-w-0 rounded-lg"
+              }}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {buildProjectOptions(props.projects, job.cwd).map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                aria-label={t("auto.detail.project")}
+                className="h-9 w-full max-w-[360px] min-w-0 rounded-lg"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {buildProjectOptions(props.projects, job.cwd).map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </FieldRow>
 
         {job.templateSource && (
@@ -1016,54 +1139,7 @@ export function AutomationDetail(props: {
         )}
       </div>
 
-      {job.resumeSessionId ? (
-        <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">
-            {t("auto.detail.boundConversation")}
-          </h3>
-          {(() => {
-            const bound = sessions.find(
-              (l) => (l.session.engineSessionId ?? l.session.id) === job.resumeSessionId,
-            );
-            if (!bound)
-              return (
-                <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm leading-relaxed text-muted-foreground">
-                  {t("auto.detail.boundNotFound")}
-                </div>
-              );
-            const status = bound.run?.status ?? bound.session.runStatus;
-            const when = bound.run?.updatedAt ?? bound.session.updatedAt;
-            return (
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-auto min-w-0 w-full flex-wrap justify-start gap-2 whitespace-normal rounded-xl px-3 py-3 text-left"
-                onClick={() => {
-                  if (bound.needsImport && bound.run) props.onOpenRunSession(bound.run);
-                  else if (bound.disk) props.onOpenDiskSession(bound.disk);
-                  else props.onOpenSession(bound.projectId, bound.session.id);
-                }}
-              >
-                <Link2 size={16} aria-hidden="true" className="text-muted-foreground" />
-                <span className="min-w-0 flex-1 basis-40">
-                  <span className="block truncate text-sm font-medium">
-                    {bound.session.title || t("auto.detail.untitled")}
-                  </span>
-                  <span className="mt-1 flex flex-wrap items-center gap-2">
-                    <small className="text-xs text-muted-foreground tabular-nums">
-                      {shortDate(when)}
-                    </small>
-                    <RunStatus status={status} t={t} />
-                  </span>
-                </span>
-                <span className="shrink-0 text-xs text-primary">
-                  {t("auto.detail.openConversation")} →
-                </span>
-              </Button>
-            );
-          })()}
-        </div>
-      ) : (
+      {!job.resumeSessionId && (
         <div className="min-w-0 rounded-2xl border border-border/70 bg-card p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>

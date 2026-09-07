@@ -52,6 +52,23 @@ describe("foldTranscript", () => {
     expect((tool as { toolName: string }).toolName).toBe("Bash");
   });
 
+  it("keeps nested agents running in an explicitly live transcript snapshot", () => {
+    const items: FoldItem[] = [
+      {
+        kind: "stream",
+        event: { type: "agent_start", agentId: "nested", description: "Still working" },
+      },
+    ];
+    const live = foldTranscript(items, { live: true });
+    expect(live.messages.find((message) => message.kind === "agent")).toMatchObject({
+      done: false,
+    });
+    expect(live.activeAgents.nested).toBeDefined();
+    expect(
+      foldTranscript(items).messages.find((message) => message.kind === "agent"),
+    ).toMatchObject({ done: true });
+  });
+
   it("returns empty state for empty input", () => {
     expect(foldTranscript([]).messages).toEqual([]);
   });

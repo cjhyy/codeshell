@@ -40,6 +40,12 @@ import {
 import { DriveAgentJobsLoader } from "./tool-cards/DriveAgentJobsContext";
 import { SystemReminderTask } from "./messages/SystemReminderTask";
 import type { MarkdownRootStatus } from "./Markdown";
+import {
+  SubagentNavigationContext,
+  type SubagentSelection,
+  type SubagentSummary,
+} from "./subagents/SubagentNavigation";
+import { SubagentSessionDetail } from "./subagents/SubagentSessionDetail";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
@@ -66,6 +72,8 @@ export type ContextPackageCreatedHandler = (
 
 interface Props {
   messages: Message[];
+  /** Transcript detail views do not expose file undo/redo. */
+  readOnly?: boolean;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
@@ -127,6 +135,7 @@ interface Props {
 
 export function MessageStream({
   messages,
+  readOnly = false,
   onAskUserAnswer,
   onExtendGoal,
   trailing,
@@ -143,6 +152,33 @@ export function MessageStream({
   contextSelectionRequest,
 }: Props) {
   const { t } = useT();
+  const [selectedSubagent, setSelectedSubagent] = useState<SubagentSelection | null>(null);
+  // Context consumers only need identity, label and completion. Preserve the
+  // value across unrelated token deltas so memoized tool cards stay cheap.
+  const subagentSummariesRef = useRef<SubagentSummary[]>([]);
+  const nextSubagents = messages.filter((message) => message.kind === "agent");
+  if (
+    nextSubagents.length !== subagentSummariesRef.current.length ||
+    nextSubagents.some((agent, index) => {
+      const previous = subagentSummariesRef.current[index];
+      return (
+        agent.id !== previous?.id ||
+        agent.description !== previous.description ||
+        agent.done !== previous.done
+      );
+    })
+  )
+    subagentSummariesRef.current = nextSubagents;
+  const subagents = subagentSummariesRef.current;
+  const subagentNavigation = useMemo(
+    () => ({
+      sessionId: engineSessionId,
+      agents: subagents,
+      onView: setSelectedSubagent,
+    }),
+    [engineSessionId, subagents],
+  );
+  useEffect(() => setSelectedSubagent(null), [engineSessionId]);
   // The LAST files_changed message = the most recent turn's file edits. Only
   // that card gets interactive undo/redo (snapshots only peel newest-first);
   // older cards are informational. Computed from the raw message list (1:1 with
@@ -484,7 +520,7 @@ export function MessageStream({
             message={m}
             cwd={cwd ?? null}
             sessionId={engineSessionId ?? null}
-            isLatest={m.id === lastFilesChangedId}
+            isLatest={!readOnly && m.id === lastFilesChangedId}
           />
         );
       case "turn_end":
@@ -494,7 +530,11 @@ export function MessageStream({
     }
   };
 
-  return (
+  if (selectedSubagent) {
+    return <SubagentSessionDetail {...selectedSubagent} onBack={() => setSelectedSubagent(null)} />;
+  }
+
+  const stream = (
     <DriveAgentJobsLoader sessionId={engineSessionId} messages={messages}>
       <div className="relative flex min-w-0 max-w-full flex-1 flex-col overflow-hidden">
         {selectionOpen && (
@@ -661,5 +701,10 @@ export function MessageStream({
         )}
       </div>
     </DriveAgentJobsLoader>
+  );
+  return (
+    <SubagentNavigationContext.Provider value={subagentNavigation}>
+      {stream}
+    </SubagentNavigationContext.Provider>
   );
 }

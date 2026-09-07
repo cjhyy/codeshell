@@ -35,6 +35,8 @@ export type { ExternalRuntimeAttachment, ExternalRuntimeTurnInput } from "./turn
 export { CodexEventTranslator } from "./codex/event-translator.js";
 export { CodexAppServerClient } from "./codex/app-server-client.js";
 export type { AppServerClientOptions } from "./codex/app-server-client.js";
+export { discoverCodexModels } from "./codex/model-discovery.js";
+export type { CodexDiscoveredModel } from "./codex/model-discovery.js";
 export { CodexRuntime } from "./codex/runtime.js";
 export type {
   CodexRuntimeOptions,

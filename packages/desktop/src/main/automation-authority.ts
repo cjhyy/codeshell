@@ -203,14 +203,10 @@ export function resolveAutomationUpdateAuthority(
   existing: AutomationWorkspaceAuthorityInput,
   deps: AutomationAuthorityDeps,
 ): Promise<ResolvedAutomationAuthority> {
-  if (
-    hasOwn(patch, "resumeSessionId") &&
-    (patch.resumeSessionId ?? null) !== (existing.resumeSessionId ?? null)
-  ) {
-    return Promise.reject(new Error("automation resume Session binding is immutable"));
-  }
-  const sessionId = nonEmptyResumeSessionId(existing);
+  const sessionId = nonEmptyResumeSessionId(patch.resumeSessionId !== undefined ? patch : existing);
   if (sessionId) {
+    // Only explicit caller workspace fields are consistency hints. A newly
+    // selected Session owns its workspace; the previous job's ids may differ.
     return resolveResumeSessionAuthority(sessionId, patch, deps, {
       allowLegacy: false,
       role: "resume",

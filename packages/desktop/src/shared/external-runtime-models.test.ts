@@ -19,9 +19,9 @@ import {
 
 describe("external runtime model keys", () => {
   test("parses a runtime key into kind + model", () => {
-    expect(parseExternalRuntimeModelKey("codex/gpt-5.6-sol")).toEqual({
+    expect(parseExternalRuntimeModelKey("codex/gpt-6-astra")).toEqual({
       kind: "codex",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-astra",
     });
     expect(parseExternalRuntimeModelKey("claude-code/sonnet")).toEqual({
       kind: "claude-code",
@@ -105,8 +105,9 @@ describe("external runtime model keys", () => {
     expect(entries.every((entry) => entry.maxContextTokens === 1_000_000)).toBe(true);
   });
 
-  test("offers the current recommended Codex family instead of retired 5.1 entries", () => {
+  test("offers GPT-6 Astra first and keeps the GPT-5.6 choices", () => {
     expect(EXTERNAL_RUNTIME_MODELS.codex.map(({ model }) => model)).toEqual([
+      "gpt-6-astra",
       "gpt-5.6-sol",
       "gpt-5.6-terra",
       "gpt-5.6-luna",

@@ -74,7 +74,7 @@ export interface PetNavigationTarget {
   projectPath: string | null;
   title: string;
   updatedAt: number;
-  origin: DiskSessionMeta["origin"];
+  origin: "desktop" | "automation";
   status?: DiskSessionMeta["status"];
 }
 
@@ -460,7 +460,12 @@ export class PetStateAggregator {
         // boundary too so alternate/older catalog providers cannot leak them
         // into Mimi's durable view.
         newHighWater = Math.max(newHighWater, session.updatedAt);
-        if (isQuickChatSessionId(session.engineSessionId)) continue;
+        if (
+          isQuickChatSessionId(session.engineSessionId) ||
+          session.parentSessionId ||
+          session.origin === "subagent"
+        )
+          continue;
         next.set(session.engineSessionId, diskProjection(session, observedAt));
         nextBindings.set(session.engineSessionId, {
           uiSessionId: session.id,

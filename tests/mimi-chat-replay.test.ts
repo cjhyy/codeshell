@@ -51,11 +51,17 @@ class ReplayClient extends LLMClientBase {
   protected initClient(): void {}
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     const script = scripts.get(this.model)!;
-    if (!options.tools?.length) {
-      if (String(options.messages.at(-1)?.content).includes("<system-reminder>Turn limit reached."))
-        script.summaries += 1;
+    const turnLimitSummary = String(options.messages.at(-1)?.content).includes(
+      "<system-reminder>Turn limit reached.",
+    );
+    if (
+      !options.tools?.length &&
+      (turnLimitSummary || !options.systemPrompt.includes('"delegationLaunchReceipt":'))
+    ) {
+      if (turnLimitSummary) script.summaries += 1;
       // Deliberately wrong terminal summary: a host must not turn exhausted
-      // retries into a claim that work was completed.
+      // retries into a claim that work was completed. Auxiliary title requests
+      // also stay outside scripted manager rounds; receipt turns are scripted.
       return response(undefined, {}, "所有任务已经完成。");
     }
     script.requests.push({
@@ -280,7 +286,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
   });
 
   for (const failLaunch of [false, true]) {
-    test(`new-session delegation plus same-batch reply uses the real ${failLaunch ? "failed" : "accepted"} launch outcome`, async () => {
+    test(`new-session delegation preserves Mimi’s reply and records the ${failLaunch ? "failed" : "accepted"} launch outcome`, async () => {
       const h = createHarness({ failLaunch });
       h.script.steps.push((request) => {
         const delegated = response("DelegateWork", {
@@ -288,12 +294,20 @@ describe("Mimi historical chat replay through the real manager stack", () => {
           objective: "在 CodeShell 项目新开会话调查 Mimi 卡住的原因。",
         });
         delegated.toolCalls.push(
-          ...response("GatewayReply", { text: "任务已经全部完成。" }).toolCalls,
+          ...response("GatewayReply", { text: "我会新开工作会话调查 Mimi 卡住的原因。" }).toolCalls,
         );
         return delegated;
       });
+      if (failLaunch) {
+        h.script.steps.push((request) => {
+          expect(request.systemPrompt).toContain("fixture launch rejected");
+          expect(request.tools?.map((tool) => tool.name)).not.toContain("DelegateWork");
+          expect(request.tools?.map((tool) => tool.name)).not.toContain("GatewayReply");
+          return response(undefined, {}, "工作会话未能启动，队列拒绝了这次派发。");
+        });
+      }
       await h.say("新开一个session 然后做这个工作", "new-task");
-      expect(h.script.requests).toHaveLength(1);
+      expect(h.script.requests).toHaveLength(failLaunch ? 2 : 1);
       expect(h.launches).toHaveLength(1);
       expect(h.launches[0]?.targetSessionId).toBeUndefined();
       expect(h.launches[0]?.completionTarget).toMatchObject({
@@ -301,8 +315,24 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         target: "owner-chat",
       });
       expect(h.sent).toHaveLength(1);
-      expect(h.sent[0]?.message.text).toContain(failLaunch ? "任务未能启动" : "任务已启动");
-      expect(h.sent[0]?.message.text).not.toContain("全部完成");
+      expect(h.sent[0]?.message.text).toBe(
+        failLaunch
+          ? "工作会话未能启动，队列拒绝了这次派发。"
+          : "我会新开工作会话调查 Mimi 卡住的原因。",
+      );
+      expect(h.outcomes[0]).not.toHaveProperty("authoritativeReply");
+      if (failLaunch) expect(h.outcomes[0]).toHaveProperty("delegationError");
+      else expect(h.outcomes[0]).toHaveProperty("delegation.sessionId");
+      if (failLaunch) {
+        h.script.steps.push((request) => {
+          expect(request.tools?.map((tool) => tool.name)).toContain("GatewayReply");
+          expect(request.systemPrompt).not.toContain('"delegationLaunchReceipt":');
+          return response("GatewayReply", { text: "可以，先讨论下一步。" });
+        });
+        await h.say("那先讨论下一步", "after-launch-failure");
+        expect(h.sent[1]?.message.text).toBe("可以，先讨论下一步。");
+        expect(h.launches).toHaveLength(1);
+      }
     });
   }
 
@@ -313,6 +343,10 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         response("DelegateWork", {
           workspace_id: workspace(request),
           session_id: sessionSelectorId("previous-work"),
+          session_continuation: {
+            prior_thread: "架构图",
+            reason: "继续完善刚才架构图任务中的节点和连线。",
+          },
           objective: "继续刚才的架构图任务。",
         }),
       () => response("GatewayReply", { text: "继续处理。" }),

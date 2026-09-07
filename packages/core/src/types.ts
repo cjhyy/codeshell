@@ -170,6 +170,10 @@ export type TranscriptEventType =
   | "tool_result"
   | "summary"
   | "context_transfer"
+  // Agent-written continuation notes are audit-only. A host-built checkpoint
+  // replaces the model context without removing the original transcript.
+  | "context_note"
+  | "context_checkpoint"
   // A contiguous message span was archived into a summary. Written by
   // Engine.archiveTurnRange / appendArchiveMarker. Anchored by client message
   // ids (NOT indices — indices shift across restarts). toMessages() REPLACES
@@ -512,7 +516,21 @@ export type ApprovalResult =
       pathScope?: ApprovalPathScope;
       /** Used by AskUserQuestion to carry the user's free-text answer. */ answer?: string;
     }
-  | { approved: false; reason?: string; always?: boolean; scope?: ApprovalScope };
+  | {
+      approved: false;
+      reason?: string;
+      /** A host/policy failure is distinct from an explicit user denial. */
+      failure?:
+        | "denied"
+        | "cancelled"
+        | "session_closed"
+        | "owner_lost"
+        | "timed_out"
+        | "unavailable"
+        | "policy_denied";
+      always?: boolean;
+      scope?: ApprovalScope;
+    };
 
 // ─── Turn Loop ────────────────────────────────────────────────────
 
@@ -707,7 +725,15 @@ export type StreamEvent =
   | { type: "tool_summary"; summary: string; toolCallIds?: string[]; agentId?: string }
   | {
       type: "context_compact";
-      strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted" | "range";
+      strategy:
+        | "micro"
+        | "summary"
+        | "window"
+        | "snip"
+        | "emergency"
+        | "compacted"
+        | "range"
+        | "notes";
       before: number;
       after: number;
       agentId?: string;

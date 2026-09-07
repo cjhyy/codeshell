@@ -176,7 +176,7 @@ describe("handleBrowserAction", () => {
     const r = JSON.parse(out);
     expect(r.url).toContain("xiaohongshu");
     expect(r.elements).toHaveLength(2);
-    expect(r.elements[0].ref).toBe("s1:e1");
+    expect(r.elements[0].ref).toBe(`${r.snapshotId}:e1`);
   });
 
   test("detaches the debugger after each action while keeping refs cached", async () => {
@@ -187,7 +187,7 @@ describe("handleBrowserAction", () => {
     });
     const d = deps({ activeGuest: () => guest });
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
-    expect(snap.elements[1].ref).toBe("s1:e2");
+    expect(snap.elements[1].ref).toBe(`${snap.snapshotId}:e2`);
     expect(debuggerState).toMatchObject({ attached: false, attaches: 1, detaches: 1 });
 
     const out = await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
@@ -198,7 +198,7 @@ describe("handleBrowserAction", () => {
   test("click after snapshot reuses the cached driver → ref resolves (persistent ref map)", async () => {
     const d = deps();
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
-    expect(snap.elements[1].ref).toBe("s1:e2");
+    expect(snap.elements[1].ref).toBe(`${snap.snapshotId}:e2`);
     // The per-guest driver (id:1) persists across calls, so e2's ref map survives
     // into this separate click call — it must NOT be stale.
     const out = await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);

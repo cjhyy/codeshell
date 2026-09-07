@@ -13,7 +13,19 @@
 import { Methods } from "@cjhyy/code-shell-core";
 import type { BrowserActionRequest } from "./automation-host.js";
 
+/** Trusted worker envelope, separate from model-provided browser arguments. */
+export interface ChildBrowserHost {
+  sourceSessionId: string;
+  bindingId: string;
+  release?: boolean;
+  activate?: boolean;
+}
+
 export interface ParsedBrowserAction {
+  connectionId?: string;
+  generation?: number;
+  childHost?: ChildBrowserHost;
+  invalidChildHost?: boolean;
   sessionId?: string;
   requestId: string;
   request: BrowserActionRequest;
@@ -38,9 +50,29 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
   if (!r || r.toolName !== "__browser_action__" || !r.args) return null;
   const a = r.args as Record<string, unknown>;
   if (typeof a.action !== "string") return null;
+  const childHostValid =
+    p.childHost &&
+    typeof p.childHost.sourceSessionId === "string" &&
+    /^[A-Za-z0-9_.-]{1,128}$/.test(p.childHost.sourceSessionId) &&
+    typeof p.childHost.bindingId === "string" &&
+    /^[A-Za-z0-9_-]{1,128}$/.test(p.childHost.bindingId);
   return {
+    ...(typeof p.connectionId === "string" ? { connectionId: p.connectionId } : {}),
+    ...(typeof p.generation === "number" ? { generation: p.generation } : {}),
     sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
     requestId: p.requestId,
+    ...(childHostValid
+      ? {
+          childHost: {
+            sourceSessionId: p.childHost.sourceSessionId,
+            bindingId: p.childHost.bindingId,
+            release: p.childHost.release === true,
+            activate: p.childHost.activate === true,
+          },
+        }
+      : p.childHost !== undefined
+        ? { invalidChildHost: true }
+        : {}),
     request: {
       action: a.action as BrowserActionRequest["action"],
       ref: a.ref as string | undefined,
@@ -58,6 +90,8 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
         ? (a.refs.filter((x) => typeof x === "string") as string[])
         : undefined,
       tabId: typeof a.tabId === "string" ? a.tabId : undefined,
+      cursor: typeof a.cursor === "string" ? a.cursor : undefined,
+      maxChars: typeof a.maxChars === "number" ? a.maxChars : undefined,
     },
   };
 }
@@ -73,6 +107,8 @@ export function buildBrowserActionReply(parsed: ParsedBrowserAction, resultJson:
     id: replyId(),
     method: "agent/approve",
     params: {
+      ...(parsed.connectionId ? { connectionId: parsed.connectionId } : {}),
+      ...(parsed.generation !== undefined ? { generation: parsed.generation } : {}),
       sessionId: parsed.sessionId,
       requestId: parsed.requestId,
       decision: { approved: true, answer: resultJson },
@@ -95,6 +131,8 @@ function replyId(): number {
 // glue stays a thin call and parsing is unit-tested.
 
 export interface ParsedCredentialAction {
+  connectionId?: string;
+  generation?: number;
   sessionId?: string;
   requestId: string;
   /** Currently only "injectCookie". */
@@ -122,6 +160,8 @@ export function parseCredentialActionLine(line: string): ParsedCredentialAction 
   const a = r.args as Record<string, unknown>;
   if (typeof a.action !== "string" || typeof a.credentialId !== "string") return null;
   return {
+    ...(typeof p.connectionId === "string" ? { connectionId: p.connectionId } : {}),
+    ...(typeof p.generation === "number" ? { generation: p.generation } : {}),
     sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
     requestId: p.requestId,
     action: a.action,
@@ -141,6 +181,8 @@ export function buildCredentialActionReply(
     id: replyId(),
     method: "agent/approve",
     params: {
+      ...(parsed.connectionId ? { connectionId: parsed.connectionId } : {}),
+      ...(parsed.generation !== undefined ? { generation: parsed.generation } : {}),
       sessionId: parsed.sessionId,
       requestId: parsed.requestId,
       decision: { approved: true, answer: resultJson },
@@ -234,9 +276,7 @@ export function parsePanelActionLine(line: string): ParsedPanelAction | null {
   if (args.action === "invoke" && typeof args.toolName !== "string") return null;
   if (
     args.action === "invoke" &&
-    (args.arguments === null ||
-      typeof args.arguments !== "object" ||
-      Array.isArray(args.arguments))
+    (args.arguments === null || typeof args.arguments !== "object" || Array.isArray(args.arguments))
   ) {
     return null;
   }

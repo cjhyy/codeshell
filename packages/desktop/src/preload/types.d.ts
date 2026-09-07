@@ -45,6 +45,7 @@ import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/p
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
+import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { ProjectAuthorityApi } from "./project-authority-types";
 import type {
   DigitalHumanProfileExportResult,
@@ -1404,6 +1405,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   externalRuntime: Readonly<{
     /** Runtime kinds whose binary is installed; empty when the flag is off. */
     available(): Promise<string[]>;
+    /** Discovered models, cached across windows; bundled choices are the fallback. */
+    models(): Promise<ExternalRuntimeModelEntry[]>;
     start(payload: {
       sessionId: string;
       cwd: string;
@@ -1639,14 +1642,16 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     sessionId: string,
     options?: { maxBytes?: number },
   ): Promise<SessionTranscriptPage>;
-  listDiskSessions(opts?: { limit?: number; cursor?: string }): Promise<{
+  listDiskSessions(opts?: { limit?: number; cursor?: string; parentSessionId?: string }): Promise<{
     sessions: Array<{
       id: string;
       engineSessionId: string;
       cwd: string;
       title: string;
       updatedAt: number;
-      origin: "desktop" | "automation";
+      origin: "desktop" | "automation" | "subagent";
+      parentSessionId?: string;
+      status?: "active" | "paused" | "completed" | "failed" | "cancelled";
       workspaceProfile?: string;
     }>;
     nextCursor: string | null;

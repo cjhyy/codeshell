@@ -8,7 +8,6 @@
 
 import type {
   Message,
-  LLMResponse,
   ContextUsageAnchor,
   PromptTokenConfidence,
   PromptTokenSource,
@@ -101,7 +100,14 @@ function defaultKeepRecent(maxTokens: number): number {
  */
 export type SummarizeFn = (prompt: string, signal?: AbortSignal) => Promise<string>;
 
-export type CompactStrategy = "micro" | "summary" | "window" | "snip" | "emergency" | "range";
+export type CompactStrategy =
+  | "micro"
+  | "summary"
+  | "window"
+  | "snip"
+  | "emergency"
+  | "range"
+  | "notes";
 export type OnCompactFn = (info: {
   strategy: CompactStrategy;
   before: number;
@@ -153,6 +159,25 @@ export class ContextManager {
 
   setOnCompact(fn: OnCompactFn): void {
     this.onCompact = fn;
+  }
+
+  /** Reserve one model step for a working note before the normal compact gate. */
+  shouldPrepareNote(messages: Message[]): boolean {
+    return this.checkLimits(messages).ratio >= Math.max(0.05, this.config.compactAtRatio - 0.1);
+  }
+
+  /** A persisted notes checkpoint supersedes any cached summary/usage anchor. */
+  recordNotesCompaction(beforeMessages: Message[], afterMessages: Message[]): void {
+    const before = this.estimateTokensHybrid(beforeMessages);
+    this.lastSummary = undefined;
+    this.lastActualTokens = undefined;
+    this.lastActualAtMessageCount = undefined;
+    this.lastActualAnchorEstimate = undefined;
+    this.lastActualRecordedAt = undefined;
+    this.lastActualProvider = undefined;
+    this.lastActualModel = undefined;
+    this.suppressNoOpMicroSummaryUntilCompact = false;
+    this.onCompact?.({ strategy: "notes", before, after: estimateTokens(afterMessages) });
   }
 
   /**
@@ -223,10 +248,7 @@ export class ContextManager {
    */
   private estimateTokensHybridInfo(messages: Message[]): TokenEstimate {
     const currentEstimate = estimateTokens(messages);
-    if (
-      this.lastActualTokens !== undefined &&
-      this.lastActualAtMessageCount !== undefined
-    ) {
+    if (this.lastActualTokens !== undefined && this.lastActualAtMessageCount !== undefined) {
       if (this.lastActualAtMessageCount < messages.length) {
         const newMessages = messages.slice(this.lastActualAtMessageCount);
         const newTokens = estimateTokens(newMessages);
@@ -296,12 +318,7 @@ export class ContextManager {
         return { messages, tokens: before, compacted: false, noProgress: true };
       }
 
-      const compacted = applySummaryCompaction(
-        messages,
-        summary,
-        keepRecentN,
-        this.transcriptPath,
-      );
+      const compacted = applySummaryCompaction(messages, summary, keepRecentN, this.transcriptPath);
       const after = this.estimateTokensHybrid(compacted);
 
       if (after >= before) {
@@ -489,7 +506,11 @@ export class ContextManager {
    * Async context management — attempts LLM summarization before falling back.
    * Call this when you have access to the LLM (between turns).
    */
-  async manageAsync(messages: Message[], signal?: AbortSignal): Promise<Message[]> {
+  async manageAsync(
+    messages: Message[],
+    signal?: AbortSignal,
+    options?: { preferNotes?: boolean },
+  ): Promise<Message[]> {
     let result = messages;
 
     // Tier 0a: Persist large tool_results to disk + replace with preview.
@@ -562,7 +583,7 @@ export class ContextManager {
       ratio >= this.config.microcompactFloorRatio &&
       ratio < this.config.compactAtRatio;
     const shouldEscalateNoOpMicro =
-      noOpMicroSpinBand && !this.suppressNoOpMicroSummaryUntilCompact;
+      !options?.preferNotes && noOpMicroSpinBand && !this.suppressNoOpMicroSummaryUntilCompact;
     const snipGate = this.config.maxTokens * this.config.compactAtRatio;
     const windowGate = this.config.maxTokens * (this.config.compactAtRatio + 0.05);
     const emergencyGate = this.config.maxTokens * this.config.summarizeAtRatio;
@@ -823,5 +844,4 @@ export class ContextManager {
       promptTokensConfidence: estimate.confidence,
     };
   }
-
 }

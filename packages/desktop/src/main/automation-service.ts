@@ -19,6 +19,7 @@ import {
   validateAutomationResumeAuthority,
   type AutomationAuthorityDeps,
 } from "./automation-authority.js";
+import { assertDesktopSessionId } from "./session-validation.js";
 
 export interface AutomationSummary {
   id: string;
@@ -145,6 +146,7 @@ export async function createAutomation(
   input: CreateAutomationInput,
   authorityDeps: AutomationAuthorityDeps,
 ): Promise<AutomationSummary> {
+  if (input.resumeSessionId !== undefined) assertDesktopSessionId(input.resumeSessionId);
   const authority = await resolveAutomationCreateAuthority(input, authorityDeps);
   const s = requireScheduler();
   syncFromStore();
@@ -178,6 +180,9 @@ export async function updateAutomation(
   authorityDeps: AutomationAuthorityDeps,
   scope?: { resumeSessionId: string },
 ): Promise<AutomationSummary | null> {
+  if (patch.resumeSessionId !== undefined && patch.resumeSessionId !== null) {
+    assertDesktopSessionId(patch.resumeSessionId);
+  }
   const s = requireScheduler();
   syncFromStore();
   const existing = s.get(id);
@@ -185,14 +190,34 @@ export async function updateAutomation(
   if (scope && existing.resumeSessionId !== scope.resumeSessionId) {
     throw new Error("automation is not bound to the authorized resume Session");
   }
+  if (
+    scope &&
+    patch.resumeSessionId !== undefined &&
+    patch.resumeSessionId !== scope.resumeSessionId
+  ) {
+    throw new Error("scoped automation update cannot change the authorized resume Session binding");
+  }
+  const previousAuthority = {
+    resumeSessionId: existing.resumeSessionId,
+    cwd: existing.cwd,
+    projectId: existing.projectId,
+    rootId: existing.rootId,
+  };
   const authority = await resolveAutomationUpdateAuthority(patch, existing, authorityDeps);
-  const {
-    cwd: _cwd,
-    projectId: _projectId,
-    rootId: _rootId,
-    resumeSessionId: _resumeSessionId,
-    ...definition
-  } = patch;
+  // Authority lookup awaits durable Session state. Recheck after that await so
+  // a concurrent binding edit cannot authorize this update against an old task.
+  syncFromStore();
+  const current = s.get(id);
+  if (!current) return null;
+  if (
+    current.resumeSessionId !== previousAuthority.resumeSessionId ||
+    current.cwd !== previousAuthority.cwd ||
+    current.projectId !== previousAuthority.projectId ||
+    current.rootId !== previousAuthority.rootId
+  ) {
+    throw new Error("automation Session or workspace binding changed; reload and retry");
+  }
+  const { cwd: _cwd, projectId: _projectId, rootId: _rootId, ...definition } = patch;
   const job = s.update(id, { ...definition, ...authority });
   return job ? automationSummary(job) : null;
 }

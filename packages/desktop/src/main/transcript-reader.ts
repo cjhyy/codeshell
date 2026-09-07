@@ -396,6 +396,25 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           timestamp: ts,
         });
         break;
+      case "context_checkpoint":
+        // Checkpoints carry model replay snapshots, never user-facing chat.
+        // Restore only the boundary marker when hydrating desktop/mobile.
+        if (
+          d.version !== 1 ||
+          typeof d.noteId !== "string" ||
+          typeof d.coveredThroughEventId !== "string" ||
+          typeof d.checksum !== "string" ||
+          !Array.isArray(d.messages) ||
+          !Array.isArray(d.clientMessageIds)
+        ) {
+          break;
+        }
+        items.push({
+          kind: "stream",
+          event: { type: "context_compact", strategy: "notes", before: 0, after: 0 },
+          timestamp: ts,
+        });
+        break;
       case "summary":
         items.push({
           kind: "stream",

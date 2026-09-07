@@ -239,7 +239,7 @@ export const browserActToolDef: ToolDefinition = {
     "- select {ref, value}: choose an option in a NATIVE <select> (value = option " +
     "value or visible text). Custom dropdowns: click to expand, then click the option.\n" +
     "- press_key {key, ref?}: press a key/combo (Enter, Tab, Escape, ArrowDown, " +
-    "Control+a). Focuses ref first if given.\n" +
+    "ControlOrMeta+a; resolves to Command on macOS, Control elsewhere). Focuses ref first if given.\n" +
     "- hover {ref}: hover to reveal menus/tooltips.\n" +
     "- scroll {direction: up|down, amount?}: scroll the page, then re-observe.\n" +
     "- wait {timeout_ms?}: wait for the page to finish loading before observing.\n" +
@@ -272,7 +272,11 @@ export const browserActToolDef: ToolDefinition = {
       ref: { type: "string", description: "Element ref (eN) — click/type/select/hover/press_key" },
       text: { type: "string", description: "Text to type — type" },
       value: { type: "string", description: "Option value or visible text — select" },
-      key: { type: "string", description: "Key name or combo (Enter/Tab/Control+a) — press_key" },
+      key: {
+        type: "string",
+        description:
+          "Key or combo (Enter/Tab/ControlOrMeta+a). ControlOrMeta uses the browser host's platform; literal Control and Meta stay distinct — press_key",
+      },
       direction: { type: "string", enum: ["up", "down"], description: "Scroll direction — scroll" },
       amount: { type: "number", description: "Pixels to scroll (default one viewport) — scroll" },
       timeout_ms: { type: "number", description: "Max wait in ms (default 10000) — wait" },
@@ -315,11 +319,11 @@ export async function browserActTool(
       const tabs = await b.listTabs();
       if (tabs.length === 0) return "(no open browser tabs)";
       return (
-        "Open tabs:\n" +
+        "Browser tabs:\n" +
         tabs
           .map(
             (t) =>
-              `- [${t.tabId}]${t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`,
+              `- [${t.tabId}]${t.status === "closed" ? " (closed — navigate to reopen; old refs expired)" : t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`,
           )
           .join("\n")
       );
@@ -396,10 +400,11 @@ export async function browserActTool(
 export const browserNavigateToolDef: ToolDefinition = {
   name: "browser_navigate",
   description:
-    "Navigate the CodeShell browser runtime to a URL. It does not control the " +
-    "user-facing built-in browser unless the user explicitly grants a future handoff. " +
-    "Navigation stays in the background; the runtime's own window appears only when login or a " +
-    "high-consequence action needs human control. Then call browser_act(wait) + " +
+    "Open a URL in a task-owned tab of CodeShell's built-in browser. Default for web page " +
+    "tasks unless the user specifies another browser or a required capability is unavailable. " +
+    "Shares the in-app browser profile; existing user-opened tabs require an explicit grant. " +
+    "Starts in the background; browser_act(request_takeover) reveals this same tab when the user " +
+    "wants to see it or needs to sign in. Then call browser_act(wait) + " +
     "browser_observe to inspect the page.",
   inputSchema: {
     type: "object",

@@ -18,6 +18,7 @@ const BUILTIN_SECTIONS: Record<string, string> = {
   orchestration: readSectionFile("orchestration"),
   browser: readSectionFile("browser"),
   tone: readSectionFile("tone"),
+  "context-notes": readSectionFile("context-notes"),
 };
 
 /**

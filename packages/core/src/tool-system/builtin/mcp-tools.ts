@@ -3,6 +3,8 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
+import type { BuiltinToolReturn } from "./index.js";
 
 // ─── MCPTool — invoke an MCP tool on a connected server ─────────
 
@@ -30,7 +32,10 @@ export const mcpToolDef: ToolDefinition = {
   },
 };
 
-export async function mcpToolExecute(args: Record<string, unknown>): Promise<string> {
+export async function mcpToolExecute(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<BuiltinToolReturn> {
   const server = args.server as string;
   const tool = args.tool as string;
   const toolArgs = (args.arguments as Record<string, unknown>) ?? {};
@@ -40,11 +45,11 @@ export async function mcpToolExecute(args: Record<string, unknown>): Promise<str
 
   try {
     const { MCPManager } = await import("../mcp-manager.js");
-    const manager = MCPManager.getInstance();
-    const result = await manager.callTool(server, tool, toolArgs, signal);
+    const manager = MCPManager.forContext(ctx);
+    const result = await manager.callTool(server, tool, toolArgs, signal, ctx);
     return typeof result === "string" ? result : JSON.stringify(result, null, 2);
   } catch (err) {
-    return `MCP tool error: ${(err as Error).message}`;
+    return { ok: false, error: `MCP tool error: ${(err as Error).message}` };
   }
 }
 
@@ -64,7 +69,10 @@ export const listMcpResourcesToolDef: ToolDefinition = {
   },
 };
 
-export async function listMcpResourcesTool(args: Record<string, unknown>): Promise<string> {
+export async function listMcpResourcesTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const server = (args.server as string) ?? "";
   // The executor injects the session's allowed-server set (see executor.ts).
   // When no explicit server filter is given, we must only enumerate resources
@@ -74,11 +82,11 @@ export async function listMcpResourcesTool(args: Record<string, unknown>): Promi
 
   try {
     const { MCPManager } = await import("../mcp-manager.js");
-    const manager = MCPManager.getInstance();
+    const manager = MCPManager.forContext(ctx);
     // Forward the run's abort signal (registry injects __signal) so Stop cancels
     // promptly instead of waiting out the SDK's default request timeout.
     const signal = args.__signal as AbortSignal | undefined;
-    let resources = await manager.listResources(server || undefined, signal);
+    let resources = await manager.listResources(server || undefined, signal, ctx);
 
     if (allowed && resources) {
       resources = resources.filter((r: any) => {
@@ -121,15 +129,18 @@ export const readMcpResourceToolDef: ToolDefinition = {
   },
 };
 
-export async function readMcpResourceTool(args: Record<string, unknown>): Promise<string> {
+export async function readMcpResourceTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const server = args.server as string;
   const uri = args.uri as string;
 
   try {
     const { MCPManager } = await import("../mcp-manager.js");
-    const manager = MCPManager.getInstance();
+    const manager = MCPManager.forContext(ctx);
     const signal = args.__signal as AbortSignal | undefined;
-    const content = await manager.readResource(server, uri, signal);
+    const content = await manager.readResource(server, uri, signal, ctx);
     return typeof content === "string" ? content : JSON.stringify(content, null, 2);
   } catch (err) {
     return `Error reading MCP resource: ${(err as Error).message}`;

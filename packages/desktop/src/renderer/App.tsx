@@ -93,10 +93,8 @@ import { fromSettingsPermissionMode, type PermissionMode } from "./chat/Permissi
 import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
 import {
-  externalRuntimeModelEntries,
   isExternalRuntimeModelKey,
   normalizeExternalRuntimeModelKey,
-  type ExternalRuntimeModelKind,
 } from "../shared/external-runtime-models";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import type { QuickChatSessionRef } from "./quickChatSession";
@@ -128,6 +126,7 @@ import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
 import { useProjectRegistrySync } from "./app/useProjectRegistrySync";
+import { useExternalRuntimeModels } from "./app/useExternalRuntimeModels";
 
 // Large, low-frequency pages stay off the chat startup path. Each route keeps
 // its own visible loading state through the Suspense boundaries below.
@@ -247,17 +246,7 @@ function App() {
   // settings.defaults.text (unified catalog). Composer changes are session-local;
   // users change this global default explicitly in Settings.
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
-  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
-  const quickChatModelOptions = useMemo(
-    () => modelOptions.filter((option) => !isExternalRuntimeModelKey(option.key)),
-    [modelOptions],
-  );
-  const quickChatDefaultModelKey = useMemo(() => {
-    if (defaultActiveModelKey && !isExternalRuntimeModelKey(defaultActiveModelKey)) {
-      return defaultActiveModelKey;
-    }
-    return quickChatModelOptions[0]?.key ?? null;
-  }, [defaultActiveModelKey, quickChatModelOptions]);
+  const [configuredModelOptions, setConfiguredModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
@@ -338,6 +327,24 @@ function App() {
       noRepoCwd,
       locallyCreatedSessionIds: locallyCreatedSessionIdsRef,
     });
+  const externalRuntimeModels = useExternalRuntimeModels(
+    sessionUiAuthority.configurationAvailable,
+    settingsRevision,
+  );
+  const modelOptions = useMemo<ModelOption[]>(
+    () => [...configuredModelOptions, ...externalRuntimeModels],
+    [configuredModelOptions, externalRuntimeModels],
+  );
+  const quickChatModelOptions = useMemo(
+    () => modelOptions.filter((option) => !isExternalRuntimeModelKey(option.key)),
+    [modelOptions],
+  );
+  const quickChatDefaultModelKey = useMemo(() => {
+    if (defaultActiveModelKey && !isExternalRuntimeModelKey(defaultActiveModelKey)) {
+      return defaultActiveModelKey;
+    }
+    return quickChatModelOptions[0]?.key ?? null;
+  }, [defaultActiveModelKey, quickChatModelOptions]);
   const activeBucket = bucketKey(activeProjectId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   // The model shown/used for the ACTIVE session: its own override if it has
@@ -1471,7 +1478,7 @@ function App() {
       setDefaultActiveModelKey(null);
       setDefaultPermissionMode(null);
       setImageDetail(undefined);
-      setModelOptions([]);
+      setConfiguredModelOptions([]);
     };
     const refresh = async (): Promise<void> => {
       if (!sessionUiAuthority.configurationAvailable) {
@@ -1511,25 +1518,8 @@ function App() {
         const conns = Array.isArray(merged.modelConnections)
           ? (merged.modelConnections as ModelInstance[])
           : [];
-        // External Agent Runtimes appear as ordinary models (`codex/gpt-5.6-sol`),
-        // so picking Codex is the same gesture as picking any other model. Only
-        // runtimes whose binary is actually installed are listed — an entry the
-        // machine cannot run would fail on send and read as a broken feature.
-        const runtimeKinds = await window.codeshell.externalRuntime
-          .available()
-          .catch(() => [] as string[]);
-        const baseOpts: ModelOption[] = [
-          ...catalogModelOptions(conns, catalog),
-          ...externalRuntimeModelEntries(runtimeKinds as ExternalRuntimeModelKind[]).map(
-            (entry) => ({
-              key: entry.key,
-              label: entry.label,
-              provider: entry.provider,
-              maxContextTokens: entry.maxContextTokens,
-            }),
-          ),
-        ];
-        setModelOptions(baseOpts);
+        const baseOpts = catalogModelOptions(conns, catalog);
+        setConfiguredModelOptions(baseOpts);
 
         // Backfill maxContextTokens/supportsVision for connections whose
         // catalog preset omitted them (e.g. OpenRouter dynamic models). Resolve
@@ -1546,7 +1536,7 @@ function App() {
           const meta = await window.codeshell.resolveModelMeta(metaInput, []);
           if (cancelled) return;
           const byKey = new Map(meta.map((m) => [m.key, m]));
-          setModelOptions((prev) =>
+          setConfiguredModelOptions((prev) =>
             prev.map((o) => {
               const r = byKey.get(o.key);
               if (!r) return o;

@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
+import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine.js";
 import {
@@ -45,6 +46,8 @@ import {
   chromeExtensionRuntimeService,
   annotateBrowserRuntimeStreamEvent,
   dispatchInteractiveBrowserRuntimeAction,
+  releaseChildBrowserRuntime,
+  activateChildBrowserRuntime,
   interactiveBrowserRuntimeOwner,
   replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
@@ -253,6 +256,7 @@ export class AgentBridge implements PetStateBridge {
    * credentialId). Keyed by sessionId; cleared in forgetSession.
    */
   private sessionCwd = new Map<string, string>();
+  private readonly childBrowserLifetime = new ChildBrowserWorkerLifetime();
   /**
    * Main-process half of the non-resident ownership fence. It survives worker
    * exit/restart and rejects a new run until the durable attempt completes.
@@ -332,6 +336,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onSpawnError: () => {
+        this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
         // Snapshots intentionally survive worker exit — a respawn may resume
@@ -341,6 +346,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onExit: ({ code, clean, gaveUp }) => {
+        this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
         this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
@@ -853,10 +859,31 @@ export class AgentBridge implements PetStateBridge {
   private maybeHandleBrowserAction(line: string): boolean {
     const parsed = parseBrowserActionLine(line);
     if (!parsed) return false;
+    if (parsed.childHost?.activate && parsed.sessionId) {
+      const parentSessionId = parsed.sessionId;
+      const child = parsed.childHost;
+      this.childBrowserLifetime.register(JSON.stringify([parentSessionId, child.bindingId]), () =>
+        releaseChildBrowserRuntime(parentSessionId, child),
+      );
+      activateChildBrowserRuntime(parentSessionId, child);
+      return true;
+    }
+    if (parsed.childHost?.release && parsed.sessionId) {
+      this.childBrowserLifetime.release(
+        JSON.stringify([parsed.sessionId, parsed.childHost.bindingId]),
+      );
+      return true;
+    }
     void (async () => {
       let resultJson: string;
       try {
-        if (!parsed.sessionId) {
+        if (parsed.invalidChildHost) {
+          resultJson = JSON.stringify({
+            ok: false,
+            code: "INVALID_ARGS",
+            detail: "invalid child browser host binding",
+          });
+        } else if (!parsed.sessionId) {
           resultJson = JSON.stringify({
             ok: false,
             detail: "browser action missing sessionId",
@@ -865,6 +892,8 @@ export class AgentBridge implements PetStateBridge {
           resultJson = await dispatchInteractiveBrowserRuntimeAction(
             parsed.sessionId,
             parsed.request,
+            undefined,
+            parsed.childHost,
           );
         }
       } catch (e) {
@@ -1072,7 +1101,9 @@ export class AgentBridge implements PetStateBridge {
         if (!parsed.sessionId) throw new Error("workspace action requires sessionId");
         if (parsed.action === "resolve_session_run") {
           if (this.sessionMainRootMigrationClaims.has(parsed.target)) {
-            throw new Error(`Session ${parsed.target} root migration is in progress; retry the message`);
+            throw new Error(
+              `Session ${parsed.target} root migration is in progress; retry the message`,
+            );
           }
           const workspace = resolveSessionRunWorkspace(
             { sourceSessionId: parsed.sessionId, targetSessionId: parsed.target },

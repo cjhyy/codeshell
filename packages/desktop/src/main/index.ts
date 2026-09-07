@@ -117,6 +117,7 @@ import {
   parseExternalApprovalDecision,
 } from "./external-runtime-approvals.js";
 import { availableExternalRuntimes } from "./external-runtime-availability.js";
+import { ExternalRuntimeModelService } from "./external-runtime-model-service.js";
 import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
@@ -5895,6 +5896,11 @@ ipcMain.handle("externalRuntime:available", () => {
   return availableExternalRuntimes();
 });
 
+const externalRuntimeModelService = new ExternalRuntimeModelService({
+  isEnabled: () => externalRuntimeService?.isEnabled() ?? false,
+});
+ipcMain.handle("externalRuntime:models", () => externalRuntimeModelService.list());
+
 /**
  * Start (or restart) a session on an external runtime.
  *
@@ -6752,22 +6758,34 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   return getRun(runId);
 });
 registerSessionTranscriptIpc(ipcMain);
-ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: string }) => {
-  const limit =
-    typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
-      ? Math.min(opts.limit, 200)
-      : 30;
-  if (
-    opts?.cursor !== undefined &&
-    (typeof opts.cursor !== "string" || opts.cursor.length > 512 || opts.cursor.includes("\0"))
-  ) {
-    throw new Error("invalid session cursor");
-  }
-  return listDiskSessions({
-    limit,
-    cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
-  });
-});
+ipcMain.handle(
+  "sessions:listDisk",
+  async (
+    _e,
+    opts: {
+      limit?: number;
+      cursor?: string;
+      parentSessionId?: string;
+    },
+  ) => {
+    const limit =
+      typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
+        ? Math.min(opts.limit, 200)
+        : 30;
+    if (
+      opts?.cursor !== undefined &&
+      (typeof opts.cursor !== "string" || opts.cursor.length > 512 || opts.cursor.includes("\0"))
+    ) {
+      throw new Error("invalid session cursor");
+    }
+    if (opts?.parentSessionId !== undefined) assertDesktopSessionId(opts.parentSessionId);
+    return listDiskSessions({
+      limit,
+      cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
+      parentSessionId: opts?.parentSessionId,
+    });
+  },
+);
 ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
   assertDesktopSessionId(sessionId);
   if (

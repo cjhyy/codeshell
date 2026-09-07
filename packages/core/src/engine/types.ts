@@ -32,6 +32,23 @@ import type { AgentModule, ResolvedComposition } from "../composition/types.js";
 import type { RunBehaviorProfile } from "./run-types.js";
 import type { LegacyPetWorkDelegation } from "../types.js";
 
+/** Per-run host capabilities. Each child owns its resources and approval identity. */
+export interface ChildHostBindings {
+  browserBridge?: EngineConfig["browserBridge"];
+  askUser?: AskUserFn;
+  injectCredentialToBrowser?: EngineConfig["injectCredentialToBrowser"];
+  approvalBackend?: ApprovalBackend;
+  /** Called only after the child obtains its live transcript writer lease. */
+  activate?(): void;
+  dispose(): void;
+}
+
+export type ChildHostBindingsFactory = (input: {
+  parentSessionId: string;
+  sessionId: string;
+  signal?: AbortSignal;
+}) => ChildHostBindings;
+
 export interface EngineConfig {
   llm: LLMConfig;
   /**
@@ -93,7 +110,11 @@ export interface EngineConfig {
   goal?: string | GoalConfig;
   sessionStorageDir?: string;
   maxContextTokens?: number;
+  /** Override settings.context.strategy and the active behavior profile's default. */
+  contextStrategy?: "summary" | "notes";
   approvalBackend?: ApprovalBackend;
+  /** Bind child resources to this interactive host without sharing a browser target. */
+  createChildHostBindings?: ChildHostBindingsFactory;
   /** Connection-scoped permission approval router supplied by an interactive host. */
   approvalRouter?: ApprovalRouter;
   hooks?: EngineHookConfig[];

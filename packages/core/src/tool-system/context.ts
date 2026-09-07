@@ -23,6 +23,7 @@ import type { SessionWorkspace } from "../types.js";
 import type { ApprovalRouter } from "./permission.js";
 import type { ChildWriterLease, LiveChildControl } from "./builtin/agent-registry.js";
 import type { McpToolPolicy } from "./mcp-tool-policy.js";
+import type { SessionContextNotes } from "../context/notes.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -200,12 +201,16 @@ export interface SubAgentSpawnResult {
  */
 export interface ToolVisibilityContext {
   cwd: string;
+  /** Resolved native context strategy; omitted for external runtimes. */
+  contextStrategy?: "summary" | "notes";
   workspace?: import("../workspace/workspace-context.js").WorkspaceContext;
   hasGoal: boolean;
   /** Resolved Session identity for per-session extension-tool visibility. */
   sessionId?: string;
   settingsScope?: import("../settings/manager.js").SettingsScope;
   host?: string;
+  /** A browser bridge is wired for this run, independent of the host's name. */
+  hasBrowserAutomation?: boolean;
   isSubAgent?: boolean;
   behaviorProfile?: string;
   /** Host-authorized targets available to the cross-Session messaging builtin. */
@@ -246,6 +251,10 @@ export interface ToolRunYieldController {
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
+  /** Resolved strategy for the current session's model context. */
+  contextStrategy?: "summary" | "notes";
+  /** Session-local working notes and history; never a cross-session memory store. */
+  contextNotes?: Pick<SessionContextNotes, "save" | "requestRollover" | "search" | "read">;
   /**
    * True when this call belongs to an external Agent Runtime rather than the
    * native Engine loop.

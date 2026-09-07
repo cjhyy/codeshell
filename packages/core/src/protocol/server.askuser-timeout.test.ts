@@ -213,7 +213,11 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       expect((server as any).approvalTimers.size).toBe(1);
 
       scheduled[0]!.run();
-      await expect(approval).resolves.toEqual({ approved: false, reason: "approval timed out" });
+      await expect(approval).resolves.toEqual({
+        approved: false,
+        failure: "timed_out",
+        reason: "approval timed out",
+      });
       expect((server as any).approvalTimers.size).toBe(0);
     } finally {
       timeoutSpy.mockRestore();

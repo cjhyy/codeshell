@@ -33,7 +33,16 @@ const authorityDeps = {
           projectId: "project-1",
           rootId: "root-primary",
         }
-      : undefined,
+      : sessionId === "session-secondary"
+        ? {
+            sessionId,
+            cwd: "/secondary",
+            projectId: "project-2",
+            rootId: "root-secondary",
+          }
+        : sessionId === "session-no-repo"
+          ? { sessionId, cwd: "/no-repo" }
+          : undefined,
 };
 
 const createAutomation = (input: Parameters<typeof createAuthorizedAutomation>[0]) =>
@@ -202,6 +211,164 @@ describe("automation-service", () => {
     ).resolves.toEqual([expect.objectContaining({ id: job.id })]);
     sched.stopAll();
   });
+
+  test("updates bind, rebind, and unbind while persisting the target workspace", async () => {
+    const job = await createAutomation({ name: "bind", schedule: "1h", prompt: "p" });
+    expect(await updateAutomation(job.id, { resumeSessionId: "session-job-hunt" })).toMatchObject({
+      resumeSessionId: "session-job-hunt",
+      projectId: "project-1",
+      rootId: "root-primary",
+      cwd: "/primary",
+    });
+    expect(await updateAutomation(job.id, { resumeSessionId: "session-secondary" })).toMatchObject({
+      resumeSessionId: "session-secondary",
+      projectId: "project-2",
+      rootId: "root-secondary",
+      cwd: "/secondary",
+    });
+    expect(await updateAutomation(job.id, { resumeSessionId: null })).toMatchObject({
+      resumeSessionId: null,
+      projectId: "project-2",
+      rootId: "root-secondary",
+      cwd: "/secondary",
+    });
+    expect(sched.get(job.id)?.resumeSessionId).toBeUndefined();
+    expect(await updateAutomation(job.id, { resumeSessionId: "session-no-repo" })).toMatchObject({
+      resumeSessionId: "session-no-repo",
+      projectId: null,
+      rootId: null,
+      cwd: "",
+    });
+    sched.stopAll();
+  });
+
+  test("invalid Session bindings fail without changing the job", async () => {
+    const job = await createAutomation({ name: "bind", schedule: "1h", prompt: "p" });
+    await expect(updateAutomation(job.id, { resumeSessionId: "missing" })).rejects.toThrow(
+      /missing/,
+    );
+    await expect(updateAutomation(job.id, { resumeSessionId: "" })).rejects.toThrow(/sessionId/);
+    expect(getAutomation(job.id)).toEqual(job);
+    sched.stopAll();
+  });
+
+  test("Session-scoped updates cannot rebind, unbind, or edit another Session's automation", async () => {
+    const job = await createAutomation({
+      name: "bound",
+      schedule: "1h",
+      prompt: "p",
+      resumeSessionId: "session-job-hunt",
+    });
+    const scope = { resumeSessionId: "session-job-hunt" };
+    for (const resumeSessionId of ["session-secondary", null]) {
+      await expect(
+        updateAuthorizedAutomation(job.id, { resumeSessionId }, authorityDeps, scope),
+      ).rejects.toThrow(/cannot change.*binding/);
+    }
+    await expect(
+      updateAuthorizedAutomation(job.id, { prompt: "forged" }, authorityDeps, {
+        resumeSessionId: "session-secondary",
+      }),
+    ).rejects.toThrow(/not bound/);
+    expect(getAutomation(job.id)).toEqual(job);
+    expect(
+      await updateAuthorizedAutomation(
+        job.id,
+        { prompt: "updated", resumeSessionId: "session-job-hunt" },
+        authorityDeps,
+        scope,
+      ),
+    ).toMatchObject({ prompt: "updated", resumeSessionId: "session-job-hunt" });
+    sched.stopAll();
+  });
+
+  test("malformed Session ids reject before authority reads across create and update callers", async () => {
+    const job = await createAutomation({ name: "valid", schedule: "1h", prompt: "p" });
+    let authorityReads = 0;
+    const guardedDeps = {
+      ...authorityDeps,
+      resolveSessionAuthority: async (sessionId: string) => {
+        authorityReads++;
+        return authorityDeps.resolveSessionAuthority(sessionId);
+      },
+      requireRendererPath: async (cwd: string) => {
+        authorityReads++;
+        return cwd;
+      },
+    };
+    for (const resumeSessionId of ["", 42, false, {}, "../task", "task/name", "a".repeat(129)]) {
+      await expect(
+        createAuthorizedAutomation(
+          {
+            name: "invalid",
+            schedule: "1h",
+            prompt: "p",
+            resumeSessionId,
+          } as any,
+          guardedDeps,
+        ),
+      ).rejects.toThrow(/invalid desktop sessionId/);
+      await expect(
+        updateAuthorizedAutomation(
+          job.id,
+          {
+            resumeSessionId,
+            prompt: "must not change",
+          } as any,
+          guardedDeps,
+        ),
+      ).rejects.toThrow(/invalid desktop sessionId/);
+    }
+    await expect(
+      createAuthorizedAutomation(
+        {
+          name: "invalid",
+          schedule: "1h",
+          prompt: "p",
+          resumeSessionId: null,
+        } as any,
+        guardedDeps,
+      ),
+    ).rejects.toThrow(/invalid desktop sessionId/);
+    expect(authorityReads).toBe(0);
+    expect(listAutomations()).toEqual([job]);
+    sched.stopAll();
+  });
+
+  for (const concurrentPatch of [
+    { resumeSessionId: "session-secondary" },
+    { cwd: "/secondary", projectId: "project-2", rootId: "root-secondary" },
+  ]) {
+    test(`a ${"resumeSessionId" in concurrentPatch ? "Session" : "workspace"} binding changed during authority lookup rejects the stale update`, async () => {
+      const job = await createAutomation({
+        name: "bound",
+        schedule: "1h",
+        prompt: "p",
+        resumeSessionId: "session-job-hunt",
+      });
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const update = updateAuthorizedAutomation(
+        job.id,
+        { prompt: "stale" },
+        {
+          ...authorityDeps,
+          resolveSessionAuthority: async (sessionId) => {
+            await gate;
+            return authorityDeps.resolveSessionAuthority(sessionId);
+          },
+        },
+        { resumeSessionId: "session-job-hunt" },
+      );
+      sched.update(job.id, concurrentPatch);
+      release();
+      await expect(update).rejects.toThrow(/binding changed/);
+      expect(getAutomation(job.id)?.prompt).toBe("p");
+      sched.stopAll();
+    });
+  }
 });
 
 test("reloadAutomations calls scheduler.loadJobs", () => {

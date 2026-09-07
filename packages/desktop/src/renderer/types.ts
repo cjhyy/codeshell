@@ -135,7 +135,7 @@ export interface AgentMessage {
 export interface ContextBoundaryMessage {
   kind: "context_boundary";
   id: string;
-  strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted" | "range";
+  strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted" | "range" | "notes";
   before: number;
   after: number;
   contextTransfer?: {

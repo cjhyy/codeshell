@@ -1,5 +1,6 @@
 /** Runtime-only dispatch for interactive engine sessions. */
 
+import type { ChildBrowserHost } from "../browser-driver/intercept.js";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import {
   dispatchBrowserBridgeAction,
@@ -12,6 +13,32 @@ import { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
 
 export { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
 
+// Positive ownership: unknown or released child bindings cannot allocate a target.
+// Pending calls retain this object after removal, so cancellation cannot expire.
+const activeChildOwners = new Map<string, { released: boolean }>();
+function childOwner(sessionId: string, child: ChildBrowserHost): string {
+  return `${interactiveBrowserRuntimeOwner(sessionId)}:child:${child.sourceSessionId}:${child.bindingId}`;
+}
+
+/** The worker emits activation only after obtaining the child's writer lease. */
+export function activateChildBrowserRuntime(sessionId: string, child: ChildBrowserHost): void {
+  const owner = childOwner(sessionId, child);
+  if (!activeChildOwners.has(owner)) activeChildOwners.set(owner, { released: false });
+}
+
+/** Release only the target allocated by this child run, including a resumed run. */
+export function releaseChildBrowserRuntime(
+  sessionId: string,
+  child: ChildBrowserHost,
+  runtime: BrowserRuntimeLike = browserRuntime,
+): void {
+  const owner = childOwner(sessionId, child);
+  const lifetime = activeChildOwners.get(owner);
+  if (lifetime) lifetime.released = true;
+  activeChildOwners.delete(owner);
+  runtime.close(owner);
+}
+
 /**
  * Execute one browser tool request against a runtime-owned target.
  *
@@ -23,9 +50,20 @@ export async function dispatchInteractiveBrowserRuntimeAction(
   sessionId: string,
   request: BrowserActionRequest,
   runtime: BrowserRuntimeLike = browserRuntime,
+  child?: ChildBrowserHost,
 ): Promise<string> {
+  const ownerId = child ? childOwner(sessionId, child) : interactiveBrowserRuntimeOwner(sessionId);
+  const lifetime = child ? activeChildOwners.get(ownerId) : undefined;
+  if (child && (!lifetime || lifetime.released)) {
+    return JSON.stringify({
+      ok: false,
+      code: "TARGET_CLOSED",
+      retryable: false,
+      detail: "child browser run has ended",
+    });
+  }
   if (request.action === "requestTakeover") {
-    if (builtInTabClaimBackend.status(sessionId).granted) {
+    if (!child && builtInTabClaimBackend.status(sessionId).granted) {
       return JSON.stringify({
         ok: true,
         code: "NEEDS_HUMAN",
@@ -33,7 +71,7 @@ export async function dispatchInteractiveBrowserRuntimeAction(
         detail: "the granted built-in browser tab is already user-visible",
       });
     }
-    if (chromeExtensionBackend.status(sessionId).granted) {
+    if (!child && chromeExtensionBackend.status(sessionId).granted) {
       return JSON.stringify({
         ok: true,
         code: "NEEDS_HUMAN",
@@ -42,7 +80,6 @@ export async function dispatchInteractiveBrowserRuntimeAction(
       });
     }
 
-    const ownerId = interactiveBrowserRuntimeOwner(sessionId);
     const lease = await runtime.acquire({
       ownerId,
       profileId: sessionId,
@@ -50,6 +87,14 @@ export async function dispatchInteractiveBrowserRuntimeAction(
       title: "CodeShell Browser Runtime — 需要你接管",
     });
     try {
+      if (child && lifetime?.released) {
+        runtime.close(ownerId);
+        return JSON.stringify({
+          ok: false,
+          code: "TARGET_CLOSED",
+          detail: "child browser run has ended",
+        });
+      }
       await lease.show();
       return JSON.stringify({
         ok: true,
@@ -69,12 +114,12 @@ export async function dispatchInteractiveBrowserRuntimeAction(
     }
   }
 
-  const handedOff = await builtInTabClaimBackend.dispatch(sessionId, request);
-  if (handedOff !== undefined) return handedOff;
-  const chrome = await chromeExtensionBackend.dispatch(sessionId, request);
-  if (chrome !== undefined) return chrome;
-
-  const ownerId = interactiveBrowserRuntimeOwner(sessionId);
+  if (!child) {
+    const handedOff = await builtInTabClaimBackend.dispatch(sessionId, request);
+    if (handedOff !== undefined) return handedOff;
+    const chrome = await chromeExtensionBackend.dispatch(sessionId, request);
+    if (chrome !== undefined) return chrome;
+  }
   const lease = await runtime.acquire({
     ownerId,
     profileId: sessionId,
@@ -82,6 +127,14 @@ export async function dispatchInteractiveBrowserRuntimeAction(
     title: "CodeShell Browser Runtime — 需要你接管",
   });
   try {
+    if (child && lifetime?.released) {
+      runtime.close(ownerId);
+      return JSON.stringify({
+        ok: false,
+        code: "TARGET_CLOSED",
+        detail: "child browser run has ended",
+      });
+    }
     return await dispatchBrowserBridgeAction(request, lease.bridge);
   } finally {
     lease.release();

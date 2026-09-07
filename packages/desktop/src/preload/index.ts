@@ -24,6 +24,7 @@ import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/p
 import type { PluginMediaDto } from "../shared/plugin-media";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
+import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type {
   LocalPluginPreview,
   PluginHookApprovalResult,
@@ -952,7 +953,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   getSessionTranscript: (sessionId: string) => ipcRenderer.invoke("sessions:transcript", sessionId),
   getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
     ipcRenderer.invoke("sessions:transcriptPage", sessionId, options),
-  listDiskSessions: (opts?: { limit?: number; cursor?: string }) =>
+  listDiskSessions: (opts?: { limit?: number; cursor?: string; parentSessionId?: string }) =>
     ipcRenderer.invoke("sessions:listDisk", opts ?? {}),
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
@@ -1489,6 +1490,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   externalRuntime: {
     /** Runtime kinds whose binary is installed. Empty when the flag is off. */
     available: (): Promise<string[]> => ipcRenderer.invoke("externalRuntime:available"),
+    models: (): Promise<ExternalRuntimeModelEntry[]> => ipcRenderer.invoke("externalRuntime:models"),
     /** Start or restart a session on the runtime encoded in `modelKey`. */
     start: (payload: {
       sessionId: string;

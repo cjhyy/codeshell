@@ -7,9 +7,9 @@
  * `codex app-server`.
  *
  * So the runtime is encoded INTO the model key, the way the cindy reference
- * implementation does it (`codex/gpt-5.6-sol`):
+ * implementation does it (`codex/gpt-6-astra`):
  *
- *     codex/gpt-5.6-sol        → CodexRuntime,      model gpt-5.6-sol
+ *     codex/gpt-6-astra        → CodexRuntime,      model gpt-6-astra
  *     claude-code/sonnet       → ClaudeCodeRuntime, model sonnet
  *     <anything without "/">   → native Engine, unchanged
  *
@@ -35,8 +35,8 @@ export const EXTERNAL_RUNTIME_PROVIDERS: Readonly<Record<ExternalRuntimeModelKin
 const PREFIXES: readonly ExternalRuntimeModelKind[] = ["codex", "claude-code"];
 
 /**
- * External runtimes do not expose a stable model-metadata endpoint today. Keep
- * their context ring useful until a runtime/model reports a real window; an
+ * Runtime model lists do not always include context-window metadata. Keep
+ * the context ring useful until a runtime/model reports a real window; an
  * explicit per-model value below always wins over this fallback.
  */
 export const EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS = 1_000_000;
@@ -98,13 +98,11 @@ export function isExternalRuntimeModelKey(key: string | null | undefined): boole
 }
 
 /**
- * The models offered per runtime.
+ * Bundled model choices for runtimes without discovery, or when discovery fails.
  *
- * Deliberately a short curated list rather than a live query: `codex app-server`
- * has no "list models" call we can rely on across versions, and an empty or
- * failed query would silently produce a picker with nothing in it. A wrong id
- * here surfaces as an error from the runtime on first use, which is
- * self-explanatory; a missing entry is invisible.
+ * Desktop prefers Codex's `model/list` response, so new models do not require
+ * an app release. These entries keep the picker usable with older CLIs or when
+ * discovery is unavailable. Claude Code currently uses the bundled aliases.
  */
 export const EXTERNAL_RUNTIME_MODELS: Readonly<
   Record<
@@ -113,6 +111,7 @@ export const EXTERNAL_RUNTIME_MODELS: Readonly<
   >
 > = Object.freeze({
   codex: Object.freeze([
+    { model: "gpt-6-astra", label: "Codex · GPT-6 Astra" },
     { model: "gpt-5.6-sol", label: "Codex · GPT-5.6 Sol" },
     { model: "gpt-5.6-terra", label: "Codex · GPT-5.6 Terra" },
     { model: "gpt-5.6-luna", label: "Codex · GPT-5.6 Luna" },

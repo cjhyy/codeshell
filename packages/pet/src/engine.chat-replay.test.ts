@@ -159,6 +159,10 @@ describe("Mimi mocked multi-turn chat replay", () => {
           {
             workspace_id: "ws-no-workspace",
             session_id: selector,
+            session_continuation: {
+              prior_thread: "发布准备",
+              reason: "沿用原发布说明的已完成内容，继续补全说明。",
+            },
             objective: "继续发布准备，整理发布说明；保留已完成内容，不发布。",
           },
           "wrong-workspace",
@@ -170,6 +174,10 @@ describe("Mimi mocked multi-turn chat replay", () => {
           {
             workspace_id: "ws-project",
             session_id: selector,
+            session_continuation: {
+              prior_thread: "发布准备",
+              reason: "沿用原发布说明的已完成内容，继续补全说明。",
+            },
             objective: "继续发布准备，整理发布说明；保留已完成内容，不发布。",
           },
           "correct-workspace",
@@ -196,6 +204,10 @@ describe("Mimi mocked multi-turn chat replay", () => {
     expect(result.petWorkDelegation).toEqual({
       workspaceId: "ws-project",
       reusableSessionId: selector,
+      continuationEvidence: {
+        priorThread: "发布准备",
+        reason: "沿用原发布说明的已完成内容，继续补全说明。",
+      },
       objective: "继续发布准备，整理发布说明；保留已完成内容，不发布。",
     });
     expect(result.extensions?.pet).not.toHaveProperty("hostActions");
@@ -218,6 +230,10 @@ describe("Mimi mocked multi-turn chat replay", () => {
         return call("DelegateWork", {
           workspace_id: "ws-project",
           session_id: selector,
+          session_continuation: {
+            prior_thread: "发布准备",
+            reason: "沿用原发布说明的已完成内容，继续补全说明。",
+          },
           objective: "继续发布准备：核对已整理的发布说明，仅补全缺失说明，不发布。",
         });
       }
@@ -278,6 +294,10 @@ describe("Mimi mocked multi-turn chat replay", () => {
         return call("DelegateWork", {
           workspace_id: row.workspaceId,
           session_id: row.sessionSelector,
+          session_continuation: {
+            prior_thread: "发布准备",
+            reason: "沿用原发布说明的已完成内容，继续补全说明。",
+          },
           objective: "继续原发布准备会话，补全发布说明。",
         });
       }
@@ -492,6 +512,68 @@ describe("Mimi mocked multi-turn chat replay", () => {
     expect(
       readFileSync(join(replay.sessionsRootDir, "mimi-replay", "transcript.jsonl"), "utf8"),
     ).not.toContain("release-ledger");
+  });
+
+  test("saves a corrected working note, refreshes context, and checks history before one Gateway reply", async () => {
+    const original = "旧阶段的交付标记是 stage-alpha-17，最后还需要核对引用。";
+    const note = "用户纠正：继续发布准备的原会话，只整理说明，不发布。未完成：核对交付标记与引用。";
+    const reply = "已记下这次纠正；原会话现在已暂停，接下来仍需核对交付标记与引用。";
+    const replay = createReplay((_options, round) => {
+      if (round === 1) return call("GatewayReply", { text: "记下交付标记，等待下一步。" });
+      if (round === 2) return call("SaveContextNote", { note });
+      if (round === 3) return call("NewContext", {});
+      if (round === 4) {
+        return call("SearchHistory", { action: "search", query: "stage-alpha-17" });
+      }
+      return call("GatewayReply", { text: reply });
+    });
+    await replay.run(`${original}\n${"旧阶段的参考说明已经讨论完毕。".repeat(500)}`, {
+      runtimeContext: JSON.stringify({
+        currentMessageSource: { kind: "gateway", channel: "wechat" },
+        longTasks: { active: [{ taskId: "release-note-ledger", status: "running" }] },
+      }),
+    });
+    const result = await replay.run(
+      "继续原会话，只整理说明，不发布。记好当前进度后换一段上下文。",
+      {
+        runtimeContext: JSON.stringify({
+          currentMessageSource: { kind: "gateway", channel: "wechat" },
+          longTasks: { active: [{ taskId: "release-note-ledger", status: "paused" }] },
+        }),
+      },
+    );
+
+    expect(result.reason).toBe("completed");
+    expect(replay.replay.rounds).toHaveLength(5);
+    expect(replay.replay.rounds.length - 1).toBeLessThanOrEqual(PET_BEHAVIOR_PROFILE.maxTurns!);
+    expect(replay.replay.summaries).toHaveLength(0);
+    const contextAfterRollover = replay.replay.rounds[3]!;
+    expect(JSON.stringify(contextAfterRollover.messages)).toContain(note);
+    expect(JSON.stringify(contextAfterRollover.messages)).toContain("<context-note>");
+    expect(contextAfterRollover.systemPrompt).toContain('"status":"paused"');
+    expect(contextAfterRollover.systemPrompt).not.toContain('"status":"running"');
+    const results = toolResults(replay.events);
+    expect(results.map((entry) => entry.toolName)).toEqual([
+      "GatewayReply",
+      "SaveContextNote",
+      "NewContext",
+      "SearchHistory",
+      "GatewayReply",
+    ]);
+    expect(results.filter((entry) => entry.isError)).toEqual([]);
+    expect(results.find((entry) => entry.toolName === "SearchHistory")?.result).toContain(original);
+    expect(result.extensions?.pet).toEqual({
+      hostActions: [{ kind: "gatewayReply", payload: { text: reply } }],
+    });
+    expect(result.petWorkDelegation).toBeUndefined();
+    expect(replay.engine.getSessionManager().readSessionKind("mimi-replay")).toBe("pet");
+    const transcript = readFileSync(
+      join(replay.sessionsRootDir, "mimi-replay", "transcript.jsonl"),
+      "utf8",
+    );
+    expect(transcript).toContain(original);
+    expect(transcript).toContain('"type":"context_checkpoint"');
+    expect(transcript).not.toContain("release-note-ledger");
   });
 
   test.each(["wrong workspace", "invalid follow-up lookup"])(

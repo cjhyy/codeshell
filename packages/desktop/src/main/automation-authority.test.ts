@@ -133,7 +133,7 @@ describe("automation Main workspace authority", () => {
     ).rejects.toThrow(/Session.*cwd/i);
   });
 
-  test("resume update cannot switch Session and re-normalizes to a migrated Session root", async () => {
+  test("resume update re-normalizes to a migrated Session root and validates a new target", async () => {
     const migrated = deps({
       cwd: "/secondary",
       projectId: "project-1",
@@ -152,7 +152,7 @@ describe("automation Main workspace authority", () => {
     });
     await expect(
       resolveAutomationUpdateAuthority({ resumeSessionId: "session-2" }, existing, migrated),
-    ).rejects.toThrow(/resume Session.*immutable/i);
+    ).rejects.toThrow(/resume Session.*missing/i);
     await expect(
       resolveAutomationUpdateAuthority(
         { projectId: "project-1", rootId: "root-primary" },
@@ -160,6 +160,61 @@ describe("automation Main workspace authority", () => {
         migrated,
       ),
     ).rejects.toThrow(/Session.*root/i);
+  });
+
+  test("binding and rebinding derive authority from the target without carrying old workspace ids", async () => {
+    const target = deps({
+      cwd: "/secondary",
+      projectId: "project-1",
+      rootId: "root-secondary",
+    });
+    for (const resumeSessionId of [undefined, "old-session"]) {
+      const existing = {
+        cwd: "/primary",
+        projectId: "project-1",
+        rootId: "root-primary",
+        resumeSessionId,
+      };
+      await expect(
+        resolveAutomationUpdateAuthority({ resumeSessionId: "session-1" }, existing, target),
+      ).resolves.toEqual({
+        cwd: "/secondary",
+        projectId: "project-1",
+        rootId: "root-secondary",
+      });
+      for (const hint of [
+        { projectId: "project-2" },
+        { rootId: "root-primary" },
+        { cwd: "/primary" },
+      ]) {
+        await expect(
+          resolveAutomationUpdateAuthority(
+            { resumeSessionId: "session-1", ...hint },
+            existing,
+            target,
+          ),
+        ).rejects.toThrow(/does not match persisted resume Session/);
+      }
+    }
+  });
+
+  test("unbind retains or explicitly changes standalone workspace even if the old Session is missing", async () => {
+    const existing = {
+      cwd: "/primary",
+      projectId: "project-1",
+      rootId: "root-primary",
+      resumeSessionId: "deleted-session",
+    };
+    await expect(
+      resolveAutomationUpdateAuthority({ resumeSessionId: null }, existing, deps(null)),
+    ).resolves.toEqual({ cwd: "/primary", projectId: "project-1", rootId: "root-primary" });
+    await expect(
+      resolveAutomationUpdateAuthority(
+        { resumeSessionId: null, cwd: "", projectId: null, rootId: null },
+        existing,
+        deps(null),
+      ),
+    ).resolves.toEqual({ cwd: "", projectId: null, rootId: null });
   });
 
   test("no-repo resume remains explicit while missing or unbound resume Sessions reject", async () => {

@@ -334,7 +334,11 @@ describe("MCPManager discovered tool executors", () => {
       },
     };
 
-    await (manager as any).discoverTools("srv", client);
+    const { mcpConnectionKey, mcpConnectionScope } = await import("./mcp-workspace.js");
+    const scope = mcpConnectionScope({ cwd: "/tmp" });
+    const key = mcpConnectionKey("srv", scope);
+    (manager as any).connections.set(key, { client, serverName: "srv", scope });
+    await (manager as any).discoverTools("srv", client, key);
     const parent = new AbortController();
     const result = await registry.executeTool(
       "mcp_srv_doit",

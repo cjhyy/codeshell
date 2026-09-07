@@ -19,6 +19,14 @@ const REUSABLE_SESSIONS = [
     description: "completed",
   },
 ];
+const CONTINUATION = {
+  prior_thread: "Login work",
+  reason: "Continue the login fix using the existing implementation and its failing regression.",
+};
+const CONTINUATION_EVIDENCE = {
+  priorThread: CONTINUATION.prior_thread,
+  reason: CONTINUATION.reason,
+};
 function context() {
   const recorded: PetWorkDelegation[] = [];
   const ctx = {
@@ -138,15 +146,17 @@ describe("DelegateWork", () => {
           workspace_id: "workspace-a",
           session_id: "session-alpha-login",
           objective: "continue the login fix",
+          session_continuation: CONTINUATION,
         },
         ctx,
       ),
-    ).toContain("existing Session Login work");
+    ).toContain('"mode":"reuse"');
     expect(recorded).toEqual([
       {
         workspaceId: "workspace-a",
         objective: "continue the login fix",
         reusableSessionId: "session-alpha-login",
+        continuationEvidence: CONTINUATION_EVIDENCE,
       },
     ]);
 
@@ -184,6 +194,7 @@ describe("DelegateWork", () => {
           session_id: "session-alpha-login",
           objective: "continue the login fix",
           __signal: new AbortController().signal,
+          session_continuation: CONTINUATION,
         },
         ctx,
       );
@@ -192,10 +203,65 @@ describe("DelegateWork", () => {
           workspaceId: "workspace-a",
           reusableSessionId: "session-alpha-login",
           objective: "continue the login fix",
+          continuationEvidence: CONTINUATION_EVIDENCE,
         },
       ]);
     },
   );
+
+  test("creates new work when Mimi selects an unrelated old Session without evidence", async () => {
+    const { ctx, recorded } = context();
+    const result = JSON.parse(
+      await delegateWorkTool(
+        {
+          workspace_id: "workspace-a",
+          session_id: "session-alpha-login",
+          objective: "核查飞书文档；新开 Session，不要复用旧 Session。",
+        },
+        ctx,
+      ),
+    );
+    expect(recorded).toEqual([
+      {
+        workspaceId: "workspace-a",
+        objective: "核查飞书文档；新开 Session，不要复用旧 Session。",
+      },
+    ]);
+    expect(result).toMatchObject({
+      status: "accepted",
+      launchStatus: "pending",
+      session: {
+        mode: "new",
+        reason: "missing_continuation_evidence",
+        requestedSessionId: "session-alpha-login",
+      },
+    });
+    expect(result.session).not.toHaveProperty("reusableSessionId");
+  });
+
+  test.each([
+    { prior_thread: "Feishu document review", reason: "Continue the previous review." },
+    { prior_thread: "Login work", reason: " " },
+    { prior_thread: "Login work", reason: "Resume", bypass: true },
+    "continue",
+  ])("fails closed to a new Session for ungrounded evidence %j", async (evidence) => {
+    const { ctx, recorded } = context();
+    const result = JSON.parse(
+      await delegateWorkTool(
+        {
+          workspace_id: "workspace-a",
+          session_id: "session-alpha-login",
+          objective: "Check the Feishu document",
+          session_continuation: evidence,
+        },
+        ctx,
+      ),
+    );
+    expect(recorded).toEqual([
+      { workspaceId: "workspace-a", objective: "Check the Feishu document" },
+    ]);
+    expect(result.session.mode).toBe("new");
+  });
 
   test("rejects undeclared routing controls instead of silently discarding them", async () => {
     const { ctx, recorded } = context();

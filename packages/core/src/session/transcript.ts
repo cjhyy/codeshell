@@ -17,6 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
+import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
 import type { EngineResult } from "../engine/types.js";
@@ -74,6 +75,157 @@ export interface SelectedContextRange {
   sourceEventCount: number;
 }
 
+/** Host-generated replay state. Models supply the note text, never this snapshot. */
+export interface ContextCheckpointSnapshot {
+  version: 1;
+  noteId: string;
+  coveredThroughEventId: string;
+  messages: Message[];
+  clientMessageIds: Array<[string, number]>;
+}
+
+function checkpointHash(snapshot: ContextCheckpointSnapshot): string {
+  return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+}
+
+/** Complete, ordered provider pairs are required before a checkpoint can commit. */
+export function hasCompleteContextToolPairs(messages: readonly Message[]): boolean {
+  const pending = new Set<string>();
+  const used = new Set<string>();
+  for (const message of messages) {
+    if (
+      pending.size > 0 &&
+      (message.role !== "user" ||
+        !Array.isArray(message.content) ||
+        message.content.length === 0 ||
+        message.content.some((block) => block.type !== "tool_result"))
+    )
+      return false;
+    if (!Array.isArray(message.content)) continue;
+    for (const block of message.content) {
+      if (block.type === "tool_use") {
+        if (message.role !== "assistant" || !block.id || used.has(block.id)) return false;
+        used.add(block.id);
+        pending.add(block.id);
+      } else if (block.type === "tool_result") {
+        if (message.role !== "user" || !block.tool_use_id || !pending.delete(block.tool_use_id)) {
+          return false;
+        }
+      }
+    }
+  }
+  return pending.size === 0;
+}
+
+function readCheckpoint(
+  event: TranscriptEvent,
+  precedingEvents: readonly TranscriptEvent[],
+): ContextCheckpointSnapshot | undefined {
+  if (event.type !== "context_checkpoint") return undefined;
+  const data = event.data;
+  if (
+    !data ||
+    typeof data !== "object" ||
+    data.version !== 1 ||
+    typeof data.noteId !== "string" ||
+    typeof data.coveredThroughEventId !== "string" ||
+    !Array.isArray(data.messages) ||
+    data.messages.length === 0 ||
+    !Array.isArray(data.clientMessageIds)
+  )
+    return undefined;
+  const noteIndex = precedingEvents.findIndex((candidate) => candidate.id === data.noteId);
+  const cursorIndex = precedingEvents.findIndex(
+    (candidate) => candidate.id === data.coveredThroughEventId,
+  );
+  const note = precedingEvents[noteIndex];
+  if (
+    cursorIndex < 0 ||
+    noteIndex <= cursorIndex ||
+    note?.type !== "context_note" ||
+    !note.data ||
+    typeof note.data.text !== "string" ||
+    note.data.text.trim().length === 0 ||
+    note.data.coveredThroughEventId !== data.coveredThroughEventId
+  )
+    return undefined;
+  for (const value of data.messages) {
+    if (!value || typeof value !== "object") return undefined;
+    const message = value as Message;
+    if (!["user", "assistant", "system", "tool"].includes(message.role)) return undefined;
+    if (!validCheckpointContent(message.content)) return undefined;
+  }
+  const seen = new Set<string>();
+  for (const pair of data.clientMessageIds) {
+    if (
+      !Array.isArray(pair) ||
+      pair.length !== 2 ||
+      typeof pair[0] !== "string" ||
+      seen.has(pair[0]) ||
+      !Number.isSafeInteger(pair[1]) ||
+      pair[1] < 0 ||
+      pair[1] >= data.messages.length
+    )
+      return undefined;
+    seen.add(pair[0]);
+  }
+  const snapshot: ContextCheckpointSnapshot = {
+    version: 1,
+    noteId: data.noteId,
+    coveredThroughEventId: data.coveredThroughEventId,
+    messages: data.messages,
+    clientMessageIds: data.clientMessageIds,
+  };
+  if (
+    data.checksum !== checkpointHash(snapshot) ||
+    !hasCompleteContextToolPairs(snapshot.messages)
+  ) {
+    return undefined;
+  }
+  return snapshot;
+}
+
+function validCheckpointContent(content: unknown, depth = 0): boolean {
+  if (typeof content === "string") return true;
+  if (!Array.isArray(content) || depth > 8) return false;
+  return content.every((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const block = value as ContentBlock;
+    switch (block.type) {
+      case "text":
+      case "reasoning":
+        return (
+          (block.text === undefined || typeof block.text === "string") &&
+          (block.reasoningContent === undefined || typeof block.reasoningContent === "string")
+        );
+      case "image":
+        return (
+          block.source?.type === "base64" &&
+          typeof block.source.media_type === "string" &&
+          typeof block.source.data === "string"
+        );
+      case "tool_use":
+        return (
+          depth === 0 &&
+          typeof block.id === "string" &&
+          (block.name === undefined || typeof block.name === "string") &&
+          (block.input === undefined ||
+            (block.input !== null &&
+              typeof block.input === "object" &&
+              !Array.isArray(block.input)))
+        );
+      case "tool_result":
+        return (
+          depth === 0 &&
+          typeof block.tool_use_id === "string" &&
+          (block.content === undefined || validCheckpointContent(block.content, depth + 1))
+        );
+      default:
+        return false;
+    }
+  });
+}
+
 export type SummaryAppendMetadata =
   | { fromTurn: number; toTurn: number; eventCount: number }
   | {
@@ -106,6 +258,24 @@ function isSyntheticInterruptedToolResult(event: TranscriptEvent): boolean {
     event.data.toolName === "unknown" &&
     event.data.error === INTERRUPTED_TOOL_RESULT_ERROR
   );
+}
+
+function toolResultContentBlock(event: TranscriptEvent): ContentBlock {
+  const { toolCallId, result, error, contentBlocks } = event.data as {
+    toolCallId: string;
+    result?: string;
+    error?: string;
+    contentBlocks?: ContentBlock[];
+  };
+  return {
+    type: "tool_result",
+    tool_use_id: toolCallId,
+    content: error
+      ? `Error: ${error}`
+      : Array.isArray(contentBlocks) && contentBlocks.length > 0
+        ? structuredClone(contentBlocks)
+        : (result ?? "(no output)"),
+  };
 }
 
 /**
@@ -192,6 +362,42 @@ export class Transcript {
     return transcript;
   }
 
+  /** Preserve checkpoint provenance when a fork assigns fresh event ids. */
+  static remapContextForkReferences(
+    sourceEvents: readonly TranscriptEvent[],
+    copiedEvents: TranscriptEvent[],
+  ): void {
+    if (!sourceEvents.some((event) => event.type === "context_note")) return;
+    const eventIds = new Map(
+      sourceEvents.map((event, index) => [event.id, copiedEvents[index]!.id]),
+    );
+    for (const [index, source] of sourceEvents.entries()) {
+      const copied = copiedEvents[index]!;
+      // An inherited note can cite old event ids. Resolve those aliases only
+      // against the copied prefix, never by reaching into the parent session.
+      copied.data.contextHistorySourceIds = [
+        ...(Array.isArray(source.data.contextHistorySourceIds)
+          ? source.data.contextHistorySourceIds.filter((id): id is string => typeof id === "string")
+          : []),
+        source.id,
+      ];
+      if (source.type === "context_note") {
+        const cursor = source.data.coveredThroughEventId;
+        if (typeof cursor === "string" && eventIds.has(cursor)) {
+          copied.data.coveredThroughEventId = eventIds.get(cursor);
+        }
+      }
+      if (source.type !== "context_checkpoint") continue;
+      const snapshot = readCheckpoint(source, sourceEvents.slice(0, index));
+      if (!snapshot) continue; // Never turn a corrupt source checkpoint into a valid one.
+      const noteId = eventIds.get(snapshot.noteId);
+      const coveredThroughEventId = eventIds.get(snapshot.coveredThroughEventId);
+      if (!noteId || !coveredThroughEventId) continue;
+      const remapped = { ...snapshot, noteId, coveredThroughEventId };
+      Object.assign(copied.data, remapped, { checksum: checkpointHash(remapped) });
+    }
+  }
+
   isPersistent(): boolean {
     return this.persistent;
   }
@@ -206,6 +412,44 @@ export class Transcript {
     };
     this.events.push(event);
     this.flush(event);
+    return event;
+  }
+
+  /** Failed note/checkpoint writes must never change the active replay. */
+  appendContextNote(text: string, coveredThroughEventId: string): TranscriptEvent | undefined {
+    return this.appendDurableContextEvent("context_note", { text, coveredThroughEventId });
+  }
+
+  appendContextCheckpoint(snapshot: ContextCheckpointSnapshot): TranscriptEvent | undefined {
+    const frozen = structuredClone(snapshot);
+    const data = { ...frozen, checksum: checkpointHash(frozen) };
+    const candidate: TranscriptEvent = {
+      id: "validation",
+      type: "context_checkpoint",
+      timestamp: Date.now(),
+      turnNumber: this.currentTurn,
+      data,
+    };
+    if (!readCheckpoint(candidate, this.events)) return undefined;
+    return this.appendDurableContextEvent("context_checkpoint", data);
+  }
+
+  private appendDurableContextEvent(
+    type: "context_note" | "context_checkpoint",
+    data: Record<string, unknown>,
+  ): TranscriptEvent | undefined {
+    // A missing earlier event makes a durable cursor unreliable, even when
+    // this particular append would succeed.
+    if (this.dirty) return undefined;
+    const event: TranscriptEvent = {
+      id: nanoid(12),
+      type,
+      timestamp: Date.now(),
+      turnNumber: this.currentTurn,
+      data,
+    };
+    if (!this.flush(event)) return undefined;
+    this.events.push(event);
     return event;
   }
 
@@ -405,10 +649,11 @@ export class Transcript {
     messages: Message[];
     liveIndexByClientMessageId: Map<string, number>;
   } {
+    const events = this.contextReplayEvents();
     const messages: Message[] = [];
     const liveIndexByClientMessageId = new Map<string, number>();
-    const selectedToolResults = preferredToolResults(this.events);
-    const hasRangeArchive = this.events.some((e) => e.type === "range_archive");
+    const selectedToolResults = preferredToolResults(events);
+    const hasRangeArchive = events.some((e) => e.type === "range_archive");
 
     // Range-archive pre-pass: collect valid markers keyed by their span-opening
     // client message id. A marker whose to-anchor no longer resolves to a
@@ -430,7 +675,7 @@ export class Transcript {
       // while scanning forward, so it would never close — silently swallowing
       // the rest of the conversation. Fail open instead: ignore the marker.
       const firstIndexByClientId = new Map<string, number>();
-      for (const [index, event] of this.events.entries()) {
+      for (const [index, event] of events.entries()) {
         if (event.type === "message" && typeof event.data.clientMessageId === "string") {
           if (!firstIndexByClientId.has(event.data.clientMessageId)) {
             firstIndexByClientId.set(event.data.clientMessageId, index);
@@ -438,7 +683,7 @@ export class Transcript {
         }
       }
       const presentClientIds = new Set(firstIndexByClientId.keys());
-      for (const event of this.events) {
+      for (const event of events) {
         if (event.type !== "range_archive") continue;
         const { summary, toClientMessageId, fromClientMessageId } = event.data as {
           summary: string;
@@ -482,7 +727,7 @@ export class Transcript {
     // that breaks provider validation; skip it instead of emitting it.
     const emittedToolUseIds = new Set<string>();
 
-    for (const event of this.events) {
+    for (const event of events) {
       // Span bookkeeping runs on message events only: exit before entry so
       // adjacent spans (A.to === B.from) hand over on the boundary message.
       if (event.type === "message") {
@@ -525,7 +770,9 @@ export class Transcript {
               }
             }
           }
-          messages.push({ role: role as Message["role"], content });
+          // Tool results can be merged into this array below. Never mutate
+          // the source event (or a checkpoint) during a read-only replay.
+          messages.push({ role: role as Message["role"], content: structuredClone(content) });
           break;
         }
         case "tool_use": {
@@ -542,23 +789,9 @@ export class Transcript {
           ) {
             break;
           }
-          const { toolCallId, result, error, contentBlocks } = event.data as {
-            toolCallId: string;
-            result?: string;
-            error?: string;
-            contentBlocks?: ContentBlock[];
-          };
           // Find if there's already a user message with tool_results to append to
           const lastMsg = messages[messages.length - 1];
-          const block: ContentBlock = {
-            type: "tool_result",
-            tool_use_id: toolCallId,
-            content: error
-              ? `Error: ${error}`
-              : Array.isArray(contentBlocks) && contentBlocks.length > 0
-                ? contentBlocks
-                : (result ?? "(no output)"),
-          };
+          const block = toolResultContentBlock(event);
 
           if (lastMsg?.role === "user" && Array.isArray(lastMsg.content)) {
             (lastMsg.content as ContentBlock[]).push(block);
@@ -594,6 +827,57 @@ export class Transcript {
     }
 
     return { messages, liveIndexByClientMessageId };
+  }
+
+  private contextReplayEvents(): TranscriptEvent[] {
+    for (let index = this.events.length - 1; index >= 0; index -= 1) {
+      const event = this.events[index]!;
+      if (event.type !== "context_checkpoint") continue;
+      const snapshot = readCheckpoint(event, this.events.slice(0, index));
+      if (!snapshot) continue; // Corrupt or truncated checkpoints fail open.
+      const clientIdByIndex = new Map(snapshot.clientMessageIds.map(([id, i]) => [i, id]));
+      const snapshotEvents = snapshot.messages.map(
+        (message, messageIndex): TranscriptEvent => ({
+          id: `${event.id}:${messageIndex}`,
+          type: "message",
+          timestamp: event.timestamp,
+          turnNumber: event.turnNumber,
+          data: {
+            role: message.role,
+            content: structuredClone(message.content),
+            ...(clientIdByIndex.has(messageIndex)
+              ? { clientMessageId: clientIdByIndex.get(messageIndex) }
+              : {}),
+          },
+        }),
+      );
+      const tail = this.events.slice(index + 1);
+      const lateResults = preferredToolResults([...snapshotEvents, ...tail]);
+      const completedIds = new Set<string>();
+      for (const snapshotEvent of snapshotEvents) {
+        const content = snapshotEvent.data.content;
+        if (!Array.isArray(content)) continue;
+        snapshotEvent.data.content = content.map((block: ContentBlock) => {
+          if (block.type !== "tool_result" || !block.tool_use_id) return block;
+          completedIds.add(block.tool_use_id);
+          const late = lateResults.get(block.tool_use_id);
+          // Reconcile late duplicates in the original result position, so a
+          // result cannot become orphaned or split an unrelated later batch.
+          return late && !isSyntheticInterruptedToolResult(late)
+            ? toolResultContentBlock(late)
+            : block;
+        });
+      }
+      return [
+        ...snapshotEvents,
+        ...tail.filter(
+          (candidate) =>
+            candidate.type !== "tool_result" ||
+            !completedIds.has(candidate.data.toolCallId as string),
+        ),
+      ];
+    }
+    return this.events;
   }
 
   getEvents(type?: TranscriptEventType): TranscriptEvent[] {
@@ -893,6 +1177,11 @@ export class Transcript {
         // context. The normal loader keeps its established skip behavior.
         return Transcript.loadFromFile(filePath);
       }
+    }
+    // Checkpoint validity references its note and covered cursor. A bounded
+    // range-archive tail may omit either, so use the full loader here.
+    if (events.some((event) => event.type === "context_checkpoint")) {
+      return Transcript.loadFromFile(filePath);
     }
     let markerIndex = -1;
     let toClientMessageId: string | undefined;

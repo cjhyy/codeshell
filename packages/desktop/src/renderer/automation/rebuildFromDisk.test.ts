@@ -6,6 +6,41 @@ import type { ProjectLike } from "./pathMatch";
 const repo = (id: string, path: string): ProjectLike => ({ id, name: id, path });
 
 describe("planDiskRebuild", () => {
+  it("never rebuilds a child transcript query into sidebar sessions or projects", () => {
+    let created = false;
+    const out = planDiskRebuild(
+      [
+        {
+          id: "child",
+          engineSessionId: "child",
+          cwd: "/worktree",
+          title: "child",
+          updatedAt: 1,
+          origin: "subagent",
+        },
+        {
+          id: "legacy-child",
+          engineSessionId: "legacy-child",
+          cwd: "/worktree",
+          title: "child",
+          updatedAt: 2,
+          origin: "desktop",
+          parentSessionId: "parent",
+        },
+      ],
+      [],
+      {
+        caseInsensitive: false,
+        createProjectForCwd: () => {
+          created = true;
+          return "unexpected";
+        },
+      },
+    );
+    expect(out).toEqual([]);
+    expect(created).toBe(false);
+  });
+
   it("matches an existing repo by cwd", () => {
     const projects: ProjectLike[] = [repo("r1", "/proj/a")];
     const out = planDiskRebuild(

@@ -7,6 +7,11 @@ import { stubPetSpriteAssets } from "./test-utils/stubPetSpriteAssets";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { PermissionMode } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
+import {
+  externalRuntimeModelEntries,
+  type ExternalRuntimeModelEntry,
+  type ExternalRuntimeModelKind,
+} from "../shared/external-runtime-models";
 
 interface QuickChatPanelProps {
   sessionId: string;
@@ -47,6 +52,7 @@ interface ChatProps {
   draft: string;
   permissionMode: PermissionMode | null;
   activeModelKey: string | null;
+  modelOptions: ModelOption[];
   onPermissionChange: (mode: PermissionMode) => void;
   onModelChange: (option: ModelOption) => void;
   onDraftChange: (text: string) => void;
@@ -387,6 +393,7 @@ function installCodeshellStub(
   getSettings: () => Promise<Record<string, unknown>> = async () => ({}),
   externalRuntimeKinds: string[] = [],
   modelCatalog: Array<Record<string, unknown>> = [],
+  externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>,
 ): void {
   const unsubscribe = () => undefined;
   const project = {
@@ -423,6 +430,10 @@ function installCodeshellStub(
     },
     externalRuntime: {
       available: async () => externalRuntimeKinds,
+      models:
+        externalRuntimeModels ??
+        (async () =>
+          externalRuntimeModelEntries(externalRuntimeKinds as ExternalRuntimeModelKind[])),
       stop: async (sessionId: string) => {
         externalRuntimeStopCalls.push(sessionId);
       },
@@ -561,6 +572,7 @@ async function mountApp(options: {
   settings?: Record<string, unknown>;
   externalRuntimeKinds?: string[];
   modelCatalog?: Array<Record<string, unknown>>;
+  externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -595,6 +607,7 @@ async function mountApp(options: {
     async () => options.settings ?? {},
     options.externalRuntimeKinds,
     options.modelCatalog,
+    options.externalRuntimeModels,
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -684,6 +697,52 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("loads native choices before runtime discovery and preserves selection when models refresh", async () => {
+    let finishDiscovery!: (models: ExternalRuntimeModelEntry[]) => void;
+    let discoveredModels = new Promise<ExternalRuntimeModelEntry[]>((resolve) => {
+      finishDiscovery = resolve;
+    });
+    const entries = externalRuntimeModelEntries(["codex"]);
+    const oldModel = entries.find((entry) => entry.key === "codex/gpt-5.6-sol")!;
+    const newModel = entries.find((entry) => entry.key === "codex/gpt-6-astra")!;
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      externalRuntimeModels: () => discoveredModels,
+      settings: {
+        defaults: { text: oldModel.key },
+        modelConnections: [
+          { id: "native-model", tag: "text", catalogId: "native-provider", model: "native-1" },
+        ],
+      },
+      modelCatalog: [
+        {
+          id: "native-provider",
+          displayName: "Native Provider",
+          modelPresets: [{ value: "native-1", label: "Native 1" }],
+        },
+      ],
+    });
+
+    expect(chatProps?.modelOptions.map((option) => option.key)).toEqual(["native-model"]);
+    expect(chatProps?.activeModelKey).toBe(oldModel.key);
+    await act(async () => finishDiscovery([oldModel]));
+    expect(chatProps?.modelOptions.map((option) => option.key)).toEqual([
+      "native-model",
+      oldModel.key,
+    ]);
+
+    discoveredModels = Promise.resolve([newModel, oldModel]);
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(chatProps?.modelOptions.map((option) => option.key)).toEqual([
+      "native-model",
+      newModel.key,
+      oldModel.key,
+    ]);
+    expect(chatProps?.activeModelKey).toBe(oldModel.key);
+    expect(localStorageMock.getItem("codeshell.overrides.model")).toBeNull();
+  });
+
   test("does not rebind an external runtime session to the renderer browser bucket", async () => {
     await mountApp({
       withNormalSession: true,

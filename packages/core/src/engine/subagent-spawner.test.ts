@@ -39,6 +39,7 @@ describe("subagent spawner", () => {
   it("interrupts then serially redrives the same child runtime and session", async () => {
     notificationQueue.reset();
     let runtimeCreations = 0;
+    let runtimeDisposals = 0;
     let activeRuns = 0;
     let maxActiveRuns = 0;
     const tasks: string[] = [];
@@ -51,6 +52,9 @@ describe("subagent spawner", () => {
       | import("../tool-system/builtin/agent-registry.js").LiveChildControl
       | undefined;
     const runtime = {
+      dispose() {
+        runtimeDisposals++;
+      },
       stateListener: undefined as
         | ((state: import("../tool-system/builtin/agent-registry.js").LiveChildState) => void)
         | undefined,
@@ -129,6 +133,7 @@ describe("subagent spawner", () => {
 
       expect(result.text).toBe("redirected");
       expect(runtimeCreations).toBe(1);
+      expect(runtimeDisposals).toBe(1);
       expect(maxActiveRuns).toBe(1);
       expect(tasks).toHaveLength(2);
       expect(tasks[1]).toContain("new direction");
@@ -577,4 +582,130 @@ describe("subagent spawner", () => {
       disabled: ["Agent", "AgentStatus", "AgentCancel", "AgentSendInput"],
     });
   });
+});
+
+describe("child host lifetime", () => {
+  for (const fail of [false, true]) {
+    it(`binds resumed child identity, inherits restrictions and disposes on ${fail ? "failure" : "completion"}`, async () => {
+      const events: string[] = [];
+      const parent = parentConfig();
+      parent.readOnlySession = true;
+      parent.projectTrusted = false;
+      parent.allowBackgroundShells = false;
+      const browser = {} as NonNullable<EngineConfig["browserBridge"]>;
+      parent.browserBridge = {} as NonNullable<EngineConfig["browserBridge"]>;
+      parent.createChildHostBindings = (input) => {
+        expect(input.parentSessionId).toBe("parent");
+        expect(input.sessionId).toBe("resumed-child");
+        return {
+          browserBridge: browser,
+          activate() {
+            events.push("activate");
+          },
+          dispose() {
+            events.push("dispose");
+          },
+        };
+      };
+      const spawner = createSubAgentSpawner({
+        parentConfig: parent,
+        parentSessionId: "parent",
+        parentSandbox: parent.sandbox!,
+        presetName: "general",
+        cwd: "/repo",
+        permissionMode: "acceptEdits",
+        appendParentSubagent() {},
+        sessionExists: () => true,
+        childRunner: {
+          async runChild(config, _task, options) {
+            events.push("run");
+            expect(config.browserBridge).toBe(browser);
+            expect(config.browserBridge).not.toBe(parent.browserBridge);
+            expect(config).toMatchObject({
+              readOnlySession: true,
+              projectTrusted: false,
+              allowBackgroundShells: false,
+              sandbox: parent.sandbox,
+            });
+            if (fail) throw new Error("child failed");
+            return {
+              text: "done",
+              sessionId: options.sessionId!,
+              usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            };
+          },
+        },
+      });
+      const result = spawner.spawn({
+        agentId: "child",
+        resumeSessionId: "resumed-child",
+        description: "resume",
+        prompt: "work",
+        maxTurns: 2,
+        signal: new AbortController().signal,
+        readOnlySession: false,
+      });
+      if (fail) await expect(result).rejects.toThrow("child failed");
+      else await result;
+      expect(events).toEqual(["activate", "run", "dispose"]);
+    });
+  }
+});
+
+describe("supervised child resource cleanup", () => {
+  for (const fail of [false, true]) {
+    it(`disposes host before the Engine after ${fail ? "failure" : "success"}`, async () => {
+      const events: string[] = [];
+      const parent = parentConfig();
+      parent.createChildHostBindings = () => ({
+        dispose() {
+          events.push("host.dispose");
+        },
+      });
+      const spawner = createSubAgentSpawner({
+        parentConfig: parent,
+        parentSessionId: "parent",
+        parentSandbox: parent.sandbox!,
+        presetName: "general",
+        cwd: "/repo",
+        permissionMode: "acceptEdits",
+        appendParentSubagent() {},
+        sessionExists: () => false,
+        childRunner: {
+          createChild: () => ({
+            setAgentControlStateListener() {},
+            async run(_task, options) {
+              events.push("run");
+              if (fail) throw new Error("child failed");
+              return {
+                text: "done",
+                reason: "completed",
+                sessionId: options!.sessionId!,
+                turnCount: 1,
+                usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+              };
+            },
+            async dispose() {
+              events.push("engine.dispose");
+            },
+          }),
+          async runChild() {
+            throw new Error("unexpected legacy runner");
+          },
+        },
+      });
+      const result = spawner.spawn({
+        agentId: "child-dispose",
+        description: "work",
+        prompt: "work",
+        maxTurns: 2,
+        signal: new AbortController().signal,
+        runtimeGeneration: 1,
+        bindLiveControl: () => true,
+      });
+      if (fail) await expect(result).rejects.toThrow("child failed");
+      else await result;
+      expect(events).toEqual(["run", "host.dispose", "engine.dispose"]);
+    });
+  }
 });

@@ -193,31 +193,39 @@ export async function connectRunMcp(args: {
   runtimePool: MCPManager | undefined;
   toolRegistry: ToolRegistry;
   engineForConnect: Parameters<MCPManager["connectAll"]>[1];
+  toolContext?: Parameters<MCPManager["connectAll"]>[3];
   emitNotificationHook: (payload: Record<string, unknown>) => void;
 }): Promise<void> {
-  // Connect MCP servers (if configured and not already connected).
-  // B1: prefer the Runtime-owned MCPManager so all sessions in a
-  // worker share one set of connections. Falling back to a
-  // per-Engine instance keeps the null-runtime path (tests, ad-hoc
-  // scripts) working.
-  const mcpServers = args.mcpServers;
-  const mcpDisabled = args.mcpDisabled;
-  if (!mcpDisabled && Object.keys(mcpServers).length > 0 && !args.getManager()) {
-    if (args.runtimePool) {
-      args.setManager(args.runtimePool);
-    } else {
-      args.setManager(new MCPManager(args.toolRegistry));
-    }
-    await args.getManager()!.connectAll(mcpServers, args.engineForConnect, (event) => {
-      // Fire-and-forget onto the notification hook: hosts/plugins learn
-      // about MCP availability changes without polling the pool.
+  // A pool may outlive a run and the engine registry may predate discovery.
+  // Refresh scope and the engine's MCP-only view on every run (including cwd
+  // and project changes); identical scopes still share a single transport.
+  const enabledServers = args.mcpDisabled ? {} : args.mcpServers;
+  if (!args.getManager() && Object.keys(enabledServers).length > 0) {
+    args.setManager(args.runtimePool ?? new MCPManager(args.toolRegistry));
+  }
+  const manager = args.getManager();
+  if (!manager) return;
+  await manager.connectAll(
+    enabledServers,
+    args.engineForConnect,
+    (event) => {
       args.emitNotificationHook({
         kind: event.type,
         server: event.server,
         ...(event.error ? { error: event.error } : {}),
       });
-    });
-  }
+    },
+    args.toolContext,
+  );
+  manager.syncToolsToRegistry(
+    args.toolRegistry,
+    args.toolContext,
+    new Set(
+      Object.entries(enabledServers)
+        .filter(([, config]) => config.enabled !== false)
+        .map(([name]) => name),
+    ),
+  );
 }
 
 /**
@@ -228,12 +236,14 @@ export async function connectRunMcp(args: {
  */
 export interface ToolVisibilityInputs {
   cwd: string;
+  contextStrategy?: "summary" | "notes";
   workspace?: ToolContext["workspace"];
   hasGoal: boolean;
   sessionId?: string;
   settingsScope?: SettingsScope;
   /** Host identity a guard may require, e.g. Panel needs `"desktop"`. */
   host?: string;
+  hasBrowserAutomation?: boolean;
   isSubAgent?: boolean;
   behaviorProfile?: string;
   sessionMessageTargets?: readonly import("../session/session-message.js").SessionMessageTarget[];
@@ -258,11 +268,15 @@ export function buildToolVisibility(
 ): import("../tool-system/context.js").ToolVisibilityContext {
   return {
     cwd: inputs.cwd,
+    ...(inputs.contextStrategy ? { contextStrategy: inputs.contextStrategy } : {}),
     ...(inputs.workspace ? { workspace: inputs.workspace } : {}),
     hasGoal: inputs.hasGoal,
     ...(inputs.sessionId ? { sessionId: inputs.sessionId } : {}),
     ...(inputs.settingsScope ? { settingsScope: inputs.settingsScope } : {}),
     ...(inputs.host !== undefined ? { host: inputs.host } : {}),
+    ...(inputs.hasBrowserAutomation !== undefined
+      ? { hasBrowserAutomation: inputs.hasBrowserAutomation }
+      : {}),
     ...(inputs.isSubAgent !== undefined ? { isSubAgent: inputs.isSubAgent } : {}),
     ...(inputs.behaviorProfile !== undefined ? { behaviorProfile: inputs.behaviorProfile } : {}),
     ...(inputs.sessionMessageTargets?.length
@@ -303,11 +317,13 @@ export function assembleRunToolDefs(args: {
   const guardCwd = args.guardCwd;
   const toolVisibility = buildToolVisibility({
     cwd: guardCwd,
+    contextStrategy: toolCtx.contextNotes ? toolCtx.contextStrategy : undefined,
     workspace: toolCtx.workspace,
     hasGoal: args.hasRunnableGoal,
     sessionId: toolCtx.sessionId,
     settingsScope: args.settingsScope,
     host: args.builtinToolHost,
+    hasBrowserAutomation: toolCtx.browser !== undefined,
     isSubAgent: args.isSubAgent,
     behaviorProfile: args.behaviorProfileId,
     sessionMessageTargets: toolCtx.sessionMessages?.targets,

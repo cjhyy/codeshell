@@ -116,7 +116,7 @@ describe("E2E: 小红书 搜索→打开→扒内容", () => {
     // 1. snapshot home → find the search box
     const home = await act({ action: "snapshot" });
     const searchBox = home.elements.find((e: any) => e.role === "textbox");
-    expect(searchBox.ref).toBe("s1:e1");
+    expect(searchBox.ref).toBe(`${home.snapshotId}:e1`);
 
     // 2. type the query + press Enter (→ results page)
     expect((await act({ action: "type", ref: searchBox.ref, text: "citywalk" })).ok).toBe(true);

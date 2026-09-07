@@ -59,6 +59,8 @@ import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
+import { SessionContextNotes } from "../context/notes.js";
+import { loadSection } from "../prompt/section-loader.js";
 import {
   CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
   buildAnchoredSummaryMessage,
@@ -916,6 +918,10 @@ export class Engine {
     this.config.browserBridge = bridge;
   }
 
+  setChildHostBindings(factory: EngineConfig["createChildHostBindings"]): void {
+    this.config.createChildHostBindings = factory;
+  }
+
   /** Inject the host-backed workspace bridge after construction. */
   setWorkspaceBridge(
     bridge: import("../tool-system/workspace-bridge.js").WorkspaceBridge | undefined,
@@ -1271,6 +1277,15 @@ export class Engine {
     return sessionProfile ?? explicitProfile;
   }
 
+  private resolveContextStrategy(profile?: RunBehaviorProfile): "summary" | "notes" {
+    return (
+      this.config.contextStrategy ??
+      this.getSettingsManager().get().context?.strategy ??
+      profile?.contextStrategy ??
+      "summary"
+    );
+  }
+
   private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
@@ -1427,6 +1442,10 @@ export class Engine {
     } = openedResult.opened;
     const session = openedResult.opened.session;
     let messages = openedMessages;
+    toolCtx.contextStrategy = this.resolveContextStrategy(profile);
+    const contextNotes =
+      toolCtx.contextStrategy === "notes" ? new SessionContextNotes(session.transcript) : undefined;
+    toolCtx.contextNotes = contextNotes;
 
     // A host-owned time/topic boundary must be applied only after the current
     // user message exists in the transcript (it is the exclusive end anchor),
@@ -1448,11 +1467,21 @@ export class Engine {
             : {}),
         };
         const before = estimateTokens(messages);
+        let archiveStrategy: CompactStrategy = "range";
         if (options.archiveBeforeCurrentTurn.summary) {
           await this.appendArchiveMarker(session.state.sessionId, {
             ...anchors,
             summary: options.archiveBeforeCurrentTurn.summary,
           });
+        } else if (
+          !freshImageMessage &&
+          contextNotes &&
+          this.tryNotesRollover(contextNotes, messages)
+        ) {
+          // The note covers its own cursor; any newer messages remain verbatim.
+          this.compactedMessagesBySession.delete(session.state.sessionId);
+          session.state.contextUsageAnchor = undefined;
+          archiveStrategy = "notes";
         } else {
           await this.archiveTurnRange(session.state.sessionId, { start: 0, end: 0 }, anchors);
         }
@@ -1466,7 +1495,7 @@ export class Engine {
         if (archived.before > archived.after) {
           options.onStream?.({
             type: "context_compact",
-            strategy: "range",
+            strategy: archiveStrategy,
             before: archived.before,
             after: archived.after,
           });
@@ -1523,18 +1552,23 @@ export class Engine {
         runPlanMode,
       });
 
-      const { llmClient, fullSystemPrompt, dynamicContextMsg, userContextMsg } =
-        await this.assembleRunPrompts({
-          session,
-          messages,
-          hookMessages,
-          promptComposer,
-          toolDefs,
-          llmClientPromise,
-          contextManager,
-          profile,
-          profileParams,
-        });
+      const {
+        llmClient,
+        fullSystemPrompt,
+        dynamicContextMsg,
+        userContextMsg,
+        retainedContextMessages,
+      } = await this.assembleRunPrompts({
+        session,
+        messages,
+        hookMessages,
+        promptComposer,
+        toolDefs,
+        llmClientPromise,
+        contextManager,
+        profile,
+        profileParams,
+      });
 
       // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
       //    condenses many rounds into the running summary that REPLACES the real
@@ -1585,6 +1619,7 @@ export class Engine {
         releaseClientMessageId,
         freshImageMessage,
         dynamicContextMsg,
+        retainedContextMessages,
       });
 
       let result: Awaited<ReturnType<typeof turnLoop.run>>;
@@ -1916,6 +1951,7 @@ export class Engine {
     fullSystemPrompt: string;
     dynamicContextMsg: Message | null;
     userContextMsg: Message | null;
+    retainedContextMessages: Message[];
   }> {
     const {
       session,
@@ -1937,17 +1973,23 @@ export class Engine {
       promptComposer.buildDynamicContextMessage(),
     ]);
     const fullSystemPrompt = composeRunSystemPrompt({
-      baseSystemPrompt,
+      baseSystemPrompt: toolDefs.some((tool) => tool.name === "SaveContextNote")
+        ? `${baseSystemPrompt}\n\n${loadSection("context-notes")}`
+        : baseSystemPrompt,
       profile,
       profileParams,
     });
     const userContextMsg = promptComposer.buildUserContextMessage();
+    const priorMessages = new Set(messages);
     assembleRunMessages({
       messages,
       userContextMsg,
       hookMessages,
       dynamicContextMsg,
     });
+    const retainedContextMessages = messages.filter(
+      (message) => !priorMessages.has(message) && message !== dynamicContextMsg,
+    );
     this.lastSessionId = session.state.sessionId;
     this.lastMessages = messages;
 
@@ -1965,7 +2007,13 @@ export class Engine {
     // Two summarizers with DIFFERENT quality needs (see the run loop wiring for
     // the aux-model summarizer set up alongside the ModelFacade).
 
-    return { llmClient, fullSystemPrompt, dynamicContextMsg, userContextMsg };
+    return {
+      llmClient,
+      fullSystemPrompt,
+      dynamicContextMsg,
+      userContextMsg,
+      retainedContextMessages,
+    };
   }
 
   /**
@@ -2123,6 +2171,7 @@ export class Engine {
     // built-ins and product capabilities.
     const subAgentSpawner = createSubAgentSpawner({
       parentConfig: this.config,
+      getParentSessionId: () => getSession().state.sessionId,
       parentSandbox: sandboxConfig,
       presetName: this.preset.name,
       cwd,
@@ -2139,7 +2188,11 @@ export class Engine {
         createChild: (config) => new Engine(config),
         runChild: async (config, childTask, childOptions) => {
           const child = new Engine(config);
-          return child.run(childTask, childOptions);
+          try {
+            return await child.run(childTask, childOptions);
+          } finally {
+            await child.dispose();
+          }
         },
       },
     });
@@ -2222,6 +2275,7 @@ export class Engine {
     releaseClientMessageId: (clientMessageId: string) => void;
     freshImageMessage: Message | undefined;
     dynamicContextMsg: Message | null;
+    retainedContextMessages: Message[];
   }): Promise<{
     turnLoop: TurnLoop;
     applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;
@@ -2250,6 +2304,7 @@ export class Engine {
       releaseClientMessageId,
       freshImageMessage,
       dynamicContextMsg,
+      retainedContextMessages,
     } = args;
 
     // eslint-disable-next-line prefer-const
@@ -2388,6 +2443,7 @@ export class Engine {
       normalizedGoal,
       freshImageMessage,
       dynamicContextMsg,
+      retainedContextMessages,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -2640,6 +2696,7 @@ export class Engine {
     const mcpServers = this.config.mcpServers ?? {};
     const mcpDisabled = profile?.disableMcp === true;
     await connectRunMcp({
+      toolContext: toolCtx,
       mcpServers,
       mcpDisabled,
       getManager: () => this.mcpManager,
@@ -2728,6 +2785,7 @@ export class Engine {
     normalizedGoal: GoalConfig | undefined;
     freshImageMessage: Message | undefined;
     dynamicContextMsg: Message | null;
+    retainedContextMessages: Message[];
     usageBaseline: TokenUsage;
     getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
     recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
@@ -2752,6 +2810,7 @@ export class Engine {
       normalizedGoal,
       freshImageMessage,
       dynamicContextMsg,
+      retainedContextMessages,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -2764,6 +2823,10 @@ export class Engine {
     // know about HookRegistry — the buffer is the seam).
     let pendingCompactInfo: { strategy: string; before: number; after: number } | null = null;
     contextManager.setOnCompact((info) => {
+      if (info.strategy === "notes") {
+        session.state.contextUsageAnchor = undefined;
+        this.compactedMessagesBySession.delete(sid);
+      }
       pendingCompactInfo = info;
       options?.onStream?.({ type: "context_compact", ...info });
     });
@@ -2774,6 +2837,8 @@ export class Engine {
         model: modelFacade,
         toolExecutor,
         contextManager,
+        contextNotes:
+          toolCtx.contextNotes instanceof SessionContextNotes ? toolCtx.contextNotes : undefined,
         hooks: this.hooks,
         transcript: session.transcript,
         systemPrompt: fullSystemPrompt,
@@ -2908,6 +2973,7 @@ export class Engine {
         signal: options?.signal,
         freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
         volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
+        retainedContextMessages,
         // Goal mode: the active goal is surfaced to the on_stop handler via
         // ctx.data.goal; the GoalStopHook (registered above) judges it.
         goal: normalizedGoal,
@@ -3612,10 +3678,17 @@ export class Engine {
     }
   }
 
-  /**
-   * Force context compaction on a session.
-   * Returns token stats before/after.
-   */
+  /** Attempt the durable note path without issuing a separate model request. */
+  private tryNotesRollover(notes: SessionContextNotes, messages: Message[]): Message[] | undefined {
+    try {
+      notes.requestRollover();
+      return notes.applyRollover(messages);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Force context compaction and return token stats before/after. */
   async forceCompact(sessionId?: string): Promise<{
     before: number;
     after: number;
@@ -3630,6 +3703,24 @@ export class Engine {
     const sourceMessages =
       this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
     const before = estimateTokens(sourceMessages);
+    const profile = [...this.behaviorProfiles.values()].find((candidate) =>
+      candidate.activateForSessionKinds?.includes(session.state.kind ?? "work"),
+    );
+    if (this.resolveContextStrategy(profile) === "notes") {
+      const compacted = this.tryNotesRollover(
+        new SessionContextNotes(session.transcript),
+        sourceMessages,
+      );
+      if (compacted) {
+        this.compactedMessagesBySession.set(effectiveSessionId, compacted);
+        session.state.contextUsageAnchor = undefined;
+        this.lastContextManager = undefined;
+        this.persistRunProgress(session.state);
+        this.lastSessionId = effectiveSessionId;
+        this.lastMessages = compacted;
+        return { before, after: estimateTokens(compacted), strategy: "notes" };
+      }
+    }
 
     const contextManager = await this.prepareContextManagerForSession(
       effectiveSessionId,

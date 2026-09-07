@@ -310,6 +310,38 @@ describe("browser_act", () => {
     );
   });
 
+  test("a reclaimed target is listed as closed and its stale action never executes", async () => {
+    let clicked = false;
+    const ctx = ctxWith({
+      listTabs: async () => [
+        {
+          tabId: "5",
+          url: "https://example.com/sheet",
+          title: "Sheet",
+          active: false,
+          status: "closed",
+        },
+      ],
+      switchTab: async () => ({
+        ok: false,
+        code: "TARGET_CLOSED",
+        detail:
+          "Target closed after inactivity. Use browser_navigate to reopen https://example.com/sheet and re-observe.",
+      }),
+      click: async () => {
+        clicked = true;
+        return { ok: true };
+      },
+    });
+    expect(await browserActTool({ action: "list_tabs" }, ctx)).toContain(
+      "closed — navigate to reopen; old refs expired",
+    );
+    expect(await browserActTool({ action: "click", ref: "e1", tabId: "5" }, ctx)).toContain(
+      "Use browser_navigate",
+    );
+    expect(clicked).toBe(false);
+  });
+
   test("tabId on a normal action switches first, then acts", async () => {
     const order: string[] = [];
     const ctx = ctxWith({

@@ -89,7 +89,15 @@ describe("a session_id paired with the wrong workspace_id", () => {
       ctx,
     );
     const retry = await delegateWorkTool(
-      { workspace_id: "ws-coding", objective: "继续修登录", session_id: "sess-old" },
+      {
+        workspace_id: "ws-coding",
+        objective: "继续修登录",
+        session_id: "sess-old",
+        session_continuation: {
+          prior_thread: "旧的编码会话",
+          reason: "继续修复原会话中的登录实现并复查之前失败的验证。",
+        },
+      },
       ctx,
     );
     expect(retry).not.toStartWith("Error:");

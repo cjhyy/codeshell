@@ -36,6 +36,7 @@ export const READ_ONLY_TOOLS: ReadonlySet<string> = new Set([
   "WebSearch",
   "WebFetch",
   "ToolSearch",
+  "SearchHistory",
 ]);
 export const PLAN_MODE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   // Plan lifecycle
@@ -61,6 +62,10 @@ export const PLAN_MODE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   "TaskUpdate",
   "TaskList",
   "TaskGet",
+  // Session-local working state remains available across planning contexts.
+  "SaveContextNote",
+  "NewContext",
+  "SearchHistory",
   // Bash: visible to the model; executor gates it to read-only commands.
   "Bash",
 ]);

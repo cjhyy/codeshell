@@ -17,6 +17,10 @@ function harness(options?: {
   overrides?: Partial<BrowserBridge>;
   maxTargets?: number;
   idleTtlMs?: number;
+  continuityTtlMs?: number;
+  maxRememberedTargets?: number;
+  now?: () => number;
+  beforeOpen?: () => Promise<void>;
 }): Harness {
   const openOptions: BrowserHostOpenOptions[] = [];
   const calls: string[] = [];
@@ -81,9 +85,12 @@ function harness(options?: {
   const runtime = new BackgroundBrowserRuntime({
     idleTtlMs: options?.idleTtlMs ?? 60_000,
     maxTargets: options?.maxTargets,
+    continuityTtlMs: options?.continuityTtlMs,
+    maxRememberedTargets: options?.maxRememberedTargets,
     deps: {
       openHost: async (open) => {
         openOptions.push(open);
+        await options?.beforeOpen?.();
         state.url = open.url;
         return host;
       },
@@ -94,7 +101,7 @@ function harness(options?: {
       },
       detach: () => calls.push("detach"),
       policy: () => ({ allowedDomains: options?.allowedDomains ?? [] }),
-      now: () => 100,
+      now: options?.now ?? (() => 100),
     },
   });
   return { runtime, openOptions, calls, state };
@@ -322,4 +329,218 @@ describe("BackgroundBrowserRuntime", () => {
     expect(h.state.closed).toBe(true);
     expect(h.runtime.stats()).toEqual({ entries: 0, liveTargets: 0, leased: 0 });
   });
+});
+
+describe("BackgroundBrowserRuntime continuity", () => {
+  const owner = { ownerId: "task-1", partition: "persist:workspace-1" };
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+  test("idle reclamation retains only a closed logical handle and requires explicit navigation", async () => {
+    const h = harness({ idleTtlMs: 5 });
+    const first = h.runtime.acquire(owner);
+    await first.bridge.navigate("https://example.com/work");
+    const [before] = await first.bridge.listTabs();
+    first.release();
+    await tick();
+    expect(h.runtime.stats().liveTargets).toBe(0);
+
+    const resumed = h.runtime.acquire(owner);
+    expect(await resumed.bridge.listTabs()).toEqual([
+      { ...before!, active: false, status: "closed" },
+    ]);
+    const stale = await resumed.bridge.switchTab(before!.tabId);
+    expect(stale).toMatchObject({ ok: false, code: "TARGET_CLOSED", retryable: false });
+    expect(stale.detail).toContain("browser_navigate");
+    expect(stale.detail).toContain("https://example.com/work");
+    expect(await resumed.bridge.click("old:e1")).toMatchObject({ code: "TARGET_CLOSED" });
+    expect((await resumed.bridge.readContent()).detail).toContain("old element refs");
+    expect(h.openOptions).toHaveLength(1);
+
+    expect(await resumed.bridge.navigate("https://example.com/work")).toMatchObject({ ok: true });
+    expect(await resumed.bridge.listTabs()).toEqual([{ ...before!, status: "open" }]);
+    expect(await resumed.bridge.switchTab(before!.tabId)).toMatchObject({ ok: true });
+    expect(h.openOptions).toHaveLength(2);
+    expect(h.openOptions[1]).toMatchObject({
+      partition: owner.partition,
+      show: false,
+      url: "about:blank",
+    });
+    resumed.release();
+    h.runtime.closeAll();
+  });
+
+  test("capacity reclamation never redirects an old handle to another task", async () => {
+    const h = harness({ maxTargets: 1 });
+    const first = h.runtime.acquire(owner);
+    const [before] = await first.bridge.listTabs();
+    first.release();
+    const second = h.runtime.acquire({ ownerId: "task-2", partition: "persist:workspace-2" });
+    await second.bridge.navigate("https://other.example/");
+    expect(await second.bridge.switchTab(before!.tabId)).toMatchObject({
+      ok: false,
+      code: "FAILED",
+      retryable: false,
+    });
+    const resumed = h.runtime.acquire(owner);
+    const result = await resumed.bridge.switchTab(before!.tabId);
+    expect(result.code).toBe("TARGET_CLOSED");
+    expect(result.detail).toContain("capacity");
+    expect(h.openOptions).toHaveLength(2);
+    expect(h.state.url).toBe("https://other.example/");
+    resumed.release();
+    second.release();
+    h.runtime.closeAll();
+  });
+
+  test("remembered handles remain bound to their original workspace partition", async () => {
+    const h = harness({ idleTtlMs: 5 });
+    const first = h.runtime.acquire(owner);
+    await first.bridge.snapshot();
+    first.release();
+    await tick();
+    expect(() => h.runtime.acquire({ ...owner, partition: "persist:other-workspace" })).toThrow(
+      "another partition",
+    );
+    h.runtime.closeAll();
+  });
+
+  test("explicit owner close forgets continuity and revokes old leases", async () => {
+    const h = harness();
+    const first = h.runtime.acquire(owner);
+    const [before] = await first.bridge.listTabs();
+    h.runtime.close(owner.ownerId);
+    expect(await first.bridge.navigate("https://example.com/")).toMatchObject({ ok: false });
+    const replacement = h.runtime.acquire(owner);
+    expect(await replacement.bridge.switchTab(before!.tabId)).toMatchObject({
+      ok: false,
+      retryable: false,
+    });
+    expect(h.openOptions).toHaveLength(1);
+    const [after] = await replacement.bridge.listTabs();
+    expect(after!.tabId).not.toBe(before!.tabId);
+    first.release();
+    replacement.release();
+    h.runtime.closeAll();
+  });
+
+  test("released leases cannot open a target again", async () => {
+    const h = harness();
+    const lease = h.runtime.acquire(owner);
+    lease.release();
+    const result = await lease.bridge.navigate("https://example.com/");
+    expect(result).toMatchObject({ ok: false });
+    expect(result.detail).toContain("released");
+    expect(h.openOptions).toHaveLength(0);
+    h.runtime.closeAll();
+  });
+
+  test("continuity metadata expires and old IDs fail without opening a page", async () => {
+    let now = 100;
+    const h = harness({ idleTtlMs: 5, continuityTtlMs: 50, now: () => now });
+    const lease = h.runtime.acquire(owner);
+    const [before] = await lease.bridge.listTabs();
+    lease.release();
+    await tick();
+    now += 51;
+    const next = h.runtime.acquire(owner);
+    expect(await next.bridge.switchTab(before!.tabId)).toMatchObject({
+      code: "FAILED",
+      retryable: false,
+    });
+    expect(h.openOptions).toHaveLength(1);
+    next.release();
+    h.runtime.closeAll();
+  });
+
+  test("caps remembered metadata while retaining the newest task", async () => {
+    const h = harness({ maxTargets: 1, maxRememberedTargets: 1 });
+    const first = h.runtime.acquire(owner);
+    const [firstTab] = await first.bridge.listTabs();
+    first.release();
+    const secondOwner = { ownerId: "task-2", partition: owner.partition };
+    const second = h.runtime.acquire(secondOwner);
+    const [secondTab] = await second.bridge.listTabs();
+    second.release();
+    const third = h.runtime.acquire({ ownerId: "task-3", partition: owner.partition });
+    await third.bridge.snapshot();
+    const forgotten = h.runtime.acquire(owner);
+    expect(await forgotten.bridge.switchTab(firstTab!.tabId)).toMatchObject({ code: "FAILED" });
+    const remembered = h.runtime.acquire(secondOwner);
+    expect(await remembered.bridge.switchTab(secondTab!.tabId)).toMatchObject({
+      code: "TARGET_CLOSED",
+    });
+    expect(h.openOptions).toHaveLength(3);
+    forgotten.release();
+    remembered.release();
+    third.release();
+    h.runtime.closeAll();
+  });
+
+  test("an in-flight action survives lease release and idle/capacity reclamation", async () => {
+    let finish!: () => void;
+    let started!: () => void;
+    const running = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const h = harness({
+      idleTtlMs: 5,
+      maxTargets: 1,
+      overrides: {
+        click: async () => {
+          started();
+          await pending;
+          return { ok: true };
+        },
+      },
+    });
+    const first = h.runtime.acquire(owner);
+    const action = first.bridge.click("e1");
+    await running;
+    first.release();
+    await tick();
+    const second = h.runtime.acquire({ ownerId: "task-2", partition: owner.partition });
+    expect((await second.bridge.snapshot()).detail).toContain("target limit reached");
+    expect(h.runtime.stats().liveTargets).toBe(1);
+    finish();
+    expect(await action).toMatchObject({ ok: true });
+    await tick();
+    expect(h.runtime.stats().liveTargets).toBe(0);
+    second.release();
+    h.runtime.closeAll();
+  });
+});
+
+test("closing an owner during target creation closes the late host without resurrecting the lease", async () => {
+  let finish!: () => void;
+  let started!: () => void;
+  const opening = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const h = harness({
+    beforeOpen: async () => {
+      started();
+      await pending;
+    },
+  });
+  const lease = h.runtime.acquire({
+    ownerId: "child-binding-1",
+    partition: "persist:parent-profile",
+  });
+  const snapshot = lease.bridge.snapshot();
+  await opening;
+  h.runtime.close("child-binding-1");
+  finish();
+  expect((await snapshot).detail).toContain("released while opening");
+  expect(h.state.closed).toBe(true);
+  expect(h.runtime.stats()).toEqual({ entries: 0, liveTargets: 0, leased: 0 });
+  expect(await lease.bridge.navigate("https://example.com/")).toMatchObject({ ok: false });
+  expect(h.openOptions).toHaveLength(1);
+  lease.release();
+  h.runtime.closeAll();
 });

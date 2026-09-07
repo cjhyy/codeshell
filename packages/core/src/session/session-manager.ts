@@ -302,6 +302,8 @@ const FORK_EVENT_POLICY = {
   tool_result: "copy",
   summary: "copy",
   context_transfer: "copy",
+  context_note: "copy",
+  context_checkpoint: "copy",
   range_archive: "copy",
   content_replace: "copy",
   file_history: "skip",
@@ -2206,13 +2208,12 @@ export function buildForkTranscript(
       forkedFrom: structuredClone(state.forkedFrom),
     },
   };
-  return [
-    meta,
-    ...sourceEvents.map((source) => ({
-      ...structuredClone(source),
-      id: nanoid(12),
-    })),
-  ];
+  const copied = sourceEvents.map((source) => ({
+    ...structuredClone(source),
+    id: nanoid(12),
+  }));
+  Transcript.remapContextForkReferences(sourceEvents, copied);
+  return [meta, ...copied];
 }
 
 function validateForkToolPairs(events: readonly TranscriptEvent[]): void {

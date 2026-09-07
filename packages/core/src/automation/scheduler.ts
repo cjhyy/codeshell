@@ -142,6 +142,8 @@ export interface UpdateJobPatch {
   projectId?: string | null;
   rootId?: string | null;
   permissionLevel?: CronPermissionLevel;
+  /** Existing Session to resume; null returns the job to standalone execution. */
+  resumeSessionId?: string | null;
 }
 
 const MAX_JOB_NAME_CHARS = 512;
@@ -158,6 +160,7 @@ function validateJobFields(input: {
   cwd?: unknown;
   projectId?: unknown;
   rootId?: unknown;
+  resumeSessionId?: unknown;
   timezone?: unknown;
   permissionLevel?: unknown;
 }): void {
@@ -199,6 +202,7 @@ function validateJobFields(input: {
   for (const [field, value] of [
     ["projectId", input.projectId],
     ["rootId", input.rootId],
+    ["resumeSessionId", input.resumeSessionId],
   ] as const) {
     if (
       value !== undefined &&
@@ -690,6 +694,7 @@ export class CronScheduler {
         const next = jobs.map((j) => {
           if (j.id !== id) return j;
           const job = { ...j };
+          this.assertBindingEditable(job, patch);
 
           const nextSchedule = patch.schedule ?? job.schedule;
           const nextTimezone = patch.timezone ?? job.timezone;
@@ -710,6 +715,8 @@ export class CronScheduler {
           else if (patch.projectId !== undefined) job.projectId = patch.projectId;
           if (patch.rootId === null) delete job.rootId;
           else if (patch.rootId !== undefined) job.rootId = patch.rootId;
+          if (patch.resumeSessionId === null) delete job.resumeSessionId;
+          else if (patch.resumeSessionId !== undefined) job.resumeSessionId = patch.resumeSessionId;
           if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
           if (scheduleChanged) this.refreshNextRunForDisplay(job);
           updated = job;
@@ -723,6 +730,7 @@ export class CronScheduler {
 
     const job = this.jobs.get(id);
     if (!job) return null;
+    this.assertBindingEditable(job, patch);
 
     // Validate a new schedule/timezone BEFORE mutating anything.
     const nextSchedule = patch.schedule ?? job.schedule;
@@ -744,6 +752,8 @@ export class CronScheduler {
     else if (patch.projectId !== undefined) job.projectId = patch.projectId;
     if (patch.rootId === null) delete job.rootId;
     else if (patch.rootId !== undefined) job.rootId = patch.rootId;
+    if (patch.resumeSessionId === null) delete job.resumeSessionId;
+    else if (patch.resumeSessionId !== undefined) job.resumeSessionId = patch.resumeSessionId;
     if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
 
     // Re-arm only when the schedule definition changed, or when an enabled job
@@ -757,6 +767,20 @@ export class CronScheduler {
     }
     this.persist();
     return job;
+  }
+
+  private assertBindingEditable(job: CronJob, patch: UpdateJobPatch): void {
+    const bindingChanged =
+      (patch.resumeSessionId !== undefined &&
+        (patch.resumeSessionId ?? null) !== (job.resumeSessionId ?? null)) ||
+      (patch.cwd !== undefined && patch.cwd !== job.cwd) ||
+      (patch.projectId !== undefined && (patch.projectId ?? null) !== (job.projectId ?? null)) ||
+      (patch.rootId !== undefined && (patch.rootId ?? null) !== (job.rootId ?? null));
+    if (bindingChanged && this.running.has(job.id)) {
+      throw new Error(
+        "automation is running; wait for it to finish before changing its Session or workspace binding",
+      );
+    }
   }
 
   stopAll(): void {

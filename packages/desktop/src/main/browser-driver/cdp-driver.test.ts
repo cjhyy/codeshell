@@ -23,16 +23,40 @@ const BOX = (id: number) => ({
 });
 
 describe("CdpBrowserDriver.snapshot", () => {
+  test("recreated target rejects previous refs and read cursors even at the same URL", async () => {
+    const { send, calls } = fakeCdp({
+      "Accessibility.getFullAXTree": () => AX_TWO,
+      "Runtime.evaluate": () => ({
+        result: { value: { text: "First line. Second line. ".repeat(40) } },
+      }),
+    });
+    const page = () => ({ url: "https://x.com" });
+    const before = new CdpBrowserDriver(send, page);
+    const first = await before.snapshot();
+    const content = await before.readContent({ maxChars: 256 });
+    expect(content.nextCursor).toBeTruthy();
+    const after = new CdpBrowserDriver(send, page);
+    const second = await after.snapshot();
+    expect(second.snapshotId).not.toBe(first.snapshotId);
+    calls.length = 0;
+    expect(await after.click(first.elements[0]!.ref)).toMatchObject({ ok: false, staleRef: true });
+    expect(calls.some((call) => call.method === "Input.dispatchMouseEvent")).toBe(false);
+    expect(await after.readContent({ cursor: content.nextCursor })).toMatchObject({
+      ok: false,
+      code: "STALE_CURSOR",
+    });
+  });
+
   test("enables domains once, flattens AX tree, maps refs", async () => {
     const { send, calls } = fakeCdp({ "Accessibility.getFullAXTree": () => AX_TWO });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com", title: "X" }));
 
     const snap = await d.snapshot();
     expect(snap.url).toBe("https://x.com");
-    expect(snap.snapshotId).toBe("s1");
+    expect(snap.snapshotId).toEndWith(":s1");
     expect(snap.elements).toEqual([
-      { ref: "s1:e1", role: "textbox", name: "关键词" },
-      { ref: "s1:e2", role: "button", name: "搜索" },
+      { ref: `${snap.snapshotId}:e1`, role: "textbox", name: "关键词" },
+      { ref: `${snap.snapshotId}:e2`, role: "button", name: "搜索" },
     ]);
     // DOM.enable + Accessibility.enable happened before the tree query
     const methods = calls.map((c) => c.method);

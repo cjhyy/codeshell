@@ -195,6 +195,7 @@ function installCodeshellStub(): void {
     // only on the per-test Object.assign patches below.
     externalRuntime: {
       available: async () => [],
+      models: async () => [],
       onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) =>
         unsubscribe,
     },
@@ -495,6 +496,7 @@ describe("App compact session UI", () => {
         },
         externalRuntime: {
           available: async () => [],
+          models: async () => [],
           onSessionState: (_cb: (payload: { sessionId: string; active: boolean }) => void) => () =>
             undefined,
         },

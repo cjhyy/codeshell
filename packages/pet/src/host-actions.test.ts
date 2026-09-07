@@ -431,6 +431,8 @@ describe("pet profile host-action integration", () => {
       profileParams: {
         hostActions: ["gatewayReply", "memory"],
         gatewayReply: richGatewayReply,
+        workspaces: [{ id: "ws-one", name: "CodeShell" }],
+        reusableSessions: [{ id: "session-one", workspaceId: "ws-one", name: "原工作" }],
       },
       reportResult: (key, value) => {
         reportCount++;
@@ -453,6 +455,7 @@ describe("pet profile host-action integration", () => {
       workspaceId: "ws-one",
       objective: "继续原工作",
       reusableSessionId: "session-one",
+      continuationEvidence: { priorThread: "原工作", reason: "继续原工作中尚未完成的执行步骤。" },
     };
     expect(pet.requestPetHostAction(memory).ok).toBe(true);
     expect(pet.requestPetWorkDelegation(delegation).ok).toBe(true);

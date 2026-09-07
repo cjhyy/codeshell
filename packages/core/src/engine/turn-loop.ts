@@ -26,6 +26,7 @@ import { ModelFacade, type ModelCallRecordingOptions } from "./model-facade.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
+import type { SessionContextNotes } from "../context/notes.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
@@ -93,6 +94,8 @@ export interface TurnLoopConfig {
    * summarized into durable history. Engine uses this for dynamicContext.
    */
   volatileContextMessages?: Iterable<Message>;
+  /** Current instructions and lifecycle hooks, reattached after a notes transition. */
+  retainedContextMessages?: Iterable<Message>;
   /**
    * Fired after each turn boundary is recorded. Lets the engine flush an
    * up-to-date snapshot to state.json mid-run, so a long run doesn't leave
@@ -127,6 +130,7 @@ export interface TurnLoopDeps {
   model: ModelFacade;
   toolExecutor: ToolExecutor;
   contextManager: ContextManager;
+  contextNotes?: SessionContextNotes;
   hooks: HookRegistry;
   transcript: Transcript;
   systemPrompt: string;
@@ -619,12 +623,85 @@ export class TurnLoop {
     return [...managedStable, ...volatile];
   }
 
+  private noteReminderIssued = false;
+  private readonly retainedHookMessages = new Map<string, Message>();
+  private readonly pendingContextReminders = new Map<string, Message>();
+
+  private appendContextReminder(messages: Message[], message: Message, retainForRun = false): void {
+    messages.push(message);
+    if (!this.deps.contextNotes) return;
+    const target = retainForRun ? this.retainedHookMessages : this.pendingContextReminders;
+    target.set(JSON.stringify(message), message);
+  }
+
+  /** Called only before a model step or after every result in a tool batch is recorded. */
+  private applyNotesRollover(messages: Message[]): Message[] {
+    const notes = this.deps.contextNotes;
+    if (
+      !notes ||
+      !notes.hasPendingRollover() ||
+      this.pendingImageMessages.size > 0 ||
+      this.sensitiveToolResultRedactions.size > 0
+    ) {
+      return messages;
+    }
+    if (this.config.signal?.aborted || this.goalControlStopRequested) return messages;
+    const stable = this.stripVolatileContextMessages(messages);
+    const liveContent = new Set(stable.map((message) => JSON.stringify(message)));
+    for (const key of this.retainedHookMessages.keys()) {
+      if (!liveContent.has(key)) this.retainedHookMessages.delete(key);
+    }
+    const retainedByContent = new Map(
+      [
+        ...(this.config.retainedContextMessages ?? []),
+        ...this.retainedHookMessages.values(),
+        ...this.pendingContextReminders.values(),
+      ].map((message) => [JSON.stringify(message), message]),
+    );
+    const retained = [...retainedByContent.values()];
+    const checkpoint = notes.applyRollover(stable, retained);
+    if (!checkpoint) return messages;
+    const managed = [...retained, ...checkpoint];
+    this.deps.contextManager.recordNotesCompaction(stable, managed);
+    this.noteReminderIssued = false;
+    return this.restoreVolatileAfterContextManagement(messages, stable, managed);
+  }
+
   private async manageContextMessages(messages: Message[]): Promise<Message[]> {
-    if (this.volatileContextMessages.size === 0) {
-      return this.deps.contextManager.manageAsync(messages, this.config.signal);
+    messages = this.applyNotesRollover(messages);
+    const notes = this.deps.contextNotes;
+    if (notes) {
+      const stable = this.stripVolatileContextMessages(messages);
+      const limits = this.deps.contextManager.checkLimits(stable);
+      if (limits.needsCompact) {
+        try {
+          notes.requestRollover();
+          messages = this.applyNotesRollover(messages);
+        } catch {
+          // No usable note (or it was already consumed): existing summary is the fallback.
+        }
+      }
+      const nearBudget = this.deps.contextManager.shouldPrepareNote(
+        this.stripVolatileContextMessages(messages),
+      );
+      if (!nearBudget) this.noteReminderIssued = false;
+      const canSaveNotes = this.deps.tools.some((tool) => tool.name === "SaveContextNote");
+      if (nearBudget && !this.noteReminderIssued && canSaveNotes) {
+        messages = [
+          ...messages,
+          {
+            role: "user",
+            content:
+              "<system-reminder>Context budget is running low. Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>",
+          },
+        ];
+        this.noteReminderIssued = true;
+      }
     }
     const stable = this.stripVolatileContextMessages(messages);
-    const managed = await this.deps.contextManager.manageAsync(stable, this.config.signal);
+    const managed = await this.deps.contextManager.manageAsync(stable, this.config.signal, {
+      preferNotes: notes !== undefined,
+    });
     return this.restoreVolatileAfterContextManagement(messages, stable, managed);
   }
 
@@ -937,7 +1014,7 @@ export class TurnLoop {
         });
         const turnStartInjection = wrapHookMessages(turnStartHook.messages);
         if (turnStartInjection) {
-          messages.push(turnStartInjection);
+          this.appendContextReminder(messages, turnStartInjection, true);
         }
         if (this.goalControlStopRequested) {
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -950,21 +1027,21 @@ export class TurnLoop {
         // cap, the limit a re-blocked goal actually hits first.)
         const turnsRemaining = this.config.maxTurns - this.turnCount;
         if (turnsRemaining === 2) {
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. " +
               "Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>",
           });
         } else if (turnsRemaining === 1) {
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>Warning: you have only 1 turn remaining before the turn limit is reached. " +
               "Wrap up your work now — your next turn will be your last.</system-reminder>",
           });
         } else if (turnsRemaining === 0) {
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>This is your LAST turn. You MUST respond with a final text summary now. " +
@@ -1028,7 +1105,7 @@ export class TurnLoop {
           });
           const compactInjection = wrapHookMessages(compactHook.messages);
           if (compactInjection) {
-            messages.push(compactInjection);
+            this.appendContextReminder(messages, compactInjection, true);
           }
         }
         if (this.goalControlStopRequested) {
@@ -1057,6 +1134,7 @@ export class TurnLoop {
         });
         let response;
         try {
+          this.deps.contextNotes?.markModelBoundary();
           response = await this.callModelWithFallback(messages, assistantMessageId);
         } catch (err) {
           if (err instanceof ContextLimitError) {
@@ -1148,6 +1226,7 @@ export class TurnLoop {
           if (anchor) this.deps.recordContextUsageAnchor?.(anchor);
         }
 
+        this.pendingContextReminders.clear();
         messages = this.markPendingImagesConsumed(messages);
 
         // stopBlockCount guards only the no-tool final-answer loop evaluated by
@@ -1195,7 +1274,7 @@ export class TurnLoop {
               },
             });
           }
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>Your previous response was truncated by the max output token limit before the tool call finished, so its arguments are incomplete. Do not assume it ran. Either retry with a smaller/more focused tool call (e.g. write the file in sections via Edit), or raise this model's maxOutputTokens.</system-reminder>",
@@ -1462,12 +1541,12 @@ export class TurnLoop {
             this.maybeAnnounceApproachingLimit();
             const injection = wrapHookMessages(stopHook.messages);
             if (injection) {
-              messages.push(injection);
+              this.appendContextReminder(messages, injection, true);
             } else {
               // No guidance from the handler — inject a generic nudge so the
               // model knows it must keep going rather than re-emitting the
               // same final answer.
-              messages.push({
+              this.appendContextReminder(messages, {
                 role: "user",
                 content:
                   "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
@@ -1631,6 +1710,8 @@ export class TurnLoop {
         messages.push(toolResultMessage);
         this.trackFreshImageMessage(toolResultMessage);
 
+        messages = this.applyNotesRollover(messages);
+
         // B-3: tell the model which of its requested tool calls were dropped by
         // the per-turn cap so it can re-issue them, instead of silently assuming
         // they ran. Appended to the same user message that carries the results.
@@ -1645,7 +1726,7 @@ export class TurnLoop {
           // Separate user message (not folded into the tool_result blocks) so the
           // OpenAI converter — which lifts tool_results into standalone role:tool
           // messages — keeps the reminder as a plain user turn after them.
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               `<system-reminder>Only the first ${toolCalls.length} of your ${response.toolCalls.length} ` +
@@ -1734,7 +1815,7 @@ export class TurnLoop {
             return { text: finalText, reason: "completed", messages };
           }
           tlog.warn("turn.goal_self_reported_complete_persist_failed", { cat: "goal" });
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>complete_goal 未能持久化完成状态；目标仍处于活动状态。请不要宣称已经结束，并在会话状态恢复可写后重试。</system-reminder>",
@@ -1776,7 +1857,7 @@ export class TurnLoop {
             };
           }
           tlog.warn("turn.goal_user_cancelled_persist_failed", { cat: "goal" });
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>cancel_goal 未能持久化删除状态；目标仍处于活动状态。请在会话状态恢复可写后重试。</system-reminder>",
@@ -1815,7 +1896,7 @@ export class TurnLoop {
           };
         }
         if (budgetDecision === "nudge") {
-          messages.push({
+          this.appendContextReminder(messages, {
             role: "user",
             content:
               "<system-reminder>You are approaching the token budget limit. Please start wrapping up your work and provide a summary.</system-reminder>",
@@ -1830,7 +1911,7 @@ export class TurnLoop {
           guard.noteText(response.text);
           const turnReminder = guard.turnEnded(this.turnCount);
           if (turnReminder) {
-            messages.push({ role: "user", content: turnReminder });
+            this.appendContextReminder(messages, { role: "user", content: turnReminder });
             tlog.info("guard.silent_turn", { cat: "guard", turn: this.turnCount });
           }
         }
@@ -1843,7 +1924,7 @@ export class TurnLoop {
         if (taskGuard) {
           const taskReminder = taskGuard.turnEnded(this.turnCount);
           if (taskReminder) {
-            messages.push({ role: "user", content: taskReminder });
+            this.appendContextReminder(messages, { role: "user", content: taskReminder });
             tlog.info("guard.stale_task", { cat: "guard", turn: this.turnCount });
           }
         }
@@ -1926,7 +2007,7 @@ export class TurnLoop {
       messages = this.redactConsumedSensitiveToolResults(messages);
       return { text: finalText, reason: "completed", messages };
     }
-    messages.push({
+    this.appendContextReminder(messages, {
       role: "user",
       content:
         "<system-reminder>Turn limit reached. Provide a final summary of what you accomplished and what remains to be done. Do NOT call any tools.</system-reminder>",
@@ -2199,7 +2280,7 @@ export class TurnLoop {
     });
     this.deps.onAgentDirectionsDelivered?.(envelopeIds);
     const hookInjection = wrapHookMessages(hook.messages);
-    if (hookInjection) messages.push(hookInjection);
+    if (hookInjection) this.appendContextReminder(messages, hookInjection, true);
     return true;
   }
 

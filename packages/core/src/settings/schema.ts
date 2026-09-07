@@ -289,6 +289,12 @@ export const SettingsSchema = z
 
     context: z
       .object({
+        strategy: z
+          .enum(["summary", "notes"])
+          .optional()
+          .describe(
+            "上下文策略：notes 使用接续笔记和历史检索；summary 使用现有摘要压缩。未设置时跟随行为配置。",
+          ),
         maxTokens: z.number().default(200_000),
         // 压缩阈值（占上下文窗口的比例）。窗口越大可调越高：1M 窗口的模型
         // 把 compactAtRatio 调到 0.95 能少浪费几十万 token。三档须满足

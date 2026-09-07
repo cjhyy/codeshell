@@ -70,6 +70,43 @@ describe("parseBrowserActionLine", () => {
     expect(p?.request.tabId).toBeUndefined();
   });
 
+  test("preserves an opaque content cursor and the trusted child host route", () => {
+    const message = JSON.parse(
+      browserActionLine({ action: "readContent", cursor: "target:g1:page:12000", maxChars: 8000 }),
+    );
+    message.params.connectionId = "host-a";
+    message.params.generation = 12;
+    message.params.childHost = { sourceSessionId: "child-a", bindingId: "binding-1" };
+    const parsed = parseBrowserActionLine(JSON.stringify(message))!;
+    expect(parsed.request).toMatchObject({ cursor: "target:g1:page:12000", maxChars: 8000 });
+    expect(parsed.childHost).toMatchObject({ sourceSessionId: "child-a", bindingId: "binding-1" });
+    expect(JSON.parse(buildBrowserActionReply(parsed, "{}")).params).toMatchObject({
+      sessionId: "s1",
+      requestId: "rq1",
+      connectionId: "host-a",
+      generation: 12,
+    });
+    expect(
+      parseBrowserActionLine(browserActionLine({ action: "readContent", cursor: 12 }))?.request
+        .cursor,
+    ).toBeUndefined();
+    expect(
+      parseBrowserActionLine(
+        browserActionLine({ action: "snapshot", childHost: message.params.childHost }),
+      )?.childHost,
+    ).toBeUndefined();
+  });
+
+  test("malformed child host metadata never becomes a parent browser action", () => {
+    const message = JSON.parse(
+      browserActionLine({ action: "navigate", url: "https://example.com" }),
+    );
+    message.params.childHost = { sourceSessionId: "child" };
+    const parsed = parseBrowserActionLine(JSON.stringify(message))!;
+    expect(parsed.invalidChildHost).toBe(true);
+    expect(parsed.childHost).toBeUndefined();
+  });
+
   test("returns null for a normal ask-user approval request (not browser)", () => {
     const line = JSON.stringify({
       method: "agent/approvalRequest",

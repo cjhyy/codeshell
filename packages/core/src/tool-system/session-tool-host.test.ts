@@ -198,6 +198,35 @@ function makeHost(
 }
 
 describe("SessionToolHost", () => {
+  test("browser availability comes from the injected bridge, even with stale visibility metadata", async () => {
+    for (const wired of [false, true]) {
+      const host = createSessionToolHost({
+        businessSessionId: `browser-${wired}`,
+        cwd: process.cwd(),
+        registry: new ToolRegistry({ builtinTools: ["browser_navigate"] }),
+        permissionMode: "default",
+        projectTrusted: true,
+        presetRules: [{ tool: "browser_navigate", decision: "allow" }],
+        exposure: { mode: "allowlist", toolNames: new Set(["browser_navigate"]) },
+        visibility: { cwd: process.cwd(), hasGoal: false, hasBrowserAutomation: !wired },
+        contextOverrides: wired
+          ? { browser: { navigate: async () => ({ ok: true }) } as ToolContext["browser"] }
+          : {},
+      });
+      try {
+        expect(host.listTools().length).toBe(wired ? 1 : 0);
+        const result = await host.execute({
+          id: "browser-call",
+          name: "browser_navigate",
+          input: { url: "https://example.com" },
+        });
+        expect(Boolean(result.isError)).toBe(!wired);
+      } finally {
+        await host.dispose();
+      }
+    }
+  });
+
   test("lists only the allowlisted tools", () => {
     const { host } = makeHost();
     const names = host.listTools().map((t) => t.name);

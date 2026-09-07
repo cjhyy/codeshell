@@ -150,12 +150,16 @@ export class HeadlessApprovalBackend implements ApprovalBackend {
       case "approve-all":
         return { approved: true };
       case "deny-all":
-        return { approved: false, reason: "headless deny-all mode" };
+        return { approved: false, failure: "policy_denied", reason: "headless deny-all mode" };
       case "approve-read-only": {
         if (READ_ONLY_TOOLS.has(req.toolName)) {
           return { approved: true };
         }
-        return { approved: false, reason: "read-only mode: write operations denied" };
+        return {
+          approved: false,
+          failure: "policy_denied",
+          reason: "read-only mode: write operations denied",
+        };
       }
     }
   }
@@ -184,6 +188,7 @@ export class AutoApprovalBackend implements ApprovalBackend {
       }
       return {
         approved: false,
+        failure: "unavailable",
         reason: "auto mode: high-risk operation denied (no interactive approval available)",
       };
     }
@@ -203,6 +208,7 @@ export class AutoApprovalBackend implements ApprovalBackend {
     }
     return {
       approved: false,
+      failure: "unavailable",
       reason: "auto mode: medium-risk operation denied (no interactive approval available)",
     };
   }
@@ -293,7 +299,14 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     onProjectRules: null,
   };
 
+  private requestGuard?: (request: ApprovalRequest) => ApprovalResult | undefined;
+
   constructor(private readonly approvalRouter = new ApprovalRouter()) {}
+
+  /** Host lifecycle checks apply even to cached grants and queued prompts. */
+  setRequestGuard(guard: (request: ApprovalRequest) => ApprovalResult | undefined): void {
+    this.requestGuard = guard;
+  }
 
   setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
     this.promptFn = fn;
@@ -398,6 +411,8 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   }
 
   async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
+    const unavailable = this.requestGuard?.(req);
+    if (unavailable) return unavailable;
     const state = this.getSessionState(req.sessionId, true);
 
     // Fast path: the operation may already be covered by a session rule.
@@ -405,7 +420,11 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     if (cached) return cached;
 
     if (!this.promptFn && !this.approvalRouter.hasConnections()) {
-      return { approved: false, reason: "interactive approval backend has no prompt function" };
+      return {
+        approved: false,
+        failure: "unavailable",
+        reason: "interactive approval backend has no prompt function",
+      };
     }
 
     // Serialize prompts and re-check rules when our turn comes (see promptTurn
@@ -422,6 +441,8 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     }
     try {
       await prevTurn;
+      const unavailable = this.requestGuard?.(req);
+      if (unavailable) return unavailable;
       const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
       const nowCached = activeState ? this.checkSessionRules(req, activeState) : null;
       if (nowCached) return nowCached;
@@ -464,11 +485,18 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
         ? await fallback
         : {
             approved: false,
+            failure: "owner_lost",
             reason: `no approval connection owns session ${req.sessionId}`,
           };
     } else {
-      return { approved: false, reason: "interactive approval backend has no prompt function" };
+      return {
+        approved: false,
+        failure: "unavailable",
+        reason: "interactive approval backend has no prompt function",
+      };
     }
+    const unavailable = this.requestGuard?.(req);
+    if (unavailable) return unavailable;
     const scope = result.scope ?? (result.always ? "session" : "once");
     const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
     const context = activeState ?? (!req.sessionId ? this.legacyContext : null);
@@ -1501,13 +1529,26 @@ export class PermissionClassifier {
     reason?: string,
     opts?: { sessionId?: string },
   ): Promise<boolean> {
+    return (await this.handleAskResult(toolName, args, reason, opts)).approved;
+  }
+
+  async handleAskResult(
+    toolName: string,
+    args: Record<string, unknown>,
+    reason?: string,
+    opts?: { sessionId?: string },
+  ): Promise<ApprovalResult> {
     if (this.defaultMode === "dontAsk") {
       this.log.info("permission.auto_deny", {
         cat: "permission",
         tool: toolName,
         reason: "dontAsk_mode",
       });
-      return false;
+      return {
+        approved: false,
+        failure: "policy_denied",
+        reason: "permission policy does not allow prompting",
+      };
     }
     if (this.defaultMode === "bypassPermissions") {
       this.log.info("permission.auto_allow", {
@@ -1515,7 +1556,7 @@ export class PermissionClassifier {
         tool: toolName,
         reason: "bypassPermissions_mode",
       });
-      return true;
+      return { approved: true };
     }
 
     // Check denial tracker — if too many denials, auto-deny
@@ -1525,7 +1566,7 @@ export class PermissionClassifier {
         tool: toolName,
         reason: "denial_tracker_threshold",
       });
-      return false;
+      return { approved: false, failure: "policy_denied", reason: "repeated user denials" };
     }
 
     const riskLevel = this.assessRisk(toolName, args);
@@ -1563,7 +1604,7 @@ export class PermissionClassifier {
 
     if (result.approved) {
       this.denialTracker.recordSuccess(toolName);
-    } else {
+    } else if (!result.failure || result.failure === "denied") {
       this.denialTracker.record(toolName);
     }
     this.emitApprovalEvent({
@@ -1583,7 +1624,7 @@ export class PermissionClassifier {
       reason: !result.approved ? (result as { reason?: string }).reason : undefined,
     });
 
-    return result.approved;
+    return result;
   }
 
   /** Get denial warning message if the model keeps getting denied. */

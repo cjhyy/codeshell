@@ -435,13 +435,19 @@ export async function handleClientEvent(
     const activeSessionId = st.selectedSessionId ?? runContext.sessionId;
     reply({
       type: "session.list.ok",
-      sessions: sessions.map((s) => ({
-        id: s.id,
-        title: s.title,
-        cwd: s.cwd,
-        updatedAt: s.updatedAt,
-        origin: s.origin,
-      })),
+      sessions: sessions.flatMap((s) =>
+        s.parentSessionId || s.origin === "subagent"
+          ? []
+          : [
+              {
+                id: s.id,
+                title: s.title,
+                cwd: s.cwd,
+                updatedAt: s.updatedAt,
+                origin: s.origin,
+              },
+            ],
+      ),
       activeSessionId,
     });
     if (activeSessionId) {

@@ -61,6 +61,7 @@ import {
   type ApprovalRouter,
   getApprovalRouter,
   getInteractiveApprovalBackend,
+  InteractiveApprovalBackend,
 } from "../tool-system/permission.js";
 import {
   agentNotificationBus,
@@ -69,6 +70,7 @@ import {
   type NotificationQueue,
   type NotificationQueuePersistence,
 } from "../tool-system/builtin/agent-notifications.js";
+import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { listBackgroundWorkForUI } from "../tool-system/builtin/background-work.js";
@@ -96,6 +98,14 @@ import {
   scanPluginCommands,
   MAX_PLUGIN_COMMAND_ARGUMENT_CHARS,
 } from "../plugins/pluginCommandsLoader.js";
+interface ChildHostScope {
+  sourceSessionId: string;
+  bindingId: string;
+  route: ApprovalRouteTarget;
+  pending: Set<string>;
+  failure(): { failure: "cancelled" | "owner_lost" | "session_closed"; reason: string } | undefined;
+}
+
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
 
 function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {
@@ -260,6 +270,7 @@ const COMPACT_STREAM_STRATEGIES = new Set<ContextCompactStreamEvent["strategy"]>
   // Range archival (archive_range query) emits its boundary through this map;
   // without "range" here it would be silently downgraded to "compacted".
   "range",
+  "notes",
 ]);
 
 function toCompactStreamStrategy(strategy: string): ContextCompactStreamEvent["strategy"] {
@@ -567,6 +578,13 @@ export class AgentServer {
   private readonly panelBridgeEnabled: boolean;
   private readonly connectionId: string;
   private readonly strictApprovalRouting: boolean;
+  private readonly childHostDisposers = new Map<
+    string,
+    {
+      route: ApprovalRouteTarget;
+      dispose: (reason: string) => void;
+    }
+  >();
   private readonly approvalRouter: ApprovalRouter;
   private approvalConnectionUnregister: (() => void) | null = null;
   private disconnected = false;
@@ -945,6 +963,148 @@ export class AgentServer {
     session.engine.setInjectCredential((credentialId, credentialScope) =>
       this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
     );
+    session.engine.setChildHostBindings?.((input) => {
+      if (input.parentSessionId !== sid) throw new Error("child host parent identity mismatch");
+      assertSafeSessionId(input.sessionId);
+      const route = this.approvalRouter.current(sid);
+      if (!route || route.connectionId !== this.connectionId) {
+        throw new Error(
+          "child host unavailable: parent approval connection no longer owns session",
+        );
+      }
+      const backend = new InteractiveApprovalBackend();
+      backend.openSession(input.sessionId);
+      let active = false;
+      let closed = false;
+      let closedFailure: { failure: "cancelled" | "owner_lost"; reason: string } = {
+        failure: "cancelled",
+        reason: "child run ended or was cancelled",
+      };
+      const scope: ChildHostScope = {
+        sourceSessionId: input.sessionId,
+        bindingId: nanoid(),
+        route,
+        pending: new Set(),
+        failure: () => {
+          if (closed || input.signal?.aborted) return closedFailure;
+          if (this.chatManager?.get(sid) !== session)
+            return { failure: "session_closed", reason: "parent host session closed" };
+          if (this.disconnected || !this.approvalRouter.matches(route))
+            return { failure: "owner_lost", reason: "parent host approval ownership changed" };
+          return undefined;
+        },
+      };
+      backend.setRequestGuard((request) => {
+        const failure = scope.failure();
+        if (failure) return { approved: false, ...failure };
+        if (request.sessionId !== input.sessionId)
+          return {
+            approved: false,
+            failure: "owner_lost",
+            reason: "child approval identity mismatch",
+          };
+        return undefined;
+      });
+      backend.setPromptFn((request) => {
+        const failure = scope.failure();
+        if (failure) return Promise.resolve({ approved: false, ...failure });
+        if (request.sessionId !== input.sessionId) {
+          return Promise.resolve({
+            approved: false,
+            failure: "owner_lost",
+            reason: "child approval identity mismatch",
+          });
+        }
+        return this.requestApprovalFromClient(request, route, scope);
+      });
+      const dispose = () => {
+        if (closed) return;
+        closed = true;
+        input.signal?.removeEventListener("abort", dispose);
+        this.childHostDisposers.delete(scope.bindingId);
+        backend.clearSession(input.sessionId);
+        if (active) clearSessionPathApprovals(input.sessionId);
+        for (const id of scope.pending) {
+          const entry = this.takeSessionApproval(session, id, "cancelled");
+          this.clearApprovalTimer(id);
+          this.pendingApprovalTargets.delete(id);
+          entry?.resolve(
+            entry.metadata.kind === "internal"
+              ? internalCancellation(closedFailure.failure, closedFailure.reason)
+              : {
+                  approved: false,
+                  ...closedFailure,
+                },
+          );
+          try {
+            this.notify(Methods.ApprovalResolved, { sessionId: sid, requestId: id });
+          } catch {
+            /* transport may already be closed */
+          }
+        }
+        scope.pending.clear();
+        // One-way release uses the existing private host channel; it is never
+        // a model tool and never inherits a parent tab handoff grant.
+        try {
+          this.notify(Methods.ApprovalRequest, {
+            sessionId: sid,
+            requestId: nanoid(12),
+            childHost: {
+              sourceSessionId: input.sessionId,
+              bindingId: scope.bindingId,
+              release: true,
+            },
+            request: {
+              toolName: "__browser_action__",
+              args: { action: "release" },
+              description: "release child browser",
+              riskLevel: "low",
+            },
+          });
+        } catch {
+          /* resource owner also closes targets on host teardown */
+        }
+      };
+      this.childHostDisposers.set(scope.bindingId, {
+        route,
+        dispose: (reason) => {
+          closedFailure = { failure: "owner_lost", reason };
+          dispose();
+        },
+      });
+      input.signal?.addEventListener("abort", dispose, { once: true });
+      if (input.signal?.aborted) dispose();
+      return {
+        activate: () => {
+          if (!closed && !active) {
+            this.notify(Methods.ApprovalRequest, {
+              sessionId: sid,
+              requestId: nanoid(12),
+              childHost: {
+                sourceSessionId: input.sessionId,
+                bindingId: scope.bindingId,
+                activate: true,
+              },
+              request: {
+                toolName: "__browser_action__",
+                args: { action: "activate" },
+                description: "bind child browser",
+                riskLevel: "low",
+              },
+            });
+            active = true;
+            openSessionPathApprovals(input.sessionId);
+          }
+        },
+        approvalBackend: backend,
+        browserBridge: this.makeBrowserBridge(session, sid, scope),
+        askUser: (question, opts) =>
+          this.requestAskUserForSession(session, sid, question, opts, scope),
+        injectCredentialToBrowser: (id, credentialScope) =>
+          this.requestCredentialInjectForSession(session, sid, id, credentialScope, scope),
+        dispose,
+      };
+    });
     session.engine.setSessionMessageRouter((input) => this.routeSessionMessage(input));
     if (this.workspaceBridgeEnabled && typeof session.engine.setWorkspaceBridge === "function") {
       session.engine.setWorkspaceBridge(this.makeWorkspaceBridge(session, sid));
@@ -2140,7 +2300,7 @@ export class AgentServer {
     this.abortController.abort();
 
     for (const [, resolve] of this.pendingApprovals) {
-      resolve({ approved: false, reason: "cancelled" });
+      resolve({ approved: false, failure: "cancelled", reason: "cancelled" });
     }
     this.pendingApprovals.clear();
     this.clearAllApprovalTimers();
@@ -3748,7 +3908,10 @@ export class AgentServer {
   private requestApprovalFromClient(
     request: ApprovalRequest,
     route?: ApprovalRouteTarget,
+    scope?: ChildHostScope,
   ): Promise<ApprovalResult> {
+    const failure = scope?.failure();
+    if (failure) return Promise.resolve({ approved: false, ...failure });
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       const effectiveRoute = route ?? {
@@ -3760,7 +3923,11 @@ export class AgentServer {
       const session = this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
 
       if (this.chatManager && sessionId && !session) {
-        resolve({ approved: false, reason: `session closed: ${sessionId}` });
+        resolve({
+          approved: false,
+          failure: "session_closed",
+          reason: `session closed: ${sessionId}`,
+        });
         return;
       }
 
@@ -3783,6 +3950,7 @@ export class AgentServer {
             surfaceable: !internal,
           },
           (decision: unknown) => resolve(decision as ApprovalResult),
+          scope,
         );
       } else {
         this.pendingApprovals.set(requestId, resolve);
@@ -3799,7 +3967,8 @@ export class AgentServer {
           }
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
-          resolve({ approved: false, reason: "approval timed out" });
+          scope?.pending.delete(requestId);
+          resolve({ approved: false, failure: "timed_out", reason: "approval timed out" });
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
@@ -3837,7 +4006,10 @@ export class AgentServer {
     sessionId: string,
     question: string,
     opts?: import("../tool-system/context.js").AskUserOptions,
+    scope?: ChildHostScope,
   ): Promise<string> {
+    const failure = scope?.failure();
+    if (failure) return Promise.resolve(`(question ${failure.failure}: ${failure.reason})`);
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
@@ -3867,6 +4039,7 @@ export class AgentServer {
             resolve(typeof decision === "string" ? decision : "");
           }
         },
+        scope,
       );
 
       const args: Record<string, unknown> = { question };
@@ -3877,6 +4050,7 @@ export class AgentServer {
 
       this.notify(Methods.ApprovalRequest, {
         ...routeEnvelope,
+        ...(scope ? { sourceSessionId: scope.sourceSessionId } : {}),
         request: {
           toolName: "__ask_user__",
           args,
@@ -3928,9 +4102,10 @@ export class AgentServer {
   private makeBrowserBridge(
     session: import("./chat-session.js").ChatSession,
     sessionId: string,
+    scope?: ChildHostScope,
   ): import("../tool-system/browser-bridge.js").BrowserBridge {
     const call = (action: string, payload: Record<string, unknown>): Promise<any> =>
-      this.requestBrowserActionForSession(session, sessionId, action, payload);
+      this.requestBrowserActionForSession(session, sessionId, action, payload, scope);
     return {
       requestHumanTakeover: () => call("requestTakeover", {}),
       snapshot: () => call("snapshot", {}),
@@ -3956,7 +4131,11 @@ export class AgentServer {
     sessionId: string,
     action: string,
     payload: Record<string, unknown>,
+    scope?: ChildHostScope,
   ): Promise<any> {
+    const failure = scope?.failure();
+    if (failure)
+      return Promise.resolve({ ok: false, failure: failure.failure, detail: failure.reason });
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
@@ -3974,6 +4153,7 @@ export class AgentServer {
               : { ok: false, failure: parsed.failure, detail: parsed.detail },
           );
         },
+        scope,
       );
 
       const timer = setTimeout(() => {
@@ -3981,6 +4161,7 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
+          scope?.pending.delete(requestId);
           resolve({
             ok: false,
             failure: "timed_out" as const,
@@ -3992,6 +4173,9 @@ export class AgentServer {
 
       this.notify(Methods.ApprovalRequest, {
         ...routeEnvelope,
+        ...(scope
+          ? { childHost: { sourceSessionId: scope.sourceSessionId, bindingId: scope.bindingId } }
+          : {}),
         request: {
           toolName: "__browser_action__",
           args: { action, ...payload },
@@ -4013,7 +4197,11 @@ export class AgentServer {
     sessionId: string,
     credentialId: string,
     credentialScope: "full" | "project" = "full",
+    scope?: ChildHostScope,
   ): Promise<{ ok: boolean; count?: number; error?: string }> {
+    const failure = scope?.failure();
+    if (failure)
+      return Promise.resolve({ ok: false, error: `${failure.failure}: ${failure.reason}` });
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
@@ -4029,6 +4217,7 @@ export class AgentServer {
               : { ok: false, error: parsed.detail },
           );
         },
+        scope,
       );
 
       const timer = setTimeout(() => {
@@ -4036,6 +4225,7 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
+          scope?.pending.delete(requestId);
           resolve({
             ok: false,
             error: `credential inject ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`,
@@ -4046,6 +4236,7 @@ export class AgentServer {
 
       this.notify(Methods.ApprovalRequest, {
         ...routeEnvelope,
+        ...(scope ? { sourceSessionId: scope.sourceSessionId } : {}),
         request: {
           toolName: "__credential_action__",
           args: { action: "injectCookie", credentialId, credentialScope },
@@ -4400,7 +4591,7 @@ export class AgentServer {
     }
 
     for (const [, resolve] of this.pendingApprovals) {
-      resolve({ approved: false, reason: "server closing" });
+      resolve({ approved: false, failure: "session_closed", reason: "server closing" });
     }
     this.pendingApprovals.clear();
     this.clearAllApprovalTimers();
@@ -4440,9 +4631,20 @@ export class AgentServer {
     session: ChatSession,
     metadata: PendingApprovalMetadata,
     resolve: (decision: unknown) => void,
+    scope?: ChildHostScope,
   ): void {
+    if (scope) {
+      metadata = { ...metadata, sourceSessionId: scope.sourceSessionId };
+      scope.pending.add(metadata.requestId);
+    }
     metadata = this.observeApprovalCreated(metadata);
-    session.pendingApprovals.set(metadata.requestId, { resolve, metadata });
+    session.pendingApprovals.set(metadata.requestId, {
+      resolve: (decision) => {
+        scope?.pending.delete(metadata.requestId);
+        resolve(decision);
+      },
+      metadata,
+    });
   }
 
   private takeSessionApproval(
@@ -4539,7 +4741,7 @@ export class AgentServer {
           entry.resolve(
             entry.metadata.kind === "internal"
               ? internalCancellation(failure, reason)
-              : { approved: false, reason },
+              : { approved: false, failure, reason },
           );
         } catch {
           /* a resolver must never break cancel cleanup */
@@ -4551,6 +4753,14 @@ export class AgentServer {
 
   private failClosedApprovalTargets(targets: ApprovalRouteTarget[], reason: string): void {
     for (const target of targets) {
+      for (const child of this.childHostDisposers.values()) {
+        if (
+          child.route.connectionId === target.connectionId &&
+          child.route.sessionId === target.sessionId &&
+          child.route.generation === target.generation
+        )
+          child.dispose(reason);
+      }
       const session = this.chatManager?.get(target.sessionId);
       if (session) {
         this.cancelSessionApprovals(session, reason, "owner-lost", "owner_lost");
@@ -4568,7 +4778,7 @@ export class AgentServer {
         this.pendingApprovals.delete(requestId);
         this.pendingApprovalTargets.delete(requestId);
         this.clearApprovalTimer(requestId);
-        resolve?.({ approved: false, reason });
+        resolve?.({ approved: false, failure: "owner_lost", reason });
       }
     }
   }

@@ -65,6 +65,7 @@ export type BrowserResultCode =
   | "OK"
   | "STALE_SNAPSHOT"
   | "STALE_CURSOR"
+  | "TARGET_CLOSED"
   | "NO_PROGRESS"
   | "NAVIGATION"
   | "BLOCKED"
@@ -233,6 +234,8 @@ export interface BrowserBridge {
 
 /** One open browser tab, as the agent sees it. */
 export interface BrowserTab {
+  /** Closed task-owned targets can be listed with a URL for explicit recovery. */
+  status?: "open" | "closed";
   /** Stable id (the desktop webContents id, as a string). */
   tabId: string;
   url: string;

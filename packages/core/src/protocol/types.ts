@@ -30,6 +30,8 @@ export type PendingApprovalKind = "tool_approval" | "ask_user" | "internal";
 
 /** Resolver-free metadata retained beside a pending approval callback. */
 export interface PendingApprovalMetadata {
+  /** Child task that originated this request; sessionId remains its parent UI route. */
+  sourceSessionId?: string;
   sessionId: string;
   requestId: string;
   routeGeneration?: number;

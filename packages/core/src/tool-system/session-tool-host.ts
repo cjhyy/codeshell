@@ -251,9 +251,17 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     ...options.contextOverrides,
     sessionId: options.businessSessionId,
     externalRuntime: true,
+    // This bridge owns tool calls, not a native model loop that can apply a
+    // context rollover. Never expose native working-memory controls here.
+    contextStrategy: undefined,
+    contextNotes: undefined,
     planMode: options.planMode,
     permissionMode: options.permissionMode,
-    toolVisibility: buildToolVisibility(options.visibility),
+    toolVisibility: buildToolVisibility({
+      ...options.visibility,
+      contextStrategy: undefined,
+      hasBrowserAutomation: options.contextOverrides?.browser !== undefined,
+    }),
     // Belt and braces with the exposure check in execute(): the executor
     // enforces this too, so a future refactor that loses one still fails closed.
     allowedToolNames: new Set(exposure.toolNames),

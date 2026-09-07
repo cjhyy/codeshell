@@ -320,6 +320,58 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
+  it("restores a notes boundary without displaying the note or checkpoint replay snapshot", () => {
+    const jsonl = [
+      line("session_meta", { sessionId: "notes-session", cwd: "/repo" }),
+      line("message", { role: "user", content: "继续原会话" }),
+      line("message", { role: "assistant", content: "已记下当前进度" }),
+      line("turn_boundary", { turnNumber: 1 }),
+      line("context_note", {
+        text: "internal working note",
+        coveredThroughEventId: "old-context",
+      }),
+      line("context_checkpoint", {
+        version: 1,
+        noteId: "note-1",
+        coveredThroughEventId: "old-context",
+        checksum: "checkpoint-checksum",
+        messages: [{ role: "user", content: "internal replay snapshot" }],
+        clientMessageIds: [],
+      }),
+    ].join("\n");
+
+    const items = transcriptToFoldItems(jsonl);
+    const state = foldTranscript(items);
+    expect(state.sessionId).toBe("notes-session");
+    expect(state.messages.filter((message) => message.kind === "context_boundary")).toEqual([
+      expect.objectContaining({ kind: "context_boundary", strategy: "notes", before: 0, after: 0 }),
+    ]);
+    expect(state.messages.filter((message) => message.kind === "user")).toEqual([
+      expect.objectContaining({ text: "继续原会话" }),
+    ]);
+    expect(JSON.stringify(state)).toContain("已记下当前进度");
+    expect(JSON.stringify(items)).not.toContain("internal working note");
+    expect(JSON.stringify(items)).not.toContain("internal replay snapshot");
+  });
+
+  it("ignores incomplete or unsupported checkpoint records", () => {
+    expect(
+      transcriptToFoldItems(
+        [
+          line("context_checkpoint", { version: 1 }),
+          line("context_checkpoint", {
+            version: 2,
+            noteId: "note-1",
+            coveredThroughEventId: "old-context",
+            checksum: "checkpoint-checksum",
+            messages: [],
+            clientMessageIds: [],
+          }),
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
   it("replays a context_transfer event with its package provenance", () => {
     const items = transcriptToFoldItems(
       line("context_transfer", {

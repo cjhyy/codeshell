@@ -479,14 +479,17 @@ export class ToolExecutor {
         hookResult.decision === "ask" ? hookResult.messages : undefined,
         permHook.decision === "ask" ? permHook.messages : undefined,
       );
-      const approved = await this.permission.handleAsk(call.toolName, call.args, reason, {
+      const approval = await this.permission.handleAskResult(call.toolName, call.args, reason, {
         sessionId: this.toolCtx?.sessionId,
       });
-      if (!approved) {
+      if (!approval.approved) {
         return {
           id: call.id,
           toolName: call.toolName,
-          error: `Permission denied by user for tool: ${call.toolName}`,
+          error:
+            approval.failure && approval.failure !== "denied"
+              ? `Permission approval ${approval.failure} for tool: ${call.toolName}${approval.reason ? `. ${approval.reason}` : ""}`
+              : `Permission denied by user for tool: ${call.toolName}${approval.reason ? `. ${approval.reason}` : ""}`,
           isError: true,
         };
       }

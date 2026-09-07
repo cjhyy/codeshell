@@ -137,6 +137,7 @@ const KEY_MAP: Record<string, [string, number | null]> = {
 const ALIASES: Record<string, string> = {
   ctrl: "Control",
   control: "Control",
+  controlormeta: "ControlOrMeta",
   alt: "Alt",
   option: "Alt",
   meta: "Meta",
@@ -263,7 +264,19 @@ export interface KeyEvent {
   windowsVirtualKeyCode?: number;
   nativeVirtualKeyCode?: number;
   modifiers?: number;
+  /** Chromium editing commands bypass the absent macOS native event loop in CDP. */
+  commands?: string[];
 }
+
+export type KeyboardPlatform = "mac" | "other";
+
+const MAC_EDIT_COMMANDS: Record<string, string> = {
+  KeyA: "selectAll",
+  KeyC: "copy",
+  KeyX: "cut",
+  KeyV: "paste",
+  KeyZ: "undo",
+};
 
 function printableText(key: string, modifiers = 0): string | null {
   if (modifiers & TEXT_BLOCKING_MODIFIERS) return null;
@@ -286,10 +299,11 @@ function printableText(key: string, modifiers = 0): string | null {
  * Combination order (matches browser-use): modifier keyDowns → main keyDown
  * (with bitmask) → main keyUp (with bitmask) → modifier keyUps (reversed).
  */
-export function planKeySequence(spec: string): KeyEvent[] {
+export function planKeySequence(spec: string, platform: KeyboardPlatform = "other"): KeyEvent[] {
   const parts = spec
     .split("+")
     .map(normalizeKey)
+    .map((key) => (key === "ControlOrMeta" ? (platform === "mac" ? "Meta" : "Control") : key))
     .filter((p) => p.length > 0);
   if (parts.length === 0) return [];
 
@@ -305,6 +319,15 @@ export function planKeySequence(spec: string): KeyEvent[] {
       e.nativeVirtualKeyCode = info.windowsVirtualKeyCode;
     }
     if (modifiers) e.modifiers = modifiers;
+    if (type === "keyDown" && platform === "mac") {
+      const command =
+        modifiers === MODIFIER_BITS.Meta
+          ? MAC_EDIT_COMMANDS[info.code]
+          : modifiers === (MODIFIER_BITS.Meta | MODIFIER_BITS.Shift) && info.code === "KeyZ"
+            ? "redo"
+            : undefined;
+      if (command) e.commands = [command];
+    }
     const text =
       type === "keyDown" ? (NAMED_ACTION_TEXT[key] ?? printableText(key, modifiers)) : null;
     if (text !== null) {

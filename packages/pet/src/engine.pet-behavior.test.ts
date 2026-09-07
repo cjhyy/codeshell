@@ -248,24 +248,35 @@ describe("Engine pet behavior", () => {
     expect(JSON.stringify(first.messages)).not.toContain("Goal 工具状态");
     expect(JSON.stringify(first.messages)).not.toContain("pet-invisible-skill");
     expect(JSON.stringify(first.messages)).not.toContain("active goal");
-    expect(first.tools).toEqual(["DelegateWork", "Sessions", "FollowUps", "CurrentTime"]);
+    expect([...first.tools].sort()).toEqual(
+      [
+        "DelegateWork",
+        "Sessions",
+        "FollowUps",
+        "CurrentTime",
+        "SaveContextNote",
+        "NewContext",
+        "SearchHistory",
+      ].sort(),
+    );
     expect(result.petWorkDelegation).toEqual({
       workspaceId: "workspace-codeshell",
       objective: "inspect CodeShell",
-      reusableSessionId: "session-existing",
     });
     expect(result.extensions).toEqual({
       pet: {
         workDelegation: {
           workspaceId: "workspace-codeshell",
           objective: "inspect CodeShell",
-          reusableSessionId: "session-existing",
         },
       },
     });
     expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
     expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
       "not allowed by this run profile",
+    );
+    expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
+      "missing_continuation_evidence",
     );
     expect(engine.getSessionManager().readSessionKind("local-pet")).toBe("pet");
     const transcript = readFileSync(join(cwd, "sessions", "local-pet", "transcript.jsonl"), "utf8");
@@ -300,6 +311,38 @@ describe("Engine pet behavior", () => {
     await expect(engine.run("rewrite", { sessionId: "pet", kind: "work" })).rejects.toThrow(
       "session kind mismatch",
     );
+  });
+
+  test("explicit summary settings override Mimi's notes default without widening its tools", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-pet-summary-"));
+    tempDirs.push(cwd);
+    mkdirSync(join(cwd, ".code-shell"));
+    writeFileSync(
+      join(cwd, ".code-shell", "settings.json"),
+      JSON.stringify({ context: { strategy: "summary" } }),
+    );
+    const model = `pet-summary-${crypto.randomUUID()}`;
+    calls.set(model, []);
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      modules: [createPetModule()],
+      sessionStorageDir: join(cwd, "sessions"),
+      settingsScope: "project",
+      headless: true,
+      maxTurns: 3,
+    });
+    (engine as any).hooks.clear();
+
+    await engine.run("global status", { sessionId: "pet-summary", kind: "pet" });
+
+    const first = calls.get(model)![0]!;
+    expect(first.tools).toEqual(["FollowUps", "CurrentTime"]);
+    expect(first.tools).not.toContain("SaveContextNote");
+    expect(first.tools).not.toContain("NewContext");
+    expect(first.tools).not.toContain("SearchHistory");
+    expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
+    expect(engine.getSessionManager().readSessionKind("pet-summary")).toBe("pet");
   });
 
   test("exposes Gateway discovery before the per-route GatewayReply execution tool", async () => {
@@ -359,17 +402,26 @@ describe("Engine pet behavior", () => {
     });
 
     const first = calls.get(model)![0]!;
-    expect(first.tools).toEqual([
-      "Gateway",
-      "GatewayReply",
-      "Sessions",
-      "FollowUps",
-      "CurrentTime",
-    ]);
-    expect(first.toolDefinitions[0]?.inputSchema.properties.action).toMatchObject({
+    expect([...first.tools].sort()).toEqual(
+      [
+        "Gateway",
+        "GatewayReply",
+        "Sessions",
+        "FollowUps",
+        "CurrentTime",
+        "SaveContextNote",
+        "NewContext",
+        "SearchHistory",
+      ].sort(),
+    );
+    expect(
+      first.toolDefinitions.find((tool) => tool.name === "Gateway")?.inputSchema.properties.action,
+    ).toMatchObject({
       enum: ["search", "describe"],
     });
-    expect(first.toolDefinitions[1]?.inputSchema.properties).not.toHaveProperty("attachment_paths");
+    expect(
+      first.toolDefinitions.find((tool) => tool.name === "GatewayReply")?.inputSchema.properties,
+    ).not.toHaveProperty("attachment_paths");
     expect(events.filter((event) => event.type === "stream_request_start")).toHaveLength(1);
     expect(result.reason).toBe("completed");
     expect(result.extensions?.pet).toEqual({

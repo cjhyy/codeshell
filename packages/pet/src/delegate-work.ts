@@ -6,7 +6,10 @@ import type {
 import {
   DELEGATE_WORK_TOOL_NAME,
   isPetWorkExecutionBackend,
+  normalizePetWorkDelegation,
+  petDelegationDisplay,
   type PetReusableSessionOption,
+  type PetSessionContinuationEvidence,
   type PetWorkspaceOption,
 } from "./delegation.js";
 import type { PetRunScopedServices } from "./profile.js";
@@ -22,7 +25,8 @@ export const delegateWorkToolDef: ToolDefinition = {
     "Delegate one execution objective to exactly one host-provided Workspace. " +
     "Use only as Mimi after deciding that the user's request requires execution. " +
     "Before calling, decide whether this is the same concrete work thread as one reusable Session. " +
-    "Pass session_id only for a clear continuation; omit it to create a new Session. " +
+    "Reuse requires session_id and session_continuation identifying that prior work and explaining why this objective continues it. " +
+    "Without grounded continuation evidence the host creates a new Session, even if session_id is valid. " +
     "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity. " +
     "If the user asked for a new Session, omit session_id regardless of how continuous the work looks. " +
     "workspace_id must be copied exactly from the available Workspace list.",
@@ -50,6 +54,27 @@ export const delegateWorkToolDef: ToolDefinition = {
         description:
           "Optional exact id from the reusable Session list. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work, and whenever the user asked to start a new Session. The host never infers an omitted id.",
       },
+      session_continuation: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          prior_thread: {
+            type: "string",
+            maxLength: 4_096,
+            description:
+              "Quote the selected candidate's entire displayed name identifying its prior work thread. Do not invent a summary or quote only a shared topic.",
+          },
+          reason: {
+            type: "string",
+            maxLength: 2_000,
+            description:
+              "Explain why the current objective continues, corrects, or retries that specific prior work, including which existing context, state, or artifact is needed. A shared Workspace or topic is insufficient.",
+          },
+        },
+        required: ["prior_thread", "reason"],
+        description:
+          "Mimi's explicit evidence for reusing session_id. Omit for new or uncertain work; missing or ungrounded evidence makes the host create a new Session.",
+      },
     },
     required: ["workspace_id", "objective"],
   },
@@ -67,10 +92,6 @@ function visibleReusableSessions(ctx: ToolVisibilityContext): readonly PetReusab
 
 export function delegateWorkAvailability(ctx: ToolVisibilityContext): boolean {
   return ctx.behaviorProfile === "pet" && visibleWorkspaces(ctx).length > 0;
-}
-
-function inlineDisplay(value: string, maximum: number): string {
-  return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
 }
 
 export function rewriteDelegateWorkDef(
@@ -91,8 +112,10 @@ export function delegateWorkToolDefFor(
     ? available
         .map(
           (workspace) =>
-            `- ${JSON.stringify(workspace.id)}: ${inlineDisplay(workspace.name, 256)}${
-              workspace.description ? ` — ${inlineDisplay(workspace.description, 4_096)}` : ""
+            `- ${JSON.stringify(workspace.id)}: ${petDelegationDisplay(workspace.name, 256)}${
+              workspace.description
+                ? ` — ${petDelegationDisplay(workspace.description, 4_096)}`
+                : ""
             }`,
         )
         .join("\n")
@@ -101,14 +124,17 @@ export function delegateWorkToolDefFor(
     ? sessions
         .map(
           (session) =>
-            `- ${JSON.stringify(session.id)}: ${inlineDisplay(session.name, 256)} (Workspace ${JSON.stringify(session.workspaceId)})${
-              session.description ? ` — ${inlineDisplay(session.description, 4_096)}` : ""
+            `- ${JSON.stringify(session.id)}: ${petDelegationDisplay(session.name, 256)} (Workspace ${JSON.stringify(session.workspaceId)})${
+              session.description ? ` — ${petDelegationDisplay(session.description, 4_096)}` : ""
             }`,
         )
         .join("\n")
     : "- (no existing Session is currently eligible for reuse; omit session_id)";
-  const { session_id: _sessionId, ...baseProperties } = delegateWorkToolDef.inputSchema
-    .properties as Record<string, unknown>;
+  const {
+    session_id: _sessionId,
+    session_continuation: sessionContinuation,
+    ...baseProperties
+  } = delegateWorkToolDef.inputSchema.properties as Record<string, unknown>;
   return {
     ...delegateWorkToolDef,
     description: `${delegateWorkToolDef.description}\n\nAvailable Workspaces:\n${workspaceListing}\n\nReusable Sessions (candidates only — listing one here is not a reason to reuse it):\n${sessionListing}`,
@@ -129,6 +155,7 @@ export function delegateWorkToolDefFor(
                 description:
                   "Optional exact id from the reusable Session list. Pass it only for a clear continuation of the same concrete work thread; omit it to create a new Session, including whenever the user asked for a new one. The host never infers an omitted id.",
               },
+              session_continuation: sessionContinuation,
             }
           : {}),
       },
@@ -149,9 +176,15 @@ export async function delegateWorkTool(
     return "Error: DelegateWork is available only in a Mimi manager turn.";
   }
   if (
-    !hasOnlyDeclaredToolArguments(args, ["workspace_id", "objective", "executor", "session_id"])
+    !hasOnlyDeclaredToolArguments(args, [
+      "workspace_id",
+      "objective",
+      "executor",
+      "session_id",
+      "session_continuation",
+    ])
   ) {
-    return "Error: DelegateWork accepts only workspace_id, objective, executor, and session_id.";
+    return "Error: DelegateWork accepts only workspace_id, objective, executor, session_id, and session_continuation.";
   }
   const workspaceId = typeof args.workspace_id === "string" ? args.workspace_id.trim() : "";
   const objective = typeof args.objective === "string" ? args.objective.trim() : "";
@@ -208,14 +241,46 @@ export async function delegateWorkTool(
       `${JSON.stringify(reusableSession.workspaceId)} if you meant to continue that Session.`
     );
   }
-  const decision = services.requestPetWorkDelegation({
-    workspaceId,
-    objective,
-    ...(executor === "codex" ? { executionBackend: "codex" as const } : {}),
-    ...(reusableSession ? { reusableSessionId: reusableSession.id } : {}),
-  });
+  const evidence = args.session_continuation;
+  const evidenceRecord =
+    evidence && typeof evidence === "object" && !Array.isArray(evidence)
+      ? (evidence as Record<string, unknown>)
+      : undefined;
+  const continuationEvidence =
+    evidenceRecord &&
+    Object.keys(evidenceRecord).every((key) => key === "prior_thread" || key === "reason")
+      ? ({
+          priorThread: evidenceRecord.prior_thread,
+          reason: evidenceRecord.reason,
+        } as PetSessionContinuationEvidence)
+      : { priorThread: "", reason: "" };
+  const normalized = normalizePetWorkDelegation(
+    {
+      workspaceId,
+      objective,
+      ...(executor === "codex" ? { executionBackend: "codex" as const } : {}),
+      ...(reusableSession ? { reusableSessionId: reusableSession.id } : {}),
+      ...(evidence !== undefined ? { continuationEvidence } : {}),
+    },
+    reusableSessions,
+  );
+  if (!normalized.ok) return `Error: ${normalized.error}`;
+  const decision = services.requestPetWorkDelegation(normalized.delegation);
   if (!decision.ok) return `Error: ${decision.error ?? "work delegation was rejected"}`;
-  return reusableSession
-    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}.`
-    : `Delegation accepted for a new Session in Workspace ${workspace.name}.`;
+  const sessionDecision =
+    decision.sessionDecision && decision.sessionDecision.mode !== normalized.sessionDecision.mode
+      ? decision.sessionDecision
+      : normalized.sessionDecision;
+  return JSON.stringify({
+    status: "accepted",
+    launchStatus: "pending",
+    workspace: { id: workspace.id, name: workspace.name },
+    objective,
+    session: {
+      ...sessionDecision,
+      ...(sessionDecision.mode === "reuse" && reusableSession
+        ? { name: reusableSession.name }
+        : {}),
+    },
+  });
 }

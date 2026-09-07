@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { toolSearchTool } from "./tool-search.js";
 import { ToolRegistry } from "../registry.js";
 import type { ToolContext } from "../context.js";
+import { browserDiscoveryScore } from "../browser-discovery.js";
 
 function registryWith(...defs: Array<{ name: string; description: string }>): ToolRegistry {
   const r = new ToolRegistry({ builtinTools: [] });
@@ -71,6 +72,62 @@ describe("toolSearchTool", () => {
 });
 
 describe("toolSearchTool — current Session surface", () => {
+  it("fallback discovery honors disabled and unexposed tools even with a live bridge", async () => {
+    const r = new ToolRegistry({ builtinTools: ["ToolSearch", "browser_navigate"] });
+    const live = {
+      ...ctx(r),
+      browser: {} as ToolContext["browser"],
+      toolVisibility: { cwd: "/repo", hasGoal: false, hasBrowserAutomation: true },
+    };
+    for (const restricted of [
+      { ...live, disabledBuiltins: new Set(["browser_navigate"]) },
+      { ...live, allowedToolNames: new Set(["ToolSearch"]) },
+    ]) {
+      expect(await toolSearchTool({ query: "select:browser_navigate" }, restricted)).toContain(
+        "not found",
+      );
+      expect(await toolSearchTool({ query: "浏览器" }, restricted)).not.toContain(
+        "browser_navigate",
+      );
+    }
+  });
+
+  it("prefers the available native browser for generic discovery while respecting exact MCP selection", async () => {
+    const r = new ToolRegistry({
+      builtinTools: ["browser_navigate", "browser_observe", "browser_act"],
+    });
+    const mcpName = "mcp_chrome_new_page";
+    r.registerTool(
+      {
+        name: mcpName,
+        description: "MCP browser automation: open a Chrome browser webpage",
+        inputSchema: { type: "object", properties: {} },
+        source: "mcp",
+        serverName: "chrome",
+        permissionDefault: "ask",
+      },
+      async () => "ok",
+    );
+    const current = { ...ctx(r), searchableToolDefinitions: r.getToolDefinitions() };
+    for (const query of ["browser", "网页", "内置浏览器"]) {
+      const result = await toolSearchTool({ query, max_results: 1 }, current);
+      expect(result).toContain("### browser_navigate");
+      expect(result).not.toContain(mcpName);
+    }
+    expect(await toolSearchTool({ query: `select:${mcpName}` }, current)).toContain(
+      `### ${mcpName}`,
+    );
+    expect(
+      await toolSearchTool({ query: "MCP browser Chrome", max_results: 1 }, current),
+    ).toContain(`### ${mcpName}`);
+    for (const query of ["browser network", "browser console", "browser performance", mcpName]) {
+      expect(browserDiscoveryScore(r.getTool("browser_navigate")!, query)).toBe(0);
+    }
+    // Legacy hosts without a per-turn snapshot must not advertise an unwired bridge either.
+    expect(await toolSearchTool({ query: "select:browser_navigate" }, ctx(r))).toContain(
+      "not found",
+    );
+  });
   it("does not advertise a registry tool filtered out of the current Session", async () => {
     const r = registryWith(
       { name: "SendMessage", description: "raw outbound sender" },

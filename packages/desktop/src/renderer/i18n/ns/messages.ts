@@ -38,6 +38,15 @@ export const messagesNs = {
         operationCount: "{count} 次操作",
         output: "输出",
         waitingForActivity: "子代理运行中，执行过程将在这里显示。",
+        transcript: "完整对话",
+        back: "返回上级对话",
+        refresh: "刷新对话",
+        chooseChild: "选择子任务",
+        loadingTranscript: "正在加载子任务对话…",
+        emptyTranscript: "暂未找到子任务对话记录。",
+        externalTraceUnavailable:
+          "这里只能查看已记录的委派请求和返回结果。外部子代理的内部对话尚未收录。",
+        transcriptError: "读取子任务对话失败：{error}",
       },
       // agent fan-out group card
       agentGroup: {
@@ -186,6 +195,15 @@ export const messagesNs = {
         operationCount: "{count} operations",
         output: "Output",
         waitingForActivity: "The agent is running. Its activity will appear here.",
+        transcript: "Full conversation",
+        back: "Back to parent conversation",
+        refresh: "Refresh conversation",
+        chooseChild: "Choose a subtask",
+        loadingTranscript: "Loading subtask conversation…",
+        emptyTranscript: "No subtask conversation has been saved yet.",
+        externalTraceUnavailable:
+          "This view shows the recorded delegation request and returned result. The external subagent’s internal conversation was not captured.",
+        transcriptError: "Could not read subtask conversation: {error}",
       },
       agentGroup: {
         count: "{count} sub-agents",

@@ -68,6 +68,8 @@ interface ApprovalReq {
   askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
 }
 
+type SubagentItem = Extract<ChatItem, { kind: "subagent" | "tool" }>;
+
 type ChatAction =
   | { kind: "raw"; raw: unknown }
   | { kind: "replayHistory"; messages: unknown }
@@ -128,6 +130,8 @@ export function CCConversationView({
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [takingOver, setTakingOver] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<SubagentItem | null>(null);
+  useEffect(() => setSelectedAgent(null), [roomId, sessionId]);
 
   // Approval delivery is independent of transcript tailing. PanelArea keeps
   // inactive tabs mounted, so retain these lightweight listeners and do not
@@ -321,6 +325,45 @@ export function CCConversationView({
     [roomId],
   );
 
+  if (selectedAgent) {
+    // Room history stores Agent/Task requests and result summaries, but does
+    // not currently capture external child transcripts. Keep this view within
+    // its external room; external IDs must never query the native session store.
+    const current = chat.items.find((item) => item.id === selectedAgent.id) as
+      | SubagentItem
+      | undefined;
+    const selected = current ?? selectedAgent;
+    const scopedItems =
+      selected.kind === "subagent"
+        ? chat.items.filter(
+            (item) =>
+              (item.kind === "assistant" || item.kind === "tool") &&
+              item.agentId === selected.agentId,
+          )
+        : [];
+    return (
+      <section aria-label={t("msg.agent.showDetails")} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center gap-2 border-b border-border p-2">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedAgent(null)}>
+            {t("msg.agent.back")}
+          </Button>
+          <span className="min-w-0 truncate text-sm font-medium">{subagentLabel(selected)}</span>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
+          {selected.kind === "tool" && <CcToolCard tool={selected} defaultOpen />}
+          {scopedItems.map((item) => (
+            <MessageRow key={item.id} item={item} />
+          ))}
+          {scopedItems.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t("msg.agent.externalTraceUnavailable")}
+            </p>
+          )}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div
       className={cn("flex h-full flex-col", dragOver && "ring-2 ring-inset ring-primary/40")}
@@ -376,7 +419,9 @@ export function CCConversationView({
               还没有消息。发条消息开始对话。
             </p>
           ) : (
-            chat.items.map((item) => <MessageRow key={item.id} item={item} />)
+            chat.items.map((item) => (
+              <MessageRow key={item.id} item={item} onViewSubagent={setSelectedAgent} />
+            ))
           )}
           {pending.map((req) => (
             <CcApprovalCard key={req.requestId} req={req} onResolve={resolve} />
@@ -441,7 +486,13 @@ export function CCConversationView({
 }
 
 // ── one chat row ───────────────────────────────────────────────────────────
-function MessageRow({ item }: { item: ChatItem }) {
+export function MessageRow({
+  item,
+  onViewSubagent,
+}: {
+  item: ChatItem;
+  onViewSubagent?: (item: SubagentItem) => void;
+}) {
   switch (item.kind) {
     case "user":
       return (
@@ -473,28 +524,16 @@ function MessageRow({ item }: { item: ChatItem }) {
         </div>
       );
     case "tool":
+      if (onViewSubagent && /^(agent|task)$/i.test(item.name)) {
+        return <CcSubagentButton item={item} onView={() => onViewSubagent(item)} />;
+      }
       return (
         <div className="ml-9 max-w-[90%]">
           <CcToolCard tool={item} />
         </div>
       );
     case "subagent":
-      return (
-        <div className="ml-9 flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              item.status === "running"
-                ? "animate-pulse bg-status-running"
-                : item.status === "error"
-                  ? "bg-status-err"
-                  : "bg-status-ok",
-            )}
-          />
-          <span className="font-medium">子代理</span>
-          <span className="truncate">{item.label}</span>
-        </div>
-      );
+      return <CcSubagentButton item={item} onView={() => onViewSubagent?.(item)} />;
     case "system_error":
       return (
         <div className="ml-9 rounded-lg border border-status-err/40 bg-status-err/10 px-3 py-2 text-xs text-status-err">
@@ -504,8 +543,56 @@ function MessageRow({ item }: { item: ChatItem }) {
   }
 }
 
-function CcToolCard({ tool }: { tool: Extract<ChatItem, { kind: "tool" }> }) {
-  const [open, setOpen] = useState(false);
+function subagentLabel(item: SubagentItem): string {
+  if (item.kind === "subagent") return item.label;
+  return typeof item.args?.description === "string"
+    ? item.args.description
+    : item.summary || item.name;
+}
+
+function CcSubagentButton({ item, onView }: { item: SubagentItem; onView: () => void }) {
+  const status =
+    item.kind === "subagent"
+      ? item.status
+      : item.error
+        ? "error"
+        : item.done
+          ? "recorded"
+          : "running";
+  return (
+    <button
+      type="button"
+      onClick={onView}
+      data-cc-subagent={item.id}
+      className="ml-9 flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          status === "running"
+            ? "animate-pulse bg-status-running"
+            : status === "error"
+              ? "bg-status-err"
+              : status === "recorded"
+                ? "bg-muted-foreground"
+                : "bg-status-ok",
+        )}
+      />
+      <span className="font-medium">子代理</span>
+      <span className="truncate">{subagentLabel(item)}</span>
+      <ChevronRight className="ml-auto size-3.5 shrink-0" />
+    </button>
+  );
+}
+
+function CcToolCard({
+  tool,
+  defaultOpen = false,
+}: {
+  tool: Extract<ChatItem, { kind: "tool" }>;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const argStr = tool.args ? JSON.stringify(tool.args) : "";
   const hasBody = Boolean(argStr && argStr !== "{}") || Boolean(tool.result);
   return (

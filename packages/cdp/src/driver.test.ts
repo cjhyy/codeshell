@@ -20,6 +20,23 @@ function fakeCdp(handlers: Record<string, (params?: any) => any> = {}) {
 
 const BOX = { model: { content: [0, 0, 100, 0, 100, 40, 0, 40] } };
 
+test("pressKey sends platform-aware editing commands through CDP", async () => {
+  const { send, calls } = fakeCdp();
+  const driver = new CdpActionsDriver(send, () => ({ url: "about:blank" }), {
+    keyboardPlatform: "mac",
+  });
+  expect(await driver.pressKey("ControlOrMeta+c")).toEqual({ ok: true });
+  expect(
+    calls.find((call) => call.params?.key === "c" && call.params.type === "keyDown"),
+  ).toMatchObject({
+    method: "Input.dispatchKeyEvent",
+    params: { modifiers: 4, commands: ["copy"] },
+  });
+  calls.length = 0;
+  await driver.pressKey("Control+c");
+  expect(calls.every((call) => !call.params?.commands)).toBe(true);
+});
+
 describe("CdpActionsDriver.snapshot", () => {
   test("enables domains once and returns RAW nodes (no flattening)", async () => {
     const nodes = [

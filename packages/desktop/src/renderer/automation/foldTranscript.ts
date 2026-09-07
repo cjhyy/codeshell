@@ -14,7 +14,10 @@ import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import { applyTranscriptStreamEvent } from "../transcripts";
 
-export function foldTranscript(items: FoldItem[]): MessagesReducerState {
+export function foldTranscript(
+  items: FoldItem[],
+  options: { live?: boolean } = {},
+): MessagesReducerState {
   let state = INITIAL_STATE;
   for (const item of items) {
     // Replay clock = the event's ORIGINAL persisted timestamp, so createdAt/
@@ -58,7 +61,10 @@ export function foldTranscript(items: FoldItem[]): MessagesReducerState {
       state = applyTranscriptStreamEvent(state, item.event, replayClock);
     }
   }
-  return sealOrphanedAgents(state);
+  // A detail view can replay a snapshot while the child still runs. Its nested
+  // agents remain live; absence of an end event is only orphan evidence for
+  // historical replay.
+  return options.live ? state : sealOrphanedAgents(state);
 }
 
 /**

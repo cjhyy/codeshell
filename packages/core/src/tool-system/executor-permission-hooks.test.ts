@@ -347,3 +347,26 @@ describe("ToolExecutor permission hook hardening", () => {
     expect(result.result).toBe("ran");
   });
 });
+
+describe("permission failure attribution", () => {
+  for (const failure of [
+    "owner_lost",
+    "session_closed",
+    "timed_out",
+    "cancelled",
+    "unavailable",
+    "policy_denied",
+  ] as const) {
+    it(`reports ${failure} without claiming a user denial`, async () => {
+      const { executor, didRun } = makeExecutor({
+        rules: [rule("ask")],
+        approvalBackend: backendWith({ approved: false, failure, reason: "actual host cause" }),
+      });
+      const result = await runProbe(executor);
+      expect(result.error).toContain(failure);
+      expect(result.error).toContain("actual host cause");
+      expect(result.error).not.toContain("by user");
+      expect(didRun()).toBe(false);
+    });
+  }
+});

@@ -350,7 +350,7 @@ describe("PetDispatchService", () => {
           return {
             ok: true,
             result: {
-              text: "微信消息已发送。系统提示当前没有活跃任务，待命。",
+              text: "我会新开工作会话，检查登录流程。",
               petWorkDelegation: {
                 workspaceId: workspace.id,
                 objective: "修复 CodeShell 登录问题",
@@ -383,8 +383,7 @@ describe("PetDispatchService", () => {
     ).toMatchObject({
       ok: true,
       type: "chat",
-      result: { text: "任务已启动，正在处理。完成后我会在当前会话回复结果。" },
-      authoritativeReply: "任务已启动，正在处理。完成后我会在当前会话回复结果。",
+      result: { text: "我会新开工作会话，检查登录流程。" },
       delegation: {
         clientMessageId: "client-delegate",
         task: "修复 CodeShell 登录问题",
@@ -952,6 +951,10 @@ describe("PetDispatchService", () => {
                     workspaceId: workspace.id,
                     objective: "继续修复登录问题",
                     reusableSessionId: reusable.id,
+                    continuationEvidence: {
+                      priorThread: reusable.name,
+                      reason: "继续排查该登录修复中的剩余失败。",
+                    },
                   },
                 },
               },
@@ -1583,7 +1586,15 @@ describe("PetDispatchService", () => {
     expect(resolverCalls).toBe(0);
   });
 
-  test("replaces Mimi's launch claim and reports a delegationError when the Work Session cannot start", async () => {
+  test("Mimi composes a read-only launch-failure receipt without duplicating launch or host actions", async () => {
+    const workerParams: Record<string, unknown>[] = [];
+    const executed: Array<{ kind: string; payload: Record<string, unknown> }> = [];
+    const originalActions = [
+      { kind: "gatewayReply", payload: { text: "已交给工作会话。" } },
+      { kind: "memory", payload: { action: "remember", text: "汇报先说结论" } },
+    ];
+    let launches = 0;
+    const feedbackText = "工作会话没能启动，队列拒绝了请求。这次还没有开始修复。";
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
       aggregator: {
@@ -1592,6 +1603,25 @@ describe("PetDispatchService", () => {
       },
       worker: {
         requestWorker: async (_method, params) => {
+          workerParams.push(params);
+          if (params.injected) {
+            return {
+              ok: true,
+              result: {
+                text: feedbackText,
+                reason: "completed",
+                // Even a malformed/older worker cannot introduce new side effects
+                // through a receipt: the dispatcher consumes only its text.
+                extensions: {
+                  pet: {
+                    hostActions: [
+                      { kind: "memory", payload: { action: "remember", text: "ignore this" } },
+                    ],
+                  },
+                },
+              },
+            };
+          }
           const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
             (candidate) => candidate.name === "CodeShell",
           )!;
@@ -1599,6 +1629,8 @@ describe("PetDispatchService", () => {
             ok: true,
             result: {
               text: "已交给工作会话。",
+              reason: "completed",
+              extensions: { pet: { hostActions: originalActions } },
               petWorkDelegation: {
                 workspaceId: workspace.id,
                 objective: "修复 CodeShell 登录问题",
@@ -1608,9 +1640,22 @@ describe("PetDispatchService", () => {
         },
       },
       hostCwd: "/safe/pet",
+      managerModel: async () => "mimi-model",
+      personalization: () => ({ responseLanguage: "简体中文", communicationStyle: "简洁" }),
       listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
       startWorkSession: async () => {
+        launches += 1;
         throw new Error("queue rejected");
+      },
+      hostActions: {
+        gatewayReply: async (payload) => {
+          executed.push({ kind: "gatewayReply", payload });
+          return { text: payload.text };
+        },
+        memory: async (payload) => {
+          executed.push({ kind: "memory", payload });
+          return { id: "memory-one" };
+        },
       },
     });
 
@@ -1618,17 +1663,193 @@ describe("PetDispatchService", () => {
       type: "chat",
       message: "修复登录问题",
       clientMessageId: "client-delegate-failed",
+      source: imSource("owner"),
     });
     expect(failedResult).toMatchObject({
       ok: true,
       type: "chat",
       petSessionId: "pet-one",
-      result: { text: "任务未能启动，请稍后重试。" },
-      authoritativeReply: "任务未能启动，请稍后重试。",
+      result: { text: feedbackText, extensions: { pet: { hostActions: originalActions } } },
       delegationError: "Mimi failed to start the delegated Work Session: queue rejected",
     });
     expect(failedResult).not.toHaveProperty("delegation");
+    expect(failedResult).not.toHaveProperty("authoritativeReply");
+    expect(launches).toBe(1);
+    expect(workerParams).toHaveLength(2);
+    expect(workerParams[1]).toMatchObject({
+      sessionId: "pet-one",
+      requireExisting: true,
+      model: "mimi-model",
+      injected: true,
+      disableGoal: true,
+      toolAllowlist: [],
+      skillAllowlist: [],
+      clientMessageId: expect.stringMatching(/^pet-launch-receipt-[a-f0-9]{64}$/),
+      profileParams: { workspaces: [], reusableSessions: [], hostActions: [], outboundTargets: [] },
+    });
+    expect(validatePetRunParams(workerParams[1]!)).toBeNull();
+    const receiptWorld = JSON.parse(String(workerParams[1]!.petRuntimeContext));
+    expect(receiptWorld).toMatchObject({
+      currentMessageSource: { kind: "im-gateway", channel: "wechat" },
+      personalization: { responseLanguage: "简体中文", communicationStyle: "简洁" },
+      delegationLaunchReceipt: {
+        requestedCount: 1,
+        startedCount: 0,
+        requested: [{ objective: "修复 CodeShell 登录问题" }],
+        started: [],
+        error: "Mimi failed to start the delegated Work Session: queue rejected",
+      },
+    });
+    expect(receiptWorld).not.toHaveProperty("currentMessageCapabilities");
+    expect(executed).toEqual([
+      { kind: "gatewayReply", payload: { text: feedbackText } },
+      originalActions[1]!,
+    ]);
   });
+
+  test("keeps every actual started session in the bounded partial-launch receipt", async () => {
+    let receiptWorld: Record<string, any> = {};
+    let runtimeLength = 0;
+    let launches = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          if (params.injected) {
+            const runtime = String(params.petRuntimeContext);
+            runtimeLength = runtime.length;
+            receiptWorld = JSON.parse(runtime);
+            return {
+              ok: true,
+              result: { text: "七项已启动，一项未能启动。", reason: "completed" },
+            };
+          }
+          return {
+            ok: true,
+            result: {
+              text: "正在派发。",
+              reason: "completed",
+              extensions: {
+                pet: {
+                  workDelegations: Array.from({ length: 8 }, (_, index) => ({
+                    workspaceId: (params.petWorkspaces as Array<{ id: string }>)[0]!.id,
+                    objective: `${index}: ${"request detail ".repeat(550)}`,
+                  })),
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      startWorkSession: async () => {
+        const index = launches++;
+        if (index === 7) throw new Error("queue rejected ".repeat(1_000));
+        return { sessionId: `started-${index}`, cwd: "/work/project" };
+      },
+    });
+
+    const result = await service.dispatch({
+      type: "chat",
+      message: "处理这些任务",
+      clientMessageId: "partial-launch",
+    });
+
+    expect(result).toMatchObject({ ok: true, result: { text: "七项已启动，一项未能启动。" } });
+    expect(result).not.toHaveProperty("authoritativeReply");
+    expect(launches).toBe(8);
+    expect(runtimeLength).toBeLessThanOrEqual(32_768);
+    expect(receiptWorld.delegationLaunchReceipt.requested).toHaveLength(8);
+    expect(receiptWorld.delegationLaunchReceipt.started).toEqual(
+      Array.from({ length: 7 }, (_, index) =>
+        expect.objectContaining({
+          sessionId: `started-${index}`,
+          reusedSession: false,
+        }),
+      ),
+    );
+    expect(receiptWorld.delegationLaunchReceipt).toMatchObject({
+      requestedCount: 8,
+      startedCount: 7,
+    });
+  });
+
+  test.each(["max_turns", "model_error", "worker-error", "throw"])(
+    "uses the incomplete-model fallback when the launch receipt fails with %s",
+    async (failure) => {
+      let workerCalls = 0;
+      let launches = 0;
+      let gatewayReplies = 0;
+      const service = new PetDispatchService({
+        metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+        aggregator: {
+          getSnapshot: () => snapshot,
+          resolveNavigation: async () => ({ status: "not-found" }),
+        },
+        worker: {
+          requestWorker: async (_method, params) => {
+            workerCalls += 1;
+            if (params.injected) {
+              if (failure === "throw") throw new Error("worker disconnected");
+              if (failure === "worker-error") return { ok: false, message: "model unavailable" };
+              return { ok: true, result: { text: "已经成功开始了", reason: failure } };
+            }
+            return {
+              ok: true,
+              result: {
+                text: "我会派发任务。",
+                reason: "completed",
+                petWorkDelegation: {
+                  workspaceId: (params.petWorkspaces as Array<{ id: string }>)[0]!.id,
+                  objective: "修复登录",
+                },
+                extensions: {
+                  pet: { hostActions: [{ kind: "gatewayReply", payload: { text: "已经启动了" } }] },
+                },
+              },
+            };
+          },
+        },
+        hostCwd: "/safe/pet",
+        startWorkSession: async () => {
+          launches += 1;
+          throw new Error("queue rejected");
+        },
+        hostActions: {
+          gatewayReply: async () => {
+            gatewayReplies += 1;
+            return { text: "must not send" };
+          },
+        },
+      });
+
+      const result = await service.dispatch({
+        type: "chat",
+        message: "修复登录",
+        clientMessageId: "failed-receipt",
+        source: imSource("owner"),
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        type: "chat",
+        result: {
+          text: "任务未能启动，请稍后重试。",
+          reason: failure === "max_turns" ? "max_turns" : "model_error",
+        },
+        authoritativeReply: "任务未能启动，请稍后重试。",
+        delegationError: "Mimi failed to start the delegated Work Session: queue rejected",
+        hostActions: [{ kind: "gatewayReply", ok: false }],
+      });
+      expect(workerCalls).toBe(2);
+      expect(launches).toBe(1);
+      expect(gatewayReplies).toBe(0);
+    },
+  );
 
   test("does not treat the legacy text marker as a delegation", async () => {
     const service = new PetDispatchService({

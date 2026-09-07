@@ -26,6 +26,23 @@ describe("normalizeKey", () => {
 });
 
 describe("planKeySequence", () => {
+  test("ControlOrMeta follows the target platform and supports mac editing commands", () => {
+    const mac = planKeySequence("ControlOrMeta+c", "mac");
+    expect(mac[1]).toMatchObject({ key: "c", modifiers: 4, commands: ["copy"] });
+    expect(mac[1]).not.toHaveProperty("text");
+    expect(mac[2]).not.toHaveProperty("commands");
+    const other = planKeySequence("ControlOrMeta+c", "other");
+    expect(other[1]).toMatchObject({ key: "c", modifiers: 2 });
+    expect(other[1]).not.toHaveProperty("commands");
+  });
+
+  test("literal Control keeps its semantics on macOS; Meta shortcuts edit normally", () => {
+    expect(planKeySequence("Control+c", "mac")[1]).toMatchObject({ key: "c", modifiers: 2 });
+    expect(planKeySequence("Control+c", "mac")[1]).not.toHaveProperty("commands");
+    expect(planKeySequence("Meta+a", "mac")[1]?.commands).toEqual(["selectAll"]);
+    expect(planKeySequence("ControlOrMeta+Shift+z", "mac")[2]?.commands).toEqual(["redo"]);
+    expect(planKeySequence("ControlOrMeta+Alt+c", "mac")[2]).not.toHaveProperty("commands");
+  });
   test("single key → keyDown + keyUp", () => {
     const seq = planKeySequence("Enter");
     expect(seq.map((e) => e.type)).toEqual(["keyDown", "keyUp"]);

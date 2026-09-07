@@ -64,6 +64,98 @@ describe("listDiskSessions", () => {
     expect(sessions.map((s) => s.id)).toEqual(["top-1"]);
   });
 
+  it("lists only direct children for an explicit parent, without adding them to the sidebar", async () => {
+    mkSession(dir, "top-1", { parentSessionId: null }, 1000);
+    mkSession(dir, "top-2", { parentSessionId: null }, 2000);
+    mkSession(dir, "child-old", { parentSessionId: "top-1", origin: "subagent" }, 3000);
+    mkSession(dir, "child-new", { parentSessionId: "top-1", origin: "subagent" }, 4000);
+    mkSession(dir, "other-child", { parentSessionId: "top-2", origin: "subagent" }, 5000);
+    mkSession(dir, "grandchild", { parentSessionId: "child-new", origin: "subagent" }, 6000);
+
+    const children = await listDiskSessions({ limit: 10, parentSessionId: "top-1" }, dir);
+
+    expect(children.sessions.map((session) => session.id)).toEqual(["child-new", "child-old"]);
+    expect(children.sessions[0]).toMatchObject({
+      engineSessionId: "child-new",
+      parentSessionId: "top-1",
+      origin: "subagent",
+    });
+    expect(
+      (await listDiskSessions({ limit: 10 }, dir)).sessions.map((session) => session.id),
+    ).toEqual(["top-2", "top-1"]);
+  });
+
+  it("paginates child queries across unrelated sessions and hides internal sessions", async () => {
+    for (let i = 0; i < 5; i++) {
+      mkSession(
+        dir,
+        `child-${i}`,
+        { parentSessionId: "parent", origin: "subagent" },
+        1000 + i * 2000,
+      );
+      mkSession(
+        dir,
+        `other-${i}`,
+        { parentSessionId: "other", origin: "subagent" },
+        2000 + i * 2000,
+      );
+    }
+    mkSession(
+      dir,
+      "hidden-pet",
+      { parentSessionId: "parent", origin: "subagent", kind: "pet" },
+      15000,
+    );
+    mkSession(
+      dir,
+      "hidden-ephemeral",
+      { parentSessionId: "parent", origin: "subagent", ephemeral: true },
+      14000,
+    );
+    mkSession(
+      dir,
+      "hidden-archived",
+      { parentSessionId: "parent", origin: "subagent", archivedAt: 1 },
+      13000,
+    );
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < 10; page++) {
+      const result = await listDiskSessions({ limit: 2, parentSessionId: "parent", cursor }, dir);
+      ids.push(...result.sessions.map((session) => session.id));
+      if (!result.nextCursor) break;
+      cursor = result.nextCursor;
+    }
+    expect(ids).toEqual(["child-4", "child-3", "child-2", "child-1", "child-0"]);
+  });
+
+  it("keeps child history accessible after its temporary worktree is removed", async () => {
+    mkSession(
+      dir,
+      "child",
+      {
+        parentSessionId: "parent",
+        origin: "subagent",
+        cwd: path.join(dir, "removed-worktree"),
+      },
+      1000,
+    );
+
+    const result = await listDiskSessions({ limit: 10, parentSessionId: "parent" }, dir);
+
+    expect(result.sessions.map((session) => session.id)).toEqual(["child"]);
+    expect((await listDiskSessions({ limit: 10 }, dir)).sessions).toEqual([]);
+  });
+
+  it("rejects an invalid parent filter instead of silently listing top-level sessions", async () => {
+    mkSession(dir, "top-1", { parentSessionId: null }, 1000);
+    for (const parentSessionId of ["", ".", "..", "../parent", "parent/child", "a".repeat(129)]) {
+      await expect(listDiskSessions({ limit: 10, parentSessionId }, dir)).rejects.toThrow(
+        "invalid parent session id",
+      );
+    }
+  });
+
   it("filters ephemeral and legacy qchat sessions out of the ordinary picker", async () => {
     mkSession(dir, "normal", { cwd: "/p", parentSessionId: null }, 1000);
     mkSession(dir, "side-with-marker", { cwd: "/p", parentSessionId: null, ephemeral: true }, 2000);

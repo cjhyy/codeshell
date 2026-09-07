@@ -111,6 +111,9 @@ function wrapChildRuntimeStream(
 
 export interface CreateSubAgentSpawnerDeps {
   parentConfig: EngineConfig;
+  parentSessionId?: string;
+  /** Tool context is assembled before the run session is initialized. */
+  getParentSessionId?: () => string;
   /** Fully resolved sandbox for this parent run, including settings layers. */
   parentSandbox: SandboxConfig;
   presetName: AgentPresetName;
@@ -341,7 +344,11 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         maxContextTokens: deps.parentConfig.maxContextTokens ?? 200_000,
         sessionStorageDir: deps.parentConfig.sessionStorageDir,
         headless: deps.parentConfig.headless,
-        readOnlySession: request.readOnlySession,
+        readOnlySession: deps.parentConfig.readOnlySession || request.readOnlySession,
+        projectTrusted: deps.parentConfig.projectTrusted,
+        allowBackgroundShells: deps.parentConfig.allowBackgroundShells,
+        approvalBackend: deps.parentConfig.approvalBackend,
+        approvalRouter: deps.parentConfig.approvalRouter,
         skillAllowlist: request.skillAllowlist,
         sandbox: resolveChildSandbox(request.sandboxMode, deps.parentSandbox),
         mcpServers: resolveChildMcpServers(request.mcpAllowlist, deps.parentConfig.mcpServers),
@@ -350,37 +357,62 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
       };
       const destination = request.streamOverride ?? deps.parentStream;
       const childSessionId = request.resumeSessionId ?? request.agentId;
-      if (deps.childRunner.createChild && request.runtimeGeneration !== undefined) {
-        const runtime = deps.childRunner.createChild(childConfig);
-        const supervisor = new ChildRunSupervisor(
-          runtime,
-          childSessionId,
-          request.runtimeGeneration,
-        );
-        const ownerToken = nanoid();
-        const bound = request.bindLiveControl?.(supervisor, ownerToken);
-        supervisor.setCloseIntake(() =>
-          request.closeLiveControl?.(
-            supervisor,
-            bound && bound !== true ? (bound as ChildWriterLease) : undefined,
-          ),
-        );
-        if (bound === false) {
-          throw new Error(`child session ${childSessionId} already has a live transcript writer`);
+      const parentSessionId = deps.getParentSessionId?.() ?? deps.parentSessionId;
+      const host = parentSessionId
+        ? deps.parentConfig.createChildHostBindings?.({
+            parentSessionId,
+            sessionId: childSessionId,
+            signal: request.signal,
+          })
+        : undefined;
+      if (host) {
+        childConfig.browserBridge = host.browserBridge;
+        childConfig.askUser = host.askUser;
+        childConfig.injectCredentialToBrowser = host.injectCredentialToBrowser;
+        childConfig.approvalBackend = host.approvalBackend ?? childConfig.approvalBackend;
+      }
+      let runtime: ChildEngineRuntime | undefined;
+      try {
+        if (deps.childRunner.createChild && request.runtimeGeneration !== undefined) {
+          runtime = deps.childRunner.createChild(childConfig);
+          const supervisor = new ChildRunSupervisor(
+            runtime,
+            childSessionId,
+            request.runtimeGeneration,
+          );
+          const ownerToken = nanoid();
+          const bound = request.bindLiveControl?.(supervisor, ownerToken);
+          supervisor.setCloseIntake(() =>
+            request.closeLiveControl?.(
+              supervisor,
+              bound && bound !== true ? (bound as ChildWriterLease) : undefined,
+            ),
+          );
+          if (bound === false) {
+            throw new Error(`child session ${childSessionId} already has a live transcript writer`);
+          }
+          host?.activate?.();
+          return await supervisor.run(request.prompt, {
+            signal: request.signal,
+            onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
+            sessionId: childSessionId,
+            onAgentProgress: request.onAgentProgress,
+          });
         }
-        return await supervisor.run(request.prompt, {
+        host?.activate?.();
+        const result = await deps.childRunner.runChild(childConfig, request.prompt, {
           signal: request.signal,
           onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
           sessionId: childSessionId,
-          onAgentProgress: request.onAgentProgress,
         });
+        return result;
+      } finally {
+        try {
+          host?.dispose();
+        } finally {
+          await runtime?.dispose?.();
+        }
       }
-      const result = await deps.childRunner.runChild(childConfig, request.prompt, {
-        signal: request.signal,
-        onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
-        sessionId: childSessionId,
-      });
-      return result;
     },
   };
 }

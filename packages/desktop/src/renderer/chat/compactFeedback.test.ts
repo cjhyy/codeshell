@@ -45,6 +45,8 @@ describe("compact feedback", () => {
     expect(compactStrategyLabel("snip", t("zh"))).toBe("裁剪");
     expect(compactStrategyLabel("window", t("en"))).toBe("window");
     expect(compactStrategyLabel("compacted", t("en"))).toBe("general compaction");
+    expect(compactStrategyLabel("notes", t("zh"))).toBe("笔记接续");
+    expect(compactStrategyLabel("notes", t("en"))).toBe("working notes");
     expect(compactStrategyLabel("custom-tier", t("en"))).toBe("custom-tier");
   });
 

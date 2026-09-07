@@ -73,6 +73,7 @@ export const chat = {
         strategy: {
           compacted: "综合压缩",
           summary: "摘要",
+          notes: "笔记接续",
           snip: "裁剪",
           window: "窗口保留",
           micro: "轻量清理",
@@ -342,6 +343,7 @@ export const chat = {
         strategy: {
           compacted: "general compaction",
           summary: "summary",
+          notes: "working notes",
           snip: "snip",
           window: "window",
           micro: "micro cleanup",

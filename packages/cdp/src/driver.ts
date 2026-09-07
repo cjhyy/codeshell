@@ -27,7 +27,7 @@ import type {
   CdpReadOptions,
   CdpScrollState,
 } from "./types.js";
-import { planKeySequence } from "./keymap.js";
+import { planKeySequence, type KeyboardPlatform } from "./keymap.js";
 
 /** Default cap for extracted page text (chars). */
 export const CONTENT_CHAR_CAP = 12_000;
@@ -44,6 +44,10 @@ export const DEFAULT_IMAGE_FETCH_TIMEOUT_MS = 15_000;
 export const DEFAULT_NAVIGATION_SCHEMES = ["http:", "https:", "about:"] as const;
 
 export interface CdpActionsDriverOptions {
+  /** Host OS of the target browser; required for macOS shortcut semantics. */
+  keyboardPlatform?: KeyboardPlatform;
+  /** Host-assigned target generation, so refs/cursors cannot cross recreated targets. */
+  documentNamespace?: string;
   /** Optional host policy gate; false blocks before Page.navigate. */
   canNavigate?: (url: URL) => boolean | Promise<boolean>;
   /** Allowed URL schemes. Defaults to http(s) plus about:blank. */
@@ -113,18 +117,20 @@ export class CdpActionsDriver {
 
   /** Main-frame identity used to invalidate snapshots/cursors after navigation. */
   async currentDocumentId(fallbackUrl?: string): Promise<string> {
+    const scoped = (id: string) =>
+      this.options.documentNamespace ? `${this.options.documentNamespace}:${id}` : id;
     try {
       const tree = (await this.send("Page.getFrameTree")) as {
         frameTree?: { frame?: { id?: string; loaderId?: string; url?: string } };
       };
       const frame = tree.frameTree?.frame;
-      if (frame?.id && frame.loaderId) return `${frame.id}:${frame.loaderId}`;
-      if (frame?.id && frame.url) return `${frame.id}:url:${frame.url}`;
+      if (frame?.id && frame.loaderId) return scoped(`${frame.id}:${frame.loaderId}`);
+      if (frame?.id && frame.url) return scoped(`${frame.id}:url:${frame.url}`);
     } catch {
       // Older/minimal CDP transports may not expose Page.getFrameTree.
     }
     const info = fallbackUrl === undefined ? await this.pageInfo() : undefined;
-    return `url:${fallbackUrl ?? info?.url ?? ""}`;
+    return scoped(`url:${fallbackUrl ?? info?.url ?? ""}`);
   }
 
   /** Resolve a backendDOMNodeId to its element's viewport-center coordinates, or
@@ -245,7 +251,7 @@ export class CdpActionsDriver {
    * "Meta+Shift+z"). The key map + sequence planning live in keymap.ts.
    */
   async pressKey(spec: string): Promise<CdpActionResult> {
-    const seq = planKeySequence(spec);
+    const seq = planKeySequence(spec, this.options.keyboardPlatform);
     if (seq.length === 0) return { ok: false, detail: `empty key spec: ${spec}` };
     try {
       for (const ev of seq) {
