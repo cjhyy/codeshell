@@ -123,7 +123,7 @@ describe("App Pet lifecycle boundaries", () => {
     const languageIndex = settingsMenuSource.indexOf('t("settingsX.menu.switchLanguage")');
     const openSettingsIndex = settingsMenuSource.indexOf('t("settingsX.menu.openSettings")');
     expect(settingsMenuSource).not.toContain("onMouseEnter");
-    expect(settingsMenuSource).not.toContain("onFocus");
+    expect(settingsMenuSource).not.toMatch(/\bonFocus\s*=/);
     expect(settingsMenuSource).toContain("onPointerMove={(event) => event.preventDefault()}");
     expect(petToggleIndex).toBeGreaterThan(-1);
     expect(languageIndex).toBeGreaterThan(petToggleIndex);

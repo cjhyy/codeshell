@@ -1,12 +1,12 @@
 /**
- * Composition golden baseline (design §12 Phase A/B).
+ * Reviewed composition golden baseline (design §12 Phase A/B).
  *
- * The fixture was generated from the PRE-cutover legacy composition path
+ * The fixture originated from the PRE-cutover legacy composition path
  * (composeToolCatalog + registerExtensionModules order, resolveAgentPreset,
- * engine behavior-profile merge) at the baseline commit recorded inside it.
- * Post-cutover, the product AgentModule factories compiled through
- * compileComposition() must reproduce that snapshot item by item — this is
- * the proof that the cutover changed wiring, not behavior.
+ * engine behavior-profile merge). Post-cutover, it tracks deliberate, reviewed
+ * composition changes, with their baseline commit recorded inside it. Product
+ * AgentModule factories compiled through compileComposition() must reproduce
+ * that snapshot item by item to detect unintended behavior changes.
  *
  * The fixture is frozen: do NOT regenerate it to make this test pass. Only
  * a deliberate, reviewed composition change may update it
@@ -36,7 +36,7 @@ describe("composition golden baseline", () => {
   });
   const snapshot = toCompositionSnapshot(composition);
 
-  test("product factories reproduce the pre-cutover legacy composition", () => {
+  test("product factories reproduce the reviewed composition baseline", () => {
     if (process.env.UPDATE_COMPOSITION_GOLDEN === "1") {
       const baselineCommit = execSync("git rev-parse HEAD").toString().trim();
       writeFileSync(GOLDEN_PATH, JSON.stringify({ baselineCommit, snapshot }, null, 2));

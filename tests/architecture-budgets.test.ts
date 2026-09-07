@@ -46,7 +46,10 @@ describe("architecture growth budgets", () => {
     // split the host-action table itself. (The rationale above was written
     // when the change landed but the number was never raised; 7_002 is the
     // measured size of that reviewed wiring.)
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_002);
+    // v0.9.7 adds model-service and activity-history adapter wiring, the delivered
+    // reply body, and parentSessionId validation at the existing IPC boundary
+    // (+25). Their service implementations remain outside the composition root.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_027);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );
@@ -76,7 +79,12 @@ describe("architecture growth budgets", () => {
     // extracted to session-message-result.ts (59) and
     // session-message-workspace.ts (84), so this file validates and dispatches
     // rather than implementing the routing.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_593);
+    // v0.9.7's child-host lifecycle adds activation/disposal, not just wiring
+    // (+210 total). It owns this connection's generation, pending approvals,
+    // notification targets and timers, so cleanup stays with AgentServer's
+    // private state. Approval policy/queues and child-run creation remain in
+    // ApprovalRouter/InteractiveApprovalBackend and subagent-spawner respectively.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_803);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -89,7 +97,11 @@ describe("architecture growth budgets", () => {
     // state with an engine lifetime — it is cleared when the turn loop it
     // belongs to ends — so there is nothing to extract without separating the
     // value from the loop that owns it.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_318);
+    // v0.9.7 threads context-note strategy and retained messages through runs,
+    // synchronizes private compaction caches/usage anchors, and installs child
+    // host bindings (+91). Note persistence/rollover/replay lives in context/notes
+    // and the builtin tools; Engine retains ownership of its per-run state.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_409);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

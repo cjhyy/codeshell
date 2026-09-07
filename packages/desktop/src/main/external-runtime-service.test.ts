@@ -5,7 +5,7 @@
  * `startExternalRuntimeSession` is stubbed via module mocking, because the point
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { SessionManager } from "@cjhyy/code-shell-core";
 
 type StartArgs = Record<string, unknown>;
@@ -40,7 +40,13 @@ function fakeSession(args: StartArgs) {
   };
 }
 
+// Keep unrelated exports intact for other desktop suites loaded in this process.
+// Snapshot the namespace before mocking, because module export bindings are live.
+const runtimeExports = {
+  ...(await import("@cjhyy/code-shell-capability-coding/external-runtimes")),
+};
 mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
+  ...runtimeExports,
   startExternalRuntimeSession: async (args: StartArgs) => {
     starts.push(args);
     return fakeSession(args);
@@ -48,6 +54,9 @@ mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
   textWithAttachmentReferences: (input: { text: string; attachments?: Array<{ path: string }> }) =>
     [input.text, ...(input.attachments ?? []).map((attachment) => attachment.path)].join("\n"),
 }));
+afterAll(() => {
+  mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => runtimeExports);
+});
 
 let trust: "trusted" | "untrusted" = "trusted";
 

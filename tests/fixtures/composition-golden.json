@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "da3bdef4916352ff9110323e4449adfe32af9c81",
+  "baselineCommit": "b5093df548b5939eaae61cb961786324a297cd0a",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -228,6 +228,33 @@
       },
       {
         "name": "TodoWrite",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "SaveContextNote",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "NewContext",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "SearchHistory",
         "moduleId": "core",
         "exposure": "preset-tags",
         "presetTags": [

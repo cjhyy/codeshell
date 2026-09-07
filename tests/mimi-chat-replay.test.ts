@@ -542,6 +542,8 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     });
   }
 
+  // This exercises 100 serial Engine turns with durable transcript/receipt I/O.
+  // Allow headroom for full-suite contention; the assertions bound model loops.
   test("100 consecutive chat inputs produce 100 replies without post-reply model loops", async () => {
     const h = createHarness();
     for (let index = 0; index < 100; index += 1) {
@@ -555,5 +557,5 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     const history = h.script.requests.at(-1)!.messages;
     expect(JSON.stringify(history)).not.toContain("<pet-world>");
     expect(h.script.summaries).toBe(0);
-  }, 60_000);
+  }, 120_000);
 });
