@@ -29,6 +29,7 @@ breaking.
 - Preserved conversation titles and kept temporary internal sessions out of activity history.
 - Showed live CLI login state on Link cards and centered the desktop ask-user card.
 - Let the macOS sandbox reach the keychain and corrected Mimi's delivered-message receipts.
+- Serialized concurrent saves of the same agent definition through replacement and read registration.
 - Improved session reuse, delegation receipt handling, and test isolation.
 
 ## [0.9.3] - 2026-09-01

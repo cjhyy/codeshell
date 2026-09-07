@@ -1026,18 +1026,24 @@ try {
     { mode: 0o600 },
   );
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
+  stage = "Electron launch";
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
   });
-  await installFixture();
+  stage = "renderer readiness";
   win = await findCodeShellWindow(app);
+  // Wait for the production main module to finish registering its IPC handlers
+  // before replacing them. electron.launch() alone can resolve before startup.
+  stage = "fixture installation";
+  await installFixture();
   win.on("pageerror", () => rendererErrors.push(true));
   await win.route(/^https?:\/\//, (route) => route.abort());
   await win.evaluate(() => {
     localStorage.setItem("codeshell.uiLanguage", "zh");
   });
+  stage = "settings navigation";
   await win.reload();
   await win.setViewportSize({ width: 1280, height: 900 });
   await win.locator("#root").waitFor({ state: "visible" });
@@ -1050,6 +1056,20 @@ try {
 } catch (error) {
   // Do not print Playwright errors: input-action call logs can contain key text.
   console.error(`CodeShell Electron model settings E2E failed during ${stage}`);
+  const message = typeof error?.message === "string" ? error.message : "";
+  const errorType = ["Error", "ReferenceError", "TypeError", "TimeoutError"].includes(error?.name)
+    ? error.name
+    : "UnknownError";
+  // Only emit fixed labels, never the matched text or a serialized error.
+  const failureKind = [
+    [/structuredClone is not defined|structuredClone is not a function/i, "clone-unavailable"],
+    [/Attempted to register a second handler/i, "duplicate-ipc-handler"],
+    [/No handler registered/i, "ipc-handler-unavailable"],
+    [/Execution context was destroyed|Cannot find context with specified id/i, "context-unavailable"],
+    [/Target.*(?:has been closed|closed)|browser has been closed/i, "electron-target-closed"],
+    [/timeout|timed out/i, "timeout"],
+  ].find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified";
+  console.error(`Failure category: ${failureKind} (${errorType})`);
   console.error(
     error.stack?.match(/e2e-model-settings\.mjs:\d+:\d+/)?.[0] ?? "No script location available",
   );

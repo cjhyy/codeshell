@@ -22,6 +22,10 @@ import { randomUUID } from "node:crypto";
 import * as os from "node:os";
 import * as path from "node:path";
 
+// A same-path replacement must not race another save's canonical-path lookup.
+// Each gate always resolves, so one failed write cannot poison later saves.
+const pendingAgentWrites = new Map<string, Promise<void>>();
+
 export interface AgentSummary {
   name: string;
   description: string;
@@ -125,8 +129,7 @@ function assertAgentDefinition(def: AgentDefinition): void {
       (!Array.isArray(def.tools) ||
         def.tools.length > 256 ||
         def.tools.some(
-          (tool) =>
-            typeof tool !== "string" || !tool || tool.length > 512 || tool.includes("\0"),
+          (tool) => typeof tool !== "string" || !tool || tool.length > 512 || tool.includes("\0"),
         )))
   ) {
     throw new Error("invalid or unbounded agent definition");
@@ -176,13 +179,25 @@ export async function saveAgent(
     throw new Error(`refuse to write outside agents dir: ${target}`);
   }
   const tmp = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  const previous = pendingAgentWrites.get(target);
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  pendingAgentWrites.set(target, current);
+  await previous;
   try {
-    await fs.writeFile(tmp, serializeAgentDefinition(clean), { encoding: "utf8", mode: 0o600 });
-    await fs.rename(tmp, target);
+    try {
+      await fs.writeFile(tmp, serializeAgentDefinition(clean), { encoding: "utf8", mode: 0o600 });
+      await fs.rename(tmp, target);
+      rememberCodeShellMarkdownPath(target);
+    } finally {
+      await fs.rm(tmp, { force: true }).catch(() => undefined);
+    }
   } finally {
-    await fs.rm(tmp, { force: true }).catch(() => undefined);
+    release();
+    if (pendingAgentWrites.get(target) === current) pendingAgentWrites.delete(target);
   }
-  rememberCodeShellMarkdownPath(target);
   return {
     name,
     description: clean.description,
