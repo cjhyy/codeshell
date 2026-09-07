@@ -277,7 +277,11 @@ function renderOutboundMessageLine(execution: PetHostActionExecution): string {
     execution.result.attachmentCount > 0
       ? execution.result.attachmentCount
       : 0;
-  return formatPetHostActionOutboundAcceptedReceipt(label, attachmentCount);
+  const receipt = formatPetHostActionOutboundAcceptedReceipt(label, attachmentCount);
+  // The delivered body is the point of the turn; the receipt only qualifies it.
+  // Older executions predate result.text, so fall back to the receipt alone.
+  const sent = typeof execution.result?.text === "string" ? execution.result.text.trim() : "";
+  return sent ? `${sent}\n\n${receipt}` : receipt;
 }
 
 /** Render the one-time pairing URL as a PNG QR file; best-effort. */

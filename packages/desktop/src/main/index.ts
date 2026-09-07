@@ -2009,6 +2009,10 @@ async function createWindow(): Promise<BrowserWindow> {
             channel: target.channel,
             label: target.label,
             accepted: true,
+            // Carry the delivered body back so the Mimi bubble can show what was
+            // actually sent instead of a bare receipt. Only reached once
+            // sendOwnerMessage resolved, so this text is what the platform took.
+            text: text.trim(),
             ...(attachments.length > 0 ? { attachmentCount: attachments.length } : {}),
           };
         },

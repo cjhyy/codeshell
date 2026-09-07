@@ -201,6 +201,40 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.text).toContain("任务「另一个任务」在订阅前就已完成");
   });
 
+  test("shows the delivered body above the outbound receipt", async () => {
+    const sourceClientMessageId = "message-with-body";
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "我这就发给你。",
+      [
+        {
+          kind: "outboundMessage",
+          payload: { targetId: "owner-one", text: "会议改到周四下午三点。" },
+          ok: true,
+          result: {
+            label: "微信",
+            accepted: true,
+            attachmentCount: 0,
+            text: "会议改到周四下午三点。",
+          },
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
+    );
+
+    expect(enriched.text).toBe(
+      "会议改到周四下午三点。\n\n消息已提交到 微信，平台接口已接受发送请求；尚未确认收件设备已展示。",
+    );
+    // The model's pre-send promise never speaks to the outcome, so it stays out.
+    expect(enriched.text).not.toContain("我这就发给你");
+    // A multi-line receipt must still be recognized as a replacement receipt.
+    expect(
+      replacementReceiptSourceClientMessageId(
+        `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${sourceClientMessageId}`,
+        enriched.text,
+      ),
+    ).toBe(sourceClientMessageId);
+  });
+
   test("keeps outbound receipt generation and legacy replacement recognition in one contract", async () => {
     const sourceClientMessageId = "message-with-punctuation";
     const enriched = await enrichPetChatReplyWithHostActions(
