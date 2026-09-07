@@ -87,7 +87,7 @@ tokens:    id_token, access_token, refresh_token, account_id
 纯 `fs.readFile` + `JSON.parse`，best-effort 不 throw，**零 Electron 依赖**；
 `quota/index.ts:64` 已经在用 `authorization: Bearer ${creds.codexAccessToken}` 打同一个 host。
 
-→ 服务端部署形态下认证这一环**不需要新建任何东西**。
+→ 服务端部署可复用现有的**凭证读取**；长任务的 token 刷新和多用户凭证隔离仍需补齐。
 
 ## 2. 两条路线与取舍
 
@@ -96,9 +96,9 @@ tokens:    id_token, access_token, refresh_token, account_id
 对齐既有 `codex-room-agent.ts` 的 `codexArgsForTurn()` 模式（固定 argv、不过 shell）。
 
 - 优点：不碰非公开 API；token 刷新由 codex 自己管；argv allowlist 模式仓库已有先例。
-- 致命缺点：**只有 `list` 能拿到结构化数据**。`status`/`diff`/`exec` 都要解析散文，
-  违反 §1.3 的既有教训。`diff` 尤其危险——把 unified diff 从人类排版里"抠"出来，
-  一次排版微调就静默产出错误补丁。
+- 待验证：目前只确认 `list` 帮助中提供 `--json`；`status`/`diff`/`exec` 的真实输出
+  和稳定机器接口尚未验证，不能仅凭缺少这个开关断定必须解析散文。
+  尤其需要核验 `diff` 能否稳定输出可应用的补丁，再确定封装路线。
 
 ### 路线 B：直连 wham REST API
 
@@ -112,9 +112,9 @@ tokens:    id_token, access_token, refresh_token, account_id
 
 ### 倾向
 
-**B 为主，A 作为 `apply` 的兜底。** 理由：读路径（list/status/diff）必须结构化，
-否则不可靠；而 `apply` 是把补丁落到工作树的写操作，交给 codex 自己做比我们复刻
-`git apply` 语义更安全。
+**暂不确定路线，先核验 A 的输出契约与 B 的请求/响应 schema。** 读路径
+（list/status/diff）需要稳定的机器接口；`apply` 是把补丁落到工作树的写操作，
+可以优先评估复用 codex 的实现，避免自行复刻补丁应用语义。
 
 **但这是一个需要你拍板的决策**，因为 B 依赖非公开 API——见 §4 Q1。
 
@@ -135,7 +135,7 @@ codex 登录态、算力和沙箱；③ 把执行推给 OpenAI，**部署机只�
 
 | #   | 问题                                       | 倾向                                                        | 决策时点   |
 | --- | ------------------------------------------ | ----------------------------------------------------------- | ---------- |
-| Q1  | 是否接受依赖非公开 wham API                | 待拍板；若否则只能做 `list`（唯一有 `--json` 的命令）       | **开工前** |
+| Q1  | 是否接受依赖非公开 wham API                | 待拍板；先核验 CLI 真实输出及稳定接口，再确定功能范围       | **开工前** |
 | Q2  | `--env <ENV_ID>` 从哪来                    | 需先在 Codex Cloud 侧配置环境；本机当前无任务故未能实测枚举 | 开工前     |
 | Q3  | token 刷新自己做还是每次 shell 出 codex 拿 | 倾向复用 codex 自身刷新，避免复刻 OAuth 流程                | 设计细化时 |
 | Q4  | 多用户下 per-user codex 凭证如何隔离       | 随上游 Phase 2 一起解，Phase 1 不阻塞                       | Phase 2    |
@@ -144,7 +144,7 @@ codex 登录态、算力和沙箱；③ 把执行推给 OpenAI，**部署机只�
 
 - **没有真跑过一个云端任务全流程**：账号下无任务，且 `exec` 需要 `--env`，
   本次未提交真实任务（会消耗额度并在你账号留下记录，需你授权）。
-  故 `status`/`diff`/`apply` 的**真实输出格式未见过**，§2 对"散文不可解析"的判断
-  基于 `--help` 缺少 `--json` 这一确定事实，而非见过输出。
+  故 `status`/`diff`/`apply` 的**真实输出格式未见过**；`--help` 缺少 `--json`
+  不足以证明没有稳定的机器接口，§2 的封装路线仍待实测。
 - wham API 的**请求/响应 schema 未验证**（只从一条 404 错误里确认了 URL 形状）。
 - 未验证云端任务与 CodeShell session/审批模型如何对应。

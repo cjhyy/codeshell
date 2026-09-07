@@ -8,6 +8,29 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-09-07
+
+### Added
+
+- Added searchable automation session binding, rebinding, and execution-mode controls.
+- Added continuation notes, context rollover checkpoints, and original-history retrieval.
+- Persisted the latest 200 local approval decisions for the activity history page.
+
+### Changed
+
+- Improved child-session capabilities, browser ownership and lifetime, and workspace-scoped MCP roots.
+- Discover installed Codex runtime models and cache desktop model choices.
+- Merged the Hub deployment research and remote-task design drafts.
+
+### Fixed
+
+- Restored activity history from current session files, completed run receipts, and desktop logs.
+- Kept settings submenus open while moving the pointer between a submenu and its parent.
+- Preserved conversation titles and kept temporary internal sessions out of activity history.
+- Showed live CLI login state on Link cards and centered the desktop ask-user card.
+- Let the macOS sandbox reach the keychain and corrected Mimi's delivered-message receipts.
+- Improved session reuse, delegation receipt handling, and test isolation.
+
 ## [0.9.3] - 2026-09-01
 
 ### Added

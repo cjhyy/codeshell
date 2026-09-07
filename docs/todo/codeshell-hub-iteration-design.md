@@ -5,8 +5,8 @@
 > 修订：v2（2026-09-06，按 0.9.6 源码复核）——**I0–I4 全部未开工**（§1.0）；
 > §1.2「两套浏览器协议」中 serve 侧的"原始 RPC 直通"表述已证伪，实为 3 方法白名单
 > （见上游 v3 §2.1）；§1.2 桌面 mobile-remote 面被少算 2 文件 14 事件族（§1.3）；
-> IPC 计数与全文 file:line 锚点重校（§1.4）  
-> 上游文档：`codeshell-hub-remote-service-architecture.md`（方向稿 v2，本文实现其 Phase 1–3）  
+> IPC 计数与全文 file:line 锚点重校（§1.4）<br>
+> 上游文档：`codeshell-hub-remote-service-architecture.md`（方向稿 v3，本文实现其 Phase 1–3）<br>
 > 交叉文档：`multi-folder-local-project-plan.md`（多目录本地项目，实施中，见 §8）  
 > 硬约束：① 兼容服务端部署；② 桌面端（Electron）零回归；③ 客户端与执行面尽量一套代码两种宿主
 
