@@ -7,6 +7,7 @@ export function createPanelHttp(
   options: PanelManagementHttpOptions & {
     dataDir: string;
     host: "hub" | "desktop";
+    publicPathPrefix?: string;
     agentTaskOptions?: PanelAgentTaskHostOptions;
   },
 ) {

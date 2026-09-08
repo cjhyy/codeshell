@@ -8,6 +8,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { startHeadlessServer } from "./headless-server.js";
+import { startProjectControlServer } from "../project-runtime/control-server.js";
 
 interface CliArgs {
   cwd: string;
@@ -15,6 +16,8 @@ interface CliArgs {
   port: number;
   passcode?: string;
   authMode: "hub" | "passcode";
+  runtime: "local" | "docker";
+  runtimeImage?: string;
   debugLogs?: boolean;
   publicOrigin?: string;
   dataDir: string;
@@ -30,6 +33,8 @@ Options:
   --host <host>        Bind host (default: 127.0.0.1)
   --port <port>        Bind port, 0 selects a free port (default: 8790)
   --auth <mode>        hub (default) or legacy passcode
+  --runtime <mode>     local (default) or Docker project sandboxes
+  --runtime-image <tag> Prebuilt project image (default: codeshell-project-runtime:local)
   --public-url <url>   External HTTPS origin for reverse-proxy deployments
   --passcode <code>    Set or rotate the legacy passcode (selects passcode mode)
   --data-dir <path>    Persistent server data (auth, uploads and worker sessions)
@@ -43,6 +48,8 @@ const VALUE_FLAGS = new Set([
   "--port",
   "--passcode",
   "--auth",
+  "--runtime",
+  "--runtime-image",
   "--public-url",
   "--data-dir",
   "--static-root",
@@ -76,6 +83,13 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
     throw new Error("--auth must be hub or passcode");
   if (authMode === "hub" && args.passcode)
     throw new Error("--passcode cannot be combined with --auth hub");
+  const runtime = args.runtime ?? "local";
+  if (runtime !== "local" && runtime !== "docker")
+    throw new Error("--runtime must be local or docker");
+  if (runtime === "docker" && authMode !== "hub")
+    throw new Error("Docker projects require --auth hub");
+  if (args["runtime-image"] && runtime !== "docker")
+    throw new Error("--runtime-image requires --runtime docker");
   let publicOrigin: string | undefined;
   const publicUrl = args["public-url"] ?? env.CODE_SHELL_SERVE_PUBLIC_URL;
   if (publicUrl) {
@@ -95,6 +109,8 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
   }
   return {
     authMode,
+    runtime,
+    ...(args["runtime-image"] ? { runtimeImage: args["runtime-image"] } : {}),
     ...(args["debug-logs"] ? { debugLogs: true } : {}),
     ...(publicOrigin ? { publicOrigin } : {}),
     cwd: resolve(args.cwd ?? process.cwd()),
@@ -143,26 +159,40 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
   }
   const parsed = parseServeArgs(argv);
   const staticRootDir = parsed.staticRootDir ?? resolveWebAppRoot();
-  const server = await startHeadlessServer({
-    host: parsed.host,
-    port: parsed.port,
-    cwd: parsed.cwd,
-    dataDir: parsed.dataDir,
-    authMode: parsed.authMode,
-    debugLogs: parsed.debugLogs,
-    ...(parsed.publicOrigin ? { publicOrigin: parsed.publicOrigin } : {}),
-    workerEntryPath: resolveWorkerEntry(),
-    workerCapabilityModules: resolveWorkerCapabilityModules(),
-    ...(staticRootDir ? { staticRootDir } : {}),
-    ...(parsed.passcode ? { passcode: parsed.passcode } : {}),
-    log: (event, data) =>
-      console.error(`[serve] ${event}${data ? ` ${JSON.stringify(data)}` : ""}`),
-  });
+  const server =
+    parsed.runtime === "docker"
+      ? await startProjectControlServer({
+          host: parsed.host,
+          port: parsed.port,
+          dataDir: parsed.dataDir,
+          publicOrigin: parsed.publicOrigin,
+          staticRootDir,
+          runtimeImage: parsed.runtimeImage,
+        })
+      : await startHeadlessServer({
+          host: parsed.host,
+          port: parsed.port,
+          cwd: parsed.cwd,
+          dataDir: parsed.dataDir,
+          authMode: parsed.authMode,
+          debugLogs: parsed.debugLogs,
+          ...(parsed.publicOrigin ? { publicOrigin: parsed.publicOrigin } : {}),
+          workerEntryPath: resolveWorkerEntry(),
+          workerCapabilityModules: resolveWorkerCapabilityModules(),
+          ...(staticRootDir ? { staticRootDir } : {}),
+          ...(parsed.passcode ? { passcode: parsed.passcode } : {}),
+          log: (event, data) =>
+            console.error(`[serve] ${event}${data ? ` ${JSON.stringify(data)}` : ""}`),
+        });
 
   console.log(
     `CodeShell ${parsed.authMode === "hub" ? "Hub" : "web host"} listening at ${parsed.publicOrigin ?? server.url}`,
   );
-  console.log(`Workspace: ${parsed.cwd}`);
+  console.log(
+    parsed.runtime === "docker"
+      ? "Project sandboxes: Docker (project files persist in separate volumes)"
+      : `Workspace: ${parsed.cwd}`,
+  );
   if (!staticRootDir) {
     console.log("No web app build found — WS endpoint only (/ws). Build packages/web first.");
   }

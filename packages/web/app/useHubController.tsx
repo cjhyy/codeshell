@@ -22,6 +22,7 @@ import { readConfiguration, type HubConfiguration } from "./configuration.js";
 import { SessionDrafts, type SubmittedDraft } from "./drafts.js";
 import { readManagedSessions } from "./HubSessions.js";
 import { HubApprovalCard } from "./HubApprovalCard.js";
+import { captureApiScope } from "./api-context.js";
 import type { WorkbenchController } from "./workbench-types.js";
 function newSessionId(): string {
   return browserId();
@@ -90,6 +91,7 @@ export function useHubController({
   const liveRuns = React.useRef(new Set<string>());
   const decisionPending = React.useRef(new Set<string>());
   const mounted = React.useRef(false);
+  const uploadController = React.useRef<AbortController | null>(null);
   const loadingTranscript = React.useRef<{
     sessionId: string;
     events: StreamEventPayload[];
@@ -139,7 +141,7 @@ export function useHubController({
   );
 
   const refreshConfiguration = React.useCallback(async () => {
-    if (!hub) return;
+    if (!hub || !mounted.current) return;
     const request = ++configurationRequest.current;
     try {
       const next = await readConfiguration();
@@ -366,6 +368,7 @@ export function useHubController({
     client.connect();
     return () => {
       mounted.current = false;
+      uploadController.current?.abort();
       offState();
       offNotify();
       offAuth();
@@ -539,14 +542,18 @@ export function useHubController({
   };
 
   const addFiles = async (selected: FileList | null): Promise<void> => {
-    if (!selected?.length || uploadingFor !== null) return;
+    if (!selected?.length || uploadController.current) return;
+    const controller = new AbortController();
+    const scope = captureApiScope();
+    uploadController.current = controller;
     setUploadingFor(activeIdRef.current);
     setError("");
     const sessionId = activeIdRef.current;
     try {
       for (const file of Array.from(selected)) {
-        const uploaded = await uploadFile(file);
-        if (mounted.current) {
+        if (!mounted.current || controller.signal.aborted) break;
+        const uploaded = await uploadFile(file, { signal: controller.signal, scope });
+        if (mounted.current && !controller.signal.aborted) {
           draftStore.current.addFile(sessionId, uploaded);
           syncDraft(sessionId);
         }
@@ -554,7 +561,8 @@ export function useHubController({
     } catch (cause) {
       reportError(cause);
     } finally {
-      setUploadingFor(null);
+      if (uploadController.current === controller) uploadController.current = null;
+      if (mounted.current) setUploadingFor(null);
     }
   };
 

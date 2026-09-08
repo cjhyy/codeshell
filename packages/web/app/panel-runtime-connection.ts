@@ -1,5 +1,5 @@
 import { api, ApiError } from "./auth.js";
-import { apiUrl } from "./api-context.js";
+import { apiUrl, getApiProject } from "./api-context.js";
 
 export interface PanelRuntimeEvent {
   id: number;
@@ -12,10 +12,12 @@ export function connectPanelRuntime(options: {
   instanceId: string;
   expiresAt: number;
   workspace: string;
+  projectId?: string | null;
   onEvents: (events: PanelRuntimeEvent[]) => void;
   onTerminal: (cause: Error) => void;
   onStatus: (status: string) => void;
 }) {
+  const projectId = options.projectId === undefined ? getApiProject() : options.projectId;
   const root = `/api/v1/panels/runtime/${encodeURIComponent(options.instanceId)}`;
   const timers = new Set<ReturnType<typeof setTimeout>>();
   const requests = new Set<AbortController>();
@@ -71,7 +73,7 @@ export function connectPanelRuntime(options: {
     requests.add(controller);
     const timeout = schedule(() => controller.abort(), 8_000);
     try {
-      return await api<unknown>(apiUrl(`${root}${suffix}`, options.workspace), {
+      return await api<unknown>(apiUrl(`${root}${suffix}`, options.workspace, projectId), {
         method,
         ...(method === "POST"
           ? { headers: { "Content-Type": "application/json" }, body: "{}" }

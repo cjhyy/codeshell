@@ -1,3 +1,4 @@
+import { apiUrl } from "./api-context.js";
 // packages/web/app/protocol.ts
 //
 // Browser-side client for the CodeShell core JSON-RPC protocol over the
@@ -286,5 +287,5 @@ export class ProtocolClient {
 
 export function defaultWsUrl(): string {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${location.host}/ws`;
+  return `${proto}//${location.host}${apiUrl("/ws")}`;
 }

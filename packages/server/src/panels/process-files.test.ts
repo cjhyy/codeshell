@@ -21,7 +21,7 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-async function fixture(workspace?: string) {
+async function fixture(workspace?: string, linkPrefix?: string) {
   const temporary = await mkdtemp(join(tmpdir(), "panel-process-files-"));
   await mkdir(join(temporary, "downloads"));
   const root = await realpath(join(temporary, "downloads"));
@@ -38,6 +38,7 @@ async function fixture(workspace?: string) {
     void handlePanelProcessDirectory(request, response, {
       root,
       baseUrl,
+      linkPrefix,
       workspace,
       isAuthorized: async () => {
         state.checks++;
@@ -57,6 +58,15 @@ async function fixture(workspace?: string) {
 }
 
 describe("Panel process directory downloads", () => {
+  test("project prefix is applied to download links without changing internal route validation", async () => {
+    const prefix = "/p/7bc54c17-1af8-4105-87c1-f4e5c6638998";
+    const f = await fixture("/workspace", prefix);
+    const html = await (await f.request()).text();
+    expect(html).toContain(`href="${prefix}${f.baseUrl}?file=`);
+    expect((await f.request(`?file=${encodeURIComponent("演示 视频.mp4")}`)).status).toBe(200);
+    const invalid = await fixture(undefined, "//evil.example");
+    expect((await invalid.request()).status).toBe(400);
+  });
   test("preserves only the trusted workspace in cookie-based browsing and download links", async () => {
     const workspace = "/srv/项目 A&team=<primary>";
     const f = await fixture(workspace);

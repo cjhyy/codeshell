@@ -39,14 +39,22 @@ RUN bun install --frozen-lockfile --ignore-scripts --production \
       --filter '@cjhyy/code-shell-link'
 
 FROM node:22-bookworm-slim AS runtime
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates git openssh-client python3 ripgrep \
+RUN apt-get -o Acquire::Retries=3 update \
+    && apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+      ca-certificates git openssh-client curl ffmpeg ripgrep \
+      python3 python3-venv python3-pip yt-dlp unzip zip fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data /workspace/.code-shell \
     && mv /home/node /data/home \
     && mkdir -p /data/home/.code-shell \
     && ln -s /data/home /home/node \
     && chown -R node:node /data /workspace
+# Match the validated downloader version instead of relying on Bookworm's older package.
+RUN curl --fail --location --retry 3 \
+      https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp \
+      --output /usr/local/bin/yt-dlp \
+    && echo '1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6  /usr/local/bin/yt-dlp' | sha256sum --check \
+    && chmod 755 /usr/local/bin/yt-dlp
 WORKDIR /opt/codeshell
 # Preserve the installed workspace layout and relative dependency symlinks.
 COPY --from=production-dependencies /opt/codeshell/ ./

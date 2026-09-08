@@ -7,7 +7,7 @@ import type {
   MaskedLinkConnection,
 } from "@cjhyy/code-shell-link";
 import { api, ApiError } from "./auth.js";
-import { apiUrl, getApiWorkspace } from "./api-context.js";
+import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import "./hub-links.css";
 
 const ROOT = "/api/v1/links";
@@ -418,14 +418,16 @@ export function HubLinks({
                 <button
                   disabled={unavailable || !editor.label.trim() || !!conflict}
                   onClick={() => {
-                    const workspace = getApiWorkspace();
-                    const target = apiUrl(`${ROOT}/authorizations/device`, workspace);
+                    const workspace = getApiWorkspace() ?? "";
+                    const projectId = getApiProject();
+                    const target = apiUrl(`${ROOT}/authorizations/device`, workspace, projectId);
                     void operation(
                       (signal) => mutate<LinkAuthorization>(target, "POST", input(), signal),
                       (value) => {
                         authUrl.current = apiUrl(
                           `${ROOT}/authorizations/${encodeURIComponent(value.id)}`,
                           workspace,
+                          projectId,
                         );
                         setAuthorization(value);
                       },

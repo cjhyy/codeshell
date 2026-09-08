@@ -64,6 +64,8 @@ export interface PanelProcessDirectoryOptions {
   root: string;
   /** The exact authenticated route for that opaque grant. */
   baseUrl: string;
+  /** Trusted gateway prefix, used in rendered links only. */
+  linkPrefix?: string;
   /** Trusted host workspace retained in browser links for Desktop Web routing. */
   workspace?: string;
   isAuthorized(): Promise<boolean>;
@@ -141,6 +143,11 @@ export async function handlePanelProcessDirectory(
     if (!["GET", "HEAD"].includes(request.method ?? "")) fail(405, "此目录只支持浏览和下载。");
     if (
       !isAbsolute(options.root) ||
+      (options.linkPrefix !== undefined &&
+        options.linkPrefix !== "" &&
+        !/^\/p\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+          options.linkPrefix,
+        )) ||
       (options.workspace !== undefined && !isAbsolute(options.workspace)) ||
       !/^\/api\/v1\/panels\/runtime\/[A-Za-z0-9_-]+\/directory\/[A-Za-z0-9_-]+$/.test(
         options.baseUrl,
@@ -223,7 +230,7 @@ export async function handlePanelProcessDirectory(
       const rows = entries
         .map(
           (entry) =>
-            `<li><a href="${escaped(options.baseUrl + "?file=" + encodeURIComponent(entry.name) + (options.workspace === undefined ? "" : "&workspace=" + encodeURIComponent(options.workspace)))}">${escaped(entry.name)}</a><span>${entry.size.toLocaleString("en-US")} bytes</span></li>`,
+            `<li><a href="${escaped((options.linkPrefix ?? "") + options.baseUrl + "?file=" + encodeURIComponent(entry.name) + (options.workspace === undefined ? "" : "&workspace=" + encodeURIComponent(options.workspace)))}">${escaped(entry.name)}</a><span>${entry.size.toLocaleString("en-US")} bytes</span></li>`,
         )
         .join("");
       const html = `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>面板下载文件</title><style>body{font:16px system-ui,sans-serif;max-width:880px;margin:48px auto;padding:0 24px;color:#1f2937;background:#f8fafc}h1{font-size:26px}p,span{color:#64748b}ul{list-style:none;padding:0}li{display:flex;gap:24px;justify-content:space-between;padding:16px 0;border-bottom:1px solid #e2e8f0}a{color:#1d4ed8;overflow-wrap:anywhere}span{font-size:13px;white-space:nowrap}</style><h1>面板下载文件</h1><p>点击文件保存到这台设备。这里只显示当前目录中的媒体与导出文件。</p>${rows ? `<ul>${rows}</ul>` : "<p>暂无可下载的文件。</p>"}${truncated ? "<p>文件较多，当前最多显示 200 项。</p>" : ""}</html>`;

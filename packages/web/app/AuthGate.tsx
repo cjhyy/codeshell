@@ -1,5 +1,6 @@
 import React from "react";
 import { App } from "./App.js";
+import { ProjectsGate } from "./ProjectsGate.js";
 import { ApiError, post, readAuthStatus, type AuthSession, type AuthStatus } from "./auth.js";
 
 type GateState = "checking" | "setup" | "login" | "authenticated" | "legacy" | "error";
@@ -101,15 +102,24 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
     }
   };
 
-  if (state === "authenticated" || state === "legacy") {
+  if (state === "authenticated") {
     return (
-      <App
-        session={session}
-        hub={state === "authenticated"}
-        onAuthLost={authLost}
-        onCheckAuth={check}
-      />
+      <ProjectsGate onAuthLost={authLost}>
+        {(project, onBack) => (
+          <App
+            session={session}
+            hub
+            onAuthLost={authLost}
+            onCheckAuth={check}
+            projectName={project?.name}
+            onBackToProjects={onBack}
+          />
+        )}
+      </ProjectsGate>
     );
+  }
+  if (state === "legacy") {
+    return <App session={session} hub={false} onAuthLost={authLost} onCheckAuth={check} />;
   }
 
   return (

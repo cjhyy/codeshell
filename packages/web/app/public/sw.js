@@ -37,7 +37,8 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/") || url.pathname === "/ws") return;
+  if (url.pathname.startsWith("/api/") || url.pathname === "/ws" || url.pathname.startsWith("/p/"))
+    return;
   if (!url.pathname.startsWith(BASE)) return;
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => caches.match(`${BASE}offline.html`)));

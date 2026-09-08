@@ -50,11 +50,31 @@ describe("Hub service worker privacy", () => {
     for (const url of [
       "https://hub.example/api/v1/auth/status",
       "https://hub.example/api/v1/uploads/id",
+      "https://hub.example/p/12345678-1234-1234-1234-1234567890ab/api/v1/files/content",
+      "https://hub.example/p/12345678-1234-1234-1234-1234567890ab/ws",
       "https://other.example/icon.svg",
     ]) {
       listeners.fetch({ request: new Request(url), respondWith: () => handled++ });
     }
     expect(handled).toBe(0);
+    expect(matched).toEqual([]);
+  });
+  test("project directory navigation never substitutes the public offline page", () => {
+    const { listeners, matched } = worker(async () => {
+      throw new TypeError("offline");
+    });
+    let handled = false;
+    listeners.fetch({
+      request: {
+        method: "GET",
+        url: "https://hub.example/p/12345678-1234-1234-1234-1234567890ab/api/v1/panels/runtime/grant/directory/handle",
+        mode: "navigate",
+      },
+      respondWith: () => {
+        handled = true;
+      },
+    });
+    expect(handled).toBe(false);
     expect(matched).toEqual([]);
   });
   test("serves authenticated navigation from the network without caching it", async () => {

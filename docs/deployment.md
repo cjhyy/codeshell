@@ -1,5 +1,7 @@
 # 用 Node.js 部署个人 CodeShell Hub
 
+需要为多个项目分配独立容器、文件和配置时，请使用 [项目沙箱部署](project-sandboxes.md)。本文保留默认的单工作区部署方式。
+
 当前部署形态是单管理员、单 Workspace、一个独立 Worker。电脑和手机浏览器可登录远端 Hub，进行对话、审批、停止、历史管理、工作区文件预览/下载，以及模型、Skills、MCP 和 Link 管理。服务进程直接使用 Node.js，Bun 只用于安装依赖和构建；无需启动桌面 Electron。
 
 **桌面端开启的 Web 与独立 Hub 已共用浏览器工作台和管理页面。** 桌面 Web 通过设备配对连接原来的 Desktop Worker；独立 Hub 通过管理员登录连接自己的 Worker。Electron 原生窗口选择远端 Hub 作为执行目标尚未实现。两种 Web 的实现与入口区别见 [共享 Web 工作台](todo/shared-web-workbench.md)。

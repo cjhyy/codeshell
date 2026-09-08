@@ -3,6 +3,17 @@ import { join } from "node:path";
 import { parseServeArgs, resolveWorkerEntry } from "./cli.js";
 
 describe("parseServeArgs", () => {
+  test("Docker projects are explicit and require account authentication", () => {
+    expect(parseServeArgs([], {}).runtime).toBe("local");
+    expect(
+      parseServeArgs(["--runtime", "docker", "--runtime-image", "codeshell:test"], {}).runtimeImage,
+    ).toBe("codeshell:test");
+    expect(() => parseServeArgs(["--runtime", "docker", "--passcode", "secret"], {})).toThrow(
+      "require",
+    );
+    expect(() => parseServeArgs(["--runtime", "invalid"], {})).toThrow("runtime");
+    expect(() => parseServeArgs(["--runtime-image", "codeshell:test"], {})).toThrow("requires");
+  });
   test("defaults: loopback host, port 8790, dataDir under CODE_SHELL_HOME", () => {
     const args = parseServeArgs([], { CODE_SHELL_HOME: "/tmp/cs-home" } as NodeJS.ProcessEnv);
     expect(args.host).toBe("127.0.0.1");

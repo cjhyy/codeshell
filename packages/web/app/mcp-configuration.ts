@@ -266,8 +266,12 @@ export async function probeMcpServer(name: string, signal?: AbortSignal): Promis
     throw new Error("服务端返回了无效的连接测试结果。");
   return result;
 }
-export function cancelMcpProbe(name: string, workspace?: string): Promise<{ cancelled: boolean }> {
-  return api(apiUrl(path(name, "/cancel-probe"), workspace), {
+export function cancelMcpProbe(
+  name: string,
+  workspace?: string,
+  projectId?: string | null,
+): Promise<{ cancelled: boolean }> {
+  return api(apiUrl(path(name, "/cancel-probe"), workspace, projectId), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",

@@ -1,0 +1,131 @@
+.projects-page {
+  max-width: 1120px;
+  min-height: 100dvh;
+  margin: auto;
+  padding: 48px 28px;
+  color: var(--text, #e5e7eb);
+}
+.projects-header {
+  margin-bottom: 32px;
+}
+.projects-header h1 {
+  margin: 24px 0 10px;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}
+.projects-header p,
+.project-date,
+.project-empty {
+  color: var(--muted, #9ca3af);
+  line-height: 1.6;
+}
+.project-create {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  max-width: 600px;
+  margin: 24px 0 32px;
+}
+.project-create label {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  font-size: 13px;
+}
+.project-create input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border, #303541);
+  border-radius: 8px;
+  background: var(--surface, #171b24);
+  color: inherit;
+}
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+.project-card {
+  padding: 22px;
+  border: 1px solid var(--border, #303541);
+  border-radius: 14px;
+  background: var(--surface, #171b24);
+}
+.project-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.project-card h2 {
+  font-size: 17px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.project-status {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 20px;
+  color: var(--muted, #9ca3af);
+  background: #ffffff08;
+  font-size: 12px;
+}
+.project-status.running {
+  color: var(--success, #70d4b3);
+  background: #4fc69d12;
+}
+.project-status.error {
+  color: var(--danger, #fb9d9d);
+}
+.project-date {
+  font-size: 12px;
+  margin: 12px 0 22px;
+}
+.project-stop-confirm {
+  position: fixed;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: inherit;
+  max-width: 480px;
+  width: calc(100% - 40px);
+  padding: 28px;
+  background: var(--surface, #171b24);
+  border: 1px solid var(--border, #303541);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.project-stop-confirm::backdrop {
+  background: #0009;
+}
+.project-stop-confirm h2 {
+  margin-top: 0;
+  font-size: 19px;
+}
+.project-stop-confirm p {
+  line-height: 1.7;
+}
+.project-connection-note {
+  position: fixed;
+  z-index: 90;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(700px, 90vw);
+  padding: 8px 14px;
+  background: #453919;
+  color: #ffe6a0;
+  border-radius: 0 0 8px 8px;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .projects-page {
+    padding: 28px 18px;
+  }
+  .project-create {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

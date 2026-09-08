@@ -1,4 +1,11 @@
-import { apiWorkspaceHeaders } from "./api-context.js";
+import {
+  apiUrl,
+  apiWorkspaceHeaders,
+  captureApiScope,
+  isControlPlaneUrl,
+  isProjectUrl,
+  type ApiScope,
+} from "./api-context.js";
 
 /** Same-origin, cookie-authenticated API. Hub account credentials never enter storage. */
 export interface AuthSession {
@@ -43,14 +50,23 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const workspaceHeaders = apiWorkspaceHeaders();
   const request = { ...init };
-  if (Object.keys(workspaceHeaders).length && !path.includes("workspace=")) {
+  if (
+    Object.keys(workspaceHeaders).length &&
+    !isControlPlaneUrl(path) &&
+    !isProjectUrl(path) &&
+    !path.includes("workspace=")
+  ) {
     const headers = new Headers(init.headers);
     for (const [name, value] of Object.entries(workspaceHeaders)) {
       if (!headers.has(name)) headers.set(name, value);
     }
     request.headers = headers;
   }
-  const response = await fetch(path, { ...request, credentials: "same-origin", cache: "no-store" });
+  const response = await fetch(apiUrl(path, ""), {
+    ...request,
+    credentials: "same-origin",
+    cache: "no-store",
+  });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = typeof body.error === "string" ? body.error : body.error?.message;
@@ -124,13 +140,18 @@ export function browserId(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export async function uploadFile(file: File): Promise<UploadedFile> {
-  return api(`/api/v1/uploads/${browserId()}`, {
+export async function uploadFile(
+  file: File,
+  options: { signal?: AbortSignal; scope?: ApiScope } = {},
+): Promise<UploadedFile> {
+  const scope = options.scope ?? captureApiScope();
+  return api(apiUrl(`/api/v1/uploads/${browserId()}`, scope.workspace, scope.projectId), {
     method: "PUT",
     headers: {
       "Content-Type": file.type || "application/octet-stream",
       "X-File-Name": encodeURIComponent(file.name),
     },
     body: file,
+    signal: options.signal,
   });
 }

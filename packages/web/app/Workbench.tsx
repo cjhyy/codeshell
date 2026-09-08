@@ -48,7 +48,15 @@ export function submitWorkbenchPanelPrompt(
   return { accepted: true };
 }
 
-export function Workbench({ controller }: { controller: WorkbenchController }) {
+export function Workbench({
+  controller,
+  onBackToProjects,
+  projectName,
+}: {
+  controller: WorkbenchController;
+  onBackToProjects?: () => void;
+  projectName?: string;
+}) {
   const {
     connection,
     sessions,
@@ -292,6 +300,20 @@ export function Workbench({ controller }: { controller: WorkbenchController }) {
           </button>
         </div>
         <nav className="workbench-nav" aria-label="主要功能">
+          {onBackToProjects ? (
+            <button
+              className="nav-button"
+              title={projectName}
+              onClick={() => {
+                if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+                  setPendingNavigation(() => onBackToProjects);
+                else onBackToProjects();
+              }}
+            >
+              <WorkbenchIcon name="folder" />
+              <span>返回项目列表</span>
+            </button>
+          ) : null}
           <button className="nav-button new-chat-button" onClick={startNewSession}>
             <WorkbenchIcon name="plus" />
             <span>新对话</span>
@@ -389,13 +411,13 @@ export function Workbench({ controller }: { controller: WorkbenchController }) {
             onClick={() => openFiles()}
           >
             <WorkbenchIcon name="folder" />
-            <span>{workspaceName}</span>
+            <span>{projectName ?? workspaceName}</span>
             <WorkbenchIcon name="chevron" />
           </button>
         ) : (
           <div className="workspace-button" title={workspaceCwd ?? undefined}>
             <WorkbenchIcon name="folder" />
-            <span>{workspaceName}</span>
+            <span>{projectName ?? workspaceName}</span>
           </div>
         )}
         <div className="rail-section-label history-label">
@@ -640,7 +662,7 @@ export function Workbench({ controller }: { controller: WorkbenchController }) {
                   <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
                   <span className="welcome-workspace">
                     <WorkbenchIcon name="folder" />
-                    {workspaceName}
+                    {projectName ?? workspaceName}
                   </span>
                 </div>
               ) : null}
@@ -912,7 +934,9 @@ function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: ()
       }}
     >
       <h2 id="navigation-prompt-title">还有未保存的修改</h2>
-      <p>离开会丢弃未提交的修改。已经提交的保存可能仍会完成，请等待结果后再离开。</p>
+      <p>
+        离开会丢弃未提交的修改；切换项目还会清除未发送的草稿和附件。已经提交的操作可能仍会完成，请等待结果后再离开。
+      </p>
       <div className="library-actions">
         <button className="library-button primary" onClick={onStay} autoFocus>
           留在此页

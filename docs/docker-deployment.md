@@ -1,5 +1,7 @@
 # 用 Docker 部署个人 CodeShell Hub
 
+需要每个项目单独启动容器时，请使用 [项目沙箱部署](project-sandboxes.md)：Node 控制服务运行在 Docker 宿主机上。本文的 Compose 继续用于单工作区模式。
+
 先用 [Node.js 本地部署](deployment.md) 验证模型和浏览器流程，再把同一版本代码放到装有 Docker Engine 和 Docker Compose v2 的机器上。Docker 镜像内包含 Web 页面、Hub 和 Worker；运行进程使用 Node.js 22 和非 root 用户，Bun 1.3.11 只参与构建。
 
 默认映射 `http://127.0.0.1:8791`，可以和本机 Node 的 `8790` 同时运行。容器中固定监听 `0.0.0.0:8790`，只向宿主机 loopback 发布端口。它与 Desktop 开启的 Web 共用工作台页面，但采用自己的管理员登录、Worker 和持久目录；不是连接到宿主机上正在运行的 Electron。
@@ -102,7 +104,7 @@ sudo install -d -o 1000 -g 1000 -m 700 /srv/codeshell-workspace/.code-shell
 
 项目 Skills 位于 `/workspace/.code-shell/skills` 或 `/workspace/.agents/skills`，Web 新建和 GitHub 安装默认使用前者。用户级配置、Skills 和插件属于容器的 `/data/home`，随 `/data` 卷持久化；镜像将 `/home/node` 指向该目录，不会读取宿主机用户的 home。`--data-dir /data` 本身不会移动 home，这是镜像单独设置的目录布局。MCP 的 stdio 命令在容器中启动，HTTP 地址也从容器访问；`127.0.0.1` 表示该容器自身。需要额外系统包或 MCP 程序时，应写入自定义镜像并重新构建，确保重建后仍可使用。不要依赖在某次运行中的容器里临时安装程序。
 
-默认镜像没有安装 `yt-dlp` 或 `ffmpeg`。使用 Mimi Download 等依赖外部程序的面板时，需要按面板要求在自定义镜像中安装对应的 Linux 程序及依赖，再重新构建并验证面板中的程序探测。本机 Node 部署能够下载，不代表容器已具备相同依赖；宿主机的 macOS 程序也不能直接复制进 Linux 容器使用。
+本轮源码构建的默认镜像已包含 `yt-dlp` 和 `ffmpeg`；旧镜像需要重新构建才能获得这些工具。使用 Mimi Download 等面板时，仍需验证面板中的程序探测和所需站点对工具版本的要求；其他系统依赖可在自定义镜像中补充。本机 Node 部署能够下载，不代表旧容器已具备相同依赖；宿主机的 macOS 程序也不能直接复制进 Linux 容器使用。
 
 面板安装包、专用数据、键值存储和用户级程序目录随 `/data` 保留，项目绑定配置和默认下载文件随 `/workspace` 保留。浏览器中的「查看并下载文件」用于访问服务端提供并鉴权的文件列表，不会打开浏览器所在电脑的本地目录。程序运行仍需父页面确认和宿主检查，容器配置与面板授权不等于完整的操作系统沙箱。
 

@@ -136,6 +136,7 @@ export interface PanelRuntimeOptions {
   bindingCwd?: string;
   dataDir: string;
   host: "hub" | "desktop";
+  publicPathPrefix?: string;
   snapshot: () => Promise<PanelSnapshot>;
   ownerId: (request: IncomingMessage) => Promise<string | undefined>;
   isAuthorized: (request: IncomingMessage) => Promise<boolean>;
@@ -415,6 +416,12 @@ function injectBridge(html: string, source: string): string {
 
 /** Owner-bound capability grants serve reviewed static bytes to an opaque-origin iframe. */
 export function createPanelRuntime(options: PanelRuntimeOptions) {
+  const publicPathPrefix = options.publicPathPrefix ?? "";
+  if (
+    publicPathPrefix &&
+    !/^\/p\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(publicPathPrefix)
+  )
+    throw new Error("Invalid project public path prefix");
   const grants = new Map<string, Grant>();
   const assets = new Map<string, Grant>();
   const now = options.now ?? Date.now;
@@ -1000,6 +1007,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           await handlePanelProcessDirectory(request, response, {
             root,
             baseUrl: url.pathname,
+            linkPrefix: publicPathPrefix,
             workspace: options.cwd,
             isAuthorized: () => authorized(grant),
           });
@@ -1108,7 +1116,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         }
         // Relative source expressions remain tied to the resource response origin,
         // including when the public site is behind HTTPS termination.
-        const source = ASSETS + grant.asset + "/";
+        const source = publicPathPrefix + ASSETS + grant.asset + "/";
         if (extname(path).toLowerCase() === ".html") {
           bytes = Buffer.from(injectBridge(bytes.toString("utf8"), source));
           const resourceOrigin = grant.origin;

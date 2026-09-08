@@ -3,7 +3,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
-import { setApiWorkspace } from "./api-context.js";
+import { setApiWorkspace, setApiProject } from "./api-context.js";
 import { PanelHost } from "./PanelHost.js";
 
 type Element = React.ReactElement<Record<string, any>>;
@@ -30,6 +30,8 @@ async function click(element: Element) {
     await flushMicrotasks();
   });
 }
+const projectA = "12345678-1234-1234-1234-1234567890ab";
+const projectB = "12345678-1234-1234-1234-1234567890cd";
 const instanceId = "synthetic-instance-1234567890";
 const prepared = {
   instanceId,
@@ -75,6 +77,7 @@ afterEach(async () => {
   if (previousMatchMedia) Object.defineProperty(window, "matchMedia", previousMatchMedia);
   else delete (window as any).matchMedia;
   setApiWorkspace(undefined);
+  setApiProject(null);
   setSystemTime();
 });
 
@@ -384,12 +387,15 @@ test("a revoked grant closes only its panel while authentication failure is repo
 
 test("unmount cancels pending confirmations and deletes the original workspace grant", async () => {
   setApiWorkspace("/workspace/original");
+  setApiProject(projectA);
   const view = await fixture();
   await view.call("agent.submitPrompt", { prompt: "Pending task" });
   setApiWorkspace("/workspace/later");
+  setApiProject(projectB);
   await view.unmount();
   expect(view.submissions).toHaveLength(0);
   expect(view.dirty).toBe(false);
+  for (const request of view.requests) expect(request.url.pathname).toStartWith(`/p/${projectA}/`);
   const deletes = view.requests.filter((request) => request.method === "DELETE");
   expect(deletes).toHaveLength(1);
   expect(deletes[0].url.searchParams.get("workspace")).toBe("/workspace/original");
@@ -397,6 +403,7 @@ test("unmount cancels pending confirmations and deletes the original workspace g
 
 test("a late prepare response is cleaned up after the component has unmounted", async () => {
   setApiWorkspace("/workspace/original");
+  setApiProject(projectA);
   let resolvePrepare!: (response: Response) => void;
   const view = await fixture({
     intercept(request) {
@@ -408,10 +415,12 @@ test("a late prepare response is cleaned up after the component has unmounted", 
   });
   await view.unmount();
   setApiWorkspace("/workspace/later");
+  setApiProject(projectB);
   await act(async () => {
     resolvePrepare(Response.json(prepared));
     await flushMicrotasks();
   });
+  for (const request of view.requests) expect(request.url.pathname).toStartWith(`/p/${projectA}/`);
   const cleanup = view.requests.find((request) => request.method === "DELETE")!;
   expect(cleanup.url.searchParams.get("workspace")).toBe("/workspace/original");
   expect(view.requests[0].signal?.aborted).toBe(true);
@@ -419,10 +428,13 @@ test("a late prepare response is cleaned up after the component has unmounted", 
 
 test("lease renewal on resume retains the same iframe and its original workspace", async () => {
   setApiWorkspace("/workspace/original");
+  setApiProject(projectA);
   const view = await fixture();
   await view.ready();
   const frame = view.attach()!;
+  expect(frame.props.src).toStartWith(`/p/${projectA}/api/v1/panel-assets/`);
   setApiWorkspace("/workspace/later");
+  setApiProject(projectB);
   setSystemTime(prepared.expiresAt - 59_000);
   await view.resume();
   expect(view.requests.filter((request) => request.url.pathname.endsWith("/renew"))).toHaveLength(
@@ -433,6 +445,7 @@ test("lease renewal on resume retains the same iframe and its original workspace
       .find((request) => request.url.pathname.endsWith("/renew"))!
       .url.searchParams.get("workspace"),
   ).toBe("/workspace/original");
+  for (const request of view.requests) expect(request.url.pathname).toStartWith(`/p/${projectA}/`);
   expect(view.attach()!.props.src).toBe(frame.props.src);
   expect(view.attach()!.props.ref.current.contentWindow).toBe(
     frame.props.ref.current.contentWindow,
@@ -684,6 +697,7 @@ test("server directory results display the remote path without claiming a local 
 
 test("server directory links open only on a user's click and retain their original workspace", async () => {
   setApiWorkspace("/workspace/original");
+  setApiProject(projectA);
   const path = `/api/v1/panels/runtime/${instanceId}/directory/f2f099cc-5c0d-444f-ac44-76165b436e3a`;
   const view = await fixture({
     intercept(request) {
@@ -697,13 +711,14 @@ test("server directory links open only on a user's click and retain their origin
     },
   });
   setApiWorkspace("/workspace/later");
+  setApiProject(projectB);
   await view.call("filesystem.openDirectory", { path: "/server/downloads" });
   const link = elements(view.tree).find(
     (item) => item.type === "a" && text(item) === "查看并下载文件",
   )!;
   expect(link.props).toMatchObject({ target: "_blank", rel: "noopener noreferrer" });
   const url = new URL(link.props.href, "http://localhost");
-  expect(url.pathname).toBe(path);
+  expect(url.pathname).toBe(`/p/${projectA}${path}`);
   expect(url.searchParams.get("workspace")).toBe("/workspace/original");
   expect(text(view.tree)).toContain("文件保存在服务器目录：/server/downloads");
   expect(view.replies.at(-1)?.data.result).toEqual({ opened: false, path: "/server/downloads" });

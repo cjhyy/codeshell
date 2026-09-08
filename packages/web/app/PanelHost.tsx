@@ -1,7 +1,7 @@
 import React from "react";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { api, ApiError } from "./auth.js";
-import { apiUrl, getApiWorkspace } from "./api-context.js";
+import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import { connectPanelRuntime, type PanelRuntimeEvent } from "./panel-runtime-connection.js";
 import "./panel-host.css";
 
@@ -124,6 +124,7 @@ export function PanelHost({
 
   React.useEffect(() => {
     const workspace = getApiWorkspace() ?? "";
+    const projectId = getApiProject();
     const scope = { workspace, grant: undefined as PreparedPanel | undefined };
     const prepareController = new AbortController();
     const calls = new Set<AbortController>();
@@ -187,7 +188,7 @@ export function PanelHost({
     const closeGrant = (grant: PreparedPanel) => {
       if (closeRequested) return;
       closeRequested = true;
-      void api(apiUrl(`${ROOT}/${encodeURIComponent(grant.instanceId)}`, workspace), {
+      void api(apiUrl(`${ROOT}/${encodeURIComponent(grant.instanceId)}`, workspace, projectId), {
         method: "DELETE",
         keepalive: true,
       }).catch(() => {});
@@ -264,7 +265,7 @@ export function PanelHost({
           calls.add(controller);
           const timeout = setTimeout(() => controller.abort(), 8_000);
           void api<{ allowed?: boolean }>(
-            apiUrl(`${ROOT}/${scope.grant.instanceId}/confirm`, workspace),
+            apiUrl(`${ROOT}/${scope.grant.instanceId}/confirm`, workspace, projectId),
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -413,7 +414,7 @@ export function PanelHost({
         calls.add(controller);
         const timeout = setTimeout(() => controller.abort(), 8_000);
         try {
-          await api(apiUrl(`${ROOT}/${grant.instanceId}/tool-results`, workspace), {
+          await api(apiUrl(`${ROOT}/${grant.instanceId}/tool-results`, workspace, projectId), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: payload,
@@ -462,12 +463,15 @@ export function PanelHost({
       let submitting = false;
       calls.add(controller);
       try {
-        const result = await api<unknown>(apiUrl(`${ROOT}/${grant.instanceId}/call`, workspace), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          signal: controller.signal,
-        });
+        const result = await api<unknown>(
+          apiUrl(`${ROOT}/${grant.instanceId}/call`, workspace, projectId),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            signal: controller.signal,
+          },
+        );
         if (disposed || controller.signal.aborted) return;
         if (data.method === "context.get") {
           bridgeReady = true;
@@ -513,7 +517,9 @@ export function PanelHost({
             throw new Error("面板目录链接无效，请重新打开目录。");
           setDirectory({
             path: result.path,
-            ...(typeof result.url === "string" ? { url: apiUrl(result.url, workspace) } : {}),
+            ...(typeof result.url === "string"
+              ? { url: apiUrl(result.url, workspace, projectId) }
+              : {}),
           });
           reply(child, requestId, { opened: false, path: result.path });
         } else if (data.method === "notifications.send") {
@@ -566,7 +572,7 @@ export function PanelHost({
     window.addEventListener("focus", resume);
     window.addEventListener("online", resume);
     document.addEventListener("visibilitychange", visibility);
-    void api<unknown>(apiUrl(`${ROOT}/prepare`, workspace), {
+    void api<unknown>(apiUrl(`${ROOT}/prepare`, workspace, projectId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -589,7 +595,7 @@ export function PanelHost({
           throw new Error("面板授权已过期，请重新打开。");
         }
         scope.grant = value;
-        setPrepared({ ...value, src: apiUrl(value.src, workspace) });
+        setPrepared({ ...value, src: apiUrl(value.src, workspace, projectId) });
         handshakeTimeout = setTimeout(() => {
           terminate(
             new Error(
@@ -601,6 +607,7 @@ export function PanelHost({
           instanceId: value.instanceId,
           expiresAt: value.expiresAt,
           workspace,
+          projectId,
           onEvents: receiveEvents,
           onTerminal: terminate,
           onStatus: setConnectionStatus,

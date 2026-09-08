@@ -25,6 +25,7 @@ async function fixture(
     html?: string;
     permissions?: InstalledPanelApp["permissions"];
     origin?: string;
+    publicPathPrefix?: string;
     agentTasks?: PanelTaskHost;
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
   } = {},
@@ -99,6 +100,7 @@ async function fixture(
     cwd,
     dataDir: join(root, "data"),
     host: "hub",
+    publicPathPrefix: options.publicPathPrefix,
     agentTasks: options.agentTasks,
     createAgentTasks: options.createAgentTasks,
     now: () => state.now,
@@ -182,6 +184,19 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("project asset bridge and CSP use the public prefix while prepare stays relative", async () => {
+    const publicPathPrefix = "/p/7bc54c17-1af8-4105-87c1-f4e5c6638998";
+    const f = await fixture({ publicPathPrefix });
+    const grant = await f.prepare();
+    expect(grant.src.startsWith("/api/v1/panel-assets/")).toBe(true);
+    const response = await fetch(f.url + grant.src, { headers: { Origin: "null" } });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain(`src="${publicPathPrefix}/api/v1/panel-assets/`);
+    expect(response.headers.get("content-security-policy")).toContain(
+      `script-src ${f.url}${publicPathPrefix}/api/v1/panel-assets/`,
+    );
+  });
   test("serves sandboxed HTML and CORS-enabled ESM bytes without login cookies", async () => {
     const f = await fixture();
     const grant = await f.prepare();

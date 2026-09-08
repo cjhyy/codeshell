@@ -1,6 +1,6 @@
 import React from "react";
 import { ApiError, browserId } from "./auth.js";
-import { getApiWorkspace } from "./api-context.js";
+import { getApiWorkspace, getApiProject } from "./api-context.js";
 import {
   cancelMcpProbe,
   deleteMcpServer,
@@ -66,6 +66,7 @@ export function HubMcp({
   const probeController = React.useRef<{
     name: string;
     workspace?: string;
+    projectId: string | null;
     controller: AbortController;
   } | null>(null);
   const revision = React.useRef(0);
@@ -89,7 +90,7 @@ export function HubMcp({
       const active = probeController.current;
       if (active) {
         active.controller.abort();
-        void cancelMcpProbe(active.name, active.workspace).catch(() => {});
+        void cancelMcpProbe(active.name, active.workspace, active.projectId).catch(() => {});
       }
     };
   }, []);
@@ -165,7 +166,12 @@ export function HubMcp({
   const probe = async (name: string) => {
     if (probeController.current || writeController.current) return;
     const controller = new AbortController();
-    probeController.current = { name, controller, workspace: getApiWorkspace() };
+    probeController.current = {
+      name,
+      controller,
+      workspace: getApiWorkspace() ?? "",
+      projectId: getApiProject(),
+    };
     setProbing(name);
     setError("");
     setNotice("");
@@ -189,7 +195,7 @@ export function HubMcp({
     const active = probeController.current;
     if (!active) return;
     try {
-      await cancelMcpProbe(active.name, active.workspace);
+      await cancelMcpProbe(active.name, active.workspace, active.projectId);
     } catch (cause) {
       if (mounted.current) report(cause);
     } finally {
