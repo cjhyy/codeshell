@@ -1,16 +1,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider } from "@/i18n";
-import { App } from "./App";
-import "./styles.css";
+import { registerServiceWorker } from "../../../web/app/register-service-worker.js";
+import { DesktopApp } from "../../../web/app/DesktopApp.js";
 
-const el = document.getElementById("app");
-if (!el) throw new Error("#app mount node missing");
+const element = document.getElementById("app");
+if (!element) throw new Error("#app mount node missing");
 
-createRoot(el).render(
+createRoot(element).render(
   <StrictMode>
-    <I18nProvider>
-      <App />
-    </I18nProvider>
+    <DesktopApp />
   </StrictMode>,
 );
+
+registerServiceWorker("/mobile/");

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteApp } from "./useRemoteApp";
+import { useDesktopController } from "../../app/DesktopApp.js";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -458,6 +459,7 @@ describe("useRemoteApp project V2 session creation", () => {
     });
     expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
       type: "session.create",
+      clientRequestId: expect.any(String),
       projectId: "project-1",
       rootId: "root-new",
     });
@@ -500,6 +502,7 @@ describe("useRemoteApp project V2 session creation", () => {
     });
     expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
       type: "session.create",
+      clientRequestId: expect.any(String),
       projectId: null,
     });
     await hook.unmount();
@@ -878,4 +881,226 @@ describe("useRemoteApp cc transcript streaming", () => {
 
     await hook.unmount();
   });
+});
+
+describe("useRemoteApp shared workbench integration", () => {
+  test("host notifications use the existing socket and the latest observer without mutating chat", async () => {
+    setupBrowser();
+    const seen: string[] = [];
+    let prefix = "first";
+    const hook = await renderHook(() =>
+      useRemoteApp({ onNotification: (method) => seen.push(`${prefix}:${method}`) }),
+    );
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    prefix = "current";
+    await hook.rerender();
+    await act(async () => {
+      ws.message({
+        jsonrpc: "2.0",
+        method: "serve/configurationChanged",
+        params: { cwd: "/repo" },
+      });
+      await flushMicrotasks();
+    });
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(seen).toContain("current:serve/configurationChanged");
+    expect(hook.result.current.chat.items).toHaveLength(0);
+    await hook.unmount();
+  });
+
+  test("a delayed send acceptance cannot pull navigation back or append its user bubble to another session", async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("no attachments expected");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    let accepted!: Promise<boolean>;
+    await act(async () => {
+      accepted = hook.result.current.sendChat({ text: "old task", attachments: [] });
+      await flushMicrotasks();
+    });
+    const sent = ws.sent
+      .map((line) => JSON.parse(line))
+      .find((event) => event.type === "chat.send");
+    expect(sent?.clientMessageId).toBeString();
+    await act(async () => {
+      hook.result.current.selectSession("new-selection");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        sessionId: "old-session",
+        clientMessageId: sent.clientMessageId,
+        cwd: "/old",
+      });
+      await flushMicrotasks();
+    });
+    expect(await accepted).toBe(true);
+    expect(hook.result.current.activeSessionId).toBe("new-selection");
+    expect(hook.result.current.chat.items).toHaveLength(0);
+    await hook.unmount();
+    restoreFetch();
+  });
+});
+
+describe("useRemoteApp correlated session creation", () => {
+  test("late creation acknowledgement and its list refresh cannot replace an explicit session selection", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.newSession({ projectId: null });
+      await flushMicrotasks();
+    });
+    const request = ws.sent
+      .map((line) => JSON.parse(line))
+      .find((event) => event.type === "session.create");
+    expect(request.clientRequestId).toBeString();
+    await act(async () => {
+      hook.result.current.selectSession("chosen");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        clientRequestId: request.clientRequestId,
+        sessionId: "late-created",
+        cwd: "/late",
+      });
+      ws.message({ type: "session.list.ok", activeSessionId: "late-created", sessions: [] });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("chosen");
+    expect(hook.result.current.chat.items).toHaveLength(0);
+    await hook.unmount();
+  });
+
+  test("two creations only bind the newest correlated acknowledgement; legacy acknowledgement remains compatible", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.newSession({ projectId: null });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.newSession({ projectId: null });
+      await flushMicrotasks();
+    });
+    const requests = ws.sent
+      .map((line) => JSON.parse(line))
+      .filter((event) => event.type === "session.create");
+    expect(requests[0].clientRequestId).not.toBe(requests[1].clientRequestId);
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        clientRequestId: requests[1].clientRequestId,
+        sessionId: "newest",
+      });
+      ws.message({
+        type: "chat.accepted",
+        clientRequestId: requests[0].clientRequestId,
+        sessionId: "older",
+      });
+      ws.message({ type: "session.list.ok", activeSessionId: "older", sessions: [] });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("newest");
+    await act(async () => {
+      hook.result.current.newSession();
+      ws.message({ type: "chat.accepted", sessionId: "legacy" });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("legacy");
+    await hook.unmount();
+  });
+});
+
+test("the actual Desktop hook/controller pair keeps drafts through create and send acceptance on one socket", async () => {
+  setupBrowser();
+  const restoreFetch = defineTestProperty(window, "fetch", {
+    value: async () => {
+      throw new Error("no image requests expected");
+    },
+    writable: true,
+  });
+  const onAuthLost = () => {};
+  const hook = await renderHook(() => useDesktopController(useRemoteApp(), undefined, onAuthLost));
+  const ws = FakeWebSocket.instances[0]!;
+  await act(async () => {
+    ws.open();
+    ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    hook.result.current.newSession();
+    await flushMicrotasks();
+  });
+  const creation = ws.sent
+    .map((line) => JSON.parse(line))
+    .find((event) => event.type === "session.create");
+  await act(async () => {
+    hook.result.current.setDraft("typed before session exists");
+  });
+  await act(async () => {
+    ws.message({
+      type: "chat.accepted",
+      clientRequestId: creation.clientRequestId,
+      sessionId: "mobile-durable",
+      cwd: null,
+    });
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.activeId).toBe("mobile-durable");
+  expect(hook.result.current.draft).toBe("typed before session exists");
+  await act(async () => {
+    hook.result.current.send();
+    await flushMicrotasks();
+  });
+  const message = ws.sent
+    .map((line) => JSON.parse(line))
+    .find((event) => event.type === "chat.send");
+  expect(message.sessionId).toBe("mobile-durable");
+  await act(async () => {
+    hook.result.current.setDraft("next draft while accepting");
+  });
+  await act(async () => {
+    ws.message({
+      type: "chat.accepted",
+      clientMessageId: message.clientMessageId,
+      sessionId: "mobile-durable",
+      cwd: null,
+    });
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.draft).toBe("next draft while accepting");
+  expect(hook.result.current.chat.items.filter((item) => item.kind === "user")).toHaveLength(1);
+  expect(FakeWebSocket.instances).toHaveLength(1);
+  await hook.unmount();
+  restoreFetch();
 });

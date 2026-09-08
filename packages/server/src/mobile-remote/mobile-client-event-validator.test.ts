@@ -163,3 +163,11 @@ describe("parseMobileClientEvent", () => {
     ).toBeUndefined();
   });
 });
+
+test("session creation accepts bounded optional client correlation without changing legacy requests", () => {
+  const event = { type: "session.create", projectId: null, clientRequestId: "browser-create-1" };
+  expect(parseMobileClientEvent(event)).toEqual(event);
+  for (const invalid of ["", "x".repeat(513), 1, null])
+    expect(parseMobileClientEvent({ ...event, clientRequestId: invalid })).toBeUndefined();
+  expect(parseMobileClientEvent({ type: "session.create" })).toEqual({ type: "session.create" });
+});

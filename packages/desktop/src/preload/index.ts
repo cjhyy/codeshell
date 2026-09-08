@@ -19,6 +19,7 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
+import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
@@ -168,9 +169,9 @@ export interface SessionContentSearchResult {
   truncated: boolean;
 }
 
-let nextRpcId = 1;
+const nextRpcId = createPreloadRpcIdFactory();
 const pending = new Map<
-  number,
+  string,
   { resolve: (resp: unknown) => void; reject: (err: Error) => void }
 >();
 // Multi-session: callbacks receive `{ sessionId, event, seq? }` for stream events
@@ -254,14 +255,8 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   }
   // Response: has id, no method
   if ("id" in msg && !("method" in msg)) {
-    // `pending` is keyed by the numeric ids we send. Coerce a string id (some
-    // JSON-RPC peers echo ids as strings) to number so the lookup matches
-    // instead of silently dropping the response.
-    const rawId = (msg as { id: unknown }).id;
-    const id = typeof rawId === "string" ? Number(rawId) : (rawId as number);
-    const entry = pending.get(id);
+    const entry = takePreloadRpcResponse(pending, msg.id);
     if (entry) {
-      pending.delete(id);
       entry.resolve(msg);
     }
     return;
@@ -398,7 +393,7 @@ function rpc(
   params?: Record<string, unknown>,
   timeoutMs: number = RPC_TIMEOUT_MS,
 ): Promise<unknown> {
-  const id = nextRpcId++;
+  const id = nextRpcId();
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
   return new Promise((resolve, reject) => {
     const timer =

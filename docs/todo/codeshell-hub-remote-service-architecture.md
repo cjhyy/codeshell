@@ -1,11 +1,15 @@
 # CodeShell Hub：一键部署、多用户能力分配与远程使用架构
 
-> 状态：方向设计稿，非实现承诺  
+> 状态：总体方向设计；单管理员 Node.js/Docker、双宿主共享 Web 工作台与 Link 管理已实现，多用户/远程 Panel 阶段未实施<br>
 > 日期：2026-08-28  
 > 适用范围：CodeShell Core、Server、Web、Desktop、Panel Apps、Skills、Plugins 与 MCP  
-> 修订：v3（2026-09-06，按源码重新核验：**§2「完整 Core RPC 直通」的表述已被证伪**——
+> 修订：v7（2026-09-09）：新增独立 Link Server 双向 OAuth 目标，见 §3.4；尚未实施。
+> v6（2026-09-08）：补记共享 Workbench、Desktop 配对 Cookie facade、同一 Worker 与 Link 管理，见 §10.0。
+> v5（2026-09-08）：更新配置管理、历史/文件、流式恢复、容器验证与桌面远程边界。
+> v4（2026-09-08）：补记 Phase 1 原生 Node.js 交付。
+> v3（2026-09-06，按源码重新核验：**§2「完整 Core RPC 直通」的表述已被证伪**——
 > serve 的浏览器面早已收敛为 3 方法白名单 + 强制 `cwd` + 64 在途上限，详见 §2.1；
-> 全文 file:line 锚点按 0.9.6 重校；Hub 侧代码仍为零，无任何 Phase 落地）
+> 全文 file:line 锚点按 0.9.6 重校；当时 Hub 侧代码为零）
 > v2（2026-08-28，按源码核验补齐：Phase 顺序与 RPC 直通的关系 §7.1/§10、
 > workspace 内配置发现的钳制 §4.4、会话索引对账 §4.3、命名与在途方案对齐 §6.4）
 
@@ -15,7 +19,12 @@ CodeShell 可以演进成一个可一键部署的个人或团队 AI 工作台：
 **CodeShell Hub**，用户通过电脑浏览器、手机 PWA 或 Electron 客户端登录，并根据自己的
 账号与 Workspace 获得不同的 Panel Apps、Skills、Plugins、MCP、模型和权限策略。
 
-推荐架构不是远程控制 Electron，而是拆成三部分：
+这是目标架构。当前源码中的 Desktop Web 和单管理员、单 Workspace 的 Hub 已共用
+工作台、模型/Skills/MCP 管理、历史、文件和独立 Link 页面。Desktop Web 使用原桌面
+Worker 与设备配对，Hub 使用自己的 Worker 与管理员登录。Electron 原生窗口连接远端
+Hub、账号能力分配和远程 Panel Host 尚未实现。运行说明见 [`../deployment.md`](../deployment.md)，状态见 §10.0。
+
+目标架构分为四部分：
 
 1. **CodeShell Hub（控制面）**：负责账号、Workspace、Capability Profile、授权、会话索引、
    实时事件、审计和运行时调度。
@@ -23,6 +32,8 @@ CodeShell 可以演进成一个可一键部署的个人或团队 AI 工作台：
    浏览器 Profile 和 Workspace 操作。
 3. **CodeShell Web/PWA（体验面）**：作为桌面和手机的标准体验；Electron 后续成为可选外壳，
    而不是唯一宿主。
+4. **独立 Link Server（第三方数据服务）**：连接第三方 OAuth 服务、保管凭据，并让
+   CodeShell 和其他应用通过 OAuth2 获得有限的数据访问权。与执行主机独立部署，见 §3.4。
 
 现有 `packages/server`、`packages/web`、Core stdio worker、Panel App Manifest 和权限系统可继续
 复用。主要新增能力是：多用户身份、Capability Profile、用户级 Runtime 隔离、Web Panel Host
@@ -48,6 +59,9 @@ CodeShell 可以演进成一个可一键部署的个人或团队 AI 工作台：
 - 不把多个不可信用户放进同一个共享 Core Runtime。
 
 ## 2. 当前基础与主要缺口
+
+下表及 §2.1 保留 2026-09-06 的设计基线和源码行号。当时的「共享口令、无正式账号」
+已被本轮单管理员 Hub 登录替代，当前实现以 §10.0 为准；多租户缺口仍然存在。
 
 | 领域           | 当前基础                                                                          | 主要缺口                                                                                                                                                                                                                                                                       |
 | -------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -153,6 +167,10 @@ flowchart TB
 
     Catalog --> PanelHost["Panel Asset Host\nSandbox iframe"]
     PanelHost --> Client
+    RuntimeA -->|"获准的数据操作"| LinkServer["独立 Link Server\n第三方连接与应用授权"]
+    RuntimeB -->|"获准的数据操作"| LinkServer
+    OtherApps["其他应用"] -->|"OAuth2 接入"| LinkServer
+    LinkServer -->|"上游 OAuth2 与数据 API"| Providers["第三方服务"]
 ```
 
 ### 3.1 控制面
@@ -173,7 +191,7 @@ flowchart TB
 - Core Worker、Agent Session 和长任务。
 - Skills、Plugins、Capability Modules 和 MCP 子进程。
 - Workspace 文件、Git、LSP、shell 和其他进程。
-- 用户凭据、服务端浏览器 Profile 和自动化。
+- 宿主模型/工具凭据、服务端浏览器 Profile 和自动化；托管第三方连接的原始凭据归 Link Server。
 - Panel App 的后端工具、长期进程和 Agent Tool handler。
 
 MVP 使用“一用户一 Worker 进程”；正式多租户服务使用“一用户或一用户 Workspace 一容器”，
@@ -187,6 +205,20 @@ Web/PWA 成为产品体验的标准实现：
 - Tablet：可折叠双栏。
 - Mobile：聊天、会话和 Panel 使用全屏页面切换。
 - Electron：复用同一套 Web Shell 和服务协议，按需补充本机能力适配器。
+
+### 3.4 独立 Link Server（2026-09-09 新需求，尚未实施）
+
+Link 同时有两种角色：向第三方服务发起用户授权的 OAuth 客户端，以及面向 CodeShell
+和其他应用的 OAuth 授权服务器。应用拿到 Link 自己签发的访问令牌；Link 按用户、应用、
+具体连接、操作和数据范围检查后取数，第三方原始令牌保留在 Link。
+
+这项能力与主机/项目选择分别演进。主机继续执行 Core、Skills、MCP、文件和进程；
+共享工作台提供同一套 Link 管理入口，独立 Link 也提供登录、同意和应用授权管理。
+Link 用户与 Hub 用户通过显式授权关联，不能按同名账号推定身份相同。
+
+先做单 owner、多应用、GitHub 只读双向授权闭环，再接入 CodeShell 远程执行适配器。
+当前宿主 Link token/CLI/device OAuth 功能继续有效，不因设计更新自动迁移现有凭据。
+接口、存储、刷新/撤销与验收阶段见 [独立 Link Server 设计](link-server-oauth-architecture.md)。
 
 ## 4. Capability Profile
 
@@ -581,40 +613,65 @@ Runtime 支持空闲休眠、按需恢复、资源限额和节点调度。只有
 
 ## 10. 实施阶段
 
-### 10.0 落地进度（2026-09-06 核验）
+### 10.0 落地进度（2026-09-09）
 
-**四个 Phase 一个都没有开工。** 自本文 v2 写成（2026-08-28，commit `476a0c14`）至今，
-`packages/server` 只收到加固与发版提交，无任何 Hub 方向的新增：
+**Phase 1 已实现单管理员 Node.js 与 Docker 部署形态。** 本轮先以
+`bun run build:server` + Node CLI、systemd 服务示例及 Caddy HTTPS 示例完成原生交付；
+随后补齐 Docker/Compose 配置供其他机器部署，见 [`../docker-deployment.md`](../docker-deployment.md)。
+可执行部署说明见 [`../deployment.md`](../deployment.md)。
 
-| 组件                                                      | 状态                                              |
-| --------------------------------------------------------- | ------------------------------------------------- |
-| `packages/server/src/hub/`                                | **不存在**                                        |
-| `packages/web/src/client/`                                | **不存在**                                        |
-| `packages/server/src/mobile-remote/remote-host-bridge.ts` | **不存在**（`RemoteHostBridge` 标识符全仓无声明） |
-| `Dockerfile` / `docker-compose.yml`                       | **不存在**                                        |
+| 组件                               | 状态                                                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/server/src/hub/`         | 已有单管理员认证、设备撤销、审批 lease、受限上传、模型/Skills/MCP 配置、会话管理、Workspace 文件读取及有界运行事件恢复              |
+| `packages/server/src/serve/`       | 已接入 Hub 认证、Origin 校验、健康检查、持久化及原生 CLI                                                                            |
+| `packages/web/app/`                | 两种 Web 共用 `Workbench`、消息、模型、Skills、MCP、历史、文件和 Link；`DesktopApp` / `useHubController` 提供各自状态与动作         |
+| `packages/server/src/desktop-web/` | 已有配对设备换 Cookie、Origin / 已知 Workspace 校验，以及对 Hub 管理 handler 的复用；接入原 Desktop Worker 的运行门禁和热更新       |
+| `packages/server/src/links/`       | 已有共享目录、token 验证连接、CLI 状态/绑定、设备授权、版本校验及取消/撤销清理；Desktop 保存流程复用服务                            |
+| Core / 共享客户端库                | 复用同一执行引擎和配置热更新；Skill 文件/GitHub 管理提取到 Core；Web 库共享流式与历史消息投影，Server/Desktop 共用会话标题存储      |
+| 浏览器 transport                   | 原方案 `web/src/client` / `RemoteHostBridge` 未提炼；保留 Desktop mobile-remote 与 Hub 受限 RPC，通过 `WorkbenchController` 共用 UI |
+| Web Panel Host                     | 两种 Web 共用 GitHub 安装、项目绑定、续租、进程与任务事件、工具回调和受控目录下载；能力以 `availableMethods` 为准                    |
+| 多用户 Runtime                     | 未实施；当前仍是单管理员、固定工作区                                                                                               |
+| Dockerfile / Compose               | 已有镜像源码白名单、生产依赖、非 root Node 22 运行和持久卷；本机 Linux 容器已使用真实 Node/Core 完成隔离模拟模型验证                |
 
-期间落地的 server 相关提交只有：`cb94334e`（WS 在途请求上限）、`fe7b48ef`（send race 隔离）、
-`9c396c42`+`43c0e116`（静态资源按 realpath 收敛）、以及 0.9.1→0.9.6 若干发版。
+真实 Node/Core Worker 验证完成初始化、流式对话、工具审批、停止与重启续聊，模型来自本地
+模拟服务；浏览器还验证了丰富消息、实时思考、运行中刷新、附件/草稿恢复和流式失败回退后的
+历史一致性，没有使用外部模型服务。Linux systemd/Caddy 示例仍需在目标机器验收。
+多用户隔离和账号能力分配仍属于 Phase 2，不能把单管理员多设备登录视为团队部署。
 
-**相关新增文档**（本轮同批）：
+本轮先统一用户直接访问的两种 Web 页面及业务服务，未替换 Electron 原生 renderer。
+Desktop 已有 Worker 同时服务原生窗口和配对 Web，不另外启动 Hub Worker；Desktop 的
+已知项目切换也不等于 Hub 已有 Workspace Registry。设计落点见 [共享 Web 工作台](shared-web-workbench.md)。
 
-- `link-headless-server-feasibility.md` —— Link 在 headless 下的阻塞点核验（结论：
-  不是 Electron 卡的，是 `agent-server-stdio.ts:394` 一行无条件 IPC 注入）。
-- `codex-cloud-remote-tasks-design.md` —— Codex Cloud 云端任务接入的现状核验与路线取舍。
+配置由认证 HTTP API 写入 Workspace 本地层，运行中拒绝修改，空闲热更新用于下一次任务。
+模型测试使用真实凭证发送小型请求；MCP 探测建立临时连接并列出工具，stdio 会启动对应程序。
+这些程序、Skills 脚本和工具操作均发生在服务器。Web 文件页面只读，且拒绝 Workspace 外路径、
+符号链接和敏感配置文件；不能据此推断 Agent 已获得额外系统沙箱。
+
+历史持久化与任务续跑有区别：短暂断网/刷新可合并持久历史与有界运行缓冲，缓冲超限会提示；
+服务重启后可读取历史，但不会自动继续中断的任务。插件市场、Hub 多 Workspace、
+Electron 原生窗口的远端执行目标和完整原生 Panel SDK 的 Web 适配尚未实现。当前面板的 Cookie、音频、媒体、自动化、PDF 等仍未完整接入，进程确认不等于操作系统级沙箱；见 [Web 面板](../web-panels.md)。
+
+Link Worker 的本地凭证接线及变更订阅已接通，两种 Web 已提供 Link 管理。
+连接仍属于宿主系统用户；Web 仅绑定已登录 CLI，执行位置随 Desktop / Node / Docker 宿主而定。
+设备 OAuth 过期需重新授权，没有自动续期，也没有额外的云端 Link Server。
+2026-09-06 的源码复核及行号继续保留为历史证据，不代表当前 Link 仍缺授权界面。
+
+当前状态按源码与隔离验证记载；Desktop 必须重建主进程及 mobile 页面并重启才能启用新 Web。
+本机 8790 已完成备份、重建与重启并提供共享工作台和 Link；构建、Node/Docker 实测及原数据保留证据见 [验收记录](hub-usability-polish.md)。
 
 ### Phase 1：个人远程闭环
 
-- 将现有 `code-shell-serve` 打包为可部署镜像。
+- 提供现有 `code-shell-serve` 的原生 Node.js 构建/启动与服务配置，再提供同版本的容器部署。
 - 增加正式管理员初始化和登录 Session，替换共享 passcode 作为主身份。
 - 提供 HTTPS、健康检查、持久卷和手机 PWA。
 - 保持单 Workspace、单用户 Worker。
 - 定义审批 lease 的多设备语义（§5.2）并随审批闭环一起验收。
 - 验证会话、流式输出、审批、停止和重启恢复。
-- **Phase 1 已知限制**（v3 修订，原为「显式风险接受」）：本阶段浏览器面是
-  `agent/run|approve|cancel` 3 方法 + 单一强制 `cwd` + 64 在途上限（§2.1），
-  不是完整 Core RPC 直通。单用户下浏览器等同部署者本人，该面可接受。
-  缺的是 ownership 维度（无账号校验、会话仅按 `cwd` 过滤），由 Phase 2 的
-  Application API Gateway 补齐。
+- **Phase 1 当前边界**：转发到 Worker 的浏览器 RPC 仍限于
+  `agent/run|approve|cancel`，部署 `cwd` 固定，并在转发前校验 Session 属于该 Workspace。
+  Hub 已有管理员登录和 HTTP/WS 认证，配置/历史/文件通过专用受限接口开放；不存在全量
+  Core RPC 直通。缺少的是多个产品用户之间的所有权与执行隔离、Workspace Registry 和
+  Capability Profile，需要由 Phase 2 的 Gateway 与 Runtime 设计补齐。
 
 ### Phase 2：多用户与 Capability Profile
 

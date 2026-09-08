@@ -18,6 +18,7 @@ import {
   type SkillDefinition,
 } from "@cjhyy/code-shell-core";
 import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
+import { installSkillFromDirectory as installSharedSkillDirectory } from "@cjhyy/code-shell-core/internal/skills";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
@@ -211,52 +212,7 @@ export async function installSkillFromDirectory(
   cwd?: string,
   requestedName?: string,
 ): Promise<InstalledSkill> {
-  const source = path.resolve(sourceDir);
-  const skillFile = path.join(source, "SKILL.md");
-  await fs.access(skillFile);
-
-  const name = normalizeSkillName(requestedName || path.basename(source));
-  const root = scope === "user" ? userSkillRoot() : projectSkillRoot(cwd);
-  const targetDir = path.join(root, name);
-
-  try {
-    await fs.access(targetDir);
-    throw new Error(`Skill "${name}" 已存在：${targetDir}`);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-  }
-
-  await fs.mkdir(root, { recursive: true });
-  await fs.cp(source, targetDir, {
-    recursive: true,
-    filter: (src) => !path.basename(src).startsWith(".git"),
-  });
-
-  // The dir-mtime cache key (core scanner) busts on the new child, but clear
-  // explicitly too so main's own listSkills() reflects the install immediately.
-  invalidateSkillCache();
-
-  const filePath = path.join(targetDir, "SKILL.md");
-  rememberCodeShellMarkdownPath(filePath);
-  return {
-    name,
-    targetDir,
-    filePath,
-  };
-}
-
-function projectSkillRoot(cwd?: string): string {
-  if (!cwd) throw new Error("project scope requires cwd");
-  return path.join(cwd, ".code-shell", "skills");
-}
-
-function normalizeSkillName(input: string): string {
-  const name = input
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
-  if (!name) throw new Error("Skill 名称不能为空");
-  return name;
+  const installed = await installSharedSkillDirectory(sourceDir, scope, cwd, requestedName);
+  rememberCodeShellMarkdownPath(installed.filePath);
+  return installed;
 }

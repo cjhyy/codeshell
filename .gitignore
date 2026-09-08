@@ -55,6 +55,10 @@ artifacts/code-review-*/
 # 二进制大文件不该进仓库。同样只限定到这一个子目录，不能写成整个 artifacts/。
 artifacts/codeshell-intro-video/
 
+# Private deployment configuration, mounted at runtime rather than built into images.
+/deploy/settings.local.json
+/compose.override.yaml
+
 # Job Hunt HQ 的个人数据：简历素材、工作经历、面试记录、联系方式和面板快照，
 # 都是本人隐私而不是源码。CODESHELL.md 把这两个路径写成了权威入口，所以目录
 # 结构要保留 —— 只忽略内容，放行 jd/README.md 这类模板说明。

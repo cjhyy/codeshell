@@ -51,6 +51,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "session.create":
       valid =
+        optionalBoundedString(event.clientRequestId, MAX_ID_LENGTH) &&
         (event.cwd === undefined || event.cwd === null || boundedPath(event.cwd)) &&
         (event.projectId === undefined ||
           event.projectId === null ||

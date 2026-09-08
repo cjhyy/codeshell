@@ -42,6 +42,7 @@ import { diskDefaultsFrom } from "../engine/engine.js";
 import { ISOLATED_TASK_BEHAVIOR_MODE } from "../engine/run-types.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
+import { invalidateSkillCache } from "../skills/scanner.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import type {
   RouteSessionMessageInput,
@@ -104,6 +105,30 @@ interface ChildHostScope {
   route: ApprovalRouteTarget;
   pending: Set<string>;
   failure(): { failure: "cancelled" | "owner_lost" | "session_closed"; reason: string } | undefined;
+}
+
+// A run can await a lifecycle handoff before it reaches ChatSession's queue.
+// Share this transient fence across transports using the same manager, while
+// keeping independent managers/identities and subsequent user runs separate.
+const pendingRunStarts = new WeakMap<ChatSessionManager, Map<string, Set<AbortController>>>();
+
+function trackRunStart(manager: ChatSessionManager, id: string, controller: AbortController) {
+  let sessions = pendingRunStarts.get(manager);
+  if (!sessions) pendingRunStarts.set(manager, (sessions = new Map()));
+  let starts = sessions.get(id);
+  if (!starts) sessions.set(id, (starts = new Set()));
+  starts.add(controller);
+  return () => {
+    starts.delete(controller);
+    if (!starts.size && sessions.get(id) === starts) sessions.delete(id);
+  };
+}
+
+function cancelRunStarts(manager: ChatSessionManager, id: string): boolean {
+  const starts = pendingRunStarts.get(manager)?.get(id);
+  if (!starts?.size) return false;
+  for (const controller of [...starts]) controller.abort();
+  return true;
 }
 
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
@@ -588,6 +613,7 @@ export class AgentServer {
   private readonly approvalRouter: ApprovalRouter;
   private approvalConnectionUnregister: (() => void) | null = null;
   private disconnected = false;
+  private readonly runStarts = new Set<AbortController>();
   private readonly pendingApprovalTargets = new Map<
     string,
     ApprovalRouteTarget & { requestId: string }
@@ -1874,127 +1900,164 @@ export class AgentServer {
       }
     }
 
-    let session;
-    try {
-      session = await cm.getOrCreate(params.sessionId, sessionConfig);
-    } catch (err: any) {
-      const code = err.code ?? ErrorCodes.InternalError;
-      this.transport.send(createErrorResponse(req.id, code, err.message));
-      return;
-    }
-    const sid = params.sessionId;
-    this.observeSessionAttached(sid, session.lastActivityAt);
-    const approvalRegistration = this.approvalRouter.register(sid, this.connectionId);
-    if (!approvalRegistration.ok) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.Overloaded,
-          `Session ${sid} is owned by another connection`,
-        ),
-      );
-      return;
-    }
-    this.rememberSessionSlice(params.sessionId, sessionConfig);
-
-    if (params.model !== undefined) {
-      if (typeof params.model !== "string" || params.model.length === 0) {
-        this.transport.send(
-          createErrorResponse(req.id, ErrorCodes.InvalidParams, "model must be a non-empty string"),
-        );
-        return;
-      }
-      try {
-        session.requestModelSwitch(params.model);
-      } catch (err) {
-        this.transport.send(
-          createErrorResponse(req.id, ErrorCodes.InvalidParams, (err as Error).message),
-        );
-        return;
-      }
-    }
-
-    // Wire AskUserQuestion and host bridges for this interactive session. The
-    // chatManager path builds a fresh per-session Engine via engineFactory, so
-    // these host callbacks must be installed after every create/recreate.
-    this.wireInteractiveSession(session, sid);
-    try {
-      const displayText = typeof params.displayText === "string" ? params.displayText.trim() : "";
-      if (displayText) {
-        const userMessageEvent = {
-          type: "session_user_message",
-          text: displayText,
-          ...(typeof params.clientMessageId === "string"
-            ? { clientMessageId: params.clientMessageId }
-            : {}),
-        } satisfies StreamEvent;
-        this.observeSessionStream(sid, userMessageEvent);
-        this.notify(Methods.StreamEvent, { sessionId: sid, event: userMessageEvent });
-      }
-      const run = session.enqueueTurn(params.task, {
-        cwd: params.cwd,
-        workspaceContext: params.workspaceContext,
-        displayText: displayText || undefined,
-        injected: params.injected === true,
-        attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
-        goal:
-          typeof params.goal === "string" ||
-          (params.goal != null && typeof params.goal === "object")
-            ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
-            : undefined,
-        disableGoal: params.disableGoal === true,
-        onStream: (event: StreamEvent) => {
-          this.observeSessionStream(sid, event);
-          this.notify(Methods.StreamEvent, { sessionId: sid, event });
-        },
-        clientMessageId:
-          typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
-        archiveBeforeCurrentTurn: params.archiveBeforeCurrentTurn,
-        permissionMode: params.permissionMode,
-        planMode: params.planMode,
-        behaviorMode: params.behaviorMode,
-        toolAllowlist: params.toolAllowlist,
-        skillAllowlist: params.skillAllowlist,
-        ephemeral: params.ephemeral,
-        profileParams: params.profileParams,
-        workspaceProfile: params.workspaceProfile,
-        sessionBrief: params.sessionBrief,
-        sessionMessageTargets: params.sessionMessageTargets,
-        petRuntimeContext: params.petRuntimeContext,
-        petWorkspaces: params.petWorkspaces,
-        kind: params.kind,
-        approvalRouter: this.approvalRouter,
-      });
-      this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
-      this.observeRunBoundary(sid, "start");
-      const result = await run;
-      this.observeRunBoundary(sid, "end");
-
-      const runResult: RunResult = {
-        text: result.text,
-        reason: result.reason,
-        sessionId: result.sessionId ?? sid,
-        turnCount: result.turnCount,
-        usage: result.usage,
-        ...(result.extensions ? { extensions: result.extensions } : {}),
-        petWorkDelegation: result.petWorkDelegation,
+    const start = new AbortController();
+    const releaseStart = trackRunStart(cm, params.sessionId, start);
+    this.runStarts.add(start);
+    if (this.disconnected) start.abort();
+    const cancelledBeforeQueue = () => {
+      const result: RunResult = {
+        text: "",
+        reason: "aborted_streaming",
+        sessionId: params.sessionId,
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
-      this.transport.send(createResponse(req.id, runResult));
-      // Run-boundary re-check (trigger B): normally trigger A already owns a
-      // completion that arrived while this run was busy and is waiting on the
-      // session's `settled` promise. Keep this check as a recovery path for a
-      // missed/delayed bus event and for results committed at the run boundary.
-      // Interactive path only; headless already drained its sub-agents inside
-      // engine.run before returning.
-      this.maybeWakeIdleSession(sid);
-    } catch (err) {
-      this.observeRunBoundary(sid, "error");
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
-      );
-      // Even on a failed run the session goes idle — re-check so a background
-      // completion that landed during the failed run isn't orphaned.
-      this.maybeWakeIdleSession(sid);
+      this.transport.send(createResponse(req.id, result));
+    };
+    try {
+      let session;
+      try {
+        session = await cm.getOrCreate(params.sessionId, sessionConfig, { signal: start.signal });
+        start.signal.throwIfAborted();
+      } catch (err: any) {
+        if (start.signal.aborted) {
+          cancelledBeforeQueue();
+          return;
+        }
+        const code = err.code ?? ErrorCodes.InternalError;
+        this.transport.send(createErrorResponse(req.id, code, err.message));
+        return;
+      }
+      const sid = params.sessionId;
+      this.observeSessionAttached(sid, session.lastActivityAt);
+      const approvalRegistration = this.approvalRouter.register(sid, this.connectionId);
+      if (!approvalRegistration.ok) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.Overloaded,
+            `Session ${sid} is owned by another connection`,
+          ),
+        );
+        return;
+      }
+      this.rememberSessionSlice(params.sessionId, sessionConfig);
+
+      if (params.model !== undefined) {
+        if (typeof params.model !== "string" || params.model.length === 0) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "model must be a non-empty string",
+            ),
+          );
+          return;
+        }
+        try {
+          session.requestModelSwitch(params.model);
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InvalidParams, (err as Error).message),
+          );
+          return;
+        }
+      }
+
+      // Wire AskUserQuestion and host bridges for this interactive session. The
+      // chatManager path builds a fresh per-session Engine via engineFactory, so
+      // these host callbacks must be installed after every create/recreate.
+      this.wireInteractiveSession(session, sid);
+      try {
+        const displayText = typeof params.displayText === "string" ? params.displayText.trim() : "";
+        if (displayText) {
+          const userMessageEvent = {
+            type: "session_user_message",
+            text: displayText,
+            ...(typeof params.clientMessageId === "string"
+              ? { clientMessageId: params.clientMessageId }
+              : {}),
+          } satisfies StreamEvent;
+          this.observeSessionStream(sid, userMessageEvent);
+          this.notify(Methods.StreamEvent, { sessionId: sid, event: userMessageEvent });
+        }
+        start.signal.throwIfAborted();
+        const run = session.enqueueTurn(params.task, {
+          cwd: params.cwd,
+          workspaceContext: params.workspaceContext,
+          displayText: displayText || undefined,
+          injected: params.injected === true,
+          attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
+          goal:
+            typeof params.goal === "string" ||
+            (params.goal != null && typeof params.goal === "object")
+              ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
+              : undefined,
+          disableGoal: params.disableGoal === true,
+          onStream: (event: StreamEvent) => {
+            this.observeSessionStream(sid, event);
+            this.notify(Methods.StreamEvent, { sessionId: sid, event });
+          },
+          clientMessageId:
+            typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+          archiveBeforeCurrentTurn: params.archiveBeforeCurrentTurn,
+          permissionMode: params.permissionMode,
+          planMode: params.planMode,
+          behaviorMode: params.behaviorMode,
+          toolAllowlist: params.toolAllowlist,
+          skillAllowlist: params.skillAllowlist,
+          ephemeral: params.ephemeral,
+          profileParams: params.profileParams,
+          workspaceProfile: params.workspaceProfile,
+          sessionBrief: params.sessionBrief,
+          sessionMessageTargets: params.sessionMessageTargets,
+          petRuntimeContext: params.petRuntimeContext,
+          petWorkspaces: params.petWorkspaces,
+          kind: params.kind,
+          approvalRouter: this.approvalRouter,
+        });
+        // ChatSession now owns cancellation, including turns queued behind an
+        // active run. Do not let a later cancel affect a newer preparation.
+        releaseStart();
+        this.runStarts.delete(start);
+        this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
+        this.observeRunBoundary(sid, "start");
+        const result = await run;
+        this.observeRunBoundary(sid, "end");
+
+        const runResult: RunResult = {
+          text: result.text,
+          reason: result.reason,
+          sessionId: result.sessionId ?? sid,
+          turnCount: result.turnCount,
+          usage: result.usage,
+          ...(result.extensions ? { extensions: result.extensions } : {}),
+          petWorkDelegation: result.petWorkDelegation,
+        };
+        this.transport.send(createResponse(req.id, runResult));
+        // Run-boundary re-check (trigger B): normally trigger A already owns a
+        // completion that arrived while this run was busy and is waiting on the
+        // session's `settled` promise. Keep this check as a recovery path for a
+        // missed/delayed bus event and for results committed at the run boundary.
+        // Interactive path only; headless already drained its sub-agents inside
+        // engine.run before returning.
+        this.maybeWakeIdleSession(sid);
+      } catch (err) {
+        if (start.signal.aborted) {
+          cancelledBeforeQueue();
+          return;
+        }
+        this.observeRunBoundary(sid, "error");
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+        );
+        // Even on a failed run the session goes idle — re-check so a background
+        // completion that landed during the failed run isn't orphaned.
+        this.maybeWakeIdleSession(sid);
+      }
+    } finally {
+      releaseStart();
+      this.runStarts.delete(start);
     }
   }
 
@@ -2266,7 +2329,13 @@ export class AgentServer {
         );
         return;
       }
-      const s = this.chatManager.get(params.sessionId);
+      const manager = this.chatManager;
+      const stoppedStart = cancelRunStarts(manager, params.sessionId);
+      const s = manager.get(params.sessionId);
+      if (!s && stoppedStart) {
+        this.transport.send(createResponse(req.id, { ok: true }));
+        return;
+      }
       if (!s) {
         this.transport.send(
           createErrorResponse(
@@ -2844,6 +2913,7 @@ export class AgentServer {
       return;
     }
     if (this.chatManager) {
+      cancelRunStarts(this.chatManager, params.sessionId);
       const session = this.chatManager.get(params.sessionId);
       if (session) {
         this.cancelSessionApprovals(session, "session closed", "cancelled", "session_closed");
@@ -2868,6 +2938,10 @@ export class AgentServer {
 
   private handleConfigure(req: RpcRequest): void {
     const params = (req.params ?? {}) as unknown as ConfigureParams;
+    // Editing an existing SKILL.md does not change its base directory's mtime.
+    // A host settings refresh must invalidate the worker's discovery cache too,
+    // so Desktop/Hub edits become visible at the next turn without a restart.
+    if (params.reloadSettings === true) invalidateSkillCache();
 
     // If a sessionId is present, mutate that specific session's engine
     if (this.chatManager && typeof params.sessionId === "string") {
@@ -4605,6 +4679,7 @@ export class AgentServer {
   disconnect(reason = "approval connection disconnected"): void {
     if (this.disconnected) return;
     this.disconnected = true;
+    for (const start of this.runStarts) start.abort();
     const unregister = this.approvalConnectionUnregister;
     this.approvalConnectionUnregister = null;
     if (unregister) {

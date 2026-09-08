@@ -259,9 +259,12 @@ export async function linkActionTool(
       live.meta.linkLastVerifiedAt === connection.credential.meta?.linkLastVerifiedAt,
     );
   };
-  const unsubscribe = access.subscribe?.(() => {
-    if (!stillConnected()) invalidated.abort("Link connection disconnected");
-  });
+  const unsubscribe = access.subscribe?.(
+    () => {
+      if (!stillConnected()) invalidated.abort("Link connection disconnected");
+    },
+    { cwd, scope },
+  );
   try {
     if (!stillConnected()) throw new Error(`${provider.displayName} connection was disconnected`);
     const signal = ctx?.signal

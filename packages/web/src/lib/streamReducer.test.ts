@@ -419,3 +419,101 @@ test("ids 确定性(不依赖 Date.now/random)", () => {
   const b = feed([ev({ type: "error", error: "e" }), ev({ type: "error", error: "e" })]);
   expect(a.items.map((i) => i.id)).toEqual(b.items.map((i) => i.id));
 });
+
+test("server echo enriches optimistic attachment paths without duplicating or rewriting the user message", () => {
+  const optimistic = appendUserMessage(
+    initialChatState(),
+    "my draft",
+    [{ name: "notes.txt", size: 42 }],
+    "client-attachment",
+  );
+  const enriched = reduceStream(
+    optimistic,
+    ev({
+      type: "session_user_message",
+      clientMessageId: "client-attachment",
+      text: "model attachment plumbing",
+      attachments: [
+        {
+          name: "notes.txt",
+          size: 42,
+          mime: "text/plain",
+          path: ".code-shell/attachments/staged-notes.txt",
+          unrelated: "discard this field",
+        },
+      ],
+    }),
+  );
+  expect(enriched.items).toEqual([
+    {
+      ...optimistic.items[0],
+      attachments: [
+        {
+          name: "notes.txt",
+          size: 42,
+          mime: "text/plain",
+          path: ".code-shell/attachments/staged-notes.txt",
+        },
+      ],
+    },
+  ]);
+  const repeated = reduceStream(
+    enriched,
+    ev({
+      type: "session_user_message",
+      clientMessageId: "client-attachment",
+      text: "duplicate",
+      attachments: [{ name: "invalid", size: -1 }],
+    }),
+  );
+  expect(repeated).toBe(enriched);
+});
+
+test("fallback tombstone removes only its assistant and reasoning before the replacement stream", () => {
+  const s = feed([
+    ev({ type: "stream_request_start", messageId: "parent" }),
+    ev({ type: "thinking_delta", text: "failed thought" }),
+    ev({ type: "text_delta", text: "failed partial" }),
+    ev({ type: "stream_request_start", agentId: "child", messageId: "child" }),
+    ev({ type: "text_delta", agentId: "child", text: "child intact" }),
+    ev({ type: "tombstone", messageId: "parent" }),
+    ev({ type: "stream_request_start", messageId: "parent" }),
+    ev({ type: "thinking_delta", text: "replacement thought" }),
+    ev({ type: "text_delta", text: "replacement answer" }),
+    ev({
+      type: "assistant_message",
+      messageId: "parent",
+      message: { role: "assistant", content: "replacement answer" },
+    }),
+  ]);
+  expect(s.items).toHaveLength(2);
+  expect(s.items[0]).toMatchObject({ kind: "assistant", text: "child intact", done: false });
+  expect(s.items[1]).toMatchObject({
+    kind: "assistant",
+    text: "replacement answer",
+    reasoning: "replacement thought",
+    done: true,
+  });
+  expect(s.liveByAgent).toEqual({ child: s.items[0]?.id });
+});
+
+test("tombstone drops an unexecuted tool placeholder and permits its replacement to reuse the ID", () => {
+  const s = feed([
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "same-tool", toolName: "Read", args: { partial: true } },
+    }),
+    ev({ type: "tombstone", messageId: "same-tool" }),
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "same-tool", toolName: "Read", args: { path: "complete.txt" } },
+    }),
+    ev({ type: "tool_result", result: { id: "same-tool", result: "read complete" } }),
+  ]);
+  expect(s.items).toHaveLength(1);
+  expect(tool(s)).toMatchObject({
+    args: { path: "complete.txt" },
+    result: "read complete",
+    done: true,
+  });
+});

@@ -14,6 +14,7 @@ export default defineConfig({
   server: {
     // Dev proxy: `vite dev` against a locally running code-shell-serve.
     proxy: {
+      "/api": { target: "http://127.0.0.1:8790" },
       "/ws": { target: "http://127.0.0.1:8790", ws: true },
     },
   },

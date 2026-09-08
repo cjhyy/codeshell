@@ -15,6 +15,7 @@ export {
   type CcCliKind,
   type PendingApproval,
   type RemoteApp,
+  type RemoteAppOptions,
   type MobileSessionCreateTarget,
 } from "./hooks/useRemoteApp.js";
 export {
@@ -28,6 +29,7 @@ export * from "./hooks/remoteAppSync.js";
 
 // ── Stream folding (shared with the desktop renderer's CC room view) ────────
 export * from "./lib/streamReducer.js";
+export * from "./lib/transcriptReplay.js";
 export * from "./lib/messageMappers.js";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────

@@ -1,0 +1,241 @@
+.hub-panels {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px;
+  overflow-wrap: anywhere;
+}
+.hub-panels h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+.hub-panels h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.hub-panels h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.hub-panels p {
+  line-height: 1.6;
+}
+.panels-muted,
+.hub-panels small,
+.panels-card > p,
+.panels-heading p {
+  color: var(--muted);
+}
+.panels-heading,
+.panels-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.panels-heading {
+  margin-bottom: 20px;
+}
+.panels-heading p {
+  margin: 8px 0 0;
+}
+.panels-section {
+  margin-top: 28px;
+}
+.panels-card,
+.panels-import,
+.panels-review,
+.panels-empty {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 20px;
+}
+.panels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.panels-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.panels-card > p {
+  margin: 10px 0;
+}
+.panels-card .panels-actions {
+  margin-top: auto;
+  padding-top: 18px;
+}
+.panels-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.hub-panels button {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 12px;
+  color: inherit;
+  background: var(--panel);
+  font: inherit;
+  cursor: pointer;
+}
+.hub-panels button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.hub-panels button.panels-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text, white);
+}
+.hub-panels button.panels-danger {
+  color: var(--danger);
+}
+.hub-panels input:not([type="checkbox"]) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 7px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: inherit;
+  background: var(--bg);
+  font: inherit;
+}
+.panels-heading input {
+  max-width: 240px;
+}
+.hub-panels label {
+  display: block;
+}
+.panels-import form > label {
+  margin: 20px 0 14px;
+}
+.panels-import details {
+  margin: 16px 0;
+}
+.hub-panels summary {
+  cursor: pointer;
+}
+.panels-source-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-top: 16px;
+}
+.panels-candidates {
+  margin-top: 24px;
+}
+.panels-candidates > h3 {
+  margin-bottom: 14px;
+}
+.panels-batch-start {
+  margin: 16px 0;
+}
+.panels-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0;
+}
+.panels-badge {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 12px;
+  background: var(--bg);
+}
+.panels-badge-ready,
+.panels-notice {
+  color: var(--success);
+}
+.panels-warning,
+.panels-confirm {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  line-height: 1.6;
+  margin: 16px 0;
+}
+.panels-warning p,
+.panels-confirm p {
+  margin: 0 0 8px;
+}
+.panels-warning ul {
+  margin: 6px 0 0;
+  padding-left: 22px;
+}
+.panels-review {
+  margin: 24px 0;
+}
+.panels-review section {
+  margin: 22px 0;
+}
+.panels-review dl,
+.panels-card dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px 14px;
+  font-size: 13px;
+}
+.panels-review dt,
+.panels-card dt {
+  color: var(--muted);
+}
+.panels-review dd,
+.panels-card dd {
+  margin: 0;
+}
+.panels-review .panels-permission {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.panels-review footer {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.panels-check {
+  margin-bottom: 16px;
+}
+.panels-check input {
+  margin-right: 8px;
+}
+.panels-empty p {
+  margin: 8px 0 0;
+}
+@media (max-width: 640px) {
+  .hub-panels {
+    padding: 20px 16px;
+  }
+  .panels-heading {
+    flex-wrap: wrap;
+  }
+  .panels-heading input {
+    max-width: none;
+  }
+  .panels-grid,
+  .panels-source-fields {
+    grid-template-columns: 1fr;
+  }
+  .panels-card,
+  .panels-import,
+  .panels-review,
+  .panels-empty {
+    padding: 16px;
+  }
+}

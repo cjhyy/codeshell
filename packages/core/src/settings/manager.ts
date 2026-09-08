@@ -490,16 +490,18 @@ export class SettingsManager {
    * Returning false makes the operation a no-op.
    */
   mutateSettingsForScope(
-    scope: "user" | "project",
+    scope: "user" | "project" | "local",
     cwd: string,
     mutate: (current: Record<string, unknown>) => boolean | void,
   ): void {
     const path =
       scope === "user"
         ? join(this.userConfigDir(), "settings.json")
-        : this.projectSettingsPath(cwd);
-    if (scope === "project") {
-      this.validateProjectCwd(cwd, "project");
+        : scope === "local"
+          ? this.localSettingsPath(cwd)
+          : this.projectSettingsPath(cwd);
+    if (scope !== "user") {
+      this.validateProjectCwd(cwd, scope);
       if (!existsSync(cwd)) throw new Error(`project directory does not exist: ${cwd}`);
     }
     this.mutateSettingsFile(path, (current) => {
@@ -507,7 +509,9 @@ export class SettingsManager {
       // Validate the complete resulting layer before persistence. We keep the
       // original object for serialization so forward-compatible unknown keys
       // are preserved instead of being stripped by Zod's parsed result.
-      validateSettings(current);
+      // A writable layer may remove inherited record entries with null.
+      // Validate its resolved shape while retaining those tombstones on disk.
+      validateSettings(merge({}, current));
       return true;
     });
     this.invalidate();
@@ -569,6 +573,24 @@ export class SettingsManager {
    * file are returned (defaults are not synthesized), so an absent file → {}.
    */
   getForScope(scope: "user" | "project" | "local", cwd?: string): Partial<ValidatedSettings> {
+    const raw = this.getRawForScope(scope, cwd);
+    // validateSettings applies defaults; for a scope view we want only the
+    // file's own keys, so validate then project back the present keys.
+    const normalized = merge({}, raw);
+    const validated = validateSettings(normalized) as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(normalized)) out[k] = validated[k];
+    return out as Partial<ValidatedSettings>;
+  }
+
+  /**
+   * Read a bounded, unmerged layer, retaining null deletion markers for host
+   * configuration editors. Values can contain credentials: never expose this
+   * object directly to a renderer or remote client. The workspace trust gate
+   * still applies. Every call parses a fresh object, so callers cannot mutate
+   * the effective settings cache through this view.
+   */
+  getRawForScope(scope: "user" | "project" | "local", cwd?: string): Record<string, unknown> {
     const path =
       scope === "user"
         ? join(this.userConfigDir(), "settings.json")
@@ -577,18 +599,13 @@ export class SettingsManager {
           : this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.json");
     if (!path) return {};
     const raw = this.readJsonObject(path);
-    // validateSettings applies defaults; for a scope view we want only the
-    // file's own keys, so validate then project back the present keys.
-    const validated = validateSettings(raw) as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-    for (const k of Object.keys(raw)) out[k] = validated[k];
     // Same workspace-trust gate as load(): project/local scope reads bypass the
     // merge, so an untrusted project's dangerous fields (for example an MCP
     // server or setup script) must be stripped here too.
     if ((scope === "project" || scope === "local") && !this.projectTrusted) {
-      for (const field of DANGEROUS_PROJECT_FIELDS) delete out[field];
+      for (const field of DANGEROUS_PROJECT_FIELDS) delete raw[field];
     }
-    return out as Partial<ValidatedSettings>;
+    return raw;
   }
 
   private projectSettingsPath(cwd: string): string {
@@ -912,14 +929,14 @@ function merge(
       continue;
     } else if (value === null) {
       delete result[key];
-    } else if (
-      typeof value === "object" &&
-      !Array.isArray(value) &&
-      typeof result[key] === "object" &&
-      !Array.isArray(result[key]) &&
-      result[key] !== null
-    ) {
-      result[key] = merge(result[key] as Record<string, unknown>, value as Record<string, unknown>);
+    } else if (typeof value === "object" && !Array.isArray(value)) {
+      const previous = result[key];
+      result[key] = merge(
+        previous && typeof previous === "object" && !Array.isArray(previous)
+          ? (previous as Record<string, unknown>)
+          : {},
+        value as Record<string, unknown>,
+      );
     } else {
       result[key] = value;
     }

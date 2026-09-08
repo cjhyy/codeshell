@@ -20,7 +20,7 @@ import {
   type SaveDialogOptions,
 } from "electron";
 import { fileURLToPath } from "node:url";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
@@ -38,8 +38,6 @@ import {
   materializeCookieSecret,
   type Credential,
   type CredentialScope,
-  validateLocalLinkToken,
-  connectCliLink,
   getCliLinkStatus,
   isCliLinkProvider,
   type CliLinkProviderId,
@@ -197,6 +195,7 @@ import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { listDesktopLinkProviders } from "./link-provider-catalog.js";
+import { createDesktopLinkConnections } from "./link-connections.js";
 import {
   isLocalBrowserLinkProvider,
   LinkDeviceOAuthBroker,
@@ -367,6 +366,7 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
+import { createDesktopWebService } from "./desktop-web-service.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
   installSkillFromDirectory,
@@ -888,6 +888,18 @@ const mobileUploads = new MobileUploadService({
 const mobileRemote = new RemoteHostManager({
   devices: mobileDevices,
   uploads: mobileUploads,
+  webApi: createDesktopWebService({
+    devices: mobileDevices,
+    getBridge: () => bridge,
+    resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
+    onSessionsChanged: (cwd, sessionId) => {
+      const line = JSON.stringify({ jsonrpc: "2.0", method: "serve/sessionsChanged", params: { cwd, sessionId } });
+      mobileRemote.broadcastRaw(line);
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send("agent:msg", line);
+      }
+    },
+  }),
   // The built mobile web app stays a desktop asset (out/mobile, sibling of the
   // bundled out/main) — pass it explicitly now that RemoteHostManager lives in
   // @cjhyy/code-shell-server and can no longer derive it from its own location.
@@ -3744,69 +3756,15 @@ async function persistLocalLinkCredential(input: {
   existingId: string;
   authSource: "manual-token" | "browser-oauth";
 }) {
-  const { cwd, providerId, methodId, label, token, browserOAuthToken, existingId, authSource } =
-    input;
-  const credentialId = existingId || `link-${providerId}-${methodId}`;
-  const store = new CredentialStore(cwd || undefined);
-  if (existingId) {
-    const current = store.resolve(existingId, "full");
-    if (
-      !current ||
-      current.type !== "link" ||
-      current.meta?.linkProvider !== providerId ||
-      current.meta.linkConnectionMethod !== methodId ||
-      current.meta.linkExecutionRuntime !== "local"
-    ) {
-      throw new Error("The existing credential does not belong to this local Link provider");
-    }
-  }
-
-  // Validation and save are one main-process operation: the renderer never
-  // receives the token back and an invalid replacement never overwrites the
-  // last working credential.
-  const validation = await validateLocalLinkToken(providerId, token);
-  store.save("user", {
-    id: credentialId,
-    type: "link",
-    label: label || `${providerId} · ${methodId}`,
-    secret: browserOAuthToken
-      ? JSON.stringify({
-          version: 1,
-          accessToken: browserOAuthToken.accessToken,
-          refreshToken: browserOAuthToken.refreshToken,
-          expiresAt:
-            browserOAuthToken.expiresIn === undefined
-              ? undefined
-              : new Date(Date.now() + browserOAuthToken.expiresIn * 1_000).toISOString(),
-          refreshTokenExpiresAt:
-            browserOAuthToken.refreshTokenExpiresIn === undefined
-              ? undefined
-              : new Date(
-                  Date.now() + browserOAuthToken.refreshTokenExpiresIn * 1_000,
-                ).toISOString(),
-          tokenType: browserOAuthToken.tokenType,
-          scope: browserOAuthToken.scope,
-          tokenEndpoint: browserOAuthToken.tokenEndpoint,
-          clientId: browserOAuthToken.clientId,
-        })
-      : token,
-    autoUseByAI: false,
-    meta: {
-      linkProvider: providerId,
-      linkConnectionMethod: methodId,
-      linkExecutionRuntime: "local",
-      linkAuthSource: authSource,
-      linkExecutionBackend: "http-token",
-      agentExposable: false,
-      linkAccountId: validation.identity.externalAccountId,
-      linkAccountLabel: validation.identity.label,
-      linkResourceLabels: validation.identity.resourceLabels,
-      linkCapabilityIds: validation.capabilityIds,
-      linkLastVerifiedAt: validation.verifiedAt,
-    },
+  const connections = createDesktopLinkConnections({
+    cwd: input.cwd || undefined,
+    onChanged: () => bridge?.notifyWebConfigurationChanged(),
   });
-  bridge?.pushCredentialSnapshot(cwd || undefined);
-  return validation;
+  try {
+    return await connections.connectLocal(input);
+  } finally {
+    connections.close();
+  }
 }
 
 async function persistCliLinkCredential(input: {
@@ -3817,52 +3775,15 @@ async function persistCliLinkCredential(input: {
   existingId: string;
   loginIfNeeded: boolean;
 }) {
-  const { cwd, providerId, methodId, label, existingId, loginIfNeeded } = input;
-  const provider = listDesktopLinkProviders().find((candidate) => candidate.id === providerId);
-  const method = provider?.connectionMethods.find((candidate) => candidate.id === methodId);
-  if (!provider || !method?.quickAuth || method.quickAuth.kind !== "cli-session") {
-    throw new Error("This Link connection method does not support a CLI session");
-  }
-  const store = new CredentialStore(cwd || undefined);
-  const credentialId = existingId || `link-${providerId}-${methodId}`;
-  if (existingId) {
-    const current = store.resolve(existingId, "full");
-    if (
-      !current ||
-      current.type !== "link" ||
-      current.meta?.linkProvider !== providerId ||
-      current.meta.linkConnectionMethod !== methodId ||
-      current.meta.linkExecutionRuntime !== "local"
-    ) {
-      throw new Error("The existing credential does not belong to this local Link provider");
-    }
-  }
-
-  const validation = await connectCliLink(providerId, { cwd: cwd || undefined, loginIfNeeded });
-  store.save("user", {
-    id: credentialId,
-    type: "link",
-    label: label || `${provider.displayName} · ${validation.identity.label}`,
-    // This random value is only an encrypted binding marker. It is never sent
-    // to the provider and never used to authenticate a Link Action.
-    secret: `cli-binding:${randomBytes(24).toString("base64url")}`,
-    autoUseByAI: false,
-    meta: {
-      linkProvider: providerId,
-      linkConnectionMethod: methodId,
-      linkExecutionRuntime: "local",
-      linkAuthSource: "cli-session",
-      linkExecutionBackend: "cli",
-      agentExposable: false,
-      linkAccountId: validation.identity.externalAccountId,
-      linkAccountLabel: validation.identity.label,
-      linkResourceLabels: validation.identity.resourceLabels,
-      linkCapabilityIds: validation.capabilityIds,
-      linkLastVerifiedAt: validation.verifiedAt,
-    },
+  const connections = createDesktopLinkConnections({
+    cwd: input.cwd || undefined,
+    onChanged: () => bridge?.notifyWebConfigurationChanged(),
   });
-  bridge?.pushCredentialSnapshot(cwd || undefined);
-  return validation;
+  try {
+    return await connections.connectCli(input);
+  } finally {
+    connections.close();
+  }
 }
 
 ipcMain.handle("links:cliStatus", async (_e, rawProviderId: unknown, rawCwd: unknown) => {
@@ -5438,8 +5359,14 @@ ipcMain.handle("mobileRemote:stop", async () => stopMobileRemote());
 ipcMain.handle("mobileRemote:pairingUrl", async () => createMobileRemotePairingUrl());
 ipcMain.handle("mobileRemote:status", async () => getMobileRemoteGatewayStatus());
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
-ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
-ipcMain.handle("mobileRemote:removeDevice", async (_e, id: string) => mobileDevices.remove(id));
+ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {
+  mobileDevices.revoke(id);
+  mobileRemote.revokeDevice(id);
+});
+ipcMain.handle("mobileRemote:removeDevice", async (_e, id: string) => {
+  mobileDevices.remove(id);
+  mobileRemote.revokeDevice(id);
+});
 ipcMain.handle("mobileRemote:renameDevice", async (_e, id: string, name: string) =>
   mobileDevices.rename(id, name),
 );

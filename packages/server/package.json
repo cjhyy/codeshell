@@ -1,7 +1,7 @@
 {
   "name": "@cjhyy/code-shell-server",
   "version": "0.9.7",
-  "description": "CodeShell server transport layer — mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
+  "description": "CodeShell server transport layer \u2014 mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,6 +25,18 @@
     "./serve": {
       "types": "./dist/index.serve.d.ts",
       "import": "./dist/index.serve.js"
+    },
+    "./desktop-web": {
+      "types": "./dist/index.desktop-web.d.ts",
+      "import": "./dist/index.desktop-web.js"
+    },
+    "./links": {
+      "types": "./dist/index.links.d.ts",
+      "import": "./dist/index.links.js"
+    },
+    "./panels": {
+      "types": "./dist/index.panels.d.ts",
+      "import": "./dist/index.panels.js"
     }
   },
   "bin": {
@@ -42,8 +54,10 @@
     "@cjhyy/code-shell-capability-coding": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-web": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.12.1",
     "@types/ws": "^8.18.1",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "@cjhyy/code-shell-link": "workspace:*"
   },
   "engines": {
     "node": ">=20.10"

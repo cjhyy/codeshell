@@ -96,4 +96,27 @@ describe("effectiveProjectOverrides", () => {
     expect(effectiveProjectOverrides(settings, undefined)).toBeUndefined();
     expect(effectiveProjectOverrides(settings, cwd)).toBeUndefined();
   });
+
+  test("local skill overrides win without dropping project or profile entries", () => {
+    const settings = new SettingsManager(cwd, "full");
+    settings.saveProjectSetting(
+      "profile",
+      { active: "test", overrides: { skills: { profile: "on" } } },
+      cwd,
+    );
+    settings.saveProjectSetting(
+      "capabilityOverrides",
+      { skills: { shared: "off", project: "on" }, pet: { showExternalCodexSessions: "on" } },
+      cwd,
+    );
+    settings.saveLocalSetting(
+      "capabilityOverrides",
+      { skills: { shared: "on", local: "off" } },
+      cwd,
+    );
+    expect(effectiveProjectOverrides(settings, cwd)).toEqual({
+      skills: { profile: "on", shared: "on", project: "on", local: "off" },
+      pet: { showExternalCodexSessions: "on" },
+    });
+  });
 });

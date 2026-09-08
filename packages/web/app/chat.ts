@@ -3,34 +3,55 @@
 // Transcript replay + title helpers for the standalone SPA. Live stream
 // folding is handled by the shared reducer in ../src/lib/streamReducer —
 // do NOT reintroduce a local fold here.
-import { initialChatState, type ChatItem, type ChatState } from "../src/lib/streamReducer.js";
+import {
+  initialChatState,
+  reduceStream,
+  type ChatItem,
+  type ChatState,
+} from "../src/lib/streamReducer.js";
+import { replayTranscript } from "../src/lib/transcriptReplay.js";
+import type { HubStreamCursor, SessionDetailData, StreamEventPayload } from "./protocol.js";
 
 export { initialChatState, type ChatItem, type ChatState };
 
-/**
- * Best-effort mapping of a persisted transcript (session_detail) into chat
- * items. Transcript event shapes vary across event kinds; anything we don't
- * recognize is skipped rather than rendered wrong.
- */
-export function chatFromTranscript(events: Array<Record<string, unknown>>): ChatState {
-  const items: ChatItem[] = [];
-  let seq = 0;
-  for (const event of events) {
-    const message = (event.message ?? event) as Record<string, unknown>;
-    const role = message.role as string | undefined;
-    if (role !== "user" && role !== "assistant") continue;
-    const text = extractText(message.content);
-    if (!text) continue;
-    // Skip synthetic frames (system reminders ride user turns).
-    if (role === "user" && text.startsWith("<system-reminder>")) continue;
-    seq += 1;
-    items.push(
-      role === "user"
-        ? { kind: "user", id: `h-${seq}`, text }
-        : { kind: "assistant", id: `h-${seq}`, text, reasoning: "", done: true },
-    );
+export { replayTranscript as chatFromTranscript } from "../src/lib/transcriptReplay.js";
+
+export function sessionIdFromSearch(search: string): string | null {
+  const value = new URLSearchParams(search).get("session");
+  return value && /^[a-zA-Z0-9_-]{1,128}$/.test(value) ? value : null;
+}
+
+export function isNewStreamEvent(
+  event: StreamEventPayload,
+  cursor?: HubStreamCursor | null,
+): boolean {
+  if (!cursor || !event.hubEpoch || event.hubSequence === undefined) return true;
+  return event.hubEpoch === cursor.epoch && event.hubSequence > cursor.sequence;
+}
+
+/** The host's durable prefix and active stream are a single atomic snapshot.
+ * Buffered notifications at or before its cursor are already represented. */
+export function chatFromSnapshot(
+  data: SessionDetailData,
+  buffered: StreamEventPayload[] = [],
+): {
+  chat: ChatState;
+  cursor?: HubStreamCursor;
+  truncated: boolean;
+} {
+  let chat = replayTranscript(data.transcript);
+  for (const item of data.liveStream?.events ?? []) chat = reduceStream(chat, item.event);
+  if (data.running) chat = { ...chat, run: "running" };
+  else if (data.running === false && (chat.run === "running" || chat.run === "waiting"))
+    chat = { ...chat, run: "idle" };
+  let cursor = data.streamCursor;
+  for (const payload of buffered) {
+    if (!isNewStreamEvent(payload, cursor)) continue;
+    chat = reduceStream(chat, payload.event);
+    if (payload.hubEpoch && payload.hubSequence !== undefined)
+      cursor = { epoch: payload.hubEpoch, sequence: payload.hubSequence };
   }
-  return { ...initialChatState(), items, seq };
+  return { chat, cursor, truncated: data.liveStream?.truncated ?? false };
 }
 
 /** Session-rail title: reducer-pushed title, else first user line, else id. */
@@ -41,20 +62,7 @@ export function sessionTitle(state: ChatState | undefined, sessionId: string): s
     const line = firstUser.text.trim().split("\n")[0];
     return line.length > 32 ? `${line.slice(0, 32)}…` : line;
   }
+  if (firstUser?.kind === "user" && firstUser.attachments?.length)
+    return `附件：${firstUser.attachments[0].name}`;
   return sessionId.slice(0, 8);
-}
-
-function extractText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((block) =>
-        block && typeof block === "object" && (block as { type?: string }).type === "text"
-          ? String((block as { text?: string }).text ?? "")
-          : "",
-      )
-      .filter(Boolean)
-      .join("\n");
-  }
-  return "";
 }

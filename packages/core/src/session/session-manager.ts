@@ -4,6 +4,8 @@
 
 import {
   closeSync,
+  constants,
+  fstatSync,
   chmodSync,
   existsSync,
   mkdirSync,
@@ -17,7 +19,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
@@ -2089,7 +2091,18 @@ export class SessionManager {
     }
   }
 
-  list(limit = 20, opts?: { excludeKinds?: readonly string[] }): SessionListEntry[] {
+  list(
+    limit = 20,
+    opts?: {
+      excludeKinds?: readonly string[];
+      /** Apply workspace/visibility filters before the result limit and previews. */
+      cwd?: string;
+      archived?: boolean;
+      rootsOnly?: boolean;
+      before?: { lastActiveAt: number; sessionId: string };
+      filter?: (entry: Readonly<SessionListEntry>) => boolean;
+    },
+  ): SessionListEntry[] {
     if (!existsSync(this.sessionsDir)) return [];
     // Core is domain-agnostic: only the composition root knows which
     // extension-owned kinds belong outside its generic list. AgentServer passes
@@ -2123,13 +2136,22 @@ export class SessionManager {
       let lastActiveAt: number;
       let transcriptExists: boolean;
       try {
+        const stateInfo = lstatSync(stateFile);
+        if (
+          !stateInfo.isFile() ||
+          stateInfo.isSymbolicLink() ||
+          stateInfo.size > MAX_LIST_STATE_BYTES
+        )
+          continue;
         transcriptExists = existsSync(transcriptFile);
         if (transcriptExists) {
-          lastActiveAt = statSync(transcriptFile).mtimeMs;
+          const transcriptInfo = lstatSync(transcriptFile);
+          if (!transcriptInfo.isFile() || transcriptInfo.isSymbolicLink()) continue;
+          lastActiveAt = transcriptInfo.mtimeMs;
         } else {
           // Fall back to state.json mtime (cheaper than parsing it for
           // state.startedAt and good enough for ordering).
-          lastActiveAt = statSync(stateFile).mtimeMs;
+          lastActiveAt = stateInfo.mtimeMs;
         }
       } catch {
         continue;
@@ -2137,17 +2159,29 @@ export class SessionManager {
       candidates.push({ dir, lastActiveAt, transcriptFile, stateFile, transcriptExists });
     }
 
-    candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+    candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt || a.dir.localeCompare(b.dir));
     const sessions: SessionListEntry[] = [];
     for (const c of candidates) {
       if (sessions.length >= limit) break;
       try {
-        const state = JSON.parse(readFileSync(c.stateFile, "utf-8")) as SessionState;
+        const state = readSessionListState(c.stateFile, c.dir);
         if (isEphemeralSessionState(state)) continue;
         state.kind = normalizedSessionKind(state.kind);
         if (excludeKinds.includes(state.kind)) continue;
+        if (opts?.cwd !== undefined && resolve(state.cwd) !== resolve(opts.cwd)) continue;
+        if (opts?.archived !== undefined && Boolean(state.archivedAt) !== opts.archived) continue;
+        if (opts?.rootsOnly && state.parentSessionId) continue;
+        if (
+          opts?.before &&
+          (c.lastActiveAt > opts.before.lastActiveAt ||
+            (c.lastActiveAt === opts.before.lastActiveAt &&
+              c.dir.localeCompare(opts.before.sessionId) <= 0))
+        )
+          continue;
         const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
-        sessions.push({ ...state, preview, lastActiveAt: c.lastActiveAt });
+        const entry = { ...state, preview, lastActiveAt: c.lastActiveAt };
+        if (opts?.filter && !opts.filter(entry)) continue;
+        sessions.push(entry);
       } catch {
         // Skip corrupted sessions
       }
@@ -2358,6 +2392,72 @@ export type SessionListEntry = SessionState & {
  * Returns undefined if the session has no user messages, or on any IO
  * error (caller treats the preview as optional).
  */
+const MAX_LIST_STATE_BYTES = 1024 * 1024;
+const MAX_PREVIEW_SCAN_BYTES = 2 * 1024 * 1024;
+const MAX_PREVIEW_CHARS = 64 * 1024;
+
+/** Never follow a leaf symlink or block on a FIFO while listing optional metadata. */
+function openRegularSessionListFile(file: string): { fd: number; size: number } {
+  let directory: number | undefined;
+  let fd: number | undefined;
+  try {
+    const parent = dirname(file);
+    const before = lstatSync(parent);
+    if (!before.isDirectory() || before.isSymbolicLink())
+      throw new Error("invalid session directory");
+    directory = openSync(
+      parent,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0),
+    );
+    const openedParent = fstatSync(directory);
+    if (before.dev !== openedParent.dev || before.ino !== openedParent.ino)
+      throw new Error("session directory changed");
+    fd = openSync(
+      process.platform === "linux" ? `/proc/self/fd/${directory}/${basename(file)}` : file,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
+    const opened = fstatSync(fd);
+    const current = lstatSync(file);
+    const currentParent = lstatSync(parent);
+    if (
+      !opened.isFile() ||
+      current.isSymbolicLink() ||
+      currentParent.isSymbolicLink() ||
+      current.dev !== opened.dev ||
+      current.ino !== opened.ino ||
+      currentParent.dev !== before.dev ||
+      currentParent.ino !== before.ino
+    )
+      throw new Error("session file changed");
+    return { fd, size: opened.size };
+  } catch (error) {
+    if (fd !== undefined) closeSync(fd);
+    throw error;
+  } finally {
+    if (directory !== undefined) closeSync(directory);
+  }
+}
+
+function readSessionListState(file: string, sessionId: string): SessionState {
+  const { fd, size } = openRegularSessionListFile(file);
+  try {
+    if (size > MAX_LIST_STATE_BYTES) throw new Error("session list state is too large");
+    const buffer = Buffer.alloc(size);
+    let bytes = 0;
+    while (bytes < buffer.length) {
+      const count = readSync(fd, buffer, bytes, buffer.length - bytes, bytes);
+      if (!count) break;
+      bytes += count;
+    }
+    const state = JSON.parse(buffer.subarray(0, bytes).toString("utf8")) as SessionState;
+    if (!state || state.sessionId !== sessionId || typeof state.cwd !== "string")
+      throw new Error("invalid session metadata");
+    return state;
+  } finally {
+    closeSync(fd);
+  }
+}
+
 const TAIL_CHUNK_SIZE = 64 * 1024;
 
 function readLastUserMessage(transcriptFile: string): string | undefined {
@@ -2366,8 +2466,9 @@ function readLastUserMessage(transcriptFile: string): string | undefined {
   let fd: number;
   let fileSize: number;
   try {
-    fd = openSync(transcriptFile, "r");
-    fileSize = statSync(transcriptFile).size;
+    const opened = openRegularSessionListFile(transcriptFile);
+    fd = opened.fd;
+    fileSize = opened.size;
   } catch {
     return undefined;
   }
@@ -2384,8 +2485,9 @@ function readLastUserMessage(transcriptFile: string): string | undefined {
     let leftover = "";
     const buf = Buffer.alloc(TAIL_CHUNK_SIZE);
 
-    while (position > 0) {
-      const readLen = Math.min(TAIL_CHUNK_SIZE, position);
+    const minimumPosition = Math.max(0, fileSize - MAX_PREVIEW_SCAN_BYTES);
+    while (position > minimumPosition) {
+      const readLen = Math.min(TAIL_CHUNK_SIZE, position - minimumPosition);
       position -= readLen;
       const got = readSync(fd, buf, 0, readLen, position);
       if (got <= 0) break;
@@ -2441,5 +2543,6 @@ function parseUserPreview(line: string | undefined): string | undefined {
         ? (content.find((b: { type?: string; text?: string }) => b.type === "text")?.text ?? "")
         : "";
   if (!text.trim()) return undefined;
-  return text.replace(/\s+/g, " ").trim();
+  // Hosts strip attachment metadata before collapsing whitespace for display.
+  return text.trim().slice(0, MAX_PREVIEW_CHARS);
 }

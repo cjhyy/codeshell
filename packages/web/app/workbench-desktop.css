@@ -1,0 +1,134 @@
+#app {
+  height: 100%;
+}
+.desktop-sidebar-controls {
+  display: grid;
+  gap: 10px;
+  padding: 8px 12px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.desktop-project-picker,
+.desktop-approval-scope label,
+.desktop-chat-controls label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.desktop-project-picker select,
+.desktop-approval-scope select,
+.desktop-chat-controls select {
+  min-width: 0;
+  min-height: 34px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 4px 8px;
+}
+.desktop-sidebar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.desktop-root-picker,
+.desktop-cli-sessions {
+  min-width: 0;
+  max-height: 38dvh;
+  overflow: auto;
+}
+.desktop-root-picker summary,
+.desktop-cli-sessions summary {
+  cursor: pointer;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.desktop-cli-sessions .session,
+.desktop-root-picker .session {
+  width: 100%;
+  margin-top: 5px;
+}
+.desktop-chat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 16px;
+  font-size: 12px;
+}
+.desktop-room-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.desktop-mode-options,
+.desktop-ask-options {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.desktop-mode-options .library-button {
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  white-space: normal;
+}
+.desktop-mode-options span {
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--muted);
+}
+.desktop-approval-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.desktop-ask-options .library-button {
+  white-space: normal;
+  text-align: left;
+}
+.session-unread {
+  color: var(--accent);
+}
+.goal {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.goal > span {
+  flex: 1;
+  min-width: 0;
+}
+.desktop-connection {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--text);
+}
+.desktop-connection-card {
+  width: min(400px, 100%);
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.desktop-connection-card h1 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.desktop-connection-card p {
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.desktop-cli-path {
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}

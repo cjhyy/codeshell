@@ -314,6 +314,7 @@ export async function handleClientEvent(
     if (st.permissionMode) ctx.mobilePermissionModes.set(st.sessionId, st.permissionMode);
     reply({
       type: "chat.accepted",
+      ...(event.clientRequestId ? { clientRequestId: event.clientRequestId } : {}),
       sessionId: st.sessionId,
       cwd: st.selectedCwd,
       ...(selection.projectId !== undefined ? { projectId: selection.projectId } : {}),

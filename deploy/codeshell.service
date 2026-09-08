@@ -1,0 +1,30 @@
+# Install at /etc/systemd/system/codeshell.service after adapting the paths.
+[Unit]
+Description=CodeShell personal Hub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=codeshell
+Group=codeshell
+WorkingDirectory=/opt/codeshell
+Environment=NODE_ENV=production
+Environment=DISABLE_AUTOUPDATER=1
+EnvironmentFile=-/etc/codeshell/server.env
+ExecStart=/usr/bin/node /opt/codeshell/packages/server/dist/bin/code-shell-serve.js --auth hub --host 127.0.0.1 --port 8790 --cwd /srv/codeshell-workspace --data-dir /var/lib/codeshell
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=codeshell
+StateDirectoryMode=0700
+ReadWritePaths=/srv/codeshell-workspace
+
+[Install]
+WantedBy=multi-user.target

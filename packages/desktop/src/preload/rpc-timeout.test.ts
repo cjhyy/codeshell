@@ -15,19 +15,19 @@
  * deliberately faithful; if preload's logic changes, update this copy.
  */
 import { describe, it, expect } from "bun:test";
+import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity.js";
 
 type Entry = { resolve: (r: unknown) => void; reject: (e: Error) => void };
 
 /** A faithful mirror of preload's RPC layer, parameterized on a fake sender. */
 function makeRpcLayer(send: (line: string) => void) {
-  let nextId = 1;
-  const pending = new Map<number, Entry>();
+  const nextId = createPreloadRpcIdFactory();
+  const pending = new Map<string, Entry>();
   const RPC_TIMEOUT_MS = 30_000;
 
-  function onResponse(id: number, msg: unknown) {
-    const entry = pending.get(id);
+  function onResponse(id: string, msg: unknown) {
+    const entry = takePreloadRpcResponse(pending, id);
     if (entry) {
-      pending.delete(id);
       entry.resolve(msg);
     }
   }
@@ -44,13 +44,18 @@ function makeRpcLayer(send: (line: string) => void) {
     }
   }
 
-  function rpc(method: string, params?: Record<string, unknown>, timeoutMs = RPC_TIMEOUT_MS): Promise<unknown> {
-    const id = nextId++;
+  function rpc(
+    method: string,
+    params?: Record<string, unknown>,
+    timeoutMs = RPC_TIMEOUT_MS,
+  ): Promise<unknown> {
+    const id = nextId();
     return new Promise((resolve, reject) => {
       const timer =
         timeoutMs > 0
           ? setTimeout(() => {
-              if (pending.delete(id)) reject(new Error(`RPC '${method}' timed out after ${timeoutMs}ms`));
+              if (pending.delete(id))
+                reject(new Error(`RPC '${method}' timed out after ${timeoutMs}ms`));
             }, timeoutMs)
           : null;
       pending.set(id, {
@@ -80,7 +85,7 @@ describe("preload RPC timeout/cancel semantics", () => {
   });
 
   it("agent/run (timeoutMs=0) does NOT time out — resolves whenever the reply lands", async () => {
-    let sentId = 0;
+    let sentId = "";
     const layer = makeRpcLayer((line) => {
       sentId = JSON.parse(line).id;
     });
@@ -96,7 +101,11 @@ describe("preload RPC timeout/cancel semantics", () => {
     expect(layer.pendingSize()).toBe(1);
 
     // The run finally finishes and main sends its response.
-    layer.onResponse(sentId, { jsonrpc: "2.0", id: sentId, result: { text: "done", reason: "completed" } });
+    layer.onResponse(sentId, {
+      jsonrpc: "2.0",
+      id: sentId,
+      result: { text: "done", reason: "completed" },
+    });
     const r = (await runPromise) as { result: { text: string } };
     expect(r.result.text).toBe("done");
     expect(layer.pendingSize()).toBe(0);

@@ -1,12 +1,16 @@
 # CodeShell Hub 迭代设计：一套代码、双宿主（Electron + Server）
 
-> 状态：详细迭代设计稿（Draft for review）  
+> 状态：I1 单管理员 Node.js/Docker 部署已实现；两种 Web 已共用 Workbench 和管理服务；协议统一、多用户及远程 Panel Host 待实施<br>
 > 日期：2026-08-28  
-> 修订：v2（2026-09-06，按 0.9.6 源码复核）——**I0–I4 全部未开工**（§1.0）；
+> 修订：v6（2026-09-09）：增加独立 Link Server 双向 OAuth 需求与独立交付轨道，尚未实施。
+> v5（2026-09-08）：Desktop Web / Hub 共享 Workbench、同一 Desktop Worker、配对 Cookie facade 与 Link 管理已接入，详见 §1.0。
+> v4（2026-09-08）：补记模型/Skills/MCP 管理、历史/文件、流式恢复及 Linux 容器验证。
+> v3（2026-09-08）：本轮部署目标明确为直接使用 Node.js，I1 改以原生启动验收。
+> v2（2026-09-06，按 0.9.6 源码复核，当时 I0–I4 均未开工）；
 > §1.2「两套浏览器协议」中 serve 侧的"原始 RPC 直通"表述已证伪，实为 3 方法白名单
 > （见上游 v3 §2.1）；§1.2 桌面 mobile-remote 面被少算 2 文件 14 事件族（§1.3）；
 > IPC 计数与全文 file:line 锚点重校（§1.4）<br>
-> 上游文档：`codeshell-hub-remote-service-architecture.md`（方向稿 v3，本文实现其 Phase 1–3）<br>
+> 上游文档：`codeshell-hub-remote-service-architecture.md`（方向稿，本文规划其 Phase 1–3）<br>
 > 交叉文档：`multi-folder-local-project-plan.md`（多目录本地项目，实施中，见 §8）  
 > 硬约束：① 兼容服务端部署；② 桌面端（Electron）零回归；③ 客户端与执行面尽量一套代码两种宿主
 
@@ -14,7 +18,9 @@
 
 不需要"把桌面搬上服务器"，也不需要重写客户端。按源码核验，**执行面今天已经是一套代码**，
 浏览器语义协议**已经存在且类型定义在 core**，共享客户端库**已经有先例和 lint 白名单机制**。
-本设计只做三件事：
+以下三项保留原始迭代目标，不代表实现必须沿用同一拆分顺序。当前已先让 Desktop Web 与
+Hub 共用 `web/app/Workbench` 和服务端管理逻辑，保留两个 transport controller；未迁移
+Electron 原生 renderer，也未把两种 WebSocket 协议强制合并。当前交付以 §1.0 为准：
 
 1. **收敛协议**：淘汰 serve 的"原始 RPC 白名单直通"，把 desktop 内嵌 mobile remote 的
    语义协议（client event）提升为唯一浏览器协议，服务端 handler 下沉 `packages/server` 供
@@ -28,17 +34,75 @@
 桌面端在全过程中不改 preload/main 的既有 IPC 契约，每个迭代以桌面全量测试 + typecheck +
 golden 不变作为验收门。
 
+### 独立 Link 交付轨道（2026-09-09）
+
+新增需求：独立 Node/Docker Link Server 向上游连接第三方 OAuth 服务，向下游让 CodeShell
+与其他应用经 OAuth2 取数。它有独立 owner、client、connection 和 grant，不并入 Hub 的
+Worker/项目管理，也不要求先完成多用户 Hub。
+
+交付顺序为：独立存储/登录与上游 GitHub → 下游应用同意、令牌和只读 API → CodeShell
+共享管理 UI 与 remote Link 执行适配器 → Docker 及真实 provider 验收。前两步共同构成
+双向 OAuth 最小版本；目前都未实施，现有宿主 Link 管理不计作独立服务已完成。
+完整设计见 [Link Server 架构](link-server-oauth-architecture.md)。
+
 ## 1. 现状盘点（已核验，这是设计的地基）
 
-### 1.0 落地进度（2026-09-06）
+### 1.0 落地进度（2026-09-09）
 
-**I0–I4 全部未开工。** 本文自 2026-08-28（`476a0c14`）写成后未被修改，
-其列出的新增落点一个都不存在：`packages/web/src/client/`、`packages/server/src/hub/`、
-`packages/server/src/mobile-remote/remote-host-bridge.ts`、`Dockerfile`、
-`docker-compose.yml` 均无；`RemoteHostBridge` 这个标识符全仓没有任何声明。
+本轮按直接使用 Node.js 的部署目标，先完成 **I1 单管理员远程闭环**。
+运行方式及配置见 [`../deployment.md`](../deployment.md)。
 
-下面 §1.1–§1.2 的"地基"结论**大体仍然成立**，但有三处必须更正
-（§1.2 的直通表述、§1.2 的桌面面规模、IPC 计数），否则会按错误前提排期。
+| 迭代                             | 当前状态                                                                                                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I0 共享客户端骨架                | 已有 `WorkbenchController`、Desktop controller 与 Hub controller；两个 Web 入口共用页面，`web/src/lib` 共用流式与历史投影；原方案的通用 RPC client 未提炼 |
+| I1 个人远程闭环                  | 已实现 Node.js 与 Docker：一次性初始化、登录及设备撤销、HTTP/WS 认证、审批 lease、受限上传、PWA、有界运行恢复、持久化和部署说明                           |
+| I2 语义协议与 Gateway 统一       | 两种浏览器协议保留；新增 Desktop 配对 Cookie facade，复用 Hub 管理 handler；多租户 Gateway 未实施                                                         |
+| I3 多用户                        | 未实施；只有一个管理员、一个部署 Workspace、一个 Worker                                                                                                   |
+| I4 桌面级 Web Shell / Panel Host | 两种 Web 共用工作台、消息、模型、Skills、MCP、历史、文件、Link 和面板；Web 面板支持安装、续租、进程、独立任务与工具回调，完整原生 SDK 适配仍未完成        |
+
+落点：`packages/server/src/hub/`、`packages/server/src/serve/`、`packages/web/app/`、
+`packages/server/src/desktop-web/`、`packages/server/src/links/`、`packages/server/src/panels/`、`packages/web/src/lib/`、
+`packages/core/src/skills/{management,github}.ts`、
+`deploy/`、`Dockerfile`、`compose.yaml`、`scripts/smoke-hub-server.mjs`。
+CLI 默认 Hub 登录，既有库调用和显式 `--auth passcode` 保留旧口令形态。
+服务器显式为 stdio Worker 选择本地凭证读取；桌面继续使用原有 IPC 凭证路径。
+
+模型、Skills 开关和 MCP 设置经认证 HTTP API 写入 Workspace 本地层，忙时拒绝修改，
+空闲时通过 Core 热更新用于下一次任务。Skill 文件管理与 GitHub 安装逻辑提取到 Core，
+Desktop 与 Hub 共用；会话标题存储、历史消息投影也共用实现。Web 文件接口只读且限制在
+宿主授权的 Workspace 内，用户级和插件 Skill 来源不会被当作项目可写目录。
+
+Desktop 的 `mobile/main.tsx` 加载共享 `DesktopApp`，经原 `useRemoteApp` 驱动已有
+`AgentBridge` 与 Worker；Web 不再另外维护一份工作台 UI，也不创建第二个 Worker。
+配对设备换取短期 HttpOnly Cookie 后访问管理接口，宿主只接受桌面已知的项目或会话目录。
+Hub 保留管理员认证和固定 Workspace。具体接口边界见 [共享 Web 工作台](shared-web-workbench.md)。
+
+独立 Link 页面复用纯 Node 服务商目录、token 验证/保存、CLI 状态/绑定和设备授权服务；
+Desktop 保存适配也使用该服务。新连接为宿主用户级凭证，Web 不启动交互式 CLI 登录，
+OAuth 过期需重新授权。模型设置、MCP 连接和 Link 是三种不同配置，不能互相替代。
+
+先完成原生启动，再按本地试用后部署其他机器的目标补齐镜像、Compose 和构建上下文白名单。
+本机 Linux 容器已运行真实 Node 22/Core，并使用隔离模拟模型验证浏览器对话流程；
+部署步骤见 [`../docker-deployment.md`](../docker-deployment.md)。
+原方案的 `RemoteHostBridge` 与 `web/src/client` 仍未提炼；本轮共享落在 controller 和
+业务 HTTP handler，不据此宣称协议统一或多用户已完成。浏览器/PWA 可连接远端 Hub；
+Electron 原生窗口的远端执行目标仍未实现。
+
+验证覆盖：真实 Node CLI 与 Core Worker，在隔离临时目录连接本地模拟模型，完成
+初始化、流式对话、审批后写文件、停止、重启保留登录及历史、携带历史续聊。
+浏览器验证还覆盖 Markdown、模型提供的实时思考、工具展示、运行中刷新、附件与草稿恢复，
+以及部分流式失败后回退结果和历史的一致性。以上模拟模型验证未调用外部模型服务。
+Linux systemd/Caddy 配置作为部署示例提供，尚未在目标服务器实际运行。
+
+当前边界：单管理员多设备不等于多用户隔离；运行事件缓冲有容量上限，服务重启只恢复
+已保存历史，不自动续跑中断任务；草稿仅保留在当前页面内。插件市场、完整原生 Panel SDK 适配和
+Hub 多 Workspace 切换仍未交付。Web 面板以 `availableMethods` 为准，Cookie、音频、媒体、自动化、PDF 等仍未完整接入；见 [Web 面板](../web-panels.md)。Desktop Web 可切换桌面已知项目，不能据此推断 Hub 已有多用户目录注册。
+
+本节描述源码完成范围，不代表运行中的旧构建已升级。Desktop 需重建主进程及 mobile
+页面并重启应用。本机 8790 已升级到共享工作台与 Link，验收见 [打磨记录](hub-usability-polish.md)。
+
+以下 §1.1a–§1.5 保留 2026-09-06 的源码复核记录，文件行号属于当时快照；§2 之后为
+原始实施方案，尚未完成的退出标准不能覆盖本节的实际落地状态。
 
 ### 1.1a 锚点漂移（v1 → 0.9.6）
 
@@ -287,8 +351,9 @@ cd packages/web && bun test && bun run build
 
 ## 4. Iteration 1：serve → hub-lite（单用户远程闭环，对应上游 Phase 1）
 
-**目标**：一台服务器一条命令部署，登录取代 passcode，手机 PWA 可用，重启可恢复。
-本迭代**显式接受**原始 RPC 直通仍存在（单用户 = 部署者本人，上游文档 §10 已记录）。
+**目标**：原生 Node.js 启动，单管理员登录，手机 PWA 可用，重启可恢复。
+2026-09-08 已按本轮目标实现；以下是原始计划清单，其中容器项由原生构建/启动命令及
+systemd、Caddy 示例替代。浏览器保留 3 方法白名单与固定 Workspace，属于单用户已知边界。
 
 改动落点：
 

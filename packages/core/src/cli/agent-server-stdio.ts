@@ -391,7 +391,11 @@ cronScheduler.loadJobs();
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
-setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
+// Headless hosts explicitly use the local store. Electron remains the default
+// and keeps credential resolution in its safeStorage-owning main process.
+if (process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local") {
+  setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
+}
 setCronCreateAuthority(createDesktopAutomationAuthorityClient(stdioTransport));
 
 // Cron jobs are persisted by this worker but only main arms/executes their

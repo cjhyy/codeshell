@@ -28,13 +28,21 @@ export interface UserAttachmentSummary {
   name: string;
   mime?: string;
   size: number;
+  path?: string;
 }
 
 export type ChatItem =
-  | { kind: "user"; id: string; text: string; attachments?: UserAttachmentSummary[] }
+  | {
+      kind: "user";
+      id: string;
+      text: string;
+      attachments?: UserAttachmentSummary[];
+      clientMessageId?: string;
+    }
   | {
       kind: "assistant";
       id: string;
+      messageId?: string;
       text: string;
       reasoning: string;
       done: boolean;
@@ -170,17 +178,6 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
   };
 
   switch (type) {
-    case "session_user_message": {
-      const [id, s2] = freshId("u");
-      return {
-        ...s2,
-        items: [
-          ...s2.items,
-          { kind: "user", id, text: typeof event.text === "string" ? event.text : "" },
-        ],
-      };
-    }
-
     case "stream_request_start": {
       // Open a fresh assistant message (for THIS agent) to accumulate text into.
       const key = agentKey(event);
@@ -192,6 +189,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         reasoning: "",
         done: false,
         agentId: event.agentId as string | undefined,
+        ...(typeof event.messageId === "string" ? { messageId: event.messageId } : {}),
       };
       return {
         ...s2,
@@ -428,6 +426,27 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       return { ...s, items };
     }
 
+    case "tombstone": {
+      if (typeof event.messageId !== "string") return s;
+      const removed = new Set(
+        s.items
+          .filter(
+            (item) =>
+              (item.kind === "assistant" && item.messageId === event.messageId) ||
+              (item.kind === "tool" && item.id === event.messageId),
+          )
+          .map((item) => item.id),
+      );
+      if (!removed.size) return s;
+      return {
+        ...s,
+        items: s.items.filter((item) => !removed.has(item.id)),
+        liveByAgent: Object.fromEntries(
+          Object.entries(s.liveByAgent).filter(([, id]) => !removed.has(id)),
+        ),
+      };
+    }
+
     case "assistant_message": {
       // Final assistant message for the request — seal THIS agent's live bubble
       // AND mark its open assistant items done. Without the latter, a finalized
@@ -561,7 +580,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         id: `sub-${agentId}`,
         agentId,
         label: (event.name as string) || (event.description as string) || "子代理",
-        status: "running",
+        status: event.status === "recorded" ? "recorded" : "running",
       };
       if (s.items.some((i) => i.kind === "subagent" && i.agentId === agentId)) return s;
       return { ...s, items: [...s.items, sub] };
@@ -596,19 +615,56 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       return { ...s, title: event.title as string | undefined };
     }
 
+    case "session_user_message":
     case "user_message": {
       // History replay surfaces past user turns as a synthetic event so the
       // same reducer rebuilds the full conversation (the live path uses
       // appendUserMessage instead, since the phone echoes locally).
-      const [id, s2] = freshId("u");
+      const clientMessageId =
+        typeof event.clientMessageId === "string" ? event.clientMessageId : undefined;
       const attachments = Array.isArray(event.attachments)
         ? event.attachments
             .map((item) => item as Partial<UserAttachmentSummary>)
             .filter(
               (item): item is UserAttachmentSummary =>
-                typeof item.name === "string" && typeof item.size === "number",
+                !!item &&
+                typeof item.name === "string" &&
+                typeof item.size === "number" &&
+                Number.isFinite(item.size) &&
+                item.size >= 0,
             )
+            .map((item) => ({
+              name: item.name,
+              size: item.size,
+              ...(typeof item.mime === "string" ? { mime: item.mime } : {}),
+              ...(typeof item.path === "string" ? { path: item.path } : {}),
+            }))
         : undefined;
+      if (
+        clientMessageId &&
+        s.items.some((item) => item.kind === "user" && item.clientMessageId === clientMessageId)
+      ) {
+        // The local echo has original filenames but no authenticated workspace
+        // paths yet. Reconcile the host's staged attachment metadata in place.
+        if (!attachments?.length) return s;
+        return {
+          ...s,
+          items: s.items.map((item) =>
+            item.kind === "user" && item.clientMessageId === clientMessageId
+              ? {
+                  ...item,
+                  attachments: attachments.map((attachment, index) => {
+                    const previous = item.attachments?.[index];
+                    return previous?.name === attachment.name
+                      ? { ...previous, ...attachment }
+                      : attachment;
+                  }),
+                }
+              : item,
+          ),
+        };
+      }
+      const [id, s2] = freshId("u");
       return {
         ...s2,
         items: [
@@ -618,6 +674,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
             id,
             text: (event.text as string) ?? "",
             ...(attachments?.length ? { attachments } : {}),
+            ...(clientMessageId ? { clientMessageId } : {}),
           },
         ],
       };
@@ -663,6 +720,7 @@ export function appendUserMessage(
   state: ChatState,
   text: string,
   attachments?: UserAttachmentSummary[],
+  clientMessageId?: string,
 ): ChatState {
   const id = `u-${state.seq + 1}`;
   return {
@@ -670,7 +728,13 @@ export function appendUserMessage(
     seq: state.seq + 1,
     items: [
       ...state.items,
-      { kind: "user", id, text, ...(attachments?.length ? { attachments } : {}) },
+      {
+        kind: "user",
+        id,
+        text,
+        ...(attachments?.length ? { attachments } : {}),
+        ...(clientMessageId ? { clientMessageId } : {}),
+      },
     ],
   };
 }

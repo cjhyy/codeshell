@@ -1,0 +1,45 @@
+# Build-context allowlist: personal workspaces, settings, history, .git and
+# host node_modules never enter the Docker build context.
+**
+!Dockerfile
+!package.json
+!bun.lock
+!LICENSE
+!scripts/
+!scripts/copy-assets.mjs
+!packages/
+!packages/*/
+!packages/*/package.json
+!packages/link/tsconfig.json
+!packages/link/src/
+!packages/link/src/**
+!packages/core/tsconfig.json
+!packages/core/src/
+!packages/core/src/**
+!packages/coding/tsconfig.json
+!packages/coding/THIRD_PARTY_NOTICES.md
+!packages/coding/src/
+!packages/coding/src/**
+!packages/server/tsconfig.json
+!packages/server/src/
+!packages/server/src/**
+!packages/web/tsconfig.json
+!packages/web/tsconfig.app.json
+!packages/web/vite.config.ts
+!packages/web/src/
+!packages/web/src/**
+!packages/web/app/
+!packages/web/app/**
+
+# Also exclude local/generated material if it appears inside an allowed tree.
+**/node_modules
+**/.code-shell
+**/.codex
+**/.git
+**/.env
+**/.env.*
+**/settings.local.json
+**/dist
+**/dist-app
+**/*.log
+**/.DS_Store

@@ -177,7 +177,7 @@ export function mergeCapabilityOverrides(
 }
 
 /**
- * 项目 overrides 的唯一读取咽喉：profile 快照垫底、用户手写覆盖。
+ * 项目 overrides 的唯一读取咽喉：profile 快照垫底、项目设置覆盖、本地设置优先。
  * 所有折叠消费方（engine / disabled-lists / capability service）必须
  * 经这里读，不得再直接 getForScope().capabilityOverrides。
  */
@@ -192,10 +192,19 @@ export function effectiveProjectOverrides(
       capabilityOverrides?: CapabilityOverrides;
       profile?: { overrides?: CapabilityOverrides };
     };
-    return mergeCapabilityOverrides(
-      explicitProfileOverrides ?? scoped.profile?.overrides,
-      scoped.capabilityOverrides,
-    );
+    const local = settings.getForScope("local", cwd) as {
+      capabilityOverrides?: CapabilityOverrides;
+    };
+    // Both project layers are direct settings, unlike portable profile
+    // overrides. Preserve their host visibility keys while merging per token.
+    const direct = mergeCapabilityOverrides(scoped.capabilityOverrides, {
+      ...local.capabilityOverrides,
+      pet: {
+        ...scoped.capabilityOverrides?.pet,
+        ...local.capabilityOverrides?.pet,
+      },
+    });
+    return mergeCapabilityOverrides(explicitProfileOverrides ?? scoped.profile?.overrides, direct);
   } catch {
     return undefined;
   }

@@ -175,7 +175,9 @@
       "dependencies": {
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-link": "workspace:*",
         "@cjhyy/code-shell-web": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.12.1",
         "@types/ws": "^8.18.1",
         "ws": "^8.21.0",
       },
@@ -222,6 +224,7 @@
       "version": "0.9.7",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-link": "workspace:*",
       },
       "devDependencies": {
         "@types/react": "^19.2.14",
@@ -229,6 +232,8 @@
         "@vitejs/plugin-react": "^5.0.0",
         "react": "19.2.6",
         "react-dom": "19.2.6",
+        "react-markdown": "^9",
+        "remark-gfm": "^4",
         "vite": "^7.0.0",
       },
       "peerDependencies": {

@@ -24,7 +24,8 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@cjhyy/code-shell-core": "workspace:*"
+    "@cjhyy/code-shell-core": "workspace:*",
+    "@cjhyy/code-shell-link": "workspace:*"
   },
   "peerDependencies": {
     "react": "19.2.6"
@@ -35,6 +36,8 @@
     "@vitejs/plugin-react": "^5.0.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "react-markdown": "^9",
+    "remark-gfm": "^4",
     "vite": "^7.0.0"
   },
   "engines": {

@@ -14,6 +14,10 @@
       "types": "./dist/index.internal.d.ts",
       "import": "./dist/index.internal.js"
     },
+    "./internal/skills": {
+      "types": "./dist/index.skills.d.ts",
+      "import": "./dist/index.skills.js"
+    },
     "./panel-app-runtime": {
       "types": "./dist/panel-apps/runtime.d.ts",
       "import": "./dist/panel-apps/runtime.js"

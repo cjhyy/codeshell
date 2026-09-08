@@ -210,3 +210,29 @@ describe("injectAndAwaitResult timeouts", () => {
     expect(injected).toHaveLength(1);
   });
 });
+
+test("session creation echoes optional browser correlation while legacy clients keep the original reply", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/primary",
+    lookupSession: () => undefined,
+  });
+  await handleClientEvent(harness.ctx, {
+    type: "session.create",
+    deviceId: "phone-1",
+    cwd: "/primary",
+    clientRequestId: "browser-create-1",
+  });
+  expect(harness.replies.find((event) => event.type === "chat.accepted")).toMatchObject({
+    clientRequestId: "browser-create-1",
+    cwd: "/primary",
+  });
+  harness.replies.length = 0;
+  await handleClientEvent(harness.ctx, {
+    type: "session.create",
+    deviceId: "phone-1",
+    cwd: "/primary",
+  });
+  expect(harness.replies.find((event) => event.type === "chat.accepted")).not.toHaveProperty(
+    "clientRequestId",
+  );
+});

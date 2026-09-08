@@ -281,6 +281,7 @@ describe("headless serve — WS pipe", () => {
           sessionId: "session-in-workspace",
           cwd: dir,
           startedAt: 123,
+          lastActiveAt: expect.any(Number),
           model: "test-model",
           status: "completed",
           turnCount: 1,

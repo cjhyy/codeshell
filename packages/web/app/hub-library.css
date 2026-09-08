@@ -1,0 +1,412 @@
+.hub-library {
+  height: 100%;
+  overflow: auto;
+  padding: 30px clamp(18px, 4vw, 52px) 44px;
+}
+.library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.library-heading h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+.library-heading p,
+.library-hint {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 13px;
+}
+.library-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.library-button:hover {
+  background: var(--hover);
+}
+.library-button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.library-button.danger {
+  color: var(--danger);
+}
+.library-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.library-error {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+  padding: 12px 14px;
+  border-radius: 9px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.library-empty {
+  padding: 32px 18px;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.library-search input,
+.hub-library select,
+.library-title-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 11px;
+}
+.file-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.file-breadcrumbs button {
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 4px;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.file-breadcrumbs button:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.file-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.file-columns.has-preview {
+  grid-template-columns: minmax(230px, 1fr) minmax(0, 1.7fr);
+}
+.file-directory {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.file-directory .library-search {
+  display: block;
+  padding: 12px;
+  border-bottom: 1px solid var(--subtle);
+}
+.file-directory .library-hint {
+  padding: 14px;
+}
+.file-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--subtle);
+  background: transparent;
+  color: var(--text);
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.file-entry:last-child {
+  border-bottom: none;
+}
+.file-entry:hover,
+.file-entry.selected {
+  background: var(--hover);
+}
+.file-glyph {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--muted);
+}
+.file-entry-name {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.file-entry-size {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.file-preview {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.file-preview header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-bottom: 1px solid var(--subtle);
+  flex-wrap: wrap;
+}
+.file-preview header strong {
+  display: block;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.file-preview header span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.file-preview pre {
+  max-height: 65vh;
+  overflow: auto;
+  margin: 0;
+  padding: 18px;
+  font:
+    12px/1.8 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  white-space: pre;
+  tab-size: 2;
+}
+.file-preview > img {
+  display: block;
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  margin: auto;
+  padding: 16px;
+}
+.file-preview .library-hint {
+  padding: 12px 18px;
+  border-top: 1px solid var(--subtle);
+}
+.session-toolbar {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+}
+.session-toolbar .library-search {
+  flex: 1;
+}
+.session-toolbar select {
+  width: auto;
+  min-width: 110px;
+}
+.session-history-list {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: visible;
+}
+.session-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--subtle);
+  padding: 17px 18px;
+}
+.session-history-row:last-child {
+  border-bottom: none;
+}
+.session-history-info {
+  flex: 1;
+  min-width: 0;
+}
+.session-history-title {
+  border: none;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  font-weight: 550;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.session-history-info p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 6px 0 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.session-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.session-history-editor {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.session-history-editor h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.session-history-editor label > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+.session-history-editor .library-error {
+  margin: 0;
+}
+.session-title-review {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.session-title-review strong {
+  color: var(--text);
+}
+.session-history-editor .library-error:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.session-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+.session-export {
+  position: relative;
+}
+.session-export summary {
+  list-style: none;
+}
+.session-export summary::-webkit-details-marker {
+  display: none;
+}
+.session-export > div {
+  position: absolute;
+  right: 0;
+  z-index: 2;
+  min-width: 160px;
+  padding: 5px;
+  margin-top: 5px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.session-export a {
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 10px;
+  border-radius: 5px;
+}
+.session-export a:hover {
+  background: var(--hover);
+}
+.navigation-prompt {
+  max-width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+.navigation-prompt::backdrop {
+  background: #0006;
+}
+.navigation-prompt h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.navigation-prompt p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0 0 20px;
+}
+.attachment-open {
+  color: inherit;
+  cursor: pointer;
+}
+.attachment-open:hover {
+  background: var(--hover);
+}
+@media (max-width: 1000px) {
+  .file-columns.has-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .file-columns.has-preview .file-directory {
+    max-height: 250px;
+    overflow: auto;
+  }
+}
+@media (max-width: 600px) {
+  .hub-library {
+    padding: 22px 16px 32px;
+  }
+  .library-heading {
+    align-items: flex-start;
+  }
+  .library-heading h1 {
+    font-size: 22px;
+  }
+  .session-history-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .session-history-row .library-actions {
+    width: 100%;
+  }
+  .file-preview .library-actions {
+    gap: 6px;
+  }
+}

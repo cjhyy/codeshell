@@ -9,6 +9,7 @@ describe("parseServeArgs", () => {
     expect(args.port).toBe(8790);
     expect(args.dataDir).toBe(join("/tmp/cs-home", "serve"));
     expect(args.passcode).toBeUndefined();
+    expect(args.authMode).toBe("hub");
   });
 
   test("parses explicit flags", () => {
@@ -20,6 +21,26 @@ describe("parseServeArgs", () => {
     expect(args.port).toBe(9000);
     expect(args.host).toBe("0.0.0.0");
     expect(args.passcode).toBe("s3cret");
+    expect(args.authMode).toBe("passcode");
+  });
+
+  test("validates Hub mode and the externally trusted HTTPS origin", () => {
+    expect(parseServeArgs(["--public-url", "https://hub.example.com/"], {}).publicOrigin).toBe(
+      "https://hub.example.com",
+    );
+    expect(
+      parseServeArgs([], { CODE_SHELL_SERVE_PUBLIC_URL: "https://hub.example.com" }).publicOrigin,
+    ).toBe("https://hub.example.com");
+    expect(() => parseServeArgs(["--auth", "unknown"], {})).toThrow(/auth/);
+    expect(() => parseServeArgs(["--auth", "hub", "--passcode", "secret"], {})).toThrow(/passcode/);
+    for (const origin of [
+      "http://hub.example.com",
+      "https://hub.example.com/subpath",
+      "https://name:secret@hub.example.com",
+      "https://hub.example.com/#token",
+    ]) {
+      expect(() => parseServeArgs(["--public-url", origin], {})).toThrow(/public-url/);
+    }
   });
 
   test("rejects a bogus port", () => {

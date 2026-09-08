@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { basename, extname, join, posix, relative, resolve, sep } from "node:path";
 import { extractZip, extractZipSubdirectory } from "../plugins/installer/unzip.js";
 import { downloadGitHubPanelAppArchive } from "./github-archive.js";
+import { lock } from "../utils/lockfile.js";
 import {
   PANEL_APP_MANIFEST_FILE,
   PanelAppManifest,
@@ -831,12 +832,37 @@ async function replaceInstalledDirectory(
   }
 }
 
+/** Keep reviewed CAS checks and a same-app directory swap indivisible across hosts. */
+async function lockPanelAppMutation(id: string): Promise<() => Promise<void>> {
+  const root = panelAppsRoot();
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  const locks = join(root, ".operations");
+  const target = join(locks, id);
+  for (const directory of [root, locks, target]) {
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const info = await lstat(directory);
+    if (info.isSymbolicLink() || !info.isDirectory()) {
+      throw new PanelAppInstallError("Panel App operation locks require ordinary directories");
+    }
+  }
+  return lock(target, {
+    realpath: true,
+    stale: 30_000,
+    retries: { retries: 30, minTimeout: 10, maxTimeout: 250, factor: 1.4 },
+  });
+}
+
 async function installReviewedPanelAppFromRoot(
   sourceRoot: string,
   input: PanelAppSourceInput,
   expectedReviewToken: string,
   installedAt: string,
-  options: { overwrite?: boolean; expectedId?: string },
+  options: {
+    overwrite?: boolean;
+    expectedId?: string;
+    beforeCommit?: () => void | Promise<void>;
+    recordedRef?: string;
+  },
 ): Promise<InstalledPanelApp> {
   const inspected = await inspectPanelAppSource(sourceRoot);
   if (options.expectedId && inspected.manifest.id !== options.expectedId) {
@@ -849,12 +875,18 @@ async function installReviewedPanelAppFromRoot(
   const staging = await mkdtemp(join(panelAppsRoot(), `.tmp-${inspected.manifest.id}-`));
   let backup: string | undefined;
   let directoryReplaced = false;
+  let release: (() => Promise<void>) | undefined;
   try {
     await cp(sourceRoot, staging, { recursive: true });
     const copied = await inspectPanelAppSource(staging);
     if (copied.digest !== expectedReviewToken) throw new PanelAppReviewChangedError();
     const storedSource: InstalledPanelAppSource =
-      input.kind === "git" ? normalizeGitPanelAppSource(input) : input.path;
+      input.kind === "git"
+        ? normalizeGitPanelAppSource({
+            ...input,
+            ...(options.recordedRef ? { ref: options.recordedRef } : {}),
+          })
+        : input.path;
     await writeFile(
       join(staging, PANEL_APP_META_FILE),
       `${JSON.stringify(
@@ -870,6 +902,10 @@ async function installReviewedPanelAppFromRoot(
       )}\n`,
       { mode: 0o600 },
     );
+    release = await lockPanelAppMutation(copied.manifest.id);
+    // Hosts may need to recheck a reviewed revision and the authenticated owner
+    // after staging work, immediately before making the installed snapshot visible.
+    await options.beforeCommit?.();
     ({ backup } = await replaceInstalledDirectory(
       copied.manifest.id,
       staging,
@@ -905,6 +941,8 @@ async function installReviewedPanelAppFromRoot(
       await rename(backup, finalDir).catch(() => undefined);
     }
     throw error;
+  } finally {
+    await release?.();
   }
 }
 
@@ -912,7 +950,14 @@ export async function installReviewedLocalPanelApp(
   input: PanelAppSourceInput,
   expectedReviewToken: string,
   installedAt: string,
-  options: { overwrite?: boolean; expectedId?: string } = {},
+  options: {
+    overwrite?: boolean;
+    expectedId?: string;
+    /** Recheck host authorization/CAS after staging, before directory replacement. */
+    beforeCommit?: () => void | Promise<void>;
+    /** Keep the original update branch while installing a separately pinned SHA. */
+    recordedRef?: string;
+  } = {},
 ): Promise<InstalledPanelApp> {
   if (!/^[a-f0-9]{64}$/.test(expectedReviewToken)) {
     throw new PanelAppInstallError("Panel App review token is invalid");
@@ -996,17 +1041,26 @@ export async function listInstalledPanelApps(): Promise<InstalledPanelApp[]> {
   return output.sort((left, right) => left.id.localeCompare(right.id));
 }
 
-export async function uninstallPanelApp(id: string): Promise<void> {
+export async function uninstallPanelApp(
+  id: string,
+  options: { beforeCommit?: () => void | Promise<void> } = {},
+): Promise<void> {
   assertSafePanelAppId(id);
-  const directory = panelAppInstallDir(id);
-  if (!existsSync(directory)) throw new PanelAppInstallError(`Panel App '${id}' is not installed`);
-  const quarantine = join(panelAppsRoot(), `.remove-${id}-${randomUUID()}`);
-  await rename(directory, quarantine);
+  const release = await lockPanelAppMutation(id);
   try {
-    await removeInstalledPanelAppRecord(id);
-  } catch (error) {
-    await rename(quarantine, directory).catch(() => undefined);
-    throw error;
+    const directory = panelAppInstallDir(id);
+    if (!existsSync(directory)) throw new PanelAppInstallError(`Panel App '${id}' is not installed`);
+    const quarantine = join(panelAppsRoot(), `.remove-${id}-${randomUUID()}`);
+    await options.beforeCommit?.();
+    await rename(directory, quarantine);
+    try {
+      await removeInstalledPanelAppRecord(id);
+    } catch (error) {
+      await rename(quarantine, directory).catch(() => undefined);
+      throw error;
+    }
+    await rm(quarantine, { recursive: true, force: true });
+  } finally {
+    await release();
   }
-  await rm(quarantine, { recursive: true, force: true });
 }

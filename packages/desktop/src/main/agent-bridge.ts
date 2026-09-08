@@ -28,6 +28,7 @@ import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
+import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine.js";
 import {
@@ -207,6 +208,7 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
 }
 
 export class AgentBridge implements PetStateBridge {
+  private readonly webConfiguration = new WebConfigurationGate();
   /** Transport-agnostic worker driver (spawn / framing / correlation). */
   private readonly core: WorkerBridgeCore;
   private ipcListenerAttached = false;
@@ -336,6 +338,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onSpawnError: () => {
+        this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
@@ -346,6 +349,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onExit: ({ code, clean, gaveUp }) => {
+        this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
@@ -411,6 +415,7 @@ export class AgentBridge implements PetStateBridge {
    * then forwards to renderer windows + outbound taps.
    */
   private handleWorkerLine(line: string): void {
+    this.webConfiguration.observe(line);
     this.updateTentativeRunLifecycle(line);
     // Internal credential access: worker asks main to resolve/materialize
     // secrets. Consumed here; never forwarded to renderer/transcript.
@@ -518,6 +523,7 @@ export class AgentBridge implements PetStateBridge {
       }
     }
     this.pushCredentialSnapshot(prepared.cwd);
+    if (this.core.canSend()) this.webConfiguration.beginRun(prepared.parsed.id, prepared.sessionId);
     return prepared.outLine;
   }
 
@@ -629,6 +635,11 @@ export class AgentBridge implements PetStateBridge {
     const parsed = prepared.parsed;
     let outLine = line;
     if (parsed.method === "agent/run") {
+      if (this.webConfiguration.runBlocked) {
+        throw Object.assign(new Error("配置正在更新，请稍后重试。"), {
+          code: ErrorCodes.Overloaded,
+        });
+      }
       if (prepared.sessionId && this.sessionMainRootMigrationClaims.has(prepared.sessionId)) {
         throw Object.assign(
           new Error(`Session ${prepared.sessionId} root migration is in progress; retry the run`),
@@ -688,8 +699,8 @@ export class AgentBridge implements PetStateBridge {
       const parsed = prepared.parsed;
       if (
         parsed.method === "agent/run" &&
-        prepared.sessionId &&
-        this.sessionMainRootMigrationClaims.has(prepared.sessionId)
+        (this.webConfiguration.runBlocked ||
+          (prepared.sessionId && this.sessionMainRootMigrationClaims.has(prepared.sessionId)))
       ) {
         if (parsed.id !== undefined && !event.sender.isDestroyed()) {
           event.sender.send(
@@ -699,7 +710,9 @@ export class AgentBridge implements PetStateBridge {
               id: parsed.id,
               error: {
                 code: ErrorCodes.Overloaded,
-                message: `Session ${prepared.sessionId} root migration is in progress; retry the run`,
+                message: this.webConfiguration.runBlocked
+                  ? "配置正在更新，请稍后重试。"
+                  : `Session ${prepared.sessionId} root migration is in progress; retry the run`,
               },
             }),
           );
@@ -793,7 +806,24 @@ export class AgentBridge implements PetStateBridge {
         return;
       }
       dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
-      this.core.sendLine(outLine);
+      try {
+        if (!this.core.sendLine(outLine) && parsed.id !== undefined) {
+          this.webConfiguration.settleRun(parsed.id);
+        }
+      } catch (error) {
+        if (parsed.id !== undefined) {
+          this.webConfiguration.settleRun(parsed.id);
+          this.safeSend(
+            "agent:msg",
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: parsed.id,
+              error: { code: -32603, message: "无法向任务进程发送请求，请重试。" },
+            }),
+          );
+        }
+        dlog("bridge", "renderer.write_failed", { error: String(error) });
+      }
     });
 
     ipcMain.on(
@@ -1311,6 +1341,45 @@ export class AgentBridge implements PetStateBridge {
     return this.core.hasLiveWorker();
   }
 
+  isSessionRunning(sessionId: string): boolean {
+    return this.webConfiguration.isRunning(sessionId);
+  }
+
+  /** Apply Web settings to the same worker used by Desktop and mobile runs. */
+  withWebConfigurationMutation<T>(cwd: string, write: () => Promise<T>): Promise<T> {
+    return this.webConfiguration.mutate(write, async () => {
+      if (this.core.hasLiveWorker()) {
+        const outcome = await this.core.request(
+          "agent/configure",
+          { reloadModels: true, reloadSettings: true },
+          {
+            id: `desktop-web-configuration-${randomUUID()}`,
+            timeoutMs: 5_000,
+            consume: true,
+            settleOnExit: true,
+            failFast: true,
+            meta: { origin: "host", producer: "desktop-web-configuration" },
+          },
+        );
+        if (outcome.status !== "result" && this.core.hasLiveWorker()) {
+          throw new Error("Worker configuration reload failed");
+        }
+      }
+      this.notifyWebConfigurationChanged(cwd);
+    });
+  }
+
+  notifyWebConfigurationChanged(cwd?: string): void {
+    this.pushCredentialSnapshot(cwd);
+    this.handleWorkerLine(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "serve/configurationChanged",
+        params: cwd ? { cwd } : {},
+      }),
+    );
+  }
+
   async requestPetProjectionSnapshot(): Promise<PetProjectionSnapshotResult | null> {
     if (!this.hasLiveWorker()) return null;
     const id = `desktop-pet-snapshot-${++this.petSnapshotRequestId}`;
@@ -1390,6 +1459,13 @@ export class AgentBridge implements PetStateBridge {
       ...(ensureWorker ? { ensureWorker: true, ...(cwd ? { ensureWorkerCwd: cwd } : {}) } : {}),
     });
     if (method === "agent/run") {
+      if (
+        outcome.status === "sendFailed" ||
+        outcome.status === "workerExit" ||
+        outcome.status === "error"
+      ) {
+        this.webConfiguration.settleRun(id);
+      }
       const sessionId = typeof params.sessionId === "string" ? params.sessionId : undefined;
       if (sessionId && getSessionCwdIndex().lookupCached(sessionId)?.status === "tentative") {
         getSessionCwdIndex().evictTentative(sessionId);
@@ -1678,8 +1754,8 @@ export class AgentBridge implements PetStateBridge {
     const sessionId = parsed.params?.sessionId;
     if (
       parsed.method === "agent/run" &&
-      typeof sessionId === "string" &&
-      this.sessionMainRootMigrationClaims.has(sessionId)
+      (this.webConfiguration.runBlocked ||
+        (typeof sessionId === "string" && this.sessionMainRootMigrationClaims.has(sessionId)))
     ) {
       if (parsed.id !== undefined) {
         this.handleWorkerLine(
@@ -1688,14 +1764,23 @@ export class AgentBridge implements PetStateBridge {
             id: parsed.id,
             error: {
               code: ErrorCodes.Overloaded,
-              message: `Session ${sessionId} root migration is in progress; retry the run`,
+              message: this.webConfiguration.runBlocked
+                ? "配置正在更新，请稍后重试。"
+                : `Session ${sessionId} root migration is in progress; retry the run`,
             },
           }),
         );
       }
       return;
     }
-    this.core.injectWorkerMessage(line, meta);
+    try {
+      this.core.injectWorkerMessage(line, meta);
+      if (!this.core.canSend() && parsed.id !== undefined)
+        this.webConfiguration.settleRun(parsed.id);
+    } catch (error) {
+      if (parsed.id !== undefined) this.webConfiguration.settleRun(parsed.id);
+      throw error;
+    }
   }
 
   /**

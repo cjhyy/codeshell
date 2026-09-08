@@ -1,0 +1,716 @@
+.hub-settings {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: min(920px, 100%);
+  margin: 0 auto;
+  padding: 40px 42px 56px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.hub-settings * {
+  box-sizing: border-box;
+}
+.hub-settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.hub-settings-eyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+.hub-settings h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.hub-settings-heading p {
+  margin: 7px 0 0;
+  color: var(--muted);
+}
+.hub-settings h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.hub-settings h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+:is(.hub-settings, .hub-skills) .config-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 11px;
+  min-height: 33px;
+  background: var(--surface, var(--bg));
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+  white-space: nowrap;
+}
+:is(.hub-settings, .hub-skills) .config-button:hover {
+  background: var(--hover, var(--panel));
+}
+:is(.hub-settings, .hub-skills) .config-button-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+:is(.hub-settings, .hub-skills) .config-button-primary {
+  background: var(--accent);
+  color: var(--accent-text, white);
+  border-color: var(--accent);
+}
+:is(.hub-settings, .hub-skills) .config-button-primary:hover {
+  filter: brightness(0.94);
+  background: var(--accent);
+}
+.hub-settings button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+:is(.hub-settings, .hub-skills) button:focus-visible,
+:is(.hub-settings, .hub-skills) summary:focus-visible,
+:is(.hub-settings, .hub-skills) input:focus-visible,
+:is(.hub-settings, .hub-skills) select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.config-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface, var(--bg));
+}
+.config-workspace-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.config-workspace-card > div {
+  min-width: 0;
+  flex: 1;
+}
+.config-workspace-card strong {
+  display: block;
+  font-weight: 500;
+}
+.config-workspace-card code {
+  display: block;
+  margin: 6px 0;
+  font-size: 11px;
+  word-break: break-all;
+}
+.config-workspace-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.config-workspace-icon,
+.config-row-icon,
+.config-model-icon,
+.config-skill-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 20px;
+}
+.config-workspace-icon {
+  background: var(--surface, var(--bg));
+}
+:is(.hub-settings, .hub-skills) .config-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 7px;
+  min-height: 21px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+:is(.hub-settings, .hub-skills) .config-badge-accent {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.config-section-title {
+  margin: 28px 0 12px;
+}
+.config-overview-list {
+  overflow: hidden;
+}
+.hub-settings .config-overview-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 20px;
+  width: 100%;
+  background: transparent;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+}
+.hub-settings button.config-overview-row {
+  cursor: pointer;
+}
+.hub-settings button.config-overview-row:hover {
+  background: var(--hover, var(--panel));
+}
+.config-overview-row + .config-overview-row {
+  border-top: 1px solid var(--border);
+}
+.config-row-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.config-row-copy strong {
+  font-weight: 500;
+}
+.config-row-copy > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.config-chevron {
+  font-size: 21px;
+  color: var(--muted);
+}
+.config-explanation {
+  margin-top: 28px;
+}
+.config-explanation h2 {
+  margin: 0 0 8px;
+}
+.config-explanation p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 8px 0;
+  line-height: 1.8;
+}
+.config-scope-note {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin: 32px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.config-message {
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0 0 18px;
+  font-size: 12px;
+}
+.config-error {
+  color: var(--danger, #c5443c);
+  background: color-mix(in srgb, var(--danger, #c5443c) 6%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #c5443c) 22%, transparent);
+}
+.config-success {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.config-loading,
+.config-help {
+  color: var(--muted);
+  font-size: 11px;
+}
+.config-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 26px 0 12px;
+}
+.config-section-heading h2 {
+  margin: 0;
+}
+.config-count {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--muted);
+  margin-left: 5px;
+}
+.config-defaults {
+  padding: 20px;
+}
+.hub-settings fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.hub-settings legend {
+  padding: 0;
+  margin: 0 0 15px;
+  font-weight: 500;
+  font-size: 13px;
+}
+.config-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+.config-form-grid label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  min-width: 0;
+  font-size: 11px;
+}
+.hub-settings input,
+.hub-settings select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 35px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface, var(--bg));
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.hub-settings input::placeholder {
+  color: var(--muted);
+  opacity: 0.75;
+}
+.hub-settings input[readonly] {
+  color: var(--muted);
+  background: var(--panel);
+}
+.hub-settings input:disabled,
+.hub-settings select:disabled {
+  opacity: 0.6;
+}
+.config-form-grid small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.config-full-width {
+  grid-column: 1 / -1;
+}
+.config-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+}
+.config-form-footer p {
+  margin: 0;
+}
+.config-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 20px;
+}
+.config-connection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.config-connection-card,
+.config-editor-card {
+  padding: 18px 20px;
+}
+.config-editor-card {
+  margin-bottom: 12px;
+}
+.config-connection-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.config-connection-facts {
+  margin: 18px 0 0 43px;
+  font-size: 11px;
+}
+.config-connection-facts > div {
+  display: grid;
+  grid-template-columns: 75px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 7px;
+}
+.config-connection-facts dt {
+  color: var(--muted);
+}
+.config-connection-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.config-connection-editor {
+  margin-top: 18px;
+}
+.config-field-meta {
+  color: var(--muted);
+  margin-left: 5px;
+  font-size: 10px;
+}
+.config-empty {
+  padding: 34px 24px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+.config-empty > span {
+  color: var(--muted);
+  font-size: 27px;
+}
+.config-empty h3 {
+  margin: 9px 0 6px;
+}
+.config-empty p {
+  max-width: 440px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.config-skills-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.config-search {
+  position: relative;
+  display: block;
+  width: min(360px, 100%);
+}
+.config-search > span {
+  position: absolute;
+  top: 5px;
+  left: 10px;
+  font-size: 21px;
+  color: var(--muted);
+}
+.hub-settings .config-search input {
+  padding-left: 33px;
+}
+.config-skills-toolbar > .config-help {
+  white-space: nowrap;
+}
+.config-skill-list {
+  overflow: hidden;
+}
+.config-skill + .config-skill {
+  border-top: 1px solid var(--border);
+}
+.config-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px;
+}
+.config-skill-copy {
+  flex: 1;
+  min-width: 0;
+}
+.config-skill-copy > strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.config-skill-copy > p {
+  margin: 4px 0 9px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.config-skill-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hub-settings .config-text-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.hub-settings .config-text-button:hover {
+  color: var(--text);
+}
+:is(.hub-settings, .hub-skills) .config-switch {
+  flex-shrink: 0;
+  width: 29px;
+  height: 17px;
+  min-height: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 2px;
+  background: var(--border);
+  margin-top: 4px;
+  cursor: pointer;
+}
+:is(.hub-settings, .hub-skills) .config-switch > span {
+  display: block;
+  height: 13px;
+  width: 13px;
+  border-radius: 50%;
+  background: white;
+  transform: translateX(0);
+  box-shadow: 0 1px 2px #0002;
+  transition: transform 0.12s ease;
+}
+:is(.hub-settings, .hub-skills) .config-switch[aria-checked="true"] {
+  background: var(--accent);
+}
+:is(.hub-settings, .hub-skills) .config-switch[aria-checked="true"] > span {
+  transform: translateX(12px);
+}
+.config-skill-detail {
+  margin: 0 20px 18px 64px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border-radius: 8px;
+}
+.config-skill-detail pre {
+  margin: 0;
+  max-height: 430px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    11px/1.8 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.config-skill-detail > p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0;
+}
+.config-detail-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--danger, #c5443c);
+  font-size: 11px;
+}
+.config-directories {
+  margin-top: 24px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.config-directories summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.config-directories p {
+  margin: 12px 0 8px;
+}
+.config-directories ul {
+  padding-left: 16px;
+  margin: 0;
+}
+.config-directories li {
+  margin-top: 6px;
+}
+.config-directories code {
+  font-size: 10px;
+  word-break: break-all;
+}
+.config-mcp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 20px;
+}
+.config-mcp-row + .config-mcp-row {
+  border-top: 1px solid var(--border);
+}
+.config-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 700px) {
+  .hub-settings {
+    padding: 24px 20px 40px;
+  }
+  .hub-settings-heading {
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .hub-settings h1 {
+    font-size: 23px;
+  }
+  .config-workspace-card {
+    flex-wrap: wrap;
+    padding: 17px;
+  }
+  .config-workspace-card > .config-badge {
+    margin-left: 46px;
+  }
+  .config-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .config-form-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .config-defaults,
+  .config-connection-card,
+  .config-editor-card {
+    padding: 17px;
+  }
+  .config-connection-facts {
+    margin-left: 0;
+  }
+  .config-connection-facts > div {
+    grid-template-columns: 65px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .config-skill-row {
+    padding: 16px;
+    gap: 10px;
+  }
+  .config-skill-icon {
+    display: none;
+  }
+  .config-skill-detail {
+    margin: 0 16px 16px;
+    padding: 12px;
+  }
+  .config-skills-toolbar {
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+  .config-search {
+    width: 100%;
+  }
+  .config-section-heading {
+    gap: 8px;
+  }
+  .config-mcp-row {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.hub-settings, .hub-skills) .config-switch > span {
+    transition: none;
+  }
+}
+
+.config-model-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 18px 0;
+}
+.config-remove-connection {
+  margin-left: auto;
+}
+.config-probe-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 18px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+}
+.config-probe-result.is-success {
+  color: var(--success);
+}
+.config-probe-result small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.config-remove-confirm {
+  margin: 16px 18px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.config-remove-confirm h3 {
+  margin-bottom: 8px;
+}
+.config-remove-confirm p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.config-remove-confirm label {
+  display: block;
+  margin: 14px 0;
+}
+.config-remove-confirm label > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+.hub-settings .config-button-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+.hub-settings .config-button-danger:hover {
+  background: var(--danger);
+  filter: brightness(0.94);
+}
+.config-connection-editor .config-remove-confirm {
+  margin: 14px 0;
+}
+@media (max-width: 600px) {
+  .config-model-actions .config-help {
+    flex-basis: 100%;
+    order: 3;
+  }
+  .config-model-actions,
+  .config-probe-result,
+  .config-remove-confirm {
+    margin-left: 14px;
+    margin-right: 14px;
+  }
+}

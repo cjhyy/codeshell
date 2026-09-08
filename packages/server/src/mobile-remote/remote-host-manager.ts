@@ -12,6 +12,7 @@ import type { MobileServerEvent } from "./types.js";
 import type { MobileViewerIdentity } from "./viewer-identity.js";
 import type { MobileUploadService } from "./mobile-upload-service.js";
 import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
+import type { DesktopWebHttpApi } from "../desktop-web/http-api.js";
 
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
@@ -75,6 +76,8 @@ export interface RemoteHostManagerOptions {
   mobileDevUrl?: string;
   /** One-time upload tickets. The route remains behind the tunnel passcode gate. */
   uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers">;
+  /** Optional shared Web HTTP facade. Pairing, uploads, and /mobile retain their routes. */
+  webApi?: DesktopWebHttpApi;
 }
 
 export class RemoteHostManager extends EventEmitter {
@@ -151,6 +154,7 @@ export class RemoteHostManager extends EventEmitter {
     const tunnel = options.mode === "tunnel";
     this.passcode = tunnel ? options.passcode : undefined;
     const gate = this.passcode;
+    this.opts.webApi?.start();
     const server = createServer((req, res) => {
       // Tunnel mode: a passcode gate sits in front of EVERY route. The gate
       // either allows (returns true) or writes its own 401/403 challenge.
@@ -158,6 +162,27 @@ export class RemoteHostManager extends EventEmitter {
       if (req.url === "/health") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+      if (req.url?.startsWith("/api/v1/") && this.opts.webApi) {
+        const baseUrl = this.publicBaseUrl ?? this.started?.url;
+        if (!baseUrl) {
+          res.writeHead(503);
+          res.end("remote host is starting");
+          return;
+        }
+        void this.opts.webApi
+          .handle(req, res, { baseUrl })
+          .then((handled) => {
+            if (!handled && !res.writableEnded) {
+              res.writeHead(404);
+              res.end("not found");
+            }
+          })
+          .catch(() => {
+            if (!res.headersSent) res.writeHead(500);
+            if (!res.writableEnded) res.end("remote request failed");
+          });
         return;
       }
       const uploadPath = req.url
@@ -320,6 +345,7 @@ export class RemoteHostManager extends EventEmitter {
       if (this.server === server) this.server = undefined;
       this.wss = undefined;
       this.passcode = undefined;
+      await this.opts.webApi?.close();
       throw error;
     }
     const addr = server.address();
@@ -443,6 +469,16 @@ export class RemoteHostManager extends EventEmitter {
     this.markOffline(deviceId);
   }
 
+  /** Call after revoking/removing a trusted device to release both transports immediately. */
+  revokeDevice(deviceId: string): void {
+    this.opts.webApi?.revokeDevice(deviceId);
+    for (const client of this.wss?.clients ?? []) {
+      if (this.authed.get(client) !== deviceId) continue;
+      this.releaseSocket(client);
+      client.terminate();
+    }
+  }
+
   async stop(): Promise<void> {
     if (this.starting) await this.starting.catch(() => undefined);
     const server = this.server;
@@ -465,6 +501,7 @@ export class RemoteHostManager extends EventEmitter {
     // manually injected bookkeeping (tests / future non-WS transports).
     for (const deviceId of this.onlineCounts.keys()) this.emit("device-offline", deviceId);
     this.onlineCounts.clear();
+    await this.opts.webApi?.close();
     await this.opts.uploads?.cancelActiveTransfers();
     if (!server) return;
     // server.close() only stops accepting new connections and waits for live

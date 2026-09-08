@@ -4,10 +4,14 @@
 // headless serve WS pipe (/ws). Deliberately dependency-free: SessionSummary,
 // ApprovalRequestPayload, and StreamEventPayload stay as minimal local mirrors
 // because core does not export these UI-facing payload shapes. Auth rides the
-// cs_access remember-cookie set by the page's passcode gate, so the WS upgrade
-// needs no extra credentials.
+// same-origin HttpOnly session cookie (or the legacy passcode cookie), so the
+// WS upgrade needs no credential in its URL or message frames.
 
 export interface SessionSummary {
+  title?: string;
+  customTitle?: string;
+  lastActiveAt?: number;
+  running?: boolean;
   sessionId: string;
   cwd: string;
   startedAt: number;
@@ -30,7 +34,41 @@ export interface ApprovalRequestPayload {
   };
 }
 
-export type StreamEventPayload = { sessionId: string; event: Record<string, unknown> };
+export interface HubStreamCursor {
+  epoch: string;
+  sequence: number;
+}
+
+export interface SessionDetailData {
+  state: Record<string, unknown>;
+  transcript: Array<Record<string, unknown>>;
+  running?: boolean;
+  streamCursor?: HubStreamCursor;
+  liveStream?: {
+    events: Array<{ sequence: number; event: Record<string, unknown> }>;
+    truncated: boolean;
+  };
+}
+
+export type StreamEventPayload = {
+  sessionId: string;
+  event: Record<string, unknown>;
+  hubEpoch?: string;
+  hubSequence?: number;
+};
+
+/** Distinguish a definite rejection from a lost acknowledgement. Retrying an
+ * uncertain transport failure before checking history could repeat a task. */
+export class ProtocolRequestError extends Error {
+  constructor(
+    message: string,
+    readonly kind: "response" | "transport" | "timeout" | "not-sent",
+    readonly code?: number,
+  ) {
+    super(message);
+    this.name = "ProtocolRequestError";
+  }
+}
 
 type NotificationHandler = (method: string, params: Record<string, unknown>) => void;
 
@@ -45,34 +83,51 @@ export class ProtocolClient {
   private nextId = 1;
   private readonly pending = new Map<
     string,
-    { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: number }
+    {
+      resolve: (v: unknown) => void;
+      reject: (e: Error) => void;
+      timer?: ReturnType<typeof setTimeout>;
+    }
   >();
   private readonly notificationHandlers = new Set<NotificationHandler>();
   private readonly stateHandlers = new Set<(state: ConnectionState) => void>();
   private reconnectDelay = RECONNECT_BASE_MS;
   private closedByUser = false;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private readonly authHandlers = new Set<() => void>();
 
   constructor(private readonly url: string) {}
 
   connect(): void {
+    if (this.ws) return;
+    clearTimeout(this.reconnectTimer);
     this.closedByUser = false;
+    this.openSocket();
+  }
+
+  private openSocket(): void {
+    if (this.closedByUser) return;
+    this.reconnectTimer = undefined;
     this.emitState("connecting");
     const ws = new WebSocket(this.url);
     this.ws = ws;
     ws.onopen = () => {
+      if (this.ws !== ws || this.closedByUser) return;
       this.reconnectDelay = RECONNECT_BASE_MS;
       this.emitState("open");
     };
     ws.onmessage = (msgEvent) => {
+      if (this.ws !== ws || this.closedByUser) return;
       let msg: {
         id?: string | number;
         method?: string;
         params?: Record<string, unknown>;
         result?: unknown;
-        error?: { message?: string };
+        error?: { message?: string; code?: number };
       };
       try {
         msg = JSON.parse(String(msgEvent.data));
+        if (!msg || typeof msg !== "object" || Array.isArray(msg)) return;
       } catch {
         return;
       }
@@ -81,7 +136,14 @@ export class ProtocolClient {
         if (!pending) return;
         this.pending.delete(String(msg.id));
         clearTimeout(pending.timer);
-        if (msg.error) pending.reject(new Error(msg.error.message ?? "request failed"));
+        if (msg.error)
+          pending.reject(
+            new ProtocolRequestError(
+              msg.error.message ?? "request failed",
+              "response",
+              msg.error.code,
+            ),
+          );
         else pending.resolve(msg.result);
         return;
       }
@@ -91,14 +153,19 @@ export class ProtocolClient {
         }
       }
     };
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      if (this.ws !== ws) return;
       this.ws = null;
       this.emitState("closed");
-      this.failAllPending(new Error("connection closed"));
+      this.failAllPending(new ProtocolRequestError("connection closed", "transport"));
+      if (event.code === 4401 || event.code === 4403) {
+        this.closedByUser = true;
+        for (const handler of this.authHandlers) handler();
+      }
       if (!this.closedByUser) {
         // Reconnect with backoff — the serve host may be restarting; sessions
         // persist on disk so the UI can simply re-list once we're back.
-        setTimeout(() => this.connect(), this.reconnectDelay);
+        this.reconnectTimer = setTimeout(() => this.openSocket(), this.reconnectDelay);
         this.reconnectDelay = Math.min(this.reconnectDelay * 2, RECONNECT_MAX_MS);
       }
     };
@@ -109,7 +176,12 @@ export class ProtocolClient {
 
   close(): void {
     this.closedByUser = true;
-    this.ws?.close();
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+    const ws = this.ws;
+    this.ws = null;
+    ws?.close();
+    this.failAllPending(new ProtocolRequestError("connection closed", "transport"));
   }
 
   onNotification(handler: NotificationHandler): () => void {
@@ -122,36 +194,56 @@ export class ProtocolClient {
     return () => this.stateHandlers.delete(handler);
   }
 
+  onAuthLost(handler: () => void): () => void {
+    this.authHandlers.add(handler);
+    return () => this.authHandlers.delete(handler);
+  }
+
   /** Correlated request; rejects on protocol error / timeout / disconnect. */
-  request<T>(method: string, params?: Record<string, unknown>): Promise<T> {
+  request<T>(
+    method: string,
+    params?: Record<string, unknown>,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+  ): Promise<T> {
     const ws = this.ws;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      return Promise.reject(new Error("not connected"));
+      return Promise.reject(new ProtocolRequestError("not connected", "not-sent"));
     }
     const id = `web-${this.nextId++}`;
     return new Promise<T>((resolve, reject) => {
-      const timer = window.setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`request timed out: ${method}`));
-      }, REQUEST_TIMEOUT_MS);
+      const timer =
+        timeoutMs > 0
+          ? setTimeout(() => {
+              this.pending.delete(id);
+              reject(new ProtocolRequestError(`request timed out: ${method}`, "timeout"));
+            }, timeoutMs)
+          : undefined;
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer });
-      ws.send(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+      try {
+        ws.send(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+      } catch (cause) {
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(
+          new ProtocolRequestError(
+            cause instanceof Error ? cause.message : "send failed",
+            "not-sent",
+          ),
+        );
+      }
     });
   }
 
-  /** Fire-and-forget notification frame (e.g. agent/run — result streams back). */
-  notify(method: string, params?: Record<string, unknown>): void {
-    this.ws?.send(JSON.stringify({ jsonrpc: "2.0", method, params }));
-  }
-
-  /**
-   * agent/run is a long-lived request (its response arrives at turn end), so
-   * it gets a run-scoped id and NO timeout; progress arrives via
-   * agent/streamEvent notifications regardless.
-   */
-  run(params: { sessionId: string; task: string; cwd?: string }): void {
-    const id = `run-${this.nextId++}`;
-    this.ws?.send(JSON.stringify({ jsonrpc: "2.0", id, method: "agent/run", params }));
+  /** Runs finish at turn end; correlate errors without timing out long work. */
+  run(params: {
+    sessionId: string;
+    task: string;
+    cwd?: string;
+    uploadIds?: string[];
+    clientMessageId?: string;
+    displayText?: string;
+  }): Promise<unknown> {
+    return this.request("agent/run", params, 0);
   }
 
   listSessions(): Promise<{ type: string; data: SessionSummary[] }> {
@@ -160,13 +252,13 @@ export class ProtocolClient {
 
   sessionDetail(sessionId: string): Promise<{
     type: string;
-    data: { state: Record<string, unknown>; transcript: Array<Record<string, unknown>> };
+    data: SessionDetailData;
   }> {
     return this.request("agent/query", { type: "session_detail", sessionId });
   }
 
-  approve(payload: ApprovalRequestPayload, approved: boolean, answer?: string): void {
-    this.notifyRequest("agent/approve", {
+  approve(payload: ApprovalRequestPayload, approved: boolean, answer?: string): Promise<unknown> {
+    return this.request("agent/approve", {
       sessionId: payload.sessionId ?? "",
       ...(payload.connectionId ? { connectionId: payload.connectionId } : {}),
       ...(payload.generation !== undefined ? { generation: payload.generation } : {}),
@@ -175,14 +267,8 @@ export class ProtocolClient {
     });
   }
 
-  cancel(sessionId: string): void {
-    this.notifyRequest("agent/cancel", { sessionId });
-  }
-
-  /** Requests whose response we don't need to await (still id-carrying). */
-  private notifyRequest(method: string, params: Record<string, unknown>): void {
-    const id = `web-${this.nextId++}`;
-    this.ws?.send(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+  cancel(sessionId: string): Promise<unknown> {
+    return this.request("agent/cancel", { sessionId });
   }
 
   private emitState(state: ConnectionState): void {

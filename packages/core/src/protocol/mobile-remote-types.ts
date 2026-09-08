@@ -114,6 +114,8 @@ export type MobileClientEvent =
   | { type: "session.select"; sessionId: string }
   | {
       type: "session.create";
+      /** Optional browser request correlation; echoed with the creation acknowledgement. */
+      clientRequestId?: string;
       /** Stable V2 project identity. null explicitly selects the no-repo workspace. */
       projectId?: string | null;
       /** Stable V2 root identity. Omit to use the project's current primary root. */
@@ -213,6 +215,7 @@ export type MobileServerEvent =
   | { type: "pair.failed"; message: string }
   | {
       type: "chat.accepted";
+      clientRequestId?: string;
       sessionId?: string;
       cwd?: string | null;
       projectId?: string | null;

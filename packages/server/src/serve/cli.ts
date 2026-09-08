@@ -1,13 +1,8 @@
 // packages/server/src/serve/cli.ts
 //
-// `code-shell-serve` — boot the headless no-account web host from a terminal:
-//
-//   code-shell-serve --cwd ~/work/repo [--port 8790] [--host 127.0.0.1]
-//                    [--passcode <code>] [--data-dir <dir>]
-//
-// Access control is passcode + remember-cookie only (决策见 TODO 约束边界
-// 「服务端部署不做账号体系」). Default bind is loopback; binding 0.0.0.0 is a
-// deliberate operator choice.
+// `code-shell-serve` boots a single-workspace Hub under Node.js.
+// New deployments use one administrator and revocable device sessions.
+// --auth passcode preserves the original passcode-only host.
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -19,6 +14,9 @@ interface CliArgs {
   host: string;
   port: number;
   passcode?: string;
+  authMode: "hub" | "passcode";
+  debugLogs?: boolean;
+  publicOrigin?: string;
   dataDir: string;
   staticRootDir?: string;
 }
@@ -31,9 +29,12 @@ Options:
   --cwd <path>         Workspace root (default: current directory)
   --host <host>        Bind host (default: 127.0.0.1)
   --port <port>        Bind port, 0 selects a free port (default: 8790)
-  --passcode <code>    Set or rotate the access passcode
-  --data-dir <path>    Access-control data directory
+  --auth <mode>        hub (default) or legacy passcode
+  --public-url <url>   External HTTPS origin for reverse-proxy deployments
+  --passcode <code>    Set or rotate the legacy passcode (selects passcode mode)
+  --data-dir <path>    Persistent server data (auth, uploads and worker sessions)
   --static-root <path> Override the built Web app directory
+  --debug-logs        Include raw worker diagnostics (may contain task content)
   -h, --help           Show this help and exit`;
 
 const VALUE_FLAGS = new Set([
@@ -41,6 +42,8 @@ const VALUE_FLAGS = new Set([
   "--host",
   "--port",
   "--passcode",
+  "--auth",
+  "--public-url",
   "--data-dir",
   "--static-root",
 ]);
@@ -49,6 +52,10 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
   const args: Record<string, string> = {};
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
+    if (key === "--debug-logs") {
+      args["debug-logs"] = "true";
+      continue;
+    }
     if (!key || !VALUE_FLAGS.has(key)) {
       throw new Error(`unknown argument: ${key ?? ""}\n\n${SERVE_HELP}`);
     }
@@ -64,7 +71,32 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error(`invalid --port: ${args.port}`);
   }
+  const authMode = args.auth ?? (args.passcode ? "passcode" : "hub");
+  if (authMode !== "hub" && authMode !== "passcode")
+    throw new Error("--auth must be hub or passcode");
+  if (authMode === "hub" && args.passcode)
+    throw new Error("--passcode cannot be combined with --auth hub");
+  let publicOrigin: string | undefined;
+  const publicUrl = args["public-url"] ?? env.CODE_SHELL_SERVE_PUBLIC_URL;
+  if (publicUrl) {
+    const url = new URL(publicUrl);
+    if (
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.pathname !== "/" ||
+      (url.protocol !== "https:" &&
+        !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
+    ) {
+      throw new Error("--public-url must be an HTTPS origin (HTTP allowed only on loopback)");
+    }
+    publicOrigin = url.origin;
+  }
   return {
+    authMode,
+    ...(args["debug-logs"] ? { debugLogs: true } : {}),
+    ...(publicOrigin ? { publicOrigin } : {}),
     cwd: resolve(args.cwd ?? process.cwd()),
     host: args.host ?? "127.0.0.1",
     port,
@@ -116,6 +148,9 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
     port: parsed.port,
     cwd: parsed.cwd,
     dataDir: parsed.dataDir,
+    authMode: parsed.authMode,
+    debugLogs: parsed.debugLogs,
+    ...(parsed.publicOrigin ? { publicOrigin: parsed.publicOrigin } : {}),
     workerEntryPath: resolveWorkerEntry(),
     workerCapabilityModules: resolveWorkerCapabilityModules(),
     ...(staticRootDir ? { staticRootDir } : {}),
@@ -124,10 +159,19 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
       console.error(`[serve] ${event}${data ? ` ${JSON.stringify(data)}` : ""}`),
   });
 
-  console.log(`CodeShell web host listening at ${server.url}`);
+  console.log(
+    `CodeShell ${parsed.authMode === "hub" ? "Hub" : "web host"} listening at ${parsed.publicOrigin ?? server.url}`,
+  );
   console.log(`Workspace: ${parsed.cwd}`);
   if (!staticRootDir) {
     console.log("No web app build found — WS endpoint only (/ws). Build packages/web first.");
+  }
+  if (server.bootstrapToken) {
+    const origin =
+      parsed.publicOrigin ?? server.url.replace(/\/\/(0\.0\.0\.0|\[?::\]?)(?=:)/, "//127.0.0.1");
+    console.log(
+      `Administrator setup (one-time link, save it now): ${origin}/#setup=${server.bootstrapToken}`,
+    );
   }
   if (server.generatedPasscode) {
     console.log(`Access passcode (generated, save it now): ${server.generatedPasscode}`);

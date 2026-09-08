@@ -21,6 +21,7 @@ import { logger } from "../logging/logger.js";
 import { summarizeOAuthCredentialSecret } from "./oauth.js";
 import { isBrowserOAuthLinkCredential } from "./oauth.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
+import { isDeepStrictEqual } from "node:util";
 
 const MAX_CREDENTIALS = 4_096;
 const MAX_CREDENTIAL_FILE_BYTES = 32 * 1024 * 1024;
@@ -347,6 +348,46 @@ export class CredentialStore {
       }
       return true;
     });
+  }
+
+  /** Atomically create, replace or remove the exact record a host previously reviewed. */
+  compareAndSwap(
+    scope: CredentialScope,
+    id: string,
+    expected: Credential | null,
+    next: Credential | null,
+  ): boolean {
+    if (typeof id !== "string" || !id || id.length > MAX_CREDENTIAL_ID_CHARS || id.includes("\0")) {
+      throw new Error("invalid credential id");
+    }
+    if ((expected && expected.id !== id) || (next && next.id !== id)) {
+      throw new Error("credential comparison cannot change id");
+    }
+    const reviewed = expected ? normalizeCredential(expected, true)! : null;
+    const replacement = next ? normalizeCredential(next, true)! : null;
+    let matched = false;
+    this.mutate(scope, (file) => {
+      const index = file.credentials.findIndex((credential) => credential.id === id);
+      const current = index < 0 ? null : normalizeCredential(file.credentials[index], true)!;
+      if (!isDeepStrictEqual(current, reviewed)) return false;
+      matched = true;
+      if (!replacement) {
+        if (index < 0) return false;
+        file.credentials.splice(index, 1);
+      } else {
+        const safe = credentialAllowsEnvExposure(replacement.type)
+          ? replacement
+          : { ...replacement, exposeAsEnv: undefined };
+        if (index < 0) {
+          if (file.credentials.length >= MAX_CREDENTIALS) {
+            throw new Error("credential store has reached its maximum entry count");
+          }
+          file.credentials.push(safe);
+        } else file.credentials[index] = safe;
+      }
+      return true;
+    });
+    return matched;
   }
 
   /**

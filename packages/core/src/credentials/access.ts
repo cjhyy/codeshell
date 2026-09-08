@@ -10,6 +10,7 @@ import {
   type CredentialType,
 } from "./types.js";
 import { CredentialStore } from "./store.js";
+import { subscribeToLocalCredentialChanges } from "./change-subscription.js";
 import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
 import {
   parseOAuthCredentialSecret,
@@ -51,8 +52,11 @@ export interface CredentialAccess {
     scope: CredentialAccessScope,
   ): CredentialMetadata | undefined;
   envExposures(cwd: string | undefined, scope: CredentialAccessScope): Record<string, string>;
-  /** Subscribe to host credential snapshot changes (desktop worker uses this to cancel in-flight Links). */
-  subscribe?(listener: () => void): () => void;
+  /** Observe host snapshots or scoped local store changes to cancel in-flight Links. */
+  subscribe?(
+    listener: () => void,
+    context?: { cwd?: string; scope: CredentialAccessScope },
+  ): () => void;
   resolveValue?(req: {
     cwd?: string;
     id: string;
@@ -263,6 +267,9 @@ function storeFor(cwd: string | undefined): CredentialStore {
 }
 
 export const localCredentialAccess: CredentialAccess = {
+  subscribe(listener, context) {
+    return subscribeToLocalCredentialChanges(listener, context);
+  },
   listMasked(cwd, scope) {
     return storeFor(cwd).list(scope).map(toMetadata);
   },

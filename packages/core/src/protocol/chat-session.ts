@@ -55,6 +55,11 @@ export interface TurnOpts {
   planMode?: boolean;
   /** Named behavior profile snapshot for this queued turn only. */
   behaviorMode?: RunBehaviorMode;
+  /** Host-authorized hard limits must survive the queued-turn boundary. */
+  toolAllowlist?: readonly string[];
+  skillAllowlist?: readonly string[];
+  /** Host-owned Tasks must remain process-local when run through this queue. */
+  ephemeral?: boolean;
   /** Generic per-run parameters consumed by the active behavior profile. */
   profileParams?: Record<string, unknown>;
   /** Digital human to bind durably to this Work Session. */
@@ -164,7 +169,18 @@ export class ChatSession {
     // wake the session again.
     this.cancelledSinceLastTurn = false;
     return new Promise((resolve, reject) => {
-      this.queue.push({ task, opts, resolve, reject });
+      this.queue.push({
+        task,
+        opts: {
+          ...opts,
+          ...(opts.toolAllowlist !== undefined ? { toolAllowlist: [...opts.toolAllowlist] } : {}),
+          ...(opts.skillAllowlist !== undefined
+            ? { skillAllowlist: [...opts.skillAllowlist] }
+            : {}),
+        },
+        resolve,
+        reject,
+      });
       this.pump();
     });
   }
@@ -426,6 +442,9 @@ export class ChatSession {
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
+        toolAllowlist: next.opts.toolAllowlist,
+        skillAllowlist: next.opts.skillAllowlist,
+        ephemeral: next.opts.ephemeral,
         profileParams: next.opts.profileParams,
         workspaceProfile: next.opts.workspaceProfile,
         sessionMessageTargets: next.opts.sessionMessageTargets,

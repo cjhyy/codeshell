@@ -1,0 +1,15 @@
+{
+  "id": ".",
+  "name": "CodeShell",
+  "short_name": "CodeShell",
+  "lang": "zh-CN",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0b0b0c",
+  "theme_color": "#151517",
+  "description": "连接你的 CodeShell 工作空间",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

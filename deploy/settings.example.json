@@ -1,0 +1,26 @@
+{
+  "credentials": [
+    {
+      "id": "server-key",
+      "catalogId": "openai",
+      "apiKey": "REPLACE_WITH_YOUR_API_KEY",
+      "baseUrl": "https://api.openai.com/v1"
+    }
+  ],
+  "modelConnections": [
+    {
+      "id": "server-text",
+      "catalogId": "openai",
+      "tag": "text",
+      "model": "REPLACE_WITH_YOUR_MODEL_ID",
+      "credentialId": "server-key"
+    }
+  ],
+  "defaults": {
+    "text": "server-text"
+  },
+  "permissions": {
+    "defaultMode": "default"
+  },
+  "autoUpdates": false
+}

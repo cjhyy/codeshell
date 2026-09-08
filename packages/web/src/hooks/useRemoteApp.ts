@@ -182,7 +182,15 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-export function useRemoteApp(): RemoteApp {
+export interface RemoteAppOptions {
+  /** Browser host features may observe notifications without opening a second
+   * transport or changing the session/room reducer's ownership. */
+  onNotification?: (method: string, params: Record<string, unknown>) => void;
+}
+
+export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => new Set());
@@ -239,6 +247,12 @@ export function useRemoteApp(): RemoteApp {
       }
     >(),
   );
+  const conversationRevisionRef = useRef(0);
+  const pendingCreateRef = useRef<{
+    clientRequestId: string;
+    conversationRevision: number;
+    connectionGeneration: number;
+  } | null>(null);
   const messageAckWaitersRef = useRef(
     new Map<
       string,
@@ -247,6 +261,7 @@ export function useRemoteApp(): RemoteApp {
         reject: (error: Error) => void;
         timer: ReturnType<typeof setTimeout>;
         connectionGeneration: number;
+        conversationRevision: number;
       }
     >(),
   );
@@ -294,7 +309,11 @@ export function useRemoteApp(): RemoteApp {
   );
 
   const waitForMessageAck = useCallback(
-    (clientMessageId: string, connectionGeneration: number): Promise<void> =>
+    (
+      clientMessageId: string,
+      connectionGeneration: number,
+      conversationRevision: number,
+    ): Promise<void> =>
       new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           messageAckWaitersRef.current.delete(clientMessageId);
@@ -305,6 +324,7 @@ export function useRemoteApp(): RemoteApp {
           reject,
           timer,
           connectionGeneration,
+          conversationRevision,
         });
       }),
     [],
@@ -454,9 +474,27 @@ export function useRemoteApp(): RemoteApp {
         case "auth.ok":
           // Pull the world on connect.
           break;
-        case "chat.accepted":
+        case "chat.accepted": {
+          const waiter = event.clientMessageId
+            ? messageAckWaitersRef.current.get(event.clientMessageId)
+            : undefined;
+          const creation = pendingCreateRef.current;
+          const mayBind = event.clientRequestId
+            ? Boolean(
+                creation &&
+                creation.clientRequestId === event.clientRequestId &&
+                creation.conversationRevision === conversationRevisionRef.current &&
+                creation.connectionGeneration === connectionGenerationRef.current,
+              )
+            : !event.clientMessageId ||
+              Boolean(
+                waiter &&
+                waiter.conversationRevision === conversationRevisionRef.current &&
+                waiter.connectionGeneration === connectionGenerationRef.current,
+              );
+          if (event.clientRequestId && creation?.clientRequestId === event.clientRequestId)
+            pendingCreateRef.current = null;
           if (event.clientMessageId) {
-            const waiter = messageAckWaitersRef.current.get(event.clientMessageId);
             settleMessageAck(
               event.clientMessageId,
               waiter && waiter.connectionGeneration !== connectionGenerationRef.current
@@ -464,16 +502,17 @@ export function useRemoteApp(): RemoteApp {
                 : undefined,
             );
           }
-          if (event.sessionId) {
+          if (mayBind && event.sessionId) {
             setActiveSessionId(event.sessionId);
             boundSessionRef.current = event.sessionId;
             clearSessionUnread(event.sessionId);
           }
-          if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
+          if (mayBind && "cwd" in event) setActiveSessionCwd(event.cwd ?? null);
           // A freshly minted session won't be on disk until its first turn, so
           // pull the list now so the new conversation shows up as a row.
           sendRef.current?.({ type: "session.list" });
           break;
+        }
         case "attachment.upload.ready": {
           const waiter = uploadWaitersRef.current.get(event.clientId);
           if (!waiter) break;
@@ -514,7 +553,14 @@ export function useRemoteApp(): RemoteApp {
             return clearUnreadSession(pruned, event.activeSessionId);
           });
           setLoadingKey("sessions", false);
-          if (event.activeSessionId) {
+          if (
+            event.activeSessionId &&
+            (conversationRevisionRef.current === 0 ||
+              event.activeSessionId === boundSessionRef.current)
+          ) {
+            // A refresh may reflect an earlier async create or another tab's
+            // device selection. Only an explicit acknowledgement/select owns
+            // navigation once this browser has chosen its conversation.
             setActiveSessionId(event.activeSessionId);
             const active = event.sessions.find((s) => s.id === event.activeSessionId);
             if (active) setActiveSessionCwd(active.cwd || null);
@@ -848,6 +894,14 @@ export function useRemoteApp(): RemoteApp {
   const onRawLine = useCallback(
     (raw: unknown) => {
       const obj = raw as Record<string, unknown>;
+      if (typeof obj.method === "string") {
+        optionsRef.current.onNotification?.(
+          obj.method,
+          obj.params && typeof obj.params === "object"
+            ? (obj.params as Record<string, unknown>)
+            : {},
+        );
+      }
       // Permission requests arrive as agent/approvalRequest worker lines.
       if (obj.method === "agent/approvalRequest" && obj.params) {
         const params = obj.params as Record<string, unknown>;
@@ -985,6 +1039,7 @@ export function useRemoteApp(): RemoteApp {
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
       const connectionGeneration = socket.connectionGeneration;
+      const conversationRevision = conversationRevisionRef.current;
       const roomId = activeRoomIdRef.current;
       const sessionId = boundSessionRef.current;
       const clientMessageId =
@@ -1008,8 +1063,13 @@ export function useRemoteApp(): RemoteApp {
         );
         return false;
       }
+      if (conversationRevision !== conversationRevisionRef.current) return false;
       const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));
-      const acknowledged = waitForMessageAck(clientMessageId, connectionGeneration);
+      const acknowledged = waitForMessageAck(
+        clientMessageId,
+        connectionGeneration,
+        conversationRevision,
+      );
       let queued: boolean;
       if (roomId) {
         // NO optimistic echo for rooms: RoomManager persists the user line and
@@ -1055,6 +1115,7 @@ export function useRemoteApp(): RemoteApp {
       }
       if (
         !roomId &&
+        conversationRevision === conversationRevisionRef.current &&
         !activeRoomIdRef.current &&
         (sessionId === undefined || boundSessionRef.current === sessionId)
       ) {
@@ -1078,6 +1139,7 @@ export function useRemoteApp(): RemoteApp {
 
   const selectSession = useCallback(
     (id: string) => {
+      conversationRevisionRef.current += 1;
       if (activeRoomIdRef.current) {
         socket.send({
           type: "ccRoom.unsubscribeTranscript",
@@ -1123,6 +1185,7 @@ export function useRemoteApp(): RemoteApp {
 
   const openCcSession = useCallback(
     (sessionId: string, cwd: string, mode: PermissionMode) => {
+      conversationRevisionRef.current += 1;
       // Pin the CLI this session belongs to so its on-disk backlog is read with
       // the right reader even if the user switches the pane's CLI afterward.
       ccHistoryKindRef.current = ccCliKindRef.current;
@@ -1151,6 +1214,15 @@ export function useRemoteApp(): RemoteApp {
 
   const newSession = useCallback(
     (target?: MobileSessionCreateTarget, name?: string) => {
+      conversationRevisionRef.current += 1;
+      const clientRequestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `mobile-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      pendingCreateRef.current = {
+        clientRequestId,
+        conversationRevision: conversationRevisionRef.current,
+        connectionGeneration: socket.connectionGeneration,
+      };
       if (activeRoomIdRef.current) {
         socket.send({
           type: "ccRoom.unsubscribeTranscript",
@@ -1206,12 +1278,22 @@ export function useRemoteApp(): RemoteApp {
       setLoadingKey("sessionHistory", false);
       dispatchChat({ kind: "reset" });
       if (stableTarget && typeof stableTarget === "object") {
-        socket.send({ type: "session.create", ...stableTarget, ...(name ? { name } : {}) });
+        socket.send({
+          type: "session.create",
+          clientRequestId,
+          ...stableTarget,
+          ...(name ? { name } : {}),
+        });
       } else {
         socket.send(
           stableTarget === undefined
-            ? { type: "session.create", ...(name ? { name } : {}) }
-            : { type: "session.create", cwd: stableTarget, ...(name ? { name } : {}) },
+            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
+            : {
+                type: "session.create",
+                clientRequestId,
+                cwd: stableTarget,
+                ...(name ? { name } : {}),
+              },
         );
       }
     },
@@ -1273,6 +1355,7 @@ export function useRemoteApp(): RemoteApp {
   // is no user-facing room create/open/close — CC sessions are opened via
   // openCcSession; the room is internal transport.)
   const leaveRoom = useCallback(() => {
+    conversationRevisionRef.current += 1;
     if (activeRoomIdRef.current) {
       socket.send({
         type: "ccRoom.unsubscribeTranscript",

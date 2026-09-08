@@ -1,0 +1,34 @@
+name: codeshell-hub
+
+services:
+  hub:
+    image: codeshell-hub:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      CODE_SHELL_SERVE_PUBLIC_URL: ${CODE_SHELL_SERVE_PUBLIC_URL:-http://127.0.0.1:${CODESHELL_HTTP_PORT:-8791}}
+    ports:
+      - "127.0.0.1:${CODESHELL_HTTP_PORT:-8791}:8790"
+    volumes:
+      - hub-data:/data
+      - workspace:/workspace
+      - type: bind
+        source: ${CODESHELL_MODEL_SETTINGS:-./deploy/settings.local.json}
+        # User defaults preserve project settings; Web edits use the workspace local layer.
+        target: /data/home/.code-shell/settings.json
+        read_only: true
+        bind:
+          create_host_path: false
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  hub-data:
+  workspace:

@@ -39,7 +39,12 @@ import { getProjectStore } from "./project-store.js";
 import { toMobileProjectMeta } from "./mobile-project-meta.js";
 export { toMobileProjectMeta } from "./mobile-project-meta.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { getSessionWorkspaceForUi } from "./session-workspace-service.js";
+import { lstatSync, realpathSync } from "node:fs";
+import { findMainWorktreeRoot } from "@cjhyy/code-shell-capability-coding/git";
+import {
+  getSessionWorkspaceForUi,
+  getSessionWorkspaceAuthorityForUi,
+} from "./session-workspace-service.js";
 
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
@@ -88,6 +93,49 @@ export class MobileRemoteOrchestrator {
 
   async projectList(): Promise<MobileProjectMeta[]> {
     return (await getProjectStore().list()).map(toMobileProjectMeta);
+  }
+
+  /** HTTP settings/files use the same Main-owned project and session authority as chat. */
+  async resolveWebWorkspace(
+    input: string | undefined,
+    deviceId: string,
+  ): Promise<string | undefined> {
+    const state = this.deviceState(deviceId);
+    const cwd = input ?? this.effectiveMobileRunCwd(state);
+    const projects = getProjectStore();
+    if (projects.isNoRepoCwd(cwd)) return resolveNoRepoCwd();
+    const root = projects.resolveExactRootSync(cwd);
+    if (root) return root.cwd;
+    // A session may use its own worktree, which is not a separately registered
+    // project root. Resolve it from persisted authority, never from an HTTP cwd.
+    const candidates = new Set([
+      state.selectedSessionId,
+      state.sessionId,
+      ...[...this.mobileSessionCwds.keys()].filter(
+        (id) => getSessionCwdIndex().lookupCached(id)?.workspaceRoot === cwd,
+      ),
+    ]);
+    for (const id of candidates) {
+      if (!id) continue;
+      try {
+        const authority = await getSessionWorkspaceAuthorityForUi(id);
+        if (
+          authority.rootStatus !== "ok" ||
+          authority.workspace.root !== cwd ||
+          authority.workspace.kind !== "worktree" ||
+          authority.workspace.worktree?.createdBy !== "codeshell" ||
+          authority.workspace.worktree.path !== cwd
+        )
+          continue;
+        const directory = lstatSync(cwd);
+        if (!directory.isDirectory() || directory.isSymbolicLink()) continue;
+        const mainRoot = await findMainWorktreeRoot(cwd);
+        if (mainRoot && realpathSync(mainRoot) === realpathSync(authority.mainRoot)) return cwd;
+      } catch {
+        // Deleted/unmounted sessions do not grant filesystem access.
+      }
+    }
+    return undefined;
   }
 
   private async sendProjectList(deviceId?: string): Promise<void> {

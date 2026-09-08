@@ -1,0 +1,5 @@
+# Replace this domain and set the matching CODE_SHELL_SERVE_PUBLIC_URL in
+# /etc/codeshell/server.env before initializing the administrator account.
+codeshell.example.com {
+	reverse_proxy 127.0.0.1:8790
+}

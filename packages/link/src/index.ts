@@ -15,3 +15,13 @@ export type {
   LinkProviderManifest,
   LinkSecretLocation,
 } from "./types.js";
+
+export type {
+  LinkProviderView,
+  LinkAuthorization,
+  LinkConnectionInput,
+  LinkErrorCode,
+  LinkSnapshot,
+  MaskedLinkConnection,
+  TokenConnectionInput,
+} from "./management-types.js";

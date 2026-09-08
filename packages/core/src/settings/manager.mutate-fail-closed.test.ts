@@ -27,6 +27,31 @@ function project(prefix: string): { cwd: string; settingsPath: string } {
   return { cwd, settingsPath: join(cwd, ".code-shell", "settings.json") };
 }
 
+test("local atomic mutations preserve shared settings and reject invalid replacements", () => {
+  const { cwd, settingsPath } = project("cs-mutate-local-");
+  const shared = JSON.stringify({ theme: "dark" });
+  writeFileSync(settingsPath, shared);
+  const localPath = join(cwd, ".code-shell", "settings.local.json");
+  writeFileSync(localPath, JSON.stringify({ keep: "local-value" }));
+  const settings = new SettingsManager(cwd, "project");
+  settings.mutateSettingsForScope("local", cwd, (current) => {
+    current.capabilityOverrides = { skills: { example: "off" } };
+  });
+  const saved = readFileSync(localPath, "utf8");
+  expect(JSON.parse(saved)).toEqual({
+    keep: "local-value",
+    capabilityOverrides: { skills: { example: "off" } },
+  });
+  expect(statSync(localPath).mode & 0o777).toBe(0o600);
+  expect(readFileSync(settingsPath, "utf8")).toBe(shared);
+  expect(() =>
+    settings.mutateSettingsForScope("local", cwd, (current) => {
+      current.permissions = { defaultMode: "invalid-mode" };
+    }),
+  ).toThrow();
+  expect(readFileSync(localPath, "utf8")).toBe(saved);
+});
+
 describe("SettingsManager.saveProjectSetting — fail closed on an unreadable file", () => {
   test("refuses to overwrite malformed JSON and leaves the bytes untouched", () => {
     const { cwd, settingsPath } = project("cs-mutate-malformed-");

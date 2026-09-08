@@ -39,7 +39,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: link → core → pet → arena → coding → cdp → server → web → tui → chat → build-meta.ts (desktop separate)
+bun run build          # filter order: link → core → pet → arena → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)

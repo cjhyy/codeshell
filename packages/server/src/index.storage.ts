@@ -8,3 +8,5 @@ export * from "./attachment-service.js";
 export * from "./client-message-id.js";
 export * from "./image-byte-probe.js";
 export * from "./sessions-service.js";
+export * from "./session-titles-store.js";
+export * from "./panels/storage-store.js";

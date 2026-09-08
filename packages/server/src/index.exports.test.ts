@@ -6,6 +6,9 @@ import * as storageApi from "./index.storage.js";
 import * as workerApi from "./index.worker.js";
 import * as mobileRemoteApi from "./index.mobile-remote.js";
 import * as serveApi from "./index.serve.js";
+import * as desktopWebApi from "./index.desktop-web.js";
+import * as linksApi from "./index.links.js";
+import * as panelsApi from "./index.panels.js";
 
 const repoRoot = join(import.meta.dir, "../../..");
 
@@ -17,6 +20,9 @@ describe("Server package public entry contracts", () => {
         ...Object.keys(workerApi),
         ...Object.keys(mobileRemoteApi),
         ...Object.keys(serveApi),
+        ...Object.keys(desktopWebApi),
+        ...Object.keys(linksApi),
+        ...Object.keys(panelsApi),
       ]),
     ].sort();
     expect(Object.keys(rootApi).sort()).toEqual(focusedKeys);
@@ -24,6 +30,9 @@ describe("Server package public entry contracts", () => {
     expect(workerApi.WorkerBridgeCore).toBe(rootApi.WorkerBridgeCore);
     expect(mobileRemoteApi.RemoteHostManager).toBe(rootApi.RemoteHostManager);
     expect(serveApi.startHeadlessServer).toBe(rootApi.startHeadlessServer);
+    expect(desktopWebApi.createDesktopWebApi).toBe(rootApi.createDesktopWebApi);
+    expect(linksApi.createLinkService).toBe(rootApi.createLinkService);
+    expect(panelsApi.createPanelHttp).toBe(rootApi.createPanelHttp);
 
     expect("RemoteHostManager" in storageApi).toBe(false);
     expect("WorkerBridgeCore" in storageApi).toBe(false);
@@ -42,7 +51,10 @@ describe("Server package public entry contracts", () => {
     };
     expect(Object.keys(manifest.exports).sort()).toEqual([
       ".",
+      "./desktop-web",
+      "./links",
       "./mobile-remote",
+      "./panels",
       "./serve",
       "./storage",
       "./worker",
@@ -71,6 +83,15 @@ describe("Server package public entry contracts", () => {
     ]);
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/worker"]).toEqual([
       "packages/server/src/index.worker.ts",
+    ]);
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/desktop-web"]).toEqual([
+      "packages/server/src/index.desktop-web.ts",
+    ]);
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/links"]).toEqual([
+      "packages/server/src/index.links.ts",
+    ]);
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/panels"]).toEqual([
+      "packages/server/src/index.panels.ts",
     ]);
   });
 

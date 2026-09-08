@@ -9,3 +9,7 @@ export * from "./index.storage.js";
 export * from "./index.worker.js";
 export * from "./index.mobile-remote.js";
 export * from "./index.serve.js";
+export * from "./index.desktop-web.js";
+export * from "./index.links.js";
+
+export * from "./index.panels.js";
