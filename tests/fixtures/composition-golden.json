@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "b5093df548b5939eaae61cb961786324a297cd0a",
+  "baselineCommit": "66745937764702f327b284130c13d593989ea1b2",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -462,6 +462,14 @@
       },
       {
         "name": "browser_navigate",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "browser_inspect",
         "moduleId": "core",
         "exposure": "preset-tags",
         "presetTags": [

@@ -49,7 +49,9 @@ describe("architecture growth budgets", () => {
     // v0.9.7 adds model-service and activity-history adapter wiring, the delivered
     // reply body, and parentSessionId validation at the existing IPC boundary
     // (+25). Their service implementations remain outside the composition root.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_027);
+    // v0.9.8 adds two calls to clear browser grants when deleting a Session;
+    // cleanup remains in the existing browser-runtime services (+2 wiring).
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_029);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );
@@ -84,7 +86,9 @@ describe("architecture growth budgets", () => {
     // notification targets and timers, so cleanup stays with AgentServer's
     // private state. Approval policy/queues and child-run creation remain in
     // ApprovalRouter/InteractiveApprovalBackend and subagent-spawner respectively.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_803);
+    // v0.9.8 forwards inspect and explicit resume through BrowserBridge (+2);
+    // implementations and authorization stay in the host browser backends.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_805);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -101,7 +105,9 @@ describe("architecture growth budgets", () => {
     // synchronizes private compaction caches/usage anchors, and installs child
     // host bindings (+91). Note persistence/rollover/replay lives in context/notes
     // and the builtin tools; Engine retains ownership of its per-run state.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_409);
+    // v0.9.8 retains lastCompletionKind in Engine's own session snapshot (+1),
+    // so a yielded background turn is not projected as completed by hosts.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_410);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
