@@ -88,7 +88,14 @@ describe("architecture growth budgets", () => {
     // ApprovalRouter/InteractiveApprovalBackend and subagent-spawner respectively.
     // v0.9.8 forwards inspect and explicit resume through BrowserBridge (+2);
     // implementations and authorization stay in the host browser backends.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_805);
+    // Shared Desktop/Hub transports add a pending-start cancellation fence
+    // (+70): the manager keys cross-connection cancellation, while AgentServer
+    // owns each connection's controllers until ChatSession accepts the turn.
+    // Cancel, close and disconnect must cover that pre-queue lifetime here;
+    // queued/running turn cancellation stays in ChatSession. Settings refresh
+    // also invalidates the extracted skill scanner's discovery cache (+5), so
+    // an edited SKILL.md is visible on the next turn without a worker restart.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_880);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -126,8 +133,13 @@ describe("architecture growth budgets", () => {
       // visit receipt, deterministic commands). They are one feature and are
       // consumed together, so the barrel gains a single line rather than four.
       "packages/pet/src/index.ts": 25,
-      "packages/server/src/index.ts": 4,
-      "packages/web/src/index.ts": 14,
+      // Desktop and Hub share the extracted desktop-web, links and panels
+      // entry points (+3); their HTTP/service implementations remain in server
+      // so Desktop adapters no longer own separate copies of those services.
+      "packages/server/src/index.ts": 7,
+      // Shared transcript replay (+1) folds persisted records through the web
+      // stream reducer, giving reconnecting clients the same message state.
+      "packages/web/src/index.ts": 15,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);
