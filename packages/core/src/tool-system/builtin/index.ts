@@ -113,6 +113,7 @@ import {
   browserNavigateToolDef,
   browserNavigateTool,
 } from "./browser-tools.js";
+import { browserInspectToolDef, browserInspectTool } from "./browser-inspect.js";
 import { panelToolDef, panelTool } from "./panel.js";
 import {
   sendMessageToSessionToolDef,
@@ -996,6 +997,22 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     exposure: expose(GENERAL_TAGS, {
       defaultPermissionRules: allow(browserNavigateToolDef.name),
       availability: (ctx) => ctx.hasBrowserAutomation === true,
+      promptSections: ["browser"],
+    }),
+  },
+  {
+    definition: {
+      ...browserInspectToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+      timeoutMs: 15_000,
+    },
+    execute: browserInspectTool,
+    exposure: expose(GENERAL_TAGS, {
+      availability: (ctx) => ctx.hasBrowserAutomation === true,
+      defaultPermissionRules: [{ tool: browserInspectToolDef.name, decision: "ask" }],
       promptSections: ["browser"],
     }),
   },

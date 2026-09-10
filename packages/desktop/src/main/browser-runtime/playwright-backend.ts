@@ -73,7 +73,7 @@ export interface DedicatedPlaywrightBackendOptions {
   deps?: Partial<PlaywrightBackendDeps>;
 }
 
-/** Explicit isolated Chromium backend powered by Playwright Locator semantics. */
+/** Explicit isolated Chromium backend using Playwright actions on exact node handles. */
 export class DedicatedPlaywrightBackend implements BrowserRuntimeBackend {
   readonly kind = "dedicated-playwright" as const;
   private readonly entries = new Map<string, PlaywrightEntry>();
@@ -217,6 +217,7 @@ export class DedicatedPlaywrightBackend implements BrowserRuntimeBackend {
         entry.opening = undefined;
         context.on("close", () => {
           if (entry.context !== context) return;
+          driver.dispose();
           entry.context = undefined;
           entry.driver = undefined;
           entry.bridge = undefined;
@@ -287,6 +288,13 @@ export class DedicatedPlaywrightBackend implements BrowserRuntimeBackend {
     });
 
     return {
+      resumeControl: () => this.run(entry, () => driver.resumeControl()),
+      inspect: (options) =>
+        this.run(entry, () =>
+          currentAllowed()
+            ? driver.inspect(options)
+            : Promise.resolve({ ...denied(), mode: options.mode }),
+        ),
       snapshot: async () => {
         if (!currentAllowed()) {
           const page = driver.currentPageInfo();
@@ -458,6 +466,7 @@ export class DedicatedPlaywrightBackend implements BrowserRuntimeBackend {
   private disposeEntry(entry: PlaywrightEntry): void {
     if (this.entries.get(entry.ownerId) !== entry) return;
     this.entries.delete(entry.ownerId);
+    entry.driver?.dispose();
     this.profileOwners.delete(entry.profileId);
     entry.disposed = true;
     if (entry.idleTimer) clearTimeout(entry.idleTimer);

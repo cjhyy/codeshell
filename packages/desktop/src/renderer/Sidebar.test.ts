@@ -73,7 +73,7 @@ afterEach(async () => {
   root = null;
 });
 
-function ProjectGroupHarness() {
+function ProjectGroupHarness({ revealedSessionId }: { revealedSessionId?: string } = {}) {
   const [collapsed, setCollapsed] = useState(false);
   return React.createElement(ProjectGroup, {
     project,
@@ -81,6 +81,7 @@ function ProjectGroupHarness() {
     collapsed,
     isActiveProject: false,
     activeSessionId: null,
+    revealedSessionId,
     statusFor: () => undefined,
     onToggle: () => setCollapsed((current) => !current),
     onSelectProject: () => undefined,
@@ -162,6 +163,23 @@ describe("Sidebar project root trust", () => {
 });
 
 describe("Sidebar project session visibility", () => {
+  test("renders an announced Session beyond the compact list while its chat is inactive", async () => {
+    ensureMiniDom();
+    Object.assign(window, {
+      codeshell: { getProjectGitStatus: async () => ({ branch: "main" }) },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(React.createElement(ProjectGroupHarness, { revealedSessionId: "session-1" }));
+      await flushMicrotasks();
+    });
+    expect(buttonWithText(container, "Session 1")).toBeDefined();
+    expect(buttonWithText(container, "Session 8")).toBeDefined();
+    expect(buttonWithText(container, "Session 4")).toBeUndefined();
+    expect(buttonWithText(container, "展开显示3")).toBeDefined();
+  });
+
   test("returns to the compact session list after the project is closed and reopened", async () => {
     ensureMiniDom();
     Object.assign(window, {

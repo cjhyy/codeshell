@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { agentTool } from "./agent.js";
-import type { SubAgentSpawner, ToolContext } from "../context.js";
+import type { SubAgentSpawner, ToolContext, ToolRunYieldReason } from "../context.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { notificationQueue } from "./agent-notifications.js";
 import type { TokenUsage } from "../../types.js";
@@ -33,7 +33,19 @@ function makeCtx(
     parentStream: onEvent ? (e) => onEvent(e as never) : () => {},
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
   };
-  return { subAgentSpawner: spawner, sessionId, recordBilledUsage } as unknown as ToolContext;
+  const yields = new Set<ToolRunYieldReason>();
+  return {
+    subAgentSpawner: spawner,
+    sessionId,
+    recordBilledUsage,
+    runYield: {
+      request: (reason) => {
+        yields.add(reason);
+      },
+      peek: (reason) => yields.has(reason),
+      consume: (reason) => yields.delete(reason),
+    },
+  } as ToolContext;
 }
 
 beforeEach(() => {
@@ -74,6 +86,7 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
 
     // The agent is now tracked as a running background agent.
     expect(asyncAgentRegistry.hasRunningForSession("s-test")).toBe(true);
+    expect(ctx.runYield?.peek("background_notification")).toBe(true);
 
     // When it finishes, the result lands in the notification queue.
     await until(() => notificationQueue.getSnapshot("s-test").length > 0);
@@ -117,6 +130,33 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
     // No background agent left running; no notification needed.
     expect(asyncAgentRegistry.hasRunningForSession("s-test")).toBe(false);
     expect(notificationQueue.getSnapshot("s-test")).toHaveLength(0);
+    expect(ctx.runYield?.peek("background_notification")).toBe(false);
+  });
+
+  it("marks an explicitly detached Agent as waiting for its eventual result", async () => {
+    let finish!: (text: string) => void;
+    const completion = new Promise<string>((resolve) => {
+      finish = resolve;
+    });
+    const ctx = makeCtx(() => completion);
+    try {
+      const out = await agentTool({ prompt: "p", run_in_background: true }, ctx);
+      expect(out).toContain("Async agent launched successfully");
+      expect(ctx.runYield?.peek("background_notification")).toBe(true);
+      expect(notificationQueue.getSnapshot("s-test")).toHaveLength(0);
+    } finally {
+      finish("verified final result");
+      await until(() => notificationQueue.getSnapshot("s-test").length > 0);
+    }
+    expect(notificationQueue.getSnapshot("s-test")[0]?.finalText).toBe("verified final result");
+  });
+
+  it("does not request a background wait when a foreground Agent fails inline", async () => {
+    const ctx = makeCtx(async () => {
+      throw new Error("spawn failed");
+    });
+    expect(await agentTool({ prompt: "p" }, ctx)).toContain("spawn failed");
+    expect(ctx.runYield?.peek("background_notification")).toBe(false);
   });
 
   it("emits a UI agent_end marker when an auto-backgrounded agent later completes", async () => {

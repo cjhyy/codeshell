@@ -8,6 +8,36 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-09-10
+
+### Added
+
+- Added permission-gated browser inspection for DOM geometry, console messages,
+  network metadata, and performance timings on the task's authorized page.
+
+### Changed
+
+- Use Puppeteer for built-in Electron and Chrome extension browser actions,
+  retaining Playwright for independent task browsers.
+- Upgrade the bundled Chrome extension to 0.2.0 with target-scoped high-level
+  actions, explicit takeover/resume, and protocol compatibility reporting.
+
+### Fixed
+
+- Capture the complete browser viewport on Retina displays and preserve correct
+  element clipping and coordinates at different page zoom levels.
+- Scroll nested content areas, frames, and canvases using library mouse APIs;
+  observe delayed rendering without repeating the wheel input.
+- Bind element references to exact nodes and frames, rejecting stale references
+  after replacement, navigation, or control changes.
+- Cancel stale queued actions and resumes when browser control is taken over or
+  authorization ends, preserving the original page and login state.
+- Show newly delegated work Sessions in the sidebar immediately and keep Mimi
+  replies attached to the user messages that triggered them.
+- Keep foreground tasks waiting for background Agent notifications instead of
+  prematurely recording the work as complete.
+- Avoid renderer stalls while detecting attachment paths in large screenshot results.
+
 ## [0.9.7] - 2026-09-07
 
 ### Added

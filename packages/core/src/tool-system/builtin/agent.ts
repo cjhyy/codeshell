@@ -685,6 +685,10 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
         });
       });
 
+    // Mark the foreground completion as waiting for this child's notification.
+    // The Engine consumes the marker only after the whole tool batch finishes,
+    // and suppresses it for headless/sub-agent runs that cannot be woken later.
+    ctx.runYield?.request("background_notification");
     return [
       `Async agent launched successfully.`,
       `agent_id: ${agentId} (internal — do not show to user)`,
@@ -901,6 +905,9 @@ async function runSyncSubAgent(args: {
         // handlers so they emit the terminal agent_end the card needs.
         uiStream: parentStream,
       });
+      // A timeout hands off execution, not task completion. Keep host task
+      // coordinators open until the child's notification drives the final run.
+      ctx?.runYield?.request("background_notification");
       return [
         `Task is taking a while (>${Math.round(autoBgMs / 1000)}s) — moved it to the background so I'm not blocked.`,
         `agent_id: ${agentId} (internal — do not show to user)`,

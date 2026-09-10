@@ -101,6 +101,15 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
       "every other entry here.",
   },
   {
+    tool: "browser_inspect",
+    kind: "host-loopback",
+    status: "exposed",
+    reason:
+      "Bounded DOM, console, network and timing observations of the same session-owned " +
+      "target. ToolExecutor applies separate ask permission; the host retains target/domain " +
+      "authorization. No arbitrary script/CDP, request bodies or browser-wide access.",
+  },
+  {
     tool: "InjectCredential",
     kind: "host-loopback",
     status: "exposed",

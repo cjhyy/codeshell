@@ -28,6 +28,7 @@ import type {
   CdpScrollState,
 } from "./types.js";
 import { planKeySequence, type KeyboardPlatform } from "./keymap.js";
+import { READ_PAGE_STATE_EXPRESSION } from "./scroll-state.js";
 
 /** Default cap for extracted page text (chars). */
 export const CONTENT_CHAR_CAP = 12_000;
@@ -43,6 +44,13 @@ export const DEFAULT_IMAGE_FETCH_TIMEOUT_MS = 15_000;
 /** Schemes the standalone driver will navigate to without host policy. */
 export const DEFAULT_NAVIGATION_SCHEMES = ["http:", "https:", "about:"] as const;
 
+export interface CdpScreenshotRequest {
+  /** Optional visible element region in viewport-relative CSS pixels. */
+  region?: { x: number; y: number; width: number; height: number };
+  /** Maximum encoded image width or height in pixels. */
+  maxDim: number;
+}
+
 export interface CdpActionsDriverOptions {
   /** Host OS of the target browser; required for macOS shortcut semantics. */
   keyboardPlatform?: KeyboardPlatform;
@@ -54,6 +62,8 @@ export interface CdpActionsDriverOptions {
   allowedNavigationSchemes?: readonly string[];
   /** Timeout for in-page image fetch/decode/canvas work. */
   imageFetchTimeoutMs?: number;
+  /** Host-native screenshot capture, bound to this exact browser target. */
+  captureScreenshot?: (request: CdpScreenshotRequest) => Promise<CdpImageData>;
 }
 
 export type NavigationUrlValidation =
@@ -148,8 +158,8 @@ export class CdpActionsDriver {
       const visible = intersectRects(box, viewport);
       if (!visible) return null;
       return {
-        x: visible.x + visible.width / 2 - viewport.x,
-        y: visible.y + visible.height / 2 - viewport.y,
+        x: visible.x + visible.width / 2,
+        y: visible.y + visible.height / 2,
       };
     } catch {
       return null; // node detached / no box → treat as stale
@@ -347,37 +357,57 @@ export class CdpActionsDriver {
    */
   async screenshot(backendNodeId?: number, maxDim = MAX_IMAGE_DIM): Promise<CdpImageData> {
     try {
-      // Region to capture (CSS px) + the native scale that fits it into maxDim.
-      let region: { x: number; y: number; width: number; height: number };
+      const safeMaxDim = positiveFinite(maxDim, MAX_IMAGE_DIM);
+      if (backendNodeId === undefined && this.options.captureScreenshot) {
+        return await this.options.captureScreenshot({ maxDim: safeMaxDim });
+      }
       if (backendNodeId !== undefined) {
         await this.ensureEnabled();
         await this.send("DOM.scrollIntoViewIfNeeded", { backendNodeId }).catch(() => undefined);
+      }
+      const capture = await this.screenshotViewport();
+      // Keep DOM boxes and the viewport in CSS pixels until the final CDP clip.
+      let region = capture.region;
+      if (backendNodeId !== undefined) {
         const { model } = (await this.send("DOM.getBoxModel", { backendNodeId })) as {
           model?: { content: number[] };
         };
         if (!model?.content || model.content.length < 8) {
           return { ok: false, detail: "element has no layout box", staleRef: true };
         }
-        const viewport = await this.layoutViewportRect();
         const box = rectFromQuad(model.content);
-        const visible = intersectRects(box, viewport);
+        const visible = intersectRects(box, capture.region);
         if (!visible)
           return { ok: false, detail: "element is outside the visible viewport after scrolling" };
         region = visible;
-      } else {
-        region = await this.layoutViewportRect();
       }
       if (region.width < 1 || region.height < 1) {
         return { ok: false, detail: "capture region is empty" };
       }
-      // scale ≤ 1 so the larger dimension lands at ~maxDim — CDP does the resize.
-      const safeMaxDim = positiveFinite(maxDim, MAX_IMAGE_DIM);
-      const scale = Math.min(1, safeMaxDim / Math.max(region.width, region.height));
+      if (this.options.captureScreenshot) {
+        return await this.options.captureScreenshot({ region, maxDim: safeMaxDim });
+      }
+      // CDP's clip uses device-independent pixels, while its output uses native
+      // pixels. Electron's deprecated layoutViewport is already device-scaled:
+      // passing it as a clip makes Retina captures twice as wide/high, leaving
+      // the real page in the upper-left quarter. Include zoom and native scale
+      // exactly once so the entire viewport fits the requested pixel budget.
+      const dip = capture.cssToDipScale;
+      const scale = Math.min(
+        1,
+        safeMaxDim / (Math.max(region.width, region.height) * dip * capture.deviceScale),
+      );
       const shot = (await this.send("Page.captureScreenshot", {
         format: "jpeg",
         quality: 80,
         captureBeyondViewport: false,
-        clip: { ...region, scale },
+        clip: {
+          x: (region.x + capture.pageX) * dip,
+          y: (region.y + capture.pageY) * dip,
+          width: region.width * dip,
+          height: region.height * dip,
+          scale,
+        },
       })) as { data?: string };
       if (!shot.data) return { ok: false, detail: "screenshot returned no data" };
       return { ok: true, base64: shot.data, mediaType: "image/jpeg" };
@@ -386,26 +416,58 @@ export class CdpActionsDriver {
     }
   }
 
+  private async screenshotViewport(): Promise<{
+    region: { x: number; y: number; width: number; height: number };
+    pageX: number;
+    pageY: number;
+    cssToDipScale: number;
+    deviceScale: number;
+  }> {
+    type Viewport = {
+      pageX?: number;
+      pageY?: number;
+      clientWidth?: number;
+      clientHeight?: number;
+    };
+    const metrics = (await this.send("Page.getLayoutMetrics")) as {
+      layoutViewport?: Viewport;
+      cssLayoutViewport?: Viewport;
+      visualViewport?: { zoom?: number };
+      cssVisualViewport?: { zoom?: number };
+    };
+    const css = metrics.cssLayoutViewport;
+    const viewport = css ?? metrics.layoutViewport;
+    const cssToDipScale = css
+      ? positiveFinite(metrics.cssVisualViewport?.zoom ?? metrics.visualViewport?.zoom, 1)
+      : 1;
+    const cssWidth = positiveFinite(css?.clientWidth, 0);
+    const deviceWidth = positiveFinite(metrics.layoutViewport?.clientWidth, 0);
+    const deviceScale =
+      cssWidth > 0 && deviceWidth > 0 ? deviceWidth / cssWidth / cssToDipScale : 1;
+    return {
+      region: {
+        x: 0,
+        y: 0,
+        width: positiveFinite(viewport?.clientWidth, 1280),
+        height: positiveFinite(viewport?.clientHeight, 800),
+      },
+      pageX: finiteOr(viewport?.pageX, 0),
+      pageY: finiteOr(viewport?.pageY, 0),
+      cssToDipScale,
+      deviceScale,
+    };
+  }
+
   private async layoutViewportRect(): Promise<{
     x: number;
     y: number;
     width: number;
     height: number;
   }> {
-    const { layoutViewport } = (await this.send("Page.getLayoutMetrics")) as {
-      layoutViewport?: {
-        pageX?: number;
-        pageY?: number;
-        clientWidth?: number;
-        clientHeight?: number;
-      };
-    };
-    return {
-      x: finiteOr(layoutViewport?.pageX, 0),
-      y: finiteOr(layoutViewport?.pageY, 0),
-      width: positiveFinite(layoutViewport?.clientWidth, 1280),
-      height: positiveFinite(layoutViewport?.clientHeight, 800),
-    };
+    // DOM.getBoxModel and Input coordinates are viewport-relative CSS pixels,
+    // even after scrolling. Deprecated layoutViewport uses physical pixels on
+    // Electron, so its scroll origin must never be subtracted from a DOM box.
+    return (await this.screenshotViewport()).region;
   }
 
   async navigate(url: string): Promise<CdpActionResult> {
@@ -567,16 +629,20 @@ export class CdpActionsDriver {
   async scroll(dir: "up" | "down", amount?: number): Promise<CdpActionResult> {
     try {
       const before = await this.readProgressState();
+      const beforePixels =
+        before.scroll.positionKnown === false ? await this.visualSignature() : undefined;
       // Keep one action to at most one viewport. Huge deltas made progress
       // impossible to reason about and encouraged blind 20,000px loops.
       const requested =
-        typeof amount === "number" && Number.isFinite(amount) ? Math.abs(amount) : 600;
+        typeof amount === "number" && Number.isFinite(amount) && amount !== 0
+          ? Math.abs(amount)
+          : 600;
       const magnitude = Math.max(1, Math.min(requested, Math.max(1, before.scroll.viewportHeight)));
       const deltaY = (dir === "down" ? 1 : -1) * magnitude;
       await this.send("Input.dispatchMouseEvent", {
         type: "mouseWheel",
-        x: before.scroll.viewportWidth / 2,
-        y: before.scroll.viewportHeight / 2,
+        x: before.wheelPoint?.x ?? before.scroll.viewportWidth / 2,
+        y: before.wheelPoint?.y ?? before.scroll.viewportHeight / 2,
         deltaX: 0,
         deltaY,
       });
@@ -593,7 +659,10 @@ export class CdpActionsDriver {
           contentChanged: before.contentSignature !== after.contentSignature,
         };
       }
-      const contentChanged = before.contentSignature !== after.contentSignature;
+      const afterPixels = beforePixels === undefined ? undefined : await this.visualSignature();
+      const contentChanged =
+        before.contentSignature !== after.contentSignature ||
+        (beforePixels !== undefined && afterPixels !== undefined && beforePixels !== afterPixels);
       const moved =
         Math.abs(before.scroll.x - after.scroll.x) > 0.5 ||
         Math.abs(before.scroll.y - after.scroll.y) > 0.5;
@@ -628,15 +697,23 @@ export class CdpActionsDriver {
   private async readProgressState(): Promise<ProgressState> {
     const info = await this.pageInfo();
     const res = (await this.send("Runtime.evaluate", {
-      expression: READ_PROGRESS_STATE_EXPRESSION,
+      expression: READ_PAGE_STATE_EXPRESSION,
       returnByValue: true,
     })) as { result?: { value?: Partial<ProgressPayload> } };
     const payload = normalizeProgressPayload(res.result?.value);
     return {
       documentId: await this.currentDocumentId(info.url),
       scroll: payload.scroll,
-      contentSignature: `${payload.textLength}:${payload.scroll.maxX}:${payload.scroll.maxY}`,
+      wheelPoint: payload.wheelPoint,
+      contentSignature:
+        payload.contentSignature ??
+        `${payload.textLength}:${payload.scroll.maxX}:${payload.scroll.maxY}`,
     };
+  }
+
+  private async visualSignature(): Promise<string | undefined> {
+    const image = await this.screenshot();
+    return image.ok && image.base64 ? hashText(image.base64) : undefined;
   }
 }
 
@@ -648,55 +725,16 @@ interface ReadPageState {
 interface ProgressPayload {
   scroll: CdpScrollState;
   textLength: number;
+  wheelPoint?: { x: number; y: number };
+  contentSignature?: string;
 }
 
 interface ProgressState {
   documentId: string;
   scroll: CdpScrollState;
   contentSignature: string;
+  wheelPoint?: { x: number; y: number };
 }
-
-const READ_PAGE_STATE_EXPRESSION = `(() => {
-  const de = document.documentElement;
-  const body = document.body;
-  const viewportWidth = Math.max(0, window.innerWidth || de?.clientWidth || 0);
-  const viewportHeight = Math.max(0, window.innerHeight || de?.clientHeight || 0);
-  const width = Math.max(de?.scrollWidth || 0, body?.scrollWidth || 0, viewportWidth);
-  const height = Math.max(de?.scrollHeight || 0, body?.scrollHeight || 0, viewportHeight);
-  const x = Math.max(0, window.scrollX || window.pageXOffset || 0);
-  const y = Math.max(0, window.scrollY || window.pageYOffset || 0);
-  const maxX = Math.max(0, width - viewportWidth);
-  const maxY = Math.max(0, height - viewportHeight);
-  return {
-    text: body?.innerText || '',
-    scroll: {
-      x, y, maxX, maxY, viewportWidth, viewportHeight,
-      atTop: y <= 1,
-      atEnd: y >= maxY - 1,
-    },
-  };
-})()`;
-
-const READ_PROGRESS_STATE_EXPRESSION = `(() => {
-  const de = document.documentElement;
-  const body = document.body;
-  const viewportWidth = Math.max(0, window.innerWidth || de?.clientWidth || 0);
-  const viewportHeight = Math.max(0, window.innerHeight || de?.clientHeight || 0);
-  const width = Math.max(de?.scrollWidth || 0, body?.scrollWidth || 0, viewportWidth);
-  const height = Math.max(de?.scrollHeight || 0, body?.scrollHeight || 0, viewportHeight);
-  const x = Math.max(0, window.scrollX || window.pageXOffset || 0);
-  const y = Math.max(0, window.scrollY || window.pageYOffset || 0);
-  const maxX = Math.max(0, width - viewportWidth);
-  const maxY = Math.max(0, height - viewportHeight);
-  return {
-    textLength: (body?.innerText || '').length,
-    scroll: {
-      x, y, maxX, maxY, viewportWidth, viewportHeight,
-      atTop: y <= 1,
-      atEnd: y >= maxY - 1,
-    },
-  };
-})()`;
 
 function emptyScrollState(): CdpScrollState {
   return {
@@ -728,6 +766,8 @@ function normalizeScrollState(value: Partial<CdpScrollState> | undefined): CdpSc
     viewportHeight,
     atTop: typeof value?.atTop === "boolean" ? value.atTop : y <= 1,
     atEnd: typeof value?.atEnd === "boolean" ? value.atEnd : y >= maxY - 1,
+    ...(value?.target ? { target: value.target } : {}),
+    ...(typeof value?.positionKnown === "boolean" ? { positionKnown: value.positionKnown } : {}),
   };
 }
 
@@ -741,6 +781,14 @@ function normalizeReadPageState(value: Partial<ReadPageState> | undefined): Read
 function normalizeProgressPayload(value: Partial<ProgressPayload> | undefined): ProgressPayload {
   return {
     scroll: normalizeScrollState(value?.scroll),
+    wheelPoint:
+      value?.wheelPoint &&
+      Number.isFinite(value.wheelPoint.x) &&
+      Number.isFinite(value.wheelPoint.y)
+        ? value.wheelPoint
+        : undefined,
+    contentSignature:
+      typeof value?.contentSignature === "string" ? value.contentSignature : undefined,
     textLength:
       typeof value?.textLength === "number" && Number.isFinite(value.textLength)
         ? Math.max(0, Math.floor(value.textLength))

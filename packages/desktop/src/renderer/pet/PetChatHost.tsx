@@ -211,17 +211,20 @@ export function selectPetChatRows(
   );
   const hostReceiptsByMessageId = new Map<string, PetHostActionReceiptRow>();
   const persistedReplacementMessageIds = new Set<string>();
+  const userClientMessageIds = new Set<string>();
   let persistedTurnClientMessageId: string | undefined;
   for (const message of messages) {
     if (message.kind === "user") {
       persistedTurnClientMessageId = message.clientMessageId;
+      if (message.clientMessageId) userClientMessageIds.add(message.clientMessageId);
       continue;
     }
-    if (message.kind !== "assistant" || !persistedTurnClientMessageId) continue;
+    if (message.kind !== "assistant") continue;
     const parsed = parsePetHostActionReplacementDisplay(message.text);
     if (!parsed.replacesAssistant || !parsed.text.trim()) continue;
-    persistedReplacementMessageIds.add(message.id);
     const sourceClientMessageId = parsed.sourceClientMessageId ?? persistedTurnClientMessageId;
+    if (!sourceClientMessageId) continue;
+    persistedReplacementMessageIds.add(message.id);
     hostReceiptsByMessageId.set(sourceClientMessageId, {
       clientMessageId: sourceClientMessageId,
       message: parsed.text,
@@ -235,10 +238,10 @@ export function selectPetChatRows(
   }
   const emittedDelegationReceipts = new Set<string>();
   const emittedHostReceipts = new Set<string>();
+  const hostReceiptRowIds = new Set<string>();
   const turnsWithSuppressedAssistant = new Set<string>();
   const rows: PetChatRow[] = [];
   let activeClientMessageId: string | undefined;
-  let activeTurnRowStart = 0;
   let activeTurnAwaitsAuthoritativeReply = false;
   const turnRowStarts = new Map<string, number>();
   const appendDelegationReceipts = (): void => {
@@ -259,17 +262,27 @@ export function selectPetChatRows(
     if (!clientMessageId || emittedHostReceipts.has(clientMessageId)) return;
     const hostReceipt = hostReceiptsByMessageId.get(clientMessageId);
     if (!hostReceipt?.message.trim()) return;
+    const turnStart = turnRowStarts.get(clientMessageId);
+    // A paged snapshot can retain a receipt while hydration restores its user
+    // bubble at the tail. Wait for that user instead of replacing the previous
+    // turn's answer. If the source is outside loaded history, keep the receipt
+    // at its persisted position without replacing an unrelated answer.
+    if (turnStart === undefined && userClientMessageIds.has(clientMessageId)) return;
     emittedHostReceipts.add(clientMessageId);
-    const turnStart = turnRowStarts.get(clientMessageId) ?? activeTurnRowStart;
     let turnEnd = rows.length;
-    for (let index = turnStart + 1; index < rows.length; index += 1) {
+    for (let index = (turnStart ?? rows.length) + 1; index < rows.length; index += 1) {
       if (rows[index]?.role !== "user") continue;
       turnEnd = index;
       break;
     }
-    if (hostReceipt.replaceAssistant && !turnsWithSuppressedAssistant.has(clientMessageId)) {
+    if (
+      turnStart !== undefined &&
+      hostReceipt.replaceAssistant &&
+      !turnsWithSuppressedAssistant.has(clientMessageId)
+    ) {
       for (let index = turnEnd - 1; index >= turnStart; index -= 1) {
-        if (rows[index]?.role !== "assistant") continue;
+        const row = rows[index];
+        if (row?.role !== "assistant" || hostReceiptRowIds.has(row.id)) continue;
         rows.splice(index, 1);
         turnEnd -= 1;
         break;
@@ -282,8 +295,10 @@ export function selectPetChatRows(
         deliveryChannel && deliveryChannel in IM_GATEWAY_CHANNEL_NAMES
           ? IM_GATEWAY_CHANNEL_NAMES[deliveryChannel as keyof typeof IM_GATEWAY_CHANNEL_NAMES]
           : undefined;
+      const receiptRowId = `host-action:${clientMessageId}:${hostReceipt.createdAt}`;
+      hostReceiptRowIds.add(receiptRowId);
       rows.splice(turnEnd, 0, {
-        id: `host-action:${clientMessageId}:${hostReceipt.createdAt}`,
+        id: receiptRowId,
         role: "assistant",
         text: hostReceipt.message.trim(),
         ...(deliveryLabel ? { deliveryLabel } : {}),
@@ -297,9 +312,7 @@ export function selectPetChatRows(
       if (!content.text && content.images.length === 0) continue;
       appendHostReceipt();
       activeClientMessageId = message.clientMessageId;
-      activeTurnRowStart = rows.length;
       activeTurnAwaitsAuthoritativeReply = false;
-      if (activeClientMessageId) turnRowStarts.set(activeClientMessageId, activeTurnRowStart);
       const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
       const userRow: PetChatRow = {
         id: message.id,
@@ -312,18 +325,17 @@ export function selectPetChatRows(
       const boundary =
         (message.clientMessageId ? boundaries.get(message.clientMessageId) : undefined) ??
         boundaries.get(message.id);
-      if (!boundary) {
-        rows.push(userRow);
-        continue;
+      if (boundary) {
+        rows.push({ id: `divider:${message.id}`, role: "segment-divider" as const, text: "" });
+        if (boundary.brief) {
+          rows.push({
+            id: `memory:${message.id}`,
+            role: "work-memory" as const,
+            text: boundary.brief,
+          });
+        }
       }
-      rows.push({ id: `divider:${message.id}`, role: "segment-divider" as const, text: "" });
-      if (boundary.brief) {
-        rows.push({
-          id: `memory:${message.id}`,
-          role: "work-memory" as const,
-          text: boundary.brief,
-        });
-      }
+      if (activeClientMessageId) turnRowStarts.set(activeClientMessageId, rows.length);
       rows.push(userRow);
       continue;
     }

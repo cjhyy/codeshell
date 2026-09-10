@@ -1,7 +1,7 @@
 {
   "name": "@cjhyy/code-shell-server",
-  "version": "0.9.7",
-  "description": "CodeShell server transport layer \u2014 mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
+  "version": "0.9.8",
+  "description": "CodeShell server transport layer — mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

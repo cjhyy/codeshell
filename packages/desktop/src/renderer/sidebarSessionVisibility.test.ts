@@ -37,6 +37,43 @@ describe("sidebar session visibility", () => {
     expect([...revealSidebarProject(collapsed, "project-a")]).toEqual(["project-b"]);
     expect(revealSidebarProject(collapsed, null)).toBe(collapsed);
   });
+
+  test("shows newly delegated work beside the active Session even behind five pinned rows", () => {
+    const ordered = sortSidebarSessions([
+      ...Array.from({ length: 5 }, (_, index) => ({
+        id: `pinned-${index}`,
+        updatedAt: 10 - index,
+        pinned: true,
+      })),
+      { id: "delegated", updatedAt: 100 },
+      { id: "active", updatedAt: 20 },
+    ]);
+
+    expect(
+      compactSidebarSessions(ordered, "active", false, 5, undefined, "delegated").map(
+        (session) => session.id,
+      ),
+    ).toEqual(["pinned-0", "pinned-1", "pinned-2", "delegated", "active"]);
+    // Revealing doesn't mutate the stored ordering or selection.
+    expect(ordered.map((session) => session.id)).toEqual([
+      "pinned-0",
+      "pinned-1",
+      "pinned-2",
+      "pinned-3",
+      "pinned-4",
+      "delegated",
+      "active",
+    ]);
+  });
+
+  test("ignores removed announcements and deduplicates an active announced Session", () => {
+    expect(compactSidebarSessions(sessions, "session-8", false, 5, undefined, "missing")).toEqual(
+      compactSidebarSessions(sessions, "session-8", false, 5),
+    );
+    expect(compactSidebarSessions(sessions, "session-8", false, 5, undefined, "session-8")).toEqual(
+      compactSidebarSessions(sessions, "session-8", false, 5),
+    );
+  });
 });
 
 describe("compactSidebarSessions expanded cap", () => {

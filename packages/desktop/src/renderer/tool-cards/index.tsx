@@ -104,7 +104,12 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
         />
       );
     }
-    if (name === "browser_observe" || name === "browser_act" || name === "browser_navigate") {
+    if (
+      name === "browser_observe" ||
+      name === "browser_act" ||
+      name === "browser_navigate" ||
+      name === "browser_inspect"
+    ) {
       return (
         <BrowserToolCard
           message={message}

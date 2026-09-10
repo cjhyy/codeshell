@@ -266,6 +266,7 @@ function App() {
     SettingsModuleId | undefined
   >();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
    *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
   const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
@@ -1110,6 +1111,8 @@ function App() {
       setSessionIndices,
       setProjects,
       setQuickChatSessions,
+      setCollapsedProjects,
+      setRevealedSessionIds,
     },
     activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },
   });
@@ -2171,6 +2174,7 @@ function App() {
               activeProjectId={activeProjectId}
               activeSessionId={activeSessionId}
               collapsedProjects={collapsedProjects}
+              revealedSessionIds={revealedSessionIds}
               sidebarCollapsed={false}
               petPendingCount={petPendingCount}
               petRunningCount={petRunningCount}

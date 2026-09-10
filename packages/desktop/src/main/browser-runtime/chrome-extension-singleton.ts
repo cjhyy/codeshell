@@ -5,7 +5,7 @@ import { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
 
 export const chromeExtensionBackend = new ChromeExtensionBackend({
   onGranted: (sessionId) => {
-    builtInTabClaimBackend.revoke(sessionId);
+    builtInTabClaimBackend.clearSession(sessionId);
     browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
   },
 });

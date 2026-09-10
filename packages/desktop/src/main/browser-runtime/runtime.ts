@@ -283,7 +283,9 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
           Math.round(result.scroll.maxY),
           result.contentChanged === true ? "content-changed" : "content-same",
         ].join("|");
-        if (state.scrollSignature === signature) {
+        // Canvas/virtualized regions may change pixels/content without changing
+        // DOM offsets. The driver has already verified this action's progress.
+        if (state.scrollSignature === signature && !result.contentChanged) {
           return {
             ...result,
             ok: false,
@@ -303,6 +305,19 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
 
 function lazyBrowserBridge(resolve: () => Promise<BrowserBridge>): BrowserBridge {
   return {
+    resumeControl: async () =>
+      (await resolve()).resumeControl?.() ?? {
+        ok: false,
+        code: "BLOCKED",
+        detail: "resume unavailable",
+      },
+    inspect: async (options) =>
+      (await resolve()).inspect?.(options) ?? {
+        ok: false,
+        mode: options.mode,
+        code: "BLOCKED",
+        detail: "developer inspection unavailable",
+      },
     snapshot: async () => (await resolve()).snapshot(),
     click: async (ref) => (await resolve()).click(ref),
     type: async (ref, text) => (await resolve()).type(ref, text),

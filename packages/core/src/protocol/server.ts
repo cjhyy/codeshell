@@ -4182,6 +4182,8 @@ export class AgentServer {
       this.requestBrowserActionForSession(session, sessionId, action, payload, scope);
     return {
       requestHumanTakeover: () => call("requestTakeover", {}),
+      resumeControl: () => call("resumeControl", {}),
+      inspect: (inspect) => call("inspect", { inspect }),
       snapshot: () => call("snapshot", {}),
       click: (ref) => call("click", { ref }),
       type: (ref, text) => call("type", { ref, text }),

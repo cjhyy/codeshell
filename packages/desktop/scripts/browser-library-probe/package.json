@@ -1,0 +1,12 @@
+{
+  "name": "codeshell-browser-library-probe",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "probe": "bun run run.ts",
+    "production": "bun run run.ts --production"
+  },
+  "dependencies": {
+    "puppeteer-core": "23.7.1"
+  }
+}

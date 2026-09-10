@@ -1,6 +1,8 @@
 /**
  * CdpBrowserDriver — desktop GLUE between core's BrowserBridge contract and the
  * environment-agnostic CDP action layer (@cjhyy/code-shell-cdp).
+ * Retained for compatibility exports and regression comparisons. Production
+ * Electron and Chrome actions use PuppeteerBrowserDriver, never this as fallback.
  *
  * The actual CDP command sequences live in the package's CdpActionsDriver. This
  * glue owns the two things that carry product/security policy and therefore stay
@@ -20,6 +22,7 @@ import {
   CdpActionsDriver,
   type CdpSender as PkgCdpSender,
   type PageInfo,
+  type CdpActionsDriverOptions,
 } from "@cjhyy/code-shell-cdp";
 import {
   flattenAxTree,
@@ -34,10 +37,11 @@ import {
 } from "@cjhyy/code-shell-core";
 
 /** Send one CDP command, resolve its result. Throws on protocol error.
- *  (Structurally the package's CdpSender; re-exported for the Electron adapter.) */
+ *  (Structurally the package's CdpSender; retained for compatibility callers.) */
 export type CdpSender = PkgCdpSender;
 export type { PageInfo };
 
+/** @deprecated Production targets use PuppeteerBrowserDriver or PlaywrightBrowserDriver. */
 export class CdpBrowserDriver implements BrowserBridge {
   private readonly inner: CdpActionsDriver;
   /** ref (e1,e2,…) → backendDOMNodeId from the latest snapshot. Cleared each snapshot. */
@@ -47,10 +51,15 @@ export class CdpBrowserDriver implements BrowserBridge {
   /** A new physical target or grant must never reuse a previous target's refs. */
   private readonly instanceId = randomUUID();
 
-  constructor(send: CdpSender, pageInfo: () => Promise<PageInfo> | PageInfo) {
+  constructor(
+    send: CdpSender,
+    pageInfo: () => Promise<PageInfo> | PageInfo,
+    options: Pick<CdpActionsDriverOptions, "captureScreenshot"> = {},
+  ) {
     this.inner = new CdpActionsDriver(send, pageInfo, {
       keyboardPlatform: process.platform === "darwin" ? "mac" : "other",
       documentNamespace: this.instanceId,
+      captureScreenshot: options.captureScreenshot,
     });
   }
 

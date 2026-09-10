@@ -6,13 +6,18 @@ import type {
   BrowserImageData,
   BrowserResult,
 } from "@cjhyy/code-shell-core";
-import { CdpBrowserDriver } from "../browser-driver/cdp-driver.js";
+import { MAX_NATIVE_COMMAND_BYTES } from "../../chrome-extension/browser-sessions.js";
 import {
   dispatchBrowserBridgeAction,
   type BrowserActionRequest,
 } from "../browser-driver/automation-host.js";
 import { loadBrowserAutomationPolicy } from "../browser-driver/load-policy.js";
-import { isDomainAllowed, isSensitiveAction, SENSITIVE_WORDS } from "../browser-driver/policy.js";
+import {
+  isDomainAllowed,
+  isSensitiveAction,
+  SENSITIVE_WORDS,
+  type BrowserAutomationPolicy,
+} from "../browser-driver/policy.js";
 import {
   ChromeNativeBridgeServer,
   type ChromeExtensionMessage,
@@ -21,6 +26,8 @@ import {
 
 const PAIRING_TTL_MS = 2 * 60 * 1000;
 const GRANT_TTL_MS = 30 * 60 * 1000;
+const EXTENSION_UPDATE_REQUIRED =
+  "Update the CodeShell Chrome extension to version 0.2.0 or later, then reload it in chrome://extensions";
 
 interface ChromeTabInfo {
   id: number;
@@ -39,12 +46,12 @@ interface PairingRequest {
 }
 
 interface ChromeTabGrant {
+  grantId: string;
   sessionId: string;
   tab: ChromeTabInfo;
   grantedAt: number;
   expiresAt: number;
-  driver: CdpBrowserDriver;
-  bridge?: BrowserBridge;
+  controlEpoch: number;
   sensitiveRefs: Set<string>;
   tail: Promise<void>;
 }
@@ -52,8 +59,10 @@ interface ChromeTabGrant {
 export interface ChromeExtensionRuntimeStatus {
   sessionId: string;
   connected: boolean;
+  error?: string;
   pairing?: { code: string; label: string; expiresAt: number };
   granted?: {
+    grantId: string;
     tabId: number;
     url: string;
     title: string;
@@ -66,6 +75,7 @@ export interface ChromeExtensionRuntimeServiceOptions {
   server?: ChromeExtensionTransport;
   now?: () => number;
   onGranted?: (sessionId: string) => void;
+  policy?: () => BrowserAutomationPolicy;
 }
 
 export interface ChromeExtensionTransport {
@@ -75,17 +85,22 @@ export interface ChromeExtensionTransport {
   request(type: string, payload?: Record<string, unknown>): Promise<unknown>;
 }
 
-/** Logged-in Chrome channel: Extension chrome.debugger → Native Messaging → Runtime. */
+/** Logged-in Chrome: high-level actions over Native Messaging, Puppeteer inside the extension. */
 export class ChromeExtensionBackend {
   private readonly server: ChromeExtensionTransport;
   private readonly now: () => number;
   private readonly onGranted?: (sessionId: string) => void;
+  private readonly policy: () => BrowserAutomationPolicy;
   private readonly pairings = new Map<string, PairingRequest>();
   private readonly grants = new Map<string, ChromeTabGrant>();
+  private readonly endedGrants = new Map<string, { tabId: number; reason: string }>();
+  private extensionReady = false;
+  private compatibilityError?: string;
 
   constructor(options: ChromeExtensionRuntimeServiceOptions = {}) {
     this.now = options.now ?? Date.now;
     this.onGranted = options.onGranted;
+    this.policy = options.policy ?? loadBrowserAutomationPolicy;
     this.server =
       options.server ??
       new ChromeNativeBridgeServer({
@@ -99,10 +114,15 @@ export class ChromeExtensionBackend {
 
   async stop(): Promise<void> {
     for (const grant of this.grants.values()) {
-      void this.server.request("tab.detach", { tabId: grant.tab.id }).catch(() => undefined);
+      void this.server
+        .request("tab.detach", { tabId: grant.tab.id, grantId: grant.grantId })
+        .catch(() => undefined);
     }
     this.grants.clear();
     this.pairings.clear();
+    this.endedGrants.clear();
+    this.extensionReady = false;
+    this.compatibilityError = undefined;
     await this.server.stop();
   }
 
@@ -133,13 +153,15 @@ export class ChromeExtensionBackend {
     const pairing = [...this.pairings.values()].find((request) => request.sessionId === sessionId);
     return {
       sessionId,
-      connected: this.server.status().connected,
+      connected: this.server.status().connected && this.extensionReady,
+      ...(this.compatibilityError ? { error: this.compatibilityError } : {}),
       ...(pairing
         ? { pairing: { code: pairing.code, label: pairing.label, expiresAt: pairing.expiresAt } }
         : {}),
       ...(grant
         ? {
             granted: {
+              grantId: grant.grantId,
               tabId: grant.tab.id,
               url: grant.tab.url,
               title: grant.tab.title,
@@ -158,25 +180,66 @@ export class ChromeExtensionBackend {
     const grant = this.grants.get(sessionId);
     if (grant) {
       this.grants.delete(sessionId);
-      void this.server.request("tab.detach", { tabId: grant.tab.id }).catch(() => undefined);
+      this.endedGrants.set(sessionId, {
+        tabId: grant.tab.id,
+        reason: "Chrome tab authorization was revoked",
+      });
+      void this.server
+        .request("tab.detach", { tabId: grant.tab.id, grantId: grant.grantId })
+        .catch(() => undefined);
     }
     return this.status(sessionId);
   }
 
-  /** Undefined means no Chrome grant; caller should use another Runtime target. */
+  /** Explicit source changes and session deletion release the continuity marker. */
+  forgetSession(sessionId: string): void {
+    this.revoke(sessionId);
+    this.endedGrants.delete(sessionId);
+  }
+
+  /** Only a task which never selected Chrome may fall through to another source. */
   async dispatch(sessionId: string, request: BrowserActionRequest): Promise<string | undefined> {
     const grant = this.liveGrant(sessionId);
-    if (!grant) return undefined;
-    const bridge = grant.bridge ?? (grant.bridge = this.secureBridge(grant));
-    return this.enqueue(grant, () => dispatchBrowserBridgeAction(request, bridge));
+    if (!grant) return this.endedGrants.has(sessionId) ? this.unavailable(sessionId) : undefined;
+    if (request.action === "requestTakeover") ++grant.controlEpoch;
+    const controlEpoch = grant.controlEpoch;
+    const bridge = this.secureBridge(grant, controlEpoch);
+    const operation = () =>
+      this.isCurrentGrant(grant)
+        ? grant.controlEpoch === controlEpoch
+          ? dispatchBrowserBridgeAction(request, bridge)
+          : Promise.resolve(
+              JSON.stringify({
+                ok: false,
+                code: "NEEDS_HUMAN",
+                detail:
+                  "Chrome control changed while queued; issue a new request after the user finishes",
+              }),
+            )
+        : Promise.resolve(this.unavailable(sessionId));
+    // A handover must interrupt a pending action instead of sitting behind it.
+    if (request.action === "requestTakeover") return operation();
+    return this.enqueue(grant, operation);
   }
 
   async handleExtensionMessage(message: ChromeExtensionMessage): Promise<unknown> {
     this.sweepExpired();
     switch (message.type) {
       case "hello":
+        // A new authenticated connection has no surviving browser grants.
+        for (const grant of this.grants.values()) {
+          this.endedGrants.set(grant.sessionId, {
+            tabId: grant.tab.id,
+            reason: "Chrome connection ended",
+          });
+        }
+        this.grants.clear();
+        this.extensionReady = message.protocolVersion === 2;
+        this.compatibilityError = this.extensionReady ? undefined : EXTENSION_UPDATE_REQUIRED;
+        if (!this.extensionReady) throw new Error(EXTENSION_UPDATE_REQUIRED);
         return { ready: true };
       case "pairing.list":
+        if (!this.extensionReady) throw new Error(EXTENSION_UPDATE_REQUIRED);
         return {
           requests: [...this.pairings.values()].map((request) => ({
             code: request.code,
@@ -185,12 +248,23 @@ export class ChromeExtensionBackend {
           })),
         };
       case "pairing.grant":
-        return this.acceptPairing(String(message.code || ""), sanitizeChromeTab(message.tab));
+        if (!this.extensionReady) throw new Error(EXTENSION_UPDATE_REQUIRED);
+        return this.acceptPairing(
+          String(message.code || ""),
+          String(message.grantId || ""),
+          sanitizeChromeTab(message.tab),
+        );
       case "tab.detached":
       case "tab.closed": {
         const tabId = Number(message.tabId);
         for (const [sessionId, grant] of this.grants) {
-          if (grant.tab.id === tabId) this.grants.delete(sessionId);
+          if (grant.tab.id === tabId && grant.grantId === message.grantId) {
+            this.endedGrants.set(sessionId, {
+              tabId,
+              reason: "Chrome tab was closed or debugger control was detached",
+            });
+            this.grants.delete(sessionId);
+          }
         }
         return { revoked: true };
       }
@@ -199,50 +273,54 @@ export class ChromeExtensionBackend {
     }
   }
 
-  private acceptPairing(code: string, tab: ChromeTabInfo): ChromeExtensionRuntimeStatus {
+  private acceptPairing(
+    code: string,
+    grantId: string,
+    tab: ChromeTabInfo,
+  ): ChromeExtensionRuntimeStatus {
     const pairing = this.pairings.get(code);
     if (!pairing || pairing.expiresAt <= this.now()) {
       this.pairings.delete(code);
       throw new Error("Chrome pairing request expired or was not found");
     }
     if (!/^https?:/i.test(tab.url)) throw new Error("only http(s) Chrome tabs can be granted");
+    if (!/^[a-zA-Z0-9_-]{16,80}$/.test(grantId))
+      throw new Error("invalid Chrome grant identity; update the extension");
     for (const [sessionId, existing] of this.grants) {
       if (existing.tab.id === tab.id && sessionId !== pairing.sessionId) {
         throw new Error("this Chrome tab is already granted to another CodeShell task");
       }
+      if (existing.grantId === grantId) throw new Error("Chrome grant identity was already used");
     }
     this.pairings.delete(code);
     const grantedAt = this.now();
     const grant = {} as ChromeTabGrant;
     Object.assign(grant, {
       sessionId: pairing.sessionId,
+      grantId,
       tab,
       grantedAt,
       expiresAt: grantedAt + GRANT_TTL_MS,
+      controlEpoch: 0,
       sensitiveRefs: new Set<string>(),
       tail: Promise.resolve(),
     });
-    grant.driver = new CdpBrowserDriver(
-      async (method, params) =>
-        this.server.request("cdp.command", { tabId: tab.id, method, params }) as Promise<unknown>,
-      async () => {
-        const current = sanitizeChromeTab(await this.server.request("tab.get", { tabId: tab.id }));
-        grant.tab = current;
-        return { url: current.url, title: current.title };
-      },
-    );
     this.grants.set(pairing.sessionId, grant);
+    this.endedGrants.delete(pairing.sessionId);
     this.onGranted?.(pairing.sessionId);
     return this.status(pairing.sessionId);
   }
 
-  private secureBridge(grant: ChromeTabGrant): BrowserBridge {
+  private secureBridge(grant: ChromeTabGrant, controlEpoch: number): BrowserBridge {
+    const driver = this.remoteDriver(grant, controlEpoch);
     const currentTab = async () => {
-      const tab = sanitizeChromeTab(await this.server.request("tab.get", { tabId: grant.tab.id }));
+      const tab = sanitizeChromeTab(await this.requestForGrant(grant, controlEpoch, "tab.get"));
+      if (tab.id !== grant.tab.id)
+        throw new Error("Chrome returned a different tab than the grant");
       grant.tab = tab;
       return tab;
     };
-    const allowed = (tab: ChromeTabInfo) => isDomainAllowed(tab.url, loadBrowserAutomationPolicy());
+    const allowed = (tab: ChromeTabInfo) => isDomainAllowed(tab.url, this.policy());
     const blocked = (url: string): BrowserResult => ({
       ok: false,
       code: "BLOCKED",
@@ -259,10 +337,10 @@ export class ChromeExtensionBackend {
     return {
       snapshot: async () => {
         const tab = await currentTab();
-        if (!isDomainAllowed(tab.url, loadBrowserAutomationPolicy())) {
+        if (!isDomainAllowed(tab.url, this.policy())) {
           return { url: tab.url, title: tab.title, elements: [], detail: blocked(tab.url).detail };
         }
-        const snapshot = await grant.driver.snapshot();
+        const snapshot = await driver.snapshot();
         grant.sensitiveRefs = new Set(
           snapshot.elements
             .filter((element) => element.sensitive === true || hasHighConsequenceName(element.name))
@@ -274,7 +352,7 @@ export class ChromeExtensionBackend {
         const tab = await currentTab();
         if (!allowed(tab)) return blocked(tab.url);
         if (grant.sensitiveRefs.has(ref)) return human("sensitive Chrome action requires the user");
-        return grant.driver.click(ref);
+        return driver.click(ref);
       },
       type: async (ref, text) => {
         const tab = await currentTab();
@@ -282,21 +360,21 @@ export class ChromeExtensionBackend {
         if (grant.sensitiveRefs.has(ref) || isSensitiveAction({ action: "type", ref, text })) {
           return human("sensitive Chrome input requires the user");
         }
-        return grant.driver.type(ref, text);
+        return driver.type(ref, text);
       },
       navigate: async (url) => {
-        if (!isDomainAllowed(url, loadBrowserAutomationPolicy())) return blocked(url);
-        const result = await grant.driver.navigate(url);
+        if (!isDomainAllowed(url, this.policy())) return blocked(url);
+        const result = await driver.navigate(url);
         if (result.ok) grant.sensitiveRefs.clear();
         return result;
       },
       scroll: async (dir, amount) => {
         const tab = await currentTab();
-        return allowed(tab) ? grant.driver.scroll(dir, amount) : blocked(tab.url);
+        return allowed(tab) ? driver.scroll(dir, amount) : blocked(tab.url);
       },
       readContent: async (options) => {
         const tab = await currentTab();
-        if (allowed(tab)) return grant.driver.readContent(options);
+        if (allowed(tab)) return driver.readContent(options);
         return {
           ok: false,
           code: "BLOCKED",
@@ -308,7 +386,7 @@ export class ChromeExtensionBackend {
       },
       extractLinks: async () => {
         const tab = await currentTab();
-        if (allowed(tab)) return grant.driver.extractLinks();
+        if (allowed(tab)) return driver.extractLinks();
         return {
           ok: false,
           url: tab.url,
@@ -321,29 +399,29 @@ export class ChromeExtensionBackend {
       },
       waitForLoad: async (timeoutMs) => {
         const tab = await currentTab();
-        return allowed(tab) ? grant.driver.waitForLoad(timeoutMs) : blocked(tab.url);
+        return allowed(tab) ? driver.waitForLoad(timeoutMs) : blocked(tab.url);
       },
       hover: async (ref) => {
         const tab = await currentTab();
-        return allowed(tab) ? grant.driver.hover(ref) : blocked(tab.url);
+        return allowed(tab) ? driver.hover(ref) : blocked(tab.url);
       },
       selectOption: async (ref, value) => {
         const tab = await currentTab();
         if (!allowed(tab)) return blocked(tab.url);
         if (grant.sensitiveRefs.has(ref))
           return human("sensitive Chrome selection requires the user");
-        return grant.driver.selectOption(ref, value);
+        return driver.selectOption(ref, value);
       },
       pressKey: async (key, ref) => {
         const tab = await currentTab();
         if (!allowed(tab)) return blocked(tab.url);
         if (ref && grant.sensitiveRefs.has(ref))
           return human("sensitive Chrome input requires the user");
-        return grant.driver.pressKey(key, ref);
+        return driver.pressKey(key, ref);
       },
       fetchImages: async (refs) => {
         const tab = await currentTab();
-        if (allowed(tab)) return grant.driver.fetchImages(refs);
+        if (allowed(tab)) return driver.fetchImages(refs);
         return refs.map(
           (ref) => ({ ok: false, ref, detail: blocked(tab.url).detail }) satisfies BrowserImageData,
         );
@@ -351,7 +429,7 @@ export class ChromeExtensionBackend {
       screenshot: async (ref) => {
         const tab = await currentTab();
         return allowed(tab)
-          ? grant.driver.screenshot(ref)
+          ? driver.screenshot(ref)
           : { ok: false, detail: blocked(tab.url).detail };
       },
       listTabs: async () => {
@@ -369,7 +447,104 @@ export class ChromeExtensionBackend {
         tabId === String(grant.tab.id)
           ? { ok: true, code: "OK" }
           : { ok: false, code: "BLOCKED", detail: "tab was not granted to this task" },
+      requestHumanTakeover: async () => driver.requestHumanTakeover!(),
+      resumeControl: async () => driver.resumeControl!(),
+      inspect: async (options) => {
+        const tab = await currentTab();
+        if (!allowed(tab))
+          return { ok: false, mode: options.mode, detail: blocked(tab.url).detail };
+        return driver.inspect!(options);
+      },
     };
+  }
+
+  private remoteDriver(grant: ChromeTabGrant, controlEpoch: number): BrowserBridge {
+    const forward = <T>(request: BrowserActionRequest) =>
+      this.requestForGrant(grant, controlEpoch, "browser.action", { request }) as Promise<T>;
+    return {
+      snapshot: () => forward({ action: "snapshot" }),
+      click: (ref) => forward({ action: "click", ref }),
+      type: (ref, text) => forward({ action: "type", ref, text }),
+      navigate: (url) => forward({ action: "navigate", url }),
+      scroll: (dir, amount) => forward({ action: "scroll", dir, amount }),
+      readContent: (options) => forward({ action: "readContent", ...options }),
+      extractLinks: () => forward({ action: "extractLinks" }),
+      waitForLoad: (timeoutMs) => forward({ action: "waitForLoad", timeoutMs }),
+      hover: (ref) => forward({ action: "hover", ref }),
+      selectOption: (ref, value) => forward({ action: "selectOption", ref, value }),
+      pressKey: (key, ref) => forward({ action: "pressKey", key, ref }),
+      fetchImages: (refs) => forward({ action: "fetchImages", refs }),
+      screenshot: (ref) => forward({ action: "screenshot", ref }),
+      requestHumanTakeover: () => forward({ action: "requestTakeover" }),
+      resumeControl: () => forward({ action: "resumeControl" }),
+      inspect: (inspect) => forward({ action: "inspect", inspect }),
+      listTabs: async () => [
+        { tabId: String(grant.tab.id), url: grant.tab.url, title: grant.tab.title, active: true },
+      ],
+      switchTab: async (tabId) =>
+        tabId === String(grant.tab.id)
+          ? { ok: true, code: "OK" }
+          : { ok: false, code: "BLOCKED", detail: "tab was not granted to this task" },
+    };
+  }
+
+  private isCurrentGrant(grant: ChromeTabGrant): boolean {
+    if (this.grants.get(grant.sessionId) !== grant) return false;
+    if (grant.expiresAt <= this.now() || !this.server.status().connected) {
+      this.grants.delete(grant.sessionId);
+      this.endedGrants.set(grant.sessionId, {
+        tabId: grant.tab.id,
+        reason:
+          grant.expiresAt <= this.now()
+            ? "Chrome tab authorization expired"
+            : "Chrome connection ended",
+      });
+      if (this.server.status().connected) {
+        void this.server
+          .request("tab.detach", { tabId: grant.tab.id, grantId: grant.grantId })
+          .catch(() => undefined);
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private unavailable(sessionId: string): string {
+    const ended = this.endedGrants.get(sessionId);
+    return JSON.stringify({
+      ok: false,
+      code: "NEEDS_HUMAN",
+      retryable: false,
+      detail: `${ended?.reason ?? "Chrome control ended"}. Reauthorize the original tab or explicitly choose another browser source.`,
+      ...(ended ? { tabId: String(ended.tabId) } : {}),
+    });
+  }
+
+  private async requestForGrant(
+    grant: ChromeTabGrant,
+    controlEpoch: number,
+    type: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<unknown> {
+    if (!this.isCurrentGrant(grant)) throw new Error("Chrome browser grant expired or was revoked");
+    const checkControl = () => {
+      if (grant.controlEpoch !== controlEpoch) {
+        throw new Error("Chrome control changed; issue a new request after the user finishes");
+      }
+    };
+    checkControl();
+    const message = { tabId: grant.tab.id, grantId: grant.grantId, ...payload };
+    if (
+      Buffer.byteLength(JSON.stringify({ id: "desktop-request", type, ...message }), "utf8") >
+      MAX_NATIVE_COMMAND_BYTES - 128
+    ) {
+      throw new Error("Chrome command exceeds native message size limit");
+    }
+    const result = await this.server.request(type, message);
+    if (!this.isCurrentGrant(grant))
+      throw new Error("Chrome browser grant ended while the action was running");
+    checkControl();
+    return result;
   }
 
   private liveGrant(sessionId: string): ChromeTabGrant | undefined {
@@ -377,7 +552,13 @@ export class ChromeExtensionBackend {
     if (!grant) return undefined;
     if (grant.expiresAt <= this.now()) {
       this.grants.delete(sessionId);
-      void this.server.request("tab.detach", { tabId: grant.tab.id }).catch(() => undefined);
+      this.endedGrants.set(sessionId, {
+        tabId: grant.tab.id,
+        reason: "Chrome tab authorization expired",
+      });
+      void this.server
+        .request("tab.detach", { tabId: grant.tab.id, grantId: grant.grantId })
+        .catch(() => undefined);
       return undefined;
     }
     return grant;

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { detectAttachments, classifyPath } from "./attachments";
 
 describe("classifyPath", () => {
@@ -97,6 +98,42 @@ describe("detectAttachments", () => {
         path: "/Users/me/个人学习/代码学习/proj/.code-shell/generated_images/1782-57adaf.png",
         kind: "image",
       },
+    ]);
+  });
+
+  test("does not scrape a known extension from the middle of a different filename", () => {
+    expect(detectAttachments("Bash", "{}", "saved to /tmp/image.png.backup")).toEqual([]);
+    expect(detectAttachments("Bash", "{}", "saved to /tmp/report.md... ")).toEqual([
+      { path: "/tmp/report.md", kind: "markdown" },
+    ]);
+  });
+
+  test("scans large MCP screenshot results without blocking and retains surrounding paths", () => {
+    // A synchronous regex hang cannot be interrupted by the test runner's
+    // timeout. Keep the regression in a child with a hard execution deadline.
+    // Only synthetic bytes are used; no screenshots or transcript data.
+    const child = spawnSync(
+      process.execPath,
+      [
+        "--eval",
+        `
+          import { detectAttachments } from ${JSON.stringify(`${import.meta.dir}/attachments.ts`)};
+          const result = JSON.stringify({ content: [
+            { type: "text", text: "saved to /tmp/before.png" },
+            { type: "image", data: "AbCd12+/".repeat(128 * 1024), mimeType: "image/png" },
+            { type: "text", text: ".".repeat(256 * 1024) + "x" },
+            { type: "text", text: "saved to ./docs/after.md" },
+          ] });
+          console.log(JSON.stringify(detectAttachments("mcpToolCall", "{}", result)));
+        `,
+      ],
+      { encoding: "utf8", timeout: 3_000 },
+    );
+    expect(child.error).toBeUndefined();
+    expect(child.status).toBe(0);
+    expect(JSON.parse(child.stdout)).toEqual([
+      { path: "/tmp/before.png", kind: "image" },
+      { path: "./docs/after.md", kind: "markdown" },
     ]);
   });
 });

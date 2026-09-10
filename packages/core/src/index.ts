@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.9.7";
+export const VERSION = "0.9.8";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -741,6 +741,8 @@ export type {
   BrowserImage,
   BrowserVideo,
   BrowserImageData,
+  BrowserInspectOptions,
+  BrowserInspectResult,
   BrowserTab,
   AXNode,
 } from "./tool-system/browser-bridge.js";

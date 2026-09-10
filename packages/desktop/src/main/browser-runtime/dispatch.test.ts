@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeLike } from "./runtime.js";
 import {
@@ -6,6 +6,8 @@ import {
   releaseChildBrowserRuntime,
   activateChildBrowserRuntime,
 } from "./dispatch.js";
+import { builtInTabClaimBackend } from "./built-in-handoff.js";
+import { chromeExtensionBackend } from "./chrome-extension-singleton.js";
 
 function runtimeDispatchTestBridge(overrides: Partial<BrowserBridge> = {}): BrowserBridge {
   return {
@@ -35,6 +37,39 @@ function runtimeDispatchTestBridge(overrides: Partial<BrowserBridge> = {}): Brow
 }
 
 describe("interactive Browser Runtime dispatch", () => {
+  test.each(["builtin", "chrome"])(
+    "takeover preserves an ended %s grant instead of allocating a different page",
+    async (source) => {
+      const paused = JSON.stringify({ ok: false, code: "NEEDS_HUMAN", detail: "grant ended" });
+      const builtin = spyOn(builtInTabClaimBackend, "dispatch").mockResolvedValue(
+        source === "builtin" ? paused : undefined,
+      );
+      const chrome = spyOn(chromeExtensionBackend, "dispatch").mockResolvedValue(paused);
+      let acquisitions = 0;
+      const runtime: BrowserRuntimeLike = {
+        async acquire() {
+          acquisitions++;
+          throw new Error("must not allocate another page");
+        },
+        close() {},
+        closeAll() {},
+      };
+      try {
+        const request = { action: "requestTakeover" } as const;
+        expect(await dispatchInteractiveBrowserRuntimeAction("ended-grant", request, runtime)).toBe(
+          paused,
+        );
+        expect(acquisitions).toBe(0);
+        expect(builtin).toHaveBeenCalledWith("ended-grant", request);
+        if (source === "chrome") expect(chrome).toHaveBeenCalledWith("ended-grant", request);
+        else expect(chrome).not.toHaveBeenCalled();
+      } finally {
+        builtin.mockRestore();
+        chrome.mockRestore();
+      }
+    },
+  );
+
   test("reveals the exact task-owned runtime target for human takeover", async () => {
     let shown = 0;
     let released = 0;

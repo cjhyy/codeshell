@@ -74,7 +74,7 @@ export const browserObserveToolDef: ToolDefinition = {
     "after navigation/page changes (refs are only valid for the latest snapshot). " +
     "Passwords show as [sensitive] with no value.\n" +
     "- read: a cursor-paged chunk of the page's normalized readable text. Continue " +
-    "with the returned nextCursor until complete; scrolling is only for lazy/infinite loading.\n" +
+    "with the returned nextCursor until complete. This covers DOM text only; canvas tables, virtualized panels and lazy/infinite content need vision and scrolling.\n" +
     "- extract: the real URLs on the page (hyperlink hrefs, image srcs, video srcs) " +
     "that snapshot omits — each image/video is tagged [ref=imgN/vidN] for image mode.\n" +
     "- image: SEE the actual pixels of page images (refs from extract, e.g. img3) — for " +
@@ -156,7 +156,9 @@ export async function browserObserveTool(
             ? "\nRead: truncated"
             : "";
       const scroll = c.scroll
-        ? `\nScroll: ${Math.round(c.scroll.y)}/${Math.round(c.scroll.maxY)}${c.scroll.atEnd ? " (end)" : ""}`
+        ? c.scroll.positionKnown === false
+          ? `\nScroll: ${c.scroll.target ?? "rendered region"} position unknown; use vision and scroll to inspect its content`
+          : `\nScroll: ${Math.round(c.scroll.y)}/${Math.round(c.scroll.maxY)}${c.scroll.atEnd ? " (end)" : ""}${c.scroll.target === "element" ? " (content panel)" : ""}`
         : "";
       const head = `URL: ${c.url}${c.title ? `\nTitle: ${c.title}` : ""}${progress}${scroll}`;
       return `${head}\n\n${c.text || "(no readable text)"}`;
@@ -241,11 +243,13 @@ export const browserActToolDef: ToolDefinition = {
     "- press_key {key, ref?}: press a key/combo (Enter, Tab, Escape, ArrowDown, " +
     "ControlOrMeta+a; resolves to Command on macOS, Control elsewhere). Focuses ref first if given.\n" +
     "- hover {ref}: hover to reveal menus/tooltips.\n" +
-    "- scroll {direction: up|down, amount?}: scroll the page, then re-observe.\n" +
+    "- scroll {direction: up|down, amount?}: scroll the main visible content region (including nested panels/canvas), then re-observe.\n" +
     "- wait {timeout_ms?}: wait for the page to finish loading before observing.\n" +
     "- request_takeover: reveal the exact task-owned Browser Runtime page so the " +
     "user can see it and complete login, 2FA, CAPTCHA, or another required manual step. " +
     "Use only when the user asks to see the page or human interaction is required.\n" +
+    "- resume_control: resume after the user confirms their manual step is finished. " +
+    "Then take a new snapshot; all previous element refs have expired.\n" +
     "- list_tabs: list open browser tabs (tabId, url, title, which is active).\n" +
     "- switch_tab {tabId}: make another tab the active one that actions drive.\n" +
     "Pass tabId on any action to target a specific tab (switches to it first). " +
@@ -264,6 +268,7 @@ export const browserActToolDef: ToolDefinition = {
           "scroll",
           "wait",
           "request_takeover",
+          "resume_control",
           "list_tabs",
           "switch_tab",
         ],
@@ -306,6 +311,13 @@ export async function browserActTool(
   }
 
   switch (action) {
+    case "resume_control": {
+      if (!b.resumeControl) return "Error: this browser does not support resuming control";
+      const r = await b.resumeControl();
+      return r.ok
+        ? "Browser control resumed — take a new snapshot before acting"
+        : `Error: ${r.detail ?? "could not resume browser control"}`;
+    }
     case "request_takeover": {
       if (!b.requestHumanTakeover) {
         return "Error: this Browser Runtime cannot reveal its page for user takeover";
@@ -378,7 +390,9 @@ export async function browserActTool(
         return `Error${code}: ${r.detail ?? "scroll failed"}`;
       }
       const state = r.scroll
-        ? ` — position ${Math.round(r.scroll.y)}/${Math.round(r.scroll.maxY)}${r.scroll.atEnd ? " (end)" : ""}`
+        ? r.scroll.positionKnown === false
+          ? " — rendered content changed; use vision to inspect"
+          : ` — position ${Math.round(r.scroll.y)}/${Math.round(r.scroll.maxY)}${r.scroll.atEnd ? " (end)" : ""}`
         : "";
       return `Scrolled ${dir}${state}`;
     }
@@ -404,7 +418,8 @@ export const browserNavigateToolDef: ToolDefinition = {
     "tasks unless the user specifies another browser or a required capability is unavailable. " +
     "Shares the in-app browser profile; existing user-opened tabs require an explicit grant. " +
     "Starts in the background; browser_act(request_takeover) reveals this same tab when the user " +
-    "wants to see it or needs to sign in. Then call browser_act(wait) + " +
+    "wants to see it or needs to sign in. After the user finishes, call " +
+    "browser_act(resume_control), then browser_act(wait) + " +
     "browser_observe to inspect the page.",
   inputSchema: {
     type: "object",

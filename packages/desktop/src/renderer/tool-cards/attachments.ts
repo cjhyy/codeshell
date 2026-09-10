@@ -34,19 +34,13 @@ export function classifyPath(p: string): AttachmentKind {
   return "file";
 }
 
-// Match an absolute / relative file path with an extension. Same
-// shape as the Markdown remarkPathLinks matcher but standalone here
-// because we run against tool result strings, not MDAST.
-//
-// A path segment is `[\p{L}\p{N}_./@+-]` — letters/numbers via Unicode
-// properties (NOT `\w`, which is ASCII-only and would resync at the first CJK
-// char, dropping a `/Users/.../个人学习/代码学习/` prefix and yielding a wrong,
-// non-existent absolute path — the "图片打不开" bug). `u` flag enables \p{}.
-const SEG = "[\\p{L}\\p{N}_@.+-]";
-const PATH_RE = new RegExp(
-  `((?:/|\\.{1,2}/|${SEG}+/)?(?:${SEG}|/)+\\.[\\p{L}\\p{N}]{1,8})`,
-  "gu",
-);
+// Tokenize each contiguous run once, then check the complete token's extension.
+// An unanchored path regex with an optional directory prefix repeatedly retries
+// long extensionless strings, such as base64 screenshots in MCP result JSON.
+// That quadratic work blocks the renderer even when the tool card is collapsed.
+// This single character class has no ambiguous alternatives or failing suffix.
+// Unicode letters/numbers preserve complete paths containing CJK segments.
+const PATH_TOKEN_RE = /[\p{L}\p{N}_@.+/-]+/gu;
 
 /**
  * Pull attachment paths out of one tool message.
@@ -63,7 +57,12 @@ export function detectAttachments(
   const found: Attachment[] = [];
   const seen = new Set<string>();
   const push = (p: string, requireDir = false): void => {
-    const trimmed = p.trim().replace(/[.,;:!?]+$/, "");
+    const value = p.trim();
+    // Strip prose punctuation without retrying a suffix regex at every offset
+    // of a long punctuation run that is followed by a non-punctuation byte.
+    let end = value.length;
+    while (end > 0 && ".,;:!?".includes(value[end - 1]!)) end--;
+    const trimmed = value.slice(0, end);
     if (!trimmed || seen.has(trimmed)) return;
     // Prose-scraped paths must carry a directory (absolute `/`, `./`/`../`,
     // or `dir/file`). A bare filename like `TODO.md` mentioned in a sentence
@@ -101,10 +100,10 @@ export function detectAttachments(
   // "wrote /abs/path"; we don't even need to anchor on that prefix
   // — the file extension is enough signal.
   if (result) {
-    PATH_RE.lastIndex = 0;
+    PATH_TOKEN_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
-    while ((m = PATH_RE.exec(result))) {
-      push(m[1]!, /* requireDir */ true);
+    while ((m = PATH_TOKEN_RE.exec(result))) {
+      push(m[0], /* requireDir */ true);
     }
   }
 

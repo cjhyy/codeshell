@@ -110,6 +110,7 @@ export interface BrowserRuntimeHandoffStatus {
 export interface ChromeBrowserRuntimeStatus {
   sessionId: string;
   connected: boolean;
+  error?: string;
   pairing?: { code: string; label: string; expiresAt: number };
   granted?: {
     tabId: number;

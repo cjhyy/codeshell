@@ -15,6 +15,8 @@ import {
   selectPetChatRows,
 } from "./PetChatHost";
 import { markPetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
+import { transcriptsReducer } from "../transcriptsReducer";
+import { INITIAL_STATE } from "../types";
 
 describe("PetChatHost", () => {
   test("keeps dropped PDFs as bounded absolute path references", () => {
@@ -384,6 +386,137 @@ describe("PetChatHost", () => {
       "主动消息操作失败：微信发送准备失败",
       "再查一下进度",
       "还在查。",
+    ]);
+  });
+
+  test("keeps a replayed reply after its user when hydration appends the live user bubble", () => {
+    const live = transcriptsReducer(
+      {},
+      {
+        type: "user_message",
+        bucket: "pet",
+        text: "再看看飞书文档有什么更新",
+        clientMessageId: "im:wechat:check-update",
+      },
+    );
+    const hydrated = transcriptsReducer(live, {
+      type: "hydrate",
+      bucket: "pet",
+      state: {
+        ...INITIAL_STATE,
+        messages: [
+          { kind: "user", id: "u1", text: "上一件事", clientMessageId: "pet-previous" },
+          { kind: "assistant", id: "a1", text: "上一件事已处理。", done: true },
+          {
+            kind: "assistant",
+            id: "receipt",
+            text: markPetHostActionReplacementDisplay(
+              "已经新开 Session，正在核查。",
+              "im:wechat:check-update",
+              "wechat",
+            ),
+            done: true,
+          },
+        ],
+      },
+    });
+    const rows = selectPetChatRows(hydrated.pet!.messages);
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "上一件事",
+      "上一件事已处理。",
+      "再看看飞书文档有什么更新",
+      "已经新开 Session，正在核查。",
+    ]);
+    expect(rows.at(-1)?.deliveryLabel).toBe("个人微信");
+  });
+
+  test("anchors a leading persisted receipt using its explicit source id", () => {
+    const rows = selectPetChatRows([
+      {
+        kind: "assistant",
+        id: "receipt",
+        text: markPetHostActionReplacementDisplay("任务已派出。", "im:wechat:first", "wechat"),
+        done: true,
+      },
+      { kind: "user", id: "u1", text: "帮我检查更新", clientMessageId: "im:wechat:first" },
+    ]);
+
+    expect(rows.map((row) => row.text)).toEqual(["帮我检查更新", "任务已派出。"]);
+    expect(rows.at(-1)?.deliveryLabel).toBe("个人微信");
+  });
+
+  test.each([undefined, "上个话题的摘要"])(
+    "anchors a receipt after a user that starts a new segment (brief: %s)",
+    (brief) => {
+      const rows = selectPetChatRows(
+        [
+          {
+            kind: "assistant",
+            id: "receipt",
+            text: markPetHostActionReplacementDisplay("新任务已派出。", "pet-new-topic"),
+            done: true,
+          },
+          { kind: "user", id: "u1", text: "开始新任务", clientMessageId: "pet-new-topic" },
+          { kind: "assistant", id: "a1", text: "准备启动。", done: true },
+          { kind: "user", id: "u2", text: "接下来", clientMessageId: "pet-next" },
+          { kind: "assistant", id: "a2", text: "请说。", done: true },
+        ],
+        [{ boundaryBeforeMessageId: "pet-new-topic", brief }],
+      );
+
+      expect(rows.map((row) => [row.role, row.text])).toEqual([
+        ["segment-divider", ""],
+        ...(brief ? [["work-memory", brief]] : []),
+        ["user", "开始新任务"],
+        ["assistant", "新任务已派出。"],
+        ["user", "接下来"],
+        ["assistant", "请说。"],
+      ]);
+    },
+  );
+
+  test("keeps a receipt whose source is outside loaded history without replacing another reply", () => {
+    const rows = selectPetChatRows([
+      { kind: "user", id: "u1", text: "当前问题", clientMessageId: "pet-current" },
+      { kind: "assistant", id: "a1", text: "当前问题的回答。", done: true },
+      {
+        kind: "assistant",
+        id: "receipt",
+        text: markPetHostActionReplacementDisplay("更早任务的结果。", "im:wechat:older", "wechat"),
+        done: true,
+      },
+    ]);
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "当前问题",
+      "当前问题的回答。",
+      "更早任务的结果。",
+    ]);
+  });
+
+  test("does not replace an older task receipt while correcting the current reply", () => {
+    const rows = selectPetChatRows([
+      { kind: "user", id: "u1", text: "当前问题", clientMessageId: "pet-current" },
+      { kind: "assistant", id: "a1", text: "还在处理。", done: true },
+      {
+        kind: "assistant",
+        id: "older-receipt",
+        text: markPetHostActionReplacementDisplay("更早任务的结果。", "pet-older"),
+        done: true,
+      },
+      {
+        kind: "assistant",
+        id: "current-receipt",
+        text: markPetHostActionReplacementDisplay("当前问题已处理。", "pet-current"),
+        done: true,
+      },
+    ]);
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "当前问题",
+      "更早任务的结果。",
+      "当前问题已处理。",
     ]);
   });
 

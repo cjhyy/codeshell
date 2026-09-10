@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { handleBrowserAction, releaseGuest, type AutomationDeps } from "./automation-host";
+import { CdpBrowserDriver } from "./cdp-driver.js";
 import type { WebContents } from "electron";
 
 /**
@@ -110,7 +111,16 @@ function fakeXiaohongshu() {
 describe("E2E: 小红书 搜索→打开→扒内容", () => {
   test("full observe→act→read loop produces article text to summarize", async () => {
     const guest = fakeXiaohongshu();
-    const deps: AutomationDeps = { activeGuest: () => guest, policy: () => ({ allowedDomains: [] }) };
+    const deps: AutomationDeps = {
+      activeGuest: () => guest,
+      policy: () => ({ allowedDomains: [] }),
+      // Protocol script is only a deterministic test double for host routing.
+      createDriver: () =>
+        new CdpBrowserDriver(
+          (method, params) => guest.debugger.sendCommand(method, params),
+          () => ({ url: guest.getURL(), title: guest.getTitle() }),
+        ),
+    };
     const act = (req: Parameters<typeof handleBrowserAction>[0]) => handleBrowserAction(req, deps).then(JSON.parse);
 
     // 1. snapshot home → find the search box
