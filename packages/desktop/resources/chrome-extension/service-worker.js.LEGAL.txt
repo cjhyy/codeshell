@@ -1,0 +1,820 @@
+Bundled license information:
+
+puppeteer-core/lib/esm/puppeteer/util/disposable.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/EventEmitter.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/environment.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/assert.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/encoding.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/Debug.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/Errors.js:
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/PDFOptions.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/util.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/Deferred.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/Mutex.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/BrowserContext.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/Dialog.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/ElementHandleSymbol.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/ErrorLike.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/Function.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/HandleIterator.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/LazyArg.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/QueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/AriaQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/CSSQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/ScriptInjector.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/CustomQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/PierceQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/PQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/PSelectorParser.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/TextQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/XPathQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/GetQueryHandler.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/decorators.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/JSHandle.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/ElementHandle.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/Frame.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/HTTPResponse.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/incremental-id-generator.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/Input.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/TimeoutSettings.js:
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/Page.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/WaitTask.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/Realm.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/Target.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/WebWorker.js:
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Accessibility.js:
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/CallbackRegistry.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/ConsoleMessage.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Coverage.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/SecurityDetails.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Connection.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/BidiOverCdp.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/Navigation.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/Realm.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/Request.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/UserPrompt.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/BrowsingContext.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/UserContext.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Deserializer.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Dialog.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/JSHandle.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/ElementHandle.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/ExposedFunction.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Serializer.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/util.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/WebWorker.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Frame.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Input.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Page.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Target.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/BrowserContext.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/Browser.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/core/Session.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/Browser.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/bidi.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/node/NodeWebSocketTransport.js:
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/api/api.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Binding.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/BrowserContext.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/CDPSession.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/FileChooser.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/NetworkManagerEvents.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Connection.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Dialog.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/FirefoxTargetManager.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/CdpPreloadScript.js:
+  /**
+   * @license
+   * Copyright 2024 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/DeviceRequestPrompt.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/utils.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/JSHandle.js:
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/ElementHandle.js:
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/ExecutionContext.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/FrameManagerEvents.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/IsolatedWorld.js:
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/IsolatedWorlds.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/LifecycleWatcher.js:
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Frame.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/FrameTree.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/NetworkEventManager.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/NetworkManager.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/FrameManager.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/USKeyboardLayout.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Input.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Page.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Target.js:
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/ChromeTargetManager.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/Browser.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/BrowserConnector.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/PredefinedNetworkConditions.js:
+  /**
+   * @license
+   * Copyright 2021 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/TargetManager.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/cdp/cdp.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/Device.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/bidi/BrowserConnector.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/BrowserConnector.js:
+  /**
+   * @license
+   * Copyright 2023 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/Puppeteer.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/TaskQueue.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/common/common.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/revisions.js:
+  /**
+   * @license
+   * Copyright 2020 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/util/util.js:
+  /**
+   * @license
+   * Copyright 2022 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/index-browser.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js:
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   * SPDX-License-Identifier: Apache-2.0
+   */

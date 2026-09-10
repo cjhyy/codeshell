@@ -4,6 +4,19 @@ The CodeShell desktop application includes code derived from third-party open
 source projects through the bundled core, TUI rendering code, and CDP browser
 action layer.
 
+## Puppeteer
+
+The desktop browser execution layer and bundled Chrome extension include
+Puppeteer Core 23.7.1, copyright Google Inc., licensed under Apache License 2.0
+(full license reproduced below). The official ExtensionTransport is used
+unmodified. CodeShell's Electron debugger adapter and target lifecycle are
+maintained by CodeShell and are not an official Puppeteer Electron integration.
+
+- Source: https://github.com/puppeteer/puppeteer/tree/puppeteer-v23.7.1
+- License: https://github.com/puppeteer/puppeteer/blob/puppeteer-v23.7.1/LICENSE
+- The extension bundle also ships generated third-party notices beside its
+  service worker.
+
 ## OpenAI Codex apply-patch
 
 The bundled `@cjhyy/code-shell-core` package includes TypeScript code under

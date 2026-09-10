@@ -33,7 +33,9 @@ export interface InAppBrowserBackendOptions {
  * It owns a task-only background target, but places that target in the same
  * Electron partition as the task's in-app BrowserPanel. Cookies and sign-in
  * state are therefore shared without granting control of any user-opened tab.
- * `show()` reveals this exact target in place for login or human takeover.
+ * `show()` releases automation and reveals this exact target for human takeover.
+ * Ordinary pool lease release preserves the library connection; resumeControl
+ * explicitly starts a new driver after takeover and invalidates previous refs.
  */
 export class InAppBrowserBackend implements BrowserRuntimeBackend {
   readonly kind = "in-app" as const;

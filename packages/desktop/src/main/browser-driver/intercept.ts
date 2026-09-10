@@ -92,6 +92,10 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
       tabId: typeof a.tabId === "string" ? a.tabId : undefined,
       cursor: typeof a.cursor === "string" ? a.cursor : undefined,
       maxChars: typeof a.maxChars === "number" ? a.maxChars : undefined,
+      inspect:
+        a.inspect && typeof a.inspect === "object" && !Array.isArray(a.inspect)
+          ? (a.inspect as BrowserActionRequest["inspect"])
+          : undefined,
     },
   };
 }

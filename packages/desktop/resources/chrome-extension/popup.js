@@ -8,6 +8,7 @@ async function loadRequests() {
   requestsNode.replaceChildren();
   try {
     const result = await chrome.runtime.sendMessage({ type: "pairing.list" });
+    if (result?.error) throw new Error(result.error);
     const requests = Array.isArray(result?.requests) ? result.requests : [];
     statusNode.textContent = requests.length
       ? "请选择要接收当前 Chrome 标签的任务："
@@ -32,7 +33,8 @@ function requestCard(request) {
   button.addEventListener("click", async () => {
     button.disabled = true;
     try {
-      await chrome.runtime.sendMessage({ type: "pairing.grant", code: request.code });
+      const result = await chrome.runtime.sendMessage({ type: "pairing.grant", code: request.code });
+      if (result?.error) throw new Error(result.error);
       statusNode.textContent = "授权成功。你可以返回 CodeShell。";
       requestsNode.replaceChildren();
     } catch (error) {

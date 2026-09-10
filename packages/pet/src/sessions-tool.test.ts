@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sessionsTool, SESSIONS_TOOL_NAME, sessionsToolDef } from "./sessions-tool.js";
 import { sessionSelectorId } from "./disclosure/selector.js";
+import { delegateWorkTool } from "./delegate-work.js";
+import type { PetWorkDelegation } from "./delegation.js";
 
 function makeRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "pet-sessions-tool-"));
@@ -85,6 +87,79 @@ describe("sessionsTool", () => {
     expect(parsed.latestResult.text).toContain("Patched the payment flow");
     expect(parsed.openSteps[0]!.subject).toBe("patch checkout");
     expect(parsed.selector).toBe(sessionSelectorId("work-1"));
+  });
+
+  test("a closure turn can read work without being told to use an unavailable continuation id", async () => {
+    const root = makeRoot();
+    const ctx = {
+      runScopedServices: {
+        petSessionsRootDir: root,
+        petWorkspaces: [{ id: "workspace-a", name: "Alpha" }],
+        petReusableSessions: [],
+        requestPetWorkDelegation: () => ({ ok: true }),
+      },
+    } as never;
+    const described = JSON.parse(
+      await sessionsTool({ action: "describe", session_id: "work-1" }, ctx),
+    );
+    expect(described.latestResult.text).toContain("Patched the payment flow");
+    expect(described.canContinue).toBe(false);
+    expect(described.continuation).toBeNull();
+    expect(described.next).toContain("not eligible for DelegateWork in this turn");
+    expect(described.next).not.toContain("call DelegateWork with session_id=");
+    const listed = JSON.parse(await sessionsTool({ action: "list" }, ctx));
+    const searched = JSON.parse(await sessionsTool({ action: "search", query: "checkout" }, ctx));
+    expect(listed.sessions[0].canContinue).toBe(false);
+    expect(searched.matches[0].canContinue).toBe(false);
+  });
+
+  test("advertised continuation fields are accepted by DelegateWork for the same existing Session", async () => {
+    const root = makeRoot();
+    const recorded: PetWorkDelegation[] = [];
+    const ctx = {
+      runScopedServices: {
+        petSessionsRootDir: root,
+        petWorkspaces: [{ id: "workspace-a", name: "Alpha" }],
+        petReusableSessions: [
+          {
+            id: sessionSelectorId("work-1"),
+            workspaceId: "workspace-a",
+            name: "Payment checkout regression",
+          },
+        ],
+        requestPetWorkDelegation: (request: PetWorkDelegation) => {
+          recorded.push(request);
+          return { ok: true };
+        },
+      },
+    } as never;
+    const described = JSON.parse(
+      await sessionsTool({ action: "describe", session_id: "work-1" }, ctx),
+    );
+    expect(described.canContinue).toBe(true);
+    expect(described.continuation).toEqual({
+      session_id: sessionSelectorId("work-1"),
+      workspace_id: "workspace-a",
+      prior_thread: "Payment checkout regression",
+    });
+    const result = JSON.parse(
+      await delegateWorkTool(
+        {
+          session_id: described.continuation.session_id,
+          workspace_id: described.continuation.workspace_id,
+          objective: "Verify the payment patch against the remaining checkout regression",
+          session_continuation: {
+            prior_thread: described.continuation.prior_thread,
+            reason: "Continue the existing checkout patch using its failing payment test.",
+          },
+        },
+        ctx,
+      ),
+    );
+    expect(result.session.mode).toBe("reuse");
+    expect(recorded[0]?.reusableSessionId).toBe(sessionSelectorId("work-1"));
+    const listed = JSON.parse(await sessionsTool({ action: "list" }, ctx));
+    expect(listed.sessions[0].canContinue).toBe(true);
   });
 
   test("search finds sessionId by query", async () => {

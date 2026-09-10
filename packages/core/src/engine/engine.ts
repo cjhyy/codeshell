@@ -3286,6 +3286,7 @@ export class Engine {
   private persistFinalRunState(state: SessionState): void {
     const finalFields = {
       status: state.status,
+      lastCompletionKind: state.lastCompletionKind,
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
       tokenUsage: state.tokenUsage,

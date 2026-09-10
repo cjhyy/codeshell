@@ -1451,8 +1451,8 @@ export class AgentBridge implements PetStateBridge {
     getSessionCwdIndex().forget(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
     browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
-    builtInBrowserHandoffGrants.revoke(sessionId);
-    chromeExtensionRuntimeService.revoke(sessionId);
+    builtInBrowserHandoffGrants.clearSession(sessionId);
+    chromeExtensionRuntimeService.forgetSession(sessionId);
     forgetSessionBucket(sessionId);
   }
 

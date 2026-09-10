@@ -62,24 +62,16 @@ export async function dispatchInteractiveBrowserRuntimeAction(
       detail: "child browser run has ended",
     });
   }
-  if (request.action === "requestTakeover") {
-    if (!child && builtInTabClaimBackend.status(sessionId).granted) {
-      return JSON.stringify({
-        ok: true,
-        code: "NEEDS_HUMAN",
-        retryable: false,
-        detail: "the granted built-in browser tab is already user-visible",
-      });
-    }
-    if (!child && chromeExtensionBackend.status(sessionId).granted) {
-      return JSON.stringify({
-        ok: true,
-        code: "NEEDS_HUMAN",
-        retryable: false,
-        detail: "the granted Chrome tab is already user-visible",
-      });
-    }
+  // Resolve claims, including expired/revoked claims, before every action.
+  // Takeover must preserve target continuity just like click or navigation.
+  if (!child) {
+    const handedOff = await builtInTabClaimBackend.dispatch(sessionId, request);
+    if (handedOff !== undefined) return handedOff;
+    const chrome = await chromeExtensionBackend.dispatch(sessionId, request);
+    if (chrome !== undefined) return chrome;
+  }
 
+  if (request.action === "requestTakeover") {
     const lease = await runtime.acquire({
       ownerId,
       profileId: sessionId,
@@ -114,12 +106,6 @@ export async function dispatchInteractiveBrowserRuntimeAction(
     }
   }
 
-  if (!child) {
-    const handedOff = await builtInTabClaimBackend.dispatch(sessionId, request);
-    if (handedOff !== undefined) return handedOff;
-    const chrome = await chromeExtensionBackend.dispatch(sessionId, request);
-    if (chrome !== undefined) return chrome;
-  }
   const lease = await runtime.acquire({
     ownerId,
     profileId: sessionId,
@@ -153,6 +139,8 @@ export function interactiveBrowserBridgeForSession(sessionId: string): BrowserBr
   };
   return {
     requestHumanTakeover: () => call({ action: "requestTakeover" }),
+    resumeControl: () => call({ action: "resumeControl" }),
+    inspect: (inspect) => call({ action: "inspect", inspect }),
     snapshot: () => call({ action: "snapshot" }),
     click: (ref) => call({ action: "click", ref }),
     type: (ref, text) => call({ action: "type", ref, text }),

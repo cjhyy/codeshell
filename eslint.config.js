@@ -321,6 +321,8 @@ export default [
       "*.config.js",
       "examples/**/output/**",
       "packages/desktop/out/**",
+      // Generated Puppeteer bundle; lint the TypeScript source in src/chrome-extension instead.
+      "packages/desktop/resources/chrome-extension/service-worker.js",
       "packages/*/dist/**",
       "packages/web/dist-app/**",
     ],

@@ -3,17 +3,21 @@
  * tool requests to the actual webview:
  *   worker tool → ctx.browser → AgentServer emits a __browser_action__ request
  *   → agent-bridge hands the action here → we drive the active webview guest
- *     via the browser-driver (per-action attach + CdpBrowserDriver) → return JSON.
+ *     via the persistent, target-scoped Puppeteer driver → return JSON.
  *
  * Tracks the most-recently-attached browser-panel guest webContents as the
  * automation target (MVP: single active tab). Kept separate from agent-bridge
  * so the routing is unit-testable and the driver module stays UI-agnostic.
  */
 
-import type { BrowserBridge, BrowserSnapshot } from "@cjhyy/code-shell-core";
+import type { BrowserBridge, BrowserSnapshot, BrowserInspectOptions } from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
-import { CdpBrowserDriver } from "./cdp-driver.js";
-import { attachDebugger, detachDebugger } from "./electron-cdp.js";
+import {
+  acquireElectronBrowser,
+  authorizeElectronBrowser,
+  releaseElectronBrowser,
+  driverFor,
+} from "./electron-cdp.js";
 import {
   isDomainAllowed,
   isSensitiveAction,
@@ -22,39 +26,58 @@ import {
   type BrowserAutomationPolicy,
 } from "./policy.js";
 
-/**
- * Per-guest driver cache. The CdpBrowserDriver holds the ref→backendNodeId map
- * from the latest snapshot, so click/type (separate worker calls) MUST reuse
- * the same driver instance that produced the snapshot — a fresh driver per
- * action would make every ref stale. Keyed by webContents.id; debugger
- * attachment is deliberately separate and only lasts for one action.
- */
-const drivers = new Map<number, CdpBrowserDriver>();
+/** Product ref/sensitivity state survives tools while a target connection is live. */
+const drivers = new Map<number, BrowserBridge>();
 const knownGuests = new Map<number, WebContents>();
-const automationAttachedGuests = new Set<number>();
+const guestDestroyListeners = new Map<number, () => void>();
 const sensitiveRefsByGuest = new Map<number, Set<string>>();
+const actionTails = new Map<number, Promise<void>>();
 
-function driverForGuest(guest: WebContents): CdpBrowserDriver {
-  const id = guest.id;
-  let d = drivers.get(id);
-  if (!d) {
-    knownGuests.set(id, guest);
-    d = new CdpBrowserDriver(
-      (method, params) => guest.debugger.sendCommand(method, params ?? {}),
-      () => ({ url: safeUrl(guest) ?? "", title: safeTitle(guest) }),
-    );
-    drivers.set(id, d);
-    // Auto-cleanup when the guest is destroyed.
-    guest.once("destroyed", () => releaseGuest(id));
+async function driverForGuest(guest: WebContents, deps: AutomationDeps): Promise<BrowserBridge> {
+  rememberGuest(guest);
+  // Unit-test seam; production always validates the live connection and never
+  // returns a driver that was disposed by external debugger detachment.
+  if (deps.createDriver) {
+    let driver = drivers.get(guest.id);
+    if (!driver) {
+      driver = await deps.createDriver(guest);
+      drivers.set(guest.id, driver);
+    }
+    return driver;
   }
-  return d;
+  return driverFor(guest);
 }
 
-/** Detach + forget a guest's driver (on destroy, or when automation ends). */
+function rememberGuest(guest: WebContents): void {
+  if (knownGuests.has(guest.id)) return;
+  knownGuests.set(guest.id, guest);
+  const onDestroyed = () => releaseGuest(guest.id);
+  guestDestroyListeners.set(guest.id, onDestroyed);
+  guest.once("destroyed", onDestroyed);
+}
+
+/** Explicit grant/resume; ordinary actions cannot clear a paused connection. */
+export async function acquireGuest(guest: WebContents): Promise<void> {
+  rememberGuest(guest);
+  sensitiveRefsByGuest.delete(guest.id);
+  await acquireElectronBrowser(guest);
+}
+
+export function authorizeGuest(guest: WebContents): void {
+  rememberGuest(guest);
+  sensitiveRefsByGuest.delete(guest.id);
+  authorizeElectronBrowser(guest);
+}
+
+/** Release control, cancel pending waits, and preserve the target for a human. */
 export function releaseGuest(id: number): void {
   const guest = knownGuests.get(id);
-  if (guest && !guest.isDestroyed() && automationAttachedGuests.has(id)) detachDebugger(guest);
-  automationAttachedGuests.delete(id);
+  if (guest) releaseElectronBrowser(guest);
+  const onDestroyed = guestDestroyListeners.get(id);
+  if (guest && onDestroyed) guest.removeListener?.("destroyed", onDestroyed);
+  guestDestroyListeners.delete(id);
+  const driver = drivers.get(id) as (BrowserBridge & { dispose?: () => void }) | undefined;
+  driver?.dispose?.();
   knownGuests.delete(id);
   drivers.delete(id);
   sensitiveRefsByGuest.delete(id);
@@ -78,7 +101,10 @@ export interface BrowserActionRequest {
     | "screenshot"
     | "listTabs"
     | "switchTab"
-    | "requestTakeover";
+    | "requestTakeover"
+    | "resumeControl"
+    | "inspect";
+  inspect?: BrowserInspectOptions;
   ref?: string;
   text?: string;
   url?: string;
@@ -102,6 +128,12 @@ export interface BrowserActionRequest {
 /** Resolve a target webContents and approve sensitive actions. Injected so
  *  tests don't need Electron / the real settings store. */
 export interface AutomationDeps {
+  /** Grant and control generations captured by the caller; checked after waits. */
+  isActive?: () => boolean;
+  /** Test seam. Production uses the target-scoped Puppeteer connection. */
+  createDriver?: (guest: WebContents) => BrowserBridge | Promise<BrowserBridge>;
+  /** Test seam for explicit control recovery. */
+  resumeGuest?: typeof acquireGuest;
   /** Current automation-target guest webContents, or null if no panel/tab. */
   activeGuest: () => WebContents | null;
   /**
@@ -147,10 +179,34 @@ export interface AutomationDeps {
  * parses it back into a BrowserResult / BrowserSnapshot). Never throws — every
  * failure becomes a safe {ok:false,detail} so the agent gets a usable message.
  */
-export async function handleBrowserAction(
+export function handleBrowserAction(
   req: BrowserActionRequest,
   deps: AutomationDeps,
 ): Promise<string> {
+  const guest = deps.activeGuest();
+  if (!guest || guest.isDestroyed() || req.action === "requestTakeover") {
+    return performBrowserAction(req, deps);
+  }
+  const previous = actionTails.get(guest.id) ?? Promise.resolve();
+  const result = previous.then(() =>
+    performBrowserAction(req, { ...deps, activeGuest: () => guest }),
+  );
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  actionTails.set(guest.id, tail);
+  void tail.then(() => {
+    if (actionTails.get(guest.id) === tail) actionTails.delete(guest.id);
+  });
+  return result;
+}
+
+async function performBrowserAction(
+  req: BrowserActionRequest,
+  deps: AutomationDeps,
+): Promise<string> {
+  if (deps.isActive?.() === false) return revokedGrantResult();
   // Tab management is panel-global (operates on the guest registry, not a single
   // guest's driver) — handle it before resolving an active guest / driver.
   if (req.action === "listTabs") {
@@ -198,6 +254,17 @@ export async function handleBrowserAction(
     }
   }
 
+  if (req.action === "requestTakeover") {
+    // Unlike ordinary actions this bypasses the queue to interrupt pending waits.
+    releaseElectronBrowser(guest);
+    releaseGuest(guest.id);
+    return JSON.stringify({
+      ok: true,
+      code: "OK",
+      detail: "Browser control released for the user; resume explicitly after finishing.",
+    });
+  }
+
   const policy = deps.policy();
 
   // Domain whitelist HARD-enforces (no approve bypass): it's opt-in — an empty
@@ -240,13 +307,26 @@ export async function handleBrowserAction(
 
   // Reuse the per-guest driver so the snapshot's ref map survives into the
   // following click/type calls (each is a separate worker request).
-  const driver = driverForGuest(guest);
-  let attachedForAction = false;
   try {
-    attachedForAction = attachDebugger(guest);
-    if (attachedForAction) automationAttachedGuests.add(guest.id);
+    if (deps.isActive?.() === false) return revokedGrantResult();
+    if (req.action === "resumeControl") {
+      await (deps.resumeGuest ?? acquireGuest)(guest);
+      if (deps.isActive?.() === false) return revokedGrantResult();
+      return JSON.stringify({
+        ok: true,
+        code: "OK",
+        detail: "Browser control resumed. Take a new snapshot.",
+      });
+    }
+    const driver = await driverForGuest(guest, deps);
+    if (deps.isActive?.() === false) return revokedGrantResult();
     let result: unknown;
     switch (req.action) {
+      case "inspect":
+        result = driver.inspect
+          ? await driver.inspect(req.inspect ?? { mode: "dom" })
+          : { ok: false, detail: "Browser inspection is unavailable" };
+        break;
       case "snapshot":
         result = await driver.snapshot();
         sensitiveRefsByGuest.set(
@@ -303,13 +383,17 @@ export async function handleBrowserAction(
     return JSON.stringify(result);
   } catch (e) {
     return JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
-  } finally {
-    if (attachedForAction) {
-      detachDebugger(guest);
-      automationAttachedGuests.delete(guest.id);
-      driver.resetDomains();
-    }
   }
+}
+
+function revokedGrantResult(): string {
+  return JSON.stringify({
+    ok: false,
+    code: "NEEDS_HUMAN",
+    retryable: false,
+    detail:
+      "This browser request's grant or control generation has ended. A later grant or resume cannot authorize an earlier queued request.",
+  });
 }
 
 /**
@@ -324,6 +408,21 @@ export async function dispatchBrowserBridgeAction(
   try {
     let result: unknown;
     switch (req.action) {
+      case "resumeControl":
+        result = bridge.resumeControl
+          ? await bridge.resumeControl()
+          : { ok: false, detail: "Browser control resume is unavailable" };
+        break;
+      case "requestTakeover":
+        result = bridge.requestHumanTakeover
+          ? await bridge.requestHumanTakeover()
+          : { ok: false, detail: "Browser takeover is unavailable" };
+        break;
+      case "inspect":
+        result = bridge.inspect
+          ? await bridge.inspect(req.inspect ?? { mode: "dom" })
+          : { ok: false, detail: "Browser inspection is unavailable" };
+        break;
       case "snapshot":
         result = await bridge.snapshot();
         break;
@@ -378,14 +477,6 @@ export async function dispatchBrowserBridgeAction(
       ok: false,
       detail: error instanceof Error ? error.message : String(error),
     });
-  }
-}
-
-function safeTitle(wc: WebContents): string | undefined {
-  try {
-    return wc.getTitle() || undefined;
-  } catch {
-    return undefined;
   }
 }
 

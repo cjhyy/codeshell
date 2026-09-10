@@ -21,8 +21,10 @@ export {
   hashText,
 } from "./driver.js";
 export { planKeySequence, keyInfo, normalizeKey, MODIFIER_BITS } from "./keymap.js";
+export { READ_PAGE_STATE_EXPRESSION } from "./scroll-state.js";
 export type { KeyInfo, KeyEvent } from "./keymap.js";
 export type { CdpSender, PageInfo } from "./sender.js";
+export type { CdpActionsDriverOptions, CdpScreenshotRequest } from "./driver.js";
 export type {
   AXNode,
   RawSnapshot,

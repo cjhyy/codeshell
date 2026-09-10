@@ -22,6 +22,7 @@ import type {
   BrowserContent,
   BrowserExtract,
   BrowserImageData,
+  BrowserInspectResult,
   BrowserResult,
   BrowserSnapshot,
   BrowserTab,
@@ -33,8 +34,7 @@ import {
   type BrowserHostHandle,
   type BrowserHostOpenOptions,
 } from "../browser-host/index.js";
-import { CdpBrowserDriver } from "./cdp-driver.js";
-import { attachDebugger, detachDebugger, driverFor } from "./electron-cdp.js";
+import { acquireElectronBrowser, releaseElectronBrowser, driverFor } from "./electron-cdp.js";
 import { loadBrowserAutomationPolicy } from "./load-policy.js";
 import {
   isDomainAllowed,
@@ -58,7 +58,7 @@ interface TargetContinuity {
   expiresAt: number;
 }
 
-type BrowserDriver = CdpBrowserDriver;
+type BrowserDriver = BrowserBridge & { dispose?: () => void };
 
 export interface BackgroundBrowserAcquireOptions {
   /** Stable task/session identity. Re-acquiring the same owner reuses its target. */
@@ -105,6 +105,9 @@ interface RuntimeEntry {
   opening?: Promise<BackgroundTarget>;
   idleTimer?: ReturnType<typeof setTimeout>;
   disposed?: boolean;
+  controlPaused?: boolean;
+  /** Invalidates queued requests when the user takes control. */
+  controlEpoch: number;
   /** Rebuilt on snapshot; these refs require the exact target to be shown. */
   interactiveOnlyRefs: Set<string>;
   /** Promise-chain mutex. Rejections are swallowed only in the stored tail. */
@@ -113,8 +116,8 @@ interface RuntimeEntry {
 
 interface BackgroundBrowserRuntimeDeps {
   openHost: (options: BrowserHostOpenOptions) => Promise<BrowserHostHandle>;
-  createDriver: (webContents: WebContents) => BrowserDriver;
-  attach: (webContents: WebContents) => boolean;
+  createDriver: (webContents: WebContents) => BrowserDriver | Promise<BrowserDriver>;
+  resumeDriver: (webContents: WebContents) => BrowserDriver | Promise<BrowserDriver>;
   detach: (webContents: WebContents) => void;
   policy: () => BrowserAutomationPolicy;
   now: () => number;
@@ -158,8 +161,8 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     this.deps = {
       openHost: openBrowserHost,
       createDriver: driverFor,
-      attach: attachDebugger,
-      detach: detachDebugger,
+      resumeDriver: acquireElectronBrowser,
+      detach: releaseElectronBrowser,
       policy: loadBrowserAutomationPolicy,
       now: Date.now,
       ...options.deps,
@@ -193,6 +196,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         lastTitle: remembered?.title ?? "",
         recovery: remembered?.reason,
         pendingOperations: 0,
+        controlEpoch: 0,
         lastUsedAt: this.deps.now(),
         interactiveOnlyRefs: new Set(),
         tail: Promise.resolve(),
@@ -213,11 +217,11 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     return {
       bridge,
       show: async () => {
-        const target = await this.enqueue(entry!, () => {
-          if (released) throw new Error("background browser lease has been released");
-          return this.ensureTarget(entry!);
-        });
-        target.host.show();
+        if (released) throw new Error("background browser lease has been released");
+        // Cancel in-flight waits before waiting for the operation queue.
+        this.pauseTarget(entry!);
+        const target = await this.enqueue(entry!, () => this.ensureTarget(entry!));
+        this.revealTargetForHuman(target);
       },
       hide: () => {
         if (!released) entry?.target?.host.hide();
@@ -254,28 +258,46 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
   }
 
   private bridgeFor(entry: RuntimeEntry, isActive: () => boolean): BrowserBridge {
-    const queue = <T>(operation: () => Promise<T>) =>
-      this.enqueue(entry, () => {
-        if (!isActive()) throw new Error("background browser lease has been released");
-        return operation();
+    const checkLease = () => {
+      if (!isActive()) throw new Error("background browser lease has been released");
+      if (entry.disposed || this.entries.get(entry.ownerId) !== entry)
+        throw new Error("background browser lease is no longer active");
+    };
+    const checkEpoch = (epoch: number) => {
+      checkLease();
+      if (entry.controlEpoch !== epoch)
+        throw new Error("Browser control changed; this earlier request cannot resume or act.");
+    };
+    const checkControl = (epoch: number) => {
+      checkEpoch(epoch);
+      if (entry.controlPaused)
+        throw new Error("Browser control is paused; explicitly resume after the user finishes.");
+    };
+    const queue = <T>(operation: (epoch: number) => Promise<T>) => {
+      const epoch = entry.controlEpoch;
+      return this.enqueue(entry, () => {
+        checkEpoch(epoch);
+        return operation(epoch);
       });
+    };
     const use = <T>(
       operation: (target: BackgroundTarget) => Promise<T>,
       recover = false,
     ): Promise<T> =>
-      queue(async () => {
+      queue(async (epoch) => {
+        checkControl(epoch);
         const target = await this.ensureTarget(entry, recover);
+        // The first connection does not yet have entry.target for takeover to
+        // detach. Recheck after each wait so that request cannot execute later.
+        checkControl(epoch);
+        target.driver = await this.deps.createDriver(target.host.webContents);
+        checkControl(epoch);
         entry.lastUsedAt = this.deps.now();
-        const attached = this.deps.attach(target.host.webContents);
         try {
           return await operation(target);
         } finally {
           entry.lastUrl = safeCall(() => target.host.webContents.getURL()) ?? entry.lastUrl;
           entry.lastTitle = safeCall(() => target.host.webContents.getTitle()) ?? entry.lastTitle;
-          if (attached) {
-            this.deps.detach(target.host.webContents);
-            target.driver.resetDomains();
-          }
         }
       });
 
@@ -293,6 +315,46 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     };
 
     return {
+      requestHumanTakeover: () =>
+        safely<BrowserResult>(async () => {
+          checkLease();
+          this.pauseTarget(entry);
+          const epoch = entry.controlEpoch;
+          const target = await queue(() => this.ensureTarget(entry));
+          checkEpoch(epoch);
+          this.revealTargetForHuman(target);
+          return { ok: true, code: "OK", detail: "Browser control released for the user." };
+        }, failResult),
+      resumeControl: () =>
+        safely<BrowserResult>(
+          () =>
+            queue(async (epoch) => {
+              const target = await this.ensureTarget(entry);
+              checkEpoch(epoch);
+              target.driver = await this.deps.resumeDriver(target.host.webContents);
+              checkEpoch(epoch);
+              entry.controlPaused = false;
+              entry.interactiveOnlyRefs.clear();
+              return {
+                ok: true,
+                code: "OK",
+                detail: "Browser control resumed. Take a new snapshot.",
+              };
+            }),
+          failResult,
+        ),
+      inspect: (options) =>
+        safely<BrowserInspectResult>(
+          () =>
+            use(async (target) => {
+              if (!allowed(target))
+                return { ok: false, mode: options.mode, detail: deniedDetail(target) };
+              return target.driver.inspect
+                ? target.driver.inspect(options)
+                : { ok: false, mode: options.mode, detail: "Browser inspection is unavailable" };
+            }),
+          (detail) => ({ ok: false, mode: options.mode, detail }),
+        ),
       snapshot: () =>
         safely(
           () =>
@@ -314,7 +376,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
                   )
                   .map((element) => element.ref),
               );
-              if (snapshot.needsHuman) full.host.show();
+              if (snapshot.needsHuman) this.pauseTarget(entry, full);
               return snapshot;
             }),
           (detail) => ({ url: "", elements: [], detail }),
@@ -325,7 +387,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
             use(async (target) => {
               if (!allowed(target)) return { ok: false, detail: deniedDetail(target) };
               if (entry.interactiveOnlyRefs.has(ref)) {
-                target.host.show();
+                this.pauseTarget(entry, target);
                 return {
                   ok: false,
                   detail: "high-consequence action requires an interactive browser session",
@@ -344,7 +406,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
                 entry.interactiveOnlyRefs.has(ref) ||
                 isSensitiveAction({ action: "type", ref, text })
               ) {
-                target.host.show();
+                this.pauseTarget(entry, target);
                 return {
                   ok: false,
                   detail: "sensitive input requires an interactive browser session",
@@ -455,7 +517,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
             use(async (target) => {
               if (!allowed(target)) return { ok: false, detail: deniedDetail(target) };
               if (ref && entry.interactiveOnlyRefs.has(ref)) {
-                target.host.show();
+                this.pauseTarget(entry, target);
                 return {
                   ok: false,
                   detail: "sensitive input requires an interactive browser session",
@@ -542,6 +604,19 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     };
   }
 
+  private pauseTarget(entry: RuntimeEntry, target = entry.target): void {
+    entry.controlEpoch += 1;
+    entry.controlPaused = true;
+    entry.interactiveOnlyRefs.clear();
+    if (target) this.revealTargetForHuman(target);
+  }
+
+  private revealTargetForHuman(target: BackgroundTarget): void {
+    this.deps.detach(target.host.webContents);
+    target.driver.dispose?.();
+    target.host.show();
+  }
+
   private async ensureTarget(entry: RuntimeEntry, recover = false): Promise<BackgroundTarget> {
     if (entry.disposed || this.entries.get(entry.ownerId) !== entry) {
       throw new Error("background browser lease is no longer active");
@@ -560,17 +635,30 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         show: false,
         backgroundThrottling: false,
       })
-      .then((host) => {
+      .then(async (host) => {
         if (entry.disposed || this.entries.get(entry.ownerId) !== entry) {
           host.close();
           throw new Error("background browser lease was released while opening");
         }
-        const target = { host, driver: this.deps.createDriver(host.webContents) };
+        let driver: BrowserDriver;
+        try {
+          driver = await this.deps.createDriver(host.webContents);
+        } catch (error) {
+          host.close();
+          throw error;
+        }
+        if (entry.disposed) {
+          this.deps.detach(host.webContents);
+          host.close();
+          throw new Error("Browser target was released while connecting");
+        }
+        const target = { host, driver };
         entry.target = target;
         entry.opening = undefined;
         entry.recovery = undefined;
         host.onClosed(() => {
           if (entry.target?.host === host) {
+            this.deps.detach(host.webContents);
             entry.target = undefined;
             entry.recovery = "closed";
             entry.interactiveOnlyRefs.clear();
@@ -676,7 +764,11 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     entry.disposed = true;
     if (entry.idleTimer) clearTimeout(entry.idleTimer);
     entry.idleTimer = undefined;
-    entry.target?.host.close();
+    if (entry.target) {
+      this.deps.detach(entry.target.host.webContents);
+      entry.target.driver.dispose?.();
+      entry.target.host.close();
+    }
     entry.target = undefined;
   }
 

@@ -1,6 +1,8 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import { handleBrowserAction, releaseGuest, type AutomationDeps } from "./automation-host";
+import { CdpBrowserDriver } from "./cdp-driver.js";
+import { captureElectronPage } from "./electron-screenshot.js";
 import type { WebContents } from "electron";
 
 // The driver cache is module-level (keyed by guest id). Reset id:1 between tests
@@ -13,6 +15,7 @@ function fakeGuest(opts: {
   cdp?: Record<string, (p?: any) => any>;
   destroyed?: boolean;
   debuggerState?: { attached: boolean; attaches: number; detaches: number };
+  capturePage?: WebContents["capturePage"];
 }): WebContents {
   const debuggerState = opts.debuggerState ?? { attached: false, attaches: 0, detaches: 0 };
   const cdp = opts.cdp ?? {};
@@ -22,6 +25,8 @@ function fakeGuest(opts: {
     isDestroyed: () => opts.destroyed ?? false,
     getURL: () => opts.url ?? "https://www.xiaohongshu.com/explore",
     getTitle: () => "小红书",
+    getZoomFactor: () => 1.25,
+    capturePage: opts.capturePage,
     debugger: {
       isAttached: () => debuggerState.attached,
       attach: () => {
@@ -50,6 +55,16 @@ function deps(over: Partial<AutomationDeps> = {}): AutomationDeps {
     activeGuest: () =>
       fakeGuest({ cdp: { "Accessibility.getFullAXTree": () => AX, "DOM.getBoxModel": () => BOX } }),
     policy: () => ({ allowedDomains: [] }),
+    createDriver: (guest) =>
+      new CdpBrowserDriver(
+        (method, params) => guest.debugger.sendCommand(method, params),
+        () => ({ url: guest.getURL(), title: guest.getTitle() }),
+        {
+          captureScreenshot: guest.capturePage
+            ? (request) => captureElectronPage(guest, request)
+            : undefined,
+        },
+      ),
     ...over,
   };
 }
@@ -102,6 +117,47 @@ describe("handleBrowserAction tabs", () => {
 });
 
 describe("handleBrowserAction", () => {
+  test("captures the cached guest through Electron and keeps snapshot refs isolated", async () => {
+    const captures: unknown[] = [];
+    const image = {
+      isEmpty: () => false,
+      getSize: () => ({ width: 250, height: 100 }),
+      toJPEG: () => Buffer.from("native-guest"),
+    };
+    const guest = fakeGuest({
+      cdp: {
+        "Accessibility.getFullAXTree": () => AX,
+        "DOM.getBoxModel": () => BOX,
+      },
+      capturePage: (async (...args: unknown[]) => {
+        captures.push(args);
+        return image;
+      }) as WebContents["capturePage"],
+    });
+    const dependencies = deps({ activeGuest: () => guest });
+    const snapshot = JSON.parse(await handleBrowserAction({ action: "snapshot" }, dependencies));
+    const ref = snapshot.elements[0].ref;
+    const full = JSON.parse(await handleBrowserAction({ action: "screenshot" }, dependencies));
+    const region = JSON.parse(
+      await handleBrowserAction({ action: "screenshot", ref }, dependencies),
+    );
+    expect(full).toMatchObject({
+      ok: true,
+      base64: Buffer.from("native-guest").toString("base64"),
+    });
+    expect(region.ok).toBe(true);
+    expect(captures).toEqual([
+      [undefined, { stayHidden: true }],
+      [{ x: 0, y: 0, width: 125, height: 50 }, { stayHidden: true }],
+    ]);
+    releaseGuest(guest.id);
+    const stale = JSON.parse(
+      await handleBrowserAction({ action: "screenshot", ref }, dependencies),
+    );
+    expect(stale.ok).toBe(false);
+    expect(captures).toHaveLength(2);
+  });
+
   test("no active guest, no openPanel → safe error", async () => {
     const out = await handleBrowserAction(
       { action: "snapshot" },
@@ -179,7 +235,7 @@ describe("handleBrowserAction", () => {
     expect(r.elements[0].ref).toBe(`${r.snapshotId}:e1`);
   });
 
-  test("detaches the debugger after each action while keeping refs cached", async () => {
+  test("keeps a single target driver across consecutive actions", async () => {
     const debuggerState = { attached: false, attaches: 0, detaches: 0 };
     const guest = fakeGuest({
       debuggerState,
@@ -188,11 +244,11 @@ describe("handleBrowserAction", () => {
     const d = deps({ activeGuest: () => guest });
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
     expect(snap.elements[1].ref).toBe(`${snap.snapshotId}:e2`);
-    expect(debuggerState).toMatchObject({ attached: false, attaches: 1, detaches: 1 });
+    expect(debuggerState).toMatchObject({ attached: false, attaches: 0, detaches: 0 });
 
     const out = await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
     expect(JSON.parse(out)).toMatchObject({ ok: true });
-    expect(debuggerState).toMatchObject({ attached: false, attaches: 2, detaches: 2 });
+    expect(debuggerState).toMatchObject({ attached: false, attaches: 0, detaches: 0 });
   });
 
   test("click after snapshot reuses the cached driver → ref resolves (persistent ref map)", async () => {

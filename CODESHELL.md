@@ -25,7 +25,7 @@ packages/
                                           by desktop's mobile UI today.
   tui/      @cjhyy/code-shell-tui      — Ink-based terminal REPL on top of core.
   desktop/  @cjhyy/code-shell-desktop  — Electron client (private, not published).
-  cdp/      @cjhyy/code-shell-cdp      — env-agnostic CDP browser action layer (no Playwright).
+  cdp/      @cjhyy/code-shell-cdp      — env-agnostic browser helpers and legacy CDP compatibility.
   chat/     @cjhyy/code-shell-chat     — standalone multi-channel chat gateway + optional CodeShell integration.
 ```
 
@@ -61,6 +61,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 ## Architecture Gotchas
 
 - **Package manager is `bun`**, not npm/yarn/pnpm. `preinstall` enforces Node >= 20.10 via `scripts/check-node.cjs`.
+- **Browser actions reuse maintained libraries**: Desktop's `src/browser-library/` provides the shared Puppeteer driver for Electron and the Chrome extension; the independent Playwright backend remains available. The legacy `packages/cdp` driver is a compatibility export, not a production fallback. Keep task grants, revocation, and exact element identity above the transport layer.
 - **React is pinned to 19.2.6** via root `overrides` — do not upgrade casually.
 - **Terminal UI is Ink** (React for CLI). `packages/tui/src/ui/**.tsx` are Ink React components, NOT browser DOM.
 - **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). Coding policy lives in

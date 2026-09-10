@@ -35,6 +35,7 @@ import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { browserPartitionForBucket, fromMobilePermissionMode, stablePromptHash } from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
+import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import type {
@@ -78,6 +79,8 @@ interface Params {
     setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
     setProjects: Dispatch<SetStateAction<TrackedProject[]>>;
     setQuickChatSessions: Dispatch<SetStateAction<Record<string, QuickChatSessionRef>>>;
+    setCollapsedProjects: Dispatch<SetStateAction<Set<string>>>;
+    setRevealedSessionIds: Dispatch<SetStateAction<Record<string, string>>>;
   };
   activity: {
     mobileAnnounceSeqRef: MutableRefObject<number>;
@@ -123,6 +126,8 @@ export function useHostSubscriptions({
     setSessionIndices,
     setProjects,
     setQuickChatSessions,
+    setCollapsedProjects,
+    setRevealedSessionIds,
   } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
   useEffect(() => {
@@ -424,6 +429,8 @@ export function useHostSubscriptions({
         setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
       })();
     });
+    let hostAnnouncementSequence = 0;
+    const revealedAnnouncementSequences = new Map<string, number>();
     const announceHostSession = async (
       meta: {
         sessionId: string;
@@ -434,17 +441,20 @@ export function useHostSubscriptions({
       },
       source: "mobile" | "pet-delegation",
     ): Promise<void> => {
+      const announcementSequence = ++hostAnnouncementSequence;
       window.codeshell.log(`${source}.session.announce`, {
         sessionId: meta.sessionId,
         cwd: meta.cwd,
       });
       const projectsNow = loadProjects();
-      const knownProjectId =
-        [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
-          loadSessionIndex(rid).sessions.some(
-            (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
-          ),
-        ) ?? undefined;
+      const knownProjectId = [
+        null as string | null,
+        ...projectsNow.map((project) => project.id),
+      ].find((rid) =>
+        loadSessionIndex(rid).sessions.some(
+          (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
+        ),
+      );
       const known =
         knownProjectId !== undefined
           ? loadSessionIndex(knownProjectId).sessions.find(
@@ -514,7 +524,17 @@ export function useHostSubscriptions({
         }
         dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
       }
-      setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
+      const projectKey = projectBucketSegmentFor(projectId);
+      sessionIndicesRef.current = { ...sessionIndicesRef.current, [projectKey]: nextIdx };
+      setSessionIndices((prev) => ({ ...prev, [projectKey]: nextIdx }));
+      if (
+        source === "pet-delegation" &&
+        announcementSequence > (revealedAnnouncementSequences.get(projectKey) ?? 0)
+      ) {
+        revealedAnnouncementSequences.set(projectKey, announcementSequence);
+        setCollapsedProjects((current) => revealSidebarProject(current, projectId));
+        setRevealedSessionIds((current) => ({ ...current, [projectKey]: sessionId }));
+      }
     };
     const offMobileSession = window.codeshell.onMobileSession((meta) => {
       void announceHostSession(meta, "mobile");

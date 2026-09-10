@@ -189,6 +189,7 @@
     "highlight.js": "^11",
     "lucide-react": "^0.460.0",
     "playwright": "^1.60.0",
+    "puppeteer-core": "23.7.1",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",

@@ -29,6 +29,10 @@ export interface CdpActionResult {
 }
 
 export interface CdpScrollState {
+  /** The visible region receiving the wheel, which may be inside an app shell. */
+  target?: "page" | "element" | "canvas" | "frame";
+  /** False for canvas/opaque frames whose rendered position is not a DOM offset. */
+  positionKnown?: boolean;
   x: number;
   y: number;
   maxX: number;

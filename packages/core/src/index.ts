@@ -741,6 +741,8 @@ export type {
   BrowserImage,
   BrowserVideo,
   BrowserImageData,
+  BrowserInspectOptions,
+  BrowserInspectResult,
   BrowserTab,
   AXNode,
 } from "./tool-system/browser-bridge.js";

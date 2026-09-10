@@ -4219,7 +4219,7 @@ ipcMain.handle(
     });
     // Switching targets is explicit. Dispose the independent runtime target so
     // there is never a second browser silently continuing in the background.
-    chromeExtensionRuntimeService.revoke(sessionId);
+    chromeExtensionRuntimeService.forgetSession(sessionId);
     browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
     return status;
   },
@@ -6640,6 +6640,8 @@ ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: bool
   await getSessionCwdIndex().refresh(id);
 });
 async function deleteDesktopSession(id: string): Promise<void> {
+  builtInBrowserHandoffGrants.clearSession(id);
+  chromeExtensionRuntimeService.forgetSession(id);
   const browserPartition = partitionForSession(id);
   const ephemeralBrowserPartition = id.startsWith("qchat-") ? browserPartition : null;
   if (browserPartition && isBrowserPartition(browserPartition)) {

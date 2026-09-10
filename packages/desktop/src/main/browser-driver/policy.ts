@@ -110,6 +110,7 @@ const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
   "scroll",
   "waitForLoad",
   "hover",
+  "inspect",
 ]);
 
 export function isWriteAction(action: string): boolean {

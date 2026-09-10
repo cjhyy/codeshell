@@ -1,5 +1,5 @@
 /**
- * Production build — fire all three sub-builds in parallel, no watch,
+ * Production build — build main, preload, renderer, mobile, and extension in parallel, no watch,
  * no electron launch. Equivalent of `npm run build` in electron-vite
  * but with explicit control over every step.
  */
@@ -9,6 +9,7 @@ import esbuild from "esbuild";
 import { rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildChromeExtension } from "./build-chrome-extension.js";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
@@ -77,9 +78,15 @@ async function buildMobile(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await Promise.all([buildMain(), buildPreload(), buildRenderer(), buildMobile()]);
+  await Promise.all([
+    buildMain(),
+    buildPreload(),
+    buildRenderer(),
+    buildMobile(),
+    buildChromeExtension(),
+  ]);
   // eslint-disable-next-line no-console
-  console.log("[build] all four sub-builds OK");
+  console.log("[build] main, preload, renderer, mobile, and Chrome extension OK");
 }
 
 main().catch((err) => {

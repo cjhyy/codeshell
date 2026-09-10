@@ -42,6 +42,34 @@ describe("browser tools — host without a browser bridge", () => {
   });
 });
 describe("browser_observe", () => {
+  test("canvas read does not equate complete DOM text with the end of its contents", async () => {
+    const out = await browserObserveTool(
+      { mode: "read" },
+      ctxWith({
+        readContent: async () => ({
+          ok: true,
+          url: "https://example.com",
+          text: "Table toolbar",
+          done: true,
+          scroll: {
+            x: 0,
+            y: 0,
+            maxX: 0,
+            maxY: 0,
+            viewportWidth: 800,
+            viewportHeight: 600,
+            atTop: false,
+            atEnd: false,
+            target: "canvas",
+            positionKnown: false,
+          },
+        }),
+      }),
+    );
+    expect(out).toContain("canvas position unknown");
+    expect(out).toContain("use vision and scroll");
+    expect(out).not.toContain("0/0 (end)");
+  });
   test("snapshot renders url/title + element list; surfaces needsHuman", async () => {
     const ctx = ctxWith({
       snapshot: async () => ({

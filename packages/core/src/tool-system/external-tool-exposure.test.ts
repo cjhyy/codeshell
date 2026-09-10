@@ -20,6 +20,7 @@ describe("first-phase external tool exposure", () => {
       [
         "Bash",
         "browser_act",
+        "browser_inspect",
         "browser_navigate",
         "browser_observe",
         "Edit",
@@ -65,6 +66,15 @@ describe("first-phase external tool exposure", () => {
     for (const name of ["Agent", "EnterPlanMode", "ExitPlanMode"]) {
       expect(FIRST_PHASE_EXPOSURE.toolNames.has(name)).toBe(false);
     }
+  });
+
+  test("developer inspection retains separate ask permission", () => {
+    const tool = BUILTIN_TOOLS.find((tool) => tool.definition.name === "browser_inspect")!;
+    expect(tool.definition.permissionDefault).toBe("ask");
+    expect(tool.exposure?.defaultPermissionRules).toContainEqual({
+      tool: "browser_inspect",
+      decision: "ask",
+    });
   });
 
   test("InjectCredential is exposed only while its in-tool approval is mandatory", () => {

@@ -10,25 +10,26 @@ export function compactSidebarSessions<T extends { id: string }>(
    * that want it.
    */
   expandedLimit?: number,
+  /** A newly announced host Session stays visible without selecting its chat. */
+  revealedSessionId?: string | null,
 ): T[] {
-  if (expanded) {
-    if (expandedLimit === undefined || sessions.length <= expandedLimit) return [...sessions];
-    const head = sessions.slice(0, expandedLimit);
-    if (!activeSessionId || head.some((session) => session.id === activeSessionId)) return head;
-    const active = sessions.find((session) => session.id === activeSessionId);
-    if (!active) return head;
-    // The active Session must stay visible even past the cap, otherwise the
-    // selected row disappears from its own list.
-    return [...head.slice(0, Math.max(0, expandedLimit - 1)), active];
+  const cap = expanded ? expandedLimit : limit;
+  if (cap === undefined || sessions.length <= cap) return [...sessions];
+  const required = new Set([activeSessionId, revealedSessionId].filter(Boolean));
+  const visible = sessions.slice(0, cap);
+  for (const session of sessions) {
+    if (!required.has(session.id) || visible.some((candidate) => candidate.id === session.id))
+      continue;
+    for (let index = visible.length - 1; index >= 0; index--) {
+      if (required.has(visible[index]!.id)) continue;
+      visible[index] = session;
+      break;
+    }
   }
-  if (sessions.length <= limit) return [...sessions];
-  const compact = sessions.slice(0, limit);
-  if (!activeSessionId || compact.some((session) => session.id === activeSessionId)) {
-    return compact;
-  }
-  const active = sessions.find((session) => session.id === activeSessionId);
-  if (!active) return compact;
-  return [...compact.slice(0, Math.max(0, limit - 1)), active];
+  const visibleIds = new Set(visible.map((session) => session.id));
+  // Keep pinned/activity ordering even when selected or newly announced rows
+  // displace otherwise-visible rows near the compact/expanded cap.
+  return sessions.filter((session) => visibleIds.has(session.id));
 }
 
 /** Pinned Sessions lead; each group keeps most-recent activity first. */
@@ -42,7 +43,7 @@ export function sortSidebarSessions<T extends { pinned?: boolean; updatedAt: num
   );
 }
 
-/** Selecting from Mimi/search must reveal the owning project in the sidebar. */
+/** Selecting or announcing a Session reveals the owning project in the sidebar. */
 export function revealSidebarProject(
   collapsedProjects: Set<string>,
   projectId: string | null,

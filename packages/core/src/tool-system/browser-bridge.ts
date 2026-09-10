@@ -14,8 +14,8 @@
 
 /** One interactive element from the page's accessibility tree. */
 export interface BrowserElement {
-  /** Per-snapshot reference id (for example s3:e1); the host maps it back to a
-   *  backendDOMNodeId for the action tools. Reassigned each snapshot. */
+  /** Per-snapshot reference id (for example s3:e1); the host binds it to the
+   *  observed node in its document/frame. Reassigned each snapshot. */
   ref: string;
   /** ARIA role (button, link, textbox, checkbox, combobox, …). */
   role: string;
@@ -73,6 +73,10 @@ export type BrowserResultCode =
   | "FAILED";
 
 export interface BrowserScrollState {
+  /** The visible region receiving the wheel, which may be inside an app shell. */
+  target?: "page" | "element" | "canvas" | "frame";
+  /** False for canvas/opaque frames whose rendered position is not a DOM offset. */
+  positionKnown?: boolean;
   x: number;
   y: number;
   maxX: number;
@@ -185,10 +189,32 @@ export interface BrowserImageData {
   detail?: string;
 }
 
+/** Bounded developer observations; deliberately not an arbitrary script/CDP port. */
+export interface BrowserInspectOptions {
+  mode: "dom" | "console" | "network" | "performance" | "stop";
+  /** DOM mode: CSS selector for the subtree to inspect. */
+  selector?: string;
+  /** Maximum returned records/nodes, clamped by the host. */
+  maxEntries?: number;
+}
+
+export interface BrowserInspectResult {
+  ok: boolean;
+  mode: BrowserInspectOptions["mode"];
+  code?: BrowserResultCode;
+  url?: string;
+  data?: unknown;
+  detail?: string;
+}
+
 export interface BrowserBridge {
   /** Reveal the exact task-owned browser target so the user can complete a
    * login, 2FA, CAPTCHA, or another interaction that requires human control. */
   requestHumanTakeover?(): Promise<BrowserResult>;
+  /** Explicitly resume automation after the user has finished manual control. */
+  resumeControl?(): Promise<BrowserResult>;
+  /** Separate developer-tool permission applies before this host-scoped call. */
+  inspect?(options: BrowserInspectOptions): Promise<BrowserInspectResult>;
   snapshot(): Promise<BrowserSnapshot>;
   click(ref: string): Promise<BrowserResult>;
   type(ref: string, text: string): Promise<BrowserResult>;

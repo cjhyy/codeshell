@@ -110,22 +110,37 @@ describe("CdpActionsDriver.clickNode", () => {
     expect(press?.params).toMatchObject({ x: 780, y: 30 });
   });
 
-  test("dispatches viewport-relative coordinates after page scroll", async () => {
-    const { send, calls } = fakeCdp({
-      "DOM.getBoxModel": () => ({
-        model: { content: [20, 1000, 120, 1000, 120, 1040, 20, 1040] },
-      }),
-      "Page.getLayoutMetrics": () => ({
-        layoutViewport: { pageX: 0, pageY: 980, clientWidth: 800, clientHeight: 600 },
-      }),
-    });
-    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+  test.each([1, 1.25])(
+    "keeps DOM click coordinates after Retina page scroll at zoom %s",
+    async (zoom) => {
+      const { send, calls } = fakeCdp({
+        "DOM.getBoxModel": () => ({
+          model: { content: [20, 20, 120, 20, 120, 60, 20, 60] },
+        }),
+        "Page.getLayoutMetrics": () => ({
+          layoutViewport: {
+            pageX: 0,
+            pageY: 1000 * 2 * zoom,
+            clientWidth: 1600 * zoom,
+            clientHeight: 1200 * zoom,
+          },
+          cssLayoutViewport: {
+            pageX: 0,
+            pageY: 1000,
+            clientWidth: 800,
+            clientHeight: 600,
+          },
+          cssVisualViewport: { zoom },
+        }),
+      });
+      const d = new CdpActionsDriver(send, () => ({ url: "u" }));
 
-    const r = await d.clickNode(20);
-    expect(r.ok).toBe(true);
-    const press = calls.find((c) => c.params?.type === "mousePressed");
-    expect(press?.params).toMatchObject({ x: 70, y: 40 });
-  });
+      const r = await d.clickNode(20);
+      expect(r.ok).toBe(true);
+      const press = calls.find((c) => c.params?.type === "mousePressed");
+      expect(press?.params).toMatchObject({ x: 70, y: 40 });
+    },
+  );
 
   test("fails when the node has no visible viewport intersection", async () => {
     const { send, calls } = fakeCdp({
@@ -473,38 +488,195 @@ describe("CdpActionsDriver.fetchImageData", () => {
 });
 
 describe("CdpActionsDriver.screenshot", () => {
+  test("uses a native viewport capture without requiring any CDP geometry", async () => {
+    const { send, calls } = fakeCdp();
+    const requests: unknown[] = [];
+    const driver = new CdpActionsDriver(send, () => ({ url: "u" }), {
+      captureScreenshot: async (request) => {
+        requests.push(request);
+        return { ok: true, base64: "QUJD", mediaType: "image/jpeg" };
+      },
+    });
+    expect(await driver.screenshot()).toMatchObject({
+      ok: true,
+      base64: "QUJD",
+    });
+    expect(requests).toEqual([{ maxDim: 1568 }]);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("passes only the visible viewport CSS intersection to native region capture after scrolling", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [760, -10, 900, -10, 900, 50, 760, 50] },
+      }),
+      "Page.getLayoutMetrics": () => ({
+        layoutViewport: { pageY: 2500, clientWidth: 2000, clientHeight: 1500 },
+        cssLayoutViewport: { pageY: 1000, clientWidth: 800, clientHeight: 600 },
+        cssVisualViewport: { zoom: 1.25 },
+      }),
+    });
+    const requests: unknown[] = [];
+    const driver = new CdpActionsDriver(send, () => ({ url: "u" }), {
+      captureScreenshot: async (request) => {
+        requests.push(request);
+        return { ok: true, base64: "QUJD", mediaType: "image/jpeg" };
+      },
+    });
+    expect((await driver.screenshot(42)).ok).toBe(true);
+    expect(requests).toEqual([{ region: { x: 760, y: 0, width: 40, height: 50 }, maxDim: 1568 }]);
+    expect(calls.some((call) => call.method === "DOM.scrollIntoViewIfNeeded")).toBe(true);
+    expect(calls.some((call) => call.method === "Page.captureScreenshot")).toBe(false);
+  });
+
+  test("does not call native capture for an element outside the visible viewport", async () => {
+    const { send } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [900, 10, 950, 10, 950, 50, 900, 50] },
+      }),
+      "Page.getLayoutMetrics": () => ({
+        cssLayoutViewport: { clientWidth: 800, clientHeight: 600 },
+      }),
+    });
+    let captures = 0;
+    const driver = new CdpActionsDriver(send, () => ({ url: "u" }), {
+      captureScreenshot: async () => {
+        captures += 1;
+        return { ok: true };
+      },
+    });
+    expect((await driver.screenshot(42)).ok).toBe(false);
+    expect(captures).toBe(0);
+  });
+
+  test.each([1, 1.25])(
+    "captures the whole Retina viewport at zoom %s within the pixel cap",
+    async (zoom) => {
+      const { send, calls } = fakeCdp({
+        "Page.getLayoutMetrics": () => ({
+          layoutViewport: {
+            pageX: 200,
+            pageY: 400,
+            clientWidth: 4000,
+            clientHeight: 2800,
+          },
+          cssLayoutViewport: {
+            pageX: 100 / zoom,
+            pageY: 200 / zoom,
+            clientWidth: 2000 / zoom,
+            clientHeight: 1400 / zoom,
+          },
+          cssVisualViewport: { zoom },
+        }),
+        "Page.captureScreenshot": () => ({ data: "QUJD" }),
+      });
+      const driver = new CdpActionsDriver(send, () => ({ url: "u" }));
+      expect((await driver.screenshot()).ok).toBe(true);
+      const shot = calls.find((call) => call.method === "Page.captureScreenshot");
+      expect(shot?.params?.clip).toEqual({
+        x: 100,
+        y: 200,
+        width: 2000,
+        height: 1400,
+        scale: 1568 / 4000,
+      });
+      expect(calls.some((call) => call.method === "Runtime.evaluate")).toBe(false);
+    },
+  );
+
+  test("intersects Retina element boxes with the CSS viewport before applying zoom", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [900, 100, 1100, 100, 1100, 300, 900, 300] },
+      }),
+      "Page.getLayoutMetrics": () => ({
+        layoutViewport: {
+          pageX: 0,
+          pageY: 250,
+          clientWidth: 2500,
+          clientHeight: 1750,
+        },
+        cssLayoutViewport: {
+          pageX: 0,
+          pageY: 100,
+          clientWidth: 1000,
+          clientHeight: 700,
+        },
+        cssVisualViewport: { zoom: 1.25 },
+      }),
+      "Page.captureScreenshot": () => ({ data: "QUJD" }),
+    });
+    const driver = new CdpActionsDriver(send, () => ({ url: "u" }));
+    expect((await driver.screenshot(42, 100)).ok).toBe(true);
+    const shot = calls.find((call) => call.method === "Page.captureScreenshot");
+    expect(shot?.params?.clip).toEqual({
+      x: 1125,
+      y: 250,
+      width: 125,
+      height: 250,
+      scale: 0.2,
+    });
+  });
+
   test("viewport: scales natively via clip.scale, no page round-trip", async () => {
     const { send, calls } = fakeCdp({
-      "Page.getLayoutMetrics": () => ({ layoutViewport: { clientWidth: 3136, clientHeight: 800 } }),
+      "Page.getLayoutMetrics": () => ({
+        layoutViewport: { clientWidth: 3136, clientHeight: 800 },
+      }),
       "Page.captureScreenshot": () => ({ data: "QUJD" }),
     });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     const r = await d.screenshot();
-    expect(r).toMatchObject({ ok: true, mediaType: "image/jpeg", base64: "QUJD" });
+    expect(r).toMatchObject({
+      ok: true,
+      mediaType: "image/jpeg",
+      base64: "QUJD",
+    });
     const shot = calls.find((c) => c.method === "Page.captureScreenshot");
     expect(shot?.params?.format).toBe("jpeg");
     // 3136px wide → scale 1568/3136 = 0.5; CDP resizes server-side
-    expect(shot?.params?.clip).toMatchObject({ x: 0, y: 0, width: 3136, height: 800, scale: 0.5 });
+    expect(shot?.params?.clip).toMatchObject({
+      x: 0,
+      y: 0,
+      width: 3136,
+      height: 800,
+      scale: 0.5,
+    });
     // CRITICAL: no Runtime.evaluate (the old in-page canvas downscale that stalled)
     expect(calls.some((c) => c.method === "Runtime.evaluate")).toBe(false);
   });
 
   test("element box: clips to the box and scale 1 when within maxDim", async () => {
     const { send, calls } = fakeCdp({
-      "DOM.getBoxModel": () => ({ model: { content: [10, 20, 110, 20, 110, 70, 10, 70] } }),
+      "DOM.getBoxModel": () => ({
+        model: { content: [10, 20, 110, 20, 110, 70, 10, 70] },
+      }),
       "Page.captureScreenshot": () => ({ data: "QUJD" }),
     });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     await d.screenshot(42);
     const shot = calls.find((c) => c.method === "Page.captureScreenshot");
-    expect(shot?.params?.clip).toMatchObject({ x: 10, y: 20, width: 100, height: 50, scale: 1 });
+    expect(shot?.params?.clip).toMatchObject({
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 50,
+      scale: 1,
+    });
   });
 
   test("element box: scrolls then clamps the clip to the visible viewport", async () => {
     const { send, calls } = fakeCdp({
-      "DOM.getBoxModel": () => ({ model: { content: [-10, 100, 50, 100, 50, 180, -10, 180] } }),
+      "DOM.getBoxModel": () => ({
+        model: { content: [-10, -20, 50, -20, 50, 60, -10, 60] },
+      }),
       "Page.getLayoutMetrics": () => ({
-        layoutViewport: { pageX: 0, pageY: 120, clientWidth: 40, clientHeight: 40 },
+        layoutViewport: {
+          pageX: 0,
+          pageY: 120,
+          clientWidth: 40,
+          clientHeight: 40,
+        },
       }),
       "Page.captureScreenshot": () => ({ data: "QUJD" }),
     });
@@ -512,7 +684,13 @@ describe("CdpActionsDriver.screenshot", () => {
     await d.screenshot(42);
     expect(calls.some((c) => c.method === "DOM.scrollIntoViewIfNeeded")).toBe(true);
     const shot = calls.find((c) => c.method === "Page.captureScreenshot");
-    expect(shot?.params?.clip).toMatchObject({ x: 0, y: 120, width: 40, height: 40, scale: 1 });
+    expect(shot?.params?.clip).toMatchObject({
+      x: 0,
+      y: 120,
+      width: 40,
+      height: 40,
+      scale: 1,
+    });
     expect(shot?.params?.captureBeyondViewport).toBe(false);
   });
 

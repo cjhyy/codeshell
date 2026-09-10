@@ -62,6 +62,7 @@ interface SidebarProps {
   activeProjectId: string | null;
   activeSessionId: string | null;
   collapsedProjects: Set<string>;
+  revealedSessionIds?: Record<string, string>;
   /** Per-bucket status mark, keyed by the shared bucketKey(projectId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
@@ -130,6 +131,7 @@ export function Sidebar({
   activeProjectId,
   activeSessionId,
   collapsedProjects,
+  revealedSessionIds,
   sessionStatuses,
   sidebarCollapsed,
   petPendingCount,
@@ -415,6 +417,7 @@ export function Sidebar({
               collapsed={collapsedProjects.has(project.id)}
               isActiveProject={activeProjectId === project.id}
               activeSessionId={activeSessionId}
+              revealedSessionId={revealedSessionIds?.[project.id]}
               statusFor={(sid) => sessionStatuses?.[bucketKey(project.id, sid)]}
               onToggle={() => onToggleProject(project.id)}
               onSelectProject={() => onSelectProject(project.id)}
@@ -897,6 +900,7 @@ export function ProjectGroup({
   collapsed,
   isActiveProject,
   activeSessionId,
+  revealedSessionId,
   statusFor,
   onToggle,
   onSelectProject,
@@ -914,6 +918,7 @@ export function ProjectGroup({
   collapsed: boolean;
   isActiveProject: boolean;
   activeSessionId: string | null;
+  revealedSessionId?: string;
   statusFor: (sid: string) => SessionStatus | undefined;
   onToggle: () => void;
   onSelectProject: () => void;
@@ -943,8 +948,9 @@ export function ProjectGroup({
         showMore,
         COMPACT_SESSION_LIMIT,
         expandedPage * EXPANDED_SESSION_PAGE,
+        revealedSessionId,
       ),
-    [activeSessionId, expandedPage, isActiveProject, live, showMore],
+    [activeSessionId, expandedPage, isActiveProject, live, revealedSessionId, showMore],
   );
   const hiddenLiveCount = Math.max(0, live.length - visibleLive.length);
   const workspaceSessions = useMemo(() => (collapsed ? [] : visibleLive), [collapsed, visibleLive]);

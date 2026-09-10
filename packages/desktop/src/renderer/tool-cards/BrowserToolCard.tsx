@@ -118,6 +118,10 @@ export function browserSummary(
   args: Record<string, unknown>,
 ): string {
   const name = message.toolName.toLowerCase();
+  if (name === "browser_inspect") {
+    const label = args.mode === "stop" ? "停止页面诊断" : "检查页面运行情况";
+    return message.status === "running" ? `正在${label}` : `已${label}`;
+  }
   if (message.status === "running") {
     if (name === "browser_navigate") return `正在打开 ${shortUrl(args.url)}`;
     if (name === "browser_observe") return "正在观察页面";
@@ -159,6 +163,8 @@ function actionLabel(action: unknown): string {
       return "等待页面";
     case "request_takeover":
       return "显示浏览器供用户接管";
+    case "resume_control":
+      return "恢复浏览器操作";
     case "list_tabs":
       return "读取标签页";
     case "switch_tab":

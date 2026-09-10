@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
 import type { BrowserHostHandle, BrowserHostOpenOptions } from "../browser-host/index.js";
-import { CdpBrowserDriver } from "./cdp-driver.js";
 import { BackgroundBrowserRuntime, backgroundBrowserPartition } from "./background-runtime.js";
 
 interface Harness {
@@ -21,6 +20,9 @@ function harness(options?: {
   maxRememberedTargets?: number;
   now?: () => number;
   beforeOpen?: () => Promise<void>;
+  beforeCreateDriver?: () => Promise<void>;
+  beforeResumeDriver?: () => Promise<void>;
+  onDetach?: () => void;
 }): Harness {
   const openOptions: BrowserHostOpenOptions[] = [];
   const calls: string[] = [];
@@ -94,12 +96,19 @@ function harness(options?: {
         state.url = open.url;
         return host;
       },
-      createDriver: () => base as CdpBrowserDriver,
-      attach: () => {
-        calls.push("attach");
-        return true;
+      createDriver: async () => {
+        await options?.beforeCreateDriver?.();
+        return base;
       },
-      detach: () => calls.push("detach"),
+      resumeDriver: async () => {
+        calls.push("resume");
+        await options?.beforeResumeDriver?.();
+        return base;
+      },
+      detach: () => {
+        calls.push("detach");
+        options?.onDetach?.();
+      },
       policy: () => ({ allowedDomains: options?.allowedDomains ?? [] }),
       now: options?.now ?? (() => 100),
     },
@@ -108,6 +117,216 @@ function harness(options?: {
 }
 
 describe("BackgroundBrowserRuntime", () => {
+  test("tool lease release preserves control; takeover requires an explicit resume", async () => {
+    const h = harness();
+    const options = { ownerId: "persistent-control", partition: "test-control" };
+    const first = h.runtime.acquire(options);
+    await first.bridge.snapshot();
+    first.release();
+    const second = h.runtime.acquire(options);
+    expect((await second.bridge.click("ref")).ok).toBe(true);
+    expect(h.calls).not.toContain("detach");
+    await second.show();
+    expect(h.state.visible).toBe(true);
+    expect((await second.bridge.click("ref")).ok).toBe(false);
+    second.release();
+    const third = h.runtime.acquire(options);
+    expect((await third.bridge.click("ref")).ok).toBe(false);
+    expect(await third.bridge.resumeControl?.()).toMatchObject({ ok: true });
+    expect(h.calls).toContain("resume");
+    expect((await third.bridge.click("ref")).ok).toBe(true);
+    third.release();
+    h.runtime.closeAll();
+  });
+
+  test("a released lease cannot pause a later lease's browser control", async () => {
+    const h = harness();
+    const owner = { ownerId: "stale-takeover", partition: "stale-takeover" };
+    const oldLease = h.runtime.acquire(owner);
+    await oldLease.bridge.snapshot();
+    oldLease.release();
+    const currentLease = h.runtime.acquire(owner);
+    expect(await oldLease.bridge.requestHumanTakeover!()).toMatchObject({ ok: false });
+    expect(h.calls).not.toContain("detach");
+    expect(h.state.visible).toBe(false);
+    expect((await currentLease.bridge.navigate("https://example.com/current-request")).ok).toBe(
+      true,
+    );
+    currentLease.release();
+    h.runtime.closeAll();
+  });
+
+  test("takeover cancels an in-flight wait before waiting for the target queue", async () => {
+    let rejectWait: (error: Error) => void = () => {};
+    let started!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const h = harness({
+      overrides: {
+        waitForLoad: () =>
+          new Promise((_resolve, reject) => {
+            rejectWait = reject;
+            started();
+          }),
+      },
+      onDetach: () => rejectWait(new Error("control released")),
+    });
+    const lease = h.runtime.acquire({ ownerId: "cancel-wait", partition: "cancel-wait" });
+    const pending = lease.bridge.waitForLoad();
+    await waiting;
+    await lease.show();
+    expect(await pending).toMatchObject({ ok: false, detail: "control released" });
+    expect(h.state.visible).toBe(true);
+    lease.release();
+    h.runtime.closeAll();
+  });
+
+  test.each(["show", "requestHumanTakeover"] as const)(
+    "%s invalidates earlier queued resumes while a later explicit resume works",
+    async (takeoverMethod) => {
+      let finishWait!: () => void;
+      let markStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        markStarted = resolve;
+      });
+      const h = harness({
+        overrides: {
+          waitForLoad: () =>
+            new Promise((resolve) => {
+              finishWait = () => resolve({ ok: false, detail: "control released" });
+              markStarted();
+            }),
+        },
+        onDetach: () => finishWait?.(),
+      });
+      const lease = h.runtime.acquire({ ownerId: "queued-resume", partition: "queued-resume" });
+      const waiting = lease.bridge.waitForLoad();
+      await started;
+      const oldResume = lease.bridge.resumeControl!();
+      const oldNavigation = lease.bridge.navigate("https://example.com/old-request");
+      await (takeoverMethod === "show" ? lease.show() : lease.bridge.requestHumanTakeover!());
+      await waiting;
+      expect(await oldResume).toMatchObject({ ok: false });
+      expect(await oldNavigation).toMatchObject({ ok: false });
+      expect(h.calls).not.toContain("resume");
+      expect(h.calls).not.toContain("navigate:https://example.com/old-request");
+      expect(h.state.visible).toBe(true);
+      expect(await lease.bridge.resumeControl!()).toMatchObject({ ok: true });
+      expect((await lease.bridge.navigate("https://example.com/new-request")).ok).toBe(true);
+      lease.release();
+      h.runtime.closeAll();
+    },
+  );
+
+  test("takeover during resume connection prevents its late completion from restoring control", async () => {
+    let finishResume!: () => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    let resumeCalls = 0;
+    const h = harness({
+      beforeResumeDriver: async () => {
+        if (++resumeCalls !== 1) return;
+        await new Promise<void>((resolve) => {
+          finishResume = resolve;
+          markStarted();
+        });
+      },
+    });
+    const lease = h.runtime.acquire({ ownerId: "pending-resume", partition: "pending-resume" });
+    await lease.bridge.snapshot();
+    await lease.show();
+    const oldResume = lease.bridge.resumeControl!();
+    await started;
+    const takeover = lease.show();
+    finishResume();
+    expect(await oldResume).toMatchObject({ ok: false });
+    await takeover;
+    expect((await lease.bridge.navigate("https://example.com/still-paused")).ok).toBe(false);
+    expect(await lease.bridge.resumeControl!()).toMatchObject({ ok: true });
+    expect((await lease.bridge.navigate("https://example.com/new-request")).ok).toBe(true);
+    lease.release();
+    h.runtime.closeAll();
+  });
+
+  test.each([
+    [1, "show"],
+    [1, "requestHumanTakeover"],
+    [2, "show"],
+    [2, "requestHumanTakeover"],
+  ] as const)(
+    "takeover during driver wait %i via %s prevents the original navigation",
+    async (driverWait, takeoverMethod) => {
+      let finishConnecting!: () => void;
+      let started!: () => void;
+      const connecting = new Promise<void>((resolve) => {
+        finishConnecting = resolve;
+      });
+      const waiting = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      let driverCalls = 0;
+      const h = harness({
+        beforeCreateDriver: async () => {
+          if (++driverCalls !== driverWait) return;
+          started();
+          await connecting;
+        },
+      });
+      const lease = h.runtime.acquire({ ownerId: "connecting", partition: "connecting" });
+      const navigation = lease.bridge.navigate("https://example.com/old-request");
+      await waiting;
+      const takeover =
+        takeoverMethod === "show" ? lease.show() : lease.bridge.requestHumanTakeover!();
+      finishConnecting();
+      expect(await navigation).toMatchObject({ ok: false });
+      await takeover;
+      expect(h.calls).not.toContain("navigate:https://example.com/old-request");
+      expect(h.state.visible).toBe(true);
+      expect(h.state.closed).toBe(false);
+      expect((await lease.bridge.navigate("https://example.com/still-paused")).ok).toBe(false);
+      expect(await lease.bridge.resumeControl!()).toMatchObject({ ok: true });
+      expect((await lease.bridge.navigate("https://example.com/new-request")).ok).toBe(true);
+      lease.release();
+      h.runtime.closeAll();
+    },
+  );
+
+  test.each(["release", "close"] as const)(
+    "%s during driver validation prevents the original navigation",
+    async (interruption) => {
+      let finishConnecting!: () => void;
+      let started!: () => void;
+      const connecting = new Promise<void>((resolve) => {
+        finishConnecting = resolve;
+      });
+      const waiting = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      let driverCalls = 0;
+      const h = harness({
+        beforeCreateDriver: async () => {
+          if (++driverCalls !== 2) return;
+          started();
+          await connecting;
+        },
+      });
+      const owner = { ownerId: "cancel-connecting", partition: "cancel-connecting" };
+      const lease = h.runtime.acquire(owner);
+      const navigation = lease.bridge.navigate("https://example.com/old-request");
+      await waiting;
+      if (interruption === "release") lease.release();
+      else h.runtime.close(owner.ownerId);
+      finishConnecting();
+      expect(await navigation).toMatchObject({ ok: false });
+      expect(h.calls).not.toContain("navigate:https://example.com/old-request");
+      lease.release();
+      h.runtime.closeAll();
+    },
+  );
+
   test("is lazy, opens a hidden unthrottled BrowserWindow on first browser call", async () => {
     const h = harness();
     const lease = h.runtime.acquire({
@@ -127,7 +346,7 @@ describe("BackgroundBrowserRuntime", () => {
       backgroundThrottling: false,
       partition: "persist:browser:automation:job-1",
     });
-    expect(h.calls).toEqual(["attach", "navigate:https://example.com/", "detach", "reset"]);
+    expect(h.calls).toEqual(["navigate:https://example.com/"]);
     lease.release();
     h.runtime.closeAll();
   });
@@ -229,13 +448,13 @@ describe("BackgroundBrowserRuntime", () => {
     lease.hide();
     const typedResult = await lease.bridge.type("e1", "ordinary-password");
     expect(typedResult).toMatchObject({ ok: false });
-    expect(h.state.visible).toBe(true);
+    expect(h.state.visible).toBe(false);
     expect(typed).toBe(false);
 
     lease.hide();
     const clickResult = await lease.bridge.click("e2");
     expect(clickResult).toMatchObject({ ok: false });
-    expect(h.state.visible).toBe(true);
+    expect(h.state.visible).toBe(false);
     expect(clicked).toBe(false);
 
     lease.release();

@@ -162,13 +162,14 @@ describe("DesktopBrowserRuntime", () => {
     });
   });
 
-  test("stops identical structured scroll states across calls", async () => {
+  test("stops identical offsets but allows successive verified canvas content changes", async () => {
     const targetBridge = fakeBridge();
+    let contentChanged = false;
     targetBridge.scroll = async () => ({
       ok: true,
       code: "OK",
       documentId: "frame:loader-1",
-      contentChanged: false,
+      contentChanged,
       scroll: {
         x: 0,
         y: 1000,
@@ -202,6 +203,9 @@ describe("DesktopBrowserRuntime", () => {
       code: "NO_PROGRESS",
       retryable: false,
     });
+    contentChanged = true;
+    expect((await first.bridge.scroll("down")).ok).toBe(true);
+    expect((await second.bridge.scroll("down")).ok).toBe(true);
   });
 
   test("default mode fails closed instead of silently switching away from in-app", async () => {

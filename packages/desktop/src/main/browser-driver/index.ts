@@ -1,19 +1,14 @@
-/**
- * browser-driver — self-contained module that implements core's BrowserBridge
- * by driving a browser target over CDP. Decoupled from UI: the core driver
- * (cdp-driver.ts) needs only a CdpSender; the Electron adapter (electron-cdp.ts)
- * is the sole Electron touchpoint. Designed to be extractable into its own
- * package later, and reusable for both the visible webview (user-present) and a
- * hidden BrowserWindow (unattended), per the MVP spec.
- *
- * Public surface:
- *  - CdpBrowserDriver: the UI-agnostic BrowserBridge implementation
- *  - driverFor / withAttached / attach·detachDebugger: Electron webContents glue
- */
+/** BrowserBridge hosts. Production Electron actions use Puppeteer; the raw-CDP
+ * bridge remains an explicit compatibility export for other embedders/tests. */
 
 export { CdpBrowserDriver } from "./cdp-driver.js";
 export type { CdpSender, PageInfo } from "./cdp-driver.js";
-export { driverFor, withAttached, attachDebugger, detachDebugger } from "./electron-cdp.js";
+export {
+  driverFor,
+  acquireElectronBrowser,
+  authorizeElectronBrowser,
+  releaseElectronBrowser,
+} from "./electron-cdp.js";
 export { handleBrowserAction } from "./automation-host.js";
 export type { BrowserActionRequest, AutomationDeps } from "./automation-host.js";
 export { isDomainAllowed, isSensitiveAction, DEFAULT_POLICY } from "./policy.js";

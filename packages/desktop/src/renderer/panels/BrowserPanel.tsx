@@ -262,6 +262,7 @@ export function BrowserPanel({
   const [chromeRuntime, setChromeRuntime] = useState<{
     sessionId: string;
     connected: boolean;
+    error?: string;
     pairing?: { code: string; label: string; expiresAt: number };
     granted?: {
       tabId: number;
@@ -277,8 +278,7 @@ export function BrowserPanel({
   const handleActiveGuestDomReady = useCallback(() => {
     setReadyGuestTabId(activeId);
   }, [activeId]);
-  const activeGuestReady =
-    readyGuestTabId === activeId && !evicted && !showingNewTab;
+  const activeGuestReady = readyGuestTabId === activeId && !evicted && !showingNewTab;
 
   useEffect(() => {
     let cancelled = false;
@@ -603,6 +603,15 @@ export function BrowserPanel({
           >
             {t("panels.browser.revokeRuntimeHandoff")}
           </Button>
+        </div>
+      )}
+
+      {chromeRuntime.error && (
+        <div
+          role="alert"
+          className="shrink-0 border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground"
+        >
+          {t("panels.browser.chromeFailed")}: {chromeRuntime.error}
         </div>
       )}
 
