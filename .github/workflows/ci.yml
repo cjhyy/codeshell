@@ -109,6 +109,16 @@ jobs:
           bun-version: "1.3.11"
       - name: install
         run: bun install --frozen-lockfile
+      # Real conversion and cancellation tests require the same command-line
+      # media tools that the Host detects at runtime. Keep these checks active
+      # on Linux rather than relying on a developer machine's installed tools.
+      - name: install desktop media test tools
+        if: matrix.shard == 'desktop'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg
+          ffmpeg -version
+          ffprobe -version
       # Windows and other focused jobs still list literal paths. Keep their
       # references checked even though this Linux job now runs the full suite.
       - name: verify workflow test paths exist
