@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
@@ -9,7 +9,11 @@ import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message } from "../types.js";
 
 const fakeProvider = "fake-client-message-id";
-const scenarios = new Map<string, { calls: Message[][] }>();
+interface Scenario {
+  calls: Message[][];
+  beforeReply?: (options: CreateMessageOptions) => Promise<void>;
+}
+const scenarios = new Map<string, Scenario>();
 
 class FakeClientMessageIdClient extends LLMClientBase {
   protected initClient(): void {}
@@ -19,6 +23,7 @@ class FakeClientMessageIdClient extends LLMClientBase {
     if (!scenario) throw new Error(`missing fake scenario: ${this.model}`);
     if ((options.tools?.length ?? 0) > 0) {
       scenario.calls.push(options.messages.map((message) => ({ ...message })));
+      await scenario.beforeReply?.(options);
     }
     this.recordUsage({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }, options);
     return {
@@ -35,12 +40,12 @@ registerProvider(fakeProvider, FakeClientMessageIdClient);
 function makeEngine(): {
   engine: Engine;
   dir: string;
-  scenario: { calls: Message[][] };
+  scenario: Scenario;
   model: string;
 } {
   const dir = mkdtempSync(join(tmpdir(), "engine-client-message-id-"));
   const model = `${fakeProvider}-${Date.now()}-${Math.random()}`;
-  const scenario = { calls: [] };
+  const scenario: Scenario = { calls: [] };
   scenarios.set(model, scenario);
   const engine = new Engine({
     llm: { provider: fakeProvider, model, apiKey: "test" } as never,
@@ -57,6 +62,73 @@ function countExactText(messages: Message[], text: string): number {
 }
 
 describe("Engine clientMessageId submit idempotency", () => {
+  it("reports an accepted input without a saved result as incomplete and permits a fresh intent", async () => {
+    const { engine, dir, scenario, model } = makeEngine();
+    const controller = new AbortController();
+    let resolveEntered!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      resolveEntered = resolve;
+    });
+    scenario.beforeReply = async (options) => {
+      resolveEntered();
+      await new Promise<void>((_resolve, reject) => {
+        const abort = () => reject(new DOMException("Stopped", "AbortError"));
+        if (options.signal?.aborted) abort();
+        else options.signal?.addEventListener("abort", abort, { once: true });
+      });
+    };
+    const running = engine.run("do recoverable work", {
+      sessionId: "s-incomplete",
+      cwd: dir,
+      clientMessageId: "accepted-input",
+      signal: controller.signal,
+    });
+    try {
+      await entered;
+      // Capture actual durable Engine state while the provider is running.
+      // This prefix is what a process crash leaves: an accepted input without
+      // the later result receipt. Stop the original only after copying it.
+      const recoveredRoot = join(dir, "recovered-sessions");
+      cpSync(join(dir, "sessions"), recoveredRoot, { recursive: true });
+      const transcriptPath = join(recoveredRoot, "s-incomplete", "transcript.jsonl");
+      const interruptedTranscript = readFileSync(transcriptPath, "utf8");
+      expect(interruptedTranscript).toContain("accepted-input");
+      expect(interruptedTranscript).not.toContain('"type":"run_result"');
+      controller.abort();
+      await running;
+      scenario.beforeReply = undefined;
+      const restarted = new Engine({
+        llm: { provider: fakeProvider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: recoveredRoot,
+        headless: true,
+      });
+      (restarted as any).hooks.clear();
+      const replayed = await restarted.run("do recoverable work", {
+        sessionId: "s-incomplete",
+        cwd: dir,
+        clientMessageId: "accepted-input",
+      });
+      expect(replayed.reason).toBe("replay_incomplete");
+      expect(replayed.text).toContain("no final result was saved");
+      expect(scenario.calls).toHaveLength(1);
+      expect(readFileSync(transcriptPath, "utf8")).toBe(interruptedTranscript);
+      const recovered = await restarted.run("do recoverable work", {
+        sessionId: "s-incomplete",
+        cwd: dir,
+        clientMessageId: "fresh-attempt",
+      });
+      expect(recovered.reason).toBe("completed");
+      expect(recovered.text).toBe("ok 2");
+      expect(scenario.calls).toHaveLength(2);
+    } finally {
+      controller.abort();
+      await running;
+      scenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("replays a duplicate submit result after an engine restart", async () => {
     const { engine, dir, scenario, model } = makeEngine();
     try {

@@ -226,7 +226,7 @@ interface PetDispatchOptions {
     requestWorker(
       method: string,
       params: Record<string, unknown>,
-      options: { meta: WorkerFrameMeta },
+      options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
     /** Optional live stream tap used to confirm that a queued steer was actually consumed. */
     subscribeOutbound?(
@@ -891,7 +891,11 @@ export class PetDispatchService {
               ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
               ...(command.attachments?.length ? { attachments: command.attachments } : {}),
             },
-            { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+            {
+              settleOnExit: true,
+              failFast: true,
+              meta: { origin: "host", producer: "pet-dispatch-steer" },
+            },
           );
           return {
             accepted: response.ok && readWorkerBoolean(response.result, "accepted") === true,
@@ -902,7 +906,11 @@ export class PetDispatchService {
           const response = await this.options.worker.requestWorker(
             "agent/unsteer",
             { sessionId: admission.active.sessionId, id: admission.steer.id },
-            { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+            {
+              settleOnExit: true,
+              failFast: true,
+              meta: { origin: "host", producer: "pet-dispatch-steer" },
+            },
           );
           return {
             removed: !response.ok || readWorkerBoolean(response.result, "removed") !== false,
@@ -962,6 +970,10 @@ export class PetDispatchService {
       active.workerRunPending = true;
     try {
       return await this.options.worker.requestWorker("agent/run", params, {
+        // An exited worker cannot answer this turn. Release the chat and its
+        // queued inputs immediately instead of waiting for the RPC timeout.
+        settleOnExit: true,
+        failFast: true,
         meta: { origin: "host", producer: "pet-dispatch" },
       });
     } finally {
@@ -982,6 +994,8 @@ export class PetDispatchService {
   private requestManagerRun(params: Record<string, unknown>, producer: string) {
     return this.withManagerTurn(() =>
       this.options.worker.requestWorker("agent/run", params, {
+        settleOnExit: true,
+        failFast: true,
         meta: { origin: "host", producer },
       }),
     );
@@ -1001,7 +1015,11 @@ export class PetDispatchService {
       const response = await this.options.worker.requestWorker(
         "agent/cancel",
         { sessionId: active.sessionId, expectedClientMessageId: active.clientMessageId },
-        { meta: { origin: "host", producer: "pet-chat-stop" } },
+        {
+          settleOnExit: true,
+          failFast: true,
+          meta: { origin: "host", producer: "pet-chat-stop" },
+        },
       );
       if (!response.ok) {
         active.stopRequested = false;

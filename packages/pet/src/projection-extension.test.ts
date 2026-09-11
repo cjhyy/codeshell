@@ -13,6 +13,86 @@ import {
 } from "./protocol.js";
 
 describe("Pet projection observer", () => {
+  test("withdraws a newly hidden session first exposed by a snapshot without a delta", async () => {
+    const live: ProtocolLiveSession = {
+      sessionId: "snapshot-manager",
+      busy: true,
+      queueDepth: 0,
+      lastActivityAt: 100,
+      kind: "work",
+    };
+    let snapshotQuery: ExtensionQueryHandler | undefined;
+    const deltas: PetProjectionDelta[] = [];
+    const observer = createPetProjectionObserver({
+      getLiveSessionSnapshot: () => [live],
+      projectionGeneration: () => 1,
+      getSessionKind: () => live.kind,
+      isTransportDisconnected: () => false,
+      registerQuery: (_method, handler) => {
+        snapshotQuery = handler;
+      },
+      notify: (_method, payload) => deltas.push(payload as unknown as PetProjectionDelta),
+    });
+    observer.onSessionAttached?.(live.sessionId, 100);
+    const initial = (await snapshotQuery?.({})) as PetProjectionSnapshotResult;
+    expect(initial.sessions[0]?.agentSessionId).toBe(live.sessionId);
+    expect(deltas).toEqual([]);
+    live.kind = "pet";
+    observer.onRunBoundary?.(live.sessionId, "end");
+    expect(deltas).toEqual([
+      expect.objectContaining({
+        kind: "session-remove",
+        sessionId: live.sessionId,
+        version: initial.snapshotVersion + 1,
+      }),
+    ]);
+  });
+
+  test.each(["stream", "boundary"])(
+    "withdraws an initial default-kind projection once the session becomes Pet (%s)",
+    (trigger) => {
+      const live: ProtocolLiveSession = {
+        sessionId: "new-manager",
+        busy: true,
+        queueDepth: 0,
+        lastActivityAt: 100,
+        kind: "work",
+      };
+      const deltas: PetProjectionDelta[] = [];
+      const observer = createPetProjectionObserver({
+        getLiveSessionSnapshot: () => [live],
+        projectionGeneration: () => 1,
+        getSessionKind: () => live.kind,
+        isTransportDisconnected: () => false,
+        registerQuery: () => {},
+        notify: (_method, payload) => deltas.push(payload as unknown as PetProjectionDelta),
+      });
+      observer.onSessionAttached?.(live.sessionId, 100);
+      observer.onRunBoundary?.(live.sessionId, "start");
+      expect(deltas.at(-1)).toMatchObject({
+        kind: "session-upsert",
+        session: { agentSessionId: live.sessionId, runState: "running" },
+      });
+      live.kind = "pet";
+      if (trigger === "stream") {
+        observer.onSessionStream?.(live.sessionId, {
+          type: "session_started",
+          sessionId: live.sessionId,
+          promptTokens: 0,
+        });
+      } else {
+        observer.onRunBoundary?.(live.sessionId, "end");
+      }
+      expect(deltas.at(-1)).toMatchObject({
+        kind: "session-remove",
+        sessionId: live.sessionId,
+      });
+      observer.onRunBoundary?.(live.sessionId, "end");
+      observer.onSessionStream?.(live.sessionId, { type: "turn_complete", reason: "completed" });
+      expect(deltas.map((delta) => delta.kind)).toEqual(["session-upsert", "session-remove"]);
+    },
+  );
+
   test("drops closed session state before the same id is attached again", async () => {
     let liveSessions: ProtocolLiveSession[] = [
       {

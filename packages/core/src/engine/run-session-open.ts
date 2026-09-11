@@ -131,8 +131,11 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       return {
         ok: false,
         result: {
-          text: "",
-          reason: "completed",
+          // A crash or receipt-write failure can leave an accepted input with
+          // no durable outcome. Keep deduplication (tools may already have run),
+          // but never report an empty success for this unresolved attempt.
+          text: "This input was already accepted, but no final result was saved. Restore the input and send it again to start a new attempt.",
+          reason: "replay_incomplete",
           sessionId: session.state.sessionId,
           turnCount: session.state.turnCount ?? 0,
           usage: {

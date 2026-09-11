@@ -104,7 +104,12 @@ function workspace(request: CreateMessageOptions): string {
 }
 
 function createHarness(
-  options: { failLaunch?: boolean; failSendOnce?: boolean; failReply?: boolean } = {},
+  options: {
+    failLaunch?: boolean;
+    failSendOnce?: boolean;
+    failReply?: boolean;
+    beforeLaunch?: (dispatcher: PetDispatchService) => Promise<void>;
+  } = {},
 ) {
   const dir = mkdtempSync(join(tmpdir(), "mimi-chat-replay-"));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
@@ -203,6 +208,7 @@ function createHarness(
     ],
     startWorkSession: async (input) => {
       launches.push(input);
+      await options.beforeLaunch?.(dispatcher);
       if (options.failLaunch) throw new Error("fixture launch rejected");
       return { sessionId: input.targetSessionId ?? `work-${launches.length}`, cwd: dir };
     },
@@ -276,6 +282,7 @@ function createHarness(
     outcomes,
     events,
     dispatcher,
+    client,
     steered,
     expectAcceptedScopedSteer: () => {
       expect(scopedSteers).toEqual([
@@ -294,7 +301,175 @@ function createHarness(
   };
 }
 
+function closedWorkFixture() {
+  return {
+    schemaVersion: 1 as const,
+    id: "runtime-closed-work",
+    originClientMessageId: "original-work-request",
+    objective: "Report the actual work result",
+    status: "failed" as const,
+    phase: "finalizing" as const,
+    attempt: 1,
+    revision: 1,
+    createdAt: 1,
+    updatedAt: 2,
+    completedAt: 2,
+    artifacts: [],
+    events: [],
+    lastError: "fixture work process failed",
+  };
+}
+
 describe("Mimi historical chat replay through the real manager stack", () => {
+  test("real Engine Stop rejects a late model reply and cannot stop the successor", async () => {
+    const h = createHarness();
+    const entered = deferred();
+    const nextEntered = deferred();
+    const releaseNext = deferred();
+    let firstSignal: AbortSignal | undefined;
+    let nextSignal: AbortSignal | undefined;
+    h.script.steps.push(
+      async (request) => {
+        firstSignal = request.signal;
+        entered.resolve();
+        await new Promise<void>((resolve) => {
+          if (request.signal?.aborted) resolve();
+          else request.signal?.addEventListener("abort", () => resolve(), { once: true });
+        });
+        // Simulate a provider resolving after cancellation. Production Engine
+        // must discard this tool request, even though the provider ignored Stop.
+        return response("GatewayReply", { text: "STALE_CANCELLED_REPLY" });
+      },
+      async (request) => {
+        nextSignal = request.signal;
+        nextEntered.resolve();
+        await releaseNext.promise;
+        return response("GatewayReply", { text: "后续输入正常完成。" });
+      },
+    );
+    const first = h.say("请先处理这个请求", "cancel-real-engine");
+    await entered.promise;
+    const originalId = h.events.find((event) => event.type === "session_started")!.clientMessageId!;
+    expect(
+      await h.dispatcher.dispatch({ type: "stop_chat", clientMessageId: "stale-id" }),
+    ).toMatchObject({ stopped: false });
+    expect(firstSignal?.aborted).toBe(false);
+    expect(
+      await h.dispatcher.dispatch({ type: "stop_chat", clientMessageId: originalId }),
+    ).toMatchObject({ stopped: true });
+    await first;
+    expect(firstSignal?.aborted).toBe(true);
+    expect(h.outcomes[0]).toMatchObject({ result: { reason: "aborted_streaming" } });
+    expect(h.replyActions).toBe(0);
+
+    const next = h.say("继续新的请求", "successor-real-engine");
+    await nextEntered.promise;
+    expect(
+      await h.client.requestExtension("agent/cancel", {
+        sessionId: "pet-replay",
+        expectedClientMessageId: originalId,
+      }),
+    ).toEqual({ ok: true, stopped: false });
+    expect(nextSignal?.aborted).toBe(false);
+    releaseNext.resolve();
+    await next;
+    expect(h.sent.map((item) => item.message.text).join("\n")).not.toContain(
+      "STALE_CANCELLED_REPLY",
+    );
+    expect(h.sent.at(-1)?.message.text).toBe("后续输入正常完成。");
+    expect(h.replyActions).toBe(1);
+  });
+
+  test("real manager serializes an internal closure before two queued user inputs", async () => {
+    const h = createHarness();
+    h.script.steps.push(() => response("GatewayReply", { text: "Mimi 已准备好。" }));
+    await h.say("开始验证", "warmup-closure");
+    const closureEntered = deferred();
+    const releaseClosure = deferred();
+    h.script.steps.push(
+      async (request) => {
+        expect(request.systemPrompt).toContain("fixture work process failed");
+        closureEntered.resolve();
+        await releaseClosure.promise;
+        return response(undefined, {}, "工作失败，保留失败原因。");
+      },
+      () => response("GatewayReply", { text: "第一条用户输入的回复。" }),
+      () => response("GatewayReply", { text: "第二条用户输入的回复。" }),
+    );
+    const closure = h.dispatcher.reportLongTaskClosure(closedWorkFixture());
+    await closureEntered.promise;
+    const first = h.say("第一条用户输入", "queued-user-one");
+    const second = h.say("第二条用户输入", "queued-user-two");
+    await Bun.sleep(10);
+    expect(h.script.requests).toHaveLength(2);
+    expect(await h.dispatcher.dispatch({ type: "stop_chat" })).toMatchObject({ stopped: false });
+    releaseClosure.resolve();
+    const [report] = await Promise.all([closure, first, second]);
+    expect(report.text).toContain("工作失败");
+    expect(h.sent.slice(1).map((item) => item.message.text)).toEqual([
+      "第一条用户输入的回复。",
+      "第二条用户输入的回复。",
+    ]);
+    expect(h.events.some((event) => event.type === "steer_injected")).toBe(false);
+    expect(h.script.requests).toHaveLength(4);
+  });
+
+  test("a real delegation failure can synchronously close work and compose its receipt", async () => {
+    const h = createHarness({
+      failLaunch: true,
+      beforeLaunch: async (dispatcher) => {
+        const report = await dispatcher.reportLongTaskClosure(closedWorkFixture());
+        expect(report.text).toContain("工作进程失败");
+      },
+    });
+    h.script.steps.push(
+      (request) => {
+        const delegated = response("DelegateWork", {
+          workspace_id: workspace(request),
+          objective: "验证启动失败后的真实收尾链路。",
+        });
+        delegated.toolCalls.push(...response("GatewayReply", { text: "正在启动。" }).toolCalls);
+        return delegated;
+      },
+      (request) => {
+        expect(request.systemPrompt).toContain("fixture work process failed");
+        return response(undefined, {}, "工作进程失败，尚未完成。");
+      },
+      (request) => {
+        expect(request.systemPrompt).toContain("fixture launch rejected");
+        expect(request.tools?.map((tool) => tool.name)).not.toContain("DelegateWork");
+        return response(undefined, {}, "本次工作未启动，请重试。");
+      },
+    );
+    await h.say("启动验证任务", "nested-closure");
+    expect(h.script.requests).toHaveLength(3);
+    expect(h.launches).toHaveLength(1);
+    expect(h.sent.map((item) => item.message.text)).toEqual(["本次工作未启动，请重试。"]);
+    expect(h.outcomes[0]).toHaveProperty("delegationError");
+  });
+
+  test("a real failed turn is transport-idempotent but a fresh retry can succeed", async () => {
+    const h = createHarness();
+    h.script.steps.push(() => {
+      throw new Error("fixture model unavailable");
+    });
+    await h.say("生成完整结果", "failed-intent");
+    expect(h.outcomes[0]).toMatchObject({ result: { reason: "model_error" } });
+    expect(h.sent[0]?.message.text).toContain("没能回复");
+    const failedRequests = h.script.requests.length;
+    // Retrying delivery after an unknown transport outcome must not execute
+    // the model again. A user-requested retry is a distinct input intent.
+    await h.say("生成完整结果", "failed-intent");
+    expect(h.script.requests).toHaveLength(failedRequests);
+    expect(h.outcomes[1]).toMatchObject({ result: { reason: "model_error" } });
+    h.script.steps.push(() => response("GatewayReply", { text: "重试成功，完整结果已经生成。" }));
+    await h.say("生成完整结果", "fresh-retry-intent");
+    expect(h.script.requests).toHaveLength(failedRequests + 1);
+    expect(h.outcomes[2]).toMatchObject({ result: { reason: "completed" } });
+    expect(h.sent.at(-1)?.message.text).toBe("重试成功，完整结果已经生成。");
+    expect(h.replyActions).toBe(1);
+  });
+
   test("explains the question once and retains context for the next WeChat message", async () => {
     const h = createHarness();
     h.script.steps.push(

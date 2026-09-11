@@ -490,4 +490,241 @@ describe("Mimi chat interactions", () => {
     );
     expect(latest.chatBusy).toBe(false);
   });
+
+  test.each([
+    ["exited", false],
+    ["gave_up", false],
+    ["exited", true],
+    ["gave_up", true],
+  ] as const)(
+    "clears a streamed reply after worker %s with pending history %s and recovers an incomplete retry",
+    async (type, pendingHistory) => {
+      let streamListener: ((envelope: any) => void) | undefined;
+      let lifecycleListener: ((event: any) => void) | undefined;
+      let resolveHistory: ((items: unknown[]) => void) | undefined;
+      Object.assign(window.codeshell, {
+        ...(pendingHistory
+          ? {
+              getSessionTranscript: () =>
+                new Promise((resolve) => {
+                  resolveHistory = resolve;
+                }),
+            }
+          : {}),
+        onStreamEvent: (listener: typeof streamListener) => {
+          streamListener = listener;
+          return () => {
+            streamListener = undefined;
+          };
+        },
+        onAgentLifecycle: (listener: typeof lifecycleListener) => {
+          lifecycleListener = listener;
+          return () => {
+            lifecycleListener = undefined;
+          };
+        },
+      });
+      const originalDispatch = api.dispatch;
+      let resolveSend!: (result: any) => void;
+      api.dispatch = async (command) => {
+        if (command.type !== "chat") return originalDispatch(command);
+        sent.push(command);
+        if (sent.length === 1)
+          return new Promise((resolve) => {
+            resolveSend = resolve;
+          });
+        return {
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-input-test",
+          result:
+            sent.length === 2
+              ? {
+                  reason: "replay_incomplete",
+                  text: "This input was already accepted, but no final result was saved.",
+                }
+              : { reason: "completed" },
+        };
+      };
+      await mount("host");
+      let sending!: Promise<void>;
+      await act(async () => {
+        sending = latest.submitChat({
+          clientMessageId: "crashed-input",
+          message: "work",
+          draft: "work",
+          paths: [],
+        });
+        await flushMicrotasks();
+        streamListener?.({
+          sessionId: "pet-input-test",
+          event: {
+            type: "session_started",
+            sessionId: "pet-input-test",
+            promptTokens: 0,
+            runId: "crashed-run",
+            clientMessageId: "crashed-input",
+          },
+        });
+        streamListener?.({
+          sessionId: "pet-input-test",
+          event: {
+            type: "stream_request_start",
+            turnNumber: 1,
+            runId: "crashed-run",
+            clientMessageId: "crashed-input",
+          },
+        });
+        streamListener?.({
+          sessionId: "pet-input-test",
+          event: {
+            type: "text_delta",
+            text: "partial reply",
+            runId: "crashed-run",
+            clientMessageId: "crashed-input",
+          },
+        });
+      });
+      expect(latest.chatBusy).toBe(true);
+      await act(async () => {
+        lifecycleListener?.({ type, code: 1 });
+        resolveSend({
+          ok: false,
+          code: "worker-error",
+          message: "the agent worker exited before responding",
+        });
+        await sending;
+      });
+      await act(async () => {
+        resolveHistory?.([]);
+        await flushMicrotasks();
+      });
+      expect(latest.chatBusy).toBe(false);
+      expect(latest.chatState.streamingAssistantId).toBeNull();
+      expect(renderedText(container)).toContain("the agent worker exited before responding");
+      expect(elements(container, "BUTTON").some((node) => renderedText(node) === "停止回复")).toBe(
+        false,
+      );
+      const retry = elements(container, "BUTTON").find(
+        (node) => renderedText(node) === "重新发送",
+      )!;
+      await act(async () => {
+        propsOf(retry).onClick();
+        await flushMicrotasks();
+      });
+      expect(sent).toHaveLength(2);
+      expect(sent[1]).toEqual(sent[0]);
+      expect(latest.chatState.messages.filter((message) => message.kind === "user")).toHaveLength(
+        1,
+      );
+      expect(renderedText(container)).toContain("no final result was saved");
+      expect(elements(container, "BUTTON").some((node) => renderedText(node) === "重新发送")).toBe(
+        false,
+      );
+      const restore = elements(container, "BUTTON").find(
+        (node) => renderedText(node) === "恢复到输入框",
+      )!;
+      await act(async () => propsOf(restore).onClick());
+      const restoredInput = elements(container, "TEXTAREA")[0]!;
+      expect(propsOf(restoredInput).value).toBe("work");
+      await act(async () => {
+        propsOf(restoredInput).onKeyDown(enterEvent());
+        await flushMicrotasks();
+      });
+      expect(sent).toHaveLength(3);
+      expect(sent[2]?.clientMessageId).not.toBe(sent[0]?.clientMessageId);
+      expect(sent[2]?.message).toBe(sent[0]?.message);
+      expect(latest.chatBusy).toBe(false);
+      await act(async () => root.unmount());
+      expect(lifecycleListener).toBeUndefined();
+    },
+  );
+
+  test("a crashed worker's late RPC failure cannot clear a replacement worker's reply", async () => {
+    let streamListener: ((envelope: any) => void) | undefined;
+    let lifecycleListener: ((event: any) => void) | undefined;
+    Object.assign(window.codeshell, {
+      onStreamEvent: (listener: typeof streamListener) => {
+        streamListener = listener;
+        return () => {
+          streamListener = undefined;
+        };
+      },
+      onAgentLifecycle: (listener: typeof lifecycleListener) => {
+        lifecycleListener = listener;
+        return () => {
+          lifecycleListener = undefined;
+        };
+      },
+    });
+    const originalDispatch = api.dispatch;
+    const replies = new Map<string, (result: any) => void>();
+    api.dispatch = async (command) =>
+      command.type !== "chat"
+        ? originalDispatch(command)
+        : new Promise((resolve) => {
+            replies.set(command.clientMessageId!, resolve);
+          });
+    await mount("host");
+    const start = (clientMessageId: string, previousRunId?: string) => {
+      streamListener?.({
+        sessionId: "pet-input-test",
+        event: {
+          type: "session_started",
+          sessionId: "pet-input-test",
+          promptTokens: 0,
+          runId: clientMessageId,
+          clientMessageId,
+          previousRunId,
+        },
+      });
+      streamListener?.({
+        sessionId: "pet-input-test",
+        event: {
+          type: "stream_request_start",
+          turnNumber: 1,
+          runId: clientMessageId,
+          clientMessageId,
+        },
+      });
+    };
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    await act(async () => {
+      first = latest.submitChat({
+        clientMessageId: "old",
+        message: "old",
+        draft: "old",
+        paths: [],
+      });
+      await flushMicrotasks();
+      start("old");
+    });
+    await act(async () => {
+      lifecycleListener?.({ type: "exited", code: 1 });
+    });
+    await act(async () => {
+      second = latest.submitChat({
+        clientMessageId: "new",
+        message: "new",
+        draft: "new",
+        paths: [],
+      });
+      await flushMicrotasks();
+      start("new", "old");
+      replies.get("old")!({
+        ok: false,
+        code: "worker-error",
+        message: "the agent worker exited before responding",
+      });
+      await first;
+    });
+    expect(latest.chatBusy).toBe(true);
+    expect(latest.chatFailures.map((failure) => failure.clientMessageId)).toEqual(["old"]);
+    await act(async () => {
+      replies.get("new")!({ ok: true, type: "chat", result: { reason: "completed" } });
+      await second;
+    });
+    expect(latest.chatBusy).toBe(false);
+  });
 });

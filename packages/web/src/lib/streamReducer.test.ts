@@ -166,6 +166,11 @@ test("turn_complete model_error → run error", () => {
   expect(s.run).toBe("error");
 });
 
+test("turn_complete replay_incomplete never reports a recovered run as completed", () => {
+  const s = feed([ev({ type: "turn_complete", reason: "replay_incomplete" })]);
+  expect(s.run).toBe("error");
+});
+
 test("turn_complete max_turns/goal_budget_exhausted → 正常完成,非 error", () => {
   // Regression: budget/turn limits are EXPECTED stops, not failures.
   expect(feed([ev({ type: "turn_complete", reason: "max_turns" })]).run).toBe("completed");
