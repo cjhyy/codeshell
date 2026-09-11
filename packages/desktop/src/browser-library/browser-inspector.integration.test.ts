@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { chromium, type Browser } from "playwright-core";
 import { defaultLaunchCandidates } from "../main/browser-runtime/playwright-backend.js";
@@ -31,17 +31,27 @@ async function stage<T>(name: string, run: () => Promise<T>, timeoutMs = 6000): 
   }
 }
 
+let browser: Browser | undefined;
+// Cold process startup is fixture setup, separate from the page-inspection
+// deadline. Match the other real-browser suites' 30s launch budget.
+beforeAll(async () => {
+  if (!launchCandidate) return;
+  browser = await stage(
+    `launch ${launchCandidate.label}`,
+    () => chromium.launch({ headless: true, ...launchCandidate, timeout: 30000 }),
+    32000,
+  );
+}, 35000);
+
+afterAll(async () => {
+  if (browser) await stage("close browser", () => browser!.close(), 3000);
+}, 5000);
+
 test.skipIf(!launchCandidate)(
   "inspects a real page and records diagnostics without exposing request secrets",
   async () => {
-    let browser: Browser | undefined;
     let inspector: BrowserInspector | undefined;
-    let failed = false;
-    let failure: unknown;
     try {
-      browser = await stage(`launch ${launchCandidate!.label}`, () =>
-        chromium.launch({ headless: true, ...launchCandidate, timeout: 5000 }),
-      );
       const page = await stage("create page", () => browser!.newPage());
       page.setDefaultNavigationTimeout(3000);
       inspector = createPlaywrightInspector(page);
@@ -123,24 +133,9 @@ test.skipIf(!launchCandidate)(
         recording: true,
         entries: [],
       });
-    } catch (error) {
-      failed = true;
-      failure = error;
     } finally {
       inspector?.dispose();
-      if (browser) {
-        try {
-          await stage("close browser", () => browser!.close(), 3000);
-        } catch (error) {
-          if (failed) console.error(error);
-          else {
-            failed = true;
-            failure = error;
-          }
-        }
-      }
     }
-    if (failed) throw failure;
   },
   15000,
 );
