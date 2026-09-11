@@ -8,6 +8,42 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.9] - 2026-09-11
+
+### Added
+
+- Added the standalone Hub's shared web workbench and persistent Docker project sandboxes.
+- Added Host-managed Panel media APIs for authorized asset import, speech, transcription,
+  audio processing, video preparation and rendering, with persistent scoped media records.
+- Added text-to-speech connections independently from voice-input transcription settings.
+
+### Fixed
+
+- Preserve desktop conversation history and pending input through reloads, late snapshots,
+  earlier-history expansion, and application shutdown; pair stream cursors with the Main
+  process generation for desktop and mobile recovery.
+- Prevent directory-lock contention from freezing the desktop process or losing trust,
+  settings, credentials, Panel storage, and remembered process approvals.
+- Isolate stale MCP and digital-human editor operations; preserve disabled connections,
+  remove cleared fields correctly, and retain drafts after failed saves.
+- Keep memory operations in their configured storage root and prevent similarity-based
+  fallback decisions from overwriting different facts.
+- Revoke partial streaming attempts before fallback, surface reasoning deltas separately,
+  and restore native Codex session bindings and external-runtime launch diagnostics.
+- Fence cancelled runs, remote connections, rooms, approvals, and browser actions against
+  delayed callbacks; improve cleanup when media preparation or cancellation fails.
+- Keep Skill staging, replacement backups, and deletion work inside the managed Skill root,
+  including Linux installations whose parent directory is not writable.
+- Release all temporary browser handles when observation or cleanup fails, preserving the
+  original error and the handles owned by successful references.
+- Correct TUI search highlighting for wide and combining characters, preserve case-sensitive
+  model identifiers, and make rendering benchmarks measure actual frame updates.
+
+### Changed
+
+- Reconciled the roadmap with implementation and test evidence, and documented remaining
+  account-dependent checks and recovery limits.
+
 ## [0.9.8] - 2026-09-10
 
 ### Added

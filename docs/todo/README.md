@@ -1,43 +1,57 @@
-# docs/todo — 后续规划 / Roadmap
+# docs/todo — 设计与待办索引
 
-> 本目录收集**尚未做 / 前瞻性**的文档:产品路线规划与待实现的设计稿。
-> 已落地的现状以 [`docs/architecture/11-feature-inventory.md`](../architecture/11-feature-inventory.md)(全量能力盘点)为权威;
-> 历史/已完成的设计稿、审计、旧架构集见 [`docs/archive/`](../archive/)。
+> 当前可执行待办以根 [TODO.md](../../TODO.md) 为准；能力现状见 [全量能力盘点](../architecture/11-feature-inventory.md)。
+> 2026-09-11 复核：本目录混有前瞻设计、已实现方案、历史审计和真实验证证据。“未动手”的旧文首与未勾 checkbox 不能单独证明功能缺失。
+> 全部 75 份原有 Markdown、48 个未勾验收和源码 TODO 的逐项分类见 [夜间 TODO 核查](2026-09-11-overnight-todo-audit.md)。本轮保留旧文档路径，避免破坏已有源码/设计引用。
+> 全量基线的 65 项 skip 原因与本机可执行集成结果见 [跳过测试审计](2026-09-11-skipped-test-audit.md)；跳过标记不等于功能未实现。
 
-## 文档
+## 仍有明确后续的设计
 
-| 文档                                                                                         | 状态                                        | 说明                                                                                                                                                                                                                                                                                                                                                                                   |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`roadmap.md`](roadmap.md)                                                                   | 规划中                                      | 对标 Claude Code / OpenCode / OpenAI Codex 的分阶段产品路线(Phase 0–6),含优先级矩阵与执行顺序。注意:文内「当前状态」表多为早期写法,事实现状以 feature-inventory 为准                                                                                                                                                                                                                   |
-| [`workspace-profile-讨论稿.md`](workspace-profile-讨论稿.md)                                 | 历史讨论稿；MVP 已落地                      | WorkspaceProfile / 数字人的早期产品推导。当前实现见 `architecture/14`；经验运营、导入导出和远程分发等后续阶段见根 `TODO.md`                                                                                                                                                                                                                                                            |
-| [`worktree-session-isolation-research.md`](worktree-session-isolation-research.md)           | 外部 agent 自动隔离已落地                   | DriveAgent 已具备并行 per-run worktree、resume binding、include/baseRef/lock 与 keep/detach/discard；原生 `Agent` subagent isolation 仍为后续独立能力                                                                                                                                                                                                                                  |
-| [`prompt-cache-optimization.md`](prompt-cache-optimization.md)                               | 统一缓存层已落地；线上验收/Responses 待做   | 已统一会话亲和键与语义断点:GPT-5.6 explicit、较早 OpenAI implicit、Anthropic explicit、其他 provider-managed；动态上下文保持 append-only，兼容网关可自动降级。后续做分模型真实命中率验收与 Responses API 评估                                                                                                                                                                          |
-| [`architecture-debt.md`](architecture-debt.md)                                               | **P0 已落地 main**(`c191bb51`),P1/P2 待排期 | 架构债路线图:P0=断循环依赖/抽 engine 类型/凭证加密边界(已并);P1=拆 index、arena builtin 可选、拆 engine.ts、拆 App.tsx、真启用 safeStorage;P2=arena 移包/state 单例/cron 测试/文档措辞。含每条正解与落地顺序。配套源码级现状见 `docs/architecture/`                                                                                                                                    |
-| [`core-harness-and-plugin-panels.md`](core-harness-and-plugin-panels.md)                     | 路线图/待排期                               | core 通用 agent harness + 插件 UI 面板路线图:Phase A 工具元数据合一/PanelRegistry 可先做;Phase B/C 做 harness 纯度、CapabilityModule、coding pack 外移、index 分层;Phase D 做插件面板 v1                                                                                                                                                                                               |
-| [`agent-module-resolved-composition-design.md`](agent-module-resolved-composition-design.md) | **Phase A+B 已落地 main**,C/D 待做          | 统一 CapabilityModule / ExtensionModule 为 AgentModule，引入确定性的 ResolvedComposition、host/engine/session/run 生命周期 scope、可逆 disposer 与安全的 inspect snapshot；保留 Core First，不采用 Everything-is-Plugin 全量范式；一次性 cutover 无兼容过渡层(breaking release)                                                                                                        |
-| [`session-cumulative-cache-usage-plan.md`](session-cumulative-cache-usage-plan.md)           | 方案稿(未动手)                              | Session 级累计 cache usage:命中率按会话累计、落盘与 resume 回显、切模型清零;实现重点是 core 累加口径、renderer 信号回灌和 tooltip 文案                                                                                                                                                                                                                                                 |
-| [`mcp-http-auth-oauth-link-tech-design.md`](mcp-http-auth-oauth-link-tech-design.md)         | 方案稿(未动手)                              | HTTP MCP 认证 UI 与 OAuth/link 凭证模型设计:认证方式单选、`oauth` credential 类型、OAuth login/logout/refresh、探测 authStatus 与 Codex 字段兼容                                                                                                                                                                                                                                       |
-| [`github-link-local-first-tech-design.md`](github-link-local-first-tech-design.md)           | 方案稿 v1(未动手)                           | GitHub Link 本地优先 MVP：Fine-grained PAT、本地完整 Actions、Desktop main 密钥与执行边界、Chat 读取/创建 Issue 审批、断开失效；后续以相同 Action contract 增加 GitHub App + 可选 Link Server                                                                                                                                                                                          |
-| [`smoke-automation-mock-provider.md`](smoke-automation-mock-provider.md)                     | v1 已落地并接入 CI                          | OpenAI 四场景 + Anthropic SSE、隔离 Electron harness、L1/L2 smoke、plugin sandbox e2e、xvfb CI 与根 `smoke` 入口均已完成；L3 发布产物仍后置                                                                                                                                                                                                                                            |
-| [`im-gateway-remote-orchestration.md`](im-gateway-remote-orchestration.md)                   | 设计稿/方向锚点(未动手,非承诺)              | IM Gateway(对标 openclaw):独立常驻进程,IM(Telegram/飞书)发指令→远程拉起隧道→手机配对入口回推 IM→手机操作。下游隧道/配对/房间全已存在(复用),纯新增 IM 控制入口。gateway 是**通道非大脑**,高阶编排委托给未来「assistant 主体」(§6 留衔接口,与整体产品形态 design 强绑)。MVP=Telegram+开关+复用隧道,方案 A 唤起 main                                                                      |
-| [`external-agent-runtime-bridge.md`](external-agent-runtime-tool-bridge-design.md)           | 设计稿(待评审,未动手)                       | Claude Code / Codex 作为外部 Agent Runtime 接入 CodeShell，并通过进程内 MCP / loopback HTTP MCP 安全调用 CodeShell 工具；第一阶段采用增强模式，统一经过 ToolExecutor、权限、路径和沙箱链路                                                                                                                                                                                             |
-| [`mimi-im-session-bridge-design.md`](mimi-im-session-bridge-design.md)                       | 设计稿 v2(已按源码核实,未动手)              | Mimi 列出/搜索 Work Session,用户在微信回复「进入 2」后该聊天与 Session 建立持久路由:入站消息直接进目标 Session(空闲 run / 运行中 steer / 外部 runtime 持久排队),最终回复经 durable outbox 回微信。统一 completionTarget/WatchSession/进入为一条 ConversationSessionRoute(notify/bound 双模),`/mimi` 是降级不是删除;进入/退出各写一条有界 SessionVisitReceipt 给 Mimi,不复制 transcript |
-| [`mimi-im-session-bridge-review-2026-09-03.md`](mimi-im-session-bridge-review-2026-09-03.md) | 评审意见(已并入上稿 v2)                     | 对 v1 草案的逐条源码核实:maxPerTarget 前提已过期(已是 4)、Sessions 会泄漏原始 sessionId、catalog 不过滤 archivedAt、SessionStatus 无 idle/crashed 词汇、Pet 对 worktree 零感知;并提出边界收据与统一路由两项拓展                                                                                                                                                                        |
-| [`browser-profile-workspace-lease-design.md`](browser-profile-workspace-lease-design.md)     | 设计稿(待评审,未动手)                       | 把浏览器侧现由 `bucket`(project+session) 一并承担的四件事拆开:BrowserProfile(登录态,partition 改由 profileId 派生)/BrowserWorkspace(标签页组)/SessionBrowserBinding/TabControl(排他写租约)。默认 `shared-auth`(共享登录、隔离页面),另有 `isolated` 与 `claim-tab`。对齐 Codex 分层;含 partition 迁移方案(旧 Cookie 不可删)与 Phase 0 先收口 renderer/main 两份重复实现                 |
+| 文档                                                                                                                                         | 当前状态与剩余范围                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [独立 Link Server](link-server-oauth-architecture.md)                                                                                        | 独立服务与双向 OAuth 尚未实现；现有本地 Link/Hub 管理能力不是该服务                                                       |
+| [Hub 迭代](codeshell-hub-iteration-design.md) / [远程服务架构](codeshell-hub-remote-service-architecture.md)                                 | 单管理员部署、共享工作台和基础 Web Panel 已实现；语义协议、远端原生窗口、完整 Panel 适配及多用户后置                      |
+| [AgentModule / ResolvedComposition](agent-module-resolved-composition-design.md)                                                             | Phase A/B 已实现；Phase C lifetime/disposer 与 Phase D 请求边界仍待做                                                     |
+| [Agent 可靠性与上下文](agent-reliability-and-context-optimization.md)                                                                        | 大部分 Operation/Capability/评测设计仍待实现；09-03 缓存与若干旧缺口已被后续修复覆盖                                      |
+| [聊天历史恢复边界](2026-09-11-overnight-todo-audit.md)                                                                                       | 有界快照/实时交接、重试和 epoch 隔离已补回归；必要前缀淘汰时保留可见内容并报告失败，完整 durable raw 长段恢复仍需设计     |
+| [Harness 评测](codeshell-harness-evals.md) / [通用评测层](agent-evals-platforms-and-adapters.md) / [优化 Agent](agent-optimization-agent.md) | 设计阶段；未接入平台、上传真实会话或运行完整模型对照实验                                                                  |
+| [Codex Cloud 远程任务](codex-cloud-remote-tasks-design.md)                                                                                   | 方向核验与取舍；原生 Cloud 接入未实现，不与本地 Codex runtime 混称                                                        |
+| [Memory 最终设计](memory-final-design.md)                                                                                                    | P0/P1 已实现；P2 按决策挂起；description、严格同批重复、保守 fallback 与 baseDir 已修；剩余同批上下文刷新、旧正文有界对照 |
+| [Workspace 数据源 ADR](workspace-datasource-binding-adr.md)                                                                                  | 只读 MVP 已实现；Profile 求交、写操作、真实 adapter 和解析索引后续                                                        |
+| [WorkspaceProfile 历史讨论](workspace-profile-讨论稿.md)                                                                                     | MVP、portable memory、导入导出和仓库分发已实现；经验运营、完整依赖编辑、plugin 降级仍可规划                               |
+| [Worktree / Session 隔离](worktree-session-isolation-research.md)                                                                            | DriveAgent 外部运行时隔离已实现；原生 Agent 隔离是独立后续，不能把旧外部隔离缺口重复实施                                  |
+| [视频工作台](video-studio-panel.md)                                                                                                          | 产品草案；媒体宿主能力已有在途实现，具体面板工程与验收需另看对应面板仓库                                                  |
+| [早期 Roadmap](roadmap.md)                                                                                                                   | 保留产品方向；Arena 已抽包、HTTP serve 已实现，不再按旧状态表排工                                                         |
 
-## 仍准确未做的代表项
+## 已实现主体，保留设计依据或后续验证
 
-(摘自 roadmap,已 grep 源码核实仍未实现;非全量,详见各文档)
+| 文档                                                                                                                 | 本次复核结论                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [浏览器 Profile / Workspace / 租约](browser-profile-workspace-lease-design.md)                                       | shared profile、workspace、tab control 与生产接线已存在；不再标“未动手”，进一步迁移按现有实现规划        |
+| [浏览器自动化库复用](browser-automation-library-reuse.md)                                                            | Electron/扩展 Puppeteer、独立 Playwright 路径已实现；安装版与扩展重载后的真实环境验收单独记录            |
+| [外部 Runtime 工具桥](external-agent-runtime-tool-bridge-design.md)                                                  | Codex/Claude、SessionToolHost、工具桥与产品入口已接通；旧文中 Panel/审批限制需要按当前实现复核           |
+| [Mimi 进入 Work Session](mimi-im-session-bridge-design.md) / [早期评审](mimi-im-session-bridge-review-2026-09-03.md) | ConversationSessionRoute、持久路由、访问收据、IM bound-session 与 durable outbox 已实现                  |
+| [父子双向通知](parent-child-bidirectional-notification-phase0-design.md)                                             | mailbox direction/progress/result、running child 路由与 tree ACL 已实现；原“只设计不实现”是历史快照      |
+| [多文件夹项目](multi-folder-local-project-plan.md)                                                                   | project roots、主目录迁移、multi-root 路径策略与 Desktop 接线已实现；外部 runtime 等非目标仍保留         |
+| [GitHub Link 本地优先](github-link-local-first-tech-design.md)                                                       | PAT/CLI、读操作、逐次写审批和断开机制已实现；旧 WorkspaceLinkGrant/ActionSpec 架构未照搬，真账号验证另计 |
+| [MCP HTTP Auth / OAuth](mcp-http-auth-oauth-link-tech-design.md)                                                     | 认证配置、login/refresh/logout 与 host 服务已实现；不再以早期“未动手”作状态结论                          |
+| [IM Gateway](im-gateway-remote-orchestration.md)                                                                     | Phase 1–3 代码闭环、通道、inbox/outbox 与运维入口已实现；真实平台 canary 要显式提供测试条件              |
+| [Prompt cache](prompt-cache-optimization.md) / [09-06 实现验证](gpt-cache-optimization-2026-09-06.md)                | 通用缓存与 GPT hybrid 已实现并有短样本真实证据；Responses/20+轮基线与长期成本仍待评估                    |
+| [Session 累计 cache usage](session-cumulative-cache-usage-plan.md)                                                   | 累计、落盘、恢复与切模型处理已实现；旧“方案未动手”过期                                                   |
+| [会话 notes 策略](context-notes-strategy.md)                                                                         | 原生 notes/save/new-context/history 已实现；连续长程笔记质量与成本仍需真实使用评估                       |
+| [Mimi 架构复核](mimi-architecture-review-2026-09-05.md) / [聊天回放](mimi-chat-replay-2026-09-06.md)                 | 设计与后续实现并存；离线回放不能替代全部真实 IM 长程验收                                                 |
+| [共享 Web 工作台](shared-web-workbench.md) / [Link 服务端现状](link-headless-server-feasibility.md)                  | 当前实现说明；Desktop Web 与 Hub 共用业务管理服务                                                        |
+| [Hub 打磨验收](hub-usability-polish.md) / [Web Panel 验收](web-panels-validation.md)                                 | 09-08/09-09 历史验证和部署证据；不是 09-11 新改动的重跑记录                                              |
+| [Smoke 自动化](smoke-automation-mock-provider.md)                                                                    | v1 和 CI 已实现；发布产物层与条件式集成用例单独验收                                                      |
 
-- **Arena 产品化** — Phase 1 核心差异化方向(抽包已决「暂不抽」,产品化待定)
-- **`codeshell serve` HTTP 模式 + 多语言 SDK** — Phase 2
-- **LSP 深度集成** — Phase 3.1(现为基础能力)
-- **DAG / Topology 多 Agent 协作** — Phase 4.1
-- **企业级能力** — Phase 5
-- **`List` 工具** — Glob/Grep 已覆盖,优先级低
-- **VS Code / JetBrains 扩展** — 现有完整 Electron 桌面 App,IDE 扩展未做
+## 历史计划与审计
 
-## 约定
+[架构债](architecture-debt.md)、[P1/P2 实施记录](arch-debt-p1p2-plan.md)、[Core harness 与插件面板](core-harness-and-plugin-panels.md)、[插件面板技术设计](core-universalize-plugin-panel-design.md)、[Engine 拆分旧稿](engine-split-plan.md)、[凭证 partition 旧稿](credentials-partition-mismatch-plan.md) 和 [07-10 小 feature 批次](small-features-2026-07-10/PIPELINE-SUMMARY-CORE.md) 含已完成或已被后续实现替代的阶段，不宜整篇当作开放工单。
 
-- 新的待办/前瞻设计稿往这里放,并在上表登记一行 + link。
-- 一旦落地,把对应条目移出本目录:设计稿归 [`docs/archive/`](../archive/),能力登记进 [`11-feature-inventory.md`](../architecture/11-feature-inventory.md)。
+[08-30 全仓优化](claude-repository-optimization-2026-08-30.md) 的 C4 记忆正文原子写、C5 WS 上限/pending TTL 与 onboarding 并发写已在当前代码解决；其历史残余项按本轮审计重新判定。三份 [Core](bug-status-core.md)、[Desktop main](bug-status-desktop-main.md)、[Renderer/TUI](bug-status-renderer-tui.md) bug 状态文档保留历史修复证据。
+
+## 维护约定
+
+- 新设计在本目录登记，并写清“设计 / 在途 / 已实现 / 待外部验证”，避免把文档存在等同于功能承诺。
+- 完成的待办从根 TODO 删除，设计保留时及时改索引状态；整体迁入 `docs/archive/` 前核对反向引用。
+- 不依据历史测试次数、旧行号、未回勾 checkbox 或源码编号 TODO 宣称当前实现未完成或已验收。

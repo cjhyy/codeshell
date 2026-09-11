@@ -1,70 +1,36 @@
 # TODO
 
-> 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
+> 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-08-25（全仓架构、边界、CI、headless 安全与代码内待办复核）。
-> **仓库状态（2026-07-27 实测）**：main 与 origin/main 完全同步（ahead/behind 均为 0），工作区干净。本文件历史版本多处写的「未 commit / 在工作树 / 未 push」均已过期作废——包括 2026-07-15 模块边界大拆分、07-16 优化冲刺 2、07-20 Pet 外部会话，全部已进 main 并推送。
-> 2026-07-15 模块边界大拆分（已合入 main）：core 去领域化（pet 迁出为 `packages/pet`，经通用 extension 钩子组合；三入口导出面收敛；protocol↔engine/session↔engine/settings→engine 四组倒置消除；goal/session-usage 下沉）、desktop 传输层抽出 `packages/server`、AgentBridge 拆出纯 Node `WorkerBridgeCore`、mobile 逻辑层抽出 `packages/web`、identity/data-root 注入基础落地（服务端部署项现状段已同步更新）。monorepo 现为 11 包（arena/cdp/chat/coding/core/desktop/link/pet/server/tui/web）。实施计划：`docs/superpowers/plans/2026-07-15-*.md`。
->
-> **验收门实测（2026-08-25）**：根 `bun run typecheck` 已覆盖全部 11 个 workspace（含 Desktop 与 Web SPA）；本轮复核的 8 项安全/健壮性遗留已全部修复，并通过全量测试、lint、类型检查与生产构建。源码中的编号式 `TODO` 绝大多数是已完成功能的追溯标签；真正的 future 注释仅保留在明确的产品/架构边界（TUI 软换行与任务归属、runtime 级 MCP/成本聚合、arena 连接迁移、cc-room 列表收敛），不表示当前路径处于半实现状态。
+> 最近一次核对：2026-09-11。完整来源、源码标记、设计文档和未勾验收判定见 [夜间 TODO 核查](docs/todo/2026-09-11-overnight-todo-audit.md)。本次检查的是共享工作区，包含既有未提交改动，不代表这些改动已经发布。
 
----
+## 小 feature（体量 M 及以下）
 
-## 小 feature（体量 M 及以下，现在可直接着手）
+- **Link 真账号 / 真 token 验证**（S，验证任务）。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
+- **数字人依赖编辑补齐**（S/M）。编辑器已能配置缺失 Skill 的安装源并保留 `requires`，但任意依赖项与外部 `tools` 的图形化增删尚未完整开放。数字人 JSON 导入导出、仓库分发和原地更新按钮都已实现，不再重复排期。发布目前生成仓库骨架，`git init/push` 仍是用户自行完成的后续步骤。
+- **TUI 子 agent 待办详情**（S）。主/子 `task_update` 已按 `agentId` 隔离，主待办不会串入子视图；后续可为每个子 agent 保留自己的 TodoWrite 快照并显示。不要再按旧 TaskCreate/Update singleton 设计实现。
+- **macOS TTS 偶发测试超时定位**（S，验证任务）。第六轮全量中 `media-tts.test.ts` 的 literal 文本合成用例在 30 秒超时，随后三个独立进程重跑及相邻组合均通过，尚无稳定产品缺陷证据。需补阶段/PID 定位信息，并核对 fixture 超时后的取消清理；保留失败记录，不放宽 30 秒门限、不将其列为 TTS 功能缺失。证据见夜间核查。
+- **记忆提取后续精修**（S/M）。同批不同表述候选仍需刷新决策上下文；写决策模型尚需加入有界的旧正文对照。description、严格同批重复、独立存储根透传与保守 fallback 已补齐：相似度不再自动触发 UPDATE，auto/dream 只有完整字段严格相同才由 fallback NOOP；其他回退为 ADD，明确的模型 UPDATE 仍受 ownership 保护。模型失败时可能暂留重复，不能为了去重覆盖方向、否定或数值不同的事实；manual 相近主题继续保守跳过。来源见 [Memory Final Design](docs/todo/memory-final-design.md)。
 
-> 2026-07-12：上一批 12 项小 feature 已全部落地并合并回 main——core 引擎 5 项（goal-judge 上下文重构、prompt-cache 归因、拆 engine.ts、子 agent sandbox/mcp、密钥脱敏硬化）、desktop 2 项（review-panel workspace + fork busy-guard）、跨层 5 项（MCP OAuth 闭环、浏览器复制地址、DriveAgent 跳转、手机发图、命名收敛第一批）、快聊对齐 codex `/side`（修主聊消息串漏）。逐线只读 codex 复审+修复+复核全绿。实施记录见 `docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-*.md`。
+## 大功能升级（体量 L，分阶段落地）
 
-> 2026-07-16:优化冲刺 2 工作流 A(设置中心信息架构统一)已落地——SettingsPage scope 模型(全局/按项目切换)、数字人/数据源/指令文件/项目概览四个新模块、project_config 路由改为预选项目 scope 的设置中心(ProjectConfigPage 删除)、侧边栏一级设置入口、customize 双门收口、SidebarNav 死代码清理。设计稿:`docs/superpowers/specs/2026-07-16-optimization-sweep-2-design.md`;计划:`docs/superpowers/plans/2026-07-16-settings-center-ia.md`。工作流 C(core 债务)已完成 2026-07-17:C4 守卫死链修复、C3 三个可直跑 SDK examples、C2 installer/marketplace/onboarding/updater 导出迁 /internal(0.8 breaking)、C1 拆 runExclusive(1787→294 行,7 个 run-\*.ts 模块 + 10 个私有方法,行为零变化,全仓 6897 测试绿、protocol 零 diff)。计划:`docs/superpowers/plans/2026-07-17-core-debt-cleanup.md`。工作流 D(插件贡献点)已完成 2026-07-17:D1 全屏页面注册表 PageRegistry(对齐 PanelRegistry)+ ViewMode 开放 union + 侧边栏注册表驱动(视觉零变化)+ logs/runs 迁移 render 缝;D2 沙箱面板图标白名单放宽至 87 名 + 权限扩容 workspace.info/notifications.send(上限仍 8);Non-goals(capability 包 UI 贡献字段/插件进一级导航/pet UI 插件化)守住;向后兼容。计划:`docs/superpowers/plans/2026-07-17-plugin-contribution-points.md`。工作流 B(Mimi 会话归档)已完成 2026-07-17:B2 工作台五分组结构化分类(未分类不隐身)+ dismiss id 契约抽 shared 单一真源;B3 core archivedAt 原语 + listDiskSessions 默认过滤 + 完成7天自动归档 + 复用候选退出 + refreshCatalog 增量 mtime 游标;B1 core 通用 summarizeRange 原语 + engine archiveTurnRange/protocol archive_range + pet topic-segment 纯函数 + main PetWorkMemoryStore/PetSegmentController + Mimi 聊天流分隔线/纪要卡片(经 clientMessageId 端到端打通)。core/engine 无 pet 字面量。计划:`docs/superpowers/plans/2026-07-17-mimi-session-archival.md`。**优化冲刺 2(A/B/C/D 四工作流)全部落地。** 遗留跟进(均非阻塞,已确认可接受):①委派刚 launch 即记 completed 致携带纪要「未完成任务」路径暂空,待真实委派完成信号;②getWorkMemory IPC 无 UI 消费者(UI 走 snapshot,API 完整性保留;2026-07-27 复核仍只有 preload 声明);③设置中心 scope 切换未保存内联草稿的离开确认(见下 XS 项)。
-> 2026-08-11 更正：普通 SettingsPage 已不再提供运行时 scope picker；上述第③项描述的离开路径不存在，属于过期待办，已从开放清单删除。
+- **独立 Link Server + 双向 OAuth2**。独立 Node/Docker 服务，上游保管和刷新第三方凭据，下游给 CodeShell 与其他应用签发按连接、操作、数据范围限制的授权；先单 owner、多应用、GitHub 只读闭环。client、同意页、grant、令牌轮换和撤销尚未实现，第三方原始 token 不下发。见 [Link Server 架构](docs/todo/link-server-oauth-architecture.md)。当前 Desktop/Hub 的本地 Link 管理不是该独立服务。
+- **Hub 与 Web 后续**。当前已有单管理员登录/设备撤销、Node/Docker 部署、共享 Web 工作台、模型/Skills/MCP/Link 管理、历史文件和基础 Web Panel；HTTPS 指引与隔离容器验收也已有记录。剩余是两宿主语义协议统一、Electron 原生窗口选择远端 Hub、独立 Hub 多 Workspace、插件市场，以及媒体/音频/Cookie/自动化/PDF 等完整原生 Panel SDK 的 Web 适配。多用户 Runtime/凭据/CLI HOME 隔离仍后置。见 [共享工作台](docs/todo/shared-web-workbench.md)、[Hub 迭代方案](docs/todo/codeshell-hub-iteration-design.md)、[Web 面板](docs/web-panels.md)。历史容器验收不表示本轮新增源码已重新构建部署。
+- **Workspace / Profile / 数字人后续**。现有 MVP、Session 绑定、portable memory 读写/编辑、JSON 导入导出和 Git 仓库分发保留。剩余包括项目经验提升为数字人经验的运营流程、受约束的数字人 dream 策略、切换影响预览，以及导出降级为 plugin。自动 dream 目前明确不写 portable profile memory；变更前需要单独确定 ownership 和审批语义。见 [数字人与 Pet 架构](docs/architecture/14-digital-human-and-pet.md) 和 [Profile 历史设计](docs/todo/workspace-profile-讨论稿.md)。
+- **Workspace 数据源后续**。mock / mcp-resource / local-files 的只读 MVP 已落地。剩余是更多真实 provider adapter、Profile 求交接线、写操作和上传文件解析/索引。`sources/resolve.ts` 的 `profile` 参数仍只是预留；当前不能宣称按 Profile 限制数据源。见 [数据源 ADR](docs/todo/workspace-datasource-binding-adr.md)。
+- **运行时共享资源与生命周期**。runtime 级 MCP 连接聚合、跨 Session 成本汇总，以及 [AgentModule](docs/todo/agent-module-resolved-composition-design.md) Phase C 的 lifetime/disposer 和 Phase D 的请求边界证据仍待推进。现有 per-session MCP、成本统计和 composition compiler 已工作，不能为清理占位注释改变隔离边界。
+- **可靠性与评测体系**。统一 Capability/Operation Controller、结构化 VerifiedWriteResult、错误分类/熔断、Skill 列表预算、非核心工具渐进发现、真实长程 cache/notes 回放与按模型评估尚未完整实施。GPT-5.6 hybrid cache 已有短样本真实验证，Responses API / `previous_response_id` 仍是独立评估项。见 [可靠性方案](docs/todo/agent-reliability-and-context-optimization.md)、[Harness 评测](docs/todo/codeshell-harness-evals.md)、[通用评测层](docs/todo/agent-evals-platforms-and-adapters.md)、[优化 Agent](docs/todo/agent-optimization-agent.md)。
+- **聊天历史的长程流式恢复**。运行中的快照已淘汰必要流式前缀、或恢复缓冲超限后无法补齐时，当前明确显示恢复失败、保留可见内容并阻止不完整恢复写入缓存；从 durable raw 历史完整恢复正在生成的长段内容仍需后续设计。Mobile 在后台发现新 Main 代次后切回会话时，因保存的 history 与 snapshot 没有共同游标，当前保留 durable 历史并提示实时部分暂不能接续，不直接叠加完整快照；历史返回后，下一个顶层回合开始才恢复实时接收。旧版 peer 未携带 epoch 时仍无法保证跨 Main 重启的游标有效性。本轮有界恢复不等于任意长度、任意历史来源的无缝合并，实现与验证边界见 [夜间核查](docs/todo/2026-09-11-overnight-todo-audit.md)。
 
-> 2026-07-23:**Session 世界渐进披露 v1 已落地**(11 任务 TDD 计划全部执行完)。产出:pet `disclosure/` 子入口(最新 assistant 文本读取器、跨 session TodoWrite 快照读取器、磁盘 work-session catalog + selector 哈希、有界 transcript grep 搜索)、Mimi 的 `Sessions` 两级只读披露工具(host 接线 sessions root + 可见性门禁 + 按 lastActivityAt 降序而非 id 序)、resume 白名单打通(Sessions 搜到的 session 可被 DelegateWork 复用,已归档与非 desktop session 排除)、工作台 session 行展开「最新结果」、Cmd-K 会话内容搜索模式。`packages/pet` 主入口保持零 node 内置模块(node:crypto/node:fs 仅限 `disclosure/` 与动态 import)。设计稿:`docs/superpowers/specs/2026-07-23-session-world-progressive-disclosure-design.md`;计划:`docs/superpowers/plans/2026-07-23-session-world-progressive-disclosure.md`(注:计划内 checkbox 未回勾,以 commit 与本条为准)。
+## 明确保留、暂不盲改的边界
 
-> 2026-07-24:**Mimi 记忆中心 + segment 收尾管线已落地**。架构要点:**segment 收尾是唯一触点**——`PetSegmentController.beginTurn` 检测到 idle 切段时,一次 aux 调用同时产出 journal(事件档案)与 auto 记忆,再 `archiveRange` 压缩刚关闭的段,聊天 UI 与模型上下文都不再无限增长。产出:aux session 收尾小结服务(并发上限 + in-flight 去重)、pet memory auto source + journal store、journal/segment-transcript/auto-extract IPC、Mimi 记忆中心页面(从设置进入)、工作台「需跟进」区块。决策记录:素材只从 mimi 对话提取(core memory/dream/pending 体系完全不动)、自动提取直接写入标 `source: "auto"` 不做待确认收件箱、事件档案只含 mimi 对话段落小结。设计稿:`docs/superpowers/specs/2026-07-24-mimi-memory-center-design.md`。
->
-> 同批产品收敛(有意 revert,非回退失败):①`16ccdfbe` 删除跨 session TodoWrite 聚合区块(704 行)——工作台待办改由 **Mimi 收尾小结**承担,不再聚合 TodoWrite;②`e20d1caf` 删除内联行提醒;③`73c3c143` 工作台移除记忆区块(记忆归记忆中心页面)。收尾提醒改为一行式,且只在真实 follow-up 时触发。**注意**:07-23 计划里的 Task 9(TodoWrite 聚合)已被本次决策作废,读该计划时勿当待办。
-
-> 2026-07-28:**数字人 feature 整体优化已落地**。此前数字人是「配了等于没配」——8 个内置除一句提示词外能力全空,还带编造的使用量;声明的 skill 只 force-enable、从不获取。本轮补齐全链路:
->
-> - **自带依赖**:profile 新增可选 `requires`(skill 来源 + 外部命令),与 plugins/skills/mcp/agents 分工——前者管「怎么弄来」,后者管「弄来后启用哪些」。启用前预检 → 列出将执行的命令确认 → 跑 `npx skills add`。`scope` 只允许 project(`-g` 落在 `~/.claude/skills`,不在 scanner 三个根内);repo 值双重校验挡 `--flag`/`../`/`;rm -rf` 注入。
-> - **仓库分发**:数字人不寄生插件市场,有独立通道(`core/profile/catalog*.ts`)。设置 › 数字人 › 数字人仓库填 `owner/repo` 克隆;广场卡片显示来源仓库;`exportProfileRepo` 把库里的数字人写成可 push 的仓库骨架(单个 JSON 只能人肉传,仓库骨架别人填 owner/repo 就能装)。配套目录:`cjhyy/mimi-humans`(3 个视频制作数字人,已验证真实克隆 + requires 完整 + 发布产物回读闭合)。
-> - **清理**:8 个空壳内置与编造 usageCount 全删;3 个 curated teams 删除(建立在已被 Session-first 取代的 Pet-led teams 模型上);空目录不再堆一屏空控件。
-> - **修 bug**:①编辑器保存会静默抹掉 `requires`(把仓库来的数字人打回空壳);②Radix 点遮罩/Esc 直接丢弃未保存改动;③归档会话被当成活引用阻止删除;④i18n 占位符写成 `{{name}}` 导致界面显示大括号;⑤删除报错发生在确认之后且是英文原文带 session id。
-> - **视觉**:TopBar 最后一个原生 `<select>` 换 shadcn;卡片 7 个平铺控件收敛为「一个主行动 + 项目默认 + 溢出菜单」。
->
-> 遗留(非阻塞):①`requires` 只能在定义 JSON 里写,编辑器为只读展示——图形化编辑依赖字段增删待后续;②发布只生成骨架,`git init/push` 仍需用户自己做;③仓库更新要手动移除再添加,没有「检查更新」按钮。
-
-**2026-08-11 review 遗留跟进**（可在当前仓库内修复的项已清理，只剩外部验证）：
-
-- **Link 真机/真 token 验证**（体量 S，验证任务非编码）。各 provider 仍需用授权账号实测一次 action 响应形状；API 版本头与 CLI 命令已有 stub/契约测试，CLI browser login 的 stdin EOF 问题已修复，但本仓库没有可代替用户凭据的自动化验证条件。
-
----
-
-## rc.18 发版遗留（非阻塞项，发 0.7.0 正式版前处理）
-
-> 本次核对后暂无未完成项。
-
----
-
-## 大功能升级（体量 L，需方案设计 + 分阶段落地）
-
-- **独立 Link Server + 双向 OAuth2（2026-09-08，需求已确认，尚未实施）**：独立 Node/Docker 服务；上游连接第三方并保管/刷新凭据，下游让 CodeShell 与其他应用经 OAuth2 获得按连接、操作和数据范围限制的访问权。先做单 owner、多应用、GitHub 只读闭环，再接入共享工作台及远程宿主。新增 client、同意页、grant、令牌轮换和撤销；第三方原始 token 不下发。见 [Link Server 架构](docs/todo/link-server-oauth-architecture.md)。
-
-- **Pet 全局 Session 实时态势 + 独立窗口控制台**（体量 L，**主体已完成；2026-07-20 补齐外部 CLI 接入 + 卡片安全摘要**）｜**产品结论**：每个正常 CodeShell 工作 Session，以及独立 Codex CLI / Codex App / Claude Code CLI Session，都应由 host 代理自动向 Pet 推送结构化活动事件（开始、排队、模型处理、工具调用、等待审批/回答、阶段变更、完成/失败/取消），Pet 以同一份可持久化 projection 实时维护全局工作视图；不依赖 Session 手动调用 `ReportToPet`，不让 Pet 轮询/偷读完整 transcript，也不在每个事件上唤醒 Pet LLM。投影仅携带 Session 身份、任务/工作区、安全状态摘要、待处理决策、时间戳与终态，不传完整对话、工具参数/输出、文件内容或模型思考。**独立 Pet 窗口**定位为随时可见的轻量实时控制台：全局列表展示 projection 中所有可见 Session，与完整 Pet 页面共用数据源、已读状态和路由，不建第二份状态库。**现状（2026-07-20 落地，已合入 main 并推送；原 `worktree-pet-external-sessions` 分支已删除）**：①CodeShell 内普通 Session 事件驱动 projection、独立窗口、全局卡片、自动推送早已完成；②**外部 Codex CLI/App 与 Claude Code CLI 会话已接入**——`packages/desktop/src/main/pet/external-session-adapter.ts` 通用 per-CLI adapter（周期发现 `~/.codex`/`~/.claude` 会话文件 + `watchFile` tail + 元数据归约，只带 runState/phase/工具名，绝不带 transcript 内容/工具参数/文件内容进投影），作为 `PetStateAggregator` 第三数据源，独立于 worker 生命周期；③**两个从源头启停的开关（默认关）**：`pet.showExternalCodexSessions` / `pet.showExternalClaudeSessions`，关闭时 adapter 完全不扫描/不 tail，设置中心（数字人区块，全局 scope）双 Switch 热调谐；④外部会话卡片带 CLI 徽章、禁用跳转（外部无 CodeShell 内目标）；⑤卡片安全摘要：等待决策卡片按 pending 最高 `riskLevel` 显示风险徽章 + 工具名。实施计划：`docs/superpowers/plans/2026-07-20-pet-external-codex-sessions.md`。剩余 follow-up（均非阻塞）：①外部会话卡片点击跳转到 cc-room（现禁用）；②外部会话可见性的 per-project scope（现仅全局开关，2026-07-27 复核：`showExternalCodexSessions`/`showExternalClaudeSessions` 均默认 false 且只有全局 scope）；③外部会话无"等待审批/排队"感知（Codex/Claude transcript 不记录这类事件，诚实呈现 running/idle/dormant——属上游数据限制，倾向不做）。
-- **Hub 原生 Node.js 部署（2026-09-08）**：已实现单管理员初始化/登录、设备撤销、健康检查、审批 lease、受限上传、PWA 和重启续聊。入口 `bun run build:server` / `bun run serve:server`；部署说明见 `docs/deployment.md`。后续：共享客户端与语义协议、多用户隔离、远程 Panel；已补齐 Docker/Compose 部署配置（镜像构建/运行待 Docker 环境验证），多用户形态后置。
-  - **Web 工作台补齐（2026-09-08）**：侧栏/对话/输入区对齐桌面视觉，新增模型连接与默认模型、Skills 搜索/正文/启停、MCP 配置摘要。复用 Core 设置与扫描器，保存使用桌面同源热更新；服务器与客户端文件不自动同步。插件市场、Skills 安装/更新、完整桌面组件共享和远程 Panel 仍待推进。
-- **服务端部署 + Web Client（无账号体系）— 后续阶段**（体量 L，**Phase 1' 已完成 2026-07-15，2026-07-16 交付闭环已补齐**：`code-shell-serve` headless host（`packages/server/src/serve/`：AccessPasscode 门禁 + 防遍历静态托管 + WS↔stdio-worker 薄管道 + spawn-on-first-frame + 崩溃记账）+ `packages/web` 独立浏览器 SPA（vite `dist-app`，说 core JSON-RPC 协议：会话列表/新建/恢复、流式渲染、工具审批与 ask-user 卡片、停止、断线重连 + worker 退出横幅）+ `WorkerBridgeCore` 迁入 server 包（desktop 改从包导入）。SPA 已复用成熟 stream reducer，tool result/富事件/会话标题与 workspace 路径已闭环；标准 `bun run build` 已直接生成 `dist-app`。集成测试 + reducer/CLI 单测 + 真 worker 端到端 smoke 已验证 passcode→SPA→会话→工具审批/结果→worker 崩溃横幅→自动重启。用法见 `packages/server/README.md`。架构决策：浏览器是 core 协议一等前端，不复刻 desktop 的 mobile 编排器。剩余阶段：①公网入口（tunnel/反代 TLS 指引或复用 TunnelManager）；②配对/受信设备层（TrustedDeviceStore 已在包内，接到 serve 门禁后面）；③web UI 打磨（transcript 渲染增强已完成；仍缺 attachment、多 workspace 切换））｜设计稿：`docs/nightly-2026-07-12/server-deployment-web-account-roadmap.md`｜锚点：`packages/core/src/protocol/server.ts`（resolveIdentity 选项）、`packages/core/src/protocol/chat-session-manager.ts`（forIdentity/dataRoot）、`packages/core/src/cli/agent-server-stdio.ts`（CODE_SHELL_DATA_ROOT）、`packages/server/src/index.ts`、`packages/web/src/index.ts`、`packages/desktop/src/main/worker-bridge-core.ts`｜现状（2026-07-15 模块拆分后大幅推进）：**传输层已独立**——原 Electron main 内的 HTTP+WS host/配对/passcode/tunnel/rooms/上传整体抽为 `packages/server`（纯 Node、零 electron），胶水收敛为 desktop `mobile-remote-orchestrator.ts`；**浏览器客户端种子已独立**——mobile 的 stream reducer/approval/reconnect 逻辑层抽为 `packages/web`；**worker 驱动核心已独立**——AgentBridge 拆出传输无关的 `WorkerBridgeCore`（spawn/JSON-RPC 帧/注入），可直接被 server 复用驱动 per-user worker；**identity 基础已落**——`ChatSessionManager` 支持 `identity`+`dataRoot`（per-identity manager + `<root>/identities/<id>` 隔离），`AgentServer.resolveIdentity` 钩子按连接分派并过滤会话列表，stdio worker 支持 `CODE_SHELL_DATA_ROOT`；settings/credentials/session-memory 均有 root 注入口。仍缺：真账号体系（AuthN/AuthZ 网关本体）、per-user worker 编排、公网入口；进程级审批单例（ApprovalRouter/path approvals）按裸 sessionId 分键，多 identity 同进程需按连接注入独立 router（per-user worker 隔离则天然规避）。**推荐方案 A 不变**：`packages/server` 现在就是网关的宿主包，Phase 1 单管理员闭环可直接开工（bootstrap/login → 登记 workspace → 浏览器建/恢复 session → 流式+审批+停止+重启恢复），Phase 2 per-user worker + 私有 data root（用 WorkerBridgeCore + CODE_SHELL_DATA_ROOT），Phase 3 再选 tunnel/relay/SSO/rooms/browser 分叉。未决问题见文档 §9（self-host vs SaaS、公网入口、credential 归属、worker 隔离粒度等，需用户拍板）。
-  - **2026-08-11 架构更正**：上段 2026-07-15 现状中“真账号体系 / per-user worker / SSO”路线已被后续产品决策作废，以当时本文「约束边界」为准（2026-09-08 单管理员 Hub 进展见上一条）。当时 headless serve 是单 workspace、passcode-only 网关；worker data root 已隔离，Web 只开放 sessions/detail 与 run/approve/cancel。剩余项仅是公网 TLS/tunnel 指引、受信设备接线和 Web UI 能力补齐。
-- **Workspace / Profile / 数字人 — 后续阶段**（体量 L，**MVP 第一步已完成 2026-07-15**）｜设计稿：`docs/superpowers/specs/2026-07-15-workspace-profile-design.md`；实施计划：`docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md`；样例：`docs/examples/workspace-profile-sample.md`｜锚点：`packages/core/src/profile/resolve.ts`（sessionProfile 缝）、`packages/core/src/capability-control/overlay.ts`（effectiveProjectOverrides 咽喉）、`packages/desktop/src/renderer/settings/ProfileSection.tsx`｜已完成：`WorkspaceProfile` schema + 全局库（`~/.code-shell/profiles/`，identity dataRoot 天然隔离）+ 原子激活/切换/关闭事务（settings 单一 `profile` 子树全量重写）+ 能力折叠单一咽喉（用户手写 override 按 key 赢过 profile）+ preset 优先级 + 主指令注入（CLAUDE.md > mainInstruction > preset）+ 记忆三层（全局→数字人→局部）+ desktop 设置区块/TopBar 指示，30 测试全绿。**2026-07-15 增量（commit `5840d2e1`）**：①session 级绑定 + Pet 缝合已完成——engine 按 RunParams 接线 sessionProfile（`engine.workspace-profile-session.test.ts`）、Pet-led teams（`packages/pet/src/team.ts` + desktop `digital-human-team-service.ts`）、数字人市场 catalog（desktop `digital-human-catalog.ts` + `digital_humans` 页）。剩余阶段：②经验层运营（项目经验"提升"为数字人经验、MemoryWrite 写数字人层、dream 按数字人分桶）；③产品化 UI 补全（Profile Builder / Switcher 预览影响、Memory Studio）；④P4 本地导入导出/降级 plugin；⑤P5 marketplace 远程分发（本地市场页已有雏形，远程后置）。
-  - **2026-07-18 架构更正已落地**：上述 Pet-led teams / Pet 缝合已被 Session-first 模型取代。数字人现在直接创建并绑定项目 Session，独立管理长期记忆；Session 协作只使用 `SendMessageToSession` 工具，把一条普通用户消息排入目标 Session，不创建 Handoff 实体、版本或订阅，也不暴露 Handoff UI；后续补充由来源 Session 再发一条消息。目标 Session 使用自己的当前数字人及项目 Skills 工作；数字人便携 skill 与项目 skill 分层，项目明确 override 优先；Pet 完全不接收数字人 / team 路由字段。主路径代码、编辑 UI、契约测试和架构文档均已同步。
-- **Workspace 数据源绑定 — 后续阶段**（体量 L，**只读 MVP 已完成 2026-07-15**）｜ADR：`docs/todo/workspace-datasource-binding-adr.md`；实施计划：`docs/superpowers/plans/2026-07-15-workspace-datasource-readonly-mvp.md`｜锚点：`packages/core/src/sources/`、`packages/desktop/src/renderer/project-config/DataSourcesSection.tsx`｜已完成：SourceDefinition → WorkspaceSourceBinding → EffectiveSourceAccess 三层模型 + mock/mcp-resource/local-files 三种 adapter + ListSources/ReadSource 只读工具面（默认 deny、读取审批、二次校验、provenance、256 KiB 截断、密钥脱敏与 untrusted 包裹）+ 动态上下文 metadata 注入 + desktop 项目配置中心/全局 Connections 管理 + mock 纵切 e2e。剩余阶段：真实 OAuth provider adapter、Profile 求交接线（resolver `profile?` 参数已留）、写操作、上传文件解析/索引。
-
----
-
-## 约束边界（明确不做）
-
-- **quick-chat 不做 Pi 式 parent 指针树状 session**：快聊是用完即走短对话；需要合并时用 fork/复制派生，不引入树状会话模型。
-- **IM gateway MVP 不做编排大脑 / IM 内富交互审批 / 多租户**：gateway 只做通道、隧道生命周期和入口回推；高阶跨 session 指挥留给未来 assistant 主体。
-- **WorkspaceProfile MVP 不做同一 workspace 同时激活多个 Profile**：当前决策是同一 workspace 一个 active Profile，可切换但不并存；项目专属定制仍放 `CLAUDE.md`/项目指令。
-- **Mimi 工作台不做 TodoWrite 聚合**（2026-07-24 拍板，已 revert 实现）：工作台待办由 **Mimi 收尾小结**承担——aux 模型对已完成 session 的收尾摘要，不是跨 session 聚合 TodoWrite 快照。
-- **Mimi 记忆中心不碰 core 记忆体系**（2026-07-24 拍板）：不改 core 的 memory 提取 / dream / pending；不做置信度分流、待确认收件箱、周月巩固总结、向量检索；不给 mimi 引入显式 session 概念（segment 即隐形 session）。
-- **服务端部署先做单管理员**（2026-09-08 本轮 Hub 方案）：提供管理员初始化、登录和设备撤销；不扩展团队多用户租户、per-user worker 或 SSO。2026-07-15 的 passcode-only 形态仍可显式使用，单管理员登录按后续 Hub Phase 1 设计实现。identity/dataRoot 底座保留。
+- **Ink meta/escape 兼容**注释保留到明确 major 迁移策略；不能因为带 TODO 就删除兼容行为。
+- **Memory P2 背压 / rate-limit / 注入 cap**按既有产品决策挂起，待真实容量或成本证据触发。
+- **外部 CLI 的审批/排队可观测性**受上游 transcript 限制，继续诚实显示可观测状态，不通过猜测补成完整状态。Pet 外部卡片跳转、项目可见性 override 和真实委派终态收尾已实现。
+- **Core First**：Arena、Pet、coding 都是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务。
+- **quick-chat 不做 Pi 式 parent 指针树状 Session**：快聊是短对话，需要合并时使用 fork/复制派生，不引入树状会话模型。
+- **IM Gateway 不做编排大脑 / IM 内富交互审批 / 多租户**：Gateway 负责通道、隧道生命周期与入口回推；已绑定 Session 路由和通知能力保留。
+- **同一 Workspace 同时一个 active Profile**；项目专属定制仍放项目指令，项目明确 override 优先。
+- **Mimi 工作台不恢复 TodoWrite 聚合**：个人待办由 Mimi 收尾小结和跟进项承载，Session TodoWrite 是执行进度。
+- **Mimi 记忆与 core 记忆分开**：不顺手引入置信度分流、待确认收件箱、周月巩固或向量检索；隐形 segment 与 notes 上下文策略保留。
+- **服务端先单管理员**：当前不扩展团队租户、per-user worker 或 SSO；显式 passcode-only 兼容入口和 identity/dataRoot 底座保留。

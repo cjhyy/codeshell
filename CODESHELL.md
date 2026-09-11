@@ -51,6 +51,11 @@ bun run format         # prettier --write 'packages/**/*.ts'
 bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 ```
 
+`bun run test:package-release` clean-builds the audited packages before packing them.
+Run it to completion before starting other checks that read `dist/`, including Desktop
+build, workspace typecheck, and SDK/Hub smoke tests; running those concurrently can
+observe deleted or partially emitted dependency files.
+
 ## Code Style
 
 - **Prettier**: double quotes, semicolons always, trailing commas (`all`), 2-space indent, 100 print width.
@@ -81,11 +86,16 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **`sync-models.ts` exists** at `scripts/sync-models.ts` but is NOT run automatically by `bun run build`. Run it manually to refresh OpenRouter model data (`bun run scripts/sync-models.ts`).
 - **Markdown rendering stacks differ**: Desktop uses `react-markdown + remark-gfm + rehype-highlight` (streaming phase uses plain/pre without live parse); TUI uses `marked + marked-terminal`. Don't assume they render identically.
 - **MCP servers may be project-scoped**: `SettingsManager` defaults to `project` scope and reads `${cwd}/.code-shell/settings.json` + `.local.json`. It does NOT read `~/.code-shell/settings.json` unless explicitly configured. Local-first is the intended pattern.
+- **Synchronous file locks must not block an asynchronous holder in the same process.**
+  Keep bounded read-modify-write work synchronous while a shared directory lock is held.
+  If the operation must await, every competing acquisition on that path needs bounded,
+  nonblocking retries; a blocking retry can stall the holder's I/O and heartbeat until
+  its own live lock is mistaken for stale. Do not suppress compromised-lock errors.
 - **Plugin env-var rewrite is deliberate**: `packages/core/src/plugins/varRewrite.ts` rewrites Claude-specific root/data variables to `CODESHELL_PLUGIN_ROOT` / `CODESHELL_PLUGIN_DATA` in plugin files at install time. Hook processes expose the CodeShell names plus the Codex-compatible `PLUGIN_ROOT` / `PLUGIN_DATA` aliases, but deliberately strip the Claude names so plugins do not misdetect the host.
 
 ## Where to put things
 
-- **Roadmap TODOs** → root `TODO.md` (has P0-P7 priority sections). There is no `todo/` directory for roadmap items.
+- **Roadmap TODOs** → root `TODO.md` (unfinished work grouped by scope and size). There is no `todo/` directory for roadmap items.
 - **In-progress design drafts** → `docs/todo/*.md` (e.g. `session-cumulative-cache-usage-plan.md`).
 - **Test files** → `tests/` and `packages/*/src/**/*.test.ts`.
 - **Generic prompt sections** → `packages/core/src/prompt/sections/*.md`; domain prompt sections belong

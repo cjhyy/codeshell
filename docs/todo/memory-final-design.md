@@ -8,9 +8,12 @@
 - ✅ **P1 可见 + 晋升 + 清理**（已 landed main，commit `8c6544f1` → merge `bc37da74`）：设置页显示 origin 三态徽标 + 「命中/更新」次数、详情 lifecycle；编辑 user 强制 origin:manual、pin 不增 updateCount；存量清理改分组 review + 用户批准软删。
 - ✅ **审查修复**（已 landed main，commit `85abccca` → merge `aab21d08`）：修 2 个数据安全 🔴（frontmatter 注入用 JSON 序列化根治、id→文件名碰撞加冲突探测）+ 加固 dream 守卫（Save 同时按 id+name 查、命中 manual fail-closed）；**global dream 晋升从不可靠的 slug/evidenceCount 自动写改为 pending 审批流**——候选未审批前作为 project dream 正常使用，批准才进 global，拒绝标 `promotionStatus:rejected`。
 - ⏸️ **P2（未做，按决策挂起）**：dream 背压 / rate-limit gate / 注入 cap。当前规模（~150 user + 个位数 dream，且 P0 已掐断重复源头）远未触发，等真出现 dream 过吵/token 上涨/后台烧配额时再做。
-- 🟡 **遗留轻微改进**（codex 审查列出，不急）：intra-batch dedup（同一批第 2 个候选看不到刚 ADD 的）、canonical fallback 方向性/否定词（"use bun not npm" vs "use npm not bun"）、baseDir 透传、extract description 类型校验。
+- ✅ **2026-09-11 工作区精修**：extract description 类型校验与完整字段严格相同的同批去重已完成；去重先于数量/global cap，保留大小写、空白、否定与词序差异。解析、真实落盘、dream guard、scope routing 共 39 项专项通过，源码状态不等于已发布。
+- ✅ **2026-09-11 后续精修**：独立存储根现覆盖全部 project/global scope、global pending、promotion、TTL、session summary、dream 计数、driver 与实际 Memory 工具；注入 manager 的原始项目 key 保持一致，冲突配置拒绝。无显式根时保留原 HOME/env 默认，portable profile 仍独立且自动 dream 不写 profile。存储专项 46 项通过（含默认路径、profile 与并发计数）；此为工作区源码结果。
+- ✅ **保守写入回退**：auto/dream 的相似度不再改写为 UPDATE；仅 type/location/name/description/content 完全相同才由 fallback NOOP，其余 ADD。明确的模型 UPDATE 仍须目标存在且 ownership 通过；manual 相近主题保守守卫不变。方向、数值、正文差异及日期更新等 15 个新增 canonical 回归通过；包含相关旧用例的联合检查为 66 项。
+- 🟡 **遗留轻微改进**：同批不同表述候选的决策上下文刷新（后面的候选仍看不到刚 ADD 的），以及写决策 prompt 的有界旧正文对照。模型失败或返回无效决策时可能暂留日期/表述重复，这是避免误覆盖的保守代价；不能将上述修复写成任意语义去重已解决。
 
-以下为原始设计正文（P0/P1 已按此实现）。
+以下保留分期设计与历史源码定位。写决策规则、相关验收和风险说明已按 2026-09-11 的保守策略更新；其他历史实现快照中的“当前”与旧行号不作为最新状态，具体进度以上文及夜间审计为准。
 
 ---
 
@@ -52,11 +55,11 @@ Extractor
 写入决策层（新增）
   |
   | 读取候选相关的 project/user、project/dream、global/dream、可选 global/user 摘要
-  | 无向量：LLM 判同主题 + 归一化文本兜底
+  | 无向量：相似度召回；模型明确决策 + 严格重复/ownership 守卫
   |
   | ADD    -> 新 id，写目标 dream，origin:auto
-  | UPDATE -> 同 auto/dream 记忆，按 id 更新，name 可变，updateCount++
-  | NOOP   -> 同 manual 记忆，或等价内容已存在，不碰 manual
+  | UPDATE -> 模型明确指定已有 auto/dream 目标且 ownership 通过；按 id 更新
+  | NOOP   -> manual 保守守卫、严格全字段重复或模型明确 NOOP；不碰 manual
   | DELETE -> 仅允许删除 auto/dream owned 条目；manual 永远拒绝
   |
   | Origin guard A：保存执行器拒绝自动改写 origin:manual
@@ -64,9 +67,7 @@ Extractor
 Dream 区
   |
   | project scope -> project dream
-  | global scope  -> global dream
-  | 当前代码需从 pending/user 路由改到 dream：
-  | packages/core/src/services/memory-orchestrator.ts:118
+  | global scope  -> project dream evidence + global pending；批准后才进入 global dream
   v
 Dream 整理
   |
@@ -202,7 +203,7 @@ parseExtractionResponse()
 - global dream：global 自动记忆的主要 UPDATE 目标。
 - global user：只读 awareness，可选，用于避免自动重复 manual global。
 
-当前 extraction existing list 只来自 `mm.loadAll()`，见 `packages/core/src/services/memory-orchestrator.ts:103`；`buildExtractionPrompt()` 只接收 `name/type/description`，见 `packages/core/src/services/extract-memories.ts:26`。P0 要扩展为包含：
+2026-09-11：existing list 已读取 project/global 的 user/dream 四组，并携带下列摘要字段；内部候选保留完整 entry，供严格内容相等判断。模型的 write-decision prompt 目前仍只含 name/type/description 等摘要，尚需有界旧正文对照，不把内部可读正文误写成模型已看到正文：
 
 ```ts
 interface ExistingMemorySummary {
@@ -231,9 +232,9 @@ interface ExistingMemorySummary {
 
 候选 cap：P0 先 120 条摘要；决策 prompt 的 top related excerpt 20-40 条。规模超过 cap 时仍不引入向量，P2 再考虑背压/分页。
 
-### 归一化兜底
+### 相似度召回与保守回退（2026-09-11 更新）
 
-canonical key 只作为兜底，不作为无提示自动删除依据：
+下列 canonical/token 归一化保留作候选召回与 manual 相近主题保护，不再证明 auto/dream 内容等价，也不授权自动 UPDATE/DELETE：
 
 - lower-case。
 - 去日期：`YYYY-MM-DD`、`YYYYMMDD`、`today/yesterday/本轮/今天/昨天`。
@@ -243,10 +244,10 @@ canonical key 只作为兜底，不作为无提示自动删除依据：
 
 规则：
 
-- LLM 判 ADD，但 canonical key 与 `origin:auto|dream` 目标强一致 -> 降级为 UPDATE。
-- LLM 判 ADD，但 canonical key 与 `origin:manual` 强一致 -> 降级为 NOOP。
-- LLM 判 DELETE，但目标是 `origin:manual` -> 强制 NOOP 并记录 guard hit。
-- LLM 判 UPDATE，但目标缺 id 且多条候选同分 -> NOOP，交给 dream 整理或 UI。
+- auto/dream 的 type/location/name/description/content 完整相同 -> fallback NOOP；类型、scope、方向、否定、数值或正文不同均不能仅凭相似度合并。
+- LLM 判 ADD 时保持 ADD，只有上述严格重复或 manual 保守守卫可改为 NOOP。LLM 失败/返回无效决策也使用同一回退，不再产生猜测性 UPDATE。
+- 与 `origin:manual` 相近主题继续保守 NOOP；明确 UPDATE/DELETE 若命中 manual 目标也强制 NOOP 并记录 guard hit。
+- 只有 LLM 明确 UPDATE/DELETE、目标 ID 存在且属于 auto/dream dream scope，才执行相应操作；不合法目标退回上述安全规则。模型失败时可暂留日期/表述重复，后续由有证据的显式更新、dream 或 UI 整理。
 
 ### 决策 schema
 
@@ -427,15 +428,15 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
 - `packages/desktop/src/renderer/settings/MemorySection.tsx:607`：`usageCount` badge 改为 `useCount`，新增 `updateCount` badge。
 - `packages/desktop/src/renderer/i18n/ns/settings.ts:368` 和 `packages/desktop/src/renderer/i18n/ns/settings.ts:1123`：autoExtract 文案从“存入 User scope”改为“存入 Dream scope”。
 
-## 分期实施计划
+## 分期实施计划（历史阶段，当前规则已按收尾修正）
 
 ### P0：止血 + 最小可用
 
 目标：
 
-- 自动提取不再污染 user/pending。
+- 自动提取不再直接写 user；全局提议进入 pending 审批门。
 - 新自动记忆有稳定 id。
-- 写入前有 ADD/UPDATE/NOOP 决策，能阻止日期戳重复。
+- 写入前有 ADD/UPDATE/NOOP 决策；明确识别同主题的模型 UPDATE 可避免日期变体，模型失败时优先保留不同候选而不是猜测覆盖。
 - dream/user origin guard 成立。
 - 计数字段写入并可由 core 读取。
 
@@ -453,10 +454,10 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
 
 - `packages/core/src/services/memory-orchestrator.ts`：M
   - project extraction -> project dream。
-  - global extraction -> global dream。
-  - 删除新写 pending path；pending API 保留 legacy。
+  - global extraction -> project dream evidence + pending；批准后才进入 global dream。
+  - pending API 保留并继续处理新的全局提议。
   - existing list 改成 project user + project dream + global dream + optional global user。
-  - 加写入决策层和归一化兜底。
+  - 加写入决策层、相似度召回与严格全字段重复 NOOP；不再以归一化结果自动 UPDATE。
   - telemetry 从 `pendingGlobalCount/projectCount` 改成 `globalDreamCount/projectDreamCount/add/update/noop/delete/guardedManualCount`。
   - due auto-dream 移到本轮 extraction persist 前，或加 fresh-entry grace。
 
@@ -484,14 +485,15 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
 测试点：
 
 - 更新 `packages/core/src/services/memory-scope-routing.test.ts:27`：
-  - global/project 自动提取均进 dream。
-  - pending/global user/project user 不新增自动提取条目。
+  - project 自动提取进 project dream；global 提议生成 project dream evidence 与 pending。
+  - global user/project user 不新增自动提取条目；pending 须经审批才进入 global dream。
   - telemetry 字段改名。
 
 - 更新 `packages/core/src/services/memory-orchestrator.test.ts:16`：
   - telemetry 包含 ADD/UPDATE/NOOP。
   - autoExtract=false 仍跳过 extraction，见现有测试 `packages/core/src/services/memory-orchestrator.test.ts:149`。
-  - 同主题 auto dream 记忆二次提取走 UPDATE，不新增文件，updateCount++。
+  - 模型明确将同主题 auto dream 二次提取判为 UPDATE 时，保持 ID、不新增文件、updateCount++；不能用无效模型响应隐式触发该验收。
+  - 无效响应或 ADD 决策下，方向/否定/端口/正文不同的候选新增为独立记忆；完整字段重复走 NOOP。
   - 同主题 manual user 记忆走 NOOP。
 
 - 更新 `packages/core/src/session/memory.lifecycle.test.ts:18`：
@@ -507,8 +509,8 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
 
 验收标准：
 
-- 自动 extraction 新条目只出现在 dream。
-- 日期戳变体不会因为 name 不同而新增同主题 auto memory。
+- project extraction 新条目只进 dream；global 提议的 pending 在审批前不注入全局。
+- 日期 enrichment fixture 明确返回合法 UPDATE 后不新增文件；模型无法明确判断时允许暂留日期变体，不覆盖旧事实。
 - `MemoryRead` 后 `useCount` 增加；UPDATE 后 `updateCount` 增加。
 - manual user memory 在 dream loop 中不可变更。
 - pending 老 API 和 UI 仍能处理历史 pending。
@@ -613,7 +615,7 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
 ## 风险与回滚
 
 - 风险：id 迁移不完整导致 legacy 文件重复。  
-  缓解：legacy 读兼容；只在被保存时补 id；决策层对无 id 文件使用 canonical key 和 origin guard。
+  缓解：legacy 读兼容；只在被显式保存时补稳定 id；canonical 只用于召回与 manual 保守保护，不能凭相似度猜测无 id 目标并覆盖。无法证明相同的 legacy 记录可暂时重复，后续显式整理。
 
 - 风险：dream 误改 manual user memory。  
   缓解：dispatch guard 硬拒 `origin:manual`；缺失 origin 视作 manual；测试覆盖 Save/Delete user 和 dream scope manual。
@@ -622,7 +624,7 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
   缓解：executor 层二次检查 origin，manual 强制 NOOP。
 
 - 风险：global dream 膨胀。  
-  缓解：P1 hybrid gate；未达标候选留 project dream；global dream stable cap。
+  缓解：全局提议保留 project dream evidence 并等待 pending 审批；自动晋升/evidenceCount 与 P2 注入 cap 不作为当前已实现保证。
 
 - 风险：UI 编辑 `origin:dream` 后 dream 仍可改用户刚编辑内容。  
   缓解：设置页内容编辑 user 条目强制转 `origin:manual`；pin/unpin 不算接管。
@@ -631,7 +633,7 @@ promotionReason: Applies to all CodeShell projects because it protects user-owne
   缓解：拆 lifecycle-only save 或保存选项；专测。
 
 - 风险：P0 dream 写入变多，dream 区短期增长。  
-  缓解：P0 已做 UPDATE/NOOP 决策；P2 做 backlog/rate-limit gate。临时回滚可设置 `settings.memories.autoExtract=false`，当前 schema 已有该开关，见 `packages/core/src/settings/schema.ts:371`。
+  缓解：仅明确且通过 ownership 的 UPDATE 与严格重复 NOOP 自动收敛；模型失败后可能暂留重复，不能以恢复猜测性覆盖来压低数量。P2 背压/rate-limit 仍按决策挂起。临时回滚可设置 `settings.memories.autoExtract=false`，当前 schema 已有该开关，见 `packages/core/src/settings/schema.ts:371`。
 
 回滚策略：
 

@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "CodeShell 全仓库请求链路（Run / Steer / Stop）",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      980,
+      800
+    ],
+    "output": "full-repo-sequence.html"
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "输入"
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "桌面前端",
+      "sublabel": "ChatView"
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "协议与桥",
+      "sublabel": "Protocol"
+    },
+    {
+      "id": "runtime",
+      "type": "backend",
+      "label": "会话与引擎",
+      "sublabel": "SessionLoop"
+    },
+    {
+      "id": "llm",
+      "type": "cloud",
+      "label": "LLM",
+      "sublabel": "Provider"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "工具执行",
+      "sublabel": "ToolExec"
+    },
+    {
+      "id": "store",
+      "type": "messagebus",
+      "label": "事件存储",
+      "sublabel": "Store"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "user",
+      "to": "ui",
+      "y": 160,
+      "label": "输入问题",
+      "variant": "default"
+    },
+    {
+      "id": "m2",
+      "from": "ui",
+      "to": "agent",
+      "y": 188,
+      "label": "queueInput(run)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m3",
+      "from": "agent",
+      "to": "runtime",
+      "y": 216,
+      "label": "create/lookup session",
+      "variant": "default"
+    },
+    {
+      "id": "m4",
+      "from": "runtime",
+      "to": "store",
+      "y": 244,
+      "label": "consumeQueuedSteer",
+      "variant": "dashed"
+    },
+    {
+      "id": "m5",
+      "from": "runtime",
+      "to": "llm",
+      "y": 272,
+      "label": "LLM request",
+      "variant": "default"
+    },
+    {
+      "id": "m6",
+      "from": "llm",
+      "to": "runtime",
+      "y": 300,
+      "label": "tool call + text",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "runtime",
+      "to": "tools",
+      "y": 328,
+      "label": "执行 tool batch",
+      "variant": "default"
+    },
+    {
+      "id": "m8",
+      "from": "tools",
+      "to": "runtime",
+      "y": 356,
+      "label": "ToolResult",
+      "variant": "return"
+    },
+    {
+      "id": "m9",
+      "from": "runtime",
+      "to": "store",
+      "y": 384,
+      "label": "发布事件",
+      "variant": "dashed"
+    },
+    {
+      "id": "m10",
+      "from": "store",
+      "to": "ui",
+      "y": 412,
+      "label": "更新 running 状态",
+      "variant": "return"
+    },
+    {
+      "id": "m11",
+      "from": "ui",
+      "to": "store",
+      "y": 440,
+      "label": "pending/转发状态",
+      "variant": "dashed"
+    },
+    {
+      "id": "m12",
+      "from": "ui",
+      "to": "agent",
+      "y": 468,
+      "label": "Steer（busy）",
+      "variant": "dashed"
+    },
+    {
+      "id": "m13",
+      "from": "agent",
+      "to": "runtime",
+      "y": 496,
+      "label": "handleSteer -> queue",
+      "variant": "dashed"
+    },
+    {
+      "id": "m14",
+      "from": "user",
+      "to": "ui",
+      "y": 524,
+      "label": "Stop",
+      "variant": "security"
+    },
+    {
+      "id": "m15",
+      "from": "ui",
+      "to": "agent",
+      "y": 552,
+      "label": "cancel()",
+      "variant": "security"
+    },
+    {
+      "id": "m16",
+      "from": "agent",
+      "to": "runtime",
+      "y": 580,
+      "label": "handleCancel + abort",
+      "variant": "security"
+    },
+    {
+      "id": "m17",
+      "from": "runtime",
+      "to": "tools",
+      "y": 608,
+      "label": "abort 工具等待",
+      "variant": "return"
+    },
+    {
+      "id": "m18",
+      "from": "tools",
+      "to": "runtime",
+      "y": 636,
+      "label": "清理完成",
+      "variant": "return"
+    },
+    {
+      "id": "m19",
+      "from": "runtime",
+      "to": "ui",
+      "y": 664,
+      "label": "停止态反馈",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "ui",
+      "from": 160,
+      "to": 700,
+      "type": "frontend"
+    },
+    {
+      "participant": "agent",
+      "from": 188,
+      "to": 620,
+      "type": "backend"
+    },
+    {
+      "participant": "runtime",
+      "from": 188,
+      "to": 700,
+      "type": "backend"
+    },
+    {
+      "participant": "llm",
+      "from": 244,
+      "to": 290,
+      "type": "cloud"
+    },
+    {
+      "participant": "tools",
+      "from": 272,
+      "to": 630,
+      "type": "backend"
+    },
+    {
+      "participant": "store",
+      "from": 304,
+      "to": 390,
+      "type": "messagebus"
+    }
+  ]
+}

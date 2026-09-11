@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "CodeShell 全仓库 Run / Steer / Stop 终链路（文件覆盖闭环）",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "fixed",
+    "viewBox": [
+      930,
+      520
+    ],
+    "output": "archify/full-repo-run-steer-stop-final-global.sequence.html"
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "输入"
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "UI",
+      "sublabel": "W/T/D"
+    },
+    {
+      "id": "protocol",
+      "type": "backend",
+      "label": "Protocol",
+      "sublabel": "run/steer/cancel"
+    },
+    {
+      "id": "repo",
+      "type": "backend",
+      "label": "Repo",
+      "sublabel": "scan"
+    },
+    {
+      "id": "core",
+      "type": "backend",
+      "label": "Core",
+      "sublabel": "session"
+    },
+    {
+      "id": "llm",
+      "type": "cloud",
+      "label": "LLM",
+      "sublabel": "provider"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tools",
+      "sublabel": "MCP/CDP"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "user",
+      "to": "ui",
+      "y": 160,
+      "label": "run / steer / stop",
+      "variant": "default"
+    },
+    {
+      "id": "m2",
+      "from": "ui",
+      "to": "protocol",
+      "y": 188,
+      "label": "agent.run",
+      "variant": "emphasis",
+      "note": "建立会话并进入 turn-loop，携带命令与当前会话状态。"
+    },
+    {
+      "id": "m3",
+      "from": "protocol",
+      "to": "repo",
+      "y": 216,
+      "label": "扫描文件清单",
+      "variant": "default"
+    },
+    {
+      "id": "m4",
+      "from": "repo",
+      "to": "protocol",
+      "y": 244,
+      "label": "返回 4179 文件",
+      "note": "证据：docs/architecture/archify/full-repo-file-list.txt；汇总：docs/architecture/archify/full-repo-file-coverage.txt。",
+      "variant": "return"
+    },
+    {
+      "id": "m5",
+      "from": "protocol",
+      "to": "core",
+      "y": 272,
+      "label": "注入覆盖上下文并开启 loop",
+      "variant": "default",
+      "note": "将全仓库扫描结果与可读性上下文（顶层路径统计）挂载到会话上下文。"
+    },
+    {
+      "id": "m6",
+      "from": "core",
+      "to": "llm",
+      "y": 300,
+      "label": "LLM request",
+      "variant": "default",
+      "note": "构建上下文后请求模型。若有 steer 队列，在每次请求前写入。"
+    },
+    {
+      "id": "m7",
+      "from": "llm",
+      "to": "core",
+      "y": 328,
+      "label": "text / tool_calls",
+      "variant": "return",
+      "note": "模型返回文本或工具调用。"
+    },
+    {
+      "id": "m8",
+      "from": "core",
+      "to": "tools",
+      "y": 356,
+      "label": "执行 tools",
+      "variant": "default",
+      "note": "工具执行时注入 cancel signal（同一轮内并发执行，多 tool_result 回流）。"
+    },
+    {
+      "id": "m9",
+      "from": "core",
+      "to": "ui",
+      "y": 384,
+      "label": "增量输出",
+      "variant": "return",
+      "note": "Steer 在本次工具组完成前不会直接打断；在下一轮模型请求前入队后注入。Stop 在 pending 阶段可直接中断。"
+    },
+    {
+      "id": "m10",
+      "from": "ui",
+      "to": "protocol",
+      "y": 412,
+      "label": "Stop",
+      "variant": "security",
+      "note": "触发 session.cancel，走 abort 回调；Core 仅注册并广播取消信号，等待中的工具请求 / LLM 请求按信号立即退出，turn-loop 判定已取消后停止下一轮。"
+    }
+  ]
+}
