@@ -41,6 +41,8 @@ breaking.
 
 ### Changed
 
+- Upgrade the bundled Chrome extension to 0.2.1 with the shared browser-handle cleanup
+  fixes, retaining protocol 2 compatibility and the Chrome 125 minimum.
 - Reconciled the roadmap with implementation and test evidence, and documented remaining
   account-dependent checks and recovery limits.
 
