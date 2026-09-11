@@ -1417,10 +1417,19 @@ export class SessionManager {
    * object. saveState serializes the read/revision-check/write section with the
    * per-session lock and returns the new persisted revision to the caller.
    */
-  updateSessionState(sessionId: string, partial: SessionStateFieldPatch): number {
+  updateSessionState(
+    sessionId: string,
+    partial: SessionStateFieldPatch,
+    expectedRunId?: string,
+  ): number {
     assertSafeSessionId(sessionId);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
+      // Re-check on every CAS retry: an older run must not merge its terminal
+      // status into a newer run's identity after another writer wins the lock.
+      if (expectedRunId !== undefined && state.runId !== expectedRunId) {
+        throw new SessionError(`Session run identity conflict for ${sessionId}`);
+      }
       if (
         partial.kind !== undefined &&
         normalizedSessionKind(partial.kind) !== normalizedSessionKind(state.kind)
@@ -1445,6 +1454,40 @@ export class SessionManager {
       // miss like a lock collision.
     }
     throw new SessionError(`Session state revision conflict for ${sessionId}`);
+  }
+
+  /** Claim a run and return the identity replaced by the successful state CAS. */
+  startSessionRun(
+    state: SessionState,
+    runId: string,
+    clientMessageId?: string,
+  ): string | undefined {
+    assertSafeSessionId(state.sessionId);
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      const latest = this.readPersistedState(state.sessionId);
+      const previousRunId = latest.runId;
+      const runFields = {
+        runId,
+        clientMessageId,
+        status: "active" as const,
+        lastCompletionKind: undefined,
+        turnSeq: (latest.turnSeq ?? 0) + 1,
+      } satisfies SessionStateFieldPatch;
+      Object.assign(latest, runFields);
+      const result = this.saveStateAttempt(latest);
+      if (result.ok) {
+        Object.assign(state, runFields, { stateRevision: latest.stateRevision });
+        return previousRunId;
+      }
+      if (result.reason !== "revision_conflict") {
+        throw new SessionError(
+          `Could not start session run for ${state.sessionId}: ${result.reason}`,
+        );
+      }
+      // A competing opener won after our read. Its run is now the predecessor;
+      // recompute both that identity and the turn sequence on the next attempt.
+    }
+    throw new SessionError(`Session state revision conflict for ${state.sessionId}`);
   }
 
   /**
@@ -1648,9 +1691,13 @@ export class SessionManager {
    * serialized wholesale. This prevents a Goal/workspace/title domain write
    * from authorizing a later stale metadata overwrite.
    */
-  saveStateOrUpdateFields(state: SessionState, partial: SessionStateFieldPatch): boolean {
+  saveStateOrUpdateFields(
+    state: SessionState,
+    partial: SessionStateFieldPatch,
+    expectedRunId?: string,
+  ): boolean {
     try {
-      const stateRevision = this.updateSessionState(state.sessionId, partial);
+      const stateRevision = this.updateSessionState(state.sessionId, partial, expectedRunId);
       Object.assign(state, partial, { stateRevision });
       return true;
     } catch {

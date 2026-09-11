@@ -243,6 +243,20 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
     case "list_pending":
       if (Object.keys(record).length !== 1) throw new Error("invalid pet command");
       return { type: record.type };
+    case "stop_chat":
+      if (
+        Object.keys(record).some((key) => key !== "type" && key !== "clientMessageId") ||
+        (record.clientMessageId !== undefined &&
+          (typeof record.clientMessageId !== "string" || !record.clientMessageId.trim()))
+      ) {
+        throw new Error("invalid pet command");
+      }
+      return {
+        type: "stop_chat",
+        ...(typeof record.clientMessageId === "string"
+          ? { clientMessageId: record.clientMessageId }
+          : {}),
+      };
     case "chat":
       if (
         Object.keys(record).some(

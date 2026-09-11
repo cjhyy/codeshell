@@ -199,6 +199,8 @@ export async function cleanupStaleQuickChatSessions(
 }
 
 export interface DiskSessionMeta {
+  runId?: string;
+  clientMessageId?: string;
   id: string;
   engineSessionId: string; // == directory name; reused as the UI session id
   cwd: string;
@@ -372,6 +374,14 @@ export async function listDiskSessions(
     if (archivedAt !== undefined && !opts.includeArchived) continue;
     sessions.push({
       id,
+      ...(typeof state.runId === "string" && state.runId.length > 0 && state.runId.length <= 256
+        ? { runId: state.runId }
+        : {}),
+      ...(typeof state.clientMessageId === "string" &&
+      state.clientMessageId.length > 0 &&
+      state.clientMessageId.length <= 256
+        ? { clientMessageId: state.clientMessageId }
+        : {}),
       engineSessionId: id,
       cwd: typeof state.cwd === "string" ? state.cwd : "",
       // Prefer the LLM-generated title (now persisted to state); fall back to

@@ -64,6 +64,35 @@ function longTaskSnapshot(tasks: PetLongTask[]): PetLongTaskSnapshot {
 }
 
 describe("Pet widget work activity", () => {
+  test("makes a corrected result unread without changing its original completion time", () => {
+    const task = longTask({ status: "completed", completedAt: 300 });
+    const receipts = { baselineAt: 200, seenCompletionKeys: ["completed-task:task-one:300"] };
+    expect(
+      buildPetWidgetActivity(snapshot([]), receipts, longTaskSnapshot([task])).unreadCompletedCount,
+    ).toBe(0);
+    const corrected = {
+      ...task,
+      summary: "Corrected answer",
+      updatedAt: 500,
+      events: [
+        {
+          id: "update",
+          sequence: 8,
+          kind: "result-updated" as const,
+          at: 500,
+          attempt: 1,
+        },
+      ],
+    };
+    const result = buildPetWidgetActivity(snapshot([]), receipts, longTaskSnapshot([corrected]));
+    expect(result.unreadCompletedCount).toBe(1);
+    expect(result.items[0]).toMatchObject({ detail: "Corrected answer", lastActivityAt: 500 });
+    const seen = markPetWidgetCompletionSeen(receipts, result.items[0].key);
+    expect(
+      buildPetWidgetActivity(snapshot([]), seen, longTaskSnapshot([corrected]))
+        .unreadCompletedCount,
+    ).toBe(0);
+  });
   test("counts active sessions and only completions newer than the persisted baseline", () => {
     const value = snapshot([
       session("running", { runState: "running", lastActivityAt: 350 }),

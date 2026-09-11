@@ -2,6 +2,8 @@ export const PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX = "pet-host-action-";
 export const PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX = "pet-host-action-replace-";
 export const PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX =
   "pet-host-action-replace-delivery-";
+export const PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX =
+  "pet-host-action-replace-versioned-";
 export const PET_HOST_ACTION_REPLACE_DISPLAY_MARKER = "<!--PET:HOST_ACTION_REPLACE-->";
 const PET_HOST_ACTION_REPLACE_DISPLAY_PREFIX = "<!--PET:HOST_ACTION_REPLACE:";
 export const PET_HOST_ACTION_OUTBOUND_FAILURE_PREFIX = "主动消息操作失败：";
@@ -43,6 +45,25 @@ export function replacementReceiptDisplayMetadata(
   text: string,
 ): PetHostActionReplacementDisplayMetadata | undefined {
   if (typeof receiptClientMessageId !== "string") return undefined;
+  if (receiptClientMessageId.startsWith(PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX)) {
+    try {
+      const metadata = JSON.parse(
+        decodeURIComponent(
+          receiptClientMessageId.slice(PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX.length),
+        ),
+      );
+      if (typeof metadata.sourceClientMessageId !== "string" || !metadata.sourceClientMessageId)
+        return undefined;
+      return {
+        sourceClientMessageId: metadata.sourceClientMessageId,
+        ...(typeof metadata.deliveryChannel === "string" && metadata.deliveryChannel
+          ? { deliveryChannel: metadata.deliveryChannel }
+          : {}),
+      };
+    } catch {
+      return undefined;
+    }
+  }
   if (receiptClientMessageId.startsWith(PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX)) {
     const encoded = receiptClientMessageId.slice(
       PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX.length,

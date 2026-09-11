@@ -491,6 +491,7 @@ describe("Engine pet behavior", () => {
     expect(events.find((event) => event.type === "turn_complete")).toEqual({
       type: "turn_complete",
       reason: "completed",
+      text: result.text,
     });
   });
 

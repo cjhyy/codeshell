@@ -241,6 +241,7 @@ export interface RunParams {
 export interface RunResult {
   text: string;
   reason: TerminalReason;
+  completionKind?: import("../types.js").TurnCompletionKind;
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
@@ -309,6 +310,8 @@ export interface ApproveParams {
 export interface CancelParams {
   sessionId: string;
   reason?: string;
+  /** Cancel only the matching active input; preserve other queued turns. */
+  expectedClientMessageId?: string;
 }
 
 /** Close (destroy) a session. */
@@ -368,6 +371,8 @@ export interface InjectParams {
 export interface SteerParams {
   sessionId: string;
   text: string;
+  /** Identity of the active input to steer, distinct from this new input. */
+  expectedClientMessageId?: string;
   /** Structured input attachments that should ride with this queued steer. */
   attachments?: InputAttachmentMeta[];
   /** Stable host-side id for this queued draft. Rides through to the

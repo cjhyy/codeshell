@@ -15,6 +15,7 @@
  */
 
 import type { Transport } from "./transport.js";
+import { handleCancelRequest, handleSteerRequest } from "./server-run-controls.js";
 import {
   type RpcRequest,
   type InputAttachmentMeta,
@@ -24,7 +25,6 @@ import {
   type ConfigureParams,
   type QueryParams,
   type InjectParams,
-  type SteerParams,
   type UnsteerParams,
   type GoalUpdateParams,
   type PluginCommandsListParams,
@@ -901,12 +901,15 @@ export class AgentServer {
   }
 
   private async wakeIdleSession(sessionId: string): Promise<boolean> {
-    return wakeSessionForBackgroundResults({
+    const ranTurn = await wakeSessionForBackgroundResults({
       sessionId,
       manager: this.chatManager,
       rehydrate: (id) => this.rehydrateSessionForWake(id),
       approvalRouter: this.approvalRouter,
-      onStream: (event) => this.notify(Methods.StreamEvent, { sessionId, event }),
+      onStream: (event) => {
+        this.observeSessionStream(sessionId, event);
+        this.notify(Methods.StreamEvent, { sessionId, event });
+      },
       notificationMailbox: this.notificationMailbox,
       resolveWorkspace: this.workspaceBridgeEnabled
         ? async (session) => {
@@ -916,6 +919,8 @@ export class AgentServer {
           }
         : undefined,
     });
+    if (ranTurn) this.observeRunBoundary(sessionId, "end");
+    return ranTurn;
   }
 
   private async rehydrateSessionForWake(sessionId: string): Promise<ChatSession | null> {
@@ -2028,6 +2033,7 @@ export class AgentServer {
         const runResult: RunResult = {
           text: result.text,
           reason: result.reason,
+          ...(result.completionKind ? { completionKind: result.completionKind } : {}),
           sessionId: result.sessionId ?? sid,
           turnCount: result.turnCount,
           usage: result.usage,
@@ -2193,6 +2199,7 @@ export class AgentServer {
       const runResult: RunResult = {
         text: result.text,
         reason: result.reason,
+        ...(result.completionKind ? { completionKind: result.completionKind } : {}),
         sessionId: result.sessionId,
         turnCount: result.turnCount,
         usage: result.usage,
@@ -2319,62 +2326,22 @@ export class AgentServer {
   // ─── Cancel ─────────────────────────────────────────────────────
 
   private handleCancel(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as import("./types.js").CancelParams;
-
-    // ChatSessionManager path: cancel a specific session
-    if (this.chatManager) {
-      if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
-        this.transport.send(
-          createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
-        );
-        return;
-      }
-      const manager = this.chatManager;
-      const stoppedStart = cancelRunStarts(manager, params.sessionId);
-      const s = manager.get(params.sessionId);
-      if (!s && stoppedStart) {
-        this.transport.send(createResponse(req.id, { ok: true }));
-        return;
-      }
-      if (!s) {
-        this.transport.send(
-          createErrorResponse(
-            req.id,
-            ErrorCodes.SessionClosed,
-            `No such session: ${params.sessionId}`,
-          ),
-        );
-        return;
-      }
-      s.cancel();
-      // s.cancel() only aborts the engine controller + drains queued turns. The
-      // session's pendingApprovals (askUser / browser_action / tool approvals)
-      // are NOT driven directly by the abort signal. Left alone, an awaiting
-      // AskUserQuestion would now wait forever, while bounded request types
-      // would wait until APPROVAL_TIMEOUT_MS. Resolve them as cancelled now and
-      // clear any matching timers, mirroring the legacy path below.
-      this.cancelSessionApprovals(s);
-      this.transport.send(createResponse(req.id, { ok: true }));
-      return;
-    }
-
-    // Legacy path
-    if (!this.running || !this.abortController) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.SessionClosed, "Agent is not running"),
-      );
-      return;
-    }
-
-    this.abortController.abort();
-
-    for (const [, resolve] of this.pendingApprovals) {
-      resolve({ approved: false, failure: "cancelled", reason: "cancelled" });
-    }
-    this.pendingApprovals.clear();
-    this.clearAllApprovalTimers();
-
-    this.transport.send(createResponse(req.id, { ok: true }));
+    handleCancelRequest(req, {
+      transport: this.transport,
+      chatManager: this.chatManager,
+      cancelRunStarts,
+      cancelSessionApprovals: (session) => this.cancelSessionApprovals(session),
+      cancelLegacyRun: () => {
+        if (!this.running || !this.abortController) return false;
+        this.abortController.abort();
+        for (const resolve of this.pendingApprovals.values()) {
+          resolve({ approved: false, failure: "cancelled", reason: "cancelled" });
+        }
+        this.pendingApprovals.clear();
+        this.clearAllApprovalTimers();
+        return true;
+      },
+    });
   }
 
   /**
@@ -2480,10 +2447,15 @@ export class AgentServer {
     }
     if (session.engine.isHeadless()) return null;
     return {
-      completion: session.enqueueGoalResumeTurn(goal, {
-        onStream: (event: StreamEvent) => this.notify(Methods.StreamEvent, { sessionId, event }),
-        approvalRouter: this.approvalRouter,
-      }),
+      completion: session
+        .enqueueGoalResumeTurn(goal, {
+          onStream: (event: StreamEvent) => {
+            this.observeSessionStream(sessionId, event);
+            this.notify(Methods.StreamEvent, { sessionId, event });
+          },
+          approvalRouter: this.approvalRouter,
+        })
+        .finally(() => this.observeRunBoundary(sessionId, "end")),
     };
   }
 
@@ -2757,6 +2729,11 @@ export class AgentServer {
         ? (this.legacyEngine?.getGoal(params.sessionId) ??
           this.readActiveGoalFromDisk?.(params.sessionId))
         : undefined;
+    const clearingState = (
+      session?.engine?.getSessionManager?.() ??
+      this.legacyEngine?.getSessionManager?.() ??
+      (this.diskSessionReader ??= new SessionManager(this.sessionDiskRoot))
+    ).readSessionState(params.sessionId);
     const cleared = session
       ? session.clearGoal(expected)
       : params.sessionId
@@ -2765,13 +2742,19 @@ export class AgentServer {
           false)
         : false;
     if (cleared && typeof params.sessionId === "string" && params.sessionId.length > 0) {
+      const event: StreamEvent = {
+        type: "goal_cleared",
+        ...(clearingState?.runId ? { runId: clearingState.runId } : {}),
+        ...(clearingState?.clientMessageId
+          ? { clientMessageId: clearingState.clientMessageId }
+          : {}),
+        ...(clearingGoal?.goalId ? { goalId: clearingGoal.goalId } : {}),
+        ...(clearingGoal?.revision ? { revision: clearingGoal.revision } : {}),
+      };
+      this.observeSessionStream(params.sessionId, event);
       this.notify(Methods.StreamEvent, {
         sessionId: params.sessionId,
-        event: {
-          type: "goal_cleared",
-          ...(clearingGoal?.goalId ? { goalId: clearingGoal.goalId } : {}),
-          ...(clearingGoal?.revision ? { revision: clearingGoal.revision } : {}),
-        },
+        event,
       });
     }
     this.transport.send(
@@ -3885,50 +3868,11 @@ export class AgentServer {
   // user message to the CURRENT run's next step. No abort, no LLM trigger by
   // itself — the running loop picks it up at its next step boundary.
   private handleSteer(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as SteerParams;
-    if (!params.text || !params.sessionId) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "text and sessionId required"),
-      );
-      return;
-    }
-    if (this.chatManager?.isUnavailable(params.sessionId)) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.SessionClosed,
-          `Session is closing or closed: ${params.sessionId}`,
-        ),
-      );
-      return;
-    }
-    const engine = this.chatManager
-      ? this.chatManager.get(params.sessionId)?.engine
-      : this.legacyEngine;
-    if (!engine) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.SessionClosed,
-          `No such session: ${params.sessionId}`,
-        ),
-      );
-      return;
-    }
-    try {
-      const result = engine.enqueueSteer(
-        params.sessionId,
-        params.text,
-        params.id,
-        params.clientMessageId,
-        params.attachments,
-      );
-      this.transport.send(createResponse(req.id, { ok: true, ...result }));
-    } catch (err) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
-      );
-    }
+    handleSteerRequest(req, {
+      transport: this.transport,
+      chatManager: this.chatManager,
+      legacyEngine: this.legacyEngine,
+    });
   }
 
   private handleUnsteer(req: RpcRequest): void {

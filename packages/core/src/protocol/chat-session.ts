@@ -250,6 +250,20 @@ export class ChatSession {
     }
   }
 
+  /** Check the queue's actual owner, rather than a persisted previous run. */
+  matchesActiveTurn(clientMessageId: string): boolean {
+    return Boolean(this.active && this.active.opts.clientMessageId === clientMessageId);
+  }
+
+  /** Stop this exact turn while preserving unrelated queued work. */
+  cancelActiveTurn(clientMessageId: string): boolean {
+    if (!this.matchesActiveTurn(clientMessageId)) return false;
+    this.cancelledActive = true;
+    this.cancelledSinceLastTurn = true;
+    this.controller?.abort();
+    return true;
+  }
+
   isBusy(): boolean {
     return this.active !== null || this.exclusiveOperation;
   }
@@ -418,6 +432,9 @@ export class ChatSession {
       next = undefined;
     }
     if (!next) return;
+    // Scoped cancellation can preserve a previously queued successor. Starting
+    // it re-enables its own background wakeups just like a fresh enqueue does.
+    this.cancelledSinceLastTurn = false;
     this.active = next;
     this.settlePromise = new Promise<void>((resolve) => {
       this.resolveSettled = resolve;
@@ -426,13 +443,28 @@ export class ChatSession {
     this.controller = new AbortController();
     try {
       const onStream = next.opts.onStream ?? this.defaultOnStream;
+      // Capture identity per queued run, including automatic background wakeups.
+      // A late callback must never borrow the identity of this.active's next run.
+      let runId: string | undefined;
+      let clientMessageId = next.opts.clientMessageId;
+      const stream = (event: StreamEvent): void => {
+        if (event.type === "session_started") {
+          runId = event.runId;
+          clientMessageId = event.clientMessageId;
+        }
+        onStream?.(
+          (runId || clientMessageId) && !("agentId" in event && event.agentId !== undefined)
+            ? { ...event, runId, clientMessageId }
+            : event,
+        );
+      };
       const result = await this.engine.run(next.task, {
         cwd: next.opts.cwd,
         workspaceContext: next.opts.workspaceContext,
         sessionId: this.id,
         displayText: next.opts.displayText,
         signal: this.controller.signal,
-        onStream,
+        onStream: stream,
         goal: next.opts.goal,
         disableGoal: next.opts.disableGoal,
         injected: next.opts.injected,

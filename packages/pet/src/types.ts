@@ -37,14 +37,23 @@ export interface PetSessionProjection {
   queueDepth: number;
   lastActivityAt: number;
   pendingDecisionCount: number;
+  runId?: string;
+  clientMessageId?: string;
   /** Exceptional completed-run boundary that is waiting for recovery/continuation. */
   completionKind?: TurnCompletionKind;
-  terminal?: { status: PetTerminalStatus; at: number };
+  terminal?: {
+    status: PetTerminalStatus;
+    at: number;
+    runId?: string;
+    clientMessageId?: string;
+  };
   freshness: PetProjectionFreshness;
 }
 
 export interface PetCatalogSession {
   sessionId: string;
+  runId?: string;
+  clientMessageId?: string;
   title?: string;
   workspaceDisplayName?: string;
   updatedAt: number;

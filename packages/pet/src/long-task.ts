@@ -55,6 +55,9 @@ export type PetReplyAttachmentKind = "image" | "file" | "audio" | "video";
 export type PetLongTaskEventKind =
   | "created"
   | "started"
+  | "run-bound"
+  | "run-prepared"
+  | "result-updated"
   | "progress"
   | "waiting"
   | "paused"
@@ -83,6 +86,9 @@ export interface PetLongTaskEvent {
   waitingFor?: string;
   nextAction?: string;
   artifacts?: PetLongTaskArtifact[];
+  attempt?: number;
+  runId?: string;
+  clientMessageId?: string;
 }
 
 export interface PetLongTask {
@@ -102,6 +108,10 @@ export interface PetLongTask {
   status: PetLongTaskStatus;
   phase: PetLongTaskPhase;
   attempt: number;
+  /** Current run's transcript user-message id; absent in historical rows. */
+  runId?: string;
+  /** Expected launch client id before binding, current run client id afterwards. */
+  clientMessageId?: string;
   revision: number;
   createdAt: number;
   updatedAt: number;
@@ -165,6 +175,8 @@ export interface CreatePetLongTaskInput {
   objective: string;
   workspacePath: string | null;
   sessionId: string;
+  runId?: string;
+  clientMessageId?: string;
   executionBackend?: PetWorkExecutionBackend;
   verificationMode?: PetLongTaskVerificationMode;
   completionTarget?: PetLongTaskCompletionTarget;
@@ -172,7 +184,24 @@ export interface CreatePetLongTaskInput {
   at: number;
 }
 
-export type PetLongTaskTransition =
+export type PetLongTaskTransition = {
+  /** Optimistic fence for observations queued before retry/resume. */
+  attempt?: number;
+  runId?: string;
+  clientMessageId?: string;
+} & PetLongTaskTransitionInput;
+
+type PetLongTaskTransitionInput =
+  | { kind: "run-prepared"; at: number; clientMessageId?: string }
+  | { kind: "run-bound"; at: number; runId: string; previousRunId?: string }
+  | {
+      kind: "result-updated";
+      at: number;
+      attempt: number;
+      runId: string;
+      summary?: string;
+      terminalStatus?: "completed" | "failed";
+    }
   | { kind: "started"; at: number; message?: string }
   | { kind: "progress"; at: number; phase: PetLongTaskPhase; summary: string }
   | { kind: "waiting"; at: number; waitingFor: string; message?: string }
@@ -392,6 +421,8 @@ export function createPetLongTask(input: CreatePetLongTaskInput): PetLongTask {
     status: "queued",
     phase: "planning",
     attempt: 1,
+    runId: input.runId,
+    clientMessageId: input.clientMessageId,
     revision: 1,
     createdAt: input.at,
     updatedAt: input.at,
@@ -403,14 +434,29 @@ export function createPetLongTask(input: CreatePetLongTaskInput): PetLongTask {
 
 /**
  * Apply one durable transition. Terminal tasks only accept retry/cancel or a
- * closure-delivery acknowledgement; late
- * worker events are ignored so a stale completion cannot undo an explicit user
- * action such as pause or cancel.
+ * closure-delivery acknowledgement. A completed task can also record an explicit
+ * result update fenced to its current run and attempt. Late worker events cannot
+ * undo an explicit user action such as pause, cancel, or retry.
  */
 export function transitionPetLongTask(
   current: PetLongTask,
   transition: PetLongTaskTransition,
 ): PetLongTask {
+  if (transition.attempt !== undefined && transition.attempt !== current.attempt) return current;
+  if (current.status === "paused" && transition.runId !== undefined) return current;
+  if (
+    transition.kind !== "run-bound" &&
+    transition.kind !== "run-prepared" &&
+    transition.kind !== "retrying" &&
+    ((transition.runId !== undefined &&
+      (transition.runId !== current.runId ||
+        transition.clientMessageId !== current.clientMessageId)) ||
+      (transition.clientMessageId !== undefined &&
+        transition.clientMessageId !== current.clientMessageId))
+  )
+    return current;
+  if (transition.kind === "result-updated" && (current.status !== "completed" || !current.runId))
+    return current;
   if (transition.kind === "closure-decided" && current.closureDecision?.key === transition.key) {
     return current;
   }
@@ -444,6 +490,7 @@ export function transitionPetLongTask(
     transition.kind !== "retrying" &&
     transition.kind !== "cancelled" &&
     transition.kind !== "background-wait-recovered" &&
+    transition.kind !== "result-updated" &&
     transition.kind !== "closure-decided" &&
     transition.kind !== "continuation-started" &&
     transition.kind !== "closure-recorded" &&
@@ -479,6 +526,55 @@ export function transitionPetLongTask(
   };
   let event: Omit<PetLongTaskEvent, "id" | "sequence">;
   switch (transition.kind) {
+    case "run-prepared":
+      Object.assign(next, { runId: undefined, clientMessageId: transition.clientMessageId });
+      event = { kind: transition.kind, at: transition.at, message: "Preparing to continue work" };
+      break;
+    case "run-bound":
+      if (current.runId !== transition.previousRunId) return current;
+      // A resume can prepare a different launch before a queued start is applied.
+      // Unbound launches share undefined previousRunId; the submit id is their CAS.
+      if (
+        !current.runId &&
+        current.clientMessageId !== undefined &&
+        current.clientMessageId !== transition.clientMessageId
+      )
+        return current;
+      if (current.runId === transition.runId) return current;
+      Object.assign(next, {
+        runId: transition.runId,
+        clientMessageId: transition.clientMessageId,
+        status: "running",
+        phase: "executing",
+        resultSummary: undefined,
+        waitingFor: undefined,
+      });
+      event = { kind: transition.kind, at: transition.at, message: "Work session started" };
+      break;
+    case "result-updated": {
+      const summary = bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH);
+      const message = summary ?? current.resultSummary ?? "Work session result confirmed";
+      if (
+        current.events.some(
+          (item) =>
+            item.kind === "result-updated" &&
+            item.runId === transition.runId &&
+            item.attempt === current.attempt,
+        ) &&
+        (!summary || summary === current.resultSummary) &&
+        (!transition.terminalStatus || transition.terminalStatus === current.status)
+      )
+        return current;
+      Object.assign(next, {
+        status: transition.terminalStatus ?? current.status,
+        ...(summary ? { resultSummary: summary, summary } : {}),
+        ...(transition.terminalStatus === "failed"
+          ? { lastError: summary, completedAt: transition.at }
+          : {}),
+      });
+      event = { kind: transition.kind, at: transition.at, phase: "finalizing", message };
+      break;
+    }
     case "started":
       Object.assign(next, {
         status: "running",
@@ -582,6 +678,8 @@ export function transitionPetLongTask(
         status: "queued",
         phase: "planning",
         attempt: current.attempt + 1,
+        runId: undefined,
+        clientMessageId: transition.clientMessageId,
         // A retry is a new attempt in the same durable Session. Keeping the
         // previous attempt's start time would let an old projection terminal
         // pass the new attempt's time fence.
@@ -843,7 +941,12 @@ export function transitionPetLongTask(
       };
       break;
   }
-  next.events = appendEvent(current, event);
+  next.events = appendEvent(current, {
+    ...event,
+    attempt: next.attempt,
+    runId: next.runId,
+    clientMessageId: next.clientMessageId,
+  });
   return next;
 }
 
@@ -876,6 +979,9 @@ function isEventKind(value: unknown): value is PetLongTaskEventKind {
     [
       "created",
       "started",
+      "run-bound",
+      "run-prepared",
+      "result-updated",
       "progress",
       "waiting",
       "paused",
@@ -918,6 +1024,19 @@ function parseEvent(value: unknown): PetLongTaskEvent | null {
     sequence: event.sequence,
     kind: event.kind,
     at: event.at,
+    ...(typeof event.attempt === "number" &&
+    Number.isSafeInteger(event.attempt) &&
+    event.attempt > 0
+      ? { attempt: event.attempt }
+      : {}),
+    ...(typeof event.runId === "string" && event.runId.length > 0 && event.runId.length <= 256
+      ? { runId: event.runId }
+      : {}),
+    ...(typeof event.clientMessageId === "string" &&
+    event.clientMessageId.length > 0 &&
+    event.clientMessageId.length <= 256
+      ? { clientMessageId: event.clientMessageId }
+      : {}),
     ...(typeof event.message === "string" ? { message: bounded(event.message, 2_000) } : {}),
     ...(isPhase(event.phase) ? { phase: event.phase } : {}),
     ...(typeof event.waitingFor === "string" ? { waitingFor: bounded(event.waitingFor, 500) } : {}),
@@ -1066,6 +1185,14 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
     status: record.status,
     phase: record.phase,
     attempt: record.attempt,
+    ...(typeof record.runId === "string" && record.runId.length > 0 && record.runId.length <= 256
+      ? { runId: record.runId }
+      : {}),
+    ...(typeof record.clientMessageId === "string" &&
+    record.clientMessageId.length > 0 &&
+    record.clientMessageId.length <= 256
+      ? { clientMessageId: record.clientMessageId }
+      : {}),
     revision: record.revision,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,

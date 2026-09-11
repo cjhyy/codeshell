@@ -83,6 +83,21 @@ export function PetLongTaskCard({
   const confirm = useConfirm();
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [detailExpanded, setDetailExpanded] = React.useState(false);
+  const [artifactError, setArtifactError] = React.useState<string | null>(null);
+  const openArtifact = async (artifact: PetLongTask["artifacts"][number]): Promise<void> => {
+    setArtifactError(null);
+    try {
+      if (artifact.kind === "file") {
+        await window.codeshell.revealInFinder(artifact.reference, task.workspacePath ?? undefined);
+      } else if (artifact.kind === "url" && /^https?:\/\//iu.test(artifact.reference)) {
+        await window.codeshell.openExternal(artifact.reference);
+      } else {
+        onOpenSession?.(task.sessionId);
+      }
+    } catch (error) {
+      setArtifactError(error instanceof Error ? error.message : String(error));
+    }
+  };
   const actions = taskActions(task);
   // Cancel stops a possibly hours-long run; a stray click must not be enough,
   // matching the confirmation the clear/cleanup buttons already require.
@@ -189,15 +204,21 @@ export function PetLongTaskCard({
               key={`${artifact.kind}:${artifact.reference}`}
               type="button"
               className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border/55 bg-background px-2 py-1 text-[11px] text-muted-foreground transition hover:text-foreground disabled:cursor-default"
-              disabled={artifact.kind !== "session" && artifact.kind !== "result"}
+              disabled={artifact.kind === "url" && !/^https?:\/\//iu.test(artifact.reference)}
               title={artifact.reference}
-              onClick={() => onOpenSession?.(task.sessionId)}
+              onClick={() => void openArtifact(artifact)}
             >
               <ExternalLink size={11} aria-hidden="true" />
               <span className="truncate">{artifact.label}</span>
             </button>
           ))}
         </div>
+      )}
+
+      {artifactError && (
+        <p role="alert" className="mt-2 text-xs text-status-err">
+          {artifactError}
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/45 pt-2.5">

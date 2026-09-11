@@ -32,6 +32,12 @@ import {
   pushBoundedPetEvent,
 } from "./petReliability";
 import { loadPetChatModelKey, savePetChatModelKey, type PetSettingsBridge } from "./petPreferences";
+import { useT } from "../i18n";
+import {
+  petChatResultFailure,
+  type PetChatFailure,
+  type PetChatSubmission,
+} from "./petChatSubmission";
 
 export interface PetStateContextValue {
   state: PetState;
@@ -41,6 +47,11 @@ export interface PetStateContextValue {
   chatDispatch: React.Dispatch<TranscriptsAction>;
   chatBusy: boolean;
   setChatBusy: React.Dispatch<React.SetStateAction<boolean>>;
+  chatFailures: PetChatFailure[];
+  submitChat: (submission: PetChatSubmission) => Promise<void>;
+  stopChat: () => Promise<string | null>;
+  chatStopping: boolean;
+  chatCanStop: boolean;
   chatModelKey: string | null;
   setChatModelKey: React.Dispatch<React.SetStateAction<string | null>>;
   delegationReceipts: PetDelegationReceiptGroup[];
@@ -103,18 +114,17 @@ export function PetStateProvider({
   snapshotRetryDelay?: (attempt: number) => number;
 }) {
   const api = apiOverride ?? window.codeshell.pet;
+  const { t } = useT();
   const [state, dispatch] = React.useReducer(petStateReducer, initialPetState);
   const [petSessionId, setPetSessionId] = React.useState<string | null>(null);
-  const [chatBusy, setChatBusy] = React.useState(false);
-  // Watchdog: chatBusy is cleared by the stream's turn_complete/error. If that
-  // event is lost (worker crash, dropped IPC), busy would stick true forever,
-  // leaving the activity indicator stale and labelling later sends as queued.
-  // Force-clear after a generous ceiling so the UI always recovers.
-  React.useEffect(() => {
-    if (!chatBusy) return;
-    const id = setTimeout(() => setChatBusy(false), 120_000);
-    return () => clearTimeout(id);
-  }, [chatBusy]);
+  const [chatStreamBusy, setChatBusy] = React.useState(false);
+  const [pendingChatIds, setPendingChatIds] = React.useState<Set<string>>(() => new Set());
+  const pendingChatRequestsRef = React.useRef(new Map<string, Promise<void>>());
+  const [chatFailures, setChatFailures] = React.useState<PetChatFailure[]>([]);
+  const [chatStopping, setChatStopping] = React.useState(false);
+  const activeChatIdentityRef = React.useRef<{ runId?: string; clientMessageId?: string }>({});
+  const stoppedChatIdsRef = React.useRef(new Set<string>());
+  const chatBusy = chatStreamBusy || pendingChatIds.size > 0;
   const [chatModelKey, setChatModelKeyState] = React.useState<string | null>(null);
   const chatModelKeyRef = React.useRef<string | null>(null);
   const chatModelPreferenceRevisionRef = React.useRef(0);
@@ -165,6 +175,117 @@ export function PetStateProvider({
   const chatHistoryRequestedBytesRef = React.useRef(0);
   const chatHistoryRefreshInFlightRef = React.useRef(false);
   const chatHistoryRefreshQueuedRef = React.useRef(false);
+
+  const submitChat = React.useCallback(
+    (submission: PetChatSubmission): Promise<void> => {
+      const previous = pendingChatRequestsRef.current.get(submission.clientMessageId);
+      if (previous) return previous;
+      const queued = chatStreamBusy || pendingChatRequestsRef.current.size > 0;
+      stoppedChatIdsRef.current.delete(submission.clientMessageId);
+      setPendingChatIds((current) => new Set(current).add(submission.clientMessageId));
+      setChatFailures((current) =>
+        current.filter((item) => item.clientMessageId !== submission.clientMessageId),
+      );
+      chatDispatch({
+        type: "user_message",
+        bucket: PET_CHAT_BUCKET,
+        text: submission.message,
+        clientMessageId: submission.clientMessageId,
+        ...(queued ? { steerId: submission.clientMessageId, pending: true } : {}),
+      });
+      const operation = Promise.resolve().then(async () => {
+        let failure: Pick<PetChatFailure, "error" | "retryable"> | null = null;
+        let confirmedRunEnded = false;
+        try {
+          const result = await api.dispatch({
+            type: "chat",
+            message: submission.message,
+            clientMessageId: submission.clientMessageId,
+            ...(submission.model ? { model: submission.model } : {}),
+            ...(submission.preferredProjectPath
+              ? { preferredProjectPath: submission.preferredProjectPath }
+              : {}),
+          });
+          failure = petChatResultFailure(result, t);
+          if (
+            result.ok &&
+            result.type === "chat" &&
+            result.result &&
+            typeof result.result === "object"
+          ) {
+            const { reason } = result.result as { reason?: unknown };
+            confirmedRunEnded = typeof reason === "string" && reason !== "steered";
+          }
+        } catch (error) {
+          failure = {
+            error: error instanceof Error ? error.message : t("pet.chat.failed"),
+            retryable: true,
+          };
+        } finally {
+          if (failure)
+            setChatFailures((current) =>
+              [
+                ...current.filter((item) => item.clientMessageId !== submission.clientMessageId),
+                { ...submission, ...failure! },
+              ].slice(-100),
+            );
+          chatDispatch({
+            type: "user_message",
+            bucket: PET_CHAT_BUCKET,
+            text: submission.message,
+            clientMessageId: submission.clientMessageId,
+            pending: false,
+          });
+          pendingChatRequestsRef.current.delete(submission.clientMessageId);
+          setPendingChatIds((current) => {
+            const next = new Set(current);
+            next.delete(submission.clientMessageId);
+            return next;
+          });
+          // Only the run owned by this response can clear stream activity.
+          if (
+            confirmedRunEnded &&
+            activeChatIdentityRef.current.clientMessageId === submission.clientMessageId
+          )
+            setChatBusy(false);
+        }
+      });
+      pendingChatRequestsRef.current.set(submission.clientMessageId, operation);
+      return operation;
+    },
+    [api, chatStreamBusy, t],
+  );
+
+  const stopChat = React.useCallback(async (): Promise<string | null> => {
+    if (chatStopping) return null;
+    const clientMessageId =
+      (chatStreamBusy ? activeChatIdentityRef.current.clientMessageId : undefined) ??
+      pendingChatIds.values().next().value;
+    if (!clientMessageId) return t("pet.chat.stopUnavailable");
+    setChatStopping(true);
+    try {
+      const result = await api.dispatch({ type: "stop_chat", clientMessageId });
+      if (!result.ok) return result.message || t("pet.chat.failed");
+      if (result.type === "chat_stopped" && !result.stopped) return t("pet.chat.stopUnavailable");
+      if (result.type === "chat_stopped" && result.stopped) {
+        stoppedChatIdsRef.current.add(clientMessageId);
+        if (stoppedChatIdsRef.current.size > 100) {
+          stoppedChatIdsRef.current.delete(stoppedChatIdsRef.current.values().next().value!);
+        }
+        if (activeChatIdentityRef.current.clientMessageId === clientMessageId) setChatBusy(false);
+        setPendingChatIds((current) => {
+          const next = new Set(current);
+          next.delete(clientMessageId);
+          return next;
+        });
+      }
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : t("pet.chat.failed");
+    } finally {
+      setChatStopping(false);
+    }
+  }, [api, chatStopping, chatStreamBusy, pendingChatIds, t]);
 
   React.useEffect(() => {
     let active = true;
@@ -271,9 +392,36 @@ export function PetStateProvider({
     const shell = globalThis.window?.codeshell;
 
     const applyStream = (envelope: StreamEventEnvelope): void => {
+      const event = envelope.event;
+      const child = "agentId" in event && event.agentId !== undefined;
+      const identity = activeChatIdentityRef.current;
+      if (!child) {
+        if (event.type === "session_started") {
+          if (
+            identity.runId &&
+            (!event.runId ||
+              event.runId === identity.runId ||
+              event.previousRunId !== identity.runId)
+          )
+            return;
+          activeChatIdentityRef.current = {
+            runId: event.runId,
+            clientMessageId: event.clientMessageId,
+          };
+        } else if (
+          identity.runId &&
+          (event.runId !== identity.runId || event.clientMessageId !== identity.clientMessageId)
+        )
+          return;
+      }
       chatDispatch({ type: "stream", bucket: PET_CHAT_BUCKET, event: envelope.event });
-      if (envelope.event.type === "stream_request_start") setChatBusy(true);
-      if (envelope.event.type === "turn_complete" || envelope.event.type === "error") {
+      if (child) return;
+      if (
+        event.type === "stream_request_start" &&
+        (!event.clientMessageId || !stoppedChatIdsRef.current.has(event.clientMessageId))
+      )
+        setChatBusy(true);
+      if (event.type === "turn_complete" || event.type === "error") {
         setChatBusy(false);
       }
     };
@@ -287,12 +435,23 @@ export function PetStateProvider({
     };
     const unsubscribeStream = shell?.onStreamEvent?.(receiveStream);
 
-    const finishHydration = (sessionId: string): void => {
+    const finishHydration = (sessionId: string, history?: MessagesReducerState): void => {
       if (!active || knownPetSessionId !== sessionId) return;
-      transcriptHydrated = true;
+      // Fold the buffered live turn first, then merge the disk snapshot into it.
+      // Replaying this buffer on top of history duplicates the same assistant
+      // when the disk read already included its streamed reply.
       for (const envelope of bufferedStream.splice(0)) {
         if (envelope.sessionId === sessionId) applyStream(envelope);
       }
+      if (history)
+        chatDispatch({
+          type: "hydrate_history",
+          bucket: PET_CHAT_BUCKET,
+          state: history,
+          history,
+          goalAtStart: null,
+        });
+      transcriptHydrated = true;
     };
 
     const requestGlobalStatus = (): void => {
@@ -315,6 +474,7 @@ export function PetStateProvider({
             finishHydration(sessionId);
             return;
           }
+          let history: MessagesReducerState | undefined;
           try {
             const page = shell.getSessionTranscriptPage
               ? await shell.getSessionTranscriptPage(sessionId, {
@@ -323,14 +483,7 @@ export function PetStateProvider({
               : null;
             const transcript = page?.items ?? (await shell.getSessionTranscript(sessionId));
             if (active && knownPetSessionId === sessionId) {
-              const history = foldTranscript(transcript);
-              chatDispatch({
-                type: "hydrate_history",
-                bucket: PET_CHAT_BUCKET,
-                state: history,
-                history,
-                goalAtStart: null,
-              });
+              history = foldTranscript(transcript);
               setChatHistoryLoadedBytes(page?.loadedBytes ?? 0);
               setChatHistoryHasMore(
                 Boolean(page?.hasMore && page.loadedBytes < MAX_PET_HISTORY_BYTES),
@@ -339,7 +492,7 @@ export function PetStateProvider({
           } catch {
             // A new Pet has no transcript yet; the first chat turn creates it.
           } finally {
-            finishHydration(sessionId);
+            finishHydration(sessionId, history);
           }
         })
         .catch(() => {
@@ -666,6 +819,12 @@ export function PetStateProvider({
       chatDispatch,
       chatBusy,
       setChatBusy,
+      chatFailures,
+      submitChat,
+      stopChat,
+      chatStopping,
+      chatCanStop:
+        chatBusy && Boolean(activeChatIdentityRef.current.clientMessageId || pendingChatIds.size),
       chatModelKey,
       setChatModelKey,
       delegationReceipts,
@@ -690,6 +849,11 @@ export function PetStateProvider({
       petSessionId,
       chatState,
       chatBusy,
+      chatFailures,
+      submitChat,
+      stopChat,
+      chatStopping,
+      pendingChatIds,
       chatModelKey,
       delegationReceipts,
       hostActionReceipts,
@@ -730,6 +894,11 @@ const INERT_PET_CONTEXT: PetStateContextValue = {
   chatDispatch: () => {},
   chatBusy: false,
   setChatBusy: () => {},
+  chatFailures: [],
+  submitChat: async () => {},
+  stopChat: async () => null,
+  chatStopping: false,
+  chatCanStop: false,
   chatModelKey: null,
   setChatModelKey: () => {},
   delegationReceipts: [],

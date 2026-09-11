@@ -166,7 +166,12 @@ describe("Agent background completion boundaries", () => {
         // turn with only "running in background", so Mimi closed the task early.
         expect(h.mainRequests()).toBe(1);
         expect(h.completeEvents()).toEqual([
-          { type: "turn_complete", reason: "completed", completionKind: "background_wait" },
+          {
+            type: "turn_complete",
+            reason: "completed",
+            completionKind: "background_wait",
+            text: initial.text,
+          },
         ]);
         expect(h.state(initial.sessionId).lastCompletionKind).toBe("background_wait");
         expect(asyncAgentRegistry.hasRunningForSession(initial.sessionId)).toBe(true);
@@ -188,8 +193,13 @@ describe("Agent background completion boundaries", () => {
         expect(result.sessionId).toBe(initial.sessionId);
         expect(h.mainRequests()).toBe(2);
         expect(h.completeEvents()).toEqual([
-          { type: "turn_complete", reason: "completed", completionKind: "background_wait" },
-          { type: "turn_complete", reason: "completed" },
+          {
+            type: "turn_complete",
+            reason: "completed",
+            completionKind: "background_wait",
+            text: initial.text,
+          },
+          { type: "turn_complete", reason: "completed", text: result.text },
         ]);
         expect(h.state(initial.sessionId).lastCompletionKind).toBeUndefined();
       } finally {
@@ -208,7 +218,9 @@ describe("Agent background completion boundaries", () => {
         h.finish(FINAL_RESULT);
         const result = await run;
         expect(result.text).toBe(FINAL_RESULT);
-        expect(h.completeEvents()).toEqual([{ type: "turn_complete", reason: "completed" }]);
+        expect(h.completeEvents()).toEqual([
+          { type: "turn_complete", reason: "completed", text: result.text },
+        ]);
         expect(h.state(result.sessionId).lastCompletionKind).toBeUndefined();
       } finally {
         await h.close();
@@ -233,7 +245,12 @@ describe("Agent background completion boundaries", () => {
         expect.objectContaining({ type: "agent_end", text: "Sibling check passed" }),
       );
       expect(h.completeEvents()).toEqual([
-        { type: "turn_complete", reason: "completed", completionKind: "background_wait" },
+        {
+          type: "turn_complete",
+          reason: "completed",
+          completionKind: "background_wait",
+          text: initial.text,
+        },
       ]);
       h.finish(FINAL_RESULT);
       await until(() => notificationQueue.getSnapshot(initial.sessionId).length === 2);

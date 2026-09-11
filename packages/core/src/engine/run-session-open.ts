@@ -37,6 +37,9 @@ export interface OpenRunSessionArgs {
 
 export interface OpenedRunSession {
   session: SessionBundle;
+  /** Existing transcript user-message event that opened this run. */
+  runId: string;
+  previousRunId?: string;
   messages: Message[];
   freshImageMessage: Message | undefined;
   resumedFromDisk: boolean;
@@ -60,6 +63,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
   let messages: Message[];
   let freshImageMessage: Message | undefined;
   let resumedFromDisk = false;
+  let runId: string;
   const claimClientMessageId = (
     bundle: SessionBundle,
     clientMessageId: string | undefined,
@@ -141,7 +145,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     }
     if (args.parsedTask.hasImages) freshImageMessage = userMsg;
     messages.push(userMsg);
-    session.transcript.appendMessage("user", args.userMessageContent, {
+    runId = session.transcript.appendMessage("user", args.userMessageContent, {
       injected: options?.injected === true,
       clientMessageId: options?.clientMessageId,
       displayText: options?.displayText?.trim() || undefined,
@@ -153,18 +157,10 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
             correlationIds: options.agentDirection.correlationIds,
           }
         : {}),
-    });
+    }).id;
     if (options?.agentDirection) {
       args.onAgentDirectionsDelivered?.(options.agentDirection.envelopeIds);
     }
-    // Flush "active" status to disk immediately. resume() set it in memory
-    // (session-manager.ts), but without this write the on-disk state.json
-    // still shows the previous run's terminal reason — so any external
-    // observer (another CLI process, /sid, the session list) would think
-    // the session is still errored/aborted while we're actually running.
-    args.sessionManager.saveStateOrUpdateFields(session.state, {
-      status: session.state.status,
-    });
   } else {
     // Cold start: shape (2) reuses the host-supplied sid; shape (3)
     // lets sessionManager generate one with nanoid.
@@ -185,7 +181,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     claimClientMessageId(session, options?.clientMessageId, "submit");
     if (args.parsedTask.hasImages) freshImageMessage = userMsg;
     messages = [userMsg];
-    session.transcript.appendMessage("user", args.userMessageContent, {
+    runId = session.transcript.appendMessage("user", args.userMessageContent, {
       injected: options?.injected === true,
       clientMessageId: options?.clientMessageId,
       displayText: options?.displayText?.trim() || undefined,
@@ -197,7 +193,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
             correlationIds: options.agentDirection.correlationIds,
           }
         : {}),
-    });
+    }).id;
     if (options?.agentDirection) {
       args.onAgentDirectionsDelivered?.(options.agentDirection.envelopeIds);
     }
@@ -239,12 +235,20 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       sessionBrief: args.sessionBrief,
     });
   }
-  session.state.turnSeq = (session.state.turnSeq ?? 0) + 1;
+  // Derive the predecessor and turn sequence from the same successful CAS that
+  // publishes this run. The earlier resume snapshot may predate another opener.
+  const previousRunId = args.sessionManager.startSessionRun(
+    session.state,
+    runId,
+    options?.clientMessageId,
+  );
 
   return {
     ok: true,
     opened: {
       session,
+      runId,
+      previousRunId,
       messages,
       freshImageMessage,
       resumedFromDisk,

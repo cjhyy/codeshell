@@ -301,7 +301,7 @@ describe("attachment durability", () => {
     second.stop();
   });
 
-  test("a slow attachment load does not hold the queue mutation lock", async () => {
+  test("a slow attachment load does not block another conversation", async () => {
     const path = inboxPath();
     const loadStarted = deferred<void>();
     const releaseLoad = deferred<Uint8Array>();
@@ -319,12 +319,42 @@ describe("attachment durability", () => {
 
     const slowEnqueue = queue.enqueue("line:0", slow);
     await loadStarted.promise;
-    await expect(queue.enqueue("line:0", incoming("m-fast", "fast"))).resolves.toBe("queued");
+    await expect(
+      queue.enqueue("line:0", { ...incoming("m-fast", "fast"), target: "another-room" }),
+    ).resolves.toBe("queued");
     expect(persistedPending(path)).toBe(1);
 
     releaseLoad.resolve(Uint8Array.from([1]));
     await expect(slowEnqueue).resolves.toBe("queued");
     expect(persistedPending(path)).toBe(2);
+    queue.stop();
+  });
+
+  test("text cannot overtake an earlier attachment in the same conversation", async () => {
+    const loadStarted = deferred<void>();
+    const releaseLoad = deferred<Uint8Array>();
+    const slow = withAttachment("m-image-first", [1]);
+    slow.text = "image first";
+    slow.attachments![0]!.load = async () => {
+      loadStarted.resolve(undefined);
+      return releaseLoad.promise;
+    };
+    const delivered: string[] = [];
+    const queue = new DeliveryQueue(
+      config(inboxPath()),
+      async (_adapter, message) => void delivered.push(message.text),
+      () => undefined,
+    );
+    await queue.start();
+    const first = queue.enqueue("line:0", slow);
+    await loadStarted.promise;
+    const followUp = queue.enqueue("line:0", incoming("m-text-next", "describe that image"));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(delivered).toEqual([]);
+    releaseLoad.resolve(Uint8Array.from([1]));
+    await Promise.all([first, followUp]);
+    await waitUntil(() => delivered.length === 2);
+    expect(delivered).toEqual(["image first", "describe that image"]);
     queue.stop();
   });
 

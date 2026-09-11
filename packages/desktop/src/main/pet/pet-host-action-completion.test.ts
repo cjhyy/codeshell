@@ -7,6 +7,7 @@ import {
   PetHostActionReceiptService,
   type PetHostActionCompletedEvent,
 } from "./pet-host-action-completion.js";
+import { replacementReceiptDisplayMetadata } from "../../shared/pet-host-action-receipt.js";
 
 const roots: string[] = [];
 
@@ -15,6 +16,57 @@ afterEach(() => {
 });
 
 describe("Pet host-action completion", () => {
+  test("persists retry outcomes independently while retaining the original chat association", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-retry-receipts-"));
+    roots.push(root);
+    const service = new PetHostActionReceiptService({
+      sessionsRootDir: root,
+      qrDir: join(root, "qr"),
+    });
+    const base = {
+      petSessionId: "pet-one",
+      clientMessageId: "user:message",
+      executions: [],
+      replaceAssistant: true,
+      deliveryChannel: "wechat",
+    };
+    await service.record({
+      ...base,
+      receiptId: "task:1:failed",
+      authoritativeMessage: "First attempt failed",
+    });
+    await service.record({
+      ...base,
+      receiptId: "task:2:completed",
+      authoritativeMessage: "Retry succeeded",
+    });
+    // Restarting the service preserves both versions and deduplicates retries.
+    const restarted = new PetHostActionReceiptService({
+      sessionsRootDir: root,
+      qrDir: join(root, "qr"),
+    });
+    await restarted.record({
+      ...base,
+      receiptId: "task:2:completed",
+      authoritativeMessage: "Retry succeeded",
+    });
+    const rows = readFileSync(join(root, "pet-one", "transcript.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows.map((row) => row.data.content)).toEqual([
+      "First attempt failed",
+      "Retry succeeded",
+    ]);
+    expect(
+      rows.map((row) =>
+        replacementReceiptDisplayMetadata(row.data.clientMessageId, row.data.content),
+      ),
+    ).toEqual([
+      { sourceClientMessageId: "user:message", deliveryChannel: "wechat" },
+      { sourceClientMessageId: "user:message", deliveryChannel: "wechat" },
+    ]);
+  });
   test("persists and publishes one authoritative SendMessage replacement", async () => {
     const root = mkdtempSync(join(tmpdir(), "pet-host-completion-"));
     roots.push(root);

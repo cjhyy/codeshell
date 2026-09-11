@@ -123,6 +123,7 @@ export interface PetHostActionExecution {
 export type PetDispatchCommand =
   | { type: "get_global_status" }
   | { type: "list_pending" }
+  | { type: "stop_chat"; clientMessageId?: string }
   | { type: "open_session"; target: PetNavigationRequest }
   | {
       type: "chat";
@@ -183,6 +184,7 @@ export type PetDispatchResult =
       sessions: DesktopPetProjectionSnapshot["sessions"];
     }
   | { ok: true; type: "pending_list"; pending: DesktopPetProjectionSnapshot["pending"] }
+  | { ok: true; type: "chat_stopped"; stopped: boolean }
   | { ok: true; type: "open_session"; result: PetNavigationResult }
   | {
       ok: true;
@@ -698,8 +700,15 @@ interface PetQueuedSteer {
 interface PetActiveChatTurn {
   routeKey: string;
   sessionId: string;
+  clientMessageId?: string;
+  /** Only the original user run accepts steers, never its host receipt turn. */
+  workerRunPending: boolean;
+  stopRequested: boolean;
+  stopConfirmed: boolean;
   runSettled: boolean;
   followerCount: number;
+  steersDrained: Promise<void>;
+  resolveSteersDrained?: () => void;
   steers: Map<string, PetQueuedSteer>;
   runDone: Promise<void>;
   resolveRunDone: () => void;
@@ -762,14 +771,23 @@ export class PetDispatchService {
     }
   }
 
-  private createActiveChatTurn(routeKey: string, sessionId: string): PetActiveChatTurn {
+  private createActiveChatTurn(
+    routeKey: string,
+    sessionId: string,
+    clientMessageId?: string,
+  ): PetActiveChatTurn {
     let resolveRunDone!: () => void;
     let resolveFullyDone!: () => void;
     return {
       routeKey,
       sessionId,
+      clientMessageId,
+      workerRunPending: false,
+      stopRequested: false,
+      stopConfirmed: false,
       runSettled: false,
       followerCount: 0,
+      steersDrained: Promise.resolve(),
       steers: new Map(),
       runDone: new Promise<void>((resolve) => {
         resolveRunDone = resolve;
@@ -783,6 +801,10 @@ export class PetDispatchService {
   }
 
   private finishActiveChatTurnIfDrained(active: PetActiveChatTurn): void {
+    if (active.followerCount === 0) {
+      active.resolveSteersDrained?.();
+      active.resolveSteersDrained = undefined;
+    }
     if (!active.runSettled || active.followerCount > 0) return;
     if (this.activeChatTurn === active) this.activeChatTurn = undefined;
     active.resolveFullyDone();
@@ -800,6 +822,7 @@ export class PetDispatchService {
   }
 
   private async dispatchScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
+    command = { ...command, clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}` };
     const sessionId = (await this.options.metadata.ensure()).petSessionId;
     const routeKey = petChatRouteKey(command);
 
@@ -807,13 +830,23 @@ export class PetDispatchService {
       const admission = await this.withChatAdmission(() => {
         const active = this.activeChatTurn;
         if (!active) {
-          const leader = this.createActiveChatTurn(routeKey, sessionId);
+          const leader = this.createActiveChatTurn(routeKey, sessionId, command.clientMessageId);
           this.activeChatTurn = leader;
           return { kind: "leader" as const, active: leader };
         }
-        if (active.routeKey === routeKey && !isPetContextControl(command)) {
+        if (
+          active.routeKey === routeKey &&
+          active.workerRunPending &&
+          !active.stopRequested &&
+          !isPetContextControl(command)
+        ) {
           const id = command.clientMessageId ?? `pet-steer-${randomUUID()}`;
           const steer = { id, injected: false };
+          if (active.followerCount === 0) {
+            active.steersDrained = new Promise<void>((resolve) => {
+              active.resolveSteersDrained = resolve;
+            });
+          }
           active.followerCount += 1;
           active.steers.set(id, steer);
           return { kind: "steer" as const, active, steer };
@@ -845,10 +878,14 @@ export class PetDispatchService {
       // session-turn-scheduler.ts for why unsteer is the confirmation.
       const outcome = await resolveSteerOutcome({
         steer: async () => {
+          if (!admission.active.workerRunPending || admission.active.stopRequested) {
+            return { accepted: false };
+          }
           const response = await this.options.worker.requestWorker(
             "agent/steer",
             {
               sessionId: admission.active.sessionId,
+              expectedClientMessageId: admission.active.clientMessageId,
               text: command.message.trim(),
               id: admission.steer.id,
               ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
@@ -886,6 +923,101 @@ export class PetDispatchService {
       // The turn ended before consuming this input (or steering was rejected).
       // Retry admission as a normal queued turn; the stable clientMessageId
       // keeps transcript/host-action replay idempotent.
+    }
+  }
+
+  /** Background reports reserve the same session as chat, without accepting steers. */
+  private async withManagerTurn<T>(operation: () => Promise<T>): Promise<T> {
+    const sessionId = (await this.options.metadata.ensure()).petSessionId;
+    for (;;) {
+      const admission = await this.withChatAdmission(() => {
+        if (this.activeChatTurn) return { wait: this.activeChatTurn.fullyDone };
+        const active = this.createActiveChatTurn(`internal:${randomUUID()}`, sessionId);
+        this.activeChatTurn = active;
+        return { active };
+      });
+      if (admission.wait) {
+        await admission.wait;
+        continue;
+      }
+      const active = admission.active!;
+      try {
+        return await operation();
+      } finally {
+        await this.withChatAdmission(() => {
+          active.runSettled = true;
+          active.resolveRunDone();
+          this.finishActiveChatTurnIfDrained(active);
+        });
+      }
+    }
+  }
+
+  private async requestChatRun(
+    command: PetChatCommand,
+    params: Record<string, unknown>,
+  ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
+    const active = this.activeChatTurn;
+    if (active && active.clientMessageId === command.clientMessageId)
+      active.workerRunPending = true;
+    try {
+      return await this.options.worker.requestWorker("agent/run", params, {
+        meta: { origin: "host", producer: "pet-dispatch" },
+      });
+    } finally {
+      if (active) {
+        active.workerRunPending = false;
+        active.resolveRunDone();
+        // Revoke accepted but unused steers before a host receipt run can
+        // consume them with its different prompt and capability set.
+        await active.steersDrained;
+        await this.withChatAdmission(() => {
+          active.runSettled = true;
+          this.finishActiveChatTurnIfDrained(active);
+        });
+      }
+    }
+  }
+
+  private requestManagerRun(params: Record<string, unknown>, producer: string) {
+    return this.withManagerTurn(() =>
+      this.options.worker.requestWorker("agent/run", params, {
+        meta: { origin: "host", producer },
+      }),
+    );
+  }
+
+  private async stopChat(clientMessageId?: string): Promise<PetDispatchResult> {
+    const active = this.activeChatTurn;
+    if (
+      !active?.clientMessageId ||
+      !active.workerRunPending ||
+      (clientMessageId !== undefined && active.clientMessageId !== clientMessageId)
+    ) {
+      return { ok: true, type: "chat_stopped", stopped: false };
+    }
+    active.stopRequested = true;
+    try {
+      const response = await this.options.worker.requestWorker(
+        "agent/cancel",
+        { sessionId: active.sessionId, expectedClientMessageId: active.clientMessageId },
+        { meta: { origin: "host", producer: "pet-chat-stop" } },
+      );
+      if (!response.ok) {
+        active.stopRequested = false;
+        return { ok: false, code: "worker-error", message: response.message };
+      }
+      const stopped = readWorkerBoolean(response.result, "stopped") === true;
+      if (stopped) active.stopConfirmed = true;
+      if (!stopped) active.stopRequested = false;
+      return { ok: true, type: "chat_stopped", stopped };
+    } catch (error) {
+      active.stopRequested = false;
+      return {
+        ok: false,
+        code: "worker-error",
+        message: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -1022,8 +1154,7 @@ export class PetDispatchService {
           canContinue,
         },
       });
-      const response = await this.options.worker.requestWorker(
-        "agent/run",
+      const response = await this.requestManagerRun(
         {
           sessionId: metadata.petSessionId,
           task:
@@ -1060,7 +1191,7 @@ export class PetDispatchService {
               : {}),
           },
         },
-        { meta: { origin: "host", producer: "pet-long-task-closure" } },
+        "pet-long-task-closure",
       );
       if (!response.ok) throw new Error(response.message);
       const responseText = (response.result as { text?: unknown } | undefined)?.text;
@@ -1319,8 +1450,7 @@ export class PetDispatchService {
           "After GatewayReply is accepted, stop; do not call it again."
         : "No external reply route is attached to this report. Do not call GatewayReply and do not claim external delivery. " +
           "Absorb the report into your manager conversation and respond with a concise acknowledgement, follow-up, or decision.";
-    const response = await this.options.worker.requestWorker(
-      "agent/run",
+    const response = await this.requestManagerRun(
       {
         sessionId: metadata.petSessionId,
         task:
@@ -1357,7 +1487,7 @@ export class PetDispatchService {
             : {}),
         },
       },
-      { meta: { origin: "host", producer: "pet-session-report" } },
+      "pet-session-report",
     );
     if (!response.ok) throw new Error(response.message);
     const responseText = (response.result as { text?: unknown } | undefined)?.text;
@@ -1415,6 +1545,7 @@ export class PetDispatchService {
   }
 
   async dispatch(command: PetDispatchCommand): Promise<PetDispatchResult> {
+    if (command?.type === "stop_chat") return this.stopChat(command.clientMessageId);
     return command?.type === "chat"
       ? this.dispatchScheduledChat(command)
       : this.dispatchNow(command);
@@ -1749,66 +1880,74 @@ export class PetDispatchService {
           ...remainingWorldExtras,
         };
         const runtimeContext = stringifyBoundedPetWorld(world);
-        const response = await this.options.worker
-          .requestWorker(
-            "agent/run",
-            {
-              sessionId: metadata.petSessionId,
-              task: command.message.trim(),
-              ...(managerModel ? { model: managerModel } : {}),
-              ...(attachments.length > 0 ? { attachments } : {}),
-              petRuntimeContext: runtimeContext,
-              petWorkspaces,
-              profileParams: {
-                runtimeContext,
-                workspaces: petWorkspaces,
-                reusableSessions: petReusableSessions,
-                ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
-                ...(gatewayCatalog ? { gateway: gatewayCatalog } : {}),
-                ...(gatewayReplyCapability && hostActionKinds.includes("gatewayReply")
-                  ? { gatewayReply: gatewayReplyCapability }
-                  : {}),
-                ...(this.options.sessionsRootDir
-                  ? { sessionsRootDir: this.options.sessionsRootDir }
-                  : {}),
-                followUps: petFollowUps,
-                outboundTargets: listedOutboundTargets.slice(0, 32),
-              },
-              cwd: this.options.hostCwd,
-              behaviorMode: "pet",
-              kind: "pet",
-              permissionMode: "default",
-              clientMessageId: command.clientMessageId,
-              ...(segmentTurn?.closedSegment && command.clientMessageId
-                ? {
-                    archiveBeforeCurrentTurn: {
-                      ...(segmentTurn.closedSegment.closingBoundaryMessageId &&
-                      !segmentTurn.archiveSummary
-                        ? {
-                            fromClientMessageId: segmentTurn.closedSegment.closingBoundaryMessageId,
-                          }
-                        : {}),
-                      segmentId: segmentTurn.closedSegment.segmentId,
-                      ...(segmentTurn.archiveSummary
-                        ? { summary: segmentTurn.archiveSummary }
-                        : {}),
-                    },
-                  }
-                : {}),
-            },
-            { meta: { origin: "host", producer: "pet-dispatch" } },
-          )
-          .finally(() => {
-            if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;
-            // Journal/memory extraction is intentionally background work. It
-            // starts only after agent/run has settled, so its end anchor is no
-            // longer racing the transcript append.
-            void this.options.segmentController
-              ?.completeSegmentClosure(segmentTurn.closedSegment)
-              .catch(() => undefined);
-          });
+        const activeChat = this.activeChatTurn;
+        const response = await this.requestChatRun(command, {
+          sessionId: metadata.petSessionId,
+          task: command.message.trim(),
+          ...(managerModel ? { model: managerModel } : {}),
+          ...(attachments.length > 0 ? { attachments } : {}),
+          petRuntimeContext: runtimeContext,
+          petWorkspaces,
+          profileParams: {
+            runtimeContext,
+            workspaces: petWorkspaces,
+            reusableSessions: petReusableSessions,
+            ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
+            ...(gatewayCatalog ? { gateway: gatewayCatalog } : {}),
+            ...(gatewayReplyCapability && hostActionKinds.includes("gatewayReply")
+              ? { gatewayReply: gatewayReplyCapability }
+              : {}),
+            ...(this.options.sessionsRootDir
+              ? { sessionsRootDir: this.options.sessionsRootDir }
+              : {}),
+            followUps: petFollowUps,
+            outboundTargets: listedOutboundTargets.slice(0, 32),
+          },
+          cwd: this.options.hostCwd,
+          behaviorMode: "pet",
+          kind: "pet",
+          permissionMode: "default",
+          clientMessageId: command.clientMessageId,
+          ...(segmentTurn?.closedSegment && command.clientMessageId
+            ? {
+                archiveBeforeCurrentTurn: {
+                  ...(segmentTurn.closedSegment.closingBoundaryMessageId &&
+                  !segmentTurn.archiveSummary
+                    ? {
+                        fromClientMessageId: segmentTurn.closedSegment.closingBoundaryMessageId,
+                      }
+                    : {}),
+                  segmentId: segmentTurn.closedSegment.segmentId,
+                  ...(segmentTurn.archiveSummary ? { summary: segmentTurn.archiveSummary } : {}),
+                },
+              }
+            : {}),
+        }).finally(() => {
+          if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;
+          // Journal/memory extraction is intentionally background work. It
+          // starts only after agent/run has settled, so its end anchor is no
+          // longer racing the transcript append.
+          void this.options.segmentController
+            ?.completeSegmentClosure(segmentTurn.closedSegment)
+            .catch(() => undefined);
+        });
         if (!response.ok) {
           return { ok: false, code: "worker-error", message: response.message };
+        }
+        const responseReason = (response.result as { reason?: unknown } | undefined)?.reason;
+        if (
+          responseReason === "aborted_streaming" ||
+          responseReason === "aborted_tools" ||
+          (activeChat &&
+            activeChat.clientMessageId === command.clientMessageId &&
+            activeChat.stopConfirmed)
+        ) {
+          return {
+            ok: true,
+            type: "chat",
+            petSessionId: metadata.petSessionId,
+            result: { ...((response.result as object) ?? {}), reason: "aborted_streaming" },
+          };
         }
         const workDelegations = readPetWorkDelegations(response.result);
         if (workDelegations.some((entry) => !workspacePathById.has(entry.workspaceId))) {
@@ -1959,8 +2098,7 @@ export class PetDispatchService {
             // The same derived id replays the persisted injected receipt on a
             // duplicate delivery. Never consume its action/delegation results:
             // only the original manager turn can authorize side effects.
-            const receipt = await this.options.worker.requestWorker(
-              "agent/run",
+            const receipt = await this.requestManagerRun(
               {
                 sessionId: metadata.petSessionId,
                 requireExisting: true,
@@ -1991,7 +2129,7 @@ export class PetDispatchService {
                   outboundTargets: [],
                 },
               },
-              { meta: { origin: "host", producer: "pet-delegation-launch-receipt" } },
+              "pet-delegation-launch-receipt",
             );
             const receiptResult =
               receipt.ok && receipt.result && typeof receipt.result === "object"

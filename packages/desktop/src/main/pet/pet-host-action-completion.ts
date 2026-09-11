@@ -5,6 +5,7 @@ import {
   PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX,
   PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX,
   PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX,
+  PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX,
 } from "../../shared/pet-host-action-receipt.js";
 import { enrichPetChatReplyWithHostActions } from "./host-action-reply.js";
 import type { PetHostActionExecution } from "./pet-dispatch-service.js";
@@ -12,6 +13,8 @@ import type { PetHostActionExecution } from "./pet-dispatch-service.js";
 export interface PetHostActionReceiptRecordInput {
   petSessionId: string;
   clientMessageId: string;
+  /** Distinct durable receipt identity, independent of the originating user turn. */
+  receiptId?: string;
   executions: PetHostActionExecution[];
   /** Trusted host text to use before rendering any host-action outcomes. */
   baseMessage?: string;
@@ -100,13 +103,22 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
           clientMessageId: input.clientMessageId,
         });
       }
-      const assistantClientMessageId = replaceAssistant
-        ? deliveryChannel
-          ? `${PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX}${encodeURIComponent(
-              deliveryChannel,
-            )}:${input.clientMessageId}`
-          : `${PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX}${input.clientMessageId}`
-        : `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${input.clientMessageId}`;
+      const assistantClientMessageId =
+        replaceAssistant && input.receiptId
+          ? `${PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX}${encodeURIComponent(
+              JSON.stringify({
+                sourceClientMessageId: input.clientMessageId,
+                receiptId: input.receiptId,
+                ...(deliveryChannel ? { deliveryChannel } : {}),
+              }),
+            )}`
+          : replaceAssistant
+            ? deliveryChannel
+              ? `${PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX}${encodeURIComponent(
+                  deliveryChannel,
+                )}:${input.clientMessageId}`
+              : `${PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX}${input.clientMessageId}`
+            : `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${input.clientMessageId}`;
       if (!transcript.hasClientMessageId(assistantClientMessageId)) {
         transcript.appendMessage("assistant", message, {
           clientMessageId: assistantClientMessageId,

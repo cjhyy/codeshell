@@ -295,6 +295,7 @@ export async function finalizeRunSuccess(args: {
   options?.onStream?.({
     type: "turn_complete",
     reason: result.reason,
+    text: result.text,
     ...(result.completionKind ? { completionKind: result.completionKind } : {}),
   });
 
@@ -311,6 +312,7 @@ export async function finalizeRunSuccess(args: {
   return {
     text: result.text,
     reason: result.reason,
+    ...(result.completionKind ? { completionKind: result.completionKind } : {}),
     goalTermination: firstGoalTermination,
     sessionId: session.state.sessionId,
     turnCount,

@@ -19,6 +19,44 @@ function makeTransport() {
 }
 
 describe("AgentServer agent/goalClear", () => {
+  for (const mode of ["live", "legacy"] as const) {
+    it(`stamps ${mode} Goal clear with the run identity captured before the control`, () => {
+      let runId = "cleared-run";
+      const engine = {
+        isHeadless: () => true,
+        getGoal: () => ({ objective: "ship", goalId: "goal-1", revision: 2 }),
+        getSessionManager: () => ({
+          readSessionState: () => ({ runId, clientMessageId: "cleared-client" }),
+        }),
+        clearGoal: () => {
+          runId = "newer-run";
+          return true;
+        },
+      } as any;
+      const t = makeTransport();
+      new AgentServer({
+        transport: t.transport,
+        ...(mode === "legacy"
+          ? { engine }
+          : {
+              chatManager: {
+                get: () => ({ engine, getGoal: engine.getGoal, clearGoal: engine.clearGoal }),
+              } as any,
+            }),
+      });
+      t.deliver({ jsonrpc: "2.0", id: 1, method: Methods.GoalClear, params: { sessionId: "s-1" } });
+      expect(
+        t.sent.find((message) => message.method === Methods.StreamEvent)?.params.event,
+      ).toEqual({
+        type: "goal_cleared",
+        runId: "cleared-run",
+        clientMessageId: "cleared-client",
+        goalId: "goal-1",
+        revision: 2,
+      });
+    });
+  }
+
   it("notifies stream subscribers when a live session goal is cleared", () => {
     let clearCalls = 0;
     const chatManager = {

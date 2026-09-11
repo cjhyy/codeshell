@@ -7,11 +7,11 @@ import type {
   Message,
   SessionState,
   SessionWorkspace,
-  StreamCallback,
   TaskInfo,
   TokenUsage,
 } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
+import { buildWrappedOnStream } from "./run-stream.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
@@ -408,6 +408,8 @@ export class Engine {
    * Null when idle; set at run start, cleared in run's finally.
    */
   private activeRunSession: SessionBundle | null = null;
+  /** Original transcript identity survives Goal-control rebases of the live state. */
+  private readonly runIds = new WeakMap<SessionState, string>();
   /**
    * Same-instance run guard. Engine owns single-valued live controls and one
    * HookRegistry, so a second run must not enter until the first has completed
@@ -1287,6 +1289,9 @@ export class Engine {
   }
 
   private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+    // Stream wrappers capture this run's identity. Keep them off the caller's
+    // options so reusing an options object cannot nest a previous run's wrapper.
+    if (options) options = { ...options };
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
@@ -1331,8 +1336,15 @@ export class Engine {
     // store is the transcript, but TaskGuard runs in-loop and can't
     // afford a transcript scan per turn.
     let latestTodos: TaskInfo[] = [];
-    const wrappedOnStream = this.buildWrappedOnStream({
-      userOnStream: options?.onStream,
+    const userOnStream = options?.onStream;
+    const clientMessageId = options?.clientMessageId;
+    const wrappedOnStream = buildWrappedOnStream({
+      userOnStream: (event) =>
+        userOnStream?.(
+          event.type === "session_started"
+            ? { ...event, runId, previousRunId, clientMessageId }
+            : event,
+        ),
       getSession: () => session,
       setLatestTodos: (todos) => {
         latestTodos = todos;
@@ -1434,6 +1446,8 @@ export class Engine {
     });
     if (!openedResult.ok) return openedResult.result;
     const {
+      runId,
+      previousRunId,
       messages: openedMessages,
       freshImageMessage,
       resumedFromDisk,
@@ -1441,6 +1455,7 @@ export class Engine {
       releaseClientMessageId,
     } = openedResult.opened;
     const session = openedResult.opened.session;
+    this.runIds.set(session.state, runId);
     let messages = openedMessages;
     toolCtx.contextStrategy = this.resolveContextStrategy(profile);
     const contextNotes =
@@ -1778,38 +1793,6 @@ export class Engine {
       profile,
       getProfileReportedResults,
     });
-  }
-
-  /**
-   * Build the stream callback that wraps the caller's `onStream`: it snapshots
-   * TodoWrite `task_update` events for TaskGuard and persists `goal_progress`
-   * events to the transcript before delegating. Extracted verbatim from the
-   * {@link runExclusive} skeleton; the todo buffer and (not-yet-open) session
-   * are reached through the `setLatestTodos` / `getSession` accessors.
-   */
-  private buildWrappedOnStream(args: {
-    userOnStream: StreamCallback | undefined;
-    getSession: () => SessionBundle;
-    setLatestTodos: (todos: TaskInfo[]) => void;
-  }): StreamCallback {
-    const { userOnStream, getSession, setLatestTodos } = args;
-    return (event) => {
-      if (event.type === "task_update") {
-        setLatestTodos(event.tasks);
-      }
-      // Persist goal progress so replay/history shows how many rounds the
-      // goal ran. Display-only — toMessages() ignores this type, so it never
-      // re-enters the LLM context.
-      if (event.type === "goal_progress") {
-        getSession().transcript.append("goal_progress", {
-          ...(event.goalId ? { goalId: event.goalId } : {}),
-          status: event.status,
-          round: event.round,
-          ...(event.gaps ? { gaps: event.gaps } : {}),
-        });
-      }
-      userOnStream?.(event);
-    };
   }
 
   /**
@@ -3298,7 +3281,7 @@ export class Engine {
       completedSnapshotVersion: state.completedSnapshotVersion,
       completedThroughEventId: state.completedThroughEventId,
     } satisfies SessionStateFieldPatch;
-    if (!this.sessionManager.saveStateOrUpdateFields(state, finalFields)) {
+    if (!this.sessionManager.saveStateOrUpdateFields(state, finalFields, this.runIds.get(state))) {
       logger.warn("session.final_state_persist_failed", { sessionId: state.sessionId });
     }
   }
@@ -3315,7 +3298,9 @@ export class Engine {
       contextUsageAnchor: state.contextUsageAnchor,
       costState: state.costState,
     } satisfies SessionStateFieldPatch;
-    if (!this.sessionManager.saveStateOrUpdateFields(state, progressFields)) {
+    if (
+      !this.sessionManager.saveStateOrUpdateFields(state, progressFields, this.runIds.get(state))
+    ) {
       logger.warn("session.run_progress_persist_failed", { sessionId: state.sessionId });
     }
   }

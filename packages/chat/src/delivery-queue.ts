@@ -97,6 +97,8 @@ export class DeliveryQueue {
   private readonly pending: DeliveryRecord[] = [];
   /** Enqueues that reserved capacity while attachments are materialized outside the mutation lock. */
   private readonly preparing = new Map<string, string | undefined>();
+  /** Same-target inputs enter the queue in arrival order, even when media loads slowly. */
+  private readonly preparationByTarget = new Map<string, Promise<void>>();
   private readonly completed = new Map<string, number>();
   private readonly inFlight = new Set<string>();
   private readonly targetInFlight = new Map<string, number>();
@@ -147,6 +149,10 @@ export class DeliveryQueue {
     if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
     const dedupeKey = deliveryDedupeKey(message);
     const id = randomUUID();
+    const target = targetKey(message);
+    let previousPreparation: Promise<void> | undefined;
+    let preparation: Promise<void> | undefined;
+    let releasePreparation: (() => void) | undefined;
     const reserved = await this.withMutation(async () => {
       if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
       this.pruneCompleted();
@@ -162,6 +168,11 @@ export class DeliveryQueue {
         throw new DeliveryBackpressureError(this.config.maxPending);
       }
       this.preparing.set(id, dedupeKey);
+      previousPreparation = this.preparationByTarget.get(target);
+      preparation = new Promise<void>((resolve) => {
+        releasePreparation = resolve;
+      });
+      this.preparationByTarget.set(target, preparation);
       return true;
     });
     if (!reserved) return "duplicate";
@@ -170,6 +181,7 @@ export class DeliveryQueue {
     // above preserves dedupe/backpressure, while doing the I/O here prevents one
     // slow attachment from blocking every enqueue and terminal state write.
     const spooled = await this.spoolAttachments(id, message);
+    await previousPreparation;
     let record: DeliveryRecord | undefined;
     try {
       await this.withMutation(async () => {
@@ -216,6 +228,11 @@ export class DeliveryQueue {
         },
       );
       throw error;
+    } finally {
+      releasePreparation?.();
+      if (this.preparationByTarget.get(target) === preparation) {
+        this.preparationByTarget.delete(target);
+      }
     }
     this.pump();
     return "queued";

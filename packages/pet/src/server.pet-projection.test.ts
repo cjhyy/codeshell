@@ -13,6 +13,7 @@ import {
 import { createPetModule } from "./capability.js";
 
 function makeEngine(sessionId: string, kind: "work" | "pet" = "work"): Engine {
+  let runs = 0;
   return {
     setPlanMode() {},
     setAskUser() {},
@@ -22,6 +23,15 @@ function makeEngine(sessionId: string, kind: "work" | "pet" = "work"): Engine {
     isHeadless: () => false,
     getSessionManager: () => ({ readSessionKind: () => kind }),
     async run(_task: string, options?: any): Promise<EngineResult> {
+      const previousRunId = runs > 0 ? `user-${runs}` : undefined;
+      options?.onStream?.({
+        type: "session_started",
+        sessionId,
+        promptTokens: 0,
+        runId: `user-${++runs}`,
+        previousRunId,
+        clientMessageId: options.clientMessageId,
+      });
       options?.onStream?.({ type: "stream_request_start", turnNumber: 1 });
       options?.onStream?.({
         type: "tool_use_start",
@@ -50,7 +60,11 @@ function makePair(sessionIds = ["session-a", "session-b"], kind: "work" | "pet" 
     engineFactory: () => engines.shift() ?? makeEngine("fallback"),
   });
   const [clientTransport, serverTransport] = createInProcessTransport();
-  const server = new AgentServer({ transport: serverTransport, chatManager: manager, composition: compileComposition({ modules: [createPetModule()] }) });
+  const server = new AgentServer({
+    transport: serverTransport,
+    chatManager: manager,
+    composition: compileComposition({ modules: [createPetModule()] }),
+  });
   const client = new AgentClient({ transport: clientTransport });
   return { client, manager, server };
 }
@@ -61,6 +75,36 @@ async function tick(): Promise<void> {
 }
 
 describe("Pet projection protocol", () => {
+  test("projects an automatic background wake with its fresh run identity", async () => {
+    const { client, server } = makePair(["session-a"]);
+    try {
+      await client.run({ sessionId: "session-a", task: "first", clientMessageId: "submit" });
+      (server as any).notificationMailbox.enqueue(
+        {
+          agentId: "child",
+          name: "child",
+          description: "background result",
+          finalText: "finished",
+          status: "completed",
+          enqueuedAt: 1,
+        },
+        "session-a",
+      );
+      expect(await (server as any).wakeIdleSession("session-a")).toBe(true);
+      const snapshot = (await client.requestExtension(
+        GET_PET_PROJECTION_SNAPSHOT_METHOD,
+      )) as PetProjectionSnapshotResult;
+      expect(snapshot.sessions[0]).toMatchObject({
+        runId: "user-2",
+        terminal: { status: "completed", runId: "user-2" },
+      });
+      expect(snapshot.sessions[0]?.clientMessageId).toBeUndefined();
+    } finally {
+      server.close();
+      client.close();
+    }
+  });
+
   test("returns a bounded snapshot and monotonic session-isolated deltas", async () => {
     const { client, server } = makePair();
     const deltas: PetProjectionDelta[] = [];
@@ -68,7 +112,9 @@ describe("Pet projection protocol", () => {
       deltas.push(raw as unknown as PetProjectionDelta);
     });
 
-    const initial = (await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const initial = (await client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     expect(initial).toMatchObject({
       workerGeneration: 1,
       snapshotVersion: 0,
@@ -92,7 +138,9 @@ describe("Pet projection protocol", () => {
     expect(sessionDeltas.some((delta) => delta.session.agentSessionId === "session-a")).toBe(true);
     expect(sessionDeltas.some((delta) => delta.session.agentSessionId === "session-b")).toBe(true);
 
-    const snapshot = (await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const snapshot = (await client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     expect(snapshot.sessions.map((session) => session.agentSessionId).sort()).toEqual([
       "session-a",
       "session-b",
@@ -114,7 +162,9 @@ describe("Pet projection protocol", () => {
       received.push(raw as unknown as PetProjectionDelta);
     });
     await client.run({ sessionId: "session-a", task: "first" });
-    const snapshot = (await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const snapshot = (await client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     const beforeSecondRun = received.length;
 
     await client.run({ sessionId: "session-a", task: "second" });
@@ -133,14 +183,18 @@ describe("Pet projection protocol", () => {
   test("stdio-equivalent managers expose their real process-local generation and metadata shape", async () => {
     const old = makePair(["session-a"]);
     await old.client.run({ sessionId: "session-a", task: "old" });
-    const oldSnapshot = (await old.client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const oldSnapshot = (await old.client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     expect(oldSnapshot.sessions).toHaveLength(1);
     expect(oldSnapshot.workerGeneration).toBe(1);
     expect(oldSnapshot.sessions[0]?.title).toBeUndefined();
     expect(oldSnapshot.sessions[0]?.workspaceDisplayName).toBeUndefined();
 
     const fresh = makePair([]);
-    const freshSnapshot = (await fresh.client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const freshSnapshot = (await fresh.client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     expect(freshSnapshot).toMatchObject({ workerGeneration: 1, sessions: [], pending: [] });
 
     old.server.close();
@@ -158,7 +212,9 @@ describe("Pet projection protocol", () => {
     client.onExtensionNotification(PET_PROJECTION_DELTA_METHOD, (raw) => {
       deltas.push(raw as unknown as PetProjectionDelta);
     });
-    const before = (await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const before = (await client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     expect(before.pending).toHaveLength(1);
 
     server.close();
@@ -182,7 +238,9 @@ describe("Pet projection protocol", () => {
     ].join("\n");
 
     void (server as any).requestAskUserForSession(session, "session-sensitive", question);
-    const snapshot = (await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const snapshot = (await client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     const serialized = JSON.stringify(snapshot);
 
     expect(snapshot.pending[0]?.title).toBe("需要用户回答");
@@ -254,7 +312,9 @@ describe("Pet projection protocol", () => {
     const session = await manager.getOrCreate("local-pet", {} as never);
     void (server as any).requestAskUserForSession(session, "local-pet", "pet-only question");
 
-    const snapshot = (await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD)) as PetProjectionSnapshotResult;
+    const snapshot = (await client.requestExtension(
+      GET_PET_PROJECTION_SNAPSHOT_METHOD,
+    )) as PetProjectionSnapshotResult;
     expect(snapshot.sessions).toEqual([]);
     expect(snapshot.pending).toEqual([]);
 

@@ -24,6 +24,8 @@ export interface DesktopPetSession {
   queueDepth: number;
   lastActivityAt: number;
   pendingDecisionCount: number;
+  runId?: PetSessionProjection["runId"];
+  clientMessageId?: PetSessionProjection["clientMessageId"];
   completionKind?: PetSessionProjection["completionKind"];
   terminal?: PetSessionProjection["terminal"];
   /** Present on sessions observed from an external CLI's own storage
@@ -158,6 +160,8 @@ function diskProjection(session: DiskSessionMeta, observedAt: number): DesktopPe
   const terminal = terminalFromDisk(session.status, session.updatedAt, session.completionKind);
   return {
     agentSessionId: session.engineSessionId,
+    runId: session.runId,
+    clientMessageId: session.clientMessageId,
     title: bounded(session.title, MAX_TITLE_LENGTH),
     workspaceDisplayName: session.cwd ? bounded(path.basename(session.cwd), 80) : undefined,
     runState: terminal ? "terminal" : "dormant",
@@ -173,7 +177,9 @@ function diskProjection(session: DiskSessionMeta, observedAt: number): DesktopPe
           : session.completionKind === "limit_stop"
             ? "已到运行限制"
             : undefined,
-    terminal,
+    terminal: terminal
+      ? { ...terminal, runId: session.runId, clientMessageId: session.clientMessageId }
+      : undefined,
     freshness: { source: "disk", observedAt, workerState: "reclaimed" },
   };
 }
@@ -191,6 +197,8 @@ function safeSession(session: PetSessionProjection): DesktopPetSession {
     pendingDecisionCount: Math.max(0, session.pendingDecisionCount),
     completionKind: session.completionKind,
     terminal: session.terminal,
+    runId: session.runId,
+    clientMessageId: session.clientMessageId,
     freshness: {
       source: session.freshness.source,
       observedAt: session.freshness.observedAt,
@@ -641,6 +649,9 @@ export class PetStateAggregator {
     const staleBackgroundWait =
       session.completionKind === "background_wait" || session.summary === "等待后台结果";
     const reconciledCompletionKind =
+      (!session.runId ||
+        (durable?.runId === session.runId &&
+          durable.clientMessageId === session.clientMessageId)) &&
       !session.completionKind &&
       !session.terminal &&
       durable?.completionKind &&
@@ -648,6 +659,9 @@ export class PetStateAggregator {
         ? durable.completionKind
         : undefined;
     const reconciledTerminal =
+      (!session.runId ||
+        (durable?.runId === session.runId &&
+          durable.clientMessageId === session.clientMessageId)) &&
       !session.terminal &&
       durable?.terminal &&
       durable.lastActivityAt >= session.lastActivityAt &&

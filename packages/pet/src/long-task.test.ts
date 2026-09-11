@@ -27,6 +27,113 @@ function created() {
 }
 
 describe("Pet long-task state machine", () => {
+  test("rejects an old queued start after a new launch was prepared without a run id", () => {
+    const prepared = transitionPetLongTask(created(), {
+      kind: "run-prepared",
+      at: 200,
+      clientMessageId: "new-launch",
+    });
+    const stale = transitionPetLongTask(prepared, {
+      kind: "run-bound",
+      at: 150,
+      attempt: 1,
+      runId: "old-run",
+      clientMessageId: "old-launch",
+      previousRunId: undefined,
+    });
+    expect(stale).toBe(prepared);
+    const bound = transitionPetLongTask(stale, {
+      kind: "run-bound",
+      at: 250,
+      attempt: 1,
+      runId: "new-run",
+      clientMessageId: "new-launch",
+      previousRunId: undefined,
+    });
+    expect(bound.runId).toBe("new-run");
+    const resumed = transitionPetLongTask(bound, {
+      kind: "run-bound",
+      at: 300,
+      attempt: 1,
+      runId: "background-run",
+      previousRunId: "new-run",
+    });
+    expect(resumed.runId).toBe("background-run");
+    expect(resumed.clientMessageId).toBeUndefined();
+  });
+  test("retains historical rows without allowing an unidentified result correction", () => {
+    const historical = parsePetLongTask(JSON.parse(JSON.stringify(created())))!;
+    expect(historical.runId).toBeUndefined();
+    const completed = transitionPetLongTask(historical, { kind: "completed", at: 200 });
+    expect(
+      transitionPetLongTask(completed, {
+        kind: "result-updated",
+        at: 300,
+        attempt: 1,
+        runId: "unknown",
+        summary: "unrelated",
+      }),
+    ).toBe(completed);
+  });
+
+  test("fences persisted run identities and queued corrections at the mutation boundary", () => {
+    const bound = transitionPetLongTask(created(), {
+      kind: "run-bound",
+      at: 150,
+      attempt: 1,
+      runId: "run-one",
+      clientMessageId: "submit-one",
+    });
+    const completed = transitionPetLongTask(bound, { kind: "completed", at: 200 });
+    const updated = transitionPetLongTask(completed, {
+      kind: "result-updated",
+      at: 220,
+      attempt: 1,
+      runId: "run-one",
+      clientMessageId: "submit-one",
+      summary: "Final verified result",
+    });
+    const restored = parsePetLongTask(JSON.parse(JSON.stringify(updated)))!;
+    expect(restored).toMatchObject({ runId: "run-one", clientMessageId: "submit-one" });
+    expect(restored.events.at(-1)).toMatchObject({
+      kind: "result-updated",
+      attempt: 1,
+      runId: "run-one",
+      clientMessageId: "submit-one",
+    });
+    const retrying = transitionPetLongTask(restored, {
+      kind: "retrying",
+      at: 300,
+      clientMessageId: "submit-two",
+    });
+    const running = transitionPetLongTask(retrying, {
+      kind: "run-bound",
+      at: 310,
+      attempt: 2,
+      runId: "run-two",
+      clientMessageId: "submit-two",
+    });
+    expect(
+      transitionPetLongTask(running, {
+        kind: "completed",
+        at: 500,
+        attempt: 1,
+        runId: "run-one",
+        clientMessageId: "submit-one",
+      }),
+    ).toBe(running);
+    expect(
+      transitionPetLongTask(running, {
+        kind: "result-updated",
+        at: 600,
+        attempt: 1,
+        runId: "run-one",
+        clientMessageId: "submit-one",
+        summary: "Late old result",
+      }),
+    ).toBe(running);
+  });
+
   test("persists a closure decision before its idempotent continuation launch", () => {
     const created = createPetLongTask({
       id: "task-closure",

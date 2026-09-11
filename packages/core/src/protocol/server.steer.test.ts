@@ -19,6 +19,44 @@ function makeTransport() {
 }
 
 describe("AgentServer steer", () => {
+  it("rejects a late turn-scoped steer before it can enter another run", () => {
+    const calls: unknown[] = [];
+    const session = {
+      matchesActiveTurn: (id: string) => id === "current-chat",
+      engine: {
+        enqueueSteer: (...args: unknown[]) => {
+          calls.push(args);
+          return { accepted: true, id: "steer-1" };
+        },
+      },
+    };
+    const t = makeTransport();
+    new AgentServer({
+      transport: t.transport,
+      chatManager: { get: () => session, isUnavailable: () => false } as any,
+    });
+    for (const [id, expectedClientMessageId] of [
+      [1, "old-chat"],
+      [2, "current-chat"],
+    ] as const) {
+      t.deliver({
+        jsonrpc: "2.0",
+        id,
+        method: "agent/steer",
+        params: {
+          sessionId: "s1",
+          text: "follow up",
+          clientMessageId: "new-input",
+          id: "steer-1",
+          expectedClientMessageId,
+        },
+      });
+    }
+    expect(t.sent.find((message) => message.id === 1)?.result).toMatchObject({ accepted: false });
+    expect(t.sent.find((message) => message.id === 2)?.result).toMatchObject({ accepted: true });
+    expect(calls).toEqual([["s1", "follow up", "steer-1", "new-input", undefined]]);
+  });
+
   it("returns the engine accepted flag and id", () => {
     const calls: unknown[] = [];
     const attachments = [
