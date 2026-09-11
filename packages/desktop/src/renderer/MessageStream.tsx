@@ -72,6 +72,8 @@ export type ContextPackageCreatedHandler = (
 
 interface Props {
   messages: Message[];
+  /** History controls stay at the beginning of the scrollable conversation. */
+  leading?: React.ReactNode;
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
@@ -135,6 +137,7 @@ interface Props {
 
 export function MessageStream({
   messages,
+  leading,
   readOnly = false,
   onAskUserAnswer,
   onExtendGoal,
@@ -571,6 +574,7 @@ export function MessageStream({
           ref={ref}
         >
           <div className="cs-chat-transcript w-full min-w-0">
+            {!selectionOpen && leading}
             {selectionOpen &&
               displayGroups.map((group) => {
                 const index = group.selectionIndex;

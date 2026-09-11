@@ -1,13 +1,9 @@
 /**
- * Attribute completed automation runs to sidebar projects and import them
- * into localStorage as normal sessions. Pure orchestration with injected
- * side effects (fetchTranscript / writeImported / createProjectForCwd) so it
- * unit-tests without Electron or localStorage.
+ * Attribute automation runs to sidebar projects and import their metadata.
+ * Transcripts are loaded on demand after selection, through the same paged
+ * hydration path as manually created sessions.
  */
-import type { FoldItem } from "../../preload/types";
-import type { MessagesReducerState } from "../types";
 import type { SessionSummary } from "../transcripts";
-import { foldTranscript } from "./foldTranscript";
 import { matchProjectIdForCwd, normalizeCwd, isNoRepoCwd, type ProjectLike } from "./pathMatch";
 
 /** A run as needed for import (subset of the main-process RunSummary). */
@@ -28,12 +24,7 @@ export interface ImportDeps {
   caseInsensitive: boolean;
   /** engineSessionIds already present across all repo indices (dedup key). */
   existingEngineSessionIds: Set<string>;
-  fetchTranscript: (sessionId: string) => Promise<FoldItem[]>;
-  writeImported: (
-    projectId: string | null,
-    summary: SessionSummary,
-    state: MessagesReducerState,
-  ) => void;
+  writeImported: (projectId: string | null, summary: SessionSummary) => void;
   /** Create a repo for an unmatched cwd; returns its id. */
   createProjectForCwd: (cwd: string) => string | null;
   resolveCwd?: (cwd: string) => string;
@@ -91,16 +82,11 @@ export async function importAutomationRuns(
     byProject.set(projectId, list);
   }
 
-  // 3. Per repo: most-recent first, cap, fetch+fold+write.
+  // 3. Per repo: most-recent first, cap, write the directory entry only. A run
+  // can still be streaming; importing it must never replace its live snapshot.
   for (const [projectId, list] of byProject) {
     list.sort((a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt));
     for (const r of list.slice(0, deps.cap)) {
-      let state: MessagesReducerState;
-      try {
-        state = foldTranscript(await deps.fetchTranscript(r.sessionId as string));
-      } catch {
-        state = foldTranscript([]); // transcript unavailable — import an empty shell
-      }
       const summary: SessionSummary = {
         id: r.sessionId as string, // engine sessionId doubles as the UI session id for imports
         title: (r.cronJobName || r.objective || "automation").slice(0, 60),
@@ -111,7 +97,7 @@ export async function importAutomationRuns(
         runId: r.runId,
         runStatus: r.status,
       };
-      deps.writeImported(projectId, summary, state);
+      deps.writeImported(projectId, summary);
     }
   }
 }

@@ -1,5 +1,6 @@
 // Isolate real Radix navigation from renderer suites that mock shared primitives.
 import assert from "node:assert/strict";
+import { mock } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
@@ -9,14 +10,42 @@ globalThis.requestAnimationFrame = (callback) =>
   setTimeout(() => callback(performance.now()), 0) as unknown as number;
 globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
 const scenario = process.argv[2];
+let editorProps:
+  | React.ComponentProps<typeof import("./DigitalHumanEditorDialog").DigitalHumanEditorDialog>
+  | undefined;
+if (scenario === "save-target-switch" || scenario.startsWith("settings-")) {
+  mock.module("./DigitalHumanEditorDialog", () => ({
+    DigitalHumanEditorDialog: (props: NonNullable<typeof editorProps>) => {
+      editorProps = props;
+      return null;
+    },
+  }));
+}
 const en = scenario.endsWith("-en");
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
   value: { getItem: () => (en ? "en" : "zh"), setItem() {} },
 });
 const { DigitalHumansView } = await import("./DigitalHumansView");
+const { DigitalHumansSection } = await import("../settings/DigitalHumansSection");
 const { DialogProvider } = await import("../ui/DialogProvider");
+const { I18nProvider } = await import("../i18n/I18nProvider");
 const repoCalls: string[] = [];
+const requirementCalls: unknown[] = [];
+const activations: unknown[] = [];
+const selections: unknown[] = [];
+let completeRequirementCheck!: () => void;
+const pendingRequirementCheck = new Promise<void>((resolve) => {
+  completeRequirementCheck = resolve;
+});
+let completeSave!: () => void;
+const pendingSave = new Promise<void>((resolve) => {
+  completeSave = resolve;
+});
+let completeOldProfiles!: (profiles: any[]) => void;
+const oldProfiles = new Promise<any[]>((resolve) => {
+  completeOldProfiles = resolve;
+});
 const profile = {
   name: "researcher",
   label: "Research Partner",
@@ -32,13 +61,31 @@ const profile = {
 Object.defineProperty(window, "codeshell", {
   configurable: true,
   value: {
-    listProfiles: async () => [profile],
+    listProfiles: async (target: { projectId?: string }) => {
+      if (scenario !== "settings-stale-list") return [profile];
+      return target.projectId === "project-a" ? oldProfiles : [{ ...profile, label: "Project B" }];
+    },
     listProfileCatalog: async () => [
       { ...profile, category: "engineering", tags: ["evidence"], installed: false },
     ],
     listDigitalHumanTeams: async () => [],
-    listSkills: async () => [],
+    listSkills: async (target: { projectId?: string }) => {
+      if (scenario !== "settings-failed-target-skills") return [];
+      if (target.projectId !== "project-a") throw new Error("Project B skills unavailable");
+      return [{ name: "only-in-project-a", description: "", source: "project" }];
+    },
+    getSettings: async () => ({}),
     listProfileRepos: async () => [],
+    saveProfile: () => pendingSave,
+    previewProfileRequirements: async (...args: unknown[]) => {
+      requirementCalls.push(args);
+      if (["start-target-switch", "default-target-switch"].includes(scenario))
+        await pendingRequirementCheck;
+      return { needsInstall: false, willRun: [], warnings: [], blockers: [] };
+    },
+    activateProfile: async (...args: unknown[]) => {
+      activations.push(args);
+    },
     addProfileRepo: async (repo: string) => {
       repoCalls.push(repo);
       return { ok: false, error: "Source unavailable: " + "x".repeat(180) };
@@ -68,6 +115,14 @@ function find(test: (node: any) => boolean) {
   assert.ok(node, "Expected rendered control");
   return node;
 }
+function profileCardProps() {
+  const card = find((node) => props(node)["data-digital-human-card"]);
+  const fiberKey = Object.keys(card).find((key) => key.startsWith("__reactFiber$"));
+  let fiber = fiberKey ? card[fiberKey] : undefined;
+  while (fiber && !fiber.memoizedProps?.onEdit) fiber = fiber.return;
+  assert.ok(fiber?.memoizedProps.onEdit);
+  return fiber.memoizedProps;
+}
 async function market() {
   const tab = find(
     (node) => props(node).role === "tab" && textOf(node).includes(en ? "Market" : "数字人广场"),
@@ -78,21 +133,38 @@ async function market() {
 const container = document.createElement("div");
 document.body.appendChild(container);
 const root = createRoot(container);
-try {
-  await update(() =>
+let configurationTarget: import("../../preload/types").RendererConfigurationTarget =
+  scenario.endsWith("target-switch") || scenario.startsWith("settings-")
+    ? { projectId: "project-a" }
+    : { noRepo: true };
+const render = () =>
+  update(() =>
     root.render(
-      <DialogProvider>
-        <DigitalHumansView
-          configurationTarget={{ noRepo: true }}
-          projectName={null}
-          onUse={() => {
-            throw new Error("Unexpected apply");
-          }}
-        />
-      </DialogProvider>,
+      <I18nProvider>
+        <DialogProvider>
+          {scenario.startsWith("settings-") ? (
+            <DigitalHumansSection
+              scope="user"
+              projectPath="/repo"
+              configurationTarget={configurationTarget}
+            />
+          ) : (
+            <DigitalHumansView
+              configurationTarget={configurationTarget}
+              projectName={null}
+              onUse={(selection) => {
+                selections.push(selection);
+              }}
+            />
+          )}
+        </DialogProvider>
+      </I18nProvider>,
     ),
   );
-  assert.equal(nodes(container).filter((node) => node.tagName === "H1").length, 1);
+try {
+  await render();
+  if (!scenario.startsWith("settings-"))
+    assert.equal(nodes(container).filter((node) => node.tagName === "H1").length, 1);
   if (scenario.startsWith("search-")) {
     const search = find((node) => node.tagName === "INPUT" && props(node).type === "search");
     await update(() => props(search).onChange({ target: { value: "no-match" } }));
@@ -170,6 +242,82 @@ try {
     assert.equal(props(input).value, "owner/repo", "Failed additions retain the input for retry");
     await update(() => props(input).onChange({ target: { value: "owner/other" } }));
     assert.equal(props(input)["aria-describedby"], undefined);
+  } else if (scenario.endsWith("save-target-switch")) {
+    if (scenario.startsWith("settings-")) {
+      const edit = find((node) => node.tagName === "BUTTON" && textOf(node) === "编辑");
+      await update(() => props(edit).onClick());
+    } else {
+      await update(() => profileCardProps().onEdit());
+    }
+    assert.equal(editorProps?.open, true);
+    await update(() =>
+      editorProps?.onSave(
+        { ...profile, exclusiveCapabilities: false },
+        { installRequirements: true },
+      ),
+    );
+    configurationTarget = { projectId: "project-b" };
+    await render();
+    await update(() => completeSave());
+    assert.deepEqual(
+      requirementCalls,
+      [],
+      "Saving in A must not start its dependency install after switching to B",
+    );
+    assert.equal(editorProps?.open, true, "An old save cannot close the editor in the new project");
+    assert.equal(editorProps?.busy, false);
+  } else if (scenario === "settings-stale-list") {
+    configurationTarget = { projectId: "project-b" };
+    await render();
+    assert.ok(textOf(container).includes("Project B"));
+    await update(() => completeOldProfiles([{ ...profile, label: "Project A" }]));
+    assert.ok(
+      textOf(container).includes("Project B"),
+      "An old settings load cannot replace the current project data",
+    );
+    assert.ok(!textOf(container).includes("Project A"));
+  } else if (scenario === "settings-failed-target-skills") {
+    assert.equal(editorProps?.projectSkills?.length, 1);
+    configurationTarget = { projectId: "project-b" };
+    await render();
+    assert.deepEqual(
+      editorProps?.projectSkills,
+      [],
+      "A failed project B load cannot keep project A's installed skills",
+    );
+  } else if (["start-target-switch", "default-target-switch"].includes(scenario)) {
+    await update(() =>
+      profileCardProps()[scenario === "start-target-switch" ? "onUse" : "onToggleDefault"](),
+    );
+    assert.equal(requirementCalls.length, 1);
+    configurationTarget = { projectId: "project-b" };
+    await render();
+    await update(() => completeRequirementCheck());
+    assert.deepEqual(activations, [], "An old dependency check cannot activate a project default");
+    assert.deepEqual(selections, [], "An old dependency check cannot start work in a new project");
+  } else if (scenario === "settings-repo-input") {
+    const input = find((node) => String(props(node).placeholder ?? "").includes("owner/repo"));
+    await update(() => props(input).onChange({ target: { value: "owner/repo" } }));
+    const enter = (extra = {}) =>
+      update(() =>
+        props(input).onKeyDown({
+          key: "Enter",
+          keyCode: 13,
+          nativeEvent: { isComposing: false },
+          preventDefault() {},
+          ...extra,
+        }),
+      );
+    await enter({ nativeEvent: { isComposing: true } });
+    await enter({ keyCode: 229 });
+    assert.deepEqual(repoCalls, [], "IME confirmation must not clone a digital-human source");
+    await update(() => props(input).onCompositionStart());
+    await enter();
+    assert.deepEqual(repoCalls, []);
+    await update(() => props(input).onCompositionEnd());
+    await enter();
+    assert.deepEqual(repoCalls, ["owner/repo"]);
+    assert.equal(props(input).value, "owner/repo", "A failed clone retains its source for retry");
   } else throw new Error(`Unknown scenario: ${scenario}`);
 } finally {
   await update(() => root.unmount());

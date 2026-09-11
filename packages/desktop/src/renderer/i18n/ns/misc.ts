@@ -98,6 +98,11 @@ export const misc = {
       },
       session: {
         defaultTitle: "新对话",
+        loading: "正在准备会话记录；首次升级会迁移已有聊天…",
+        loadFailed: "会话记录暂时无法读取，原有记录已保留。请重试。",
+        saveFailed: "会话尚未保存成功，请重试后再关闭应用。",
+        sendSaveFailed: "会话保存失败，本轮尚未发送。请重试保存后重新发送。",
+        retry: "重试保存或读取",
       },
       bgTask: {
         defaultName: "后台任务",
@@ -211,6 +216,14 @@ export const misc = {
       },
       session: {
         defaultTitle: "New chat",
+        loading: "Preparing conversations; the first upgrade migrates existing chats…",
+        loadFailed:
+          "Conversations could not be loaded. Existing records are preserved. Please retry.",
+        saveFailed:
+          "Conversation changes have not been saved. Please retry before closing the app.",
+        sendSaveFailed:
+          "The conversation could not be saved, so this turn was not sent. Retry saving, then send again.",
+        retry: "Retry",
       },
       bgTask: {
         defaultName: "Background task",

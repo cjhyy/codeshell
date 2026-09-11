@@ -1,16 +1,19 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as nodeFs from "node:fs";
 import {
   chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  realpathSync,
   rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 import {
   assertOwnedSkillDirectory,
@@ -23,6 +26,7 @@ import {
   stageSkillDirectory,
   validateSkillMarkdown,
 } from "./management.js";
+import { invalidateSkillCache, scanSkills } from "./scanner.js";
 
 const directories: string[] = [];
 const fixture = () => {
@@ -142,17 +146,96 @@ describe("shared Skill management", () => {
     const root = skillRoot("project", cwd);
     const broken = fixture();
     writeFileSync(join(broken, "data.txt"), "missing markdown");
-    await expect(stageSkillDirectory(broken, join(cwd, ".code-shell"))).rejects.toThrow(
-      "缺少 SKILL.md",
-    );
+    await expect(stageSkillDirectory(broken, root)).rejects.toThrow("缺少 SKILL.md");
     expect(readSkillBundle(installed.targetDir).revision).toBe(before.revision);
     const replacement = source();
     writeFileSync(join(replacement, "SKILL.md"), markdown("demo", "Updated safely."));
-    const stage = await stageSkillDirectory(replacement, join(cwd, ".code-shell"));
+    const stage = await stageSkillDirectory(replacement, root);
     commitSkillDirectory(stage, root, "demo", before.revision);
     expect(readFileSync(installed.filePath, "utf8")).toContain("Updated safely.");
     expect(existsSync(stage)).toBe(false);
   });
+
+  test("private stages stay undiscoverable and independent with a read-only root parent", async () => {
+    const cwd = fixture();
+    const input = source();
+    const root = skillRoot("project", cwd, true);
+    const parent = dirname(root);
+    chmodSync(parent, 0o555);
+    try {
+      const installed = await installSkillFromDirectory(input, "project", cwd, "demo");
+      const first = await stageSkillDirectory(input, root);
+      const second = await stageSkillDirectory(input, root);
+      for (const stage of [first, second]) {
+        const rel = relative(realpathSync(root), realpathSync(stage));
+        expect(rel === ".." || rel.startsWith(`..${sep}`)).toBe(false);
+        expect(statSync(stage).mode & 0o777).toBe(0o700);
+      }
+      invalidateSkillCache();
+      expect(
+        scanSkills(realpathSync(cwd))
+          .filter((skill) => skill.filePath.startsWith(`${root}${sep}`))
+          .map((skill) => skill.name),
+      ).toEqual(["demo"]);
+      rmSync(first, { recursive: true });
+      expect(readSkillBundle(second).content).toBe(markdown());
+      commitSkillDirectory(second, root, "demo", readSkillBundle(installed.targetDir).revision);
+      removeOwnedSkill(installed.filePath, [root], readSkillBundle(installed.targetDir).revision);
+      expect(readdirSync(root)).toEqual([".skill-mutation"]);
+      expect(readdirSync(join(root, ".skill-mutation"))).toEqual([]);
+      expect(statSync(parent).mode & 0o777).toBe(0o555);
+    } finally {
+      chmodSync(parent, 0o700);
+    }
+  });
+
+  for (const failSwap of [false, true]) {
+    test(`replacement ${failSwap ? "rollback" : "commit"} never renames outside its managed root`, async () => {
+      const cwd = fixture();
+      const input = source();
+      const installed = await installSkillFromDirectory(input, "project", cwd, "demo");
+      const sibling = await installSkillFromDirectory(input, "project", cwd, "sibling");
+      const root = skillRoot("project", cwd);
+      const previous = readSkillBundle(installed.targetDir);
+      const replacement = source();
+      writeFileSync(join(replacement, "SKILL.md"), markdown("demo", "Replacement."));
+      const stage = await stageSkillDirectory(replacement, root);
+      const rename = nodeFs.renameSync;
+      const moves: Array<[string, string]> = [];
+      const observed = spyOn(nodeFs, "renameSync").mockImplementation((from, to) => {
+        // Observe real transaction paths instead of trusting chmod: privileged
+        // test runners could otherwise write a forbidden parent and pass.
+        for (const path of [from, to]) {
+          const canonical = join(realpathSync(dirname(String(path))), basename(String(path)));
+          const rel = relative(realpathSync(root), canonical);
+          expect(rel === ".." || rel.startsWith(`..${sep}`)).toBe(false);
+        }
+        moves.push([String(from), String(to)]);
+        if (failSwap && from === stage) throw new Error("injected stage rename failure");
+        rename(from, to);
+      });
+      try {
+        if (failSwap) {
+          expect(() => commitSkillDirectory(stage, root, "demo", previous.revision)).toThrow(
+            "injected stage rename failure",
+          );
+        } else {
+          commitSkillDirectory(stage, root, "demo", previous.revision);
+        }
+      } finally {
+        observed.mockRestore();
+      }
+      expect(moves).toHaveLength(failSwap ? 3 : 2);
+      expect(readFileSync(installed.filePath, "utf8")).toBe(
+        failSwap ? markdown() : markdown("demo", "Replacement."),
+      );
+      expect(readFileSync(sibling.filePath, "utf8")).toBe(markdown());
+      expect(existsSync(stage)).toBe(failSwap);
+      if (failSwap) rmSync(stage, { recursive: true });
+      expect(readdirSync(root).sort()).toEqual([".skill-mutation", "demo", "sibling"]);
+      expect(readdirSync(join(root, ".skill-mutation"))).toEqual([]);
+    });
+  }
 
   test("removes only the selected owned skill after matching its full revision", async () => {
     const cwd = fixture();

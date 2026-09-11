@@ -43,7 +43,13 @@ function shellItemKey(item: ShellWorkItem): string {
  * (core keeps it out of context; the agent pulls via BashOutput) — this panel
  * is the human's window onto it.
  */
-export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }) {
+export function BackgroundShellPanel({
+  sessionId,
+  active = true,
+}: {
+  sessionId: string | null;
+  active?: boolean;
+}) {
   const { t } = useT();
   const [items, setItems] = useState<BackgroundWorkInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -51,15 +57,11 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
     BackgroundWorkInfo,
     { kind: "subagent" }
   > | null>(null);
-  useEffect(() => setSelectedAgent(null), [sessionId]);
   // Which finished job's result detail is expanded (click to toggle).
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   // Mirror of `selected` for the poll tick, so reading the current selection
   // doesn't force the interval to re-arm on every selection change.
   const selectedRef = useRef<string | null>(null);
-  useEffect(() => {
-    selectedRef.current = selected;
-  }, [selected]);
   const [output, setOutput] = useState<{ header: string; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,54 +70,85 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   // (turn-complete / poll) was the only signal before, leaving the manual click
   // with no visible response (TODO-background-panel #1).
   const [refreshing, setRefreshing] = useState(false);
+  const sessionRef = useRef(sessionId);
+  sessionRef.current = sessionId;
+  const listRequestRef = useRef(0);
+  const outputRequestRef = useRef(0);
+  const manualRequestRef = useRef<object | null>(null);
+
+  const clearSelection = useCallback(() => {
+    outputRequestRef.current += 1;
+    selectedRef.current = null;
+    setSelected(null);
+    setOutput(null);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    setItems([]);
+    setSelectedAgent(null);
+    setExpandedJobId(null);
+    setError(null);
+    setRefreshing(false);
+    clearSelection();
+    return () => {
+      listRequestRef.current += 1;
+      outputRequestRef.current += 1;
+      manualRequestRef.current = null;
+    };
+  }, [sessionId, clearSelection]);
 
   const refresh = useCallback(async () => {
+    if (sessionRef.current !== sessionId) return;
+    const request = ++listRequestRef.current;
     if (!sessionId) {
       setItems([]);
       return;
     }
     try {
       const res = await window.codeshell.listBackgroundWork(sessionId, { scope: "all" });
+      if (listRequestRef.current !== request || sessionRef.current !== sessionId) return;
       const next = res?.items ?? [];
       setItems(next);
       // The selected shell may have vanished (worker recycled / shell reaped) —
       // drop its now-stale selection + output so the body doesn't keep showing a
-      // frozen header next to a list that no longer contains it. Functional
-      // updater reads the LATEST selection without adding it to this callback's
-      // deps (which would re-arm the poll interval on every selection change).
-      setSelected((cur) => {
-        const vanished = !!cur && !next.some((i) => i.kind === "shell" && shellItemKey(i) === cur);
-        if (vanished) setOutput(null);
-        return vanished ? null : cur;
-      });
+      // frozen header next to a list that no longer contains it.
+      const cur = selectedRef.current;
+      if (cur && !next.some((i) => i.kind === "shell" && shellItemKey(i) === cur)) clearSelection();
       setError(null);
     } catch (e) {
+      if (listRequestRef.current !== request || sessionRef.current !== sessionId) return;
       // Don't leave stale "running" rows frozen on a failed refresh — the most
       // common failure is the worker having recycled (its in-RAM registries are
       // gone), in which case there genuinely is no background work to show. (#7)
       setItems([]);
-      setSelected(null);
-      setOutput(null);
+      clearSelection();
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [sessionId]);
+  }, [sessionId, clearSelection]);
 
   // Manual refresh from the top button — spins the icon until the fetch settles
   // so the click has visible feedback. Guards against a double-spin if clicked
   // mid-refresh.
   const manualRefresh = useCallback(async () => {
+    if (manualRequestRef.current) return;
+    const request = {};
+    manualRequestRef.current = request;
     setRefreshing(true);
     try {
       await refresh();
     } finally {
-      setRefreshing(false);
+      if (manualRequestRef.current === request) {
+        manualRequestRef.current = null;
+        setRefreshing(false);
+      }
     }
   }, [refresh]);
 
   // Load once on mount / session change.
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (active) void refresh();
+  }, [active, refresh]);
 
   // Refresh the instant a turn finishes: that's when newly-spawned background
   // work (a shell / sub-agent / video job kicked off during the turn) becomes
@@ -123,22 +156,28 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   // means the list no longer waits for the next poll tick — and works even when
   // nothing was running before (so the running-only poll wouldn't have fired).
   useEffect(() => {
+    if (!active) return;
     const onChanged = (): void => void refresh();
     window.addEventListener("codeshell:files-changed", onChanged);
     return () => window.removeEventListener("codeshell:files-changed", onChanged);
-  }, [refresh]);
+  }, [active, refresh]);
 
   const fetchOutput = useCallback(
     async (ownerSessionId: string, shellId: string, withSpinner: boolean) => {
       if (!ownerSessionId) return;
+      const key = `${ownerSessionId}:${shellId}`;
+      if (selectedRef.current !== key) return;
+      const request = ++outputRequestRef.current;
+      const isCurrent = () => outputRequestRef.current === request && selectedRef.current === key;
       if (withSpinner) setLoading(true);
       try {
         const res = await window.codeshell.backgroundShellOutput(ownerSessionId, shellId);
+        if (!isCurrent()) return;
         setOutput(res);
       } catch (e) {
         // Only surface the error if the user explicitly opened it; a silent
         // poll refresh shouldn't clobber a good view with an error string.
-        if (withSpinner) {
+        if (withSpinner && isCurrent()) {
           setOutput({
             header: "",
             text: t("panels.shells.readOutputFailed", {
@@ -147,14 +186,16 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
           });
         }
       } finally {
-        if (withSpinner) setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [t],
   );
 
   const viewOutput = (item: ShellWorkItem) => {
-    setSelected(shellItemKey(item));
+    selectedRef.current = shellItemKey(item);
+    setSelected(selectedRef.current);
+    setOutput(null);
     void fetchOutput(item.sourceSession.sessionId, item.shell.shellId, true);
   };
 
@@ -206,7 +247,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   // view also gets its output re-pulled so live jobs (e.g. a download's progress
   // bar) actually move instead of showing a frozen tail.
   useEffect(() => {
-    if (!anyRunning) return;
+    if (!active || !anyRunning) return;
     const tick = (): void => {
       if (document.visibilityState !== "visible") return;
       void refreshRef.current();
@@ -224,14 +265,14 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
     };
     const timer = setInterval(tick, 3000);
     return () => clearInterval(timer);
-  }, [anyRunning]);
+  }, [active, anyRunning]);
 
   const kill = async (item: ShellWorkItem) => {
     try {
       await window.codeshell.killBackgroundShell(item.sourceSession.sessionId, item.shell.shellId);
       await refresh();
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      if (sessionRef.current === sessionId) setError(String(e instanceof Error ? e.message : e));
     }
   };
 

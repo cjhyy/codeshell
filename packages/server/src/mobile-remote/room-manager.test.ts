@@ -160,9 +160,11 @@ describe("RoomManager", () => {
     appendFileSync(join(dir!, room.id, "messages.jsonl"), '{"seq":999');
 
     mgr.ingestTranscriptMessages(room.id, []); // no-op keeps public path untouched
-    const append = (mgr as unknown as {
-      append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
-    }).append.bind(mgr);
+    const append = (
+      mgr as unknown as {
+        append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
+      }
+    ).append.bind(mgr);
     append(room.id, { from: "system", type: "recovered", text: "survives" });
 
     expect(mgr.getMessages(room.id).at(-1)).toMatchObject({ type: "recovered", text: "survives" });
@@ -291,9 +293,11 @@ describe("RoomManager", () => {
   test("restores the cached sequence after an oversized append fails", () => {
     const { mgr } = makeManager();
     const room = mgr.createRoom({ cwd: "/repo" });
-    const append = (mgr as unknown as {
-      append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
-    }).append.bind(mgr);
+    const append = (
+      mgr as unknown as {
+        append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
+      }
+    ).append.bind(mgr);
 
     expect(() =>
       append(room.id, { from: "agent", type: "text", text: "x".repeat(4 * 1024 * 1024 + 1) }),
@@ -327,6 +331,68 @@ describe("RoomManager", () => {
     mgr.close(room.id);
     expect(mgr.isOpen(room.id)).toBe(false);
   });
+
+  test.each([false, true])(
+    "late events from a stopped agent cannot mutate its room (reopened: %s)",
+    (reopened) => {
+      dir = mkdtempSync(join(tmpdir(), "rooms-agent-ownership-"));
+      const emitters: ((event: ResidentAgentEvent) => void)[] = [];
+      const approvals: string[] = [];
+      const controls: string[] = [];
+      let endings = 0;
+      const mgr = new RoomManager({
+        rootDir: dir,
+        createAgent: (_room, onEvent) => {
+          emitters.push(onEvent);
+          return {
+            start() {},
+            send: () => true,
+            isRunning: () => true,
+            stop() {},
+            respondControl: (requestId) => controls.push(requestId),
+          };
+        },
+        onMessage: () => {},
+        onApprovalRequest: (_room, request) => approvals.push(request.requestId),
+        onRoomEnded: () => endings++,
+      });
+      const room = mgr.createRoom({ cwd: "/repo" });
+      mgr.open(room.id);
+      mgr.close(room.id);
+      if (reopened) {
+        mgr.open(room.id);
+        emitters[1]!({
+          type: "approval_request",
+          requestId: "active",
+          toolName: "Bash",
+          input: { command: "pwd" },
+        });
+      }
+      const before = mgr.getMessages(room.id);
+
+      // A process receives SIGTERM synchronously but may drain stdout and emit
+      // exit only after a new process has taken over the same room.
+      emitters[0]!({ type: "text", text: "late old process output" });
+      emitters[0]!({
+        type: "approval_request",
+        requestId: "obsolete",
+        toolName: "Bash",
+        input: { command: "old command" },
+      });
+      emitters[0]!({ type: "exit", code: 0, signal: "SIGTERM" });
+
+      expect(mgr.getMessages(room.id)).toEqual(before);
+      expect(mgr.isOpen(room.id)).toBe(reopened);
+      expect(endings).toBe(1);
+      expect(approvals).toEqual(reopened ? ["active"] : []);
+      expect(mgr.respondApproval(room.id, "obsolete", { behavior: "allow" })).toBe(false);
+      if (reopened) {
+        expect(mgr.respondApproval(room.id, "active", { behavior: "allow" })).toBe(true);
+        expect(controls).toEqual(["active"]);
+      }
+      mgr.closeAll();
+    },
+  );
 
   test("a throwing agent start is removed so the room can retry cleanly", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-start-failure-"));
@@ -377,9 +443,7 @@ describe("RoomManager", () => {
 
     expect(() => mgr.send(room.id, "hello")).toThrow("send failed");
     expect(mgr.getMessages(room.id).map((message) => message.type)).toEqual(["room_created"]);
-    expect(
-      (mgr as unknown as { deferredEmits: Map<string, unknown> }).deferredEmits.size,
-    ).toBe(0);
+    expect((mgr as unknown as { deferredEmits: Map<string, unknown> }).deferredEmits.size).toBe(0);
   });
 
   test("open missing room reports missing", () => {
@@ -887,6 +951,7 @@ describe("RoomManager", () => {
 
   test("respondApproval routes the decision to the room's agent.respondControl", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (event: ResidentAgentEvent) => void;
     const calls: { requestId: string; decision: unknown }[] = [];
     const mgr = new RoomManager({
       rootDir: dir,
@@ -894,19 +959,36 @@ describe("RoomManager", () => {
         let c = 1;
         return () => c++;
       })(),
-      createAgent: () => ({
-        start() {},
-        send: () => true,
-        isRunning: () => true,
-        stop() {},
-        respondControl: (requestId, decision) => calls.push({ requestId, decision }),
-      }),
+      createAgent: (_room, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
+          respondControl: (requestId, decision) => calls.push({ requestId, decision }),
+        };
+      },
       onMessage: () => {},
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
+    expect(mgr.respondApproval(room.id, "req-1", { behavior: "allow" })).toBe(false);
+    emit({
+      type: "approval_request",
+      requestId: "req-1",
+      toolName: "Bash",
+      input: { command: "pwd" },
+      description: "Read current directory",
+    });
     expect(mgr.respondApproval(room.id, "req-1", { behavior: "allow" })).toBe(true);
-    expect(calls).toEqual([{ requestId: "req-1", decision: { behavior: "allow" } }]);
+    expect(mgr.respondApproval(room.id, "req-1", { behavior: "allow" })).toBe(false);
+    expect(calls).toEqual([
+      {
+        requestId: "req-1",
+        decision: { behavior: "allow", updatedInput: { command: "pwd" } },
+      },
+    ]);
     // unopened / unknown room → false
     expect(mgr.respondApproval("nope", "req-x", { behavior: "deny", message: "no" })).toBe(false);
   });

@@ -1,8 +1,11 @@
 import { spawn } from "node:child_process";
-import { delimiter } from "node:path";
+import { statSync } from "node:fs";
+import { homedir } from "node:os";
+import { delimiter, isAbsolute, join } from "node:path";
 import { ENV_DENY_REGEX } from "@cjhyy/code-shell-core/internal";
 
 const DEFAULT_TIMEOUT_MS = 2_500;
+const PROBE_KILL_GRACE_MS = 200;
 const MAX_CAPTURE_BYTES = 64 * 1024;
 const LOGIN_SHELL_ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const LOGIN_SHELL_ENV_SYSTEM_KEYS = new Set([
@@ -29,6 +32,10 @@ function redactedStderrLogFields(stderr: string | undefined): Record<string, unk
   };
 }
 
+function boundedDiagnostic(value: string | undefined): string | undefined {
+  return value?.replace(/[\r\n\t]/g, " ").slice(0, 300);
+}
+
 type SupportedPlatform = NodeJS.Platform;
 
 export type LoginShellPathProbeResult =
@@ -50,18 +57,18 @@ export type LoginShellPathInjectionResult =
       status: "skipped";
       reason: "unsupported-platform" | "no-shell";
     } & LoginShellEnvInjectionBase)
-  | {
+  | ({
       status: "unchanged";
       reason: "probe-failed" | "already-current";
       probe: LoginShellPathProbeResult;
-    } & LoginShellEnvInjectionBase
-  | {
+    } & LoginShellEnvInjectionBase)
+  | ({
       status: "updated";
       before: string;
       after: string;
       added: string[];
-      probe: Extract<LoginShellPathProbeResult, { ok: true }>;
-    } & LoginShellEnvInjectionBase;
+      probe: LoginShellPathProbeResult;
+    } & LoginShellEnvInjectionBase);
 
 export type LoginShellEnvMergeResult = {
   path: string;
@@ -78,6 +85,33 @@ export function splitPathEntries(
     .split(pathDelimiter)
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+/**
+ * A slow or broken shell must not hide installed CLIs from a GUI launch.
+ * Only append existing, well-known install directories: an inherited PATH
+ * keeps its precedence, and no shell configuration or extra env is imported.
+ */
+function fallbackExecutablePath(env: NodeJS.ProcessEnv, platform: SupportedPlatform): string {
+  const home = env.HOME ?? homedir();
+  const candidates = [
+    ...(isAbsolute(home) ? [join(home, ".local/bin"), join(home, ".bun/bin")] : []),
+    platform === "darwin" ? "/opt/homebrew/bin" : "/home/linuxbrew/.linuxbrew/bin",
+    "/usr/local/bin",
+  ];
+  const entries = splitPathEntries(env.PATH);
+  const seen = new Set(entries);
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    try {
+      if (!statSync(candidate).isDirectory()) continue;
+    } catch {
+      continue;
+    }
+    seen.add(candidate);
+    entries.push(candidate);
+  }
+  return entries.join(delimiter);
 }
 
 /**
@@ -212,7 +246,10 @@ export async function probeLoginShellPath(
     const finish = (result: LoginShellPathProbeResult) => {
       if (settled) return;
       settled = true;
-      if (timeout) clearTimeout(timeout);
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = undefined;
+      }
       resolve(result);
     };
 
@@ -221,6 +258,9 @@ export async function probeLoginShellPath(
       child = spawn(shell, ["-lic", "env"], {
         env,
         stdio: ["ignore", "pipe", "pipe"],
+        // The probe owns this POSIX process group, including startup-script
+        // children. Never signal the desktop's inherited process group.
+        detached: true,
       });
     } catch (err) {
       finish({
@@ -233,11 +273,24 @@ export async function probeLoginShellPath(
     }
 
     timeout = setTimeout(() => {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        // Best effort; the caller keeps startup moving regardless.
-      }
+      const pid = child.pid;
+      const signalProbe = (signal: NodeJS.Signals) => {
+        if (!pid) return;
+        try {
+          process.kill(-pid, signal);
+        } catch {
+          // The group may have exited between the timeout and this signal.
+        }
+      };
+      signalProbe("SIGTERM");
+      // Keep escalation even if the shell itself exits: a startup-script
+      // descendant may still own its pipes or ignore SIGTERM. Resolution does
+      // not wait for any of these processes to cooperate.
+      if (pid) setTimeout(() => signalProbe("SIGKILL"), PROBE_KILL_GRACE_MS);
+      child.stdout?.removeAllListeners("data");
+      child.stderr?.removeAllListeners("data");
+      child.stdout?.destroy();
+      child.stderr?.destroy();
       finish({ ok: false, shell, reason: "timeout", stderr: stderr.trim() || undefined });
     }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
@@ -253,6 +306,7 @@ export async function probeLoginShellPath(
       finish({ ok: false, shell, reason: "spawn-error", error: err.message });
     });
     child.on("close", (code, signal) => {
+      if (settled) return;
       const envSnapshot = parseLoginShellEnvOutput(stdout);
       const path = parseEnvPathOutput(stdout);
       if (code === 0 && path) {
@@ -276,6 +330,7 @@ export async function injectLoginShellPathAtStartup(
     env?: NodeJS.ProcessEnv;
     platform?: SupportedPlatform;
     timeoutMs?: number;
+    phase?: "startup" | "runtime-retry";
     log?: (event: string, data?: Record<string, unknown>) => void;
   } = {},
 ): Promise<LoginShellPathInjectionResult> {
@@ -289,22 +344,41 @@ export async function injectLoginShellPathAtStartup(
   if (!shell) return { status: "skipped", reason: "no-shell", addedEnvKeys: [] };
 
   const before = env.PATH ?? "";
+  const startedAt = performance.now();
   const probe = await probeLoginShellPath({
     env,
     platform,
     shell,
     timeoutMs: options.timeoutMs,
   });
+  const diagnostics = {
+    phase: options.phase ?? "startup",
+    elapsedMs: Math.round(performance.now() - startedAt),
+    timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    shell: boundedDiagnostic(shell),
+  };
 
   if (!probe.ok) {
     options.log?.("login-shell-path.failed", {
-      shell,
+      ...diagnostics,
       reason: probe.reason,
-      error: probe.error,
+      error: boundedDiagnostic(probe.error),
       code: probe.code,
       signal: probe.signal,
       ...redactedStderrLogFields(probe.stderr),
     });
+    const after = fallbackExecutablePath(env, platform);
+    if (after && after !== before) {
+      const existing = new Set(splitPathEntries(before));
+      const added = splitPathEntries(after).filter((entry) => !existing.has(entry));
+      env.PATH = after;
+      options.log?.("login-shell-path.fallback", {
+        ...diagnostics,
+        reason: probe.reason,
+        addedPathEntryCount: added.length,
+      });
+      return { status: "updated", before, after, added, probe, addedEnvKeys: [] };
+    }
     return { status: "unchanged", reason: "probe-failed", probe, addedEnvKeys: [] };
   }
 
@@ -312,7 +386,7 @@ export async function injectLoginShellPathAtStartup(
   const after = merge.path;
   if (!after || (after === before && merge.addedEnvKeys.length === 0)) {
     options.log?.("login-shell-path.unchanged", {
-      shell,
+      ...diagnostics,
       reason: "already-current",
       addedEnvKeys: [],
     });
@@ -322,7 +396,7 @@ export async function injectLoginShellPathAtStartup(
   if (after !== before) env.PATH = after;
   for (const key of merge.addedEnvKeys) env[key] = merge.addedEnv[key];
   options.log?.("login-shell-path.updated", {
-    shell,
+    ...diagnostics,
     pathChanged: after !== before,
     addedPathEntryCount: merge.addedPathEntries.length,
     addedEnvKeys: merge.addedEnvKeys,

@@ -125,7 +125,10 @@ describe("architecture growth budgets", () => {
       "packages/core/src/index.extension.ts": 46,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
-      "packages/core/src/index.internal.ts": 81,
+      // Speech model resolution adds one reviewed host-only module, shared by
+      // transcription, voice generation and Desktop media capability checks.
+      // It remains outside the stable public SDK and extension surfaces.
+      "packages/core/src/index.internal.ts": 82,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

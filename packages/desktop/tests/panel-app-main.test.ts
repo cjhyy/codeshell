@@ -25,11 +25,13 @@ import {
 } from "node:fs";
 import { basename, delimiter, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { Readable } from "node:stream";
 import { PANEL_APP_API_VERSION } from "../src/shared/panel-apps.js";
 import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-electron-mock.js";
 
 let api: typeof import("../src/main/panel-app-protocol.js");
 let PanelAppBridge: typeof import("../src/main/panel-app-bridge.js").PanelAppBridge;
+let MediaCaptionRenderer: typeof import("../src/main/media/media-caption-renderer.js").MediaCaptionRenderer;
 
 const isolated = process.env.CODESHELL_PANEL_APP_FIXTURE === "1";
 // `describe.skip` still registers the suite without running its bodies, so the
@@ -43,6 +45,7 @@ beforeAll(async () => {
   installPanelAppElectronMock();
   api = await import("../src/main/panel-app-protocol.js");
   ({ PanelAppBridge } = await import("../src/main/panel-app-bridge.js"));
+  ({ MediaCaptionRenderer } = await import("../src/main/media/media-caption-renderer.js"));
 });
 
 afterAll(() => {
@@ -64,6 +67,7 @@ describeIsolated("Panel App protocol", () => {
   });
 
   async function arrange(hostId: string, permissions: string[] = []) {
+    api.setPanelAppCaptureAuthorizer(() => true);
     root = mkdtempSync(join(tmpdir(), "cspanel-protocol-"));
     mkdirSync(join(root, "panels", "dashboard"), { recursive: true });
     writeFileSync(join(root, "panels", "dashboard", "index.html"), "<h1>safe</h1>");
@@ -110,6 +114,159 @@ describeIsolated("Panel App protocol", () => {
     expect(script.headers.get("content-type")).toContain("text/javascript");
   });
 
+  test("serves installed MP3 and WAV files with audio MIME types and strict headers", async () => {
+    await arrange("staticaudio");
+    for (const [extension, mime] of [
+      ["mp3", "audio/mpeg"],
+      ["wav", "audio/wav"],
+    ]) {
+      const bytes = readFileSync(
+        new URL(`../../core/src/panel-apps/fixtures/static-tone.${extension}`, import.meta.url),
+      );
+      writeFileSync(join(root, "panels", "dashboard", `tone.${extension}`), bytes);
+      const url = `cspanel://staticaudio/panels/dashboard/tone.${extension}`;
+      const audio = await panelAppElectronMock.protocolHandler!(new Request(url));
+      expect(audio.status).toBe(200);
+      expect(audio.headers.get("content-type")).toBe(mime);
+      expect(audio.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(audio.headers.get("content-security-policy")).toContain("connect-src 'none'");
+      expect(Buffer.from(await audio.arrayBuffer())).toEqual(bytes);
+      const head = await panelAppElectronMock.protocolHandler!(
+        new Request(url, { method: "HEAD" }),
+      );
+      expect(head.status).toBe(200);
+      expect(head.headers.get("content-type")).toBe(mime);
+      expect(await head.text()).toBe("");
+    }
+  });
+
+  test("streams managed media with Range only from its bound app and project", async () => {
+    await arrange("managedmedia", ["media", "context.workspace"]);
+    const id = `asset-${"a".repeat(64)}`;
+    let reads = 0;
+    api.setPanelAppMediaReader(async (scope, assetId, request) => {
+      reads++;
+      expect(scope).toEqual({ appId: "managedmedia", projectPath: "/repo/alpha" });
+      expect(assetId).toBe(id);
+      expect(request).toEqual({ method: "GET", range: "bytes=1-3" });
+      return {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Range": "bytes 1-3/9",
+          "Content-Length": "3",
+        },
+        body: Readable.from([Buffer.from("abc")]),
+      };
+    });
+    const handler = panelAppElectronMock.protocolHandler!;
+    const result = await handler(
+      new Request(`cspanel://managedmedia/media/${id}`, { headers: { Range: "bytes=1-3" } }),
+    );
+    expect(result.status).toBe(206);
+    expect(result.headers.get("content-range")).toBe("bytes 1-3/9");
+    expect(result.headers.get("content-security-policy")).toContain("sandbox");
+    expect(result.headers.get("content-security-policy")).toContain("default-src 'none'");
+    expect(await result.text()).toBe("abc");
+    expect((await handler(new Request("cspanel://managedmedia/media/private-file"))).status).toBe(
+      403,
+    );
+    expect(reads).toBe(1);
+  });
+
+  test("managed media rejects a missing permission and a cross-app partition", async () => {
+    await arrange("withoutmedia");
+    let reads = 0;
+    api.setPanelAppMediaReader(async () => {
+      reads++;
+      throw new Error("must not be called");
+    });
+    const firstHandler = panelAppElectronMock.protocolHandler!;
+    const id = `asset-${"b".repeat(64)}`;
+    expect((await firstHandler(new Request(`cspanel://withoutmedia/media/${id}`))).status).toBe(
+      403,
+    );
+    rmSync(root, { recursive: true, force: true });
+    await arrange("othermedia", ["media", "context.workspace"]);
+    expect((await firstHandler(new Request(`cspanel://othermedia/media/${id}`))).status).toBe(403);
+    expect(reads).toBe(0);
+  });
+
+  test("managed media refuses active or non-media MIME types and closes rejected streams", async () => {
+    await arrange("mediatypes", ["media", "context.workspace"]);
+    for (const mime of [
+      "text/html",
+      "image/svg+xml",
+      "application/json",
+      "application/octet-stream",
+    ]) {
+      const body = Readable.from([Buffer.from("not safe media")]);
+      api.setPanelAppMediaReader(async () => ({
+        status: 200,
+        headers: { "content-type": mime },
+        body,
+      }));
+      const result = await panelAppElectronMock.protocolHandler!(
+        new Request(`cspanel://mediatypes/media/asset-${"a".repeat(64)}`),
+      );
+      expect(result.status).toBe(415);
+      expect(body.destroyed).toBe(true);
+    }
+  });
+
+  test("caption cancellation destroys a window while its page is still loading", async () => {
+    let destroyed = false;
+    const controller = new AbortController();
+    const renderer = new MediaCaptionRenderer({
+      createWindow: () =>
+        ({
+          isDestroyed: () => destroyed,
+          destroy: () => {
+            destroyed = true;
+          },
+          loadURL: () => new Promise(() => {}),
+          webContents: { setWindowOpenHandler() {}, on() {} },
+        }) as any,
+    });
+    const rendering = renderer.render({ width: 160, height: 90, fontSize: 10, texts: ["字幕"] }, {
+      jobId: "caption-cancel",
+      signal: controller.signal,
+    } as any);
+    controller.abort();
+    await expect(rendering).rejects.toThrow("cancelled");
+    expect(destroyed).toBe(true);
+  });
+
+  test("caption execution timeout destroys its Chromium window and permits the next attempt", async () => {
+    const windows: { destroyed: boolean }[] = [];
+    const renderer = new MediaCaptionRenderer({
+      timeoutMs: 5,
+      createWindow: () => {
+        const state = { destroyed: false };
+        windows.push(state);
+        return {
+          isDestroyed: () => state.destroyed,
+          destroy: () => {
+            state.destroyed = true;
+          },
+          loadURL: async () => {},
+          webContents: {
+            setWindowOpenHandler() {},
+            on() {},
+            executeJavaScript: () => new Promise(() => {}),
+          },
+        } as any;
+      },
+    });
+    const context = { jobId: "caption-timeout", signal: new AbortController().signal } as any;
+    for (let attempt = 0; attempt < 2; attempt++)
+      await expect(
+        renderer.render({ width: 160, height: 90, fontSize: 10, texts: [] }, context),
+      ).rejects.toThrow("timed out");
+    expect(windows).toHaveLength(2);
+    expect(windows.every((window) => window.destroyed)).toBe(true);
+  });
+
   test("rejects traversal, query strings, dotfiles, and assets outside the panel tree", async () => {
     await arrange("rejecthost");
     const urls = [
@@ -122,6 +279,29 @@ describeIsolated("Panel App protocol", () => {
       const result = await panelAppElectronMock.protocolHandler!(new Request(url));
       expect(result.status).toBeGreaterThanOrEqual(400);
     }
+  });
+
+  test("permits local blob media previews while keeping execution and network isolated", async () => {
+    const prepared = await arrange("localmediahost");
+    const html = await panelAppElectronMock.protocolHandler!(new Request(prepared.src));
+    const directives = new Map(
+      html.headers
+        .get("content-security-policy")!
+        .split(";")
+        .map((directive) => {
+          const [name, ...sources] = directive.trim().split(/\s+/);
+          return [name, sources] as const;
+        }),
+    );
+
+    expect(directives.get("media-src")).toEqual(["'self'", "blob:"]);
+    expect(directives.get("img-src")).toEqual(["'self'", "data:", "blob:"]);
+    expect(directives.get("default-src")).toEqual(["'self'"]);
+    expect(directives.get("script-src")).toEqual(["'self'"]);
+    expect(directives.get("connect-src")).toEqual(["'none'"]);
+    expect(directives.get("frame-src")).toEqual(["'self'"]);
+    expect(directives.get("object-src")).toEqual(["'none'"]);
+    expect(directives.get("form-action")).toEqual(["'none'"]);
   });
 
   test("rejects a symlink escape even when the extension is allowed", async () => {
@@ -149,6 +329,47 @@ describeIsolated("Panel App protocol", () => {
     expect(api.preparedPanelAppPartitionProjectPath("scopedhost", second.partition)).toBe(
       "/repo/beta",
     );
+  });
+
+  test("capture permission is scoped, revocable and requires explicit screen selection", async () => {
+    const prepared = await arrange("recordinghost", ["context.workspace", "media.capture"]);
+    const webContents = { getURL: () => prepared.src };
+    const check = (mediaType: string, isMainFrame = true) =>
+      panelAppElectronMock.permissionCheckHandler!(webContents, "media", prepared.src, {
+        requestingUrl: prepared.src,
+        isMainFrame,
+        mediaType,
+      });
+    expect(check("video")).toBe(true);
+    expect(check("audio")).toBe(true);
+    expect(check("video", false)).toBe(false);
+    api.setPanelAppCaptureAuthorizer(() => false);
+    expect(check("video")).toBe(false);
+    api.setPanelAppCaptureAuthorizer(undefined);
+    expect(check("audio")).toBe(false);
+    api.setPanelAppCaptureAuthorizer(() => true);
+    const capture = (request: Record<string, unknown>) =>
+      new Promise<any>((resolve) =>
+        panelAppElectronMock.displayMediaRequestHandler!(request, resolve),
+      );
+    const request = {
+      frame: { url: prepared.src, parent: null },
+      videoRequested: true,
+      audioRequested: false,
+      userGesture: true,
+    };
+    panelAppElectronMock.displaySources = [
+      { id: "screen:1", name: "First screen" },
+      { id: "screen:2", name: "Second screen" },
+    ];
+    expect(await capture({ ...request, userGesture: false })).toEqual({});
+    panelAppElectronMock.dialogResponse = 0;
+    expect(await capture(request)).toEqual({});
+    panelAppElectronMock.dialogResponse = 2;
+    expect((await capture(request)).video.id).toBe("screen:2");
+    panelAppElectronMock.dialogResponse = 1;
+    api.setPanelAppCaptureAuthorizer(() => false);
+    expect(await capture(request)).toEqual({});
   });
 
   test("grants microphone-only media access only to a reviewed audio Panel App", async () => {
@@ -1491,6 +1712,70 @@ describeIsolated("PanelAppBridge", () => {
     }
   });
 
+  test("two bridge instances share the storage lock without blocking its async holder", async () => {
+    const storageRoot = mkdtempSync(join(tmpdir(), "cspanel-storage-contention-"));
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    panelAppElectronMock.userDataPath = storageRoot;
+    try {
+      const calls: Array<(method: string, params: unknown) => Promise<unknown>> = [];
+      const bridges: InstanceType<typeof PanelAppBridge>[] = [];
+      for (const id of [911, 912]) {
+        const bridge = new PanelAppBridge({
+          isTrustedHost: () => true,
+          isWorkspaceTrusted: () => false,
+          isPanelAppBound: () => true,
+          getAgentBridge: () => null,
+          limits: { storageQuotaBytes: 256 },
+        });
+        bridge.registerIpc();
+        const guest = fakeGuest(id);
+        bridge.registerGuest(
+          guest as any,
+          panelAppElectronMock.ownerWindow as any,
+          bridgeResource(["storage"]) as any,
+          "/repo",
+        );
+        await bindBridgeGuest(id);
+        // Capture each registered handler before the next bridge replaces the
+        // Electron mock's handler, preserving two independent instance queues.
+        const handler = panelAppElectronMock.ipcHandlers.get("panel-app:call")!;
+        calls.push(
+          (method, params) => handler({ sender: guest }, method, params) as Promise<unknown>,
+        );
+        bridges.push(bridge);
+      }
+      let entered!: () => void;
+      const holding = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const first = bridges[0] as any;
+      const readStorage = first.readStorage.bind(first);
+      first.readStorage = async (binding: unknown) => {
+        entered();
+        // The real filesystem lock is already held here. A second synchronous
+        // lock wait would stop this timer and the holder's renewal heartbeat.
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        return readStorage(binding);
+      };
+      const started = performance.now();
+      const left = calls[0]!("storage.set", { key: "left", value: 1 });
+      await holding;
+      const right = calls[1]!("storage.set", { key: "right", value: 2 });
+      const results = await Promise.allSettled([left, right]);
+      const elapsed = performance.now() - started;
+      expect(elapsed).toBeLessThan(1_000);
+      expect(results).toEqual([
+        { status: "fulfilled", value: true },
+        { status: "fulfilled", value: true },
+      ]);
+      expect(await calls[1]!("storage.get", { key: "left" })).toBe(1);
+      expect(await calls[0]!("storage.get", { key: "right" })).toBe(2);
+    } finally {
+      rmSync(storageRoot, { recursive: true, force: true });
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+    }
+  }, 20_000);
+
   test("accepts a recovery snapshot larger than the generic call limit within storage quota", async () => {
     const storageRoot = mkdtempSync(join(tmpdir(), "cspanel-recovery-"));
     panelAppElectronMock.userDataPath = storageRoot;
@@ -2288,6 +2573,42 @@ describeIsolated("PanelAppBridge", () => {
       ).toBe(true);
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("media workspace import checks trust for its actual worktree cwd", async () => {
+    const projectPath = mkdtempSync(join(tmpdir(), "cspanel-media-trust-"));
+    const worktreePath = join(projectPath, "worktree");
+    mkdirSync(worktreePath);
+    mkdirSync(join(projectPath, ".git"));
+    writeFileSync(
+      join(worktreePath, ".git"),
+      `gitdir: ${join(projectPath, ".git", "worktrees", "test")}\n`,
+    );
+    try {
+      const bridge = new PanelAppBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: (cwd) => cwd === projectPath,
+        isPanelAppBound: () => true,
+        getAgentBridge: () => null,
+      });
+      bridge.registerIpc();
+      const guest = fakeGuest(91);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["context.workspace", "workspace.read", "media"]) as any,
+        projectPath,
+      );
+      await bindBridgeGuest(91, { projectPath, cwd: worktreePath });
+      await expect(
+        panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "media.import", {
+          paths: ["video.mp4"],
+        }),
+      ).rejects.toThrow("trusted workspace");
+      await bridge.shutdownMedia();
+    } finally {
+      rmSync(projectPath, { recursive: true, force: true });
     }
   });
 

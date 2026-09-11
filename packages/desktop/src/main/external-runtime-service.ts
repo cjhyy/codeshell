@@ -35,6 +35,7 @@ import {
 import { isFeatureEnabled, type FeatureFlagOverrides } from "@cjhyy/code-shell-core/extension";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
+import { createCodexLaunchResolver, type CodexLaunch } from "./external-runtime-launch.js";
 import {
   ExternalRuntimeSessionRecorder,
   readExternalRuntimeBinding,
@@ -115,6 +116,8 @@ export interface ExternalRuntimeServiceDeps {
   backgroundWork?: ExternalRuntimeBackgroundWorkDelivery;
   /** Injectable sidecar writer; failure must never orphan an otherwise-live runtime. */
   writeBinding?: typeof writeExternalRuntimeBinding;
+  /** Resolve the executable before reserving resources; injectable for tests. */
+  prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
 }
 
 /**
@@ -152,8 +155,10 @@ export class ExternalRuntimeService {
   /** At most one notification-drain continuation may be scheduled per Session. */
   private readonly backgroundWakeups = new Set<string>();
   private backgroundWorkUnsubscribe?: () => void;
+  private readonly prepareCodexLaunch: (cwd: string) => Promise<CodexLaunch>;
 
   constructor(private readonly deps: ExternalRuntimeServiceDeps) {
+    this.prepareCodexLaunch = deps.prepareCodexLaunch ?? createCodexLaunchResolver();
     this.backgroundWorkUnsubscribe = deps.backgroundWork?.subscribe((sessionId, event) => {
       if (!this.sessions.has(sessionId)) return;
       // Completion/progress is observational and belongs to the async job, not
@@ -408,6 +413,20 @@ export class ExternalRuntimeService {
     const ownerId = request.ownerWindow?.webContents.id;
     this.assertOwner(request.sessionId, ownerId);
 
+    // Do not tear down a usable runtime or reserve its replacement until the
+    // replacement's program and working directory have passed preflight.
+    const codexLaunch =
+      request.kind === "codex" ? await this.prepareCodexLaunch(request.cwd) : undefined;
+
+    // Environment recovery can wait for a shell. Recheck the caller's authority
+    // after that wait, before closing a live runtime or spawning its replacement.
+    if (!this.isEnabled()) {
+      throw new Error("External Agent Runtimes were disabled while preparing the session.");
+    }
+    if (request.ownerWindow?.isDestroyed?.()) {
+      throw new Error(`external runtime owner window closed while preparing: ${request.sessionId}`);
+    }
+
     // Replacing an existing session: close the old one first so two runtimes
     // cannot interleave turns on the same business session.
     await this.stopExclusive(request.sessionId);
@@ -539,6 +558,7 @@ export class ExternalRuntimeService {
     try {
       session = await startExternalRuntimeSession({
         kind: request.kind,
+        ...(codexLaunch ? { codexClient: codexLaunch } : {}),
         cwd: request.cwd,
         businessSessionId: request.sessionId,
         registry,

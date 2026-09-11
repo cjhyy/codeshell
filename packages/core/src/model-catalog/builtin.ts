@@ -201,14 +201,39 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     // omit params — no catch-all forcing reasoning onto a model that lacks it.
     modelPresets: [
       // Anthropic (Claude) — alias + concrete versions
-      orPreset("~anthropic/claude-opus-latest", "Claude Opus (latest)", [OPENROUTER_REASONING], 1_000_000),
-      orPreset("~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset(
+        "~anthropic/claude-opus-latest",
+        "Claude Opus (latest)",
+        [OPENROUTER_REASONING],
+        1_000_000,
+      ),
+      orPreset(
+        "~anthropic/claude-sonnet-latest",
+        "Claude Sonnet (latest)",
+        [OPENROUTER_REASONING],
+        1_000_000,
+      ),
       orPreset("anthropic/claude-opus-4.8", "Claude Opus 4.8", [OPENROUTER_REASONING], 1_000_000),
-      orPreset("anthropic/claude-opus-4.8-fast", "Claude Opus 4.8 (fast)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset(
+        "anthropic/claude-opus-4.8-fast",
+        "Claude Opus 4.8 (fast)",
+        [OPENROUTER_REASONING],
+        1_000_000,
+      ),
       orPreset("anthropic/claude-opus-4.7", "Claude Opus 4.7", [OPENROUTER_REASONING], 1_000_000),
-      orPreset("anthropic/claude-opus-4.7-fast", "Claude Opus 4.7 (fast)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset(
+        "anthropic/claude-opus-4.7-fast",
+        "Claude Opus 4.7 (fast)",
+        [OPENROUTER_REASONING],
+        1_000_000,
+      ),
       orPreset("anthropic/claude-sonnet-5", "Claude Sonnet 5", [OPENROUTER_REASONING], 1_000_000),
-      orPreset("anthropic/claude-sonnet-4.6", "Claude Sonnet 4.6", [OPENROUTER_REASONING], 1_000_000),
+      orPreset(
+        "anthropic/claude-sonnet-4.6",
+        "Claude Sonnet 4.6",
+        [OPENROUTER_REASONING],
+        1_000_000,
+      ),
       orPreset("anthropic/claude-fable-5", "Claude Fable 5", [OPENROUTER_REASONING], 1_000_000),
       // OpenAI (GPT) — concrete only (no working ~latest alias). Led by 5.5 to
       // match the direct-OpenAI default (state.json model = gpt-5.5).
@@ -218,8 +243,18 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       orPreset("openai/gpt-5.4-mini", "GPT-5.4 Mini", [OPENROUTER_REASONING], 400_000),
       orPreset("openai/gpt-5.1-codex-max", "GPT-5.1 Codex Max", [OPENROUTER_REASONING], 400_000),
       // Google (Gemini) — alias + concrete
-      orPreset("~google/gemini-pro-latest", "Gemini Pro (latest)", [OPENROUTER_REASONING], 1_048_576),
-      orPreset("google/gemini-3-flash-preview", "Gemini 3 Flash (preview)", [OPENROUTER_REASONING], 1_048_576),
+      orPreset(
+        "~google/gemini-pro-latest",
+        "Gemini Pro (latest)",
+        [OPENROUTER_REASONING],
+        1_048_576,
+      ),
+      orPreset(
+        "google/gemini-3-flash-preview",
+        "Gemini 3 Flash (preview)",
+        [OPENROUTER_REASONING],
+        1_048_576,
+      ),
       orPreset("google/gemini-2.5-pro", "Gemini 2.5 Pro", [OPENROUTER_REASONING], 1_048_576),
       orPreset("google/gemini-2.5-flash", "Gemini 2.5 Flash", [OPENROUTER_REASONING], 1_048_576),
       // xAI (Grok)
@@ -227,7 +262,12 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       orPreset("x-ai/grok-4.20", "Grok 4.20", [OPENROUTER_REASONING], 2_000_000),
       // DeepSeek — V4 reasoning + V3 chat (non-reasoning)
       orPreset("deepseek/deepseek-v4-pro", "DeepSeek V4 Pro", [OPENROUTER_REASONING], 1_048_576),
-      orPreset("deepseek/deepseek-v4-flash", "DeepSeek V4 Flash", [OPENROUTER_REASONING], 1_048_576),
+      orPreset(
+        "deepseek/deepseek-v4-flash",
+        "DeepSeek V4 Flash",
+        [OPENROUTER_REASONING],
+        1_048_576,
+      ),
       orPreset("deepseek/deepseek-chat", "DeepSeek V3 (chat)", undefined, 131_072),
       // Zhipu (GLM) — glm-5.1 (65k ctx) omitted: below the catalog's ≥100k
       // context floor; glm-5.2 (1M) and glm-5 (202k) cover the family.
@@ -392,6 +432,72 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       "fal 视频:用 model 选底层模型(文生 vs 图生)。传 image/images(本地路径自动上传)→ 用图生视频模型;1 张=图生视频,2+ 张=参考生视频(最多 9,prompt 里用 @Image1/@Image2 引用)。" +
       "续接/参考视频:传 videos(http/https URL,非本地路径;最多 3)续接已有视频,prompt 里用 @Video1/@Video2 引用(如「从 @Video1 结尾继续」);需用 Seedance 模型(走 reference-to-video,Kling 不支持)。异步后台生成。",
   },
+  // Speech generation is independent from the audio/dictation connection.
+  {
+    id: "openai-speech",
+    tag: "speech",
+    adapterKind: "openai",
+    shape: "generic-sync",
+    displayName: "OpenAI 文字配音",
+    description: "OpenAI 兼容 /audio/speech；可选择模型、声音、语速和朗读风格。",
+    defaultBaseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-4o-mini-tts",
+    signupUrl: "https://platform.openai.com/api-keys",
+    test: false,
+    modelPresets: ["gpt-4o-mini-tts", "gpt-4o-mini-tts-2025-12-15", "tts-1", "tts-1-hd"].map(
+      (value) => ({
+        value,
+        label: value,
+        params: [
+          {
+            name: "voice",
+            label: "声音",
+            control: "enum" as const,
+            options: value.startsWith("gpt-")
+              ? [
+                  "alloy",
+                  "ash",
+                  "ballad",
+                  "coral",
+                  "echo",
+                  "fable",
+                  "onyx",
+                  "nova",
+                  "sage",
+                  "shimmer",
+                  "verse",
+                  "marin",
+                  "cedar",
+                ]
+              : ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
+            default: value.startsWith("gpt-") ? "coral" : "alloy",
+            doc: "此模型支持的内置声音；语音由 AI 合成。",
+          },
+          {
+            name: "speed",
+            label: "语速",
+            control: "number" as const,
+            min: 0.5,
+            max: 2,
+            default: 1,
+          },
+          ...(value.startsWith("gpt-")
+            ? [
+                {
+                  name: "instructions",
+                  label: "朗读风格",
+                  control: "text" as const,
+                  max: 2000,
+                  doc: "描述语气、情感、口音等；不改变配音文案。",
+                },
+              ]
+            : []),
+        ],
+      }),
+    ),
+    paramsDoc:
+      "文字配音，返回真实音频。gpt-4o-mini-tts 支持 instructions；tts-1/tts-1-hd 不支持风格指令。可修改 baseUrl 使用真正支持 /audio/speech 的兼容服务。",
+  },
   // ─── audio (speech-to-text / 语音输入听写) ───
   {
     id: "openai-transcribe",
@@ -409,7 +515,8 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       { value: "gpt-4o-mini-transcribe", label: "gpt-4o-mini-transcribe" },
       { value: "whisper-1", label: "Whisper (whisper-1)" },
     ],
-    paramsDoc: "语音转写:录音(webm/opus)→ 文字,填进输入框。换 baseUrl+model 可指向 Groq/本地 whisper.cpp。",
+    paramsDoc:
+      "语音转写:录音(webm/opus)→ 文字,填进输入框。换 baseUrl+model 可指向 Groq/本地 whisper.cpp。",
   },
   {
     id: "groq-transcribe",

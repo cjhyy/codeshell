@@ -33,7 +33,8 @@ describe("buildSkillInstallArgs", () => {
       "add",
       "heygen-com/hyperframes",
       "--skill",
-      "media-use,hyperframes-core",
+      "media-use",
+      "hyperframes-core",
       "--agent",
       "*",
       "--yes",
@@ -54,6 +55,17 @@ describe("buildSkillInstallArgs", () => {
     // keeps it as one argv element so a hostile value cannot become a flag.
     const args = buildSkillInstallArgs(req({ repo: "owner/repo" }));
     expect(args[2]).toBe("owner/repo");
+  });
+
+  test("keeps literal names separate without excluding object prototype names", () => {
+    const names = ["constructor", "toString", "__proto__", "skill,comma"];
+    expect(buildSkillInstallArgs(req({ skills: names })).slice(4, 8)).toEqual(names);
+  });
+
+  test("rejects special selectors before they can change installer scope", () => {
+    for (const name of ["--global", "-g", "--all", "--copy", "-", "*", "bad\0name"]) {
+      expect(() => buildSkillInstallArgs(req({ skills: ["media-use", name] }))).toThrow();
+    }
   });
 });
 

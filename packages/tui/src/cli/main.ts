@@ -151,7 +151,7 @@ addCommonOptions(
     .command("arena")
     .description("Multi-model review arena — agent gathers context, multiple models discuss")
     .argument("<topic>", "What to review (agent will find relevant code)")
-    .option("--models <models>", "Models to use (e.g. claude,gpt4o,deepseek)")
+    .option("--models <models>", "Connection IDs, preset aliases or model paths (comma-separated)")
     .option(
       "--mode <mode>",
       "Arena mode: review, discussion, or planning (auto-detected if omitted)",
@@ -165,7 +165,7 @@ addCommonOptions(
     console.error("Error: 没有可用的文本模型连接。");
     process.exit(1);
   }
-  // TODO(arena): participants 改按 modelConnections.id 解析,本次不迁
+  // Arena resolves exact modelConnections.id keys before legacy preset aliases.
   await runArenaReview(
     { topic, models: opts.models, mode: opts.mode },
     {

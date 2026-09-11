@@ -121,6 +121,43 @@ function waitForLine(core: WorkerBridgeCore, match: (line: string) => boolean): 
 }
 
 describe("WorkerBridgeCore", () => {
+  test("request(): invalid JSON params settle as sendFailed and release correlation", async () => {
+    const core = makeCore();
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const outcome = await core.request("test/echo", circular, {
+      id: "invalid-json",
+      timeoutMs: 100,
+      meta: TEST_META,
+    });
+    expect(outcome.status).toBe("sendFailed");
+    expect(pendingRequestCount(core)).toBe(0);
+    expect(core.hasChild()).toBe(false);
+  });
+
+  test("correlation ignores JSON scalars while retaining a pending request", async () => {
+    const core = makeCore();
+    const pending = core.request("test/never", undefined, {
+      id: "waiting",
+      timeoutMs: 20,
+      meta: TEST_META,
+    });
+    const dispatch = (line: string) =>
+      (
+        core as unknown as {
+          settleMatchingRequest(line: string): boolean;
+        }
+      ).settleMatchingRequest(line);
+    try {
+      for (const invalid of ["null", "[]", "42", '"noise"', "broken"]) {
+        expect(() => dispatch(invalid)).not.toThrow();
+      }
+      expect(pendingRequestCount(core)).toBe(1);
+    } finally {
+      await pending;
+    }
+  });
+
   test("spawns on demand, frames stdout lines, and dispatches notifications", async () => {
     let startedGeneration = 0;
     const core = makeCore({

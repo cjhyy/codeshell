@@ -62,6 +62,7 @@ export interface PanelAgentTaskStartInput {
   key?: unknown;
   model?: unknown;
   skill?: unknown;
+  skills?: unknown;
   toolNames?: unknown;
   maxTurns?: unknown;
   maxContextTokens?: unknown;
@@ -186,6 +187,16 @@ export class PanelAppAgentTaskService {
     if (skill !== undefined && !owner.availableSkills.includes(skill)) {
       throw new Error(`Task Skill '${skill}' is not bundled with this Panel App`);
     }
+    const requestedSkills = raw.skills === undefined ? [] : raw.skills;
+    if (
+      !Array.isArray(requestedSkills) ||
+      requestedSkills.length > 8 ||
+      requestedSkills.some(
+        (name) => typeof name !== "string" || !owner.availableSkills.includes(name),
+      )
+    )
+      throw new Error("Task Skills must be bundled with this Panel App (at most 8)");
+    const skillNames = [...new Set([...(skill ? [skill] : []), ...(requestedSkills as string[])])];
     const requestedTools = raw.toolNames === undefined ? [] : raw.toolNames;
     if (
       !Array.isArray(requestedTools) ||
@@ -218,7 +229,7 @@ export class PanelAppAgentTaskService {
     const createdAt = this.now();
     const id = `task-${this.makeId()}`;
     const toolNames = [...new Set(requestedTools as string[])];
-    if (skill && !toolNames.includes("Skill")) toolNames.push("Skill");
+    if (skillNames.length && !toolNames.includes("Skill")) toolNames.push("Skill");
     const task: StoredPanelAgentTask = {
       id,
       ...(key ? { key } : {}),
@@ -232,7 +243,7 @@ export class PanelAppAgentTaskService {
       owner: { ...owner, availableSkills: [...owner.availableSkills] },
       prompt,
       toolNames,
-      skillNames: skill ? [skill] : [],
+      skillNames,
       maxTurns,
       maxContextTokens,
       cancelRequested: false,

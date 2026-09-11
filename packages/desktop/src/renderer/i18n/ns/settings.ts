@@ -308,6 +308,7 @@ export const settingsNs = {
         headingImage: "图片模型",
         headingVideo: "视频模型",
         headingAudio: "语音转写模型",
+        headingSpeech: "文字配音模型",
         addModel: "添加模型",
         add: "添加",
         defaultModelLabel: "默认模型:",
@@ -425,6 +426,8 @@ export const settingsNs = {
         groupImageSub: "默认连接决定 GenerateImage 用哪一个；key 存在凭证里，多连接可共用。",
         groupVideo: "视频生成",
         groupVideoSub: "默认连接决定 GenerateVideo 用哪一个；key 存在凭证里，多连接可共用。",
+        groupSpeech: "文字配音",
+        groupSpeechSub: "为视频旁白选择语音模型和声音，复用已有模型凭据",
         groupAudio: "语音转写(听写)",
         groupAudioSub:
           "默认连接决定语音输入(麦克风听写)用哪一个;OpenAI 兼容 /audio/transcriptions(Whisper / gpt-4o-transcribe / Groq)。不配也会回退复用已有 OpenAI key。",
@@ -1235,6 +1238,7 @@ export const settingsNs = {
         headingImage: "Image models",
         headingVideo: "Video models",
         headingAudio: "Speech-to-text models",
+        headingSpeech: "Text-to-speech models",
         addModel: "Add model",
         add: "Add",
         defaultModelLabel: "Default model:",
@@ -1366,6 +1370,8 @@ export const settingsNs = {
         groupVideo: "Video generation",
         groupVideoSub:
           "The default connection decides which one GenerateVideo uses; keys live in credentials and can be shared across connections.",
+        groupSpeech: "Text-to-speech",
+        groupSpeechSub: "Choose narration models and voices using existing model credentials",
         groupAudio: "Speech-to-text (dictation)",
         groupAudioSub:
           "The default connection decides which one voice input (mic dictation) uses; OpenAI-compatible /audio/transcriptions (Whisper / gpt-4o-transcribe / Groq). Falls back to reusing an existing OpenAI key if none is set.",

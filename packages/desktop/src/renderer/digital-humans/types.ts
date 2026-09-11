@@ -75,7 +75,8 @@ export function digitalHumanSkillRequirementsFromSources(
 export function digitalHumanSkillSourcesByName(
   requires: DigitalHumanProfileEntry["requires"],
 ): Record<string, string> {
-  const sources: Record<string, string> = {};
+  // Skill names are user data; names such as constructor and __proto__ are valid.
+  const sources: Record<string, string> = Object.create(null);
   for (const requirement of requires?.skills ?? []) {
     for (const name of requirement.skills ?? []) {
       // Malformed imported definitions can name the same Skill more than once.
@@ -122,8 +123,8 @@ export function replaceDigitalHumanSkillSources(
     const target = next[mergeIndex];
     next[mergeIndex] = {
       ...target,
-      skills: [...new Set([...(target.skills ?? []), ...(addition.skills ?? [])])].sort((left, right) =>
-        left.localeCompare(right),
+      skills: [...new Set([...(target.skills ?? []), ...(addition.skills ?? [])])].sort(
+        (left, right) => left.localeCompare(right),
       ),
     };
   }

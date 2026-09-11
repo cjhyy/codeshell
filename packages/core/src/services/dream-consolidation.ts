@@ -45,6 +45,8 @@ export interface DreamConsolidationInput {
   toolContext: ToolContext;
   /** Project root; when set, memories are scoped per-project. */
   projectDir?: string;
+  /** Shared project/global root; overrides toolContext.memoryBaseDir when supplied. */
+  baseDir?: string;
   /** For log attribution. */
   sessionId?: string;
   /** Owning Engine session/Goal recorder; process billing already happened. */
@@ -72,6 +74,7 @@ export async function runDreamConsolidation(
   input: DreamConsolidationInput,
 ): Promise<DreamConsolidationResult> {
   const { llmClient, toolRegistry, projectDir, sessionId } = input;
+  const baseDir = input.baseDir ?? input.toolContext.memoryBaseDir;
 
   const memoryTools = MEMORY_TOOL_NAMES.map((n) => toolRegistry.getTool(n)).filter(
     (t): t is NonNullable<typeof t> => t != null,
@@ -86,10 +89,12 @@ export async function runDreamConsolidation(
 
   // Dream sees BOTH scopes — user/ is read-only context so it can spot
   // duplicates spanning scopes, dream/ is the workspace it edits.
-  const mm = new MemoryManager({ projectDir });
+  const mm = new MemoryManager({ projectDir, baseDir });
   const userMems = mm.loadScope("user");
   const dreamMems = mm.loadScope("dream");
-  const globalDreamMems = projectDir ? new MemoryManager({ scope: "dream" }).loadAll() : [];
+  const globalDreamMems = projectDir
+    ? new MemoryManager({ scope: "dream", baseDir }).loadAll()
+    : [];
 
   const systemPrompt = buildDreamSystemPrompt();
   const userPrompt = buildDreamUserPrompt(userMems, dreamMems, globalDreamMems);
@@ -103,6 +108,7 @@ export async function runDreamConsolidation(
 
   const toolCtx: ToolContext = {
     ...input.toolContext,
+    memoryBaseDir: mm.getStorageContext().baseDir,
     cwd: projectDir ?? process.cwd(),
   };
 
@@ -226,6 +232,7 @@ function checkDreamWriteGuard(
 
   const location = tc.args?.location === "global" ? "global" : "project";
   const mm = new MemoryManager({
+    baseDir: ctx.memoryBaseDir,
     projectDir: location === "project" ? ctx.cwd : undefined,
     scope,
   });

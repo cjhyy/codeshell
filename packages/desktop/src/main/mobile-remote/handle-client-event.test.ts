@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import type { AgentBridge } from "../agent-bridge.js";
+import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import type { SessionCwdIndexEntry } from "../session-cwd-index.js";
 import {
@@ -235,4 +236,126 @@ test("session creation echoes optional browser correlation while legacy clients 
   expect(harness.replies.find((event) => event.type === "chat.accepted")).not.toHaveProperty(
     "clientRequestId",
   );
+});
+
+describe("mobile snapshot epoch recovery", () => {
+  function snapshotHarness(legacyServer = false) {
+    const harness = createHarness({
+      requestedWorkspaceRoot: "/primary",
+      lookupSession: () => undefined,
+    });
+    const store = new SessionSnapshotStore();
+    store.append("session-1", { type: "session_started" });
+    store.append("session-1", { type: "text_delta", delta: "new answer" });
+    store.append("session-1", { type: "turn_complete" });
+    const cursors: number[] = [];
+    const approvalReplays: Array<[string, string | undefined]> = [];
+    harness.ctx.getBridge = () =>
+      ({
+        getLastRunContext: () => ({}),
+        getSnapshot: (sessionId: string, sinceSeq: number) => {
+          cursors.push(sinceSeq);
+          const snapshot = store.get(sessionId, sinceSeq);
+          if (!legacyServer) return snapshot;
+          const { epoch: _epoch, ...legacy } = snapshot;
+          return legacy;
+        },
+      }) as unknown as AgentBridge;
+    harness.ctx.replayPendingMobileApprovals = (sessionId, deviceId) => {
+      approvalReplays.push([sessionId, deviceId]);
+    };
+    return { ...harness, store, cursors, approvalReplays };
+  }
+
+  test("replays the new Main snapshot when a previous lifetime supplied a higher cursor", async () => {
+    const harness = snapshotHarness();
+    await handleClientEvent(harness.ctx, {
+      type: "session.sync",
+      deviceId: "phone-1",
+      sessionId: "session-1",
+      sinceSeq: 100,
+      epoch: "previous-main-lifetime",
+    });
+    expect(harness.cursors).toEqual([100, 0]);
+    expect(harness.replies).toEqual([
+      {
+        type: "session.snapshot",
+        sessionId: "session-1",
+        entries: harness.store.get("session-1").events,
+        nextSeq: 4,
+        epoch: harness.store.epoch,
+      },
+    ]);
+    expect(harness.approvalReplays).toEqual([["session-1", "phone-1"]]);
+  });
+
+  test("keeps incremental filtering inside the same Main lifetime", async () => {
+    const harness = snapshotHarness();
+    await handleClientEvent(harness.ctx, {
+      type: "session.sync",
+      deviceId: "phone-1",
+      sessionId: "session-1",
+      sinceSeq: 1,
+      epoch: harness.store.epoch,
+    });
+    expect(harness.cursors).toEqual([1]);
+    expect(harness.replies[0]).toEqual({
+      type: "session.snapshot",
+      sessionId: "session-1",
+      entries: harness.store.get("session-1", 1).events,
+      nextSeq: 4,
+      epoch: harness.store.epoch,
+    });
+  });
+
+  test("accepts a legacy client cursor and advertises the current epoch", async () => {
+    const harness = snapshotHarness();
+    await handleClientEvent(harness.ctx, {
+      type: "session.sync",
+      deviceId: "phone-1",
+      sessionId: "session-1",
+      sinceSeq: 1,
+    });
+    expect(harness.cursors).toEqual([1]);
+    expect(harness.replies[0]).toMatchObject({
+      entries: harness.store.get("session-1", 1).events,
+      epoch: harness.store.epoch,
+    });
+  });
+
+  test("does not infer an epoch mismatch when a legacy snapshot has no epoch", async () => {
+    const harness = snapshotHarness(true);
+    await handleClientEvent(harness.ctx, {
+      type: "session.sync",
+      deviceId: "phone-1",
+      sessionId: "session-1",
+      sinceSeq: 1,
+      epoch: "known-client-lifetime",
+    });
+    expect(harness.cursors).toEqual([1]);
+    expect(harness.replies[0]).toEqual({
+      type: "session.snapshot",
+      sessionId: "session-1",
+      entries: harness.store.get("session-1", 1).events,
+      nextSeq: 4,
+    });
+  });
+
+  test("returns the new epoch even when the restarted Main has no session events yet", async () => {
+    const harness = snapshotHarness();
+    await handleClientEvent(harness.ctx, {
+      type: "session.sync",
+      deviceId: "phone-1",
+      sessionId: "empty-session",
+      sinceSeq: 100,
+      epoch: "previous-main-lifetime",
+    });
+    expect(harness.replies[0]).toEqual({
+      type: "session.snapshot",
+      sessionId: "empty-session",
+      entries: [],
+      nextSeq: 1,
+      epoch: harness.store.epoch,
+    });
+  });
 });

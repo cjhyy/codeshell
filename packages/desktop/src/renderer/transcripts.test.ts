@@ -67,6 +67,11 @@ describe("transcript snapshot cursor persistence", () => {
     expect(loadTranscript(null, "s1").snapshotSeq).toBe(42);
   });
 
+  it("round-trips the Main epoch together with its snapshot sequence", () => {
+    saveTranscript(null, "epoch", { ...INITIAL_STATE, snapshotSeq: 2, snapshotEpoch: "new-main" });
+    expect(loadTranscript(null, "epoch")).toMatchObject({ snapshotSeq: 2, snapshotEpoch: "new-main" });
+  });
+
   it("defaults legacy saved transcripts without snapshotSeq to 0", () => {
     storage.setItem(`codeshell.transcript.${NO_REPO_KEY}.legacy`, JSON.stringify({ messages: [] }));
 

@@ -78,15 +78,22 @@ function makeRuntime(script: string, onEvent?: (event: StreamEvent) => void): Co
 
 describe("CodexRuntime", () => {
   test("starts a thread and reports the runtime session id", async () => {
-    const runtime = makeRuntime(HAPPY_PATH);
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(HAPPY_PATH, (event) => events.push(event));
     await runtime.start();
     expect(runtime.runtimeSessionId).toBe("thread-fake-1");
     // The Codex thread id is protocol routing only — never the authorization
     // subject, which stays the CodeShell business session (§8.1).
     expect(runtime.runtimeSessionId).not.toBe("sess-runtime");
+    expect(events).toEqual([
+      { type: "session_started", sessionId: "sess-runtime", promptTokens: 0 },
+    ]);
+    await runtime.start();
+    expect(events).toHaveLength(1);
   });
 
   test("resumes a durable Codex thread instead of silently starting over", async () => {
+    const events: StreamEvent[] = [];
     const file = fakeServerScript(`
       setOnLine((m) => {
         if (m.method === "initialize") return send({ id: m.id, result: {} });
@@ -94,16 +101,47 @@ describe("CodexRuntime", () => {
         if (m.method === "thread/start") return send({ id: m.id, error: { code: -1, message: "must not start" } });
       });
     `);
-    const runtime = new CodexRuntime({
-      cwd: process.cwd(),
-      businessSessionId: "sess-resume",
-      bridge,
-      resumeRuntimeSessionId: "thread-existing",
-      client: { command: process.execPath, args: [file] },
-    });
+    const runtime = new CodexRuntime(
+      {
+        cwd: process.cwd(),
+        businessSessionId: "sess-resume",
+        bridge,
+        resumeRuntimeSessionId: "thread-existing",
+        client: { command: process.execPath, args: [file] },
+      },
+      { onEvent: (event) => events.push(event) },
+    );
     runtimes.push(runtime);
     await runtime.start();
     expect(runtime.runtimeSessionId).toBe("thread-existing");
+    expect(events).toEqual([
+      { type: "session_started", sessionId: "sess-resume", promptTokens: 0 },
+    ]);
+  });
+
+  test("announces the business session once when thread/started precedes the RPC response", async () => {
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      `
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") {
+          send({ method: "thread/started", params: { thread: { id: "thread-notified" } } });
+          send({ id: m.id, result: { thread: { id: "thread-notified" } } });
+          send({ method: "thread/started", params: { thread: { id: "thread-notified" } } });
+        }
+        if (m.method === "collect") return send({ id: m.id, result: {} });
+      });
+    `,
+      (event) => events.push(event),
+    );
+    await runtime.start();
+    await (
+      runtime as unknown as { client: { request(m: string): Promise<unknown> } }
+    ).client.request("collect");
+    expect(events).toEqual([
+      { type: "session_started", sessionId: "sess-runtime", promptTokens: 0 },
+    ]);
   });
 
   test("runs a turn and emits translated StreamEvents in order", async () => {
@@ -114,12 +152,13 @@ describe("CodexRuntime", () => {
     await turn.done;
 
     expect(events.map((event) => event.type)).toEqual([
+      "session_started",
       "stream_request_start",
       "text_delta",
       "turn_complete",
     ]);
-    expect(events[1]).toEqual({ type: "text_delta", text: "hello" });
-    expect(events[2]).toEqual({ type: "turn_complete", reason: "completed" });
+    expect(events[2]).toEqual({ type: "text_delta", text: "hello" });
+    expect(events[3]).toEqual({ type: "turn_complete", reason: "completed" });
   });
 
   test("turn.done resolves on completion, not on the RPC response", async () => {
@@ -173,13 +212,18 @@ describe("CodexRuntime", () => {
   });
 
   test("a thread/start with no id fails loudly", async () => {
-    const runtime = makeRuntime(`
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      `
       setOnLine((m) => {
         if (m.method === "initialize") return send({ id: m.id, result: {} });
         if (m.method === "thread/start") return send({ id: m.id, result: { thread: {} } });
       });
-    `);
+    `,
+      (event) => events.push(event),
+    );
     await expect(runtime.start()).rejects.toThrow(/no thread id/i);
+    expect(events).toEqual([]);
   });
 
   test("close() settles a turn that never completed", async () => {

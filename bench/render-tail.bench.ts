@@ -1,25 +1,32 @@
 #!/usr/bin/env bun
 import React from "react";
-import { Box, Text } from "../src/render/index.js";
-import { setup, flush, time, printTable } from "./harness.js";
+import { Box, Text } from "../packages/tui/src/render/index.js";
+import { setup, time, printTable, type BenchHarness } from "./harness.js";
 
 async function main() {
-  const count = 10000;
-  const items = Array.from({ length: count }, (_, i) => `row-${i}`);
-  const h = setup(
-    React.createElement(Box, { flexDirection: "column" },
-      ...items.map((it) => React.createElement(Text, { key: it }, it)),
-    ),
-    { columns: 120, rows: 40 },
-  );
-  await flush();
-  const mountTiming = await time("mount 10k", 1, async () => {});
-  printTable([mountTiming]);
-  process.stdout.write(`bytes_written=${h.bytesWritten}\nframe_count=${h.frameCount}\n`);
-  h.unmount();
+  let h: BenchHarness | undefined;
+  try {
+    const mountTiming = await time("mount-10k", 1, async () => {
+      const items = Array.from({ length: 10_000 }, (_, i) => `row-${i}`);
+      h = setup(
+        React.createElement(
+          Box,
+          { flexDirection: "column" },
+          ...items.map((it) => React.createElement(Text, { key: it }, it)),
+        ),
+      );
+      await h.waitForFrame(1);
+    });
+    printTable([mountTiming]);
+    process.stdout.write(
+      `bytes_written=${h!.bytesWritten}\nframe_count=${h!.frameCount}\nwrite_count=${h!.writeCount}\n`,
+    );
+  } finally {
+    h?.unmount();
+  }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
 });

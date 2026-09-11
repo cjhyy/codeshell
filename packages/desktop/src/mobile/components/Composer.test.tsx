@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -20,6 +20,17 @@ function findElements(node: unknown, tagName: string): any[] {
 }
 
 let mountedRoot: Root | null = null;
+let matchMediaDescriptor: PropertyDescriptor | undefined;
+
+beforeEach(() => {
+  ensureMiniDom();
+  matchMediaDescriptor = Object.getOwnPropertyDescriptor(window, "matchMedia");
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: () => ({ matches: false }),
+  });
+});
 
 afterEach(async () => {
   await act(async () => {
@@ -27,6 +38,8 @@ afterEach(async () => {
     await flushMicrotasks();
   });
   mountedRoot = null;
+  if (matchMediaDescriptor) Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
+  else Reflect.deleteProperty(window, "matchMedia");
 });
 
 test("Composer exposes gallery/camera inputs and image-only capable controls", () => {
@@ -41,10 +54,6 @@ test("Composer exposes gallery/camera inputs and image-only capable controls", (
 });
 
 test("Composer synchronously suppresses a repeated send while the first upload is in flight", async () => {
-  ensureMiniDom();
-  Object.assign(window, {
-    matchMedia: () => ({ matches: false }),
-  });
   const container = document.createElement("div") as unknown as HTMLElement;
   mountedRoot = createRoot(container);
   let resolveSend!: (sent: boolean) => void;
@@ -85,10 +94,6 @@ test("Composer synchronously suppresses a repeated send while the first upload i
 });
 
 test("Composer keeps text and image drafts after rejection and retries the same File", async () => {
-  ensureMiniDom();
-  Object.assign(window, {
-    matchMedia: () => ({ matches: false }),
-  });
   const originalCreateObjectURL = URL.createObjectURL;
   const originalRevokeObjectURL = URL.revokeObjectURL;
   const revoked: string[] = [];

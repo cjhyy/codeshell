@@ -209,15 +209,23 @@ export function readSkillBundle(directory: string): SkillBundle {
   return { revision: hash.digest("hex"), files, bytes, content };
 }
 
-/** Download/copy before locking; only bounded synchronous final swaps hold this shared lock. */
-export function withSkillDirectoryLock<T>(root: string, action: () => T): T {
+function skillMutationDirectory(root: string): string {
   realDirectory(dirname(root));
   realDirectory(root);
-  // Keep the lock inside this owned root, including legacy desktop roots whose
-  // parent directory may not be writable. The empty hidden anchor is not a Skill.
+  // This container has no SKILL.md, so scanners never expose staged or backed-up
+  // bundles as installed Skills. Its parent need not be writable.
   const anchor = join(root, ".skill-mutation");
-  if (!pathExists(anchor)) mkdirSync(anchor, { mode: 0o700 });
-  realDirectory(anchor);
+  try {
+    mkdirSync(anchor, { mode: 0o700 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  return realDirectory(anchor);
+}
+
+/** Download/copy before locking; only bounded synchronous final swaps hold this shared lock. */
+export function withSkillDirectoryLock<T>(root: string, action: () => T): T {
+  const anchor = skillMutationDirectory(root);
   const release = acquireFileLock(join(anchor, "mutation"));
   try {
     return action();
@@ -226,10 +234,14 @@ export function withSkillDirectoryLock<T>(root: string, action: () => T): T {
   }
 }
 
-export async function stageSkillDirectory(source: string, parent: string): Promise<string> {
-  realDirectory(parent);
+/** Allocate a same-filesystem stage that Skill discovery cannot see. */
+export async function createSkillStageDirectory(root: string): Promise<string> {
+  return fs.mkdtemp(join(skillMutationDirectory(root), ".skill-stage-"));
+}
+
+export async function stageSkillDirectory(source: string, root: string): Promise<string> {
   const bundle = readSkillBundle(source);
-  const stage = await fs.mkdtemp(join(parent, ".skill-stage-"));
+  const stage = await createSkillStageDirectory(root);
   try {
     for (const file of bundle.files) {
       const target = join(stage, file.path);
@@ -262,7 +274,7 @@ export function commitSkillDirectory(
       assertOwnedSkillDirectory(join(target, "SKILL.md"), [root]);
       if (readSkillBundle(target).revision !== expectedRevision) throw new SkillConflictError();
     }
-    const backup = join(dirname(root), `.skill-backup-${randomUUID()}`);
+    const backup = join(skillMutationDirectory(root), `.skill-backup-${randomUUID()}`);
     let backedUp = false;
     let installed = false;
     try {
@@ -303,7 +315,7 @@ export async function installSkillFromDirectory(
     .slice(0, 64);
   assertSafeSkillName(name);
   const root = skillRoot(scope, cwd, true);
-  const stage = await stageSkillDirectory(resolve(sourceDir), dirname(root));
+  const stage = await stageSkillDirectory(resolve(sourceDir), root);
   try {
     return commitSkillDirectory(stage, root, name);
   } finally {
@@ -341,11 +353,12 @@ export function removeOwnedSkill(
   expectedRevision: string,
 ): void {
   const dir = assertOwnedSkillDirectory(filePath, roots);
-  withSkillDirectoryLock(dirname(dir), () => {
+  const root = dirname(dir);
+  withSkillDirectoryLock(root, () => {
     assertOwnedSkillDirectory(filePath, roots);
     if (readSkillBundle(dir).revision !== expectedRevision) throw new SkillConflictError();
     // Rename first makes discovery stop atomically and never follows an external child.
-    const trash = join(dirname(dirname(dir)), `.skill-removed-${randomUUID()}`);
+    const trash = join(skillMutationDirectory(root), `.skill-removed-${randomUUID()}`);
     renameSync(dir, trash);
     try {
       rmSync(trash, { recursive: true, force: true });

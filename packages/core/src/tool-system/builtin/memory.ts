@@ -66,6 +66,7 @@ function mmFor(
   }
   // location=global → omit projectDir so the manager points at the global store.
   return new MemoryManager({
+    baseDir: ctx?.memoryBaseDir,
     projectDir: location === "global" ? undefined : ctx?.cwd,
     scope,
   });

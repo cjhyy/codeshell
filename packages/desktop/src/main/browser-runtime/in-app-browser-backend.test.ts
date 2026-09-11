@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
+import { createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
+import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
+import { resolveAgentRunBrowserRegistration } from "../agent-run-browser-registration.js";
 import {
   browserPartitionForBucket,
   forgetSession,
@@ -34,6 +37,81 @@ function bridge(): BrowserBridge {
 }
 
 describe("InAppBrowserBackend", () => {
+  test("opens the project browser for a cold cron resume without renderer routing fields", async () => {
+    const sessionId = "cold-cron-browser-test";
+    const acquiredPartitions: string[] = [];
+    const backend = new InAppBrowserBackend({
+      targetPool: {
+        acquire: ({ partition }) => {
+          acquiredPartitions.push(partition);
+          return {
+            bridge: bridge(),
+            show: async () => undefined,
+            hide: () => undefined,
+            release: () => undefined,
+          };
+        },
+        close: () => undefined,
+        closeAll: () => undefined,
+      },
+    });
+    try {
+      await expect(
+        backend.acquire({ ownerId: `interactive:${sessionId}`, profileId: sessionId }),
+      ).rejects.toThrow(`no in-app browser profile is registered for ${sessionId}`);
+
+      const prepared = prepareAgentRunMetadata(
+        JSON.stringify({
+          method: "agent/run",
+          params: {
+            task: "Read the scheduled page",
+            sessionId,
+            requireExisting: true,
+            projectId: "cron-project",
+            rootId: "root",
+          },
+        }),
+        { origin: "host", producer: "automation-resume" },
+        {
+          isProjectTrusted: () => true,
+          lookupSession: () => ({
+            sessionId,
+            cwd: "/project",
+            projectId: "cron-project",
+            mainRootId: "root",
+            status: "confirmed",
+          }),
+          resolveProjectRun: () => ({
+            cwd: "/project",
+            trustCwd: "/project",
+            projectId: "cron-project",
+            mainRootId: "root",
+            projectPrimaryRootId: "root",
+            workspaceContext: createWorkspaceContext({
+              projectId: "cron-project",
+              projectRevision: 1,
+              sessionMainRootId: "root",
+              roots: [{ id: "root", path: "/project", role: "primary" }],
+            }),
+          }),
+        },
+      );
+      const registration = resolveAgentRunBrowserRegistration(prepared, {});
+      expect(registration).toBeDefined();
+      registerSessionBucket(registration!.sessionId, registration!.bucket, registration!.partition);
+
+      const lease = await backend.acquire({
+        ownerId: `interactive:${sessionId}`,
+        profileId: sessionId,
+      });
+      await expect(lease.bridge.navigate("https://example.test/")).resolves.toEqual({ ok: true });
+      expect(acquiredPartitions).toEqual([browserPartitionForBucket(`cron-project::${sessionId}`)]);
+      lease.release();
+    } finally {
+      forgetSession(sessionId);
+    }
+  });
+
   test("resolves the exact partition registered for the task session", async () => {
     const sessionId = "in-app-backend-test-session";
     const partitions: string[] = [];

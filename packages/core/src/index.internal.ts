@@ -164,6 +164,12 @@ export {
   type TranscribeDescription,
 } from "./stt/resolve-transcribe.js";
 export {
+  resolveSpeechConfiguration,
+  type SpeechConfiguration,
+  type SpeechModelDescription,
+  type ResolvedSpeechModel,
+} from "./speech/resolve-speech.js";
+export {
   BUILTIN_CATALOG,
   getMergedCatalog,
   loadUserCatalog,

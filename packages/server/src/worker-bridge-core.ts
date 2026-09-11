@@ -289,6 +289,7 @@ export class WorkerBridgeCore {
     } catch {
       return false;
     }
+    if (!msg || typeof msg !== "object" || Array.isArray(msg)) return false;
     if (msg.id === undefined || msg.id === null) return false;
     const pending = this.pendingRequests.get(msg.id);
     if (!pending) return false;
@@ -388,12 +389,20 @@ export class WorkerBridgeCore {
         settleOnExit: options.settleOnExit === true,
         settle,
       });
-      const rawFrame = JSON.stringify({
-        jsonrpc: "2.0",
-        id,
-        method,
-        ...(params === undefined ? {} : { params }),
-      });
+      let rawFrame: string;
+      try {
+        rawFrame = JSON.stringify({
+          jsonrpc: "2.0",
+          id,
+          method,
+          ...(params === undefined ? {} : { params }),
+        });
+      } catch (error) {
+        // Invalid params can never reach the wire. Honor the never-rejecting
+        // outcome contract and clear their correlation/timer immediately.
+        settle({ status: "sendFailed", error });
+        return;
+      }
       let sent = false;
       let sendError: unknown;
       try {

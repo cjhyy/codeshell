@@ -171,3 +171,14 @@ test("session creation accepts bounded optional client correlation without chang
     expect(parseMobileClientEvent({ ...event, clientRequestId: invalid })).toBeUndefined();
   expect(parseMobileClientEvent({ type: "session.create" })).toEqual({ type: "session.create" });
 });
+
+test("session sync accepts optional bounded epochs and rejects malformed lifetime identifiers", () => {
+  const legacy = { type: "session.sync", sessionId: "s1", sinceSeq: 100 };
+  expect(parseMobileClientEvent(legacy)).toEqual(legacy);
+  for (const epoch of ["main-lifetime-1", "x".repeat(512)]) {
+    expect(parseMobileClientEvent({ ...legacy, epoch })).toEqual({ ...legacy, epoch });
+  }
+  for (const epoch of ["", "   ", "x".repeat(513), 1, null, {}, []]) {
+    expect(parseMobileClientEvent({ ...legacy, epoch })).toBeUndefined();
+  }
+});

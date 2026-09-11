@@ -60,7 +60,9 @@ export function selectMiniChatRows(
   const rows = selectPetChatRows(visibleMessages, segments, delegationReceipts, hostActionReceipts);
   let latestBoundary = -1;
   for (let index = rows.length - 1; index >= 0; index -= 1) {
-    if (rows[index]?.role !== "history-boundary" && rows[index]?.role !== "segment-divider") {
+    // Model-context compaction does not end the visible conversation. In
+    // particular a boundary appended after a reply must not empty mini chat.
+    if (rows[index]?.role !== "segment-divider") {
       continue;
     }
     latestBoundary = index;
@@ -399,6 +401,14 @@ export function PetDesktopWindow() {
               ref={inputRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  (event.nativeEvent.isComposing || event.keyCode === 229)
+                ) {
+                  event.preventDefault();
+                }
+              }}
               className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary/50"
               placeholder={t("pet.widget.placeholder")}
               disabled={!petSessionId}

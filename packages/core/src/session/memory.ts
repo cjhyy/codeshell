@@ -163,6 +163,7 @@ export function resolveMemoryBaseDir(override?: string): string {
 
 export class MemoryManager {
   private readonly baseDir: string;
+  private readonly projectDir?: string;
   /** Root containing both scope subdirs (the "memory" dir per project/global). */
   private readonly memoryRoot: string;
   private readonly scope: MemoryScope;
@@ -182,6 +183,7 @@ export class MemoryManager {
       typeof options === "string" ? { projectDir: options } : (options ?? {});
 
     this.baseDir = resolveMemoryBaseDir(opts.baseDir);
+    this.projectDir = opts.projectDir;
     this.scope = opts.scope ?? "user";
 
     if (opts.projectDir) {
@@ -206,6 +208,11 @@ export class MemoryManager {
   }
   getScope(): MemoryScope {
     return this.scope;
+  }
+
+  /** Shared root for callers that derive other scopes or auxiliary storage. */
+  getStorageContext(): Readonly<{ baseDir: string; projectDir?: string }> {
+    return { baseDir: this.baseDir, projectDir: this.projectDir };
   }
 
   /**

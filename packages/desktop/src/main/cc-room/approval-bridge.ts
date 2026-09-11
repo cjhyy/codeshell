@@ -19,6 +19,8 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>;
 }
 
+const MAX_CONFLICT_DECISIONS = 1024;
+
 export interface ApprovalBridgeOptions {
   timeoutMs?: number;
   onPush: (roomId: string, req: ApprovalRequestPayload & { requestId: string }) => void;
@@ -32,6 +34,9 @@ export interface ApprovalBridgeOptions {
  *  timeout (guards against the host hanging — claude-code#52084). */
 export class ApprovalBridge {
   private pending = new Map<string, Pending>(); // key = `${roomId}:${requestId}`
+  // Only malformed duplicate IDs need a terminal cache: a third delivery must
+  // not create a new prompt while the original denial is reaching the process.
+  private conflictDecisions = new Map<string, ApprovalDecision>();
   private readonly timeoutMs: number;
   constructor(private readonly opts: ApprovalBridgeOptions) {
     this.timeoutMs = opts.timeoutMs ?? 5 * 60_000;
@@ -40,9 +45,33 @@ export class ApprovalBridge {
     return `${roomId}:${requestId}`;
   }
 
-  request(roomId: string, requestId: string, payload: ApprovalRequestPayload): Promise<ApprovalDecision> {
+  request(
+    roomId: string,
+    requestId: string,
+    payload: ApprovalRequestPayload,
+  ): Promise<ApprovalDecision> {
+    const k = this.key(roomId, requestId);
+    const conflict = this.conflictDecisions.get(k);
+    if (conflict) return Promise.resolve(conflict);
+    if (this.pending.has(k)) {
+      // A control ID names exactly one pending decision. Never replace its
+      // resolver/timer (which would strand the original request), or let a
+      // duplicate with different input inherit an approval for the old input.
+      // Resolve both callers as denied and remove the original UI prompt.
+      // RoomManager consumes the matching control ID only once, so only the
+      // first continuation delivers this terminal decision to the CLI.
+      const decision: ApprovalDecision = {
+        behavior: "deny",
+        message: "duplicate approval request",
+      };
+      this.conflictDecisions.set(k, decision);
+      if (this.conflictDecisions.size > MAX_CONFLICT_DECISIONS) {
+        this.conflictDecisions.delete(this.conflictDecisions.keys().next().value!);
+      }
+      this.respond(roomId, requestId, decision);
+      return Promise.resolve(decision);
+    }
     return new Promise<ApprovalDecision>((resolve) => {
-      const k = this.key(roomId, requestId);
       const timer = setTimeout(() => {
         if (this.pending.delete(k)) {
           const decision: ApprovalDecision = { behavior: "deny", message: "approval timed out" };
@@ -80,6 +109,9 @@ export class ApprovalBridge {
   /** Deny every request owned by a room that can no longer answer controls. */
   cancelRoom(roomId: string): number {
     const prefix = `${roomId}:`;
+    for (const key of this.conflictDecisions.keys()) {
+      if (key.startsWith(prefix)) this.conflictDecisions.delete(key);
+    }
     let cancelled = 0;
     for (const [key, pending] of [...this.pending]) {
       if (!key.startsWith(prefix)) continue;
@@ -97,11 +129,7 @@ export class ApprovalBridge {
     return cancelled;
   }
 
-  private publishResolution(
-    roomId: string,
-    requestId: string,
-    decision: ApprovalDecision,
-  ): void {
+  private publishResolution(roomId: string, requestId: string, decision: ApprovalDecision): void {
     try {
       this.opts.onResolve?.(roomId, requestId, decision);
     } catch {

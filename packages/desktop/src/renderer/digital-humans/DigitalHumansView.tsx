@@ -76,7 +76,11 @@ import {
   normalizeDigitalHumanSkillRepo,
 } from "./types";
 import { CURATED_DIGITAL_HUMAN_TEAMS, profileSamplePrompts } from "./marketplace";
-import { useDigitalHumanOperations, useDigitalHumansLibrary } from "./useDigitalHumansLibrary";
+import {
+  useDigitalHumanContext,
+  useDigitalHumanOperations,
+  useDigitalHumansLibrary,
+} from "./useDigitalHumansLibrary";
 
 interface Props {
   configurationTarget: RendererConfigurationTarget;
@@ -132,6 +136,7 @@ export function DigitalHumansView({
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
+  const captureContext = useDigitalHumanContext(configurationTarget);
   const { profiles, catalog, teams, availableSkills, status, error, refresh } =
     useDigitalHumansLibrary(configurationTarget);
   const operations = useDigitalHumanOperations(refresh);
@@ -418,7 +423,10 @@ export function DigitalHumansView({
    * 依赖安装失败会阻断启用：继续创建一个已知缺能力的 Session，只会把安装错误
    * 推迟成模型调用 `/skill` 时更难理解的失败。
    */
-  const ensureProfileRequirements = async (name: string): Promise<boolean> => {
+  const ensureProfileRequirements = async (
+    name: string,
+    isCurrent: () => boolean,
+  ): Promise<boolean> => {
     return ensureDigitalHumanRequirements({
       name,
       configurationTarget,
@@ -426,6 +434,7 @@ export function DigitalHumansView({
       confirm,
       toast,
       t,
+      isCurrent,
     });
   };
 
@@ -446,6 +455,7 @@ export function DigitalHumansView({
    */
   const ensureSelectionRequirements = async (
     selection: DigitalHumanSelection,
+    isCurrent: () => boolean,
   ): Promise<boolean> => {
     const names = selection.kind === "single" ? [selection.id] : selection.members;
     // Install any member missing from the library FIRST. A team definition names
@@ -458,6 +468,7 @@ export function DigitalHumansView({
     const installedNames = new Set(profiles.map((profile) => profile.name));
     const missing = names.filter((name) => !installedNames.has(name));
     for (const name of missing) {
+      if (!isCurrent()) return false;
       const entry = catalog.find((candidate) => candidate.name === name);
       if (!entry) {
         toast({
@@ -477,7 +488,7 @@ export function DigitalHumansView({
     if (missing.length > 0) await refresh();
 
     for (const name of names) {
-      if (!(await ensureProfileRequirements(name))) return false;
+      if (!(await ensureProfileRequirements(name, isCurrent))) return false;
     }
     return true;
   };
@@ -486,10 +497,11 @@ export function DigitalHumansView({
   const useSelection = (selection: DigitalHumanSelection, starterPrompt?: string): void => {
     if (selectionLock.current) return;
     selectionLock.current = true;
+    const isCurrent = captureContext();
     setSelectionBusy(true);
     void (async () => {
       try {
-        if (!(await ensureSelectionRequirements(selection))) return;
+        if (!(await ensureSelectionRequirements(selection, isCurrent)) || !isCurrent()) return;
         onUse(selection, starterPrompt);
       } finally {
         selectionLock.current = false;
@@ -1042,6 +1054,7 @@ export function DigitalHumansView({
                           onDelete={() => void deleteProfileEntry(profile)}
                           onToggleDefault={() => {
                             if (!hasRepositoryTarget) return;
+                            const isCurrent = captureContext();
                             void run(
                               `profile:${profile.name}`,
                               async () => {
@@ -1050,7 +1063,8 @@ export function DigitalHumansView({
                                 }
                                 // 补齐依赖后再启用，否则数字人声明的 skill 在这台
                                 // 机器上并不存在，启用了也是空壳。
-                                if (!(await ensureProfileRequirements(profile.name))) return;
+                                if (!(await ensureProfileRequirements(profile.name, isCurrent)))
+                                  return;
                                 return window.codeshell.activateProfile(
                                   configurationTarget,
                                   profile.name,
@@ -1152,6 +1166,7 @@ export function DigitalHumansView({
         onSave={(profile, options) => {
           if (editorSaveFlowLock.current) return;
           editorSaveFlowLock.current = true;
+          const isCurrent = captureContext();
           setEditorSaveFlowBusy(true);
           setEditorInstallFlowBusy(Boolean(options?.installRequirements));
           void (async () => {
@@ -1161,9 +1176,11 @@ export function DigitalHumansView({
                 () => window.codeshell.saveProfile(profile, configurationTarget),
                 { name: profile.label },
               );
-              if (!saved) return;
+              if (!saved || !isCurrent()) return;
               if (options?.installRequirements) {
-                if (await ensureProfileRequirements(profile.name)) {
+                const ready = await ensureProfileRequirements(profile.name, isCurrent);
+                if (!isCurrent()) return;
+                if (ready) {
                   setEditor(null);
                 } else {
                   // Saving the new source succeeded even when install review was

@@ -1666,3 +1666,70 @@ describe("completed-turn token summary", () => {
     expect(s.messages.find((m) => m.kind === "turn_usage")).toBeUndefined();
   });
 });
+
+test("fallback tombstone clears its associated thinking and keeps later agent indexes valid", () => {
+  const s = dispatch(INITIAL_STATE, [
+    ev("stream_request_start", { turnNumber: 1, messageId: "failed-model" } as any),
+    ev("thinking_delta", { text: "failed reasoning" } as any),
+    ev("text_delta", { text: "failed partial" } as any),
+    ev("agent_start", { agentId: "child-after-thinking", description: "child" } as any),
+    ev("tombstone", { messageId: "failed-model" } as any),
+    ev("stream_request_start", { turnNumber: 1, messageId: "failed-model" } as any),
+    ev("thinking_delta", { text: "complete replacement reasoning" } as any),
+    ev("text_delta", { text: "replacement answer" } as any),
+    ev("assistant_message", {
+      messageId: "failed-model",
+      message: { role: "assistant", content: "replacement answer" },
+    } as any),
+  ]);
+  expect(s.messages.filter((m) => m.kind === "thinking")).toEqual([
+    expect.objectContaining({ text: "complete replacement reasoning" }),
+  ]);
+  expect(s.messages.filter((m) => m.kind === "assistant")).toEqual([
+    expect.objectContaining({ text: "replacement answer", done: true }),
+  ]);
+  expect(s.agentMessageIndex["child-after-thinking"]).toBe(0);
+  expect(s.messages[s.agentMessageIndex["child-after-thinking"]!]?.kind).toBe("agent");
+});
+
+test("tombstoning an older assistant keeps the current request's thinking", () => {
+  const s = dispatch(INITIAL_STATE, [
+    ev("stream_request_start", { turnNumber: 1, messageId: "old" } as any),
+    ev("text_delta", { text: "old answer" } as any),
+    ev("stream_request_start", { turnNumber: 2, messageId: "current" } as any),
+    ev("thinking_delta", { text: "current reasoning" } as any),
+    ev("tombstone", { messageId: "old" } as any),
+  ]);
+  expect(s.messages.find((m) => m.kind === "thinking")).toMatchObject({
+    text: "current reasoning",
+  });
+  expect(s.streamingThinkingId).not.toBeNull();
+  expect(s.streamingAssistantId).toBe("current");
+});
+
+test("tombstone still clears thinking after a tool-first stream removed its empty assistant", () => {
+  const s = dispatch(INITIAL_STATE, [
+    ev("stream_request_start", { turnNumber: 1, messageId: "tool-first" } as any),
+    ev("thinking_delta", { text: "failed tool-first reasoning" } as any),
+    ev("tool_use_start", { toolCall: { id: "read-tool", toolName: "Read", args: {} } } as any),
+    ev("tombstone", { messageId: "tool-first" } as any),
+  ]);
+  expect(s.messages.some((message) => message.kind === "thinking")).toBe(false);
+  expect(s.messages.filter((message) => message.kind === "tool")).toHaveLength(1);
+  expect(s.streamingAssistantId).toBeNull();
+  expect(s.streamingThinkingId).toBeNull();
+});
+
+test("subagent fallback revokes only its unexecuted nested tool card", () => {
+  const s = dispatch(INITIAL_STATE, [
+    ev("agent_start", { agentId: "child", description: "child work" } as any),
+    ev("tool_use_start", {
+      agentId: "child",
+      toolCall: { id: "partial-child-tool", toolName: "Read", args: {} },
+    } as any),
+    ev("tombstone", { agentId: "child", messageId: "partial-child-tool" } as any),
+  ]);
+  expect(s.messages).toHaveLength(1);
+  expect(s.messages[0]).toMatchObject({ kind: "agent", toolCalls: [], toolCount: 0 });
+  expect(s.agentMessageIndex.child).toBe(0);
+});

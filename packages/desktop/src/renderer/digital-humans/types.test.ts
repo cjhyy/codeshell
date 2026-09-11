@@ -33,6 +33,29 @@ describe("digital-human editor limits", () => {
 });
 
 describe("digital-human Skill source validation", () => {
+  test("preserves Skill names that match JavaScript prototype properties", () => {
+    const names = ["constructor", "toString", "__proto__", "hasOwnProperty"];
+    const sources = digitalHumanSkillSourcesByName({
+      skills: [
+        {
+          source: "github",
+          repo: "owner/skills",
+          skills: names,
+          scope: "project",
+          fullDepth: false,
+        },
+      ],
+      tools: [],
+    });
+    for (const name of names) {
+      expect(Object.hasOwn(sources, name)).toBe(true);
+      expect(sources[name]).toBe("owner/skills");
+    }
+    expect(digitalHumanSkillRequirementsFromSources(sources)[0]?.skills).toEqual(
+      [...names].sort((left, right) => left.localeCompare(right)),
+    );
+  });
+
   test("normalizes a trusted GitHub owner/repo shorthand", () => {
     expect(normalizeDigitalHumanSkillRepo("  heygen-com/hyperframes  ")).toBe(
       "heygen-com/hyperframes",

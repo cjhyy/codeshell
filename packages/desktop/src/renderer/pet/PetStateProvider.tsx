@@ -323,10 +323,13 @@ export function PetStateProvider({
               : null;
             const transcript = page?.items ?? (await shell.getSessionTranscript(sessionId));
             if (active && knownPetSessionId === sessionId) {
+              const history = foldTranscript(transcript);
               chatDispatch({
-                type: "hydrate",
+                type: "hydrate_history",
                 bucket: PET_CHAT_BUCKET,
-                state: foldTranscript(transcript),
+                state: history,
+                history,
+                goalAtStart: null,
               });
               setChatHistoryLoadedBytes(page?.loadedBytes ?? 0);
               setChatHistoryHasMore(
@@ -381,10 +384,13 @@ export function PetStateProvider({
     setChatHistoryLoading(true);
     try {
       const page = await shell.getSessionTranscriptPage(petSessionId, { maxBytes: nextBytes });
+      const history = foldTranscript(page.items);
       chatDispatch({
-        type: "hydrate",
+        type: "hydrate_history",
         bucket: PET_CHAT_BUCKET,
-        state: foldTranscript(page.items),
+        state: history,
+        history,
+        goalAtStart: null,
       });
       setChatHistoryLoadedBytes(page.loadedBytes);
       setChatHistoryHasMore(page.hasMore && page.loadedBytes < MAX_PET_HISTORY_BYTES);
@@ -426,10 +432,15 @@ export function PetStateProvider({
             chatHistoryRefreshQueuedRef.current = true;
             continue;
           }
+          // A reply can stream while this disk read is pending. Merge against
+          // the latest bucket so its text and continuation pointers survive.
+          const history = foldTranscript(transcript);
           chatDispatch({
-            type: "hydrate",
+            type: "hydrate_history",
             bucket: PET_CHAT_BUCKET,
-            state: foldTranscript(transcript),
+            state: history,
+            history,
+            goalAtStart: null,
           });
           if (page) {
             setChatHistoryLoadedBytes(page.loadedBytes);

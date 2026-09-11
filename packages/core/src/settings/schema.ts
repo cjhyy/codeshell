@@ -243,7 +243,7 @@ export const SettingsSchema = z
           id: z.string(),
           /** Catalog template this instance was created from. */
           catalogId: z.string(),
-          tag: z.enum(["text", "image", "video", "audio"]),
+          tag: z.enum(["text", "image", "video", "audio", "speech"]),
           /** Selected modelId (from the entry's modelPresets). */
           model: z.string(),
           /** Per-connection baseUrl override (else the credential's / catalog's). */
@@ -264,6 +264,8 @@ export const SettingsSchema = z
         video: z.string().optional(),
         /** Default speech-to-text (voice input) connection. */
         audio: z.string().optional(),
+        /** Default text-to-speech connection; independent from dictation. */
+        speech: z.string().optional(),
         /** Background-task model (replaces auxModelKey). */
         auxText: z.string().optional(),
       })

@@ -121,7 +121,7 @@ describe("Pet desktop mini chat", () => {
     ]);
   });
 
-  test("omits all transcript rows hidden by the latest context compaction", () => {
+  test("keeps conversation visible across model context compaction", () => {
     const rows = selectMiniChatRows([
       { kind: "user", id: "old-u", text: "旧问题" },
       { kind: "assistant", id: "old-a", text: "旧回答", done: true },
@@ -136,7 +136,39 @@ describe("Pet desktop mini chat", () => {
       { kind: "assistant", id: "new-a", text: "新回答", done: true },
     ]);
 
-    expect(rows.map((row) => row.id)).toEqual(["new-u", "new-a"]);
+    expect(rows.map((row) => row.id)).toEqual(["old-u", "old-a", "new-u", "new-a"]);
+  });
+
+  test("keeps the user input, reply and session card after end-of-turn compaction", () => {
+    const rows = selectMiniChatRows(
+      [
+        { kind: "user", id: "u1", text: "修复输入显示", clientMessageId: "client-1" },
+        { kind: "assistant", id: "a1", text: "已经安排修复", done: true },
+        {
+          kind: "context_boundary",
+          id: "ctx-1",
+          strategy: "summary",
+          before: 12_000,
+          after: 1_200,
+        },
+      ],
+      [
+        {
+          originClientMessageId: "client-1",
+          delegations: [
+            {
+              sessionId: "session-1",
+              task: "修复输入显示",
+              workspacePath: "/tmp/work",
+              reusedSession: false,
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(rows.map((row) => row.role)).toEqual(["user", "assistant", "delegation"]);
+    expect(rows.at(-1)?.delegation?.sessionId).toBe("session-1");
   });
 
   test("omits rows before the latest Mimi topic-segment boundary", () => {

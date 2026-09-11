@@ -17,6 +17,7 @@ import {
 import { markPetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 import { transcriptsReducer } from "../transcriptsReducer";
 import { INITIAL_STATE } from "../types";
+import type { Message } from "../types";
 
 describe("PetChatHost", () => {
   test("keeps dropped PDFs as bounded absolute path references", () => {
@@ -242,6 +243,80 @@ describe("PetChatHost", () => {
       sessionId: "session-work-1",
       task: "继续下载 mimi-test-videos",
     });
+  });
+
+  test.each(["tool-only", "stream-interrupted", "next-turn"])(
+    "keeps the delegated Session visible without a final assistant message (%s)",
+    (ending) => {
+      const messages: Message[] = [
+        { kind: "user", id: "u1", text: "去处理任务", clientMessageId: "pet-delegate" },
+        {
+          kind: "tool",
+          id: "delegate-tool",
+          toolName: "DelegateWork",
+          args: "{}",
+          status: "succeeded",
+          startedAt: 1,
+        },
+      ];
+      if (ending === "stream-interrupted") {
+        messages.push({ kind: "assistant", id: "a1", text: "", done: false });
+      } else if (ending === "next-turn") {
+        messages.push(
+          { kind: "user", id: "u2", text: "还有下一件事", clientMessageId: "pet-next" },
+          { kind: "assistant", id: "a2", text: "请说。", done: true },
+        );
+      }
+      const delegation = {
+        sessionId: "work-session",
+        task: "处理任务",
+        workspacePath: "/work/app",
+        reusedSession: false,
+      };
+      const rows = selectPetChatRows(
+        messages,
+        [],
+        [{ originClientMessageId: "pet-delegate", delegations: [delegation] }],
+      );
+
+      expect(rows.map((row) => row.role)).toEqual([
+        "user",
+        "delegation",
+        ...(ending === "next-turn" ? ["user", "assistant"] : []),
+      ]);
+      expect(rows[1]?.delegation).toEqual(delegation);
+      const html = renderToStaticMarkup(
+        React.createElement(PetDelegationCard, { delegation: rows[1]!.delegation!, onOpen() {} }),
+      );
+      expect(html).toContain("打开 Session");
+      expect(html).not.toContain("<button disabled");
+    },
+  );
+
+  test("emits each delegation once when both completed messages and turn boundaries flush it", () => {
+    const rows = selectPetChatRows(
+      [
+        { kind: "user", id: "u1", text: "去处理任务", clientMessageId: "pet-delegate" },
+        { kind: "assistant", id: "a1", text: "已经派出。", done: true },
+        { kind: "assistant", id: "a2", text: "稍后反馈。", done: true },
+        { kind: "user", id: "u2", text: "知道了", clientMessageId: "pet-next" },
+      ],
+      [],
+      [
+        {
+          originClientMessageId: "pet-delegate",
+          delegations: [
+            {
+              sessionId: "work-session",
+              task: "处理任务",
+              workspacePath: "/work/app",
+              reusedSession: false,
+            },
+          ],
+        },
+      ],
+    );
+    expect(rows.filter((row) => row.role === "delegation")).toHaveLength(1);
   });
 
   test("places a host-action receipt after its originating turn instead of after later chat", () => {

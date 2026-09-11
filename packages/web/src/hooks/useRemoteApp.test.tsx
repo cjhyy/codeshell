@@ -103,6 +103,436 @@ afterEach(() => {
   visibilityState = "visible";
 });
 
+describe("useRemoteApp Main process epochs", () => {
+  async function connectedSession(oldEpoch?: string, seedTool = false) {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const firstSocket = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      firstSocket.open();
+      firstSocket.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectSession("s1");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      for (const [seq, event] of [
+        [1, { type: "stream_request_start", turnNumber: 1 }],
+        [2, { type: "text_delta", text: "old answer" }],
+        ...(seedTool
+          ? ([
+              [
+                3,
+                {
+                  type: "tool_use_start",
+                  toolCall: { id: "call-1", toolName: "Read", args: { path: "old.txt" } },
+                },
+              ],
+            ] as const)
+          : []),
+        [100, { type: "session_title", title: "existing history" }],
+      ] as const) {
+        firstSocket.message({
+          type: "session.stream",
+          sessionId: "s1",
+          seq,
+          event,
+          ...(oldEpoch ? { epoch: oldEpoch } : {}),
+        });
+      }
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.chat.items).toContainEqual(
+      expect.objectContaining({ kind: "assistant", text: "old answer", done: false }),
+    );
+    await act(async () => {
+      firstSocket.close();
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const ws = FakeWebSocket.instances[1]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((line) => JSON.parse(line))).toContainEqual({
+      type: "session.sync",
+      sessionId: "s1",
+      sinceSeq: 100,
+      ...(oldEpoch ? { epoch: oldEpoch } : {}),
+    });
+    return { hook, ws, firstSocket };
+  }
+
+  const snapshot = {
+    type: "session.snapshot",
+    sessionId: "s1",
+    epoch: "epoch-b",
+    // A fresh Main can attach after generation began; its first observed
+    // delta must still never join an unfinished old-domain assistant.
+    entries: [
+      { seq: 1, event: { type: "text_delta", text: "new prefix " } },
+      { seq: 2, event: { type: "text_delta", text: "tail" } },
+      { seq: 3, event: { type: "turn_complete", reason: "completed" } },
+    ],
+    nextSeq: 4,
+  };
+
+  for (const oldEpoch of ["epoch-a", undefined]) {
+    for (const order of ["snapshot-first", "live-first"] as const) {
+      test(`${oldEpoch ?? "legacy"} seq 100 -> epoch-b seq 1: ${order} preserves both replies`, async () => {
+        const { hook, ws, firstSocket } = await connectedSession(oldEpoch);
+        try {
+          if (order === "live-first") {
+            await act(async () => {
+              ws.message({
+                type: "session.stream",
+                sessionId: "s1",
+                epoch: "epoch-b",
+                ...snapshot.entries[1],
+              });
+              await flushMicrotasks();
+            });
+            expect(ws.sent.map((line) => JSON.parse(line))).toContainEqual({
+              type: "session.sync",
+              sessionId: "s1",
+              sinceSeq: 0,
+              epoch: "epoch-b",
+            });
+            expect(
+              hook.result.current.chat.items
+                .filter((item) => item.kind === "assistant")
+                .map((item) => item.text),
+            ).toEqual(["old answer"]);
+          }
+          await act(async () => {
+            ws.message(snapshot);
+            for (const entry of snapshot.entries)
+              ws.message({ type: "session.stream", sessionId: "s1", epoch: "epoch-b", ...entry });
+            ws.message(snapshot);
+            // Retired sockets cannot replace the current epoch/cursor.
+            firstSocket.message({
+              type: "session.stream",
+              sessionId: "s1",
+              epoch: "epoch-a",
+              seq: 999,
+              event: { type: "text_delta", text: "late old packet" },
+            });
+            await flushMicrotasks();
+          });
+          expect(
+            hook.result.current.chat.items
+              .filter((item) => item.kind === "assistant")
+              .map((item) => ({ text: item.text, done: item.done })),
+          ).toEqual([
+            { text: "old answer", done: true },
+            { text: "new prefix tail", done: true },
+          ]);
+          await act(async () => {
+            window.dispatchEvent(new Event("focus"));
+            await flushMicrotasks();
+          });
+          expect(
+            ws.sent
+              .map((line) => JSON.parse(line))
+              .filter((event) => event.type === "session.sync")
+              .at(-1),
+          ).toEqual({ type: "session.sync", sessionId: "s1", sinceSeq: 3, epoch: "epoch-b" });
+        } finally {
+          await hook.unmount();
+        }
+      });
+    }
+  }
+
+  test("a legacy filtered reply after learning an epoch requests a full prefix", async () => {
+    const { hook, ws } = await connectedSession();
+    try {
+      await act(async () => {
+        ws.message({ ...snapshot, entries: [] });
+        await flushMicrotasks();
+      });
+      expect(ws.sent.map((line) => JSON.parse(line))).toContainEqual({
+        type: "session.sync",
+        sessionId: "s1",
+        sinceSeq: 0,
+        epoch: "epoch-b",
+      });
+      await act(async () => {
+        ws.message(snapshot);
+        // A later missing epoch packet keeps the learned epoch for resync.
+        ws.message({
+          type: "session.stream",
+          sessionId: "s1",
+          seq: 4,
+          event: { type: "session_title", title: "new title" },
+        });
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(
+        hook.result.current.chat.items
+          .filter((item) => item.kind === "assistant")
+          .map((item) => item.text),
+      ).toEqual(["old answer", "new prefix tail"]);
+      expect(
+        ws.sent
+          .map((line) => JSON.parse(line))
+          .filter((event) => event.type === "session.sync")
+          .at(-1),
+      ).toEqual({ type: "session.sync", sessionId: "s1", sinceSeq: 4, epoch: "epoch-b" });
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("an evicted new-epoch prefix stays unapplied and leaves old visible content intact", async () => {
+    const { hook, ws } = await connectedSession("epoch-a");
+    try {
+      await act(async () => {
+        ws.message({
+          type: "session.stream",
+          sessionId: "s1",
+          epoch: "epoch-b",
+          seq: 2001,
+          event: { type: "text_delta", text: "missing prefix tail" },
+        });
+        ws.message({
+          ...snapshot,
+          entries: [{ seq: 2001, event: { type: "text_delta", text: "missing prefix tail" } }],
+          nextSeq: 2002,
+        });
+        await flushMicrotasks();
+      });
+      expect(
+        hook.result.current.chat.items
+          .filter((item) => item.kind === "assistant")
+          .map((item) => item.text),
+      ).toEqual(["old answer"]);
+      expect(hook.result.current.notice).toContain("开头尚未恢复");
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(
+        ws.sent
+          .map((line) => JSON.parse(line))
+          .filter((event) => event.type === "session.sync")
+          .at(-1),
+      ).toEqual({ type: "session.sync", sessionId: "s1", sinceSeq: 0, epoch: "epoch-b" });
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("tool ids reused by a new Main cannot mutate retained old tool history", async () => {
+    const { hook, ws } = await connectedSession("epoch-a", true);
+    try {
+      await act(async () => {
+        ws.message({
+          ...snapshot,
+          entries: [
+            {
+              seq: 1,
+              event: {
+                type: "tool_use_start",
+                toolCall: { id: "call-1", toolName: "Read", args: { path: "new.txt" } },
+              },
+            },
+            {
+              seq: 2,
+              event: { type: "tool_result", result: { id: "call-1", result: "new result" } },
+            },
+          ],
+          nextSeq: 3,
+        });
+        await flushMicrotasks();
+      });
+      const tools = hook.result.current.chat.items.filter((item) => item.kind === "tool");
+      expect(tools).toHaveLength(2);
+      expect(tools[0]).toMatchObject({ args: { path: "old.txt" }, result: undefined });
+      expect(tools[1]).toMatchObject({
+        id: "call-1",
+        args: { path: "new.txt" },
+        result: "new result",
+      });
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const savedReply of ["saved history", "new prefix tailmore"]) {
+    test(`a background epoch change keeps unpaired durable history (${savedReply})`, async () => {
+      const { hook, ws } = await connectedSession("epoch-a");
+      try {
+        await act(async () => {
+          ws.message({
+            type: "session.stream",
+            sessionId: "s2",
+            epoch: "epoch-a",
+            seq: 100,
+            event: { type: "text_delta", text: "background old" },
+          });
+          ws.message({
+            type: "session.stream",
+            sessionId: "s2",
+            epoch: "epoch-b",
+            seq: 2,
+            event: { type: "text_delta", text: "tail" },
+          });
+          hook.result.current.selectSession("s2");
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "session.stream",
+            sessionId: "s2",
+            epoch: "epoch-b",
+            seq: 3,
+            event: { type: "text_delta", text: "more" },
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.chat.items).toEqual([]);
+        await act(async () => {
+          ws.message({
+            type: "session.history.ok",
+            sessionId: "s2",
+            events: [
+              { type: "text_delta", text: savedReply },
+              { type: "turn_complete", reason: "completed" },
+            ],
+          });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            ...snapshot,
+            sessionId: "s2",
+            entries: [
+              ...snapshot.entries.slice(0, 2),
+              { seq: 3, event: { type: "text_delta", text: "more" } },
+              { seq: 4, event: { type: "turn_complete", reason: "completed" } },
+            ],
+            nextSeq: 5,
+          });
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.chat.items
+            .filter((item) => item.kind === "assistant")
+            .map((item) => item.text),
+        ).toEqual([savedReply]);
+        expect(hook.result.current.notice).toContain("已恢复保存的聊天记录");
+        await act(async () => {
+          // A later Main may be the first to identify its epoch after this
+          // durable read. Its log still has no association with that history.
+          ws.message({
+            ...snapshot,
+            sessionId: "s2",
+            epoch: "epoch-c",
+            entries: [
+              { seq: 1, event: { type: "text_delta", text: savedReply } },
+              { seq: 2, event: { type: "turn_complete", reason: "completed" } },
+            ],
+            nextSeq: 3,
+          });
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.chat.items.filter((item) => item.kind === "assistant"),
+        ).toHaveLength(1);
+        await act(async () => {
+          ws.message({
+            type: "session.stream",
+            sessionId: "s2",
+            epoch: "epoch-c",
+            seq: 5,
+            event: { type: "stream_request_start", agentId: "child" },
+          });
+          ws.message({
+            type: "session.stream",
+            sessionId: "s2",
+            epoch: "epoch-c",
+            seq: 6,
+            event: { type: "text_delta", agentId: "child", text: "unpaired child tail" },
+          });
+          window.dispatchEvent(new Event("focus"));
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.chat.items.filter((item) => item.kind === "assistant"),
+        ).toHaveLength(1);
+        expect(ws.sent.map((line) => JSON.parse(line)).at(-1)).toEqual({
+          type: "session.history",
+          sessionId: "s2",
+        });
+        await act(async () => {
+          ws.message({ type: "error", message: "History temporarily unavailable" });
+          window.dispatchEvent(new Event("focus"));
+          // A top-level start before the requested history returns is still
+          // unpaired, because that asynchronous read may already include it.
+          ws.message({
+            type: "session.stream",
+            sessionId: "s2",
+            epoch: "epoch-c",
+            seq: 7,
+            event: { type: "stream_request_start" },
+          });
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.chat.items.filter((item) => item.kind === "assistant"),
+        ).toHaveLength(1);
+        expect(
+          ws.sent
+            .map((line) => JSON.parse(line))
+            .filter((event) => event.type === "session.history" && event.sessionId === "s2"),
+        ).toHaveLength(3);
+        const savedHistory = {
+          type: "session.history.ok",
+          sessionId: "s2",
+          events: [
+            { type: "text_delta", text: savedReply },
+            { type: "turn_complete", reason: "completed" },
+          ],
+        };
+        await act(async () => {
+          ws.message(savedHistory);
+          for (const [seq, event] of [
+            [8, { type: "stream_request_start" }],
+            [9, { type: "text_delta", text: "fresh reply" }],
+            [10, { type: "turn_complete", reason: "completed" }],
+          ] as const)
+            ws.message({ type: "session.stream", sessionId: "s2", epoch: "epoch-c", seq, event });
+          // A previously ignored snapshot and a late history retry cannot
+          // reintroduce old replies or wipe the fresh turn after the boundary.
+          ws.message({ ...snapshot, sessionId: "s2", epoch: "epoch-c" });
+          ws.message(savedHistory);
+          window.dispatchEvent(new Event("focus"));
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.chat.items
+            .filter((item) => item.kind === "assistant")
+            .map((item) => item.text),
+        ).toEqual([savedReply, "fresh reply"]);
+        expect(ws.sent.map((line) => JSON.parse(line)).at(-1)).toEqual({
+          type: "session.sync",
+          sessionId: "s2",
+          sinceSeq: 10,
+          epoch: "epoch-c",
+        });
+      } finally {
+        await hook.unmount();
+      }
+    });
+  }
+});
+
 describe("useRemoteApp session unread", () => {
   test("非当前 session 的 seq 前进标未读,切到该 session 后清除", async () => {
     setupBrowser();

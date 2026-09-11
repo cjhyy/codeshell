@@ -335,7 +335,7 @@ describe("DigitalHumansView contract", () => {
     expect(editor).toContain("nextRequirements ? { requires: nextRequirements }");
     expect(source).toContain("editorSaveFlowLock.current");
     expect(source).toContain("editorSaveFlowBusy || operations.isBusy");
-    expect(editor).toContain("if (!next && operationBusy) return");
+    // Busy and stale discard decisions are exercised by the editor interaction suite.
     expect(editor).toContain("showClose={!operationBusy}");
     // Radix closes on backdrop click / Esc; a half-written profile must not
     // vanish without asking.

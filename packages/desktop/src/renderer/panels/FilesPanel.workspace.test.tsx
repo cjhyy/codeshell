@@ -108,6 +108,34 @@ afterEach(async () => {
 });
 
 describe("FilesPanel workspace identity", () => {
+  test("a successful same-file refresh recovers a failed preview read", async () => {
+    const text = (node: any): string =>
+      node.nodeType === 3
+        ? (node.nodeValue ?? node.textContent ?? "")
+        : node.childNodes?.length
+          ? node.childNodes.map(text).join("")
+          : (node.textContent ?? "");
+    window.codeshell.readSessionFileContent = async () => {
+      throw new Error("temporary file error");
+    };
+    await act(async () => {
+      window.dispatchEvent(new Event("codeshell:files-changed"));
+      await flushMicrotasks();
+    });
+    expect(text(container)).toContain("temporary file error");
+
+    window.codeshell.readSessionFileContent = async () => ({
+      text: "recovered file content",
+      size: 22,
+    });
+    await act(async () => {
+      window.dispatchEvent(new Event("codeshell:files-changed"));
+      await flushMicrotasks();
+    });
+    expect(text(container)).toContain("recovered file content");
+    expect(text(container)).not.toContain("temporary file error");
+  });
+
   test("uses the resolved root for fs and clears a nested-worktree selection when returning to main", async () => {
     expect(readSessionDirs).toContainEqual(["session-1", "primary", WORKTREE]);
     expect(readSessionFiles).toContainEqual([

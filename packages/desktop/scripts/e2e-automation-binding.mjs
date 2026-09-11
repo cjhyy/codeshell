@@ -14,6 +14,8 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedSessionCatalog,
+  waitForSessionCatalogSelection,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -143,37 +145,34 @@ async function installFixture() {
     replace("sessions:transcriptPage", () => ({ items: [], loadedBytes: 0, hasMore: false }));
     replace("agent:subscribe", () => ({ events: [], nextSeq: 0, topLevelRunning: false }));
   });
-  await win.evaluate(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "codeshell.sessionIndex.__no_repo__",
-      JSON.stringify({
-        activeSessionId: null,
-        sessions: [
-          {
-            id: "ui-binding-local",
-            engineSessionId: "engine-binding-local",
-            title: "工作进度与计划",
-            createdAt: now - 3_600_000,
-            updatedAt: now,
-          },
-          {
-            id: "ui-binding-draft",
-            title: "尚未开始的草稿对话",
-            createdAt: now,
-            updatedAt: now,
-          },
-          {
-            id: "ui-binding-archived",
-            engineSessionId: "engine-binding-archived",
-            title: "已经归档的旧对话",
-            createdAt: now - 86_400_000,
-            updatedAt: now - 86_400_000,
-            archived: true,
-          },
-        ],
-      }),
-    );
+  const fixtureNow = Date.now();
+  await seedSessionCatalog(win, {
+    __no_repo__: {
+      activeSessionId: null,
+      sessions: [
+        {
+          id: "ui-binding-local",
+          engineSessionId: "engine-binding-local",
+          title: "工作进度与计划",
+          createdAt: fixtureNow - 3_600_000,
+          updatedAt: fixtureNow,
+        },
+        {
+          id: "ui-binding-draft",
+          title: "尚未开始的草稿对话",
+          createdAt: fixtureNow,
+          updatedAt: fixtureNow,
+        },
+        {
+          id: "ui-binding-archived",
+          engineSessionId: "engine-binding-archived",
+          title: "已经归档的旧对话",
+          createdAt: fixtureNow - 86_400_000,
+          updatedAt: fixtureNow - 86_400_000,
+          archived: true,
+        },
+      ],
+    },
   });
 }
 
@@ -387,10 +386,10 @@ async function checkBinding() {
   await detail()
     .getByRole("button", { name: /打开对话/ })
     .click();
+  await waitForSessionCatalogSelection(win, "__no_repo__", "ui-binding-local");
   await win.waitForFunction(() => {
-    const index = JSON.parse(localStorage.getItem("codeshell.sessionIndex.__no_repo__") || "{}");
     const view = JSON.parse(localStorage.getItem("codeshell.view") || "{}");
-    return index.activeSessionId === "ui-binding-local" && view.viewMode === "chat";
+    return view.viewMode === "chat";
   });
   await openAutomations();
   console.log("PASS: binding survives reload and opens the correct local UI conversation");
@@ -472,13 +471,10 @@ async function checkNoResumableSessions() {
   await app.evaluate(() => {
     globalThis.__automationBindingFixture.diskSessions = [];
   });
-  await win.evaluate(() => {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith("codeshell.sessionIndex.")) localStorage.removeItem(key);
-    }
-    localStorage.setItem(
-      "codeshell.sessionIndex.__no_repo__",
-      JSON.stringify({
+  await seedSessionCatalog(
+    win,
+    {
+      __no_repo__: {
         activeSessionId: null,
         sessions: [
           {
@@ -488,9 +484,10 @@ async function checkNoResumableSessions() {
             updatedAt: Date.now(),
           },
         ],
-      }),
-    );
-  });
+      },
+    },
+    { replace: true },
+  );
   await win.reload();
   await execution().waitFor();
   await mode("续接已有对话").click();

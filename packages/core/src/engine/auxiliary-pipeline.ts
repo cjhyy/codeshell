@@ -177,9 +177,10 @@ export class AuxiliaryPipeline {
           if (response.usage) recordBilledUsage?.(response.usage);
           return response.text;
         },
-        runDream: async ({ projectDir }) =>
+        runDream: async ({ projectDir, baseDir }) =>
           this.runDreamLoop({
             projectDir,
+            baseDir,
             llmClient,
             sessionId,
             recordBilledUsage,
@@ -200,11 +201,13 @@ export class AuxiliaryPipeline {
 
   private async runDreamLoop(options: {
     projectDir?: string;
+    baseDir?: string;
     llmClient: EngineLlmClient;
     sessionId: string;
     recordBilledUsage?: (usage: TokenUsage) => void;
   }): Promise<boolean> {
     const { ran } = await runDreamConsolidation({
+      baseDir: options.baseDir,
       llmClient: options.llmClient,
       toolRegistry: this.deps.toolRegistry(),
       toolContext: this.deps.toolContext(),

@@ -8,6 +8,29 @@ export interface SessionReplaySelection {
   cursor: number;
 }
 
+/** The Main process owns one sequence domain; legacy peers omit its epoch. */
+export interface SessionStreamCursor {
+  epoch?: string;
+  appliedSeq: number;
+  observedSeq: number;
+  awaitingSnapshot: boolean;
+  /** A selected durable history has no cursor linking it to this live log. */
+  historyUnpaired?: boolean;
+}
+
+export function alignSessionEpoch(cursor: SessionStreamCursor, epoch?: string): boolean {
+  if (!epoch || epoch === cursor.epoch) return false;
+  // A legacy cursor is also untrusted when the peer first supplies an epoch.
+  // Missing epoch on a later legacy packet must not erase a known domain.
+  cursor.epoch = epoch;
+  cursor.appliedSeq = 0;
+  cursor.observedSeq = 0;
+  // A history read without an associated cursor remains unpaired even when
+  // the next packet is the first one to identify another Main lifetime.
+  if (!cursor.historyUnpaired) cursor.historyUnpaired = undefined;
+  return true;
+}
+
 export function selectSessionReplayEntries(
   entries: SessionReplayEntry[],
   appliedSeq: number,

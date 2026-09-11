@@ -107,8 +107,28 @@ export function DigitalHumanEditorDialog({
   const [skillInstallRepos, setSkillInstallRepos] = React.useState<Record<string, string>>({});
   const [section, setSection] = React.useState<EditorSection>("identity");
   const [installingRequirements, setInstallingRequirements] = React.useState(false);
+  const editorGeneration = React.useRef(0);
+  const installRequest = React.useRef<number | null>(null);
+  const discardRequest = React.useRef<number | null>(null);
+  const targetKey =
+    "projectId" in configurationTarget
+      ? `project:${configurationTarget.projectId}`
+      : "sessionId" in configurationTarget
+        ? `session:${configurationTarget.sessionId}`
+        : "no-repo";
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
+    editorGeneration.current += 1;
+    installRequest.current = null;
+    discardRequest.current = null;
+    return () => {
+      editorGeneration.current += 1;
+      installRequest.current = null;
+      discardRequest.current = null;
+    };
+  }, [open, profile?.name, targetKey]);
+
+  React.useLayoutEffect(() => {
     if (!open) return;
     setId(profile?.name ?? "");
     setLabel(profile?.label ?? "");
@@ -127,7 +147,7 @@ export function DigitalHumanEditorDialog({
     // Re-initialize only for a real open/target change so the active section
     // and the user's local editor state do not jump unexpectedly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, profile?.name]);
+  }, [open, profile?.name, targetKey]);
 
   const normalizedId = id.trim();
   const duplicateId = !profile && existingIds.includes(normalizedId);
@@ -204,7 +224,9 @@ export function DigitalHumanEditorDialog({
       ? []
       : missingSkills.map((skill) => skill.name);
     const rows = editableMissingSkillNames.map((name) => {
-      const value = skillInstallRepos[name] ?? existingSkillSources[name] ?? "";
+      const value = Object.hasOwn(skillInstallRepos, name)
+        ? skillInstallRepos[name]
+        : (existingSkillSources[name] ?? "");
       const normalizedValue = value.trim();
       const repo = normalizeDigitalHumanSkillRepo(value);
       return {
@@ -254,16 +276,21 @@ export function DigitalHumanEditorDialog({
       !hasCatchAllSkillRequirement ||
       busy ||
       installing ||
-      installingRequirements
+      installingRequirements ||
+      installRequest.current !== null
     ) {
       return;
     }
+    const generation = editorGeneration.current;
+    installRequest.current = generation;
+    const isCurrent = () => editorGeneration.current === generation;
     setInstallingRequirements(true);
     try {
       const preview = await window.codeshell.previewProfileRequirements(
         profile.name,
         configurationTarget,
       );
+      if (!isCurrent()) return;
       const detail = [...preview.willRun, ...preview.warnings, ...preview.blockers].join("\n");
 
       if (!preview.needsInstall) {
@@ -274,8 +301,10 @@ export function DigitalHumanEditorDialog({
             detail,
             confirmLabel: t("common.confirm"),
           });
+          if (!isCurrent()) return;
         }
         await onRequirementsInstalled?.();
+        if (!isCurrent()) return;
         if (preview.blockers.length === 0) {
           toast({
             message: t("digitalHumans.editor.missingSkillsRefreshed"),
@@ -291,13 +320,15 @@ export function DigitalHumanEditorDialog({
         detail,
         confirmLabel: t("digitalHumans.requirements.install"),
       });
-      if (!accepted) return;
+      if (!accepted || !isCurrent()) return;
 
       const result = await window.codeshell.installProfileRequirements(
         profile.name,
         configurationTarget,
       );
+      if (!isCurrent()) return;
       await onRequirementsInstalled?.();
+      if (!isCurrent()) return;
       if (!result.ok) {
         toast({
           message: t("digitalHumans.requirements.installFailed", {
@@ -312,6 +343,7 @@ export function DigitalHumanEditorDialog({
         variant: "success",
       });
     } catch (caught) {
+      if (!isCurrent()) return;
       toast({
         message: t("digitalHumans.requirements.installFailed", {
           error: caught instanceof Error ? caught.message : String(caught),
@@ -319,7 +351,10 @@ export function DigitalHumanEditorDialog({
         variant: "error",
       });
     } finally {
-      setInstallingRequirements(false);
+      if (isCurrent()) {
+        installRequest.current = null;
+        setInstallingRequirements(false);
+      }
     }
   };
 
@@ -345,7 +380,7 @@ export function DigitalHumanEditorDialog({
   const skillLimitReached = selectedSkills.size === DIGITAL_HUMAN_PROFILE_LIMITS.capabilityCount;
   const skillLimitExceeded = selectedSkills.size > DIGITAL_HUMAN_PROFILE_LIMITS.capabilityCount;
   const skillAdditionBlocked = selectedSkills.size >= DIGITAL_HUMAN_PROFILE_LIMITS.capabilityCount;
-  const operationBusy = busy || installingRequirements;
+  const operationBusy = busy || installing || installingRequirements;
   const canSave =
     validId &&
     Boolean(label.trim()) &&
@@ -374,17 +409,22 @@ export function DigitalHumanEditorDialog({
     (profile?.skills ?? []).some((name) => !selectedSkills.has(name));
 
   const requestClose = (next: boolean) => {
-    if (!next && operationBusy) return;
+    if (!next && (operationBusy || installRequest.current !== null)) return;
     if (next || !dirty) {
       onOpenChange(next);
       return;
     }
+    if (discardRequest.current !== null) return;
+    const generation = editorGeneration.current;
+    discardRequest.current = generation;
     void confirm({
       title: t("digitalHumans.editor.discardTitle"),
       message: t("digitalHumans.editor.discardMessage"),
       confirmLabel: t("digitalHumans.editor.discard"),
       destructive: true,
     }).then((accepted) => {
+      if (editorGeneration.current !== generation) return;
+      discardRequest.current = null;
       if (accepted) onOpenChange(false);
     });
   };

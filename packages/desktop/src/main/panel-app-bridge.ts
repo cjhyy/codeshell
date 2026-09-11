@@ -23,7 +23,13 @@ import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
-import { preparePanelApp } from "./panel-app-protocol.js";
+import {
+  preparePanelApp,
+  setPanelAppMediaReader,
+  setPanelAppCaptureAuthorizer,
+} from "./panel-app-protocol.js";
+import { PanelMediaService } from "./media/panel-media-service.js";
+import { MediaCaptionRenderer } from "./media/media-caption-renderer.js";
 import {
   PanelAppProcessService,
   panelExecutableDirectories,
@@ -102,6 +108,7 @@ interface GuestBinding {
   resource: PanelAppProtocolResource;
   context: PanelAppHostContext;
   callTimes: number[];
+  recordingWriteTimes: number[];
   notifyTimes: number[];
   bucket?: string;
   /** Project selected during prepare; immutable for this guest. */
@@ -368,8 +375,23 @@ export class PanelAppBridge {
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
   private readonly processService: PanelAppProcessService;
   private readonly agentTaskService: PanelAppAgentTaskService;
+  private mediaService?: PanelMediaService;
+  private readonly captionRenderer = new MediaCaptionRenderer();
 
   constructor(private readonly options: PanelAppBridgeOptions) {
+    setPanelAppCaptureAuthorizer(
+      (scope) =>
+        options.isPanelAppBound(scope.projectPath, scope.appId) &&
+        options.isWorkspaceTrusted(scope.projectPath),
+    );
+    setPanelAppMediaReader(async (scope, id, request) => {
+      if (
+        !options.isPanelAppBound(scope.projectPath, scope.appId) ||
+        !options.isWorkspaceTrusted(scope.projectPath)
+      )
+        throw new Error("Media scope is no longer authorized");
+      return this.getMediaService().library.openRead(scope, id, request);
+    });
     const processApprovalStore = new PanelAppProcessApprovalStore(
       join(app.getPath("userData"), "panel-app-process-approvals.json"),
     );
@@ -546,6 +568,15 @@ export class PanelAppBridge {
     );
   }
 
+  /** Restore durable media work after Host trust has been loaded, independent of guests. */
+  initializeMedia(): Promise<void> {
+    return this.getMediaService().initialize();
+  }
+
+  shutdownMedia(): Promise<void> {
+    return this.mediaService?.shutdown() ?? Promise.resolve();
+  }
+
   registerGuest(
     guest: WebContents,
     owner: BrowserWindow,
@@ -564,6 +595,7 @@ export class PanelAppBridge {
         apiVersion: PANEL_APP_API_VERSION,
       },
       callTimes: [],
+      recordingWriteTimes: [],
       notifyTimes: [],
       projectPath,
       execution: {
@@ -604,6 +636,7 @@ export class PanelAppBridge {
 
   revokeAppId(appId: string): void {
     this.agentTaskService.cancelApp(appId);
+    void this.mediaService?.cancelApp(appId).catch(() => {});
     for (const [guestId, binding] of this.guests) {
       if (binding.resource.descriptor.appId !== appId) continue;
       this.revokeGuest(guestId);
@@ -901,22 +934,27 @@ export class PanelAppBridge {
     const limits = this.options.limits;
     const paramsLimit =
       limits?.maxParamsBytes ??
-      (method === "workspace.writeText"
-        ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
-        : method === "storage.set"
-          ? this.storageQuotaBytes() + 8 * 1024
-          : MAX_PARAMS_BYTES);
+      (method === "media.document.set" || method === "media.render"
+        ? 2 * 1024 * 1024 + 8 * 1024
+        : method === "workspace.writeText"
+          ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
+          : method === "storage.set"
+            ? this.storageQuotaBytes() + 8 * 1024
+            : MAX_PARAMS_BYTES);
     if (jsonBytes(params) > paramsLimit) {
       throw new Error("Panel App params are too large");
     }
     const now = Date.now();
-    binding.callTimes = binding.callTimes.filter(
+    // Bounded upload chunks have their own budget so they cannot starve UI calls.
+    const chunk = method === "media.recording.write";
+    const timestamps = (chunk ? binding.recordingWriteTimes : binding.callTimes).filter(
       (time) => now - time < (limits?.rateWindowMs ?? RATE_WINDOW_MS),
     );
-    if (binding.callTimes.length >= (limits?.maxCallsPerWindow ?? MAX_CALLS_PER_WINDOW)) {
+    if (timestamps.length >= (limits?.maxCallsPerWindow ?? (chunk ? 512 : MAX_CALLS_PER_WINDOW)))
       throw new Error("Panel App rate limit exceeded");
-    }
-    binding.callTimes.push(now);
+    timestamps.push(now);
+    if (chunk) binding.recordingWriteTimes = timestamps;
+    else binding.callTimes = timestamps;
 
     const operation = this.dispatch(binding, method, params);
     const result = await withTimeout(
@@ -928,7 +966,10 @@ export class PanelAppBridge {
             ? AUDIO_TRANSCRIBE_TIMEOUT_MS
             : method === "credentials.cookies.loginAndSave"
               ? COOKIE_LOGIN_TIMEOUT_MS
-              : method === "filesystem.pickDirectory" ||
+              : method === "media.recording.finish" ||
+                  method === "media.import" ||
+                  method === "media.export" ||
+                  method === "filesystem.pickDirectory" ||
                   method === "process.spawn" ||
                   method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
@@ -936,11 +977,13 @@ export class PanelAppBridge {
     );
     const resultLimit =
       limits?.maxResultBytes ??
-      (method === "workspace.readText"
-        ? MAX_WORKSPACE_READ_BYTES * 6 + 8 * 1024
-        : method === "workspace.list"
-          ? MAX_WORKSPACE_LIST_RESULT_BYTES
-          : MAX_RESULT_BYTES);
+      (method === "media.document.get"
+        ? 2 * 1024 * 1024 + 8 * 1024
+        : method === "workspace.readText"
+          ? MAX_WORKSPACE_READ_BYTES * 6 + 8 * 1024
+          : method === "workspace.list"
+            ? MAX_WORKSPACE_LIST_RESULT_BYTES
+            : MAX_RESULT_BYTES);
     if (jsonBytes(result) > resultLimit) {
       throw new Error("Panel App result is too large");
     }
@@ -961,7 +1004,113 @@ export class PanelAppBridge {
     }
   }
 
+  private getMediaService(): PanelMediaService {
+    this.mediaService ??= new PanelMediaService({
+      rootDirectory: join(app.getPath("userData"), "panel-app-media"),
+      isScopeAuthorized: (scope) =>
+        this.options.isPanelAppBound(scope.projectPath, scope.appId) &&
+        this.options.isWorkspaceTrusted(scope.projectPath),
+      renderCaptionPng: (request, context) => this.captionRenderer.render(request, context),
+      onChanged: (scope, job) => {
+        if (["succeeded", "failed", "cancelled"].includes(job.status))
+          this.captionRenderer.close(job.id);
+        for (const binding of this.guests.values()) {
+          if (
+            !binding.guest.isDestroyed() &&
+            binding.projectPath === scope.projectPath &&
+            binding.resource.descriptor.appId === scope.appId &&
+            binding.resource.descriptor.permissions.includes("media")
+          ) {
+            binding.guest.send("panel-app:event", { event: "media.job.changed", payload: job });
+          }
+        }
+      },
+    });
+    return this.mediaService;
+  }
+
+  private async dispatchMedia(
+    binding: GuestBinding,
+    method: string,
+    params: unknown,
+  ): Promise<unknown> {
+    const scope = { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath };
+    if (!this.options.isWorkspaceTrusted(binding.projectPath))
+      throw new Error("Media requires a trusted workspace");
+    const service = this.getMediaService();
+    const input = (params ?? {}) as Record<string, unknown>;
+    if (method === "media.import") {
+      if (input.paths !== undefined) {
+        this.requirePermission(binding, "workspace.read");
+        return service.importWorkspaceFiles(
+          scope,
+          await this.trustedWorkspaceRoot(binding),
+          input.paths,
+        );
+      }
+      const owner = BrowserWindow.fromId(binding.ownerWindowId);
+      if (!owner || owner.isDestroyed()) throw new Error("Media picker requires an owner window");
+      const selection = await dialog.showOpenDialog(owner, {
+        title: "导入视频、图片与音频",
+        properties: ["openFile", "multiSelections"],
+        filters: [
+          {
+            name: "Media",
+            extensions: [
+              "mp4",
+              "m4v",
+              "mov",
+              "webm",
+              "mkv",
+              "avi",
+              "mp3",
+              "m4a",
+              "aac",
+              "wav",
+              "flac",
+              "ogg",
+              "opus",
+              "png",
+              "jpg",
+              "jpeg",
+              "webp",
+              "gif",
+              "bmp",
+              "tiff",
+            ],
+          },
+        ],
+      });
+      this.assertProjectBinding(binding);
+      if (selection.canceled || !selection.filePaths.length) return { cancelled: true };
+      return service.importFiles(scope, selection.filePaths);
+    }
+    if (method === "media.export") {
+      const asset = await service.library.get(scope, input.assetId as string);
+      const owner = BrowserWindow.fromId(binding.ownerWindowId);
+      if (!owner || owner.isDestroyed()) throw new Error("Media export requires an owner window");
+      const destination = await dialog.showSaveDialog(owner, {
+        title: "保存制作结果",
+        defaultPath: asset.name,
+      });
+      this.assertProjectBinding(binding);
+      if (destination.canceled || !destination.filePath) return { cancelled: true };
+      await service.exportFile(scope, asset.id, destination.filePath);
+      return { saved: true, name: basename(destination.filePath) };
+    }
+    if (method === "media.reveal") {
+      const path = await service.library.resolvePath(scope, input.assetId as string);
+      shell.showItemInFolder(path);
+      return { revealed: true };
+    }
+    return service.dispatch(scope, method, params);
+  }
+
   private async dispatch(binding: GuestBinding, method: string, params: unknown): Promise<unknown> {
+    if (method.startsWith("media.")) {
+      this.requirePermission(binding, "media");
+      return this.dispatchMedia(binding, method, params);
+    }
     switch (method) {
       case "storage.get":
         this.requirePermission(binding, "storage");
@@ -1677,12 +1826,20 @@ export class PanelAppBridge {
     let releaseFileLock: (() => void) | undefined;
     try {
       await preparePanelAppStorage(file);
-      // Lock THIS file, not its directory. Every panel app's storage lives in
-      // one `panel-app-storage/` directory, so a directory lock made unrelated
-      // apps contend. The lock is held across `await mutate(file)` and its
-      // retry uses a synchronous Atomics.wait, which froze the Electron main
-      // thread (measured ~10s, event loop fully stalled) until the 30s timeout.
-      releaseFileLock = acquireLockOnPath(file);
+      // Other bridge instances can mutate the same file. Try once per tick so
+      // their async writes and lock heartbeats can finish while we wait. Keep
+      // the per-file lock shared with remote Panel storage and other processes.
+      const deadline = Date.now() + 5_000;
+      for (;;) {
+        try {
+          releaseFileLock = acquireLockOnPath(file, -1);
+          break;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ELOCKED" || Date.now() >= deadline)
+            throw error;
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+      }
       return await mutate(file);
     } finally {
       releaseFileLock?.();

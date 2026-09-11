@@ -274,6 +274,8 @@ export interface ToolContext {
    * path as trusted run metadata, not as model-supplied input.
    */
   profileMemoryDir?: string;
+  /** Explicit root for project/global memory; portable profile storage stays separate. */
+  memoryBaseDir?: string;
   /** Mutate the owning live context cwd. Worktree switching intentionally does not use this. */
   setCwd?(cwd: string): void;
   /** Mutate/rebase the owning live session state after a workspace switch. */

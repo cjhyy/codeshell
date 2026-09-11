@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 11 as const;
+export const PANEL_APP_API_VERSION = 13 as const;
 
 export const PANEL_APP_PERMISSION_NAMES = [
   "context.session",
@@ -15,6 +15,8 @@ export const PANEL_APP_PERMISSION_NAMES = [
   "credentials.cookies",
   "automations.manage",
   "process",
+  "media",
+  "media.capture",
 ] as const;
 
 export type PanelAppPermission = (typeof PANEL_APP_PERMISSION_NAMES)[number];

@@ -70,6 +70,36 @@ describe("PanelAppAgentTaskService", () => {
     expect(completed.model).toBe("fast-model");
   });
 
+  test("related setup Skills are explicitly allowlisted without granting other app Skills", async () => {
+    const calls: PanelAgentTaskRuntime extends { run(input: infer I): unknown } ? I[] : never = [];
+    const runtime: PanelAgentTaskRuntime = {
+      run: async (input) => {
+        calls.push(input);
+        return { text: "ready" };
+      },
+      cancel: async () => {},
+      close: async () => {},
+      rebind: () => {},
+    };
+    const service = new PanelAppAgentTaskService(runtime, () => {});
+    const context = {
+      ...owner(),
+      availableSkills: ["video-studio:video-production", "video-studio:tts-setup"],
+    };
+    service.start(context, {
+      prompt: "安装指定引擎",
+      label: "配音准备",
+      skill: "video-studio:video-production",
+      skills: ["video-studio:tts-setup"],
+      toolNames: ["Panel"],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls[0]!.skillNames).toEqual(context.availableSkills);
+    expect(calls[0]!.toolNames).toEqual(["Panel", "Skill"]);
+    for (const skills of [["other:secret"], "video-studio:tts-setup", [null]])
+      expect(() => service.start(context, { prompt: "x", label: "x", skills })).toThrow(/bundled/);
+  });
+
   test("deduplicates an active key and rejects another app's Skill", async () => {
     let finish = (): void => undefined;
     const blocked = new Promise<void>((resolve) => {

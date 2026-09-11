@@ -2,6 +2,9 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
 import { timePhase } from "./perf";
 import { applyTranscriptStreamEvent } from "./transcripts";
+import { mergeHistoryIntoLive } from "./automation/hydrateOrder";
+import { reduceTranscriptHydration } from "./transcriptHydration";
+import type { SequencedStreamEvent } from "./streamCoalescer";
 import {
   INITIAL_STATE,
   appendAskUserMessage,
@@ -29,7 +32,16 @@ export type TranscriptsAction =
       attachments?: PetChatAttachment[];
     }
   | { type: "stream"; bucket: string; event: StreamEvent }
-  | { type: "stream_batch"; bucket: string; events: StreamEvent[]; maxSeq?: number }
+  | {
+      type: "stream_batch";
+      bucket: string;
+      events: StreamEvent[];
+      maxSeq?: number;
+      epoch?: string;
+      raw?: SequencedStreamEvent[];
+    }
+  | { type: "hydrate_begin"; bucket: string; token: number; sessionId?: string }
+  | { type: "hydrate_cancel"; bucket: string; token: number }
   | {
       /** Apply an authoritative goalGet result after an optimistic RPC failed.
        *  `expected` fences this rollback against a newer local/stream update. */
@@ -39,7 +51,19 @@ export type TranscriptsAction =
       goal: ActiveGoal | null;
     }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
+  | {
+      type: "hydrate_history";
+      bucket: string;
+      state: MessagesReducerState;
+      history: MessagesReducerState;
+      goalAtStart: ActiveGoal | null;
+      token?: number;
+      snapshot?: SequencedStreamEvent[];
+      epoch?: string;
+      sessionId?: string;
+    }
   | { type: "evict"; bucket: string }
+  | { type: "evict_if_unchanged"; bucket: string; state: MessagesReducerState }
   | { type: "remove_pending_steers"; bucket: string; steerIds: string[] }
   | {
       type: "ask_user";
@@ -62,11 +86,27 @@ export type TranscriptsAction =
     };
 
 export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsAction): TranscriptsMap {
-  if (action.type === "evict") {
+  return reduceTranscriptHydration(map, action, reduceTranscriptAction);
+}
+
+function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction): TranscriptsMap {
+  if (action.type === "evict" || action.type === "evict_if_unchanged") {
+    if (action.type === "evict_if_unchanged" && map[action.bucket] !== action.state) return map;
     if (!(action.bucket in map)) return map;
     const next = { ...map };
     delete next[action.bucket];
     return next;
+  }
+  if (action.type === "hydrate_history") {
+    const current = map[action.bucket];
+    const state = current ? mergeHistoryIntoLive(action.history, current) : action.state;
+    return {
+      ...map,
+      [action.bucket]:
+        current && current.activeGoal === action.goalAtStart
+          ? { ...state, activeGoal: action.state.activeGoal }
+          : state,
+    };
   }
   if (action.type === "hydrate") {
     const current = map[action.bucket];
@@ -150,7 +190,18 @@ export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsActio
       next = timePhase(
         "reducer.batch",
         () => {
-          let acc = current;
+          let acc =
+            action.epoch && action.epoch !== current.snapshotEpoch
+              ? {
+                  ...current,
+                  snapshotSeq: 0,
+                  snapshotEpoch: action.epoch,
+                  streamingAssistantId: null,
+                  streamingThinkingId: null,
+                  agentMessageIndex: {},
+                  activeAgents: {},
+                }
+              : current;
           for (const ev of action.events) acc = applyTranscriptStreamEvent(acc, ev);
           if (action.maxSeq !== undefined && action.maxSeq > acc.snapshotSeq) {
             acc = { ...acc, snapshotSeq: action.maxSeq };

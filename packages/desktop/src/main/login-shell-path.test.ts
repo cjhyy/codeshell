@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -186,6 +195,158 @@ describe("resolveLoginShell", () => {
 });
 
 describe("injectLoginShellPathAtStartup logging", () => {
+  test("a timeout kills only the probe group, including a child that ignores SIGTERM", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "login-shell-probe-group-"));
+    const shell = join(dir, "slow-shell");
+    const pidsFile = join(dir, "probe-pids.json");
+    writeFileSync(
+      shell,
+      [
+        "#!/bin/sh",
+        "trap '' TERM",
+        "/bin/sh -c 'trap \"\" TERM; while :; do /bin/sleep 1; done' &",
+        'printf \'[%s,%s]\' "$$" "$!" > "$TEST_PIDS_FILE"',
+        "wait",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    const unrelated = spawn("/bin/sleep", ["30"], {
+      stdio: "ignore",
+    });
+    let pids: number[] = [];
+    const running = (pid: number): boolean => {
+      try {
+        // A terminated orphan can briefly remain a zombie until init reaps
+        // it; it is no longer an executing startup-script process.
+        const status = execFileSync("/bin/ps", ["-o", "stat=", "-p", String(pid)], {
+          encoding: "utf8",
+        }).trim();
+        return status.length > 0 && !status.startsWith("Z");
+      } catch {
+        return false;
+      }
+    };
+    const waitUntil = async (ready: () => boolean) => {
+      const deadline = Date.now() + 4_000;
+      while (!ready() && Date.now() < deadline) await Bun.sleep(20);
+      expect(ready()).toBe(true);
+    };
+    try {
+      const startedAt = performance.now();
+      const resultPromise = injectLoginShellPathAtStartup({
+        env: {
+          HOME: dir,
+          SHELL: shell,
+          PATH: "/usr/bin:/bin",
+          TEST_PIDS_FILE: pidsFile,
+        },
+        platform: "darwin",
+        timeoutMs: 3_000,
+      });
+      try {
+        await waitUntil(() => existsSync(pidsFile));
+      } catch {
+        throw new Error(`probe fixture did not start: ${JSON.stringify(await resultPromise)}`);
+      }
+      pids = JSON.parse(readFileSync(pidsFile, "utf8")) as number[];
+      expect(pids).toHaveLength(2);
+      expect(pids.every((pid) => pid > 1 && pid !== process.pid)).toBe(true);
+      const result = await resultPromise;
+      expect(result.status).not.toBe("skipped");
+      if (result.status === "skipped") throw new Error("expected a shell probe");
+      expect(result.probe).toMatchObject({ ok: false, reason: "timeout" });
+      expect(performance.now() - startedAt).toBeLessThan(4_500);
+      await waitUntil(() => pids.every((pid) => !running(pid)));
+      expect(unrelated.pid).toBeDefined();
+      expect(running(unrelated.pid!)).toBe(true);
+    } finally {
+      if (pids.length === 0 && existsSync(pidsFile)) {
+        pids = JSON.parse(readFileSync(pidsFile, "utf8")) as number[];
+      }
+      // This pid came only from the fixture spawned into its own group.
+      if (pids[0] > 1 && pids[0] !== process.pid) {
+        try {
+          process.kill(-pids[0], "SIGKILL");
+        } catch {
+          // Expected once the probe's timeout cleanup has completed.
+        }
+      }
+      unrelated.kill("SIGKILL");
+      if (unrelated.exitCode === null && unrelated.signalCode === null) {
+        await new Promise<void>((resolve) => unrelated.once("exit", () => resolve()));
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 10_000);
+
+  test("can spawn an installed CLI after a login shell times out", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "login-shell-timeout-"));
+    const localBin = join(dir, ".local/bin");
+    const shell = join(dir, "slow-shell");
+    mkdirSync(localBin, { recursive: true });
+    writeFileSync(shell, "#!/bin/sh\nexec /bin/sleep 10\n", { mode: 0o755 });
+    writeFileSync(join(localBin, "codex"), "#!/bin/sh\nprintf 'codex-ready'\n", { mode: 0o755 });
+    const env: NodeJS.ProcessEnv = { HOME: dir, SHELL: shell, PATH: "/usr/bin:/bin" };
+    const logs: string[] = [];
+    try {
+      const result = await injectLoginShellPathAtStartup({
+        env,
+        platform: "darwin",
+        timeoutMs: 30,
+        log: (event) => logs.push(event),
+      });
+      expect(result.status).toBe("updated");
+      if (result.status !== "updated") throw new Error("expected fallback PATH");
+      expect(result.probe).toMatchObject({ ok: false, reason: "timeout" });
+      expect(result.added).toContain(localBin);
+      expect(result.addedEnvKeys).toEqual([]);
+      expect(env.PATH?.startsWith("/usr/bin:/bin:")).toBe(true);
+      expect(env.PATH?.split(":")).not.toContain(join(dir, ".bun/bin"));
+      expect(execFileSync("codex", ["--version"], { env, encoding: "utf-8" })).toBe("codex-ready");
+      expect(logs).toContain("login-shell-path.fallback");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("fallback keeps inherited executable precedence and is idempotent", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "login-shell-fallback-"));
+    const inheritedBin = join(dir, "preferred/bin");
+    const localBin = join(dir, ".local/bin");
+    for (const [bin, text] of [
+      [inheritedBin, "preferred"],
+      [localBin, "fallback"],
+    ]) {
+      mkdirSync(bin, { recursive: true });
+      writeFileSync(join(bin, "codex"), `#!/bin/sh\nprintf '${text}'\n`, { mode: 0o755 });
+    }
+    const env: NodeJS.ProcessEnv = {
+      HOME: dir,
+      SHELL: join(dir, "missing-shell"),
+      PATH: `${inheritedBin}:/usr/bin:/bin`,
+      NO_PROXY: "keep-existing",
+    };
+    try {
+      await injectLoginShellPathAtStartup({ env, platform: "linux" });
+      const firstPath = env.PATH;
+      const second = await injectLoginShellPathAtStartup({ env, platform: "linux" });
+      expect(second.status).toBe("unchanged");
+      expect(env.PATH).toBe(firstPath);
+      expect(execFileSync("codex", [], { env, encoding: "utf-8" })).toBe("preferred");
+      expect(env.NO_PROXY).toBe("keep-existing");
+      expect(env.PATH?.split(":").filter((entry) => entry === localBin)).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("does not add Unix fallback directories on Windows", async () => {
+    const env = { PATH: "C:\\Windows", SHELL: "/missing-shell" };
+    const result = await injectLoginShellPathAtStartup({ env, platform: "win32" });
+    expect(result.status).toBe("skipped");
+    expect(env.PATH).toBe("C:\\Windows");
+  });
+
   test("does not log raw shell stderr on probe failure", async () => {
     const dir = mkdtempSync(join(tmpdir(), "login-shell-path-"));
     const shell = join(dir, "fake-shell.sh");
@@ -211,9 +372,30 @@ describe("injectLoginShellPathAtStartup logging", () => {
       expect(failed?.data).not.toHaveProperty("stderr");
       expect(failed?.data?.stderrRedacted).toBe(true);
       expect(typeof failed?.data?.stderrLength).toBe("number");
+      expect(failed?.data).toMatchObject({ phase: "startup", timeoutMs: 3_000 });
+      expect(typeof failed?.data?.elapsedMs).toBe("number");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  test("retry diagnostics identify the phase and bound launch metadata", async () => {
+    const logs: Array<{ event: string; data?: Record<string, unknown> }> = [];
+    const shell = `/missing-shell/${"a".repeat(1_000)}`;
+    await injectLoginShellPathAtStartup({
+      env: { HOME: "/missing-home", SHELL: shell, PATH: "/usr/bin:/bin" },
+      platform: "darwin",
+      phase: "runtime-retry",
+      timeoutMs: 100,
+      log: (event, data) => logs.push({ event, data }),
+    });
+    const failed = logs.find((entry) => entry.event === "login-shell-path.failed");
+    expect(failed?.data).toMatchObject({ phase: "runtime-retry", timeoutMs: 100 });
+    expect(Number(failed?.data?.elapsedMs)).toBeGreaterThanOrEqual(0);
+    expect(String(failed?.data?.shell).length).toBeLessThanOrEqual(300);
+    expect(String(failed?.data?.error).length).toBeLessThanOrEqual(300);
+    expect(failed?.data).not.toHaveProperty("env");
+    expect(failed?.data).not.toHaveProperty("PATH");
   });
 
   test("injects safe login-shell env keys and is idempotent", async () => {

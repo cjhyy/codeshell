@@ -79,7 +79,7 @@ export const catalogEntrySchema = z.object({
   /** Template id, e.g. "openai" / "openai-images" / "fal-video". */
   id,
   /** Which 连接 page group this lands in. (audio = speech-to-text / voice input.) */
-  tag: z.enum(["text", "image", "video", "audio"]),
+  tag: z.enum(["text", "image", "video", "audio", "speech"]),
   /**
    * Provider/gateway identity for text (distinct from `protocol`), or concrete
    * runtime adapter for image/video. OpenRouter is `openrouter` even though its

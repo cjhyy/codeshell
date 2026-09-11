@@ -16,9 +16,11 @@
  * dispatch via ChatSessionManager.
  */
 
+import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
+import { createSessionCatalogApi } from "./session-catalog-api";
 import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
@@ -176,7 +178,7 @@ const pending = new Map<
 >();
 // Multi-session: callbacks receive `{ sessionId, event, seq? }` for stream events
 // and `{ sessionId, requestId, request }` for approval requests.
-const streamListeners: Array<(env: { sessionId: string; event: unknown; seq?: number }) => void> =
+const streamListeners: Array<(env: { sessionId: string; event: unknown; seq?: number; epoch?: string }) => void> =
   [];
 const approvalListeners: Array<(env: unknown) => void> = [];
 const approvalResolvedListeners: Array<(env: unknown) => void> = [];
@@ -232,19 +234,10 @@ ipcRenderer.on(
   },
 );
 
-ipcRenderer.on(
-  "agent:streamEvent",
-  (_e: IpcRendererEvent, env: { sessionId?: string; event?: unknown; seq?: number }) => {
-    if (env?.event === undefined) return;
-    streamListeners.forEach((cb) =>
-      cb({
-        sessionId: env.sessionId ?? "",
-        event: env.event,
-        ...(typeof env.seq === "number" ? { seq: env.seq } : {}),
-      }),
-    );
-  },
-);
+ipcRenderer.on("agent:streamEvent", (_e: IpcRendererEvent, env: unknown) => {
+  const envelope = normalizeStreamEnvelope(env);
+  if (envelope) streamListeners.forEach((cb) => cb(envelope));
+});
 
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   let msg: Record<string, unknown>;
@@ -253,6 +246,7 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   } catch {
     return; // malformed — skip
   }
+  if (!msg || typeof msg !== "object" || Array.isArray(msg)) return;
   // Response: has id, no method
   if ("id" in msg && !("method" in msg)) {
     const entry = takePreloadRpcResponse(pending, msg.id);
@@ -276,11 +270,8 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     // "externalRuntime:event" bridge near the bottom of this file)
     // Multi-session wire format: `{ sessionId, event }` envelope. The
     // renderer routes by sessionId; legacy callers can ignore it.
-    const sessionId = (params?.sessionId as string | undefined) ?? "";
-    const event = params?.event;
-    if (event !== undefined) {
-      streamListeners.forEach((cb) => cb({ sessionId, event }));
-    }
+    const envelope = normalizeStreamEnvelope(params);
+    if (envelope) streamListeners.forEach((cb) => cb(envelope));
   } else if (method === "agent/automationSession") {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const cwd = (params?.cwd as string | undefined) ?? "";
@@ -490,6 +481,7 @@ ipcRenderer.on(
 contextBridge.exposeInMainWorld("codeshell", {
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
+  sessionCatalog: createSessionCatalogApi(ipcRenderer),
   /**
    * Resolve a browser File created by an explicit picker/drop to its local
    * absolute path. Electron intentionally removed the old `file.path` field;
@@ -1485,7 +1477,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   externalRuntime: {
     /** Runtime kinds whose binary is installed. Empty when the flag is off. */
     available: (): Promise<string[]> => ipcRenderer.invoke("externalRuntime:available"),
-    models: (): Promise<ExternalRuntimeModelEntry[]> => ipcRenderer.invoke("externalRuntime:models"),
+    models: (): Promise<ExternalRuntimeModelEntry[]> =>
+      ipcRenderer.invoke("externalRuntime:models"),
     /** Start or restart a session on the runtime encoded in `modelKey`. */
     start: (payload: {
       sessionId: string;

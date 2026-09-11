@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, spyOn } from "bun:test";
 import { RunQueue } from "./RunQueue.js";
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 5));
@@ -8,6 +8,46 @@ const tick = () => new Promise<void>((r) => setTimeout(r, 5));
 // must be unchanged.
 
 describe("RunQueue", () => {
+  test("starts previously queued work when an executor is installed", async () => {
+    const order: string[] = [];
+    const q = new RunQueue();
+    q.enqueue("before-executor");
+    await tick();
+    expect(q.pendingCount).toBe(1);
+
+    q.setExecutor(async (id) => {
+      order.push(id);
+    });
+    await tick();
+
+    expect(order).toEqual(["before-executor"]);
+    expect(q.pendingCount).toBe(0);
+    expect(q.activeCount).toBe(0);
+  });
+
+  test("a synchronous executor failure releases capacity for the next run", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const order: string[] = [];
+      const q = new RunQueue();
+      q.setExecutor((id) => {
+        order.push(id);
+        if (id === "broken") throw new Error("failed before promise creation");
+        return Promise.resolve();
+      });
+      q.enqueue("broken");
+      q.enqueue("next");
+      await tick();
+
+      expect(order).toEqual(["broken", "next"]);
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(q.activeCount).toBe(0);
+      expect(q.pendingCount).toBe(0);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   test("dedups enqueues and preserves FIFO order", async () => {
     const order: string[] = [];
     const q = new RunQueue({ concurrency: 1 });

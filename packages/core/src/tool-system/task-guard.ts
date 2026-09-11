@@ -14,9 +14,10 @@
  * top of the next turn.
  *
  * Re-nag policy: don't fire more than once per (todo, threshold)
- * pair. Identity is the position-based id ("1", "2", …) carried on
- * TaskInfo. Re-arranging the list creates a new identity, which is
- * already a refresh, so the nag resets naturally.
+ * pair. TodoWrite replaces the entire snapshot, even when the model
+ * reaffirms the same plan. A replacement resets the reminder age;
+ * position-based ids ("1", "2", …) are only identities within that
+ * snapshot, since a later write can reuse an id for a different task.
  */
 
 import type { TaskInfo } from "../types.js";
@@ -25,7 +26,9 @@ const STALE_TURN_THRESHOLD = 3;
 const RENAG_INTERVAL = 3;
 
 export class TaskGuard {
+  /** Return the same array until TodoWrite emits a replacement snapshot. */
   private snapshotSource: () => TaskInfo[];
+  private lastSnapshot?: TaskInfo[];
   private lastNagTurn = new Map<string, number>();
   private inProgressSince = new Map<string, number>();
 
@@ -35,6 +38,10 @@ export class TaskGuard {
 
   turnEnded(turnNumber: number): string | undefined {
     const tasks = this.snapshotSource();
+    if (tasks !== this.lastSnapshot) {
+      this.reset();
+      this.lastSnapshot = tasks;
+    }
     const open = tasks.filter((t) => t.status === "in_progress");
 
     const trackedIds = [...this.inProgressSince.keys()];
@@ -78,6 +85,7 @@ export class TaskGuard {
   }
 
   reset(): void {
+    this.lastSnapshot = undefined;
     this.lastNagTurn.clear();
     this.inProgressSince.clear();
   }

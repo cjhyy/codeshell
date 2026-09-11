@@ -6,7 +6,7 @@
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { delimiter, isAbsolute, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { availableExternalRuntimes, findOnPath } from "./external-runtime-availability.js";
 
@@ -69,6 +69,14 @@ describe("external runtime availability", () => {
     const winner = makeExecutable(first, "codex");
     makeExecutable(second, "codex");
     expect(findOnPath("codex", [first, second].join(delimiter))).toBe(winner);
+  });
+
+  test("pins a relative PATH entry before a runtime changes its working directory", () => {
+    const dir = tempDir();
+    const command = makeExecutable(dir, "codex");
+    const found = findOnPath("codex", relative(process.cwd(), dir));
+    expect(found).toBe(command);
+    expect(isAbsolute(found!)).toBe(true);
   });
 
   test("empty and missing PATH are handled, not crashed on", () => {

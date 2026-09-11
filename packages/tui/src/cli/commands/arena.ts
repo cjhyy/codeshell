@@ -209,9 +209,10 @@ function resolveParticipants(engineConfig: EngineConfig, modelsFlag?: string): A
 
   if (modelsFlag) {
     // --models flag: comma-separated pool keys or model paths
-    const names = modelsFlag.split(",").map((n) => n.trim().toLowerCase());
+    const names = modelsFlag.split(",").map((n) => n.trim());
     return names.map((name) => {
-      // Try pool first
+      // Connection IDs and raw model paths are case-sensitive. Only legacy
+      // preset aliases are normalized, after an exact connection lookup.
       const fromPool = pool.get(name);
       if (fromPool) {
         return {
@@ -227,7 +228,7 @@ function resolveParticipants(engineConfig: EngineConfig, modelsFlag?: string): A
         };
       }
       // Fallback to MODEL_PRESETS (backward compat)
-      const preset = MODEL_PRESETS[name];
+      const preset = MODEL_PRESETS[name.toLowerCase()];
       if (preset) {
         return {
           name: modelDisplayName(preset.model),

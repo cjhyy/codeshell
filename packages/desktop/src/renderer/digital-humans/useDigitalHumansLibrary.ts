@@ -29,6 +29,27 @@ export interface DigitalHumansLibraryState {
   refresh: () => Promise<boolean>;
 }
 
+/** Capture whether an asynchronous operation still belongs to this mounted project context. */
+export function useDigitalHumanContext(target: RendererConfigurationTarget) {
+  const generation = React.useRef(0);
+  const key =
+    "projectId" in target
+      ? `project:${target.projectId}`
+      : "sessionId" in target
+        ? `session:${target.sessionId}`
+        : "no-repo";
+  React.useLayoutEffect(() => {
+    generation.current += 1;
+    return () => {
+      generation.current += 1;
+    };
+  }, [key]);
+  return React.useCallback(() => {
+    const current = generation.current;
+    return () => current === generation.current;
+  }, []);
+}
+
 export function useDigitalHumansLibrary(
   target: RendererConfigurationTarget,
   api: DigitalHumansLibraryApi = window.codeshell,

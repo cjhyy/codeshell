@@ -26,6 +26,8 @@ export interface EnsureDigitalHumanRequirementsOptions {
   confirm: (options: ConfirmDialogOptions) => Promise<boolean>;
   toast: (options: ToastOptions) => void;
   t: TFunction;
+  /** Stop dependent actions when the initiating project or editor has changed. */
+  isCurrent?: () => boolean;
 }
 
 /**
@@ -43,7 +45,9 @@ export async function ensureDigitalHumanRequirements({
   confirm,
   toast,
   t,
+  isCurrent = () => true,
 }: EnsureDigitalHumanRequirementsOptions): Promise<boolean> {
+  if (!isCurrent()) return false;
   if ("noRepo" in configurationTarget) {
     toast({ message: t("digitalHumans.pickProject"), variant: "error" });
     return false;
@@ -53,6 +57,7 @@ export async function ensureDigitalHumanRequirements({
   try {
     preview = await api.previewProfileRequirements(name, configurationTarget);
   } catch (error) {
+    if (!isCurrent()) return false;
     toast({
       message: t("digitalHumans.requirements.checkFailed", {
         error: error instanceof Error ? error.message : String(error),
@@ -61,6 +66,7 @@ export async function ensureDigitalHumanRequirements({
     });
     return false;
   }
+  if (!isCurrent()) return false;
 
   if (!preview.needsInstall && preview.blockers.length === 0) return true;
   const detail = [...preview.willRun, ...preview.warnings, ...preview.blockers].join("\n");
@@ -74,7 +80,7 @@ export async function ensureDigitalHumanRequirements({
     });
     // External tools cannot be installed by the Skill installer. The warning
     // is explicit, but the profile itself remains usable for unaffected work.
-    return accepted;
+    return accepted && isCurrent();
   }
 
   const accepted = await confirm({
@@ -83,10 +89,11 @@ export async function ensureDigitalHumanRequirements({
     detail,
     confirmLabel: t("digitalHumans.requirements.install"),
   });
-  if (!accepted) return false;
+  if (!accepted || !isCurrent()) return false;
 
   try {
     const result = await api.installProfileRequirements(name, configurationTarget);
+    if (!isCurrent()) return false;
     if (result.ok) return true;
     toast({
       message: t("digitalHumans.requirements.installFailed", {
@@ -96,6 +103,7 @@ export async function ensureDigitalHumanRequirements({
     });
     return false;
   } catch (error) {
+    if (!isCurrent()) return false;
     toast({
       message: t("digitalHumans.requirements.installFailed", {
         error: error instanceof Error ? error.message : String(error),

@@ -37,6 +37,8 @@
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",
     "smoke:background-browser": "esbuild scripts/smoke-background-browser.ts --bundle --platform=node --format=esm --outfile=out/smoke-background-browser.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-background-browser.mjs",
     "smoke:cookie-sync": "esbuild scripts/smoke-cookie-credential-auto-refresh.ts --bundle --platform=node --format=esm --outfile=out/smoke-cookie-credential-auto-refresh.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-cookie-credential-auto-refresh.mjs",
+    "smoke:video-media": "esbuild scripts/smoke-video-media.ts --bundle --platform=node --format=esm --outfile=out/smoke-video-media.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-video-media.mjs ../../artifacts/video-studio/native-render",
+    "smoke:video-production": "esbuild scripts/smoke-video-production.ts --bundle --platform=node --format=esm --outfile=out/smoke-video-production.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-video-production.mjs ../../artifacts/video-studio/production-smoke",
     "smoke": "node scripts/smoke-panels.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.mobile.json --noEmit",
     "start": "electron .",

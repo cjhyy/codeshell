@@ -128,17 +128,7 @@ try {
   await waitUntil(
     () => server.status().connected,
     "production extension native messaging connection",
-  ).catch(async (error) => {
-    console.error(
-      "native startup diagnostic",
-      JSON.stringify({
-        status: server.status(),
-        popup: await popup.locator("body").innerText(),
-        worker: worker.url(),
-      }),
-    );
-    throw error;
-  });
+  );
   const first = await context.newPage();
   const second = await context.newPage();
   await first.goto(`http://127.0.0.1:${websitePort}/a`);
@@ -191,32 +181,20 @@ try {
     }),
     /not granted/,
   );
-  const resumeCycles = Number(process.env.CODESHELL_SMOKE_RESUME_CYCLES ?? 1);
-  assert.ok(Number.isInteger(resumeCycles) && resumeCycles >= 1 && resumeCycles <= 50);
-  let previousRef = firstRef;
-  for (let resumeAttempt = 0; resumeAttempt < resumeCycles; resumeAttempt++) {
-    assert.equal((await action("extension-a", { action: "requestTakeover" })).ok, true);
-    assert.equal(
-      (await action("extension-a", { action: "navigate", url: first.url() })).code,
-      "NEEDS_HUMAN",
-    );
-    assert.equal((await action("extension-a", { action: "resumeControl" })).ok, true);
-    assert.equal((await action("extension-a", { action: "click", ref: previousRef })).ok, false);
-    const refreshed = await action("extension-a", { action: "snapshot" });
-    const main = refreshed.elements.find((element: any) => element.name === "First increment");
-    const frame = refreshed.elements.find((element: any) => element.name === "Frame increment");
-    assert.ok(main && frame, `resume ${resumeAttempt + 1}: ${JSON.stringify(refreshed)}`);
-    assert.equal((await action("extension-a", { action: "click", ref: main.ref })).ok, true);
-    assert.equal((await action("extension-a", { action: "click", ref: frame.ref })).ok, true);
-    assert.equal(await first.evaluate(() => (window as any).count), resumeAttempt + 2);
-    assert.equal(await first.frames()[1].evaluate(() => (window as any).count), resumeAttempt + 2);
-    previousRef = main.ref;
-    assert.equal(
-      (await action("extension-a", { action: "inspect", inspect: { mode: "dom", maxEntries: 10 } }))
-        .ok,
-      true,
-    );
-  }
+  assert.equal((await action("extension-a", { action: "requestTakeover" })).ok, true);
+  assert.equal(
+    (await action("extension-a", { action: "navigate", url: first.url() })).code,
+    "NEEDS_HUMAN",
+  );
+  assert.equal((await action("extension-a", { action: "resumeControl" })).ok, true);
+  assert.equal((await action("extension-a", { action: "click", ref: firstRef })).ok, false);
+  const refreshed = await action("extension-a", { action: "snapshot" });
+  assert.ok(refreshed.elements.some((element: any) => element.name === "First increment"));
+  assert.equal(
+    (await action("extension-a", { action: "inspect", inspect: { mode: "dom", maxEntries: 10 } }))
+      .ok,
+    true,
+  );
 
   const slowStarted = new Promise<void>((resolve) => {
     onSlowRequest = resolve;

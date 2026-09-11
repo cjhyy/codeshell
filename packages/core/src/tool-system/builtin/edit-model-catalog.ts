@@ -85,7 +85,7 @@ export const editModelCatalogToolDef: ToolDefinition = {
   description:
     "Add a model to an existing provider, or add/replace a complete provider template, " +
     "in the user model catalog so it appears in the connection page " +
-    "(text/image/video/audio). Prefer operation='upsertModel' whenever the provider " +
+    "(text/image/video/audio/speech). Prefer operation='upsertModel' whenever the provider " +
     "already exists: it preserves all existing/built-in models and reuses that provider's " +
     "credentials. Use operation='upsertProvider' only for a genuinely new provider/endpoint " +
     "or an intentional full provider override. Backs up the file before writing and " +
@@ -124,7 +124,7 @@ export const editModelCatalogToolDef: ToolDefinition = {
         type: "object",
         description:
           "For upsertProvider only: a full CatalogEntry. Required: id, tag " +
-          "(text|image|video|audio), adapterKind " +
+          "(text|image|video|audio|speech), adapterKind " +
           `(the actual provider/gateway identity: ${CATALOG_ADAPTER_KINDS}), displayName, ` +
           "description, defaultBaseUrl. Optional: protocol (openai-compat|anthropic-style), " +
           "defaultModel, needsKey, signupUrl, test, modelPresets[] (each {value, label?, " +

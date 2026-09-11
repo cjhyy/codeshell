@@ -1,4 +1,4 @@
-/* global document */
+/* global window */
 import { _electron as electron } from "playwright";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -42,10 +42,18 @@ export async function findCodeShellWindow(app, options = {}) {
   while (Date.now() < deadline) {
     for (const candidate of app.windows()) {
       const hasRoot = await candidate
-        .evaluate(() => Boolean(document.getElementById("root")))
-        .catch(() => false);
+        .locator("#root")
+        .waitFor({ state: "attached", timeout: Math.min(500, Math.max(1, deadline - Date.now())) })
+        .then(
+          () => true,
+          () => false,
+        );
       if (hasRoot) {
-        await candidate.waitForLoadState("domcontentloaded").catch(() => undefined);
+        await candidate
+          .waitForLoadState("domcontentloaded", {
+            timeout: Math.max(1, deadline - Date.now()),
+          })
+          .catch(() => undefined);
         return candidate;
       }
     }
@@ -61,4 +69,49 @@ export function captureRendererErrors(win) {
     console.error("renderer pageerror:", error.message);
   });
   return errors;
+}
+
+/** Seed synthetic sidebar metadata through the same durable API used by the UI.
+ * Writing legacy localStorage after startup is deliberately ignored once the
+ * one-time catalog migration has completed. */
+export async function seedSessionCatalog(win, indices, { replace = false } = {}) {
+  await win.evaluate(
+    async ({ seed, replace }) => {
+      const current = await window.codeshell.sessionCatalog.load();
+      const projectKeys = new Set([
+        ...Object.keys(seed),
+        ...(replace ? Object.keys(current.indices) : []),
+      ]);
+      for (const projectKey of projectKeys) {
+        const index = seed[projectKey] ?? { sessions: [], activeSessionId: null };
+        const ids = new Set(index.sessions.map((session) => session.id));
+        await window.codeshell.sessionCatalog.apply({
+          projectKey,
+          upserts: index.sessions.map((session) => ({ id: session.id, values: session })),
+          ...(replace
+            ? {
+                deletedSessionIds: (current.indices[projectKey]?.sessions ?? [])
+                  .filter((session) => !ids.has(session.id))
+                  .map((session) => session.id),
+              }
+            : {}),
+          activeSessionId: index.activeSessionId,
+          ...(replace || index.deletedProjectLabel !== undefined
+            ? { deletedProjectLabel: index.deletedProjectLabel ?? null }
+            : {}),
+        });
+      }
+    },
+    { seed: indices, replace },
+  );
+}
+
+export async function waitForSessionCatalogSelection(win, projectKey, sessionId) {
+  await win.waitForFunction(
+    async ({ projectKey, sessionId }) =>
+      (await window.codeshell.sessionCatalog.load()).indices[projectKey]?.activeSessionId ===
+      sessionId,
+    { projectKey, sessionId },
+    { polling: 100 },
+  );
 }

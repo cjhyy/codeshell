@@ -886,6 +886,150 @@ describe("PetStateProvider", () => {
     else testWindow.codeshell = originalCodeshell;
   });
 
+  test.each(["refresh", "older"] as const)(
+    "keeps a repeated submitted message and its streaming reply during a %s history read",
+    async (readKind) => {
+      ensureMiniDom();
+      let chatListener: Parameters<NonNullable<PetApi["onChatEvent"]>>[0] | undefined;
+      let streamListener: ((envelope: any) => void) | undefined;
+      let resolvePage: ((page: any) => void) | undefined;
+      let reads = 0;
+      const initialItems = [
+        { kind: "user", text: "继续", clientMessageId: "pet-first" },
+        {
+          kind: "stream",
+          event: {
+            type: "assistant_message",
+            messageId: "old-reply",
+            message: { role: "assistant", content: "上一个任务完成了。" },
+          },
+        },
+      ];
+      const testWindow = window as unknown as Record<string, unknown>;
+      const originalCodeshell = testWindow.codeshell;
+      testWindow.codeshell = {
+        getSessionTranscript: async () => [],
+        getSessionTranscriptPage: async () => {
+          reads += 1;
+          if (reads === 1) {
+            return { items: initialItems, loadedBytes: 512 * 1024, hasMore: true };
+          }
+          return new Promise((resolve) => {
+            resolvePage = resolve;
+          });
+        },
+        onStreamEvent: (listener: (envelope: any) => void) => {
+          streamListener = listener;
+          return () => {
+            streamListener = undefined;
+          };
+        },
+        log: () => {},
+      };
+      const api: PetApi = {
+        getSnapshot: async () => snapshot(),
+        onProjectionEvent: () => () => {},
+        openSession: async () => ({ status: "not-found" }),
+        onChatEvent: (listener) => {
+          chatListener = listener;
+          return () => {
+            chatListener = undefined;
+          };
+        },
+        dispatch: async () => ({
+          ok: true,
+          type: "global_status",
+          version: 0,
+          generation: 0,
+          observedAt: 1,
+          workerState: "active",
+          petSessionId: "pet-refresh",
+          runningCount: 0,
+          queuedCount: 0,
+          pendingCount: 0,
+          sessions: [],
+        }),
+        getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+        onAttentionEvent: () => () => {},
+        setActiveSession: async () => ({ ok: true }),
+        markAttentionReceipt: async () => ({ ok: true }),
+      };
+      let latest: ReturnType<typeof usePetState> | undefined;
+      function Consumer() {
+        latest = usePetState();
+        return null;
+      }
+      const root = createRoot(document.createElement("div"));
+      try {
+        await act(async () => {
+          root.render(
+            <PetStateProvider api={api}>
+              <Consumer />
+            </PetStateProvider>,
+          );
+          await flushMicrotasks();
+        });
+        let olderRead: Promise<boolean> | undefined;
+        await act(async () => {
+          if (readKind === "older") olderRead = latest?.loadOlderChatHistory();
+          else {
+            chatListener?.({
+              kind: "transcript-updated",
+              source: "long-task-closure",
+              taskId: "pet-task-0123456789abcdef01234567",
+              createdAt: 2,
+            });
+          }
+          await flushMicrotasks();
+        });
+        expect(reads).toBe(2);
+        await act(async () => {
+          chatListener?.({
+            kind: "user-submitted",
+            message: "继续",
+            clientMessageId: "pet-second",
+            createdAt: 3,
+          });
+          streamListener?.({
+            sessionId: "pet-refresh",
+            event: { type: "stream_request_start", messageId: "live-reply" },
+          });
+          streamListener?.({
+            sessionId: "pet-refresh",
+            event: { type: "text_delta", text: "新任务" },
+          });
+        });
+        await act(async () => {
+          resolvePage?.({
+            items: initialItems,
+            loadedBytes: readKind === "older" ? 1024 * 1024 : 512 * 1024,
+            hasMore: false,
+          });
+          await olderRead;
+          await flushMicrotasks();
+        });
+        expect(latest?.chatState.messages.map((message) => message.text)).toEqual([
+          "继续",
+          "上一个任务完成了。",
+          "继续",
+          "新任务",
+        ]);
+        expect(latest?.chatState.streamingAssistantId).toBe("live-reply");
+        await act(async () => {
+          streamListener?.({
+            sessionId: "pet-refresh",
+            event: { type: "text_delta", text: "正在执行。" },
+          });
+        });
+        expect(latest?.chatState.messages.at(-1)?.text).toBe("新任务正在执行。");
+      } finally {
+        await act(async () => root.unmount());
+        if (originalCodeshell === undefined) delete testWindow.codeshell;
+        else testWindow.codeshell = originalCodeshell;
+      }
+    },
+  );
+
   test("hydrates only the recent Mimi page and expands it on demand", async () => {
     ensureMiniDom();
     const requestedBytes: number[] = [];

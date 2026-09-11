@@ -33,6 +33,18 @@ import type {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { PetApi } from "./pet-api";
 import type {
+  StreamEventEnvelope,
+  SessionSnapshot,
+  RawTranscriptEvent,
+} from "./session-stream-types";
+export type {
+  StreamEventEnvelope,
+  SnapshotEntry,
+  SessionSnapshot,
+  RawTranscriptEvent,
+} from "./session-stream-types";
+import type { SessionCatalogApi } from "../shared/session-catalog";
+import type {
   PanelAppBindInput,
   PanelAppDescriptor,
   PanelAppExtensionSummary,
@@ -409,42 +421,6 @@ export interface MobilePermissionModeEnvelope {
 export interface MobilePermissionModeSnapshotEntry {
   sessionId: string;
   mode: MobilePermissionMode;
-}
-
-/**
- * Multi-session stream envelope. The renderer routes by sessionId; a missing
- * sessionId (legacy single-engine path) routes to the active session.
- */
-export interface StreamEventEnvelope {
-  sessionId: string;
-  event: StreamEvent;
-  seq?: number;
-}
-
-/** One entry in a main-held session snapshot: a forwarded event + its seq. */
-export interface SnapshotEntry {
-  seq: number;
-  event: StreamEvent;
-}
-
-/** Reply to subscribeSession — events past the requested cursor + next cursor. */
-export interface SessionSnapshot {
-  events: SnapshotEntry[];
-  nextSeq: number;
-  /** Main-authoritative top-level run state. Missing on legacy snapshots. */
-  topLevelRunning?: boolean;
-}
-
-/**
- * A raw on-disk transcript event (getSessionRawEvents). Preserves the stable
- * `id` (dedup key) and `turnNumber`/`timestamp` that the folded reader drops.
- */
-export interface RawTranscriptEvent {
-  id: string;
-  type: string;
-  timestamp: number;
-  turnNumber: number;
-  data: Record<string, unknown>;
 }
 
 export interface RpcResponse<T = unknown> {
@@ -1024,6 +1000,8 @@ export type ImGatewayUiEvent =
     };
 
 export interface CodeshellApi extends ProjectAuthorityApi {
+  /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
+  sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */
   pet: PetApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
@@ -2550,7 +2528,7 @@ export interface ModelPreset {
 /** Model catalog template (mirror of core CatalogEntry). */
 export interface CatalogEntry {
   id: string;
-  tag: "text" | "image" | "video" | "audio";
+  tag: "text" | "image" | "video" | "audio" | "speech";
   adapterKind: string;
   protocol?: "openai-compat" | "anthropic-style";
   shape?: "generic-sync" | "fal-queue";

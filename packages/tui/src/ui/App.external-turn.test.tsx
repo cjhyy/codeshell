@@ -285,3 +285,60 @@ describe("App server-driven turn lifecycle", () => {
     }
   });
 });
+
+test("failed model fallback revokes flushed prose, pending buffers and tool placeholders before the complete replacement", async () => {
+  const client = new FakeAgentClient();
+  const queryGuard = new QueryGuard();
+  const sessionId = "stream-fallback-session";
+  chatStore.setEntries([
+    createEntry({ type: "assistant_text", text: "previous completed answer", streaming: false }),
+  ]);
+  const harness = mount(
+    <App
+      client={client as unknown as AgentClient}
+      model="test-model"
+      effort="medium"
+      maxTurns={4}
+      cwd="/tmp"
+      maxContextTokens={16_000}
+      sessionId={sessionId}
+      queryGuard={queryGuard}
+    />,
+  );
+  try {
+    await flush();
+    client.emit(sessionId, { type: "session_started", sessionId, promptTokens: 0 });
+    client.emit(sessionId, { type: "stream_request_start", turnNumber: 1, messageId: "fallback" });
+    client.emit(sessionId, { type: "thinking_delta", text: "failed thought" });
+    client.emit(sessionId, { type: "text_delta", text: "failed flushed partial" });
+    client.emit(sessionId, {
+      type: "tool_use_start",
+      toolCall: { id: "unexecuted", toolName: "Read", args: {} },
+    });
+    await flush();
+    client.emit(sessionId, { type: "text_delta", text: "failed pending partial" });
+    client.emit(sessionId, { type: "tombstone", messageId: "fallback" });
+    client.emit(sessionId, { type: "tombstone", messageId: "unexecuted" });
+    client.emit(sessionId, { type: "stream_request_start", turnNumber: 1, messageId: "fallback" });
+    client.emit(sessionId, { type: "thinking_delta", text: "complete replacement thought" });
+    client.emit(sessionId, { type: "text_delta", text: "complete replacement answer" });
+    client.emit(sessionId, { type: "turn_complete", reason: "completed" });
+    await flush();
+    expect(chatStore.getEntries()).toEqual([
+      expect.objectContaining({
+        type: "assistant_text",
+        text: "previous completed answer",
+        streaming: false,
+      }),
+      expect.objectContaining({
+        type: "assistant_text",
+        text: "complete replacement answer",
+        streaming: false,
+      }),
+    ]);
+    expect(queryGuard.getSnapshot()).toBe(false);
+  } finally {
+    harness.unmount();
+    chatStore.clear();
+  }
+});

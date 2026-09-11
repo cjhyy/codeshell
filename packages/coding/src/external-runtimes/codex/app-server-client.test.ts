@@ -10,7 +10,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CodexAppServerClient } from "./app-server-client.js";
+import { CodexAppServerClient, type AppServerClientOptions } from "./app-server-client.js";
 
 const dirs: string[] = [];
 const clients: CodexAppServerClient[] = [];
@@ -20,7 +20,7 @@ afterEach(async () => {
 });
 
 /** Spawn a fake app-server: `node <script>` instead of `codex app-server`. */
-function inlineClient(script: string): CodexAppServerClient {
+function inlineClient(script: string, log?: AppServerClientOptions["log"]): CodexAppServerClient {
   const dir = mkdtempSync(join(tmpdir(), "codeshell-fake-appserver-"));
   dirs.push(dir);
   const file = join(dir, "server.mjs");
@@ -38,12 +38,90 @@ createInterface({ input: process.stdin }).on("line", (l) => {
 ${script}
 `,
   );
-  const client = new CodexAppServerClient({ command: process.execPath, args: [file] });
+  const client = new CodexAppServerClient({ command: process.execPath, args: [file], log });
   clients.push(client);
   return client;
 }
 
 describe("CodexAppServerClient", () => {
+  test("reports a missing executable without logging arguments or environment values", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "codeshell-missing-appserver-"));
+    dirs.push(dir);
+    const command = join(dir, "missing-codex");
+    const closed: Record<string, unknown>[] = [];
+    const client = new CodexAppServerClient({
+      command,
+      cwd: dir,
+      args: ["app-server", "private-argument-marker"],
+      env: { ...process.env, PRIVATE_TEST_TOKEN: "private-env-marker" },
+      log: (event, data) => {
+        if (event === "appserver.closed") closed.push(data);
+      },
+    });
+    clients.push(client);
+    client.onNotification(() => {});
+    client.start();
+
+    await expect(client.request("initialize", {}, 1_000)).rejects.toThrow(
+      /app-server failed to start.*ENOENT/,
+    );
+    expect(closed).toHaveLength(1);
+    expect(closed[0]).toMatchObject({ command, cwd: dir, code: "ENOENT" });
+    expect(closed[0].reason).toContain(command);
+    expect(closed[0].reason).toContain(dir);
+    expect(JSON.stringify(closed)).not.toContain("private-argument-marker");
+    expect(JSON.stringify(closed)).not.toContain("private-env-marker");
+    // Later requests retain the original startup failure, and close must not
+    // wait for an exit event from a process that was never created.
+    await expect(client.request("ping")).rejects.toThrow(/ENOENT/);
+    await client.close();
+    expect(closed).toHaveLength(1);
+  });
+
+  test("reports the working directory when an existing executable cannot spawn there", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "codeshell-missing-appserver-cwd-"));
+    dirs.push(dir);
+    const cwd = join(dir, "missing-directory");
+    const closed: Record<string, unknown>[] = [];
+    const client = new CodexAppServerClient({
+      command: process.execPath,
+      args: ["-e", "process.exit(0)"],
+      cwd,
+      log: (event, data) => {
+        if (event === "appserver.closed") closed.push(data);
+      },
+    });
+    clients.push(client);
+    client.onNotification(() => {});
+    client.start();
+
+    await expect(client.request("initialize", {}, 1_000)).rejects.toThrow(/failed to start/);
+    expect(closed[0]).toMatchObject({ command: process.execPath, cwd, code: "ENOENT" });
+    expect(closed[0].reason).toContain(cwd);
+  });
+
+  test("bounds executable and OS error text in startup diagnostics", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "codeshell-long-appserver-path-"));
+    dirs.push(dir);
+    const command = join(dir, ...Array<string>(50).fill("missing-folder"), "codex");
+    const closed: Record<string, unknown>[] = [];
+    const client = new CodexAppServerClient({
+      command,
+      cwd: dir,
+      log: (event, data) => {
+        if (event === "appserver.closed") closed.push(data);
+      },
+    });
+    clients.push(client);
+    client.onNotification(() => {});
+    client.start();
+
+    await expect(client.request("initialize", {}, 1_000)).rejects.toThrow(/failed to start/);
+    expect(closed[0].command).toBe(command.slice(0, 300));
+    expect(String(closed[0].error).length).toBeLessThanOrEqual(300);
+    expect(String(closed[0].reason).length).toBeLessThan(1_000);
+  });
+
   test("correlates a response that omits the jsonrpc field", async () => {
     // Codex's JSON-RPC does not send `jsonrpc: "2.0"`; discrimination is by shape.
     const client = inlineClient(`
@@ -135,10 +213,14 @@ describe("CodexAppServerClient", () => {
   });
 
   test("rejects in-flight requests when the process exits", async () => {
-    const client = inlineClient(`setOnLine(() => { process.exit(0); });`);
+    const closed: Record<string, unknown>[] = [];
+    const client = inlineClient(`setOnLine(() => { process.exit(23); });`, (event, data) => {
+      if (event === "appserver.closed") closed.push(data);
+    });
     client.onNotification(() => {});
     client.start();
-    await expect(client.request("thread/start")).rejects.toThrow(/exited|closed/i);
+    await expect(client.request("thread/start")).rejects.toThrow(/app-server exited \(code 23\)/);
+    expect(closed[0]).toMatchObject({ code: 23, signal: null, command: process.execPath });
   });
 
   test("a timeout says the request may still have taken effect", async () => {
@@ -165,7 +247,7 @@ describe("CodexAppServerClient", () => {
     const client = inlineClient(`setOnLine(() => { process.kill(process.pid, "SIGTERM"); });`);
     client.onNotification(() => {});
     client.start();
-    await expect(client.request("ping")).rejects.toThrow(/exited/);
+    await expect(client.request("ping")).rejects.toThrow(/app-server exited \(signal SIGTERM\)/);
     await client.close();
     expect(client.isClosed).toBe(true);
   });

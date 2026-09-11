@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 
@@ -8,6 +8,7 @@ import {
   compactWasNoop,
 } from "../chat/compactFeedback";
 import { titleFromWire } from "../chat/attachments";
+import { flushSessionPersistence } from "../sessionPersistence";
 import {
   toCorePermissionMode,
   toExternalRuntimePermission,
@@ -172,6 +173,7 @@ export function useRunController({
     setApprovalHistory,
     approvalBucketsRef,
   } = approvals;
+  const pendingLaunchesRef = useRef(new Map<string, { cancelled: boolean }>());
   const send = (
     text: string,
     sendOpts: {
@@ -183,8 +185,8 @@ export function useRunController({
       suppressGoal?: boolean;
     } = {},
   ): Promise<void> => {
-    // createSession persists to localStorage synchronously, so reading
-    // it back via touchSession() right after sees the new entry.
+    // createSession updates the local projection immediately; Main must
+    // acknowledge its durable directory entry before either runtime starts.
     const parsedBucket = sendOpts.bucket ? parsePanelBucket(sendOpts.bucket) : null;
     const targetProjectId = parsedBucket ? parsedBucket.projectId : activeProjectId;
     const targetSessionId = parsedBucket ? parsedBucket.sessionId : activeSessionId;
@@ -270,13 +272,14 @@ export function useRunController({
     // Touch session: bump updatedAt + adopt first user prompt as title,
     // and persist engineSessionId so future sends in this UI session
     // pass the same value (and the engine resumes the right convo).
-    setSessionIndices((prev) => {
-      const touched = touchSession(targetProjectId, sid, titleFromWire(displayText));
-      const next = summary?.engineSessionId
+    // Queue persistence outside React's updater: React can defer or replay an
+    // updater, which would otherwise let the run start before the write exists.
+    const touched = touchSession(targetProjectId, sid, titleFromWire(displayText));
+    const next =
+      summary?.engineSessionId === engineSessionId
         ? touched
         : bindEngineSession(targetProjectId, sid, engineSessionId);
-      return { ...prev, [projectBucketSegment]: next };
-    });
+    setSessionIndices((prev) => ({ ...prev, [projectBucketSegment]: next }));
 
     const opts: {
       cwd?: string;
@@ -422,32 +425,41 @@ export function useRunController({
     ]
       .filter(Boolean)
       .join("\n\n");
-    const startRun = externalRuntime
-      ? runExternalRuntimeTurn({
-          sessionId: engineSessionId,
-          // `opts.cwd` is the same value the native path sends to agent/run.
-          cwd: opts.cwd ?? "",
-          modelKey: bucketModel,
-          text,
-          clientMessageId,
-          attachments: opts.attachments,
-          ...toExternalRuntimePermission(opts.permissionMode),
-          hasGoal: !!activeGoal,
-          initialContext: buildExternalRuntimeHandoff(state.messages),
-          ...(externalDeveloperInstructions
-            ? { developerInstructions: externalDeveloperInstructions }
-            : {}),
-          runtime: window.codeshell.externalRuntime,
-        })
-      : runAfterModelSwitch({
-          sessionId: engineSessionId,
-          model: bucketModel,
-          text,
-          opts,
-          run: window.codeshell.run,
-        });
+    let directorySaved = false;
+    const pendingLaunch = { cancelled: false };
+    pendingLaunchesRef.current.set(bucket, pendingLaunch);
+    const startRun = flushSessionPersistence().then(async () => {
+      if (pendingLaunch.cancelled) return null;
+      pendingLaunchesRef.current.delete(bucket);
+      directorySaved = true;
+      return externalRuntime
+        ? runExternalRuntimeTurn({
+            sessionId: engineSessionId,
+            // `opts.cwd` is the same value the native path sends to agent/run.
+            cwd: opts.cwd ?? "",
+            modelKey: bucketModel,
+            text,
+            clientMessageId,
+            attachments: opts.attachments,
+            ...toExternalRuntimePermission(opts.permissionMode),
+            hasGoal: !!activeGoal,
+            initialContext: buildExternalRuntimeHandoff(state.messages),
+            ...(externalDeveloperInstructions
+              ? { developerInstructions: externalDeveloperInstructions }
+              : {}),
+            runtime: window.codeshell.externalRuntime,
+          })
+        : runAfterModelSwitch({
+            sessionId: engineSessionId,
+            model: bucketModel,
+            text,
+            opts,
+            run: window.codeshell.run,
+          });
+    });
     return startRun
       .then((r) => {
+        if (pendingLaunch.cancelled) return;
         // Belt-and-braces: clear busy for THIS run's bucket even if the
         // stream never delivered turn_complete (e.g. error in setup, or
         // the worker shutdown before flushing the event). Use the closed-
@@ -488,6 +500,10 @@ export function useRunController({
         }
       })
       .catch((err) => {
+        if (pendingLaunch.cancelled) return;
+        if (pendingLaunchesRef.current.get(bucket) === pendingLaunch) {
+          pendingLaunchesRef.current.delete(bucket);
+        }
         // Server crashed / RPC rejected / non-abort error. Without this
         // the run promise silently rejects, busy never clears, and the
         // composer stays disabled until the user reloads. Cancellation
@@ -502,6 +518,11 @@ export function useRunController({
           bucket,
           error: String((err as Error)?.message ?? err),
         });
+        if (!directorySaved) {
+          const detail = t("misc.session.sendSaveFailed");
+          dispatch({ type: "turn_end", bucket, reason: "error", detail });
+          toast({ message: detail, variant: "error" });
+        }
       });
   };
 
@@ -919,6 +940,11 @@ export function useRunController({
     // sent last and would abort the wrong one when two run concurrently.
     const bucket = resolveStopBucket(override, activeBucket, runningBucketRef.current);
     if (!bucket) return;
+    const pendingLaunch = pendingLaunchesRef.current.get(bucket);
+    if (pendingLaunch) {
+      pendingLaunch.cancelled = true;
+      pendingLaunchesRef.current.delete(bucket);
+    }
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const projectBucketSegment = sep > 0 ? bucket.slice(0, sep) : null;

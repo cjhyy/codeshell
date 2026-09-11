@@ -591,6 +591,7 @@ function EntryForm({
               { value: "image", label: "image" },
               { value: "video", label: "video" },
               { value: "audio", label: "audio" },
+              { value: "speech", label: "speech" },
             ]}
           />
         </ConnField>

@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,6 +8,22 @@ import { createDesktopWebApi, type DesktopWebApiOptions } from "./http-api.js";
 import { RemoteHostManager } from "../mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "../mobile-remote/trusted-device-store.js";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
+
+// This suite boots a native server. Renderer suites share Bun's process and
+// may have installed a mini DOM; preserve the production SDK browser guard.
+const nativeHostGlobals = new Map<string, PropertyDescriptor | undefined>();
+beforeAll(() => {
+  for (const name of ["window", "document"]) {
+    nativeHostGlobals.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+    Reflect.deleteProperty(globalThis, name);
+  }
+});
+afterAll(() => {
+  for (const [name, descriptor] of nativeHostGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+});
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => {

@@ -408,3 +408,276 @@ describe("CCConversationView existing external subtask records", () => {
     expect(view.nativeReads()).toBe(0);
   });
 });
+
+describe("CCConversationView asynchronous recovery", () => {
+  function elements(node: any, tag: string): any[] {
+    return [
+      ...(node.tagName === tag ? [node] : []),
+      ...(node.childNodes ?? []).flatMap((child: any) => elements(child, tag)),
+    ];
+  }
+
+  function installRoomApi(overrides: Record<string, unknown> = {}) {
+    ensureMiniDom();
+    const receive: Record<string, (...args: any[]) => void> = {};
+    const off = () => undefined;
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          onApprovalRequest: (cb: (...args: any[]) => void) => {
+            receive.approval = cb;
+            return off;
+          },
+          onApprovalResolved: (cb: (...args: any[]) => void) => {
+            receive.resolved = cb;
+            return off;
+          },
+          onRoomMessage: (cb: (...args: any[]) => void) => {
+            receive.message = cb;
+            return off;
+          },
+          subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+          unsubscribeTranscript: async () => undefined,
+          roomHistory: async () => [],
+          readHistory: async () => ({ messages: [] }),
+          readCodexHistory: async () => ({ messages: [] }),
+          send: async () => true,
+          respondApproval: async () => true,
+          ...overrides,
+        },
+      },
+    });
+    return receive;
+  }
+
+  async function render(props: Partial<React.ComponentProps<typeof CCConversationView>> = {}) {
+    await act(async () => {
+      root?.render(
+        <CCConversationView
+          roomId="room"
+          cwd="/repo"
+          sessionId="session"
+          mode="default"
+          onBack={() => undefined}
+          {...props}
+        />,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+  }
+
+  async function mount(props: Partial<React.ComponentProps<typeof CCConversationView>> = {}) {
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await render(props);
+    return container;
+  }
+
+  async function editDraft(container: unknown, value: string) {
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-cc-room-composer")).onChange({
+        target: { value },
+      });
+      await flushMicrotasks();
+    });
+  }
+
+  const enter = { key: "Enter", shiftKey: false, preventDefault() {} };
+
+  test("re-entering a plain room replaces its full history instead of duplicating messages", async () => {
+    installRoomApi({
+      roomHistory: async () => [{ seq: 1, from: "user", type: "text", text: "unique-backlog" }],
+    });
+    const container = await mount({ sessionId: "" });
+    await render({ sessionId: "", active: false });
+    await render({ sessionId: "", active: true });
+    expect(renderedText(container).match(/unique-backlog/g)).toHaveLength(1);
+  });
+
+  test("a failed subscription and fallback expose retry while keeping live messages usable", async () => {
+    let recovered = false;
+    const receive = installRoomApi({
+      subscribeTranscript: async () => {
+        if (!recovered) throw new Error("subscription unavailable");
+        return { messages: [{ role: "user", text: "recovered-history" }], roomCursor: 1 };
+      },
+      readHistory: async () => {
+        throw new Error("disk unavailable");
+      },
+      unsubscribeTranscript: async () => {
+        throw new Error("window disconnected");
+      },
+    });
+    const container = await mount();
+    expect(renderedText(container)).toContain("disk unavailable");
+    await act(async () => {
+      receive.message({
+        roomId: "room",
+        msg: { seq: 1, from: "user", type: "text", text: "live-message" },
+      });
+      await flushMicrotasks();
+    });
+    expect(renderedText(container)).toContain("live-message");
+    recovered = true;
+    const retry = elements(container, "BUTTON").find((node) => renderedText(node) === "重新读取");
+    expect(retry).toBeDefined();
+    await act(async () => {
+      reactPropsOf(retry).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(renderedText(container)).toContain("recovered-history");
+    expect(renderedText(container)).not.toContain("disk unavailable");
+  });
+
+  test("rapid sends share one request and its acknowledgement preserves the next draft", async () => {
+    let resolveSend!: (value: boolean) => void;
+    let sends = 0;
+    installRoomApi({
+      send: () => {
+        sends += 1;
+        return new Promise((resolve) => {
+          resolveSend = resolve;
+        });
+      },
+    });
+    const container = await mount();
+    await editDraft(container, "first message");
+    const composer = findElementByProp(container, "data-cc-room-composer");
+    await act(async () => {
+      reactPropsOf(composer).onKeyDown(enter);
+      reactPropsOf(composer).onKeyDown(enter);
+      await flushMicrotasks();
+    });
+    expect(sends).toBe(1);
+    await editDraft(container, "next draft");
+    await act(async () => {
+      resolveSend(true);
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(composer).value).toBe("next draft");
+  });
+
+  test("the Enter used to confirm an IME composition does not send", async () => {
+    let sends = 0;
+    installRoomApi({
+      send: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    const container = await mount();
+    await editDraft(container, "中文草稿");
+    await act(async () => {
+      const keyDown = reactPropsOf(findElementByProp(container, "data-cc-room-composer")).onKeyDown;
+      keyDown({ ...enter, nativeEvent: { isComposing: true } });
+      keyDown({ ...enter, keyCode: 229 });
+      await flushMicrotasks();
+    });
+    expect(sends).toBe(0);
+  });
+
+  test("rapid takeover clicks start one operation and allow retry after rejection", async () => {
+    let rejectTakeover!: (error: Error) => void;
+    let attempts = 0;
+    installRoomApi();
+    const container = await mount({
+      observing: true,
+      onTakeOver: () => {
+        attempts += 1;
+        return new Promise((_resolve, reject) => {
+          rejectTakeover = reject;
+        });
+      },
+    });
+    const button = findElementByProp(container, "data-cc-room-takeover");
+    await act(async () => {
+      reactPropsOf(button).onClick();
+      reactPropsOf(button).onClick();
+      await flushMicrotasks();
+    });
+    expect(attempts).toBe(1);
+    expect(reactPropsOf(button).disabled).toBe(true);
+    await act(async () => {
+      rejectTakeover(new Error("CLI unavailable"));
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(button).disabled).toBe(false);
+  });
+
+  test("a send that completes after switching rooms does not clear the new room draft", async () => {
+    let resolveSend!: (value: boolean) => void;
+    installRoomApi({
+      send: () =>
+        new Promise((resolve) => {
+          resolveSend = resolve;
+        }),
+    });
+    const container = await mount();
+    await editDraft(container, "old-room draft");
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-cc-room-composer")).onKeyDown(enter);
+      await flushMicrotasks();
+    });
+    await render({ roomId: "next-room", sessionId: "next-session" });
+    expect(reactPropsOf(findElementByProp(container, "data-cc-room-composer")).value).toBe("");
+    await editDraft(container, "new-room draft");
+    await act(async () => {
+      resolveSend(true);
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(findElementByProp(container, "data-cc-room-composer")).value).toBe(
+      "new-room draft",
+    );
+  });
+
+  test("approval failures retain the card for retry and other rooms cannot clear it", async () => {
+    let rejectResponse!: (error: Error) => void;
+    let responses = 0;
+    const receive = installRoomApi({
+      respondApproval: () => {
+        responses += 1;
+        return responses === 1
+          ? new Promise((_resolve, reject) => {
+              rejectResponse = reject;
+            })
+          : Promise.resolve(true);
+      },
+    });
+    const container = await mount();
+    await act(async () => {
+      receive.approval({
+        roomId: "room",
+        requestId: "same-request",
+        toolName: "Bash",
+        input: { command: "pwd" },
+      });
+      await flushMicrotasks();
+      receive.resolved({ roomId: "another-room", requestId: "same-request" });
+      await flushMicrotasks();
+    });
+    const card = findElementByProp(container, "data-cc-room-approval");
+    expect(card).toBeDefined();
+    const allow = elements(card, "BUTTON").find((node) => renderedText(node) === "允许");
+    await act(async () => {
+      reactPropsOf(allow).onClick();
+      reactPropsOf(allow).onClick();
+      await flushMicrotasks();
+    });
+    expect(responses).toBe(1);
+    expect(reactPropsOf(allow).disabled).toBe(true);
+    await act(async () => {
+      rejectResponse(new Error("IPC failed"));
+      await flushMicrotasks();
+    });
+    expect(findElementByProp(container, "data-cc-room-approval")).toBeDefined();
+    expect(reactPropsOf(allow).disabled).toBe(false);
+    await act(async () => {
+      reactPropsOf(allow).onClick();
+      await flushMicrotasks();
+    });
+    expect(responses).toBe(2);
+    expect(findElementByProp(container, "data-cc-room-approval")).toBeUndefined();
+  });
+});

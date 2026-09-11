@@ -118,6 +118,8 @@ export class RunManager {
    * mismatched-input re-queue path are not. We serialize per-run here.
    */
   private readonly resolvingRuns = new Set<string>();
+  /** Serializes snapshot mutations without holding a gate around execution. */
+  private readonly mutations = new Map<string, Promise<void>>();
 
   constructor(config: RunManagerConfig) {
     this.store = config.store;
@@ -216,7 +218,7 @@ export class RunManager {
     }
     this.resolvingRuns.add(runId);
     try {
-      await this.resumeInner(runId, input);
+      await this.mutateRun(runId, () => this.resumeInner(runId, input));
     } finally {
       this.resolvingRuns.delete(runId);
     }
@@ -310,7 +312,9 @@ export class RunManager {
     }
     this.resolvingRuns.add(runId);
     try {
-      await this.cancelInner(runId, reason);
+      // Signal immediately, even when a prior snapshot write is still pending.
+      this.abortControllers.get(runId)?.abort();
+      await this.mutateRun(runId, () => this.cancelInner(runId, reason));
     } finally {
       this.resolvingRuns.delete(runId);
     }
@@ -341,9 +345,8 @@ export class RunManager {
     // Remove from pending queue
     this.queue.cancel(runId);
 
-    await this.transition(run, "cancelled");
     run.finishedAt = Date.now();
-    await this.store.update(run);
+    await this.transition(run, "cancelled");
     await this.emitRunEvent(runId, "run_cancelled", { reason });
 
     logger.info("run.cancelled", { runId, reason });
@@ -523,15 +526,21 @@ export class RunManager {
 
   private async executeRun(runId: string): Promise<void> {
     assertSafeRunId(runId);
-    const run = await this.getOrThrow(runId);
+    let run = await this.getOrThrow(runId);
 
     // Acquire run lock — prevents concurrent execution by multiple workers
     const lockResult = await this.lock.acquire(runId);
     if (!lockResult.acquired) {
       if (lockResult.reason === "missing_target") {
         const errorMsg = lockResult.message ?? "Run lock target was missing";
-        run.error = errorMsg;
-        await this.transition(run, "blocked");
+        const blocked = await this.mutateRun(runId, async () => {
+          const current = await this.getOrThrow(runId);
+          if (current.status !== "queued") return false;
+          current.error = errorMsg;
+          await this.transition(current, "blocked");
+          return true;
+        });
+        if (!blocked) return;
         await this.emitRunEvent(runId, "run_blocked", {
           error: errorMsg,
           reason: "missing_lock_target",
@@ -548,87 +557,100 @@ export class RunManager {
       return;
     }
 
-    // Start heartbeat so crash recovery can detect liveness
-    this.heartbeat.start(runId);
-
-    // Transition to running
-    await this.transition(run, "running");
-    run.startedAt = run.startedAt ?? Date.now();
-    run.attemptCount += 1;
-    await this.store.update(run);
-    await this.emitRunEvent(runId, "run_started", { attempt: run.attemptCount });
-
-    // Create abort controller for this execution
+    // Cancellation must see this controller during startup persistence too.
+    // Keep every operation after lock acquisition inside the cleanup boundary.
     const ac = new AbortController();
     this.abortControllers.set(runId, ac);
+    try {
+      const started = await this.mutateRun(runId, async () => {
+        // Lock acquisition can yield while a queued run is cancelled.
+        run = await this.getOrThrow(runId);
+        if (run.status !== "queued" || ac.signal.aborted) return false;
+        this.heartbeat.start(runId);
+        run.startedAt = run.startedAt ?? Date.now();
+        run.attemptCount += 1;
+        await this.transition(run, "running");
+        return true;
+      });
+      if (!started || ac.signal.aborted) return;
+      await this.emitRunEvent(runId, "run_started", { attempt: run.attemptCount });
 
-    // Create checkpoint writer and artifact tracker
-    const checkpointWriter = new CheckpointWriter({
-      runId,
-      objective: run.objective,
-      store: this.store,
-    });
-    const artifactTracker = new ArtifactTracker({
-      runId,
-      store: this.store,
-      detectors: this.artifactDetectors,
-    });
+      // Create checkpoint writer and artifact tracker
+      const checkpointWriter = new CheckpointWriter({
+        runId,
+        objective: run.objective,
+        store: this.store,
+      });
+      const artifactTracker = new ArtifactTracker({
+        runId,
+        store: this.store,
+        detectors: this.artifactDetectors,
+      });
 
-    // Build lifecycle hooks so Engine can notify us about approval/input needs
-    const lifecycleHooks: RunLifecycleHooks = {
-      onApprovalNeeded: async (request: ApprovalRequest) => {
-        return this.handleApprovalNeeded(runId, request);
-      },
-      onInputNeeded: async (question: string) => {
-        await this.handleInputNeeded(runId, question);
-      },
-    };
+      // Build lifecycle hooks so Engine can notify us about approval/input needs
+      const lifecycleHooks: RunLifecycleHooks = {
+        onApprovalNeeded: async (request: ApprovalRequest) => {
+          return this.mutateRun(runId, () => {
+            ac.signal.throwIfAborted();
+            return this.handleApprovalNeeded(runId, request);
+          });
+        },
+        onInputNeeded: async (question: string) => {
+          await this.mutateRun(runId, () => {
+            ac.signal.throwIfAborted();
+            return this.handleInputNeeded(runId, question);
+          });
+        },
+      };
 
-    const context: RunExecutionContext = {
-      signal: ac.signal,
-      onStream: async (event: StreamEvent) => {
-        // Feed events to checkpoint writer and artifact tracker
-        await checkpointWriter.onStreamEvent(event);
-        await artifactTracker.onStreamEvent(event);
+      const context: RunExecutionContext = {
+        signal: ac.signal,
+        onStream: async (event: StreamEvent) => {
+          // Feed events to checkpoint writer and artifact tracker
+          await checkpointWriter.onStreamEvent(event);
+          await artifactTracker.onStreamEvent(event);
 
-        // Link the run's sessionId the moment the engine resolves it.
-        // session_started fires at run START (engine.ts:1081); without this,
-        // sessionId is only written at completion, so in-flight runs have
-        // sessionId=null on disk and never reach the sidebar import.
-        //
-        // The `!agentId` guard is defensive: the built-in engine already
-        // suppresses sub-agent session_started upstream (engine.ts:830-835),
-        // but a custom RunExecutor could forward sub-agent events — and only
-        // the MAIN run's session should identify the run, never a sub-agent's.
-        if (event.type === "session_started" && !(event as { agentId?: string }).agentId) {
-          try {
-            const run = await this.getOrThrow(runId);
-            if (run.sessionId !== event.sessionId) {
-              run.sessionId = event.sessionId;
-              checkpointWriter.setSessionId(event.sessionId);
-              await this.store.update(run);
-              await this.emitRunEvent(runId, "session_linked", {
-                sessionId: event.sessionId,
+          // Link the run's sessionId the moment the engine resolves it.
+          // session_started fires at run START (engine.ts:1081); without this,
+          // sessionId is only written at completion, so in-flight runs have
+          // sessionId=null on disk and never reach the sidebar import.
+          //
+          // The `!agentId` guard is defensive: the built-in engine already
+          // suppresses sub-agent session_started upstream (engine.ts:830-835),
+          // but a custom RunExecutor could forward sub-agent events — and only
+          // the MAIN run's session should identify the run, never a sub-agent's.
+          if (event.type === "session_started" && !(event as { agentId?: string }).agentId) {
+            try {
+              await this.mutateRun(runId, async () => {
+                const run = await this.getOrThrow(runId);
+                if (ac.signal.aborted) return;
+                if (run.sessionId !== event.sessionId) {
+                  run.sessionId = event.sessionId;
+                  checkpointWriter.setSessionId(event.sessionId);
+                  await this.store.update(run);
+                  await this.emitRunEvent(runId, "session_linked", {
+                    sessionId: event.sessionId,
+                  });
+                }
+              });
+            } catch (linkErr) {
+              // Don't let a snapshot-write failure abort the run as a swallowed
+              // unhandled rejection — log and continue; the completion-time link
+              // is the backstop.
+              logger.warn("run.session_link_error", {
+                runId,
+                error: linkErr instanceof Error ? linkErr.message : String(linkErr),
               });
             }
-          } catch (linkErr) {
-            // Don't let a snapshot-write failure abort the run as a swallowed
-            // unhandled rejection — log and continue; the completion-time link
-            // is the backstop.
-            logger.warn("run.session_link_error", {
-              runId,
-              error: linkErr instanceof Error ? linkErr.message : String(linkErr),
-            });
           }
-        }
 
-        // Forward to run subscribers
-        this.notifySubscribers(runId, { type: "engine_stream", event });
-      },
-    };
+          // Forward to run subscribers
+          this.notifySubscribers(runId, { type: "engine_stream", event });
+        },
+      };
 
-    try {
-      const { result, handle } = await this.runner.execute(
+      if (ac.signal.aborted) return;
+      const { result } = await this.runner.execute(
         run,
         context,
         lifecycleHooks,
@@ -636,6 +658,8 @@ export class RunManager {
         // pending approvals/input while Engine is suspended
         (h) => this.executionHandles.set(runId, h),
       );
+
+      if (ac.signal.aborted) return;
 
       // Refresh run state (may have been updated during execution)
       const current = await this.getOrThrow(runId);
@@ -698,49 +722,56 @@ export class RunManager {
         });
       }
 
+      // Evaluators may take time and need not cooperate with cancellation.
+      // Never let their late result replace an already cancelled snapshot.
+      if (ac.signal.aborted) return;
+
       // Determine terminal state — evaluator verdict can override
       const engineSuccess = result.reason === "completed";
       const evalFailed = checkpoint.evaluator?.status === "failed";
       const isSuccess = engineSuccess && !evalFailed;
-      current.summary = result.text.slice(0, 500);
-
-      if (isSuccess) {
-        await this.transition(current, "completed");
-        current.finishedAt = Date.now();
-        await this.store.update(current);
-        await this.emitRunEvent(runId, "run_completed", {
-          turnCount: result.turnCount,
-          reason: result.reason,
-          evaluator: checkpoint.evaluator,
-        });
-        logger.info("run.completed", { runId, turnCount: result.turnCount });
-      } else {
-        current.error = evalFailed
-          ? `Evaluator failed: ${checkpoint.evaluator?.findings.join("; ")}`
-          : `Engine terminated: ${result.reason}`;
-        await this.transition(current, "failed");
-        current.finishedAt = Date.now();
-        await this.store.update(current);
-        await this.emitRunEvent(runId, "run_failed", {
-          reason: evalFailed ? "evaluator_failed" : result.reason,
-          error: current.error,
-          evaluator: checkpoint.evaluator,
-        });
-        logger.warn("run.failed", { runId, reason: evalFailed ? "evaluator" : result.reason });
-      }
+      await this.mutateRun(runId, async () => {
+        const latest = await this.getOrThrow(runId);
+        if (ac.signal.aborted || latest.status !== "running") return;
+        latest.sessionId = result.sessionId || latest.sessionId;
+        latest.latestCheckpointId = checkpoint.checkpointId;
+        latest.summary = result.text.slice(0, 500);
+        latest.finishedAt = Date.now();
+        if (isSuccess) {
+          await this.transition(latest, "completed");
+          await this.emitRunEvent(runId, "run_completed", {
+            turnCount: result.turnCount,
+            reason: result.reason,
+            evaluator: checkpoint.evaluator,
+          });
+          logger.info("run.completed", { runId, turnCount: result.turnCount });
+        } else {
+          latest.error = evalFailed
+            ? `Evaluator failed: ${checkpoint.evaluator?.findings.join("; ")}`
+            : `Engine terminated: ${result.reason}`;
+          await this.transition(latest, "failed");
+          await this.emitRunEvent(runId, "run_failed", {
+            reason: evalFailed ? "evaluator_failed" : result.reason,
+            error: latest.error,
+            evaluator: checkpoint.evaluator,
+          });
+          logger.warn("run.failed", { runId, reason: evalFailed ? "evaluator" : result.reason });
+        }
+      });
     } catch (err) {
-      const current = await this.store.get(runId);
-      if (!current) return;
+      await this.mutateRun(runId, async () => {
+        const current = await this.store.get(runId);
+        if (!current) return;
 
-      // If aborted (cancelled), state is already handled
-      if (ac.signal.aborted) return;
+        // If aborted (cancelled), state is already handled
+        if (ac.signal.aborted) return;
 
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      current.error = errorMsg;
-      await this.transition(current, "blocked");
-      await this.store.update(current);
-      await this.emitRunEvent(runId, "run_blocked", { error: errorMsg });
-      logger.error("run.blocked", { runId, error: errorMsg });
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        current.error = errorMsg;
+        await this.transition(current, "blocked");
+        await this.emitRunEvent(runId, "run_blocked", { error: errorMsg });
+        logger.error("run.blocked", { runId, error: errorMsg });
+      });
     } finally {
       this.abortControllers.delete(runId);
       this.executionHandles.delete(runId);
@@ -887,20 +918,44 @@ export class RunManager {
     const subs = this.subscribers.get(runId);
     if (!subs) return;
     for (const cb of subs) {
-      try {
-        cb(event);
-      } catch (err) {
-        // Remove broken subscriber to prevent repeated errors
+      const failed = (err: unknown) => {
         subs.delete(cb);
+        if (subs.size === 0 && this.subscribers.get(runId) === subs) {
+          this.subscribers.delete(runId);
+        }
         logger.warn("run.subscriber_error", {
           runId,
           error: err instanceof Error ? err.message : String(err),
         });
+      };
+      try {
+        // Subscribers may return promises. Rejections need the same isolation
+        // as synchronous throws and must never escape into the host process.
+        const result = cb(event);
+        if (result) void Promise.resolve(result).catch(failed);
+      } catch (err) {
+        failed(err);
       }
     }
   }
 
   // ─── Helpers ───────────────────────────────────────────────────
+
+  private async mutateRun<T>(runId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.mutations.get(runId) ?? Promise.resolve();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.mutations.set(runId, pending);
+    try {
+      await previous;
+      return await operation();
+    } finally {
+      release();
+      if (this.mutations.get(runId) === pending) this.mutations.delete(runId);
+    }
+  }
 
   private async getPendingApprovalForResume(
     run: RunSnapshot,

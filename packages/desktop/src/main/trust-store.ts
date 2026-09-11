@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
+import * as syncFs from "node:fs";
 import { constants, readFileSync, realpathSync } from "node:fs";
 import * as path from "node:path";
 import { codeShellHome } from "@cjhyy/code-shell-core";
@@ -90,21 +91,51 @@ async function load(target = file): Promise<TrustMap> {
   }
 }
 
-async function assertSafeTrustParent(target: string): Promise<void> {
+function loadForMutation(target: string): TrustMap {
+  let descriptor: number | undefined;
+  try {
+    const entry = syncFs.lstatSync(target);
+    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_TRUST_FILE_BYTES) {
+      throw new Error("trust registry must be a bounded regular file");
+    }
+    descriptor = syncFs.openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = syncFs.fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_TRUST_FILE_BYTES) {
+      throw new Error("trust registry must be a bounded regular file");
+    }
+    const buffer = Buffer.alloc(Math.min(opened.size + 1, MAX_TRUST_FILE_BYTES + 1));
+    let bytes = 0;
+    while (bytes < buffer.length) {
+      const count = syncFs.readSync(descriptor, buffer, bytes, buffer.length - bytes, bytes);
+      if (!count) break;
+      bytes += count;
+    }
+    if (bytes > opened.size) throw new Error("trust registry changed during read");
+    cache = parseTrustMap(JSON.parse(buffer.subarray(0, bytes).toString("utf8")));
+    return cache;
+  } catch {
+    cache = {};
+    return {};
+  } finally {
+    if (descriptor !== undefined) syncFs.closeSync(descriptor);
+  }
+}
+
+function assertSafeTrustParent(target: string): void {
   const parent = path.dirname(target);
-  await fs.mkdir(parent, { recursive: true, mode: 0o700 });
-  const parentInfo = await fs.lstat(parent);
+  syncFs.mkdirSync(parent, { recursive: true, mode: 0o700 });
+  const parentInfo = syncFs.lstatSync(parent);
   if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
     throw new Error("trust registry directory must be a real directory");
   }
 }
 
-async function save(target: string, map: TrustMap): Promise<void> {
+function save(target: string, map: TrustMap): void {
   const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    await assertSafeTrustParent(target);
+    assertSafeTrustParent(target);
     try {
-      const targetInfo = await fs.lstat(target);
+      const targetInfo = syncFs.lstatSync(target);
       if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) {
         throw new Error("trust registry target must be a regular file");
       }
@@ -115,18 +146,22 @@ async function save(target: string, map: TrustMap): Promise<void> {
     if (Buffer.byteLength(serialized, "utf8") > MAX_TRUST_FILE_BYTES) {
       throw new Error("trust registry is too large");
     }
-    await fs.writeFile(temporary, serialized, {
+    syncFs.writeFileSync(temporary, serialized, {
       encoding: "utf8",
       mode: 0o600,
       flag: "wx",
     });
-    await fs.rename(temporary, target);
+    syncFs.renameSync(temporary, target);
   } finally {
-    await fs.rm(temporary, { force: true }).catch(() => undefined);
+    try {
+      syncFs.rmSync(temporary, { force: true });
+    } catch {
+      /* Preserve the original write error. */
+    }
   }
 }
 
-function serializeMutation(mutation: (target: string) => Promise<void>): Promise<void> {
+function serializeMutation(mutation: (target: string) => void): Promise<void> {
   const target = file;
   const result = mutationQueue.then(() => mutation(target));
   mutationQueue = result.catch(() => undefined);
@@ -144,19 +179,21 @@ export function setTrust(projectPath: string, level: TrustLevel): Promise<void> 
   if (!validTrustPath(projectPath)) throw new Error("invalid trust path");
   if (level !== "trusted" && level !== "untrusted") throw new Error("invalid trust level");
   const canonical = canonicalTrustPath(projectPath);
-  return serializeMutation(async (target) => {
-    await assertSafeTrustParent(target);
+  return serializeMutation((target) => {
+    assertSafeTrustParent(target);
     const release = acquireFileLock(target);
     try {
       // Re-read while holding the cross-process lock. Atomic rename alone does
       // not stop two desktop instances from both writing a stale snapshot.
-      const map = { ...(await load(target)) };
+      // Do not yield: catalog/project writes take the same directory lock
+      // synchronously and would otherwise block our release until it is stale.
+      const map = { ...loadForMutation(target) };
       if (!(canonical in map) && Object.keys(map).length >= MAX_TRUST_ENTRIES) {
         throw new Error("trust registry is full");
       }
       map[canonical] = level;
       // Only publish trusted state to the sync path after durable persistence.
-      await save(target, map);
+      save(target, map);
       cache = map;
     } finally {
       release();

@@ -13,6 +13,7 @@ import type { SetConnectionKeyResult } from "./useModelConnections";
 import {
   credentialCandidates,
   credentialLabel,
+  modelSelectionPatch,
   type Credential,
   type ModelInstance,
 } from "./textConnections";
@@ -95,7 +96,7 @@ export function ConnectionInstanceCard({
       <ConnField label={t("settingsX.textConn.fieldModel")}>
         <SimpleSelect
           value={inst.model}
-          onChange={(v) => onPatch(inst.id, { model: v })}
+          onChange={(v) => onPatch(inst.id, modelSelectionPatch(inst, entry, v))}
           options={(entry?.modelPresets ?? []).map((p) => ({
             value: p.value,
             label: p.label ?? p.value,

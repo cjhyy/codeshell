@@ -21,15 +21,21 @@
 import type { Message, MessagesReducerState } from "../types";
 
 /**
- * Content signature for dedup. Two messages with the same signature are "the
- * same turn" regardless of their (randomly assigned) ids. Tool calls key on
- * name + serialized args; text-bearing messages key on their text.
+ * Cross-projection signature for dedup, independent of renderer-local ids.
+ * User inputs prefer their durable intent id; tool calls key on name + args,
+ * and other text-bearing messages key on their text within that user turn.
  */
 function signature(m: Message): string {
   switch (m.kind) {
     case "tool":
       return `tool|${m.toolName}|${m.args}`;
     case "user":
+      // Repeated requests (for example "continue") are separate turns. The
+      // persisted client/steer id is stable across live and disk projections;
+      // text alone would hide a new submission behind an older identical one.
+      if (m.clientMessageId) return `user|client:${m.clientMessageId}`;
+      if (m.steerId) return `user|steer:${m.steerId}`;
+      return `user|${m.text}`;
     case "assistant":
     case "system":
     case "thinking":
@@ -62,15 +68,48 @@ function signature(m: Message): string {
   }
 }
 
+function transcriptSignatures(messages: readonly Message[]): string[] {
+  let turnIdentity = "";
+  return messages.map((message) => {
+    if (message.kind === "user") {
+      turnIdentity = message.clientMessageId
+        ? `client:${message.clientMessageId}`
+        : message.steerId
+          ? `steer:${message.steerId}`
+          : "";
+    }
+    // Repeated replies and tool calls must not extend the overlap past a new
+    // user intent just because a previous turn produced the same content.
+    return `${turnIdentity}|${signature(message)}`;
+  });
+}
+
+type TranscriptCursor = Pick<MessagesReducerState, "snapshotEpoch" | "snapshotSeq">;
+
+/** Keep a cursor bound to its Main lifetime; unscoped legacy counters cannot
+ * advance a known epoch. The live epoch wins across restarts. Two legacy
+ * cursors retain their existing max-sequence compatibility behavior. */
+export function mergeTranscriptCursor(
+  disk: TranscriptCursor,
+  live: TranscriptCursor,
+): TranscriptCursor {
+  const diskEpoch = disk.snapshotEpoch || undefined;
+  const liveEpoch = live.snapshotEpoch || undefined;
+  if (diskEpoch === liveEpoch) {
+    return { snapshotEpoch: liveEpoch, snapshotSeq: Math.max(disk.snapshotSeq, live.snapshotSeq) };
+  }
+  return liveEpoch
+    ? { snapshotEpoch: liveEpoch, snapshotSeq: live.snapshotSeq }
+    : { snapshotEpoch: diskEpoch, snapshotSeq: disk.snapshotSeq };
+}
+
 export function mergeTranscripts(
   disk: MessagesReducerState,
   live: MessagesReducerState,
 ): MessagesReducerState {
-  // Even when one side has no messages, keep the highest snapshotSeq so the
-  // subscribe cursor never regresses and replays already-applied events.
-  const mergedSnapshotSeq = Math.max(disk.snapshotSeq, live.snapshotSeq);
-  if (disk.messages.length === 0) return { ...live, snapshotSeq: mergedSnapshotSeq };
-  if (live.messages.length === 0) return { ...disk, snapshotSeq: mergedSnapshotSeq };
+  const cursor = mergeTranscriptCursor(disk, live);
+  if (disk.messages.length === 0) return { ...live, ...cursor };
+  if (live.messages.length === 0) return { ...disk, ...cursor };
 
   // Find the live "continuation point": the index just after the LAST live
   // message that disk also has. Everything in live up to there is part of a
@@ -84,10 +123,11 @@ export function mergeTranscripts(
   // filter kept those live-only messages even when they sat INSIDE a
   // disk-covered span, appending them as a tail with no user message; that tail
   // then folded into an orphan "已处理 N 条命令" group pinned to the bottom.
-  const seen = new Set(disk.messages.map(signature));
+  const seen = new Set(transcriptSignatures(disk.messages));
+  const liveSignatures = transcriptSignatures(live.messages);
   let lastCovered = -1;
   for (let i = 0; i < live.messages.length; i++) {
-    if (seen.has(signature(live.messages[i]!))) lastCovered = i;
+    if (seen.has(liveSignatures[i]!)) lastCovered = i;
   }
   const liveTail = live.messages.slice(lastCovered + 1);
 
@@ -117,7 +157,7 @@ export function mergeTranscripts(
     // session_started / usage_update), falling back to disk when live is unset.
     sessionId: live.sessionId ?? disk.sessionId,
     promptTokens: live.promptTokens || disk.promptTokens,
-    snapshotSeq: Math.max(disk.snapshotSeq, live.snapshotSeq),
+    ...cursor,
     // Streaming pointers belong to the live turn (if any is mid-flight).
     streamingAssistantId: live.streamingAssistantId,
     streamingThinkingId: live.streamingThinkingId,

@@ -15,6 +15,7 @@ export class PendingMobileApprovals {
     } catch {
       return;
     }
+    if (!msg || typeof msg !== "object" || Array.isArray(msg)) return;
 
     if (msg.method === "agent/approvalRequest") {
       const params = msg.params as Record<string, unknown> | null;

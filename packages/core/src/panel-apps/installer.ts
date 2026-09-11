@@ -62,6 +62,8 @@ const ALLOWED_ASSET_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
   ".webp",
+  ".mp3",
+  ".wav",
   ".woff",
   ".woff2",
   ".ttf",

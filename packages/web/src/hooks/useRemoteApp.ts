@@ -37,13 +37,14 @@ import {
   markSessionUnread,
   markRoomSeqApplied,
   maxRoomSeq,
-  noteSessionSeq,
+  alignSessionEpoch,
   pruneUnreadSessions,
   rawApprovalResolvedRequestId,
   removeResolvedApproval,
   roomMessageSeq,
   selectSessionReplayEntries,
   type SessionReplayEntry,
+  type SessionStreamCursor,
 } from "./remoteAppSync.js";
 
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
@@ -164,6 +165,7 @@ type ChatAction =
       attachments?: Array<{ name: string; mime?: string; size: number }>;
     }
   | { kind: "reset" }
+  | { kind: "stream_epoch_changed" }
   | { kind: "replay"; events: unknown[] }
   | { kind: "append"; events: unknown[] };
 
@@ -175,6 +177,23 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return appendUserMessage(state, action.text, action.attachments);
     case "reset":
       return initialChatState();
+    case "stream_epoch_changed": {
+      const seq = state.seq + 1;
+      return {
+        ...state,
+        seq,
+        run: "idle",
+        liveByAgent: {},
+        orphanResults: undefined,
+        items: state.items.map((item) =>
+          item.kind === "assistant"
+            ? { ...item, done: true }
+            : item.kind === "tool"
+              ? { ...item, id: `prior-${seq}-${item.id}`, done: true }
+              : item,
+        ),
+      };
+    }
     case "replay":
       return action.events.reduce(reduceStream, initialChatState());
     case "append":
@@ -356,10 +375,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
   /** Which session id the chat view is bound to (for filtering live stream). */
   const boundSessionRef = useRef<string | undefined>(undefined);
-  /** Highest mobile snapshot seq applied per desktop session. */
-  const appliedSeqRef = useRef<Map<string, number>>(new Map());
-  /** Highest live/snapshot seq observed per desktop session, including sessions not being viewed. */
-  const lastSessionSeqRef = useRef<Map<string, number>>(new Map());
+  /** Observed/applied cursors always belong to the same Main process epoch. */
+  const sessionCursorsRef = useRef<Map<string, SessionStreamCursor>>(new Map());
+  /** A newly selected epoch must load its durable history before live recovery. */
+  const epochHistorySessionRef = useRef<string | undefined>(undefined);
+  const sessionCursor = useCallback((sessionId: string): SessionStreamCursor => {
+    let cursor = sessionCursorsRef.current.get(sessionId);
+    if (!cursor) {
+      cursor = { appliedSeq: 0, observedSeq: 0, awaitingSnapshot: false };
+      sessionCursorsRef.current.set(sessionId, cursor);
+    }
+    return cursor;
+  }, []);
   /** Highest room message seq seen per active room. Used as room.history cursor. */
   const lastRoomSeqRef = useRef<Map<string, number>>(new Map());
   /** Recent room seqs already folded into the reducer, for idempotent history/live merge. */
@@ -569,26 +596,81 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           break;
         case "session.history.ok":
           // Only apply if it's the session we're currently viewing.
-          if (event.sessionId === boundSessionRef.current) {
+          if (event.sessionId === boundSessionRef.current && !activeRoomIdRef.current) {
+            const cursor = sessionCursor(event.sessionId);
+            // An earlier retry may finish after a fresh live turn starts.
+            // Only an explicitly requested history can replace that projection.
+            if (
+              cursor.historyUnpaired !== undefined &&
+              epochHistorySessionRef.current !== event.sessionId
+            )
+              break;
             dispatchChat({ kind: "replay", events: event.events });
+            if (epochHistorySessionRef.current === event.sessionId) {
+              epochHistorySessionRef.current = undefined;
+              dispatchChat({ kind: "stream_epoch_changed" });
+              // History carries no live cursor. A full snapshot could repeat
+              // a reply already saved here, so keep the durable projection
+              // until a subsequent top-level start proves a fresh boundary.
+              cursor.historyUnpaired = true;
+              cursor.awaitingSnapshot = true;
+              setNotice(t("mobile.notice.sessionRecoveryHistoryOnly"));
+            }
             setLoadingKey("sessionHistory", false);
           }
           break;
         case "session.snapshot": {
           if (event.sessionId !== boundSessionRef.current || activeRoomIdRef.current) break;
-          const appliedSeq = appliedSeqRef.current.get(event.sessionId) ?? 0;
+          if (epochHistorySessionRef.current === event.sessionId) break;
+          const session = sessionCursor(event.sessionId);
+          const changed = alignSessionEpoch(session, event.epoch);
+          if (session.historyUnpaired) break;
+          if (changed) {
+            dispatchChat({ kind: "stream_epoch_changed" });
+            setApprovals([]);
+            session.awaitingSnapshot = true;
+          }
+          // After a restart only a full new-domain prefix can release the
+          // barrier. An older filtered reply (or an evicted prefix) cannot.
+          if (
+            session.awaitingSnapshot &&
+            event.nextSeq > 1 &&
+            !event.entries.some((entry) => entry.seq === 1)
+          ) {
+            if (changed) {
+              sendRef.current?.({
+                type: "session.sync",
+                sessionId: event.sessionId,
+                sinceSeq: 0,
+                epoch: session.epoch,
+              });
+            } else {
+              setNotice(t("mobile.notice.sessionRecoveryIncomplete"));
+            }
+            setLoadingKey("sessionHistory", false);
+            break;
+          }
+          const appliedSeq = session.appliedSeq;
           const { events, cursor } = selectSessionReplayEntries(
             event.entries as SessionReplayEntry[],
             appliedSeq,
           );
-          if (cursor > appliedSeq) appliedSeqRef.current.set(event.sessionId, cursor);
-          if (cursor > 0) noteSessionSeq(lastSessionSeqRef.current, event.sessionId, cursor);
+          session.appliedSeq = cursor;
+          session.observedSeq = Math.max(session.observedSeq, cursor);
+          session.awaitingSnapshot = false;
           appendSessionEvents(event.sessionId, events);
           setLoadingKey("sessionHistory", false);
           break;
         }
         case "session.stream": {
-          if (!noteSessionSeq(lastSessionSeqRef.current, event.sessionId, event.seq)) break;
+          if (!Number.isSafeInteger(event.seq) || event.seq < 1) break;
+          const session = sessionCursor(event.sessionId);
+          const hadCursor =
+            session.epoch !== undefined || session.appliedSeq > 0 || session.observedSeq > 0;
+          const changed = alignSessionEpoch(session, event.epoch);
+          if (changed) session.awaitingSnapshot = hadCursor || event.seq > 1;
+          if (event.seq <= session.observedSeq) break;
+          session.observedSeq = event.seq;
           if (activeRoomIdRef.current) {
             setUnreadSessionIds((prev) => markSessionUnread(prev, event.sessionId));
             break;
@@ -606,9 +688,37 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             setActiveSessionCwd(sessionCwdById.get(event.sessionId));
           }
           clearSessionUnread(event.sessionId);
-          const appliedSeq = appliedSeqRef.current.get(event.sessionId) ?? 0;
-          if (event.seq <= appliedSeq) break;
-          appliedSeqRef.current.set(event.sessionId, event.seq);
+          if (changed) {
+            dispatchChat({ kind: "stream_epoch_changed" });
+            setApprovals([]);
+            session.awaitingSnapshot = hadCursor || event.seq > 1;
+            if (session.awaitingSnapshot && epochHistorySessionRef.current !== event.sessionId) {
+              // Main captures/replies synchronously on this ordered socket.
+              // Its full snapshot covers every live frame preceding the reply,
+              // so waiting needs no unbounded client-side event journal.
+              sendRef.current?.({
+                type: "session.sync",
+                sessionId: event.sessionId,
+                sinceSeq: 0,
+                epoch: session.epoch,
+              });
+            }
+          }
+          if (session.historyUnpaired && epochHistorySessionRef.current !== event.sessionId) {
+            const raw = event.event as Record<string, unknown> | null;
+            if (raw?.type === "stream_request_start" && !raw.agentId) {
+              session.historyUnpaired = false;
+              session.awaitingSnapshot = false;
+              // Every older snapshot entry is either already in history or
+              // unprovable. None may be replayed into this new live turn.
+              session.appliedSeq = event.seq - 1;
+              setNoticeState((notice) =>
+                notice === t("mobile.notice.sessionRecoveryHistoryOnly") ? undefined : notice,
+              );
+            }
+          }
+          if (session.awaitingSnapshot || event.seq <= session.appliedSeq) break;
+          session.appliedSeq = event.seq;
           appendSessionEvents(event.sessionId, [event.event]);
           break;
         }
@@ -888,6 +998,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setLoadingKey,
       settleMessageAck,
       setNotice,
+      sessionCursor,
     ],
   );
 
@@ -1002,12 +1113,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     }
     const sessionId = boundSessionRef.current;
     if (!sessionId) return;
+    const cursor = sessionCursor(sessionId);
+    if (epochHistorySessionRef.current === sessionId || cursor.historyUnpaired) {
+      epochHistorySessionRef.current = sessionId;
+      setLoadingKey("sessionHistory", true);
+      sendRef.current?.({ type: "session.history", sessionId });
+      return;
+    }
     sendRef.current?.({
       type: "session.sync",
       sessionId,
-      sinceSeq: appliedSeqRef.current.get(sessionId) ?? 0,
+      sinceSeq: cursor.awaitingSnapshot ? 0 : cursor.appliedSeq,
+      ...(cursor.epoch ? { epoch: cursor.epoch } : {}),
     });
-  }, [setLoadingKey]);
+  }, [setLoadingKey, sessionCursor]);
 
   const socket = useRemoteSocket({
     onServerEvent,
@@ -1150,6 +1269,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clearSessionUnread(id);
       setActiveSessionCwd(sessionCwdById.get(id) ?? null);
       boundSessionRef.current = id;
+      const cursor = sessionCursor(id);
+      epochHistorySessionRef.current =
+        cursor.awaitingSnapshot || cursor.historyUnpaired !== undefined ? id : undefined;
       ccHistorySessionRef.current = undefined;
       ccHistoryCwdRef.current = undefined;
       ccBacklogLoadedRef.current = false;
@@ -1160,7 +1282,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       socket.send({ type: "session.select", sessionId: id });
       socket.send({ type: "session.history", sessionId: id });
     },
-    [clearSessionUnread, socket, sessionCwdById, setLoadingKey],
+    [clearSessionUnread, socket, sessionCwdById, setLoadingKey, sessionCursor],
   );
 
   /** Select a project (like the desktop sidebar): set the one-true-source cwd and

@@ -152,6 +152,25 @@ describe("WorkspaceProfile requires", () => {
     ).toThrow();
   });
 
+  test("rejects flag and wildcard selectors only for installable Skill names", () => {
+    for (const name of ["--global", "-g", "--all", "-", "*", "bad\0name"]) {
+      expect(() =>
+        WorkspaceProfileSchema.parse({
+          ...base,
+          requires: { skills: [{ source: "github", repo: "owner/repo", skills: [name] }] },
+        }),
+      ).toThrow();
+    }
+    const names = ["constructor", "toString", "__proto__", "skill,comma"];
+    expect(
+      WorkspaceProfileSchema.parse({
+        ...base,
+        requires: { skills: [{ source: "github", repo: "owner/repo", skills: names }] },
+      }).requires!.skills[0]!.skills,
+    ).toEqual(names);
+    expect(WorkspaceProfileSchema.parse({ ...base, skills: ["*"] }).skills).toEqual(["*"]);
+  });
+
   test("parses tool requirements and rejects non-numeric versions", () => {
     const p = WorkspaceProfileSchema.parse({
       ...base,

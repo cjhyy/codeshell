@@ -111,6 +111,8 @@ export class ModelFacade {
           if (!onStream) return;
           if (chunk.type === "text" && chunk.text) {
             onStream({ type: "text_delta", text: chunk.text, tokens: chunk.tokens });
+          } else if (chunk.type === "thinking" && chunk.text) {
+            onStream({ type: "thinking_delta", text: chunk.text });
           } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
             // Forward tool_use_start immediately so the UI can show progress
             // while JSON args are still streaming

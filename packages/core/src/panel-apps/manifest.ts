@@ -18,6 +18,8 @@ export const PANEL_APP_PERMISSIONS = [
   "credentials.cookies",
   "automations.manage",
   "process",
+  "media",
+  "media.capture",
 ] as const;
 
 export const PANEL_APP_ICONS = [
@@ -205,13 +207,16 @@ export const PanelAppManifest = z
     if (
       (value.permissions.includes("workspace.read") ||
         value.permissions.includes("workspace.write") ||
-        value.permissions.includes("audio.transcribe")) &&
+        value.permissions.includes("audio.transcribe") ||
+        value.permissions.includes("media.capture") ||
+        value.permissions.includes("media")) &&
       !value.permissions.includes("context.workspace")
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["permissions"],
-        message: "workspace.read, workspace.write, and audio.transcribe require context.workspace",
+        message:
+          "workspace.read, workspace.write, audio.transcribe, and media require context.workspace",
       });
     }
     if (

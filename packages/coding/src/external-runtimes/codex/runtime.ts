@@ -192,6 +192,14 @@ export class CodexRuntime {
       threadIdPrefix: threadId.slice(0, 8),
       resumed: this.resumed,
     });
+    // Announce the host identity after a successful start/resume. Codex may
+    // deliver thread/started before this RPC settles (and before the translator
+    // exists), so that notification cannot reliably establish the UI binding.
+    this.emitEvent({
+      type: "session_started",
+      sessionId: this.options.businessSessionId,
+      promptTokens: 0,
+    });
   }
 
   /**
@@ -284,17 +292,21 @@ export class CodexRuntime {
   private onNotification(method: string, params: unknown): void {
     const events = this.translator?.translate({ method, params }) ?? [];
     for (const event of events) {
-      try {
-        this.hooks.onEvent?.(event);
-      } catch (error) {
-        this.log("runtime.event_handler_failed", {
-          error: error instanceof Error ? error.name : "unknown",
-        });
-      }
+      this.emitEvent(event);
       if (event.type === "turn_complete") {
         this.activeTurn?.resolve();
         this.activeTurn = undefined;
       }
+    }
+  }
+
+  private emitEvent(event: StreamEvent): void {
+    try {
+      this.hooks.onEvent?.(event);
+    } catch (error) {
+      this.log("runtime.event_handler_failed", {
+        error: error instanceof Error ? error.name : "unknown",
+      });
     }
   }
 

@@ -37,9 +37,11 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
       ? t("settingsX.textConn.headingImage")
       : tag === "video"
         ? t("settingsX.textConn.headingVideo")
-        : tag === "audio"
-          ? t("settingsX.textConn.headingAudio")
-          : t("settingsX.textConn.headingText"));
+        : tag === "speech"
+          ? t("settingsX.textConn.headingSpeech")
+          : tag === "audio"
+            ? t("settingsX.textConn.headingAudio")
+            : t("settingsX.textConn.headingText"));
   const {
     catalog,
     instances,

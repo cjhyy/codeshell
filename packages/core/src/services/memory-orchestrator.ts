@@ -15,10 +15,11 @@
 
 import {
   MemoryManager,
+  resolveMemoryBaseDir,
   type MemoryEntry,
   type MemoryOrigin,
-  type MemoryScope,
 } from "../session/memory.js";
+import { resolve } from "node:path";
 import {
   buildExtractionPrompt,
   parseExtractionResponse,
@@ -59,10 +60,13 @@ export interface MemoryOrchestratorOptions {
     systemPrompt: string;
     userPrompt: string;
     projectDir?: string;
+    baseDir?: string;
   }) => Promise<boolean>;
   /** Project root; when set, memories are scoped per-project. */
   projectDir?: string;
-  /** Optional pre-constructed MemoryManager (avoids re-creating for every call). */
+  /** Explicit root shared by memory scopes, summaries and dream bookkeeping. */
+  baseDir?: string;
+  /** Optional manager whose root/project are inherited by the whole pipeline. */
   memoryManager?: MemoryManager;
   /**
    * Max memories to accept per extraction pass. From settings.memories.maxCount;
@@ -117,7 +121,29 @@ interface MemoryCandidateSummary extends ExistingMemorySummary {
 }
 
 export class MemoryOrchestrator {
-  constructor(private readonly options: MemoryOrchestratorOptions) {}
+  private readonly projectDir?: string;
+  private readonly baseDir?: string;
+
+  constructor(private readonly options: MemoryOrchestratorOptions) {
+    const storage = options.memoryManager?.getStorageContext();
+    if (
+      storage &&
+      options.baseDir !== undefined &&
+      resolve(resolveMemoryBaseDir(options.baseDir)) !== resolve(storage.baseDir)
+    )
+      throw new Error("MemoryOrchestrator baseDir conflicts with injected storage");
+    if (
+      storage &&
+      options.projectDir !== undefined &&
+      (!storage.projectDir || resolve(options.projectDir) !== resolve(storage.projectDir))
+    )
+      throw new Error("MemoryOrchestrator projectDir conflicts with injected storage");
+    this.projectDir = storage ? storage.projectDir : options.projectDir;
+    // No explicit storage keeps legacy summary HOME routing; explicit/injected
+    // storage binds every auxiliary operation to the same root.
+    this.baseDir =
+      options.baseDir !== undefined ? resolveMemoryBaseDir(options.baseDir) : storage?.baseDir;
+  }
 
   /**
    * Run the full end-of-session memory pipeline.
@@ -132,7 +158,9 @@ export class MemoryOrchestrator {
     sessionId: string,
   ): Promise<MemoryOrchestratorResult> {
     const mm =
-      this.options.memoryManager ?? new MemoryManager({ projectDir: this.options.projectDir });
+      this.options.memoryManager ??
+      new MemoryManager({ projectDir: this.projectDir, baseDir: this.baseDir });
+    const storage = mm.getStorageContext();
     const startTime = Date.now();
 
     // --------------- 1. Extract durable memories ---------------
@@ -144,7 +172,7 @@ export class MemoryOrchestrator {
     } else
       try {
         let t = Date.now();
-        const existing = collectExistingMemorySummaries(mm, this.options.projectDir);
+        const existing = collectExistingMemorySummaries(mm, storage);
         const loadMs = Date.now() - t;
         t = Date.now();
         const extractionPrompt = buildExtractionPrompt(transcript, existing);
@@ -181,7 +209,7 @@ export class MemoryOrchestrator {
               const isGlobal = redactedEntry.scope === "global";
               if (isGlobal) {
                 const promotion = applyGlobalDreamPromotionGate({
-                  projectDir: this.options.projectDir,
+                  ...storage,
                   candidate: redactedEntry,
                   userDirectGlobal,
                 });
@@ -191,7 +219,7 @@ export class MemoryOrchestrator {
                 addCount++;
                 break;
               }
-              const target = memoryManagerForDecision("project", "dream", this.options.projectDir);
+              const target = memoryManagerForDecision("project", "dream", storage);
               target.save(
                 {
                   type: redactedEntry.type,
@@ -199,9 +227,7 @@ export class MemoryOrchestrator {
                   description: redactedEntry.description,
                   content: redactedEntry.content,
                   origin: "auto",
-                  ...(isGlobal && this.options.projectDir
-                    ? { originProject: this.options.projectDir }
-                    : {}),
+                  ...(isGlobal && this.projectDir ? { originProject: this.projectDir } : {}),
                 },
                 { forceOrigin: "auto" },
               );
@@ -217,7 +243,7 @@ export class MemoryOrchestrator {
                 break;
               }
               const location = decision.target?.location ?? redactedEntry.scope;
-              const target = memoryManagerForDecision(location, "dream", this.options.projectDir);
+              const target = memoryManagerForDecision(location, "dream", storage);
               const existingTarget = target.findById(targetId);
               if (!existingTarget || !target.isOwnedBy(existingTarget, ["auto", "dream"])) {
                 noopCount++;
@@ -248,7 +274,7 @@ export class MemoryOrchestrator {
             case "DELETE": {
               const targetId = decision.target?.id;
               const location = decision.target?.location ?? redactedEntry.scope;
-              const target = memoryManagerForDecision(location, "dream", this.options.projectDir);
+              const target = memoryManagerForDecision(location, "dream", storage);
               if (!targetId) {
                 noopCount++;
                 break;
@@ -322,13 +348,16 @@ export class MemoryOrchestrator {
           }
         }
         if (parsed) {
-          saveSessionMemory({
-            sessionId,
-            summary: String(parsed.summary ?? "").slice(0, 1000),
-            keyTopics: Array.isArray(parsed.keyTopics) ? parsed.keyTopics.slice(0, 20) : [],
-            decisions: Array.isArray(parsed.decisions) ? parsed.decisions.slice(0, 20) : [],
-            createdAt: new Date().toISOString(),
-          });
+          saveSessionMemory(
+            {
+              sessionId,
+              summary: String(parsed.summary ?? "").slice(0, 1000),
+              keyTopics: Array.isArray(parsed.keyTopics) ? parsed.keyTopics.slice(0, 20) : [],
+              decisions: Array.isArray(parsed.decisions) ? parsed.decisions.slice(0, 20) : [],
+              createdAt: new Date().toISOString(),
+            },
+            this.baseDir,
+          );
         }
       }
     } catch (err) {
@@ -339,7 +368,7 @@ export class MemoryOrchestrator {
     }
 
     // --------------- 3. Record session for auto-dream tracking ---------------
-    recordSession();
+    recordSession(storage.baseDir);
 
     // --------------- 4. Auto-dream consolidation ---------------
     // Drives a tool-call loop in the caller (Engine.runDream) so the LLM can
@@ -350,26 +379,27 @@ export class MemoryOrchestrator {
     //   - the workspace is empty (nothing to consolidate)
     let dreamTriggered = false;
     try {
-      if (shouldAutoDream() && this.options.runDream) {
+      if (shouldAutoDream(undefined, storage.baseDir) && this.options.runDream) {
         // Dream sees project user/ (read-only context) + project dream/
         // (workspace) + global dream/ (cross-project workspace it also cleans).
         const userMems = mm.loadScope("user");
         const dreamMems = mm.loadScope("dream");
-        const globalDreamMems = this.options.projectDir
-          ? new MemoryManager({ scope: "dream" }).loadScope("dream")
+        const globalDreamMems = this.projectDir
+          ? memoryManagerForDecision("global", "dream", storage).loadScope("dream")
           : [];
         if (userMems.length + dreamMems.length + globalDreamMems.length > 0) {
           // Snapshot the cadence counter BEFORE the (async) run so sessions that
           // finish while it is in flight are carried into the next cycle rather
           // than being zeroed away on completion.
-          const consumed = sessionsSinceLastDream();
+          const consumed = sessionsSinceLastDream(storage.baseDir);
           const ran = await this.options.runDream({
             systemPrompt: buildDreamSystemPrompt(),
             userPrompt: buildDreamUserPrompt(userMems, dreamMems, globalDreamMems),
-            projectDir: this.options.projectDir,
+            projectDir: this.projectDir,
+            baseDir: storage.baseDir,
           });
           if (ran) {
-            recordDreamComplete(consumed);
+            recordDreamComplete(consumed, storage.baseDir);
             dreamTriggered = true;
             logger.info("memory.auto_dream_done", {
               sessionId,
@@ -397,8 +427,8 @@ export class MemoryOrchestrator {
       if (ttl && ttl > 0) {
         pruned.push(...mm.pruneByRecall(ttl));
         // Only sweep the global store when we're not already it (projectDir set).
-        if (this.options.projectDir) {
-          pruned.push(...new MemoryManager({ scope: "user" }).pruneByRecall(ttl));
+        if (this.projectDir) {
+          pruned.push(...memoryManagerForDecision("global", "user", storage).pruneByRecall(ttl));
         }
         if (pruned.length > 0) {
           logger.info("memory.recall_ttl_pruned", { sessionId, pruned, ttlDays: ttl });
@@ -418,17 +448,18 @@ export class MemoryOrchestrator {
 function memoryManagerForDecision(
   location: MemoryLocation,
   scope: "user" | "dream",
-  projectDir?: string,
+  storage: Readonly<{ baseDir: string; projectDir?: string }>,
 ): MemoryManager {
   return new MemoryManager({
-    projectDir: location === "project" ? projectDir : undefined,
+    baseDir: storage.baseDir,
+    projectDir: location === "project" ? storage.projectDir : undefined,
     scope,
   });
 }
 
 function collectExistingMemorySummaries(
   projectUserManager: MemoryManager,
-  projectDir?: string,
+  storage: Readonly<{ baseDir: string; projectDir?: string }>,
 ): MemoryCandidateSummary[] {
   const seen = new Set<string>();
   const out: MemoryCandidateSummary[] = [];
@@ -455,9 +486,9 @@ function collectExistingMemorySummaries(
   };
 
   add(projectUserManager.loadScope("user"), "project", "user");
-  add(memoryManagerForDecision("project", "dream", projectDir).loadAll(), "project", "dream");
-  add(memoryManagerForDecision("global", "dream", projectDir).loadAll(), "global", "dream");
-  add(memoryManagerForDecision("global", "user", projectDir).loadAll(), "global", "user");
+  add(memoryManagerForDecision("project", "dream", storage).loadAll(), "project", "dream");
+  add(memoryManagerForDecision("global", "dream", storage).loadAll(), "global", "dream");
+  add(memoryManagerForDecision("global", "user", storage).loadAll(), "global", "user");
 
   return out
     .sort((a, b) => {
@@ -579,24 +610,24 @@ function fallbackWriteDecision(
     };
   }
 
-  const ownedDream = strong.find(
+  // Similar words cannot prove that a new fact supersedes an old one: word
+  // order, negation and numeric identifiers all matter. Only an exact repeat
+  // is safe to suppress without an explicit LLM UPDATE decision.
+  const duplicate = existing.find(
     (m) =>
-      m.summary.location === candidate.scope &&
-      m.summary.memoryScope === "dream" &&
-      (m.summary.origin === "auto" || m.summary.origin === "dream") &&
-      m.summary.id &&
-      !m.summary.id.startsWith("legacy:"),
+      m.location === candidate.scope &&
+      m.memoryScope === "dream" &&
+      (m.origin === "auto" || m.origin === "dream") &&
+      m.type === candidate.type &&
+      m.name === candidate.name &&
+      m.description === candidate.description &&
+      m.entry.content === candidate.content,
   );
-  if (ownedDream?.summary.id) {
+  if (duplicate) {
     return {
-      action: "UPDATE",
-      target: {
-        id: ownedDream.summary.id,
-        location: ownedDream.summary.location,
-        scope: "dream",
-      },
+      action: "NOOP",
       memory: candidate,
-      reason: `same topic as auto/dream memory ${ownedDream.summary.id}`,
+      reason: `identical auto/dream memory ${duplicate.id ?? duplicate.name}`,
     };
   }
 

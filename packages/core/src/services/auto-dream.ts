@@ -44,12 +44,12 @@ const MAX_SESSION_COUNT = 1_000_000;
 // Co-locate the dream-cadence state with the memories it tracks: both resolve
 // through resolveMemoryBaseDir (CODE_SHELL_HOME ?? $HOME ?? homedir()), so a
 // relocated/test HOME moves them together and never writes the real ~/.code-shell.
-function getStateFile(): string {
-  return join(resolveMemoryBaseDir(), "auto-dream-state.json");
+function getStateFile(baseDir?: string): string {
+  return join(resolveMemoryBaseDir(baseDir), "auto-dream-state.json");
 }
 
-function loadState(): DreamState {
-  const stateFile = getStateFile();
+function loadState(baseDir?: string): DreamState {
+  const stateFile = getStateFile(baseDir);
   let descriptor: number | undefined;
   try {
     const pathInfo = lstatSync(stateFile);
@@ -73,7 +73,9 @@ function parseDreamState(raw: string): DreamState {
   const parsed = JSON.parse(raw) as Partial<DreamState>;
   const timestamp = typeof parsed.lastDreamAt === "string" ? parsed.lastDreamAt : null;
   const lastDreamAt =
-    timestamp && timestamp.length <= 64 && Number.isFinite(Date.parse(timestamp)) ? timestamp : null;
+    timestamp && timestamp.length <= 64 && Number.isFinite(Date.parse(timestamp))
+      ? timestamp
+      : null;
   const count = parsed.sessionsSinceLastDream;
   return {
     lastDreamAt,
@@ -90,9 +92,9 @@ function parseDreamState(raw: string): DreamState {
  * The reload happens inside the lock, so a writer that lost the race still sees
  * the winner's value and applies its own change on top instead of overwriting it.
  */
-function mutateState(change: (current: DreamState) => DreamState): void {
-  mkdirSync(resolveMemoryBaseDir(), { recursive: true });
-  mutateJsonFile<DreamState>(getStateFile(), {
+function mutateState(change: (current: DreamState) => DreamState, baseDir?: string): void {
+  mkdirSync(resolveMemoryBaseDir(baseDir), { recursive: true });
+  mutateJsonFile<DreamState>(getStateFile(baseDir), {
     parse: (raw) => {
       if (raw === undefined) return { lastDreamAt: null, sessionsSinceLastDream: 0 };
       try {
@@ -110,10 +112,13 @@ function mutateState(change: (current: DreamState) => DreamState): void {
 /**
  * Check if auto-dream should run.
  */
-export function shouldAutoDream(config: AutoDreamConfig = DEFAULT_CONFIG): boolean {
+export function shouldAutoDream(
+  config: AutoDreamConfig = DEFAULT_CONFIG,
+  baseDir?: string,
+): boolean {
   if (!config.enabled) return false;
 
-  const state = loadState();
+  const state = loadState(baseDir);
 
   // Check session count
   if (state.sessionsSinceLastDream < config.minSessionsBetween) return false;
@@ -136,20 +141,23 @@ export function shouldAutoDream(config: AutoDreamConfig = DEFAULT_CONFIG): boole
  * Callers snapshot this BEFORE starting an async dream run and pass it back to
  * `recordDreamComplete`, so sessions finishing mid-run are not swallowed.
  */
-export function sessionsSinceLastDream(): number {
-  return loadState().sessionsSinceLastDream;
+export function sessionsSinceLastDream(baseDir?: string): number {
+  return loadState(baseDir).sessionsSinceLastDream;
 }
 
-export function recordSession(): void {
+export function recordSession(baseDir?: string): void {
   // Cross-process increment. Desktop worker, Desktop main/automation, TUI and a
   // standalone agent server can share one CODE_SHELL_HOME, so this was a real
   // multi-writer path: an unlocked read → +1 → write dropped nearly everything
   // (48 concurrent processes recorded 1–2 increments). The cadence then never
   // reached its threshold and auto-consolidation silently stopped happening.
-  mutateState((state) => ({
-    ...state,
-    sessionsSinceLastDream: Math.min(MAX_SESSION_COUNT, state.sessionsSinceLastDream + 1),
-  }));
+  mutateState(
+    (state) => ({
+      ...state,
+      sessionsSinceLastDream: Math.min(MAX_SESSION_COUNT, state.sessionsSinceLastDream + 1),
+    }),
+    baseDir,
+  );
 }
 
 /**
@@ -160,16 +168,19 @@ export function recordSession(): void {
  * completed while the run was in flight: `runDream()` is async, so blindly
  * resetting to 0 threw away increments that belonged to the next cycle.
  */
-export function recordDreamComplete(consumed?: number): void {
+export function recordDreamComplete(consumed?: number, baseDir?: string): void {
   const safeConsumed =
     typeof consumed === "number" && Number.isSafeInteger(consumed) && consumed >= 0
       ? consumed
       : undefined;
-  mutateState((state) => ({
-    lastDreamAt: new Date().toISOString(),
-    sessionsSinceLastDream:
-      safeConsumed === undefined ? 0 : Math.max(0, state.sessionsSinceLastDream - safeConsumed),
-  }));
+  mutateState(
+    (state) => ({
+      lastDreamAt: new Date().toISOString(),
+      sessionsSinceLastDream:
+        safeConsumed === undefined ? 0 : Math.max(0, state.sessionsSinceLastDream - safeConsumed),
+    }),
+    baseDir,
+  );
 }
 
 /**

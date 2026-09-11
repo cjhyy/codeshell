@@ -720,7 +720,10 @@ function TextPreview({
     void fileSystem
       .readFile(root, path)
       .then((c) => {
-        if (!cancelled) setContent(c);
+        if (!cancelled) {
+          setContent(c);
+          setError(null);
+        }
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(String(e instanceof Error ? e.message : e));

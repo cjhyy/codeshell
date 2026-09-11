@@ -352,7 +352,7 @@ try {
   assert(context.cwd === projectDir, "workspace permission was not scoped correctly");
   assert(context.trusted === false, "workspace trust must be decided by main");
   assert(context.theme === "dark" && context.locale === "en", "host context was not bound");
-  assert(context.apiVersion === 11, "Panel App bridge API v11 was not exposed");
+  assert(context.apiVersion === 13, "Panel App bridge API v13 was not exposed");
   const agentToolResult = await win.evaluate(
     ({ appDescriptorId }) =>
       window.codeshell.invokePanelAppAgentTool({

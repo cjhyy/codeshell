@@ -8,7 +8,7 @@
  * real-binary proof lives in `docs/todo/evidence/`.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ToolRegistry } from "@cjhyy/code-shell-core";
@@ -148,6 +148,89 @@ describe("startExternalRuntimeSession", () => {
       expect(reachable).toBe(false);
     }
   });
+
+  test.each([
+    { method: "initialize", ignoresShutdown: false },
+    { method: "thread/start", ignoresShutdown: false },
+    { method: "initialize", ignoresShutdown: true },
+  ])(
+    "cleans up a rejected $method before returning (ignores shutdown: $ignoresShutdown)",
+    async ({ method, ignoresShutdown }) => {
+      const dir = mkdtempSync(join(tmpdir(), "codeshell-factory-start-failure-"));
+      dirs.push(dir);
+      const script = join(dir, "server.mjs");
+      const stateFile = join(dir, "state.json");
+      const eofFile = join(dir, "eof");
+      const signalFile = join(dir, "sigterm");
+      writeFileSync(
+        script,
+        `import { createInterface } from "node:readline";
+import { writeFileSync } from "node:fs";
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+const urlFlag = process.argv.find((arg) => arg.startsWith("mcp_servers.codeshell_tools.url="));
+writeFileSync(${JSON.stringify(stateFile)}, JSON.stringify({
+  pid: process.pid, bridgeUrl: JSON.parse(urlFlag.slice(urlFlag.indexOf("=") + 1)),
+}));
+setInterval(() => {}, 1_000);
+if (${ignoresShutdown}) {
+  process.on("SIGTERM", () => writeFileSync(${JSON.stringify(signalFile)}, "ignored"));
+}
+const input = createInterface({ input: process.stdin });
+input.on("close", () => {
+  writeFileSync(${JSON.stringify(eofFile)}, "closed");
+  if (!${ignoresShutdown}) process.exit(0);
+});
+input.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (message.method === ${JSON.stringify(method)}) {
+    return send({ id: message.id, error: { code: -1, message: "startup rejected by fake server" } });
+  }
+  if (message.method === "initialize") return send({ id: message.id, result: {} });
+});
+`,
+      );
+
+      try {
+        await expect(
+          startExternalRuntimeSession({
+            ...BASE,
+            kind: "codex",
+            registry: registry(),
+            codexClient: { command: process.execPath, args: [script] },
+          }),
+        ).rejects.toThrow(/startup rejected by fake server/);
+
+        const state = JSON.parse(readFileSync(stateFile, "utf8")) as {
+          pid: number;
+          bridgeUrl: string;
+        };
+        expect(existsSync(eofFile)).toBe(true);
+        if (ignoresShutdown) expect(existsSync(signalFile)).toBe(true);
+        expect(() => process.kill(state.pid, 0)).toThrow(/ESRCH|No such process/);
+        const reachable = await fetch(state.bridgeUrl, {
+          method: "POST",
+          signal: AbortSignal.timeout(1_000),
+        })
+          .then(async (response) => {
+            await response.arrayBuffer();
+            return true;
+          })
+          .catch(() => false);
+        expect(reachable).toBe(false);
+      } finally {
+        // Keep the regression test from leaking its fake server if cleanup is
+        // broken again. Production must already have reaped it before rejecting.
+        if (existsSync(stateFile)) {
+          const { pid } = JSON.parse(readFileSync(stateFile, "utf8")) as { pid: number };
+          try {
+            process.kill(pid, "SIGKILL");
+          } catch {
+            /* already reaped by the factory */
+          }
+        }
+      }
+    },
+  );
 
   test("security-relevant inputs are required by the type, not defaulted", () => {
     // Mirrors the contract test on CreateSessionToolHostOptions one layer up: the

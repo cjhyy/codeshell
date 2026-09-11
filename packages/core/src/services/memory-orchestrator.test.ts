@@ -1,18 +1,10 @@
 import { describe, it, expect, spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { MemoryOrchestrator } from "./memory-orchestrator.js";
 import { logger } from "../logging/logger.js";
 import { MemoryManager } from "../session/memory.js";
-
-function fakeMemoryManager() {
-  return {
-    loadAll: () => [],
-    save: () => {},
-    loadScope: () => [],
-  } as any;
-}
 
 async function withCodeShellHome<T>(fn: (base: string) => Promise<T>): Promise<T> {
   const base = mkdtempSync(join(tmpdir(), "cs-mem-orch-"));
@@ -114,6 +106,72 @@ describe("MemoryOrchestrator redacts secrets before persisting an auto-extracted
   });
 });
 
+describe("MemoryOrchestrator malformed extraction isolation", () => {
+  it("keeps valid memories when another candidate has a non-string description", async () => {
+    await withCodeShellHome(async (base) => {
+      const projectDir = "/tmp/orchestrator-malformed-description";
+      const orchestrator = new MemoryOrchestrator({
+        projectDir,
+        callLLM: async () =>
+          JSON.stringify([
+            { type: "project", name: "invalid", description: 42, content: "Discard this" },
+            {
+              type: "project",
+              name: "valid",
+              description: "Valid memory",
+              content: "Keep this useful fact",
+            },
+          ]),
+      });
+
+      await orchestrator.run([{ role: "user", content: "Remember the useful fact" }], "s-valid");
+
+      const saved = new MemoryManager({ baseDir: base, projectDir, scope: "dream" }).loadAll();
+      expect(saved).toHaveLength(1);
+      expect(saved[0]).toMatchObject({
+        name: "valid",
+        description: "Valid memory",
+        content: "Keep this useful fact",
+      });
+    });
+  });
+});
+
+describe("MemoryOrchestrator exact batch duplicates", () => {
+  it("persists one copy and lets the next distinct fact use the remaining slot", async () => {
+    await withCodeShellHome(async (base) => {
+      const projectDir = "/tmp/orchestrator-exact-duplicates";
+      const candidate = {
+        type: "project",
+        scope: "project",
+        name: "runtime-choice",
+        description: "Project runtime choice",
+        content: "Use Bun for this project.",
+      };
+      const distinct = {
+        ...candidate,
+        name: "artifact-location",
+        description: "Release artifact location",
+        content: "Keep release artifacts outside the repository.",
+      };
+      const orchestrator = new MemoryOrchestrator({
+        projectDir,
+        callLLM: async () => JSON.stringify([candidate, { ...candidate }, distinct]),
+      });
+      await orchestrator.run([{ role: "user", content: "Remember these facts" }], "s-duplicates");
+
+      const saved = new MemoryManager({ baseDir: base, projectDir, scope: "dream" }).loadAll();
+      expect(saved).toHaveLength(2);
+      expect(saved.map((memory) => memory.name).sort()).toEqual([
+        "artifact-location",
+        "runtime-choice",
+      ]);
+      expect(saved.filter((memory) => memory.content === candidate.content)).toHaveLength(1);
+      expect(saved.every((memory) => memory.origin === "auto")).toBe(true);
+    });
+  });
+});
+
 describe("MemoryOrchestrator session-summary JSON robustness", () => {
   // The session-summary step (step 2) used to do a naive
   // `smResponse.match(/\{[\s\S]*\}/)` + bare JSON.parse, so any LLM reply with a
@@ -133,35 +191,27 @@ describe("MemoryOrchestrator session-summary JSON robustness", () => {
       const info = spyOn(logger, "info").mockImplementation(() => {});
       const warn = spyOn(logger, "warn").mockImplementation(() => {});
       try {
-        // Extraction step gets valid []; only the summary step sees the fragile
-        // reply. Distinguish by the system prompt (summariser vs extractor).
-        const orchestrator = new MemoryOrchestrator({
-          memoryManager: fakeMemoryManager(),
-          callLLM: async (sysPrompt) => (sysPrompt.includes("session summariser") ? reply : "[]"),
+        await withCodeShellHome(async (base) => {
+          // Use a real isolated store so the summary and cadence remain inside
+          // the fixture along with the extraction scopes.
+          const orchestrator = new MemoryOrchestrator({
+            memoryManager: new MemoryManager({ baseDir: base }),
+            callLLM: async (sysPrompt) => (sysPrompt.includes("session summariser") ? reply : "[]"),
+          });
+          await orchestrator.run(
+            [
+              { role: "user", content: "a" },
+              { role: "assistant", content: "b" },
+              { role: "user", content: "c" },
+            ],
+            "s-fragile",
+          );
+          const failed = warn.mock.calls.find((c) => c[0] === "memory.session_memory_failed");
+          expect(failed).toBeUndefined();
         });
-        // ≥3 non-system messages so the summary step actually runs.
-        await orchestrator.run(
-          [
-            { role: "user", content: "a" },
-            { role: "assistant", content: "b" },
-            { role: "user", content: "c" },
-          ],
-          "s-fragile",
-        );
-        const failed = warn.mock.calls.find((c) => c[0] === "memory.session_memory_failed");
-        expect(failed).toBeUndefined();
       } finally {
         info.mockRestore();
         warn.mockRestore();
-        // saveSessionMemory writes ~/.code-shell/session-memories/<id>.json on a
-        // successful parse — clean up so the test doesn't pollute real disk.
-        try {
-          rmSync(join(homedir(), ".code-shell", "session-memories", "s-fragile.json"), {
-            force: true,
-          });
-        } catch {
-          /* best-effort */
-        }
       }
     });
   }
@@ -172,33 +222,25 @@ describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", 
     const info = spyOn(logger, "info").mockImplementation(() => {});
     const warn = spyOn(logger, "warn").mockImplementation(() => {});
     try {
-      let saves = 0;
-      const mm = {
-        loadAll: () => [],
-        save: () => {
-          saves++;
-        },
-        loadScope: () => [],
-      } as any;
-      const systemPrompts: string[] = [];
-      const orchestrator = new MemoryOrchestrator({
-        memoryManager: mm,
-        autoExtract: false,
-        callLLM: async (sysPrompt) => {
-          systemPrompts.push(sysPrompt);
-          return "[]";
-        },
+      await withCodeShellHome(async (base) => {
+        const mm = new MemoryManager({ baseDir: base });
+        const systemPrompts: string[] = [];
+        const orchestrator = new MemoryOrchestrator({
+          memoryManager: mm,
+          autoExtract: false,
+          callLLM: async (sysPrompt) => {
+            systemPrompts.push(sysPrompt);
+            return "[]";
+          },
+        });
+        const result = await orchestrator.run([{ role: "user", content: "remember this" }], "s1");
+        expect(result.extracted).toBe(0);
+        expect(mm.loadScope("user")).toHaveLength(0);
+        expect(mm.loadScope("dream")).toHaveLength(0);
+        expect(systemPrompts.some((p) => p.includes("memory extraction assistant"))).toBe(false);
+        const skipped = info.mock.calls.find((c) => c[0] === "memory.extraction_skipped");
+        expect(skipped).toBeDefined();
       });
-
-      const result = await orchestrator.run([{ role: "user", content: "remember this" }], "s1");
-
-      expect(result.extracted).toBe(0);
-      expect(saves).toBe(0);
-      // The extraction call never happens; the session-summary step (step 2)
-      // may still call the LLM — assert none of the calls were extraction.
-      expect(systemPrompts.some((p) => p.includes("memory extraction assistant"))).toBe(false);
-      const skipped = info.mock.calls.find((c) => c[0] === "memory.extraction_skipped");
-      expect(skipped).toBeDefined();
     } finally {
       info.mockRestore();
       warn.mockRestore();
@@ -231,7 +273,7 @@ describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", 
 });
 
 describe("MemoryOrchestrator write decisions", () => {
-  it("updates an existing same-topic auto dream memory by id instead of creating a date variant", async () => {
+  it("honors an explicit same-topic UPDATE by id instead of creating a date variant", async () => {
     const info = spyOn(logger, "info").mockImplementation(() => {});
     const warn = spyOn(logger, "warn").mockImplementation(() => {});
     try {
@@ -249,16 +291,22 @@ describe("MemoryOrchestrator write decisions", () => {
 
         const orchestrator = new MemoryOrchestrator({
           projectDir,
-          callLLM: async () =>
-            JSON.stringify([
-              {
-                type: "project",
-                scope: "project",
-                name: "memory-p0-2026-07-09",
-                description: "memory redesign origin guard",
-                content: "Dream entries must not touch manual memories and should update by id.",
-              },
-            ]),
+          callLLM: async (system) =>
+            system.includes("write decision")
+              ? JSON.stringify({
+                  action: "UPDATE",
+                  target: { id: seeded.id, location: "project", scope: "dream" },
+                })
+              : JSON.stringify([
+                  {
+                    type: "project",
+                    scope: "project",
+                    name: "memory-p0-2026-07-09",
+                    description: "memory redesign origin guard",
+                    content:
+                      "Dream entries must not touch manual memories and should update by id.",
+                  },
+                ]),
         });
 
         await orchestrator.run([{ role: "user", content: "same topic" }], "s-update");

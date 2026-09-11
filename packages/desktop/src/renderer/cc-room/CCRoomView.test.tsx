@@ -385,3 +385,237 @@ describe("CCRoomView DriveAgent deep links", () => {
     });
   });
 });
+
+describe("CCRoomView session list recovery", () => {
+  const session = (id: string) => ({
+    sessionId: id,
+    firstMessage: `prompt-${id}`,
+    lastModified: 1,
+    messageCount: 1,
+  });
+
+  function installRoomApi(overrides: Record<string, unknown>) {
+    ensureMiniDom();
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          probe: async () => ({ available: true }),
+          codexProbe: async () => ({ available: true }),
+          listSessions: async () => ({ sessions: [session("first")], total: 1 }),
+          listCodexSessions: async () => ({ sessions: [], total: 0 }),
+          ...overrides,
+        },
+      },
+    });
+  }
+
+  async function mount(cwd: string | null = "/repo") {
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await render(cwd);
+    return container;
+  }
+
+  async function render(cwd: string | null) {
+    await act(async () => {
+      root?.render(<CCRoomView cwd={cwd} />);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+  }
+
+  function button(container: unknown, label: string) {
+    return findElements(container, "BUTTON").find((node) =>
+      childText(reactPropsOf(node).children).startsWith(label),
+    );
+  }
+
+  async function click(node: unknown) {
+    expect(node).toBeDefined();
+    await act(async () => {
+      reactPropsOf(node).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+  }
+
+  test("a failed load-more stays retryable and full-list refresh follows a successful retry", async () => {
+    const listCalls: boolean[] = [];
+    installRoomApi({
+      listSessions: async (_cwd: string, all: boolean) => {
+        listCalls.push(all);
+        if (listCalls.length === 2) throw new Error("temporary read failure");
+        return {
+          sessions: all ? [session("first"), session("older")] : [session("first")],
+          total: 2,
+        };
+      },
+    });
+    const container = await mount();
+    await click(button(container, "加载更多"));
+    expect(button(container, "加载更多")).toBeDefined();
+    const error = findElements(container, "P").find((node) => reactPropsOf(node).role === "alert");
+    expect(childText(reactPropsOf(error).children)).toContain("temporary read failure");
+
+    await click(button(container, "加载更多"));
+    expect(button(container, "加载更多")).toBeUndefined();
+    const refresh = findElements(container, "BUTTON").find(
+      (node) => reactPropsOf(node)["aria-label"] === "刷新会话",
+    );
+    await click(refresh);
+    expect(listCalls).toEqual([false, true, true, true]);
+  });
+
+  test("switching projects clears the old list and expansion while the new list is pending", async () => {
+    let resolveNext!: (value: { sessions: ReturnType<typeof session>[]; total: number }) => void;
+    const next = new Promise<{ sessions: ReturnType<typeof session>[]; total: number }>(
+      (resolve) => {
+        resolveNext = resolve;
+      },
+    );
+    const requests: Array<[string, boolean]> = [];
+    installRoomApi({
+      listSessions: async (cwd: string, all: boolean) => {
+        requests.push([cwd, all]);
+        if (cwd === "/next") return next;
+        return {
+          sessions: all ? [session("first"), session("older")] : [session("first")],
+          total: 2,
+        };
+      },
+    });
+    const container = await mount();
+    await click(button(container, "加载更多"));
+    await render("/next");
+    expect(
+      findElements(container, "DIV").some(
+        (node) => childText(reactPropsOf(node).children) === "prompt-first",
+      ),
+    ).toBe(false);
+    await act(async () => {
+      resolveNext({ sessions: [session("next")], total: 2 });
+      await flushMicrotasks();
+    });
+    expect(button(container, "加载更多")).toBeDefined();
+    expect(requests.at(-1)).toEqual(["/next", false]);
+  });
+
+  test("focus refresh cannot replace an in-flight load-more with the bounded list", async () => {
+    let resolveMore!: (value: { sessions: ReturnType<typeof session>[]; total: number }) => void;
+    const calls: boolean[] = [];
+    installRoomApi({
+      listSessions: (_cwd: string, all: boolean) => {
+        calls.push(all);
+        return all
+          ? new Promise((resolve) => {
+              resolveMore = resolve;
+            })
+          : Promise.resolve({ sessions: [session("first")], total: 2 });
+      },
+    });
+    const container = await mount();
+    await click(button(container, "加载更多"));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    expect(calls).toEqual([false, true]);
+    await act(async () => {
+      resolveMore({ sessions: [session("first"), session("older")], total: 2 });
+      await flushMicrotasks();
+    });
+    expect(button(container, "加载更多")).toBeUndefined();
+  });
+
+  test("late results from a closed project cannot restore its sessions", async () => {
+    let resolveList!: (value: { sessions: ReturnType<typeof session>[]; total: number }) => void;
+    installRoomApi({
+      listSessions: () =>
+        new Promise((resolve) => {
+          resolveList = resolve;
+        }),
+    });
+    const container = await mount();
+    await render(null);
+    await act(async () => {
+      resolveList({ sessions: [session("stale")], total: 1 });
+      await flushMicrotasks();
+    });
+    expect(
+      findElements(container, "DIV").some(
+        (node) => childText(reactPropsOf(node).children) === "prompt-stale",
+      ),
+    ).toBe(false);
+    expect(button(container, "加载更多")).toBeUndefined();
+  });
+
+  test("opening is single-flight and can retry after failure", async () => {
+    let rejectOpen!: (error: Error) => void;
+    let calls = 0;
+    installRoomApi({
+      openSession: () => {
+        calls += 1;
+        return calls === 1
+          ? new Promise((_resolve, reject) => {
+              rejectOpen = reject;
+            })
+          : Promise.resolve({ roomId: "room-retry", status: "observing" });
+      },
+    });
+    const container = await mount();
+    await click(button(container, "新开 session"));
+    const open = button(container, "default");
+    await act(async () => {
+      reactPropsOf(open).onClick();
+      reactPropsOf(open).onClick();
+      await flushMicrotasks();
+    });
+    expect(calls).toBe(1);
+    expect(reactPropsOf(button(container, "default")).disabled).toBe(true);
+    await act(async () => {
+      rejectOpen(new Error("unable to start CLI"));
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(button(container, "default")).disabled).toBe(false);
+    await click(button(container, "default"));
+    expect(calls).toBe(2);
+    expect(conversationProps).toMatchObject({ roomId: "room-retry" });
+  });
+
+  test("a delayed open cannot navigate away from a newer project", async () => {
+    let resolveOpen!: (value: { roomId: string; status: string }) => void;
+    installRoomApi({
+      openSession: () =>
+        new Promise((resolve) => {
+          resolveOpen = resolve;
+        }),
+    });
+    const container = await mount();
+    await click(button(container, "新开 session"));
+    await click(button(container, "default"));
+    await render("/next");
+    await act(async () => {
+      resolveOpen({ roomId: "stale-room", status: "running" });
+      await flushMicrotasks();
+    });
+    expect(conversationProps).toBeNull();
+    expect(button(container, "default")).toBeUndefined();
+  });
+
+  test("a CLI that exits during startup remains retryable instead of opening a running conversation", async () => {
+    let calls = 0;
+    installRoomApi({
+      openSession: async () => ({
+        roomId: "startup-room",
+        status: ++calls === 1 ? "missing" : "running",
+      }),
+    });
+    const container = await mount();
+    await click(button(container, "新开 session"));
+    await click(button(container, "default"));
+    expect(conversationProps).toBeNull();
+    expect(reactPropsOf(button(container, "default")).disabled).toBe(false);
+    await click(button(container, "default"));
+    expect(conversationProps).toMatchObject({ roomId: "startup-room", observing: false });
+  });
+});

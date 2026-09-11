@@ -155,16 +155,15 @@ export abstract class LLMClientBase {
    * the SDK timeout, min 120s) — long enough for slow-but-alive generations,
    * short enough that a wedged socket can't burn half an hour.
    */
-  protected withRequestDeadline(
-    callerSignal?: AbortSignal,
-  ): { signal: AbortSignal; cleanup: () => void } {
+  protected withRequestDeadline(callerSignal?: AbortSignal): {
+    signal: AbortSignal;
+    cleanup: () => void;
+  } {
     const deadlineMs = Math.max(this.timeout * 2, 120_000);
     const deadline = AbortSignal.timeout(deadlineMs);
     // AbortSignal.any is available in Node ≥20 / Bun; combine so EITHER the
     // user's cancel OR the deadline aborts the request.
-    const signal = callerSignal
-      ? AbortSignal.any([callerSignal, deadline])
-      : deadline;
+    const signal = callerSignal ? AbortSignal.any([callerSignal, deadline]) : deadline;
     // AbortSignal.timeout's timer is unref'd by the runtime; no manual clear is
     // strictly required, but expose cleanup for symmetry / future tightening.
     return { signal, cleanup: () => {} };
@@ -172,7 +171,12 @@ export abstract class LLMClientBase {
 
   protected async withRetry<T>(
     fn: (requestSignal?: AbortSignal) => Promise<T>,
-    opts?: { maxAttempts?: number; signal?: AbortSignal },
+    opts?: {
+      maxAttempts?: number;
+      signal?: AbortSignal;
+      /** Veto retries after caller-visible progress which cannot be replayed safely. */
+      shouldRetry?: (error: unknown) => boolean;
+    },
   ): Promise<T> {
     const attempts = opts?.maxAttempts ?? this.retryMaxAttempts;
     const signal = opts?.signal;
@@ -190,13 +194,14 @@ export abstract class LLMClientBase {
       }
       // Per-attempt hard deadline composed with the caller's cancel signal.
       // A half-dead socket that ignores the SDK timeout is torn down here.
-      const { signal: requestSignal, cleanup } = this.withRequestDeadline(signal);
+      const { signal: requestSignal, cleanup: _cleanup } = this.withRequestDeadline(signal);
       try {
         return await fn(requestSignal);
       } catch (err) {
         lastError = err as Error;
 
         if (err instanceof ContextLimitError) throw err;
+        if (opts?.shouldRetry?.(err) === false) throw err;
 
         // Distinguish a deadline tear-down from a user cancel. When the caller
         // did NOT abort but the request signal did, the per-request deadline

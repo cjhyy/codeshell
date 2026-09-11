@@ -24,7 +24,7 @@ const controllerSource = readFileSync(
 
 /** The `.then` handler on the MAIN send path (not the QuickChat one below it). */
 function mainSendErrorBranch(): string {
-  const start = controllerSource.indexOf("const startRun = externalRuntime");
+  const start = controllerSource.indexOf("return startRun");
   expect(start).toBeGreaterThan(-1);
   const end = controllerSource.indexOf("const sendQuickChat", start);
   return controllerSource.slice(start, end > start ? end : undefined);

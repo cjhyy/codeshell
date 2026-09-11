@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act, type SetStateAction } from "react";
+import { act, useReducer, type SetStateAction } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { loadProjects, saveProjects, type TrackedProject } from "../projects";
 import {
@@ -10,8 +10,10 @@ import {
   type SessionIndex,
 } from "../transcripts";
 import { compactSidebarSessions, sortSidebarSessions } from "../sidebarSessionVisibility";
-import type { TranscriptsAction } from "../transcriptsReducer";
+import { transcriptsReducer, type TranscriptsAction } from "../transcriptsReducer";
+import { getSessionPersistence } from "../sessionPersistence";
 import { useHostSubscriptions } from "./useHostSubscriptions";
+import { INITIAL_STATE } from "../types";
 
 function cell<T>(value: T) {
   const state = {
@@ -221,6 +223,62 @@ describe("Mimi delegated Session sidebar announcements", () => {
     });
   });
 
+  test("quit flush commits coalesced events to React before a snapshot reader runs", async () => {
+    const snapshot = { revision: 0, indices: {} };
+    const writes: string[] = [];
+    window.codeshell.sessionCatalog = {
+      load: async () => snapshot,
+      importLegacy: async () => snapshot,
+      apply: async () => snapshot,
+      onChanged: () => () => undefined,
+      readTranscript: async () => ({ value: null, hasEarlier: false }),
+      writeTranscript: async ({ value }) => {
+        writes.push(value);
+      },
+      deleteTranscript: async () => undefined,
+    };
+    const persistence = getSessionPersistence()!;
+    const bucket = bucketKey("project", "pinned-4");
+    params.routing.engineToBucketRef.current.set("engine", bucket);
+    const unsubscribe = persistence.subscribeBeforeFlush(() => {
+      const state = params.routing.transcriptsRef.current[bucket];
+      if (state) persistence.saveTranscript("project", "pinned-4", JSON.stringify(state));
+    });
+    try {
+      hook = await renderHook(() => {
+        const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+        params.services.dispatch = dispatch;
+        params.routing.transcriptsRef.current = transcripts;
+        useHostSubscriptions(params);
+      });
+      listeners.get("onStreamEvent")!({
+        sessionId: "engine",
+        seq: 1,
+        event: { type: "stream_request_start", turnNumber: 1, messageId: "last" },
+      });
+      listeners.get("onStreamEvent")!({
+        sessionId: "engine",
+        seq: 2,
+        event: { type: "text_delta", text: "Last buffered words" },
+      });
+      expect(params.routing.transcriptsRef.current[bucket]).toBeUndefined();
+      await act(async () => {
+        await persistence.flush();
+      });
+      expect(writes).toHaveLength(1);
+      expect(JSON.parse(writes[0]!).messages).toContainEqual(
+        expect.objectContaining({ id: "last", text: "Last buffered words" }),
+      );
+      expect(JSON.parse(writes[0]!).snapshotSeq).toBe(2);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      });
+      expect(params.routing.transcriptsRef.current[bucket]!.messages).toHaveLength(1);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   test("a slower earlier announcement cannot hide the most recently delegated Session", async () => {
     const first = deferred<unknown[]>();
     let calls = 0;
@@ -244,6 +302,108 @@ describe("Mimi delegated Session sidebar announcements", () => {
       expect.arrayContaining(["older", "newer"]),
     );
     expect(params.routing.sessionIndicesRef.current).toEqual(indices.value);
+  });
+
+  test("live completion remains immediate while recovery preserves exact coalesced sequences", async () => {
+    const bucket = bucketKey("project", "pinned-4");
+    params.routing.engineToBucketRef.current.set("engine", bucket);
+    busy.add(bucket);
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(
+        transcriptsReducer,
+        transcriptsReducer({}, { type: "hydrate_begin", bucket, token: 1 }),
+      );
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    await act(async () => {
+      for (const [seq, event] of [
+        [10, { type: "text_delta", text: "prefix" }],
+        [11, { type: "text_delta", text: " tail" }],
+        [12, { type: "turn_complete" }],
+      ] as const)
+        listeners.get("onStreamEvent")!({ sessionId: "engine", seq, event });
+      expect(busy.has(bucket)).toBe(false);
+      params.routing.coalescersRef.current.get(bucket)!.flush();
+      await flushMicrotasks();
+    });
+    expect(params.routing.appliedSeqRef.current.has(bucket)).toBe(false);
+    await act(async () => {
+      params.services.dispatch({
+        type: "hydrate_history",
+        bucket,
+        token: 1,
+        history: INITIAL_STATE,
+        state: INITIAL_STATE,
+        goalAtStart: null,
+        snapshot: [
+          {
+            seq: 9,
+            event: { type: "stream_request_start", turnNumber: 1, messageId: "recovered" },
+          },
+          { seq: 10, event: { type: "text_delta", text: "prefix" } },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]?.messages).toContainEqual(
+      expect.objectContaining({ id: "recovered", text: "prefix tail", done: true }),
+    );
+    expect(params.routing.transcriptsRef.current[bucket]?.snapshotSeq).toBe(12);
+    expect(busy.has(bucket)).toBe(false);
+  });
+
+  test("preserves a delegated run that starts and finishes before its sidebar placement resolves", async () => {
+    const placement = deferred<unknown[]>();
+    resolveCwds = () => placement.promise;
+    const activeBucket = params.routing.activeBucketRef.current;
+    params.routing.runningBucketRef.current = activeBucket;
+    busy.add(activeBucket);
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onStreamEvent")!({
+        sessionId: "delegated",
+        seq: 1,
+        event: { type: "session_started", sessionId: "delegated" },
+      });
+      listeners.get("onPetDelegationSession")!(announcement("delegated"));
+      listeners.get("onStreamEvent")!({
+        sessionId: "delegated",
+        seq: 2,
+        event: { type: "text_delta", text: "The document is ready." },
+      });
+      listeners.get("onStreamEvent")!({
+        sessionId: "delegated",
+        seq: 3,
+        event: { type: "turn_complete" },
+      });
+      await flushMicrotasks();
+    });
+    expect(busy.has(activeBucket)).toBe(true);
+    expect(params.routing.runningBucketRef.current).toBe(activeBucket);
+    expect(actions).toEqual([]);
+
+    await act(async () => {
+      placement.resolve([{ projectId: "project", rootId: "root", created: false }]);
+      await flushMicrotasks();
+      params.routing.coalescersRef.current.get(bucketKey("project", "delegated"))?.flush();
+    });
+    const bucket = bucketKey("project", "delegated");
+    expect(revealed.value.project).toBe("delegated");
+    expect(busy.has(bucket)).toBe(false);
+    expect(busy.has(activeBucket)).toBe(true);
+    expect(actions[0]).toMatchObject({ type: "user_message", bucket });
+    expect(actions[1]).toMatchObject({
+      type: "stream_batch",
+      bucket,
+      maxSeq: 3,
+      events: [
+        { type: "session_started", sessionId: "delegated" },
+        { type: "text_delta", text: "The document is ready.", agentId: undefined },
+        { type: "turn_complete" },
+      ],
+    });
   });
 
   test("reuses the existing local no-project Session identity", async () => {
@@ -277,6 +437,34 @@ describe("Mimi delegated Session sidebar announcements", () => {
       id: "local",
       title: "Saved title",
       pinned: true,
+    });
+  });
+
+  test("retains startup and completion when the unbound event buffer reaches its limit", async () => {
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      const stream = listeners.get("onStreamEvent")!;
+      stream({
+        sessionId: "delegated",
+        event: { type: "session_started", sessionId: "delegated" },
+      });
+      for (let index = 0; index < 2_050; index++) {
+        stream({ sessionId: "delegated", event: { type: "text_delta", text: "x" } });
+      }
+      stream({ sessionId: "delegated", event: { type: "turn_complete" } });
+      listeners.get("onPetDelegationSession")!(announcement("delegated"));
+      await flushMicrotasks();
+      params.routing.coalescersRef.current.get(bucketKey("project", "delegated"))?.flush();
+    });
+    expect(busy.has(bucketKey("project", "delegated"))).toBe(false);
+    const batch = actions.find((action) => action.type === "stream_batch");
+    expect(batch).toMatchObject({
+      type: "stream_batch",
+      events: [
+        { type: "session_started", sessionId: "delegated" },
+        { type: "text_delta", text: "x".repeat(2_046) },
+        { type: "turn_complete" },
+      ],
     });
   });
 });

@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -59,5 +66,35 @@ describe("PanelAppProcessApprovalStore", () => {
 
     await store.remember(scope);
     expect(await new PanelAppProcessApprovalStore(file).has(scope)).toBe(true);
+  });
+
+  test("concurrent store instances preserve both approvals without waiting for a stale lock", async () => {
+    const { file, scope } = fixture();
+    const secondScope = { ...scope, appId: "second-app" };
+    const first = new PanelAppProcessApprovalStore(file);
+    const second = new PanelAppProcessApprovalStore(file);
+    const startedAt = Date.now();
+
+    await Promise.all([first.remember(scope), second.remember(secondScope)]);
+
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    const reloaded = new PanelAppProcessApprovalStore(file);
+    expect(await reloaded.has(scope)).toBe(true);
+    expect(await reloaded.has(secondScope)).toBe(true);
+    expect(JSON.parse(readFileSync(file, "utf8")).approvals).toHaveLength(2);
+    if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  test("rejects symlink targets and retains the linked file", async () => {
+    if (process.platform === "win32") return;
+    const { file, scope } = fixture();
+    const target = join(root, "existing.json");
+    writeFileSync(target, "original contents", { mode: 0o600 });
+    symlinkSync(target, file);
+    const store = new PanelAppProcessApprovalStore(file);
+
+    expect(await store.has(scope)).toBe(false);
+    await expect(store.remember(scope)).rejects.toThrow("target must be a regular file");
+    expect(readFileSync(target, "utf8")).toBe("original contents");
   });
 });

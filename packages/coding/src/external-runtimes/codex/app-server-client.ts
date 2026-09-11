@@ -26,6 +26,11 @@ import { createInterface, type Interface } from "node:readline";
 /** Cap per NDJSON line. Generous for reasoning text; guards parse latency. */
 const MAX_LINE_BYTES = 16 * 1024 * 1024;
 
+/** Keep launch diagnostics useful without copying unbounded process metadata. */
+function diagnosticText(value: string): string {
+  return value.replace(/[\r\n\t]/g, " ").slice(0, 300);
+}
+
 export interface AppServerClientOptions {
   /** Executable; defaults to `codex` on PATH. */
   command?: string;
@@ -116,9 +121,27 @@ export class CodexAppServerClient {
       if (text) this.log("appserver.stderr", { bytes: text.length, preview: text.slice(0, 300) });
     });
 
-    const onGone = (why: string) => (): void => this.failAll(why);
-    this.child.on("exit", onGone("app-server exited"));
-    this.child.on("error", onGone("app-server failed to start"));
+    // A GUI host can have a different PATH from the user's terminal. Preserve
+    // the OS cause so a missing executable/cwd is distinguishable from a server
+    // that launched and exited. Never copy spawnargs or the environment: both
+    // can contain credentials for the runtime's MCP bridge.
+    const launch = {
+      command: diagnosticText(command),
+      cwd: diagnosticText(this.options.cwd ?? process.cwd()),
+    };
+    this.child.on("exit", (code, signal) => {
+      const status = signal ? `signal ${signal}` : `code ${code ?? "unknown"}`;
+      this.failAll(`app-server exited (${status})`, { ...launch, code, signal });
+    });
+    this.child.on("error", (error: NodeJS.ErrnoException) => {
+      const code = error.code ? diagnosticText(error.code) : undefined;
+      const message = diagnosticText(error.message);
+      this.failAll(
+        `app-server failed to start${code ? ` (${code})` : ""}: ${message}; ` +
+          `command=${JSON.stringify(launch.command)}, cwd=${JSON.stringify(launch.cwd)}`,
+        { ...launch, code, error: message },
+      );
+    });
     // Handlers are registered by contract before start(); release the buffer.
     this.handlersReady = true;
     for (const line of this.preHandlerLines.splice(0)) this.handleLine(line);
@@ -246,11 +269,11 @@ export class CodexAppServerClient {
     child.stdin.write(`${JSON.stringify(payload)}\n`);
   }
 
-  private failAll(reason: string): void {
+  private failAll(reason: string, details: Record<string, unknown> = {}): void {
     if (this.closed) return;
     this.closed = true;
     this.closeReason = reason;
-    this.log("appserver.closed", { reason });
+    this.log("appserver.closed", { ...details, reason });
     for (const [, entry] of this.pending) {
       if (entry.timer) clearTimeout(entry.timer);
       entry.reject(new Error(reason));

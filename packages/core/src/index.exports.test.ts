@@ -120,6 +120,7 @@ const expectedRuntimeExportsByPartition = {
     "DEFAULT_IMAGE_MODEL",
     "transcribe",
     "resolveTranscribeProvider",
+    "resolveSpeechConfiguration",
     "isTranscribeAvailable",
     "describeTranscribe",
     "BUILTIN_CATALOG",

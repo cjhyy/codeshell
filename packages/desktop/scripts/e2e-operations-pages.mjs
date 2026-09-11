@@ -4,7 +4,7 @@
  * responses are intercepted before the worker; no model or tool is invoked.
  * CODESHELL_OPERATIONS_SCREENSHOT_DIR enables optional local preview images.
  */
-/* global document, getComputedStyle, localStorage, window */
+/* global document, getComputedStyle, window */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedSessionCatalog,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -300,8 +301,8 @@ async function checkSessions() {
   );
   await win.getByRole("button", { name: "已整理的工作进度", exact: true }).waitFor();
   const localTitle = await win.evaluate(
-    () =>
-      JSON.parse(localStorage.getItem("codeshell.sessionIndex.__no_repo__")).sessions.find(
+    async () =>
+      (await window.codeshell.sessionCatalog.load()).indices.__no_repo__.sessions.find(
         (session) => session.id === "ui-local-daily",
       )?.title,
   );
@@ -323,8 +324,8 @@ async function checkSessions() {
   await win
     .getByRole("button", { name: "可移除的临时记录", exact: true })
     .waitFor({ state: "hidden" });
-  const deleted = await win.evaluate(() =>
-    JSON.parse(localStorage.getItem("codeshell.sessionIndex.__no_repo__")).sessions.every(
+  const deleted = await win.evaluate(async () =>
+    (await window.codeshell.sessionCatalog.load()).indices.__no_repo__.sessions.every(
       (session) => session.id !== "ui-local-delete",
     ),
   );
@@ -609,30 +610,27 @@ try {
   )
     await trust.click();
   await seedMetadata();
-  await win.evaluate(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "codeshell.sessionIndex.__no_repo__",
-      JSON.stringify({
-        activeSessionId: null,
-        sessions: [
-          {
-            id: "ui-local-daily",
-            engineSessionId: "ui-history-daily",
-            title: "工作进度与计划",
-            createdAt: now,
-            updatedAt: now,
-          },
-          {
-            id: "ui-local-delete",
-            engineSessionId: "ui-history-delete",
-            title: "可移除的临时记录",
-            createdAt: now,
-            updatedAt: now,
-          },
-        ],
-      }),
-    );
+  const fixtureNow = Date.now();
+  await seedSessionCatalog(win, {
+    __no_repo__: {
+      activeSessionId: null,
+      sessions: [
+        {
+          id: "ui-local-daily",
+          engineSessionId: "ui-history-daily",
+          title: "工作进度与计划",
+          createdAt: fixtureNow,
+          updatedAt: fixtureNow,
+        },
+        {
+          id: "ui-local-delete",
+          engineSessionId: "ui-history-delete",
+          title: "可移除的临时记录",
+          createdAt: fixtureNow,
+          updatedAt: fixtureNow,
+        },
+      ],
+    },
   });
   await win.reload();
   await win.getByRole("button", { name: "工作进度与计划", exact: true }).waitFor();

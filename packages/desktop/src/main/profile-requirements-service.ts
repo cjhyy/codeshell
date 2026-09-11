@@ -12,7 +12,7 @@ import { execFile } from "node:child_process";
 import { isAbsolute } from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import {
-  SKILL_REPO_RE,
+  WorkspaceProfileRequirementsSchema,
   buildSkillInstallArgs,
   type ProfileRequirementPlan,
   type SkillRequirement,
@@ -61,8 +61,8 @@ const defaultRunner: SkillInstallRunner = (file, args, cwd) =>
 /**
  * 执行一条 skill 依赖。
  *
- * 安全上这是最后一道门，故即使 schema 已经校验过也**重新校验** repo：这个值会
- * 变成子进程 argv，一旦放过 `--flag` 形态就等于让 profile 控制 CLI 行为。
+ * 安全上这是最后一道门，故即使 schema 已经校验过也重新校验完整依赖：仓库和
+ * Skill 名都会变成子进程 argv，不能让选项或通配符扩大已确认的安装范围。
  * 参数始终以数组传递，不经 shell。
  */
 export async function installSkillRequirement(
@@ -70,8 +70,9 @@ export async function installSkillRequirement(
   workspaceCwd: string,
   runner: SkillInstallRunner = defaultRunner,
 ): Promise<SkillInstallResult> {
-  if (!SKILL_REPO_RE.test(requirement.repo)) {
-    return { ok: false, error: `拒绝安装：非法的 skill 仓库 "${requirement.repo}"` };
+  const checked = WorkspaceProfileRequirementsSchema.safeParse({ skills: [requirement] });
+  if (!checked.success) {
+    return { ok: false, error: "拒绝安装：Skill 依赖的仓库、名称或安装范围不合法" };
   }
   if (!isAbsolute(workspaceCwd)) {
     return { ok: false, error: "拒绝安装：需要绝对路径的工作区" };
@@ -80,7 +81,7 @@ export async function installSkillRequirement(
   // buildSkillInstallArgs 负责，两者不是同一个。
   const result = await runner(
     "npx",
-    ["--yes", ...buildSkillInstallArgs(requirement)],
+    ["--yes", ...buildSkillInstallArgs(checked.data.skills[0]!)],
     workspaceCwd,
   );
   return result.ok ? result : { ok: false, error: conciseInstallError(result.error) };

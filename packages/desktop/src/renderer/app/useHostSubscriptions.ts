@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { flushSync } from "react-dom";
 
 import { bgCompletionText, type ApprovalState, type AskUserOption } from "../types";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
@@ -18,6 +19,8 @@ import {
 import { findAskUserOrigin, resolveBucket } from "../streamRouting";
 import { removeQueuedInputById, type QueuedInputState } from "../queuedInput";
 import { createEventCoalescer } from "../streamCoalescer";
+import { subscribeSessionPersistenceFlush } from "../sessionPersistence";
+import { hasTranscriptRecovery } from "../transcriptHydration";
 import type { PermissionMode } from "../chat/PermissionPill";
 import {
   isQuickChatBucket,
@@ -130,6 +133,15 @@ export function useHostSubscriptions({
     setRevealedSessionIds,
   } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
+  useEffect(
+    () =>
+      subscribeSessionPersistenceFlush(() => {
+        flushSync(() => {
+          for (const coalescer of coalescersRef.current.values()) coalescer.flush();
+        });
+      }, "events"),
+    [coalescersRef],
+  );
   useEffect(() => {
     const coalescers = coalescersRef.current;
     return () => {
@@ -142,14 +154,24 @@ export function useHostSubscriptions({
   function getCoalescer(bucket: string) {
     let c = coalescersRef.current.get(bucket);
     if (!c) {
-      c = createEventCoalescer((events) => {
-        const maxSeq = coalescerSeqRef.current.get(bucket);
+      c = createEventCoalescer((events, raw) => {
+        let epoch: string | undefined;
+        for (const entry of raw) if (entry.epoch !== undefined) epoch = entry.epoch;
+        const sequences = raw.flatMap((entry) =>
+          entry.seq === undefined || (epoch && entry.epoch && entry.epoch !== epoch)
+            ? []
+            : [entry.seq],
+        );
+        const maxSeq = sequences.length ? Math.max(...sequences) : undefined;
         coalescerSeqRef.current.delete(bucket);
-        if (maxSeq !== undefined) {
-          const prev = appliedSeqRef.current.get(bucket) ?? 0;
+        if (maxSeq !== undefined && !hasTranscriptRecovery(transcriptsRef.current, bucket)) {
+          const prev =
+            epoch && epoch !== transcriptsRef.current[bucket]?.snapshotEpoch
+              ? 0
+              : (appliedSeqRef.current.get(bucket) ?? 0);
           appliedSeqRef.current.set(bucket, Math.max(prev, maxSeq));
         }
-        dispatch({ type: "stream_batch", bucket, events, maxSeq });
+        dispatch({ type: "stream_batch", bucket, events, maxSeq, epoch, raw });
       });
       coalescersRef.current.set(bucket, c);
     }
@@ -159,20 +181,34 @@ export function useHostSubscriptions({
   useEffect(() => {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
 
-    const offStream = window.codeshell.onStreamEvent((env: StreamEventEnvelope) => {
-      const event = env.event;
-      if (event.type === "background_agent_completed") {
-        toast({
-          message: bgCompletionText(event),
-          variant:
-            event.status === "completed"
-              ? "success"
-              : event.status === "cancelled"
-                ? undefined
-                : "error",
-        });
-        // fall through: the reducer still appends the system message below.
+    // Host-created runs can stream before their announcement arrives, and cwd
+    // resolution below is asynchronous. Hold that short unbound interval so a
+    // fast delegated run cannot lose its response or terminal status. Bound the
+    // cache because hidden/retired sessions may never acquire a sidebar bucket.
+    const unboundStreams = new Map<string, StreamEventEnvelope[]>();
+    const bufferUnboundStream = (env: StreamEventEnvelope): void => {
+      if (!env.sessionId || isQuickChatSessionId(env.sessionId)) return;
+      const pending = unboundStreams.get(env.sessionId) ?? [];
+      pending.push(env);
+      if (pending.length > 2_048) {
+        // Keep the authoritative binding/start event even during an unusually
+        // large burst. The transcript hydrator can recover older output later.
+        const discardIndex = pending.findIndex(({ event }) => event.type !== "session_started");
+        pending.splice(Math.max(0, discardIndex), 1);
       }
+      unboundStreams.set(env.sessionId, pending);
+      if (unboundStreams.size > 32) {
+        unboundStreams.delete(unboundStreams.keys().next().value!);
+      }
+    };
+    const replayUnboundStream = (sessionId: string): void => {
+      const pending = unboundStreams.get(sessionId);
+      if (!pending) return;
+      unboundStreams.delete(sessionId);
+      for (const env of pending) handleStreamEvent(env);
+    };
+    const handleStreamEvent = (env: StreamEventEnvelope): void => {
+      const event = env.event;
       // Multi-session routing: every envelope carries the engine sessionId.
       // We mirror engineSessionId → bucket in a ref so stream events route to
       // the right tab even when several runs are in flight at once. Fallback
@@ -189,7 +225,12 @@ export function useHostSubscriptions({
         runningBucketRef.current,
       );
       if (!target) {
-        if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
+        bufferUnboundStream(env);
+        if (
+          !env.sessionId &&
+          (event.type === "turn_complete" || event.type === "error") &&
+          !event.agentId
+        ) {
           const runningBucket = runningBucketRef.current;
           if (runningBucket) {
             setBusyForKey(runningBucket, false);
@@ -197,6 +238,18 @@ export function useHostSubscriptions({
           }
         }
         return;
+      }
+      if (event.type === "background_agent_completed") {
+        toast({
+          message: bgCompletionText(event),
+          variant:
+            event.status === "completed"
+              ? "success"
+              : event.status === "cancelled"
+                ? undefined
+                : "error",
+        });
+        // fall through: the reducer still appends the system message below.
       }
       // Backfill the route table so subsequent events for this session take the
       // fast path (and so turn_complete/error below can clear the right bucket).
@@ -232,7 +285,7 @@ export function useHostSubscriptions({
         const prev = coalescerSeqRef.current.get(target) ?? 0;
         coalescerSeqRef.current.set(target, Math.max(prev, env.seq));
       }
-      getCoalescer(target).push(event);
+      getCoalescer(target).push(event, env.seq, env.epoch);
 
       // session_started carries the authoritative engine sessionId. Persist
       // the binding (engineSessionId == uiSessionId is the new normal, but
@@ -343,7 +396,8 @@ export function useHostSubscriptions({
           }
         }
       }
-    });
+    };
+    const offStream = window.codeshell.onStreamEvent(handleStreamEvent);
     // Live automation session: main announces {sessionId, cwd, title} once when
     // an in-main automation run emits session_started. Stream events carry no
     // cwd, so without this the run can't be attributed to a project until the
@@ -371,6 +425,7 @@ export function useHostSubscriptions({
             loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
           ) ?? null;
         engineToBucketRef.current.set(meta.sessionId, bucketKey(knownProjectId, meta.sessionId));
+        replayUnboundStream(meta.sessionId);
         return;
       }
       void (async () => {
@@ -387,6 +442,7 @@ export function useHostSubscriptions({
             meta.sessionId,
             bucketKey(existingProjectId, meta.sessionId),
           );
+          replayUnboundStream(meta.sessionId);
           return;
         }
         const projectFactory = makeCreateProjectForCwd(projectsAfterResolve);
@@ -427,6 +483,7 @@ export function useHostSubscriptions({
         }
         if (projectFactory.changed()) setProjects(projectsAfterResolve.slice());
         setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
+        replayUnboundStream(meta.sessionId);
       })();
     });
     let hostAnnouncementSequence = 0;
@@ -535,6 +592,7 @@ export function useHostSubscriptions({
         setCollapsedProjects((current) => revealSidebarProject(current, projectId));
         setRevealedSessionIds((current) => ({ ...current, [projectKey]: sessionId }));
       }
+      replayUnboundStream(meta.sessionId);
     };
     const offMobileSession = window.codeshell.onMobileSession((meta) => {
       void announceHostSession(meta, "mobile");

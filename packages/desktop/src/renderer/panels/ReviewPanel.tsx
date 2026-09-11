@@ -107,6 +107,9 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
       .map((f) => f.newPath ?? f.oldPath)
       .filter((p): p is string => !!p);
   }, [turnDiff]);
+  // A file selected in an earlier turn may not exist in the next snapshot.
+  // Resolve that stale filter immediately, before the diff viewer renders.
+  const activeTurnFileSel = turnFilePaths.includes(turnFileSel) ? turnFileSel : ALL_FILES;
   // The commit picked from the 提交 submenu (committed scope diffs <hash>^..<hash>).
   // null = no specific commit picked → default to the most recent (HEAD~1..HEAD).
   const [selectedCommit, setSelectedCommit] = useState<ReviewGitCommit | null>(null);
@@ -255,7 +258,7 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
           <SimpleSelect
             size="sm"
             ariaLabel={t("panels.review.selectFile")}
-            value={turnFileSel}
+            value={activeTurnFileSel}
             onChange={setTurnFileSel}
             options={[
               {
@@ -286,7 +289,7 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
           <UnifiedDiffViewer
             cwd={cwd}
             diffText={turnDiff}
-            onlyPath={turnFileSel === ALL_FILES ? null : turnFileSel}
+            onlyPath={activeTurnFileSel === ALL_FILES ? null : activeTurnFileSel}
             onStats={setStats}
           />
         ) : (

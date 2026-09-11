@@ -2,7 +2,12 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 
 /** Flushes a batch of events in arrival order. Callers apply them under a
  *  single reducer dispatch so one 50ms window = one render, not one per event. */
-type FlushBatch = (events: StreamEvent[]) => void;
+export interface SequencedStreamEvent {
+  event: StreamEvent;
+  seq?: number;
+  epoch?: string;
+}
+type FlushBatch = (events: StreamEvent[], raw: SequencedStreamEvent[]) => void;
 
 interface PendingText {
   agentId: string | undefined;
@@ -52,6 +57,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
   const argsBuf = new Map<string, PendingArgs>();
   let timer: ReturnType<typeof setTimeout> | null = null;
   let segment = 0;
+  let raw: SequencedStreamEvent[] = [];
 
   function isHardBoundary(event: StreamEvent): boolean {
     switch (event.type) {
@@ -108,7 +114,9 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
       timer = null;
     }
     const batch = drainToBatch();
-    if (batch.length > 0) onFlushBatch(batch);
+    const entries = raw;
+    raw = [];
+    if (batch.length > 0) onFlushBatch(batch, entries);
   }
 
   function scheduleFlush(): void {
@@ -119,8 +127,14 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
     }, intervalMs);
   }
 
-  function push(event: StreamEvent): void {
+  function push(event: StreamEvent, seq?: number, epoch?: string): void {
     const t = event.type;
+    if (t === "error") {
+      flush();
+      onFlushBatch([event], [{ event, seq, epoch }]);
+      return;
+    }
+    raw.push({ event, seq, epoch });
     if (t === "text_delta") {
       const agentId = (event as any).agentId as string | undefined;
       const key = `text|${segment}|${agentId ?? ""}`;
@@ -155,13 +169,6 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
       scheduleFlush();
       return;
     }
-    // `error` must surface instantly and on its own — flush the pending batch
-    // (preserving order), then emit the error in its own batch.
-    if (t === "error") {
-      flush();
-      onFlushBatch([event]);
-      return;
-    }
     // Boundary events still join the ordered batch, but they also advance the
     // delta segment so later text/args cannot merge back across the boundary.
     // Non-boundary passthrough events (session_started, usage_update, ...) do
@@ -183,6 +190,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
       timer = null;
     }
     drainToBatch();
+    raw = [];
   }
 
   return { push, flush, dispose, discard };

@@ -10,10 +10,11 @@
  */
 
 import * as fs from "node:fs/promises";
+import * as syncFs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
-import { lock } from "@cjhyy/code-shell-core/internal";
+import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding";
 
 export type SettingsScope = "user" | "project";
@@ -70,7 +71,7 @@ export async function readSettings(
 //      main). Cheap, in-memory; also means same-process writes never contend
 //      for the OS lock below.
 //
-//   2. lock(dir) — cross-process advisory file lock (proper-lockfile, the same
+//   2. acquireFileLock(file) — cross-process advisory directory lock (the same
 //      one CronStore uses for cron.json). This is what stops the agent WORKER
 //      process — or a second Electron instance — from doing its own RMW between
 //      our read and our rename and silently dropping our update. The lock is on
@@ -81,27 +82,49 @@ export async function readSettings(
 // writeSettings MUST be the only path that writes settings.json. Do not bypass.
 const writeChains = new Map<string, Promise<void>>();
 
-// stale: a holder that crashes (kill -9 / power loss) must not wedge writes
-// forever; 10s ≫ any real settings write, so it won't be falsely reclaimed.
-// retries: settings writes want "don't lose my change" over "fail fast", so
-// wait through a brief contention window with backoff rather than erroring.
-const LOCK_STALE_MS = 10_000;
-const LOCK_RETRIES = { retries: 10, factor: 1.5, minTimeout: 20, maxTimeout: 500 };
+/** The shared directory mutex must not be held across an async I/O boundary. */
+function readSettingsForMutation(file: string): Record<string, unknown> | null {
+  let raw: string;
+  try {
+    raw = syncFs.readFileSync(file, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPlainRecord(parsed)) throw new Error("settings root must be an object");
+    return sanitizeStoredSettings(parsed) as Record<string, unknown>;
+  } catch {
+    // Match the public reader's corrupt-file recovery without yielding while
+    // credentials or model-catalog writers need the same directory mutex.
+    try {
+      syncFs.renameSync(file, file + ".corrupt-" + Date.now());
+    } catch {
+      /* best effort */
+    }
+    return null;
+  }
+}
 
-async function writeSettingsFileAtomic(file: string, data: Record<string, unknown>): Promise<void> {
+function writeSettingsFileAtomic(file: string, data: Record<string, unknown>): void {
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
     // settings.json can still contain legacy plaintext provider keys. Create
     // the staging inode owner-only; rename preserves that mode and tightens a
     // pre-fix 0644 target without an observable chmod window.
-    await fs.writeFile(temporary, JSON.stringify(data, null, 2) + "\n", {
+    syncFs.writeFileSync(temporary, JSON.stringify(data, null, 2) + "\n", {
       encoding: "utf8",
       mode: 0o600,
     });
-    await fs.rename(temporary, file);
+    syncFs.renameSync(temporary, file);
   } finally {
     // rename removes the source on success; force makes cleanup a no-op then.
-    await fs.rm(temporary, { force: true }).catch(() => undefined);
+    try {
+      syncFs.rmSync(temporary, { force: true });
+    } catch {
+      /* Preserve the original write error. */
+    }
   }
 }
 
@@ -118,20 +141,21 @@ export async function writeSettings(
   const prev = writeChains.get(p) ?? Promise.resolve();
   const next = prev
     .catch(() => {})
-    .then(async () => {
-      const dir = path.dirname(p);
-      await fs.mkdir(dir, { recursive: true });
+    .then(() => {
       // Cross-process lock around the whole RMW. Lock the dir, not the file.
-      const release = await lock(dir, { stale: LOCK_STALE_MS, retries: LOCK_RETRIES });
+      // Keep the operation synchronous: other stores in this same process
+      // also synchronously take this directory lock and must not block an
+      // async holder's continuation until it is mistaken for a stale owner.
+      const release = acquireFileLock(p);
       try {
-        const current = (await readSettings(scope, projectPath)) ?? {};
+        const current = readSettingsForMutation(p) ?? {};
         const merged = deepMerge(current, patch);
         normalizeWorktreeBranchPrefixIfPatched(patch, merged);
         // Unique temp name so a concurrent writer for the same file can't clobber
         // our half-written temp and produce corrupt JSON after rename.
-        await writeSettingsFileAtomic(p, merged);
+        writeSettingsFileAtomic(p, merged);
       } finally {
-        await release();
+        release();
       }
     });
   writeChains.set(p, next);

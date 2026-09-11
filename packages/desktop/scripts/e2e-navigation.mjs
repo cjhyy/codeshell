@@ -13,6 +13,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedSessionCatalog,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -74,21 +75,18 @@ try {
   )
     await trust.click();
 
-  await win.evaluate(() => {
-    localStorage.setItem(
-      "codeshell.sessionIndex.__no_repo__",
-      JSON.stringify({
-        sessions: [
-          {
-            id: "ui-navigation-draft",
-            title: "界面导航草稿",
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          },
-        ],
-        activeSessionId: null,
-      }),
-    );
+  await seedSessionCatalog(win, {
+    __no_repo__: {
+      sessions: [
+        {
+          id: "ui-navigation-draft",
+          title: "界面导航草稿",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ],
+      activeSessionId: null,
+    },
   });
   await win.reload();
 

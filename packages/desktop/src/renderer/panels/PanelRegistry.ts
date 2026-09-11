@@ -184,8 +184,11 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     icon: ServerCog,
     order: 40,
     enabled: alwaysEnabled,
-    render: ({ engineSessionId }) =>
-      createElement(BackgroundShellPanel, { sessionId: engineSessionId }),
+    render: ({ engineSessionId, foregroundVisible }) =>
+      createElement(BackgroundShellPanel, {
+        sessionId: engineSessionId,
+        active: foregroundVisible,
+      }),
   }),
   builtin({
     key: "ccRoom",

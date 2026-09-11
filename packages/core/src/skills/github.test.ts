@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -142,4 +143,45 @@ test("source updates preserve edits made while the remote version is downloading
   ).rejects.toThrow("变化");
   expect(readFileSync(file, "utf8")).toBe("New unsent local work.");
   expect(JSON.parse(readFileSync(join(skill, SKILL_META_FILE), "utf8"))).toEqual(metadata);
+});
+
+test("source updates keep staging and backups inside a root with a read-only parent", async () => {
+  const parent = directory();
+  const root = join(parent, "skills");
+  const skill = join(root, "demo");
+  mkdirSync(skill, { recursive: true, mode: 0o700 });
+  const file = join(skill, "SKILL.md");
+  writeFileSync(file, "Original instructions.", { mode: 0o600 });
+  const metadata = {
+    kind: "github",
+    owner: "fixture",
+    repo: "skills",
+    ref: "main",
+    dirInRepo: "demo",
+    commit,
+    installedAt: "2026-09-08",
+  };
+  writeFileSync(join(skill, SKILL_META_FILE), JSON.stringify(metadata));
+  chmodSync(parent, 0o555);
+  try {
+    await expect(
+      updateSkillFromSource(file, {
+        getRefCommit: async () => "b".repeat(40),
+        downloadSkillTree: async (_info, _ref, _dir, destination) => {
+          writeFileSync(join(destination, "SKILL.md"), "Replacement.", { mode: 0o600 });
+        },
+      }),
+    ).resolves.toEqual({ updated: true, reason: "updated" });
+    expect(readFileSync(file, "utf8")).toBe("Replacement.");
+    expect(JSON.parse(readFileSync(join(skill, SKILL_META_FILE), "utf8")).commit).toBe(
+      "b".repeat(40),
+    );
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(statSync(parent).mode & 0o777).toBe(0o555);
+    expect(readdirSync(parent)).toEqual(["skills"]);
+    expect(readdirSync(root).sort()).toEqual([".skill-mutation", "demo"]);
+    expect(readdirSync(join(root, ".skill-mutation"))).toEqual([]);
+  } finally {
+    chmodSync(parent, 0o700);
+  }
 });

@@ -11,6 +11,7 @@ import type { Anchor } from "./chat/anchors";
 import { PetStateProvider } from "./pet/PetStateProvider";
 import { PetDesktopWindow } from "./pet/PetDesktopWindow";
 import { installQuickChatPanelApp } from "./panels/apps/quickChatPanelApp";
+import { SessionPersistenceGate } from "./SessionPersistenceGate";
 
 initTheme();
 
@@ -52,9 +53,11 @@ if (params.get("popout") === "pet") {
   root.render(
     <React.StrictMode>
       <I18nProvider>
-        <PetStateProvider>
-          <PetDesktopWindow />
-        </PetStateProvider>
+        <SessionPersistenceGate>
+          <PetStateProvider>
+            <PetDesktopWindow />
+          </PetStateProvider>
+        </SessionPersistenceGate>
       </I18nProvider>
     </React.StrictMode>,
   );
@@ -72,10 +75,12 @@ if (params.get("popout") === "pet") {
       <I18nProvider>
         <DialogProvider>
           <ToastProvider>
-            {/* Process-shell owner: stays mounted while App swaps chat/settings/overview content. */}
-            <PetStateProvider>
-              <App />
-            </PetStateProvider>
+            <SessionPersistenceGate>
+              {/* Process-shell owner: stays mounted while App swaps chat/settings/overview content. */}
+              <PetStateProvider>
+                <App />
+              </PetStateProvider>
+            </SessionPersistenceGate>
           </ToastProvider>
         </DialogProvider>
       </I18nProvider>

@@ -1,5 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -63,6 +73,67 @@ describe("trust-store", () => {
     expect(paths.every((projectPath) => parsed[projectPath] === "trusted")).toBe(true);
   });
 
+  test("trust and catalog mutations sharing the desktop directory cannot steal their own lock", async () => {
+    const trustUrl = pathToFileURL(join(import.meta.dir, "trust-store.ts")).href;
+    const catalogUrl = pathToFileURL(join(import.meta.dir, "session-catalog-store.ts")).href;
+    const corePackage = join(import.meta.dir, "../../../core/package.json");
+    // Run the actual stores in an isolated process so a regressed orphaned
+    // heartbeat cannot contaminate the surrounding test runner.
+    const child = Bun.spawn({
+      cmd: [
+        process.execPath,
+        "--eval",
+        `
+        import { createRequire } from "node:module";
+        import { setImmediate as immediate } from "node:timers/promises";
+        import { __setTrustFileForTest, setTrust } from ${JSON.stringify(trustUrl)};
+        import { SessionCatalogStore } from ${JSON.stringify(catalogUrl)};
+        const { getLocks } = createRequire(${JSON.stringify(corePackage)})("proper-lockfile/lib/lockfile");
+        __setTrustFileForTest(${JSON.stringify(file)});
+        const errors = [];
+        process.on("uncaughtException", error => errors.push({ message: error.message, code: error.code }));
+        let completed = false;
+        const pending = setTrust(${JSON.stringify(root)}, "untrusted")
+          .catch(error => errors.push({ message: error.message, code: error.code }))
+          .finally(() => { completed = true; });
+        const until = Date.now() + 2000;
+        let observedAsyncHolder = false;
+        while (!completed && Date.now() < until) {
+          if (Object.keys(getLocks()).some(key => key.endsWith(${JSON.stringify(root.split("/").at(-1) + "/desktop")}))) {
+            observedAsyncHolder = true;
+            break;
+          }
+          await immediate();
+        }
+        const started = Date.now();
+        const catalog = new SessionCatalogStore({ file: ${JSON.stringify(join(root, "desktop", "session-catalog.json"))} });
+        await catalog.apply({ projectKey: "fixture", upserts: [{ id: "s1", values: { title: "saved", createdAt: 1, updatedAt: 1 } }] });
+        await pending;
+        await new Promise(resolve => setTimeout(resolve, 25));
+        console.log(JSON.stringify({ observedAsyncHolder, durationMs: Date.now() - started, errors }));
+      `,
+      ],
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [code, output, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    const result = JSON.parse(output.trim());
+    expect(result.errors).toEqual([]);
+    expect(result.observedAsyncHolder).toBe(false);
+    expect(result.durationMs).toBeLessThan(2000);
+    expect(JSON.parse(await readFile(file, "utf8"))[await realpath(root)]).toBe("untrusted");
+    expect(
+      JSON.parse(await readFile(join(root, "desktop", "session-catalog.json"), "utf8")).indices
+        .fixture.sessions[0].title,
+    ).toBe("saved");
+  }, 20_000);
+
   test("clears a previously trusted sync cache when disk becomes corrupt", async () => {
     const projectPath = join(root, "project");
     await setTrust(projectPath, "trusted");
@@ -72,6 +143,17 @@ describe("trust-store", () => {
     await warmTrustCache();
     expect(getTrustCachedSync(projectPath)).toBe("unknown");
     expect(await getTrust(projectPath)).toBe("unknown");
+  });
+
+  test("a mutation recovers a corrupt registry without retaining stale trusted entries", async () => {
+    const stale = join(root, "stale-project");
+    const current = join(root, "current-project");
+    await setTrust(stale, "trusted");
+    await writeFile(file, "{", "utf8");
+    await setTrust(current, "untrusted");
+    expect(getTrustCachedSync(stale)).toBe("unknown");
+    expect(getTrustCachedSync(current)).toBe("untrusted");
+    expect(JSON.parse(await readFile(file, "utf8"))).toEqual({ [current]: "untrusted" });
   });
 
   test("uses one canonical trust decision for real and symlink paths", async () => {
@@ -108,7 +190,10 @@ describe("trust-store", () => {
   test("fails closed on oversized registries", async () => {
     const projectPath = join(root, "oversized-project");
     await mkdir(join(root, "desktop"), { recursive: true });
-    await writeFile(file, JSON.stringify({ [projectPath]: "trusted", padding: "x".repeat(4 * 1024 * 1024) }));
+    await writeFile(
+      file,
+      JSON.stringify({ [projectPath]: "trusted", padding: "x".repeat(4 * 1024 * 1024) }),
+    );
 
     await warmTrustCache();
     expect(getTrustCachedSync(projectPath)).toBe("unknown");

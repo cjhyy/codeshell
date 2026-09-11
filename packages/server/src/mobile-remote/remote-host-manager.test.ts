@@ -27,6 +27,157 @@ function mobileFixture(base: string): string {
 }
 
 describe("RemoteHostManager", () => {
+  test.each(["web", "upload"])(
+    "a failed %s cleanup still closes the listener and cleans the other service",
+    async (failedService) => {
+      dir = mkdtempSync(join(tmpdir(), "remote-host-close-failure-"));
+      const cleaned: string[] = [];
+      const host = new RemoteHostManager({
+        devices: new TrustedDeviceStore(join(dir, "devices.json")),
+        onClientEvent: () => {},
+        webApi: {
+          start() {},
+          async close() {
+            cleaned.push("web");
+            if (failedService === "web") throw new Error("web cleanup unavailable");
+          },
+        } as unknown as NonNullable<ConstructorParameters<typeof RemoteHostManager>[0]["webApi"]>,
+        uploads: {
+          async acceptPut() {},
+          async cancelActiveTransfers() {
+            cleaned.push("upload");
+            if (failedService === "upload") throw new Error("upload cleanup unavailable");
+          },
+        } as unknown as NonNullable<ConstructorParameters<typeof RemoteHostManager>[0]["uploads"]>,
+      });
+      await host.start({ host: "127.0.0.1", port: 0 });
+      const listener = (host as unknown as { server: import("node:http").Server }).server;
+      try {
+        await expect(host.stop()).rejects.toThrow(`${failedService} cleanup unavailable`);
+        expect(cleaned).toEqual(["web", "upload"]);
+        expect(listener.listening).toBe(false);
+      } finally {
+        // Also clean the old implementation's abandoned listener on failure.
+        listener.closeAllConnections();
+        await new Promise<void>((resolve) => listener.close(() => resolve()));
+      }
+    },
+  );
+
+  test("restart waits for the previous host cleanup and concurrent stops share it", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-restart-"));
+    let releaseClose!: () => void;
+    const closeGate = new Promise<void>((resolve) => {
+      releaseClose = resolve;
+    });
+    let reachedClose!: () => void;
+    const closing = new Promise<void>((resolve) => {
+      reachedClose = resolve;
+    });
+    let starts = 0;
+    let closes = 0;
+    const webApi = {
+      start() {
+        starts += 1;
+      },
+      async close() {
+        closes += 1;
+        reachedClose();
+        await closeGate;
+      },
+    } as unknown as NonNullable<ConstructorParameters<typeof RemoteHostManager>[0]["webApi"]>;
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      webApi,
+    });
+    await host.start({ host: "127.0.0.1", port: 0 });
+    const firstStop = host.stop();
+    await closing;
+    const secondStop = host.stop();
+    const restarting = host.start({ host: "127.0.0.1", port: 0 });
+    let startsBeforeCleanup: number;
+    let closesBeforeCleanup: number;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      startsBeforeCleanup = starts;
+      closesBeforeCleanup = closes;
+    } finally {
+      releaseClose();
+    }
+    await Promise.all([firstStop, secondStop]);
+    const restarted = await restarting;
+    try {
+      expect(startsBeforeCleanup).toBe(1);
+      expect(closesBeforeCleanup).toBe(1);
+      expect(starts).toBe(2);
+      expect((await fetch(`${restarted.url}/health`)).status).toBe(200);
+    } finally {
+      await host.stop();
+    }
+  });
+
+  test.each(["auth", "pair"])(
+    "switching device identity through %s releases the previous viewer and online count",
+    async (method) => {
+      dir = mkdtempSync(join(tmpdir(), "remote-host-rebind-"));
+      const devices = new TrustedDeviceStore(join(dir, "devices.json"));
+      const first = devices.addDevice({ name: "First", secretHash: "first-secret" });
+      const second = devices.addDevice({ name: "Second", secretHash: "second-secret" });
+      const offline: Array<{ deviceId: string; viewerId: string }> = [];
+      const host = new RemoteHostManager({
+        devices,
+        onClientEvent: (event, ws) => ws.send(JSON.stringify(event)),
+      });
+      host.on("viewer-offline", (identity) => offline.push(identity));
+      const started = await host.start({ host: "127.0.0.1", port: 0 });
+      const { WebSocket: WS } = await import("ws");
+      const socket = new WS(`${started.url.replace(/^http/, "ws")}/ws`);
+      await new Promise<void>((resolve, reject) => {
+        socket.once("open", resolve);
+        socket.once("error", reject);
+      });
+      const exchange = (event: unknown) =>
+        new Promise<Record<string, any>>((resolve) => {
+          socket.once("message", (raw) => resolve(JSON.parse(String(raw))));
+          socket.send(JSON.stringify(event));
+        });
+      try {
+        await exchange({ type: "auth.device", deviceId: first.id, secretHash: "first-secret" });
+        const oldIdentity = await exchange({ type: "room.history", roomId: "old" });
+        await exchange({ type: "auth.device", deviceId: first.id, secretHash: "first-secret" });
+        const unchanged = await exchange({ type: "room.history", roomId: "same" });
+        expect(unchanged.viewerId).toBe(oldIdentity.viewerId);
+        expect(offline).toHaveLength(0);
+        const reply =
+          method === "auth"
+            ? await exchange({
+                type: "auth.device",
+                deviceId: second.id,
+                secretHash: "second-secret",
+              })
+            : await exchange({
+                type: "pair.complete",
+                token: host.createPairingUrl().token,
+                name: "New",
+                secretHash: "new-secret",
+              });
+        const current = await exchange({ type: "room.history", roomId: "new" });
+        expect(reply.type).toBe(method === "auth" ? "auth.ok" : "pair.ok");
+        expect(current.deviceId).toBe(reply.device.id);
+        expect(current.viewerId).not.toBe(oldIdentity.viewerId);
+        expect(offline).toEqual([{ deviceId: first.id, viewerId: oldIdentity.viewerId }]);
+        expect(host.onlineDeviceIds()).toEqual([reply.device.id]);
+        await host.stop();
+        expect(host.onlineDeviceIds()).toEqual([]);
+        expect(offline).toHaveLength(2);
+      } finally {
+        socket.terminate();
+        await host.stop();
+      }
+    },
+  );
+
   test("starts, serves mobile HTML, and stops", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const host = new RemoteHostManager({

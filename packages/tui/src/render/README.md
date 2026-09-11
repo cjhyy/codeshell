@@ -26,38 +26,38 @@ Three states:
 
 ### Components
 
-| Export             | Status        | Purpose                                          |
-| ------------------ | ------------- | ------------------------------------------------ |
-| `Box`              | supported     | Flexbox container.                               |
-| `Text`             | supported     | Styled text leaf.                                |
-| `Spacer`           | supported     | Flexible spacer in a flex container.             |
-| `Newline`          | supported     | Hard line break inside a `Text`.                 |
-| `ScrollBox`        | supported     | Viewport scroll container; imperative handle.    |
-| `AlternateScreen`  | supported     | Enter alt-screen + mouse tracking + raw input.   |
-| `Ansi`             | supported     | Embed a pre-rendered ANSI string.                |
-| `NoSelect`         | supported     | Mark a region non-selectable in fullscreen copy. |
-| `Button`           | supported     | Click/keyboard activatable region.               |
-| `Link`             | supported     | OSC 8 hyperlink wrapper.                         |
-| `RawAnsi`          | supported     | Like `Ansi` but bypasses width measurement.      |
+| Export            | Status    | Purpose                                          |
+| ----------------- | --------- | ------------------------------------------------ |
+| `Box`             | supported | Flexbox container.                               |
+| `Text`            | supported | Styled text leaf.                                |
+| `Spacer`          | supported | Flexible spacer in a flex container.             |
+| `Newline`         | supported | Hard line break inside a `Text`.                 |
+| `ScrollBox`       | supported | Viewport scroll container; imperative handle.    |
+| `AlternateScreen` | supported | Enter alt-screen + mouse tracking + raw input.   |
+| `Ansi`            | supported | Embed a pre-rendered ANSI string.                |
+| `NoSelect`        | supported | Mark a region non-selectable in fullscreen copy. |
+| `Button`          | supported | Click/keyboard activatable region.               |
+| `Link`            | supported | OSC 8 hyperlink wrapper.                         |
+| `RawAnsi`         | supported | Like `Ansi` but bypasses width measurement.      |
 
 ### Hooks
 
-| Export       | Status     | Purpose                                  |
-| ------------ | ---------- | ---------------------------------------- |
-| `useApp`     | supported  | App lifecycle (`exit`, ...).             |
-| `useInput`   | supported  | Subscribe to keyboard input.             |
-| `useStdin`   | supported  | Read stdin state / raw mode toggling.    |
-| `useStdout`  | supported  | Imperative stdout writer + size.         |
+| Export      | Status    | Purpose                               |
+| ----------- | --------- | ------------------------------------- |
+| `useApp`    | supported | App lifecycle (`exit`, ...).          |
+| `useInput`  | supported | Subscribe to keyboard input.          |
+| `useStdin`  | supported | Read stdin state / raw mode toggling. |
+| `useStdout` | supported | Imperative stdout writer + size.      |
 
 ### Entry points
 
-| Export         | Status        | Purpose                                       |
-| -------------- | ------------- | --------------------------------------------- |
-| `render`       | supported     | Mount a React tree to the terminal.           |
-| `createRoot`   | supported     | Lower-level mount API.                        |
-| `Instance`     | supported     | Handle returned by `render` / `createRoot`.   |
-| `renderSync`   | experimental  | Synchronous render variant.                   |
-| `RenderOptions` | experimental  | Options bag for `render` / `createRoot`.      |
+| Export          | Status       | Purpose                                     |
+| --------------- | ------------ | ------------------------------------------- |
+| `render`        | supported    | Mount a React tree to the terminal.         |
+| `createRoot`    | supported    | Lower-level mount API.                      |
+| `Instance`      | supported    | Handle returned by `render` / `createRoot`. |
+| `renderSync`    | experimental | Synchronous render variant.                 |
+| `RenderOptions` | experimental | Options bag for `render` / `createRoot`.    |
 
 ### Types
 
@@ -94,31 +94,27 @@ The two are unrelated despite the shared name.
 
 ## Perf baselines
 
-Local bench results, recorded 2026-05-17. Numbers are machine-specific — treat
-them as a regression anchor, not absolute SLOs. Re-record on similar reference
-machines as needed.
+Local bench results, recorded 2026-09-11. Numbers are machine-specific; use
+relative deltas on the same machine, not absolute SLOs.
 
-Host: MacBook, macOS 15.6.1 (Darwin 24.6.0 arm64), bun 1.3.11.
+These benchmarks were repaired after the monorepo migration: imports now use
+`packages/tui/src/render`, timers surround the actual scenario, and frame counts
+come from `onFrame` rather than stdout chunk counts. The old 2026-05-17 table
+measured different intervals and counters and is not comparable to these values.
 
-The `tail-10k-mount (settle)` "per iter" is post-mount settle latency, not mount
-cost. Component-level mount work is reflected by `bytes_written` and `frames`
-rather than `per iter ms`. `wheel-100-steps` per-iter includes the 20 ms render
-settle wait per step (16 ms ScrollBox throttle + flush); the bench drives real
-renders rather than measuring queueMicrotask latency.
+| Scenario               | total ms | per update ms | bytes written | frames | writes |
+| ---------------------- | -------- | ------------- | ------------- | ------ | ------ |
+| `mount-10k`            | 233.09   | —             | 98,912        | 1      | 2      |
+| `streaming-200-deltas` | 4,114.03 | 20.570        | 6,276         | 200    | 200    |
+| `spinner-60-ticks`     | 1,451.08 | 24.185        | 1,680         | 60     | 60     |
+| `wheel-100-steps`      | 2,089.74 | 20.897        | 129,293       | 300    | 301    |
 
-| Scenario                         | per iter ms | bytes written | frames |
-| -------------------------------- | ----------- | ------------- | ------ |
-| `tail-10k-mount (settle)`        | 0.065       | 98 912        | 2      |
-| `streaming-200-deltas`           | 15.438      | 49 856        | 34     |
-| `spinner-60-ticks`               | 18.789      | 49 374        | 18     |
-| `wheel-100-steps`                | 20.470      | 186 143       | 461    |
-
-The `streaming` / `spinner` rows total elapsed time for the scenario after
-warm mount; `frames` counts stdout chunks written during the streamed/ticking
-phase. Low `frames` relative to event count = batching is working. For
-`wheel-100-steps` the inverse: ~4.6 frames per scroll step is expected because
-each ScrollBox commit emits multiple stdout chunks (cursor moves, style
-transitions, line redraws).
+Mount timing includes tree construction through the first terminal frame.
+Streaming and spinner timing/counters exclude warm mount and include all updates
+through the final rendered frame. The wheel scenario includes the initial frame
+in counters and a deliberate 20 ms settle wait in each step. The benchmark waits
+for actual frame callbacks and fails if they do not arrive; batching may produce
+fewer frames than updates on a faster machine.
 
 To re-record: `bun run bench:render`. To collect under live perf logging:
 `CODESHELL_RENDER_DEBUG=1 bun run bench:render`, then read
@@ -136,7 +132,7 @@ When changing `src/render/`:
    shrink over time, not grow. See `docs/architecture/11-render-tui-capability-plan.md`
    for the roadmap.
 
-## What this directory is *not*
+## What this directory is _not_
 
 - **Not** a vendored snapshot of npm `ink`.
 - **Not** a published library.

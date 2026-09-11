@@ -107,6 +107,60 @@ describe("RunApprovalBackend — fail-closed when hooks are missing (§5.6 #15)"
 });
 
 describe("createRunAskUserFn — second ask does not orphan the first (§5.6 #15)", () => {
+  test("an immediate answer from the lifecycle hook finds the pending input", async () => {
+    let answeredInHook = false;
+    const adapter = createRunAskUserFn({
+      onApprovalNeeded: async () => ({ approvalId: "unused" }),
+      onInputNeeded: async () => {
+        answeredInHook = adapter.resolveInput("immediate answer");
+      },
+    });
+    const answer = adapter.askUserFn("Q");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Also settle the old implementation so a failed regression has no leak.
+    adapter.resolveInput("fallback answer");
+    expect(await answer).toBe("immediate answer");
+    expect(answeredInHook).toBe(true);
+    expect(adapter.hasPendingInput()).toBe(false);
+  });
+
+  test("a failed lifecycle hook rejects its input and clears the pending slot", async () => {
+    const adapter = createRunAskUserFn({
+      onApprovalNeeded: async () => ({ approvalId: "unused" }),
+      onInputNeeded: async () => {
+        throw new Error("input persistence failed");
+      },
+    });
+    await expect(adapter.askUserFn("Q")).rejects.toThrow("input persistence failed");
+    expect(adapter.hasPendingInput()).toBe(false);
+  });
+
+  test("an older delayed hook cannot replace a newer pending question", async () => {
+    const oldHook = deferred<void>();
+    const adapter = createRunAskUserFn({
+      onApprovalNeeded: async () => ({ approvalId: "unused" }),
+      onInputNeeded: async (question) => {
+        if (question === "old") await oldHook.promise;
+      },
+    });
+    const old = adapter.askUserFn("old");
+    const oldResult = old.then(
+      () => "resolved",
+      () => "superseded",
+    );
+    const current = adapter.askUserFn("current");
+    const currentResult = current.then(
+      (value) => value,
+      () => "unexpected rejection",
+    );
+    oldHook.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    adapter.resolveInput("current answer");
+
+    expect(await oldResult).toBe("superseded");
+    expect(await currentResult).toBe("current answer");
+  });
+
   test("a second askUser before the first resolves rejects rather than leaking", async () => {
     const hooks: RunLifecycleHooks = {
       onApprovalNeeded: async () => ({ approvalId: "x" }),

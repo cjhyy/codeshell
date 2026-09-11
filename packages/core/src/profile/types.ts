@@ -39,6 +39,20 @@ const capabilityListSchema = z
     message: "capability entries must be unique",
   });
 
+// The Skills CLI consumes each --skill value until the next '-' option, and
+// treats '*' as a request for the whole repository. Keep capability switches
+// unrestricted; only dependency-install selectors need this narrower contract.
+const installSkillNameSchema = capabilityNameSchema.refine(
+  (name) => !name.startsWith("-") && name !== "*" && !name.includes("\0"),
+  { message: "installable Skill names must be literal names, not options or wildcard selectors" },
+);
+const installSkillListSchema = z
+  .array(installSkillNameSchema)
+  .max(WORKSPACE_PROFILE_LIMITS.capabilityCount)
+  .refine((items) => new Set(items).size === items.length, {
+    message: "capability entries must be unique",
+  });
+
 /**
  * 依赖来源：数字人自带的「怎么把能力弄来」声明。
  *
@@ -55,7 +69,7 @@ const skillRequirementSchema = z.object({
   /** `owner/repo` 形式。 */
   repo: z.string().regex(SKILL_REPO_RE),
   /** 只装这些 skill；省略表示装全部（`--all`）。 */
-  skills: capabilityListSchema.optional(),
+  skills: installSkillListSchema.optional(),
   /**
    * project → `<cwd>/.agents/skills`（scanner 认）。
    * user 级 `npx skills add -g` 落在 `~/.claude/skills`，**不在 scanner 的三个根里**，

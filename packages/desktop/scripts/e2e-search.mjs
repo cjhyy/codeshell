@@ -13,6 +13,8 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedSessionCatalog,
+  waitForSessionCatalogSelection,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -63,24 +65,21 @@ try {
     await trust.click();
 
   // These are local drafts, so selecting one needs no engine session or model.
-  await win.evaluate(() => {
-    const sessions = Array.from({ length: 24 }, (_, index) => ({
-      id: `ui-search-${index + 1}`,
-      title: `界面任务 ${String(index + 1).padStart(2, "0")}`,
-      createdAt: Date.now() - index * 60_000,
-      updatedAt: Date.now() - index * 60_000,
-    }));
-    sessions.push({
-      id: "ui-search-archived",
-      title: "界面任务 archived",
-      createdAt: 1,
-      updatedAt: 1,
-      archived: true,
-    });
-    localStorage.setItem(
-      "codeshell.sessionIndex.__no_repo__",
-      JSON.stringify({ sessions, activeSessionId: null }),
-    );
+  const sessions = Array.from({ length: 24 }, (_, index) => ({
+    id: `ui-search-${index + 1}`,
+    title: `界面任务 ${String(index + 1).padStart(2, "0")}`,
+    createdAt: Date.now() - index * 60_000,
+    updatedAt: Date.now() - index * 60_000,
+  }));
+  sessions.push({
+    id: "ui-search-archived",
+    title: "界面任务 archived",
+    createdAt: 1,
+    updatedAt: 1,
+    archived: true,
+  });
+  await seedSessionCatalog(win, {
+    __no_repo__: { sessions, activeSessionId: null },
   });
   await win.reload();
   await win.getByRole("button", { name: "搜索", exact: true }).waitFor();
@@ -158,11 +157,7 @@ try {
   await input.press("ArrowDown");
   await input.press("Enter");
   await dialog.waitFor({ state: "hidden" });
-  await win.waitForFunction(
-    () =>
-      JSON.parse(localStorage.getItem("codeshell.sessionIndex.__no_repo__")).activeSessionId ===
-      "ui-search-2",
-  );
+  await waitForSessionCatalogSelection(win, "__no_repo__", "ui-search-2");
 
   dialog = await openSearch();
   input = dialog.getByRole("combobox");
@@ -211,11 +206,7 @@ try {
   await input.focus();
   await input.press("Enter");
   await dialog.waitFor({ state: "hidden" });
-  await win.waitForFunction(
-    () =>
-      JSON.parse(localStorage.getItem("codeshell.sessionIndex.__no_repo__")).activeSessionId ===
-      "ui-search-3",
-  );
+  await waitForSessionCatalogSelection(win, "__no_repo__", "ui-search-3");
 
   for (const width of [680, 390]) {
     await win.setViewportSize({ width, height: 620 });

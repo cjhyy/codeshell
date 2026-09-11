@@ -22,7 +22,11 @@ or editing renderer UI:
 
 ## Architecture reminder
 
-The renderer is a thin client: it imports no `@cjhyy/code-shell-core`. It talks
-to main only through `window.codeshell.*` (see `src/preload/index.ts`). Desktop
-has its OWN typecheck and build — the repo root's checks do not cover it; run
-`bun run typecheck` and `bun run build` in `packages/desktop` after UI changes.
+The renderer is a thin client: host functionality crosses `window.codeshell.*`
+(see `src/preload/index.ts`). Type-only core imports and the reviewed browser-safe
+`@cjhyy/code-shell-core/browser/panel-app-runtime` runtime entry are allowed;
+other core runtime imports are prohibited by ESLint.
+
+The root typecheck includes Desktop's main/preload/renderer/mobile configs.
+Desktop's build remains separate: run `bun run typecheck` and `bun run build`
+in `packages/desktop` after UI changes.

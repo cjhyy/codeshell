@@ -1,7 +1,6 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
 import { importAutomationRuns } from "../automation/importRuns";
-import { foldTranscript } from "../automation/foldTranscript";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { planDiskRebuild, type DiskSessionMeta } from "../automation/rebuildFromDisk";
 import { emptyPanelBucketState, type PanelBucketState } from "./appUtils";
@@ -15,7 +14,6 @@ import {
   loadSessionIndex,
   projectBucketSegment,
   renameSessionLocal,
-  saveTranscript,
   setActiveSession,
   setSessionPinnedLocal,
   upsertImportedSession,
@@ -38,7 +36,6 @@ import {
   releaseWorkspacesForArchiveMany,
 } from "../workspaceArchiveRelease";
 import type { PermissionMode } from "../chat/PermissionPill";
-import type { MessagesReducerState } from "../types";
 import type { RunSummary } from "../../preload/types";
 import type { ViewState } from "../view";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
@@ -198,6 +195,7 @@ export function useSessionNavigation({
 
   const resetDraft = (projectId: string | null, clearOverrides: boolean): void => {
     if (activeProjectId !== projectId) setActiveProjectId(projectId);
+    setCollapsedProjects((current) => revealSidebarProject(current, projectId));
     const draftBucket = bucketKey(projectId, null);
     const previousBucket = activeBucketRef.current;
     activeBucketRef.current = draftBucket;
@@ -328,11 +326,9 @@ export function useSessionNavigation({
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: new Set(),
         cap: 1,
-        fetchTranscript: (sessionId) => window.codeshell.getSessionTranscript(sessionId),
         createProjectForCwd: projectFactory.createProjectForCwd,
         resolvedForCwd,
-        writeImported: (projectId, summary, state) => {
-          saveTranscript(projectId, summary.id, state);
+        writeImported: (projectId, summary) => {
           upsertImportedSession(projectId, summary);
           touchedProjectIds.add(projectId);
         },
@@ -372,13 +368,6 @@ export function useSessionNavigation({
       resolvedForCwd,
     });
     if (!placement) return;
-    let state: MessagesReducerState;
-    try {
-      state = foldTranscript(await window.codeshell.getSessionTranscript(session.engineSessionId));
-    } catch {
-      state = foldTranscript([]);
-    }
-    saveTranscript(placement.projectId, placement.summary.id, state);
     const nextIndex = upsertImportedSession(placement.projectId, placement.summary);
     if (projectFactory.changed()) setProjects(projectsNow.slice());
     setSessionIndices((prev) => ({

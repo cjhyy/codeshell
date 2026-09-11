@@ -45,7 +45,8 @@ function ParamControl({
   switch (spec.control) {
     case "enum": {
       const options = (spec.options ?? []).map((o) => ({ value: o, label: o }));
-      const current = typeof value === "string" ? value : (spec.default as string | undefined) ?? "";
+      const current =
+        typeof value === "string" ? value : ((spec.default as string | undefined) ?? "");
       return (
         <ConnField label={label} hint={spec.doc}>
           <SimpleSelect
@@ -89,7 +90,12 @@ function ParamControl({
       const current = typeof value === "string" ? value : "";
       return (
         <ConnField label={label} hint={spec.doc}>
-          <Input value={current} placeholder={spec.name} onChange={(e) => onChange(spec.name, e.target.value)} />
+          <Input
+            value={current}
+            placeholder={spec.name}
+            maxLength={spec.max}
+            onChange={(e) => onChange(spec.name, e.target.value)}
+          />
         </ConnField>
       );
     }

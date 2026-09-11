@@ -137,6 +137,7 @@ export function parseExtractionResponse(response: string, maxCount?: number): Ex
           m !== null &&
           typeof (m as any).type === "string" &&
           typeof (m as any).name === "string" &&
+          typeof (m as any).description === "string" &&
           typeof (m as any).content === "string" &&
           ["user", "feedback", "project", "reference"].includes((m as any).type),
       )
@@ -152,11 +153,22 @@ export function parseExtractionResponse(response: string, maxCount?: number): Ex
         }),
       );
 
+    // Compare the complete normalized structure before caps or global demotion.
+    // Exact repeats must not crowd out distinct facts; text, whitespace, case
+    // and word order stay untouched, so this makes no semantic merge decisions.
+    const seen = new Set<string>();
+    const unique = valid.filter((memory) => {
+      const key = JSON.stringify(memory);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     // Hard cap (用户拍板 克制): at most 1 global per extraction. The prompt asks
     // for this, but the model may ignore it — enforce in code. Keep the first
     // global as-is; demote any further globals to project.
     let globalSeen = false;
-    const capped = valid.map((m) => {
+    const capped = unique.map((m) => {
       if (m.scope !== "global") return m;
       if (globalSeen) return { ...m, scope: "project" as const };
       globalSeen = true;

@@ -14,7 +14,7 @@
  * confusing direction.
  */
 import { accessSync, constants, statSync } from "node:fs";
-import { delimiter, isAbsolute, join } from "node:path";
+import { delimiter, isAbsolute, resolve } from "node:path";
 import type { ExternalRuntimeModelKind } from "../shared/external-runtime-models.js";
 import { dlog } from "./desktop-logger.js";
 
@@ -59,7 +59,10 @@ export function findOnPath(command: string, pathValue: string | undefined): stri
   for (const dir of (pathValue ?? "").split(delimiter)) {
     if (!dir) continue;
     for (const name of names) {
-      const candidate = join(dir, name);
+      // Pin relative PATH entries against the probing host's cwd. Returning a
+      // relative command would resolve differently once spawn switches to the
+      // project's working directory.
+      const candidate = resolve(dir, name);
       if (isExecutableFile(candidate)) return candidate;
     }
   }

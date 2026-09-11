@@ -133,6 +133,20 @@ describe("PanelRegistry", () => {
     expect(rendered.props.active).toBe(false);
   });
 
+  it("pauses background-work reads for a kept-mounted hidden panel", () => {
+    const rendered = getPanelEntry("shells")!.render({
+      cwd: "/repo",
+      engineSessionId: "session-1",
+      tabId: "shells-1",
+      bucket: "repo::session-1",
+      busy: false,
+      visible: true,
+      foregroundVisible: false,
+    }) as ReactElement<{ sessionId: string; active: boolean }>;
+
+    expect(rendered.props).toMatchObject({ sessionId: "session-1", active: false });
+  });
+
   it("routes the active Session identity into the Review panel", () => {
     const rendered = getPanelEntry("review")!.render({
       projectPath: "/repo",

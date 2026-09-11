@@ -78,18 +78,13 @@ let nextDriver = 0;
 export class PuppeteerBrowserDriver implements BrowserBridge {
   private readonly namespace: string;
   private generation = 1;
-  private mainDocumentGeneration = 1;
-  private readonly mainFrame: Frame;
   private observation = 0;
   private refs = new Map<string, RefRecord>();
   private disposed = false;
   private readonly abort = new AbortController();
   private tail: Promise<unknown> = Promise.resolve();
   private inspector?: ReturnType<typeof createPuppeteerInspector>;
-  private readonly onDocumentChange = (frame: Frame) => {
-    if (frame === this.mainFrame) this.mainDocumentGeneration++;
-    this.resetRefs();
-  };
+  private readonly onDocumentChange = () => this.resetRefs();
   private readonly onClose = () => this.dispose();
   private readonly onAbort = () => this.dispose();
 
@@ -98,7 +93,6 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
     private readonly options: PuppeteerBrowserDriverOptions = {},
   ) {
     this.namespace = `${options.documentNamespace ?? "puppeteer"}:p${++nextDriver}`;
-    this.mainFrame = page.mainFrame();
     page.on("framenavigated", this.onDocumentChange);
     page.on("framedetached", this.onDocumentChange);
     page.on("close", this.onClose);
@@ -134,53 +128,40 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
 
   snapshot(): Promise<BrowserSnapshot> {
     return this.enqueue(async () => {
-      const mainDocumentGeneration = this.mainDocumentGeneration;
-      for (let attempt = 0; ; attempt++) {
-        try {
-          this.checkActive();
-          this.releaseRefs();
-          const documentId = this.documentId();
-          const snapshotId = `${this.namespace}:s${++this.observation}`;
-          const collected = await this.collect("interactive", 250, snapshotId);
-          const title = await this.title();
-          this.checkDocument(documentId);
-          const elements: BrowserElement[] = collected.map(({ ref, metadata }) => ({
-            ref,
-            role: metadata.role,
-            name: metadata.name,
-            sensitive: metadata.sensitive,
-            value: metadata.value,
-          }));
-          return {
-            url: this.page.url(),
-            title,
-            documentId,
-            snapshotId,
-            elements,
-            identity: this.options.identity,
-            ...(elements.some((element) => element.sensitive)
-              ? { needsHuman: "this page requires sign-in or another sensitive input" }
-              : {}),
-          };
-        } catch (error) {
-          this.releaseRefs();
-          // Restored OOPIFs can register after the main Page is ready. Restart
-          // this read with fresh refs, but never cross a main-document navigation:
-          // the host must recheck the destination's authorization first.
-          if (
-            error instanceof DriverError &&
-            error.code === "NAVIGATION" &&
-            mainDocumentGeneration === this.mainDocumentGeneration &&
-            attempt < 2
-          )
-            continue;
-          return {
-            url: this.page.url(),
-            elements: [],
-            detail: message(error),
-            identity: this.options.identity,
-          };
-        }
+      try {
+        this.checkActive();
+        this.releaseRefs();
+        const documentId = this.documentId();
+        const snapshotId = `${this.namespace}:s${++this.observation}`;
+        const collected = await this.collect("interactive", 250, snapshotId);
+        const title = await this.title();
+        this.checkDocument(documentId);
+        const elements: BrowserElement[] = collected.map(({ ref, metadata }) => ({
+          ref,
+          role: metadata.role,
+          name: metadata.name,
+          sensitive: metadata.sensitive,
+          value: metadata.value,
+        }));
+        return {
+          url: this.page.url(),
+          title,
+          documentId,
+          snapshotId,
+          elements,
+          identity: this.options.identity,
+          ...(elements.some((element) => element.sensitive)
+            ? { needsHuman: "this page requires sign-in or another sensitive input" }
+            : {}),
+        };
+      } catch (error) {
+        this.releaseRefs();
+        return {
+          url: this.page.url(),
+          elements: [],
+          detail: message(error),
+          identity: this.options.identity,
+        };
       }
     });
   }
@@ -697,7 +678,6 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       let metadataHandle: JSHandle<ReturnType<typeof collectPageNodes>["metadata"]> | undefined;
       const unclaimed = new Set<JSHandle>();
       try {
-        this.checkDocument(documentId);
         nodes = await result.getProperty("nodes");
         metadataHandle = await result.getProperty("metadata");
         const metadata = await metadataHandle.jsonValue();
@@ -706,9 +686,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         for (const node of properties.values()) unclaimed.add(node);
         for (const [key, node] of properties) {
           const handle = node.asElement() as ElementHandle<Element> | null;
-          if (!handle || !metadata[Number(key)]) {
-            continue;
-          }
+          if (!handle || !metadata[Number(key)]) continue;
           const ref = `${prefix}:e${output.length + 1}`;
           this.refs.set(ref, { handle, documentId, frame });
           unclaimed.delete(node);
@@ -721,9 +699,13 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         }
       } finally {
         await Promise.all(
-          [result, nodes, metadataHandle, ...unclaimed].map((handle) =>
-            handle?.dispose().catch(() => undefined),
-          ),
+          [result, nodes, metadataHandle, ...unclaimed].map(async (handle) => {
+            try {
+              await handle?.dispose();
+            } catch {
+              // Release every acquired handle without replacing the observation error.
+            }
+          }),
         );
       }
       this.checkDocument(documentId);

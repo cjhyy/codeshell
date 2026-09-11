@@ -22,10 +22,21 @@
  */
 
 import type { RendererStreamEvent } from "../preload/types";
+import type { SessionIndex, SessionSummary } from "../shared/session-catalog";
+import { getSessionPersistence } from "./sessionPersistence";
+export type { SessionIndex, SessionSummary } from "../shared/session-catalog";
 import type { MessagesReducerState } from "./types";
 import { INITIAL_STATE, applyStreamEvent } from "./types";
 
 const TRANSCRIPT_MSG_CAP = 500;
+// Tool output and screenshots can make even a short conversation enormous.
+// Disk holds the authoritative history; keep completed renderer caches small
+// enough that they cannot crowd out the sidebar's session identities.
+const TRANSCRIPT_CACHE_MAX_BYTES = 1024 * 1024;
+const pendingSessionIndices = new WeakMap<
+  Storage,
+  Map<string, { previous: string | null; value: string }>
+>();
 /** Legacy byte value for the no-project conversation bucket. */
 export const NO_REPO_KEY = "__no_repo__";
 
@@ -69,70 +80,6 @@ export function applyTranscriptStreamEvent(
  * as the legacy "新对话" literal so existing stored sessions still match.
  */
 export const DEFAULT_SESSION_TITLE = "新对话";
-
-export interface SessionSummary {
-  /** Local UI session id (NOT the engine session id; see `engineSessionId`). */
-  id: string;
-  title: string;
-  /** True once the user manually renamed this session — blocks LLM auto-title overwrite. */
-  titleManual?: boolean;
-  createdAt: number;
-  updatedAt: number;
-  /** True when the user has archived this session — hidden from the
-   *  main list, accessible under a collapsed "已归档" group. */
-  archived?: boolean;
-  /** Pinned sessions stay at the front of their project's sidebar list. */
-  pinned?: boolean;
-  /**
-   * Engine sessionId bound to this UI session. Empty until the first
-   * agent/run for this UI session completes (or session_started fires).
-   * On subsequent sends we MUST pass this value as `sessionId` so the
-   * worker resumes the right engine session instead of letting the
-   * engine auto-pick the last active one — that's the bug that made
-   * '新对话' resume the previous chat's context.
-   */
-  engineSessionId?: string;
-  /**
-   * Team this Session was summoned as part of, and its role in it. Set once at
-   * creation; lets the sidebar show which Sessions belong together instead of
-   * leaving the user to infer it from titles.
-   */
-  teamId?: string;
-  teamRole?: "lead" | "member";
-  /**
-   * Standing brief injected as system context on every run of this Session.
-   * Persisted here (not just in engine state) because a planned Session has no
-   * engine state until its first run.
-   */
-  sessionBrief?: string;
-  /** Current, switchable digital-human identity for this project Session. */
-  workspaceProfile?: string;
-  /** "automation" when imported from a cron run; absent for manual chats. */
-  source?: "automation";
-  /** RunStore run id, when source === "automation" — used for unified delete. */
-  runId?: string;
-  /** Run status at import time (e.g. "running" | "completed"). Lets the
-   *  backfill dedup re-import a still-running import once it completes. */
-  runStatus?: string;
-  /** Cron job id that owns this automation run, when known (live-announced
-   *  sessions). Lets delete cancel a still-running run via
-   *  cancelAutomationRun(cronJobId) before removing the on-disk session dir. */
-  cronJobId?: string;
-}
-
-export interface SessionIndex {
-  /** Sessions ordered most-recently-updated first. */
-  sessions: SessionSummary[];
-  activeSessionId: string | null;
-  /**
-   * Project label captured at delete time. Set ONLY when the owning project was
-   * removed from the sidebar — the project is gone from the live project list,
-   * so the archived-sessions view can no longer resolve its name. We stash the
-   * label here so those archived sessions still show "原项目名" instead of
-   * "未知项目". Absent for live projects (their name comes from `projects`).
-   */
-  deletedProjectLabel?: string;
-}
 
 function logSessionDiagnostic(event: string, details: Record<string, unknown>): void {
   try {
@@ -421,6 +368,9 @@ const SCHEMA_KEY = "codeshell.schema";
 const SCHEMA_VERSION = "2026-05-26-multi-session";
 function migrateSessionStorageIfNeeded(): void {
   try {
+    // Main's new importer keeps a backup before acknowledging legacy data.
+    // Running the obsolete wipe first would destroy older installations.
+    if (getSessionPersistence()) return;
     if (typeof localStorage === "undefined") return;
     if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return;
     const stale: string[] = [];
@@ -456,8 +406,23 @@ export function makeSessionId(): string {
 }
 
 export function loadSessionIndex(projectId: string | null): SessionIndex {
+  const persistence = getSessionPersistence();
+  if (persistence) {
+    return normalizeSessionIndex(
+      projectId,
+      persistence.getIndex(projectBucketSegment(projectId)),
+      "load",
+    );
+  }
   try {
-    const raw = localStorage.getItem(indexKey(projectId));
+    const key = indexKey(projectId);
+    const persisted = localStorage.getItem(key);
+    const pending = pendingSessionIndices.get(localStorage)?.get(key);
+    // Retain a failed write within this window so create -> touch -> bind never
+    // reloads an older list. A successful write in another window wins.
+    const raw = pending?.previous === persisted ? pending.value : persisted;
+    if (pending && pending.previous !== persisted)
+      pendingSessionIndices.get(localStorage)?.delete(key);
     if (!raw) return { sessions: [], activeSessionId: null };
     const parsed = JSON.parse(raw) as Partial<SessionIndex>;
     if (!parsed || !Array.isArray(parsed.sessions)) {
@@ -490,15 +455,139 @@ export function loadSessionIndex(projectId: string | null): SessionIndex {
 }
 
 export function saveSessionIndex(projectId: string | null, idx: SessionIndex): void {
+  const persistence = getSessionPersistence();
+  if (persistence) {
+    persistence.saveIndex(
+      projectBucketSegment(projectId),
+      normalizeSessionIndex(projectId, idx, "save"),
+    );
+    return;
+  }
   try {
     const normalized = normalizeSessionIndex(projectId, idx, "save");
-    localStorage.setItem(indexKey(projectId), JSON.stringify(normalized));
-  } catch {
-    // best effort
+    const key = indexKey(projectId);
+    const value = JSON.stringify(normalized);
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      if (!isStorageQuotaError(error)) throw error;
+      if (!reclaimTranscriptCacheForIndex(key, value)) {
+        let pending = pendingSessionIndices.get(localStorage);
+        if (!pending) {
+          pending = new Map();
+          pendingSessionIndices.set(localStorage, pending);
+        }
+        pending.set(key, { previous: localStorage.getItem(key), value });
+        throw error;
+      }
+    }
+    pendingSessionIndices.get(localStorage)?.delete(key);
+  } catch (error) {
+    logSessionDiagnostic("session.index_save_failed", {
+      repoId: projectId,
+      error: error instanceof Error ? error.name : "unknown",
+    });
   }
 }
 
 const INDEX_KEY_PREFIX = "codeshell.sessionIndex.";
+
+function isStorageQuotaError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED")
+  );
+}
+
+/** Only discard completed, engine-bound caches, never an unflushed user tail. */
+function isRecoverableTranscriptCache(
+  state: Partial<MessagesReducerState>,
+  engineSessionId: string,
+): boolean {
+  if (
+    state.sessionId !== engineSessionId ||
+    state.streamingAssistantId ||
+    state.streamingThinkingId ||
+    Object.keys(state.activeAgents ?? {}).length > 0 ||
+    !Array.isArray(state.messages)
+  )
+    return false;
+  let completed = false;
+  for (const message of state.messages) {
+    if (message.kind === "user") {
+      if (message.pending) return false;
+      completed = false;
+    } else if (
+      message.kind === "assistant" ||
+      message.kind === "thinking" ||
+      message.kind === "agent"
+    ) {
+      if (!message.done) return false;
+      if (
+        message.kind === "agent" &&
+        message.toolCalls.some((tool) => tool.status === "queued" || tool.status === "running")
+      )
+        return false;
+      if (message.kind === "assistant") completed = true;
+    } else if (message.kind === "tool") {
+      if (message.status === "queued" || message.status === "running") return false;
+      completed = false;
+    } else if (message.kind === "ask_user" && message.answer === undefined) {
+      return false;
+    } else if (message.kind === "turn_end" || message.kind === "turn_usage") {
+      completed = true;
+    }
+  }
+  return completed;
+}
+
+/** Quota recovery runs only after a failed index write, not on every delta. */
+function reclaimTranscriptCacheForIndex(key: string, value: string): boolean {
+  const candidates: Array<{ key: string; raw: string; engineSessionId: string }> = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const candidateKey = localStorage.key(i);
+    if (!candidateKey?.startsWith(INDEX_KEY_PREFIX)) continue;
+    let index: SessionIndex;
+    try {
+      index = JSON.parse(localStorage.getItem(candidateKey) ?? "null") as SessionIndex;
+      if (!Array.isArray(index?.sessions)) continue;
+    } catch {
+      continue;
+    }
+    const projectId = candidateKey.slice(INDEX_KEY_PREFIX.length);
+    for (const summary of index.sessions) {
+      if (!summary.engineSessionId || summary.id === index.activeSessionId) continue;
+      const cacheKey = transcriptKey(projectId, summary.id);
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) candidates.push({ key: cacheKey, raw, engineSessionId: summary.engineSessionId });
+    }
+  }
+  // Free the fewest caches possible, and parse large JSON only on this rare path.
+  candidates.sort((a, b) => b.raw.length - a.raw.length);
+  let reclaimedBytes = 0;
+  let removed = 0;
+  for (const candidate of candidates) {
+    try {
+      if (!isRecoverableTranscriptCache(JSON.parse(candidate.raw), candidate.engineSessionId))
+        continue;
+    } catch {
+      continue;
+    }
+    localStorage.removeItem(candidate.key);
+    reclaimedBytes += (candidate.key.length + candidate.raw.length) * 2;
+    removed += 1;
+    try {
+      localStorage.setItem(key, value);
+      logSessionDiagnostic("session.index_quota_recovered", { removed, reclaimedBytes });
+      return true;
+    } catch (error) {
+      if (!isStorageQuotaError(error)) throw error;
+    }
+  }
+  return false;
+}
 
 /**
  * Find session indices for projects that were DELETED (carry deletedProjectLabel)
@@ -512,6 +601,19 @@ export function loadDeletedArchivedIndices(
   liveProjectIds: Set<string>,
 ): Record<string, SessionIndex> {
   const out: Record<string, SessionIndex> = {};
+  const persistence = getSessionPersistence();
+  if (persistence) {
+    for (const [key, idx] of Object.entries(persistence.getIndices())) {
+      if (
+        key !== NO_REPO_KEY &&
+        !liveProjectIds.has(key) &&
+        idx.deletedProjectLabel &&
+        idx.sessions.length
+      )
+        out[key] = idx;
+    }
+    return out;
+  }
   try {
     if (typeof localStorage === "undefined") return out;
     for (let i = 0; i < localStorage.length; i++) {
@@ -532,8 +634,35 @@ export function loadDeletedArchivedIndices(
 }
 
 export function loadTranscript(projectId: string | null, sessionId: string): MessagesReducerState {
+  const persistence = getSessionPersistence();
+  if (persistence)
+    return parseTranscriptSnapshot(
+      persistence.getTranscript(projectBucketSegment(projectId), sessionId),
+    );
   try {
-    const raw = localStorage.getItem(transcriptKey(projectId, sessionId));
+    return parseTranscriptSnapshot(localStorage.getItem(transcriptKey(projectId, sessionId)));
+  } catch {
+    return INITIAL_STATE;
+  }
+}
+
+export async function loadPersistedTranscript(
+  projectId: string | null,
+  sessionId: string,
+  maxBytes?: number,
+): Promise<{ state: MessagesReducerState; hasEarlier: boolean }> {
+  const persistence = getSessionPersistence();
+  if (!persistence) return { state: loadTranscript(projectId, sessionId), hasEarlier: false };
+  const result = await persistence.readTranscript(
+    projectBucketSegment(projectId),
+    sessionId,
+    maxBytes,
+  );
+  return { state: parseTranscriptSnapshot(result.value), hasEarlier: result.hasEarlier };
+}
+
+function parseTranscriptSnapshot(raw: string | null): MessagesReducerState {
+  try {
     if (!raw) return INITIAL_STATE;
     const parsed = JSON.parse(raw) as Partial<MessagesReducerState>;
     if (!parsed || !Array.isArray(parsed.messages)) return INITIAL_STATE;
@@ -562,6 +691,9 @@ export function loadTranscript(projectId: string | null, sessionId: string): Mes
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
       snapshotSeq: parsed.snapshotSeq ?? 0,
+      ...(typeof parsed.snapshotEpoch === "string" && parsed.snapshotEpoch
+        ? { snapshotEpoch: parsed.snapshotEpoch }
+        : {}),
       turnEpoch: parsed.turnEpoch ?? 0,
       // Persisted so the active-goal marker + popover survive a refresh /
       // localStorage reload (core also persists it in session state, but the
@@ -586,6 +718,11 @@ export function saveTranscript(
   sessionId: string,
   state: MessagesReducerState,
 ): void {
+  const persistence = getSessionPersistence();
+  if (persistence) {
+    persistence.saveTranscript(projectBucketSegment(projectId), sessionId, JSON.stringify(state));
+    return;
+  }
   try {
     const capped: MessagesReducerState =
       state.messages.length <= TRANSCRIPT_MSG_CAP
@@ -599,13 +736,34 @@ export function saveTranscript(
             // restore — the session has already been persisted.
             agentMessageIndex: {},
           };
-    localStorage.setItem(transcriptKey(projectId, sessionId), JSON.stringify(capped));
+    const serialized = JSON.stringify(capped);
+    const key = transcriptKey(projectId, sessionId);
+    if ((key.length + serialized.length) * 2 > TRANSCRIPT_CACHE_MAX_BYTES) {
+      const summary = loadSessionIndex(projectId).sessions.find(
+        (session) => session.id === sessionId,
+      );
+      if (
+        summary?.engineSessionId &&
+        isRecoverableTranscriptCache(capped, summary.engineSessionId)
+      ) {
+        // Replace an older, potentially unfinished snapshot with disk hydration,
+        // rather than leaving a giant streaming cache permanently ineligible.
+        localStorage.removeItem(key);
+        return;
+      }
+    }
+    localStorage.setItem(key, serialized);
   } catch {
     // best effort
   }
 }
 
 export function clearTranscript(projectId: string | null, sessionId: string): void {
+  const persistence = getSessionPersistence();
+  if (persistence) {
+    persistence.saveTranscript(projectBucketSegment(projectId), sessionId, null);
+    return;
+  }
   try {
     localStorage.removeItem(transcriptKey(projectId, sessionId));
   } catch {
@@ -614,17 +772,49 @@ export function clearTranscript(projectId: string | null, sessionId: string): vo
 }
 
 /** Merge one project bucket into another, moving index rows and transcript blobs. */
-export function migrateProjectSessionBucket(
+export async function migrateProjectSessionBucket(
   fromProjectId: string,
   toProjectId: string,
-): SessionIndex {
+): Promise<SessionIndex> {
   if (fromProjectId === toProjectId) return loadSessionIndex(toProjectId);
   const from = loadSessionIndex(fromProjectId);
   const to = loadSessionIndex(toProjectId);
   const existing = new Set(to.sessions.map((s) => s.engineSessionId || s.id));
   const moved = from.sessions.filter((s) => !existing.has(s.engineSessionId || s.id));
+  const persistence = getSessionPersistence();
   for (const s of moved) {
-    saveTranscript(toProjectId, s.id, loadTranscript(fromProjectId, s.id));
+    if (persistence) persistence.copyTranscript(fromProjectId, toProjectId, s.id);
+    else saveTranscript(toProjectId, s.id, loadTranscript(fromProjectId, s.id));
+  }
+  if (persistence) {
+    // Keep the source catalog authoritative until every complete snapshot has
+    // been copied. A failed copy or process exit leaves the original route usable.
+    await persistence.flush();
+    const currentFrom = loadSessionIndex(fromProjectId);
+    const currentTo = loadSessionIndex(toProjectId);
+    const copiedIds = new Set(from.sessions.map((session) => session.id));
+    const known = new Set(
+      currentTo.sessions.map((session) => session.engineSessionId || session.id),
+    );
+    const copied = currentFrom.sessions.filter(
+      (session) => copiedIds.has(session.id) && !known.has(session.engineSessionId || session.id),
+    );
+    const next: SessionIndex = {
+      ...currentTo,
+      sessions: [...copied, ...currentTo.sessions].sort((a, b) => b.updatedAt - a.updatedAt),
+      activeSessionId: currentTo.activeSessionId ?? currentFrom.activeSessionId,
+    };
+    saveSessionIndex(toProjectId, next);
+    saveSessionIndex(fromProjectId, {
+      ...currentFrom,
+      sessions: currentFrom.sessions.filter((session) => !copiedIds.has(session.id)),
+      activeSessionId: null,
+    });
+    await persistence.flush();
+    // Source snapshots are deleted only after both directory patches commit.
+    for (const session of moved) persistence.saveTranscript(fromProjectId, session.id, null);
+    await persistence.flush();
+    return next;
   }
   const next: SessionIndex = {
     sessions: [...moved, ...to.sessions].sort((a, b) => b.updatedAt - a.updatedAt),

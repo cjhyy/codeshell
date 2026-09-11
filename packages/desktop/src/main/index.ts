@@ -362,6 +362,7 @@ import {
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
@@ -893,7 +894,11 @@ const mobileRemote = new RemoteHostManager({
     getBridge: () => bridge,
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
     onSessionsChanged: (cwd, sessionId) => {
-      const line = JSON.stringify({ jsonrpc: "2.0", method: "serve/sessionsChanged", params: { cwd, sessionId } });
+      const line = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "serve/sessionsChanged",
+        params: { cwd, sessionId },
+      });
       mobileRemote.broadcastRaw(line);
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) window.webContents.send("agent:msg", line);
@@ -1526,6 +1531,7 @@ async function createWindow(): Promise<BrowserWindow> {
           type: "session.stream",
           sessionId: snapshotEntry.sessionId,
           seq: snapshotEntry.seq,
+          epoch: snapshotEntry.epoch,
           event: snapshotEntry.event,
         });
       } else {
@@ -3192,7 +3198,9 @@ app.whenReady().then(async () => {
   // Prime the workspace-trust cache so the agent-bridge's synchronous
   // agent/run handler can resolve project trust without a disk read. Until it
   // resolves, unknown → fail-closed (untrusted), which is the safe default.
-  void warmTrustCache();
+  void warmTrustCache()
+    .then(() => panelAppBridge.initializeMedia())
+    .catch((error) => dlog("main", "panel.media.recovery.failed", { error: String(error) }));
   void createWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
@@ -6690,6 +6698,10 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   return getRunHistory(runId);
 });
 registerSessionTranscriptIpc(ipcMain);
+const sessionCatalogIpc = registerSessionCatalogIpc(ipcMain, () => [
+  ...mainWindows,
+  ...(petWidgetWindow ? [petWidgetWindow] : []),
+]);
 ipcMain.handle(
   "sessions:listDisk",
   async (
@@ -6897,42 +6909,49 @@ app.on("before-quit", (event) => {
   if (quitCleanupDone) return;
   event.preventDefault();
   if (quitCleanupPromise) return;
-  // Drain the last debounced rotations before the browser contexts are closed.
-  const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
-  browserRuntime.closeAll();
-  bridge?.kill();
-  petStateAggregator?.stop();
-  petStateAggregator = null;
-  petExternalVisibilityController?.shutdown();
-  petExternalVisibilityController = null;
-  reconcileExternalAdapters = null;
-  petDispatchService = null;
-  petHostActionReceiptService = null;
-  petLongTaskCoordinator?.stop();
-  petLongTaskCoordinator = null;
-  unsubscribePetLongTaskStream?.();
-  unsubscribePetLongTaskStream = null;
-  unsubscribePetReportStream?.();
-  unsubscribePetReportStream = null;
-  petAttentionPolicy?.stop();
-  petAttentionPolicy = null;
-  const petWorkInboxFlush = petWorkInboxStore?.flush();
-  petWorkInboxStore = null;
-  const petLongTaskFlush = petLongTaskStore?.flush();
-  petLongTaskStore = null;
-  disposePetIpc?.();
-  disposePetIpc = null;
-  automationHandle?.stop();
-  automationHandle = null;
-  ptyKillAll();
-  transcriptSubscriptions?.closeAll();
-  roomManager.closeAll();
-  // Each external-runtime session holds a child process and a listening port,
-  // and neither dies with the parent on Windows. Captured before the async
-  // block so a later reassignment cannot make this a no-op.
-  const externalRuntimeShutdown = externalRuntimeService?.stopAll();
-  externalRuntimeService = null;
   quitCleanupPromise = (async () => {
+    try {
+      await sessionCatalogIpc.flushRenderers();
+    } catch (error) {
+      dlog("main", "session.quit_save_failed", { error: String(error) });
+      quitCleanupPromise = undefined;
+      return;
+    }
+    // Drain the last debounced rotations before the browser contexts are closed.
+    const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+    browserRuntime.closeAll();
+    bridge?.kill();
+    petStateAggregator?.stop();
+    petStateAggregator = null;
+    petExternalVisibilityController?.shutdown();
+    petExternalVisibilityController = null;
+    reconcileExternalAdapters = null;
+    petDispatchService = null;
+    petHostActionReceiptService = null;
+    petLongTaskCoordinator?.stop();
+    petLongTaskCoordinator = null;
+    unsubscribePetLongTaskStream?.();
+    unsubscribePetLongTaskStream = null;
+    unsubscribePetReportStream?.();
+    unsubscribePetReportStream = null;
+    petAttentionPolicy?.stop();
+    petAttentionPolicy = null;
+    const petWorkInboxFlush = petWorkInboxStore?.flush();
+    petWorkInboxStore = null;
+    const petLongTaskFlush = petLongTaskStore?.flush();
+    petLongTaskStore = null;
+    disposePetIpc?.();
+    disposePetIpc = null;
+    automationHandle?.stop();
+    automationHandle = null;
+    ptyKillAll();
+    transcriptSubscriptions?.closeAll();
+    roomManager.closeAll();
+    // Each external-runtime session holds a child process and a listening port,
+    // and neither dies with the parent on Windows. Captured before the async
+    // block so a later reassignment cannot make this a no-op.
+    const externalRuntimeShutdown = externalRuntimeService?.stopAll();
+    externalRuntimeService = null;
     await Promise.allSettled([
       imGatewayService.dispose(),
       tunnelManager.stop(),
@@ -6942,6 +6961,8 @@ app.on("before-quit", (event) => {
       petLongTaskFlush,
       externalRuntimeShutdown,
       cookieRefreshShutdown,
+      sessionCatalogIpc.flush(),
+      panelAppBridge.shutdownMedia(),
       chromeExtensionRuntimeService.stop(),
     ]);
     gatewayControlServer = undefined;

@@ -54,6 +54,7 @@ import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-command
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { ApprovalRequest, TaskInfo } from "@cjhyy/code-shell-core/internal";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
+import { StreamAttempt } from "./stream-attempt.js";
 import {
   nextPermissionMode,
   permissionConfigurePayload,
@@ -476,6 +477,7 @@ export function App({
 
   // ─── Text delta buffering ──────────────────────────────────────
   const textBufferRef = useRef<Map<string | undefined, string>>(new Map());
+  const streamAttemptRef = useRef(new StreamAttempt());
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Throttle ref for "we dropped a sub-agent text_delta" log so it doesn't
   // drown the bucket at 30/s. One sampled log per second is enough to see
@@ -655,6 +657,7 @@ export function App({
           break;
 
         case "turn_complete":
+          if (agentId === undefined) streamAttemptRef.current.clear();
           if (agentId === undefined && queryGuard.endExternal()) {
             finalizeStreamPresentation();
           }
@@ -668,6 +671,12 @@ export function App({
           // Sub-agent stream events surface via AgentDock + agent_start/end
           // markers; don't add per-sub-agent thinking rows to the main feed.
           if (agentId !== undefined) break;
+          if (flushTimerRef.current) {
+            clearTimeout(flushTimerRef.current);
+            flushTimerRef.current = null;
+          }
+          flushTextBuffer();
+          streamAttemptRef.current.begin(event.messageId, chatStore.getEntries());
           setStreamMode("thinking");
           setThinkingContent(null);
           clearThinkingBuffer();
@@ -675,10 +684,35 @@ export function App({
           // Tracks output of the current call only; ctx size is the bar's job.
           streamingTokensRef.current = 0;
           chatStore.update((prev) => {
-            const filtered = prev.filter((e) => !(e.type === "thinking" && e.agentId === agentId));
+            const filtered = prev
+              .filter((e) => !(e.type === "thinking" && e.agentId === agentId))
+              .map((e) =>
+                e.type === "assistant_text" && e.streaming && e.agentId === agentId
+                  ? { ...e, streaming: false }
+                  : e,
+              );
             return [...filtered, entry({ type: "thinking", agentId })];
           });
           break;
+
+        case "tombstone": {
+          if (agentId !== undefined) break;
+          const remaining = streamAttemptRef.current.revoke(
+            event.messageId,
+            chatStore.getEntries(),
+          );
+          if (!remaining) break;
+          textBufferRef.current.delete(undefined);
+          if (flushTimerRef.current) {
+            clearTimeout(flushTimerRef.current);
+            flushTimerRef.current = null;
+          }
+          clearThinkingBuffer();
+          setThinkingContent(null);
+          chatStore.setEntries(remaining);
+          setStreamMode("thinking");
+          break;
+        }
 
         case "thinking_delta":
           if (!shouldAppendThinkingDeltaToMainFeed(agentId)) break;
@@ -2108,10 +2142,10 @@ export function App({
         />
       )}
 
-      {/* Task list — hidden in sub-agent detail view: today's TaskCreate/Update
-          are a global singleton (no per-agent tagging), so showing them under
-          a sub-agent would mislead. When task ownership lands (TODO:
-          多代理增强), filter by ownerAgentId here instead. */}
+      {/* This list holds the main session's TodoWrite snapshot. The task_update
+          handler above filters events tagged with a sub-agent id, so hide it
+          in sub-agent detail view. Showing a child's own list would require
+          keeping that child's task snapshot alongside its transcript. */}
       {tasks.length > 0 && viewMode.kind === "main" && <TaskList tasks={tasks} />}
     </>
   );

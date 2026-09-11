@@ -413,6 +413,103 @@ describe("LinkAction tool", () => {
     }
   });
 
+  test.each([true, false])(
+    "discards a late provider result after disconnect (subscription: %s)",
+    async (subscribed) => {
+      const state: GithubState = { connected: true, resolveCalls: 0 };
+      const access = githubAccess(state);
+      if (!subscribed) delete access.subscribe;
+      setDefaultCredentialAccess(access);
+      const previousFetch = globalThis.fetch;
+      globalThis.fetch = asGlobalFetch(async () => {
+        state.connected = false;
+        for (const listener of state.listeners ?? []) listener();
+        // A transport can finish despite abort, or credential storage may not
+        // support change events. Its stale result must not leave the tool.
+        return new Response(JSON.stringify([{ full_name: "private/late-result" }]), {
+          status: 200,
+        });
+      });
+      try {
+        const result = JSON.parse(
+          await linkActionTool(
+            { provider: "github", action: "list_repositories", params: {} },
+            context(),
+          ),
+        );
+        expect(result.kind).toBe("error");
+        expect(result.error).toMatch(/disconnected/i);
+        expect(result.data).toBeUndefined();
+        expect(state.listeners?.size ?? 0).toBe(0);
+      } finally {
+        globalThis.fetch = previousFetch;
+      }
+    },
+  );
+
+  test("disconnect during credential resolution prevents the provider call", async () => {
+    const state: GithubState = { connected: true, resolveCalls: 0 };
+    const access = githubAccess(state);
+    access.resolveValue = async () => {
+      state.connected = false;
+      for (const listener of state.listeners ?? []) listener();
+      return "late-token";
+    };
+    setDefaultCredentialAccess(access);
+    const previousFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = asGlobalFetch(async () => {
+      fetchCalls += 1;
+      return new Response("[]", { status: 200 });
+    });
+    try {
+      const result = JSON.parse(
+        await linkActionTool(
+          { provider: "github", action: "list_repositories", params: {} },
+          context(),
+        ),
+      );
+      expect(result.kind).toBe("error");
+      expect(fetchCalls).toBe(0);
+      expect(state.listeners?.size ?? 0).toBe(0);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
+  test.each(["before", "during"] as const)(
+    "task cancellation %s a provider call cannot return a successful action",
+    async (when) => {
+      const state: GithubState = { connected: true, resolveCalls: 0 };
+      setDefaultCredentialAccess(githubAccess(state));
+      const controller = new AbortController();
+      if (when === "before") controller.abort(new Error("task cancelled"));
+      const previousFetch = globalThis.fetch;
+      let fetchCalls = 0;
+      globalThis.fetch = asGlobalFetch(async () => {
+        fetchCalls += 1;
+        controller.abort(new Error("task cancelled"));
+        return new Response("[]", { status: 200 });
+      });
+      try {
+        const result = JSON.parse(
+          await linkActionTool(
+            { provider: "github", action: "list_repositories", params: {} },
+            { ...context(), signal: controller.signal },
+          ),
+        );
+        expect(result.kind).toBe("error");
+        expect(result.error).toContain("task cancelled");
+        expect(result.data).toBeUndefined();
+        expect(fetchCalls).toBe(when === "before" ? 0 : 1);
+        expect(state.resolveCalls).toBe(when === "before" ? 0 : 1);
+        expect(state.listeners?.size ?? 0).toBe(0);
+      } finally {
+        globalThis.fetch = previousFetch;
+      }
+    },
+  );
+
   test("runs a CLI connection without resolving a token and kills it on disconnect", async () => {
     const directory = mkdtempSync(join(tmpdir(), "codeshell-link-cli-"));
     const marker = join(directory, "started");

@@ -40,6 +40,57 @@ function harness(preview: {
 }
 
 describe("ensureDigitalHumanRequirements", () => {
+  test.each(["preview", "confirmation", "installation", "preview-error", "install-error"])(
+    "ignores an obsolete context during %s",
+    async (stage) => {
+      const preview = {
+        needsInstall: true,
+        willRun: ["Install skills"],
+        warnings: [],
+        blockers: [],
+      };
+      const h = harness(preview);
+      let current = true;
+      let reached!: () => void;
+      let proceed!: () => void;
+      const checkpoint = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      const continuation = new Promise<void>((resolve) => {
+        proceed = resolve;
+      });
+      const pause = async () => {
+        reached();
+        await continuation;
+      };
+      const initialPreview = h.options.api.previewProfileRequirements;
+      h.options.api.previewProfileRequirements = async () => {
+        if (stage.startsWith("preview")) await pause();
+        if (stage === "preview-error") throw new Error("old preview failed");
+        return initialPreview();
+      };
+      const initialConfirm = h.options.confirm;
+      h.options.confirm = async (options) => {
+        if (stage === "confirmation") await pause();
+        return initialConfirm(options);
+      };
+      const initialInstall = h.options.api.installProfileRequirements;
+      h.options.api.installProfileRequirements = async () => {
+        if (stage === "installation" || stage === "install-error") await pause();
+        if (stage === "install-error") throw new Error("old installation failed");
+        return initialInstall();
+      };
+      const pending = ensureDigitalHumanRequirements({ ...h.options, isCurrent: () => current });
+      await checkpoint;
+      current = false;
+      proceed();
+      expect(await pending).toBe(false);
+      expect(h.toasts).toEqual([]);
+      if (stage.startsWith("preview")) expect(h.confirmations).toEqual([]);
+      if (stage === "confirmation" || stage.startsWith("preview")) expect(h.installCalls()).toBe(0);
+    },
+  );
+
   test("uses an explicit Session configuration target when switching an existing Session", async () => {
     const h = harness({ needsInstall: false, willRun: [], warnings: [], blockers: [] });
     const targets: unknown[] = [];

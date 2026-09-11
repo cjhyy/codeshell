@@ -84,6 +84,11 @@ interface Props {
    * welcome hero so we don't flash "new chat" before history paints.
    */
   awaitingHydration?: boolean;
+  historyHasMore?: boolean;
+  historyLoading?: boolean;
+  historyFailed?: boolean;
+  historyLimitReached?: boolean;
+  onLoadEarlierHistory?: () => Promise<void>;
   turnEpoch?: number;
   /** Engine session id — lets the Files-Changed card do turn-level undo/redo. */
   engineSessionId?: string | null;
@@ -341,6 +346,11 @@ export function ChatView({
   variant = "main",
   messages,
   awaitingHydration = false,
+  historyHasMore = false,
+  historyLoading = false,
+  historyFailed = false,
+  historyLimitReached = false,
+  onLoadEarlierHistory,
   turnEpoch,
   engineSessionId,
   liveTurnActive,
@@ -1285,7 +1295,8 @@ export function ChatView({
   // session being hydrated also has messages.length === 0 for a frame, but must
   // NOT render as the welcome hero (see awaitingHydration) — it shows a loading
   // placeholder below instead.
-  const isNewChat = messages.length === 0 && !awaitingHydration;
+  const isNewChat =
+    messages.length === 0 && !awaitingHydration && !historyFailed && !historyHasMore;
 
   // Codex-style inline approvals: when an approval is pending, drop
   // the full ApprovalCard at the tail of the chat stream so it scrolls
@@ -1430,6 +1441,38 @@ export function ChatView({
         !isNewChat && (
           <MessageStream
             messages={messages}
+            leading={
+              (historyHasMore || historyFailed) && onLoadEarlierHistory ? (
+                <div
+                  className="flex flex-col items-center gap-1 px-4 py-3"
+                  data-chat-history-control
+                >
+                  {historyFailed && (
+                    <span role="status" className="text-xs text-muted-foreground">
+                      {t("chat.historyLoadFailed")}
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={historyLoading || historyLimitReached}
+                    onClick={() => void onLoadEarlierHistory()}
+                  >
+                    {historyLoading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
+                    {t(
+                      historyLimitReached
+                        ? "chat.historyPreviewLimit"
+                        : historyLoading
+                          ? "chat.loadingEarlierHistory"
+                          : historyFailed
+                            ? "chat.retryHistory"
+                            : "chat.loadEarlierHistory",
+                    )}
+                  </Button>
+                </div>
+              ) : undefined
+            }
             turnEpoch={turnEpoch}
             engineSessionId={engineSessionId}
             liveTurnActive={liveTurnActive}

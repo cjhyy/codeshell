@@ -356,7 +356,7 @@ describe("Hub Skills management", () => {
     let workspace = "";
     const f = await fixture({
       isAuthorized: async () => {
-        const state = join(workspace, ".code-shell");
+        const state = join(workspace, ".code-shell", "skills", ".skill-mutation");
         if (!existsSync(state)) return true;
         return !(await fs.readdir(state)).some((name) => name.startsWith(".skill-stage-"));
       },
@@ -365,7 +365,7 @@ describe("Hub Skills management", () => {
     expect((await f.api("/local", "POST", { name: "hub-skill", content: md() })).status).toBe(401);
     expect(existsSync(join(f.cwd, ".code-shell", "skills", "hub-skill"))).toBe(false);
     expect(
-      (await fs.readdir(join(f.cwd, ".code-shell"))).some((name) =>
+      (await fs.readdir(join(f.cwd, ".code-shell", "skills", ".skill-mutation"))).some((name) =>
         name.startsWith(".skill-stage-"),
       ),
     ).toBe(false);

@@ -476,15 +476,21 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "session.sync") {
-    const snapshot = bridge.getSnapshot(
+    let snapshot = bridge.getSnapshot(
       event.sessionId,
       typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
     );
+    // A cursor from an earlier Main lifetime cannot filter this process's log.
+    // Legacy peers omit epochs and retain the original incremental contract.
+    if (event.epoch && snapshot.epoch && event.epoch !== snapshot.epoch) {
+      snapshot = bridge.getSnapshot(event.sessionId, 0);
+    }
     reply({
       type: "session.snapshot",
       sessionId: event.sessionId,
       entries: snapshot.events,
       nextSeq: snapshot.nextSeq,
+      ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),
     });
     ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
     return;

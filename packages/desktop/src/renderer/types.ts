@@ -363,6 +363,8 @@ export interface MessagesReducerState {
   agentMessageIndex: Record<string, number>;
   /** Highest main-process session snapshot seq applied to this projection. */
   snapshotSeq: number;
+  /** Main-process lifetime that owns snapshotSeq; absent on legacy caches. */
+  snapshotEpoch?: string;
   /**
    * Monotonic counter incremented on each turn_complete. ToolCard /
    * ToolGroupCard subscribe via prop and force their open state back
@@ -1291,17 +1293,38 @@ export function applyStreamEvent(
     }
 
     case "tombstone": {
+      if (event.agentId) {
+        const index = state.agentMessageIndex[event.agentId];
+        const agent = index === undefined ? undefined : state.messages[index];
+        if (
+          agent?.kind !== "agent" ||
+          !agent.toolCalls.some((tool) => tool.id === event.messageId)
+        ) {
+          return state;
+        }
+        const messages = [...state.messages];
+        const toolCalls = agent.toolCalls.filter((tool) => tool.id !== event.messageId);
+        messages[index!] = { ...agent, toolCalls, toolCount: toolCalls.length };
+        return { ...state, messages };
+      }
       // Find the doomed message's index so we can adjust agentMessageIndex.
       const removedIdx = state.messages.findIndex((m) => m.id === event.messageId);
-      if (removedIdx < 0) return state;
-      const messages = state.messages.filter((_, i) => i !== removedIdx);
+      const removesCurrentAssistant = state.streamingAssistantId === event.messageId;
+      // A tool-first stream can already have dropped its empty assistant
+      // placeholder; its live-turn anchor still owns the thinking row.
+      if (removedIdx < 0 && !removesCurrentAssistant) return state;
+      const thinkingId = removesCurrentAssistant ? state.streamingThinkingId : null;
+      const removedIndexes = state.messages.flatMap((message, index) =>
+        index === removedIdx || (thinkingId !== null && message.id === thinkingId) ? [index] : [],
+      );
+      const messages = state.messages.filter((_, i) => !removedIndexes.includes(i));
       // Drop the entry for the removed agent (if it was an AgentMessage),
       // decrement every index that pointed past the removed slot.
-      const removed = state.messages[removedIdx]!;
+      const removed = state.messages[removedIdx];
       const agentMessageIndex: Record<string, number> = {};
       for (const [agentId, idx] of Object.entries(state.agentMessageIndex)) {
-        if (removed.kind === "agent" && agentId === removed.id) continue;
-        agentMessageIndex[agentId] = idx > removedIdx ? idx - 1 : idx;
+        if (removed?.kind === "agent" && agentId === removed.id) continue;
+        agentMessageIndex[agentId] = idx - removedIndexes.filter((removed) => removed < idx).length;
       }
       return {
         ...state,
@@ -1309,6 +1332,7 @@ export function applyStreamEvent(
         agentMessageIndex,
         streamingAssistantId:
           state.streamingAssistantId === event.messageId ? null : state.streamingAssistantId,
+        streamingThinkingId: removesCurrentAssistant ? null : state.streamingThinkingId,
       };
     }
 

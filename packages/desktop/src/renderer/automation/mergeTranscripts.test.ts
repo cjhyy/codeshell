@@ -9,7 +9,12 @@ function stateOf(messages: Message[], extra?: Partial<MessagesReducerState>): Me
 }
 
 const user = (id: string, text: string): Message => ({ kind: "user", id, text });
-const assistant = (id: string, text: string): Message => ({ kind: "assistant", id, text, done: true });
+const assistant = (id: string, text: string): Message => ({
+  kind: "assistant",
+  id,
+  text,
+  done: true,
+});
 const system = (id: string, text: string): Message => ({ kind: "system", id, text });
 const tool = (id: string, toolName: string, args: string): Message => ({
   kind: "tool",
@@ -37,15 +42,9 @@ const contextBoundary = (id: string, before: number, after: number): Message => 
 describe("mergeTranscripts", () => {
   it("keeps disk as the canonical base and appends live-only tail", () => {
     // disk: headless briefing turn (different ids than the live re-render would use)
-    const disk = stateOf([
-      user("d-u1", "汇总新闻"),
-      assistant("d-a1", "今日简报：……"),
-    ]);
+    const disk = stateOf([user("d-u1", "汇总新闻"), assistant("d-a1", "今日简报：……")]);
     // live (localStorage): only the manual follow-up turn was streamed in
-    const live = stateOf([
-      user("l-u1", "为什么没输出"),
-      assistant("l-a1", "我刚才误解成……"),
-    ]);
+    const live = stateOf([user("l-u1", "为什么没输出"), assistant("l-a1", "我刚才误解成……")]);
 
     const merged = mergeTranscripts(disk, live);
     expect(merged.messages.map((m) => [m.kind, (m as { text: string }).text])).toEqual([
@@ -71,6 +70,40 @@ describe("mergeTranscripts", () => {
       "今日简报：……",
       "再补充一句",
     ]);
+  });
+
+  it.each(["clientMessageId", "steerId"] as const)(
+    "keeps repeated requests and replies in separate turns using %s",
+    (identityKey) => {
+      const disk = stateOf([
+        { kind: "user", id: "disk-user", text: "继续", [identityKey]: "first" },
+        assistant("disk-reply", "正在处理。"),
+      ]);
+      const live = stateOf([
+        { kind: "user", id: "live-first", text: "继续", [identityKey]: "first" },
+        assistant("live-first-reply", "正在处理。"),
+        { kind: "user", id: "live-second", text: "继续", [identityKey]: "second" },
+        assistant("live-second-reply", "正在处理。"),
+      ]);
+
+      expect(mergeTranscripts(disk, live).messages.map((message) => message.id)).toEqual([
+        "disk-user",
+        "disk-reply",
+        "live-second",
+        "live-second-reply",
+      ]);
+    },
+  );
+
+  it("matches a persisted user intent even when the host enriched its text", () => {
+    const disk = stateOf([
+      { kind: "user", id: "disk-user", text: "检查附图\n附件元数据", clientMessageId: "image" },
+    ]);
+    const live = stateOf([
+      { kind: "user", id: "live-user", text: "检查附图", clientMessageId: "image" },
+    ]);
+
+    expect(mergeTranscripts(disk, live).messages).toEqual(disk.messages);
   });
 
   it("dedupes tool messages by name + args, not id", () => {
@@ -103,6 +136,48 @@ describe("mergeTranscripts", () => {
     const live2 = stateOf([], { snapshotSeq: 99 });
     expect(mergeTranscripts(disk2, live2).snapshotSeq).toBe(99);
   });
+
+  const cursorCases = [
+    {
+      name: "uses the live cursor after a Main restart",
+      disk: { snapshotEpoch: "old-main", snapshotSeq: 500 },
+      live: { snapshotEpoch: "new-main", snapshotSeq: 3 },
+      expected: { snapshotEpoch: "new-main", snapshotSeq: 3 },
+    },
+    {
+      name: "does not attach an unscoped disk sequence to the live epoch",
+      disk: { snapshotSeq: 500 },
+      live: { snapshotEpoch: "new-main", snapshotSeq: 3 },
+      expected: { snapshotEpoch: "new-main", snapshotSeq: 3 },
+    },
+    {
+      name: "preserves the disk pair when only disk has a known epoch",
+      disk: { snapshotEpoch: "known-main", snapshotSeq: 3 },
+      live: { snapshotSeq: 500 },
+      expected: { snapshotEpoch: "known-main", snapshotSeq: 3 },
+    },
+    {
+      name: "advances monotonically within the same known epoch",
+      disk: { snapshotEpoch: "same-main", snapshotSeq: 8 },
+      live: { snapshotEpoch: "same-main", snapshotSeq: 3 },
+      expected: { snapshotEpoch: "same-main", snapshotSeq: 8 },
+    },
+  ];
+  for (const scenario of cursorCases) {
+    it(`${scenario.name} for full or empty message histories`, () => {
+      for (const diskMessages of [[], [user("disk", "question")]]) {
+        for (const liveMessages of [[], [assistant("live", "answer")]]) {
+          const merged = mergeTranscripts(
+            stateOf(diskMessages, scenario.disk),
+            stateOf(liveMessages, scenario.live),
+          );
+          expect({ snapshotEpoch: merged.snapshotEpoch, snapshotSeq: merged.snapshotSeq }).toEqual(
+            scenario.expected,
+          );
+        }
+      }
+    });
+  }
 
   it("uses disk alone when live is empty", () => {
     const disk = stateOf([user("d-u1", "hi"), assistant("d-a1", "hello")], { sessionId: "s1" });
@@ -144,10 +219,7 @@ describe("mergeTranscripts", () => {
   });
 
   it("dedupes context_boundary cards by content, not id", () => {
-    const disk = stateOf([
-      assistant("d-a1", "x"),
-      contextBoundary("ctx-2-1", 1000, 200),
-    ]);
+    const disk = stateOf([assistant("d-a1", "x"), contextBoundary("ctx-2-1", 1000, 200)]);
     const live = stateOf([
       assistant("l-a1", "x"),
       contextBoundary("ctx-1-9", 1000, 200), // same content, stale id
@@ -167,8 +239,20 @@ describe("mergeTranscripts", () => {
   });
 
   it("keeps genuinely different goal_progress rounds", () => {
-    const r1: Message = { kind: "goal_progress", id: "g1", status: "not_met", round: 1, gaps: "缺测试" };
-    const r2: Message = { kind: "goal_progress", id: "g2", status: "not_met", round: 2, gaps: "缺类型" };
+    const r1: Message = {
+      kind: "goal_progress",
+      id: "g1",
+      status: "not_met",
+      round: 1,
+      gaps: "缺测试",
+    };
+    const r2: Message = {
+      kind: "goal_progress",
+      id: "g2",
+      status: "not_met",
+      round: 2,
+      gaps: "缺类型",
+    };
     const merged = mergeTranscripts(stateOf([r1]), stateOf([r2]));
     expect(merged.messages.filter((m) => m.kind === "goal_progress")).toHaveLength(2);
   });
@@ -243,12 +327,7 @@ describe("mergeTranscripts", () => {
       merged.messages
         .filter((m) => m.kind === "user" || m.kind === "assistant")
         .map((m) => (m as { text: string }).text),
-    ).toEqual([
-      "汇总新闻",
-      "今日简报：……",
-      "帮我改成早上9点",
-      "已改好",
-    ]);
+    ).toEqual(["汇总新闻", "今日简报：……", "帮我改成早上9点", "已改好"]);
     // The continuation's tools/turns are present; no orphan duplication.
     expect(merged.messages.filter((m) => m.kind === "tool")).toHaveLength(1);
   });

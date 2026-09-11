@@ -1,15 +1,42 @@
-import { protocol, session } from "electron";
+import { protocol, session, desktopCapturer, dialog } from "electron";
 import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, posix, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
+import type { MediaScope } from "./media/media-types.js";
 import type { PanelAppDescriptor, PreparedPanelApp } from "../shared/panel-apps.js";
 import { THEME_ASSET_SCHEME } from "./theme-asset-url.js";
 
 export const PANEL_APP_SCHEME = "cspanel";
 const CSP =
   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-  "img-src 'self' data:; font-src 'self' data:; connect-src 'none'; object-src 'none'; " +
+  // Local files explicitly selected in the guest can be previewed via object
+  // URLs without granting filesystem URLs, network access, or blob scripts.
+  "img-src 'self' data: blob:; media-src 'self' blob:; " +
+  "font-src 'self' data:; connect-src 'none'; object-src 'none'; " +
   "frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const MEDIA_CSP = "default-src 'none'; sandbox; frame-ancestors 'none'";
+const MEDIA_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-matroska",
+  "video/x-msvideo",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/mp4",
+  "audio/aac",
+  "audio/flac",
+  "audio/ogg",
+  "audio/webm",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "image/bmp",
+  "image/tiff",
+]);
 
 const MIME_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -22,6 +49,8 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
@@ -36,6 +65,37 @@ export interface PanelAppProtocolResource {
 let resources = new Map<string, PanelAppProtocolResource>();
 const installedPartitions = new Set<string>();
 const preparedPartitionScopes = new Map<string, { hostId: string; projectPath: string }>();
+
+type ManagedMediaReader = (
+  scope: MediaScope,
+  id: string,
+  request: { range?: string; method: string },
+) => Promise<{ status: number; headers: Record<string, string>; body: Readable | null }>;
+let managedMediaReader: ManagedMediaReader | undefined;
+let captureAuthorizer: ((scope: MediaScope) => boolean) | undefined;
+export function setPanelAppCaptureAuthorizer(
+  authorize: ((scope: MediaScope) => boolean) | undefined,
+): void {
+  captureAuthorizer = authorize;
+}
+function partitionMayCapture(partition: string, url: string): boolean {
+  const scope = preparedPartitionScopes.get(partition),
+    resource = validatePanelAppEntryUrl(url);
+  if (!scope || !resource || scope.hostId !== resource.descriptor.hostId) return false;
+  try {
+    return (
+      captureAuthorizer?.({ appId: resource.descriptor.appId, projectPath: scope.projectPath }) ===
+      true
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** The Host installs an authorization-aware reader; guests never supply disk paths. */
+export function setPanelAppMediaReader(reader: ManagedMediaReader): void {
+  managedMediaReader = reader;
+}
 
 export function registerPanelAppSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
@@ -184,13 +244,56 @@ function response(status: number, body?: BodyInit, contentType = "text/plain; ch
   });
 }
 
-async function handlePanelAppRequest(request: Request): Promise<Response> {
+async function handlePanelAppRequest(request: Request, partition: string): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD")
     return response(405, "Method Not Allowed");
   const parsed = parsePanelAppUrl(request.url);
   if (!parsed) return response(400, "Bad Request");
   const resource = resources.get(parsed.hostId);
   if (!resource) return response(404, "Not Found");
+
+  if (parsed.relativePath.startsWith("media/")) {
+    const scope = preparedPartitionScopes.get(partition);
+    const id = parsed.relativePath.slice("media/".length);
+    if (
+      !scope ||
+      scope.hostId !== parsed.hostId ||
+      !/^asset-[a-f0-9]{64}$/.test(id) ||
+      !resource.descriptor.permissions.includes("media") ||
+      !managedMediaReader
+    )
+      return response(403, "Forbidden");
+    try {
+      const media = await managedMediaReader(
+        { appId: resource.descriptor.appId, projectPath: scope.projectPath },
+        id,
+        { method: request.method, range: request.headers.get("range") ?? undefined },
+      );
+      try {
+        const headers = new Headers(media.headers);
+        const mime = headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+        if (!mime || !MEDIA_MIME_TYPES.has(mime)) {
+          media.body?.destroy();
+          return response(415, "Unsupported Media Type");
+        }
+        headers.set("Content-Security-Policy", MEDIA_CSP);
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("Cache-Control", "private, no-store");
+        return new Response(
+          media.body ? (Readable.toWeb(media.body) as unknown as BodyInit) : null,
+          {
+            status: media.status,
+            headers,
+          },
+        );
+      } catch (error) {
+        media.body?.destroy();
+        throw error;
+      }
+    } catch {
+      return response(404, "Not Found");
+    }
+  }
 
   const assetRoot = posix.dirname(resource.entry);
   if (!isPathUnder(parsed.relativePath, assetRoot, resource.entry)) {
@@ -215,32 +318,105 @@ async function handlePanelAppRequest(request: Request): Promise<Response> {
 async function installProtocolForPartition(partition: string): Promise<void> {
   if (installedPartitions.has(partition)) return;
   const targetSession = session.fromPartition(partition, { cache: false });
-  await targetSession.protocol.handle(PANEL_APP_SCHEME, handlePanelAppRequest);
+  await targetSession.protocol.handle(PANEL_APP_SCHEME, (request) =>
+    handlePanelAppRequest(request, partition),
+  );
   targetSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    if (permission !== "media") {
-      callback(false);
-      return;
-    }
     const mediaTypes = "mediaTypes" in details ? details.mediaTypes : undefined;
     callback(
-      panelAppMayCaptureAudio(
-        webContents.getURL(),
-        details.requestingUrl,
-        details.isMainFrame,
-        Array.isArray(mediaTypes) ? mediaTypes : [],
-      ),
+      partitionMayCapture(partition, webContents.getURL()) &&
+        panelAppMayCapture(
+          webContents.getURL(),
+          details.requestingUrl,
+          details.isMainFrame,
+          String(permission) === "display-capture"
+            ? ["screen"]
+            : permission === "media" && Array.isArray(mediaTypes)
+              ? mediaTypes
+              : [],
+        ),
     );
   });
   targetSession.setPermissionCheckHandler(
     (webContents, permission, _origin, details) =>
-      permission === "media" &&
-      details.mediaType === "audio" &&
-      panelAppMayCaptureAudio(
+      partitionMayCapture(partition, webContents?.getURL() ?? "") &&
+      panelAppMayCapture(
         webContents?.getURL() ?? "",
         details.requestingUrl,
         details.isMainFrame,
-        ["audio"],
+        String(permission) === "display-capture"
+          ? ["screen"]
+          : permission === "media" && details.mediaType
+            ? [details.mediaType]
+            : [],
       ),
+  );
+  targetSession.setDisplayMediaRequestHandler?.(
+    (request, callback) => {
+      const frame = request.frame;
+      const sourceUrl = frame?.url;
+      if (
+        !frame ||
+        !partitionMayCapture(partition, frame.url) ||
+        frame.parent ||
+        !request.userGesture ||
+        !request.videoRequested ||
+        !panelAppMayCapture(frame.url, frame.url, true, ["screen"])
+      ) {
+        callback({});
+        return;
+      }
+      // Keep authorization in this handler on every platform. The system picker
+      // bypasses it on newer macOS; require an explicitly selected source here.
+      void (async () => {
+        const sources = await desktopCapturer.getSources({
+          types: ["screen", "window"],
+          thumbnailSize: { width: 0, height: 0 },
+        });
+        for (let offset = 0; offset < sources.length; offset += 12) {
+          const page = sources.slice(offset, offset + 12);
+          const more = offset + page.length < sources.length;
+          const result = await dialog.showMessageBox({
+            type: "question",
+            title: "选择要录制的画面",
+            message: "只录制你选择的屏幕或窗口",
+            buttons: [
+              "取消",
+              ...page.map((source) => source.name),
+              ...(more ? ["查看更多窗口"] : []),
+            ],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+          });
+          if (!result.response) {
+            callback({});
+            return;
+          }
+          if (more && result.response === page.length + 1) continue;
+          const source = page[result.response - 1];
+          if (
+            !source ||
+            !request.frame ||
+            request.frame.url !== sourceUrl ||
+            !partitionMayCapture(partition, frame.url) ||
+            !panelAppMayCapture(frame.url, frame.url, true, ["screen"])
+          ) {
+            callback({});
+            return;
+          }
+          callback({
+            video: source,
+            ...(request.audioRequested && process.platform === "win32"
+              ? { audio: "loopback" }
+              : {}),
+          });
+          return;
+        }
+        callback({});
+      })().catch(() => callback({}));
+    },
+    { useSystemPicker: false },
   );
   installedPartitions.add(partition);
 }
@@ -263,4 +439,25 @@ export function panelAppMayCaptureAudio(
   const resource = validatePanelAppEntryUrl(requested);
   if (!resource || validatePanelAppEntryUrl(webContentsUrl) !== resource) return false;
   return resource.descriptor.permissions.includes("audio.transcribe");
+}
+
+/** Capture is an explicit install permission, separate from microphone dictation. */
+export function panelAppMayCapture(
+  webContentsUrl: string,
+  requestingUrl: string | undefined,
+  isMainFrame: boolean,
+  mediaTypes: readonly string[],
+): boolean {
+  if (
+    !isMainFrame ||
+    !mediaTypes.length ||
+    mediaTypes.some((kind) => !["audio", "video", "screen"].includes(kind))
+  )
+    return false;
+  const resource = validatePanelAppEntryUrl(requestingUrl || webContentsUrl);
+  if (!resource || validatePanelAppEntryUrl(webContentsUrl) !== resource) return false;
+  return (
+    resource.descriptor.permissions.includes("media.capture") ||
+    panelAppMayCaptureAudio(webContentsUrl, requestingUrl, isMainFrame, mediaTypes)
+  );
 }

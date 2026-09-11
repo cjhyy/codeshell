@@ -90,6 +90,7 @@ function service(
     sessionStateChanged: (sessionId, active, ownerWebContentsId) =>
       stateChanges.push({ sessionId, active, ownerWebContentsId }),
     projectTrust: () => trust,
+    prepareCodexLaunch: async () => ({ command: "/test/bin/codex", env: { PATH: "/test/bin" } }),
     ...(requestApproval ? { requestApproval } : {}),
     ...overrides,
   });
@@ -117,6 +118,97 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("passes the preflight executable and environment to the actual runtime", async () => {
+    const launch = { command: "/custom/version/bin/codex", env: { PATH: "/custom/version/bin" } };
+    const cwdChecks: string[] = [];
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      prepareCodexLaunch: async (cwd: string) => {
+        cwdChecks.push(cwd);
+        return launch;
+      },
+    });
+    await svc.ensure(request);
+    await svc.ensure(request);
+    expect(cwdChecks).toEqual([request.cwd]);
+    expect(starts).toHaveLength(1);
+    expect(starts[0]!.codexClient).toEqual(launch);
+  });
+
+  test("failed preflight never reserves a host session or starts a runtime", async () => {
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      prepareCodexLaunch: async () => {
+        throw new Error("Codex CLI was not found");
+      },
+    });
+    await expect(svc.start(request)).rejects.toThrow(/Codex CLI was not found/);
+    expect(claims).toEqual([]);
+    expect(starts).toEqual([]);
+    expect(released).toEqual([]);
+  });
+
+  test("failed replacement preflight preserves the existing live runtime", async () => {
+    let fail = false;
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      prepareCodexLaunch: async () => {
+        if (fail) throw new Error("Codex CLI was not found");
+        return { command: "/test/bin/codex", env: {} };
+      },
+    });
+    const original = await svc.start(request);
+    fail = true;
+    await expect(svc.start({ ...request, model: "replacement" })).rejects.toThrow(/not found/);
+    expect(svc.get(request.sessionId)).toBe(original);
+    expect(closed).toEqual([]);
+    expect(released).toEqual([]);
+    expect(starts).toHaveLength(1);
+  });
+
+  test.each(["owner closes", "feature is disabled"])(
+    "does not replace a runtime when its %s during preflight",
+    async (change) => {
+      const flags = { external_agent_runtime: true };
+      let ownerClosed = false;
+      const ownerWindow = {
+        webContents: { id: 77 },
+        isDestroyed: () => ownerClosed,
+      } as never;
+      let blockPreflight = false;
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let entered!: () => void;
+      const preflightEntered = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const svc = service(flags, undefined, {
+        prepareCodexLaunch: async () => {
+          if (blockPreflight) {
+            entered();
+            await gate;
+          }
+          return { command: "/test/bin/codex", env: {} };
+        },
+      });
+      const original = await svc.start({ ...request, ownerWindow });
+      blockPreflight = true;
+      const replacement = svc.start({ ...request, ownerWindow, model: "replacement" });
+      await preflightEntered;
+      if (change === "owner closes") ownerClosed = true;
+      else flags.external_agent_runtime = false;
+      release();
+
+      await expect(replacement).rejects.toThrow(
+        change === "owner closes" ? /owner window closed/ : /disabled/,
+      );
+      expect(svc.get(request.sessionId)).toBe(original);
+      expect(closed).toEqual([]);
+      expect(released).toEqual([]);
+      expect(starts).toHaveLength(1);
+      expect(claims).toHaveLength(1);
+    },
+  );
+
   test("refuses to start when the runtime flag is off", async () => {
     // Falling back to the native engine silently would leave a caller debugging
     // the wrong backend.
@@ -226,7 +318,7 @@ describe("ExternalRuntimeService", () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     const ownerWindow = {
       webContents: { id: 77 },
-      isDestroyed: () => true,
+      isDestroyed: () => starts.length > 0,
     } as never;
 
     await expect(svc.start({ ...request, ownerWindow })).rejects.toThrow(/owner window closed/i);

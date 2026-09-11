@@ -10,6 +10,7 @@ import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "../digital-humans/DigitalHumanEditorDialog";
 import { ensureDigitalHumanRequirements } from "../digital-humans/profileRequirements";
+import { useDigitalHumanContext } from "../digital-humans/useDigitalHumansLibrary";
 import { normalizeDigitalHumanSkillRepo } from "../digital-humans/types";
 import type { DigitalHumanProfileEntry, DigitalHumanSkillEntry } from "../digital-humans/types";
 import { ProfileSection } from "./ProfileSection";
@@ -49,6 +50,7 @@ export function DigitalHumansSection({
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
+  const captureContext = useDigitalHumanContext(configurationTarget);
   const [profiles, setProfiles] = React.useState<DigitalHumanProfileEntry[]>([]);
   const [skills, setSkills] = React.useState<DigitalHumanSkillEntry[]>([]);
   const [editing, setEditing] = React.useState<DigitalHumanProfileEntry | undefined>();
@@ -59,14 +61,26 @@ export function DigitalHumansSection({
   const transferLock = React.useRef(false);
   const [transferBusy, setTransferBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const refreshGeneration = React.useRef(0);
+  const refreshContext = React.useRef<(() => boolean) | null>(null);
 
   const refresh = React.useCallback(async () => {
+    const generation = ++refreshGeneration.current;
+    const isCurrent = captureContext();
+    if (refreshContext.current && !refreshContext.current()) {
+      // Project-scoped Skill status cannot survive a failed replacement load.
+      setProfiles([]);
+      setSkills([]);
+      setError(null);
+    }
+    refreshContext.current = isCurrent;
     // Profiles are the primary content; a skills failure only degrades the
     // editor's skill picker, so it must not discard a fetched profile list.
     const [profileResult, skillResult] = await Promise.allSettled([
       window.codeshell.listProfiles(configurationTarget),
       window.codeshell.listSkills(configurationTarget, { includeDisabled: true }),
     ]);
+    if (!isCurrent() || generation !== refreshGeneration.current) return;
     if (profileResult.status === "fulfilled") {
       setProfiles(profileResult.value);
       setError(null);
@@ -83,7 +97,7 @@ export function DigitalHumansSection({
         variant: "error",
       });
     }
-  }, [configurationTarget, t, toast]);
+  }, [captureContext, configurationTarget, t, toast]);
 
   React.useEffect(() => {
     if (scope === "user") void refresh();
@@ -105,11 +119,14 @@ export function DigitalHumansSection({
   ) => {
     if (saveLock.current) return;
     saveLock.current = true;
+    const isCurrent = captureContext();
     setBusy(true);
     setInstallingRequirements(Boolean(options?.installRequirements));
     try {
       await window.codeshell.saveProfile(profile, configurationTarget);
+      if (!isCurrent()) return;
       await refresh();
+      if (!isCurrent()) return;
       if (options?.installRequirements) {
         const ready = await ensureDigitalHumanRequirements({
           name: profile.name,
@@ -118,7 +135,9 @@ export function DigitalHumansSection({
           confirm,
           toast,
           t,
+          isCurrent,
         });
+        if (!isCurrent()) return;
         if (!ready) {
           setEditing((current) => ({
             ...profile,
@@ -127,9 +146,11 @@ export function DigitalHumansSection({
           return;
         }
         await refresh();
+        if (!isCurrent()) return;
       }
       setEditorOpen(false);
     } catch (caught) {
+      if (!isCurrent()) return;
       // The section-body error <p> sits under the dialog overlay, so save
       // failures surface as a toast (same pattern as DigitalHumansView) and
       // the dialog stays open with the user's input intact.
@@ -355,6 +376,7 @@ function DigitalHumanReposPanel() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const operationLock = React.useRef(false);
+  const composing = React.useRef(false);
   const normalizedRepo = normalizeDigitalHumanSkillRepo(input);
   const repoInvalid = input.trim().length > 0 && normalizedRepo === null;
 
@@ -416,7 +438,21 @@ function DigitalHumanReposPanel() {
             if (error) setError(null);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") void add();
+            if (
+              event.key !== "Enter" ||
+              composing.current ||
+              event.nativeEvent.isComposing ||
+              event.keyCode === 229
+            )
+              return;
+            event.preventDefault();
+            void add();
+          }}
+          onCompositionStart={() => {
+            composing.current = true;
+          }}
+          onCompositionEnd={() => {
+            composing.current = false;
           }}
           placeholder={t("settingsX.digitalHumans.repos.placeholder")}
           aria-label={t("settingsX.digitalHumans.repos.title")}

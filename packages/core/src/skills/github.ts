@@ -23,6 +23,7 @@ import {
   readBoundedSkillFile,
   SkillConflictError,
   commitSkillDirectory,
+  createSkillStageDirectory,
   type InstalledSkill,
 } from "./management.js";
 import { logger } from "../logging/logger.js";
@@ -714,7 +715,7 @@ const defaultUpdateDeps: SkillUpdateDeps = { getRefCommit, downloadSkillTree };
  *      (case-insensitive) → `{ updated:false, reason:"already up to date" }`,
  *      skipping the download entirely.
  *   3. Download the immutable revision and stage the complete bundle plus source
- *      metadata beside the skill root. The shared final swap checks the original
+ *      metadata inside the skill root's private mutation container. The final swap checks the original
  *      local revision while holding a directory lock, then publishes atomically.
  *      Failed downloads, copies, swaps, or concurrent local edits retain the old
  *      version. Temporary directories are always removed.
@@ -783,8 +784,7 @@ export async function updateSkillFromSource(
       mode: 0o600,
     });
     readSkillBundle(tmpRoot);
-    const stageParent = path.basename(root) === "skills" ? path.dirname(root) : root;
-    const stage = await fs.mkdtemp(path.join(stageParent, ".skill-source-stage-"));
+    const stage = await createSkillStageDirectory(root);
     try {
       await fs.cp(tmpRoot, stage, {
         recursive: true,

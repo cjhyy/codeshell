@@ -27,6 +27,7 @@ export class RunQueue {
 
   setExecutor(fn: RunQueueExecutor): void {
     this.executor = fn;
+    this.drain();
   }
 
   enqueue(runId: string): void {
@@ -74,14 +75,18 @@ export class RunQueue {
   }
 
   private processNext(): void {
-    if (!this.executor) return;
+    const executor = this.executor;
+    if (!executor) return;
 
     while (this.active.size < this.concurrency && this.pending.length > 0) {
       const runId = this.pending.shift()!;
       this.pendingSet.delete(runId);
       this.active.add(runId);
 
-      this.executor(runId)
+      // Custom executors can throw before returning their promise. Put the
+      // invocation inside the chain so both failure paths release the slot.
+      Promise.resolve()
+        .then(() => executor(runId))
         .catch((err) => {
           // Executor (RunManager.executeRun) handles state transitions
           // in its own try/catch. Log here as a safety net.

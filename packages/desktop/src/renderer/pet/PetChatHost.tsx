@@ -4,7 +4,6 @@ import {
   ArrowUp,
   ArrowUpRight,
   CheckCircle2,
-  ChevronDown,
   FileText,
   FolderKanban,
   ImageIcon,
@@ -310,6 +309,7 @@ export function selectPetChatRows(
     if (message.kind === "user") {
       const content = parsePetUserContent(message);
       if (!content.text && content.images.length === 0) continue;
+      appendDelegationReceipts();
       appendHostReceipt();
       activeClientMessageId = message.clientMessageId;
       activeTurnAwaitsAuthoritativeReply = false;
@@ -377,6 +377,10 @@ export function selectPetChatRows(
       });
     }
   }
+  // A successful delegation need not produce a final assistant message (for
+  // example when the turn ends with a tool result). The host receipt itself
+  // is sufficient proof that the new Session can be opened.
+  appendDelegationReceipts();
   appendHostReceipt();
   return rows;
 }
@@ -611,7 +615,18 @@ function PetChatRowView({
   dogIcon: string;
 }) {
   const { t } = useT();
-  if (row.role === "history-boundary") return null;
+  if (row.role === "history-boundary") {
+    return (
+      <div
+        data-pet-chat-history="compacted"
+        className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground"
+        role="note"
+      >
+        <Archive size={13} className="shrink-0 text-primary" aria-hidden="true" />
+        <span>{t("pet.chat.historyCompacted")}</span>
+      </div>
+    );
+  }
   if (row.role === "delegation" && row.delegation) {
     return (
       <PetDelegationCard delegation={row.delegation} session={session} onOpen={onOpenDelegation} />
@@ -685,13 +700,6 @@ function PetChatRowView({
   );
 }
 
-function latestHistoryBoundaryIndex(rows: readonly PetChatRow[]): number {
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    if (rows[index]?.role === "history-boundary") return index;
-  }
-  return -1;
-}
-
 export function PetChatHost({
   defaultProjectPath,
   defaultModelKey,
@@ -747,10 +755,6 @@ export function PetChatHost({
     () => describePetChatActivity(chatState.messages, t),
     [chatState.messages, t],
   );
-  const latestHistoryBoundary = latestHistoryBoundaryIndex(rows);
-  const historyBoundary = latestHistoryBoundary >= 0 ? rows[latestHistoryBoundary] : undefined;
-  const historyRows = latestHistoryBoundary > 0 ? rows.slice(0, latestHistoryBoundary) : [];
-  const currentRows = latestHistoryBoundary >= 0 ? rows.slice(latestHistoryBoundary + 1) : rows;
   const rowSession = (row: PetChatRow): PetSessionProjection | undefined =>
     row.delegation
       ? state.projection?.sessions.find(
@@ -1014,45 +1018,7 @@ export function PetChatHost({
           </div>
         ) : (
           <div className="space-y-3.5">
-            {historyBoundary && (
-              <details
-                data-pet-chat-history="compacted"
-                className="group/history rounded-2xl border border-border/55 bg-muted/25"
-              >
-                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl px-3 py-2.5 text-xs text-muted-foreground transition hover:bg-muted/45">
-                  <Archive size={13} className="shrink-0 text-primary" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    {historyBoundary.before && historyBoundary.after
-                      ? t("pet.chat.historyCompactedWithTokens", {
-                          before: historyBoundary.before,
-                          after: historyBoundary.after,
-                        })
-                      : t("pet.chat.historyCompacted")}
-                  </span>
-                  {historyRows.length > 0 && (
-                    <ChevronDown
-                      size={13}
-                      className="shrink-0 transition-transform group-open/history:rotate-180"
-                      aria-hidden="true"
-                    />
-                  )}
-                </summary>
-                {historyRows.length > 0 && (
-                  <div className="space-y-3.5 border-t border-border/45 px-3 py-3 opacity-75">
-                    {historyRows.map((row) => (
-                      <PetChatRowView
-                        key={row.id}
-                        row={row}
-                        session={rowSession(row)}
-                        onOpenDelegation={openRowDelegation(row)}
-                        dogIcon={dogIcon}
-                      />
-                    ))}
-                  </div>
-                )}
-              </details>
-            )}
-            {currentRows.map((row) => (
+            {rows.map((row) => (
               <PetChatRowView
                 key={row.id}
                 row={row}
@@ -1136,6 +1102,7 @@ export function PetChatHost({
             value={state.chatDraft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing || event.keyCode === 229) return;
               if (event.key !== "Enter" || event.shiftKey) return;
               event.preventDefault();
               void submitToPet();

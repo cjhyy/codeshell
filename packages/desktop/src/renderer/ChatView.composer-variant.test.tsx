@@ -12,6 +12,7 @@ function renderComposer(
   variant: "main" | "quickChat" | "pet",
   permissionMode = "plan",
   messages: unknown[] = [],
+  historyProps: Record<string, unknown> = {},
 ) {
   return renderToStaticMarkup(
     <ChatView
@@ -49,6 +50,7 @@ function renderComposer(
       onDraftChange={() => undefined}
       attachments={[]}
       onAttachmentsChange={() => undefined}
+      {...historyProps}
     />,
   );
 }
@@ -93,6 +95,48 @@ describe("ChatView composer variants", () => {
     expect(html).not.toContain('aria-label="添加本地文件"');
     expect(html).not.toContain(">Goal<");
     expect(html).not.toContain('data-composer-control="context-usage"');
+  });
+});
+
+describe("ChatView history paging", () => {
+  test("keeps the earlier-history action inside the conversation stream", () => {
+    const html = renderComposer(
+      "main",
+      "default",
+      [{ kind: "user", id: "recent", text: "Recent turn" }],
+      {
+        historyHasMore: true,
+        onLoadEarlierHistory: async () => undefined,
+      },
+    );
+    expect(html).toContain("加载更早记录");
+    expect(html.indexOf("data-chat-history-control")).toBeLessThan(html.indexOf("Recent turn"));
+  });
+
+  test("shows retry after an initial history failure instead of a fresh-chat welcome", () => {
+    const html = renderComposer("main", "default", [], {
+      historyFailed: true,
+      onLoadEarlierHistory: async () => undefined,
+    });
+    expect(html).toContain('data-mode="active"');
+    expect(html).toContain("重试加载记录");
+    expect(html).toContain("聊天记录暂时未能加载");
+    expect(html).not.toContain("选择一个开始的方向");
+  });
+
+  test("disables an in-progress page request", () => {
+    const html = renderComposer(
+      "main",
+      "default",
+      [{ kind: "user", id: "recent", text: "Recent turn" }],
+      {
+        historyHasMore: true,
+        historyLoading: true,
+        onLoadEarlierHistory: async () => undefined,
+      },
+    );
+    expect(html).toContain("正在加载更早记录");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>[\s\S]*?正在加载更早记录/);
   });
 });
 

@@ -81,7 +81,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "session.sync":
       valid =
-        boundedString(event.sessionId, MAX_ID_LENGTH) && optionalNonNegativeInteger(event.sinceSeq);
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        optionalNonNegativeInteger(event.sinceSeq) &&
+        (event.epoch === undefined || boundedTrimmedString(event.epoch, MAX_ID_LENGTH));
       break;
     case "permission.setMode":
       valid =

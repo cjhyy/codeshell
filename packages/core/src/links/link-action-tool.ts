@@ -265,11 +265,15 @@ export async function linkActionTool(
     },
     { cwd, scope },
   );
-  try {
+  const signal = ctx?.signal
+    ? AbortSignal.any([ctx.signal, invalidated.signal])
+    : invalidated.signal;
+  const assertConnected = (): void => {
     if (!stillConnected()) throw new Error(`${provider.displayName} connection was disconnected`);
-    const signal = ctx?.signal
-      ? AbortSignal.any([ctx.signal, invalidated.signal])
-      : invalidated.signal;
+    signal.throwIfAborted();
+  };
+  try {
+    assertConnected();
     let data: unknown;
     if (connection.credential.meta?.linkExecutionBackend === "cli") {
       if (!isCliLinkProvider(providerId)) {
@@ -280,7 +284,7 @@ export async function linkActionTool(
         throw new Error(`${provider.displayName} CLI connection must be reconnected`);
       }
       await assertCliLinkAccount(providerId, accountId, { cwd, signal });
-      if (!stillConnected()) throw new Error(`${provider.displayName} connection was disconnected`);
+      assertConnected();
       data = await executeCliLinkAction(providerId, actionId, params, { cwd, signal });
     } else {
       // Resolve on every invocation (and after write approval). Disconnecting the
@@ -292,8 +296,12 @@ export async function linkActionTool(
         scope,
         purpose: "link",
       });
+      assertConnected();
       data = await action.execute({ token, params, signal });
     }
+    // Cancellation is advisory to transports. Recheck both the live binding
+    // and task signal before publishing any result from the completed action.
+    assertConnected();
     return JSON.stringify({
       kind: "action_result",
       provider: providerId,

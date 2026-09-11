@@ -396,6 +396,16 @@ export class OpenAIClient extends LLMClientBase {
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    let emittedOutput = false;
+    const streamOptions = options.onChunk
+      ? {
+          ...options,
+          onChunk: (chunk: Parameters<NonNullable<CreateMessageOptions["onChunk"]>>[0]) => {
+            if (chunk.type !== "stop") emittedOutput = true;
+            options.onChunk!(chunk);
+          },
+        }
+      : options;
     return this.withRetry(
       async (requestSignal) => {
         // requestSignal = caller's cancel signal composed with a per-request
@@ -467,7 +477,7 @@ export class OpenAIClient extends LLMClientBase {
         try {
           const response =
             options.stream && options.onChunk
-              ? await this.streamMessage(options, messages, tools, reasoning, requestSignal)
+              ? await this.streamMessage(streamOptions, messages, tools, reasoning, requestSignal)
               : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
           if (cachePlan && !requestSignal?.aborted && (response.usage?.promptTokens ?? 0) > 0) {
             this.promptCacheHistory.commit(cachePlan);
@@ -485,7 +495,10 @@ export class OpenAIClient extends LLMClientBase {
           throw err;
         }
       },
-      { signal: options.signal },
+      // Once a delta escaped, a transparent retry would concatenate separate
+      // answers/tool calls. Let the turn loop revoke that attempt and perform
+      // its explicit non-streaming fallback instead.
+      { signal: options.signal, shouldRetry: () => !emittedOutput },
     );
   }
 
@@ -759,7 +772,9 @@ export class OpenAIClient extends LLMClientBase {
         const reasoningDelta = (delta as Record<string, unknown>).reasoning_content;
         if (typeof reasoningDelta === "string" && reasoningDelta.length > 0) {
           reasoningContent += reasoningDelta;
+          options.onChunk?.({ type: "thinking", text: reasoningDelta });
         }
+        if (sdkSignal?.aborted) return "";
 
         if (delta.content) {
           if (!firstByteLogged) {
@@ -778,6 +793,7 @@ export class OpenAIClient extends LLMClientBase {
             tokens: countTokens(delta.content),
           });
         }
+        if (sdkSignal?.aborted) return delta.content ?? "";
 
         if (delta.tool_calls) {
           for (const tc of delta.tool_calls) {

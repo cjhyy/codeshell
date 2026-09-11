@@ -7,6 +7,8 @@ import { stubPetSpriteAssets } from "./test-utils/stubPetSpriteAssets";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { PermissionMode } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
+import type { SessionIndex } from "./transcripts";
+import { compactSidebarSessions, sortSidebarSessions } from "./sidebarSessionVisibility";
 import {
   externalRuntimeModelEntries,
   type ExternalRuntimeModelEntry,
@@ -63,7 +65,12 @@ interface ChatProps {
 }
 
 interface SidebarProps {
+  sessions: Record<string, SessionIndex>;
+  activeSessionId: string | null;
+  collapsedProjects: Set<string>;
   onNewConversation: () => void;
+  onNewConversationForProject: (projectId: string | null) => void;
+  onToggleProject: (projectId: string) => void;
   onSelectSession: (repoId: string | null, sessionId: string) => void;
 }
 
@@ -927,6 +934,74 @@ describe("App quick-chat integration", () => {
       }),
     );
   });
+
+  test.each(["global", "project"] as const)(
+    "%s new conversation reveals its collapsed project and first sent Session",
+    async (entry) => {
+      await mountApp({
+        withNormalSession: true,
+        panelTabs: [],
+        sidebarCollapsed: false,
+      });
+      if (!chatProps || !sidebarProps) throw new Error("main chat controls were not rendered");
+      const previousChat = chatProps;
+      const index = sidebarProps.sessions.repoA!;
+      localStorageMock.setItem(
+        "codeshell.sessionIndex.repoA",
+        JSON.stringify({
+          ...index,
+          sessions: [
+            ...index.sessions,
+            ...Array.from({ length: 5 }, (_, i) => ({
+              id: `pinned-${i}`,
+              title: `Pinned ${i}`,
+              createdAt: 1,
+              updatedAt: 10 - i,
+              pinned: true,
+            })),
+          ],
+        }),
+      );
+      await act(async () => {
+        sidebarProps?.onToggleProject("repoA");
+        sidebarProps?.onToggleProject("unrelated");
+        await flushMicrotasks();
+      });
+      expect(sidebarProps.collapsedProjects.has("repoA")).toBe(true);
+
+      await act(async () => {
+        if (entry === "global") sidebarProps?.onNewConversation();
+        else sidebarProps?.onNewConversationForProject("repoA");
+        await flushMicrotasks();
+      });
+      expect([...sidebarProps.collapsedProjects]).toEqual(["unrelated"]);
+      expect(sidebarProps.activeSessionId).toBeNull();
+      expect(sidebarProps.sessions.repoA!.sessions).toHaveLength(6);
+
+      await act(async () => {
+        void previousChat.onSend("visible new session", { bucket: previousChat.sendBucket });
+        await flushMicrotasks();
+      });
+      await flushApp();
+
+      const sessionId = sidebarProps.activeSessionId;
+      expect(sessionId).not.toBeNull();
+      expect(sessionId).not.toBe("session-a");
+      expect([...sidebarProps.collapsedProjects]).toEqual(["unrelated"]);
+      expect(runCalls).toHaveLength(1);
+      expect(runCalls[0]?.opts.sessionId).toBe(sessionId);
+      const visible = compactSidebarSessions(
+        sortSidebarSessions(sidebarProps.sessions.repoA!.sessions),
+        sessionId,
+        false,
+        5,
+      );
+      expect(visible.some((session) => session.id === sessionId)).toBe(true);
+      expect(visible.find((session) => session.id === sessionId)?.title).toBe(
+        "visible new session",
+      );
+    },
+  );
 
   test("routes a same-tick send from a draft callback to the selected existing session", async () => {
     await mountApp({

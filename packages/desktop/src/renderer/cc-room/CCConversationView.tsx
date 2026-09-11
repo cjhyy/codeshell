@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState, useCallback, type DragEvent } from "react";
+import { useEffect, useReducer, useRef, useState, useCallback, type DragEvent } from "react";
 import {
   Bot,
   ChevronDown,
@@ -84,8 +84,9 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       // a full reset, so it must be dispatched before the live replay.
       return ccHistoryToEvents(action.messages).reduce(reduceStream, initialChatState());
     case "replayLive":
-      // Live room messages already observed before mount — fold on top of base.
-      return action.messages.map(roomMsgToEvent).reduce(reduceStream, state);
+      // A plain room's full backlog is a replacement snapshot, including when
+      // a kept-mounted tab becomes active again.
+      return action.messages.map(roomMsgToEvent).reduce(reduceStream, initialChatState());
   }
 }
 
@@ -124,14 +125,38 @@ export function CCConversationView({
 }) {
   const { t } = useT();
   const toast = useToast();
+  const feedbackRef = useRef({ t, toast });
+  feedbackRef.current = { t, toast };
   const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
   const [pending, setPending] = useState<ApprovalReq[]>([]);
   const [input, setInput] = useState("");
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [takingOver, setTakingOver] = useState(false);
+  const takeOverRequestRef = useRef<object | null>(null);
+  const [sending, setSending] = useState(false);
+  const sendRequestRef = useRef<object | null>(null);
+  const draftRevisionRef = useRef(0);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const approvalRequestsRef = useRef(new Map<string, object>());
+  const [resolvingApprovals, setResolvingApprovals] = useState(new Set<string>());
   const [selectedAgent, setSelectedAgent] = useState<SubagentItem | null>(null);
-  useEffect(() => setSelectedAgent(null), [roomId, sessionId]);
+  useEffect(() => {
+    setSelectedAgent(null);
+    setInput("");
+    setLocalFilePaths([]);
+    setPending([]);
+    setSending(false);
+    setTakingOver(false);
+    setResolvingApprovals(new Set());
+    dispatch({ kind: "replayLive", messages: [] });
+    return () => {
+      sendRequestRef.current = null;
+      takeOverRequestRef.current = null;
+      approvalRequestsRef.current.clear();
+    };
+  }, [roomId, sessionId, cwd, cliKind]);
 
   // Approval delivery is independent of transcript tailing. PanelArea keeps
   // inactive tabs mounted, so retain these lightweight listeners and do not
@@ -144,7 +169,8 @@ export function CCConversationView({
         );
       }
     });
-    const offResolved = window.codeshell.ccRoom.onApprovalResolved(({ requestId }) => {
+    const offResolved = window.codeshell.ccRoom.onApprovalResolved(({ roomId: rid, requestId }) => {
+      if (rid !== roomId) return;
       setPending((current) => current.filter((item) => item.requestId !== requestId));
     });
     return () => {
@@ -155,6 +181,7 @@ export function CCConversationView({
 
   useEffect(() => {
     if (!active) return;
+    setHistoryError(null);
     let cancelled = false;
     let ready = false;
     let seenSeq = 0;
@@ -219,32 +246,40 @@ export function CCConversationView({
         ready = true;
       }
     };
-    void boot().catch(async () => {
+    void boot().catch(async (initialError) => {
       // Preserve the pre-existing snapshot experience if the live subscription
       // cannot be established (missing/rotated transcript, transient IPC error).
-      if (cancelled || !sessionId || !cwd) return;
-      const fallback =
-        cliKind === "codex"
-          ? await window.codeshell.ccRoom.readCodexHistory(cwd, sessionId, 50)
-          : await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
-      if (!cancelled) {
-        dispatch({
-          kind: "replayHistory",
-          messages: (fallback as { messages: HistoryMessage[] }).messages,
-        });
-        ready = true;
-        applyLive([...pending.values()]);
-        pending.clear();
+      if (cancelled) return;
+      try {
+        if (!sessionId || !cwd) throw initialError;
+        const fallback =
+          cliKind === "codex"
+            ? await window.codeshell.ccRoom.readCodexHistory(cwd, sessionId, 50)
+            : await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
+        if (cancelled) return;
+        dispatch({ kind: "replayHistory", messages: fallback.messages });
+      } catch (error) {
+        if (cancelled) return;
+        setHistoryError(
+          feedbackRef.current.t("panels.room.historyFailed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
       }
+      if (cancelled) return;
+      ready = true;
+      applyLive([...pending.values()]);
+      pending.clear();
     });
     return () => {
       cancelled = true;
       offMsg();
       if (sessionId && cwd) {
-        void window.codeshell.ccRoom.unsubscribeTranscript(roomId);
+        // The window may already be disconnected during teardown.
+        void window.codeshell.ccRoom.unsubscribeTranscript(roomId).catch(() => undefined);
       }
     };
-  }, [active, roomId, cwd, sessionId, cliKind]);
+  }, [active, roomId, cwd, sessionId, cliKind, historyRevision]);
 
   const send = useCallback(async () => {
     const text = buildMessageWithLocalFilePaths(
@@ -252,26 +287,41 @@ export function CCConversationView({
       localFilePaths,
       t("panels.room.localFilePaths"),
     );
-    if (!text || observing) return;
+    if (!text || observing || sendRequestRef.current) return;
+    const request = {};
+    const draftRevision = draftRevisionRef.current;
+    sendRequestRef.current = request;
+    setSending(true);
     // NO local echo: RoomManager.send persists the user line and broadcasts it
     // back as a `room.message`, which onRoomMessage folds into the feed. Echoing
     // locally too would render the user bubble twice (the desktop "1 条消息变 2
     // 条" bug). The broadcast round-trips over loopback ~instantly.
     try {
       const sent = await window.codeshell.ccRoom.send(roomId, text);
+      if (sendRequestRef.current !== request) return;
       if (!sent) {
         toast({ message: t("panels.room.sendFailed"), variant: "error" });
         return;
       }
-      setInput("");
-      setLocalFilePaths([]);
+      // The user can compose the next message while the current send is in
+      // flight; its acknowledgement must never erase that newer draft.
+      if (draftRevisionRef.current === draftRevision) {
+        setInput("");
+        setLocalFilePaths([]);
+      }
     } catch (error) {
+      if (sendRequestRef.current !== request) return;
       toast({
         message: t("panels.room.sendFailedWithReason", {
           error: error instanceof Error ? error.message : String(error),
         }),
         variant: "error",
       });
+    } finally {
+      if (sendRequestRef.current === request) {
+        sendRequestRef.current = null;
+        setSending(false);
+      }
     }
   }, [input, localFilePaths, observing, roomId, t, toast]);
 
@@ -297,30 +347,60 @@ export function CCConversationView({
       toast({ message: t("panels.room.filePathUnavailable"), variant: "error" });
       return;
     }
+    draftRevisionRef.current += 1;
     setLocalFilePaths((current) => normalizeLocalFilePaths([...current, ...paths]));
   };
 
   const takeOver = useCallback(async () => {
-    if (!onTakeOver || takingOver) return;
+    if (!onTakeOver || takeOverRequestRef.current) return;
+    const request = {};
+    takeOverRequestRef.current = request;
     setTakingOver(true);
     try {
       await onTakeOver();
     } catch {
       // The owner surfaces a translated toast; retain observe-only state.
     } finally {
-      setTakingOver(false);
+      if (takeOverRequestRef.current === request) {
+        takeOverRequestRef.current = null;
+        setTakingOver(false);
+      }
     }
-  }, [onTakeOver, takingOver]);
+  }, [onTakeOver]);
 
   const resolve = useCallback(
-    (
+    async (
       req: ApprovalReq,
       decision:
         | { behavior: "allow"; updatedInput?: unknown; answer?: string }
         | { behavior: "deny"; message: string },
     ) => {
-      void window.codeshell.ccRoom.respondApproval(roomId, req.requestId, decision);
-      setPending((p) => p.filter((r) => r.requestId !== req.requestId));
+      if (req.roomId !== roomId || approvalRequestsRef.current.has(req.requestId)) return;
+      const request = {};
+      approvalRequestsRef.current.set(req.requestId, request);
+      setResolvingApprovals((current) => new Set([...current, req.requestId]));
+      try {
+        await window.codeshell.ccRoom.respondApproval(req.roomId, req.requestId, decision);
+        if (approvalRequestsRef.current.get(req.requestId) !== request) return;
+        setPending((p) => p.filter((r) => r.requestId !== req.requestId));
+      } catch (error) {
+        if (approvalRequestsRef.current.get(req.requestId) !== request) return;
+        feedbackRef.current.toast({
+          message: feedbackRef.current.t("panels.room.approvalFailed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          variant: "error",
+        });
+      } finally {
+        if (approvalRequestsRef.current.get(req.requestId) === request) {
+          approvalRequestsRef.current.delete(req.requestId);
+          setResolvingApprovals((current) => {
+            const next = new Set(current);
+            next.delete(req.requestId);
+            return next;
+          });
+        }
+      }
     },
     [roomId],
   );
@@ -414,6 +494,18 @@ export function CCConversationView({
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+          {historyError && (
+            <div role="alert" className="flex items-center gap-2 text-sm text-destructive">
+              <span className="min-w-0 flex-1">{historyError}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setHistoryRevision((revision) => revision + 1)}
+              >
+                {t("panels.room.retryHistory")}
+              </Button>
+            </div>
+          )}
           {chat.items.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               还没有消息。发条消息开始对话。
@@ -424,7 +516,12 @@ export function CCConversationView({
             ))
           )}
           {pending.map((req) => (
-            <CcApprovalCard key={req.requestId} req={req} onResolve={resolve} />
+            <CcApprovalCard
+              key={req.requestId}
+              req={req}
+              resolving={resolvingApprovals.has(req.requestId)}
+              onResolve={resolve}
+            />
           ))}
         </div>
       </div>
@@ -447,9 +544,10 @@ export function CCConversationView({
                   type="button"
                   className="rounded-sm text-muted-foreground hover:text-foreground"
                   aria-label={t("panels.room.removeFile", { name: localFileBasename(path) })}
-                  onClick={() =>
-                    setLocalFilePaths((current) => current.filter((item) => item !== path))
-                  }
+                  onClick={() => {
+                    draftRevisionRef.current += 1;
+                    setLocalFilePaths((current) => current.filter((item) => item !== path));
+                  }}
                 >
                   <X size={12} aria-hidden="true" />
                 </button>
@@ -463,9 +561,17 @@ export function CCConversationView({
             className="flex-1"
             value={input}
             disabled={observing}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              draftRevisionRef.current += 1;
+              setInput(e.target.value);
+            }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing &&
+                e.keyCode !== 229
+              ) {
                 e.preventDefault();
                 void send();
               }
@@ -474,7 +580,7 @@ export function CCConversationView({
           />
           <Button
             size="sm"
-            disabled={observing || (!input.trim() && localFilePaths.length === 0)}
+            disabled={observing || sending || (!input.trim() && localFilePaths.length === 0)}
             onClick={() => void send()}
           >
             发送
@@ -654,9 +760,11 @@ function CcToolCard({
 // ── approval card (allow/deny + AskUserQuestion options) ─────────────────────
 function CcApprovalCard({
   req,
+  resolving,
   onResolve,
 }: {
   req: ApprovalReq;
+  resolving: boolean;
   onResolve: (
     req: ApprovalReq,
     decision:
@@ -671,7 +779,10 @@ function CcApprovalCard({
   const answer = (label: string) => onResolve(req, { behavior: "allow", answer: label });
 
   return (
-    <div className="rounded-xl border border-status-warn/50 bg-status-warn/5 p-3">
+    <div
+      data-cc-room-approval={req.requestId}
+      className="rounded-xl border border-status-warn/50 bg-status-warn/5 p-3"
+    >
       <div className="mb-2 flex items-center gap-2">
         <span className="grid size-7 place-items-center rounded-lg bg-status-warn/15 text-status-warn">
           <ShieldAlert className="size-4" />
@@ -688,6 +799,7 @@ function CcApprovalCard({
               ask.multiSelect ? (
                 <Button
                   key={opt}
+                  disabled={resolving}
                   size="sm"
                   variant={picked.includes(opt) ? "default" : "outline"}
                   onClick={() =>
@@ -697,7 +809,13 @@ function CcApprovalCard({
                   {opt}
                 </Button>
               ) : (
-                <Button key={opt} size="sm" variant="outline" onClick={() => answer(opt)}>
+                <Button
+                  key={opt}
+                  disabled={resolving}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => answer(opt)}
+                >
                   {opt}
                 </Button>
               ),
@@ -706,7 +824,7 @@ function CcApprovalCard({
           {ask.multiSelect && (
             <Button
               size="sm"
-              disabled={picked.length === 0}
+              disabled={resolving || picked.length === 0}
               onClick={() => answer(picked.join(", "))}
             >
               确认所选 ({picked.length})
@@ -716,19 +834,31 @@ function CcApprovalCard({
             <Input
               className="flex-1"
               value={free}
+              disabled={resolving}
               onChange={(e) => setFree(e.target.value)}
               placeholder="或输入自定义回答…"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && free.trim()) answer(free.trim());
+                if (
+                  e.key === "Enter" &&
+                  free.trim() &&
+                  !e.nativeEvent?.isComposing &&
+                  e.keyCode !== 229
+                )
+                  answer(free.trim());
               }}
             />
-            <Button size="sm" disabled={!free.trim()} onClick={() => answer(free.trim())}>
+            <Button
+              size="sm"
+              disabled={resolving || !free.trim()}
+              onClick={() => answer(free.trim())}
+            >
               回答
             </Button>
           </div>
           <Button
             size="sm"
             variant="ghost"
+            disabled={resolving}
             onClick={() => onResolve(req, { behavior: "deny", message: "用户取消" })}
           >
             取消
@@ -737,12 +867,13 @@ function CcApprovalCard({
       ) : (
         <>
           <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-muted/50 p-2 font-mono text-[11px]">
-            {JSON.stringify(req.input, null, 2).slice(0, 600)}
+            {(JSON.stringify(req.input, null, 2) ?? "{}").slice(0, 600)}
           </pre>
           <div className="flex gap-2">
             <Button
               size="sm"
               className="flex-1"
+              disabled={resolving}
               onClick={() =>
                 onResolve(req, {
                   behavior: "allow",
@@ -756,6 +887,7 @@ function CcApprovalCard({
               size="sm"
               variant="outline"
               className="flex-1"
+              disabled={resolving}
               onClick={() => onResolve(req, { behavior: "deny", message: "denied by user" })}
             >
               拒绝

@@ -102,6 +102,36 @@ describe("installSkillRequirement", () => {
     expect(result.ok).toBe(false);
     expect(spawned).toBe(false);
   });
+
+  test("rejects unvalidated flag or wildcard selectors before reaching the runner", async () => {
+    let calls = 0;
+    const runner: SkillInstallRunner = async () => {
+      calls++;
+      return { ok: true, stdout: "" };
+    };
+    for (const skills of [["--global"], ["media-use", "*"], ["-g"], ["bad\0name"]]) {
+      expect((await installSkillRequirement(req({ skills }), "/repo", runner)).ok).toBe(false);
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("reviewed multi-Skill names exactly match separately executed argv", async () => {
+    const names = ["media-use", "hyperframes-core", "constructor", "toString", "__proto__"];
+    const requirement = req({ skills: names });
+    const summary = formatRequirementPlan({
+      skillInstalls: [{ requirement, missing: names }],
+      missingTools: [],
+      conflicts: [],
+      needsInstall: true,
+    });
+    let argv: string[] = [];
+    await installSkillRequirement(requirement, "/repo", async (_file, args) => {
+      argv = args;
+      return { ok: true, stdout: "" };
+    });
+    expect(argv.slice(argv.indexOf("--skill") + 1, argv.indexOf("--agent"))).toEqual(names);
+    expect(summary.willRun[0]).toContain(`--skill ${names.join(" ")} --agent '*' --yes`);
+  });
 });
 
 describe("formatRequirementPlan", () => {

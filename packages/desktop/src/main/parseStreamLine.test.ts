@@ -102,3 +102,26 @@ describe("parseLiveStreamEnvelope", () => {
     expect(parseLiveStreamEnvelope(line({ jsonrpc: "2.0", id: 7, result: {} }))).toBeNull();
   });
 });
+
+describe("worker stream input boundaries", () => {
+  it("ignores non-notification JSON values", () => {
+    for (const value of [null, true, 1, "text", [], {}]) {
+      expect(parseSnapshotAppend(line(value))).toBeNull();
+      expect(parseLiveStreamEnvelope(line(value))).toBeNull();
+    }
+  });
+  it("keeps the Main epoch with the sequence on forwarded stream events", () => {
+    expect(
+      parseLiveStreamEnvelope(
+        line({
+          method: "agent/streamEvent",
+          params: {
+            sessionId: "saved",
+            event: { type: "text_delta", text: "new" },
+          },
+        }),
+        { seq: 2, epoch: "new-main" },
+      ),
+    ).toMatchObject({ seq: 2, epoch: "new-main" });
+  });
+});

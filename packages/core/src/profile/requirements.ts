@@ -10,7 +10,11 @@
  * 只负责**计划与校验**，从不自行执行；执行由 host 在拿到用户确认后驱动
  * ({@link buildSkillInstallArgs} 给出确切 argv)。
  */
-import type { SkillRequirement, WorkspaceProfileRequirements } from "./types.js";
+import {
+  WorkspaceProfileRequirementsSchema,
+  type SkillRequirement,
+  type WorkspaceProfileRequirements,
+} from "./types.js";
 
 /** scanner 已发现的一条 skill（`plugin:skill` 形式代表插件来源）。 */
 export interface KnownSkill {
@@ -68,15 +72,17 @@ export interface PlanRequirementsContext {
  *    `SKILL_REPO_RE` 挡住 `--flag` / `../` / `;rm -rf` 一类注入。
  */
 export function buildSkillInstallArgs(requirement: SkillRequirement): string[] {
-  const args = ["skills", "add", requirement.repo];
-  if (requirement.skills && requirement.skills.length > 0) {
+  const checked = WorkspaceProfileRequirementsSchema.parse({ skills: [requirement] }).skills[0]!;
+  const args = ["skills", "add", checked.repo];
+  if (checked.skills && checked.skills.length > 0) {
     // 具名子集：只装需要的，避免把整个仓库几十个 skill 都拖进项目。
-    args.push("--skill", requirement.skills.join(","), "--agent", "*", "--yes");
+    // The CLI takes a variadic list; a comma-joined string names one Skill.
+    args.push("--skill", ...checked.skills, "--agent", "*", "--yes");
   } else {
     // --all === --skill '*' --agent '*' -y
     args.push("--all");
   }
-  if (requirement.fullDepth) args.push("--full-depth");
+  if (checked.fullDepth) args.push("--full-depth");
   return args;
 }
 

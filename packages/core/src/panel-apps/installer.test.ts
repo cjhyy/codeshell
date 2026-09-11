@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -114,6 +114,32 @@ describe("independent Panel App installer", () => {
 
     await uninstallPanelApp("design-studio");
     expect(await listInstalledPanelApps()).toEqual([]);
+  });
+
+  test("reviews and installs bundled MP3 and WAV audio without changing their bytes", async () => {
+    writePanelApp(source, {
+      html: '<!doctype html><audio controls src="./tone.mp3"></audio><audio src="./tone.wav"></audio>',
+    });
+    const files = ["mp3", "wav"].map((extension) => {
+      const bytes = readFileSync(new URL(`./fixtures/static-tone.${extension}`, import.meta.url));
+      writeFileSync(join(source, "app", `tone.${extension}`), bytes);
+      return { extension, bytes };
+    });
+    const preview = await previewLocalPanelApp({ kind: "dir", path: source });
+    const installed = await installReviewedLocalPanelApp(
+      { kind: "dir", path: source },
+      preview.reviewToken,
+      "2026-09-08T00:00:00.000Z",
+    );
+    for (const { extension, bytes } of files)
+      expect(readFileSync(join(installed.installPath, "app", `tone.${extension}`))).toEqual(bytes);
+    writeFileSync(
+      join(source, "app", "active.svg"),
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+    );
+    await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
+      /unsupported Panel App asset extension/,
+    );
   });
 
   test("rejects agent-plugin content instead of creating a hybrid package", async () => {
@@ -268,7 +294,22 @@ describe("independent Panel App installer", () => {
     manifest.permissions = ["audio.transcribe"];
     writeFileSync(manifestPath, JSON.stringify(manifest));
     await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
-      /audio\.transcribe require context\.workspace/,
+      /audio\.transcribe.*require context\.workspace/,
+    );
+  });
+
+  test("requires workspace context for managed media and accepts a scoped declaration", async () => {
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as { permissions: string[] };
+    manifest.permissions = ["media"];
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
+      /media require context\.workspace/,
+    );
+    manifest.permissions.push("context.workspace");
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    expect((await previewLocalPanelApp({ kind: "dir", path: source })).permissions).toContain(
+      "media",
     );
   });
 

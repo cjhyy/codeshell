@@ -23,6 +23,17 @@ function approvalRequestLine(sessionId: string, requestId: string): string {
 }
 
 describe("PendingMobileApprovals", () => {
+  test("ignores JSON scalars and malformed records without losing a pending approval", () => {
+    const pending = new PendingMobileApprovals();
+    const line = approvalRequestLine("session", "pending");
+    pending.observeOutboundLine(line);
+
+    for (const invalid of ["null", "[]", "42", '"noise"', "broken", '{"params":null}']) {
+      expect(() => pending.observeOutboundLine(invalid)).not.toThrow();
+    }
+    expect(pending.replayLines("session")).toEqual([line]);
+  });
+
   test("replays pending approval requests only for the selected session", () => {
     const pending = new PendingMobileApprovals();
     const line = approvalRequestLine("s2", "ask-1");

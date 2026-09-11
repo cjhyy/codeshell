@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
-type PanelAppEvent = "context.changed" | "process.output" | "process.exit" | "agent.task.changed";
+type PanelAppEvent =
+  | "context.changed"
+  | "process.output"
+  | "process.exit"
+  | "agent.task.changed"
+  | "media.job.changed";
 type ToolHandler = (args: Record<string, unknown>) => unknown | Promise<unknown>;
 
 interface AgentToolRequest {
@@ -102,9 +107,13 @@ const api = Object.freeze({
   },
   on: (event: PanelAppEvent, listener: (payload: unknown) => void) => {
     if (
-      !["context.changed", "process.output", "process.exit", "agent.task.changed"].includes(
-        event,
-      ) ||
+      ![
+        "context.changed",
+        "process.output",
+        "process.exit",
+        "agent.task.changed",
+        "media.job.changed",
+      ].includes(event) ||
       typeof listener !== "function"
     ) {
       throw new Error("unsupported Panel App event");

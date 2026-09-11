@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
 import { optionalProjectConfigurationTarget } from "../configurationTarget";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
@@ -15,6 +15,7 @@ import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import type { MaskedCredentialView } from "../credentials/types";
+import { buildMcpSettingsPatch } from "./mcpSettingsPatch";
 
 interface McpServer {
   name: string;
@@ -187,12 +188,25 @@ export function mcpEffectiveProjectPath(
     : (activeProjectPath ?? undefined);
 }
 
-export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Props) {
+export function McpSection(props: Props) {
+  // A draft belongs to the settings target where it was opened. Remount all
+  // target-owned state together, including dialogs and in-flight read results.
+  const target = JSON.stringify([
+    props.scope,
+    props.scope === "project" ? (props.settingsProjectPath ?? props.activeProjectPath) : null,
+    mcpEffectiveProjectPath(props.scope, props.settingsProjectPath, props.activeProjectPath),
+  ]);
+  return <McpSectionForTarget key={target} {...props} />;
+}
+
+function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: Props) {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [probes, setProbes] = useState<Record<string, McpProbeResult>>({});
   const [loadingProbe, setLoadingProbe] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState>({ kind: "closed" });
+  const editRef = useRef(edit);
+  editRef.current = edit;
   const [toolsViewer, setToolsViewer] = useState<McpProbeResult | null>(null);
   const [errorDetailFor, setErrorDetailFor] = useState<McpProbeResult | null>(null);
   const [pluginMcpTrust, setPluginMcpTrust] = useState<PluginMcpTrustEntry[]>([]);
@@ -200,14 +214,27 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
   const confirm = useConfirm();
   const toast = useToast();
   const { t } = useT();
+  const mounted = useRef(false);
+  const loadGeneration = useRef(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      loadGeneration.current++;
+    };
+  }, []);
 
   const projectPath =
     scope === "project" ? (settingsProjectPath ?? activeProjectPath ?? undefined) : undefined;
 
   const load = useCallback(async () => {
+    if (!mounted.current) return;
+    const generation = ++loadGeneration.current;
+    const isCurrent = () => mounted.current && generation === loadGeneration.current;
     setError(null);
     try {
       const s = (await readScopedSettings(scope, projectPath)) ?? {};
+      if (!isCurrent()) return;
       const disabledPlugins = Array.isArray(s.disabledPlugins)
         ? s.disabledPlugins.filter((x): x is string => typeof x === "string")
         : [];
@@ -222,17 +249,20 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
           mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
         ),
       );
+      if (!isCurrent()) return;
       const trust = await window.codeshell.listPluginMcpTrust();
+      if (!isCurrent()) return;
       const list = mcpServersFromSettings(merged);
       setServers(list);
       setPluginMcpTrust(visiblePluginMcpTrustEntries(trust));
       void runProbe(list, false);
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      if (isCurrent()) setError(String(e instanceof Error ? e.message : e));
     }
   }, [scope, projectPath, settingsProjectPath, activeProjectPath]);
 
   const runProbe = useCallback(async (list: McpServer[], force: boolean) => {
+    if (!mounted.current) return;
     // Disabled servers are never connected by the engine, so probing them
     // would be misleading — skip them here too.
     const probeable = list.filter(isEnabled);
@@ -261,21 +291,23 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
     });
     try {
       const results = await window.codeshell.probeMcpServers(inputs, force);
+      if (!mounted.current) return;
       setProbes((prev) => {
         const next = { ...prev };
         for (const r of results) next[r.name] = r;
         return next;
       });
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      if (mounted.current) setError(String(e instanceof Error ? e.message : e));
     } finally {
       // Only clear the names this run set — a concurrent testOne() owns its
       // own entry and must not be wiped here.
-      setLoadingProbe((prev) => {
-        const next = new Set(prev);
-        for (const n of probingNames) next.delete(n);
-        return next;
-      });
+      if (mounted.current)
+        setLoadingProbe((prev) => {
+          const next = new Set(prev);
+          for (const n of probingNames) next.delete(n);
+          return next;
+        });
     }
   }, []);
 
@@ -289,7 +321,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
       confirmLabel: t("settingsX.mcp.remove"),
       destructive: true,
     });
-    if (!ok) return;
+    if (!ok || !mounted.current) return;
     await updateScopedSettings(scope, { mcpServers: { [name]: null } }, projectPath);
     await window.codeshell.invalidateMcpProbeCache(name);
     setProbes((prev) => {
@@ -328,13 +360,12 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
       }
       return;
     }
-    // Persist just this server's full config with the flipped flag. We write
-    // the whole entry (not a partial) because updateSettings merges records
-    // key-by-key but replaces a server entry wholesale.
+    // Settings patches merge recursively. A toggle owns only enabled, so it
+    // must not replay stale credentials or commands loaded before another edit.
     const updated = servers.map((x) => (x.name === s.name ? { ...x, enabled: nextEnabled } : x));
     await updateScopedSettings(
       scope,
-      { mcpServers: { [s.name]: stripNameFromServer({ ...s, enabled: nextEnabled }) } },
+      { mcpServers: { [s.name]: { enabled: nextEnabled } } },
       projectPath,
     );
     setServers(updated);
@@ -355,55 +386,57 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
   };
 
   const saveEdit = async (next: McpServer, originalName?: string) => {
-    const others = servers.filter((s) => s.name !== originalName && s.name !== next.name);
-    const updated = [...others, next];
+    if (!mounted.current) return;
+    const owner = editRef.current;
     // Rename must be ATOMIC: write the new server AND delete the old key in ONE
     // updateSettings patch. The old two-step (persist new, then a separate patch
     // to null the old key) could persist BOTH old+new if the second write
     // failed/crashed. deepMerge in settings-service honors nested `null` to
     // delete a key, so { mcpServers: { new: {...}, old: null } } does both.
-    const record: Record<string, unknown> = Object.fromEntries(
-      persistableMcpServers(updated).map((s) => [s.name, stripNameFromServer(s)]),
-    );
-    if (originalName && originalName !== next.name) {
-      record[originalName] = null;
-    }
+    // Patch only the edited server; replaying the loaded list could overwrite
+    // an unrelated server changed by another window while this editor was open.
+    const record: Record<string, unknown> = {
+      [next.name]: buildMcpSettingsPatch(
+        next,
+        servers.find((server) => server.name === originalName),
+      ),
+      ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),
+    };
     await updateScopedSettings(scope, { mcpServers: record }, projectPath);
-    setServers(updated);
+    if (mounted.current) {
+      setServers((current) => [
+        ...current.filter((s) => s.name !== originalName && s.name !== next.name),
+        next,
+      ]);
+    }
     if (originalName && originalName !== next.name) {
       await window.codeshell.invalidateMcpProbeCache(originalName);
     }
     await window.codeshell.invalidateMcpProbeCache(next.name);
-    setEdit({ kind: "closed" });
     broadcastSettingsChanged();
-    void runProbe(updated, true);
+    if (!mounted.current) return;
+    if (editRef.current === owner) setEdit({ kind: "closed" });
+    void runProbe([next], true);
   };
 
   // Save (or clear) the env/credential supplement for a PLUGIN server. Always
   // writes the GLOBAL mcpServerOverrides layer — never mcpServers — so the
   // plugin's command/url stay owned by the manifest and survive updates.
   const saveOverride = async (name: string, next: McpServer) => {
-    const supplement: Record<string, unknown> = {};
-    let any = false;
-    for (const f of MCP_OVERRIDE_FIELDS) {
-      const v = next[f];
-      const present = v !== undefined && !(Array.isArray(v) && v.length === 0);
-      // settings deepMerge: a present field overwrites, a `null` deletes the
-      // stale one. Send every field so a CLEARED field is actually removed
-      // (a plain absent key would leave the old value behind).
-      supplement[f] = present ? v : null;
-      if (present) any = true;
-    }
-    // No fields left → drop the whole override entry (null deletes the key).
-    const value = any ? supplement : null;
-    await updateScopedSettings(
-      "user",
-      { mcpServerOverrides: { [name]: value } },
-      undefined,
+    if (!mounted.current) return;
+    const owner = editRef.current;
+    const supplement = buildMcpSettingsPatch(
+      next,
+      servers.find((server) => server.name === name),
+      MCP_OVERRIDE_FIELDS,
     );
+    // No fields left → drop the whole override entry (null deletes the key).
+    const value = Object.values(supplement).some((entry) => entry !== null) ? supplement : null;
+    await updateScopedSettings("user", { mcpServerOverrides: { [name]: value } }, undefined);
     await window.codeshell.invalidateMcpProbeCache(name);
-    setEdit({ kind: "closed" });
     broadcastSettingsChanged();
+    if (!mounted.current) return;
+    if (editRef.current === owner) setEdit({ kind: "closed" });
     await load();
   };
 
@@ -428,14 +461,23 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
         ],
         true,
       );
-      setProbes((prev) => ({ ...prev, [s.name]: r }));
+      if (mounted.current) setProbes((prev) => ({ ...prev, [s.name]: r }));
+    } catch (cause) {
+      if (mounted.current) setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setLoadingProbe((prev) => {
-        const next = new Set(prev);
-        next.delete(s.name);
-        return next;
-      });
+      if (mounted.current)
+        setLoadingProbe((prev) => {
+          const next = new Set(prev);
+          next.delete(s.name);
+          return next;
+        });
     }
+  };
+
+  const runAction = (action: () => Promise<void>) => {
+    void action().catch((cause) => {
+      if (mounted.current) setError(cause instanceof Error ? cause.message : String(cause));
+    });
   };
 
   const changePluginTrust = async (entry: PluginMcpTrustEntry, action: "approve" | "revoke") => {
@@ -576,11 +618,11 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
               probe={probe}
               loading={loading}
               groupedByPlugin={groupedByPlugin}
-              onToggle={() => void toggleServer(s)}
+              onToggle={() => runAction(() => toggleServer(s))}
               onTest={() => void testOne(s)}
               onEdit={() => setEdit({ kind: "edit", original: s.name })}
               onOverride={() => setEdit({ kind: "override", original: s.name })}
-              onRemove={() => void removeServer(s.name)}
+              onRemove={() => runAction(() => removeServer(s.name))}
               onViewTools={() => setToolsViewer(probe ?? null)}
               onShowErrorDetail={() => setErrorDetailFor(probe ?? null)}
             />
@@ -608,6 +650,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
 
       {edit.kind !== "closed" && (
         <McpEditor
+          key={edit.kind === "new" ? "new" : `${edit.kind}:${edit.original}`}
           existingNames={servers.map((s) => s.name)}
           initial={
             edit.kind === "edit" || edit.kind === "override"
@@ -618,8 +661,8 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
           onCancel={() => setEdit({ kind: "closed" })}
           onSave={(next) =>
             edit.kind === "override"
-              ? void saveOverride(edit.original, next)
-              : void saveEdit(next, edit.kind === "edit" ? edit.original : undefined)
+              ? saveOverride(edit.original, next)
+              : saveEdit(next, edit.kind === "edit" ? edit.original : undefined)
           }
         />
       )}
@@ -1000,7 +1043,7 @@ interface EditorProps {
    *  only lets the user supplement env/credential for a plugin server. */
   mode?: "full" | "override";
   onCancel: () => void;
-  onSave: (next: McpServer) => void;
+  onSave: (next: McpServer) => Promise<void>;
 }
 
 function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: EditorProps) {
@@ -1041,6 +1084,10 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       Boolean(initial?.disabledTools?.length),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [credentialsError, setCredentialsError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savePending = useRef(false);
+  const editorMounted = useRef(false);
   const [oauthBusy, setOAuthBusy] = useState(false);
   const [oauthError, setOAuthError] = useState<string | null>(null);
   const [oauthClientId, setOAuthClientId] = useState("");
@@ -1051,7 +1098,20 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
 
   // Load credentials (user scope) to offer token/link Bearer and OAuth sources.
   useEffect(() => {
-    void window.codeshell.credentials.list("").then((all) => setCredentials(all));
+    let active = true;
+    editorMounted.current = true;
+    void window.codeshell.credentials.list("").then(
+      (all) => {
+        if (active) setCredentials(all);
+      },
+      (cause) => {
+        if (active) setCredentialsError(cause instanceof Error ? cause.message : String(cause));
+      },
+    );
+    return () => {
+      active = false;
+      editorMounted.current = false;
+    };
   }, []);
 
   const isStdio = transport === "stdio";
@@ -1174,6 +1234,7 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
   };
 
   const submit = () => {
+    if (savePending.current || oauthBusy || !editorMounted.current) return;
     const trimmedName = name.trim();
     // Override mode locks identity fields, so skip their validation — the user
     // only supplies env/credential supplements for an existing plugin server.
@@ -1249,6 +1310,7 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       : {
           name: trimmedName,
           transport,
+          enabled: initial?.enabled,
           allowedTools,
           disabledTools,
           ...(isStdio
@@ -1266,7 +1328,21 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                 envHeaders: nextEnvHeaders,
               }),
         };
-    onSave(next);
+    savePending.current = true;
+    setSaving(true);
+    setValidationError(null);
+    void (async () => {
+      try {
+        await onSave(next);
+      } catch (cause) {
+        if (editorMounted.current) {
+          setValidationError(cause instanceof Error ? cause.message : String(cause));
+        }
+      } finally {
+        savePending.current = false;
+        if (editorMounted.current) setSaving(false);
+      }
+    })();
   };
 
   return (
@@ -1587,6 +1663,11 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
         </div>
       )}
 
+      {credentialsError && (
+        <p role="alert" className="text-sm text-status-err">
+          {credentialsError}
+        </p>
+      )}
       {validationError && (
         <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">
           {validationError}
@@ -1597,7 +1678,7 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
         <Button variant="default" onClick={onCancel}>
           {t("settingsX.mcp.cancel")}
         </Button>
-        <Button variant="solid" onClick={submit} disabled={oauthBusy}>
+        <Button variant="solid" onClick={submit} disabled={oauthBusy || saving}>
           {initial ? t("settingsX.mcp.save") : t("settingsX.mcp.add")}
         </Button>
       </div>

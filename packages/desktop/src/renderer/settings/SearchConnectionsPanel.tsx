@@ -80,6 +80,18 @@ export function ConnectionsPanel({ scope, activeProjectPath }: Props) {
         </CollapsibleGroup>
 
         <CollapsibleGroup
+          title={t("settingsX.searchConn.groupSpeech")}
+          subtitle={t("settingsX.searchConn.groupSpeechSub")}
+          defaultOpen={false}
+        >
+          <UnifiedConnectionsPanel
+            scope={scope}
+            activeProjectPath={activeProjectPath}
+            tag="speech"
+          />
+        </CollapsibleGroup>
+
+        <CollapsibleGroup
           title={t("settingsX.searchConn.groupAudio")}
           subtitle={t("settingsX.searchConn.groupAudioSub")}
           defaultOpen={false}

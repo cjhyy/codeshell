@@ -3,6 +3,11 @@ export const chat = {
   zh: {
     chat: {
       loadingSession: "正在加载会话…",
+      loadEarlierHistory: "加载更早记录",
+      loadingEarlierHistory: "正在加载更早记录…",
+      historyLoadFailed: "聊天记录暂时未能加载，已有内容已保留。",
+      retryHistory: "重试加载记录",
+      historyPreviewLimit: "已达到历史预览范围上限",
       starters: {
         label: "选择一个开始的方向",
         projectTitle: "了解项目",
@@ -261,6 +266,11 @@ export const chat = {
   en: {
     chat: {
       loadingSession: "Loading conversation…",
+      loadEarlierHistory: "Load earlier messages",
+      loadingEarlierHistory: "Loading earlier messages…",
+      historyLoadFailed: "History could not be loaded. Existing messages have been kept.",
+      retryHistory: "Retry loading history",
+      historyPreviewLimit: "History preview limit reached",
       starters: {
         label: "Choose a starting point",
         projectTitle: "Explore this project",

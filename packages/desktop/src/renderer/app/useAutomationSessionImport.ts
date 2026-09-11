@@ -8,7 +8,6 @@ import {
   loadSessionIndex,
   NO_REPO_KEY,
   projectBucketSegment,
-  saveTranscript,
   upsertImportedSession,
   type SessionIndex,
   type SessionSummary,
@@ -94,11 +93,9 @@ export function useAutomationSessionImport({
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: known,
         cap: 50,
-        fetchTranscript: (sessionId) => window.codeshell.getSessionTranscript(sessionId),
         createProjectForCwd: projectFactory.createProjectForCwd,
         resolvedForCwd,
-        writeImported: (projectId, summary, state) => {
-          saveTranscript(projectId, summary.id, state);
+        writeImported: (projectId, summary) => {
           upsertImportedSession(projectId, summary);
           touchedProjectIds.add(projectId);
         },

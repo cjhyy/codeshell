@@ -1,16 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import {
-  chmod,
-  mkdtemp,
-  writeFile,
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  stat,
-} from "node:fs/promises";
+import { chmod, mkdtemp, writeFile, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { readSettings, writeSettings, resolveSettingsPath } from "./settings-service.js";
 
 /**
@@ -59,10 +51,28 @@ describe("settings-service", () => {
       await writeFile(p, "[]\n", "utf8");
 
       expect(await readSettings("project", cwd)).toBeNull();
-      expect((await readdir(join(cwd, ".code-shell"))).some((name) => name.includes(".corrupt-"))).toBe(
-        true,
-      );
+      expect(
+        (await readdir(join(cwd, ".code-shell"))).some((name) => name.includes(".corrupt-")),
+      ).toBe(true);
     });
+  });
+
+  it("direct writes quarantine corrupt or non-object settings before replacing them", async () => {
+    for (const raw of ["{ broken", "[]\n"]) {
+      await withCwd(async (cwd) => {
+        const file = resolveSettingsPath("project", cwd);
+        const directory = join(cwd, ".code-shell");
+        await mkdir(directory, { recursive: true });
+        await writeFile(file, raw, "utf8");
+        await writeSettings("project", { recovered: true }, cwd);
+        expect(await readSettings("project", cwd)).toEqual({ recovered: true });
+        const backups = (await readdir(directory)).filter((name) =>
+          name.startsWith("settings.json.corrupt-"),
+        );
+        expect(backups).toHaveLength(1);
+        expect(await readFile(join(directory, backups[0]!), "utf8")).toBe(raw);
+      });
+    }
   });
 
   it("drops dangerous legacy keys and rejects them in new patches", async () => {
@@ -81,7 +91,9 @@ describe("settings-service", () => {
         string,
         unknown
       >;
-      await expect(writeSettings("project", dangerous, cwd)).rejects.toThrow(/invalid settings key/);
+      await expect(writeSettings("project", dangerous, cwd)).rejects.toThrow(
+        /invalid settings key/,
+      );
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
   });
@@ -128,6 +140,66 @@ describe("settings-service", () => {
       expect(result).toEqual({ a: 1, b: 2, c: 3 });
     });
   });
+
+  it("settings and credential saves cannot displace their own shared user-directory lock", async () => {
+    await withCwd(async (cwd) => {
+      const serviceUrl = pathToFileURL(join(import.meta.dir, "settings-service.ts")).href;
+      const coreUrl = pathToFileURL(join(import.meta.dir, "../../../core/dist/index.js")).href;
+      const corePackage = join(import.meta.dir, "../../../core/package.json");
+      const child = Bun.spawn({
+        cmd: [
+          process.execPath,
+          "--eval",
+          `
+          import { createRequire } from "node:module";
+          import { setImmediate as immediate } from "node:timers/promises";
+          import { writeSettings, readSettings } from ${JSON.stringify(serviceUrl)};
+          import { CredentialStore } from ${JSON.stringify(coreUrl)};
+          const { getLocks } = createRequire(${JSON.stringify(corePackage)})("proper-lockfile/lib/lockfile");
+          const errors=[];
+          process.on("uncaughtException",error=>errors.push({message:error.message,code:error.code}));
+          let completed=false;
+          const pending=writeSettings("user",{fixtureSetting:true})
+            .catch(error=>errors.push({message:error.message,code:error.code}))
+            .finally(()=>{completed=true;});
+          let observedAsyncHolder=false;
+          const deadline=Date.now()+2000;
+          while(!completed && Date.now()<deadline){
+            if(Object.keys(getLocks()).some(key=>key.endsWith(${JSON.stringify(cwd.split("/").at(-1) + "/.code-shell")}))){observedAsyncHolder=true;break;}
+            await immediate();
+          }
+          const started=Date.now();
+          const credentials=new CredentialStore(undefined,undefined,${JSON.stringify(join(cwd, ".code-shell"))});
+          credentials.save("user",{id:"fixture-token",type:"token",label:"Synthetic",secret:"synthetic-only"});
+          await pending;
+          await new Promise(resolve=>setTimeout(resolve,25));
+          console.log(JSON.stringify({observedAsyncHolder,durationMs:Date.now()-started,errors,settings:await readSettings("user"),credentialPresent:credentials.list().some(c=>c.id==="fixture-token")}));
+        `,
+        ],
+        env: {
+          ...process.env,
+          HOME: cwd,
+          USERPROFILE: cwd,
+          CODE_SHELL_HOME: join(cwd, ".code-shell"),
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [code, output, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ]);
+      expect(code).toBe(0);
+      expect(stderr).toBe("");
+      const result = JSON.parse(output.trim());
+      expect(result.errors).toEqual([]);
+      expect(result.observedAsyncHolder).toBe(false);
+      expect(result.durationMs).toBeLessThan(2000);
+      expect(result.settings).toEqual({ fixtureSetting: true });
+      expect(result.credentialPresent).toBe(true);
+    });
+  }, 20_000);
 
   it("never leaves the file as corrupt JSON under concurrent writes", async () => {
     await withCwd(async (cwd) => {

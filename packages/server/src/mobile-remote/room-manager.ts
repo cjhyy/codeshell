@@ -104,9 +104,7 @@ function parseRoomMeta(value: unknown, expectedId?: string): RoomMeta | undefine
     permissionMode: raw.permissionMode,
     createdAt: raw.createdAt,
     lastActiveAt: raw.lastActiveAt,
-    ...(typeof raw.claudeSessionId === "string"
-      ? { claudeSessionId: raw.claudeSessionId }
-      : {}),
+    ...(typeof raw.claudeSessionId === "string" ? { claudeSessionId: raw.claudeSessionId } : {}),
     ...(raw.linkedSessionMode === "observe-only"
       ? { linkedSessionMode: raw.linkedSessionMode }
       : {}),
@@ -134,7 +132,10 @@ function parseRoomMessage(value: unknown): RoomMessage | undefined {
     if (item !== undefined && (typeof item !== "string" || item.includes("\0"))) return undefined;
   }
   if (raw.isError !== undefined && typeof raw.isError !== "boolean") return undefined;
-  if (raw.args !== undefined && (!raw.args || typeof raw.args !== "object" || Array.isArray(raw.args))) {
+  if (
+    raw.args !== undefined &&
+    (!raw.args || typeof raw.args !== "object" || Array.isArray(raw.args))
+  ) {
     return undefined;
   }
   if (raw.attachments !== undefined && !Array.isArray(raw.attachments)) return undefined;
@@ -959,6 +960,12 @@ export class RoomManager {
     const originalInput = this.pendingApprovalInputs.get(askKey);
     this.pendingApprovalInputs.delete(askKey);
 
+    // A control response consumes exactly one server-observed request. The
+    // bridge can settle multiple waiters when a duplicate control ID arrives;
+    // only the first settlement may reach the resident process. This also
+    // rejects unsolicited and late replies after a room has been closed.
+    if (!hasPendingAsk && !hasOriginalInput) return false;
+
     const agent = this.agents.get(roomId);
     if (!agent?.respondControl) return false;
 
@@ -1000,7 +1007,13 @@ export class RoomManager {
     if (!meta) return { status: "missing" };
     if (meta.linkedSessionMode === "observe-only") return { status: "observing" };
     if (!this.agents.has(id)) {
-      const agent = this.opts.createAgent(meta, (event) => this.onAgentEvent(id, event));
+      let agent: RoomAgent | undefined = undefined;
+      agent = this.opts.createAgent(meta, (event) => {
+        // stop() sends a signal; an old process can still drain output or emit
+        // exit after the room has reopened. Only the current process owns its
+        // transcript, pending approvals, and terminal lifecycle transition.
+        if (agent && this.agents.get(id) === agent) this.onAgentEvent(id, event);
+      });
       this.agents.set(id, agent);
       try {
         agent.start();

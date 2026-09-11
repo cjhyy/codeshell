@@ -4,6 +4,10 @@ export const panelAppElectronMock = {
   privilegedSchemeRegistrations: [] as Array<
     Array<{ scheme: string; privileges?: Record<string, boolean> }>
   >,
+  displayMediaRequestHandler: null as
+    | ((request: any, callback: (streams: any) => void) => void)
+    | null,
+  displaySources: [] as { id: string; name: string }[],
   protocolHandler: null as ((request: Request) => Promise<Response>) | null,
   permissionRequestHandler: null as
     | ((
@@ -30,6 +34,7 @@ export const panelAppElectronMock = {
 
 export function installPanelAppElectronMock(): void {
   mock.module("electron", () => ({
+    desktopCapturer: { getSources: async () => panelAppElectronMock.displaySources },
     app: { getPath: () => panelAppElectronMock.userDataPath },
     BrowserWindow: {
       fromWebContents: (sender: unknown) =>
@@ -61,6 +66,9 @@ export function installPanelAppElectronMock(): void {
           handle: (_scheme: string, next: (request: Request) => Promise<Response>) => {
             panelAppElectronMock.protocolHandler = next;
           },
+        },
+        setDisplayMediaRequestHandler: (handler: any) => {
+          panelAppElectronMock.displayMediaRequestHandler = handler;
         },
         setPermissionRequestHandler: (handler: any) => {
           panelAppElectronMock.permissionRequestHandler = handler;

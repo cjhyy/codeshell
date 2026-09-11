@@ -13,6 +13,17 @@ import { describe, it, expect } from "bun:test";
 import { SessionSnapshotStore } from "./SessionSnapshotStore";
 
 describe("SessionSnapshotStore", () => {
+  it("keeps one epoch across sessions but changes it when Main restarts", () => {
+    const before = new SessionSnapshotStore();
+    before.append("saved", { type: "text_delta", text: "old" });
+    const after = new SessionSnapshotStore();
+    after.append("saved", { type: "text_delta", text: "new" });
+    expect(before.get("saved").epoch).toBe(before.get("other").epoch);
+    expect(before.get("saved").epoch).toBe(before.epoch);
+    expect(after.get("saved").epoch).not.toBe(before.epoch);
+    expect(after.get("saved").events[0]!.seq).toBe(1);
+  });
+
   it("appends events and returns them in order with a monotonic seq", () => {
     const store = new SessionSnapshotStore();
     const first = store.append("s1", { type: "text_delta", text: "a" });

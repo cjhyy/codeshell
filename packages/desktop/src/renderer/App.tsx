@@ -26,6 +26,8 @@ import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
 import { useToast } from "./ui/ToastProvider";
+import { useSessionIndices } from "./app/useSessionIndices";
+import { useProtectedTranscriptBuckets } from "./app/useIdleTranscriptEviction";
 import { useOptionalConfirm } from "./ui/DialogProvider";
 import { useT } from "./i18n/I18nProvider";
 import { ensureDigitalHumanRequirements } from "./digital-humans/profileRequirements";
@@ -44,7 +46,6 @@ import {
   unbindWorkspaceProfileEverywhere,
   createSession,
   archiveSession,
-  loadDeletedArchivedIndices,
   bindEngineSession,
   setActiveSession,
   NO_REPO_KEY,
@@ -271,30 +272,7 @@ function App() {
    *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
   const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
 
-  // Session indices per repo (keyed by projectBucketSegment).
-  const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>(() => {
-    const out: Record<string, SessionIndex> = {};
-    const liveProjects = loadProjects();
-    for (const project of liveProjects) out[project.id] = loadSessionIndex(project.id);
-    out[GLOBAL_KEY] = loadSessionIndex(null);
-    // Re-surface deleted projects' all-archived indices so 设置→高级→已归档
-    // still lists them (under their original name) after a restart — App only
-    // seeds from live projects above, which a removed project is no longer in.
-    Object.assign(
-      out,
-      loadDeletedArchivedIndices(new Set(liveProjects.map((project) => project.id))),
-    );
-    return out;
-  });
-  const archivedPetSessionIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const index of Object.values(sessionIndices)) {
-      for (const session of index.sessions) {
-        if (session.archived) ids.add(session.engineSessionId ?? session.id);
-      }
-    }
-    return ids;
-  }, [sessionIndices]);
+  const { sessionIndices, setSessionIndices, archivedPetSessionIds } = useSessionIndices();
   const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
 
   /**
@@ -906,7 +884,22 @@ function App() {
   // "draft" state. A real session row only appears after the user
   // actually sends a message (see `send` below).
 
-  const { state, awaitingHydration, appliedSeqRef, setBusyForKey } = useTranscriptBuckets({
+  const protectedTranscriptBuckets = useProtectedTranscriptBuckets(
+    busyKeys,
+    queuedInputs,
+    sessionStatusMap,
+  );
+  const {
+    state,
+    awaitingHydration,
+    historyHasMore,
+    historyLoading,
+    historyFailed,
+    historyLimitReached,
+    loadEarlierHistory,
+    appliedSeqRef,
+    setBusyForKey,
+  } = useTranscriptBuckets({
     activeProjectId,
     activeSessionId,
     activeBucket,
@@ -917,6 +910,7 @@ function App() {
     runningBucketRef,
     busySinceRef,
     setBusyKeys,
+    protectedBuckets: protectedTranscriptBuckets,
   });
 
   // The "正在思考…" live line shows whenever a turn is busy. Normally
@@ -2042,7 +2036,12 @@ function App() {
     const inheritedPermission = targetOverrides.permissionOverrides[bucket];
     let hydrated: MessagesReducerState;
     try {
-      hydrated = foldTranscript(await window.codeshell.getSessionTranscript(result.sessionId));
+      const page = window.codeshell.getSessionTranscriptPage
+        ? await window.codeshell.getSessionTranscriptPage(result.sessionId, {
+            maxBytes: 512 * 1024,
+          })
+        : { items: await window.codeshell.getSessionTranscript(result.sessionId) };
+      hydrated = foldTranscript(page.items);
     } catch {
       // Core already published the target atomically. Keep it reachable in the
       // sidebar even if this one hydration read fails; selecting it later will
@@ -2430,6 +2429,11 @@ function App() {
                   <ChatView
                     messages={state.messages}
                     awaitingHydration={awaitingHydration}
+                    historyHasMore={historyHasMore}
+                    historyLoading={historyLoading}
+                    historyFailed={historyFailed}
+                    historyLimitReached={historyLimitReached}
+                    onLoadEarlierHistory={loadEarlierHistory}
                     turnEpoch={state.turnEpoch}
                     engineSessionId={state.sessionId ?? engineSessionIdForActive()}
                     liveTurnActive={liveTurnActive}

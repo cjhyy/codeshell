@@ -85,6 +85,7 @@ export class RemoteHostManager extends EventEmitter {
   private wss?: WebSocketServer;
   private started?: RemoteHostStarted;
   private starting?: Promise<RemoteHostStarted>;
+  private stopping?: Promise<void>;
   private pairing = new PairingTokenManager();
   /** ws → authenticated device id. A socket absent here is unauthenticated. */
   private authed = new WeakMap<WebSocket, string>();
@@ -139,6 +140,9 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   async start(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
+    // A prior close owns the shared HTTP facade/upload services until every
+    // cleanup step settles. A restart must not reopen them underneath it.
+    if (this.stopping) await this.stopping;
     if (this.started) return this.started;
     if (this.starting) return this.starting;
     const attempt = this.startOnce(options);
@@ -253,6 +257,13 @@ export class RemoteHostManager extends EventEmitter {
     this.wss.on("connection", (ws) => {
       const viewerId = `viewer-${this.nextViewerId++}`;
       this.viewers.set(ws, viewerId);
+      ws.on("error", (error) => {
+        // ws emits parser/size-limit failures on the individual socket. An
+        // unhandled error here would terminate the entire Node/Electron host.
+        this.releaseSocket(ws);
+        ws.terminate();
+        this.emit("host-error", error);
+      });
       ws.on("message", (raw) => {
         let parsed: unknown;
         try {
@@ -277,13 +288,11 @@ export class RemoteHostManager extends EventEmitter {
           return;
         }
         if (event.type === "auth.device" && reply?.type === "auth.ok") {
-          if (!this.authed.has(ws)) this.markOnline(reply.device.id);
-          this.authed.set(ws, reply.device.id);
+          this.bindSocketDevice(ws, reply.device.id);
         }
         // Pairing also yields a live, identified socket → count it online.
         if (event.type === "pair.complete" && reply?.type === "pair.ok") {
-          if (!this.authed.has(ws)) this.markOnline(reply.device.id);
-          this.authed.set(ws, reply.device.id);
+          this.bindSocketDevice(ws, reply.device.id);
         }
         if (reply) {
           ws.send(JSON.stringify(reply));
@@ -469,6 +478,19 @@ export class RemoteHostManager extends EventEmitter {
     this.markOffline(deviceId);
   }
 
+  private bindSocketDevice(ws: WebSocket, deviceId: string): void {
+    const previous = this.authed.get(ws);
+    if (previous === deviceId) return;
+    if (previous) {
+      // One socket can authenticate/pair again. Retire its old viewer before
+      // switching owners so subscriptions and grants cannot cross identities.
+      this.releaseSocket(ws);
+      this.viewers.set(ws, `viewer-${this.nextViewerId++}`);
+    }
+    this.authed.set(ws, deviceId);
+    this.markOnline(deviceId);
+  }
+
   /** Call after revoking/removing a trusted device to release both transports immediately. */
   revokeDevice(deviceId: string): void {
     this.opts.webApi?.revokeDevice(deviceId);
@@ -479,7 +501,18 @@ export class RemoteHostManager extends EventEmitter {
     }
   }
 
-  async stop(): Promise<void> {
+  stop(): Promise<void> {
+    if (this.stopping) return this.stopping;
+    const attempt = Promise.resolve()
+      .then(() => this.stopOnce())
+      .finally(() => {
+        if (this.stopping === attempt) this.stopping = undefined;
+      });
+    this.stopping = attempt;
+    return attempt;
+  }
+
+  private async stopOnce(): Promise<void> {
     if (this.starting) await this.starting.catch(() => undefined);
     const server = this.server;
     // Forcibly drop live WS sockets first. wss.close() alone waits for clients
@@ -501,14 +534,20 @@ export class RemoteHostManager extends EventEmitter {
     // manually injected bookkeeping (tests / future non-WS transports).
     for (const deviceId of this.onlineCounts.keys()) this.emit("device-offline", deviceId);
     this.onlineCounts.clear();
-    await this.opts.webApi?.close();
-    await this.opts.uploads?.cancelActiveTransfers();
-    if (!server) return;
-    // server.close() only stops accepting new connections and waits for live
-    // ones to end — a lingering upgraded/keep-alive socket keeps its callback
-    // from ever firing. Destroy any remaining connections so close() resolves.
-    server.closeAllConnections?.();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    // A failed service cleanup must not strand an unreachable HTTP listener or
+    // prevent another service from releasing its uploads/resources.
+    const cleanup = await Promise.allSettled([
+      Promise.resolve().then(() => this.opts.webApi?.close()),
+      Promise.resolve().then(() => this.opts.uploads?.cancelActiveTransfers()),
+    ]);
+    if (server) {
+      // server.close() waits for live connections. Drop any lingering HTTP
+      // keep-alive sockets after services have cancelled their active work.
+      server.closeAllConnections?.();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+    const failure = cleanup.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
   }
 
   status(): RemoteHostStarted | undefined {

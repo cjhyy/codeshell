@@ -11,6 +11,24 @@ test("two windows and a reloaded preload never reuse their first request identit
   for (const id of ids) expect(id).toMatch(/^desktop-rpc-[a-f0-9-]{36}-[1-9][0-9]*$/);
 });
 
+test("sandbox preloads work when Web Crypto exposes getRandomValues without randomUUID", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  const crypto = globalThis.crypto;
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: { getRandomValues: crypto.getRandomValues.bind(crypto) },
+  });
+  try {
+    const first = createPreloadRpcIdFactory()();
+    const second = createPreloadRpcIdFactory()();
+    expect(first).toMatch(/^desktop-rpc-[a-f0-9-]{36}-1$/);
+    expect(second).not.toBe(first);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, "crypto", descriptor);
+    else Reflect.deleteProperty(globalThis, "crypto");
+  }
+});
+
 test("a broadcast reply resolves only its own window without coercing numeric or unrelated ids", () => {
   const firstId = createPreloadRpcIdFactory()();
   const secondId = createPreloadRpcIdFactory()();

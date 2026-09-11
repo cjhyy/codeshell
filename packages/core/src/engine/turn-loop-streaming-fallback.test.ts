@@ -11,7 +11,10 @@ function finalResponse(text: string): LLMResponse {
   };
 }
 
-function makeDeps(eventsFromStreaming: StreamEvent[]): TurnLoopDeps {
+function makeDeps(
+  eventsFromStreaming: StreamEvent[],
+  replacement: LLMResponse = finalResponse("final"),
+): TurnLoopDeps {
   const model = {
     async call(
       _system: string,
@@ -25,7 +28,7 @@ function makeDeps(eventsFromStreaming: StreamEvent[]): TurnLoopDeps {
       throw new Error("stream failed");
     },
     async callWithoutStreaming(): Promise<LLMResponse> {
-      return finalResponse("final");
+      return replacement;
     },
     getUsage: () => ({
       records: [],
@@ -69,6 +72,7 @@ function makeDeps(eventsFromStreaming: StreamEvent[]): TurnLoopDeps {
       appendToolUse() {},
       appendToolResult() {},
       appendTurnBoundary() {},
+      appendTurnStopped() {},
       appendMessage() {},
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "sys",
@@ -117,5 +121,82 @@ describe("TurnLoop streaming fallback messageId contract", () => {
     expect(tombstone.messageId).toBe(messageId);
     expect(assistant.messageId).toBe(messageId);
     expect(assistant.message.content).toBe("final");
+  });
+});
+
+it("reopens a revoked stream with the fallback provider's complete reasoning and answer exactly once", async () => {
+  const events: StreamEvent[] = [];
+  const deps = makeDeps(
+    [
+      { type: "thinking_delta", text: "failed partial reasoning" },
+      { type: "text_delta", text: "failed partial answer" },
+    ],
+    { ...finalResponse("replacement answer"), reasoningContent: "replacement reasoning" },
+  );
+  const result = await new TurnLoop(deps, {
+    maxTurns: 5,
+    maxToolCallsPerTurn: 10,
+    onStream: (event) => events.push(event),
+  }).run([{ role: "user", content: "go" }]);
+  expect(result.text).toBe("replacement answer");
+  const revokedAt = events.findIndex((event) => event.type === "tombstone");
+  const after = events
+    .slice(revokedAt + 1)
+    .filter((event) =>
+      ["stream_request_start", "thinking_delta", "text_delta", "assistant_message"].includes(
+        event.type,
+      ),
+    );
+  const firstStart = events.find((event) => event.type === "stream_request_start");
+  expect(after).toEqual([
+    { type: "stream_request_start", turnNumber: 1, messageId: firstStart?.messageId },
+    { type: "thinking_delta", text: "replacement reasoning" },
+    { type: "text_delta", text: "replacement answer" },
+    {
+      type: "assistant_message",
+      messageId: firstStart?.messageId,
+      message: { role: "assistant", content: "replacement answer" },
+    },
+  ]);
+});
+
+it("does not publish fallback reasoning or text after cancellation during the replacement request", async () => {
+  const events: StreamEvent[] = [];
+  const controller = new AbortController();
+  const deps = makeDeps([]);
+  deps.model.callWithoutStreaming = async () => {
+    controller.abort();
+    return { ...finalResponse("too late"), reasoningContent: "too late" };
+  };
+  const result = await new TurnLoop(deps, {
+    maxTurns: 5,
+    maxToolCallsPerTurn: 10,
+    signal: controller.signal,
+    onStream: (event) => events.push(event),
+  }).run([{ role: "user", content: "go" }]);
+  expect(result.reason).toBe("aborted_streaming");
+  expect(
+    events.filter((event) => event.type === "thinking_delta" || event.type === "text_delta"),
+  ).toEqual([]);
+  expect(events.filter((event) => event.type === "stream_request_start")).toHaveLength(1);
+});
+
+it("revokes unexecuted streamed tool placeholders before committing fallback output", async () => {
+  const events: StreamEvent[] = [];
+  const deps = makeDeps([
+    { type: "tool_use_start", toolCall: { id: "partial-tool", toolName: "Read", args: {} } },
+  ]);
+  await new TurnLoop(deps, {
+    maxTurns: 5,
+    maxToolCallsPerTurn: 10,
+    onStream: (event) => events.push(event),
+  }).run([{ role: "user", content: "go" }]);
+  const tombstones = events.filter((event) => event.type === "tombstone");
+  expect(tombstones).toHaveLength(2);
+  expect(tombstones[1]).toEqual({ type: "tombstone", messageId: "partial-tool" });
+  const revokedAt = events.findIndex((event) => event === tombstones[1]);
+  expect(events.slice(revokedAt + 1).find((event) => event.type === "text_delta")).toEqual({
+    type: "text_delta",
+    text: "final",
   });
 });

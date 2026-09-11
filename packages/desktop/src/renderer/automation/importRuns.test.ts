@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import { importAutomationRuns, type ImportableRun, type ImportDeps } from "./importRuns";
-import type { FoldItem } from "../../preload/types";
 
 const projects = [{ id: "r1", name: "alpha", path: "/repo/alpha" }];
 
@@ -27,8 +26,7 @@ function deps(over: Partial<ImportDeps> = {}): {
   const d: ImportDeps = {
     caseInsensitive: false,
     existingEngineSessionIds: new Set<string>(),
-    fetchTranscript: async (): Promise<FoldItem[]> => [{ kind: "user", text: "hi" }],
-    writeImported: (projectId, summary, _state) => {
+    writeImported: (projectId, summary) => {
       imported.push({ projectId, sessionId: summary.id, runStatus: summary.runStatus });
     },
     createProjectForCwd: () => "auto-repo",
@@ -130,10 +128,11 @@ describe("importAutomationRuns", () => {
     expect(ids.has("sess-0")).toBe(false);
   });
 
-  it("does not throw when a transcript fetch fails", async () => {
-    const { d, imported } = deps({
-      fetchTranscript: async () => {
-        throw new Error("io");
+  it("imports metadata without requiring transcript IO", async () => {
+    const { d, imported } = deps();
+    Object.defineProperty(d, "fetchTranscript", {
+      get: () => {
+        throw new Error("Transcript IO must wait for selection");
       },
     });
     await importAutomationRuns([run({})], projects, d);

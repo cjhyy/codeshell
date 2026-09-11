@@ -19,7 +19,7 @@ export interface Credential {
 export interface ModelInstance {
   id: string;
   catalogId: string;
-  tag: "text" | "image" | "video" | "audio";
+  tag: "text" | "image" | "video" | "audio" | "speech";
   model: string;
   baseUrl?: string;
   /** Which credential supplies this connection's key. */
@@ -87,7 +87,7 @@ export function buildInstance(
   entry: CatalogEntry,
   model: string | undefined,
   taken: Set<string>,
-  tag: "text" | "image" | "video" | "audio",
+  tag: "text" | "image" | "video" | "audio" | "speech",
 ): ModelInstance {
   const chosen = model ?? entry.defaultModel ?? entry.modelPresets?.[0]?.value ?? "";
   const preset = entry.modelPresets?.find((p) => p.value === chosen);
@@ -112,6 +112,32 @@ export function buildTextInstance(
   taken: Set<string>,
 ): ModelInstance {
   return buildInstance(entry, model, taken, "text");
+}
+
+/** Keep only values supported by the newly selected model, seeding its defaults. */
+export function modelSelectionPatch(
+  instance: ModelInstance,
+  entry: CatalogEntry | undefined,
+  model: string,
+): Pick<ModelInstance, "model" | "paramValues"> {
+  const paramValues: Record<string, unknown> = {};
+  for (const param of entry?.modelPresets?.find((preset) => preset.value === model)?.params ?? []) {
+    const value = instance.paramValues?.[param.name];
+    const compatible =
+      param.control === "enum"
+        ? typeof value === "string" && Boolean(param.options?.includes(value))
+        : param.control === "toggle"
+          ? typeof value === "boolean"
+          : param.control === "number"
+            ? typeof value === "number" &&
+              Number.isFinite(value) &&
+              (param.min === undefined || value >= param.min) &&
+              (param.max === undefined || value <= param.max)
+            : typeof value === "string" && (param.max === undefined || value.length <= param.max);
+    if (compatible) paramValues[param.name] = value;
+    else if (param.default !== undefined) paramValues[param.name] = param.default;
+  }
+  return { model, paramValues };
 }
 
 /**

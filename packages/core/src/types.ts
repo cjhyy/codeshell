@@ -945,7 +945,8 @@ export interface LLMResponse {
 }
 
 export interface LLMStreamChunk {
-  type: "text" | "tool_use_start" | "tool_use_delta" | "tool_use_end" | "stop";
+  type: "text" | "thinking" | "tool_use_start" | "tool_use_delta" | "tool_use_end" | "stop";
+  /** Provider-supplied text or reasoning delta. Thinking is kept out of answer text. */
   text?: string;
   /** Token count for this text delta, when provider can compute it. */
   tokens?: number;

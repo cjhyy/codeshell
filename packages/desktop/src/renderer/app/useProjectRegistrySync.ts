@@ -55,7 +55,7 @@ export function useProjectRegistrySync(options: ProjectRegistrySyncOptions): voi
       const remaps = Object.entries(projectIdRemap);
       const migratedProjectIds = new Set<string>();
       for (const [fromProjectId, toProjectId] of remaps) {
-        migrateProjectSessionBucket(fromProjectId, toProjectId);
+        await migrateProjectSessionBucket(fromProjectId, toProjectId);
         migratedProjectIds.add(toProjectId);
       }
       if (!alive) return;
@@ -87,7 +87,9 @@ export function useProjectRegistrySync(options: ProjectRegistrySyncOptions): voi
           return next;
         });
       }
-    })();
+    })().catch((error) => {
+      window.codeshell.log("session.project_migration_failed", { error: String(error) });
+    });
     const unsubscribe = registry.onChanged(apply);
     return () => {
       alive = false;

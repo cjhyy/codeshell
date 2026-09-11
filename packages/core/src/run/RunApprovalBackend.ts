@@ -167,15 +167,19 @@ export function createRunAskUserFn(hooks: RunLifecycleHooks): {
   };
 
   const askUserFn: AskUserFn = async (question: string) => {
-    // Notify RunManager
-    await hooks.onInputNeeded(question);
-
-    // Suspend execution until user provides input. The supersede check runs
-    // here — AFTER the await — so it sees a `pending` set by an earlier ask
-    // whose own await already resolved, rather than racing the assignment.
     return new Promise<string>((resolve, reject) => {
+      // Register before notifying the host: an immediate answer/cancellation
+      // must find the pending slot, and a slow older hook must not take it back
+      // from a question that was requested more recently.
       supersedePending();
       pending = { resolve, reject, question };
+      void Promise.resolve()
+        .then(() => hooks.onInputNeeded(question))
+        .catch((error) => {
+          if (pending?.resolve !== resolve) return;
+          pending = null;
+          reject(error);
+        });
     });
   };
 

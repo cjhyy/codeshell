@@ -14,8 +14,11 @@
  *
  * Bounded: only the most recent `maxPerSession` events are retained (older ones
  * are recoverable from the on-disk transcript — see phase 4). seq never resets,
- * so eviction can't cause a cursor collision.
+ * so eviction can't cause a cursor collision within one Main lifetime.
+ * The epoch separates those counters from persisted cursors after a restart.
  */
+
+import { randomUUID } from "node:crypto";
 
 /** One snapshot entry: the forwarded event plus its assigned sequence. */
 export interface SnapshotEntry {
@@ -24,6 +27,8 @@ export interface SnapshotEntry {
 }
 
 export interface Snapshot {
+  /** Identifies the Main-process lifetime in which sequence numbers are valid. */
+  epoch: string;
   events: SnapshotEntry[];
   /** The seq the next appended event will receive (cursor for the client). */
   nextSeq: number;
@@ -42,6 +47,7 @@ interface SessionLog {
 const DEFAULT_MAX_PER_SESSION = 2000;
 
 export class SessionSnapshotStore {
+  readonly epoch = randomUUID();
   private readonly logs = new Map<string, SessionLog>();
   private readonly maxPerSession: number;
 
@@ -79,9 +85,14 @@ export class SessionSnapshotStore {
    */
   get(sessionId: string, sinceSeq = 0): Snapshot {
     const log = this.logs.get(sessionId);
-    if (!log) return { events: [], nextSeq: 1, topLevelRunning: false };
+    if (!log) return { epoch: this.epoch, events: [], nextSeq: 1, topLevelRunning: false };
     const events = sinceSeq > 0 ? log.events.filter((e) => e.seq > sinceSeq) : log.events.slice();
-    return { events, nextSeq: log.nextSeq, topLevelRunning: log.topLevelRunning };
+    return {
+      epoch: this.epoch,
+      events,
+      nextSeq: log.nextSeq,
+      topLevelRunning: log.topLevelRunning,
+    };
   }
 
   /**

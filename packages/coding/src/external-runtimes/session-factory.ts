@@ -189,8 +189,10 @@ export async function startExternalRuntimeSession(
         },
         options.hooks ?? {},
       );
-      await codex.start();
+      // Own the process before its handshake can fail, so the catch path also
+      // closes an app-server that launched but could not initialize a thread.
       runtime = codex;
+      await codex.start();
     } else {
       runtime = new ClaudeCodeRuntime(
         {

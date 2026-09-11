@@ -306,7 +306,7 @@ export function createHubSkills(options: HubSkillsOptions) {
               if (scanSkills(options.cwd).some((entry) => entry.name === name))
                 throw new HubConfigurationError(409, "已有同名 Skill，请修改名称。");
               const root = skillRoot("project", options.cwd, true);
-              const localStage = await stageSkillDirectory(stage, dirname(root));
+              const localStage = await stageSkillDirectory(stage, root);
               try {
                 await authorizeWrite(req);
                 commitSkillDirectory(localStage, root, name);
@@ -396,7 +396,7 @@ export function createHubSkills(options: HubSkillsOptions) {
             if (scanSkills(options.cwd).some((skill) => skill.name === name))
               throw new HubConfigurationError(409, "已有同名 Skill，请选择其他名称。");
             const root = skillRoot("project", options.cwd, true);
-            const localStage = await stageSkillDirectory(stage, dirname(root));
+            const localStage = await stageSkillDirectory(stage, root);
             try {
               await authorizeWrite(req);
               commitSkillDirectory(localStage, root, name);
@@ -478,7 +478,7 @@ export function createHubSkills(options: HubSkillsOptions) {
           await reviewFor(body.reviewToken, owner, "update");
           const skill = owned(reviewed.name);
           const dir = dirname(skill.filePath);
-          const stage = await stageSkillDirectory(reviewed.stage, dirname(dirname(dir)));
+          const stage = await stageSkillDirectory(reviewed.stage, dirname(dir));
           try {
             await authorizeWrite(req);
             commitSkillDirectory(stage, dirname(dir), basename(dir), reviewed.revision);

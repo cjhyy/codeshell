@@ -140,7 +140,13 @@ export type MobileClientEvent =
   // ── Sessions: see every desktop session, open its history, drive it ──────
   | { type: "session.list" }
   | { type: "session.history"; sessionId: string }
-  | { type: "session.sync"; sessionId: string; sinceSeq?: number }
+  | {
+      type: "session.sync";
+      sessionId: string;
+      sinceSeq?: number;
+      /** Main lifetime paired with sinceSeq; omitted by legacy clients. */
+      epoch?: string;
+    }
   // ── Capability controls ──────────────────────────────────────────────────
   | { type: "permission.setMode"; sessionId?: string; mode: PermissionMode }
   | { type: "model.set"; model: string }
@@ -254,8 +260,17 @@ export type MobileServerEvent =
       sessionId: string;
       entries: Array<{ seq: number; event: unknown }>;
       nextSeq: number;
+      /** Main lifetime in which these sequence numbers are valid. */
+      epoch?: string;
     }
-  | { type: "session.stream"; sessionId: string; seq: number; event: unknown }
+  | {
+      type: "session.stream";
+      sessionId: string;
+      seq: number;
+      event: unknown;
+      /** Main lifetime in which seq is valid; omitted by legacy servers. */
+      epoch?: string;
+    }
   // ── Capability controls ──────────────────────────────────────────────────
   | { type: "permission.mode"; sessionId?: string; mode: PermissionMode }
   | { type: "model.current"; model: string; available?: string[] }

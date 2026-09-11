@@ -1,6 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
-import { constants } from "node:fs";
-import { chmod, lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 
@@ -95,44 +106,50 @@ function parseDocument(value: unknown): ApprovalDocument {
   return { version: STORE_VERSION, approvals };
 }
 
-async function readDocument(file: string): Promise<ApprovalDocument> {
-  let handle: Awaited<ReturnType<typeof open>> | undefined;
+function readDocument(file: string): ApprovalDocument {
+  let descriptor: number | undefined;
   try {
-    const entry = await lstat(file);
+    const entry = lstatSync(file);
     if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_STORE_BYTES) {
       throw new Error("Panel process approval store must be a bounded regular file");
     }
-    handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    const opened = await handle.stat();
+    descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
     if (!opened.isFile() || opened.size > MAX_STORE_BYTES) {
       throw new Error("Panel process approval store must be a bounded regular file");
     }
-    return parseDocument(JSON.parse(await handle.readFile("utf8")) as unknown);
+    return parseDocument(JSON.parse(readFileSync(descriptor, "utf8")) as unknown);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return emptyDocument();
     throw error;
   } finally {
-    await handle?.close().catch(() => undefined);
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // Preserve the original read/validation outcome.
+      }
+    }
   }
 }
 
-async function assertSafeParent(file: string): Promise<void> {
+function assertSafeParent(file: string): void {
   const parent = dirname(file);
-  await mkdir(parent, { recursive: true, mode: 0o700 });
-  const entry = await lstat(parent);
+  mkdirSync(parent, { recursive: true, mode: 0o700 });
+  const entry = lstatSync(parent);
   if (entry.isSymbolicLink() || !entry.isDirectory()) {
     throw new Error("Panel process approval directory must be a real directory");
   }
 }
 
-async function writeDocument(file: string, document: ApprovalDocument): Promise<void> {
+function writeDocument(file: string, document: ApprovalDocument): void {
   const serialized = `${JSON.stringify(document, null, 2)}\n`;
   if (Buffer.byteLength(serialized, "utf8") > MAX_STORE_BYTES) {
     throw new Error("Panel process approval store is too large");
   }
-  await assertSafeParent(file);
+  assertSafeParent(file);
   try {
-    const entry = await lstat(file);
+    const entry = lstatSync(file);
     if (entry.isSymbolicLink() || !entry.isFile()) {
       throw new Error("Panel process approval store target must be a regular file");
     }
@@ -141,11 +158,15 @@ async function writeDocument(file: string, document: ApprovalDocument): Promise<
   }
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    await writeFile(temporary, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    await rename(temporary, file);
-    if (process.platform !== "win32") await chmod(file, 0o600);
+    writeFileSync(temporary, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    renameSync(temporary, file);
+    if (process.platform !== "win32") chmodSync(file, 0o600);
   } finally {
-    await rm(temporary, { force: true }).catch(() => undefined);
+    try {
+      rmSync(temporary, { force: true });
+    } catch {
+      // Temporary cleanup must not replace the write outcome.
+    }
   }
 }
 
@@ -159,7 +180,7 @@ export class PanelAppProcessApprovalStore {
     await this.mutationQueue.catch(() => undefined);
     try {
       const key = approvalKey(scope);
-      return (await readDocument(this.file)).approvals.some(
+      return readDocument(this.file).approvals.some(
         (approval) => approvalKey(approval) === key,
       );
     } catch {
@@ -169,13 +190,15 @@ export class PanelAppProcessApprovalStore {
 
   remember(scope: PanelProcessApprovalScope): Promise<void> {
     if (!validScope(scope)) throw new Error("invalid Panel process approval scope");
-    const mutation = this.mutationQueue.then(async () => {
-      await assertSafeParent(this.file);
+    const mutation = this.mutationQueue.then(() => {
+      assertSafeParent(this.file);
       const release = acquireFileLock(this.file);
       try {
+        // A second store can contend on this directory in the same process.
+        // Never yield while holding its synchronous cross-process lock.
         let document: ApprovalDocument;
         try {
-          document = await readDocument(this.file);
+          document = readDocument(this.file);
         } catch {
           document = emptyDocument();
         }
@@ -186,7 +209,7 @@ export class PanelAppProcessApprovalStore {
             !(approval.appId === scope.appId && approval.revision !== scope.revision),
         );
         approvals.unshift({ ...scope, approvedAt: Date.now() });
-        await writeDocument(this.file, {
+        writeDocument(this.file, {
           version: STORE_VERSION,
           approvals: approvals.slice(0, MAX_APPROVALS),
         });

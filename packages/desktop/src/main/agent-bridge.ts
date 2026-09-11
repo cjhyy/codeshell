@@ -101,9 +101,11 @@ import {
   type AgentRunMetadataDeps,
   type HostReservation,
 } from "./agent-run-metadata.js";
+import { resolveAgentRunBrowserRegistration } from "./agent-run-browser-registration.js";
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
+import { readExternalRuntimeBinding } from "./external-runtime-state.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
@@ -241,7 +243,7 @@ export class AgentBridge implements PetStateBridge {
    * the renderer's single run/permission path rather than a second runtime.
    */
   private readonly outboundTaps = new Set<
-    (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string }) => void
+    (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string }) => void
   >();
   /**
    * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
@@ -464,13 +466,17 @@ export class AgentBridge implements PetStateBridge {
       : null;
     if (append) this.workerSnapshotSessionIds.add(append.sessionId);
     const snapshotEntry = append
-      ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
+      ? {
+          sessionId: append.sessionId,
+          epoch: this.snapshots.epoch,
+          ...this.snapshots.append(append.sessionId, append.event),
+        }
       : undefined;
     const liveStreamEnvelope = append
       ? {
           sessionId: append.sessionId,
           event: append.event,
-          ...(snapshotEntry ? { seq: snapshotEntry.seq } : {}),
+          ...(snapshotEntry ? { seq: snapshotEntry.seq, epoch: snapshotEntry.epoch } : {}),
         }
       : parseLiveStreamEnvelope(line, snapshotEntry);
     const projectedLine = append ? replaceStreamEventInLine(line, append.event) : line;
@@ -515,9 +521,23 @@ export class AgentBridge implements PetStateBridge {
         this.tentativeRunsByRequest.set(String(prepared.parsed.id), prepared.sessionId);
       }
     }
-    if (prepared.sessionId && prepared.bucket) {
+    if (prepared.sessionId) {
       try {
-        registerSessionBucket(prepared.sessionId, prepared.bucket, prepared.browserPartition);
+        // Host-driven resumes have no renderer to supply a browser bucket.
+        // Resolve only after run metadata has established Session authority,
+        // retaining any existing browser identity or external-runtime isolation.
+        const existingBucket = bucketForSession(prepared.sessionId);
+        const registration = resolveAgentRunBrowserRegistration(prepared, {
+          existingBucket,
+          existingPartition: partitionForSession(prepared.sessionId),
+          externalRuntime:
+            !prepared.bucket &&
+            !existingBucket &&
+            readExternalRuntimeBinding(prepared.sessionId) !== undefined,
+        });
+        if (registration) {
+          registerSessionBucket(registration.sessionId, registration.bucket, registration.partition);
+        }
       } catch (err) {
         dlog("bridge", "browser.register_session_bucket_failed", { error: String(err) });
       }
@@ -1789,7 +1809,7 @@ export class AgentBridge implements PetStateBridge {
    * throwing tap never disrupts the renderer stream.
    */
   subscribeOutbound(
-    tap: (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string }) => void,
+    tap: (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string }) => void,
   ): () => void {
     this.outboundTaps.add(tap);
     return () => this.outboundTaps.delete(tap);
@@ -1984,7 +2004,12 @@ export class AgentBridge implements PetStateBridge {
   ): void {
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     const entry = this.snapshots.append(sessionId, projected);
-    this.safeSend("agent:streamEvent", { sessionId, event: projected, seq: entry.seq });
+    this.safeSend("agent:streamEvent", {
+      sessionId,
+      event: projected,
+      seq: entry.seq,
+      epoch: this.snapshots.epoch,
+    });
   }
 
   /**

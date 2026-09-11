@@ -78,11 +78,13 @@ export function CCRoomView({
   cwdRef.current = cwd;
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
-  // Total session count (unbounded) vs the bounded default we show. When total >
-  // shown and not expanded, offer "load more" (TODO room-list convergence).
+  // Total session count (unbounded) vs the bounded default we show. Expansion
+  // is committed only after the full list arrives, so a failed read is retryable.
+  // Discovery/list consolidation remains a follow-up (TODO room-list convergence).
   const [total, setTotal] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [conv, setConv] = useState<{
     roomId: string;
@@ -93,12 +95,34 @@ export function CCRoomView({
     status: "observing" | "running";
   } | null>(null);
   const [picking, setPicking] = useState<{ sessionId: string; cwd: string } | null>(null);
+  const [opening, setOpening] = useState(false);
+  const openingRequestRef = useRef<object | null>(null);
   const lastOpenRequestNonceRef = useRef(-1);
   const pendingOpenRequestRef = useRef<OpenCliSessionRequest | null>(null);
   const probeSequenceRef = useRef(0);
   const probeForceRef = useRef(false);
   const [probeRevision, setProbeRevision] = useState(0);
   const listSequenceRef = useRef(0);
+
+  const dismissPicker = useCallback(() => {
+    openingRequestRef.current = null;
+    setOpening(false);
+    setPicking(null);
+  }, []);
+
+  useEffect(() => {
+    setSessions([]);
+    setTotal(0);
+    setExpanded(false);
+    setLastRefreshedAt(null);
+    setListError(null);
+    setRefreshing(false);
+    dismissPicker();
+    return () => {
+      listSequenceRef.current += 1;
+      openingRequestRef.current = null;
+    };
+  }, [cwd, cliKind, dismissPicker]);
 
   const probeFor = useCallback(
     (kind: CliKind, force = false) =>
@@ -117,7 +141,7 @@ export function CCRoomView({
       lastOpenRequestNonceRef.current = openRequest.nonce;
       pendingOpenRequestRef.current = openRequest;
       consumeRef.current?.(openRequest.nonce);
-      setPicking(null);
+      dismissPicker();
       if (cliKind !== openRequest.cliKind) {
         setAvail(null);
         setCliKind(openRequest.cliKind);
@@ -132,7 +156,12 @@ export function CCRoomView({
     let cancelled = false;
     setAvail(null);
     setSessions([]);
+    setTotal(0);
     setExpanded(false);
+    setLastRefreshedAt(null);
+    setListError(null);
+    setRefreshing(false);
+    listSequenceRef.current += 1;
 
     // A Pet/DriveAgent deep-link is a disk-only observe action. Do not run the
     // normal availability probe here: production probes execute
@@ -203,7 +232,7 @@ export function CCRoomView({
     return () => {
       cancelled = true;
     };
-  }, [cliKind, openRequest?.nonce, probeFor, probeRevision]);
+  }, [cliKind, openRequest?.nonce, probeFor, probeRevision, dismissPicker]);
 
   const requestProbe = useCallback((force = false) => {
     probeForceRef.current = force;
@@ -212,28 +241,48 @@ export function CCRoomView({
 
   const openWithMode = useCallback(
     async (mode: "default" | "acceptEdits" | "bypassPermissions") => {
-      if (!cwd || !picking) return;
-      const { roomId, status } = await window.codeshell.ccRoom.openSession(
-        picking.sessionId,
-        picking.cwd,
-        mode,
-        cliKind,
-      );
-      setConv({
-        roomId,
-        sessionId: picking.sessionId,
-        mode,
-        cwd: picking.cwd,
-        cliKind,
-        status: status === "observing" ? "observing" : "running",
-      });
-      setPicking(null);
+      if (!cwd || !picking || openingRequestRef.current) return;
+      const request = {};
+      openingRequestRef.current = request;
+      setOpening(true);
+      try {
+        const { roomId, status } = await window.codeshell.ccRoom.openSession(
+          picking.sessionId,
+          picking.cwd,
+          mode,
+          cliKind,
+        );
+        if (openingRequestRef.current !== request) return;
+        if (status === "missing") throw new Error(tRef.current("panels.room.sessionNotRunning"));
+        setConv({
+          roomId,
+          sessionId: picking.sessionId,
+          mode,
+          cwd: picking.cwd,
+          cliKind,
+          status: status === "observing" ? "observing" : "running",
+        });
+        setPicking(null);
+      } catch (error) {
+        if (openingRequestRef.current !== request) return;
+        toastRef.current({
+          message: `打开 ${CLI_LABEL[cliKind]} 会话失败：${error instanceof Error ? error.message : String(error)}`,
+          variant: "error",
+        });
+      } finally {
+        if (openingRequestRef.current === request) {
+          openingRequestRef.current = null;
+          setOpening(false);
+        }
+      }
     },
     [cwd, picking, cliKind],
   );
 
   const refresh = useCallback(
     (all = false) => {
+      const sequence = listSequenceRef.current + 1;
+      listSequenceRef.current = sequence;
       if (!cwd) {
         setSessions([]);
         setTotal(0);
@@ -243,9 +292,8 @@ export function CCRoomView({
         cliKind === "codex"
           ? window.codeshell.ccRoom.listCodexSessions(cwd, all)
           : window.codeshell.ccRoom.listSessions(cwd, all);
-      const sequence = listSequenceRef.current + 1;
-      listSequenceRef.current = sequence;
       setRefreshing(true);
+      setListError(null);
       const requestKind = cliKind;
       const requestCwd = cwd;
       void list
@@ -259,14 +307,19 @@ export function CCRoomView({
           }
           setSessions(res.sessions);
           setTotal(res.total);
+          setExpanded(all);
           setLastRefreshedAt(Date.now());
         })
         .catch((error) => {
-          if (listSequenceRef.current !== sequence) return;
-          toastRef.current({
-            message: `刷新 ${CLI_LABEL[requestKind]} 会话失败：${error instanceof Error ? error.message : String(error)}`,
-            variant: "error",
-          });
+          if (
+            listSequenceRef.current !== sequence ||
+            requestKind !== cliKindRef.current ||
+            requestCwd !== cwdRef.current
+          )
+            return;
+          setListError(
+            `刷新 ${CLI_LABEL[requestKind]} 会话失败：${error instanceof Error ? error.message : String(error)}`,
+          );
         })
         .finally(() => {
           if (listSequenceRef.current === sequence) setRefreshing(false);
@@ -280,7 +333,7 @@ export function CCRoomView({
   }, [avail?.available, refresh]);
 
   useEffect(() => {
-    if (!active || !avail?.available || conv) return;
+    if (!active || !avail?.available || conv || refreshing) return;
     const refreshVisibleList = () => refresh(expanded);
     const timer = setInterval(refreshVisibleList, 10_000);
     window.addEventListener("focus", refreshVisibleList);
@@ -288,7 +341,7 @@ export function CCRoomView({
       clearInterval(timer);
       window.removeEventListener("focus", refreshVisibleList);
     };
-  }, [active, avail?.available, conv, expanded, refresh]);
+  }, [active, avail?.available, conv, expanded, refresh, refreshing]);
 
   const label = CLI_LABEL[cliKind];
 
@@ -426,14 +479,23 @@ export function CCRoomView({
       </div>
 
       <div className="-mt-2 text-xs text-muted-foreground">
-        {lastRefreshedAt
-          ? `每 10 秒自动刷新 · 更新于 ${new Date(lastRefreshedAt).toLocaleTimeString()}`
-          : "正在读取会话…"}
+        {!cwd
+          ? "请先选择项目。"
+          : lastRefreshedAt
+            ? `每 10 秒自动刷新 · 更新于 ${new Date(lastRefreshedAt).toLocaleTimeString()}`
+            : refreshing
+              ? "正在读取会话…"
+              : "尚未读取会话。"}
       </div>
+      {listError && (
+        <p role="alert" className="text-sm text-destructive">
+          {listError}
+        </p>
+      )}
 
       {/* Sessions */}
       <section className="flex flex-col gap-2">
-        {sessions.length === 0 ? (
+        {sessions.length === 0 && cwd && lastRefreshedAt !== null ? (
           <p className="text-sm text-muted-foreground">该项目下还没有 {label} 会话。</p>
         ) : (
           sessions.map((s) => (
@@ -465,18 +527,16 @@ export function CCRoomView({
           <Button
             variant="ghost"
             size="sm"
+            disabled={refreshing}
             className="self-center text-muted-foreground"
-            onClick={() => {
-              setExpanded(true);
-              refresh(true);
-            }}
+            onClick={() => refresh(true)}
           >
             加载更多（还有 {total - sessions.length} 个更早的会话）
           </Button>
         )}
       </section>
 
-      <Dialog open={picking !== null} onOpenChange={(o) => !o && setPicking(null)}>
+      <Dialog open={picking !== null} onOpenChange={(o) => !o && dismissPicker()}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>选择权限模式</DialogTitle>
@@ -486,11 +546,21 @@ export function CCRoomView({
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <Button onClick={() => void openWithMode("default")}>default</Button>
-            <Button variant="outline" onClick={() => void openWithMode("acceptEdits")}>
+            <Button disabled={opening} onClick={() => void openWithMode("default")}>
+              default
+            </Button>
+            <Button
+              disabled={opening}
+              variant="outline"
+              onClick={() => void openWithMode("acceptEdits")}
+            >
               acceptEdits
             </Button>
-            <Button variant="outline" onClick={() => void openWithMode("bypassPermissions")}>
+            <Button
+              disabled={opening}
+              variant="outline"
+              onClick={() => void openWithMode("bypassPermissions")}
+            >
               bypassPermissions
             </Button>
           </div>

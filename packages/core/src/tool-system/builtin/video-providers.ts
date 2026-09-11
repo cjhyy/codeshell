@@ -288,9 +288,9 @@ export const DEFAULT_VIDEO_MODEL: Record<string, string> = {
 };
 
 /**
- * Registry of video-provider adapters, keyed by `kind`. Only `fake` exists
- * today (test/dev). Real adapters (seedance, kling) are intentionally absent
- * until their private API contracts are confirmed — see TODO 7.1 块3.
+ * Registry of video-provider adapters, keyed by `kind`: `fake` for test/dev
+ * and `fal` for real generation (including the default Kling model above).
+ * Direct vendor integrations require their own verified API contracts.
  */
 export function getVideoProvider(
   kind: string,

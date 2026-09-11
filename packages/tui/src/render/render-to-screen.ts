@@ -11,7 +11,6 @@ import renderNodeToOutput, {
   resetLayoutShifted,
 } from './render-node-to-output.js'
 import {
-  CellWidth,
   CharPool,
   cellAtIndex,
   createScreen,
@@ -20,6 +19,7 @@ import {
   StylePool,
   setCellStyleId,
 } from './screen.js'
+import { findRowSearchMatches } from './searchMatches.js'
 
 /** Position of a match within a rendered message, relative to the message's
  *  own bounding box (row 0 = message top). Stable across scroll — to
@@ -150,50 +150,16 @@ export function renderToScreen(
 export function scanPositions(screen: Screen, query: string): MatchPosition[] {
   const lq = query.toLowerCase()
   if (!lq) return []
-  const qlen = lq.length
-  const w = screen.width
   const h = screen.height
-  const noSelect = screen.noSelect
   const positions: MatchPosition[] = []
 
   const t0 = performance.now()
   for (let row = 0; row < h; row++) {
-    const rowOff = row * w
-    // Same text-build as applySearchHighlight. Keep in sync — or extract
-    // to a shared helper (TODO once both are stable). codeUnitToCell
-    // maps indexOf positions (code units in the LOWERCASED text) to cell
-    // indices in colOf — surrogate pairs (emoji) and multi-unit lowercase
-    // (Turkish İ → i + U+0307) make text.length > colOf.length.
-    let text = ''
-    const colOf: number[] = []
-    const codeUnitToCell: number[] = []
-    for (let col = 0; col < w; col++) {
-      const idx = rowOff + col
-      const cell = cellAtIndex(screen, idx)
-      if (
-        cell.width === CellWidth.SpacerTail ||
-        cell.width === CellWidth.SpacerHead ||
-        noSelect[idx] === 1
-      ) {
-        continue
-      }
-      const lc = cell.char.toLowerCase()
-      const cellIdx = colOf.length
-      for (let i = 0; i < lc.length; i++) {
-        codeUnitToCell.push(cellIdx)
-      }
-      text += lc
-      colOf.push(col)
-    }
-    // Non-overlapping — same advance as applySearchHighlight.
-    let pos = text.indexOf(lq)
-    while (pos >= 0) {
-      const startCi = codeUnitToCell[pos]!
-      const endCi = codeUnitToCell[pos + qlen - 1]!
-      const col = colOf[startCi]!
-      const endCol = colOf[endCi]! + 1
+    const { columns, matches } = findRowSearchMatches(screen, row, lq)
+    for (const { start, end } of matches) {
+      const col = columns[start]!
+      const endCol = columns[end]! + 1
       positions.push({ row, col, len: endCol - col })
-      pos = text.indexOf(lq, pos + qlen)
     }
   }
   timing.scan += performance.now() - t0

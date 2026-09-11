@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import type {
   Message,
   StreamCallback,
+  StreamEvent,
   TerminalReason,
   ContentBlock,
   ToolResult,
@@ -2078,6 +2079,15 @@ export class TurnLoop {
    * If streaming fails, emit tombstone and retry non-streaming.
    */
   private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
+    const revokePartialStream = () => {
+      this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
+      // Streamed tool placeholders have not executed or entered the durable
+      // transcript yet. Revoke them too; replacement IDs may differ or repeat.
+      for (const toolId of this.streamedToolIds) {
+        this.config.onStream?.({ type: "tombstone", messageId: toolId });
+      }
+      this.streamedToolIds.clear();
+    };
     // Wrap stream callback to track tool_use_start events and reactive compaction
     let streamingResponseTokens = 0;
     let reactiveBucket = -1;
@@ -2141,7 +2151,7 @@ export class TurnLoop {
       // promised safe boundary, so revoke any partial stream and synthesize an
       // empty settled step instead.
       if (this.goalControlStopRequested) {
-        this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
+        revokePartialStream();
         return { text: "", toolCalls: [], stopReason: "stop" };
       }
 
@@ -2149,7 +2159,7 @@ export class TurnLoop {
       // fallback would re-send the same pending plaintext in a second request,
       // so fail the turn and let the unified exit redact returned history.
       if (this.sensitiveToolResultRedactions.size > 0) {
-        this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
+        revokePartialStream();
         this.currentTurnLog.warn("turn.streaming_fallback_skipped_sensitive", {
           cat: "turn",
           error: (err as Error).message,
@@ -2158,20 +2168,37 @@ export class TurnLoop {
       }
 
       // Streaming might have partially emitted — send tombstone to revoke
-      this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
+      revokePartialStream();
       this.currentTurnLog.warn("turn.streaming_fallback", {
         cat: "turn",
         error: (err as Error).message,
       });
 
       // Retry without streaming
-      return await this.deps.model.callWithoutStreaming(
+      const response = await this.deps.model.callWithoutStreaming(
         this.deps.systemPrompt,
         messages,
         this.deps.tools,
         this.config.signal,
         this.modelCallRecordingOptions(messages),
       );
+      // A failed stream's slot was revoked above. Reopen it for the successful
+      // replacement so delta-based clients receive the same text/reasoning as
+      // clients which reconcile the final assistant_message. The facade has
+      // already persisted this response once; these are presentation events.
+      const emit = (event: StreamEvent) => {
+        if (!this.config.signal?.aborted) this.config.onStream?.(event);
+      };
+      emit({
+        type: "stream_request_start",
+        turnNumber: this.turnCount,
+        messageId: assistantMessageId,
+      });
+      if (response.reasoningContent) {
+        emit({ type: "thinking_delta", text: response.reasoningContent });
+      }
+      if (response.text) emit({ type: "text_delta", text: response.text });
+      return response;
     }
   }
 
