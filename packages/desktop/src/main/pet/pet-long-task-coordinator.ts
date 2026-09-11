@@ -12,10 +12,14 @@ import {
   type PetLongTaskControlResult,
   type PetLongTaskPhase,
   type PetLongTaskSnapshot,
+  type PetLongTaskTransition,
 } from "@cjhyy/code-shell-pet";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
 import type { PetWorkDelegationLaunch } from "./pet-work-delegation-host.js";
-import { petDelegationSessionId } from "./pet-work-delegation-host.js";
+import {
+  petDelegationClientMessageId,
+  petDelegationSessionId,
+} from "./pet-work-delegation-host.js";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -180,6 +184,20 @@ function topLevelEvent(value: unknown): Record<string, unknown> | null {
   return typeof event.type === "string" && event.agentId === undefined ? event : null;
 }
 
+function matchesRun(
+  task: PetLongTask,
+  identity: { runId?: unknown; clientMessageId?: unknown },
+): boolean {
+  return (
+    task.clientMessageId === identity.clientMessageId &&
+    (task.runId ? task.runId === identity.runId : !!task.clientMessageId)
+  );
+}
+
+function runFence(task: PetLongTask) {
+  return { attempt: task.attempt, runId: task.runId, clientMessageId: task.clientMessageId };
+}
+
 function extractText(value: unknown): string | undefined {
   const collect = (input: unknown): string[] => {
     if (typeof input === "string") return [input];
@@ -245,6 +263,7 @@ export class PetLongTaskCoordinator {
   private readonly lastProgressAt = new Map<string, number>();
   private readonly closedNotifications = new Map<string, Promise<void>>();
   private readonly workMemoryNotifications = new Map<string, Promise<void>>();
+  private readonly sessionEventQueues = new Map<string, Promise<void>>();
 
   constructor(private readonly options: PetLongTaskCoordinatorOptions) {
     this.now = options.now ?? Date.now;
@@ -343,6 +362,7 @@ export class PetLongTaskCoordinator {
       objective: delegation.task,
       workspacePath: delegation.workspacePath,
       sessionId,
+      clientMessageId: petDelegationClientMessageId(delegation.clientMessageId),
       verificationMode: delegation.goalObjective ? "goal" : "turn",
       ...(delegation.completionTarget ? { completionTarget: delegation.completionTarget } : {}),
       ...(delegation.continuationDepth ? { continuationDepth: delegation.continuationDepth } : {}),
@@ -416,6 +436,8 @@ export class PetLongTaskCoordinator {
       objective: input.objective,
       workspacePath: input.workspacePath,
       sessionId: input.sessionId,
+      runId: session.runId,
+      clientMessageId: session.clientMessageId,
       verificationMode: "turn",
       completionTarget: input.completionTarget,
       at,
@@ -474,11 +496,88 @@ export class PetLongTaskCoordinator {
 
   /** Observe the exact, top-level session stream retained by AgentBridge. */
   async observeSessionEvent(sessionId: string, value: unknown): Promise<void> {
+    const previous = this.sessionEventQueues.get(sessionId) ?? Promise.resolve();
+    const operation = previous
+      .catch(() => undefined)
+      .then(() => this.applySessionEvent(sessionId, value));
+    this.sessionEventQueues.set(sessionId, operation);
+    try {
+      await operation;
+    } finally {
+      if (this.sessionEventQueues.get(sessionId) === operation)
+        this.sessionEventQueues.delete(sessionId);
+    }
+  }
+
+  private async applySessionEvent(sessionId: string, value: unknown): Promise<void> {
     const event = topLevelEvent(value);
     if (!event) return;
-    const task = this.options.store.activeForSession(sessionId);
+    const task =
+      this.options.store.activeForSession(sessionId) ??
+      this.options.store.latestForSession(sessionId);
     if (!task || task.status === "paused" || task.status === "cancelled") return;
     const at = this.now();
+    if (event.type === "session_started") {
+      if (isTerminal(task) || typeof event.runId !== "string" || !event.runId) return;
+      if (task.runId && matchesRun(task, event)) return;
+      const backgroundResume =
+        task.runId && event.previousRunId === task.runId && event.clientMessageId === undefined;
+      if (task.runId && !backgroundResume) return;
+      if (!backgroundResume && task.clientMessageId !== event.clientMessageId) return;
+      await this.options.store.transition(task.id, {
+        kind: "run-bound",
+        at,
+        attempt: task.attempt,
+        runId: event.runId,
+        clientMessageId:
+          typeof event.clientMessageId === "string" ? event.clientMessageId : undefined,
+        previousRunId: task.runId,
+      });
+      return;
+    }
+    if (!matchesRun(task, event)) return;
+    const transition = (input: PetLongTaskTransition) =>
+      this.options.store.transition(task.id, { ...runFence(task), ...input });
+    if (task.status === "completed") {
+      if (!task.runId) return;
+      // An assistant_message may precede a Goal rejection or a steer backfill.
+      // Only the finalized run payload is safe to publish as a result update.
+      if (event.type === "turn_complete" && !event.completionKind) {
+        const summary = typeof event.text === "string" ? extractText(event) : undefined;
+        if (event.reason === "completed" && (task.verificationMode === "turn" || summary)) {
+          await transition({
+            kind: "result-updated",
+            at,
+            summary,
+            ...(task.verificationMode === "turn" ? { terminalStatus: "completed" as const } : {}),
+            attempt: task.attempt,
+            runId: task.runId,
+          });
+        } else if (
+          event.reason !== "completed" &&
+          event.reason !== "aborted_streaming" &&
+          event.reason !== "aborted_tools"
+        ) {
+          await transition({
+            kind: "result-updated",
+            at,
+            terminalStatus: "failed",
+            summary: `Work session ended: ${String(event.reason ?? "unknown")}`,
+            attempt: task.attempt,
+            runId: task.runId!,
+          });
+        }
+      } else if (event.type === "goal_progress" && event.status === "met") {
+        await transition({
+          kind: "result-updated",
+          at,
+          terminalStatus: "completed",
+          attempt: task.attempt,
+          runId: task.runId!,
+        });
+      }
+      return;
+    }
     switch (event.type) {
       case "stream_request_start":
         if (
@@ -486,7 +585,7 @@ export class PetLongTaskCoordinator {
           task.status === "interrupted" ||
           isWaitingForBackgroundResult(task)
         ) {
-          await this.options.store.transition(task.id, { kind: "started", at });
+          await transition({ kind: "started", at });
         }
         return;
       case "tool_use_start":
@@ -498,14 +597,14 @@ export class PetLongTaskCoordinator {
       case "tool_result": {
         const artifacts = generatedImageArtifacts(event);
         if (artifacts.length > 0) {
-          await this.options.store.transition(task.id, { kind: "artifact", at, artifacts });
+          await transition({ kind: "artifact", at, artifacts });
         }
         return;
       }
       case "assistant_message": {
         const summary = extractText(event.message);
         if (summary) {
-          await this.options.store.transition(task.id, {
+          await transition({
             kind: "checkpoint",
             at,
             summary,
@@ -520,7 +619,7 @@ export class PetLongTaskCoordinator {
         if (status === "met") {
           const current = this.options.store.get(task.id);
           if (!current || current.status === "paused" || current.status === "cancelled") return;
-          const completed = await this.options.store.transition(task.id, {
+          const completed = await transition({
             kind: "completed",
             at,
             summary:
@@ -535,7 +634,7 @@ export class PetLongTaskCoordinator {
           return;
         }
         if (status === "exhausted") {
-          const failed = await this.options.store.transition(task.id, {
+          const failed = await transition({
             kind: "failed",
             at,
             error: gaps ?? "The Goal continuation limit was exhausted before completion",
@@ -544,7 +643,7 @@ export class PetLongTaskCoordinator {
           return;
         }
         if (status === "not_met" || status === "approaching_limit") {
-          await this.options.store.transition(task.id, {
+          await transition({
             kind: "checkpoint",
             at,
             summary: gaps ?? "The goal is not complete yet; the worker is continuing",
@@ -555,7 +654,7 @@ export class PetLongTaskCoordinator {
       }
       case "goal_cleared": {
         if (task.verificationMode === "goal") {
-          await this.options.store.transition(task.id, {
+          await transition({
             kind: "verification-changed",
             at,
             mode: "turn",
@@ -571,7 +670,7 @@ export class PetLongTaskCoordinator {
             event.completionKind === "goal_control_stop" ||
             event.completionKind === "limit_stop"
           ) {
-            await this.options.store.transition(task.id, {
+            await transition({
               kind: "interrupted",
               at,
               reason: interruptReasonForCompletionKind(event.completionKind),
@@ -579,7 +678,7 @@ export class PetLongTaskCoordinator {
             return;
           }
           if (event.completionKind === "background_wait") {
-            await this.options.store.transition(task.id, {
+            await transition({
               kind: "waiting-worker",
               at,
               waitingFor: interruptReasonForCompletionKind(event.completionKind),
@@ -587,9 +686,10 @@ export class PetLongTaskCoordinator {
             return;
           }
           if (current.verificationMode === "turn") {
-            const completed = await this.options.store.transition(task.id, {
+            const completed = await transition({
               kind: "completed",
               at,
+              summary: typeof event.text === "string" ? extractText(event) : undefined,
               artifacts: [
                 { kind: "result", label: "Completed work session", reference: current.sessionId },
               ],
@@ -600,19 +700,19 @@ export class PetLongTaskCoordinator {
           // Core also uses turn_complete(completed) when a Goal stops because
           // its judge prompt is too large or a continuation cap is reached.
           // Only goal_progress(met) is proof that the objective completed.
-          await this.options.store.transition(task.id, {
+          await transition({
             kind: "interrupted",
             at,
             reason: "The work session stopped without a verified Goal-complete signal",
           });
         } else if (event.reason === "aborted_streaming" || event.reason === "aborted_tools") {
-          await this.options.store.transition(task.id, {
+          await transition({
             kind: "interrupted",
             at,
             reason: "The work session stopped before the objective was complete",
           });
         } else {
-          const failed = await this.options.store.transition(task.id, {
+          const failed = await transition({
             kind: "failed",
             at,
             error: `Work session ended: ${String(event.reason ?? "unknown")}`,
@@ -622,7 +722,7 @@ export class PetLongTaskCoordinator {
         return;
       }
       case "error": {
-        const failed = await this.options.store.transition(task.id, {
+        const failed = await transition({
           kind: "failed",
           at,
           error: typeof event.error === "string" ? event.error : "Work session failed",
@@ -683,15 +783,19 @@ export class PetLongTaskCoordinator {
     // previous attempt that reused this Session. It is historical evidence,
     // not the outcome of the current launch.
     if (projectionPredatesCurrentAttempt(task, event.session)) return;
+    if (!matchesRun(task, event.session)) return;
+    if (event.session.terminal && !matchesRun(task, event.session.terminal)) return;
+    const transition = (input: PetLongTaskTransition) =>
+      this.options.store.transition(task.id, { ...runFence(task), ...input });
     if (event.session.completionKind) {
       if (event.session.completionKind === "background_wait") {
-        await this.options.store.transition(task.id, {
+        await transition({
           kind: "waiting-worker",
           at: event.observedAt,
           waitingFor: interruptReasonForCompletionKind(event.session.completionKind),
         });
       } else {
-        await this.options.store.transition(task.id, {
+        await transition({
           kind: "interrupted",
           at: event.observedAt,
           reason: interruptReasonForCompletionKind(event.session.completionKind),
@@ -707,7 +811,7 @@ export class PetLongTaskCoordinator {
         // background notification starts a fresh run and clears this guard.
         if (isWaitingForBackgroundResult(task)) return;
         if (task.verificationMode === "turn") {
-          const completed = await this.options.store.transition(task.id, {
+          const completed = await transition({
             kind: "completed",
             at: event.session.terminal.at,
             artifacts: [
@@ -719,21 +823,21 @@ export class PetLongTaskCoordinator {
           // The safe projection intentionally omits Goal verdict details. A
           // generic completed Session therefore cannot prove a Goal task met
           // its objective; the trusted goal_progress(met) stream closes it.
-          await this.options.store.transition(task.id, {
+          await transition({
             kind: "interrupted",
             at: event.session.terminal.at,
             reason: "The Session ended without a retained Goal-complete signal; verify or retry",
           });
         }
       } else if (event.session.terminal.status === "cancelled") {
-        const cancelled = await this.options.store.transition(task.id, {
+        const cancelled = await transition({
           kind: "cancelled",
           at: event.session.terminal.at,
           reason: "The work session was stopped before completion",
         });
         await this.notifyClosed(cancelled);
       } else {
-        const failed = await this.options.store.transition(task.id, {
+        const failed = await transition({
           kind: "failed",
           at: event.session.terminal.at,
           error: event.session.summary ?? "The work session failed",
@@ -743,7 +847,7 @@ export class PetLongTaskCoordinator {
       return;
     }
     if (event.session.pendingDecisionCount > 0) {
-      await this.options.store.transition(task.id, {
+      await transition({
         kind: "waiting",
         at: event.observedAt,
         waitingFor: event.session.summary ?? "A user decision is required",
@@ -834,7 +938,13 @@ export class PetLongTaskCoordinator {
     const last = this.lastProgressAt.get(task.id) ?? 0;
     if (previous.summary === summary && at - last < 2_000) return;
     this.lastProgressAt.set(task.id, at);
-    await this.options.store.transition(task.id, { kind: "progress", at, phase, summary });
+    await this.options.store.transition(task.id, {
+      kind: "progress",
+      at,
+      phase,
+      summary,
+      ...runFence(task),
+    });
   }
 
   private async pause(task: PetLongTask): Promise<PetLongTaskControlResult> {
@@ -906,6 +1016,14 @@ export class PetLongTaskCoordinator {
       if (this.options.worker.hasLiveWorker() && (await this.resumePersistedGoal(resumed))) {
         return { ok: true, task: this.options.store.get(task.id) ?? resumed };
       }
+      await this.options.store.transition(task.id, {
+        kind: "run-prepared",
+        at: this.now(),
+        attempt: resumed.attempt,
+        clientMessageId: petDelegationClientMessageId(
+          `${task.originClientMessageId}:resume:${resumed.revision}`,
+        ),
+      });
       await this.options.launcher.start({
         clientMessageId: `${task.originClientMessageId}:resume:${resumed.revision}`,
         task: petLongTaskResumePrompt(resumed),
@@ -969,6 +1087,9 @@ export class PetLongTaskCoordinator {
     const retrying = await this.options.store.transition(task.id, {
       kind: "retrying",
       at: this.now(),
+      clientMessageId: petDelegationClientMessageId(
+        `${task.originClientMessageId}:retry:${task.attempt + 1}`,
+      ),
     });
     try {
       await this.options.launcher.start({
@@ -1058,7 +1179,7 @@ export class PetLongTaskCoordinator {
             await this.options.store.transition(task.id, {
               kind: "closure-recorded",
               at: this.now(),
-              attempt: task.attempt,
+              ...runFence(task),
               status: task.status,
             });
           } catch (error) {
@@ -1093,7 +1214,7 @@ export class PetLongTaskCoordinator {
         await this.options.store.transition(task.id, {
           kind: "work-memory-recorded",
           at: this.now(),
-          attempt: task.attempt,
+          ...runFence(task),
           status: task.status,
         });
       } catch (error) {

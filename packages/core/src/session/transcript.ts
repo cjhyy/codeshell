@@ -1241,6 +1241,10 @@ function isEngineResultReceipt(value: unknown): value is EngineResult {
   return (
     typeof result.text === "string" &&
     typeof result.reason === "string" &&
+    (result.completionKind === undefined ||
+      result.completionKind === "background_wait" ||
+      result.completionKind === "goal_control_stop" ||
+      result.completionKind === "limit_stop") &&
     typeof result.sessionId === "string" &&
     typeof result.turnCount === "number" &&
     Number.isSafeInteger(result.turnCount) &&

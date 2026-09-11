@@ -18,8 +18,114 @@ import { markPetHostActionReplacementDisplay } from "../../shared/pet-host-actio
 import { transcriptsReducer } from "../transcriptsReducer";
 import { INITIAL_STATE } from "../types";
 import type { Message } from "../types";
+import type { PetLongTask } from "../../preload/types";
 
 describe("PetChatHost", () => {
+  test("replaces the matching closure with its durable correction without claiming another delivery", () => {
+    const task: PetLongTask = {
+      schemaVersion: 1,
+      id: "task",
+      originClientMessageId: "im-gateway:wechat:turn",
+      objective: "Check the result",
+      workspacePath: null,
+      sessionId: "work-session",
+      verificationMode: "turn",
+      status: "completed",
+      phase: "finalizing",
+      attempt: 2,
+      revision: 5,
+      createdAt: 1,
+      updatedAt: 30,
+      completedAt: 20,
+      resultSummary: "The corrected final answer",
+      artifacts: [],
+      events: [{ id: "update", sequence: 5, kind: "result-updated", attempt: 2, at: 30 }],
+    };
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "Check", clientMessageId: task.originClientMessageId },
+      { kind: "assistant", id: "a1", text: "I will check", done: true },
+      { kind: "user", id: "u2", text: "Another question", clientMessageId: "other-turn" },
+      { kind: "assistant", id: "a2", text: "Another answer", done: true },
+    ];
+    const receipts = [
+      {
+        clientMessageId: task.originClientMessageId,
+        message: "Old result",
+        createdAt: 20,
+        replaceAssistant: true,
+        deliveryChannel: "wechat",
+      },
+    ];
+    const rows = selectPetChatRows(messages, [], [], receipts, [], [task]);
+    expect(rows.map((row) => row.text)).toEqual([
+      "Check",
+      "The corrected final answer",
+      "Another question",
+      "Another answer",
+    ]);
+    expect(rows[1].updatedResult).toEqual({ sessionId: "work-session" });
+    expect(rows[1].deliveryLabel).toBeUndefined();
+    const correctedFailure: PetLongTask = {
+      ...task,
+      status: "failed",
+      lastError: "Final verification failed",
+    };
+    expect(selectPetChatRows(messages, [], [], receipts, [], [correctedFailure])[1]).toMatchObject({
+      text: "Final verification failed",
+      updatedResult: { sessionId: task.sessionId },
+    });
+    const childTask = { ...task, originClientMessageId: `${task.originClientMessageId}:0:work` };
+    const multiRows = selectPetChatRows(
+      messages,
+      [],
+      [
+        {
+          originClientMessageId: task.originClientMessageId,
+          createdAt: 10,
+          delegations: [
+            {
+              clientMessageId: childTask.originClientMessageId,
+              task: task.objective,
+              sessionId: task.sessionId,
+              workspacePath: null,
+              reusedSession: false,
+            },
+          ],
+        },
+      ],
+      [],
+      [],
+      [childTask],
+    );
+    expect(multiRows.find((row) => row.updatedResult)?.text).toBe(task.resultSummary);
+    expect(multiRows.filter((row) => row.updatedResult)).toHaveLength(1);
+    // Reloaded transcript receipts follow the same projection as live receipts.
+    const persisted = [...messages];
+    persisted[1] = {
+      kind: "assistant",
+      id: "persisted-receipt",
+      done: true,
+      text: markPetHostActionReplacementDisplay("Old result", task.originClientMessageId, "wechat"),
+      createdAt: 20,
+    };
+    expect(selectPetChatRows(persisted, [], [], [], [], [task]).map((row) => row.text)).toEqual(
+      rows.map((row) => row.text),
+    );
+    const staleAttempt = { ...task, events: [{ ...task.events[0], attempt: 1 }] };
+    expect(selectPetChatRows(messages, [], [], receipts, [], [staleAttempt])[1].text).toBe(
+      "Old result",
+    );
+    expect(
+      selectPetChatRows(
+        messages,
+        [],
+        [],
+        [{ ...receipts[0], message: "Newer receipt", createdAt: 40 }],
+        [],
+        [task],
+      )[1].text,
+    ).toBe("The corrected final answer");
+  });
   test("keeps dropped PDFs as bounded absolute path references", () => {
     const paths = normalizePetPathAttachments([
       "/Users/maki/Documents/spec.pdf",
@@ -193,9 +299,9 @@ describe("PetChatHost", () => {
     expect(html).not.toContain("**Markdown**");
   });
 
-  test("lets the manager chat shrink to its minimum before page scrolling begins", () => {
+  test("lets chat history shrink while the composer remains reachable", () => {
     const source = readFileSync(join(import.meta.dir, "PetChatHost.tsx"), "utf8");
-    expect(source).toContain("min-h-[360px]");
+    expect(source).toContain("min-h-0 w-full flex-col overflow-hidden");
     expect(source).not.toContain("min-h-[520px]");
     expect(source).toContain("pathForRendererFile(file)");
     expect(source).toContain('data-pet-path-attachments="true"');
@@ -204,7 +310,7 @@ describe("PetChatHost", () => {
   test("loads older Mimi history near the top without losing the scroll anchor", () => {
     const source = readFileSync(join(import.meta.dir, "PetChatHost.tsx"), "utf8");
     expect(source).toContain('data-pet-chat-history-page="true"');
-    expect(source).toContain("scrollTop <= 72");
+    expect(source).toContain("scroller.scrollTop <= 72");
     expect(source).toContain("scroller.scrollHeight - pending.scrollHeight");
     expect(source).toContain("loadOlderChatHistory()");
   });

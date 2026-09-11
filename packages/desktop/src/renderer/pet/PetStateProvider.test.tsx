@@ -368,90 +368,128 @@ describe("PetStateProvider", () => {
     await act(async () => root.unmount());
   });
 
-  test("replays Pet stream events that arrive while the durable transcript is still loading", async () => {
-    ensureMiniDom();
-    let streamListener: ((envelope: any) => void) | undefined;
-    let resolveTranscript: ((items: any[]) => void) | undefined;
-    const testWindow = window as unknown as Record<string, unknown>;
-    const originalCodeshell = testWindow.codeshell;
-    testWindow.codeshell = {
-      getSessionTranscript: () =>
-        new Promise<any[]>((resolve) => {
-          resolveTranscript = resolve;
-        }),
-      onStreamEvent: (listener: (envelope: any) => void) => {
-        streamListener = listener;
-        return () => {
-          streamListener = undefined;
-        };
-      },
-    };
-    const api: PetApi = {
-      getSnapshot: async () => snapshot(),
-      onProjectionEvent: () => () => {},
-      openSession: async () => ({ status: "not-found" }),
-      dispatch: async (command) =>
-        command.type === "get_global_status"
-          ? {
-              ok: true,
-              type: "global_status",
-              version: 0,
-              generation: 0,
-              observedAt: 1,
-              workerState: "active",
-              petSessionId: "pet-buffered",
-              runningCount: 0,
-              queuedCount: 0,
-              pendingCount: 0,
-              sessions: [],
-            }
-          : { ok: false, code: "invalid-command" },
-      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
-      onAttentionEvent: () => () => {},
-      setActiveSession: async () => ({ ok: true }),
-      markAttentionReceipt: async () => ({ ok: true }),
-    };
-    let latest: ReturnType<typeof usePetState> | undefined;
-    function Consumer() {
-      latest = usePetState();
-      return null;
-    }
-    const root = createRoot(document.createElement("div"));
-    await act(async () => {
-      root.render(
-        <PetStateProvider api={api}>
-          <Consumer />
-        </PetStateProvider>,
+  test.each([false, true])(
+    "merges buffered Pet replies once when initial history overlaps: %s",
+    async (historyOverlaps) => {
+      ensureMiniDom();
+      let streamListener: ((envelope: any) => void) | undefined;
+      let resolveTranscript: ((items: any[]) => void) | undefined;
+      const testWindow = window as unknown as Record<string, unknown>;
+      const originalCodeshell = testWindow.codeshell;
+      testWindow.codeshell = {
+        getSessionTranscript: () =>
+          new Promise<any[]>((resolve) => {
+            resolveTranscript = resolve;
+          }),
+        onStreamEvent: (listener: (envelope: any) => void) => {
+          streamListener = listener;
+          return () => {
+            streamListener = undefined;
+          };
+        },
+      };
+      const api: PetApi = {
+        getSnapshot: async () => snapshot(),
+        onProjectionEvent: () => () => {},
+        openSession: async () => ({ status: "not-found" }),
+        dispatch: async (command) =>
+          command.type === "get_global_status"
+            ? {
+                ok: true,
+                type: "global_status",
+                version: 0,
+                generation: 0,
+                observedAt: 1,
+                workerState: "active",
+                petSessionId: "pet-buffered",
+                runningCount: 0,
+                queuedCount: 0,
+                pendingCount: 0,
+                sessions: [],
+              }
+            : { ok: false, code: "invalid-command" },
+        getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+        onAttentionEvent: () => () => {},
+        setActiveSession: async () => ({ ok: true }),
+        markAttentionReceipt: async () => ({ ok: true }),
+      };
+      let latest: ReturnType<typeof usePetState> | undefined;
+      function Consumer() {
+        latest = usePetState();
+        return null;
+      }
+      const root = createRoot(document.createElement("div"));
+      await act(async () => {
+        root.render(
+          <PetStateProvider api={api}>
+            <Consumer />
+          </PetStateProvider>,
+        );
+        await flushMicrotasks();
+      });
+
+      await act(async () => {
+        streamListener?.({
+          sessionId: "pet-buffered",
+          event: { type: "stream_request_start", messageId: "assistant-live" },
+        });
+        streamListener?.({
+          sessionId: "pet-buffered",
+          event: { type: "text_delta", text: "无需刷新" },
+        });
+        if (historyOverlaps) {
+          streamListener?.({
+            sessionId: "pet-buffered",
+            event: {
+              type: "assistant_message",
+              messageId: "assistant-live",
+              message: { role: "assistant", content: "无需刷新" },
+            },
+          });
+          streamListener?.({
+            sessionId: "pet-buffered",
+            event: { type: "turn_complete", reason: "completed" },
+          });
+        }
+        resolveTranscript?.(
+          historyOverlaps
+            ? [
+                { kind: "user", text: "我的请求" },
+                { kind: "stream", event: { type: "stream_request_start", turnNumber: 1 } },
+                { kind: "stream", event: { type: "text_delta", text: "无需刷新" } },
+                {
+                  kind: "stream",
+                  event: {
+                    type: "assistant_message",
+                    message: { role: "assistant", content: "无需刷新" },
+                  },
+                },
+                { kind: "stream", event: { type: "turn_complete", reason: "completed" } },
+              ]
+            : [],
+        );
+        await flushMicrotasks();
+      });
+
+      expect(latest?.chatState.messages).toContainEqual(
+        expect.objectContaining({ kind: "assistant", text: "无需刷新" }),
       );
-      await flushMicrotasks();
-    });
-
-    await act(async () => {
-      streamListener?.({
-        sessionId: "pet-buffered",
-        event: { type: "stream_request_start", messageId: "assistant-live" },
+      expect(
+        latest?.chatState.messages.filter(
+          (message) => message.kind === "assistant" && message.text === "无需刷新",
+        ),
+      ).toHaveLength(1);
+      expect(latest?.chatBusy).toBe(!historyOverlaps);
+      await act(async () => {
+        streamListener?.({ sessionId: "pet-buffered", event: { type: "turn_complete" } });
       });
-      streamListener?.({
-        sessionId: "pet-buffered",
-        event: { type: "text_delta", text: "无需刷新" },
-      });
-      resolveTranscript?.([]);
-      await flushMicrotasks();
-    });
+      expect(latest?.chatBusy).toBe(false);
 
-    expect(latest?.chatState.messages).toContainEqual(
-      expect.objectContaining({ kind: "assistant", text: "无需刷新" }),
-    );
-    expect(latest?.chatBusy).toBe(true);
-    await act(async () => {
-      streamListener?.({ sessionId: "pet-buffered", event: { type: "turn_complete" } });
-    });
-    expect(latest?.chatBusy).toBe(false);
-
-    await act(async () => root.unmount());
-    if (originalCodeshell === undefined) delete testWindow.codeshell;
-    else testWindow.codeshell = originalCodeshell;
-  });
+      await act(async () => root.unmount());
+      if (originalCodeshell === undefined) delete testWindow.codeshell;
+      else testWindow.codeshell = originalCodeshell;
+    },
+  );
 
   test("hydrates the durable pet transcript and routes only its main stream bucket", async () => {
     ensureMiniDom();

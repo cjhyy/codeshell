@@ -178,6 +178,7 @@ export type PetOpenSessionResult =
 export type PetDispatchCommand =
   | { type: "get_global_status" }
   | { type: "list_pending" }
+  | { type: "stop_chat"; clientMessageId?: string }
   | { type: "open_session"; target: PetOpenSessionRequest }
   | {
       type: "chat";
@@ -207,6 +208,7 @@ export type PetDispatchResult =
       sessions: PetSessionProjection[];
     }
   | { ok: true; type: "pending_list"; pending: PetPendingDecision[] }
+  | { ok: true; type: "chat_stopped"; stopped: boolean }
   | { ok: true; type: "open_session"; result: PetOpenSessionResult }
   | {
       ok: true;

@@ -197,6 +197,8 @@ describe("listDiskSessions", () => {
         parentSessionId: null,
         status: "completed",
         lastCompletionKind: "background_wait",
+        runId: "user-event-1",
+        clientMessageId: "submit-1",
       },
       1000,
     );
@@ -205,6 +207,8 @@ describe("listDiskSessions", () => {
       id: "background-wait",
       status: "completed",
       completionKind: "background_wait",
+      runId: "user-event-1",
+      clientMessageId: "submit-1",
     });
   });
 

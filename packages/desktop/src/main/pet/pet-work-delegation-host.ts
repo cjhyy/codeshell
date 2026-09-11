@@ -31,6 +31,10 @@ export function petDelegationSessionId(clientMessageId: string): string {
   return `pet-work-${delegationKey(clientMessageId)}`;
 }
 
+export function petDelegationClientMessageId(clientMessageId: string): string {
+  return `pet-delegation:${delegationKey(clientMessageId)}`;
+}
+
 function delegationTitle(task: string): string {
   return task.replace(/\s+/g, " ").trim().slice(0, 60) || "Mimi delegated work";
 }
@@ -75,7 +79,7 @@ export class PetWorkDelegationHost {
       delegation.targetSessionId ?? petDelegationSessionId(delegation.clientMessageId);
     const cwd = delegation.workspacePath ?? this.options.noWorkspaceCwd;
     const runId = `pet-delegation-run-${delegationKey(delegation.clientMessageId)}`;
-    const workClientMessageId = `pet-delegation:${delegationKey(delegation.clientMessageId)}`;
+    const workClientMessageId = petDelegationClientMessageId(delegation.clientMessageId);
     const wasKnownToHost = this.options.bridge.hasKnownSession(sessionId);
     // Only a brand-new Session needs a host cwd reservation. A reused Session
     // already has its own real cwd registered; overwriting it with this

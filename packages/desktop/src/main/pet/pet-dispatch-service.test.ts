@@ -3307,6 +3307,7 @@ describe("PetDispatchService", () => {
   test("steers consecutive messages from the same IM route into one Mimi turn", async () => {
     const firstRun = deferred<{ ok: true; result: { text: string } }>();
     const runStarted = deferred<void>();
+    const steerRequested = deferred<void>();
     let outbound:
       | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
       | undefined;
@@ -3329,6 +3330,8 @@ describe("PetDispatchService", () => {
             return firstRun.promise;
           }
           if (method === "agent/steer") {
+            expect(params.expectedClientMessageId).toBe("wechat-1");
+            steerRequested.resolve(undefined);
             outbound?.("", {
               sessionId: "pet-one",
               event: { type: "steer_injected", id: params.id, text: params.text },
@@ -3354,7 +3357,7 @@ describe("PetDispatchService", () => {
       clientMessageId: "wechat-2",
       source: imSource("user-one"),
     });
-    await Promise.resolve();
+    await steerRequested.promise;
     firstRun.resolve({ ok: true, result: { text: "combined reply" } });
 
     expect(await leader).toMatchObject({
@@ -3426,6 +3429,7 @@ describe("PetDispatchService", () => {
     const firstRun = deferred<{ ok: true; result: { text: string } }>();
     const firstRunStarted = deferred<void>();
     const secondRunStarted = deferred<void>();
+    const steerRequested = deferred<void>();
     const calls: string[] = [];
     let runCount = 0;
     const service = new PetDispatchService({
@@ -3437,7 +3441,10 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async (method) => {
           calls.push(method);
-          if (method === "agent/steer") return { ok: true, result: { accepted: true } };
+          if (method === "agent/steer") {
+            steerRequested.resolve(undefined);
+            return { ok: true, result: { accepted: true } };
+          }
           if (method === "agent/unsteer") return { ok: true, result: { removed: true } };
           if (method !== "agent/run") throw new Error(`unexpected worker method: ${method}`);
           runCount += 1;
@@ -3463,7 +3470,7 @@ describe("PetDispatchService", () => {
       message: "too late for this turn",
       clientMessageId: "desktop-2",
     });
-    await Promise.resolve();
+    await steerRequested.promise;
     firstRun.resolve({ ok: true, result: { text: "first reply" } });
     await secondRunStarted.promise;
 
@@ -3518,3 +3525,386 @@ describe("stringifyBoundedPetWorld", () => {
     expect(parsed.huge.length).toBeLessThan(40_000);
   });
 });
+
+test("background completion and user chat share admission without cross-run steering", async () => {
+  const closureStarted = deferred<void>();
+  const closureDone = deferred<void>();
+  const calls: string[] = [];
+  const service = new PetDispatchService({
+    metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+    aggregator: {
+      getSnapshot: () => snapshot,
+      resolveNavigation: async () => ({ status: "not-found" }),
+    },
+    worker: {
+      requestWorker: async (method, params) => {
+        if (method === "agent/steer") {
+          calls.push("steer");
+          return { ok: true, result: { accepted: false } };
+        }
+        const closure = String(params.task).includes("trusted delegated Work Session");
+        calls.push(closure ? "closure" : String(params.task));
+        if (closure) {
+          closureStarted.resolve(undefined);
+          await closureDone.promise;
+        }
+        return { ok: true, result: { text: "reply", reason: "completed" } };
+      },
+    },
+    hostCwd: "/safe/pet",
+  });
+  const closure = service.reportLongTaskClosure({
+    schemaVersion: 1,
+    id: "closed-task",
+    originClientMessageId: "old-input",
+    objective: "old work",
+    status: "completed",
+    phase: "finalizing",
+    attempt: 1,
+    revision: 1,
+    createdAt: 1,
+    updatedAt: 2,
+    completedAt: 2,
+    artifacts: [],
+    events: [],
+  });
+  await closureStarted.promise;
+  const first = service.dispatch({
+    type: "chat",
+    message: "first user input",
+    clientMessageId: "first",
+  });
+  const second = service.dispatch({
+    type: "chat",
+    message: "second user input",
+    clientMessageId: "second",
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(calls).toEqual(["closure"]);
+  expect(await service.dispatch({ type: "stop_chat" })).toEqual({
+    ok: true,
+    type: "chat_stopped",
+    stopped: false,
+  });
+  closureDone.resolve(undefined);
+  const [, firstResult, secondResult] = await Promise.all([closure, first, second]);
+  expect(calls).toEqual(["closure", "first user input", "second user input"]);
+  expect(firstResult).toMatchObject({ inputDisposition: "turn" });
+  expect(secondResult).toMatchObject({ inputDisposition: "turn" });
+});
+
+test("Mimi Stop is bound to the original input and drops cancelled host actions", async () => {
+  const runStarted = deferred<void>();
+  const runDone = deferred<void>();
+  const cancellations: Record<string, unknown>[] = [];
+  let memoryWrites = 0;
+  const service = new PetDispatchService({
+    metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+    aggregator: {
+      getSnapshot: () => snapshot,
+      resolveNavigation: async () => ({ status: "not-found" }),
+    },
+    worker: {
+      requestWorker: async (method, params) => {
+        if (method === "agent/cancel") {
+          cancellations.push(params);
+          runDone.resolve(undefined);
+          return { ok: true, result: { ok: true, stopped: true } };
+        }
+        runStarted.resolve(undefined);
+        await runDone.promise;
+        return {
+          ok: true,
+          result: {
+            text: "partial",
+            reason: "aborted_streaming",
+            extensions: {
+              pet: {
+                hostActions: [
+                  { kind: "memory", payload: { action: "remember", text: "stale draft" } },
+                ],
+              },
+            },
+          },
+        };
+      },
+    },
+    hostActions: {
+      memory: async () => {
+        memoryWrites++;
+        return {};
+      },
+    },
+    hostCwd: "/safe/pet",
+  });
+  const run = service.dispatch({
+    type: "chat",
+    message: "first",
+    clientMessageId: "active-input",
+    source: imSource("user-one"),
+  });
+  await runStarted.promise;
+  expect(await service.dispatch({ type: "stop_chat", clientMessageId: "stale-input" })).toEqual({
+    ok: true,
+    type: "chat_stopped",
+    stopped: false,
+  });
+  expect(cancellations).toEqual([]);
+  expect(await service.dispatch({ type: "stop_chat", clientMessageId: "active-input" })).toEqual({
+    ok: true,
+    type: "chat_stopped",
+    stopped: true,
+  });
+  expect(await run).toMatchObject({
+    ok: true,
+    type: "chat",
+    result: { reason: "aborted_streaming" },
+  });
+  expect(cancellations).toEqual([
+    { sessionId: "pet-one", expectedClientMessageId: "active-input" },
+  ]);
+  expect(memoryWrites).toBe(0);
+});
+
+test("unused steers are revoked before the read-only delegation receipt starts", async () => {
+  const originalStarted = deferred<void>();
+  const originalDone = deferred<void>();
+  const steerAccepted = deferred<void>();
+  const unsteerStarted = deferred<void>();
+  const unsteerDone = deferred<void>();
+  const calls: string[] = [];
+  const service = new PetDispatchService({
+    metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+    aggregator: {
+      getSnapshot: () => snapshot,
+      resolveNavigation: async () => ({ status: "not-found" }),
+    },
+    worker: {
+      requestWorker: async (method, params) => {
+        if (method === "agent/steer") {
+          calls.push("steer");
+          steerAccepted.resolve(undefined);
+          return { ok: true, result: { accepted: true } };
+        }
+        if (method === "agent/unsteer") {
+          calls.push("unsteer");
+          unsteerStarted.resolve(undefined);
+          await unsteerDone.promise;
+          return { ok: true, result: { removed: true } };
+        }
+        if (params.task === "delegate") {
+          calls.push("original");
+          originalStarted.resolve(undefined);
+          await originalDone.promise;
+          return {
+            ok: true,
+            result: {
+              text: "launching",
+              reason: "completed",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: (params.petWorkspaces as Array<{ id: string }>)[0]!.id,
+                    objective: "work",
+                  },
+                },
+              },
+            },
+          };
+        }
+        calls.push(params.injected ? "receipt" : "followup");
+        return { ok: true, result: { text: "reply", reason: "completed" } };
+      },
+    },
+    hostCwd: "/safe/pet",
+    startWorkSession: async () => {
+      throw new Error("launch failed");
+    },
+  });
+  const original = service.dispatch({
+    type: "chat",
+    message: "delegate",
+    clientMessageId: "original",
+  });
+  await originalStarted.promise;
+  const follower = service.dispatch({
+    type: "chat",
+    message: "separate follow-up",
+    clientMessageId: "followup",
+  });
+  await steerAccepted.promise;
+  originalDone.resolve(undefined);
+  await unsteerStarted.promise;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(calls).toEqual(["original", "steer", "unsteer"]);
+  unsteerDone.resolve(undefined);
+  await Promise.all([original, follower]);
+  expect(calls.slice(0, 3)).toEqual(["original", "steer", "unsteer"]);
+  expect(calls.slice(3).sort()).toEqual(["followup", "receipt"]);
+});
+
+test.each(["launch", "cancel"] as const)(
+  "a %s host action can synchronously report closure without deadlocking chat",
+  async (action) => {
+    const calls: string[] = [];
+    const closedTask = {
+      schemaVersion: 1 as const,
+      id: "closed-task",
+      originClientMessageId: "origin",
+      objective: "work",
+      status: "failed" as const,
+      phase: "finalizing" as const,
+      attempt: 1,
+      revision: 1,
+      createdAt: 1,
+      updatedAt: 2,
+      completedAt: 2,
+      artifacts: [],
+      events: [],
+    };
+    const service: PetDispatchService = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          if (params.task !== "user request") {
+            calls.push(
+              String(params.task).includes("trusted delegated Work Session")
+                ? "closure"
+                : "receipt",
+            );
+            return {
+              ok: true,
+              result: { text: "Reported the actual result", reason: "completed" },
+            };
+          }
+          calls.push("chat");
+          return {
+            ok: true,
+            result: {
+              text: "working",
+              reason: "completed",
+              extensions: {
+                pet:
+                  action === "launch"
+                    ? {
+                        workDelegation: {
+                          workspaceId: (params.petWorkspaces as Array<{ id: string }>)[0]!.id,
+                          objective: "work",
+                        },
+                      }
+                    : {
+                        hostActions: [
+                          {
+                            kind: "longTaskControl",
+                            payload: { taskId: "closed-task", action: "cancel" },
+                          },
+                        ],
+                      },
+              },
+            },
+          };
+        },
+      },
+      startWorkSession: async () => {
+        await service.reportLongTaskClosure(closedTask);
+        throw new Error("launch failed");
+      },
+      hostActions: {
+        longTaskControl: async () => {
+          await service.reportLongTaskClosure(closedTask);
+          return { action: "cancel" };
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    const result = await service.dispatch({
+      type: "chat",
+      message: "user request",
+      clientMessageId: "original",
+      source: imSource("user-one"),
+    });
+    expect(result.ok).toBe(true);
+    expect(calls).toEqual(
+      action === "launch" ? ["chat", "closure", "receipt"] : ["chat", "closure"],
+    );
+  },
+);
+
+test.each(["stale", "error"] as const)(
+  "a completed reply survives a later %s Stop response",
+  async (failure) => {
+    const started = deferred<void>();
+    const cancelStarted = deferred<void>();
+    const finishRun = deferred<void>();
+    const finishCancel = deferred<void>();
+    let memoryWrites = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method) => {
+          if (method === "agent/cancel") {
+            cancelStarted.resolve(undefined);
+            await finishCancel.promise;
+            if (failure === "error") throw new Error("cancel transport failed");
+            return { ok: true, result: { ok: true, stopped: false } };
+          }
+          started.resolve(undefined);
+          await finishRun.promise;
+          return {
+            ok: true,
+            result: {
+              text: "completed reply",
+              reason: "completed",
+              extensions: {
+                pet: {
+                  hostActions: [
+                    {
+                      kind: "memory",
+                      payload: { action: "remember", text: "confirmed preference" },
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostActions: {
+        memory: async () => {
+          memoryWrites++;
+          return {};
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    const run = service.dispatch({
+      type: "chat",
+      message: "remember this",
+      clientMessageId: "input",
+      source: imSource("user-one"),
+    });
+    await started.promise;
+    const stop = service.dispatch({ type: "stop_chat", clientMessageId: "input" });
+    await cancelStarted.promise;
+    finishRun.resolve(undefined);
+    expect(await run).toMatchObject({
+      ok: true,
+      result: { text: "completed reply", reason: "completed" },
+    });
+    expect(memoryWrites).toBe(1);
+    finishCancel.resolve(undefined);
+    expect(await stop).toMatchObject(
+      failure === "error"
+        ? { ok: false, code: "worker-error" }
+        : { ok: true, type: "chat_stopped", stopped: false },
+    );
+  },
+);

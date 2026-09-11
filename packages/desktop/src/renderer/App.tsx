@@ -2240,7 +2240,7 @@ function App() {
               }
             >
               {isPetView ? (
-                <PetPage>
+                <PetPage overview={petState}>
                   <PetWorldPane
                     projection={petState.projection}
                     status={petState.status}

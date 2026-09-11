@@ -19,22 +19,23 @@ describe("PetPage", () => {
     expect(html).toContain("world pane");
     expect(html).toContain("chat slot");
     expect(html).toContain("@container/pet-page");
-    expect(html).toContain(
-      "@min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]",
-    );
+    expect(html).toContain("@min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]");
     expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
   });
 
-  test("shrinks the chat row before the single-column page needs to scroll", () => {
+  test("collapses narrow-window work into a summary while reserving the chat row", () => {
     const html = renderToStaticMarkup(
-      <PetPage>
+      <PetPage runningCount={3} pendingCount={2}>
         <div>work pane</div>
         <div>chat pane</div>
       </PetPage>,
     );
 
     expect(html).toContain("h-full min-w-0 flex-1 flex-col overflow-hidden");
-    expect(html).toContain("grid-rows-[auto_minmax(360px,1fr)]");
+    expect(html).toContain("grid-rows-[auto_minmax(0,1fr)]");
+    expect(html).toContain('data-pet-work-toggle="true"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("3 项运行中 · 2 项待决定");
     expect(html).toContain("@min-[1100px]/pet-page:grid-rows-1");
     expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
   });

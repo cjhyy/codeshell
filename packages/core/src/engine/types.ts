@@ -17,6 +17,7 @@ import type {
   SessionOrigin,
   TerminalReason,
   TokenUsage,
+  TurnCompletionKind,
 } from "../types.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { GoalConfig, GoalTerminationReason } from "../goal/lifecycle.js";
@@ -228,6 +229,7 @@ export interface EngineHookConfig {
 export interface EngineResult {
   text: string;
   reason: TerminalReason;
+  completionKind?: TurnCompletionKind;
   /** Goal-specific stop outcome; omitted for ordinary completion/met verdicts. */
   goalTermination?: GoalTerminationReason;
   sessionId: string;

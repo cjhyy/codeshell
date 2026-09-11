@@ -3,6 +3,7 @@ import {
   Archive,
   ArrowUp,
   ArrowUpRight,
+  ArrowDown,
   CheckCircle2,
   FileText,
   FolderKanban,
@@ -10,12 +11,14 @@ import {
   LoaderCircle,
   Settings,
   Sparkles,
+  Square,
   X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   PetDelegationReceipt,
   PetDelegationReceiptGroup,
+  PetLongTask,
   PetOpenSessionRequest,
   PetSessionProjection,
 } from "../../preload/types";
@@ -29,7 +32,7 @@ import {
 } from "../imGatewayChannels";
 import { visiblePetAssistantText } from "./petChatRouting";
 import { parsePetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
-import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
+import { usePetState } from "./PetStateProvider";
 import { ModelPill, type ModelOption } from "../chat/ModelPill";
 import { Lightbox } from "../chat/Lightbox";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
@@ -41,6 +44,7 @@ import {
   pathForRendererFile,
 } from "../chat/localFilePaths";
 import { describePetChatActivity } from "./petChatActivity";
+import type { PetChatFailure } from "./petChatSubmission";
 
 export const MAX_PET_PATH_ATTACHMENTS = MAX_LOCAL_FILE_PATHS;
 
@@ -82,6 +86,8 @@ export interface PetChatRow {
   images?: PetChatImage[];
   /** This user input is waiting to join the active Mimi turn. */
   pending?: boolean;
+  failure?: PetChatFailure;
+  updatedResult?: { sessionId: string };
 }
 
 export interface PetChatImage {
@@ -194,6 +200,7 @@ export interface PetHostActionReceiptRow {
   createdAt: number;
   replaceAssistant?: boolean;
   deliveryChannel?: string;
+  updatedResult?: { sessionId: string };
 }
 
 const PET_AUTHORITATIVE_REPLY_TOOLS = new Set(["DelegateWork", "GatewayReply", "SendMessage"]);
@@ -203,7 +210,10 @@ export function selectPetChatRows(
   segments: readonly PetChatSegmentBoundary[] = [],
   delegationReceipts: readonly PetDelegationReceiptGroup[] = [],
   hostActionReceipts: readonly PetHostActionReceiptRow[] = [],
+  failures: readonly PetChatFailure[] = [],
+  longTasks: readonly PetLongTask[] = [],
 ): PetChatRow[] {
+  const failuresById = new Map(failures.map((failure) => [failure.clientMessageId, failure]));
   const boundaries = new Map(segments.map((segment) => [segment.boundaryBeforeMessageId, segment]));
   const receiptsByMessageId = new Map(
     delegationReceipts.map((receipt) => [receipt.originClientMessageId, receipt]),
@@ -235,6 +245,25 @@ export function selectPetChatRows(
   for (const receipt of hostActionReceipts) {
     hostReceiptsByMessageId.set(receipt.clientMessageId, receipt);
   }
+  // The task store is durable and can receive a corrected final body after the
+  // one-time closure receipt. Project it locally without claiming a new IM send.
+  for (const task of longTasks) {
+    if (task.status !== "completed" && task.status !== "failed") continue;
+    const summary =
+      task.status === "failed" ? (task.lastError ?? task.resultSummary) : task.resultSummary;
+    if (!summary?.trim()) continue;
+    const update = [...task.events]
+      .reverse()
+      .find((event) => event.kind === "result-updated" && event.attempt === task.attempt);
+    if (!update) continue;
+    hostReceiptsByMessageId.set(task.originClientMessageId, {
+      clientMessageId: task.originClientMessageId,
+      message: summary,
+      createdAt: update.at,
+      replaceAssistant: true,
+      updatedResult: { sessionId: task.sessionId },
+    });
+  }
   const emittedDelegationReceipts = new Set<string>();
   const emittedHostReceipts = new Set<string>();
   const hostReceiptRowIds = new Set<string>();
@@ -255,6 +284,12 @@ export function selectPetChatRows(
         text: delegation.task,
         delegation,
       });
+      if (
+        delegation.clientMessageId !== activeClientMessageId &&
+        hostReceiptsByMessageId.get(delegation.clientMessageId)?.updatedResult
+      ) {
+        appendHostReceipt(delegation.clientMessageId);
+      }
     }
   };
   const appendHostReceipt = (clientMessageId = activeClientMessageId): void => {
@@ -288,8 +323,9 @@ export function selectPetChatRows(
       }
     }
     if (hostReceipt?.message.trim()) {
-      const deliveryChannel =
-        hostReceipt.deliveryChannel ?? imGatewayChannelFromClientMessageId(clientMessageId);
+      const deliveryChannel = hostReceipt.updatedResult
+        ? undefined
+        : (hostReceipt.deliveryChannel ?? imGatewayChannelFromClientMessageId(clientMessageId));
       const deliveryLabel =
         deliveryChannel && deliveryChannel in IM_GATEWAY_CHANNEL_NAMES
           ? IM_GATEWAY_CHANNEL_NAMES[deliveryChannel as keyof typeof IM_GATEWAY_CHANNEL_NAMES]
@@ -300,6 +336,7 @@ export function selectPetChatRows(
         id: receiptRowId,
         role: "assistant",
         text: hostReceipt.message.trim(),
+        ...(hostReceipt.updatedResult ? { updatedResult: hostReceipt.updatedResult } : {}),
         ...(deliveryLabel ? { deliveryLabel } : {}),
       });
     }
@@ -321,6 +358,9 @@ export function selectPetChatRows(
         ...(content.images.length > 0 ? { images: content.images } : {}),
         ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
         ...(message.pending ? { pending: true } : {}),
+        ...(message.clientMessageId && failuresById.has(message.clientMessageId)
+          ? { failure: failuresById.get(message.clientMessageId)! }
+          : {}),
       };
       const boundary =
         (message.clientMessageId ? boundaries.get(message.clientMessageId) : undefined) ??
@@ -606,6 +646,8 @@ function PetChatRowView({
   session,
   onOpenDelegation,
   dogIcon,
+  onRetry,
+  onRestore,
 }: {
   row: PetChatRow;
   session?: PetSessionProjection;
@@ -613,6 +655,8 @@ function PetChatRowView({
   /** Passed from the parent so a long message list doesn't open one theme
    * subscription per row (usePetSprite subscribes to 3 events each call). */
   dogIcon: string;
+  onRetry?: () => void;
+  onRestore?: () => void;
 }) {
   const { t } = useT();
   if (row.role === "history-boundary") {
@@ -678,6 +722,32 @@ function PetChatRowView({
               {t("pet.chat.inputQueued")}
             </div>
           )}
+          {row.failure && (
+            <div
+              className="mt-2 border-t border-primary-foreground/25 pt-2"
+              data-pet-chat-failure={row.failure.clientMessageId}
+            >
+              <p className="whitespace-pre-wrap text-xs leading-5" role="status">
+                {row.failure.error}
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-3 text-xs font-medium">
+                {row.failure.retryable && onRetry && (
+                  <button type="button" className="underline underline-offset-2" onClick={onRetry}>
+                    {t("pet.chat.retrySend")}
+                  </button>
+                )}
+                {onRestore && (
+                  <button
+                    type="button"
+                    className="underline underline-offset-2"
+                    onClick={onRestore}
+                  >
+                    {t("pet.chat.restoreDraft")}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -693,6 +763,20 @@ function PetChatRowView({
         />
       </span>
       <div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border/60 bg-background px-3.5 py-2.5 text-sm leading-6 shadow-sm">
+        {row.updatedResult && (
+          <div className="mb-2 flex items-center gap-2 text-xs text-primary" role="status">
+            <span>{t("pet.chat.resultUpdated")}</span>
+            {onOpenDelegation && (
+              <button
+                type="button"
+                className="ml-auto underline underline-offset-2"
+                onClick={onOpenDelegation}
+              >
+                {t("pet.chat.openFullResult")}
+              </button>
+            )}
+          </div>
+        )}
         <PetChatMarkdown text={row.text} />
         {row.deliveryLabel && <PetDeliveryStatusTip label={row.deliveryLabel} />}
       </div>
@@ -720,13 +804,17 @@ export function PetChatHost({
     dispatch,
     petSessionId,
     chatState,
-    chatDispatch,
     chatBusy,
-    setChatBusy,
+    chatFailures,
+    submitChat,
+    stopChat,
+    chatStopping,
+    chatCanStop,
     chatModelKey,
     setChatModelKey,
     delegationReceipts,
     hostActionReceipts,
+    longTasks,
     chatHistoryLoadedBytes,
     chatHistoryHasMore,
     chatHistoryLoading,
@@ -734,10 +822,16 @@ export function PetChatHost({
   } = usePetState();
   const [error, setError] = React.useState<string | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
-  const [pathAttachments, setPathAttachments] = React.useState<string[]>([]);
+  const pathAttachments = state.chatPathAttachments;
+  const setPathAttachments = (next: string[] | ((current: string[]) => string[])): void =>
+    dispatch({
+      type: "set-chat-path-attachments",
+      paths: typeof next === "function" ? next(pathAttachments) : next,
+    });
   const endRef = React.useRef<HTMLDivElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const pendingDispatchesRef = React.useRef(0);
+  const followLatestRef = React.useRef(true);
+  const [showLatest, setShowLatest] = React.useState(false);
   const historyRequestPendingRef = React.useRef(false);
   const pendingHistoryAnchorRef = React.useRef<{
     loadedBytes: number;
@@ -748,8 +842,23 @@ export function PetChatHost({
   const effectiveModelKey = chatModelKey ?? defaultModelKey;
   const segments = state.projection?.workMemorySegments;
   const rows = React.useMemo(
-    () => selectPetChatRows(chatState.messages, segments, delegationReceipts, hostActionReceipts),
-    [chatState.messages, delegationReceipts, hostActionReceipts, segments],
+    () =>
+      selectPetChatRows(
+        chatState.messages,
+        segments,
+        delegationReceipts,
+        hostActionReceipts,
+        chatFailures,
+        longTasks.tasks,
+      ),
+    [
+      chatState.messages,
+      delegationReceipts,
+      hostActionReceipts,
+      segments,
+      chatFailures,
+      longTasks.tasks,
+    ],
   );
   const chatActivity = React.useMemo(
     () => describePetChatActivity(chatState.messages, t),
@@ -762,10 +871,11 @@ export function PetChatHost({
         )
       : undefined;
   const openRowDelegation = (row: PetChatRow): (() => void) | undefined => {
-    if (!row.delegation || !state.projection || !onOpenSession) return undefined;
+    const sessionId = row.updatedResult?.sessionId ?? row.delegation?.sessionId;
+    if (!sessionId || !state.projection || !onOpenSession) return undefined;
     return () =>
       onOpenSession({
-        agentSessionId: row.delegation!.sessionId,
+        agentSessionId: sessionId,
         snapshotVersion: state.projection!.version,
         generation: state.projection!.generation,
       });
@@ -815,7 +925,8 @@ export function PetChatHost({
       skipAutoScrollRef.current = false;
       return;
     }
-    endRef.current?.scrollIntoView({ block: "end" });
+    if (followLatestRef.current) endRef.current?.scrollIntoView({ block: "end" });
+    else setShowLatest(true);
   }, [chatBusy, rows.length, rows.at(-1)?.text]);
 
   const setDraft = (draft: string): void => dispatch({ type: "set-chat-draft", draft });
@@ -873,51 +984,24 @@ export function PetChatHost({
     );
     if (!message || !petSessionId) return;
     const clientMessageId = `pet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    const queued = chatBusy || pendingDispatchesRef.current > 0;
-    pendingDispatchesRef.current += 1;
-    setDraft("");
-    setPathAttachments([]);
-    setError(null);
-    chatDispatch({
-      type: "user_message",
-      bucket: PET_CHAT_BUCKET,
-      text: message,
+    const submission = {
       clientMessageId,
-      ...(queued ? { steerId: clientMessageId, pending: true } : {}),
-    });
-    setChatBusy(true);
-    try {
-      const result = await window.codeshell.pet.dispatch({
-        type: "chat",
-        message,
-        clientMessageId,
-        ...(effectiveModelKey ? { model: effectiveModelKey } : {}),
-        ...(defaultProjectPath ? { preferredProjectPath: defaultProjectPath } : {}),
-      });
-      if (!result.ok) setError(result.message ?? t("pet.chat.failed"));
-      else if (result.type === "chat" && result.delegationError) {
-        setError(result.delegationError);
-      }
-    } catch (dispatchError) {
-      setError(dispatchError instanceof Error ? dispatchError.message : t("pet.chat.failed"));
-    } finally {
-      // A rejected/late steer is retried by the host as a normal next turn.
-      // Either way, the completed dispatch no longer needs the queued badge.
-      chatDispatch({
-        type: "user_message",
-        bucket: PET_CHAT_BUCKET,
-        text: message,
-        clientMessageId,
-        pending: false,
-      });
-      pendingDispatchesRef.current = Math.max(0, pendingDispatchesRef.current - 1);
-      if (pendingDispatchesRef.current === 0) setChatBusy(false);
-    }
+      message,
+      draft: state.chatDraft,
+      paths: [...pathAttachments],
+      ...(effectiveModelKey ? { model: effectiveModelKey } : {}),
+      ...(defaultProjectPath ? { preferredProjectPath: defaultProjectPath } : {}),
+    };
+    dispatch({ type: "clear-chat-draft" });
+    setError(null);
+    followLatestRef.current = true;
+    setShowLatest(false);
+    await submitChat(submission);
   };
 
   return (
     <section
-      className={`mimi-surface relative flex min-h-[360px] w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:min-h-0 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center ${
+      className={`mimi-surface relative flex min-h-0 w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center ${
         dragOver ? "ring-2 ring-inset ring-primary/50" : ""
       }`}
       aria-label={t("pet.chat.title")}
@@ -979,7 +1063,11 @@ export function PetChatHost({
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto bg-muted/15 px-4 py-5 @min-[1440px]/pet-page:px-5"
         onScroll={(event) => {
-          if (event.currentTarget.scrollTop <= 72) requestOlderHistory();
+          const scroller = event.currentTarget;
+          followLatestRef.current =
+            scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= 72;
+          if (followLatestRef.current) setShowLatest(false);
+          if (scroller.scrollTop <= 72) requestOlderHistory();
         }}
       >
         {(chatHistoryHasMore || chatHistoryLoading) && (
@@ -1025,6 +1113,23 @@ export function PetChatHost({
                 session={rowSession(row)}
                 onOpenDelegation={openRowDelegation(row)}
                 dogIcon={dogIcon}
+                onRetry={
+                  row.failure
+                    ? () => {
+                        void submitChat(row.failure!);
+                      }
+                    : undefined
+                }
+                onRestore={
+                  row.failure
+                    ? () =>
+                        dispatch({
+                          type: "restore-chat-draft",
+                          draft: row.failure!.draft,
+                          paths: row.failure!.paths,
+                        })
+                    : undefined
+                }
               />
             ))}
             {chatBusy && (
@@ -1059,6 +1164,21 @@ export function PetChatHost({
           </div>
         )}
       </div>
+
+      {showLatest && (
+        <button
+          type="button"
+          className="mx-auto my-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs shadow-sm"
+          onClick={() => {
+            followLatestRef.current = true;
+            setShowLatest(false);
+            endRef.current?.scrollIntoView({ block: "end" });
+          }}
+        >
+          <ArrowDown size={12} aria-hidden="true" />
+          {t("pet.chat.latestMessages")}
+        </button>
+      )}
 
       {error && (
         <p
@@ -1118,15 +1238,32 @@ export function PetChatHost({
               <Sparkles size={11} className="shrink-0 text-primary" aria-hidden="true" />
               <span className="line-clamp-2">{t("pet.chat.autoRoute")}</span>
             </p>
-            <button
-              type="button"
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-40"
-              disabled={(!state.chatDraft.trim() && pathAttachments.length === 0) || !petSessionId}
-              onClick={() => void submitToPet()}
-            >
-              <ArrowUp size={13} aria-hidden="true" />
-              {t("pet.chat.send")}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {chatCanStop && (
+                <button
+                  type="button"
+                  disabled={chatStopping}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium disabled:opacity-50"
+                  onClick={() => {
+                    void stopChat().then(setError);
+                  }}
+                >
+                  <Square size={11} aria-hidden="true" />
+                  {t(chatStopping ? "pet.chat.stopping" : "pet.chat.stop")}
+                </button>
+              )}
+              <button
+                type="button"
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-40"
+                disabled={
+                  (!state.chatDraft.trim() && pathAttachments.length === 0) || !petSessionId
+                }
+                onClick={() => void submitToPet()}
+              >
+                <ArrowUp size={13} aria-hidden="true" />
+                {t("pet.chat.send")}
+              </button>
+            </div>
           </div>
         </div>
       </div>

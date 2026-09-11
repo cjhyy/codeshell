@@ -8,6 +8,26 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.10] - 2026-09-11
+
+### Fixed
+
+- Preserve run identity and completion kind through queued starts, background yields,
+  concurrent session updates, GoalClear, and late task watchers; reject stale lifecycle events.
+- Serialize Mimi conversations and internal task reports, scope Stop and steering to the
+  intended input, and retain incoming IM order while attachments download.
+- Persist successful retry results independently of earlier failure receipts, and show
+  corrected task results and unread indicators without repeating delivery side effects.
+- Reconcile chat history with overlapping live events without duplicate replies, expose
+  rejected input clearly, and preserve text and attachment drafts across settings navigation.
+
+### Changed
+
+- Add Stop, retry, and restore-draft actions to Mimi chat; keep scrolling anchored while
+  reading earlier messages and provide a button to return to the latest reply.
+- Make task artifacts accessible and collapse the task overview on narrow windows so
+  the chat composer stays within reach.
+
 ## [0.9.9] - 2026-09-11
 
 ### Added

@@ -163,15 +163,19 @@ export function buildPetWidgetActivity(
         return;
       case "completed": {
         const completedAt = task.completedAt ?? task.updatedAt;
-        const key = `completed-task:${task.id}:${completedAt}`;
-        if (completedAt > receipts.baselineAt && !seen.has(key)) {
+        const update = [...task.events]
+          .reverse()
+          .find((event) => event.kind === "result-updated" && event.attempt === task.attempt);
+        const resultAt = Math.max(completedAt, update?.at ?? 0);
+        const key = `completed-task:${task.id}:${completedAt}${update ? `:result:${update.sequence}` : ""}`;
+        if (resultAt > receipts.baselineAt && !seen.has(key)) {
           items.push({
             key,
             agentSessionId: task.sessionId,
             title,
             detail,
             kind: "completed",
-            lastActivityAt: completedAt,
+            lastActivityAt: resultAt,
             ...external,
           });
         }

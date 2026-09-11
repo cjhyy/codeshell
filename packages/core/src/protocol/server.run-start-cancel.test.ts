@@ -100,6 +100,31 @@ function aborted(reply: any, sessionId = "session") {
   });
 }
 
+test("a turn-scoped Stop preserves queued work and cannot cancel its successor", async () => {
+  const fixture = managerFixture();
+  const client = connect(fixture);
+  client.send(1, "agent/run", { sessionId: "session", task: "hold", clientMessageId: "chat" });
+  await until(() => fixture.runs.length === 1);
+  client.send(2, "agent/run", { sessionId: "session", task: "hold", clientMessageId: "closure" });
+  await until(() => fixture.manager.get("session")!.queueDepth() === 1);
+
+  client.send(3, "agent/cancel", { sessionId: "session", expectedClientMessageId: "stale" });
+  expect((await client.reply(3)).result).toEqual({ ok: true, stopped: false });
+  expect(fixture.runs[0]!.signal.aborted).toBe(false);
+  expect(fixture.manager.get("session")!.queueDepth()).toBe(1);
+
+  client.send(4, "agent/cancel", { sessionId: "session", expectedClientMessageId: "chat" });
+  expect((await client.reply(4)).result).toEqual({ ok: true, stopped: true });
+  aborted(await client.reply(1));
+  await until(() => fixture.runs.length === 2);
+
+  client.send(5, "agent/cancel", { sessionId: "session", expectedClientMessageId: "chat" });
+  expect((await client.reply(5)).result).toEqual({ ok: true, stopped: false });
+  expect(fixture.runs[1]!.signal.aborted).toBe(false);
+  client.cancel(6);
+  aborted(await client.reply(2));
+});
+
 test("run followed synchronously by Stop never enters the newly created idle engine", async () => {
   const f = managerFixture();
   const client = connect(f);

@@ -1738,6 +1738,7 @@ async function createWindow(): Promise<BrowserWindow> {
               input: {
                 petSessionId: await petDispatchService.getSessionId(),
                 clientMessageId: task.originClientMessageId,
+                receiptId: `${task.id}:${task.attempt}:${task.status}`,
                 executions: closureHostActions ?? [],
                 authoritativeMessage: message,
                 replaceAssistant: true,

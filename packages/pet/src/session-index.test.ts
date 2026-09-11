@@ -13,6 +13,83 @@ const catalog = [
 ];
 
 describe("SessionIndex", () => {
+  test("does not replace the current projection with an older run start", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+    const send = (version: number, event: any) =>
+      index.applyStreamEvent({
+        sessionId: "work-a",
+        generation: 1,
+        version,
+        observedAt: 200 + version,
+        event,
+      });
+    send(1, { type: "session_started", sessionId: "work-a", promptTokens: 0, runId: "old" });
+    send(2, {
+      type: "session_started",
+      sessionId: "work-a",
+      promptTokens: 0,
+      runId: "new",
+      previousRunId: "old",
+    });
+    send(3, { type: "session_started", sessionId: "work-a", promptTokens: 0, runId: "old" });
+    send(4, { type: "turn_complete", reason: "completed", runId: "old" });
+    expect(index.get("work-a")).toMatchObject({ runId: "new", runState: "running" });
+    expect(index.get("work-a")?.terminal).toBeUndefined();
+  });
+
+  test("isolates child terminals while retaining child progress", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+    const send = (version: number, event: any) =>
+      index.applyStreamEvent({
+        sessionId: "work-a",
+        generation: 1,
+        version,
+        observedAt: 200 + version,
+        event,
+      });
+    send(1, { type: "session_started", sessionId: "work-a", promptTokens: 0, runId: "parent" });
+    send(2, { type: "stream_request_start", turnNumber: 1, runId: "parent" });
+    send(3, {
+      type: "tool_use_start",
+      agentId: "child",
+      runId: "child-run",
+      toolCall: { id: "tool", toolName: "Bash", args: {} },
+    });
+    expect(index.get("work-a")?.summary).toBe("正在运行 Bash");
+    for (const [offset, event] of [
+      { type: "turn_complete", reason: "completed" },
+      { type: "turn_complete", reason: "completed", completionKind: "background_wait" },
+      { type: "error", error: "child failed" },
+    ].entries()) {
+      send(4 + offset, { ...event, agentId: "child", runId: "child-run" });
+      expect(index.get("work-a")).toMatchObject({ runState: "running", terminal: undefined });
+      expect(index.get("work-a")?.completionKind).toBeUndefined();
+    }
+  });
+
+  test("rejects a previous run terminal even with a newer timestamp and cursor", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+    const send = (version: number, event: any) =>
+      index.applyStreamEvent({
+        sessionId: "work-a",
+        generation: 1,
+        version,
+        observedAt: 200 + version,
+        event,
+      });
+    send(1, { type: "session_started", sessionId: "work-a", promptTokens: 0, runId: "new" });
+    send(2, { type: "stream_request_start", turnNumber: 1, runId: "new" });
+    send(3, { type: "turn_complete", reason: "completed", runId: "old" });
+    expect(index.get("work-a")).toMatchObject({ runState: "running", terminal: undefined });
+    send(4, { type: "turn_complete", reason: "completed" });
+    expect(index.get("work-a")?.terminal).toBeUndefined();
+    send(5, { type: "turn_complete", reason: "completed", runId: "new" });
+    expect(index.get("work-a")?.terminal).toMatchObject({ status: "completed", runId: "new" });
+  });
+
   test("projects disk-only work sessions without creating a live session", () => {
     const index = new SessionIndex();
     index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 110 });

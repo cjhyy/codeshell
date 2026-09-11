@@ -328,6 +328,9 @@ export interface SessionState {
    * Absent means `status === "completed"` is an ordinary final answer.
    */
   lastCompletionKind?: TurnCompletionKind;
+  /** Current run's durable user-message identity; optional on historical state. */
+  runId?: string;
+  clientMessageId?: string;
   /**
    * Monotonic prompt-cache counters for the whole session. These only increase
    * from session start and are separate from the resettable tokenUsage window.
@@ -590,13 +593,21 @@ export type PromptTokenConfidence = "high" | "medium" | "low";
  */
 export type TurnCompletionKind = "background_wait" | "goal_control_stop" | "limit_stop";
 
-export type StreamEvent =
+export type StreamEvent = {
+  /** Transcript user-message event id that opened this run; scoped to the session. */
+  runId?: string;
+  clientMessageId?: string;
+} & StreamEventPayload;
+
+type StreamEventPayload =
   // Emitted once per run() as soon as the Engine has resolved the session
   // id (resume vs. create). Lets the client know the authoritative sid
   // *before* run() resolves, which matters for mid-turn `/sid` lookups.
   | {
       type: "session_started";
       sessionId: string;
+      /** Persisted run identity replaced when this run opened the session. */
+      previousRunId?: string;
       promptTokens: number;
       promptTokensSource?: PromptTokenSource;
       promptTokensConfidence?: PromptTokenConfidence;
@@ -630,6 +641,8 @@ export type StreamEvent =
   | {
       type: "turn_complete";
       reason: TerminalReason;
+      /** Final run result, after tool/steer/Goal continuations have settled. */
+      text?: string;
       completionKind?: TurnCompletionKind;
       agentId?: string;
     }

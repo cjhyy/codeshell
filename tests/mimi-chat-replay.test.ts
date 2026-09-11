@@ -3,8 +3,15 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Engine, type RunParams, type StreamEvent } from "@cjhyy/code-shell-core";
-import { createInProcessClient } from "@cjhyy/code-shell-core/internal";
+import {
+  AgentClient,
+  AgentServer,
+  ChatSessionManager,
+  Engine,
+  createInProcessTransport,
+  type RunParams,
+  type StreamEvent,
+} from "@cjhyy/code-shell-core";
 import {
   LLMClientBase,
   registerProvider,
@@ -35,7 +42,7 @@ import { enrichPetChatReplyWithHostActions } from "../packages/desktop/src/main/
 type Step = (request: CreateMessageOptions) => LLMResponse | Promise<LLMResponse>;
 type Script = { steps: Step[]; requests: CreateMessageOptions[]; summaries: number };
 const scripts = new Map<string, Script>();
-const cleanups: Array<() => void> = [];
+const cleanups: Array<() => void | Promise<void>> = [];
 const provider = "mimi-chat-replay";
 
 function response(toolName?: string, args: Record<string, unknown> = {}, text = ""): LLMResponse {
@@ -78,8 +85,8 @@ class ReplayClient extends LLMClientBase {
 }
 registerProvider(provider, ReplayClient);
 
-afterEach(() => {
-  for (const cleanup of cleanups.splice(0).reverse()) cleanup();
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
   scripts.clear();
 });
 
@@ -105,27 +112,42 @@ function createHarness(
   const script: Script = { steps: [], requests: [], summaries: 0 };
   scripts.set(model, script);
   const sessionId = "pet-replay";
-  const engine = new Engine({
-    llm: { provider, model, apiKey: "offline-fixture" } as never,
-    cwd: dir,
-    modules: [createPetModule()],
-    sessionStorageDir: join(dir, "sessions"),
-    settingsScope: "isolated",
-    headless: true,
-    maxTurns: 20,
+  // Desktop runs each turn through ChatSessionManager. The legacy single-
+  // Engine helper has no active input identity for scoped steer/cancel.
+  const manager = new ChatSessionManager({
+    runtime: {} as never,
+    engineFactory: (slice) => {
+      const engine = new Engine({
+        ...slice,
+        llm: { provider, model, apiKey: "offline-fixture" } as never,
+        cwd: dir,
+        modules: [createPetModule()],
+        sessionStorageDir: join(dir, "sessions"),
+        settingsScope: "isolated",
+        maxTurns: 20,
+      });
+      (engine as any).hooks.clear();
+      return engine;
+    },
   });
-  (engine as any).hooks.clear();
-  const rpc = createInProcessClient(engine);
-  cleanups.push(() => rpc.close());
+  const [serverTransport, clientTransport] = createInProcessTransport();
+  const server = new AgentServer({ chatManager: manager, transport: serverTransport });
+  const client = new AgentClient({ transport: clientTransport });
+  cleanups.push(async () => {
+    server.close();
+    client.close();
+    await manager.closeAll();
+  });
   const events: StreamEvent[] = [];
   let outbound: ((line: string, entry: { sessionId: string; event: unknown }) => void) | undefined;
-  rpc.client.onStreamEvent((event) => {
+  client.onStreamEvent((event) => {
     events.push(event.event);
     outbound?.("", event);
   });
   const launches: PetAutoDelegation[] = [];
   const outcomes: PetDispatchResult[] = [];
   const steered = deferred();
+  const scopedSteers: Array<{ expectedClientMessageId: unknown; accepted: unknown }> = [];
   let replyActions = 0;
   let clearCount = 0;
   const dispatcher = new PetDispatchService({
@@ -152,9 +174,15 @@ function createHarness(
         try {
           const result =
             method === "agent/run"
-              ? await rpc.client.run(params as unknown as RunParams)
-              : await rpc.client.requestExtension(method, params);
-          if (method === "agent/steer") steered.resolve();
+              ? await client.run(params as unknown as RunParams)
+              : await client.requestExtension(method, params);
+          if (method === "agent/steer") {
+            scopedSteers.push({
+              expectedClientMessageId: params.expectedClientMessageId,
+              accepted: (result as { accepted?: boolean }).accepted,
+            });
+            steered.resolve();
+          }
           return { ok: true, result };
         } catch (error) {
           return { ok: false, message: String(error) };
@@ -249,6 +277,11 @@ function createHarness(
     events,
     dispatcher,
     steered,
+    expectAcceptedScopedSteer: () => {
+      expect(scopedSteers).toEqual([
+        { expectedClientMessageId: expect.stringMatching(/^im:wechat:/), accepted: true },
+      ]);
+    },
     get replyActions() {
       return replyActions;
     },
@@ -400,6 +433,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     await entered.promise;
     const next = h.say("不要答案 只要题目", "burst-2");
     await Promise.all([first, next]);
+    h.expectAcceptedScopedSteer();
     expect(h.sent.map((item) => item.message.text)).toEqual(["题目：描述 BPE 的训练过程。"]);
     expect(h.replyActions).toBe(1);
     expect(
@@ -447,6 +481,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     const first = h.say("给我解释一下题目", "plain-draft");
     await entered.promise;
     await Promise.all([first, h.say("不要答案，只要题目", "plain-correction")]);
+    h.expectAcceptedScopedSteer();
     expect(h.replyActions).toBe(0);
     expect(h.sent.map((item) => item.message.text)).toEqual(["题目：描述 BPE 的训练过程。"]);
     expect(h.script.requests).toHaveLength(2);
@@ -529,6 +564,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
       const first = h.say("给我解释一下题目", `draft-${failure}`);
       await entered.promise;
       await Promise.all([first, h.say("不要答案，只要题目", `correction-${failure}`)]);
+      h.expectAcceptedScopedSteer();
       expect(h.replyActions).toBe(0);
       expect(h.sent).toHaveLength(1);
       expect(h.sent[0]?.message.text).not.toContain("旧回复");

@@ -3,6 +3,7 @@ import type {
   PetProjectionSnapshot,
   PetSessionProjection,
 } from "../../preload/types";
+import { normalizeLocalFilePaths } from "../chat/localFilePaths";
 
 export type PetOverviewFilter = "all" | "pending" | "running";
 export type PetProjectionStatus = "loading" | "ready" | "reconciling" | "error";
@@ -15,6 +16,7 @@ export interface PetState {
   overviewFilter: PetOverviewFilter;
   overviewFocus: string | null;
   chatDraft: string;
+  chatPathAttachments: string[];
   chatTranscript: unknown[];
 }
 
@@ -25,6 +27,7 @@ export const initialPetState: PetState = {
   overviewFilter: "all",
   overviewFocus: null,
   chatDraft: "",
+  chatPathAttachments: [],
   chatTranscript: [],
 };
 
@@ -36,6 +39,9 @@ export type PetStateAction =
   | { type: "set-overview-filter"; filter: PetOverviewFilter }
   | { type: "set-overview-focus"; focus: string | null }
   | { type: "set-chat-draft"; draft: string }
+  | { type: "set-chat-path-attachments"; paths: string[] }
+  | { type: "clear-chat-draft" }
+  | { type: "restore-chat-draft"; draft: string; paths: string[] }
   | { type: "set-chat-transcript"; transcript: unknown[] };
 
 function requireSnapshot(state: PetState): PetState {
@@ -136,6 +142,22 @@ export function petStateReducer(state: PetState, action: PetStateAction): PetSta
       return { ...state, overviewFocus: action.focus };
     case "set-chat-draft":
       return { ...state, chatDraft: action.draft };
+    case "set-chat-path-attachments":
+      return { ...state, chatPathAttachments: normalizeLocalFilePaths(action.paths) };
+    case "clear-chat-draft":
+      return { ...state, chatDraft: "", chatPathAttachments: [] };
+    case "restore-chat-draft":
+      return {
+        ...state,
+        chatDraft:
+          state.chatDraft.trim() && state.chatDraft !== action.draft
+            ? [state.chatDraft, action.draft].filter(Boolean).join("\n\n")
+            : action.draft,
+        chatPathAttachments: normalizeLocalFilePaths([
+          ...state.chatPathAttachments,
+          ...action.paths,
+        ]),
+      };
     case "set-chat-transcript":
       return { ...state, chatTranscript: action.transcript };
   }

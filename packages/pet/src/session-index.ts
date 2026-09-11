@@ -79,6 +79,8 @@ function baseProjection(
     owner: LOCAL_PET_OWNER,
     agentSessionId: catalog.sessionId,
     coreSessionId: catalog.sessionId,
+    runId: catalog.runId,
+    clientMessageId: catalog.clientMessageId,
     title: catalog.title,
     workspaceDisplayName: catalog.workspaceDisplayName,
     runState: status ? "terminal" : "dormant",
@@ -94,7 +96,14 @@ function baseProjection(
           : completionKind === "limit_stop"
             ? "已到运行限制"
             : undefined,
-    terminal: status ? { status, at: catalog.updatedAt } : undefined,
+    terminal: status
+      ? {
+          status,
+          at: catalog.updatedAt,
+          runId: catalog.runId,
+          clientMessageId: catalog.clientMessageId,
+        }
+      : undefined,
     freshness: { source: "disk", observedAt, workerState },
   };
 }
@@ -294,12 +303,48 @@ export class SessionIndex {
     event: StreamEvent,
     observedAt: number,
   ): PetSessionProjection {
+    if ("agentId" in event && event.agentId !== undefined) {
+      // Child activity is useful progress, but cannot change the parent's lifecycle.
+      if (event.type === "turn_complete" || event.type === "error") return current;
+      return {
+        ...current,
+        lastActivityAt: observedAt,
+        summary:
+          event.type === "tool_use_start"
+            ? `正在运行 ${safeToolName(event.toolCall.toolName)}`.slice(0, 64)
+            : current.summary,
+        freshness: { source: "live-event", observedAt, workerState: "active" },
+      };
+    }
+    if (
+      event.type !== "session_started" &&
+      current.runId &&
+      (event.runId !== current.runId || event.clientMessageId !== current.clientMessageId)
+    ) {
+      return current;
+    }
     const next: PetSessionProjection = {
       ...current,
       lastActivityAt: observedAt,
       freshness: { source: "live-event", observedAt, workerState: "active" },
     };
     switch (event.type) {
+      case "session_started":
+        if (
+          current.runId &&
+          (event.runId === current.runId || event.previousRunId !== current.runId)
+        )
+          return current;
+        return {
+          ...next,
+          runId: event.runId,
+          clientMessageId: event.clientMessageId,
+          runState: "running",
+          phase: "model",
+          summary: "模型处理中",
+          completionKind: undefined,
+          terminal: undefined,
+        };
       case "stream_request_start":
         return {
           ...next,
@@ -357,7 +402,15 @@ export class SessionIndex {
                 ? "本轮已完成"
                 : "运行已结束",
           completionKind: undefined,
-          terminal: current.queueDepth > 0 ? undefined : { status, at: observedAt },
+          terminal:
+            current.queueDepth > 0
+              ? undefined
+              : {
+                  status,
+                  at: observedAt,
+                  runId: current.runId,
+                  clientMessageId: current.clientMessageId,
+                },
         };
       }
       case "error":
@@ -367,7 +420,12 @@ export class SessionIndex {
           phase: "finalizing",
           summary: "运行失败",
           completionKind: undefined,
-          terminal: { status: "failed", at: observedAt },
+          terminal: {
+            status: "failed",
+            at: observedAt,
+            runId: current.runId,
+            clientMessageId: current.clientMessageId,
+          },
         };
       default:
         return next;
