@@ -19,7 +19,12 @@ import { buildChromeExtension } from "./build-chrome-extension.js";
 const temporary = await mkdtemp(path.join(tmpdir(), "codeshell-extension-smoke-"));
 const profile = path.join(temporary, "profile");
 const desktop = path.resolve(import.meta.dir, "..");
-const extension = path.join(desktop, "resources/chrome-extension");
+// An explicit artifact is validated as supplied, including an installed/released extension.
+// Never rebuild it: doing so would silently replace the very artifact under investigation.
+const suppliedExtension = process.env.CODESHELL_TEST_EXTENSION_DIRECTORY;
+const extension = suppliedExtension
+  ? path.resolve(suppliedExtension)
+  : path.join(desktop, "resources/chrome-extension");
 const statePath = path.join(temporary, "native-state.json");
 let context: BrowserContext | undefined;
 const commands: string[] = [];
@@ -78,7 +83,7 @@ async function waitUntil(check: () => Promise<boolean> | boolean, detail: string
 }
 
 try {
-  await buildChromeExtension();
+  if (!suppliedExtension) await buildChromeExtension();
   await mkdir(path.join(profile, "NativeMessagingHosts"), { recursive: true });
   const nativeEntry = path.join(temporary, "native-host.mjs");
   const source = path.join(desktop, "src/main/browser-runtime/chrome-native-protocol.ts");
