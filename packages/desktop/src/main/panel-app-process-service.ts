@@ -3,6 +3,7 @@ export {
   PanelAppProcessService,
   panelExecutableDirectories,
   panelProcessInfo,
+  processLimits,
   resolvePanelExecutable,
   type PanelAppProcessServiceOptions,
   type PanelProcessApprovalScope,

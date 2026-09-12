@@ -377,6 +377,17 @@ export class MediaJobService {
     return publicJob(job);
   }
 
+  /** Trusted compatibility reader; callers must project private inputs before exposing a recipe. */
+  async recipe(
+    scope: MediaScope,
+    id: string,
+  ): Promise<{ id: string; type: string; input: unknown }> {
+    await this.initialize();
+    const job = this.jobs.get(this.key(scope, id));
+    if (!job) throw new Error("Media job not found in this app and project");
+    return { id: job.id, type: job.type, input: cloneMediaJson(job.input) };
+  }
+
   async list(scope: MediaScope, options: { includeResult?: boolean } = {}): Promise<MediaJob[]> {
     await this.initialize();
     const key = mediaScopeKey(scope);

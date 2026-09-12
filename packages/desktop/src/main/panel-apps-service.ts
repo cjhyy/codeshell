@@ -20,7 +20,7 @@ function localizedTitle(app: InstalledPanelApp, locale: string): string {
     : (app.title.en ?? app.title.default);
 }
 
-function installedPanelAppRevision(app: InstalledPanelApp): string {
+export function installedPanelAppRevision(app: InstalledPanelApp): string {
   const hash = createHash("sha256");
   for (const relative of [".codeshell-panel/panel.json", ".cs-panel-app-meta.json", app.entry]) {
     const file = path.join(app.installPath, relative);
@@ -71,6 +71,7 @@ async function discoverPanelApps(locale: string): Promise<{
       icon: app.icon,
       singleton: app.singleton,
       permissions: [...app.permissions],
+      ...(app.nativeEntries ? { nativeEntries: structuredClone(app.nativeEntries) } : {}),
       ...(app.agent
         ? {
             agent: {

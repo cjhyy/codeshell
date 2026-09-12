@@ -18,6 +18,8 @@ export const PANEL_APP_PERMISSIONS = [
   "credentials.cookies",
   "automations.manage",
   "process",
+  "resources",
+  "credentials.connections",
   "media",
   "media.capture",
 ] as const;
@@ -151,12 +153,26 @@ export const PanelAppAgentContribution = z
     }
   });
 
+/** Reviewed standalone Node entry points; names are the only Guest-visible selectors. */
+const PanelNativeEntries = z
+  .record(
+    z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+    z
+      .object({
+        entry: z.string().regex(/^app\/tools\/[a-z][a-z0-9-]{0,63}\.mjs$/),
+        sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict(),
+  )
+  .refine((entries) => Object.keys(entries).length <= 16, "too many native entries");
+
 const PanelAppManifestFields = {
   id: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
   version: z.string().min(1).max(80),
   title: LocalizedTitle,
   description: z.string().min(1).max(500).optional(),
   entry: SafePanelAppEntry,
+  nativeEntries: PanelNativeEntries.optional(),
   icon: z.enum(PANEL_APP_ICONS).default("panel"),
   placement: z.literal("right-dock").default("right-dock"),
   singleton: z.boolean().default(true),
@@ -186,6 +202,13 @@ export const PanelAppManifest = z
       .strict(),
   ])
   .superRefine((value, ctx) => {
+    if (value.nativeEntries && !value.permissions.includes("process")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nativeEntries"],
+        message: "native entries require process permission",
+      });
+    }
     const permissionSet = new Set(value.permissions);
     if (permissionSet.size !== value.permissions.length) {
       ctx.addIssue({
@@ -209,7 +232,8 @@ export const PanelAppManifest = z
         value.permissions.includes("workspace.write") ||
         value.permissions.includes("audio.transcribe") ||
         value.permissions.includes("media.capture") ||
-        value.permissions.includes("media")) &&
+        value.permissions.includes("media") ||
+        value.permissions.includes("resources")) &&
       !value.permissions.includes("context.workspace")
     ) {
       ctx.addIssue({

@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 13 as const;
+export const PANEL_APP_API_VERSION = 14 as const;
 
 export const PANEL_APP_PERMISSION_NAMES = [
   "context.session",
@@ -15,6 +15,8 @@ export const PANEL_APP_PERMISSION_NAMES = [
   "credentials.cookies",
   "automations.manage",
   "process",
+  "resources",
+  "credentials.connections",
   "media",
   "media.capture",
 ] as const;
@@ -54,6 +56,7 @@ export interface PanelAppDescriptor {
   icon: PanelAppIconName;
   singleton: boolean;
   permissions: PanelAppPermission[];
+  nativeEntries?: Record<string, { entry: string; sha256: string }>;
   agent?: {
     tools: PanelAppAgentToolDescriptor[];
     skills: string[];
@@ -136,6 +139,10 @@ export interface PanelAppHostContext {
   cwd?: string;
   trusted?: boolean;
   apiVersion: typeof PANEL_APP_API_VERSION;
+  host?: "desktop" | "hub";
+  availableMethods?: string[];
+  capabilities?: Record<string, unknown>;
+  limitations?: string[];
 }
 
 export interface PanelAppCookieCredential {

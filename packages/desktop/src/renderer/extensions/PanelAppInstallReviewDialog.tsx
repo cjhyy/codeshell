@@ -83,8 +83,14 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
                 preview.permissions.map((permission) => (
                   <Badge key={permission} variant="outline">
                     {permission === "media.capture"
-                      ? "media.capture · 麦克风、摄像头与屏幕录制"
-                      : permission}
+                      ? "麦克风、摄像头与屏幕录制"
+                      : permission === "resources"
+                        ? "存取已授权文件与工具结果"
+                        : permission === "credentials.connections"
+                          ? "让工具使用选定的服务连接"
+                          : permission === "process"
+                            ? "运行已审核工具与后台任务"
+                            : permission}
                   </Badge>
                 ))
               )}

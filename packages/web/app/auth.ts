@@ -42,6 +42,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
+    readonly retryAfterMs?: number,
   ) {
     super(message);
   }
@@ -70,7 +72,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = typeof body.error === "string" ? body.error : body.error?.message;
-    throw new ApiError(error ?? body.message ?? `请求失败（${response.status}）`, response.status);
+    throw new ApiError(
+      error ?? body.message ?? `请求失败（${response.status}）`,
+      response.status,
+      typeof body.code === "string" ? body.code : undefined,
+      typeof body.retryAfterMs === "number" ? body.retryAfterMs : undefined,
+    );
   }
   return body as T;
 }

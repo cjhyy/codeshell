@@ -10,7 +10,7 @@
 // `tests/.fixtures/` for the same reason, but a dot-directory is invisible to
 // `bun test` AND to CI's explicit path list, so 30 tests covering Cookie
 // credentials and workspace writes silently never ran.
-import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, spyOn, test } from "bun:test";
 import {
   chmodSync,
   existsSync,
@@ -31,7 +31,6 @@ import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-e
 
 let api: typeof import("../src/main/panel-app-protocol.js");
 let PanelAppBridge: typeof import("../src/main/panel-app-bridge.js").PanelAppBridge;
-let MediaCaptionRenderer: typeof import("../src/main/media/media-caption-renderer.js").MediaCaptionRenderer;
 
 const isolated = process.env.CODESHELL_PANEL_APP_FIXTURE === "1";
 // `describe.skip` still registers the suite without running its bodies, so the
@@ -45,7 +44,6 @@ beforeAll(async () => {
   installPanelAppElectronMock();
   api = await import("../src/main/panel-app-protocol.js");
   ({ PanelAppBridge } = await import("../src/main/panel-app-bridge.js"));
-  ({ MediaCaptionRenderer } = await import("../src/main/media/media-caption-renderer.js"));
 });
 
 afterAll(() => {
@@ -212,59 +210,6 @@ describeIsolated("Panel App protocol", () => {
       expect(result.status).toBe(415);
       expect(body.destroyed).toBe(true);
     }
-  });
-
-  test("caption cancellation destroys a window while its page is still loading", async () => {
-    let destroyed = false;
-    const controller = new AbortController();
-    const renderer = new MediaCaptionRenderer({
-      createWindow: () =>
-        ({
-          isDestroyed: () => destroyed,
-          destroy: () => {
-            destroyed = true;
-          },
-          loadURL: () => new Promise(() => {}),
-          webContents: { setWindowOpenHandler() {}, on() {} },
-        }) as any,
-    });
-    const rendering = renderer.render({ width: 160, height: 90, fontSize: 10, texts: ["字幕"] }, {
-      jobId: "caption-cancel",
-      signal: controller.signal,
-    } as any);
-    controller.abort();
-    await expect(rendering).rejects.toThrow("cancelled");
-    expect(destroyed).toBe(true);
-  });
-
-  test("caption execution timeout destroys its Chromium window and permits the next attempt", async () => {
-    const windows: { destroyed: boolean }[] = [];
-    const renderer = new MediaCaptionRenderer({
-      timeoutMs: 5,
-      createWindow: () => {
-        const state = { destroyed: false };
-        windows.push(state);
-        return {
-          isDestroyed: () => state.destroyed,
-          destroy: () => {
-            state.destroyed = true;
-          },
-          loadURL: async () => {},
-          webContents: {
-            setWindowOpenHandler() {},
-            on() {},
-            executeJavaScript: () => new Promise(() => {}),
-          },
-        } as any;
-      },
-    });
-    const context = { jobId: "caption-timeout", signal: new AbortController().signal } as any;
-    for (let attempt = 0; attempt < 2; attempt++)
-      await expect(
-        renderer.render({ width: 160, height: 90, fontSize: 10, texts: [] }, context),
-      ).rejects.toThrow("timed out");
-    expect(windows).toHaveLength(2);
-    expect(windows.every((window) => window.destroyed)).toBe(true);
   });
 
   test("rejects traversal, query strings, dotfiles, and assets outside the panel tree", async () => {
@@ -481,6 +426,22 @@ function bridgeResource(
   };
 }
 
+/** Capture the handler and model preload's typed-error unwrapping. */
+function panelGuestHandler() {
+  const handler = panelAppElectronMock.ipcHandlers.get("panel-app:call")!;
+  return async (event: any, method: string, params?: unknown): Promise<any> => {
+    const result = await handler(event, method, params);
+    if (result?.__codeshellPanelError) {
+      const { code, message, retryAfterMs } = result.__codeshellPanelError;
+      throw Object.assign(new Error(message), {
+        code,
+        ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+      });
+    }
+    return result;
+  };
+}
+
 async function bindBridgeGuest(guestId: number, overrides: Record<string, unknown> = {}) {
   return panelAppElectronMock.ipcHandlers.get("panel-apps:bind")!(
     { sender: panelAppElectronMock.trustedSender },
@@ -510,6 +471,210 @@ describeIsolated("PanelAppBridge", () => {
     panelAppElectronMock.revealedPaths.length = 0;
   });
 
+  test("generic resources cross the bridge with bounded bytes, scoped tool hand-off and capability-gated tasks", async () => {
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "panel-resource-bridge-")));
+    const worktree = join(directory, "worktree");
+    mkdirSync(worktree);
+    mkdirSync(join(directory, ".git"));
+    writeFileSync(
+      join(worktree, ".git"),
+      `gitdir: ${join(directory, ".git", "worktrees", "test")}\n`,
+    );
+    let bound = true;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: (cwd) => cwd === directory || cwd === worktree,
+      isPanelAppBound: (projectPath) => bound && projectPath === directory,
+      getAgentBridge: () => null,
+    });
+    try {
+      panelAppElectronMock.userDataPath = directory;
+      bridge.registerIpc();
+      const guest = fakeGuest(94);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["context.workspace", "resources", "process"]) as any,
+        directory,
+      );
+      await bindBridgeGuest(94, { projectPath: directory, cwd: worktree });
+      const call = (method: string, params: unknown = {}) =>
+        panelGuestHandler()({ sender: guest }, method, params);
+      const context = await call("context.get");
+      expect(context.availableMethods).toContain("resources.materialize");
+      expect(context.availableMethods).toContain("tasks.start");
+      expect(context.availableMethods).not.toContain("media.tts");
+      expect(context.capabilities.resources.maxChunkBytes).toBe(32768);
+      const bytes = Buffer.from("%PDF opaque plugin document");
+      const session = await call("resources.upload.begin", {
+        name: "document.pdf",
+        expectedBytes: bytes.length,
+      });
+      await call("resources.upload.write", {
+        sessionId: session.sessionId,
+        sequence: 0,
+        offset: 0,
+        dataBase64: bytes.toString("base64"),
+      });
+      const { asset } = await call("resources.upload.finish", { sessionId: session.sessionId });
+      const read = await call("resources.read", { assetId: asset.id, offset: 0, length: 32768 });
+      expect(Buffer.from(read.dataBase64, "base64")).toEqual(bytes);
+      expect(JSON.stringify(read)).not.toContain(directory);
+      const tool = await call("filesystem.getKnownDirectory", { name: "app-data" });
+      await call("resources.materialize", {
+        assetId: asset.id,
+        directoryHandle: tool.handle,
+        path: "inputs/source.pdf",
+      });
+      expect(readFileSync(join(tool.path, "inputs/source.pdf"))).toEqual(bytes);
+      writeFileSync(join(tool.path, "result.csv"), "name,value\nplugin,1\n");
+      const captured = await call("resources.capture", {
+        directoryHandle: tool.handle,
+        path: "result.csv",
+      });
+      expect(captured.asset.mimeType).toBe("text/csv");
+      expect(JSON.stringify(captured)).not.toContain(directory);
+      const restricted = fakeGuest(95);
+      bridge.registerGuest(
+        restricted as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["context.workspace", "resources"]) as any,
+        directory,
+      );
+      await bindBridgeGuest(95, { projectPath: directory, cwd: directory });
+      const restrictedCall = (method: string, params: unknown = {}) =>
+        panelGuestHandler()({ sender: restricted }, method, params);
+      const restrictedContext = await restrictedCall("context.get");
+      expect(restrictedContext.availableMethods).not.toContain("tasks.start");
+      expect(restrictedContext.capabilities.resources).toMatchObject({
+        materialize: false,
+        capture: false,
+      });
+      // A panel reopened in the main checkout retains the worktree's project library.
+      const projectRead = await restrictedCall("resources.read", {
+        assetId: asset.id,
+        offset: 0,
+        length: 32768,
+      });
+      expect(Buffer.from(projectRead.dataBase64, "base64")).toEqual(bytes);
+      const denied = await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: restricted },
+        "tasks.start",
+        { entry: "tool", input: {} },
+      );
+      expect(denied).toMatchObject({ __codeshellPanelError: { code: "PERMISSION_DENIED" } });
+
+      await expect(restrictedCall("tasks.start", { entry: "tool", input: {} })).rejects.toThrow(
+        "permission denied: process",
+      );
+      await expect(
+        restrictedCall("resources.capture", { directoryHandle: tool.handle, path: "result.csv" }),
+      ).rejects.toThrow("permission denied: process");
+      bound = false;
+      await expect(
+        call("resources.read", { assetId: asset.id, offset: 0, length: 1 }),
+      ).rejects.toThrow("no longer bound");
+    } finally {
+      await bridge.shutdownMedia();
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("background task routing uses the stable project and isolates revision events", async () => {
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    const project = realpathSync(mkdtempSync(join(tmpdir(), "panel-task-scope-")));
+    const worktree = join(project, "worktree");
+    const otherProject = join(project, "unrelated");
+    mkdirSync(worktree);
+    mkdirSync(otherProject);
+    mkdirSync(join(otherProject, ".git"));
+    mkdirSync(join(project, ".git"));
+    writeFileSync(
+      join(worktree, ".git"),
+      `gitdir: ${join(project, ".git", "worktrees", "test")}\n`,
+    );
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+    });
+    try {
+      panelAppElectronMock.userDataPath = project;
+      bridge.registerIpc();
+      const connect = async (
+        id: number,
+        revision: string,
+        projectPath: string,
+        cwd: string,
+        permissions = ["context.workspace", "process", "resources"],
+      ) => {
+        const guest = fakeGuest(id);
+        const resource = bridgeResource(permissions);
+        resource.descriptor.revision = revision;
+        bridge.registerGuest(
+          guest as any,
+          panelAppElectronMock.ownerWindow as any,
+          resource as any,
+          projectPath,
+        );
+        await bindBridgeGuest(id, { projectPath, cwd });
+        return guest;
+      };
+      const current = await connect(96, "revision-2", project, worktree);
+      const reopened = await connect(97, "revision-2", project, project);
+      const oldRevision = await connect(98, "revision-1", project, project);
+      const other = await connect(99, "revision-2", otherProject, otherProject);
+      const noProcess = await connect(100, "revision-2", project, project, [
+        "context.workspace",
+        "resources",
+      ]);
+      const service = (bridge as any).getToolJobService();
+      const list = spyOn(service, "list").mockResolvedValue([]);
+      try {
+        await panelGuestHandler()({ sender: current }, "tasks.list", {});
+        expect(list).toHaveBeenCalledWith({
+          appId: "demo",
+          projectPath: project,
+          revision: "revision-2",
+        });
+        await expect(
+          panelGuestHandler()({ sender: current }, "tasks.list", { limit: 51 }),
+        ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+      } finally {
+        list.mockRestore();
+      }
+      // Inject the queue's public notification, exercising the real bridge recipient filter.
+      // Queue execution and persistence are independently covered by tool-jobs.test.ts.
+      service.options.onEvent({
+        id: "task-scoped",
+        scope: { appId: "demo", projectPath: project, revision: "revision-2" },
+        status: "running",
+        progress: { fraction: 0.5 },
+        input: { hidden: "private input" },
+        result: { hidden: "private result" },
+      });
+      const changes = (guest: ReturnType<typeof fakeGuest>) =>
+        guest.sent.filter((item) => item.payload.event === "tasks.changed");
+      for (const guest of [current, reopened]) {
+        expect(changes(guest)).toHaveLength(1);
+        expect(changes(guest)[0]!.payload.payload).toMatchObject({
+          id: "task-scoped",
+          status: "running",
+        });
+        expect(changes(guest)[0]!.payload.payload).not.toHaveProperty("input");
+        expect(changes(guest)[0]!.payload.payload).not.toHaveProperty("result");
+      }
+      for (const guest of [oldRevision, other, noProcess]) expect(changes(guest)).toHaveLength(0);
+    } finally {
+      await bridge.shutdownMedia();
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
   test("gates process primitives and scopes user-selected directory handles", async () => {
     const previousUserDataPath = panelAppElectronMock.userDataPath;
     const directory = mkdtempSync(join(tmpdir(), "panel-process-directory-"));
@@ -517,7 +682,7 @@ describeIsolated("PanelAppBridge", () => {
       panelAppElectronMock.userDataPath = directory;
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
-        isWorkspaceTrusted: () => false,
+        isWorkspaceTrusted: () => true,
         isPanelAppBound: () => true,
         getAgentBridge: () => null,
       });
@@ -531,11 +696,7 @@ describeIsolated("PanelAppBridge", () => {
       );
       await bindBridgeGuest(61);
       await expect(
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: deniedGuest },
-          "process.find",
-          { name: "missing-tool" },
-        ),
+        panelGuestHandler()({ sender: deniedGuest }, "process.find", { name: "missing-tool" }),
       ).rejects.toThrow(/permission denied: process/);
 
       const guest = fakeGuest(62);
@@ -546,26 +707,24 @@ describeIsolated("PanelAppBridge", () => {
         "/repo",
       );
       await bindBridgeGuest(62);
-      const known = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "filesystem.getKnownDirectory",
-        { name: "downloads" },
-      )) as { handle: string; path: string };
+      const known = (await panelGuestHandler()({ sender: guest }, "filesystem.getKnownDirectory", {
+        name: "downloads",
+      })) as { handle: string; path: string };
       expect(known.handle).toBeString();
       expect(known.path).toContain("panel-process-directory-");
       expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          "filesystem.openDirectory",
-          { handle: known.handle },
-        ),
+        await panelGuestHandler()({ sender: guest }, "filesystem.openDirectory", {
+          handle: known.handle,
+        }),
       ).toBe(true);
       expect(panelAppElectronMock.openedPaths).toHaveLength(1);
 
-      const appData = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+      const appData = (await panelGuestHandler()(
         { sender: guest },
         "filesystem.getKnownDirectory",
-        { name: "app-data" },
+        {
+          name: "app-data",
+        },
       )) as { handle: string; path: string; name: string };
       expect(appData.handle).toBeString();
       expect(appData.path).toBe(realpathSync(join(directory, "panel-app-data", "demo")));
@@ -575,19 +734,16 @@ describeIsolated("PanelAppBridge", () => {
         expect(statSync(appData.path).mode & 0o777).toBe(0o700);
       }
       expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          "filesystem.openDirectory",
-          { handle: appData.handle },
-        ),
+        await panelGuestHandler()({ sender: guest }, "filesystem.openDirectory", {
+          handle: appData.handle,
+        }),
       ).toBe(true);
       expect(panelAppElectronMock.openedPaths.at(-1)).toBe(realpathSync(appData.path));
 
       panelAppElectronMock.openDialogResult = { canceled: false, filePaths: [directory] };
-      const picked = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "filesystem.pickDirectory",
-      )) as { handle: string };
+      const picked = (await panelGuestHandler()({ sender: guest }, "filesystem.pickDirectory")) as {
+        handle: string;
+      };
       expect(picked.handle).toBeString();
     } finally {
       panelAppElectronMock.userDataPath = previousUserDataPath;
@@ -962,7 +1118,7 @@ describeIsolated("PanelAppBridge", () => {
       contextSettled = true;
     });
     const callPromise = Promise.resolve(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "workspace.info"),
+      panelGuestHandler()({ sender: guest }, "workspace.info"),
     ).finally(() => {
       callSettled = true;
     });
@@ -999,16 +1155,12 @@ describeIsolated("PanelAppBridge", () => {
     await bindBridgeGuest(8);
 
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "storage.get", {
+      panelGuestHandler()({ sender: guest }, "storage.get", {
         key: "x",
       }),
     ).rejects.toThrow(/permission denied/);
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: fakeGuest(99) },
-        "storage.get",
-        { key: "x" },
-      ),
+      panelGuestHandler()({ sender: fakeGuest(99) }, "storage.get", { key: "x" }),
     ).rejects.toThrow(/scope is not bound/);
   });
 
@@ -1028,13 +1180,9 @@ describeIsolated("PanelAppBridge", () => {
       "/repo",
     );
     await bindBridgeGuest(16);
-    await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "workspace.info",
-        {},
-      ),
-    ).rejects.toThrow(/permission denied/);
+    await expect(panelGuestHandler()({ sender: guest }, "workspace.info", {})).rejects.toThrow(
+      /permission denied/,
+    );
   });
 
   test("denies notifications.send when the panel has not declared the permission", async () => {
@@ -1059,11 +1207,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(17);
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "notifications.send",
-        { body: "should not show" },
-      ),
+      panelGuestHandler()({ sender: guest }, "notifications.send", { body: "should not show" }),
     ).rejects.toThrow(/permission denied/);
     // Gating happens before the notification hook.
     expect(shown).toEqual([]);
@@ -1118,11 +1262,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(18);
     const call = (method: string, params: unknown) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        method,
-        params,
-      ) as Promise<any>;
+      panelGuestHandler()({ sender: guest }, method, params) as Promise<any>;
 
     expect(await call("credentials.cookies.list", { url: "https://www.zhipin.com" })).toEqual({
       accounts: [
@@ -1216,11 +1356,7 @@ describeIsolated("PanelAppBridge", () => {
       );
       await bindBridgeGuest(28);
       const call = (method: string, params: unknown) =>
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          method,
-          params,
-        ) as Promise<any>;
+        panelGuestHandler()({ sender: guest }, method, params) as Promise<any>;
       const executable = await call("process.find", { name: executableName });
       panelAppElectronMock.dialogResponse = 0;
       const authorization = await call("credentials.cookies.authorizeProcess", {
@@ -1271,11 +1407,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(26);
     const list = (url: string) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "credentials.cookies.list",
-        { url },
-      ) as Promise<any>;
+      panelGuestHandler()({ sender: guest }, "credentials.cookies.list", { url }) as Promise<any>;
 
     // A bare eTLD must not sweep up every credential beneath it, and a parent
     // domain must not resolve a credential saved for one of its subdomains.
@@ -1311,11 +1443,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(27);
     const call = (method: string, params: unknown) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        method,
-        params,
-      ) as Promise<any>;
+      panelGuestHandler()({ sender: guest }, method, params) as Promise<any>;
 
     for (const [method, params] of [
       ["credentials.cookies.list", { url: "https://www.zhipin.com" }],
@@ -1399,11 +1527,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(28);
     const call = (method: string, params: unknown) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        method,
-        params,
-      ) as Promise<any>;
+      panelGuestHandler()({ sender: guest }, method, params) as Promise<any>;
 
     expect((await call("automations.list", {})).automations.map((job: any) => job.id)).toEqual([
       "scoped",
@@ -1493,11 +1617,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(29);
     const call = (method: string, params: unknown = {}) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        method,
-        params,
-      ) as Promise<any>;
+      panelGuestHandler()({ sender: guest }, method, params) as Promise<any>;
 
     expect(await call("audio.status")).toEqual({
       available: true,
@@ -1542,13 +1662,9 @@ describeIsolated("PanelAppBridge", () => {
       "/repo",
     );
     await bindBridgeGuest(30);
-    await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: deniedGuest },
-        "audio.status",
-        {},
-      ),
-    ).rejects.toThrow(/audio.transcribe/);
+    await expect(panelGuestHandler()({ sender: deniedGuest }, "audio.status", {})).rejects.toThrow(
+      /audio.transcribe/,
+    );
   });
 
   test("does not expose transcription settings in an untrusted workspace", async () => {
@@ -1576,13 +1692,9 @@ describeIsolated("PanelAppBridge", () => {
       "/repo",
     );
     await bindBridgeGuest(31);
-    await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "audio.status",
-        {},
-      ),
-    ).rejects.toThrow(/trusted workspace/);
+    await expect(panelGuestHandler()({ sender: guest }, "audio.status", {})).rejects.toThrow(
+      /trusted workspace/,
+    );
     expect(statusCalls).toBe(0);
   });
 
@@ -1604,7 +1716,7 @@ describeIsolated("PanelAppBridge", () => {
     await bindBridgeGuest(9);
 
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "storage.get", {
+      panelGuestHandler()({ sender: guest }, "storage.get", {
         key: "x",
         padding: "x".repeat(70 * 1024),
       }),
@@ -1640,11 +1752,7 @@ describeIsolated("PanelAppBridge", () => {
     await bindBridgeGuest(10, { busy: true });
 
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "agent.submitPrompt",
-        { prompt: "continue" },
-      ),
+      panelGuestHandler()({ sender: guest }, "agent.submitPrompt", { prompt: "continue" }),
     ).rejects.toThrow(/busy/);
     expect(workerCalls).toBe(0);
   });
@@ -1670,11 +1778,7 @@ describeIsolated("PanelAppBridge", () => {
       );
       await bindBridgeGuest(11);
       const call = (method: string, params: unknown) =>
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          method,
-          params,
-        ) as Promise<unknown>;
+        panelGuestHandler()({ sender: guest }, method, params) as Promise<unknown>;
 
       await Promise.all([
         call("storage.set", { key: "left", value: 1 }),
@@ -1696,11 +1800,7 @@ describeIsolated("PanelAppBridge", () => {
         cwd: "/repo/other",
       });
       expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: otherProjectGuest },
-          "storage.get",
-          { key: "right" },
-        ),
+        await panelGuestHandler()({ sender: otherProjectGuest }, "storage.get", { key: "right" }),
       ).toBeNull();
 
       await expect(call("storage.set", { key: "large", value: "x".repeat(512) })).rejects.toThrow(
@@ -1738,7 +1838,7 @@ describeIsolated("PanelAppBridge", () => {
         await bindBridgeGuest(id);
         // Capture each registered handler before the next bridge replaces the
         // Electron mock's handler, preserving two independent instance queues.
-        const handler = panelAppElectronMock.ipcHandlers.get("panel-app:call")!;
+        const handler = panelGuestHandler();
         calls.push(
           (method, params) => handler({ sender: guest }, method, params) as Promise<unknown>,
         );
@@ -1797,11 +1897,7 @@ describeIsolated("PanelAppBridge", () => {
       );
       await bindBridgeGuest(23);
       const call = (method: string, params: unknown) =>
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          method,
-          params,
-        ) as Promise<unknown>;
+        panelGuestHandler()({ sender: guest }, method, params) as Promise<unknown>;
       const recovery = { path: "designs/home.codesign.json", design: "x".repeat(70 * 1024) };
       expect(await call("storage.set", { key: "recovery", value: recovery })).toBe(true);
       expect(await call("storage.get", { key: "recovery" })).toEqual(recovery);
@@ -1828,7 +1924,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(12);
     const call = (url: string) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "external.open", {
+      panelGuestHandler()({ sender: guest }, "external.open", {
         url,
       }) as Promise<unknown>;
     await expect(call("file:///etc/passwd")).rejects.toThrow(/https/);
@@ -1879,11 +1975,7 @@ describeIsolated("PanelAppBridge", () => {
       );
       await bindBridgeGuest(13, { cwd: workspaceRoot, projectPath: workspaceRoot });
       const call = (path: string) =>
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          "workspace.readText",
-          { path },
-        ) as Promise<unknown>;
+        panelGuestHandler()({ sender: guest }, "workspace.readText", { path }) as Promise<unknown>;
 
       // 1st call: result exceeds the 64-byte cap.
       await expect(call("big.txt")).rejects.toThrow(/result is too large/);
@@ -1934,11 +2026,9 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(23);
 
-    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-      { sender: guest },
-      "agent.submitPrompt",
-      { prompt: "do the thing" },
-    )) as { accepted: boolean; clientMessageId: string };
+    const accepted = (await panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+      prompt: "do the thing",
+    })) as { accepted: boolean; clientMessageId: string };
 
     expect(accepted.accepted).toBe(true);
     // A stable, panel-scoped id is what makes the submission idempotent upstream.
@@ -1998,11 +2088,10 @@ describeIsolated("PanelAppBridge", () => {
       hasGoal: true,
     });
 
-    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-      { sender: guest },
-      "agent.submitPrompt",
-      { prompt: "full task", displayText: "short task" },
-    )) as { accepted: boolean };
+    const accepted = (await panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+      prompt: "full task",
+      displayText: "short task",
+    })) as { accepted: boolean };
     expect(accepted.accepted).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -2064,11 +2153,9 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(28, { modelKey: "codex/gpt-5.6-sol" });
 
-    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-      { sender: guest },
-      "agent.submitPrompt",
-      { prompt: "run on Codex" },
-    )) as { accepted: boolean };
+    const accepted = (await panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+      prompt: "run on Codex",
+    })) as { accepted: boolean };
     expect(accepted.accepted).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -2120,11 +2207,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(29, { modelKey: "codex/gpt-5.6-sol" });
 
-    await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-      { sender: guest },
-      "agent.submitPrompt",
-      { prompt: "continue" },
-    );
+    await panelGuestHandler()({ sender: guest }, "agent.submitPrompt", { prompt: "continue" });
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(sendCalls).toBe(1);
@@ -2163,11 +2246,9 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(25);
     const submit = () =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "agent.submitPrompt",
-        { prompt: "go" },
-      ) as Promise<unknown>;
+      panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+        prompt: "go",
+      }) as Promise<unknown>;
 
     const first = (await submit()) as { accepted: boolean };
     expect(first.accepted).toBe(true);
@@ -2203,11 +2284,9 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(26);
     const submit = () =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "agent.submitPrompt",
-        { prompt: "go" },
-      ) as Promise<unknown>;
+      panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+        prompt: "go",
+      }) as Promise<unknown>;
 
     await submit();
     // Let the fire-and-forget continuation settle and release the slot.
@@ -2243,11 +2322,9 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(24);
 
-    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-      { sender: guest },
-      "agent.submitPrompt",
-      { prompt: "will fail" },
-    )) as { accepted: boolean };
+    const accepted = (await panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+      prompt: "will fail",
+    })) as { accepted: boolean };
     // Accepted even though the run fails — the failure is asynchronous.
     expect(accepted.accepted).toBe(true);
 
@@ -2281,11 +2358,7 @@ describeIsolated("PanelAppBridge", () => {
         projectPath: workspaceRoot,
         cwd: workspaceRoot,
       });
-      const info = await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "workspace.info",
-        {},
-      );
+      const info = await panelGuestHandler()({ sender: guest }, "workspace.info", {});
       expect(info).toEqual({
         name: basename(workspaceRoot),
         root: workspaceRoot,
@@ -2293,21 +2366,13 @@ describeIsolated("PanelAppBridge", () => {
         gitBranch: "feature/x",
       });
       writeFileSync(join(workspaceRoot, ".git", "HEAD"), "ref: refs/heads/unsafe\tbranch\n");
-      expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          "workspace.info",
-          {},
-        ),
-      ).toMatchObject({ gitBranch: null });
+      expect(await panelGuestHandler()({ sender: guest }, "workspace.info", {})).toMatchObject({
+        gitBranch: null,
+      });
       writeFileSync(join(workspaceRoot, ".git", "HEAD"), "x".repeat(4 * 1024 + 1));
-      expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          "workspace.info",
-          {},
-        ),
-      ).toMatchObject({ gitBranch: null });
+      expect(await panelGuestHandler()({ sender: guest }, "workspace.info", {})).toMatchObject({
+        gitBranch: null,
+      });
       if (process.platform !== "win32") {
         rmSync(join(workspaceRoot, ".git"), { recursive: true, force: true });
         mkdirSync(join(workspaceRoot, "git-metadata"));
@@ -2316,13 +2381,9 @@ describeIsolated("PanelAppBridge", () => {
           "ref: refs/heads/should-not-leak\n",
         );
         symlinkSync("git-metadata", join(workspaceRoot, ".git"));
-        expect(
-          await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-            { sender: guest },
-            "workspace.info",
-            {},
-          ),
-        ).toMatchObject({ gitBranch: null });
+        expect(await panelGuestHandler()({ sender: guest }, "workspace.info", {})).toMatchObject({
+          gitBranch: null,
+        });
       }
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
@@ -2357,11 +2418,7 @@ describeIsolated("PanelAppBridge", () => {
         cwd: workspaceRoot,
       });
       const call = (method: string, params: unknown) =>
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          method,
-          params,
-        ) as Promise<any>;
+        panelGuestHandler()({ sender: guest }, method, params) as Promise<any>;
 
       const created = await call("workspace.writeText", {
         path: "designs/home.codesign.json",
@@ -2602,7 +2659,7 @@ describeIsolated("PanelAppBridge", () => {
       );
       await bindBridgeGuest(91, { projectPath, cwd: worktreePath });
       await expect(
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "media.import", {
+        panelGuestHandler()({ sender: guest }, "media.import", {
           paths: ["video.mp4"],
         }),
       ).rejects.toThrow("trusted workspace");
@@ -2635,25 +2692,21 @@ describeIsolated("PanelAppBridge", () => {
         cwd: workspaceRoot,
       });
       expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: readGuest },
-          "workspace.readText",
-          { path: "readable.json" },
-        ),
+        await panelGuestHandler()({ sender: readGuest }, "workspace.readText", {
+          path: "readable.json",
+        }),
       ).toMatchObject({ content: "{}\n" });
       await expect(
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: readGuest },
-          "workspace.writeText",
-          { path: "denied.json", content: "{}\n" },
-        ),
+        panelGuestHandler()({ sender: readGuest }, "workspace.writeText", {
+          path: "denied.json",
+          content: "{}\n",
+        }),
       ).rejects.toThrow(/workspace.write/);
       await expect(
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: readGuest },
-          "workspace.exportPdf",
-          { path: "denied.pdf", expectedModifiedAt: null },
-        ),
+        panelGuestHandler()({ sender: readGuest }, "workspace.exportPdf", {
+          path: "denied.pdf",
+          expectedModifiedAt: null,
+        }),
       ).rejects.toThrow(/workspace.write/);
 
       const writeGuest = fakeGuest(22);
@@ -2668,18 +2721,16 @@ describeIsolated("PanelAppBridge", () => {
         cwd: workspaceRoot,
       });
       await expect(
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: writeGuest },
-          "workspace.readText",
-          { path: "readable.json" },
-        ),
+        panelGuestHandler()({ sender: writeGuest }, "workspace.readText", {
+          path: "readable.json",
+        }),
       ).rejects.toThrow(/workspace.read/);
       expect(
-        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: writeGuest },
-          "workspace.writeText",
-          { path: "writable.json", content: "{}\n", expectedModifiedAt: null },
-        ),
+        await panelGuestHandler()({ sender: writeGuest }, "workspace.writeText", {
+          path: "writable.json",
+          content: "{}\n",
+          expectedModifiedAt: null,
+        }),
       ).toMatchObject({ path: "writable.json" });
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
@@ -2718,11 +2769,7 @@ describeIsolated("PanelAppBridge", () => {
         cwd: workspaceRoot,
       });
       const call = (method: string, params: unknown) =>
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: guest },
-          method,
-          params,
-        ) as Promise<unknown>;
+        panelGuestHandler()({ sender: guest }, method, params) as Promise<unknown>;
 
       await expect(call("workspace.readText", { path: "../secret.json" })).rejects.toThrow(
         /safe relative/,
@@ -2790,11 +2837,9 @@ describeIsolated("PanelAppBridge", () => {
         cwd: workspaceRoot,
       });
       await expect(
-        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-          { sender: untrustedGuest },
-          "workspace.readText",
-          { path: "safe.json" },
-        ),
+        panelGuestHandler()({ sender: untrustedGuest }, "workspace.readText", {
+          path: "safe.json",
+        }),
       ).rejects.toThrow(/trusted workspace/);
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
@@ -2825,11 +2870,7 @@ describeIsolated("PanelAppBridge", () => {
     );
     await bindBridgeGuest(15);
     const call = (params: unknown) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "notifications.send",
-        params,
-      ) as Promise<unknown>;
+      panelGuestHandler()({ sender: guest }, "notifications.send", params) as Promise<unknown>;
 
     expect(await call({ body: "build finished" })).toBe(true);
     expect(await call({ title: "CI", body: "build finished" })).toBe(true);

@@ -105,6 +105,7 @@ export interface PanelAppPreview {
   singleton: boolean;
   permissions: PanelAppManifest["permissions"];
   agent?: PanelAppAgentContribution;
+  nativeEntries?: PanelAppManifest["nativeEntries"];
   alreadyInstalled: boolean;
   reviewToken: string;
   source: { kind: PanelAppSourceInput["kind"]; label: string };
@@ -143,6 +144,7 @@ export interface InstalledPanelApp {
   singleton: boolean;
   permissions: PanelAppManifest["permissions"];
   agent?: PanelAppAgentContribution;
+  nativeEntries?: PanelAppManifest["nativeEntries"];
   installPath: string;
   source: InstalledPanelAppSource;
   installedAt: string;
@@ -642,6 +644,13 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
   if (!(await stat(entry)).isFile()) {
     throw new PanelAppInstallError(`Panel App entry is not a file: ${manifest.entry}`);
   }
+  for (const [name, tool] of Object.entries(manifest.nativeEntries ?? {})) {
+    if (!files.includes(tool.entry))
+      throw new PanelAppInstallError(`native entry is missing: ${name}`);
+    const bytes = await readBoundedPackageFile(root, tool.entry, MAX_FILE_BYTES);
+    if (createHash("sha256").update(bytes).digest("hex") !== tool.sha256)
+      throw new PanelAppInstallError(`native entry hash does not match: ${name}`);
+  }
   const assetRoot = posix.dirname(manifest.entry);
   const agent = manifest.schemaVersion === 2 ? manifest.agent : undefined;
   const declaredAgentRoots = new Set((agent?.skills ?? []).map((entry) => posix.dirname(entry)));
@@ -706,6 +715,7 @@ function previewFrom(
     title: manifest.title,
     ...(manifest.description ? { description: manifest.description } : {}),
     entry: manifest.entry,
+    ...(manifest.nativeEntries ? { nativeEntries: structuredClone(manifest.nativeEntries) } : {}),
     icon: manifest.icon,
     singleton: manifest.singleton,
     permissions: [...manifest.permissions],
@@ -1007,6 +1017,7 @@ function installedPanelApp(
     title: manifest.title,
     ...(manifest.description ? { description: manifest.description } : {}),
     entry: manifest.entry,
+    ...(manifest.nativeEntries ? { nativeEntries: structuredClone(manifest.nativeEntries) } : {}),
     icon: manifest.icon,
     singleton: manifest.singleton,
     permissions: [...manifest.permissions],
@@ -1051,7 +1062,8 @@ export async function uninstallPanelApp(
   const release = await lockPanelAppMutation(id);
   try {
     const directory = panelAppInstallDir(id);
-    if (!existsSync(directory)) throw new PanelAppInstallError(`Panel App '${id}' is not installed`);
+    if (!existsSync(directory))
+      throw new PanelAppInstallError(`Panel App '${id}' is not installed`);
     const quarantine = join(panelAppsRoot(), `.remove-${id}-${randomUUID()}`);
     await options.beforeCommit?.();
     await rename(directory, quarantine);

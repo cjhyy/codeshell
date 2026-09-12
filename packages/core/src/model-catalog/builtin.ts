@@ -498,6 +498,53 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     paramsDoc:
       "文字配音，返回真实音频。gpt-4o-mini-tts 支持 instructions；tts-1/tts-1-hd 不支持风格指令。可修改 baseUrl 使用真正支持 /audio/speech 的兼容服务。",
   },
+  {
+    id: "siliconflow-speech",
+    tag: "speech",
+    adapterKind: "openai",
+    shape: "generic-sync",
+    displayName: "硅基流动中文配音 · CosyVoice",
+    description: "中文及多语言文字配音，提供 8 种声音，可调节语速。需要硅基流动 API Key。",
+    defaultBaseUrl: "https://api.siliconflow.cn/v1",
+    defaultModel: "FunAudioLLM/CosyVoice2-0.5B",
+    signupUrl: "https://cloud.siliconflow.cn/account/ak",
+    test: false,
+    modelPresets: [
+      {
+        value: "FunAudioLLM/CosyVoice2-0.5B",
+        label: "CosyVoice2 · 中文/多语言",
+        params: [
+          {
+            name: "voice",
+            label: "声音",
+            control: "enum",
+            options: [
+              "alex",
+              "benjamin",
+              "charles",
+              "david",
+              "anna",
+              "bella",
+              "claire",
+              "diana",
+            ].map((voice) => `FunAudioLLM/CosyVoice2-0.5B:${voice}`),
+            default: "FunAudioLLM/CosyVoice2-0.5B:anna",
+            doc: "4 种男声、4 种女声；默认 anna 沉稳女声。语音由 AI 合成。",
+          },
+          {
+            name: "speed",
+            label: "语速",
+            control: "number",
+            min: 0.5,
+            max: 2,
+            default: 1,
+          },
+        ],
+      },
+    ],
+    paramsDoc:
+      "CosyVoice2 中文及多语言配音，经 /audio/speech 返回 WAV 音频。选择声音与语速后输入文稿即可生成，不支持单独的 instructions 参数。",
+  },
   // ─── audio (speech-to-text / 语音输入听写) ───
   {
     id: "openai-transcribe",

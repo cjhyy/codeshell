@@ -1,5 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
-import { resolvePanelAppBindingProjectPath, validateToolArgsStrict } from "@cjhyy/code-shell-core";
+import {
+  listInstalledPanelApps,
+  resolvePanelAppBindingProjectPath,
+  validateToolArgsStrict,
+} from "@cjhyy/code-shell-core";
 import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, type Stats } from "node:fs";
@@ -28,8 +32,22 @@ import {
   setPanelAppMediaReader,
   setPanelAppCaptureAuthorizer,
 } from "./panel-app-protocol.js";
+import {
+  PanelToolJobService,
+  createPanelToolExecutor,
+  toolJobLimits,
+  type ToolJobScope,
+  type ToolJob,
+  PanelResourceService,
+  panelConnections,
+  panelConnectionIds,
+  materializePanelConnections,
+  PanelBridgeError,
+  panelBridgeFailure,
+} from "@cjhyy/code-shell-server/panels";
+import { installedPanelAppRevision } from "./panel-apps-service.js";
+import { desktopPanelCapabilities } from "./panel-app-capabilities.js";
 import { PanelMediaService } from "./media/panel-media-service.js";
-import { MediaCaptionRenderer } from "./media/media-caption-renderer.js";
 import {
   PanelAppProcessService,
   panelExecutableDirectories,
@@ -354,7 +372,10 @@ function panelAgentTaskProgress(event: unknown): {
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Panel App call timed out")), timeoutMs);
+    const timer = setTimeout(
+      () => reject(new PanelBridgeError("TIMEOUT", "Panel App call timed out")),
+      timeoutMs,
+    );
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -376,7 +397,10 @@ export class PanelAppBridge {
   private readonly processService: PanelAppProcessService;
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
-  private readonly captionRenderer = new MediaCaptionRenderer();
+  private resourceService?: PanelResourceService;
+  private toolJobService?: PanelToolJobService;
+  private nextToolOwner = -1;
+  private readonly toolOwners = new Map<number, { scope: ToolJobScope; appTitle: string }>();
 
   constructor(private readonly options: PanelAppBridgeOptions) {
     setPanelAppCaptureAuthorizer(
@@ -396,13 +420,53 @@ export class PanelAppBridge {
       join(app.getPath("userData"), "panel-app-process-approvals.json"),
     );
     this.processService = new PanelAppProcessService({
+      isOwnerAuthorized: async (owner) => {
+        const task = this.toolOwners.get(owner.guestId);
+        if (task) return !!(await this.installedToolApp(task.scope).catch(() => null));
+        const binding = this.guests.get(owner.guestId);
+        return (
+          !!binding &&
+          !binding.guest.isDestroyed() &&
+          binding.resource.descriptor.appId === owner.appId &&
+          binding.resource.descriptor.revision === owner.revision &&
+          this.options.isPanelAppBound(binding.projectPath, owner.appId) &&
+          this.options.isWorkspaceTrusted(binding.cwd ?? binding.projectPath)
+        );
+      },
+      resolvePackageEntry: async (owner, name) => {
+        const task = this.toolOwners.get(owner.guestId);
+        if (task) {
+          const installed = await this.installedToolApp(task.scope);
+          const entry = installed.nativeEntries?.[name];
+          if (!entry)
+            throw new PanelBridgeError("NOT_SUPPORTED", "Installed tool entry is missing");
+          return { path: join(installed.installPath, entry.entry), sha256: entry.sha256 };
+        }
+        const binding = this.guests.get(owner.guestId);
+        const entry = binding?.resource.descriptor.nativeEntries?.[name];
+        if (!binding || !entry || binding.resource.descriptor.revision !== owner.revision)
+          throw new PanelBridgeError("REVOKED", "Installed tool entry is unavailable");
+        return { path: join(binding.resource.root, entry.entry), sha256: entry.sha256 };
+      },
       extraPathDirectories: () =>
         panelExecutableDirectories(this.managedBinDirectory(), { home: app.getPath("home") }),
       isExecutionApproved: (scope) => processApprovalStore.has(scope),
       rememberExecutionApproval: (scope) => processApprovalStore.remember(scope),
       confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
         const owner = this.guests.get(guestId);
-        const window = owner ? BrowserWindow.fromId(owner.ownerWindowId) : null;
+        const task = this.toolOwners.get(guestId);
+        const taskGuest =
+          task &&
+          [...this.guests.values()].find(
+            (binding) =>
+              binding.resource.descriptor.appId === task.scope.appId &&
+              binding.projectPath === task.scope.projectPath,
+          );
+        const window = owner
+          ? BrowserWindow.fromId(owner.ownerWindowId)
+          : taskGuest
+            ? BrowserWindow.fromId(taskGuest.ownerWindowId)
+            : BrowserWindow.getFocusedWindow();
         if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
         const decision = await dialog.showMessageBox(window, {
           type: "warning",
@@ -564,17 +628,21 @@ export class PanelAppBridge {
     });
     ipcMain.handle("panel-app:get-context", (event) => this.contextFor(event.sender));
     ipcMain.handle("panel-app:call", (event, method: string, params?: unknown) =>
-      this.call(event.sender, method, params),
+      this.call(event.sender, method, params).catch(panelBridgeFailure),
     );
   }
 
   /** Restore durable media work after Host trust has been loaded, independent of guests. */
-  initializeMedia(): Promise<void> {
-    return this.getMediaService().initialize();
+  async initializeMedia(): Promise<void> {
+    await this.getResourceService().initialize();
+    await this.getToolJobService().initialize();
+    await this.getMediaService().initialize();
   }
 
-  shutdownMedia(): Promise<void> {
-    return this.mediaService?.shutdown() ?? Promise.resolve();
+  async shutdownMedia(): Promise<void> {
+    await this.toolJobService?.shutdown();
+    await this.mediaService?.shutdown();
+    await this.resourceService?.shutdown();
   }
 
   registerGuest(
@@ -637,6 +705,8 @@ export class PanelAppBridge {
   revokeAppId(appId: string): void {
     this.agentTaskService.cancelApp(appId);
     void this.mediaService?.cancelApp(appId).catch(() => {});
+    void this.toolJobService?.cancelApp(appId).catch(() => {});
+    void this.resourceService?.cancelApp(appId).catch(() => {});
     for (const [guestId, binding] of this.guests) {
       if (binding.resource.descriptor.appId !== appId) continue;
       this.revokeGuest(guestId);
@@ -867,6 +937,7 @@ export class PanelAppBridge {
       theme: input.theme === "light" || input.theme === "dark" ? input.theme : "system",
       locale: typeof input.locale === "string" ? input.locale.slice(0, 16) : "en",
       apiVersion: PANEL_APP_API_VERSION,
+      ...this.capabilitiesFor(binding),
       ...(binding.resource.descriptor.permissions.includes("context.session") && input.sessionId
         ? { sessionId: input.sessionId, busy: input.busy === true }
         : {}),
@@ -934,24 +1005,37 @@ export class PanelAppBridge {
     const limits = this.options.limits;
     const paramsLimit =
       limits?.maxParamsBytes ??
-      (method === "media.document.set" || method === "media.render"
+      (method === "media.document.set" || method === "media.render" || method === "tasks.start"
         ? 2 * 1024 * 1024 + 8 * 1024
-        : method === "workspace.writeText"
-          ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
-          : method === "storage.set"
-            ? this.storageQuotaBytes() + 8 * 1024
-            : MAX_PARAMS_BYTES);
+        : method === "process.write"
+          ? 128 * 1024
+          : method === "workspace.writeText"
+            ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
+            : method === "storage.set"
+              ? this.storageQuotaBytes() + 8 * 1024
+              : MAX_PARAMS_BYTES);
     if (jsonBytes(params) > paramsLimit) {
-      throw new Error("Panel App params are too large");
+      throw new PanelBridgeError("PARAMS_TOO_LARGE", "Panel App params are too large");
     }
     const now = Date.now();
-    // Bounded upload chunks have their own budget so they cannot starve UI calls.
-    const chunk = method === "media.recording.write";
+    // Bounded media transfer chunks share a budget so they cannot starve UI calls.
+    const chunk = [
+      "media.recording.write",
+      "media.assets.read",
+      "resources.upload.write",
+      "resources.read",
+      "process.write",
+      "process.get",
+    ].includes(method);
     const timestamps = (chunk ? binding.recordingWriteTimes : binding.callTimes).filter(
       (time) => now - time < (limits?.rateWindowMs ?? RATE_WINDOW_MS),
     );
     if (timestamps.length >= (limits?.maxCallsPerWindow ?? (chunk ? 512 : MAX_CALLS_PER_WINDOW)))
-      throw new Error("Panel App rate limit exceeded");
+      throw new PanelBridgeError(
+        "RATE_LIMITED",
+        "Panel App rate limit exceeded",
+        Math.max(1, (timestamps[0] ?? now) + (limits?.rateWindowMs ?? RATE_WINDOW_MS) - now),
+      );
     timestamps.push(now);
     if (chunk) binding.recordingWriteTimes = timestamps;
     else binding.callTimes = timestamps;
@@ -971,28 +1055,37 @@ export class PanelAppBridge {
                   method === "media.export" ||
                   method === "filesystem.pickDirectory" ||
                   method === "process.spawn" ||
+                  method === "tasks.start" ||
+                  method === "credentials.connections.authorizeProcess" ||
                   method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
                 : CALL_TIMEOUT_MS),
     );
     const resultLimit =
       limits?.maxResultBytes ??
-      (method === "media.document.get"
-        ? 2 * 1024 * 1024 + 8 * 1024
-        : method === "workspace.readText"
-          ? MAX_WORKSPACE_READ_BYTES * 6 + 8 * 1024
-          : method === "workspace.list"
-            ? MAX_WORKSPACE_LIST_RESULT_BYTES
-            : MAX_RESULT_BYTES);
+      (method === "tasks.get" ||
+      method === "tasks.start" ||
+      method === "tasks.retry" ||
+      method === "tasks.cancel"
+        ? 5 * 1024 * 1024
+        : method === "process.get"
+          ? 2 * 1024 * 1024
+          : method === "media.document.get"
+            ? 2 * 1024 * 1024 + 8 * 1024
+            : method === "workspace.readText"
+              ? MAX_WORKSPACE_READ_BYTES * 6 + 8 * 1024
+              : method === "workspace.list"
+                ? MAX_WORKSPACE_LIST_RESULT_BYTES
+                : MAX_RESULT_BYTES);
     if (jsonBytes(result) > resultLimit) {
-      throw new Error("Panel App result is too large");
+      throw new PanelBridgeError("RESULT_TOO_LARGE", "Panel App result is too large");
     }
     return result;
   }
 
   private requirePermission(binding: GuestBinding, permission: string): void {
     if (!binding.resource.descriptor.permissions.includes(permission as never)) {
-      throw new Error(`Panel App permission denied: ${permission}`);
+      throw new PanelBridgeError("PERMISSION_DENIED", `Panel App permission denied: ${permission}`);
     }
   }
 
@@ -1004,16 +1097,222 @@ export class PanelAppBridge {
     }
   }
 
+  private capabilitiesFor(binding: GuestBinding) {
+    return desktopPanelCapabilities(binding.resource.descriptor.permissions, {
+      resources: this.getResourceService().capabilities(),
+      tasks: { available: true, ...toolJobLimits },
+      audio: !!this.options.audioTranscription,
+      cookies: !!this.options.cookieCredentials,
+      automations: !!this.options.automations,
+      mediaMethods: [
+        "media.status",
+        "media.import",
+        "media.export",
+        "media.assets.list",
+        "media.assets.get",
+        "media.assets.read",
+        "media.document.get",
+        "media.document.set",
+        "media.recording.begin",
+        "media.recording.write",
+        "media.recording.get",
+        "media.recording.finish",
+        "media.recording.cancel",
+        "media.jobs.list",
+        "media.jobs.get",
+        "media.jobs.cancel",
+        "media.jobs.retry",
+        "media.jobs.recipe",
+        "media.document.versions",
+        "media.transcript",
+        "media.analysis",
+        "media.reveal",
+      ],
+      limits: this.options.limits,
+    });
+  }
+
+  private async installedToolApp(scope: ToolJobScope) {
+    if (
+      !this.options.isPanelAppBound(scope.projectPath, scope.appId) ||
+      !this.options.isWorkspaceTrusted(scope.projectPath)
+    )
+      throw new PanelBridgeError("REVOKED", "Tool task authorization was revoked");
+    const installed = (await listInstalledPanelApps()).find((item) => item.id === scope.appId);
+    if (
+      !installed ||
+      installedPanelAppRevision(installed) !== scope.revision ||
+      !installed.permissions.includes("process") ||
+      !installed.permissions.includes("resources")
+    )
+      throw new PanelBridgeError("REVOKED", "Installed tool task version or permissions changed");
+    return installed;
+  }
+
+  private toolSummary(job: ToolJob) {
+    const { input: _input, result: _result, ...summary } = job;
+    return summary;
+  }
+
+  private getToolJobService(): PanelToolJobService {
+    if (this.toolJobService) return this.toolJobService;
+    const executor = createPanelToolExecutor({
+      processes: this.processService,
+      resources: this.getResourceService(),
+      owner: (job, send) => {
+        const guestId = this.nextToolOwner--;
+        const binding = [...this.guests.values()].find(
+          (binding) =>
+            binding.resource.descriptor.appId === job.scope.appId &&
+            binding.projectPath === job.scope.projectPath,
+        );
+        const appTitle = binding?.resource.descriptor.title ?? job.scope.appId;
+        this.toolOwners.set(guestId, { scope: job.scope, appTitle });
+        return { guestId, appId: job.scope.appId, appTitle, revision: job.scope.revision, send };
+      },
+      releaseOwner: (owner) => {
+        this.toolOwners.delete(owner.guestId);
+      },
+      authorize: async (scope) => {
+        await this.installedToolApp(scope);
+      },
+      authorizeConnections: async (scope) => {
+        if (!(await this.installedToolApp(scope)).permissions.includes("credentials.connections"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
+      },
+      appDataDirectory: async (scope) => {
+        await this.installedToolApp(scope);
+        const path = join(app.getPath("userData"), "panel-app-data", scope.appId);
+        await mkdir(path, { recursive: true, mode: 0o700 });
+        return path;
+      },
+      sealedRoot: join(app.getPath("userData"), "panel-app-sealed"),
+    });
+    this.toolJobService = new PanelToolJobService({
+      rootDir: join(app.getPath("userData"), "panel-tool-jobs"),
+      ...executor,
+      isAuthorized: async (scope) => !!(await this.installedToolApp(scope).catch(() => null)),
+      onEvent: (job) => {
+        for (const binding of this.guests.values())
+          if (
+            !binding.guest.isDestroyed() &&
+            binding.resource.descriptor.appId === job.scope.appId &&
+            binding.projectPath === job.scope.projectPath &&
+            binding.resource.descriptor.revision === job.scope.revision &&
+            binding.resource.descriptor.permissions.includes("process") &&
+            binding.resource.descriptor.permissions.includes("resources")
+          )
+            binding.guest.send("panel-app:event", {
+              event: "tasks.changed",
+              payload: this.toolSummary(job),
+            });
+      },
+    });
+    return this.toolJobService;
+  }
+
+  private async dispatchToolJobs(binding: GuestBinding, method: string, params: unknown) {
+    this.requirePermission(binding, "process");
+    this.requirePermission(binding, "resources");
+    await this.trustedWorkspaceRoot(binding);
+    const scope = {
+      appId: binding.resource.descriptor.appId,
+      projectPath: binding.projectPath,
+      revision: binding.resource.descriptor.revision,
+    };
+    const input = (params ?? {}) as {
+      id?: string;
+      entry?: string;
+      input?: unknown;
+      recovery?: "manual" | "retry";
+      requestKey?: string;
+      offset?: number;
+      limit?: number;
+    };
+    const service = this.getToolJobService();
+    if (method === "tasks.start") {
+      const entry = (await this.installedToolApp(scope)).nativeEntries?.[input.entry ?? ""];
+      if (!entry)
+        throw new PanelBridgeError("NOT_SUPPORTED", "Installed native tool is unavailable");
+      return service.start(scope, {
+        entry: { name: input.entry!, sha256: entry.sha256 },
+        input: input.input,
+        recovery: input.recovery ?? "manual",
+        requestKey: input.requestKey,
+      });
+    }
+    if (method === "tasks.list") {
+      const offset = input.offset ?? 0,
+        limit = input.limit ?? 50;
+      if (
+        !Number.isSafeInteger(offset) ||
+        offset < 0 ||
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > 50
+      )
+        throw new PanelBridgeError("INVALID_ARGUMENT", "Invalid task page");
+      return (await service.list(scope))
+        .slice(offset, offset + limit)
+        .map((job) => this.toolSummary(job));
+    }
+    if (method === "tasks.get") return service.get(scope, input.id!);
+    if (method === "tasks.cancel") return service.cancel(scope, input.id!);
+    if (method === "tasks.retry") return service.retry(scope, input.id!);
+    throw new PanelBridgeError("NOT_SUPPORTED", "Unknown tool task operation");
+  }
+
+  private getResourceService(): PanelResourceService {
+    this.resourceService ??= new PanelResourceService({
+      rootDirectory: join(app.getPath("userData"), "panel-app-media"),
+      isScopeAuthorized: (scope) =>
+        this.options.isPanelAppBound(scope.projectPath, scope.appId) &&
+        this.options.isWorkspaceTrusted(scope.projectPath),
+    });
+    return this.resourceService;
+  }
+
+  private async authorizeConnections(binding: GuestBinding, params: unknown) {
+    this.requirePermission(binding, "credentials.connections");
+    this.requirePermission(binding, "process");
+    const input = params as {
+      connectionIds?: unknown;
+      executableHandle?: unknown;
+      argumentName?: unknown;
+    };
+    const ids = panelConnectionIds(input?.connectionIds);
+    const cwd = await this.trustedWorkspaceRoot(binding);
+    if (typeof input.executableHandle !== "string" || typeof input.argumentName !== "string")
+      throw new PanelBridgeError(
+        "INVALID_ARGUMENT",
+        "Connection handoff requires an executable and argument",
+      );
+    const sealed = await materializePanelConnections(
+      join(app.getPath("userData"), "panel-app-sealed"),
+      cwd,
+      ids,
+    );
+    try {
+      this.assertProjectBinding(binding);
+      return await this.processService.grantFileArgument(this.processOwner(binding), {
+        executableHandle: input.executableHandle,
+        argumentName: input.argumentName,
+        path: sealed.path,
+        cleanup: sealed.cleanup,
+      });
+    } catch (error) {
+      sealed.cleanup();
+      throw error;
+    }
+  }
+
   private getMediaService(): PanelMediaService {
     this.mediaService ??= new PanelMediaService({
       rootDirectory: join(app.getPath("userData"), "panel-app-media"),
       isScopeAuthorized: (scope) =>
         this.options.isPanelAppBound(scope.projectPath, scope.appId) &&
         this.options.isWorkspaceTrusted(scope.projectPath),
-      renderCaptionPng: (request, context) => this.captionRenderer.render(request, context),
       onChanged: (scope, job) => {
-        if (["succeeded", "failed", "cancelled"].includes(job.status))
-          this.captionRenderer.close(job.id);
         for (const binding of this.guests.values()) {
           if (
             !binding.guest.isDestroyed() &&
@@ -1107,11 +1406,31 @@ export class PanelAppBridge {
   }
 
   private async dispatch(binding: GuestBinding, method: string, params: unknown): Promise<unknown> {
+    if (method.startsWith("tasks.")) return this.dispatchToolJobs(binding, method, params);
+    if (method.startsWith("resources.")) {
+      this.requirePermission(binding, "resources");
+      await this.trustedWorkspaceRoot(binding);
+      const scope = { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath };
+      if (method === "resources.materialize" || method === "resources.capture")
+        this.requirePermission(binding, "process");
+      return this.getResourceService().dispatch(scope, method, params, {
+        resolveDirectory: (handle) =>
+          this.processService.directoryPath(this.processOwner(binding), handle),
+      });
+    }
+    if (method === "credentials.connections.list") {
+      this.requirePermission(binding, "credentials.connections");
+      return panelConnections(await this.trustedWorkspaceRoot(binding));
+    }
+    if (method === "credentials.connections.authorizeProcess")
+      return this.authorizeConnections(binding, params);
     if (method.startsWith("media.")) {
       this.requirePermission(binding, "media");
       return this.dispatchMedia(binding, method, params);
     }
     switch (method) {
+      case "context.get":
+        return binding.context;
       case "storage.get":
         this.requirePermission(binding, "storage");
         return this.storageGet(binding, params);
@@ -1218,6 +1537,18 @@ export class PanelAppBridge {
       case "process.info":
         this.requirePermission(binding, "process");
         return panelProcessInfo();
+      case "process.resolveEntry":
+        this.requirePermission(binding, "process");
+        return this.processService.resolveEntry(this.processOwner(binding), params);
+      case "process.get":
+        this.requirePermission(binding, "process");
+        return this.processService.get(this.processOwner(binding), params);
+      case "process.write":
+        this.requirePermission(binding, "process");
+        return this.processService.write(this.processOwner(binding), params);
+      case "process.end":
+        this.requirePermission(binding, "process");
+        return this.processService.end(this.processOwner(binding), params);
       case "process.spawn":
         this.requirePermission(binding, "process");
         return this.processService.start(this.processOwner(binding), params);
@@ -1234,7 +1565,7 @@ export class PanelAppBridge {
         this.requirePermission(binding, "process");
         return this.openProcessDirectory(binding, params);
       default:
-        throw new Error(`unknown Panel App method: ${method}`);
+        throw new PanelBridgeError("NOT_SUPPORTED", `unknown Panel App method: ${method}`);
     }
   }
 

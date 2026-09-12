@@ -108,4 +108,110 @@ describe("speech connections", () => {
     ])
       expect(isSpeechEndpointAllowed(url)).toBe(false);
   });
+
+  test("CosyVoice connections expose supported Chinese speech voices and defaults without credentials", () => {
+    const model = "FunAudioLLM/CosyVoice2-0.5B";
+    const instance: ModelInstance = {
+      id: "chinese-narration",
+      catalogId: "siliconflow-speech",
+      tag: "speech",
+      model,
+      credentialId: "siliconflow-key",
+    };
+    const settings = SettingsSchema.parse({
+      modelConnections: [instance],
+      credentials: [
+        {
+          id: "siliconflow-key",
+          catalogId: "siliconflow-speech",
+          apiKey: "TEST-ONLY-SILICONFLOW-KEY",
+        },
+      ],
+      defaults: { speech: instance.id },
+    });
+    const result = speechModelsFromSettings(settings, BUILTIN_CATALOG);
+    expect(result.models).toHaveLength(1);
+    const resolved = result.models[0]!;
+    expect(result.defaultModelId).toBe(resolved.description.id);
+    expect(resolved.baseUrl).toBe("https://api.siliconflow.cn/v1");
+    expect(resolved.model).toBe(model);
+    expect(resolved.apiKey).toBe("TEST-ONLY-SILICONFLOW-KEY");
+    expect(resolved.defaultRate).toBe(1);
+    expect(resolved.defaultInstructions).toBeUndefined();
+    expect(resolved.description.supportsInstructions).toBe(false);
+    expect(resolved.description.defaultVoiceId).toBe(`${model}:anna`);
+    expect(resolved.description.voices.map((voice) => voice.id)).toEqual(
+      ["alex", "benjamin", "charles", "david", "anna", "bella", "claire", "diana"].map(
+        (voice) => `${model}:${voice}`,
+      ),
+    );
+    expect(JSON.stringify(resolved.description)).not.toContain("TEST-ONLY-SILICONFLOW-KEY");
+    expect(JSON.stringify(resolved.description)).not.toContain("api.siliconflow.cn");
+    for (const paramValues of [
+      { voice: "anna" },
+      { voice: "coral" },
+      { instructions: "不能静默忽略" },
+      { speed: 0.25 },
+      { speed: 4 },
+    ]) {
+      expect(
+        speechModelsFromSettings(
+          {
+            ...settings,
+            modelConnections: [{ ...instance, paramValues }],
+          },
+          BUILTIN_CATALOG,
+        ).models,
+      ).toHaveLength(0);
+    }
+  });
+
+  test("CosyVoice can share a same-provider credential but cannot receive OpenAI or foreign endpoint keys", () => {
+    const catalog = [
+      ...BUILTIN_CATALOG,
+      {
+        id: "siliconflow-text",
+        tag: "text" as const,
+        adapterKind: "openai",
+        displayName: "Configured SiliconFlow text provider",
+        description: "Test configured provider",
+        defaultBaseUrl: "https://api.siliconflow.cn/v1",
+      },
+    ];
+    const instance: ModelInstance = {
+      id: "chinese-narration",
+      catalogId: "siliconflow-speech",
+      tag: "speech",
+      model: "FunAudioLLM/CosyVoice2-0.5B",
+      credentialId: "shared-key",
+    };
+    const sharedKey = {
+      id: "shared-key",
+      catalogId: "siliconflow-text",
+      apiKey: "TEST-ONLY-SHARED-KEY",
+    };
+    expect(
+      speechModelsFromSettings(
+        {
+          modelConnections: [instance],
+          credentials: [sharedKey],
+        },
+        catalog,
+      ).models,
+    ).toHaveLength(1);
+    for (const credential of [
+      { ...sharedKey, catalogId: "openai" },
+      { ...sharedKey, baseUrl: "https://foreign.example/v1" },
+    ]) {
+      expect(
+        speechModelsFromSettings(
+          {
+            modelConnections: [instance],
+            credentials: [credential],
+          },
+          catalog,
+        ).models,
+      ).toHaveLength(0);
+    }
+  });
 });

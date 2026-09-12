@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
-## [Unreleased]
+## [0.9.11] - 2026-09-13
+
+- Move Video Studio processing and model installers out of Desktop into reviewed
+  Panel tools, so updating a video or voice engine no longer requires Host changes.
+- Add API 14 resource upload/direct hand-off, package entry hashes, bounded process
+  stdin and exit receipts, Desktop background tasks, selected connection handoffs,
+  and permission-aware capabilities with structured transport errors.
+- Preserve existing media IDs, project/worktree resource scope, document revisions
+  and historical job recipes while the Panel takes over processing and retries.
+- Validate with local package-release, resource/process isolation and Desktop bridge
+  checks, plus real FFmpeg extraction and capture through the installed Panel entry.
 
 ## [0.9.10] - 2026-09-11
 

@@ -9,6 +9,20 @@ import {
   validateToolArgsStrict,
   type InstalledPanelApp,
 } from "@cjhyy/code-shell-core";
+import {
+  panelRuntimeApiVersion,
+  panelProcessMethods,
+  panelResourceMethods,
+  panelRuntimeCapabilities,
+  PanelBridgeError,
+  panelBridgeFailure,
+} from "./bridge-contract.js";
+import { PanelResourceService } from "./resources/service.js";
+import {
+  panelConnections,
+  panelConnectionIds,
+  materializePanelConnections,
+} from "./connections.js";
 import { PanelRuntimeServices } from "./runtime-services.js";
 import { handlePanelProcessDirectory } from "./process-files.js";
 import {
@@ -35,13 +49,10 @@ const METHODS = [
   "external.open",
   "agent.submitPrompt",
   "notifications.send",
-  "process.find",
-  "process.info",
-  "process.spawn",
-  "process.cancel",
-  "filesystem.getKnownDirectory",
-  "filesystem.pickDirectory",
-  "filesystem.openDirectory",
+  ...panelProcessMethods,
+  ...panelResourceMethods,
+  "credentials.connections.list",
+  "credentials.connections.authorizeProcess",
   "agent.task.models",
   "agent.task.start",
   "agent.task.list",
@@ -61,6 +72,8 @@ const PERMISSIONS = new Set([
   "agent.submitPrompt",
   "notifications.send",
   "process",
+  "resources",
+  "credentials.connections",
   "agent.task",
 ]);
 const MIME: Record<string, string> = {
@@ -105,6 +118,7 @@ interface Grant {
   files: Map<string, string>;
   expiresAt: number;
   calls: number[];
+  transfers: number[];
   context: Record<string, unknown>;
   events: Array<{ id: number; event: string; payload: unknown }>;
   eventCounter: number;
@@ -149,6 +163,8 @@ export interface PanelRuntimeOptions {
   }) => PanelTaskHost;
 }
 function methodPermission(method: string): string {
+  if (method.startsWith("resources.")) return "resources";
+  if (method.startsWith("credentials.connections.")) return "credentials.connections";
   if (method.startsWith("storage.")) return "storage";
   if (method.startsWith("process.") || method.startsWith("filesystem.")) return "process";
   if (method.startsWith("agent.task.")) return "agent.task";
@@ -315,7 +331,7 @@ function bridgeScript(id: string, origin: string): string {
         const item = pending.get(data.requestId);
         if (!item) return;
         pending.delete(data.requestId); clearTimeout(item.timer);
-        data.error ? item.reject(new Error(String(data.error))) : item.resolve(data.result);
+        data.error ? item.reject(Object.assign(new Error(String(data.error)), { code: typeof data.code === "string" ? data.code : "OPERATION_FAILED", ...(typeof data.retryAfterMs === "number" ? { retryAfterMs: data.retryAfterMs } : {}) })) : item.resolve(data.result);
       } else if (data.type === "codeshell-panel:event") {
         if (data.event === "tools.invoke") {
           const call = data.payload;
@@ -342,6 +358,7 @@ function bridgeScript(id: string, origin: string): string {
       value: Object.freeze({
         getContext: () => ask("context.get"),
         call: ask,
+        callResult: (method, params) => ask(method, params).then(value => ({ ok: true, value }), error => ({ ok: false, error: { code: error.code || "OPERATION_FAILED", message: error.message, ...(typeof error.retryAfterMs === "number" ? { retryAfterMs: error.retryAfterMs } : {}) } })),
         on: (name, listener) => {
           if (!["context.changed", "process.output", "process.exit", "agent.task.changed", "media.job.changed"].includes(name) || typeof listener !== "function") {
             throw new Error("Invalid event listener");
@@ -433,6 +450,18 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const byGuest = new Map<number, Grant>();
   const processes = new PanelAppProcessService({
     approvalScope: "guest",
+    resolvePackageEntry: async (owner, name) => {
+      const grant = byGuest.get(owner.guestId);
+      const entry = grant?.app.nativeEntries?.[name];
+      if (
+        !grant ||
+        !entry ||
+        !(await authorized(grant)) ||
+        entry.sha256 !== grant.files.get(entry.entry)
+      )
+        throw new PanelBridgeError("REVOKED", "Installed tool entry is unavailable or changed");
+      return { path: join(grant.root, entry.entry), sha256: entry.sha256 };
+    },
     extraPathDirectories: () =>
       panelExecutableDirectories(join(options.dataDir, "panel-bin"), { home: homedir() }),
     isOwnerAuthorized: async (owner) => {
@@ -449,6 +478,20 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           `程序将在服务端运行，可使用当前运行用户的文件与网络权限。\n程序：${input.executablePath}`,
         ))
       );
+    },
+  });
+  const resources = new PanelResourceService({
+    rootDirectory: join(options.dataDir, "panel-app-media"),
+    isScopeAuthorized: async (scope) => {
+      for (const grant of grants.values())
+        if (
+          grant.app.id === scope.appId &&
+          scope.projectPath === (options.bindingCwd ?? options.cwd) &&
+          grant.app.permissions.includes("resources") &&
+          (await authorized(grant))
+        )
+          return true;
+      return false;
     },
   });
   const agentTasks = options.createAgentTasks?.({ onPanelAction }) ?? options.agentTasks;
@@ -717,10 +760,32 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         visible: true,
         theme: input.theme === "dark" ? "dark" : "light",
         locale: typeof input.locale === "string" ? input.locale.slice(0, 32) : "zh-CN",
-        apiVersion: agentTasks ? 9 : 7,
+        apiVersion: panelRuntimeApiVersion,
+        capabilities: panelRuntimeCapabilities({
+          process: app.permissions.includes("process"),
+          resources: app.permissions.includes("resources") ? resources.capabilities() : undefined,
+          limits: {
+            maxParamsBytes: 3 * 1024 * 1024,
+            maxResultBytes: 3 * 1024 * 1024,
+            rateWindowMs: 60000,
+            maxCallsPerWindow: 240,
+            maxTransferCallsPerWindow: 2048,
+            callTimeoutMs: 60000,
+            consentTimeoutMs: 50000,
+          },
+        }),
         host: options.host,
         availableMethods: METHODS.filter((method) => {
           if (method.startsWith("agent.task.") && !agentTasks) return false;
+          if (
+            [
+              "resources.materialize",
+              "resources.capture",
+              "credentials.connections.authorizeProcess",
+            ].includes(method) &&
+            !app.permissions.includes("process")
+          )
+            return false;
           if (method.startsWith("tools.")) return !!app.agent?.tools.length;
           return (
             method === "context.get" || app.permissions.includes(methodPermission(method) as never)
@@ -751,6 +816,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         context,
         expiresAt: now() + GRANT_TTL,
         calls: [],
+        transfers: [],
         events: [],
         eventCounter: 0,
         eventBytes: 0,
@@ -784,9 +850,24 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       params = input.params;
     if (typeof method !== "string" || !METHODS.includes(method))
       error(501, "这个面板功能尚未接入网页版，请在桌面客户端使用：" + String(method).slice(0, 80));
-    grant.calls = grant.calls.filter((time) => time > now() - 60_000);
-    if (grant.calls.length >= 240) error(429, "面板请求过于频繁。");
-    grant.calls.push(now());
+    const transfer = [
+      "resources.upload.write",
+      "resources.read",
+      "process.write",
+      "process.get",
+    ].includes(method);
+    const history = (transfer ? grant.transfers : grant.calls).filter(
+      (time) => time > now() - 60000,
+    );
+    if (history.length >= (transfer ? 2048 : 240))
+      throw new PanelBridgeError(
+        "RATE_LIMITED",
+        "面板请求过于频繁。",
+        Math.max(1, history[0]! + 60000 - now()),
+      );
+    history.push(now());
+    if (transfer) grant.transfers = history;
+    else grant.calls = history;
     if (method === "context.get") return grant.context;
     if (method.startsWith("tools.")) {
       const name = (params as { name?: unknown } | undefined)?.name;
@@ -798,6 +879,57 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     }
     const permission = methodPermission(method);
     if (!grant.app.permissions.includes(permission as never)) error(403, "面板未声明这个权限。");
+    const processOwner = {
+      guestId: grant.guestId,
+      appId: grant.app.id,
+      appTitle: grant.app.title.default,
+      revision: grant.revision,
+      send: (event: "process.output" | "process.exit", payload: Record<string, unknown>) =>
+        emit(grant, event, payload),
+    };
+    if (method.startsWith("resources.")) {
+      if (
+        ["resources.materialize", "resources.capture"].includes(method) &&
+        !grant.app.permissions.includes("process")
+      )
+        error(403, "资源工具交接需要process权限。");
+      return resources.dispatch(
+        { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd },
+        method,
+        params,
+        { resolveDirectory: (handle) => processes.directoryPath(processOwner, handle) },
+      );
+    }
+    if (method === "credentials.connections.list") return panelConnections(options.cwd);
+    if (method === "credentials.connections.authorizeProcess") {
+      if (!grant.app.permissions.includes("process")) error(403, "连接交接需要process权限。");
+      const value = params as {
+        connectionIds?: unknown;
+        executableHandle?: unknown;
+        argumentName?: unknown;
+      };
+      const ids = panelConnectionIds(value?.connectionIds);
+      if (typeof value.executableHandle !== "string" || typeof value.argumentName !== "string")
+        error(400, "连接交接参数无效。");
+      if (!(await confirm(grant, "允许面板工具使用这些连接？", ids.join(", "))))
+        error(403, "已取消连接交接。");
+      const sealed = await materializePanelConnections(
+        join(options.dataDir, "panel-sealed"),
+        options.cwd,
+        ids,
+      );
+      try {
+        return await processes.grantFileArgument(processOwner, {
+          executableHandle: value.executableHandle,
+          argumentName: value.argumentName,
+          path: sealed.path,
+          cleanup: sealed.cleanup,
+        });
+      } catch (error) {
+        sealed.cleanup();
+        throw error;
+      }
+    }
     if (method.startsWith("agent.task.")) {
       if (!agentTasks) error(501, "当前宿主未提供独立面板任务。");
       if (
@@ -822,6 +954,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       };
       if (method === "process.find") return processes.findExecutable(owner, params);
       if (method === "process.info") return panelProcessInfo();
+      if (method === "process.resolveEntry") return processes.resolveEntry(owner, params);
+      if (method === "process.get") return processes.get(owner, params);
+      if (method === "process.write") return processes.write(owner, params);
+      if (method === "process.end") return processes.end(owner, params);
       if (method === "process.spawn") return processes.start(owner, params);
       if (method === "process.cancel") return processes.cancel(owner, params);
       if (method === "filesystem.openDirectory") {
@@ -966,9 +1102,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       clearInterval(reaper);
       for (const grant of grants.values()) remove(grant);
       processes.close();
-      void agentTasks?.close();
       assets.clear();
       for (const preparation of preparing) preparation.cancelled = true;
+      return Promise.all([resources.shutdown(), Promise.resolve(agentTasks?.close())]).then(
+        () => undefined,
+      );
     },
     async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
       const url = new URL(request.url ?? "/", "http://localhost");
@@ -1065,14 +1203,35 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         } else if (request.method === "POST" && match[2] === "call") {
           const value = await call(grant, await body(request));
           if (!(await authorized(grant))) error(410, "面板授权已失效，请重新打开。");
+          if (Buffer.byteLength(JSON.stringify(value) ?? "null") > 3 * 1024 * 1024)
+            throw new PanelBridgeError(
+              "RESULT_TOO_LARGE",
+              "Panel result exceeds the response limit",
+            );
           json(response, 200, value);
         } else error(405, "不支持这个面板请求。");
       } catch (cause) {
-        let status = cause instanceof PanelManagementError ? cause.status : 400;
+        let status =
+          cause instanceof PanelManagementError
+            ? cause.status
+            : cause instanceof PanelBridgeError && cause.code === "RATE_LIMITED"
+              ? 429
+              : 400;
         if (activeGrant && !(await options.isAuthorized(request))) status = 401;
         else if (activeGrant && !(await authorized(activeGrant))) status = 410;
         json(response, status, {
           error: cause instanceof Error ? cause.message : "面板请求失败。",
+          code:
+            status === 410
+              ? "REVOKED"
+              : status === 403
+                ? "PERMISSION_DENIED"
+                : status === 501
+                  ? "NOT_SUPPORTED"
+                  : panelBridgeFailure(cause).__codeshellPanelError.code,
+          ...(cause instanceof PanelBridgeError && cause.retryAfterMs !== undefined
+            ? { retryAfterMs: cause.retryAfterMs }
+            : {}),
         });
       }
       return true;

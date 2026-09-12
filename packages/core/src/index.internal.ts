@@ -364,3 +364,5 @@ export {
   getAutoUpdateDisabledReason,
   type UpdateInfo,
 } from "./updater.js";
+
+export { resolveInstance, type ResolvedInstance } from "./model-catalog/resolve.js";

@@ -223,14 +223,28 @@ export function PanelHost({
       ...context,
       ...(typeof context.sessionId === "string" ? { busy: callbacks.current.busy } : {}),
     });
-    const reply = (source: WindowProxy, requestId: string, result?: unknown, failure?: string) => {
+    const reply = (
+      source: WindowProxy,
+      requestId: string,
+      result?: unknown,
+      failure?: string,
+      details?: { code?: string; retryAfterMs?: number },
+    ) => {
       if (disposed || !scope.grant || source !== frame.current?.contentWindow) return;
       source.postMessage(
         {
           type: "codeshell-panel:response",
           instanceId: scope.grant.instanceId,
           requestId,
-          ...(failure ? { error: failure } : { result }),
+          ...(failure
+            ? {
+                error: failure,
+                ...(details?.code ? { code: details.code } : {}),
+                ...(details?.retryAfterMs !== undefined
+                  ? { retryAfterMs: details.retryAfterMs }
+                  : {}),
+              }
+            : { result }),
         },
         "*",
       );
@@ -550,6 +564,9 @@ export function PanelHost({
             requestId,
             undefined,
             cause instanceof Error ? cause.message : "面板请求失败。",
+            cause instanceof ApiError
+              ? { code: cause.code, retryAfterMs: cause.retryAfterMs }
+              : undefined,
           );
         }
       } finally {

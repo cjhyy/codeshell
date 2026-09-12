@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createServer, type IncomingMessage } from "node:http";
 import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -13,6 +13,7 @@ import {
   type PanelTaskScope,
 } from "./runtime.js";
 import { resolvePanelExecutable } from "./process-service.js";
+import { PanelResourceService } from "./resources/service.js";
 import type { PanelSnapshot } from "./types.js";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -150,7 +151,7 @@ async function fixture(
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   cleanups.push(async () => {
-    runtime.close();
+    await runtime.close();
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
@@ -184,6 +185,100 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("Web capabilities disclose actual confirmation and result limits and mask native hand-offs", async () => {
+    const f = await fixture({
+      permissions: ["context.workspace", "resources", "credentials.connections"],
+    });
+    const grant = await f.prepare();
+    const context = grant.context as any;
+    expect(context.capabilities.bridge).toMatchObject({
+      consentTimeoutMs: 50000,
+      callTimeoutMs: 60000,
+      maxResultBytes: 3 * 1024 * 1024,
+    });
+    expect(context.capabilities.resources).toMatchObject({ materialize: false, capture: false });
+    expect(context.capabilities.process).toBeUndefined();
+    expect(context.capabilities.tasks).toBeUndefined();
+    expect(context.availableMethods).toContain("resources.read");
+    expect(context.availableMethods).toContain("credentials.connections.list");
+    for (const method of [
+      "resources.materialize",
+      "resources.capture",
+      "credentials.connections.authorizeProcess",
+      "tasks.start",
+    ]) {
+      expect(context.availableMethods).not.toContain(method);
+    }
+    const denied = await f.api(`${grant.instanceId}/call`, "POST", {
+      method: "resources.capture",
+      params: { directoryHandle: "not-granted", path: "result.txt" },
+    });
+    expect(denied.status).toBe(403);
+  });
+
+  test("Web rejects an oversized Host result with a bounded structured error", async () => {
+    let responseValue: unknown = { models: [] };
+    const f = await fixture({
+      permissions: ["context.workspace", "agent.task"],
+      agentTasks: {
+        async call() {
+          return responseValue;
+        },
+        revokeInstance() {},
+        close() {},
+      },
+    });
+    const grant = await f.prepare();
+    const call = () =>
+      f.api(`${grant.instanceId}/call`, "POST", { method: "agent.task.models", params: {} });
+    const small = await call();
+    expect(small.status).toBe(200);
+    expect(await small.json()).toEqual({ models: [] });
+    responseValue = { models: ["x".repeat(3 * 1024 * 1024)] };
+    const oversized = await call();
+    expect(oversized.status).toBe(400);
+    const text = await oversized.text();
+    expect(text.length).toBeLessThan(1024);
+    expect(JSON.parse(text)).toMatchObject({ code: "RESULT_TOO_LARGE" });
+  });
+
+  test("Web shutdown awaits resource cleanup before resolving", async () => {
+    const f = await fixture({ permissions: ["context.workspace", "resources"] });
+    await f.prepare();
+    const original = PanelResourceService.prototype.shutdown;
+    let release!: () => void;
+    let entered!: () => void;
+    const cleanupGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const cleanupStarted = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const shutdown = spyOn(PanelResourceService.prototype, "shutdown").mockImplementation(
+      async function (this: PanelResourceService) {
+        await original.call(this);
+        entered();
+        await cleanupGate;
+      },
+    );
+    let resolved = false;
+    const closing = f.runtime.close().then(() => {
+      resolved = true;
+    });
+    try {
+      await cleanupStarted;
+      expect(shutdown).toHaveBeenCalledTimes(1);
+      expect(resolved).toBe(false);
+      release();
+      await closing;
+      expect(resolved).toBe(true);
+    } finally {
+      release();
+      await closing;
+      shutdown.mockRestore();
+    }
+  });
+
   test("project asset bridge and CSP use the public prefix while prepare stays relative", async () => {
     const publicPathPrefix = "/p/7bc54c17-1af8-4105-87c1-f4e5c6638998";
     const f = await fixture({ publicPathPrefix });
@@ -863,7 +958,8 @@ describe("Panel HTTP host operations", () => {
     });
     f.app.agent!.skills = ["agent/skills/research/SKILL.md"];
     const grant = await f.prepare();
-    expect(grant.context.apiVersion).toBe(9);
+    expect(grant.context.apiVersion).toBe(14);
+    expect(grant.context.capabilities.bridge.structuredErrors).toBe(true);
     expect(grant.context.availableMethods).toContain("agent.task.start");
     const input = {
       method: "agent.task.start",

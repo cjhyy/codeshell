@@ -33,6 +33,44 @@ Core entry contract: `.` = stable public SDK; `/extension` = capability-package
 contract (coding/arena/pet import ONLY this); `/internal` = in-repo host surface
 (tui/desktop import host-only helpers from here, never from `.`).
 
+## Panel feature ownership
+
+Panel features are plugin-owned. Keep models, dependency versions/installers,
+data providers, domain workflows, document schemas, templates, and editing rules
+in the independently versioned Panel package. A Panel feature must not require a
+new CodeShell branch merely because its model or business logic changes.
+
+Change CodeShell only when an existing interface cannot provide a reusable Host
+capability: for example authorized files, package entry handles, process/task
+lifecycle, credentials, or capability discovery. Establish the actual gap and
+concrete consumers or a system-boundary reason first; ordinary helper reuse
+belongs in the Panel SDK/library.
+Native tools must run outside the Host process through reviewed interfaces.
+If a Host media operation remains, keep its limits and parameters domain-neutral;
+voice-reference duration, timeline frame rate, and specific engine choices are
+Panel policy. Preserve existing callers while migrating legacy coupled code.
+
+Existing media services are not automatically Host-owned merely because they
+are reusable. Separate resource custody and process enforcement from asset
+catalogs, progress calculation/UI, cancellation cleanup, and retry/recovery
+policy. Put domain behavior in the Panel and ordinary shared implementation in
+the Panel SDK; retain only the authority/lifecycle mechanism in the Host.
+
+The API 14 migration is implemented: pure-Node resources, reviewed package entry
+grants, bounded process stdin/receipts, selected connection handoffs and Desktop
+background tool tasks are generic Host infrastructure. Video Studio's TTS,
+FFmpeg/Whisper processing, captions, HyperFrames templates and editing rules now
+run in its own package. Desktop `media/` is a legacy custody/document/history
+adapter; do not reintroduce media processors there. Resource IDs, the original
+scope/storage layout, media URLs and document revisions remain compatible.
+Use `availableMethods` and `capabilities.bridge` rather than assuming methods from
+an API number. Web advertises its supported subset; full native Panel workflow
+adaptation remains separate. See `docs/panel-native-tools.md` and the release
+acceptance matrix for implementation evidence versus publication status.
+
+This ownership rule does not merge the existing Panel App and Agent Plugin
+package formats or installation registries.
+
 Root package `@cjhyy/code-shell` is the meta package that installs core + tui and exposes the `code-shell` bin.
 
 ## Build & Test

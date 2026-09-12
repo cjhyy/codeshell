@@ -352,7 +352,19 @@ try {
   assert(context.cwd === projectDir, "workspace permission was not scoped correctly");
   assert(context.trusted === false, "workspace trust must be decided by main");
   assert(context.theme === "dark" && context.locale === "en", "host context was not bound");
-  assert(context.apiVersion === 13, "Panel App bridge API v13 was not exposed");
+  assert(context.apiVersion === 14, "Panel App bridge API v14 was not exposed");
+  assert(
+    Array.isArray(context.availableMethods) && context.availableMethods.includes("storage.get"),
+    "authorized methods were not advertised",
+  );
+  const resultEnvelope = await execute(
+    firstView,
+    'window.codeshellPanel.callResult("unsupported.operation", {})',
+  );
+  assert(
+    resultEnvelope.ok === false && resultEnvelope.error.code === "NOT_SUPPORTED",
+    "structured error did not survive Electron isolation",
+  );
   const agentToolResult = await win.evaluate(
     ({ appDescriptorId }) =>
       window.codeshell.invokePanelAppAgentTool({

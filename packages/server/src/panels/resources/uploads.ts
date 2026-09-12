@@ -1,30 +1,22 @@
 import { createHash, randomUUID, type Hash } from "node:crypto";
 import { constants } from "node:fs";
 import { open, readdir, rm } from "node:fs/promises";
-import { basename, extname, join } from "node:path";
-import { MediaLibrary, mediaSourceIdentity } from "./media-library.js";
+import { basename, join } from "node:path";
+import { MediaLibrary, mediaSourceIdentity } from "./library.js";
 import {
   mediaDirectory,
   mediaScopeKey,
   normalizeMediaScope,
   readMediaJson,
   writeMediaJson,
-} from "./media-storage.js";
-import type { MediaAsset, MediaScope } from "./media-types.js";
+} from "./storage.js";
+import type { MediaAsset, MediaScope } from "./types.js";
 
-const MIME_EXTENSIONS: Record<string, string> = {
-  "video/webm": ".webm",
-  "video/mp4": ".mp4",
-  "audio/webm": ".webm",
-  "audio/mp4": ".m4a",
-  "audio/ogg": ".ogg",
-  "audio/wav": ".wav",
-};
-const SESSION_ID = /^recording-[a-f0-9-]{36}$/;
+const SESSION_ID = /^upload-[a-f0-9-]{36}$/;
 const MAX_FILE_BYTES = 20 * 1024 ** 3;
 const CHUNK_BYTES = 32 * 1024;
 type State = "uploading" | "finishing" | "finished" | "cancelled" | "failed";
-export interface RecordingSession {
+export interface ResourceUploadSession {
   sessionId: string;
   mimeType: string;
   state: State;
@@ -34,11 +26,8 @@ export interface RecordingSession {
   maxFileBytes: number;
   expiresAt: number;
 }
-export interface RecordingResult {
+export interface ResourceUploadResult {
   asset: MediaAsset;
-  /** Present only in receipts produced by older Hosts. New uploads are opaque resources. */
-  inspection?: unknown;
-  provenance: { kind: "recording" };
 }
 interface StoredSession {
   schemaVersion: 1;
@@ -50,16 +39,18 @@ interface StoredSession {
   receivedBytes: number;
   nextSequence: number;
   expectedBytes?: number;
+  expectedSha256?: string;
+  contentSha256: string;
   createdAt: number;
   updatedAt: number;
   expiresAt: number;
   lastChunk?: { sequence: number; offset: number; bytes: number; sha256: string };
-  result?: RecordingResult;
+  result?: ResourceUploadResult;
 }
-export interface RecordingIngestOptions {
+export interface ResourceUploadOptions {
   rootDirectory: string;
   library: MediaLibrary;
-  isScopeAuthorized(scope: MediaScope): boolean;
+  isScopeAuthorized(scope: MediaScope): boolean | Promise<boolean>;
   maxFileBytes?: number;
   maxChunkBytes?: number;
   maxActivePerScope?: number;
@@ -76,47 +67,46 @@ function object(value: unknown, allowed: string[]): Record<string, unknown> {
     Array.isArray(value) ||
     Object.keys(value).some((key) => !allowed.includes(key))
   )
-    throw new Error("Invalid recording parameters");
+    throw new Error("Invalid resource upload parameters");
   return value as Record<string, unknown>;
 }
 function sessionId(value: unknown): string {
   if (typeof value !== "string" || !SESSION_ID.test(value))
-    throw new Error("Invalid recording session ID");
+    throw new Error("Invalid resource upload session ID");
   return value;
 }
 function integer(value: unknown, min: number, max: number, label: string): number {
   if (!Number.isSafeInteger(value) || (value as number) < min || (value as number) > max)
-    throw new Error(`Invalid recording ${label}`);
+    throw new Error(`Invalid resource upload ${label}`);
   return value as number;
 }
 function mimeType(value: unknown): string {
-  if (typeof value !== "string" || value.length > 200)
-    throw new Error("Unsupported recording MIME type");
-  // Preserve the legacy recording envelope. Format analysis is performed by Panel tools.
-  const mime = value.split(";", 1)[0]!.trim().toLowerCase();
-  if (!Object.hasOwn(MIME_EXTENSIONS, mime)) throw new Error("Unsupported recording MIME type");
-  return mime;
+  if (value === undefined) return "application/octet-stream";
+  if (
+    typeof value !== "string" ||
+    value.length > 200 ||
+    !/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(value)
+  )
+    throw new Error("Invalid resource MIME type");
+  return value.toLowerCase();
 }
-function nameFor(value: unknown, mime: string): string {
-  if (value !== undefined && (typeof value !== "string" || value.length > 240))
-    throw new Error("Invalid recording name");
-  const name = basename(typeof value === "string" ? value : "recording")
-    .replace(/[\\/\x00-\x1f\x7f]/g, "_")
-    .trim();
-  return `${name.slice(0, name.length - extname(name).length).slice(0, 200) || "recording"}${MIME_EXTENSIONS[mime]}`;
+function nameFor(value: unknown, _mime: string): string {
+  if (typeof value !== "string" || !value || value.length > 240 || /[\x00-\x1f\x7f]/.test(value))
+    throw new Error("Invalid resource name");
+  return basename(value).replaceAll("\\", "_");
 }
 function active(record: StoredSession): boolean {
   return record.state === "uploading" || record.state === "finishing";
 }
 function invalidMedia(): Error {
-  return Object.assign(new Error("Recording bytes failed integrity verification"), {
-    name: "InvalidRecordingError",
+  return Object.assign(new Error("Resource upload bytes failed integrity validation"), {
+    name: "InvalidResourceUploadError",
   });
 }
 
-/** Scope-bound, streaming recordings. Acknowledged chunks and final results survive Host restart. */
-export class MediaRecordingIngest {
-  private readonly options: Required<RecordingIngestOptions>;
+/** Scope-bound, streaming resource uploads. Acknowledged chunks and final results survive Host restart. */
+export class ResourceUploadIngest {
+  private readonly options: Required<ResourceUploadOptions>;
   private readonly records = new Map<string, StoredSession>();
   private readonly locks = new Map<string, Promise<unknown>>();
   private readonly hashes = new Map<string, { bytes: number; hash: Hash }>();
@@ -125,9 +115,8 @@ export class MediaRecordingIngest {
   private initialization?: Promise<void>;
   private cleanupTimer?: ReturnType<typeof setInterval>;
   private stopping = false;
-  constructor(options: RecordingIngestOptions) {
+  constructor(options: ResourceUploadOptions) {
     this.options = {
-      maxFileBytes: MAX_FILE_BYTES,
       maxChunkBytes: CHUNK_BYTES,
       maxActivePerScope: 4,
       maxActiveSessions: 64,
@@ -135,6 +124,7 @@ export class MediaRecordingIngest {
       finishTimeoutMs: 10 * 60 * 1000,
       now: Date.now,
       ...options,
+      maxFileBytes: options.maxFileBytes ?? MAX_FILE_BYTES,
     };
     integer(this.options.maxFileBytes, 1, MAX_FILE_BYTES, "file budget");
     integer(this.options.maxChunkBytes, 1, CHUNK_BYTES, "chunk budget");
@@ -146,16 +136,16 @@ export class MediaRecordingIngest {
   private key(scope: MediaScope, id: string): string {
     return `${mediaScopeKey(scope)}:${id}`;
   }
-  private authorize(scope: MediaScope): void {
+  private async authorize(scope: MediaScope): Promise<void> {
     normalizeMediaScope(scope);
-    if (!this.options.isScopeAuthorized(scope))
-      throw new Error("Recording access is no longer authorized");
-    if (this.stopping) throw new Error("Recording service is shutting down");
+    if (!(await this.options.isScopeAuthorized(scope)))
+      throw new Error("Resource upload access is no longer authorized");
+    if (this.stopping) throw new Error("Resource upload service is shutting down");
   }
   private async directory(scope: MediaScope, id: string, create = false): Promise<string> {
     return mediaDirectory(
       this.options.rootDirectory,
-      ["scopes", mediaScopeKey(scope), "recordings", sessionId(id)],
+      ["scopes", mediaScopeKey(scope), "uploads", sessionId(id)],
       create,
     );
   }
@@ -168,7 +158,7 @@ export class MediaRecordingIngest {
       if (this.locks.get(key) === operation) this.locks.delete(key);
     }
   }
-  private view(record: StoredSession): RecordingSession {
+  private view(record: StoredSession): ResourceUploadSession {
     return {
       sessionId: record.sessionId,
       mimeType: record.mimeType,
@@ -196,9 +186,11 @@ export class MediaRecordingIngest {
       mediaScopeKey(record.scope) !== key ||
       !["uploading", "finishing", "finished", "cancelled", "failed"].includes(record.state) ||
       record.mimeType !== mimeType(record.mimeType) ||
-      record.name !== nameFor(record.name, record.mimeType)
+      record.name !== nameFor(record.name, record.mimeType) ||
+      !/^[a-f0-9]{64}$/.test(record.contentSha256) ||
+      (record.expectedSha256 !== undefined && !/^[a-f0-9]{64}$/.test(record.expectedSha256))
     )
-      throw new Error("Invalid stored recording session");
+      throw new Error("Invalid stored resource upload session");
     integer(record.receivedBytes, 0, this.options.maxFileBytes, "stored size");
     integer(record.nextSequence, 0, Number.MAX_SAFE_INTEGER, "stored sequence");
     integer(record.createdAt, 0, Number.MAX_SAFE_INTEGER, "created time");
@@ -219,14 +211,14 @@ export class MediaRecordingIngest {
         record.lastChunk.offset + record.lastChunk.bytes !== record.receivedBytes ||
         !/^[a-f0-9]{64}$/.test(record.lastChunk.sha256)
       )
-        throw new Error("Invalid stored recording chunk");
+        throw new Error("Invalid stored resource upload chunk");
     } else if (record.nextSequence !== 0 || record.receivedBytes !== 0)
-      throw new Error("Stored recording lacks its last acknowledged chunk");
+      throw new Error("Stored resource upload lacks its last acknowledged chunk");
     if (
       record.state === "finished" &&
       (!record.result || !/^asset-[a-f0-9]{64}$/.test(record.result.asset?.id))
     )
-      throw new Error("Invalid finished recording");
+      throw new Error("Invalid finished resource upload");
     return record;
   }
   initialize(): Promise<void> {
@@ -236,7 +228,7 @@ export class MediaRecordingIngest {
         if (!scopeEntry.isDirectory() || !/^[a-f0-9]{64}$/.test(scopeEntry.name)) continue;
         const directory = await mediaDirectory(
           this.options.rootDirectory,
-          ["scopes", scopeEntry.name, "recordings"],
+          ["scopes", scopeEntry.name, "uploads"],
           false,
         ).catch(() => null);
         if (!directory) continue;
@@ -244,7 +236,7 @@ export class MediaRecordingIngest {
           if (!entry.isDirectory() || !SESSION_ID.test(entry.name)) continue;
           const child = await mediaDirectory(
             this.options.rootDirectory,
-            ["scopes", scopeEntry.name, "recordings", entry.name],
+            ["scopes", scopeEntry.name, "uploads", entry.name],
             false,
           );
           try {
@@ -282,12 +274,12 @@ export class MediaRecordingIngest {
     return this.initialization;
   }
   private async record(scope: MediaScope, id: string): Promise<StoredSession> {
-    this.authorize(scope);
+    await this.authorize(scope);
     const record = this.records.get(this.key(scope, id));
-    if (!record) throw new Error("Unknown recording session in this project");
+    if (!record) throw new Error("Unknown resource upload session in this project");
     if (record.expiresAt <= this.options.now()) {
       await this.remove(record);
-      throw new Error("Recording session expired; start another recording");
+      throw new Error("Resource upload session expired; start another resource upload");
     }
     await this.directory(scope, id);
     return record;
@@ -309,30 +301,37 @@ export class MediaRecordingIngest {
         await this.locked(key, () => this.remove(record));
       }
   }
-  async begin(scope: MediaScope, raw: unknown): Promise<RecordingSession> {
-    this.authorize(scope);
+  async begin(scope: MediaScope, raw: unknown): Promise<ResourceUploadSession> {
+    await this.authorize(scope);
     await this.initialize();
-    const input = object(raw, ["mimeType", "name", "expectedBytes"]);
+    const input = object(raw, ["mimeType", "name", "expectedBytes", "expectedSha256"]);
     const mime = mimeType(input.mimeType),
       name = nameFor(input.name, mime);
     const expectedBytes =
       input.expectedBytes === undefined
         ? undefined
         : integer(input.expectedBytes, 1, this.options.maxFileBytes, "expected size");
+    if (
+      input.expectedSha256 !== undefined &&
+      (typeof input.expectedSha256 !== "string" || !/^[a-f0-9]{64}$/.test(input.expectedSha256))
+    )
+      throw new Error("Invalid expected resource digest");
     await this.cleanupExpired();
     return this.locked("begin", async () => {
-      this.authorize(scope);
+      await this.authorize(scope);
       // Completed/failed receipts are small but also bounded until their TTL.
       if (this.records.size >= 2048)
-        throw new Error("Too many retained recording sessions; wait for expired sessions to clear");
+        throw new Error(
+          "Too many retained resource upload sessions; wait for expired sessions to clear",
+        );
       const all = [...this.records.values()].filter(active);
       if (
         all.length >= this.options.maxActiveSessions ||
         all.filter((record) => mediaScopeKey(record.scope) === mediaScopeKey(scope)).length >=
           this.options.maxActivePerScope
       )
-        throw new Error("Too many active recording uploads; finish or cancel one first");
-      const id = `recording-${randomUUID()}`,
+        throw new Error("Too many active resource uploads; finish or cancel one first");
+      const id = `upload-${randomUUID()}`,
         time = this.options.now();
       const directory = await this.directory(scope, id, true);
       const handle = await open(join(directory, "content.partial"), "wx", 0o600);
@@ -346,27 +345,34 @@ export class MediaRecordingIngest {
         state: "uploading",
         receivedBytes: 0,
         nextSequence: 0,
+        contentSha256: createHash("sha256").digest("hex"),
+        ...(input.expectedSha256 === undefined
+          ? {}
+          : { expectedSha256: input.expectedSha256 as string }),
         createdAt: time,
         updatedAt: time,
         expiresAt: time + this.options.ttlMs,
         ...(expectedBytes === undefined ? {} : { expectedBytes }),
       };
       try {
+        await this.authorize(scope);
         await this.save(record);
+        await this.authorize(scope);
       } catch (error) {
         await rm(directory, { recursive: true, force: true });
+        this.records.delete(this.key(scope, id));
         throw error;
       }
       return this.view(record);
     });
   }
-  async get(scope: MediaScope, raw: unknown): Promise<RecordingSession> {
+  async get(scope: MediaScope, raw: unknown): Promise<ResourceUploadSession> {
     await this.initialize();
     const id = sessionId(object(raw, ["sessionId"]).sessionId);
     return this.locked(this.key(scope, id), async () => this.view(await this.record(scope, id)));
   }
-  async write(scope: MediaScope, raw: unknown): Promise<RecordingSession> {
-    this.authorize(scope);
+  async write(scope: MediaScope, raw: unknown): Promise<ResourceUploadSession> {
+    await this.authorize(scope);
     await this.initialize();
     const input = object(raw, ["sessionId", "sequence", "offset", "dataBase64"]),
       id = sessionId(input.sessionId);
@@ -377,19 +383,19 @@ export class MediaRecordingIngest {
       input.dataBase64.length > Math.ceil(this.options.maxChunkBytes / 3) * 4 ||
       !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(input.dataBase64)
     )
-      throw new Error("Recording chunks must use bounded canonical base64");
+      throw new Error("Resource upload chunks must use bounded canonical base64");
     const bytes = Buffer.from(input.dataBase64, "base64");
     if (
       !bytes.length ||
       bytes.length > this.options.maxChunkBytes ||
       bytes.toString("base64") !== input.dataBase64
     )
-      throw new Error("Invalid recording chunk size or encoding");
+      throw new Error("Invalid resource upload chunk size or encoding");
     const digest = createHash("sha256").update(bytes).digest("hex"),
       key = this.key(scope, id);
     return this.locked(key, async () => {
       const record = await this.record(scope, id);
-      if (record.state !== "uploading") throw new Error("Recording no longer accepts chunks");
+      if (record.state !== "uploading") throw new Error("Resource upload no longer accepts chunks");
       if (
         record.lastChunk?.sequence === sequence &&
         record.lastChunk.offset === offset &&
@@ -398,9 +404,11 @@ export class MediaRecordingIngest {
       )
         return this.view(record);
       if (sequence !== record.nextSequence || offset !== record.receivedBytes)
-        throw new Error("Recording chunks must arrive in sequence at the acknowledged offset");
+        throw new Error(
+          "Resource upload chunks must arrive in sequence at the acknowledged offset",
+        );
       if (offset + bytes.length > (record.expectedBytes ?? this.options.maxFileBytes))
-        throw new Error("Recording exceeds its file budget");
+        throw new Error("Resource upload exceeds its file budget");
       const handle = await open(
         join(await this.directory(scope, id), "content.partial"),
         constants.O_RDWR | (constants.O_NOFOLLOW ?? 0),
@@ -408,7 +416,7 @@ export class MediaRecordingIngest {
       try {
         const info = await handle.stat();
         if (!info.isFile() || info.size < record.receivedBytes)
-          throw new Error("Stored recording bytes are incomplete");
+          throw new Error("Stored resource upload bytes are incomplete");
         // A crash between data fsync and metadata commit can leave an unacknowledged
         // tail. Discard only that tail before accepting the client's retry.
         if (info.size > record.receivedBytes) await handle.truncate(record.receivedBytes);
@@ -423,25 +431,27 @@ export class MediaRecordingIngest {
               Math.min(buffer.length, offset - hash.bytes),
               hash.bytes,
             );
-            if (!bytesRead) throw new Error("Stored recording stopped making progress");
+            if (!bytesRead) throw new Error("Stored resource upload stopped making progress");
             hash.hash.update(buffer.subarray(0, bytesRead));
             hash.bytes += bytesRead;
           }
         }
+        if (hash.hash.copy().digest("hex") !== record.contentSha256) throw invalidMedia();
         let written = 0;
         while (written < bytes.length) {
-          this.authorize(scope);
+          await this.authorize(scope);
           const result = await handle.write(
             bytes,
             written,
             bytes.length - written,
             offset + written,
           );
-          if (!result.bytesWritten) throw new Error("Recording write stopped making progress");
+          if (!result.bytesWritten)
+            throw new Error("Resource upload write stopped making progress");
           written += result.bytesWritten;
         }
         await handle.sync();
-        this.authorize(scope);
+        await this.authorize(scope);
         const time = this.options.now();
         const next: StoredSession = {
           ...record,
@@ -450,6 +460,7 @@ export class MediaRecordingIngest {
           updatedAt: time,
           expiresAt: time + this.options.ttlMs,
           lastChunk: { sequence, offset, bytes: bytes.length, sha256: digest },
+          contentSha256: hash.hash.copy().update(bytes).digest("hex"),
         };
         await this.save(next);
         hash.hash.update(bytes);
@@ -465,8 +476,13 @@ export class MediaRecordingIngest {
       }
     });
   }
-  async finish(scope: MediaScope, raw: unknown): Promise<RecordingResult> {
-    this.authorize(scope);
+  async finish(
+    scope: MediaScope,
+    raw: unknown,
+    externalSignal?: AbortSignal,
+  ): Promise<ResourceUploadResult> {
+    externalSignal?.throwIfAborted();
+    await this.authorize(scope);
     await this.initialize();
     const id = sessionId(object(raw, ["sessionId"]).sessionId),
       key = this.key(scope, id);
@@ -481,7 +497,7 @@ export class MediaRecordingIngest {
         !record.receivedBytes ||
         (record.expectedBytes !== undefined && record.expectedBytes !== record.receivedBytes)
       )
-        throw new Error("Recording is incomplete or no longer accepts finalization");
+        throw new Error("Resource upload is incomplete or no longer accepts finalization");
       const controller = new AbortController();
       this.finishes.set(key, controller);
       // cancel may be queued behind a write before finish acquires the lock.
@@ -489,6 +505,7 @@ export class MediaRecordingIngest {
       if (this.cancellations.has(key)) controller.abort();
       const signal = AbortSignal.any([
         controller.signal,
+        ...(externalSignal ? [externalSignal] : []),
         AbortSignal.timeout(this.options.finishTimeoutMs),
       ]);
       const directory = await this.directory(scope, id),
@@ -507,7 +524,7 @@ export class MediaRecordingIngest {
         let read = 0;
         while (read < record.receivedBytes) {
           signal.throwIfAborted();
-          this.authorize(scope);
+          await this.authorize(scope);
           const { bytesRead } = await handle.read(
             buffer,
             0,
@@ -519,8 +536,13 @@ export class MediaRecordingIngest {
           read += bytesRead;
         }
         const sha256 = digest.digest("hex");
+        if (
+          sha256 !== record.contentSha256 ||
+          (record.expectedSha256 !== undefined && sha256 !== record.expectedSha256)
+        )
+          throw invalidMedia();
         signal.throwIfAborted();
-        this.authorize(scope);
+        await this.authorize(scope);
         const asset = await this.options.library.importFile(scope, path, {
           name: record.name,
           mimeType: record.mimeType,
@@ -532,8 +554,8 @@ export class MediaRecordingIngest {
         });
         if (asset.sha256 !== sha256 || asset.bytes !== record.receivedBytes) throw invalidMedia();
         signal.throwIfAborted();
-        this.authorize(scope);
-        const result: RecordingResult = { asset, provenance: { kind: "recording" } };
+        await this.authorize(scope);
+        const result: ResourceUploadResult = { asset };
         const time = this.options.now();
         await this.save({
           ...record,
@@ -550,7 +572,7 @@ export class MediaRecordingIngest {
       } catch (error) {
         await handle?.close();
         handle = undefined;
-        const invalid = (error as Error).name === "InvalidRecordingError";
+        const invalid = (error as Error).name === "InvalidResourceUploadError";
         if (invalid) {
           await rm(path, { force: true });
           this.hashes.delete(key);
@@ -564,7 +586,7 @@ export class MediaRecordingIngest {
     });
   }
   async cancel(scope: MediaScope, raw: unknown): Promise<{ cancelled: true }> {
-    this.authorize(scope);
+    await this.authorize(scope);
     await this.initialize();
     const id = sessionId(object(raw, ["sessionId"]).sessionId),
       key = this.key(scope, id);
@@ -573,7 +595,8 @@ export class MediaRecordingIngest {
     try {
       return await this.locked(key, async () => {
         const record = await this.record(scope, id);
-        if (record.state === "finished") throw new Error("Recording is already a managed asset");
+        if (record.state === "finished")
+          throw new Error("Resource upload is already a managed asset");
         await rm(join(await this.directory(scope, id), "content.partial"), { force: true });
         this.hashes.delete(key);
         await this.save({ ...record, state: "cancelled" });

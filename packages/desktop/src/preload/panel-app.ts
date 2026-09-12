@@ -5,7 +5,8 @@ type PanelAppEvent =
   | "process.output"
   | "process.exit"
   | "agent.task.changed"
-  | "media.job.changed";
+  | "media.job.changed"
+  | "tasks.changed";
 type ToolHandler = (args: Record<string, unknown>) => unknown | Promise<unknown>;
 
 interface AgentToolRequest {
@@ -90,7 +91,33 @@ const api = Object.freeze({
         throw new Error("audio.transcribe recording exceeds 25 MiB");
       }
     }
-    return ipcRenderer.invoke("panel-app:call", method, params);
+    return ipcRenderer.invoke("panel-app:call", method, params).then((value) => {
+      const failure = value?.__codeshellPanelError;
+      if (failure && typeof failure.code === "string" && typeof failure.message === "string")
+        throw Object.assign(new Error(failure.message), {
+          code: failure.code,
+          ...(typeof failure.retryAfterMs === "number"
+            ? { retryAfterMs: failure.retryAfterMs }
+            : {}),
+        });
+      return value;
+    });
+  },
+  callResult: async (method: string, params?: unknown) => {
+    try {
+      const value = await ipcRenderer.invoke("panel-app:call", method, params);
+      return value?.__codeshellPanelError
+        ? { ok: false, error: value.__codeshellPanelError }
+        : { ok: true, value };
+    } catch (error) {
+      return {
+        ok: false,
+        error: {
+          code: "OPERATION_FAILED",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
   },
   registerTool: (name: string, handler: ToolHandler) => {
     if (!/^[a-z][a-z0-9_]{0,63}$/.test(name) || typeof handler !== "function") {
@@ -113,6 +140,7 @@ const api = Object.freeze({
         "process.exit",
         "agent.task.changed",
         "media.job.changed",
+        "tasks.changed",
       ].includes(event) ||
       typeof listener !== "function"
     ) {
