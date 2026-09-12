@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import {
@@ -13,10 +14,12 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DesktopEvalFailure,
+  inspectPrefixCache,
+  prefixDisplayMatches,
   executeDesktopScenario,
   normalizeVisibleText,
   scenarioFor,
@@ -52,6 +55,153 @@ export function isolatedEnvironment(source, home) {
     CODE_SHELL_DEV: "0",
     CODE_SHELL_VERBOSE_LOG: "0",
   };
+}
+
+const PREFIX_RENDER_SCRIPT = `
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { StreamingMarkdown } from "./src/renderer/messages/StreamingMarkdown";
+const props = JSON.parse(readFileSync(0, "utf8"));
+const render = (done) => renderToStaticMarkup(React.createElement(StreamingMarkdown, { ...props, done }));
+process.stdout.write(JSON.stringify({ streaming: render(false), done: render(true) }));
+`;
+
+/** Use the product's actual render component, not a permissive Markdown stripper. */
+export async function prepareRendererOracle(sourceRoot) {
+  if (!sourceRoot)
+    throw new DesktopEvalFailure(
+      "renderer_oracle_unavailable",
+      "Use --renderer-source-root with the frozen source for this packaged executable",
+    );
+  const root = await realpath(resolve(sourceRoot));
+  if (root === repo || root.startsWith(repo + "/"))
+    throw new DesktopEvalFailure(
+      "renderer_oracle_unavailable",
+      "The working repository is not a frozen renderer oracle",
+    );
+  const packageRoot = join(root, "packages/desktop");
+  const requireOracle = createRequire(join(packageRoot, "package.json"));
+  const ts = requireOracle("typescript");
+  const configPath = join(packageRoot, "tsconfig.json");
+  const config = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (config.error)
+    throw new DesktopEvalFailure(
+      "renderer_oracle_unavailable",
+      "Frozen renderer tsconfig could not be read",
+    );
+  const compiler = ts.parseJsonConfigFileContent(config.config, ts.sys, packageRoot).options;
+  const resolutionCache = ts.createModuleResolutionCache(packageRoot, (path) => path, compiler);
+  const files = {},
+    externals = new Set(),
+    queue = [join(packageRoot, "src/renderer/messages/StreamingMarkdown.tsx")];
+  while (queue.length) {
+    const path = await realpath(queue.pop());
+    if (!path.startsWith(root + "/") || path.includes("/node_modules/"))
+      throw new DesktopEvalFailure(
+        "renderer_oracle_unavailable",
+        "A local renderer import escaped the frozen source tree",
+      );
+    const key = relative(root, path);
+    if (files[key]) continue;
+    const bytes = await readFile(path);
+    files[key] = hash(bytes);
+    if (!/\.[cm]?[jt]sx?$/u.test(path)) continue;
+    for (const entry of ts.preProcessFile(bytes.toString("utf8"), true, true).importedFiles) {
+      const specifier = entry.fileName;
+      if (
+        !specifier.startsWith(".") &&
+        !specifier.startsWith("@/") &&
+        !specifier.startsWith("@ui/")
+      ) {
+        externals.add(specifier);
+        try {
+          const resolved = requireOracle.resolve(specifier, { paths: [dirname(path)] });
+          if (resolved.startsWith("/")) {
+            const actual = await realpath(resolved);
+            if (
+              actual.startsWith(join(root, "packages") + "/") &&
+              !actual.includes("/node_modules/")
+            )
+              queue.push(actual);
+          }
+        } catch {
+          /* Type-only or browser-conditional imports are recorded as external. */
+        }
+        continue;
+      }
+      const module = ts.resolveModuleName(
+        specifier,
+        path,
+        compiler,
+        ts.sys,
+        resolutionCache,
+      ).resolvedModule;
+      if (!module)
+        throw new DesktopEvalFailure(
+          "renderer_oracle_unavailable",
+          `Unresolved renderer import: ${specifier}`,
+        );
+      queue.push(module.resolvedFileName);
+    }
+  }
+  for (const path of [configPath, join(packageRoot, "package.json"), join(root, "bun.lock")])
+    if (await exists(path)) files[relative(root, path)] = hash(await readFile(path));
+  const sorted = Object.fromEntries(
+    Object.entries(files).sort(([left], [right]) => left.localeCompare(right)),
+  );
+  return {
+    sourceRoot: root,
+    entry: "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+    method:
+      "Bun --no-install; real React renderToStaticMarkup; detached-template textContent in the actual renderer",
+    localFiles: sorted,
+    manifestSha256: hash(JSON.stringify(sorted)),
+    externalImports: [...externals].sort(),
+  };
+}
+
+async function verifyRendererOracle(oracle) {
+  for (const [path, expected] of Object.entries(oracle.localFiles))
+    if (hash(await readFile(join(oracle.sourceRoot, path))) !== expected)
+      throw new DesktopEvalFailure(
+        "renderer_oracle_unavailable",
+        "Frozen renderer source changed during oracle execution",
+      );
+}
+
+export async function renderPrefixReference(text, options = {}) {
+  if (!options.sourceRoot)
+    throw new DesktopEvalFailure(
+      "renderer_oracle_unavailable",
+      "Explicit frozen renderer source root is required",
+    );
+  return new Promise((resolveReference, reject) => {
+    const child = execFile(
+      "bun",
+      ["--no-install", "-e", PREFIX_RENDER_SCRIPT],
+      {
+        cwd: join(options.sourceRoot, "packages/desktop"),
+        timeout: options.timeoutMs ?? 15000,
+        killSignal: "SIGKILL",
+        env: options.env ?? process.env,
+        maxBuffer: 2 * 1024 * 1024,
+      },
+      (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        try {
+          resolveReference(JSON.parse(stdout));
+        } catch (error) {
+          reject(error);
+        }
+      },
+    );
+    child.stdin.on("error", () => {});
+    child.stdin.end(JSON.stringify({ text, cwd: options.cwd, sessionId: options.sessionId }));
+  });
 }
 
 export async function workspaceManifest(folder) {
@@ -166,6 +316,7 @@ export async function runDesktopCase({
   trial = 1,
   seed = "0",
   executable,
+  rendererSourceRoot,
   output,
   model,
   proxy,
@@ -237,7 +388,7 @@ export async function runDesktopCase({
     if (stopped || Date.now() >= deadline)
       throw new DesktopEvalFailure("case_timeout", "Overall desktop case deadline reached");
   };
-  let watchdog;
+  let watchdog, prefixReference, rendererOracle;
   const ctx = {
     scenario,
     report,
@@ -489,16 +640,132 @@ export async function runDesktopCase({
       await writeFile(join(out, `${name}-transcript.json`), JSON.stringify(transcript, null, 2));
       return { snapshot, transcript };
     },
-    async cachedCursor(id) {
+    async cachedState(id) {
       const folder = join(codeShellHome, "desktop/transcript-cache");
       for (const file of await readdir(folder).catch(() => [])) {
         const cache = await readFile(join(folder, file), "utf8")
           .then(JSON.parse)
           .catch(() => undefined);
-        if (cache?.state?.sessionId === id)
-          return { snapshotSeq: cache.state.snapshotSeq, snapshotEpoch: cache.state.snapshotEpoch };
+        if (cache?.state?.sessionId === id) return cache.state;
       }
       return null;
+    },
+    async cachedCursor(id) {
+      const state = await ctx.cachedState(id);
+      return state
+        ? {
+            snapshotSeq: state.snapshotSeq,
+            snapshotEpoch: state.snapshotEpoch,
+            users: state.messages
+              .filter((message) => message.kind === "user")
+              .map((message) => ({
+                id: message.id,
+                clientMessageId: message.clientMessageId,
+                steerId: message.steerId,
+              })),
+          }
+        : null;
+    },
+    async preparePrefixReference(text) {
+      guard();
+      await verifyRendererOracle(rendererOracle);
+      prefixReference = await renderPrefixReference(text, {
+        sourceRoot: rendererOracle.sourceRoot,
+        cwd: workspace,
+        sessionId: report.facts.sessionId,
+        timeoutMs: Math.max(1, Math.min(15000, deadline - Date.now())),
+        env: isolatedEnvironment(process.env, home),
+      });
+      await verifyRendererOracle(rendererOracle);
+      report.facts.prefixRendererReference = {
+        ...rendererOracle,
+        htmlHashes: Object.fromEntries(
+          Object.entries(prefixReference).map(([state, html]) => [state, hash(html)]),
+        ),
+      };
+    },
+    async prefixUi() {
+      const evidence = await win.evaluate(
+        ({ reference, prompts }) => {
+          const normalize = (value) =>
+            String(value ?? "")
+              .replace(/\s+/gu, " ")
+              .trim();
+          const timeline = [
+            ...document.querySelectorAll(
+              '.cs-chat-transcript [data-message-kind="assistant"], .cs-chat-transcript .whitespace-pre-wrap.break-words',
+            ),
+          ].flatMap((node) => {
+            if (node.matches('[data-message-kind="assistant"]')) {
+              const copy = node.cloneNode(true);
+              copy.querySelectorAll(".cs-message-actions").forEach((footer) => footer.remove());
+              const text = normalize(copy.textContent);
+              return text
+                ? [{ kind: "assistant", text, state: node.getAttribute("data-message-state") }]
+                : [];
+            }
+            if (node.closest('[data-message-kind="assistant"]')) return [];
+            const text = normalize(node.textContent);
+            return prompts.includes(text) ? [{ kind: "user", text }] : [];
+          });
+          const anchors = timeline.flatMap((item, index) =>
+            item.kind === "user" && item.text === prompts[0] ? [index] : [],
+          );
+          const start = anchors.length === 1 ? anchors[0] : -1;
+          const next = timeline.findIndex((item, index) => index > start && item.kind === "user");
+          const replies =
+            start < 0
+              ? []
+              : timeline
+                  .slice(start + 1, next < 0 ? undefined : next)
+                  .filter((item) => item.kind === "assistant");
+          const reply = replies[0];
+          const html = reply && reference[reply.state];
+          // A detached template parses inert server output without touching the app DOM.
+          const template = document.createElement("template");
+          template.innerHTML = html ?? "";
+          const expected = normalize(template.content.textContent);
+          return { anchorCount: anchors.length, expected, replies, timeline };
+        },
+        { reference: prefixReference, prompts: scenario.input.prompts.map(normalizeVisibleText) },
+      );
+      return {
+        ...evidence,
+        passed:
+          evidence.anchorCount === 1 && prefixDisplayMatches(evidence.replies, evidence.expected),
+      };
+    },
+    async verifyInterruptedPrefix(stage, userCount) {
+      let state,
+        fingerprint,
+        stableSince = 0;
+      await ctx.until(async () => {
+        state = await ctx.cachedState(report.facts.sessionId);
+        if (
+          !state?.snapshotEpoch ||
+          !Number.isSafeInteger(state.snapshotSeq) ||
+          state.messages.filter((item) => item.kind === "user").length < userCount
+        )
+          return false;
+        const next = JSON.stringify(state);
+        if (next !== fingerprint) {
+          fingerprint = next;
+          stableSince = Date.now();
+        }
+        return Date.now() - stableSince >= 800;
+      }, "stable raw cache for interrupted reply");
+      const raw = inspectPrefixCache(state, {
+        sessionId: report.facts.sessionId,
+        clientMessageId: report.facts.interruptedClientMessageId,
+        rawPrefix: report.facts.held.deliveredText,
+        userCount,
+      });
+      const ui = await ctx.prefixUi();
+      const evidence = { stage, raw, ui };
+      report.facts.interruptedPrefixChecks ??= [];
+      report.facts.interruptedPrefixChecks.push(evidence);
+      ctx.check(raw.passed && ui.passed, stage + "-exact-raw-and-rendered-prefix", evidence);
+      return evidence;
     },
     async waitWriteApproval() {
       let pending;
@@ -629,6 +896,17 @@ export async function runDesktopCase({
     void ctx.close().catch(() => {});
   }, timeoutMs);
   try {
+    if (scenario.id === "interrupted-reply-later-restart") {
+      rendererOracle = await prepareRendererOracle(rendererSourceRoot);
+      // Validate the frozen component and Bun runtime before launching the app
+      // or spending a model request. The real prefix is rendered after it arrives.
+      await renderPrefixReference("", {
+        sourceRoot: rendererOracle.sourceRoot,
+        env: isolatedEnvironment(process.env, home),
+        timeoutMs: Math.max(1, Math.min(15000, deadline - Date.now())),
+      });
+      await verifyRendererOracle(rendererOracle);
+    }
     await mkdir(workspace, { recursive: true });
     for (const fixture of scenario.input.files) {
       const path = resolve(workspace, fixture.path);

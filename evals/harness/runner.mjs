@@ -15,6 +15,7 @@ export function parseArgs(args) {
   const flags = new Set(["live", "list", "validate", "help", "judge"]);
   const values = new Set([
     "executable",
+    "renderer-source-root",
     "connection",
     "cases",
     "trials",
@@ -97,7 +98,7 @@ export async function main(args = process.argv.slice(2)) {
   const options = parseArgs(args);
   if (options.help || !args.length) {
     console.log(
-      "Usage: bun run evals:list | bun run evals:validate | bun run evals:live --executable PATH [--connection ID] [--cases ID,ID] [--trials 1] [--seed 20260912] [--judge]",
+      "Usage: bun run evals:list | bun run evals:validate | bun run evals:live --executable PATH [--connection ID] [--cases ID,ID] [--trials 1] [--seed 20260912] [--renderer-source-root FROZEN_SOURCE] [--judge]",
     );
     console.log(
       "Live runs use paid real requests. Defaults: 30 requests, 4096 output tokens/request, 180 seconds/case; stop starting requests after $3 of REPORTED cost. Missing usage means total cost is unknown.",
@@ -171,6 +172,9 @@ export async function main(args = process.argv.slice(2)) {
     model: publicModel(model),
     budget,
     app,
+    rendererSourceRoot: options["renderer-source-root"]
+      ? resolve(options["renderer-source-root"])
+      : null,
     harnessHashes,
     semanticJudge: options.judge ? "same selected live model; advisory" : "disabled",
     trialsPerCase: options.trials,
@@ -227,6 +231,7 @@ export async function main(args = process.argv.slice(2)) {
             trial,
             seed: run.fixtureSeed,
             executable,
+            rendererSourceRoot: options["renderer-source-root"],
             output: caseOutput,
             model,
             proxy,

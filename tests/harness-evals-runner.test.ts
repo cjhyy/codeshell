@@ -55,3 +55,12 @@ test("CLI failure includes missing hard evidence and an enabled judge failure", 
   expect(runSucceeded([result])).toBe(false);
   expect(runSucceeded([])).toBe(false);
 });
+
+test("renderer oracle source is explicit and preserved for live adapter selection", () => {
+  expect(parseArgs(["--live", "--renderer-source-root", "/frozen/source"])).toMatchObject({
+    live: true,
+    "renderer-source-root": "/frozen/source",
+  });
+  expect(parseArgs([])["renderer-source-root"]).toBeUndefined();
+  expect(() => parseArgs(["--renderer-source-root"])).toThrow();
+});

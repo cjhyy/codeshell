@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "suiteVersion": "2026-09-12.2",
+  "suiteVersion": "2026-09-12.3",
   "id": "codeshell-runtime-reliability",
   "title": "真实故障回归案例库",
   "description": "从隔离验收的真实失败及明确标注的受控负例整理；合成输入可独立重建，不读取私人会话。",
@@ -1054,7 +1054,7 @@
     },
     {
       "id": "ordinary-steer-cache-cursor",
-      "version": 1,
+      "version": 2,
       "title": "普通聊天旧缓存游标重放导致完成回复重复",
       "adapter": "desktop",
       "executionCoverage": {
@@ -1115,6 +1115,11 @@
           "id": "cursor-consistency",
           "criterion": "旧缓存按所属epoch/cursor先回放，canonical缺尾或为空时仍保留真实snapshot尾。",
           "requiredEvidence": ["repository-regression-result"]
+        },
+        {
+          "id": "cache-alias-unique",
+          "criterion": "完整刷新与重启后，Main持久缓存中的两个用户意图各只有一行；同一steer的旧身份与canonical client身份不能各留一份。",
+          "requiredEvidence": ["durable-cache-state", "client-steer-id-map"]
         }
       ],
       "semanticRubric": {
@@ -1135,12 +1140,16 @@
       "repositoryRegression": [
         "packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx",
         "packages/desktop/src/renderer/transcriptHydration.prefix.test.ts",
-        "packages/desktop/src/renderer/automation/hydrateOrder.steer.test.ts"
+        "packages/desktop/src/renderer/automation/hydrateOrder.steer.test.ts",
+        "packages/desktop/src/main/session-transcript-cache.test.ts",
+        "packages/desktop/src/renderer/messages/TurnProcessGroupCard.test.tsx"
       ],
       "provenance": {
         "fixCommits": [
           "e554ac7cfd92a684554648be5fe1e87b20b5dddf",
-          "e6a2345c6d2868f3ad6b15eb199ce2645cef90b9"
+          "e6a2345c6d2868f3ad6b15eb199ce2645cef90b9",
+          "31282ff8cb5ab8cfaae6fec8e64f4db9f1ec7bfd",
+          "159cea6a417b04d740a0a775f6c0d916d6c47152"
         ],
         "artifacts": [
           {
@@ -1171,7 +1180,8 @@
       },
       "notes": [
         "派生cursor回归使用从实际事件重建的受控缓存前缀，不声称捕获到原刷新前瞬间的缓存。",
-        "canonical第二clientId可以不同于steerId，snapshot外壳clientId仍属于首输入，不能用该外壳给第二输入改身份。"
+        "canonical第二clientId可以不同于steerId，snapshot外壳clientId仍属于首输入，不能用该外壳给第二输入改身份。",
+        "v2增加真实模型Write→追加Read→final后发现的持久缓存alias唯一性断言；同轮还复现了已完成工具卡折叠隐藏追加用户请求。原v1所有失败与通过报告保持不变。"
       ]
     },
     {

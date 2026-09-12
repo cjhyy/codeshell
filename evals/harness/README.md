@@ -30,6 +30,10 @@
 
 Mimi 附件题 v2 只要求确认真实 File/drop 带入的文件名，并说明路径引用不代表已读取内容。Mimi 的文件检查需要委派工作；本题明确不要求读取或创建任务，以保持原排队/刷新故障的测试边界。真实模型的 Write/Read 由 `ordinary-steer-cache-cursor` 覆盖。
 
+普通对话题 v2 增加持久缓存的身份唯一性检查：真实模型执行 Write，消费追加的 Read 请求，两次刷新及完整重启后，界面与持久缓存都应保留两个用户意图各一次。原缓存把同一追加请求的旧身份与补齐后的身份保存成两行，真实模型验收已检出此问题；不能仅凭界面气泡数量判为修复。新增判据随 `suiteVersion: 2026-09-12.3` 发布，原 v1 运行记录不改写。
+
+本轮实际模型结果、旧包对照和新发现见 [2026-09-12 实测报告](PILOT-2026-09-12.md)。
+
 ## 案例格式
 
 顶层 `schemaVersion` 定义结构，`suiteVersion` 固定整批案例。每例使用稳定 `id` 和独立 `version`；改变输入、触发条件或判分标准时递增版本。
@@ -117,7 +121,9 @@ bun run --filter '@cjhyy/code-shell-core' build
 bun run evals:list
 bun run evals:validate
 bun run test:evals
-bun run evals:live --executable '/path/to/code-shell.app/Contents/MacOS/code-shell'
+bun run evals:live \
+  --executable '/path/to/code-shell.app/Contents/MacOS/code-shell' \
+  --renderer-source-root '/path/to/frozen-build-source'
 ```
 
 `--list` 和 `--validate` 不调用模型；`--live` 才使用选中的真实连接。命令也可直接写为 `node evals/harness/runner.mjs --live ...`。需要指定子集时：
@@ -133,6 +139,8 @@ bun run evals:live \
 ```
 
 `--executable` 必填，选中明确的封包应用；`--connection` 可省略，使用设置中的默认 text 连接。本版仅支持 OpenAI-compatible text 连接。未指定 `--cases` 时选择五个 `desktop` 案例；`--trials` 默认 1，`--seed` 默认 `20260912`。这个 seed 用来重建合成 fixture，不是供应商采样 seed。`--output` 必须是空目录，默认写入被 Git 忽略的 `evals/runs/<run-id>`，不会覆盖旧试验。
+
+中断恢复题需要额外提供 `--renderer-source-root`，指向被测包对应、已准备依赖的冻结源码树。评测用该树的真实 `StreamingMarkdown` 组件生成流式和完成态的预期显示，同时核对持久缓存中原 client 归属的原始正文；不会通过删除 Markdown 标记来放宽内容检查。来源清单记录本地依赖闭包和源码摘要，应与应用构建清单核对；路径参数本身不能证明任意安装包与源码一致。缺少可信渲染来源时，该题保留 `inconclusive`。其余四题无需该参数。
 
 可加布尔开关 `--judge` 启用真实模型语义评分，默认关闭。评分使用当前选中的同一模型，单独发起非流式、无工具的 rubric 请求；只对已完成且有实际答案的案例评分。评分请求标记为 `role: judge`，计入同一请求、token 和已报告费用预算。缺少证据、解析失败或没有实际答案时保留 `not_evaluated`，不能自动判绿。
 

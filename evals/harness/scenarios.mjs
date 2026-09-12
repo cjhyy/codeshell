@@ -60,6 +60,73 @@ export function deliveredPrefixMatches(answers, deliveredText) {
   );
 }
 
+/** Renderer row ids can change when folded; durable intents and their order cannot. */
+export function cacheIntentsMatch(cached, canonical) {
+  if (!Array.isArray(cached) || !Array.isArray(canonical) || cached.length !== canonical.length)
+    return false;
+  if (
+    !canonical.every((user) => typeof user.clientMessageId === "string" && user.clientMessageId) ||
+    new Set(canonical.map((user) => user.clientMessageId)).size !== canonical.length
+  )
+    return false;
+  return cached.every(
+    (user, index) =>
+      user.clientMessageId === canonical[index].clientMessageId &&
+      (user.steerId ?? null) === (canonical[index].steerId ?? null),
+  );
+}
+
+export function prefixDisplayMatches(replies, expected) {
+  return (
+    typeof expected === "string" &&
+    expected.length > 0 &&
+    replies.length === 1 &&
+    ["streaming", "done"].includes(replies[0].state) &&
+    replies[0].text === expected
+  );
+}
+
+export function inspectPrefixCache(state, { sessionId, clientMessageId, rawPrefix, userCount }) {
+  const messages = state?.messages ?? [];
+  const users = messages.filter((message) => message.kind === "user");
+  const matches = messages.flatMap((message, index) =>
+    message.kind === "user" && message.clientMessageId === clientMessageId ? [index] : [],
+  );
+  const start = matches.length === 1 ? matches[0] : -1;
+  const following =
+    start < 0
+      ? -1
+      : messages.findIndex((message, index) => index > start && message.kind === "user");
+  const replies =
+    start < 0
+      ? []
+      : messages
+          .slice(start + 1, following < 0 ? undefined : following)
+          .filter(
+            (message) =>
+              message.kind === "assistant" &&
+              typeof message.text === "string" &&
+              message.text.length > 0,
+          )
+          .map(({ id, text, done }) => ({ id, text, done }));
+  return {
+    passed:
+      state?.sessionId === sessionId &&
+      !!clientMessageId &&
+      matches.length === 1 &&
+      users.length === userCount &&
+      users[0]?.clientMessageId === clientMessageId &&
+      replies.length === 1 &&
+      replies[0].text === rawPrefix,
+    sessionId: state?.sessionId,
+    clientMessageId,
+    userCount: users.length,
+    snapshotEpoch: state?.snapshotEpoch,
+    snapshotSeq: state?.snapshotSeq,
+    replies,
+  };
+}
+
 /** Compare what the real model already rendered, without predicting its prose. */
 export function sameConversation(before, after) {
   return (
@@ -320,6 +387,42 @@ async function writeApproval(ctx, steer) {
     );
     ctx.check(await ctx.onlyTargetChanged(), "only-target-changed-after-all-recoveries");
     ctx.canonical("exactly-one-write", true);
+    let cached,
+      fingerprint,
+      stableSince = 0;
+    await ctx.until(async () => {
+      cached = await ctx.cachedCursor(sessionId);
+      if (
+        !cached?.snapshotEpoch ||
+        !Number.isSafeInteger(cached.snapshotSeq) ||
+        cached.snapshotSeq < 0
+      )
+        return false;
+      const next = JSON.stringify(cached);
+      if (next !== fingerprint) {
+        fingerprint = next;
+        stableSince = Date.now();
+      }
+      // Main saves are debounced. Inspect a stable persisted value after the
+      // reload/restart writes, rather than treating a transient old prefix as final.
+      return Date.now() - stableSince >= 1000;
+    }, "stable persisted session cache after recovery");
+    const expectedUsers = ctx.report.facts.clientSteerMap.users;
+    ctx.report.facts.cacheUsers = cached.users;
+    ctx.report.facts.cacheCursor = {
+      snapshotEpoch: cached.snapshotEpoch,
+      snapshotSeq: cached.snapshotSeq,
+    };
+    const cacheMatches = cacheIntentsMatch(cached.users, expectedUsers);
+    ctx.canonical(
+      "cache-alias-unique",
+      cacheMatches,
+      "Persisted cache rows match the canonical ordered client/steer identities one-to-one after two reloads and a full restart.",
+    );
+    ctx.check(cacheMatches, "persisted-cache-has-one-row-per-canonical-intent", {
+      expected: expectedUsers,
+      actual: cached,
+    });
     ctx.canonical(
       "cursor-consistency",
       null,
@@ -340,26 +443,14 @@ async function restartPreserved(ctx, before, name) {
   );
   await ctx.pause(1500);
   const after = await ctx.conversation();
-  const prefix = ctx.report.facts.held?.deliveredText;
-  if (
-    !sameConversation(before, after) &&
-    prefix &&
-    /(?:^|\n)\s*(?:#{1,6} |[-*] |\d+\. )|[*_`\[\]]/u.test(prefix) &&
-    JSON.stringify(before.users) === JSON.stringify(after.users) &&
-    before.answers.length === after.answers.length &&
-    before.answers[0] === normalizeVisibleText(prefix) &&
-    after.answers[0] !== before.answers[0]
-  ) {
-    throw new DesktopEvalFailure(
-      "rendering_boundary",
-      "Stream/plain and restored Markdown displays differ; exact content recovery is not proven",
-      { before, after, deliveredText: prefix },
-    );
+  let expected = before;
+  if (ctx.scenario.id === "interrupted-reply-later-restart") {
+    await ctx.verifyInterruptedPrefix(name, before.users.length);
+    // Only the proven raw first reply may switch between its two official
+    // rendering states. Every other visible message remains an exact match.
+    expected = { ...before, answers: [after.answers[0], ...before.answers.slice(1)] };
   }
-  ctx.check(sameConversation(before, await ctx.conversation()), name, {
-    before,
-    after: await ctx.conversation(),
-  });
+  ctx.check(sameConversation(expected, after), name, { before, expected, after });
   ctx.check(
     JSON.stringify(executionInventory(ctx)) === JSON.stringify(executionBefore),
     `${name}-no-model-reexecution`,
@@ -389,17 +480,29 @@ async function interrupted(ctx) {
         .join("") === held.deliveredText,
     "real IPC text caught up with held provider bytes",
   );
-  await ctx.until(async () => {
-    const visible = await ctx.conversation();
-    return deliveredPrefixMatches(visible.answers, held.deliveredText);
-  }, "typing animation caught up with delivered prefix");
+  ctx.report.facts.held = held;
+  ctx.report.facts.sessionId = sessionId;
+  ctx.report.facts.interruptedClientMessageId = ctx.report.streamEvents.find(
+    (entry) => entry.sessionId === sessionId && entry.event.type === "session_started",
+  )?.event.clientMessageId;
+  ctx.check(
+    !!ctx.report.facts.interruptedClientMessageId,
+    "first-durable-client-identity-observed",
+  );
+  await ctx.preparePrefixReference(held.deliveredText);
+  await ctx.until(
+    async () => (await ctx.prefixUi()).passed,
+    "typing animation caught up with the official rendering of delivered prefix",
+  );
+  await ctx.verifyInterruptedPrefix("before-close", 1);
   const partial = await ctx.conversation();
   ctx.check(
     partial.answers.length === 1 && partial.answers[0].length > 0,
     "real-model-partial-observed",
     { partial },
   );
-  ctx.report.facts.interruptedPrefix = partial.answers[0];
+  ctx.report.facts.interruptedPrefix = held.deliveredText;
+  ctx.report.facts.initialRenderedPrefix = partial.answers[0];
   ctx.report.facts.held = held;
   ctx.report.facts.sessionId = sessionId;
   await ctx.capture("interrupted-before-close");
@@ -419,14 +522,12 @@ async function interrupted(ctx) {
   await ctx.send(s.second);
   await ctx.idle(2);
   const later = await ctx.conversation();
-  ctx.check(
-    later.answers.filter((text) => text === partial.answers[0]).length === 1,
-    "later-turn-keeps-interrupted-reply",
-  );
+  await ctx.verifyInterruptedPrefix("later-turn-keeps-interrupted-reply", 2);
   await restartPreserved(ctx, later, "second-restart-preserves-both-turns-once");
   await ctx.send(s.third);
   await ctx.idle(3);
   const final = await ctx.conversation();
+  await ctx.verifyInterruptedPrefix("third-turn-keeps-interrupted-reply", 3);
   await restartPreserved(ctx, final, "third-restart-preserves-all-turns-once");
   const disk = await ctx.sessionEvidence(sessionId, "third-restart");
   const users = disk.transcript.filter((item) => item.kind === "user");
@@ -439,9 +540,7 @@ async function interrupted(ctx) {
     { users },
   );
   ctx.check(
-    final.users.length === 3 &&
-      final.answers.length === 3 &&
-      final.answers[0] === partial.answers[0],
+    final.users.length === 3 && final.answers.length === 3,
     "three-user-answers-in-original-order",
     { final },
   );
