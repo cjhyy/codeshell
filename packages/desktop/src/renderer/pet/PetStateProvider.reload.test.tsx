@@ -6,6 +6,7 @@ import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { PetStateProvider, usePetState } from "./PetStateProvider";
 import { transcriptToFoldItems } from "../../main/transcript-reader";
 import { parsePetUserContent } from "./PetChatHost";
+import type { PetDispatchResult } from "../../preload/pet-api";
 
 const sessionId = "pet-reload";
 const identity = { runId: "run-reload", clientMessageId: "input-reload" };
@@ -21,7 +22,10 @@ const prefix = [
   envelope(3, { type: "text_delta", text: "before " }),
 ];
 
-async function mount(snapshot: SessionSnapshot) {
+async function mount(
+  snapshot: SessionSnapshot,
+  chatInputs?: Extract<PetDispatchResult, { type: "global_status" }>["chatInputs"],
+) {
   ensureMiniDom();
   const testWindow = window as unknown as Record<string, unknown>;
   const originalCodeshell = testWindow.codeshell;
@@ -69,6 +73,7 @@ async function mount(snapshot: SessionSnapshot) {
         queuedCount: 0,
         pendingCount: 0,
         sessions: [],
+        chatInputs,
       };
     },
     getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
@@ -118,6 +123,113 @@ function liveSnapshot(): SessionSnapshot {
 }
 
 describe("Mimi reload during a live reply", () => {
+  test.each([false, true])(
+    "restores a queued intent and its next reply exactly once (starts during history read: %s)",
+    async (startsDuringRead) => {
+      const nextInput = {
+        clientMessageId: "input-next",
+        message: "reload request",
+        createdAt: 123,
+        pending: true,
+        attachments: [
+          { kind: "file" as const, path: "notes.txt", absPath: "/work/notes.txt", sessionId },
+        ],
+      };
+      const next = (seq: number, event: Record<string, unknown>): StreamEventEnvelope => ({
+        ...envelope(seq, event),
+        event: { ...event, runId: "run-next", clientMessageId: nextInput.clientMessageId } as any,
+      });
+      const nextEvents = [
+        envelope(4, { type: "turn_complete", reason: "aborted_streaming" }),
+        next(5, { type: "session_started", sessionId, previousRunId: identity.runId }),
+        next(6, { type: "stream_request_start", messageId: "reply-next" }),
+        next(7, { type: "text_delta", text: "next reply" }),
+      ];
+      const view = await mount(liveSnapshot(), [nextInput, { ...nextInput }]);
+      try {
+        await act(async () => {
+          if (startsDuringRead) nextEvents.forEach(view.emit);
+          await view.hydrate();
+        });
+        if (!startsDuringRead) {
+          expect(
+            view.state.chatState.messages.filter((message) => message.kind === "user"),
+          ).toMatchObject([
+            { clientMessageId: identity.clientMessageId },
+            {
+              clientMessageId: nextInput.clientMessageId,
+              pending: true,
+              attachments: nextInput.attachments,
+            },
+          ]);
+          expect(view.state.chatBusy).toBe(true);
+          await act(async () => {
+            await view.state.stopChat();
+            nextEvents.forEach(view.emit);
+          });
+          expect(view.commands).toContainEqual({
+            type: "stop_chat",
+            clientMessageId: identity.clientMessageId,
+          });
+        }
+        expect(
+          view.state.chatState.messages.filter((message) => message.kind === "user"),
+        ).toMatchObject([
+          { clientMessageId: identity.clientMessageId },
+          {
+            clientMessageId: nextInput.clientMessageId,
+            pending: false,
+            attachments: nextInput.attachments,
+          },
+        ]);
+        expect(
+          view.state.chatState.messages
+            .filter((message) => message.kind === "assistant")
+            .map((message) => message.text),
+        ).toEqual(["before ", "next reply"]);
+        expect(view.state.chatBusy).toBe(true);
+        await act(async () => {
+          view.emit(next(8, { type: "turn_complete", reason: "completed" }));
+        });
+        expect(view.state.chatBusy).toBe(false);
+        expect(
+          view.state.chatState.messages.filter((message) => message.kind === "user"),
+        ).toHaveLength(2);
+      } finally {
+        await view.close();
+      }
+    },
+  );
+
+  test("a queued input already injected during hydration is not marked pending again", async () => {
+    const attachments = [
+      { kind: "image" as const, path: "pic.png", absPath: "/work/pic.png", sessionId },
+    ];
+    const view = await mount(liveSnapshot(), [
+      {
+        clientMessageId: "queued",
+        message: "another input",
+        createdAt: 1,
+        pending: true,
+        attachments,
+      },
+    ]);
+    try {
+      await act(async () => {
+        view.emit(envelope(4, { type: "steer_injected", id: "queued", text: "another input" }));
+        await view.hydrate();
+      });
+      const queued = view.state.chatState.messages.filter(
+        (message) => message.kind === "user" && message.steerId === "queued",
+      );
+      expect(queued).toHaveLength(1);
+      expect(queued[0]?.pending).not.toBe(true);
+      expect(queued[0]).toMatchObject({ clientMessageId: "queued", attachments });
+    } finally {
+      await view.close();
+    }
+  });
+
   test("keeps durable image and file metadata when restoring the user intent anchor", async () => {
     const imagePath = "/work/.code-shell/attachments/pet-reload/image.png";
     const filePath = "/work/.code-shell/attachments/pet-reload/notes.txt";

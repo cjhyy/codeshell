@@ -41,6 +41,11 @@ import {
   type PetChatFailure,
   type PetChatSubmission,
 } from "./petChatSubmission";
+import type { PetDispatchResult } from "../../preload/pet-api";
+
+type AcceptedChatInput = NonNullable<
+  Extract<PetDispatchResult, { type: "global_status" }>["chatInputs"]
+>[number];
 
 export interface PetStateContextValue {
   state: PetState;
@@ -394,6 +399,8 @@ export function PetStateProvider({
     let streamActive = false;
     const bufferedStream: PetChatBufferedEvent[] = [];
     const appliedSequences = new Map<string | undefined, number>();
+    const acceptedInputs = new Map<string, AcceptedChatInput>();
+    const startedInputIds = new Set<string>();
     const shell = globalThis.window?.codeshell;
 
     const applyWorkerExit = (): void => {
@@ -434,18 +441,38 @@ export function PetStateProvider({
           return;
       }
       if (!child && event.type === "session_started" && event.clientMessageId) {
+        startedInputIds.add(event.clientMessageId);
+        const accepted = acceptedInputs.get(event.clientMessageId);
         const user = history?.messages.find(
           (message) => message.kind === "user" && message.clientMessageId === event.clientMessageId,
         );
-        if (user?.kind === "user") {
-          // Ordinary inputs are persisted but do not have a live stream event.
-          // Restore their intent anchor so disk/live replies compare within
-          // the same turn even when their generated message ids differ.
+        if (user?.kind === "user" || accepted) {
+          // A queued input can begin after reload, without another submission
+          // event. Main's accepted input supplies its original intent anchor.
           chatDispatch({
             type: "user_message",
             bucket: PET_CHAT_BUCKET,
-            text: user.text,
-            clientMessageId: user.clientMessageId,
+            text: user?.kind === "user" ? user.text : accepted!.message,
+            clientMessageId: event.clientMessageId,
+            attachments: user?.kind === "user" ? user.attachments : accepted?.attachments,
+            pending: false,
+          });
+        }
+      }
+      if (!child && event.type === "steer_injected" && event.id) {
+        startedInputIds.add(event.id);
+        const accepted = acceptedInputs.get(event.id);
+        if (accepted) {
+          // Injection can race the history read before its queued bubble is
+          // restored. Give the reducer the original identity and attachments.
+          chatDispatch({
+            type: "user_message",
+            bucket: PET_CHAT_BUCKET,
+            text: accepted.message,
+            clientMessageId: accepted.clientMessageId,
+            steerId: event.id,
+            pending: false,
+            attachments: accepted.attachments,
           });
         }
       }
@@ -513,6 +540,27 @@ export function PetStateProvider({
           history,
           goalAtStart: null,
         });
+      const durableInputs = new Set(
+        history?.messages.flatMap((message) =>
+          message.kind === "user" && message.clientMessageId ? [message.clientMessageId] : [],
+        ),
+      );
+      // Restore waiting inputs after the current run's replay so a held reply
+      // keeps its own user anchor. Starts/injections observed during the reads
+      // supersede the earlier pending snapshot; never re-queue those inputs.
+      for (const input of acceptedInputs.values()) {
+        if (startedInputIds.has(input.clientMessageId) || durableInputs.has(input.clientMessageId))
+          continue;
+        chatDispatch({
+          type: "user_message",
+          bucket: PET_CHAT_BUCKET,
+          text: input.message,
+          clientMessageId: input.clientMessageId,
+          steerId: input.clientMessageId,
+          pending: input.pending,
+          attachments: input.attachments,
+        });
+      }
       transcriptHydrated = true;
     };
 
@@ -527,6 +575,8 @@ export function PetStateProvider({
             return;
           }
           const sessionId = result.petSessionId;
+          for (const input of result.chatInputs ?? [])
+            acceptedInputs.set(input.clientMessageId, input);
           knownPetSessionId = sessionId;
           setPetSessionId(sessionId);
           setChatHistoryLoadedBytes(0);

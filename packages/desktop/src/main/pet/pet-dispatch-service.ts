@@ -32,6 +32,7 @@ import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
+import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -182,6 +183,13 @@ export type PetDispatchResult =
       queuedCount: number;
       pendingCount: number;
       sessions: DesktopPetProjectionSnapshot["sessions"];
+      chatInputs?: Array<{
+        clientMessageId: string;
+        message: string;
+        attachments?: PetChatAttachment[];
+        createdAt: number;
+        pending: boolean;
+      }>;
     }
   | { ok: true; type: "pending_list"; pending: DesktopPetProjectionSnapshot["pending"] }
   | { ok: true; type: "chat_stopped"; stopped: boolean }
@@ -743,6 +751,10 @@ function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
 export class PetDispatchService {
   private activeChatTurn?: PetActiveChatTurn;
   private chatAdmissionTail: Promise<void> = Promise.resolve();
+  private readonly chatInputs = new Map<
+    string,
+    { command: PetChatCommand; createdAt: number; result: Promise<PetDispatchResult> }
+  >();
 
   constructor(private readonly options: PetDispatchOptions) {
     options.worker.subscribeOutbound?.((_line, snapshotEntry) => {
@@ -823,6 +835,19 @@ export class PetDispatchService {
 
   private async dispatchScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
     command = { ...command, clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}` };
+    const key = `${petChatRouteKey(command)}\0${command.clientMessageId}`;
+    const existing = this.chatInputs.get(key);
+    if (existing) return existing.result;
+    // Main outlives renderer reloads. Retain only accepted, unsettled inputs;
+    // retries with the same identity share the existing admission/result.
+    const result = Promise.resolve()
+      .then(() => this.runScheduledChat(command))
+      .finally(() => this.chatInputs.delete(key));
+    this.chatInputs.set(key, { command, createdAt: Date.now(), result });
+    return result;
+  }
+
+  private async runScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
     const sessionId = (await this.options.metadata.ensure()).petSessionId;
     const routeKey = petChatRouteKey(command);
 
@@ -1591,6 +1616,26 @@ export class PetDispatchService {
           queuedCount: snapshot.sessions.filter((session) => session.runState === "queued").length,
           pendingCount: pending.length,
           sessions: snapshot.sessions.slice(0, 100),
+          chatInputs: [...this.chatInputs.values()].map(({ command, createdAt }) => ({
+            clientMessageId: command.clientMessageId!,
+            message: command.message.trim(),
+            createdAt,
+            pending: this.activeChatTurn?.clientMessageId !== command.clientMessageId,
+            ...(command.attachments?.length
+              ? {
+                  attachments: command.attachments.map(
+                    ({ kind, path, absPath, sessionId, mime, originalName }) => ({
+                      kind,
+                      path,
+                      absPath,
+                      sessionId,
+                      ...(mime ? { mime } : {}),
+                      ...(originalName ? { originalName } : {}),
+                    }),
+                  ),
+                }
+              : {}),
+          })),
         };
       }
       case "list_pending":
