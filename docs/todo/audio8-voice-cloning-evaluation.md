@@ -1,6 +1,6 @@
 # Audio8 与视频面板声音克隆：调研及接入建议
 
-查阅日期：2026-09-12。本文保留视频面板 0.4.7 自管 Audio8/Qwen 的历史验证。当前候选为 Video Studio 0.5.0 / CodeShell API 14：模型与视频处理由面板管理，Host 提供通用资源、授权进程与持久任务；发布状态见[验收清单](panel-plugin-runtime-implementation.md)。尚未使用用户本人录音做相似度和听感对比。
+查阅日期：2026-09-12。本文保留视频面板 0.4.7 自管 Audio8/Qwen 的历史验证。当前发布版本为 Video Studio 0.5.0 / CodeShell API 14：模型与视频处理由面板管理，Host 提供通用资源、授权进程与持久任务；发布状态见[验收清单](panel-plugin-runtime-implementation.md)。尚未使用用户本人录音做相似度和听感对比。
 
 Audio8 核查版本：仓库 `07e40f5d0b03fc473635ef378654bfb581027ac3`；0.6B ONNX 模型 revision `818569c6b832118ad68d61bbd873abe250fcd68a`。本次集成已核实固定版本文件清单并加入逐文件 SHA-256 校验。
 

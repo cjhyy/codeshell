@@ -121,11 +121,11 @@ before starting work.
 
 ## Validation and release status
 
-The API 14 implementation is complete in the 0.9.11 release candidate. Local
+The API 14 implementation is complete in the published 0.9.11 release. Local
 resource, process/task, isolation, and Desktop bridge checks pass. Package-release
 smoke checks cover 10 tarballs, 47 typed entry points and 45 runtime entry points.
 The Video Studio 0.5.0 package has also run a real reviewed-entry chain through
 import, inspection, preprocessing, three-second audio extraction and verified
-capture, including persisted results and cross-project denial. This is local
-validation; publication and remote CI remain tracked in the
+capture, including persisted results and cross-project denial. The compatible
+releases and successful remote CI are recorded in the
 [release acceptance matrix](todo/panel-plugin-runtime-implementation.md).
