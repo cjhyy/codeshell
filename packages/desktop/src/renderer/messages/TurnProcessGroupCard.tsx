@@ -92,6 +92,14 @@ function TurnProcessGroupCardImpl({
   // group), so we deliberately drop the header here to avoid a duplicate marker.
   const showHeader = !group.stopped;
   const itemsVisible = group.stopped || open;
+  // A consumed user steer belongs to this running turn, but remains a user
+  // request when its surrounding tools are collapsed. Keep the same bubble
+  // visible after reload without exposing pending drafts or internal wakeups.
+  const visibleItems = dedupeById(group.items).filter(
+    (item) =>
+      itemsVisible ||
+      (item.kind === "user" && !!item.steerId && !item.pending && !isSystemReminderText(item.text)),
+  );
   const toolNames = group.items.flatMap((item) => {
     if (item.kind === "tool") return [item.toolName];
     if (item.kind === "tool_group") {
@@ -115,9 +123,9 @@ function TurnProcessGroupCardImpl({
           <span>{label}</span>
         </button>
       )}
-      {itemsVisible && (
+      {visibleItems.length > 0 && (
         <div className={showHeader ? "mt-1 flex flex-col gap-1" : "flex flex-col gap-1"}>
-          {dedupeById(group.items).map((m) => {
+          {visibleItems.map((m) => {
             if (m.kind === "tool_group") {
               return (
                 <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} defaultOpen />
