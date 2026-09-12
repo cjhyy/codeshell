@@ -1,0 +1,1430 @@
+{
+  "schemaVersion": 1,
+  "suiteVersion": "2026-09-12.2",
+  "id": "codeshell-runtime-reliability",
+  "title": "真实故障回归案例库",
+  "description": "从隔离验收的真实失败及明确标注的受控负例整理；合成输入可独立重建，不读取私人会话。",
+  "provenanceArchives": {
+    "round1": {
+      "label": "2026-09-12 第一轮真实验收",
+      "summaryArtifact": "VALIDATION.md"
+    },
+    "round2": {
+      "label": "2026-09-12 第二轮真实验收",
+      "summaryArtifact": "VALIDATION.md"
+    }
+  },
+  "verdictPolicy": {
+    "criterionVerdicts": ["passed", "failed", "inconclusive", "not-applicable"],
+    "hardAndSemanticIndependent": true,
+    "hardFailureCannotBeOverriddenBySemanticScore": true,
+    "missingEvidenceVerdict": "inconclusive",
+    "executionReasons": [
+      "completed",
+      "cancelled",
+      "timeout",
+      "provider-error",
+      "environment-error"
+    ],
+    "executionStatuses": ["passed", "failed", "inconclusive", "skipped"],
+    "semanticStatuses": ["passed", "failed", "not_evaluated", "not_applicable"],
+    "reportEvidenceLevels": ["packaged_live_llm", "repository_regression", "catalogue"],
+    "hardAssertionValue": "passed: true | false | null (unknown)"
+  },
+  "cases": [
+    {
+      "id": "chrome-csp-modern",
+      "version": 1,
+      "title": "新版 Chrome 扩展快照为空",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["real_browser"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-browser",
+      "input": {
+        "prompts": [],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "临时浏览器与显式指定的已构建扩展准备完毕",
+          "action": "打开本地页面，页面有带caseNonce的按钮和状态区。"
+        },
+        {
+          "when": "页面已加载",
+          "action": "通过真实扩展观察页面并点击目标按钮；分别使用141、145、149原记录版本或明确记录的维护版本。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "observe-target",
+          "criterion": "快照包含按钮及其可操作引用；不是空快照。",
+          "requiredEvidence": ["browser-snapshot"]
+        },
+        {
+          "id": "actual-click",
+          "criterion": "目标状态由未点击变为caseNonce；不是只返回工具成功。",
+          "requiredEvidence": ["page-dom"]
+        },
+        {
+          "id": "csp-preserved",
+          "criterion": "未放宽CSP/扩展权限；真实SyntaxError仍被拒绝。",
+          "requiredEvidence": ["manifest-diff", "behavior-test-results"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/scripts/puppeteer-extension-csp.test.ts",
+        "packages/desktop/scripts/smoke-chrome-extension.ts"
+      ],
+      "provenance": {
+        "fixCommits": ["12639f0bc63710ffa89e362a62c99bfe8e2f4d11"],
+        "artifacts": [
+          {
+            "archive": "round1",
+            "path": "media-browser/original-browser-matrix.json",
+            "role": "failure",
+            "sha256": "e4762af827c8971013d117b9acc10247cff000824dfc7a27da1b504481ce3d1b"
+          },
+          {
+            "archive": "round1",
+            "path": "media-browser/candidate-browser-matrix.json",
+            "role": "fix-verification",
+            "sha256": "2227b902169fb254274ddd98d8b72ea9127ef31bb2c73d38eff64e3d90834dba"
+          },
+          {
+            "archive": "round1",
+            "path": "media-browser/browser-findings.md",
+            "role": "scope",
+            "sha256": "4f69dc3f07b4a97cc2d0a5e03baa1312cdcc189c49a9ffef8da320c06ef321cf"
+          }
+        ]
+      },
+      "notes": [
+        "原149失败不能被141通过覆盖；记录浏览器版本及扩展bundle哈希。",
+        "历史真实浏览器验收使用源码Host桥，不等于已安装Electron到扩展完整链路。"
+      ]
+    },
+    {
+      "id": "interrupted-reply-later-restart",
+      "version": 1,
+      "title": "中断回复在后续完整重启后丢失",
+      "adapter": "desktop",
+      "executionCoverage": {
+        "liveEnabled": true,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": [
+          "请用三段解释如何给书架分类，每段带上标记 {{caseNonce}}。",
+          "请用一句话建议书架整理完成后的维护习惯。",
+          "再补充一个不同的维护习惯。"
+        ],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "live-selected-provider"
+      },
+      "requirements": [
+        "event-driven-trigger",
+        "identity-and-artifact-capture",
+        "packaged-electron",
+        "real-ipc",
+        "live-model-stream"
+      ],
+      "steps": [
+        {
+          "when": "第一条实际回复已收到非空正文、请求尚未终结",
+          "action": "记录真实收到的正文，然后完整退出应用；确认实际HTTP中止。"
+        },
+        {
+          "when": "首次完整启动",
+          "action": "确认原输入与已收到正文仍在，再发送第二条并等待完成。"
+        },
+        {
+          "when": "第二次完整启动",
+          "action": "确认原中断正文仍在，发送第三条并完成；随后第三次完整启动。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "received-prefix-preserved",
+          "criterion": "首次、第二次、第三次启动后，实际退出前收到的正文均保留在原用户回合。",
+          "requiredEvidence": ["pre-exit-stream", "transcript-after-restart"]
+        },
+        {
+          "id": "intent-unique",
+          "criterion": "三条用户输入各一次；已完成回复各一次，中断正文不被移到后续回合。",
+          "requiredEvidence": ["client-message-ids", "transcript-after-restart"]
+        },
+        {
+          "id": "no-reexecution",
+          "criterion": "重启自身不触发旧intent额外模型或工具执行。",
+          "requiredEvidence": ["model-request-log", "tool-execution-log"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "live-output",
+        "criteria": [
+          {
+            "id": "semantic-1",
+            "criterion": "已完成的第二、第三条回复分别回应对应维护问题，第三条不是机械重复第二条。"
+          },
+          {
+            "id": "semantic-2",
+            "criterion": "保留的中断正文只按实际收到的内容评价，不要求中断运行伪装成完整成功。"
+          }
+        ],
+        "notApplicableReason": null
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/app/mergeHistoryWindows.test.ts",
+        "packages/desktop/src/renderer/transcriptHydration.prefix.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": [
+          "9c8c566e1db6127c1ca22567e5acc75938e24ee1",
+          "e6a2345c6d2868f3ad6b15eb199ce2645cef90b9"
+        ],
+        "artifacts": [
+          {
+            "archive": "round1",
+            "path": "runtime/recovery-analysis/merge-reproduction.json",
+            "role": "failure",
+            "sha256": "c8fafa1aa2ed22cf5c3609232fcf935a6fac51454bc9f3e85b59278b8c313df4"
+          },
+          {
+            "archive": "round2",
+            "path": "recovery-rerun/cursor/summary-and-cleanup.json",
+            "role": "fix-verification",
+            "sha256": "f057f942a13d3db94bf161d1d813182efd23fabf1dd2c5a65201eab03817a949"
+          }
+        ]
+      },
+      "notes": [
+        "原实机为7回合、4次流式刷新、3次Main重启；本案例是保留相同丢失触发条件的合成最小任务。",
+        "不把回复仍在本地缓存描述成磁盘文件被删除。"
+      ]
+    },
+    {
+      "id": "mimi-reload-stop",
+      "version": 1,
+      "title": "Mimi 静默流刷新后丢失停止入口",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": ["解释整理书架的步骤，标记 {{caseNonce}}。"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "真实本地SSE已发送partial且仍保持打开",
+          "action": "保持服务端无新chunk，刷新Renderer。"
+        },
+        {
+          "when": "刷新完成、仍没有任何新chunk",
+          "action": "检查partial和Stop，然后点击Stop。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "restore-before-next-event",
+          "criterion": "刷新后不依赖下一条stream事件就恢复已有partial和Stop。",
+          "requiredEvidence": ["ui-before-next-chunk"]
+        },
+        {
+          "id": "abort-current",
+          "criterion": "点击后实际当前HTTP被中止；没有遗留busy。",
+          "requiredEvidence": ["http-abort-log", "ui-after-stop"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/pet/PetStateProvider.reload.test.tsx"
+      ],
+      "provenance": {
+        "fixCommits": ["d1f60dd52674aebaa33c506608bea3f50f96eece"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/published/report.json",
+            "role": "failure",
+            "sha256": "26a97f1076e4bf9d543a89f6f90828029f807d1e97ba673307a3434f4b10fd25"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/candidate-cursor-strict/report.json",
+            "role": "fix-verification",
+            "sha256": "561b4c9045251e4fe6924785b8cc54b1c478b16fb7730c3a632cae0bf1049bb8"
+          }
+        ]
+      },
+      "notes": ["只检验真实取消和投影恢复；语义评分不适用。"]
+    },
+    {
+      "id": "mimi-queued-input-reload",
+      "version": 1,
+      "title": "Mimi 已接受的排队输入刷新后不可见",
+      "adapter": "desktop",
+      "executionCoverage": {
+        "liveEnabled": true,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": [
+          "请用三段介绍绿色植物的浇水原则，每段带上标记 {{caseNonce}}-A。",
+          "请另外给出两条仙人掌养护建议，带上标记 {{caseNonce}}-B。"
+        ],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "live-selected-provider"
+      },
+      "requirements": [
+        "event-driven-trigger",
+        "identity-and-artifact-capture",
+        "packaged-electron",
+        "real-ipc",
+        "live-model-stream"
+      ],
+      "steps": [
+        {
+          "when": "第一条真实流已有partial且尚未完成",
+          "action": "通过正常输入框提交第二条；记录其已接受clientMessageId。"
+        },
+        {
+          "when": "第二条已接受、第一条仍执行",
+          "action": "刷新Renderer；在没有新chunk到达时检查第二条输入及待排状态。"
+        },
+        {
+          "when": "刷新状态检查完成",
+          "action": "让真实流继续，等待两个输入对应的回复完成。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "pending-visible",
+          "criterion": "已接受第二条在刷新静默阶段可见，原clientMessageId保留。",
+          "requiredEvidence": ["accepted-input", "ui-held-after-reload"]
+        },
+        {
+          "id": "ordered-once",
+          "criterion": "两个intent及各自回复按执行顺序且各一次；没有假busy。",
+          "requiredEvidence": ["client-message-ids", "model-request-log", "final-transcript"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "live-output",
+        "criteria": [
+          {
+            "id": "semantic-1",
+            "criterion": "第一回复解释浇水原则；第二回复给出两条适用于仙人掌的养护建议。"
+          },
+          {
+            "id": "semantic-2",
+            "criterion": "第二任务不能被当作第一回复的重复副本，标记及主题归属正确。"
+          }
+        ],
+        "notApplicableReason": null
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/main/pet/pet-dispatch-inputs.test.ts",
+        "packages/desktop/src/renderer/pet/PetStateProvider.reload.test.tsx"
+      ],
+      "provenance": {
+        "fixCommits": ["2bd3444370fb1537700d4101d897fffd8478feb1"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/candidate-9c8c566e/report.json",
+            "role": "failure",
+            "sha256": "1c53e4ef389107dc8e61da63994309088fac2df1013631f81c25911a462e0745"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/candidate-cursor-strict/report.json",
+            "role": "fix-verification",
+            "sha256": "561b4c9045251e4fe6924785b8cc54b1c478b16fb7730c3a632cae0bf1049bb8"
+          }
+        ]
+      },
+      "notes": ["真实模型可产生不同措辞；不要把固定fixture文本相等作为live质量标准。"]
+    },
+    {
+      "id": "mimi-stop-current-preserve-next",
+      "version": 1,
+      "title": "停止当前 Mimi 请求不能误停排队下一条",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": ["第一任务 {{caseNonce}}-A", "下一任务 {{caseNonce}}-B"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "第一流执行且第二输入已接受",
+          "action": "刷新并检查第二条仍可见。"
+        },
+        {
+          "when": "第一HTTP仍打开",
+          "action": "点击当前Stop；第二条开始后检查它自己的Stop并让其完成。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "right-abort",
+          "criterion": "只中止第一请求；第二请求不被取消且完成一次。",
+          "requiredEvidence": ["http-lifecycle", "request-intent-map"]
+        },
+        {
+          "id": "both-users-retained",
+          "criterion": "两个用户intent均保留一次；第二回复一次。",
+          "requiredEvidence": ["final-transcript"]
+        },
+        {
+          "id": "next-running-state",
+          "criterion": "第二请求执行时有自己的停止入口，完成后退出busy。",
+          "requiredEvidence": ["ui-next-running", "ui-final"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/main/pet/pet-dispatch-inputs.test.ts",
+        "packages/desktop/src/renderer/pet/PetStateProvider.reload.test.tsx"
+      ],
+      "provenance": {
+        "fixCommits": ["2bd3444370fb1537700d4101d897fffd8478feb1"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/candidate-9c8c566e/report.json",
+            "role": "failure",
+            "sha256": "1c53e4ef389107dc8e61da63994309088fac2df1013631f81c25911a462e0745"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/candidate-cursor-strict/report.json",
+            "role": "fix-verification",
+            "sha256": "561b4c9045251e4fe6924785b8cc54b1c478b16fb7730c3a632cae0bf1049bb8"
+          }
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "mimi-worker-crash-recovery",
+      "version": 1,
+      "title": "Worker 崩溃后 Mimi 假忙碌与下一条卡住",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": ["旧任务 {{caseNonce}}-A", "新的任务 {{caseNonce}}-B"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "确认实际流打开，且精确识别本测试Main所属Worker PID",
+          "action": "只对该Worker发送SIGKILL。"
+        },
+        {
+          "when": "旧流断开",
+          "action": "检查失败回执与非busy；同ID重试检查replay_incomplete，再恢复原文作为新intent发送。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "failure-not-busy",
+          "criterion": "旧运行进入可见失败状态；新intent可实际发出模型请求并完成。",
+          "requiredEvidence": ["worker-process-identity", "http-lifecycle", "ui-status"]
+        },
+        {
+          "id": "old-id-no-reexecution",
+          "criterion": "旧clientMessageId的未知终态不自动重新执行，不新增旧intent模型/工具请求或用户气泡。",
+          "requiredEvidence": ["client-message-ids", "model-request-log", "tool-execution-log"]
+        },
+        {
+          "id": "new-intent-once",
+          "criterion": "恢复原文的新提交产生新ID，新输入及回复各一次。",
+          "requiredEvidence": ["final-transcript"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/main/pet/pet-dispatch-worker-lifecycle.test.ts",
+        "packages/core/src/engine/engine-client-message-id.test.ts",
+        "tests/mimi-chat-replay.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": ["d1f60dd52674aebaa33c506608bea3f50f96eece"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "worker-crash/red-final/result.json",
+            "role": "failure",
+            "sha256": "1f41b4550787e17331ffe4f345a9cb75f2d8a9b05814e5dd3606092ac9f87943"
+          },
+          {
+            "archive": "round2",
+            "path": "worker-crash/green-fixed/result.json",
+            "role": "fix-verification",
+            "sha256": "39509302ac3ad8e257396f7dfd191ef42ea1ef9242cc653bcd5016075e3c3311"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/worker-restore-candidate-fixed/report.json",
+            "role": "boundary-verification",
+            "sha256": "972fbaeecdd84cb37e74c4ce96ecbf68bf57c1ee56f4634de2720c61a8bb1511"
+          }
+        ]
+      },
+      "notes": [
+        "原探针要求同ID自动重执行属于fixture预期错误，不是待修复行为；Core故意避免未知副作用重复。"
+      ]
+    },
+    {
+      "id": "approval-reload-write",
+      "version": 1,
+      "title": "刷新后待批准 Write 卡片丢失",
+      "adapter": "desktop",
+      "executionCoverage": {
+        "liveEnabled": true,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": [
+          "请创建文件 eval-note.txt，内容严格为 approved-{{caseNonce}} 加一个换行。只修改这一个文件。"
+        ],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "live-selected-provider"
+      },
+      "requirements": [
+        "event-driven-trigger",
+        "identity-and-artifact-capture",
+        "packaged-electron",
+        "real-ipc",
+        "live-model-stream"
+      ],
+      "steps": [
+        {
+          "when": "模型真实请求Write，应用显示待批准卡",
+          "action": "核对目标文件不存在，刷新Renderer。"
+        },
+        {
+          "when": "刷新后恢复审批卡",
+          "action": "核对仍未写入，点击仅本次批准。"
+        },
+        {
+          "when": "工具与模型回复结束",
+          "action": "读取真实文件并核对工具执行次数。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "approval-once",
+          "criterion": "刷新后恰好一张对应原requestId的可操作卡。",
+          "requiredEvidence": ["approval-request-id", "ui-after-reload"]
+        },
+        {
+          "id": "no-early-write",
+          "criterion": "批准前目标始终不存在。",
+          "requiredEvidence": ["filesystem-before-approval"]
+        },
+        {
+          "id": "exact-write-once",
+          "criterion": "批准后文件字节等于approved-{{caseNonce}}及换行，实际写入执行一次，其他文件不变。",
+          "requiredEvidence": ["filesystem-diff", "tool-execution-log"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "live-output",
+        "criteria": [
+          {
+            "id": "semantic-1",
+            "criterion": "最终答复准确说明eval-note.txt已创建；不能在批准前宣称写入成功。"
+          },
+          {
+            "id": "semantic-2",
+            "criterion": "答复不虚构额外编辑或测试。"
+          }
+        ],
+        "notApplicableReason": null
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/pendingApprovalRecovery.test.ts",
+        "packages/desktop/src/renderer/app/useHostSubscriptions.test.tsx"
+      ],
+      "provenance": {
+        "fixCommits": ["f40c4205c7e15b97db1a5d5afabead685ef3ec72"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "tools/published/pending-approval-result.json",
+            "role": "failure",
+            "sha256": "2cadc386f05acb1a91c24e851a4087087593e8d5483b32cc8c1904afde9ee33b"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/candidate-cursor/pending-approval-result.json",
+            "role": "fix-verification",
+            "sha256": "bf6f90eaf3893c3d71176bf33ae83032b373219d9951897becbf70ad21995b6e"
+          }
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "approval-worker-exit",
+      "version": 1,
+      "title": "Worker 退出后旧审批卡仍可操作",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": [
+          "创建 old-note.txt，内容 old-{{caseNonce}}。",
+          "创建 new-note.txt，内容 new-{{caseNonce}}。"
+        ],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "原生Write待批准且Worker归属已证实",
+          "action": "精确SIGKILL自有Worker，观察卡片并刷新。"
+        },
+        {
+          "when": "新Worker可用",
+          "action": "重新发送新输入；必须重新批准才能执行。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "retire-old-native",
+          "criterion": "旧Worker退出后及刷新后，旧批准入口均为0；old-note.txt不存在。",
+          "requiredEvidence": ["worker-identity", "approval-state", "filesystem-diff"]
+        },
+        {
+          "id": "new-approval",
+          "criterion": "新请求有新审批，批准后只写new-note.txt一次。",
+          "requiredEvidence": ["approval-ids", "tool-execution-log"]
+        },
+        {
+          "id": "external-retained",
+          "criterion": "仅原生Worker退出不清理另一个外部运行时的审批。",
+          "requiredEvidence": ["repository-regression-result"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/pendingApprovalRecovery.test.ts",
+        "packages/desktop/src/renderer/app/useHostSubscriptions.test.tsx"
+      ],
+      "provenance": {
+        "fixCommits": ["f40c4205c7e15b97db1a5d5afabead685ef3ec72"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "tools/candidate-9c-crash-approval/pending-approval-worker-crash-result.json",
+            "role": "failure",
+            "sha256": "4d6d1154c6bb163bb6ab1b484c82488e24830bc69f2ee233ba70b0c7761b4738"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/candidate-cursor/pending-approval-worker-crash-result.json",
+            "role": "fix-verification",
+            "sha256": "572f4a4693b9c0ef98192e4a678537ec38366dfc29498f61e3816a6e6ffdf9f9"
+          }
+        ]
+      },
+      "notes": ["外部运行时共存边界当前只由仓库回归覆盖，不声称启动外部服务实测。"]
+    },
+    {
+      "id": "background-question-hydration",
+      "version": 1,
+      "title": "后台问答快照与缓存交错产生重复卡",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["reducer_replay"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "controlled-reducer",
+      "input": {
+        "prompts": ["请先问我选择只读检查还是修改文件，再按选择继续。"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "后台会话已有AskUserQuestion",
+          "action": "先恢复pending快照卡，再打开会话并hydrate同requestId的缓存卡。"
+        },
+        {
+          "when": "用户选择只读检查",
+          "action": "合并已答状态，刷新并再次hydrate；附加canonical已有后续回复的变体。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "question-identity",
+          "criterion": "同requestId只有一张卡，不因渲染messageId不同而重复。",
+          "requiredEvidence": ["reducer-state", "question-request-id"]
+        },
+        {
+          "id": "answered-stays-answered",
+          "criterion": "答案保留，未选选项不能重新变可操作；答案只送入一次继续请求。",
+          "requiredEvidence": ["question-answer", "next-model-request"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/automation/hydrateOrder.test.ts",
+        "packages/desktop/src/renderer/app/useHostSubscriptions.test.tsx",
+        "packages/desktop/src/renderer/pendingApprovalRecovery.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": [
+          "f40c4205c7e15b97db1a5d5afabead685ef3ec72",
+          "e6a2345c6d2868f3ad6b15eb199ce2645cef90b9"
+        ],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "approval-patch/implementation-report.md",
+            "role": "controlled-failure-description",
+            "sha256": "c51ec3fc5c78b2f51dd505e13e85521189add96d7a668dc4041e2e4f3e898c76"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/candidate-cursor/pending-question-background-result.json",
+            "role": "packaged-verification",
+            "sha256": "ad05c8099f7617726f717b7a789fe628c835a8b65f8267e1c9f0ea1333d2e0f8"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/candidate-cursor/answered-question-persistence-result.json",
+            "role": "packaged-verification",
+            "sha256": "fe9392f8446fe7631f73b311ffd8cd0c013896f129ce601998bac6e21a3469be"
+          }
+        ]
+      },
+      "notes": [
+        "原9c后台问答也有通过的真实基线；已确认红例是snapshot先于cache的受控reducer顺序，不能改写为9c所有问答均失败。"
+      ]
+    },
+    {
+      "id": "queued-attachment-consumption-race",
+      "version": 1,
+      "title": "历史读取期间消费排队附件丢失原身份",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["reducer_replay"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "controlled-reducer",
+      "input": {
+        "prompts": ["读取附件里的标记 {{caseNonce}}。"],
+        "variables": ["caseNonce"],
+        "files": [
+          {
+            "path": "附件/notes.txt",
+            "content": "attachment-{{caseNonce}}\n"
+          }
+        ]
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "Main已接受带clientMessageId与结构化附件的queued输入",
+          "action": "保持history读取Promise未完成。"
+        },
+        {
+          "when": "history尚未返回",
+          "action": "送入真实格式的steer_injected，同一稳定ID，然后完成history读取。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "original-identity",
+          "criterion": "只保留一个原clientMessageId/steerId对应的用户条目，不生成新intent。",
+          "requiredEvidence": ["accepted-input", "reducer-state"]
+        },
+        {
+          "id": "attachment-preserved",
+          "criterion": "原附件path、type与其他白名单展示字段仍在；pending=false。",
+          "requiredEvidence": ["accepted-attachment", "reducer-state"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/pet/PetStateProvider.reload.test.tsx",
+        "packages/desktop/src/main/pet/pet-dispatch-inputs.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": ["2bd3444370fb1537700d4101d897fffd8478feb1"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/injected-input-identity.log",
+            "role": "failure",
+            "sha256": "7f59adeac6e042ca829ae280c2145c11c6224148945c742cd0d6e76afdd5fb85"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/injected-input-identity-green.log",
+            "role": "fix-verification",
+            "sha256": "cd47dee36cf307b3907675edf419c34c60a440240bbd045c7f8c9add9f6b89de"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/attachment-race-v2.md",
+            "role": "scope",
+            "sha256": "bf28579b9daec2d2a7c30157cdca8877f846ac9fdf4558361405b30cc7b42227"
+          }
+        ]
+      },
+      "notes": [
+        "精确交错由真实Provider/reducer证明；不是外部IM或实际UI人为阻塞历史IPC的端到端结果。"
+      ]
+    },
+    {
+      "id": "mimi-file-queue-completed-reload",
+      "version": 2,
+      "title": "Mimi 文件附件排队完成后刷新重复回复",
+      "adapter": "desktop",
+      "executionCoverage": {
+        "liveEnabled": true,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": [
+          "请用三段介绍如何整理书桌，每段带上标记 {{caseNonce}}-A。",
+          "附件仅作为路径引用，无需读取文件或创建任务。请确认它的文件名，并说明仅有路径引用并不代表已经读取文件内容。"
+        ],
+        "variables": ["caseNonce"],
+        "files": [
+          {
+            "path": "验收笔记.txt",
+            "content": "项目代号：orchid-{{caseNonce}}\n建议动作：只读检查，不修改文件。\n"
+          }
+        ]
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "live-selected-provider"
+      },
+      "requirements": [
+        "event-driven-trigger",
+        "identity-and-artifact-capture",
+        "packaged-electron",
+        "real-ipc",
+        "live-model-stream"
+      ],
+      "steps": [
+        {
+          "when": "第一条真实流进行中",
+          "action": "通过正常文件拖放附加真实磁盘File，提交第二条输入并保存其原clientMessageId。"
+        },
+        {
+          "when": "第二条已接受、第一条仍在执行",
+          "action": "刷新并检查文件路径提示和排队输入；随后等两条回复完成。"
+        },
+        {
+          "when": "第二条完成且磁盘记录可读",
+          "action": "再次刷新，核对第二条输入和回复的数量、归属与内容。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "actual-file-path",
+          "criterion": "附件经真实File/drop和Electron路径获取；原path及clientMessageId保留。",
+          "requiredEvidence": ["drop-file-identity", "accepted-input"]
+        },
+        {
+          "id": "completed-once",
+          "criterion": "完成后刷新，两个用户intent各一次，第二助手回复一次。",
+          "requiredEvidence": ["snapshot", "canonical-transcript", "ui-final"]
+        },
+        {
+          "id": "read-only",
+          "criterion": "附件文件和其他工作区文件未修改。",
+          "requiredEvidence": ["filesystem-diff"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 2,
+        "applicability": "live-output",
+        "criteria": [
+          {
+            "id": "semantic-1",
+            "criterion": "正确确认附件文件名为验收笔记.txt；不把第一任务的书桌建议作为第二任务答案。"
+          },
+          {
+            "id": "semantic-2",
+            "criterion": "明确路径引用不证明已经读取文件内容，不虚构文件正文或已完成检查，也不声称创建了用户未要求的任务。"
+          }
+        ],
+        "notApplicableReason": null
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/pet/PetStateProvider.reload.test.tsx",
+        "packages/desktop/src/renderer/automation/hydrateOrder.steer.test.ts",
+        "packages/desktop/src/main/parseStreamLine.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": ["e554ac7cfd92a684554648be5fe1e87b20b5dddf"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "mimi-attachment-runtime/final/file-path-queue-reload/result.json",
+            "role": "failure",
+            "sha256": "83cd21edc95ab13fe8baf6f5a57c100c87f30d3a699b91672ee1d9e018d635bf"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-attachment-runtime/cursor/file-path-queue-reload/result.json",
+            "role": "fix-verification",
+            "sha256": "5aa59dd655af024601a7c61d7cfc2236cc0bb13f223c99d045baf2eb56c5ac94"
+          }
+        ]
+      },
+      "notes": [
+        "历史原case前16项绿、完成后再次刷新第17项出现双回复；不要只验首次完成。",
+        "不等同于外部消息渠道的结构化附件端到端验收。",
+        "live v2保持Mimi自身路径引用/恢复边界，不要求读取文件或DelegateWork；实际Write/Read由ordinary-steer-cache-cursor覆盖。"
+      ]
+    },
+    {
+      "id": "ordinary-steer-cache-cursor",
+      "version": 1,
+      "title": "普通聊天旧缓存游标重放导致完成回复重复",
+      "adapter": "desktop",
+      "executionCoverage": {
+        "liveEnabled": true,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": [
+          "请创建 eval-note.txt，内容严格为 orchid-{{caseNonce}} 加换行。只修改这一个文件。",
+          "完成后请读取 eval-note.txt，告诉我它的完整内容；不要再修改文件。"
+        ],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "live-selected-provider"
+      },
+      "requirements": [
+        "event-driven-trigger",
+        "identity-and-artifact-capture",
+        "packaged-electron",
+        "real-ipc",
+        "live-model-stream"
+      ],
+      "steps": [
+        {
+          "when": "第一请求真实Write等待批准",
+          "action": "从同一普通聊天输入框追加第二条，记录不同clientMessageId与steerId。"
+        },
+        {
+          "when": "第二条已接受",
+          "action": "批准第一项，等待真实写入和第二回复完成；立即刷新。"
+        },
+        {
+          "when": "第一次刷新已核对",
+          "action": "再次刷新，然后完整退出启动；同时在仓库Hook回归中枚举旧cursor与独立canonical完成态。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "unique-intents-replies",
+          "criterion": "第一、第二用户各一次，第二助手一次；相同文本的不同intent不得合并。",
+          "requiredEvidence": ["client-steer-id-map", "ui-after-each-recovery"]
+        },
+        {
+          "id": "exactly-one-write",
+          "criterion": "eval-note.txt字节正确且只写一次；恢复不重复旧工具或模型运行。",
+          "requiredEvidence": ["filesystem-diff", "tool-execution-log", "model-request-log"]
+        },
+        {
+          "id": "cursor-consistency",
+          "criterion": "旧缓存按所属epoch/cursor先回放，canonical缺尾或为空时仍保留真实snapshot尾。",
+          "requiredEvidence": ["repository-regression-result"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "live-output",
+        "criteria": [
+          {
+            "id": "semantic-1",
+            "criterion": "第二回复正确报告文件实际内容，包含orchid-{{caseNonce}}，且符合“不再修改”的请求。"
+          },
+          {
+            "id": "semantic-2",
+            "criterion": "最终表述与实际写入/读取轨迹一致，不能把“已排队”当作已完成。"
+          }
+        ],
+        "notApplicableReason": null
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx",
+        "packages/desktop/src/renderer/transcriptHydration.prefix.test.ts",
+        "packages/desktop/src/renderer/automation/hydrateOrder.steer.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": [
+          "e554ac7cfd92a684554648be5fe1e87b20b5dddf",
+          "e6a2345c6d2868f3ad6b15eb199ce2645cef90b9"
+        ],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "tools/candidate-verified/ordinary-steer-result.json",
+            "role": "failure",
+            "sha256": "2508f47d588cdfdc9cd21669f5672c8555c7117acce6c88ac6504e8b8e440348"
+          },
+          {
+            "archive": "round2",
+            "path": "mimi-reload-queue/ordinary-steer-hook-real-red.log",
+            "role": "controlled-reproduction",
+            "sha256": "10ce755b69780ad531f36afef89823361473e22e9e11684f0b814d7509e8f982"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/candidate-cursor/ordinary-steer-result.json",
+            "role": "fix-verification",
+            "sha256": "7fe8243e6142bdf0096379387a6b9edcd99be0ace3d08b4773650ccfbee34c12"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/candidate-cursor/ordinary-steer-persistence-followup-result.json",
+            "role": "restart-verification",
+            "sha256": "da74a860b43bdd0bc5ea153d0cd29f77c5fa6a9633da0489a66a4cc35f745ef0"
+          }
+        ]
+      },
+      "notes": [
+        "派生cursor回归使用从实际事件重建的受控缓存前缀，不声称捕获到原刷新前瞬间的缓存。",
+        "canonical第二clientId可以不同于steerId，snapshot外壳clientId仍属于首输入，不能用该外壳给第二输入改身份。"
+      ]
+    },
+    {
+      "id": "manual-stop-cache-upgrade",
+      "version": 1,
+      "title": "旧双 Stop 缓存升级后重复显示",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["packaged_fixed_provider"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "actual-packaged",
+      "input": {
+        "prompts": ["连续解释三个整理步骤，标记 {{caseNonce}}。"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "旧包真实流已有partial且未终结",
+          "action": "点击Stop，刷新，确认旧版产生两个Stop并完整退出。"
+        },
+        {
+          "when": "旧profile已保存且不作改写",
+          "action": "由候选包直接打开同一profile，检查一次；刷新，再完整退出启动。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "one-detailed-stop",
+          "criterion": "每次恢复都是partial一次、同回合Stop一次；保留原elapsed/detail且排在partial后。",
+          "requiredEvidence": ["old-cache-hash", "ui-after-recovery", "recovered-transcript"]
+        },
+        {
+          "id": "no-reexecution",
+          "criterion": "升级和刷新不增加原请求或工具副作用。",
+          "requiredEvidence": ["model-request-log", "tool-execution-log"]
+        },
+        {
+          "id": "turn-scoped",
+          "criterion": "不同或矛盾用户身份的Stop不跨回合合并；重复merge保持幂等。",
+          "requiredEvidence": ["repository-regression-result"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/desktop/src/renderer/transcriptHydration.prefix.test.ts",
+        "packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx"
+      ],
+      "provenance": {
+        "fixCommits": ["e6a2345c6d2868f3ad6b15eb199ce2645cef90b9"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "tools/manual-stop-baseline/ordinary-manual-stop-result.json",
+            "role": "failure",
+            "sha256": "28c78e99a60b43895d45807bc3f7a708dbe91949ac43bea62ef5f52da611cdbd"
+          },
+          {
+            "archive": "round2",
+            "path": "tools/manual-stop-live-upgrade/old-stop-cache-upgrade-result.json",
+            "role": "fix-verification",
+            "sha256": "c12a0bebe844c69048a5f785dfc64b08931c5f938d4b9bbc2b49d5df937142e5"
+          }
+        ]
+      },
+      "notes": [
+        "真正升级验收必须使用旧包实际生成且未被测试改写的profile；合成reducer双Stop仅是补充回归。"
+      ]
+    },
+    {
+      "id": "cached-decision-compaction",
+      "version": 1,
+      "title": "恢复时复活已被压缩删除的旧决策",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["reducer_replay"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "controlled-reducer",
+      "input": {
+        "prompts": ["第一轮问题 {{caseNonce}}-A", "下一轮问题 {{caseNonce}}-B"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "缓存含唯一user-A、已答question、旧Stop、user-B及后续回复",
+          "action": "canonical保留user-A但用context_boundary替代该回合旧内容，保留user-B回复。"
+        },
+        {
+          "when": "恢复合并",
+          "action": "确认缓存旧问题与Stop不被复活；另加本次journal新问题/答案/Stop正向变体。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "respect-compaction",
+          "criterion": "压缩回合旧cached-only问题和Stop不重新出现。",
+          "requiredEvidence": ["canonical-state", "recovered-state"]
+        },
+        {
+          "id": "new-decisions-survive",
+          "criterion": "本次恢复实际观察到的journal问题/答案/Stop仍保留在所属回合。",
+          "requiredEvidence": ["journal", "recovered-state"]
+        },
+        {
+          "id": "agent-index",
+          "criterion": "插入或删除决策后agentMessageIndex仍指向原agent卡。",
+          "requiredEvidence": ["reducer-state"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": ["packages/desktop/src/renderer/transcriptHydration.prefix.test.ts"],
+      "provenance": {
+        "fixCommits": ["e6a2345c6d2868f3ad6b15eb199ce2645cef90b9"],
+        "artifacts": [
+          {
+            "archive": "round2",
+            "path": "ordinary-cache-diagnosis/decision-boundary-probe-red.json",
+            "role": "failure",
+            "sha256": "a0a4be61a2975989647528e6f88471de666be283b97e9040cc02c3fec30eabfc"
+          },
+          {
+            "archive": "round2",
+            "path": "ordinary-cache-diagnosis/decision-boundary-probe.json",
+            "role": "fix-verification",
+            "sha256": "0ba667db349cdecd65cc260b06426e4fe2c4df7f3bff5355a6f01739215e9fb2"
+          },
+          {
+            "archive": "round2",
+            "path": "ordinary-cache-diagnosis/hydration-final-independent-review.md",
+            "role": "scope",
+            "sha256": "5425d8e380e0238584220628dd7ec0c96374b8e687b2995099ea4cdc0161348e"
+          }
+        ]
+      },
+      "notes": ["这是恢复补丁交叉审查时发现的受控回归风险，不是已发布产品线上失败。"]
+    },
+    {
+      "id": "memory-directory-isolation",
+      "version": 1,
+      "title": "注入记忆根与环境默认根混用",
+      "adapter": "repository-regression",
+      "executionCoverage": {
+        "liveEnabled": false,
+        "historicalLevels": ["public_package_fixed_model"],
+        "currentNonLiveEntry": "repository-regression",
+        "note": "案例定义不表示本轮已执行；结果由独立运行报告记录。"
+      },
+      "failureBasis": "historical-package-control",
+      "input": {
+        "prompts": ["请记住：本合成项目的维护动作是只读检查，标记 {{caseNonce}}。"],
+        "variables": ["caseNonce"],
+        "files": []
+      },
+      "environment": {
+        "fixture": "synthetic-isolated",
+        "workspace": "temporary",
+        "profile": "temporary",
+        "externalWrites": false,
+        "model": "fixed-or-none"
+      },
+      "requirements": ["event-driven-trigger", "identity-and-artifact-capture"],
+      "steps": [
+        {
+          "when": "两个独立合成记忆根准备好",
+          "action": "注入根放owned-{{caseNonce}}，环境默认根放foreign-{{caseNonce}}；明确注入MemoryManager。"
+        },
+        {
+          "when": "使用同一固定JSON模型回调执行提取",
+          "action": "记录实际提取上下文、文件写入、会话计数；公开旧新包作相同输入对照。"
+        }
+      ],
+      "hardAssertions": [
+        {
+          "id": "read-isolation",
+          "criterion": "模型提取上下文不含foreign哨兵，包含所需owned上下文。",
+          "requiredEvidence": ["captured-model-input"]
+        },
+        {
+          "id": "write-isolation",
+          "criterion": "新记忆及会话计数仅进入注入根，默认根字节和计数未改变。",
+          "requiredEvidence": ["before-after-files", "session-counts"]
+        }
+      ],
+      "semanticRubric": {
+        "version": 1,
+        "applicability": "not-applicable",
+        "criteria": [],
+        "notApplicableReason": "当前只登记确定性故障与仓库回归入口；不以模型评分判断进程、身份、缓存或权限正确性。"
+      },
+      "repositoryRegression": [
+        "packages/core/src/services/memory-storage-context.test.ts",
+        "packages/core/src/services/session-memory.home-isolation.test.ts"
+      ],
+      "provenance": {
+        "fixCommits": ["00740501013a5c1224d91908617fa2aa5ea67958"],
+        "artifacts": [
+          {
+            "archive": "round1",
+            "path": "runtime/runtime-report.json",
+            "role": "old-new-control",
+            "sha256": "20f25fab05a0b5ddff526e008f10cbd7d3fc040ff1d0f195b7f2517dcd321618"
+          },
+          {
+            "archive": "round1",
+            "path": "runtime/runtime-validation.md",
+            "role": "scope",
+            "sha256": "8dbcb6c53ad102022d64b162c16c0603d3baab80260be8342bec17e78b93d4ee"
+          },
+          {
+            "archive": "round1",
+            "path": "runtime/public-package-provenance.json",
+            "role": "package-identity",
+            "sha256": "85656c20a9cd6f62385a85c2679716e5c5766a7c64c661ffead09061b07c9b35"
+          }
+        ]
+      },
+      "notes": [
+        "历史是公开0.9.8红与0.9.10绿、Linux真实文件系统/进程；提取模型回调固定，不验证记忆摘要语义质量。",
+        "当前未接live adapter；未来真实模型扩展须另评记忆语义，不改变目录隔离硬门槛。"
+      ]
+    }
+  ]
+}
