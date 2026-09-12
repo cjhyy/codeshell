@@ -474,7 +474,9 @@ ipcRenderer.on(
     const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
     if (!sessionId || !requestId || payload?.request === undefined) return;
     externalApprovalIds.add(requestId);
-    approvalListeners.forEach((cb) => cb({ sessionId, requestId, request: payload.request }));
+    approvalListeners.forEach((cb) =>
+      cb({ sessionId, requestId, request: payload.request, source: "external-runtime" }),
+    );
   },
 );
 
@@ -800,6 +802,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       if (i >= 0) petDelegationSessionListeners.splice(i, 1);
     };
   },
+  getPendingApprovals: () => ipcRenderer.invoke("agent:pendingApprovals"),
   onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {
     approvalListeners.push(cb);
     return () => {

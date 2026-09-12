@@ -7,6 +7,13 @@
  */
 export class PendingMobileApprovals {
   private readonly bySession = new Map<string, Map<string, string>>();
+  private workerGeneration: number | undefined;
+
+  /** Requests belong to the worker that can answer them, never its successor. */
+  setWorkerState(generation: number, alive: boolean): void {
+    if (!alive || this.workerGeneration !== generation) this.bySession.clear();
+    this.workerGeneration = generation;
+  }
 
   observeOutboundLine(line: string): void {
     let msg: { method?: unknown; params?: unknown };
@@ -49,6 +56,11 @@ export class PendingMobileApprovals {
 
   replayLines(sessionId: string): string[] {
     return [...(this.bySession.get(sessionId)?.values() ?? [])];
+  }
+
+  /** The desktop has a queue across sessions; return only its current pending requests. */
+  replayAllLines(): string[] {
+    return [...this.bySession.values()].flatMap((pending) => [...pending.values()]);
   }
 
   forgetSession(sessionId: string): void {

@@ -117,4 +117,14 @@ describe("the shipped preload actually routes", () => {
     expect(approveIdx).toBeGreaterThan(-1);
     expect(approveIdx).toBeLessThan(rpcIdx);
   });
+
+  test("external prompts retain their lifecycle source in the shared approval channel", () => {
+    const handler = source.slice(
+      source.indexOf('"externalRuntime:approvalRequest"'),
+      source.indexOf('"externalRuntime:approvalRequest"') + 800,
+    );
+    expect(handler).toContain('source: "external-runtime"');
+    expect(handler).toContain("externalApprovalIds.add(requestId)");
+    expect(handler).toContain("approvalListeners.forEach");
+  });
 });

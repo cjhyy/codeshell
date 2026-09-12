@@ -398,6 +398,8 @@ export interface PluginMcpApprovalResult extends PluginMcpTrustEntry {
 }
 
 export interface ApprovalRequestEnvelope {
+  /** External approvals outlive native worker exits; omitted means the Core worker. */
+  source?: "external-runtime";
   /** Owning chat session — renderer routes the modal to the right tab. */
   sessionId?: string;
   requestId: string;
@@ -1220,6 +1222,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
       clientMessageId: string;
     }) => void,
   ): Unsubscribe;
+  /** Current native worker approvals, for recovery after a renderer reload. */
+  getPendingApprovals(): Promise<ApprovalRequestEnvelope[]>;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onApprovalResolved(cb: (env: ApprovalResolvedEnvelope) => void): Unsubscribe;
   onMobilePermissionMode(cb: (env: MobilePermissionModeEnvelope) => void): Unsubscribe;

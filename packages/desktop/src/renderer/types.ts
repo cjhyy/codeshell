@@ -1601,6 +1601,10 @@ export function appendAskUserMessage(
   state: MessagesReducerState,
   payload: Omit<AskUserMessage, "kind" | "id">,
 ): MessagesReducerState {
+  // A pending approval snapshot can race persisted history hydration. The
+  // request identity survives both paths; keep its card and any existing answer.
+  if (state.messages.some((m) => m.kind === "ask_user" && m.requestId === payload.requestId))
+    return state;
   return {
     ...state,
     messages: [...state.messages, { kind: "ask_user", id: freshId("ask"), ...payload }],

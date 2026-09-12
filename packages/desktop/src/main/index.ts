@@ -1525,6 +1525,10 @@ async function createWindow(): Promise<BrowserWindow> {
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
+      pendingMobileApprovals.setWorkerState(
+        externalBridge.workerGeneration(),
+        externalBridge.hasLiveWorker(),
+      );
       pendingMobileApprovals.observeOutboundLine(line);
       if (snapshotEntry) {
         mobileRemote.broadcast({
@@ -6653,6 +6657,15 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
   );
 });
 
+ipcMain.handle("agent:pendingApprovals", () => {
+  // Native approval events already reach all main windows. Preserve that queue
+  // and its session envelopes, without replaying resolved historical requests.
+  pendingMobileApprovals.setWorkerState(
+    bridge?.workerGeneration() ?? 0,
+    bridge?.hasLiveWorker() ?? false,
+  );
+  return pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params);
+});
 /**
  * Snapshot subscription: a (re)mounted renderer asks main for the events it
  * missed for a session past `sinceSeq`. main holds these (AgentBridge's

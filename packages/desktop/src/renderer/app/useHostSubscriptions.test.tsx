@@ -13,7 +13,8 @@ import { compactSidebarSessions, sortSidebarSessions } from "../sidebarSessionVi
 import { transcriptsReducer, type TranscriptsAction } from "../transcriptsReducer";
 import { getSessionPersistence } from "../sessionPersistence";
 import { useHostSubscriptions } from "./useHostSubscriptions";
-import { INITIAL_STATE } from "../types";
+import { INITIAL_STATE, type ApprovalState } from "../types";
+import type { ApprovalRequestEnvelope } from "../../preload/types";
 
 function cell<T>(value: T) {
   const state = {
@@ -50,7 +51,7 @@ const announcement = (sessionId: string) => ({
   clientMessageId: `request:${sessionId}`,
 });
 
-describe("Mimi delegated Session sidebar announcements", () => {
+describe("host subscriptions and recovery", () => {
   let hook: Awaited<ReturnType<typeof renderHook<void>>> | undefined;
   let savedStorage: PropertyDescriptor | undefined;
   let savedBridge: PropertyDescriptor | undefined;
@@ -63,6 +64,23 @@ describe("Mimi delegated Session sidebar announcements", () => {
   let actions: TranscriptsAction[];
   let busy: Set<string>;
   let resolveCwds: (cwds: string[]) => Promise<unknown[]>;
+  let readApprovals: () => Promise<ApprovalRequestEnvelope[]>;
+  let approvals: ReturnType<typeof cell<ApprovalRequestEnvelope[]>>;
+  let currentApproval: ReturnType<typeof cell<ApprovalState>>;
+  let approveCalls: unknown[][];
+  const approval = (requestId = "approval-one", toolName = "Write"): ApprovalRequestEnvelope => ({
+    sessionId: "pinned-1",
+    requestId,
+    request: {
+      toolName,
+      description: "Confirm the requested operation",
+      args: {
+        question: "Choose a target",
+        options: [{ label: "Read only", description: "Inspect" }],
+      },
+      riskLevel: "medium",
+    },
+  });
 
   beforeEach(() => {
     ensureMiniDom();
@@ -99,6 +117,10 @@ describe("Mimi delegated Session sidebar announcements", () => {
     busy = new Set();
     listeners = new Map();
     resolveCwds = async () => [{ projectId: "project", rootId: "root", created: false }];
+    readApprovals = async () => [];
+    approvals = cell<ApprovalRequestEnvelope[]>([]);
+    currentApproval = cell<ApprovalState>(null);
+    approveCalls = [];
     const subscribe = (name: string) => (listener: (value: any) => void) => {
       listeners.set(name, listener);
       return () => {
@@ -111,6 +133,11 @@ describe("Mimi delegated Session sidebar announcements", () => {
         log: () => {},
         projectRegistry: { resolveForCwdBatch: (cwds: string[]) => resolveCwds(cwds) },
         registerBrowserSessionBucket: () => {},
+        getPendingApprovals: () => readApprovals(),
+        approve: async (...args: unknown[]) => {
+          approveCalls.push(args);
+        },
+        mobileRemote: { notifyApprovalResolved: async () => {} },
         ...Object.fromEntries(
           [
             "onStreamEvent",
@@ -150,8 +177,8 @@ describe("Mimi delegated Session sidebar announcements", () => {
         approvalBucketsRef: { current: new Map() },
         permissionForBucketRef: { current: () => null },
         defaultPermissionModeRef: { current: null },
-        setApprovalQueue: () => {},
-        setApproval: () => {},
+        setApprovalQueue: approvals.set,
+        setApproval: currentApproval.set,
         setPermissionOverrides: () => {},
       },
       sessions: {
@@ -183,6 +210,129 @@ describe("Mimi delegated Session sidebar announcements", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
     if (savedBridge) Object.defineProperty(window, "codeshell", savedBridge);
     else Reflect.deleteProperty(window, "codeshell");
+  });
+
+  test("restores pending approvals after live listeners register and keeps the originating bucket", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => {
+      expect(listeners.has("onApprovalRequest")).toBe(true);
+      expect(listeners.has("onApprovalResolved")).toBe(true);
+      return read.promise;
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const env = approval();
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(env);
+      read.resolve([env, env]);
+      await flushMicrotasks();
+      listeners.get("onApprovalRequest")!(env);
+    });
+    expect(approvals.value).toEqual([env]);
+    expect(currentApproval.value).toEqual(env);
+    expect(params.permissions.approvalBucketsRef.current.get(env.requestId)).toBe(
+      bucketKey("project", "pinned-1"),
+    );
+    expect(params.routing.activeBucketRef.current).toBe(bucketKey("project", "pinned-4"));
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("a resolved request wins over an older in-flight snapshot, even without a live request", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const shown = approval("shown");
+    const missed = approval("missed");
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(shown);
+      listeners.get("onApprovalResolved")!({ requestId: shown.requestId, approved: true });
+      listeners.get("onApprovalResolved")!({ requestId: missed.requestId, approved: false });
+      read.resolve([shown, missed]);
+      await flushMicrotasks();
+    });
+    expect(approvals.value).toEqual([]);
+    expect(currentApproval.value).toBe(null);
+    expect(params.permissions.approvalBucketsRef.current.size).toBe(0);
+  });
+
+  test("snapshot restoration preserves bypass scope and delivers ask_user once without auto-answering", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    const ownBucket = bucketKey("project", "pinned-1");
+    params.permissions.permissionForBucketRef.current = (bucket) =>
+      bucket === ownBucket ? "bypass" : null;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const write = approval("write");
+    const ask = approval("question", "__ask_user__");
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(write);
+      listeners.get("onApprovalRequest")!(ask);
+      read.resolve([write, ask]);
+      await flushMicrotasks();
+    });
+    expect(approveCalls).toEqual([["pinned-1", "write", "approve"]]);
+    expect(approvals.value).toEqual([]);
+    expect(actions).toEqual([
+      expect.objectContaining({
+        type: "ask_user",
+        bucket: ownBucket,
+        engineSessionId: "pinned-1",
+        requestId: "question",
+        question: "Choose a target",
+      }),
+    ]);
+  });
+
+  test("worker exit invalidates an in-flight snapshot and permits current worker request ids", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    params.permissions.permissionForBucketRef.current = () => "bypass";
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(approval("reused"));
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: null });
+      read.resolve([approval("old-worker")]);
+      await flushMicrotasks();
+      listeners.get("onApprovalRequest")!(approval("reused"));
+    });
+    expect(approveCalls).toEqual([
+      ["pinned-1", "reused", "approve"],
+      ["pinned-1", "reused", "approve"],
+    ]);
+    expect(approvals.value).toEqual([]);
+  });
+
+  test("an unmounted renderer ignores a late approval snapshot", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await hook.unmount();
+    hook = undefined;
+    read.resolve([approval()]);
+    await flushMicrotasks();
+    expect(approvals.value).toEqual([]);
+  });
+
+  test("a dead Core worker retires its visible approvals but preserves external runtime prompts", async () => {
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const native = approval("native");
+    const external: ApprovalRequestEnvelope = {
+      ...approval("external"),
+      source: "external-runtime",
+    };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(native);
+      listeners.get("onApprovalRequest")!(external);
+      expect(currentApproval.value?.requestId).toBe("native");
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: null });
+    });
+    expect(approvals.value).toEqual([external]);
+    expect(currentApproval.value).toEqual(external);
+    expect([...params.permissions.approvalBucketsRef.current.keys()]).toEqual(["external"]);
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(external);
+      listeners.get("onApprovalRequest")!(native);
+    });
+    expect(approvals.value).toEqual([external, native]);
   });
 
   test("reveals a new Session immediately without changing the active conversation", async () => {

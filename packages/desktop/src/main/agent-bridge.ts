@@ -1361,6 +1361,10 @@ export class AgentBridge implements PetStateBridge {
     return this.core.hasLiveWorker();
   }
 
+  workerGeneration(): number {
+    return this.core.workerGeneration();
+  }
+
   isSessionRunning(sessionId: string): boolean {
     return this.webConfiguration.isRunning(sessionId);
   }

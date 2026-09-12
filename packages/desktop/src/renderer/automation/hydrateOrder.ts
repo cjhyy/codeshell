@@ -7,7 +7,7 @@
  * post-sync-point tail), so localStorage residue can't form an orphan trailing
  * group. disk empty (brand-new front-end session not yet on disk) → use local.
  */
-import type { MessagesReducerState } from "../types";
+import type { AskUserMessage, MessagesReducerState } from "../types";
 import { mergeTranscripts, mergeTranscriptCursor } from "./mergeTranscripts";
 
 export function chooseHydrateBase(
@@ -24,7 +24,23 @@ export function mergeHistoryIntoLive(
 ): MessagesReducerState {
   const merged = chooseHydrateBase(history, live);
   const liveMessages = new Map(live.messages.map((message) => [message.id, message]));
-  const messages = merged.messages.map((message) => liveMessages.get(message.id) ?? message);
+  const questions = new Map<string, AskUserMessage>();
+  for (const source of [history, live]) {
+    for (const message of source.messages) {
+      if (message.kind !== "ask_user") continue;
+      const previous = questions.get(message.requestId);
+      if (!previous || message.answer !== undefined) questions.set(message.requestId, message);
+    }
+  }
+  const seenQuestions = new Set<string>();
+  const messages = merged.messages.flatMap((message) => {
+    if (message.kind !== "ask_user") return [liveMessages.get(message.id) ?? message];
+    // Background approvals can arrive before this bucket begins hydration, so
+    // both states already hold the same question under different local ids.
+    if (seenQuestions.has(message.requestId)) return [];
+    seenQuestions.add(message.requestId);
+    return [questions.get(message.requestId) ?? message];
+  });
   // The content merge may keep the disk copy, whose generated id differs from
   // the live pointer. Retain the live object at that slot so the next delta can
   // continue it. Never infer an overlap from a short text prefix or cut away a

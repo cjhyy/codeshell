@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { flushSync } from "react-dom";
 
@@ -133,6 +133,8 @@ export function useHostSubscriptions({
     setRevealedSessionIds,
   } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
+  const pendingApprovalIdsRef = useRef(new Set<string>());
+  const coreApprovalIdsRef = useRef(new Set<string>());
   useEffect(
     () =>
       subscribeSessionPersistenceFlush(() => {
@@ -601,7 +603,17 @@ export function useHostSubscriptions({
       window.codeshell.onPetDelegationSession?.((meta) => {
         void announceHostSession(meta, "pet-delegation");
       }) ?? (() => undefined);
-    const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
+    let approvalRestoreActive = true;
+    let restoringApprovals = true;
+    const resolvedDuringRestore = new Set<string>();
+    const handleApproval = (env: ApprovalRequestEnvelope): void => {
+      if (
+        pendingApprovalIdsRef.current.has(env.requestId) ||
+        resolvedDuringRestore.has(env.requestId)
+      )
+        return;
+      pendingApprovalIdsRef.current.add(env.requestId);
+      if (env.source !== "external-runtime") coreApprovalIdsRef.current.add(env.requestId);
       window.codeshell.log("approval.request", {
         requestId: env.requestId,
         toolName: env.request.toolName,
@@ -723,37 +735,56 @@ export function useHostSubscriptions({
         return;
       }
       approvalBucketsRef.current.set(env.requestId, targetBucket);
-      setApprovalQueue((q) => [...q, env]);
+      setApprovalQueue((q) =>
+        q.some((queued) => queued.requestId === env.requestId) ? q : [...q, env],
+      );
       setApproval((cur) => cur ?? env);
-    });
-    const offApprovalResolved = window.codeshell.onApprovalResolved(
-      (env: ApprovalResolvedEnvelope) => {
-        if (!env.requestId) return;
-        // A server-initiated resolve (e.g. a goal-mode AskUserQuestion that timed
-        // out with nobody answering) must also retire the inline ask_user card,
-        // which lives in the transcript — not just the approval modal queue below.
-        // A user-driven answer already marks it via handleAskUserAnswer, so only
-        // touch a card that's still unanswered here.
-        const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
-        if (origin && origin.answer === undefined) {
-          dispatch({
-            type: "ask_user_answered",
-            bucket: origin.bucket,
-            requestId: env.requestId,
-            answer: t("msg.ask.timedOut"),
-          });
-        }
-        approvalBucketsRef.current.delete(env.requestId);
-        setApprovalQueue((prev) => {
-          const remaining = prev.filter((e) => e.requestId !== env.requestId);
-          setApproval((cur) => {
-            if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
-            return cur;
-          });
-          return remaining;
+    };
+    const offApproval = window.codeshell.onApprovalRequest(handleApproval);
+    const handleApprovalResolved = (env: ApprovalResolvedEnvelope): void => {
+      if (!env.requestId) return;
+      pendingApprovalIdsRef.current.delete(env.requestId);
+      coreApprovalIdsRef.current.delete(env.requestId);
+      if (restoringApprovals) resolvedDuringRestore.add(env.requestId);
+      // A server-initiated resolve (e.g. a goal-mode AskUserQuestion that timed
+      // out with nobody answering) must also retire the inline ask_user card,
+      // which lives in the transcript — not just the approval modal queue below.
+      // A user-driven answer already marks it via handleAskUserAnswer, so only
+      // touch a card that's still unanswered here.
+      const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
+      if (origin && origin.answer === undefined) {
+        dispatch({
+          type: "ask_user_answered",
+          bucket: origin.bucket,
+          requestId: env.requestId,
+          answer: t("msg.ask.timedOut"),
         });
-      },
-    );
+      }
+      approvalBucketsRef.current.delete(env.requestId);
+      setApprovalQueue((prev) => {
+        const remaining = prev.filter((e) => e.requestId !== env.requestId);
+        setApproval((cur) => {
+          if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
+          return cur;
+        });
+        return remaining;
+      });
+    };
+    const offApprovalResolved = window.codeshell.onApprovalResolved(handleApprovalResolved);
+    // Subscribe first so a decision made while the read is in flight wins over
+    // an older snapshot. Use the same routing and permission path as live events.
+    const pendingApprovals = window.codeshell.getPendingApprovals?.();
+    if (pendingApprovals) {
+      void pendingApprovals
+        .then((pending) => {
+          if (approvalRestoreActive) for (const env of pending) handleApproval(env);
+        })
+        .catch((error) => window.codeshell.log("approval.restore_failed", { error: String(error) }))
+        .finally(() => {
+          restoringApprovals = false;
+          resolvedDuringRestore.clear();
+        });
+    } else restoringApprovals = false;
     const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
       (env: MobilePermissionModeEnvelope) => {
         if (!env.sessionId) return;
@@ -818,6 +849,12 @@ export function useHostSubscriptions({
     };
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
+      if (evt.type === "exited" || evt.type === "gave_up") {
+        // A snapshot from the old worker cannot restore actionable requests.
+        approvalRestoreActive = false;
+        for (const requestId of [...coreApprovalIdsRef.current])
+          handleApprovalResolved({ requestId });
+      }
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") {
         expireQuickChatSessions();
@@ -850,6 +887,7 @@ export function useHostSubscriptions({
       }
     });
     return () => {
+      approvalRestoreActive = false;
       offStream();
       offAutomationSession();
       offMobileSession();

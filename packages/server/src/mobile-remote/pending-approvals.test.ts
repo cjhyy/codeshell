@@ -23,6 +23,40 @@ function approvalRequestLine(sessionId: string, requestId: string): string {
 }
 
 describe("PendingMobileApprovals", () => {
+  test("snapshots all unresolved sessions without replaying resolved or closed requests", () => {
+    const pending = new PendingMobileApprovals();
+    const first = approvalRequestLine("s1", "one");
+    const second = approvalRequestLine("s2", "two");
+    pending.observeOutboundLine(first);
+    pending.observeOutboundLine(second);
+    pending.observeOutboundLine(second);
+    expect(pending.replayAllLines()).toEqual([first, second]);
+    const snapshot = pending.replayAllLines();
+    pending.resolve("one");
+    pending.forgetSession("s2");
+    expect(pending.replayAllLines()).toEqual([]);
+    expect(snapshot).toEqual([first, second]);
+  });
+
+  test("a dead worker or a new generation cannot replay the previous worker's approvals", () => {
+    const pending = new PendingMobileApprovals();
+    const old = approvalRequestLine("same-session", "reused-id");
+    pending.setWorkerState(1, true);
+    pending.observeOutboundLine(old);
+    pending.setWorkerState(1, true);
+    expect(pending.replayAllLines()).toEqual([old]);
+    pending.setWorkerState(1, false);
+    expect(pending.replayAllLines()).toEqual([]);
+    pending.setWorkerState(2, true);
+    pending.observeOutboundLine(old);
+    pending.setWorkerState(3, true);
+    expect(pending.replayAllLines()).toEqual([]);
+    const current = approvalRequestLine("current-session", "reused-id");
+    pending.observeOutboundLine(current);
+    expect(pending.replayAllLines()).toEqual([current]);
+    expect(pending.replayLines("same-session")).toEqual([]);
+  });
+
   test("ignores JSON scalars and malformed records without losing a pending approval", () => {
     const pending = new PendingMobileApprovals();
     const line = approvalRequestLine("session", "pending");
