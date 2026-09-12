@@ -462,17 +462,24 @@ export function PetStateProvider({
       if (!child && event.type === "steer_injected" && event.id) {
         startedInputIds.add(event.id);
         const accepted = acceptedInputs.get(event.id);
-        if (accepted) {
+        const user = history?.messages.find(
+          (message) =>
+            message.kind === "user" &&
+            (message.steerId === event.id || message.clientMessageId === event.id),
+        );
+        if (user?.kind === "user" || accepted) {
           // Injection can race the history read before its queued bubble is
-          // restored. Give the reducer the original identity and attachments.
+          // restored, or replay after Main has retired the accepted input.
+          // Restore the original identity before folding its reply.
           chatDispatch({
             type: "user_message",
             bucket: PET_CHAT_BUCKET,
-            text: accepted.message,
-            clientMessageId: accepted.clientMessageId,
+            text: user?.kind === "user" ? user.text : accepted!.message,
+            clientMessageId:
+              user?.kind === "user" ? user.clientMessageId : accepted!.clientMessageId,
             steerId: event.id,
             pending: false,
-            attachments: accepted.attachments,
+            attachments: user?.kind === "user" ? user.attachments : accepted?.attachments,
           });
         }
       }

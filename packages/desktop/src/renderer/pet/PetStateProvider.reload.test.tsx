@@ -7,6 +7,8 @@ import { PetStateProvider, usePetState } from "./PetStateProvider";
 import { transcriptToFoldItems } from "../../main/transcript-reader";
 import { parsePetUserContent } from "./PetChatHost";
 import type { PetDispatchResult } from "../../preload/pet-api";
+import { parseSnapshotAppend } from "../../main/parseStreamLine";
+import { SessionSnapshotStore } from "../../main/SessionSnapshotStore";
 
 const sessionId = "pet-reload";
 const identity = { runId: "run-reload", clientMessageId: "input-reload" };
@@ -123,6 +125,109 @@ function liveSnapshot(): SessionSnapshot {
 }
 
 describe("Mimi reload during a live reply", () => {
+  test.each([
+    "complete",
+    "complete-missing-reply",
+    "complete-missing-input",
+    "partial",
+    "worker-exited",
+  ] as const)(
+    "keeps an identified attachment steer boundary through Main snapshot and reload (%s)",
+    async (mode) => {
+      // The real queue/reload failure had two model steps under ONE run/client
+      // envelope. Only steer_injected identifies the second durable input.
+      const secondText = 'review note\n\n本地文件路径（由你拖入）:\n- "/work/notes.txt"';
+      const events = [
+        { type: "session_started", sessionId },
+        { type: "stream_request_start", turnNumber: 1, messageId: "first-reply" },
+        { type: "text_delta", text: "same reply" },
+        {
+          type: "assistant_message",
+          messageId: "first-reply",
+          message: { role: "assistant", content: "same reply" },
+        },
+        { type: "steer_injected", id: "second-input", text: secondText },
+        { type: "stream_request_start", turnNumber: 2, messageId: "second-reply" },
+        { type: "text_delta", text: "same reply" },
+        ...(mode.startsWith("complete")
+          ? [{ type: "turn_complete", reason: "completed", text: "same reply" }]
+          : []),
+      ];
+      const store = new SessionSnapshotStore();
+      for (const event of events) {
+        const append = parseSnapshotAppend(
+          JSON.stringify({
+            method: "agent/streamEvent",
+            params: { sessionId, event: { ...event, ...identity } },
+          }),
+        );
+        if (append) store.append(append.sessionId, append.event);
+      }
+      if (mode === "worker-exited") store.onWorkerExit([sessionId]);
+      const snapshot = store.get(sessionId) as SessionSnapshot;
+      const view = await mount(snapshot, []);
+      const history = [
+        { kind: "user", text: "review note", clientMessageId: identity.clientMessageId },
+        { kind: "stream", event: { type: "stream_request_start", turnNumber: 0 } },
+        { kind: "stream", event: { type: "text_delta", text: "same reply" } },
+        { kind: "stream", event: { type: "turn_complete", reason: "completed" } },
+        ...(mode === "complete-missing-input"
+          ? []
+          : [
+              {
+                kind: "user",
+                text: secondText,
+                clientMessageId: "second-input",
+                steerId: "second-input",
+              },
+            ]),
+        ...(mode === "complete"
+          ? [
+              { kind: "stream", event: { type: "stream_request_start", turnNumber: 1 } },
+              { kind: "stream", event: { type: "text_delta", text: "same reply" } },
+              { kind: "stream", event: { type: "turn_complete", reason: "completed" } },
+            ]
+          : []),
+      ];
+      try {
+        await act(async () => {
+          // Delivery overlaps the snapshot; the identified boundary and
+          // assistant deltas must each be consumed once.
+          for (const entry of snapshot.events)
+            view.emit({ ...entry, sessionId, epoch: snapshot.epoch });
+          await view.hydrate(history);
+        });
+        expect(view.state.chatState.messages.filter((m) => m.kind === "user")).toMatchObject([
+          { clientMessageId: identity.clientMessageId, text: "review note" },
+          {
+            ...(mode === "complete-missing-input" ? {} : { clientMessageId: "second-input" }),
+            steerId: "second-input",
+            text: secondText,
+          },
+        ]);
+        expect(
+          view.state.chatState.messages.filter((m) => m.kind === "assistant").map((m) => m.text),
+        ).toEqual(["same reply", "same reply"]);
+        expect(view.state.chatBusy).toBe(mode === "partial");
+        if (mode === "partial") {
+          await act(async () => {
+            view.emit({
+              sessionId,
+              epoch: snapshot.epoch,
+              seq: snapshot.nextSeq,
+              event: { type: "text_delta", text: " continues", ...identity },
+            });
+          });
+          expect(
+            view.state.chatState.messages.filter((m) => m.kind === "assistant").map((m) => m.text),
+          ).toEqual(["same reply", "same reply continues"]);
+        }
+      } finally {
+        await view.close();
+      }
+    },
+  );
+
   test.each([false, true])(
     "restores a queued intent and its next reply exactly once (starts during history read: %s)",
     async (startsDuringRead) => {

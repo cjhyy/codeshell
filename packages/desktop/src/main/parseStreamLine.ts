@@ -33,15 +33,12 @@ export function parseSnapshotAppend(line: string): SnapshotAppend | null {
   const envelope = normalizeStreamEnvelope(m.params);
   if (!envelope?.sessionId) return null;
   const { sessionId, event } = envelope;
-  // steer_injected is a LIVE-only marker. The engine already persisted the
-  // steered text as a `user` message in the transcript, so a resume rebuilds
-  // that bubble from the transcript. If we ALSO snapshotted the event, resume
-  // would replay it through applyStreamEvent → appendUserMessage and the SAME
-  // steered message would render twice (the s-mqjl1uap double-bubble bug). Keep
-  // it out of the snapshot: live shows one bubble (from the event), resume shows
-  // one (from the transcript) — never both.
-  const evType = event.type;
-  if (evType === "steer_injected") return null;
+  // Identified steers are real user-turn boundaries. Dropping them attaches
+  // later replies to the previous input on replay. Their persisted steerId
+  // lets hydration join the same user intent without adding a second bubble.
+  // Legacy markers without an id still cannot be joined safely (s-mqjl1uap).
+  if (event.type === "steer_injected" && (typeof event.id !== "string" || !event.id.trim()))
+    return null;
   return { sessionId, event };
 }
 

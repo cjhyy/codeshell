@@ -14,7 +14,39 @@ export function chooseHydrateBase(
   disk: MessagesReducerState,
   local: MessagesReducerState,
 ): MessagesReducerState {
-  return disk.messages.length > 0 ? mergeTranscripts(disk, local) : local;
+  return disk.messages.length > 0
+    ? mergeTranscripts(disk, alignSteerClientIds(disk, local))
+    : local;
+}
+
+function alignSteerClientIds(
+  history: MessagesReducerState,
+  live: MessagesReducerState,
+): MessagesReducerState {
+  // A live steer carries only its steerId; the disk record also knows the
+  // original client id. Join that exact identity before the turn-scoped merge.
+  // Do not infer aliases from text, overwrite another client id, or choose
+  // between contradictory durable records.
+  const steerClients = new Map<string, string | undefined>();
+  for (const message of history.messages) {
+    if (message.kind !== "user" || !message.steerId || !message.clientMessageId) continue;
+    const previous = steerClients.get(message.steerId);
+    steerClients.set(
+      message.steerId,
+      !steerClients.has(message.steerId) || previous === message.clientMessageId
+        ? message.clientMessageId
+        : undefined,
+    );
+  }
+  let aligned = false;
+  const alignedMessages = live.messages.map((message) => {
+    if (message.kind !== "user" || !message.steerId || message.clientMessageId) return message;
+    const clientMessageId = steerClients.get(message.steerId);
+    if (!clientMessageId) return message;
+    aligned = true;
+    return { ...message, clientMessageId };
+  });
+  return aligned ? { ...live, messages: alignedMessages } : live;
 }
 
 /** Attach missing history without rewinding a live turn that arrived during the read. */
@@ -22,7 +54,8 @@ export function mergeHistoryIntoLive(
   history: MessagesReducerState,
   live: MessagesReducerState,
 ): MessagesReducerState {
-  const merged = chooseHydrateBase(history, live);
+  live = alignSteerClientIds(history, live);
+  const merged = history.messages.length > 0 ? mergeTranscripts(history, live) : live;
   const liveMessages = new Map(live.messages.map((message) => [message.id, message]));
   const questions = new Map<string, AskUserMessage>();
   for (const source of [history, live]) {
