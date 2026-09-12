@@ -128,7 +128,9 @@ describe("architecture growth budgets", () => {
       // Speech model resolution adds one reviewed host-only module, shared by
       // transcription, voice generation and Desktop media capability checks.
       // It remains outside the stable public SDK and extension surfaces.
-      "packages/core/src/index.internal.ts": 82,
+      // Panel connection discovery and sealed tool hand-offs share the existing
+      // catalog resolver (+1); credentials remain on the reviewed Host surface.
+      "packages/core/src/index.internal.ts": 83,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

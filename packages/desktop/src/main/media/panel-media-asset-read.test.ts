@@ -162,7 +162,7 @@ test("the Host never registers Panel processing or model installers", async () =
     "media.render",
   ])
     await expect(f.service.dispatch(f.scope, method, {})).rejects.toThrow(
-      "Unsupported media method",
+      `This operation now runs in the Panel native tools. Update the Panel and retry (${method}).`,
     );
   expect(await f.service.jobs.list(f.scope)).toHaveLength(0);
 });

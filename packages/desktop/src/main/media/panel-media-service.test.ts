@@ -203,7 +203,9 @@ test("legacy import retains its job envelope, opaque assets, document revisions 
     "media.audio.extract",
     "media.audio.enhance",
   ])
-    await expect(service.dispatch(scope, method, {})).rejects.toThrow("Unsupported media method");
+    await expect(service.dispatch(scope, method, {})).rejects.toThrow(
+      `This operation now runs in the Panel native tools. Update the Panel and retry (${method}).`,
+    );
 });
 
 test("historical receipts expose safe recipes without registering or rerunning processors", async () => {
