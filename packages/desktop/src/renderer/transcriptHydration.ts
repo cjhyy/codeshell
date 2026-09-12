@@ -1,7 +1,8 @@
 import type { TranscriptsAction, TranscriptsMap } from "./transcriptsReducer";
-import type { MessagesReducerState } from "./types";
+import type { Message, MessagesReducerState, UserMessage } from "./types";
 import type { SequencedStreamEvent } from "./streamCoalescer";
 import { mergeHistoryIntoLive } from "./automation/hydrateOrder";
+import { mergeHistoryWindows } from "./app/mergeHistoryWindows";
 
 type Reduce = (map: TranscriptsMap, action: TranscriptsAction) => TranscriptsMap;
 interface JournalEntry {
@@ -61,6 +62,164 @@ function entries(action: TranscriptsAction): SequencedStreamEvent[] | undefined 
   );
 }
 
+/** Keep local decisions in their proven user turn after disk overlap is removed. */
+function retainLocalDecisions(
+  merged: MessagesReducerState,
+  replayed: MessagesReducerState,
+  questions: ReadonlySet<string>,
+  endings: ReadonlySet<string>,
+  freshEndings: ReadonlySet<string>,
+): MessagesReducerState {
+  const ids = new Map(merged.messages.map((message, index) => [message.id, index]));
+  const questionIds = new Set(
+    merged.messages.flatMap((message) => (message.kind === "ask_user" ? [message.requestId] : [])),
+  );
+  const users = new Map<string, number | null>();
+  interface Turn {
+    end: number;
+    text: Map<string, number | null>;
+    endings: Map<string, number[]>;
+    compacted: boolean;
+  }
+  const turns = new Map<number, Turn>();
+  let current: Turn | undefined;
+  for (let index = 0; index < merged.messages.length; index++) {
+    const message = merged.messages[index]!;
+    if (message.kind === "user") {
+      if (current) current.end = index;
+      current = {
+        end: merged.messages.length,
+        text: new Map(),
+        endings: new Map(),
+        compacted: false,
+      };
+      turns.set(index, current);
+      for (const key of [
+        ...(message.clientMessageId ? [`client:${message.clientMessageId}`] : []),
+        ...(message.steerId ? [`steer:${message.steerId}`] : []),
+      ])
+        users.set(key, users.has(key) ? null : index);
+    } else if (current && (message.kind === "assistant" || message.kind === "thinking")) {
+      const key = `${message.kind}:${message.text}`;
+      current.text.set(key, current.text.has(key) ? null : index);
+    } else if (current && message.kind === "turn_end") {
+      const markers = current.endings.get(message.reason) ?? [];
+      markers.push(index);
+      current.endings.set(message.reason, markers);
+    } else if (current && message.kind === "context_boundary") {
+      current.compacted = true;
+    }
+  }
+  const userKey = (message: UserMessage): string | undefined =>
+    message.clientMessageId
+      ? `client:${message.clientMessageId}`
+      : message.steerId
+        ? `steer:${message.steerId}`
+        : undefined;
+  const savedUsers = new Map<string, number>();
+  for (const message of replayed.messages) {
+    const key = message.kind === "user" ? userKey(message) : undefined;
+    if (key) savedUsers.set(key, (savedUsers.get(key) ?? 0) + 1);
+  }
+  // Older releases could save both the disk Stop and its detailed local copy.
+  // Select one only inside a uniquely identified turn in both projections.
+  const preferredEndings = new Map<Turn, Map<string, Extract<Message, { kind: "turn_end" }>>>();
+  const detailScore = (message: Extract<Message, { kind: "turn_end" }>): number =>
+    Number(freshEndings.has(message.id)) * 4 +
+    Number(message.elapsedMs !== undefined) * 2 +
+    Number(message.detail !== undefined);
+  current = undefined;
+  for (const message of replayed.messages) {
+    if (message.kind === "user") {
+      const key = userKey(message);
+      const index = key && savedUsers.get(key) === 1 ? users.get(key) : undefined;
+      current = typeof index === "number" ? turns.get(index) : undefined;
+    } else if (
+      current &&
+      message.kind === "turn_end" &&
+      endings.has(message.id) &&
+      (!current.compacted || freshEndings.has(message.id))
+    ) {
+      const markers = preferredEndings.get(current) ?? new Map();
+      const previous = markers.get(message.reason);
+      if (!previous || detailScore(message) > detailScore(previous))
+        markers.set(message.reason, message);
+      preferredEndings.set(current, markers);
+    }
+  }
+  const insertions = new Map<number, Message[]>();
+  const removals = new Set<number>();
+  let after: number | undefined;
+  current = undefined;
+  for (const message of replayed.messages) {
+    let position = ids.get(message.id);
+    if (message.kind === "user") {
+      const key = userKey(message);
+      if (position === undefined && key) position = users.get(key) ?? undefined;
+      after = position === undefined ? undefined : position + 1;
+      current = position === undefined ? undefined : turns.get(position);
+    } else {
+      // Disk folding changes assistant ids. An exact, unique match within the
+      // already-proven user turn can place a decision beside the same reply;
+      // this never deduplicates replies or matches text across user intents.
+      if (
+        position === undefined &&
+        current &&
+        (message.kind === "assistant" || message.kind === "thinking")
+      )
+        position = current.text.get(`${message.kind}:${message.text}`) ?? undefined;
+      if (position !== undefined) after = position + 1;
+    }
+    const question =
+      message.kind === "ask_user" &&
+      (questions.has(message.requestId) || (message.answer !== undefined && !current?.compacted)) &&
+      !questionIds.has(message.requestId);
+    const ending =
+      message.kind === "turn_end" &&
+      endings.has(message.id) &&
+      (!current?.compacted || freshEndings.has(message.id)) &&
+      (!current ||
+        !preferredEndings.has(current) ||
+        preferredEndings.get(current)?.get(message.reason)?.id === message.id);
+    if (ending && current) {
+      // The same Stop can already be durable under a fresh fold id. Prefer the
+      // journal's marker, including its elapsed/detail, after its partial reply.
+      if (preferredEndings.get(current)?.get(message.reason)?.id === message.id) {
+        for (const durable of current.endings.get(message.reason) ?? [])
+          if (merged.messages[durable]?.id !== message.id) removals.add(durable);
+      }
+    }
+    if ((!question && !(ending && !ids.has(message.id))) || after === undefined) continue;
+    // Retain answered cache cards, but restore an old unanswered prompt only
+    // when this recovery observed the actual approval action.
+    const insertion = ending ? (current?.end ?? merged.messages.length) : after;
+    const rows = insertions.get(insertion) ?? [];
+    rows.push(message);
+    insertions.set(insertion, rows);
+    if (message.kind === "ask_user") questionIds.add(message.requestId);
+  }
+  if (!insertions.size && !removals.size) return merged;
+  const positions = new Map<number, number>();
+  const messages: Message[] = [];
+  for (let index = 0; index <= merged.messages.length; index++) {
+    messages.push(...(insertions.get(index) ?? []));
+    if (index < merged.messages.length && !removals.has(index)) {
+      positions.set(index, messages.length);
+      messages.push(merged.messages[index]!);
+    }
+  }
+  return {
+    ...merged,
+    messages,
+    agentMessageIndex: Object.fromEntries(
+      Object.entries(merged.agentMessageIndex).map(([id, index]) => [
+        id,
+        positions.get(index) ?? index,
+      ]),
+    ),
+  };
+}
+
 function replay(
   bucket: string,
   recovery: Recovery,
@@ -71,7 +230,8 @@ function replay(
   for (let node = recovery.head; node; node = node.previous) journal.push(node.action);
   journal.reverse();
   const initial = recovery.initial;
-  let baseline = initial ? mergeHistoryIntoLive(action.history, initial) : action.history;
+  const prefix = action.replayBase ?? action.history;
+  let baseline = initial ? mergeHistoryIntoLive(prefix, initial) : prefix;
   if (action.sessionId && baseline.sessionId && baseline.sessionId !== action.sessionId) {
     baseline = {
       ...baseline,
@@ -103,10 +263,7 @@ function replay(
   if (initial && !initial.messages.length && !initial.turnEpoch) {
     baseline = {
       ...baseline,
-      snapshotSeq:
-        action.epoch && action.history.snapshotEpoch !== action.epoch
-          ? 0
-          : action.history.snapshotSeq,
+      snapshotSeq: action.epoch && prefix.snapshotEpoch !== action.epoch ? 0 : prefix.snapshotSeq,
     };
   }
   const sequenced = new Map<number, SequencedStreamEvent>();
@@ -140,6 +297,34 @@ function replay(
     }
   }
   let state: TranscriptsMap = { [bucket]: baseline };
+  const localQuestions = new Set<string>();
+  const localEndings = new Set(
+    baseline.messages.flatMap((message) => (message.kind === "turn_end" ? [message.id] : [])),
+  );
+  const freshEndings = new Set<string>();
+  const applyLocal = (local: TranscriptsAction): void => {
+    state = reduce(state, local);
+    if (local.type === "ask_user" || local.type === "ask_user_answered")
+      localQuestions.add(local.requestId);
+    if (local.type === "turn_end") {
+      const message = state[bucket]?.messages.at(-1);
+      if (message?.kind === "turn_end") {
+        localEndings.add(message.id);
+        freshEndings.add(message.id);
+      }
+    }
+  };
+  const users = new Map<string, UserMessage | null>();
+  if (action.replayBase) {
+    for (const message of action.history.messages) {
+      if (message.kind !== "user") continue;
+      for (const key of new Set([
+        ...(message.clientMessageId ? [`client:${message.clientMessageId}`] : []),
+        ...(message.steerId ? [`steer:${message.steerId}`] : []),
+      ]))
+        users.set(key, users.has(key) ? null : message);
+    }
+  }
   const anchors = [...beforeSequence].sort(([left], [right]) => left - right);
   let anchor = 0;
   let previousSeq = baseline.snapshotSeq;
@@ -147,7 +332,33 @@ function replay(
     if (recovery.requiresContiguous && seq > previousSeq + 1 && state[bucket]?.streamingAssistantId)
       return undefined;
     while (anchor < anchors.length && anchors[anchor]![0] <= seq) {
-      for (const local of anchors[anchor++]![1]) state = reduce(state, local);
+      for (const local of anchors[anchor++]![1]) applyLocal(local);
+    }
+    const event = entry.event;
+    if (action.replayBase && (!("agentId" in event) || !event.agentId)) {
+      const user =
+        event.type === "session_started" && event.clientMessageId
+          ? users.get(`client:${event.clientMessageId}`)
+          : event.type === "steer_injected" && event.id
+            ? users.has(`steer:${event.id}`)
+              ? users.get(`steer:${event.id}`)
+              : users.get(`client:${event.id}`)
+            : undefined;
+      if (user) {
+        // Ordinary inputs are absent from the stream. A unique durable id
+        // supplies their original anchor without replaying a newer disk reply.
+        state = reduce(state, {
+          type: "user_message",
+          bucket,
+          text: user.text,
+          clientMessageId: user.clientMessageId,
+          steerId: user.steerId,
+          attachments: user.attachments,
+          isGoal: user.isGoal,
+          injected: user.injected,
+          pending: false,
+        });
+      }
     }
     if (
       entry.event.type === "text_delta" &&
@@ -173,10 +384,15 @@ function replay(
   // contained in the main snapshot. Keep their own order after the replay;
   // clientMessageId/steerId and goal revisions provide their existing guards.
   for (; anchor < anchors.length; anchor++) {
-    for (const local of anchors[anchor]![1]) state = reduce(state, local);
+    for (const local of anchors[anchor]![1]) applyLocal(local);
   }
-  for (const recorded of pendingLocal) state = reduce(state, recorded);
-  return state[bucket]!;
+  for (const recorded of pendingLocal) applyLocal(recorded);
+  const replayed = state[bucket]!;
+  // Canonical history may be ahead of the cache's cursor. Reconcile only
+  // after replay so its completed reply cannot receive the same deltas twice.
+  if (!action.replayBase) return replayed;
+  const merged = mergeHistoryIntoLive(mergeHistoryWindows(action.history, replayed), replayed);
+  return retainLocalDecisions(merged, replayed, localQuestions, localEndings, freshEndings);
 }
 
 export function reduceTranscriptHydration(

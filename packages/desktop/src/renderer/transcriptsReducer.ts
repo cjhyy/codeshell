@@ -56,6 +56,8 @@ export type TranscriptsAction =
       bucket: string;
       state: MessagesReducerState;
       history: MessagesReducerState;
+      /** Original cache prefix for snapshot replay; history is then merged afterwards. */
+      replayBase?: MessagesReducerState;
       goalAtStart: ActiveGoal | null;
       token?: number;
       snapshot?: SequencedStreamEvent[];

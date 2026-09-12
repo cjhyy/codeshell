@@ -130,6 +130,72 @@ describe("transcript history hydration after a background resume", () => {
     else Reflect.deleteProperty(window, "codeshell");
   });
 
+  test("replays an older cache prefix before merging a completed steer reply from disk", async () => {
+    const epoch = "main";
+    const identity = { runId: "run", clientMessageId: "first-client" };
+    const events = [
+      { type: "session_started", sessionId: "saved" },
+      { type: "stream_request_start", turnNumber: 1, messageId: "first-reply" },
+      { type: "text_delta", text: "first reply" },
+      { type: "steer_injected", id: "second-steer", text: "continue" },
+      { type: "stream_request_start", turnNumber: 2, messageId: "second-reply" },
+      { type: "text_delta", text: "final " },
+      { type: "text_delta", text: "reply" },
+      { type: "turn_complete", reason: "completed" },
+    ].map((event) => ({ ...event, ...identity }) as StreamEvent);
+    const first: FoldItem = { kind: "user", text: "continue", clientMessageId: "first-client" };
+    const second: FoldItem = {
+      kind: "user",
+      text: "continue",
+      clientMessageId: "second-client",
+      steerId: "second-steer",
+    };
+    let saved = foldTranscript([first]);
+    for (const [index, event] of events.slice(0, 6).entries())
+      saved = transcriptsReducer(
+        { [bucket]: saved },
+        {
+          type: "stream_batch",
+          bucket,
+          events: [event],
+          epoch,
+          maxSeq: index + 1,
+        },
+      )[bucket]!;
+    const serialized = JSON.stringify(saved);
+    initial = {};
+    installSnapshotReader(async () => ({ value: serialized, hasEarlier: false }));
+    readDisk = async () => [
+      first,
+      { kind: "stream", event: { type: "stream_request_start", turnNumber: 1 } },
+      { kind: "stream", event: { type: "text_delta", text: "first reply" } },
+      { kind: "stream", event: { type: "turn_complete", reason: "completed" } },
+      second,
+      { kind: "stream", event: { type: "stream_request_start", turnNumber: 2 } },
+      { kind: "stream", event: { type: "text_delta", text: "final reply" } },
+      { kind: "stream", event: { type: "turn_complete", reason: "completed" } },
+    ];
+    readSnapshot = async () => ({
+      epoch,
+      nextSeq: events.length + 1,
+      topLevelRunning: false,
+      events: events.map((event, index) => ({ event, seq: index + 1 })),
+    });
+    hook = await renderHook(useHarness);
+    const state = hook.result.current.state;
+    expect(state.messages.filter((m) => m.kind === "user").map((m) => m.clientMessageId)).toEqual([
+      "first-client",
+      "second-client",
+    ]);
+    expect(state.messages.filter((m) => m.kind === "assistant").map((m) => m.text)).toEqual([
+      "first reply",
+      "final reply",
+    ]);
+    expect(state.snapshotSeq).toBe(events.length);
+    expect(state.streamingAssistantId).toBeNull();
+    expect(JSON.stringify(saved)).toBe(serialized);
+  });
+
   test("loads history even when a background session_started already created an empty bucket", async () => {
     hook = await renderHook(useHarness);
     expect(hook.result.current.state.messages).toMatchObject([
