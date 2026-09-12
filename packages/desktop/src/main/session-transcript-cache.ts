@@ -196,6 +196,7 @@ function checkedState(value: unknown): CachedState {
 
 /** A tail hydrated into a renderer must not erase its earlier cached history. */
 function mergeSnapshot(previous: CachedState, incoming: CachedState): CachedState {
+  [previous, incoming] = alignSteerClientIds(previous, incoming);
   if (incoming.messages.length === 0) {
     return repairPointers({
       ...previous,
@@ -394,6 +395,49 @@ function mergeSnapshot(previous: CachedState, incoming: CachedState): CachedStat
       mergedIds.get(`thinking|${previous.streamingThinkingId}`) ??
       previous.streamingThinkingId,
   });
+}
+
+/** Live steers learn their original client id only after canonical hydration.
+ * Join that exact alias before indexing turns, including older cached mirrors.
+ * Conflicting durable client ids never supply an alias for a steer-only row. */
+function alignSteerClientIds(
+  previous: CachedState,
+  incoming: CachedState,
+): [CachedState, CachedState] {
+  const clients = new Map<string, string | null>();
+  for (const state of [previous, incoming]) {
+    for (const message of state.messages) {
+      if (
+        message.kind !== "user" ||
+        typeof message.steerId !== "string" ||
+        !message.steerId ||
+        typeof message.clientMessageId !== "string" ||
+        !message.clientMessageId
+      )
+        continue;
+      const prior = clients.get(message.steerId);
+      clients.set(
+        message.steerId,
+        !clients.has(message.steerId) || prior === message.clientMessageId
+          ? message.clientMessageId
+          : null,
+      );
+    }
+  }
+  const align = (state: CachedState): CachedState => ({
+    ...state,
+    messages: state.messages.map((message) => {
+      if (
+        message.kind !== "user" ||
+        typeof message.steerId !== "string" ||
+        (typeof message.clientMessageId === "string" && message.clientMessageId)
+      )
+        return message;
+      const clientMessageId = clients.get(message.steerId);
+      return clientMessageId ? { ...message, clientMessageId } : message;
+    }),
+  });
+  return [align(previous), align(incoming)];
 }
 
 /** A sequence can only be compared with another cursor from the same Main lifetime. */
