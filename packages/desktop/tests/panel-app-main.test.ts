@@ -675,6 +675,126 @@ describeIsolated("PanelAppBridge", () => {
     }
   });
 
+  test("a prepared project panel can use resources and tasks before a new chat has a cwd", async () => {
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    const project = realpathSync(mkdtempSync(join(tmpdir(), "panel-new-chat-scope-")));
+    let bound = true;
+    let trusted = true;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: (sender) => sender === panelAppElectronMock.trustedSender,
+      isWorkspaceTrusted: (cwd) => trusted && cwd === project,
+      isPanelAppBound: (path, appId) => bound && path === project && appId === "demo",
+      getAgentBridge: () => null,
+    });
+    try {
+      panelAppElectronMock.userDataPath = project;
+      bridge.registerIpc();
+      const resource = bridgeResource(["context.workspace", "resources", "process"]);
+      resource.root = project;
+      mkdirSync(join(project, "panels"));
+      writeFileSync(join(project, resource.entry), "<h1>Project panel</h1>");
+      api.replacePanelAppResources([resource as any]);
+      const prepared = await panelAppElectronMock.ipcHandlers.get("panel-apps:prepare")!(
+        { sender: panelAppElectronMock.trustedSender },
+        resource.descriptor.id,
+        project,
+      );
+      expect(prepared.id).toBe(resource.descriptor.id);
+      const guest = fakeGuest(101);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        resource as any,
+        project,
+      );
+      const call = (method: string, params: unknown = {}) =>
+        panelGuestHandler()({ sender: guest }, method, params);
+      const getContext = () =>
+        panelAppElectronMock.ipcHandlers.get("panel-app:get-context")!({ sender: guest });
+
+      // New UI sessions can exist before Main has any corresponding session root.
+      await bindBridgeGuest(101, { projectPath: project, cwd: null, sessionId: "new-chat" });
+      expect(await getContext()).toMatchObject({ cwd: project, trusted: true });
+      expect((await getContext()).availableMethods).toContain("tasks.start");
+      const bytes = Buffer.from("Saved before the first chat message");
+      const upload = await call("resources.upload.begin", {
+        name: "draft.txt",
+        expectedBytes: bytes.length,
+      });
+      await call("resources.upload.write", {
+        sessionId: upload.sessionId,
+        sequence: 0,
+        offset: 0,
+        dataBase64: bytes.toString("base64"),
+      });
+      const { asset } = await call("resources.upload.finish", { sessionId: upload.sessionId });
+      const read = await call("resources.read", { assetId: asset.id, offset: 0, length: 32768 });
+      expect(Buffer.from(read.dataBase64, "base64")).toEqual(bytes);
+      const service = (bridge as any).getToolJobService();
+      const list = spyOn(service, "list").mockResolvedValue([]);
+      try {
+        await expect(call("tasks.list")).resolves.toEqual([]);
+        expect(list).toHaveBeenCalledWith({
+          appId: "demo",
+          projectPath: project,
+          revision: resource.descriptor.revision,
+        });
+        await expect(
+          bindBridgeGuest(101, { projectPath: project, cwd: join(project, "other") }),
+        ).rejects.toThrow("does not belong to its bound project");
+        await expect(
+          bindBridgeGuest(101, { projectPath: join(project, "other"), cwd: null }),
+        ).rejects.toThrow("does not match its prepared scope");
+        expect(await getContext()).toMatchObject({ cwd: project });
+        await bindBridgeGuest(101, { projectPath: project, cwd: undefined, sessionId: null });
+        expect(await getContext()).toMatchObject({ cwd: project, trusted: true });
+
+        trusted = false;
+        await bindBridgeGuest(101, { projectPath: project, cwd: null });
+        expect(await getContext()).toMatchObject({ cwd: project, trusted: false });
+        await expect(call("resources.read", { assetId: asset.id })).rejects.toThrow(
+          "trusted workspace",
+        );
+        await expect(call("tasks.list")).rejects.toThrow("trusted workspace");
+        expect(list).toHaveBeenCalledTimes(1);
+        trusted = true;
+        bound = false;
+        expect(() => getContext()).toThrow("no longer bound");
+        await expect(call("resources.read", { assetId: asset.id })).rejects.toThrow(
+          "no longer bound",
+        );
+        await expect(call("tasks.list")).rejects.toThrow("no longer bound");
+        expect(list).toHaveBeenCalledTimes(1);
+      } finally {
+        list.mockRestore();
+      }
+
+      bound = true;
+      const restricted = fakeGuest(102);
+      bridge.registerGuest(
+        restricted as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource() as any,
+        project,
+      );
+      await bindBridgeGuest(102, { projectPath: project, cwd: null });
+      const restrictedContext = await panelAppElectronMock.ipcHandlers.get(
+        "panel-app:get-context",
+      )!({ sender: restricted });
+      expect(restrictedContext).not.toHaveProperty("cwd");
+      expect(restrictedContext).not.toHaveProperty("trusted");
+      for (const method of ["resources.get", "tasks.list"])
+        await expect(panelGuestHandler()({ sender: restricted }, method, {})).rejects.toThrow(
+          "permission denied",
+        );
+    } finally {
+      await bridge.shutdownMedia();
+      api.replacePanelAppResources([]);
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
   test("gates process primitives and scopes user-selected directory handles", async () => {
     const previousUserDataPath = panelAppElectronMock.userDataPath;
     const directory = mkdtempSync(join(tmpdir(), "panel-process-directory-"));

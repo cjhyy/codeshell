@@ -923,7 +923,10 @@ export class PanelAppBridge {
     }
     this.assertProjectBinding(binding);
     binding.bucket = input.bucket;
-    binding.cwd = typeof input.cwd === "string" && input.cwd.length > 0 ? input.cwd : undefined;
+    // Installed panels are already bound to a verified project. A new chat may
+    // not have a session workspace yet, but that must not remove project access.
+    const cwd = input.cwd ?? binding.projectPath;
+    binding.cwd = cwd;
     binding.execution = {
       cwd: input.projectPath,
       ...(typeof input.modelKey === "string" ? { modelKey: input.modelKey } : {}),
@@ -941,8 +944,8 @@ export class PanelAppBridge {
       ...(binding.resource.descriptor.permissions.includes("context.session") && input.sessionId
         ? { sessionId: input.sessionId, busy: input.busy === true }
         : {}),
-      ...(binding.resource.descriptor.permissions.includes("context.workspace") && input.cwd
-        ? { cwd: input.cwd, trusted: this.options.isWorkspaceTrusted(input.cwd) }
+      ...(binding.resource.descriptor.permissions.includes("context.workspace")
+        ? { cwd, trusted: this.options.isWorkspaceTrusted(cwd) }
         : {}),
     };
     if (!binding.guest.isDestroyed()) {
