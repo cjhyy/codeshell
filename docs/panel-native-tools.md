@@ -126,6 +126,8 @@ resource, process/task, isolation, and Desktop bridge checks pass. Package-relea
 smoke checks cover 10 tarballs, 47 typed entry points and 45 runtime entry points.
 The Video Studio 0.5.0 package has also run a real reviewed-entry chain through
 import, inspection, preprocessing, three-second audio extraction and verified
-capture, including persisted results and cross-project denial. The compatible
-releases and successful remote CI are recorded in the
+capture, including persisted results and cross-project denial. Those runtime
+checks missed its complete manifest's installation constraints; use Panel 0.5.1,
+which also passes the published 0.9.11 installer's discovery and package preflight.
+The correction, compatible releases and remote CI are recorded in the
 [release acceptance matrix](todo/panel-plugin-runtime-implementation.md).
