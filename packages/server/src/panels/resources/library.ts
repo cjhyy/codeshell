@@ -250,9 +250,10 @@ export class ResourceLibrary {
       const digest = createHash("sha256");
       let copied = 0;
       destination = await open(temporary, "wx", 0o600);
-      // A fixed-size buffer keeps large imports streaming while retaining both
-      // file descriptors for post-copy identity checks and an explicit fsync.
-      const buffer = Buffer.allocUnsafe(256 * 1024);
+      // A bounded 1 MiB buffer amortizes the filesystem identity checks on large
+      // imports. Every block still verifies the grant, source and staging path;
+      // both descriptors remain open for the final identity checks and fsync.
+      const buffer = Buffer.allocUnsafe(Math.min(initial.size, 1024 * 1024));
       while (true) {
         await verifySource();
         const { bytesRead } = await source.read(buffer, 0, buffer.length, copied);

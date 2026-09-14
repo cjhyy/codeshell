@@ -83,6 +83,12 @@ const MAX_RESULT_BYTES = 256 * 1024;
 const MAX_CALLS_PER_WINDOW = 30;
 const RATE_WINDOW_MS = 10_000;
 const CALL_TIMEOUT_MS = 15_000;
+const RESOURCE_TRANSFER_TIMEOUT_MS = 30 * 60 * 1_000;
+const RESOURCE_TRANSFER_METHODS = new Set([
+  "resources.capture",
+  "resources.materialize",
+  "resources.upload.finish",
+]);
 const PDF_EXPORT_TIMEOUT_MS = 30_000;
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 180_000;
 const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
@@ -272,6 +278,7 @@ export interface PanelAppBridgeOptions {
     maxCallsPerWindow: number;
     rateWindowMs: number;
     callTimeoutMs: number;
+    resourceTransferTimeoutMs: number;
     storageQuotaBytes: number;
     maxNotificationsPerWindow: number;
   }>;
@@ -370,12 +377,16 @@ function panelAgentTaskProgress(event: unknown): {
   }
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  onTimeout?: () => void,
+): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new PanelBridgeError("TIMEOUT", "Panel App call timed out")),
-      timeoutMs,
-    );
+    const timer = setTimeout(() => {
+      onTimeout?.();
+      reject(new PanelBridgeError("TIMEOUT", "Panel App call timed out"));
+    }, timeoutMs);
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -398,6 +409,10 @@ export class PanelAppBridge {
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
   private resourceService?: PanelResourceService;
+  private readonly resourceTransfers = new Map<
+    AbortController,
+    { guestId: number; settled: Promise<void> }
+  >();
   private toolJobService?: PanelToolJobService;
   private nextToolOwner = -1;
   private readonly toolOwners = new Map<number, { scope: ToolJobScope; appTitle: string }>();
@@ -640,6 +655,8 @@ export class PanelAppBridge {
   }
 
   async shutdownMedia(): Promise<void> {
+    for (const controller of this.resourceTransfers.keys()) controller.abort();
+    await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
     await this.toolJobService?.shutdown();
     await this.mediaService?.shutdown();
     await this.resourceService?.shutdown();
@@ -692,6 +709,8 @@ export class PanelAppBridge {
   }
 
   revokeGuest(guestId: number): void {
+    for (const [controller, transfer] of this.resourceTransfers)
+      if (transfer.guestId === guestId) controller.abort();
     this.processService.revokeGuest(guestId);
     this.guests.delete(guestId);
     for (const [requestId, pending] of this.pendingAgentToolCalls) {
@@ -1043,10 +1062,25 @@ export class PanelAppBridge {
     if (chunk) binding.recordingWriteTimes = timestamps;
     else binding.callTimes = timestamps;
 
-    const operation = this.dispatch(binding, method, params);
+    // Whole-file custody can outlast a normal UI RPC. Keep it guest-owned and
+    // cancellable so a deadline or revoked guest cannot leave a copy running.
+    const transfer = RESOURCE_TRANSFER_METHODS.has(method) ? new AbortController() : undefined;
+    const operation = this.dispatch(binding, method, params, transfer?.signal);
+    if (transfer) {
+      const settled = operation
+        .then(
+          () => {},
+          () => {},
+        )
+        .finally(() => this.resourceTransfers.delete(transfer));
+      this.resourceTransfers.set(transfer, { guestId: binding.guest.id, settled });
+    }
     const result = await withTimeout(
       operation,
-      limits?.callTimeoutMs ??
+      (transfer
+        ? (limits?.resourceTransferTimeoutMs ?? RESOURCE_TRANSFER_TIMEOUT_MS)
+        : undefined) ??
+        limits?.callTimeoutMs ??
         (method === "workspace.exportPdf"
           ? PDF_EXPORT_TIMEOUT_MS
           : method === "audio.transcribe"
@@ -1063,6 +1097,7 @@ export class PanelAppBridge {
                   method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
                 : CALL_TIMEOUT_MS),
+      transfer ? () => transfer.abort() : undefined,
     );
     const resultLimit =
       limits?.maxResultBytes ??
@@ -1408,7 +1443,12 @@ export class PanelAppBridge {
     return service.dispatch(scope, method, params);
   }
 
-  private async dispatch(binding: GuestBinding, method: string, params: unknown): Promise<unknown> {
+  private async dispatch(
+    binding: GuestBinding,
+    method: string,
+    params: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     if (method.startsWith("tasks.")) return this.dispatchToolJobs(binding, method, params);
     if (method.startsWith("resources.")) {
       this.requirePermission(binding, "resources");
@@ -1417,6 +1457,7 @@ export class PanelAppBridge {
       if (method === "resources.materialize" || method === "resources.capture")
         this.requirePermission(binding, "process");
       return this.getResourceService().dispatch(scope, method, params, {
+        signal,
         resolveDirectory: (handle) =>
           this.processService.directoryPath(this.processOwner(binding), handle),
       });

@@ -17,6 +17,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   statSync,
@@ -470,6 +471,161 @@ describeIsolated("PanelAppBridge", () => {
     panelAppElectronMock.openedPaths.length = 0;
     panelAppElectronMock.revealedPaths.length = 0;
   });
+
+  test("whole-file resource transfers outlive ordinary RPCs and return their committed receipts", async () => {
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "panel-resource-deadline-")));
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      limits: { callTimeoutMs: 250 },
+    });
+    try {
+      panelAppElectronMock.userDataPath = directory;
+      bridge.registerIpc();
+      const guest = fakeGuest(103);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["context.workspace", "resources", "process"]) as any,
+        directory,
+      );
+      await bindBridgeGuest(103, { projectPath: directory, cwd: directory });
+      const call = (method: string, params: unknown = {}) =>
+        panelGuestHandler()({ sender: guest }, method, params);
+      const tool = await call("filesystem.getKnownDirectory", { name: "app-data" });
+      const source = Buffer.from("a small fixture standing in for a slow whole-file transfer");
+      const upload = await call("resources.upload.begin", {
+        name: "source.txt",
+        expectedBytes: source.length,
+      });
+      await call("resources.upload.write", {
+        sessionId: upload.sessionId,
+        sequence: 0,
+        offset: 0,
+        dataBase64: source.toString("base64"),
+      });
+      const service = (bridge as any).getResourceService();
+      const dispatch = service.dispatch.bind(service);
+      service.dispatch = async (...args: any[]) => {
+        // Delay only the transfer, after it has crossed the real IPC wrapper.
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        return dispatch(...args);
+      };
+      const { asset } = await call("resources.upload.finish", { sessionId: upload.sessionId });
+      const materialized = await call("resources.materialize", {
+        assetId: asset.id,
+        directoryHandle: tool.handle,
+        path: "source.txt",
+      });
+      expect(materialized).toMatchObject({ assetId: asset.id, bytes: source.length });
+      const captured = await call("resources.capture", {
+        directoryHandle: tool.handle,
+        path: "source.txt",
+        expectedBytes: source.length,
+      });
+      expect(captured.asset).toEqual(asset);
+      service.dispatch = dispatch;
+      expect(await call("resources.get", { id: captured.asset.id })).toEqual({ asset });
+      expect((bridge as any).resourceTransfers.size).toBe(0);
+    } finally {
+      await bridge.shutdownMedia();
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  for (const stop of ["deadline", "guest", "shutdown"] as const)
+    test(`a resource capture interrupted by ${stop} stops copying and cleans its partial file`, async () => {
+      const previousUserDataPath = panelAppElectronMock.userDataPath;
+      const directory = realpathSync(mkdtempSync(join(tmpdir(), "panel-resource-abort-")));
+      const bridge = new PanelAppBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: () => true,
+        isPanelAppBound: () => true,
+        getAgentBridge: () => null,
+        ...(stop === "deadline" ? { limits: { resourceTransferTimeoutMs: 1_000 } } : {}),
+      });
+      let release!: () => void;
+      try {
+        panelAppElectronMock.userDataPath = directory;
+        bridge.registerIpc();
+        const guest = fakeGuest(104);
+        bridge.registerGuest(
+          guest as any,
+          panelAppElectronMock.ownerWindow as any,
+          bridgeResource(["context.workspace", "resources", "process"]) as any,
+          directory,
+        );
+        await bindBridgeGuest(104, { projectPath: directory, cwd: directory });
+        const call = (method: string, params: unknown = {}) =>
+          panelGuestHandler()({ sender: guest }, method, params);
+        const tool = await call("filesystem.getKnownDirectory", { name: "app-data" });
+        const source = Buffer.alloc(3 * 1024 * 1024, 42);
+        const file = join(tool.path, "source.bin");
+        writeFileSync(file, source);
+        const service = (bridge as any).getResourceService();
+        const importFile = service.library.importFile.bind(service.library);
+        let reached!: () => void;
+        const copying = new Promise<void>((resolve) => {
+          reached = resolve;
+        });
+        const gate = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        let copied = 0;
+        service.library.importFile = (scope: unknown, path: string, options: any) =>
+          importFile(scope, path, {
+            ...options,
+            onProgress(bytes: number) {
+              copied = bytes;
+            },
+            async assertAuthorized() {
+              if (copied) {
+                reached();
+                options.signal.addEventListener("abort", release, { once: true });
+                if (options.signal.aborted) release();
+                await gate;
+              }
+              await options.assertAuthorized();
+            },
+          });
+        const result = call("resources.capture", {
+          directoryHandle: tool.handle,
+          path: "source.bin",
+          expectedBytes: source.length,
+        }).then(
+          (value) => ({ value, error: undefined }),
+          (error) => ({ value: undefined, error }),
+        );
+        await copying;
+        const transfers = [...(bridge as any).resourceTransfers.values()] as Array<{
+          settled: Promise<void>;
+        }>;
+        expect(transfers).toHaveLength(1);
+        if (stop === "guest") bridge.revokeGuest(104);
+        if (stop === "shutdown") await bridge.shutdownMedia();
+        const outcome = await result;
+        expect(outcome.value).toBeUndefined();
+        expect(outcome.error).toBeDefined();
+        if (stop === "deadline") expect(outcome.error.code).toBe("TIMEOUT");
+        await Promise.all(transfers.map((transfer) => transfer.settled));
+        expect(copied).toBeGreaterThan(0);
+        expect(copied).toBeLessThan(source.length);
+        expect(readFileSync(file)).toEqual(source);
+        expect((bridge as any).resourceTransfers.size).toBe(0);
+        const paths = readdirSync(join(directory, "panel-app-media"), { recursive: true });
+        expect(paths.some((path) => String(path).endsWith(".partial"))).toBe(false);
+        expect(paths.some((path) => String(path).endsWith("asset.json"))).toBe(false);
+      } finally {
+        release?.();
+        await bridge.shutdownMedia();
+        panelAppElectronMock.userDataPath = previousUserDataPath;
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
 
   test("generic resources cross the bridge with bounded bytes, scoped tool hand-off and capability-gated tasks", async () => {
     const previousUserDataPath = panelAppElectronMock.userDataPath;

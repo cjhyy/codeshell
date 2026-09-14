@@ -137,7 +137,7 @@ test("chunk reads reconstruct arbitrary binary bytes with exact EOF and reject o
 
 test("materialize atomically hands exact bytes to an approved directory and capture returns a path-free resource", async () => {
   const f = await fixture(),
-    data = Buffer.alloc(600003, 17),
+    data = Buffer.alloc(2 * 1024 * 1024 + 3, 17),
     asset = await f.asset(data, "source.docx");
   let observedPartial = false;
   f.hook(async () => {
@@ -296,6 +296,78 @@ test("capture validates declared size/digest and selected identity before atomic
     f.service.library.importFile(f.scope, path, { expectedSource: metadata }),
   ).rejects.toThrow("Source changed");
 });
+
+test.each(["scope", "grant", "cancel"])(
+  "capture stops between copied blocks after %s revocation and discards partial bytes",
+  async (kind) => {
+    const f = await fixture();
+    const path = join(f.tool, "large.bin");
+    const data = Buffer.alloc(3 * 1024 * 1024 + 19, 41);
+    await writeFile(path, data);
+    let authorized = true;
+    let grantAuthorized = true;
+    const controller = new AbortController();
+    const library = new ResourceLibrary({
+      rootDirectory: join(f.root, "store"),
+      isScopeAuthorized: () => authorized,
+    });
+    const progress: number[] = [];
+    await expect(
+      library.importFile(f.scope, path, {
+        signal: controller.signal,
+        assertAuthorized: () => {
+          if (!grantAuthorized) throw new Error("Directory grant was revoked");
+        },
+        onProgress: (copied) => {
+          progress.push(copied);
+          if (kind === "scope") authorized = false;
+          if (kind === "grant") grantAuthorized = false;
+          if (kind === "cancel") controller.abort();
+        },
+      }),
+    ).rejects.toThrow();
+    expect(progress).toHaveLength(1);
+    expect(progress[0]).toBeGreaterThan(0);
+    expect(progress[0]).toBeLessThan(data.length);
+    authorized = true;
+    expect(await library.list(f.scope)).toEqual([]);
+    expect(
+      await readdir(join(f.root, "store", "scopes", mediaScopeKey(f.scope), "imports")),
+    ).toEqual([]);
+  },
+);
+
+test.each(["replace", "rewrite"])(
+  "capture rejects a same-size source %s after copying begins",
+  async (kind) => {
+    const f = await fixture();
+    const path = join(f.tool, "large.bin");
+    const data = Buffer.alloc(3 * 1024 * 1024 + 19, 43);
+    await writeFile(path, data);
+    let copiedBytes = 0;
+    let changed = false;
+    await expect(
+      f.service.library.importFile(f.scope, path, {
+        assertAuthorized: async () => {
+          if (changed || !copiedBytes) return;
+          changed = true;
+          if (kind === "replace") await rename(path, join(f.tool, "original.bin"));
+          await writeFile(path, Buffer.alloc(data.length, 47));
+        },
+        onProgress: (copied) => {
+          copiedBytes = copied;
+        },
+      }),
+    ).rejects.toThrow("Source changed");
+    expect(changed).toBe(true);
+    expect(copiedBytes).toBeGreaterThan(0);
+    expect(copiedBytes).toBeLessThan(data.length);
+    expect(await f.service.library.list(f.scope)).toEqual([]);
+    expect(
+      await readdir(join(f.root, "store", "scopes", mediaScopeKey(f.scope), "imports")),
+    ).toEqual([]);
+  },
+);
 
 test("uploads acknowledge canonical chunks, resume after restart and verify bytes before idempotent finish", async () => {
   const f = await fixture(),

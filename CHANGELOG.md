@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.13] - 2026-09-14
+
+- Give whole-file Panel resource capture, materialization and upload completion a
+  separate 30-minute transfer budget, so large files can return their saved resource
+  receipt instead of failing at the ordinary 15-second interface timeout.
+- Abort outstanding resource transfers on their deadline, guest revocation and
+  Host shutdown, preserving staged-file cleanup and authorization checks.
+- Reduce streaming-copy overhead with a bounded 1 MiB buffer while retaining
+  per-block and final source identity, authorization and content checks.
+
 ## [0.9.11] - 2026-09-13
 
 - Move Video Studio processing and model installers out of Desktop into reviewed
