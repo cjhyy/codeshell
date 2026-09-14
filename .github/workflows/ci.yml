@@ -97,6 +97,9 @@ jobs:
             ignore: "--path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**"
           - shard: desktop
             paths: packages/desktop
+            ignore: >-
+              --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
+              --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
@@ -130,6 +133,15 @@ jobs:
         run: bun run build
       - name: test shard
         run: bun test --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
+      # The large Desktop Bun process can stall real Chromium load callbacks.
+      # Run each browser suite in its own process, keeping every assertion and
+      # the same 30-second timeout as the rest of the shard.
+      - name: test Chromium CDP integration
+        if: matrix.shard == 'desktop'
+        run: bun test --timeout 30000 packages/desktop/src/main/browser-driver/cdp-actions.integration.test.ts
+      - name: test Playwright driver integration
+        if: matrix.shard == 'desktop'
+        run: bun test --timeout 30000 packages/desktop/src/main/browser-runtime/playwright-driver.test.ts
 
   coverage:
     name: builtin integration coverage
