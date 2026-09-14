@@ -409,6 +409,7 @@ export class PanelAppBridge {
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
   private resourceService?: PanelResourceService;
+  private resourceTransfersStopping = false;
   private readonly resourceTransfers = new Map<
     AbortController,
     { guestId: number; settled: Promise<void> }
@@ -655,6 +656,7 @@ export class PanelAppBridge {
   }
 
   async shutdownMedia(): Promise<void> {
+    this.resourceTransfersStopping = true;
     for (const controller of this.resourceTransfers.keys()) controller.abort();
     await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
     await this.toolJobService?.shutdown();
@@ -1024,6 +1026,8 @@ export class PanelAppBridge {
     const binding = await this.waitForBoundGuest(this.bindingFor(sender));
     this.assertProjectBinding(binding);
     if (typeof method !== "string" || method.length > 64) throw new Error("invalid bridge method");
+    if (this.resourceTransfersStopping && RESOURCE_TRANSFER_METHODS.has(method))
+      throw new PanelBridgeError("REVOKED", "Resource transfers are shutting down");
     const limits = this.options.limits;
     const paramsLimit =
       limits?.maxParamsBytes ??

@@ -585,8 +585,11 @@ describeIsolated("PanelAppBridge", () => {
             async assertAuthorized() {
               if (copied) {
                 reached();
-                options.signal.addEventListener("abort", release, { once: true });
-                if (options.signal.aborted) release();
+                // Hold shutdown's cleanup open while a guest tries its next file.
+                if (stop !== "shutdown") {
+                  options.signal.addEventListener("abort", release, { once: true });
+                  if (options.signal.aborted) release();
+                }
                 await gate;
               }
               await options.assertAuthorized();
@@ -606,7 +609,28 @@ describeIsolated("PanelAppBridge", () => {
         }>;
         expect(transfers).toHaveLength(1);
         if (stop === "guest") bridge.revokeGuest(104);
-        if (stop === "shutdown") await bridge.shutdownMedia();
+        if (stop === "shutdown") {
+          const closing = bridge.shutdownMedia();
+          const dispatch = spyOn(service, "dispatch");
+          try {
+            for (const method of [
+              "resources.capture",
+              "resources.materialize",
+              "resources.upload.finish",
+            ])
+              await expect(call(method, {})).rejects.toMatchObject({
+                code: "REVOKED",
+                message: "Resource transfers are shutting down",
+              });
+            expect(dispatch).not.toHaveBeenCalled();
+            expect((bridge as any).resourceTransfers.size).toBe(1);
+          } finally {
+            dispatch.mockRestore();
+            release();
+            await closing;
+          }
+          await expect(call("resources.capture", {})).rejects.toMatchObject({ code: "REVOKED" });
+        }
         const outcome = await result;
         expect(outcome.value).toBeUndefined();
         expect(outcome.error).toBeDefined();
