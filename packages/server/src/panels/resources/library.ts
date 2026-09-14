@@ -54,6 +54,13 @@ const SAFE_MIME_TYPES = new Set([
   "application/octet-stream",
 ]);
 
+export function resourceMimeType(name: string, requested?: string): string {
+  const mime = requested?.split(";", 1)[0].toLowerCase();
+  return mime && SAFE_MIME_TYPES.has(mime)
+    ? mime
+    : (MIME_BY_EXTENSION[extname(name).toLowerCase()] ?? "application/octet-stream");
+}
+
 export interface MediaLibraryOptions {
   rootDirectory: string;
   maxFileBytes?: number;
@@ -132,7 +139,7 @@ function assetRecord(raw: unknown, id: string): MediaAsset {
   };
 }
 
-function rangeBounds(range: string, size: number): { start: number; end: number } | null {
+export function rangeBounds(range: string, size: number): { start: number; end: number } | null {
   const match = /^bytes=(\d*)-(\d*)$/.exec(range);
   if (!match || (!match[1] && !match[2])) return null;
   const first = match[1] ? Number(match[1]) : undefined;
@@ -300,11 +307,7 @@ export class ResourceLibrary {
         throw new Error("Resource digest does not match the expected digest");
       const id = `asset-${sha256}`;
       const name = resourceName(options.name ?? sourcePath);
-      const requestedMime = options.mimeType?.split(";", 1)[0].toLowerCase();
-      const mimeType =
-        requestedMime && SAFE_MIME_TYPES.has(requestedMime)
-          ? requestedMime
-          : (MIME_BY_EXTENSION[extname(name).toLowerCase()] ?? "application/octet-stream");
+      const mimeType = resourceMimeType(name, options.mimeType);
       const record: MediaAsset = {
         id,
         name,

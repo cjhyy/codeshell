@@ -47,7 +47,7 @@ const groups: Record<string, string[]> = {
     "automations.runNow",
   ],
   process: panelProcessMethods,
-  resources: panelResourceMethods,
+  resources: [...panelResourceMethods, "resources.references.pick"],
 };
 export function desktopPanelCapabilities(
   permissions: readonly PanelAppPermission[],
@@ -77,7 +77,9 @@ export function desktopPanelCapabilities(
           !(
             method.endsWith("authorizeProcess") ||
             method === "resources.capture" ||
-            method === "resources.materialize"
+            method === "resources.materialize" ||
+            method === "resources.references.create" ||
+            method === "resources.references.relink"
           ) || permitted.has("process"),
       ),
     );
@@ -91,11 +93,14 @@ export function desktopPanelCapabilities(
     capabilities: {
       ...panelRuntimeCapabilities({
         process: permitted.has("process"),
-        resources: permitted.has("resources") ? options.resources : undefined,
+        resources: permitted.has("resources")
+          ? { ...(options.resources as Record<string, unknown>), pickReferences: true }
+          : undefined,
         tasks: permitted.has("process") && permitted.has("resources") ? options.tasks : undefined,
         limits: options.limits,
       }),
       methodLimits: {
+        "resources.references.pick": { timeoutMs: 30 * 60 * 1000 },
         "tasks.start": {
           maxParamsBytes: 2 * 1024 * 1024 + 8192,
           maxResultBytes: 5 * 1024 * 1024,

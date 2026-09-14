@@ -65,7 +65,8 @@ export async function openResourceDirectory(
     const original = await lstat(root);
     if (!original.isDirectory() || original.isSymbolicLink())
       throw new Error("Resource directory must not be a symlink");
-    let current = await realpath(root);
+    const rootPath = await realpath(root);
+    let current = rootPath;
     for (let i = -1; i < parts.length; i++) {
       if (i >= 0) {
         await verify();
@@ -101,7 +102,16 @@ export async function openResourceDirectory(
       process.platform === "linux"
         ? `/proc/self/fd/${parent.handle.fd}/${file}`
         : join(parent.path, file);
-    return { name, path: location(name), location, rootIdentity: held[0]!.identity, verify, close };
+    return {
+      name,
+      path: location(name),
+      location,
+      rootIdentity: held[0]!.identity,
+      rootPath,
+      identities: held.map(({ identity }) => ({ dev: identity.dev, ino: identity.ino })),
+      verify,
+      close,
+    };
   } catch (error) {
     await close();
     throw error;

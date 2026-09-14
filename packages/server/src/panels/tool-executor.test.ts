@@ -178,6 +178,50 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
     expect(f.owners.size).toBe(0);
   });
 
+  test("external references materialize only into the job and keep original paths out of tool input", async () => {
+    const f = await fixture(
+      `${readRequest}console.log(JSON.stringify({type:"result",result:{ok:true}}));`,
+    );
+    const original = join(f.root, "original.wav");
+    await writeFile(original, "original reference content");
+    const reference = await f.resources.references.createFromSelectedPath(scope, original);
+    const input = await f.executor.prepareInput(
+      scope,
+      {
+        request: { file: "input.wav" },
+        resources: [{ assetId: reference.id, path: "input.wav" }],
+      },
+      f.workDir,
+      f.controller.signal,
+    );
+    expect(await readFile(join(f.workDir, "input.wav"), "utf8")).toBe("original reference content");
+    expect(await f.resources.library.list(scope)).toEqual([]);
+    expect(JSON.stringify(input)).not.toContain(original);
+    await writeFile(original, "changed");
+    await expect(
+      f.executor.prepareInput(
+        scope,
+        {
+          request: {},
+          resources: [{ assetId: reference.id, path: "changed.wav" }],
+        },
+        f.workDir,
+        f.controller.signal,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      f.executor.prepareInput(
+        scope,
+        {
+          request: {},
+          resources: [{ assetId: original, path: "raw.wav" }],
+        },
+        f.workDir,
+        f.controller.signal,
+      ),
+    ).rejects.toThrow("Invalid tool resource");
+  });
+
   test("cancellation waits for native cleanup, including when exit events are dropped", async () => {
     const f = await fixture(
       `import{writeFile}from"node:fs/promises";${readRequest}process.on("SIGTERM",()=>setTimeout(async()=>{await writeFile("cleaned","yes");process.exit(0)},150));console.log(JSON.stringify({type:"progress",progress:{stage:"ready"}}));setInterval(()=>{},1000);`,

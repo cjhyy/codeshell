@@ -781,6 +781,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             [
               "resources.materialize",
               "resources.capture",
+              "resources.references.create",
+              "resources.references.relink",
               "credentials.connections.authorizeProcess",
             ].includes(method) &&
             !app.permissions.includes("process")
@@ -889,7 +891,12 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     };
     if (method.startsWith("resources.")) {
       if (
-        ["resources.materialize", "resources.capture"].includes(method) &&
+        [
+          "resources.materialize",
+          "resources.capture",
+          "resources.references.create",
+          "resources.references.relink",
+        ].includes(method) &&
         !grant.app.permissions.includes("process")
       )
         error(403, "资源工具交接需要process权限。");

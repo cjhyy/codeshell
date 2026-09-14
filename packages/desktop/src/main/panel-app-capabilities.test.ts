@@ -2,7 +2,13 @@ import { expect, test } from "bun:test";
 import { desktopPanelCapabilities } from "./panel-app-capabilities.js";
 
 const options = {
-  resources: { maxChunkBytes: 32768, materialize: true, capture: true },
+  resources: {
+    maxChunkBytes: 32768,
+    materialize: true,
+    capture: true,
+    externalReferences: true,
+    createReferences: true,
+  },
   tasks: { durable: true },
   audio: false,
   cookies: true,
@@ -16,12 +22,17 @@ test("Desktop masks process hand-offs and durable tasks without both required pe
     options,
   );
   expect(restricted.availableMethods).toContain("resources.read");
+  expect(restricted.availableMethods).toContain("resources.references.pick");
+  expect(restricted.availableMethods).toContain("resources.references.get");
+  expect(restricted.availableMethods).toContain("resources.references.forget");
   expect(restricted.availableMethods).toContain("credentials.connections.list");
   expect(restricted.availableMethods).toContain("credentials.cookies.list");
   for (const method of [
     "process.spawn",
     "resources.materialize",
     "resources.capture",
+    "resources.references.create",
+    "resources.references.relink",
     "tasks.start",
     "credentials.connections.authorizeProcess",
     "credentials.cookies.authorizeProcess",
@@ -31,6 +42,9 @@ test("Desktop masks process hand-offs and durable tasks without both required pe
     maxChunkBytes: 32768,
     materialize: false,
     capture: false,
+    externalReferences: true,
+    createReferences: false,
+    pickReferences: true,
   });
   expect(restricted.capabilities.process).toBeUndefined();
   expect(restricted.capabilities.tasks).toBeUndefined();
@@ -61,6 +75,9 @@ test("Desktop advertises only implemented services and the larger bounded protoc
     "process.end",
     "resources.materialize",
     "resources.capture",
+    "resources.references.create",
+    "resources.references.relink",
+    "resources.references.pick",
     "credentials.connections.authorizeProcess",
   ])
     expect(value.availableMethods).toContain(method);
@@ -69,6 +86,9 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   expect(value.availableMethods).toContain("media.assets.list");
   expect(value.availableMethods).not.toContain("media.tts");
   expect(value.capabilities.resources).toMatchObject({ materialize: true, capture: true });
+  expect(value.capabilities.methodLimits["resources.references.pick"].timeoutMs).toBe(
+    30 * 60 * 1000,
+  );
   expect(value.capabilities.tasks).toEqual({ durable: true });
   expect(value.capabilities.methodLimits["tasks.start"]).toMatchObject({
     maxParamsBytes: 2 * 1024 * 1024 + 8192,

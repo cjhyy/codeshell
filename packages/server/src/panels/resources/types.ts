@@ -13,5 +13,17 @@ export interface ResourceAsset {
   sha256: string;
   createdAt: number;
 }
+
+/** Mutable external storage is a reference, never an immutable content digest. */
+export interface ExternalResourceReference {
+  id: string;
+  kind: "external";
+  name: string;
+  mimeType: string;
+  bytes: number;
+  lastModified: number;
+  createdAt: number;
+  state: "available" | "missing" | "changed";
+}
 export type MediaScope = ResourceScope;
 export type MediaAsset = ResourceAsset;

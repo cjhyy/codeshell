@@ -9,7 +9,9 @@ import {
   sameResourceIdentity,
 } from "./directories.js";
 import { ResourceUploadIngest } from "./uploads.js";
-import type { ResourceScope } from "./types.js";
+import { ExternalResourceReferences } from "./references.js";
+import type { MediaReadResult } from "./library.js";
+import type { ExternalResourceReference, ResourceAsset, ResourceScope } from "./types.js";
 
 const CHUNK_BYTES = 32768;
 export interface PanelResourceServiceOptions {
@@ -51,7 +53,7 @@ function integer(value: unknown, min: number, max: number): number {
   return Number(value);
 }
 function assetId(value: unknown): string {
-  if (typeof value !== "string" || !/^asset-[a-f0-9]{64}$/.test(value))
+  if (typeof value !== "string" || !/^(?:asset|external)-[a-f0-9]{64}$/.test(value))
     throw new PanelResourceError("INVALID_RESOURCE_REQUEST", "Invalid resource ID");
   return value;
 }
@@ -59,11 +61,13 @@ function assetId(value: unknown): string {
 /** Generic resource custody and byte transport; it never interprets a project or invokes a model. */
 export class PanelResourceService {
   readonly library: ResourceLibrary;
+  readonly references: ExternalResourceReferences;
   private readonly uploads: ResourceUploadIngest;
   private readonly directoryIdentities = new Map<string, { dev: number; ino: number }>();
   private closed = false;
   constructor(private readonly options: PanelResourceServiceOptions) {
     this.library = new ResourceLibrary(options);
+    this.references = new ExternalResourceReferences(options);
     this.uploads = new ResourceUploadIngest({ ...options, library: this.library });
   }
   capabilities() {
@@ -74,6 +78,8 @@ export class PanelResourceService {
       materialize: true,
       capture: true,
       resumableUploads: true,
+      externalReferences: true,
+      createReferences: true,
     };
   }
   initialize(): Promise<void> {
@@ -128,11 +134,74 @@ export class PanelResourceService {
       throw new Error("Too many resource directory grants; reopen the panel");
     }
     this.directoryIdentities.set(key, { dev: held.rootIdentity.dev, ino: held.rootIdentity.ino });
-    return held;
+    return { ...held, root };
+  }
+  async get(scope: ResourceScope, id: string): Promise<ResourceAsset | ExternalResourceReference> {
+    await this.authorize(scope);
+    return assetId(id).startsWith("external-")
+      ? this.references.get(scope, id)
+      : this.library.get(scope, id);
+  }
+  async openRead(
+    scope: ResourceScope,
+    id: string,
+    options: { range?: string; method?: string; signal?: AbortSignal } = {},
+  ): Promise<MediaReadResult> {
+    await this.authorize(scope, options);
+    return assetId(id).startsWith("external-")
+      ? this.references.openRead(scope, id, options)
+      : this.library.openRead(scope, id, options);
+  }
+  private async reference(
+    scope: ResourceScope,
+    raw: unknown,
+    context: PanelResourceCallContext,
+    relink = false,
+  ) {
+    const input = object(
+      raw,
+      relink
+        ? ["id", "directoryHandle", "path"]
+        : ["directoryHandle", "path", "name", "mimeType", "expectedBytes", "expectedLastModified"],
+    );
+    if (
+      (input.name !== undefined &&
+        (typeof input.name !== "string" || !input.name || input.name.length > 240)) ||
+      (input.mimeType !== undefined &&
+        (typeof input.mimeType !== "string" || !input.mimeType || input.mimeType.length > 200))
+    )
+      throw new PanelResourceError(
+        "INVALID_RESOURCE_REQUEST",
+        "Invalid external reference metadata",
+      );
+    const directory = await this.directory(scope, input, context, false);
+    try {
+      const options = {
+        name: input.name,
+        mimeType: input.mimeType,
+        expectedBytes: input.expectedBytes,
+        expectedLastModified: input.expectedLastModified,
+        signal: context.signal,
+        assertAuthorized: directory.verify,
+      };
+      return {
+        reference: relink
+          ? await this.references.relinkFromDirectory(
+              scope,
+              input.id,
+              directory.root,
+              input.path,
+              options,
+            )
+          : await this.references.createFromDirectory(scope, directory.root, input.path, options),
+      };
+    } finally {
+      await directory.close();
+    }
   }
   private async materialize(scope: ResourceScope, raw: unknown, context: PanelResourceCallContext) {
     const input = object(raw, ["assetId", "directoryHandle", "path"]);
-    const asset = await this.library.get(scope, assetId(input.assetId));
+    const asset = await this.get(scope, assetId(input.assetId));
     const directory = await this.directory(scope, input, context, true);
     const temporary = directory.location(`.${randomUUID()}.resource-partial`);
     let destination: Awaited<ReturnType<typeof open>> | undefined;
@@ -146,7 +215,7 @@ export class PanelResourceService {
         0o600,
       );
       identity = await destination.stat();
-      const source = await this.library.openRead(scope, asset.id);
+      const source = await this.openRead(scope, asset.id, { signal: context.signal });
       const hash = createHash("sha256");
       let bytes = 0;
       try {
@@ -170,7 +239,8 @@ export class PanelResourceService {
       } finally {
         source.body?.destroy();
       }
-      if (bytes !== asset.bytes || hash.digest("hex") !== asset.sha256)
+      const sha256 = hash.digest("hex");
+      if (bytes !== asset.bytes || ("sha256" in asset && sha256 !== asset.sha256))
         throw new Error("Resource content failed integrity validation");
       await destination.sync();
       // A tool may share the granted directory. Verify the actual destination,
@@ -195,7 +265,7 @@ export class PanelResourceService {
         verified.size !== asset.bytes ||
         verified.mtimeMs !== completed.mtimeMs ||
         verified.ctimeMs !== completed.ctimeMs ||
-        copiedHash.digest("hex") !== asset.sha256
+        copiedHash.digest("hex") !== sha256
       )
         throw new Error("Materialized resource failed integrity verification");
       await destination.close();
@@ -208,7 +278,7 @@ export class PanelResourceService {
       const current = await lstat(directory.path);
       if (!current.isFile() || current.isSymbolicLink() || !sameResourceIdentity(current, identity))
         throw new Error("Resource output changed during publication");
-      return { assetId: asset.id, path: input.path, bytes: asset.bytes, sha256: asset.sha256 };
+      return { assetId: asset.id, path: input.path, bytes: asset.bytes, sha256 };
     } catch (error) {
       if (published && identity) {
         const current = await lstat(directory.path).catch(() => undefined);
@@ -277,15 +347,16 @@ export class PanelResourceService {
   }
   private async read(scope: ResourceScope, raw: unknown, context: PanelResourceCallContext) {
     const input = object(raw, ["assetId", "offset", "length"]);
-    const asset = await this.library.get(scope, assetId(input.assetId));
+    const asset = await this.get(scope, assetId(input.assetId));
     const offset = integer(input.offset, 0, asset.bytes),
       length = integer(input.length, 1, CHUNK_BYTES);
     const expected = Math.min(length, asset.bytes - offset);
     const chunks: Buffer[] = [];
     let bytes = 0;
     if (expected) {
-      const result = await this.library.openRead(scope, asset.id, {
+      const result = await this.openRead(scope, asset.id, {
         range: `bytes=${offset}-${offset + expected - 1}`,
+        signal: context.signal,
       });
       try {
         for await (const chunk of result.body!) {
@@ -298,7 +369,7 @@ export class PanelResourceService {
       } finally {
         result.body?.destroy();
       }
-    } else await this.library.resolvePath(scope, asset.id);
+    } else await this.openRead(scope, asset.id, { method: "HEAD", signal: context.signal });
     await this.authorize(scope, context);
     return {
       assetId: asset.id,
@@ -326,7 +397,15 @@ export class PanelResourceService {
           return { assets: assets.slice(offset, offset + limit), total: assets.length };
         }
         case "resources.get":
-          return { asset: await this.library.get(scope, assetId(object(raw, ["id"]).id)) };
+          return { asset: await this.get(scope, assetId(object(raw, ["id"]).id)) };
+        case "resources.references.create":
+          return await this.reference(scope, raw, context);
+        case "resources.references.get":
+          return { reference: await this.references.get(scope, object(raw, ["id"]).id) };
+        case "resources.references.relink":
+          return await this.reference(scope, raw, context, true);
+        case "resources.references.forget":
+          return await this.references.forget(scope, object(raw, ["id"]).id);
         case "resources.read":
           return await this.read(scope, raw, context);
         case "resources.materialize":
@@ -363,14 +442,17 @@ export class PanelResourceService {
   releaseDirectory(scope: ResourceScope, handle: string): void {
     this.directoryIdentities.delete(`${mediaScopeKey(scope)}:${handle}`);
   }
-  cancelScope(scope: ResourceScope): Promise<void> {
-    return this.uploads.cancelScope(scope);
+  async cancelScope(scope: ResourceScope): Promise<void> {
+    await this.references.cancelScope(scope);
+    await this.uploads.cancelScope(scope);
   }
-  cancelApp(appId: string): Promise<void> {
-    return this.uploads.cancelApp(appId);
+  async cancelApp(appId: string): Promise<void> {
+    await this.references.cancelApp(appId);
+    await this.uploads.cancelApp(appId);
   }
   async shutdown(): Promise<void> {
     this.closed = true;
+    await this.references.shutdown();
     await this.uploads.shutdown();
     this.directoryIdentities.clear();
   }

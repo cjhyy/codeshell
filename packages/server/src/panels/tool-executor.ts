@@ -75,7 +75,7 @@ function toolInput(value: unknown): ToolInput {
     if (
       !resource ||
       Object.keys(resource).some((key) => !["assetId", "path"].includes(key)) ||
-      !/^asset-[a-f0-9]{64}$/.test(resource.assetId)
+      !/^(?:asset|external)-[a-f0-9]{64}$/.test(resource.assetId)
     )
       throw new Error("Invalid tool resource");
     resourceRelativePath(resource.path);

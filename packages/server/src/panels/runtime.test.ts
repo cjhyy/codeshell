@@ -200,10 +200,15 @@ describe("Panel HTTP runtime", () => {
     expect(context.capabilities.process).toBeUndefined();
     expect(context.capabilities.tasks).toBeUndefined();
     expect(context.availableMethods).toContain("resources.read");
+    expect(context.availableMethods).toContain("resources.references.get");
+    expect(context.availableMethods).toContain("resources.references.forget");
     expect(context.availableMethods).toContain("credentials.connections.list");
     for (const method of [
       "resources.materialize",
       "resources.capture",
+      "resources.references.create",
+      "resources.references.relink",
+      "resources.references.pick",
       "credentials.connections.authorizeProcess",
       "tasks.start",
     ]) {
@@ -214,6 +219,10 @@ describe("Panel HTTP runtime", () => {
       params: { directoryHandle: "not-granted", path: "result.txt" },
     });
     expect(denied.status).toBe(403);
+    for (const method of ["resources.references.create", "resources.references.relink"]) {
+      const result = await f.api(`${grant.instanceId}/call`, "POST", { method, params: {} });
+      expect(result.status).toBe(403);
+    }
   });
 
   test("Web rejects an oversized Host result with a bounded structured error", async () => {

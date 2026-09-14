@@ -69,9 +69,20 @@ const preparedPartitionScopes = new Map<string, { hostId: string; projectPath: s
 type ManagedMediaReader = (
   scope: MediaScope,
   id: string,
-  request: { range?: string; method: string },
+  request: { range?: string; method: string; signal?: AbortSignal },
 ) => Promise<{ status: number; headers: Record<string, string>; body: Readable | null }>;
 let managedMediaReader: ManagedMediaReader | undefined;
+const activeMediaReads = new Set<{
+  appId: string;
+  allowed: () => boolean;
+  cancel: () => void;
+}>();
+
+/** Revoke pending opens as well as streams already handed to Chromium. */
+export function revokePanelAppMediaReads(appId?: string): void {
+  for (const read of activeMediaReads)
+    if (appId === undefined || read.appId === appId) read.cancel();
+}
 let captureAuthorizer: ((scope: MediaScope) => boolean) | undefined;
 export function setPanelAppCaptureAuthorizer(
   authorize: ((scope: MediaScope) => boolean) | undefined,
@@ -123,6 +134,7 @@ export function registerPanelAppSchemePrivileges(): void {
 
 export function replacePanelAppResources(next: PanelAppProtocolResource[]): void {
   resources = new Map(next.map((resource) => [resource.descriptor.hostId, resource]));
+  for (const read of activeMediaReads) if (!read.allowed()) read.cancel();
 }
 
 function encodePanelUrl(hostId: string, entry: string): string {
@@ -258,27 +270,69 @@ async function handlePanelAppRequest(request: Request, partition: string): Promi
     if (
       !scope ||
       scope.hostId !== parsed.hostId ||
-      !/^asset-[a-f0-9]{64}$/.test(id) ||
+      !/^(?:asset|external)-[a-f0-9]{64}$/.test(id) ||
       !resource.descriptor.permissions.includes("media") ||
+      (id.startsWith("external-") && !resource.descriptor.permissions.includes("resources")) ||
       !managedMediaReader
     )
       return response(403, "Forbidden");
+    const controller = new AbortController();
+    let body: Readable | null = null;
+    const active = {
+      appId: resource.descriptor.appId,
+      allowed: () => {
+        const current = resources.get(parsed.hostId);
+        return (
+          !!current &&
+          current.descriptor.appId === resource.descriptor.appId &&
+          current.descriptor.revision === resource.descriptor.revision &&
+          current.descriptor.permissions.includes("media") &&
+          (!id.startsWith("external-") || current.descriptor.permissions.includes("resources"))
+        );
+      },
+      cancel: () => {
+        controller.abort();
+        body?.destroy();
+        cleanup();
+      },
+    };
+    const cleanup = () => {
+      activeMediaReads.delete(active);
+      request.signal.removeEventListener("abort", active.cancel);
+    };
+    activeMediaReads.add(active);
+    request.signal.addEventListener("abort", active.cancel, { once: true });
+    if (request.signal.aborted) active.cancel();
     try {
+      controller.signal.throwIfAborted();
       const media = await managedMediaReader(
         { appId: resource.descriptor.appId, projectPath: scope.projectPath },
         id,
-        { method: request.method, range: request.headers.get("range") ?? undefined },
+        {
+          method: request.method,
+          range: request.headers.get("range") ?? undefined,
+          signal: controller.signal,
+        },
       );
+      body = media.body;
       try {
+        controller.signal.throwIfAborted();
+        if (!active.allowed()) throw new Error("Panel App media permission was revoked");
         const headers = new Headers(media.headers);
         const mime = headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
         if (!mime || !MEDIA_MIME_TYPES.has(mime)) {
           media.body?.destroy();
+          cleanup();
           return response(415, "Unsupported Media Type");
         }
         headers.set("Content-Security-Policy", MEDIA_CSP);
         headers.set("X-Content-Type-Options", "nosniff");
         headers.set("Cache-Control", "private, no-store");
+        if (body) {
+          body.once("close", cleanup);
+          body.once("end", cleanup);
+          body.once("error", cleanup);
+        } else cleanup();
         return new Response(
           media.body ? (Readable.toWeb(media.body) as unknown as BodyInit) : null,
           {
@@ -291,6 +345,7 @@ async function handlePanelAppRequest(request: Request, partition: string): Promi
         throw error;
       }
     } catch {
+      cleanup();
       return response(404, "Not Found");
     }
   }

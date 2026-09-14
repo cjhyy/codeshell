@@ -19,6 +19,7 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -55,6 +56,7 @@ describeIsolated("Panel App protocol", () => {
   let root = "";
 
   afterEach(() => {
+    api.revokePanelAppMediaReads();
     if (root) rmSync(root, { recursive: true, force: true });
     root = "";
     panelAppElectronMock.protocolHandler = null;
@@ -147,7 +149,8 @@ describeIsolated("Panel App protocol", () => {
       reads++;
       expect(scope).toEqual({ appId: "managedmedia", projectPath: "/repo/alpha" });
       expect(assetId).toBe(id);
-      expect(request).toEqual({ method: "GET", range: "bytes=1-3" });
+      expect(request).toMatchObject({ method: "GET", range: "bytes=1-3" });
+      expect(request.signal).toBeInstanceOf(AbortSignal);
       return {
         status: 206,
         headers: {
@@ -189,6 +192,87 @@ describeIsolated("Panel App protocol", () => {
     await arrange("othermedia", ["media", "context.workspace"]);
     expect((await firstHandler(new Request(`cspanel://othermedia/media/${id}`))).status).toBe(403);
     expect(reads).toBe(0);
+  });
+
+  test("external media uses the same scoped Range route and requires resources permission", async () => {
+    await arrange("externalmedia", ["media", "resources"]);
+    const id = `external-${"d".repeat(64)}`;
+    api.setPanelAppMediaReader(async (scope, resourceId, request) => {
+      expect(scope).toEqual({ appId: "externalmedia", projectPath: "/repo/alpha" });
+      expect(resourceId).toBe(id);
+      expect(request).toMatchObject({ method: "HEAD", range: "bytes=4-7" });
+      return {
+        status: 206,
+        headers: {
+          "content-type": "video/mp4",
+          "content-range": "bytes 4-7/12",
+          "content-length": "4",
+        },
+        body: null,
+      };
+    });
+    const result = await panelAppElectronMock.protocolHandler!(
+      new Request(`cspanel://externalmedia/media/${id}`, {
+        method: "HEAD",
+        headers: { range: "bytes=4-7" },
+      }),
+    );
+    expect(result.status).toBe(206);
+    expect(result.headers.get("content-range")).toBe("bytes 4-7/12");
+    expect(await result.text()).toBe("");
+    rmSync(root, { recursive: true, force: true });
+    await arrange("externaldenied", ["media"]);
+    expect(
+      (
+        await panelAppElectronMock.protocolHandler!(
+          new Request(`cspanel://externaldenied/media/${id}`),
+        )
+      ).status,
+    ).toBe(403);
+  });
+
+  for (const reason of ["request", "app", "uninstall"] as const)
+    test(`external media closes active streams on ${reason} revocation`, async () => {
+      await arrange(`externalclose${reason}`, ["media", "resources"]);
+      const body = new Readable({ read() {} });
+      let readSignal: AbortSignal | undefined;
+      api.setPanelAppMediaReader(async (_scope, _id, request) => {
+        readSignal = request.signal;
+        return { status: 200, headers: { "content-type": "video/mp4" }, body };
+      });
+      const controller = new AbortController();
+      const result = await panelAppElectronMock.protocolHandler!(
+        new Request(`cspanel://externalclose${reason}/media/external-${"e".repeat(64)}`, {
+          signal: controller.signal,
+        }),
+      );
+      expect(result.status).toBe(200);
+      if (reason === "request") controller.abort();
+      else if (reason === "app") api.revokePanelAppMediaReads(`externalclose${reason}`);
+      else api.replacePanelAppResources([]);
+      expect(readSignal?.aborted).toBe(true);
+      expect(body.destroyed).toBe(true);
+    });
+
+  test("revoking media during a pending open prevents late publication and closes its body", async () => {
+    await arrange("externalpending", ["media", "resources"]);
+    let resolveRead!: (value: any) => void;
+    let signal: AbortSignal | undefined;
+    api.setPanelAppMediaReader(async (_scope, _id, request) => {
+      signal = request.signal;
+      return new Promise((resolve) => {
+        resolveRead = resolve;
+      });
+    });
+    const pending = panelAppElectronMock.protocolHandler!(
+      new Request(`cspanel://externalpending/media/external-${"f".repeat(64)}`),
+    );
+    api.replacePanelAppResources([]);
+    const body = new Readable({ read() {} });
+    resolveRead({ status: 200, headers: { "content-type": "video/mp4" }, body });
+    expect((await pending).status).toBe(404);
+    expect(signal?.aborted).toBe(true);
+    expect(body.destroyed).toBe(true);
   });
 
   test("managed media refuses active or non-media MIME types and closes rejected streams", async () => {
@@ -471,6 +555,200 @@ describeIsolated("PanelAppBridge", () => {
     panelAppElectronMock.openedPaths.length = 0;
     panelAppElectronMock.revealedPaths.length = 0;
   });
+
+  test("native reference selection returns opaque persistent resources and previews selected original ranges", async () => {
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "panel-reference-pick-")));
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+    });
+    const { dialog } = await import("electron");
+    const selectedPaths = [join(directory, "original.mp4"), join(directory, "voice.wav")];
+    selectedPaths.forEach((path) => writeFileSync(path, "0123456789"));
+    const picker = spyOn(dialog, "showOpenDialog").mockResolvedValue({
+      canceled: false,
+      filePaths: selectedPaths,
+    });
+    try {
+      panelAppElectronMock.userDataPath = join(directory, "host-data");
+      bridge.registerIpc();
+      const guest = fakeGuest(111);
+      const resource = bridgeResource(["resources", "media"]);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        resource as any,
+        directory,
+      );
+      await bindBridgeGuest(111, { projectPath: directory, cwd: directory });
+      const call = (method: string, params: unknown = {}) =>
+        panelGuestHandler()({ sender: guest }, method, params);
+      const { references } = await call("resources.references.pick", {
+        multiple: true,
+        filters: [{ name: "Media", extensions: ["mp4", "wav"] }],
+      });
+      expect(references).toHaveLength(2);
+      expect(references[0]).toMatchObject({
+        name: "original.mp4",
+        mimeType: "video/mp4",
+        bytes: 10,
+        state: "available",
+      });
+      expect(references[0].id).toMatch(/^external-[a-f0-9]{64}$/);
+      expect(references[1].mimeType).toBe("audio/wav");
+      expect(JSON.stringify(references)).not.toContain(directory);
+      const deniedGuest = fakeGuest(113);
+      bridge.registerGuest(
+        deniedGuest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource([]) as any,
+        directory,
+      );
+      await bindBridgeGuest(113, { projectPath: directory, cwd: directory });
+      await expect(
+        panelGuestHandler()({ sender: deniedGuest }, "resources.references.pick", {}),
+      ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+      expect(picker).toHaveBeenCalledTimes(1);
+      expect(
+        await (bridge as any)
+          .getResourceService()
+          .library.list({ appId: "demo", projectPath: directory }),
+      ).toEqual([]);
+      expect(picker.mock.calls[0][1]).toMatchObject({
+        properties: ["openFile", "multiSelections"],
+      });
+      api.replacePanelAppResources([resource as any]);
+      const prepared = await api.preparePanelApp(resource.descriptor.id, directory);
+      expect(api.validatePanelAppEntryUrl(prepared.src)?.descriptor.permissions).toEqual([
+        "resources",
+        "media",
+      ]);
+      expect(api.preparedPanelAppPartitionProjectPath("host", prepared.partition)).toBe(directory);
+      const preview = await panelAppElectronMock.protocolHandler!(
+        new Request(`cspanel://host/media/${references[0].id}`, {
+          headers: { range: "bytes=3-6" },
+        }),
+      );
+      expect(preview.status).toBe(206);
+      expect(preview.headers.get("content-range")).toBe("bytes 3-6/10");
+      expect(await preview.text()).toBe("3456");
+      picker.mockResolvedValue({ canceled: false, filePaths: [selectedPaths[1]] });
+      const wrongFile = await call("resources.references.pick", { id: references[0].id }).then(
+        () => null,
+        (error) => error,
+      );
+      expect(wrongFile).toMatchObject({ code: "OPERATION_FAILED" });
+      expect(wrongFile.message).not.toContain(directory);
+      const moved = join(directory, "moved.mp4");
+      renameSync(selectedPaths[0], moved);
+      expect(
+        (await call("resources.references.get", { id: references[0].id })).reference.state,
+      ).toBe("missing");
+      picker.mockResolvedValue({ canceled: false, filePaths: [moved] });
+      expect(
+        (await call("resources.references.pick", { id: references[0].id, multiple: true }))
+          .references[0].id,
+      ).toBe(references[0].id);
+      expect(picker.mock.calls.at(-1)?.[1]).toMatchObject({ properties: ["openFile"] });
+      // Restoring the service reads only its metadata and reopens the original.
+      await bridge.shutdownMedia();
+      const { PanelResourceService } = await import("@cjhyy/code-shell-server/panels");
+      const restored = new PanelResourceService({
+        rootDirectory: join(panelAppElectronMock.userDataPath, "panel-app-media"),
+        isScopeAuthorized: () => true,
+      });
+      try {
+        const read = await restored.openRead(
+          { appId: "demo", projectPath: directory },
+          references[0].id,
+          { range: "bytes=-2" },
+        );
+        expect(read.status).toBe(206);
+        let content = "";
+        for await (const chunk of read.body!) content += chunk.toString();
+        expect(content).toBe("89");
+      } finally {
+        await restored.shutdown();
+      }
+      expect(readFileSync(moved, "utf8")).toBe("0123456789");
+    } finally {
+      picker.mockRestore();
+      await bridge.shutdownMedia();
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  for (const reason of ["guest", "trust", "shutdown", "deadline"] as const)
+    test(`reference picker rejects a late native selection after ${reason} revocation`, async () => {
+      const previousUserDataPath = panelAppElectronMock.userDataPath;
+      const directory = realpathSync(mkdtempSync(join(tmpdir(), "panel-reference-revoke-")));
+      let trusted = true;
+      const bridge = new PanelAppBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: () => trusted,
+        isPanelAppBound: () => true,
+        getAgentBridge: () => null,
+        ...(reason === "deadline" ? { limits: { resourceTransferTimeoutMs: 200 } } : {}),
+      });
+      const { dialog } = await import("electron");
+      let finishSelection!: (value: { canceled: boolean; filePaths: string[] }) => void;
+      const picker = spyOn(dialog, "showOpenDialog").mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishSelection = resolve;
+          }),
+      );
+      try {
+        panelAppElectronMock.userDataPath = join(directory, "host-data");
+        bridge.registerIpc();
+        const guest = fakeGuest(112);
+        bridge.registerGuest(
+          guest as any,
+          panelAppElectronMock.ownerWindow as any,
+          bridgeResource(["context.workspace", "resources"]) as any,
+          directory,
+        );
+        await bindBridgeGuest(112, { projectPath: directory, cwd: directory });
+        const call = (params: unknown) =>
+          panelGuestHandler()({ sender: guest }, "resources.references.pick", params);
+        await expect(call({ paths: [join(directory, "must-not-open")] })).rejects.toMatchObject({
+          code: "INVALID_ARGUMENT",
+        });
+        await expect(
+          call({ filters: [{ name: "bad", extensions: ["../mp4"] }] }),
+        ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+        expect(picker).not.toHaveBeenCalled();
+        const service = (bridge as any).getResourceService();
+        const create = spyOn(service.references, "createFromSelectedPath");
+        const pending = call({ multiple: true }).then(
+          () => null,
+          (error) => error,
+        );
+        const until = Date.now() + 2000;
+        while (!finishSelection && Date.now() < until)
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        expect(finishSelection).toBeFunction();
+        if (reason === "guest") bridge.revokeGuest(guest.id);
+        else if (reason === "trust") trusted = false;
+        else if (reason === "shutdown") await bridge.shutdownMedia();
+        else expect(await pending).toMatchObject({ code: "TIMEOUT" });
+        finishSelection({ canceled: false, filePaths: [join(directory, "must-not-open.mp4")] });
+        expect(await pending).toMatchObject({
+          code: reason === "deadline" ? "TIMEOUT" : "REVOKED",
+        });
+        expect(create).not.toHaveBeenCalled();
+        create.mockRestore();
+      } finally {
+        picker.mockRestore();
+        await bridge.shutdownMedia();
+        panelAppElectronMock.userDataPath = previousUserDataPath;
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
 
   test("whole-file resource transfers outlive ordinary RPCs and return their committed receipts", async () => {
     const previousUserDataPath = panelAppElectronMock.userDataPath;

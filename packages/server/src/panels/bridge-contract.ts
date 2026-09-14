@@ -25,6 +25,10 @@ export const panelResourceMethods = [
   "resources.upload.cancel",
   "resources.materialize",
   "resources.capture",
+  "resources.references.create",
+  "resources.references.get",
+  "resources.references.relink",
+  "resources.references.forget",
 ];
 export const panelToolJobMethods = [
   "tasks.start",
@@ -101,6 +105,9 @@ export function panelRuntimeCapabilities(input: {
             ...(input.resources as Record<string, unknown>),
             materialize: input.process,
             capture: input.process,
+            ...((input.resources as Record<string, unknown>).externalReferences
+              ? { createReferences: input.process }
+              : {}),
           },
         }
       : {}),

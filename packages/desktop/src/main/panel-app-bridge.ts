@@ -31,6 +31,7 @@ import {
   preparePanelApp,
   setPanelAppMediaReader,
   setPanelAppCaptureAuthorizer,
+  revokePanelAppMediaReads,
 } from "./panel-app-protocol.js";
 import {
   PanelToolJobService,
@@ -88,6 +89,7 @@ const RESOURCE_TRANSFER_METHODS = new Set([
   "resources.capture",
   "resources.materialize",
   "resources.upload.finish",
+  "resources.references.pick",
 ]);
 const PDF_EXPORT_TIMEOUT_MS = 30_000;
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 180_000;
@@ -430,7 +432,7 @@ export class PanelAppBridge {
         !options.isWorkspaceTrusted(scope.projectPath)
       )
         throw new Error("Media scope is no longer authorized");
-      return this.getMediaService().library.openRead(scope, id, request);
+      return this.getResourceService().openRead(scope, id, request);
     });
     const processApprovalStore = new PanelAppProcessApprovalStore(
       join(app.getPath("userData"), "panel-app-process-approvals.json"),
@@ -657,6 +659,7 @@ export class PanelAppBridge {
 
   async shutdownMedia(): Promise<void> {
     this.resourceTransfersStopping = true;
+    revokePanelAppMediaReads();
     for (const controller of this.resourceTransfers.keys()) controller.abort();
     await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
     await this.toolJobService?.shutdown();
@@ -724,6 +727,7 @@ export class PanelAppBridge {
   }
 
   revokeAppId(appId: string): void {
+    revokePanelAppMediaReads(appId);
     this.agentTaskService.cancelApp(appId);
     void this.mediaService?.cancelApp(appId).catch(() => {});
     void this.toolJobService?.cancelApp(appId).catch(() => {});
@@ -1458,7 +1462,14 @@ export class PanelAppBridge {
       this.requirePermission(binding, "resources");
       await this.trustedWorkspaceRoot(binding);
       const scope = { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath };
-      if (method === "resources.materialize" || method === "resources.capture")
+      if (method === "resources.references.pick")
+        return this.pickResourceReferences(binding, params, signal);
+      if (
+        method === "resources.materialize" ||
+        method === "resources.capture" ||
+        method === "resources.references.create" ||
+        method === "resources.references.relink"
+      )
         this.requirePermission(binding, "process");
       return this.getResourceService().dispatch(scope, method, params, {
         signal,
@@ -1690,6 +1701,122 @@ export class PanelAppBridge {
     await mkdir(path, { recursive: true, mode: 0o700 });
     await chmod(path, 0o700).catch(() => undefined);
     return this.processService.grantDirectory(this.processOwner(binding), path);
+  }
+
+  private async pickResourceReferences(
+    binding: GuestBinding,
+    params: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
+    const input = (params ?? {}) as {
+      multiple?: boolean;
+      filters?: Array<{ name: string; extensions: string[] }>;
+      id?: string;
+    };
+    if (
+      !input ||
+      typeof input !== "object" ||
+      Array.isArray(input) ||
+      Object.keys(input).some((key) => !["multiple", "filters", "id"].includes(key)) ||
+      (input.multiple !== undefined && typeof input.multiple !== "boolean") ||
+      (input.id !== undefined &&
+        (typeof input.id !== "string" || !/^external-[a-f0-9]{64}$/.test(input.id))) ||
+      (input.filters !== undefined &&
+        (!Array.isArray(input.filters) ||
+          input.filters.length > 16 ||
+          input.filters.some(
+            (filter) =>
+              !filter ||
+              typeof filter !== "object" ||
+              Object.keys(filter).some((key) => !["name", "extensions"].includes(key)) ||
+              typeof filter.name !== "string" ||
+              !filter.name.trim() ||
+              filter.name.length > 80 ||
+              !Array.isArray(filter.extensions) ||
+              !filter.extensions.length ||
+              filter.extensions.length > 32 ||
+              filter.extensions.some(
+                (extension) =>
+                  typeof extension !== "string" || !/^(?:[a-zA-Z0-9]{1,16}|\*)$/.test(extension),
+              ),
+          )))
+    )
+      throw new PanelBridgeError("INVALID_ARGUMENT", "Invalid reference file selection");
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    const assertAuthorized = () => {
+      if (
+        signal?.aborted ||
+        this.resourceTransfersStopping ||
+        this.guests.get(binding.guest.id) !== binding ||
+        binding.guest.isDestroyed() ||
+        !owner ||
+        owner.isDestroyed()
+      )
+        throw new PanelBridgeError("REVOKED", "Panel App file selection was revoked");
+      this.requirePermission(binding, "resources");
+      this.assertProjectBinding(binding);
+      if (
+        !this.options.isWorkspaceTrusted(binding.projectPath) ||
+        !this.options.isWorkspaceTrusted(binding.cwd ?? binding.projectPath)
+      )
+        throw new PanelBridgeError("REVOKED", "Panel App workspace trust was revoked");
+    };
+    assertAuthorized();
+    const multiple = !input.id && input.multiple === true;
+    // A closed guest must not hold Host shutdown open while a native dialog is
+    // still waiting for user input. Ignore its eventual answer after revocation.
+    const selected = await new Promise<Electron.OpenDialogReturnValue>(
+      (resolveSelection, reject) => {
+        const abort = () =>
+          reject(new PanelBridgeError("REVOKED", "Panel App file selection was revoked"));
+        signal?.addEventListener("abort", abort, { once: true });
+        if (signal?.aborted) {
+          signal.removeEventListener("abort", abort);
+          abort();
+          return;
+        }
+        void dialog
+          .showOpenDialog(owner!, {
+            title: input.id ? "Reconnect original file" : "Choose files to reference",
+            properties: multiple ? ["openFile", "multiSelections"] : ["openFile"],
+            ...(input.filters ? { filters: input.filters } : {}),
+          })
+          .then(resolveSelection, () =>
+            reject(new PanelBridgeError("OPERATION_FAILED", "Unable to open file selection")),
+          )
+          .finally(() => signal?.removeEventListener("abort", abort));
+      },
+    );
+    assertAuthorized();
+    if (selected.canceled || !selected.filePaths.length) return { references: [] };
+    if (selected.filePaths.length > (multiple ? 128 : 1))
+      throw new PanelBridgeError("INVALID_ARGUMENT", "Select at most 128 files");
+    const scope = { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath };
+    const service = this.getResourceService().references;
+    const references: Awaited<ReturnType<typeof service.createFromSelectedPath>>[] = [];
+    for (const path of selected.filePaths) {
+      assertAuthorized();
+      try {
+        references.push(
+          input.id
+            ? await service.relinkFromSelectedPath(scope, input.id, path, {
+                signal,
+                assertAuthorized,
+              })
+            : await service.createFromSelectedPath(scope, path, { signal, assertAuthorized }),
+        );
+      } catch (error) {
+        assertAuthorized();
+        if (error instanceof PanelBridgeError) throw error;
+        // Filesystem errors can contain the selected absolute source path.
+        throw new PanelBridgeError(
+          "OPERATION_FAILED",
+          "Unable to reference selected file; reconnecting requires the unchanged original file",
+        );
+      }
+    }
+    assertAuthorized();
+    return { references };
   }
 
   private async pickProcessDirectory(binding: GuestBinding): Promise<unknown> {
