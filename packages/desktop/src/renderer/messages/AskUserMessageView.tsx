@@ -67,6 +67,18 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
     );
   }
 
+  if (typeof message.question !== "string" || !message.question.trim()) {
+    return (
+      <div className="min-w-0 max-w-full px-4 py-1">
+        <div className="my-2 min-w-0 rounded-md border bg-card p-3 text-sm shadow-sm">
+          <p role="alert" className="text-status-err">
+            {t("msg.ask.questionUnavailable")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const hasOptions = !!message.options && message.options.length > 0;
   const submit = (val: string): void => {
     const v = val.trim();

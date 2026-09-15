@@ -6,6 +6,7 @@
 
 import type {
   StreamEvent,
+  GoalConfig,
   CapabilityDescriptor,
   EffectiveSourceAccess,
   SessionWorkspace,
@@ -411,6 +412,8 @@ export interface ApprovalResolvedEnvelope {
   sessionId?: string;
   requestId: string;
   approved?: boolean;
+  /** Actual question answer accepted by the owning host. */
+  answer?: string;
 }
 
 export type MobilePermissionMode = "default" | "acceptEdits" | "bypassPermissions";
@@ -1403,6 +1406,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     send(payload: {
       sessionId: string;
       text: string;
+      goal?: string | GoalConfig;
+      disableGoal?: boolean;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }>;

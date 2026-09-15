@@ -408,12 +408,14 @@ export function useRunController({
     // — busy clearing, error surfacing, the whole .then chain below — because
     // the two paths differ only in who produces the stream, and duplicating the
     // bookkeeping is how one path ends up permanently "busy" after a failure.
-    const activeGoal = sendOpts.suppressGoal
-      ? undefined
-      : (opts.goal ?? state.activeGoal?.objective);
+    // The service owns persistent Goal state and emits the canonical projection.
+    // Pass a new objective only for an explicit Goal send; ordinary follow-ups
+    // inherit there instead of replacing the goal with a renderer snapshot.
+    const hasActiveGoal =
+      !sendOpts.suppressGoal &&
+      (!!opts.goal || (bucket === activeBucket && !!state.activeGoal && !state.activeGoal.paused));
     const externalDeveloperInstructions = [
       opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
-      activeGoal ? `Active CodeShell goal:\n${activeGoal}` : undefined,
       opts.workspaceProfile
         ? `Active CodeShell workspace profile: ${opts.workspaceProfile}`
         : undefined,
@@ -442,7 +444,9 @@ export function useRunController({
             clientMessageId,
             attachments: opts.attachments,
             ...toExternalRuntimePermission(opts.permissionMode),
-            hasGoal: !!activeGoal,
+            hasGoal: hasActiveGoal,
+            ...(opts.goal !== undefined ? { goal: opts.goal } : {}),
+            ...(opts.disableGoal !== undefined ? { disableGoal: opts.disableGoal } : {}),
             initialContext: buildExternalRuntimeHandoff(state.messages),
             ...(externalDeveloperInstructions
               ? { developerInstructions: externalDeveloperInstructions }

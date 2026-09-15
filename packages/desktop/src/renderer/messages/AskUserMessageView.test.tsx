@@ -3,6 +3,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AskUserMessageView } from "./AskUserMessageView";
 import type { AskUserMessage } from "../types";
+import { translate } from "../i18n/translate";
 
 function ask(over: Partial<AskUserMessage> = {}): AskUserMessage {
   return {
@@ -19,6 +20,47 @@ function ask(over: Partial<AskUserMessage> = {}): AskUserMessage {
     ...over,
   };
 }
+
+describe("AskUserMessageView missing question", () => {
+  test("missing or blank unanswered questions show a diagnostic without answer controls", () => {
+    for (const question of [undefined, "", " \n\t "]) {
+      for (const options of [undefined, ask().options]) {
+        const html = renderToStaticMarkup(
+          <AskUserMessageView
+            message={ask({ question, options })}
+            onAnswer={() => {
+              throw new Error("A missing question must not submit an answer");
+            }}
+          />,
+        );
+        expect(html).toContain('role="alert"');
+        expect(html).toContain("未收到问题内容，暂时无法回答。");
+        expect(html).not.toContain("<input");
+        expect(html).not.toContain("<button");
+        expect(html).not.toContain("允许本次");
+      }
+    }
+  });
+
+  test("a resolved question preserves its recorded answer even when the question is blank", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ question: " ", answer: "问题已取消" })}
+        onAnswer={() => {}}
+      />,
+    );
+    expect(html).toContain("问题已取消");
+    expect(html).not.toContain('role="alert"');
+    expect(html).not.toContain("<input");
+  });
+
+  test("the diagnostic is available in Chinese and English", () => {
+    expect(translate("zh", "msg.ask.questionUnavailable")).toBe("未收到问题内容，暂时无法回答。");
+    expect(translate("en", "msg.ask.questionUnavailable")).toBe(
+      "The question text is missing, so it cannot be answered yet.",
+    );
+  });
+});
 
 describe("AskUserMessageView optionsOnly", () => {
   test("normal multiple-choice shows the 其它… free-text escape hatch", () => {

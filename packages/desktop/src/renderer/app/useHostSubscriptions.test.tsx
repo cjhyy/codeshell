@@ -13,7 +13,7 @@ import { compactSidebarSessions, sortSidebarSessions } from "../sidebarSessionVi
 import { transcriptsReducer, type TranscriptsAction } from "../transcriptsReducer";
 import { getSessionPersistence } from "../sessionPersistence";
 import { useHostSubscriptions } from "./useHostSubscriptions";
-import { INITIAL_STATE, type ApprovalState } from "../types";
+import { INITIAL_STATE, type ApprovalState, type AskUserMessage } from "../types";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 
 function cell<T>(value: T) {
@@ -280,6 +280,231 @@ describe("host subscriptions and recovery", () => {
         question: "Choose a target",
       }),
     ]);
+  });
+
+  test("reload retires expired external cards while retaining real pending and native questions", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    const bucket = bucketKey("project", "pinned-1");
+    const questions: AskUserMessage[] = [
+      "external-approval-expired",
+      "external-approval-live",
+      "native-question",
+    ].map((requestId) => ({
+      kind: "ask_user",
+      id: requestId,
+      requestId,
+      engineSessionId: "pinned-1",
+      question: "Choose a target",
+      multiSelect: false,
+    }));
+    questions.push({
+      ...questions[0]!,
+      id: "answered",
+      requestId: "external-approval-answered",
+      answer: "Original answer",
+    });
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {
+        [bucket]: { ...INITIAL_STATE, messages: questions },
+      });
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    expect(params.routing.transcriptsRef.current[bucket]!.messages[0]).not.toHaveProperty("answer");
+    await act(async () => {
+      read.resolve([
+        { ...approval("external-approval-live", "__ask_user__"), source: "external-runtime" },
+      ]);
+      await flushMicrotasks();
+    });
+    const messages = params.routing.transcriptsRef.current[bucket]!.messages;
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        requestId: "external-approval-expired",
+        answer: "msg.ask.cancelled",
+      }),
+    );
+    expect(
+      messages.find(
+        (message) => message.kind === "ask_user" && message.requestId === "external-approval-live",
+      ),
+    ).not.toHaveProperty("answer");
+    expect(
+      messages.find(
+        (message) => message.kind === "ask_user" && message.requestId === "native-question",
+      ),
+    ).not.toHaveProperty("answer");
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        requestId: "external-approval-answered",
+        answer: "Original answer",
+      }),
+    );
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("a timeout still retires a card hydrated after the pending snapshot and resolution", async () => {
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    await act(async () => {
+      listeners.get("onApprovalResolved")!({
+        requestId: "external-approval-timeout",
+        sessionId: "pinned-1",
+      });
+      const cached = {
+        ...INITIAL_STATE,
+        messages: [
+          {
+            kind: "ask_user" as const,
+            id: "old",
+            requestId: "external-approval-timeout",
+            question: "Old question",
+            multiSelect: false,
+          },
+        ],
+      };
+      params.services.dispatch({
+        type: "hydrate_history",
+        bucket,
+        state: cached,
+        history: cached,
+        goalAtStart: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]!.messages).toContainEqual(
+      expect.objectContaining({
+        requestId: "external-approval-timeout",
+        answer: "msg.ask.timedOut",
+      }),
+    );
+  });
+
+  test("external resolution wins over stale replay while a newer live question remains pending", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    const old = {
+      ...approval("external-approval-old", "__ask_user__"),
+      source: "external-runtime" as const,
+    };
+    const current = {
+      ...approval("external-approval-new", "__ask_user__"),
+      source: "external-runtime" as const,
+    };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(old);
+      listeners.get("onApprovalResolved")!({
+        requestId: old.requestId,
+        sessionId: old.sessionId,
+        approved: false,
+      });
+      listeners.get("onApprovalRequest")!(current);
+      read.resolve([old]);
+      await flushMicrotasks();
+    });
+    const messages = params.routing.transcriptsRef.current[bucket]!.messages;
+    expect(messages).toContainEqual(
+      expect.objectContaining({ requestId: old.requestId, answer: "msg.ask.cancelled" }),
+    );
+    expect(
+      messages.find(
+        (message) => message.kind === "ask_user" && message.requestId === current.requestId,
+      ),
+    ).not.toHaveProperty("answer");
+    expect(messages).toHaveLength(2);
+  });
+
+  test("Core exit does not discard an external request in the in-flight recovery snapshot", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const external = {
+      ...approval("external-approval-survivor"),
+      source: "external-runtime" as const,
+    };
+    await act(async () => {
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: null });
+      read.resolve([approval("native-old"), external]);
+      await flushMicrotasks();
+    });
+    expect(approvals.value).toEqual([external]);
+  });
+
+  test("legacy external questions at the request root retain their text and choices", async () => {
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const legacy = {
+      sessionId: "pinned-1",
+      requestId: "legacy-question",
+      request: {
+        toolName: "__ask_user__",
+        question: "Which date should the comparison start from?",
+        header: "Date",
+        options: [{ label: "This year", description: "Use January 1" }],
+        multiSelect: true,
+      },
+    };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(legacy);
+      await flushMicrotasks();
+    });
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        type: "ask_user",
+        requestId: "legacy-question",
+        question: legacy.request.question,
+        header: "Date",
+        options: legacy.request.options,
+        multiSelect: true,
+      }),
+    );
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("canonical question fields override legacy fields and blank text uses the description", async () => {
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const canonical = approval("canonical-question", "__ask_user__");
+    Object.assign(canonical.request, {
+      question: "Old question",
+      options: [{ label: "Old", description: "Old choice" }],
+    });
+    const blank = approval("blank-question", "__ask_user__");
+    blank.request.args = { question: " \n " };
+    blank.request.description = "Please specify the comparison period";
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(canonical);
+      listeners.get("onApprovalRequest")!(blank);
+      await flushMicrotasks();
+    });
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        type: "ask_user",
+        requestId: "canonical-question",
+        question: "Choose a target",
+        options: canonical.request.args.options,
+      }),
+    );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        type: "ask_user",
+        requestId: "blank-question",
+        question: blank.request.description,
+      }),
+    );
+    expect(approveCalls).toEqual([]);
   });
 
   test("worker exit invalidates an in-flight snapshot and permits current worker request ids", async () => {

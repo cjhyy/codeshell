@@ -416,6 +416,14 @@ export class ExternalRuntimeSessionRecorder {
     return this.outcome !== undefined;
   }
 
+  /** Provider usage for this turn, also available before its terminal event. */
+  get turnTokensUsed(): number {
+    return (
+      Math.max(0, this.usage.promptTokens - this.usageAtTurnStart.promptTokens) +
+      Math.max(0, this.usage.completionTokens - this.usageAtTurnStart.completionTokens)
+    );
+  }
+
   private flushAssistantText(): void {
     if (!this.textBuffer) return;
     this.transcript.appendMessage("assistant", this.textBuffer);

@@ -1601,24 +1601,37 @@ function App() {
           : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
-    if (engineSessionId) {
-      void window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer);
-    } else {
-      void window.codeshell.approve(requestId, "approve", undefined, answer);
-    }
-    void window.codeshell.mobileRemote.notifyApprovalResolved({
-      requestId,
-      sessionId: engineSessionId,
-      approved: true,
-    });
-    dispatch({
-      type: "ask_user_answered",
-      // Mark answered in the bucket that actually holds the prompt (found above),
-      // not blindly the active bucket — they differ for a background-session ask.
-      bucket: originBucket ?? activeBucket,
-      requestId,
-      answer,
-    });
+    const accepted = engineSessionId
+      ? window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer)
+      : window.codeshell.approve(requestId, "approve", undefined, answer);
+    void accepted
+      .then((response) => {
+        const error = (response as { error?: { message?: string } } | undefined)?.error;
+        if (error) throw new Error(error.message || "The answer was not accepted.");
+        dispatch({
+          type: "ask_user_answered",
+          bucket: originBucket ?? activeBucket,
+          requestId,
+          answer,
+        });
+        // Mirror only accepted answers; a failed mirror must not undo acceptance.
+        void window.codeshell.mobileRemote
+          .notifyApprovalResolved({
+            requestId,
+            sessionId: engineSessionId,
+            approved: true,
+          })
+          .catch((error) =>
+            window.codeshell.log("ask_user.answer_mirror_failed", {
+              requestId,
+              error: String(error),
+            }),
+          );
+      })
+      .catch((error) => {
+        window.codeshell.log("ask_user.answer_failed", { requestId, error: String(error) });
+        toast({ message: t("msg.ask.submitFailed"), variant: "error" });
+      });
   };
 
   const clearTranscript = (): void => {

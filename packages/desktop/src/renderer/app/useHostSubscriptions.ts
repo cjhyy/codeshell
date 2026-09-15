@@ -1,8 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { flushSync } from "react-dom";
 
-import { bgCompletionText, type ApprovalState, type AskUserOption } from "../types";
+import {
+  bgCompletionText,
+  type ApprovalState,
+  type AskUserOption,
+  type AskUserMessage,
+} from "../types";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
 import {
   bindEngineSession,
@@ -135,6 +140,13 @@ export function useHostSubscriptions({
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
   const pendingApprovalIdsRef = useRef(new Set<string>());
   const coreApprovalIdsRef = useRef(new Set<string>());
+  const externalApprovalsRef = useRef({
+    ready: false,
+    pending: new Set<string>(),
+    resolved: new Map<string, ApprovalResolvedEnvelope>(),
+  });
+  const retiredExternalQuestionsRef = useRef(new WeakSet<AskUserMessage>());
+  const [, refreshExternalApprovals] = useState(0);
   useEffect(
     () =>
       subscribeSessionPersistenceFlush(() => {
@@ -604,9 +616,20 @@ export function useHostSubscriptions({
         void announceHostSession(meta, "pet-delegation");
       }) ?? (() => undefined);
     let approvalRestoreActive = true;
+    let approvalHandlingActive = true;
     let restoringApprovals = true;
     const resolvedDuringRestore = new Set<string>();
-    const handleApproval = (env: ApprovalRequestEnvelope): void => {
+    const externalRequestsDuringRestore = new Set<string>();
+    externalApprovalsRef.current.ready = false;
+    // Remember a question's route before React commits its card. Another
+    // client can answer in the same IPC batch as the original request.
+    const pendingQuestionBuckets = new Map<string, string>();
+    const handleApproval = (env: ApprovalRequestEnvelope, fromSnapshot = false): void => {
+      if (env.source === "external-runtime") {
+        if (externalApprovalsRef.current.resolved.has(env.requestId)) return;
+        externalApprovalsRef.current.pending.add(env.requestId);
+        if (restoringApprovals && !fromSnapshot) externalRequestsDuringRestore.add(env.requestId);
+      }
       if (
         pendingApprovalIdsRef.current.has(env.requestId) ||
         resolvedDuringRestore.has(env.requestId)
@@ -658,9 +681,13 @@ export function useHostSubscriptions({
       // so the user picks an answer inline — much less disruptive than
       // a blocking dialog.
       if (env.request.toolName === "__ask_user__") {
-        const args = (env.request.args ?? {}) as Record<string, unknown>;
+        // Older external runtimes sent question fields at the request root.
+        // Prefer the canonical args payload while still rendering those prompts.
+        const args: Record<string, unknown> = { ...env.request, ...env.request.args };
         const question =
-          (typeof args.question === "string" && args.question) || env.request.description || "";
+          (typeof args.question === "string" && args.question.trim()) ||
+          env.request.description ||
+          "";
         const header = typeof args.header === "string" ? args.header : undefined;
         const multiSelect = args.multiSelect === true;
         const optionsOnly = args.optionsOnly === true;
@@ -695,6 +722,7 @@ export function useHostSubscriptions({
           );
         }
         const bucket = resolved ?? activeBucketRef.current;
+        pendingQuestionBuckets.set(env.requestId, bucket);
         dispatch({
           type: "ask_user",
           bucket,
@@ -743,6 +771,17 @@ export function useHostSubscriptions({
     const offApproval = window.codeshell.onApprovalRequest(handleApproval);
     const handleApprovalResolved = (env: ApprovalResolvedEnvelope): void => {
       if (!env.requestId) return;
+      if (
+        env.requestId.startsWith("external-approval-") ||
+        externalApprovalsRef.current.pending.has(env.requestId)
+      ) {
+        externalApprovalsRef.current.pending.delete(env.requestId);
+        externalRequestsDuringRestore.delete(env.requestId);
+        const resolved = externalApprovalsRef.current.resolved;
+        resolved.set(env.requestId, env);
+        if (resolved.size > 2_048) resolved.delete(resolved.keys().next().value!);
+        refreshExternalApprovals((version) => version + 1);
+      }
       pendingApprovalIdsRef.current.delete(env.requestId);
       coreApprovalIdsRef.current.delete(env.requestId);
       if (restoringApprovals) resolvedDuringRestore.add(env.requestId);
@@ -752,14 +791,17 @@ export function useHostSubscriptions({
       // A user-driven answer already marks it via handleAskUserAnswer, so only
       // touch a card that's still unanswered here.
       const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
-      if (origin && origin.answer === undefined) {
+      const questionBucket = origin?.bucket ?? pendingQuestionBuckets.get(env.requestId);
+      if (questionBucket && origin?.answer === undefined) {
         dispatch({
           type: "ask_user_answered",
-          bucket: origin.bucket,
+          bucket: questionBucket,
           requestId: env.requestId,
-          answer: t("msg.ask.timedOut"),
+          answer:
+            env.answer ?? t(env.approved === false ? "msg.ask.cancelled" : "msg.ask.timedOut"),
         });
       }
+      pendingQuestionBuckets.delete(env.requestId);
       approvalBucketsRef.current.delete(env.requestId);
       setApprovalQueue((prev) => {
         const remaining = prev.filter((e) => e.requestId !== env.requestId);
@@ -777,7 +819,16 @@ export function useHostSubscriptions({
     if (pendingApprovals) {
       void pendingApprovals
         .then((pending) => {
-          if (approvalRestoreActive) for (const env of pending) handleApproval(env);
+          if (!approvalHandlingActive) return;
+          const external = externalApprovalsRef.current;
+          external.pending = new Set(externalRequestsDuringRestore);
+          for (const env of pending) {
+            // A Core worker exit invalidates only its own snapshot entries.
+            if (approvalRestoreActive || env.source === "external-runtime")
+              handleApproval(env, true);
+          }
+          external.ready = true;
+          refreshExternalApprovals((version) => version + 1);
         })
         .catch((error) => window.codeshell.log("approval.restore_failed", { error: String(error) }))
         .finally(() => {
@@ -888,6 +939,7 @@ export function useHostSubscriptions({
     });
     return () => {
       approvalRestoreActive = false;
+      approvalHandlingActive = false;
       offStream();
       offAutomationSession();
       offMobileSession();
@@ -901,6 +953,40 @@ export function useHostSubscriptions({
     // `toast` from useToast is a stable reference (memoized in ToastProvider),
     // so listing it here does not re-register these long-lived IPC listeners.
   }, [t, toast]);
+
+  // Transcript hydration can finish after the authoritative pending snapshot.
+  // Reconcile then as well, so a reload cannot revive an expired external card.
+  // Inspect refs after App's transcript effect has committed the latest map.
+  useEffect(() => {
+    const external = externalApprovalsRef.current;
+    if (!external.ready) return;
+    for (const [bucket, transcript] of Object.entries(transcriptsRef.current)) {
+      for (const message of transcript.messages) {
+        if (
+          message.kind !== "ask_user" ||
+          message.answer !== undefined ||
+          !message.requestId.startsWith("external-approval-") ||
+          external.pending.has(message.requestId) ||
+          retiredExternalQuestionsRef.current.has(message)
+        )
+          continue;
+        const resolution = external.resolved.get(message.requestId);
+        retiredExternalQuestionsRef.current.add(message);
+        dispatch({
+          type: "ask_user_answered",
+          bucket,
+          requestId: message.requestId,
+          answer:
+            resolution?.answer ??
+            t(
+              resolution && resolution.approved !== false
+                ? "msg.ask.timedOut"
+                : "msg.ask.cancelled",
+            ),
+        });
+      }
+    }
+  });
 
   useEffect(() => {
     const off = window.codeshell.onWorktreeCleanupSkipped((event) => {

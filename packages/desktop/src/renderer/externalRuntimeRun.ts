@@ -29,6 +29,8 @@ export interface ExternalRuntimeBridge {
   send(payload: {
     sessionId: string;
     text: string;
+    goal?: string;
+    disableGoal?: boolean;
     clientMessageId?: string;
     attachments?: InputAttachmentMeta[];
   }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean } | void>;
@@ -39,6 +41,10 @@ export interface ExternalRuntimeTurnArgs {
   cwd: string;
   modelKey: string;
   text: string;
+  /** Establish a new goal only when this send explicitly requests one. */
+  goal?: string;
+  /** Exclude the session's persistent goal from this turn. */
+  disableGoal?: boolean;
   clientMessageId?: string;
   attachments?: InputAttachmentMeta[];
   permissionMode?: string;
@@ -190,6 +196,8 @@ async function runExternalRuntimeTurnExclusive(
     cwd,
     modelKey,
     text,
+    goal,
+    disableGoal,
     clientMessageId,
     attachments,
     permissionMode,
@@ -243,6 +251,8 @@ async function runExternalRuntimeTurnExclusive(
     const result = await runtime.send({
       sessionId,
       text,
+      ...(goal !== undefined ? { goal } : {}),
+      ...(disableGoal !== undefined ? { disableGoal } : {}),
       ...(clientMessageId ? { clientMessageId } : {}),
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
     });
