@@ -61,7 +61,7 @@ test("discovers validated metadata and resolves host-only paths without changing
   });
   expect(process.env).toEqual(environment);
   expect(await fs.readFile(value.executable)).toEqual(bytes);
-  expect(await fs.readdir(value.runtime)).toEqual(["LICENSE", "bin", "manifest.json"]);
+  expect((await fs.readdir(value.runtime)).sort()).toEqual(["LICENSE", "bin", "manifest.json"]);
 });
 
 test("missing roots and IDs are explicitly unavailable and never created", async () => {
