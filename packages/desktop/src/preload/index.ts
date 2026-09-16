@@ -1328,6 +1328,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   setBadgeCount: (count: number) => ipcRenderer.invoke("badge:set", count),
   newWindow: () => ipcRenderer.invoke("window:new"),
   getAppVersion: () => ipcRenderer.invoke("app:version"),
+  managedRuntimes: Object.freeze({
+    list: () => ipcRenderer.invoke("managed-runtimes:list"),
+    resolve: (id: string) => ipcRenderer.invoke("managed-runtimes:resolve", id),
+  }),
   checkForUpdate: () => ipcRenderer.invoke("updater:check"),
   downloadUpdate: () => ipcRenderer.invoke("updater:download"),
   installUpdate: () => ipcRenderer.invoke("updater:install"),

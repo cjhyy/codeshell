@@ -18,7 +18,12 @@ import {
   screen,
   type OpenDialogOptions,
   type SaveDialogOptions,
+  type IpcMainInvokeEvent,
 } from "electron";
+import {
+  createDesktopManagedRuntimeProvider,
+  createManagedRuntimeHandlers,
+} from "./managed-runtime-service.js";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
@@ -5239,6 +5244,20 @@ ipcMain.handle("updater:download", async () => downloadUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 ipcMain.handle("app:version", () => app.getVersion());
+
+const managedRuntimeHandlers = createManagedRuntimeHandlers<IpcMainInvokeEvent>(
+  createDesktopManagedRuntimeProvider({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+  }),
+  (event) =>
+    [...mainWindows].some(
+      (window) => !window.isDestroyed() && window.webContents === event.sender,
+    ) && event.senderFrame === event.sender.mainFrame,
+);
+ipcMain.handle("managed-runtimes:list", managedRuntimeHandlers.list);
+ipcMain.handle("managed-runtimes:resolve", managedRuntimeHandlers.resolve);
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
 // In-flight mutex for mobileRemote:start. Without it, a concurrent second

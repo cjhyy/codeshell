@@ -36,6 +36,13 @@ export {
 export { default as sliceAnsi } from "./utils/sliceAnsi.js";
 export { execFileNoThrow } from "./utils/execFileNoThrow.js";
 export {
+  createManagedRuntimeProvider,
+  ManagedRuntimeError,
+  type ManagedRuntimeDescriptor,
+  type ManagedRuntimeProvider,
+  type ResolvedManagedRuntime,
+} from "./runtime/managed-runtime.js";
+export {
   findExecutable,
   resolveExecutable,
   setGitPathOverride,

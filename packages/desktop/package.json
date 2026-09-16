@@ -42,6 +42,10 @@
     "start": "electron .",
     "predist": "bun run scripts/predist.ts",
     "prepack": "bun run scripts/predist.ts",
+    "runtime:prepare": "node scripts/managed-node-runtime.cjs",
+    "runtime:verify": "node scripts/managed-node-runtime.cjs --verify",
+    "runtime:smoke": "bun run scripts/verify-managed-runtime.ts out/managed-runtimes",
+    "test:managed-node": "bun test scripts/managed-node-runtime.test.ts scripts/managed-node-signing.test.ts",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
@@ -49,6 +53,7 @@
     "appId": "com.cjhyy.codeshell",
     "productName": "code-shell",
     "afterPack": "scripts/after-pack-adhoc-sign.cjs",
+    "afterSign": "scripts/after-sign-managed-node.cjs",
     "detectUpdateChannel": true,
     "publish": [
       {
@@ -59,6 +64,8 @@
     ],
     "files": [
       "out/**/*",
+      "!out/managed-node-cache{,/**/*}",
+      "!out/managed-runtimes{,/**/*}",
       "build/icon.png",
       "package.json",
       "node_modules/node-pty/**/*",
@@ -98,6 +105,8 @@
       "buildResources": "build"
     },
     "mac": {
+      "sign": "scripts/sign-managed-node-mac.cjs",
+      "signIgnore": "\\/Contents\\/Resources\\/runtimes\\/node\\/bin\\/node$",
       "target": [
         {
           "target": "dmg",

@@ -221,6 +221,18 @@ commit/rollback behavior for failed patches.
    END OF TERMS AND CONDITIONS
 ```
 
+## Node.js managed runtime
+
+CodeShell includes an independent Node.js 24.21.0 runtime from the official
+Node.js distribution, with its archive checksums pinned during packaging.
+
+- Source: https://nodejs.org/dist/v24.21.0/
+- License: MIT and the third-party licenses included in Node.js's LICENSE file.
+- Complete license notices: `resources/runtimes/node/LICENSE` (inside the macOS
+  app, `Contents/Resources/runtimes/node/LICENSE`).
+
+This runtime is supplied independently of Electron's embedded Node.js.
+
 ## Yoga
 
 The bundled terminal rendering code includes a TypeScript port of portions of

@@ -83,6 +83,7 @@ const expectedRuntimeExportsByPartition = {
     "workspacePrimaryRoot",
   ],
   logging: ["rotateLogs", "recordUIEvent"],
+  managedRuntimes: ["createManagedRuntimeProvider", "ManagedRuntimeError"],
   toolSystemAndHostServices: [
     "getInteractiveApprovalBackend",
     "defaultSandboxConfig",
@@ -249,6 +250,8 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "createManagedRuntimeProvider",
+  "ManagedRuntimeError",
   "sliceAnsi",
   "getGraphemeSegmenter",
   "logForDebugging",

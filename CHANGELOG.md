@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.15] - 2026-09-16
+
+### Added
+
+- Bundle a private Node.js 24.21.0 runtime in macOS, Windows, and Linux desktop
+  installers, with pinned official archive checksums and complete license notices.
+- Expose verified runtime discovery to trusted Desktop hosts without changing
+  system PATH or automatically selecting a runtime for existing consumers.
+
+### Changed
+
+- Verify packaged runtime integrity and macOS signatures before publishing, and
+  exercise the native runtime with an empty PATH on each release platform.
+
 ## [0.9.13] - 2026-09-14
 
 - Give whole-file Panel resource capture, materialization and upload completion a

@@ -25,6 +25,8 @@ import type {
   ApprovalRequest,
   ReasoningControl,
   LocalPluginPreview,
+  ManagedRuntimeDescriptor,
+  ResolvedManagedRuntime,
 } from "@cjhyy/code-shell-core/internal";
 import type {
   CCAvailability,
@@ -2170,6 +2172,11 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   newWindow(): Promise<void>;
   /** The running app version (from Electron `app.getVersion()`). */
   getAppVersion(): Promise<string>;
+  /** Application-owned runtimes; discovery does not install, run, or authorize code. */
+  managedRuntimes: {
+    list(): Promise<ManagedRuntimeDescriptor[]>;
+    resolve(id: string): Promise<ResolvedManagedRuntime | null>;
+  };
   checkForUpdate(): Promise<void>;
   downloadUpdate(): Promise<void>;
   installUpdate(): Promise<void>;

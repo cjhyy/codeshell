@@ -235,6 +235,27 @@ jobs:
         working-directory: packages/desktop
         run: bunx electron-builder --publish never
 
+      # Exercise the packaged executable on its native runner after signing.
+      # The other macOS architecture is integrity-checked by the packaging hooks.
+      - name: verify packaged Node with an empty PATH
+        working-directory: packages/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.artifact }}" in
+            mac)
+              case "$(bun -p 'process.arch')" in
+                arm64) runtime_dir="dist/mac-arm64/code-shell.app/Contents/Resources/runtimes" ;;
+                x64) runtime_dir="dist/mac/code-shell.app/Contents/Resources/runtimes" ;;
+                *) echo "Unsupported native macOS runtime architecture" >&2; exit 1 ;;
+              esac
+              ;;
+            windows) runtime_dir="dist/win-unpacked/resources/runtimes" ;;
+            linux) runtime_dir="dist/linux-unpacked/resources/runtimes" ;;
+            *) echo "Unsupported runtime acceptance target" >&2; exit 1 ;;
+          esac
+          bun run scripts/verify-managed-runtime.ts "$runtime_dir"
+
       - name: verify auto-update metadata
         shell: bash
         run: |
