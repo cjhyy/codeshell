@@ -42,3 +42,9 @@ export {
   resolvePanelAppBindingProjectPath,
   type PanelAppBindingPolicy,
 } from "./bindings.js";
+export {
+  checkInstalledPanelAppUpdate,
+  getInstalledPanelAppUpdateIdentity,
+  type PanelAppUpdateCheck,
+  type InstalledPanelAppUpdateIdentity,
+} from "./update-check.js";

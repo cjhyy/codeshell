@@ -17,11 +17,19 @@ interface Props {
   busy: boolean;
   action: "install" | "update";
   preview: PanelAppPreview;
+  installedVersion?: string;
   onCancel: () => void;
   onInstall: () => void;
 }
 
-export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, onInstall }: Props) {
+export function PanelAppInstallReviewDialog({
+  busy,
+  action,
+  preview,
+  installedVersion,
+  onCancel,
+  onInstall,
+}: Props) {
   const { t } = useT();
 
   return (
@@ -42,7 +50,11 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <span className="text-base font-semibold text-foreground">{preview.title.default}</span>
             <Badge variant="secondary">{preview.id}</Badge>
-            <Badge variant="outline">v{preview.version}</Badge>
+            <Badge variant="outline">
+              {installedVersion
+                ? `v${installedVersion} → v${preview.version}`
+                : `v${preview.version}`}
+            </Badge>
           </div>
         </DialogHeader>
 

@@ -20,6 +20,7 @@ import type {
   LocalPanelAppSourceInput,
   PanelAppSourceInput,
   PanelAppPreview,
+  PanelAppUpdateCheck,
 } from "@cjhyy/code-shell-core";
 import type {
   ApprovalRequest,
@@ -81,6 +82,7 @@ export type {
   LocalPanelAppSourceInput,
   PanelAppSourceInput,
   PanelAppPreview,
+  PanelAppUpdateCheck,
 };
 export type { ExpandedPluginCommand, PluginCommandDescriptor };
 export type { RendererConfigurationTarget };
@@ -2009,6 +2011,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   discoverGitPanelApps(
     input: GitPanelAppSourceInput,
   ): Promise<{ ok: true; discovery: GitPanelAppDiscovery } | { ok: false; error: string }>;
+  /** Read-only version discovery; does not review or install a package. */
+  checkPanelAppUpdate(id: string, force?: boolean): Promise<PanelAppUpdateCheck>;
   /** Revalidate the original folder, archive, or GitHub source for an installed Panel App. */
   previewPanelAppUpdate(
     id: string,

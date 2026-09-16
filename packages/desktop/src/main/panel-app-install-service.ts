@@ -12,6 +12,7 @@ import {
   type GitPanelAppDiscovery,
   type GitPanelAppSourceInput,
 } from "@cjhyy/code-shell-core";
+import { panelAppUpdateService } from "./panel-app-update-service.js";
 
 export async function discoverGitPanelAppsForUi(
   input: GitPanelAppSourceInput,
@@ -54,6 +55,7 @@ export async function installLocalPanelAppForUi(input: {
       new Date().toISOString(),
       { overwrite: input.overwrite === true },
     );
+    panelAppUpdateService.invalidate(installed.id);
     return { ok: true, id: installed.id };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -93,6 +95,7 @@ export async function installPanelAppUpdateForUi(input: {
       input.reviewToken,
       new Date().toISOString(),
     );
+    panelAppUpdateService.invalidate(installed.id);
     return { ok: true, id: installed.id };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -106,4 +109,5 @@ export async function installPanelAppUpdateForUi(input: {
 
 export async function uninstallPanelAppForUi(id: string): Promise<void> {
   await uninstallPanelApp(id);
+  panelAppUpdateService.invalidate(id);
 }

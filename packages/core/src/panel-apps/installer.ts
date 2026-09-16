@@ -17,6 +17,8 @@ import { tmpdir } from "node:os";
 import { basename, extname, join, posix, relative, resolve, sep } from "node:path";
 import { extractZip, extractZipSubdirectory } from "../plugins/installer/unzip.js";
 import { downloadGitHubPanelAppArchive } from "./github-archive.js";
+import { normalizeGitPanelAppSource } from "./source.js";
+import { discoverPanelAppRoots, findPanelAppRoot } from "./discovery.js";
 import { lock } from "../utils/lockfile.js";
 import {
   PANEL_APP_MANIFEST_FILE,
@@ -46,9 +48,6 @@ const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_DEPTH = 16;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_AGENT_SKILL_BYTES = 256 * 1024;
-const MAX_PANEL_DISCOVERY_DEPTH = 4;
-const MAX_PANEL_DISCOVERY_DIRECTORIES = 512;
-const MAX_PANEL_DISCOVERY_RESULTS = 16;
 const REVIEWED_GIT_SNAPSHOT_TTL_MS = 10 * 60 * 1000;
 const MAX_REVIEWED_GIT_SNAPSHOTS = 8;
 const ALLOWED_ASSET_EXTENSIONS = new Set([
@@ -189,150 +188,8 @@ function validLocalSourceInput(input: LocalPanelAppSourceInput): boolean {
   );
 }
 
-function normalizeGitPanelAppSource(input: GitPanelAppSourceInput): GitPanelAppSourceInput {
-  if (!input || input.kind !== "git" || typeof input.url !== "string") {
-    throw new PanelAppInstallError("GitHub Panel App source is invalid");
-  }
-  const raw = input.url.trim();
-  if (!raw || raw.length > MAX_SOURCE_PATH || raw.includes("\0")) {
-    throw new PanelAppInstallError("GitHub repository URL is invalid");
-  }
-  const urlText = /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}(?:\.git)?\/?$/.test(raw)
-    ? `https://github.com/${raw}`
-    : /^github\.com\//i.test(raw)
-      ? `https://${raw}`
-      : raw;
-  let parsed: URL;
-  try {
-    parsed = new URL(urlText);
-  } catch {
-    throw new PanelAppInstallError("GitHub repository URL is invalid");
-  }
-  if (
-    parsed.protocol !== "https:" ||
-    parsed.hostname.toLowerCase() !== "github.com" ||
-    parsed.username ||
-    parsed.password ||
-    parsed.port ||
-    parsed.search ||
-    parsed.hash
-  ) {
-    throw new PanelAppInstallError(
-      "Panel Apps support public https://github.com repositories only",
-    );
-  }
-  const parts = parsed.pathname.replace(/^\/+|\/+$/g, "").split("/");
-  if (parts.length < 2 || !parts[0] || !parts[1]) {
-    throw new PanelAppInstallError("GitHub URL must include owner/repository");
-  }
-  const owner = parts[0];
-  const repo = parts[1].replace(/\.git$/i, "");
-  if (!/^[A-Za-z0-9_.-]{1,100}$/.test(owner) || !/^[A-Za-z0-9_.-]{1,100}$/.test(repo)) {
-    throw new PanelAppInstallError("GitHub owner or repository name is invalid");
-  }
-
-  let urlRef: string | undefined;
-  let urlSubdir: string | undefined;
-  if (parts.length > 2) {
-    if (parts[2] !== "tree" || !parts[3]) {
-      throw new PanelAppInstallError("GitHub URL must point to a repository or /tree/<ref>/<path>");
-    }
-    urlRef = decodeURIComponent(parts[3]);
-    urlSubdir =
-      parts.length > 4
-        ? parts
-            .slice(4)
-            .map((part) => decodeURIComponent(part))
-            .join("/")
-        : undefined;
-  }
-  if ((input.ref && urlRef) || (input.subdir && urlSubdir)) {
-    throw new PanelAppInstallError(
-      "GitHub tree URLs cannot be combined with separate ref or subdirectory fields",
-    );
-  }
-  const ref = input.ref?.trim() || urlRef;
-  const subdir = input.subdir?.trim().replaceAll("\\", "/") || urlSubdir;
-  if (
-    ref &&
-    (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/.test(ref) ||
-      ref.includes("..") ||
-      ref.includes("//") ||
-      ref.endsWith("/") ||
-      ref.endsWith(".lock"))
-  ) {
-    throw new PanelAppInstallError("GitHub branch, tag, or commit is invalid");
-  }
-  if (subdir) {
-    const segments = subdir.split("/");
-    if (
-      subdir.length > 1_024 ||
-      subdir.startsWith("/") ||
-      segments.some((segment) => !segment || segment === "." || segment === "..")
-    ) {
-      throw new PanelAppInstallError("GitHub Panel App subdirectory is invalid");
-    }
-  }
-  return {
-    kind: "git",
-    url: `https://github.com/${owner}/${repo}.git`,
-    ...(ref ? { ref } : {}),
-    ...(subdir ? { subdir } : {}),
-  };
-}
-
 function normalizedGitSourceKey(input: GitPanelAppSourceInput): string {
   return JSON.stringify(normalizeGitPanelAppSource(input));
-}
-
-function looksLikePanelAppRoot(directory: string): boolean {
-  return existsSync(join(directory, PANEL_APP_MANIFEST_FILE));
-}
-
-async function discoverPanelAppRoots(directory: string): Promise<string[]> {
-  const found: string[] = [];
-  const pending = [{ directory, depth: 0 }];
-  let visited = 0;
-  while (
-    pending.length > 0 &&
-    visited < MAX_PANEL_DISCOVERY_DIRECTORIES &&
-    found.length < MAX_PANEL_DISCOVERY_RESULTS
-  ) {
-    const current = pending.shift()!;
-    visited += 1;
-    if (looksLikePanelAppRoot(current.directory)) {
-      found.push(current.directory);
-      continue;
-    }
-    if (current.depth >= MAX_PANEL_DISCOVERY_DEPTH) continue;
-    const entries = await readdir(current.directory, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") {
-        continue;
-      }
-      pending.push({ directory: join(current.directory, entry.name), depth: current.depth + 1 });
-    }
-  }
-  return found;
-}
-
-async function findPanelAppRoot(directory: string): Promise<string> {
-  if (looksLikePanelAppRoot(directory)) return directory;
-  const found = await discoverPanelAppRoots(directory);
-  if (found.length === 1) return found[0];
-  if (found.length > 1) {
-    const candidates = found
-      .map((root) => relative(directory, root).split(sep).join(posix.sep))
-      .sort()
-      .join(", ");
-    throw new PanelAppInstallError(
-      `multiple Panel Apps found; choose an app subdirectory: ${candidates}`,
-    );
-  }
-  throw new PanelAppInstallError(
-    `no Panel App found (expected ${PANEL_APP_MANIFEST_FILE}); ` +
-      "for a monorepo, provide the app subdirectory or a GitHub /tree/<ref>/<path> URL",
-  );
 }
 
 function joinedPanelAppSubdirectory(base: string | undefined, nested: string): string | undefined {
@@ -514,7 +371,7 @@ async function withPanelAppSourceRoot<T>(
     if (!existsSync(input.path) || !(await stat(input.path)).isDirectory()) {
       throw new PanelAppInstallError(`source is not a directory: ${input.path}`);
     }
-    return operation(await findPanelAppRoot(input.path));
+    return operation(await findPanelAppRoot(await realpath(input.path)));
   }
   if (!existsSync(input.path) || !(await stat(input.path)).isFile()) {
     throw new PanelAppInstallError(`archive is not a file: ${input.path}`);

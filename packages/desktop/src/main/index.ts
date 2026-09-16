@@ -402,6 +402,7 @@ import {
   previewLocalPanelAppForUi,
   uninstallPanelAppForUi,
 } from "./panel-app-install-service.js";
+import { panelAppUpdateService } from "./panel-app-update-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
@@ -4476,6 +4477,12 @@ ipcMain.handle("panel-apps:discoverGit", async (_e, input: GitPanelAppSourceInpu
 ipcMain.handle("panel-apps:previewUpdate", async (_e, id: string) => {
   if (typeof id !== "string" || !id) throw new Error("panel-apps:previewUpdate requires id");
   return previewPanelAppUpdateForUi(id);
+});
+ipcMain.handle("panel-apps:checkUpdate", async (_e, id: string, force?: boolean) => {
+  if (typeof id !== "string" || (force !== undefined && typeof force !== "boolean")) {
+    throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
+  }
+  return panelAppUpdateService.check(id, force === true);
 });
 ipcMain.handle(
   "panel-apps:installLocal",

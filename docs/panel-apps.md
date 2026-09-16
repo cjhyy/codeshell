@@ -342,6 +342,28 @@ To install from GitHub instead, choose **From GitHub** and enter:
 After new commits are pushed, **Update from source** clones the same ref again
 and presents a new review before replacing the installed snapshot.
 
+### Version update notices
+
+Opening **Extensions → Panel Apps** checks installed apps in the background.
+Cards show **Update available** and the installed → source version when the
+source has a newer semantic version. **Check for updates** refreshes the results
+manually. Checks also refresh when this page regains focus and every five minutes
+while open; successful results are cached for five minutes and failures for
+thirty seconds. Installation, removal, or a source change invalidates old results.
+
+GitHub checks read only `.codeshell-panel/panel.json` at the recorded branch/tag
+and subdirectory; an omitted ref follows the repository's default branch. A
+pinned tag or commit therefore follows that pinned source, not the latest release.
+Local folder checks read that folder's manifest. ZIP installs retain manual
+source review. The card identifies its source, and failed checks or older source
+versions are shown separately from an up-to-date result. Authors must increase
+the manifest version to advertise a new version; same-version development edits
+can still be installed with **Update from source**.
+
+Discovery does not install or execute app code, change project bindings, or
+grant permissions. Choosing an update downloads and reviews the complete package
+through the existing content-bound installer, and the review shows both versions.
+
 ## Reference apps
 
 - [Starter](../examples/panel-apps/starter/README.md) is the minimal template

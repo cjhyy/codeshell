@@ -435,6 +435,8 @@ export {
   PanelAppInstallError,
   PanelAppReviewChangedError,
   assertSafePanelAppId,
+  checkInstalledPanelAppUpdate,
+  getInstalledPanelAppUpdateIdentity,
   discoverGitPanelApps,
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
@@ -459,6 +461,8 @@ export {
   type PanelAppManifestData,
   type PanelAppBindingPolicy,
   type PanelAppPreview,
+  type PanelAppUpdateCheck,
+  type InstalledPanelAppUpdateIdentity,
 } from "./panel-apps/index.js";
 export {
   previewLocalTheme,

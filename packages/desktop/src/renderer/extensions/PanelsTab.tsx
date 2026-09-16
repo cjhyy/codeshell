@@ -35,6 +35,7 @@ import { writeSettings } from "../settingsBus";
 import { useAlert, useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
+import { usePanelAppUpdates } from "./usePanelAppUpdates";
 import {
   bindingBusyKey,
   computeProjectBindings,
@@ -56,7 +57,7 @@ interface Props {
 
 type PanelAppReviewState =
   | { mode: "install"; source: PanelAppSourceInput; preview: PanelAppPreview }
-  | { mode: "update"; appId: string; preview: PanelAppPreview };
+  | { mode: "update"; appId: string; installedVersion: string; preview: PanelAppPreview };
 
 export function nextPanelAppBindings(value: unknown, appId: string, bound: boolean): string[] {
   const bindings = new Set(
@@ -102,6 +103,15 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const confirm = useConfirm();
   const alert = useAlert();
   const toast = useToast();
+  const updates = usePanelAppUpdates(apps);
+  const invalidateUpdates = updates.invalidate;
+
+  useEffect(() => {
+    return window.codeshell.onPanelAppsChanged?.(() => {
+      invalidateUpdates();
+      setReloadKey((key) => key + 1);
+    });
+  }, [invalidateUpdates]);
 
   // Blank the list only when the target actually changes, so another project's
   // apps can never show under this one's heading. A post-toggle refresh keeps
@@ -330,6 +340,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           return;
         }
         setReview(null);
+        invalidateUpdates();
         setReloadKey((key) => key + 1);
         toast({
           message: t("ext.panels.updatedToast", { name: preview.title.default }),
@@ -390,6 +401,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setReview(null);
       if (source.kind === "git") setGitOpen(false);
       if (source.kind === "git") setGitDiscovery(null);
+      invalidateUpdates();
       setReloadKey((key) => key + 1);
       toast({
         message: t("ext.panels.installedAndBoundToast", {
@@ -415,7 +427,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         setError(result.error);
         return;
       }
-      setReview({ mode: "update", appId: app.appId, preview: result.preview });
+      setReview({
+        mode: "update",
+        appId: app.appId,
+        installedVersion: app.version,
+        preview: result.preview,
+      });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
@@ -435,6 +452,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     setBusy(app.id);
     try {
       await window.codeshell.uninstallPanelApp(app.appId, activeProjectPath ?? undefined);
+      invalidateUpdates();
       setReloadKey((key) => key + 1);
     } catch (cause) {
       void alert({
@@ -479,6 +497,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         <PanelAppInstallReviewDialog
           preview={review.preview}
           action={review.mode}
+          installedVersion={
+            review.mode === "update"
+              ? review.installedVersion
+              : apps?.find((app) => app.appId === review.preview.id)?.version
+          }
           busy={installBusy !== null || (review.mode === "update" && busy === review.appId)}
           onCancel={() => setReview(null)}
           onInstall={() => void installReviewed()}
@@ -802,6 +825,33 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         )}
       </div>
 
+      {apps && apps.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+            {t("ext.panels.installedCount", { count: apps.length })}
+            {updates.availableCount > 0 && (
+              <Badge variant="info">
+                {t("ext.panels.updatesAvailableCount", { count: updates.availableCount })}
+              </Badge>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 px-2 text-xs"
+            disabled={updates.checking}
+            onClick={() => updates.checkAll(true)}
+          >
+            <RefreshCw
+              className={`h-3 w-3 ${updates.checking ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            {updates.checking ? t("ext.panels.checkingVersions") : t("ext.panels.checkUpdates")}
+          </Button>
+        </div>
+      )}
+
       {apps === null ? (
         <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>
       ) : apps.length === 0 ? (
@@ -831,10 +881,20 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                       ? t("ext.panels.boundAndEnabled")
                       : t("ext.panels.notBound")}
                   </Badge>
-                  <Badge variant="outline">v{app.version}</Badge>
+                  <Badge variant="outline">
+                    {updates.results[app.appId]?.status === "update-available"
+                      ? `v${app.version} → v${updates.results[app.appId].latestVersion}`
+                      : `v${app.version}`}
+                  </Badge>
+                  {updates.results[app.appId]?.status === "update-available" && (
+                    <Badge variant="info">{t("ext.panels.updateAvailable")}</Badge>
+                  )}
                 </div>
                 <div className="mt-0.5 truncate text-xs text-muted-foreground">{app.appId}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  <Badge variant="outline">
+                    {t(`ext.panels.sourceKinds.${app.updateSource.kind}`)}
+                  </Badge>
                   <span>
                     {t("ext.panels.updateSource")}:{" "}
                     {app.updateSource.label || t("ext.panels.unknownSource")}
@@ -842,6 +902,31 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                   {!app.updateSource.available && (
                     <Badge variant="outline">{t("ext.panels.sourceUnavailable")}</Badge>
                   )}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground" aria-live="polite">
+                  {(() => {
+                    const result = updates.results[app.appId];
+                    if (updates.checkingIds.has(app.appId) && !result) {
+                      return t("ext.panels.checkingVersions");
+                    }
+                    if (!result || result.status === "update-available") return null;
+                    if (result.status === "up-to-date") return t("ext.panels.upToDate");
+                    if (result.status === "source-older") {
+                      return t("ext.panels.sourceOlder", { version: result.latestVersion ?? "?" });
+                    }
+                    if (result.status === "unsupported") {
+                      return t(
+                        result.sourceKind === "git"
+                          ? "ext.panels.updateCheckUnsupported"
+                          : "ext.panels.localSourceUpdateHint",
+                      );
+                    }
+                    return (
+                      <span className="text-status-warn" title={result.message}>
+                        {t("ext.panels.updateCheckFailed")}
+                      </span>
+                    );
+                  })()}
                 </div>
                 {app.description && (
                   <div className="mt-1 text-xs text-muted-foreground">{app.description}</div>
@@ -998,7 +1083,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     )}
                     {checkingUpdate === app.id
                       ? t("ext.panels.checkingUpdate")
-                      : t("ext.panels.updateFromSource")}
+                      : updates.results[app.appId]?.status === "update-available"
+                        ? t("ext.panels.updateToVersion", {
+                            version: updates.results[app.appId].latestVersion ?? "?",
+                          })
+                        : t("ext.panels.updateFromSource")}
                   </Button>
                   <Button
                     type="button"

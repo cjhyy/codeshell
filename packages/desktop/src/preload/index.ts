@@ -1220,6 +1220,11 @@ contextBridge.exposeInMainWorld("codeshell", {
       }
     | { ok: false; error: string }
   > => ipcRenderer.invoke("panel-apps:discoverGit", input),
+  checkPanelAppUpdate: (
+    id: string,
+    force?: boolean,
+  ): Promise<import("@cjhyy/code-shell-core").PanelAppUpdateCheck> =>
+    ipcRenderer.invoke("panel-apps:checkUpdate", id, force),
   previewPanelAppUpdate: (
     id: string,
   ): Promise<
