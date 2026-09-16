@@ -130,7 +130,9 @@ describe("architecture growth budgets", () => {
       // It remains outside the stable public SDK and extension surfaces.
       // Panel connection discovery and sealed tool hand-offs share the existing
       // catalog resolver (+1); credentials remain on the reviewed Host surface.
-      "packages/core/src/index.internal.ts": 83,
+      // Verified application-owned runtime discovery adds one Host-only module;
+      // it neither selects executables for consumers nor grants execution.
+      "packages/core/src/index.internal.ts": 84,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
