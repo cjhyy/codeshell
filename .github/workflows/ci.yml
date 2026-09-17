@@ -100,6 +100,7 @@ jobs:
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
+              --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
@@ -142,6 +143,9 @@ jobs:
       - name: test Playwright driver integration
         if: matrix.shard == 'desktop'
         run: bun test --timeout 30000 packages/desktop/src/main/browser-runtime/playwright-driver.test.ts
+      - name: test Puppeteer driver integration
+        if: matrix.shard == 'desktop'
+        run: bun test --timeout 30000 packages/desktop/src/browser-library/puppeteer-browser-driver.test.ts
 
   coverage:
     name: builtin integration coverage
