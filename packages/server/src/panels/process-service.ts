@@ -100,8 +100,9 @@ export interface PanelAppProcessServiceOptions {
   /** Rechecked after asynchronous work and immediately before admitting a process. */
   isOwnerAuthorized?(owner: PanelProcessOwner): boolean | Promise<boolean>;
   /**
-   * Desktop defaults to app-version approvals. Web uses guest to isolate each
-   * authenticated instance; guest approvals never use the app-wide durable hooks.
+   * Desktop delegates durable approval lifetime to its Host hooks. Web uses guest
+   * to isolate each authenticated instance; guest approvals never use the
+   * app-wide durable hooks.
    */
   approvalScope?: "app" | "guest";
   confirmExecution(input: {

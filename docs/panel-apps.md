@@ -185,9 +185,12 @@ Host accepts only simple executable names from PATH, never invokes a shell,
 passes arguments as separate strings, strips the child environment to a small
 system allowlist, limits concurrency/lifetime/output, and terminates the child
 tree when its Panel closes. The first execution of an executable is confirmed
-by the user and approval is scoped to the app id, installed revision, and
-resolved executable path. Domain operations such as video downloading remain
-Panel code rather than new Host methods.
+by the user. Desktop's **Allow and remember** consent persists across restarts
+and Panel App updates, scoped to the app id, resolved executable path, and
+executable fingerprint. Another app, path, or changed executable needs approval
+again. Older grants that explicitly covered only an installed revision retain
+that boundary until a new confirmation; they are not silently widened. Domain
+operations such as video downloading remain Panel code rather than new Host methods.
 
 Panel API v8 adds isolated AI Tasks for apps that declare `agent.task`:
 `agent.task.start`, `agent.task.list`, `agent.task.get`, and
@@ -244,6 +247,15 @@ handle. Data survives app updates, never lands in the bound project or Git by
 default, and cannot be shared across Panel App ids. The Panel still needs an
 approved local executable to read, write, index, or migrate files in this
 directory; arbitrary host filesystem access is not exposed to guest code.
+
+Hosts also support `filesystem.getKnownDirectory({ name: "project" })` for apps
+with `process`. It returns a process directory handle for the Panel's bound,
+trusted project root, resolved by the Host; the caller cannot provide or override
+the path. An unbound, untrusted, or unavailable project is rejected. Panels can
+use this for a project-local output destination without needing raw workspace
+context. Older Hosts reject this additive known-directory name; callers should
+handle that response and offer a directory picker instead of silently choosing
+a different output location.
 
 ```js
 const task = await window.codeshellPanel.call("agent.task.start", {

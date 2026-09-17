@@ -3,6 +3,7 @@ import { readScopedSettings } from "../settingsAuthority";
 import {
   AlertTriangle,
   Briefcase,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Code2,
@@ -910,7 +911,14 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                       return t("ext.panels.checkingVersions");
                     }
                     if (!result || result.status === "update-available") return null;
-                    if (result.status === "up-to-date") return t("ext.panels.upToDate");
+                    if (result.status === "up-to-date") {
+                      return (
+                        <Badge variant="success" className="gap-1.5">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          {t("ext.panels.upToDate")}
+                        </Badge>
+                      );
+                    }
                     if (result.status === "source-older") {
                       return t("ext.panels.sourceOlder", { version: result.latestVersion ?? "?" });
                     }

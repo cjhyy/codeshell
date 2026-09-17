@@ -469,7 +469,8 @@ export class PanelAppBridge {
       extraPathDirectories: () =>
         panelExecutableDirectories(this.managedBinDirectory(), { home: app.getPath("home") }),
       isExecutionApproved: (scope) => processApprovalStore.has(scope),
-      rememberExecutionApproval: (scope) => processApprovalStore.remember(scope),
+      rememberExecutionApproval: (scope) =>
+        processApprovalStore.remember(scope, { lifetime: "app" }),
       confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
         const owner = this.guests.get(guestId);
         const task = this.toolOwners.get(guestId);
@@ -488,14 +489,14 @@ export class PanelAppBridge {
         if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
         const decision = await dialog.showMessageBox(window, {
           type: "warning",
-          buttons: ["Allow", "Cancel"],
+          buttons: ["Allow and remember", "Cancel"],
           defaultId: 1,
           cancelId: 1,
           title: appTitle,
           message: `${appTitle} wants to run ${executable}`,
           detail:
             `${executablePath}\n\n` +
-            "CodeShell will run it without a shell. This approval is remembered for this installed app version. Updating the app or executable asks again.",
+            "CodeShell will run it without a shell. Allow and remember keeps this executable approved for this app, including after app updates and restarts. A different app, executable path, or changed executable requires a new approval.",
           noLink: true,
         });
         return decision.response === 0;
@@ -1661,8 +1662,12 @@ export class PanelAppBridge {
     };
   }
 
-  private getKnownProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
+  private async getKnownProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
     const name = (params as { name?: unknown } | null)?.name;
+    if (name === "project") {
+      const root = await this.trustedWorkspaceRoot(binding);
+      return this.processService.grantDirectory(this.processOwner(binding), root);
+    }
     if (name === "downloads") {
       return this.processService.grantDirectory(
         this.processOwner(binding),
