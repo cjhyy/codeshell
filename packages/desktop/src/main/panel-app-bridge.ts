@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import {
   listInstalledPanelApps,
+  panelAppInstallDir,
+  panelAppsRegistryPath,
   resolvePanelAppBindingProjectPath,
   validateToolArgsStrict,
 } from "@cjhyy/code-shell-core";
@@ -47,6 +49,7 @@ import {
   panelBridgeFailure,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
+import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
 import { desktopPanelCapabilities } from "./panel-app-capabilities.js";
 import { PanelMediaService } from "./media/panel-media-service.js";
 import {
@@ -1162,7 +1165,7 @@ export class PanelAppBridge {
       !this.options.isWorkspaceTrusted(scope.projectPath)
     )
       throw new PanelBridgeError("REVOKED", "Tool task authorization was revoked");
-    const installed = (await listInstalledPanelApps()).find((item) => item.id === scope.appId);
+    const installed = await this.installedToolApps.get(scope.appId);
     if (
       !installed ||
       installedPanelAppRevision(installed) !== scope.revision ||
@@ -1172,6 +1175,12 @@ export class PanelAppBridge {
       throw new PanelBridgeError("REVOKED", "Installed tool task version or permissions changed");
     return installed;
   }
+
+  private readonly installedToolApps = new PanelAppInspectionCache({
+    installPath: panelAppInstallDir,
+    registryPath: panelAppsRegistryPath,
+    listInstalled: listInstalledPanelApps,
+  });
 
   private toolSummary(job: ToolJob) {
     const { input: _input, result: _result, ...summary } = job;
