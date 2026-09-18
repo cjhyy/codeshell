@@ -11,7 +11,12 @@ import {
 } from "./types.js";
 import { CredentialStore } from "./store.js";
 import { subscribeToLocalCredentialChanges } from "./change-subscription.js";
-import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
+import {
+  formatNetscapeCookies,
+  parseCookieJar,
+  summarizeCookieExpiry,
+  type CookieExpirySummary,
+} from "./cookie-jar.js";
 import {
   parseOAuthCredentialSecret,
   isBrowserOAuthLinkCredential,
@@ -36,6 +41,7 @@ export interface CredentialMetadata {
   meta?: Credential["meta"];
   hasSecret: boolean;
   secretHint?: string;
+  cookieExpiry?: CookieExpirySummary;
   oauthStatus?: import("./types.js").OAuthCredentialPublicStatus;
 }
 
@@ -255,6 +261,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
     ...(cred.type === "oauth" || isBrowserOAuthLinkCredential(cred)
       ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
       : {}),
+    ...(cred.type === "cookie" ? { cookieExpiry: summarizeCookieExpiry(secret) } : {}),
   };
 }
 

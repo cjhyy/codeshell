@@ -23,6 +23,7 @@ import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
 import { useT } from "../i18n/I18nProvider";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
+import { cookiePlatformName } from "./cookie-platform";
 
 type SwitchMode = "clear" | "merge";
 
@@ -413,7 +414,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   // 按 platform 分组
   const groups = new Map<string, MaskedCredentialView[]>();
   for (const c of items) {
-    const p = c.meta?.platform ?? c.meta?.domain ?? t("ext.cookie.otherGroup");
+    const p = cookiePlatformName(c.meta?.platform ?? c.meta?.domain ?? t("ext.cookie.otherGroup"));
     if (!groups.has(p)) groups.set(p, []);
     groups.get(p)!.push(c);
   }
@@ -672,6 +673,25 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
                           >
                             {c.meta?.domain ?? c.id}
                           </p>
+                          {c.cookieExpiry ? (
+                            <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+                              <p>
+                                {c.cookieExpiry.nextExpiryAt
+                                  ? t("ext.cookie.nextExpiry", {
+                                      date: new Date(c.cookieExpiry.nextExpiryAt).toLocaleString(),
+                                    })
+                                  : c.cookieExpiry.persistentCount > 0
+                                    ? t("ext.cookie.allPersistentExpired")
+                                    : c.cookieExpiry.sessionCount > 0
+                                      ? t("ext.cookie.sessionNoExpiry")
+                                      : t("ext.cookie.noExpiryData")}
+                                {c.cookieExpiry.expiredCount > 0
+                                  ? ` · ${t("ext.cookie.expiredCount", { count: c.cookieExpiry.expiredCount })}`
+                                  : ""}
+                              </p>
+                              <p>{t("ext.cookie.expiryCaveat")}</p>
+                            </div>
+                          ) : null}
                         </div>
                         <Button
                           variant="secondary"

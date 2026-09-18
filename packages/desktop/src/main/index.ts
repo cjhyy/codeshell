@@ -40,6 +40,7 @@ import {
   writeSettingsSchemaFile,
   userHome,
   CredentialStore,
+  summarizeCookieExpiry,
   materializeCookieSecret,
   type Credential,
   type CredentialScope,
@@ -656,6 +657,7 @@ const panelAppBridge = new PanelAppBridge({
             platform: credential.meta?.platform,
             appUrl: credential.meta?.appUrl,
             autoInjectByAI: credential.autoInjectByAI,
+            cookieExpiry: summarizeCookieExpiry(credential.secret),
           };
         });
     },

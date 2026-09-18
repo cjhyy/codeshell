@@ -154,4 +154,10 @@ export interface PanelAppCookieCredential {
   platform?: string;
   appUrl?: string;
   autoInjectByAI?: boolean;
+  cookieExpiry?: {
+    nextExpiryAt?: string;
+    persistentCount: number;
+    sessionCount: number;
+    expiredCount: number;
+  };
 }

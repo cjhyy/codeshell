@@ -20,6 +20,7 @@ import { type EncryptionCipher, getDefaultCredentialCipher } from "./cipher.js";
 import { logger } from "../logging/logger.js";
 import { summarizeOAuthCredentialSecret } from "./oauth.js";
 import { isBrowserOAuthLinkCredential } from "./oauth.js";
+import { summarizeCookieExpiry, type CookieExpirySummary } from "./cookie-jar.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
 import { isDeepStrictEqual } from "node:util";
 
@@ -121,6 +122,7 @@ export interface MaskedCredential extends Omit<Credential, "secret"> {
   /** 形如 `****abcd`,绝不含完整明文。 */
   secretHint?: string;
   oauthStatus?: import("./types.js").OAuthCredentialPublicStatus;
+  cookieExpiry?: CookieExpirySummary;
 }
 
 const EMPTY: CredentialStoreFile = { version: 1, credentials: [] };
@@ -541,6 +543,7 @@ export class CredentialStore {
         ...(c.type === "oauth" || isBrowserOAuthLinkCredential(c)
           ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
           : {}),
+        ...(c.type === "cookie" ? { cookieExpiry: summarizeCookieExpiry(secret) } : {}),
       };
     });
   }

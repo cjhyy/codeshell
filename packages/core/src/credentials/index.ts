@@ -43,7 +43,13 @@ export {
   type OAuthRefreshHandler,
   type OAuthRefreshRequest,
 } from "./oauth.js";
-export { formatNetscapeCookies, parseCookieJar, type CookieLike } from "./cookie-jar.js";
+export {
+  formatNetscapeCookies,
+  parseCookieJar,
+  summarizeCookieExpiry,
+  type CookieLike,
+  type CookieExpirySummary,
+} from "./cookie-jar.js";
 export {
   useCredentialToolDef,
   useCredentialToolDefFor,

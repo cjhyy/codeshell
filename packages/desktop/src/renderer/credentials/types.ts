@@ -45,6 +45,12 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   storeScope?: "user" | "project";
   hasSecret: boolean;
   secretHint?: string;
+  cookieExpiry?: {
+    nextExpiryAt?: string;
+    persistentCount: number;
+    sessionCount: number;
+    expiredCount: number;
+  };
   oauthStatus?: {
     state: "valid" | "expired" | "missing" | "invalid";
     expiresAt?: string;

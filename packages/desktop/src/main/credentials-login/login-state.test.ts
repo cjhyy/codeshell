@@ -1,9 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import {
-  evaluateLoginState,
-  usernameScriptFor,
-  sanitizeUsername,
-} from "./login-state.js";
+import { evaluateLoginState, usernameScriptFor, sanitizeUsername } from "./login-state.js";
 import type { ElectronCookieLike } from "../credentials-service.js";
 
 const ck = (name: string, extra: Partial<ElectronCookieLike> = {}): ElectronCookieLike => ({
@@ -27,9 +23,13 @@ describe("evaluateLoginState — known sites", () => {
   });
 
   test("youtube: guest-only cookies → ok=false (the original 5-cookie trap)", () => {
-    const jar = ["VISITOR_INFO1_LIVE", "PREF", "VISITOR_PRIVACY_METADATA", "__Secure-YNID", "YSC"].map(
-      (n) => ck(n),
-    );
+    const jar = [
+      "VISITOR_INFO1_LIVE",
+      "PREF",
+      "VISITOR_PRIVACY_METADATA",
+      "__Secure-YNID",
+      "YSC",
+    ].map((n) => ck(n));
     expect(evaluateLoginState(jar, "youtube.com").ok).toBe(false);
   });
 
@@ -94,5 +94,7 @@ describe("usernameScriptFor / sanitizeUsername", () => {
   test("sanitizeUsername: strips control chars and collapses whitespace", () => {
     expect(sanitizeUsername("\n  Alice\tWang \r\n")).toBe("Alice Wang");
     expect(sanitizeUsername("Bob\u0000\u0007")).toBe("Bob");
+    expect(sanitizeUsername("头像图片")).toBeUndefined();
+    expect(sanitizeUsername("Avatar image")).toBeUndefined();
   });
 });

@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.9.17";
+export const VERSION = "0.9.18";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -629,7 +629,9 @@ export {
   type OAuthRefreshRequest,
   formatNetscapeCookies,
   parseCookieJar,
+  summarizeCookieExpiry,
   type CookieLike,
+  type CookieExpirySummary,
   useCredentialToolDef,
   useCredentialToolDefFor,
   sweepStaleCredentialCookies,

@@ -119,7 +119,11 @@ export function sanitizeUsername(raw: unknown): string | undefined {
   // 先把空白(含 \t\n\r)折叠成单空格,再剥剩余的非空白控制字符 —— 顺序很关键:
   // \t\n\r 既是控制字符又是空白,先剥控制字符会把 "Alice\tWang" 粘成 "AliceWang"。
   // eslint-disable-next-line no-control-regex
-  const s = raw.replace(/\s+/g, " ").replace(/[\x00-\x1f\x7f]/g, "").trim();
+  const s = raw
+    .replace(/\s+/g, " ")
+    .replace(/[\x00-\x1f\x7f]/g, "")
+    .trim();
   if (!s || s.length > 60) return undefined;
+  if (/^(头像图片|头像|avatar(?: image)?|profile (?:picture|photo))$/i.test(s)) return undefined;
   return s;
 }

@@ -18,6 +18,40 @@ export interface CookieLike {
   value: string;
 }
 
+/** Public metadata only; a jar can contain several dates and session cookies. */
+export interface CookieExpirySummary {
+  nextExpiryAt?: string;
+  persistentCount: number;
+  sessionCount: number;
+  expiredCount: number;
+}
+
+export function summarizeCookieExpiry(
+  secret: string | undefined,
+  nowMs = Date.now(),
+): CookieExpirySummary {
+  const summary: CookieExpirySummary = {
+    persistentCount: 0,
+    sessionCount: 0,
+    expiredCount: 0,
+  };
+  let nextExpiryMs = Number.POSITIVE_INFINITY;
+  for (const cookie of parseCookieJar(secret).slice(0, 10_000)) {
+    if (!cookie || typeof cookie.name !== "string" || typeof cookie.value !== "string") continue;
+    const seconds = cookie.expirationDate;
+    const millis = typeof seconds === "number" ? seconds * 1000 : Number.NaN;
+    if (!Number.isFinite(millis) || millis <= 0 || millis > 8.64e15) {
+      summary.sessionCount++;
+      continue;
+    }
+    summary.persistentCount++;
+    if (millis <= nowMs) summary.expiredCount++;
+    else nextExpiryMs = Math.min(nextExpiryMs, millis);
+  }
+  if (Number.isFinite(nextExpiryMs)) summary.nextExpiryAt = new Date(nextExpiryMs).toISOString();
+  return summary;
+}
+
 function bad(s: string): boolean {
   return s.includes("\t") || s.includes("\n") || s.includes("\r");
 }
