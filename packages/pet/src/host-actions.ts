@@ -177,6 +177,15 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
   if (value.kind === "sessionWatch") {
     return hasExactKeys(payload, ["sessionId"]) && isOpaqueId(payload.sessionId);
   }
+  if (value.kind === "sessionBind") {
+    if (payload.action === "leave") return hasExactKeys(payload, ["action"]);
+    return (
+      payload.action === "enter" &&
+      hasExactKeys(payload, ["action", "sessionSelector"]) &&
+      isOpaqueId(payload.sessionSelector) &&
+      /^session-[a-f0-9]{20}$/u.test(payload.sessionSelector)
+    );
+  }
   if (value.kind === "sessionArchive") {
     return (
       payload.action === "archive" &&
@@ -208,6 +217,8 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
           new Set(attachmentPaths).size === attachmentPaths.length))
     );
   }
+  // Newly declared action kinds must supply their own payload validator.
+  if (value.kind !== "memory") return false;
   if (payload.action === "remember") {
     return (
       hasExactKeys(payload, ["action", "text"]) &&

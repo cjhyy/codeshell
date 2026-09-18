@@ -21,6 +21,60 @@ import type { Message } from "../types";
 import type { PetLongTask } from "../../preload/types";
 
 describe("PetChatHost", () => {
+  test.each([
+    "已进入「端侧小模型」。接下来的消息会直接发送到这个 Session。",
+    "找不到这个 Session，可能已被删除。先让我列出最近的 Session，再选一个。",
+    "已退出「端侧小模型」，接下来由 Mimi 处理。",
+  ])("shows the confirmed Session routing outcome live and after reload: %s", (outcome) => {
+    const clientMessageId = "im:wechat:enter-session";
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "进入第 15 条", clientMessageId },
+      {
+        kind: "tool",
+        id: "bind-tool",
+        toolName: "BindConversationSession",
+        args: "{}",
+        result: "Enter request accepted for host validation after this turn.",
+        status: "succeeded",
+        startedAt: 1,
+      },
+      {
+        kind: "assistant",
+        id: "pending-ack",
+        text: "已提交进入第 15 条的请求，由宿主校验后给出结果。",
+        done: true,
+      },
+    ];
+    expect(selectPetChatRows(messages).map((row) => row.text)).toEqual(["进入第 15 条"]);
+    const liveRows = selectPetChatRows(
+      messages,
+      [],
+      [],
+      [
+        {
+          clientMessageId,
+          message: outcome,
+          createdAt: 2,
+          replaceAssistant: true,
+          deliveryChannel: "wechat",
+        },
+      ],
+    );
+    const reloadedRows = selectPetChatRows([
+      ...messages,
+      {
+        kind: "assistant",
+        id: "persisted-receipt",
+        text: markPetHostActionReplacementDisplay(outcome, clientMessageId, "wechat"),
+        done: true,
+      },
+    ]);
+    for (const rows of [liveRows, reloadedRows]) {
+      expect(rows.map((row) => row.text)).toEqual(["进入第 15 条", outcome]);
+      expect(rows[1]?.deliveryLabel).toBe("个人微信");
+    }
+  });
+
   test("replaces the matching closure with its durable correction without claiming another delivery", () => {
     const task: PetLongTask = {
       schemaVersion: 1,

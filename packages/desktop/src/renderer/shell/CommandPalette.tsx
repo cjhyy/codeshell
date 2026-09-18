@@ -97,6 +97,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
 export function buildCommands(opts: {
   setViewMode: (v: ViewMode) => void;
   openPanel: (t: PanelTab) => void;
+  gitReviewAvailable?: boolean;
   toggleSidebar: () => void;
   toggleInspector: () => void;
   clearTranscript: () => void;
@@ -123,12 +124,15 @@ export function buildCommands(opts: {
       hint: "Cmd+T",
       run: () => openPanel("browser"),
     },
-    {
-      id: "go.review",
-      label: tt("panels.palette.openReview"),
-      hint: "Ctrl+Shift+G",
-      run: () => openPanel("review"),
-    },
+    ...(opts.gitReviewAvailable
+      ? [
+          {
+            id: "go.review",
+            label: tt("panels.palette.openReview"),
+            run: () => openPanel("review"),
+          },
+        ]
+      : []),
     {
       id: "go.terminal",
       label: tt("panels.palette.openTerminal"),

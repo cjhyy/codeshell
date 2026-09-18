@@ -64,19 +64,24 @@ describe("durable delivery queue", () => {
       () => undefined,
     );
     await first.start();
-    await first.enqueue("whatsapp:0", incoming("m-1", "one"));
-    await first.enqueue("whatsapp:0", incoming("m-2", "two"));
+    await first.enqueue("whatsapp:0", { ...incoming("m-1", "one"), isDirectMessage: true });
+    await first.enqueue("whatsapp:0", { ...incoming("m-2", "two"), isDirectMessage: false });
     first.stop();
 
     const delivered: string[] = [];
+    const privateFlags: Array<boolean | undefined> = [];
     const recovered = new DeliveryQueue(
       config(path),
-      async (_adapter, message) => void delivered.push(message.text),
+      async (_adapter, message) => {
+        delivered.push(message.text);
+        privateFlags.push(message.isDirectMessage);
+      },
       () => undefined,
     );
     await recovered.start();
     await waitUntil(() => delivered.length === 2);
     expect(delivered).toEqual(["one", "two"]);
+    expect(privateFlags).toEqual([true, false]);
     await waitUntil(() => persistedPending(path) === 0);
     recovered.stop();
   });

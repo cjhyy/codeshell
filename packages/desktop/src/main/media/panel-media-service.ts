@@ -32,6 +32,7 @@ import { runMediaProcess } from "./media-process-runner.js";
 import { createAudioEnhanceProcessor, validateAudioEnhanceInput } from "./media-audio-enhance.js";
 import { MediaRecordingIngest } from "./media-recording-ingest.js";
 import { createManagedTtsProviders, validateManagedTtsInput } from "./media-tts-providers.js";
+import { createAudioExtractProcessor, validateAudioExtractInput } from "./media-audio-extract.js";
 
 export interface PanelMediaOptions {
   rootDirectory: string;
@@ -208,6 +209,27 @@ export class PanelMediaService {
       ffprobePath,
     });
     await this.recording.initialize();
+    this.jobs.registerProcessor(
+      "audio-extract",
+      createAudioExtractProcessor({
+        ffmpegPath,
+        ffprobePath,
+        resolveAssetPath: (scope, id) => {
+          this.authorize(scope);
+          return this.library.resolvePath(scope, id);
+        },
+        publishArtifact: async (scope, path, mimeType, context) => {
+          this.authorize(scope);
+          const asset = await this.library.importFile(scope, path, {
+            name: "本人声音参考片段.wav",
+            mimeType,
+            signal: context.signal,
+          });
+          this.authorize(scope);
+          return asset;
+        },
+      }),
+    );
     this.jobs.registerProcessor(
       "audio-enhance",
       createAudioEnhanceProcessor({
@@ -566,13 +588,16 @@ export class PanelMediaService {
       if (Buffer.byteLength(JSON.stringify([...models, description])) > 160 * 1024) break;
       models.push(description);
     }
-    const defaultModelId = models.some(
-      (model) => model.id === configured.defaultModelId && model.available,
-    )
-      ? configured.defaultModelId!
-      : local.available
-        ? "macos-say"
-        : (models.find((model) => model.available)?.id ?? "macos-say");
+    const preferredModelIds = [
+      configured.defaultModelId,
+      ...configured.models.map((model) => model.description.id),
+      "edge-tts",
+      "kokoro",
+      "macos-say",
+    ];
+    const defaultModelId =
+      preferredModelIds.find((id) => models.some((model) => model.id === id && model.available)) ??
+      "macos-say";
     return { ...local, available: models.some((model) => model.available), models, defaultModelId };
   }
 
@@ -768,6 +793,7 @@ export class PanelMediaService {
         return {
           apiVersion: 1,
           persistent: true,
+          assetRead: { available: true, maxChunkBytes: 32768 },
           processors: [
             "prepare",
             "transcribe",
@@ -777,6 +803,7 @@ export class PanelMediaService {
             "tts-managed",
             "tts-setup",
             "audio-enhance",
+            "audio-extract",
             "recording",
             "render",
           ],
@@ -819,6 +846,12 @@ export class PanelMediaService {
         await this.library.get(scope, params.assetId);
         this.authorize(scope);
         return this.jobs.start(scope, { type: "audio-enhance", input: params });
+      }
+      case "media.audio.extract": {
+        const params = validateAudioExtractInput(input);
+        await this.library.get(scope, params.assetId);
+        this.authorize(scope);
+        return this.jobs.start(scope, { type: "audio-extract", input: params });
       }
       case "media.tts.providers":
         return {
@@ -925,6 +958,68 @@ export class PanelMediaService {
           throw error;
         });
         return { asset, preparation };
+      }
+      case "media.assets.read": {
+        if (Object.keys(input).some((key) => !["assetId", "offset", "length"].includes(key)))
+          throw new Error("不支持此素材读取参数");
+        const id = assetId(input.assetId);
+        const offset = input.offset,
+          length = input.length;
+        if (
+          !Number.isSafeInteger(offset) ||
+          offset < 0 ||
+          !Number.isSafeInteger(length) ||
+          length < 1 ||
+          length > 32768
+        )
+          throw new Error("素材读取需要有效字节位置，每次最多读取 32768 字节");
+        try {
+          const asset = await this.library.get(scope, id);
+          if (offset > asset.bytes) throw new Error("素材读取位置超出文件长度");
+          this.authorize(scope);
+          const chunks: Buffer[] = [];
+          let bytes = 0;
+          const expected = Math.min(length, asset.bytes - offset);
+          if (expected) {
+            const result = await this.library.openRead(scope, id, {
+              range: `bytes=${offset}-${offset + expected - 1}`,
+            });
+            if (result.status !== 206 || !result.body) throw new Error("Invalid managed range");
+            try {
+              for await (const chunk of result.body) {
+                this.authorize(scope);
+                const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+                bytes += buffer.length;
+                if (bytes > expected) throw new Error("Managed range exceeds its budget");
+                chunks.push(buffer);
+              }
+            } finally {
+              result.body.destroy();
+            }
+            if (bytes !== expected) throw new Error("Incomplete managed range");
+          } else {
+            await this.library.resolvePath(scope, id);
+          }
+          this.authorize(scope);
+          return {
+            assetId: id,
+            offset,
+            totalBytes: asset.bytes,
+            mimeType: asset.mimeType,
+            dataBase64: Buffer.concat(chunks, bytes).toString("base64"),
+            eof: offset + bytes === asset.bytes,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "";
+          if (
+            [
+              "素材读取位置超出文件长度",
+              "Media app or workspace authorization was revoked",
+            ].includes(message)
+          )
+            throw error;
+          throw new Error("无法读取受管素材，请确认素材仍可用后重试", { cause: error });
+        }
       }
       case "media.prepare": {
         if (!Array.isArray(input.assetIds) || !input.assetIds.length || input.assetIds.length > 100)

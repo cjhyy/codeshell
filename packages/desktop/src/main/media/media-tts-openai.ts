@@ -34,6 +34,9 @@ export interface OpenAiTtsResult {
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 const MAX_DURATION_SECONDS = 600;
 const WAV_TYPES = new Set(["audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave"]);
+// Compatible speech servers may send a generic binary response. Its RIFF/WAVE
+// signature and restricted ffprobe validation below still determine the format.
+const GENERIC_BINARY_TYPES = new Set(["application/octet-stream", ""]);
 
 /** Only messages constructed locally may cross the Host boundary. */
 class SpeechError extends Error {}
@@ -146,7 +149,7 @@ async function saveResponse(
   }
   const type = (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   const length = Number(response.headers.get("content-length")) || undefined;
-  if (!WAV_TYPES.has(type) || !response.body) {
+  if ((!WAV_TYPES.has(type) && !GENERIC_BINARY_TYPES.has(type)) || !response.body) {
     await response.body?.cancel().catch(() => undefined);
     throw new SpeechError("配音服务未返回 WAV 音频");
   }

@@ -14,7 +14,7 @@ export interface LineAdapterConfig {
 interface LineWebhookBody {
   events?: Array<{
     type?: string;
-    source?: { userId?: string; groupId?: string; roomId?: string };
+    source?: { type?: string; userId?: string; groupId?: string; roomId?: string };
     message?: { id?: string; type?: string; text?: string; fileName?: string; fileSize?: number };
   }>;
 }
@@ -98,6 +98,7 @@ export class LineAdapter implements WebhookChannelAdapter {
           channel: this.channel,
           target,
           senderId,
+          isDirectMessage: event.source?.type === "user",
           text,
           ...(id ? { messageId: id } : {}),
           ...(attachment ? { attachments: [attachment] } : {}),

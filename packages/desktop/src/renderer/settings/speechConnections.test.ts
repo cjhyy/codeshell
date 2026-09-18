@@ -30,3 +30,27 @@ test("changing the speech model removes unsupported style and replaces incompati
   expect(returned.paramValues).toEqual({ voice: "alloy", speed: 1.2 });
   expect(instance.paramValues.instructions).toBe("温柔地朗读");
 });
+
+test("CosyVoice connection creation seeds the complete provider voice ID and keeps foreign credentials out", () => {
+  const chineseEntry = BUILTIN_CATALOG.find((entry) => entry.id === "siliconflow-speech")!;
+  const connection = buildInstance(chineseEntry, undefined, new Set(), "speech");
+  expect(connection.catalogId).toBe("siliconflow-speech");
+  expect(connection.tag).toBe("speech");
+  expect(connection.model).toBe("FunAudioLLM/CosyVoice2-0.5B");
+  expect(connection.paramValues).toEqual({ voice: "FunAudioLLM/CosyVoice2-0.5B:anna", speed: 1 });
+  expect(
+    credentialCandidates(
+      [
+        { id: "siliconflow-key", catalogId: "siliconflow-speech" },
+        { id: "openai-key", catalogId: "openai" },
+        { id: "openrouter-key", catalogId: "openrouter" },
+      ],
+      chineseEntry.id,
+      BUILTIN_CATALOG,
+    ).map((credential) => credential.id),
+  ).toEqual(["siliconflow-key"]);
+  expect(chineseEntry.modelPresets?.[0]?.params?.map((param) => param.name)).toEqual([
+    "voice",
+    "speed",
+  ]);
+});

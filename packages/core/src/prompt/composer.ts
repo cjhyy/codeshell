@@ -180,7 +180,11 @@ export class PromptComposer {
     const parts = await Promise.all(
       (this.options.dynamicContextProviders ?? []).map(async (provider) => {
         try {
-          return await provider({ cwd: this.options.cwd, workspace: this.options.workspace, preset });
+          return await provider({
+            cwd: this.options.cwd,
+            workspace: this.options.workspace,
+            preset,
+          });
         } catch {
           // A capability's optional context must not make a turn fail.
           return undefined;
@@ -307,18 +311,16 @@ export class PromptComposer {
       });
     }
 
-    // Tool listing — name + one-line description only. The full JSON schema
-    // is NOT repeated here: the provider clients already send it in the
-    // native `tools` field (Anthropic tools / OpenAI functions), so dumping
-    // `Parameters: {...}` into the system prompt sent every tool's schema
-    // twice — a large, per-request token cost for no added model signal.
+    // Keep a compact name index for discovery. Providers already send every
+    // full description and input schema in their native tools field; repeating
+    // those descriptions here can add thousands of tokens to each request.
     if (tools.length > 0) {
       sections.push({
         name: "tool_definitions",
-        compute: () => {
-          const toolLines = tools.map((t) => `### ${t.name}\n${t.description}`);
-          return `# Available Tools\n\n${toolLines.join("\n\n")}`;
-        },
+        // A reused composer must reflect the current run's visible tool names.
+        cacheBreak: true,
+        compute: () =>
+          `# Available Tools\n\nDescriptions and input schemas are provided in the tools field.\n${tools.map((tool) => tool.name).join(", ")}`,
       });
     }
 

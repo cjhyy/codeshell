@@ -62,6 +62,7 @@ function sourceReferencesTool(source: string, toolName: string, executorName: st
   const toolIdentifier = toLowerCamelCase(toolName);
   const aliases: Record<string, string[]> = {
     AskUserQuestion: ["askUserTool"],
+    AskUserQuestionAsync: ["askUserAsyncTool"],
   };
   // Most catalog entries are wrapped by the same local function name
   // (`execute`). Treating that generic name as evidence made one broad harness

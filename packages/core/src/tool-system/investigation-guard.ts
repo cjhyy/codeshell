@@ -167,7 +167,7 @@ export class InvestigationGuard {
   private isMutatingTool(name: string): boolean {
     if (name === "Bash") return true;
     if (name === "Edit" || name === "Write" || name === "NotebookEdit") return true;
-    if (name === "AskUserQuestion") return true;
+    if (name === "AskUserQuestion" || name === "AskUserQuestionAsync") return true;
     if (name === "TodoWrite") return false;
     return false;
   }

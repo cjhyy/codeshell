@@ -23,6 +23,8 @@ interface Props {
   cwd: string | null;
   /** Current engine Session; Main resolves all roots and repositories from it. */
   sessionId: string | null;
+  /** Whether the current Session has repositories available for live Git review. */
+  gitAvailable?: boolean;
   /**
    * Files the originating turn changed (from a chat "files changed" card).
    * When present we open in "本轮改动" scope showing exactly these — fixing the
@@ -88,11 +90,16 @@ export function useWorkspaceRecentCommits(
  * scroll horizontally (see diff.css). (A commit/push/PR action bar is a later
  * slice — see TODO 2.3a.)
  */
-export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
+export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDiff }: Props) {
   const { t } = useT();
   const scopeLabel = (id: ReviewScope): string => t(`panels.review.scopes.${id}`);
   const hasTurnFiles = !!files && files.length > 0;
-  const [scope, setScope] = useState<ReviewScope>(hasTurnFiles ? "turn" : "all");
+  const hasTurnSnapshot = !!turnDiff?.trim();
+  const hasTurnContext = hasTurnFiles || hasTurnSnapshot;
+  const [scope, setScope] = useState<ReviewScope>(hasTurnContext ? "turn" : "all");
+  // Apply availability during render so a previously selected Git scope cannot
+  // issue a request before effects respond to the workspace change.
+  const activeScope = gitAvailable ? scope : "turn";
   // Turn-scope file filter for the dropdown (#5 ②). "" / ALL_FILES = show all.
   const [turnFileSel, setTurnFileSel] = useState<string>(ALL_FILES);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -114,36 +121,36 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
   // null = no specific commit picked → default to the most recent (HEAD~1..HEAD).
   const [selectedCommit, setSelectedCommit] = useState<ReviewGitCommit | null>(null);
   // Recent commits for the 提交 submenu, loaded lazily when it opens.
-  const { commits, loadCommits } = useWorkspaceRecentCommits(sessionId, cwd);
+  const { commits, loadCommits } = useWorkspaceRecentCommits(gitAvailable ? sessionId : null, cwd);
 
   // Git-derived selections belong to one workspace. A session switching from
   // main to a worktree must not retain commits/ranges/stats from the old root.
   useEffect(() => {
     setSelectedCommit(null);
     setStats(null);
-  }, [cwd, sessionId]);
+  }, [cwd, sessionId, gitAvailable]);
 
   // When the caller hands us a focus set (e.g. from a "files changed" card),
   // snap to its turn scope + first file. Re-runs when the set identity changes.
   const focusKey = files?.join("\n") ?? "";
   useEffect(() => {
-    if (hasTurnFiles) setScope("turn");
-  }, [focusKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (hasTurnContext) setScope("turn");
+  }, [focusKey, turnDiff]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Label for the scope dropdown trigger. In committed scope, show the picked
   // commit's subject (or "最近提交" when none picked yet).
   const triggerLabel =
-    scope === "committed"
+    activeScope === "committed"
       ? selectedCommit
         ? selectedCommit.subject
         : t("panels.review.recentCommit")
-      : REVIEW_SCOPES.find((s) => s.id === scope)
-        ? scopeLabel(scope)
+      : REVIEW_SCOPES.find((s) => s.id === activeScope)
+        ? scopeLabel(activeScope)
         : t("panels.review.scopeFallback");
 
   const reviewRequest = useMemo<ReviewGitDiffRequest>(() => {
-    if (scope === "branch") return { kind: "branch" };
-    if (scope === "committed") {
+    if (activeScope === "branch") return { kind: "branch" };
+    if (activeScope === "committed") {
       return selectedCommit
         ? {
             kind: "committed",
@@ -154,9 +161,11 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
     }
     return {
       kind: "working",
-      mode: scope === "turn" ? "all" : (scope as "unstaged" | "staged" | "all"),
+      mode: activeScope === "turn" ? "all" : (activeScope as "unstaged" | "staged" | "all"),
     };
-  }, [scope, selectedCommit]);
+  }, [activeScope, selectedCommit]);
+
+  if (!gitAvailable && !hasTurnSnapshot) return null;
 
   if (!cwd) {
     return (
@@ -165,7 +174,7 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
       </div>
     );
   }
-  if (!sessionId && !(scope === "turn" && turnDiff)) {
+  if (!sessionId && !(activeScope === "turn" && hasTurnSnapshot)) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
         {t("panels.common.selectProjectFirst")}
@@ -182,79 +191,83 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
       {/* Top bar: scope dropdown (top-left, with a 提交 submenu listing recent
           commits) + optional file dropdown + refresh. */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("panels.review.selectScope")}
-              className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-xs hover:bg-accent"
-            >
-              <span className="max-w-[180px] truncate">{triggerLabel}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[160px]">
-            {REVIEW_SCOPES.filter((s) =>
-              s.id === "turn" ? hasTurnFiles : s.id !== "committed",
-            ).map((s) => (
-              <DropdownMenuItem
-                key={s.id}
-                onSelect={() => {
-                  setScope(s.id);
-                  setSelectedCommit(null);
-                }}
+        {gitAvailable ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("panels.review.selectScope")}
+                className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-xs hover:bg-accent"
               >
-                <span className="flex-1">{scopeLabel(s.id)}</span>
-                {scope === s.id && <Check className="h-3.5 w-3.5" />}
-              </DropdownMenuItem>
-            ))}
-            {/* 提交 ›: hover to list recent commits (Codex style). */}
-            <DropdownMenuSub onOpenChange={(open) => open && loadCommits()}>
-              <DropdownMenuSubTrigger>
-                <span className="flex-1">{t("panels.review.commits")}</span>
-                {scope === "committed" && <Check className="mr-1 h-3.5 w-3.5" />}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="max-h-[60vh] max-w-[360px] overflow-auto">
-                {commits === null ? (
-                  <DropdownMenuItem disabled>{t("panels.common.loading")}</DropdownMenuItem>
-                ) : commits.length === 0 ? (
-                  <DropdownMenuItem disabled>{t("panels.review.noCommits")}</DropdownMenuItem>
-                ) : (
-                  commits.map((c) => (
-                    <DropdownMenuItem
-                      key={`${c.rootId}:${c.repoRoot}:${c.hash}`}
-                      onSelect={() => {
-                        setSelectedCommit(c);
-                        setScope("committed");
-                      }}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{c.subject}</span>
-                      <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
-                        {c.relativeDate}
-                      </span>
-                      <span
-                        className="ml-2 max-w-[110px] shrink-0 truncate text-[10px] text-muted-foreground"
-                        title={c.repoRoot}
+                <span className="max-w-[180px] truncate">{triggerLabel}</span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[160px]">
+              {REVIEW_SCOPES.filter((s) =>
+                s.id === "turn" ? hasTurnContext : s.id !== "committed",
+              ).map((s) => (
+                <DropdownMenuItem
+                  key={s.id}
+                  onSelect={() => {
+                    setScope(s.id);
+                    setSelectedCommit(null);
+                  }}
+                >
+                  <span className="flex-1">{scopeLabel(s.id)}</span>
+                  {activeScope === s.id && <Check className="h-3.5 w-3.5" />}
+                </DropdownMenuItem>
+              ))}
+              {/* 提交 ›: hover to list recent commits (Codex style). */}
+              <DropdownMenuSub onOpenChange={(open) => open && loadCommits()}>
+                <DropdownMenuSubTrigger>
+                  <span className="flex-1">{t("panels.review.commits")}</span>
+                  {activeScope === "committed" && <Check className="mr-1 h-3.5 w-3.5" />}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-h-[60vh] max-w-[360px] overflow-auto">
+                  {commits === null ? (
+                    <DropdownMenuItem disabled>{t("panels.common.loading")}</DropdownMenuItem>
+                  ) : commits.length === 0 ? (
+                    <DropdownMenuItem disabled>{t("panels.review.noCommits")}</DropdownMenuItem>
+                  ) : (
+                    commits.map((c) => (
+                      <DropdownMenuItem
+                        key={`${c.rootId}:${c.repoRoot}:${c.hash}`}
+                        onSelect={() => {
+                          setSelectedCommit(c);
+                          setScope("committed");
+                        }}
                       >
-                        {c.repoRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? c.repoRoot}
-                      </span>
-                      {selectedCommit?.hash === c.hash && selectedCommit.rootId === c.rootId && (
-                        <Check className="ml-1 h-3.5 w-3.5" />
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                        <span className="min-w-0 flex-1 truncate">{c.subject}</span>
+                        <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
+                          {c.relativeDate}
+                        </span>
+                        <span
+                          className="ml-2 max-w-[110px] shrink-0 truncate text-[10px] text-muted-foreground"
+                          title={c.repoRoot}
+                        >
+                          {c.repoRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? c.repoRoot}
+                        </span>
+                        {selectedCommit?.hash === c.hash && selectedCommit.rootId === c.rootId && (
+                          <Check className="ml-1 h-3.5 w-3.5" />
+                        )}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="text-xs text-muted-foreground">{scopeLabel("turn")}</span>
+        )}
         {stats && (stats.added > 0 || stats.removed > 0) && (
           <span className="shrink-0 text-xs tabular-nums">
             <span className="text-status-ok">+{stats.added}</span>{" "}
             <span className="text-status-err">-{stats.removed}</span>
           </span>
         )}
-        {scope === "turn" && turnDiff && turnFilePaths.length > 1 && (
+        {activeScope === "turn" && hasTurnSnapshot && turnFilePaths.length > 1 && (
           <SimpleSelect
             size="sm"
             ariaLabel={t("panels.review.selectFile")}
@@ -269,20 +282,22 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
             ]}
           />
         )}
-        <button
-          type="button"
-          title={t("panels.common.refresh")}
-          aria-label={t("panels.common.refresh")}
-          className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-          onClick={() => setRefreshKey((k) => k + 1)}
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-        </button>
+        {gitAvailable && (
+          <button
+            type="button"
+            title={t("panels.common.refresh")}
+            aria-label={t("panels.common.refresh")}
+            className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={() => setRefreshKey((k) => k + 1)}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Full-width diff. */}
       <div className="min-h-0 flex-1 overflow-auto p-2">
-        {scope === "turn" && turnDiff ? (
+        {activeScope === "turn" && hasTurnSnapshot ? (
           // Authoritative turn-time snapshot — viewable even after the edits
           // were committed (git would no longer show them). The dropdown above
           // narrows the flat snapshot to one file (#5 ②).
@@ -296,7 +311,7 @@ export function ReviewPanel({ cwd, sessionId, files, turnDiff }: Props) {
           // Every Git-backed scope is resolved in Main from the current Session.
           // The renderer sends only the operation/range selector, never roots.
           <UnifiedDiffViewer
-            key={`${scope}:${refreshKey}`}
+            key={`${activeScope}:${refreshKey}`}
             cwd={cwd}
             reviewSessionId={sessionId ?? undefined}
             reviewRequest={reviewRequest}

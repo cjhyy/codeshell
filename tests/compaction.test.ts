@@ -11,9 +11,7 @@ import type { Message } from "../packages/core/src/types.js";
 
 describe("estimateTokens", () => {
   it("estimates string messages", () => {
-    const messages: Message[] = [
-      { role: "user", content: "hello world" },
-    ];
+    const messages: Message[] = [{ role: "user", content: "hello world" }];
     const tokens = estimateTokens(messages);
     expect(tokens).toBeGreaterThan(0);
     expect(tokens).toBeLessThan(30);
@@ -46,20 +44,28 @@ describe("windowCompact", () => {
     }));
     const result = windowCompact(msgs, 3);
     expect(result).toHaveLength(4); // first + 3
-    expect((result[0].content as string)).toBe("msg0");
-    expect((result[1].content as string)).toBe("msg7");
-    expect((result[3].content as string)).toBe("msg9");
+    expect(result[0].content as string).toBe("msg0");
+    expect(result[1].content as string).toBe("msg7");
+    expect(result[3].content as string).toBe("msg9");
   });
 
   it("returns original if short enough", () => {
-    const msgs: Message[] = [{ role: "user", content: "a" }, { role: "user", content: "b" }];
+    const msgs: Message[] = [
+      { role: "user", content: "a" },
+      { role: "user", content: "b" },
+    ];
     expect(windowCompact(msgs, 5)).toHaveLength(2);
   });
 });
 
 describe("microcompact", () => {
   /** Pair an assistant tool_use with the user tool_result that follows it. */
-  function round(id: string, tool: string, input: Record<string, unknown>, result: string): Message[] {
+  function round(
+    id: string,
+    tool: string,
+    input: Record<string, unknown>,
+    result: string,
+  ): Message[] {
     return [
       { role: "assistant", content: [{ type: "tool_use", id, name: tool, input }] },
       { role: "user", content: [{ type: "tool_result", tool_use_id: id, content: result }] },
@@ -150,7 +156,8 @@ describe("truncateToolResult", () => {
     const long = "x".repeat(1000);
     const result = truncateToolResult(long, 200);
     expect(result.length).toBeLessThan(1000);
-    expect(result).toContain("characters truncated");
+    expect(result).toContain("tool output truncated");
+    expect(result.length).toBeLessThanOrEqual(200);
   });
 });
 
@@ -163,9 +170,9 @@ describe("applySummaryCompaction", () => {
     const result = applySummaryCompaction(msgs, "Summary of work done", 3);
     // first + summary + last 3 = 5
     expect(result).toHaveLength(5);
-    expect((result[0].content as string)).toBe("msg0");
-    expect((result[1].content as string)).toContain("Summary of work done");
-    expect((result[2].content as string)).toBe("msg7");
+    expect(result[0].content as string).toBe("msg0");
+    expect(result[1].content as string).toContain("Summary of work done");
+    expect(result[2].content as string).toBe("msg7");
   });
 });
 

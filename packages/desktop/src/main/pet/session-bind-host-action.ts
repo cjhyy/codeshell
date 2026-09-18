@@ -106,7 +106,7 @@ export function createSessionBindHostAction(deps: BindHostActionDeps) {
       ok: true,
       sessionTitle: route.sessionTitle,
       message:
-        `已进入「${route.sessionTitle}」。接下来的消息会直接发送到这个 Session。\n` +
+        `已进入「${route.sessionTitle}」。接下来的消息会直接发送到这个 Session，沿用它的已有上下文。\n` +
         "发送 /mimi 可退出，发送 /session 可查看当前状态。",
     };
   };

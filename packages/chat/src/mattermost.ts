@@ -13,6 +13,7 @@ export interface MattermostAdapterConfig {
 interface MattermostEvent {
   event?: string;
   data?: {
+    channel_type?: string;
     post?: string | MattermostPost;
     error?: { message?: string };
   };
@@ -183,6 +184,7 @@ export class MattermostAdapter implements ChannelAdapter {
       channel: this.channel,
       target: post.channel_id,
       senderId: post.user_id,
+      isDirectMessage: event.data.channel_type === "D",
       text: post.message ?? "",
       ...(post.id ? { messageId: post.id } : {}),
       ...(attachments.length > 0 ? { attachments } : {}),

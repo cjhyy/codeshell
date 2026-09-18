@@ -94,6 +94,8 @@ export interface PetChatRequest {
     channel: string;
     target: string;
     senderId: string;
+    /** Adapter-authenticated private-chat signal; absent for legacy clients. */
+    isDirectMessage?: boolean;
     messageId?: string;
     /** Adapter-declared implementation capabilities for this exact route. */
     capabilities: ChannelCapabilities;

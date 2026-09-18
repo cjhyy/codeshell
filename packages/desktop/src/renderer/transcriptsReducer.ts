@@ -77,6 +77,7 @@ export type TranscriptsAction =
       options?: AskUserOption[];
       multiSelect: boolean;
       optionsOnly?: boolean;
+      asynchronous?: boolean;
     }
   | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string }
   | {
@@ -173,6 +174,7 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
         options: action.options,
         multiSelect: action.multiSelect,
         optionsOnly: action.optionsOnly,
+        asynchronous: action.asynchronous,
       });
       break;
     case "ask_user_answered":
@@ -202,6 +204,8 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
                   streamingThinkingId: null,
                   agentMessageIndex: {},
                   activeAgents: {},
+                  streamRuns: undefined,
+                  activeStreamRunKey: undefined,
                 }
               : current;
           for (const ev of action.events) acc = applyTranscriptStreamEvent(acc, ev);

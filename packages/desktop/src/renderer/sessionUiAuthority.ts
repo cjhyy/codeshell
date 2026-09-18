@@ -23,6 +23,8 @@ interface Params {
   projectAuthorityVersion: string;
   noRepoCwd: string | null;
   allowProjectFallback: boolean;
+  /** Persisted UI draft marker; the host must still confirm the Session is absent. */
+  pendingFirstRun?: boolean;
 }
 
 interface LoadedAuthority {
@@ -63,6 +65,7 @@ export function useSessionUiAuthority({
   projectAuthorityVersion,
   noRepoCwd,
   allowProjectFallback,
+  pendingFirstRun = false,
 }: Params): SessionUiAuthority {
   const requestKey = sessionId ? `${sessionId}\0${projectAuthorityVersion}` : "";
   const [loaded, setLoaded] = useState<LoadedAuthority | null>(null);
@@ -187,7 +190,14 @@ export function useSessionUiAuthority({
       return unavailableSessionAuthority(sessionId, "loading");
     }
     if (!loaded.authority) {
-      if (allowProjectFallback) return projectFallback();
+      const missingSession = `unknown session: ${sessionId}`;
+      // Electron wraps invoke failures. Match only the absent-Session error,
+      // never a corrupt state, transport failure or unavailable workspace.
+      const confirmedAbsent =
+        loaded.error === missingSession ||
+        loaded.error ===
+          `Error invoking remote method 'workspace:authority': Error: ${missingSession}`;
+      if ((allowProjectFallback || pendingFirstRun) && confirmedAbsent) return projectFallback();
       return unavailableSessionAuthority(sessionId, "unavailable", loaded.error);
     }
     const authority = loaded.authority;
@@ -215,6 +225,7 @@ export function useSessionUiAuthority({
     };
   }, [
     allowProjectFallback,
+    pendingFirstRun,
     loaded,
     noRepoCwd,
     projectId,
@@ -261,6 +272,8 @@ export function useActiveSessionUiAuthority({
     allowProjectFallback: activeEngineSessionId
       ? locallyCreatedSessionIds.current.has(activeEngineSessionId)
       : false,
+    pendingFirstRun:
+      activeSessionSummary?.pendingFirstRun === true && !activeSessionSummary.engineSessionId,
   });
   useEffect(() => {
     if (activeEngineSessionId && sessionUiAuthority.rootStatus === "ok") {

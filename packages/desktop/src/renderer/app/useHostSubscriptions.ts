@@ -4,6 +4,7 @@ import { flushSync } from "react-dom";
 
 import {
   bgCompletionText,
+  isCurrentStreamRunEvent,
   type ApprovalState,
   type AskUserOption,
   type AskUserMessage,
@@ -43,6 +44,7 @@ import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { browserPartitionForBucket, fromMobilePermissionMode, stablePromptHash } from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
+import { readApprovalPermission } from "./approvalPermission";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -75,8 +77,7 @@ interface Params {
   };
   permissions: {
     approvalBucketsRef: MutableRefObject<Map<string, string>>;
-    permissionForBucketRef: MutableRefObject<(bucket: string) => PermissionMode | null>;
-    defaultPermissionModeRef: MutableRefObject<PermissionMode | null>;
+    permissionOverrideForBucketRef: MutableRefObject<(bucket: string) => PermissionMode | null>;
     setApprovalQueue: Dispatch<SetStateAction<ApprovalRequestEnvelope[]>>;
     setApproval: Dispatch<SetStateAction<ApprovalState>>;
     setPermissionOverrides: Dispatch<SetStateAction<Record<string, PermissionMode>>>;
@@ -122,8 +123,7 @@ export function useHostSubscriptions({
   } = routing;
   const {
     approvalBucketsRef,
-    permissionForBucketRef,
-    defaultPermissionModeRef,
+    permissionOverrideForBucketRef,
     setApprovalQueue,
     setApproval,
     setPermissionOverrides,
@@ -299,12 +299,26 @@ export function useHostSubscriptions({
         const prev = coalescerSeqRef.current.get(target) ?? 0;
         coalescerSeqRef.current.set(target, Math.max(prev, env.seq));
       }
-      getCoalescer(target).push(event, env.seq, env.epoch);
+      const coalescer = getCoalescer(target);
+      if (
+        !("agentId" in event && event.agentId !== undefined) &&
+        (event.type === "turn_complete" || event.type === "error")
+      ) {
+        // Commit terminal output before busy=false can send the next queued
+        // user bubble. Otherwise the 50 ms stream batch lands in that new turn.
+        flushSync(() => {
+          coalescer.push(event, env.seq, env.epoch);
+          coalescer.flush();
+        });
+      } else {
+        coalescer.push(event, env.seq, env.epoch);
+      }
+      const ownsCurrentTurn = isCurrentStreamRunEvent(transcriptsRef.current[target], event);
 
       // session_started carries the authoritative engine sessionId. Persist
       // the binding (engineSessionId == uiSessionId is the new normal, but
       // older sessions on disk may differ) and seed the routing table.
-      if (event.type === "session_started") {
+      if (event.type === "session_started" && ownsCurrentTurn) {
         // session_started fires once at the start of every run() — including a
         // run the renderer DIDN'T initiate, e.g. core waking an idle session
         // when a background shell (download) finishes. The send() path already
@@ -360,7 +374,11 @@ export function useHostSubscriptions({
       // turn_complete as the parent's flipped the top-bar/sidebar to "完成"
       // (idle) mid-run while the agent kept working. The per-agent card's own
       // done state is handled separately in the reducer via `agent_end`.
-      if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
+      if (
+        (event.type === "turn_complete" || event.type === "error") &&
+        !event.agentId &&
+        ownsCurrentTurn
+      ) {
         setBusyForKey(target, false);
         // A turn just finished → its file edits have landed on disk. Nudge the
         // Files panel to re-read the file it's previewing (and refresh its
@@ -617,6 +635,8 @@ export function useHostSubscriptions({
       }) ?? (() => undefined);
     let approvalRestoreActive = true;
     let approvalHandlingActive = true;
+    const approvalRequests = new Map<string, object>();
+    const pendingApprovalDecisions = new Set<string>();
     let restoringApprovals = true;
     const resolvedDuringRestore = new Set<string>();
     const externalRequestsDuringRestore = new Set<string>();
@@ -733,40 +753,128 @@ export function useHostSubscriptions({
           options,
           multiSelect,
           optionsOnly,
+          asynchronous: args.asynchronous === true,
         });
         return;
       }
-      // 完全访问权限 (bypass): auto-approve any request that reaches the
-      // renderer for this bucket. The engine's bypassPermissions backend
-      // already approves everything, so requests rarely surface here; this
-      // is belt-and-braces so "full access" never silently blocks on a
-      // modal. Resolve the request's OWN bucket (not the active one) —
-      // concurrent runs may target a different tab.
       if (env.sessionId && !resolved) {
         console.warn(
           "[approval] could not resolve bucket for session; rendering in active bucket",
           env.sessionId,
         );
       }
-      const targetBucket = resolved ?? activeBucketRef.current;
-      if (permissionForBucketRef.current(targetBucket) === "bypass") {
-        if (env.sessionId) {
-          void window.codeshell.approve(env.sessionId, env.requestId, "approve");
-        } else {
-          void window.codeshell.approve(env.requestId, "approve");
+      const displayBucket = resolved ?? activeBucketRef.current;
+      const token = {};
+      approvalRequests.set(env.requestId, token);
+      const isCurrent = () =>
+        approvalHandlingActive && approvalRequests.get(env.requestId) === token;
+      // Display may fall back to the active tab for an unknown route. Authority
+      // must not: only an exact route can supply a per-session UI override.
+      const currentRoute = () => {
+        if (env.sessionId && isQuickChatSessionId(env.sessionId)) {
+          return (
+            Object.values(quickChatSessionsRef.current).find(
+              (session) => session.sessionId === env.sessionId,
+            )?.bucket ?? null
+          );
         }
-        void window.codeshell.mobileRemote.notifyApprovalResolved({
+        return resolveBucket(
+          env.sessionId ?? "",
+          engineToBucketRef.current,
+          sessionIndicesRef.current,
+          runningBucketRef.current,
+        );
+      };
+      const currentOverride = () => {
+        const bucket = currentRoute();
+        return bucket ? permissionOverrideForBucketRef.current(bucket) : null;
+      };
+      const showApproval = () => {
+        if (!isCurrent()) return;
+        pendingApprovalDecisions.delete(env.requestId);
+        approvalBucketsRef.current.set(env.requestId, currentRoute() ?? displayBucket);
+        setApprovalQueue((q) =>
+          q.some((queued) => queued.requestId === env.requestId) ? q : [...q, env],
+        );
+        setApproval((cur) => cur ?? env);
+      };
+      const applyPermission = (mode: PermissionMode | null, source: string) => {
+        if (!isCurrent()) return;
+        window.codeshell.log("approval.permission", {
           requestId: env.requestId,
-          sessionId: env.sessionId,
-          approved: true,
+          engineSessionId: env.sessionId ?? null,
+          bucket: currentRoute(),
+          mode,
+          source,
         });
-        return;
+        if (mode !== "bypass") {
+          showApproval();
+          return;
+        }
+        pendingApprovalDecisions.add(env.requestId);
+        const approved = env.sessionId
+          ? window.codeshell.approve(env.sessionId, env.requestId, "approve")
+          : window.codeshell.approve(env.requestId, "approve");
+        void approved
+          .then((response) => {
+            // Native approve returns a JSON-RPC envelope; a server rejection
+            // resolves the transport promise rather than rejecting it.
+            const error = (response as { error?: { message?: string } } | undefined)?.error;
+            if (error) throw new Error(error.message || "Approval rejected by worker");
+            if (!isCurrent()) return;
+            pendingApprovalDecisions.delete(env.requestId);
+            // Mirror only an accepted decision, so failed RPCs never advertise
+            // a successful approval to other clients.
+            void window.codeshell.mobileRemote
+              .notifyApprovalResolved({
+                requestId: env.requestId,
+                sessionId: env.sessionId,
+                approved: true,
+              })
+              .catch((error) =>
+                window.codeshell.log("approval.mirror_failed", {
+                  requestId: env.requestId,
+                  error: String(error),
+                }),
+              );
+          })
+          .catch((error) => {
+            window.codeshell.log("approval.auto_approve_failed", {
+              requestId: env.requestId,
+              error: String(error),
+            });
+            showApproval();
+          });
+      };
+      const override = currentOverride();
+      if (override !== null) {
+        applyPermission(override, "session-override");
+      } else if (env.sessionId) {
+        pendingApprovalDecisions.add(env.requestId);
+        void readApprovalPermission(env.sessionId).then(
+          (mode) => {
+            // A permission choice made while IPC was in flight takes effect
+            // before this request is approved. Request tokens also prevent a
+            // previous worker's lookup from approving a reused request id.
+            const latestOverride = currentOverride();
+            applyPermission(
+              latestOverride ?? mode,
+              latestOverride === null ? "session-settings" : "session-override",
+            );
+          },
+          (error) => {
+            if (!isCurrent()) return;
+            window.codeshell.log("approval.permission_failed", {
+              requestId: env.requestId,
+              engineSessionId: env.sessionId,
+              error: String(error),
+            });
+            applyPermission(null, "unavailable");
+          },
+        );
+      } else {
+        applyPermission(null, "unresolved-session");
       }
-      approvalBucketsRef.current.set(env.requestId, targetBucket);
-      setApprovalQueue((q) =>
-        q.some((queued) => queued.requestId === env.requestId) ? q : [...q, env],
-      );
-      setApproval((cur) => cur ?? env);
     };
     const offApproval = window.codeshell.onApprovalRequest(handleApproval);
     const handleApprovalResolved = (env: ApprovalResolvedEnvelope): void => {
@@ -782,6 +890,8 @@ export function useHostSubscriptions({
         if (resolved.size > 2_048) resolved.delete(resolved.keys().next().value!);
         refreshExternalApprovals((version) => version + 1);
       }
+      approvalRequests.delete(env.requestId);
+      pendingApprovalDecisions.delete(env.requestId);
       pendingApprovalIdsRef.current.delete(env.requestId);
       coreApprovalIdsRef.current.delete(env.requestId);
       if (restoringApprovals) resolvedDuringRestore.add(env.requestId);
@@ -862,13 +972,9 @@ export function useHostSubscriptions({
         }
         if (!bucket) return;
         const mode = fromMobilePermissionMode(env.mode);
-        setPermissionOverrides((prev) => {
-          if (mode === defaultPermissionModeRef.current) {
-            const { [bucket]: _removed, ...rest } = prev;
-            return rest;
-          }
-          return { ...prev, [bucket]: mode };
-        });
+        // This is an explicit choice for the target Session. Comparing it to
+        // the foreground project's default can erase a background restriction.
+        setPermissionOverrides((prev) => ({ ...prev, [bucket]: mode }));
       },
     );
     const offStatus = window.codeshell.onStatus((evt) => {
@@ -940,6 +1046,14 @@ export function useHostSubscriptions({
     return () => {
       approvalRestoreActive = false;
       approvalHandlingActive = false;
+      approvalRequests.clear();
+      // A language change re-registers these listeners. Let the new listener's
+      // snapshot recover requests whose permission lookup or approval RPC was still in flight.
+      for (const requestId of pendingApprovalDecisions) {
+        pendingApprovalIdsRef.current.delete(requestId);
+        coreApprovalIdsRef.current.delete(requestId);
+      }
+      pendingApprovalDecisions.clear();
       offStream();
       offAutomationSession();
       offMobileSession();

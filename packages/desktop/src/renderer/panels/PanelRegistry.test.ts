@@ -36,13 +36,29 @@ describe("PanelRegistry", () => {
     }
   });
 
-  it("keeps every existing panel enabled without an active session", () => {
+  it("omits Git review until the workspace confirms a repository", () => {
     const entries = getEnabledPanelEntries({
       projectPath: null,
       cwd: null,
       engineSessionId: null,
     });
-    expect(entries.map((entry) => entry.key)).toEqual(PANEL_KEYS);
+    expect(entries.map((entry) => entry.key)).toEqual(PANEL_KEYS.filter((key) => key !== "review"));
+    expect(
+      getEnabledPanelEntries({
+        projectPath: "/repo",
+        cwd: "/repo",
+        engineSessionId: "session-1",
+        gitReviewAvailable: false,
+      }).some((entry) => entry.key === "review"),
+    ).toBe(false);
+    expect(
+      getEnabledPanelEntries({
+        projectPath: "/repo",
+        cwd: "/repo",
+        engineSessionId: "session-1",
+        gitReviewAvailable: true,
+      }).some((entry) => entry.key === "review"),
+    ).toBe(true);
   });
 
   it("routes QuickChat through a registered built-in Panel App service", () => {

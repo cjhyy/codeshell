@@ -40,6 +40,8 @@ export interface PanelAvailabilityContext {
   cwd: string | null;
   engineSessionId: string | null;
   sessionMainRootId?: string | null;
+  /** Confirmed Git repository in this Session's mounted review workspace. */
+  gitReviewAvailable?: boolean;
 }
 
 export interface PanelRenderContext extends PanelAvailabilityContext {
@@ -154,13 +156,14 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     title: { kind: "i18n", key: "panels.kinds.review" },
     icon: GitCompare,
     order: 20,
-    enabled: alwaysEnabled,
-    render: ({ cwd, engineSessionId, reviewFiles, reviewDiff }) =>
+    enabled: ({ gitReviewAvailable }) => gitReviewAvailable === true,
+    render: ({ cwd, engineSessionId, reviewFiles, reviewDiff, gitReviewAvailable }) =>
       createElement(ReviewPanel, {
         cwd,
         sessionId: engineSessionId,
         files: reviewFiles,
         turnDiff: reviewDiff,
+        gitAvailable: gitReviewAvailable === true,
       }),
   }),
   builtin({

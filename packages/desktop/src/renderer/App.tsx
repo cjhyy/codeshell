@@ -126,6 +126,7 @@ import { usePanelBuckets } from "./app/usePanelBuckets";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
+import { readReviewAvailability, useReviewAvailability } from "./panels/useReviewAvailability";
 import { useProjectRegistrySync } from "./app/useProjectRegistrySync";
 import { useExternalRuntimeModels } from "./app/useExternalRuntimeModels";
 
@@ -310,6 +311,17 @@ function App() {
     sessionUiAuthority.configurationAvailable,
     settingsRevision,
   );
+  const reviewAvailability = useReviewAvailability(
+    activeEngineSessionId,
+    sessionUiAuthority.rootStatus === "ok" && sessionUiAuthority.workspaceRoot
+      ? JSON.stringify([
+          activeProject?.path ?? null,
+          sessionUiAuthority.mainRootId,
+          sessionUiAuthority.workspaceRoot,
+          activeProject?.roots,
+        ])
+      : null,
+  );
   const modelOptions = useMemo<ModelOption[]>(
     () => [...configuredModelOptions, ...externalRuntimeModels],
     [configuredModelOptions, externalRuntimeModels],
@@ -475,13 +487,13 @@ function App() {
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   /**
    * Per-bucket permission resolver for the mount-time approval listener
-   * (which closes over stale state). Mirrors the same precedence as
-   * `permissionMode`: a bucket's explicit override, else the global
-   * default. Used to honor 完全访问权限 (bypass) by auto-approving requests
-   * that still reach the renderer.
+   * (which closes over stale state). Only explicit per-session choices live
+   * here. Approval defaults are resolved against the requesting Session, never
+   * the foreground page's configuration.
    */
-  const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
-  const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
+  const permissionOverrideForBucketRef = useRef<(bucket: string) => PermissionMode | null>(
+    () => null,
+  );
   useEffect(() => {
     let cancelled = false;
     if (!sessionUiAuthority.configurationAvailable) {
@@ -812,10 +824,9 @@ function App() {
     permissionModeRef.current = permissionMode;
   }, [permissionMode]);
   useEffect(() => {
-    permissionForBucketRef.current = (bucket: string): PermissionMode | null =>
-      permissionOverrides[bucket] ?? defaultPermissionMode;
-    defaultPermissionModeRef.current = defaultPermissionMode;
-  }, [permissionOverrides, defaultPermissionMode]);
+    permissionOverrideForBucketRef.current = (bucket: string): PermissionMode | null =>
+      permissionOverrides[bucket] ?? null;
+  }, [permissionOverrides]);
 
   useEffect(() => {
     const refreshSettings = (): void => {
@@ -1093,8 +1104,7 @@ function App() {
     },
     permissions: {
       approvalBucketsRef,
-      permissionForBucketRef,
-      defaultPermissionModeRef,
+      permissionOverrideForBucketRef,
       setApprovalQueue,
       setApproval,
       setPermissionOverrides,
@@ -1227,6 +1237,7 @@ function App() {
       quickChatSessionsRef,
     },
     controls: {
+      gitReviewAvailable: reviewAvailability.available,
       engineToBucketRef,
       setPermissionOverrides,
       setModelOverrides,
@@ -1279,6 +1290,12 @@ function App() {
               projectPath,
               cwd,
               engineSessionId: request.sessionId,
+              gitReviewAvailable:
+                request.sessionId &&
+                cwd &&
+                (request.action === "list" || request.panelId === "review")
+                  ? (await readReviewAvailability(request.sessionId, cwd)).available
+                  : false,
             },
             translate: (key) => t(key as never),
             open: (panelId) => {
@@ -1577,7 +1594,7 @@ function App() {
     prevBusyRef.current = busy;
   }, [busy, activeProject]);
 
-  const handleAskUserAnswer = (requestId: string, answer: string): void => {
+  const handleAskUserAnswer = async (requestId: string, answer: string): Promise<void> => {
     // Route the answer to the session that ORIGINATED the prompt. The prompt
     // message carries engineSessionId (stamped at dispatch from env.sessionId),
     // so we no longer assume "AskUser is always in the active bucket" — that
@@ -1601,37 +1618,31 @@ function App() {
           : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
-    const accepted = engineSessionId
-      ? window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer)
-      : window.codeshell.approve(requestId, "approve", undefined, answer);
-    void accepted
-      .then((response) => {
-        const error = (response as { error?: { message?: string } } | undefined)?.error;
-        if (error) throw new Error(error.message || "The answer was not accepted.");
-        dispatch({
-          type: "ask_user_answered",
-          bucket: originBucket ?? activeBucket,
-          requestId,
-          answer,
-        });
-        // Mirror only accepted answers; a failed mirror must not undo acceptance.
-        void window.codeshell.mobileRemote
-          .notifyApprovalResolved({
-            requestId,
-            sessionId: engineSessionId,
-            approved: true,
-          })
-          .catch((error) =>
-            window.codeshell.log("ask_user.answer_mirror_failed", {
-              requestId,
-              error: String(error),
-            }),
-          );
+    if (engineSessionId) {
+      await window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer);
+    } else {
+      await window.codeshell.approve(requestId, "approve", undefined, answer);
+    }
+    dispatch({
+      type: "ask_user_answered",
+      // Mark answered in the bucket that actually holds the prompt (found above),
+      // not blindly the active bucket — they differ for a background-session ask.
+      bucket: originBucket ?? activeBucket,
+      requestId,
+      answer,
+    });
+    // The worker has accepted the answer. A mirror notification failure must
+    // not turn a successful send into a retry that submits the answer twice.
+    void window.codeshell.mobileRemote
+      .notifyApprovalResolved({
+        requestId,
+        sessionId: engineSessionId,
+        approved: true,
+        answer,
       })
-      .catch((error) => {
-        window.codeshell.log("ask_user.answer_failed", { requestId, error: String(error) });
-        toast({ message: t("msg.ask.submitFailed"), variant: "error" });
-      });
+      .catch((error) =>
+        window.codeshell.log("ask_user.answer_mirror_failed", { requestId, error: String(error) }),
+      );
   };
 
   const clearTranscript = (): void => {
@@ -2659,6 +2670,7 @@ function App() {
           commands={buildCommands({
             setViewMode,
             openPanel,
+            gitReviewAvailable: reviewAvailability.available,
             toggleSidebar,
             toggleInspector,
             clearTranscript,

@@ -37,6 +37,10 @@ class FakeAgentClient {
     this.approvalHandlers.delete(handler);
   }
 
+  onApprovalResolved(): void {}
+
+  offApprovalResolved(): void {}
+
   async goalGetState(): Promise<null> {
     return null;
   }

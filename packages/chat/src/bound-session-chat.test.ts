@@ -8,6 +8,7 @@ function message(overrides: Partial<ChannelMessage> = {}): ChannelMessage {
     channel: "wechat",
     target: "owner-1",
     senderId: "owner-1",
+    isDirectMessage: true,
     text: "继续修那个 bug",
     messageId: "m-1",
     ...overrides,
@@ -64,11 +65,12 @@ describe("falling through to Mimi", () => {
     expect(seen).toEqual([]);
   });
 
-  test("a bridge failure falls back to Mimi rather than dropping the message", async () => {
-    const { nextCalled } = await run(async () => {
-      throw new Error("control plane down");
-    });
-    expect(nextCalled).toBe(true);
+  test("an ambiguous bridge failure escapes for inbox retry without reaching Mimi", async () => {
+    await expect(
+      run(async () => {
+        throw new Error("control plane down");
+      }),
+    ).rejects.toThrow("control plane down");
   });
 });
 
@@ -102,7 +104,12 @@ describe("routing into the Session", () => {
   });
 
   test("reports a group chat so the host can refuse to bind it", async () => {
-    const { seen } = await run({ kind: "not-bound" }, {}, () => false);
+    const { seen } = await run({ kind: "not-bound" }, { isDirectMessage: false });
+    expect(seen[0]).toMatchObject({ isDirectMessage: false });
+  });
+
+  test("an adapter without private-chat metadata never gains it from matching ids", async () => {
+    const { seen } = await run({ kind: "not-bound" }, { isDirectMessage: undefined });
     expect(seen[0]).toMatchObject({ isDirectMessage: false });
   });
 });

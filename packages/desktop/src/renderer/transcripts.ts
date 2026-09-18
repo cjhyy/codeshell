@@ -859,6 +859,7 @@ export function createSession(
     title: title?.trim() ? title.trim() : DEFAULT_SESSION_TITLE,
     createdAt: now,
     updatedAt: now,
+    pendingFirstRun: true,
     ...(options.workspaceProfile ? { workspaceProfile: options.workspaceProfile } : {}),
     ...(options.teamId ? { teamId: options.teamId } : {}),
     ...(options.teamRole ? { teamRole: options.teamRole } : {}),
@@ -918,7 +919,11 @@ export function bindEngineSession(
   const idx = loadSessionIndex(projectId);
   const next: SessionIndex = {
     ...idx,
-    sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, engineSessionId } : s)),
+    sessions: idx.sessions.map((s) => {
+      if (s.id !== sessionId) return s;
+      const { pendingFirstRun: _pendingFirstRun, ...bound } = s;
+      return { ...bound, engineSessionId };
+    }),
   };
   saveSessionIndex(projectId, next);
   return next;

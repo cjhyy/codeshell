@@ -31,6 +31,8 @@ export interface PanelProcessApprovalScope {
 }
 
 interface StoredApproval extends PanelProcessApprovalScope {
+  /** Explicit Host-side consent to retain this executable grant across app updates. */
+  lifetime?: "app";
   approvedAt: number;
 }
 
@@ -61,11 +63,12 @@ function validScope(value: unknown): value is PanelProcessApprovalScope {
   );
 }
 
-function approvalKey(scope: PanelProcessApprovalScope): string {
+function approvalKey(scope: PanelProcessApprovalScope, lifetime?: "app"): string {
   return createHash("sha256")
+    .update(lifetime === "app" ? "app\0" : "revision\0")
     .update(scope.appId)
     .update("\0")
-    .update(scope.revision)
+    .update(lifetime === "app" ? "" : scope.revision)
     .update("\0")
     .update(scope.executablePath)
     .update("\0")
@@ -97,8 +100,11 @@ function parseDocument(value: unknown): ApprovalDocument {
     if (typeof approvedAt !== "number" || !Number.isSafeInteger(approvedAt) || approvedAt <= 0) {
       throw new Error("Panel process approval store contains an invalid timestamp");
     }
+    const lifetime = (value as { lifetime?: unknown }).lifetime;
+    if (lifetime !== undefined && lifetime !== "app")
+      throw new Error("Panel process approval store contains an invalid lifetime");
     const approval = { ...value, approvedAt } as StoredApproval;
-    const key = approvalKey(approval);
+    const key = approvalKey(approval, approval.lifetime);
     if (keys.has(key)) continue;
     keys.add(key);
     approvals.push(approval);
@@ -180,16 +186,33 @@ export class PanelAppProcessApprovalStore {
     await this.mutationQueue.catch(() => undefined);
     try {
       const key = approvalKey(scope);
-      return readDocument(this.file).approvals.some(
-        (approval) => approvalKey(approval) === key,
-      );
+      const appKey = approvalKey(scope, "app");
+      return readDocument(this.file).approvals.some((approval) => {
+        const storedKey = approvalKey(approval, approval.lifetime);
+        return storedKey === key || storedKey === appKey;
+      });
     } catch {
       return false;
     }
   }
 
-  remember(scope: PanelProcessApprovalScope): Promise<void> {
+  remember(
+    scope: PanelProcessApprovalScope,
+    options: { lifetime?: "revision" | "app" } = {},
+  ): Promise<void> {
     if (!validScope(scope)) throw new Error("invalid Panel process approval scope");
+    if (options.lifetime !== undefined && !["revision", "app"].includes(options.lifetime))
+      throw new Error("invalid Panel process approval lifetime");
+    // Only the explicit Host option may widen a grant. Ignore extra input properties
+    // and capture the validated scope before the queued write can yield.
+    const approval: StoredApproval = {
+      appId: scope.appId,
+      revision: scope.revision,
+      executablePath: scope.executablePath,
+      executableFingerprint: scope.executableFingerprint,
+      ...(options.lifetime === "app" ? { lifetime: "app" } : {}),
+      approvedAt: Date.now(),
+    };
     const mutation = this.mutationQueue.then(() => {
       assertSafeParent(this.file);
       const release = acquireFileLock(this.file);
@@ -202,16 +225,28 @@ export class PanelAppProcessApprovalStore {
         } catch {
           document = emptyDocument();
         }
-        const key = approvalKey(scope);
+        const key = approvalKey(approval, approval.lifetime);
         const approvals = document.approvals.filter(
-          (approval) =>
-            approvalKey(approval) !== key &&
-            !(approval.appId === scope.appId && approval.revision !== scope.revision),
+          (stored) =>
+            approvalKey(stored, stored.lifetime) !== key &&
+            !(
+              stored.lifetime !== "app" &&
+              stored.appId === approval.appId &&
+              stored.revision !== approval.revision
+            ),
         );
-        approvals.unshift({ ...scope, approvedAt: Date.now() });
+        approvals.unshift(approval);
+        const appLifetimeCount = approvals.filter((stored) => stored.lifetime === "app").length;
+        if (appLifetimeCount > MAX_APPROVALS)
+          throw new Error("Panel process app-lifetime approval limit exceeded");
+        let revisionCapacity = MAX_APPROVALS - appLifetimeCount;
+        const retained =
+          approvals.length <= MAX_APPROVALS
+            ? approvals
+            : approvals.filter((stored) => stored.lifetime === "app" || revisionCapacity-- > 0);
         writeDocument(this.file, {
           version: STORE_VERSION,
-          approvals: approvals.slice(0, MAX_APPROVALS),
+          approvals: retained,
         });
       } finally {
         release();

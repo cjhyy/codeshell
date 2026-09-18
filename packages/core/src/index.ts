@@ -216,7 +216,7 @@ export {
   buildStdioEnv,
   createMcpAuthenticatedFetch,
 } from "./tool-system/mcp-manager.js";
-export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
+export type { AskUserFn, AskUserAsyncFn } from "./tool-system/builtin/ask-user.js";
 export type {
   ExtensionQueryHandler,
   ExtensionTool,

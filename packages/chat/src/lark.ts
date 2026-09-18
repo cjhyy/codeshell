@@ -48,6 +48,7 @@ export class LarkAdapter implements ChannelAdapter {
           channel: this.channel,
           target: event.message.chat_id,
           senderId: sender,
+          isDirectMessage: event.message.chat_type === "p2p",
           text,
           ...(event.message.message_id ? { messageId: event.message.message_id } : {}),
           ...(attachment ? { attachments: [attachment] } : {}),

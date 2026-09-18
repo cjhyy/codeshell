@@ -6,6 +6,10 @@
 
 ## 小 feature（体量 M 及以下）
 
+- **Panel 能力与限额发现统一**（M）。复用 Web 已有 `availableMethods`，补齐 Desktop，并区分宿主支持、当前授权和插件依赖就绪；公开有界方法限额与结构化限流重试时间。面板改用实际能力判断，不仅比较 API 版本。客户端排队/事件解码放 Panel SDK，不向 Core 加业务模型。见 [插件边界与通用能力审计](docs/todo/panel-plugin-host-capability-audit-2026-09-12.md)。
+- **Panel 进程状态与退出回执**（M）。为已有通用进程补有容量/有效期限制且按 owner 授权的状态、退出结果与事件序号，解决事件遗漏和“已请求取消不等于已退出”；初版保持关闭面板终止进程。队列、进度和重试编排抽 Panel SDK，跨窗口后台执行单独设计。见 [进程生命周期审计](docs/todo/panel-plugin-host-capability-audit-2026-09-12.md)。
+- **Panel 素材与任务业务分层**（M，先拆职责）。素材目录/配方/预处理、生成阶段与进度算法、取消清理、重试与恢复策略归面板或共享 SDK；Host 只保留授权资源存取、事件/状态传递、实际进程终止等通用机制。现有 MediaLibrary/MediaJobService 不能未经拆分整体保留，也不能把插件 processor 回调加载到主程序。保留旧数据兼容，文件直交和持久后台能力另按下方 L 项实施。见 [四项职责表](docs/todo/panel-plugin-host-capability-audit-2026-09-12.md#素材管理进度取消与重试的归属)。
+
 - **Link 真账号 / 真 token 验证**（S，验证任务）。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
 - **数字人依赖编辑补齐**（S/M）。编辑器已能配置缺失 Skill 的安装源并保留 `requires`，但任意依赖项与外部 `tools` 的图形化增删尚未完整开放。数字人 JSON 导入导出、仓库分发和原地更新按钮都已实现，不再重复排期。发布目前生成仓库骨架，`git init/push` 仍是用户自行完成的后续步骤。
 - **TUI 子 agent 待办详情**（S）。主/子 `task_update` 已按 `agentId` 隔离，主待办不会串入子视图；后续可为每个子 agent 保留自己的 TodoWrite 快照并显示。不要再按旧 TaskCreate/Update singleton 设计实现。
@@ -13,6 +17,8 @@
 - **记忆提取后续精修**（S/M）。同批不同表述候选仍需刷新决策上下文；写决策模型尚需加入有界的旧正文对照。description、严格同批重复、独立存储根透传与保守 fallback 已补齐：相似度不再自动触发 UPDATE，auto/dream 只有完整字段严格相同才由 fallback NOOP；其他回退为 ADD，明确的模型 UPDATE 仍受 ownership 保护。模型失败时可能暂留重复，不能为了去重覆盖方向、否定或数值不同的事实；manual 相近主题继续保守跳过。来源见 [Memory Final Design](docs/todo/memory-final-design.md)。
 
 ## 大功能升级（体量 L，分阶段落地）
+
+- **Panel 通用文件、包内工具与后台任务**（L）。在既有进程、app-data、受管素材和任务调度基础上，优先补已授权文件直交工具/结果入库和绑定安装版本的包内工具入口；需要关闭后继续运行时再补后台任务与重连。不将插件模块加载进 Host 进程，不固定模型/模板/编辑规则。文件与任务恢复需保留授权和版本边界。随后迁出遗留 Edge/Kokoro 安装、HyperFrames 模板及声音参考专用裁切限制；代码可复用不等于新增 Host API。见 [分阶段清单](docs/todo/panel-plugin-host-capability-audit-2026-09-12.md)。Web 完整 SDK 适配仍归下方 Hub/Web 待办，避免重复排期。
 
 - **独立 Link Server + 双向 OAuth2**。独立 Node/Docker 服务，上游保管和刷新第三方凭据，下游给 CodeShell 与其他应用签发按连接、操作、数据范围限制的授权；先单 owner、多应用、GitHub 只读闭环。client、同意页、grant、令牌轮换和撤销尚未实现，第三方原始 token 不下发。见 [Link Server 架构](docs/todo/link-server-oauth-architecture.md)。当前 Desktop/Hub 的本地 Link 管理不是该独立服务。
 - **Hub 与 Web 后续**。当前已有单管理员登录/设备撤销、Node/Docker 部署、共享 Web 工作台、模型/Skills/MCP/Link 管理、历史文件和基础 Web Panel；HTTPS 指引与隔离容器验收也已有记录。剩余是两宿主语义协议统一、Electron 原生窗口选择远端 Hub、独立 Hub 多 Workspace、插件市场，以及媒体/音频/Cookie/自动化/PDF 等完整原生 Panel SDK 的 Web 适配。多用户 Runtime/凭据/CLI HOME 隔离仍后置。见 [共享工作台](docs/todo/shared-web-workbench.md)、[Hub 迭代方案](docs/todo/codeshell-hub-iteration-design.md)、[Web 面板](docs/web-panels.md)。历史容器验收不表示本轮新增源码已重新构建部署。

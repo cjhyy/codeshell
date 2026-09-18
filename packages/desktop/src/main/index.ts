@@ -1908,6 +1908,12 @@ async function createWindow(): Promise<BrowserWindow> {
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
+      onDeliveryError: (error, turn) =>
+        dlog("main", "pet.session.reply.retry", {
+          sessionId: turn.sessionId,
+          turnId: turn.turnId,
+          error: String(error),
+        }),
     });
     await sessionBridge.recoverOnStartup().catch(() => undefined);
     petDispatchService = new PetDispatchService({
@@ -3081,6 +3087,7 @@ async function dispatchGatewayPetChat(
       kind: "im-gateway",
       channel: sourceChannel,
       ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
+      isDirectMessage: request.origin?.isDirectMessage === true,
       capabilities: request.origin?.capabilities ?? {
         inbound: { text: true, attachments: [] },
         outbound: { text: true, button: "link", attachments: [] },
@@ -3118,7 +3125,11 @@ async function dispatchGatewayPetChat(
   );
   const replacesGatewayTurn =
     Boolean(result.authoritativeReply) ||
-    Boolean(result.hostActions?.some((execution) => execution.kind === "gatewayReply"));
+    Boolean(
+      result.hostActions?.some(
+        (execution) => execution.kind === "gatewayReply" || execution.kind === "sessionBind",
+      ),
+    );
   if (
     (replacesGatewayTurn ||
       result.hostActions?.some((execution) => execution.kind === "outboundMessage")) &&
@@ -5478,13 +5489,17 @@ ipcMain.handle("mobileRemote:updatePermissionModes", async (_e, entries: unknown
 });
 ipcMain.handle(
   "mobileRemote:approvalResolved",
-  async (_e, input: { requestId?: unknown; sessionId?: unknown; approved?: unknown }) => {
+  async (
+    _e,
+    input: { requestId?: unknown; sessionId?: unknown; approved?: unknown; answer?: unknown },
+  ) => {
     const requestId = typeof input?.requestId === "string" ? input.requestId : "";
     if (!requestId) return false;
     mobileOrchestrator.broadcastApprovalResolved({
       requestId,
       sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
       approved: typeof input?.approved === "boolean" ? input.approved : undefined,
+      answer: typeof input?.answer === "string" ? input.answer : undefined,
     });
     return true;
   },

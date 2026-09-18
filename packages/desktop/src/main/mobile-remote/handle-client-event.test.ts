@@ -210,6 +210,95 @@ describe("injectAndAwaitResult timeouts", () => {
     expect(result).toEqual({ ok: false, message: "worker did not respond" });
     expect(injected).toHaveLength(1);
   });
+
+  test("a failed worker write reports a retryable error and releases its subscription", async () => {
+    let listening = false;
+    const bridge = {
+      subscribeOutbound: () => {
+        listening = true;
+        return () => { listening = false; };
+      },
+      injectWorkerMessage: () => { throw new Error("Worker disconnected"); },
+    } as unknown as AgentBridge;
+    const result = await injectAndAwaitResult(bridge, "agent/approve", {}, meta);
+    expect(result).toEqual({ ok: false, message: "Worker disconnected" });
+    expect(listening).toBe(false);
+  });
+});
+
+describe("mobile question answer acknowledgment", () => {
+  for (const success of [true, false]) {
+    test(`only resolves an answer after worker acceptance (success: ${success})`, async () => {
+      const harness = createHarness({
+        requestedWorkspaceRoot: "/primary",
+        lookupSession: () => undefined,
+      });
+      const outbound = new Set<OutboundListener>();
+      const requests: Array<{ id: string; params: Record<string, unknown> }> = [];
+      const resolved: Record<string, unknown>[] = [];
+      harness.ctx.broadcastApprovalResolved = (value) => {
+        resolved.push(value);
+      };
+      harness.ctx.getBridge = () =>
+        ({
+          getLastRunContext: () => ({}),
+          subscribeOutbound: (listener: OutboundListener) => {
+            outbound.add(listener);
+            return () => {
+              outbound.delete(listener);
+            };
+          },
+          injectWorkerMessage: (line: string) => {
+            requests.push(JSON.parse(line));
+          },
+        }) as unknown as AgentBridge;
+      const submitted = handleClientEvent(harness.ctx, {
+        type: "approval.respond",
+        deviceId: "phone-1",
+        sessionId: "session-1",
+        approvalId: "async-question",
+        decision: "approve",
+        answer: "Read only",
+      });
+      expect(requests).toHaveLength(1);
+      expect(resolved).toEqual([]);
+      expect(requests[0]?.params).toEqual({
+        sessionId: "session-1",
+        requestId: "async-question",
+        decision: { approved: true, answer: "Read only" },
+      });
+      const response = {
+        id: requests[0]!.id,
+        ...(success ? { result: {} } : { error: { code: -32602, message: "Question expired" } }),
+      };
+      for (const listener of outbound) listener(JSON.stringify(response));
+      await submitted;
+      expect(resolved).toEqual(
+        success
+          ? [
+              {
+                requestId: "async-question",
+                sessionId: "session-1",
+                approved: true,
+                answer: "Read only",
+              },
+            ]
+          : [],
+      );
+      expect(harness.replies).toEqual(
+        success
+          ? []
+          : [
+              {
+                type: "error",
+                approvalId: "async-question",
+                message: "Question expired",
+              },
+            ],
+      );
+      expect(outbound.size).toBe(0);
+    });
+  }
 });
 
 test("session creation echoes optional browser correlation while legacy clients keep the original reply", async () => {

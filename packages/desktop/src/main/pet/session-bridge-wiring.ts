@@ -14,6 +14,10 @@
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import type { ConversationSessionRoute } from "@cjhyy/code-shell-pet";
+import {
+  injectMobileRunAndAwaitAcceptance,
+  type MobileRunBridge,
+} from "@cjhyy/code-shell-server/mobile-remote";
 import { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
 import { createConversationSessionBindValidator } from "./conversation-session-bind-validator.js";
 import {
@@ -42,7 +46,7 @@ export interface SessionBridgeWiringDeps {
    * reply loop closed here instead of in the composition root, which cannot
    * reference the wiring it is still constructing.
    */
-  createRunner(onTurn: (result: BoundSessionTurnResult) => void): BoundSessionRunner;
+  createRunner(onTurn: (result: BoundSessionTurnResult) => Promise<void>): BoundSessionRunner;
   health: BoundSessionHealth;
   /** Human-readable status for /session, without waking a model. */
   describeStatus(route: ConversationSessionRoute): Promise<string>;
@@ -53,6 +57,9 @@ export interface SessionBridgeWiringDeps {
     text: string;
     target: { channel: string; target: string };
   }): Promise<void>;
+  /** Initial retry delay for a reply not yet persisted to the outbox. */
+  deliveryRetryMs?: number;
+  onDeliveryError?(error: unknown, turn: BoundSessionTurnResult): void;
   now?: () => number;
 }
 
@@ -62,7 +69,11 @@ export interface SessionBridgeWiring {
   /** Register under the `sessionBind` key of the Mimi host-action table. */
   sessionBindExecutor(
     payload: Record<string, unknown>,
-    context?: { completionTarget?: { channel: string; target: string }; senderId?: string },
+    context?: {
+      completionTarget?: { channel: string; target: string };
+      senderId?: string;
+      isDirectMessage?: boolean;
+    },
   ): Promise<Record<string, unknown>>;
   /** Called by the gateway middleware for one inbound message. */
   routeInbound(inbound: BoundSessionInbound): Promise<BoundSessionDisposition>;
@@ -79,13 +90,13 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     resolveSelector: deps.resolveSelector,
     ...(deps.directoryExists ? { directoryExists: deps.directoryExists } : {}),
   });
-  async function deliverSessionReply({
-    sessionId,
-    turnId,
-    text,
-  }: BoundSessionTurnResult): Promise<void> {
+  async function deliverSessionReply(
+    { sessionId, turnId, text }: BoundSessionTurnResult,
+    publishedRoutes?: Set<string>,
+  ): Promise<void> {
     if (!text.trim()) return;
     for (const route of await routes.notifyRoutesForSession(sessionId)) {
+      if (publishedRoutes?.has(route.id)) continue;
       await deps.publish({
         // Stable across retries and restarts so one turn is delivered once.
         deliveryKey: createHash("sha256")
@@ -100,13 +111,45 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
         text,
         target: { channel: route.channel, target: route.target },
       });
+      publishedRoutes?.add(route.id);
     }
   }
 
+  // A terminal event arrives after the inbound request has returned. Keep its
+  // publication pending until the durable outbox owns every targeted reply.
+  const pendingReplies = new Map<string, Promise<void>>();
+  const retryDelayMs = Math.max(1, deps.deliveryRetryMs ?? 1_000);
   const runner = deps.createRunner((turn) => {
-    // The Session's answer is produced long after the inbound request
-    // returned, so it goes back through the durable outbox.
-    void deliverSessionReply(turn).catch(() => undefined);
+    const key = `${turn.sessionId}\u0000${turn.turnId}`;
+    const existing = pendingReplies.get(key);
+    if (existing) return existing;
+    let resolve!: () => void;
+    const pending = new Promise<void>((done) => {
+      resolve = done;
+    });
+    pendingReplies.set(key, pending);
+    const publishedRoutes = new Set<string>();
+    let failures = 0;
+    const attempt = async (): Promise<void> => {
+      try {
+        await deliverSessionReply(turn, publishedRoutes);
+        pendingReplies.delete(key);
+        resolve();
+      } catch (error) {
+        try {
+          deps.onDeliveryError?.(error, turn);
+        } catch {
+          // Logging must not discard the reply that still needs publication.
+        }
+        const delay = Math.min(30_000, retryDelayMs * 2 ** Math.min(failures++, 10));
+        const timer = setTimeout(() => {
+          void attempt();
+        }, delay);
+        timer.unref?.();
+      }
+    };
+    void attempt();
+    return pending;
   });
   const bridge = new SessionConversationBridge({
     routes,
@@ -134,10 +177,9 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
               channel: target.channel,
               target: target.target,
               senderId: context.senderId,
-              // Phase 1 binds private chats only. Without an adapter signal a
-              // shared target cannot be proven private, so a target that
-              // differs from the sender is treated as a group.
-              isDirectMessage: target.target === context.senderId,
+              // Conversation ids and user ids are different namespaces on
+              // several platforms. Only the adapter can confirm a private chat.
+              isDirectMessage: context.isDirectMessage === true,
             }
           : undefined;
       const result = await bindAction(payload, bindContext);
@@ -152,14 +194,18 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
 }
 
 /** Minimal worker seam: the same request shape PetDispatchService uses. */
-export interface BridgeWorkerLike {
+export interface BridgeWorkerLike extends MobileRunBridge {
   requestWorker(
     method: string,
     params: Record<string, unknown>,
-    options: { meta: { origin: string; producer: string } },
+    options: {
+      settleOnExit?: boolean;
+      failFast?: boolean;
+      meta: { origin: "host"; producer: string };
+    },
   ): Promise<{ ok: boolean; result?: unknown; message?: string }>;
   /** Live protocol stream, used to observe turn boundaries and steer uptake. */
-  subscribeOutbound?(
+  subscribeOutbound(
     listener: (line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void,
   ): () => void;
 }
@@ -176,7 +222,11 @@ function workerBoolean(result: unknown, key: string): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }
 
-const META = { meta: { origin: "host", producer: "session-bridge" } };
+const META = {
+  settleOnExit: true,
+  failFast: true,
+  meta: { origin: "host" as const, producer: "session-bridge" },
+};
 
 /**
  * Flatten one assistant message to plain text. `content` is either a string or
@@ -222,59 +272,156 @@ export interface BoundSessionTurnResult {
 export function createBoundSessionRunner(
   worker: BridgeWorkerLike,
   aggregator: BridgeAggregatorLike,
-  onTurn?: (result: BoundSessionTurnResult) => void,
+  onTurn?: (result: BoundSessionTurnResult) => void | Promise<void>,
 ): BoundSessionRunner {
   const injected = new Set<string>();
-  const running = new Map<string, { done: Promise<void>; resolve: () => void }>();
-  const lastAssistantText = new Map<string, string>();
+  interface ObservedRun {
+    done: Promise<void>;
+    resolve: () => void;
+    runId?: string;
+    clientMessageId?: string;
+    fallbackTurnId: string;
+    lastAssistantText?: string;
+  }
+  const running = new Map<string, ObservedRun>();
+  const completed = new Set<string>();
+  const publishing = new Set<string>();
 
-  function beginRun(sessionId: string): void {
-    if (running.has(sessionId)) return;
+  function beginRun(sessionId: string, clientMessageId?: string): ObservedRun {
+    const existing = running.get(sessionId);
+    if (existing) return existing;
     let resolve!: () => void;
     const done = new Promise<void>((r) => {
       resolve = r;
     });
-    running.set(sessionId, { done, resolve });
+    const entry = { done, resolve, clientMessageId, fallbackTurnId: randomUUID() };
+    running.set(sessionId, entry);
+    return entry;
   }
 
-  function endRun(sessionId: string): void {
+  function endRun(sessionId: string, expected?: ObservedRun): void {
     const entry = running.get(sessionId);
-    if (!entry) return;
+    if (!entry || (expected && entry !== expected)) return;
     running.delete(sessionId);
     entry.resolve();
   }
 
+  function belongsToRun(record: Record<string, unknown>, run: ObservedRun): boolean {
+    if (typeof record.runId === "string" && run.runId) return record.runId === run.runId;
+    if (typeof record.clientMessageId === "string" && run.clientMessageId) {
+      return record.clientMessageId === run.clientMessageId;
+    }
+    return true;
+  }
+
   // One tap serves steer confirmation, turn boundaries and reply capture.
-  worker.subscribeOutbound?.((_line, snapshotEntry) => {
+  worker.subscribeOutbound((_line, snapshotEntry) => {
     const sessionId = snapshotEntry?.sessionId;
     const event = snapshotEntry?.event;
     if (!sessionId || !event || typeof event !== "object" || Array.isArray(event)) return;
     const record = event as Record<string, unknown>;
+    // Child events share the parent's stream envelope. They cannot settle its
+    // turn or become a private-chat reply.
+    if (record.agentId !== undefined) return;
     const type = record.type;
     if (type === "steer_injected" && typeof record.id === "string") {
       injected.add(`${sessionId}\u0000${record.id}`);
       return;
     }
-    if (type === "stream_request_start") {
-      beginRun(sessionId);
+    if (type === "session_started" || type === "stream_request_start") {
+      let entry = running.get(sessionId);
+      if (entry && !belongsToRun(record, entry)) {
+        // Only an explicit run boundary can replace the current owner. A late
+        // model-step event from an older run must not steal the new run.
+        if (type !== "session_started") return;
+        endRun(sessionId, entry);
+        entry = undefined;
+      }
+      entry ??= beginRun(sessionId);
+      if (typeof record.runId === "string") entry.runId = record.runId;
+      if (typeof record.clientMessageId === "string")
+        entry.clientMessageId = record.clientMessageId;
       return;
     }
     if (type === "assistant_message") {
-      // Keep only the latest assistant text; the turn's final one is what the
-      // conversation should receive, not every intermediate step.
+      const entry = running.get(sessionId) ?? beginRun(sessionId);
+      if (!belongsToRun(record, entry)) return;
       const text = assistantMessageText(record.message);
-      if (text) lastAssistantText.set(sessionId, text);
+      if (text) entry.lastAssistantText = text;
       return;
     }
     if (type === "turn_complete") {
-      const text = lastAssistantText.get(sessionId);
-      lastAssistantText.delete(sessionId);
-      endRun(sessionId);
-      if (text?.trim()) {
-        onTurn?.({ sessionId, turnId: `${sessionId}:${Date.now()}`, text });
+      const entry = running.get(sessionId);
+      const matching = entry && belongsToRun(record, entry) ? entry : undefined;
+      // Core's completion text is the authoritative final answer. An explicit
+      // empty result must not resurrect an earlier progress message.
+      const failed = record.reason === "model_error";
+      const stopped = typeof record.reason === "string" && record.reason.startsWith("aborted");
+      const finalText = typeof record.text === "string" ? record.text.trim() : undefined;
+      const text =
+        finalText ||
+        (failed
+          ? "这个 Session 本轮执行失败，请在桌面端查看详情后重试。"
+          : stopped
+            ? "这个 Session 本轮已停止。你可以发送新消息继续。"
+            : finalText === undefined
+              ? matching?.lastAssistantText
+              : undefined);
+      const turnId =
+        (typeof record.runId === "string" && record.runId) ||
+        matching?.runId ||
+        (typeof record.clientMessageId === "string" && record.clientMessageId) ||
+        matching?.clientMessageId ||
+        matching?.fallbackTurnId;
+      if (matching) endRun(sessionId, matching);
+      if (!text?.trim() || !turnId) return;
+      const key = `${sessionId}\u0000${turnId}`;
+      if (completed.has(key) || publishing.has(key)) return;
+      publishing.add(key);
+      try {
+        const delivery = onTurn?.({ sessionId, turnId, text });
+        void Promise.resolve(delivery).then(
+          () => {
+            publishing.delete(key);
+            completed.add(key);
+            if (completed.size > 1_000) completed.delete(completed.values().next().value!);
+          },
+          () => {
+            publishing.delete(key);
+          },
+        );
+      } catch {
+        publishing.delete(key);
       }
     }
   });
+
+  async function submitRun({
+    sessionId,
+    text,
+    clientMessageId,
+  }: {
+    sessionId: string;
+    text: string;
+    clientMessageId: string;
+  }): Promise<{ started: boolean; reason?: string }> {
+    const existing = running.get(sessionId);
+    const entry = beginRun(sessionId, clientMessageId);
+    const acceptance = await injectMobileRunAndAwaitAcceptance(
+      worker,
+      {
+        id: `session-bridge-run-${randomUUID()}`,
+        params: { sessionId, task: text, clientMessageId, requireExisting: true },
+      },
+      META.meta,
+    );
+    if (!acceptance.ok) {
+      // A refused successor must never settle the turn already in flight.
+      if (!existing) endRun(sessionId, entry);
+      return { started: false, reason: acceptance.message };
+    }
+    return { started: true };
+  }
 
   return {
     isRunning: async (sessionId) => {
@@ -284,32 +431,7 @@ export function createBoundSessionRunner(
         .sessions.find((entry) => entry.agentSessionId === sessionId);
       return session?.runState === "running" || session?.runState === "queued";
     },
-    run: async ({ sessionId, text, clientMessageId }) => {
-      // Do NOT await the run RPC: it resolves at turn end, far past the worker
-      // timeout. Acceptance is proven by runAccepted / stream_request_start.
-      beginRun(sessionId);
-      const settled = worker
-        .requestWorker("agent/run", { sessionId, task: text, clientMessageId }, META)
-        .then((response) => {
-          endRun(sessionId);
-          return response;
-        })
-        .catch(() => {
-          endRun(sessionId);
-          return { ok: false, message: "the agent worker did not accept the turn" };
-        });
-      const accepted = await Promise.race([
-        settled.then((response) => (response.ok ? "ok" : "failed")),
-        new Promise<"pending">((resolve) => setTimeout(() => resolve("pending"), 3_000)),
-      ]);
-      // "pending" means the run is still executing, which is success: the RPC
-      // only returns once the whole turn is over.
-      if (accepted === "failed") {
-        const response = await settled;
-        return { started: false, ...(response.message ? { reason: response.message } : {}) };
-      }
-      return { started: true };
-    },
+    run: submitRun,
     steer: async ({ sessionId, text, id, clientMessageId }) => {
       const response = await worker.requestWorker(
         "agent/steer",
@@ -326,22 +448,15 @@ export function createBoundSessionRunner(
     },
     wasInjected: (sessionId, id) => injected.has(`${sessionId}\u0000${id}`),
     runDone: (sessionId) => running.get(sessionId)?.done ?? Promise.resolve(),
-    queueNextTurn: async ({ sessionId, text, clientMessageId }) => {
-      // Core's ChatSession serializes this behind the in-flight turn. The
-      // result is checked: a refused queue must surface, not vanish.
-      const response = await worker.requestWorker(
-        "agent/run",
-        { sessionId, task: text, clientMessageId },
-        META,
-      );
-      if (!response.ok) {
-        throw new Error(response.message ?? "the Session refused the queued message");
+    queueNextTurn: async (input) => {
+      // Core owns serialization; its acknowledgement confirms the successor
+      // is queued without waiting for the current or following turn to finish.
+      const result = await submitRun(input);
+      if (!result.started) {
+        throw new Error(result.reason ?? "the Session refused the queued message");
       }
     },
     supportsSteer: (sessionId) => {
-      // An external runtime (codex / claude-code) has no steer at all; its
-      // turns never pass through agent/run, so both steer and run would fail.
-      // The projection is the only signal available here.
       const session = aggregator
         .getSnapshot()
         .sessions.find((entry) => entry.agentSessionId === sessionId);

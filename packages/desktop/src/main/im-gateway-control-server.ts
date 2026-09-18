@@ -141,6 +141,7 @@ export interface PetChatControlRequest {
     channel: string;
     target: string;
     senderId: string;
+    isDirectMessage?: boolean;
     messageId?: string;
     capabilities: PetChatControlChannelCapabilities;
     channels?: PetChatControlGatewayChannel[];
@@ -938,6 +939,7 @@ function parseOrigin(value: unknown): PetChatControlRequest["origin"] | undefine
         key !== "channel" &&
         key !== "target" &&
         key !== "senderId" &&
+        key !== "isDirectMessage" &&
         key !== "messageId" &&
         key !== "capabilities" &&
         key !== "channels",
@@ -946,6 +948,7 @@ function parseOrigin(value: unknown): PetChatControlRequest["origin"] | undefine
     !/^[a-z0-9][a-z0-9_-]{0,31}$/u.test(record.channel) ||
     typeof record.target !== "string" ||
     typeof record.senderId !== "string" ||
+    (record.isDirectMessage !== undefined && typeof record.isDirectMessage !== "boolean") ||
     (record.messageId !== undefined && typeof record.messageId !== "string") ||
     (record.channels !== undefined && !Array.isArray(record.channels)) ||
     record.capabilities === undefined
@@ -958,6 +961,9 @@ function parseOrigin(value: unknown): PetChatControlRequest["origin"] | undefine
     channel: record.channel,
     target: record.target,
     senderId: record.senderId,
+    ...(typeof record.isDirectMessage === "boolean"
+      ? { isDirectMessage: record.isDirectMessage }
+      : {}),
     ...(record.messageId ? { messageId: record.messageId } : {}),
     capabilities,
     ...(channels ? { channels } : {}),

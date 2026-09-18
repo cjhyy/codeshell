@@ -608,6 +608,8 @@ export class ChatSessionManager {
       if (id.startsWith("qchat-")) continue;
       if (s.lastActivityAt >= cutoff) continue;
       if (s.isBusy()) continue;
+      // An asynchronous question remains answerable after its requesting run ends.
+      if (s.pendingApprovals.size > 0) continue;
       if (backgroundJobRegistry.hasRunningForSession(id)) continue;
       void this.closeSession(id, false);
     }

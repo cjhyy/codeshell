@@ -75,7 +75,7 @@ interface SessionPanelDockProps {
   >["onAttachmentsChange"];
   sendQuickChat: React.ComponentProps<typeof QuickChatPanelHost>["onSend"];
   stop: React.ComponentProps<typeof QuickChatPanelHost>["onStop"];
-  handleAskUserAnswer: (requestId: string, answer: string) => void;
+  handleAskUserAnswer: (requestId: string, answer: string) => void | Promise<void>;
   decideEnvelope: (
     env: ApprovalRequestEnvelope,
     decision: "approve" | "deny",

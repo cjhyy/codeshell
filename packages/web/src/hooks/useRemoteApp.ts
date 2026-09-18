@@ -64,6 +64,8 @@ export interface PendingApproval {
   options?: string[];
   /** When true, the user must pick an option (no free text). */
   optionsOnly?: boolean;
+  /** A nonblocking question remains answerable after the run ends. */
+  asynchronous?: boolean;
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
   pathScoped: boolean;
 }
@@ -228,6 +230,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
+  const submittingAsyncApprovalsRef = useRef(new Set<string>());
   // The SELECTED project (one-true-source for "what am I looking at"), distinct
   // from activeSessionCwd which is derived from the bound session. Drives session
   // list filtering AND ccRoom.listSessions.
@@ -423,6 +426,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   }, []);
 
   const clearApproval = useCallback((requestId: string) => {
+    submittingAsyncApprovalsRef.current.delete(requestId);
     approvalsRef.current = removeResolvedApproval(approvalsRef.current, requestId);
     setApprovals((prev) => removeResolvedApproval(prev, requestId));
   }, []);
@@ -455,8 +459,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return type === "turn_complete" || type === "error";
       })
     ) {
-      approvalsRef.current = [];
-      setApprovals([]);
+      // Asynchronous questions outlive the current run. Only a resolution
+      // notification (or a new worker epoch) makes their answer stale.
+      approvalsRef.current = approvalsRef.current.filter((approval) => approval.asynchronous);
+      setApprovals((prev) => prev.filter((approval) => approval.asynchronous));
     }
   }, []);
 
@@ -799,6 +805,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           setNotice(event.message || t("mobile.notice.roomError"));
           break;
         case "error":
+          if (event.approvalId) {
+            submittingAsyncApprovalsRef.current.delete(event.approvalId);
+          }
           if (event.clientMessageId) {
             settleMessageAck(event.clientMessageId, new Error(event.message));
           }
@@ -1036,6 +1045,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             risk,
             options: askOptions?.options,
             optionsOnly: askOptions?.optionsOnly,
+            asynchronous: rq.toolName === "__ask_user__" && rq.args?.asynchronous === true,
             pathScoped: PATH_SCOPED.has(rq.toolName ?? ""),
           });
         }
@@ -1070,19 +1080,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           return;
         }
         dispatchChat({ kind: "raw", raw });
-        // A turn ending (or erroring) resolves any pending approval for this
-        // session — clear stale cards so a request the user already handled (or
-        // that the desktop answered) doesn't linger ("点了还存在").
-        const ev = (params.event as { type?: string } | undefined)?.type;
-        if (ev === "turn_complete" || ev === "error") {
-          // We only ever hold bound-session approvals, so the turn ending clears
-          // them all (the request can no longer be answered).
-          approvalsRef.current = [];
-          setApprovals([]);
-        }
+        clearApprovalsIfTerminal([params.event]);
       }
     },
-    [addApproval, clearApproval, sessionCwdById],
+    [addApproval, clearApproval, clearApprovalsIfTerminal, sessionCwdById],
   );
 
   const requestActiveResync = useCallback(() => {
@@ -1138,6 +1139,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   useEffect(() => {
     if (socket.status === "online") return;
+    submittingAsyncApprovalsRef.current.clear();
     const error = new Error("Remote connection was lost");
     for (const waiter of uploadWaitersRef.current.values()) {
       clearTimeout(waiter.timer);
@@ -1438,7 +1440,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // already responded to (rapid double-tap before setApprovals flushes / the
       // card unmounts). Sending again would violate the approve-once invariant.
       if (!a) return;
-      socket.send({
+      if (a.asynchronous && submittingAsyncApprovalsRef.current.has(requestId)) return;
+      const sent = socket.send({
         type: "approval.respond",
         approvalId: requestId,
         decision,
@@ -1448,6 +1451,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         scope: opts?.scope,
         pathScope: opts?.pathScope,
       });
+      if (!sent) return;
+      if (a.asynchronous) {
+        // Keep the card until the worker accepts this late answer. A rejected
+        // delivery unlocks it for retry without losing the user's question.
+        submittingAsyncApprovalsRef.current.add(requestId);
+        return;
+      }
       // Update the ref synchronously too so a second tap in the same tick (before
       // the async setApprovals commits) sees it gone and no-ops above.
       approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);

@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +7,7 @@ import { PanelMediaService, type PanelMediaOptions } from "./panel-media-service
 import { mediaDirectory, mediaScopeKey, writeMediaJson } from "./media-storage.js";
 import type { MediaJob } from "./media-types.js";
 import type { SpeechConfiguration } from "@cjhyy/code-shell-core/internal";
+import type { createManagedTtsProviders } from "./media-tts-providers.js";
 
 const services = new Set<PanelMediaService>(),
   roots = new Set<string>();
@@ -83,6 +84,48 @@ test("speech catalog exposes configured choices without credentials, URLs or cha
   expect(encoded).not.toContain("apiKey");
 });
 
+test("speech default prefers explicit settings, configured connections and ready neural voices before system voices", async () => {
+  let configuration = configured();
+  const second = {
+    ...configuration.models[0]!,
+    description: { ...configuration.models[0]!.description, id: `speech-${"d".repeat(32)}` },
+  };
+  configuration.models.push(second);
+  configuration.defaultModelId = second.description.id;
+  const { service } = await fixture({ speechConfiguration: () => configuration });
+  const managed = (service as any).managedTts as ReturnType<typeof createManagedTtsProviders>;
+  const ready = new Set<string>(["edge-tts", "kokoro"]);
+  const status = spyOn(managed, "status").mockImplementation(async (id) => ({
+    id,
+    name: id,
+    mode: id === "edge-tts" ? "online" : "offline",
+    state: ready.has(id) ? "ready" : "needs-setup",
+    available: ready.has(id),
+    installed: true,
+    voices: [{ id: `${id}-voice`, name: "测试声音", language: "zh-CN" }],
+    defaultVoiceId: `${id}-voice`,
+    downloadBytes: 0,
+    requiredDiskBytes: 0,
+  }));
+  const selected = async () =>
+    ((await service.dispatch(scope, "media.tts.voices", {})) as any).defaultModelId;
+  try {
+    expect(await selected()).toBe(second.description.id);
+    delete configuration.defaultModelId;
+    expect(await selected()).toBe(modelId);
+    configuration.defaultModelId = "removed-connection";
+    expect(await selected()).toBe(modelId);
+    configuration = { models: [] };
+    expect(await selected()).toBe("edge-tts");
+    ready.delete("edge-tts");
+    expect(await selected()).toBe("kokoro");
+    ready.clear();
+    expect(await selected()).toBe("macos-say");
+  } finally {
+    status.mockRestore();
+  }
+});
+
 test("unknown models, cross-model voices, unsupported styles and oversized drafts fail before queuing", async () => {
   const configuration = configured();
   configuration.models[0]!.description.supportsInstructions = false;
@@ -134,15 +177,37 @@ test("new requests use the configured speech default and freeze the selected mod
   expect(calls).toBe(1);
 });
 
+test("new requests use an available configured connection even without a speech default", async () => {
+  const configuration = configured();
+  delete configuration.defaultModelId;
+  let calls = 0;
+  const { service, root } = await fixture({
+    speechConfiguration: () => configuration,
+    generateOnlineSpeech: async () => {
+      calls++;
+      throw new Error("Local test provider: no external request");
+    },
+  });
+  const job = (await service.dispatch(scope, "media.tts", {
+    text: "使用配置好的声音",
+  })) as MediaJob;
+  expect(job.type).toBe("tts-online");
+  const directory = await mediaDirectory(root, ["scopes", mediaScopeKey(scope), "jobs", job.id]);
+  expect(JSON.parse(await readFile(join(directory, "job.json"), "utf8")).input.modelId).toBe(
+    modelId,
+  );
+  expect((await terminal(service, job.id)).status).toBe("failed");
+  expect(calls).toBe(1);
+});
+
 test.skipIf(
   process.platform !== "darwin" ||
     spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status !== 0,
 )(
-  "requests without a configured default and explicit system selections retain local synthesis",
+  "requests with no configured connections and explicit system selections retain local synthesis",
   async () => {
     for (const explicit of [false, true]) {
-      const configuration = configured();
-      if (!explicit) delete configuration.defaultModelId;
+      const configuration = explicit ? configured() : { models: [] };
       let remoteCalls = 0;
       const { service, root } = await fixture({
         speechConfiguration: () => configuration,

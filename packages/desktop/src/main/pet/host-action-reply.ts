@@ -65,11 +65,18 @@ export async function enrichPetChatReplyWithHostActions(
   let gatewayReplyText: string | undefined;
   let gatewayReplyButton: { text: string; url: string } | undefined;
   let gatewayReplyFailed = false;
+  const hasSessionBind = executions.some((execution) => execution.kind === "sessionBind");
   for (const execution of executions) {
-    if (options.authoritativeBaseText && execution.kind === "gatewayReply") continue;
+    // Session entry/exit is decided after the model finishes. Its pending
+    // GatewayReply draft must not obscure or contradict the actual route.
+    if ((options.authoritativeBaseText || hasSessionBind) && execution.kind === "gatewayReply")
+      continue;
     if (!execution.ok) {
       if (execution.kind === "gatewayReply") gatewayReplyFailed = true;
-      const label = HOST_ACTION_LABELS[execution.kind] ?? execution.kind;
+      const label =
+        execution.kind === "sessionBind"
+          ? sessionBindLabel(execution)
+          : (HOST_ACTION_LABELS[execution.kind] ?? execution.kind);
       lines.push(
         execution.kind === "gatewayReply"
           ? `Gateway 回复未发送：${execution.error ?? "未知错误"}`
@@ -97,6 +104,8 @@ export async function enrichPetChatReplyWithHostActions(
       lines.push(renderSessionWatchLine(execution));
     } else if (execution.kind === "sessionArchive") {
       lines.push(renderSessionArchiveLine(execution));
+    } else if (execution.kind === "sessionBind") {
+      lines.push(renderSessionBindLine(execution));
     } else if (execution.kind === "outboundMessage") {
       lines.push(renderOutboundMessageLine(execution));
     } else if (execution.kind === "gatewayReply") {
@@ -117,14 +126,35 @@ export async function enrichPetChatReplyWithHostActions(
   // The model only sees that its request was recorded; actual file validation
   // runs after its turn. If validation fails, discard any premature "sent"
   // claim and return the authoritative host failure instead.
-  const trimmed = gatewayReplyFailed
-    ? ""
-    : (gatewayReplyText ?? (hasOutboundMessage ? "" : baseText.trim()));
+  const trimmed =
+    gatewayReplyFailed || hasSessionBind
+      ? ""
+      : (gatewayReplyText ?? (hasOutboundMessage ? "" : baseText.trim()));
   return {
     text: appended ? (trimmed ? `${trimmed}\n\n${appended}` : appended) : trimmed,
     ...(!gatewayReplyFailed && gatewayReplyButton ? { button: gatewayReplyButton } : {}),
     attachments,
   };
+}
+
+function sessionBindLabel(execution: PetHostActionExecution): string {
+  return execution.payload.action === "leave" ? "退出 Session" : "进入 Session";
+}
+
+function renderSessionBindLine(execution: PetHostActionExecution): string {
+  const result = execution.result;
+  const message = typeof result?.message === "string" ? result.message.trim() : "";
+  if (
+    (result?.action !== "enter" && result?.action !== "leave") ||
+    result.action !== execution.payload.action ||
+    typeof result.ok !== "boolean" ||
+    !message
+  ) {
+    return `${sessionBindLabel(execution)}结果无法确认：宿主返回了无效结果。`;
+  }
+  // A completed executor can still return a business refusal (result.ok=false).
+  // Both acceptance and refusal carry the host's exact authoritative message.
+  return message;
 }
 
 function renderGatewayReply(

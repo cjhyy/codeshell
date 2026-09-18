@@ -12,9 +12,10 @@
  *      finalizes; Enter on Cancel or Esc returns to the pick phase so the
  *      user can change their mind without losing what they typed.
  */
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
 import TextInput from "./TextInput.js";
+import type { QuestionDraft } from "../pending-questions.js";
 
 interface Choice {
   label: string;
@@ -26,15 +27,19 @@ interface AskUserPromptProps {
   header?: string;
   options?: Choice[];
   multiSelect?: boolean;
-  onAnswer: (answer: string) => void;
-  onCancel: () => void;
+  onAnswer: (answer: string) => void | Promise<void>;
+  onCancel: () => void | Promise<void>;
+  /** Optional questions can be set aside without sending a response. */
+  onDefer?: () => void;
+  draft?: QuestionDraft;
+  onDraftChange?: (draft: QuestionDraft) => void;
+  submitting?: boolean;
+  onSubmittingChange?: (submitting: boolean) => void;
 }
 
 const OTHER_LABEL = "Other...";
 const DEFAULT_HEADER = "Agent question";
 const BORDER_COLOR = "ansi:yellow";
-
-type Phase = "pick" | "review";
 
 export function AskUserPrompt({
   question,
@@ -43,6 +48,11 @@ export function AskUserPrompt({
   multiSelect,
   onAnswer,
   onCancel,
+  onDefer,
+  draft: savedDraft,
+  onDraftChange,
+  submitting: pendingSubmission = false,
+  onSubmittingChange,
 }: AskUserPromptProps) {
   const hasOptions = !!options && options.length > 0;
   const choices: Choice[] = hasOptions
@@ -50,12 +60,48 @@ export function AskUserPrompt({
     : [{ label: OTHER_LABEL, description: "Type your answer" }];
   const inputIdx = choices.length - 1;
 
-  const [phase, setPhase] = useState<Phase>("pick");
-  const [cursor, setCursor] = useState(hasOptions ? 0 : inputIdx);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [inputValue, setInputValue] = useState("");
-  // Review phase has its own 2-item cursor: 0 = Submit, 1 = Cancel.
-  const [reviewCursor, setReviewCursor] = useState(0);
+  const [draft, setDraft] = useState<QuestionDraft>(
+    () =>
+      savedDraft ?? {
+        phase: "pick",
+        cursor: hasOptions ? 0 : inputIdx,
+        selected: [],
+        inputValue: "",
+        reviewCursor: 0,
+      },
+  );
+  const draftRef = useRef(draft);
+  const submissionRef = useRef<"idle" | "pending" | "resolved">("idle");
+  const [locallySubmitting, setSubmitting] = useState(false);
+  const submitting = pendingSubmission || locallySubmitting;
+  const { phase, cursor, inputValue, reviewCursor } = draft;
+  const selected = new Set(draft.selected);
+
+  function updateDraft(update: (current: QuestionDraft) => QuestionDraft): void {
+    if (pendingSubmission || submissionRef.current !== "idle") return;
+    const next = update(draftRef.current);
+    draftRef.current = next;
+    setDraft(next);
+    onDraftChange?.(next);
+  }
+
+  async function submitDecision(action: () => void | Promise<void>): Promise<void> {
+    // Lock synchronously: consecutive keypresses can arrive before React renders.
+    if (pendingSubmission || submissionRef.current !== "idle") return;
+    submissionRef.current = "pending";
+    setSubmitting(true);
+    onSubmittingChange?.(true);
+    try {
+      await action();
+      // Keep a successful question locked until its owner removes it.
+      submissionRef.current = "resolved";
+    } catch {
+      submissionRef.current = "idle";
+    } finally {
+      setSubmitting(false);
+      onSubmittingChange?.(false);
+    }
+  }
 
   const onInputRow = cursor === inputIdx;
 
@@ -108,51 +154,64 @@ export function AskUserPrompt({
       // Free-text mode with empty input — don't advance.
       return;
     }
-    setReviewCursor(0);
-    setPhase("review");
+    updateDraft((current) => ({ ...current, reviewCursor: 0, phase: "review" }));
   }
 
   // ─── Input handler ─────────────────────────────────────────────────
   useInput((input, key) => {
+    if (pendingSubmission || submissionRef.current !== "idle") return;
     if (phase === "review") {
       if (key.escape) {
-        setPhase("pick");
+        updateDraft((current) => ({ ...current, phase: "pick" }));
         return;
       }
       if (key.upArrow) {
-        setReviewCursor((c) => (c > 0 ? c - 1 : 1));
+        updateDraft((current) => ({
+          ...current,
+          reviewCursor: current.reviewCursor > 0 ? current.reviewCursor - 1 : 1,
+        }));
         return;
       }
       if (key.downArrow) {
-        setReviewCursor((c) => (c < 1 ? c + 1 : 0));
+        updateDraft((current) => ({
+          ...current,
+          reviewCursor: current.reviewCursor < 1 ? current.reviewCursor + 1 : 0,
+        }));
         return;
       }
       if (input === "1") {
-        setReviewCursor(0);
+        updateDraft((current) => ({ ...current, reviewCursor: 0 }));
         return;
       }
       if (input === "2") {
-        setReviewCursor(1);
+        updateDraft((current) => ({ ...current, reviewCursor: 1 }));
         return;
       }
       if (key.return) {
-        if (reviewCursor === 0) onAnswer(buildAnswer());
-        else setPhase("pick");
+        if (reviewCursor === 0) void submitDecision(() => onAnswer(buildAnswer()));
+        else updateDraft((current) => ({ ...current, phase: "pick" }));
       }
       return;
     }
 
     // ── pick phase ──
     if (key.escape) {
-      onCancel();
+      if (onDefer) onDefer();
+      else void submitDecision(onCancel);
       return;
     }
     if (key.upArrow) {
-      setCursor((c) => (c > 0 ? c - 1 : choices.length - 1));
+      updateDraft((current) => ({
+        ...current,
+        cursor: current.cursor > 0 ? current.cursor - 1 : choices.length - 1,
+      }));
       return;
     }
     if (key.downArrow) {
-      setCursor((c) => (c < choices.length - 1 ? c + 1 : 0));
+      updateDraft((current) => ({
+        ...current,
+        cursor: current.cursor < choices.length - 1 ? current.cursor + 1 : 0,
+      }));
       return;
     }
     if (key.return) {
@@ -162,11 +221,11 @@ export function AskUserPrompt({
       return;
     }
     if (multiSelect && hasOptions && input === " " && !onInputRow) {
-      setSelected((prev) => {
-        const next = new Set(prev);
+      updateDraft((current) => {
+        const next = new Set(current.selected);
         if (next.has(cursor)) next.delete(cursor);
         else next.add(cursor);
-        return next;
+        return { ...current, selected: [...next] };
       });
       return;
     }
@@ -174,7 +233,7 @@ export function AskUserPrompt({
     // keys still work normally when typing into the Other… field.
     if (!onInputRow && /^[1-9]$/.test(input)) {
       const idx = parseInt(input, 10) - 1;
-      if (idx >= 0 && idx < choices.length) setCursor(idx);
+      if (idx >= 0 && idx < choices.length) updateDraft((current) => ({ ...current, cursor: idx }));
       return;
     }
   });
@@ -189,17 +248,21 @@ export function AskUserPrompt({
           cursor={cursor}
           selected={selected}
           inputValue={inputValue}
-          setInputValue={setInputValue}
+          setInputValue={(inputValue) => updateDraft((current) => ({ ...current, inputValue }))}
           onInputSubmit={() => advanceToReview()}
           multiSelect={!!multiSelect}
           hasOptions={hasOptions}
           inputIdx={inputIdx}
+          canDefer={!!onDefer}
+          disabled={submitting || submissionRef.current === "resolved"}
         />
       ) : (
-        <ReviewPhase
-          lines={reviewLines()}
-          reviewCursor={reviewCursor}
-        />
+        <ReviewPhase lines={reviewLines()} reviewCursor={reviewCursor} />
+      )}
+      {submitting && (
+        <Box marginLeft={1}>
+          <Text dim>Submitting answer…</Text>
+        </Box>
       )}
     </Frame>
   );
@@ -218,6 +281,8 @@ interface PickPhaseProps {
   multiSelect: boolean;
   hasOptions: boolean;
   inputIdx: number;
+  canDefer: boolean;
+  disabled: boolean;
 }
 
 function PickPhase({
@@ -231,6 +296,8 @@ function PickPhase({
   multiSelect,
   hasOptions,
   inputIdx,
+  canDefer,
+  disabled,
 }: PickPhaseProps) {
   return (
     <>
@@ -247,8 +314,7 @@ function PickPhase({
           const labelCol = isCursor ? "ansi:cyan" : undefined;
           // Multi-select adds a ◉/◯ glyph BEFORE the number. Non-input rows
           // only — the input row never shows a checkbox.
-          const checkbox =
-            multiSelect && hasOptions && !isInput ? (isPicked ? "◉" : "◯") : null;
+          const checkbox = multiSelect && hasOptions && !isInput ? (isPicked ? "◉" : "◯") : null;
           const cursorMark = isCursor ? "❯" : " ";
 
           return (
@@ -260,12 +326,11 @@ function PickPhase({
                 {isInput ? (
                   isCursor ? (
                     <TextInput
+                      focus={!disabled}
                       value={inputValue}
                       onChange={setInputValue}
                       onSubmit={onInputSubmit}
-                      placeholder={
-                        hasOptions ? "Type a custom answer here" : "Type your answer"
-                      }
+                      placeholder={hasOptions ? "Type a custom answer here" : "Type your answer"}
                     />
                   ) : (
                     <Text dim>{c.label}</Text>
@@ -288,8 +353,9 @@ function PickPhase({
       <Box marginTop={1} marginLeft={1}>
         <Text dim>
           {multiSelect && hasOptions
-            ? "↑↓ move · 1-9 jump · Space toggle · Enter continue · Esc cancel"
-            : "↑↓ move · 1-9 jump · Enter continue · Esc cancel"}
+            ? "↑↓ move · 1-9 jump · Space toggle · Enter continue"
+            : "↑↓ move · 1-9 jump · Enter continue"}
+          {canDefer ? " · Esc answer later (selection is not submitted)" : " · Esc cancel"}
         </Text>
       </Box>
     </>
@@ -361,8 +427,12 @@ function Frame({ header, children }: { header?: string; children: ReactNode }) {
       marginY={0}
     >
       <Box>
-        <Text color={BORDER_COLOR} bold>{"? "}</Text>
-        <Text color={BORDER_COLOR} bold>{header ?? DEFAULT_HEADER}</Text>
+        <Text color={BORDER_COLOR} bold>
+          {"? "}
+        </Text>
+        <Text color={BORDER_COLOR} bold>
+          {header ?? DEFAULT_HEADER}
+        </Text>
       </Box>
       {children}
     </Box>

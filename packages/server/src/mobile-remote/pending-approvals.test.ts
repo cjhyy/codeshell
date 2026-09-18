@@ -23,6 +23,49 @@ function approvalRequestLine(sessionId: string, requestId: string): string {
 }
 
 describe("PendingMobileApprovals", () => {
+  test("replays an asynchronous question after its run ends until it is answered or cancelled", () => {
+    const pending = new PendingMobileApprovals();
+    const request = JSON.parse(approvalRequestLine("s1", "ask-later"));
+    request.params.request.toolName = "__ask_user__";
+    request.params.request.args.asynchronous = true;
+    const line = JSON.stringify(request);
+    pending.observeOutboundLine(line);
+
+    for (const event of [
+      { type: "turn_complete", reason: "completed" },
+      { type: "error", message: "later run failed" },
+    ]) {
+      pending.observeOutboundLine(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "agent/streamEvent",
+          params: { sessionId: "s1", event },
+        }),
+      );
+      expect(pending.replayLines("s1")).toEqual([line]);
+      expect(pending.replayAllLines()).toEqual([line]);
+    }
+
+    pending.observeOutboundLine(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/approvalResolved",
+        params: { sessionId: "s1", requestId: "ask-later", approved: true, answer: "staging" },
+      }),
+    );
+    expect(pending.replayAllLines()).toEqual([]);
+
+    pending.observeOutboundLine(line);
+    pending.observeOutboundLine(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/approvalResolved",
+        params: { sessionId: "s1", requestId: "ask-later", approved: false },
+      }),
+    );
+    expect(pending.replayAllLines()).toEqual([]);
+  });
+
   test("snapshots all unresolved sessions without replaying resolved or closed requests", () => {
     const pending = new PendingMobileApprovals();
     const first = approvalRequestLine("s1", "one");

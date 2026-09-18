@@ -91,6 +91,7 @@ export function defineProduct(
     "Grep",
     "Bash",
     "AskUserQuestion",
+    "AskUserQuestionAsync",
     "Agent",
     "ToolSearch",
     "TodoWrite",
@@ -107,6 +108,7 @@ export function defineProduct(
     { tool: "Glob", decision: "allow" as const },
     { tool: "Grep", decision: "allow" as const },
     { tool: "AskUserQuestion", decision: "allow" as const },
+    { tool: "AskUserQuestionAsync", decision: "allow" as const },
     { tool: "ToolSearch", decision: "allow" as const },
     { tool: "TodoWrite", decision: "allow" as const },
     // Product-specific rules (higher priority)

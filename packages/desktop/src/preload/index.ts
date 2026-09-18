@@ -1706,6 +1706,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       requestId: string;
       sessionId?: string;
       approved?: boolean;
+      answer?: string;
     }) => ipcRenderer.invoke("mobileRemote:approvalResolved", input),
   },
 

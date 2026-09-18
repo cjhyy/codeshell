@@ -13,6 +13,31 @@ App installer rejects packages containing `.codex-plugin`, `.claude-plugin`,
 `.codeshell-plugin`, `.mcp.json`, `skills`, `agents`, `commands`, or `hooks`.
 The normal Plugin installer rejects `.codeshell-panel/panel.json`.
 
+## Feature ownership
+
+Panel functionality belongs to the independently versioned Panel package. A
+model, installer, provider, template, workflow, or editor rule must not become a
+new Desktop/Core branch merely to serve one Panel. Native Panel tools run in
+separate processes through reviewed generic interfaces.
+
+Host changes need evidence of a missing reusable capability; first check the
+existing process, app-data, workspace, media, Agent Task, and credential surfaces.
+Reusable client-side scheduling, event parsing, and installation helpers belong
+in a Panel SDK/library. Only Host-enforced authority or lifecycle changes belong
+in CodeShell. Domain-neutral APIs may still impose explicit resource budgets,
+but a particular voice model's input length or an editor's fixed frame rate is
+Panel policy.
+
+Reusing an existing media service does not establish its ownership. Asset
+catalogs, generation stages/progress, cleanup, and retry/recovery policy belong
+to the Panel or shared SDK. The Host retains generic resource custody, event
+transport, process termination/exit confirmation, and any explicitly supported
+durable-task mechanism; it must not infer business retry safety or run bundled
+Panel processors in its own process.
+
+Current gaps, legacy coupling, and the proposed sequence are recorded in the
+[Panel/Host capability audit](todo/panel-plugin-host-capability-audit-2026-09-12.md).
+
 ## Package format
 
 ```text
@@ -99,23 +124,23 @@ const unsubscribe = window.codeshellPanel.on("context.changed", (next) => {
 
 No Host capability is granted by default.
 
-| Permission            | Capability                                                                                                                                                                                                                       |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `context.session`     | Adds session ID and busy state to context.                                                                                                                                                                                       |
-| `context.workspace`   | Adds workspace root and trust state to context.                                                                                                                                                                                  |
-| `storage`             | JSON-only app storage, capped at 256 KiB per app.                                                                                                                                                                                |
-| `external.open`       | Opens HTTPS links after user confirmation.                                                                                                                                                                                       |
-| `agent.submitPrompt`  | Immediately queues work in the bound, idle session and renders `displayText` (or `prompt`) as an app-attributed user message; requires `context.session`.                                                                        |
-| `agent.task`          | Starts, lists, reads, and cancels bounded AI Tasks owned by this app and project. Each Task uses a fresh process-local Session with no current-chat history; results return to the Panel instead of the conversation.            |
-| `workspace.info`      | Reads safe workspace metadata and the current Git branch.                                                                                                                                                                        |
-| `workspace.read`      | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                                                                                                                                            |
-| `workspace.write`     | Atomically writes allowlisted repository text/data files and can export the Panel's print view to a project-local PDF, with optimistic concurrency; requires `context.workspace`.                                                |
+| Permission            | Capability                                                                                                                                                                                                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `context.session`     | Adds session ID and busy state to context.                                                                                                                                                                                                                                    |
+| `context.workspace`   | Adds workspace root and trust state to context.                                                                                                                                                                                                                               |
+| `storage`             | JSON-only app storage, capped at 256 KiB per app.                                                                                                                                                                                                                             |
+| `external.open`       | Opens HTTPS links after user confirmation.                                                                                                                                                                                                                                    |
+| `agent.submitPrompt`  | Immediately queues work in the bound, idle session and renders `displayText` (or `prompt`) as an app-attributed user message; requires `context.session`.                                                                                                                     |
+| `agent.task`          | Starts, lists, reads, and cancels bounded AI Tasks owned by this app and project. Each Task uses a fresh process-local Session with no current-chat history; results return to the Panel instead of the conversation.                                                         |
+| `workspace.info`      | Reads safe workspace metadata and the current Git branch.                                                                                                                                                                                                                     |
+| `workspace.read`      | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                                                                                                                                                                                         |
+| `workspace.write`     | Atomically writes allowlisted repository text/data files and can export the Panel's print view to a project-local PDF, with optimistic concurrency; requires `context.workspace`.                                                                                             |
 | `media`               | Imports selected media into project-scoped Host storage; prepares, transcribes and renders through durable jobs; streams managed assets and maintains versioned media documents. Requires `context.workspace` and a trusted project. See [Managed media API](panel-media.md). |
-| `notifications.send`  | Sends rate-limited, app-attributed system notifications.                                                                                                                                                                         |
-| `audio.transcribe`    | Lets the Panel capture microphone audio and send a bounded recording to the user's configured speech-to-text provider; requires `context.workspace`, explicit package review, and OS microphone consent.                         |
-| `credentials.cookies` | Lists only masked Cookie-account metadata matching a requested HTTPS site, opens a host-owned isolated login-and-save window, and restores a selected saved login after confirmation. Cookie values never enter the Panel guest. |
-| `automations.manage`  | Lists, creates, updates, pauses, resumes, runs, and deletes recurring jobs only when they are bound to the Panel's current workspace and task; requires both context permissions.                                                |
-| `process`             | Resolves PATH executables to opaque app-scoped handles, grants persistent app-local data, Downloads, or a user-selected directory as an opaque working-directory handle, and starts/cancels bounded local processes without a shell. |
+| `notifications.send`  | Sends rate-limited, app-attributed system notifications.                                                                                                                                                                                                                      |
+| `audio.transcribe`    | Lets the Panel capture microphone audio and send a bounded recording to the user's configured speech-to-text provider; requires `context.workspace`, explicit package review, and OS microphone consent.                                                                      |
+| `credentials.cookies` | Lists only masked Cookie-account metadata matching a requested HTTPS site, opens a host-owned isolated login-and-save window, and restores a selected saved login after confirmation. Cookie values never enter the Panel guest.                                              |
+| `automations.manage`  | Lists, creates, updates, pauses, resumes, runs, and deletes recurring jobs only when they are bound to the Panel's current workspace and task; requires both context permissions.                                                                                             |
+| `process`             | Resolves PATH executables to opaque app-scoped handles, grants persistent app-local data, Downloads, or a user-selected directory as an opaque working-directory handle, and starts/cancels bounded local processes without a shell.                                          |
 
 Workspace calls reject traversal, hidden paths, `node_modules`, symlinks,
 binary files, invalid UTF-8, control characters, Windows device names, and path
@@ -158,9 +183,12 @@ Host accepts only simple executable names from PATH, never invokes a shell,
 passes arguments as separate strings, strips the child environment to a small
 system allowlist, limits concurrency/lifetime/output, and terminates the child
 tree when its Panel closes. The first execution of an executable is confirmed
-by the user and approval is scoped to the app id, installed revision, and
-resolved executable path. Domain operations such as video downloading remain
-Panel code rather than new Host methods.
+by the user. Desktop's **Allow and remember** consent persists across restarts
+and Panel App updates, scoped to the app id, resolved executable path, and
+executable fingerprint. Another app, path, or changed executable needs approval
+again. Older grants that explicitly covered only an installed revision retain
+that boundary until a new confirmation; they are not silently widened. Domain
+operations such as video downloading remain Panel code rather than new Host methods.
 
 Panel API v8 adds isolated AI Tasks for apps that declare `agent.task`:
 `agent.task.start`, `agent.task.list`, `agent.task.get`, and
@@ -202,6 +230,15 @@ handle. Data survives app updates, never lands in the bound project or Git by
 default, and cannot be shared across Panel App ids. The Panel still needs an
 approved local executable to read, write, index, or migrate files in this
 directory; arbitrary host filesystem access is not exposed to guest code.
+
+Hosts also support `filesystem.getKnownDirectory({ name: "project" })` for apps
+with `process`. It returns a process directory handle for the Panel's bound,
+trusted project root, resolved by the Host; the caller cannot provide or override
+the path. An unbound, untrusted, or unavailable project is rejected. Panels can
+use this for a project-local output destination without needing raw workspace
+context. Older Hosts reject this additive known-directory name; callers should
+handle that response and offer a directory picker instead of silently choosing
+a different output location.
 
 ```js
 const task = await window.codeshellPanel.call("agent.task.start", {

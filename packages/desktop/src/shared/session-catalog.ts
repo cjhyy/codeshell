@@ -22,6 +22,9 @@ export interface SessionSummary {
    * '新对话' resume the previous chat's context.
    */
   engineSessionId?: string;
+  /** Explicitly created in the UI and still awaiting its first engine binding.
+   * Legacy rows without this marker must not be inferred to be drafts. */
+  pendingFirstRun?: boolean;
   /**
    * Team this Session was summoned as part of, and its role in it. Set once at
    * creation; lets the sidebar show which Sessions belong together instead of

@@ -1,9 +1,17 @@
 import { describe, it, expect } from "bun:test";
-import { askUserTool } from "./ask-user.js";
+import {
+  askUserTool,
+  askUserToolDef,
+  askUserAsyncTool,
+  askUserAsyncToolDef,
+} from "./ask-user.js";
 import type { ToolContext, AskUserOptions } from "../context.js";
 
 /** Capture the args askUser was called with, return a canned answer. */
-function ctxWith(answer: string | Promise<string> | (() => Promise<string>)): {
+function ctxWith(
+  answer: string | Promise<string> | (() => Promise<string>),
+  handler: "askUser" | "askUserAsync" = "askUser",
+): {
   ctx: ToolContext;
   lastOpts: () => AskUserOptions | undefined;
   lastQuestion: () => string;
@@ -11,7 +19,7 @@ function ctxWith(answer: string | Promise<string> | (() => Promise<string>)): {
   let opts: AskUserOptions | undefined;
   let question = "";
   const ctx = {
-    askUser: (q: string, o?: AskUserOptions) => {
+    [handler]: (q: string, o?: AskUserOptions) => {
       question = q;
       opts = o;
       return typeof answer === "function" ? answer() : Promise.resolve(answer);
@@ -100,5 +108,74 @@ describe("askUserTool", () => {
   it("surfaces an askUser rejection as an error string", async () => {
     const { ctx } = ctxWith(() => Promise.reject(new Error("cancelled")));
     expect(await askUserTool({ question: "q" }, ctx)).toContain("Error asking user: cancelled");
+  });
+});
+
+describe("askUserAsyncTool", () => {
+  it("requires a nonempty string question", async () => {
+    const { ctx } = ctxWith("displayed", "askUserAsync");
+    for (const args of [{}, { question: 42 }, { question: " " }]) {
+      expect(await askUserAsyncTool(args, ctx)).toContain("question is required");
+    }
+  });
+
+  it("never falls back to the blocking handler when async delivery is unsupported", async () => {
+    let asked = false;
+    const { ctx } = ctxWith(async () => {
+      asked = true;
+      return "answer";
+    });
+    expect(await askUserAsyncTool({ question: "theme?" }, ctx)).toContain(
+      "No question was displayed",
+    );
+    expect(asked).toBe(false);
+  });
+
+  it("returns the delivery receipt and forwards a plain question", async () => {
+    const { ctx, lastQuestion, lastOpts } = ctxWith("Question q1 displayed", "askUserAsync");
+    expect(await askUserAsyncTool({ question: "theme?" }, ctx)).toBe("Question q1 displayed");
+    expect(lastQuestion()).toBe("theme?");
+    expect(lastOpts()).toBeUndefined();
+  });
+
+  it("shares the input schema and strips untrusted option rendering hints", async () => {
+    expect(askUserAsyncToolDef.inputSchema).toBe(askUserToolDef.inputSchema);
+    const { ctx, lastOpts } = ctxWith("displayed", "askUserAsync");
+    await askUserAsyncTool(
+      {
+        question: "请选择配色",
+        header: "配色",
+        multiSelect: true,
+        optionsOnly: true,
+        options: [
+          { label: "蓝色", description: "冷色", tone: "ok" },
+          { label: "红色", description: "暖色", tone: "danger" },
+          { label: "invalid" },
+        ],
+      },
+      ctx,
+    );
+    expect(lastOpts()).toEqual({
+      header: "配色",
+      multiSelect: true,
+      options: [
+        { label: "蓝色", description: "冷色" },
+        { label: "红色", description: "暖色" },
+      ],
+    });
+  });
+
+  it("does not label an empty receipt as an empty user answer", async () => {
+    const { ctx } = ctxWith("", "askUserAsync");
+    expect(await askUserAsyncTool({ question: "theme?" }, ctx)).toContain(
+      "no answer has been received",
+    );
+  });
+
+  it("surfaces delivery failures without claiming the user answered", async () => {
+    const { ctx } = ctxWith(() => Promise.reject(new Error("connection closed")), "askUserAsync");
+    expect(await askUserAsyncTool({ question: "theme?" }, ctx)).toBe(
+      "Error displaying question: connection closed",
+    );
   });
 });

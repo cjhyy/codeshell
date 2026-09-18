@@ -24,7 +24,7 @@ import type { GoalConfig, GoalTerminationReason } from "../goal/lifecycle.js";
 import type { ApprovalBackend, ApprovalRouter } from "../tool-system/permission.js";
 import type { SandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CostStateStore } from "./cost-store.js";
-import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
+import type { AskUserFn, AskUserAsyncFn } from "../tool-system/builtin/ask-user.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { HookEventName } from "../hooks/events.js";
@@ -37,6 +37,7 @@ import type { LegacyPetWorkDelegation } from "../types.js";
 export interface ChildHostBindings {
   browserBridge?: EngineConfig["browserBridge"];
   askUser?: AskUserFn;
+  askUserAsync?: AskUserAsyncFn;
   injectCredentialToBrowser?: EngineConfig["injectCredentialToBrowser"];
   approvalBackend?: ApprovalBackend;
   /** Called only after the child obtains its live transcript writer lease. */
@@ -120,6 +121,8 @@ export interface EngineConfig {
   approvalRouter?: ApprovalRouter;
   hooks?: EngineHookConfig[];
   askUser?: AskUserFn;
+  /** Display questions immediately; deliver later answers as session input. */
+  askUserAsync?: AskUserAsyncFn;
   /** Browser automation bridge (browser_* tools). Wired by the host (desktop)
    *  after construction via setBrowserBridge. Undefined → tools degrade. */
   browserBridge?: import("../tool-system/browser-bridge.js").BrowserBridge;

@@ -130,6 +130,37 @@ test("online speech sends the selected model and voice and converts a real WAV t
   expect(events.at(-1)?.fraction).toBe(1);
 });
 
+test("compatible binary or unlabelled WAV responses pass signature checks across streamed chunks and real audio probing", async () => {
+  const wav = pcmWav();
+  for (const type of ["application/octet-stream", ""]) {
+    const chunks = [wav.subarray(0, 3), wav.subarray(3, 9), wav.subarray(9)];
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const chunk = chunks.shift();
+        if (chunk) controller.enqueue(chunk);
+        else controller.close();
+      },
+    });
+    const job = context();
+    const result = await generateOpenAiTts(
+      input,
+      job,
+      options({
+        fetchImpl: (async () =>
+          new Response(body, { headers: type ? { "Content-Type": type } : {} })) as typeof fetch,
+      }),
+    );
+    expect(result.durationSeconds).toBeCloseTo(0.4, 5);
+    expect(result.sampleRate).toBe(48000);
+    expect(result.channels).toBe(1);
+    const output = await readFile(result.path);
+    expect(output.toString("ascii", 0, 4)).toBe("RIFF");
+    expect(output.toString("ascii", 8, 12)).toBe("WAVE");
+    expect(await readdir(job.workDir)).toEqual([]);
+    expect(await readdir(job.outputDir)).toEqual([result.path.split("/").at(-1)!]);
+  }
+});
+
 test("plain requests omit unsupported optional instructions and repeated explicit calls do not silently cache", async () => {
   wavResponse();
   const count = requests.length;
@@ -202,6 +233,12 @@ test("wrong content type, wrong WAV signature, invalid media and overlong actual
     { type: "audio/wav", body: Buffer.from('{"error":"this is not a sound file"}'.repeat(3)) },
     { type: "audio/wav", body: Buffer.from("RIFF0000WAVE" + "x".repeat(100)) },
     { type: "audio/wav", body: pcmWav(1000, 601) },
+    {
+      type: "application/octet-stream",
+      body: Buffer.from('{"error":"this is not a sound file"}'.repeat(3)),
+    },
+    { type: "application/octet-stream", body: Buffer.from("RIFF0000WAVE" + "x".repeat(100)) },
+    { type: "application/octet-stream", body: pcmWav(1000, 601) },
   ];
   for (const sample of cases) {
     respond = (res) => {
@@ -216,14 +253,17 @@ test("wrong content type, wrong WAV signature, invalid media and overlong actual
 
 test("advertised or streamed oversized responses stop before a partial output can be published", async () => {
   respond = (res) => {
-    res.writeHead(200, { "Content-Type": "audio/wav", "Content-Length": 64 * 1024 * 1024 + 1 });
+    res.writeHead(200, {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": 64 * 1024 * 1024 + 1,
+    });
     res.end();
   };
   const advertised = context();
   await expect(generateOpenAiTts(input, advertised, options())).rejects.toThrow("64 MiB");
   await noFiles(advertised);
   respond = (res) => {
-    res.writeHead(200, { "Content-Type": "audio/wav" });
+    res.writeHead(200, { "Content-Type": "application/octet-stream" });
     const chunk = Buffer.alloc(1024 * 1024);
     chunk.write("RIFF0000WAVE");
     let count = 0;
@@ -245,7 +285,7 @@ test("advertised or streamed oversized responses stop before a partial output ca
 
 test("HTTP streaming honours active cancellation and timeout, cleans files and makes no retry", async () => {
   respond = (res) => {
-    res.writeHead(200, { "Content-Type": "audio/wav" });
+    res.writeHead(200, { "Content-Type": "application/octet-stream" });
     res.write(pcmWav().subarray(0, 100));
   };
   for (const mode of ["cancel", "timeout"]) {

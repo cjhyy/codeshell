@@ -6,9 +6,16 @@ import type { Message } from "./types";
 import { resetExternalRuntimeSessions } from "./externalRuntimeRun";
 import { stubPetSpriteAssets } from "./test-utils/stubPetSpriteAssets";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
+import { I18nProvider } from "./i18n/I18nProvider";
 import type { PermissionMode } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
 import type { SessionIndex } from "./transcripts";
+import {
+  __resetProjectSnapshotForTest,
+  loadProjects,
+  saveProjects,
+  type TrackedProject,
+} from "./projects";
 import { compactSidebarSessions, sortSidebarSessions } from "./sidebarSessionVisibility";
 import {
   externalRuntimeModelEntries,
@@ -294,8 +301,9 @@ const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThi
 const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
 
 let root: Root | null = null;
+let previousProjects: TrackedProject[] | null = null;
 let container: HTMLElement | null = null;
-let streamListener: ((env: any) => void) | null = null;
+const streamListeners = new Set<(env: any) => void>();
 let approvalListener: ((env: ApprovalRequestEnvelope) => void) | null = null;
 let approvalResolvedListener: ((env: ApprovalResolvedEnvelope) => void) | null = null;
 let lifecycleListener:
@@ -338,6 +346,20 @@ function seedApp(options: {
 }): string {
   const hasActiveSession = options.withNormalSession && !options.startInDraft;
   const bucket = hasActiveSession ? "repoA::session-a" : "repoA::_none_";
+  previousProjects ??= loadProjects();
+  __resetProjectSnapshotForTest();
+  // App initializes from Main's V2 projection; the legacy localStorage entry
+  // below alone would make isolated tests wait for an unrelated migration.
+  saveProjects([
+    {
+      id: "repoA",
+      name: "Repo A",
+      path: "/tmp/repo-a",
+      roots: [{ id: "root-a", path: "/tmp/repo-a", name: "Repo A", addedAt: 1 }],
+      primaryRootId: "root-a",
+      addedAt: 1,
+    },
+  ]);
   localStorageMock.setItem(
     "codeshell.repos",
     JSON.stringify([{ id: "repoA", name: "Repo A", path: "/tmp/repo-a", addedAt: 1 }]),
@@ -532,8 +554,8 @@ function installCodeshellStub(
       return new Promise(() => undefined);
     },
     onStreamEvent: (listener: (env: any) => void) => {
-      streamListener = listener;
-      return unsubscribe;
+      streamListeners.add(listener);
+      return () => streamListeners.delete(listener);
     },
     onAutomationSession: () => unsubscribe,
     onMobileSession: () => unsubscribe,
@@ -635,7 +657,13 @@ async function mountApp(options: {
   container = document.createElement("div");
   root = createRoot(container);
   await act(async () => {
-    root?.render(<App />);
+    // Match the real desktop root: the provider keeps t stable across renders,
+    // so unrelated UI updates do not tear down in-flight IPC subscriptions.
+    root?.render(
+      <I18nProvider>
+        <App />
+      </I18nProvider>,
+    );
     await flushMicrotasks();
   });
   await flushApp();
@@ -647,8 +675,8 @@ function currentQuickPanels(): QuickChatPanelProps[] {
 }
 
 function emitStream(sessionId: string, event: Record<string, unknown>): void {
-  if (!streamListener) throw new Error("stream listener was not registered");
-  streamListener({ sessionId, event });
+  if (streamListeners.size === 0) throw new Error("stream listener was not registered");
+  for (const listener of [...streamListeners]) listener({ sessionId, event });
 }
 
 function emitApproval(env: ApprovalRequestEnvelope): void {
@@ -693,7 +721,7 @@ afterEach(async () => {
   }
   root = null;
   container = null;
-  streamListener = null;
+  streamListeners.clear();
   approvalListener = null;
   approvalResolvedListener = null;
   lifecycleListener = null;
@@ -717,6 +745,9 @@ afterEach(async () => {
   sidebarProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
+  __resetProjectSnapshotForTest();
+  if (previousProjects) saveProjects(previousProjects);
+  previousProjects = null;
   localStorageMock.clear();
   restoreGlobalProperty("localStorage", originalLocalStorageDescriptor);
   restoreGlobalProperty("window", originalWindowDescriptor);
@@ -2301,6 +2332,7 @@ describe("App quick-chat integration", () => {
       emitApproval(approvalEnvelope(quickTwo.sessionId, "approval-two"));
       await flushMicrotasks();
     });
+    await flushApp();
 
     expect(chatProps?.pendingApproval?.requestId).toBe("approval-normal");
     expect(quickChatProps.get(quickOne.sessionId)?.pendingApproval?.requestId).toBe("approval-one");
@@ -2323,6 +2355,76 @@ describe("App quick-chat integration", () => {
       ["engine-a", "approval-normal", "approve"],
       [quickOne.sessionId, "approval-one", "approve"],
       [quickTwo.sessionId, "approval-two", "approve"],
+    ]);
+  });
+
+  test("asynchronous answers stay pending until accepted and can retry a failed delivery", async () => {
+    await mountApp({ withNormalSession: true, panelTabs: [] });
+    const question = approvalEnvelope("engine-a", "ask-async", "__ask_user__");
+    question.request.args = { ...question.request.args, asynchronous: true };
+    await act(async () => {
+      emitApproval(question);
+      await flushMicrotasks();
+    });
+    let reject!: (error: Error) => void;
+    let resolve!: () => void;
+    let attempts = 0;
+    const failed = new Promise<void>((_yes, no) => {
+      reject = no;
+    });
+    const accepted = new Promise<void>((yes) => {
+      resolve = yes;
+    });
+    const mirrored: unknown[] = [];
+    (window.codeshell as any).approve = (...args: unknown[]) => {
+      approveCalls.push(args);
+      return ++attempts === 1 ? failed : accepted;
+    };
+    (window.codeshell.mobileRemote as any).notifyApprovalResolved = async (env: unknown) => {
+      mirrored.push(env);
+    };
+    const answer = () =>
+      chatProps?.messages.find(
+        (message) => message.kind === "ask_user" && message.requestId === "ask-async",
+      );
+    let submission: Promise<unknown>;
+    await act(async () => {
+      submission = Promise.resolve(chatProps!.onAskUserAnswer!("ask-async", "Read only")).catch(
+        (error) => error,
+      );
+      await flushMicrotasks();
+    });
+    expect(answer()).toMatchObject({ asynchronous: true });
+    expect(answer()).not.toHaveProperty("answer");
+    expect(mirrored).toEqual([]);
+    await act(async () => {
+      reject(new Error("Connection interrupted"));
+      await submission;
+      await flushMicrotasks();
+    });
+    expect(answer()).not.toHaveProperty("answer");
+    await act(async () => {
+      submission = Promise.resolve(chatProps!.onAskUserAnswer!("ask-async", "Read only"));
+      await flushMicrotasks();
+    });
+    expect(answer()).not.toHaveProperty("answer");
+    await act(async () => {
+      resolve();
+      await submission;
+      await flushMicrotasks();
+    });
+    expect(answer()).toMatchObject({ answer: "Read only" });
+    expect(mirrored).toEqual([
+      {
+        requestId: "ask-async",
+        sessionId: "engine-a",
+        approved: true,
+        answer: "Read only",
+      },
+    ]);
+    expect(approveCalls).toEqual([
+      ["engine-a", "ask-async", "approve", undefined, "Read only"],
+      ["engine-a", "ask-async", "approve", undefined, "Read only"],
     ]);
   });
 

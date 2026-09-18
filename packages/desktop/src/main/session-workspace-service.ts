@@ -1,6 +1,11 @@
 import { statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import { SessionManager, SettingsManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
+import {
+  SessionManager,
+  SettingsManager,
+  type SessionProjectBinding,
+  type SessionWorkspace,
+} from "@cjhyy/code-shell-core";
 import { canonicalKey, createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
 import {
   createWorktree,
@@ -43,6 +48,11 @@ export interface SessionWorkspaceAuthority {
   rootStatus: SessionRootStatus;
   rootStatusReason?: SessionRootStatusReason;
   rootStatusMessage?: string;
+}
+
+export interface SessionWorkspaceAuthorityOptions {
+  /** Main-only grant; the IPC caller must own a live Host reservation. */
+  getHostWorkspace?: () => { mainRoot: string; cwd: string } | undefined;
 }
 
 export interface ReleasedSessionWorkspace {
@@ -138,10 +148,16 @@ async function mainRootAuthorityFor(
   if (!fromSession) {
     throw new Error("session exists but has no valid state — cannot resolve workspace root");
   }
+  return rootAuthorityFor(fromSession, sm.readSessionProjectBinding(sessionId));
+}
+
+async function rootAuthorityFor(
+  fromSession: string,
+  binding?: SessionProjectBinding,
+): Promise<Omit<SessionWorkspaceAuthority, "workspace">> {
   // Probe Git usability, but preserve the persisted spelling. On macOS Git may
   // canonicalize /var to /private/var; rewriting that into Session state breaks
   // stable workspace identity and creates a spurious handoff.
-  const binding = sm.readSessionProjectBinding(sessionId);
   if (binding) {
     const project = await projects().get(binding.projectId);
     if (!project || project.deletedAt !== undefined) {
@@ -319,8 +335,51 @@ export async function getSessionWorkspaceForUi(
 
 export async function getSessionWorkspaceAuthorityForUi(
   sessionId: string,
+  options: SessionWorkspaceAuthorityOptions = {},
 ): Promise<SessionWorkspaceAuthority> {
   const sm = sessions();
+  // Ephemeral Host tasks deliberately have no disk Session. Their workspace is
+  // read-only authority from a live owner grant, never a renderer-supplied path
+  // or a session-id prefix. A present (even corrupt) disk Session takes priority.
+  if (!sm.exists(sessionId)) {
+    const hostWorkspace = options.getHostWorkspace?.();
+    if (hostWorkspace) {
+      if (!isAbsolute(hostWorkspace.mainRoot) || !isAbsolute(hostWorkspace.cwd)) {
+        throw new Error("Host workspace roots must be absolute");
+      }
+      const indexed = getSessionCwdIndex().lookupCached(sessionId);
+      const binding =
+        indexed?.projectId &&
+        indexed.mainRootId &&
+        canonicalKey(indexed.cwd) === canonicalKey(hostWorkspace.mainRoot)
+          ? { projectId: indexed.projectId, mainRootId: indexed.mainRootId }
+          : undefined;
+      const authority = await rootAuthorityFor(hostWorkspace.mainRoot, binding);
+      const current = options.getHostWorkspace?.();
+      if (
+        !current ||
+        current.mainRoot !== hostWorkspace.mainRoot ||
+        current.cwd !== hostWorkspace.cwd
+      ) {
+        throw new Error(`unknown session: ${sessionId}`);
+      }
+      if (authority.rootStatus === "ok" && !isDirectory(hostWorkspace.cwd)) {
+        authority.rootStatus = "dir_missing";
+        authority.rootStatusReason = "directory_missing";
+        authority.rootStatusMessage = `Session root status dir_missing: workspace directory is missing: ${hostWorkspace.cwd}`;
+      }
+      return {
+        workspace: {
+          root: hostWorkspace.cwd,
+          kind:
+            canonicalKey(hostWorkspace.cwd) === canonicalKey(hostWorkspace.mainRoot)
+              ? "main"
+              : "worktree",
+        },
+        ...authority,
+      };
+    }
+  }
   requireKnownSession(sm, sessionId);
   const authority = await mainRootAuthorityFor(sm, sessionId);
   return {

@@ -9,7 +9,7 @@
  *
  * Two properties matter more than they look:
  *
- * - Leaving is decided here, not by the host and never by a model. /mimi has
+ * - Leaving is decided by the host, never by a model. /mimi has
  *   to work when the worker is wedged or the bound Session is unreachable,
  *   otherwise a user can be stuck inside a Session with no way out.
  * - The reply for an accepted message is not this middleware's job. A Session
@@ -63,26 +63,23 @@ function isAddressable(message: ChannelMessage): boolean {
 }
 
 export function createBoundSessionChat(options: BoundSessionChatOptions): ChatMiddleware {
-  const isDirectMessage = options.isDirectMessage ?? (() => true);
+  const isDirectMessage =
+    options.isDirectMessage ?? ((message) => message.isDirectMessage === true);
   return async ({ message, reply }, next) => {
     if (!message.text.trim() && !message.attachments?.length) return next();
     if (!isAddressable(message)) return next();
 
-    let disposition: BoundSessionDisposition;
-    try {
-      disposition = await options.desktop.routeBoundSessionMessage({
-        channel: message.channel,
-        target: message.target,
-        senderId: message.senderId,
-        ...(message.messageId ? { messageId: message.messageId } : {}),
-        text: message.text,
-        isDirectMessage: isDirectMessage(message),
-      });
-    } catch {
-      // The bridge being unreachable must not swallow the message: fall
-      // through so Mimi still answers, which is the pre-binding behavior.
-      return next();
-    }
+    // A transport timeout is ambiguous: the Work Session may already have
+    // accepted this message. Leave retry to the durable inbox instead of also
+    // handing the same message to Mimi.
+    const disposition = await options.desktop.routeBoundSessionMessage({
+      channel: message.channel,
+      target: message.target,
+      senderId: message.senderId,
+      ...(message.messageId ? { messageId: message.messageId } : {}),
+      text: message.text,
+      isDirectMessage: isDirectMessage(message),
+    });
 
     switch (disposition.kind) {
       case "not-bound":

@@ -17,6 +17,7 @@ bun run test:mimi-chat
 ## 回放层次
 
 - `tests/mimi-chat-replay.test.ts`：真实 ChatGateway → Mimi middleware → PetDispatchService → AgentClient/AgentServer → Engine/Pet tools → host-action receipts → reply enrichment → 模拟渠道发送。桌面 Electron 广播、附件 staging 和 Work 执行使用已有独立测试；控制入口适配在测试中组装。
+- `tests/mimi-bound-session-replay.test.ts`：真实私聊路由、Desktop HTTP 控制接口、绑定执行器、Session runner、AgentServer/Engine 与通知回传；使用脚本模型和模拟渠道发送，验证原 Session 历史保留、运行中继续输入及时入队、最终回复及 `/session`、`/mimi`。
 - `packages/chat/src/mimi-wechat-replay.test.ts`：真实 WechatAdapter 解析、持久 inbox/附件 spool、ChatGateway 与 Mimi middleware；平台 HTTP/CDN 和 desktop.petChat 使用模拟接口。
 - `packages/pet/src/engine.chat-replay.test.ts`：真实 Engine、多轮历史、Sessions/FollowUps 读取、工具参数校验与动作收集，LLM 使用脚本。
 - `packages/core/src/engine/engine.profile-max-turns.test.ts`：通用 profile 上限、Goal 修改/扩展、普通 Work 隔离及无工具收尾。
@@ -66,6 +67,8 @@ bun run test:mimi-chat
 7. 新输入实际注入后，使待发送 GatewayReply 草稿失效；新一轮普通 final、失败或上限终止都不会复活旧草稿。
 
 ## 验证范围与剩余边界
+
+2026-09-18 绑定链路补充：`sessionBind` 必须通过完整宿主动作校验并显示宿主的实际结果；私聊标志来自渠道适配器，不能用聊天 ID 与用户 ID 是否相同推测。绑定后的文字续聊在原 Session 中排队，收到 worker 的接收确认即结束入站请求，不等待整轮完成。路由未知或超时不能把同一条输入再转交 Mimi；只转发主 Session 的最终回复，子 Agent 和中间进度不作为最终答案。
 
 脚本预先指定模型输出，能证明工具、状态与交付契约，不能证明真实 LLM 在任意自然语言下都会选择正确任务或补全正确题干。尤其“新开”语义与模型显式给出的旧 selector 冲突，尚没有完整的结构化意图证据契约；本次没有引入关键词猜测路由。
 

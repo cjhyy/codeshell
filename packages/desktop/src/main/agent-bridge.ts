@@ -1581,13 +1581,24 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Reserve a main-owned Session before a headless producer submits agent/run. */
-  reserveHostSession(sessionId: string, cwd: string, producer = "host-reservation"): void {
-    reserveHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId, cwd, producer);
+  reserveHostSession(
+    sessionId: string,
+    cwd: string,
+    producer = "host-reservation",
+    mainRoot?: string,
+  ): void {
+    reserveHostSessionMaps(
+      this.sessionCwd,
+      this.hostReservations,
+      sessionId,
+      cwd,
+      producer,
+      undefined,
+      mainRoot,
+    );
   }
 
-  hostReservation(
-    sessionId: string,
-  ): { cwd: string; producer: string; reservedAt: number } | undefined {
+  hostReservation(sessionId: string): HostReservation | undefined {
     const reservation = this.hostReservations.get(sessionId);
     return reservation ? { ...reservation } : undefined;
   }

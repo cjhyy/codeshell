@@ -9,17 +9,8 @@ export interface SequencedStreamEvent {
 }
 type FlushBatch = (events: StreamEvent[], raw: SequencedStreamEvent[]) => void;
 
-interface PendingText {
-  agentId: string | undefined;
-  text: string;
-  tokens?: number;
-}
-
-interface PendingArgs {
-  agentId: string | undefined;
-  toolCallId: string;
-  args: Record<string, unknown>;
-}
+type PendingText = Extract<StreamEvent, { type: "text_delta" }>;
+type PendingArgs = Extract<StreamEvent, { type: "tool_use_args_delta" }>;
 
 /**
  * Coalesce a stream into batched, render-friendly flushes.
@@ -41,6 +32,8 @@ interface PendingArgs {
  * slots + boundary events) as first seen, so the batch preserves arrival
  * order across types. Re-seeing a delta key merges into the existing slot
  * without re-appending — its original position is kept.
+ * A run/client identity change flushes the preceding segment first, including
+ * passthrough thinking events, so late output cannot merge into a newer run.
  *
  * `error` still flushes synchronously and alone (it must surface instantly and
  * may precede teardown). Pure logic, no React.
@@ -58,6 +51,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
   let timer: ReturnType<typeof setTimeout> | null = null;
   let segment = 0;
   let raw: SequencedStreamEvent[] = [];
+  let pendingRunIdentity: string | null = null;
 
   function isHardBoundary(event: StreamEvent): boolean {
     switch (event.type) {
@@ -84,20 +78,11 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
       if (slot.kind === "text") {
         const p = textBuf.get(slot.key);
         if (!p) continue;
-        out.push(
-          p.tokens !== undefined
-            ? ({ type: "text_delta", text: p.text, tokens: p.tokens, agentId: p.agentId } as any)
-            : ({ type: "text_delta", text: p.text, agentId: p.agentId } as any),
-        );
+        out.push(p);
       } else if (slot.kind === "args") {
         const p = argsBuf.get(slot.key);
         if (!p) continue;
-        out.push({
-          type: "tool_use_args_delta",
-          toolCallId: p.toolCallId,
-          args: p.args,
-          agentId: p.agentId,
-        } as any);
+        out.push(p);
       } else {
         out.push(slot.event);
       }
@@ -116,6 +101,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
     const batch = drainToBatch();
     const entries = raw;
     raw = [];
+    pendingRunIdentity = null;
     if (batch.length > 0) onFlushBatch(batch, entries);
   }
 
@@ -134,35 +120,39 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
       onFlushBatch([event], [{ event, seq, epoch }]);
       return;
     }
+    const runIdentity = JSON.stringify([event.runId ?? null, event.clientMessageId ?? null]);
+    if (pendingRunIdentity !== null && pendingRunIdentity !== runIdentity) flush();
+    pendingRunIdentity = runIdentity;
     raw.push({ event, seq, epoch });
     if (t === "text_delta") {
-      const agentId = (event as any).agentId as string | undefined;
+      const agentId = event.agentId;
       const key = `text|${segment}|${agentId ?? ""}`;
       const prev = textBuf.get(key);
       if (prev) {
-        prev.text += (event as any).text;
-        if ((event as any).tokens !== undefined) {
-          prev.tokens = (prev.tokens ?? 0) + ((event as any).tokens as number);
+        prev.text += event.text;
+        if (event.tokens !== undefined) {
+          prev.tokens = (prev.tokens ?? 0) + event.tokens;
         }
       } else {
-        textBuf.set(key, { agentId, text: (event as any).text, tokens: (event as any).tokens });
+        // Keep the complete envelope on the merged event. Clone it so neither
+        // concatenation nor token accumulation mutates raw replay metadata.
+        textBuf.set(key, { ...event });
         order.push({ kind: "text", key });
       }
       scheduleFlush();
       return;
     }
     if (t === "tool_use_args_delta") {
-      const agentId = (event as any).agentId as string | undefined;
-      const toolCallId = (event as any).toolCallId as string;
+      const agentId = event.agentId;
+      const toolCallId = event.toolCallId;
       const key = `args|${segment}|${agentId ?? ""}|${toolCallId}`;
       const prev = argsBuf.get(key);
       if (prev) {
-        Object.assign(prev.args, (event as any).args);
+        Object.assign(prev.args, event.args);
       } else {
         argsBuf.set(key, {
-          agentId,
-          toolCallId,
-          args: { ...((event as any).args as Record<string, unknown>) },
+          ...event,
+          args: { ...event.args },
         });
         order.push({ kind: "args", key });
       }
@@ -191,6 +181,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
     }
     drainToBatch();
     raw = [];
+    pendingRunIdentity = null;
   }
 
   return { push, flush, dispose, discard };

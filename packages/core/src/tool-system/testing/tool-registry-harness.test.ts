@@ -64,9 +64,10 @@ describe("shared ToolRegistry integration harness", () => {
     const opened: string[] = [];
     const harness = createToolRegistryHarness({
       cwd: tempRoot,
-      builtinTools: ["AskUserQuestion", "Panel", "browser_observe"],
+      builtinTools: ["AskUserQuestion", "AskUserQuestionAsync", "Panel", "browser_observe"],
       overrides: {
         askUser: async () => "approved",
+        askUserAsync: async () => "Question displayed; the answer will arrive later.",
         panels: {
           list: async () => ({ items: [{ id: "files", title: "Files", source: "builtin" }] }),
           open: async (panelId) => {
@@ -89,6 +90,9 @@ describe("shared ToolRegistry integration harness", () => {
     expect((await harness.execute("AskUserQuestion", { question: "Continue?" })).result).toBe(
       "approved",
     );
+    expect(
+      (await harness.execute("AskUserQuestionAsync", { question: "Preferred theme?" })).result,
+    ).toBe("Question displayed; the answer will arrive later.");
     expect((await harness.execute("Panel", { action: "list" })).result).toContain("files");
     expect((await harness.execute("Panel", { action: "open", panel_id: "files" })).isError).toBe(
       false,

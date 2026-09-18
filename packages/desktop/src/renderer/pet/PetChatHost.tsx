@@ -203,7 +203,12 @@ export interface PetHostActionReceiptRow {
   updatedResult?: { sessionId: string };
 }
 
-const PET_AUTHORITATIVE_REPLY_TOOLS = new Set(["DelegateWork", "GatewayReply", "SendMessage"]);
+const PET_AUTHORITATIVE_REPLY_TOOLS = new Set([
+  "DelegateWork",
+  "GatewayReply",
+  "SendMessage",
+  "BindConversationSession",
+]);
 
 export function selectPetChatRows(
   messages: readonly Message[],
@@ -395,7 +400,7 @@ export function selectPetChatRows(
         continue;
       }
       const text = visiblePetAssistantText(message.text);
-      // DelegateWork/GatewayReply/SendMessage complete at a trusted host boundary
+      // Delegation, message delivery and Session binding complete at a trusted host boundary
       // after the model turn. Suppress the model's post-tool acknowledgement so
       // stale claims such as "sent" or "no active task" never flash before the
       // authoritative receipt arrives. Pre-tool reasoning remains visible.

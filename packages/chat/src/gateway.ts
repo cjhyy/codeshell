@@ -234,6 +234,7 @@ async function buildMimiOutgoingReplies(
       channel: message.channel,
       target: message.target,
       senderId: message.senderId,
+      isDirectMessage: message.isDirectMessage === true,
       ...(message.messageId ? { messageId: message.messageId } : {}),
       capabilities,
       channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),

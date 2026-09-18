@@ -283,6 +283,41 @@ describe("host-action availability", () => {
 });
 
 describe("host-action envelope validation", () => {
+  test.each([
+    { action: "enter", sessionSelector: "session-f3fc3368e78c43ee5a8c" },
+    { action: "leave" },
+  ])("accepts a valid session binding request: %j", (payload) => {
+    expect(isPetHostActionRequest({ kind: "sessionBind", payload })).toBe(true);
+  });
+
+  test.each([
+    {},
+    { action: "enter" },
+    { action: "enter", sessionSelector: "s-mu29ikau-091fd2b6" },
+    { action: "enter", sessionSelector: "session-f3fc3368e78c43ee5a8" },
+    { action: "enter", sessionSelector: "session-f3fc3368e78c43ee5a8c0" },
+    { action: "enter", sessionSelector: "session-F3FC3368E78C43EE5A8C" },
+    { action: "enter", sessionSelector: "session-g3fc3368e78c43ee5a8c" },
+    { action: "enter", sessionSelector: " session-f3fc3368e78c43ee5a8c" },
+    { action: "enter", sessionSelector: "session-f3fc3368e78c43ee5a8c\n" },
+    { action: "enter", sessionSelector: null },
+    { action: "enter", session_selector: "session-f3fc3368e78c43ee5a8c" },
+    {
+      action: "enter",
+      sessionSelector: "session-f3fc3368e78c43ee5a8c",
+      target: "other-chat",
+    },
+    { action: "leave", sessionSelector: "session-f3fc3368e78c43ee5a8c" },
+    { action: "leave", sessionSelector: undefined },
+    { action: "leave", target: "other-chat" },
+    { action: "resume", sessionSelector: "session-f3fc3368e78c43ee5a8c" },
+    { action: "remember", text: "not a binding request" },
+    { action: "update", memoryId: "mem-1", text: "not a binding request" },
+    { action: "forget", memoryId: "mem-1" },
+  ])("rejects a malformed or unrelated session binding payload: %j", (payload) => {
+    expect(isPetHostActionRequest({ kind: "sessionBind", payload })).toBe(false);
+  });
+
   test("accepts only exact, bounded payloads for each host side effect", () => {
     expect(isPetHostActionRequest({ kind: "mobileRemote", payload: { action: "open" } })).toBe(
       true,

@@ -412,7 +412,7 @@ export interface ApprovalResolvedEnvelope {
   sessionId?: string;
   requestId: string;
   approved?: boolean;
-  /** Actual question answer accepted by the owning host. */
+  /** Actual question answer, including answers submitted from another client. */
   answer?: string;
 }
 

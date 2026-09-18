@@ -30,6 +30,7 @@ import {
   type DesktopBuiltinPanelAppHost,
 } from "./DesktopBuiltinPanelApp";
 import { PanelTabStrip } from "./PanelTabStrip";
+import { useReviewAvailability } from "./useReviewAvailability";
 
 export interface OpenTab {
   id: string;
@@ -181,6 +182,16 @@ function ResolvedPanelArea({
     PANEL_REGISTRY.snapshot,
   );
   const cwd = workspace.root;
+  const reviewAvailability = useReviewAvailability(
+    engineSessionId ?? null,
+    workspace.ready && cwd
+      ? JSON.stringify([projectPath, workspace.mainRootId, cwd, project?.roots])
+      : null,
+    !hidden,
+  );
+  // A saved turn diff remains useful after a repository is removed. It may
+  // open from its chat card, without exposing Git actions in the panel launcher.
+  const hasReviewSnapshot = Boolean(reviewDiff?.trim());
   const enabledPanels = useMemo(
     () =>
       getEnabledPanelEntries({
@@ -188,8 +199,16 @@ function ResolvedPanelArea({
         cwd,
         engineSessionId: engineSessionId ?? null,
         sessionMainRootId: workspace.mainRootId,
+        gitReviewAvailable: reviewAvailability.available,
       }),
-    [cwd, engineSessionId, panelRegistryRevision, projectPath, workspace.mainRootId],
+    [
+      cwd,
+      engineSessionId,
+      panelRegistryRevision,
+      projectPath,
+      workspace.mainRootId,
+      reviewAvailability.available,
+    ],
   );
   const enabledPanelIds = useMemo(
     () => new Set(enabledPanels.map((entry) => entry.key)),
@@ -214,7 +233,11 @@ function ResolvedPanelArea({
   // Dedup defensively: persisted state from older builds can carry duplicate ids.
   const seenTabIds = new Set<string>();
   const activeTabs = tabs.filter((tb) => {
-    if (!enabledPanelIds.has(tb.kind) || seenTabIds.has(tb.id)) return false;
+    if (
+      (!enabledPanelIds.has(tb.kind) && !(tb.kind === "review" && hasReviewSnapshot)) ||
+      seenTabIds.has(tb.id)
+    )
+      return false;
     seenTabIds.add(tb.id);
     return true;
   });
@@ -230,7 +253,7 @@ function ResolvedPanelArea({
 
   const addTab = (kind: PanelTab): void => {
     const entry = getPanelEntry(kind);
-    if (!entry) return;
+    if (!entry || !enabledPanelIds.has(kind)) return;
     if (entry.singleton) {
       const existing = activeTabs.find((candidate) => candidate.kind === kind);
       if (existing) {
@@ -280,7 +303,8 @@ function ResolvedPanelArea({
     }
     // A project-bound app registry arrives asynchronously. Do not consume the
     // open request until that project actually exposes the requested panel.
-    if (!enabledPanelIds.has(requestKind)) return;
+    if (!enabledPanelIds.has(requestKind) && !(requestKind === "review" && hasReviewSnapshot))
+      return;
     openedNonce.current = requestNonce;
     const newTab: OpenTab = { id: mkId(requestKind), kind: requestKind };
     setTabs((prev) => {
@@ -293,7 +317,7 @@ function ResolvedPanelArea({
       setActiveId(newTab.id);
       return [...prev, newTab];
     });
-  }, [enabledPanelIds, panelRegistryRevision, requestNonce, requestKind]);
+  }, [enabledPanelIds, panelRegistryRevision, requestNonce, requestKind, hasReviewSnapshot]);
 
   const panelStyle: React.CSSProperties | undefined = hidden
     ? keepActiveBodyLive
@@ -460,6 +484,7 @@ function ResolvedPanelArea({
                     project={project}
                     cwd={cwd}
                     sessionMainRootId={workspace.mainRootId}
+                    gitReviewAvailable={reviewAvailability.available}
                     reviewFiles={reviewFiles}
                     reviewDiff={reviewDiff}
                     engineSessionId={engineSessionId}
@@ -556,6 +581,7 @@ function PanelBody({
   project,
   cwd,
   sessionMainRootId,
+  gitReviewAvailable,
   reviewFiles,
   reviewDiff,
   revealFile,
@@ -583,6 +609,7 @@ function PanelBody({
   project?: TrackedProject | null;
   cwd: string | null;
   sessionMainRootId?: string | null;
+  gitReviewAvailable: boolean;
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
@@ -623,6 +650,7 @@ function PanelBody({
     project,
     cwd,
     sessionMainRootId,
+    gitReviewAvailable,
     reviewFiles,
     reviewDiff,
     revealFile,

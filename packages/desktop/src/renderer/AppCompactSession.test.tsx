@@ -464,7 +464,7 @@ describe("App compact session UI", () => {
 
       installCodeshellStub();
       let registryListener: ((projects: any[]) => void) | null = null;
-      let workspaceListener: ((event: { sessionId: string }) => void) | null = null;
+      const workspaceListeners = new Set<(event: { sessionId: string }) => void>();
       let oldSessionRootStatus: "ok" | "root_removed" = "ok";
       let oldSessionMainRootId = "old-root";
       const configurationCalls: RendererConfigurationTarget[] = [];
@@ -531,8 +531,8 @@ describe("App compact session UI", () => {
                 rootStatus: "ok" as const,
               },
         onWorkspaceChanged: (listener: (event: { sessionId: string }) => void) => {
-          workspaceListener = listener;
-          return () => undefined;
+          workspaceListeners.add(listener);
+          return () => workspaceListeners.delete(listener);
         },
         getConfigurationSettings: async (target: RendererConfigurationTarget) => {
           configurationCalls.push(target);
@@ -623,7 +623,7 @@ describe("App compact session UI", () => {
       const profileCallCount = profileCalls.length;
       oldSessionRootStatus = "root_removed";
       await act(async () => {
-        workspaceListener?.({ sessionId: "engine-old" });
+        for (const listener of workspaceListeners) listener({ sessionId: "engine-old" });
         await flushMicrotasks();
       });
       expect(chatProps?.configurationAvailable).toBe(false);
@@ -640,7 +640,7 @@ describe("App compact session UI", () => {
       oldSessionRootStatus = "ok";
       oldSessionMainRootId = "new-root";
       await act(async () => {
-        workspaceListener?.({ sessionId: "engine-old" });
+        for (const listener of workspaceListeners) listener({ sessionId: "engine-old" });
         await flushMicrotasks();
       });
       expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-old" });

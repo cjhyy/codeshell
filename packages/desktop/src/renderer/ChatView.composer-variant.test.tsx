@@ -159,4 +159,11 @@ describe("ChatView sticky ask column", () => {
     expect(html).toContain("继续吗？");
     expect(html).toContain("cs-chat-sticky");
   });
+
+  test("keeps asynchronous questions in the stream without occupying the sticky composer", () => {
+    const html = renderComposer("main", "default", [{ ...pendingAsk, asynchronous: true }]);
+    expect(html).toContain("继续吗？");
+    expect(html).toContain("稍后回答");
+    expect(html).not.toContain("cs-chat-sticky");
+  });
 });

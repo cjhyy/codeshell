@@ -6,6 +6,7 @@ import { BOUND_ROUTE_IDLE_EXPIRY_MS } from "@cjhyy/code-shell-pet";
 import {
   createSessionBridgeWiring,
   type SessionBridgeWiringDeps,
+  type BoundSessionTurnResult,
 } from "./session-bridge-wiring.js";
 import type { BoundSessionRunner } from "./session-conversation-bridge.js";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
@@ -41,6 +42,7 @@ function wiring(overrides: Partial<SessionBridgeWiringDeps> = {}) {
     },
     supportsSteer: () => true,
   };
+  let onTurn!: (turn: BoundSessionTurnResult) => Promise<void>;
   const built = createSessionBridgeWiring({
     routesFilePath: join(dir, "pet", "conversation-session-routes.json"),
     resolveSelector: async () =>
@@ -50,7 +52,10 @@ function wiring(overrides: Partial<SessionBridgeWiringDeps> = {}) {
         title: "修复登录问题",
         updatedAt: NOW,
       }) as PetReusableSessionCandidate,
-    createRunner: () => runner,
+    createRunner: (handler) => {
+      onTurn = handler;
+      return runner;
+    },
     health: { check: async () => ({ ok: true }) },
     // The workspace check is real; these fixtures use a path that does not
     // exist on disk, so the seam stands in for a live worktree.
@@ -62,12 +67,13 @@ function wiring(overrides: Partial<SessionBridgeWiringDeps> = {}) {
     now: () => clock,
     ...overrides,
   });
-  return { ...built, published, calls };
+  return { ...built, published, calls, emitTurn: (turn: BoundSessionTurnResult) => onTurn(turn) };
 }
 
 const IM_CONTEXT = {
   completionTarget: { channel: "wechat", target: "owner-1" },
   senderId: "owner-1",
+  isDirectMessage: true,
 };
 
 const INBOUND = {
@@ -109,7 +115,7 @@ describe("the bind executor", () => {
     expect(await w.routeInbound(INBOUND)).toEqual({ kind: "not-bound" });
   });
 
-  test("a shared target that is not the sender is treated as a group", async () => {
+  test("a conversation without private-chat metadata cannot bind", async () => {
     // Without an adapter signal a room cannot be proven private, so it fails
     // closed rather than binding one member's chat to everyone's replies.
     const w = wiring();
@@ -118,6 +124,40 @@ describe("the bind executor", () => {
       { completionTarget: { channel: "wechat", target: "room-9" }, senderId: "owner-1" },
     );
     expect(result.ok).toBe(false);
+  });
+
+  test("adapter-confirmed private chats bind even when conversation and sender ids differ", async () => {
+    const w = wiring();
+    const context = {
+      completionTarget: { channel: "slack", target: "D012345" },
+      senderId: "U012345",
+      isDirectMessage: true,
+    };
+    const result = await w.sessionBindExecutor(
+      { action: "enter", sessionSelector: SELECTOR },
+      context,
+    );
+    expect(result.ok).toBe(true);
+    expect(
+      await w.routeInbound({
+        ...INBOUND,
+        channel: "slack",
+        target: "D012345",
+        senderId: "U012345",
+      }),
+    ).toMatchObject({ kind: "accepted" });
+  });
+
+  test("group and unknown metadata cannot bind even when target equals sender", async () => {
+    const w = wiring();
+    for (const isDirectMessage of [false, undefined]) {
+      const result = await w.sessionBindExecutor(
+        { action: "enter", sessionSelector: SELECTOR },
+        { ...IM_CONTEXT, isDirectMessage },
+      );
+      expect(result.ok).toBe(false);
+    }
+    expect(await w.routeInbound(INBOUND)).toEqual({ kind: "not-bound" });
   });
 
   test("leaving returns the conversation to Mimi", async () => {
@@ -181,4 +221,42 @@ describe("startup recovery", () => {
     await w.deliverSessionReply({ sessionId: "s-login", turnId: "t-1", text: "已修复" });
     expect(w.published).toHaveLength(1);
   });
+});
+
+test("a failed outbox publication retries without repeating successful routes", async () => {
+  const attempts: Array<{ target: string; deliveryKey: string }> = [];
+  const delivered: string[] = [];
+  const errors: unknown[] = [];
+  let failed = false;
+  const w = wiring({
+    deliveryRetryMs: 1,
+    onDeliveryError: (error) => {
+      errors.push(error);
+    },
+    publish: async (event) => {
+      attempts.push({ target: event.target.target, deliveryKey: event.deliveryKey });
+      if (event.target.target === "owner-2" && !failed) {
+        failed = true;
+        throw new Error("temporary outbox write failure");
+      }
+      delivered.push(event.target.target);
+    },
+  });
+  await w.sessionBindExecutor({ action: "enter", sessionSelector: SELECTOR }, IM_CONTEXT);
+  await w.sessionBindExecutor(
+    { action: "enter", sessionSelector: SELECTOR },
+    {
+      completionTarget: { channel: "wechat", target: "owner-2" },
+      senderId: "owner-2",
+      isDirectMessage: true,
+    },
+  );
+  const turn = { sessionId: "s-login", turnId: "durable-run", text: "answer" };
+  const first = w.emitTurn(turn);
+  expect(w.emitTurn(turn)).toBe(first);
+  await first;
+  expect(errors).toHaveLength(1);
+  expect(delivered).toEqual(["owner-1", "owner-2"]);
+  expect(attempts.map((entry) => entry.target)).toEqual(["owner-1", "owner-2", "owner-2"]);
+  expect(attempts[1]!.deliveryKey).toBe(attempts[2]!.deliveryKey);
 });

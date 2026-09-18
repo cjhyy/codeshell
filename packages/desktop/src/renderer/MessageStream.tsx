@@ -76,7 +76,7 @@ interface Props {
   leading?: React.ReactNode;
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
-  onAskUserAnswer?: (requestId: string, answer: string) => void;
+  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -506,7 +506,7 @@ export function MessageStream({
       case "goal_progress":
         return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
       case "ask_user":
-        return m.answer !== undefined ? (
+        return m.answer !== undefined || m.asynchronous ? (
           <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />
         ) : null;
       case "system":

@@ -21,6 +21,7 @@ describe("parseDingTalkTextMessage", () => {
       channel: "dingtalk",
       target: "cid-test",
       senderId: "staff-1",
+      isDirectMessage: false,
       text: "@机器人 你好",
       messageId: "message-1",
       metadata: {

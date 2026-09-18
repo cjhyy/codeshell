@@ -104,6 +104,8 @@ export interface PetHostActionContext {
    * member's binding capture another member's messages.
    */
   senderId?: string;
+  /** Adapter-authenticated private-chat signal; unknown conversations cannot bind. */
+  isDirectMessage?: boolean;
 }
 
 /** Host-side executor for one Mimi host-action kind; throws to signal failure. */
@@ -140,6 +142,7 @@ export type PetDispatchCommand =
         target?: string;
         /** Authenticated sender within the target (important for group chats). */
         senderId?: string;
+        isDirectMessage?: boolean;
         capabilities: PetImChannelCapabilities;
         channels?: readonly PetImGatewayChannel[];
       };
@@ -2260,6 +2263,7 @@ export class PetDispatchService {
             requestedAt,
             ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
             ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
+            isDirectMessage: command.source?.isDirectMessage === true,
           },
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns

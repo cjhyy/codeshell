@@ -110,14 +110,14 @@ describe("unbound conversations", () => {
     expect(result.kind).toBe("left");
   });
 
-  test("an internal failure falls back to Mimi rather than losing the message", async () => {
+  test("an unknown routing state never falls through to Mimi", async () => {
     const { bridge, routes } = harness();
     await bind(routes);
     // Force a failure inside routing.
     (routes as unknown as { boundRoute: () => Promise<never> }).boundRoute = async () => {
       throw new Error("disk gone");
     };
-    expect(await bridge.accept(INBOUND)).toEqual({ kind: "not-bound" });
+    expect(await bridge.accept(INBOUND)).toMatchObject({ kind: "suspended" });
   });
 });
 
@@ -129,27 +129,31 @@ describe("delivering into a Session", () => {
     expect(calls).toEqual(["run"]);
   });
 
-  test("a running Session takes a steer that is confirmed injected", async () => {
+  test("a running Session queues the next input without waiting for completion", async () => {
+    let waitedForTurn = false;
     const { bridge, routes, calls } = harness({
       isRunning: async () => true,
-      wasInjected: () => true,
+      runDone: () => {
+        waitedForTurn = true;
+        return new Promise(() => {});
+      },
     });
     await bind(routes);
     expect((await bridge.accept(INBOUND)).kind).toBe("accepted");
-    expect(calls).toEqual(["steer"]);
+    expect(calls).toEqual(["queue"]);
+    expect(waitedForTurn).toBe(false);
   });
 
-  test("a steer that was not consumed becomes its own turn", async () => {
-    // Losing the message would be worse than an extra turn; the stable
-    // clientMessageId makes the retry safe.
+  test("a refused queued message is reported without retrying in another conversation", async () => {
     const { bridge, routes, calls } = harness({
       isRunning: async () => true,
-      wasInjected: () => false,
-      unsteer: async () => ({ removed: true }),
+      queueNextTurn: async () => {
+        throw new Error("worker disconnected");
+      },
     });
     await bind(routes);
-    await bridge.accept(INBOUND);
-    expect(calls).toEqual(["steer", "run"]);
+    expect(await bridge.accept(INBOUND)).toMatchObject({ kind: "suspended" });
+    expect(calls).toEqual([]);
   });
 
   test("an external runtime queues instead of steering", async () => {
@@ -163,13 +167,29 @@ describe("delivering into a Session", () => {
     expect(calls).toEqual(["queue"]);
   });
 
-  test("a refused start is queued rather than dropped", async () => {
+  test("a refused start is reported without submitting it a second time", async () => {
     const { bridge, routes, calls } = harness({
-      run: async () => ({ started: false, reason: "busy" }),
+      run: async () => ({ started: false, reason: "session missing" }),
     });
     await bind(routes);
-    await bridge.accept(INBOUND);
-    expect(calls).toEqual(["queue"]);
+    expect(await bridge.accept(INBOUND)).toMatchObject({ kind: "suspended" });
+    expect(calls).toEqual([]);
+  });
+
+  test("a group message cannot use an existing private route", async () => {
+    const { bridge, routes, calls } = harness();
+    await bind(routes);
+    expect(await bridge.accept({ ...INBOUND, isDirectMessage: false })).toMatchObject({
+      kind: "suspended",
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("an empty bound input is rejected without starting a turn", async () => {
+    const { bridge, routes, calls } = harness();
+    await bind(routes);
+    expect(await bridge.accept({ ...INBOUND, text: "  " })).toMatchObject({ kind: "suspended" });
+    expect(calls).toEqual([]);
   });
 });
 

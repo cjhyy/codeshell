@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createEventCoalescer } from "./streamCoalescer";
+import { createEventCoalescer, type SequencedStreamEvent } from "./streamCoalescer";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 
 function delay(ms: number): Promise<void> {
@@ -10,13 +10,19 @@ function delay(ms: number): Promise<void> {
  *  records how many batches (= reducer dispatches) were emitted. */
 function collector() {
   const out: StreamEvent[] = [];
+  const raw: SequencedStreamEvent[] = [];
+  const batchItems: StreamEvent[][] = [];
   let batches = 0;
-  const onFlush = (events: StreamEvent[]) => {
+  const onFlush = (events: StreamEvent[], entries: SequencedStreamEvent[]) => {
     batches += 1;
     out.push(...events);
+    raw.push(...entries);
+    batchItems.push(events);
   };
   return {
     out,
+    raw,
+    batchItems,
     onFlush,
     get batches() {
       return batches;
@@ -25,6 +31,167 @@ function collector() {
 }
 
 describe("createEventCoalescer", () => {
+  test("keeps interrupted and replacement runs separate when late deltas interleave", () => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    const oldRun = { runId: "run-old", clientMessageId: "message-old" };
+    const newRun = { runId: "run-new", clientMessageId: "message-new" };
+    const input: SequencedStreamEvent[] = [
+      {
+        event: { type: "text_delta", text: "old ", tokens: 2, ...oldRun },
+        seq: 11,
+        epoch: "epoch-a",
+      },
+      {
+        event: { type: "text_delta", text: "answer", tokens: 3, ...oldRun },
+        seq: 12,
+        epoch: "epoch-a",
+      },
+      {
+        event: { type: "thinking_delta", text: "old reasoning", ...oldRun },
+        seq: 13,
+        epoch: "epoch-a",
+      },
+      {
+        event: {
+          type: "tool_use_args_delta",
+          toolCallId: "reused-tool",
+          args: { old: true },
+          ...oldRun,
+        },
+        seq: 14,
+        epoch: "epoch-a",
+      },
+      {
+        event: {
+          type: "tool_use_args_delta",
+          toolCallId: "reused-tool",
+          args: { part: 1 },
+          ...oldRun,
+        },
+        seq: 15,
+        epoch: "epoch-a",
+      },
+      // The replacement run can arrive before the stopped run's final events.
+      { event: { type: "text_delta", text: "new answer", ...newRun }, seq: 1, epoch: "epoch-b" },
+      {
+        event: { type: "thinking_delta", text: "new reasoning", ...newRun },
+        seq: 2,
+        epoch: "epoch-b",
+      },
+      {
+        event: {
+          type: "tool_use_args_delta",
+          toolCallId: "reused-tool",
+          args: { new: true },
+          ...newRun,
+        },
+        seq: 3,
+        epoch: "epoch-b",
+      },
+      { event: { type: "text_delta", text: " late old", ...oldRun }, seq: 16, epoch: "epoch-a" },
+      {
+        event: { type: "thinking_delta", text: "late old reasoning", ...oldRun },
+        seq: 17,
+        epoch: "epoch-a",
+      },
+      {
+        event: {
+          type: "tool_use_args_delta",
+          toolCallId: "reused-tool",
+          args: { late: true },
+          ...oldRun,
+        },
+        seq: 18,
+        epoch: "epoch-a",
+      },
+      {
+        event: { type: "text_delta", text: " continued new", ...newRun },
+        seq: 4,
+        epoch: "epoch-b",
+      },
+    ];
+
+    for (const entry of input) c.push(entry.event, entry.seq, entry.epoch);
+    // Each identity change flushes synchronously; the final new-run segment
+    // remains buffered until the usual flush, never merging back into its first.
+    expect(c1.batches).toBe(3);
+    c.flush();
+    expect(c1.batchItems).toEqual([
+      [
+        { type: "text_delta", text: "old answer", tokens: 5, ...oldRun },
+        input[2]!.event,
+        {
+          type: "tool_use_args_delta",
+          toolCallId: "reused-tool",
+          args: { old: true, part: 1 },
+          ...oldRun,
+        },
+      ],
+      input.slice(5, 8).map(({ event }) => event),
+      input.slice(8, 11).map(({ event }) => event),
+      [input[11]!.event],
+    ]);
+    expect(c1.raw).toEqual(input);
+    for (const [index, entry] of c1.raw.entries()) expect(entry.event).toBe(input[index]!.event);
+    // Aggregation must not overwrite either original text/tokens or args.
+    expect(input[0]!.event).toEqual({ type: "text_delta", text: "old ", tokens: 2, ...oldRun });
+    expect(input[3]!.event).toEqual({
+      type: "tool_use_args_delta",
+      toolCallId: "reused-tool",
+      args: { old: true },
+      ...oldRun,
+    });
+    c.dispose();
+    expect(c1.batches).toBe(4);
+  });
+
+  test.each([
+    [
+      { runId: "run-a", clientMessageId: "client" },
+      { runId: "run-b", clientMessageId: "client" },
+    ],
+    [
+      { runId: "run", clientMessageId: "client-a" },
+      { runId: "run", clientMessageId: "client-b" },
+    ],
+    [{}, { runId: "run", clientMessageId: "client" }],
+    [{ runId: "run", clientMessageId: "client" }, {}],
+  ] as Array<
+    [Pick<StreamEvent, "runId" | "clientMessageId">, Pick<StreamEvent, "runId" | "clientMessageId">]
+  >)("splits all deltas when either run identity field changes (%j → %j)", (first, second) => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    const input: StreamEvent[] = [
+      { type: "text_delta", text: "first", ...first },
+      { type: "thinking_delta", text: "second", ...second },
+      { type: "tool_use_args_delta", toolCallId: "tool", args: { first: true }, ...first },
+      { type: "tool_use_args_delta", toolCallId: "tool", args: { second: true }, ...second },
+      { type: "text_delta", text: "first again", ...first },
+    ];
+    for (const event of input) c.push(event);
+    expect(c1.batches).toBe(4);
+    c.dispose();
+    expect(c1.out).toEqual(input);
+    expect(c1.batches).toBe(5);
+  });
+
+  test("preserves identity and tokens while merging deltas in the same run", () => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    const identity = { runId: "run", clientMessageId: "client", agentId: "agent" };
+    c.push({ type: "text_delta", text: "one", ...identity });
+    c.push({ type: "text_delta", text: "two", tokens: 4, ...identity });
+    c.push({ type: "tool_use_args_delta", toolCallId: "tool", args: { a: 1 }, ...identity });
+    c.push({ type: "tool_use_args_delta", toolCallId: "tool", args: { b: 2 }, ...identity });
+    c.dispose();
+    expect(c1.batches).toBe(1);
+    expect(c1.out).toEqual([
+      { type: "text_delta", text: "onetwo", tokens: 4, ...identity },
+      { type: "tool_use_args_delta", toolCallId: "tool", args: { a: 1, b: 2 }, ...identity },
+    ]);
+  });
+
   test("13. two text_delta for the same agent merge into one flushed event", async () => {
     const c1 = collector();
     const c = createEventCoalescer(c1.onFlush, 30);

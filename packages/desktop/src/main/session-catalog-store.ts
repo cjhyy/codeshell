@@ -25,7 +25,7 @@ const STRING_FIELDS = new Set([
   "runStatus",
   "cronJobId",
 ]);
-const BOOLEAN_FIELDS = new Set(["titleManual", "archived", "pinned"]);
+const BOOLEAN_FIELDS = new Set(["titleManual", "archived", "pinned", "pendingFirstRun"]);
 const SUMMARY_FIELDS = new Set([
   ...REQUIRED_FIELDS,
   ...STRING_FIELDS,

@@ -46,6 +46,7 @@ describe("preset builtin tool whitelist", () => {
       "Glob",
       "Grep",
       "AskUserQuestion",
+      "AskUserQuestionAsync",
       "Agent",
       "TodoWrite",
       "Skill",

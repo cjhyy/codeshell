@@ -124,9 +124,22 @@ Registered builtin tools by category:
 - **Shell/runtime**: `Bash`, `PowerShell`, `REPL`, `BashOutput`, `KillShell`, `ListShells`
 - **Web/media/browser**: `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`, `browser_observe`, `browser_act`, `browser_navigate`
 - **Agent/multi-model/orchestration**: `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Arena`
-- **Planning/coordination**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `complete_goal`, `cancel_goal`, `AddMarketplace`, `InstallCapability`
+- **Planning/coordination**: `AskUserQuestion`, `AskUserQuestionAsync`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `complete_goal`, `cancel_goal`, `AddMarketplace`, `InstallCapability`
 - **MCP/credentials**: `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `UseCredential`, `InjectCredential`
 - **Automation/memory**: `CronCreate`, `CronDelete`, `CronList`, `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`
+
+`AskUserQuestion` waits for an answer. `AskUserQuestionAsync` uses the same question/options
+schema but returns a display receipt immediately; the agent can continue independent work.
+Managed interactive sessions deliver the later answer as user input, using the original
+session and request identity. Questions survive natural turn completion and are retired on
+Stop, session close, or host ownership loss. They are process-local and do not survive a
+worker restart. Silence or deferring a question does not grant permission.
+
+Desktop question cards support answering later without taking focus from the main composer.
+The TUI lists pending questions in its footer: Ctrl+G opens one and Escape defers an
+asynchronous question. SDK hosts can provide `askUserAsync` / `setAskUserAsync` to implement
+their own delivery and later-input lifecycle; the callback returns a receipt, not an answer.
+Unattended automation excludes this tool, and child agents require their own host binding.
 
 `InstallCapability` is the conversational lifecycle surface for marketplace plugins, standalone
 project Skills, and MCP servers. It reuses the existing plugin installer, Skill CLI contract, and
