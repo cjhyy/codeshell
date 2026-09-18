@@ -114,6 +114,8 @@ export interface PanelAppProcessServiceOptions {
   }): Promise<boolean>;
   isExecutionApproved?(scope: PanelProcessApprovalScope): Promise<boolean>;
   rememberExecutionApproval?(scope: PanelProcessApprovalScope): Promise<void>;
+  /** Desktop can use installed-app process permission and trusted-project binding as consent. */
+  allowAuthorizedProcessWithoutPrompt?: boolean;
   /** Resolve a declared entry in this app revision; return a canonical, reviewed file. */
   resolvePackageEntry?(
     owner: PanelProcessOwner,
@@ -601,7 +603,10 @@ export class PanelAppProcessService {
       const approvalKey =
         (guestScoped ? `${owner.guestId}\0${epoch}\0` : "") +
         `${scope.appId}\0${scope.revision}\0${scope.executablePath}\0${scope.executableFingerprint}`;
-      let approved = this.approvedExecutables.has(approvalKey);
+      // Desktop already checks installed-app process permission and a trusted,
+      // bound project in authorize(). Web keeps its per-guest confirmation path.
+      let approved = this.options.allowAuthorizedProcessWithoutPrompt === true ||
+        this.approvedExecutables.has(approvalKey);
       if (!approved && !guestScoped && this.options.isExecutionApproved) {
         approved = await this.options.isExecutionApproved(scope).catch(() => false);
         await this.authorize(owner, epoch);
@@ -656,7 +661,7 @@ export class PanelAppProcessService {
         )
           throw new Error("sealed directory argument was replaced");
       }
-      this.approvedExecutables.add(approvalKey);
+      if (!this.options.allowAuthorizedProcessWithoutPrompt) this.approvedExecutables.add(approvalKey);
       const processId = randomUUID();
       const child = spawn(executable.path, args, {
         cwd,

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { PanelAppProcessService } from "./panel-app-process-service.js";
+import { PanelAppDirectoryBookmarks } from "./panel-app-directory-bookmarks.js";
 
 // Execute the real bridge methods without loading Electron and its application
 // startup dependencies. Authorization uses real filesystem paths and the real
@@ -15,7 +16,7 @@ const declaration = parsed.statements.find(
   (node): node is ts.ClassDeclaration =>
     ts.isClassDeclaration(node) && node.name?.text === "PanelAppBridge",
 )!;
-const methods = ["getKnownProcessDirectory", "trustedWorkspaceRoot"].map((name) => {
+const methods = ["getKnownProcessDirectory", "pickProcessDirectory", "restoreProcessDirectory", "trustedWorkspaceRoot"].map((name) => {
   const method = declaration.members.find(
     (node) => ts.isMethodDeclaration(node) && node.name.getText(parsed) === name,
   );
@@ -44,11 +45,17 @@ async function fixture() {
     revision: "r1",
     send() {},
   };
-  const Bridge = runInNewContext(`${compiled}\nDirectoryBridge`, { realpath, stat });
+  const Bridge = runInNewContext(`${compiled}\nDirectoryBridge`, {
+    realpath, stat,
+    BrowserWindow: { fromId: () => ({ isDestroyed: () => false }) },
+    dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: [join(project, "videos")] }) },
+    app: { getPath: () => project },
+  });
   const bridge = new Bridge();
   bridge.options = { isWorkspaceTrusted: (path: string) => path === project };
   bridge.processService = service;
   bridge.processOwner = () => owner;
+  bridge.directoryBookmarks = new PanelAppDirectoryBookmarks(join(project, "bookmarks.json"));
   return { bridge, project, service, owner };
 }
 
@@ -91,5 +98,22 @@ describe("Panel project process directory", () => {
     await expect(
       bridge.getKnownProcessDirectory({ cwd: file }, { name: "project" }),
     ).rejects.toThrow(/root is unavailable/);
+  });
+
+  test("a picked directory renews its grant after a new Panel lifetime without another picker", async () => {
+    const { bridge, project, service, owner } = await fixture();
+    const videos = join(project, "videos");
+    await mkdir(videos);
+    const binding = {
+      cwd: project, projectPath: project, ownerWindowId: 1,
+      resource: { descriptor: { appId: "download-test" } },
+    };
+    const picked = await bridge.pickProcessDirectory(binding);
+    expect(typeof picked.bookmark).toBe("string");
+    service.revokeGuest(owner.guestId);
+    const renewed = await bridge.restoreProcessDirectory(binding, { bookmark: picked.bookmark });
+    expect(renewed.handle).not.toBe(picked.handle);
+    expect(service.directoryPath(owner, renewed.handle)).toBe(await realpath(videos));
+    await expect(bridge.restoreProcessDirectory({ ...binding, resource: { descriptor: { appId: "other-app" } } }, { bookmark: picked.bookmark })).rejects.toThrow();
   });
 });

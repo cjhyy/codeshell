@@ -184,12 +184,12 @@ Panel API v7 adds the atomic local-process surface for apps that declare only
 Host accepts only simple executable names from PATH, never invokes a shell,
 passes arguments as separate strings, strips the child environment to a small
 system allowlist, limits concurrency/lifetime/output, and terminates the child
-tree when its Panel closes. The first execution of an executable is confirmed
-by the user. Desktop's **Allow and remember** consent persists across restarts
-and Panel App updates, scoped to the app id, resolved executable path, and
-executable fingerprint. Another app, path, or changed executable needs approval
-again. Older grants that explicitly covered only an installed revision retain
-that boundary until a new confirmation; they are not silently widened. Domain
+tree when its Panel closes. On Desktop, installing the Panel with `process`
+permission and binding it to a trusted project authorizes its local processes;
+execution does not add a separate dialog for Node or other executables. The
+Host still checks the live app binding, directory and executable handles,
+reviewed entry hashes, arguments, and revocation at each spawn. Web retains
+its per-guest execution confirmation. Domain
 operations such as video downloading remain Panel code rather than new Host methods.
 
 Panel API v8 adds isolated AI Tasks for apps that declare `agent.task`:
@@ -256,6 +256,14 @@ use this for a project-local output destination without needing raw workspace
 context. Older Hosts reject this additive known-directory name; callers should
 handle that response and offer a directory picker instead of silently choosing
 a different output location.
+
+Desktop `filesystem.pickDirectory` also returns a random `bookmark` after the
+user chooses a folder. A Panel can persist that token and call
+`filesystem.restoreDirectory({ bookmark })` when it reopens. The Host binds the
+bookmark to the installed Panel id and trusted project, checks that the exact
+directory still exists with the same filesystem identity, and returns a fresh
+short-lived process handle. Guest-stored paths alone never restore access.
+Older Hosts reject the restore call; Panels should offer the picker then.
 
 ```js
 const task = await window.codeshellPanel.call("agent.task.start", {

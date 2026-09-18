@@ -40,6 +40,8 @@ async function fixture() {
   const file = join(root, "approvals.json");
   const decisions: Array<Record<string, any>> = [];
   let response = 0;
+  let trusted = true;
+  let bound = true;
   const owner: PanelProcessOwner = {
     guestId: 11,
     appId: "download-fixture",
@@ -77,8 +79,8 @@ async function fixture() {
         toolOwners: new Map(),
         options: {
           isPanelAppBound: (projectPath: string, appId: string) =>
-            projectPath === root && appId === identity.appId,
-          isWorkspaceTrusted: (projectPath: string) => projectPath === root,
+            bound && projectPath === root && appId === identity.appId,
+          isWorkspaceTrusted: (projectPath: string) => trusted && projectPath === root,
         },
         managedBinDirectory: () => root,
       }),
@@ -115,36 +117,34 @@ async function fixture() {
     deny: () => {
       response = 1;
     },
+    setTrusted: (value: boolean) => { trusted = value; },
+    setBound: (value: boolean) => { bound = value; },
   };
 }
 
 describe.skipIf(process.platform === "win32")("Desktop process consent", () => {
-  test("Allow and remember survives an app update and Host restart, but not another app or binary", async () => {
+  test("installed trusted Panels run without dialogs across app updates and binary changes", async () => {
     const app = await fixture();
     await app.run(app.createService());
-    expect(app.decisions).toHaveLength(1);
-    expect(app.decisions[0].buttons[0]).toBe("Allow and remember");
-    expect(app.decisions[0].detail).toContain("including after app updates and restarts");
-    expect(app.decisions[0].detail).not.toContain("this installed app version");
-
     const updated = { ...app.owner, revision: "r2" };
     await app.run(app.createService(updated), updated);
-    expect(app.decisions).toHaveLength(1);
     const anotherApp = { ...updated, appId: "another-app" };
     await app.run(app.createService(anotherApp), anotherApp);
-    expect(app.decisions).toHaveLength(2);
     await writeFile(app.executablePath, "#!/bin/sh\nprintf 'changed-executable-fixture\\n'\n");
     await app.run(app.createService(updated), updated);
-    expect(app.decisions).toHaveLength(3);
+    expect(app.decisions).toHaveLength(0);
   });
 
-  test("Cancel never creates a persistent approval", async () => {
+  test("revoked project trust and app binding still block execution without a dialog", async () => {
     const app = await fixture();
     app.deny();
-    await expect(app.run(app.createService())).rejects.toThrow(/denied running/);
-    const updated = { ...app.owner, revision: "r2" };
-    await expect(app.run(app.createService(updated), updated)).rejects.toThrow(/denied running/);
-    expect(app.decisions).toHaveLength(2);
-    expect(app.decisions[0].defaultId).toBe(1);
+    const service = app.createService();
+    await app.run(service);
+    app.setTrusted(false);
+    await expect(app.run(service)).rejects.toThrow(/no longer authorized/);
+    app.setTrusted(true);
+    app.setBound(false);
+    await expect(app.run(service)).rejects.toThrow(/no longer authorized/);
+    expect(app.decisions).toHaveLength(0);
   });
 });

@@ -55,7 +55,7 @@ import {
   panelProcessInfo,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
-import { PanelAppProcessApprovalStore } from "./panel-app-process-approval-store.js";
+import { PanelAppDirectoryBookmarks } from "./panel-app-directory-bookmarks.js";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
@@ -408,6 +408,9 @@ export class PanelAppBridge {
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
   private readonly processService: PanelAppProcessService;
+  private readonly directoryBookmarks = new PanelAppDirectoryBookmarks(
+    join(app.getPath("userData"), "panel-app-directory-bookmarks.json"),
+  );
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
   private resourceService?: PanelResourceService;
@@ -434,10 +437,8 @@ export class PanelAppBridge {
         throw new Error("Media scope is no longer authorized");
       return this.getResourceService().openRead(scope, id, request);
     });
-    const processApprovalStore = new PanelAppProcessApprovalStore(
-      join(app.getPath("userData"), "panel-app-process-approvals.json"),
-    );
     this.processService = new PanelAppProcessService({
+      allowAuthorizedProcessWithoutPrompt: true,
       isOwnerAuthorized: async (owner) => {
         const task = this.toolOwners.get(owner.guestId);
         if (task) return !!(await this.installedToolApp(task.scope).catch(() => null));
@@ -468,39 +469,10 @@ export class PanelAppBridge {
       },
       extraPathDirectories: () =>
         panelExecutableDirectories(this.managedBinDirectory(), { home: app.getPath("home") }),
-      isExecutionApproved: (scope) => processApprovalStore.has(scope),
-      rememberExecutionApproval: (scope) =>
-        processApprovalStore.remember(scope, { lifetime: "app" }),
-      confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
-        const owner = this.guests.get(guestId);
-        const task = this.toolOwners.get(guestId);
-        const taskGuest =
-          task &&
-          [...this.guests.values()].find(
-            (binding) =>
-              binding.resource.descriptor.appId === task.scope.appId &&
-              binding.projectPath === task.scope.projectPath,
-          );
-        const window = owner
-          ? BrowserWindow.fromId(owner.ownerWindowId)
-          : taskGuest
-            ? BrowserWindow.fromId(taskGuest.ownerWindowId)
-            : BrowserWindow.getFocusedWindow();
-        if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
-        const decision = await dialog.showMessageBox(window, {
-          type: "warning",
-          buttons: ["Allow and remember", "Cancel"],
-          defaultId: 1,
-          cancelId: 1,
-          title: appTitle,
-          message: `${appTitle} wants to run ${executable}`,
-          detail:
-            `${executablePath}\n\n` +
-            "CodeShell will run it without a shell. Allow and remember keeps this executable approved for this app, including after app updates and restarts. A different app, executable path, or changed executable requires a new approval.",
-          noLink: true,
-        });
-        return decision.response === 0;
-      },
+      // Desktop installation, declared process permission and trusted project binding
+      // already authorize Panel execution. ProcessService still enforces handles,
+      // package entry hashes, safe arguments and revocation before every spawn.
+      confirmExecution: async () => true,
     });
     this.agentTaskService = new PanelAppAgentTaskService(
       {
@@ -1621,6 +1593,9 @@ export class PanelAppBridge {
       case "filesystem.pickDirectory":
         this.requirePermission(binding, "process");
         return this.pickProcessDirectory(binding);
+      case "filesystem.restoreDirectory":
+        this.requirePermission(binding, "process");
+        return this.restoreProcessDirectory(binding, params);
       case "filesystem.openDirectory":
         this.requirePermission(binding, "process");
         return this.openProcessDirectory(binding, params);
@@ -1833,7 +1808,21 @@ export class PanelAppBridge {
       properties: ["openDirectory", "createDirectory"],
     });
     if (selected.canceled || selected.filePaths.length !== 1) return { cancelled: true };
-    return this.processService.grantDirectory(this.processOwner(binding), selected.filePaths[0]);
+    const projectPath = await this.trustedWorkspaceRoot(binding);
+    const processOwner = this.processOwner(binding);
+    const grant = await this.processService.grantDirectory(processOwner, selected.filePaths[0]);
+    const bookmark = this.directoryBookmarks.remember(binding.resource.descriptor.appId, projectPath, grant.path);
+    this.processService.directoryPath(processOwner, grant.handle);
+    return { ...grant, bookmark };
+  }
+
+  private async restoreProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const projectPath = await this.trustedWorkspaceRoot(binding);
+    const bookmark = (params as { bookmark?: unknown } | null)?.bookmark;
+    const path = this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
+    const grant = await this.processService.grantDirectory(this.processOwner(binding), path);
+    this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
+    return { ...grant, bookmark };
   }
 
   private async openProcessDirectory(binding: GuestBinding, params: unknown): Promise<boolean> {

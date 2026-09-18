@@ -1282,9 +1282,9 @@ describeIsolated("PanelAppBridge", () => {
         guest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["process"]) as any,
-        "/repo",
+        directory,
       );
-      await bindBridgeGuest(62);
+      await bindBridgeGuest(62, { projectPath: directory, cwd: directory });
       const known = (await panelGuestHandler()({ sender: guest }, "filesystem.getKnownDirectory", {
         name: "downloads",
       })) as { handle: string; path: string };
@@ -1321,8 +1321,15 @@ describeIsolated("PanelAppBridge", () => {
       panelAppElectronMock.openDialogResult = { canceled: false, filePaths: [directory] };
       const picked = (await panelGuestHandler()({ sender: guest }, "filesystem.pickDirectory")) as {
         handle: string;
+        bookmark: string;
       };
       expect(picked.handle).toBeString();
+      expect(picked.bookmark).toBeString();
+      const restored = (await panelGuestHandler()({ sender: guest }, "filesystem.restoreDirectory", {
+        bookmark: picked.bookmark,
+      })) as { handle: string; path: string };
+      expect(restored.handle).not.toBe(picked.handle);
+      expect(restored.path).toBe(realpathSync(directory));
     } finally {
       panelAppElectronMock.userDataPath = previousUserDataPath;
       rmSync(directory, { recursive: true, force: true });

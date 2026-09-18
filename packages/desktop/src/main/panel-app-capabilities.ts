@@ -46,7 +46,7 @@ const groups: Record<string, string[]> = {
     "automations.delete",
     "automations.runNow",
   ],
-  process: panelProcessMethods,
+  process: [...panelProcessMethods, "filesystem.restoreDirectory"],
   resources: [...panelResourceMethods, "resources.references.pick"],
 };
 export function desktopPanelCapabilities(

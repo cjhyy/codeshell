@@ -33,6 +33,7 @@ describe("Panel process protocol", () => {
     const path = join(root, "entry.mjs");
     await writeFile(path, source);
     await symlink(process.execPath, join(root, "runtime"));
+    await symlink(process.execPath, join(root, "node"));
     const sha256 = createHash("sha256").update(source).digest("hex");
     const events: Array<{ event: string; payload: Record<string, unknown> }> = [];
     const owner: PanelProcessOwner = {
@@ -99,6 +100,30 @@ describe("Panel process protocol", () => {
     expect(rest.found && rest.truncated).toBe(false);
     now += processLimits.receiptTtlMs;
     expect(await f.service.get(f.owner, { processId })).toEqual({ found: false, processId });
+  });
+
+  test("trusted Desktop Panels skip process prompts for both reviewed and direct Node runs", async () => {
+    let prompts = 0;
+    const f = await fixture('console.log("reviewed");', {
+      allowAuthorizedProcessWithoutPrompt: true,
+      confirmExecution: async () => { prompts++; return true; },
+    });
+    const node = await f.service.findExecutable(f.owner, { name: "node" });
+    const entry = await f.service.resolveEntry(f.owner, {
+      name: "fixture", executableHandle: node.handle,
+    });
+    const reviewed = await f.service.start(f.owner, {
+      ...f.params, executableHandle: node.handle, entryHandle: entry.handle,
+    });
+    expect((await f.exit(reviewed.processId)).code).toBe(0);
+    expect(prompts).toBe(0);
+    const direct = await f.service.start(f.owner, {
+      executableHandle: node.handle,
+      directoryHandle: f.params.directoryHandle,
+      args: ["--version"],
+    });
+    expect((await f.exit(direct.processId)).code).toBe(0);
+    expect(prompts).toBe(0);
   });
 
   test("cancel acknowledges a request; terminal state waits for the actual child close", async () => {
