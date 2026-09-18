@@ -2674,6 +2674,8 @@ describe("PetDispatchService", () => {
     expect(executionContext).toEqual({
       originClientMessageId: "im-message-one",
       requestedAt: expect.any(Number),
+      // A legacy route without adapter metadata is not assumed private.
+      isDirectMessage: false,
       completionTarget: {
         kind: "im-gateway",
         channel: "wechat",

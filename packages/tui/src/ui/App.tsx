@@ -4,7 +4,15 @@
  * Uses AgentClient (protocol layer) instead of Engine directly.
  * All engine interaction goes through the client-server protocol.
  */
-import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+  useReducer,
+  useSyncExternalStore,
+} from "react";
 import { Box, Text, useApp, useInput, forceRedraw } from "../render/index.js";
 import { Banner } from "./components/Banner.js";
 import { UpdateBanner } from "./components/UpdateBanner.js";
@@ -24,11 +32,12 @@ import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
 import type { ArenaParticipantEntry, ProviderManagerEntry } from "./components/ModelManager.js";
 import type { SessionPickerEntry } from "./components/SessionPicker.js";
+import { TuiControlSurface, type ModelManagerState } from "./components/TuiControlSurface.js";
 import {
-  TuiControlSurface,
-  type ModelManagerState,
-  type PendingQuestion,
-} from "./components/TuiControlSurface.js";
+  activeQuestion,
+  INITIAL_PENDING_QUESTIONS,
+  reducePendingQuestions,
+} from "./pending-questions.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
@@ -52,7 +61,7 @@ import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { loopCommand } from "../cli/commands/builtin/loop-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
-import type { ApprovalRequest, TaskInfo } from "@cjhyy/code-shell-core/internal";
+import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
 import { StreamAttempt } from "./stream-attempt.js";
 import {
@@ -335,7 +344,14 @@ export function App({
     riskLevel: string;
     args: Record<string, unknown>;
   } | null>(null);
-  const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
+  const [pendingQuestions, dispatchQuestion] = useReducer(
+    reducePendingQuestions,
+    INITIAL_PENDING_QUESTIONS,
+  );
+  const pendingQuestion = activeQuestion(pendingQuestions);
+  const deferredQuestionCount = pendingQuestions.questions.filter(
+    (question) => question.asynchronous,
+  ).length;
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [modelEntries, setModelEntries] = useState<ModelEntry[] | null>(null);
   const [sessionEntries, setSessionEntries] = useState<SessionPickerEntry[] | null>(null);
@@ -431,7 +447,11 @@ export function App({
 
   useEffect(() => {
     // Handle approval requests from the server
-    const handleApproval = (requestId: string, request: ApprovalRequest) => {
+    const handleApproval: Parameters<AgentClient["onApprovalRequest"]>[0] = (
+      requestId,
+      request,
+      meta,
+    ) => {
       // __ask_user__ is a question, not a tool approval — routed to the
       // text-input prompt instead of the y/n permission dialog. Optional
       // multiple-choice metadata travels along in the request args.
@@ -449,15 +469,20 @@ export function App({
           )
             ? (rawOptions as { label: string; description: string }[])
             : undefined;
-        setPendingQuestion({
-          requestId,
-          question: request.description,
-          header:
-            typeof (args as { header?: unknown }).header === "string"
-              ? (args as { header: string }).header
-              : undefined,
-          options,
-          multiSelect: (args as { multiSelect?: unknown }).multiSelect === true,
+        dispatchQuestion({
+          type: "receive",
+          question: {
+            requestId,
+            sessionId: meta?.sessionId,
+            question: request.description,
+            header:
+              typeof (args as { header?: unknown }).header === "string"
+                ? (args as { header: string }).header
+                : undefined,
+            options,
+            multiSelect: (args as { multiSelect?: unknown }).multiSelect === true,
+            asynchronous: (args as { asynchronous?: unknown }).asynchronous === true,
+          },
         });
         return;
       }
@@ -471,8 +496,15 @@ export function App({
       });
     };
 
+    const handleResolved: Parameters<AgentClient["onApprovalResolved"]>[0] = (event) => {
+      dispatchQuestion({ type: "resolve", requestId: event.requestId, sessionId: event.sessionId });
+    };
     client.onApprovalRequest(handleApproval);
-    return () => client.offApprovalRequest(handleApproval);
+    client.onApprovalResolved(handleResolved);
+    return () => {
+      client.offApprovalRequest(handleApproval);
+      client.offApprovalResolved(handleResolved);
+    };
   }, [client]);
 
   // ─── Text delta buffering ──────────────────────────────────────
@@ -1249,6 +1281,21 @@ export function App({
   }, [fetchModelManagerState]);
 
   useInput((ch, key) => {
+    if (
+      key.ctrl &&
+      ch === "g" &&
+      !pendingQuestion &&
+      !pendingApproval &&
+      !showOnboarding &&
+      !modelEntries &&
+      !modelManager &&
+      !sessionEntries &&
+      screen === "prompt" &&
+      dockFocusIdx === null
+    ) {
+      dispatchQuestion({ type: "open_next" });
+      return;
+    }
     // Dock keyboard branch — highest priority among non-overlay keys.
     // When dockFocusIdx is non-null the dock owns ↑/↓/Enter/Esc and
     // returns early on each one, so they never reach the cancel-Esc or
@@ -2133,7 +2180,7 @@ export function App({
       {/* Spinner with verb (when loading).
           Hidden while waiting on user input (AskUser / approval) — the elapsed
           counter would otherwise keep climbing while we're idle on the user. */}
-      {isRunning && !pendingQuestion && !pendingApproval && (
+      {isRunning && (!pendingQuestion || pendingQuestion.asynchronous) && !pendingApproval && (
         <SpinnerWithVerb
           mode={streamMode}
           streamingTokensRef={streamingTokensRef}
@@ -2197,7 +2244,20 @@ export function App({
         wizard={wizard}
         setWizard={setWizard}
         pendingQuestion={pendingQuestion}
-        setPendingQuestion={setPendingQuestion}
+        onQuestionResolved={(question) =>
+          dispatchQuestion({
+            type: "resolve",
+            requestId: question.requestId,
+            sessionId: question.sessionId,
+          })
+        }
+        onQuestionDeferred={(requestId) => dispatchQuestion({ type: "defer", requestId })}
+        onQuestionDraftChange={(requestId, draft) =>
+          dispatchQuestion({ type: "draft", requestId, draft })
+        }
+        onQuestionSubmittingChange={(requestId, submitting) =>
+          dispatchQuestion({ type: "submitting", requestId, submitting })
+        }
         pendingApproval={pendingApproval !== null}
         sessionId={sessionId}
         sidRef={sidRef}
@@ -2217,6 +2277,12 @@ export function App({
       />
 
       <Text dim>{separator}</Text>
+
+      {deferredQuestionCount > 0 && (
+        <Box marginLeft={2}>
+          <Text color="ansi:yellow">{`${deferredQuestionCount} 个问题待回答 · Ctrl+G 打开回答`}</Text>
+        </Box>
+      )}
 
       <Box wrap="truncate">
         <ModeIndicator mode={permMode} />

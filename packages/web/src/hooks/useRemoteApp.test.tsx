@@ -940,6 +940,100 @@ describe("useRemoteApp project V2 session creation", () => {
 });
 
 describe("useRemoteApp approval replay", () => {
+  for (const source of ["raw", "stream", "snapshot"] as const) {
+    test(`keeps asynchronous questions across ${source} terminal events and acknowledges a late answer`, async () => {
+      setupBrowser();
+      const hook = await renderHook(() => useRemoteApp());
+      const ws = FakeWebSocket.instances[0]!;
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        for (const [requestId, toolName, asynchronous] of [
+          ["ask-later", "__ask_user__", true],
+          ["ask-now", "__ask_user__", false],
+          ["ordinary", "Write", true],
+        ]) {
+          ws.message({
+            jsonrpc: "2.0",
+            method: "agent/approvalRequest",
+            params: {
+              sessionId: "s1",
+              requestId,
+              request: {
+                toolName,
+                description: "Pick a theme",
+                args: { question: "Pick a theme", asynchronous },
+                riskLevel: "low",
+              },
+            },
+          });
+        }
+        const event = { type: "turn_complete", reason: "completed" };
+        if (source === "raw") {
+          ws.message({ method: "agent/streamEvent", params: { sessionId: "s1", event } });
+        } else if (source === "stream") {
+          ws.message({ type: "session.stream", sessionId: "s1", seq: 1, event });
+        } else {
+          ws.message({
+            type: "session.snapshot",
+            sessionId: "s1",
+            nextSeq: 2,
+            entries: [{ seq: 1, event }],
+          });
+        }
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((approval) => approval.requestId)).toEqual([
+        "ask-later",
+      ]);
+      expect(hook.result.current.approvals[0]?.asynchronous).toBe(true);
+
+      const responses = () =>
+        ws.sent
+          .map((payload) => JSON.parse(payload))
+          .filter((event) => event.type === "approval.respond");
+      await act(async () => {
+        hook.result.current.respondApproval("ask-later", "approve", { answer: "蓝色" });
+        hook.result.current.respondApproval("ask-later", "approve", { answer: "蓝色" });
+        await flushMicrotasks();
+      });
+      expect(responses()).toEqual([
+        {
+          type: "approval.respond",
+          approvalId: "ask-later",
+          sessionId: "s1",
+          decision: "approve",
+          answer: "蓝色",
+        },
+      ]);
+      expect(hook.result.current.approvals).toHaveLength(1);
+
+      await act(async () => {
+        ws.message({ type: "error", approvalId: "ask-later", message: "Please retry" });
+        hook.result.current.respondApproval("ask-later", "approve", { answer: "蓝色" });
+        await flushMicrotasks();
+      });
+      expect(responses()).toHaveLength(2);
+      expect(hook.result.current.approvals).toHaveLength(1);
+
+      await act(async () => {
+        ws.message({
+          type: "approval.resolved",
+          approvalId: "ask-later",
+          sessionId: "s1",
+          approved: true,
+          answer: "蓝色",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      await hook.unmount();
+    });
+  }
+
   test("replayed raw approval after selecting its session hydrates and resolves the card", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());

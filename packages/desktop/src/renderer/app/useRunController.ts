@@ -165,15 +165,10 @@ export function useRunController({
     compactingBucketsRef,
     setCompactingBuckets,
   } = runtime;
-  const {
-    approval,
-    approvalQueue,
-    setApprovalQueue,
-    setApproval,
-    setApprovalHistory,
-    approvalBucketsRef,
-  } = approvals;
+  const { approvalQueue, setApprovalQueue, setApproval, setApprovalHistory, approvalBucketsRef } =
+    approvals;
   const pendingLaunchesRef = useRef(new Map<string, { cancelled: boolean }>());
+  const launchVersionsRef = useRef(new Map<string, symbol>());
   const send = (
     text: string,
     sendOpts: {
@@ -193,6 +188,9 @@ export function useRunController({
     const wasDraft = targetSessionId === null;
     const sid = targetSessionId ?? ensureActiveSession(targetProjectId);
     const bucket = bucketKey(targetProjectId, sid);
+    const launchVersion = Symbol();
+    launchVersionsRef.current.set(bucket, launchVersion);
+    const ownsCurrentLaunch = () => launchVersionsRef.current.get(bucket) === launchVersion;
     const projectBucketSegment = projectBucketSegmentFor(targetProjectId);
     const targetProject = projects.find((project) => project.id === targetProjectId) ?? null;
     // A draft's pre-send toggles (permission/goal/model) were keyed under the
@@ -408,12 +406,14 @@ export function useRunController({
     // — busy clearing, error surfacing, the whole .then chain below — because
     // the two paths differ only in who produces the stream, and duplicating the
     // bookkeeping is how one path ends up permanently "busy" after a failure.
-    const activeGoal = sendOpts.suppressGoal
-      ? undefined
-      : (opts.goal ?? state.activeGoal?.objective);
+    // The service owns persistent Goal state and emits the canonical projection.
+    // Pass a new objective only for an explicit Goal send; ordinary follow-ups
+    // inherit there instead of replacing the goal with a renderer snapshot.
+    const hasActiveGoal =
+      !sendOpts.suppressGoal &&
+      (!!opts.goal || (bucket === activeBucket && !!state.activeGoal && !state.activeGoal.paused));
     const externalDeveloperInstructions = [
       opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
-      activeGoal ? `Active CodeShell goal:\n${activeGoal}` : undefined,
       opts.workspaceProfile
         ? `Active CodeShell workspace profile: ${opts.workspaceProfile}`
         : undefined,
@@ -429,7 +429,7 @@ export function useRunController({
     const pendingLaunch = { cancelled: false };
     pendingLaunchesRef.current.set(bucket, pendingLaunch);
     const startRun = flushSessionPersistence().then(async () => {
-      if (pendingLaunch.cancelled) return null;
+      if (pendingLaunch.cancelled || !ownsCurrentLaunch()) return null;
       pendingLaunchesRef.current.delete(bucket);
       directorySaved = true;
       return externalRuntime
@@ -442,7 +442,9 @@ export function useRunController({
             clientMessageId,
             attachments: opts.attachments,
             ...toExternalRuntimePermission(opts.permissionMode),
-            hasGoal: !!activeGoal,
+            hasGoal: hasActiveGoal,
+            ...(opts.goal !== undefined ? { goal: opts.goal } : {}),
+            ...(opts.disableGoal !== undefined ? { disableGoal: opts.disableGoal } : {}),
             initialContext: buildExternalRuntimeHandoff(state.messages),
             ...(externalDeveloperInstructions
               ? { developerInstructions: externalDeveloperInstructions }
@@ -459,7 +461,7 @@ export function useRunController({
     });
     return startRun
       .then((r) => {
-        if (pendingLaunch.cancelled) return;
+        if (pendingLaunch.cancelled || !ownsCurrentLaunch()) return;
         // Belt-and-braces: clear busy for THIS run's bucket even if the
         // stream never delivered turn_complete (e.g. error in setup, or
         // the worker shutdown before flushing the event). Use the closed-
@@ -500,7 +502,7 @@ export function useRunController({
         }
       })
       .catch((err) => {
-        if (pendingLaunch.cancelled) return;
+        if (pendingLaunch.cancelled || !ownsCurrentLaunch()) return;
         if (pendingLaunchesRef.current.get(bucket) === pendingLaunch) {
           pendingLaunchesRef.current.delete(bucket);
         }
@@ -536,6 +538,8 @@ export function useRunController({
     if ((!prompt && attachments.length === 0) || session.status !== "ready") return;
 
     const bucket = session.bucket;
+    const launchVersion = Symbol();
+    launchVersionsRef.current.set(bucket, launchVersion);
     const engineSessionId = session.sessionId;
     const clientMessageId = newQueuedId();
     const sendPermissionMode =
@@ -607,6 +611,7 @@ export function useRunController({
     }
 
     const isLiveGeneration = (): boolean =>
+      launchVersionsRef.current.get(bucket) === launchVersion &&
       Object.values(quickChatSessionsRef.current).some(
         (liveSession) =>
           liveSession.sessionId === engineSessionId &&
@@ -928,9 +933,9 @@ export function useRunController({
     // else falls through to the running/active bucket. Without this the event
     // object reaches `bucket.indexOf` and throws — silently breaking Stop.
     const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
-    // opts.relay = 引导打断 (handoff to a queued re-send). We still draw the
-    // "你在 Ns 后停止了" marker for it now (gives elapsed + keeps the killed turn's
-    // content un-collapsed); the relayingBuckets marker set by the caller keeps
+    // opts.relay = 引导打断 (handoff to a queued re-send). The compact stopped
+    // status preserves the interrupted turn's elapsed time and expanded output;
+    // the relayingBuckets marker set by the caller keeps
     // liveTurnActive lit across the cancel→re-send gap. (relay no longer changes
     // the turn_end dispatch — kept in the signature for call-site clarity.)
     void opts;
@@ -940,6 +945,8 @@ export function useRunController({
     // sent last and would abort the wrong one when two run concurrently.
     const bucket = resolveStopBucket(override, activeBucket, runningBucketRef.current);
     if (!bucket) return;
+    // A stopped run's eventual RPC resolve/reject cannot finish a successor.
+    launchVersionsRef.current.set(bucket, Symbol());
     const pendingLaunch = pendingLaunchesRef.current.get(bucket);
     if (pendingLaunch) {
       pendingLaunch.cancelled = true;
@@ -960,20 +967,15 @@ export function useRunController({
         : undefined;
     const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     window.codeshell.log("stop.click", { bucket, engineSessionId });
-    // Fire the cancel IPC, but don't wait for the round-trip — the
-    // user pressed Stop and expects the UI to reflect that NOW. Clear
-    // busy + routing optimistically; any stream events that arrive
-    // after this point are tail-end noise we can drop (the engine has
-    // already been told to abort).
-    // Manual-stop marker (TODO 2.8): a thin "你在 Ns 后停止了" line, using the
-    // turn-start time captured when busy went true. Read BEFORE setBusyForKey
-    // clears it.
+    // Show Stop immediately while retaining the Session route. Late output and
+    // usage still belong to this run; run identities keep them out of a relay
+    // successor. Capture elapsed time before setBusyForKey clears the clock.
     const startedAt = busySinceRef.current.get(bucket);
     const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
     setBusyForKey(bucket, false);
     if (runningBucketRef.current === bucket) runningBucketRef.current = null;
     // Always mark the interrupted turn — even on the relay (引导接力) path. The
-    // "你在 Ns 后停止了" line gives the elapsed time AND tags the turn as stopped,
+    // stopped status gives the elapsed time and tags the turn as stopped,
     // which makes its TurnProcessGroup show its produced content flat (stopped →
     // itemsVisible) instead of collapsing behind the fold header. relay still
     // re-sends the queued input on the next busy=false tick; the turn_end just
@@ -1161,12 +1163,11 @@ export function useRunController({
   };
 
   const showWelcome = state.messages.length === 0;
-  const visibleApproval =
-    approval && approvalBucketsRef.current.get(approval.requestId) === activeBucket
-      ? approval
-      : null;
   const approvalForBucket = (bucket: string): ApprovalRequestEnvelope | null =>
     approvalQueue.find((env) => approvalBucketsRef.current.get(env.requestId) === bucket) ?? null;
+  // Settings reads can finish out of order across Sessions. A different
+  // Session's earlier queue entry must not hide this conversation's approval.
+  const visibleApproval = approvalForBucket(activeBucket);
 
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
 

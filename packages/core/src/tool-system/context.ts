@@ -92,6 +92,13 @@ export interface AskUserOptions {
  */
 export type AskUserFn = (question: string, opts?: AskUserOptions) => Promise<string>;
 
+/**
+ * Display a question without waiting for an answer. Resolves once the host
+ * accepts the question, with a delivery receipt (never the user's answer).
+ * The host delivers a later answer as user input to the originating session.
+ */
+export type AskUserAsyncFn = (question: string, opts?: AskUserOptions) => Promise<string>;
+
 /** Spawn a sub-agent. Returns the produced text or throws. */
 export interface SubAgentSpawnRequest {
   agentId: string;
@@ -304,6 +311,8 @@ export interface ToolContext {
   runScopedServices?: Readonly<Record<string, unknown>>;
   /** UI-backed AskUserQuestion handler. Undefined → headless mode. */
   askUser?: AskUserFn;
+  /** Nonblocking question delivery. Undefined → this host does not support it. */
+  askUserAsync?: AskUserAsyncFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */
   subAgentSpawner?: SubAgentSpawner;
   /**

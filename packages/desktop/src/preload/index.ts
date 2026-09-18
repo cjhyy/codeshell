@@ -28,6 +28,7 @@ import type { PluginMediaDto } from "../shared/plugin-media";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
+import type { GoalConfig } from "@cjhyy/code-shell-core";
 import type {
   LocalPluginPreview,
   PluginHookApprovalResult,
@@ -178,8 +179,9 @@ const pending = new Map<
 >();
 // Multi-session: callbacks receive `{ sessionId, event, seq? }` for stream events
 // and `{ sessionId, requestId, request }` for approval requests.
-const streamListeners: Array<(env: { sessionId: string; event: unknown; seq?: number; epoch?: string }) => void> =
-  [];
+const streamListeners: Array<
+  (env: { sessionId: string; event: unknown; seq?: number; epoch?: string }) => void
+> = [];
 const approvalListeners: Array<(env: unknown) => void> = [];
 const approvalResolvedListeners: Array<(env: unknown) => void> = [];
 const mobilePermissionModeListeners: Array<(env: unknown) => void> = [];
@@ -474,9 +476,17 @@ ipcRenderer.on(
     const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
     if (!sessionId || !requestId || payload?.request === undefined) return;
     externalApprovalIds.add(requestId);
-    approvalListeners.forEach((cb) => cb({ sessionId, requestId, request: payload.request }));
+    approvalListeners.forEach((cb) =>
+      cb({ sessionId, requestId, request: payload.request, source: "external-runtime" }),
+    );
   },
 );
+ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: unknown }) => {
+  const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
+  if (!requestId) return;
+  externalApprovalIds.delete(requestId);
+  approvalResolvedListeners.forEach((cb) => cb(payload));
+});
 
 contextBridge.exposeInMainWorld("codeshell", {
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
@@ -705,17 +715,22 @@ contextBridge.exposeInMainWorld("codeshell", {
     // main instead. Intercepting HERE — after the argument parsing above — means
     // the renderer calls `approve(...)` identically for both transports and the
     // scope/pathScope handling is shared rather than reimplemented.
-    if (externalApprovalIds.has(requestId)) {
-      externalApprovalIds.delete(requestId);
-      ipcRenderer.send("externalRuntime:approvalDecision", {
-        requestId,
-        approved: decision === "approve",
-        ...(reason !== undefined ? { reason } : {}),
-        ...(answerText !== undefined ? { answer: answerText } : {}),
-        ...(scope ? { scope } : {}),
-        ...(pathScope ? { pathScope } : {}),
-      });
-      return Promise.resolve({ ok: true });
+    if (externalApprovalIds.has(requestId) || requestId.startsWith("external-approval-")) {
+      return ipcRenderer
+        .invoke("externalRuntime:approvalDecision", {
+          requestId,
+          approved: decision === "approve",
+          ...(reason !== undefined ? { reason } : {}),
+          ...(answerText !== undefined ? { answer: answerText } : {}),
+          ...(scope ? { scope } : {}),
+          ...(pathScope ? { pathScope } : {}),
+        })
+        .then((result) => {
+          if (!result?.ok)
+            throw new Error(result?.error?.message || "The prompt is no longer pending.");
+          externalApprovalIds.delete(requestId);
+          return result;
+        });
     }
     return rpc("agent/approve", {
       sessionId,
@@ -799,6 +814,14 @@ contextBridge.exposeInMainWorld("codeshell", {
       const i = petDelegationSessionListeners.indexOf(cb);
       if (i >= 0) petDelegationSessionListeners.splice(i, 1);
     };
+  },
+  getPendingApprovals: async () => {
+    const pending = await ipcRenderer.invoke("agent:pendingApprovals");
+    for (const env of pending) {
+      if (env?.source === "external-runtime" && typeof env.requestId === "string")
+        externalApprovalIds.add(env.requestId);
+    }
+    return pending;
   },
   onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {
     approvalListeners.push(cb);
@@ -1511,6 +1534,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     send: (payload: {
       sessionId: string;
       text: string;
+      goal?: string | GoalConfig;
+      disableGoal?: boolean;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }> =>
@@ -1690,6 +1715,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       requestId: string;
       sessionId?: string;
       approved?: boolean;
+      answer?: string;
     }) => ipcRenderer.invoke("mobileRemote:approvalResolved", input),
   },
 

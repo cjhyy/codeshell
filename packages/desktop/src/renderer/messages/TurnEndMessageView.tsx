@@ -4,7 +4,7 @@ import { useT, type TFunction } from "../i18n/I18nProvider";
 
 /**
  * Thin, non-foldable marker for how a turn ended when it wasn't a natural
- * completion (TODO 2.8): a right-aligned faint line with a divider, sitting
+ * completion (TODO 2.8): a compact status aligned with the assistant, sitting
  * below the assistant output it interrupted. Distinguishes manual stop /
  * timeout / error. Deliberately NOT a tool/thinking fold card.
  */
@@ -20,13 +20,9 @@ function label(message: TurnEndMessage, t: TFunction): string {
   const elapsed = formatElapsed(message.elapsedMs);
   switch (message.reason) {
     case "stopped":
-      return elapsed
-        ? t("msg.turnEnd.stoppedAt", { time: elapsed })
-        : t("msg.turnEnd.stopped");
+      return elapsed ? t("msg.turnEnd.stoppedAt", { time: elapsed }) : t("msg.turnEnd.stopped");
     case "timeout":
-      return elapsed
-        ? t("msg.turnEnd.timeoutAt", { time: elapsed })
-        : t("msg.turnEnd.timeout");
+      return elapsed ? t("msg.turnEnd.timeoutAt", { time: elapsed }) : t("msg.turnEnd.timeout");
     case "error":
       return message.detail
         ? t("msg.turnEnd.errorWithDetail", { detail: message.detail })
@@ -37,9 +33,8 @@ function label(message: TurnEndMessage, t: TFunction): string {
 function TurnEndMessageViewImpl({ message }: { message: TurnEndMessage }) {
   const { t } = useT();
   return (
-    <div className="flex items-center gap-2 px-4 py-1 text-[11px] text-muted-foreground">
-      <span className="h-px flex-1 bg-border" />
-      <span className="shrink-0">{label(message, t)}</span>
+    <div className="min-w-0 px-4 py-1 text-xs text-muted-foreground" data-message-kind="turn-end">
+      <span className="break-words [overflow-wrap:anywhere]">{label(message, t)}</span>
     </div>
   );
 }

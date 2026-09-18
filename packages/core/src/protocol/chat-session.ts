@@ -17,8 +17,10 @@ export interface ChatSessionOptions {
 }
 
 export interface PendingApprovalEntry {
-  resolve: (decision: unknown) => void;
+  resolve: (decision: unknown) => void | Promise<void>;
   metadata: PendingApprovalMetadata;
+  /** An asynchronous answer is validating/admitting; keep the question retryable. */
+  submitting?: boolean;
 }
 
 export interface TurnOpts {
@@ -134,6 +136,7 @@ export class ChatSession {
    * (the user is engaging again) so normal wakeups resume working afterward.
    */
   private cancelledSinceLastTurn = false;
+  private cancellationGeneration = 0;
   private settlePromise: Promise<void> = Promise.resolve();
   private resolveSettled: (() => void) | null = null;
 
@@ -185,6 +188,33 @@ export class ChatSession {
     });
   }
 
+  /** Preserve the requesting turn's authority for an asynchronous follow-up. */
+  captureFollowUpOptions(): TurnOpts {
+    const opts = this.active?.opts;
+    if (!opts) return {};
+    return {
+      cwd: opts.cwd,
+      workspaceContext: opts.workspaceContext
+        ? {
+            ...opts.workspaceContext,
+            roots: opts.workspaceContext.roots.map((root) => ({ ...root })),
+          }
+        : undefined,
+      disableGoal: opts.disableGoal,
+      permissionMode: opts.permissionMode,
+      planMode: opts.planMode,
+      behaviorMode: opts.behaviorMode,
+      toolAllowlist: opts.toolAllowlist ? [...opts.toolAllowlist] : undefined,
+      skillAllowlist: opts.skillAllowlist ? [...opts.skillAllowlist] : undefined,
+      ephemeral: opts.ephemeral,
+      profileParams: opts.profileParams ? { ...opts.profileParams } : undefined,
+      workspaceProfile: opts.workspaceProfile,
+      sessionMessageTargets: opts.sessionMessageTargets?.map((target) => ({ ...target })),
+      kind: opts.kind,
+      approvalRouter: opts.approvalRouter,
+    };
+  }
+
   /**
    * Run session maintenance (for example context-package summarization) under
    * the same per-session mutex as turns. Existing activity fails fast; turns
@@ -224,6 +254,11 @@ export class ChatSession {
     return this.cancelledSinceLastTurn;
   }
 
+  /** Monotonic Stop boundary, including across a subsequent user-started turn. */
+  get cancellationEpoch(): number {
+    return this.cancellationGeneration;
+  }
+
   /**
    * Abort the in-flight turn and drain queued turns.
    *
@@ -233,6 +268,7 @@ export class ChatSession {
    * are always rejected regardless.
    */
   cancel(): void {
+    this.cancellationGeneration += 1;
     // Mark the in-flight turn as user-cancelled so pump()'s catch resolves it
     // as a clean aborted result rather than rejecting (→ UI Error).
     if (this.active) this.cancelledActive = true;
@@ -258,6 +294,7 @@ export class ChatSession {
   /** Stop this exact turn while preserving unrelated queued work. */
   cancelActiveTurn(clientMessageId: string): boolean {
     if (!this.matchesActiveTurn(clientMessageId)) return false;
+    this.cancellationGeneration += 1;
     this.cancelledActive = true;
     this.cancelledSinceLastTurn = true;
     this.controller?.abort();

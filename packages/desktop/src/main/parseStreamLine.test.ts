@@ -54,7 +54,7 @@ describe("parseSnapshotAppend", () => {
     expect(parseSnapshotAppend("{not json")).toBeNull();
   });
 
-  it("excludes steer_injected (live-only marker; transcript already has the user msg)", () => {
+  it("excludes legacy steer_injected without a stable id", () => {
     // If snapshotted, a resume would replay it AND rebuild the same user msg
     // from the transcript → the steered message renders twice (s-mqjl1uap bug).
     expect(
@@ -65,6 +65,31 @@ describe("parseSnapshotAppend", () => {
         }),
       ),
     ).toBeNull();
+  });
+
+  it("retains the real identified steer boundary without changing its run identity", () => {
+    const event = {
+      type: "steer_injected",
+      text: "queued input",
+      id: "second-input",
+      runId: "first-run",
+      clientMessageId: "first-input",
+    };
+    expect(
+      parseSnapshotAppend(
+        line({ method: "agent/streamEvent", params: { sessionId: "s1", event } }),
+      ),
+    ).toEqual({ sessionId: "s1", event });
+    for (const id of [undefined, null, "", "   ", 1]) {
+      expect(
+        parseSnapshotAppend(
+          line({
+            method: "agent/streamEvent",
+            params: { sessionId: "s1", event: { ...event, id } },
+          }),
+        ),
+      ).toBeNull();
+    }
   });
 });
 

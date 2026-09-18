@@ -21,6 +21,12 @@ function notifyGitBranchesChanged(cwd: string): void {
 
 export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
   const { t } = useT();
+  const targetRef = useRef({ projectId, cwd });
+  if (targetRef.current.projectId !== projectId || targetRef.current.cwd !== cwd) {
+    targetRef.current = { projectId, cwd };
+  }
+  const target = targetRef.current;
+  const [resolvedTarget, setResolvedTarget] = useState<typeof target | null>(null);
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<LoadState>("idle");
   const [branches, setBranches] = useState<GitBranches>({
@@ -43,8 +49,10 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
   });
 
   useEffect(() => {
+    setOpen(false);
+    setPendingBranch(null);
     if (!projectId || !cwd) {
-      setOpen(false);
+      setResolvedTarget(null);
       setState("unavailable");
       setBranches({ isRepo: false, current: null, branches: [] });
       setError(null);
@@ -57,12 +65,14 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     window.codeshell
       .getProjectGitBranches(projectId)
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled || targetRef.current !== target) return;
+        setResolvedTarget(target);
         setBranches(result);
         setState(result.isRepo && result.branches.length > 0 ? "ready" : "unavailable");
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
+        if (cancelled || targetRef.current !== target) return;
+        setResolvedTarget(null);
         setBranches({ isRepo: false, current: null, branches: [] });
         setError(err instanceof Error ? err.message : t("chat.branch.readFailed"));
         setState("error");
@@ -94,10 +104,7 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
 
   const canOpen = !disabled && state === "ready";
   const label = (() => {
-    if (!cwd) return t("chat.branch.noBranch");
     if (state === "loading") return t("chat.branch.loading");
-    if (state === "error") return t("chat.branch.notGit");
-    if (!branches.isRepo) return t("chat.branch.notGit");
     if (branches.branches.length === 0) return t("chat.branch.noLocalBranches");
     return branches.current ?? t("chat.branch.detached");
   })();
@@ -109,12 +116,14 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     setError(null);
     try {
       const next = await window.codeshell.switchProjectGitBranch(projectId, branch);
+      notifyGitBranchesChanged(cwd);
+      if (targetRef.current !== target) return;
       setBranches(next);
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       setPendingBranch(null);
       setOpen(false);
-      notifyGitBranchesChanged(cwd);
     } catch (err) {
+      if (targetRef.current !== target) return;
       setBranches(previous);
       setError(err instanceof Error ? err.message : t("chat.branch.switchFailed"));
       setState("ready");
@@ -128,12 +137,14 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     setError(null);
     try {
       const next = await window.codeshell.stashAndSwitchProjectGitBranch(projectId, pendingBranch);
+      notifyGitBranchesChanged(cwd);
+      if (targetRef.current !== target) return;
       setBranches(next);
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       setPendingBranch(null);
       setOpen(false);
-      notifyGitBranchesChanged(cwd);
     } catch (err) {
+      if (targetRef.current !== target) return;
       setBranches(previous);
       setError(err instanceof Error ? err.message : t("chat.branch.stashFailed"));
       setState("ready");
@@ -148,16 +159,22 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     setError(null);
     try {
       const status = await window.codeshell.getProjectGitStatus(projectId);
+      if (targetRef.current !== target) return;
       if (!status.clean) {
         setPendingBranch(branch);
         return;
       }
       await switchClean(branch);
     } catch (err) {
+      if (targetRef.current !== target) return;
       setError(err instanceof Error ? err.message : t("chat.branch.switchFailed"));
       setState("ready");
     }
   };
+
+  // A result belongs to one project/workspace selection. Hide immediately on
+  // selection changes, before the loading effect can clear the previous label.
+  if (!projectId || !cwd || resolvedTarget !== target || !branches.isRepo) return null;
 
   return (
     <div className="relative" ref={wrapRef}>

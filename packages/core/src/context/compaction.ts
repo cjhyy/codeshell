@@ -12,7 +12,13 @@
  */
 
 import type { ContentBlock, Message } from "../types.js";
-import { estimateMessagesTokens } from "./token-counter.js";
+import { estimateMessagesTokens, estimateStringTokens } from "./token-counter.js";
+import {
+  replaceToolResultText,
+  createToolTextReplacement,
+  toolResultText,
+  truncateToolOutput,
+} from "./tool-output-budget.js";
 
 /**
  * Estimate token count from messages.
@@ -539,17 +545,14 @@ export interface DedupeFileReadsResult {
 }
 
 /**
- * Content-aware dedup: when the SAME file is Read more than once, every Read
- * result except the most recent is stale — the file's current state is in the
- * latest read. Clear the older ones (replace with a fingerprint pointing at
- * the newer read) regardless of the recency window or pressure floor, because
- * this is pure waste removal, not lossy compaction: the model never needs two
- * copies of the same file.
+ * Dedup complete, successful Reads of the same requested file range. Different
+ * pages remain useful together; errors and shortened previews cannot replace
+ * the file content from a previous successful read.
  *
  * Distinct from microcompact (which is recency-gated and pressure-gated): a
- * file Read 3 times in the last 3 turns keeps 3 full copies under microcompact
- * but only the newest under this pass. Zero-cost and always safe to run, so the
- * ContextManager calls it as an early tier.
+ * range Read 3 times in the last 3 turns keeps 3 copies under microcompact but
+ * only the newest complete successful copy under this pass. The ContextManager
+ * calls it as an early tier without an LLM request.
  *
  * Only `Read` is deduped (its result is exactly the file content). Edit/Write
  * results are diffs/confirmations, not full snapshots, so they're left alone.
@@ -564,37 +567,66 @@ export function dedupeFileReads(messages: Message[]): DedupeFileReadsResult {
     }
   }
 
-  // Resolve a Read tool_use_id to its file_path arg (the dedup key).
-  const pathOf = (toolUseId: string): string | undefined => {
+  // Read defaults to offset=1, limit=2000 (not the whole file). Match its
+  // non-positive fallbacks, but leave malformed/fractional ranges untouched
+  // rather than guessing which lines a permissive tool invocation returned.
+  const rangeKeyOf = (toolUseId: string): string | undefined => {
     const input = idToInput.get(toolUseId);
     const p = input?.file_path ?? input?.path;
-    return typeof p === "string" && p.length > 0 ? p : undefined;
+    if (typeof p !== "string" || p.length === 0) return undefined;
+    if (
+      (input?.offset !== undefined && typeof input.offset !== "number") ||
+      (input?.limit !== undefined && typeof input.limit !== "number")
+    ) {
+      return undefined;
+    }
+    const offset = Math.max(1, (input?.offset as number) || 1);
+    const rawLimit = input?.limit;
+    const limit = typeof rawLimit === "number" && rawLimit > 0 ? rawLimit : 2000;
+    if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(limit)) return undefined;
+    return JSON.stringify([p, offset, limit]);
   };
 
-  // Collect, per file path, the message indices + block positions of every
-  // non-cleared Read result. Walk forward so "last" is the newest.
-  const byPath = new Map<string, Array<{ msgIdx: number; toolUseId: string }>>();
+  const isCompleteRead = (block: ContentBlock): boolean => {
+    if (block.is_error || typeof block.content !== "string") return false;
+    const content = block.content;
+    return !(
+      content.length === 0 ||
+      content === "(no output)" ||
+      /^(?:Error:|Error reading file:)/.test(content) ||
+      content.startsWith("[Old tool result cleared") ||
+      content.startsWith("<persisted-output>") ||
+      content.startsWith("Output too large (") ||
+      /^(?:Image|Binary) file \(not displayed by Read\)\./.test(content) ||
+      content.endsWith("\n\n... content truncated") ||
+      content.includes("[... tool output truncated ...]") ||
+      /\n\n\.\.\. \[\d+ characters truncated\] \.\.\.\n\n/.test(content)
+    );
+  };
+
+  // Only a complete successful result may supersede an earlier complete
+  // result for the exact same range. Keep failed/incomplete observations too.
+  const byRange = new Map<string, string[]>();
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
     if (!Array.isArray(msg.content)) continue;
     for (const block of msg.content) {
       if (block.type !== "tool_result" || !block.tool_use_id) continue;
       if (!FILE_READ_TOOLS.has(idToName.get(block.tool_use_id) ?? "")) continue;
-      if (typeof block.content !== "string") continue;
-      if (block.content.startsWith("[Old tool result cleared")) continue;
-      const path = pathOf(block.tool_use_id);
-      if (!path) continue;
-      const list = byPath.get(path) ?? [];
-      list.push({ msgIdx: i, toolUseId: block.tool_use_id });
-      byPath.set(path, list);
+      if (!isCompleteRead(block)) continue;
+      const rangeKey = rangeKeyOf(block.tool_use_id);
+      if (!rangeKey) continue;
+      const list = byRange.get(rangeKey) ?? [];
+      list.push(block.tool_use_id);
+      byRange.set(rangeKey, list);
     }
   }
 
-  // For each path read more than once, mark all-but-last for clearing.
+  // For each range read more than once, mark all-but-last for clearing.
   const clearIds = new Set<string>();
-  for (const [, reads] of byPath) {
+  for (const reads of byRange.values()) {
     if (reads.length < 2) continue;
-    for (let k = 0; k < reads.length - 1; k++) clearIds.add(reads[k].toolUseId);
+    for (let k = 0; k < reads.length - 1; k++) clearIds.add(reads[k]);
   }
   if (clearIds.size === 0) return { messages, clearedCount: 0 };
 
@@ -691,61 +723,71 @@ export function maskOldObservations(messages: Message[]): {
  * When total tool_result content in a single message exceeds maxTotalChars,
  * truncates the largest results first with a notice.
  */
-export function applyToolResultBudget(messages: Message[], maxTotalChars = 100_000): Message[] {
+export function applyToolResultBudget(
+  messages: Message[],
+  maxTotalChars = 100_000,
+  maxTotalTokens = Number.POSITIVE_INFINITY,
+): Message[] {
   return messages.map((msg) => {
     if (!Array.isArray(msg.content)) return msg;
 
     // Collect tool_result blocks with their sizes
-    const resultBlocks: Array<{ index: number; size: number }> = [];
+    const resultBlocks: Array<{ index: number; size: number; tokens: number; text: string }> = [];
     let totalSize = 0;
+    let totalTokens = 0;
 
     for (let i = 0; i < msg.content.length; i++) {
       const block = msg.content[i];
-      if (block.type === "tool_result" && typeof block.content === "string") {
-        const size = block.content.length;
-        resultBlocks.push({ index: i, size });
+      const text = block.type === "tool_result" ? toolResultText(block.content) : undefined;
+      if (text !== undefined) {
+        const size = text.length;
+        const tokens = estimateStringTokens(text);
+        resultBlocks.push({ index: i, size, tokens, text });
         totalSize += size;
+        totalTokens += tokens;
       }
     }
 
-    if (totalSize <= maxTotalChars || resultBlocks.length === 0) return msg;
+    if ((totalSize <= maxTotalChars && totalTokens <= maxTotalTokens) || resultBlocks.length === 0)
+      return msg;
 
     // Sort by size descending — truncate largest first
-    resultBlocks.sort((a, b) => b.size - a.size);
-
-    // Build the exact replacement for a block, so the running budget uses the
-    // real post-truncation length (the old code assumed a flat ~200 chars,
-    // but the replacement is ~150 boilerplate + up to 500 preview ≈ 650+,
-    // which under-truncated and could even leave the message LARGER).
-    const truncate = (content: string): string => {
-      const preview = content.slice(0, 500);
-      const sizeKb = (content.length / 1000).toFixed(0);
-      return (
-        `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. ` +
-        `Re-run the originating tool if you need the full output.\n\n` +
-        `Preview (first 500 chars):\n${preview}`
-      );
-    };
+    resultBlocks.sort(
+      (a, b) =>
+        Math.max(b.size / maxTotalChars, b.tokens / maxTotalTokens) -
+        Math.max(a.size / maxTotalChars, a.tokens / maxTotalTokens),
+    );
 
     let remaining = totalSize;
-    const replacements = new Map<number, string>();
+    let remainingTokens = totalTokens;
+    const replacements = new Map<number, { text: string; parts?: string[] }>();
 
     for (const rb of resultBlocks) {
-      if (remaining <= maxTotalChars) break;
-      const original = msg.content[rb.index]!.content as string;
-      const replaced = truncate(original);
+      if (remaining <= maxTotalChars && remainingTokens <= maxTotalTokens) break;
+      // Persistence normally handles these first. This is the no-disk/error
+      // backstop: keep the tail diagnostic and never suggest repeating a write.
+      const replaced = createToolTextReplacement(msg.content[rb.index]!.content, {
+        maxChars: 600,
+        maxTokens: 200,
+      });
       // Only truncate if it actually shrinks the block; otherwise skip it
       // (truncating a barely-oversized block would grow the message).
-      if (replaced.length >= rb.size) continue;
+      if (replaced.text.length >= rb.size) continue;
       replacements.set(rb.index, replaced);
-      remaining -= rb.size - replaced.length;
+      remaining -= rb.size - replaced.text.length;
+      remainingTokens -= rb.tokens - estimateStringTokens(replaced.text);
     }
 
     if (replacements.size === 0) return msg;
 
     const newContent = msg.content.map((block, i) => {
       const replaced = replacements.get(i);
-      return replaced === undefined ? block : { ...block, content: replaced };
+      return replaced === undefined
+        ? block
+        : {
+            ...block,
+            content: replaceToolResultText(block.content, replaced.text, replaced.parts),
+          };
     });
 
     return { ...msg, content: newContent };
@@ -757,17 +799,7 @@ export function applyToolResultBudget(messages: Message[], maxTotalChars = 100_0
  * Returns the truncated string with a notice.
  */
 export function truncateToolResult(result: string, maxChars = 30_000): string {
-  if (result.length <= maxChars) return result;
-
-  // Keep head and tail for context
-  const headSize = Math.floor(maxChars * 0.7);
-  const tailSize = Math.floor(maxChars * 0.2);
-  const head = result.slice(0, headSize);
-  const tail = result.slice(-tailSize);
-
-  return (
-    head + `\n\n... [${result.length - headSize - tailSize} characters truncated] ...\n\n` + tail
-  );
+  return truncateToolOutput(result, { maxChars });
 }
 
 /**

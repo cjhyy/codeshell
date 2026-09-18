@@ -206,6 +206,14 @@ export type PetDispatchResult =
       queuedCount: number;
       pendingCount: number;
       sessions: PetSessionProjection[];
+      /** Main-held accepted inputs not yet settled; no attachment bytes or credentials. */
+      chatInputs?: Array<{
+        clientMessageId: string;
+        message: string;
+        attachments?: PetChatAttachment[];
+        createdAt: number;
+        pending: boolean;
+      }>;
     }
   | { ok: true; type: "pending_list"; pending: PetPendingDecision[] }
   | { ok: true; type: "chat_stopped"; stopped: boolean }

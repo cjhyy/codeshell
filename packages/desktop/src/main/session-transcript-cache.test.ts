@@ -394,6 +394,131 @@ describe("SessionTranscriptCache", () => {
     expect(loaded.messages[1]).toMatchObject({ status: "succeeded", result: "full result" });
   });
 
+  test.each(["live-first", "canonical-first"])(
+    "joins a confirmed steer to its canonical client identity in %s cache saves",
+    async (order) => {
+      const { cache } = fixture();
+      const first = { ...message("first", "user", "create note"), clientMessageId: "first" };
+      const live = {
+        ...message("live-steer", "user", "read note"),
+        steerId: "steer-second",
+        injected: true,
+        pending: false,
+        attachments: [{ type: "file", path: "/synthetic/note.txt" }],
+      };
+      const canonical = {
+        ...message("canonical-steer", "user", "read note"),
+        steerId: "steer-second",
+        clientMessageId: "client-second",
+        injected: true,
+      };
+      const states = order === "live-first" ? [live, canonical] : [canonical, live];
+      for (const [index, user] of [...states, ...states].entries()) {
+        await cache.write({ ...key, value: state([first, user]) });
+        const users = JSON.parse((await cache.read(key)).value!).messages;
+        expect(users).toHaveLength(2);
+        if (index === 0) continue;
+        expect(users[1]).toMatchObject({
+          steerId: "steer-second",
+          clientMessageId: "client-second",
+          pending: false,
+          attachments: live.attachments,
+        });
+      }
+    },
+  );
+
+  test("upgrades an existing dual-alias cache without moving the request after its tool", async () => {
+    const { cache } = fixture();
+    const first = { ...message("first", "user", "create note"), clientMessageId: "first" };
+    const live = { ...message("live-steer", "user", "read note"), steerId: "steer-second" };
+    const canonical = { ...live, id: "canonical-steer", clientMessageId: "client-second" };
+    const write = {
+      ...message("write", "tool"),
+      toolName: "Write",
+      args: "{}",
+      status: "succeeded",
+    };
+    const read = { ...message("read", "tool"), toolName: "Read", args: "{}", status: "succeeded" };
+    const answer = { ...message("answer", "assistant", "note content"), done: false };
+    const agent = { ...message("agent", "agent"), done: false };
+    // A previous app version saved the live steer and its refolded canonical
+    // client as separate rows, with the stable Read call between the mirrors.
+    await cache.write({
+      ...key,
+      value: state([first, write, live, read, canonical, answer, agent], {
+        snapshotEpoch: "main",
+        snapshotSeq: 19,
+        streamingAssistantId: "answer",
+        agentMessageIndex: { agent: 6 },
+      }),
+    });
+    for (let pass = 0; pass < 3; pass++) {
+      await cache.write({
+        ...key,
+        value: state([{ ...first, id: "fold-first" }, write, canonical, read, answer], {
+          snapshotEpoch: "main",
+          snapshotSeq: 50,
+          streamingAssistantId: "answer",
+        }),
+      });
+      const saved = JSON.parse((await cache.read(key)).value!);
+      expect(saved.messages.map((row: { kind: string }) => row.kind)).toEqual([
+        "user",
+        "tool",
+        "user",
+        "tool",
+        "assistant",
+        "agent",
+      ]);
+      expect(saved.messages[2]).toMatchObject({
+        clientMessageId: "client-second",
+        steerId: "steer-second",
+      });
+      expect(saved.agentMessageIndex).toEqual({ agent: 5 });
+      expect(saved.streamingAssistantId).toBe("answer");
+      expect(saved.snapshotSeq).toBe(50);
+      expect(saved.snapshotEpoch).toBe("main");
+    }
+  });
+
+  test("does not identify distinct steers by their equal request text", async () => {
+    const { cache } = fixture();
+    const first = { ...message("live-a", "user", "continue"), steerId: "steer-a" };
+    const second = { ...message("live-b", "user", "continue"), steerId: "steer-b" };
+    await cache.write({ ...key, value: state([first, second]) });
+    await cache.write({
+      ...key,
+      value: state([
+        { ...first, id: "canonical-a", clientMessageId: "client-a" },
+        { ...second, id: "canonical-b", clientMessageId: "client-b" },
+      ]),
+    });
+    expect(JSON.parse((await cache.read(key)).value!).messages).toMatchObject([
+      { steerId: "steer-a", clientMessageId: "client-a", text: "continue" },
+      { steerId: "steer-b", clientMessageId: "client-b", text: "continue" },
+    ]);
+  });
+
+  test("keeps an ambiguous steer separate from conflicting durable client identities", async () => {
+    const { cache } = fixture();
+    const live = { ...message("live", "user", "continue"), steerId: "conflict" };
+    const one = { ...live, id: "canonical-one", clientMessageId: "client-one" };
+    const two = { ...live, id: "canonical-two", clientMessageId: "client-two" };
+    await cache.write({ ...key, value: state([live, one, two]) });
+    for (const rows of [[one, two], [live]]) {
+      await cache.write({ ...key, value: state(rows) });
+      expect(JSON.parse((await cache.read(key)).value!).messages).toMatchObject([
+        { id: "live", steerId: "conflict" },
+        { id: "canonical-one", steerId: "conflict", clientMessageId: "client-one" },
+        { id: "canonical-two", steerId: "conflict", clientMessageId: "client-two" },
+      ]);
+      expect(
+        JSON.parse((await cache.read(key)).value!).messages[0].clientMessageId,
+      ).toBeUndefined();
+    }
+  });
+
   test("deletion removes sensitive snapshots and fences delayed writes and reimports", async () => {
     const { legacyDirectory, cache } = fixture();
     await cache.write({ ...key, value: state(), legacy: true });

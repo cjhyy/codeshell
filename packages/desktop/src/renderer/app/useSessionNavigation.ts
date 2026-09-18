@@ -122,16 +122,16 @@ export function useSessionNavigation({
     const created = await window.codeshell.projectRegistry.createFromPicker();
     if (!created) return;
     const next = trackedProjectFromRegistry(created);
-    const duplicate = projects.find((project) => project.id === next.id);
-    if (duplicate) {
-      unmarkProjectPathRemoved(next.path);
-      setActiveProjectId(duplicate.id);
-      return;
-    }
     unmarkProjectPathRemoved(next.path);
-    setProjects((prev) => [...prev, next]);
+    // Main broadcasts the registry before the picker call returns. Check the
+    // latest state so the broadcast and picker result cannot add the same id twice.
+    setProjects((prev) =>
+      prev.some((project) => project.id === next.id) ? prev : [...prev, next],
+    );
     setActiveProjectId(next.id);
-    setSessionIndices((prev) => ({ ...prev, [next.id]: loadSessionIndex(next.id) }));
+    setSessionIndices((prev) =>
+      prev[next.id] ? prev : { ...prev, [next.id]: loadSessionIndex(next.id) },
+    );
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 

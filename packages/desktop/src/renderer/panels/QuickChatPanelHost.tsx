@@ -34,7 +34,7 @@ interface QuickChatPanelHostProps {
     opts?: { attachments?: InputAttachmentMeta[]; displayText?: string },
   ) => void;
   onStop: (bucket: string) => void;
-  onAskUserAnswer: (requestId: string, answer: string) => void;
+  onAskUserAnswer: (requestId: string, answer: string) => void | Promise<void>;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (
     decision: "approve" | "deny",

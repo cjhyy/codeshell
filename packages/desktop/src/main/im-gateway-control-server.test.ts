@@ -191,6 +191,7 @@ describe("GatewayControlServer", () => {
           channel: "telegram",
           target: "owner-chat",
           senderId: "owner",
+          isDirectMessage: true,
           capabilities: telegramCapabilities,
           channels: [
             { channel: "telegram", capabilities: telegramCapabilities },
@@ -209,6 +210,7 @@ describe("GatewayControlServer", () => {
     expect(observed).toMatchObject({
       origin: {
         channel: "telegram",
+        isDirectMessage: true,
         capabilities: {
           outbound: {
             proactive: true,
@@ -245,6 +247,25 @@ describe("GatewayControlServer", () => {
       }),
     });
     expect(invalidCapabilityFlag.status).toBe(400);
+
+    const invalidPrivateFlag = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${descriptor.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: "enter",
+        origin: {
+          channel: "slack",
+          target: "D-chat",
+          senderId: "U-owner",
+          isDirectMessage: "true",
+          capabilities: telegramCapabilities,
+        },
+      }),
+    });
+    expect(invalidPrivateFlag.status).toBe(400);
 
     const invalidCatalog = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
       method: "POST",

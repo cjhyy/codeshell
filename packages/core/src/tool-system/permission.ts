@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "
 import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
 import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
+import { isSensitiveResourcePath } from "./path-policy.js";
 
 export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
@@ -991,9 +992,31 @@ function isSafeReadGitCommand(segment: string): boolean {
   return false;
 }
 
+/**
+ * Allow the common documentation reader `sed -n '1,200p' file`, not arbitrary
+ * sed programs: scripts can write files (`w`), execute commands (`e`), or edit
+ * in place (`-i`). Keep the accepted expression to one numeric/end-of-file
+ * address or range followed by print, and reject subsequent option arguments.
+ */
+function isSafeReadSedCommand(segment: string): boolean {
+  const words = splitShellWords(segment.trim());
+  if (!words || words[0] !== "sed" || words[1] !== "-n") return false;
+
+  const scriptIndex = words[2] === "-e" ? 3 : 2;
+  const script = words[scriptIndex];
+  if (!script || !/^(?:\d+|\$)(?:,(?:\d+|\$))?p$/.test(script)) return false;
+
+  const files = words.slice(scriptIndex + 1);
+  if (files[0] === "--") return true;
+  // Expansion before an explicit `--` can produce sed options (for example,
+  // `*` matching a file named `-e...`). A literal path keeps its vetted shape.
+  return files.every((file) => file === "-" || (!file.startsWith("-") && !/[*?[\]{}]/.test(file)));
+}
+
 function matchesSafeReadPattern(segment: string, allowArgumentless = false): boolean {
   return (
     isSafeReadGitCommand(segment) ||
+    isSafeReadSedCommand(segment) ||
     SAFE_READ_PATTERNS.some(
       (pattern) => pattern.test(segment) || (allowArgumentless && pattern.test(`${segment} `)),
     )
@@ -1040,7 +1063,46 @@ const SENSITIVE_PATH_PATTERNS = [
 export function segmentIsSensitiveRead(segment: string): boolean {
   const s = segment.trim();
   if (ENV_DUMP_RE.test(s)) return true;
-  return SENSITIVE_PATH_PATTERNS.some((re) => re.test(s));
+  if (SENSITIVE_PATH_PATTERNS.some((re) => re.test(s))) return true;
+  // Limit the shared basename check to readers with known file operands.
+  // Search patterns/options (`rg token SKILL.md`) are not credential paths.
+  const words = splitShellWords(s);
+  if (!words) return false;
+  if (words[0] === "sed") {
+    if (!isSafeReadSedCommand(s)) return false;
+    const scriptIndex = words[2] === "-e" ? 3 : 2;
+    return words.slice(scriptIndex + 1).some(isSensitiveResourcePath);
+  }
+  if (!["cat", "head", "tail"].includes(words[0])) return false;
+
+  let options = true;
+  for (let i = 1; i < words.length; i++) {
+    const word = words[i];
+    if (options && word === "--") {
+      options = false;
+      continue;
+    }
+    if (options && word.startsWith("-")) {
+      if (
+        words[0] !== "cat" &&
+        [
+          "-n",
+          "-c",
+          "-b",
+          "-s",
+          "--lines",
+          "--bytes",
+          "--pid",
+          "--sleep-interval",
+          "--max-unchanged-stats",
+        ].includes(word)
+      )
+        i++;
+      continue;
+    }
+    if (isSensitiveResourcePath(word)) return true;
+  }
+  return false;
 }
 
 const SAFE_WRITE_PATTERNS = [

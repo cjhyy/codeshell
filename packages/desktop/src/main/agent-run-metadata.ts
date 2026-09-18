@@ -44,6 +44,8 @@ export class AgentRunMetadataError extends Error {
 
 export interface HostReservation {
   cwd: string;
+  /** Host-authorized project binding when execution runs from a worktree. */
+  mainRoot?: string;
   producer: string;
   reservedAt: number;
 }
@@ -55,9 +57,10 @@ export function reserveHostSessionMaps(
   cwd: string,
   producer: string,
   reservedAt = Date.now(),
+  mainRoot?: string,
 ): void {
   sessionCwd.set(sessionId, cwd);
-  reservations.set(sessionId, { cwd, producer, reservedAt });
+  reservations.set(sessionId, { cwd, producer, reservedAt, ...(mainRoot ? { mainRoot } : {}) });
 }
 
 export function forgetHostSessionMaps(

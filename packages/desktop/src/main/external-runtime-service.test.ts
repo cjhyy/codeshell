@@ -6,13 +6,28 @@
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { SessionManager } from "@cjhyy/code-shell-core";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { SessionManager, type StreamEvent, type ToolRegistry } from "@cjhyy/code-shell-core";
+import { FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
+import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
+import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
+import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
 const closed: string[] = [];
 /** When set, the next fake provider send rejects the way a dead process does. */
 let failNextSend = false;
+let providerSend:
+  | ((args: StartArgs, input: { text: string; injected?: boolean }) => Promise<void>)
+  | undefined;
+let providerInterrupt: (() => Promise<void>) | undefined;
+const providerInputs: Array<{ text: string; injected?: boolean }> = [];
+const streamEvents: StreamEvent[] = [];
+let previousHome: string | undefined;
+let testHome: string;
 
 /** A session stub that records what it was asked to do. */
 function fakeSession(args: StartArgs) {
@@ -26,14 +41,18 @@ function fakeSession(args: StartArgs) {
       const names = exposure ? [...(exposure.toolNames ?? [])] : ["Panel"];
       return names.map((name) => ({ name, description: "", inputSchema: {} }));
     },
-    send: async () => {
+    send: async (input: { text: string; injected?: boolean }) => {
+      providerInputs.push(input);
       if (failNextSend) {
         failNextSend = false;
         throw new Error("provider process exited");
       }
+      await providerSend?.(args, input);
       return { done: Promise.resolve() };
     },
-    interrupt: async () => {},
+    interrupt: async () => {
+      await providerInterrupt?.();
+    },
     close: async () => {
       closed.push(String(args.businessSessionId));
     },
@@ -73,7 +92,7 @@ const stateChanges: Array<{
 
 function service(
   flags: Record<string, boolean>,
-  requestApproval?: () => Promise<{ approved: boolean; answer?: string }>,
+  requestApproval?: ExternalRuntimeServiceDeps["requestApproval"],
   overrides: Record<string, unknown> = {},
 ) {
   return new ExternalRuntimeService({
@@ -81,12 +100,14 @@ function service(
     registerSession: (sessionId, _cwd, webContentsId) => claims.push({ sessionId, webContentsId }),
     releaseSession: (sessionId) => released.push(sessionId),
     resolveProjectBinding: () => undefined,
-    emit: (sessionId, event) =>
+    emit: (sessionId, event) => {
       emitted.push({
         sessionId,
         type: event.type,
         ...(event.type === "session_started" ? { eventSessionId: event.sessionId } : {}),
-      }),
+      });
+      streamEvents.push(event);
+    },
     sessionStateChanged: (sessionId, active, ownerWebContentsId) =>
       stateChanges.push({ sessionId, active, ownerWebContentsId }),
     projectTrust: () => trust,
@@ -104,6 +125,9 @@ const request = {
 };
 
 beforeEach(() => {
+  previousHome = process.env.CODE_SHELL_HOME;
+  testHome = mkdtempSync(join(tmpdir(), "codeshell-external-service-"));
+  process.env.CODE_SHELL_HOME = testHome;
   starts.length = 0;
   closed.length = 0;
   claims.length = 0;
@@ -111,13 +135,391 @@ beforeEach(() => {
   emitted.length = 0;
   stateChanges.length = 0;
   failNextSend = false;
+  providerSend = undefined;
+  providerInterrupt = undefined;
+  providerInputs.length = 0;
+  streamEvents.length = 0;
   trust = "trusted";
 });
 afterEach(() => {
   starts.length = 0;
+  if (previousHome === undefined) delete process.env.CODE_SHELL_HOME;
+  else process.env.CODE_SHELL_HOME = previousHome;
+  rmSync(testHome, { recursive: true, force: true });
 });
 
 describe("ExternalRuntimeService", () => {
+  test("persists and continues a Goal on the same provider until an explicit host completion", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    providerSend = async (args) => {
+      if (providerInputs.length !== 2) return;
+      const goal = svc.getGoal(request.sessionId, 77);
+      const result = await (args.registry as ToolRegistry).executeTool("complete_goal", {
+        goalId: goal.goalId,
+        revision: goal.revision,
+        summary: "独立测试完成",
+      });
+      expect(JSON.parse(result.result!)).toMatchObject({ ok: true, status: "completed" });
+    };
+    await svc.send(request.sessionId, { text: "执行测试", goal: "完成目标" }, 77);
+    expect(providerInputs).toHaveLength(2);
+    expect(providerInputs[0]!.text).toContain("Goal: 完成目标");
+    expect(providerInputs[1]!.injected).toBe(true);
+    expect(starts).toHaveLength(1);
+    expect(streamEvents.filter((event) => event.type === "turn_complete")).toHaveLength(1);
+    expect(
+      streamEvents.some((event) => event.type === "goal_progress" && event.status === "met"),
+    ).toBe(true);
+    expect(svc.getGoal(request.sessionId).goal).toBeNull();
+    expect(new SessionManager().readSessionState(request.sessionId)?.goalLifecycle).toMatchObject({
+      phase: "terminal",
+      terminal: { reason: "completed" },
+    });
+    expect(() => svc.getGoal(request.sessionId, 99)).toThrow(/owned by another/);
+  });
+
+  test("turn bounds pause a recoverable Goal and disableGoal makes a single ordinary turn", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    await svc.send(request.sessionId, {
+      text: "执行测试",
+      goal: { objective: "未完成", maxTurns: 2 },
+    });
+    expect(providerInputs).toHaveLength(2);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "未完成", paused: true });
+    const identity = svc.getGoal(request.sessionId);
+    await svc.send(request.sessionId, { text: "独立问题", disableGoal: true });
+    expect(providerInputs).toHaveLength(3);
+    expect(providerInputs[2]!.text).toBe("独立问题");
+    expect(svc.getGoal(request.sessionId)).toEqual(identity);
+    await svc.stop(request.sessionId);
+    expect(svc.getGoal(request.sessionId)).toEqual(identity);
+    expect(
+      svc.deleteGoal(request.sessionId, {
+        expectedGoalId: identity.goalId,
+        expectedRevision: identity.revision,
+      }).cleared,
+    ).toBe(true);
+  });
+
+  test("editing a live Goal cancels its prompt and resumes the same runtime with a new revision", async () => {
+    let releaseFirst!: () => void;
+    let firstStarted!: () => void;
+    let completed!: () => void;
+    const first = new Promise<void>((resolve) => {
+      firstStarted = resolve;
+    });
+    const completion = new Promise<void>((resolve) => {
+      completed = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const cancelled: string[] = [];
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      cancelApprovals: (sessionId: string) => {
+        cancelled.push(sessionId);
+      },
+    });
+    await svc.start(request);
+    let oldGoal: ReturnType<typeof svc.getGoal>;
+    providerInterrupt = async () => {
+      releaseFirst();
+    };
+    providerSend = async (args, input) => {
+      if (providerInputs.length === 1) {
+        oldGoal = svc.getGoal(request.sessionId);
+        firstStarted();
+        await blocked;
+        return;
+      }
+      expect(input.text).toContain("修订目标");
+      const registry = args.registry as ToolRegistry;
+      const stale = await registry.executeTool("complete_goal", {
+        goalId: oldGoal.goalId,
+        revision: oldGoal.revision,
+      });
+      expect(JSON.parse(stale.result!).ok).toBe(false);
+      const current = svc.getGoal(request.sessionId);
+      const success = await registry.executeTool("complete_goal", {
+        goalId: current.goalId,
+        revision: current.revision,
+      });
+      expect(JSON.parse(success.result!).ok).toBe(true);
+      completed();
+    };
+    const running = svc.send(request.sessionId, { text: "执行", goal: "原目标" });
+    await first;
+    const previous = svc.getGoal(request.sessionId);
+    const updated = await svc.updateGoal(
+      request.sessionId,
+      {
+        objective: "修订目标",
+        expectedGoalId: previous.goalId!,
+        expectedRevision: previous.revision!,
+      },
+      77,
+    );
+    expect(updated).toMatchObject({ updated: true, revision: 2, goal: "修订目标" });
+    await completion;
+    await running;
+    expect(cancelled).toContain(request.sessionId);
+    expect(starts).toHaveLength(1);
+    expect(providerInputs).toHaveLength(2);
+    await svc.stop(request.sessionId);
+  });
+
+  test("pause clears pending questions, stops continuation and keeps the Goal visible", async () => {
+    let release!: () => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const cancelled: string[] = [];
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      cancelApprovals: (sessionId: string) => {
+        cancelled.push(sessionId);
+        release();
+      },
+    });
+    await svc.start(request);
+    providerSend = async () => {
+      started();
+      await blocked;
+    };
+    const running = svc.send(request.sessionId, { text: "执行", goal: "等待中的目标" });
+    await entered;
+    const goal = svc.getGoal(request.sessionId);
+    await svc.updateGoal(request.sessionId, {
+      paused: true,
+      expectedGoalId: goal.goalId!,
+      expectedRevision: goal.revision!,
+    });
+    await running;
+    expect(cancelled).toEqual([request.sessionId]);
+    expect(providerInputs).toHaveLength(1);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "等待中的目标", paused: true });
+    expect(
+      streamEvents.some((event) => event.type === "goal_progress" && event.status === "met"),
+    ).toBe(false);
+  });
+
+  test("interrupt failure pauses the edited revision and requires rebuilding the provider", async () => {
+    let release!: () => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    providerSend = async () => {
+      started();
+      await blocked;
+    };
+    providerInterrupt = async () => {
+      throw new Error("provider unreachable");
+    };
+    const running = svc.send(request.sessionId, { text: "执行", goal: "原目标" });
+    await entered;
+    const goal = svc.getGoal(request.sessionId);
+    await expect(
+      svc.updateGoal(request.sessionId, {
+        objective: "新目标",
+        expectedGoalId: goal.goalId!,
+        expectedRevision: goal.revision!,
+      }),
+    ).rejects.toThrow(/remains paused/);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({
+      goal: "新目标",
+      paused: true,
+      revision: 3,
+    });
+    expect(svc.canResumeGoal(request.sessionId)).toBe(false);
+    release();
+    await running;
+    expect(providerInputs).toHaveLength(1);
+  });
+
+  test("a failed provider preserves its Goal and a host-tool flag change rebuilds the runtime", async () => {
+    const flags = { external_agent_runtime: true, external_host_tools: false };
+    const svc = service(flags);
+    await svc.start(request);
+    expect(svc.canResumeGoal(request.sessionId)).toBe(false);
+    flags.external_host_tools = true;
+    await svc.ensure(request);
+    expect(starts).toHaveLength(2);
+    expect(svc.canResumeGoal(request.sessionId, 77)).toBe(true);
+    failNextSend = true;
+    await svc.send(request.sessionId, { text: "执行", goal: "保留失败目标" });
+    expect(svc.getGoal(request.sessionId).goal).toBe("保留失败目标");
+    expect(svc.canResumeGoal(request.sessionId)).toBe(false);
+    expect(
+      streamEvents.some((event) => event.type === "goal_progress" && event.status === "met"),
+    ).toBe(false);
+  });
+
+  test("the wall-clock budget interrupts a waiting provider and pauses without declaring success", async () => {
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const order: string[] = [];
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      cancelApprovals: () => {
+        order.push("cancel approvals");
+        release();
+      },
+    });
+    await svc.start(request);
+    providerSend = async () => {
+      await blocked;
+    };
+    providerInterrupt = async () => {
+      order.push("interrupt provider");
+    };
+    await svc.send(request.sessionId, {
+      text: "执行",
+      goal: { objective: "时间预算测试", timeBudgetMs: 5 },
+    });
+    expect(providerInputs).toHaveLength(1);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "时间预算测试", paused: true });
+    expect(order).toEqual(["cancel approvals", "interrupt provider"]);
+  });
+
+  test("provider token updates cancel pending approvals before interrupting an exhausted Goal", async () => {
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const order: string[] = [];
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      cancelApprovals: () => {
+        order.push("cancel approvals");
+        release();
+      },
+    });
+    await svc.start(request);
+    providerInterrupt = async () => {
+      order.push("interrupt provider");
+    };
+    providerSend = async (args) => {
+      const hooks = args.hooks as { onEvent: (event: StreamEvent) => void };
+      hooks.onEvent({ type: "usage_update", promptTokens: 8, completionTokens: 2 });
+      await blocked;
+    };
+    await svc.send(request.sessionId, {
+      text: "执行",
+      goal: { objective: "额度测试", tokenBudget: 10 },
+    });
+    expect(order).toEqual(["cancel approvals", "interrupt provider"]);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "额度测试", paused: true });
+    expect(providerInputs).toHaveLength(1);
+  });
+
+  test.each([false, true])(
+    "consumes background results within the Goal run, with Stop=%s",
+    async (stop) => {
+      let listener: ((sessionId: string, event: StreamEvent) => void) | undefined;
+      let pending: string | undefined;
+      let release!: () => void;
+      let entered!: () => void;
+      let completed!: () => void;
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const firstStarted = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const finished = new Promise<void>((resolve) => {
+        completed = resolve;
+      });
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: {
+          subscribe: (next: typeof listener) => {
+            listener = next;
+            return () => {
+              listener = undefined;
+            };
+          },
+          drainMessage: () => {
+            const result = pending;
+            pending = undefined;
+            return result;
+          },
+          hasPending: () => pending !== undefined,
+          dropSession: () => {
+            pending = undefined;
+          },
+        },
+      });
+      await svc.start(request);
+      const publish = () => {
+        pending = "后台检查已完成：全部通过。";
+        listener?.(request.sessionId, {
+          type: "background_agent_completed",
+          agentId: "test-child",
+          description: "后台检查",
+          status: "completed",
+          enqueuedAt: Date.now(),
+        });
+      };
+      providerInterrupt = async () => {
+        release();
+      };
+      providerSend = async (args, input) => {
+        if (providerInputs.length === 1) {
+          entered();
+          if (stop) await blocked;
+          else publish();
+          return;
+        }
+        expect(input.text).toContain("后台检查已完成：全部通过。");
+        const goal = svc.getGoal(request.sessionId);
+        await (args.registry as ToolRegistry).executeTool("complete_goal", {
+          goalId: goal.goalId,
+          revision: goal.revision,
+        });
+        completed();
+      };
+      const running = svc.send(request.sessionId, { text: "执行", goal: "收集后台检查结果" });
+      await firstStarted;
+      if (stop) {
+        await svc.interrupt(request.sessionId, 77);
+        await running;
+        publish();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(providerInputs).toHaveLength(1);
+        expect(pending).toBeDefined();
+        const goal = svc.getGoal(request.sessionId);
+        expect(goal.paused).toBe(true);
+        await svc.updateGoal(
+          request.sessionId,
+          {
+            paused: false,
+            expectedGoalId: goal.goalId!,
+            expectedRevision: goal.revision!,
+          },
+          77,
+        );
+      }
+      await finished;
+      await running;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(providerInputs).toHaveLength(2);
+      expect(pending).toBeUndefined();
+      expect(starts).toHaveLength(1);
+      expect(svc.getGoal(request.sessionId).goal).toBeNull();
+      await svc.stopAll();
+    },
+  );
+
   test("passes the preflight executable and environment to the actual runtime", async () => {
     const launch = { command: "/custom/version/bin/codex", env: { PATH: "/custom/version/bin" } };
     const cwdChecks: string[] = [];
@@ -232,9 +634,12 @@ describe("ExternalRuntimeService", () => {
   test("uses the reviewed allowlist when host tools are enabled", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);
-    // `undefined` means "the reviewed FIRST_PHASE_EXPOSURE default", which is the
-    // safe direction — an explicit set here could only ever be wider.
-    expect(starts[0]!.exposure).toBeUndefined();
+    const exposure = starts[0]!.exposure as { toolNames: Set<string>; argsPatterns: unknown };
+    expect([...exposure.toolNames]).toEqual([
+      ...FIRST_PHASE_EXPOSURE.toolNames,
+      ...EXTERNAL_GOAL_TOOLS,
+    ]);
+    expect(exposure.argsPatterns).toBe(FIRST_PHASE_EXPOSURE.argsPatterns);
     const registry = starts[0]!.registry as {
       getToolDefinitions(): Array<{ name: string }>;
     };
@@ -256,6 +661,84 @@ describe("ExternalRuntimeService", () => {
     expect(hooks.onNativeApproval).toBeUndefined();
     expect(hooks.onUserInput).toBeFunction();
   });
+
+  test.each(["host free text", "host choices", "Codex input"])(
+    "delivers %s through the approval bridge with renderer-readable question fields",
+    async (source) => {
+      const sent: Array<{
+        channel: string;
+        payload: {
+          sessionId: string;
+          requestId: string;
+          request: Record<string, unknown>;
+        };
+      }> = [];
+      const approvals = new ExternalRuntimeApprovals({
+        windows: () =>
+          [
+            {
+              isDestroyed: () => false,
+              webContents: {
+                id: 77,
+                send: (channel: string, payload: (typeof sent)[number]["payload"]) =>
+                  sent.push({ channel, payload }),
+              },
+            },
+          ] as never,
+        ownerWebContentsId: () => 77,
+      });
+      const svc = service(
+        { external_agent_runtime: true, external_host_tools: true },
+        (sessionId, questionRequest) => approvals.request(sessionId, questionRequest),
+      );
+      await svc.start(request);
+      const question = "如果你已持有 501058，发我成本净值或目前亏损比例即可。";
+      const choices = [
+        { label: "按成本测算", description: "提供持仓成本" },
+        { label: "按最新净值测算", description: "使用公开净值" },
+      ];
+      const options =
+        source === "host free text"
+          ? undefined
+          : {
+              header: "测算依据",
+              options: choices,
+              ...(source === "host choices" ? { multiSelect: true, optionsOnly: true } : {}),
+            };
+      let pending: Promise<unknown>;
+      if (source === "Codex input") {
+        const hooks = starts[0]!.hooks as {
+          onUserInput: (input: { method: string; params: unknown }) => Promise<unknown>;
+        };
+        pending = hooks.onUserInput({
+          method: "item/tool/requestUserInput",
+          params: { questions: [{ id: "cost_basis", question, ...options }] },
+        });
+      } else {
+        const context = starts[0]!.contextOverrides as {
+          askUser: (question: string, options?: Record<string, unknown>) => Promise<string>;
+        };
+        pending = context.askUser(question, options);
+      }
+
+      expect(sent).toHaveLength(1);
+      expect(sent[0]!.channel).toBe("externalRuntime:approvalRequest");
+      expect(sent[0]!.payload.sessionId).toBe(request.sessionId);
+      expect(sent[0]!.payload.request).toEqual({
+        toolName: "__ask_user__",
+        args: { ...options, question },
+        description: question,
+        riskLevel: "low",
+      });
+      expect(
+        approvals.settle(sent[0]!.payload.requestId, { approved: true, answer: "1.25" }, 77),
+      ).toBe(true);
+      await expect(pending).resolves.toEqual(
+        source === "Codex input" ? { answers: { cost_basis: { answers: ["1.25"] } } } : "1.25",
+      );
+      expect(approvals.pendingCount).toBe(0);
+    },
+  );
 
   test("resolves projectTrusted from the trust store, not a default", async () => {
     // `permissions` is the first DANGEROUS_PROJECT_FIELD: an untrusted project's

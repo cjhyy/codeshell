@@ -19,7 +19,6 @@ import {
   maskOldObservations,
   snipCompact,
   windowCompact,
-  truncateToolResult,
   buildSummarizationPrompt,
   applySummaryCompaction,
   applyToolResultBudget,
@@ -34,6 +33,13 @@ import {
   reconstructContentReplacementState,
   resolveToolResultsDir,
 } from "./tool-result-storage.js";
+import {
+  DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,
+  DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,
+  createToolTextReplacement,
+  replaceToolResultText,
+  toolResultText,
+} from "./tool-output-budget.js";
 import { logger } from "../logging/logger.js";
 
 export interface ContextManagerConfig {
@@ -41,6 +47,9 @@ export interface ContextManagerConfig {
   compactAtRatio: number;
   summarizeAtRatio: number;
   maxToolResultChars: number;
+  /** Estimated text budgets, applied before total-history compaction. */
+  toolOutputTokenLimit: number;
+  toolMessageTokenLimit: number;
   /**
    * Lower bound, as a ratio of maxTokens, below which microcompact will not
    * run. CC's external (non-cache-edit) path is "autocompact handles context
@@ -72,6 +81,8 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
   compactAtRatio: 0.85,
   summarizeAtRatio: 0.92,
   maxToolResultChars: 30_000,
+  toolOutputTokenLimit: DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,
+  toolMessageTokenLimit: DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,
   // 0.7 leaves micro idle until the prompt is ~70% full. Below this we
   // let tool_results stay intact: under-pressure context doesn't need
   // micro and wiping early Read/Bash output just forces the model to
@@ -371,7 +382,7 @@ export class ContextManager {
    * every result against the current threshold and might flip choices.
    */
   initReplacementStateFromMessages(messages: Message[]): void {
-    this.replacementState = reconstructContentReplacementState(messages);
+    this.replacementState = reconstructContentReplacementState(messages, this.toolResultsDir);
   }
 
   /**
@@ -391,14 +402,14 @@ export class ContextManager {
     // block was already frozen "don't persist" on a prior pass).
     result = this.truncateToolResults(result);
 
-    // Tier 0c: Aggregate tool result budget (per-message) — char-level
+    // Tier 0c: Aggregate tool result budget (per-message) — text
     // backstop for messages still over the limit after persistence.
-    result = applyToolResultBudget(result);
+    result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
-    // Tier 0d: dedup repeated Reads of the same file — keep only the latest
-    // copy (older ones are stale). Always-on + zero-cost: it's pure waste
-    // removal (the model never needs two snapshots of one file), unlike the
-    // pressure-/recency-gated tiers below. Runs before microcompact so an
+    // Tier 0d: dedup complete, successful Reads of the same file range.
+    // Different pages and incomplete observations remain available. Runs
+    // independently of the pressure-/recency-gated tiers below, before
+    // microcompact so an
     // already-deduped result isn't double-counted toward the keep-recent window.
     const dedup = dedupeFileReads(result);
     if (dedup.clearedCount > 0) {
@@ -521,7 +532,7 @@ export class ContextManager {
     result = this.truncateToolResults(result);
 
     // Tier 0c: Aggregate tool result budget (per-message)
-    result = applyToolResultBudget(result);
+    result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
     // Tier 0d: same always-on waste-removal passes as manage().
     const dedup = dedupeFileReads(result);
@@ -669,7 +680,7 @@ export class ContextManager {
     // Tier 0: same waste-removal + micro as the automatic path.
     result = this.persistLargeToolResults(result);
     result = this.truncateToolResults(result);
-    result = applyToolResultBudget(result);
+    result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
     const dedup = dedupeFileReads(result);
     if (dedup.clearedCount > 0) result = dedup.messages;
     const masked = maskOldObservations(result);
@@ -772,6 +783,9 @@ export class ContextManager {
       this.replacementState = createContentReplacementState();
     }
     return applyToolResultPersistence(messages, {
+      perResultThreshold: this.config.maxToolResultChars,
+      perResultTokenLimit: this.config.toolOutputTokenLimit,
+      perMessageTokenLimit: this.config.toolMessageTokenLimit,
       toolResultsDir: this.toolResultsDir,
       state: this.replacementState,
       onPersist: (info) => {
@@ -784,7 +798,10 @@ export class ContextManager {
    * Truncate oversized tool results in messages.
    */
   private truncateToolResults(messages: Message[]): Message[] {
-    const maxChars = this.config.maxToolResultChars;
+    const budget = {
+      maxChars: this.config.maxToolResultChars,
+      maxTokens: this.config.toolOutputTokenLimit,
+    };
 
     const result = messages.map((msg) => {
       if (!Array.isArray(msg.content)) return msg;
@@ -793,13 +810,16 @@ export class ContextManager {
       // later, unchanged messages to be spread-copied.
       let messageModified = false;
       const newContent = msg.content.map((block) => {
-        if (block.type === "tool_result" && typeof block.content === "string") {
-          if (block.content.length > maxChars) {
-            messageModified = true;
-            return { ...block, content: truncateToolResult(block.content, maxChars) };
-          }
-        }
-        return block;
+        if (block.type !== "tool_result") return block;
+        const text = toolResultText(block.content);
+        if (text === undefined) return block;
+        const truncated = createToolTextReplacement(block.content, budget);
+        if (truncated.text === text) return block;
+        messageModified = true;
+        return {
+          ...block,
+          content: replaceToolResultText(block.content, truncated.text, truncated.parts),
+        };
       });
 
       return messageModified ? { ...msg, content: newContent } : msg;

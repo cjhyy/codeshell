@@ -83,7 +83,9 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     const replaceAssistant =
       input.replaceAssistant ??
       (Boolean(input.baseMessage?.trim()) ||
-        input.executions.some((execution) => execution.kind === "outboundMessage"));
+        input.executions.some(
+          (execution) => execution.kind === "outboundMessage" || execution.kind === "sessionBind",
+        ));
     let deliveryChannel = input.deliveryChannel;
     if (!deliveryChannel) {
       const resultChannel = input.executions.find(

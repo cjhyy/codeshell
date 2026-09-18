@@ -97,7 +97,7 @@ import { logger, runWithSid } from "../logging/logger.js";
 import { recordSessionStart } from "../logging/session-recorder.js";
 import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
-import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
+import type { AskUserFn, AskUserAsyncFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, userHome } from "../settings/manager.js";
 import { getCredentialAccess } from "../credentials/access.js";
@@ -895,6 +895,11 @@ export class Engine {
    */
   setAskUser(fn: AskUserFn | undefined): void {
     this.config.askUser = fn;
+  }
+
+  /** Inject the host's nonblocking question delivery handler. */
+  setAskUserAsync(fn: AskUserAsyncFn | undefined): void {
+    this.config.askUserAsync = fn;
   }
 
   /** Internal child-runtime seam used by the single-writer supervisor. */
@@ -4275,6 +4280,7 @@ export class Engine {
       toolRegistry: this.toolRegistry,
       capabilityServices,
       askUser: this.config.askUser,
+      askUserAsync: this.config.askUserAsync,
       browser: this.config.browserBridge,
       workspaceBridge: this.config.workspaceBridge,
       panels: this.config.panelBridge,

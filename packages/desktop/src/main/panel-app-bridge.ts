@@ -479,7 +479,12 @@ export class PanelAppBridge {
         run: async (input) => {
           const bridge = this.options.getAgentBridge();
           if (!bridge) throw new Error("agent worker is unavailable");
-          bridge.reserveHostSession(input.sessionId, input.owner.cwd);
+          bridge.reserveHostSession(
+            input.sessionId,
+            input.owner.cwd,
+            "panel-agent-task",
+            input.owner.projectPath,
+          );
           bridge.rebindHostSessionBucket(input.sessionId, input.owner.bucket);
           bridge.claimSessionPanelOwner(input.sessionId, input.owner.ownerWebContentsId);
           let latestError = "";

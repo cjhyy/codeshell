@@ -109,6 +109,8 @@ export interface ChannelMessage {
   channel: string;
   target: string;
   senderId: string;
+  /** Adapter-authenticated conversation kind; missing means unknown, never private. */
+  isDirectMessage?: boolean;
   text: string;
   attachments?: readonly ChatAttachment[];
   messageId?: string;

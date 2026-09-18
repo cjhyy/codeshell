@@ -37,6 +37,7 @@ import {
   revokePluginMcp,
   revokePluginHooks,
   SettingsManager,
+  SessionManager,
   writeSettingsSchemaFile,
   userHome,
   CredentialStore,
@@ -114,6 +115,10 @@ import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-codi
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import {
+  createExternalGoalRpcHandler,
+  parseExternalGoalInput,
+} from "./external-runtime-goal-rpc.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
 import { removeExternalRuntimeBinding } from "./external-runtime-state.js";
 import {
@@ -1432,6 +1437,7 @@ async function createWindow(): Promise<BrowserWindow> {
   // webContents is actually torn down (next tick after `closed`).
   const ownerWebContentsId = win.webContents.id;
   win.on("closed", () => {
+    externalRuntimeApprovals?.cancelWindow(ownerWebContentsId);
     void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
     mainWindows.delete(win);
     browserAnchorsByParent.delete(win.id);
@@ -1530,9 +1536,72 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
 
+    const externalGoalSessions = new SessionManager();
+    externalBridge.setExternalGoalRpcHandler(
+      createExternalGoalRpcHandler({
+        isExternalSession: (sessionId) => {
+          if (externalRuntimeService?.get(sessionId)) return true;
+          // The canonical model wins over an old external-runtime sidecar after
+          // a user switches this task back to the native runtime.
+          return !!parseExternalRuntimeModelKey(
+            externalGoalSessions.readSessionState(sessionId)?.model,
+          );
+        },
+        authorize: (sessionId, callerId) => {
+          assertDesktopSessionId(sessionId);
+          const owner = [...mainWindows].find(
+            (window) => !window.isDestroyed() && window.webContents.id === callerId,
+          );
+          if (!owner) throw new Error("goal controls require a live owner window");
+          const existingOwner = externalBridge.panelOwnerWebContentsId(sessionId);
+          if (existingOwner !== undefined && existingOwner !== callerId) {
+            throw new Error("goal belongs to another window");
+          }
+        },
+        prepareResume: async (sessionId, callerId) => {
+          const service = externalRuntimeService;
+          if (!service) throw new Error("external runtime service is unavailable");
+          if (service.canResumeGoal(sessionId, callerId)) return;
+          const state = externalGoalSessions.readSessionState(sessionId);
+          const model = parseExternalRuntimeModelKey(state?.model);
+          if (!state || !model) throw new Error("external goal task is no longer available");
+          const cwd = await requireRendererProjectPath(state.cwd);
+          const ownerWindow = [...mainWindows].find(
+            (window) => !window.isDestroyed() && window.webContents.id === callerId,
+          );
+          if (!ownerWindow) throw new Error("goal owner window has closed");
+          const existingOwner = externalBridge.panelOwnerWebContentsId(sessionId);
+          if (existingOwner !== undefined && existingOwner !== callerId) {
+            throw new Error("goal belongs to another window");
+          }
+          await service.ensure({
+            kind: model.kind,
+            sessionId,
+            cwd,
+            modelKey: state.model,
+            ...(model.model ? { model: model.model } : {}),
+            permissionMode: "default",
+            hasGoal: true,
+            initialContext: buildExternalRuntimeHandoffFromEvents(
+              await getSessionEvents(sessionId),
+            ),
+            ownerWindow,
+          });
+        },
+        service: () => {
+          if (!externalRuntimeService) throw new Error("external runtime service is unavailable");
+          return externalRuntimeService;
+        },
+      }),
+    );
+
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
+      pendingMobileApprovals.setWorkerState(
+        externalBridge.workerGeneration(),
+        externalBridge.hasLiveWorker(),
+      );
       pendingMobileApprovals.observeOutboundLine(line);
       if (snapshotEntry) {
         mobileRemote.broadcast({
@@ -1847,6 +1916,12 @@ async function createWindow(): Promise<BrowserWindow> {
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
+      onDeliveryError: (error, turn) =>
+        dlog("main", "pet.session.reply.retry", {
+          sessionId: turn.sessionId,
+          turnId: turn.turnId,
+          error: String(error),
+        }),
     });
     await sessionBridge.recoverOnStartup().catch(() => undefined);
     petDispatchService = new PetDispatchService({
@@ -3020,6 +3095,7 @@ async function dispatchGatewayPetChat(
       kind: "im-gateway",
       channel: sourceChannel,
       ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
+      isDirectMessage: request.origin?.isDirectMessage === true,
       capabilities: request.origin?.capabilities ?? {
         inbound: { text: true, attachments: [] },
         outbound: { text: true, button: "link", attachments: [] },
@@ -3057,7 +3133,11 @@ async function dispatchGatewayPetChat(
   );
   const replacesGatewayTurn =
     Boolean(result.authoritativeReply) ||
-    Boolean(result.hostActions?.some((execution) => execution.kind === "gatewayReply"));
+    Boolean(
+      result.hostActions?.some(
+        (execution) => execution.kind === "gatewayReply" || execution.kind === "sessionBind",
+      ),
+    );
   if (
     (replacesGatewayTurn ||
       result.hostActions?.some((execution) => execution.kind === "outboundMessage")) &&
@@ -5437,13 +5517,17 @@ ipcMain.handle("mobileRemote:updatePermissionModes", async (_e, entries: unknown
 });
 ipcMain.handle(
   "mobileRemote:approvalResolved",
-  async (_e, input: { requestId?: unknown; sessionId?: unknown; approved?: unknown }) => {
+  async (
+    _e,
+    input: { requestId?: unknown; sessionId?: unknown; approved?: unknown; answer?: unknown },
+  ) => {
     const requestId = typeof input?.requestId === "string" ? input.requestId : "";
     if (!requestId) return false;
     mobileOrchestrator.broadcastApprovalResolved({
       requestId,
       sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
       approved: typeof input?.approved === "boolean" ? input.approved : undefined,
+      answer: typeof input?.answer === "string" ? input.answer : undefined,
     });
     return true;
   },
@@ -5953,6 +6037,8 @@ ipcMain.handle(
       text?: unknown;
       clientMessageId?: unknown;
       attachments?: unknown;
+      goal?: unknown;
+      disableGoal?: unknown;
     },
   ) => {
     const service = externalRuntimeService;
@@ -5960,6 +6046,10 @@ ipcMain.handle(
     const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
     assertDesktopSessionId(sessionId);
     const text = typeof payload?.text === "string" ? payload.text : "";
+    const goal = parseExternalGoalInput(payload?.goal);
+    if (payload?.disableGoal !== undefined && typeof payload.disableGoal !== "boolean") {
+      throw new Error("disableGoal must be a boolean");
+    }
     if (text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
       throw new Error("external runtime message is too large");
     }
@@ -6026,6 +6116,8 @@ ipcMain.handle(
       sessionId,
       {
         text,
+        ...(goal ? { goal } : {}),
+        ...(payload.disableGoal === true ? { disableGoal: true } : {}),
         ...(clientMessageId ? { clientMessageId } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
       },
@@ -6040,16 +6132,20 @@ ipcMain.handle("externalRuntime:interrupt", async (event, sessionId: unknown) =>
 });
 
 /** The renderer answering a prompt this session's runtime is parked on. */
-ipcMain.on(
+ipcMain.handle(
   "externalRuntime:approvalDecision",
   (event, payload: { requestId?: unknown; approved?: unknown; [key: string]: unknown }) => {
     const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
-    if (!requestId) return;
-    externalRuntimeApprovals?.settle(
-      requestId,
-      parseExternalApprovalDecision(payload),
-      event.sender.id,
-    );
+    const settled =
+      requestId &&
+      externalRuntimeApprovals?.settle(
+        requestId,
+        parseExternalApprovalDecision(payload),
+        event.sender.id,
+      );
+    return settled
+      ? { ok: true }
+      : { ok: false, error: { message: "This prompt is no longer pending in this window." } };
   },
 );
 
@@ -6681,6 +6777,18 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
   );
 });
 
+ipcMain.handle("agent:pendingApprovals", (event) => {
+  // Native approval events already reach all main windows. Preserve that queue
+  // and its session envelopes, without replaying resolved historical requests.
+  pendingMobileApprovals.setWorkerState(
+    bridge?.workerGeneration() ?? 0,
+    bridge?.hasLiveWorker() ?? false,
+  );
+  return [
+    ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),
+    ...(externalRuntimeApprovals?.pendingForWindow(event.sender.id) ?? []),
+  ];
+});
 /**
  * Snapshot subscription: a (re)mounted renderer asks main for the events it
  * missed for a session past `sinceSeq`. main holds these (AgentBridge's

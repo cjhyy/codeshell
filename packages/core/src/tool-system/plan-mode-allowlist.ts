@@ -50,6 +50,7 @@ export const PLAN_MODE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   "WebFetch",
   // Agent / interaction / discovery
   "AskUserQuestion",
+  "AskUserQuestionAsync",
   "Agent",
   "ToolSearch",
   // Skill: loads a skill's guidance text into context — read-only, no file

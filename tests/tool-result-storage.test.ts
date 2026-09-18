@@ -133,6 +133,45 @@ describe("tool-result-storage", () => {
     expect(second[0]).toBe(first[0]);
   });
 
+  it.each(["partial", "same-size"])(
+    "rejects a %s corrupted original during cold recovery",
+    (kind) => {
+      const content = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);
+      const messages = [userToolResult("corrupt-on-resume", content)];
+      applyToolResultPersistence(messages, {
+        toolResultsDir: dir,
+        state: createContentReplacementState(),
+      });
+      writeFileSync(
+        persistedPath(dir, "corrupt-on-resume"),
+        kind === "partial" ? "TRUNCATED" : "y".repeat(content.length),
+      );
+
+      const state = reconstructContentReplacementState(messages, dir);
+      expect(state.replacements.has("corrupt-on-resume")).toBe(false);
+      expect(applyToolResultPersistence(messages, { toolResultsDir: dir, state })).toBe(messages);
+    },
+  );
+
+  it("repairs an interrupted preview before using it and restores that view on resume", () => {
+    const content = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);
+    const messages = [userToolResult("broken-preview", content)];
+    const previewPath = `${persistedPath(dir, "broken-preview")}.preview.json`;
+    writeFileSync(previewPath, "{");
+
+    const first = applyToolResultPersistence(messages, {
+      toolResultsDir: dir,
+      state: createContentReplacementState(),
+    });
+    expect(first).not.toBe(messages);
+    expect(JSON.parse(readFileSync(previewPath, "utf8")).version).toBe(1);
+    const resumed = applyToolResultPersistence(messages, {
+      toolResultsDir: dir,
+      state: reconstructContentReplacementState(messages, dir),
+    });
+    expect(JSON.stringify(resumed)).toBe(JSON.stringify(first));
+  });
+
   it("persists the largest blocks first when a single message busts the aggregate cap", () => {
     // Three results, each well below the per-result threshold, but
     // together over the per-message cap. Tune cap so exactly one must go.
@@ -161,7 +200,7 @@ describe("tool-result-storage", () => {
 
     // 'large' must have been persisted (it's the biggest, and replacing
     // it alone gets us under the cap: 5k + 7k = 12k < 20k).
-    const blocks = (result[0].content as any[]);
+    const blocks = result[0].content as any[];
     expect(blocks[0].content).toBe(small);
     expect(blocks[1].content).toBe(medium);
     expect(isPersistedReplacement(blocks[2].content)).toBe(true);
@@ -183,8 +222,7 @@ describe("tool-result-storage", () => {
     applyToolResultPersistence(messages, {
       toolResultsDir: dir,
       state,
-      onPersist: (info) =>
-        calls.push({ toolUseId: info.toolUseId, reason: info.reason }),
+      onPersist: (info) => calls.push({ toolUseId: info.toolUseId, reason: info.reason }),
     });
 
     expect(calls).toHaveLength(2);
@@ -214,6 +252,17 @@ describe("tool-result-storage", () => {
     expect(isPersistedReplacement(block.content)).toBe(true);
   });
 
+  it("does not claim a partial original file contains the full result", () => {
+    const content = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);
+    writeFileSync(persistedPath(dir, "partial"), "interrupted prior write");
+    const input = [userToolResult("partial", content)];
+    const state = createContentReplacementState();
+    const output = applyToolResultPersistence(input, { toolResultsDir: dir, state });
+    expect(output).toEqual(input);
+    expect(state.replacements.has("partial")).toBe(false);
+    expect(existsSync(`${persistedPath(dir, "partial")}.preview.json`)).toBe(false);
+  });
+
   it("reconstructs state from messages containing existing persisted replacements", () => {
     const huge = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);
     const stateA = createContentReplacementState();
@@ -228,9 +277,7 @@ describe("tool-result-storage", () => {
     expect(replayedState.replacements.has("id-1")).toBe(true);
     expect(replayedState.replacements.has("id-2")).toBe(false);
     // The reconstructed replacement string should match the live one.
-    expect(replayedState.replacements.get("id-1")).toBe(
-      stateA.replacements.get("id-1"),
-    );
+    expect(replayedState.replacements.get("id-1")).toBe(stateA.replacements.get("id-1"));
   });
 
   it("skips blocks already marked as cleared (microcompact sentinel)", () => {
@@ -252,19 +299,17 @@ describe("tool-result-storage", () => {
   });
 
   it("resolveToolResultsDir places the directory next to the transcript", () => {
-    expect(resolveToolResultsDir("/sessions/abc/session.jsonl")).toBe(
-      "/sessions/abc/tool-results",
-    );
+    expect(resolveToolResultsDir("/sessions/abc/session.jsonl")).toBe("/sessions/abc/tool-results");
   });
 
   it("reconstructed state survives a fresh persistence pass with no changes", () => {
     // Cold session: persist a big blob.
     const huge = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);
     const stateA = createContentReplacementState();
-    const persistedA = applyToolResultPersistence(
-      [userToolResult("id-1", huge)],
-      { toolResultsDir: dir, state: stateA },
-    );
+    const persistedA = applyToolResultPersistence([userToolResult("id-1", huge)], {
+      toolResultsDir: dir,
+      state: stateA,
+    });
     const replacementA = (persistedA[0].content as any)[0].content;
 
     // Simulate resume: rebuild state from the already-persisted messages,
@@ -293,9 +338,7 @@ describe("tool-result-storage", () => {
       toolResultsDir: nested,
       state,
     });
-    expect(isPersistedReplacement((result[0].content as any)[0].content)).toBe(
-      true,
-    );
+    expect(isPersistedReplacement((result[0].content as any)[0].content)).toBe(true);
     expect(existsSync(persistedPath(nested, "id-1"))).toBe(true);
   });
 
@@ -333,9 +376,8 @@ describe("tool-result-storage", () => {
     // Pull out the preview body between the header and the closing tag.
     const previewStart = replacement.indexOf("Preview");
     const body = replacement.slice(previewStart);
-    // Last character of the preview portion before "..." should be \n
-    // (we cut at lastIndexOf('\n') if it's in the back half).
-    const beforeEllipsis = body.slice(0, body.indexOf("\n..."));
+    // Head/tail previews still end the head at a complete line when possible.
+    const beforeEllipsis = body.slice(0, body.indexOf("\n[... tool output truncated ...]"));
     expect(beforeEllipsis.endsWith("line")).toBe(true);
   });
 
@@ -345,10 +387,10 @@ describe("tool-result-storage", () => {
     // cleanup that wipes the tool-results dir.
     const huge = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);
     const stateA = createContentReplacementState();
-    const persisted = applyToolResultPersistence(
-      [userToolResult("id-1", huge)],
-      { toolResultsDir: dir, state: stateA },
-    );
+    const persisted = applyToolResultPersistence([userToolResult("id-1", huge)], {
+      toolResultsDir: dir,
+      state: stateA,
+    });
     rmSync(persistedPath(dir, "id-1"));
 
     const stateB = reconstructContentReplacementState(persisted);

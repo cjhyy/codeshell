@@ -70,6 +70,7 @@ interface Params {
     quickChatSessionsRef: MutableRefObject<Record<string, QuickChatSessionRef>>;
   };
   controls: {
+    gitReviewAvailable: boolean;
     engineToBucketRef: MutableRefObject<Map<string, string>>;
     setPermissionOverrides: Dispatch<SetStateAction<Record<string, PermissionMode>>>;
     setModelOverrides: Dispatch<SetStateAction<Record<string, string>>>;
@@ -132,6 +133,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     quickChatSessionsRef,
   } = quickChat;
   const {
+    gitReviewAvailable,
     engineToBucketRef,
     setPermissionOverrides,
     setModelOverrides,
@@ -146,6 +148,8 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   } = controls;
   const { runningBucketRef, coalescersRef, coalescerSeqRef, appliedSeqRef } = stream;
   const { toast, t, setViewMode } = shell;
+  const gitReviewAvailableRef = useRef(gitReviewAvailable);
+  gitReviewAvailableRef.current = gitReviewAvailable;
   // Right-side panel dock (dynamic tabs: files/browser/review/terminal). Panel
   // state is bucket-owned below; only nonce sources stay global so repeated
   // clicks can refire even if the same file/url is selected twice.
@@ -698,13 +702,15 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       };
     });
 
-  const openPanel = (kind: PanelTab): void =>
+  const openPanel = (kind: PanelTab): void => {
+    if (kind === "review" && !gitReviewAvailable) return;
     updateActivePanelBucket((state) => ({
       ...state,
       open: true,
       requestNonce: state.requestNonce + 1,
       requestKind: kind,
     }));
+  };
 
   // Dock width (px), persisted. The divider on the dock's left edge drags it.
   const PANEL_MIN = 320;
@@ -787,6 +793,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     const onReview = (e: Event): void => {
       const detail = (e as CustomEvent<{ files?: string[]; diff?: string }>).detail;
       const files = detail?.files;
+      if (!gitReviewAvailableRef.current && !detail?.diff?.trim()) return;
       updatePanelBucket(activeBucketRef.current, (state) => ({
         ...state,
         open: true,

@@ -22,7 +22,7 @@ interface TelegramUpdate {
     caption?: string;
     message_id?: number;
     date?: number;
-    chat: { id: number | string };
+    chat: { id: number | string; type?: string };
     from?: { id: number | string };
     sender_chat?: { id: number | string };
     photo?: TelegramPhoto[];
@@ -273,6 +273,7 @@ function toChannelMessage(
     channel: "telegram",
     target: String(message.chat.id),
     senderId: String(sender),
+    isDirectMessage: message.chat.type === "private",
     text,
     ...(attachments.length > 0 ? { attachments } : {}),
     ...(message.message_id === undefined ? {} : { messageId: String(message.message_id) }),

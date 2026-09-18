@@ -61,11 +61,19 @@ export function createBwrapBackend(config: SandboxConfig): SandboxBackend {
       return { file: "bwrap", args };
     },
     hintForBlockedOutput(stderr) {
-      if (/Permission denied|No such file or directory.*bwrap/i.test(stderr)) {
+      // A denied directory is shadowed by /dev/null, so trying to read one
+      // of its children commonly reports ENOTDIR rather than EACCES.
+      if (
+        /Permission denied|Operation not permitted|Not a directory|No such file or directory.*bwrap/i.test(
+          stderr,
+        )
+      ) {
         return (
-          "\n[sandbox:bwrap] A path access was blocked by the sandbox. " +
-          "If this path should be writable, ask the user to update " +
-          "sandbox.writableRoots in settings.json."
+          "\n[sandbox:bwrap] A file read or write may have been blocked by the sandbox. " +
+          "For an installed Skill, load SKILL.md with the Skill tool and inspect references " +
+          "with Read or Grep. On Linux, Bash cannot currently read Skill files beneath " +
+          "protected directories. For a required write, ask the user to add only its " +
+          "intended directory to sandbox.writableRoots in settings.json."
         );
       }
       return undefined;

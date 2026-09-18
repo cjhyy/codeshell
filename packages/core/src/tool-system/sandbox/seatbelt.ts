@@ -20,6 +20,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SandboxBackend, SandboxConfig } from "./index.js";
+import { collectSkillReadAccess } from "./skill-resources.js";
 
 /**
  * Per-user MDS (Module Directory Service) scratch directory.
@@ -98,6 +99,9 @@ export function createSeatbeltBackend(config: SandboxConfig): SandboxBackend {
       if (/Operation not permitted|sandbox/.test(stderr)) {
         return (
           "\n[sandbox:seatbelt] A syscall was blocked by the sandbox. " +
+          "Installed Skill resources are readable but remain protected from writes. " +
+          "For an unreadable Skill reference, use Read to get its path-specific restriction; " +
+          "use Skill to load SKILL.md. " +
           "If this path should be writable or this network call legitimate, " +
           "ask the user to update sandbox.writableRoots / sandbox.network in settings.json."
         );
@@ -111,6 +115,14 @@ function buildProfile(config: SandboxConfig): string {
   const writeAllows = config.writableRoots.map((p) => `  (subpath ${quote(p)})`).join("\n");
   const readDenies = config.deniedReads.map((p) => `  (subpath ${quote(p)})`).join("\n");
   const networkClause = config.network === "deny" ? "(deny network-outbound)" : "(allow network*)";
+  const skillAccess = collectSkillReadAccess(config);
+  const skillReads = [...skillAccess.files, ...skillAccess.directories]
+    .map((path) => `  (literal ${quote(path)})`)
+    .join("\n");
+  const skillTraversal = skillAccess.traversalDirectories
+    .map((path) => `  (literal ${quote(path)})`)
+    .join("\n");
+  const skillWrites = skillAccess.roots.map((path) => `  (subpath ${quote(path)})`).join("\n");
 
   // Keychain access. Tools that store credentials in the macOS keychain
   // (`gh`, `az`, `docker login`, anything calling /usr/bin/security) shell
@@ -156,9 +168,15 @@ function buildProfile(config: SandboxConfig): string {
 (allow file-read*)
 ${readDenies ? `(deny file-read*\n${readDenies})` : ""}
 
+;; Installed Skill resources: exact ordinary files and directory listings.
+;; Ancestors receive metadata only, so private sibling directories stay hidden.
+${skillReads ? `(allow file-read*\n${skillReads})` : ""}
+${skillTraversal ? `(allow file-read-metadata\n${skillTraversal})` : ""}
+
 ;; Writes: workspace + listed roots only
 (allow file-write*
 ${writeAllows})
+${skillWrites ? `(deny file-write*\n${skillWrites})` : ""}
 (allow file-write-data
   (literal "/dev/null")
   (literal "/dev/zero")
@@ -179,5 +197,5 @@ ${networkClause}
 }
 
 function quote(path: string): string {
-  return `"${path.replace(/"/g, '\\"')}"`;
+  return JSON.stringify(path);
 }

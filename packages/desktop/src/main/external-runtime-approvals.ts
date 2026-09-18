@@ -16,6 +16,7 @@
  * correct — a second one would drift, and the drift would be silent.
  */
 import type { BrowserWindow } from "electron";
+import { randomUUID } from "node:crypto";
 import { dlog } from "./desktop-logger.js";
 
 /** Mirrors core's ApprovalRequest closely enough for the wire. */
@@ -59,6 +60,7 @@ export function parseExternalApprovalDecision(
 
 interface Pending {
   sessionId: string;
+  request: ExternalApprovalRequest;
   targetWebContentsId: number;
   resolve: (decision: ExternalApprovalDecision) => void;
   timer: ReturnType<typeof setTimeout>;
@@ -75,7 +77,6 @@ const APPROVAL_TIMEOUT_MS = 10 * 60_000;
 
 export class ExternalRuntimeApprovals {
   private readonly pending = new Map<string, Pending>();
-  private seq = 0;
 
   constructor(
     private readonly deps: {
@@ -83,6 +84,8 @@ export class ExternalRuntimeApprovals {
       windows: () => Iterable<BrowserWindow>;
       /** The window owning a session, when one is known. */
       ownerWebContentsId?: (sessionId: string) => number | undefined;
+      /** Test seam; production prompts retain the ten-minute deadline. */
+      timeoutMs?: number;
     },
   ) {}
 
@@ -106,18 +109,21 @@ export class ExternalRuntimeApprovals {
       });
     }
 
-    const requestId = `external-approval-${++this.seq}`;
+    // A renderer may restore old transcript cards after Main restarts. Never
+    // reuse their ids for an unrelated new prompt.
+    const requestId = `external-approval-${randomUUID()}`;
     return new Promise<ExternalApprovalDecision>((resolve) => {
       const timer = setTimeout(() => {
-        if (!this.pending.delete(requestId)) return;
+        if (!this.finish(requestId, { approved: false, reason: "approval timed out" }, true))
+          return;
         dlog("external-runtime", "approval.timed_out", { sessionId, tool: request.toolName });
-        resolve({ approved: false, reason: "approval timed out" });
-      }, APPROVAL_TIMEOUT_MS);
+      }, this.deps.timeoutMs ?? APPROVAL_TIMEOUT_MS);
       // `unref` so a parked prompt cannot keep the process alive at quit.
       (timer as unknown as { unref?: () => void }).unref?.();
 
       this.pending.set(requestId, {
         sessionId,
+        request,
         targetWebContentsId: target.webContents.id,
         resolve,
         timer,
@@ -159,16 +165,11 @@ export class ExternalRuntimeApprovals {
   ): boolean {
     const entry = this.pending.get(requestId);
     if (!entry) return false;
-    if (
-      callerWebContentsId !== undefined &&
-      entry.targetWebContentsId !== callerWebContentsId
-    ) {
+    if (callerWebContentsId !== undefined && entry.targetWebContentsId !== callerWebContentsId) {
       dlog("external-runtime", "approval.wrong_window", { requestId });
       return false;
     }
-    this.pending.delete(requestId);
-    clearTimeout(entry.timer);
-    entry.resolve(decision);
+    this.finish(requestId, decision);
     dlog("external-runtime", "approval.settled", { requestId, approved: decision.approved });
     return true;
   }
@@ -181,10 +182,64 @@ export class ExternalRuntimeApprovals {
   cancelSession(sessionId: string): void {
     for (const [requestId, entry] of [...this.pending]) {
       if (entry.sessionId !== sessionId) continue;
-      this.pending.delete(requestId);
-      clearTimeout(entry.timer);
-      entry.resolve({ approved: false, reason: "session closed before the prompt was answered" });
+      this.finish(requestId, {
+        approved: false,
+        reason: "session closed before the prompt was answered",
+      });
     }
+  }
+
+  /** Window teardown also retires prompts delivered through the fallback route. */
+  cancelWindow(webContentsId: number): void {
+    for (const [requestId, entry] of [...this.pending]) {
+      if (entry.targetWebContentsId !== webContentsId) continue;
+      this.finish(requestId, {
+        approved: false,
+        reason: "window closed before the prompt was answered",
+      });
+    }
+  }
+
+  /** Reload recovery exposes only unresolved requests delivered to this window. */
+  pendingForWindow(webContentsId: number) {
+    return [...this.pending].flatMap(([requestId, entry]) =>
+      entry.targetWebContentsId === webContentsId
+        ? [
+            {
+              sessionId: entry.sessionId,
+              requestId,
+              request: entry.request,
+              source: "external-runtime" as const,
+            },
+          ]
+        : [],
+    );
+  }
+
+  private finish(requestId: string, decision: ExternalApprovalDecision, timedOut = false): boolean {
+    const entry = this.pending.get(requestId);
+    if (!entry) return false;
+    this.pending.delete(requestId);
+    clearTimeout(entry.timer);
+    entry.resolve(decision);
+    const target = [...this.deps.windows()].find(
+      (window) => !window.isDestroyed() && window.webContents.id === entry.targetWebContentsId,
+    );
+    try {
+      target?.webContents.send("externalRuntime:approvalResolved", {
+        sessionId: entry.sessionId,
+        requestId,
+        // The existing shared channel uses an absent decision for a timeout.
+        ...(timedOut ? {} : { approved: decision.approved }),
+        ...(decision.answer !== undefined ? { answer: decision.answer } : {}),
+      });
+    } catch (error) {
+      dlog("external-runtime", "approval.resolution_delivery_failed", {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return true;
   }
 
   /** Live prompt count — for teardown assertions. */

@@ -31,11 +31,17 @@ export function ApprovalCard({
   onRespond: (decision: "approve" | "reject", opts?: ApprovalResponse) => void;
 }) {
   const { t } = useT();
-  const isAsk = Boolean(approval.options?.length);
+  const isAsk = approval.toolName === "__ask_user__" || Boolean(approval.options?.length);
   const [scope, setScope] = useState<ApprovalScope>("once");
   const [pathScope, setPathScope] = useState<ApprovalPathScope>("tool");
   const [freeText, setFreeText] = useState("");
-  const askQuestion = approval.summary || approval.description;
+  const [deferred, setDeferred] = useState(false);
+  // A question without options may have a generic JSON args summary; the
+  // engine description still carries its human-readable question.
+  const askQuestion =
+    approval.toolName === "__ask_user__"
+      ? approval.description || approval.summary
+      : approval.summary || approval.description;
   const showDescription = Boolean(
     approval.description && (!isAsk || approval.description !== askQuestion),
   );
@@ -52,7 +58,7 @@ export function ApprovalCard({
           <ShieldAlert className="size-4" />
         </span>
         <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-foreground">
-          {approval.toolName}
+          {isAsk ? t("mobile.approval.question") : approval.toolName}
         </span>
         <span
           className={cn(
@@ -66,6 +72,21 @@ export function ApprovalCard({
       {showDescription && (
         <p className="mb-2 break-words text-xs text-muted-foreground">{approval.description}</p>
       )}
+      {isAsk && approval.asynchronous && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">{t("msg.ask.asyncHint")}</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            aria-expanded={!deferred}
+            onClick={() => setDeferred((value) => !value)}
+          >
+            {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
+          </Button>
+        </div>
+      )}
+
       {isAsk ? (
         <div className="mb-3 rounded-lg border border-border/70 bg-muted/30 p-3">
           <div className="mb-1 text-[11px] font-medium text-muted-foreground">
@@ -81,114 +102,115 @@ export function ApprovalCard({
         </pre>
       )}
 
-      {isAsk ? (
-        // AskUser approval: tap an option, or type a free answer (if allowed).
-        <div className="flex flex-col gap-2.5">
-          <div className="flex min-w-0 flex-col gap-2">
-            {approval.options!.map((opt, index) => (
-              <button
-                key={opt}
-                type="button"
-                className="mobile-list-item flex min-h-12 w-full min-w-0 items-center gap-2 rounded-lg border border-border/70 px-3 py-2.5 text-left hover:bg-primary/10"
-                onClick={() => onRespond("approve", { answer: opt })}
-              >
-                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 text-[11px] font-semibold text-primary">
-                  {index + 1}
-                </span>
-                <span className="min-w-0 flex-1 whitespace-normal break-words text-sm leading-5 text-foreground">
-                  {opt}
-                </span>
-                <Check className="size-4 shrink-0 text-muted-foreground" />
-              </button>
-            ))}
-          </div>
-          {!approval.optionsOnly && (
-            <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border/70 bg-black/10 p-2">
-              <Textarea
-                rows={2}
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
-                placeholder={t("mobile.approval.customPlaceholder")}
-                name="codeshell-answer"
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                data-1p-ignore="true"
-                data-lpignore="true"
-                // text-base (16px): avoid iOS focus auto-zoom.
-                className="min-h-16 min-w-0 resize-none rounded-lg text-base"
-              />
-              <Button
-                size="sm"
-                className="h-9 w-full rounded-lg"
-                disabled={!freeText.trim()}
-                onClick={() => onRespond("approve", { answer: freeText.trim() })}
-              >
-                <Check />
-                {t("mobile.approval.sendCustom")}
-              </Button>
+      {!deferred &&
+        (isAsk ? (
+          // AskUser approval: tap an option, or type a free answer (if allowed).
+          <div className="flex flex-col gap-2.5">
+            <div className="flex min-w-0 flex-col gap-2">
+              {approval.options?.map((opt, index) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className="mobile-list-item flex min-h-12 w-full min-w-0 items-center gap-2 rounded-lg border border-border/70 px-3 py-2.5 text-left hover:bg-primary/10"
+                  onClick={() => onRespond("approve", { answer: opt })}
+                >
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 text-[11px] font-semibold text-primary">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 whitespace-normal break-words text-sm leading-5 text-foreground">
+                    {opt}
+                  </span>
+                  <Check className="size-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
             </div>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="rounded-lg"
-            onClick={() => onRespond("reject")}
-          >
-            {t("common.cancel")}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2.5">
-          {/* Remembered scope */}
-          <ScopeChips
-            label={t("mobile.approval.rememberScope")}
-            value={scope}
-            options={[
-              ["once", t("mobile.approval.scope.once")],
-              ["session", t("mobile.approval.scope.session")],
-              ["project", t("mobile.approval.scope.project")],
-            ]}
-            onChange={(v) => setScope(v as ApprovalScope)}
-          />
-          {/* Path breadth, only for path-scoped tools and only when remembering */}
-          {approval.pathScoped && scope !== "once" && (
-            <ScopeChips
-              label={t("mobile.approval.pathScopeLabel")}
-              value={pathScope}
-              options={[
-                ["file", t("mobile.approval.pathScope.file")],
-                ["dir", t("mobile.approval.pathScope.dir")],
-                ["tool", t("mobile.approval.pathScope.tool")],
-              ]}
-              onChange={(v) => setPathScope(v as ApprovalPathScope)}
-            />
-          )}
-          <div className="flex gap-2">
+            {!approval.optionsOnly && (
+              <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border/70 bg-black/10 p-2">
+                <Textarea
+                  rows={2}
+                  value={freeText}
+                  onChange={(e) => setFreeText(e.target.value)}
+                  placeholder={t("mobile.approval.customPlaceholder")}
+                  name="codeshell-answer"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  // text-base (16px): avoid iOS focus auto-zoom.
+                  className="min-h-16 min-w-0 resize-none rounded-lg text-base"
+                />
+                <Button
+                  size="sm"
+                  className="h-9 w-full rounded-lg"
+                  disabled={!freeText.trim()}
+                  onClick={() => onRespond("approve", { answer: freeText.trim() })}
+                >
+                  <Check />
+                  {t("mobile.approval.sendCustom")}
+                </Button>
+              </div>
+            )}
             <Button
-              className="h-10 flex-1 rounded-lg"
-              onClick={() =>
-                onRespond("approve", {
-                  scope,
-                  pathScope: approval.pathScoped ? pathScope : undefined,
-                })
-              }
-            >
-              <Check />
-              {t("mobile.approval.allow")}
-            </Button>
-            <Button
-              className="h-10 flex-1 rounded-lg"
-              variant="outline"
+              size="sm"
+              variant="ghost"
+              className="rounded-lg"
               onClick={() => onRespond("reject")}
             >
-              <X />
-              {t("mobile.approval.reject")}
+              {t("common.cancel")}
             </Button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {/* Remembered scope */}
+            <ScopeChips
+              label={t("mobile.approval.rememberScope")}
+              value={scope}
+              options={[
+                ["once", t("mobile.approval.scope.once")],
+                ["session", t("mobile.approval.scope.session")],
+                ["project", t("mobile.approval.scope.project")],
+              ]}
+              onChange={(v) => setScope(v as ApprovalScope)}
+            />
+            {/* Path breadth, only for path-scoped tools and only when remembering */}
+            {approval.pathScoped && scope !== "once" && (
+              <ScopeChips
+                label={t("mobile.approval.pathScopeLabel")}
+                value={pathScope}
+                options={[
+                  ["file", t("mobile.approval.pathScope.file")],
+                  ["dir", t("mobile.approval.pathScope.dir")],
+                  ["tool", t("mobile.approval.pathScope.tool")],
+                ]}
+                onChange={(v) => setPathScope(v as ApprovalPathScope)}
+              />
+            )}
+            <div className="flex gap-2">
+              <Button
+                className="h-10 flex-1 rounded-lg"
+                onClick={() =>
+                  onRespond("approve", {
+                    scope,
+                    pathScope: approval.pathScoped ? pathScope : undefined,
+                  })
+                }
+              >
+                <Check />
+                {t("mobile.approval.allow")}
+              </Button>
+              <Button
+                className="h-10 flex-1 rounded-lg"
+                variant="outline"
+                onClick={() => onRespond("reject")}
+              >
+                <X />
+                {t("mobile.approval.reject")}
+              </Button>
+            </div>
+          </div>
+        ))}
     </div>
   );
 }

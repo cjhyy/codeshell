@@ -143,7 +143,7 @@ interface Props {
    *  resolves the main run immediately while children keep working). */
   runningAgents?: number;
   activeProjectId: string | null;
-  onAskUserAnswer?: (requestId: string, answer: string) => void;
+  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -1285,7 +1285,7 @@ export function ChatView({
   let openAsk: AskUserMessage | null = null;
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (m.kind === "ask_user" && m.answer === undefined) {
+    if (m.kind === "ask_user" && m.answer === undefined && !m.asynchronous) {
       openAsk = m;
       break;
     }

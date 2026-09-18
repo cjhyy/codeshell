@@ -68,6 +68,7 @@ export class SlackAdapter implements ChannelAdapter {
         channel: this.channel,
         target: event.channel,
         senderId: event.user,
+        isDirectMessage: event.channel_type === "im",
         text,
         ...(event.client_msg_id || event.ts
           ? { messageId: String(event.client_msg_id ?? event.ts) }
@@ -85,10 +86,17 @@ export class SlackAdapter implements ChannelAdapter {
         await ack();
         return;
       }
+      // A user can name a channel "directmessage"; only Slack's conversation
+      // metadata can distinguish a DM from a private channel or group DM.
+      const isDirectMessage = await this.web.conversations
+        .info({ channel: body.channel_id })
+        .then(({ channel }) => channel?.is_im === true)
+        .catch(() => false);
       await dispatchSafely(handler, {
         channel: this.channel,
         target: body.channel_id,
         senderId: body.user_id,
+        isDirectMessage,
         text: [body.command, typeof body.text === "string" ? body.text : ""]
           .filter(Boolean)
           .join(" "),

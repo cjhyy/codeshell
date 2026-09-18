@@ -106,6 +106,7 @@ import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { readExternalRuntimeBinding } from "./external-runtime-state.js";
+import type { ExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
@@ -210,6 +211,12 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
 }
 
 export class AgentBridge implements PetStateBridge {
+  private externalGoalRpcHandler?: ExternalGoalRpcHandler;
+
+  setExternalGoalRpcHandler(handler: ExternalGoalRpcHandler): void {
+    this.externalGoalRpcHandler = handler;
+  }
+
   private readonly webConfiguration = new WebConfigurationGate();
   /** Transport-agnostic worker driver (spawn / framing / correlation). */
   private readonly core: WorkerBridgeCore;
@@ -536,7 +543,11 @@ export class AgentBridge implements PetStateBridge {
             readExternalRuntimeBinding(prepared.sessionId) !== undefined,
         });
         if (registration) {
-          registerSessionBucket(registration.sessionId, registration.bucket, registration.partition);
+          registerSessionBucket(
+            registration.sessionId,
+            registration.bucket,
+            registration.partition,
+          );
         }
       } catch (err) {
         dlog("bridge", "browser.register_session_bucket_failed", { error: String(err) });
@@ -717,6 +728,15 @@ export class AgentBridge implements PetStateBridge {
         throw error;
       }
       const parsed = prepared.parsed;
+      const externalGoalReply = this.externalGoalRpcHandler?.(parsed, event.sender.id);
+      if (externalGoalReply) {
+        void externalGoalReply.then((reply) => {
+          if (parsed.id !== undefined && !event.sender.isDestroyed()) {
+            event.sender.send("agent:msg", JSON.stringify(reply));
+          }
+        });
+        return;
+      }
       if (
         parsed.method === "agent/run" &&
         (this.webConfiguration.runBlocked ||
@@ -1361,6 +1381,10 @@ export class AgentBridge implements PetStateBridge {
     return this.core.hasLiveWorker();
   }
 
+  workerGeneration(): number {
+    return this.core.workerGeneration();
+  }
+
   isSessionRunning(sessionId: string): boolean {
     return this.webConfiguration.isRunning(sessionId);
   }
@@ -1557,13 +1581,24 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Reserve a main-owned Session before a headless producer submits agent/run. */
-  reserveHostSession(sessionId: string, cwd: string, producer = "host-reservation"): void {
-    reserveHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId, cwd, producer);
+  reserveHostSession(
+    sessionId: string,
+    cwd: string,
+    producer = "host-reservation",
+    mainRoot?: string,
+  ): void {
+    reserveHostSessionMaps(
+      this.sessionCwd,
+      this.hostReservations,
+      sessionId,
+      cwd,
+      producer,
+      undefined,
+      mainRoot,
+    );
   }
 
-  hostReservation(
-    sessionId: string,
-  ): { cwd: string; producer: string; reservedAt: number } | undefined {
+  hostReservation(sessionId: string): HostReservation | undefined {
     const reservation = this.hostReservations.get(sessionId);
     return reservation ? { ...reservation } : undefined;
   }
@@ -1809,7 +1844,10 @@ export class AgentBridge implements PetStateBridge {
    * throwing tap never disrupts the renderer stream.
    */
   subscribeOutbound(
-    tap: (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string }) => void,
+    tap: (
+      line: string,
+      snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string },
+    ) => void,
   ): () => void {
     this.outboundTaps.add(tap);
     return () => this.outboundTaps.delete(tap);

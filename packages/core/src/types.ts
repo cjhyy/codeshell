@@ -560,6 +560,8 @@ export type TerminalReason =
   | "hook_stopped"
   | "prompt_too_long"
   | "model_error"
+  /** The input exists, but no durable result is available to replay safely. */
+  | "replay_incomplete"
   | "aborted_streaming"
   | "aborted_tools"
   | "max_turns"

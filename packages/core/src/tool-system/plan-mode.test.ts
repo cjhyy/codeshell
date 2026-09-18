@@ -21,6 +21,7 @@ describe("PLAN_MODE_ALLOWED_TOOLS", () => {
       "EnterPlanMode",
       "ExitPlanMode",
       "AskUserQuestion",
+      "AskUserQuestionAsync",
       "Agent",
       "ToolSearch",
       "Skill",

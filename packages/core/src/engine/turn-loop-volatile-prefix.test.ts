@@ -83,7 +83,9 @@ describe("TurnLoop preserves volatile prompt prefixes during tool-result cleanup
       expect(resultText(next, id)!.length).toBeLessThan(3_000);
       previous = next;
     }
-    expect(readdirSync(join(directory, "tool-results"))).toHaveLength(2);
+    const outputFiles = readdirSync(join(directory, "tool-results"));
+    expect(outputFiles.filter((name) => name.endsWith(".txt"))).toHaveLength(2);
+    expect(outputFiles.filter((name) => name.endsWith(".preview.json"))).toHaveLength(2);
   });
 
   test("the sync path keeps the prefix while still truncating a new oversized result", () => {
@@ -102,8 +104,8 @@ describe("TurnLoop preserves volatile prompt prefixes during tool-result cleanup
 
     expect(JSON.stringify(next.slice(0, previous.length))).toBe(JSON.stringify(previous));
     expect(next[1]).toBe(volatile);
-    expect(resultText(next, "large")).toContain("characters truncated");
-    expect(resultText(next, "large")!.length).toBeLessThan(30_000);
+    expect(resultText(next, "large")).toContain("tool output truncated");
+    expect(resultText(next, "large")!.length).toBeLessThanOrEqual(30_000);
     expect(loop.manageContextMessagesSync(next)).toBe(next);
   });
 
@@ -137,7 +139,7 @@ describe("TurnLoop preserves volatile prompt prefixes during tool-result cleanup
     expect(next.slice(0, previous.length)).toEqual(previous);
     expect(next[1]).toBe(first);
     expect(next[4]).toBe(second);
-    expect(resultText(next, "large")).toContain("characters truncated");
+    expect(resultText(next, "large")).toContain("tool output truncated");
   });
 
   test("resets to the tail when a repeated Read rewrites history before the boundary", async () => {

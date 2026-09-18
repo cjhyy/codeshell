@@ -42,7 +42,13 @@ describe("webhook adapters", () => {
 
     expect(response.statusCode()).toBe(200);
     expect(messages).toEqual([
-      { channel: "line", target: "group-1", senderId: "user-1", text: "/status" },
+      {
+        channel: "line",
+        target: "group-1",
+        senderId: "user-1",
+        isDirectMessage: false,
+        text: "/status",
+      },
     ]);
   });
 

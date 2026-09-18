@@ -207,6 +207,7 @@ export function useTranscriptBuckets({
     void (async () => {
       let snapshotShowsRunning = false;
       let base: MessagesReducerState;
+      let canonicalHistory: MessagesReducerState | undefined;
       let historyLoaded = false;
       let persistedLoaded = false;
       let persistedHasEarlier = false;
@@ -234,7 +235,8 @@ export function useTranscriptBuckets({
       }
       if (canonicalResult.status === "fulfilled") {
         page = canonicalResult.value;
-        base = page ? mergeHistoryWindows(foldTranscript(page.items), local) : local;
+        canonicalHistory = page ? foldTranscript(page.items) : undefined;
+        base = canonicalHistory ? mergeHistoryWindows(canonicalHistory, local) : local;
         historyLoaded = persistedLoaded;
       } else {
         base = local;
@@ -294,7 +296,10 @@ export function useTranscriptBuckets({
           try {
             page = await readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES);
             const disk = foldTranscript(page.items);
-            if (disk.messages.length > 0) state = base = mergeHistoryWindows(disk, local);
+            if (disk.messages.length > 0) {
+              canonicalHistory = disk;
+              state = base = mergeHistoryWindows(disk, local);
+            }
             historyLoaded = persistedLoaded;
           } catch (error) {
             window.codeshell.log("session.hydrate.fail", {
@@ -325,7 +330,8 @@ export function useTranscriptBuckets({
           type: "hydrate_history",
           bucket,
           state,
-          history: base,
+          history: snapshotLoaded ? (canonicalHistory ?? INITIAL_STATE) : base,
+          replayBase: snapshotLoaded ? local : undefined,
           goalAtStart,
           token: snapshotLoaded ? token : undefined,
           snapshot: replaySnapshot,

@@ -4,6 +4,12 @@ import { asyncAgentRegistry, type OnboardingResult } from "@cjhyy/code-shell-cor
 import { Box, Text } from "../../render/index.js";
 import { CommandInput } from "./CommandInput.js";
 import { AskUserPrompt } from "./AskUserPrompt.js";
+import {
+  answerPendingQuestion,
+  type PendingQuestion,
+  type QuestionDraft,
+} from "../pending-questions.js";
+export type { PendingQuestion } from "../pending-questions.js";
 import { OnboardingPrompt } from "./OnboardingPrompt.js";
 import { ModelSelector, type ModelEntry } from "./ModelSelector.js";
 import {
@@ -21,14 +27,6 @@ export interface ModelManagerState {
   snapshot: { count: number; fetchedAt: string };
   arenaParticipants: ArenaParticipantEntry[];
   providers: ProviderManagerEntry[];
-}
-
-export interface PendingQuestion {
-  requestId: string;
-  question: string;
-  header?: string;
-  options?: { label: string; description: string }[];
-  multiSelect?: boolean;
 }
 
 interface CommandDef {
@@ -52,7 +50,10 @@ interface TuiControlSurfaceProps {
   wizard: "flow" | null;
   setWizard: Dispatch<SetStateAction<"flow" | null>>;
   pendingQuestion: PendingQuestion | null;
-  setPendingQuestion: Dispatch<SetStateAction<PendingQuestion | null>>;
+  onQuestionResolved: (question: PendingQuestion) => void;
+  onQuestionDeferred: (requestId: string) => void;
+  onQuestionDraftChange: (requestId: string, draft: QuestionDraft) => void;
+  onQuestionSubmittingChange: (requestId: string, submitting: boolean) => void;
   pendingApproval: boolean;
   sessionId: string | undefined;
   sidRef: MutableRefObject<string | undefined>;
@@ -88,7 +89,10 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
     wizard,
     setWizard,
     pendingQuestion,
-    setPendingQuestion,
+    onQuestionResolved,
+    onQuestionDeferred,
+    onQuestionDraftChange,
+    onQuestionSubmittingChange,
     pendingApproval,
     sessionId,
     sidRef,
@@ -268,7 +272,10 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
             previous
               ? {
                   ...previous,
-                  entries: previous.entries.map((model) => ({ ...model, active: model.key === key })),
+                  entries: previous.entries.map((model) => ({
+                    ...model,
+                    active: model.key === key,
+                  })),
                 }
               : previous,
           );
@@ -321,21 +328,40 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
   if (pendingQuestion) {
     return (
       <AskUserPrompt
+        key={pendingQuestion.requestId}
         question={pendingQuestion.question}
         header={pendingQuestion.header}
         options={pendingQuestion.options}
         multiSelect={pendingQuestion.multiSelect}
+        draft={pendingQuestion.draft}
+        submitting={pendingQuestion.submitting}
+        onSubmittingChange={(submitting) =>
+          onQuestionSubmittingChange(pendingQuestion.requestId, submitting)
+        }
+        onDraftChange={(draft) => onQuestionDraftChange(pendingQuestion.requestId, draft)}
+        onDefer={
+          pendingQuestion.asynchronous
+            ? () => onQuestionDeferred(pendingQuestion.requestId)
+            : undefined
+        }
         onAnswer={(answer) => {
-          const { requestId } = pendingQuestion;
-          setPendingQuestion(null);
-          client.approve(requestId, { approved: true, answer }).catch(() => {});
+          return answerPendingQuestion(client, pendingQuestion, { approved: true, answer })
+            .then(() => onQuestionResolved(pendingQuestion))
+            .catch((error) => {
+              addStatus(`Could not submit answer: ${String(error)}`);
+              throw error;
+            });
         }}
         onCancel={() => {
-          const { requestId } = pendingQuestion;
-          setPendingQuestion(null);
-          client
-            .approve(requestId, { approved: false, reason: "(user declined to answer)" })
-            .catch(() => {});
+          return answerPendingQuestion(client, pendingQuestion, {
+            approved: false,
+            reason: "(user declined to answer)",
+          })
+            .then(() => onQuestionResolved(pendingQuestion))
+            .catch((error) => {
+              addStatus(`Could not dismiss question: ${String(error)}`);
+              throw error;
+            });
         }}
       />
     );

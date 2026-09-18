@@ -135,7 +135,7 @@ provider、凭证、cookie 或 goal 相关工具。
 - **File / workspace**：`Read`, `Write`, `Edit`, `ApplyPatch`, `Glob`, `Grep`
 - **Shell / execution**：`Bash`, `BashOutput`, `KillShell`, `ListShells`, `PowerShell`, `REPL`, `Sleep`
 - **Web / media / browser**：`browser_observe`, `browser_act`, `browser_navigate`, `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`
-- **Planning / orchestration**：`AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
+- **Planning / orchestration**：`AskUserQuestion`, `AskUserQuestionAsync`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
 - **Automation / integration**：`CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `AddMarketplace`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
 - **Memory / credentials / goals**：`MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `UseCredential`, `InjectCredential`, `complete_goal`, `cancel_goal`
 - **Terminal-coding preset extras**：`EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`

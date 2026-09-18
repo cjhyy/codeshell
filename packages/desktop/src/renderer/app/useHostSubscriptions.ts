@@ -1,8 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { flushSync } from "react-dom";
 
-import { bgCompletionText, type ApprovalState, type AskUserOption } from "../types";
+import {
+  bgCompletionText,
+  isCurrentStreamRunEvent,
+  type ApprovalState,
+  type AskUserOption,
+  type AskUserMessage,
+} from "../types";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
 import {
   bindEngineSession,
@@ -38,6 +44,7 @@ import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { browserPartitionForBucket, fromMobilePermissionMode, stablePromptHash } from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
+import { readApprovalPermission } from "./approvalPermission";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -70,8 +77,7 @@ interface Params {
   };
   permissions: {
     approvalBucketsRef: MutableRefObject<Map<string, string>>;
-    permissionForBucketRef: MutableRefObject<(bucket: string) => PermissionMode | null>;
-    defaultPermissionModeRef: MutableRefObject<PermissionMode | null>;
+    permissionOverrideForBucketRef: MutableRefObject<(bucket: string) => PermissionMode | null>;
     setApprovalQueue: Dispatch<SetStateAction<ApprovalRequestEnvelope[]>>;
     setApproval: Dispatch<SetStateAction<ApprovalState>>;
     setPermissionOverrides: Dispatch<SetStateAction<Record<string, PermissionMode>>>;
@@ -117,8 +123,7 @@ export function useHostSubscriptions({
   } = routing;
   const {
     approvalBucketsRef,
-    permissionForBucketRef,
-    defaultPermissionModeRef,
+    permissionOverrideForBucketRef,
     setApprovalQueue,
     setApproval,
     setPermissionOverrides,
@@ -133,6 +138,15 @@ export function useHostSubscriptions({
     setRevealedSessionIds,
   } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
+  const pendingApprovalIdsRef = useRef(new Set<string>());
+  const coreApprovalIdsRef = useRef(new Set<string>());
+  const externalApprovalsRef = useRef({
+    ready: false,
+    pending: new Set<string>(),
+    resolved: new Map<string, ApprovalResolvedEnvelope>(),
+  });
+  const retiredExternalQuestionsRef = useRef(new WeakSet<AskUserMessage>());
+  const [, refreshExternalApprovals] = useState(0);
   useEffect(
     () =>
       subscribeSessionPersistenceFlush(() => {
@@ -285,12 +299,26 @@ export function useHostSubscriptions({
         const prev = coalescerSeqRef.current.get(target) ?? 0;
         coalescerSeqRef.current.set(target, Math.max(prev, env.seq));
       }
-      getCoalescer(target).push(event, env.seq, env.epoch);
+      const coalescer = getCoalescer(target);
+      if (
+        !("agentId" in event && event.agentId !== undefined) &&
+        (event.type === "turn_complete" || event.type === "error")
+      ) {
+        // Commit terminal output before busy=false can send the next queued
+        // user bubble. Otherwise the 50 ms stream batch lands in that new turn.
+        flushSync(() => {
+          coalescer.push(event, env.seq, env.epoch);
+          coalescer.flush();
+        });
+      } else {
+        coalescer.push(event, env.seq, env.epoch);
+      }
+      const ownsCurrentTurn = isCurrentStreamRunEvent(transcriptsRef.current[target], event);
 
       // session_started carries the authoritative engine sessionId. Persist
       // the binding (engineSessionId == uiSessionId is the new normal, but
       // older sessions on disk may differ) and seed the routing table.
-      if (event.type === "session_started") {
+      if (event.type === "session_started" && ownsCurrentTurn) {
         // session_started fires once at the start of every run() — including a
         // run the renderer DIDN'T initiate, e.g. core waking an idle session
         // when a background shell (download) finishes. The send() path already
@@ -346,7 +374,11 @@ export function useHostSubscriptions({
       // turn_complete as the parent's flipped the top-bar/sidebar to "完成"
       // (idle) mid-run while the agent kept working. The per-agent card's own
       // done state is handled separately in the reducer via `agent_end`.
-      if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
+      if (
+        (event.type === "turn_complete" || event.type === "error") &&
+        !event.agentId &&
+        ownsCurrentTurn
+      ) {
         setBusyForKey(target, false);
         // A turn just finished → its file edits have landed on disk. Nudge the
         // Files panel to re-read the file it's previewing (and refresh its
@@ -601,7 +633,30 @@ export function useHostSubscriptions({
       window.codeshell.onPetDelegationSession?.((meta) => {
         void announceHostSession(meta, "pet-delegation");
       }) ?? (() => undefined);
-    const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
+    let approvalRestoreActive = true;
+    let approvalHandlingActive = true;
+    const approvalRequests = new Map<string, object>();
+    const pendingApprovalDecisions = new Set<string>();
+    let restoringApprovals = true;
+    const resolvedDuringRestore = new Set<string>();
+    const externalRequestsDuringRestore = new Set<string>();
+    externalApprovalsRef.current.ready = false;
+    // Remember a question's route before React commits its card. Another
+    // client can answer in the same IPC batch as the original request.
+    const pendingQuestionBuckets = new Map<string, string>();
+    const handleApproval = (env: ApprovalRequestEnvelope, fromSnapshot = false): void => {
+      if (env.source === "external-runtime") {
+        if (externalApprovalsRef.current.resolved.has(env.requestId)) return;
+        externalApprovalsRef.current.pending.add(env.requestId);
+        if (restoringApprovals && !fromSnapshot) externalRequestsDuringRestore.add(env.requestId);
+      }
+      if (
+        pendingApprovalIdsRef.current.has(env.requestId) ||
+        resolvedDuringRestore.has(env.requestId)
+      )
+        return;
+      pendingApprovalIdsRef.current.add(env.requestId);
+      if (env.source !== "external-runtime") coreApprovalIdsRef.current.add(env.requestId);
       window.codeshell.log("approval.request", {
         requestId: env.requestId,
         toolName: env.request.toolName,
@@ -646,9 +701,13 @@ export function useHostSubscriptions({
       // so the user picks an answer inline — much less disruptive than
       // a blocking dialog.
       if (env.request.toolName === "__ask_user__") {
-        const args = (env.request.args ?? {}) as Record<string, unknown>;
+        // Older external runtimes sent question fields at the request root.
+        // Prefer the canonical args payload while still rendering those prompts.
+        const args: Record<string, unknown> = { ...env.request, ...env.request.args };
         const question =
-          (typeof args.question === "string" && args.question) || env.request.description || "";
+          (typeof args.question === "string" && args.question.trim()) ||
+          env.request.description ||
+          "";
         const header = typeof args.header === "string" ? args.header : undefined;
         const multiSelect = args.multiSelect === true;
         const optionsOnly = args.optionsOnly === true;
@@ -683,6 +742,7 @@ export function useHostSubscriptions({
           );
         }
         const bucket = resolved ?? activeBucketRef.current;
+        pendingQuestionBuckets.set(env.requestId, bucket);
         dispatch({
           type: "ask_user",
           bucket,
@@ -693,67 +753,199 @@ export function useHostSubscriptions({
           options,
           multiSelect,
           optionsOnly,
+          asynchronous: args.asynchronous === true,
         });
         return;
       }
-      // 完全访问权限 (bypass): auto-approve any request that reaches the
-      // renderer for this bucket. The engine's bypassPermissions backend
-      // already approves everything, so requests rarely surface here; this
-      // is belt-and-braces so "full access" never silently blocks on a
-      // modal. Resolve the request's OWN bucket (not the active one) —
-      // concurrent runs may target a different tab.
       if (env.sessionId && !resolved) {
         console.warn(
           "[approval] could not resolve bucket for session; rendering in active bucket",
           env.sessionId,
         );
       }
-      const targetBucket = resolved ?? activeBucketRef.current;
-      if (permissionForBucketRef.current(targetBucket) === "bypass") {
-        if (env.sessionId) {
-          void window.codeshell.approve(env.sessionId, env.requestId, "approve");
-        } else {
-          void window.codeshell.approve(env.requestId, "approve");
+      const displayBucket = resolved ?? activeBucketRef.current;
+      const token = {};
+      approvalRequests.set(env.requestId, token);
+      const isCurrent = () =>
+        approvalHandlingActive && approvalRequests.get(env.requestId) === token;
+      // Display may fall back to the active tab for an unknown route. Authority
+      // must not: only an exact route can supply a per-session UI override.
+      const currentRoute = () => {
+        if (env.sessionId && isQuickChatSessionId(env.sessionId)) {
+          return (
+            Object.values(quickChatSessionsRef.current).find(
+              (session) => session.sessionId === env.sessionId,
+            )?.bucket ?? null
+          );
         }
-        void window.codeshell.mobileRemote.notifyApprovalResolved({
+        return resolveBucket(
+          env.sessionId ?? "",
+          engineToBucketRef.current,
+          sessionIndicesRef.current,
+          runningBucketRef.current,
+        );
+      };
+      const currentOverride = () => {
+        const bucket = currentRoute();
+        return bucket ? permissionOverrideForBucketRef.current(bucket) : null;
+      };
+      const showApproval = () => {
+        if (!isCurrent()) return;
+        pendingApprovalDecisions.delete(env.requestId);
+        approvalBucketsRef.current.set(env.requestId, currentRoute() ?? displayBucket);
+        setApprovalQueue((q) =>
+          q.some((queued) => queued.requestId === env.requestId) ? q : [...q, env],
+        );
+        setApproval((cur) => cur ?? env);
+      };
+      const applyPermission = (mode: PermissionMode | null, source: string) => {
+        if (!isCurrent()) return;
+        window.codeshell.log("approval.permission", {
           requestId: env.requestId,
-          sessionId: env.sessionId,
-          approved: true,
+          engineSessionId: env.sessionId ?? null,
+          bucket: currentRoute(),
+          mode,
+          source,
         });
-        return;
-      }
-      approvalBucketsRef.current.set(env.requestId, targetBucket);
-      setApprovalQueue((q) => [...q, env]);
-      setApproval((cur) => cur ?? env);
-    });
-    const offApprovalResolved = window.codeshell.onApprovalResolved(
-      (env: ApprovalResolvedEnvelope) => {
-        if (!env.requestId) return;
-        // A server-initiated resolve (e.g. a goal-mode AskUserQuestion that timed
-        // out with nobody answering) must also retire the inline ask_user card,
-        // which lives in the transcript — not just the approval modal queue below.
-        // A user-driven answer already marks it via handleAskUserAnswer, so only
-        // touch a card that's still unanswered here.
-        const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
-        if (origin && origin.answer === undefined) {
-          dispatch({
-            type: "ask_user_answered",
-            bucket: origin.bucket,
-            requestId: env.requestId,
-            answer: t("msg.ask.timedOut"),
-          });
+        if (mode !== "bypass") {
+          showApproval();
+          return;
         }
-        approvalBucketsRef.current.delete(env.requestId);
-        setApprovalQueue((prev) => {
-          const remaining = prev.filter((e) => e.requestId !== env.requestId);
-          setApproval((cur) => {
-            if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
-            return cur;
+        pendingApprovalDecisions.add(env.requestId);
+        const approved = env.sessionId
+          ? window.codeshell.approve(env.sessionId, env.requestId, "approve")
+          : window.codeshell.approve(env.requestId, "approve");
+        void approved
+          .then((response) => {
+            // Native approve returns a JSON-RPC envelope; a server rejection
+            // resolves the transport promise rather than rejecting it.
+            const error = (response as { error?: { message?: string } } | undefined)?.error;
+            if (error) throw new Error(error.message || "Approval rejected by worker");
+            if (!isCurrent()) return;
+            pendingApprovalDecisions.delete(env.requestId);
+            // Mirror only an accepted decision, so failed RPCs never advertise
+            // a successful approval to other clients.
+            void window.codeshell.mobileRemote
+              .notifyApprovalResolved({
+                requestId: env.requestId,
+                sessionId: env.sessionId,
+                approved: true,
+              })
+              .catch((error) =>
+                window.codeshell.log("approval.mirror_failed", {
+                  requestId: env.requestId,
+                  error: String(error),
+                }),
+              );
+          })
+          .catch((error) => {
+            window.codeshell.log("approval.auto_approve_failed", {
+              requestId: env.requestId,
+              error: String(error),
+            });
+            showApproval();
           });
-          return remaining;
+      };
+      const override = currentOverride();
+      if (override !== null) {
+        applyPermission(override, "session-override");
+      } else if (env.sessionId) {
+        pendingApprovalDecisions.add(env.requestId);
+        void readApprovalPermission(env.sessionId).then(
+          (mode) => {
+            // A permission choice made while IPC was in flight takes effect
+            // before this request is approved. Request tokens also prevent a
+            // previous worker's lookup from approving a reused request id.
+            const latestOverride = currentOverride();
+            applyPermission(
+              latestOverride ?? mode,
+              latestOverride === null ? "session-settings" : "session-override",
+            );
+          },
+          (error) => {
+            if (!isCurrent()) return;
+            window.codeshell.log("approval.permission_failed", {
+              requestId: env.requestId,
+              engineSessionId: env.sessionId,
+              error: String(error),
+            });
+            applyPermission(null, "unavailable");
+          },
+        );
+      } else {
+        applyPermission(null, "unresolved-session");
+      }
+    };
+    const offApproval = window.codeshell.onApprovalRequest(handleApproval);
+    const handleApprovalResolved = (env: ApprovalResolvedEnvelope): void => {
+      if (!env.requestId) return;
+      if (
+        env.requestId.startsWith("external-approval-") ||
+        externalApprovalsRef.current.pending.has(env.requestId)
+      ) {
+        externalApprovalsRef.current.pending.delete(env.requestId);
+        externalRequestsDuringRestore.delete(env.requestId);
+        const resolved = externalApprovalsRef.current.resolved;
+        resolved.set(env.requestId, env);
+        if (resolved.size > 2_048) resolved.delete(resolved.keys().next().value!);
+        refreshExternalApprovals((version) => version + 1);
+      }
+      approvalRequests.delete(env.requestId);
+      pendingApprovalDecisions.delete(env.requestId);
+      pendingApprovalIdsRef.current.delete(env.requestId);
+      coreApprovalIdsRef.current.delete(env.requestId);
+      if (restoringApprovals) resolvedDuringRestore.add(env.requestId);
+      // A server-initiated resolve (e.g. a goal-mode AskUserQuestion that timed
+      // out with nobody answering) must also retire the inline ask_user card,
+      // which lives in the transcript — not just the approval modal queue below.
+      // A user-driven answer already marks it via handleAskUserAnswer, so only
+      // touch a card that's still unanswered here.
+      const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
+      const questionBucket = origin?.bucket ?? pendingQuestionBuckets.get(env.requestId);
+      if (questionBucket && origin?.answer === undefined) {
+        dispatch({
+          type: "ask_user_answered",
+          bucket: questionBucket,
+          requestId: env.requestId,
+          answer:
+            env.answer ?? t(env.approved === false ? "msg.ask.cancelled" : "msg.ask.timedOut"),
         });
-      },
-    );
+      }
+      pendingQuestionBuckets.delete(env.requestId);
+      approvalBucketsRef.current.delete(env.requestId);
+      setApprovalQueue((prev) => {
+        const remaining = prev.filter((e) => e.requestId !== env.requestId);
+        setApproval((cur) => {
+          if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
+          return cur;
+        });
+        return remaining;
+      });
+    };
+    const offApprovalResolved = window.codeshell.onApprovalResolved(handleApprovalResolved);
+    // Subscribe first so a decision made while the read is in flight wins over
+    // an older snapshot. Use the same routing and permission path as live events.
+    const pendingApprovals = window.codeshell.getPendingApprovals?.();
+    if (pendingApprovals) {
+      void pendingApprovals
+        .then((pending) => {
+          if (!approvalHandlingActive) return;
+          const external = externalApprovalsRef.current;
+          external.pending = new Set(externalRequestsDuringRestore);
+          for (const env of pending) {
+            // A Core worker exit invalidates only its own snapshot entries.
+            if (approvalRestoreActive || env.source === "external-runtime")
+              handleApproval(env, true);
+          }
+          external.ready = true;
+          refreshExternalApprovals((version) => version + 1);
+        })
+        .catch((error) => window.codeshell.log("approval.restore_failed", { error: String(error) }))
+        .finally(() => {
+          restoringApprovals = false;
+          resolvedDuringRestore.clear();
+        });
+    } else restoringApprovals = false;
     const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
       (env: MobilePermissionModeEnvelope) => {
         if (!env.sessionId) return;
@@ -780,13 +972,9 @@ export function useHostSubscriptions({
         }
         if (!bucket) return;
         const mode = fromMobilePermissionMode(env.mode);
-        setPermissionOverrides((prev) => {
-          if (mode === defaultPermissionModeRef.current) {
-            const { [bucket]: _removed, ...rest } = prev;
-            return rest;
-          }
-          return { ...prev, [bucket]: mode };
-        });
+        // This is an explicit choice for the target Session. Comparing it to
+        // the foreground project's default can erase a background restriction.
+        setPermissionOverrides((prev) => ({ ...prev, [bucket]: mode }));
       },
     );
     const offStatus = window.codeshell.onStatus((evt) => {
@@ -818,6 +1006,12 @@ export function useHostSubscriptions({
     };
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
+      if (evt.type === "exited" || evt.type === "gave_up") {
+        // A snapshot from the old worker cannot restore actionable requests.
+        approvalRestoreActive = false;
+        for (const requestId of [...coreApprovalIdsRef.current])
+          handleApprovalResolved({ requestId });
+      }
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") {
         expireQuickChatSessions();
@@ -850,6 +1044,16 @@ export function useHostSubscriptions({
       }
     });
     return () => {
+      approvalRestoreActive = false;
+      approvalHandlingActive = false;
+      approvalRequests.clear();
+      // A language change re-registers these listeners. Let the new listener's
+      // snapshot recover requests whose permission lookup or approval RPC was still in flight.
+      for (const requestId of pendingApprovalDecisions) {
+        pendingApprovalIdsRef.current.delete(requestId);
+        coreApprovalIdsRef.current.delete(requestId);
+      }
+      pendingApprovalDecisions.clear();
       offStream();
       offAutomationSession();
       offMobileSession();
@@ -863,6 +1067,40 @@ export function useHostSubscriptions({
     // `toast` from useToast is a stable reference (memoized in ToastProvider),
     // so listing it here does not re-register these long-lived IPC listeners.
   }, [t, toast]);
+
+  // Transcript hydration can finish after the authoritative pending snapshot.
+  // Reconcile then as well, so a reload cannot revive an expired external card.
+  // Inspect refs after App's transcript effect has committed the latest map.
+  useEffect(() => {
+    const external = externalApprovalsRef.current;
+    if (!external.ready) return;
+    for (const [bucket, transcript] of Object.entries(transcriptsRef.current)) {
+      for (const message of transcript.messages) {
+        if (
+          message.kind !== "ask_user" ||
+          message.answer !== undefined ||
+          !message.requestId.startsWith("external-approval-") ||
+          external.pending.has(message.requestId) ||
+          retiredExternalQuestionsRef.current.has(message)
+        )
+          continue;
+        const resolution = external.resolved.get(message.requestId);
+        retiredExternalQuestionsRef.current.add(message);
+        dispatch({
+          type: "ask_user_answered",
+          bucket,
+          requestId: message.requestId,
+          answer:
+            resolution?.answer ??
+            t(
+              resolution && resolution.approved !== false
+                ? "msg.ask.timedOut"
+                : "msg.ask.cancelled",
+            ),
+        });
+      }
+    }
+  });
 
   useEffect(() => {
     const off = window.codeshell.onWorktreeCleanupSkipped((event) => {

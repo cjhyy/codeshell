@@ -28,7 +28,12 @@ import { grepToolDef, grepTool } from "./grep.js";
 import { bashToolDef, bashTool } from "./bash.js";
 import { webSearchToolDef, webSearchTool, isWebSearchAvailable } from "./web-search.js";
 import { webFetchToolDef, webFetchTool } from "./web-fetch.js";
-import { askUserToolDef, askUserTool } from "./ask-user.js";
+import {
+  askUserToolDef,
+  askUserTool,
+  askUserAsyncToolDef,
+  askUserAsyncTool,
+} from "./ask-user.js";
 import {
   agentToolDef,
   agentTool,
@@ -502,6 +507,17 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: askUserTool,
     exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserToolDef.name) }),
+  },
+  {
+    definition: {
+      ...askUserAsyncToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: askUserAsyncTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserAsyncToolDef.name) }),
   },
   {
     definition: {

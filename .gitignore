@@ -130,6 +130,9 @@ video-output/
 !/evals/personal-sanitized/README.md
 !/evals/personal-sanitized/SCHEMA.md
 
+# Reproducible runtime eval outputs: synthetic session logs, screenshots and profiles.
+/evals/runs/
+
 # Local Feishu request/response state and screenshots; these contain personal
 # workspace data, not product fixtures or documentation.
 /.code-shell-feishu-*

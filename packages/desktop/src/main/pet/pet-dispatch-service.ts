@@ -32,6 +32,7 @@ import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
+import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -103,6 +104,8 @@ export interface PetHostActionContext {
    * member's binding capture another member's messages.
    */
   senderId?: string;
+  /** Adapter-authenticated private-chat signal; unknown conversations cannot bind. */
+  isDirectMessage?: boolean;
 }
 
 /** Host-side executor for one Mimi host-action kind; throws to signal failure. */
@@ -139,6 +142,7 @@ export type PetDispatchCommand =
         target?: string;
         /** Authenticated sender within the target (important for group chats). */
         senderId?: string;
+        isDirectMessage?: boolean;
         capabilities: PetImChannelCapabilities;
         channels?: readonly PetImGatewayChannel[];
       };
@@ -182,6 +186,13 @@ export type PetDispatchResult =
       queuedCount: number;
       pendingCount: number;
       sessions: DesktopPetProjectionSnapshot["sessions"];
+      chatInputs?: Array<{
+        clientMessageId: string;
+        message: string;
+        attachments?: PetChatAttachment[];
+        createdAt: number;
+        pending: boolean;
+      }>;
     }
   | { ok: true; type: "pending_list"; pending: DesktopPetProjectionSnapshot["pending"] }
   | { ok: true; type: "chat_stopped"; stopped: boolean }
@@ -226,7 +237,7 @@ interface PetDispatchOptions {
     requestWorker(
       method: string,
       params: Record<string, unknown>,
-      options: { meta: WorkerFrameMeta },
+      options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
     /** Optional live stream tap used to confirm that a queued steer was actually consumed. */
     subscribeOutbound?(
@@ -743,6 +754,10 @@ function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
 export class PetDispatchService {
   private activeChatTurn?: PetActiveChatTurn;
   private chatAdmissionTail: Promise<void> = Promise.resolve();
+  private readonly chatInputs = new Map<
+    string,
+    { command: PetChatCommand; createdAt: number; result: Promise<PetDispatchResult> }
+  >();
 
   constructor(private readonly options: PetDispatchOptions) {
     options.worker.subscribeOutbound?.((_line, snapshotEntry) => {
@@ -823,6 +838,19 @@ export class PetDispatchService {
 
   private async dispatchScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
     command = { ...command, clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}` };
+    const key = `${petChatRouteKey(command)}\0${command.clientMessageId}`;
+    const existing = this.chatInputs.get(key);
+    if (existing) return existing.result;
+    // Main outlives renderer reloads. Retain only accepted, unsettled inputs;
+    // retries with the same identity share the existing admission/result.
+    const result = Promise.resolve()
+      .then(() => this.runScheduledChat(command))
+      .finally(() => this.chatInputs.delete(key));
+    this.chatInputs.set(key, { command, createdAt: Date.now(), result });
+    return result;
+  }
+
+  private async runScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
     const sessionId = (await this.options.metadata.ensure()).petSessionId;
     const routeKey = petChatRouteKey(command);
 
@@ -891,7 +919,11 @@ export class PetDispatchService {
               ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
               ...(command.attachments?.length ? { attachments: command.attachments } : {}),
             },
-            { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+            {
+              settleOnExit: true,
+              failFast: true,
+              meta: { origin: "host", producer: "pet-dispatch-steer" },
+            },
           );
           return {
             accepted: response.ok && readWorkerBoolean(response.result, "accepted") === true,
@@ -902,7 +934,11 @@ export class PetDispatchService {
           const response = await this.options.worker.requestWorker(
             "agent/unsteer",
             { sessionId: admission.active.sessionId, id: admission.steer.id },
-            { meta: { origin: "host", producer: "pet-dispatch-steer" } },
+            {
+              settleOnExit: true,
+              failFast: true,
+              meta: { origin: "host", producer: "pet-dispatch-steer" },
+            },
           );
           return {
             removed: !response.ok || readWorkerBoolean(response.result, "removed") !== false,
@@ -962,6 +998,10 @@ export class PetDispatchService {
       active.workerRunPending = true;
     try {
       return await this.options.worker.requestWorker("agent/run", params, {
+        // An exited worker cannot answer this turn. Release the chat and its
+        // queued inputs immediately instead of waiting for the RPC timeout.
+        settleOnExit: true,
+        failFast: true,
         meta: { origin: "host", producer: "pet-dispatch" },
       });
     } finally {
@@ -982,6 +1022,8 @@ export class PetDispatchService {
   private requestManagerRun(params: Record<string, unknown>, producer: string) {
     return this.withManagerTurn(() =>
       this.options.worker.requestWorker("agent/run", params, {
+        settleOnExit: true,
+        failFast: true,
         meta: { origin: "host", producer },
       }),
     );
@@ -1001,7 +1043,11 @@ export class PetDispatchService {
       const response = await this.options.worker.requestWorker(
         "agent/cancel",
         { sessionId: active.sessionId, expectedClientMessageId: active.clientMessageId },
-        { meta: { origin: "host", producer: "pet-chat-stop" } },
+        {
+          settleOnExit: true,
+          failFast: true,
+          meta: { origin: "host", producer: "pet-chat-stop" },
+        },
       );
       if (!response.ok) {
         active.stopRequested = false;
@@ -1573,6 +1619,26 @@ export class PetDispatchService {
           queuedCount: snapshot.sessions.filter((session) => session.runState === "queued").length,
           pendingCount: pending.length,
           sessions: snapshot.sessions.slice(0, 100),
+          chatInputs: [...this.chatInputs.values()].map(({ command, createdAt }) => ({
+            clientMessageId: command.clientMessageId!,
+            message: command.message.trim(),
+            createdAt,
+            pending: this.activeChatTurn?.clientMessageId !== command.clientMessageId,
+            ...(command.attachments?.length
+              ? {
+                  attachments: command.attachments.map(
+                    ({ kind, path, absPath, sessionId, mime, originalName }) => ({
+                      kind,
+                      path,
+                      absPath,
+                      sessionId,
+                      ...(mime ? { mime } : {}),
+                      ...(originalName ? { originalName } : {}),
+                    }),
+                  ),
+                }
+              : {}),
+          })),
         };
       }
       case "list_pending":
@@ -2197,6 +2263,7 @@ export class PetDispatchService {
             requestedAt,
             ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
             ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
+            isDirectMessage: command.source?.isDirectMessage === true,
           },
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns

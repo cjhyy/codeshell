@@ -21,6 +21,27 @@ afterEach(() => {
 });
 
 describe("SessionCatalogStore", () => {
+  test("preserves an explicit first-run marker across reload and removes it on engine binding", async () => {
+    const { file, store } = fixture();
+    await store.apply({
+      projectKey: "p",
+      upserts: [{ id: "draft", values: row("draft", { pendingFirstRun: true }) }],
+    });
+    const reopened = new SessionCatalogStore({ file });
+    expect((await reopened.load()).indices.p.sessions[0].pendingFirstRun).toBe(true);
+    await reopened.apply({
+      projectKey: "p",
+      upserts: [
+        {
+          id: "draft",
+          values: { engineSessionId: "engine-session" },
+          removeFields: ["pendingFirstRun"],
+        },
+      ],
+    });
+    expect((await store.load()).indices.p.sessions[0]).not.toHaveProperty("pendingFirstRun");
+  });
+
   test("migrates every legacy project once, backs it up, and preserves canonical choices", async () => {
     const { file, store } = fixture();
     await store.apply({

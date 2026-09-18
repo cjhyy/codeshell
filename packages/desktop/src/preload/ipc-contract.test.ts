@@ -61,6 +61,7 @@ describe("desktop IPC contract", () => {
       /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
     );
     const channels = [
+      "agent:pendingApprovals",
       "workspace:authority",
       "projectRegistry:migrateSessionMainRoot",
       "sessions:setArchived",

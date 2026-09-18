@@ -16,6 +16,95 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched).toEqual({ text: "你好", attachments: [] });
   });
 
+  test.each([
+    {
+      action: "enter",
+      ok: true,
+      message:
+        "已进入「端侧模型」。接下来的消息会直接发送到这个 Session。\n发送 /mimi 可退出，发送 /session 可查看当前状态。",
+    },
+    { action: "leave", ok: true, message: "已退出「端侧模型」，接下来由 Mimi 处理。" },
+    { action: "leave", ok: true, message: "当前不在任何 Session 中，消息由 Mimi 处理。" },
+    { action: "enter", ok: false, message: "这个 Session 已归档，不能进入。" },
+  ])("replaces pending Session wording with the host outcome: $message", async (result) => {
+    const binding = {
+      kind: "sessionBind",
+      payload: { action: result.action },
+      ok: true,
+      result,
+    };
+    const pendingGatewayReply = {
+      kind: "gatewayReply",
+      payload: { text: "已提交进入请求，由宿主校验后给出结果。" },
+      ok: true,
+      result: {
+        text: "已提交进入请求，由宿主校验后给出结果。",
+        button: { text: "旧链接", url: "https://example.test/old" },
+        attachments: [
+          { kind: "file", path: "/work/old.txt", name: "old.txt", mimeType: "text/plain", size: 1 },
+        ],
+      },
+    };
+    for (const executions of [
+      [binding],
+      [pendingGatewayReply, binding],
+      [binding, pendingGatewayReply],
+    ]) {
+      const enriched = await enrichPetChatReplyWithHostActions(
+        "已提交进入请求，由宿主校验后给出结果。",
+        executions,
+        { qrDir: join(tmpdir(), "unused") },
+      );
+      expect(enriched).toEqual({ text: result.message, attachments: [] });
+    }
+  });
+
+  test.each([
+    { action: "enter", label: "进入 Session" },
+    { action: "leave", label: "退出 Session" },
+  ])(
+    "reports a thrown $action failure without a premature success claim",
+    async ({ action, label }) => {
+      const enriched = await enrichPetChatReplyWithHostActions(
+        "已完成会话切换。",
+        [
+          {
+            kind: "sessionBind",
+            payload: { action },
+            ok: false,
+            error: "会话路由不可用",
+          },
+          {
+            kind: "gatewayReply",
+            payload: { text: "切换请求已提交。" },
+            ok: true,
+            result: { text: "切换请求已提交。" },
+          },
+        ],
+        { qrDir: join(tmpdir(), "unused") },
+      );
+      expect(enriched).toEqual({ text: `${label}操作失败：会话路由不可用`, attachments: [] });
+    },
+  );
+
+  test.each([
+    { name: "missing result", result: undefined },
+    { name: "missing outcome", result: { action: "enter", message: "已进入。" } },
+    { name: "wrong action", result: { action: "leave", ok: true, message: "已退出。" } },
+    { name: "empty message", result: { action: "enter", ok: true, message: "   " } },
+    { name: "missing refusal message", result: { action: "enter", ok: false } },
+  ])("does not infer Session entry from an invalid host result: $name", async ({ result }) => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "已经进入。",
+      [{ kind: "sessionBind", payload: { action: "enter" }, ok: true, result }],
+      { qrDir: join(tmpdir(), "unused") },
+    );
+    expect(enriched).toEqual({
+      text: "进入 Session结果无法确认：宿主返回了无效结果。",
+      attachments: [],
+    });
+  });
+
   test("appends the opened tunnel details and renders a pairing QR image", async () => {
     const qrDir = await mkdtemp(join(tmpdir(), "pet-qr-"));
     try {

@@ -223,9 +223,26 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
     if (typeof cwd !== "string" || !cwd) throw new Error("workspace:current requires cwd");
     return getSessionWorkspaceForUi(sessionId, cwd);
   });
-  deps.ipcMain.handle("workspace:authority", async (_event, sessionId: string) => {
+  deps.ipcMain.handle("workspace:authority", async (event, sessionId: string) => {
     deps.assertSessionId(sessionId);
-    return getSessionWorkspaceAuthorityForUi(sessionId);
+    const bridge = deps.getBridge();
+    const reservation = bridge?.hostReservation(sessionId);
+    return getSessionWorkspaceAuthorityForUi(sessionId, {
+      getHostWorkspace: () => {
+        if (!bridge || !reservation || deps.getBridge() !== bridge) return undefined;
+        const current = bridge.hostReservation(sessionId);
+        if (
+          !current ||
+          current.reservedAt !== reservation.reservedAt ||
+          current.cwd !== reservation.cwd ||
+          current.mainRoot !== reservation.mainRoot ||
+          bridge.panelOwnerWebContentsId(sessionId) !== event.sender.id
+        ) {
+          return undefined;
+        }
+        return { mainRoot: current.mainRoot ?? current.cwd, cwd: current.cwd };
+      },
+    });
   });
   deps.ipcMain.handle("workspace:gitStatus", async (_event, sessionId: string) => {
     deps.assertSessionId(sessionId);

@@ -16,6 +16,7 @@
 
 import type { Transport } from "./transport.js";
 import { handleCancelRequest, handleSteerRequest } from "./server-run-controls.js";
+import { deliverAsyncUserAnswer } from "./async-user-answer.js";
 import {
   type RpcRequest,
   type InputAttachmentMeta,
@@ -990,6 +991,9 @@ export class AgentServer {
     session.engine.setAskUser((question, opts) =>
       this.requestAskUserForSession(session, sid, question, opts),
     );
+    session.engine.setAskUserAsync?.((question, opts) =>
+      this.requestAskUserAsyncForSession(session, sid, question, opts),
+    );
     session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
     session.engine.setInjectCredential((credentialId, credentialScope) =>
       this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
@@ -1311,7 +1315,7 @@ export class AgentServer {
         await this.handleForkSession(req);
         break;
       case Methods.Approve:
-        this.handleApprove(req);
+        await this.handleApprove(req);
         break;
       case Methods.Cancel:
         this.handleCancel(req);
@@ -2240,7 +2244,7 @@ export class AgentServer {
 
   // ─── Approve ────────────────────────────────────────────────────
 
-  private handleApprove(req: RpcRequest): void {
+  private async handleApprove(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as ApproveParams & Partial<ApprovalRouteTarget>;
 
     if (this.strictApprovalRouting) {
@@ -2289,6 +2293,68 @@ export class AgentServer {
             `No pending approval for session ${params.sessionId}: ${params.requestId}`,
           ),
         );
+        return;
+      }
+      if (entry.metadata.asynchronous) {
+        if (entry.submitting) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "This answer is already being submitted",
+            ),
+          );
+          return;
+        }
+        const decision = params.decision;
+        const answer =
+          typeof decision === "string"
+            ? decision
+            : decision && typeof decision === "object" && decision.approved
+              ? decision.answer
+              : undefined;
+        if (answer !== undefined && (typeof answer !== "string" || !answer.trim())) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InvalidParams, "A non-empty answer is required"),
+          );
+          return;
+        }
+        if (decision && typeof decision === "object" && decision.approved && answer === undefined) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InvalidParams, "An answer is required"),
+          );
+          return;
+        }
+        entry.submitting = true;
+        try {
+          const admitted = entry.resolve(decision);
+          if (admitted) await admitted;
+          if (s.pendingApprovals.get(params.requestId) !== entry) {
+            throw new Error("Question was cancelled before the answer was accepted");
+          }
+          this.takeSessionApproval(s, params.requestId, "resolved");
+          this.pendingApprovalTargets.delete(params.requestId);
+          this.clearApprovalTimer(params.requestId);
+          if (typeof answer === "string") {
+            this.notify(Methods.ApprovalResolved, {
+              sessionId: params.sessionId,
+              requestId: params.requestId,
+              approved: true,
+              answer,
+            });
+          }
+          this.transport.send(createResponse(req.id, { ok: true }));
+        } catch (error) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              error instanceof Error ? error.message : String(error),
+            ),
+          );
+        } finally {
+          entry.submitting = false;
+        }
         return;
       }
       s.pendingApprovals.delete(params.requestId);
@@ -4012,6 +4078,120 @@ export class AgentServer {
     return target;
   }
 
+  /** Register a question without holding a tool call or the current turn open. */
+  private requestAskUserAsyncForSession(
+    session: ChatSession,
+    sessionId: string,
+    question: string,
+    opts?: import("../tool-system/context.js").AskUserOptions,
+  ): Promise<string> {
+    const manager = this.chatManager;
+    const route = this.approvalRouter.current(sessionId);
+    const cancellationEpoch = session.cancellationEpoch;
+    const isCurrent = () =>
+      !this.disconnected &&
+      manager?.get(sessionId) === session &&
+      !manager.isUnavailable(sessionId) &&
+      session.cancellationEpoch === cancellationEpoch &&
+      !session.wasCancelledSinceLastTurn() &&
+      !!route &&
+      route.connectionId === this.connectionId &&
+      this.approvalRouter.matches(route);
+    if (!isCurrent()) return Promise.reject(new Error("Question session is no longer active"));
+
+    const requestId = nanoid(12);
+    const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+    const continuation = session.captureFollowUpOptions();
+    const requestingRun = session.settled;
+    session.lastActivityAt = Date.now();
+    this.registerSessionApproval(
+      session,
+      {
+        sessionId,
+        requestId,
+        routeGeneration: "generation" in routeEnvelope ? routeEnvelope.generation : undefined,
+        workerGeneration: this.workerGeneration(),
+        kind: "ask_user",
+        title: "可稍后回答的问题",
+        createdAt: Date.now(),
+        surfaceable: false,
+        asynchronous: true,
+      },
+      (decision) => {
+        const result = decision as ApprovalResult;
+        const answer =
+          typeof decision === "string"
+            ? decision
+            : result && typeof result === "object" && result.approved
+              ? result.answer
+              : undefined;
+        const hasAnswer = typeof answer === "string" && answer.trim().length > 0;
+        // Cancellation and ownership loss retire the card; they are never
+        // synthetic user answers and must not restart a stopped session.
+        if (!hasAnswer) {
+          this.notify(Methods.ApprovalResolved, { sessionId, requestId, approved: false });
+          return;
+        }
+        return deliverAsyncUserAnswer({
+          session,
+          requestId,
+          question,
+          answer,
+          continuation: { ...continuation, approvalRouter: this.approvalRouter },
+          requestingRun,
+          isCurrent,
+          resolveWorkspace: async () => {
+            if (this.workspaceBridgeEnabled) {
+              const workspace = await this.resolveHostSessionWorkspace(session, sessionId);
+              this.rememberSessionSlice(sessionId, workspace);
+              return workspace;
+            }
+            return session.engine.resolveSessionRunWorkspace?.(sessionId) ?? {};
+          },
+          onStream: (event) => {
+            this.observeSessionStream(sessionId, event);
+            this.notify(Methods.StreamEvent, { sessionId, event });
+          },
+          onBoundary: (status) => this.observeRunBoundary(sessionId, status),
+          onError: (error) => {
+            if (!isCurrent()) return;
+            logger.warn("ask_user_async.delivery_failed", {
+              sessionId,
+              requestId,
+              error: String(error),
+            });
+            this.notify(Methods.StreamEvent, {
+              sessionId,
+              event: {
+                type: "error",
+                error: `Could not continue with your answer: ${String(error)}\n\nQuestion: ${question}\nYour answer: ${answer}`,
+              },
+            });
+          },
+        });
+      },
+    );
+    try {
+      this.notify(Methods.ApprovalRequest, {
+        ...routeEnvelope,
+        request: {
+          toolName: "__ask_user__",
+          args: { question, ...opts, asynchronous: true },
+          description: question,
+          riskLevel: "low",
+        },
+      });
+    } catch (error) {
+      this.takeSessionApproval(session, requestId, "cancelled");
+      this.pendingApprovalTargets.delete(requestId);
+      return Promise.reject(error);
+    }
+    return Promise.resolve(
+      `Question displayed (requestId: ${requestId}). No answer has been received. ` +
+        "Continue work that does not depend on the answer. The user's reply will arrive as a later user message; silence is not consent.",
+    );
+  }
+
   /**
    * Per-session AskUserQuestion for the chatManager path. Resolves via the
    * SESSION's pendingApprovals (the chatManager approve handler looks there,
@@ -4651,7 +4831,7 @@ export class AgentServer {
   private registerSessionApproval(
     session: ChatSession,
     metadata: PendingApprovalMetadata,
-    resolve: (decision: unknown) => void,
+    resolve: (decision: unknown) => void | Promise<void>,
     scope?: ChildHostScope,
   ): void {
     if (scope) {
@@ -4662,7 +4842,7 @@ export class AgentServer {
     session.pendingApprovals.set(metadata.requestId, {
       resolve: (decision) => {
         scope?.pending.delete(metadata.requestId);
-        resolve(decision);
+        return resolve(decision);
       },
       metadata,
     });

@@ -132,6 +132,7 @@ function runStateForReason(reason: string): RunState {
     case "prompt_too_long":
     case "model_error":
     case "image_error":
+    case "replay_incomplete":
       return "error";
     // "completed", "max_turns", "goal_budget_exhausted", "stop_hook_prevented",
     // "hook_stopped", and any future/unknown terminal reason: a normal stop.

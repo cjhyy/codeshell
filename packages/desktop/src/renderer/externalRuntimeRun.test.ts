@@ -121,6 +121,41 @@ describe("runExternalRuntimeTurn", () => {
     expect(starts).toHaveLength(2);
   });
 
+  test("sends explicit goal changes per turn without recreating them on ordinary follow-ups", async () => {
+    const sent: Array<Parameters<ExternalRuntimeBridge["send"]>[0]> = [];
+    const { impl, starts } = bridge({
+      send: async (payload) => {
+        sent.push(payload);
+      },
+    });
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "Finish the review",
+      goal: "Finish the review",
+      hasGoal: true,
+      runtime: impl,
+    });
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "Check the tests",
+      hasGoal: true,
+      runtime: impl,
+    });
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "Just answer this question",
+      disableGoal: true,
+      hasGoal: false,
+      runtime: impl,
+    });
+    expect(sent).toEqual([
+      { sessionId: base.sessionId, text: "Finish the review", goal: "Finish the review" },
+      { sessionId: base.sessionId, text: "Check the tests" },
+      { sessionId: base.sessionId, text: "Just answer this question", disableGoal: true },
+    ]);
+    expect(starts).toHaveLength(2);
+  });
+
   test("tracks sessions independently", async () => {
     const { impl, starts } = bridge();
     await runExternalRuntimeTurn({ ...base, text: "a", runtime: impl });

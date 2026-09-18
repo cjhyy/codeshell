@@ -368,6 +368,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
       if (host) {
         childConfig.browserBridge = host.browserBridge;
         childConfig.askUser = host.askUser;
+        childConfig.askUserAsync = host.askUserAsync;
         childConfig.injectCredentialToBrowser = host.injectCredentialToBrowser;
         childConfig.approvalBackend = host.approvalBackend ?? childConfig.approvalBackend;
       }

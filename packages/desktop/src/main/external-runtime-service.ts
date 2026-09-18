@@ -28,11 +28,16 @@ import {
   BUILTIN_AGENT_PRESETS,
   BUILTIN_TOOLS,
   ToolRegistry,
+  type GoalConfig,
   type PermissionMode,
   type SessionProjectBinding,
   type StreamEvent,
 } from "@cjhyy/code-shell-core";
-import { isFeatureEnabled, type FeatureFlagOverrides } from "@cjhyy/code-shell-core/extension";
+import {
+  FIRST_PHASE_EXPOSURE,
+  isFeatureEnabled,
+  type FeatureFlagOverrides,
+} from "@cjhyy/code-shell-core/extension";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
 import { createCodexLaunchResolver, type CodexLaunch } from "./external-runtime-launch.js";
@@ -42,8 +47,28 @@ import {
   writeExternalRuntimeBinding,
   type ExternalRuntimeTurnOutcome,
 } from "./external-runtime-state.js";
+import {
+  EXTERNAL_GOAL_TOOLS,
+  ExternalRuntimeGoals,
+  type ExternalGoalExtension,
+  type ExternalGoalUpdate,
+} from "./external-runtime-goals.js";
 
-type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & { displayText?: string };
+export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
+  goal?: string | GoalConfig;
+  disableGoal?: boolean;
+};
+
+function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
+  // External approvals share the native ApprovalRequest wire contract. The
+  // renderer reads presentation fields from args, not the request's top level.
+  return {
+    toolName: "__ask_user__",
+    args: { ...options, question },
+    description: question,
+    riskLevel: "low" as const,
+  };
+}
 
 export interface ExternalRuntimeStartRequest {
   kind: ExternalRuntimeKind;
@@ -147,7 +172,14 @@ export class ExternalRuntimeService {
        * a provider error: it stays reachable for stop/interrupt, but ensure()
        * and isCompatible() treat it as gone so the next turn replaces it.
        */
-      lifecycle: { active: boolean; turnActive: boolean; faulted: boolean };
+      lifecycle: {
+        active: boolean;
+        turnActive: boolean;
+        faulted: boolean;
+        goalRunActive: boolean;
+        interruptGeneration: number;
+      };
+      goalToolsAvailable: boolean;
     }
   >();
   /** Serializes start/stop for one business id, including concurrent IPC calls. */
@@ -156,8 +188,10 @@ export class ExternalRuntimeService {
   private readonly backgroundWakeups = new Set<string>();
   private backgroundWorkUnsubscribe?: () => void;
   private readonly prepareCodexLaunch: (cwd: string) => Promise<CodexLaunch>;
+  private readonly goals: ExternalRuntimeGoals;
 
   constructor(private readonly deps: ExternalRuntimeServiceDeps) {
+    this.goals = new ExternalRuntimeGoals((sessionId, event) => this.emitSafely(sessionId, event));
     this.prepareCodexLaunch = deps.prepareCodexLaunch ?? createCodexLaunchResolver();
     this.backgroundWorkUnsubscribe = deps.backgroundWork?.subscribe((sessionId, event) => {
       if (!this.sessions.has(sessionId)) return;
@@ -182,6 +216,91 @@ export class ExternalRuntimeService {
 
   get(sessionId: string): ExternalRuntimeSession | undefined {
     return this.sessions.get(sessionId)?.session;
+  }
+
+  hasSession(sessionId: string): boolean {
+    return this.sessions.has(sessionId);
+  }
+
+  canResumeGoal(sessionId: string, callerWebContentsId?: number): boolean {
+    this.assertOwner(sessionId, callerWebContentsId);
+    const entry = this.sessions.get(sessionId);
+    return (
+      !!entry && entry.lifecycle.active && !entry.lifecycle.faulted && entry.goalToolsAvailable
+    );
+  }
+
+  getGoal(sessionId: string, callerWebContentsId?: number) {
+    this.assertOwner(sessionId, callerWebContentsId);
+    return this.goals.get(sessionId);
+  }
+
+  async updateGoal(sessionId: string, patch: ExternalGoalUpdate, callerWebContentsId?: number) {
+    this.assertOwner(sessionId, callerWebContentsId);
+    const entry = this.sessions.get(sessionId);
+    if (patch.paused === false && !this.canResumeGoal(sessionId, callerWebContentsId)) {
+      throw new Error("Resume requires the owning external runtime to be started first");
+    }
+    const previousRun = this.goals.running(sessionId);
+    const result = this.goals.update(sessionId, patch);
+    if (!result.updated) return result;
+    if (previousRun && entry?.lifecycle.turnActive) {
+      try {
+        await this.interruptGoalTurn(sessionId, previousRun);
+      } catch (error) {
+        entry.lifecycle.faulted = true;
+        if (!result.paused) {
+          this.goals.update(sessionId, {
+            paused: true,
+            expectedGoalId: result.goalId!,
+            expectedRevision: result.revision!,
+          });
+        }
+        throw new Error("The external runtime could not stop; the goal remains paused for retry", {
+          cause: error,
+        });
+      }
+    }
+    if (!result.paused && (patch.paused === false || previousRun) && entry) {
+      const expected = { goalId: result.goalId!, revision: result.revision! };
+      void this.send(
+        sessionId,
+        { text: "继续执行已保存的目标。", injected: true },
+        callerWebContentsId,
+        expected,
+      ).catch((error) => {
+        this.goals.update(sessionId, {
+          paused: true,
+          expectedGoalId: expected.goalId,
+          expectedRevision: expected.revision,
+        });
+        dlog("external-runtime", "goal.resume_failed", { sessionId, error: String(error) });
+      });
+    }
+    return result;
+  }
+
+  deleteGoal(
+    sessionId: string,
+    expected?: { expectedGoalId?: string; expectedRevision?: number },
+    callerWebContentsId?: number,
+  ) {
+    this.assertOwner(sessionId, callerWebContentsId);
+    const run = this.goals.running(sessionId);
+    const result = this.goals.delete(sessionId, expected);
+    if (result.cleared && run) {
+      void this.interruptGoalTurn(sessionId, run).catch((error) => {
+        const entry = this.sessions.get(sessionId);
+        if (entry) entry.lifecycle.faulted = true;
+        dlog("external-runtime", "goal.interrupt_failed", { sessionId, error: String(error) });
+      });
+    }
+    return result;
+  }
+
+  extendGoal(sessionId: string, extension: ExternalGoalExtension, callerWebContentsId?: number) {
+    this.assertOwner(sessionId, callerWebContentsId);
+    return this.goals.extend(sessionId, extension);
   }
 
   /**
@@ -269,6 +388,7 @@ export class ExternalRuntimeService {
       permissionMode: request.permissionMode ?? "default",
       planMode: request.planMode === true,
       hasGoal: request.hasGoal === true,
+      hostToolsEnabled: this.areHostToolsEnabled(),
       ownerWebContentsId: request.ownerWindow?.webContents.id ?? null,
     });
   }
@@ -321,7 +441,12 @@ export class ExternalRuntimeService {
    * while a job is running does not consume a result nobody can receive.
    */
   private maybeWakeForBackgroundWork(sessionId: string): void {
-    if (!this.deps.backgroundWork || this.backgroundWakeups.has(sessionId)) return;
+    if (
+      !this.deps.backgroundWork ||
+      this.backgroundWakeups.has(sessionId) ||
+      !this.mayWakeForBackgroundWork(sessionId)
+    )
+      return;
     this.backgroundWakeups.add(sessionId);
     void this.wakeForBackgroundWork(sessionId)
       .catch((error) => {
@@ -332,10 +457,20 @@ export class ExternalRuntimeService {
       })
       .finally(() => {
         this.backgroundWakeups.delete(sessionId);
-        if (this.sessions.has(sessionId) && this.deps.backgroundWork?.hasPending(sessionId)) {
+        if (
+          this.mayWakeForBackgroundWork(sessionId) &&
+          this.deps.backgroundWork?.hasPending(sessionId)
+        ) {
           this.maybeWakeForBackgroundWork(sessionId);
         }
       });
+  }
+
+  private mayWakeForBackgroundWork(sessionId: string): boolean {
+    const entry = this.sessions.get(sessionId);
+    return (
+      !!entry?.lifecycle.active && !entry.lifecycle.faulted && !this.goals.read(sessionId)?.paused
+    );
   }
 
   private async wakeForBackgroundWork(sessionId: string): Promise<void> {
@@ -344,7 +479,7 @@ export class ExternalRuntimeService {
     // A completion can arrive before the launching turn reaches its terminal
     // callback. Never overlap recorder state or provider turns.
     await entry.turnTail;
-    if (this.sessions.get(sessionId) !== entry || !entry.lifecycle.active) return;
+    if (this.sessions.get(sessionId) !== entry || !this.mayWakeForBackgroundWork(sessionId)) return;
     const message = this.deps.backgroundWork.drainMessage(sessionId);
     if (!message) return;
     await this.send(sessionId, {
@@ -440,8 +575,15 @@ export class ExternalRuntimeService {
     // Host tools are gated by their OWN flag, so the runtime can be trialled with
     // no tool surface at all (§20). An empty allowlist is the honest expression of
     // "off" — the bridge still exists, it just advertises nothing.
+    const goalToolsAvailable = this.areHostToolsEnabled() && !request.planMode;
     const exposure = this.areHostToolsEnabled()
-      ? undefined // the reviewed first-phase allowlist
+      ? {
+          ...FIRST_PHASE_EXPOSURE,
+          toolNames: new Set([
+            ...FIRST_PHASE_EXPOSURE.toolNames,
+            ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
+          ]),
+        }
       : { mode: "allowlist" as const, toolNames: new Set<string>() };
 
     // The registry must actually CONTAIN the tools the exposure policy allows.
@@ -505,7 +647,62 @@ export class ExternalRuntimeService {
       request.kind,
       this.deps.resolveProjectBinding(request.cwd),
     );
-    const lifecycle = { active: true, turnActive: false, faulted: false };
+    const lifecycle = {
+      active: true,
+      turnActive: false,
+      faulted: false,
+      goalRunActive: false,
+      interruptGeneration: 0,
+    };
+    for (const name of EXTERNAL_GOAL_TOOLS) {
+      // Replace the native acknowledgement-only executors and their static
+      // hasGoal guards with this provider's live, version-checked controller.
+      registry.unregisterTool(name);
+      registry.registerTool(
+        {
+          name,
+          description:
+            name === "get_goal"
+              ? "Read this CodeShell session's persisted goal and its goalId/revision."
+              : name === "complete_goal"
+                ? "Declare the CodeShell goal fully achieved. Supply its current goalId and revision."
+                : "Cancel a CodeShell goal ONLY when the user explicitly requests cancellation. Include the user's reason.",
+          inputSchema: {
+            type: "object",
+            properties:
+              name === "get_goal"
+                ? {}
+                : {
+                    goalId: { type: "string" },
+                    revision: { type: "integer", minimum: 1 },
+                    ...(name === "complete_goal"
+                      ? { summary: { type: "string" } }
+                      : { confirm: { type: "boolean" }, reason: { type: "string" } }),
+                  },
+            required:
+              name === "get_goal"
+                ? []
+                : ["goalId", "revision", ...(name === "cancel_goal" ? ["confirm", "reason"] : [])],
+          },
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: name === "get_goal",
+          isConcurrencySafe: false,
+        },
+        async (args) => {
+          if (!lifecycle.active) throw new Error("This external runtime has been replaced");
+          return JSON.stringify(
+            name === "get_goal"
+              ? this.goals.get(request.sessionId)
+              : this.goals.settle(
+                  request.sessionId,
+                  name === "complete_goal" ? "completed" : "cancelled",
+                  args,
+                ),
+          );
+        },
+      );
+    }
     const forwardEvent = (event: StreamEvent): void => {
       // A provider process may flush buffered output while close() is in flight.
       // Once this concrete runtime has been stopped/replaced, its events belong
@@ -526,8 +723,28 @@ export class ExternalRuntimeService {
       try {
         recorder.onEvent(normalized);
       } finally {
-        this.emitSafely(request.sessionId, normalized);
+        // A provider final reply closes one provider turn, not the enclosing
+        // Goal run. Publish only its final boundary after continuation ends.
+        if (!(normalized.type === "turn_complete" && lifecycle.goalRunActive)) {
+          this.emitSafely(request.sessionId, normalized);
+        }
         if (normalized.type === "turn_complete") lifecycle.turnActive = false;
+        const run = this.goals.running(request.sessionId);
+        if (
+          normalized.type === "usage_update" &&
+          run?.tokenBudget !== undefined &&
+          this.goals.isCurrent(run) &&
+          run.tokensUsed + recorder.turnTokensUsed >= run.tokenBudget
+        ) {
+          this.goals.pause(run, "达到本轮 token 预算");
+          void this.interruptGoalTurn(request.sessionId, run).catch((error) => {
+            lifecycle.faulted = true;
+            dlog("external-runtime", "goal.interrupt_failed", {
+              sessionId: request.sessionId,
+              error: String(error),
+            });
+          });
+        }
       }
     };
     const contextOverrides = {
@@ -537,11 +754,10 @@ export class ExternalRuntimeService {
       ...(this.deps.requestApproval
         ? {
             askUser: async (question: string, options?: Record<string, unknown>) => {
-              const decision = await this.deps.requestApproval!(request.sessionId, {
-                toolName: "__ask_user__",
-                question,
-                ...(options ?? {}),
-              });
+              const decision = await this.deps.requestApproval!(
+                request.sessionId,
+                askUserApprovalRequest(question, options),
+              );
               return (
                 decision.answer ?? decision.reason ?? (decision.approved ? "approved" : "denied")
               );
@@ -563,7 +779,10 @@ export class ExternalRuntimeService {
         businessSessionId: request.sessionId,
         registry,
         permissionMode: hostPermissionMode,
-        presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+        presetRules: [
+          ...BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+          ...EXTERNAL_GOAL_TOOLS.map((tool) => ({ tool, decision: "allow" as const })),
+        ],
         projectTrusted,
         planMode: request.planMode === true,
         visibility: {
@@ -633,12 +852,13 @@ export class ExternalRuntimeService {
                             : [];
                         })
                       : undefined;
-                    const decision = await this.deps.requestApproval!(request.sessionId, {
-                      toolName: "__ask_user__",
-                      question: text,
-                      ...(typeof question.header === "string" ? { header: question.header } : {}),
-                      ...(options && options.length > 0 ? { options } : {}),
-                    });
+                    const decision = await this.deps.requestApproval!(
+                      request.sessionId,
+                      askUserApprovalRequest(text, {
+                        ...(typeof question.header === "string" ? { header: question.header } : {}),
+                        ...(options && options.length > 0 ? { options } : {}),
+                      }),
+                    );
                     if (decision.answer) answers[id] = { answers: [decision.answer] };
                   }
                   return { answers };
@@ -679,6 +899,7 @@ export class ExternalRuntimeService {
       configurationKey: this.configurationKey(request),
       turnTail: Promise.resolve(),
       lifecycle,
+      goalToolsAvailable,
       forwardEvent,
       ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
@@ -707,64 +928,146 @@ export class ExternalRuntimeService {
     sessionId: string,
     input: DesktopExternalRuntimeTurnInput | string,
     callerWebContentsId?: number,
+    expectedGoal?: { goalId: string; revision: number },
   ): Promise<ExternalRuntimeTurnOutcome> {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
     const turnInput = typeof input === "string" ? { text: input } : input;
+    const acceptedGeneration = entry.lifecycle.interruptGeneration;
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
       if (this.sessions.get(sessionId) !== entry) {
         throw new Error(
           `external runtime session was replaced before its queued turn: ${sessionId}`,
         );
       }
-      entry.lifecycle.turnActive = true;
-      try {
-        try {
-          entry.recorder.beginTurn(turnInput);
-          // `displayText` is only set by main-originated turns (Panel Apps). The
-          // chat renderer appends its own bubble before calling send, so it must
-          // not receive this event; a Panel submission has no local dispatch and
-          // would otherwise be invisible in the live transcript. Same contract
-          // as the native protocol server's session_user_message.
-          if (turnInput.displayText) {
-            this.emitSafely(sessionId, {
-              type: "session_user_message",
-              text: turnInput.displayText,
-              ...(turnInput.clientMessageId ? { clientMessageId: turnInput.clientMessageId } : {}),
+      if (acceptedGeneration !== entry.lifecycle.interruptGeneration) {
+        return { ok: false, reason: "aborted_streaming", streamed: true };
+      }
+      if (expectedGoal) {
+        const current = this.goals.read(sessionId);
+        if (
+          current?.paused ||
+          current?.goalId !== expectedGoal.goalId ||
+          current?.revision !== expectedGoal.revision
+        ) {
+          return { ok: true, reason: "completed", streamed: true };
+        }
+      }
+      const inheritedGoal = this.goals.read(sessionId);
+      if (
+        !turnInput.disableGoal &&
+        (turnInput.goal !== undefined || (inheritedGoal && !inheritedGoal.paused)) &&
+        !entry.goalToolsAvailable
+      ) {
+        throw new Error("External goals require host tools and execution mode, not plan mode");
+      }
+      const goalRun = this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal);
+      entry.lifecycle.goalRunActive = goalRun !== undefined;
+      let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+      const armDeadline = () => {
+        if (!goalRun || !this.goals.isCurrent(goalRun)) return;
+        deadlineTimer = setTimeout(
+          () => {
+            if (!this.goals.isCurrent(goalRun)) return;
+            if (this.goals.remainingTime(goalRun) > 0) return armDeadline();
+            this.goals.pause(goalRun, "达到本轮时间预算");
+            void this.interruptGoalTurn(sessionId, goalRun).catch((error) => {
+              entry.lifecycle.faulted = true;
+              dlog("external-runtime", "goal.interrupt_failed", {
+                sessionId,
+                error: String(error),
+              });
             });
+          },
+          Math.min(2_147_483_647, this.goals.remainingTime(goalRun)),
+        );
+        deadlineTimer.unref?.();
+      };
+      armDeadline();
+      const { goal: _goal, disableGoal: _disableGoal, ...providerInput } = turnInput;
+      const pendingBackground = goalRun
+        ? this.deps.backgroundWork?.drainMessage(sessionId)
+        : undefined;
+      const withBackground = (text: string, background?: string) =>
+        background ? `${text}\n\n<system-reminder>\n${background}\n</system-reminder>` : text;
+      let nextInput: ExternalRuntimeTurnInput = goalRun
+        ? {
+            ...providerInput,
+            text: withBackground(
+              `${providerInput.text}\n\n${this.goals.instruction(goalRun)}`,
+              pendingBackground,
+            ),
           }
-          const turn = await entry.session.send(turnInput);
-          await turn.done;
-        } catch (error) {
+        : providerInput;
+      let finalOutcome: ExternalRuntimeTurnOutcome | undefined;
+      try {
+        while (true) {
+          entry.lifecycle.turnActive = true;
+          try {
+            // Keep the original user text in the shared transcript. The Goal's
+            // control instructions are provider context, never a new user request.
+            entry.recorder.beginTurn(goalRun && goalRun.turns === 0 ? providerInput : nextInput);
+            if (nextInput.displayText && !nextInput.injected) {
+              this.emitSafely(sessionId, {
+                type: "session_user_message",
+                text: nextInput.displayText,
+                ...(nextInput.clientMessageId
+                  ? { clientMessageId: nextInput.clientMessageId }
+                  : {}),
+              });
+            }
+            const turn = await entry.session.send(nextInput);
+            await turn.done;
+          } catch (error) {
+            if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
+              return entry.recorder.finishIfMissing();
+            }
+            const detail = error instanceof Error ? error.message : String(error);
+            entry.forwardEvent({ type: "error", error: detail });
+            entry.forwardEvent({ type: "turn_complete", reason: "model_error" });
+          }
           if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
             return entry.recorder.finishIfMissing();
           }
-          const detail = error instanceof Error ? error.message : String(error);
-          const errorEvent = { type: "error" as const, error: detail };
-          const terminalEvent = { type: "turn_complete" as const, reason: "model_error" as const };
-          entry.forwardEvent(errorEvent);
-          entry.forwardEvent(terminalEvent);
-          return entry.recorder.finishIfMissing();
+          if (entry.session.runtimeSessionId) {
+            this.persistBindingSafely(sessionId, {
+              kind: entry.kind,
+              cwd: entry.cwd,
+              runtimeSessionId: entry.session.runtimeSessionId,
+              ...(entry.model ? { model: entry.model } : {}),
+            });
+          }
+          if (!entry.recorder.isTurnFinished) {
+            entry.forwardEvent({ type: "turn_complete", reason: "completed" });
+          }
+          finalOutcome = entry.recorder.finishIfMissing();
+          if (
+            !goalRun ||
+            finalOutcome.reason !== "completed" ||
+            acceptedGeneration !== entry.lifecycle.interruptGeneration ||
+            !this.goals.afterTurn(goalRun, entry.recorder.turnTokensUsed, finalOutcome.text ?? "")
+          ) {
+            return finalOutcome;
+          }
+          nextInput = {
+            text: withBackground(
+              `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
+              this.deps.backgroundWork?.drainMessage(sessionId),
+            ),
+            displayText: "继续处理尚未完成的目标。",
+            injected: true,
+          };
         }
-        if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
-          return entry.recorder.finishIfMissing();
-        }
-        if (entry.session.runtimeSessionId) {
-          this.persistBindingSafely(sessionId, {
-            kind: entry.kind,
-            cwd: entry.cwd,
-            runtimeSessionId: entry.session.runtimeSessionId,
-            ...(entry.model ? { model: entry.model } : {}),
-          });
-        }
-        if (!entry.recorder.isTurnFinished) {
-          // Keep `streamed: true` honest even for a provider that resolves `done`
-          // without delivering its documented terminal callback.
-          entry.forwardEvent({ type: "turn_complete", reason: "completed" });
-        }
-        return entry.recorder.finishIfMissing();
       } finally {
+        if (deadlineTimer) clearTimeout(deadlineTimer);
+        if (goalRun) {
+          this.goals.end(goalRun);
+          if (entry.lifecycle.active && finalOutcome) {
+            this.emitSafely(sessionId, { type: "turn_complete", reason: finalOutcome.reason });
+          }
+        }
+        entry.lifecycle.goalRunActive = false;
         entry.lifecycle.turnActive = false;
       }
     };
@@ -788,7 +1091,29 @@ export class ExternalRuntimeService {
 
   async interrupt(sessionId: string, callerWebContentsId?: number): Promise<void> {
     this.assertOwner(sessionId, callerWebContentsId);
-    await this.sessions.get(sessionId)?.session.interrupt();
+    const entry = this.sessions.get(sessionId);
+    if (entry) entry.lifecycle.interruptGeneration++;
+    const run = this.goals.running(sessionId);
+    if (run && this.goals.isCurrent(run)) this.goals.pause(run, "用户已停止本轮执行");
+    this.goals.stop(sessionId);
+    await this.interruptGoalTurn(sessionId, run);
+  }
+
+  private async interruptGoalTurn(
+    sessionId: string,
+    run = this.goals.running(sessionId),
+  ): Promise<void> {
+    const entry = this.sessions.get(sessionId);
+    if (!entry || (run && this.goals.running(sessionId) !== run)) return;
+    try {
+      this.deps.cancelApprovals?.(sessionId);
+      await entry.session.interrupt();
+    } catch (error) {
+      // A stopped-but-unreachable provider must be rebuilt on Resume, never
+      // reused with a new Goal turn queued behind its stranded turnTail.
+      if (this.sessions.get(sessionId) === entry) entry.lifecycle.faulted = true;
+      throw error;
+    }
   }
 
   /** Close one session. Safe when there is none. */
@@ -806,6 +1131,8 @@ export class ExternalRuntimeService {
   private async stopExclusive(sessionId: string): Promise<void> {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
+    entry.lifecycle.interruptGeneration++;
+    this.goals.stop(sessionId);
     if (entry.lifecycle.turnActive) {
       // Persist and stream an explicit terminal boundary before invalidating the
       // provider callbacks. Otherwise app shutdown / deletion can leave Session

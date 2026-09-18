@@ -687,6 +687,7 @@ export class WechatAdapter implements ChannelAdapter {
       channel: this.channel,
       target: senderId,
       senderId,
+      isDirectMessage: !raw.group_id,
       text,
       ...(attachments.length > 0 ? { attachments } : {}),
       messageId: raw.message_id === undefined ? undefined : String(raw.message_id),

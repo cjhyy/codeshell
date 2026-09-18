@@ -144,6 +144,7 @@ export class TeamsAdapter implements WebhookChannelAdapter {
             channel: this.channel,
             target,
             senderId,
+            isDirectMessage: activity.conversation.conversationType === "personal",
             text,
             ...(activity.id ? { messageId: activity.id } : {}),
             ...(attachments.length > 0 ? { attachments } : {}),
@@ -264,7 +265,9 @@ function validTeamsConversationReference(target: string, value: unknown): boolea
     const url = new URL(reference.serviceUrl);
     if (url.protocol !== "https:" || url.username || url.password || !url.hostname) return false;
     if (url.hostname === "localhost" || url.hostname.endsWith(".localhost")) return false;
-    if (/^(?:127\.|0\.|10\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/u.test(url.hostname)) {
+    if (
+      /^(?:127\.|0\.|10\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/u.test(url.hostname)
+    ) {
       return false;
     }
   } catch {

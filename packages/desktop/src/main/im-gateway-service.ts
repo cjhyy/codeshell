@@ -508,8 +508,8 @@ export class ImGatewayService {
       gateway.use(createImGatewayActivityMiddleware((activity) => this.recordActivity(activity)));
       gateway.use(createCodeShellRemoteCommands({ desktop }));
       // Enters before Mimi: a conversation bound to a Work Session routes
-      // there instead, and everything else (including an unreachable bridge)
-      // falls through to the manager exactly as before.
+      // there instead. Only an explicitly unbound conversation falls through;
+      // an unavailable bridge leaves the message in the inbox for retry.
       gateway.use(
         createBoundSessionChat({
           desktop: {

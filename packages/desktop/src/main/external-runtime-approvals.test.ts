@@ -62,6 +62,10 @@ describe("ExternalRuntimeApprovals", () => {
     expect(payload.sessionId).toBe("sess-1");
     expect(approvals.settle(payload.requestId, { approved: true })).toBe(true);
     await expect(pending).resolves.toMatchObject({ approved: true });
+    expect(sent[1]).toEqual({
+      channel: "externalRuntime:approvalResolved",
+      payload: { sessionId: "sess-1", requestId: payload.requestId, approved: true },
+    });
   });
 
   test("denies when there is no window to ask", async () => {
@@ -162,7 +166,75 @@ describe("ExternalRuntimeApprovals", () => {
     approvals.cancelSession("sess-1");
     await expect(pending).resolves.toMatchObject({ approved: false });
     expect(approvals.pendingCount).toBe(0);
-    expect(sent).toHaveLength(1);
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toMatchObject({
+      channel: "externalRuntime:approvalResolved",
+      payload: { sessionId: "sess-1", approved: false },
+    });
+  });
+
+  test("reload recovery returns only the owning window's truly unresolved requests", async () => {
+    const owner = fakeWindow(1);
+    const other = fakeWindow(2);
+    const approvals = router([owner.window, other.window], (sessionId) =>
+      sessionId === "one" ? 1 : 2,
+    );
+    const first = approvals.request("one", request);
+    const second = approvals.request("two", request);
+    const firstId = (owner.sent[0]!.payload as { requestId: string }).requestId;
+    expect(approvals.pendingForWindow(1)).toEqual([
+      { sessionId: "one", requestId: firstId, request, source: "external-runtime" },
+    ]);
+    expect(approvals.pendingForWindow(2)).toHaveLength(1);
+    expect(approvals.pendingForWindow(3)).toEqual([]);
+    expect(approvals.settle(firstId, { approved: true, answer: "Read only" }, 2)).toBe(false);
+    expect(approvals.pendingForWindow(1)).toHaveLength(1);
+    expect(approvals.settle(firstId, { approved: true, answer: "Read only" }, 1)).toBe(true);
+    expect(approvals.pendingForWindow(1)).toEqual([]);
+    expect(owner.sent.at(-1)).toMatchObject({
+      channel: "externalRuntime:approvalResolved",
+      payload: { requestId: firstId, answer: "Read only" },
+    });
+    expect(other.sent).toHaveLength(1);
+    approvals.cancelWindow(2);
+    await expect(first).resolves.toMatchObject({ answer: "Read only" });
+    await expect(second).resolves.toMatchObject({ approved: false });
+    expect(approvals.pendingForWindow(2)).toEqual([]);
+  });
+
+  test("timeout retires the card, excludes it from recovery, and rejects a late answer", async () => {
+    const { window, sent } = fakeWindow(1);
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [window] as never,
+      timeoutMs: 5,
+    });
+    const pending = approvals.request("one", {
+      toolName: "__ask_user__",
+      args: { question: "Choose" },
+    });
+    const requestId = (sent[0]!.payload as { requestId: string }).requestId;
+    await expect(pending).resolves.toEqual({ approved: false, reason: "approval timed out" });
+    expect(sent[1]).toEqual({
+      channel: "externalRuntime:approvalResolved",
+      payload: { sessionId: "one", requestId },
+    });
+    expect(approvals.pendingForWindow(1)).toEqual([]);
+    expect(approvals.settle(requestId, { approved: true }, 1)).toBe(false);
+    expect(sent).toHaveLength(2);
+  });
+
+  test("a recreated router cannot reuse an old transcript card's request id", () => {
+    const first = fakeWindow(1);
+    const second = fakeWindow(1);
+    const a = router([first.window]);
+    const b = router([second.window]);
+    void a.request("same-session", request);
+    void b.request("same-session", request);
+    expect((first.sent[0]!.payload as { requestId: string }).requestId).not.toBe(
+      (second.sent[0]!.payload as { requestId: string }).requestId,
+    );
+    a.cancelWindow(1);
+    b.cancelWindow(1);
   });
 
   test("closing one session leaves another's prompt alone", async () => {

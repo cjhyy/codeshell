@@ -240,4 +240,28 @@ describe("AgentBridge host reservation maps", () => {
     expect(reservations.has("host")).toBe(false);
     expect(sessionCwd.get("renderer")).toBe("/renderer");
   });
+
+  test("host reserve retains the authorized main root separately from the execution cwd", () => {
+    const sessionCwd = new Map<string, string>();
+    const reservations = new Map<string, HostReservation>();
+    reserveHostSessionMaps(
+      sessionCwd,
+      reservations,
+      "isolated-task",
+      "/worktree",
+      "panel-agent-task",
+      123,
+      "/project",
+    );
+
+    expect(sessionCwd.get("isolated-task")).toBe("/worktree");
+    expect(reservations.get("isolated-task")).toEqual({
+      cwd: "/worktree",
+      mainRoot: "/project",
+      producer: "panel-agent-task",
+      reservedAt: 123,
+    });
+    forgetHostSessionMaps(sessionCwd, reservations, "isolated-task");
+    expect(reservations.has("isolated-task")).toBe(false);
+  });
 });

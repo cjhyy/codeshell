@@ -205,6 +205,7 @@ export class MobileRemoteOrchestrator {
     requestId: string;
     sessionId?: string;
     approved?: boolean;
+    answer?: string;
   }): void {
     this.deps.pendingApprovals.resolve(params.requestId);
     const line = JSON.stringify({
@@ -218,6 +219,7 @@ export class MobileRemoteOrchestrator {
       approvalId: params.requestId,
       ...(params.sessionId ? { sessionId: params.sessionId } : {}),
       ...(params.approved !== undefined ? { approved: params.approved } : {}),
+      ...(params.answer !== undefined ? { answer: params.answer } : {}),
     });
   }
 

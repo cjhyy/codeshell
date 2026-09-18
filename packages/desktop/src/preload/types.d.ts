@@ -6,6 +6,7 @@
 
 import type {
   StreamEvent,
+  GoalConfig,
   CapabilityDescriptor,
   EffectiveSourceAccess,
   SessionWorkspace,
@@ -402,6 +403,8 @@ export interface PluginMcpApprovalResult extends PluginMcpTrustEntry {
 }
 
 export interface ApprovalRequestEnvelope {
+  /** External approvals outlive native worker exits; omitted means the Core worker. */
+  source?: "external-runtime";
   /** Owning chat session — renderer routes the modal to the right tab. */
   sessionId?: string;
   requestId: string;
@@ -413,6 +416,8 @@ export interface ApprovalResolvedEnvelope {
   sessionId?: string;
   requestId: string;
   approved?: boolean;
+  /** Actual question answer, including answers submitted from another client. */
+  answer?: string;
 }
 
 export type MobilePermissionMode = "default" | "acceptEdits" | "bypassPermissions";
@@ -1230,6 +1235,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
       clientMessageId: string;
     }) => void,
   ): Unsubscribe;
+  /** Current native worker approvals, for recovery after a renderer reload. */
+  getPendingApprovals(): Promise<ApprovalRequestEnvelope[]>;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onApprovalResolved(cb: (env: ApprovalResolvedEnvelope) => void): Unsubscribe;
   onMobilePermissionMode(cb: (env: MobilePermissionModeEnvelope) => void): Unsubscribe;
@@ -1409,6 +1416,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     send(payload: {
       sessionId: string;
       text: string;
+      goal?: string | GoalConfig;
+      disableGoal?: boolean;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }>;

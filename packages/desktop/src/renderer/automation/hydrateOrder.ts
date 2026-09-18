@@ -7,14 +7,46 @@
  * post-sync-point tail), so localStorage residue can't form an orphan trailing
  * group. disk empty (brand-new front-end session not yet on disk) → use local.
  */
-import type { MessagesReducerState } from "../types";
+import type { AskUserMessage, MessagesReducerState } from "../types";
 import { mergeTranscripts, mergeTranscriptCursor } from "./mergeTranscripts";
 
 export function chooseHydrateBase(
   disk: MessagesReducerState,
   local: MessagesReducerState,
 ): MessagesReducerState {
-  return disk.messages.length > 0 ? mergeTranscripts(disk, local) : local;
+  return disk.messages.length > 0
+    ? mergeTranscripts(disk, alignSteerClientIds(disk, local))
+    : local;
+}
+
+function alignSteerClientIds(
+  history: MessagesReducerState,
+  live: MessagesReducerState,
+): MessagesReducerState {
+  // A live steer carries only its steerId; the disk record also knows the
+  // original client id. Join that exact identity before the turn-scoped merge.
+  // Do not infer aliases from text, overwrite another client id, or choose
+  // between contradictory durable records.
+  const steerClients = new Map<string, string | undefined>();
+  for (const message of history.messages) {
+    if (message.kind !== "user" || !message.steerId || !message.clientMessageId) continue;
+    const previous = steerClients.get(message.steerId);
+    steerClients.set(
+      message.steerId,
+      !steerClients.has(message.steerId) || previous === message.clientMessageId
+        ? message.clientMessageId
+        : undefined,
+    );
+  }
+  let aligned = false;
+  const alignedMessages = live.messages.map((message) => {
+    if (message.kind !== "user" || !message.steerId || message.clientMessageId) return message;
+    const clientMessageId = steerClients.get(message.steerId);
+    if (!clientMessageId) return message;
+    aligned = true;
+    return { ...message, clientMessageId };
+  });
+  return aligned ? { ...live, messages: alignedMessages } : live;
 }
 
 /** Attach missing history without rewinding a live turn that arrived during the read. */
@@ -22,9 +54,26 @@ export function mergeHistoryIntoLive(
   history: MessagesReducerState,
   live: MessagesReducerState,
 ): MessagesReducerState {
-  const merged = chooseHydrateBase(history, live);
+  live = alignSteerClientIds(history, live);
+  const merged = history.messages.length > 0 ? mergeTranscripts(history, live) : live;
   const liveMessages = new Map(live.messages.map((message) => [message.id, message]));
-  const messages = merged.messages.map((message) => liveMessages.get(message.id) ?? message);
+  const questions = new Map<string, AskUserMessage>();
+  for (const source of [history, live]) {
+    for (const message of source.messages) {
+      if (message.kind !== "ask_user") continue;
+      const previous = questions.get(message.requestId);
+      if (!previous || message.answer !== undefined) questions.set(message.requestId, message);
+    }
+  }
+  const seenQuestions = new Set<string>();
+  const messages = merged.messages.flatMap((message) => {
+    if (message.kind !== "ask_user") return [liveMessages.get(message.id) ?? message];
+    // Background approvals can arrive before this bucket begins hydration, so
+    // both states already hold the same question under different local ids.
+    if (seenQuestions.has(message.requestId)) return [];
+    seenQuestions.add(message.requestId);
+    return [questions.get(message.requestId) ?? message];
+  });
   // The content merge may keep the disk copy, whose generated id differs from
   // the live pointer. Retain the live object at that slot so the next delta can
   // continue it. Never infer an overlap from a short text prefix or cut away a

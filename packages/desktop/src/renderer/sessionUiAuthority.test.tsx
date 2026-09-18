@@ -2,14 +2,21 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act, useLayoutEffect } from "react";
 import type { SessionWorkspaceAuthority, StreamEventEnvelope } from "../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "./test-utils/renderHook";
-import { useSessionUiAuthority } from "./sessionUiAuthority";
+import { useActiveSessionUiAuthority, useSessionUiAuthority } from "./sessionUiAuthority";
+import type { SessionSummary } from "./transcripts";
 
-function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T): void;
+  reject(reason: unknown): void;
+} {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((accept) => {
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((accept, fail) => {
     resolve = accept;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function authority(sessionId: string): SessionWorkspaceAuthority {
@@ -68,6 +75,118 @@ afterEach(async () => {
 });
 
 describe("useSessionUiAuthority", () => {
+  test("restores an explicitly unstarted conversation only after Main confirms no Session exists", async () => {
+    ensureMiniDom();
+    const missing = deferred<SessionWorkspaceAuthority>();
+    let calls = 0;
+    const host = streamHost(() => {
+      calls += 1;
+      return calls === 1 ? missing.promise : Promise.resolve(authority("session"));
+    });
+    const hook = await renderHook(() =>
+      useSessionUiAuthority({ ...sessionParams("session"), pendingFirstRun: true }),
+    );
+    cleanup = hook.unmount;
+    expect(hook.result.current.configurationAvailable).toBe(false);
+
+    await act(async () => {
+      // Match the error surface delivered by Electron's invoke transport.
+      missing.reject(
+        new Error(
+          "Error invoking remote method 'workspace:authority': Error: unknown session: session",
+        ),
+      );
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.configurationTarget).toEqual({ projectId: "project-1" });
+    expect(hook.result.current.configurationAvailable).toBe(true);
+    expect(hook.result.current.workspaceRoot).toBe("/current-primary");
+
+    await act(async () => {
+      host.emit({
+        sessionId: "session",
+        event: { type: "session_started", sessionId: "session", promptTokens: 0 },
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.configurationTarget).toEqual({ sessionId: "session" });
+    expect(hook.result.current.workspaceRoot).toBe("/roots/session");
+  });
+
+  test.each([
+    [
+      "corrupt state",
+      new Error("session exists but has no valid state — cannot perform workspace operations"),
+    ],
+    ["transport failure", new Error("IPC connection closed")],
+  ])("does not restore a marked draft after %s", async (_label, error) => {
+    ensureMiniDom();
+    streamHost(async () => {
+      throw error;
+    });
+    const hook = await renderHook(() =>
+      useSessionUiAuthority({ ...sessionParams("session"), pendingFirstRun: true }),
+    );
+    cleanup = hook.unmount;
+    expect(hook.result.current.configurationAvailable).toBe(false);
+    expect(hook.result.current.workspaceRoot).toBeNull();
+  });
+
+  test("an authoritative removed root overrides an unstarted marker", async () => {
+    ensureMiniDom();
+    streamHost(async () => ({ ...authority("session"), rootStatus: "root_removed" }));
+    const hook = await renderHook(() =>
+      useSessionUiAuthority({ ...sessionParams("session"), pendingFirstRun: true }),
+    );
+    cleanup = hook.unmount;
+    expect(hook.result.current.rootStatus).toBe("root_removed");
+    expect(hook.result.current.configurationAvailable).toBe(false);
+    expect(hook.result.current.workspaceRoot).toBeNull();
+  });
+
+  test.each([
+    ["explicitly unstarted", { pendingFirstRun: true }, true],
+    ["legacy without engine binding", {}, false],
+    ["already bound", { pendingFirstRun: true, engineSessionId: "session" }, false],
+  ])(
+    "restores configuration only for an unbound marked conversation: %s",
+    async (_label, fields, available) => {
+      ensureMiniDom();
+      streamHost(async () => {
+        throw new Error("unknown session: session");
+      });
+      const summary: SessionSummary = {
+        id: "session",
+        title: "New conversation",
+        createdAt: 1,
+        updatedAt: 1,
+        ...fields,
+      };
+      const hook = await renderHook(() =>
+        useActiveSessionUiAuthority({
+          activeProject: {
+            id: "project-1",
+            name: "Project",
+            path: "/current-primary",
+            primaryRootId: "primary",
+            roots: [{ id: "primary", name: "Primary", path: "/current-primary", addedAt: 1 }],
+            addedAt: 1,
+          },
+          activeProjectId: "project-1",
+          activeSessionId: "session",
+          sessions: [summary],
+          noRepoCwd: null,
+          locallyCreatedSessionIds: { current: new Set<string>() },
+        }),
+      );
+      cleanup = hook.unmount;
+      expect(hook.result.current.sessionUiAuthority.configurationAvailable).toBe(available);
+      expect(hook.result.current.sessionUiAuthority.workspaceRoot).toBe(
+        available ? "/current-primary" : null,
+      );
+    },
+  );
+
   test("recovers an initially unknown Session when its top-level run starts", async () => {
     ensureMiniDom();
     const persisted = deferred<SessionWorkspaceAuthority>();

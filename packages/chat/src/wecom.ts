@@ -47,6 +47,7 @@ export class WeComAdapter implements ChannelAdapter {
         channel: this.channel,
         target: message.chatid ?? message.from.userid,
         senderId: message.from.userid,
+        isDirectMessage: message.chattype === "single",
         text: message.text.content,
         ...((frame as { headers?: { req_id?: string } }).headers?.req_id
           ? { messageId: (frame as { headers: { req_id: string } }).headers.req_id }
@@ -151,6 +152,7 @@ export class WeComAdapter implements ChannelAdapter {
       channel: this.channel,
       target: message.chatid ?? message.from.userid,
       senderId: message.from.userid,
+      isDirectMessage: message.chattype === "single",
       text,
       messageId: message.msgid,
       ...(attachments.length > 0 ? { attachments } : {}),

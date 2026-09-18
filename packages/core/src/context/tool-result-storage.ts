@@ -11,8 +11,8 @@
  *     mutated in place. Once a result is "seen", its fate is frozen for
  *     the rest of the session (prevents flapping replacement choices that
  *     would constantly invalidate the prompt prefix).
- *   • No transcript persistence / no fork-subagent gap-fill. Resume just
- *     re-derives the seenIds set from the loaded messages.
+ *   • Raw transcripts stay unchanged. A versioned text-only sidecar freezes
+ *     each saved preview, including text-slot positions, for cold replay.
  *
  * Strategy:
  *   • Per-result cap (DEFAULT_PERSIST_THRESHOLD): when a single tool_result
@@ -22,19 +22,27 @@
  *     parallel Read results), persist the largest ones first until under.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
 import { dirname, isAbsolute, join, relative, resolve, sep, win32 } from "node:path";
 import type { ContentBlock, Message } from "../types.js";
 import { logger } from "../logging/logger.js";
+import { estimateStringTokens } from "./token-counter.js";
+import {
+  DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,
+  DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,
+  createToolTextReplacement,
+  replaceToolResultText,
+  toolResultText,
+} from "./tool-output-budget.js";
 
 // ─── Tunables ───────────────────────────────────────────────────────
 
 /** Per-result threshold. Larger than this → persist + replace. */
-export const DEFAULT_PERSIST_THRESHOLD = 50_000;
+export const DEFAULT_PERSIST_THRESHOLD = 30_000;
 
 /** Per-message aggregate cap (sum of tool_result content sizes in one user msg). */
-export const PER_MESSAGE_AGGREGATE_CAP = 200_000;
+export const PER_MESSAGE_AGGREGATE_CAP = 100_000;
 
 /** Preview length included in the replacement string. */
 export const PREVIEW_SIZE = 2_000;
@@ -59,20 +67,23 @@ const CLEARED_PREFIX = "[Old tool result cleared";
 export interface ContentReplacementState {
   seenIds: Set<string>;
   replacements: Map<string, string>;
+  /** Text slots are retained for multimodal results; media never enter sidecars. */
+  textReplacements?: Map<string, string[]>;
 }
 
 export function createContentReplacementState(): ContentReplacementState {
-  return { seenIds: new Set(), replacements: new Map() };
+  return { seenIds: new Set(), replacements: new Map(), textReplacements: new Map() };
 }
 
 /**
  * Rebuild a state object by walking the loaded message history.
  * Used on resume so the budget makes the same decisions it made before.
- * Replacements are taken from the messages themselves (we identify them
- * by the PERSISTED_OPEN sentinel), so we don't need a side-channel log.
+ * Replacements come from already-reduced messages or the saved model view
+ * beside an intact original output when the transcript still contains raw text.
  */
 export function reconstructContentReplacementState(
   messages: Message[],
+  toolResultsDir?: string,
 ): ContentReplacementState {
   const state = createContentReplacementState();
   for (const msg of messages) {
@@ -80,8 +91,18 @@ export function reconstructContentReplacementState(
     for (const block of msg.content) {
       if (block.type !== "tool_result" || !block.tool_use_id) continue;
       state.seenIds.add(block.tool_use_id);
-      if (typeof block.content === "string" && block.content.startsWith(PERSISTED_OPEN)) {
-        state.replacements.set(block.tool_use_id, block.content);
+      const text = toolResultText(block.content);
+      if (text?.startsWith(PERSISTED_OPEN)) {
+        state.replacements.set(block.tool_use_id, text);
+        if (Array.isArray(block.content)) {
+          state.textReplacements!.set(block.tool_use_id, textParts(block.content));
+        }
+      } else if (toolResultsDir && text !== undefined) {
+        const saved = readSavedReplacement(toolResultsDir, block.tool_use_id, block.content);
+        if (saved) {
+          state.replacements.set(block.tool_use_id, saved.replacement);
+          if (saved.parts) state.textReplacements!.set(block.tool_use_id, saved.parts);
+        }
       }
     }
   }
@@ -137,11 +158,14 @@ function persistToFile(dir: string, toolUseId: string, content: string): string 
   }
   ensureDir(dir);
   try {
-    // 'wx' = fail if exists. Skipping on collision is correct: same id =
-    // same content. Avoids re-writing the same bytes every turn.
-    writeFileSync(filepath, content, { encoding: "utf-8", flag: "wx" });
+    // 'wx' = fail if exists. Only reuse an existing original if it is complete
+    // and identical; an interrupted prior write must not yield a false receipt.
+    writeFileSync(filepath, content, { encoding: "utf-8", flag: "wx", mode: 0o600 });
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EEXIST" && readFileSync(filepath, "utf8") !== content) {
+      throw new Error("Saved tool output does not match this result", { cause: err });
+    }
     if (code !== "EEXIST") {
       // Read-only FS (CI containers, ephemeral runtimes) hits EROFS/EACCES/
       // ENOENT here on every large tool_result. The caller already catches
@@ -160,22 +184,94 @@ function persistToFile(dir: string, toolUseId: string, content: string): string 
   return filepath;
 }
 
-function buildReplacement(filepath: string, originalSize: number, content: string): string {
-  const sizeKb = (originalSize / 1024).toFixed(1);
-  const previewRaw = content.slice(0, PREVIEW_SIZE);
-  // Cut at the last newline within the preview if there's one in the
-  // back half — avoids slicing mid-line which looks ugly to the model.
-  const lastNl = previewRaw.lastIndexOf("\n");
-  const preview = lastNl > PREVIEW_SIZE * 0.5 ? previewRaw.slice(0, lastNl) : previewRaw;
-  const hasMore = content.length > preview.length;
-  return (
+interface SavedReplacement {
+  replacement: string;
+  parts?: string[];
+}
+
+function textParts(content: ContentBlock[]): string[] {
+  return content
+    .filter((part) => part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text!);
+}
+
+function buildReplacement(
+  filepath: string,
+  originalSize: number,
+  content: ContentBlock["content"],
+): SavedReplacement {
+  const preview = createToolTextReplacement(content, { maxChars: PREVIEW_SIZE });
+  const header =
     `${PERSISTED_OPEN}\n` +
-    `Output too large (${sizeKb} KB). Full output saved to: ${filepath}\n\n` +
-    `Preview (first ${preview.length} chars${hasMore ? ", truncated" : ""}):\n` +
-    preview +
-    (hasMore ? "\n..." : "") +
-    `\n${PERSISTED_CLOSE}`
-  );
+    `Text output too large (${originalSize} chars). Full output saved to: ${filepath}\n` +
+    (Array.isArray(content) ? "Non-text attachments remain in their original positions.\n" : "") +
+    `Use Read with offset/limit or Grep on this file for omitted details; do not repeat a write operation to retrieve output.\n\n` +
+    `Preview (head and tail):\n`;
+  const footer = `\n${PERSISTED_CLOSE}`;
+  if (preview.parts?.length) {
+    const parts = [...preview.parts];
+    parts[0] = header + parts[0];
+    parts[parts.length - 1] += footer;
+    return { replacement: parts.join("\n\n"), parts };
+  }
+  return { replacement: header + preview.text + footer };
+}
+
+function contentHash(content: string): string {
+  return createHash("sha256").update(content, "utf8").digest("hex");
+}
+
+/** Store the exact model view beside the raw output, without changing the transcript. */
+function saveReplacement(filepath: string, content: string, saved: SavedReplacement): void {
+  const record = JSON.stringify({ version: 1, hash: contentHash(content), ...saved });
+  const previewPath = `${filepath}.preview.json`;
+  try {
+    if (readFileSync(previewPath, "utf8") === record) return;
+  } catch {
+    // Missing or interrupted previews are replaced below.
+  }
+  const temporaryPath = `${previewPath}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporaryPath, record, { flag: "wx", mode: 0o600 });
+    // Commit the complete record at once, also repairing a corrupt sidecar.
+    renameSync(temporaryPath, previewPath);
+  } finally {
+    rmSync(temporaryPath, { force: true });
+  }
+}
+
+function readSavedReplacement(
+  dir: string,
+  toolUseId: string,
+  original: ContentBlock["content"],
+): SavedReplacement | undefined {
+  try {
+    const content = toolResultText(original);
+    if (content === undefined) return undefined;
+    const filepath = join(resolve(dir), safeToolResultFilename(toolUseId));
+    const previewPath = `${filepath}.preview.json`;
+    if (statSync(previewPath).size > 32_768 || !statSync(filepath).isFile()) return undefined;
+    const record = JSON.parse(readFileSync(previewPath, "utf8"));
+    const validParts = Array.isArray(original)
+      ? Array.isArray(record.parts) &&
+        record.parts.length === textParts(original).length &&
+        record.parts.every((part: unknown) => typeof part === "string") &&
+        record.parts.join("\n\n") === record.replacement
+      : record.parts === undefined;
+    if (
+      record.version === 1 &&
+      record.hash === contentHash(content) &&
+      validParts &&
+      typeof record.replacement === "string" &&
+      record.replacement.startsWith(PERSISTED_OPEN) &&
+      record.replacement.includes(`Full output saved to: ${filepath}\n`) &&
+      readFileSync(filepath, "utf8") === content
+    )
+      return { replacement: record.replacement, ...(record.parts ? { parts: record.parts } : {}) };
+  } catch {
+    // Legacy sessions, deleted output files, or interrupted sidecar writes.
+  }
+  return undefined;
 }
 
 // ─── Application ─────────────────────────────────────────────────────
@@ -185,6 +281,7 @@ interface ToolResultCandidate {
   block: ContentBlock;
   content: string;
   size: number;
+  tokens: number;
 }
 
 function collectCandidates(msg: Message): ToolResultCandidate[] {
@@ -192,20 +289,18 @@ function collectCandidates(msg: Message): ToolResultCandidate[] {
   const out: ToolResultCandidate[] = [];
   for (const block of msg.content) {
     if (block.type !== "tool_result" || !block.tool_use_id) continue;
-    if (typeof block.content !== "string") continue;
+    const content = toolResultText(block.content);
+    if (content === undefined) continue;
     // Skip blocks already in a persisted/cleared sentinel — nothing to do
     // and we must not re-persist (would change replacement strings →
     // prompt cache miss).
-    if (
-      block.content.startsWith(PERSISTED_OPEN) ||
-      block.content.startsWith(CLEARED_PREFIX)
-    )
-      continue;
+    if (content.startsWith(PERSISTED_OPEN) || content.startsWith(CLEARED_PREFIX)) continue;
     out.push({
       toolUseId: block.tool_use_id,
       block,
-      content: block.content,
-      size: block.content.length,
+      content,
+      size: content.length,
+      tokens: estimateStringTokens(content),
     });
   }
   return out;
@@ -216,6 +311,9 @@ interface PersistOptions {
   perResultThreshold?: number;
   /** Per-message aggregate cap; default PER_MESSAGE_AGGREGATE_CAP. */
   perMessageCap?: number;
+  /** Estimated text token budgets, shared by all text parts of a result/batch. */
+  perResultTokenLimit?: number;
+  perMessageTokenLimit?: number;
   /** Directory to write tool-result files to. Required. */
   toolResultsDir: string;
   /** Decision state, mutated in place. */
@@ -251,6 +349,8 @@ export function applyToolResultPersistence(
   const {
     perResultThreshold = DEFAULT_PERSIST_THRESHOLD,
     perMessageCap = PER_MESSAGE_AGGREGATE_CAP,
+    perResultTokenLimit = DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,
+    perMessageTokenLimit = DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,
     toolResultsDir,
     state,
     onPersist,
@@ -285,59 +385,56 @@ export function applyToolResultPersistence(
 
     if (fresh.length === 0) continue;
 
-    // Per-result: anything individually over the threshold gets persisted.
-    const toPersist = new Set<string>();
-    for (const c of fresh) {
-      if (c.size > perResultThreshold) {
-        toPersist.add(c.toolUseId);
-      }
+    // Include the ACTUAL size of existing previews, not only fresh candidates.
+    let projectedChars = 0;
+    let projectedTokens = 0;
+    for (const block of msg.content as ContentBlock[]) {
+      if (block.type !== "tool_result") continue;
+      const current = toolResultText(block.content);
+      const text = current?.startsWith(CLEARED_PREFIX)
+        ? current
+        : ((block.tool_use_id ? state.replacements.get(block.tool_use_id) : undefined) ?? current);
+      if (text === undefined) continue;
+      projectedChars += text.length;
+      projectedTokens += estimateStringTokens(text);
     }
-
-    // Per-message: if the total (frozen + fresh) still exceeds the cap,
-    // pick more from the largest remaining fresh blocks until under.
-    const frozenSize = candidates
-      .filter((c) => state.seenIds.has(c.toolUseId) && !state.replacements.has(c.toolUseId))
-      .reduce((s, c) => s + c.size, 0);
-    let projected =
-      frozenSize +
-      fresh.reduce((s, c) => s + (toPersist.has(c.toolUseId) ? 0 : c.size), 0);
-    if (projected > perMessageCap) {
-      const remaining = fresh
-        .filter((c) => !toPersist.has(c.toolUseId))
-        .sort((a, b) => b.size - a.size);
-      for (const c of remaining) {
-        if (projected <= perMessageCap) break;
-        toPersist.add(c.toolUseId);
-        projected -= c.size;
-      }
-    }
-
-    // Persist + mark.
-    for (const c of fresh) {
-      if (toPersist.has(c.toolUseId)) {
-        try {
-          const filepath = persistToFile(toolResultsDir, c.toolUseId, c.content);
-          const replacement = buildReplacement(filepath, c.size, c.content);
-          state.replacements.set(c.toolUseId, replacement);
-          newReplacements.set(c.toolUseId, replacement);
-          state.seenIds.add(c.toolUseId);
-          onPersist?.({
-            toolUseId: c.toolUseId,
-            filepath,
-            originalSize: c.size,
-            reason: c.size > perResultThreshold ? "per-result-cap" : "per-message-budget",
-          });
-        } catch {
-          // Persistence failed — leave block untouched, but mark seen so
-          // we don't try again next turn (and don't risk flapping if a
-          // transient FS issue clears up).
-          state.seenIds.add(c.toolUseId);
-        }
-      } else {
-        // Decided "don't persist" → freeze that decision.
+    const oversized = (c: ToolResultCandidate) =>
+      c.size > perResultThreshold || c.tokens > perResultTokenLimit;
+    const persist = (c: ToolResultCandidate, reason: "per-result-cap" | "per-message-budget") => {
+      try {
+        const filepath = persistToFile(toolResultsDir, c.toolUseId, c.content);
+        const saved =
+          readSavedReplacement(toolResultsDir, c.toolUseId, c.block.content) ??
+          buildReplacement(filepath, c.size, c.block.content);
+        const { replacement, parts } = saved;
+        // Very small results must not grow just because a batch is over budget.
+        if (reason === "per-message-budget" && replacement.length >= c.size) return;
+        saveReplacement(filepath, c.content, saved);
+        state.replacements.set(c.toolUseId, replacement);
+        if (parts) (state.textReplacements ??= new Map()).set(c.toolUseId, parts);
+        newReplacements.set(c.toolUseId, replacement);
+        projectedChars -= c.size - replacement.length;
+        projectedTokens -= c.tokens - estimateStringTokens(replacement);
+        onPersist?.({ toolUseId: c.toolUseId, filepath, originalSize: c.size, reason });
+      } catch {
+        // The in-context backstop still applies if saving the original fails.
+      } finally {
         state.seenIds.add(c.toolUseId);
       }
+    };
+    for (const c of fresh.filter(oversized)) persist(c, "per-result-cap");
+    const remaining = fresh
+      .filter((c) => !oversized(c))
+      .sort(
+        (a, b) =>
+          Math.max(b.size / perMessageCap, b.tokens / perMessageTokenLimit) -
+          Math.max(a.size / perMessageCap, a.tokens / perMessageTokenLimit),
+      );
+    for (const c of remaining) {
+      if (projectedChars <= perMessageCap && projectedTokens <= perMessageTokenLimit) break;
+      persist(c, "per-message-budget");
     }
+    for (const c of fresh) state.seenIds.add(c.toolUseId);
   }
 
   // Pass 2: rewrite messages. For every tool_result whose id is in
@@ -352,20 +449,25 @@ export function applyToolResultPersistence(
       if (block.type !== "tool_result" || !block.tool_use_id) return block;
       const replacement = state.replacements.get(block.tool_use_id);
       if (replacement === undefined) return block;
-      if (block.content === replacement) return block;
+      const text = toolResultText(block.content);
+      if (text === replacement) return block;
       // microcompact may have already cleared this block to a fingerprint.
       // Don't roll it back — that would cause persistence and microcompact
       // to overwrite each other every turn, doing 2 redundant rewrites on
       // a stable end-state. The cleared fingerprint is the legitimate
       // downstream form; leave it alone.
-      if (
-        typeof block.content === "string" &&
-        block.content.startsWith(CLEARED_PREFIX)
-      ) {
+      if (text?.startsWith(CLEARED_PREFIX)) {
         return block;
       }
       blockChanged = true;
-      return { ...block, content: replacement };
+      return {
+        ...block,
+        content: replaceToolResultText(
+          block.content,
+          replacement,
+          state.textReplacements?.get(block.tool_use_id),
+        ),
+      };
     });
     if (!blockChanged) return msg;
     mutated = true;

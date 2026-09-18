@@ -13,6 +13,7 @@ describe("automationBuiltinTools", () => {
   });
   it("excludes AskUserQuestion (no human present in an unattended run)", () => {
     expect(automationBuiltinTools()).not.toContain("AskUserQuestion");
+    expect(automationBuiltinTools()).not.toContain("AskUserQuestionAsync");
   });
   it("excludes MCP tools so unattended runs cannot block on external MCP startup", () => {
     const names = automationBuiltinTools();

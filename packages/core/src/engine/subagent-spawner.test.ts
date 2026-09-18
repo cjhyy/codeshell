@@ -592,6 +592,8 @@ describe("child host lifetime", () => {
       parent.readOnlySession = true;
       parent.projectTrusted = false;
       parent.allowBackgroundShells = false;
+      parent.askUserAsync = async () => "parent question displayed";
+      const childAskUserAsync = async () => "child question displayed";
       const browser = {} as NonNullable<EngineConfig["browserBridge"]>;
       parent.browserBridge = {} as NonNullable<EngineConfig["browserBridge"]>;
       parent.createChildHostBindings = (input) => {
@@ -599,6 +601,7 @@ describe("child host lifetime", () => {
         expect(input.sessionId).toBe("resumed-child");
         return {
           browserBridge: browser,
+          askUserAsync: childAskUserAsync,
           activate() {
             events.push("activate");
           },
@@ -621,6 +624,8 @@ describe("child host lifetime", () => {
             events.push("run");
             expect(config.browserBridge).toBe(browser);
             expect(config.browserBridge).not.toBe(parent.browserBridge);
+            expect(config.askUserAsync).toBe(childAskUserAsync);
+            expect(config.askUserAsync).not.toBe(parent.askUserAsync);
             expect(config).toMatchObject({
               readOnlySession: true,
               projectTrusted: false,
@@ -657,6 +662,7 @@ describe("supervised child resource cleanup", () => {
     it(`disposes host before the Engine after ${fail ? "failure" : "success"}`, async () => {
       const events: string[] = [];
       const parent = parentConfig();
+      parent.askUserAsync = async () => "parent question displayed";
       parent.createChildHostBindings = () => ({
         dispose() {
           events.push("host.dispose");
@@ -672,9 +678,10 @@ describe("supervised child resource cleanup", () => {
         appendParentSubagent() {},
         sessionExists: () => false,
         childRunner: {
-          createChild: () => ({
+          createChild: (config) => ({
             setAgentControlStateListener() {},
             async run(_task, options) {
+              expect(config.askUserAsync).toBeUndefined();
               events.push("run");
               if (fail) throw new Error("child failed");
               return {

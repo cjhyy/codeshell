@@ -199,6 +199,7 @@ describe("CodeShell remote command integration", () => {
     );
     await gateway.dispatch(adapter, {
       ...message("帮我看看"),
+      isDirectMessage: true,
       attachments: [
         {
           id: "image-1",
@@ -217,7 +218,11 @@ describe("CodeShell remote command integration", () => {
       dataBase64: "AQID",
       mimeType: "application/octet-stream",
     });
-    expect(observed.origin).toMatchObject({ channel: "telegram", senderId: "user-1" });
+    expect(observed.origin).toMatchObject({
+      channel: "telegram",
+      senderId: "user-1",
+      isDirectMessage: true,
+    });
     expect(observed.origin.capabilities).toEqual({
       inbound: { text: true, attachments: [] },
       // These distinguish open-conversation replies, proactive pushes, and a

@@ -7,6 +7,7 @@ import type {
   PetLongTaskSnapshot,
   PetPeek,
   PetProjectionEvent,
+  SessionSnapshot,
   StreamEventEnvelope,
 } from "../../preload/types";
 import React from "react";
@@ -33,11 +34,18 @@ import {
 } from "./petReliability";
 import { loadPetChatModelKey, savePetChatModelKey, type PetSettingsBridge } from "./petPreferences";
 import { useT } from "../i18n";
+import { snapshotHasUnfinishedTopLevelTurn } from "../snapshotReplay";
+import { petChatReplay, type PetChatBufferedEvent } from "./petChatReplay";
 import {
   petChatResultFailure,
   type PetChatFailure,
   type PetChatSubmission,
 } from "./petChatSubmission";
+import type { PetDispatchResult } from "../../preload/pet-api";
+
+type AcceptedChatInput = NonNullable<
+  Extract<PetDispatchResult, { type: "global_status" }>["chatInputs"]
+>[number];
 
 export interface PetStateContextValue {
   state: PetState;
@@ -388,10 +396,28 @@ export function PetStateProvider({
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let knownPetSessionId: string | null = null;
     let transcriptHydrated = false;
-    const bufferedStream: StreamEventEnvelope[] = [];
+    let streamActive = false;
+    const bufferedStream: PetChatBufferedEvent[] = [];
+    const appliedSequences = new Map<string | undefined, number>();
+    const acceptedInputs = new Map<string, AcceptedChatInput>();
+    const startedInputIds = new Set<string>();
     const shell = globalThis.window?.codeshell;
 
-    const applyStream = (envelope: StreamEventEnvelope): void => {
+    const applyWorkerExit = (): void => {
+      // An explicit process exit is conclusive, unlike an expired RPC wait.
+      // Pending submissions still settle individually so their drafts and ids
+      // survive for retry, including inputs queued for the next worker.
+      setChatBusy(false);
+      if (streamActive)
+        chatDispatch({ type: "turn_end", bucket: PET_CHAT_BUCKET, reason: "error" });
+      streamActive = false;
+    };
+    const applyStream = (envelope: StreamEventEnvelope, history?: MessagesReducerState): void => {
+      if (envelope.seq !== undefined) {
+        const previous = appliedSequences.get(envelope.epoch) ?? 0;
+        if (envelope.seq <= previous) return;
+        appliedSequences.set(envelope.epoch, envelope.seq);
+      }
       const event = envelope.event;
       const child = "agentId" in event && event.agentId !== undefined;
       const identity = activeChatIdentityRef.current;
@@ -414,14 +440,60 @@ export function PetStateProvider({
         )
           return;
       }
+      if (!child && event.type === "session_started" && event.clientMessageId) {
+        startedInputIds.add(event.clientMessageId);
+        const accepted = acceptedInputs.get(event.clientMessageId);
+        const user = history?.messages.find(
+          (message) => message.kind === "user" && message.clientMessageId === event.clientMessageId,
+        );
+        if (user?.kind === "user" || accepted) {
+          // A queued input can begin after reload, without another submission
+          // event. Main's accepted input supplies its original intent anchor.
+          chatDispatch({
+            type: "user_message",
+            bucket: PET_CHAT_BUCKET,
+            text: user?.kind === "user" ? user.text : accepted!.message,
+            clientMessageId: event.clientMessageId,
+            attachments: user?.kind === "user" ? user.attachments : accepted?.attachments,
+            pending: false,
+          });
+        }
+      }
+      if (!child && event.type === "steer_injected" && event.id) {
+        startedInputIds.add(event.id);
+        const accepted = acceptedInputs.get(event.id);
+        const user = history?.messages.find(
+          (message) =>
+            message.kind === "user" &&
+            (message.steerId === event.id || message.clientMessageId === event.id),
+        );
+        if (user?.kind === "user" || accepted) {
+          // Injection can race the history read before its queued bubble is
+          // restored, or replay after Main has retired the accepted input.
+          // Restore the original identity before folding its reply.
+          chatDispatch({
+            type: "user_message",
+            bucket: PET_CHAT_BUCKET,
+            text: user?.kind === "user" ? user.text : accepted!.message,
+            clientMessageId:
+              user?.kind === "user" ? user.clientMessageId : accepted!.clientMessageId,
+            steerId: event.id,
+            pending: false,
+            attachments: user?.kind === "user" ? user.attachments : accepted?.attachments,
+          });
+        }
+      }
       chatDispatch({ type: "stream", bucket: PET_CHAT_BUCKET, event: envelope.event });
       if (child) return;
       if (
         event.type === "stream_request_start" &&
         (!event.clientMessageId || !stoppedChatIdsRef.current.has(event.clientMessageId))
-      )
+      ) {
+        streamActive = true;
         setChatBusy(true);
+      }
       if (event.type === "turn_complete" || event.type === "error") {
+        streamActive = false;
         setChatBusy(false);
       }
     };
@@ -434,14 +506,38 @@ export function PetStateProvider({
       if (envelope.sessionId === knownPetSessionId) applyStream(envelope);
     };
     const unsubscribeStream = shell?.onStreamEvent?.(receiveStream);
+    const unsubscribeLifecycle = shell?.onAgentLifecycle?.((event) => {
+      if (!active || (event.type !== "exited" && event.type !== "gave_up")) return;
+      if (!knownPetSessionId || !transcriptHydrated) {
+        // Preserve ordering with buffered starts: history loading after a
+        // crash must not resurrect the dead worker's busy indicator.
+        pushBoundedPetEvent(bufferedStream, { workerExited: true }, PET_STREAM_BUFFER_LIMIT);
+      }
+      applyWorkerExit();
+    });
 
-    const finishHydration = (sessionId: string, history?: MessagesReducerState): void => {
+    const finishHydration = (
+      sessionId: string,
+      history?: MessagesReducerState,
+      snapshot?: SessionSnapshot,
+    ): void => {
       if (!active || knownPetSessionId !== sessionId) return;
       // Fold the buffered live turn first, then merge the disk snapshot into it.
       // Replaying this buffer on top of history duplicates the same assistant
       // when the disk read already included its streamed reply.
-      for (const envelope of bufferedStream.splice(0)) {
-        if (envelope.sessionId === sessionId) applyStream(envelope);
+      for (const envelope of petChatReplay(sessionId, snapshot, bufferedStream.splice(0))) {
+        if ("snapshot" in envelope) {
+          const clientMessageId = activeChatIdentityRef.current.clientMessageId;
+          const running =
+            snapshotHasUnfinishedTopLevelTurn(envelope.snapshot) &&
+            (!clientMessageId || !stoppedChatIdsRef.current.has(clientMessageId));
+          if (!running) applyWorkerExit();
+          else {
+            streamActive = true;
+            setChatBusy(true);
+          }
+        } else if ("workerExited" in envelope) applyWorkerExit();
+        else if (envelope.sessionId === sessionId) applyStream(envelope, history);
       }
       if (history)
         chatDispatch({
@@ -451,6 +547,27 @@ export function PetStateProvider({
           history,
           goalAtStart: null,
         });
+      const durableInputs = new Set(
+        history?.messages.flatMap((message) =>
+          message.kind === "user" && message.clientMessageId ? [message.clientMessageId] : [],
+        ),
+      );
+      // Restore waiting inputs after the current run's replay so a held reply
+      // keeps its own user anchor. Starts/injections observed during the reads
+      // supersede the earlier pending snapshot; never re-queue those inputs.
+      for (const input of acceptedInputs.values()) {
+        if (startedInputIds.has(input.clientMessageId) || durableInputs.has(input.clientMessageId))
+          continue;
+        chatDispatch({
+          type: "user_message",
+          bucket: PET_CHAT_BUCKET,
+          text: input.message,
+          clientMessageId: input.clientMessageId,
+          steerId: input.clientMessageId,
+          pending: input.pending,
+          attachments: input.attachments,
+        });
+      }
       transcriptHydrated = true;
     };
 
@@ -465,13 +582,22 @@ export function PetStateProvider({
             return;
           }
           const sessionId = result.petSessionId;
+          for (const input of result.chatInputs ?? [])
+            acceptedInputs.set(input.clientMessageId, input);
           knownPetSessionId = sessionId;
           setPetSessionId(sessionId);
           setChatHistoryLoadedBytes(0);
           setChatHistoryHasMore(false);
           chatHistoryRequestedBytesRef.current = INITIAL_PET_HISTORY_BYTES;
+          let snapshot: SessionSnapshot | undefined;
+          try {
+            snapshot = await shell?.subscribeSession?.(sessionId, 0);
+          } catch {
+            // Older or starting bridges can still hydrate the durable history.
+          }
+          if (!active) return;
           if (!shell?.getSessionTranscript) {
-            finishHydration(sessionId);
+            finishHydration(sessionId, undefined, snapshot);
             return;
           }
           let history: MessagesReducerState | undefined;
@@ -492,7 +618,7 @@ export function PetStateProvider({
           } catch {
             // A new Pet has no transcript yet; the first chat turn creates it.
           } finally {
-            finishHydration(sessionId, history);
+            finishHydration(sessionId, history, snapshot);
           }
         })
         .catch(() => {
@@ -507,6 +633,7 @@ export function PetStateProvider({
       if (retryTimer) clearTimeout(retryTimer);
       bufferedStream.length = 0;
       unsubscribeStream?.();
+      unsubscribeLifecycle?.();
     };
   }, [api, snapshotRetryDelay]);
 

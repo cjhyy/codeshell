@@ -46,6 +46,7 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
   const pendingDecisionIndex = new PendingDecisionIndex();
   const petSessionIndex = new SessionIndex();
   const petCatalog = new Map<string, { sessionId: string; updatedAt: number }>();
+  const publishedSessionIds = new Set<string>();
   let petProjectionVersion = 0;
   let petProjectionDisconnected = false;
   let petProjectionClosing = false;
@@ -61,7 +62,31 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
     // Socket teardown can resolve a fail-closed approval and finish its run.
     // Do not write projection tail events to a transport whose owner is gone.
     if (host.isTransportDisconnected() && !petProjectionClosing) return;
+    if (delta.kind === "session-upsert") publishedSessionIds.add(delta.session.agentSessionId);
+    if (delta.kind === "session-remove") publishedSessionIds.delete(delta.sessionId);
     host.notify(PET_PROJECTION_DELTA_METHOD, delta as unknown as Record<string, unknown>);
+  };
+
+  const discardHiddenSession = (sessionId: string, observedAt: number): void => {
+    if (petCatalog.delete(sessionId)) {
+      petSessionIndex.replaceCatalog({
+        owner: LOCAL_PET_OWNER,
+        sessions: [...petCatalog.values()],
+        observedAt,
+      });
+    }
+    // A first run can be observed before Engine persists its durable kind.
+    // Once it becomes hidden, withdraw any earlier default-kind projection;
+    // merely skipping later events would leave it permanently "running".
+    if (publishedSessionIds.has(sessionId)) {
+      sendPetProjectionDelta({
+        workerGeneration: petWorkerGeneration(),
+        version: nextPetProjectionVersion(),
+        observedAt,
+        kind: "session-remove",
+        sessionId,
+      });
+    }
   };
 
   const ensurePetSession = (sessionId: string, updatedAt = Date.now()): void => {
@@ -125,6 +150,7 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
       .map((session) => currentPetSessionProjection(session.sessionId, observedAt))
       .filter((session): session is PetSessionProjection => session !== undefined)
       .sort((a, b) => a.agentSessionId.localeCompare(b.agentSessionId));
+    for (const session of sessions) publishedSessionIds.add(session.agentSessionId);
     return {
       snapshotVersion: petProjectionVersion,
       workerGeneration: petWorkerGeneration(),
@@ -140,7 +166,10 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
     if (isQuickChatSessionId(sessionId)) return;
     const observedAt = Date.now();
     const live = host.getLiveSessionSnapshot().find((session) => session.sessionId === sessionId);
-    if (live?.kind === "pet") return;
+    if (live?.kind === "pet") {
+      discardHiddenSession(sessionId, observedAt);
+      return;
+    }
     ensurePetSession(sessionId, observedAt);
     const version = nextPetProjectionVersion();
     petSessionIndex.applyStreamEvent({
@@ -164,7 +193,10 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
   const emitPetSessionUpsert = (sessionId: string): void => {
     const observedAt = Date.now();
     const session = currentPetSessionProjection(sessionId, observedAt);
-    if (!session) return;
+    if (!session) {
+      if (host.getSessionKind(sessionId) === "pet") discardHiddenSession(sessionId, observedAt);
+      return;
+    }
     sendPetProjectionDelta({
       workerGeneration: petWorkerGeneration(),
       version: nextPetProjectionVersion(),

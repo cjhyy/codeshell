@@ -3,12 +3,12 @@
  *
  * Everything a bound message needs to survive lives here: the deterministic
  * commands, the fail-closed checks that run before each delivery, and the
- * decision between starting a turn, joining the one in flight, or queuing for
- * the next. The gateway middleware only asks "what happened to this message".
+ * admission into a new turn or the existing Session's queue. The gateway
+ * middleware only asks "what happened to this message".
  *
  * Design rule this file exists to keep: a message is never lost and never
- * delivered to the wrong place. Every failure mode routes back to Mimi with a
- * reason rather than silently dropping the text or guessing a Session.
+ * delivered to the wrong place. A failure returns an explicit routing error
+ * rather than silently sending the text to a different conversation.
  */
 
 import {
@@ -17,7 +17,7 @@ import {
   type ConversationSessionRoute,
 } from "@cjhyy/code-shell-pet";
 import type { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
-import { imConversationRouteKey, resolveSteerOutcome } from "./session-turn-scheduler.js";
+import { imConversationRouteKey } from "./session-turn-scheduler.js";
 
 export type BoundSessionDisposition =
   | { kind: "not-bound" }
@@ -57,7 +57,7 @@ export interface BoundSessionRunner {
   wasInjected(sessionId: string, id: string): boolean;
   /** Resolves when the in-flight turn settles. */
   runDone(sessionId: string): Promise<void>;
-  /** Persistently queue for the next turn (external runtimes cannot steer). */
+  /** Queue for the next turn; resolves on worker admission, not turn completion. */
   queueNextTurn(input: { sessionId: string; text: string; clientMessageId: string }): Promise<void>;
   /** Whether this runtime supports steering at all. */
   supportsSteer(sessionId: string): boolean;
@@ -94,15 +94,17 @@ export class SessionConversationBridge {
   constructor(private readonly deps: SessionConversationBridgeDeps) {}
 
   /**
-   * Decide what happens to one inbound message. Never throws: an unexpected
-   * failure reports not-bound so the gateway falls through to Mimi, which is
-   * the behavior that existed before any binding.
+   * Only a confirmed absent binding may fall through to Mimi. An unknown
+   * routing state must not send the same input to a second conversation.
    */
   async accept(inbound: BoundSessionInbound): Promise<BoundSessionDisposition> {
     try {
       return await this.route(inbound);
     } catch {
-      return { kind: "not-bound" };
+      return {
+        kind: "suspended",
+        text: "暂时无法确认当前 Session 路由，这条消息没有转交给 Mimi。请稍后重试。",
+      };
     }
   }
 
@@ -129,6 +131,10 @@ export class SessionConversationBridge {
 
     if (!route) return { kind: "not-bound" };
 
+    if (!inbound.isDirectMessage) {
+      return { kind: "suspended", text: "进入 Session 目前只支持私聊。请私聊我再试一次。" };
+    }
+
     if (command === "status") {
       // Deliberately does not touch the runner: /session must never start a
       // turn or wake a model.
@@ -149,6 +155,13 @@ export class SessionConversationBridge {
       ? boundSessionStalePrompt(route.sessionTitle).hint
       : undefined;
 
+    if (!inbound.text.trim()) {
+      return {
+        kind: "suspended",
+        text: "当前 Session 入口只支持文字消息，请输入文字后重试。",
+      };
+    }
+
     try {
       await this.deliver(route, inbound);
     } catch {
@@ -157,7 +170,7 @@ export class SessionConversationBridge {
       // trace, which is worse than an honest failure they can retry.
       return {
         kind: "suspended",
-        text: `「${route.sessionTitle}」暂时无法接收消息，刚才那条没有发送出去。稍后再试，或发送 /mimi 退出。`,
+        text: `未能确认「${route.sessionTitle}」已接收这条消息。请稍后查看 /session，或发送 /mimi 退出。`,
       };
     }
     await this.deps.routes.recordInbound(route.id);
@@ -166,9 +179,10 @@ export class SessionConversationBridge {
   }
 
   /**
-   * Start, join, or queue. The ordering is deliberate: ask whether a turn is
-   * running, but never trust that answer alone — the engine rejects a steer
-   * when no run is active, and the truth lives in the worker process.
+   * Both start and queue wait only for the worker's admission acknowledgement.
+   * Waiting for a running turn to consume a steer can exceed the IM HTTP
+   * timeout and route one input to both the Work Session and Mimi. Core's
+   * session queue preserves the existing context and serializes follow-ups.
    */
   private async deliver(
     route: ConversationSessionRoute,
@@ -178,9 +192,7 @@ export class SessionConversationBridge {
     const text = inbound.text.trim();
     const running = await this.deps.runner.isRunning(route.sessionId);
 
-    if (running && !this.deps.runner.supportsSteer(route.sessionId)) {
-      // External runtimes (codex, claude-code) have no steer at all, only a
-      // post-turn continuation queue, so the message waits durably.
+    if (running) {
       await this.deps.runner.queueNextTurn({
         sessionId: route.sessionId,
         text,
@@ -189,39 +201,13 @@ export class SessionConversationBridge {
       return;
     }
 
-    if (running) {
-      const steerId = clientMessageId;
-      const outcome = await resolveSteerOutcome({
-        steer: () =>
-          this.deps.runner.steer({
-            sessionId: route.sessionId,
-            text,
-            id: steerId,
-            clientMessageId,
-          }),
-        wasInjected: () => this.deps.runner.wasInjected(route.sessionId, steerId),
-        unsteer: () => this.deps.runner.unsteer({ sessionId: route.sessionId, id: steerId }),
-        runDone: () => this.deps.runner.runDone(route.sessionId),
-      });
-      if (outcome === "consumed") return;
-      // Not consumed: fall through and run it as its own turn. The stable
-      // clientMessageId keeps that safe if the steer secretly landed.
-    }
-
     const started = await this.deps.runner.run({
       sessionId: route.sessionId,
       text,
       clientMessageId,
     });
     if (!started.started) {
-      // A refused start must not vanish; queue it so the next turn picks it up.
-      // queueNextTurn throws when it too is refused, and accept() turns that
-      // into a visible failure rather than a false acknowledgement.
-      await this.deps.runner.queueNextTurn({
-        sessionId: route.sessionId,
-        text,
-        clientMessageId,
-      });
+      throw new Error(started.reason ?? "the Session refused the message");
     }
   }
 }

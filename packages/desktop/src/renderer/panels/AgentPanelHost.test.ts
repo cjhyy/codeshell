@@ -10,6 +10,45 @@ import { replacePanelApps } from "./PanelRegistry";
 installQuickChatPanelApp();
 
 describe("resolveAgentPanelHostRequest", () => {
+  test("keeps Git review out of agent discovery and rejects direct opens in non-repositories", async () => {
+    const opened: string[] = [];
+    const options = {
+      availability: {
+        projectPath: "/notes",
+        cwd: "/notes",
+        engineSessionId: "notes",
+        gitReviewAvailable: false,
+      },
+      translate: (key: string) => key,
+      open: (panelId: string) => opened.push(panelId),
+      invoke: async () => null,
+    };
+    const request = {
+      requestId: "git-gating",
+      routing: "owner" as const,
+      sessionId: "notes",
+      bucket: "notes-bucket",
+      action: "list" as const,
+    };
+    const listed = await resolveAgentPanelHostRequest(request, options);
+    expect(listed.result.panels?.some((panel) => panel.id === "review")).toBe(false);
+    const blocked = await resolveAgentPanelHostRequest(
+      { ...request, action: "open", panelId: "review" },
+      options,
+    );
+    expect(blocked.result.ok).toBe(false);
+    expect(opened).toEqual([]);
+    const allowed = await resolveAgentPanelHostRequest(
+      { ...request, action: "open", panelId: "review" },
+      {
+        ...options,
+        availability: { ...options.availability, gitReviewAvailable: true },
+      },
+    );
+    expect(allowed.result.ok).toBe(true);
+    expect(opened).toEqual(["review"]);
+  });
+
   test("handles owner-routed requests after the owner switches buckets", () => {
     const ownerRequest = {
       requestId: "request-owner-background",

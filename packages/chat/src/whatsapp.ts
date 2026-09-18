@@ -32,6 +32,7 @@ interface WhatsAppWebhookBody {
         messages?: Array<{
           id?: string;
           from?: string;
+          group_id?: string;
           type?: string;
           text?: { body?: string };
           image?: WhatsAppMedia;
@@ -106,6 +107,7 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
               channel: this.channel,
               target: message.from,
               senderId: message.from,
+              isDirectMessage: !message.group_id,
               text,
               ...(message.id ? { messageId: message.id } : {}),
               ...(media?.attachment ? { attachments: [media.attachment] } : {}),

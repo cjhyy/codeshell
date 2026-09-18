@@ -195,8 +195,7 @@ export interface ActiveGoal {
 
 /**
  * Lightweight marker for how a turn ended when it didn't end naturally
- * (TODO 2.8). Rendered as a thin right-aligned status line with a divider —
- * NOT a foldable tool/thinking card. `elapsedMs` drives "你在 Ns 后停止了".
+ * Rendered as a compact status, separate from tool/thinking cards.
  */
 export interface TurnEndMessage {
   kind: "turn_end";
@@ -263,6 +262,8 @@ export interface AskUserMessage {
    *  box. Used by closed-set permission prompts whose answer is matched by
    *  exact label, where a typed answer would silently fail to match. */
   optionsOnly?: boolean;
+  /** The agent continues working while this question remains available. */
+  asynchronous?: boolean;
   /** Set after the user answers; chat then renders as resolved. */
   answer?: string;
 }
@@ -327,6 +328,9 @@ export interface AgentRuntime {
 }
 
 export interface MessagesReducerState {
+  /** Lightweight live-run projections, retained while their user anchor exists. */
+  streamRuns?: Record<string, StreamRunProjection>;
+  activeStreamRunKey?: string;
   messages: Message[];
   /**
    * Track which assistant message id is currently streaming. Set on
@@ -379,6 +383,20 @@ export interface MessagesReducerState {
    * status-popover Goal block + the goal-message marker.
    */
   activeGoal: ActiveGoal | null;
+}
+
+interface StreamRunProjection {
+  runId?: string;
+  clientMessageId?: string;
+  userMessageId: string;
+  streamingAssistantId: string | null;
+  streamingThinkingId: string | null;
+  promptTokens: number;
+  singleTurnPromptTokens: number;
+  singleTurnCacheReadTokens: number;
+  singleTurnCacheCreationTokens: number;
+  completed?: boolean;
+  stopped?: boolean;
 }
 
 export const INITIAL_STATE: MessagesReducerState = {
@@ -618,6 +636,219 @@ export function applyStreamEvent(
   state: MessagesReducerState,
   event: StreamEvent,
   now: MessageClock = Date.now,
+): MessagesReducerState {
+  if (
+    ("agentId" in event && event.agentId !== undefined) ||
+    event.type === "session_user_message" ||
+    event.type === "steer_injected"
+  ) {
+    return applyStreamEventToTurn(state, event, now);
+  }
+  const runs = state.streamRuns ?? {};
+  const knownKey = Object.keys(runs).find((key) =>
+    event.runId
+      ? runs[key]!.runId === event.runId
+      : event.clientMessageId
+        ? runs[key]!.clientMessageId === event.clientMessageId
+        : false,
+  );
+  const latestUser = state.messages
+    .slice()
+    .reverse()
+    .find((message) => message.kind === "user" && !message.injected && !message.pending);
+  const owner = event.clientMessageId
+    ? state.messages.find(
+        (message) => message.kind === "user" && message.clientMessageId === event.clientMessageId,
+      )
+    : knownKey
+      ? state.messages.find((message) => message.id === runs[knownKey]!.userMessageId)
+      : latestUser;
+  // Legacy streams keep their established run until the next start. Native
+  // streams carry identities, including terminal callbacks after Stop.
+  const startsLegacyTurn =
+    !event.runId &&
+    !event.clientMessageId &&
+    owner?.kind === "user" &&
+    (event.type === "session_started" ||
+      (event.type === "stream_request_start" &&
+        !owner.injected &&
+        runs[state.activeStreamRunKey ?? ""]?.userMessageId !== owner.id));
+  const key =
+    knownKey ??
+    (event.runId
+      ? `run:${event.runId}`
+      : event.clientMessageId
+        ? `client:${event.clientMessageId}`
+        : startsLegacyTurn && owner
+          ? `legacy:${owner.id}`
+          : state.activeStreamRunKey);
+  // Snapshot prefixes can omit the originating user. Without a known anchor,
+  // retain the legacy fold instead of silently discarding recovered output.
+  if (!owner && (event.runId || event.clientMessageId) && latestUser) return state;
+  if (!owner || !key) return applyStreamEventToTurn(state, event, now);
+  if (
+    !knownKey &&
+    event.runId &&
+    event.type !== "session_started" &&
+    state.activeStreamRunKey &&
+    !event.clientMessageId
+  ) {
+    // A detached callback without a known user anchor cannot own the new run.
+    return state;
+  }
+  const previous = runs[key];
+  const ownerId = previous?.userMessageId ?? owner.id;
+  const start = state.messages.findIndex((message) => message.id === ownerId);
+  if (start < 0) return state;
+  const endOffset = state.messages
+    .slice(start + 1)
+    .findIndex((message) => message.kind === "user" && !message.injected && !message.pending);
+  const end = endOffset < 0 ? state.messages.length : start + 1 + endOffset;
+  const historical = end < state.messages.length;
+  const sameAnchorOlderRun =
+    !historical &&
+    !!knownKey &&
+    !!state.activeStreamRunKey &&
+    key !== state.activeStreamRunKey &&
+    runs[state.activeStreamRunKey]?.userMessageId === ownerId;
+  if (sameAnchorOlderRun) return state;
+
+  const fresh = (event.type === "session_started" || startsLegacyTurn) && !previous;
+  let scoped = historical
+    ? {
+        ...state,
+        messages: state.messages.slice(start, end),
+        streamingAssistantId: previous?.streamingAssistantId ?? null,
+        streamingThinkingId: previous?.streamingThinkingId ?? null,
+        promptTokens: previous?.promptTokens ?? 0,
+        singleTurnPromptTokens: previous?.singleTurnPromptTokens ?? 0,
+        singleTurnCacheReadTokens: previous?.singleTurnCacheReadTokens ?? 0,
+        singleTurnCacheCreationTokens: previous?.singleTurnCacheCreationTokens ?? 0,
+        activeAgents: Object.fromEntries(
+          Object.entries(state.activeAgents).filter(([id]) => {
+            const index = state.agentMessageIndex[id];
+            return index !== undefined && index >= start && index < end;
+          }),
+        ),
+        agentMessageIndex: Object.fromEntries(
+          Object.entries(state.agentMessageIndex).flatMap(([id, index]) =>
+            index >= start && index < end ? [[id, index - start]] : [],
+          ),
+        ),
+      }
+    : state;
+  if (fresh)
+    scoped = {
+      ...scoped,
+      singleTurnPromptTokens: 0,
+      singleTurnCacheReadTokens: 0,
+      singleTurnCacheCreationTokens: 0,
+    };
+  let next = applyStreamEventToTurn(scoped, event, now);
+  if (event.type === "usage_update" && (previous?.completed || previous?.stopped)) {
+    next = { ...next, messages: withTurnUsage(next.messages, next) };
+  }
+  const projection: StreamRunProjection = {
+    runId: event.runId ?? previous?.runId,
+    clientMessageId: event.clientMessageId ?? previous?.clientMessageId,
+    userMessageId: ownerId,
+    streamingAssistantId: next.streamingAssistantId,
+    streamingThinkingId: next.streamingThinkingId,
+    promptTokens: next.promptTokens,
+    singleTurnPromptTokens: next.singleTurnPromptTokens,
+    singleTurnCacheReadTokens: next.singleTurnCacheReadTokens,
+    singleTurnCacheCreationTokens: next.singleTurnCacheCreationTokens,
+    completed: previous?.completed || event.type === "turn_complete",
+    stopped: previous?.stopped,
+  };
+  const presentIds = new Set(state.messages.map((message) => message.id));
+  const streamRuns = {
+    ...Object.fromEntries(
+      Object.entries(runs).filter(([, run]) => presentIds.has(run.userMessageId)),
+    ),
+    [key]: projection,
+  };
+  if (!historical) return { ...next, streamRuns, activeStreamRunKey: key };
+  // Late output is folded into its original turn, before a newer user bubble.
+  // Never adopt the old run's streaming pointers, usage gauge or completion epoch.
+  const messages = [
+    ...state.messages.slice(0, start),
+    ...next.messages,
+    ...state.messages.slice(end),
+  ];
+  const activeAgents = { ...state.activeAgents };
+  for (const id of Object.keys(scoped.activeAgents)) delete activeAgents[id];
+  Object.assign(activeAgents, next.activeAgents);
+  return {
+    ...state,
+    messages,
+    streamRuns,
+    activeAgents,
+    agentMessageIndex: Object.fromEntries(
+      messages.flatMap((message, index) => (message.kind === "agent" ? [[message.id, index]] : [])),
+    ),
+    cumulativePromptTokens: Math.max(state.cumulativePromptTokens, next.cumulativePromptTokens),
+    cumulativeCacheReadTokens: Math.max(
+      state.cumulativeCacheReadTokens,
+      next.cumulativeCacheReadTokens,
+    ),
+    cumulativeCacheCreationTokens: Math.max(
+      state.cumulativeCacheCreationTokens,
+      next.cumulativeCacheCreationTokens,
+    ),
+    sessionPromptTokens: Math.max(state.sessionPromptTokens, next.sessionPromptTokens),
+    sessionCacheReadTokens: Math.max(state.sessionCacheReadTokens, next.sessionCacheReadTokens),
+    sessionCacheCreationTokens: Math.max(
+      state.sessionCacheCreationTokens,
+      next.sessionCacheCreationTokens,
+    ),
+  };
+}
+
+/** Host lifecycle effects must follow the newest submitted user turn too. */
+export function isCurrentStreamRunEvent(
+  state: MessagesReducerState | undefined,
+  event: StreamEvent,
+): boolean {
+  if (!state) return true;
+  const latestUser = state.messages
+    .slice()
+    .reverse()
+    .find((message) => message.kind === "user" && !message.injected && !message.pending);
+  const runs = state.streamRuns ?? {};
+  const active = state.activeStreamRunKey ? runs[state.activeStreamRunKey] : undefined;
+  if (
+    event.type !== "session_started" &&
+    event.runId &&
+    active?.runId &&
+    event.runId !== active.runId
+  )
+    return false;
+  if (event.clientMessageId && latestUser?.kind === "user" && latestUser.clientMessageId) {
+    return event.clientMessageId === latestUser.clientMessageId;
+  }
+  const run = event.runId
+    ? Object.values(runs).find((candidate) => candidate.runId === event.runId)
+    : state.activeStreamRunKey
+      ? runs[state.activeStreamRunKey]
+      : undefined;
+  if (run && latestUser && run.userMessageId !== latestUser.id) {
+    const owner = state.messages.findIndex((message) => message.id === run.userMessageId);
+    const latest = state.messages.indexOf(latestUser);
+    if (owner < latest) return false;
+  }
+  return (
+    event.type === "session_started" ||
+    !event.runId ||
+    !active?.runId ||
+    event.runId === active.runId
+  );
+}
+
+function applyStreamEventToTurn(
+  state: MessagesReducerState,
+  event: StreamEvent,
+  now: MessageClock,
 ): MessagesReducerState {
   switch (event.type) {
     case "session_user_message":
@@ -1444,24 +1675,7 @@ export function applyStreamEvent(
       //    prior summary for this task first so repeated turn_complete events
       //    don't stack. Only when something was actually spent — a no-op turn
       //    adds no line.
-      if (lastUserIdx >= 0) {
-        finalized = finalized.filter((m, i) => !(i > lastUserIdx && m.kind === "turn_usage"));
-      }
-      const turnPromptTokens = state.singleTurnPromptTokens;
-      const turnCacheRead = state.singleTurnCacheReadTokens;
-      const turnCacheCreation = state.singleTurnCacheCreationTokens;
-      if (turnPromptTokens > 0 || turnCacheRead > 0 || turnCacheCreation > 0) {
-        finalized = [
-          ...finalized,
-          {
-            kind: "turn_usage",
-            id: freshId("turn-usage"),
-            promptTokens: turnPromptTokens,
-            cacheReadTokens: turnCacheRead,
-            cacheCreationTokens: turnCacheCreation,
-          },
-        ];
-      }
+      finalized = withTurnUsage(finalized, state);
 
       // Only a cleanly completed turn bumps turnEpoch — that counter is what
       // force-collapses tool cards back to their summary (ToolGroupCard /
@@ -1601,6 +1815,10 @@ export function appendAskUserMessage(
   state: MessagesReducerState,
   payload: Omit<AskUserMessage, "kind" | "id">,
 ): MessagesReducerState {
+  // A pending approval snapshot can race persisted history hydration. The
+  // request identity survives both paths; keep its card and any existing answer.
+  if (state.messages.some((m) => m.kind === "ask_user" && m.requestId === payload.requestId))
+    return state;
   return {
     ...state,
     messages: [...state.messages, { kind: "ask_user", id: freshId("ask"), ...payload }],
@@ -1659,6 +1877,13 @@ export function appendUserMessage(
   }
   return {
     ...state,
+    ...(!injected && !pending
+      ? {
+          singleTurnPromptTokens: 0,
+          singleTurnCacheReadTokens: 0,
+          singleTurnCacheCreationTokens: 0,
+        }
+      : {}),
     messages: [
       ...state.messages,
       {
@@ -1675,6 +1900,32 @@ export function appendUserMessage(
       },
     ],
   };
+}
+
+function withTurnUsage(messages: Message[], state: MessagesReducerState): Message[] {
+  let start = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]!.kind === "user" && !(messages[i] as UserMessage).injected) {
+      start = i;
+      break;
+    }
+  }
+  const previous = messages.find((message, i) => i > start && message.kind === "turn_usage");
+  const next = messages.filter((message, i) => !(i > start && message.kind === "turn_usage"));
+  if (
+    state.singleTurnPromptTokens > 0 ||
+    state.singleTurnCacheReadTokens > 0 ||
+    state.singleTurnCacheCreationTokens > 0
+  ) {
+    next.push({
+      kind: "turn_usage",
+      id: previous?.id ?? freshId("turn-usage"),
+      promptTokens: state.singleTurnPromptTokens,
+      cacheReadTokens: state.singleTurnCacheReadTokens,
+      cacheCreationTokens: state.singleTurnCacheCreationTokens,
+    });
+  }
+  return next;
 }
 
 export function removePendingSteerMessages(
@@ -1714,6 +1965,8 @@ export function appendTurnEndMessage(
     detail,
   };
   const msgs = state.messages.slice();
+  // Keep repeat Stop clicks idempotent when the usage detail follows the marker.
+  const usage = msgs[msgs.length - 1]?.kind === "turn_usage" ? msgs.pop() : undefined;
   const last = msgs[msgs.length - 1];
   if (last && last.kind === "turn_end") {
     msgs[msgs.length - 1] = msg;
@@ -1727,7 +1980,24 @@ export function appendTurnEndMessage(
   // turn_complete/error would otherwise race to clear it after the new turn
   // already started, extinguishing the "正在思考…" line. (interrupt-relay
   // missing thinking state)
-  return { ...state, messages: msgs, streamingAssistantId: null, streamingThinkingId: null };
+  if (usage) msgs.push(usage);
+  const activeKey = state.activeStreamRunKey;
+  const activeRun = activeKey ? state.streamRuns?.[activeKey] : undefined;
+  const latestUser = state.messages
+    .slice()
+    .reverse()
+    .find((message) => message.kind === "user" && !message.injected && !message.pending);
+  return {
+    ...state,
+    ...(activeKey && activeRun && activeRun.userMessageId === latestUser?.id
+      ? {
+          streamRuns: { ...state.streamRuns, [activeKey]: { ...activeRun, stopped: true } },
+        }
+      : {}),
+    messages: withTurnUsage(msgs, state),
+    streamingAssistantId: null,
+    streamingThinkingId: null,
+  };
 }
 
 export type ApprovalState = ApprovalRequestEnvelope | null;

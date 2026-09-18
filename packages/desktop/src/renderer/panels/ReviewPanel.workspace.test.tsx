@@ -16,6 +16,18 @@ function deferred<T>() {
 let cleanup: (() => Promise<void>) | null = null;
 let root: Root | null = null;
 
+const nodes = (node: any): any[] => [node, ...(node.childNodes ?? []).flatMap(nodes)];
+const text = (node: any): string =>
+  node.nodeType === 3
+    ? (node.nodeValue ?? node.textContent ?? "")
+    : node.childNodes?.length
+      ? node.childNodes.map(text).join("")
+      : (node.textContent ?? "");
+const hasControl = (container: HTMLElement, label: string): boolean =>
+  nodes(container).some((node) => node.getAttribute?.("aria-label") === label);
+const snapshot =
+  "diff --git a/note.txt b/note.txt\n--- a/note.txt\n+++ b/note.txt\n@@ -1 +1 @@\n-before-note\n+after-note\n";
+
 beforeEach(() => {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -106,6 +118,117 @@ describe("ReviewPanel workspace requests", () => {
     expect(JSON.stringify(requests)).not.toContain("renderer-spoofed-cwd");
   });
 
+  test("shows a historical snapshot without Git, a Session, or a separate files list", async () => {
+    const requests: string[] = [];
+    Object.assign(window, {
+      codeshell: {
+        getReviewDiff: async () => {
+          requests.push("diff");
+          return { repositories: [], errors: [] };
+        },
+        getReviewRecentCommits: async () => {
+          requests.push("commits");
+          return [];
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <ReviewPanel
+          cwd="/plain-folder"
+          sessionId={null}
+          gitAvailable={false}
+          turnDiff={snapshot}
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(text(container)).toContain("after-note");
+    expect(hasControl(container, "选择审查范围")).toBe(false);
+    expect(hasControl(container, "刷新")).toBe(false);
+    expect(requests).toEqual([]);
+  });
+
+  test("does not mount a Git viewer without a repository or a nonempty snapshot", async () => {
+    const requests: string[] = [];
+    Object.assign(window, {
+      codeshell: {
+        getReviewDiff: async () => {
+          requests.push("diff");
+          return { repositories: [], errors: [] };
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    for (const turnDiff of [undefined, " \n\t"]) {
+      await act(async () => {
+        root?.render(
+          <ReviewPanel
+            cwd="/plain-folder"
+            sessionId="session"
+            gitAvailable={false}
+            files={["note.txt"]}
+            turnDiff={turnDiff}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      expect(container.childNodes.length).toBe(0);
+    }
+    expect(requests).toEqual([]);
+  });
+
+  test("stops the previous Git scope immediately when unavailable and restores Git controls", async () => {
+    const requests: unknown[][] = [];
+    Object.assign(window, {
+      codeshell: {
+        getReviewDiff: async (...args: unknown[]) => {
+          requests.push(args);
+          return { repositories: [], errors: [] };
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    const render = async (gitAvailable: boolean, turnDiff?: string) => {
+      await act(async () => {
+        root?.render(
+          <ReviewPanel
+            cwd="/folder"
+            sessionId="session"
+            gitAvailable={gitAvailable}
+            turnDiff={turnDiff}
+          />,
+        );
+        await flushMicrotasks();
+      });
+    };
+
+    await render(true);
+    expect(requests).toEqual([["session", { kind: "working", mode: "all" }]]);
+    expect(hasControl(container, "选择审查范围")).toBe(true);
+    expect(hasControl(container, "刷新")).toBe(true);
+
+    await render(false, snapshot);
+    expect(text(container)).toContain("after-note");
+    expect(hasControl(container, "选择审查范围")).toBe(false);
+    expect(hasControl(container, "刷新")).toBe(false);
+    expect(requests).toHaveLength(1);
+
+    await render(false);
+    expect(container.childNodes.length).toBe(0);
+    expect(requests).toHaveLength(1);
+
+    await render(true);
+    expect(hasControl(container, "选择审查范围")).toBe(true);
+    expect(hasControl(container, "刷新")).toBe(true);
+    expect(requests).toHaveLength(2);
+  });
+
   test("opening another turn clears an unavailable file filter instead of rendering an empty diff", async () => {
     const diff = (name: string) =>
       `diff --git a/${name}.ts b/${name}.ts\n--- a/${name}.ts\n+++ b/${name}.ts\n@@ -1 +1 @@\n-before-${name}\n+after-${name}\n`;
@@ -124,13 +247,6 @@ describe("ReviewPanel workspace requests", () => {
         await flushMicrotasks();
       });
     };
-    const nodes = (node: any): any[] => [node, ...(node.childNodes ?? []).flatMap(nodes)];
-    const text = (node: any): string =>
-      node.nodeType === 3
-        ? (node.nodeValue ?? node.textContent ?? "")
-        : node.childNodes?.length
-          ? node.childNodes.map(text).join("")
-          : (node.textContent ?? "");
     await render(["a", "b"]);
 
     // Reach the real select's public onChange prop through its rendered trigger;

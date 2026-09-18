@@ -1,13 +1,21 @@
 import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { ApprovalRequestEnvelope } from "../preload/types";
+import type { ApprovalRequestEnvelope, ApprovalResolvedEnvelope } from "../preload/types";
 import type { Message } from "./types";
+import { resetExternalRuntimeSessions } from "./externalRuntimeRun";
 import { stubPetSpriteAssets } from "./test-utils/stubPetSpriteAssets";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
+import { I18nProvider } from "./i18n/I18nProvider";
 import type { PermissionMode } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
 import type { SessionIndex } from "./transcripts";
+import {
+  __resetProjectSnapshotForTest,
+  loadProjects,
+  saveProjects,
+  type TrackedProject,
+} from "./projects";
 import { compactSidebarSessions, sortSidebarSessions } from "./sidebarSessionVisibility";
 import {
   externalRuntimeModelEntries,
@@ -54,11 +62,16 @@ interface ChatProps {
   draft: string;
   permissionMode: PermissionMode | null;
   activeModelKey: string | null;
+  goalEnabled: boolean;
+  onGoalToggle: (enabled: boolean) => void;
   modelOptions: ModelOption[];
   onPermissionChange: (mode: PermissionMode) => void;
   onModelChange: (option: ModelOption) => void;
   onDraftChange: (text: string) => void;
-  onSend: (text: string, opts?: { bucket?: string }) => Promise<void> | void;
+  onSend: (
+    text: string,
+    opts?: { bucket?: string; suppressGoal?: boolean },
+  ) => Promise<void> | void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
@@ -94,6 +107,7 @@ interface PanelAreaProps {
 }
 
 let chatProps: ChatProps | null = null;
+let topBarProps: Record<string, any> | null = null;
 let sidebarProps: SidebarProps | null = null;
 const quickChatProps = new Map<string, QuickChatPanelProps>();
 const panelAreaProps = new Map<string, PanelAreaProps>();
@@ -207,13 +221,16 @@ stubPetSpriteAssets();
 // the registry, own the stub here and expose the one control this suite drives,
 // so the test no longer depends on which file loaded TopBar first.
 mock.module("./TopBar", () => ({
-  TopBar: (props: Record<string, any>) => (
-    <div data-testid="topbar">
-      {props.panelAvailable === true && (
-        <button type="button" data-panel-action="toggle" onClick={props.onTogglePanel} />
-      )}
-    </div>
-  ),
+  TopBar: (props: Record<string, any>) => {
+    topBarProps = props;
+    return (
+      <div data-testid="topbar">
+        {props.panelAvailable === true && (
+          <button type="button" data-panel-action="toggle" onClick={props.onTogglePanel} />
+        )}
+      </div>
+    );
+  },
 }));
 
 const { App } = await import("./App");
@@ -284,9 +301,11 @@ const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThi
 const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
 
 let root: Root | null = null;
+let previousProjects: TrackedProject[] | null = null;
 let container: HTMLElement | null = null;
-let streamListener: ((env: any) => void) | null = null;
+const streamListeners = new Set<(env: any) => void>();
 let approvalListener: ((env: ApprovalRequestEnvelope) => void) | null = null;
+let approvalResolvedListener: ((env: ApprovalResolvedEnvelope) => void) | null = null;
 let lifecycleListener:
   | ((env: { type: "restarted" | "gave_up" | "exited"; code?: number }) => void)
   | null = null;
@@ -327,6 +346,20 @@ function seedApp(options: {
 }): string {
   const hasActiveSession = options.withNormalSession && !options.startInDraft;
   const bucket = hasActiveSession ? "repoA::session-a" : "repoA::_none_";
+  previousProjects ??= loadProjects();
+  __resetProjectSnapshotForTest();
+  // App initializes from Main's V2 projection; the legacy localStorage entry
+  // below alone would make isolated tests wait for an unrelated migration.
+  saveProjects([
+    {
+      id: "repoA",
+      name: "Repo A",
+      path: "/tmp/repo-a",
+      roots: [{ id: "root-a", path: "/tmp/repo-a", name: "Repo A", addedAt: 1 }],
+      primaryRootId: "root-a",
+      addedAt: 1,
+    },
+  ]);
   localStorageMock.setItem(
     "codeshell.repos",
     JSON.stringify([{ id: "repoA", name: "Repo A", path: "/tmp/repo-a", addedAt: 1 }]),
@@ -521,8 +554,8 @@ function installCodeshellStub(
       return new Promise(() => undefined);
     },
     onStreamEvent: (listener: (env: any) => void) => {
-      streamListener = listener;
-      return unsubscribe;
+      streamListeners.add(listener);
+      return () => streamListeners.delete(listener);
     },
     onAutomationSession: () => unsubscribe,
     onMobileSession: () => unsubscribe,
@@ -530,7 +563,12 @@ function installCodeshellStub(
       approvalListener = listener;
       return unsubscribe;
     },
-    onApprovalResolved: () => unsubscribe,
+    onApprovalResolved: (listener: (env: ApprovalResolvedEnvelope) => void) => {
+      approvalResolvedListener = listener;
+      return () => {
+        approvalResolvedListener = null;
+      };
+    },
     onMobilePermissionMode: () => unsubscribe,
     onStatus: () => unsubscribe,
     onAgentLifecycle: (listener: typeof lifecycleListener) => {
@@ -619,7 +657,13 @@ async function mountApp(options: {
   container = document.createElement("div");
   root = createRoot(container);
   await act(async () => {
-    root?.render(<App />);
+    // Match the real desktop root: the provider keeps t stable across renders,
+    // so unrelated UI updates do not tear down in-flight IPC subscriptions.
+    root?.render(
+      <I18nProvider>
+        <App />
+      </I18nProvider>,
+    );
     await flushMicrotasks();
   });
   await flushApp();
@@ -631,8 +675,8 @@ function currentQuickPanels(): QuickChatPanelProps[] {
 }
 
 function emitStream(sessionId: string, event: Record<string, unknown>): void {
-  if (!streamListener) throw new Error("stream listener was not registered");
-  streamListener({ sessionId, event });
+  if (streamListeners.size === 0) throw new Error("stream listener was not registered");
+  for (const listener of [...streamListeners]) listener({ sessionId, event });
 }
 
 function emitApproval(env: ApprovalRequestEnvelope): void {
@@ -677,8 +721,9 @@ afterEach(async () => {
   }
   root = null;
   container = null;
-  streamListener = null;
+  streamListeners.clear();
   approvalListener = null;
+  approvalResolvedListener = null;
   lifecycleListener = null;
   listDiskSessionsCalls = 0;
   deleteSessionCalls = [];
@@ -694,10 +739,15 @@ afterEach(async () => {
   browserSessionRegistrations = [];
   configureCalls = [];
   externalRuntimeStopCalls = [];
+  resetExternalRuntimeSessions();
   chatProps = null;
+  topBarProps = null;
   sidebarProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
+  __resetProjectSnapshotForTest();
+  if (previousProjects) saveProjects(previousProjects);
+  previousProjects = null;
   localStorageMock.clear();
   restoreGlobalProperty("localStorage", originalLocalStorageDescriptor);
   restoreGlobalProperty("window", originalWindowDescriptor);
@@ -1069,6 +1119,177 @@ describe("App quick-chat integration", () => {
       expect.objectContaining({ kind: "assistant", id: "assistant-running" }),
     ]);
     expect(chatProps?.busy).toBe(true);
+  });
+
+  test("external Goal sends establish the top-bar projection and restore paused goals across sessions", async () => {
+    const objective = "Complete the fund research";
+    const modelKey = "codex/gpt-5.6-sol";
+    const starts: Array<Record<string, any>> = [];
+    const sends: Array<Record<string, any>> = [];
+    const goalGetCalls: string[] = [];
+    let canonical: {
+      goal: string;
+      goalId: string;
+      revision: number;
+      paused: boolean;
+    } | null = null;
+    await mountApp({
+      withNormalSession: true,
+      withSecondSession: true,
+      panelTabs: [],
+      sidebarCollapsed: false,
+      externalRuntimeKinds: ["codex"],
+      modelOverrides: { "repoA::session-a": modelKey, "repoA::session-b": modelKey },
+      goalGet: async (sessionId) => {
+        goalGetCalls.push(sessionId);
+        return sessionId === "session-a" && canonical
+          ? { ok: true, ...canonical }
+          : { ok: true, goal: null };
+      },
+    });
+    Object.assign(window.codeshell.externalRuntime, {
+      start: async (payload: Record<string, any>) => {
+        starts.push(payload);
+        return { kind: "codex", runtimeSessionId: "provider-thread", tools: [] };
+      },
+      send: async (payload: Record<string, any>) => {
+        sends.push(payload);
+        if (payload.goal) {
+          canonical = { goal: payload.goal, goalId: "external-goal", revision: 1, paused: false };
+          emitStream(payload.sessionId, {
+            type: "goal_set",
+            objective: canonical.goal,
+            goalId: canonical.goalId,
+            revision: canonical.revision,
+            paused: false,
+            replaced: false,
+          });
+        }
+        return { ok: true, streamed: true };
+      },
+    });
+    Object.assign(window.codeshell, {
+      goalUpdate: async (sessionId: string, update: Record<string, any>) => {
+        expect(sessionId).toBe("session-a");
+        expect(update).toEqual({
+          paused: true,
+          expectedGoalId: "external-goal",
+          expectedRevision: 1,
+        });
+        canonical = { ...canonical!, paused: true, revision: 2 };
+        return { ok: true, updated: true, ...canonical };
+      },
+    });
+
+    expect(topBarProps?.activeGoal).toBeNull();
+    await act(async () => chatProps!.onGoalToggle(true));
+    expect(chatProps?.goalEnabled).toBe(true);
+    await act(async () => {
+      await chatProps!.onSend(objective);
+      await flushMicrotasks();
+    });
+    await flushApp(30);
+    expect(sends[0]).toMatchObject({ sessionId: "session-a", text: objective, goal: objective });
+    expect(starts[0]?.hasGoal).toBe(true);
+    expect(starts[0]?.developerInstructions ?? "").not.toContain(objective);
+    expect(starts[0]?.developerInstructions).toContain("Related CodeShell Sessions:");
+    expect(chatProps?.goalEnabled).toBe(false);
+    expect(topBarProps?.activeGoal).toMatchObject({
+      objective,
+      goalId: "external-goal",
+      paused: false,
+    });
+    expect(runCalls).toHaveLength(0);
+
+    await act(async () => {
+      await chatProps!.onSend("Check the evidence");
+      await flushMicrotasks();
+    });
+    expect(sends[1]).toMatchObject({ text: "Check the evidence" });
+    expect(sends[1]).not.toHaveProperty("goal");
+    expect(sends[1]).not.toHaveProperty("disableGoal");
+    // The legacy fixture's engine-a binding is repaired to session-a on its
+    // first send, so the related-session instructions may also refresh.
+    expect(starts.every((start) => start.hasGoal === true)).toBe(true);
+    expect(topBarProps?.activeGoal.goalId).toBe("external-goal");
+
+    await act(async () => {
+      await chatProps!.onSend("Only summarize this reply", { suppressGoal: true });
+      await flushMicrotasks();
+    });
+    expect(sends[2]).toMatchObject({ text: "Only summarize this reply", disableGoal: true });
+    expect(sends[2]).not.toHaveProperty("goal");
+    expect(starts.at(-1)?.hasGoal).toBe(false);
+    expect(topBarProps?.activeGoal).toMatchObject({ goalId: "external-goal", paused: false });
+
+    await act(async () => {
+      topBarProps!.onGoalPausedChange(true);
+      await flushMicrotasks();
+    });
+    expect(topBarProps?.activeGoal).toMatchObject({
+      goalId: "external-goal",
+      revision: 2,
+      paused: true,
+    });
+    await act(async () => {
+      sidebarProps!.onSelectSession("repoA", "session-b");
+      await flushMicrotasks();
+    });
+    expect(topBarProps?.activeGoal).toBeNull();
+    await act(async () => {
+      sidebarProps!.onSelectSession("repoA", "session-a");
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(goalGetCalls).toContain("session-a");
+    expect(topBarProps?.activeGoal).toMatchObject({
+      objective,
+      goalId: "external-goal",
+      revision: 2,
+      paused: true,
+    });
+    await act(async () => {
+      await chatProps!.onSend("Answer a separate question");
+      await flushMicrotasks();
+    });
+    expect(starts.at(-1)?.hasGoal).toBe(false);
+    expect(sends[3]).not.toHaveProperty("goal");
+    expect(sends[3]).not.toHaveProperty("disableGoal");
+    expect(starts.at(-1)?.developerInstructions ?? "").not.toContain(objective);
+    expect(runCalls).toHaveLength(0);
+  });
+
+  test("a rejected late answer cannot overwrite an externally cancelled question or publish success", async () => {
+    await mountApp({ withNormalSession: true, panelTabs: [] });
+    const requestId = "external-approval-expired-answer";
+    const mirrors: unknown[] = [];
+    window.codeshell.mobileRemote.notifyApprovalResolved = async (payload) => {
+      mirrors.push(payload);
+    };
+    window.codeshell.approve = async () => {
+      throw new Error("This prompt is no longer pending in this window.");
+    };
+    await act(async () => {
+      emitApproval({
+        ...approvalEnvelope("engine-a", requestId, "__ask_user__"),
+        source: "external-runtime",
+      });
+      await flushMicrotasks();
+    });
+    const staleAnswer = chatProps!.onAskUserAnswer!;
+    await act(async () => {
+      approvalResolvedListener!({ sessionId: "engine-a", requestId, approved: false });
+      await flushMicrotasks();
+      await Promise.resolve(staleAnswer(requestId, "late answer")).catch(() => {});
+      await flushMicrotasks();
+    });
+    expect(chatProps?.messages).toContainEqual(
+      expect.objectContaining({ requestId, answer: "问题已取消" }),
+    );
+    expect(chatProps?.messages).not.toContainEqual(
+      expect.objectContaining({ requestId, answer: "late answer" }),
+    );
+    expect(mirrors).toEqual([]);
   });
 
   test("hydrates a persisted paused goal before rendering the top-bar projection", async () => {
@@ -2111,6 +2332,7 @@ describe("App quick-chat integration", () => {
       emitApproval(approvalEnvelope(quickTwo.sessionId, "approval-two"));
       await flushMicrotasks();
     });
+    await flushApp();
 
     expect(chatProps?.pendingApproval?.requestId).toBe("approval-normal");
     expect(quickChatProps.get(quickOne.sessionId)?.pendingApproval?.requestId).toBe("approval-one");
@@ -2133,6 +2355,76 @@ describe("App quick-chat integration", () => {
       ["engine-a", "approval-normal", "approve"],
       [quickOne.sessionId, "approval-one", "approve"],
       [quickTwo.sessionId, "approval-two", "approve"],
+    ]);
+  });
+
+  test("asynchronous answers stay pending until accepted and can retry a failed delivery", async () => {
+    await mountApp({ withNormalSession: true, panelTabs: [] });
+    const question = approvalEnvelope("engine-a", "ask-async", "__ask_user__");
+    question.request.args = { ...question.request.args, asynchronous: true };
+    await act(async () => {
+      emitApproval(question);
+      await flushMicrotasks();
+    });
+    let reject!: (error: Error) => void;
+    let resolve!: () => void;
+    let attempts = 0;
+    const failed = new Promise<void>((_yes, no) => {
+      reject = no;
+    });
+    const accepted = new Promise<void>((yes) => {
+      resolve = yes;
+    });
+    const mirrored: unknown[] = [];
+    (window.codeshell as any).approve = (...args: unknown[]) => {
+      approveCalls.push(args);
+      return ++attempts === 1 ? failed : accepted;
+    };
+    (window.codeshell.mobileRemote as any).notifyApprovalResolved = async (env: unknown) => {
+      mirrored.push(env);
+    };
+    const answer = () =>
+      chatProps?.messages.find(
+        (message) => message.kind === "ask_user" && message.requestId === "ask-async",
+      );
+    let submission: Promise<unknown>;
+    await act(async () => {
+      submission = Promise.resolve(chatProps!.onAskUserAnswer!("ask-async", "Read only")).catch(
+        (error) => error,
+      );
+      await flushMicrotasks();
+    });
+    expect(answer()).toMatchObject({ asynchronous: true });
+    expect(answer()).not.toHaveProperty("answer");
+    expect(mirrored).toEqual([]);
+    await act(async () => {
+      reject(new Error("Connection interrupted"));
+      await submission;
+      await flushMicrotasks();
+    });
+    expect(answer()).not.toHaveProperty("answer");
+    await act(async () => {
+      submission = Promise.resolve(chatProps!.onAskUserAnswer!("ask-async", "Read only"));
+      await flushMicrotasks();
+    });
+    expect(answer()).not.toHaveProperty("answer");
+    await act(async () => {
+      resolve();
+      await submission;
+      await flushMicrotasks();
+    });
+    expect(answer()).toMatchObject({ answer: "Read only" });
+    expect(mirrored).toEqual([
+      {
+        requestId: "ask-async",
+        sessionId: "engine-a",
+        approved: true,
+        answer: "Read only",
+      },
+    ]);
+    expect(approveCalls).toEqual([
+      ["engine-a", "ask-async", "approve", undefined, "Read only"],
+      ["engine-a", "ask-async", "approve", undefined, "Read only"],
     ]);
   });
 

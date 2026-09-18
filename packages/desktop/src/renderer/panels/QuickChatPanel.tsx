@@ -43,7 +43,7 @@ interface Props {
   onStop: () => void;
   onRetry: () => void;
   onUseBlank: () => void;
-  onAskUserAnswer?: (requestId: string, answer: string) => void;
+  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (
     decision: "approve" | "deny",

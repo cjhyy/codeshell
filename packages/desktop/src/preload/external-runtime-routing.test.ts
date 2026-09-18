@@ -29,7 +29,9 @@ function routeApprove(
   requestId: string,
   externalApprovalIds: Set<string>,
 ): "main-decision" | "worker-approve" {
-  return externalApprovalIds.has(requestId) ? "main-decision" : "worker-approve";
+  return externalApprovalIds.has(requestId) || requestId.startsWith("external-approval-")
+    ? "main-decision"
+    : "worker-approve";
 }
 
 describe("preload cancel routing", () => {
@@ -72,10 +74,11 @@ describe("preload approve routing", () => {
     expect(routeApprove("worker-req-1", new Set(["external-approval-1"]))).toBe("worker-approve");
   });
 
-  test("an answered prompt is forgotten, so a reused id is not misrouted", () => {
+  test("a click after resolution still asks the external owner to reject the expired id", () => {
     const ids = new Set(["external-approval-1"]);
     ids.delete("external-approval-1");
-    expect(routeApprove("external-approval-1", ids)).toBe("worker-approve");
+    expect(routeApprove("external-approval-1", ids)).toBe("main-decision");
+    expect(routeApprove("worker-request", ids)).toBe("worker-approve");
   });
 });
 
@@ -116,5 +119,50 @@ describe("the shipped preload actually routes", () => {
     const rpcIdx = source.indexOf('rpc("agent/approve"');
     expect(approveIdx).toBeGreaterThan(-1);
     expect(approveIdx).toBeLessThan(rpcIdx);
+  });
+
+  test("external prompts retain their lifecycle source in the shared approval channel", () => {
+    const handler = source.slice(
+      source.indexOf('"externalRuntime:approvalRequest"'),
+      source.indexOf('"externalRuntime:approvalRequest"') + 800,
+    );
+    expect(handler).toContain('source: "external-runtime"');
+    expect(handler).toContain("externalApprovalIds.add(requestId)");
+    expect(handler).toContain("approvalListeners.forEach");
+  });
+
+  test("external answers await acceptance and expired ids cannot fall through to the worker", () => {
+    const handler = source.slice(
+      source.indexOf("externalApprovalIds.has(requestId)"),
+      source.indexOf('return rpc("agent/approve"'),
+    );
+    expect(handler).toContain('requestId.startsWith("external-approval-")');
+    expect(handler).toContain('.invoke("externalRuntime:approvalDecision"');
+    expect(handler).toContain("if (!result?.ok)");
+    expect(handler).not.toContain("Promise.resolve({ ok: true })");
+  });
+
+  test("restored external requests are registered before renderer replay and resolutions retire them", () => {
+    const recovery = source.slice(
+      source.indexOf("  getPendingApprovals:"),
+      source.indexOf("  onApprovalRequest:"),
+    );
+    expect(recovery).toContain('env?.source === "external-runtime"');
+    expect(recovery.indexOf("externalApprovalIds.add(env.requestId)")).toBeLessThan(
+      recovery.indexOf("return pending"),
+    );
+    const resolved = source.slice(
+      source.indexOf('"externalRuntime:approvalResolved"'),
+      source.indexOf('"externalRuntime:approvalResolved"') + 600,
+    );
+    expect(resolved).toContain("externalApprovalIds.delete(requestId)");
+    expect(resolved).toContain("approvalResolvedListeners.forEach");
+    const main = readFileSync(new URL("../main/index.ts", import.meta.url), "utf8");
+    const pending = main.slice(
+      main.indexOf('ipcMain.handle("agent:pendingApprovals"'),
+      main.indexOf('ipcMain.handle("agent:subscribe"'),
+    );
+    expect(pending).toContain("pendingForWindow(event.sender.id)");
+    expect(main).toContain("externalRuntimeApprovals?.cancelWindow(ownerWebContentsId)");
   });
 });

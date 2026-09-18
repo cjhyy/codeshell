@@ -5,6 +5,7 @@ import {
   archiveAllSessions,
   archiveSession,
   bucketKey,
+  bindEngineSession,
   createSession,
   deleteSessionLocal,
   loadSessionIndex,
@@ -69,7 +70,10 @@ describe("transcript snapshot cursor persistence", () => {
 
   it("round-trips the Main epoch together with its snapshot sequence", () => {
     saveTranscript(null, "epoch", { ...INITIAL_STATE, snapshotSeq: 2, snapshotEpoch: "new-main" });
-    expect(loadTranscript(null, "epoch")).toMatchObject({ snapshotSeq: 2, snapshotEpoch: "new-main" });
+    expect(loadTranscript(null, "epoch")).toMatchObject({
+      snapshotSeq: 2,
+      snapshotEpoch: "new-main",
+    });
   });
 
   it("defaults legacy saved transcripts without snapshotSeq to 0", () => {
@@ -240,6 +244,15 @@ describe("transcript snapshot cursor persistence", () => {
       "current",
     ]);
     expect(loadSessionIndex("repo-a").activeSessionId).toBe("current");
+  });
+
+  it("persists explicit unstarted conversations and retires the marker when the engine binds", () => {
+    const created = createSession("repo-a");
+    expect(loadSessionIndex("repo-a").sessions[0].pendingFirstRun).toBe(true);
+    bindEngineSession("repo-a", created.sessionId, "engine-session");
+    const bound = loadSessionIndex("repo-a").sessions[0];
+    expect(bound.engineSessionId).toBe("engine-session");
+    expect(bound).not.toHaveProperty("pendingFirstRun");
   });
 
   it("switches a Session digital human without replacing its history identity", () => {

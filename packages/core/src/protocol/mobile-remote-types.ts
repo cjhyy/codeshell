@@ -250,8 +250,9 @@ export type MobileServerEvent =
       approvalId: string;
       sessionId?: string;
       approved?: boolean;
+      answer?: string;
     }
-  | { type: "error"; message: string; clientMessageId?: string }
+  | { type: "error"; message: string; clientMessageId?: string; approvalId?: string }
   // ── Sessions ──────────────────────────────────────────────────────────
   | { type: "session.list.ok"; sessions: MobileSessionMeta[]; activeSessionId?: string }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }

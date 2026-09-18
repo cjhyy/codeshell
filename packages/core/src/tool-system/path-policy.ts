@@ -39,6 +39,7 @@ import {
   mkdirSync,
   renameSync,
   statSync,
+  readdirSync,
 } from "node:fs";
 import { open } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -584,13 +585,18 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
 
   if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
 
+  return registeredPluginSkillBases(codeShellRoot).some((base) => isSkillTreeResource(resolved, base));
+}
+
+function registeredPluginSkillBases(codeShellRoot: string): string[] {
   let cacheRoot: string;
   try {
     cacheRoot = realpathSync(join(codeShellRoot, "plugins", "cache"));
   } catch {
-    return false;
+    return [];
   }
 
+  const bases: string[] = [];
   const installed = readInstalledPlugins();
   for (const entries of Object.values(installed.plugins)) {
     for (const entry of entries) {
@@ -599,13 +605,40 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
         if (installRoot === cacheRoot || !isInsideDir(installRoot, cacheRoot)) continue;
         const skillsRoot = realpathSync(join(installRoot, "skills"));
         if (!isInsideDir(skillsRoot, installRoot)) continue;
-        if (isSkillTreeResource(resolved, skillsRoot)) return true;
+        if (isInsideDir(skillsRoot, codeShellRoot)) bases.push(skillsRoot);
       } catch {
         // A stale/tampered registry entry must never broaden read authority.
       }
     }
   }
-  return false;
+  return bases;
+}
+
+/** Enumerate the same managed Skill trees accepted by the file-read policy. */
+export function registeredSkillResourceRoots(): string[] {
+  let homeRoot: string;
+  try {
+    homeRoot = realpathSync(join(configuredUserHome(), ".code-shell"));
+  } catch {
+    return [];
+  }
+  const bases = [join(homeRoot, "skills"), ...registeredPluginSkillBases(homeRoot)];
+  const roots = new Set<string>();
+  for (const base of bases) {
+    try {
+      for (const name of readdirSync(base)) {
+        try {
+          const root = realpathSync(join(base, name));
+          if (isInsideDir(root, homeRoot) && isSkillTreeResource(root, base)) roots.add(root);
+        } catch {
+          // One dangling link must not hide the remaining installed Skills.
+        }
+      }
+    } catch {
+      // Missing or inaccessible installs never grant sandbox access.
+    }
+  }
+  return [...roots];
 }
 
 /**
@@ -693,6 +726,11 @@ function matchSensitiveFile(resolved: string): string | undefined {
     if (re.test(base)) return base;
   }
   return undefined;
+}
+
+/** Shared with sandbox resource enumeration; keep credential filtering identical. */
+export function isSensitiveResourcePath(path: string): boolean {
+  return matchSensitiveFile(path) !== undefined;
 }
 
 function isSafeCodeShellDiagnosticRead(resolved: string): boolean {

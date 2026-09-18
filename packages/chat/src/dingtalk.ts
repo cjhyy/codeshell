@@ -36,6 +36,7 @@ export function parseDingTalkTextMessage(
     channel: "dingtalk",
     target: message.conversationId,
     senderId: message.senderStaffId || message.senderId,
+    isDirectMessage: message.conversationType === "1",
     text: message.text.content,
     ...(messageId ? { messageId } : {}),
     metadata: {

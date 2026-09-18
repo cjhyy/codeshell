@@ -43,6 +43,8 @@ export interface PendingApprovalMetadata {
   createdAt: number;
   expiresAt?: number;
   surfaceable: boolean;
+  /** A non-blocking question whose answer is delivered as later user input. */
+  asynchronous?: boolean;
 }
 
 // ─── Envelope ───────────────────────────────────────────────────────

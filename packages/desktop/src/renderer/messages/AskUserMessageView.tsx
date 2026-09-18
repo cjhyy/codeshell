@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo, useRef, useState } from "react";
 import type { AskUserMessage } from "../types";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
 interface Props {
   message: AskUserMessage;
   /** Called with the user's chosen / typed answer string. */
-  onAnswer: (requestId: string, answer: string) => void;
+  onAnswer: (requestId: string, answer: string) => void | Promise<void>;
 }
 
 /**
@@ -31,6 +31,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
+  const [deferred, setDeferred] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitFailed, setSubmitFailed] = useState(false);
+  const submittingRef = useRef(false);
 
   if (message.answer !== undefined) {
     // Color the resolved echo by the chosen option's engine-supplied tone —
@@ -67,11 +71,36 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
     );
   }
 
+  if (typeof message.question !== "string" || !message.question.trim()) {
+    return (
+      <div className="min-w-0 max-w-full px-4 py-1">
+        <div className="my-2 min-w-0 rounded-md border bg-card p-3 text-sm shadow-sm">
+          <p role="alert" className="text-status-err">
+            {t("msg.ask.questionUnavailable")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const hasOptions = !!message.options && message.options.length > 0;
   const submit = (val: string): void => {
     const v = val.trim();
-    if (!v) return;
-    onAnswer(message.requestId, v);
+    if (!v || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmitFailed(false);
+    void (async () => {
+      try {
+        await onAnswer(message.requestId, v);
+      } catch {
+        // Keep every draft/selection intact so a failed send is retryable.
+        setSubmitFailed(true);
+      } finally {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
+    })();
   };
 
   const submitMulti = (): void => {
@@ -93,134 +122,170 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
           <span className="font-medium text-foreground">{message.question}</span>
         </div>
 
-        {hasOptions ? (
-          <>
-            <ul className="flex flex-col gap-2">
-              {message.options!.map((o, i) => {
-                const isPicked = picked.has(i);
-                return (
-                  <li
-                    key={i}
-                    className={cn(
-                      "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
-                      isPicked && "border-primary bg-primary/10",
-                    )}
-                    onClick={() => {
-                      if (message.multiSelect) {
-                        setPicked((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(i)) next.delete(i);
-                          else next.add(i);
-                          return next;
-                        });
-                      } else {
-                        submit(o.label);
-                      }
-                    }}
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      {message.multiSelect && (
+        {message.asynchronous && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">{t("msg.ask.asyncHint")}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-expanded={!deferred}
+              onClick={() => setDeferred((value) => !value)}
+            >
+              {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
+            </Button>
+          </div>
+        )}
+
+        {!deferred &&
+          (hasOptions ? (
+            <>
+              <ul className="flex flex-col gap-2">
+                {message.options!.map((o, i) => {
+                  const isPicked = picked.has(i);
+                  return (
+                    <li
+                      key={i}
+                      className={cn(
+                        "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
+                        isPicked && "border-primary bg-primary/10",
+                      )}
+                      onClick={() => {
+                        if (submittingRef.current) return;
+                        if (message.multiSelect) {
+                          setPicked((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(i)) next.delete(i);
+                            else next.add(i);
+                            return next;
+                          });
+                        } else {
+                          submit(o.label);
+                        }
+                      }}
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        {message.multiSelect && (
+                          <span
+                            className={cn(
+                              "flex h-4 w-4 items-center justify-center rounded-sm border text-primary",
+                              isPicked && "border-primary bg-primary/10",
+                            )}
+                          >
+                            {isPicked ? <Check size={11} /> : null}
+                          </span>
+                        )}
                         <span
                           className={cn(
-                            "flex h-4 w-4 items-center justify-center rounded-sm border text-primary",
-                            isPicked && "border-primary bg-primary/10",
+                            "min-w-0 break-words font-medium text-foreground",
+                            o.tone === "danger" && "text-status-err",
+                            o.tone === "ok" && "text-status-ok",
                           )}
                         >
-                          {isPicked ? <Check size={11} /> : null}
+                          {o.label}
                         </span>
-                      )}
-                      <span
-                        className={cn(
-                          "min-w-0 break-words font-medium text-foreground",
-                          o.tone === "danger" && "text-status-err",
-                          o.tone === "ok" && "text-status-ok",
-                        )}
-                      >
-                        {o.label}
-                      </span>
-                    </div>
-                    <div className="mt-1 break-words text-xs text-muted-foreground">
-                      {o.description}
-                    </div>
-                  </li>
-                );
-              })}
-              {/* Closed-set prompts (optionsOnly) hide the free-text escape
+                      </div>
+                      <div className="mt-1 break-words text-xs text-muted-foreground">
+                        {o.description}
+                      </div>
+                    </li>
+                  );
+                })}
+                {/* Closed-set prompts (optionsOnly) hide the free-text escape
                 hatch: their answer is matched by exact label, so a typed
                 answer like "允许" would never match and silently fail. */}
-              {!message.optionsOnly && (
-                <li
-                  className={cn(
-                    "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
-                    otherOpen && "border-primary bg-primary/10",
-                  )}
-                  onClick={() => setOtherOpen((o) => !o)}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground">{t("msg.ask.other")}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{t("msg.ask.otherDesc")}</div>
-                </li>
-              )}
-            </ul>
-            {(otherOpen || message.multiSelect) && (
-              <div className="mt-3 flex items-center gap-2">
-                {otherOpen && (
-                  <Input
-                    autoFocus
-                    placeholder={t("msg.ask.otherPlaceholder")}
-                    value={otherDraft}
-                    onChange={(e) => setOtherDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !message.multiSelect) {
-                        e.preventDefault();
-                        submit(otherDraft);
-                      }
-                    }}
-                  />
-                )}
-                {message.multiSelect ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={picked.size === 0 && !otherDraft.trim()}
-                    onClick={submitMulti}
+                {!message.optionsOnly && (
+                  <li
+                    className={cn(
+                      "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
+                      otherOpen && "border-primary bg-primary/10",
+                    )}
+                    onClick={() => setOtherOpen((o) => !o)}
                   >
-                    {t("msg.ask.submit")}
-                  </Button>
-                ) : (
-                  otherOpen && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">{t("msg.ask.other")}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {t("msg.ask.otherDesc")}
+                    </div>
+                  </li>
+                )}
+              </ul>
+              {(otherOpen || message.multiSelect) && (
+                <div className="mt-3 flex items-center gap-2">
+                  {otherOpen && (
+                    <Input
+                      autoFocus={!message.asynchronous}
+                      disabled={submitting}
+                      placeholder={t("msg.ask.otherPlaceholder")}
+                      value={otherDraft}
+                      onChange={(e) => setOtherDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !message.multiSelect) {
+                          e.preventDefault();
+                          submit(otherDraft);
+                        }
+                      }}
+                    />
+                  )}
+                  {message.multiSelect ? (
                     <Button
                       type="button"
                       size="sm"
-                      disabled={!otherDraft.trim()}
-                      onClick={() => submit(otherDraft)}
+                      disabled={submitting || (picked.size === 0 && !otherDraft.trim())}
+                      onClick={submitMulti}
                     >
-                      {t("msg.ask.answer")}
+                      {t("msg.ask.submit")}
                     </Button>
-                  )
-                )}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Input
-              autoFocus
-              placeholder={t("msg.ask.answerPlaceholder")}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  submit(draft);
-                }
-              }}
-            />
-            <Button type="button" size="sm" disabled={!draft.trim()} onClick={() => submit(draft)}>
-              {t("msg.ask.answer")}
-            </Button>
-          </div>
+                  ) : (
+                    otherOpen && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={submitting || !otherDraft.trim()}
+                        onClick={() => submit(otherDraft)}
+                      >
+                        {t("msg.ask.answer")}
+                      </Button>
+                    )
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                autoFocus={!message.asynchronous}
+                disabled={submitting}
+                placeholder={t("msg.ask.answerPlaceholder")}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submit(draft);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                disabled={submitting || !draft.trim()}
+                onClick={() => submit(draft)}
+              >
+                {t("msg.ask.answer")}
+              </Button>
+            </div>
+          ))}
+        {submitting && (
+          <p role="status" className="mt-2 text-xs text-muted-foreground">
+            {t("msg.ask.sending")}
+          </p>
+        )}
+        {submitFailed && (
+          <p role="alert" className="mt-2 text-xs text-status-err">
+            {t("msg.ask.submitFailed")}
+          </p>
         )}
       </div>
     </div>

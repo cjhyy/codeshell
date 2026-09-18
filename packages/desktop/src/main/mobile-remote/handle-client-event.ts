@@ -88,6 +88,7 @@ export interface OrchestratorCtx {
     requestId: string;
     sessionId?: string;
     approved?: boolean;
+    answer?: string;
   }) => void;
   roomToPublic: (room: RoomMeta) => RoomPublic;
   roomMatchesTranscript: (
@@ -176,7 +177,11 @@ export function injectAndAwaitResult(
       () => done({ ok: false, message: "worker did not respond" }),
       timeoutMs,
     );
-    b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }), meta);
+    try {
+      b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }), meta);
+    } catch (error) {
+      done({ ok: false, message: error instanceof Error ? error.message : String(error) });
+    }
   });
 }
 
@@ -401,19 +406,21 @@ export async function handleClientEvent(
       decision = { approved: false, reason: event.reason };
     }
     const sessionId = resolveSessionId(event.sessionId);
-    bridge.injectWorkerMessage(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: `mobile-approve-${Date.now()}`,
-        method: "agent/approve",
-        params: { sessionId, requestId: event.approvalId, decision },
-      }),
+    const result = await injectAndAwaitResult(
+      bridge,
+      "agent/approve",
+      { sessionId, requestId: event.approvalId, decision },
       { origin: "mobile", producer: "mobile-approval" },
     );
+    if (!result.ok) {
+      reply({ type: "error", approvalId: event.approvalId, message: result.message });
+      return;
+    }
     ctx.broadcastApprovalResolved({
       requestId: event.approvalId,
       sessionId,
       approved: event.decision === "approve",
+      ...(event.decision === "approve" && event.answer !== undefined ? { answer: event.answer } : {}),
     });
     return;
   }
