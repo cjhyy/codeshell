@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { buildCommands } from "./CommandPalette";
 import { ensureMiniDom } from "../test-utils/renderHook";
+
+// App suites mock the canonical palette module; use the actual registry here.
+const { buildCommands } = await import("./CommandPalette?workspace-availability");
 
 describe("command palette workspace availability", () => {
   test("hides Git review until available, while keeping general panels usable", () => {

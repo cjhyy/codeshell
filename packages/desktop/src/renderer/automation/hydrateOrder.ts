@@ -104,11 +104,35 @@ export function mergeHistoryIntoLive(
     const mergedIndex = messages.findIndex((message) => message.id === messageId);
     if (mergedIndex >= 0) agentMessageIndex[agentId] = mergedIndex;
   }
+  // Disk hydration may replace a user bubble's generated UI id while retaining
+  // the same durable intent. Rebind native run ownership to that exact intent,
+  // otherwise later deltas still look for the removed live user bubble.
+  const streamRuns = live.streamRuns
+    ? Object.fromEntries(
+        Object.entries(live.streamRuns).map(([key, run]) => {
+          if (messages.some((message) => message.id === run.userMessageId)) return [key, run];
+          const original = live.messages.find((message) => message.id === run.userMessageId);
+          if (original?.kind !== "user") return [key, run];
+          const owners = messages.filter(
+            (message) =>
+              message.kind === "user" &&
+              ((original.clientMessageId && message.clientMessageId === original.clientMessageId) ||
+                (original.steerId &&
+                  message.steerId === original.steerId &&
+                  (!original.clientMessageId ||
+                    !message.clientMessageId ||
+                    original.clientMessageId === message.clientMessageId))),
+          );
+          return owners.length === 1 ? [key, { ...run, userMessageId: owners[0]!.id }] : [key, run];
+        }),
+      )
+    : undefined;
   return {
     ...history,
     ...live,
     messages,
     agentMessageIndex,
+    streamRuns,
     sessionId: live.sessionId ?? history.sessionId,
     promptTokens: live.promptTokens || history.promptTokens,
     cumulativePromptTokens: Math.max(history.cumulativePromptTokens, live.cumulativePromptTokens),

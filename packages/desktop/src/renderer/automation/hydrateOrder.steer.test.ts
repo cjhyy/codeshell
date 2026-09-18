@@ -177,3 +177,56 @@ test("aligns repeated durable evidence of one identity without mutating its live
   expect(merged.messages).toEqual([...disk.messages, live.messages[1]!]);
   expect(live.messages[0]).not.toHaveProperty("clientMessageId", "one");
 });
+
+function runningIdentifiedTurn(): MessagesReducerState {
+  let map: TranscriptsMap = { b: state([user("live-user", "shared-steer", "live-client")]) };
+  for (const event of [
+    { type: "session_started", sessionId: "session" },
+    { type: "stream_request_start", messageId: "live-reply" },
+    { type: "text_delta", text: "partial" },
+  ] as StreamEvent[]) {
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "b",
+      event: { ...event, runId: "live-run", clientMessageId: "live-client" },
+    });
+  }
+  return map.b!;
+}
+
+test("hydration does not rebind a native run through a conflicting client identity", () => {
+  const live = runningIdentifiedTurn();
+  const disk = state([user("disk-user", "shared-steer", "other-client"), assistant("disk-reply")]);
+  const merged = mergeHistoryIntoLive(disk, live);
+  expect(merged.streamRuns!["run:live-run"]!.userMessageId).toBe("live-user");
+  const continued = transcriptsReducer(
+    { b: merged },
+    {
+      type: "stream",
+      bucket: "b",
+      event: {
+        type: "text_delta",
+        text: " continues",
+        runId: "live-run",
+        clientMessageId: "live-client",
+      },
+    },
+  ).b!;
+  expect(continued.messages.find((message) => message.id === "disk-reply")).toMatchObject({
+    text: "answer",
+  });
+  expect(continued.messages.find((message) => message.id === "live-reply")).toMatchObject({
+    text: "partial continues",
+  });
+});
+
+test("ambiguous durable user anchors do not claim a native run", () => {
+  const live = runningIdentifiedTurn();
+  const disk = state([
+    user("disk-one", "shared-steer", "live-client"),
+    user("disk-two", "shared-steer", "live-client"),
+  ]);
+  const merged = mergeHistoryIntoLive(disk, live);
+  expect(merged.messages.some((message) => message.id === "live-user")).toBe(false);
+  expect(merged.streamRuns!["run:live-run"]!.userMessageId).toBe("live-user");
+});
