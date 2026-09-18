@@ -114,6 +114,8 @@ assert.equal("Arena" in internalApi, false);
 // catalog, tool-registry harness) moved to /internal with their runtime
 // counterparts, but this list was never updated — nothing was removed, so the
 // separation itself was intact; only the pin had drifted.
+// Includes the reviewed host-only managed-runtime and model-instance types;
+// neither surface is added to the stable public root.
 const expectedInternalTypeExports = [
   "ApprovalRequest",
   "ApprovalResult",
@@ -154,6 +156,8 @@ const expectedInternalTypeExports = [
   "LocalPluginPreview",
   "LocalPluginPreviewWarning",
   "LocalPluginPreviewWarningKind",
+  "ManagedRuntimeDescriptor",
+  "ManagedRuntimeProvider",
   "NotificationItem",
   "NpmPluginFetch",
   "NpmPluginInstallOptions",
@@ -169,6 +173,8 @@ const expectedInternalTypeExports = [
   "ProviderKindName",
   "ReasoningControl",
   "ReasoningSetting",
+  "ResolvedInstance",
+  "ResolvedManagedRuntime",
   "ResolvedNpmPlugin",
   "ResolvedSpeechModel",
   "ResolvedTranscribeProvider",

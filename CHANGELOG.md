@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.19] - 2026-09-18
+
+### Added
+
+- Add optional asynchronous user questions across Desktop, TUI and remote clients,
+  allowing work to continue while a later answer returns to its original session.
+- Add persisted goals and bounded continuation for external coding runtimes, with
+  version checks for updates, completion and cancellation.
+- Add a versioned failure-case evaluation harness with isolated Desktop scenarios,
+  live-model adapters, evidence collection and separate deterministic and semantic
+  checks; historical reports remain distinct from new evaluation results.
+
+### Fixed
+
+- Preserve user-message identity, interrupted replies, pending approvals and live
+  transcript prefixes across refreshes, queued turns and application restarts.
+- Restore Mimi's accepted inputs and attachments after reload, clear stale busy
+  state after worker exits, and keep Stop and session-binding feedback attached to
+  the intended conversation.
+- Restrict bound IM sessions to identified private chats and prevent ambiguous
+  delivery timeouts from sending the same input to both a work session and Mimi.
+- Keep project and worktree authority consistent when navigating sessions,
+  selecting branches and opening review panels.
+- Make the bundled Puppeteer Chrome extension compatible with restrictive
+  extension content security policies.
+
+### Changed
+
+- Bound tool-output text by estimated tokens as well as characters, preserve
+  multimedia block order and persisted result references, and deduplicate only
+  complete successful reads of the same file range. Keep the prompt's tool index
+  compact instead of repeating descriptions already supplied to the provider.
+- Allow read-only access to registered Skill resources in sandboxed commands while
+  retaining credential exclusions, explicit denials and filesystem identity checks.
+- Reuse Panel package inspections while package and registry identities remain
+  unchanged, retaining live authorization and native entry verification.
+
 ## [0.9.15] - 2026-09-16
 
 ### Added

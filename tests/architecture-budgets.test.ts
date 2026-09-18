@@ -51,14 +51,24 @@ describe("architecture growth budgets", () => {
     // (+25). Their service implementations remain outside the composition root.
     // v0.9.8 adds two calls to clear browser grants when deleting a Session;
     // cleanup remains in the existing browser-runtime services (+2 wiring).
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_029);
+    // The 2026-09-18 consolidation adds external-goal service wiring, reload
+    // approval replay and IM reply delivery (+108 over origin/main's 7_006).
+    // Goal persistence/RPC handlers remain in external-runtime-goals.ts and
+    // external-runtime-goal-rpc.ts; main supplies its live window ownership,
+    // trusted project resolver and service lifecycle. Approval replay combines
+    // the existing native/external queues at the IPC boundary. This reviewed
+    // baseline keeps both IPC-count and public-export budgets unchanged.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_114);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_825);
+    // Reload recovery adds the pending-approval invoke and acknowledged
+    // external answers; goal inputs and answer mirroring use existing routes.
+    // These are transport adapters (+26 over the 1_802-line main baseline).
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_828);
     expect(
       matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g),
     ).toBeLessThanOrEqual(300);
@@ -66,13 +76,19 @@ describe("architecture growth budgets", () => {
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
     // the renderer's direct imports.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_852);
+    // Pending approval recovery, external goal inputs and resolved answer text
+    // add nine declaration lines; no renderer runtime import is introduced.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_853);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
     // the +64 here is the composition root naming them plus the narrow-window
     // view transitions it already owns.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_750);
+    // Consolidation adds review-availability hook wiring and waits for answer
+    // acknowledgement before updating this component's transcript state (+25
+    // over 2_748). Availability checks remain in useReviewAvailability.ts;
+    // per-session approval policy remains in app/approvalPermission.ts.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_773);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
@@ -95,7 +111,12 @@ describe("architecture growth budgets", () => {
     // queued/running turn cancellation stays in ChatSession. Settings refresh
     // also invalidates the extracted skill scanner's discovery cache (+5), so
     // an edited SKILL.md is visible on the next turn without a worker restart.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_880);
+    // Nonblocking questions add registration and acknowledged answer handling
+    // (+180 over 4_824). AgentServer owns the route generation, cancellation
+    // fence, pending approval entry/timer and transport response, so admission
+    // and retirement stay together here. Follow-up turn delivery is extracted
+    // to async-user-answer.ts; no published entry-point budget is widened.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_004);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility

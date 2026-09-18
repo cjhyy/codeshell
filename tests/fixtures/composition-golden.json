@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "66745937764702f327b284130c13d593989ea1b2",
+  "baselineCommit": "07f6eb195c96e12fc916067b75be609a85e68ccb",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -164,6 +164,15 @@
       },
       {
         "name": "AskUserQuestion",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "AskUserQuestionAsync",
         "moduleId": "core",
         "exposure": "preset-tags",
         "presetTags": [
