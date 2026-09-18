@@ -13,6 +13,7 @@ import {
   panelRuntimeApiVersion,
   panelProcessMethods,
   panelResourceMethods,
+  panelToolJobMethods,
   panelRuntimeCapabilities,
   PanelBridgeError,
   panelBridgeFailure,
@@ -24,6 +25,14 @@ import {
   materializePanelConnections,
 } from "./connections.js";
 import { PanelRuntimeServices } from "./runtime-services.js";
+import {
+  PanelToolJobService,
+  toolJobLimits,
+  type ToolJob,
+  type ToolJobScope,
+} from "./tool-jobs.js";
+import { createPanelToolExecutor } from "./tool-executor.js";
+import { PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
 import { handlePanelProcessDirectory } from "./process-files.js";
 import {
   PanelAppProcessService,
@@ -51,6 +60,7 @@ const METHODS = [
   "notifications.send",
   ...panelProcessMethods,
   ...panelResourceMethods,
+  ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.connections.authorizeProcess",
   "agent.task.models",
@@ -316,7 +326,7 @@ function bridgeScript(id: string, origin: string): string {
       const requestId = String(++next);
       const timer = setTimeout(() => {
         pending.delete(requestId); reject(new Error("Panel request timed out"));
-      }, 60000);
+      }, method === "tasks.start" ? 30 * 60 * 1000 : 60000);
       pending.set(requestId, { resolve, reject, timer });
       try {
         parent.postMessage({ type: "codeshell-panel:call", instanceId: id, requestId, method, params }, origin);
@@ -360,7 +370,7 @@ function bridgeScript(id: string, origin: string): string {
         call: ask,
         callResult: (method, params) => ask(method, params).then(value => ({ ok: true, value }), error => ({ ok: false, error: { code: error.code || "OPERATION_FAILED", message: error.message, ...(typeof error.retryAfterMs === "number" ? { retryAfterMs: error.retryAfterMs } : {}) } })),
         on: (name, listener) => {
-          if (!["context.changed", "process.output", "process.exit", "agent.task.changed", "media.job.changed"].includes(name) || typeof listener !== "function") {
+          if (!["context.changed", "process.output", "process.exit", "agent.task.changed", "tasks.changed", "media.job.changed"].includes(name) || typeof listener !== "function") {
             throw new Error("Invalid event listener");
           }
           let list = listeners.get(name);
@@ -447,10 +457,45 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   let closed = false;
   let generation = 0;
   let nextGuest = 0;
+  let nextToolOwner = -1;
   const byGuest = new Map<number, Grant>();
+  const directoryBookmarks = new PanelAppDirectoryBookmarks(
+    join(options.dataDir, "panel-web-directory-bookmarks.json"),
+  );
+  const panelDataDirectory = (appId: string) =>
+    join(
+      options.dataDir,
+      "panel-data",
+      appId,
+      digest(Buffer.from(options.bindingCwd ?? options.cwd)).slice(0, 24),
+    );
+  const toolOwners = new Map<number, ToolJobScope>();
+  const jobOwners = new Map<string, { owner: string; scope: ToolJobScope }>();
+  let toolJobs: PanelToolJobService | undefined;
+  async function installedToolApp(scope: ToolJobScope) {
+    if (closed || scope.projectPath !== (options.bindingCwd ?? options.cwd))
+      throw new PanelBridgeError("REVOKED", "Tool task workspace is unavailable");
+    const panel = (await snapshot()).panels.find((candidate) => candidate.id === scope.appId);
+    const app = (await installed()).find((candidate) => candidate.id === scope.appId);
+    if (
+      !panel?.enabled ||
+      panel.revision !== scope.revision ||
+      !app?.permissions.includes("process") ||
+      !app.permissions.includes("resources")
+    )
+      throw new PanelBridgeError("REVOKED", "Installed tool task is no longer authorized");
+    return app;
+  }
   const processes = new PanelAppProcessService({
     approvalScope: "guest",
     resolvePackageEntry: async (owner, name) => {
+      const taskScope = toolOwners.get(owner.guestId);
+      if (taskScope) {
+        const app = await installedToolApp(taskScope);
+        const entry = app.nativeEntries?.[name];
+        if (!entry) throw new PanelBridgeError("REVOKED", "Installed tool entry is unavailable");
+        return { path: join(app.installPath, entry.entry), sha256: entry.sha256 };
+      }
       const grant = byGuest.get(owner.guestId);
       const entry = grant?.app.nativeEntries?.[name];
       if (
@@ -465,10 +510,13 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     extraPathDirectories: () =>
       panelExecutableDirectories(join(options.dataDir, "panel-bin"), { home: homedir() }),
     isOwnerAuthorized: async (owner) => {
+      const taskScope = toolOwners.get(owner.guestId);
+      if (taskScope) return !!(await installedToolApp(taskScope).catch(() => null));
       const grant = byGuest.get(owner.guestId);
       return !!grant && (await authorized(grant));
     },
     confirmExecution: async (input) => {
+      if (toolOwners.has(input.guestId)) return true;
       const grant = byGuest.get(input.guestId);
       return (
         !!grant &&
@@ -483,6 +531,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const resources = new PanelResourceService({
     rootDirectory: join(options.dataDir, "panel-app-media"),
     isScopeAuthorized: async (scope) => {
+      if (scope.projectPath === (options.bindingCwd ?? options.cwd)) {
+        const panel = (await snapshot()).panels.find((candidate) => candidate.id === scope.appId);
+        if (panel?.enabled && panel.permissions.includes("resources")) return true;
+      }
       for (const grant of grants.values())
         if (
           grant.app.id === scope.appId &&
@@ -500,6 +552,148 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   }, 60_000);
   reaper.unref();
   const preparing = new Set<{ owner: string; cancelled: boolean }>();
+  async function dispatchToolJobs(grant: Grant, method: string, params: unknown) {
+    if (!grant.app.permissions.includes("process") || !grant.app.permissions.includes("resources"))
+      error(403, "原生后台任务需要 process 和 resources 权限。");
+    const scope = {
+      appId: grant.app.id,
+      projectPath: options.bindingCwd ?? options.cwd,
+      revision: grant.revision,
+    };
+    const input = (params ?? {}) as {
+      id?: string;
+      entry?: string;
+      input?: unknown;
+      recovery?: "manual" | "retry";
+      requestKey?: string;
+      offset?: number;
+      limit?: number;
+    };
+    const service = getToolJobs();
+    if (method === "tasks.start") {
+      const app = await installedToolApp(scope);
+      const entry = app.nativeEntries?.[input.entry ?? ""];
+      if (!entry) error(501, "安装的原生工具不可用。");
+      if (!(await confirm(grant, `启动 ${grant.app.title.default} 的后台工具？`, input.entry!)))
+        error(403, "你取消了后台工具执行。");
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      const job = await service.start(scope, {
+        entry: { name: input.entry!, sha256: entry.sha256 },
+        input: input.input,
+        recovery: input.recovery ?? "manual",
+        requestKey: input.requestKey,
+      });
+      if (!jobOwners.has(job.id)) jobOwners.set(job.id, { owner: grant.owner, scope });
+      if (!(await authorized(grant))) {
+        if (jobOwners.get(job.id)?.owner === grant.owner) await service.cancel(scope, job.id);
+        error(410, "登录授权已撤销。");
+      }
+      emitTaskEvent(await service.get(scope, job.id));
+      return job;
+    }
+    if (method === "tasks.list") {
+      const offset = input.offset ?? 0,
+        limit = input.limit ?? 50;
+      if (
+        !Number.isSafeInteger(offset) ||
+        offset < 0 ||
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > 50
+      )
+        throw new PanelBridgeError("INVALID_ARGUMENT", "Invalid task page");
+      return (await service.list(scope))
+        .slice(offset, offset + limit)
+        .map((job) => toolSummary(job));
+    }
+    if (method === "tasks.get") return service.get(scope, input.id!);
+    if (method === "tasks.cancel") return service.cancel(scope, input.id!);
+    if (method === "tasks.retry") {
+      if (!(await confirm(grant, `重试 ${grant.app.title.default} 的后台工具？`, input.id ?? "")))
+        error(403, "你取消了后台工具重试。");
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      const job = await service.retry(scope, input.id!);
+      jobOwners.set(job.id, { owner: grant.owner, scope });
+      if (!(await authorized(grant))) {
+        await service.cancel(scope, job.id);
+        error(410, "登录授权已撤销，后台工具已取消。");
+      }
+      emitTaskEvent(await service.get(scope, job.id));
+      return job;
+    }
+    throw new PanelBridgeError("NOT_SUPPORTED", "Unknown tool task operation");
+  }
+  function toolSummary(job: ToolJob) {
+    const { input: _input, result: _result, ...summary } = job;
+    return summary;
+  }
+  function emitTaskEvent(job: ToolJob) {
+    const owner = jobOwners.get(job.id)?.owner;
+    if (!owner) return;
+    for (const grant of grants.values())
+      if (
+        grant.owner === owner &&
+        grant.app.id === job.scope.appId &&
+        grant.revision === job.scope.revision &&
+        grant.app.permissions.includes("process") &&
+        grant.app.permissions.includes("resources")
+      )
+        emit(grant, "tasks.changed", toolSummary(job));
+    if (["succeeded", "failed", "cancelled", "interrupted"].includes(job.status))
+      jobOwners.delete(job.id);
+  }
+  function getToolJobs(): PanelToolJobService {
+    if (toolJobs) return toolJobs;
+    const executor = createPanelToolExecutor({
+      processes,
+      resources,
+      owner: (job, send) => {
+        const guestId = nextToolOwner--;
+        toolOwners.set(guestId, job.scope);
+        return {
+          guestId,
+          appId: job.scope.appId,
+          appTitle: job.scope.appId,
+          revision: job.scope.revision,
+          send,
+        };
+      },
+      releaseOwner: (owner) => {
+        toolOwners.delete(owner.guestId);
+      },
+      authorize: async (scope) => {
+        await installedToolApp(scope);
+      },
+      authorizeConnections: async (scope) => {
+        const app = await installedToolApp(scope);
+        if (!app.permissions.includes("credentials.connections"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
+      },
+      appDataDirectory: async (scope) => {
+        await installedToolApp(scope);
+        const path = panelDataDirectory(scope.appId);
+        await mkdir(path, { recursive: true, mode: 0o700 });
+        return path;
+      },
+      sealedRoot: join(options.dataDir, "panel-app-sealed"),
+    });
+    toolJobs = new PanelToolJobService({
+      // Desktop's IPC bridge has its own in-memory coordinator for panel-tool-jobs.
+      // A Desktop Web workspace must not open the same store concurrently.
+      rootDir:
+        options.host === "desktop"
+          ? join(
+              options.dataDir,
+              "panel-web-tool-jobs",
+              digest(Buffer.from(options.cwd)).slice(0, 24),
+            )
+          : join(options.dataDir, "panel-tool-jobs"),
+      ...executor,
+      isAuthorized: async (scope) => !!(await installedToolApp(scope).catch(() => null)),
+      onEvent: emitTaskEvent,
+    });
+    return toolJobs;
+  }
   let readingSnapshot: Promise<PanelSnapshot> | undefined;
   function snapshot() {
     // Parallel module requests share current disk work, without a stale TTL
@@ -673,6 +867,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     for (const preparation of preparing)
       if (preparation.owner === owner) preparation.cancelled = true;
     for (const grant of grants.values()) if (grant.owner === owner) remove(grant);
+    for (const [id, record] of jobOwners)
+      if (record.owner === owner) void toolJobs?.cancel(record.scope, id).catch(() => {});
   }
   async function authorized(grant: Grant): Promise<boolean> {
     if (
@@ -761,22 +957,48 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         theme: input.theme === "dark" ? "dark" : "light",
         locale: typeof input.locale === "string" ? input.locale.slice(0, 32) : "zh-CN",
         apiVersion: panelRuntimeApiVersion,
-        capabilities: panelRuntimeCapabilities({
-          process: app.permissions.includes("process"),
-          resources: app.permissions.includes("resources") ? resources.capabilities() : undefined,
-          limits: {
-            maxParamsBytes: 3 * 1024 * 1024,
-            maxResultBytes: 3 * 1024 * 1024,
-            rateWindowMs: 60000,
-            maxCallsPerWindow: 240,
-            maxTransferCallsPerWindow: 2048,
-            callTimeoutMs: 60000,
-            consentTimeoutMs: 50000,
-          },
-        }),
+        capabilities: {
+          ...panelRuntimeCapabilities({
+            process: app.permissions.includes("process"),
+            resources: app.permissions.includes("resources") ? resources.capabilities() : undefined,
+            tasks:
+              app.permissions.includes("process") && app.permissions.includes("resources")
+                ? {
+                    available: true,
+                    ...toolJobLimits,
+                    maxHttpResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                  }
+                : undefined,
+            limits: {
+              maxParamsBytes: 3 * 1024 * 1024,
+              maxResultBytes: 3 * 1024 * 1024,
+              rateWindowMs: 60000,
+              maxCallsPerWindow: 240,
+              maxTransferCallsPerWindow: 2048,
+              callTimeoutMs: 60000,
+              consentTimeoutMs: 50000,
+            },
+          }),
+          ...(app.permissions.includes("process") && app.permissions.includes("resources")
+            ? {
+                methodLimits: {
+                  "tasks.start": {
+                    maxParamsBytes: toolJobLimits.maxInputBytes,
+                    maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                    timeoutMs: 30 * 60 * 1000,
+                  },
+                  "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                  "tasks.retry": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                  "tasks.cancel": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                },
+              }
+            : {}),
+        },
         host: options.host,
         availableMethods: METHODS.filter((method) => {
           if (method.startsWith("agent.task.") && !agentTasks) return false;
+          if (method.startsWith("tasks."))
+            return app.permissions.includes("process") && app.permissions.includes("resources");
           if (
             [
               "resources.materialize",
@@ -871,6 +1093,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     if (transfer) grant.transfers = history;
     else grant.calls = history;
     if (method === "context.get") return grant.context;
+    if (method.startsWith("tasks.")) return dispatchToolJobs(grant, method, params);
     if (method.startsWith("tools.")) {
       const name = (params as { name?: unknown } | undefined)?.name;
       if (typeof name !== "string" || !grant.app.agent?.tools.some((tool) => tool.name === name))
@@ -977,30 +1200,51 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           url: `${ROOT}${grant.id}/directory/${handle}`,
         };
       }
+      if (method === "filesystem.restoreDirectory") {
+        const saved = directoryBookmarks.restore(
+          grant.app.id,
+          options.bindingCwd ?? options.cwd,
+          (params as { bookmark?: unknown } | null)?.bookmark,
+        );
+        if (saved !== (await realpath(join(options.cwd, "downloads"))))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Saved server directory is unavailable");
+        const restored = await processes.grantDirectory(owner, saved);
+        directoryBookmarks.restore(
+          grant.app.id,
+          options.bindingCwd ?? options.cwd,
+          (params as { bookmark?: unknown } | null)?.bookmark,
+        );
+        return { ...restored, bookmark: (params as { bookmark: string }).bookmark };
+      }
       const name =
         method === "filesystem.pickDirectory" ? "downloads" : (params as { name?: unknown })?.name;
       const directory =
-        name === "downloads"
-          ? join(options.cwd, "downloads")
-          : name === "user-bin"
-            ? join(options.dataDir, "panel-bin")
-            : name === "app-data"
-              ? join(
-                  options.dataDir,
-                  "panel-data",
-                  grant.app.id,
-                  digest(Buffer.from(options.bindingCwd ?? options.cwd)).slice(0, 24),
-                )
-              : undefined;
+        name === "project"
+          ? options.cwd
+          : name === "downloads"
+            ? join(options.cwd, "downloads")
+            : name === "user-bin"
+              ? join(options.dataDir, "panel-bin")
+              : name === "app-data"
+                ? panelDataDirectory(grant.app.id)
+                : undefined;
       if (!directory) error(400, "不支持这个服务端目录。");
       if (
         method === "filesystem.pickDirectory" &&
         !(await confirm(grant, "使用服务端下载目录？", directory))
       )
         return null;
-      await mkdir(directory, { recursive: true, mode: 0o700 });
+      if (name !== "project") await mkdir(directory, { recursive: true, mode: 0o700 });
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
-      return processes.grantDirectory(owner, directory);
+      const selected = await processes.grantDirectory(owner, directory);
+      if (method !== "filesystem.pickDirectory") return selected;
+      const bookmark = directoryBookmarks.remember(
+        grant.app.id,
+        options.bindingCwd ?? options.cwd,
+        selected.path,
+      );
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      return { ...selected, bookmark };
     }
     if (["external.open", "agent.submitPrompt", "notifications.send"].includes(method)) {
       if (!grant.app.permissions.includes(method as never)) error(403, "面板未声明这个权限。");
@@ -1061,7 +1305,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     );
   }
   return {
-    activeTaskCount: () => agentTasks?.activeTaskCount?.() ?? 0,
+    activeTaskCount: () => (agentTasks?.activeTaskCount?.() ?? 0) + (toolJobs?.activeCount() ?? 0),
     async panelAction(
       ownerId: string,
       sessionId: string,
@@ -1103,17 +1347,24 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     invalidate(appId?: string) {
       generation++;
       for (const grant of grants.values()) if (!appId || grant.app.id === appId) remove(grant);
+      if (!toolJobs) return Promise.resolve();
+      const appIds = appId
+        ? [appId]
+        : [...new Set([...jobOwners.values()].map((record) => record.scope.appId))];
+      return Promise.all(appIds.map((id) => toolJobs!.cancelApp(id))).then(() => undefined);
     },
-    close() {
+    async close() {
       closed = true;
       clearInterval(reaper);
       for (const grant of grants.values()) remove(grant);
-      processes.close();
       assets.clear();
       for (const preparation of preparing) preparation.cancelled = true;
-      return Promise.all([resources.shutdown(), Promise.resolve(agentTasks?.close())]).then(
-        () => undefined,
-      );
+      try {
+        await toolJobs?.shutdown();
+      } finally {
+        processes.close();
+        await Promise.all([resources.shutdown(), Promise.resolve(agentTasks?.close())]);
+      }
     },
     async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
       const url = new URL(request.url ?? "/", "http://localhost");
@@ -1208,9 +1459,14 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           });
           json(response, 200, { accepted: true });
         } else if (request.method === "POST" && match[2] === "call") {
-          const value = await call(grant, await body(request));
+          const input = await body(request);
+          const value = await call(grant, input);
           if (!(await authorized(grant))) error(410, "面板授权已失效，请重新打开。");
-          if (Buffer.byteLength(JSON.stringify(value) ?? "null") > 3 * 1024 * 1024)
+          const resultLimit =
+            typeof input.method === "string" && input.method.startsWith("tasks.")
+              ? toolJobLimits.maxRecordBytes + 128 * 1024
+              : 3 * 1024 * 1024;
+          if (Buffer.byteLength(JSON.stringify(value) ?? "null") > resultLimit)
             throw new PanelBridgeError(
               "RESULT_TOO_LARGE",
               "Panel result exceeds the response limit",

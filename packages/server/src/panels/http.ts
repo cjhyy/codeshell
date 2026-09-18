@@ -15,7 +15,7 @@ export function createPanelHttp(
     ...options,
     compatibility: options.compatibility ?? panelWebCompatibility,
     onChanged: async (id, kind) => {
-      runtime?.invalidate(id);
+      await runtime?.invalidate(id);
       await options.onChanged?.(id, kind);
     },
   });
@@ -39,8 +39,8 @@ export function createPanelHttp(
       runtime.cancelOwner(owner);
       management.cancelOwner(owner);
     },
-    close() {
-      runtime.close();
+    async close() {
+      await runtime.close();
       management.close();
     },
   };

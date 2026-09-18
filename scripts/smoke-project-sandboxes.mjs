@@ -8,6 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { createRequire } from "node:module";
 import {
@@ -40,6 +41,16 @@ const proofPath = "/workspace/downloads/shared-proof.txt";
 const processProof = "written by panel process\n";
 const mainProof = "written by main agent after Read\n";
 const taskProof = "written by independent panel task after Read\n";
+const nativeProof = "written by reviewed panel tool in project A\n";
+const nativeToolSource = `import { writeFileSync } from "node:fs";
+let request = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (part) => { request += part; });
+process.stdin.on("end", () => {
+  const input = JSON.parse(request);
+  writeFileSync("/workspace/downloads/native-job-proof.txt", ${JSON.stringify(nativeProof)});
+  process.stdout.write(JSON.stringify({ type: "result", result: { project: "A", value: input.value } }) + "\\n");
+});`;
 const sockets = new Set();
 let installationId;
 let child;
@@ -263,13 +274,15 @@ async function installFixture(container) {
     import { spawn } from "node:child_process";
     import { previewLocalPanelApp, installReviewedLocalPanelApp } from "/opt/codeshell/packages/core/dist/index.js";
     const source = "/tmp/project-smoke-panel";
-    for (const path of [source + "/.codeshell-panel", source + "/app", "/workspace/.code-shell"])
+    for (const path of [source + "/.codeshell-panel", source + "/app", source + "/app/tools", "/workspace/.code-shell"])
       mkdirSync(path, { recursive: true });
+    writeFileSync(source + "/app/tools/sample.mjs", ${JSON.stringify(nativeToolSource)});
     writeFileSync(source + "/.codeshell-panel/panel.json", JSON.stringify({
       schemaVersion: 2, id: "project-smoke-panel", version: "1.0.0",
       title: { default: "Project smoke panel" }, entry: "app/index.html", icon: "panel",
       singleton: true, placement: "right-dock",
-      permissions: ["context.workspace", "context.session", "workspace.info", "workspace.read", "workspace.write", "process", "agent.task"],
+      permissions: ["context.workspace", "context.session", "workspace.info", "workspace.read", "workspace.write", "process", "resources", "agent.task"],
+      nativeEntries: { sample: { entry: "app/tools/sample.mjs", sha256: ${JSON.stringify(createHash("sha256").update(nativeToolSource).digest("hex"))} } },
       agent: { tools: [], skills: [] },
     }));
     writeFileSync(source + "/app/index.html", '<!doctype html><html><head><title>Smoke panel</title></head><body>Project smoke panel</body></html>');
@@ -495,6 +508,7 @@ try {
     body: { appId: panel.id, revision, sessionId: "smoke-project-main" },
   });
   assert.ok(grant.context.availableMethods.includes("agent.task.start"));
+  assert.ok(grant.context.availableMethods.includes("tasks.start"));
   const asset = await request(prefixA + grant.src, { anonymous: true, origin: "null" });
   assert.equal(asset.status, 200);
   assert.ok((await asset.text()).includes("Project smoke panel"));
@@ -539,6 +553,35 @@ try {
   console.log(
     "PASS: opaque panel asset capability and approved panel process write the project volume",
   );
+
+  const nativeJob = await host.finish(
+    host.call("tasks.start", {
+      entry: "sample",
+      input: { request: { value: "project-volume" } },
+      recovery: "manual",
+      requestKey: "sandbox-smoke-tool",
+    }),
+  );
+  const completedNativeJob = await waitUntil(async () => {
+    await host.poll();
+    const job = await host.call("tasks.get", { id: nativeJob.id });
+    if (["failed", "cancelled", "interrupted"].includes(job.status))
+      throw new Error(`Native panel task failed: ${job.error?.message ?? job.status}`);
+    return job.status === "succeeded" ? job : null;
+  }, "reviewed native panel task in project container");
+  assert.deepEqual(completedNativeJob.result, { project: "A", value: "project-volume" });
+  assert.equal(
+    await (
+      await request(prefixA + "/api/v1/files/content?path=downloads%2Fnative-job-proof.txt")
+    ).text(),
+    nativeProof,
+  );
+  assert.ok(
+    host.events.some(
+      (event) => event.event === "tasks.changed" && event.payload.id === nativeJob.id,
+    ),
+  );
+  console.log("PASS: approved reviewed panel task executes and persists inside project A");
 
   const rpcA = await connect(a.id);
   const rpcB = await connect(b.id);

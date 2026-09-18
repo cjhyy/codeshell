@@ -1119,7 +1119,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     await mcp?.close();
     configuration?.close();
     links?.close();
-    panels?.close();
+    await panels?.close();
     files?.close();
     bridge.kill();
     wss.close();
@@ -1149,7 +1149,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       await mcp?.close();
       configuration?.close();
       links?.close();
-      panels?.close();
+      await panels?.close();
       files?.close();
       for (const tab of tabs) {
         try {

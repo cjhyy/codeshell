@@ -209,6 +209,12 @@ export class PanelToolJobService {
   constructor(private readonly options: PanelToolJobServiceOptions) {
     this.storage = new ToolJobStorage(options.rootDir);
   }
+  activeCount(): number {
+    return (
+      this.preparing.size +
+      [...this.jobs.values()].filter((job) => !TERMINAL.has(job.status)).length
+    );
+  }
   private now() {
     return this.options.now?.() ?? Date.now();
   }

@@ -60,7 +60,7 @@ export function createDesktopWebService(options: {
             const idle = [...panels].find(([, candidate]) => candidate.active === 0);
             if (!idle) throw Object.assign(new Error("正在访问的工作区过多。"), { status: 503 });
             panels.delete(idle[0]);
-            idle[1].handler.close();
+            await idle[1].handler.close();
           }
           const cwd = context.cwd;
           const bindingCwd = resolvePanelAppBindingProjectPath(cwd);
@@ -90,8 +90,10 @@ export function createDesktopWebService(options: {
                 (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,
               isAuthorized: authorized,
               withMutation: (write) => withMutation(cwd, write),
-              onChanged: (id) => {
-                for (const value of panels.values()) value.handler.invalidate(id);
+              onChanged: async (id) => {
+                await Promise.all(
+                  [...panels.values()].map((value) => value.handler.invalidate(id)),
+                );
                 options.getBridge()?.notifyWebConfigurationChanged();
               },
             }),

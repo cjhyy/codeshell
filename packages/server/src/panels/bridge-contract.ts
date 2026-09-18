@@ -12,6 +12,7 @@ export const panelProcessMethods = [
   "process.end",
   "filesystem.getKnownDirectory",
   "filesystem.pickDirectory",
+  "filesystem.restoreDirectory",
   "filesystem.openDirectory",
 ];
 export const panelResourceMethods = [

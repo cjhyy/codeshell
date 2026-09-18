@@ -468,7 +468,8 @@ export function PanelHost({
       let payload: string;
       try {
         payload = JSON.stringify({ method: data.method, params: data.params });
-        if (payload.length > 2 * 1024 * 1024) throw new Error("too large");
+        if (new TextEncoder().encode(payload).length > 3 * 1024 * 1024)
+          throw new Error("too large");
       } catch {
         reply(child, requestId, undefined, "面板请求内容过大或格式无效。");
         return;

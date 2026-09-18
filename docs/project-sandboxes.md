@@ -77,7 +77,7 @@ node packages/server/dist/bin/code-shell-serve.js \
 
 项目模式复用了共享 Web、Core Worker、工具审批、Skills、MCP、Link 和面板接口，并在容器级别分开文件与运行进程。容器采用非 root、只读根文件系统、移除 Linux capabilities 和资源限制；这不等于完整多租户安全方案，也不等于阻断所有出站网络。当前仍是同一个管理员管理多个项目。
 
-面板 SDK 仍需以运行时 `availableMethods` 和面板页面提示为准。Cookie、音频、媒体、automation、PDF 及部分桌面宿主功能尚未完整对齐；面板的基础界面可以打开，不代表全部桌面功能可用。Mimi Download 的历史仍受其使用 `localStorage` 而未声明 storage 权限的限制，opaque iframe 重开后不能依靠该历史恢复；已下载到项目卷的文件与此不同。详见 [Web 面板说明](web-panels.md)。
+面板 SDK 仍需以运行时 `availableMethods` 和面板页面提示为准。Web 原生后台任务与服务端目录书签已接入；Cookie、音频、媒体、automation、PDF 及部分桌面宿主功能尚未完整对齐。面板的基础界面可以打开，不代表全部桌面功能可用。Mimi Download 0.20.0 及更新版本的主队列和历史已使用 Host `storage`；部分偏好和临时搜索状态仍需逐项核对。已下载到项目卷的文件与浏览器本机文件是不同的位置。详见 [Web 面板说明](web-panels.md)。
 
 Link 连接在项目中独立配置。需要独立 OAuth 服务的提供方仍需部署和配置相应授权服务；项目模式不会自动启动或替代它。
 

@@ -27,3 +27,4 @@ export * from "./panels/connections.js";
 
 export * from "./panels/tool-jobs.js";
 export * from "./panels/tool-executor.js";
+export * from "./panels/directory-bookmarks.js";

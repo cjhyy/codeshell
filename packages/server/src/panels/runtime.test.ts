@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
@@ -31,7 +41,7 @@ async function fixture(
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
   } = {},
 ) {
-  const root = await mkdtemp(join(tmpdir(), "codeshell-panel-http-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-panel-http-")));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const installPath = join(root, "installed");
   const cwd = join(root, "workspace");
@@ -485,6 +495,22 @@ describe("Panel HTTP runtime", () => {
       });
       expect(updated).toEqual({ theme: "dark" });
       unsubscribe();
+      let taskChanged: unknown;
+      const stopTasks = window.codeshellPanel.on("tasks.changed", (value: unknown) => {
+        taskChanged = value;
+      });
+      handlers.get("message")!({
+        source: parent,
+        origin: f.url,
+        data: {
+          type: "codeshell-panel:event",
+          instanceId: grant.instanceId,
+          event: "tasks.changed",
+          payload: { id: "tool-job" },
+        },
+      });
+      expect(taskChanged).toEqual({ id: "tool-job" });
+      stopTasks();
       expect(() => window.codeshellPanel.on("arbitrary", () => {})).toThrow();
       const unregister = window.codeshellPanel.registerTool("read_panel", () => ({}));
       expect(() => window.codeshellPanel.registerTool("read_panel", () => ({}))).toThrow();
@@ -761,8 +787,8 @@ describe("Panel HTTP runtime", () => {
 type RuntimeFixture = Awaited<ReturnType<typeof fixture>>;
 type RuntimeEvent = { id: number; event: string; payload: Record<string, unknown> };
 
-async function runtimeEvents(f: RuntimeFixture, instance: string, after = 0) {
-  const response = await f.api(`${instance}/events?after=${after}`, "GET");
+async function runtimeEvents(f: RuntimeFixture, instance: string, after = 0, owner = "owner-a") {
+  const response = await f.api(`${instance}/events?after=${after}`, "GET", undefined, owner);
   expect(response.status).toBe(200);
   return response.json() as Promise<{ events: RuntimeEvent[]; cursor: number }>;
 }
@@ -805,7 +831,155 @@ async function nodeProcessFixture() {
   return { ...f, grant, params, directory, call };
 }
 
+async function nativeToolFixture(source: string) {
+  const f = await fixture({ permissions: ["context.workspace", "process", "resources"] });
+  const entry = "app/tools/sample.mjs";
+  await mkdir(join(f.installPath, "app", "tools"), { recursive: true });
+  await writeFile(join(f.installPath, entry), source);
+  f.app.nativeEntries = {
+    sample: { entry, sha256: createHash("sha256").update(source).digest("hex") },
+  };
+  const grant = await f.prepare();
+  const call = (method: string, params?: unknown, instance = grant.instanceId, owner = "owner-a") =>
+    f.api(`${instance}/call`, "POST", { method, params }, owner);
+  const start = async (requestKey?: string) => {
+    const pending = call("tasks.start", {
+      entry: "sample",
+      input: { request: { value: "fixture" } },
+      recovery: "retry",
+      requestKey,
+    });
+    const confirmation = await waitRuntimeEvent(f, grant.instanceId, "host.confirm");
+    expect(
+      (
+        await f.api(`${grant.instanceId}/confirm`, "POST", {
+          requestId: confirmation.payload.requestId,
+          allowed: true,
+        })
+      ).status,
+    ).toBe(200);
+    const response = await pending;
+    expect(response.status).toBe(200);
+    return response.json();
+  };
+  return { ...f, grant, call, start };
+}
+
 describe("Panel HTTP host operations", () => {
+  test("Web native tasks run from reviewed entries, persist across page close, and remain scoped", async () => {
+    const f = await nativeToolFixture(
+      'let input = ""; process.stdin.setEncoding("utf8"); process.stdin.on("data", (part) => input += part); process.stdin.on("end", () => { const request = JSON.parse(input); process.stdout.write(JSON.stringify({ type: "result", result: { value: request.value } }) + "\\n"); });',
+    );
+    expect((f.grant.context as any).capabilities.tasks.available).toBe(true);
+    expect(f.grant.context.availableMethods).toContain("tasks.start");
+    const otherOwner = await f.prepare("owner-b");
+    const job = await f.start("stable-request");
+    expect(typeof job.id).toBe("string");
+    expect((await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed")).payload.id).toBe(
+      job.id,
+    );
+    expect((await runtimeEvents(f, otherOwner.instanceId, 0, "owner-b")).events).toEqual([]);
+    expect(f.runtime.activeTaskCount()).toBeGreaterThanOrEqual(0);
+    expect((await f.api(f.grant.instanceId, "DELETE")).status).toBe(200);
+    const reopened = await f.prepare();
+    let current: any;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const response = await f.call("tasks.get", { id: job.id }, reopened.instanceId);
+      expect(response.status).toBe(200);
+      current = await response.json();
+      if (current.status === "succeeded" || current.status === "failed") break;
+      await Bun.sleep(20);
+    }
+    expect(current).toMatchObject({ status: "succeeded", result: { value: "fixture" } });
+    const list = await f.call("tasks.list", {}, reopened.instanceId);
+    expect(list.status).toBe(200);
+    expect((await list.json()).some((entry: { id: string }) => entry.id === job.id)).toBe(true);
+    f.state.revision = "b".repeat(64);
+    await f.runtime.invalidate(f.app.id);
+    const next = await f.prepare();
+    const previous = await f.call("tasks.get", { id: job.id }, next.instanceId);
+    expect((await previous.json()).readOnly).toBe(true);
+    expect((await f.call("tasks.cancel", { id: job.id }, next.instanceId)).status).toBe(400);
+  });
+
+  test("Web native task approval cannot survive session revocation", async () => {
+    const f = await nativeToolFixture(
+      'process.stdin.resume(); process.stdin.on("end", () => process.stdout.write(JSON.stringify({type:"result",result:{ok:true}})+"\\n"));',
+    );
+    const pending = f.call("tasks.start", {
+      entry: "sample",
+      input: { request: {} },
+    });
+    await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm");
+    f.runtime.cancelOwner("owner-a");
+    expect((await pending).status).toBe(410);
+    expect(f.runtime.activeTaskCount()).toBe(0);
+  });
+
+  test("Web native task stops after its login owner is revoked", async () => {
+    const f = await nativeToolFixture(
+      'process.stdin.resume(); process.stdin.on("end", () => setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{ok:true}})+"\\n"), 5000));',
+    );
+    const job = await f.start();
+    const observer = await f.prepare("owner-b");
+    let current: any;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const response = await f.call("tasks.get", { id: job.id }, observer.instanceId, "owner-b");
+      current = await response.json();
+      if (current.status === "running") break;
+      await Bun.sleep(20);
+    }
+    expect(current.status).toBe("running");
+    f.runtime.cancelOwner("owner-a");
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const response = await f.call("tasks.get", { id: job.id }, observer.instanceId, "owner-b");
+      current = await response.json();
+      if (current.status === "cancelled") break;
+      await Bun.sleep(20);
+    }
+    expect(current.status).toBe("cancelled");
+    expect(current.result).toBeUndefined();
+    expect((await runtimeEvents(f, observer.instanceId, 0, "owner-b")).events).toEqual([]);
+  });
+
+  test("Web restores only a bookmarked server directory after reopening the Panel", async () => {
+    const f = await nodeProcessFixture();
+    const project = await f.call("filesystem.getKnownDirectory", { name: "project" });
+    expect(project.path).toBe(f.cwd);
+    const pending = f.call("filesystem.pickDirectory");
+    const confirmation = await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm");
+    expect(
+      (
+        await f.api(`${f.grant.instanceId}/confirm`, "POST", {
+          requestId: confirmation.payload.requestId,
+          allowed: true,
+        })
+      ).status,
+    ).toBe(200);
+    const selected = await pending;
+    expect(typeof selected.bookmark).toBe("string");
+    expect(selected.path).toBe(f.directory.path);
+    expect((await f.api(f.grant.instanceId, "DELETE")).status).toBe(200);
+    const reopened = await f.prepare();
+    const restored = await f.api(`${reopened.instanceId}/call`, "POST", {
+      method: "filesystem.restoreDirectory",
+      params: { bookmark: selected.bookmark },
+    });
+    expect(restored.status).toBe(200);
+    expect(await restored.json()).toMatchObject({
+      path: selected.path,
+      bookmark: selected.bookmark,
+    });
+    expect(
+      (
+        await f.api(`${reopened.instanceId}/call`, "POST", {
+          method: "filesystem.restoreDirectory",
+          params: { bookmark: project.handle },
+        })
+      ).status,
+    ).toBe(400);
+  });
+
   test("renew preserves assets and instance, rejects other owners, and cannot revive expiry", async () => {
     const f = await fixture();
     const grant = await f.prepare();
