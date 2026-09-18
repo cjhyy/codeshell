@@ -9,7 +9,8 @@
  */
 /* global document, localStorage */
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assert,
@@ -23,11 +24,24 @@ import { startMockProviderServer } from "./mock-provider-server.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-smoke-");
+const projectPath = join(isolated.home, "smoke-project");
 const mock = await startMockProviderServer();
 let app;
 
 async function writeFixtureConfig() {
   await mkdir(isolated.codeShellHome, { recursive: true });
+  // Git review is available only in an actual repository. Keep its fixture
+  // isolated while exercising the same project selection and authority as users.
+  await mkdir(projectPath, { recursive: true });
+  execFileSync("git", ["init", "--quiet", "--initial-branch=main", projectPath]);
+  await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
+  await writeFile(
+    join(isolated.codeShellHome, "desktop", "recents.json"),
+    JSON.stringify([
+      { path: projectPath, name: basename(projectPath), lastOpenedAt: Date.now(), pinned: true },
+    ]),
+    { mode: 0o600 },
+  );
   const presets = ["plain-text", "tool-call", "usage-with-cache", "error-then-ok"].map(
     (scenario) => ({
       value: scenario,
@@ -246,6 +260,8 @@ try {
   const win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
+  await dismissTrustDialog(win);
+  await win.getByText(basename(projectPath), { exact: true }).click();
 
   await win.waitForFunction(
     () =>
