@@ -5,5 +5,8 @@
 # have direct executor tests.
 preload = ["./packages/core/test-setup.ts"]
 coverageSkipTestFiles = true
-coverageThreshold = { lines = 0.45, functions = 0.38 }
-
+# Bun enforces coverageThreshold per file, while this gate measures the entire
+# loaded integration surface. check-builtin-coverage.ts enforces the unchanged
+# 45% lines / 38% functions minimums using Bun's mean of module ratios, computed
+# from exact LCOV counts rather than rounded console output. Its --config= form
+# ensures Bun loads this file; Bun 1.3.11 ignores the separate --config argument.
