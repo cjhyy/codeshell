@@ -1,5 +1,33 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, test, expect } from "bun:test";
 import { SettingsSchema } from "./schema.js";
+
+describe("MCP startup policy", () => {
+  test("preserves bounded per-server settings and plugin overrides", () => {
+    const config = SettingsSchema.parse({
+      mcpServers: { test: { command: "test", connectTimeoutMs: 90_000, connectRetries: 2 } },
+      mcpServerOverrides: { "plugin:test": { connectTimeoutMs: 50_000, connectRetries: 0 } },
+    });
+    expect(config.mcpServers.test.connectTimeoutMs).toBe(90_000);
+    expect(config.mcpServerOverrides["plugin:test"].connectRetries).toBe(0);
+  });
+  test("rejects unbounded, fractional and negative startup policies", () => {
+    for (const policy of [
+      { connectTimeoutMs: 0 },
+      { connectTimeoutMs: 120_001 },
+      { connectTimeoutMs: 1.5 },
+      { connectRetries: -1 },
+      { connectRetries: 3 },
+      { connectRetries: 0.5 },
+    ]) {
+      expect(
+        SettingsSchema.safeParse({ mcpServers: { test: { command: "test", ...policy } } }).success,
+      ).toBe(false);
+      expect(
+        SettingsSchema.safeParse({ mcpServerOverrides: { "plugin:test": policy } }).success,
+      ).toBe(false);
+    }
+  });
+});
 
 describe("disabledAgents", () => {
   it("defaults to empty array", () => {

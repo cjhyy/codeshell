@@ -137,6 +137,8 @@ export interface PetLongTaskContinuationDecision {
   clientMessageId: string;
   objective: string;
   workspacePath: string | null;
+  /** Host-bound original Session; historical decisions may omit it. */
+  targetSessionId?: string;
   executionBackend?: PetWorkExecutionBackend;
 }
 
@@ -864,6 +866,9 @@ export function transitionPetLongTask(
               typeof continuation.workspacePath === "string"
                 ? continuation.workspacePath.slice(0, 4_096)
                 : null,
+            ...(continuation.targetSessionId
+              ? { targetSessionId: continuation.targetSessionId }
+              : {}),
             ...(continuation.executionBackend === "codex"
               ? { executionBackend: "codex" as const }
               : {}),
@@ -1079,7 +1084,10 @@ function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | unde
       !candidate.clientMessageId.trim() ||
       typeof candidate.objective !== "string" ||
       !candidate.objective.trim() ||
-      (candidate.workspacePath !== null && typeof candidate.workspacePath !== "string")
+      (candidate.workspacePath !== null && typeof candidate.workspacePath !== "string") ||
+      (candidate.targetSessionId !== undefined &&
+        (typeof candidate.targetSessionId !== "string" ||
+          !/^[A-Za-z0-9_-]{1,128}$/u.test(candidate.targetSessionId)))
     ) {
       return undefined;
     }
@@ -1090,6 +1098,9 @@ function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | unde
         typeof candidate.workspacePath === "string"
           ? candidate.workspacePath.slice(0, 4_096)
           : null,
+      ...(typeof candidate.targetSessionId === "string"
+        ? { targetSessionId: candidate.targetSessionId }
+        : {}),
       ...(candidate.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
     };
   }

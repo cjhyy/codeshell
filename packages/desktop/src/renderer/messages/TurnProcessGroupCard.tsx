@@ -128,11 +128,30 @@ function TurnProcessGroupCardImpl({
           {visibleItems.map((m) => {
             if (m.kind === "tool_group") {
               return (
-                <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} defaultOpen />
+                <ToolGroupCard
+                  key={m.id}
+                  group={m}
+                  turnEpoch={turnEpoch}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  sessionMainRootId={sessionMainRootId}
+                  rootStatus={rootStatus}
+                  defaultOpen
+                />
               );
             }
             if (m.kind === "tool") {
-              return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
+              return (
+                <ToolCard
+                  key={m.id}
+                  message={m}
+                  turnEpoch={turnEpoch}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  sessionMainRootId={sessionMainRootId}
+                  rootStatus={rootStatus}
+                />
+              );
             }
             if (m.kind === "assistant") {
               // Empty assistant = nothing to draw (only text renders here).

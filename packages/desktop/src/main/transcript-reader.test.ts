@@ -220,6 +220,41 @@ describe("transcriptToFoldItems", () => {
     expect(userItems).toEqual([{ kind: "user", text: "真正的用户问题", timestamp: 1 }]);
   });
 
+  it("retains an internal submission as an empty run anchor without its machine prompt", () => {
+    const items = transcriptToFoldItems(
+      [
+        line("message", { role: "user", content: "Start the work", clientMessageId: "request" }),
+        line("message", {
+          role: "user",
+          content: "<system-reminder>Private completion payload</system-reminder>",
+          displayText: "Must also stay hidden",
+          injected: true,
+          clientMessageId: "internal-completion",
+        }),
+        line("message", { role: "assistant", content: "Work completed" }),
+      ].join("\n"),
+    );
+    expect(items.filter((item) => item.kind === "user")).toEqual([
+      { kind: "user", text: "Start the work", clientMessageId: "request", timestamp: 1 },
+      {
+        kind: "user",
+        text: "",
+        injected: true,
+        clientMessageId: "internal-completion",
+        timestamp: 1,
+      },
+    ]);
+    expect(JSON.stringify(items)).not.toContain("Private completion payload");
+    expect(JSON.stringify(items)).not.toContain("Must also stay hidden");
+    expect(
+      foldTranscript(items).messages.filter((message) => message.kind === "user")[1],
+    ).toMatchObject({
+      text: "",
+      injected: true,
+      clientMessageId: "internal-completion",
+    });
+  });
+
   it("replays persisted external changed files into the renderer stream", () => {
     const items = transcriptToFoldItems(
       line("external_file_changes", {

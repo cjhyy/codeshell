@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 import type { ContentBlock, LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
+import { IMAGE_HISTORY_PLACEHOLDER_SUFFIX } from "../context/compaction.js";
 
 const userImageBase64 = "U".repeat(32_000);
 const toolImageBase64 = "T".repeat(32_000);
-const placeholder = "[image #1, 已处理 / already provided earlier]";
+const placeholder = `[image #1${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`;
 
 function imageBlock(data: string): ContentBlock {
   return {
@@ -145,15 +146,49 @@ function makeDeps(
   };
 }
 
-describe("TurnLoop image-history first consumption", () => {
-  it("sends a current user image once, then downgrades it for the later model turn", async () => {
+describe("TurnLoop image-history evidence window", () => {
+  it("counts each successful length continuation toward the image retention window", async () => {
+    const firstUserMessage: Message = {
+      role: "user",
+      content: [{ type: "text", text: "verify this screenshot" }, imageBlock(userImageBase64)],
+    };
+    const truncated: LLMResponse = { ...doneResp("partial evidence"), stopReason: "length" };
+    const { deps, callArgs } = makeDeps([
+      truncated,
+      truncated,
+      toolResp(),
+      toolResp(),
+      toolResp(),
+      toolResp(),
+      doneResp(),
+    ]);
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+      freshImageMessages: [firstUserMessage],
+    }).run([firstUserMessage]);
+
+    expect(result.reason).toBe("completed");
+    expect(callArgs).toHaveLength(7);
+    for (const request of callArgs.slice(0, 6)) {
+      expect(JSON.stringify(request)).toContain(userImageBase64);
+    }
+    expect(JSON.stringify(callArgs[6])).not.toContain(userImageBase64);
+    expect(JSON.stringify(callArgs[6])).toContain(placeholder);
+  });
+
+  it("keeps a user image available for six requests before replacing its pixels", async () => {
     const firstUserMessage: Message = {
       role: "user",
       content: [{ type: "text", text: "inspect this" }, imageBlock(userImageBase64)],
     };
-    const { deps, callArgs } = makeDeps([toolResp(), doneResp()]);
+    const { deps, callArgs } = makeDeps([
+      ...Array.from({ length: 6 }, () => toolResp()),
+      doneResp(),
+    ]);
     const config: TurnLoopConfig = {
-      maxTurns: 5,
+      maxTurns: 10,
       maxToolCallsPerTurn: 10,
       freshImageMessages: [firstUserMessage],
     };
@@ -163,20 +198,22 @@ describe("TurnLoop image-history first consumption", () => {
 
     expect(result.reason).toBe("completed");
     expect(JSON.stringify(callArgs[0])).toContain(userImageBase64);
-    expect(JSON.stringify(callArgs[1])).not.toContain(userImageBase64);
-    expect(JSON.stringify(callArgs[1])).toContain(placeholder);
+    expect(JSON.stringify(callArgs[1])).toContain(userImageBase64);
+    expect(JSON.stringify(callArgs[5])).toContain(userImageBase64);
+    expect(JSON.stringify(callArgs[6])).not.toContain(userImageBase64);
+    expect(JSON.stringify(callArgs[6])).toContain(placeholder);
     expect(JSON.stringify(result.messages)).not.toContain(userImageBase64);
   });
 
-  it("preserves a tool-result image for its first model consumption, then downgrades it", async () => {
+  it("keeps tool-result evidence across unrelated tool calls and preserves transcript bytes", async () => {
     const initial: Message = { role: "user", content: "please view the image" };
     const { deps, callArgs, toolResultAppends } = makeDeps(
-      [toolResp("view_image"), doneResp()],
+      [toolResp("view_image"), toolResp("Read"), doneResp()],
       async (call) => ({
         id: call.id,
         toolName: call.toolName,
         result: "(image)",
-        contentBlocks: [imageBlock(toolImageBase64)],
+        ...(call.toolName === "view_image" ? { contentBlocks: [imageBlock(toolImageBase64)] } : {}),
       }),
     );
     const config: TurnLoopConfig = { maxTurns: 5, maxToolCallsPerTurn: 10 };
@@ -187,8 +224,8 @@ describe("TurnLoop image-history first consumption", () => {
     expect(result.reason).toBe("completed");
     expect(JSON.stringify(callArgs[0])).not.toContain(toolImageBase64);
     expect(JSON.stringify(callArgs[1])).toContain(toolImageBase64);
-    expect(JSON.stringify(result.messages)).not.toContain(toolImageBase64);
-    expect(JSON.stringify(result.messages)).toContain(placeholder);
+    expect(JSON.stringify(callArgs[2])).toContain(toolImageBase64);
+    expect(JSON.stringify(result.messages)).toContain(toolImageBase64);
     expect(toolResultAppends[0]?.contentBlocks?.[0]?.source?.data).toBe(toolImageBase64);
   });
 });

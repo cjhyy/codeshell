@@ -259,24 +259,14 @@ describe("Engine pet behavior", () => {
         "SearchHistory",
       ].sort(),
     );
-    expect(result.petWorkDelegation).toEqual({
-      workspaceId: "workspace-codeshell",
-      objective: "inspect CodeShell",
-    });
-    expect(result.extensions).toEqual({
-      pet: {
-        workDelegation: {
-          workspaceId: "workspace-codeshell",
-          objective: "inspect CodeShell",
-        },
-      },
-    });
+    expect(result.petWorkDelegation).toBeUndefined();
+    expect(result.extensions?.pet).not.toHaveProperty("workDelegation");
     expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
     expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
       "not allowed by this run profile",
     );
     expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
-      "missing_continuation_evidence",
+      "session_continuation is required",
     );
     expect(engine.getSessionManager().readSessionKind("local-pet")).toBe("pet");
     const transcript = readFileSync(join(cwd, "sessions", "local-pet", "transcript.jsonl"), "utf8");

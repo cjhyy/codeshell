@@ -221,6 +221,49 @@ describe("remarkPathLinks — inlineCode path spans", () => {
   });
 });
 
+describe("remarkPathLinks — Windows media paths", () => {
+  it.each([
+    "C:/repo/audio.wav",
+    "D:\\项目\\输出\\视频.mp4",
+    "c:/repo/clip.MP4",
+  ])("preserves the full drive path in prose and inline code: %s", (path) => {
+    expect(linkedPaths(`生成完成：${path}。`)).toEqual([path]);
+    expect(inlineCodeLinkUrls(path).map((url) => decodePathHref(url)?.path)).toEqual([path]);
+  });
+
+  it("preserves spaces in quoted backslash paths", () => {
+    const path = "C:\\my clips\\录音 demo.wav";
+    expect(linkedPaths(`文件 '${path}' 已保存`)).toEqual([path]);
+    expect(inlineCodeLinkUrls(path).map((url) => decodePathHref(url)?.path)).toEqual([path]);
+  });
+
+  it.each(["link", "image", "definition"])(
+    "normalizes explicit Windows %s URLs before Markdown sanitization",
+    (type) => {
+      const node: MdastNode = { type, url: "C:/my%20clips/voice.wav" };
+      remarkPathLinks()({ type: "root", children: [node] });
+      expect(decodePathHref(node.url!)).toEqual({ path: "C:/my clips/voice.wav" });
+    },
+  );
+
+  it.each([
+    "https://example.com/voice.wav",
+    "file:///C:/repo/voice.wav",
+    "custom:voice.wav",
+    "C:voice.wav",
+    "C:/repo/app.ts",
+    "C:/repo/bad%XX.wav",
+  ])("does not broaden accepted schemes or unrelated files: %s", (url) => {
+    const node: MdastNode = { type: "image", url };
+    remarkPathLinks()({ type: "root", children: [node] });
+    expect(node.url).toBe(url);
+  });
+
+  it("does not produce a truncated Unix link from other drive paths", () => {
+    expect(linkedPaths("文件 C:/repo/output.unknown")).toEqual([]);
+  });
+});
+
 describe("remarkPathLinks — line RANGE suffix (:N-M)", () => {
   it("links a bare path with a :N-M range and jumps to the start line", () => {
     // The model very often cites a span, e.g. "AssistantMessageView.tsx:46-54".

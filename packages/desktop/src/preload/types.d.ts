@@ -59,6 +59,7 @@ import type {
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
+import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
@@ -239,7 +240,15 @@ export type ForkSessionResult = FullForkSessionResult | SummaryForkSessionResult
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
   | { kind: "stream"; event: RendererStreamEvent; timestamp?: number }
-  | { kind: "user"; text: string; steerId?: string; clientMessageId?: string; timestamp?: number }
+  | {
+      kind: "user";
+      text: string;
+      /** Empty internal run anchor; its system prompt must never become a user bubble. */
+      injected?: boolean;
+      steerId?: string;
+      clientMessageId?: string;
+      timestamp?: number;
+    }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's
   // `turn_stopped` event so resume restores the "你停止了本轮" marker; without
   // it the interrupted turn folds behind the process-card header on reload.
@@ -1507,6 +1516,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     absPath: string,
     context?: { cwd?: string; sessionId?: string },
   ): Promise<string | null>;
+  getMediaPreview(input: MediaPreviewRequest): Promise<MediaPreviewResult | null>;
+  releaseMediaPreview(url: string): Promise<void>;
   stageAttachmentImageDataUrl(payload: {
     cwd: string;
     sessionId: string;

@@ -219,6 +219,9 @@ import {
 } from "./link-cli-installer.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
+import { MediaPreviewService } from "./media-preview-service.js";
+import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
+import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
   bucketForSession,
   browserPartitionForBucket as registryPartitionForBucket,
@@ -574,6 +577,21 @@ registerPanelAppSchemePrivileges();
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
 const mainWindows = new Set<BrowserWindow>();
+const mediaPreviewService = new MediaPreviewService({
+  isOwnerAlive: (ownerId) =>
+    [...mainWindows].some(
+      (window) =>
+        !window.isDestroyed() &&
+        !window.webContents.isDestroyed() &&
+        window.webContents.id === ownerId,
+    ),
+  resolveAuthority: async (sessionId, ownerId) => {
+    const sessionOwner = bridge?.panelOwnerWebContentsId(sessionId);
+    if (sessionOwner !== undefined && sessionOwner !== ownerId)
+      throw new Error("Media task belongs to another window");
+    return resolveMediaPreviewAuthority(sessionId);
+  },
+});
 /** Deliver to the one live window owning `webContentsId`; other windows never see it. */
 function sendToOwnerWindow(webContentsId: number | undefined, channel: string, payload: unknown) {
   [...mainWindows]
@@ -1316,6 +1334,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "worker-src 'self' blob:; " +
             "style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: blob:; " +
+            `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
             "object-src 'none'; " +
@@ -1328,6 +1347,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "worker-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; " +
+            `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             // localhost connect is needed by the browser panel's dev-server
             // probe; without it the prod build can never detect local servers.
@@ -1406,6 +1426,7 @@ async function createWindow(): Promise<BrowserWindow> {
     dlog("main", "renderer.did-fail-load", { code, desc, url });
   });
   win.webContents.on("render-process-gone", (_e, details) => {
+    mediaPreviewService.releaseOwner(win.webContents.id);
     dlog("main", "renderer.render-process-gone", { details });
   });
   win.webContents.on("preload-error", (_e, preloadPath, err) => {
@@ -1436,6 +1457,10 @@ async function createWindow(): Promise<BrowserWindow> {
   // window is gone would otherwise leak until quit. Reap them once the
   // webContents is actually torn down (next tick after `closed`).
   const ownerWebContentsId = win.webContents.id;
+  win.webContents.once("destroyed", () => mediaPreviewService.releaseOwner(ownerWebContentsId));
+  win.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) mediaPreviewService.releaseOwner(ownerWebContentsId);
+  });
   win.on("closed", () => {
     externalRuntimeApprovals?.cancelWindow(ownerWebContentsId);
     void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
@@ -3211,6 +3236,9 @@ app.whenReady().then(async () => {
   // The main window and the pet popout both render on the default session, so
   // one handler there serves cstheme:// assets to every window.
   installThemeAssetProtocol();
+  session.defaultSession.protocol.handle(MEDIA_PREVIEW_SCHEME, (request) =>
+    mediaPreviewService.respond(request),
+  );
 
   await chromeExtensionRuntimeService.start().catch((error) => {
     dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
@@ -4962,6 +4990,19 @@ ipcMain.handle(
     readAgentBody(await requireRendererListedAgentPath(target, filePath)),
 );
 
+ipcMain.handle("media:getPreview", async (event, input: unknown) => {
+  if (
+    event.senderFrame !== event.sender.mainFrame ||
+    ![...mainWindows].some((window) => !window.isDestroyed() && window.webContents === event.sender)
+  )
+    return null;
+  return mediaPreviewService.create(event.sender.id, input);
+});
+ipcMain.handle("media:releasePreview", (event, url: unknown) => {
+  if (event.senderFrame === event.sender.mainFrame && typeof url === "string")
+    mediaPreviewService.release(event.sender.id, url);
+});
+
 ipcMain.handle(
   "images:readDataUrl",
   async (
@@ -6700,6 +6741,7 @@ ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: bool
   await getSessionCwdIndex().refresh(id);
 });
 async function deleteDesktopSession(id: string): Promise<void> {
+  mediaPreviewService.releaseSession(id);
   builtInBrowserHandoffGrants.clearSession(id);
   chromeExtensionRuntimeService.forgetSession(id);
   const browserPartition = partitionForSession(id);

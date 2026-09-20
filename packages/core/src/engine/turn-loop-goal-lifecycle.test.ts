@@ -1067,7 +1067,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     );
 
     const result = await new TurnLoop(deps, {
-      maxTurns: 5,
+      maxTurns: 6,
       maxToolCallsPerTurn: 10,
       goal: { objective: "continue after a tool attempt" },
       maxStopBlocks: 1,

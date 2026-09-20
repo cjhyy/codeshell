@@ -5,7 +5,7 @@
  */
 
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { ManagedMcpStdioTransport } from "./mcp-stdio-transport.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { MCPServerConfig, RegisteredTool } from "../types.js";
@@ -24,6 +24,12 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
 import type { ToolContext } from "./context.js";
+import {
+  DEFAULT_MCP_CONNECT_RETRIES,
+  DEFAULT_MCP_CONNECT_TIMEOUT_MS,
+  validMcpConnectRetries,
+  validMcpConnectTimeout,
+} from "./mcp-connection-policy.js";
 import { codeShellHome } from "../session/session-manager.js";
 import { adaptMcpToolSchema, normalizeMcpToolArgs } from "./mcp-compat.js";
 import {
@@ -51,7 +57,7 @@ type BoundMcpWorkspace = McpWorkspaceScope & { [MCP_RUN_SCOPE]?: McpRunBinding }
 interface MCPConnection {
   client: Client;
   serverName: string;
-  transport: StdioClientTransport | StreamableHTTPClientTransport;
+  transport: ManagedMcpStdioTransport | StreamableHTTPClientTransport;
   scope?: McpConnectionScope;
   tools?: Map<string, McpTool>;
   config?: MCPServerConfig;
@@ -62,6 +68,34 @@ interface MCPResourceInfo {
   name: string;
   description?: string;
   serverName: string;
+}
+
+class McpConnectTimeoutError extends Error {}
+
+function connectionCancelled(): Error {
+  const error = new Error("MCP initialization cancelled");
+  error.name = "AbortError";
+  return error;
+}
+
+/** Only controlled host facts cross into the model's health snapshot. */
+function connectionFailureReason(error: unknown): string {
+  if (error instanceof McpConnectTimeoutError) return error.message;
+  if (error instanceof Error && error.name === "AbortError") return "Initialization cancelled.";
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  if (code === "ENOENT") return "Server executable was not found.";
+  if (code === "EACCES" || code === "EPERM") return "Permission denied while starting the server.";
+  if (error instanceof McpInitializationError) return error.message;
+  return "Initialization failed before tools became available. Check the server configuration and host logs.";
+}
+
+class McpInitializationError extends Error {}
+
+interface PendingMcpConnection {
+  server: string;
+  promise: Promise<void>;
+  abort: AbortController;
+  waiters: number;
 }
 
 /**
@@ -522,7 +556,7 @@ export class MCPManager {
   private registeredToolsByServer = new Map<string, Set<string>>();
   private desiredServerNames: Set<string> | null = null;
   /** Concurrent handshakes share only an identical server + cwd + root scope. */
-  private connecting = new Map<string, Promise<void>>();
+  private connecting = new Map<string, PendingMcpConnection>();
   /** Per-owner (engine) desired server sets — see reconcile()'s shared-pool note. */
   private desiredByOwner = new Map<unknown, Set<string>>();
   private scopeByOwner = new Map<unknown, McpWorkspaceScope>();
@@ -611,13 +645,13 @@ export class MCPManager {
       if (result.status === "rejected") {
         logger.warn("mcp.connect_failed", {
           server,
-          error: (result.reason as Error).message,
+          error: connectionFailureReason(result.reason),
         });
       }
       try {
         onServerEvent?.(
           result.status === "rejected"
-            ? { type: "mcp_server_failed", server, error: (result.reason as Error).message }
+            ? { type: "mcp_server_failed", server, error: connectionFailureReason(result.reason) }
             : { type: "mcp_server_connected", server },
         );
       } catch {
@@ -666,6 +700,12 @@ export class MCPManager {
 
   private async pruneUnusedScopedConnections(): Promise<void> {
     const wanted = new Set([...this.connectionKeysByOwner.values()].flatMap((keys) => [...keys]));
+    const abandoned = [...this.connecting.entries()].filter(
+      ([key]) => this.managedConnectionKeys.has(key) && !wanted.has(key),
+    );
+    for (const [, pending] of abandoned) pending.abort.abort();
+    await Promise.allSettled(abandoned.map(([, pending]) => pending.promise));
+    for (const [key] of abandoned) this.managedConnectionKeys.delete(key);
     const stale = [...this.connections.entries()].filter(
       ([key, conn]) => conn.scope?.key && !wanted.has(key),
     );
@@ -679,6 +719,13 @@ export class MCPManager {
   }
 
   private managedConnectionKeys = new Set<string>();
+
+  private scopeStillWanted(key: string): boolean {
+    return (
+      !this.managedConnectionKeys.has(key) ||
+      [...this.connectionKeysByOwner.values()].some((keys) => keys.has(key))
+    );
+  }
 
   private enabledServerNames(servers: Record<string, MCPServerConfig>): Set<string> {
     return new Set(
@@ -707,7 +754,9 @@ export class MCPManager {
     config: MCPServerConfig,
     workspace?: McpWorkspaceScope,
   ): Promise<void> {
-    const key = mcpConnectionKey(name, this.scopeForContext(workspace));
+    if (workspace?.signal?.aborted) throw connectionCancelled();
+    const scope = this.scopeForContext(workspace);
+    const key = mcpConnectionKey(name, scope);
     if ([...this.connectionKeysByOwner.values()].some((keys) => keys.has(key)))
       this.managedConnectionKeys.add(key);
     if (this.connections.has(key)) {
@@ -717,13 +766,62 @@ export class MCPManager {
     const inflight = this.connecting.get(key);
     if (inflight) {
       logger.info("mcp.connect_coalesced", { server: name });
-      return inflight;
+      return this.waitForConnection(inflight, workspace?.signal);
     }
-    const p = this.performConnect(name, config, workspace).finally(() => {
-      this.connecting.delete(key);
+    const pending: PendingMcpConnection = {
+      server: name,
+      abort: new AbortController(),
+      waiters: 0,
+      promise: Promise.resolve(),
+    };
+    pending.promise = this.performConnect(
+      name,
+      config,
+      workspace,
+      pending.abort.signal,
+      scope,
+    ).finally(() => {
+      if (this.connecting.get(key) === pending) this.connecting.delete(key);
     });
-    this.connecting.set(key, p);
-    return p;
+    this.connecting.set(key, pending);
+    return this.waitForConnection(pending, workspace?.signal);
+  }
+
+  /** One cancelled run must not kill another run's coalesced initialization. */
+  private async waitForConnection(
+    pending: PendingMcpConnection,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    pending.waiters++;
+    let released = false;
+    const release = () => {
+      if (!released) {
+        released = true;
+        pending.waiters--;
+      }
+    };
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+          release();
+          if (pending.waiters === 0) {
+            pending.abort.abort();
+            // Do not return while an abandoned wrapper's process tree is alive.
+            void pending.promise.then(
+              () => reject(connectionCancelled()),
+              () => reject(connectionCancelled()),
+            );
+          } else reject(connectionCancelled());
+        };
+        signal?.addEventListener("abort", onAbort, { once: true });
+        pending.promise
+          .then(() => (signal?.aborted ? reject(connectionCancelled()) : resolve()), reject)
+          .finally(() => signal?.removeEventListener("abort", onAbort));
+        if (signal?.aborted) onAbort();
+      });
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -735,8 +833,54 @@ export class MCPManager {
     name: string,
     config: MCPServerConfig,
     workspace?: McpWorkspaceScope,
+    signal?: AbortSignal,
+    initialScope?: McpConnectionScope,
   ): Promise<void> {
-    const scope = this.scopeForContext(workspace);
+    if (config.connectTimeoutMs !== undefined && !validMcpConnectTimeout(config.connectTimeoutMs)) {
+      throw new McpInitializationError(
+        "Invalid connectTimeoutMs; expected an integer from 1 to 120000.",
+      );
+    }
+    if (config.connectRetries !== undefined && !validMcpConnectRetries(config.connectRetries)) {
+      throw new McpInitializationError("Invalid connectRetries; expected an integer from 0 to 2.");
+    }
+    const timeoutMs = config.connectTimeoutMs ?? DEFAULT_MCP_CONNECT_TIMEOUT_MS;
+    const retries = config.connectRetries ?? DEFAULT_MCP_CONNECT_RETRIES;
+    const generation = this.connectionGeneration;
+    // Freeze the negotiated authority, independent of whichever coalesced owner
+    // happened to start first. Pruning aborts when no owner still wants this scope.
+    const scope = initialScope ?? this.scopeForContext(workspace);
+    for (let attempt = 1; attempt <= retries + 1; attempt++) {
+      if (
+        signal?.aborted ||
+        generation !== this.connectionGeneration ||
+        !this.scopeStillWanted(mcpConnectionKey(name, scope))
+      )
+        throw connectionCancelled();
+      try {
+        await this.connectAttempt(name, config, scope, timeoutMs, attempt, signal);
+        return;
+      } catch (error) {
+        if (
+          !(error instanceof McpConnectTimeoutError) ||
+          attempt > retries ||
+          signal?.aborted ||
+          generation !== this.connectionGeneration
+        )
+          throw error;
+        logger.info("mcp.connect_retry", { server: name, attempt: attempt + 1, timeoutMs });
+      }
+    }
+  }
+
+  private async connectAttempt(
+    name: string,
+    config: MCPServerConfig,
+    scope: McpConnectionScope,
+    timeoutMs: number,
+    attempt: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
     const generation = this.connectionGeneration;
     const key = mcpConnectionKey(name, scope);
     if (this.connections.has(key)) {
@@ -746,22 +890,38 @@ export class MCPManager {
 
     const transportType = inferTransportType(config);
 
-    logger.info("mcp.connecting", { server: name, transport: transportType });
+    const startedAt = Date.now();
+    let stage = transportType === "stdio" ? "spawn" : "initialize";
+    const logStage = (next: string) => {
+      stage = next;
+      logger.info("mcp.connect_stage", {
+        server: name,
+        transport: transportType,
+        attempt,
+        stage,
+        elapsedMs: Date.now() - startedAt,
+        timeoutMs,
+      });
+    };
+    logger.info("mcp.connecting", { server: name, transport: transportType, attempt, timeoutMs });
 
     const client = createWorkspaceMcpClient(scope);
 
-    let transport: StdioClientTransport | StreamableHTTPClientTransport;
+    let transport: ManagedMcpStdioTransport | StreamableHTTPClientTransport;
 
     if (transportType === "stdio") {
       if (!config.command) {
         throw new Error(`MCP server "${name}": command is required for stdio transport`);
       }
-      transport = new StdioClientTransport({
-        command: config.command,
-        args: config.args,
-        env: buildStdioEnv(name, config),
-        ...(scope.cwd ? { cwd: scope.cwd } : {}),
-      });
+      transport = new ManagedMcpStdioTransport(
+        {
+          command: config.command,
+          args: config.args,
+          env: buildStdioEnv(name, config),
+          ...(scope.cwd ? { cwd: scope.cwd } : {}),
+        },
+        logStage,
+      );
     } else if (transportType === "streamable-http" || transportType === "sse") {
       if (!config.url) {
         throw new Error(`MCP server "${name}": url is required for ${transportType} transport`);
@@ -779,26 +939,66 @@ export class MCPManager {
       throw new Error(`MCP server "${name}": unsupported transport "${transportType}"`);
     }
 
-    // Prevent a misbehaving MCP server from hanging `connectAll()` forever.
-    // On timeout, best-effort close the transport so we don't leak the stdio
-    // child / socket when connect() is still pending in the background.
-    const CONNECT_TIMEOUT_MS = 15_000;
+    // Bound the complete initialize + discovery phase. A retry can start only
+    // after transport cleanup succeeds, so wrappers cannot leave duplicates.
     let timeoutHandle: NodeJS.Timeout | undefined;
+    let onAbort: (() => void) | undefined;
+    const attemptAbort = new AbortController();
+    let discoveredTools: McpTool[] = [];
+    const priorErrorHandler = client.onerror;
     try {
       await new Promise<void>((resolve, reject) => {
+        // Invalid JSON/protocol frames must fail immediately, not become a
+        // misleading timeout that restarts the same broken server.
+        client.onerror = reject;
+        onAbort = () => {
+          const error = connectionCancelled();
+          reject(error);
+          attemptAbort.abort(error);
+        };
+        signal?.addEventListener("abort", onAbort, { once: true });
+        if (signal?.aborted) {
+          onAbort();
+          return;
+        }
         timeoutHandle = setTimeout(() => {
-          reject(new Error(`MCP server "${name}" connect timed out after ${CONNECT_TIMEOUT_MS}ms`));
-        }, CONNECT_TIMEOUT_MS);
-        client.connect(transport).then(
-          () => resolve(),
-          (err) => reject(err),
-        );
+          const error = new McpConnectTimeoutError(
+            `Initialization timed out after ${timeoutMs}ms during ${stage} (attempt ${attempt}).`,
+          );
+          reject(error);
+          attemptAbort.abort(error);
+        }, timeoutMs);
+        // Initialization includes tool discovery. Neither a hung initialize nor
+        // tools/list may retain a process beyond the attempt's deadline.
+        void (async () => {
+          await client.connect(transport, { signal: attemptAbort.signal, timeout: timeoutMs });
+          logStage("initialized");
+          logStage("discovering_tools");
+          const result = await client.listTools(undefined, {
+            signal: attemptAbort.signal,
+            timeout: timeoutMs,
+          });
+          discoveredTools = result.tools;
+        })().then(resolve, reject);
       });
+      logStage("ready");
     } catch (err) {
+      logger.warn("mcp.connect_attempt_failed", {
+        server: name,
+        transport: transportType,
+        attempt,
+        stage,
+        elapsedMs: Date.now() - startedAt,
+        timeoutMs,
+        error: connectionFailureReason(err),
+      });
       try {
         await transport.close?.();
       } catch {
-        // ignore cleanup errors
+        // Retrying without confirmed cleanup can duplicate a server process.
+        throw new McpInitializationError(
+          "Initialization failed and server cleanup did not complete; retry suppressed.",
+        );
       }
       if (transportType === "stdio" && config.command) {
         const diagnostic = await diagnoseMcpStdioMissingCommand(config.command, err);
@@ -819,16 +1019,33 @@ export class MCPManager {
       throw err;
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (onAbort) signal?.removeEventListener("abort", onAbort);
+      client.onerror = priorErrorHandler;
     }
 
-    if (generation !== this.connectionGeneration) {
+    if (
+      generation !== this.connectionGeneration ||
+      signal?.aborted ||
+      !this.scopeStillWanted(key)
+    ) {
       await client.close();
-      throw new Error("MCP manager closed during connection.");
+      throw connectionCancelled();
     }
     this.connections.set(key, { client, serverName: name, transport, scope, config });
 
-    // Discover and register tools
-    await this.discoverTools(name, client, key);
+    // Publish only after the entire initialization has succeeded. A cancelled
+    // or timed-out tools/list cannot expose a partially initialized connection.
+    try {
+      this.registerDiscoveredTools(name, client, key, discoveredTools);
+    } catch (error) {
+      await this.disconnectConnection(key);
+      throw error;
+    }
+
+    if (signal?.aborted || generation !== this.connectionGeneration) {
+      await this.disconnectConnection(key);
+      throw connectionCancelled();
+    }
 
     if (this.desiredServerNames && !this.desiredServerNames.has(name)) {
       await this.disconnectConnection(key);
@@ -839,33 +1056,28 @@ export class MCPManager {
   }
 
   /**
-   * Discover tools from an MCP server and register them.
+   * Register tools after the complete initialization has succeeded.
    */
-  private async discoverTools(
+  private registerDiscoveredTools(
     serverName: string,
     client: Client,
-    connectionKey = serverName,
-  ): Promise<void> {
-    try {
-      const result = await client.listTools();
-      const connection = this.connections.get(connectionKey);
-      if (connection) connection.tools = new Map(result.tools.map((tool) => [tool.name, tool]));
+    connectionKey: string,
+    tools: McpTool[],
+  ): void {
+    const connection = this.connections.get(connectionKey);
+    if (connection) connection.tools = new Map(tools.map((tool) => [tool.name, tool]));
 
-      for (const tool of result.tools) {
-        const registered = buildRegisteredTool(serverName, tool, client.getServerVersion?.()?.name);
+    for (const tool of tools) {
+      const registered = buildRegisteredTool(serverName, tool, client.getServerVersion?.()?.name);
 
-        this.toolRegistry.registerTool(registered, (args, ctx) =>
-          this.executeRegisteredTool(serverName, tool.name, args, ctx),
-        );
-        const set = this.registeredToolsByServer.get(serverName) ?? new Set<string>();
-        set.add(registered.name);
-        this.registeredToolsByServer.set(serverName, set);
+      this.toolRegistry.registerTool(registered, (args, ctx) =>
+        this.executeRegisteredTool(serverName, tool.name, args, ctx),
+      );
+      const set = this.registeredToolsByServer.get(serverName) ?? new Set<string>();
+      set.add(registered.name);
+      this.registeredToolsByServer.set(serverName, set);
 
-        logger.info("mcp.tool_registered", { server: serverName, tool: registered.name });
-      }
-    } catch (err) {
-      await this.disconnectConnection(connectionKey);
-      throw err;
+      logger.info("mcp.tool_registered", { server: serverName, tool: registered.name });
     }
   }
 
@@ -1055,6 +1267,9 @@ export class MCPManager {
    */
   async disconnectAll(): Promise<void> {
     this.connectionGeneration++;
+    const pending = [...this.connecting.values()];
+    for (const connection of pending) connection.abort.abort();
+    await Promise.allSettled(pending.map((connection) => connection.promise));
     await Promise.all([...this.connections.keys()].map((key) => this.disconnectConnection(key)));
     this.desiredByOwner.clear();
     this.scopeByOwner.clear();
@@ -1064,6 +1279,11 @@ export class MCPManager {
   }
 
   async disconnect(name: string): Promise<void> {
+    const pending = [...this.connecting.values()].filter(
+      (connection) => connection.server === name,
+    );
+    for (const connection of pending) connection.abort.abort();
+    await Promise.allSettled(pending.map((connection) => connection.promise));
     await Promise.all(
       [...this.connections.entries()]
         .filter(([, conn]) => conn.serverName === name)

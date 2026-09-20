@@ -348,6 +348,12 @@ export class PetLongTaskCoordinator {
   async startDelegation(delegation: PetAutoDelegation): Promise<PetLongTaskLaunch> {
     const existing = this.options.store.findByOriginClientMessageId(delegation.clientMessageId);
     if (existing) {
+      // A persisted pre-acceptance failure is not a successful launch receipt.
+      // In particular, replaying a missing original Session must not turn a
+      // refused continuation into a claimed success after a host restart.
+      if (existing.status === "failed" && !existing.startedAt && !existing.runId) {
+        throw new Error(existing.lastError ?? "The original delegation was not accepted");
+      }
       return {
         taskId: existing.id,
         sessionId: existing.sessionId,
@@ -359,7 +365,7 @@ export class PetLongTaskCoordinator {
     const task = await this.options.store.create({
       id: taskIdFor(delegation.clientMessageId),
       originClientMessageId: delegation.clientMessageId,
-      objective: delegation.task,
+      objective: delegation.originalObjective ?? delegation.goalObjective ?? delegation.task,
       workspacePath: delegation.workspacePath,
       sessionId,
       clientMessageId: petDelegationClientMessageId(delegation.clientMessageId),
@@ -712,10 +718,21 @@ export class PetLongTaskCoordinator {
             reason: "The work session stopped before the objective was complete",
           });
         } else {
+          const budgetExhausted = event.reason === "max_turns";
+          if (budgetExhausted && typeof event.text === "string" && event.text.trim()) {
+            await transition({
+              kind: "checkpoint",
+              at,
+              summary: extractText(event)!,
+              nextAction: "Continue the unfinished objective in the existing Session",
+            });
+          }
           const failed = await transition({
             kind: "failed",
             at,
-            error: `Work session ended: ${String(event.reason ?? "unknown")}`,
+            error: budgetExhausted
+              ? "Work session reached its turn budget (max_turns); the objective is not verified complete"
+              : `Work session ended: ${String(event.reason ?? "unknown")}`,
           });
           await this.notifyClosed(failed);
         }

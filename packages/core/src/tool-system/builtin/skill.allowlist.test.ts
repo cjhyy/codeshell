@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { skillTool } from "./skill.js";
 import { invalidateSkillCache } from "../../skills/scanner.js";
 import type { ToolContext } from "../context.js";
+import { appendInstallEntry, pluginInstallKey } from "../../plugins/installedPlugins.js";
 
 // TODO §4.3 — the Skill tool must refuse to invoke a skill outside the
 // sub-agent's allowlist, with a message distinct from "not found", and must
@@ -46,6 +47,41 @@ describe("skillTool honors ctx.skillAllowlist", () => {
     const ctx = { cwd, skillAllowlist: ["allowed"] } as unknown as ToolContext;
     const out = await skillTool({ skill: "allowed" }, ctx);
     expect(out).toContain("body of allowed");
+  });
+
+  test("plugin instructions remain readable while same-run MCP failures are explicit", async () => {
+    const plugin = join(home, ".code-shell", "plugins", "fixture");
+    const skill = join(plugin, "skills", "read");
+    mkdirSync(skill, { recursive: true });
+    writeFileSync(
+      join(skill, "SKILL.md"),
+      "---\ndescription: Read using MCP\n---\nUse the remote read tool.",
+    );
+    appendInstallEntry(pluginInstallKey("fixture", "local"), {
+      scope: "user",
+      installPath: plugin,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
+    });
+    invalidateSkillCache();
+    const ctx = {
+      cwd,
+      mcpServerFailures: new Map([
+        ["fixture:reader", "Initialization timed out."],
+        ["unrelated:secret", "Hidden failure"],
+      ]),
+    } as unknown as ToolContext;
+    const out = await skillTool({ skill: "fixture:read" }, ctx);
+    expect(out).toContain("Initialization timed out");
+    expect(out).toContain("Use the remote read tool.");
+    expect(out).not.toContain("unrelated:secret");
+    ctx.allowedMcpServers = new Set();
+    expect(await skillTool({ skill: "fixture:read" }, ctx)).not.toContain(
+      "Initialization timed out",
+    );
+    ctx.mcpServerFailures = new Map();
+    expect(await skillTool({ skill: "fixture:read" }, ctx)).not.toContain("MCP connection status");
   });
 
   test("refuses a skill outside the allowlist with a role-specific message", async () => {

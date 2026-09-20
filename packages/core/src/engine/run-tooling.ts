@@ -54,6 +54,7 @@ export function buildRunToolContext(args: {
     ...args.base,
     approvalRouter: options?.approvalRouter ?? args.configApprovalRouter,
     permissionMode: args.runPermissionMode,
+    signal: options?.signal,
     planMode: args.runPlanMode,
     subAgentSpawner: args.subAgentSpawner,
     agentDefinitions: args.agentDefinitions,
@@ -193,9 +194,12 @@ export async function connectRunMcp(args: {
   runtimePool: MCPManager | undefined;
   toolRegistry: ToolRegistry;
   engineForConnect: Parameters<MCPManager["connectAll"]>[1];
-  toolContext?: Parameters<MCPManager["connectAll"]>[3];
+  toolContext?: Parameters<MCPManager["connectAll"]>[3] &
+    Pick<ToolContext, "mcpServerFailures" | "allowedMcpServers">;
   emitNotificationHook: (payload: Record<string, unknown>) => void;
-}): Promise<void> {
+}): Promise<ReadonlyMap<string, string>> {
+  const failures = new Map<string, string>();
+  if (args.toolContext) args.toolContext.mcpServerFailures = failures;
   // A pool may outlive a run and the engine registry may predate discovery.
   // Refresh scope and the engine's MCP-only view on every run (including cwd
   // and project changes); identical scopes still share a single transport.
@@ -204,11 +208,18 @@ export async function connectRunMcp(args: {
     args.setManager(args.runtimePool ?? new MCPManager(args.toolRegistry));
   }
   const manager = args.getManager();
-  if (!manager) return;
+  if (!manager) return failures;
   await manager.connectAll(
     enabledServers,
     args.engineForConnect,
     (event) => {
+      if (
+        event.type === "mcp_server_failed" &&
+        (!args.toolContext?.allowedMcpServers ||
+          args.toolContext.allowedMcpServers.has(event.server))
+      ) {
+        failures.set(event.server, event.error ?? "Initialization failed.");
+      }
       args.emitNotificationHook({
         kind: event.type,
         server: event.server,
@@ -226,6 +237,7 @@ export async function connectRunMcp(args: {
         .map(([name]) => name),
     ),
   );
+  return failures;
 }
 
 /**

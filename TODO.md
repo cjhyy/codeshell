@@ -8,6 +8,7 @@
 
 ## 小 feature（体量 M 及以下）
 
+- **Pet 可靠性修复的运行时加载验收**（S，部署验证）。续办、插件初始化/故障反馈、预算终态、图片保留和提示约束已修复并做本地回归；后续在加载新构建的应用里验证真实插件与同 Session 续办，插件固定版本/预安装入口按发行配置落地。详见 [逐项 TODO 与证据](docs/todo/pet-work-reliability-audit-2026-09-20.md) 和 [技术方案](docs/todo/pet-work-reliability-design-2026-09-20.md)。不把源码验收当作已部署，不重放真实账号写操作。
 - **Link 真账号 / 真 token 验证**（S，验证任务）。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
 - **数字人依赖编辑补齐**（S/M）。编辑器已能配置缺失 Skill 的安装源并保留 `requires`，但任意依赖项与外部 `tools` 的图形化增删尚未完整开放。数字人 JSON 导入导出、仓库分发和原地更新按钮都已实现，不再重复排期。发布目前生成仓库骨架，`git init/push` 仍是用户自行完成的后续步骤。
 - **TUI 子 agent 待办详情**（S）。主/子 `task_update` 已按 `agentId` 隔离，主待办不会串入子视图；后续可为每个子 agent 保留自己的 TodoWrite 快照并显示。不要再按旧 TaskCreate/Update singleton 设计实现。

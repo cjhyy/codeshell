@@ -741,7 +741,7 @@ describe("PetDispatchService", () => {
       startWorkSession: async (delegation) => {
         effects.push("session-started");
         starts.push(delegation);
-        return { sessionId: "pet-work-next", cwd: delegation.workspacePath! };
+        return { sessionId: "pet-work-step-one", cwd: delegation.workspacePath! };
       },
     });
 
@@ -772,12 +772,14 @@ describe("PetDispatchService", () => {
     expect(report).toMatchObject({
       text: "第一步完成，我继续验证发布流程。",
       continued: true,
-      delegation: { sessionId: "pet-work-next" },
+      delegation: { sessionId: "pet-work-step-one", reusedSession: true },
     });
     expect(starts).toEqual([
       {
         clientMessageId: "pet-continuation:pet-task-step-one:1:completed",
-        task: "验证 CodeShell 发布流程并修复剩余问题",
+        task: expect.stringContaining("验证 CodeShell 发布流程并修复剩余问题"),
+        originalObjective: "完成 CodeShell 发布准备",
+        targetSessionId: "pet-work-step-one",
         workspacePath: "/work/codeshell",
         completionTarget: {
           kind: "im-gateway",
@@ -829,7 +831,9 @@ describe("PetDispatchService", () => {
       startWorkSession: async (delegation) => {
         startCalls += 1;
         expect(delegation.clientMessageId).toBe("pet-continuation:pet-task-replay:1:completed");
-        return { sessionId: "pet-work-replayed", cwd: "/work/codeshell" };
+        expect(delegation.targetSessionId).toBe("pet-work-original");
+        expect(delegation.originalObjective).toBe("完成发布准备");
+        return { sessionId: "pet-work-original", cwd: "/work/codeshell" };
       },
     });
 
@@ -863,7 +867,7 @@ describe("PetDispatchService", () => {
 
     expect(report).toMatchObject({
       continued: true,
-      delegation: { sessionId: "pet-work-replayed" },
+      delegation: { sessionId: "pet-work-original" },
     });
     expect(workerCalls).toBe(0);
     expect(startCalls).toBe(1);
@@ -3754,6 +3758,9 @@ test.each(["launch", "cancel"] as const)(
       id: "closed-task",
       originClientMessageId: "origin",
       objective: "work",
+      workspacePath: null,
+      sessionId: "work-closed",
+      verificationMode: "turn" as const,
       status: "failed" as const,
       phase: "finalizing" as const,
       attempt: 1,

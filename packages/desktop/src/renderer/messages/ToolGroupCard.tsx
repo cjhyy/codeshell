@@ -4,13 +4,12 @@ import { ToolCard } from "../tool-cards";
 import { ThinkingMessageView } from "./ThinkingMessageView";
 import { toolGroupActivityLabel, type ToolGroup } from "./streamGroups";
 import { Button } from "@/components/ui/button";
+import type { AttachmentContext } from "../tool-cards/attachments";
 
-interface Props {
+interface Props extends AttachmentContext {
   group: ToolGroup;
   turnEpoch?: number;
   defaultOpen?: boolean;
-  /** Session cwd, forwarded to member tool cards for attachment resolution. */
-  cwd?: string | null;
 }
 
 /**
@@ -27,7 +26,7 @@ interface Props {
  * At the end of its own running epoch, the group returns to defaultOpen.
  * Later turns leave manually opened historical groups alone.
  */
-function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, cwd }: Props) {
+function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, ...attachmentContext }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const detailsId = useId();
   const previousEpochRef = useRef(turnEpoch);
@@ -66,7 +65,9 @@ function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, cwd }: Props
         {open &&
           group.items.map((it) => {
             if (it.kind === "tool") {
-              return <ToolCard key={it.id} message={it} turnEpoch={turnEpoch} cwd={cwd} />;
+              return (
+                <ToolCard key={it.id} message={it} turnEpoch={turnEpoch} {...attachmentContext} />
+              );
             }
             // thinking — the only non-tool item a tool_group can hold.
             return <ThinkingMessageView key={it.id} message={it} />;

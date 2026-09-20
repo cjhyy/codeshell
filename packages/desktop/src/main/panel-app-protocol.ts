@@ -6,6 +6,7 @@ import { Readable } from "node:stream";
 import type { MediaScope } from "./media/media-types.js";
 import type { PanelAppDescriptor, PreparedPanelApp } from "../shared/panel-apps.js";
 import { THEME_ASSET_SCHEME } from "./theme-asset-url.js";
+import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 
 export const PANEL_APP_SCHEME = "cspanel";
 const CSP =
@@ -110,6 +111,16 @@ export function setPanelAppMediaReader(reader: ManagedMediaReader): void {
 
 export function registerPanelAppSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
+    {
+      scheme: MEDIA_PREVIEW_SCHEME,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: false,
+        corsEnabled: false,
+        stream: true,
+      },
+    },
     {
       scheme: PANEL_APP_SCHEME,
       privileges: {

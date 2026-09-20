@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { connectRunMcp } from "./run-tooling.js";
+import { buildRunToolContext, connectRunMcp } from "./run-tooling.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { toolSearchTool } from "../tool-system/builtin/tool-search.js";
@@ -81,6 +81,58 @@ function runHost(pool: MCPManager, registry: ToolRegistry, cwd: string) {
 }
 
 describe("shared MCP pool supplies each run's local registry", () => {
+  test("run cancellation reaches startup through the ToolContext", () => {
+    const abort = new AbortController();
+    const context = buildRunToolContext({
+      base: {},
+      options: { signal: abort.signal },
+      cwd: directory,
+    } as Parameters<typeof buildRunToolContext>[0]);
+    expect(context.signal).toBe(abort.signal);
+    abort.abort();
+    expect(context.signal?.aborted).toBe(true);
+  });
+
+  test("failure snapshots are per-run, hide disallowed servers and clear on recovery", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const pool = new MCPManager(registry);
+    const context = { cwd: directory, allowedMcpServers: new Set(["fixture"]) } as ToolContext;
+    const notifications: Record<string, unknown>[] = [];
+    const args = {
+      mcpDisabled: false,
+      getManager: () => pool,
+      setManager: () => {},
+      runtimePool: pool,
+      toolRegistry: registry,
+      toolContext: context,
+      engineForConnect: {},
+      emitNotificationHook: (event: Record<string, unknown>) => notifications.push(event),
+    };
+    try {
+      const first = await connectRunMcp({
+        ...args,
+        mcpServers: {
+          fixture: { name: "fixture", command: "/missing-mcp-fixture" },
+          hidden: { name: "hidden", command: "/missing-hidden-server" },
+        },
+      });
+      expect([...first.keys()]).toEqual(["fixture"]);
+      expect(context.mcpServerFailures).toBe(first);
+      expect(notifications).toHaveLength(2);
+      const second = await connectRunMcp({
+        ...args,
+        mcpServers: {
+          fixture: { name: "fixture", command: process.execPath, args: [fixture] },
+        },
+      });
+      expect(second.size).toBe(0);
+      expect(context.mcpServerFailures).toBe(second);
+      expect(first.size).toBe(1);
+    } finally {
+      await pool.disconnectAll();
+    }
+  });
+
   test("tools connected after the Engine fork become discoverable and executable", async () => {
     const shared = new ToolRegistry({ builtinTools: ["ToolSearch"] });
     const local = shared.fork();

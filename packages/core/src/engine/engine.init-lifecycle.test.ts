@@ -92,7 +92,7 @@ function makeEngine(dir: string, model: string, mcpPool: FakeMcpPool): Engine {
     cwd: dir,
     sessionStorageDir: join(dir, "sessions"),
     enabledBuiltinTools: [],
-    maxTurns: 1,
+    maxTurns: 2,
     headless: true,
     permissionMode: "bypassPermissions",
     settingsScope: "isolated",

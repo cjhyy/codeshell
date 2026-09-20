@@ -12,6 +12,42 @@ export interface LatestAssistantText {
   timestamp?: number;
 }
 
+export interface LatestWorkContext {
+  latestRequest: LatestAssistantText | null;
+  latestResult: LatestAssistantText | null;
+}
+
+/** Recent transcript evidence, never instructions or a generated task title. */
+export async function readLatestWorkContext(
+  sessionDir: string,
+  options: { maxChars: number },
+): Promise<LatestWorkContext> {
+  const events = await readTranscriptTail(join(sessionDir, "transcript.jsonl"));
+  const context: LatestWorkContext = { latestRequest: null, latestResult: null };
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index]!;
+    if (event.type !== "message") continue;
+    const data = event.data ?? {};
+    const key = data.role === "assistant" ? "latestResult" : "latestRequest";
+    if (
+      context[key] ||
+      (data.role !== "assistant" && data.role !== "user") ||
+      data.injected === true ||
+      (data.role === "user" && data.authority !== undefined && data.authority !== "user")
+    )
+      continue;
+    const text = textOfContent(data.content).trim();
+    if (!text) continue;
+    context[key] = {
+      text: truncateSafely(text, options.maxChars),
+      truncated: text.length > options.maxChars,
+      ...(typeof event.timestamp === "number" ? { timestamp: event.timestamp } : {}),
+    };
+    if (context.latestRequest && context.latestResult) break;
+  }
+  return context;
+}
+
 /** Truncate to maxChars without splitting a UTF-16 surrogate pair in two. */
 function truncateSafely(text: string, maxChars: number): string {
   const sliced = text.slice(0, maxChars);

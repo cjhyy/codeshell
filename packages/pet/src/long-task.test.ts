@@ -159,6 +159,7 @@ describe("Pet long-task state machine", () => {
         clientMessageId: "pet-continuation:task-closure:1:completed",
         objective: "Verify the release",
         workspacePath: "/work/app",
+        targetSessionId: "session-closure",
       },
     });
     const launched = transitionPetLongTask(decided, {
@@ -179,6 +180,7 @@ describe("Pet long-task state machine", () => {
         clientMessageId: "pet-continuation:task-closure:1:completed",
         objective: "Verify the release",
         workspacePath: "/work/app",
+        targetSessionId: "session-closure",
       },
       launch: { sessionId: "session-next", taskId: "task-next", at: 220 },
     });

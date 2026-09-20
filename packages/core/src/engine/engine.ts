@@ -147,6 +147,7 @@ import { PermissionController } from "./permission-controller.js";
 import { buildPromptComposerConfig } from "./run-setup.js";
 import { resolveRunWorkspace } from "./run-workspace.js";
 import { openRunSession } from "./run-session-open.js";
+import { formatMcpConnectionFailures } from "../tool-system/mcp-health.js";
 import {
   buildRunToolContext,
   buildRunPermissionPipeline,
@@ -1558,7 +1559,7 @@ export class Engine {
         },
       });
 
-      const { promptComposer, toolDefs } = await this.wireRunTooling({
+      const { promptComposer, toolDefs, mcpFailureSummary } = await this.wireRunTooling({
         options,
         session,
         cwd,
@@ -1582,6 +1583,7 @@ export class Engine {
         session,
         messages,
         hookMessages,
+        mcpFailureSummary,
         promptComposer,
         toolDefs,
         llmClientPromise,
@@ -1928,6 +1930,7 @@ export class Engine {
     session: SessionBundle;
     messages: Message[];
     hookMessages: string[];
+    mcpFailureSummary: string;
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     llmClientPromise: ReturnType<typeof createLLMClient>;
@@ -1945,6 +1948,7 @@ export class Engine {
       session,
       messages,
       hookMessages,
+      mcpFailureSummary,
       promptComposer,
       toolDefs,
       llmClientPromise,
@@ -1953,13 +1957,28 @@ export class Engine {
       profileParams,
     } = args;
 
-    const [llmClient, baseSystemPrompt, dynamicContextMsg] = await Promise.all([
+    const [llmClient, baseSystemPrompt, baseDynamicContextMsg] = await Promise.all([
       llmClientPromise,
       // System prompt is now the STABLE prefix only — skills + git status moved
       // out to a trailing per-turn message so they no longer bust the cache.
       promptComposer.buildSystemPrompt(toolDefs),
       promptComposer.buildDynamicContextMessage(),
     ]);
+    // Capability health is current-run context. Keep it out of durable history
+    // and summaries so a recovered service is not described as offline later.
+    const dynamicContextMsg: Message | null = mcpFailureSummary
+      ? {
+          role: "user",
+          content: [
+            ...(baseDynamicContextMsg
+              ? typeof baseDynamicContextMsg.content === "string"
+                ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
+                : baseDynamicContextMsg.content
+              : []),
+            { type: "text", text: `<system-reminder>${mcpFailureSummary}</system-reminder>` },
+          ],
+        }
+      : baseDynamicContextMsg;
     const fullSystemPrompt = composeRunSystemPrompt({
       baseSystemPrompt: toolDefs.some((tool) => tool.name === "SaveContextNote")
         ? `${baseSystemPrompt}\n\n${loadSection("context-notes")}`
@@ -2592,6 +2611,7 @@ export class Engine {
   }): Promise<{
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
+    mcpFailureSummary: string;
   }> {
     const {
       options,
@@ -2683,7 +2703,7 @@ export class Engine {
 
     const mcpServers = this.config.mcpServers ?? {};
     const mcpDisabled = profile?.disableMcp === true;
-    await connectRunMcp({
+    const mcpFailures = await connectRunMcp({
       toolContext: toolCtx,
       mcpServers,
       mcpDisabled,
@@ -2739,7 +2759,11 @@ export class Engine {
       runPlanMode,
     });
 
-    return { promptComposer, toolDefs };
+    return {
+      promptComposer,
+      toolDefs,
+      mcpFailureSummary: formatMcpConnectionFailures(mcpFailures),
+    };
   }
 
   /**

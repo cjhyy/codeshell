@@ -36,7 +36,7 @@ export const viewImageToolDef: ToolDefinition = {
   description:
     "Load an image into the conversation so you can SEE it (vision). Pass path to view a " +
     "workspace image file, or pass imageNumber to retrieve the original image behind an " +
-    "earlier [image #N, already provided] history placeholder. Use exactly one of path or " +
+    "earlier [image #N, pixels omitted] history placeholder. Use exactly one of path or " +
     "imageNumber. File paths support PNG/JPEG/GIF/WebP only; convert SVG/PDF to PNG first. " +
     "Requires a vision-capable model; otherwise the image is skipped.",
   inputSchema: {
@@ -49,7 +49,7 @@ export const viewImageToolDef: ToolDefinition = {
       imageNumber: {
         type: "number",
         description:
-          "Positive image history number N from an earlier [image #N, already provided] " +
+          "Positive image history number N from an earlier [image #N, pixels omitted] " +
           "placeholder. Omit this field entirely when path is provided; do not send 0.",
       },
       detail: {

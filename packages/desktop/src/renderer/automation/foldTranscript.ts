@@ -47,7 +47,7 @@ export function foldTranscript(
             item.text,
             item.timestamp,
             undefined,
-            undefined,
+            item.injected,
             undefined,
             undefined,
             item.clientMessageId,

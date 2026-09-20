@@ -2,6 +2,15 @@ import { parsePetHostActionReplacementDisplay } from "../../shared/pet-host-acti
 
 const PET_AUTO_DELEGATE_MARKER = "<!--PET:AUTO_DELEGATE-->";
 
+/** Submit identities reserved by the host for hidden Mimi manager turns. */
+export function isPetInternalChatTurn(clientMessageId: string): boolean {
+  return (
+    clientMessageId.startsWith("pet-closure:") ||
+    clientMessageId.startsWith("pet-report:") ||
+    clientMessageId.startsWith("pet-launch-receipt-")
+  );
+}
+
 /** Keep Pet's host-control line out of both the live stream and hydrated chat. */
 export function visiblePetAssistantText(text: string): string {
   text = parsePetHostActionReplacementDisplay(text).text;

@@ -14,7 +14,18 @@
  * map each to an AttachmentCard.
  */
 
-export type AttachmentKind = "image" | "markdown" | "html" | "file";
+import { classifyMediaPath } from "../../shared/media-preview";
+import type { SessionUiAuthority } from "../sessionUiAuthority";
+
+export type AttachmentKind = "image" | "audio" | "video" | "markdown" | "html" | "file";
+
+/** Authority belongs to the task that produced the attachment. */
+export interface AttachmentContext {
+  cwd?: string | null;
+  sessionId?: string | null;
+  sessionMainRootId?: string | null;
+  rootStatus?: SessionUiAuthority["rootStatus"];
+}
 
 export interface Attachment {
   /** Absolute or relative path to the artifact. */
@@ -29,6 +40,8 @@ const HTML_EXT = /\.(html?|xhtml)$/i;
 
 export function classifyPath(p: string): AttachmentKind {
   if (IMG_EXT.test(p)) return "image";
+  const mediaKind = classifyMediaPath(p);
+  if (mediaKind) return mediaKind;
   if (MD_EXT.test(p)) return "markdown";
   if (HTML_EXT.test(p)) return "html";
   return "file";

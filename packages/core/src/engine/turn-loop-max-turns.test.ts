@@ -196,6 +196,47 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
     expect(recordedUsage).toEqual([toolResp().usage, summaryResp().usage]);
   });
 
+  it("keeps max_turns when the model obeys the forced last-turn summary", async () => {
+    const { deps, callArgs, modelCalls } = makeDeps([toolResp(1), toolResp(2), summaryResp()]);
+    const result = await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "finish the investigation" }]);
+
+    expect(result.reason).toBe("max_turns");
+    expect(result.text).toBe("final summary");
+    expect(result.completionKind).toBeUndefined();
+    expect(modelCalls()).toBe(3);
+    expect(
+      callArgs[2]!.some(
+        (message) => typeof message.content === "string" && message.content.includes("LAST turn"),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports Goal exhaustion instead of accepting forced text as a met verdict", async () => {
+    const { deps, modelCalls } = makeDeps([toolResp(1), summaryResp()]);
+    let stopCalls = 0;
+    deps.hooks.emit = async (event) => {
+      if (event === "on_stop") {
+        stopCalls++;
+        return { data: { goalVerdict: { met: true, gaps: "" } } };
+      }
+      return {};
+    };
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "complete all requested checks" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("max_turns");
+    expect(result.goalTermination).toBe("max_turns_exhausted");
+    expect(modelCalls()).toBe(2);
+    expect(stopCalls).toBe(0);
+  });
+
   it("stops before another parent request when externally reported child usage exhausts Goal", async () => {
     const { deps, modelCalls } = makeDeps([toolResp(), summaryResp()]);
     let loop!: TurnLoop;

@@ -3,6 +3,10 @@ import { isAbsolute, join, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../installedPlugins.js";
 import { pluginMcpApprovalState } from "../pluginMcpIntegrity.js";
 import type { MCPServerConfig, MCPServerOverride } from "../../types.js";
+import {
+  validMcpConnectRetries,
+  validMcpConnectTimeout,
+} from "../../tool-system/mcp-connection-policy.js";
 
 function pluginNameFromKey(key: string): string {
   const at = key.lastIndexOf("@");
@@ -183,6 +187,10 @@ function normalizePluginMcpServer(raw: unknown, key: string): MCPServerConfig | 
     cfg.credentialRef === undefined ? undefined : boundedString(cfg.credentialRef, 256);
   if (cfg.credentialRef !== undefined && !credentialRef) return undefined;
   if (cfg.enabled !== undefined && typeof cfg.enabled !== "boolean") return undefined;
+  if (cfg.connectTimeoutMs !== undefined && !validMcpConnectTimeout(cfg.connectTimeoutMs))
+    return undefined;
+  if (cfg.connectRetries !== undefined && !validMcpConnectRetries(cfg.connectRetries))
+    return undefined;
   const allowedToolsRaw = cfg.allowedTools ?? cfg.allowed_tools;
   const disabledToolsRaw = cfg.disabledTools ?? cfg.disabled_tools;
   const allowedTools = boundedStringArray(allowedToolsRaw, 256, 256, (name) => {
@@ -215,6 +223,10 @@ function normalizePluginMcpServer(raw: unknown, key: string): MCPServerConfig | 
     ...(typeof cfg.enabled === "boolean" ? { enabled: cfg.enabled } : {}),
     ...(allowedTools ? { allowedTools } : {}),
     ...(disabledTools ? { disabledTools } : {}),
+    ...(cfg.connectTimeoutMs !== undefined
+      ? { connectTimeoutMs: cfg.connectTimeoutMs as number }
+      : {}),
+    ...(cfg.connectRetries !== undefined ? { connectRetries: cfg.connectRetries as number } : {}),
   };
 }
 
@@ -267,6 +279,9 @@ function applyOverride(
   if (override.enabled !== undefined) supplement.enabled = override.enabled;
   if (override.allowedTools !== undefined) supplement.allowedTools = override.allowedTools;
   if (override.disabledTools !== undefined) supplement.disabledTools = override.disabledTools;
+  if (override.connectTimeoutMs !== undefined)
+    supplement.connectTimeoutMs = override.connectTimeoutMs;
+  if (override.connectRetries !== undefined) supplement.connectRetries = override.connectRetries;
   if (override.env !== undefined) supplement.env = override.env;
   if (override.envVars !== undefined) supplement.envVars = override.envVars;
   if (override.credentialRef !== undefined) supplement.credentialRef = override.credentialRef;

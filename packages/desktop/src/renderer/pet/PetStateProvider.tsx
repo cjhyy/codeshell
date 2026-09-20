@@ -36,6 +36,7 @@ import { loadPetChatModelKey, savePetChatModelKey, type PetSettingsBridge } from
 import { useT } from "../i18n";
 import { snapshotHasUnfinishedTopLevelTurn } from "../snapshotReplay";
 import { petChatReplay, type PetChatBufferedEvent } from "./petChatReplay";
+import { isPetInternalChatTurn } from "./petChatRouting";
 import {
   petChatResultFailure,
   type PetChatFailure,
@@ -455,6 +456,20 @@ export function PetStateProvider({
             text: user?.kind === "user" ? user.text : accepted!.message,
             clientMessageId: event.clientMessageId,
             attachments: user?.kind === "user" ? user.attachments : accepted?.attachments,
+            injected: user?.kind === "user" ? user.injected : undefined,
+            pending: false,
+          });
+        } else if (isPetInternalChatTurn(event.clientMessageId)) {
+          // Host completion/report runs have no user-submitted bubble. Give
+          // the reducer the same hidden owner restored by transcript replay
+          // before it sees this run's events, otherwise it discards the reply
+          // as output without a matching user intent.
+          chatDispatch({
+            type: "user_message",
+            bucket: PET_CHAT_BUCKET,
+            text: "",
+            clientMessageId: event.clientMessageId,
+            injected: true,
             pending: false,
           });
         }

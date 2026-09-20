@@ -291,31 +291,6 @@ describe("spillMcpImage retention", () => {
 });
 
 describe("MCPManager discovered tool executors", () => {
-  test("cleans up a connected server when post-handshake discovery fails", async () => {
-    const registry = new ToolRegistry({ builtinTools: [] });
-    const manager = new MCPManager(registry);
-    let closed = false;
-    const client = {
-      listTools: async () => {
-        throw new Error("discovery failed");
-      },
-      close: async () => {
-        closed = true;
-      },
-    };
-    (manager as any).connections.set("srv", {
-      client,
-      serverName: "srv",
-      transport: { close: async () => {} },
-    });
-
-    expect(manager.listServers()).toEqual(["srv"]);
-    await expect((manager as any).discoverTools("srv", client)).rejects.toThrow("discovery failed");
-
-    expect(manager.listServers()).toEqual([]);
-    expect(closed).toBe(true);
-  });
-
   test("forward the tool execution abort signal to client.callTool", async () => {
     const registry = new ToolRegistry({ builtinTools: [] });
     const manager = new MCPManager(registry);
@@ -338,7 +313,7 @@ describe("MCPManager discovered tool executors", () => {
     const scope = mcpConnectionScope({ cwd: "/tmp" });
     const key = mcpConnectionKey("srv", scope);
     (manager as any).connections.set(key, { client, serverName: "srv", scope });
-    await (manager as any).discoverTools("srv", client, key);
+    (manager as any).registerDiscoveredTools("srv", client, key, (await client.listTools()).tools);
     const parent = new AbortController();
     const result = await registry.executeTool(
       "mcp_srv_doit",

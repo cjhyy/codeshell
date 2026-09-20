@@ -12,6 +12,7 @@ import type { ToolContext } from "../context.js";
 import { isRegisteredMcpToolAllowed } from "../mcp-tool-policy.js";
 import { browserDiscoveryScore, isBuiltinBrowserTool } from "../browser-discovery.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "../plan-mode-allowlist.js";
+import { formatMcpConnectionFailures } from "../mcp-health.js";
 
 export const toolSearchToolDef: ToolDefinition = {
   name: "ToolSearch",
@@ -50,6 +51,21 @@ export async function toolSearchTool(
   // returning the wrong tool set. `|| 5` only caught 0/NaN, not negatives.
   const rawMax = args.max_results as number;
   const maxResults = Math.min(typeof rawMax === "number" && rawMax > 0 ? rawMax : 5, 20);
+  const queryLower = query.toLowerCase();
+  const failures = new Map(
+    [...(ctx.mcpServerFailures ?? [])].filter(([server]) => {
+      if (ctx.allowedMcpServers && !ctx.allowedMcpServers.has(server)) return false;
+      return (
+        queryLower.includes("mcp") ||
+        server
+          .toLowerCase()
+          .split(":")
+          .some((part) => part.length > 0 && queryLower.includes(part))
+      );
+    }),
+  );
+  const health = formatMcpConnectionFailures(failures);
+  const withHealth = (result: string) => (health ? `${health}\n\n${result}` : result);
 
   const currentDefinitions = ctx.searchableToolDefinitions;
   if (currentDefinitions) {
@@ -61,9 +77,9 @@ export async function toolSearchTool(
         .slice(7)
         .split(",")
         .map((name) => name.trim());
-      return matchCurrentExact(currentTools, names);
+      return withHealth(matchCurrentExact(currentTools, names));
     }
-    return searchCurrentByKeyword(currentTools, query, maxResults);
+    return withHealth(searchCurrentByKeyword(currentTools, query, maxResults));
   }
 
   // The tool registry is worker-SHARED (B1): it holds MCP tools registered by
@@ -96,11 +112,11 @@ export async function toolSearchTool(
       .slice(7)
       .split(",")
       .map((n) => n.trim());
-    return matchExact(ctx.toolRegistry, names, visible);
+    return withHealth(matchExact(ctx.toolRegistry, names, visible));
   }
 
   // Keyword search
-  return searchByKeyword(ctx.toolRegistry, query, maxResults, visible);
+  return withHealth(searchByKeyword(ctx.toolRegistry, query, maxResults, visible));
 }
 
 function definitionToSearchableTool(

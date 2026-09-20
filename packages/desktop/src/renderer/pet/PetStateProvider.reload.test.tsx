@@ -5,7 +5,7 @@ import type { PetApi, SessionSnapshot, StreamEventEnvelope } from "../../preload
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { PetStateProvider, usePetState } from "./PetStateProvider";
 import { transcriptToFoldItems } from "../../main/transcript-reader";
-import { parsePetUserContent } from "./PetChatHost";
+import { parsePetUserContent, selectPetChatRows } from "./PetChatHost";
 import type { PetDispatchResult } from "../../preload/pet-api";
 import { parseSnapshotAppend } from "../../main/parseStreamLine";
 import { SessionSnapshotStore } from "../../main/SessionSnapshotStore";
@@ -125,6 +125,149 @@ function liveSnapshot(): SessionSnapshot {
 }
 
 describe("Mimi reload during a live reply", () => {
+  test.each([
+    "pet-closure:work-session:completed",
+    "pet-report:work-session:1",
+    "pet-launch-receipt-work-session",
+  ])(
+    "accepts a host-created turn after delegation and reloads its reply once (%s)",
+    async (clientMessageId) => {
+      const summary = "Star 已成功点上，复验通过。";
+      const initial = [
+        envelope(1, { type: "session_started", sessionId }),
+        envelope(2, {
+          type: "tool_use_start",
+          toolCall: { id: "delegate", toolName: "DelegateWork", args: {} },
+        }),
+        envelope(3, {
+          type: "tool_result",
+          result: { id: "delegate", toolName: "DelegateWork", result: "Delegation accepted" },
+        }),
+        envelope(4, { type: "stream_request_start", messageId: "delegation-ack" }),
+        envelope(5, { type: "text_delta", text: "内部派单确认，不应显示。" }),
+        envelope(6, { type: "turn_complete", reason: "completed" }),
+      ];
+      const completion = [
+        { type: "session_started", sessionId, previousRunId: identity.runId },
+        { type: "stream_request_start", messageId: "completion-reply" },
+        { type: "text_delta", text: summary },
+        { type: "turn_complete", reason: "completed" },
+      ].map((event, index) => ({
+        sessionId,
+        epoch,
+        seq: initial.length + index + 1,
+        event: { ...event, runId: "run-completion", clientMessageId } as any,
+      }));
+      const records = [
+        {
+          type: "message",
+          data: {
+            role: "user",
+            content: "继续处理这个任务",
+            clientMessageId: identity.clientMessageId,
+          },
+        },
+        { type: "tool_use", data: { toolName: "DelegateWork", toolCallId: "delegate", args: {} } },
+        {
+          type: "tool_result",
+          data: { toolName: "DelegateWork", toolCallId: "delegate", result: "Delegation accepted" },
+        },
+        { type: "message", data: { role: "assistant", content: "内部派单确认，不应显示。" } },
+      ];
+      const history = (completed: boolean) =>
+        transcriptToFoldItems(
+          [
+            ...records,
+            ...(completed
+              ? [
+                  {
+                    type: "message",
+                    data: {
+                      role: "user",
+                      content: "<system-reminder>任务已完成，请总结。</system-reminder>",
+                      injected: true,
+                      clientMessageId,
+                    },
+                  },
+                  { type: "message", data: { role: "assistant", content: summary } },
+                ]
+              : []),
+          ]
+            .map((record, index) =>
+              JSON.stringify({
+                ...record,
+                id: `disk-${index}`,
+                timestamp: index + 1,
+                turnNumber: 0,
+              }),
+            )
+            .join("\n"),
+        );
+      const view = await mount(
+        {
+          epoch,
+          events: initial,
+          nextSeq: 7,
+          topLevelRunning: false,
+        },
+        [],
+      );
+      try {
+        await act(async () => {
+          await view.hydrate(history(false));
+        });
+        expect(selectPetChatRows(view.state.chatState.messages).map((row) => row.text)).toEqual([
+          "继续处理这个任务",
+        ]);
+        await act(async () => {
+          completion.forEach(view.emit);
+          // Repeated delivery must not create another hidden boundary or summary.
+          completion.forEach(view.emit);
+        });
+        expect(
+          view.state.chatState.messages.filter((message) => message.kind === "user"),
+        ).toMatchObject([
+          { clientMessageId: identity.clientMessageId, text: "继续处理这个任务" },
+          { clientMessageId, text: "", injected: true },
+        ]);
+        expect(selectPetChatRows(view.state.chatState.messages).map((row) => row.text)).toEqual([
+          "继续处理这个任务",
+          summary,
+        ]);
+        expect(view.state.chatBusy).toBe(false);
+      } finally {
+        await view.close();
+      }
+
+      const reloaded = await mount(
+        {
+          epoch,
+          events: [...initial, ...completion],
+          nextSeq: 11,
+          topLevelRunning: false,
+        },
+        [],
+      );
+      try {
+        await act(async () => {
+          completion.forEach(reloaded.emit);
+          await reloaded.hydrate(history(true));
+        });
+        expect(selectPetChatRows(reloaded.state.chatState.messages).map((row) => row.text)).toEqual(
+          ["继续处理这个任务", summary],
+        );
+        expect(
+          reloaded.state.chatState.messages.filter(
+            (message) => message.kind === "user" && message.clientMessageId === clientMessageId,
+          ),
+        ).toHaveLength(1);
+        expect(reloaded.state.chatBusy).toBe(false);
+      } finally {
+        await reloaded.close();
+      }
+    },
+  );
+
   test.each([
     "complete",
     "complete-missing-reply",

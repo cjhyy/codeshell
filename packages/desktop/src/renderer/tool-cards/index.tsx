@@ -7,14 +7,13 @@ import { WebToolCard } from "./WebToolCard";
 import { AgentToolCard } from "./AgentToolCard";
 import { GenericToolCard } from "./GenericToolCard";
 import { BrowserToolCard } from "./BrowserToolCard";
+import type { AttachmentContext } from "./attachments";
 
-interface Props {
+interface Props extends AttachmentContext {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selectedId?: string | null;
   turnEpoch?: number;
-  /** Session cwd, used to resolve relative attachment paths. */
-  cwd?: string | null;
 }
 
 /**
@@ -28,7 +27,7 @@ interface Props {
  * `messages.map` keeps untouched items by reference identity — so the
  * default shallow compare correctly short-circuits.
  */
-function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) {
+function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, ...attachmentContext }: Props) {
   const selected = selectedId === message.id;
   const name = message.toolName.toLowerCase();
 
@@ -51,7 +50,7 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
           onSelect={onSelect}
           selected={selected}
           turnEpoch={turnEpoch}
-          cwd={cwd}
+          {...attachmentContext}
         />
       );
     }
@@ -63,7 +62,7 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
           onSelect={onSelect}
           selected={selected}
           turnEpoch={turnEpoch}
-          cwd={cwd}
+          {...attachmentContext}
         />
       );
     }
@@ -80,7 +79,7 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
           onSelect={onSelect}
           selected={selected}
           turnEpoch={turnEpoch}
-          cwd={cwd}
+          {...attachmentContext}
         />
       );
     }
@@ -135,7 +134,7 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
         onSelect={onSelect}
         selected={selected}
         turnEpoch={turnEpoch}
-        cwd={cwd}
+        {...attachmentContext}
       />
     );
   })();

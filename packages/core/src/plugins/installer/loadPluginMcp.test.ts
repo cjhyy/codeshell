@@ -63,6 +63,18 @@ describe("mergePluginMcpServers", () => {
     expect(merged["p1:fs"]).toMatchObject({ command: "f" });
   });
 
+  test("keeps bounded startup policy and applies user overrides", () => {
+    regPlugin("startup", {
+      "startup:valid": { command: "test", connectTimeoutMs: 40_000, connectRetries: 2 },
+      "startup:invalid": { command: "test", connectTimeoutMs: 120_001 },
+    });
+    const merged = mergePluginMcpServers({}, [], {
+      "startup:valid": { connectTimeoutMs: 80_000, connectRetries: 0 },
+    });
+    expect(merged["startup:valid"]).toMatchObject({ connectTimeoutMs: 80_000, connectRetries: 0 });
+    expect(merged["startup:invalid"]).toBeUndefined();
+  });
+
   test("skips disabled plugins", () => {
     regPlugin("p2", { "p2:x": { command: "x", name: "p2:x" } });
     const merged = mergePluginMcpServers({}, ["p2"]);

@@ -4,6 +4,10 @@
 
 import { z } from "zod";
 import { WorkspaceSourceBindingSchema } from "../sources/types.js";
+import {
+  MAX_MCP_CONNECT_RETRIES,
+  MAX_MCP_CONNECT_TIMEOUT_MS,
+} from "../tool-system/mcp-connection-policy.js";
 const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
 const McpToolNameListSchema = z
   .array(
@@ -385,6 +389,8 @@ export const SettingsSchema = z
             enabled: z.boolean().optional(),
             allowedTools: McpToolNameListSchema.optional(),
             disabledTools: McpToolNameListSchema.optional(),
+            connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),
+            connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),
           }),
         ),
       )
@@ -404,6 +410,8 @@ export const SettingsSchema = z
             enabled: z.boolean().optional(),
             allowedTools: McpToolNameListSchema.optional(),
             disabledTools: McpToolNameListSchema.optional(),
+            connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),
+            connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),
             env: z.record(z.string()).optional(),
             envVars: z.array(z.string()).optional(),
             credentialRef: z.string().optional(),

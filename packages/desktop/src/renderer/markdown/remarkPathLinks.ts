@@ -28,6 +28,8 @@
  * symbol — is left as a normal <code> so highlighting/formatting is untouched.
  */
 
+import { classifyMediaPath } from "../../shared/media-preview";
+
 interface MdastNode {
   type: string;
   value?: string;
@@ -112,7 +114,25 @@ const BARE_FILENAME =
 // indices: 1 = quote char (backref only), 2 = quoted path, 3 = quoted :line,
 // 4 = bare path, 5 = bare :line, 6 = bare filename, 7 = filename :line, 8 =
 // filename (line N).
-const PATH_LINE_RE = new RegExp(`${QUOTED}|${BARE}|${BARE_FILENAME}`, "gu");
+// Match a drive path as one token before the ordinary matcher can restart at
+// the slash after `C:` and silently turn it into a different Unix path.
+const WINDOWS_BARE =
+  LEAD +
+  `(?<windowsPath>[a-zA-Z]:[\\\\/](?:${PATH_CHAR}|[\\\\/])+\\.[\\w]{1,8})` +
+  `(?::(?<windowsLine>\\d+)(?:[:-]\\d+)?)?` +
+  `(?=$|[\\s),.;!?${CJK_CLOSE}])`;
+const WINDOWS_QUOTED =
+  LEAD +
+  `(?<windowsQuote>['"\`])(?<windowsQuotedPath>[a-zA-Z]:[\\\\/][^'"\`\\n:]*?\\.[\\w]{1,8})` +
+  `(?::(?<windowsQuotedLine>\\d+)(?:[:-]\\d+)?)?\\k<windowsQuote>`;
+const PATH_LINE_RE = new RegExp(
+  `${QUOTED}|${BARE}|${BARE_FILENAME}|${WINDOWS_BARE}|${WINDOWS_QUOTED}`,
+  "gu",
+);
+
+function isWindowsMediaPath(path: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(path) && classifyMediaPath(path) !== null;
+}
 
 /** A bare filename links only when its extension is a known file type. */
 function bareFilenameExtOk(name: string): boolean {
@@ -173,10 +193,14 @@ const KNOWN_FILE_EXT = new Set([
   "md", "mdx", "markdown", "txt", "rst", "pdf",
   // assets
   "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "csv", "tsv",
+  "mp3", "wav", "m4a", "aac", "ogg", "oga", "opus", "flac",
+  "mp4", "m4v", "webm", "mov", "ogv", "mkv", "avi",
 ]);
 
 /** If an inlineCode value is exactly one path, return {path, line}; else null. */
 function inlineCodePath(value: string): { path: string; line?: string } | null {
+  const windowsPath = value.trim();
+  if (isWindowsMediaPath(windowsPath)) return { path: windowsPath };
   const m = INLINE_CODE_PATH_RE.exec(value.trim());
   if (!m) return null;
   const path = m[1]!;
@@ -230,7 +254,14 @@ function splitTextNode(node: MdastNode): MdastNode[] | null {
     // its extension is whitelisted — otherwise emit it back as plain text so
     // prose like "v1.2" / "obj.method" stays untouched (and the matched span
     // isn't silently dropped).
-    if (m[2] !== undefined) {
+    const windowsPath = m.groups?.windowsPath ?? m.groups?.windowsQuotedPath;
+    if (windowsPath !== undefined) {
+      out.push(
+        isWindowsMediaPath(windowsPath)
+          ? makePathLink(windowsPath, m.groups?.windowsLine ?? m.groups?.windowsQuotedLine)
+          : { type: "text", value: m[0]! },
+      );
+    } else if (m[2] !== undefined) {
       out.push(makePathLink(m[2], m[3]));
     } else if (m[4] !== undefined) {
       out.push(makePathLink(m[4], m[5]));
@@ -249,6 +280,19 @@ function splitTextNode(node: MdastNode): MdastNode[] | null {
 }
 
 function walk(node: MdastNode, parentType: string | null): void {
+  // Markdown URL sanitizers treat a Windows drive letter as an unknown scheme.
+  // Normalize only explicit local media paths before sanitization; arbitrary
+  // schemes and network URLs retain their existing treatment.
+  if (["link", "image", "definition"].includes(node.type) && node.url) {
+    try {
+      const path = decodeURIComponent(node.url);
+      if (isWindowsMediaPath(path)) {
+        node.url = `${CODESHELL_PATH_SCHEME}${encodeURIComponent(path)}`;
+      }
+    } catch {
+      // A malformed URL is left for the standard Markdown sanitizers.
+    }
+  }
   if (!node.children) return;
   if (SKIP_PARENTS.has(node.type)) return;
   const next: MdastNode[] = [];

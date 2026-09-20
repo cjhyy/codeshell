@@ -13,6 +13,22 @@ const catalog = [
 ];
 
 describe("SessionIndex", () => {
+  test("budget exhaustion is visibly incomplete even when final text claims completion", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+    index.applyStreamEvent({
+      sessionId: "work-a",
+      generation: 1,
+      version: 1,
+      observedAt: 101,
+      event: { type: "turn_complete", reason: "max_turns", text: "Everything is done" } as never,
+    });
+    expect(index.get("work-a")).toMatchObject({
+      terminal: { status: "failed" },
+      summary: "预算已用尽，任务未完成",
+    });
+  });
+
   test("does not replace the current projection with an older run start", () => {
     const index = new SessionIndex();
     index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });

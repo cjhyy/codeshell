@@ -406,14 +406,34 @@ export function MessageStream({
       );
     }
     if (m.kind === "tool_group") {
-      return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+      return (
+        <ToolGroupCard
+          key={m.id}
+          group={m}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+          sessionId={engineSessionId}
+          sessionMainRootId={rootId}
+          rootStatus={rootStatus}
+        />
+      );
     }
     if (m.kind === "agent_group") {
       return <AgentGroupCard key={m.id} group={m} />;
     }
     switch (m.kind) {
       case "tool":
-        return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
+        return (
+          <ToolCard
+            key={m.id}
+            message={m}
+            turnEpoch={turnEpoch}
+            cwd={cwd}
+            sessionId={engineSessionId}
+            sessionMainRootId={rootId}
+            rootStatus={rootStatus}
+          />
+        );
       case "user": {
         if (isSystemReminderText(m.text)) {
           return <SystemReminderTask key={m.id} text={m.text} />;

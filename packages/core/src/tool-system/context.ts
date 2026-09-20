@@ -465,6 +465,8 @@ export interface ToolContext {
    * no gating (sub-agents / tests whose registries carry no MCP tools).
    */
   allowedMcpServers?: Set<string>;
+  /** Host-controlled initialization failures for this run's workspace only. */
+  mcpServerFailures?: ReadonlyMap<string, string>;
   /**
    * Exact per-server MCP tool policy for this run. The engine uses the same
    * map for model visibility, ToolSearch, and the executor's direct-call gate.

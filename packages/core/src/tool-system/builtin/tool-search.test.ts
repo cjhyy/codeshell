@@ -24,6 +24,25 @@ function registryWith(...defs: Array<{ name: string; description: string }>): To
 const ctx = (r: ToolRegistry): ToolContext => ({ toolRegistry: r }) as unknown as ToolContext;
 
 describe("toolSearchTool", () => {
+  it("explains failed MCP discovery without exposing hidden server health", async () => {
+    const context = ctx(registryWith());
+    context.mcpServerFailures = new Map([
+      ["fixture:reader", "Initialization timed out."],
+      ["hidden:private", "Secret failure"],
+    ]);
+    context.allowedMcpServers = new Set(["fixture:reader"]);
+    for (const definitions of [undefined, []]) {
+      context.searchableToolDefinitions = definitions;
+      const result = await toolSearchTool({ query: "mcp fixture tools" }, context);
+      expect(result).toContain("fixture:reader");
+      expect(result).toContain("Initialization timed out");
+      expect(result).not.toContain("hidden:private");
+      expect(result).not.toContain("Secret failure");
+    }
+    context.mcpServerFailures = new Map();
+    expect(await toolSearchTool({ query: "mcp" }, context)).not.toContain("MCP connection status");
+  });
+
   it("requires a query", async () => {
     expect(await toolSearchTool({}, ctx(registryWith()))).toContain("query is required");
   });

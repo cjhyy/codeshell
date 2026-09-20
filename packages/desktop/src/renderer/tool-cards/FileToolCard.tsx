@@ -3,25 +3,30 @@ import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
 import { ToolOutputBlock } from "./ToolOutputBlock";
 import { parsedArgs, truncate } from "./utils";
-import { classifyPath } from "./attachments";
+import { classifyPath, type AttachmentContext, type AttachmentKind } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 
-interface Props {
+interface Props extends AttachmentContext {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
   /** "read" or "write" — affects the summary verbiage and detail layout. */
   variant: "read" | "write" | "edit";
   turnEpoch?: number;
-  /** Session cwd, used to resolve relative attachment paths. */
-  cwd?: string | null;
 }
 
-export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, cwd }: Props) {
+export function FileToolCard({
+  message,
+  onSelect,
+  selected,
+  variant,
+  turnEpoch,
+  ...attachmentContext
+}: Props) {
   const { t } = useT();
   const a = parsedArgs(message);
   const path =
@@ -92,7 +97,7 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, 
           <div className="flex flex-wrap gap-2">
             <AttachmentCard
               attachment={{ path, kind: writeAttachmentKind(path, message)! }}
-              cwd={cwd}
+              {...attachmentContext}
             />
           </div>
         </div>
@@ -118,14 +123,14 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, 
 
 /**
  * For Write tool calls, return the attachment kind iff the file
- * looks like a recognisable artifact (image / md / html) and the
+ * looks like a recognisable artifact (image / audio / video / md / html) and the
  * call didn't fail. `null` means "render no attachment card",
  * keeping the existing behavior for source files.
  */
 function writeAttachmentKind(
   path: string,
   message: ToolMessage,
-): "image" | "markdown" | "html" | null {
+): Exclude<AttachmentKind, "file"> | null {
   if (message.error) return null;
   if (message.status !== "succeeded") return null;
   const k = classifyPath(path);

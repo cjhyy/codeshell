@@ -400,7 +400,9 @@ export class SessionIndex {
               ? "队列中"
               : status === "completed"
                 ? "本轮已完成"
-                : "运行已结束",
+                : event.reason === "max_turns"
+                  ? "预算已用尽，任务未完成"
+                  : "运行已结束",
           completionKind: undefined,
           terminal:
             current.queueDepth > 0

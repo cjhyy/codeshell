@@ -4,23 +4,27 @@ import { ToolCardShell } from "./ToolCardShell";
 import { ToolOutputBlock } from "./ToolOutputBlock";
 import { SandboxBadge } from "./SandboxBadge";
 import { parsedArgs, truncate } from "./utils";
-import { detectAttachments } from "./attachments";
+import { detectAttachments, type AttachmentContext } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
 import { Lightbox } from "../chat/Lightbox";
 import { driveAgentLinkDetailForToolMessage } from "../cc-room/driveAgentLink";
 import { DriveAgentLinkButton } from "../cc-room/DriveAgentLinkButton";
 import { useDriveAgentJobs } from "./DriveAgentJobsContext";
 
-interface Props {
+interface Props extends AttachmentContext {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
   turnEpoch?: number;
-  /** Session cwd, used to resolve relative attachment paths. */
-  cwd?: string | null;
 }
 
-export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }: Props) {
+export function GenericToolCard({
+  message,
+  onSelect,
+  selected,
+  turnEpoch,
+  ...attachmentContext
+}: Props) {
   const backgroundJobs = useDriveAgentJobs();
   const cliLink = driveAgentLinkDetailForToolMessage(message, backgroundJobs);
   // Use parsedArgs (argsLive ?? parsed message.args), NOT raw message.args —
@@ -76,7 +80,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
           </span>
           <div className="flex flex-wrap gap-2">
             {attachments.map((a) => (
-              <AttachmentCard key={a.path} attachment={a} cwd={cwd} />
+              <AttachmentCard key={a.path} attachment={a} {...attachmentContext} />
             ))}
           </div>
         </div>

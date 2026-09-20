@@ -120,10 +120,16 @@ export function normalizePetWorkDelegation(
       error:
         `session_id ${JSON.stringify(reusableSessionId)} belongs to Workspace ` +
         `${JSON.stringify(candidate.workspaceId)}, not ${JSON.stringify(request.workspaceId)}. ` +
-        "Do not send this pair again. Omit session_id for new work or use the Session's Workspace.",
+        "Do not send this pair again. Inspect the intended Session and correct its Workspace or selector. A rejected continuation does not authorize creating a replacement Session.",
     };
   }
-  if (continuationEvidence === undefined) return newSession("missing_continuation_evidence");
+  if (continuationEvidence === undefined) {
+    return {
+      ok: false,
+      error:
+        "session_continuation is required for an explicit session_id. Inspect Sessions and supply grounded evidence; no replacement Session was created.",
+    };
+  }
   if (
     !continuationEvidence ||
     typeof continuationEvidence !== "object" ||
@@ -136,11 +142,19 @@ export function normalizePetWorkDelegation(
     !continuationEvidence.reason.trim() ||
     continuationEvidence.reason.length > 2_000
   ) {
-    return newSession("invalid_continuation_evidence");
+    return {
+      ok: false,
+      error:
+        "Invalid session_continuation. Supply the exact prior_thread and a non-empty reason; no replacement Session was created.",
+    };
   }
   const priorThread = petDelegationDisplay(continuationEvidence.priorThread, 4_096);
   if (petDelegationDisplay(candidate.name, 256) !== priorThread) {
-    return newSession("unmatched_prior_thread");
+    return {
+      ok: false,
+      error:
+        "session_continuation.prior_thread must quote the selected Session's entire displayed name. Inspect Sessions before retrying; no replacement Session was created.",
+    };
   }
   return {
     ok: true,

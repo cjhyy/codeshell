@@ -629,6 +629,13 @@ export class ExternalRuntimeService {
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
         "locally. Unless the user explicitly requested concurrent work, finish the current " +
         "turn; CodeShell will inject the completion and continue this same task automatically.",
+      "CodeShell Desktop can play local audio and video inline in chat. " +
+        "Save media artifacts inside this session's workspace and include a Markdown " +
+        "embed such as ![Audio description](/absolute/path/audio.mp3) or " +
+        "![Video description](/absolute/path/video.mp4); ordinary Markdown file links " +
+        "also show a player. Use angle brackets around paths containing spaces. " +
+        "Link only files that exist. Playback requires a browser-supported codec; " +
+        "remote media links open normally and are not inline players.",
       request.developerInstructions,
     ]
       .filter(Boolean)

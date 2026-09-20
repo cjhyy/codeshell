@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readLatestAssistantText } from "./latest-result.js";
+import { readLatestAssistantText, readLatestWorkContext } from "./latest-result.js";
 
 interface RawEvent {
   role: string;
@@ -25,6 +25,28 @@ function makeSessionDir(events: RawEvent[]): string {
 }
 
 describe("readLatestAssistantText", () => {
+  test("recent work context excludes injected reminders and system/agent authored user-role inputs", async () => {
+    const dir = makeSessionDir([
+      { role: "user", content: "Latest real request" },
+      { role: "assistant", content: "Latest result" },
+    ]);
+    for (const data of [
+      { role: "user", content: "injected", injected: true },
+      { role: "user", content: "system control", authority: "system" },
+      { role: "user", content: "agent control", authority: "agent" },
+      { role: "tool", content: "tool text" },
+      { role: "user", content: [{ type: "tool_result", content: "untrusted tool output" }] },
+    ])
+      appendFileSync(
+        join(dir, "transcript.jsonl"),
+        JSON.stringify({ type: "message", data }) + "\n",
+      );
+    expect(await readLatestWorkContext(dir, { maxChars: 10 })).toMatchObject({
+      latestRequest: { text: "Latest rea", truncated: true },
+      latestResult: { text: "Latest res", truncated: true },
+    });
+  });
+
   test("returns the newest assistant text, skipping a trailing user message", async () => {
     const dir = makeSessionDir([
       { role: "user", content: "first question" },

@@ -26,7 +26,8 @@ export const delegateWorkToolDef: ToolDefinition = {
     "Use only as Mimi after deciding that the user's request requires execution. " +
     "Before calling, decide whether this is the same concrete work thread as one reusable Session. " +
     "Reuse requires session_id and session_continuation identifying that prior work and explaining why this objective continues it. " +
-    "Without grounded continuation evidence the host creates a new Session, even if session_id is valid. " +
+    "An explicit session_id without grounded continuation evidence is rejected; it never creates a replacement Session. " +
+    "Titles may describe old work: inspect recent request/result data and use Sessions search/describe before dismissing a possible continuation. " +
     "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity. " +
     "If the user asked for a new Session, omit session_id regardless of how continuous the work looks. " +
     "workspace_id must be copied exactly from the available Workspace list.",
@@ -224,9 +225,9 @@ export async function delegateWorkTool(
   if (reusableSessionId && !reusableSession) {
     return (
       `Error: unknown session_id ${JSON.stringify(reusableSessionId)}. ` +
-      "Do not send it again. Omit session_id to start a new Session, or copy one exact id " +
-      "from the reusable Session list above. If the user asked to continue existing work, " +
-      "identify that Session first; do not silently create a replacement."
+      "Do not send it again. Identify the intended Session and copy its exact eligible id. " +
+      "If the user asked to continue existing work, do not silently create a replacement. " +
+      "Omit session_id only when the user's request calls for independent new work or explicitly asks for a new Session."
     );
   }
   if (reusableSession && reusableSession.workspaceId !== workspaceId) {
@@ -236,9 +237,9 @@ export async function delegateWorkTool(
     return (
       `Error: session_id ${JSON.stringify(reusableSessionId)} belongs to Workspace ` +
       `${JSON.stringify(reusableSession.workspaceId)}, not ${JSON.stringify(workspaceId)}. ` +
-      "Do not send this pair again. Either omit session_id to start a new Session in " +
-      `${JSON.stringify(workspaceId)}, or set workspace_id to ` +
-      `${JSON.stringify(reusableSession.workspaceId)} if you meant to continue that Session.`
+      "Do not send this pair again. Inspect the intended Session and correct the selector, or set workspace_id to " +
+      `${JSON.stringify(reusableSession.workspaceId)} to continue this Session. ` +
+      "A rejected continuation does not authorize creating a replacement Session."
     );
   }
   const evidence = args.session_continuation;

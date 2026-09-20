@@ -44,7 +44,7 @@ describe("Engine first turn after a session fork", () => {
       cwd: dir,
       sessionStorageDir: join(dir, "sessions"),
       enabledBuiltinTools: [],
-      maxTurns: 1,
+      maxTurns: 2,
       headless: true,
       permissionMode: "bypassPermissions",
     });
@@ -211,7 +211,7 @@ describe("Engine first turn after a session fork", () => {
       cwd: dir,
       sessionStorageDir: join(dir, "sessions"),
       enabledBuiltinTools: [],
-      maxTurns: 1,
+      maxTurns: 2,
       headless: true,
       permissionMode: "bypassPermissions",
     });

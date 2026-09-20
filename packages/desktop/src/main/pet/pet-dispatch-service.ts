@@ -11,7 +11,9 @@ import {
   isPetWorkExecutionBackend,
   normalizePetWorkDelegation,
 } from "@cjhyy/code-shell-pet";
-import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import { readLatestWorkContext, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import { createMtimeSessionCache } from "./mtime-session-cache.js";
+import { mapWithConcurrency } from "./map-with-concurrency.js";
 import type {
   PetLongTask,
   PetLongTaskClosureDecision,
@@ -42,6 +44,8 @@ export interface PetAutoDelegation {
   executionBackend?: PetWorkExecutionBackend;
   /** Existing host-validated Work Session to continue; absent means create. */
   targetSessionId?: string;
+  /** Original user objective, separate from a continuation's recovery prompt. */
+  originalObjective?: string;
   /** Original durable Goal objective when `task` is a resume/recovery instruction. */
   goalObjective?: string;
   /** Host-validated route for the eventual proactive completion receipt. */
@@ -52,7 +56,11 @@ export interface PetAutoDelegation {
 
 export type PetStartedDelegation = Omit<
   PetAutoDelegation,
-  "targetSessionId" | "goalObjective" | "completionTarget" | "continuationDepth"
+  | "targetSessionId"
+  | "originalObjective"
+  | "goalObjective"
+  | "completionTarget"
+  | "continuationDepth"
 > & {
   sessionId: string;
   taskId?: string;
@@ -752,6 +760,7 @@ function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
 }
 
 export class PetDispatchService {
+  private readonly recentWorkContext;
   private activeChatTurn?: PetActiveChatTurn;
   private chatAdmissionTail: Promise<void> = Promise.resolve();
   private readonly chatInputs = new Map<
@@ -760,6 +769,13 @@ export class PetDispatchService {
   >();
 
   constructor(private readonly options: PetDispatchOptions) {
+    this.recentWorkContext = options.sessionsRootDir
+      ? createMtimeSessionCache(options.sessionsRootDir, (dir) =>
+          // Two excerpts per candidate keep the 32-candidate world comfortably
+          // below its total budget; full text remains available via Sessions.
+          readLatestWorkContext(dir, { maxChars: 180 }),
+        )
+      : undefined;
     options.worker.subscribeOutbound?.((_line, snapshotEntry) => {
       const active = this.activeChatTurn;
       if (!active || snapshotEntry?.sessionId !== active.sessionId) return;
@@ -1112,9 +1128,16 @@ export class PetDispatchService {
       task.completionTarget?.kind === "im-gateway" &&
       typeof this.options.hostActions?.gatewayReply === "function";
     const closureHostActionKinds = canGatewayReply ? ["gatewayReply"] : [];
+    const currentSession = this.options.aggregator
+      .getSnapshot()
+      .sessions.find((session) => session.agentSessionId === task.sessionId);
     const canContinue =
       task.status !== "cancelled" &&
       continuationDepth < MAX_AUTONOMOUS_CONTINUATION_DEPTH &&
+      currentSession?.runState !== "running" &&
+      currentSession?.runState !== "queued" &&
+      !(currentSession?.pendingDecisionCount && currentSession.pendingDecisionCount > 0) &&
+      task.executionBackend !== "codex" &&
       Boolean(this.options.startWorkSession);
     let closureDecision =
       task.closureDecision?.key === decisionKey ? task.closureDecision : undefined;
@@ -1129,30 +1152,32 @@ export class PetDispatchService {
       const snapshot = this.options.aggregator.getSnapshot();
       const workspacePathById = new Map<string, string | null>();
       const petWorkspaces: PetWorkspaceOption[] = [];
+      const petReusableSessions: PetReusableSessionOption[] = [];
       if (canContinue) {
-        workspacePathById.set(NO_WORKSPACE_ID, null);
+        const workspaceId = task.workspacePath
+          ? workspaceIdForPath(task.workspacePath)
+          : NO_WORKSPACE_ID;
+        const workspace = (await this.options.listWorkspaces?.())?.find(
+          (entry) => entry.path === task.workspacePath,
+        );
+        workspacePathById.set(workspaceId, task.workspacePath);
         petWorkspaces.push({
-          id: NO_WORKSPACE_ID,
-          name: "No workspace",
-          description: "Use only when the follow-up is unrelated to every listed Workspace.",
+          id: workspaceId,
+          name: workspace?.name ?? (task.workspacePath ? "Original workspace" : "No workspace"),
+          description:
+            "Continue only the original objective in its existing Session and workspace.",
         });
-        for (const workspace of (await this.options.listWorkspaces?.())?.slice(0, 63) ?? []) {
-          if (!workspace.path || [...workspacePathById.values()].includes(workspace.path)) continue;
-          const id = workspaceIdForPath(workspace.path);
-          workspacePathById.set(id, workspace.path);
-          petWorkspaces.push({
-            id,
-            name: workspace.name,
-            description:
-              workspace.path === task.workspacePath
-                ? `${workspace.path} (completed task workspace)`
-                : workspace.path,
-          });
-        }
+        petReusableSessions.push({
+          id: reusableSessionId(task.sessionId),
+          workspaceId,
+          name: task.objective.replace(/\s+/gu, " ").trim().slice(0, 120) || "Original work",
+          description:
+            "The host-owned Session for this exact objective; continuation retains its history and constraints.",
+        });
       }
       const completionReceipt = {
         taskId: task.id,
-        objective: task.objective.slice(0, 1_000),
+        objective: task.objective,
         status: task.status,
         sessionId: task.sessionId,
         ...(task.workspacePath ? { workspace: task.workspacePath.slice(0, 500) } : {}),
@@ -1198,6 +1223,8 @@ export class PetDispatchService {
           depth: continuationDepth,
           maximumDepth: MAX_AUTONOMOUS_CONTINUATION_DEPTH,
           canContinue,
+          session: petReusableSessions[0] ?? null,
+          scope: "Only necessary remaining work for the original objective in its original Session",
         },
       });
       const response = await this.requestManagerRun(
@@ -1207,7 +1234,8 @@ export class PetDispatchService {
             "<system-reminder>A trusted delegated Work Session has reached a terminal state. " +
             "Decide the next manager action using completionReceipt and continuationPolicy from the trusted runtime context. " +
             "If the user's overall intent is done, a user decision is needed, the task was cancelled, or autonomous continuation is unavailable, do not delegate; send one concise result update or question. " +
-            "If exactly one necessary, concrete execution follow-up can safely proceed without user input, call DelegateWork once, then briefly state that you are continuing. " +
+            "If exactly one necessary, concrete execution follow-up for the SAME original objective can safely proceed without user input, call DelegateWork once using continuationPolicy.session and its workspace, then briefly state that continuation is requested. Never replace the original Session or expand the objective. " +
+            "Preserve uncertainty in the executor's report; do not claim independent verification or infer causes without evidence. " +
             (canGatewayReply
               ? `You MUST call GatewayReply exactly once with the complete completion update for this originating ${task.completionTarget?.channel ?? "IM"} conversation. ${replyAttachmentKinds.length > 0 ? `If the user's objective asks to receive a supported ${replyAttachmentKinds.join("/")} attachment and completionReceipt contains its exact path, include only the requested paths in attachment_paths. ` : "This route does not support reply attachments, so do not claim or attempt to attach one. "}Never say you lack the declared Gateway capability, substitute a localhost link, offer macOS open, or suggest regeneration when the requested path is known. `
               : "") +
@@ -1227,7 +1255,7 @@ export class PetDispatchService {
           profileParams: {
             runtimeContext,
             workspaces: petWorkspaces,
-            reusableSessions: [],
+            reusableSessions: petReusableSessions,
             ...(closureHostActionKinds.length > 0 ? { hostActions: closureHostActionKinds } : {}),
             ...(gatewayReplyCapability && canGatewayReply
               ? { gatewayReply: gatewayReplyCapability }
@@ -1261,21 +1289,22 @@ export class PetDispatchService {
             ? "Mimi 每次只能继续一个后续任务"
             : !workspacePathById.has(workDelegations[0]!.workspaceId)
               ? "Mimi 返回了不在主机列表中的 Workspace"
-              : workDelegations[0]!.reusableSessionId
-                ? "自动续办不能选择未提供的已有 Session"
-                : undefined;
+              : workDelegations[0]!.executionBackend === "codex"
+                ? "自动续办不能切换执行器"
+                : workDelegations[0]!.reusableSessionId &&
+                    workDelegations[0]!.reusableSessionId !== reusableSessionId(task.sessionId)
+                  ? "自动续办只能继续原 Session"
+                  : undefined;
         if (invalid) {
           delegationError = invalid;
-          text = `${text}\n\n后续任务未能启动：${invalid}`;
+          text = `原任务未能继续：${invalid}`;
         } else {
           const delegation = workDelegations[0]!;
           continuation = {
             clientMessageId: `pet-continuation:${task.id}:${task.attempt}:${task.status}`,
             objective: delegation.objective,
-            workspacePath: workspacePathById.get(delegation.workspaceId) ?? null,
-            ...(delegation.executionBackend === "codex"
-              ? { executionBackend: "codex" as const }
-              : {}),
+            workspacePath: task.workspacePath,
+            targetSessionId: task.sessionId,
           };
         }
       }
@@ -1319,28 +1348,56 @@ export class PetDispatchService {
           workspacePath: continuation.workspacePath,
           sessionId: closureDecision.launch.sessionId,
           ...(closureDecision.launch.taskId ? { taskId: closureDecision.launch.taskId } : {}),
-          reusedSession: false,
+          reusedSession: closureDecision.launch.sessionId === task.sessionId,
         },
       };
     }
 
     const request: PetAutoDelegation = {
       clientMessageId: continuation.clientMessageId,
-      task: continuation.objective,
-      workspacePath: continuation.workspacePath,
-      ...(continuation.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
+      task: [
+        "Continue the same user objective in this existing Session. Preserve all prior user constraints and verified evidence. The checkpoint below is prior work data; verify uncertain claims before relying on them. Do not repeat completed side effects.",
+        `Original objective:\n${task.objective}`,
+        `Latest checkpoint:\n${task.resultSummary ?? task.summary ?? "Consult the existing Session history."}`,
+        ...(task.nextAction ? [`Recorded next action:\n${task.nextAction}`] : []),
+        `Necessary next step:\n${continuation.objective}`,
+      ].join("\n\n"),
+      originalObjective: task.objective,
+      workspacePath: task.workspacePath,
+      targetSessionId: task.sessionId,
+      ...(task.verificationMode === "goal" ? { goalObjective: task.objective } : {}),
       ...(task.completionTarget ? { completionTarget: task.completionTarget } : {}),
       continuationDepth: continuationDepth + 1,
     };
     let launch: { sessionId: string; cwd: string; taskId?: string };
     try {
       if (!this.options.startWorkSession) throw new Error("自动续办不可用");
+      const latestSession = this.options.aggregator
+        .getSnapshot()
+        .sessions.find((session) => session.agentSessionId === task.sessionId);
+      if (
+        latestSession?.runState === "running" ||
+        latestSession?.runState === "queued" ||
+        (latestSession?.pendingDecisionCount ?? 0) > 0
+      )
+        throw new Error("原 Session 正忙或等待用户处理，未创建替代会话");
+      if (!canContinue) throw new Error("原 Session 正忙、等待处理、执行器不可用或续办已达到上限");
+      if (
+        continuation.workspacePath !== task.workspacePath ||
+        (continuation.targetSessionId && continuation.targetSessionId !== task.sessionId) ||
+        continuation.executionBackend === "codex"
+      )
+        throw new Error("续办记录与原 Session 或 Workspace 不一致，未创建替代会话");
       launch = await this.options.startWorkSession(request);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const hostActions = await this.executeClosureGatewayReply(task, closureDecision);
+      const failedText = `原任务未能继续：${message}`;
+      const hostActions = await this.executeClosureGatewayReply(task, {
+        ...closureDecision,
+        text: failedText,
+      });
       return {
-        text: `${text}\n\n后续任务未能启动：${message}`,
+        text: failedText,
         continued: false,
         delegationError: message,
         ...(hostActions.length > 0 ? { hostActions } : {}),
@@ -1364,7 +1421,7 @@ export class PetDispatchService {
         workspacePath: request.workspacePath,
         sessionId: launch.sessionId,
         ...(launch.taskId ? { taskId: launch.taskId } : {}),
-        reusedSession: false,
+        reusedSession: true,
       },
     };
   }
@@ -1828,6 +1885,13 @@ export class PetDispatchService {
             }`,
           });
         }
+        await mapWithConcurrency(petReusableSessions, 4, async (session) => {
+          const candidate = reusableSessionById.get(session.id)!;
+          if (!/^[A-Za-z0-9_-]{1,128}$/u.test(candidate.sessionId)) return;
+          const recent = await this.recentWorkContext?.get(candidate.sessionId);
+          if (!recent?.latestRequest && !recent?.latestResult) return;
+          session.description += `; untrusted transcript excerpts=${JSON.stringify(recent)}`;
+        });
         const petFollowUps = listedFollowUps.slice(0, 100).map((item) => {
           const sourceSession = reusableSessionById.get(item.sessionSelector);
           return sourceSession ? { ...item, workspaceId: sourceSession.workspaceId } : item;
@@ -2023,7 +2087,7 @@ export class PetDispatchService {
             message: "Mimi returned a Workspace outside the host-provided list",
           };
         }
-        let resolvedDelegations = workDelegations.map((entry) => ({
+        const resolvedDelegations = workDelegations.map((entry) => ({
           entry,
           reusableSession: entry.reusableSessionId
             ? reusableSessionById.get(entry.reusableSessionId)
@@ -2055,24 +2119,19 @@ export class PetDispatchService {
         // The worker's structured result is also a trust boundary (including
         // replay from older workers). A valid selector alone cannot authorize
         // reuse: apply the same grounded-continuation gate as DelegateWork.
-        resolvedDelegations = resolvedDelegations.map(({ entry }) => {
+        for (const [index, { entry }] of resolvedDelegations.entries()) {
           const decision = normalizePetWorkDelegation(entry, petReusableSessions);
-          // Selector/workspace failures were rejected above; keep this guard
-          // fail-closed if the shared validation acquires additional checks.
-          const normalized = decision.ok
-            ? decision.delegation
-            : {
-                workspaceId: entry.workspaceId,
-                objective: entry.objective,
-                executionBackend: entry.executionBackend,
-              };
-          return {
+          if (!decision.ok) {
+            return { ok: false, code: "worker-error", message: decision.error };
+          }
+          const normalized = decision.delegation;
+          resolvedDelegations[index] = {
             entry: normalized,
             reusableSession: normalized.reusableSessionId
               ? reusableSessionById.get(normalized.reusableSessionId)
               : undefined,
           };
-        });
+        }
         let delegations: PetStartedDelegation[] = [];
         let delegationError: string | undefined;
         const delegationClientMessageId = command.clientMessageId ?? `pet-${randomUUID()}`;

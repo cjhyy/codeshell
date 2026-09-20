@@ -75,8 +75,8 @@ export const messagesNs = {
       turnUsage: {
         summary: "本轮用量",
         tokens: "{count} tokens",
-        cached: "{count} 缓存命中",
-        cacheWrite: "{count} 缓存写入",
+        cached: "缓存命中",
+        cacheWrite: "缓存写入",
       },
       // turn-end marker line
       turnEnd: {
@@ -140,6 +140,14 @@ export const messagesNs = {
         close: "关闭",
       },
       // markdown code block
+      media: {
+        audio: "音频：{name}",
+        video: "视频：{name}",
+        loading: "正在准备播放器…",
+        unavailable: "文件不存在，或当前会话无法访问。",
+        playbackFailed: "无法播放，可重试或通过右上角菜单用其他应用打开。",
+        retry: "重试",
+      },
       markdown: {
         table: "表格，可横向滚动",
         copyCode: "代码已复制",
@@ -237,8 +245,8 @@ export const messagesNs = {
       turnUsage: {
         summary: "Turn usage",
         tokens: "{count} tokens",
-        cached: "{count} cached",
-        cacheWrite: "{count} cache write",
+        cached: "Cache read",
+        cacheWrite: "Cache write",
       },
       turnEnd: {
         stoppedAt: "Stopped · {time}",
@@ -298,6 +306,14 @@ export const messagesNs = {
         confirmUndo: "Confirm undo",
         reviewModalTitle: "Review changes — {count} files",
         close: "Close",
+      },
+      media: {
+        audio: "Audio: {name}",
+        video: "Video: {name}",
+        loading: "Preparing player…",
+        unavailable: "File unavailable or inaccessible to this session.",
+        playbackFailed: "Playback failed. Retry or use the menu to open in another app.",
+        retry: "Retry",
       },
       markdown: {
         table: "Table, scroll horizontally for more",

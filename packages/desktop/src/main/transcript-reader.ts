@@ -232,11 +232,25 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           // notifications) are persisted as `role:user` so the model sees them
           // as a user message, but they are NOT the user's own input. Live they
           // never render as a user bubble — only the assistant's reply shows —
-          // so a disk rebuild must drop them too, or the feed sprouts a phantom
-          // bubble like "10分钟到了，打开小红书". The engine marks them
+          // so a disk rebuild must hide their text too, or the feed sprouts a
+          // phantom bubble like "10分钟到了，打开小红书". The engine marks them
           // `injected:true` (steering messages are real user input and are NOT
           // marked, so they correctly survive as bubbles). See engine.ts run().
-          if (d.injected === true) break;
+          if (d.injected === true) {
+            // A separately submitted internal run still owns its replies. Keep
+            // its identity without exposing the machine prompt. In-run hook /
+            // goal reminders have no submit id and must not open a new turn.
+            if (typeof d.clientMessageId === "string" && d.clientMessageId.trim()) {
+              items.push({
+                kind: "user",
+                text: "",
+                injected: true,
+                clientMessageId: d.clientMessageId,
+                timestamp: ts,
+              });
+            }
+            break;
+          }
           items.push({
             kind: "user",
             text:

@@ -1019,6 +1019,10 @@ export interface MCPServerConfig {
   allowedTools?: string[];
   /** Exact MCP tool-name denylist, applied after `allowedTools`. */
   disabledTools?: string[];
+  /** Per-attempt initialization timeout; defaults to 30 seconds (maximum 120 seconds). */
+  connectTimeoutMs?: number;
+  /** Additional attempts after initialization timeouts only; defaults to 1 (maximum 2). */
+  connectRetries?: number;
 }
 
 /**
@@ -1035,6 +1039,8 @@ export interface MCPServerOverride {
   /** User policy layered over the plugin server's reviewed connection identity. */
   allowedTools?: string[];
   disabledTools?: string[];
+  connectTimeoutMs?: number;
+  connectRetries?: number;
   env?: Record<string, string>;
   envVars?: string[];
   /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */

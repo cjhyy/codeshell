@@ -85,7 +85,7 @@ function makeEngine(cwd: string, model: string, providerKind?: "openai"): Engine
     cwd,
     sessionStorageDir: join(cwd, "sessions"),
     enabledBuiltinTools: [],
-    maxTurns: 1,
+    maxTurns: 2,
     headless: true,
     permissionMode: "bypassPermissions",
   });

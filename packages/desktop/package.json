@@ -32,6 +32,7 @@
     "test:e2e:workspace-pages": "node scripts/e2e-workspace-pages.mjs",
     "test:e2e:operations-pages": "node scripts/e2e-operations-pages.mjs",
     "test:e2e:activity-history": "node scripts/e2e-activity-history.mjs",
+    "test:e2e:media-playback": "node scripts/e2e-media-playback.mjs",
     "test:e2e:model-settings": "node scripts/e2e-model-settings.mjs",
     "test:e2e:settings": "node scripts/e2e-settings.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",

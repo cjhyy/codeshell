@@ -29,7 +29,9 @@ export function estimateTokens(messages: Message[]): number {
 }
 
 export const IMAGE_HISTORY_PLACEHOLDER_PREFIX = "[image #";
-export const IMAGE_HISTORY_PLACEHOLDER_SUFFIX = ", 已处理 / already provided earlier]";
+export const IMAGE_HISTORY_PLACEHOLDER_SUFFIX =
+  ", pixels omitted; reload with view_image(imageNumber) if needed]";
+const LEGACY_IMAGE_HISTORY_PLACEHOLDER_SUFFIX = ", 已处理 / already provided earlier]";
 
 interface ImagePreserveSet {
   has(message: Message): boolean;
@@ -37,12 +39,12 @@ interface ImagePreserveSet {
 
 export interface DowngradeImageHistoryOptions {
   /**
-   * Messages whose image payloads are being sent for their first model
-   * consumption in this request. They still count toward image numbering but
-   * keep their base64 until the caller clears the preserve set after a
-   * successful model response.
+   * Messages whose image payloads should remain available in this request.
+   * Preserved payloads still count toward stable image numbering.
    */
   preserveMessages?: ImagePreserveSet;
+  /** Individual images retained by a bounded history window. */
+  preserveImages?: ReadonlySet<ContentBlock>;
 }
 
 export interface DowngradeImageHistoryResult {
@@ -94,11 +96,11 @@ export function findImageByNumber(
 }
 
 /**
- * Replace already-consumed image payload blocks with compact text markers.
+ * Replace image payload blocks outside the caller's retention window with markers.
  *
  * The transcript may retain the full image bytes for rendering/resume, but the
- * working message history sent to the model should not re-send base64 after the
- * model has seen it once. This handles both our internal Anthropic-style image
+ * working history may omit older pixels without claiming they were understood.
+ * This handles both our internal Anthropic-style image
  * blocks and OpenAI-style data-url image blocks defensively, including images
  * nested inside tool_result.content arrays (view_image / browser screenshots).
  */
@@ -144,7 +146,7 @@ export function downgradeImagePayloadsInHistory(
       if (isBase64ImageBlock(block)) {
         const imageNumber = takeImageNumber(block);
         if (imageNumber === undefined) return block;
-        if (preserve) return block;
+        if (preserve || options.preserveImages?.has(block)) return block;
         replacedCount++;
         blocksChanged = true;
         return placeholderFor(imageNumber);
@@ -193,8 +195,10 @@ function blockHasBase64ImagePayload(block: ContentBlock): boolean {
 function imageHistoryPlaceholderNumber(block: ContentBlock): number | undefined {
   if (block.type !== "text" || typeof block.text !== "string") return undefined;
   const escapedPrefix = IMAGE_HISTORY_PLACEHOLDER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escapedSuffix = IMAGE_HISTORY_PLACEHOLDER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = block.text.match(new RegExp(`^${escapedPrefix}(\\d+)${escapedSuffix}$`));
+  const suffixes = [IMAGE_HISTORY_PLACEHOLDER_SUFFIX, LEGACY_IMAGE_HISTORY_PLACEHOLDER_SUFFIX]
+    .map((suffix) => suffix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const match = block.text.match(new RegExp(`^${escapedPrefix}(\\d+)(?:${suffixes})$`));
   if (!match?.[1]) return undefined;
   const n = Number(match[1]);
   return Number.isSafeInteger(n) && n > 0 ? n : undefined;

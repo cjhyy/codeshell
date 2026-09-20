@@ -39,11 +39,8 @@ import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { checkTokenBudget, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
-import {
-  downgradeImagePayloadsInHistory,
-  estimateTokens,
-  messageHasBase64ImagePayload,
-} from "../context/compaction.js";
+import { estimateTokens } from "../context/compaction.js";
+import { ImageHistoryWindow } from "../context/image-history-window.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
@@ -86,8 +83,8 @@ export interface TurnLoopConfig {
   signal?: AbortSignal;
   /**
    * Image-bearing messages added for the current request and not yet consumed
-   * by the model. TurnLoop preserves their base64 for one successful model
-   * response, then downgrades them to placeholders in the working history.
+   * by the model. TurnLoop retains recent pixels within a bounded request,
+   * count and byte window, then replaces them with reloadable placeholders.
    */
   freshImageMessages?: Iterable<Message>;
   /**
@@ -276,7 +273,7 @@ export class TurnLoop {
   };
   private currentCumulativeUsage: CumulativeUsageCounters | undefined;
   private readonly sensitiveToolResultRedactions = new Map<string, string>();
-  private readonly pendingImageMessages = new Set<Message>();
+  private readonly imageHistory = new ImageHistoryWindow();
   private readonly volatileContextMessages = new Set<Message>();
   /** Last outer-loop turn for which the model returned a complete response. */
   private lastCompletedModelTurn = 0;
@@ -478,7 +475,7 @@ export class TurnLoop {
       this.config = { ...this.config, goal: undefined };
     }
     for (const msg of this.config.freshImageMessages ?? []) {
-      this.pendingImageMessages.add(msg);
+      this.imageHistory.track(msg);
     }
     for (const msg of this.config.volatileContextMessages ?? []) {
       this.volatileContextMessages.add(msg);
@@ -555,14 +552,12 @@ export class TurnLoop {
   }
 
   private prepareMessagesForModel(messages: Message[]): Message[] {
-    const preserveMessages =
-      this.pendingImageMessages.size > 0 ? this.pendingImageMessages : undefined;
-    const result = downgradeImagePayloadsInHistory(messages, { preserveMessages });
+    const result = this.imageHistory.prepare(messages);
     if (result.replacedCount > 0) {
       this.currentTurnLog.info("context.image_payload_downgrade", {
         cat: "context",
         images: result.replacedCount,
-        pendingFresh: this.pendingImageMessages.size,
+        pendingFresh: this.imageHistory.hasFreshImages,
       });
     }
     return result.messages;
@@ -641,7 +636,7 @@ export class TurnLoop {
     if (
       !notes ||
       !notes.hasPendingRollover() ||
-      this.pendingImageMessages.size > 0 ||
+      this.imageHistory.hasFreshImages ||
       this.sensitiveToolResultRedactions.size > 0
     ) {
       return messages;
@@ -716,18 +711,7 @@ export class TurnLoop {
   }
 
   private markPendingImagesConsumed(messages: Message[]): Message[] {
-    if (this.pendingImageMessages.size === 0) return messages;
-    const consumedMessages = this.pendingImageMessages.size;
-    this.pendingImageMessages.clear();
-    const result = downgradeImagePayloadsInHistory(messages);
-    if (result.replacedCount > 0) {
-      this.currentTurnLog.info("context.image_payload_consumed", {
-        cat: "context",
-        images: result.replacedCount,
-        messages: consumedMessages,
-      });
-    }
-    return result.messages;
+    return this.imageHistory.consume(messages);
   }
 
   private redactConsumedSensitiveToolResults(messages: Message[]): Message[] {
@@ -755,9 +739,7 @@ export class TurnLoop {
   }
 
   private trackFreshImageMessage(message: Message): void {
-    if (messageHasBase64ImagePayload(message)) {
-      this.pendingImageMessages.add(message);
-    }
+    this.imageHistory.track(message);
   }
 
   private async emitHook(
@@ -1054,9 +1036,8 @@ export class TurnLoop {
         // stop-blocks) so the UI can offer a "再续" button while still live.
         this.maybeAnnounceApproachingLimit();
 
-        // Pre-check: downgrade image payloads that have already had their one
-        // model-consumption turn, then run context management. Fresh images in
-        // pendingImageMessages are preserved through this next model request.
+        // Keep recent pixel evidence within the bounded history window before
+        // context management. Fresh input always gets its first model request.
         const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
         messages = this.prepareMessagesForModel(messages);
 
@@ -1325,6 +1306,7 @@ export class TurnLoop {
                 this.config.signal,
                 this.modelCallRecordingOptions(preparedContinuationMessages),
               );
+              messages = this.markPendingImagesConsumed(messages);
               // Continuations are separate provider responses, so preserve the
               // same structural tool_use invariant before processing this one.
               if (contResponse.toolCalls.length > 0) {
@@ -1443,6 +1425,23 @@ export class TurnLoop {
               reason: "completed",
               messages,
               completionKind: "background_wait",
+            };
+          }
+
+          // This response was explicitly forced to be a budget summary. It is
+          // not evidence of completion, even if limits were extended in flight.
+          if (turnsRemaining === 0) {
+            messages = this.redactConsumedSensitiveToolResults(messages);
+            return {
+              text: finalText,
+              reason: "max_turns",
+              messages,
+              ...(this.config.goal
+                ? {
+                    goalTermination: "max_turns_exhausted" as const,
+                    goalTerminationRound: this.stopBlockCount,
+                  }
+                : {}),
             };
           }
 

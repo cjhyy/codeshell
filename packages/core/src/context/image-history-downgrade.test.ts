@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { ContentBlock, Message } from "../types.js";
 import {
   IMAGE_HISTORY_PLACEHOLDER_PREFIX,
+  IMAGE_HISTORY_PLACEHOLDER_SUFFIX,
+  collectBase64Images,
   downgradeImagePayloadsInHistory,
   estimateTokens,
 } from "./compaction.js";
@@ -63,7 +65,7 @@ describe("downgradeImagePayloadsInHistory", () => {
     expect(laterTurn.replacedCount).toBe(1);
     expect(hasBase64(laterTurn.messages)).toBe(false);
     expect(placeholderTexts(laterTurn.messages)).toEqual([
-      "[image #1, 已处理 / already provided earlier]",
+      `[image #1${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
     ]);
 
     const twice = downgradeImagePayloadsInHistory(laterTurn.messages);
@@ -94,7 +96,7 @@ describe("downgradeImagePayloadsInHistory", () => {
     expect(out.replacedCount).toBe(1);
     expect(hasBase64(out.messages)).toBe(false);
     expect(placeholderTexts(out.messages)).toEqual([
-      "[image #1, 已处理 / already provided earlier]",
+      `[image #1${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
     ]);
   });
 
@@ -116,7 +118,7 @@ describe("downgradeImagePayloadsInHistory", () => {
     expect(out.replacedCount).toBe(1);
     expect(hasBase64(out.messages)).toBe(false);
     expect(placeholderTexts(out.messages)).toEqual([
-      "[image #1, 已处理 / already provided earlier]",
+      `[image #1${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
     ]);
   });
 
@@ -135,5 +137,21 @@ describe("downgradeImagePayloadsInHistory", () => {
     expect(out.replacedCount).toBe(0);
     expect(out.messages).toBe(messages);
     expect(out.messages).toEqual(messages);
+  });
+
+  test("understands legacy placeholders when numbering a later image", () => {
+    const messages: Message[] = [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "[image #7, 已处理 / already provided earlier]" },
+          anthropicImage(),
+        ],
+      },
+    ];
+    expect(collectBase64Images(messages)[0]?.imageNumber).toBe(8);
+    expect(placeholderTexts(downgradeImagePayloadsInHistory(messages).messages)[1]).toBe(
+      `[image #8${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
+    );
   });
 });

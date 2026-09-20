@@ -8,11 +8,41 @@ describe("classifyPath", () => {
     expect(classifyPath("x.JPEG")).toBe("image");
     expect(classifyPath("notes.md")).toBe("markdown");
     expect(classifyPath("page.html")).toBe("html");
+    expect(classifyPath("clips/成片.MP4")).toBe("video");
+    expect(classifyPath("audio/voice.m4a")).toBe("audio");
+    expect(classifyPath("voice.opus")).toBe("audio");
     expect(classifyPath("data.bin")).toBe("file");
   });
 });
 
 describe("detectAttachments", () => {
+  test("extracts audio and video artifacts in output order and deduplicates them", () => {
+    expect(
+      detectAttachments(
+        "mcpToolCall",
+        "{}",
+        "视频已导出 /项目/output/成片.mp4，音频 ./output/voice.wav；再见 /项目/output/成片.mp4",
+      ),
+    ).toEqual([
+      { path: "/项目/output/成片.mp4", kind: "video" },
+      { path: "./output/voice.wav", kind: "audio" },
+    ]);
+  });
+
+  test("keeps an exact media path with spaces from successful Write args", () => {
+    expect(
+      detectAttachments(
+        "Write",
+        JSON.stringify({ file_path: "exports/演示 video.mp4" }),
+        "File written successfully",
+      ),
+    ).toEqual([{ path: "exports/演示 video.mp4", kind: "video" }]);
+  });
+
+  test("does not turn media mentions or backup extensions into playable attachments", () => {
+    expect(detectAttachments("mcpToolCall", "{}", "voice.mp3 /output/clip.mp4.backup")).toEqual([]);
+  });
+
   test("extracts the PNG path from a GenerateImage result", () => {
     const result =
       "Generated image with openai (gpt-image-1), saved to /Users/me/p/.code-shell/generated_images/1718-ab12cd.png";
@@ -23,12 +53,20 @@ describe("detectAttachments", () => {
   });
 
   test("extracts a Write file_path from args on success", () => {
-    const att = detectAttachments("Write", JSON.stringify({ file_path: "/abs/notes.md" }), "wrote /abs/notes.md");
+    const att = detectAttachments(
+      "Write",
+      JSON.stringify({ file_path: "/abs/notes.md" }),
+      "wrote /abs/notes.md",
+    );
     expect(att).toEqual([{ path: "/abs/notes.md", kind: "markdown" }]);
   });
 
   test("skips Write when the result is an error", () => {
-    const att = detectAttachments("Write", JSON.stringify({ file_path: "/abs/notes.md" }), "Error: permission denied");
+    const att = detectAttachments(
+      "Write",
+      JSON.stringify({ file_path: "/abs/notes.md" }),
+      "Error: permission denied",
+    );
     // result-scrape still won't find a path-with-ext here, so empty
     expect(att).toEqual([]);
   });
@@ -62,8 +100,7 @@ describe("detectAttachments", () => {
     // to — scraping it into a clickable chip opens a wrong Finder location.
     // Only paths that carry a directory (or are absolute / ./-prefixed) are
     // trustworthy from prose.
-    const result =
-      '一次性任务 #4 "10分钟后复查 TODO.md 优化点" 已创建(到点续接当前对话)';
+    const result = '一次性任务 #4 "10分钟后复查 TODO.md 优化点" 已创建(到点续接当前对话)';
     expect(detectAttachments("CronCreate", "{}", result)).toEqual([]);
   });
 
@@ -82,7 +119,11 @@ describe("detectAttachments", () => {
   test("still trusts a bare filename from Write args (cwd is known)", () => {
     // Args-derived paths are trusted even when bare-relative, because the
     // card supplies the session cwd to resolve them.
-    const att = detectAttachments("Write", JSON.stringify({ file_path: "TODO.md" }), "wrote TODO.md");
+    const att = detectAttachments(
+      "Write",
+      JSON.stringify({ file_path: "TODO.md" }),
+      "wrote TODO.md",
+    );
     expect(att).toEqual([{ path: "TODO.md", kind: "markdown" }]);
   });
 

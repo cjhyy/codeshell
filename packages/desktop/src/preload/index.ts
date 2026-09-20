@@ -25,6 +25,7 @@ import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identit
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
+import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
@@ -884,6 +885,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Read an image file as a base64 data: URL (null on failure). */
   readImageDataUrl: (absPath: string, context?: { cwd?: string; sessionId?: string }) =>
     ipcRenderer.invoke("images:readDataUrl", { absPath, ...context }),
+  getMediaPreview: (input: MediaPreviewRequest): Promise<MediaPreviewResult | null> =>
+    ipcRenderer.invoke("media:getPreview", input),
+  releaseMediaPreview: (url: string): Promise<void> =>
+    ipcRenderer.invoke("media:releasePreview", url),
   stageAttachmentImageDataUrl: (payload: {
     cwd: string;
     sessionId: string;

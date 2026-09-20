@@ -152,11 +152,11 @@ export async function sessionsTool(
     }
     const { join } = await import("node:path");
     const sessionDir = join(root, sessionId);
-    const [latestResult, openSteps] = await Promise.all([
-      disclosure.readLatestAssistantText(sessionDir, { maxChars: LATEST_RESULT_MAX_CHARS }),
+    const [{ latestRequest, latestResult }, openSteps] = await Promise.all([
+      disclosure.readLatestWorkContext(sessionDir, { maxChars: LATEST_RESULT_MAX_CHARS }),
       disclosure.readSessionTodos(sessionDir),
     ]);
-    if (latestResult === null && openSteps === null) {
+    if (latestRequest === null && latestResult === null && openSteps === null) {
       return `Error: session ${sessionId} has no readable transcript. Call list or search first.`;
     }
     const selector = disclosure.sessionSelectorId(sessionId);
@@ -167,6 +167,7 @@ export async function sessionsTool(
       selector,
       canContinue: continuation !== null,
       continuation,
+      latestRequest,
       latestResult,
       openSteps: openSteps ?? [],
       next: continuation

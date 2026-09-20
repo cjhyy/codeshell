@@ -350,11 +350,19 @@ export function selectPetChatRows(
   for (const message of messages) {
     if (message.kind === "user") {
       const content = parsePetUserContent(message);
-      if (!content.text && content.images.length === 0) continue;
+      const internalRun = message.injected && message.clientMessageId && !message.text;
+      if (!content.text && content.images.length === 0 && !internalRun) continue;
       appendDelegationReceipts();
       appendHostReceipt();
       activeClientMessageId = message.clientMessageId;
       activeTurnAwaitsAuthoritativeReply = false;
+      // Internal completion/report turns own their replies even though their
+      // machine prompt is hidden. Do not inherit the preceding delegation's
+      // post-tool suppression, or insert its receipts after this new reply.
+      if (internalRun) {
+        turnRowStarts.set(message.clientMessageId!, rows.length);
+        continue;
+      }
       const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
       const userRow: PetChatRow = {
         id: message.id,

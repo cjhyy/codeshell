@@ -11,6 +11,7 @@ function harness(
     reason?: string;
     legacy?: boolean;
     failLaunch?: boolean;
+    newWork?: boolean;
   } = {},
 ) {
   const launches: PetAutoDelegation[] = [];
@@ -46,7 +47,9 @@ function harness(
         const delegation = {
           workspaceId: workspaces.find((workspace) => workspace.name === "Project")!.id,
           objective,
-          reusableSessionId: sessionSelectorId("unrelated-old-session"),
+          ...(options.newWork
+            ? {}
+            : { reusableSessionId: sessionSelectorId("unrelated-old-session") }),
           ...(options.evidence === undefined ? {} : { continuationEvidence: options.evidence }),
         };
         return {
@@ -76,19 +79,15 @@ function harness(
 
 describe("Mimi continuation admission and reply preservation", () => {
   test.each([false, true])(
-    "a valid old selector without continuity evidence creates new work (legacy=%s)",
+    "a selected old Session without evidence is rejected without substitution (legacy=%s)",
     async (legacy) => {
       const h = harness({ legacy });
-      const result = await h.dispatch();
-      expect(h.launches).toHaveLength(1);
-      expect(h.launches[0]).not.toHaveProperty("targetSessionId");
-      expect(h.launches[0]?.task).toBe(objective);
-      expect(result).toMatchObject({
-        ok: true,
-        result: { text: "我会单独核查这份飞书文档。" },
-        delegation: { sessionId: "new-work-session", reusedSession: false },
+      expect(await h.dispatch()).toMatchObject({
+        ok: false,
+        code: "worker-error",
+        message: expect.stringContaining("no replacement Session was created"),
       });
-      expect(result).not.toHaveProperty("authoritativeReply");
+      expect(h.launches).toEqual([]);
     },
   );
 
@@ -101,15 +100,14 @@ describe("Mimi continuation admission and reply preservation", () => {
     async (evidence) => {
       const h = harness({ evidence });
       await h.dispatch();
-      expect(h.launches).toHaveLength(1);
-      expect(h.launches[0]).not.toHaveProperty("targetSessionId");
+      expect(h.launches).toEqual([]);
     },
   );
 
   test.each(["max_turns", "model_error"])(
     "only incomplete %s replies use a factual launch fallback",
     async (reason) => {
-      const h = harness({ reason });
+      const h = harness({ reason, newWork: true });
       expect(await h.dispatch()).toMatchObject({
         authoritativeReply: "任务已启动，正在处理。",
         result: { text: "任务已启动，正在处理。", reason },
@@ -119,7 +117,7 @@ describe("Mimi continuation admission and reply preservation", () => {
   );
 
   test("an incomplete reply with a failed launch does not claim success", async () => {
-    const h = harness({ reason: "max_turns", failLaunch: true });
+    const h = harness({ reason: "max_turns", failLaunch: true, newWork: true });
     expect(await h.dispatch()).toMatchObject({
       authoritativeReply: "任务未能启动，请稍后重试。",
       delegationError: "Mimi failed to start the delegated Work Session: queue rejected",

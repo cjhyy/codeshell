@@ -209,58 +209,29 @@ describe("DelegateWork", () => {
     },
   );
 
-  test("creates new work when Mimi selects an unrelated old Session without evidence", async () => {
-    const { ctx, recorded } = context();
-    const result = JSON.parse(
-      await delegateWorkTool(
-        {
-          workspace_id: "workspace-a",
-          session_id: "session-alpha-login",
-          objective: "核查飞书文档；新开 Session，不要复用旧 Session。",
-        },
-        ctx,
-      ),
-    );
-    expect(recorded).toEqual([
-      {
-        workspaceId: "workspace-a",
-        objective: "核查飞书文档；新开 Session，不要复用旧 Session。",
-      },
-    ]);
-    expect(result).toMatchObject({
-      status: "accepted",
-      launchStatus: "pending",
-      session: {
-        mode: "new",
-        reason: "missing_continuation_evidence",
-        requestedSessionId: "session-alpha-login",
-      },
-    });
-    expect(result.session).not.toHaveProperty("reusableSessionId");
-  });
-
   test.each([
+    undefined,
     { prior_thread: "Feishu document review", reason: "Continue the previous review." },
     { prior_thread: "Login work", reason: " " },
     { prior_thread: "Login work", reason: "Resume", bypass: true },
     "continue",
-  ])("fails closed to a new Session for ungrounded evidence %j", async (evidence) => {
+  ])("rejects explicit continuation with missing or ungrounded evidence %j", async (evidence) => {
     const { ctx, recorded } = context();
-    const result = JSON.parse(
-      await delegateWorkTool(
-        {
-          workspace_id: "workspace-a",
-          session_id: "session-alpha-login",
-          objective: "Check the Feishu document",
-          session_continuation: evidence,
-        },
-        ctx,
-      ),
+    const result = await delegateWorkTool(
+      {
+        workspace_id: "workspace-a",
+        session_id: "session-alpha-login",
+        objective: "Check the Feishu document",
+        ...(evidence === undefined ? {} : { session_continuation: evidence }),
+      },
+      ctx,
     );
-    expect(recorded).toEqual([
-      { workspaceId: "workspace-a", objective: "Check the Feishu document" },
-    ]);
-    expect(result.session.mode).toBe("new");
+    expect(result).toStartWith("Error:");
+    expect(result).toContain("no replacement Session was created");
+    expect(recorded).toEqual([]);
+    // Correcting the route to intentionally request new work still works.
+    await delegateWorkTool({ workspace_id: "workspace-a", objective: "New work" }, ctx);
+    expect(recorded).toEqual([{ workspaceId: "workspace-a", objective: "New work" }]);
   });
 
   test("rejects undeclared routing controls instead of silently discarding them", async () => {

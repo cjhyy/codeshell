@@ -17,8 +17,43 @@ import {
 import { markPetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 import { transcriptsReducer } from "../transcriptsReducer";
 import { INITIAL_STATE } from "../types";
+import { foldTranscript } from "../automation/foldTranscript";
+import { transcriptToFoldItems } from "../../main/transcript-reader";
 import type { Message } from "../types";
 import type { PetLongTask } from "../../preload/types";
+
+function delegatedTurnHistory(clientMessageId = "pet-turn-delegate") {
+  return [
+    { type: "message", data: { role: "user", content: "继续处理这个任务", clientMessageId } },
+    { type: "message", data: { role: "assistant", content: "我先确认续接目标。" } },
+    {
+      type: "tool_use",
+      data: { toolName: "DelegateWork", toolCallId: "delegate", args: {} },
+    },
+    {
+      type: "tool_result",
+      data: { toolName: "DelegateWork", toolCallId: "delegate", result: "Delegation accepted" },
+    },
+    { type: "message", data: { role: "assistant", content: "内部派单确认，不应显示。" } },
+  ];
+}
+
+function replayPetHistory(records: { type: string; data: Record<string, unknown> }[]) {
+  return foldTranscript(
+    transcriptToFoldItems(
+      records
+        .map((record, index) =>
+          JSON.stringify({
+            ...record,
+            id: `history-${index}`,
+            timestamp: index + 1,
+            turnNumber: 0,
+          }),
+        )
+        .join("\n"),
+    ),
+  ).messages;
+}
 
 describe("PetChatHost", () => {
   test.each([
@@ -294,6 +329,156 @@ describe("PetChatHost", () => {
       { id: "u1", role: "user", text: "继续处理这个任务" },
       { id: "a1", role: "assistant", text: "我先确认续接目标。" },
     ]);
+  });
+
+  test("restores the closure summary after delegation without exposing its injected prompt", () => {
+    const closureClientMessageId = "pet-closure:work-session:completed";
+    const messages = replayPetHistory([
+      ...delegatedTurnHistory(),
+      { type: "turn_boundary", data: { turnNumber: 1 } },
+      {
+        type: "message",
+        data: {
+          role: "user",
+          content: "<system-reminder>委派任务已完成，请总结结果。</system-reminder>",
+          injected: true,
+          clientMessageId: closureClientMessageId,
+        },
+      },
+      { type: "message", data: { role: "assistant", content: "Star 已成功点上，复验通过。" } },
+    ]);
+    const rows = selectPetChatRows(
+      messages,
+      [],
+      [
+        {
+          originClientMessageId: "pet-turn-delegate",
+          delegations: [
+            {
+              sessionId: "work-session",
+              task: "继续执行 Star 操作",
+              workspacePath: null,
+              reusedSession: true,
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(messages.filter((message) => message.kind === "user")).toMatchObject([
+      { text: "继续处理这个任务", clientMessageId: "pet-turn-delegate" },
+      { text: "", injected: true, clientMessageId: closureClientMessageId },
+    ]);
+    expect(rows.map((row) => [row.role, row.text])).toEqual([
+      ["user", "继续处理这个任务"],
+      ["assistant", "我先确认续接目标。"],
+      ["delegation", "继续执行 Star 操作"],
+      ["assistant", "Star 已成功点上，复验通过。"],
+    ]);
+  });
+
+  test("does not end post-delegation suppression for an unidentified same-run injection", () => {
+    const messages = replayPetHistory([
+      ...delegatedTurnHistory(),
+      {
+        type: "message",
+        data: {
+          role: "user",
+          content: "<system-reminder>工具结果提示，请结束当前轮。</system-reminder>",
+          injected: true,
+        },
+      },
+      { type: "message", data: { role: "assistant", content: "另一条内部确认，不应显示。" } },
+    ]);
+
+    expect(messages.filter((message) => message.kind === "user")).toHaveLength(1);
+    expect(selectPetChatRows(messages).map((row) => row.text)).toEqual([
+      "继续处理这个任务",
+      "我先确认续接目标。",
+    ]);
+  });
+
+  test("attaches a replacement receipt to its hidden report turn without replacing earlier chat", () => {
+    const reportClientMessageId = "pet-report:work-session:1";
+    const messages = replayPetHistory([
+      ...delegatedTurnHistory(),
+      {
+        type: "message",
+        data: {
+          role: "user",
+          content: "<system-reminder>汇报任务结果。</system-reminder>",
+          injected: true,
+          clientMessageId: reportClientMessageId,
+        },
+      },
+      { type: "message", data: { role: "assistant", content: "尚未验证的汇报。" } },
+      {
+        type: "message",
+        data: {
+          role: "assistant",
+          content: "验证已完成。",
+          clientMessageId: `pet-host-action-replace-${reportClientMessageId}`,
+        },
+      },
+    ]);
+
+    expect(selectPetChatRows(messages).map((row) => row.text)).toEqual([
+      "继续处理这个任务",
+      "我先确认续接目标。",
+      "验证已完成。",
+    ]);
+  });
+
+  test("shows an authoritative IM closure receipt once across the hidden turn boundary", () => {
+    const clientMessageId = "im:wechat:delegated-turn";
+    const summary = "Star 已成功点上，复验通过。";
+    const messages = replayPetHistory([
+      ...delegatedTurnHistory(clientMessageId),
+      {
+        type: "message",
+        data: {
+          role: "user",
+          content: "<system-reminder>把完成结果发回微信。</system-reminder>",
+          injected: true,
+          clientMessageId: "pet-closure:work-session:completed",
+        },
+      },
+      {
+        type: "tool_use",
+        data: { toolName: "GatewayReply", toolCallId: "reply", args: { text: summary } },
+      },
+      {
+        type: "tool_result",
+        data: { toolName: "GatewayReply", toolCallId: "reply", result: "Reply accepted" },
+      },
+      { type: "message", data: { role: "assistant", content: "微信消息已发送。" } },
+      {
+        type: "message",
+        data: {
+          role: "assistant",
+          content: summary,
+          clientMessageId: `pet-host-action-replace-delivery-wechat:${clientMessageId}`,
+        },
+      },
+    ]);
+    const receipt = {
+      clientMessageId,
+      message: summary,
+      createdAt: 10,
+      replaceAssistant: true,
+      deliveryChannel: "wechat",
+    };
+
+    for (const receipts of [[], [receipt]]) {
+      const rows = selectPetChatRows(messages, [], [], receipts);
+      expect(rows.map((row) => row.text)).toEqual([
+        "继续处理这个任务",
+        "我先确认续接目标。",
+        summary,
+      ]);
+      expect(rows.filter((row) => row.text === summary)).toHaveLength(1);
+      expect(rows.at(-1)?.deliveryLabel).toBe("个人微信");
+    }
   });
 
   test("keeps pre-tool context when the authoritative delegation receipt arrives", () => {

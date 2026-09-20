@@ -41,13 +41,8 @@ describe("Pet work continuation gate", () => {
     expect(
       normalizePetWorkDelegation({ ...NEW_REQUEST, reusableSessionId: "session-one" }, SESSIONS),
     ).toEqual({
-      ok: true,
-      delegation: NEW_REQUEST,
-      sessionDecision: {
-        mode: "new",
-        reason: "missing_continuation_evidence",
-        requestedSessionId: "session-one",
-      },
+      ok: false,
+      error: expect.stringContaining("session_continuation is required"),
     });
   });
 
@@ -70,9 +65,8 @@ describe("Pet work continuation gate", () => {
           SESSIONS,
         ),
       ).toMatchObject({
-        ok: true,
-        delegation: { workspaceId: CONTINUATION.workspaceId, objective: CONTINUATION.objective },
-        sessionDecision: { mode: "new", reason: "unmatched_prior_thread" },
+        ok: false,
+        error: expect.stringContaining("entire displayed name"),
       });
     }
   });
@@ -107,11 +101,10 @@ describe("Pet work continuation gate", () => {
         continuationEvidence: evidence as PetWorkDelegation["continuationEvidence"],
       }),
     ).toMatchObject({
-      ok: true,
-      sessionDecision: { mode: "new", reason: "invalid_continuation_evidence" },
+      ok: false,
+      error: expect.stringContaining("Invalid session_continuation"),
     });
-    expect(reported.workDelegation).not.toHaveProperty("reusableSessionId");
-    expect(reported.workDelegation).not.toHaveProperty("continuationEvidence");
+    expect(reported.workDelegation).toBeUndefined();
   });
 
   test("run services enforce the gate even when the tool is bypassed", () => {
@@ -119,11 +112,11 @@ describe("Pet work continuation gate", () => {
     expect(
       services.requestPetWorkDelegation({ ...NEW_REQUEST, reusableSessionId: "session-one" }),
     ).toMatchObject({
-      ok: true,
-      sessionDecision: { mode: "new", reason: "missing_continuation_evidence" },
+      ok: false,
+      error: expect.stringContaining("session_continuation is required"),
     });
-    expect(reported.workDelegation).toEqual(NEW_REQUEST);
-    expect(services.requestPetWorkDelegation(CONTINUATION).ok).toBe(false);
+    expect(reported.workDelegation).toBeUndefined();
+    expect(services.requestPetWorkDelegation(CONTINUATION).ok).toBe(true);
   });
 
   test("run services preserve grounded continuation and reject wrong selectors before fallback", () => {

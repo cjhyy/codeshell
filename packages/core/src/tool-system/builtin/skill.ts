@@ -8,6 +8,7 @@ import { dirname } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { scanSkills } from "../../skills/scanner.js";
+import { formatMcpConnectionFailures } from "../mcp-health.js";
 
 export const skillToolDef: ToolDefinition = {
   name: "Skill",
@@ -93,5 +94,15 @@ export async function skillTool(args: Record<string, unknown>, ctx?: ToolContext
     .replace(/\{args\}/g, skillArgs)
     .replace(/\$\{CODESHELL_SKILL_DIR\}/g, skillDir)
     .replace(/\$\{CLAUDE_SKILL_DIR\}/g, skillDir);
-  return `Base directory for this skill: ${skillDir}\n\n${body}`;
+  const pluginPrefix = found.source === "plugin" ? `${found.name.split(":")[0]}:` : undefined;
+  const failures = new Map(
+    [...(ctx?.mcpServerFailures ?? [])].filter(
+      ([server]) =>
+        pluginPrefix &&
+        server.startsWith(pluginPrefix) &&
+        (!ctx?.allowedMcpServers || ctx.allowedMcpServers.has(server)),
+    ),
+  );
+  const health = formatMcpConnectionFailures(failures);
+  return `${health ? `${health}\n\n` : ""}Base directory for this skill: ${skillDir}\n\n${body}`;
 }

@@ -205,7 +205,7 @@ describe("SessionContextNotes", () => {
     expect(JSON.stringify(rebuilt)).toContain("already budgeted output");
     expect(JSON.stringify(rebuilt)).not.toContain("raw output");
     expect(JSON.stringify(rebuilt)).not.toContain("BASE64_BYTES");
-    expect(JSON.stringify(rebuilt)).toContain("already provided earlier");
+    expect(JSON.stringify(rebuilt)).toContain("pixels omitted");
   });
 
   test("rejects empty/oversized notes and request without a note", () => {

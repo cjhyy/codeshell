@@ -53,7 +53,7 @@ describe("a session_id paired with the wrong workspace_id", () => {
     expect(result).toContain("ws-no-workspace");
   });
 
-  test("states both ways out and forbids resending the same pair", async () => {
+  test("requires correcting the route without treating rejection as permission for a new Session", async () => {
     // Without this the model repeats the identical arguments forever.
     const { ctx } = context();
     const result = await delegateWorkTool(
@@ -61,11 +61,11 @@ describe("a session_id paired with the wrong workspace_id", () => {
       ctx,
     );
     expect(result).toContain("Do not send this pair again");
-    expect(result).toContain("omit session_id");
+    expect(result).toContain("does not authorize creating a replacement Session");
     expect(result).toContain("workspace_id");
   });
 
-  test("the corrected call succeeds: dropping session_id starts a new Session", async () => {
+  test("an independent new-work request can still omit session_id after a rejected continuation", async () => {
     // The rejection must not consume the turn's single delegation.
     const { ctx, accepted } = context();
     await delegateWorkTool(
@@ -73,7 +73,7 @@ describe("a session_id paired with the wrong workspace_id", () => {
       ctx,
     );
     const retry = await delegateWorkTool(
-      { workspace_id: "ws-no-workspace", objective: "继续修登录" },
+      { workspace_id: "ws-no-workspace", objective: "用户明确要求新开一个任务检查网页" },
       ctx,
     );
     expect(retry).not.toStartWith("Error:");
@@ -109,7 +109,7 @@ describe("a session_id paired with the wrong workspace_id", () => {
 });
 
 describe("an unknown session_id", () => {
-  test("tells the model to drop it rather than guess another", async () => {
+  test("requires identifying the intended Session instead of replacing a continuation", async () => {
     const { ctx, accepted } = context();
     const result = await delegateWorkTool(
       { workspace_id: "ws-coding", objective: "继续", session_id: "sess-imagined" },
@@ -117,7 +117,7 @@ describe("an unknown session_id", () => {
     );
     expect(result).toStartWith("Error:");
     expect(result).toContain("Do not send it again");
-    expect(result).toContain("Omit session_id");
+    expect(result).toContain("do not silently create a replacement");
     expect(accepted).toEqual([]);
   });
 });

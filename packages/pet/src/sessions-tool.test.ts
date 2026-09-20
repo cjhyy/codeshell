@@ -63,6 +63,22 @@ describe("sessionsToolDef", () => {
 });
 
 describe("sessionsTool", () => {
+  test("describe keeps a new Session's user request before an assistant result exists", async () => {
+    const root = makeRoot();
+    writeFileSync(
+      join(root, "work-1", "transcript.jsonl"),
+      JSON.stringify({
+        type: "message",
+        data: { role: "user", content: "New source verification request" },
+      }) + "\n",
+    );
+    const result = JSON.parse(
+      await sessionsTool({ action: "describe", session_id: "work-1" }, ctxFor(root)),
+    );
+    expect(result.latestRequest.text).toBe("New source verification request");
+    expect(result.latestResult).toBeNull();
+  });
+
   test("list returns L1 rows with selector and untrusted note", async () => {
     const root = makeRoot();
     const result = await sessionsTool({ action: "list" }, ctxFor(root));

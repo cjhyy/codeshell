@@ -140,6 +140,7 @@ import {
   decodePathHref,
   decodeLocalPathHref,
   CODESHELL_PATH_SCHEME,
+  isDomainShapedFirstSegment,
 } from "./markdown/remarkPathLinks";
 import { classifyPath } from "./tool-cards/attachments";
 import { Lightbox } from "./chat/Lightbox";
@@ -150,6 +151,8 @@ import { useT } from "./i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SessionUiAuthority } from "./sessionUiAuthority";
+import { classifyMediaPath } from "../shared/media-preview";
+import { InlineMedia } from "./chat/InlineMedia";
 
 export type MarkdownRootStatus = SessionUiAuthority["rootStatus"];
 
@@ -244,7 +247,33 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
         }
         components={{
           img: ({ src, alt, node: _node, ...rest }) => {
-            const localDecoded = src ? decodeLocalPathHref(src) : null;
+            // Remote media stays an explicit link, including image-style media
+            // embeds. Never try to decode a remote MP3/MP4 as an image.
+            if (src && isRemoteMediaSource(src)) {
+              return (
+                <a href={src} onClick={(event) => openRemoteMarkdownLink(event, src)}>
+                  {alt || src}
+                </a>
+              );
+            }
+            const localDecoded = src ? decodePathHref(src) ?? decodeLocalPathHref(src) : null;
+            // Accept Codex-style ![label](path.mp3) as well as ordinary links.
+            // Bare filenames in image syntax are relative file references too.
+            const mediaPath = localDecoded?.path ?? (src ? decodeLocalMediaPath(src) : null);
+            const mediaKind = mediaPath ? classifyMediaPath(mediaPath) : null;
+            if (mediaPath && mediaKind) {
+              return (
+                <InlineMedia
+                  path={mediaPath}
+                  kind={mediaKind}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  sessionMainRootId={sessionMainRootId}
+                  rootStatus={rootStatus}
+                  label={alt}
+                />
+              );
+            }
             if (localDecoded && classifyPath(localDecoded.path) === "image") {
               return (
                 <InlineImageLink
@@ -278,8 +307,25 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
           a: ({ href, children, node: _node, ...rest }) => {
             const schemeDecoded = href ? decodePathHref(href) : null;
             const localDecoded = href ? decodeLocalPathHref(href) : null;
-            const decoded = schemeDecoded ?? localDecoded;
+            const mediaFilename = href ? decodeLocalMediaPath(href) : null;
+            const decoded = schemeDecoded ?? localDecoded ??
+              (mediaFilename ? { path: mediaFilename } : null);
             const isPathLink = decoded !== null;
+            const mediaKind = decoded ? classifyMediaPath(decoded.path) : null;
+            if (decoded && mediaKind && !decoded.line) {
+              const caption = extractText(children);
+              return (
+                <InlineMedia
+                  path={decoded.path}
+                  kind={mediaKind}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  sessionMainRootId={sessionMainRootId}
+                  rootStatus={rootStatus}
+                  label={caption === decoded.path ? undefined : caption}
+                />
+              );
+            }
             // Inline-render image/SVG artifacts (GenerateImage output,
             // Playwright screenshots, generated SVGs) as a thumbnail right
             // in the answer, so the user sees the picture instead of an
@@ -331,19 +377,7 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
                 href={href}
                 {...rest}
                 onClick={(e) => {
-                  if (!href) return;
-                  if (/^https?:/i.test(href)) {
-                    e.preventDefault();
-                    // Open web links in the in-app browser panel, not the OS
-                    // browser. Holding ⌘/Ctrl falls back to the external browser.
-                    if (e.metaKey || e.ctrlKey) {
-                      void window.codeshell.openExternal(href);
-                    } else {
-                      window.dispatchEvent(
-                        new CustomEvent("codeshell:open-url", { detail: { url: href } }),
-                      );
-                    }
-                  }
+                  if (href) openRemoteMarkdownLink(e, href);
                 }}
               >
                 {children}
@@ -370,6 +404,40 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
 }
 
 export const Markdown = memo(MarkdownImpl);
+
+function isRemoteMediaSource(src: string): boolean {
+  if (!/^https?:/i.test(src)) return false;
+  try {
+    return classifyMediaPath(new URL(src).pathname) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function openRemoteMarkdownLink(event: React.MouseEvent<HTMLAnchorElement>, href: string): void {
+  if (!/^https?:/i.test(href)) return;
+  event.preventDefault();
+  // Match all Markdown web links: the browser panel by default, external with
+  // the platform modifier key.
+  if (event.metaKey || event.ctrlKey) {
+    void window.codeshell.openExternal(href);
+  } else {
+    window.dispatchEvent(new CustomEvent("codeshell:open-url", { detail: { url: href } }));
+  }
+}
+
+/** Media references can also contain spaces or a bare filename. Remote URLs
+ * retain ordinary link behavior and never become an automatic network player. */
+function decodeLocalMediaPath(value: string): string | null {
+  try {
+    const decoded = decodeURIComponent(value.split(/[?#]/, 1)[0] ?? "");
+    if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(decoded) || !classifyMediaPath(decoded)) return null;
+    if (decoded.includes("/") && isDomainShapedFirstSegment(decoded.split("/")[0]!)) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
 
 /** Last path segment — the filename we show as the link label. */
 function basename(path: string): string {

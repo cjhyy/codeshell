@@ -172,6 +172,69 @@ function waitForTaskStatus(
 }
 
 describe("PetLongTaskCoordinator", () => {
+  test("replaying an unaccepted missing-Session launch does not claim continuation succeeded", async () => {
+    const h = await harness();
+    const created = await h.store.create({
+      id: "failed-before-acceptance",
+      originClientMessageId: "same-continuation",
+      objective: "Continue checking the source",
+      workspacePath: "/work/app",
+      sessionId: "missing-original",
+      at: 1_000,
+    });
+    await h.store.transition(created.id, {
+      kind: "failed",
+      at: 1_001,
+      error: "Original Session does not exist",
+    });
+    await expect(
+      h.coordinator.startDelegation({
+        clientMessageId: "same-continuation",
+        task: "Continue checking the source",
+        workspacePath: "/work/app",
+        targetSessionId: "missing-original",
+      }),
+    ).rejects.toThrow("Original Session does not exist");
+    expect(h.launches).toEqual([]);
+  });
+
+  test("keeps the original objective in a resumed ledger entry without enabling Goal", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "continuation-with-context",
+      task: "Recovery prompt with original objective, checkpoint and next step",
+      originalObjective: "Verify the exact original addresses without changing renamed targets",
+      targetSessionId: "original-session",
+      workspacePath: "/work/app",
+    });
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      objective: "Verify the exact original addresses without changing renamed targets",
+      sessionId: "original-session",
+      verificationMode: "turn",
+    });
+  });
+
+  test("turn budget exhaustion preserves the checkpoint and closes as incomplete for bounded continuation", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "budget-checkpoint",
+      task: "Verify all rows",
+      workspacePath: "/work/app",
+    });
+    h.tick(2_000);
+    await h.stream(launch.sessionId, {
+      type: "turn_complete",
+      reason: "max_turns",
+      text: "Only rows 1–2 verified; the remaining rows still require checking.",
+    });
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "failed",
+      resultSummary: "Only rows 1–2 verified; the remaining rows still require checking.",
+      lastError: expect.stringContaining("max_turns"),
+    });
+    expect(h.closed).toEqual([{ id: launch.taskId, status: "failed" }]);
+  });
+
   test("uses finalized text when watching starts after the last assistant checkpoint", async () => {
     const h = await harness({
       ...emptySnapshot(),

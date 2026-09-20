@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ToolContext } from "./context.js";
 import { canonicalKey, canonicalPath } from "../workspace/canonical-key.js";
 
-export type McpWorkspaceScope = Pick<ToolContext, "cwd" | "workspace">;
+export type McpWorkspaceScope = Pick<ToolContext, "cwd" | "workspace" | "signal">;
 
 export interface McpConnectionScope {
   key: string;
