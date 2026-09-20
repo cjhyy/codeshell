@@ -78,4 +78,12 @@
 - 56 个变更 TypeScript 文件 ESLint：0 错误，4 条既有测试 warning 保留。`git diff --check` 通过。
 - Engine/context 最终整组：`bun test --timeout 30000 packages/core/src/engine packages/core/src/context`，682 项通过、0 失败（122 个文件）。首轮 9 个旧 fixture 失败已修正：8 个自然完成场景的预算从 1 调至 2，1 个更新图像占位文案；所有原业务断言保留。
 
+### 发布后 review 闭环
+
+- 修复自动续办重新提交 Goal 字符串造成身份和预算丢失：改为版本校验后继承原 Goal，暂停、结束和变更均禁止自动重新激活。
+- 修复 Goal 结束与 Session 收尾的时序差：同一运行仍忙时不记录 closure 已完成，空闲事件/恢复快照再处理，并保留最终正文。
+- 修复 Web 后台任务输入准备未绑定登录取消：从准备开始登记归属，将取消传入文件准备和发布过程；取消后不能启动原生执行器。
+- 回归：核心 Goal/Protocol/架构检查 367 项，Desktop Pet 与 Server Panel 678 项，共 1045 项通过、0 失败。新增用例覆盖预算继承、暂停/变更拒绝、结束前等待、退出登录取消、忽略取消的准备器以及持久化期间取消。
+- `bun run typecheck` 完整构建和 11 个工作区类型检查通过；`bun run lint:baseline` 为 0 errors / 105 warnings，与基线一致。
+
 没有对飞书或 GitHub 账号执行回归写入，没有修改原会话、笔记、全局插件或已安装应用。当前运行中的应用需要加载新构建后才会使用本次修复。

@@ -34,6 +34,7 @@ export interface TurnOpts {
   /** Goal mode for this turn — forwarded to engine.run (loop-until-done).
    *  String objective or full GoalConfig (objective + optional budgets). */
   goal?: string | import("../goal/lifecycle.js").GoalConfig;
+  goalContinuation?: import("../goal/lifecycle.js").GoalContinuation;
   /** Disable all Goal resolution for this standalone turn. */
   disableGoal?: boolean;
   /** Marks this turn as a synthetic system-reminder injection (background-job
@@ -503,6 +504,7 @@ export class ChatSession {
         signal: this.controller.signal,
         onStream: stream,
         goal: next.opts.goal,
+        goalContinuation: next.opts.goalContinuation,
         disableGoal: next.opts.disableGoal,
         injected: next.opts.injected,
         clientMessageId: next.opts.clientMessageId,

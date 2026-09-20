@@ -794,7 +794,11 @@ export class PetLongTaskCoordinator {
       return;
     }
     if (event.kind !== "session-upsert") return;
-    const task = this.options.store.activeForSession(event.session.agentSessionId);
+    if (event.session.runState !== "running" && event.session.runState !== "queued")
+      await this.sessionEventQueues.get(event.session.agentSessionId);
+    const task =
+      this.options.store.activeForSession(event.session.agentSessionId) ??
+      this.options.store.latestForSession(event.session.agentSessionId);
     if (!task || task.status === "paused") return;
     // Disk reconciliation can replay the terminal/completion marker of a
     // previous attempt that reused this Session. It is historical evidence,
@@ -802,6 +806,10 @@ export class PetLongTaskCoordinator {
     if (projectionPredatesCurrentAttempt(task, event.session)) return;
     if (!matchesRun(task, event.session)) return;
     if (event.session.terminal && !matchesRun(task, event.session.terminal)) return;
+    if (isTerminal(task)) {
+      await this.notifyClosed(task);
+      return;
+    }
     const transition = (input: PetLongTaskTransition) =>
       this.options.store.transition(task.id, { ...runFence(task), ...input });
     if (event.session.completionKind) {
@@ -882,6 +890,9 @@ export class PetLongTaskCoordinator {
   }
 
   private async reconcile(snapshot: DesktopPetProjectionSnapshot): Promise<void> {
+    for (const task of this.options.store.getSnapshot().tasks) {
+      if (isTerminal(task) && !task.closureRecordedAt) await this.notifyClosed(task);
+    }
     const sessions = new Map(snapshot.sessions.map((session) => [session.agentSessionId, session]));
     for (const task of this.options.store.activeTasks()) {
       if (task.status === "paused") continue;
@@ -1184,6 +1195,18 @@ export class PetLongTaskCoordinator {
 
   private async notifyClosed(task: PetLongTask): Promise<void> {
     if (!isTerminal(task)) return;
+    // Goal verdicts precede end hooks and the Session's idle boundary. Keep the
+    // durable closure pending until that exact run has finished; never wait on
+    // the per-session stream queue that must process its remaining events.
+    const session = this.options.projection
+      .getSnapshot()
+      .sessions.find((entry) => entry.agentSessionId === task.sessionId);
+    if (
+      session &&
+      matchesRun(task, session) &&
+      (session.runState === "running" || session.runState === "queued")
+    )
+      return;
     const key = `${task.id}:${task.attempt}:${task.status}`;
     if (!task.closureRecordedAt) {
       const existing = this.closedNotifications.get(key);

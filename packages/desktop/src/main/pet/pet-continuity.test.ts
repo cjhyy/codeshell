@@ -39,6 +39,7 @@ function harness(
     mutate?: (delegation: Record<string, unknown>) => void;
     launchError?: string;
     busy?: boolean;
+    goalState?: Record<string, unknown>;
   } = {},
 ) {
   const starts: PetAutoDelegation[] = [];
@@ -71,6 +72,16 @@ function harness(
     },
     worker: {
       requestWorker: async (_method, params) => {
+        if (_method === "agent/goalGet")
+          return {
+            ok: true,
+            result: options.goalState ?? {
+              goal: task().objective,
+              goalId: "original-goal",
+              revision: 4,
+              paused: false,
+            },
+          };
         paramsSeen.push(params);
         const profile = params.profileParams as {
           workspaces: Array<{ id: string }>;
@@ -137,6 +148,9 @@ test("closure retains original Session, full objective, checkpoint and Goal opt-
     expect(h.starts[0]!.goalObjective).toBe(
       verificationMode === "goal" ? original.objective : undefined,
     );
+    expect(h.starts[0]!.goalContinuation).toEqual(
+      verificationMode === "goal" ? { goalId: "original-goal", revision: 4 } : undefined,
+    );
     const profile = h.paramsSeen[0]!.profileParams as {
       reusableSessions: unknown[];
       workspaces: unknown[];
@@ -147,6 +161,32 @@ test("closure retains original Session, full objective, checkpoint and Goal opt-
     });
     expect(profile.workspaces).toHaveLength(1);
   }
+});
+
+test.each([
+  { goal: null, paused: false },
+  { goal: task().objective, goalId: "original-goal", revision: 4, paused: true },
+  { goal: "New user objective", goalId: "replacement", revision: 1, paused: false },
+])("closure never re-arms an ended, paused or replaced Goal: %j", async (goalState) => {
+  const h = harness({ goalState });
+  expect(
+    (await h.service.reportLongTaskClosure(task({ verificationMode: "goal" }))).continued,
+  ).toBe(false);
+  expect(h.starts).toEqual([]);
+});
+
+test("a Goal changed during manager deliberation cannot launch a stale continuation", async () => {
+  const goalState = { goal: task().objective, goalId: "original-goal", revision: 4, paused: false };
+  const h = harness({
+    goalState,
+    mutate: () => {
+      goalState.revision++;
+    },
+  });
+  expect(
+    (await h.service.reportLongTaskClosure(task({ verificationMode: "goal" }))).continued,
+  ).toBe(false);
+  expect(h.starts).toEqual([]);
 });
 
 test.each(["workspaceId", "reusableSessionId", "executionBackend"])(

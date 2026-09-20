@@ -104,7 +104,11 @@ export class PetWorkDelegationHost {
           // model/tool steps, and resume from async notifications; forcing every
           // loosely-worded delegation into persistent Goal mode caused ambiguous
           // objectives to keep re-driving instead of returning a useful result.
-          ...(delegation.goalObjective ? { goal: delegation.goalObjective } : {}),
+          ...(delegation.goalContinuation
+            ? { goalContinuation: delegation.goalContinuation }
+            : delegation.goalObjective
+              ? { goal: delegation.goalObjective }
+              : {}),
           ...(delegation.targetSessionId ? { requireExisting: true } : {}),
         },
       },

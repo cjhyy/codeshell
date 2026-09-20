@@ -15,7 +15,7 @@
  */
 
 import type { Transport } from "./transport.js";
-import { handleCancelRequest, handleSteerRequest } from "./server-run-controls.js";
+import { handleCancelRequest, handleSteerRequest, runGoalOptions } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
 import {
   type RpcRequest,
@@ -1992,17 +1992,12 @@ export class AgentServer {
         }
         start.signal.throwIfAborted();
         const run = session.enqueueTurn(params.task, {
+          ...runGoalOptions(params, () => session.getGoal()),
           cwd: params.cwd,
           workspaceContext: params.workspaceContext,
           displayText: displayText || undefined,
           injected: params.injected === true,
           attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
-          goal:
-            typeof params.goal === "string" ||
-            (params.goal != null && typeof params.goal === "object")
-              ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
-              : undefined,
-          disableGoal: params.disableGoal === true,
           onStream: (event: StreamEvent) => {
             this.observeSessionStream(sid, event);
             this.notify(Methods.StreamEvent, { sessionId: sid, event });
@@ -2170,6 +2165,9 @@ export class AgentServer {
         sessionId: params.sessionId ?? "",
       });
       const result = await this.legacyEngine!.run(params.task, {
+        ...runGoalOptions(params, () =>
+          params.sessionId ? this.legacyEngine!.getGoal(params.sessionId) : undefined,
+        ),
         cwd: params.cwd,
         workspaceContext: params.workspaceContext,
         sessionId: params.sessionId,
@@ -2180,11 +2178,6 @@ export class AgentServer {
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
-        goal:
-          typeof params.goal === "string" ||
-          (params.goal != null && typeof params.goal === "object")
-            ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
-            : undefined,
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,

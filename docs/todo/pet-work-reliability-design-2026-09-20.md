@@ -79,3 +79,9 @@ connectRunMcp 返回当次失败快照并写入 ToolContext。engine 将摘要�
 已有源码入口：`core/context/image-history-window.ts` 负责图像窗口；`core/tool-system/mcp-connection-policy.ts`、`mcp-stdio-transport.ts`、`mcp-health.ts` 负责连接策略、进程生命周期和健康摘要。MCP SDK 继续负责协议编解码；跨平台命令启动使用 SDK 同款 cross-spawn 7.0.6，作为 core 显式依赖。
 
 近期候选摘要每段 180 字、尾读 512 KiB、缓存最多 200 会话；原列表的最多 32 个候选和工作区过滤保持有效。这只是候选提示，不能把截断片段当作完整用户约束，续办仍要复用原 Session。
+
+## 发布后 review 修复
+
+- Goal 续办使用 `goalContinuation: { goalId, revision }` 继承原配置，不能重新提交目标字符串。Pet 在决策前和启动前读取当前 Goal；Protocol 入队前及 Engine 实际执行时再次校验版本。已暂停、已结束（包括预算耗尽）或已变更的 Goal 拒绝自动续办；预算、目标身份和原始时间锚点保持不变。
+- `goal_progress` 只确定任务结果，不代表 Session 已结束。Coordinator 在同一 run 仍忙时保留待处理的 closure，收到空闲状态或恢复快照后重试；先处理已排队的最终正文事件，再生成闭环回复，不占住会话事件队列等待空闲。
+- Web 原生任务在输入准备前登记登录归属，退出登录、应用撤权和 Host 关闭都中止准备。取消信号进入任务服务及文件准备流程；即使准备器忽略信号或取消发生于持久化期间，也不能启动执行器。其他登录的任务不受影响。

@@ -305,7 +305,12 @@ export class PanelToolJobService {
     const job = this.lookup(scope, id);
     return { ...publicJob(job), readOnly: job.scope.revision !== scope.revision };
   }
-  async start(rawScope: ToolJobScope, request: ToolJobRequest): Promise<ToolJob> {
+  async start(
+    rawScope: ToolJobScope,
+    request: ToolJobRequest,
+    signal?: AbortSignal,
+  ): Promise<ToolJob> {
+    signal?.throwIfAborted();
     const scope = scopeValue(rawScope);
     const entry = entryValue(request?.entry);
     if (!["manual", "retry"].includes(request.recovery))
@@ -331,6 +336,7 @@ export class PanelToolJobService {
     await this.authorize(scope);
     let done!: () => void;
     const reservation = await this.exclusive(async () => {
+      signal?.throwIfAborted();
       if (this.stopping) throw new Error("tool job service is shutting down");
       if (request.requestKey) {
         const existing = [...this.jobs.values()].find(
@@ -369,8 +375,13 @@ export class PanelToolJobService {
     });
     if (reservation.existing) return publicJob(reservation.existing);
     const { id, controller } = reservation;
+    const abort = () => controller!.abort(signal?.reason);
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
     try {
+      controller!.signal.throwIfAborted();
       const workDir = await this.storage.directory(id!, true, true);
+      controller!.signal.throwIfAborted();
       const prepared = this.options.prepareInput
         ? await this.options.prepareInput(scope, input, workDir, controller!.signal)
         : input;
@@ -401,6 +412,19 @@ export class PanelToolJobService {
         )
           throw new Error("tool job request key is already being prepared");
         await this.commit(job);
+        // Cancellation can arrive during the durable write. The serial fence
+        // prevents the scheduler from selecting this job before cancellation.
+        if (controller!.signal.aborted) {
+          job.status = "cancelled";
+          job.completedAt = this.now();
+          job.error = {
+            code: "CANCELLED",
+            message: "Task was cancelled before execution.",
+            retryable: job.recovery === "retry",
+          };
+          await this.commit(job);
+          controller!.signal.throwIfAborted();
+        }
       });
       this.schedule();
       return publicJob(job);
@@ -409,6 +433,7 @@ export class PanelToolJobService {
       if (path && !this.jobs.has(id!)) await this.storage.remove(id!);
       throw error;
     } finally {
+      signal?.removeEventListener("abort", abort);
       this.preparing.delete(id!);
       done();
     }

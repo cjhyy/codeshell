@@ -22,6 +22,19 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 describe("ChatSession.enqueueGoalResumeTurn", () => {
+  it("forwards the Goal version guard through the queued turn", async () => {
+    const goalContinuation = { goalId: "original", revision: 4 };
+    const runs: unknown[] = [];
+    const engine = {
+      async run(_task: string, opts: unknown) {
+        runs.push(opts);
+        return result("guarded");
+      },
+    } as unknown as Engine;
+    const session = new ChatSession({ id: "guarded", engine });
+    await session.enqueueTurn("continue", { goalContinuation });
+    expect(runs).toEqual([expect.objectContaining({ goalContinuation, goal: undefined })]);
+  });
   it("forwards a one-turn request to disable Goal mode", async () => {
     const runs: Array<{ disableGoal?: boolean }> = [];
     const engine = {

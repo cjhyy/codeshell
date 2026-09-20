@@ -82,6 +82,49 @@ describe("durable native tool jobs", () => {
     return { calls, execute };
   }
 
+  test("cancelled input preparation cannot publish even if its preparer returns normally", async () => {
+    const entered = deferred<AbortSignal>();
+    const release = deferred<unknown>();
+    gates.push(release);
+    let executions = 0;
+    const f = await fixture({
+      prepareInput: async (_scope, input, _workDir, signal) => {
+        entered.resolve(signal);
+        await release.promise;
+        return input;
+      },
+      execute: async () => {
+        executions++;
+      },
+    });
+    const controller = new AbortController();
+    const pending = f.service.start(scope, request, controller.signal);
+    const preparationSignal = await entered.promise;
+    controller.abort();
+    expect(preparationSignal.aborted).toBe(true);
+    release.resolve(null);
+    await expect(pending).rejects.toThrow("interrupted");
+    expect(await f.service.list(scope)).toEqual([]);
+    expect(executions).toBe(0);
+    expect(f.service.activeCount()).toBe(0);
+  });
+
+  test("cancellation during queued publication cannot reach the executor", async () => {
+    const controller = new AbortController();
+    let executions = 0;
+    const f = await fixture({
+      onEvent: (job) => {
+        if (job.status === "queued") controller.abort();
+      },
+      execute: async () => {
+        executions++;
+      },
+    });
+    await expect(f.service.start(scope, request, controller.signal)).rejects.toThrow();
+    expect((await f.service.list(scope)).map((job) => job.status)).toEqual(["cancelled"]);
+    expect(executions).toBe(0);
+  });
+
   test("persists input snapshots, progress and results, and never returns a work directory", async () => {
     const events: ToolJob[] = [];
     const f = await fixture({

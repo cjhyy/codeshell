@@ -552,6 +552,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   }, 60_000);
   reaper.unref();
   const preparing = new Set<{ owner: string; cancelled: boolean }>();
+  const preparingTools = new Set<{ owner: string; appId: string; controller: AbortController }>();
   async function dispatchToolJobs(grant: Grant, method: string, params: unknown) {
     if (!grant.app.permissions.includes("process") || !grant.app.permissions.includes("resources"))
       error(403, "原生后台任务需要 process 和 resources 权限。");
@@ -577,19 +578,36 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       if (!(await confirm(grant, `启动 ${grant.app.title.default} 的后台工具？`, input.entry!)))
         error(403, "你取消了后台工具执行。");
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
-      const job = await service.start(scope, {
-        entry: { name: input.entry!, sha256: entry.sha256 },
-        input: input.input,
-        recovery: input.recovery ?? "manual",
-        requestKey: input.requestKey,
-      });
-      if (!jobOwners.has(job.id)) jobOwners.set(job.id, { owner: grant.owner, scope });
-      if (!(await authorized(grant))) {
-        if (jobOwners.get(job.id)?.owner === grant.owner) await service.cancel(scope, job.id);
-        error(410, "登录授权已撤销。");
+      const preparation = {
+        owner: grant.owner,
+        appId: scope.appId,
+        controller: new AbortController(),
+      };
+      preparingTools.add(preparation);
+      try {
+        const job = await service.start(
+          scope,
+          {
+            entry: { name: input.entry!, sha256: entry.sha256 },
+            input: input.input,
+            recovery: input.recovery ?? "manual",
+            requestKey: input.requestKey,
+          },
+          preparation.controller.signal,
+        );
+        if (!jobOwners.has(job.id)) jobOwners.set(job.id, { owner: grant.owner, scope });
+        if (!(await authorized(grant))) {
+          if (jobOwners.get(job.id)?.owner === grant.owner) await service.cancel(scope, job.id);
+          error(410, "登录授权已撤销。");
+        }
+        emitTaskEvent(await service.get(scope, job.id));
+        return job;
+      } catch (cause) {
+        if (preparation.controller.signal.aborted) error(410, "登录授权已撤销，输入准备已取消。");
+        throw cause;
+      } finally {
+        preparingTools.delete(preparation);
       }
-      emitTaskEvent(await service.get(scope, job.id));
-      return job;
     }
     if (method === "tasks.list") {
       const offset = input.offset ?? 0,
@@ -864,6 +882,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     };
   }
   function cancelOwner(owner: string) {
+    for (const preparation of preparingTools)
+      if (preparation.owner === owner) preparation.controller.abort();
     for (const preparation of preparing)
       if (preparation.owner === owner) preparation.cancelled = true;
     for (const grant of grants.values()) if (grant.owner === owner) remove(grant);
@@ -1346,6 +1366,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     cancelOwner,
     invalidate(appId?: string) {
       generation++;
+      for (const preparation of preparingTools)
+        if (!appId || preparation.appId === appId) preparation.controller.abort();
       for (const grant of grants.values()) if (!appId || grant.app.id === appId) remove(grant);
       if (!toolJobs) return Promise.resolve();
       const appIds = appId
@@ -1355,6 +1377,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     },
     async close() {
       closed = true;
+      for (const preparation of preparingTools) preparation.controller.abort();
       clearInterval(reaper);
       for (const grant of grants.values()) remove(grant);
       assets.clear();

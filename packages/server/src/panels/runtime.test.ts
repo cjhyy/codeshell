@@ -866,6 +866,62 @@ async function nativeToolFixture(source: string) {
 }
 
 describe("Panel HTTP host operations", () => {
+  test("logout aborts input preparation before a native job can be published or run", async () => {
+    const f = await nativeToolFixture("process.stdin.resume();");
+    await f.prepare("owner-b");
+    let entered!: () => void;
+    let release!: () => void;
+    let signal: AbortSignal | undefined;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = PanelResourceService.prototype.dispatch;
+    const mocked = spyOn(PanelResourceService.prototype, "dispatch").mockImplementation(
+      async function (...args: Parameters<typeof original>) {
+        if (args[1] === "resources.materialize") {
+          signal = args[3]?.signal;
+          entered();
+          await blocked;
+          signal?.throwIfAborted();
+          return {};
+        }
+        return original.apply(this, args);
+      },
+    );
+    const pending = f.call("tasks.start", {
+      entry: "sample",
+      input: {
+        request: {},
+        resources: [{ assetId: "asset-" + "a".repeat(64), path: "input.txt" }],
+      },
+    });
+    try {
+      const confirmation = await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm");
+      await f.api(`${f.grant.instanceId}/confirm`, "POST", {
+        requestId: confirmation.payload.requestId,
+        allowed: true,
+      });
+      await ready;
+      f.runtime.cancelOwner("owner-b");
+      expect(signal?.aborted).toBe(false);
+      f.runtime.cancelOwner("owner-a");
+      expect(signal?.aborted).toBe(true);
+      release();
+      expect((await pending).status).toBe(410);
+      const reopened = await f.prepare("owner-b");
+      expect(await (await f.call("tasks.list", {}, reopened.instanceId, "owner-b")).json()).toEqual(
+        [],
+      );
+      expect(f.runtime.activeTaskCount()).toBe(0);
+    } finally {
+      release();
+      await pending;
+      mocked.mockRestore();
+    }
+  });
   test("Web native tasks run from reviewed entries, persist across page close, and remain scoped", async () => {
     const f = await nativeToolFixture(
       'let input = ""; process.stdin.setEncoding("utf8"); process.stdin.on("data", (part) => input += part); process.stdin.on("end", () => { const request = JSON.parse(input); process.stdout.write(JSON.stringify({ type: "result", result: { value: request.value } }) + "\\n"); });',

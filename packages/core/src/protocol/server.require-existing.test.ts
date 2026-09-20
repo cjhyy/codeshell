@@ -3,6 +3,7 @@ import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ErrorCodes } from "./types.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
+import type { GoalConfig } from "../goal/lifecycle.js";
 
 /**
  * `requireExisting`: agent/run must reject with SessionNotFound (and NOT run the
@@ -29,8 +30,8 @@ function makeTransport() {
 }
 
 /** Fake engine with a controllable on-disk existence probe + run counter. */
-function makeFakeEngine(existsOnDisk: boolean) {
-  const state = { runs: 0 };
+function makeFakeEngine(existsOnDisk: boolean, goal?: GoalConfig) {
+  const state = { runs: 0, options: undefined as unknown };
   const engine = {
     setAskUser() {},
     setBrowserBridge() {},
@@ -39,8 +40,10 @@ function makeFakeEngine(existsOnDisk: boolean) {
     setPlanMode() {},
     isHeadless: () => false,
     sessionExistsOnDisk: () => existsOnDisk,
-    async run(): Promise<EngineResult> {
+    getGoal: () => goal,
+    async run(_task: string, options: unknown): Promise<EngineResult> {
       state.runs++;
+      state.options = options;
       return {
         text: "ok",
         reason: "completed",
@@ -59,6 +62,44 @@ function lastError(sent: any[]): { code?: number; message?: string } | undefined
 }
 
 describe("agent/run requireExisting", () => {
+  it.each([false, true])(
+    "checks and forwards Goal continuation at admission (paused=%s)",
+    async (paused) => {
+      const { engine, state } = makeFakeEngine(true, {
+        objective: "finish",
+        goalId: "original",
+        revision: 4,
+        paused,
+      });
+      const chatManager = new ChatSessionManager({
+        runtime: {} as never,
+        engineFactory: () => engine,
+      });
+      const t = makeTransport();
+      new AgentServer({ transport: t.transport, chatManager });
+      const goalContinuation = { goalId: "original", revision: 4 };
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 10,
+        method: "agent/run",
+        params: {
+          sessionId: "goal-continuation",
+          task: "continue",
+          requireExisting: true,
+          goalContinuation,
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      if (paused) {
+        expect(lastError(t.sent)?.message).toContain("Goal continuation is no longer authorized");
+        expect(state.runs).toBe(0);
+        expect(t.sent.some((event) => event.method === "agent/runAccepted")).toBe(false);
+      } else {
+        expect(lastError(t.sent)).toBeUndefined();
+        expect(state.options).toMatchObject({ goalContinuation, goal: undefined });
+      }
+    },
+  );
   it("rejects with SessionNotFound and does NOT run when the session is absent", async () => {
     const { engine, state } = makeFakeEngine(false);
     const chatManager = new ChatSessionManager({

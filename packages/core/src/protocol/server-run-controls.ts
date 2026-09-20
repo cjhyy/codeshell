@@ -1,5 +1,6 @@
 /** Stop and steer share the worker's current-turn identity boundary. */
 import type { Engine } from "../engine/engine.js";
+import { assertGoalContinuation, type GoalConfig } from "../goal/lifecycle.js";
 import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager } from "./chat-session-manager.js";
 import type { Transport } from "./transport.js";
@@ -9,7 +10,22 @@ import {
   createResponse,
   type RpcRequest,
   type SteerParams,
+  type RunParams,
 } from "./types.js";
+
+/** Share Goal admission and forwarding across managed and legacy runs. */
+export function runGoalOptions(params: RunParams, readGoal: () => GoalConfig | undefined) {
+  if (params.goalContinuation !== undefined)
+    assertGoalContinuation(params.goalContinuation, readGoal(), params.goal, params.disableGoal);
+  return {
+    goal:
+      typeof params.goal === "string" || (params.goal != null && typeof params.goal === "object")
+        ? params.goal
+        : undefined,
+    disableGoal: params.disableGoal === true,
+    goalContinuation: params.goalContinuation,
+  };
+}
 
 interface RunControlHost {
   transport: Pick<Transport, "send">;

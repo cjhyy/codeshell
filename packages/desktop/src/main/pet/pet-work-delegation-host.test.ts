@@ -52,6 +52,24 @@ function fakeBridge(
 }
 
 describe("PetWorkDelegationHost", () => {
+  test("automatic Goal continuation inherits its version without submitting a new Goal", async () => {
+    const fake = fakeBridge("accepted", ["existing"]);
+    const host = new PetWorkDelegationHost({ bridge: fake.bridge, noWorkspaceCwd: "/safe" });
+    await host.start({
+      clientMessageId: "continue-goal",
+      task: "continue",
+      workspacePath: "/work",
+      targetSessionId: "existing",
+      goalObjective: "original",
+      goalContinuation: { goalId: "goal-id", revision: 4 },
+    });
+    const params = JSON.parse(fake.lines[0]!).params;
+    expect(params).toMatchObject({
+      requireExisting: true,
+      goalContinuation: { goalId: "goal-id", revision: 4 },
+    });
+    expect(params).not.toHaveProperty("goal");
+  });
   test("turns Mimi's validated decision into one normal accepted Work Session", async () => {
     const fake = fakeBridge();
     const host = new PetWorkDelegationHost({

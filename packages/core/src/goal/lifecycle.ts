@@ -61,6 +61,37 @@ export interface GoalConfig {
   setAtMs?: number;
 }
 
+/** A follow-up may inherit this live Goal version, but cannot re-arm or replace it. */
+export interface GoalContinuation {
+  goalId: string;
+  revision: number;
+}
+
+export function assertGoalContinuation(
+  expected: GoalContinuation | undefined,
+  goal: GoalConfig | undefined,
+  override?: unknown,
+  disabled?: boolean,
+): void {
+  if (expected === undefined) return;
+  if (
+    !expected ||
+    typeof expected.goalId !== "string" ||
+    !expected.goalId ||
+    !Number.isSafeInteger(expected.revision) ||
+    expected.revision < 1 ||
+    override !== undefined ||
+    disabled ||
+    !goal ||
+    goal.paused ||
+    goal.goalId !== expected.goalId ||
+    goal.revision !== expected.revision
+  )
+    throw new Error(
+      "Goal continuation is no longer authorized: the goal ended, paused, or changed",
+    );
+}
+
 /** Persisted V1 lifecycle. Identity/control fields live outside config exactly once. */
 export type GoalLifecycleConfig = Omit<GoalConfig, "goalId" | "revision" | "paused">;
 

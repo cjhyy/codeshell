@@ -48,6 +48,8 @@ export interface PetAutoDelegation {
   originalObjective?: string;
   /** Original durable Goal objective when `task` is a resume/recovery instruction. */
   goalObjective?: string;
+  /** Automatic follow-ups inherit a live Goal version without replacing its controls. */
+  goalContinuation?: { goalId: string; revision: number };
   /** Host-validated route for the eventual proactive completion receipt. */
   completionTarget?: PetLongTaskCompletionTarget;
   /** Bounded autonomous manager-continuation depth. */
@@ -59,6 +61,7 @@ export type PetStartedDelegation = Omit<
   | "targetSessionId"
   | "originalObjective"
   | "goalObjective"
+  | "goalContinuation"
   | "completionTarget"
   | "continuationDepth"
 > & {
@@ -1128,11 +1131,14 @@ export class PetDispatchService {
       task.completionTarget?.kind === "im-gateway" &&
       typeof this.options.hostActions?.gatewayReply === "function";
     const closureHostActionKinds = canGatewayReply ? ["gatewayReply"] : [];
+    const goalContinuation =
+      task.verificationMode === "goal" ? await this.readContinuableGoal(task) : undefined;
     const currentSession = this.options.aggregator
       .getSnapshot()
       .sessions.find((session) => session.agentSessionId === task.sessionId);
     const canContinue =
       task.status !== "cancelled" &&
+      (task.verificationMode !== "goal" || goalContinuation !== undefined) &&
       continuationDepth < MAX_AUTONOMOUS_CONTINUATION_DEPTH &&
       currentSession?.runState !== "running" &&
       currentSession?.runState !== "queued" &&
@@ -1366,6 +1372,7 @@ export class PetDispatchService {
       workspacePath: task.workspacePath,
       targetSessionId: task.sessionId,
       ...(task.verificationMode === "goal" ? { goalObjective: task.objective } : {}),
+      ...(goalContinuation ? { goalContinuation } : {}),
       ...(task.completionTarget ? { completionTarget: task.completionTarget } : {}),
       continuationDepth: continuationDepth + 1,
     };
@@ -1382,6 +1389,14 @@ export class PetDispatchService {
       )
         throw new Error("原 Session 正忙或等待用户处理，未创建替代会话");
       if (!canContinue) throw new Error("原 Session 正忙、等待处理、执行器不可用或续办已达到上限");
+      if (goalContinuation) {
+        const latestGoal = await this.readContinuableGoal(task);
+        if (
+          latestGoal?.goalId !== goalContinuation.goalId ||
+          latestGoal.revision !== goalContinuation.revision
+        )
+          throw new Error("原 Goal 已结束、暂停或变更，自动续办已取消");
+      }
       if (
         continuation.workspacePath !== task.workspacePath ||
         (continuation.targetSessionId && continuation.targetSessionId !== task.sessionId) ||
@@ -1424,6 +1439,38 @@ export class PetDispatchService {
         reusedSession: true,
       },
     };
+  }
+
+  private async readContinuableGoal(task: PetLongTask) {
+    const response = await this.options.worker.requestWorker(
+      "agent/goalGet",
+      { sessionId: task.sessionId },
+      {
+        failFast: true,
+        settleOnExit: true,
+        meta: { origin: "host", producer: "pet-goal-continuation" },
+      },
+    );
+    const goal = response.ok
+      ? (response.result as {
+          goal?: unknown;
+          goalId?: unknown;
+          revision?: unknown;
+          paused?: unknown;
+        })
+      : undefined;
+    if (
+      !goal ||
+      goal.goal !== task.objective ||
+      goal.paused !== false ||
+      typeof goal.goalId !== "string" ||
+      !goal.goalId ||
+      typeof goal.revision !== "number" ||
+      !Number.isSafeInteger(goal.revision) ||
+      goal.revision < 1
+    )
+      return undefined;
+    return { goalId: goal.goalId, revision: goal.revision };
   }
 
   /**

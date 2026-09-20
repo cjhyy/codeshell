@@ -236,6 +236,7 @@ export interface RunParams {
    * optional token/time budgets). Normalized at the engine run boundary.
    */
   goal?: string | import("../goal/lifecycle.js").GoalConfig;
+  goalContinuation?: import("../goal/lifecycle.js").GoalContinuation;
   /** Disable explicit, persisted, and configured Goal mode for this standalone turn. */
   disableGoal?: boolean;
 }

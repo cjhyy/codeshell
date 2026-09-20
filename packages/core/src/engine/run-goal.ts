@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import type { StreamCallback, TokenUsage } from "../types.js";
 import {
   normalizeGoal,
+  assertGoalContinuation,
   resolveGoalSetAt,
   goalConfigFromLifecycle,
   isGoalLifecycleCurrent,
@@ -61,6 +62,7 @@ export function resolveRunGoal(args: {
     isGoalLifecycleCurrent(storedLifecycle)
       ? goalConfigFromLifecycle(storedLifecycle)
       : undefined;
+  assertGoalContinuation(options?.goalContinuation, storedGoal, options?.goal, goalDisabled);
   if (
     storedGoal &&
     !explicitGoal &&

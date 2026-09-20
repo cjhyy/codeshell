@@ -121,6 +121,28 @@ async function harness(snapshot = emptySnapshot()) {
     identity: (sessionId: string) => identities.get(sessionId)!,
     stream: (sessionId: string, event: Record<string, unknown>) =>
       coordinator.observeSessionEvent(sessionId, { ...identities.get(sessionId), ...event }),
+    idle: async (sessionId: string, taskId: string) => {
+      const snapshot = projection.getSnapshot();
+      const session = {
+        ...snapshot.sessions.find((entry) => entry.agentSessionId === sessionId)!,
+        runState: "idle" as const,
+        lastActivityAt: now,
+      };
+      projection.setSnapshot({
+        ...snapshot,
+        sessions: snapshot.sessions.map((entry) =>
+          entry.agentSessionId === sessionId ? session : entry,
+        ),
+      });
+      projection.emit({
+        kind: "session-upsert",
+        session,
+        version: snapshot.version + 1,
+        generation: snapshot.generation,
+        observedAt: now,
+      });
+      await waitForTaskClosure(store, taskId);
+    },
     tick: (value: number) => {
       now = value;
     },
@@ -172,6 +194,51 @@ function waitForTaskStatus(
 }
 
 describe("PetLongTaskCoordinator", () => {
+  test.each(["met", "exhausted"])(
+    "defers %s Goal closure through end hooks until the same run becomes idle",
+    async (status) => {
+      const h = await harness();
+      const launch = await h.coordinator.startDelegation({
+        clientMessageId: "deferred-goal",
+        task: "Finish objective",
+        goalObjective: "Finish objective",
+        workspacePath: "/work/app",
+      });
+      const session = {
+        agentSessionId: launch.sessionId,
+        ...h.identity(launch.sessionId),
+        runState: "running",
+        pendingDecisionCount: 0,
+        lastActivityAt: 2000,
+      } as DesktopPetProjectionSnapshot["sessions"][number];
+      h.projection.setSnapshot({ ...emptySnapshot(), sessions: [session] });
+      await h.stream(launch.sessionId, { type: "goal_progress", status });
+      expect(h.closed).toEqual([]);
+      expect(h.store.get(launch.taskId)?.closureRecordedAt).toBeUndefined();
+      await h.stream(launch.sessionId, {
+        type: "turn_complete",
+        reason: status === "met" ? "completed" : "max_turns",
+        text: "Final checkpoint after end hooks",
+      });
+      expect(h.closed).toEqual([]);
+      const idle = { ...session, runState: "idle" as const };
+      h.projection.setSnapshot({ ...emptySnapshot(), sessions: [idle] });
+      h.projection.emit({
+        kind: "session-upsert",
+        session: idle,
+        version: 2,
+        generation: 1,
+        observedAt: 3000,
+      });
+      await waitForTaskClosure(h.store, launch.taskId);
+      expect(h.closed).toEqual([
+        { id: launch.taskId, status: status === "met" ? "completed" : "failed" },
+      ]);
+      if (status === "met")
+        expect(h.store.get(launch.taskId)?.resultSummary).toBe("Final checkpoint after end hooks");
+      h.coordinator.stop();
+    },
+  );
   test("replaying an unaccepted missing-Session launch does not claim continuation succeeded", async () => {
     const h = await harness();
     const created = await h.store.create({
@@ -266,6 +333,7 @@ describe("PetLongTaskCoordinator", () => {
       text: "Verified final answer",
     });
     expect(h.store.get(watched.task.id)?.resultSummary).toBe("Verified final answer");
+    await h.idle("late-watch", watched.task.id);
     expect(h.closed).toHaveLength(1);
   });
   test("does not backfill a closed task from model or tool intermediate messages", async () => {
@@ -623,6 +691,7 @@ describe("PetLongTaskCoordinator", () => {
       status: "completed",
       resultSummary: "Roadmap review complete.",
     });
+    await h.idle("standalone-session", watched.task.id);
     expect(h.closed).toEqual([{ id: watched.task.id, status: "completed" }]);
   });
 
