@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.21] - 2026-09-20
+
+### Fixed
+
+- Preserve Goal identity, budgets and deadline anchors when Mimi continues an
+  existing task. Reject automatic continuation after the Goal is paused, ended
+  or changed, including changes while the continuation is queued.
+- Wait for the original session to finish its end hooks before deciding whether
+  to continue work or send its completion report, retaining the final response.
+- Cancel Web Panel task input preparation when its login is revoked, the app is
+  invalidated or the Host shuts down. Prevent cancelled preparations from
+  launching native tools, including cancellation during durable publication.
+
 ## [0.9.19] - 2026-09-18
 
 ### Added
