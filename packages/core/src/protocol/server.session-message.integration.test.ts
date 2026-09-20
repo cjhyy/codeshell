@@ -93,7 +93,8 @@ async function fixture(authoritativeContext = true, holdResponse = false) {
         headless: true,
         permissionMode: "bypassPermissions",
         sandbox: defaultSandboxConfig("off"),
-        maxTurns: 1,
+        // One assistant response completes on the following loop boundary.
+        maxTurns: 2,
       });
       (engine as unknown as { hooks: { clear(): void } }).hooks.clear();
       return engine;

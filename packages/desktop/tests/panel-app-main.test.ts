@@ -90,12 +90,12 @@ describeIsolated("Panel App protocol", () => {
     return prepared;
   }
 
-  test("registers Panel and theme schemes together as secure before app readiness", () => {
+  test("registers Panel, theme, and media schemes together as secure before app readiness", () => {
     api.registerPanelAppSchemePrivileges();
 
     expect(panelAppElectronMock.privilegedSchemeRegistrations).toHaveLength(1);
     const schemes = panelAppElectronMock.privilegedSchemeRegistrations[0];
-    expect(schemes.map(({ scheme }) => scheme)).toEqual(["cspanel", "cstheme"]);
+    expect(schemes.map(({ scheme }) => scheme)).toEqual(["csmedia", "cspanel", "cstheme"]);
     expect(schemes.every(({ privileges }) => privileges?.standard && privileges.secure)).toBe(true);
   });
 

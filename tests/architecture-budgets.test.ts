@@ -58,7 +58,10 @@ describe("architecture growth budgets", () => {
     // trusted project resolver and service lifecycle. Approval replay combines
     // the existing native/external queues at the IPC boundary. This reviewed
     // baseline keeps both IPC-count and public-export budgets unchanged.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_114);
+    // The 2026-09-20 media preview authority adds 42 lines of composition-only
+    // wiring. Path validation, scoped authorization, Range streaming and
+    // lifecycle cleanup remain extracted in media-preview-{authority,service}.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_156);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       290,
     );
@@ -68,7 +71,9 @@ describe("architecture growth budgets", () => {
     // Reload recovery adds the pending-approval invoke and acknowledged
     // external answers; goal inputs and answer mirroring use existing routes.
     // These are transport adapters (+26 over the 1_802-line main baseline).
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_828);
+    // Media preview adds two typed invokes and one shared request/result import;
+    // authority and streaming remain in the extracted main-process service (+5).
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_833);
     expect(
       matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g),
     ).toBeLessThanOrEqual(300);
@@ -78,7 +83,9 @@ describe("architecture growth budgets", () => {
     // the renderer's direct imports.
     // Pending approval recovery, external goal inputs and resolved answer text
     // add nine declaration lines; no renderer runtime import is introduced.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_853);
+    // Media playback adds the narrow get/release preview contract and shared
+    // request/result types while all file access stays in main (+11).
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_864);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -135,7 +142,10 @@ describe("architecture growth budgets", () => {
     // and the builtin tools; Engine retains ownership of its per-run state.
     // v0.9.8 retains lastCompletionKind in Engine's own session snapshot (+1),
     // so a yielded background turn is not projected as completed by hosts.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_410);
+    // v0.9.20 threads current-run MCP connection health into dynamic context
+    // (+15 net). Connection policy, retries and user-facing formatting remain
+    // extracted under tool-system; Engine only places the result for this run.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_425);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

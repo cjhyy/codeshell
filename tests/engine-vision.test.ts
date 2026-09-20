@@ -105,7 +105,8 @@ function newEngine(opts: { model: string; cwd: string }): Engine {
     sessionStorageDir: join(opts.cwd, ".code-shell", "sessions"),
     // No tools — keep the loop short and avoid any hooks needing settings.
     enabledBuiltinTools: [],
-    maxTurns: 1,
+    // One assistant response completes on the following loop boundary.
+    maxTurns: 2,
     headless: true,
     permissionMode: "bypassPermissions",
   });
