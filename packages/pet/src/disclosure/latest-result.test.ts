@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readLatestAssistantText, readLatestWorkContext } from "./latest-result.js";

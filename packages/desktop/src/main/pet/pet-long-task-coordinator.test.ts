@@ -130,16 +130,16 @@ async function harness(snapshot = emptySnapshot()) {
 function waitForTaskClosure(store: PetLongTaskStore, taskId: string): Promise<void> {
   if (store.get(taskId)?.closureRecordedAt !== undefined) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    let unsubscribe: (() => void) | undefined;
+    const subscription: { unsubscribe?: () => void } = {};
     const timeout = setTimeout(() => {
-      unsubscribe?.();
+      subscription.unsubscribe?.();
       reject(new Error(`Timed out waiting for task closure: ${taskId}`));
     }, 4_000);
-    unsubscribe = store.subscribe((snapshot) => {
+    subscription.unsubscribe = store.subscribe((snapshot) => {
       const task = snapshot.tasks.find((candidate) => candidate.id === taskId);
       if (task?.closureRecordedAt === undefined) return;
       clearTimeout(timeout);
-      unsubscribe?.();
+      subscription.unsubscribe?.();
       resolve();
     });
   });
@@ -152,20 +152,20 @@ function waitForTaskStatus(
 ): Promise<void> {
   if (store.get(taskId)?.status === expectedStatus) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    let unsubscribe: (() => void) | undefined;
+    const subscription: { unsubscribe?: () => void } = {};
     const timeout = setTimeout(() => {
-      unsubscribe?.();
+      subscription.unsubscribe?.();
       reject(
         new Error(
           `Timed out waiting for task status ${expectedStatus}: ${taskId} (current=${store.get(taskId)?.status ?? "missing"})`,
         ),
       );
     }, 4_000);
-    unsubscribe = store.subscribe((snapshot) => {
+    subscription.unsubscribe = store.subscribe((snapshot) => {
       const task = snapshot.tasks.find((candidate) => candidate.id === taskId);
       if (task?.status !== expectedStatus) return;
       clearTimeout(timeout);
-      unsubscribe?.();
+      subscription.unsubscribe?.();
       resolve();
     });
   });

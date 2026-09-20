@@ -324,7 +324,6 @@ export class MediaPreviewService {
       if (this.grants.get(token) !== grant || request.signal.aborted)
         throw new Error("Media revoked");
       const file = handle;
-      const service = this;
       let stopped = false;
       let position = part.start;
       let validatedAt = Date.now();
@@ -346,24 +345,24 @@ export class MediaPreviewService {
           start(controller) {
             streamController = controller;
           },
-          async pull(controller) {
+          pull: async (controller) => {
             if (stopped) return;
             try {
               // Worktree authority can require Git queries. Refresh at most once
               // a second per active Session, independent of media size/bitrate.
               // Explicit release/owner destruction still stops every pending read.
               if (Date.now() - validatedAt >= 1000) {
-                await service.validate(grant, true);
+                await this.validate(grant, true);
                 validatedAt = Date.now();
               }
-              if (stopped || service.grants.get(token) !== grant) return;
-              if (!service.deps.isOwnerAlive(grant.ownerId)) throw new Error("Media owner closed");
+              if (stopped || this.grants.get(token) !== grant) return;
+              if (!this.deps.isOwnerAlive(grant.ownerId)) throw new Error("Media owner closed");
               const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, part.end - position + 1));
               const { bytesRead } = await file.read(buffer, 0, buffer.length, position);
-              if (stopped || service.grants.get(token) !== grant) return;
+              if (stopped || this.grants.get(token) !== grant) return;
               if (bytesRead === 0 || !sameIdentity(grant.identity, identity(await file.stat())))
                 throw new Error("Media file changed during playback");
-              if (stopped || service.grants.get(token) !== grant) return;
+              if (stopped || this.grants.get(token) !== grant) return;
               position += bytesRead;
               controller.enqueue(buffer.subarray(0, bytesRead));
               if (position > part.end) {
@@ -376,14 +375,12 @@ export class MediaPreviewService {
               if (stopped) return;
               controller.error(error);
               void cleanup();
-              service.revoke(token, grant);
+              this.revoke(token, grant);
             }
           },
           // Mark cancellation synchronously, before any pending filesystem await
           // resumes. This preserves the token for Chromium's subsequent seek.
-          cancel() {
-            return cleanup();
-          },
+          cancel: () => cleanup(),
         },
         { highWaterMark: 64 * 1024, size: (chunk) => chunk.byteLength },
       );

@@ -239,7 +239,11 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
 
   it("stops before another parent request when externally reported child usage exhausts Goal", async () => {
     const { deps, modelCalls } = makeDeps([toolResp(), summaryResp()]);
-    let loop!: TurnLoop;
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish with a child", tokenBudget: 50 },
+    });
     deps.toolExecutor.executeSingle = async (call: ToolCall) => {
       loop.recordGoalJudgeUsage({
         promptTokens: 80,
@@ -248,12 +252,6 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
       });
       return { id: call.id, toolName: call.toolName, result: "child done" };
     };
-    loop = new TurnLoop(deps, {
-      maxTurns: 3,
-      maxToolCallsPerTurn: 10,
-      goal: { objective: "finish with a child", tokenBudget: 50 },
-    });
-
     const result = await loop.run([{ role: "user", content: "go" }]);
 
     expect(result.reason).toBe("goal_budget_exhausted");

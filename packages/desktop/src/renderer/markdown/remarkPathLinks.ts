@@ -279,7 +279,7 @@ function splitTextNode(node: MdastNode): MdastNode[] | null {
   return out;
 }
 
-function walk(node: MdastNode, parentType: string | null): void {
+function walk(node: MdastNode): void {
   // Markdown URL sanitizers treat a Windows drive letter as an unknown scheme.
   // Normalize only explicit local media paths before sanitization; arbitrary
   // schemes and network URLs retain their existing treatment.
@@ -313,7 +313,7 @@ function walk(node: MdastNode, parentType: string | null): void {
         continue;
       }
     }
-    walk(child, node.type);
+    walk(child);
     next.push(child);
   }
   node.children = next;
@@ -321,7 +321,7 @@ function walk(node: MdastNode, parentType: string | null): void {
 
 export function remarkPathLinks() {
   return function transformer(tree: MdastNode): void {
-    walk(tree, null);
+    walk(tree);
   };
 }
 
@@ -365,7 +365,7 @@ export function decodeLocalPathHref(
   const clean = href.split(/[?#]/, 1)[0] ?? "";
   if (!clean) return null;
 
-  let decoded = clean;
+  let decoded: string;
   try {
     decoded = decodeURIComponent(clean);
   } catch {
