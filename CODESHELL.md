@@ -73,6 +73,45 @@ package formats or installation registries.
 
 Root package `@cjhyy/code-shell` is the meta package that installs core + tui and exposes the `code-shell` bin.
 
+## Branches, worktrees, and integration
+
+- `main` is the integration/release branch. Before editing, inspect the current
+  branch, working-tree changes, and existing worktrees; fetch `origin` and start
+  a task branch from the latest `origin/main`. Do not make development commits
+  directly on `main`. Merging tested task commits into `main` is expected.
+- Use `codex/<scope>/<topic>` for each task, such as
+  `codex/desktop/panel-lifecycle` or `codex/docs/branch-workflow`. A scope does not
+  get a permanent development branch: each independent change gets its own.
+- Panel business changes belong in the separate `codeshell-panel-apps`
+  repository, following its root `AGENTS.md`, `CODESHELL.md`, and
+  `CONTRIBUTING.md`. Use `codex/<panel-id>/<topic>` there, for example
+  `codex/quant-lab/selection-resume`, `codex/video-download/project-storage`, or
+  `codex/video-studio/export-colors`; shared Panel infrastructure uses
+  `codex/panel-shared/<topic>`. Cross-repository work needs a task branch in each
+  affected repository and compatible changes on both sides.
+- Concurrent tasks must each use a separate worktree and task branch, including
+  tasks for the same Panel. Different branch names in one shared directory do
+  not isolate edits. A single task may switch a clean, exclusively owned checkout
+  to its task branch before editing. Never switch another active task's checkout.
+- Preserve pre-existing changes. If work has already started on `main`, identify
+  ownership and move only the current task's changes into its task worktree with
+  a reviewed patch or checkpoint. Do not blanket-stash, reset, stage, or commit
+  other tasks' files; do not copy an old worktree wholesale onto current `main`.
+- Commit only task-owned changes on the task branch. Before integration, refresh
+  `origin/main`, resolve conflicts on the task branch, and run checks appropriate
+  to the final combined changes. Use a normal merge, fast-forward, or the
+  repository's PR workflow; never discard unknown changes with an `ours` merge.
+  Honor branch protection. When delivery/merge is authorized, complete that
+  workflow without requesting routine confirmation again.
+- Integrate through a clean checkout. A dirty primary checkout may only be
+  fast-forwarded when all incoming paths are disjoint from existing changes and
+  those changes are verified preserved; otherwise leave it untouched and report
+  the pending synchronization. Never force-update a branch checked out elsewhere.
+- Release only an authorized, verified merged commit. After integration is
+  confirmed, remove the task's clean, unused worktree and merged branch. Keep
+  unfinished changes and active tasks; do not remove them merely to reduce the
+  worktree count. Installed Panels must not depend on a disposable task worktree.
+
 ## Build & Test
 
 ```bash
