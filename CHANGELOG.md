@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.22] - 2026-09-21
+
+### Fixed
+
+- Stop repeated sensitive-path approvals when reading saved tool results from
+  main, child and Mimi work sessions. Allow ordinary individual files under
+  CodeShell home while protecting credential containers, key files and backups.
+- Route image-only WeChat messages through the gateway to Mimi without requiring
+  accompanying text, preserving attachments and queued delivery.
+- Keep accepted Mimi turns connected until completion instead of dropping their
+  results after a fixed wait. Retry interrupted WeChat delivery without losing
+  pending messages or duplicating accepted work.
+- Return a repairable tool-argument error when a model supplies incomplete JSON
+  instead of executing the tool with empty arguments.
+
 ## [0.9.21] - 2026-09-20
 
 ### Fixed

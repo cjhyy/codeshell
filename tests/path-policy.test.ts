@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -129,13 +129,90 @@ describe("classifyPath", () => {
     ).toBe("ask");
   });
 
-  test("read current CodeShell session artifacts → allow", () => {
-    const c = classifyPath("~/.code-shell/sessions/s-abc123/tool-results/call_1.txt", {
-      workspaceRoot: workspace,
-      operation: "read",
-    });
-    expect(c.decision).toBe("allow");
-    expect(c.reason).toContain("diagnostic");
+  test.each(["s-abc123", "fQCD3EUG", "Ab_cd-EF012345678", "agent.foo"])(
+    "read CodeShell session artifacts for %s → allow",
+    (sessionId) => {
+      const c = classifyPath(`~/.code-shell/sessions/${sessionId}/tool-results/call_1.txt`, {
+        workspaceRoot: workspace,
+        operation: "read",
+      });
+      expect(c.decision).toBe("allow");
+      expect(c.reason).toContain("diagnostic");
+    },
+  );
+
+  test.each(["bad$id", "agent..foo", "a".repeat(129)])(
+    "invalid session ID %s does not receive diagnostic read permission",
+    (sessionId) => {
+      expect(
+        classifyPath(`~/.code-shell/sessions/${sessionId}/tool-results/output.txt`, {
+          workspaceRoot: workspace,
+          operation: "read",
+        }).decision,
+      ).toBe("ask");
+    },
+  );
+
+  test("repeated saved-output reads do not need interactive approval", async () => {
+    let prompts = 0;
+    const ctx = {
+      cwd: workspace,
+      sessionId: "fQCD3EUG",
+      askUser: async () => {
+        prompts++;
+        return "拒绝";
+      },
+    } as ToolContext;
+    const target =
+      "~/.code-shell/sessions/fQCD3EUG/tool-results/29214b49e2230c64e4e041dff7c33e3ba92952e926766e660dda919b5e869cec.txt";
+
+    for (let i = 0; i < 2; i++) {
+      expect(await enforcePathPolicyWithApproval(target, "read", ctx)).toBeNull();
+    }
+    expect(prompts).toBe(0);
+    expect(
+      await enforcePathPolicyWithApproval(target, "read", { cwd: workspace } as ToolContext),
+    ).toBeNull();
+    expect(classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
+      "deny",
+    );
+  });
+
+  test.each([
+    "token.txt",
+    "tool-results-backup/output.txt",
+    "tool-results/../../settings.json",
+    "tool-results/.env",
+    "tool-results/token.txt",
+    "tool-results/key.pem",
+  ])("session diagnostic exception does not allow %s", (suffix) => {
+    expect(
+      classifyPath(`~/.code-shell/sessions/fQCD3EUG/${suffix}`, {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("ask");
+  });
+
+  test("session diagnostic symlinks do not inherit read permission", () => {
+    const previousHome = process.env.HOME;
+    const fakeHome = realpathSync(outside);
+    const codeShellRoot = join(fakeHome, ".code-shell");
+    const outputDir = join(codeShellRoot, "sessions", "fQCD3EUG", "tool-results");
+    mkdirSync(outputDir, { recursive: true });
+    const target = join(codeShellRoot, "settings.json");
+    writeFileSync(target, "{}\n");
+    const link = join(outputDir, "output.txt");
+    symlinkSync(target, link);
+    process.env.HOME = fakeHome;
+    try {
+      expect(classifyPath(link, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
+        "ask",
+      );
+    } finally {
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+    }
   });
 
   test("read CodeShell desktop logs → allow", () => {
@@ -251,7 +328,7 @@ describe("classifyPath", () => {
     }
   });
 
-  test("Skill read exception rejects unregistered trees, credential files, and symlink escapes", () => {
+  test("ordinary unregistered Skill files are readable; credentials and symlink escapes are protected", () => {
     const previousHome = process.env.HOME;
     const fakeHome = join(outside, "guard-home");
     const codeShellRoot = join(fakeHome, ".code-shell");
@@ -299,7 +376,7 @@ describe("classifyPath", () => {
       expect(
         classifyPath(unregisteredReference, { workspaceRoot: workspace, operation: "read" })
           .decision,
-      ).toBe("ask");
+      ).toBe("allow");
       expect(
         classifyPath(join(skillRoot, "token.txt"), {
           workspaceRoot: workspace,

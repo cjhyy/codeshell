@@ -118,6 +118,7 @@ const SENSITIVE_FILE_PATTERNS = [
   /^\.env(\..+)?$/i, // .env, .env.local, .env.production, …
   /^id_(rsa|dsa|ecdsa|ed25519)(\.pub)?$/i,
   /\.pem$/i,
+  /\.key$/i,
   /\.p12$/i,
   /\.pfx$/i,
   // Credential/secret ARTIFACT files: the secret word is the dominant stem AND
@@ -708,9 +709,9 @@ function isInstalledPanelAppResourceRead(resolved: string): boolean {
  * `resolved` lives underneath any sensitive directory, else undefined.
  */
 function matchSensitiveDir(resolved: string): string | undefined {
-  const home = homedir();
+  const home = configuredUserHome();
   for (const rel of SENSITIVE_DIR_PATTERNS) {
-    const full = home + sep + rel;
+    const full = safeRealpath(join(home, rel));
     if (isInsideDir(resolved, full)) return "~/" + rel;
   }
   return undefined;
@@ -722,8 +723,11 @@ function matchSensitiveDir(resolved: string): string | undefined {
  */
 function matchSensitiveFile(resolved: string): string | undefined {
   const base = resolved.slice(resolved.lastIndexOf(sep) + 1);
+  // Atomic credential writes use <name>.<pid>.<uuid>.tmp. Backups and
+  // temporary copies retain the original file's confidentiality.
+  const original = base.replace(/\.(?:bak|backup|old|(?:\d+\.[A-Za-z0-9_-]+\.)?tmp)$/i, "");
   for (const re of SENSITIVE_FILE_PATTERNS) {
-    if (re.test(base)) return base;
+    if (re.test(base) || re.test(original)) return base;
   }
   return undefined;
 }
@@ -740,7 +744,15 @@ function isSafeCodeShellDiagnosticRead(resolved: string): boolean {
 
   const rel = resolved.slice(root.length + 1);
   const parts = rel.split(sep).filter(Boolean);
-  if (parts[0] === "sessions" && /^s-[A-Za-z0-9_-]+$/.test(parts[1] ?? "")) {
+  // Root and child sessions use bare nanoids, not an `s-` prefix. Match the
+  // safe ID shape accepted by SessionManager, including explicit dotted IDs.
+  const sessionId = parts[1] ?? "";
+  if (
+    parts[0] === "sessions" &&
+    /^[A-Za-z0-9_.-]{1,128}$/.test(sessionId) &&
+    sessionId !== "." &&
+    !sessionId.includes("..")
+  ) {
     return parts[2] === "tool-results" || parts[2] === "logs" || parts[2] === "transcript";
   }
   if (parts[0] === "logs") {
@@ -748,6 +760,41 @@ function isSafeCodeShellDiagnosticRead(resolved: string): boolean {
     return /^(desktop|tui|agent|main)-.+\.log$/i.test(name);
   }
   return false;
+}
+
+/**
+ * CodeShell stores credentials in a few containers whose names do not look
+ * like secrets. Keep these protected even when ordinary files under its home
+ * are readable. Settings can contain provider keys and MCP env/header values;
+ * browser profiles can carry login tokens outside their Cookies database.
+ */
+function isCodeShellCredentialContainer(resolved: string): boolean {
+  const root = safeRealpath(join(configuredUserHome(), ".code-shell"));
+  if (!isInsideDir(resolved, root)) return false;
+  const rel = relative(root, resolved).split(sep).join("/");
+  return (
+    /(?:^|\/\.code-shell\/)settings(?:\.(?:local|managed))?\.(?:json|ya?ml)(?:\.|$)/.test(rel) ||
+    /^plugins\/(?:.*\/)?(?:\.mcp|mcp-servers)\.json(?:\.|$)/.test(rel) ||
+    /^browser-runtime\/profiles(?:\/|$)/.test(rel) ||
+    /^browser-runtime\/chrome-native\.json(?:\.|$)/.test(rel) ||
+    /^im-gateway\/(?:config|desktop-control)\.json(?:\.|$)/.test(rel) ||
+    /^chat\/wechat\/accounts(?:\/|$)/.test(rel) ||
+    /^(?:(?:serve|desktop)\/)?(?:access\.json(?:\.|$)|project-runtime-secrets(?:\/|$)|project-control\/registry\.json(?:\.|$))/.test(
+      rel,
+    )
+  );
+}
+
+function isOrdinaryCodeShellFileRead(resolved: string): boolean {
+  const root = safeRealpath(join(configuredUserHome(), ".code-shell"));
+  if (!isInsideDir(resolved, root)) return false;
+  try {
+    // Grant individual files only. A recursive directory read could include
+    // credential containers and must still pass its existing approval gate.
+    return statSync(resolved).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function isNoRepoAttachmentRead(resolved: string, operation: PathOperation): boolean {
@@ -797,7 +844,11 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
 
   const sensitiveDir = matchSensitiveDir(resolved);
   const sensitiveFile = matchSensitiveFile(resolved);
-  const sensitiveLabel = sensitiveDir ?? sensitiveFile;
+  const credentialContainer = isCodeShellCredentialContainer(resolved);
+  const sensitiveLabel = credentialContainer
+    ? "CodeShell credential container"
+    : (sensitiveDir ?? sensitiveFile);
+  const ordinaryRead = opts.operation === "read" && !sensitiveFile && !credentialContainer;
   const matchedRoot = workspaces.find((workspace) => isInsideDir(resolved, workspace));
   const insideWorkspace = matchedRoot !== undefined;
 
@@ -806,7 +857,7 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   // files through the ordinary Read tool as well. A credential-shaped basename
   // (.env, token.txt, key files, ...) deliberately keeps the sensitive-file
   // gate even inside a Skill tree.
-  if (opts.operation === "read" && !sensitiveFile && isRegisteredSkillResourceRead(resolved)) {
+  if (ordinaryRead && isRegisteredSkillResourceRead(resolved)) {
     return {
       decision: "allow",
       reason: "registered Skill resource read",
@@ -814,7 +865,7 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
     };
   }
 
-  if (opts.operation === "read" && !sensitiveFile && isInstalledPanelAppResourceRead(resolved)) {
+  if (ordinaryRead && isInstalledPanelAppResourceRead(resolved)) {
     return {
       decision: "allow",
       reason: "installed Panel App resource read",
@@ -822,17 +873,29 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
     };
   }
 
+  if (
+    ordinaryRead &&
+    (!sensitiveDir || sensitiveDir === "~/.code-shell") &&
+    isOrdinaryCodeShellFileRead(resolved)
+  ) {
+    return {
+      decision: "allow",
+      reason: "ordinary CodeShell file read",
+      resolvedPath: resolved,
+    };
+  }
+
   // Sensitive: write is always denied, read always asks. Workspace placement
   // doesn't soften the rule — an `.env` in the project still asks on read.
   if (sensitiveLabel) {
-    if (isNoRepoAttachmentRead(resolved, opts.operation)) {
+    if (ordinaryRead && isNoRepoAttachmentRead(resolved, opts.operation)) {
       return {
         decision: "allow",
         reason: "no-repo attachment read",
         resolvedPath: resolved,
       };
     }
-    if (opts.operation === "read" && isSafeCodeShellDiagnosticRead(resolved)) {
+    if (ordinaryRead && isSafeCodeShellDiagnosticRead(resolved)) {
       return {
         decision: "allow",
         reason: "safe CodeShell diagnostic read",

@@ -129,7 +129,7 @@ describe("installed Panel App Skill path policy", () => {
     ).toBe("ask");
   });
 
-  test("an unregistered sibling app is not trusted", () => {
+  test("ordinary files in an unregistered sibling app remain readable", () => {
     const unregistered = join(home, ".code-shell", "panel-apps", "hidden-app");
     mkdirSync(join(unregistered, ".codeshell-panel"), { recursive: true });
     writeFileSync(
@@ -142,10 +142,10 @@ describe("installed Panel App Skill path policy", () => {
         workspaceRoot: workspace,
         operation: "read",
       }).decision,
-    ).toBe("ask");
+    ).toBe("allow");
   });
 
-  test("an app directory without an installed registry entry is not trusted", () => {
+  test("ordinary app files do not need a registry entry to be read", () => {
     writeFileSync(
       join(home, ".code-shell", "panel-apps", "installed.json"),
       JSON.stringify({ version: 1, apps: [] }),
@@ -155,6 +155,6 @@ describe("installed Panel App Skill path policy", () => {
         workspaceRoot: workspace,
         operation: "read",
       }).decision,
-    ).toBe("ask");
+    ).toBe("allow");
   });
 });
