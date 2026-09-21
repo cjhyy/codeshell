@@ -98,6 +98,15 @@ describe("unbound conversations", () => {
     expect(await bridge.accept(INBOUND)).toEqual({ kind: "not-bound" });
   });
 
+  test.each(["", "  "])(
+    "an attachment-only route probe with text %j falls through",
+    async (text) => {
+      const { bridge, calls } = harness();
+      expect(await bridge.accept({ ...INBOUND, text })).toEqual({ kind: "not-bound" });
+      expect(calls).toEqual([]);
+    },
+  );
+
   test("an unaddressable conversation is never bound", async () => {
     const { bridge } = harness();
     const result = await bridge.accept({ ...INBOUND, senderId: "   " });
