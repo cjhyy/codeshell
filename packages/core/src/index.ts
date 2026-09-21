@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.9.21";
+export const VERSION = "0.9.22";
 
 // ─── Types ───────────────────────────────────────────────────────
 
