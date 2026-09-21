@@ -48,6 +48,8 @@ export interface ToolCall {
   toolName: string;
   serverName?: string;
   args: Record<string, unknown>;
+  /** Provider could not decode an argument object. Never execute the fallback args. */
+  invalidArguments?: true;
   /** Host-projected UI visibility. Does not affect execution or transcript retention. */
   uiVisibility?: "hidden" | "milestones" | "full";
 }

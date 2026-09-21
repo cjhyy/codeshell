@@ -30,6 +30,83 @@ const descriptor = JSON.stringify({
 });
 
 describe("DesktopControlClient", () => {
+  test.each([null, {}, { pending: true, requestId: "bad/path" }])(
+    "an incomplete chat response remains retryable: %j",
+    async (body) => {
+      const client = new DesktopControlClient(baseConfig(), {
+        readDescriptor: async () => descriptor,
+        fetch: async (url) => Response.json(String(url).endsWith("/v1/status") ? {} : body),
+      });
+      await expect(client.petChat({ message: "test" })).rejects.toBeInstanceOf(
+        DesktopControlUnavailableError,
+      );
+    },
+  );
+
+  test("starts once and polls across pending replies without resubmitting attachments", async () => {
+    const calls: { path: string; body?: unknown }[] = [];
+    const requestId = "a".repeat(36);
+    let polls = 0;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async (url, init) => {
+        const path = new URL(String(url)).pathname;
+        calls.push({ path, body: init?.body });
+        expect(new Headers(init?.headers).get("authorization")).toBe(`Bearer ${"a".repeat(64)}`);
+        if (path === "/v1/status") return Response.json({});
+        if (path === "/v1/pet/chat/start")
+          return Response.json({ requestId, pending: true }, { status: 202 });
+        expect(path).toBe(`/v1/pet/chat/result/${requestId}`);
+        return Response.json(
+          ++polls < 3 ? { requestId, pending: true } : { text: "done", petSessionId: "mimi" },
+        );
+      },
+    });
+    expect(
+      await client.petChat({
+        message: "inspect",
+        attachments: [{ id: "a", kind: "image", size: 2, dataBase64: "aGk=" }],
+      }),
+    ).toEqual({ text: "done", petSessionId: "mimi" });
+    expect(polls).toBe(3);
+    expect(calls.filter((call) => call.body !== undefined)).toHaveLength(1);
+  });
+
+  test.each([502, 503, 504])("HTTP %s leaves a message retryable", async (status) => {
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async () => Response.json({ message: "temporary" }, { status }),
+    });
+    await expect(client.status()).rejects.toBeInstanceOf(DesktopControlUnavailableError);
+  });
+
+  test("caller cancellation remains attached while reading a response body", async () => {
+    const caller = new AbortController();
+    let reading!: () => void;
+    const bodyStarted = new Promise<void>((resolve) => {
+      reading = resolve;
+    });
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async (_url, init) =>
+        ({
+          ok: true,
+          status: 200,
+          json: () =>
+            new Promise((_resolve, reject) => {
+              reading();
+              init!.signal!.addEventListener("abort", () => reject(new Error("body aborted")), {
+                once: true,
+              });
+            }),
+        }) as Response,
+    });
+    const page = client.events(0, 25_000, caller.signal);
+    await bodyStarted;
+    caller.abort();
+    await expect(page).rejects.toBeInstanceOf(DesktopControlUnavailableError);
+  });
+
   test("rejects a descriptor that could redirect bearer auth away from loopback", () => {
     expect(() =>
       parseDescriptor(
@@ -169,7 +246,7 @@ describe("DesktopControlClient", () => {
       name: "pairing-qr.png",
       path: "/host/pairing-qr.png",
     });
-    expect(observed?.url).toEndWith("/v1/pet/chat");
+    expect(observed?.url).toEndWith("/v1/pet/chat/start");
     expect(JSON.parse(String(observed?.init?.body))).toMatchObject({
       message: "inspect",
       attachments: [{ name: "a.txt", dataBase64: "aGk=" }],

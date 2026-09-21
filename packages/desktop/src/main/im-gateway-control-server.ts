@@ -16,6 +16,7 @@ import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { dirname, isAbsolute } from "node:path";
 import { dlog } from "./desktop-logger.js";
+import { GatewayChatRequests, GatewayChatRequestError } from "./im-gateway-chat-requests.js";
 
 export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
 
@@ -210,7 +211,14 @@ export class GatewayControlServer {
   private eventOutboxReady = false;
   private eventMutationTail: Promise<void> = Promise.resolve();
 
-  constructor(private readonly opts: GatewayControlServerOptions) {}
+  private readonly chatRequests: GatewayChatRequests;
+
+  constructor(private readonly opts: GatewayControlServerOptions) {
+    this.chatRequests = new GatewayChatRequests((request) => {
+      if (!opts.petChat) throw new Error("Mimi chat is unavailable");
+      return opts.petChat(request);
+    });
+  }
 
   async start(): Promise<DesktopControlDescriptor> {
     if (this.descriptor) return this.descriptor;
@@ -281,6 +289,7 @@ export class GatewayControlServer {
     const descriptor = this.descriptor;
     this.server = undefined;
     this.descriptor = undefined;
+    this.chatRequests.clear();
     this.wakeEventWaiters();
 
     if (server) await closeServer(server);
@@ -417,6 +426,31 @@ export class GatewayControlServer {
         sendJson(res, 200, await this.opts.routeSession(body));
         return;
       }
+      if (req.method === "POST" && req.url === "/v1/pet/chat/start" && this.opts.petChat) {
+        const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
+        sendJson(res, 202, this.chatRequests.start(body));
+        return;
+      }
+      if (
+        req.method === "GET" &&
+        req.url?.startsWith("/v1/pet/chat/result/") &&
+        this.opts.petChat
+      ) {
+        req.resume();
+        const url = new URL(req.url, "http://127.0.0.1");
+        const id = url.pathname.slice("/v1/pet/chat/result/".length);
+        const waitMs = parseBoundedInteger(url.searchParams.get("waitMs"), 0, 25_000);
+        const abort = new AbortController();
+        const onClose = () => abort.abort();
+        res.once("close", onClose);
+        try {
+          const result = await this.chatRequests.poll(id, waitMs, abort.signal);
+          sendJson(res, "pending" in result ? 202 : 200, result);
+        } finally {
+          res.off("close", onClose);
+        }
+        return;
+      }
       if (req.method === "POST" && req.url === "/v1/pet/chat" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
         sendJson(res, 200, await this.opts.petChat(body));
@@ -425,7 +459,10 @@ export class GatewayControlServer {
       req.resume();
       sendJson(res, 404, { error: "not_found" });
     } catch (error) {
-      const status = error instanceof GatewayControlRequestError ? error.status : 500;
+      const status =
+        error instanceof GatewayControlRequestError || error instanceof GatewayChatRequestError
+          ? error.status
+          : 500;
       sendJson(res, status, {
         error: "operation_failed",
         message: error instanceof Error ? error.message : String(error),
@@ -1136,7 +1173,7 @@ function hasBearerToken(req: IncomingMessage, expected: string): boolean {
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  if (res.headersSent || res.writableEnded) return;
+  if (res.headersSent || res.writableEnded || res.destroyed) return;
   res.statusCode = status;
   res.end(JSON.stringify(body));
 }

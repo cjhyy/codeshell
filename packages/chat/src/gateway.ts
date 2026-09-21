@@ -180,8 +180,9 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
       }
     } catch (error) {
       if (error instanceof DesktopControlUnavailableError) {
-        await reply({ text: `桌面端未在线：${error.message}` });
-        return;
+        // Preserve accepted work on ambiguous disconnects. The durable inbox
+        // retries with the same message identity and recovers the real reply.
+        throw error;
       }
       if (error instanceof DesktopControlOperationError) {
         await reply({ text: `Mimi Pet 处理失败：${error.message}` });

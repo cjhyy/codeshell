@@ -248,7 +248,12 @@ interface PetDispatchOptions {
     requestWorker(
       method: string,
       params: Record<string, unknown>,
-      options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+      options: {
+        settleOnExit?: boolean;
+        failFast?: boolean;
+        waitForRunCompletion?: boolean;
+        meta: WorkerFrameMeta;
+      },
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
     /** Optional live stream tap used to confirm that a queued steer was actually consumed. */
     subscribeOutbound?(
@@ -1017,6 +1022,7 @@ export class PetDispatchService {
       active.workerRunPending = true;
     try {
       return await this.options.worker.requestWorker("agent/run", params, {
+        waitForRunCompletion: true,
         // An exited worker cannot answer this turn. Release the chat and its
         // queued inputs immediately instead of waiting for the RPC timeout.
         settleOnExit: true,
@@ -1041,6 +1047,7 @@ export class PetDispatchService {
   private requestManagerRun(params: Record<string, unknown>, producer: string) {
     return this.withManagerTurn(() =>
       this.options.worker.requestWorker("agent/run", params, {
+        waitForRunCompletion: true,
         settleOnExit: true,
         failFast: true,
         meta: { origin: "host", producer },

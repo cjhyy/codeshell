@@ -87,7 +87,9 @@ describe("OpenAIClient streaming stopReason", () => {
     const resp = await clientReturning(chunks, 4096).createMessage(baseOpts());
 
     expect(resp.stopReason).toBe("length");
-    expect(resp.toolCalls).toEqual([{ id: "call_write", toolName: "Write", args: {} }]);
+    expect(resp.toolCalls).toEqual([
+      { id: "call_write", toolName: "Write", args: {}, invalidArguments: true },
+    ]);
     expect(resp.usage?.completionTokens).toBe(4096);
   });
 

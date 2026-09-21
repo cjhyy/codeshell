@@ -866,21 +866,31 @@ export class OpenAIClient extends LLMClientBase {
           continue;
         }
         let args: Record<string, unknown> = {};
+        let invalidArguments: true | undefined;
         try {
-          args = JSON.parse(tc.args || "{}");
+          const parsed: unknown = JSON.parse(tc.args || "{}");
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            throw new Error("Tool arguments must be a JSON object");
+          }
+          args = parsed as Record<string, unknown>;
         } catch {
           malformedToolArguments = true;
-          // Keep the historical empty-args fallback for genuinely malformed
-          // model output. If usage also proves the configured output ceiling was
-          // reached, the stop reason is normalized to "length" below so the turn
-          // loop retries instead of executing this misleading empty call.
+          invalidArguments = true;
+          // Preserve the parse failure so even tools with optional arguments
+          // cannot execute the fallback object. Proven cap hits still use the
+          // shared truncation retry below.
           logger.warn("openai.malformed_tool_arguments", {
             id: tc.id,
             name: tc.name,
             argumentChars: tc.args.length,
           });
         }
-        toolCalls.push({ id: tc.id, toolName: tc.name, args });
+        toolCalls.push({
+          id: tc.id,
+          toolName: tc.name,
+          args,
+          ...(invalidArguments ? { invalidArguments } : {}),
+        });
       }
 
       const usage: TokenUsage = {
@@ -937,10 +947,16 @@ export class OpenAIClient extends LLMClientBase {
     if (choice.message.tool_calls) {
       for (const tc of choice.message.tool_calls) {
         let args: Record<string, unknown> = {};
+        let invalidArguments: true | undefined;
         try {
-          args = JSON.parse(tc.function.arguments || "{}");
+          const parsed: unknown = JSON.parse(tc.function.arguments || "{}");
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            throw new Error("Tool arguments must be a JSON object");
+          }
+          args = parsed as Record<string, unknown>;
         } catch {
           malformedToolArguments = true;
+          invalidArguments = true;
           logger.warn("openai.malformed_tool_arguments", {
             id: tc.id,
             name: tc.function.name,
@@ -951,6 +967,7 @@ export class OpenAIClient extends LLMClientBase {
           id: tc.id,
           toolName: tc.function.name,
           args,
+          ...(invalidArguments ? { invalidArguments } : {}),
         });
       }
     }

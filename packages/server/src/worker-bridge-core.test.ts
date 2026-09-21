@@ -41,6 +41,19 @@ process.stdin.on("data", (chunk) => {
     try { msg = JSON.parse(line); } catch { continue; }
     if (msg.method === "test/exit") process.exit(0);
     if (msg.method === "test/never") continue;
+    if (msg.method === "agent/run" && msg.params.mode) {
+      const mode = msg.params.mode;
+      if (mode !== "unaccepted") {
+        process.stdout.write(JSON.stringify({ method: "agent/runAccepted", params: {
+          requestId: mode === "wrong-request" ? "another-run" : msg.id,
+          sessionId: mode === "wrong-session" ? "another-session" : msg.params.sessionId,
+        } }) + "\\n");
+      }
+      if (mode === "exit") setTimeout(() => process.exit(1), 120);
+      else setTimeout(() => process.stdout.write(JSON.stringify({ id: msg.id,
+        result: { text: "late result" } }) + "\\n"), 180);
+      continue;
+    }
     if (msg.method === "test/duplicate") {
       process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { sequence: 1 } }) + "\\n");
       process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { sequence: 2 } }) + "\\n");
@@ -121,6 +134,100 @@ function waitForLine(core: WorkerBridgeCore, match: (line: string) => boolean): 
 }
 
 describe("WorkerBridgeCore", () => {
+  test.each(["accepted-run", 42])(
+    "keeps accepted run %s correlated beyond the admission deadline",
+    async (id) => {
+      const core = makeCore();
+      await waitForHello(core);
+      const accepted = waitForLine(core, (line) => line.includes("agent/runAccepted"));
+      const result = core.request(
+        "agent/run",
+        { sessionId: "long-session", mode: "accepted" },
+        {
+          id,
+          timeoutMs: 60,
+          meta: TEST_META,
+          failFast: true,
+          settleOnExit: true,
+          waitForRunCompletion: true,
+        },
+      );
+      await accepted; // The admission notification must still reach observers.
+      expect(pendingRequestCount(core)).toBe(1);
+      expect(await result).toEqual({ status: "result", result: { text: "late result" } });
+      expect(pendingRequestCount(core)).toBe(0);
+    },
+  );
+
+  test.each(["wrong-request", "wrong-session", "unaccepted"])(
+    "retains the deadline for %s",
+    async (mode) => {
+      const core = makeCore();
+      await waitForHello(core);
+      expect(
+        await core.request(
+          "agent/run",
+          { sessionId: "long-session", mode },
+          {
+            id: "timed-run",
+            timeoutMs: 60,
+            meta: TEST_META,
+            failFast: true,
+            settleOnExit: true,
+            waitForRunCompletion: true,
+          },
+        ),
+      ).toEqual({ status: "timeout" });
+      expect(pendingRequestCount(core)).toBe(0);
+    },
+  );
+
+  test("worker exit settles an admitted long run after its original deadline", async () => {
+    const core = makeCore();
+    await waitForHello(core);
+    const result = await core.request(
+      "agent/run",
+      { sessionId: "long-session", mode: "exit" },
+      {
+        id: "exiting-run",
+        timeoutMs: 60,
+        meta: TEST_META,
+        failFast: true,
+        settleOnExit: true,
+        waitForRunCompletion: true,
+      },
+    );
+    expect(result.status).toBe("workerExit");
+    expect(pendingRequestCount(core)).toBe(0);
+  });
+
+  test("completion tracking cannot remove deadlines from controls or omit exit cleanup", async () => {
+    const core = makeCore();
+    for (const options of [
+      { method: "agent/steer", failFast: true, settleOnExit: true },
+      { method: "agent/run", failFast: false, settleOnExit: true },
+      { method: "agent/run", failFast: true, settleOnExit: false },
+    ]) {
+      const { method, ...lifecycle } = options;
+      expect(
+        (
+          await core.request(
+            method,
+            {},
+            {
+              id: "invalid",
+              timeoutMs: 60,
+              meta: TEST_META,
+              ...lifecycle,
+              waitForRunCompletion: true,
+            },
+          )
+        ).status,
+      ).toBe("sendFailed");
+    }
+    expect(pendingRequestCount(core)).toBe(0);
+  });
+
   test("request(): invalid JSON params settle as sendFailed and release correlation", async () => {
     const core = makeCore();
     const circular: Record<string, unknown> = {};

@@ -1456,30 +1456,49 @@ export class AgentBridge implements PetStateBridge {
   requestWorker(
     method: string,
     params: Record<string, unknown>,
-    options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+    options: {
+      settleOnExit?: boolean;
+      failFast?: boolean;
+      waitForRunCompletion?: boolean;
+      meta: WorkerFrameMeta;
+    },
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
   requestWorker(
     method: string,
     params: Record<string, unknown>,
     timeoutMs: number,
-    options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+    options: {
+      settleOnExit?: boolean;
+      failFast?: boolean;
+      waitForRunCompletion?: boolean;
+      meta: WorkerFrameMeta;
+    },
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
   async requestWorker(
     method: string,
     params: Record<string, unknown>,
     timeoutOrOptions:
       | number
-      | { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+      | {
+          settleOnExit?: boolean;
+          failFast?: boolean;
+          waitForRunCompletion?: boolean;
+          meta: WorkerFrameMeta;
+        },
     /**
-     * Opt-in lifecycle tightening for callers that do NOT await the agent's real
-     * completion (the Panel App fire-and-forget submit). Such a call uses a very
-     * long timeout purely as a backstop, so it must be released as soon as the
-     * worker is known to be gone rather than sitting pending for hours:
+     * Opt-in lifecycle tracking for host-owned requests:
      *   settleOnExit — worker exit settles the correlation immediately;
      *   failFast     — a failed/dropped write settles it instead of waiting.
+     *   waitForRunCompletion — agent/run uses the timeout for admission only;
+     *     after runAccepted it waits for the real result or worker exit.
      * Default OFF so existing callers keep the old inject-then-wait semantics.
      */
-    maybeOptions?: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+    maybeOptions?: {
+      settleOnExit?: boolean;
+      failFast?: boolean;
+      waitForRunCompletion?: boolean;
+      meta: WorkerFrameMeta;
+    },
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
     const timeoutMs = typeof timeoutOrOptions === "number" ? timeoutOrOptions : 120_000;
     const options = typeof timeoutOrOptions === "number" ? maybeOptions! : timeoutOrOptions;
@@ -1500,6 +1519,7 @@ export class AgentBridge implements PetStateBridge {
       meta: options.meta,
       ...(options.settleOnExit ? { settleOnExit: true } : {}),
       ...(options.failFast ? { failFast: true } : {}),
+      ...(options.waitForRunCompletion ? { waitForRunCompletion: true } : {}),
       ...(ensureWorker ? { ensureWorker: true, ...(cwd ? { ensureWorkerCwd: cwd } : {}) } : {}),
     });
     if (method === "agent/run") {

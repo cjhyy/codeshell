@@ -153,6 +153,15 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    if (call.invalidArguments) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error:
+          "Invalid tool arguments: the model response was not a complete JSON object. The tool was not executed. Resubmit the tool call with valid JSON and all required arguments.",
+        isError: true,
+      };
+    }
     if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(call.toolName)) {
       return {
         id: call.id,

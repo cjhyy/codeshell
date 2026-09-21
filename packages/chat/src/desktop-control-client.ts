@@ -100,7 +100,35 @@ export class DesktopControlClient {
 
   async petChat(input: PetChatRequest): Promise<PetChatResult> {
     await this.ensureDesktopAvailable();
-    return this.request("POST", "/v1/pet/chat", 150_000, input);
+    type Pending = { pending: true; requestId: string };
+    let result = await this.request<PetChatResult | Pending>(
+      "POST",
+      "/v1/pet/chat/start",
+      30_000,
+      input,
+    );
+    while (result && typeof result === "object" && "pending" in result && result.pending === true) {
+      if (typeof result.requestId !== "string" || !/^[a-f0-9-]{36}$/.test(result.requestId)) {
+        throw new DesktopControlUnavailableError("桌面端返回了无效请求标识，消息将重试");
+      }
+      result = await this.request<PetChatResult | Pending>(
+        "GET",
+        `/v1/pet/chat/result/${result.requestId}?waitMs=25000`,
+        35_000,
+      );
+    }
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("text" in result) ||
+      typeof result.text !== "string" ||
+      !("petSessionId" in result) ||
+      typeof result.petSessionId !== "string" ||
+      !result.petSessionId
+    ) {
+      throw new DesktopControlUnavailableError("桌面端未返回完整的 Mimi 结果，消息将重试");
+    }
+    return result;
   }
 
   /**
@@ -249,9 +277,8 @@ export class DesktopControlClient {
     if (signal?.aborted) controller.abort();
     else signal?.addEventListener("abort", abortRequest, { once: true });
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-    let response: Response;
     try {
-      response = await this.fetchFn(`${descriptor.baseUrl}${path}`, {
+      const response = await this.fetchFn(`${descriptor.baseUrl}${path}`, {
         method,
         headers: {
           authorization: `Bearer ${descriptor.token}`,
@@ -260,7 +287,30 @@ export class DesktopControlClient {
         ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
         signal: controller.signal,
       });
+      // Keep the deadline and caller cancellation active until the body has
+      // arrived too. A dropped body is an ambiguous delivery, so the durable
+      // inbox must retry the same message rather than acknowledge an error.
+      const body = await response.json();
+      if (!response.ok) {
+        if (response.status === 503 || response.status === 502 || response.status === 504) {
+          throw new DesktopControlUnavailableError(
+            typeof body?.message === "string" ? body.message : "桌面端暂时不可用，消息将重试",
+          );
+        }
+        throw new DesktopControlOperationError(
+          typeof body?.message === "string"
+            ? body.message
+            : `桌面端操作失败（HTTP ${response.status}）`,
+        );
+      }
+      return body as T;
     } catch (error) {
+      if (
+        error instanceof DesktopControlOperationError ||
+        error instanceof DesktopControlUnavailableError
+      ) {
+        throw error;
+      }
       throw new DesktopControlUnavailableError(
         `无法连接桌面端：${error instanceof Error ? error.message : String(error)}`,
       );
@@ -268,21 +318,6 @@ export class DesktopControlClient {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abortRequest);
     }
-
-    let body: any;
-    try {
-      body = await response.json();
-    } catch {
-      throw new DesktopControlOperationError(`桌面端返回了无效响应（HTTP ${response.status}）`);
-    }
-    if (!response.ok) {
-      throw new DesktopControlOperationError(
-        typeof body?.message === "string"
-          ? body.message
-          : `桌面端操作失败（HTTP ${response.status}）`,
-      );
-    }
-    return body as T;
   }
 }
 

@@ -61,8 +61,11 @@ export type WorkerRpcOutcome =
 
 export interface WorkerRequestOptions {
   /** Wire id for the frame. Caller mints it (must be unique while pending). */
-  id: string;
+  id: string | number;
   timeoutMs: number;
+  /** For agent/run, timeout covers admission only. A matching runAccepted
+   * transfers ownership to completion/exit; requires failFast + settleOnExit. */
+  waitForRunCompletion?: boolean;
   /**
    * true: the matching response line is consumed here and NOT dispatched to
    * line listeners (host-internal RPC, e.g. pet snapshots). false: the line
@@ -119,6 +122,7 @@ interface PendingRequest {
   consume: boolean;
   settleOnExit: boolean;
   settle: (outcome: WorkerRpcOutcome) => void;
+  acceptRun?: (sessionId: unknown) => void;
 }
 
 export class WorkerBridgeCore {
@@ -281,6 +285,8 @@ export class WorkerBridgeCore {
     if (this.pendingRequests.size === 0) return false;
     let msg: {
       id?: string | number;
+      method?: string;
+      params?: { requestId?: string | number; sessionId?: string };
       result?: unknown;
       error?: { message?: string; code?: number };
     };
@@ -290,6 +296,13 @@ export class WorkerBridgeCore {
       return false;
     }
     if (!msg || typeof msg !== "object" || Array.isArray(msg)) return false;
+    if (
+      msg.method === "agent/runAccepted" &&
+      (typeof msg.params?.requestId === "string" || typeof msg.params?.requestId === "number")
+    ) {
+      this.pendingRequests.get(msg.params.requestId)?.acceptRun?.(msg.params.sessionId);
+      return false;
+    }
     if (msg.id === undefined || msg.id === null) return false;
     const pending = this.pendingRequests.get(msg.id);
     if (!pending) return false;
@@ -368,6 +381,15 @@ export class WorkerBridgeCore {
     options: WorkerRequestOptions,
   ): Promise<WorkerRpcOutcome> {
     const { id } = options;
+    if (
+      options.waitForRunCompletion &&
+      (method !== "agent/run" || !options.failFast || !options.settleOnExit)
+    ) {
+      return Promise.resolve({
+        status: "sendFailed",
+        error: new Error("Completion tracking requires agent/run, failFast and settleOnExit"),
+      });
+    }
     return new Promise((resolve) => {
       let settled = false;
       const settle = (outcome: WorkerRpcOutcome): void => {
@@ -388,6 +410,16 @@ export class WorkerBridgeCore {
         consume: options.consume === true,
         settleOnExit: options.settleOnExit === true,
         settle,
+        ...(options.waitForRunCompletion
+          ? {
+              acceptRun: (sessionId: unknown) => {
+                const expected = (params as { sessionId?: unknown } | undefined)?.sessionId;
+                if (typeof sessionId === "string" && (!expected || sessionId === expected)) {
+                  clearTimeout(timer);
+                }
+              },
+            }
+          : {}),
       });
       let rawFrame: string;
       try {

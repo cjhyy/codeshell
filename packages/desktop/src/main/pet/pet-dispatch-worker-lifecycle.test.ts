@@ -21,7 +21,15 @@ process.stdin.on("data", (chunk) => {
     buffer = buffer.slice(newline + 1);
     if (!line.trim()) continue;
     const request = JSON.parse(line);
-    if (process.env.MIMI_LIFECYCLE_MODE === "healthy") {
+    if (process.env.MIMI_LIFECYCLE_MODE === "slow-healthy") {
+      if (request.method === "agent/run") {
+        process.stdout.write(JSON.stringify({ method: "agent/runAccepted", params: {
+          requestId: request.id, sessionId: request.params.sessionId,
+        } }) + "\\n");
+        setTimeout(() => process.stdout.write(JSON.stringify({ id: request.id,
+          result: { text: "Recovered reply", reason: "completed" } }) + "\\n"), 400);
+      } else process.stdout.write(JSON.stringify({ id: request.id, result: {} }) + "\\n");
+    } else if (process.env.MIMI_LIFECYCLE_MODE === "healthy") {
       process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: request.id,
         result: { text: "Recovered reply", reason: "completed" } }) + "\\n");
     } else if (process.env.MIMI_LIFECYCLE_MODE === "accepted-steer" && request.method === "agent/steer") {
@@ -35,6 +43,7 @@ process.stdin.on("data", (chunk) => {
     }
   }
 });
+process.stdout.write(JSON.stringify({ method: "test/ready" }) + "\\n");
 `;
 
 const cleanups: Array<() => void> = [];
@@ -51,6 +60,10 @@ function makeHarness(initialMode: string) {
   const runStarted = new Promise<void>((resolve) => {
     resolveStarted = resolve;
   });
+  let resolveReady!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    resolveReady = resolve;
+  });
   const outcomes: Array<{ method: string; status: string }> = [];
   const core = new WorkerBridgeCore({
     entryPath,
@@ -62,6 +75,7 @@ function makeHarness(initialMode: string) {
   });
   core.subscribeLines((line) => {
     if (JSON.parse(line).method === "test/runStarted") resolveStarted();
+    if (JSON.parse(line).method === "test/ready") resolveReady();
   });
   cleanups.push(() => {
     core.kill();
@@ -90,7 +104,7 @@ function makeHarness(initialMode: string) {
           id: ++requestId,
           // A short backstop keeps a regression from waiting the production
           // 120 seconds. Every assertion requires exit/send-failure, not timeout.
-          timeoutMs: 1_000,
+          timeoutMs: initialMode === "slow-healthy" ? 200 : 1_000,
           ensureWorker: method === "agent/run",
           ensureWorkerCwd: dir,
         });
@@ -101,10 +115,38 @@ function makeHarness(initialMode: string) {
       },
     },
   });
-  return { service, runStarted, outcomes };
+  return {
+    service,
+    runStarted,
+    outcomes,
+    startWorker: () => {
+      core.ensureWorker(dir);
+      return ready;
+    },
+  };
 }
 
 describe("Mimi real worker lifecycle", () => {
+  test("internal reports and subsequent chat both retain results beyond the admission deadline", async () => {
+    const { service, outcomes, startWorker } = makeHarness("slow-healthy");
+    await startWorker();
+    await service.reportSessionMessage({
+      reportId: "b".repeat(32),
+      sourceSessionId: "work-session",
+      message: "The work finished",
+    });
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "Continue",
+        clientMessageId: "after-report",
+      }),
+    ).toMatchObject({ ok: true, result: { text: "Recovered reply", reason: "completed" } });
+    expect(
+      outcomes.filter(({ method }) => method === "agent/run").map(({ status }) => status),
+    ).toEqual(["result", "result"]);
+  });
+
   test("startup failure settles the input on exit and a subsequent input recovers", async () => {
     const { service, outcomes } = makeHarness("startup-failure");
     expect(
