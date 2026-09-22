@@ -19,6 +19,17 @@ function translator(threadId = "thread-a") {
   return new CodexEventTranslator({ threadId, sessionId: "sess-a" });
 }
 
+function tokenUsage(
+  turnId: string,
+  last: { inputTokens: number; cachedInputTokens: number; cacheWriteInputTokens: number },
+  total = last,
+) {
+  return {
+    method: "thread/tokenUsage/updated",
+    params: { threadId: "thread-a", turnId, tokenUsage: { last, total } },
+  };
+}
+
 describe("CodexEventTranslator", () => {
   test("turn/started opens a stream request", () => {
     const events = translator().translate({
@@ -227,6 +238,216 @@ describe("CodexEventTranslator", () => {
         cumulativeCompletionTokens: 5577,
       }),
     ]);
+  });
+
+  test("turn usage includes every model request while context usage stays on the last request", () => {
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    const first = { inputTokens: 1000, cachedInputTokens: 800, cacheWriteInputTokens: 100 };
+    expect(t.translate(tokenUsage("t1", first))[0]).toMatchObject({
+      singleTurnPromptTokens: 1000,
+      singleTurnCacheReadTokens: 800,
+      singleTurnCacheCreationTokens: 100,
+    });
+    const next = tokenUsage(
+      "t1",
+      { inputTokens: 1500, cachedInputTokens: 1200, cacheWriteInputTokens: 150 },
+      { inputTokens: 2500, cachedInputTokens: 2000, cacheWriteInputTokens: 250 },
+    );
+    const expected = {
+      promptTokens: 1500,
+      cacheReadTokens: 1200,
+      cacheCreationTokens: 150,
+      singleTurnPromptTokens: 2500,
+      singleTurnCacheReadTokens: 2000,
+      singleTurnCacheCreationTokens: 250,
+      cumulativePromptTokens: 2500,
+      cumulativeCacheReadTokens: 2000,
+      cumulativeCacheCreationTokens: 250,
+    };
+    expect(t.translate(next)[0]).toMatchObject(expected);
+    expect(t.translate(next)[0]).toMatchObject(expected);
+    expect(t.translate(tokenUsage("t1", first))[0]).toMatchObject({
+      singleTurnPromptTokens: 2500,
+      singleTurnCacheReadTokens: 2000,
+      singleTurnCacheCreationTokens: 250,
+    });
+
+    // A missed intermediate notification is still included by the cumulative
+    // total; summing only the observed `last` snapshots would undercount.
+    expect(
+      t.translate(
+        tokenUsage(
+          "t1",
+          { inputTokens: 2000, cachedInputTokens: 1600, cacheWriteInputTokens: 200 },
+          { inputTokens: 6500, cachedInputTokens: 5200, cacheWriteInputTokens: 650 },
+        ),
+      )[0],
+    ).toMatchObject({
+      promptTokens: 2000,
+      singleTurnPromptTokens: 6500,
+      singleTurnCacheReadTokens: 5200,
+      singleTurnCacheCreationTokens: 650,
+    });
+  });
+
+  test("a new turn resets its total without including the previous turn", () => {
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    t.translate(
+      tokenUsage("t1", { inputTokens: 1000, cachedInputTokens: 800, cacheWriteInputTokens: 100 }),
+    );
+    t.translate({
+      method: "turn/completed",
+      params: { threadId: "thread-a", turn: { id: "t1", status: "completed" } },
+    });
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t2" } } });
+    const update = tokenUsage(
+      "t2",
+      { inputTokens: 1500, cachedInputTokens: 1200, cacheWriteInputTokens: 150 },
+      { inputTokens: 2500, cachedInputTokens: 2000, cacheWriteInputTokens: 250 },
+    );
+    const expected = {
+      singleTurnPromptTokens: 1500,
+      singleTurnCacheReadTokens: 1200,
+      singleTurnCacheCreationTokens: 150,
+      cumulativePromptTokens: 2500,
+    };
+    expect(t.translate(update)[0]).toMatchObject(expected);
+    // Duplicate starts must not reset the baseline partway through a turn.
+    expect(
+      t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t2" } } }),
+    ).toEqual([]);
+    expect(t.translate(update)[0]).toMatchObject(expected);
+    expect(
+      t.translate(
+        tokenUsage("t1", {
+          inputTokens: 3000,
+          cachedInputTokens: 2400,
+          cacheWriteInputTokens: 300,
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  test("a resumed thread excludes historical usage from its first new turn", () => {
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    expect(
+      t.translate(
+        tokenUsage(
+          "t1",
+          { inputTokens: 1000, cachedInputTokens: 800, cacheWriteInputTokens: 100 },
+          { inputTokens: 11000, cachedInputTokens: 8800, cacheWriteInputTokens: 1100 },
+        ),
+      )[0],
+    ).toMatchObject({
+      singleTurnPromptTokens: 1000,
+      singleTurnCacheReadTokens: 800,
+      singleTurnCacheCreationTokens: 100,
+      cumulativePromptTokens: 11000,
+    });
+    expect(
+      t.translate(
+        tokenUsage(
+          "t1",
+          { inputTokens: 1500, cachedInputTokens: 1200, cacheWriteInputTokens: 150 },
+          { inputTokens: 12500, cachedInputTokens: 10000, cacheWriteInputTokens: 1250 },
+        ),
+      )[0],
+    ).toMatchObject({
+      singleTurnPromptTokens: 2500,
+      singleTurnCacheReadTokens: 2000,
+      singleTurnCacheCreationTokens: 250,
+      cumulativePromptTokens: 12500,
+    });
+  });
+
+  test("a provider accounting reset between turns establishes a fresh baseline", () => {
+    const t = translator();
+    t.translate(
+      tokenUsage("t1", { inputTokens: 1000, cachedInputTokens: 800, cacheWriteInputTokens: 100 }),
+    );
+    t.translate({
+      method: "turn/completed",
+      params: { threadId: "thread-a", turn: { id: "t1", status: "completed" } },
+    });
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t2" } } });
+    const first = { inputTokens: 100, cachedInputTokens: 80, cacheWriteInputTokens: 10 };
+    expect(t.translate(tokenUsage("t2", first))[0]).toMatchObject({
+      singleTurnPromptTokens: 100,
+      singleTurnCacheReadTokens: 80,
+      singleTurnCacheCreationTokens: 10,
+      cumulativePromptTokens: 100,
+    });
+    expect(
+      t.translate(
+        tokenUsage("t2", first, {
+          inputTokens: 200,
+          cachedInputTokens: 160,
+          cacheWriteInputTokens: 20,
+        }),
+      )[0],
+    ).toMatchObject({
+      singleTurnPromptTokens: 200,
+      singleTurnCacheReadTokens: 160,
+      singleTurnCacheCreationTokens: 20,
+      cumulativePromptTokens: 200,
+    });
+    t.translate({
+      method: "turn/completed",
+      params: { threadId: "thread-a", turn: { id: "t2", status: "completed" } },
+    });
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t3" } } });
+    expect(
+      t.translate(
+        tokenUsage("t3", first, {
+          inputTokens: 300,
+          cachedInputTokens: 240,
+          cacheWriteInputTokens: 30,
+        }),
+      )[0],
+    ).toMatchObject({
+      singleTurnPromptTokens: 100,
+      singleTurnCacheReadTokens: 80,
+      singleTurnCacheCreationTokens: 10,
+      cumulativePromptTokens: 300,
+    });
+  });
+
+  test("usage delivered before turn/started remains part of the same turn", () => {
+    const t = translator();
+    const first = { inputTokens: 1000, cachedInputTokens: 800, cacheWriteInputTokens: 100 };
+    t.translate(tokenUsage("t1", first));
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    expect(
+      t.translate(
+        tokenUsage("t1", first, {
+          inputTokens: 2000,
+          cachedInputTokens: 1600,
+          cacheWriteInputTokens: 200,
+        }),
+      )[0],
+    ).toMatchObject({
+      singleTurnPromptTokens: 2000,
+      singleTurnCacheReadTokens: 1600,
+      singleTurnCacheCreationTokens: 200,
+    });
+  });
+
+  test("a partial usage notification is not repeatedly added as new work", () => {
+    const t = translator();
+    const update = {
+      method: "thread/tokenUsage/updated",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        tokenUsage: { last: { inputTokens: 1000, cachedInputTokens: 800 } },
+      },
+    };
+    const expected = { singleTurnPromptTokens: 1000, singleTurnCacheReadTokens: 800 };
+    expect(t.translate(update)[0]).toMatchObject(expected);
+    expect(t.translate(update)[0]).toMatchObject(expected);
   });
 
   test("a CodeShell Host Tool call is NOT re-emitted as a tool card", () => {

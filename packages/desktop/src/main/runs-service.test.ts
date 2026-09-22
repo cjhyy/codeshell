@@ -59,6 +59,13 @@ describe("getRun", () => {
           status: "completed",
           createdAt: 1,
           updatedAt: 2,
+          startedAt: 10,
+          finishedAt: 35,
+          model: "test-model",
+          provider: "test-provider",
+          metadata: {
+            usage: { promptTokens: 8, completionTokens: 3, totalTokens: 11 },
+          },
         }),
       );
       const events = Array.from({ length: 250 }, (_, index) =>
@@ -77,6 +84,13 @@ describe("getRun", () => {
       expect(detail?.events).toHaveLength(200);
       expect(detail?.events[0]?.eventId).toBe("e-50");
       expect(detail?.events.at(-1)?.eventId).toBe("e-249");
+      expect(detail).toMatchObject({
+        prompt: "review",
+        model: "test-model",
+        provider: "test-provider",
+        durationMs: 25,
+        usage: { promptTokens: 8, completionTokens: 3, totalTokens: 11 },
+      });
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

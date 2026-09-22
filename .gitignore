@@ -41,26 +41,8 @@ docs/test-outputs/*
 !docs/test-outputs/.gitkeep
 out/
 
-# Code-review deliverables (reports, screenshots, probe scripts). One-off
-# artifacts produced per review round and superseded by the next one — the
-# findings that matter land as commits, tests, and CHANGELOG entries instead.
-#
-# Scoped to code-review-* ONLY: artifacts/ also holds real product assets
-# (artifacts/mimi-papillon-pet/** — the Pet spritesheets, 29 tracked files),
-# so a blanket `artifacts/` rule must not be used here.
-artifacts/code-review-*/
-
-# 宣传片生成产物（61M：mp4 录屏/成片、TTS 试听音频、QA 缩略图、
-# HyperFrames 合成工程）。和 video-output/ 同性质 —— 跑一遍就能重新生成，
-# 二进制大文件不该进仓库。同样只限定到这一个子目录，不能写成整个 artifacts/。
-artifacts/codeshell-intro-video/
-
-# Local tutorial production runs: generated HyperFrames projects, narration,
-# rendered video, snapshots, and QA intermediates. Keep these on disk only.
-artifacts/codeshell-tutorial-*/
-
-# Local Video Studio smoke renders and visual verification artifacts.
-artifacts/video-studio/
+# Generated artifacts are local-only and can be reproduced when needed.
+artifacts/
 
 # Private deployment configuration, mounted at runtime rather than built into images.
 /deploy/settings.local.json
