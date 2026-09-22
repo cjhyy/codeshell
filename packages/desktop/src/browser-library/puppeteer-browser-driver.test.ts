@@ -68,6 +68,10 @@ describe("Puppeteer exact-node BrowserBridge", () => {
         });
         expect(await driver.waitForLoad(Number.NaN)).toMatchObject({ ok: true });
         expect((await driver.snapshot()).detail).toBeUndefined();
+        await page.setContent('<div style="position:fixed">Fixed-position result</div>');
+        expect(await driver.waitForLoad(1000, { text: "Fixed-position result" })).toMatchObject({
+          ok: true,
+        });
       });
     },
   );

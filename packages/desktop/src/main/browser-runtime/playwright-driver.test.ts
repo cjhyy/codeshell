@@ -61,6 +61,10 @@ describe("PlaywrightBrowserDriver integration", () => {
           ok: false,
           code: "FAILED",
         });
+        await page.setContent('<div style="position:fixed">Fixed-position result</div>');
+        expect(await driver.waitForLoad(1000, { text: "Fixed-position result" })).toMatchObject({
+          ok: true,
+        });
       } finally {
         driver.dispose();
         await page.close();

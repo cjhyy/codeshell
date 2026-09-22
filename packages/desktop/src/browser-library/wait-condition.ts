@@ -18,7 +18,9 @@ export function pageWaitCondition(
   }
   const visible = elements.some((element) => {
     const rect = element.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
+    // A body containing only fixed/absolute-positioned controls can have zero
+    // height even though its text is rendered. Only element targets need a box.
+    if (condition.selector && (rect.width <= 0 || rect.height <= 0)) return false;
     // Check ancestors too: a nonzero box can still be hidden by an ancestor.
     for (let node: Element | null = element; node; node = node.parentElement) {
       const style = getComputedStyle(node);
