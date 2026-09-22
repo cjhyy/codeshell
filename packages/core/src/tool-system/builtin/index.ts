@@ -985,7 +985,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       permissionDefault: "allow", // UI hint; per-action execution gating is the preset rule.
       isReadOnly: false,
       isConcurrencySafe: false,
-      timeoutMs: 30_000, // the wait action internally bounds; give RPC headroom
+      timeoutMs: 90_000, // wait accepts up to 60s; include connection/RPC headroom
     },
     execute: browserActTool,
     exposure: expose(GENERAL_TAGS, {

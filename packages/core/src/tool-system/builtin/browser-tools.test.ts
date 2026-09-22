@@ -42,6 +42,40 @@ describe("browser tools — host without a browser bridge", () => {
   });
 });
 describe("browser_observe", () => {
+  test("partial frame observations preserve usable content without claiming a complete read", async () => {
+    const warnings = ["child frame 1 did not respond within 2000ms"];
+    const ctx = ctxWith({
+      snapshot: async () => ({
+        url: "https://example.com",
+        elements: [{ ref: "e1", role: "button", name: "Visible action" }],
+        warnings,
+      }),
+      readContent: async () => ({
+        ok: true,
+        url: "https://example.com",
+        text: "Visible content",
+        done: true,
+        warnings,
+      }),
+      extractLinks: async () => ({
+        ok: true,
+        url: "https://example.com",
+        links: [],
+        images: [],
+        videos: [],
+        warnings,
+      }),
+    });
+    for (const mode of ["snapshot", "read", "extract"]) {
+      const out = await browserObserveTool({ mode }, ctx);
+      expect(out).toContain("Observation incomplete");
+      expect(out).toContain("child frame 1");
+      expect(out).not.toContain("Read: complete");
+    }
+    expect(await browserObserveTool({ mode: "snapshot" }, ctx)).toContain("Visible action");
+    expect(await browserObserveTool({ mode: "read" }, ctx)).toContain("Visible content");
+  });
+
   test("canvas read does not equate complete DOM text with the end of its contents", async () => {
     const out = await browserObserveTool(
       { mode: "read" },

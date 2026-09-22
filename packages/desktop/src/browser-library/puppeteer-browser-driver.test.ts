@@ -40,6 +40,35 @@ async function withPage(run: (page: Page, driver: PuppeteerBrowserDriver) => Pro
 
 describe("Puppeteer exact-node BrowserBridge", () => {
   test.skipIf(!executablePath)(
+    "observes a usable DOM while an unrelated resource is still loading",
+    async () => {
+      const server = Bun.serve({
+        port: 0,
+        fetch(request) {
+          if (new URL(request.url).pathname === "/pending") return new Promise<Response>(() => {});
+          return new Response('<button>Ready control</button><img src="/pending">', {
+            headers: { "content-type": "text/html" },
+          });
+        },
+      });
+      try {
+        await withPage(async (page, driver) => {
+          await page.goto(`http://127.0.0.1:${server.port}`, { waitUntil: "domcontentloaded" });
+          expect(await page.evaluate(() => document.readyState)).toBe("interactive");
+          const result = await driver.waitForLoad(1000);
+          expect(result.ok).toBe(true);
+          expect(result.detail).toContain("dynamic content may still be loading");
+          expect((await driver.snapshot()).elements.some((el) => el.name === "Ready control")).toBe(
+            true,
+          );
+        });
+      } finally {
+        server.stop(true);
+      }
+    },
+  );
+
+  test.skipIf(!executablePath)(
     "finds native editing hosts and buttons after a large ARIA table",
     async () => {
       await withPage(async (page, driver) => {

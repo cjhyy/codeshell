@@ -64,6 +64,41 @@ interface TextState {
   wheelPoint?: { x: number; y: number };
 }
 
+const OBSERVATION_BUDGET_MS = 15_000;
+const MAIN_FRAME_BUDGET_MS = 8_000;
+const CHILD_FRAME_BUDGET_MS = 2_000;
+
+/** Bound context acquisition too: protocolTimeout only starts after a CDP send. */
+async function observeWithin<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  label: string,
+  disposeLate?: (value: T) => void,
+): Promise<T> {
+  let expired = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const observed = operation.then((value) => {
+    if (expired) disposeLate?.(value);
+    return value;
+  });
+  try {
+    return await Promise.race([
+      observed,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => {
+            expired = true;
+            reject(new Error(`${label} did not respond within ${timeoutMs}ms`));
+          },
+          Math.max(1, timeoutMs),
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let nextDriver = 0;
 
 /**
@@ -150,6 +185,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
           snapshotId,
           elements,
           identity: this.options.identity,
+          ...(collected.warnings.length ? { warnings: collected.warnings } : {}),
           ...(elements.some((element) => element.sensitive)
             ? { needsHuman: "this page requires sign-in or another sensitive input" }
             : {}),
@@ -263,12 +299,18 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
 
   waitForLoad(timeoutMs = 30_000): Promise<BrowserResult> {
     return this.resultAction(async () => {
-      const ready = await this.page.waitForFunction(() => document.readyState === "complete", {
+      // A hidden iframe/resource can leave an otherwise usable SPA at
+      // "interactive" indefinitely. DOM readiness is sufficient to observe;
+      // it is not a promise that every dynamic widget has finished rendering.
+      const ready = await this.page.waitForFunction(() => document.readyState !== "loading", {
+        polling: 100,
         timeout: Math.max(1, Math.min(timeoutMs, 60_000)),
         signal: this.abort.signal,
       });
       await ready.dispose();
-    });
+    }).then((result) =>
+      result.ok ? { ...result, detail: "DOM ready; dynamic content may still be loading" } : result,
+    );
   }
 
   scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult> {
@@ -337,12 +379,9 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       const documentId = this.documentId();
       try {
         this.checkActive();
-        const state = await this.textState();
-        const text = normalizePageText(
-          (
-            await Promise.all(this.page.frames().map((frame) => frame.evaluate(readFrameText)))
-          ).join("\n"),
-        );
+        const state = await observeWithin(this.textState(), MAIN_FRAME_BUDGET_MS, "page state");
+        const content = await this.observeFrames((frame) => frame.evaluate(readFrameText));
+        const text = normalizePageText(content.values.join("\n"));
         const title = await this.title();
         this.checkDocument(documentId);
         const parsed = options.cursor ? parseReadCursor(options.cursor) : undefined;
@@ -385,6 +424,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
           truncated: end < text.length,
           contentHash: hashText(text),
           scroll: state.scroll,
+          ...(content.warnings.length ? { warnings: content.warnings } : {}),
         };
       } catch (error) {
         return { ...this.failure(error, documentId), url: this.page.url(), text: "" };
@@ -431,6 +471,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
           images,
           videos,
           truncated: collected.truncated,
+          ...(collected.warnings.length ? { warnings: collected.warnings } : {}),
         };
       } catch (error) {
         return {
@@ -662,55 +703,159 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
     const output: Array<{
       ref: string;
       metadata: ReturnType<typeof collectPageNodes>["metadata"][number];
-    }> & { truncated: boolean } = Object.assign([], { truncated: false });
+    }> & { truncated: boolean; warnings: string[] } = Object.assign([], {
+      truncated: false,
+      warnings: [] as string[],
+    });
     const mediaLimits = { link: cap / 3, image: cap / 3, video: cap / 3 };
     const seenMedia: string[] = [];
     const documentId = this.documentId();
-    for (const frame of this.page.frames()) {
-      if (output.length >= cap) break;
-      const result = await frame.evaluateHandle(collectPageNodes, {
-        mode,
-        cap: cap - output.length,
-        mediaLimits: mode === "media" ? mediaLimits : undefined,
-        seenMedia,
-      });
-      let nodes: JSHandle<ReturnType<typeof collectPageNodes>["nodes"]> | undefined;
-      let metadataHandle: JSHandle<ReturnType<typeof collectPageNodes>["metadata"]> | undefined;
-      const unclaimed = new Set<JSHandle>();
-      try {
-        nodes = await result.getProperty("nodes");
-        metadataHandle = await result.getProperty("metadata");
-        const metadata = await metadataHandle.jsonValue();
-        output.truncated ||= await result.evaluate((value) => value.truncated);
-        const properties = await nodes.getProperties();
-        for (const node of properties.values()) unclaimed.add(node);
-        for (const [key, node] of properties) {
-          const handle = node.asElement() as ElementHandle<Element> | null;
-          if (!handle || !metadata[Number(key)]) continue;
+    const frames = await this.observeFrames(
+      async (frame) => {
+        if (output.length >= cap) return [];
+        const result = await frame.evaluateHandle(collectPageNodes, {
+          mode,
+          cap: cap - output.length,
+          mediaLimits: mode === "media" ? mediaLimits : undefined,
+          seenMedia,
+        });
+        let nodes: JSHandle<ReturnType<typeof collectPageNodes>["nodes"]> | undefined;
+        let metadataHandle: JSHandle<ReturnType<typeof collectPageNodes>["metadata"]> | undefined;
+        const unclaimed = new Set<JSHandle>();
+        const collected: Array<{
+          handle: ElementHandle<Element>;
+          metadata: ReturnType<typeof collectPageNodes>["metadata"][number];
+        }> = [];
+        let completed = false;
+        try {
+          nodes = await result.getProperty("nodes");
+          metadataHandle = await result.getProperty("metadata");
+          const metadata = await metadataHandle.jsonValue();
+          const truncated = await result.evaluate((value) => value.truncated);
+          const properties = await nodes.getProperties();
+          for (const node of properties.values()) unclaimed.add(node);
+          for (const [key, node] of properties) {
+            const handle = node.asElement() as ElementHandle<Element> | null;
+            if (!handle || !metadata[Number(key)]) continue;
+            const item = metadata[Number(key)]!;
+            collected.push({ handle, metadata: item });
+          }
+          this.checkDocument(documentId);
+          completed = true;
+          // No shared refs/budgets change until the frame operation meets its
+          // deadline. A late child can only return handles to be disposed.
+          return Object.assign(collected, { truncated });
+        } finally {
+          if (completed) for (const { handle } of collected) unclaimed.delete(handle);
+          await Promise.all(
+            [result, nodes, metadataHandle, ...unclaimed].map(async (handle) => {
+              try {
+                await handle?.dispose();
+              } catch {
+                // Release every acquired handle without replacing the observation error.
+              }
+            }),
+          );
+        }
+      },
+      (items) => {
+        for (const { handle } of items) void handle.dispose().catch(() => undefined);
+      },
+      (items, frame) => {
+        this.checkDocument(documentId);
+        output.truncated ||= "truncated" in items && Boolean(items.truncated);
+        for (const { handle, metadata } of items) {
           const ref = `${prefix}:e${output.length + 1}`;
           this.refs.set(ref, { handle, documentId, frame });
-          unclaimed.delete(node);
-          const item = metadata[Number(key)]!;
-          output.push({ ref, metadata: item });
-          if (item.kind) {
-            mediaLimits[item.kind]--;
-            seenMedia.push(`${item.kind}:${item.url}`);
+          output.push({ ref, metadata });
+          if (metadata.kind) {
+            mediaLimits[metadata.kind]--;
+            seenMedia.push(`${metadata.kind}:${metadata.url}`);
           }
         }
-      } finally {
-        await Promise.all(
-          [result, nodes, metadataHandle, ...unclaimed].map(async (handle) => {
-            try {
-              await handle?.dispose();
-            } catch {
-              // Release every acquired handle without replacing the observation error.
-            }
-          }),
-        );
-      }
-      this.checkDocument(documentId);
-    }
+      },
+      () => output.length >= cap,
+    );
+    output.warnings = frames.warnings;
     return output;
+  }
+
+  /** A stalled auxiliary frame must not keep the page's serial queue occupied. */
+  private async observeFrames<T>(
+    read: (frame: Frame) => Promise<T>,
+    disposeLate?: (value: T) => void,
+    accept?: (value: T, frame: Frame) => void,
+    stop?: () => boolean,
+  ): Promise<{ values: T[]; warnings: string[] }> {
+    const deadline = Date.now() + OBSERVATION_BUDGET_MS;
+    const values: T[] = [];
+    const warnings: string[] = [];
+    const frames = this.page.frames();
+    const mainFrame = this.page.mainFrame();
+    for (const [index, frame] of frames.entries()) {
+      if (stop?.()) break;
+      const isMain = frame === mainFrame;
+      this.checkActive();
+      if (Date.now() >= deadline) {
+        warnings.push("remaining frames exceeded the observation budget");
+        break;
+      }
+      const budget = Math.min(
+        isMain ? MAIN_FRAME_BUDGET_MS : CHILD_FRAME_BUDGET_MS,
+        deadline - Date.now(),
+      );
+      const frameDeadline = Date.now() + budget;
+      const label = isMain ? "main frame" : `child frame ${index}`;
+      try {
+        if (!isMain) {
+          // Inspect the iframe element in its parent, without waiting for a
+          // hidden child's own execution context. Keep offscreen visible
+          // frames eligible: they may contain the next part of a document.
+          const visible = await observeWithin(
+            (async () => {
+              const element = await frame.frameElement();
+              if (!element) return false;
+              try {
+                return await element.evaluate((node) => {
+                  const rect = node.getBoundingClientRect();
+                  const style = getComputedStyle(node);
+                  return (
+                    rect.width > 0 &&
+                    rect.height > 0 &&
+                    style.display !== "none" &&
+                    style.visibility !== "hidden"
+                  );
+                });
+              } finally {
+                await element.dispose();
+              }
+            })(),
+            budget,
+            `${label} visibility`,
+          );
+          if (!visible) continue;
+        }
+        const value = await observeWithin(
+          read(frame),
+          Math.min(frameDeadline, deadline) - Date.now(),
+          label,
+          disposeLate,
+        );
+        try {
+          this.checkActive();
+          accept?.(value, frame);
+        } catch (error) {
+          disposeLate?.(value);
+          throw error;
+        }
+        values.push(value);
+      } catch (error) {
+        this.checkActive();
+        if (isMain) throw error;
+        warnings.push(`${label}: ${message(error)}`);
+      }
+    }
+    return { values, warnings };
   }
 
   private async resolve(ref: string): Promise<RefRecord> {
@@ -873,7 +1018,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
   }
   private async title(): Promise<string | undefined> {
     try {
-      return await this.page.title();
+      return await observeWithin(this.page.title(), 2_000, "page title");
     } catch {
       return undefined;
     }

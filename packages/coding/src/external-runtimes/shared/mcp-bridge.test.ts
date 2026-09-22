@@ -131,6 +131,37 @@ describe("Codex MCP bridge", () => {
     expect(calls).toEqual(['sess-a:Panel:{"action":"list"}', 'sess-b:Panel:{"action":"list"}']);
   });
 
+  test("keeps calls in the same Codex turn distinct in the host transcript", async () => {
+    const { handle, store } = await boot();
+    const calls: Array<{ id: string; name: string }> = [];
+    store.register("thread-a", {
+      ...fakeHost("sess-a", []),
+      execute: async (call) => {
+        calls.push(call);
+        return call.name === "browser_observe"
+          ? { error: "observation timed out", isError: true }
+          : { result: "navigated" };
+      },
+    });
+    for (const name of ["browser_navigate", "browser_observe", "browser_observe"]) {
+      await rpc(handle, {
+        id: 1, // JSON-RPC request IDs can also be reused on new connections.
+        method: "tools/call",
+        params: {
+          name,
+          arguments: {},
+          _meta: { "x-codex-turn-metadata": { thread_id: "thread-a", turn_id: "same-turn" } },
+        },
+      });
+    }
+    expect(calls.map((call) => call.name)).toEqual([
+      "browser_navigate",
+      "browser_observe",
+      "browser_observe",
+    ]);
+    expect(new Set(calls.map((call) => call.id)).size).toBe(3);
+  });
+
   test("a thread id in ARGUMENTS cannot redirect the call", async () => {
     // §22.4: the model controls arguments and cannot touch `_meta`.
     const calls: string[] = [];

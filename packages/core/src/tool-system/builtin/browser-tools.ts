@@ -111,6 +111,12 @@ export const browserObserveToolDef: ToolDefinition = {
   },
 };
 
+function renderObservationWarnings(warnings?: string[]): string {
+  return warnings?.length
+    ? `\nObservation incomplete: ${warnings.join("; ")}. Do not infer missing content; use vision or retry after the page settles.`
+    : "";
+}
+
 /** Vision gate: only show images to a vision-capable model. Mirrors view_image —
  *  no vision → never read pixels into context (your rule: 不支持就不给看). */
 function modelSupportsVision(ctx?: ToolContext): boolean {
@@ -140,7 +146,7 @@ export async function browserObserveTool(
       const human = snap.needsHuman
         ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser window, then continue.`
         : "";
-      return `${header}\n\n${renderElementList(snap.elements)}${human}`;
+      return `${header}${renderObservationWarnings(snap.warnings)}\n\n${renderElementList(snap.elements)}${human}`;
     }
     case "read": {
       const c = await b.readContent({
@@ -148,20 +154,23 @@ export async function browserObserveTool(
         maxChars: typeof args.max_chars === "number" ? args.max_chars : undefined,
       });
       if (!c.ok) return `Error: ${c.detail ?? "could not read page content"}`;
-      const progress = c.done
-        ? "\nRead: complete"
-        : c.nextCursor
-          ? `\nRead: more available\nnextCursor: ${c.nextCursor}`
-          : c.truncated
-            ? "\nRead: truncated"
-            : "";
+      const progress =
+        c.done && c.warnings?.length
+          ? "\nRead: partial (some frames unavailable)"
+          : c.done
+            ? "\nRead: complete"
+            : c.nextCursor
+              ? `\nRead: more available\nnextCursor: ${c.nextCursor}`
+              : c.truncated
+                ? "\nRead: truncated"
+                : "";
       const scroll = c.scroll
         ? c.scroll.positionKnown === false
           ? `\nScroll: ${c.scroll.target ?? "rendered region"} position unknown; use vision and scroll to inspect its content`
           : `\nScroll: ${Math.round(c.scroll.y)}/${Math.round(c.scroll.maxY)}${c.scroll.atEnd ? " (end)" : ""}${c.scroll.target === "element" ? " (content panel)" : ""}`
         : "";
       const head = `URL: ${c.url}${c.title ? `\nTitle: ${c.title}` : ""}${progress}${scroll}`;
-      return `${head}\n\n${c.text || "(no readable text)"}`;
+      return `${head}${renderObservationWarnings(c.warnings)}\n\n${c.text || "(no readable text)"}`;
     }
     case "extract": {
       const r = await b.extractLinks();
@@ -182,7 +191,7 @@ export async function browserObserveTool(
         r.videos && r.videos.length > 0
           ? "Videos:\n" + r.videos.map((v) => `- ${v.url}`).join("\n")
           : "Videos: (none)";
-      return `${head}\n\n${links}\n\n${images}\n\n${videos}`;
+      return `${head}${renderObservationWarnings(r.warnings)}\n\n${links}\n\n${images}\n\n${videos}`;
     }
     case "image": {
       // Vision gate: don't fetch pixels for a non-vision model (your rule).
@@ -244,7 +253,7 @@ export const browserActToolDef: ToolDefinition = {
     "ControlOrMeta+a; resolves to Command on macOS, Control elsewhere). Focuses ref first if given.\n" +
     "- hover {ref}: hover to reveal menus/tooltips.\n" +
     "- scroll {direction: up|down, amount?}: scroll the main visible content region (including nested panels/canvas), then re-observe.\n" +
-    "- wait {timeout_ms?}: wait for the page to finish loading before observing.\n" +
+    "- wait {timeout_ms?}: wait for DOM readiness before observing; dynamic content may still be loading.\n" +
     "- request_takeover: reveal the exact task-owned Browser Runtime page so the " +
     "user can see it and complete login, 2FA, CAPTCHA, or another required manual step. " +
     "Use only when the user asks to see the page or human interaction is required.\n" +
@@ -284,7 +293,7 @@ export const browserActToolDef: ToolDefinition = {
       },
       direction: { type: "string", enum: ["up", "down"], description: "Scroll direction — scroll" },
       amount: { type: "number", description: "Pixels to scroll (default one viewport) — scroll" },
-      timeout_ms: { type: "number", description: "Max wait in ms (default 10000) — wait" },
+      timeout_ms: { type: "number", description: "Max wait in ms (default 30000) — wait" },
       tabId: {
         type: "string",
         description: "Target tab — required for switch_tab; optional on others (switches first)",

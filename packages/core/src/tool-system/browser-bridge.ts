@@ -45,6 +45,8 @@ export interface BrowserIdentity {
 }
 
 export interface BrowserSnapshot {
+  /** Partial observations must say which content could not be inspected. */
+  warnings?: string[];
   url: string;
   title?: string;
   /** Main-frame document identity. Changes on every cross-document navigation. */
@@ -113,6 +115,7 @@ export interface BrowserReadOptions {
 
 /** Result of reading the page's main textual content (扒内容). */
 export interface BrowserContent {
+  warnings?: string[];
   ok: boolean;
   url: string;
   title?: string;
@@ -165,6 +168,7 @@ export interface BrowserVideo {
  * find a video/image source to hand to yt-dlp/curl.
  */
 export interface BrowserExtract {
+  warnings?: string[];
   ok: boolean;
   url: string;
   title?: string;
