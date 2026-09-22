@@ -291,6 +291,18 @@ export async function finalizeRunSuccess(args: {
     options?.signal,
   );
 
+  // Settle the whole user run before its footer is finalized. The live loop
+  // counts primary responses; getRunUsage also includes billed compaction,
+  // tool summaries and goal judging. Zero means no new context-size reading,
+  // so consumers retain the last provider/estimate value for the context ring.
+  options?.onStream?.({
+    type: "usage_update",
+    promptTokens: 0,
+    singleTurnPromptTokens: usage.totalPromptTokens,
+    singleTurnCacheReadTokens: usage.totalCacheReadTokens ?? 0,
+    singleTurnCacheCreationTokens: usage.totalCacheCreationTokens ?? 0,
+  });
+
   // Emit completion
   options?.onStream?.({
     type: "turn_complete",
