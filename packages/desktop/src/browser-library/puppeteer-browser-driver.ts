@@ -12,6 +12,7 @@ import type {
   BrowserScrollState,
   BrowserSnapshot,
   BrowserTab,
+  BrowserWaitCondition,
 } from "@cjhyy/code-shell-core";
 import {
   CONTENT_CHAR_CAP,
@@ -34,6 +35,7 @@ import type {
 import { collectPageNodes, readFrameText } from "./dom-observation.js";
 import { observeScrollProgress } from "./scroll-observation.js";
 import { createPuppeteerInspector } from "./browser-inspector.js";
+import { browserWaitTimeout, pageWaitCondition } from "./wait-condition.js";
 
 export interface PuppeteerScreenshotRequest {
   /** Viewport-relative CSS pixels; the host owns native scale/zoom conversion. */
@@ -88,7 +90,7 @@ async function observeWithin<T>(
         timer = setTimeout(
           () => {
             expired = true;
-            reject(new Error(`${label} did not respond within ${timeoutMs}ms`));
+            reject(new DriverError("TIMEOUT", `${label} did not respond within ${timeoutMs}ms`));
           },
           Math.max(1, timeoutMs),
         );
@@ -193,9 +195,9 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       } catch (error) {
         this.releaseRefs();
         return {
+          ...this.failure(error),
           url: this.page.url(),
           elements: [],
-          detail: message(error),
           identity: this.options.identity,
         };
       }
@@ -297,19 +299,55 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
     });
   }
 
-  waitForLoad(timeoutMs = 30_000): Promise<BrowserResult> {
+  waitForLoad(timeoutMs?: number, condition?: BrowserWaitCondition): Promise<BrowserResult> {
     return this.resultAction(async () => {
-      // A hidden iframe/resource can leave an otherwise usable SPA at
-      // "interactive" indefinitely. DOM readiness is sufficient to observe;
-      // it is not a promise that every dynamic widget has finished rendering.
-      const ready = await this.page.waitForFunction(() => document.readyState !== "loading", {
-        polling: 100,
-        timeout: Math.max(1, Math.min(timeoutMs, 60_000)),
-        signal: this.abort.signal,
-      });
-      await ready.dispose();
+      const timeout = browserWaitTimeout(timeoutMs);
+      const deadline = Date.now() + timeout;
+      const controller = new AbortController();
+      const cancel = () => controller.abort();
+      this.abort.signal.addEventListener("abort", cancel, { once: true });
+      try {
+        const ready = await observeWithin(
+          this.page.waitForFunction(
+            pageWaitCondition,
+            {
+              polling: 100,
+              timeout,
+              signal: controller.signal,
+            },
+            condition,
+          ),
+          timeout,
+          "page condition",
+          (handle) => {
+            void handle.dispose().catch(() => undefined);
+          },
+        );
+        try {
+          const value = await observeWithin<ReturnType<typeof pageWaitCondition>>(
+            ready.jsonValue(),
+            deadline - Date.now(),
+            "wait result",
+          );
+          if (typeof value === "object" && value?.invalidSelector)
+            throw new DriverError("FAILED", "invalid CSS selector for wait");
+        } finally {
+          void ready.dispose().catch(() => undefined);
+        }
+      } finally {
+        controller.abort();
+        this.abort.signal.removeEventListener("abort", cancel);
+      }
     }).then((result) =>
-      result.ok ? { ...result, detail: "DOM ready; dynamic content may still be loading" } : result,
+      result.ok
+        ? {
+            ...result,
+            detail:
+              condition?.selector || condition?.text
+                ? "Requested main-document condition met; take a fresh observation before acting"
+                : "DOM ready; dynamic content may still be loading",
+          }
+        : result,
     );
   }
 
@@ -475,12 +513,11 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         };
       } catch (error) {
         return {
-          ok: false,
+          ...this.failure(error, documentId),
           url: this.page.url(),
           links: [],
           images: [],
           videos: [],
-          detail: message(error),
         };
       }
     });
@@ -532,7 +569,11 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       const documentId = this.documentId();
       try {
         this.checkActive();
-        const image = await this.capture(ref ? (await this.resolve(ref)).handle : undefined);
+        const image = await observeWithin(
+          (async () => this.capture(ref ? (await this.resolve(ref)).handle : undefined))(),
+          4_000,
+          "screenshot",
+        );
         this.checkDocument(documentId);
         return { ...image, ref };
       } catch (error) {
@@ -885,6 +926,10 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
 
   private async capture(handle?: ElementHandle<Element>): Promise<BrowserImageData> {
     this.checkActive();
+    // Electron can capture the rendered viewport even when JS/DOM evaluation
+    // stalls. Do not put that recovery path behind another page.evaluate().
+    if (!handle && this.options.captureScreenshot)
+      return this.options.captureScreenshot({ maxDim: MAX_IMAGE_DIM });
     if (handle) await handle.scrollIntoView();
     const viewport = await this.page.evaluate(() => ({
       width: innerWidth,
@@ -997,7 +1042,10 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         ? error.code
         : /detached|not attached/i.test(message(error))
           ? "STALE_SNAPSHOT"
-          : "FAILED";
+          : (error instanceof Error && error.name === "TimeoutError") ||
+              /timeout|timed out/i.test(message(error))
+            ? "TIMEOUT"
+            : "FAILED";
     return {
       ok: false,
       code,

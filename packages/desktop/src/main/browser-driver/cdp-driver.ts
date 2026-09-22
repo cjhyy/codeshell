@@ -31,6 +31,7 @@ import {
   type BrowserResult,
   type BrowserContent,
   type BrowserReadOptions,
+  type BrowserWaitCondition,
   type BrowserExtract,
   type BrowserImageData,
   type AXNode,
@@ -135,7 +136,13 @@ export class CdpBrowserDriver implements BrowserBridge {
     return this.inner.extractLinks();
   }
 
-  waitForLoad(timeoutMs?: number): Promise<BrowserResult> {
+  waitForLoad(timeoutMs?: number, condition?: BrowserWaitCondition): Promise<BrowserResult> {
+    if (condition?.selector || condition?.text)
+      return Promise.resolve({
+        ok: false,
+        code: "FAILED",
+        detail: "targeted waits require a maintained browser backend",
+      });
     return this.inner.waitForLoad(timeoutMs);
   }
 

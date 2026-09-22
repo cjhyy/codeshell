@@ -149,7 +149,7 @@ export function interactiveBrowserBridgeForSession(sessionId: string): BrowserBr
     readContent: (options) =>
       call({ action: "readContent", cursor: options?.cursor, maxChars: options?.maxChars }),
     extractLinks: () => call({ action: "extractLinks" }),
-    waitForLoad: (timeoutMs) => call({ action: "waitForLoad", timeoutMs }),
+    waitForLoad: (timeoutMs, condition) => call({ action: "waitForLoad", timeoutMs, condition }),
     hover: (ref) => call({ action: "hover", ref }),
     selectOption: (ref, value) => call({ action: "selectOption", ref, value }),
     pressKey: (key, ref) => call({ action: "pressKey", key, ref }),

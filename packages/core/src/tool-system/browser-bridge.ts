@@ -45,6 +45,7 @@ export interface BrowserIdentity {
 }
 
 export interface BrowserSnapshot {
+  code?: BrowserResultCode;
   /** Partial observations must say which content could not be inspected. */
   warnings?: string[];
   url: string;
@@ -72,6 +73,7 @@ export type BrowserResultCode =
   | "NAVIGATION"
   | "BLOCKED"
   | "NEEDS_HUMAN"
+  | "TIMEOUT"
   | "FAILED";
 
 export interface BrowserScrollState {
@@ -111,6 +113,16 @@ export interface BrowserReadOptions {
   cursor?: string;
   /** Requested chunk size; the driver clamps it to a safe maximum. */
   maxChars?: number;
+}
+
+/** Read-only condition in the main document, not an action or an element ref. */
+export interface BrowserWaitCondition {
+  /** CSS selector observed in the page; optional when waiting for visible text. */
+  selector?: string;
+  /** Visible text substring, optionally scoped by selector. */
+  text?: string;
+  /** Hidden means no visible match remains. Defaults to visible. */
+  state?: "visible" | "hidden";
 }
 
 /** Result of reading the page's main textual content (扒内容). */
@@ -168,6 +180,7 @@ export interface BrowserVideo {
  * find a video/image source to hand to yt-dlp/curl.
  */
 export interface BrowserExtract {
+  code?: BrowserResultCode;
   warnings?: string[];
   ok: boolean;
   url: string;
@@ -228,8 +241,8 @@ export interface BrowserBridge {
   readContent(options?: BrowserReadOptions): Promise<BrowserContent>;
   /** Extract the page's hyperlink + image URLs (href/src the a11y tree omits). */
   extractLinks(): Promise<BrowserExtract>;
-  /** Wait until the page finishes loading (or a timeout). */
-  waitForLoad(timeoutMs?: number): Promise<BrowserResult>;
+  /** Wait for DOM readiness or a specific main-document condition, with a deadline. */
+  waitForLoad(timeoutMs?: number, condition?: BrowserWaitCondition): Promise<BrowserResult>;
   /** Hover over an element by ref (reveal hover-dependent menus/tooltips). */
   hover(ref: string): Promise<BrowserResult>;
   /**

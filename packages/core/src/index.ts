@@ -741,6 +741,7 @@ export type {
   BrowserResultCode,
   BrowserScrollState,
   BrowserReadOptions,
+  BrowserWaitCondition,
   BrowserContent,
   BrowserExtract,
   BrowserLink,

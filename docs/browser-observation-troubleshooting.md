@@ -94,3 +94,46 @@ late-handle cleanup, queue recovery, partial-result presentation, and distinct M
 call IDs. Real website probes are diagnostics, not network-dependent CI tests.
 The focused regression run passed 122 tests across eight files. Full workspace
 build/type checks, changed-file lint, and Chrome extension bundling also passed.
+
+## Slow-page recovery follow-up
+
+The tool loop now observes after navigation/action rather than always adding a
+separate readiness wait. If dynamic content is still loading, `browser_act`
+supports a targeted, read-only wait:
+
+```json
+{"action":"wait","text":"Results loaded","timeout_ms":10000}
+{"action":"wait","selector":"#loading","state":"hidden","timeout_ms":10000}
+```
+
+`selector` must come from observed page evidence. `text` is a visible substring,
+optionally scoped by the selector. These conditions cover the main document,
+not iframe or Canvas text. A visible result does not prove that every row has
+loaded. Invalid selectors fail explicitly; non-finite timeout values cannot
+disable the driver's 30-second default/60-second maximum. The Puppeteer deadline
+also bounds execution-context acquisition and cancels the wait poller; late
+handles are disposed. Conditions pass through the worker, runtime, authorization
+wrappers, and Chrome extension; Puppeteer and Playwright share the predicate.
+
+Snapshot/read/extract failures with structured `TIMEOUT` codes attempt at most
+one viewport screenshot for a vision-capable model. `fallback:"none"` opts out.
+The original failure is retained, the result says it is incomplete, and pixels
+are not treated as extracted URLs or element refs. Permission/target failures,
+cancellation, and non-vision models do not trigger this fallback. Partial reads
+with warnings remain available without automatically adding an image.
+
+Fallback capture has a separate 5-second tool budget. The shared Puppeteer
+screenshot operation is bounded to 4 seconds so its serial queue remains usable.
+Electron's native viewport capture no longer depends on evaluating page JS first;
+element-region captures still require valid DOM geometry. These deadlines cannot
+make a frozen renderer responsive, and screenshot recovery can also fail.
+
+No click, typing, submission, message, navigation or reload is automatically
+replayed. A timed-out write reports that its outcome is uncertain and instructs
+the model to verify the current state before retrying. Existing task ownership,
+vision gating, domain grants, and human-takeover boundaries remain in force.
+
+Follow-up validation: 256 tests passed across 24 files, including real Chrome
+tests for both maintained drivers, stalled waits/screenshots, late-handle cleanup,
+fallback cancellation and gating, condition forwarding, and uncertain writes.
+Workspace build/type checks, changed-file lint, and extension bundling passed.

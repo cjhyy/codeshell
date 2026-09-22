@@ -4308,7 +4308,7 @@ export class AgentServer {
       scroll: (dir, amount) => call("scroll", { dir, amount }),
       readContent: (options) => call("readContent", { ...(options ?? {}) }),
       extractLinks: () => call("extractLinks", {}),
-      waitForLoad: (timeoutMs) => call("waitForLoad", { timeoutMs }),
+      waitForLoad: (timeoutMs, condition) => call("waitForLoad", { timeoutMs, condition }),
       hover: (ref) => call("hover", { ref }),
       selectOption: (ref, value) => call("selectOption", { ref, value }),
       pressKey: (key, ref) => call("pressKey", { key, ref }),

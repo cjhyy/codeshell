@@ -373,9 +373,9 @@ export class DedicatedPlaywrightBackend implements BrowserRuntimeBackend {
             detail: denied().detail,
           } satisfies BrowserExtract;
         }),
-      waitForLoad: (timeoutMs) =>
+      waitForLoad: (timeoutMs, condition) =>
         this.run(entry, () =>
-          currentAllowed() ? driver.waitForLoad(timeoutMs) : Promise.resolve(denied()),
+          currentAllowed() ? driver.waitForLoad(timeoutMs, condition) : Promise.resolve(denied()),
         ),
       hover: (ref) =>
         this.run(entry, () => (currentAllowed() ? driver.hover(ref) : Promise.resolve(denied()))),

@@ -40,6 +40,39 @@ async function withPage(run: (page: Page, driver: PuppeteerBrowserDriver) => Pro
 
 describe("Puppeteer exact-node BrowserBridge", () => {
   test.skipIf(!executablePath)(
+    "waits for delayed visible text and a disappearing loading indicator",
+    async () => {
+      await withPage(async (page, driver) => {
+        await page.setContent(
+          '<div id="loading">Loading</div><section id="results" hidden>Loaded</section><div hidden>Secret hidden text</div>',
+        );
+        await page.evaluate(() => {
+          setTimeout(() => {
+            document.getElementById("loading")!.remove();
+            document.getElementById("results")!.hidden = false;
+          }, 150);
+        });
+        expect(
+          await driver.waitForLoad(2000, { selector: "#results", text: "Loaded" }),
+        ).toMatchObject({ ok: true });
+        expect(
+          await driver.waitForLoad(1000, { selector: "#loading", state: "hidden" }),
+        ).toMatchObject({ ok: true });
+        expect(await driver.waitForLoad(100, { text: "Secret hidden text" })).toMatchObject({
+          ok: false,
+          code: "TIMEOUT",
+        });
+        expect(await driver.waitForLoad(1000, { selector: "[" })).toMatchObject({
+          ok: false,
+          code: "FAILED",
+        });
+        expect(await driver.waitForLoad(Number.NaN)).toMatchObject({ ok: true });
+        expect((await driver.snapshot()).detail).toBeUndefined();
+      });
+    },
+  );
+
+  test.skipIf(!executablePath)(
     "observes a usable DOM while an unrelated resource is still loading",
     async () => {
       const server = Bun.serve({

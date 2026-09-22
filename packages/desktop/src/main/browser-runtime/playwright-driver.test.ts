@@ -30,6 +30,45 @@ afterAll(async () => {
 
 describe("PlaywrightBrowserDriver integration", () => {
   test.skipIf(!launchCandidate)(
+    "supports the same targeted wait and timeout contract",
+    async () => {
+      const context = await fixtureContext();
+      const page = await context.newPage();
+      const driver = new PlaywrightBrowserDriver(context, page);
+      try {
+        await page.setContent(
+          '<div id="loading">Loading</div><section id="results" hidden>Loaded</section>',
+        );
+        await page.evaluate(() => {
+          setTimeout(() => {
+            document.getElementById("loading")!.remove();
+            document.getElementById("results")!.hidden = false;
+          }, 150);
+        });
+        expect(
+          await driver.waitForLoad(2000, { selector: "#results", text: "Loaded" }),
+        ).toMatchObject({ ok: true });
+        expect(
+          await driver.waitForLoad(1000, { selector: "#loading", state: "hidden" }),
+        ).toMatchObject({ ok: true });
+        expect(await driver.waitForLoad(100, { text: "Missing" })).toMatchObject({
+          ok: false,
+          code: "TIMEOUT",
+          retryable: false,
+        });
+        expect(await driver.waitForLoad(Number.NaN)).toMatchObject({ ok: true });
+        expect(await driver.waitForLoad(1000, { selector: "[" })).toMatchObject({
+          ok: false,
+          code: "FAILED",
+        });
+      } finally {
+        driver.dispose();
+        await page.close();
+      }
+    },
+  );
+
+  test.skipIf(!launchCandidate)(
     "shares editing-host discovery and per-kind media budgets across frames",
     async () => {
       const context = await fixtureContext();

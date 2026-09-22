@@ -27,7 +27,12 @@
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import type { BuiltinToolReturn } from "./index.js";
-import type { BrowserImageData, BrowserSnapshot } from "../browser-bridge.js";
+import type {
+  BrowserImageData,
+  BrowserSnapshot,
+  BrowserResultCode,
+  BrowserWaitCondition,
+} from "../browser-bridge.js";
 import { renderElementList } from "../browser-bridge.js";
 import { capabilitiesFor } from "../../llm/capabilities/index.js";
 import type { ProviderKindName } from "../../llm/provider-kinds.js";
@@ -81,7 +86,9 @@ export const browserObserveToolDef: ToolDefinition = {
     "reading what a photo/product image/小红书 笔记配图 actually shows. Fetched in-page so " +
     "it works behind hotlink protection. A vidN ref grabs the video's current frame.\n" +
     "- vision: screenshot the rendered page (or one element via ref) — for layout/canvas/" +
-    "charts the a11y tree can't convey. Use sparingly (images cost tokens; snapshot first).",
+    "charts the a11y tree can't convey. Use sparingly (images cost tokens; snapshot first). " +
+    "A structured observation timeout attempts one viewport screenshot for vision-capable models " +
+    "unless fallback=none. This does not retry actions, reload the page, or claim a complete read.",
   inputSchema: {
     type: "object",
     properties: {
@@ -107,6 +114,12 @@ export const browserObserveToolDef: ToolDefinition = {
         type: "number",
         description: "read mode: requested chunk size (clamped by the runtime)",
       },
+      fallback: {
+        type: "string",
+        enum: ["vision", "none"],
+        description:
+          "On a structured read timeout, try one screenshot (default vision; vision models only)",
+      },
     },
   },
 };
@@ -131,6 +144,77 @@ function toImageBlock(d: BrowserImageData): ContentBlock | null {
   return { type: "image", source: { type: "base64", media_type: d.mediaType, data: d.base64 } };
 }
 
+function browserFailure(
+  result: { code?: BrowserResultCode; detail?: string },
+  defaultDetail: string,
+  mutating = false,
+): string {
+  const error = `Error: ${result.detail ?? defaultDetail}`;
+  switch (result.code) {
+    case "TIMEOUT":
+      return `${error}\n[TIMEOUT] ${
+        mutating
+          ? "Action outcome is unknown. Observe the current page and verify whether it already succeeded before retrying. Never blindly repeat a click, submission or message."
+          : "The requested observation/condition did not finish in time. Inspect the current page or wait for a specific target; do not repeatedly issue the same failing call."
+      }`;
+    case "TARGET_CLOSED":
+      return `${error}\n[TARGET_CLOSED] List task-owned tabs and choose a valid target. Reopen the intended URL only if needed; all previous refs are expired.`;
+    case "NAVIGATION":
+    case "STALE_SNAPSHOT":
+      return `${error}\n[${result.code}] Take a fresh snapshot before acting; old refs are invalid.`;
+    default:
+      return error;
+  }
+}
+
+/** A single read-only fallback, never a replay of the preceding interaction. */
+async function observationFailure(
+  result: { code?: BrowserResultCode; detail?: string },
+  defaultDetail: string,
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<BuiltinToolReturn> {
+  const failure = browserFailure(result, defaultDetail);
+  if (
+    result.code !== "TIMEOUT" ||
+    args.fallback === "none" ||
+    !modelSupportsVision(ctx) ||
+    ctx?.signal?.aborted
+  )
+    return failure;
+  const b = bridge(ctx);
+  if (!b) return failure;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel: (() => void) | undefined;
+  try {
+    const image = await Promise.race([
+      b.screenshot(),
+      new Promise<BrowserImageData>((resolve) => {
+        timer = setTimeout(
+          () => resolve({ ok: false, detail: "screenshot fallback timed out" }),
+          5_000,
+        );
+        cancel = () => resolve({ ok: false, detail: "observation cancelled" });
+        ctx?.signal?.addEventListener("abort", cancel, { once: true });
+        if (ctx?.signal?.aborted) cancel();
+      }),
+    ]);
+    if (ctx?.signal?.aborted) return failure;
+    const block = toImageBlock(image);
+    return block
+      ? {
+          result: `${failure}\nFallback: current viewport screenshot only. The structured read is incomplete; no new element refs or verified URLs were obtained. No action was retried and the page was not reloaded.`,
+          contentBlocks: [block],
+        }
+      : `${failure}\nScreenshot fallback unavailable: ${image.detail ?? "no image returned"}. The page was not reloaded.`;
+  } catch {
+    return `${failure}\nScreenshot fallback unavailable. The page was not reloaded.`;
+  } finally {
+    clearTimeout(timer);
+    if (cancel) ctx?.signal?.removeEventListener("abort", cancel);
+  }
+}
+
 export async function browserObserveTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
@@ -141,7 +225,7 @@ export async function browserObserveTool(
   switch (mode) {
     case "snapshot": {
       const snap = await b.snapshot();
-      if (snap.detail) return `Error: ${snap.detail}`;
+      if (snap.detail) return observationFailure(snap, "snapshot failed", args, ctx);
       const header = `URL: ${snap.url}${snap.title ? `\nTitle: ${snap.title}` : ""}${renderIdentity(snap.identity)}`;
       const human = snap.needsHuman
         ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser window, then continue.`
@@ -153,7 +237,7 @@ export async function browserObserveTool(
         cursor: typeof args.cursor === "string" ? args.cursor : undefined,
         maxChars: typeof args.max_chars === "number" ? args.max_chars : undefined,
       });
-      if (!c.ok) return `Error: ${c.detail ?? "could not read page content"}`;
+      if (!c.ok) return observationFailure(c, "could not read page content", args, ctx);
       const progress =
         c.done && c.warnings?.length
           ? "\nRead: partial (some frames unavailable)"
@@ -174,7 +258,7 @@ export async function browserObserveTool(
     }
     case "extract": {
       const r = await b.extractLinks();
-      if (!r.ok) return `Error: ${r.detail ?? "could not extract URLs"}`;
+      if (!r.ok) return observationFailure(r, "could not extract URLs", args, ctx);
       const head = `URL: ${r.url}${r.title ? `\nTitle: ${r.title}` : ""}${r.truncated ? "\n(truncated — page had more; narrow it and re-extract)" : ""}`;
       const links =
         r.links.length > 0
@@ -253,7 +337,9 @@ export const browserActToolDef: ToolDefinition = {
     "ControlOrMeta+a; resolves to Command on macOS, Control elsewhere). Focuses ref first if given.\n" +
     "- hover {ref}: hover to reveal menus/tooltips.\n" +
     "- scroll {direction: up|down, amount?}: scroll the main visible content region (including nested panels/canvas), then re-observe.\n" +
-    "- wait {timeout_ms?}: wait for DOM readiness before observing; dynamic content may still be loading.\n" +
+    "- wait {timeout_ms?, selector?, text?, state?}: wait for DOM readiness, or a visible/hidden " +
+    "main-document target. text is a visible substring; selector scopes it to observed CSS elements. " +
+    "Prefer a specific target for slow/dynamic pages. This does not inspect iframe/canvas text.\n" +
     "- request_takeover: reveal the exact task-owned Browser Runtime page so the " +
     "user can see it and complete login, 2FA, CAPTCHA, or another required manual step. " +
     "Use only when the user asks to see the page or human interaction is required.\n" +
@@ -262,7 +348,9 @@ export const browserActToolDef: ToolDefinition = {
     "- list_tabs: list open browser tabs (tabId, url, title, which is active).\n" +
     "- switch_tab {tabId}: make another tab the active one that actions drive.\n" +
     "Pass tabId on any action to target a specific tab (switches to it first). " +
-    "Re-observe after navigation/page/tab changes (refs go stale per tab).",
+    "Re-observe after navigation/page/tab changes (refs go stale per tab). " +
+    "After an action timeout, verify the current state before retrying: it may already have succeeded. " +
+    "Do not blindly repeat clicks, submissions, messages, or reloads.",
   inputSchema: {
     type: "object",
     properties: {
@@ -284,7 +372,19 @@ export const browserActToolDef: ToolDefinition = {
         description: "The interaction to perform",
       },
       ref: { type: "string", description: "Element ref (eN) — click/type/select/hover/press_key" },
-      text: { type: "string", description: "Text to type — type" },
+      text: {
+        type: "string",
+        description: "Text to type — type; visible text substring to await — wait",
+      },
+      selector: {
+        type: "string",
+        description: "wait: CSS selector grounded in an observed main-document element",
+      },
+      state: {
+        type: "string",
+        enum: ["visible", "hidden"],
+        description: "wait: target state (default visible); hidden means no visible match",
+      },
       value: { type: "string", description: "Option value or visible text — select" },
       key: {
         type: "string",
@@ -360,7 +460,7 @@ export async function browserActTool(
       if (!ref) return "Error: ref is required for click";
       const r = await b.click(ref);
       if (r.ok) return `Clicked ${ref}${r.detail ? ` — ${r.detail}` : ""}`;
-      return r.staleRef ? STALE(ref) : `Error: ${r.detail ?? "click failed"}`;
+      return r.staleRef ? STALE(ref) : browserFailure(r, "click failed", true);
     }
     case "type": {
       const text = args.text;
@@ -368,7 +468,7 @@ export async function browserActTool(
       if (typeof text !== "string") return "Error: text is required for type";
       const r = await b.type(ref, text);
       if (r.ok) return `Typed into ${ref}`;
-      return r.staleRef ? STALE(ref) : `Error: ${r.detail ?? "type failed"}`;
+      return r.staleRef ? STALE(ref) : browserFailure(r, "type failed", true);
     }
     case "select": {
       const value = args.value;
@@ -376,13 +476,13 @@ export async function browserActTool(
       if (typeof value !== "string") return "Error: value is required for select";
       const r = await b.selectOption(ref, value);
       if (r.ok) return `Selected${r.detail ? ` ${r.detail}` : ""} in ${ref}`;
-      return r.staleRef ? STALE(ref) : `Error: ${r.detail ?? "select failed"}`;
+      return r.staleRef ? STALE(ref) : browserFailure(r, "select failed", true);
     }
     case "press_key": {
       const key = (args.key as string) || "Enter";
       const r = await b.pressKey(key, ref);
       if (r.ok) return `Pressed ${key}`;
-      return r.staleRef && ref ? STALE(ref) : `Error: ${r.detail ?? "press_key failed"}`;
+      return r.staleRef && ref ? STALE(ref) : browserFailure(r, "press_key failed", true);
     }
     case "hover": {
       if (!ref) return "Error: ref is required for hover";
@@ -406,10 +506,35 @@ export async function browserActTool(
       return `Scrolled ${dir}${state}`;
     }
     case "wait": {
-      const r = await b.waitForLoad(args.timeout_ms as number | undefined);
+      for (const key of ["selector", "text"])
+        if (
+          args[key] !== undefined &&
+          (typeof args[key] !== "string" || !(args[key] as string).trim())
+        )
+          return `Error: ${key} must be a nonempty string for wait`;
+      if (args.state !== undefined && args.state !== "visible" && args.state !== "hidden")
+        return "Error: state must be visible or hidden for wait";
+      if (
+        args.timeout_ms !== undefined &&
+        (typeof args.timeout_ms !== "number" ||
+          !Number.isFinite(args.timeout_ms) ||
+          args.timeout_ms <= 0)
+      )
+        return "Error: timeout_ms must be a positive finite number";
+      if (args.state && !args.selector && !args.text)
+        return "Error: state requires selector or text for wait";
+      const condition: BrowserWaitCondition | undefined =
+        args.selector || args.text
+          ? {
+              selector: args.selector as string | undefined,
+              text: args.text as string | undefined,
+              state: (args.state as BrowserWaitCondition["state"]) ?? "visible",
+            }
+          : undefined;
+      const r = await b.waitForLoad(args.timeout_ms as number | undefined, condition);
       return r.ok
-        ? `Page ready${r.detail ? ` (${r.detail})` : ""}`
-        : `Error: ${r.detail ?? "wait failed"}`;
+        ? `${condition ? "Requested condition met" : "Page ready"}${r.detail ? ` (${r.detail})` : ""}`
+        : browserFailure(r, "wait failed");
     }
     default:
       return `Error: unknown action "${action}"`;
@@ -428,8 +553,8 @@ export const browserNavigateToolDef: ToolDefinition = {
     "Shares the in-app browser profile; existing user-opened tabs require an explicit grant. " +
     "Starts in the background; browser_act(request_takeover) reveals this same tab when the user " +
     "wants to see it or needs to sign in. After the user finishes, call " +
-    "browser_act(resume_control), then browser_act(wait) + " +
-    "browser_observe to inspect the page.",
+    "browser_act(resume_control), then browser_observe to inspect the page. " +
+    "Wait for a specific target only if it is still loading.",
   inputSchema: {
     type: "object",
     properties: { url: { type: "string", description: "Absolute URL to open" } },
