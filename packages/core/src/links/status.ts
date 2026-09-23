@@ -25,7 +25,7 @@ export interface LinkStatusDependencies {
 export interface LinkConnectionStatus {
   id: string;
   account?: string;
-  backend: "http-token" | "cli" | "oauth";
+  backend: "http-token" | "cli" | "oauth" | "remote";
   runtime?: "local" | "server";
   verifiedAt?: string;
   /** Metadata readiness only; this does not revalidate a token or a CLI account binding. */
@@ -60,7 +60,7 @@ export interface LinkStatusResult {
 const GUIDANCE =
   "Saved connection readiness describes stored metadata, not live token validity or a CLI " +
   "account binding check. Check runtime: LinkAction handles registered local actions and " +
-  "rechecks access when used; server OAuth connections use their configured server/MCP tools. " +
+  "rechecks access when used. Remote Link actions require an explicitly selected connection; other server OAuth connections use their configured server/MCP tools. " +
   "A CLI login can exist without " +
   "a usable saved Link: use the provider CLI under normal tool permissions, or reconnect the " +
   "Link in Credentials → Link. UseCredential omits Link credentials and cannot prove logout. " +
@@ -81,7 +81,16 @@ function connectionStatus(credential: CredentialMetadata): LinkConnectionStatus 
   if (!credential.hasSecret || credential.oauthStatus?.state === "missing") {
     result.state = "unavailable";
     result.reason = "Saved credential is missing or cannot be read. Reconnect this Link.";
-  } else if (credential.oauthStatus?.state === "expired") {
+  } else if (meta?.linkExecutionBackend === "remote" && meta.linkRemoteState !== "connected") {
+    result.state = "unavailable";
+    result.reason =
+      meta.linkRemoteState === "refreshing"
+        ? "Link authorization refresh is pending. Reconnect if the Host restarted during refresh."
+        : "Remote Link authorization requires reconnection.";
+  } else if (
+    credential.oauthStatus?.state === "expired" &&
+    !(meta?.linkExecutionBackend === "remote" && credential.oauthStatus.hasRefreshToken)
+  ) {
     result.state = "expired";
     result.reason = "Saved authorization has expired. Reconnect this Link.";
   } else if (credential.oauthStatus?.state === "invalid") {

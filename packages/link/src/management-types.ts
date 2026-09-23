@@ -22,8 +22,8 @@ export interface MaskedLinkConnection {
   providerId: string;
   methodId: string;
   label: string;
-  runtime: "local";
-  authSource: "manual-token" | "cli-session" | "browser-oauth";
+  runtime: "local" | "server";
+  authSource: "manual-token" | "cli-session" | "browser-oauth" | "remote-link";
   status: "connected" | "expired" | "invalid" | "unavailable";
   account?: { id?: string; label?: string; resources: string[] };
   capabilityIds: string[];
@@ -37,7 +37,8 @@ export interface MaskedLinkConnection {
 export interface LinkSnapshot {
   providers: LinkProviderView[];
   connections: MaskedLinkConnection[];
-  capabilities: { token: boolean; cliBinding: boolean; deviceAuth: boolean };
+  capabilities: { token: boolean; cliBinding: boolean; deviceAuth: boolean; remoteAuth?: boolean };
+  remoteServer?: { issuer: string };
   revision: string;
 }
 
@@ -78,6 +79,8 @@ export interface LinkAuthorization {
     verificationUriComplete?: string;
     expiresAt: string;
   };
+  redirect?: { authorizationUrl: string; expiresAt: string };
+  previousGrantRevocationPending?: boolean;
   connection?: MaskedLinkConnection;
   errorCode?: LinkErrorCode;
 }

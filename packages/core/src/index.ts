@@ -766,3 +766,15 @@ export type {
   AXNode,
 } from "./tool-system/browser-bridge.js";
 export type { WorkspaceBridge } from "./tool-system/workspace-bridge.js";
+
+export {
+  beginRemoteLinkAuthorization,
+  completeRemoteLinkAuthorization,
+  revokeRemoteLinkAuthorization,
+  executeRemoteLinkAction,
+  isRemoteLinkCredential,
+  RemoteLinkError,
+  type RemoteLinkConfiguration,
+  type RemoteLinkAttempt,
+  type RemoteLinkActionRequest,
+} from "./links/remote.js";

@@ -1119,3 +1119,45 @@ Desktop 绑定状态与 Web 快照显示故障卡片，通过“检查可用版�
 不可写配置的处理及数据格式迁移仍需专门流程。其他 Panel、远程 Link、设备中继、
 真实服务商／物理手机、完整部署与三仓发布仍未完成。代码尚在任务分支，服务仓库
 固定公开依赖未变；不能把本增量等同于完整产品交付。
+
+
+### 增量 29：独立 Link 执行与共享 Host 授权管理（2026-09-24）
+
+Core 提供远程 Link 的 S256 授权交换、账号／操作／仓库范围发现和固定只读动作。
+上游 GitHub token 留在 Link，Host 保留下游访问／刷新令牌；桌面 worker 仅通过
+Host IPC 提交连接、grant 和动作参数，通用凭据、环境变量和 MCP bearer 路径不能
+导出这些令牌。多连接必须明确选择，包括某个连接已失效的情况，失败不换用另一个账号。
+
+刷新前条件保存 refreshing 标记，同进程共享一次请求；跨进程／重启遗留状态不重发。
+实测 Bun fetch 在连接丢失时可能自动重发 POST，已改用 Node 单次 HTTP 请求；刷新结果
+不明改为 reconnect，必须重新授权。令牌范围只能缩小，断开／替换后不恢复旧连接。
+
+共享 Link 管理服务接入 owner 绑定的私有授权 attempt，信任配置由 Host getter 提供，
+不接受浏览器传入 issuer 或客户端密钥。回调交换前后和保存前复查登录、配置、到期、
+取消和目标记录；HTTP 提供发起／完成入口并复用查询、取消、快照、改名和断开。
+断开先禁用本地记录，再撤销远端 grant，失败保留禁用记录供重试；成功条件删除。
+这些接口尚未连到 Desktop／Hub 产品的配置和回调界面，不等于用户连接流程已经完成。
+
+验证：
+
+- 最终 Core、共享管理／HTTP、Desktop 凭据／MCP／连接适配器共 **125 项通过**，
+  546 个断言；包含真实本机 HTTP，owner 隔离、重复回调、配置变化、并发修改、退出、
+  取消、过期、刷新丢响应不重发、权限缩小及撤销失败恢复。
+- `node scripts/smoke-remote-link.mjs /path/to/codeshell-services/apps/link-server/http.mjs`
+  通过：真实独立 Link HTTP／SQLite／OAuth、共享 Host 发起和保存、LinkAction、刷新、
+  服务端撤销和 Host 断开；上游仍为受控测试响应，不是 GitHub 真实账号。
+- Link／Core／Server 构建、Desktop 全构建、Desktop/mobile 和 Web 类型检查通过。
+  ESLint 0 错误，MCP 文件中 3 项原有警告；diff 检查通过。
+- 初次桌面回归有 3 项默认 5 秒超时，彼时本机其他工作负载导致整体变慢；以 30 秒
+  测试等待时间重跑 32 项全通过，随后最终 125 项仅 4.77 秒。未改变业务超时或断言。
+  原始桌面构建耗时约 12 分钟，经原进程确认成功后才进行最终构建，没有重复启动替代。
+- 主要日志：`/tmp/codeshell-remote-link-final-regression.log`、
+  `/tmp/codeshell-remote-link-managed-smoke.log` 和
+  `/tmp/codeshell-remote-link-management-*`。
+
+限制：Host 采用既有凭据 cipher，桌面为加密存储，默认纯 Node cipher 不自动变为加密；
+生产服务仍须完善对应配置。替换旧 grant／回调未保存的新 grant 的失败清理尚无持久
+重试队列；旧 grant 撤销失败在授权结果显式标记，需 Link 管理端处理。IPC 未传播
+AbortSignal，不承诺取消即时中断远程 I/O；发布结果前仍校验任务状态。原生／网页配置、
+回调和管理 UI、真实 GitHub、完整 Desktop／Hub／物理手机以及三仓正式发布仍未完成。
+服务仓库公开依赖仍为 0.9.22，不能把任务分支能力视为已部署。

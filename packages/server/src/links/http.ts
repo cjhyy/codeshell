@@ -99,8 +99,19 @@ export function createLinkHttp(options: LinkHttpOptions) {
         else {
           const cli = /^\/api\/v1\/links\/providers\/([^/]+)\/cli$/.exec(url.pathname);
           const connection = /^\/api\/v1\/links\/connections\/([^/]+)$/.exec(url.pathname);
+          const remoteComplete = /^\/api\/v1\/links\/authorizations\/([^/]+)\/complete$/.exec(
+            url.pathname,
+          );
           const authorization = /^\/api\/v1\/links\/authorizations\/([^/]+)$/.exec(url.pathname);
-          if (cli && method === "GET")
+          if (remoteComplete && method === "POST") {
+            const input = await body(request);
+            fields(input, ["callbackUrl"]);
+            result = await service.completeRemoteAuth(
+              owner,
+              decodeURIComponent(remoteComplete[1]!),
+              input.callbackUrl as string,
+            );
+          } else if (cli && method === "GET")
             result = await service.cliStatus(owner, decodeURIComponent(cli[1]!));
           else if (authorization && method === "GET")
             result = await service.authorization(owner, decodeURIComponent(authorization[1]!));
@@ -113,6 +124,7 @@ export function createLinkHttp(options: LinkHttpOptions) {
               ROOT + "/connections/token",
               ROOT + "/connections/cli",
               ROOT + "/authorizations/device",
+              ROOT + "/authorizations/remote",
             ].includes(url.pathname)
           ) {
             const input = await body(request);
@@ -129,7 +141,9 @@ export function createLinkHttp(options: LinkHttpOptions) {
               ? await service.connectToken(owner, input as unknown as TokenConnectionInput)
               : url.pathname.endsWith("/cli")
                 ? await service.connectCli(owner, input as unknown as LinkConnectionInput)
-                : await service.startDeviceAuth(owner, input as unknown as LinkConnectionInput);
+                : url.pathname.endsWith("/remote")
+                  ? await service.startRemoteAuth(owner, input as unknown as LinkConnectionInput)
+                  : await service.startDeviceAuth(owner, input as unknown as LinkConnectionInput);
           } else if (connection && (method === "PATCH" || method === "DELETE")) {
             const input = await body(request);
             fields(

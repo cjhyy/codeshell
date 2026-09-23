@@ -24,6 +24,11 @@ import {
   shouldRefreshOAuthCredential,
   summarizeOAuthCredentialSecret,
 } from "./oauth.js";
+import {
+  executeRemoteLinkAction,
+  isRemoteLinkCredential,
+  type RemoteLinkActionRequest,
+} from "../links/remote.js";
 import { refreshToken } from "../services/oauth.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage } from "../protocol/types.js";
@@ -46,6 +51,7 @@ export interface CredentialMetadata {
 }
 
 export interface CredentialAccess {
+  executeRemoteLinkAction?(request: RemoteLinkActionRequest): Promise<unknown>;
   listMasked(cwd: string | undefined, scope: CredentialAccessScope): CredentialMetadata[];
   /** Optional read diagnostics. False means the list may be incomplete, not that it is empty. */
   listMaskedWithStatus?(
@@ -160,10 +166,13 @@ export function createIpcCredentialAccess(
   const request = (method: string, params: Record<string, unknown>): Promise<unknown> => {
     const id = `cred-${nextId++}`;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        pending.delete(id);
-        reject(new Error(`${method} timed out`));
-      }, 30_000);
+      const timer = setTimeout(
+        () => {
+          pending.delete(id);
+          reject(new Error(`${method} timed out`));
+        },
+        method === "desktop/remoteLinkAction" ? 45_000 : 30_000,
+      );
       pending.set(id, { resolve, reject, timer });
       transport.send({ jsonrpc: "2.0", id, method, params });
     });
@@ -175,6 +184,8 @@ export function createIpcCredentialAccess(
   };
 
   return {
+    executeRemoteLinkAction: (input) =>
+      request("desktop/remoteLinkAction", input as unknown as Record<string, unknown>),
     listMasked(cwd, scope) {
       const entry = entryFor(cwd);
       if (!entry) return [];
@@ -274,6 +285,7 @@ function storeFor(cwd: string | undefined): CredentialStore {
 }
 
 export const localCredentialAccess: CredentialAccess = {
+  executeRemoteLinkAction,
   subscribe(listener, context) {
     return subscribeToLocalCredentialChanges(listener, context);
   },
@@ -303,6 +315,8 @@ export const localCredentialAccess: CredentialAccess = {
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
     }
+    if (isRemoteLinkCredential(cred))
+      throw new Error("Remote Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
       (cred.type !== "link" ||
@@ -336,6 +350,8 @@ async function resolveLocalOAuthAccess(
   if (!cred || cred.type !== "oauth" || !isCredentialSecretAvailable(cred.secret)) {
     throw new Error(`oauth credential "${id}" requires login`);
   }
+  if (isRemoteLinkCredential(cred))
+    throw new Error("Remote Link credentials cannot be used as MCP bearer tokens");
   const parsed = parseOAuthCredentialSecret(cred.secret);
   const decision = shouldRefreshOAuthCredential(parsed);
   if (!forceRefresh && decision === "no") {
