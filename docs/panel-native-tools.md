@@ -155,6 +155,14 @@ fresh authorization. This does not occupy the background task queue. A legacy
 Desktop call without `revision` retains its original authorization behavior;
 clients must not infer version checks from method availability alone.
 
+`packages/desktop/scripts/e2e-download-background.mjs <download-panel> --cookies --paired`
+additionally drives the built mobile workbench in a 390px Chromium browser through
+the real Desktop pairing URL. It recovers Desktop task IDs, uses a saved fixture
+account for metadata and a new native download, closes/reopens the browser, then
+saves the result through the authenticated file listing and compares its bytes.
+Build Desktop main and mobile assets first. The fixture uses a local HTTPS media
+server and isolated credentials; this is not physical-phone or real-provider acceptance.
+
 ## Discovery and transport
 
 Desktop and Web contexts advertise `availableMethods`, `capabilities` and

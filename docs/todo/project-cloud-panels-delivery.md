@@ -542,3 +542,46 @@ Desktop 的账号库、密钥和租约，浏览器不接触 Cookie 内容及文�
 访问产品 HTTP 接口。不是第三方账号、手机浏览器 UI 或物理手机验收。网页登录采集、
 真实服务商、云端与手机完整下载业务，以及其他五个 Panel、版本绑定、Link 接入和
 部署发布仍须继续，完整目标保持未完成。
+
+### 增量 15：真实配对网页下载与局域网 ID 兼容（2026-09-23）
+
+新增实际手机工作台浏览器验收，不再只直接调用配对 HTTP。390×844 Chromium 使用
+Desktop 正式配对地址，经项目选择和 Panel 列表打开已安装的 Download。它读取桌面原有
+两个任务的同一 ID、使用已保存测试账号读取新视频信息、提交第三个原生后台下载，
+关闭浏览器页再重开项目，恢复三个完成记录。最后从任务页“打开文件夹”进入认证文件列表，
+通过浏览器下载保存产物，校验与 FFmpeg 测试源字节相同。整条命令退出码 0。
+
+此流程发现并修复普通局域网 HTTP 的兼容问题：浏览器不提供 `crypto.randomUUID()`，
+队列因此无法创建。独立 Chromium 实验确认同一 iframe 在 localhost 提供该方法，在
+实际 LAN 地址不提供，而两者均提供 `crypto.getRandomValues`。Download 新增 Panel
+内部 UUID v4 辅助函数，队列、历史恢复、重复副本和搜索操作统一使用安全随机数回退。
+不使用时间或 Math.random，原有持久 ID 保持不变。
+
+同类修复扩展到 Video Studio 的 30 个源码模块：工程、素材、字幕、时间线、同步、
+语音、后台处理及导出操作。对应安装包重新构建，与源码和 build-manifest 一起提交。
+这只完成标识生成的兼容，不意味着视频 Panel 的完整手机／云端流程已验收。
+
+验证：
+
+- Download 完整 241 项通过，新增缺少 randomUUID 时连续提交两个不同后台请求的浏览器回归；包校验通过。
+- Video Studio 类型检查、构建、确定性构建检查和包校验通过；主套件 887 通过／3 跳过，
+  CLI 套件 5 通过／1 跳过。新增模型用例验证无 randomUUID 的有效工程与不同 ID。
+- 单独 Chromium 用例在关闭 randomUUID 后实际新建、保存、重载工程，通过；
+  媒体模型等条件性跳过沿用原套件，并未把它们算作真实环境验证。
+- Desktop 带账号下载与正式配对网页整个流程通过，使用真实 Electron、产品 Web 构建、
+  安装 Panel、yt-dlp、临时 HTTPS 站点及浏览器文件下载；账号确认在测试中自动选择允许。
+
+复验命令：
+
+```sh
+bun run --cwd packages/desktop build:mobile
+node packages/desktop/scripts/e2e-download-background.mjs /absolute/path/to/codeshell-panel-apps/apps/video-download --cookies --paired
+```
+
+Panel 提交：`6fd63db`（版本化信息读取）、`86a2a2c`（Download LAN ID）、
+`ffba90a`（Video Studio LAN ID）；对应 Host 临时授权提交为 `c7c94a75`。
+全部仍为本任务开发分支，没有把整套版本标记发布。
+
+仍待完成：真实服务商登录与采集、物理手机录音／弱网／锁屏等行为、云端真实下载，
+下载历史的客户端播放／打开，其余 Panel 全业务流程、项目版本绑定、Link Host 接入和
+公网部署／恢复／回滚。上述浏览器结果只证明记录的测试组合，不替代其他验收项。

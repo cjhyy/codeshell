@@ -9,6 +9,7 @@ import { createServer } from "node:http";
 import { createServer as createTlsServer } from "node:https";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyPairedDownload } from "./paired-download-browser.mjs";
 import {
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -16,6 +17,8 @@ import {
 } from "./electron-harness.mjs";
 const packagePath = process.argv[2];
 const authenticated = process.argv.includes("--cookies");
+const paired = process.argv.includes("--paired");
+if (paired && !authenticated) throw new Error("Paired browser acceptance requires --cookies");
 if (!packagePath) throw new Error("Pass the Download Panel package directory");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-download-background-");
@@ -374,6 +377,14 @@ try {
   console.log(
     "Actual Download UI passed: native submission, page removal, remount recovery, two stable queued tasks and exact output bytes.",
   );
+  if (paired)
+    await verifyPairedDownload({
+      win,
+      project,
+      url,
+      bytes,
+      expectedIds: admitted.map((job) => job.id),
+    });
 } finally {
   await electron?.close();
   if (server) await new Promise((done) => server.close(done));
