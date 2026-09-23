@@ -411,7 +411,18 @@ export function createBoundSessionRunner(
       worker,
       {
         id: `session-bridge-run-${randomUUID()}`,
-        params: { sessionId, task: text, clientMessageId, requireExisting: true },
+        // `task` is the model-facing input. `displayText` also makes the
+        // existing Session emit `session_user_message`, so a desktop renderer
+        // that already has this Session open sees the IM turn immediately.
+        // The transcript would still persist `task` without it, but the live
+        // chat would have no user bubble until a later cold re-hydration.
+        params: {
+          sessionId,
+          task: text,
+          displayText: text,
+          clientMessageId,
+          requireExisting: true,
+        },
       },
       META.meta,
     );
