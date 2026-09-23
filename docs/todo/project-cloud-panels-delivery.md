@@ -1199,3 +1199,49 @@ Hub Link 页面新增独立账号入口，与已有本地连接共存；远程�
 实现和测试，真实项目容器授权还需单独验收。原生桌面、桌面配对 Web、Electron 云端
 窗口外部导航、真实 GitHub、物理手机、凭据加密配置和持久失败清理仍待完成。服务仓库
 仍固定公开包 0.9.22，本轮没有发布软件包、更新生产部署或宣称全部四组合完成。
+
+### 增量 31：Electron 云端窗口与配对 Web 的 Link 授权（2026-09-24）
+
+完成：
+
+- 云端窗口允许由原工作台发起的独立 Link PKCE 导航，精确校验 callback、state 和挑战格式。
+  临时导航资格仅覆盖一个 Link origin、最长十分钟；回到工作台、窗口关闭或过期后清除。
+  子框架不能开启流程；保留无 preload、禁弹窗／webview、云端专属权限与下载边界。
+  Link 页面标题显示实际域名，不继续冒充原云端工作台。
+- Desktop 配对 Web 的共享 Link 服务接入受信配置。新增
+  `CODE_SHELL_REMOTE_LINK_WEB_ORIGIN` 和精确 `/mobile/link/callback` 回调路径；普通 Hub
+  仍使用 `/link/callback`。未设置配对 origin 时不启用，配置不来自浏览器请求。
+- 移动入口先处理回调，再恢复工作台，避免先新建 HTTP 会话而改变授权 owner。
+  临时记录固定原 workspace，回调立即移除 URL 中的 code、一次交换、随后返回原工作区。
+  无效记录返回移动首页；不向另一个项目或新登录转交授权。
+- 返回管理项目与当前聊天工作区不一致时，发送明确拒绝，保留草稿，需选择本项目会话
+  或新建任务。桌面及配对 Panel Agent 的子进程环境移除可选 Link 客户端密钥。
+- 实际 Electron 验证发现 OAuth 提交仍触发编辑器离页提示；提交保存状态后同步清除
+  Link 编辑器自身 dirty 状态，再导航，保留其他草稿保护。
+
+验证：
+
+- 本增量相关 6 个单元／组件测试文件：34 pass、199 assertions，涵盖临时导航边界、
+  过期、重复 state、跨域／子框架拒绝、移动回调路由、原 workspace 与错误聊天目标。
+- 共享授权、配对 HTTP、CLI 和 managed-entry 回归 4 文件：31 pass、184 assertions。
+- Server、Web、Desktop（含移动入口）构建通过；Web／Desktop TypeScript、变更文件
+  ESLint 和 diff 检查通过。未在清理依赖产物时并发运行读取这些产物的测试。
+- 扩展 `scripts/smoke-remote-link-web.mjs`，显式传独立 Link 的入口，支持 `web`、
+  `electron`、`paired`。三个模式使用真实独立 Link HTTP／SQLite，GitHub 上游受控。
+  Electron 通过生产桌面 IPC 打开隔离云端窗口，实际完成登录、同意、回调、返回、
+  断开与拒绝，检查无本地 preload、实际 Link 域名标题和外部导航拦截。
+- 配对模式启动实际 Desktop，使用既有回环回退和正式配对协议，在 390px 浏览器
+  完成相同流程；另一已授权项目提交原 attempt 得到 404，未授权路径得到 403。
+  在 Link 同意前撤销配对设备，返回原 callback 得到登录失效提示，没有新增本地凭据。
+  测试将隔离进程网络接口枚举置空，未改变真实系统网络设置；不等同真实 LAN／公网手机测试。
+- 原 `e2e-cloud-workbench.mjs` 回归通过：桌面打开云端、登录、创建项目、不改变本地
+  项目注册表，关闭重开保留云端登录和项目。
+- 回调截图已检查：桌面与 390px 无横向溢出，结果及返回入口可见。
+  本轮日志位于 `/tmp/codeshell-link-cross-device-*`。
+
+测试过程中修正了两处验收器问题：macOS 临时目录需比较 realpath；跨域导航后 CDP 可能
+已丢弃创建授权响应正文，配对验收改为在真实响应交给页面前读取 ID，不伪造服务响应。
+
+未完成：原生桌面 Link 管理入口、稳定 HTTPS 远程地址／可视化配置、真实 Docker 项目
+OAuth、真实第三方账号、物理手机、旧 grant 清理的持久重试、通知、全部 Panel 流程及
+公网部署和三仓兼容发布。本增量没有发布版本，也不将上述范围记为完成。

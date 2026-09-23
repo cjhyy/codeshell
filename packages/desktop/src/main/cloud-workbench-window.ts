@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, session, systemPreferences } from "electron
 import { basename, join } from "node:path";
 import {
   cloudWorkbenchPartition,
+  createCloudWorkbenchNavigation,
   isCloudWorkbenchOrigin,
   normalizeCloudWorkbenchAddress,
 } from "./cloud-workbench-policy.js";
@@ -92,11 +93,19 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
   });
   win.on("page-title-updated", (event) => event.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-  const constrainNavigation = (event: Electron.Event, target: string): void => {
-    if (!isCloudWorkbenchOrigin(address, target)) event.preventDefault();
-  };
-  win.webContents.on("will-navigate", constrainNavigation);
-  win.webContents.on("will-redirect", constrainNavigation);
+  const navigation = createCloudWorkbenchNavigation(address);
+  win.webContents.on("will-navigate", (event, target) => {
+    if (!navigation.allows(win.webContents.getURL(), target)) event.preventDefault();
+  });
+  win.webContents.on("will-redirect", (event, target, _inPlace, mainFrame) => {
+    if (!navigation.allows(win.webContents.getURL(), target, mainFrame)) event.preventDefault();
+  });
+  win.webContents.on("did-navigate", (_event, target) => {
+    navigation.committed(target);
+    win.setTitle(
+      isCloudWorkbenchOrigin(address, target) ? title : `Link 授权 · ${new URL(target).host}`,
+    );
+  });
   win.webContents.on("will-attach-webview", (event) => event.preventDefault());
   const download = (
     event: Electron.Event,
@@ -120,6 +129,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
   win.once("closed", () => {
     windows.delete(address);
     allowed.clear();
+    navigation.reset();
     browserSession.removeListener("will-download", download);
   });
   try {

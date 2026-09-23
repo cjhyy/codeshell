@@ -6,6 +6,7 @@ import {
   projectPanelAppPackagePins,
   resolvePanelAppBindingProjectPath,
   sessionsRoot,
+  type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
 import {
   createDesktopWebApi,
@@ -26,6 +27,7 @@ export function createDesktopWebService(options: {
   sharedToolJobs: SharedPanelToolHost;
   authorizePanelDirectory: PanelDirectoryAuthorizer;
   getBridge: () => AgentBridge | null;
+  remoteLink?: () => RemoteLinkConfiguration | undefined;
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
   onSessionsChanged: (cwd: string, sessionId: string) => void;
   onPanelsChanged?: (id: string, kind: "install" | "update" | "binding" | "remove") => void;
@@ -95,7 +97,11 @@ export function createDesktopWebService(options: {
               sharedToolJobs: options.sharedToolJobs,
               authorizePanelDirectory: options.authorizePanelDirectory,
               agentTaskOptions: {
-                buildEnv: () => ({ ...process.env, ELECTRON_RUN_AS_NODE: "1" }),
+                buildEnv: () => ({
+                  ...process.env,
+                  CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+                  ELECTRON_RUN_AS_NODE: "1",
+                }),
               },
               ownerId: async (req) =>
                 (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,
@@ -147,6 +153,7 @@ export function createDesktopWebService(options: {
           active: 0,
           handler: createLinkHttp({
             cwd,
+            remoteLink: options.remoteLink,
             ownerId: async (req) =>
               (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,
             isAuthorized: authorized,

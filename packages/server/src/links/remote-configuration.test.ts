@@ -52,3 +52,19 @@ test("partial, insecure or cross-host configuration fails without printing suppl
     ),
   ).toThrow("Remote Link requires");
 });
+
+test("paired Desktop callback uses its registered mobile route without changing Hub defaults", () => {
+  const mobile = remoteLinkFromEnvironment(
+    env,
+    "https://desktop.example",
+    "/mobile/link/callback",
+  )!;
+  expect(mobile.redirectUri).toBe("https://desktop.example/mobile/link/callback");
+  expect(() => remoteLinkHostConfiguration(mobile, "https://desktop.example")).toThrow();
+  expect(
+    remoteLinkHostConfiguration(mobile, "https://desktop.example", "/mobile/link/callback"),
+  ).toEqual(mobile);
+  expect(() =>
+    remoteLinkFromEnvironment(env, "http://192.168.1.10", "/mobile/link/callback"),
+  ).toThrow();
+});

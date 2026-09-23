@@ -128,7 +128,17 @@ export function useDesktopController(
 ): WorkbenchController & {
   onHostNotification: (method: string, params: Record<string, unknown>) => void;
 } {
-  const [workspaceOverride, setWorkspaceOverride] = React.useState<string | null>();
+  const [workspaceOverride, setWorkspaceOverride] = React.useState<string | null | undefined>(
+    () => {
+      // Restore the management workspace captured before leaving for Link. The Host
+      // still validates device/project permission on every request; never fall back to another project.
+      if (window.location?.pathname !== "/mobile/") return undefined;
+      const query = new URLSearchParams(window.location.search);
+      return query.get("view") === "links" && query.getAll("workspace").length === 1
+        ? query.get("workspace") || null
+        : undefined;
+    },
+  );
   const workspaceCwd =
     workspaceOverride === undefined
       ? (app.activeCwd ?? app.activeProjectCwd ?? null)
@@ -324,6 +334,10 @@ export function useDesktopController(
   const send = (): boolean => {
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
+    if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== workspaceCwd) {
+      setError("当前会话属于另一个工作区。请选择本项目的会话，或新建任务。");
+      return false;
+    }
     const id = activeIdRef.current;
     const current = drafts.current.get(id);
     if (!current.text.trim() && !current.files.length) return false;

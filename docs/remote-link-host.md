@@ -1,8 +1,8 @@
 # 远程 Link 的 Host 执行契约
 
 状态：执行链、共享 Host 授权管理，以及 Hub 浏览器的配置接入、授权跳转、回调和断开
-已实现。真实浏览器＋Node Hub＋独立 Link 验证通过，上游仍为测试账号。原生 Desktop、
-配对 Web、真实 Docker 项目授权与真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
+已实现。Electron 云端窗口和配对 Web 也已接通并通过实际程序／浏览器测试，上游仍为
+测试账号。原生 Desktop 的 Link 管理入口、真实 Docker 项目授权与真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
 `list_repositories`、`list_issues`、`get_issue` 只读动作。
 
 ## 授权由 Host 持有
@@ -109,8 +109,41 @@ code-shell-serve --auth hub --public-url https://hub.example --cwd /workspace
 verifier；读取后移除。普通工作台启动不依赖 sessionStorage，可用性受限的浏览器会在
 授权流程给出明确错误。回调页面不绕过身份校验，换登录或原登录撤销后需要重新授权。
 
-待完成：部署服务仓库采用兼容公开包、Docker 项目实际授权验收、原生桌面和配对 Web
-的配置／回调入口、Electron 云端窗口的外部授权导航、设置与通知、清理的持久重试、
+## 桌面云端窗口和配对 Web
+
+Electron 云端窗口允许从工作台发起符合 PKCE 格式的 `/oauth/authorize` 导航。
+授权只允许在该 Link origin 内登录／同意，最长十分钟；返回地址必须为原工作台
+`/link/callback`，state 必须匹配。回到工作台、关闭窗口或超时后撤销临时导航资格。
+子框架不能开启授权流程，其他外部导航、弹窗、webview 仍被拦截。Link 页面显示其
+实际域名标题，没有 Desktop preload，也不获得云端工作台的录音、通知和下载权限。
+这仅支持当前独立 Link 的同域登录，不承诺任意第三方跨域登录链。
+
+配对 Web 使用不同的注册回调：`https://你的电脑远程域名/mobile/link/callback`。
+在 Desktop 主进程启动环境设置：
+
+```sh
+CODE_SHELL_REMOTE_LINK_WEB_ORIGIN=https://desktop.example
+CODE_SHELL_REMOTE_LINK_ISSUER=https://link.example
+CODE_SHELL_REMOTE_LINK_CLIENT_ID=registered-desktop-web-client
+```
+
+`WEB_ORIGIN` 必须是实际访问电脑的稳定 HTTPS origin，不能带路径或从请求头推断。
+精确移动端回调须先在 Link 登记，建议为配对 Web 单独登记公开 PKCE 客户端。
+未配置该 origin 时不启用配对 Web 远程授权。普通局域网 HTTP 地址不支持 OAuth 回调；
+本机回环 HTTP 仅用于开发。现有公网隧道地址改变后必须同步注册回调和部署配置；
+此接入本身不提供稳定设备目录或中继地址。
+
+移动端入口在建立新的配对 HTTP 会话之前处理回调，使用发起时已有 cookie 和项目
+路由完成授权。回调仅访问保存的授权 ID／workspace，成功后返回 `/mobile/` 的原工作区。
+设备被撤销后拒绝完成，不能换成新登录代为提交。返回管理工作区时若当前聊天仍属于
+另一个工作区，发送会明确拒绝，需选择本项目会话或新建任务。独立 Link 的客户端密钥
+也从桌面普通 Agent 和配对 Web Panel Agent 的子进程环境中剔除。
+
+授权提交已经保存临时状态后，Link 编辑器清除自己的未保存提示再跳转；其他草稿的
+离页保护保持生效。回调记录无效时，配对页面返回 `/mobile/`，不会跳到不存在的根首页。
+
+待完成：部署服务仓库采用兼容公开包、Docker 项目实际授权验收、原生桌面 Link 管理
+入口、可视化配置与通知、清理的持久重试、
 Panel 直接调用入口、真实账号和完整四组合验收。
 
 ## 验证
@@ -130,5 +163,9 @@ LinkAction、刷新、服务端撤销及 Host 断开。GitHub 响应是受控夹
 
 `node scripts/smoke-remote-link-web.mjs /path/to/codeshell-services/apps/link-server/http.mjs`
 使用已构建 Web、真实 Node Hub 和独立 Link，在 390／1440px Chromium 完成授权、回调、
-返回连接列表、断开以及拒绝授权，并核对服务端 grant 撤销。它不代替物理手机、Electron
-云端窗口或实际 Docker 项目验收。
+返回连接列表、断开以及拒绝授权，并核对服务端 grant 撤销。
+可追加 `electron` 验证实际桌面的隔离云端窗口（包括 Link 登录、域名标题、无本地 preload、
+外部导航拦截），追加 `paired` 验证实际 Desktop 的配对 Web（390px、原工作区返回、错误
+项目回调和设备撤销拒绝）。配对测试将隔离测试进程的网络接口枚举置空以采用已有回环
+回退，不打开 LAN 监听，也不修改用户真实项目或网络设置。它不代替真实公网隧道、物理
+手机、真实服务商或实际 Docker 项目授权验收。

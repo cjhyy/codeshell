@@ -124,3 +124,56 @@ test("only the configured HTTPS or development loopback authorization page can o
     ),
   ).toThrow("回调");
 });
+
+test("paired callback returns to the captured workspace and cleans the mobile callback route", () => {
+  const f = fixture();
+  f.job.redirect.authorizationUrl = f.job.redirect.authorizationUrl.replace(
+    encodeURIComponent("/link/callback"),
+    encodeURIComponent("/mobile/link/callback"),
+  );
+  f.location.pathname = "/mobile/link/callback";
+  f.location.href = f.location.href.replace("/link/callback", "/mobile/link/callback");
+  rememberRemoteLink(
+    f.job,
+    issuer,
+    { workspace: "/original project", projectId: null },
+    origin,
+    f.storage,
+  );
+  const result = takeLinkCallback(f.location, f.history, f.storage)!;
+  expect(result).not.toHaveProperty("error");
+  if (!("error" in result)) {
+    expect(result.pending.target).toBe(
+      `/api/v1/links/authorizations/${id}?workspace=%2Foriginal+project`,
+    );
+    expect(result.pending.returnUrl).toBe("/mobile/?view=links&workspace=%2Foriginal+project");
+  }
+  expect(f.clean).toBe("/mobile/link/callback");
+  expect(f.storage.getItem()).toBeNull();
+});
+test("paired callback refuses a different workspace return or a root callback record", () => {
+  for (const mismatch of ["workspace", "path"]) {
+    const f = fixture();
+    f.job.redirect.authorizationUrl = f.job.redirect.authorizationUrl.replace(
+      encodeURIComponent("/link/callback"),
+      encodeURIComponent("/mobile/link/callback"),
+    );
+    rememberRemoteLink(
+      f.job,
+      issuer,
+      { workspace: "/original", projectId: null },
+      origin,
+      f.storage,
+    );
+    f.location.pathname = "/mobile/link/callback";
+    f.location.href = f.location.href.replace("/link/callback", "/mobile/link/callback");
+    const pending = JSON.parse(f.storage.getItem()!);
+    if (mismatch === "workspace") pending.returnUrl = "/mobile/?view=links&workspace=%2Fother";
+    else pending.redirectUri = origin + "/link/callback";
+    f.storage.setItem("", JSON.stringify(pending));
+    expect(takeLinkCallback(f.location, f.history, f.storage)).toMatchObject({
+      home: "/mobile/",
+      error: expect.any(String),
+    });
+  }
+});

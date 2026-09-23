@@ -75,7 +75,9 @@ export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
           </button>
         )}
         {!pending && (
-          <a href={"error" in callback ? "/" : callback.pending.returnUrl}>返回原项目</a>
+          <a href={"error" in callback ? (callback.home ?? "/") : callback.pending.returnUrl}>
+            返回原项目
+          </a>
         )}
       </section>
     </main>

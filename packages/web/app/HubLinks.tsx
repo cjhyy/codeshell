@@ -1,5 +1,6 @@
 import { rememberRemoteLink } from "./remote-link-authorization.js";
 import React from "react";
+import { flushSync } from "react-dom";
 import type {
   LinkAuthorization,
   LinkConnectionInput,
@@ -479,6 +480,13 @@ export function HubLinks({
                       }
                     },
                     ({ url }) => {
+                      // The attempt and routing have been saved. Clear only this editor's
+                      // dirty state before navigation, so its own submit does not trigger unload protection.
+                      flushSync(() => {
+                        setEditor(undefined);
+                        setBusy(false);
+                        callbacks.current.onDirtyChange?.(false);
+                      });
                       window.location.assign(url);
                     },
                   );

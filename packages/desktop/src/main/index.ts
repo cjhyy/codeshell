@@ -384,6 +384,7 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
+import { remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService } from "./desktop-web-service.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
@@ -930,6 +931,15 @@ const mobileRemote = new RemoteHostManager({
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
+    // A registered HTTPS origin is trusted deployment configuration, never a request header.
+    remoteLink: () =>
+      process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
+        ? remoteLinkFromEnvironment(
+            process.env,
+            process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN,
+            "/mobile/link/callback",
+          )
+        : undefined,
     onPanelsChanged: (id, kind) => {
       if (kind === "remove") panelAppBridge.revokeAppId(id);
       broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
