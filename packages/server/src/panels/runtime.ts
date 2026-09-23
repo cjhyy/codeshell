@@ -619,6 +619,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       get: (id: string) => getToolJobs().get(scope, id),
       cancel: (id: string) => getToolJobs().cancel(scope, id),
       retry: (id: string) => getToolJobs().retry(scope, id),
+      find: (requestKey: string) => getToolJobs().find(scope, requestKey),
       getQueue: () => getToolJobs().getQueue(scope),
       setQueue: (update: ToolQueueUpdate) => getToolJobs().setQueue(scope, update),
     };
@@ -666,6 +667,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         preparingTools.delete(preparation);
       }
     }
+    if (method === "tasks.find") return service.find(input.requestKey!);
     if (method === "tasks.queue.get") return service.getQueue();
     if (method === "tasks.queue.set") {
       // Resuming may launch previously admitted jobs; use the existing owner consent gate.
@@ -1112,6 +1114,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                     maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
                     timeoutMs: 30 * 60 * 1000,
                   },
+                  "tasks.find": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
                   "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
                   "tasks.retry": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
                   "tasks.cancel": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
@@ -1360,6 +1363,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         );
         if (
           !options.authorizePanelDirectory &&
+          saved !== (await realpath(options.cwd)) &&
           saved !== (await realpath(join(options.cwd, "downloads")))
         )
           throw new PanelBridgeError("PERMISSION_DENIED", "Saved server directory is unavailable");
@@ -1402,7 +1406,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       if (name !== "project") await mkdir(directory, { recursive: true, mode: 0o700 });
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const selected = await processes.grantDirectory(owner, directory);
-      if (method !== "filesystem.pickDirectory" && name !== "downloads") return selected;
+      if (method !== "filesystem.pickDirectory" && !["downloads", "project"].includes(String(name)))
+        return selected;
       const bookmark = directoryBookmarks.remember(
         grant.app.id,
         options.bindingCwd ?? options.cwd,

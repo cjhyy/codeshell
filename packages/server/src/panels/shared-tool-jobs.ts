@@ -19,6 +19,7 @@ export interface SharedPanelToolBinding {
   get(id: string): Promise<ToolJob & { readOnly: boolean }>;
   cancel(id: string): Promise<ToolJob>;
   retry(id: string): Promise<ToolJob>;
+  find(requestKey: string): Promise<ToolJob | null>;
   getQueue(): Promise<ToolQueueState>;
   setQueue(update: ToolQueueUpdate): Promise<ToolQueueWriteResult>;
   subscribe(listener: (job: ToolJobEvent) => void): () => void;
@@ -48,6 +49,7 @@ export function createSharedPanelToolHost(options: {
         get: (id: string) => service.get(scope, id),
         cancel: (id: string) => service.cancel(scope, id),
         retry: (id: string) => service.retry(scope, id),
+        find: (requestKey: string) => service.find(scope, requestKey),
         getQueue: () => service.getQueue(scope),
         setQueue: (update: ToolQueueUpdate) => service.setQueue(scope, update),
         subscribe: (listener: (job: ToolJobEvent) => void) => service.subscribe(scope, listener),

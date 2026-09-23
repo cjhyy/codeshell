@@ -35,6 +35,7 @@ export const panelToolJobMethods = [
   "tasks.start",
   "tasks.list",
   "tasks.get",
+  "tasks.find",
   "tasks.cancel",
   "tasks.retry",
   "tasks.queue.get",

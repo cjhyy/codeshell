@@ -49,6 +49,7 @@
     "test:managed-node": "bun test scripts/managed-node-runtime.test.ts scripts/managed-node-signing.test.ts",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
+    "test:e2e:download-background": "node scripts/e2e-download-background.mjs",
     "test:e2e:shared-panel-tasks": "node scripts/e2e-shared-panel-tasks.mjs",
     "test:e2e:cloud-workbench": "node scripts/e2e-cloud-workbench.mjs",
     "smoke:cloud-workbench": "esbuild scripts/smoke-cloud-workbench.ts --bundle --platform=node --format=esm --outfile=out/smoke-cloud-workbench.mjs --external:electron && electron out/smoke-cloud-workbench.mjs"

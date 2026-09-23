@@ -416,6 +416,17 @@ export class PanelToolJobService {
     const job = this.lookup(scope, id);
     return { ...publicJob(job), readOnly: job.scope.revision !== scope.revision };
   }
+  async find(rawScope: ToolJobScope, requestKey: string): Promise<ToolJob | null> {
+    const scope = scopeValue(rawScope);
+    if (typeof requestKey !== "string" || !requestKey || requestKey.length > 160)
+      throw new Error("invalid tool job request key");
+    await this.initialize();
+    await this.authorize(scope);
+    const job = [...this.jobs.values()].find(
+      (item) => sameScope(item.scope, scope) && item.requestKey === requestKey,
+    );
+    return job ? publicJob(job) : null;
+  }
   private queueFor(scope: ToolJobScope): ToolQueueState {
     return queueState(
       this.queues.get(queueKey(scope)) ?? {

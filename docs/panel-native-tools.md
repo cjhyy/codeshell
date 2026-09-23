@@ -51,7 +51,7 @@ Cancellation requests termination; only the exit receipt confirms completion.
 Receipts have advertised retention and capacity limits. `stdin: "pipe"` enables
 bounded `process.write` and `process.end`; stdin is ignored by default.
 
-Desktop also provides opt-in `tasks.start/list/get/cancel/retry`, independent of
+Desktop also provides opt-in `tasks.start/list/get/find/cancel/retry`, independent of
 Guest lifetime. Start with `{entry,input,recovery,requestKey?}`. The entry is an
 installed name, not a path or source string. Input is a generic tool envelope:
 
@@ -187,7 +187,7 @@ A Desktop-supplied `PanelDirectoryAuthorizer` independently checks current
 installation, process permission, binding and trust of both project and actual
 workspace before the Web facade restores a chosen Desktop directory. Trust
 revocation invalidates the existing process grant. Standalone Hub retains its
-restriction to the server downloads directory. No client-supplied path grants
+restriction to the server project and downloads directories. No client-supplied path grants
 access. Background directory delivery is described below.
 
 The current shared flow covers main project roots. Legacy Desktop bookmarks use
@@ -199,7 +199,8 @@ still pending. Do not rewrite those identities or widen old grants implicitly.
 When `capabilities.tasks.directoryBookmarks` is true, a tool envelope may include
 `{ "argumentName": "--output-dir", "directory": "bookmark", "bookmark": "<saved-id>" }`
 in `directoryArguments`. Obtain the opaque bookmark from `filesystem.pickDirectory`
-or the supported `filesystem.getKnownDirectory({name:"downloads"})`; never provide
+or the supported `filesystem.getKnownDirectory({name:"project"})` /
+`filesystem.getKnownDirectory({name:"downloads"})`; never provide
 an absolute path in the envelope. The Host resolves the saved grant in the exact
 app/project scope during preparation, launch, running authorization checks and
 result acceptance. Unsupported Hosts reject this argument. Directory replacement,
@@ -244,3 +245,15 @@ Web queue mutations use the owner confirmation gate and recheck authorization.
 This is shared Host infrastructure. Download UI submission, reconciliation of
 saved drafts with task IDs, Cookie grants, and its per-item pause behavior still
 need to be connected before declaring the download workflow page-independent.
+
+### Recovering an uncertain task submission
+
+`tasks.find({requestKey})` returns the accepted job for the current app/project/
+execution revision, or null. It never starts work and cannot find another scope's
+request. Like `tasks.get`, it can include bounded inputs/results. A null result
+can also mean input preparation has not committed yet; it is not permission to
+blindly resubmit. Persist the correlation key before calling start, query after
+an uncertain reply and on reconnect, and require explicit recovery when no
+accepted record is found. Duplicate explicit submissions still use the existing
+request-key/digest gate. Native task records remain the execution authority when
+saving a separate Panel UI document fails.

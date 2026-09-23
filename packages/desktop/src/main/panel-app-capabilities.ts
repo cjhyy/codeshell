@@ -120,6 +120,7 @@ export function desktopPanelCapabilities(
           timeoutMs: 30 * 60 * 1000,
         },
         "tasks.get": { maxResultBytes: 5 * 1024 * 1024 },
+        "tasks.find": { maxResultBytes: 5 * 1024 * 1024 },
         "tasks.retry": { maxResultBytes: 5 * 1024 * 1024 },
         "tasks.cancel": { maxResultBytes: 5 * 1024 * 1024 },
         "process.get": { maxResultBytes: 2 * 1024 * 1024 },

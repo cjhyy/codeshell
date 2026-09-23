@@ -166,6 +166,17 @@ describe("durable native tool jobs", () => {
     services.splice(services.indexOf(invalid), 1); // failed initialization already releases its lock
   });
 
+  test("request lookup distinguishes absent, accepted and foreign-scope work without starting anything", async () => {
+    const f = await fixture();
+    expect(await f.service.find(scope, "lost-reply")).toBeNull();
+    const job = await f.service.start(scope, { ...request, requestKey: "lost-reply" });
+    expect((await f.service.find(scope, "lost-reply"))?.id).toBe(job.id);
+    expect(await f.service.find({ ...scope, revision: "r2" }, "lost-reply")).toBeNull();
+    expect(await f.service.find({ ...scope, projectPath: "/other" }, "lost-reply")).toBeNull();
+    await expect(f.service.find(scope, "")).rejects.toThrow("request key");
+    expect((await f.service.list(scope)).length).toBe(1);
+  });
+
   test("shared subscriptions stay scoped, omit task inputs/results, detach, and isolate listener failures", async () => {
     const execution = controlled();
     const f = await fixture({ execute: execution.execute });

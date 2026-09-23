@@ -231,6 +231,12 @@ try {
       json,
     );
   assert.equal(phone.context.capabilities.tasks.executionRevision, panel.revision);
+  const projectDirectory = await desktop("filesystem.getKnownDirectory", { name: "project" });
+  assert.equal(
+    (await phoneCall("filesystem.restoreDirectory", { bookmark: projectDirectory.bookmark })).path,
+    project,
+  );
+  assert.equal(await phoneCall("tasks.find", { requestKey: "desktop-and-phone" }), null);
   const selectedFolder = join(isolated.home, "explicit-output");
   await mkdir(selectedFolder);
   // Only the OS picker result is synthetic. The real guest bridge, trust checks,
@@ -340,6 +346,7 @@ try {
     "Desktop native process did not reach its progress checkpoint",
   );
   assert.equal((await phoneCall("tasks.get", { id: first.id })).id, first.id);
+  assert.equal((await phoneCall("tasks.find", { requestKey: "desktop-and-phone" })).id, first.id);
   await until(
     async () =>
       (await json(await request(`/api/v1/panels/runtime/${phone.instanceId}/events`))).events.some(

@@ -1097,6 +1097,7 @@ export class PanelAppBridge {
     const resultLimit =
       limits?.maxResultBytes ??
       (method === "tasks.get" ||
+      method === "tasks.find" ||
       method === "tasks.start" ||
       method === "tasks.retry" ||
       method === "tasks.cancel"
@@ -1344,6 +1345,7 @@ export class PanelAppBridge {
         requestKey: input.requestKey,
       });
     }
+    if (method === "tasks.find") return service.find(scope, input.requestKey!);
     if (method === "tasks.queue.get") return service.getQueue(scope);
     if (method === "tasks.queue.set") return service.setQueue(scope, params as ToolQueueUpdate);
     if (method === "tasks.list") {
@@ -1731,7 +1733,14 @@ export class PanelAppBridge {
     const name = (params as { name?: unknown } | null)?.name;
     if (name === "project") {
       const root = await this.trustedWorkspaceRoot(binding);
-      return this.processService.grantDirectory(this.processOwner(binding), root);
+      const selected = await this.processService.grantDirectory(this.processOwner(binding), root);
+      const bookmark = this.directoryBookmarks.remember(
+        binding.resource.descriptor.appId,
+        root,
+        selected.path,
+      );
+      this.processService.directoryPath(this.processOwner(binding), selected.handle);
+      return { ...selected, bookmark };
     }
     if (name === "downloads") {
       const selected = await this.processService.grantDirectory(
