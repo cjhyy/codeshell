@@ -367,7 +367,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
 
   async function snapshot(): Promise<PanelSnapshot> {
     options.assertBinding?.();
-    const current = policy();
+    const project = projectSettings();
+    const current = policy(project);
     const saved = origins();
     const panels: ManagedPanel[] = [];
     for (const listed of await listApps()) {
@@ -383,7 +384,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
       const support = compatibility(app);
       panels.push({
         ...publicApp,
-        revision: revision(app, digest),
+        revision: revision(app, digest, project),
         bound: current.boundApps.has(app.id),
         globalDisabled: current.globalDisabledApps.has(app.id),
         enabled:
@@ -400,6 +401,17 @@ export function createPanelManagement(options: PanelManagementOptions) {
           : { kind: "local", label: basename(app.source as string) },
         compatibility: support,
       });
+    }
+    // Never attach a new revision to stale displayed binding state. File and
+    // package inspection above can yield to another device's mutation.
+    for (const app of panels) {
+      const pin = options.projectPackages ? parsePanelAppPackagePins(project)[app.id] : undefined;
+      if (
+        projectState(app.id, project) !== projectState(app.id) ||
+        current.globalDisabledApps.has(app.id) !== policy().globalDisabledApps.has(app.id) ||
+        (pin && (pin.packageDigest !== app.packageDigest || pin.version !== app.version))
+      )
+        throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请刷新后重试。");
     }
     return { panels, workspace, hasProject };
   }

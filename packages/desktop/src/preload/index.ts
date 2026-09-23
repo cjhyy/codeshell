@@ -1048,6 +1048,9 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:list", cwd, locale),
   listPanelAppExtensions: (cwd: string, locale: string) =>
     ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
+  getPanelAppBindings: (cwd: string) => ipcRenderer.invoke("panel-apps:bindings", cwd),
+  setPanelAppProjectBinding: (cwd: string, id: string, bound: boolean, expectedRevision: string) =>
+    ipcRenderer.invoke("panel-apps:setProjectBinding", cwd, id, bound, expectedRevision),
   listPanelAppsForProjects: (projectPaths: string[], locale: string) =>
     ipcRenderer.invoke("panel-apps:listForProjects", projectPaths, locale),
   preparePanelApp: (id: string, projectPath: string) =>

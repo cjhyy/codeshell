@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { readScopedSettings } from "../settingsAuthority";
 import {
   AlertTriangle,
   Briefcase,
@@ -23,6 +22,7 @@ import type {
   GitPanelAppDiscovery,
   GitPanelAppSourceInput,
   PanelAppExtensionSummary,
+  PanelAppBindingState,
   PanelAppPreview,
   PanelAppSourceInput,
 } from "../../preload/types";
@@ -32,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "../i18n/I18nProvider";
 import { loadProjects, projectLabel, type TrackedProject } from "../projects";
-import { writeSettings } from "../settingsBus";
 import { useAlert, useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
@@ -40,7 +39,6 @@ import { usePanelAppUpdates } from "./usePanelAppUpdates";
 import {
   bindingBusyKey,
   computeProjectBindings,
-  withoutLegacyOverride,
   type ProjectSettingsMap,
 } from "./panelAppBindings";
 import {
@@ -97,7 +95,17 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [review, setReview] = useState<PanelAppReviewState | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
-  const [projectSettings, setProjectSettings] = useState<ProjectSettingsMap>({});
+  const [projectBindings, setProjectBindings] = useState<
+    Record<string, PanelAppBindingState[] | null>
+  >({});
+  const projectSettings: ProjectSettingsMap = Object.fromEntries(
+    Object.entries(projectBindings).map(([path, states]) => [
+      path,
+      states
+        ? { panelAppBindings: states.filter((app) => app.bound).map((app) => app.appId) }
+        : null,
+    ]),
+  );
   const [globalDisabled, setGlobalDisabled] = useState<ReadonlySet<string>>(() => new Set());
   const [bindingBusy, setBindingBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
@@ -124,7 +132,6 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
   useEffect(() => {
     let alive = true;
-    setError(null);
     window.codeshell
       .listPanelAppExtensions(cwd, lang)
       .then((next) => {
@@ -140,92 +147,67 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     };
   }, [cwd, lang, reloadKey]);
 
-  /**
-   * Read every tracked project's bindings so one app card can show its state
-   * across all projects without switching the active project. This reads raw
-   * settings (1 + N small getSettings calls) instead of calling
-   * listPanelAppExtensions per project — that call re-hashes every installed
-   * app's files, so N projects would mean N full catalog scans in main.
-   */
+  // Each row carries the Host revision it displayed. A click must not obtain a
+  // fresh revision silently and overwrite a phone's intervening change.
   useEffect(() => {
     let alive = true;
     const tracked = loadProjects();
     setProjects(tracked);
-    void (async () => {
-      const [user, ...scoped] = await Promise.all([
-        window.codeshell
-          .getSettings("user")
-          .then((value) => value ?? {})
-          .catch(() => null),
-        ...tracked.map((project) =>
-          readScopedSettings("project", project.path)
-            .then((value) => (value ?? {}) as Record<string, unknown>)
-            // A per-project read must not fail the whole list: null marks the
-            // row unreadable so a permissions error is distinguishable from
-            // an explicit opt-out.
-            .catch(() => null),
-        ),
-      ]);
+    void Promise.all(
+      tracked.map(async (project) => {
+        try {
+          return await window.codeshell.getPanelAppBindings(project.path);
+        } catch {
+          return null;
+        }
+      }),
+    ).then((states) => {
       if (!alive) return;
-      const next: ProjectSettingsMap = {};
-      tracked.forEach((project, index) => {
-        next[project.path] = scoped[index] ?? null;
-      });
-      setProjectSettings(next);
-      const raw = (user as { disabledPanelApps?: unknown } | null)?.disabledPanelApps;
-      setGlobalDisabled(
-        new Set(Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : []),
+      setProjectBindings(
+        Object.fromEntries(tracked.map((project, index) => [project.path, states[index]])),
       );
-    })();
+      setGlobalDisabled(
+        new Set(
+          states.flatMap(
+            (items) => items?.filter((app) => app.globalDisabled).map((app) => app.appId) ?? [],
+          ),
+        ),
+      );
+    });
     return () => {
       alive = false;
     };
   }, [reloadKey]);
 
   const setProjectBinding = useCallback(
-    async (appId: string, projectPath: string, bound: boolean) => {
+    async (appId: string, projectPath: string, bound: boolean, installedDigest?: string) => {
       setBindingBusy(bindingBusyKey(appId, projectPath));
       setError(null);
-      let previous: ProjectSettingsMap | null = null;
       try {
-        const settings = (await readScopedSettings("project", projectPath)) ?? {};
-        const nextBindings = nextPanelAppBindings(settings.panelAppBindings, appId, bound);
-        const nextOverrides = withoutLegacyOverride(settings.panelAppOverrides, appId);
-        // Apply locally first: the row is the only thing that changed, and a
-        // full reload here is what made the tab flash on every click.
-        setProjectSettings((current) => {
-          previous = current;
-          return {
-            ...current,
-            [projectPath]: {
-              ...settings,
-              panelAppBindings: nextBindings,
-              panelAppOverrides: nextOverrides,
-            },
-          };
-        });
-        await writeSettings(
-          "project",
-          {
-            panelAppBindings: nextBindings,
-            // Send the full surviving map, NOT `{[appId]: null}`. main's
-            // deepMerge only honors a null delete when the key already exists;
-            // on a project whose settings had no panelAppOverrides at all it
-            // wrote the null through verbatim, and the settings schema then
-            // rejected the file — which made panelAppPolicy fail closed and
-            // silently unbind every app in that project.
-            panelAppOverrides: nextOverrides,
-          },
+        // A newly installed app has no displayed row yet. Check the exact
+        // installed bytes before binding; an existing project pin may differ.
+        const states = installedDigest
+          ? await window.codeshell.getPanelAppBindings(projectPath)
+          : projectBindings[projectPath];
+        const state = states?.find((app) => app.appId === appId);
+        if (!state || (installedDigest && state.packageDigest !== installedDigest))
+          throw new Error(t("ext.panels.bindingChanged"));
+        const next = await window.codeshell.setPanelAppProjectBinding(
           projectPath,
+          appId,
+          bound,
+          state.revision,
         );
+        setProjectBindings((current) => ({ ...current, [projectPath]: next }));
+        return true;
       } catch (cause) {
-        if (previous) setProjectSettings(previous);
         setError(String((cause as Error)?.message ?? cause));
+        return false;
       } finally {
         setBindingBusy(null);
       }
     },
-    [],
+    [projectBindings, t],
   );
 
   const pickAndReview = async (kind: "dir" | "zip") => {
@@ -396,7 +378,10 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         setError(result.error);
         return;
       }
-      await setProjectBinding(preview.id, bindingProjectPath, true);
+      if (!(await setProjectBinding(preview.id, bindingProjectPath, true, result.packageDigest))) {
+        setReview(null);
+        return;
+      }
       // Reveal the project list once so the user sees which project it bound to.
       setExpanded((current) => new Set(current).add(preview.id));
       setReview(null);
@@ -1053,7 +1038,13 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                                 ) : null}
                                 <Switch
                                   checked={row.bound || row.vetoedByGlobalDenylist}
-                                  disabled={rowBusy}
+                                  disabled={
+                                    rowBusy ||
+                                    row.unreadable ||
+                                    !projectBindings[row.projectPath]?.some(
+                                      (state) => state.appId === app.appId,
+                                    )
+                                  }
                                   aria-label={t("ext.panels.bindingRowAria", {
                                     title: app.title,
                                     project: project ? projectLabel(project) : row.projectPath,

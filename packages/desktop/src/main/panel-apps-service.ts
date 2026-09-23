@@ -16,6 +16,8 @@ import { dlog } from "./desktop-logger.js";
 import { replacePanelAppResources, type PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { isPanelAppAvailable, summarizePanelApp, type PanelAppPolicy } from "./panel-app-policy.js";
 
+import { createDesktopPanelManagement } from "./panel-app-management.js";
+
 function localizedTitle(app: InstalledPanelApp, locale: string): string {
   return locale.toLowerCase().startsWith("zh")
     ? (app.title["zh-CN"] ?? app.title.default)
@@ -204,15 +206,31 @@ export async function listPanelAppExtensions(
     locale,
     cwd ? resolvePanelAppBindingProjectPath(cwd) : "",
   );
-  return discovered.descriptors.map((app) =>
-    summarizePanelApp(
-      app,
-      policy,
-      discovered.sources.get(app.appId)
-        ? updateSource(discovered.sources.get(app.appId)!)
-        : { kind: "dir", label: "", available: false },
-    ),
-  );
+  const bindings = cwd ? await createDesktopPanelManagement(cwd).snapshot() : [];
+  return discovered.descriptors.map((app) => {
+    const binding = bindings.find((item) => item.appId === app.appId);
+    if (
+      cwd &&
+      (!binding || binding.version !== app.version || binding.packageDigest !== app.packageDigest)
+    )
+      throw new Error("项目面板版本已改变，请刷新后重试。");
+    return {
+      ...summarizePanelApp(
+        app,
+        policy,
+        discovered.sources.get(app.appId)
+          ? updateSource(discovered.sources.get(app.appId)!)
+          : { kind: "dir", label: "", available: false },
+      ),
+      ...(binding
+        ? {
+            bindingRevision: binding.revision,
+            projectBound: binding.bound,
+            enabled: binding.bound && !binding.globalDisabled,
+          }
+        : {}),
+    };
+  });
 }
 
 const projectDiscoveries = new Map<string, object>();

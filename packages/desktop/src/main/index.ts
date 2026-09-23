@@ -412,6 +412,7 @@ import {
   previewLocalPanelAppForUi,
   uninstallPanelAppForUi,
 } from "./panel-app-install-service.js";
+import { createDesktopPanelManagement } from "./panel-app-management.js";
 import { panelAppUpdateService } from "./panel-app-update-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
@@ -3838,6 +3839,30 @@ ipcMain.handle("panel-apps:listExtensions", async (_e, cwd: string, locale: stri
   }
   return listPanelAppExtensions(cwd, locale);
 });
+ipcMain.handle("panel-apps:bindings", async (_e, cwd: string) => {
+  cwd = await requireRendererProjectPath(cwd);
+  return createDesktopPanelManagement(cwd).snapshot();
+});
+ipcMain.handle(
+  "panel-apps:setProjectBinding",
+  async (event, cwd: string, id: string, bound: boolean, expectedRevision: string) => {
+    cwd = await requireRendererProjectPath(cwd);
+    const management = createDesktopPanelManagement(cwd, {
+      withMutation: (write) => (bridge ? bridge.withWebConfigurationMutation(cwd, write) : write()),
+      onChanged: () => broadcastPanelAppsChanged(mainWindows),
+    });
+    return management.binding(
+      {
+        ownerId: `desktop:${event.sender.id}`,
+        authorize: async () =>
+          !event.sender.isDestroyed() && (await requireRendererProjectPath(cwd)) === cwd,
+      },
+      id,
+      bound,
+      expectedRevision,
+    );
+  },
+);
 ipcMain.handle("panel-apps:listForProjects", async (_e, projectPaths: string[], locale: string) => {
   if (!Array.isArray(projectPaths) || projectPaths.length > 64) {
     throw new Error("panel-apps:listForProjects requires projectPaths");
@@ -6562,6 +6587,9 @@ ipcMain.handle("settings:getConfiguration", async (_e, target: RendererConfigura
 function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new Error("patch must be object");
+  }
+  if (["panelAppBindings", "panelAppPins", "panelAppOverrides"].some((key) => key in patch)) {
+    throw new Error("Panel project bindings must use the reviewed project binding API");
   }
   try {
     if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {

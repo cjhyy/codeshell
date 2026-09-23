@@ -221,6 +221,36 @@ try {
   assert.ok(panel, "Panel was not installed");
   assert.equal(panel.version, "1.0.0");
   if (projectPins) assert.equal(panel.packagePinned, true);
+  // The production native binding API materializes legacy pins and shares the
+  // exact conditional revision with paired Web. No raw project settings write.
+  const bindingBefore = await win.evaluate(
+    async (cwd) =>
+      (await window.codeshell.getPanelAppBindings(cwd)).find(
+        (item) => item.appId === "task-fixture",
+      ),
+    project,
+  );
+  const bindingAfter = await win.evaluate(
+    async ({ cwd, state }) =>
+      (
+        await window.codeshell.setPanelAppProjectBinding(cwd, state.appId, true, state.revision)
+      ).find((item) => item.appId === state.appId),
+    { cwd: project, state: bindingBefore },
+  );
+  assert.equal(bindingAfter.version, "1.0.0");
+  assert.ok(bindingAfter.packageDigest);
+  const boundSettings = JSON.parse(
+    await readFile(join(project, ".code-shell/settings.json"), "utf8"),
+  );
+  assert.equal(boundSettings.panelAppPins[manifest.id].packageDigest, bindingAfter.packageDigest);
+  const currentPanel = await win.evaluate(
+    async (cwd) =>
+      (await window.codeshell.listPanelApps(cwd, "en")).find(
+        (item) => item.appId === "task-fixture",
+      ),
+    project,
+  );
+  Object.assign(panel, currentPanel);
   const prepared = await win.evaluate(({ id, cwd }) => window.codeshell.preparePanelApp(id, cwd), {
     id: panel.id,
     cwd: project,
@@ -686,9 +716,32 @@ try {
   await win.evaluate(() => window.codeshell.mobileRemote.stop());
   assert.equal((await desktop("tasks.get", { id: third.id })).status, "running");
   await desktop("tasks.cancel", { id: third.id });
+  const staleBinding = await win.evaluate(
+    async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
+    project,
+  );
+  await win.evaluate(
+    ({ cwd, state }) =>
+      window.codeshell.setPanelAppProjectBinding(cwd, state.appId, false, state.revision),
+    { cwd: project, state: staleBinding },
+  );
+  const conflict = await win.evaluate(
+    async ({ cwd, state }) => {
+      try {
+        await window.codeshell.setPanelAppProjectBinding(cwd, state.appId, true, state.revision);
+        return false;
+      } catch (error) {
+        return String(error).includes("配置已改变");
+      }
+    },
+    { cwd: project, state: staleBinding },
+  );
+  assert.equal(conflict, true);
+
   console.log(
     JSON.stringify({
       actualElectron: true,
+      nativeConditionalProjectBinding: true,
       projectPinnedAgainstNewerCatalog: projectPins,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,

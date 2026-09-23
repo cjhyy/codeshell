@@ -349,8 +349,9 @@ describe("shared Web panel management with the real Core installer", () => {
     const outside = join(root, "outside");
     mkdirSync(outside);
     writeFileSync(join(outside, "settings.json"), '{"custom":"preserve"}');
-    symlinkSync(outside, join(cwd, ".code-shell"));
     const app = (await api.snapshot()).panels[0]!;
+    symlinkSync(outside, join(cwd, ".code-shell"));
+    await expect(api.snapshot()).rejects.toThrow();
     await expect(api.binding(owner, app.id, true, app.revision)).rejects.toThrow();
     expect(readFileSync(join(outside, "settings.json"), "utf8")).toBe('{"custom":"preserve"}');
   });

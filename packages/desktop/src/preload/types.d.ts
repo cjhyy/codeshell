@@ -50,6 +50,7 @@ export type {
 import type { SessionCatalogApi } from "../shared/session-catalog";
 import type {
   PanelAppBindInput,
+  PanelAppBindingState,
   PanelAppDescriptor,
   PanelAppExtensionSummary,
   PanelAppHostContext,
@@ -73,6 +74,7 @@ import type {
 import type { DigitalHumanTeam } from "../shared/digital-human-team";
 export type {
   PanelAppBindInput,
+  PanelAppBindingState,
   PanelAppDescriptor,
   PanelAppExtensionSummary,
   PanelAppHostContext,
@@ -1697,6 +1699,13 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   onPluginCommandsChanged(cb: () => void): () => void;
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
+  getPanelAppBindings(cwd: string): Promise<PanelAppBindingState[]>;
+  setPanelAppProjectBinding(
+    cwd: string,
+    id: string,
+    bound: boolean,
+    expectedRevision: string,
+  ): Promise<PanelAppBindingState[]>;
   /**
    * Descriptors for every app bound by any of `projectPaths`, plus which of
    * those projects bind each app. Panel buckets are per project, so the dock
@@ -2051,7 +2060,7 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     reviewToken: string;
     overwrite?: boolean;
   }): Promise<
-    | { ok: true; id: string }
+    | { ok: true; id: string; packageDigest: string }
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   >;
   /** Apply an explicitly reviewed update from the app's remembered source. */

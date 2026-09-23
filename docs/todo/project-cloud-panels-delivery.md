@@ -817,3 +817,47 @@ node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --project-pins
 升级 UI 尚未写入对应条件 pin，旧绑定也没有迁移。还需要原生项目升级审阅、活跃任务
 协调、任务历史跨项目升级读取／恢复、数据迁移／回滚以及真实双项目界面验收。物理手机、
 真实服务商、全部 Panel、Link 接入、中继和部署等原目标不变。代码仍在任务分支，未发布。
+
+
+### 增量 22：原生桌面条件绑定与并发状态（2026-09-24）
+
+桌面的扩展列表和能力总览改用共享 PanelManagement 条件写入。主进程授权项目并冻结
+主项目／worktree 关联，保存包版本及摘要；两次授权之间等待主 Agent 配置门禁时，窗口
+或项目授权失效会拒绝提交。每个项目行使用读取时的 revision，不在点击时悄悄取得新版
+revision 覆盖手机修改。绑定只修改指定 Panel，保留其他设备对其他 Panel 的变更；已有
+pin 继续选择原包，全球安装新版不自动移动项目。普通 renderer 设置接口拒绝直接写
+bindings、pins、legacy overrides。
+
+管理快照在异步包检查前捕获项目状态，生成 revision 时使用同一份状态，返回前检查
+并发变化及 pin 与包摘要一致性。损坏／链接设置不能作为空配置继续读取。安装接口返回
+实际包摘要；新安装后的绑定须匹配该摘要。绑定失败或项目仍选择不同包时不再弹出
+“已安装并绑定”成功提示。项目升级的完整审阅事务仍未完成，不能用此保护代替它。
+
+验证：
+
+- Host 条件绑定、共享管理／HTTP、项目包、桌面界面相关 7 文件 29 个入口测试通过。
+  新增真实安装器测试：手机更新其他 Panel 后桌面绑定保留其修改，同 Panel 的旧 revision
+  被拒绝，旧项目保持 1.0、新项目选择 2.0，等待门禁后重新授权，以及扫描中修改绑定
+  不返回新旧状态混合的快照。
+- 原生协议与桥接、项目包、主项目／worktree 和 Hub 路由 4 文件 10 个入口测试通过；
+  协议入口仍运行隔离 Electron mock 测试组。
+- 界面隔离测试补充实际开关携带旧 revision、显示手机并发冲突；安装后绑定失败、项目
+  选择不同包两条路径都不显示绑定成功。新增后单独重跑该界面测试入口通过。
+- Server 构建、Desktop 完整构建、Desktop／mobile 类型检查及改动 ESLint 通过。
+- 生产 Electron＋配对 HTTP 分别运行普通旧绑定和 `--project-pins` 两种模式：原生 API
+  materialize 项目 pin、记录实际摘要，拒绝陈旧解绑后再绑定；固定 1.0 对全局 2.0 不漂移。
+  原有跨设备任务 ID、目录、Cookie 版本、队列、取消、退出、设备撤销、远程关闭和结果
+  恢复流程仍通过。
+
+```sh
+bun test packages/desktop/src/main/panel-app-management.test.ts packages/server/src/panels/management.test.ts packages/server/src/panels/management-http.test.ts packages/server/src/panels/project-packages.test.ts packages/desktop/src/renderer/extensions/PanelsTab.test.ts packages/desktop/src/renderer/extensions/PanelsTab.updates.test.tsx packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.test.tsx
+bun test packages/desktop/src/main/panel-app-protocol.test.ts packages/desktop/src/main/panel-app-project-packages.test.ts packages/server/src/panels/hub-binding.test.ts packages/server/src/serve/hub-panels.test.ts
+node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --project-pins
+node packages/desktop/scripts/e2e-shared-panel-tasks.mjs
+```
+
+剩余：原生项目安装／升级需将审阅、项目身份、权限和条件提交绑定成完整流程；旧绑定
+批量迁移、全部活跃任务的升级协调、数据迁移与恢复 UI 仍待完成。目前主 Agent 配置
+门禁不等于所有 Panel 任务的升级门禁。多项目行读取会检查各自选定包，后续优化必须
+保留状态与 revision 一致性。其余 Panel、Link 接入、中继、真实手机和正式部署范围
+继续保留，代码仍在任务分支，尚未发布。

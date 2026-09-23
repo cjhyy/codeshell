@@ -45,7 +45,7 @@ export async function installLocalPanelAppForUi(input: {
   reviewToken: string;
   overwrite?: boolean;
 }): Promise<
-  | { ok: true; id: string }
+  | { ok: true; id: string; packageDigest: string }
   | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
 > {
   try {
@@ -56,7 +56,8 @@ export async function installLocalPanelAppForUi(input: {
       { overwrite: input.overwrite === true },
     );
     panelAppUpdateService.invalidate(installed.id);
-    return { ok: true, id: installed.id };
+    if (!installed.packageDigest) throw new Error("Installed Panel package has no content digest");
+    return { ok: true, id: installed.id, packageDigest: installed.packageDigest };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (error instanceof PanelAppReviewChangedError) {

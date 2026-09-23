@@ -121,6 +121,7 @@ export const extensions = {
         bindingCurrentProject: "当前",
         bindingNoProjects: "还没有项目，先在侧栏添加一个。",
         bindingUnreadable: "读不到该项目的配置",
+        bindingChanged: "项目面板状态或版本已改变，请刷新后重试。已安装的包会保留。",
         bindingVetoed: "已被全局停用列表拦下",
         bindingVetoedHint:
           "此 Panel App 出现在用户级 disabledPanelApps 里，因此项目绑定不生效。该开关已从界面移除；如需解除，请手动编辑 ~/.code-shell/settings.json。",
@@ -1096,6 +1097,8 @@ export const extensions = {
         bindingCurrentProject: "Current",
         bindingNoProjects: "No projects yet. Add one from the sidebar first.",
         bindingUnreadable: "Cannot read this project's settings",
+        bindingChanged:
+          "The project Panel state or version changed. Refresh and try again. Installed packages are retained.",
         bindingVetoed: "Blocked by the global deny list",
         bindingVetoedHint:
           "This Panel App is listed in the user-level disabledPanelApps, so its project bindings do not take effect. That switch has been removed from the UI; edit ~/.code-shell/settings.json to clear it.",

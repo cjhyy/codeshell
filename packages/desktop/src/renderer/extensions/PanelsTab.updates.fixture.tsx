@@ -5,7 +5,6 @@ import type {
   PanelAppExtensionSummary,
   PanelAppPreview,
   PanelAppUpdateCheck,
-  RendererConfigurationTarget,
 } from "../../preload/types";
 import { loadProjects, saveProjects, type TrackedProject } from "../projects";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
@@ -79,7 +78,7 @@ describe("Panel App update controls", () => {
   let savedBridge: PropertyDescriptor | undefined;
   let savedStorage: PropertyDescriptor | undefined;
   let savedProjects: TrackedProject[];
-  let configurationReads: RendererConfigurationTarget[];
+  let bindingReads: string[];
   let apps: PanelAppExtensionSummary[];
   let changed: (() => void) | undefined;
   let checks: Array<[string, boolean | undefined]>;
@@ -104,7 +103,7 @@ describe("Panel App update controls", () => {
         addedAt: 1,
       },
     ]);
-    configurationReads = [];
+    bindingReads = [];
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
       value: { getItem: () => null, setItem: () => undefined },
@@ -127,9 +126,15 @@ describe("Panel App update controls", () => {
       value: {
         listPanelAppExtensions: async () => [...apps],
         getSettings: async () => ({}),
-        getConfigurationSettings: async (target: RendererConfigurationTarget) => {
-          configurationReads.push(target);
-          return {};
+        getPanelAppBindings: async (cwd: string) => {
+          bindingReads.push(cwd);
+          return apps.map((app) => ({
+            appId: app.appId,
+            revision: "a".repeat(64),
+            bound: app.projectBound,
+            globalDisabled: false,
+            version: app.version,
+          }));
         },
         onPanelAppsChanged: (callback: () => void) => {
           changed = callback;
@@ -191,9 +196,83 @@ describe("Panel App update controls", () => {
     });
   }
 
+  test("project toggles send the displayed Host revision and surface a concurrent phone change", async () => {
+    const writes: unknown[] = [];
+    Object.assign(window.codeshell, {
+      setPanelAppProjectBinding: async (...input: unknown[]) => {
+        writes.push(input);
+        throw new Error("面板配置已改变，请刷新后重试。");
+      },
+      setConfigurationSettings: () => {
+        throw new Error("Generic settings must not write Panel bindings");
+      },
+    });
+    await render();
+    await click("展开");
+    const toggle = nodes(container).find((node) => props(node).role === "switch");
+    expect(toggle).toBeDefined();
+    await act(async () => {
+      props(toggle).onClick({
+        stopPropagation() {},
+        isPropagationStopped: () => false,
+        defaultPrevented: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(writes).toEqual([["/tmp/project", "video-studio", true, "a".repeat(64)]]);
+    expect(textOf(container)).toContain("面板配置已改变，请刷新后重试。");
+    expect(
+      props(nodes(container).find((node) => props(node).role === "switch"))["aria-checked"],
+    ).toBe(false);
+  });
+
+  for (const differentPin of [false, true]) {
+    test(`installation does not report bound success when ${differentPin ? "the project selects different bytes" : "the binding write fails"}`, async () => {
+      const writes: unknown[] = [];
+      Object.assign(window.codeshell, {
+        pickPanelAppSource: async () => ({ kind: "dir", path: "/source" }),
+        previewLocalPanelApp: async () => ({
+          ok: true,
+          preview: {
+            ...preview,
+            alreadyInstalled: false,
+            source: { kind: "dir", label: "source" },
+          },
+        }),
+        installLocalPanelApp: async () => ({
+          ok: true,
+          id: "video-studio",
+          packageDigest: "b".repeat(64),
+        }),
+        getPanelAppBindings: async () => [
+          {
+            appId: "video-studio",
+            revision: "a".repeat(64),
+            version: "0.6.3",
+            bound: false,
+            globalDisabled: false,
+            packageDigest: (differentPin ? "c" : "b").repeat(64),
+          },
+        ],
+        setPanelAppProjectBinding: async (...input: unknown[]) => {
+          writes.push(input);
+          throw new Error("绑定未完成：项目状态已改变");
+        },
+      });
+      await render();
+      await click("选择源码文件夹");
+      await click("确认并安装");
+      expect(textOf(document.body)).not.toContain("已安装并绑定到");
+      expect(textOf(container)).toContain(
+        differentPin ? "项目面板状态或版本已改变" : "绑定未完成：项目状态已改变",
+      );
+      expect(writes.length).toBe(differentPin ? 0 : 1);
+    });
+  }
+
   test("automatically displays the newer version and its source without opening a dialog", async () => {
     await render();
-    expect(configurationReads).toEqual([{ projectId: "panel-updates-project" }]);
+    expect(bindingReads).toEqual(["/tmp/project"]);
     expect(textOf(container)).toContain("有更新");
     expect(textOf(container)).toContain("v0.6.2 → v0.6.3");
     expect(textOf(container)).toContain("1 个可更新");
