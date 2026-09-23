@@ -133,6 +133,42 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   let closed = false;
   let snapshotSignature = "";
   let snapshotRevision = randomUUID();
+  let cleanupRunning: Promise<void> | undefined;
+  // One bounded, unref'd sweep per service. Store leases arbitrate other windows/processes.
+  const cleanupTimer = setInterval(() => {
+    void retryRemoteCleanup();
+  }, 30_000);
+  cleanupTimer.unref?.();
+  const cleanupStartup = setTimeout(() => {
+    void retryRemoteCleanup();
+  }, 0);
+  cleanupStartup.unref?.();
+  function retryRemoteCleanup(): Promise<void> {
+    if (closed) return Promise.resolve();
+    if (cleanupRunning) return cleanupRunning;
+    cleanupRunning = (async () => {
+      if (!store.remoteLinkRetirementCount()) return;
+      for (let count = 0; count < 8 && !closed; count++) {
+        const claim = store.claimRemoteLinkRetirement(now());
+        if (!claim) break;
+        let success = false;
+        try {
+          await revokeRemoteLinkAuthorization(claim.credential);
+          success = true;
+        } catch {
+          /* Keep private custody and retry with persisted backoff. */
+        }
+        store.finishRemoteLinkRetirement(claim, success, now());
+      }
+    })()
+      .catch(() => {
+        // A locked/unreadable store remains untouched; the next sweep retries. No secrets in logs.
+      })
+      .finally(() => {
+        cleanupRunning = undefined;
+      });
+    return cleanupRunning;
+  }
 
   function unavailable(context: LinkOperationContext): void {
     if (closed) throw new LinkServiceError(503, "unavailable");
@@ -247,6 +283,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ),
       capabilities: { token: true, cliBinding: true, deviceAuth: true, remoteAuth: !!remoteConfig },
       ...(remoteConfig ? { remoteServer: { issuer: remoteConfig.issuer } } : {}),
+      remoteCleanupPending: store.remoteLinkRetirementCount(),
     };
     const signature = JSON.stringify(result);
     if (signature !== snapshotSignature) {
@@ -325,10 +362,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     await authorize(context);
     return result;
   }
-  function swap(prepared: PreparedConnection, next: Credential | null): void {
+  function swap(
+    prepared: PreparedConnection,
+    next: Credential | null,
+    retirement?: { retireExpected: boolean; adopt?: string; now: number },
+  ): void {
     const current = records();
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
-    if (!store.compareAndSwap("user", prepared.id, prepared.expected, next))
+    if (!store.compareAndSwap("user", prepared.id, prepared.expected, next, retirement))
       throw new LinkServiceError(409, "conflict");
   }
   async function commit(
@@ -789,6 +830,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     };
     job.completing = true;
     let credential: Credential | undefined;
+    let staged: string | undefined;
     try {
       await check();
       credential = await completeRemoteLinkAuthorization(
@@ -796,7 +838,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         string(callbackUrl, 16_384),
         job.prepared.id,
         job.prepared.input.label,
-        { now: now() },
+        {
+          now: now(),
+          onTokens: (minted) => {
+            credential = minted;
+            staged = store.stageRemoteLinkRetirement(minted, job.attempt.expiresAt + 60_000);
+          },
+        },
       );
       await check();
       const guarded = {
@@ -807,30 +855,30 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         },
       };
       const connection = await change(guarded, () => {
-        swap(job.prepared, credential!);
+        swap(job.prepared, credential!, {
+          retireExpected: !!job.prepared.expected,
+          adopt: staged,
+          now: now(),
+        });
         return masked(credential!, "user");
       });
       job.public = { id, providerId: "github", state: "connected", connection };
-      // The previous grant is no longer used locally. Revoke it independently of the new grant.
-      if (job.prepared.expected) {
-        try {
-          await revokeRemoteLinkAuthorization(job.prepared.expected);
-        } catch {
-          job.public.previousGrantRevocationPending = true;
-        }
-      }
+      // Replacing the active record and retaining its previous grant is one atomic write.
+      await retryRemoteCleanup();
+      if (store.remoteLinkRetirementCount()) job.public.previousGrantRevocationPending = true;
       await authorize(context);
       return structuredClone(job.public);
     } catch (error) {
       // If the callback minted a grant but its destination changed, do not leave it usable remotely.
-      if (
-        credential &&
-        store.resolve(credential.id)?.meta?.linkRemoteGrantId !== credential.meta?.linkRemoteGrantId
-      ) {
+      if (staged) {
+        store.readyRemoteLinkRetirement(staged, now());
+        await retryRemoteCleanup();
+      } else if (credential) {
+        // Storage itself failed. Best effort only: no durable write can be promised then.
         try {
           await revokeRemoteLinkAuthorization(credential);
         } catch {
-          /* No local credential is retained. */
+          /* Report failure below. */
         }
       }
       job.public = {
@@ -882,6 +930,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   }
   function close(): void {
     closed = true;
+    clearInterval(cleanupTimer);
+    clearTimeout(cleanupStartup);
     remoteJobs.clear();
     for (const operation of operations) operation.controller.abort();
     operations.clear();
@@ -900,6 +950,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     startDeviceAuth,
     startRemoteAuth,
     completeRemoteAuth,
+    retryRemoteCleanup,
     authorization,
     cancelAuthorization,
     cancelOwner,

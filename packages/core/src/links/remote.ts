@@ -236,7 +236,7 @@ export async function completeRemoteLinkAuthorization(
   callbackUrl: string,
   id: string,
   label: string,
-  options: { now?: number } = {},
+  options: { now?: number; onTokens?: (credential: Credential) => void | Promise<void> } = {},
 ): Promise<Credential> {
   const now = options.now ?? Date.now();
   if (attempt.expiresAt <= now) throw new RemoteLinkError("reconnect");
@@ -281,6 +281,21 @@ export async function completeRemoteLinkAuthorization(
     clientId: config.clientId,
     clientSecret: config.clientSecret,
   };
+  // Persist cleanup custody before the next request: metadata lookup may fail after minting.
+  await options.onTokens?.({
+    id,
+    type: "oauth",
+    label,
+    secret: JSON.stringify(secret),
+    autoUseByAI: false,
+    meta: {
+      linkExecutionRuntime: "server",
+      linkExecutionBackend: "remote",
+      linkRemoteIssuer: config.issuer,
+      linkRemoteState: "reconnect",
+      agentExposable: false,
+    },
+  });
   const authorization = await request(config.issuer, "/api/v1/data/authorization", {
     headers: { Authorization: `Bearer ${secret.accessToken}` },
   });

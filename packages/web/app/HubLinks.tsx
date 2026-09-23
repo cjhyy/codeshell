@@ -114,6 +114,12 @@ export function HubLinks({
   }, [reload, configurationVersion, report]);
 
   React.useEffect(() => {
+    if (!snapshot?.remoteCleanupPending) return;
+    const timer = setInterval(() => setReload((value) => value + 1), 30_000);
+    return () => clearInterval(timer);
+  }, [snapshot?.remoteCleanupPending]);
+
+  React.useEffect(() => {
     if (authorization?.state !== "pending" || !authUrl.current) return;
     const url = authUrl.current;
     const controller = new AbortController();
@@ -321,6 +327,12 @@ export function HubLinks({
           刷新
         </button>
       </header>
+      {!!snapshot?.remoteCleanupPending && (
+        <p role="status" className="links-muted">
+          有 {snapshot.remoteCleanupPending} 项遗留授权等待撤销。项目所在环境
+          会自动重试，重启后仍会继续；也可在 Link 服务中撤销。
+        </p>
+      )}
       <p className="links-host">
         本地连接由{hostLabel}执行，CLI 使用这台机器上已有的登录。独立 Link 连接在 Link
         服务中访问第三方，原始凭据留在 Link。

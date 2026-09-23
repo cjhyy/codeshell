@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:net";
@@ -21,7 +21,11 @@ import {
   linkActionTool,
 } from "../packages/core/dist/index.js";
 import { createLinkService } from "../packages/server/dist/index.links.js";
-let host;
+import {
+  launchCodeShellElectron,
+  findCodeShellWindow,
+} from "../packages/desktop/scripts/electron-harness.mjs";
+let host, desktop;
 const root = await mkdtemp(join(tmpdir(), "codeshell-link-real-http-"));
 process.env.HOME = join(root, "home");
 const probe = createServer();
@@ -194,6 +198,64 @@ try {
   await host.disconnect(owner, reviewed.id, reviewed.revision);
   assert.equal(store.resolve(credential.id), undefined);
   assert.equal(calls, 2);
+  let desktopStartupCleanup = false;
+  if (process.argv[3] === "desktop-retirement") {
+    const pending = await host.startRemoteAuth(owner, {
+      providerId: "github",
+      methodId: "remote-link",
+      label: "Recovery fixture",
+      connectionId: "remote-recovery",
+      expectedRevision: null,
+    });
+    const html = await (
+      await fetch(pending.redirect.authorizationUrl, { headers: { cookie } })
+    ).text();
+    const consentIntent = html.match(/name="intent" value="([^"]+)"/)[1];
+    const consentResponse = await form(
+      "/oauth/authorize",
+      {
+        csrf: snapshot.csrf,
+        intent: consentIntent,
+        decision: "allow",
+        connectionId: linked.connections[0].id,
+        repositories: "owner/repo",
+      },
+      cookie,
+    );
+    assert.equal(consentResponse.status, 303);
+    const saved = await host.completeRemoteAuth(
+      owner,
+      pending.id,
+      consentResponse.headers.get("location"),
+    );
+    const retired = store.resolve(saved.connection.id);
+    host.close();
+    store.stageRemoteLinkRetirement(retired, 0);
+    store.remove("user", retired.id);
+    assert.equal(store.remoteLinkRetirementCount(), 1);
+    const grantId = retired.meta.linkRemoteGrantId;
+    const grants = async () =>
+      (await (await request("/api/v1/links", { headers: { cookie } })).json()).grants;
+    assert.equal(Boolean((await grants()).find((g) => g.id === grantId).revoked), false);
+    await mkdir(join(process.env.HOME, ".code-shell"), { recursive: true });
+    await writeFile(
+      join(process.env.HOME, ".code-shell/settings.json"),
+      JSON.stringify({ autoUpdates: false }),
+    );
+    desktop = await launchCodeShellElectron({
+      appDir: resolve("packages/desktop"),
+      home: process.env.HOME,
+    });
+    await findCodeShellWindow(desktop);
+    // Do not navigate to credentials or open Link: startup alone must recover persisted custody.
+    const deadline = Date.now() + 15_000;
+    while (!(await grants()).find((g) => g.id === grantId).revoked && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(Boolean((await grants()).find((g) => g.id === grantId).revoked), true);
+    assert.equal(store.remoteLinkRetirementCount(), 0);
+    assert.equal(store.list().length, 0);
+    desktopStartupCleanup = true;
+  }
   console.log(
     JSON.stringify({
       realStandaloneLink: true,
@@ -205,9 +267,11 @@ try {
       tokenRotation: true,
       revocation: true,
       upstream: "controlled fixture",
+      desktopStartupCleanup,
     }),
   );
 } finally {
+  await desktop?.close();
   host?.close();
   await app.close();
   await rm(root, { recursive: true, force: true });

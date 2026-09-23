@@ -10,6 +10,7 @@ import {
   type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
 import { createLinkHttp } from "./http.js";
+import { createLinkService } from "./service.js";
 import type { LinkAuthorization } from "./types.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -46,6 +47,7 @@ async function fixture() {
   const entered = deferred();
   let gate: Promise<void> | undefined;
   let revocationFails = false;
+  let metadataFails = false;
   const issuer = await listen(
     createServer(async (req, res) => {
       const parts: Buffer[] = [];
@@ -69,6 +71,11 @@ async function fixture() {
           }),
         );
       } else if (req.url === "/api/v1/data/authorization") {
+        if (metadataFails) {
+          res.statusCode = 503;
+          res.end("{}");
+          return;
+        }
         const access = req.headers.authorization!.replace("Bearer ", "");
         res.end(
           JSON.stringify({
@@ -167,6 +174,15 @@ async function fixture() {
     },
     failRevocation: (value: boolean) => {
       revocationFails = value;
+    },
+    failMetadata: () => {
+      metadataFails = true;
+    },
+    restart: () => {
+      http.close();
+      const service = createLinkService({ store, remoteLink: () => config, now: () => clock });
+      cleanups.push(async () => service.close());
+      return service;
     },
   };
 }
@@ -306,4 +322,54 @@ test("untrusted configuration fields and foreign callbacks never reach the issue
   expect(f.requests).toHaveLength(0);
   f.disable();
   expect((await f.api("/authorizations/remote", "POST", input)).status).toBe(503);
+});
+
+test("replaced grant survives restart and cleanup revokes only the old token with persisted backoff", async () => {
+  const f = await fixture();
+  const first = await (await f.complete(await f.start())).json();
+  const oldSecret = JSON.parse(f.store.resolve(first.connection.id)!.secret!);
+  f.failRevocation(true);
+  const second = await (
+    await f.complete(
+      await f.start({
+        connectionId: first.connection.id,
+        expectedRevision: first.connection.revision,
+      }),
+    )
+  ).json();
+  expect(second.previousGrantRevocationPending).toBe(true);
+  expect(f.store.list()).toHaveLength(1);
+  expect(f.store.remoteLinkRetirementCount()).toBe(1);
+  const current = f.store.resolve(first.connection.id)!;
+  const recovered = f.restart();
+  f.failRevocation(false);
+  const before = f.requests.filter((r) => r.path === "/oauth/revoke").length;
+  await recovered.retryRemoteCleanup();
+  expect(f.requests.filter((r) => r.path === "/oauth/revoke")).toHaveLength(before);
+  f.advance();
+  await recovered.retryRemoteCleanup();
+  expect(f.store.remoteLinkRetirementCount()).toBe(0);
+  expect(f.store.resolve(first.connection.id)).toEqual(current);
+  expect(
+    f.requests
+      .filter((r) => r.path === "/oauth/revoke")
+      .every((r) => r.body.token === oldSecret.refreshToken),
+  ).toBe(true);
+});
+
+test("minted grant with failed metadata is retained privately and revoked after restart", async () => {
+  const f = await fixture();
+  f.failMetadata();
+  f.failRevocation(true);
+  expect((await f.complete(await f.start())).status).toBe(422);
+  expect(f.store.list()).toEqual([]);
+  expect(f.store.remoteLinkRetirementCount()).toBe(1);
+  expect(f.http.service.snapshot().remoteCleanupPending).toBe(1);
+  expect(JSON.stringify(f.http.service.snapshot())).not.toContain("refresh-");
+  const recovered = f.restart();
+  f.failRevocation(false);
+  f.advance();
+  await recovered.retryRemoteCleanup();
+  expect(f.store.remoteLinkRetirementCount()).toBe(0);
+  expect(f.store.list()).toEqual([]);
 });

@@ -3328,6 +3328,9 @@ app.whenReady().then(async () => {
   // main to resolve/materialize secrets on demand; if safeStorage is unavailable
   // SafeStorageCipher intentionally falls back to `plain:` owner-only storage.
   setDefaultCredentialCipher(new SafeStorageCipher());
+  // Retired Link grants must resume cleanup even if no credentials page is opened.
+  const linkCleanup = createLinkService();
+  app.once("will-quit", () => linkCleanup.close());
   void knownAttachmentCwds()
     .then((cwds) => migrateKnownCredentialStores(cwds))
     .then((result) => dlog("credentials", "migration.done", { ...result }))

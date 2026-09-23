@@ -45,7 +45,10 @@ export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
           </p>
         )}
         {result?.previousGrantRevocationPending && (
-          <p role="alert">新连接已保存，但旧授权尚未撤销。请在 Link 服务中撤销旧授权。</p>
+          <p role="alert">
+            新连接已保存。有遗留授权等待撤销，项目所在环境将自动重试，重启后仍会继续；也可在 Link
+            服务中撤销。
+          </p>
         )}
         {result?.state === "cancelled" && <p role="status">授权已取消，没有新增连接。</p>}
         {result?.state === "failed" && <p role="alert">授权未完成。请返回原项目重新连接。</p>}

@@ -39,6 +39,8 @@ export interface LinkSnapshot {
   connections: MaskedLinkConnection[];
   capabilities: { token: boolean; cliBinding: boolean; deviceAuth: boolean; remoteAuth?: boolean };
   remoteServer?: { issuer: string };
+  /** Count only; retired secrets never leave the Host. Retried after restart with backoff. */
+  remoteCleanupPending?: number;
   revision: string;
 }
 

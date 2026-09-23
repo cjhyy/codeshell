@@ -46,6 +46,13 @@ export function RemoteLinkSection({ cwd, onChanged }: { cwd: string; onChanged: 
       if (request.current) void api.remoteCancel(cwd, request.current).catch(() => {});
     };
   }, [cwd, load]);
+  React.useEffect(() => {
+    if (!snapshot?.remoteCleanupPending) return;
+    const timer = setInterval(() => {
+      void load().catch(report);
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [snapshot?.remoteCleanupPending, load]);
   const operation = async (run: () => Promise<void>) => {
     if (busy || request.current) return;
     setBusy(true);
@@ -83,7 +90,6 @@ export function RemoteLinkSection({ cwd, onChanged }: { cwd: string; onChanged: 
                 : "ext.link.remoteCancelled",
             ),
           );
-          if (result.previousGrantRevocationPending) setError(t("ext.link.remoteCleanupPending"));
         }
       } finally {
         if (request.current === id) request.current = undefined;
@@ -141,6 +147,11 @@ export function RemoteLinkSection({ cwd, onChanged }: { cwd: string; onChanged: 
       {error && (
         <p role="alert" className="break-words text-xs text-status-err">
           {error}
+        </p>
+      )}
+      {!!snapshot?.remoteCleanupPending && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {t("ext.link.remoteCleanupPending")}
         </p>
       )}
       {notice && (

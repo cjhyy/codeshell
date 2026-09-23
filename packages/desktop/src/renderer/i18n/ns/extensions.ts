@@ -646,7 +646,8 @@ export const extensions = {
         remoteCancel: "取消",
         remoteConnected: "连接已保存。",
         remoteCancelled: "授权已取消，没有新增连接。",
-        remoteCleanupPending: "新连接已保存，但旧授权尚未撤销。请在 Link 服务中撤销旧授权。",
+        remoteCleanupPending:
+          "有遗留授权等待撤销。电脑会在联网后自动重试，重启后仍会继续；也可在 Link 服务中撤销。",
         remoteFailed: "连接操作失败，请重试。",
         remoteAvailable: "已连接",
         remoteReconnectNeeded: "需要重新连接",
@@ -1689,7 +1690,7 @@ export const extensions = {
         remoteConnected: "Connection saved.",
         remoteCancelled: "Authorization cancelled. No connection was added.",
         remoteCleanupPending:
-          "The new connection was saved, but the old grant could not be revoked. Revoke it in Link.",
+          "Some unused grants await revocation. Your computer retries when online, including after restart. You can also revoke them in Link.",
         remoteFailed: "Connection operation failed. Please retry.",
         remoteAvailable: "Connected",
         remoteReconnectNeeded: "Reconnect required",

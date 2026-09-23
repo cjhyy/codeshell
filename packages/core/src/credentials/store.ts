@@ -23,6 +23,16 @@ import { isBrowserOAuthLinkCredential } from "./oauth.js";
 import { summarizeCookieExpiry, type CookieExpirySummary } from "./cookie-jar.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
 import { isDeepStrictEqual } from "node:util";
+import {
+  stageRetirement,
+  adoptRetirement,
+  readyRetirement,
+  claimRetirement,
+  finishRetirement,
+  retirementCount,
+  retirementId,
+  type RemoteLinkRetirementClaim,
+} from "./remote-link-retirement.js";
 
 const MAX_CREDENTIALS = 4_096;
 const MAX_CREDENTIAL_FILE_BYTES = 32 * 1024 * 1024;
@@ -305,7 +315,10 @@ export class CredentialStore {
     writeFileAtomic(p, encoded, 0o600);
   }
 
-  private mutate(scope: CredentialScope, change: (file: CredentialStoreFile) => boolean): void {
+  private mutate(
+    scope: CredentialScope,
+    change: (file: CredentialStoreFile, preserved: unknown[]) => boolean,
+  ): void {
     const p = this.pathFor(scope);
     if (!p) return;
     const parent = dirname(p);
@@ -327,7 +340,11 @@ export class CredentialStore {
             "move the corrupt file aside to start a new one",
         );
       }
-      if (change(file)) this.write(scope, file, unknown);
+      if (change(file, unknown)) {
+        if (file.credentials.length + unknown.length > MAX_CREDENTIALS)
+          throw new Error("credential store has reached its maximum entry count");
+        this.write(scope, file, unknown);
+      }
     } finally {
       release();
     }
@@ -358,6 +375,7 @@ export class CredentialStore {
     id: string,
     expected: Credential | null,
     next: Credential | null,
+    remoteRetirement?: { retireExpected: boolean; adopt?: string; now: number },
   ): boolean {
     if (typeof id !== "string" || !id || id.length > MAX_CREDENTIAL_ID_CHARS || id.includes("\0")) {
       throw new Error("invalid credential id");
@@ -368,10 +386,20 @@ export class CredentialStore {
     const reviewed = expected ? normalizeCredential(expected, true)! : null;
     const replacement = next ? normalizeCredential(next, true)! : null;
     let matched = false;
-    this.mutate(scope, (file) => {
+    this.mutate(scope, (file, preserved) => {
       const index = file.credentials.findIndex((credential) => credential.id === id);
       const current = index < 0 ? null : normalizeCredential(file.credentials[index], true)!;
       if (!isDeepStrictEqual(current, reviewed)) return false;
+      if (remoteRetirement) {
+        if (scope !== "user") throw new Error("remote retirement requires the user store");
+        if (remoteRetirement.adopt) {
+          if (!replacement || retirementId(replacement) !== remoteRetirement.adopt)
+            throw new Error("retirement adoption must match the saved grant");
+          adoptRetirement(preserved, remoteRetirement.adopt);
+        }
+        if (remoteRetirement.retireExpected && current)
+          stageRetirement(preserved, current, this.cipher, remoteRetirement.now);
+      }
       matched = true;
       if (!replacement) {
         if (index < 0) return false;
@@ -390,6 +418,47 @@ export class CredentialStore {
       return true;
     });
     return matched;
+  }
+
+  /** Host-only durable cleanup. Private entries use the same cipher and atomic store lock. */
+  stageRemoteLinkRetirement(credential: Credential, notBefore: number): string {
+    const normalized = normalizeCredential(credential, true)!;
+    let id = "";
+    this.mutate("user", (_file, preserved) => {
+      id = stageRetirement(preserved, normalized, this.cipher, notBefore);
+      return true;
+    });
+    return id;
+  }
+  readyRemoteLinkRetirement(id: string, now: number): void {
+    this.mutate("user", (_file, preserved) => readyRetirement(preserved, id, now));
+  }
+  claimRemoteLinkRetirement(now: number): RemoteLinkRetirementClaim | undefined {
+    let claim: RemoteLinkRetirementClaim | undefined;
+    this.mutate("user", (file, preserved) => {
+      const project = this.readGuarded("project");
+      if (!project.readable) return false;
+      claim = claimRetirement(
+        preserved,
+        [...file.credentials, ...project.file.credentials],
+        this.cipher,
+        now,
+      );
+      return !!claim;
+    });
+    return claim;
+  }
+  finishRemoteLinkRetirement(
+    claim: Pick<RemoteLinkRetirementClaim, "id" | "leaseId">,
+    success: boolean,
+    now: number,
+  ): void {
+    this.mutate("user", (_file, preserved) => finishRetirement(preserved, claim, success, now));
+  }
+  remoteLinkRetirementCount(): number {
+    const state = this.readGuarded("user");
+    if (!state.readable) throw new Error("unreadable credential cleanup store");
+    return retirementCount(state.unknown);
   }
 
   /**
