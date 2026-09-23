@@ -83,6 +83,30 @@ interface StoredJob extends ToolJob {
   requestKey?: string;
   requestDigest: string;
 }
+type PreparationOutcome = { job: ToolJob } | { error: unknown };
+
+async function waitPreparation(result: Promise<PreparationOutcome>, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  let abort: (() => void) | undefined;
+  try {
+    const outcome = signal
+      ? await Promise.race([
+          result,
+          new Promise<never>((_resolve, reject) => {
+            abort = () => reject(signal.reason ?? new Error("Tool request cancelled"));
+            signal.addEventListener("abort", abort, { once: true });
+            if (signal.aborted) abort();
+          }),
+        ])
+      : await result;
+    signal?.throwIfAborted();
+    if ("error" in outcome) throw outcome.error;
+    return outcome.job;
+  } finally {
+    if (abort) signal?.removeEventListener("abort", abort);
+  }
+}
+
 interface ActiveJob {
   controller: AbortController;
   done: Promise<void>;
@@ -198,7 +222,14 @@ export class PanelToolJobService {
   private readonly active = new Map<string, ActiveJob>();
   private readonly preparing = new Map<
     string,
-    { scope: ToolJobScope; controller: AbortController; done: Promise<void> }
+    {
+      scope: ToolJobScope;
+      controller: AbortController;
+      done: Promise<void>;
+      requestKey?: string;
+      requestDigest: string;
+      result: Promise<PreparationOutcome>;
+    }
   >();
   private ready?: Promise<void>;
   private serial: Promise<unknown> = Promise.resolve();
@@ -335,6 +366,8 @@ export class PanelToolJobService {
     await this.initialize();
     await this.authorize(scope);
     let done!: () => void;
+    let settle!: (value: PreparationOutcome) => void;
+    let outcome!: PreparationOutcome;
     const reservation = await this.exclusive(async () => {
       signal?.throwIfAborted();
       if (this.stopping) throw new Error("tool job service is shutting down");
@@ -346,6 +379,14 @@ export class PanelToolJobService {
           if (existing.requestDigest !== requestDigest)
             throw new Error("tool job request key was already used for different input");
           return { existing };
+        }
+        const pending = [...this.preparing.values()].find(
+          (item) => sameScope(item.scope, scope) && item.requestKey === request.requestKey,
+        );
+        if (pending) {
+          if (pending.requestDigest !== requestDigest)
+            throw new Error("tool job request key was already used for different input");
+          return { following: pending.result };
         }
       }
       while (this.jobs.size + this.preparing.size >= toolJobLimits.maxJobs) {
@@ -367,6 +408,11 @@ export class PanelToolJobService {
       this.preparing.set(id, {
         scope,
         controller,
+        requestKey: request.requestKey,
+        requestDigest,
+        result: new Promise<PreparationOutcome>((resolveResult) => {
+          settle = resolveResult;
+        }),
         done: new Promise<void>((resolve) => {
           done = resolve;
         }),
@@ -374,6 +420,12 @@ export class PanelToolJobService {
       return { id, controller };
     });
     if (reservation.existing) return publicJob(reservation.existing);
+    if (reservation.following) {
+      const job = await waitPreparation(reservation.following, signal);
+      await this.authorize(scope);
+      signal?.throwIfAborted();
+      return toolJobJson(job, toolJobLimits.maxRecordBytes);
+    }
     const { id, controller } = reservation;
     const abort = () => controller!.abort(signal?.reason);
     signal?.addEventListener("abort", abort, { once: true });
@@ -427,14 +479,18 @@ export class PanelToolJobService {
         }
       });
       this.schedule();
-      return publicJob(job);
+      const result = publicJob(job);
+      outcome = { job: publicJob(job) };
+      return result;
     } catch (error) {
+      outcome = { error };
       const path = await this.storage.directory(id!).catch(() => undefined);
       if (path && !this.jobs.has(id!)) await this.storage.remove(id!);
       throw error;
     } finally {
       signal?.removeEventListener("abort", abort);
       this.preparing.delete(id!);
+      settle(outcome);
       done();
     }
   }

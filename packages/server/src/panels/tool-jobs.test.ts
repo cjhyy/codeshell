@@ -291,6 +291,95 @@ describe("durable native tool jobs", () => {
     expect(calls).toBe(1);
   });
 
+  test("concurrent identical starts share input preparation and one task ID", async () => {
+    let prepared = 0,
+      executed = 0;
+    const gate = deferred<unknown>();
+    gates.push(gate);
+    const f = await fixture({
+      prepareInput: async (_scope, input) => {
+        prepared++;
+        await gate.promise;
+        return input;
+      },
+      execute: async () => {
+        executed++;
+        return null;
+      },
+    });
+    const starts = Array.from({ length: 8 }, () =>
+      f.service.start(scope, { ...request, requestKey: "shared" }),
+    );
+    await eventually(async () => (prepared ? true : undefined));
+    await expect(
+      f.service.start(scope, { ...request, input: { wrong: true }, requestKey: "shared" }),
+    ).rejects.toThrow(/different input/);
+    gate.resolve(null);
+    const jobs = await Promise.all(starts);
+    expect(new Set(jobs.map((job) => job.id)).size).toBe(1);
+    expect(prepared).toBe(1);
+    await finished(f.service, jobs[0]!.id);
+    expect(executed).toBe(1);
+  });
+
+  test("cancelling a duplicate waiter does not cancel the original task preparation", async () => {
+    const gate = deferred<unknown>();
+    gates.push(gate);
+    let signal: AbortSignal | undefined;
+    const f = await fixture({
+      prepareInput: async (_scope, input, _work, supplied) => {
+        signal = supplied;
+        await gate.promise;
+        return input;
+      },
+    });
+    const original = f.service.start(scope, { ...request, requestKey: "shared" });
+    await eventually(async () => (signal ? true : undefined));
+    const controller = new AbortController();
+    const duplicate = f.service.start(
+      scope,
+      { ...request, requestKey: "shared" },
+      controller.signal,
+    );
+    controller.abort(new Error("duplicate closed"));
+    await expect(duplicate).rejects.toThrow("duplicate closed");
+    expect(signal!.aborted).toBe(false);
+    gate.resolve(null);
+    const job = await original;
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+  });
+
+  test("failed shared preparation rejects all waiters and permits a later explicit retry", async () => {
+    const gate = deferred<unknown>();
+    gates.push(gate);
+    let failure = true,
+      prepared = 0;
+    const f = await fixture({
+      prepareInput: async (_scope, input) => {
+        prepared++;
+        await gate.promise;
+        if (failure) throw new Error("input unavailable");
+        return input;
+      },
+    });
+    const pending = [
+      f.service.start(scope, { ...request, requestKey: "shared" }),
+      f.service.start(scope, { ...request, requestKey: "shared" }),
+    ];
+    const results = Promise.allSettled(pending);
+    await eventually(async () => (prepared ? true : undefined));
+    gate.resolve(null);
+    expect(
+      (await results).every(
+        (value) => value.status === "rejected" && value.reason.message === "input unavailable",
+      ),
+    ).toBe(true);
+    expect(await f.service.list(scope)).toEqual([]);
+    failure = false;
+    const job = await f.service.start(scope, { ...request, requestKey: "shared" });
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+  });
+
   test("revocation stops native work, denies new reads, and disables retry", async () => {
     let allowed = true;
     const c = controlled();
