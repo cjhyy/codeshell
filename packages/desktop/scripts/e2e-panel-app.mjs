@@ -11,6 +11,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PanelRuntimeServices } from "@cjhyy/code-shell-server/panels";
 import {
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -388,6 +389,67 @@ try {
       42,
     "scoped storage round-trip failed",
   );
+  assert(
+    context.availableMethods.includes("storage.getSnapshot") &&
+      context.availableMethods.includes("storage.compareAndSet"),
+    "versioned storage was not advertised",
+  );
+  const webStorage = new PanelRuntimeServices({ dataDir: isolated.userDataDir });
+  const webScope = {
+    appId: "panel-e2e",
+    cwd: projectDir,
+    projectPath: projectDir,
+    permissions: ["storage"],
+    isAuthorized: async () => true,
+  };
+  const desktopStorage = (method, params) =>
+    execute(
+      firstView,
+      `window.codeshellPanel.call(${JSON.stringify(method)}, ${JSON.stringify(params)})`,
+    );
+  const before = await desktopStorage("storage.getSnapshot", { key: "shared-draft" });
+  assert(before.revision === null, "new document unexpectedly existed");
+  const webSaved = await webStorage.call(webScope, "storage.compareAndSet", {
+    key: "shared-draft",
+    expectedRevision: null,
+    value: "saved from remote Host",
+  });
+  const conflict = await desktopStorage("storage.compareAndSet", {
+    key: "shared-draft",
+    expectedRevision: before.revision,
+    value: "stale desktop edit",
+  });
+  assert(
+    !conflict.updated && conflict.snapshot.revision === webSaved.snapshot.revision,
+    "Desktop failed to detect the remote Host edit",
+  );
+  const large = "x".repeat(180 * 1024);
+  const next = await desktopStorage("storage.compareAndSet", {
+    key: "shared-draft",
+    expectedRevision: conflict.snapshot.revision,
+    value: large,
+  });
+  assert(
+    next.updated && next.snapshot.value.length === large.length,
+    "versioned storage protocol limits rejected an in-quota document",
+  );
+  assert(
+    (await webStorage.call(webScope, "storage.getSnapshot", { key: "shared-draft" })).revision ===
+      next.snapshot.revision,
+    "Desktop and Web disagree about the saved revision",
+  );
+  for (let index = 0; index < 4; index++) {
+    const params = { key: `race-${index}`, expectedRevision: null };
+    const results = await Promise.all([
+      desktopStorage("storage.compareAndSet", { ...params, value: "desktop" }),
+      webStorage.call(webScope, "storage.compareAndSet", { ...params, value: "web" }),
+    ]);
+    assert(
+      results.filter((result) => result.updated).length === 1,
+      "Desktop/Web cross-process storage race lost an update",
+    );
+  }
+
   const networkBlocked = await execute(
     firstView,
     'fetch("https://example.com").then(() => false, () => true)',

@@ -4,10 +4,17 @@ import {
   panelResourceMethods,
   panelToolJobMethods,
 } from "@cjhyy/code-shell-server/panels";
+import { panelAppStorageQuotaBytes } from "@cjhyy/code-shell-server/storage";
 import type { PanelAppPermission } from "../shared/panel-apps.js";
 
 const groups: Record<string, string[]> = {
-  storage: ["storage.get", "storage.set", "storage.delete"],
+  storage: [
+    "storage.get",
+    "storage.set",
+    "storage.delete",
+    "storage.getSnapshot",
+    "storage.compareAndSet",
+  ],
   "external.open": ["external.open"],
   "agent.submitPrompt": ["agent.submitPrompt"],
   "agent.task": [
@@ -62,6 +69,7 @@ export function desktopPanelCapabilities(
   },
 ) {
   const permitted = new Set<string>(permissions);
+  const storageBytes = panelAppStorageQuotaBytes(options.limits?.storageQuotaBytes) + 8192;
   const methods = ["context.get"];
   for (const [permission, entries] of Object.entries(groups)) {
     if (!permitted.has(permission)) continue;
@@ -100,6 +108,11 @@ export function desktopPanelCapabilities(
         limits: options.limits,
       }),
       methodLimits: {
+        "storage.getSnapshot": { maxResultBytes: options.limits?.maxResultBytes ?? storageBytes },
+        "storage.compareAndSet": {
+          maxParamsBytes: options.limits?.maxParamsBytes ?? storageBytes,
+          maxResultBytes: options.limits?.maxResultBytes ?? storageBytes,
+        },
         "resources.references.pick": { timeoutMs: 30 * 60 * 1000 },
         "tasks.start": {
           maxParamsBytes: 2 * 1024 * 1024 + 8192,

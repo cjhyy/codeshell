@@ -130,6 +130,110 @@ describe("PanelRuntimeServices", () => {
     ).toEqual(Array.from({ length: 20 }, (_, i) => i));
   });
 
+  test("snapshot writes reject a stale device and survive a new Host instance", async () => {
+    const { runtime, scope, dataDir } = await fixture();
+    const another = new PanelRuntimeServices({ dataDir });
+    const missing = await runtime.call(scope, "storage.getSnapshot", { key: "draft" });
+    expect(missing).toEqual({ exists: false, value: null, revision: null });
+    const writes = (await Promise.all(
+      [runtime, another].map((service, index) =>
+        service.call(scope, "storage.compareAndSet", {
+          key: "draft",
+          expectedRevision: null,
+          value: { device: index },
+        }),
+      ),
+    )) as any[];
+    expect(writes.filter((value) => value.updated)).toHaveLength(1);
+    const winner = writes.find((value) => value.updated).snapshot;
+    expect(writes.find((value) => !value.updated).snapshot).toEqual(winner);
+    const restarted = new PanelRuntimeServices({ dataDir });
+    expect(await restarted.call(scope, "storage.getSnapshot", { key: "draft" })).toEqual(winner);
+    expect(await restarted.call(scope, "storage.get", { key: "draft" })).toEqual(winner.value);
+    // Old clients participate in conflict detection without changing their storage format.
+    await another.call(scope, "storage.set", { key: "draft", value: "legacy update" });
+    expect(
+      await runtime.call(scope, "storage.compareAndSet", {
+        key: "draft",
+        expectedRevision: winner.revision,
+        value: "stale edit",
+      }),
+    ).toMatchObject({ updated: false, snapshot: { value: "legacy update" } });
+  });
+
+  test("versioned storage distinguishes null from absent and supports conditional removal", async () => {
+    const { runtime, scope } = await fixture();
+    const saved = (await runtime.call(scope, "storage.compareAndSet", {
+      key: "__proto__",
+      expectedRevision: null,
+      value: null,
+    })) as any;
+    expect(saved).toMatchObject({ updated: true, snapshot: { exists: true, value: null } });
+    expect(saved.snapshot.revision).toMatch(/^sha256:[0-9a-f]{64}$/);
+    // Another key can change without causing a conflict in this document.
+    await runtime.call(scope, "storage.set", { key: "other", value: 1 });
+    expect(
+      await runtime.call(scope, "storage.compareAndSet", {
+        key: "__proto__",
+        expectedRevision: null,
+        remove: true,
+      }),
+    ).toEqual({ updated: false, snapshot: saved.snapshot });
+    expect(
+      await runtime.call(scope, "storage.compareAndSet", {
+        key: "__proto__",
+        expectedRevision: saved.snapshot.revision,
+        remove: true,
+      }),
+    ).toEqual({ updated: true, snapshot: { exists: false, value: null, revision: null } });
+    expect(await runtime.call(scope, "storage.get", { key: "other" })).toBe(1);
+  });
+
+  test("versioned storage validates input and permissions without a blind fallback", async () => {
+    const { runtime, scope } = await fixture();
+    for (const params of [
+      { key: "a", value: 1 },
+      { key: "a", value: 1, expectedRevision: "anything" },
+      { key: "a", expectedRevision: null },
+      { key: "a", value: 1, expectedRevision: null, remove: true },
+      { key: "a", value: 1, expectedRevision: null, remove: "true" },
+    ])
+      await expect(runtime.call(scope, "storage.compareAndSet", params)).rejects.toThrow();
+    for (const method of ["storage.getSnapshot", "storage.compareAndSet"])
+      await expect(
+        runtime.call({ ...scope, permissions: [] }, method, {
+          key: "a",
+          expectedRevision: null,
+          value: 1,
+        }),
+      ).rejects.toThrow("permission denied");
+    await expect(
+      runtime.call(scope, "storage.compareAndSet", {
+        key: "a",
+        expectedRevision: null,
+        value: "x".repeat(256 * 1024),
+      }),
+    ).rejects.toThrow("quota");
+    expect(await runtime.call(scope, "storage.getSnapshot", { key: "a" })).toEqual({
+      exists: false,
+      value: null,
+      revision: null,
+    });
+  });
+
+  test("a revoked versioned write does not publish staged bytes", async () => {
+    const { runtime, scope } = await fixture();
+    let checks = 0;
+    await expect(
+      runtime.call({ ...scope, isAuthorized: async () => ++checks < 3 }, "storage.compareAndSet", {
+        key: "a",
+        expectedRevision: null,
+        value: "revoked",
+      }),
+    ).rejects.toThrow("no longer authorized");
+    expect(await runtime.call(scope, "storage.get", { key: "a" })).toBeNull();
+  });
+
   test("bounded storage rejects oversized data and linked targets", async () => {
     const { root, runtime, scope, dataDir } = await fixture();
     await expect(

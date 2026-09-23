@@ -49,6 +49,8 @@ const GRANT_TTL = 30 * 60_000;
 const METHODS = [
   "context.get",
   "storage.get",
+  "storage.getSnapshot",
+  "storage.compareAndSet",
   "storage.set",
   "storage.delete",
   "workspace.info",

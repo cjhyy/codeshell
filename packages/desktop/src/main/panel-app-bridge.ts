@@ -62,6 +62,9 @@ import { PanelAppDirectoryBookmarks } from "./panel-app-directory-bookmarks.js";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
+  panelAppStorageSnapshot,
+  panelAppStorageChange,
+  applyPanelAppStorageChange,
   panelAppStorageQuotaBytes,
   preparePanelAppStorage,
   readPanelAppStorage,
@@ -1022,7 +1025,7 @@ export class PanelAppBridge {
           ? 128 * 1024
           : method === "workspace.writeText"
             ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
-            : method === "storage.set"
+            : method === "storage.set" || method === "storage.compareAndSet"
               ? this.storageQuotaBytes() + 8 * 1024
               : MAX_PARAMS_BYTES);
     if (jsonBytes(params) > paramsLimit) {
@@ -1103,7 +1106,9 @@ export class PanelAppBridge {
               ? MAX_WORKSPACE_READ_BYTES * 6 + 8 * 1024
               : method === "workspace.list"
                 ? MAX_WORKSPACE_LIST_RESULT_BYTES
-                : MAX_RESULT_BYTES);
+                : method === "storage.getSnapshot" || method === "storage.compareAndSet"
+                  ? this.storageQuotaBytes() + 8192
+                  : MAX_RESULT_BYTES);
     if (jsonBytes(result) > resultLimit) {
       throw new PanelBridgeError("RESULT_TOO_LARGE", "Panel App result is too large");
     }
@@ -1477,6 +1482,10 @@ export class PanelAppBridge {
     switch (method) {
       case "context.get":
         return binding.context;
+      case "storage.getSnapshot":
+      case "storage.compareAndSet":
+        this.requirePermission(binding, "storage");
+        return this.storageVersioned(binding, method, params);
       case "storage.get":
         this.requirePermission(binding, "storage");
         return this.storageGet(binding, params);
@@ -2293,6 +2302,40 @@ export class PanelAppBridge {
     const storage = await this.readStorage(binding);
     const key = this.storageKey(params);
     return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null;
+  }
+
+  private async storageVersioned(binding: GuestBinding, method: string, params: unknown) {
+    const projectPath = binding.projectPath;
+    const file = this.storagePath(binding);
+    const key = this.storageKey(params);
+    const change = method === "storage.compareAndSet" ? panelAppStorageChange(params) : null;
+    const assertAuthorized = async () => {
+      if (
+        this.guests.get(binding.guest.id) !== binding ||
+        binding.guest.isDestroyed() ||
+        binding.projectPath !== projectPath
+      )
+        throw new PanelBridgeError("REVOKED", "Panel App storage scope changed");
+      this.assertProjectBinding(binding);
+      this.requirePermission(binding, "storage");
+    };
+    if (!change) {
+      const snapshot = panelAppStorageSnapshot(
+        await readPanelAppStorage(file, this.storageQuotaBytes()),
+        key,
+      );
+      await assertAuthorized();
+      return snapshot;
+    }
+    return this.withStorageMutation(binding, async (file) => {
+      await assertAuthorized();
+      const storage = await readPanelAppStorage(file, this.storageQuotaBytes());
+      const result = applyPanelAppStorageChange(storage, change);
+      if (result.updated)
+        await writePanelAppStorage(file, storage, this.storageQuotaBytes(), assertAuthorized);
+      await assertAuthorized();
+      return result;
+    });
   }
 
   private async storageSet(binding: GuestBinding, params: unknown): Promise<boolean> {

@@ -566,6 +566,46 @@ describe("Panel HTTP runtime", () => {
     expect((await fetch(f.url + grant.src)).status).toBe(200);
   });
 
+  test("two HTTP Panel instances detect conflicting project saves", async () => {
+    const f = await fixture();
+    const [one, two] = await Promise.all([f.prepare(), f.prepare()]);
+    const call = async (grant: typeof one, method: string, params: unknown) => {
+      const response = await f.api(`${grant.instanceId}/call`, "POST", { method, params });
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    for (const grant of [one, two]) {
+      const context = await call(grant, "context.get", {});
+      expect(context.availableMethods).toContain("storage.getSnapshot");
+      expect(context.availableMethods).toContain("storage.compareAndSet");
+      expect(await call(grant, "storage.getSnapshot", { key: "draft" })).toEqual({
+        exists: false,
+        value: null,
+        revision: null,
+      });
+    }
+    const desktop = await call(one, "storage.compareAndSet", {
+      key: "draft",
+      value: { source: "desktop" },
+      expectedRevision: null,
+    });
+    expect(desktop.updated).toBe(true);
+    expect(
+      await call(two, "storage.compareAndSet", {
+        key: "draft",
+        value: { source: "phone" },
+        expectedRevision: null,
+      }),
+    ).toEqual({ updated: false, snapshot: desktop.snapshot });
+    expect(
+      await call(two, "storage.compareAndSet", {
+        key: "draft",
+        value: { source: "merged" },
+        expectedRevision: desktop.snapshot.revision,
+      }),
+    ).toMatchObject({ updated: true, snapshot: { value: { source: "merged" } } });
+  });
+
   test("uses scope-bound storage and workspace operations and returns only validated host effects", async () => {
     const f = await fixture();
     const grant = await f.prepare();

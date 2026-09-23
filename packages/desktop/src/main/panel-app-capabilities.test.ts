@@ -106,3 +106,16 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   expect(noQueue.availableMethods).not.toContain("tasks.start");
   expect(noQueue.capabilities.tasks).toBeUndefined();
 });
+
+test("versioned storage is advertised only with storage permission and bounded limits", () => {
+  const missing = desktopPanelCapabilities([], options);
+  expect(missing.availableMethods).not.toContain("storage.getSnapshot");
+  expect(missing.availableMethods).not.toContain("storage.compareAndSet");
+  const allowed = desktopPanelCapabilities(["storage"], options);
+  expect(allowed.availableMethods).toContain("storage.getSnapshot");
+  expect(allowed.availableMethods).toContain("storage.compareAndSet");
+  expect(allowed.capabilities.methodLimits["storage.compareAndSet"]).toEqual({
+    maxParamsBytes: 256 * 1024 + 8192,
+    maxResultBytes: 256 * 1024 + 8192,
+  });
+});

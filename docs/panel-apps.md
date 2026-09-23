@@ -122,6 +122,36 @@ const unsubscribe = window.codeshellPanel.on("context.changed", (next) => {
 });
 ```
 
+Project documents can use optimistic concurrency when `availableMethods` includes
+both `storage.getSnapshot` and `storage.compareAndSet`:
+
+```js
+const before = await window.codeshellPanel.call("storage.getSnapshot", { key: "draft" });
+const result = await window.codeshellPanel.call("storage.compareAndSet", {
+  key: "draft", expectedRevision: before.revision, value: editedDocument,
+});
+if (!result.updated) {
+  // Keep the local draft; show the conflict and explicitly reload/merge.
+  // Do not adopt result.snapshot.revision and blindly retry the old draft.
+}
+```
+
+A snapshot is `{ exists, value, revision }`. An absent key has `exists: false`,
+`value: null`, and `revision: null`; a stored JSON null has a non-null revision.
+The revision hashes the key and JSON content, not an edit counter: identical
+content has the same revision, including an intervening change back to that content.
+`compareAndSet` requires the observed revision (null for absence) and either
+`value` or `remove: true`. It returns `{ updated, snapshot }`; conflicts do not
+write. An unrelated key does not invalidate the document. Desktop and remote Web
+share the existing per-app/per-project JSON file and per-file lock, including
+cross-process writers. No format migration or new permission is required.
+
+Older `storage.get/set/delete` remain compatible; old clients may still perform
+unconditional writes. New clients detect their changed content on their next
+conditional save. These methods do not synchronize the local draft automatically.
+On a lost response, query the stored snapshot first; do not replay an uncertain
+write. A new Host capability does not by itself migrate every Panel's storage.
+
 No Host capability is granted by default.
 
 | Permission                | Capability                                                                                                                                                                                                                                                           |
