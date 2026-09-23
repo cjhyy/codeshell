@@ -666,3 +666,40 @@ node scripts/smoke-project-sandboxes.mjs codeshell-project-runtime:project-cloud
 执行确认由测试点击允许。未调用外部模型或真实账号，不代表真实服务商、物理手机、云端带账号
 下载或完整四组合全部业务已经验收。其他五个 Panel、项目版本锁定、Link Host 接入、设备目录／
 中继／通知、公网部署与恢复回滚仍须继续，整套版本没有发布。
+
+
+### 增量 18：保留 Panel 历史包，为项目版本绑定提供存储基础（2026-09-23）
+
+安装器保留 `.versions/<appId>/<packageDigest>` 包快照，摘要包括文件名、长度和内容，
+覆盖 manifest、页面、原生程序与 Skill，排除 Host 来源／安装时间元数据。
+新安装自动保留包；更新前保留有效旧包；重复内容安装复用同一地址，不覆盖原快照。
+旧可变安装目录和现有返回路径保留兼容。卸载当前目录不删除历史包；引用追踪和回收尚未接入。
+
+新增 `retainInstalledPanelApp` 和 `resolvePanelAppPackage`，由 Host 显式保留和解析确定内容。
+解析重新校验包内容和元数据，拒绝缺失、内容改变、路径穿越、链接目录或链接文件，不退到
+当前最新版。这些方法仅管理包字节，不授予项目权限，也不接收项目提供的任意安装路径。
+暂存与发布分离：Host 的最终授权／版本检查拒绝时清理副本，保留原安装和注册表。
+损坏旧目录仍可通过重新安装修复，但损坏字节不会被当作有效历史包保留。
+
+验证：
+
+- Core Panel 全部 101 项通过，新增 8 项快照测试：两个版本的 UI／原生程序／Skill
+  在更新和卸载后仍可读取、同内容目录复用、同版本不同内容分离、旧安装迁移与并发保留、
+  缺失／篡改拒绝、路径与链接拒绝、损坏当前目录修复不覆盖已有历史包、拒绝重复安装不发布新包。
+- 现有独立进程安装 CAS、撤销授权、更新来源检查和注册表安全回归通过。
+- 使用实际 Core 安装器的 Web 管理、HTTP 与 Hub 绑定共 19 项通过，包括暂存后撤销授权、
+  多工作区绑定 CAS、陈旧更新拒绝及 worktree 身份校验。
+- Core 构建、已构建公开／内部导出 smoke、Server 类型检查、改动 ESLint 和差异检查通过。
+
+```sh
+bun test packages/core/src/panel-apps
+bun run --cwd packages/core build
+node scripts/smoke-core-exports.mjs
+bun test packages/server/src/panels/management.test.ts packages/server/src/panels/management-http.test.ts packages/server/src/panels/hub-binding.test.ts
+```
+
+本增量没有把项目版本锁定记为完成。下一步必须共同接入项目绑定 schema／条件更新、
+Web 运行目录、Desktop 多项目资源选择、主机原生任务解析和 Core Skill 扫描；当前 Desktop
+的全局 descriptor 和 `preparePanelApp` 仍按 Panel ID 选第一项，不能直接给两个版本共用该路径。
+之后还需升级／回滚 UI、活跃任务门禁、文档迁移与实际双项目跨设备验收。未发布新版本，
+其他 Panel、Link 接入、远程中继及部署等原范围保持未完成。

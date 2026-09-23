@@ -15,6 +15,7 @@ export {
   PanelAppReviewChangedError,
   assertSafePanelAppId,
   panelAppInstallDir,
+  panelAppPackageDir,
   panelAppsRegistryPath,
   panelAppsRoot,
 } from "./paths.js";
@@ -23,6 +24,8 @@ export {
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
   listInstalledPanelApps,
+  retainInstalledPanelApp,
+  resolvePanelAppPackage,
   previewInstalledPanelAppUpdate,
   previewLocalPanelApp,
   uninstallPanelApp,

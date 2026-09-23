@@ -344,3 +344,34 @@ so a Docker runtime does not need to create `/data.lock` on its read-only root.
 Existing `panel-web-directory-bookmarks.json` IDs migrate on successful restore,
 after the same app/project and directory identity checks. Desktop keeps its
 existing shared store and mutex layout.
+
+
+### Retained package identity (project binding integration pending)
+
+Core installation now returns `packageDigest` and retains reviewed payloads below
+`~/.code-shell/panel-apps/.versions/<appId>/<packageDigest>`. The digest uses a
+versioned hash of file paths, byte lengths and contents, excluding the Host's
+`.cs-panel-app-meta.json` provenance/timestamps. Manifest permissions, native
+entry declarations and hashes, UI assets and declared Skills are included.
+The existing `<appId>` catalog directory remains compatible with current Hosts.
+
+`retainInstalledPanelApp(id, expectedPackageDigest)` materializes an existing
+legacy catalog package after checking its current content. `resolvePanelAppPackage`
+resolves one retained address, revalidates the full bounded package and provenance
+shape, and rejects missing, modified or linked payloads. It never falls back to
+the latest catalog version. These filesystem APIs do not authorize a project or
+a guest to run the package; Host project binding and permission checks still apply.
+
+Updates preserve valid old payloads before replacing the catalog path. Same
+payload reinstalls reuse the retained directory without replacing its metadata;
+different bytes with the same manifest version have different package addresses.
+Snapshot copies are staged before the existing final Host commit guard; a rejected
+guard leaves no published new installation. Removal of the current catalog does
+not delete retained snapshots. There is deliberately no automatic history pruning
+until project/task reference tracking is connected; backups must retain the full
+Panel Apps directory.
+
+This establishes storage for project version pins, but does not yet activate them:
+Desktop still discovers resources globally by Panel ID, Web management still uses
+the global catalog, and project settings/Skill discovery/task resolution must all
+be routed to an explicit reviewed package before claiming per-project versions.

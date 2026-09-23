@@ -31,10 +31,12 @@ import {
   PanelAppReviewChangedError,
   assertSafePanelAppId,
   panelAppInstallDir,
+  panelAppPackageDir,
   panelAppsRoot,
 } from "./paths.js";
 import {
   readInstalledPanelAppsRegistry,
+  InstalledPanelAppRecordSchema,
   removeInstalledPanelAppRecord,
   upsertInstalledPanelAppRecord,
   type InstalledPanelAppRecord,
@@ -145,6 +147,8 @@ export interface InstalledPanelApp {
   agent?: PanelAppAgentContribution;
   nativeEntries?: PanelAppManifest["nativeEntries"];
   installPath: string;
+  /** Payload identity, excluding Host installation timestamps and source metadata. */
+  packageDigest?: string;
   source: InstalledPanelAppSource;
   installedAt: string;
   lastUpdated: string;
@@ -476,6 +480,7 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
   manifest: PanelAppManifest;
   files: string[];
   digest: string;
+  packageDigest: string;
 }> {
   const root = await realpath(sourceRoot);
   const files: string[] = [];
@@ -545,19 +550,18 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
     }
   }
   const hash = createHash("sha256");
+  const payloadHash = createHash("sha256").update("codeshell-panel-package-v1\0");
   for (const file of files.sort()) {
-    hash
-      .update(file)
-      .update("\0")
-      .update(
-        await readBoundedPackageFile(
-          root,
-          file,
-          file === PANEL_APP_MANIFEST_FILE ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES,
-        ),
-      );
+    const bytes = await readBoundedPackageFile(
+      root,
+      file,
+      file === PANEL_APP_MANIFEST_FILE ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES,
+    );
+    hash.update(file).update("\0").update(bytes);
+    if (file !== PANEL_APP_META_FILE)
+      payloadHash.update(file).update("\0").update(String(bytes.length)).update("\0").update(bytes);
   }
-  return { manifest, files, digest: hash.digest("hex") };
+  return { manifest, files, digest: hash.digest("hex"), packageDigest: payloadHash.digest("hex") };
 }
 
 function previewFrom(
@@ -721,6 +725,138 @@ async function lockPanelAppMutation(id: string): Promise<() => Promise<void>> {
   });
 }
 
+async function checkedPackageParents(id: string, create = false): Promise<void> {
+  assertSafePanelAppId(id);
+  const root = panelAppsRoot();
+  for (const directory of [root, join(root, ".versions"), join(root, ".versions", id)]) {
+    if (create) await mkdir(directory, { recursive: true, mode: 0o700 });
+    const info = await lstat(directory);
+    if (info.isSymbolicLink() || !info.isDirectory())
+      throw new PanelAppInstallError("Panel App package store requires ordinary directories");
+  }
+}
+
+/** Resolve exactly one retained payload. A missing/corrupt pin never follows the latest catalog. */
+export async function resolvePanelAppPackage(
+  id: string,
+  packageDigest: string,
+): Promise<InstalledPanelApp> {
+  const target = panelAppPackageDir(id, packageDigest);
+  await checkedPackageParents(id);
+  const info = await lstat(target);
+  if (info.isSymbolicLink() || !info.isDirectory())
+    throw new PanelAppInstallError("Panel App package must be an ordinary directory");
+  const inspected = await inspectPanelAppSource(target);
+  if (inspected.manifest.id !== id || inspected.packageDigest !== packageDigest)
+    throw new PanelAppInstallError("Retained Panel App package content has changed");
+  const metadata = JSON.parse(
+    (
+      await readBoundedPackageFile(await realpath(target), PANEL_APP_META_FILE, MAX_MANIFEST_BYTES)
+    ).toString("utf8"),
+  );
+  const { schemaVersion, ...rawRecord } = metadata;
+  const record = InstalledPanelAppRecordSchema.parse(rawRecord);
+  if (schemaVersion !== 1 || record.id !== id || record.version !== inspected.manifest.version)
+    throw new PanelAppInstallError("Retained Panel App package metadata does not match");
+  return { ...installedPanelApp(inspected.manifest, record), installPath: target, packageDigest };
+}
+
+interface PreparedPackage {
+  publish(): Promise<InstalledPanelApp>;
+  dispose(): Promise<void>;
+}
+
+/** Stage under the operation lock; no retained address appears before the Host commit guard. */
+async function prepareRetainedPackage(
+  sourceRoot: string,
+  packageDigest: string,
+  record: InstalledPanelAppRecord,
+): Promise<PreparedPackage> {
+  const target = panelAppPackageDir(record.id, packageDigest);
+  const parentsPresent = await checkedPackageParents(record.id)
+    .then(() => true)
+    .catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+      return false;
+    });
+  const existing = parentsPresent
+    ? await lstat(target).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+        return null;
+      })
+    : null;
+  // A corrupt retained address is never repaired by overwriting bytes behind a pin.
+  if (existing) {
+    const retained = await resolvePanelAppPackage(record.id, packageDigest);
+    return { publish: async () => retained, dispose: async () => {} };
+  }
+  const staging = await mkdtemp(join(panelAppsRoot(), `.tmp-retained-${record.id}-`));
+  const dispose = () => rm(staging, { recursive: true, force: true });
+  try {
+    await cp(sourceRoot, staging, { recursive: true, preserveTimestamps: true });
+    const copied = await inspectPanelAppSource(staging);
+    if (
+      copied.manifest.id !== record.id ||
+      copied.manifest.version !== record.version ||
+      copied.packageDigest !== packageDigest
+    )
+      throw new PanelAppReviewChangedError();
+    await writeFile(
+      join(staging, PANEL_APP_META_FILE),
+      JSON.stringify({ schemaVersion: 1, ...record }) + "\n",
+      { mode: 0o600 },
+    );
+    return {
+      async publish() {
+        await checkedPackageParents(record.id, true);
+        // A prior prepared package in this operation can have the same payload.
+        const exists = await lstat(target).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== "ENOENT") throw error;
+          return null;
+        });
+        if (exists) return resolvePanelAppPackage(record.id, packageDigest);
+        await rename(staging, target);
+        return {
+          ...installedPanelApp(copied.manifest, record),
+          installPath: target,
+          packageDigest,
+        };
+      },
+      dispose,
+    };
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
+}
+
+/** Materialize a legacy installed package before a project records its reviewed pin. */
+export async function retainInstalledPanelApp(
+  id: string,
+  expectedPackageDigest: string,
+): Promise<InstalledPanelApp> {
+  panelAppPackageDir(id, expectedPackageDigest);
+  const release = await lockPanelAppMutation(id);
+  try {
+    const record = (await readInstalledPanelAppsRegistry()).find((app) => app.id === id);
+    if (!record) throw new PanelAppInstallError("Panel App is not installed");
+    const source = panelAppInstallDir(id);
+    const info = await lstat(source);
+    if (info.isSymbolicLink() || !info.isDirectory())
+      throw new PanelAppInstallError("Panel App installation must be an ordinary directory");
+    const inspected = await inspectPanelAppSource(source);
+    if (inspected.packageDigest !== expectedPackageDigest) throw new PanelAppReviewChangedError();
+    const prepared = await prepareRetainedPackage(source, expectedPackageDigest, record);
+    try {
+      return await prepared.publish();
+    } finally {
+      await prepared.dispose();
+    }
+  } finally {
+    await release();
+  }
+}
+
 async function installReviewedPanelAppFromRoot(
   sourceRoot: string,
   input: PanelAppSourceInput,
@@ -744,6 +880,7 @@ async function installReviewedPanelAppFromRoot(
   const staging = await mkdtemp(join(panelAppsRoot(), `.tmp-${inspected.manifest.id}-`));
   let backup: string | undefined;
   let directoryReplaced = false;
+  const retainedPackages: PreparedPackage[] = [];
   let release: (() => Promise<void>) | undefined;
   try {
     await cp(sourceRoot, staging, { recursive: true });
@@ -772,33 +909,69 @@ async function installReviewedPanelAppFromRoot(
       { mode: 0o600 },
     );
     release = await lockPanelAppMutation(copied.manifest.id);
+    if (!options.overwrite && existsSync(panelAppInstallDir(copied.manifest.id)))
+      throw new PanelAppAlreadyInstalledError(copied.manifest.id);
+    const previous = (await readInstalledPanelAppsRegistry()).find(
+      (candidate) => candidate.id === copied.manifest.id,
+    );
+    // Keep the old payload before replacing its legacy catalog path. Existing
+    // project pins and task recovery can retain the exact bytes after an update.
+    if (previous && options.overwrite) {
+      const oldRoot = panelAppInstallDir(previous.id);
+      const oldInfo = await lstat(oldRoot).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+        return null;
+      });
+      if (oldInfo && (oldInfo.isSymbolicLink() || !oldInfo.isDirectory()))
+        throw new PanelAppInstallError("Panel App installation must be an ordinary directory");
+      const old = oldInfo
+        ? await inspectPanelAppSource(oldRoot).catch((error) => {
+            // Reinstalling remains a repair path for an incomplete legacy catalog.
+            // Never copy corrupt bytes into a retained address; existing pins keep
+            // their own immutable snapshot and are checked separately below.
+            if (
+              error instanceof PanelAppInstallError ||
+              (error as NodeJS.ErrnoException).code === "ENOENT"
+            )
+              return null;
+            throw error;
+          })
+        : null;
+      if (old) {
+        if (old.manifest.id !== previous.id)
+          throw new PanelAppInstallError("Installed Panel App ID does not match its record");
+        retainedPackages.push(
+          await prepareRetainedPackage(oldRoot, old.packageDigest, {
+            ...previous,
+            version: old.manifest.version,
+          }),
+        );
+      }
+    }
+    const nextRecord: InstalledPanelAppRecord = {
+      id: copied.manifest.id,
+      version: copied.manifest.version,
+      source: storedSource,
+      installedAt: previous?.installedAt ?? installedAt,
+      lastUpdated: installedAt,
+    };
+    retainedPackages.push(await prepareRetainedPackage(staging, copied.packageDigest, nextRecord));
     // Hosts may need to recheck a reviewed revision and the authenticated owner
     // after staging work, immediately before making the installed snapshot visible.
     await options.beforeCommit?.();
+    for (const retained of retainedPackages) await retained.publish();
     ({ backup } = await replaceInstalledDirectory(
       copied.manifest.id,
       staging,
       options.overwrite === true,
     ));
     directoryReplaced = true;
-    const previous = (await readInstalledPanelAppsRegistry()).find(
-      (candidate) => candidate.id === copied.manifest.id,
-    );
-    await upsertInstalledPanelAppRecord({
-      id: copied.manifest.id,
-      version: copied.manifest.version,
-      source: storedSource,
-      installedAt: previous?.installedAt ?? installedAt,
-      lastUpdated: installedAt,
-    });
+    await upsertInstalledPanelAppRecord(nextRecord);
     if (backup) await rm(backup, { recursive: true, force: true }).catch(() => undefined);
-    return installedPanelApp(copied.manifest, {
-      id: copied.manifest.id,
-      version: copied.manifest.version,
-      source: storedSource,
-      installedAt: previous?.installedAt ?? installedAt,
-      lastUpdated: installedAt,
-    });
+    return {
+      ...installedPanelApp(copied.manifest, nextRecord),
+      packageDigest: copied.packageDigest,
+    };
   } catch (error) {
     await rm(staging, { recursive: true, force: true }).catch(() => undefined);
     if (directoryReplaced) {
@@ -811,7 +984,11 @@ async function installReviewedPanelAppFromRoot(
     }
     throw error;
   } finally {
-    await release?.();
+    try {
+      for (const retained of retainedPackages) await retained.dispose();
+    } finally {
+      await release?.();
+    }
   }
 }
 
@@ -903,7 +1080,10 @@ export async function listInstalledPanelApps(): Promise<InstalledPanelApp[]> {
       const root = await realpath(panelAppInstallDir(record.id));
       const inspected = await inspectPanelAppSource(root);
       if (inspected.manifest.id !== record.id) continue;
-      output.push(installedPanelApp(inspected.manifest, record));
+      output.push({
+        ...installedPanelApp(inspected.manifest, record),
+        packageDigest: inspected.packageDigest,
+      });
     } catch {
       // One corrupt/missing app must not hide the rest of the catalog.
     }
