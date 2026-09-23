@@ -28,7 +28,8 @@ interface ToolInput {
   resources?: Array<{ assetId: string; path: string }>;
   directoryArguments?: Array<{
     argumentName: string;
-    directory: "job" | "app-data";
+    directory: "job" | "app-data" | "bookmark";
+    bookmark?: string;
     path?: string;
   }>;
   connectionIds?: string[];
@@ -41,6 +42,8 @@ export interface PanelToolExecutorOptions {
   owner(job: Job, send: PanelProcessOwner["send"]): PanelProcessOwner;
   releaseOwner(owner: PanelProcessOwner): void;
   appDataDirectory(scope: Scope): Promise<string>;
+  /** Resolve a saved Host grant in this exact app/project; never accept a caller path. */
+  resolveDirectoryBookmark?(scope: Scope, bookmark: string): Promise<string>;
   authorize(scope: Scope): Promise<void>;
   authorizeConnections(scope: Scope): Promise<void>;
   sealedRoot: string;
@@ -92,10 +95,18 @@ function toolInput(value: unknown): ToolInput {
     if (
       !item ||
       !/^--[a-z][a-z0-9-]{0,63}$/.test(item.argumentName) ||
-      !["job", "app-data"].includes(item.directory) ||
-      Object.keys(item).some((key) => !["argumentName", "directory", "path"].includes(key))
+      !["job", "app-data", "bookmark"].includes(item.directory) ||
+      Object.keys(item).some(
+        (key) => !["argumentName", "directory", "path", "bookmark"].includes(key),
+      )
     )
       throw new Error("Invalid tool directory argument");
+    if (
+      item.directory === "bookmark"
+        ? typeof item.bookmark !== "string" || !/^[a-f0-9-]{36}$/i.test(item.bookmark)
+        : item.bookmark !== undefined
+    )
+      throw new Error("Invalid tool directory bookmark");
     if (argumentsSeen.has(item.argumentName)) throw new Error("Duplicate tool argument");
     argumentsSeen.add(item.argumentName);
     if (item.path !== undefined) resourceRelativePath(item.path);
@@ -127,10 +138,20 @@ async function childDirectory(root: string, relative?: string) {
 }
 /** The only background processor: launch a reviewed tool and transport bounded JSON/files. */
 export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
+  const bookmarkDirectory = async (scope: Scope, bookmark: string) => {
+    if (!options.resolveDirectoryBookmark)
+      throw new Error("This Host does not support task directory bookmarks");
+    return options.resolveDirectoryBookmark(scope, bookmark);
+  };
+  const authorize = async (scope: Scope, input: ToolInput) => {
+    await options.authorize(scope);
+    for (const directory of input.directoryArguments ?? [])
+      if (directory.directory === "bookmark") await bookmarkDirectory(scope, directory.bookmark!);
+  };
   return {
     async prepareInput(scope: Scope, raw: unknown, workDir: string, signal: AbortSignal) {
       const input = toolInput(raw);
-      await options.authorize(scope);
+      await authorize(scope, input);
       const handle = createHash("sha256").update(workDir).digest("hex");
       try {
         for (const resource of input.resources ?? []) {
@@ -155,7 +176,7 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
     },
     async execute(job: Job, context: ExecutionContext) {
       const input = toolInput(job.input);
-      await options.authorize(job.scope);
+      await authorize(job.scope, input);
       let stdout = "",
         outputBytes = 0,
         result: unknown,
@@ -316,8 +337,7 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
       const authorizationTimer = setInterval(() => {
         if (checking || terminal) return;
         checking = true;
-        void options
-          .authorize(job.scope)
+        void authorize(job.scope, input)
           .catch(() => {
             failed ??= Object.assign(new Error("Tool task authorization was revoked"), {
               code: "APP_REVOKED",
@@ -345,7 +365,11 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
         const fileArgumentHandles: string[] = [];
         for (const item of input.directoryArguments ?? []) {
           const root =
-            item.directory === "job" ? context.workDir : await options.appDataDirectory(job.scope);
+            item.directory === "job"
+              ? context.workDir
+              : item.directory === "bookmark"
+                ? await bookmarkDirectory(job.scope, item.bookmark!)
+                : await options.appDataDirectory(job.scope);
           const location = await childDirectory(root, item.path);
           const grant = await options.processes.grantDirectory(owner, location);
           const argument = await options.processes.grantDirectoryArgument(owner, {
@@ -467,7 +491,7 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
           }
           value.artifacts = assets;
         }
-        await options.authorize(job.scope);
+        await authorize(job.scope, input);
         return value;
       } finally {
         clearInterval(receiptTimer);

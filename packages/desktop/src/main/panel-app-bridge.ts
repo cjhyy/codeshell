@@ -1136,6 +1136,7 @@ export class PanelAppBridge {
       resources: this.getResourceService().capabilities(),
       tasks: {
         available: true,
+        directoryBookmarks: true,
         ...toolJobLimits,
         ownership: "project",
         executionRevision: binding.resource.descriptor.revision,
@@ -1275,6 +1276,10 @@ export class PanelAppBridge {
       authorizeConnections: async (scope) => {
         if (!(await this.installedToolApp(scope)).permissions.includes("credentials.connections"))
           throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
+      },
+      resolveDirectoryBookmark: async (scope, bookmark) => {
+        await this.installedToolApp(scope);
+        return this.directoryBookmarks.restore(scope.appId, scope.projectPath, bookmark);
       },
       appDataDirectory: async (scope) => {
         await this.installedToolApp(scope);
@@ -1725,10 +1730,19 @@ export class PanelAppBridge {
       return this.processService.grantDirectory(this.processOwner(binding), root);
     }
     if (name === "downloads") {
-      return this.processService.grantDirectory(
+      const selected = await this.processService.grantDirectory(
         this.processOwner(binding),
         app.getPath("downloads"),
       );
+      if (!binding.cwd || !this.options.isWorkspaceTrusted(binding.cwd)) return selected;
+      const projectPath = await this.trustedWorkspaceRoot(binding);
+      const bookmark = this.directoryBookmarks.remember(
+        binding.resource.descriptor.appId,
+        projectPath,
+        selected.path,
+      );
+      this.processService.directoryPath(this.processOwner(binding), selected.handle);
+      return { ...selected, bookmark };
     }
     if (name === "user-bin") {
       return this.grantManagedBinDirectory(binding);

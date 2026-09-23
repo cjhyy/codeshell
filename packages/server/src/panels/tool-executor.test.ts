@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -59,6 +60,7 @@ describe("reviewed native tool executor", () => {
       processes.close();
       await resources.shutdown();
     });
+    const bookmarks = new PanelAppDirectoryBookmarks(join(root, "bookmarks.json"));
     let nextOwner = 1;
     const executor = createPanelToolExecutor({
       processes,
@@ -81,6 +83,8 @@ describe("reviewed native tool executor", () => {
         owners.delete(owner.guestId);
       },
       appDataDirectory: async () => appData,
+      resolveDirectoryBookmark: async (scope, id) =>
+        bookmarks.restore(scope.appId, scope.projectPath, id),
       authorize: async () => {
         if (!authorized) throw new Error("revoked");
       },
@@ -108,6 +112,7 @@ describe("reviewed native tool executor", () => {
     };
     return {
       root,
+      bookmarks,
       workDir,
       appData,
       processes,
@@ -220,6 +225,68 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
         f.controller.signal,
       ),
     ).rejects.toThrow("Invalid tool resource");
+  });
+
+  test("saved directory grants reach native argv without persisting paths and reject scope changes", async () => {
+    const f = await fixture(
+      `import {writeFile} from "node:fs/promises";import {join} from "node:path";${readRequest}const output=process.argv[process.argv.indexOf("--output-dir")+1];await writeFile(join(output,"result.txt"),request.text);console.log(JSON.stringify({type:"result",result:{ok:true}}));`,
+    );
+    const destination = join(f.root, "picked");
+    await mkdir(destination);
+    const bookmark = f.bookmarks.remember(scope.appId, scope.projectPath, destination);
+    const raw = {
+      request: { text: "authorized output" },
+      directoryArguments: [{ argumentName: "--output-dir", directory: "bookmark", bookmark }],
+    };
+    const input = await f.executor.prepareInput(scope, raw, f.workDir, f.controller.signal);
+    expect(JSON.stringify(input)).not.toContain(destination);
+    f.job.input = input;
+    expect(await f.executor.execute(f.job, f.context)).toEqual({ ok: true });
+    expect(await readFile(join(destination, "result.txt"), "utf8")).toBe("authorized output");
+    await expect(
+      f.executor.prepareInput(
+        { ...scope, projectPath: "/other-project" },
+        raw,
+        f.workDir,
+        f.controller.signal,
+      ),
+    ).rejects.toThrow(/unavailable/);
+    await expect(
+      f.executor.prepareInput(
+        scope,
+        {
+          ...raw,
+          directoryArguments: [
+            { argumentName: "--output-dir", directory: "bookmark", bookmark: destination },
+          ],
+        },
+        f.workDir,
+        f.controller.signal,
+      ),
+    ).rejects.toThrow(/bookmark/);
+  });
+
+  test("queued tasks cannot inherit a replacement directory through an old bookmark", async () => {
+    const f = await fixture(
+      `${readRequest}console.log(JSON.stringify({type:"result",result:{ok:true}}));`,
+    );
+    const chosen = join(f.root, "picked");
+    await mkdir(chosen);
+    const bookmark = f.bookmarks.remember(scope.appId, scope.projectPath, chosen);
+    f.job.input = await f.executor.prepareInput(
+      scope,
+      {
+        request: {},
+        directoryArguments: [{ argumentName: "--output-dir", directory: "bookmark", bookmark }],
+      },
+      f.workDir,
+      f.controller.signal,
+    );
+    await import("node:fs/promises").then((fs) => fs.rename(chosen, join(f.root, "old-picked")));
+    await mkdir(chosen);
+    await expect(f.executor.execute(f.job, f.context)).rejects.toThrow(/changed/);
+    expect(f.events).toEqual([]);
+    expect(f.owners.size).toBe(0);
   });
 
   test("cancellation waits for native cleanup, including when exit events are dropped", async () => {

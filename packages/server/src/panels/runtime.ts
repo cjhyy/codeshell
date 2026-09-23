@@ -756,6 +756,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         if (!app.permissions.includes("credentials.connections"))
           throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
       },
+      resolveDirectoryBookmark: async (scope, bookmark) => {
+        await installedToolApp(scope);
+        return directoryBookmarks.restore(scope.appId, scope.projectPath, bookmark);
+      },
       appDataDirectory: async (scope) => {
         await installedToolApp(scope);
         const path = panelDataDirectory(scope.appId);
@@ -1062,6 +1066,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               app.permissions.includes("process") && app.permissions.includes("resources")
                 ? {
                     available: true,
+                    directoryBookmarks: true,
                     ...toolJobLimits,
                     ownership: sharedTools ? "project" : "session",
                     executionRevision: sharedTools?.scope.revision ?? panel.revision,
@@ -1379,7 +1384,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       if (name !== "project") await mkdir(directory, { recursive: true, mode: 0o700 });
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const selected = await processes.grantDirectory(owner, directory);
-      if (method !== "filesystem.pickDirectory") return selected;
+      if (method !== "filesystem.pickDirectory" && name !== "downloads") return selected;
       const bookmark = directoryBookmarks.remember(
         grant.app.id,
         options.bindingCwd ?? options.cwd,

@@ -3,7 +3,7 @@
 /* global document, window */
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
@@ -23,11 +23,15 @@ isolated.userDataDir = join(isolated.home, "electron-user-data");
 const project = join(isolated.home, "task-project");
 const install = join(isolated.codeShellHome, "panel-apps", "task-fixture");
 const installedAt = new Date().toISOString();
-const source = `let input = "";
+const source = `import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+let input = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", part => input += part);
 process.stdin.on("end", () => {
   const request = JSON.parse(input);
+  const directory = process.argv[process.argv.indexOf("--output-dir") + 1];
+  writeFileSync(join(directory, request.message + ".txt"), request.message, { flag: "wx" });
   process.stdout.write(JSON.stringify({type:"progress", progress:{stage:"waiting", fraction:0.5}}) + "\\n");
   setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{message:request.message}}) + "\\n"), request.delayMs);
 });
@@ -269,7 +273,12 @@ try {
   );
   const startInput = {
     entry: "worker",
-    input: { request: { message: "from desktop", delayMs: 30000 } },
+    input: {
+      request: { message: "from desktop", delayMs: 30000 },
+      directoryArguments: [
+        { argumentName: "--output-dir", directory: "bookmark", bookmark: selected.bookmark },
+      ],
+    },
     recovery: "retry",
     requestKey: "desktop-and-phone",
   };
@@ -298,7 +307,7 @@ try {
   assert.equal((await desktop("tasks.get", { id: first.id })).status, "cancelled");
   const secondInput = {
     ...startInput,
-    input: { request: { message: "from phone", delayMs: 4000 } },
+    input: { ...startInput.input, request: { message: "from phone", delayMs: 4000 } },
     requestKey: "phone-and-desktop",
   };
   const pending = phoneCall("tasks.start", secondInput);
@@ -328,8 +337,15 @@ try {
     return job.status === "succeeded" ? job : false;
   }, "Task did not finish after phone logout");
   assert.deepEqual(completed.result, { message: "from phone" });
+  assert.equal(await readFile(join(selectedFolder, "from desktop.txt"), "utf8"), "from desktop");
+  assert.equal(await readFile(join(selectedFolder, "from phone.txt"), "utf8"), "from phone");
+  assert.ok(!JSON.stringify(completed).includes(selectedFolder));
   assert.equal((await desktop("tasks.list", {})).filter((job) => job.id === second.id).length, 1);
-  const third = await desktop("tasks.start", { ...startInput, requestKey: "remote-stop" });
+  const third = await desktop("tasks.start", {
+    ...startInput,
+    input: { ...startInput.input, request: { message: "remote stop", delayMs: 30000 } },
+    requestKey: "remote-stop",
+  });
   await until(() => waiting(third.id), "Third task not running");
   await win.evaluate((id) => window.codeshell.mobileRemote.revokeDevice(id), device.id);
   assert.equal((await request("/api/v1/panels")).status, 401);
@@ -341,6 +357,7 @@ try {
     JSON.stringify({
       actualElectron: true,
       sharedDirectoryBookmarks: true,
+      backgroundDirectoryDelivery: true,
       pairedHttp: true,
       sharedRevision: true,
       sharedTaskIds: true,

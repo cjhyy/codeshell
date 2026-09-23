@@ -188,8 +188,28 @@ installation, process permission, binding and trust of both project and actual
 workspace before the Web facade restores a chosen Desktop directory. Trust
 revocation invalidates the existing process grant. Standalone Hub retains its
 restriction to the server downloads directory. No client-supplied path grants
-access and no native task output argument is added by this change.
+access. Background directory delivery is described below.
 
 The current shared flow covers main project roots. Legacy Desktop bookmarks use
 actual cwd, whereas Web uses bindingCwd; worktree/main-project scope migration is
 still pending. Do not rewrite those identities or widen old grants implicitly.
+
+### Background tasks using saved directory grants
+
+When `capabilities.tasks.directoryBookmarks` is true, a tool envelope may include
+`{ "argumentName": "--output-dir", "directory": "bookmark", "bookmark": "<saved-id>" }`
+in `directoryArguments`. Obtain the opaque bookmark from `filesystem.pickDirectory`
+or the supported `filesystem.getKnownDirectory({name:"downloads"})`; never provide
+an absolute path in the envelope. The Host resolves the saved grant in the exact
+app/project scope during preparation, launch, running authorization checks and
+result acceptance. Unsupported Hosts reject this argument. Directory replacement,
+trust loss and wrong-project access invalidate it. The reviewed native entry gets
+a sealed argv directory, while the task input persists only its bookmark.
+
+This grants directory access to a reviewed program; it does not implement a
+business-specific file transaction. The Download entry verifies artifact hashes,
+publishes each output without replacing existing files, reuses byte-identical
+outputs on explicit retry, and reports relative published names. A failed later
+file may leave earlier verified outputs in place. A task can also be interrupted
+after writing a file but before recording success, so its retry must reconcile
+existing files. The Host still captures task-directory artifacts as resources.

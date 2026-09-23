@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   PanelToolJobService,
+  PanelAppDirectoryBookmarks,
   PanelAppProcessService,
   PanelResourceService,
   createPanelToolExecutor,
@@ -32,6 +33,10 @@ let slow = true,
   slowRequested = false;
 try {
   await mkdir(scope.projectPath);
+  const outputDirectory = join(root, "selected-output");
+  await mkdir(outputDirectory);
+  const bookmarks = new PanelAppDirectoryBookmarks(join(root, "bookmarks.json"));
+  const bookmark = bookmarks.remember(scope.appId, scope.projectPath, outputDirectory);
   const source = join(root, "fixture.mp4");
   await run(
     "ffmpeg",
@@ -101,6 +106,8 @@ try {
       throw new Error("No credentials in smoke");
     },
     appDataDirectory: async () => root,
+    resolveDirectoryBookmark: async (target, id) =>
+      bookmarks.restore(target.appId, target.projectPath, id),
     sealedRoot: join(root, "sealed"),
   });
   const options = {
@@ -116,7 +123,10 @@ try {
     requestKey: "one-download",
     input: {
       request: { action: "download", url, configuration: { format: "best" } },
-      directoryArguments: [{ argumentName: "--job-dir", directory: "job" }],
+      directoryArguments: [
+        { argumentName: "--job-dir", directory: "job" },
+        { argumentName: "--output-dir", directory: "bookmark", bookmark },
+      ],
     },
   };
   const [first, duplicate] = await Promise.all([
@@ -138,6 +148,12 @@ try {
   assert.equal(artifact.sha256, sha256);
   assert.equal(artifact.bytes, bytes.length);
   assert.equal(artifact.asset.id, `asset-${sha256}`);
+  assert.deepEqual(artifact.published, { path: artifact.name, reused: false });
+  assert.deepEqual(await readFile(join(outputDirectory, artifact.published.path)), bytes);
+  assert.ok(
+    !JSON.stringify(final).includes(outputDirectory),
+    "Task records must not expose resolved output paths",
+  );
   const read = await resourceService.dispatch(scope, "resources.read", {
     assetId: artifact.asset.id,
     offset: 0,
@@ -172,16 +188,33 @@ try {
   assert.equal(completed.status, "succeeded", JSON.stringify(completed.error));
   assert.equal(completed.attempt, 2);
   assert.equal(completed.result.artifacts[0].sha256, sha256);
+  assert.deepEqual(
+    await readFile(join(outputDirectory, completed.result.artifacts[0].published.path)),
+    bytes,
+  );
+  // A new explicit request for identical output must preserve the original file.
+  const repeated = await service.start(scope, { ...input, requestKey: "verify-existing-output" });
+  let reused;
+  const reuseDeadline = Date.now() + 30000;
+  while (Date.now() < reuseDeadline) {
+    reused = await service.get(scope, repeated.id);
+    if (!["queued", "running", "cancelling"].includes(reused.status)) break;
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  assert.equal(reused.status, "succeeded", JSON.stringify(reused.error));
+  assert.deepEqual(reused.result.artifacts[0].published, { path: artifact.name, reused: true });
+  assert.deepEqual(await readFile(join(outputDirectory, artifact.name)), bytes);
   await service.shutdown();
   service = new PanelToolJobService(options);
   const reopened = await service.get(scope, first.id);
   assert.equal(reopened.status, "succeeded");
   assert.equal(reopened.result.artifacts[0].asset.id, artifact.asset.id);
-  assert.equal((await service.list(scope)).length, 2);
+  assert.deepEqual(reopened.result.artifacts[0].published, artifact.published);
+  assert.equal((await service.list(scope)).length, 3);
   assert.ok(events.some((item) => item.status === "running"));
   assert.ok(requests > 0);
   console.log(
-    "Real download task passed: stable ID, duplicate submission, actual MP4 bytes, resource capture, project isolation, real cancellation/resume, restart recovery.",
+    "Real download task passed: stable ID, duplicate submission, actual MP4 bytes, bookmarked output delivery/reuse, resource capture, project isolation, real cancellation/resume, restart recovery.",
   );
 } finally {
   await service?.shutdown();
