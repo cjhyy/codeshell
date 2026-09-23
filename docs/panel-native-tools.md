@@ -446,10 +446,28 @@ retained bytes refuse access rather than falling back to the latest catalog.
 
 `projectPackages` is a Host composition option, not a guest request parameter.
 Current paired Desktop enables it explicitly. Existing unpinned bindings are not
-automatically migrated. Native binding/update writes, upgrade/rollback UI, data
-migrations, and task history across an explicit project upgrade remain outstanding. Existing global uninstall
+silently moved to the newest catalog: discovery migrates their captured legacy
+package baseline into explicit project pins. Native binding/update writes share
+the conditional project writer. Existing global uninstall
 semantics remain: removing the registry entry revokes all projects even though
 retained package files are preserved.
+
+Project package history is available through authenticated `POST /:id/versions`
+with `expectedRevision`; snapshots advertise `canRestorePackages` when enabled.
+`POST /:id/restore-preview` accepts that revision and a retained `packageDigest`.
+The resulting owner-bound expiring review describes the current and target
+versions, permissions, added permissions and compatibility. `POST /restore`
+accepts only its review token. Desktop uses the same service through native IPC.
+The Host validates retained bytes again and conditionally changes only this
+project's pin under the execution barrier. It neither installs a new global
+catalog version nor overwrites project data. Unsupported or damaged packages
+cannot be selected. History from the restored original package retains its
+identity and must still satisfy ordinary retry rules.
+
+Desktop's project binding rows and Web management expose this review flow.
+Restoring program bytes is not a document rollback: data migrations, backups,
+repair of projects whose selected package/configuration is already unavailable,
+and full deployment rollback remain separate unfinished work.
 
 
 Desktop descriptors may contain `projectPaths`, `packageDigest` and `packagePinned`.

@@ -35,6 +35,7 @@ import { loadProjects, projectLabel, type TrackedProject } from "../projects";
 import { useAlert, useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
+import { PanelAppVersionsDialog } from "./PanelAppVersionsDialog";
 import { usePanelAppUpdates } from "./usePanelAppUpdates";
 import {
   bindingBusyKey,
@@ -99,6 +100,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [gitBusyTarget, setGitBusyTarget] = useState<string | null>(null);
   const [gitDiscovery, setGitDiscovery] = useState<GitPanelAppDiscovery | null>(null);
   const [review, setReview] = useState<PanelAppReviewState | null>(null);
+  const [versions, setVersions] = useState<{
+    projectPath: string;
+    appId: string;
+    revision: string;
+  } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
   const [projectBindings, setProjectBindings] = useState<
@@ -122,6 +128,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   targetRef.current = { cwd, activeProjectPath };
   useEffect(() => {
     setReview(null);
+    setVersions(null);
   }, [cwd, activeProjectPath]);
   const updates = usePanelAppUpdates(apps, cwd);
   const invalidateUpdates = updates.invalidate;
@@ -502,6 +509,17 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
   return (
     <div className="space-y-3">
+      {versions && (
+        <PanelAppVersionsDialog
+          key={`${versions.projectPath}:${versions.appId}:${versions.revision}`}
+          {...versions}
+          onClose={() => setVersions(null)}
+          onChanged={() => {
+            invalidateUpdates();
+            setReloadKey((key) => key + 1);
+          }}
+        />
+      )}
       {review && (
         <PanelAppInstallReviewDialog
           preview={review.preview}
@@ -1059,6 +1077,26 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                                     aria-hidden="true"
                                   />
                                 ) : null}
+                                {row.bound && !row.unreadable && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={rowBusy}
+                                    onClick={() => {
+                                      const state = projectBindings[row.projectPath]?.find(
+                                        (value) => value.appId === app.appId,
+                                      );
+                                      if (state)
+                                        setVersions({
+                                          projectPath: row.projectPath,
+                                          appId: app.appId,
+                                          revision: state.revision,
+                                        });
+                                    }}
+                                  >
+                                    项目版本
+                                  </Button>
+                                )}
                                 <Switch
                                   checked={row.bound || row.vetoedByGlobalDenylist}
                                   disabled={

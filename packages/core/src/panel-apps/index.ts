@@ -26,6 +26,7 @@ export {
   listInstalledPanelApps,
   retainInstalledPanelApp,
   resolvePanelAppPackage,
+  listRetainedPanelAppPackages,
   previewInstalledPanelAppUpdate,
   previewLocalPanelApp,
   uninstallPanelApp,

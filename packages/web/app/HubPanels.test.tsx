@@ -124,6 +124,7 @@ async function fixture(
     panels?: ManagedPanel[];
     review?: PanelReview;
     discovery?: PanelDiscovery;
+    canRestorePackages?: boolean;
     intercept?: (request: Request) => Response | Promise<Response> | undefined;
   } = {},
 ) {
@@ -132,6 +133,7 @@ async function fixture(
     panels: options.panels ?? [],
     workspace: "/workspace/original",
     hasProject: true,
+    canRestorePackages: options.canRestorePackages,
   };
   const requests: Request[] = [];
   const opened: ManagedPanel[] = [];
@@ -490,4 +492,85 @@ test("expired host authentication returns control to the shared sign-in flow", a
   expect(view.authLost).toBe(1);
   expect(view.requests).toHaveLength(1);
   expect(button(view.tree, "浏览官方仓库").props.disabled).toBe(true);
+});
+
+function restoreFixture() {
+  const installed = panel({ version: "2.0.0", packageDigest: "b".repeat(64) });
+  const version = {
+    version: "1.0.0",
+    packageDigest: "a".repeat(64),
+    permissions: ["storage", "workspace.write"],
+    compatibility: { supported: true, reasons: [] },
+  };
+  const history = {
+    appId: installed.id,
+    title: installed.title,
+    expectedRevision: installed.revision,
+    current: { version: installed.version, packageDigest: installed.packageDigest },
+    versions: [version],
+    unavailablePackages: 1,
+  };
+  const restore = {
+    ...version,
+    appId: installed.id,
+    title: installed.title,
+    current: history.current,
+    addedPermissions: ["workspace.write"],
+    expectedRevision: installed.revision,
+    reviewToken: "restore-owner-token",
+    expiresAt: Date.now() + 60_000,
+  };
+  return { installed, history, restore };
+}
+
+test("retained version restoration reviews permissions and submits only the owner review token", async () => {
+  const data = restoreFixture();
+  const view = await fixture({
+    panels: [data.installed],
+    canRestorePackages: true,
+    intercept: (request) => {
+      if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
+      if (request.url.pathname.endsWith("/restore-preview")) return Response.json(data.restore);
+      if (request.url.pathname.endsWith("/restore"))
+        return Response.json({ id: data.installed.id });
+    },
+  });
+  await click(button(view.tree, "项目版本"));
+  expect(text(view.tree)).toContain("不会恢复旧数据");
+  expect(text(view.tree)).toContain("无法校验");
+  await click(button(view.tree, "审阅 v1.0.0"));
+  expect(text(view.tree)).toContain("新增权限");
+  expect(text(view.tree)).toContain("修改工作区文件");
+  await click(button(view.tree, "确认权限并恢复项目版本"));
+  expect(view.requests.find((request) => request.url.pathname.endsWith("/restore"))?.body).toEqual({
+    reviewToken: data.restore.reviewToken,
+  });
+  expect(
+    view.requests.find((request) => request.url.pathname.endsWith("/restore-preview"))?.body,
+  ).toEqual({
+    packageDigest: data.restore.packageDigest,
+    expectedRevision: data.installed.revision,
+  });
+  expect(view.changed).toBe(1);
+  expect(text(view.tree)).toContain("已恢复为 v1.0.0");
+});
+
+test("a peer project change disables the held restore review without resubmitting it", async () => {
+  const data = restoreFixture();
+  const view = await fixture({
+    panels: [data.installed],
+    canRestorePackages: true,
+    intercept: (request) => {
+      if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
+      if (request.url.pathname.endsWith("/restore-preview")) return Response.json(data.restore);
+    },
+  });
+  await click(button(view.tree, "项目版本"));
+  await click(button(view.tree, "审阅 v1.0.0"));
+  await view.refresh([panel({ version: "3.0.0", revision: "peer-version" })]);
+  expect(button(view.tree, "确认权限并恢复项目版本").props.disabled).toBe(true);
+  expect(text(view.tree)).toContain("项目或审阅已变化");
+  expect(view.requests.filter((request) => request.url.pathname.endsWith("/restore"))).toHaveLength(
+    0,
+  );
 });

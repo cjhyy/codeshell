@@ -17,6 +17,7 @@ import { join } from "node:path";
 import {
   installReviewedLocalPanelApp,
   listInstalledPanelApps,
+  listRetainedPanelAppPackages,
   listProjectPanelApps,
   migrateProjectPanelAppPackagePins,
   projectPanelAppPackagePins,
@@ -95,6 +96,23 @@ async function pinProject(name: string, pin: { version: string; packageDigest?: 
   );
   return project;
 }
+
+test("retained inventory verifies each package, reports damaged addresses and never authorizes an uninstalled app", async () => {
+  const first = await install();
+  await writePackage("2.0.0");
+  const second = await install(true);
+  const listed = await listRetainedPanelAppPackages(id);
+  expect(listed.packages.map((app) => app.version).sort()).toEqual(["1.0.0", "2.0.0"]);
+  expect(listed.unavailableDigests).toEqual([]);
+  await writeFile(join(panelAppPackageDir(id, first.packageDigest!), "app/index.html"), "damaged");
+  const linkedDigest = "f".repeat(64);
+  await symlink(source, panelAppPackageDir(id, linkedDigest));
+  const verified = await listRetainedPanelAppPackages(id);
+  expect(verified.packages.map((app) => app.packageDigest)).toEqual([second.packageDigest!]);
+  expect(verified.unavailableDigests.sort()).toEqual([first.packageDigest!, linkedDigest].sort());
+  await uninstallPanelApp(id);
+  await expect(listRetainedPanelAppPackages(id)).rejects.toThrow("not installed");
+});
 
 test("two projects select independent package payloads and matching Skill content after an update", async () => {
   const first = await install();

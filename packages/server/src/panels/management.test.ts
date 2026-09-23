@@ -22,6 +22,7 @@ import {
   SettingsManager,
   previewLocalPanelApp,
   previewInstalledPanelAppUpdate,
+  panelAppPackageDir,
 } from "@cjhyy/code-shell-core";
 import { createPanelManagement } from "./management.js";
 
@@ -307,6 +308,85 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await listInstalledPanelApps())[0]?.version).toBe("1.0.0");
     writeFileSync(join(cwd, ".code-shell/settings.json"), '{"panelAppPins":null}');
     await expect(api.snapshot()).rejects.toThrow();
+  });
+
+  async function restorationFixture(
+    options: Partial<Parameters<typeof createPanelManagement>[0]> = {},
+  ) {
+    const api = service({ projectPackages: true, ...options });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const old = (await api.snapshot()).panels[0]!;
+    writePanel("2.0.0", []);
+    await api.install(owner, (await api.previewUpdate(owner, old.id, old.revision)).reviewToken);
+    const current = (await api.snapshot()).panels[0]!;
+    return { api, old, current };
+  }
+
+  test("reviewed restoration changes only the project pin, preserves data and checks additional permissions", async () => {
+    const { api, old, current } = await restorationFixture();
+    const peerCwd = join(root, "second-project");
+    mkdirSync(peerCwd);
+    const peer = service({ cwd: peerCwd, projectPackages: true });
+    const peerPanel = (await peer.snapshot()).panels[0]!;
+    await peer.binding(owner, peerPanel.id, true, peerPanel.revision);
+    writeFileSync(join(cwd, "project-data.json"), '{"documentVersion":2}');
+    const history = await api.packageHistory(owner, old.id, current.revision);
+    expect(history.current.version).toBe("2.0.0");
+    expect(history.versions.map((app) => app.version).sort()).toEqual(["1.0.0", "2.0.0"]);
+    const preview = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    expect(preview.addedPermissions).toEqual(["storage"]);
+    expect(preview.current.version).toBe("2.0.0");
+    preview.version = "forged"; // Caller cannot change a held review.
+    await api.restore(owner, preview.reviewToken);
+    expect((await api.snapshot()).panels[0]).toMatchObject({
+      version: "1.0.0",
+      revision: old.revision,
+    });
+    expect((await peer.snapshot()).panels[0]?.version).toBe("2.0.0");
+    expect((await listInstalledPanelApps())[0]?.version).toBe("2.0.0");
+    expect(readFileSync(join(cwd, "project-data.json"), "utf8")).toBe('{"documentVersion":2}');
+    await expect(api.restore(owner, preview.reviewToken)).rejects.toMatchObject({ status: 409 });
+  });
+
+  test("restore reviews enforce owner, expiration, revocation and concurrent project edits", async () => {
+    let now = Date.now();
+    const { api, old, current } = await restorationFixture({ now: () => now });
+    const preview = () => api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const first = await preview();
+    await expect(
+      api.restore({ ...owner, ownerId: "other" }, first.reviewToken),
+    ).rejects.toMatchObject({ status: 403 });
+    now += 9 * 60_000;
+    await expect(api.restore(owner, first.reviewToken)).rejects.toMatchObject({ status: 409 });
+    const expiredOnLogout = await preview();
+    api.cancelOwner(owner.ownerId);
+    await expect(api.restore(owner, expiredOnLogout.reviewToken)).rejects.toMatchObject({
+      status: 409,
+    });
+    const stale = await preview();
+    await api.binding(owner, current.id, false, current.revision);
+    await expect(api.restore(owner, stale.reviewToken)).rejects.toMatchObject({ status: 409 });
+    expect((await api.snapshot()).panels[0]?.bound).toBe(false);
+  });
+
+  test("restore refuses live execution and rechecks target bytes after review", async () => {
+    const { api, old, current } = await restorationFixture();
+    const preview = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const release = panelExecutionGate.enter({ appId: old.id, projectPath: cwd });
+    try {
+      await expect(api.restore(owner, preview.reviewToken)).rejects.toThrow("任务");
+    } finally {
+      release();
+    }
+    writeFileSync(
+      join(panelAppPackageDir(old.id, old.packageDigest!), "app/index.html"),
+      "changed after review",
+    );
+    await expect(api.restore(owner, preview.reviewToken)).rejects.toThrow("content has changed");
+    expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
+    const inventory = await api.packageHistory(owner, old.id, current.revision);
+    expect(inventory.unavailablePackages).toBe(1);
+    expect(inventory.versions.map((app) => app.version)).toEqual(["2.0.0"]);
   });
 
   test("owner-bound reviews expire on logout and pending network work cannot issue another review", async () => {

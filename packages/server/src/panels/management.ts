@@ -14,6 +14,8 @@ import {
   invalidateSkillCache,
   listInstalledPanelApps,
   listProjectPanelApps,
+  listRetainedPanelAppPackages,
+  resolvePanelAppPackage,
   migrateProjectPanelAppPackagePins,
   parsePanelAppPackagePins,
   retainInstalledPanelApp,
@@ -38,6 +40,8 @@ import type {
   PanelReview,
   PanelProjectReview,
   PanelSnapshot,
+  PanelPackageHistory,
+  PanelPackageRestoreReview,
 } from "./types.js";
 
 const REVIEW_TTL = 8 * 60_000;
@@ -274,6 +278,15 @@ export function createPanelManagement(options: PanelManagementOptions) {
   const workspace = resolve(options.bindingCwd ?? options.cwd);
   const hasProject = workspace !== resolve(join(userHome(), ".code-shell", "no-repo"));
   const reviews = new Map<string, HeldReview>();
+  const restores = new Map<
+    string,
+    {
+      owner: string;
+      generation: number;
+      projectState: string;
+      public: PanelPackageRestoreReview;
+    }
+  >();
   const generations = new Map<string, number>();
   let closed = false;
   let networkBusy = 0;
@@ -423,7 +436,12 @@ export function createPanelManagement(options: PanelManagementOptions) {
       )
         throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请刷新后重试。");
     }
-    return { panels, workspace, hasProject };
+    return {
+      panels,
+      workspace,
+      hasProject,
+      canRestorePackages: !!options.projectPackages && hasProject,
+    };
   }
 
   async function network<T>(
@@ -463,6 +481,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
   function prune() {
     for (const [token, value] of reviews)
       if (value.public.expiresAt <= now()) reviews.delete(token);
+    for (const [token, value] of restores)
+      if (value.public.expiresAt <= now()) restores.delete(token);
   }
 
   async function issue(
@@ -658,6 +678,117 @@ export function createPanelManagement(options: PanelManagementOptions) {
 
   return {
     snapshot,
+    async packageHistory(
+      context: PanelOperationContext,
+      id: unknown,
+      expected: unknown,
+    ): Promise<PanelPackageHistory> {
+      assertId(id);
+      assertRevision(expected);
+      if (!options.projectPackages || !hasProject)
+        throw new PanelManagementError(400, "project_required", "请先选择支持独立版本的项目。");
+      return network(context, async (guard) => {
+        const current = await selectedApp(id);
+        if (revision(current.app, current.digest) !== expected)
+          throw new PanelManagementError(409, "conflict", "项目面板已改变，请刷新后重试。");
+        const inventory = await listRetainedPanelAppPackages(id);
+        await guard();
+        const latest = await selectedApp(id);
+        if (revision(latest.app, latest.digest) !== expected)
+          throw new PanelManagementError(409, "conflict", "项目面板已改变，请刷新后重试。");
+        return {
+          appId: id,
+          title: current.app.title,
+          expectedRevision: expected,
+          current: { version: current.app.version, packageDigest: current.app.packageDigest },
+          versions: inventory.packages.map((app) => ({
+            version: app.version,
+            packageDigest: app.packageDigest!,
+            permissions: app.permissions,
+            compatibility: compatibility(app),
+          })),
+          unavailablePackages: inventory.unavailableDigests.length,
+        };
+      });
+    },
+    async previewRestore(
+      context: PanelOperationContext,
+      id: unknown,
+      digest: unknown,
+      expected: unknown,
+    ): Promise<PanelPackageRestoreReview> {
+      assertId(id);
+      assertRevision(expected);
+      if (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest)) invalid();
+      if (!options.projectPackages || !hasProject)
+        throw new PanelManagementError(400, "project_required", "请先选择支持独立版本的项目。");
+      return network(context, async (guard) => {
+        prune();
+        if (restores.size >= MAX_REVIEWS)
+          throw new PanelManagementError(429, "busy", "待确认的版本过多，请稍后重试。");
+        const current = await selectedApp(id);
+        if (!policy().boundApps.has(id))
+          throw new PanelManagementError(400, "not_bound", "请先绑定项目，再选择项目版本。");
+        if (revision(current.app, current.digest) !== expected)
+          throw new PanelManagementError(409, "conflict", "项目面板已改变，请刷新后重试。");
+        const state = projectState(id);
+        const target = await resolvePanelAppPackage(id, digest);
+        await guard();
+        const latest = await selectedApp(id);
+        if (revision(latest.app, latest.digest) !== expected || projectState(id) !== state)
+          throw new PanelManagementError(409, "conflict", "项目面板已改变，请重新审阅。");
+        const value: PanelPackageRestoreReview = {
+          appId: id,
+          title: target.title,
+          version: target.version,
+          packageDigest: digest,
+          permissions: target.permissions,
+          addedPermissions: target.permissions.filter(
+            (permission) => !current.app.permissions.includes(permission),
+          ),
+          compatibility: compatibility(target),
+          current: { version: current.app.version, packageDigest: current.app.packageDigest },
+          expectedRevision: expected,
+          reviewToken: randomBytes(32).toString("base64url"),
+          expiresAt: now() + REVIEW_TTL,
+        };
+        restores.set(value.reviewToken, {
+          owner: context.ownerId,
+          generation: generation(context.ownerId),
+          projectState: state,
+          public: structuredClone(value),
+        });
+        return value;
+      });
+    },
+    async restore(context: PanelOperationContext, token: unknown) {
+      if (typeof token !== "string") invalid();
+      prune();
+      const held = restores.get(token);
+      if (!held)
+        throw new PanelManagementError(409, "review_expired", "版本审阅已失效，请重新选择。");
+      if (held.owner !== context.ownerId)
+        throw new PanelManagementError(403, "review_owner", "请在当前设备重新审阅这个版本。");
+      await assertAuthorized(context, held.generation);
+      const review = held.public;
+      return mutate(context, { appId: review.appId, kind: "binding" }, async (guard) => {
+        await assertAuthorized(context, held.generation);
+        if (restores.get(token) !== held || held.public.expiresAt <= now())
+          throw new PanelManagementError(409, "review_expired", "版本审阅已失效，请重新选择。");
+        const current = await selectedApp(review.appId);
+        if (revision(current.app, current.digest) !== review.expectedRevision)
+          throw new PanelManagementError(409, "conflict", "项目面板已改变，请重新审阅。");
+        const target = await resolvePanelAppPackage(review.appId, review.packageDigest);
+        if (target.version !== review.version || !compatibility(target).supported)
+          throw new PanelManagementError(400, "unsupported", "这个版本无法在当前环境使用。");
+        await guard();
+        await assertAuthorized(context, held.generation);
+        setBinding(target, true, { projectState: held.projectState });
+        restores.delete(token);
+        await options.onChanged?.(review.appId, "binding");
+        return { id: review.appId, packageDigest: review.packageDigest };
+      });
+    },
     assertAuthorized,
     async discover(context: PanelOperationContext, input: unknown): Promise<PanelDiscovery> {
       return network(context, async (guard) => {
@@ -870,10 +1001,12 @@ export function createPanelManagement(options: PanelManagementOptions) {
     cancelOwner(owner: string) {
       generations.set(owner, generation(owner) + 1);
       for (const [token, held] of reviews) if (held.owner === owner) reviews.delete(token);
+      for (const [token, held] of restores) if (held.owner === owner) restores.delete(token);
     },
     close() {
       closed = true;
       reviews.clear();
+      restores.clear();
     },
   };
 }

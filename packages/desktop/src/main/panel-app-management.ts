@@ -43,6 +43,9 @@ export function createDesktopPanelManagement(
   return {
     close: () => management.close(),
     cancelOwner: (owner: string) => management.cancelOwner(owner),
+    packageHistory: management.packageHistory,
+    previewRestore: management.previewRestore,
+    restore: management.restore,
     previewSource: (context: PanelOperationContext, source: PanelAppSourceInput) =>
       management.previewProjectSource(context, source),
     previewUpdate: (context: PanelOperationContext, id: string, expectedRevision: string) =>

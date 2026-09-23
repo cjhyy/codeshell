@@ -449,6 +449,7 @@ export {
   parsePanelAppPackagePins,
   retainInstalledPanelApp,
   resolvePanelAppPackage,
+  listRetainedPanelAppPackages,
   panelAppInstallDir,
   panelAppPackageDir,
   panelAppsRegistryPath,

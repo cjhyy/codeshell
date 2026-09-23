@@ -779,6 +779,22 @@ try {
       project,
     );
     assert.equal(selected.version, "2.0.0");
+    const history = await win.evaluate(
+      ({ cwd, app }) => window.codeshell.getPanelAppPackageHistory(cwd, app.appId, app.revision),
+      { cwd: project, app: selected },
+    );
+    const retained = history.versions.find((version) => version.version === "1.0.0");
+    assert.ok(retained);
+    const restoreReview = await win.evaluate(
+      ({ cwd, app, digest }) => window.codeshell.previewPanelAppRestore(cwd, app.appId, digest, app.revision),
+      { cwd: project, app: selected, digest: retained.packageDigest },
+    );
+    await win.evaluate(({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token), {
+      cwd: project, token: restoreReview.reviewToken,
+    });
+    const restored = await win.evaluate(async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0], project);
+    assert.equal(restored.version, "1.0.0");
+    assert.equal(restored.packageDigest, first.package.packageDigest);
   }
   const staleBinding = await win.evaluate(
     async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
@@ -808,6 +824,7 @@ try {
       nativeConditionalProjectBinding: true,
       packageMutationBlocksQueuedRunningAndPreparing: true,
       projectUpdateAfterActualTaskExit: projectPins,
+      nativeReviewedPackageRestore: projectPins,
       projectPinnedAgainstNewerCatalog: projectPins,
       legacyProjectAutomaticallyPinned: legacyProjects,
       sharedDirectoryBookmarks: true,

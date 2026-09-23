@@ -12,6 +12,7 @@ import {
   mkdir,
   mkdtemp,
   open,
+  opendir,
   readdir,
   realpath,
   rename,
@@ -771,6 +772,44 @@ export async function resolvePanelAppPackage(
   if (schemaVersion !== 1 || record.id !== id || record.version !== inspected.manifest.version)
     throw new PanelAppInstallError("Retained Panel App package metadata does not match");
   return { ...installedPanelApp(inspected.manifest, record), installPath: target, packageDigest };
+}
+
+/** Inventory verified retained bytes; registry membership remains installation authority. */
+export async function listRetainedPanelAppPackages(id: string): Promise<{
+  packages: InstalledPanelApp[];
+  unavailableDigests: string[];
+}> {
+  assertSafePanelAppId(id);
+  const authorized = async () => {
+    if (!(await readInstalledPanelAppsRegistry()).some((app) => app.id === id))
+      throw new PanelAppInstallError("Panel App is not installed");
+  };
+  await authorized();
+  try {
+    await checkedPackageParents(id);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      return { packages: [], unavailableDigests: [] };
+    throw error;
+  }
+  const digests: string[] = [];
+  let examined = 0;
+  for await (const entry of await opendir(join(panelAppsRoot(), ".versions", id))) {
+    if (++examined > 512) throw new PanelAppInstallError("Too many retained package entries");
+    if (/^[a-f0-9]{64}$/.test(entry.name)) digests.push(entry.name);
+  }
+  if (digests.length > 128) throw new PanelAppInstallError("Too many retained Panel packages");
+  const packages: InstalledPanelApp[] = [];
+  const unavailableDigests: string[] = [];
+  for (const digest of digests.sort()) {
+    try {
+      packages.push(await resolvePanelAppPackage(id, digest));
+    } catch {
+      unavailableDigests.push(digest);
+    }
+  }
+  await authorized();
+  return { packages, unavailableDigests };
 }
 
 interface PreparedPackage {

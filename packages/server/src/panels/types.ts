@@ -43,6 +43,7 @@ export interface PanelSnapshot {
   panels: ManagedPanel[];
   workspace: string;
   hasProject: boolean;
+  canRestorePackages?: boolean;
 }
 
 export interface PanelDiscovery {
@@ -69,4 +70,28 @@ export interface PanelProjectReview extends Omit<PanelReview, "source"> {
 export interface PanelOperationContext {
   ownerId: string;
   authorize: () => boolean | Promise<boolean>;
+}
+
+export interface PanelPackageVersion {
+  version: string;
+  packageDigest: string;
+  permissions: PanelAppPreview["permissions"];
+  compatibility: PanelCompatibility;
+}
+export interface PanelPackageHistory {
+  appId: string;
+  title: PanelAppPreview["title"];
+  expectedRevision: string;
+  current: { version: string; packageDigest?: string };
+  versions: PanelPackageVersion[];
+  unavailablePackages: number;
+}
+export interface PanelPackageRestoreReview extends PanelPackageVersion {
+  appId: string;
+  title: PanelAppPreview["title"];
+  current: PanelPackageHistory["current"];
+  addedPermissions: PanelAppPreview["permissions"];
+  expectedRevision: string;
+  reviewToken: string;
+  expiresAt: number;
 }

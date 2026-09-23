@@ -3907,6 +3907,28 @@ ipcMain.handle("panel-apps:bindings", async (_e, cwd: string) => {
   return createDesktopPanelManagement(cwd).snapshot();
 });
 ipcMain.handle(
+  "panel-apps:packageHistory",
+  async (event, rawCwd: string, id: string, revision: string) => {
+    const cwd = await requireRendererProjectPath(rawCwd);
+    return desktopPanelManager(cwd).management.packageHistory(
+      desktopPanelContext(event, cwd), id, revision,
+    );
+  },
+);
+ipcMain.handle(
+  "panel-apps:previewRestore",
+  async (event, rawCwd: string, id: string, digest: string, revision: string) => {
+    const cwd = await requireRendererProjectPath(rawCwd);
+    return desktopPanelManager(cwd).management.previewRestore(
+      desktopPanelContext(event, cwd), id, digest, revision,
+    );
+  },
+);
+ipcMain.handle("panel-apps:restore", async (event, rawCwd: string, token: string) => {
+  const cwd = await requireRendererProjectPath(rawCwd);
+  return desktopPanelManager(cwd).management.restore(desktopPanelContext(event, cwd), token);
+});
+ipcMain.handle(
   "panel-apps:setProjectBinding",
   async (event, cwd: string, id: string, bound: boolean, expectedRevision: string) => {
     cwd = await requireRendererProjectPath(cwd);

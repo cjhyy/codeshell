@@ -238,6 +238,43 @@ test("real Hub HTTP serves and executes each project's retained package across c
   expect(retry.status).not.toBe(200);
   expect(await retry.text()).toContain("仅供查看");
   await first.run(newer, "2.0.0");
+  const historyResponse = await first.request("/api/v1/panels/version-fixture/versions", "POST", {
+    expectedRevision: (await first.catalog()).revision,
+  });
+  expect(historyResponse.status).toBe(200);
+  const versions = await historyResponse.json();
+  expect(versions.versions.map((item: any) => item.version).sort()).toEqual(["1.0.0", "2.0.0"]);
+  const restorePreview = await first.request(
+    "/api/v1/panels/version-fixture/restore-preview",
+    "POST",
+    {
+      expectedRevision: versions.expectedRevision,
+      packageDigest: old.packageDigest,
+    },
+  );
+  expect(restorePreview.status).toBe(200);
+  expect(
+    (
+      await first.request("/api/v1/panels/restore", "POST", {
+        reviewToken: (await restorePreview.json()).reviewToken,
+      })
+    ).status,
+  ).toBe(200);
+  const recovered = await first.prepare();
+  expect(await first.page(recovered)).toContain("Package 1.0.0");
+  await first.run(recovered, "1.0.0");
+  const originalHistory = await first.request(
+    `/api/v1/panels/runtime/${recovered.instanceId}/call`,
+    "POST",
+    {
+      method: "tasks.get",
+      params: { id: firstOldJob },
+    },
+  );
+  expect(await originalHistory.json()).toMatchObject({
+    readOnly: false,
+    package: { version: "1.0.0", packageDigest: old.packageDigest },
+  });
   const oldJob = await second.run(original, "1.0.0");
   await second.close();
   const restarted = await host("project-b");

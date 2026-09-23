@@ -1049,6 +1049,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   listPanelAppExtensions: (cwd: string, locale: string) =>
     ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
   getPanelAppBindings: (cwd: string) => ipcRenderer.invoke("panel-apps:bindings", cwd),
+  getPanelAppPackageHistory: (cwd: string, id: string, revision: string) =>
+    ipcRenderer.invoke("panel-apps:packageHistory", cwd, id, revision),
+  previewPanelAppRestore: (cwd: string, id: string, digest: string, revision: string) =>
+    ipcRenderer.invoke("panel-apps:previewRestore", cwd, id, digest, revision),
+  restorePanelAppPackage: (cwd: string, token: string) =>
+    ipcRenderer.invoke("panel-apps:restore", cwd, token),
   setPanelAppProjectBinding: (cwd: string, id: string, bound: boolean, expectedRevision: string) =>
     ipcRenderer.invoke("panel-apps:setProjectBinding", cwd, id, bound, expectedRevision),
   listPanelAppsForProjects: (projectPaths: string[], locale: string) =>

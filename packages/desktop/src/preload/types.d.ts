@@ -1700,6 +1700,13 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
   getPanelAppBindings(cwd: string): Promise<PanelAppBindingState[]>;
+  getPanelAppPackageHistory(
+    cwd: string, id: string, revision: string,
+  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageHistory>;
+  previewPanelAppRestore(
+    cwd: string, id: string, digest: string, revision: string,
+  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageRestoreReview>;
+  restorePanelAppPackage(cwd: string, token: string): Promise<{ id: string; packageDigest: string }>;
   setPanelAppProjectBinding(
     cwd: string,
     id: string,
