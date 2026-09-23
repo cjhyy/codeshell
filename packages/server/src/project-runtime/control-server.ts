@@ -1,3 +1,5 @@
+import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 import { describeEnvironment } from "../environment-identity.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
@@ -16,6 +18,7 @@ export interface ProjectControlServerOptions {
   port: number;
   dataDir: string;
   publicOrigin?: string;
+  remoteLink?: RemoteLinkConfiguration;
   staticRootDir?: string;
   runtimeImage?: string;
   /** Dependency injection for lifecycle/transport integration tests. */
@@ -77,6 +80,7 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 
 /** A small account/project gateway. It never creates a worker, executes tools or mounts cwd. */
 export async function startProjectControlServer(options: ProjectControlServerOptions) {
+  const remoteLink = remoteLinkHostConfiguration(options.remoteLink, options.publicOrigin);
   const registry = new ProjectRegistry(options.dataDir);
   let proxy: ReturnType<typeof createProjectRuntimeProxy> | undefined;
   let manager: ProjectManager | undefined;
@@ -111,6 +115,7 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
         installationId: registry.installationId,
         dataDir: options.dataDir,
         image: options.runtimeImage,
+        remoteLink,
       });
     manager = new ProjectManager({
       registry,

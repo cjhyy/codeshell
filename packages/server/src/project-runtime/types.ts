@@ -1,3 +1,4 @@
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 /** Stored only by the trusted control plane; credentials must never reach browser DTOs. */
 export interface ProjectRuntimeRecord {
   id: string;
@@ -46,4 +47,5 @@ export interface ManagedProjectSecret {
   password: string;
   publicOrigin: string;
   publicPathPrefix: string;
+  remoteLink?: RemoteLinkConfiguration;
 }

@@ -1,3 +1,4 @@
+import { rememberRemoteLink } from "./remote-link-authorization.js";
 import React from "react";
 import type {
   LinkAuthorization,
@@ -168,7 +169,8 @@ export function HubLinks({
     } catch (cause) {
       if (mounted.current && !controller.signal.aborted) {
         report(cause);
-        if (cause instanceof ApiError && cause.status === 409) setReload((value) => value + 1);
+        if (cause instanceof ApiError && [409, 503].includes(cause.status))
+          setReload((value) => value + 1);
       }
     } finally {
       if (write.current === controller) write.current = undefined;
@@ -198,10 +200,30 @@ export function HubLinks({
     setNotice("连接已保存。");
     setReload((value) => value + 1);
   }
-  function openEditor(provider: LinkProviderView, original?: MaskedLinkConnection) {
+  function openEditor(provider: LinkProviderView, original?: MaskedLinkConnection, remote = false) {
     if (busy || authorization?.state === "pending") return;
     if (dirty && !window.confirm("放弃当前未保存的连接修改？")) return;
+    if (remote || original?.authSource === "remote-link") {
+      provider = {
+        ...provider,
+        actions: provider.actions.filter((action) =>
+          ["list_repositories", "list_issues", "get_issue"].includes(action.id),
+        ),
+        connectionMethods: [
+          ...provider.connectionMethods,
+          {
+            id: "remote-link",
+            displayName: { zh: "独立 Link 授权", en: "Remote Link" },
+            executionRuntime: "server",
+            secretLocation: "server",
+            authKind: "oauth",
+            availability: "available",
+          },
+        ],
+      };
+    }
     const method =
+      (remote ? provider.connectionMethods.find((item) => item.id === "remote-link") : undefined) ??
       provider.connectionMethods.find((item) => item.id === original?.methodId) ??
       provider.connectionMethods.find(
         (item) => item.executionRuntime === "local" && item.availability === "available",
@@ -299,7 +321,8 @@ export function HubLinks({
         </button>
       </header>
       <p className="links-host">
-        连接由{hostLabel}执行，凭据保存在{hostLabel}。CLI 使用这台机器上已有的登录。
+        本地连接由{hostLabel}执行，CLI 使用这台机器上已有的登录。独立 Link 连接在 Link
+        服务中访问第三方，原始凭据留在 Link。
       </p>
       {error && (
         <p className="form-error" role="alert">
@@ -331,11 +354,13 @@ export function HubLinks({
                   {statuses[connection.status]}
                 </span>
                 <small>
-                  {connection.authSource === "cli-session"
-                    ? "CLI 登录"
-                    : connection.authSource === "browser-oauth"
-                      ? "浏览器授权"
-                      : "Token"}
+                  {connection.authSource === "remote-link"
+                    ? "独立 Link 授权"
+                    : connection.authSource === "cli-session"
+                      ? "CLI 登录"
+                      : connection.authSource === "browser-oauth"
+                        ? "浏览器授权"
+                        : "Token"}
                   {connection.expiresAt
                     ? ` · 到期 ${new Date(connection.expiresAt).toLocaleString()}`
                     : ""}
@@ -409,6 +434,83 @@ export function HubLinks({
               >
                 载入最新版本，保留输入
               </button>
+            </div>
+          )}
+          {method.id === "remote-link" && (
+            <div className="links-auth-option">
+              <h3>独立 Link 授权</h3>
+              <p>在 Link 服务选择账号、仓库和只读操作，授权将保存到当前项目所属的{hostLabel}。</p>
+              {snapshot?.remoteServer && (
+                <p className="links-muted">服务：{snapshot.remoteServer.issuer}</p>
+              )}
+              <button
+                disabled={
+                  unavailable ||
+                  !snapshot?.capabilities.remoteAuth ||
+                  !editor.label.trim() ||
+                  !!conflict
+                }
+                onClick={() => {
+                  const workspace = getApiWorkspace() ?? "",
+                    projectId = getApiProject();
+                  const target = apiUrl(`${ROOT}/authorizations/remote`, workspace, projectId);
+                  void operation(
+                    async (signal) => {
+                      const value = await mutate<LinkAuthorization>(
+                        target,
+                        "POST",
+                        input(),
+                        signal,
+                      );
+                      const pendingTarget = apiUrl(
+                        `${ROOT}/authorizations/${encodeURIComponent(value.id)}`,
+                        workspace,
+                        projectId,
+                      );
+                      try {
+                        const url = rememberRemoteLink(value, snapshot!.remoteServer!.issuer, {
+                          workspace,
+                          projectId,
+                        });
+                        return { url, pendingTarget };
+                      } catch (cause) {
+                        await api(pendingTarget, { method: "DELETE" }).catch(() => {});
+                        throw cause;
+                      }
+                    },
+                    ({ url }) => {
+                      window.location.assign(url);
+                    },
+                  );
+                }}
+              >
+                {editor.original ? "重新授权" : "前往 Link 授权"}
+              </button>
+              {!snapshot?.capabilities.remoteAuth && (
+                <p className="links-muted">当前 Host 尚未配置独立 Link 服务。</p>
+              )}
+              {editor.original && (
+                <button
+                  disabled={unavailable || !!conflict || !editor.label.trim()}
+                  onClick={() =>
+                    void operation(
+                      (signal) =>
+                        mutate(
+                          `${ROOT}/connections/${encodeURIComponent(editor.original!.id)}`,
+                          "PATCH",
+                          {
+                            label: editor.label.trim(),
+                            expectedRevision: editor.original!.revision,
+                          },
+                          signal,
+                        ),
+                      saved,
+                    )
+                  }
+                >
+                  保存名称
+                </button>
+              )}
             </div>
           )}
           {method.browserAuth && (
@@ -518,101 +620,106 @@ export function HubLinks({
               )}
             </div>
           )}
-          <form
-            className="links-auth-option"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (unavailable || conflict) return;
-              void operation(
-                (signal) =>
-                  editor.original && !editor.token.trim()
-                    ? mutate(
-                        `${ROOT}/connections/${encodeURIComponent(editor.original.id)}`,
-                        "PATCH",
-                        { label: editor.label.trim(), expectedRevision: editor.original.revision },
-                        signal,
-                      )
-                    : mutate(
-                        `${ROOT}/connections/token`,
-                        "POST",
-                        { ...input(), token: editor.token.trim() },
-                        signal,
-                      ),
-                saved,
-              );
-            }}
-          >
-            <h3>{editor.original ? "名称与 Token" : "使用 Token"}</h3>
-            {method.authGuide && (
-              <>
-                <p>{method.authGuide.summary.zh}</p>
-                <div className="links-actions">
-                  {safeLinkUrl(method.authGuide.createCredentialUrl) && (
-                    <a
-                      href={safeLinkUrl(method.authGuide.createCredentialUrl)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      创建凭据 ↗
-                    </a>
-                  )}
-                  {safeLinkUrl(method.authGuide.docsUrl) && (
-                    <a
-                      href={safeLinkUrl(method.authGuide.docsUrl)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      授权说明 ↗
-                    </a>
-                  )}
-                </div>
-                <details>
-                  <summary>所需权限与设置步骤</summary>
-                  <ul>
-                    {method.authGuide.permissions.map((permission) => (
-                      <li key={permission.id}>
-                        {permission.label}（{permission.level === "required" ? "必需" : "可选"}）
-                        {permission.description ? `：${permission.description.zh}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                  <ol>
-                    {method.authGuide.steps.map((step, index) => (
-                      <li key={index}>{step.zh}</li>
-                    ))}
-                  </ol>
-                </details>
-              </>
-            )}
-            <label>
-              {method.tokenLabel ?? editor.provider.tokenLabel}
-              <input
-                type="password"
-                autoComplete="off"
-                value={editor.token}
-                disabled={unavailable}
-                placeholder={
-                  editor.original
-                    ? "留空保留当前授权，仅修改名称"
-                    : (method.tokenPlaceholder ?? editor.provider.tokenPlaceholder)
-                }
-                onChange={(event) => setEditor({ ...editor, token: event.target.value })}
-                required={!editor.original}
-                maxLength={16384}
-              />
-            </label>
-            <button
-              type="submit"
-              className="send"
-              disabled={unavailable || !!conflict || !editor.label.trim()}
+          {method.id !== "remote-link" && (
+            <form
+              className="links-auth-option"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (unavailable || conflict) return;
+                void operation(
+                  (signal) =>
+                    editor.original && !editor.token.trim()
+                      ? mutate(
+                          `${ROOT}/connections/${encodeURIComponent(editor.original.id)}`,
+                          "PATCH",
+                          {
+                            label: editor.label.trim(),
+                            expectedRevision: editor.original.revision,
+                          },
+                          signal,
+                        )
+                      : mutate(
+                          `${ROOT}/connections/token`,
+                          "POST",
+                          { ...input(), token: editor.token.trim() },
+                          signal,
+                        ),
+                  saved,
+                );
+              }}
             >
-              {busy
-                ? "正在验证并保存…"
-                : editor.token.trim() || !editor.original
-                  ? "验证并保存"
-                  : "保存名称"}
-            </button>
-          </form>
+              <h3>{editor.original ? "名称与 Token" : "使用 Token"}</h3>
+              {method.authGuide && (
+                <>
+                  <p>{method.authGuide.summary.zh}</p>
+                  <div className="links-actions">
+                    {safeLinkUrl(method.authGuide.createCredentialUrl) && (
+                      <a
+                        href={safeLinkUrl(method.authGuide.createCredentialUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        创建凭据 ↗
+                      </a>
+                    )}
+                    {safeLinkUrl(method.authGuide.docsUrl) && (
+                      <a
+                        href={safeLinkUrl(method.authGuide.docsUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        授权说明 ↗
+                      </a>
+                    )}
+                  </div>
+                  <details>
+                    <summary>所需权限与设置步骤</summary>
+                    <ul>
+                      {method.authGuide.permissions.map((permission) => (
+                        <li key={permission.id}>
+                          {permission.label}（{permission.level === "required" ? "必需" : "可选"}）
+                          {permission.description ? `：${permission.description.zh}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                    <ol>
+                      {method.authGuide.steps.map((step, index) => (
+                        <li key={index}>{step.zh}</li>
+                      ))}
+                    </ol>
+                  </details>
+                </>
+              )}
+              <label>
+                {method.tokenLabel ?? editor.provider.tokenLabel}
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={editor.token}
+                  disabled={unavailable}
+                  placeholder={
+                    editor.original
+                      ? "留空保留当前授权，仅修改名称"
+                      : (method.tokenPlaceholder ?? editor.provider.tokenPlaceholder)
+                  }
+                  onChange={(event) => setEditor({ ...editor, token: event.target.value })}
+                  required={!editor.original}
+                  maxLength={16384}
+                />
+              </label>
+              <button
+                type="submit"
+                className="send"
+                disabled={unavailable || !!conflict || !editor.label.trim()}
+              >
+                {busy
+                  ? "正在验证并保存…"
+                  : editor.token.trim() || !editor.original
+                    ? "验证并保存"
+                    : "保存名称"}
+              </button>
+            </form>
+          )}
           <details>
             <summary>可用操作（{editor.provider.actions.length}）</summary>
             <ul>
@@ -640,7 +747,8 @@ export function HubLinks({
       <div className="links-providers">
         {providers.map((provider) => {
           const existing = snapshot?.connections.find(
-            (connection) => connection.providerId === provider.id,
+            (connection) =>
+              connection.providerId === provider.id && connection.authSource !== "remote-link",
           );
           return (
             <article key={provider.id} className="links-provider">
@@ -656,6 +764,14 @@ export function HubLinks({
               >
                 {existing ? (existing.editable ? "管理连接" : "项目配置管理") : "添加连接"}
               </button>
+              {provider.id === "github" && snapshot?.capabilities.remoteAuth && (
+                <button
+                  disabled={unavailable}
+                  onClick={() => openEditor(provider, undefined, true)}
+                >
+                  通过 Link 添加账号
+                </button>
+              )}
             </article>
           );
         })}

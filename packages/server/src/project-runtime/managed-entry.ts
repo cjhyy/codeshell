@@ -1,3 +1,4 @@
+import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
 import { constants } from "node:fs";
 import { lstat, open } from "node:fs/promises";
 import { HubAuthStore } from "../hub/auth-store.js";
@@ -55,6 +56,8 @@ export async function readManagedProjectSecret(file: string): Promise<ManagedPro
   validateProjectPublicOrigin(secret.publicOrigin);
   if (secret.publicPathPrefix !== `/p/${secret.projectId}`)
     throw new Error("Invalid managed project public path.");
+  if (secret.remoteLink)
+    secret.remoteLink = remoteLinkHostConfiguration(secret.remoteLink, secret.publicOrigin);
   return secret;
 }
 
@@ -98,6 +101,7 @@ export function managedProjectServerOptions(
     dataDir: "/data",
     authMode: "hub",
     publicOrigin: secret.publicOrigin,
+    remoteLink: remoteLinkHostConfiguration(secret.remoteLink, secret.publicOrigin),
     publicPathPrefix: secret.publicPathPrefix,
     workerEntryPath: resolveWorkerEntry(),
     workerCapabilityModules: resolveWorkerCapabilityModules(),

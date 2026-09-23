@@ -90,7 +90,9 @@ export function Workbench({
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const [view, setView] = React.useState<
     "chat" | "settings" | "files" | "history" | "links" | "panels" | "panel"
-  >("chat");
+  >(() =>
+    new URLSearchParams(window.location?.search ?? "").get("view") === "links" ? "links" : "chat",
+  );
   const [openedPanel, setOpenedPanel] = React.useState<{
     panel: ManagedPanel;
     workspaceKey: string;
