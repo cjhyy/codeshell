@@ -646,8 +646,13 @@ export interface CredentialView {
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
-    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
-    linkExecutionBackend?: "http-token" | "cli";
+    linkAuthSource?:
+      | "manual-token"
+      | "github-cli"
+      | "cli-session"
+      | "browser-oauth"
+      | "remote-link";
+    linkExecutionBackend?: "http-token" | "cli" | "remote";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;
@@ -1299,6 +1304,20 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     logout(credentialId: string): Promise<{ removed: true; remoteRevoked: boolean }>;
   };
   links: {
+    remoteSnapshot(cwd: string): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
+    remoteStart(
+      cwd: string,
+      requestId: string,
+      input: import("@cjhyy/code-shell-link").LinkConnectionInput,
+    ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
+    remoteCancel(cwd: string, requestId: string): Promise<boolean>;
+    remoteRename(
+      cwd: string,
+      id: string,
+      label: string,
+      revision: string,
+    ): Promise<import("@cjhyy/code-shell-link").MaskedLinkConnection>;
+    remoteDisconnect(cwd: string, id: string, revision: string): Promise<void>;
     listLocalProviders(): Promise<LocalLinkProviderView[]>;
     cliStatus(providerId: string, cwd?: string): Promise<CliLinkStatusView>;
     cliInstallStatus(providerId: string): Promise<ManagedCliInstallStatusView>;
@@ -1355,8 +1374,13 @@ export interface CodeshellApi extends ProjectAuthorityApi {
           linkProvider?: string;
           linkConnectionMethod?: string;
           linkExecutionRuntime?: "local" | "server";
-          linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
-          linkExecutionBackend?: "http-token" | "cli";
+          linkAuthSource?:
+            | "manual-token"
+            | "github-cli"
+            | "cli-session"
+            | "browser-oauth"
+            | "remote-link";
+          linkExecutionBackend?: "http-token" | "cli" | "remote";
           agentExposable?: boolean;
           linkAccountId?: string;
           linkAccountLabel?: string;

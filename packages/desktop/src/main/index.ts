@@ -43,6 +43,7 @@ import {
   writeSettingsSchemaFile,
   userHome,
   CredentialStore,
+  isRemoteLinkCredential,
   summarizeCookieExpiry,
   materializeCookieSecret,
   type Credential,
@@ -384,7 +385,13 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
-import { remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
+import {
+  createLinkService,
+  remoteLinkFromEnvironment,
+  type LinkConnectionInput,
+} from "@cjhyy/code-shell-server/links";
+import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
+import { openNativeLinkAuthorization } from "./remote-link-window.js";
 import { createDesktopWebService } from "./desktop-web-service.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
@@ -3979,6 +3986,8 @@ ipcMain.handle(
   "credentials:save",
   async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    assertGenericCredentialMutation(authorizedCwd, cred.id);
+    if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
     new CredentialStore(authorizedCwd || undefined).save(scope, cred);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
@@ -3988,12 +3997,118 @@ ipcMain.handle(
   "credentials:remove",
   async (_e, cwd: string, scope: CredentialScope, id: string) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    assertGenericCredentialMutation(authorizedCwd, id);
     new CredentialStore(authorizedCwd || undefined).remove(scope, id);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
+
+const nativeLinkOwners = new WeakMap<
+  Electron.WebContents,
+  {
+    id: string;
+    managers: Map<string, ReturnType<typeof createNativeRemoteLinkManager>>;
+  }
+>();
+async function nativeLinkContext(event: IpcMainInvokeEvent, rawCwd: string) {
+  const allowed = () =>
+    !event.sender.isDestroyed() &&
+    event.senderFrame === event.sender.mainFrame &&
+    [...mainWindows].some((win) => !win.isDestroyed() && win.webContents === event.sender);
+  if (!allowed() || typeof rawCwd !== "string") throw new Error("Link 操作需要来自桌面主窗口。");
+  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
+  if (!allowed()) throw new Error("Link 操作所属窗口已关闭或刷新。");
+  let owner = nativeLinkOwners.get(event.sender);
+  if (!owner) {
+    owner = { id: `desktop-link:${randomUUID()}`, managers: new Map() };
+    nativeLinkOwners.set(event.sender, owner);
+    const close = () => {
+      for (const manager of owner!.managers.values()) manager.close();
+      owner!.managers.clear();
+      if (nativeLinkOwners.get(event.sender) === owner) nativeLinkOwners.delete(event.sender);
+      event.sender.removeListener("did-start-navigation", navigate);
+      event.sender.removeListener("destroyed", close);
+    };
+    const navigate = (
+      _event: Electron.Event,
+      _url: string,
+      _inPlace: boolean,
+      mainFrame: boolean,
+    ) => {
+      if (mainFrame) close();
+    };
+    event.sender.on("did-start-navigation", navigate);
+    event.sender.once("destroyed", close);
+  }
+  let manager = owner.managers.get(cwd);
+  if (!manager) {
+    if (owner.managers.size >= 64) throw new Error("打开的 Link 工作区过多，请重新打开窗口。");
+    manager = createNativeRemoteLinkManager({
+      service: createLinkService({
+        cwd: cwd || undefined,
+        remoteLink: () =>
+          process.env.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN
+            ? remoteLinkFromEnvironment(
+                process.env,
+                process.env.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN,
+              )
+            : undefined,
+        withMutation: (write) =>
+          bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
+        onChanged: () => bridge?.notifyWebConfigurationChanged(),
+      }),
+      open: openNativeLinkAuthorization,
+    });
+    owner.managers.set(cwd, manager);
+  }
+  const context = {
+    ownerId: owner.id,
+    authorize: async () => {
+      if (!allowed() || nativeLinkOwners.get(event.sender) !== owner) return false;
+      if (cwd && (await requireRendererProjectPath(cwd)) !== cwd) return false;
+      return allowed() && nativeLinkOwners.get(event.sender) === owner;
+    },
+  };
+  return { manager, context };
+}
+ipcMain.handle("links:remoteSnapshot", async (event, cwd: string) => {
+  const { manager, context } = await nativeLinkContext(event, cwd);
+  await manager.service.assertAuthorized(context);
+  return manager.service.snapshot();
+});
+ipcMain.handle(
+  "links:remoteStart",
+  async (event, cwd: string, requestId: string, input: LinkConnectionInput) => {
+    const { manager, context } = await nativeLinkContext(event, cwd);
+    return manager.start(context, requestId, input);
+  },
+);
+ipcMain.handle("links:remoteCancel", async (event, cwd: string, requestId: string) => {
+  const { manager, context } = await nativeLinkContext(event, cwd);
+  return manager.cancel(context, requestId);
+});
+ipcMain.handle(
+  "links:remoteRename",
+  async (event, cwd: string, id: string, label: string, revision: string) => {
+    const { manager, context } = await nativeLinkContext(event, cwd);
+    return manager.service.rename(context, id, label, revision);
+  },
+);
+ipcMain.handle(
+  "links:remoteDisconnect",
+  async (event, cwd: string, id: string, revision: string) => {
+    const { manager, context } = await nativeLinkContext(event, cwd);
+    return manager.service.disconnect(context, id, revision);
+  },
+);
+
+function assertGenericCredentialMutation(cwd: string, id: string) {
+  const credential = new CredentialStore(cwd || undefined).resolve(id);
+  if (credential && isRemoteLinkCredential(credential))
+    throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
+}
 
 async function persistLocalLinkCredential(input: {
   cwd: string;
@@ -4204,6 +4319,7 @@ ipcMain.handle(
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
       throw new Error("credentials:patchMeta requires fields");
     }
+    assertGenericCredentialMutation(authorizedCwd, id);
     new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
     if (fields.meta && typeof fields.meta === "object" && "autoRefreshFromBrowser" in fields.meta) {
       if (fields.meta.autoRefreshFromBrowser === true) {
@@ -4223,19 +4339,23 @@ ipcMain.handle(
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
-ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) =>
-  getMcpOAuthService().login(normalizeMcpOAuthLoginInput(raw)),
-);
+ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
+  const input = normalizeMcpOAuthLoginInput(raw);
+  if (input.credentialId) assertGenericCredentialMutation("", input.credentialId);
+  return getMcpOAuthService().login(input);
+});
 ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
   if (typeof credentialId !== "string" || !credentialId) {
     throw new Error("mcpOAuth:refresh requires credentialId");
   }
+  assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().refresh(credentialId);
 });
 ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
   if (typeof credentialId !== "string" || !credentialId) {
     throw new Error("mcpOAuth:logout requires credentialId");
   }
+  assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().logout(credentialId);
 });
 function browserPartitionForBucket(bucket: unknown): string | undefined {

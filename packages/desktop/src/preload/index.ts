@@ -1458,6 +1458,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     logout: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:logout", credentialId),
   },
   links: {
+    remoteSnapshot: (cwd: string) => ipcRenderer.invoke("links:remoteSnapshot", cwd),
+    remoteStart: (cwd: string, requestId: string, input: unknown) =>
+      ipcRenderer.invoke("links:remoteStart", cwd, requestId, input),
+    remoteCancel: (cwd: string, requestId: string) =>
+      ipcRenderer.invoke("links:remoteCancel", cwd, requestId),
+    remoteRename: (cwd: string, id: string, label: string, revision: string) =>
+      ipcRenderer.invoke("links:remoteRename", cwd, id, label, revision),
+    remoteDisconnect: (cwd: string, id: string, revision: string) =>
+      ipcRenderer.invoke("links:remoteDisconnect", cwd, id, revision),
     listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
     cliStatus: (providerId: string, cwd?: string) =>
       ipcRenderer.invoke("links:cliStatus", providerId, cwd),

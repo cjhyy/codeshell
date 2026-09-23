@@ -1245,3 +1245,44 @@ Hub Link 页面新增独立账号入口，与已有本地连接共存；远程�
 未完成：原生桌面 Link 管理入口、稳定 HTTPS 远程地址／可视化配置、真实 Docker 项目
 OAuth、真实第三方账号、物理手机、旧 grant 清理的持久重试、通知、全部 Panel 流程及
 公网部署和三仓兼容发布。本增量没有发布版本，也不将上述范围记为完成。
+
+### 增量 32：原生桌面独立 Link 管理（2026-09-24）
+
+完成：
+
+- 原生 Link 页支持多个独立服务账号、改名、重新授权和远端撤销后断开，保留本地
+  CLI／Token／MCP 管理。多个保存的连接要求明确选择，不再显示自动换账号的兜底文案。
+- 新原生管理器复用共享 LinkService 的 PKCE、窗口 owner、条件修改与凭据保存。
+  私有 verifier 和令牌不进入 renderer，授权窗口无 preload、临时存储、禁止设备权限、
+  下载、弹窗及 webview；只访问受信 Link origin，精确顶层 callback 由主进程截获。
+- 主进程提供受信 `CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN`，注册回调为该 origin 的
+  `/link/callback`，不启动额外 HTTP 监听。配置与配对 Web 的不同回调及共享 client ID
+  要求已写入 `docs/remote-link-host.md`，未提供可视化配置入口。
+- 取消可先于请求准入；关闭授权窗口、刷新／关闭发起主窗口、失去工作区权限均不能
+  继续保存。版本校验沿用共享服务；桌面通用凭据及旧 MCP OAuth 写入入口拒绝绕过
+  独立 Link 管理。此边界不代表完成所有 Core／Agent 修改路径审计。
+- 更新总实施清单和根 TODO，删除原生 Link、桌面云端窗口和已实现 OAuth 的陈旧待办，
+  保留真实上游、四组合业务、设备中继及部署发布缺口。
+
+验证：
+
+- 原生授权管理、Link UI、凭据页面及旧 OAuth 回归共 **32 pass、153 assertions**。
+  覆盖提前取消、窗口关闭、owner 冲突／失效、错误 state、关闭服务及显式账号选择。
+- 实际生产 Electron＋独立 Link HTTP／SQLite 完成两个不同测试账号 alice／bob 的
+  授权、改名、重新授权、拒绝、关窗、主窗口刷新及断开。验证全部服务端 grants 撤销，
+  通用 save/remove/patch 与旧 OAuth login/refresh/logout 不能修改远程记录。
+  测试上游为受控响应，不能记为真实 GitHub 账号验收。
+- 旧 `packages/desktop/scripts/e2e-link.mjs` 通过。配对 Web 的 390px 实际 Desktop
+  回归通过，包含原工作区返回、错误项目拒绝和配对设备撤销后回调拒绝。
+- Desktop 完整构建、最终主进程／renderer 构建、Desktop/mobile 类型检查、变更文件
+  ESLint 与 diff 检查通过。已查看最终两个账号的原生界面截图，无横向溢出。
+  日志：`/tmp/codeshell-native-link-final-*`、`/tmp/codeshell-native-link-legacy-e2e.log`、
+  `/tmp/codeshell-native-link-paired-regression.log`。截图位于
+  `/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-remote-link-web-ui-GDpgSc`。
+
+测试开发时修正两处验收器问题：先等待 rejects matcher 会阻止同进程测试触发 callback，
+现改为先发 callback 再断言拒绝；脱敏账号字段应读 label 而非上游 login。最终回归通过。
+
+仍待完成：持久 grant 清理队列、可视化部署配置、真实 Docker 项目 OAuth、真实 GitHub、
+稳定 HTTPS 隧道和物理手机、通知、全部 Panel 业务验收、公网备份恢复／回滚及三仓兼容
+发布。服务仓库仍固定公开包 0.9.22，本轮未发布、未部署，也未完成整个目标。

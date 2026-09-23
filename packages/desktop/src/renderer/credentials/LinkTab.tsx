@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ArrowDownLeft,
-  ArrowRight,
   ArrowUpRight,
   Cable,
   ChevronDown,
@@ -46,6 +45,7 @@ import {
   type LinkExecutionRuntime,
   type LinkIntegration,
 } from "./link-catalog";
+import { RemoteLinkSection } from "./RemoteLinkSection";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
@@ -203,7 +203,7 @@ function linkMethodStateKey(
   return `${providerId}:${method.executionRuntime}:${method.id}`;
 }
 
-/** Link Action 的默认路由规则：有效本地连接优先，否则回退到有效服务器连接。 */
+/** Multiple saved connections require an explicit choice, even when one is unavailable. */
 export function resolvePreferredLinkRuntime(
   credentials: MaskedCredentialView[],
   providerId: string,
@@ -211,10 +211,8 @@ export function resolvePreferredLinkRuntime(
   const candidates = credentials.filter(
     (credential) => linkCredentialProvider(credential) === providerId,
   );
-  const local = candidates.find((credential) => linkCredentialRuntime(credential) === "local");
-  if (linkCredentialIsUsable(local)) return "local";
-  const server = candidates.find((credential) => linkCredentialRuntime(credential) === "server");
-  return linkCredentialIsUsable(server) ? "server" : null;
+  if (candidates.length !== 1 || !linkCredentialIsUsable(candidates[0])) return null;
+  return linkCredentialRuntime(candidates[0]!) ?? null;
 }
 
 /**
@@ -421,7 +419,7 @@ function BrowserQuickAuthPanel({
 
 /**
  * Link tab = 第三方应用连接。每个 provider 同时拥有 local/server 两条连接通道；
- * credential 状态互不覆盖，Action 默认选择有效 local，再回退到有效 server。
+ * credential 状态互不覆盖；多个连接由调用方明确选择。
  */
 export function LinkTab({ cwd }: { cwd: string }) {
   const { t, lang } = useT();
@@ -646,6 +644,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const byMethod = useMemo(() => {
     const map = new Map<string, MaskedCredentialView>();
     for (const credential of credentials) {
+      if (credential.meta?.linkExecutionBackend === "remote") continue;
       const provider = linkCredentialProvider(credential);
       const runtime = linkCredentialRuntime(credential);
       if (!provider || !runtime) continue;
@@ -972,13 +971,20 @@ export function LinkTab({ cwd }: { cwd: string }) {
           <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-[11px] font-medium">
             <HardDrive className="size-3.5 text-status-ok" aria-hidden />
             {t("ext.link.localRuntime")}
-            <ArrowRight className="size-3 text-muted-foreground" aria-hidden />
+            <span aria-hidden>·</span>
             <Cloud className="size-3.5 text-sky-600 dark:text-sky-400" aria-hidden />
             {t("ext.link.serverRuntime")}
           </div>
         </div>
       </section>
 
+      <RemoteLinkSection
+        key={cwd}
+        cwd={cwd}
+        onChanged={() => {
+          void load().catch(() => undefined);
+        }}
+      />
       <section className="space-y-4" aria-labelledby="link-apps-title">
         <div>
           <div className="flex items-center gap-2">
