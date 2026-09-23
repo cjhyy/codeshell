@@ -21,6 +21,12 @@ import { normalizeGitPanelAppSource } from "./source.js";
 import { discoverPanelAppRoots, findPanelAppRoot } from "./discovery.js";
 import { lock } from "../utils/lockfile.js";
 import {
+  PANEL_APP_META_FILE,
+  PANEL_PACKAGE_LIMITS,
+  createPanelPackageHash,
+  hashPanelPackageFile,
+} from "./package-content.js";
+import {
   PANEL_APP_MANIFEST_FILE,
   PanelAppManifest,
   type PanelAppAgentContribution,
@@ -42,12 +48,13 @@ import {
   type InstalledPanelAppRecord,
 } from "./registry.js";
 
-const PANEL_APP_META_FILE = ".cs-panel-app-meta.json";
 const MAX_SOURCE_PATH = 4_096;
-const MAX_ENTRIES = 2_000;
-const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
-const MAX_FILE_BYTES = 16 * 1024 * 1024;
-const MAX_DEPTH = 16;
+const {
+  entries: MAX_ENTRIES,
+  bytes: MAX_TOTAL_BYTES,
+  fileBytes: MAX_FILE_BYTES,
+  depth: MAX_DEPTH,
+} = PANEL_PACKAGE_LIMITS;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_AGENT_SKILL_BYTES = 256 * 1024;
 const REVIEWED_GIT_SNAPSHOT_TTL_MS = 10 * 60 * 1000;
@@ -550,7 +557,7 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
     }
   }
   const hash = createHash("sha256");
-  const payloadHash = createHash("sha256").update("codeshell-panel-package-v1\0");
+  const payloadHash = createPanelPackageHash();
   for (const file of files.sort()) {
     const bytes = await readBoundedPackageFile(
       root,
@@ -558,8 +565,7 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
       file === PANEL_APP_MANIFEST_FILE ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES,
     );
     hash.update(file).update("\0").update(bytes);
-    if (file !== PANEL_APP_META_FILE)
-      payloadHash.update(file).update("\0").update(String(bytes.length)).update("\0").update(bytes);
+    hashPanelPackageFile(payloadHash, file, bytes);
   }
   return { manifest, files, digest: hash.digest("hex"), packageDigest: payloadHash.digest("hex") };
 }

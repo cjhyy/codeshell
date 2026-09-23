@@ -703,3 +703,40 @@ Web 运行目录、Desktop 多项目资源选择、主机原生任务解析和 C
 的全局 descriptor 和 `preparePanelApp` 仍按 Panel ID 选第一项，不能直接给两个版本共用该路径。
 之后还需升级／回滚 UI、活跃任务门禁、文档迁移与实际双项目跨设备验收。未发布新版本，
 其他 Panel、Link 接入、远程中继及部署等原范围保持未完成。
+
+
+### 增量 19：Core 项目包选择与相同版本 Skill（2026-09-24）
+
+增加项目层 `panelAppPins` schema，每个 Panel 保存版本与包内容摘要，拒绝任意路径、非法
+标识、无效摘要和多余字段。它不授予项目绑定或权限；用户全局层 pin 不参与项目选择。
+通用远程配置写入禁止修改该字段，后续由可信 Host 的绑定／升级操作执行审阅和条件保存。
+
+Core 提供项目包选择接口和严格项目层读取。配置损坏、null pin、缺失包、版本不符、
+内容篡改、链接配置目录或断开的配置符号链接都不会转为最新版。严格读取复用设置管理器
+的有界 JSON/YAML 路径，并保留普通设置读取的默认行为。全局注册表控制可发现性，固定
+包不依赖当前可变安装目录完整；模拟另一项目更新时目录暂时移走，旧 pin 仍可解析。
+
+Skill 扫描已接入项目版本：与异步安装检查共享摘要格式和大小限制，同步校验所选快照的
+完整内容、manifest 和来源元数据后读取 Skill；worktree 继承主项目 pin，pin 更改进入缓存键。
+即使管理页请求显示禁用 Skill，无效 pin 也不会偷偷读取全局版本。现有绑定、全局关闭、
+子 Agent allowlist 等过滤继续保留。卸载全局注册后，保留的包文件不会自行恢复可用性。
+
+验证：
+
+- Core Panel、设置、Skill 管理及 allowlist 共 262 项通过。新增实际临时项目与安装包用例
+  验证两项目分别使用 1.0.0／2.0.0 及匹配 Skill、更新 pin 后缓存刷新、worktree 继承、
+  损坏／缺失／篡改拒绝、坏配置与断链、pin 不授予绑定、全局 pin 不继承，以及目录切换期间
+  旧项目继续可读／全局卸载后不可用。
+- Web 管理、HTTP、Hub 绑定原有 19 项回归通过；这些仍是旧 Host 流程回归，不是 Host pin UI 验收。
+- Core 构建、公开／内部 dist 导出 smoke、Server 与 Desktop 类型检查、改动 ESLint 通过。
+
+```sh
+bun test packages/core/src/panel-apps packages/core/src/settings packages/core/src/skills/scanner.allowlist.test.ts packages/core/src/skills/management.test.ts
+bun run --cwd packages/core build
+node scripts/smoke-core-exports.mjs
+```
+
+尚未完成：Desktop／Web 绑定和升级写入、已有绑定迁移、执行目录选择、Desktop 多项目
+同名 Panel 的 descriptor／protocol／inspection cache 选择、原生任务与远程页面一致性、
+活跃任务门禁、版本切换 UI 与实际双项目跨设备验收。测试直接准备项目 pin 配置，不能
+说用户界面已经支持完整版本锁定。整套版本和其他原目标仍未完成、未发布。

@@ -44,7 +44,14 @@ export {
   resolvePanelAppBindingPolicy,
   resolvePanelAppBindingProjectPath,
   type PanelAppBindingPolicy,
+  parsePanelAppPackagePins,
+  type PanelAppPackagePin,
 } from "./bindings.js";
+export {
+  projectPanelAppPackagePins,
+  selectProjectPanelAppPackage,
+  listProjectPanelApps,
+} from "./project-packages.js";
 export {
   checkInstalledPanelAppUpdate,
   getInstalledPanelAppUpdateIdentity,

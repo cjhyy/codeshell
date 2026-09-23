@@ -6,7 +6,7 @@
  * integration (utils/plugins/pluginLoader.ts).
  */
 
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { homedir } from "node:os";
 import { memoize } from "../utils/memoize.js";
@@ -19,8 +19,11 @@ import {
   resolvePanelAppBindingPolicy,
   resolvePanelAppBindingProjectPath,
   type PanelAppBindingPolicy,
+  type PanelAppPackagePin,
 } from "../panel-apps/bindings.js";
 import { SettingsManager } from "../settings/manager.js";
+import { projectPanelAppPackagePins } from "../panel-apps/project-packages.js";
+import { retainedPanelAppManifestSync } from "../panel-apps/package-content.js";
 
 type SkillSource = "project" | "user" | "plugin" | "panel-app";
 
@@ -224,7 +227,11 @@ function scanInstalledPlugins(results: SkillDefinition[]): void {
   }
 }
 
-function scanInstalledPanelApps(results: SkillDefinition[]): void {
+function scanInstalledPanelApps(
+  results: SkillDefinition[],
+  pins: Record<string, PanelAppPackagePin> | null,
+): void {
+  if (!pins) return;
   const root = panelAppsRoot();
   if (!existsSync(root)) return;
   let installedIds: Set<string>;
@@ -250,28 +257,28 @@ function scanInstalledPanelApps(results: SkillDefinition[]): void {
   } catch {
     return;
   }
-  let appDirectories: { name: string; isDirectory: () => boolean }[];
-  try {
-    appDirectories = readdirSync(root, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && installedIds.has(entry.name))
-      .sort((left, right) => left.name.localeCompare(right.name));
-  } catch (error) {
-    if (isInaccessible(error)) return;
-    throw error;
-  }
-
   const seen = new Set(results.map((skill) => skill.name));
-  for (const directory of appDirectories) {
-    const appRoot = join(root, directory.name);
+  for (const id of [...installedIds].sort()) {
+    let appRoot = join(root, id);
     let manifest: ReturnType<typeof PanelAppManifest.parse>;
     try {
-      manifest = PanelAppManifest.parse(
-        JSON.parse(readFileSync(join(appRoot, PANEL_APP_MANIFEST_FILE), "utf-8")),
-      );
+      const pin = pins[id];
+      if (pin) {
+        const retained = retainedPanelAppManifestSync(id, pin.packageDigest);
+        if (retained.manifest.version !== pin.version) continue;
+        appRoot = retained.root;
+        manifest = retained.manifest;
+      } else {
+        const info = lstatSync(appRoot);
+        if (!info.isDirectory() || info.isSymbolicLink()) continue;
+        manifest = PanelAppManifest.parse(
+          JSON.parse(readFileSync(join(appRoot, PANEL_APP_MANIFEST_FILE), "utf-8")),
+        );
+      }
     } catch {
       continue;
     }
-    if (manifest.id !== directory.name || manifest.schemaVersion !== 2 || !manifest.agent) continue;
+    if (manifest.id !== id || manifest.schemaVersion !== 2 || !manifest.agent) continue;
     for (const relativeEntry of manifest.agent.skills) {
       const segments = relativeEntry.split("/");
       const defaultName = segments[2];
@@ -293,14 +300,14 @@ function scanInstalledPanelApps(results: SkillDefinition[]): void {
   }
 }
 
-function scanOnce(cwd: string): SkillDefinition[] {
+function scanOnce(cwd: string, pins: Record<string, PanelAppPackagePin> | null): SkillDefinition[] {
   const results: SkillDefinition[] = [];
   const seen = new Set<string>();
   const seenBaseDirs = new Set<string>();
 
   scanDirBases(bases(cwd), results, seen, seenBaseDirs);
   scanInstalledPlugins(results);
-  scanInstalledPanelApps(results);
+  scanInstalledPanelApps(results, pins);
 
   return results;
 }
@@ -350,8 +357,8 @@ function skillsDirsMtime(cwd: string): string {
 
 const memoized = memoize(
   scanOnce,
-  (cwd: string) =>
-    `${cwd}\0${userHome()}\0${installedPluginsMtime()}\0${installedPanelAppsMtime()}\0${skillsDirsMtime(cwd)}`,
+  (cwd: string, pins: Record<string, PanelAppPackagePin> | null) =>
+    `${cwd}\0${userHome()}\0${installedPluginsMtime()}\0${installedPanelAppsMtime()}\0${skillsDirsMtime(cwd)}\0${JSON.stringify(pins)}`,
 );
 
 /**
@@ -401,7 +408,15 @@ function panelAppBindingPolicy(cwd: string): PanelAppBindingPolicy {
 }
 
 export function scanSkills(cwd: string, opts?: ScanSkillsOptions): SkillDefinition[] {
-  const all = memoized(cwd);
+  let pins: Record<string, PanelAppPackagePin> | null;
+  try {
+    pins = projectPanelAppPackagePins(resolvePanelAppBindingProjectPath(cwd));
+  } catch {
+    // Even an administrative disabled-skill listing must not substitute latest
+    // package instructions when project pins cannot be read.
+    pins = null;
+  }
+  const all = memoized(cwd, pins);
   const disabledSkills = opts?.disabledSkills;
   const disabledPlugins = opts?.disabledPlugins;
   const skillAllowlist = opts?.skillAllowlist;

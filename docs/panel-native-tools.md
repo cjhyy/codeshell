@@ -373,5 +373,41 @@ Panel Apps directory.
 
 This establishes storage for project version pins, but does not yet activate them:
 Desktop still discovers resources globally by Panel ID, Web management still uses
-the global catalog, and project settings/Skill discovery/task resolution must all
+the global catalog, and Host binding writes, Desktop/Web runtime selection and task resolution must all
 be routed to an explicit reviewed package before claiming per-project versions.
+
+
+Core project package selection now reads the project-only `panelAppPins` record:
+
+```json
+{
+  "panelAppBindings": ["example-panel"],
+  "panelAppPins": {
+    "example-panel": { "version": "1.0.0", "packageDigest": "<64 lowercase hex characters>" }
+  }
+}
+```
+
+This is the Host integration contract, not a finished settings UI. A pin contains
+no path and grants no binding or permission. The generic remote configuration
+writer cannot change `panelAppPins`; trusted Host binding/update code must perform
+its own review, active-task checks and conditional project mutation. User-layer
+pins are not inherited. Existing projects without a pin retain the legacy catalog
+selection until explicit migration is implemented.
+
+`listProjectPanelApps(bindingProjectPath)` selects a retained package independently
+of the mutable catalog directory while retaining global registry membership as a
+discovery requirement. Removing a global registration still removes availability.
+Missing or mismatched pins fail, never select latest. `projectPanelAppPackagePins`
+uses a strict, bounded raw project-layer read so corrupt JSON, invalid pins and
+linked settings cannot be mistaken for an absent pin. The new optional strict
+mode on `SettingsManager.getRawForScope` preserves the existing default reader.
+
+Core Skill discovery uses the same payload hash format and limits as package
+retention, validates the retained manifest/provenance, and reads declared Skills
+from the selected version. Main-project pins apply to worktrees. Pin changes are
+part of the Skill cache key; normal explicit Skill cache invalidation still
+applies to disk-content changes. Invalid pins never substitute catalog Skills,
+even in the administrative include-disabled view. Other Skill sources keep their
+existing behavior. Desktop/Web runtime and UI writes have not yet been switched
+to this selection contract.

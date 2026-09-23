@@ -1,17 +1,29 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   installReviewedLocalPanelApp,
   listInstalledPanelApps,
+  listProjectPanelApps,
   panelAppPackageDir,
   previewLocalPanelApp,
   resolvePanelAppPackage,
   retainInstalledPanelApp,
   uninstallPanelApp,
 } from "./index.js";
+import { scanSkills, invalidateSkillCache } from "../skills/scanner.js";
 
 let root: string;
 let source: string;
@@ -65,9 +77,98 @@ beforeEach(async () => {
   await writePackage("1.0.0");
 });
 afterEach(async () => {
+  invalidateSkillCache();
   if (previousHome === undefined) delete process.env.HOME;
   else process.env.HOME = previousHome;
   await rm(root, { recursive: true, force: true });
+});
+
+async function pinProject(name: string, pin: { version: string; packageDigest?: string }) {
+  const project = join(root, name);
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id], panelAppPins: { [id]: pin } }),
+  );
+  return project;
+}
+
+test("two projects select independent package payloads and matching Skill content after an update", async () => {
+  const first = await install();
+  const a = await pinProject("project-a", {
+    version: first.version,
+    packageDigest: first.packageDigest,
+  });
+  const before = scanSkills(a).find((skill) => skill.name === `${id}:check`);
+  expect(before?.content).toContain("1.0.0");
+  await writePackage("2.0.0");
+  const second = await install(true);
+  const b = await pinProject("project-b", {
+    version: second.version,
+    packageDigest: second.packageDigest,
+  });
+  expect((await listProjectPanelApps(a))[0]?.version).toBe("1.0.0");
+  expect((await listProjectPanelApps(b))[0]?.version).toBe("2.0.0");
+  expect(scanSkills(a).find((skill) => skill.name === `${id}:check`)?.content).toContain("1.0.0");
+  expect(scanSkills(b).find((skill) => skill.name === `${id}:check`)?.content).toContain("2.0.0");
+  // Changing the project pin invalidates only that project's skill-cache key.
+  await pinProject("project-a", { version: second.version, packageDigest: second.packageDigest });
+  expect(scanSkills(a).find((skill) => skill.name === `${id}:check`)?.content).toContain("2.0.0");
+});
+
+test("pinned Skills inherit the main project's package from a Git worktree", async () => {
+  const installed = await install();
+  const project = await pinProject("main", {
+    version: installed.version,
+    packageDigest: installed.packageDigest,
+  });
+  await mkdir(join(project, ".git/worktrees/task"), { recursive: true });
+  const worktree = join(root, "worktree");
+  await mkdir(worktree);
+  await writeFile(join(worktree, ".git"), `gitdir: ${join(project, ".git/worktrees/task")}\n`);
+  await writePackage("2.0.0");
+  await install(true);
+  expect(scanSkills(worktree).find((skill) => skill.name === `${id}:check`)?.content).toContain(
+    "1.0.0",
+  );
+});
+
+test("invalid, mismatched, missing and tampered project pins never substitute latest Skills", async () => {
+  const installed = await install();
+  const project = await pinProject("broken", {
+    version: "wrong",
+    packageDigest: installed.packageDigest,
+  });
+  await expect(listProjectPanelApps(project)).rejects.toThrow("pinned version");
+  expect(
+    scanSkills(project, { includeDisabledPanelApps: true }).filter(
+      (skill) => skill.source === "panel-app",
+    ),
+  ).toEqual([]);
+  await pinProject("broken", { version: installed.version, packageDigest: "0".repeat(64) });
+  await expect(listProjectPanelApps(project)).rejects.toThrow();
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id], panelAppPins: null }),
+  );
+  expect(
+    scanSkills(project, { includeDisabledPanelApps: true }).filter(
+      (skill) => skill.source === "panel-app",
+    ),
+  ).toEqual([]);
+  await pinProject("broken", {
+    version: installed.version,
+    packageDigest: installed.packageDigest,
+  });
+  const retained = await resolvePanelAppPackage(id, installed.packageDigest!);
+  await writeFile(
+    join(retained.installPath, "agent/skills/check/SKILL.md"),
+    "tampered instructions",
+  );
+  invalidateSkillCache();
+  await expect(listProjectPanelApps(project)).rejects.toThrow("content has changed");
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
 });
 
 test("retained payloads preserve UI, native tools and Skills across catalog update and removal", async () => {
@@ -187,4 +288,83 @@ test("a rejected duplicate installation does not retain an uninstalled new paylo
   const directory = panelAppPackageDir(id, first.packageDigest!);
   expect(await readdir(join(directory, ".."))).toEqual([first.packageDigest!]);
   expect((await listInstalledPanelApps())[0]?.version).toBe("1.0.0");
+});
+
+test("corrupt and linked project settings cannot silently remove a package pin", async () => {
+  const installed = await install();
+  const project = await pinProject("invalid-settings", {
+    version: installed.version,
+    packageDigest: installed.packageDigest,
+  });
+  const settings = join(project, ".code-shell/settings.json");
+  await writeFile(settings, "{broken json");
+  await expect(listProjectPanelApps(project)).rejects.toThrow();
+  expect(
+    scanSkills(project, { includeDisabledPanelApps: true }).filter(
+      (skill) => skill.source === "panel-app",
+    ),
+  ).toEqual([]);
+  await rm(settings);
+  await symlink(join(root, "missing-settings.json"), settings);
+  await expect(listProjectPanelApps(project)).rejects.toThrow();
+  await rm(join(project, ".code-shell"), { recursive: true });
+  await symlink(join(root, "missing-state"), join(project, ".code-shell"));
+  await expect(listProjectPanelApps(project)).rejects.toThrow();
+  expect(
+    scanSkills(project, { includeDisabledPanelApps: true }).filter(
+      (skill) => skill.source === "panel-app",
+    ),
+  ).toEqual([]);
+});
+
+test("a package pin alone grants no Skill binding and user pins cannot select a project's code", async () => {
+  const first = await install();
+  const project = await pinProject("authorization", {
+    version: first.version,
+    packageDigest: first.packageDigest,
+  });
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({
+      panelAppPins: { [id]: { version: first.version, packageDigest: first.packageDigest } },
+    }),
+  );
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
+  await writeFile(
+    join(root, "home/.code-shell/settings.json"),
+    JSON.stringify({
+      panelAppPins: { [id]: { version: first.version, packageDigest: first.packageDigest } },
+    }),
+  );
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id] }),
+  );
+  await writePackage("2.0.0");
+  await install(true);
+  expect((await listProjectPanelApps(project))[0]?.version).toBe("2.0.0");
+  expect(scanSkills(project).find((skill) => skill.name === `${id}:check`)?.content).toContain(
+    "2.0.0",
+  );
+});
+
+test("another project's catalog directory swap does not hide pinned packages or Skills", async () => {
+  const first = await install();
+  const project = await pinProject("stable", {
+    version: first.version,
+    packageDigest: first.packageDigest,
+  });
+  await writePackage("2.0.0");
+  const latest = await install(true);
+  const backup = join(root, "catalog-swap");
+  await rename(latest.installPath, backup);
+  expect(await listInstalledPanelApps()).toEqual([]);
+  expect((await listProjectPanelApps(project))[0]?.version).toBe("1.0.0");
+  expect(scanSkills(project).find((skill) => skill.name === `${id}:check`)?.content).toContain(
+    "1.0.0",
+  );
+  await rename(backup, latest.installPath);
+  await uninstallPanelApp(id);
+  expect(await listProjectPanelApps(project)).toEqual([]);
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
 });
