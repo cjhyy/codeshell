@@ -131,3 +131,45 @@ checks missed its complete manifest's installation constraints; use Panel 0.5.1,
 which also passes the published 0.9.11 installer's discovery and package preflight.
 The correction, compatible releases and remote CI are recorded in the
 [release acceptance matrix](todo/panel-plugin-runtime-implementation.md).
+
+
+### Desktop / paired Web task ownership
+
+Desktop composes `createSharedPanelToolHost` into its paired Web facade. The
+Electron bridge is the sole owner of `panel-tool-jobs`; Web handlers never open
+that store themselves and cannot shut down the coordinator. The Host binds the
+reviewed installed package and canonical project to a frozen native revision;
+HTTP callers cannot choose that scope or substitute their Web catalog revision.
+Both interfaces use the same IDs, request-key deduplication and resources.
+
+`capabilities.tasks` reports `ownership`, `executionRevision`,
+`sharedAcrossDevices`, `continuesAfterDisconnect` and `continuesAfterLogout`.
+For Desktop and its paired Web interface ownership is `project`: after admission,
+closing the page, logout, device revocation, remote-server stop or HTTP-handler
+eviction detaches the viewer without cancelling the project task. Logout aborts
+pending input preparation; a request whose reply was lost may already have been
+admitted, so reconnect and inspect task snapshots first. Any explicit resubmission
+must retain the same request key and input to deduplicate. Explicit task
+cancellation, project/app authorization revocation and Desktop shutdown keep their
+respective cancellation/interruption semantics. Standalone Hub currently reports
+session ownership and does cancel tasks on login-owner revocation; do not assume
+identical logout behavior without probing capabilities.
+
+Shared events contain summaries only, check both native and viewer authorization,
+and detach with the Panel grant. Reconnect via `tasks.list/get`, then follow
+`tasks.changed` and its task `sequence`. A transport cache eviction must not own
+the process lifetime. Binding changes invalidate only the affected project's Web
+handlers; package replacement/removal still invalidates all affected projects.
+
+Existing per-workspace `panel-web-tool-jobs` stores are not deleted or moved. On
+first access their unfinished records become interrupted and their records appear
+with `readOnly: true` and `historySource: "desktop-web-legacy"`. They cannot be
+retried/cancelled through the new coordinator; start a reviewed new request.
+No browser-side queue migration or project-specific package pinning is implied.
+
+Run `bun run --cwd packages/desktop test:e2e:shared-panel-tasks` after building
+Server and Desktop. It launches real Electron with a temporary canonical profile,
+a synthetic reviewed Node entry and an isolated paired device, checks native
+progress, bidirectional task identity/cancellation, duplicate submission, logout,
+remote shutdown and result recovery, then closes its processes and deletes the
+fixture. It does not replace physical-phone or Panel business-flow acceptance.

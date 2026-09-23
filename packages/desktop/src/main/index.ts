@@ -923,6 +923,7 @@ const mobileRemote = new RemoteHostManager({
   uploads: mobileUploads,
   webApi: createDesktopWebService({
     devices: mobileDevices,
+    sharedToolJobs: panelAppBridge.sharedToolJobs(),
     getBridge: () => bridge,
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
     onSessionsChanged: (cwd, sessionId) => {

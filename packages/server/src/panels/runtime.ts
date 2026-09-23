@@ -30,7 +30,9 @@ import {
   toolJobLimits,
   type ToolJob,
   type ToolJobScope,
+  type ToolJobRequest,
 } from "./tool-jobs.js";
+import type { SharedPanelToolHost, SharedPanelToolBinding } from "./shared-tool-jobs.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
 import { PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
 import { handlePanelProcessDirectory } from "./process-files.js";
@@ -117,6 +119,8 @@ export const panelWebCompatibility: NonNullable<PanelManagementOptions["compatib
 });
 
 interface Grant {
+  sharedTools?: SharedPanelToolBinding;
+  unsubscribeTools?: () => void;
   guestId: number;
   id: string;
   asset: string;
@@ -170,6 +174,8 @@ export interface PanelRuntimeOptions {
   listInstalled?: () => Promise<InstalledPanelApp[]>;
   now?: () => number;
   agentTasks?: PanelTaskHost;
+  /** Reuse the Desktop coordinator; this transport never owns its lifetime. */
+  sharedToolJobs?: SharedPanelToolHost;
   createAgentTasks?: (hooks: {
     onPanelAction(scope: PanelTaskScope, input: Record<string, unknown>): Promise<unknown>;
   }) => PanelTaskHost;
@@ -474,6 +480,32 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const toolOwners = new Map<number, ToolJobScope>();
   const jobOwners = new Map<string, { owner: string; scope: ToolJobScope }>();
   let toolJobs: PanelToolJobService | undefined;
+  const localToolRoot =
+    options.host === "desktop"
+      ? join(options.dataDir, "panel-web-tool-jobs", digest(Buffer.from(options.cwd)).slice(0, 24))
+      : join(options.dataDir, "panel-tool-jobs");
+  let legacyPresent: Promise<boolean> | undefined;
+  async function legacyJobs(scope: ToolJobScope) {
+    if (!options.sharedToolJobs || options.host !== "desktop") return [];
+    const present = await (legacyPresent ??= lstat(localToolRoot)
+      .then((info) => {
+        if (!info.isDirectory() || info.isSymbolicLink())
+          throw new Error("Invalid legacy task store");
+        return true;
+      })
+      .catch((cause) => {
+        if ((cause as NodeJS.ErrnoException).code === "ENOENT") return false;
+        throw cause;
+      }));
+    // Opening an existing store marks unfinished jobs interrupted; it never replays them.
+    return present
+      ? (await getToolJobs().list(scope)).map((job) => ({
+          ...job,
+          readOnly: true as const,
+          historySource: "desktop-web-legacy" as const,
+        }))
+      : [];
+  }
   async function installedToolApp(scope: ToolJobScope) {
     if (closed || scope.projectPath !== (options.bindingCwd ?? options.cwd))
       throw new PanelBridgeError("REVOKED", "Tool task workspace is unavailable");
@@ -572,7 +604,16 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       offset?: number;
       limit?: number;
     };
-    const service = getToolJobs();
+    const shared = grant.sharedTools;
+    const service = shared ?? {
+      start: (request: ToolJobRequest, signal?: AbortSignal) =>
+        getToolJobs().start(scope, request, signal),
+      list: () => getToolJobs().list(scope),
+      get: (id: string) => getToolJobs().get(scope, id),
+      cancel: (id: string) => getToolJobs().cancel(scope, id),
+      retry: (id: string) => getToolJobs().retry(scope, id),
+    };
+    if (options.sharedToolJobs && !shared) error(410, "共享任务授权已失效，请重新打开面板。");
     if (method === "tasks.start") {
       const app = await installedToolApp(scope);
       const entry = app.nativeEntries?.[input.entry ?? ""];
@@ -588,7 +629,6 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       preparingTools.add(preparation);
       try {
         const job = await service.start(
-          scope,
           {
             entry: { name: input.entry!, sha256: entry.sha256 },
             input: input.input,
@@ -597,15 +637,21 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           },
           preparation.controller.signal,
         );
-        if (!jobOwners.has(job.id)) jobOwners.set(job.id, { owner: grant.owner, scope });
+        if (!shared && !jobOwners.has(job.id)) jobOwners.set(job.id, { owner: grant.owner, scope });
         if (!(await authorized(grant))) {
-          if (jobOwners.get(job.id)?.owner === grant.owner) await service.cancel(scope, job.id);
+          if (!shared && jobOwners.get(job.id)?.owner === grant.owner) await service.cancel(job.id);
           error(410, "登录授权已撤销。");
         }
-        emitTaskEvent(await service.get(scope, job.id));
+        if (!shared) emitTaskEvent(await service.get(job.id));
         return job;
       } catch (cause) {
-        if (preparation.controller.signal.aborted) error(410, "登录授权已撤销，输入准备已取消。");
+        if (preparation.controller.signal.aborted)
+          error(
+            410,
+            shared
+              ? "登录授权已撤销。请重新连接后查询任务，已接收的项目任务可能仍在运行。"
+              : "登录授权已撤销，输入准备已取消。",
+          );
         throw cause;
       } finally {
         preparingTools.delete(preparation);
@@ -622,23 +668,38 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         limit > 50
       )
         throw new PanelBridgeError("INVALID_ARGUMENT", "Invalid task page");
-      return (await service.list(scope))
-        .slice(offset, offset + limit)
-        .map((job) => toolSummary(job));
+      const jobs = [...(await service.list()), ...(await legacyJobs(scope))].sort(
+        (a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id),
+      );
+      return jobs.slice(offset, offset + limit).map((job) => toolSummary(job));
     }
-    if (method === "tasks.get") return service.get(scope, input.id!);
-    if (method === "tasks.cancel") return service.cancel(scope, input.id!);
+    if (shared && ["tasks.get", "tasks.cancel", "tasks.retry"].includes(method)) {
+      // Explicitly identify legacy IDs. Authorization failures on the shared service
+      // must never fall through to a less restrictive coordinator.
+      if (!(await shared.has(input.id!))) {
+        const legacy = (await legacyJobs(scope)).find((job) => job.id === input.id);
+        if (legacy) {
+          if (method === "tasks.get") return legacy;
+          throw new PanelBridgeError(
+            "NOT_SUPPORTED",
+            "旧网页任务仅供查看，请从原输入创建新的共享任务。",
+          );
+        }
+      }
+    }
+    if (method === "tasks.get") return service.get(input.id!);
+    if (method === "tasks.cancel") return service.cancel(input.id!);
     if (method === "tasks.retry") {
       if (!(await confirm(grant, `重试 ${grant.app.title.default} 的后台工具？`, input.id ?? "")))
         error(403, "你取消了后台工具重试。");
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
-      const job = await service.retry(scope, input.id!);
-      jobOwners.set(job.id, { owner: grant.owner, scope });
+      const job = await service.retry(input.id!);
+      if (!shared) jobOwners.set(job.id, { owner: grant.owner, scope });
       if (!(await authorized(grant))) {
-        await service.cancel(scope, job.id);
-        error(410, "登录授权已撤销，后台工具已取消。");
+        if (!shared) await service.cancel(job.id);
+        error(410, "登录授权已撤销，请重新连接后查看任务状态。");
       }
-      emitTaskEvent(await service.get(scope, job.id));
+      if (!shared) emitTaskEvent(await service.get(job.id));
       return job;
     }
     throw new PanelBridgeError("NOT_SUPPORTED", "Unknown tool task operation");
@@ -698,16 +759,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       sealedRoot: join(options.dataDir, "panel-app-sealed"),
     });
     toolJobs = new PanelToolJobService({
-      // Desktop's IPC bridge has its own in-memory coordinator for panel-tool-jobs.
-      // A Desktop Web workspace must not open the same store concurrently.
-      rootDir:
-        options.host === "desktop"
-          ? join(
-              options.dataDir,
-              "panel-web-tool-jobs",
-              digest(Buffer.from(options.cwd)).slice(0, 24),
-            )
-          : join(options.dataDir, "panel-tool-jobs"),
+      // Separate legacy store when a Desktop coordinator is injected. Existing
+      // history stays readable; shared jobs never acquire a second disk lock.
+      rootDir: localToolRoot,
       ...executor,
       isAuthorized: async (scope) => !!(await installedToolApp(scope).catch(() => null)),
       onEvent: emitTaskEvent,
@@ -729,6 +783,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   }
   function remove(grant: Grant) {
     if (grants.get(grant.id) !== grant) return;
+    grant.unsubscribeTools?.();
     grants.delete(grant.id);
     assets.delete(grant.asset);
     byGuest.delete(grant.guestId);
@@ -965,6 +1020,14 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       if (!files.has(app.entry)) error(404, "找不到面板入口。");
       if (closed || generation !== startedGeneration || preparation.cancelled)
         error(410, "面板授权已失效，请重新打开。");
+      const sharedTools =
+        options.sharedToolJobs &&
+        app.permissions.includes("process") &&
+        app.permissions.includes("resources")
+          ? await options.sharedToolJobs.bind(app, options.bindingCwd ?? options.cwd)
+          : undefined;
+      if (closed || generation !== startedGeneration || preparation.cancelled)
+        error(410, "面板授权已失效，请重新打开。");
       for (const grant of grants.values()) if (grant.expiresAt <= now()) remove(grant);
       if (
         grants.size >= 64 ||
@@ -988,6 +1051,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                 ? {
                     available: true,
                     ...toolJobLimits,
+                    ownership: sharedTools ? "project" : "session",
+                    executionRevision: sharedTools?.scope.revision ?? panel.revision,
+                    sharedAcrossDevices: !!sharedTools,
+                    continuesAfterDisconnect: true,
+                    continuesAfterLogout: !!sharedTools,
                     maxHttpResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
                   }
                 : undefined,
@@ -1048,6 +1116,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         context.busy = false;
       }
       const grant: Grant = {
+        sharedTools,
         guestId: ++nextGuest,
         id,
         asset,
@@ -1073,6 +1142,27 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       grants.set(id, grant);
       byGuest.set(grant.guestId, grant);
       assets.set(asset, grant);
+      if (sharedTools) {
+        // Keep event order across asynchronous viewer-authorization checks. A slow
+        // or revoked viewer cannot stop the owning coordinator or another viewer.
+        let events = Promise.resolve();
+        let pendingEvents = 0;
+        grant.unsubscribeTools = sharedTools.subscribe((job) => {
+          if (++pendingEvents > 1024) {
+            remove(grant);
+            return;
+          }
+          events = events
+            .then(async () => {
+              // The native Host may have revoked project trust independently of
+              // this Web session. Check both authorities before sending metadata.
+              if ((await sharedTools.has(job.id)) && (await authorized(grant)))
+                emit(grant, "tasks.changed", job);
+              pendingEvents--;
+            })
+            .catch(() => remove(grant));
+        });
+      }
       if (!(await authorized(grant))) {
         remove(grant);
         error((await options.isAuthorized(request)) ? 410 : 401, "面板授权已失效，请重新打开。");
@@ -1327,7 +1417,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     );
   }
   return {
-    activeTaskCount: () => (agentTasks?.activeTaskCount?.() ?? 0) + (toolJobs?.activeCount() ?? 0),
+    activeTaskCount: () =>
+      (agentTasks?.activeTaskCount?.() ?? 0) +
+      (toolJobs?.activeCount() ?? 0) +
+      (options.sharedToolJobs?.activeCount(options.bindingCwd ?? options.cwd) ?? 0),
     async panelAction(
       ownerId: string,
       sessionId: string,
@@ -1371,11 +1464,17 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       for (const preparation of preparingTools)
         if (!appId || preparation.appId === appId) preparation.controller.abort();
       for (const grant of grants.values()) if (!appId || grant.app.id === appId) remove(grant);
-      if (!toolJobs) return Promise.resolve();
+      const sharedInvalidation = options.sharedToolJobs?.invalidate(
+        options.bindingCwd ?? options.cwd,
+        appId,
+      );
+      if (!toolJobs) return sharedInvalidation ?? Promise.resolve();
       const appIds = appId
         ? [appId]
         : [...new Set([...jobOwners.values()].map((record) => record.scope.appId))];
-      return Promise.all(appIds.map((id) => toolJobs!.cancelApp(id))).then(() => undefined);
+      return Promise.all([sharedInvalidation, ...appIds.map((id) => toolJobs!.cancelApp(id))]).then(
+        () => undefined,
+      );
     },
     async close() {
       closed = true;

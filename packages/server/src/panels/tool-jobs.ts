@@ -52,6 +52,8 @@ export interface ToolJob {
   error?: { code: string; message: string; retryable: boolean };
   result?: unknown;
 }
+export type ToolJobEvent = Omit<ToolJob, "input" | "result">;
+
 export interface ToolJobRequest {
   entry: ToolJobEntry;
   input: unknown;
@@ -240,10 +242,26 @@ export class PanelToolJobService {
   constructor(private readonly options: PanelToolJobServiceOptions) {
     this.storage = new ToolJobStorage(options.rootDir);
   }
-  activeCount(): number {
+  private readonly listeners = new Set<{
+    scope: ToolJobScope;
+    send: (job: ToolJobEvent) => void;
+  }>();
+
+  /** Trusted Host subscription. Transports must recheck their viewer's authorization. */
+  subscribe(rawScope: ToolJobScope, send: (job: ToolJobEvent) => void): () => void {
+    const listener = { scope: scopeValue(rawScope), send };
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  activeCount(projectPath?: string): number {
+    const matches = (scope: ToolJobScope) =>
+      !projectPath || scope.projectPath === resolve(projectPath);
     return (
-      this.preparing.size +
-      [...this.jobs.values()].filter((job) => !TERMINAL.has(job.status)).length
+      [...this.preparing.values()].filter((item) => matches(item.scope)).length +
+      [...this.jobs.values()].filter((job) => matches(job.scope) && !TERMINAL.has(job.status))
+        .length
     );
   }
   private now() {
@@ -310,6 +328,15 @@ export class PanelToolJobService {
     } catch {
       /* A caller may reconnect via list/get. */
     }
+    for (const listener of this.listeners) {
+      if (!sameScope(listener.scope, job.scope)) continue;
+      try {
+        const { input: _input, result: _result, ...event } = publicJob(job);
+        listener.send(event);
+      } catch {
+        /* One viewer must not interrupt persistence. */
+      }
+    }
   }
   private lookup(scope: ToolJobScope, id: string, mutate = false): StoredJob {
     if (typeof id !== "string") throw new Error("tool job ID is required");
@@ -319,6 +346,15 @@ export class PanelToolJobService {
     if (mutate && !sameScope(job.scope, scope))
       throw new Error("old-revision tool jobs are read-only; create a new compatible task");
     return job;
+  }
+  /** Scoped existence check for transports merging read-only legacy history. */
+  async has(rawScope: ToolJobScope, id: string): Promise<boolean> {
+    const scope = scopeValue(rawScope);
+    await this.initialize();
+    await this.authorize(scope);
+    if (typeof id !== "string") throw new Error("tool job ID is required");
+    const job = this.jobs.get(id);
+    return !!job && sameScope(job.scope, scope, false);
   }
   async list(rawScope: ToolJobScope): Promise<Array<ToolJob & { readOnly: boolean }>> {
     const scope = scopeValue(rawScope);
@@ -650,12 +686,30 @@ export class PanelToolJobService {
     this.schedule();
     return job;
   }
-  async cancelApp(appId: string): Promise<void> {
+  async cancelProject(projectPath: string, appId?: string): Promise<void> {
     await this.initialize();
-    for (const item of this.preparing.values())
-      if (item.scope.appId === appId) item.controller.abort();
+    const project = resolve(projectPath);
+    const ids = appId
+      ? [appId]
+      : [
+          ...new Set([
+            ...[...this.preparing.values()]
+              .filter((item) => item.scope.projectPath === project)
+              .map((item) => item.scope.appId),
+            ...[...this.jobs.values()]
+              .filter((job) => job.scope.projectPath === project)
+              .map((job) => job.scope.appId),
+          ]),
+        ];
+    await Promise.all(ids.map((id) => this.cancelApp(id, project)));
+  }
+  async cancelApp(appId: string, projectPath?: string): Promise<void> {
+    await this.initialize();
+    const matches = (scope: ToolJobScope) =>
+      scope.appId === appId && (!projectPath || scope.projectPath === resolve(projectPath));
+    for (const item of this.preparing.values()) if (matches(item.scope)) item.controller.abort();
     const matching = [...this.jobs.values()].filter(
-      (job) => job.scope.appId === appId && !TERMINAL.has(job.status),
+      (job) => matches(job.scope) && !TERMINAL.has(job.status),
     );
     // Revocation bypasses the now-revoked caller grant but still waits for real exits.
     await this.exclusive(async () => {
@@ -704,6 +758,7 @@ export class PanelToolJobService {
         await this.commit(job);
       }
     });
+    this.listeners.clear();
     await this.storage.close();
   }
 }

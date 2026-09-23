@@ -268,10 +268,44 @@ Host 提交 `5a422773`：修复同时提交相同 requestKey 时重复准备输�
 
 仍待集成：界面后台队列、目标目录交付、账号授权、任务事件恢复，以及桌面和手机同一项目的任务协调器。真实媒体测试使用本机 MP4，不代表公网视频服务或账号流程已验收。
 
-### 后台任务共享的下一步依据
+### 后台任务共享的实施依据（增量 6 已落实协调器）
 
 实际源码有明确分离：`PanelAppBridge` 使用 `panel-tool-jobs`，Desktop Web 的 `createPanelRuntime` 使用按 cwd 划分的 `panel-web-tool-jobs`，以避免两个独立协调器争抢同一个磁盘锁。桌面和 Web 的 Panel revision 计算方式也不同。不能只把两个存储路径改成相同路径。
 
-下一步需要由 Desktop 持有唯一任务协调器，通过可信 Host 适配器供 Web 使用；冻结且校验已审查的安装版本映射，路由同一 app/project 的任务列表、状态、事件和取消。Web handler 关闭或被缓存淘汰不能 shutdown 桌面协调器；退出登录／设备撤销的处理应只影响相应授权范围，不能取消其他设备或桌面拥有的无关任务。既有 Web 任务目录要保留并明确迁移策略。
+据此确定由 Desktop 持有唯一任务协调器，通过可信 Host 适配器供 Web 使用；冻结且校验已审查的安装版本映射，路由同一 app/project 的任务列表、状态、事件和取消。Web handler 关闭或被缓存淘汰不能 shutdown 桌面协调器；退出登录／设备撤销的处理应只影响相应授权范围，不能取消其他设备或桌面拥有的无关任务。既有 Web 任务目录要保留并明确迁移策略。
 
 目录书签也有两个存储文件，且当前重新记住相同目录会换 ID；接入后台目的目录前需处理稳定性、目录身份变化及权限撤销。Cookie 原始数据不能作为任务 JSON 或永久产物持久化；应通过 Host 提供的有限授权交付。
+
+
+### 增量 6：桌面与配对 Web 共享原生任务（2026-09-23）
+
+Desktop 将自己持有的任务协调器通过 `SharedPanelToolHost` 注入 Web。
+Web 按经过验证的安装包、项目和冻结的 Desktop 执行 revision 建立绑定，
+不再另建一份新任务，也不把 Web catalog revision 当作 native revision。
+两端的 `tasks.start/list/get/cancel/retry` 使用同一任务 ID、去重记录、输出资源和事件。
+Web handler 只拥有查看授权和订阅，不拥有 coordinator 的 shutdown 权限。
+
+已接收任务归项目：页面关闭、登出、设备撤销、远程服务停止或 HTTP 缓存淘汰
+不取消项目任务；登出会取消尚在准备输入的请求。请求回复不明确时要求重连查询，
+不声称已提交任务必定取消。明确取消、项目/应用撤销及 Host 关闭仍遵循原有停止／中断规则。
+共享事件只传摘要，同时检查 native 与 Web 查看者授权，有界排队并随授权移除订阅。
+绑定变更只撤销相应项目的 Web handler；应用更新／卸载仍通知所有相关项目。
+
+旧的 `panel-web-tool-jobs` 文件保持原位置。首次读取会把旧未结束任务标为 interrupted，
+以 `readOnly` 和 `historySource: desktop-web-legacy` 返回；不自动重放，也不允许通过新协调器
+重试旧记录。单独的 Hub 尚保留 session ownership／登出取消规则，已通过 capabilities 显式说明；
+尚未声称所有 Host 的任务生命周期完全一致。
+
+验证：
+
+- Server 构建、完整 Desktop 生产构建、Desktop typecheck、改动文件 ESLint 通过。
+- HTTP runtime、持久任务、真实 executor、配对 facade、Desktop capabilities 共 61 项通过。
+  覆盖双向任务身份、去重、取消、项目隔离、冻结执行版本、旧历史保留、事件订阅及失效。
+- `node packages/desktop/scripts/e2e-shared-panel-tasks.mjs` 通过：真实 Electron
+  main/preload/guest、真实配对 HTTP、受控 Node 原生程序，验证 Desktop 任务在配对入口可见并取消、
+  配对入口任务在 Desktop 可见、同请求跨两端去重、真实进度、登出后结果恢复、设备撤销和远程服务停止
+  不误停项目任务。临时账号、目录、进程均随测试清理。
+
+范围限制：该 E2E 使用配对 HTTP 客户端，并非物理手机 UI 验收；下载业务界面仍未迁移到持久队列。
+项目独立包版本、目录交付、Cookie 有限授权、其他 Panel 和正式公网部署仍在总清单中待完成。
+下一步继续统一目录授权与后台产物交付，再接入下载队列，避免把同任务可见误记为整个 Panel 完成。

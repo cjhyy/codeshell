@@ -22,6 +22,8 @@ import {
   type PanelTaskHost,
   type PanelTaskScope,
 } from "./runtime.js";
+import { PanelToolJobService, type ToolJobScope } from "./tool-jobs.js";
+import { createSharedPanelToolHost, type SharedPanelToolHost } from "./shared-tool-jobs.js";
 import { resolvePanelExecutable } from "./process-service.js";
 import { PanelResourceService } from "./resources/service.js";
 import type { PanelSnapshot } from "./types.js";
@@ -39,6 +41,11 @@ async function fixture(
     publicPathPrefix?: string;
     agentTasks?: PanelTaskHost;
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
+    sharedToolJobs?: (input: {
+      root: string;
+      cwd: string;
+      app: InstalledPanelApp;
+    }) => SharedPanelToolHost;
   } = {},
 ) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-panel-http-")));
@@ -110,7 +117,8 @@ async function fixture(
   const runtime = createPanelRuntime({
     cwd,
     dataDir: join(root, "data"),
-    host: "hub",
+    host: options.sharedToolJobs ? "desktop" : "hub",
+    sharedToolJobs: options.sharedToolJobs?.({ root, cwd, app }),
     publicPathPrefix: options.publicPathPrefix,
     agentTasks: options.agentTasks,
     createAgentTasks: options.createAgentTasks,
@@ -871,8 +879,14 @@ async function nodeProcessFixture() {
   return { ...f, grant, params, directory, call };
 }
 
-async function nativeToolFixture(source: string) {
-  const f = await fixture({ permissions: ["context.workspace", "process", "resources"] });
+async function nativeToolFixture(
+  source: string,
+  sharedToolJobs?: NonNullable<Parameters<typeof fixture>[0]>["sharedToolJobs"],
+) {
+  const f = await fixture({
+    permissions: ["context.workspace", "process", "resources"],
+    sharedToolJobs,
+  });
   const entry = "app/tools/sample.mjs";
   await mkdir(join(f.installPath, "app", "tools"), { recursive: true });
   await writeFile(join(f.installPath, entry), source);
@@ -1481,4 +1495,157 @@ test("filesystem.openDirectory returns an authenticated browser URL that downloa
   ).toBe(400);
   f.runtime.cancelOwner("owner-a");
   expect((await f.api(downloadPath, "GET")).status).toBe(410);
+});
+
+describe("Desktop and Web shared native coordinator", () => {
+  async function sharedFixture() {
+    let service!: PanelToolJobService;
+    let nativeScope!: ToolJobScope;
+    let host!: SharedPanelToolHost;
+    let allowNative = true;
+    const executed: string[] = [];
+    const f = await nativeToolFixture("process.stdin.resume();", ({ root, cwd }) => {
+      nativeScope = { appId: "synthetic-panel", projectPath: cwd, revision: "native-r1" };
+      service = new PanelToolJobService({
+        rootDir: join(root, "data", "panel-tool-jobs"),
+        isAuthorized: (scope) => allowNative && scope.revision === nativeScope.revision,
+        execute: async (job, context) => {
+          executed.push(job.id);
+          await context.reportProgress({ stage: "waiting", fraction: 0.5 });
+          await new Promise<void>((done) => {
+            context.signal.addEventListener("abort", () => done(), { once: true });
+            if (context.signal.aborted) done();
+          });
+          return {};
+        },
+      });
+      cleanups.push(() => service.shutdown());
+      host = createSharedPanelToolHost({
+        service: () => service,
+        resolveScope: async () => nativeScope,
+      });
+      return host;
+    });
+    return {
+      ...f,
+      service,
+      nativeScope,
+      host,
+      executed,
+      revokeNative: () => {
+        allowNative = false;
+      },
+    };
+  }
+
+  test("Desktop and phone see the same task ID, receive scoped events and deduplicate submission", async () => {
+    const f = await sharedFixture();
+    expect((f.grant.context as any).capabilities.tasks).toMatchObject({
+      ownership: "project",
+      executionRevision: "native-r1",
+      sharedAcrossDevices: true,
+      continuesAfterLogout: true,
+    });
+    const native = await f.service.start(f.nativeScope, {
+      entry: { name: "sample", sha256: f.app.nativeEntries!.sample!.sha256 },
+      input: { request: { value: "fixture" } },
+      recovery: "retry",
+      requestKey: "both-devices",
+    });
+    const event = await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed");
+    expect(event.payload.id).toBe(native.id);
+    expect(event.payload.scope).toEqual(f.nativeScope);
+    expect(event.payload).not.toHaveProperty("input");
+    expect((await f.start("both-devices")).id).toBe(native.id);
+    expect(await (await f.call("tasks.list")).json()).toMatchObject([{ id: native.id }]);
+    const phone = await f.prepare("owner-b");
+    const stopped = await f.call("tasks.cancel", { id: native.id }, phone.instanceId, "owner-b");
+    expect(stopped.status).toBe(200);
+    expect((await stopped.json()).status).toBe("cancelled");
+    expect((await f.service.get(f.nativeScope, native.id)).status).toBe("cancelled");
+    expect(f.executed).toEqual([native.id]);
+  });
+
+  test("logout and HTTP shutdown detach access while project tasks remain under the Desktop owner", async () => {
+    const f = await sharedFixture();
+    const job = await f.start("phone-start");
+    const observer = await f.prepare("owner-b");
+    f.state.owners.delete("owner-a");
+    f.runtime.cancelOwner("owner-a");
+    expect((await f.call("tasks.list")).status).toBe(401);
+    expect(
+      await (await f.call("tasks.get", { id: job.id }, observer.instanceId, "owner-b")).json(),
+    ).toMatchObject({ id: job.id, status: "running" });
+    await f.runtime.close();
+    expect((await f.service.get(f.nativeScope, job.id)).status).toBe("running");
+    const reopened = await f.host.bind(f.app, f.cwd);
+    expect((await reopened.get(job.id)).id).toBe(job.id);
+    await reopened.cancel(job.id);
+    expect((await f.service.get(f.nativeScope, job.id)).status).toBe("cancelled");
+  });
+
+  test("project invalidation stops its shared work without cancelling another project's task", async () => {
+    const f = await sharedFixture();
+    const job = await f.start();
+    const otherScope = { ...f.nativeScope, projectPath: join(f.root, "other-project") };
+    const other = await f.service.start(otherScope, {
+      entry: { name: "sample", sha256: f.app.nativeEntries!.sample!.sha256 },
+      input: {},
+      recovery: "retry",
+    });
+    expect(f.service.activeCount(f.cwd)).toBe(1);
+    expect(f.service.activeCount(otherScope.projectPath)).toBe(1);
+    await f.runtime.invalidate(f.app.id);
+    expect((await f.service.get(f.nativeScope, job.id)).status).toBe("cancelled");
+    expect(["running", "queued"]).toContain((await f.service.get(otherScope, other.id)).status);
+    expect(f.service.activeCount(f.cwd)).toBe(0);
+    await f.service.cancel(otherScope, other.id);
+  });
+
+  test("native authorization and frozen package revision remain enforced behind Web authorization", async () => {
+    const f = await sharedFixture();
+    const job = await f.start();
+    const captured = await f.host.bind(f.app, f.cwd);
+    f.nativeScope.revision = "native-r2";
+    await expect(captured.get(job.id)).rejects.toThrow("authorized");
+    expect((await f.call("tasks.get", { id: job.id })).status).toBe(400);
+    f.revokeNative();
+    expect((await f.call("tasks.list")).status).toBe(400);
+    await f.host.invalidate(f.cwd);
+  });
+
+  test("old Web records remain read-only and cannot be retried through the shared coordinator", async () => {
+    const f = await sharedFixture();
+    const legacyScope = { appId: f.app.id, projectPath: f.cwd, revision: f.state.revision };
+    const root = join(
+      f.root,
+      "data",
+      "panel-web-tool-jobs",
+      createHash("sha256").update(f.cwd).digest("hex").slice(0, 24),
+    );
+    const legacy = new PanelToolJobService({
+      rootDir: root,
+      execute: async () => ({ legacy: true }),
+    });
+    const job = await legacy.start(legacyScope, {
+      entry: { name: "sample", sha256: f.app.nativeEntries!.sample!.sha256 },
+      input: { old: true },
+      recovery: "retry",
+    });
+    await legacy.shutdown();
+    const records = await (await f.call("tasks.list")).json();
+    expect(records).toMatchObject([
+      { id: job.id, readOnly: true, historySource: "desktop-web-legacy" },
+    ]);
+    expect(await (await f.call("tasks.get", { id: job.id })).json()).toMatchObject({
+      id: job.id,
+      readOnly: true,
+      input: { old: true },
+    });
+    const retry = await f.call("tasks.retry", { id: job.id });
+    expect(retry.status).toBe(400);
+    expect(await retry.json()).toMatchObject({ code: "NOT_SUPPORTED" });
+    expect((await f.call("tasks.cancel", { id: job.id })).status).toBe(400);
+    expect(await f.service.list(f.nativeScope)).toEqual([]);
+  });
 });

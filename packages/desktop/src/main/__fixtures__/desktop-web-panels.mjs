@@ -103,6 +103,13 @@ const bridge = {
 const allowed = new Set([first, second, forged]);
 const api = createDesktopWebService({
   devices,
+  sharedToolJobs: {
+    bind: async () => {
+      throw new Error("This storage-only fixture must not bind native tasks");
+    },
+    activeCount: () => 0,
+    invalidate: async () => {},
+  },
   getBridge: () => bridge,
   resolveWorkspace: async (cwd) => (allowed.has(cwd ?? first) ? (cwd ?? first) : undefined),
   onSessionsChanged: () => {},
@@ -226,7 +233,7 @@ try {
     200,
   );
   assert.equal((await request(grantA.src, { authenticated: false, origin: "null" })).status, 404);
-  assert.equal((await request(grantB.src, { authenticated: false, origin: "null" })).status, 404);
+  assert.equal((await request(grantB.src, { authenticated: false, origin: "null" })).status, 200);
   assert.equal((await list(second)).bound, true);
   const next = await prepare(second);
   assert.equal(
@@ -260,7 +267,7 @@ try {
       workspaceIsolation: true,
       opaqueModuleAssets: true,
       mutationGate: true,
-      crossWorkspaceInvalidation: true,
+      projectScopedInvalidation: true,
       logoutRevokesAssets: true,
       closeRevokesAssets: true,
       deviceRevocation: true,

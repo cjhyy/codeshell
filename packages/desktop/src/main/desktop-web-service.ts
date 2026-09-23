@@ -11,13 +11,14 @@ import {
   type DesktopWebRequestContext,
 } from "@cjhyy/code-shell-server/desktop-web";
 import { createLinkHttp } from "@cjhyy/code-shell-server/links";
-import { createPanelHttp } from "@cjhyy/code-shell-server/panels";
+import { createPanelHttp, type SharedPanelToolHost } from "@cjhyy/code-shell-server/panels";
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AgentBridge } from "./agent-bridge.js";
 
 /** Host wiring only. Pages and management services live in shared packages. */
 export function createDesktopWebService(options: {
   devices: TrustedDeviceStore;
+  sharedToolJobs: SharedPanelToolHost;
   getBridge: () => AgentBridge | null;
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
   onSessionsChanged: (cwd: string, sessionId: string) => void;
@@ -83,6 +84,7 @@ export function createDesktopWebService(options: {
               // Match Electron's existing panel storage exactly, including custom profiles.
               dataDir: app.getPath("userData"),
               host: "desktop",
+              sharedToolJobs: options.sharedToolJobs,
               agentTaskOptions: {
                 buildEnv: () => ({ ...process.env, ELECTRON_RUN_AS_NODE: "1" }),
               },
@@ -90,9 +92,15 @@ export function createDesktopWebService(options: {
                 (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,
               isAuthorized: authorized,
               withMutation: (write) => withMutation(cwd, write),
-              onChanged: async (id) => {
+              onChanged: async (id, kind) => {
                 await Promise.all(
-                  [...panels.values()].map((value) => value.handler.invalidate(id)),
+                  [...panels.entries()]
+                    .filter(
+                      ([otherCwd]) =>
+                        kind !== "binding" ||
+                        resolvePanelAppBindingProjectPath(otherCwd) === bindingCwd,
+                    )
+                    .map(([, value]) => value.handler.invalidate(id)),
                 );
                 options.getBridge()?.notifyWebConfigurationChanged();
               },

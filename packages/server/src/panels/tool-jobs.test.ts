@@ -82,6 +82,38 @@ describe("durable native tool jobs", () => {
     return { calls, execute };
   }
 
+  test("shared subscriptions stay scoped, omit task inputs/results, detach, and isolate listener failures", async () => {
+    const execution = controlled();
+    const f = await fixture({ execute: execution.execute });
+    const events: unknown[] = [];
+    const otherScope = { ...scope, projectPath: "/other-workspace" };
+    const wrongRevision = { ...scope, revision: "r2" };
+    const foreignEvents: unknown[] = [];
+    f.service.subscribe(scope, () => {
+      throw new Error("disconnected viewer");
+    });
+    const stop = f.service.subscribe(scope, (event) => events.push(event));
+    f.service.subscribe(otherScope, (event) => foreignEvents.push(event));
+    f.service.subscribe(wrongRevision, (event) => foreignEvents.push(event));
+    const job = await f.service.start(scope, request);
+    await eventually(async () => (execution.calls.length ? true : undefined));
+    await execution.calls[0]!.context.reportProgress({ stage: "working" });
+    expect(events.length).toBeGreaterThanOrEqual(3);
+    for (const event of events) {
+      expect(event).not.toHaveProperty("input");
+      expect(event).not.toHaveProperty("result");
+      expect(event).toMatchObject({ id: job.id });
+    }
+    expect(foreignEvents).toEqual([]);
+    expect(await f.service.has(scope, job.id)).toBe(true);
+    expect(await f.service.has(otherScope, job.id)).toBe(false);
+    stop();
+    const count = events.length;
+    execution.calls[0]!.gate.resolve({ privateOutput: "result" });
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+    expect(events).toHaveLength(count);
+  });
+
   test("cancelled input preparation cannot publish even if its preparer returns normally", async () => {
     const entered = deferred<AbortSignal>();
     const release = deferred<unknown>();

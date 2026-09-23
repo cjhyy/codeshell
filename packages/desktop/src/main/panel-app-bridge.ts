@@ -7,6 +7,7 @@ import {
   validateToolArgsStrict,
 } from "@cjhyy/code-shell-core";
 import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
+import { isDeepStrictEqual } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, type Stats } from "node:fs";
 import {
@@ -37,6 +38,8 @@ import {
 } from "./panel-app-protocol.js";
 import {
   PanelToolJobService,
+  createSharedPanelToolHost,
+  type SharedPanelToolHost,
   createPanelToolExecutor,
   toolJobLimits,
   type ToolJobScope,
@@ -1132,7 +1135,15 @@ export class PanelAppBridge {
   private capabilitiesFor(binding: GuestBinding) {
     return desktopPanelCapabilities(binding.resource.descriptor.permissions, {
       resources: this.getResourceService().capabilities(),
-      tasks: { available: true, ...toolJobLimits },
+      tasks: {
+        available: true,
+        ...toolJobLimits,
+        ownership: "project",
+        executionRevision: binding.resource.descriptor.revision,
+        sharedAcrossDevices: true,
+        continuesAfterDisconnect: true,
+        continuesAfterLogout: true,
+      },
       audio: !!this.options.audioTranscription,
       cookies: !!this.options.cookieCredentials,
       automations: !!this.options.automations,
@@ -1190,6 +1201,25 @@ export class PanelAppBridge {
   private toolSummary(job: ToolJob) {
     const { input: _input, result: _result, ...summary } = job;
     return summary;
+  }
+
+  /** Remote transports share project tasks but cannot shut down their coordinator. */
+  sharedToolJobs(): SharedPanelToolHost {
+    return createSharedPanelToolHost({
+      service: () => this.getToolJobService(),
+      resolveScope: async (expected, projectPath) => {
+        const installed = await this.installedToolApps.get(expected.id);
+        if (!installed || !isDeepStrictEqual(installed, expected))
+          throw new PanelBridgeError("REVOKED", "The installed package changed; reopen the Panel");
+        const scope = {
+          appId: installed.id,
+          projectPath,
+          revision: installedPanelAppRevision(installed),
+        };
+        await this.installedToolApp(scope);
+        return scope;
+      },
+    });
   }
 
   private getToolJobService(): PanelToolJobService {
@@ -1834,7 +1864,11 @@ export class PanelAppBridge {
     const projectPath = await this.trustedWorkspaceRoot(binding);
     const processOwner = this.processOwner(binding);
     const grant = await this.processService.grantDirectory(processOwner, selected.filePaths[0]);
-    const bookmark = this.directoryBookmarks.remember(binding.resource.descriptor.appId, projectPath, grant.path);
+    const bookmark = this.directoryBookmarks.remember(
+      binding.resource.descriptor.appId,
+      projectPath,
+      grant.path,
+    );
     this.processService.directoryPath(processOwner, grant.handle);
     return { ...grant, bookmark };
   }
@@ -1842,7 +1876,11 @@ export class PanelAppBridge {
   private async restoreProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
     const projectPath = await this.trustedWorkspaceRoot(binding);
     const bookmark = (params as { bookmark?: unknown } | null)?.bookmark;
-    const path = this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
+    const path = this.directoryBookmarks.restore(
+      binding.resource.descriptor.appId,
+      projectPath,
+      bookmark,
+    );
     const grant = await this.processService.grantDirectory(this.processOwner(binding), path);
     this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
     return { ...grant, bookmark };
