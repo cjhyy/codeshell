@@ -8,7 +8,7 @@
  * also proves Panel App updates do not own plugin automation content.
  */
 /* global document, window */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, realpath } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PanelRuntimeServices } from "@cjhyy/code-shell-server/panels";
@@ -21,7 +21,7 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-panel-app-e2e-");
-const home = isolated.home;
+const home = await realpath(isolated.home);
 const pluginDir = join(home, ".code-shell", "plugins", "panel-e2e");
 const panelAppDir = join(home, ".code-shell", "panel-apps", "panel-e2e");
 const panelAssetsDir = join(panelAppDir, "app");
@@ -31,6 +31,7 @@ const projectDir = join(home, "project-e2e");
 const installedAt = new Date().toISOString();
 
 let app;
+let win;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -273,9 +274,11 @@ try {
       CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
     },
   });
-  const win = await findCodeShellWindow(app);
+  win = await findCodeShellWindow(app);
   win.on("pageerror", (error) => console.error("renderer pageerror:", error.message));
 
+  await dismissTrustDialog(win);
+  await win.getByText("project-e2e", { exact: true }).click();
   await dismissTrustDialog(win);
   const extensionsEntry = win.getByRole("button", { name: /^(扩展|Extensions)$/ });
   await extensionsEntry.waitFor({ state: "visible" });
@@ -457,16 +460,20 @@ try {
   assert(networkBlocked, "CSP did not block external network access");
 
   await installFixture("1.0.1", "panel-v2", false);
-  const updatePreview = await win.evaluate(() =>
-    window.codeshell.previewPanelAppUpdate("panel-e2e"),
-  );
-  assert(updatePreview.ok, `Panel App source update preview failed: ${updatePreview.error}`);
-  assert(updatePreview.preview.version === "1.0.1", "source update preview used a stale manifest");
-  const updateResult = await win.evaluate(
-    ({ id, reviewToken }) => window.codeshell.installPanelAppUpdate({ id, reviewToken }),
-    { id: "panel-e2e", reviewToken: updatePreview.preview.reviewToken },
-  );
-  assert(updateResult.ok, `Panel App source update failed: ${updateResult.error}`);
+  await win.getByRole("button", { name: /^(从源码更新|Update from source)$/ }).click();
+  const reviewDialog = win.getByRole("dialog");
+  await reviewDialog.getByText(/v1\.0\.0 → v1\.0\.1/).waitFor({ state: "visible" });
+  await reviewDialog
+    .getByText(/(?:目标项目|Target project).*project-e2e/)
+    .waitFor({ state: "visible" });
+  await reviewDialog.getByRole("button", { name: /^(确认并更新|Review and update)$/ }).click();
+  await reviewDialog.waitFor({ state: "hidden" });
+  await win.waitForFunction(async (cwd) => {
+    const selected = (await window.codeshell.getPanelAppBindings(cwd)).find(
+      (item) => item.appId === "panel-e2e",
+    );
+    return selected?.version === "1.0.1" && selected?.bound && !!selected?.packageDigest;
+  }, projectDir);
   const staleReviewRejected = await win.evaluate(
     async ({ revision, cwd }) => {
       try {
@@ -518,6 +525,15 @@ try {
   );
 
   console.log("Panel App Electron E2E: passed");
+} catch (error) {
+  console.error(
+    "Panel test page:",
+    await win
+      ?.locator("#root")
+      .innerText()
+      .catch(() => "unavailable"),
+  );
+  throw error;
 } finally {
   await app?.close().catch(() => undefined);
   await isolated.cleanup();

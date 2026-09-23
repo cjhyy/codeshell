@@ -100,7 +100,10 @@ export async function getInstalledPanelAppUpdateIdentity(
  * Read-only version discovery. It neither grants permissions nor reviews/installs package code;
  * the existing full package review remains mandatory before applying any update.
  */
-export async function checkInstalledPanelAppUpdate(id: string): Promise<PanelAppUpdateCheck> {
+async function checkPanelAppSource(
+  id: string,
+  selected?: InstalledPanelAppUpdateIdentity,
+): Promise<PanelAppUpdateCheck> {
   const result: PanelAppUpdateCheck = {
     id,
     currentVersion: "",
@@ -110,7 +113,8 @@ export async function checkInstalledPanelAppUpdate(id: string): Promise<PanelApp
   };
   try {
     assertSafePanelAppId(id);
-    const record = (await readInstalledPanelAppsRegistry()).find((entry) => entry.id === id);
+    const record =
+      selected ?? (await readInstalledPanelAppsRegistry()).find((entry) => entry.id === id);
     if (!record) throw new Error("Panel App has no installed source record");
     result.sourceKind =
       typeof record.source === "string"
@@ -119,7 +123,9 @@ export async function checkInstalledPanelAppUpdate(id: string): Promise<PanelApp
           : "dir"
         : "git";
     // The registry can be stale: compare the package that is actually installed.
-    result.currentVersion = manifestVersion(await readLocalManifest(panelAppInstallDir(id)), id);
+    result.currentVersion = selected
+      ? selected.version
+      : manifestVersion(await readLocalManifest(panelAppInstallDir(id)), id);
     if (typeof record.source === "string" && result.sourceKind === "zip") {
       // Source records predate a separate local kind field; a folder can also end in .zip.
       const metadata = await stat(record.source).catch((error: NodeJS.ErrnoException) => {
@@ -151,4 +157,15 @@ export async function checkInstalledPanelAppUpdate(id: string): Promise<PanelApp
       message: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+export function checkInstalledPanelAppUpdate(id: string): Promise<PanelAppUpdateCheck> {
+  return checkPanelAppSource(id);
+}
+
+/** The Host passes the identity of an already verified project-selected package. */
+export function checkSelectedPanelAppUpdate(
+  identity: InstalledPanelAppUpdateIdentity,
+): Promise<PanelAppUpdateCheck> {
+  return checkPanelAppSource(identity.id, identity);
 }

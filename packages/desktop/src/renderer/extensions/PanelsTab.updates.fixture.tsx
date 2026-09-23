@@ -43,6 +43,7 @@ function panel(id = "video-studio", kind: "git" | "dir" | "zip" = "git"): PanelA
     title: id === "video-studio" ? "视频工作台" : id,
     version: "0.6.2",
     revision: "revision-1",
+    bindingRevision: "a".repeat(64),
     hostId: id,
     kind: "panel-app",
     icon: "panel",
@@ -226,49 +227,44 @@ describe("Panel App update controls", () => {
     ).toBe(false);
   });
 
-  for (const differentPin of [false, true]) {
-    test(`installation does not report bound success when ${differentPin ? "the project selects different bytes" : "the binding write fails"}`, async () => {
-      const writes: unknown[] = [];
-      Object.assign(window.codeshell, {
-        pickPanelAppSource: async () => ({ kind: "dir", path: "/source" }),
-        previewLocalPanelApp: async () => ({
+  test("a rejected project installation never reports success or attempts a separate binding", async () => {
+    const writes: unknown[] = [];
+    Object.assign(window.codeshell, {
+      pickPanelAppSource: async () => ({ kind: "dir", path: "/source" }),
+      previewLocalPanelApp: async (_source: unknown, cwd: string) => {
+        expect(cwd).toBe("/tmp/project");
+        return {
           ok: true,
           preview: {
             ...preview,
             alreadyInstalled: false,
             source: { kind: "dir", label: "source" },
           },
-        }),
-        installLocalPanelApp: async () => ({
-          ok: true,
-          id: "video-studio",
-          packageDigest: "b".repeat(64),
-        }),
-        getPanelAppBindings: async () => [
-          {
-            appId: "video-studio",
-            revision: "a".repeat(64),
-            version: "0.6.3",
-            bound: false,
-            globalDisabled: false,
-            packageDigest: (differentPin ? "c" : "b").repeat(64),
-          },
-        ],
-        setPanelAppProjectBinding: async (...input: unknown[]) => {
-          writes.push(input);
-          throw new Error("绑定未完成：项目状态已改变");
-        },
-      });
-      await render();
-      await click("选择源码文件夹");
-      await click("确认并安装");
-      expect(textOf(document.body)).not.toContain("已安装并绑定到");
-      expect(textOf(container)).toContain(
-        differentPin ? "项目面板状态或版本已改变" : "绑定未完成：项目状态已改变",
-      );
-      expect(writes.length).toBe(differentPin ? 0 : 1);
+        };
+      },
+      installLocalPanelApp: async (input: unknown) => {
+        writes.push(input);
+        return { ok: false, error: "项目面板配置已改变，请重新预览。" };
+      },
+      setPanelAppProjectBinding: async () => {
+        throw new Error("Installation must bind inside the reviewed Host operation");
+      },
     });
-  }
+    await render();
+    await click("选择源码文件夹");
+    expect(textOf(document.body)).toContain("目标项目：Panel updates");
+    await click("确认并安装");
+    expect(textOf(document.body)).not.toContain("已安装并绑定到");
+    expect(textOf(container)).toContain("项目面板配置已改变，请重新预览。");
+    expect(writes).toEqual([
+      {
+        cwd: "/tmp/project",
+        source: { kind: "dir", path: "/source" },
+        reviewToken: preview.reviewToken,
+        overwrite: false,
+      },
+    ]);
+  });
 
   test("automatically displays the newer version and its source without opening a dialog", async () => {
     await render();
@@ -307,7 +303,9 @@ describe("Panel App update controls", () => {
     expect(textOf(document.body)).toContain("v0.6.2 → v0.6.3");
     expect(textOf(document.body)).toContain("Host 权限");
     await click("确认并更新");
-    expect(installs).toEqual([{ id: "video-studio", reviewToken: "reviewed-package-token" }]);
+    expect(installs).toEqual([
+      { cwd: "/tmp/project", id: "video-studio", reviewToken: "reviewed-package-token" },
+    ]);
     expect(textOf(container)).not.toContain("有更新");
     expect(textOf(container)).not.toContain("个可更新");
     expect(textOf(container)).toContain("v0.6.3");

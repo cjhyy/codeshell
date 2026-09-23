@@ -1,6 +1,9 @@
 import {
   assertSafePanelAppId,
   checkInstalledPanelAppUpdate,
+  checkSelectedPanelAppUpdate,
+  listProjectPanelApps,
+  resolvePanelAppBindingProjectPath,
   getInstalledPanelAppUpdateIdentity,
   type InstalledPanelApp,
   type PanelAppUpdateCheck,
@@ -118,3 +121,18 @@ export const panelAppUpdateService = createPanelAppUpdateService({
   getInstalled: getInstalledPanelAppUpdateIdentity,
   check: checkInstalledPanelAppUpdate,
 });
+
+export function createProjectPanelAppUpdateService(cwd: string) {
+  const getInstalled = async (id: string) =>
+    (await listProjectPanelApps(resolvePanelAppBindingProjectPath(cwd))).find(
+      (app) => app.id === id,
+    );
+  return createPanelAppUpdateService({
+    getInstalled,
+    check: async (id) => {
+      const selected = await getInstalled(id);
+      if (!selected) throw new Error("Panel App is no longer installed");
+      return checkSelectedPanelAppUpdate(selected);
+    },
+  });
+}

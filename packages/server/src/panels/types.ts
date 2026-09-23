@@ -61,6 +61,11 @@ export interface PanelReview {
   compatibility: PanelCompatibility;
 }
 
+/** Trusted native hosts may review local sources without exposing paths to Web routes. */
+export interface PanelProjectReview extends Omit<PanelReview, "source"> {
+  installedVersion?: string;
+}
+
 export interface PanelOperationContext {
   ownerId: string;
   authorize: () => boolean | Promise<boolean>;

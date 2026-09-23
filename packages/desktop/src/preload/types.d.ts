@@ -2043,19 +2043,31 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   /** Validate a Panel App with the dedicated Panel App package rules. */
   previewLocalPanelApp(
     input: PanelAppSourceInput,
-  ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+    cwd: string,
+  ): Promise<
+    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+  >;
   /** Discover every installable Panel App in a public GitHub repository. */
   discoverGitPanelApps(
     input: GitPanelAppSourceInput,
   ): Promise<{ ok: true; discovery: GitPanelAppDiscovery } | { ok: false; error: string }>;
   /** Read-only version discovery; does not review or install a package. */
-  checkPanelAppUpdate(id: string, force?: boolean): Promise<PanelAppUpdateCheck>;
+  checkPanelAppUpdate(
+    id: string,
+    force: boolean | undefined,
+    cwd: string,
+  ): Promise<PanelAppUpdateCheck>;
   /** Revalidate the original folder, archive, or GitHub source for an installed Panel App. */
   previewPanelAppUpdate(
     id: string,
-  ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+    cwd: string,
+    expectedRevision: string,
+  ): Promise<
+    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+  >;
   /** Install a reviewed Panel App into the independent Panel App registry. */
   installLocalPanelApp(input: {
+    cwd: string;
     source: PanelAppSourceInput;
     reviewToken: string;
     overwrite?: boolean;
@@ -2065,6 +2077,7 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   >;
   /** Apply an explicitly reviewed update from the app's remembered source. */
   installPanelAppUpdate(input: {
+    cwd: string;
     id: string;
     reviewToken: string;
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }>;

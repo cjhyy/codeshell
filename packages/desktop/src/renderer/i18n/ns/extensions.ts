@@ -158,10 +158,11 @@ export const extensions = {
         overwriteConfirm: "已安装“{name}”。继续会用本次导入的独立 App 包覆盖它。",
         overwriteConfirmLabel: "覆盖更新",
         reviewTitle: "安装前审查 Panel App",
+        reviewProject: "目标项目：{project}",
         reviewDescription: "安装器会一起审查 UI、Host 权限以及包内声明的 Agent 工具和 Skill。",
         reviewUpdateTitle: "审查 Panel App 更新",
         reviewUpdateDescription:
-          "将重新读取原始本地或 GitHub 来源，并校验权限和全部文件内容。确认后才会替换已安装快照。",
+          "将重新读取项目所选版本的原始来源，并校验权限和全部文件内容。确认后让目标项目使用审阅过的版本。",
         reviewAlreadyInstalled: "本机已安装同 ID 的 Panel App，安装前还会要求确认覆盖。",
         reviewPackage: "应用包",
         reviewSource: "来源",
@@ -1138,11 +1139,12 @@ export const extensions = {
           "“{name}” is already installed. Continue to replace it with this independent app package.",
         overwriteConfirmLabel: "Replace",
         reviewTitle: "Review Panel App",
+        reviewProject: "Target project: {project}",
         reviewDescription:
           "The installer reviews the UI, host permissions, and any bundled Agent tools and Skills together.",
         reviewUpdateTitle: "Review Panel App update",
         reviewUpdateDescription:
-          "The original local or GitHub source, permissions, and all package bytes are revalidated before the installed snapshot is replaced.",
+          "The source of this project’s selected version, permissions, and all package bytes are revalidated before the target project switches to the reviewed version.",
         reviewAlreadyInstalled:
           "A Panel App with this ID is already installed. Replacing it requires another confirmation.",
         reviewPackage: "Application package",

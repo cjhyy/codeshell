@@ -1,5 +1,13 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+  cpSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -9,6 +17,7 @@ import {
   listProjectPanelApps,
 } from "@cjhyy/code-shell-core";
 import { createPanelManagement } from "@cjhyy/code-shell-server/panels";
+import { createProjectPanelAppUpdateService } from "./panel-app-update-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
 
 const originalHome = process.env.HOME;
@@ -154,4 +163,110 @@ test("a snapshot interrupted by another device never returns an old bound flag w
   });
   await expect(api.snapshot()).rejects.toThrow("配置已改变");
   expect((await api.snapshot()).panels[0]!.bound).toBe(true);
+});
+
+function changeSource(source: string, version: string) {
+  const manifestPath = join(source, ".codeshell-panel/panel.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.version = version;
+  manifest.permissions = ["storage", "context.workspace", "workspace.write"];
+  writeFileSync(manifestPath, JSON.stringify(manifest));
+  writeFileSync(join(source, "app/index.html"), version);
+}
+
+test("a reviewed Desktop update uses the project's original source and only advances that project", async () => {
+  const { cwd, install } = await fixture();
+  const old = await install("test-panel");
+  const first = createDesktopPanelManagement(cwd);
+  await first.binding(context, old.id, true, (await first.snapshot())[0]!.revision);
+  const secondCwd = join(root, "second");
+  mkdirSync(secondCwd);
+  const second = createDesktopPanelManagement(secondCwd);
+  // Another project installs a different source and fixes version 3.0.0.
+  const otherSource = join(root, "other-source");
+  cpSync(join(root, old.id), otherSource, { recursive: true });
+  changeSource(otherSource, "3.0.0");
+  const otherInput = { kind: "dir" as const, path: otherSource };
+  const otherReview = await second.previewSource(context, otherInput);
+  await second.install(context, otherReview.reviewToken, { overwrite: true });
+  changeSource(join(root, old.id), "2.0.0");
+  const displayed = (await first.snapshot())[0]!;
+  const check = await createProjectPanelAppUpdateService(cwd).check(old.id);
+  expect(check).toMatchObject({
+    currentVersion: "1.0.0",
+    latestVersion: "2.0.0",
+    status: "update-available",
+  });
+  const review = await first.previewUpdate(context, old.id, displayed.revision);
+  expect(review).toMatchObject({
+    installedVersion: "1.0.0",
+    preview: { version: "2.0.0", permissions: ["storage", "context.workspace", "workspace.write"] },
+  });
+  await expect(second.install(context, review.reviewToken, { overwrite: true })).rejects.toThrow(
+    "预览已失效",
+  );
+  await expect(
+    first.install({ ...context, ownerId: "another-window" }, review.reviewToken, {
+      overwrite: true,
+    }),
+  ).rejects.toThrow("当前设备重新预览");
+  await expect(first.install(context, review.reviewToken, { overwrite: false })).rejects.toThrow(
+    "确认项目更新",
+  );
+  await first.install(context, review.reviewToken, { overwrite: true, expectedId: old.id });
+  expect((await first.snapshot())[0]!.version).toBe("2.0.0");
+  expect((await second.snapshot())[0]!.version).toBe("3.0.0");
+  expect((await listProjectPanelApps(cwd))[0]!.source).toBe(join(root, old.id));
+  await expect(first.install(context, review.reviewToken, { overwrite: true })).rejects.toThrow(
+    "预览已失效",
+  );
+});
+
+test("native review rejects phone changes and changed package bytes, and closing its owner revokes it", async () => {
+  const { cwd, install } = await fixture();
+  const app = await install("test-panel");
+  const desktop = createDesktopPanelManagement(cwd);
+  await desktop.binding(context, app.id, true, (await desktop.snapshot())[0]!.revision);
+  changeSource(join(root, app.id), "2.0.0");
+  const selected = (await desktop.snapshot())[0]!;
+  const review = await desktop.previewUpdate(context, app.id, selected.revision);
+  const phone = createPanelManagement({ cwd, projectPackages: true });
+  await phone.binding(context, app.id, false, selected.revision);
+  await expect(desktop.install(context, review.reviewToken, { overwrite: true })).rejects.toThrow(
+    "面板已改变",
+  );
+  expect((await desktop.snapshot())[0]!.version).toBe("1.0.0");
+  const fresh = await desktop.previewSource(context, { kind: "dir", path: join(root, app.id) });
+  changeSource(join(root, app.id), "2.1.0");
+  await expect(desktop.install(context, fresh.reviewToken, { overwrite: true })).rejects.toThrow();
+  expect((await desktop.snapshot())[0]!.version).toBe("1.0.0");
+  const last = await desktop.previewSource(context, { kind: "dir", path: join(root, app.id) });
+  desktop.cancelOwner(context.ownerId);
+  await expect(desktop.install(context, last.reviewToken, { overwrite: true })).rejects.toThrow(
+    "预览已失效",
+  );
+});
+
+test("a new native project installation commits its exact reviewed pin and cannot enable local sources on Web", async () => {
+  const { cwd, install } = await fixture();
+  const app = await install("seed-panel");
+  const source = join(root, "new-source");
+  cpSync(join(root, app.id), source, { recursive: true });
+  const manifestPath = join(source, ".codeshell-panel/panel.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.id = "new-panel";
+  writeFileSync(manifestPath, JSON.stringify(manifest));
+  const input = { kind: "dir" as const, path: source };
+  const web = createPanelManagement({ cwd, projectPackages: true });
+  await expect(web.previewProjectSource(context, input)).rejects.toThrow("不支持本地项目安装");
+  const desktop = createDesktopPanelManagement(cwd);
+  const review = await desktop.previewSource(context, input);
+  const result = await desktop.install(context, review.reviewToken, { overwrite: false });
+  const settings = new SettingsManager(cwd, "full").getRawForScope("project", cwd, {
+    strict: true,
+  });
+  expect(settings.panelAppBindings).toEqual(["new-panel"]);
+  expect(settings.panelAppPins).toEqual({
+    "new-panel": { version: "1.0.0", packageDigest: result.packageDigest },
+  });
 });

@@ -54,6 +54,7 @@ export {
 } from "./project-packages.js";
 export {
   checkInstalledPanelAppUpdate,
+  checkSelectedPanelAppUpdate,
   getInstalledPanelAppUpdateIdentity,
   type PanelAppUpdateCheck,
   type InstalledPanelAppUpdateIdentity,

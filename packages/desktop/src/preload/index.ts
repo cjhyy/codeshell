@@ -1239,10 +1239,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("dialog:pickPanelAppSource", kind),
   previewLocalPanelApp: (
     input: import("@cjhyy/code-shell-core").PanelAppSourceInput,
+    cwd: string,
   ): Promise<
-    | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
+    | {
+        ok: true;
+        preview: import("@cjhyy/code-shell-core").PanelAppPreview;
+        installedVersion?: string;
+      }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke("panel-apps:previewLocal", input),
+  > => ipcRenderer.invoke("panel-apps:previewLocal", input, cwd),
   discoverGitPanelApps: (
     input: import("@cjhyy/code-shell-core").GitPanelAppSourceInput,
   ): Promise<
@@ -1254,16 +1259,24 @@ contextBridge.exposeInMainWorld("codeshell", {
   > => ipcRenderer.invoke("panel-apps:discoverGit", input),
   checkPanelAppUpdate: (
     id: string,
-    force?: boolean,
+    force: boolean | undefined,
+    cwd: string,
   ): Promise<import("@cjhyy/code-shell-core").PanelAppUpdateCheck> =>
-    ipcRenderer.invoke("panel-apps:checkUpdate", id, force),
+    ipcRenderer.invoke("panel-apps:checkUpdate", id, force, cwd),
   previewPanelAppUpdate: (
     id: string,
+    cwd: string,
+    expectedRevision: string,
   ): Promise<
-    | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
+    | {
+        ok: true;
+        preview: import("@cjhyy/code-shell-core").PanelAppPreview;
+        installedVersion?: string;
+      }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke("panel-apps:previewUpdate", id),
+  > => ipcRenderer.invoke("panel-apps:previewUpdate", id, cwd, expectedRevision),
   installLocalPanelApp: (input: {
+    cwd: string;
     source: import("@cjhyy/code-shell-core").PanelAppSourceInput;
     reviewToken: string;
     overwrite?: boolean;
@@ -1272,6 +1285,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   > => ipcRenderer.invoke("panel-apps:installLocal", input),
   installPanelAppUpdate: (input: {
+    cwd: string;
     id: string;
     reviewToken: string;
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }> =>

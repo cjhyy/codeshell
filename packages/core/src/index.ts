@@ -436,6 +436,7 @@ export {
   PanelAppReviewChangedError,
   assertSafePanelAppId,
   checkInstalledPanelAppUpdate,
+  checkSelectedPanelAppUpdate,
   getInstalledPanelAppUpdateIdentity,
   discoverGitPanelApps,
   installReviewedLocalPanelApp,

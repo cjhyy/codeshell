@@ -63,6 +63,7 @@ import {
   type GitPanelAppSourceInput,
   type PanelAppSourceInput,
   type ThemePreview,
+  resolvePanelAppBindingProjectPath,
 } from "@cjhyy/code-shell-core";
 import {
   defaultCacheDir,
@@ -404,16 +405,12 @@ import {
   listPanelApps,
   listPanelAppsForProjects,
 } from "./panel-apps-service.js";
-import {
-  discoverGitPanelAppsForUi,
-  installPanelAppUpdateForUi,
-  installLocalPanelAppForUi,
-  previewPanelAppUpdateForUi,
-  previewLocalPanelAppForUi,
-  uninstallPanelAppForUi,
-} from "./panel-app-install-service.js";
+import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
-import { panelAppUpdateService } from "./panel-app-update-service.js";
+import {
+  panelAppUpdateService,
+  createProjectPanelAppUpdateService,
+} from "./panel-app-update-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
@@ -3825,6 +3822,71 @@ ipcMain.handle(
     return expandPluginCommand(cwd, name, rawArguments);
   },
 );
+const desktopPanelManagers = new Map<
+  string,
+  {
+    management: ReturnType<typeof createDesktopPanelManagement>;
+    updates: ReturnType<typeof createProjectPanelAppUpdateService>;
+  }
+>();
+const panelReviewOwners = new Set<number>();
+function desktopPanelManager(cwd: string) {
+  const key = JSON.stringify([cwd, resolvePanelAppBindingProjectPath(cwd)]);
+  const existing = desktopPanelManagers.get(key);
+  if (existing) {
+    desktopPanelManagers.delete(key);
+    desktopPanelManagers.set(key, existing);
+    return existing;
+  }
+  const entry = {
+    management: createDesktopPanelManagement(cwd, {
+      withMutation: (write) => (bridge ? bridge.withWebConfigurationMutation(cwd, write) : write()),
+      onChanged: (id) => {
+        for (const value of desktopPanelManagers.values()) value.updates.invalidate(id);
+        panelAppUpdateService.invalidate(id);
+        broadcastPanelAppsChanged(mainWindows);
+      },
+    }),
+    updates: createProjectPanelAppUpdateService(cwd),
+  };
+  desktopPanelManagers.set(key, entry);
+  while (desktopPanelManagers.size > 64) {
+    const oldest = desktopPanelManagers.keys().next().value!;
+    desktopPanelManagers.get(oldest)!.management.close();
+    desktopPanelManagers.delete(oldest);
+  }
+  return entry;
+}
+function desktopPanelContext(event: IpcMainInvokeEvent, cwd: string) {
+  const ownerId = `desktop:${event.sender.id}`;
+  if (!panelReviewOwners.has(event.sender.id)) {
+    const id = event.sender.id;
+    panelReviewOwners.add(id);
+    event.sender.once("destroyed", () => {
+      panelReviewOwners.delete(id);
+      for (const value of desktopPanelManagers.values()) value.management.cancelOwner(ownerId);
+    });
+  }
+  return {
+    ownerId,
+    authorize: async () =>
+      !event.sender.isDestroyed() && (await requireRendererProjectPath(cwd)) === cwd,
+  };
+}
+async function desktopPanelOperation<T>(work: () => Promise<T>) {
+  try {
+    return { ok: true as const, ...(await work()) };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : String(error),
+      ...((error as { code?: string })?.code === "already_installed"
+        ? { alreadyInstalled: true as const }
+        : {}),
+    };
+  }
+}
+
 ipcMain.handle("panel-apps:list", async (_e, cwd: string, locale: string) => {
   cwd = await requireRendererProjectPath(cwd);
   if (typeof locale !== "string" || locale.length > 64) {
@@ -3847,16 +3909,8 @@ ipcMain.handle(
   "panel-apps:setProjectBinding",
   async (event, cwd: string, id: string, bound: boolean, expectedRevision: string) => {
     cwd = await requireRendererProjectPath(cwd);
-    const management = createDesktopPanelManagement(cwd, {
-      withMutation: (write) => (bridge ? bridge.withWebConfigurationMutation(cwd, write) : write()),
-      onChanged: () => broadcastPanelAppsChanged(mainWindows),
-    });
-    return management.binding(
-      {
-        ownerId: `desktop:${event.sender.id}`,
-        authorize: async () =>
-          !event.sender.isDestroyed() && (await requireRendererProjectPath(cwd)) === cwd,
-      },
+    return desktopPanelManager(cwd).management.binding(
+      desktopPanelContext(event, cwd),
       id,
       bound,
       expectedRevision,
@@ -4615,55 +4669,100 @@ ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginI
 ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
   previewLocalPluginForUi(input),
 );
-ipcMain.handle("panel-apps:previewLocal", async (_e, input: PanelAppSourceInput) =>
-  previewLocalPanelAppForUi(input),
+ipcMain.handle(
+  "panel-apps:previewLocal",
+  async (event, input: PanelAppSourceInput, rawCwd: string) =>
+    desktopPanelOperation(async () => {
+      const cwd = await requireRendererProjectPath(rawCwd);
+      const review = await desktopPanelManager(cwd).management.previewSource(
+        desktopPanelContext(event, cwd),
+        input,
+      );
+      return {
+        preview: { ...review.preview, reviewToken: review.reviewToken },
+        installedVersion: review.installedVersion,
+      };
+    }),
 );
 ipcMain.handle("panel-apps:discoverGit", async (_e, input: GitPanelAppSourceInput) =>
   discoverGitPanelAppsForUi(input),
 );
-ipcMain.handle("panel-apps:previewUpdate", async (_e, id: string) => {
-  if (typeof id !== "string" || !id) throw new Error("panel-apps:previewUpdate requires id");
-  return previewPanelAppUpdateForUi(id);
-});
-ipcMain.handle("panel-apps:checkUpdate", async (_e, id: string, force?: boolean) => {
-  if (typeof id !== "string" || (force !== undefined && typeof force !== "boolean")) {
-    throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
-  }
-  return panelAppUpdateService.check(id, force === true);
-});
+ipcMain.handle(
+  "panel-apps:previewUpdate",
+  async (event, id: string, rawCwd: string, expectedRevision: string) =>
+    desktopPanelOperation(async () => {
+      const cwd = await requireRendererProjectPath(rawCwd);
+      const review = await desktopPanelManager(cwd).management.previewUpdate(
+        desktopPanelContext(event, cwd),
+        id,
+        expectedRevision,
+      );
+      return {
+        preview: { ...review.preview, reviewToken: review.reviewToken },
+        installedVersion: review.installedVersion,
+      };
+    }),
+);
+ipcMain.handle(
+  "panel-apps:checkUpdate",
+  async (_e, id: string, force: boolean | undefined, rawCwd: string) => {
+    const cwd = await requireRendererProjectPath(rawCwd);
+    if (typeof id !== "string" || (force !== undefined && typeof force !== "boolean"))
+      throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
+    return desktopPanelManager(cwd).updates.check(id, force === true);
+  },
+);
 ipcMain.handle(
   "panel-apps:installLocal",
   async (
-    _e,
+    event,
     input: {
+      cwd: string;
       source: PanelAppSourceInput;
       reviewToken: string;
       overwrite?: boolean;
     },
-  ) => {
-    if (!input || !input.source || typeof input.reviewToken !== "string") {
-      throw new Error("panel-apps:installLocal requires source and reviewToken");
-    }
-    const result = await installLocalPanelAppForUi(input);
-    if (result.ok) broadcastPanelAppsChanged(mainWindows);
-    return result;
-  },
+  ) =>
+    desktopPanelOperation(async () => {
+      if (
+        !input ||
+        typeof input.reviewToken !== "string" ||
+        (input.overwrite !== undefined && typeof input.overwrite !== "boolean")
+      )
+        throw new Error("panel-apps:installLocal requires a project and reviewed token");
+      const cwd = await requireRendererProjectPath(input.cwd);
+      return desktopPanelManager(cwd).management.install(
+        desktopPanelContext(event, cwd),
+        input.reviewToken,
+        { overwrite: input.overwrite === true },
+      );
+    }),
 );
 ipcMain.handle(
   "panel-apps:installUpdate",
-  async (_e, input: { id: string; reviewToken: string }) => {
-    if (
-      !input ||
-      typeof input.id !== "string" ||
-      !input.id ||
-      typeof input.reviewToken !== "string"
-    ) {
-      throw new Error("panel-apps:installUpdate requires id and reviewToken");
-    }
-    const result = await installPanelAppUpdateForUi(input);
-    if (result.ok) broadcastPanelAppsChanged(mainWindows);
-    return result;
-  },
+  async (
+    event,
+    input: {
+      cwd: string;
+      id: string;
+      reviewToken: string;
+    },
+  ) =>
+    desktopPanelOperation(async () => {
+      if (
+        !input ||
+        typeof input.id !== "string" ||
+        !input.id ||
+        typeof input.reviewToken !== "string"
+      )
+        throw new Error("panel-apps:installUpdate requires a project and reviewed token");
+      const cwd = await requireRendererProjectPath(input.cwd);
+      return desktopPanelManager(cwd).management.install(
+        desktopPanelContext(event, cwd),
+        input.reviewToken,
+        { overwrite: true, expectedId: input.id },
+      );
+    }),
 );
 ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
   if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {

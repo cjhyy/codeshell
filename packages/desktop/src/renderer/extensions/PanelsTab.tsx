@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Briefcase,
@@ -54,9 +54,15 @@ interface Props {
   query: string;
 }
 
-type PanelAppReviewState =
-  | { mode: "install"; source: PanelAppSourceInput; preview: PanelAppPreview }
-  | { mode: "update"; appId: string; installedVersion: string; preview: PanelAppPreview };
+type PanelAppReviewState = { projectPath: string } & (
+  | {
+      mode: "install";
+      source: PanelAppSourceInput;
+      preview: PanelAppPreview;
+      installedVersion?: string;
+    }
+  | { mode: "update"; appId: string; installedVersion: string; preview: PanelAppPreview }
+);
 
 export function nextPanelAppBindings(value: unknown, appId: string, bound: boolean): string[] {
   const bindings = new Set(
@@ -112,7 +118,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const confirm = useConfirm();
   const alert = useAlert();
   const toast = useToast();
-  const updates = usePanelAppUpdates(apps);
+  const targetRef = useRef({ cwd, activeProjectPath });
+  targetRef.current = { cwd, activeProjectPath };
+  useEffect(() => {
+    setReview(null);
+  }, [cwd, activeProjectPath]);
+  const updates = usePanelAppUpdates(apps, cwd);
   const invalidateUpdates = updates.invalidate;
 
   useEffect(() => {
@@ -180,18 +191,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   }, [reloadKey]);
 
   const setProjectBinding = useCallback(
-    async (appId: string, projectPath: string, bound: boolean, installedDigest?: string) => {
+    async (appId: string, projectPath: string, bound: boolean) => {
       setBindingBusy(bindingBusyKey(appId, projectPath));
       setError(null);
       try {
-        // A newly installed app has no displayed row yet. Check the exact
-        // installed bytes before binding; an existing project pin may differ.
-        const states = installedDigest
-          ? await window.codeshell.getPanelAppBindings(projectPath)
-          : projectBindings[projectPath];
-        const state = states?.find((app) => app.appId === appId);
-        if (!state || (installedDigest && state.packageDigest !== installedDigest))
-          throw new Error(t("ext.panels.bindingChanged"));
+        const state = projectBindings[projectPath]?.find((app) => app.appId === appId);
+        if (!state) throw new Error(t("ext.panels.bindingChanged"));
         const next = await window.codeshell.setPanelAppProjectBinding(
           projectPath,
           appId,
@@ -216,6 +221,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setError(t("ext.panels.projectRequired"));
       return;
     }
+    const projectPath = activeProjectPath;
     const picked = await window.codeshell.pickPanelAppSource(kind);
     if (!picked) return;
     setInstallBusy(kind);
@@ -224,12 +230,19 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         kind: picked.kind,
         path: picked.path,
       };
-      const result = await window.codeshell.previewLocalPanelApp(source);
+      const result = await window.codeshell.previewLocalPanelApp(source, projectPath);
+      if (targetRef.current.activeProjectPath !== projectPath) return;
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setReview({ mode: "install", source, preview: result.preview });
+      setReview({
+        mode: "install",
+        projectPath,
+        source,
+        preview: result.preview,
+        installedVersion: result.installedVersion,
+      });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
@@ -242,16 +255,24 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setError(t("ext.panels.projectRequired"));
       return;
     }
+    const projectPath = activeProjectPath;
     setGitBusyTarget(source.subdir ?? source.url);
     setInstallBusy("git");
     setError(null);
     try {
-      const result = await window.codeshell.previewLocalPanelApp(source);
+      const result = await window.codeshell.previewLocalPanelApp(source, projectPath);
+      if (targetRef.current.activeProjectPath !== projectPath) return;
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setReview({ mode: "install", source, preview: result.preview });
+      setReview({
+        mode: "install",
+        projectPath,
+        source,
+        preview: result.preview,
+        installedVersion: result.installedVersion,
+      });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
@@ -315,6 +336,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       try {
         const result = await window.codeshell.installPanelAppUpdate({
           id: review.appId,
+          cwd: review.projectPath,
           reviewToken: preview.reviewToken,
         });
         if (!result.ok) {
@@ -337,11 +359,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       return;
     }
 
-    if (!activeProjectPath) {
-      setError(t("ext.panels.projectRequired"));
-      return;
-    }
-    const bindingProjectPath = activeProjectPath;
+    const bindingProjectPath = review.projectPath;
     const { source } = review;
     let overwrite = false;
     if (preview.alreadyInstalled) {
@@ -356,6 +374,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     setError(null);
     try {
       let result = await window.codeshell.installLocalPanelApp({
+        cwd: bindingProjectPath,
         source,
         reviewToken: preview.reviewToken,
         overwrite,
@@ -368,6 +387,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         });
         if (!approved) return;
         result = await window.codeshell.installLocalPanelApp({
+          cwd: bindingProjectPath,
           source,
           reviewToken: preview.reviewToken,
           overwrite: true,
@@ -376,10 +396,6 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       if (!result.ok) {
         setReview(null);
         setError(result.error);
-        return;
-      }
-      if (!(await setProjectBinding(preview.id, bindingProjectPath, true, result.packageDigest))) {
-        setReview(null);
         return;
       }
       // Reveal the project list once so the user sees which project it bound to.
@@ -408,13 +424,20 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     setCheckingUpdate(app.id);
     setError(null);
     try {
-      const result = await window.codeshell.previewPanelAppUpdate(app.appId);
+      if (!cwd || !app.bindingRevision) throw new Error(t("ext.panels.bindingChanged"));
+      const result = await window.codeshell.previewPanelAppUpdate(
+        app.appId,
+        cwd,
+        app.bindingRevision,
+      );
+      if (targetRef.current.cwd !== cwd) return;
       if (!result.ok) {
         setError(result.error);
         return;
       }
       setReview({
         mode: "update",
+        projectPath: cwd,
         appId: app.appId,
         installedVersion: app.version,
         preview: result.preview,
@@ -482,12 +505,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       {review && (
         <PanelAppInstallReviewDialog
           preview={review.preview}
-          action={review.mode}
-          installedVersion={
-            review.mode === "update"
-              ? review.installedVersion
-              : apps?.find((app) => app.appId === review.preview.id)?.version
+          projectLabel={
+            projects.find((project) => project.path === review.projectPath)?.name ??
+            review.projectPath
           }
+          action={review.mode}
+          installedVersion={review.installedVersion}
           busy={installBusy !== null || (review.mode === "update" && busy === review.appId)}
           onCancel={() => setReview(null)}
           onInstall={() => void installReviewed()}
@@ -1067,7 +1090,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     variant="outline"
                     size="sm"
                     className="h-7 gap-1 px-2 text-xs"
-                    disabled={busy === app.id || !app.updateSource.available}
+                    disabled={
+                      busy === app.id ||
+                      !activeProjectPath ||
+                      !app.bindingRevision ||
+                      !app.updateSource.available
+                    }
                     title={
                       app.updateSource.available
                         ? t("ext.panels.updateFromSource")

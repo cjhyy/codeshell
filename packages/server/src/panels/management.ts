@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
-import { lstatSync, mkdirSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { lstatSync, mkdirSync, statSync } from "node:fs";
+import { basename, extname, isAbsolute, join, resolve } from "node:path";
 import {
   SettingsManager,
   PanelAppAlreadyInstalledError,
@@ -22,6 +22,7 @@ import {
   type GitPanelAppSourceInput,
   type InstalledPanelApp,
   type PanelAppPreview,
+  type PanelAppSourceInput,
 } from "@cjhyy/code-shell-core";
 import { mutateJsonFile } from "@cjhyy/code-shell-core/internal";
 import { getRefCommit, parseGithubUrl } from "@cjhyy/code-shell-core/internal/skills";
@@ -32,6 +33,7 @@ import type {
   PanelGitSource,
   PanelOperationContext,
   PanelReview,
+  PanelProjectReview,
   PanelSnapshot,
 } from "./types.js";
 
@@ -126,6 +128,8 @@ export interface PanelManagementOptions {
   bindingCwd?: string;
   /** Enable only when every runtime in this Host selects the project package. */
   projectPackages?: boolean;
+  /** Explicit opt-in for a trusted native caller; never enabled on HTTP services. */
+  allowLocalSources?: boolean;
   /** Recheck a host-verified, frozen project/worktree association before use. */
   assertBinding?: () => void;
   withMutation?: <T>(write: () => Promise<T>) => Promise<T>;
@@ -147,8 +151,9 @@ type Origins = Record<string, StoredOrigin>;
 interface HeldReview {
   owner: string;
   generation: number;
-  public: PanelReview;
-  source: GitPanelAppSourceInput;
+  public: PanelProjectReview;
+  source: PanelAppSourceInput;
+  origin?: PanelGitSource;
   digest: string;
   projectState: string;
   catalogState?: string;
@@ -497,9 +502,78 @@ export function createPanelManagement(options: PanelManagementOptions) {
         generation: generation(context.ownerId),
         public: value,
         source: pinnedSource,
+        origin: source,
         digest,
         projectState: projectState(preview.id),
         catalogState: current?.catalogState,
+      });
+      return value;
+    });
+  }
+
+  async function issueProjectSource(
+    context: PanelOperationContext,
+    input: PanelAppSourceInput,
+    expected?: { id: string; revision: string },
+  ): Promise<PanelProjectReview> {
+    if (!options.allowLocalSources || !options.projectPackages || !hasProject)
+      throw new PanelManagementError(403, "unsupported", "这个入口不支持本地项目安装。");
+    return network(context, async (guard) => {
+      prune();
+      if (reviews.size >= MAX_REVIEWS)
+        throw new PanelManagementError(429, "busy", "待确认的面板过多，请先完成已有预览。");
+      if (!input || typeof input !== "object") invalid();
+      let source: PanelAppSourceInput;
+      let origin: PanelGitSource | undefined;
+      if (input.kind === "git") {
+        origin = await pinned(input, guard);
+        source = {
+          kind: "git",
+          url: origin.url,
+          ref: origin.commit,
+          ...(origin.subdir ? { subdir: origin.subdir } : {}),
+        };
+      } else {
+        if (
+          (input.kind !== "dir" && input.kind !== "zip") ||
+          typeof input.path !== "string" ||
+          !isAbsolute(input.path) ||
+          input.path.length > 8192 ||
+          input.path.includes("\0")
+        )
+          invalid();
+        source = { kind: input.kind, path: input.path };
+      }
+      const preview = await previewLocalPanelApp(source);
+      await guard();
+      if (expected && preview.id !== expected.id)
+        throw new PanelManagementError(409, "conflict", "来源中的面板标识已经改变。");
+      const listed = (await listApps()).find((app) => app.id === preview.id);
+      const current = listed ? await inspectApp(listed) : undefined;
+      const currentRevision = current ? revision(current.app, current.digest) : null;
+      if (expected && currentRevision !== expected.revision)
+        throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
+      const catalog = await catalogState(preview.id);
+      await guard();
+      const { reviewToken: digest, ...publicPreview } = preview;
+      const value: PanelProjectReview = {
+        reviewToken: randomBytes(32).toString("base64url"),
+        expiresAt: now() + REVIEW_TTL,
+        kind: current ? "update" : "install",
+        preview: publicPreview,
+        expectedRevision: currentRevision,
+        compatibility: compatibility(preview),
+        ...(current ? { installedVersion: current.app.version } : {}),
+      };
+      reviews.set(value.reviewToken, {
+        owner: context.ownerId,
+        generation: generation(context.ownerId),
+        public: value,
+        source,
+        origin,
+        digest,
+        projectState: projectState(preview.id),
+        catalogState: catalog,
       });
       return value;
     });
@@ -620,7 +694,33 @@ export function createPanelManagement(options: PanelManagementOptions) {
         catalogState: await catalogState(id),
       });
     },
-    async install(context: PanelOperationContext, token: unknown, bind = true) {
+    previewProjectSource: issueProjectSource,
+    async previewProjectUpdate(context: PanelOperationContext, id: unknown, expected: unknown) {
+      if (!options.allowLocalSources || !options.projectPackages || !hasProject)
+        throw new PanelManagementError(403, "unsupported", "这个入口不支持本地项目安装。");
+      assertId(id);
+      assertRevision(expected);
+      await assertAuthorized(context);
+      const { app, digest } = await selectedApp(id);
+      if (revision(app, digest) !== expected)
+        throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
+      let input: PanelAppSourceInput;
+      if (typeof app.source !== "string") input = app.source;
+      else {
+        const info = statSync(app.source);
+        if (info.isDirectory()) input = { kind: "dir", path: app.source };
+        else if (info.isFile() && extname(app.source).toLowerCase() === ".zip")
+          input = { kind: "zip", path: app.source };
+        else throw new PanelManagementError(400, "invalid_source", "原始来源不是文件夹或 ZIP 包。");
+      }
+      return issueProjectSource(context, input, { id, revision: expected });
+    },
+    async install(
+      context: PanelOperationContext,
+      token: unknown,
+      bind = true,
+      approval?: { overwrite?: boolean; expectedId?: string },
+    ) {
       if (typeof token !== "string" || typeof bind !== "boolean") invalid();
       prune();
       const held = reviews.get(token);
@@ -629,6 +729,13 @@ export function createPanelManagement(options: PanelManagementOptions) {
       if (held.owner !== context.ownerId)
         throw new PanelManagementError(403, "review_owner", "请在当前设备重新预览这个来源。");
       await assertAuthorized(context, held.generation);
+      if (approval?.expectedId && approval.expectedId !== held.public.preview.id) invalid();
+      if (approval && held.public.kind === "update" && !approval.overwrite)
+        throw new PanelManagementError(
+          409,
+          "already_installed",
+          "这个面板已经安装，请确认项目更新。",
+        );
       return mutate(context, async (guard) => {
         await assertAuthorized(context, held.generation);
         if (reviews.get(token) !== held || held.public.expiresAt <= now())
@@ -657,7 +764,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
           {
             overwrite: held.public.kind === "update",
             expectedId: id,
-            recordedRef: held.public.source.ref,
+            recordedRef: held.origin?.ref,
             beforeCommit: async () => {
               if (held.public.kind === "update") {
                 const current = await selectedApp(id);
@@ -675,14 +782,15 @@ export function createPanelManagement(options: PanelManagementOptions) {
         );
         reviews.delete(token);
         origins((value) => {
-          value[id] = { source: held.public.source, lastUpdated: installed.lastUpdated };
+          if (held.origin) value[id] = { source: held.origin, lastUpdated: installed.lastUpdated };
+          else delete value[id];
         });
         await guard();
         if (bind && hasProject && held.public.compatibility.supported)
           setBinding(installed, true, { projectState: held.projectState });
         invalidateSkillCache();
         await options.onChanged?.(id, held.public.kind);
-        return { id };
+        return { id, packageDigest: installed.packageDigest };
       });
     },
     async binding(

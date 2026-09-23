@@ -861,3 +861,48 @@ node packages/desktop/scripts/e2e-shared-panel-tasks.mjs
 门禁不等于所有 Panel 任务的升级门禁。多项目行读取会检查各自选定包，后续优化必须
 保留状态与 revision 一致性。其余 Panel、Link 接入、中继、真实手机和正式部署范围
 继续保留，代码仍在任务分支，尚未发布。
+
+
+### 增量 23：桌面项目安装／升级审阅（2026-09-24）
+
+桌面的源码导入和更新改用共享 PanelManagement 审阅与提交，不再调用全局安装后由
+页面另行绑定的两段操作。可信本地入口支持目录、ZIP 与固定 GitHub commit，HTTP
+服务不启用本地来源。审阅由主进程持有，限定发起窗口和具体项目，关闭窗口撤销；缓存
+有数量和时间限制。客户端提交的来源不能替换已审阅来源。安装、原生升级确认都要求
+具体项目，并在提交前复查包内容、项目与全局目录状态及权限；返回失败不会显示成功。
+
+更新从项目所选快照保留的原始来源获取新包，而不是跟随全局目录的另一来源。更新
+通知也按所选项目的版本计算。审阅对话框显示目标项目与旧／新版本；切换项目后旧预览
+不再打开，检查请求和迟到结果保留原目标。未选择项目时禁用项目更新按钮。成功安装
+通过同一 Host 操作条件写入项目 pin，其他已固定项目继续使用原包。
+
+验证：
+
+- Core 来源检查、Desktop 管理和更新缓存、共享管理／HTTP、更新 Hook、真实审阅
+  对话框测试入口共 8 文件 92 项通过。新增实际安装器流程覆盖项目 A 原始来源 1.0 →
+  2.0、项目 B 不同来源固定 3.0；A 的更新检查不使用 B 的来源，更新不移动 B 的 pin。
+- 拒绝把审阅凭据用于另一窗口或项目；拒绝未确认覆盖、手机在审阅后改绑定、来源字节
+  改变、窗口 owner 关闭及重复使用已消费凭据。新安装保存实际包摘要；Web 未开启本地
+  来源时无法调用该可信入口。Hook 验证项目切换后的在途请求不会显示到另一项目。
+- Hub 项目包、原生协议／桥接、PanelsTab 3 文件 5 个入口测试通过；协议测试入口运行
+  隔离 Electron mock 测试组。
+- 生产 Electron 实际界面：先选择项目并处理信任提示，再点击“从源码更新”；审阅显示
+  项目和 1.0.0 → 1.0.1，点击“确认并更新”后项目 pin 更新，实际新 guest 页面返回新
+  marker；旧协议权限、跨设备条件存储及独立 Agent Plugin 自动化内容检查继续通过。
+- Core、Server、Desktop 构建和 Desktop／mobile 类型检查、改动 ESLint 通过。最终 Hook
+  增加结果缓存的项目字段后，单独重跑 Hook 测试和 renderer 构建通过。
+
+```sh
+bun test packages/desktop/src/main/panel-app-management.test.ts packages/desktop/src/main/panel-app-update-service.test.ts packages/core/src/panel-apps/update-check.test.ts packages/server/src/panels/management.test.ts packages/server/src/panels/management-http.test.ts packages/desktop/src/renderer/extensions/PanelsTab.updates.test.tsx packages/desktop/src/renderer/extensions/usePanelAppUpdates.test.tsx packages/desktop/src/renderer/extensions/PanelAppInstallReviewDialog.test.ts
+node packages/desktop/scripts/e2e-panel-app.mjs
+```
+
+真实界面验收补齐了测试初始化：macOS 临时项目使用规范路径；进入扩展前先在侧栏选择
+项目并处理该项目的信任提示。测试失败时记录隔离 profile 的页面文本，不改用裸 IPC
+绕过界面验收。
+
+限制与下一步：现有主 Agent 配置门禁仍不覆盖所有 Panel 后台任务、临时进程和准备
+中的提交，需要实现统一升级协调。全局包与项目配置不是跨文件原子事务，安装后若
+其他进程改变项目，条件写入会保留对方状态并返回失败，包可能已进入全局目录。旧未
+固定项目迁移、多版本任务历史／恢复、数据迁移及回滚 UI、真实双项目同时开窗仍未完成。
+其他 Panel、Link 接入、中继、手机和部署等完整目标继续保留，未发布。
