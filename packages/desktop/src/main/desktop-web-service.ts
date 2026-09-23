@@ -11,7 +11,11 @@ import {
   type DesktopWebRequestContext,
 } from "@cjhyy/code-shell-server/desktop-web";
 import { createLinkHttp } from "@cjhyy/code-shell-server/links";
-import { createPanelHttp, type SharedPanelToolHost } from "@cjhyy/code-shell-server/panels";
+import {
+  createPanelHttp,
+  type SharedPanelToolHost,
+  type PanelDirectoryAuthorizer,
+} from "@cjhyy/code-shell-server/panels";
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AgentBridge } from "./agent-bridge.js";
 
@@ -19,6 +23,7 @@ import type { AgentBridge } from "./agent-bridge.js";
 export function createDesktopWebService(options: {
   devices: TrustedDeviceStore;
   sharedToolJobs: SharedPanelToolHost;
+  authorizePanelDirectory: PanelDirectoryAuthorizer;
   getBridge: () => AgentBridge | null;
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
   onSessionsChanged: (cwd: string, sessionId: string) => void;
@@ -85,6 +90,7 @@ export function createDesktopWebService(options: {
               dataDir: app.getPath("userData"),
               host: "desktop",
               sharedToolJobs: options.sharedToolJobs,
+              authorizePanelDirectory: options.authorizePanelDirectory,
               agentTaskOptions: {
                 buildEnv: () => ({ ...process.env, ELECTRON_RUN_AS_NODE: "1" }),
               },

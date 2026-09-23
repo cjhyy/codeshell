@@ -40,6 +40,7 @@ async function fixture(
     origin?: string;
     publicPathPrefix?: string;
     agentTasks?: PanelTaskHost;
+    authorizePanelDirectory?: PanelRuntimeOptions["authorizePanelDirectory"];
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
     sharedToolJobs?: (input: {
       root: string;
@@ -121,6 +122,7 @@ async function fixture(
     sharedToolJobs: options.sharedToolJobs?.({ root, cwd, app }),
     publicPathPrefix: options.publicPathPrefix,
     agentTasks: options.agentTasks,
+    authorizePanelDirectory: options.authorizePanelDirectory,
     createAgentTasks: options.createAgentTasks,
     now: () => state.now,
     ownerId: async (request) => ownerOf(request),
@@ -1050,6 +1052,30 @@ describe("Panel HTTP host operations", () => {
     expect(current.status).toBe("cancelled");
     expect(current.result).toBeUndefined();
     expect((await runtimeEvents(f, observer.instanceId, 0, "owner-b")).events).toEqual([]);
+  });
+
+  test("Desktop directory authority revocation invalidates existing Web process grants", async () => {
+    let trusted = true;
+    const checked: string[][] = [];
+    const f = await fixture({
+      permissions: ["context.workspace", "process"],
+      authorizePanelDirectory: async (app, project, workspace) => {
+        checked.push([app.id, project, workspace]);
+        if (!trusted) throw new Error("workspace trust revoked");
+      },
+    });
+    const grant = await f.prepare();
+    const call = () =>
+      f.api(`${grant.instanceId}/call`, "POST", {
+        method: "filesystem.getKnownDirectory",
+        params: { name: "downloads" },
+      });
+    expect((await call()).status).toBe(200);
+    expect(checked.at(-1)).toEqual([f.app.id, f.cwd, f.cwd]);
+    trusted = false;
+    expect((await call()).status).toBe(410);
+    trusted = true;
+    expect((await call()).status).toBe(410);
   });
 
   test("Web restores only a bookmarked server directory after reopening the Panel", async () => {

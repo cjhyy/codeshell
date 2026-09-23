@@ -34,7 +34,11 @@ import {
 } from "./tool-jobs.js";
 import type { SharedPanelToolHost, SharedPanelToolBinding } from "./shared-tool-jobs.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
-import { PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
+import {
+  PanelAppDirectoryBookmarks,
+  desktopPanelDirectoryBookmarks,
+  type PanelDirectoryAuthorizer,
+} from "./directory-bookmarks.js";
 import { handlePanelProcessDirectory } from "./process-files.js";
 import {
   PanelAppProcessService,
@@ -176,6 +180,7 @@ export interface PanelRuntimeOptions {
   agentTasks?: PanelTaskHost;
   /** Reuse the Desktop coordinator; this transport never owns its lifetime. */
   sharedToolJobs?: SharedPanelToolHost;
+  authorizePanelDirectory?: PanelDirectoryAuthorizer;
   createAgentTasks?: (hooks: {
     onPanelAction(scope: PanelTaskScope, input: Record<string, unknown>): Promise<unknown>;
   }) => PanelTaskHost;
@@ -467,9 +472,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   let nextGuest = 0;
   let nextToolOwner = -1;
   const byGuest = new Map<number, Grant>();
-  const directoryBookmarks = new PanelAppDirectoryBookmarks(
-    join(options.dataDir, "panel-web-directory-bookmarks.json"),
-  );
+  const directoryBookmarks =
+    options.host === "desktop"
+      ? desktopPanelDirectoryBookmarks(options.dataDir)
+      : new PanelAppDirectoryBookmarks(join(options.dataDir, "panel-web-directory-bookmarks.json"));
   const panelDataDirectory = (appId: string) =>
     join(
       options.dataDir,
@@ -963,6 +969,12 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       const info = await lstat(grant.root);
       const ownerStillAuthorized = await options.isAuthorized(grant.request);
       const currentOwner = await options.ownerId(grant.request);
+      if (grant.app.permissions.includes("process"))
+        await options.authorizePanelDirectory?.(
+          grant.app,
+          options.bindingCwd ?? options.cwd,
+          options.cwd,
+        );
       const valid =
         !closed &&
         grants.get(grant.id) === grant &&
@@ -1313,14 +1325,27 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         };
       }
       if (method === "filesystem.restoreDirectory") {
+        await options.authorizePanelDirectory?.(
+          grant.app,
+          options.bindingCwd ?? options.cwd,
+          options.cwd,
+        );
         const saved = directoryBookmarks.restore(
           grant.app.id,
           options.bindingCwd ?? options.cwd,
           (params as { bookmark?: unknown } | null)?.bookmark,
         );
-        if (saved !== (await realpath(join(options.cwd, "downloads"))))
+        if (
+          !options.authorizePanelDirectory &&
+          saved !== (await realpath(join(options.cwd, "downloads")))
+        )
           throw new PanelBridgeError("PERMISSION_DENIED", "Saved server directory is unavailable");
         const restored = await processes.grantDirectory(owner, saved);
+        await options.authorizePanelDirectory?.(
+          grant.app,
+          options.bindingCwd ?? options.cwd,
+          options.cwd,
+        );
         directoryBookmarks.restore(
           grant.app.id,
           options.bindingCwd ?? options.cwd,
@@ -1346,6 +1371,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         !(await confirm(grant, "使用服务端下载目录？", directory))
       )
         return null;
+      await options.authorizePanelDirectory?.(
+        grant.app,
+        options.bindingCwd ?? options.cwd,
+        options.cwd,
+      );
       if (name !== "project") await mkdir(directory, { recursive: true, mode: 0o700 });
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const selected = await processes.grantDirectory(owner, directory);

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import {
   listInstalledPanelApps,
+  type InstalledPanelApp,
   panelAppInstallDir,
   panelAppsRegistryPath,
   resolvePanelAppBindingProjectPath,
@@ -39,6 +40,7 @@ import {
 import {
   PanelToolJobService,
   createSharedPanelToolHost,
+  desktopPanelDirectoryBookmarks,
   type SharedPanelToolHost,
   createPanelToolExecutor,
   toolJobLimits,
@@ -61,7 +63,6 @@ import {
   panelProcessInfo,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
-import { PanelAppDirectoryBookmarks } from "./panel-app-directory-bookmarks.js";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
@@ -417,9 +418,7 @@ export class PanelAppBridge {
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
   private readonly processService: PanelAppProcessService;
-  private readonly directoryBookmarks = new PanelAppDirectoryBookmarks(
-    join(app.getPath("userData"), "panel-app-directory-bookmarks.json"),
-  );
+  private readonly directoryBookmarks = desktopPanelDirectoryBookmarks(app.getPath("userData"));
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
   private resourceService?: PanelResourceService;
@@ -1201,6 +1200,35 @@ export class PanelAppBridge {
   private toolSummary(job: ToolJob) {
     const { input: _input, result: _result, ...summary } = job;
     return summary;
+  }
+
+  async authorizePanelDirectory(
+    expected: InstalledPanelApp,
+    projectPath: string,
+    workspacePath: string,
+  ): Promise<void> {
+    if (
+      !this.options.isPanelAppBound(projectPath, expected.id) ||
+      !this.options.isWorkspaceTrusted(projectPath) ||
+      !this.options.isWorkspaceTrusted(workspacePath)
+    )
+      throw new PanelBridgeError("REVOKED", "Directory project authorization was revoked");
+    const installed = await this.installedToolApps.get(expected.id);
+    if (
+      !installed ||
+      !isDeepStrictEqual(installed, expected) ||
+      !installed.permissions.includes("process")
+    )
+      throw new PanelBridgeError(
+        "REVOKED",
+        "Installed directory consumer changed; reopen the Panel",
+      );
+    if (
+      !this.options.isPanelAppBound(projectPath, expected.id) ||
+      !this.options.isWorkspaceTrusted(projectPath) ||
+      !this.options.isWorkspaceTrusted(workspacePath)
+    )
+      throw new PanelBridgeError("REVOKED", "Directory project authorization was revoked");
   }
 
   /** Remote transports share project tasks but cannot shut down their coordinator. */

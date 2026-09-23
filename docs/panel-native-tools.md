@@ -173,3 +173,23 @@ a synthetic reviewed Node entry and an isolated paired device, checks native
 progress, bidirectional task identity/cancellation, duplicate submission, logout,
 remote shutdown and result recovery, then closes its processes and deletes the
 fixture. It does not replace physical-phone or Panel business-flow acceptance.
+
+
+### Shared directory bookmarks (Desktop main projects)
+
+Desktop and its paired Web facade now use `desktopPanelDirectoryBookmarks` with
+the existing private Desktop bookmark file. Reselecting the same directory keeps
+its scope-bound ID. Legacy Web IDs import only after matching app/project and
+unchanged directory identity; existing aliases remain valid and the old file is
+preserved. Replacement directories and symbolic links require a new selection.
+
+A Desktop-supplied `PanelDirectoryAuthorizer` independently checks current
+installation, process permission, binding and trust of both project and actual
+workspace before the Web facade restores a chosen Desktop directory. Trust
+revocation invalidates the existing process grant. Standalone Hub retains its
+restriction to the server downloads directory. No client-supplied path grants
+access and no native task output argument is added by this change.
+
+The current shared flow covers main project roots. Legacy Desktop bookmarks use
+actual cwd, whereas Web uses bindingCwd; worktree/main-project scope migration is
+still pending. Do not rewrite those identities or widen old grants implicitly.

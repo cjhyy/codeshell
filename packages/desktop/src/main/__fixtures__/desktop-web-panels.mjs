@@ -110,6 +110,9 @@ const api = createDesktopWebService({
     activeCount: () => 0,
     invalidate: async () => {},
   },
+  authorizePanelDirectory: async () => {
+    throw new Error("Storage fixture cannot grant a directory");
+  },
   getBridge: () => bridge,
   resolveWorkspace: async (cwd) => (allowed.has(cwd ?? first) ? (cwd ?? first) : undefined),
   onSessionsChanged: () => {},

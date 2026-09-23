@@ -309,3 +309,25 @@ Web handler 只拥有查看授权和订阅，不拥有 coordinator 的 shutdown 
 范围限制：该 E2E 使用配对 HTTP 客户端，并非物理手机 UI 验收；下载业务界面仍未迁移到持久队列。
 项目独立包版本、目录交付、Cookie 有限授权、其他 Panel 和正式公网部署仍在总清单中待完成。
 下一步继续统一目录授权与后台产物交付，再接入下载队列，避免把同任务可见误记为整个 Panel 完成。
+
+
+### 增量 7：稳定目录书签与主项目跨端恢复（2026-09-23）
+
+Desktop 与配对 Web 改为共用 `panel-app-directory-bookmarks.json`。
+重复选择同一 app／项目／实际目录时保留标识；若同路径的目录身份已变更，必须重新选择并生成新标识。
+旧 `panel-web-directory-bookmarks.json` 不删除；恢复时先核验 app、项目、路径与 dev/ino，
+再把原标识导入共享记录。如果两端原先选择过同一目录，两份标识作为别名继续有效；
+已存在的其他作用域标识不能被旧文件覆盖，导入不静默挤掉当前书签。
+
+配对 Web 可恢复 Desktop 明确选择过的目录；Host 独立复验安装包、process 权限、
+主项目绑定以及项目／实际工作区信任。撤销信任会使现有 Web process grant 失效。
+未注入 Desktop 目录授权的独立 Hub 仍只能恢复原有服务端下载目录，不扩大其文件访问范围。
+
+验证：目录书签、HTTP runtime 与配对 facade 共 43 项通过，Server 构建、Desktop typecheck、
+改动文件 ESLint 通过。真实 Electron E2E 增加双向目录恢复和受认证目录浏览，
+连同增量 6 的真实原生任务流程通过；仅 OS 目录选择器返回的是测试指定目录，
+后续 IPC、权限、持久化、配对 HTTP 均走产品实现。
+
+仍有限制：Desktop 原有目录书签按实际 cwd 绑定，Web 按 bindingCwd；本增量验证的是主项目 cwd
+一致的情形。worktree 与主项目的范围迁移必须单独完成，不能把旧 cwd 授权直接扩大到其他项目。
+后台 executor 的目录参数仍只支持任务目录／app-data，下载产物交付和账号授权仍待接入。

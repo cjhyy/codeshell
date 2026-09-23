@@ -924,6 +924,8 @@ const mobileRemote = new RemoteHostManager({
   webApi: createDesktopWebService({
     devices: mobileDevices,
     sharedToolJobs: panelAppBridge.sharedToolJobs(),
+    authorizePanelDirectory: (app, projectPath, workspacePath) =>
+      panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
     onSessionsChanged: (cwd, sessionId) => {

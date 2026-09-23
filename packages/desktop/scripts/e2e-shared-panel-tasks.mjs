@@ -227,6 +227,46 @@ try {
       json,
     );
   assert.equal(phone.context.capabilities.tasks.executionRevision, panel.revision);
+  const selectedFolder = join(isolated.home, "explicit-output");
+  await mkdir(selectedFolder);
+  // Only the OS picker result is synthetic. The real guest bridge, trust checks,
+  // bookmark persistence and paired HTTP restoration remain in the path.
+  await electron.evaluate(({ dialog }, folder) => {
+    const original = dialog.showOpenDialog;
+    dialog.showOpenDialog = async () => {
+      dialog.showOpenDialog = original;
+      return { canceled: false, filePaths: [folder] };
+    };
+  }, selectedFolder);
+  const selected = await desktop("filesystem.pickDirectory", {});
+  const restored = await phoneCall("filesystem.restoreDirectory", { bookmark: selected.bookmark });
+  assert.equal(restored.path, selectedFolder);
+  assert.equal(restored.bookmark, selected.bookmark);
+  const fileUrl = await phoneCall("filesystem.openDirectory", { handle: restored.handle });
+  assert.equal((await request(fileUrl.url)).status, 200);
+  const choosing = phoneCall("filesystem.pickDirectory", {});
+  const selectionConsent = await until(
+    async () =>
+      (await json(await request(`/api/v1/panels/runtime/${phone.instanceId}/events`))).events.find(
+        (event) => event.event === "host.confirm",
+      ),
+    "Directory consent missing",
+  );
+  await json(
+    await request(`/api/v1/panels/runtime/${phone.instanceId}/confirm`, "POST", {
+      requestId: selectionConsent.payload.requestId,
+      allowed: true,
+    }),
+  );
+  const phoneFolder = await choosing;
+  assert.equal(
+    (await desktop("filesystem.restoreDirectory", { bookmark: phoneFolder.bookmark })).path,
+    phoneFolder.path,
+  );
+  // Acknowledge the consumed picker event before waiting for native task consent.
+  await json(
+    await request(`/api/v1/panels/runtime/${phone.instanceId}/events?after=${selectionConsent.id}`),
+  );
   const startInput = {
     entry: "worker",
     input: { request: { message: "from desktop", delayMs: 30000 } },
@@ -300,6 +340,7 @@ try {
   console.log(
     JSON.stringify({
       actualElectron: true,
+      sharedDirectoryBookmarks: true,
       pairedHttp: true,
       sharedRevision: true,
       sharedTaskIds: true,

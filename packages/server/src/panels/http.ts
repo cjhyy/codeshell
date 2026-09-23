@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createPanelManagementHttp, type PanelManagementHttpOptions } from "./management-http.js";
+import type { PanelDirectoryAuthorizer } from "./directory-bookmarks.js";
 import type { SharedPanelToolHost } from "./shared-tool-jobs.js";
 import { createPanelRuntime, panelWebCompatibility } from "./runtime.js";
 import { createPanelAgentTaskHost, type PanelAgentTaskHostOptions } from "./agent-task-host.js";
@@ -11,6 +12,7 @@ export function createPanelHttp(
     publicPathPrefix?: string;
     agentTaskOptions?: PanelAgentTaskHostOptions;
     sharedToolJobs?: SharedPanelToolHost;
+    authorizePanelDirectory?: PanelDirectoryAuthorizer;
   },
 ) {
   const management = createPanelManagementHttp({
