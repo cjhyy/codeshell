@@ -777,3 +777,43 @@ bun run --cwd packages/server build
 版本选择／回滚 UI 和文档迁移。配对 Desktop Web 在原生 reader 接通前明确保留相同的全局
 读取方式，不能提前声称四组合版本一致性完成。当前修改仍在任务分支，未发布或部署；
 六个 Panel、Link Host 接入、中继、真实手机和整套部署验收等原目标继续保留。
+
+
+### 增量 21：Desktop 项目版本、协议资源与配对任务（2026-09-24）
+
+Desktop 从每个主项目的 pin 选择安装包。同一个 Panel 保留原页签 ID，允许多个不同
+hostId／revision 的项目变体；渲染器按项目解析页面、标题、图标和 Agent 工具，不会选
+数组第一项。协议资源按项目更新，刷新一个窗口不删除其他窗口的旧版本。准备页签和
+附加分区检查项目范围；pin 改变后，即使另一项目仍使用旧包，原项目旧页面与 bridge
+调用也会被拒绝。异步列表返回顺序不再让旧刷新覆盖最新渲染器状态。
+
+原生检查缓存同时检查选定路径、pin 标识和文件／注册表身份；异步检查期间切换版本、
+同路径错误版本和损坏配置都不返回旧缓存。后台程序、目录授权、Cookie 后台授权与配对
+Web 共用此选择。配对 Web 正式启用项目包读写，并向原生窗口发送绑定变更通知。更新
+不会取消另一个固定版本项目的任务，但仍撤销跟随全局安装的旧项目；全局卸载继续撤销
+全部项目与原生 guest。
+
+验证：
+
+- Desktop 缓存、项目包、协议入口、Registry 和 AgentPanelHost 共 33 项入口测试通过；
+  其中协议入口启动独立 Electron mock 进程，内部 68 项通过。新增实际安装两版本与两
+  项目的缓存切换，路径未变但版本错误、坏配置、全局卸载拒绝；页面和 Agent 工具变体、
+  重复变体拒绝；单窗口刷新不撤销其他项目、A 换 pin 后旧页面拒绝而 B 保持、两个真实
+  Node 原生任务分别输出 1.0.0／2.0.0、配对 HTTP 读取同一旧任务；坏项目不隐藏好项目。
+- 生产 Desktop 完整构建、后续 main 构建、Desktop／mobile 类型检查、改动 ESLint 与差异检查通过。
+- 真实 Electron＋配对 HTTP 运行 `--project-pins`：项目固定 1.0.0，全局实际安装不同页面／
+  程序的 2.0.0；桌面与手机均保持 1.0.0。共享任务 ID、版本、队列、目录产物、测试账号
+  版本、确认／重试、临时凭据清理、手机取消、退出登录、关闭远程服务、撤销设备与结果
+  恢复全部通过；手机重新绑定同一版本会通知原生 Panel 列表，并保留已完成任务。
+
+```sh
+bun test packages/desktop/src/main/panel-app-project-packages.test.ts packages/desktop/src/main/panel-app-inspection-cache.test.ts packages/desktop/src/main/panel-app-protocol.test.ts packages/desktop/src/renderer/panels/PanelRegistry.panelApps.test.ts packages/desktop/src/renderer/panels/PanelRegistry.test.ts packages/desktop/src/renderer/panels/AgentPanelHost.test.ts
+bun run --cwd packages/desktop build
+bun run --cwd packages/desktop typecheck
+node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --project-pins
+```
+
+这不是完整版本管理产品验收：测试通过 Host fixture 或文件准备项目 pin；原生桌面绑定／
+升级 UI 尚未写入对应条件 pin，旧绑定也没有迁移。还需要原生项目升级审阅、活跃任务
+协调、任务历史跨项目升级读取／恢复、数据迁移／回滚以及真实双项目界面验收。物理手机、
+真实服务商、全部 Panel、Link 接入、中继和部署等原目标不变。代码仍在任务分支，未发布。

@@ -567,7 +567,9 @@ function App() {
       void applyPanelApps([], null);
       return;
     }
+    let refreshGeneration = 0;
     const refresh = () => {
+      const generation = ++refreshGeneration;
       const projectPath = activeProject?.path ?? null;
       // Register apps bound by ANY tracked project, not just the active one:
       // panel buckets are per project and bindings are editable for any project
@@ -586,18 +588,22 @@ function App() {
         if (projectPath && !paths.includes(projectPath)) paths.push(projectPath);
         void listForProjects(paths, lang)
           .then((result) => {
+            if (generation !== refreshGeneration) return;
             void applyPanelApps(result.descriptors, projectPath, result.boundProjectPathsByAppId);
           })
           .catch(() => {
+            if (generation !== refreshGeneration) return;
             void applyPanelApps([], projectPath);
           });
         return;
       }
       void listApps(projectPath ?? "", lang)
         .then((apps) => {
+          if (generation !== refreshGeneration) return;
           void applyPanelApps(apps, projectPath);
         })
         .catch(() => {
+          if (generation !== refreshGeneration) return;
           void applyPanelApps([], projectPath);
         });
     };

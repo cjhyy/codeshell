@@ -13,6 +13,7 @@ import {
   makeIsolatedElectronHome,
 } from "./electron-harness.mjs";
 
+const projectPins = process.argv.includes("--project-pins");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-shared-task-e2e-");
 // Native package authorization intentionally rejects symlinked install roots.
@@ -132,6 +133,66 @@ try {
       JSON.stringify([{ path: project, name: "Task project", lastOpenedAt: Date.now() }]),
     ),
   ]);
+  if (projectPins) {
+    // Retain the project's v1 package, then install a distinguishable v2 in the
+    // global catalog. Both the actual Electron guest and paired HTTP must keep v1.
+    const previousHome = process.env.HOME;
+    process.env.HOME = isolated.home;
+    try {
+      const {
+        listInstalledPanelApps,
+        retainInstalledPanelApp,
+        previewLocalPanelApp,
+        installReviewedLocalPanelApp,
+      } = await import("@cjhyy/code-shell-core");
+      const current = (await listInstalledPanelApps()).find((item) => item.id === manifest.id);
+      assert.ok(current?.packageDigest);
+      await retainInstalledPanelApp(manifest.id, current.packageDigest);
+      await writeFile(
+        join(project, ".code-shell/settings.json"),
+        JSON.stringify({
+          panelAppBindings: [manifest.id],
+          panelAppPins: {
+            [manifest.id]: { version: current.version, packageDigest: current.packageDigest },
+          },
+        }),
+      );
+      const newer = join(isolated.home, "catalog-v2");
+      await mkdir(join(newer, ".codeshell-panel"), { recursive: true });
+      await mkdir(join(newer, "app/tools"), { recursive: true });
+      const nextSource = source.replace(
+        "const request = JSON.parse(input);",
+        'const request = JSON.parse(input); request.message += "-catalog-v2";',
+      );
+      await writeFile(join(newer, "app/tools/worker.mjs"), nextSource);
+      await writeFile(
+        join(newer, "app/index.html"),
+        "<!doctype html><body>Catalog version 2</body>",
+      );
+      await writeFile(
+        join(newer, ".codeshell-panel/panel.json"),
+        JSON.stringify({
+          ...manifest,
+          version: "2.0.0",
+          nativeEntries: {
+            worker: {
+              entry: manifest.nativeEntries.worker.entry,
+              sha256: createHash("sha256").update(nextSource).digest("hex"),
+            },
+          },
+        }),
+      );
+      const input = { kind: "dir", path: newer };
+      const review = await previewLocalPanelApp(input);
+      await installReviewedLocalPanelApp(input, review.reviewToken, new Date().toISOString(), {
+        overwrite: true,
+      });
+      assert.equal((await listInstalledPanelApps())[0].version, "2.0.0");
+    } finally {
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+    }
+  }
   const secret = randomBytes(32).toString("hex");
   const devices = new TrustedDeviceStore(join(isolated.userDataDir, "mobile-remote/devices.json"));
   const device = devices.addDevice({ name: "Shared task test browser", secretHash: secret });
@@ -158,6 +219,8 @@ try {
     project,
   );
   assert.ok(panel, "Panel was not installed");
+  assert.equal(panel.version, "1.0.0");
+  if (projectPins) assert.equal(panel.packagePinned, true);
   const prepared = await win.evaluate(({ id, cwd }) => window.codeshell.preparePanelApp(id, cwd), {
     id: panel.id,
     cwd: project,
@@ -242,6 +305,7 @@ try {
   async function openPhone() {
     const catalog = await json(await request("/api/v1/panels"));
     const panel = catalog.panels.find((item) => item.id === "task-fixture");
+    assert.equal(panel.version, "1.0.0");
     return json(
       await request("/api/v1/panels/runtime/prepare", "POST", {
         appId: panel.id,
@@ -590,6 +654,26 @@ try {
   assert.equal(await readFile(join(selectedFolder, "from phone.txt"), "utf8"), "from phone");
   assert.ok(!JSON.stringify(completed).includes(selectedFolder));
   assert.equal((await desktop("tasks.list", {})).filter((job) => job.id === second.id).length, 1);
+  if (projectPins) {
+    await win.evaluate(() => {
+      window.__panelPackageChanges = 0;
+      window.codeshell.onPanelAppsChanged(() => window.__panelPackageChanges++);
+    });
+    const catalog = await json(await request("/api/v1/panels"));
+    const selected = catalog.panels.find((item) => item.id === manifest.id);
+    await json(
+      await request(`/api/v1/panels/${manifest.id}/binding`, "PATCH", {
+        bound: true,
+        expectedRevision: selected.revision,
+      }),
+    );
+    await until(
+      () => win.evaluate(() => window.__panelPackageChanges > 0),
+      "Phone binding did not notify the native Panel registry",
+    );
+    phone = await openPhone();
+    assert.equal((await phoneCall("tasks.get", { id: second.id })).id, second.id);
+  }
   const third = await desktop("tasks.start", {
     ...startInput,
     input: { ...startInput.input, request: { message: "remote stop", delayMs: 30000 } },
@@ -605,6 +689,7 @@ try {
   console.log(
     JSON.stringify({
       actualElectron: true,
+      projectPinnedAgainstNewerCatalog: projectPins,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,
       sharedQueueControl: true,

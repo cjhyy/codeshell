@@ -61,9 +61,27 @@ export interface PanelAppProtocolResource {
   descriptor: PanelAppDescriptor;
   root: string;
   entry: string;
+  projectPaths?: readonly string[];
 }
 
 let resources = new Map<string, PanelAppProtocolResource>();
+const resourcesByProject = new Map<string, PanelAppProtocolResource[]>();
+let resourceAuthorizer:
+  | ((resource: PanelAppProtocolResource, projectPath: string) => boolean)
+  | undefined;
+export function setPanelAppResourceAuthorizer(authorize: typeof resourceAuthorizer): void {
+  resourceAuthorizer = authorize;
+}
+function mayUseResource(resource: PanelAppProtocolResource, projectPath: string): boolean {
+  try {
+    return (
+      (!resource.projectPaths || resource.projectPaths.includes(projectPath)) &&
+      (resourceAuthorizer?.(resource, projectPath) ?? true)
+    );
+  } catch {
+    return false;
+  }
+}
 const installedPartitions = new Set<string>();
 const preparedPartitionScopes = new Map<string, { hostId: string; projectPath: string }>();
 
@@ -93,7 +111,13 @@ export function setPanelAppCaptureAuthorizer(
 function partitionMayCapture(partition: string, url: string): boolean {
   const scope = preparedPartitionScopes.get(partition),
     resource = validatePanelAppEntryUrl(url);
-  if (!scope || !resource || scope.hostId !== resource.descriptor.hostId) return false;
+  if (
+    !scope ||
+    !resource ||
+    scope.hostId !== resource.descriptor.hostId ||
+    !mayUseResource(resource, scope.projectPath)
+  )
+    return false;
   try {
     return (
       captureAuthorizer?.({ appId: resource.descriptor.appId, projectPath: scope.projectPath }) ===
@@ -143,8 +167,27 @@ export function registerPanelAppSchemePrivileges(): void {
   ]);
 }
 
-export function replacePanelAppResources(next: PanelAppProtocolResource[]): void {
-  resources = new Map(next.map((resource) => [resource.descriptor.hostId, resource]));
+export function replacePanelAppResources(
+  next: PanelAppProtocolResource[],
+  projectPath?: string,
+): void {
+  if (projectPath === undefined) {
+    resourcesByProject.clear();
+    resources = new Map(next.map((resource) => [resource.descriptor.hostId, resource]));
+  } else {
+    // One window refreshes only its authorized projects. Keep other windows'
+    // versions, but remove this project's access to its previous package.
+    resourcesByProject.set(projectPath, next);
+    resources = new Map();
+    for (const [project, entries] of resourcesByProject)
+      for (const resource of entries) {
+        const previous = resources.get(resource.descriptor.hostId);
+        resources.set(resource.descriptor.hostId, {
+          ...resource,
+          projectPaths: [...(previous?.projectPaths ?? []), project],
+        });
+      }
+  }
   for (const read of activeMediaReads) if (!read.allowed()) read.cancel();
 }
 
@@ -167,7 +210,9 @@ function safePartition(hostId: string, projectPath: string): string {
 }
 
 export async function preparePanelApp(id: string, projectPath: string): Promise<PreparedPanelApp> {
-  const resource = [...resources.values()].find((candidate) => candidate.descriptor.id === id);
+  const resource = [...resources.values()].find(
+    (candidate) => candidate.descriptor.id === id && mayUseResource(candidate, projectPath),
+  );
   if (!resource) throw new Error(`Panel App is not installed or enabled: ${id}`);
   if (typeof projectPath !== "string" || !projectPath) {
     throw new Error("Panel App requires a project binding");
@@ -202,7 +247,10 @@ export function preparedPanelAppPartitionProjectPath(
   partition: string,
 ): string | null {
   const scope = preparedPartitionScopes.get(partition);
-  return scope?.hostId === hostId ? scope.projectPath : null;
+  const resource = resources.get(hostId);
+  return scope?.hostId === hostId && resource && mayUseResource(resource, scope.projectPath)
+    ? scope.projectPath
+    : null;
 }
 
 function parsePanelAppUrl(source: string): { hostId: string; relativePath: string } | null {
@@ -274,6 +322,13 @@ async function handlePanelAppRequest(request: Request, partition: string): Promi
   if (!parsed) return response(400, "Bad Request");
   const resource = resources.get(parsed.hostId);
   if (!resource) return response(404, "Not Found");
+  const prepared = preparedPartitionScopes.get(partition);
+  if (
+    !prepared ||
+    prepared.hostId !== parsed.hostId ||
+    !mayUseResource(resource, prepared.projectPath)
+  )
+    return response(403, "Forbidden");
 
   if (parsed.relativePath.startsWith("media/")) {
     const scope = preparedPartitionScopes.get(partition);
@@ -295,6 +350,7 @@ async function handlePanelAppRequest(request: Request, partition: string): Promi
         const current = resources.get(parsed.hostId);
         return (
           !!current &&
+          mayUseResource(current, scope.projectPath) &&
           current.descriptor.appId === resource.descriptor.appId &&
           current.descriptor.revision === resource.descriptor.revision &&
           current.descriptor.permissions.includes("media") &&

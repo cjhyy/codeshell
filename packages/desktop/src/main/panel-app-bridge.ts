@@ -1,10 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import {
-  listInstalledPanelApps,
   type InstalledPanelApp,
   type Credential,
-  panelAppInstallDir,
-  panelAppsRegistryPath,
   resolvePanelAppBindingProjectPath,
   validateToolArgsStrict,
 } from "@cjhyy/code-shell-core";
@@ -35,6 +32,7 @@ import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import {
   preparePanelApp,
   setPanelAppMediaReader,
+  setPanelAppResourceAuthorizer,
   setPanelAppCaptureAuthorizer,
   revokePanelAppMediaReads,
 } from "./panel-app-protocol.js";
@@ -59,7 +57,11 @@ import {
   panelBridgeFailure,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
-import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
+import type { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
+import {
+  isPanelAppDescriptorSelected,
+  projectPanelAppInspectionCache,
+} from "./panel-app-project-packages.js";
 import { desktopPanelCapabilities } from "./panel-app-capabilities.js";
 import { PanelMediaService } from "./media/panel-media-service.js";
 import {
@@ -440,6 +442,9 @@ export class PanelAppBridge {
   private readonly toolOwners = new Map<number, { scope: ToolJobScope; appTitle: string }>();
 
   constructor(private readonly options: PanelAppBridgeOptions) {
+    setPanelAppResourceAuthorizer((resource, projectPath) =>
+      isPanelAppDescriptorSelected(resource.descriptor, projectPath),
+    );
     setPanelAppCaptureAuthorizer(
       (scope) =>
         options.isPanelAppBound(scope.projectPath, scope.appId) &&
@@ -465,6 +470,7 @@ export class PanelAppBridge {
           binding.resource.descriptor.appId === owner.appId &&
           binding.resource.descriptor.revision === owner.revision &&
           this.options.isPanelAppBound(binding.projectPath, owner.appId) &&
+          isPanelAppDescriptorSelected(binding.resource.descriptor, binding.projectPath) &&
           this.options.isWorkspaceTrusted(binding.cwd ?? binding.projectPath)
         );
       },
@@ -1138,7 +1144,10 @@ export class PanelAppBridge {
   }
 
   private assertProjectBinding(binding: GuestBinding): void {
-    if (!this.options.isPanelAppBound(binding.projectPath, binding.resource.descriptor.appId)) {
+    if (
+      !this.options.isPanelAppBound(binding.projectPath, binding.resource.descriptor.appId) ||
+      !isPanelAppDescriptorSelected(binding.resource.descriptor, binding.projectPath)
+    ) {
       throw new Error(
         `Panel App '${binding.resource.descriptor.appId}' is no longer bound to this project`,
       );
@@ -1197,7 +1206,7 @@ export class PanelAppBridge {
       !this.options.isWorkspaceTrusted(scope.projectPath)
     )
       throw new PanelBridgeError("REVOKED", "Tool task authorization was revoked");
-    const installed = await this.installedToolApps.get(scope.appId);
+    const installed = await this.projectToolApps(scope.projectPath).get(scope.appId);
     if (
       !installed ||
       installedPanelAppRevision(installed) !== scope.revision ||
@@ -1208,11 +1217,17 @@ export class PanelAppBridge {
     return installed;
   }
 
-  private readonly installedToolApps = new PanelAppInspectionCache({
-    installPath: panelAppInstallDir,
-    registryPath: panelAppsRegistryPath,
-    listInstalled: listInstalledPanelApps,
-  });
+  private readonly installedToolApps = new Map<string, PanelAppInspectionCache>();
+  private projectToolApps(projectPath: string): PanelAppInspectionCache {
+    let cache = this.installedToolApps.get(projectPath);
+    if (!cache) {
+      cache = projectPanelAppInspectionCache(projectPath);
+      if (this.installedToolApps.size >= 64)
+        this.installedToolApps.delete(this.installedToolApps.keys().next().value!);
+      this.installedToolApps.set(projectPath, cache);
+    }
+    return cache;
+  }
 
   private toolSummary(job: ToolJob) {
     const { input: _input, result: _result, ...summary } = job;
@@ -1230,7 +1245,7 @@ export class PanelAppBridge {
       !this.options.isWorkspaceTrusted(workspacePath)
     )
       throw new PanelBridgeError("REVOKED", "Directory project authorization was revoked");
-    const installed = await this.installedToolApps.get(expected.id);
+    const installed = await this.projectToolApps(projectPath).get(expected.id);
     if (
       !installed ||
       !isDeepStrictEqual(installed, expected) ||
@@ -1256,7 +1271,7 @@ export class PanelAppBridge {
         : {}),
       service: () => this.getToolJobService(),
       resolveScope: async (expected, projectPath) => {
-        const installed = await this.installedToolApps.get(expected.id);
+        const installed = await this.projectToolApps(projectPath).get(expected.id);
         if (!installed || !isDeepStrictEqual(installed, expected))
           throw new PanelBridgeError("REVOKED", "The installed package changed; reopen the Panel");
         const scope = {

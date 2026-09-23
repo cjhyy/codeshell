@@ -931,6 +931,10 @@ const mobileRemote = new RemoteHostManager({
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
+    onPanelsChanged: (id, kind) => {
+      if (kind === "remove") panelAppBridge.revokeAppId(id);
+      broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
+    },
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
     onSessionsChanged: (cwd, sessionId) => {
       const line = JSON.stringify({

@@ -371,10 +371,10 @@ not delete retained snapshots. There is deliberately no automatic history prunin
 until project/task reference tracking is connected; backups must retain the full
 Panel Apps directory.
 
-Hub management and runtime now select these project packages together. Native
-Desktop still discovers resources globally by Panel ID; paired Desktop Web keeps
-that same selection until the native descriptor/protocol/coordinator migration is
-complete. This is not yet complete cross-Host project version support.
+Hub management and runtime select these project packages together. Desktop now
+selects package variants per binding project, and its paired Web composition uses
+the same selection with the native coordinator. Native project upgrade UI and
+legacy binding migration remain incomplete.
 
 
 Core project package selection now reads the project-only `panelAppPins` record:
@@ -430,9 +430,39 @@ reopens the old project's completed task after a Host restart. Missing or corrup
 retained bytes refuse access rather than falling back to the latest catalog.
 
 `projectPackages` is a Host composition option, not a guest request parameter.
-Paired Desktop leaves it disabled until its native reader uses the same package
-selection. Existing unpinned bindings are not automatically migrated. Desktop
-integration, migration, upgrade/rollback UI, data migrations, and task history
-across an explicit project upgrade remain outstanding. Existing global uninstall
+Current paired Desktop enables it explicitly. Existing unpinned bindings are not
+automatically migrated. Native binding/update writes, upgrade/rollback UI, data
+migrations, and task history across an explicit project upgrade remain outstanding. Existing global uninstall
 semantics remain: removing the registry entry revokes all projects even though
 retained package files are preserved.
+
+
+Desktop descriptors may contain `projectPaths`, `packageDigest` and `packagePinned`.
+Several descriptors can share a stable `panel-app:<id>` while having different
+asset host IDs and revisions. The renderer groups them under one persisted dock
+key and resolves the page, title, icon and Agent tools against the requesting
+project. Ambiguous variants fail closed. Worktree aliases still resolve to the
+Host's main binding project.
+
+Protocol resources are replaced per project, so refreshing one window cannot
+remove another project's retained version. Preparation and partition attachment
+require the selected project scope. Every prepared asset read and bridge call
+checks current pin selection; changing A's pin revokes its old guest even if B
+still holds the same package. Invalid project settings refuse that project's
+resources without substituting the catalog version.
+
+The native inspection cache includes selected path and pin identity in addition
+to package/registry filesystem identities. It rechecks selection after asynchronous
+inspection and cache validation, including same-path version mismatches. Native
+tasks, paired Web task binding, directory authorization and Cookie task access
+share this project-aware inspection. Paired management changes notify the native
+registry; updates invalidate other projects only if they follow the mutable
+catalog (or their pin cannot be read safely). Global removal still revokes every
+project and native guest.
+
+`node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --project-pins` runs the
+actual production Electron guest and paired HTTP facade with project v1 retained
+while the global catalog contains distinct v2 HTML/program bytes. It verifies the
+v1 program result, shared tasks/queue/accounts, consent, logout and device
+revocation behavior, and native refresh notification after a phone binding
+change. This uses fixture programs/accounts, not a physical phone or provider.

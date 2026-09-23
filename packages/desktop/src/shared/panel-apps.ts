@@ -52,6 +52,10 @@ export interface PanelAppDescriptor {
   appId: string;
   title: string;
   version: string;
+  /** A project-specific variant; undefined is the legacy single-version catalog. */
+  projectPaths?: string[];
+  packageDigest?: string;
+  packagePinned?: boolean;
   description?: string;
   icon: PanelAppIconName;
   singleton: boolean;

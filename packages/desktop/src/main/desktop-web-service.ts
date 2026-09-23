@@ -3,6 +3,7 @@ import type { IncomingMessage } from "node:http";
 import { app } from "electron";
 import {
   codeShellHome,
+  projectPanelAppPackagePins,
   resolvePanelAppBindingProjectPath,
   sessionsRoot,
 } from "@cjhyy/code-shell-core";
@@ -27,6 +28,7 @@ export function createDesktopWebService(options: {
   getBridge: () => AgentBridge | null;
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
   onSessionsChanged: (cwd: string, sessionId: string) => void;
+  onPanelsChanged?: (id: string, kind: "install" | "update" | "binding" | "remove") => void;
 }) {
   const contexts = new WeakMap<IncomingMessage, DesktopWebRequestContext>();
   const links = new Map<string, { handler: ReturnType<typeof createLinkHttp>; active: number }>();
@@ -89,6 +91,7 @@ export function createDesktopWebService(options: {
               // Match Electron's existing panel storage exactly, including custom profiles.
               dataDir: app.getPath("userData"),
               host: "desktop",
+              projectPackages: true,
               sharedToolJobs: options.sharedToolJobs,
               authorizePanelDirectory: options.authorizePanelDirectory,
               agentTaskOptions: {
@@ -101,13 +104,21 @@ export function createDesktopWebService(options: {
               onChanged: async (id, kind) => {
                 await Promise.all(
                   [...panels.entries()]
-                    .filter(
-                      ([otherCwd]) =>
-                        kind !== "binding" ||
-                        resolvePanelAppBindingProjectPath(otherCwd) === bindingCwd,
-                    )
+                    .filter(([otherCwd]) => {
+                      const otherProject = resolvePanelAppBindingProjectPath(otherCwd);
+                      if (kind === "remove" || otherProject === bindingCwd) return true;
+                      if (kind === "binding") return false;
+                      // Legacy projects still follow the catalog. Only a valid
+                      // explicit pin protects another project's running work.
+                      try {
+                        return !projectPanelAppPackagePins(otherProject)[id];
+                      } catch {
+                        return true;
+                      }
+                    })
                     .map(([, value]) => value.handler.invalidate(id)),
                 );
+                options.onPanelsChanged?.(id, kind);
                 options.getBridge()?.notifyWebConfigurationChanged();
               },
             }),

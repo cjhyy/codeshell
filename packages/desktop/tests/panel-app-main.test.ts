@@ -1325,9 +1325,13 @@ describeIsolated("PanelAppBridge", () => {
       };
       expect(picked.handle).toBeString();
       expect(picked.bookmark).toBeString();
-      const restored = (await panelGuestHandler()({ sender: guest }, "filesystem.restoreDirectory", {
-        bookmark: picked.bookmark,
-      })) as { handle: string; path: string };
+      const restored = (await panelGuestHandler()(
+        { sender: guest },
+        "filesystem.restoreDirectory",
+        {
+          bookmark: picked.bookmark,
+        },
+      )) as { handle: string; path: string };
       expect(restored.handle).not.toBe(picked.handle);
       expect(restored.path).toBe(realpathSync(directory));
     } finally {
@@ -3467,4 +3471,236 @@ describeIsolated("PanelAppBridge", () => {
     await expect(call({ body: "third" })).rejects.toThrow(/notification limit/);
     await expect(call({ body: "" })).rejects.toThrow(/non-empty body/);
   });
+});
+
+describeIsolated("Desktop project package variants", () => {
+  test("project-scoped pages and native jobs remain consistent with paired HTTP", async () => {
+    const core = await import("@cjhyy/code-shell-core");
+    const { createHash } = await import("node:crypto");
+    const { createServer } = await import("node:http");
+    const { createPanelHttp } = await import("../../server/src/panels/http.js");
+    const {
+      listPanelAppsForProjects,
+      listPanelApps,
+      listPanelAppExtensions,
+      isPanelAppBoundToProject,
+    } = await import("../src/main/panel-apps-service.js");
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "desktop-package-variants-")));
+    const previousHome = process.env.HOME,
+      previousData = panelAppElectronMock.userDataPath;
+    process.env.HOME = join(root, "home");
+    panelAppElectronMock.userDataPath = join(root, "data");
+    const source = join(root, "source"),
+      a = join(root, "a"),
+      b = join(root, "b");
+    for (const path of [a, b, join(source, "app/tools"), join(source, ".codeshell-panel")])
+      mkdirSync(path, { recursive: true });
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: isPanelAppBoundToProject,
+      getAgentBridge: () => null,
+    });
+    bridge.registerIpc();
+    const phone = createPanelHttp({
+      cwd: b,
+      dataDir: panelAppElectronMock.userDataPath,
+      host: "desktop",
+      projectPackages: true,
+      sharedToolJobs: bridge.sharedToolJobs(),
+      ownerId: async () => "phone",
+      isAuthorized: async () => true,
+    });
+    const server = createServer((request, response) => {
+      void (async () =>
+        (await phone.handleAssets(request, response)) || phone.handle(request, response))()
+        .then((handled) => {
+          if (!handled) response.writeHead(404).end();
+        })
+        .catch(() => response.writeHead(500).end());
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+    const request = (path: string, body?: unknown) =>
+      fetch(url + path, {
+        method: body === undefined ? "GET" : "POST",
+        headers: { origin: url, "content-type": "application/json" },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    async function install(version: string, overwrite = false) {
+      const script = `process.stdin.resume();process.stdin.on("end",()=>console.log(JSON.stringify({type:"result",result:{version:${JSON.stringify(version)}}})));`;
+      writeFileSync(join(source, "app/index.html"), `<h1>Package ${version}</h1>`);
+      writeFileSync(join(source, "app/tools/version.mjs"), script);
+      writeFileSync(
+        join(source, ".codeshell-panel/panel.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          id: "demo",
+          title: { default: "Demo " + version },
+          version,
+          entry: "app/index.html",
+          icon: "panel",
+          placement: "right-dock",
+          singleton: true,
+          permissions: ["context.workspace", "storage", "process", "resources"],
+          nativeEntries: {
+            version: {
+              entry: "app/tools/version.mjs",
+              sha256: createHash("sha256").update(script).digest("hex"),
+            },
+          },
+        }),
+      );
+      const input = { kind: "dir" as const, path: source };
+      const preview = await core.previewLocalPanelApp(input);
+      return core.installReviewedLocalPanelApp(
+        input,
+        preview.reviewToken,
+        new Date().toISOString(),
+        { overwrite },
+      );
+    }
+    function pin(project: string, installed: Awaited<ReturnType<typeof install>>) {
+      new core.SettingsManager(project, "full").mutateSettingsForScope(
+        "project",
+        project,
+        (settings) => {
+          settings.panelAppBindings = [installed.id];
+          settings.panelAppPins = {
+            [installed.id]: { version: installed.version, packageDigest: installed.packageDigest },
+          };
+        },
+      );
+    }
+    try {
+      const one = await install("1.0.0");
+      pin(a, one);
+      pin(b, one);
+      const initial = await listPanelAppsForProjects([a, b], "en");
+      expect(initial.descriptors).toHaveLength(1);
+      expect(initial.descriptors[0]!.projectPaths?.sort()).toEqual([a, b]);
+      const preparedA = await api.preparePanelApp("panel-app:demo", a);
+      const readerA = panelAppElectronMock.protocolHandler!;
+      const guestA = fakeGuest(4801),
+        guestB = fakeGuest(4802);
+      bridge.registerGuest(
+        guestA as any,
+        panelAppElectronMock.ownerWindow as any,
+        api.validatePanelAppEntryUrl(preparedA.src)!,
+        a,
+      );
+      await bindBridgeGuest(4801, { projectPath: a, cwd: a });
+      const preparedB = await api.preparePanelApp("panel-app:demo", b);
+      const readerB = panelAppElectronMock.protocolHandler!;
+      bridge.registerGuest(
+        guestB as any,
+        panelAppElectronMock.ownerWindow as any,
+        api.validatePanelAppEntryUrl(preparedB.src)!,
+        b,
+      );
+      await bindBridgeGuest(4802, { projectPath: b, cwd: b });
+      const two = await install("2.0.0", true);
+      pin(a, two);
+      // Pin changes revoke the old A guest before a renderer/protocol refresh.
+      await expect(
+        panelGuestHandler()({ sender: guestA }, "storage.get", { key: "test" }),
+      ).rejects.toThrow(/no longer bound/);
+      expect((await readerA(new Request(preparedA.src))).status).toBe(403);
+      expect(await (await readerB(new Request(preparedB.src))).text()).toContain("Package 1.0.0");
+      const variants = await listPanelAppsForProjects([a, b], "en");
+      expect(variants.descriptors.map((item) => item.version).sort()).toEqual(["1.0.0", "2.0.0"]);
+      expect(new Set(variants.descriptors.map((item) => item.id)).size).toBe(1);
+      expect(new Set(variants.descriptors.map((item) => item.hostId)).size).toBe(2);
+      expect((await listPanelAppExtensions(a, "en"))[0]?.version).toBe("2.0.0");
+      expect((await listPanelAppExtensions(b, "en"))[0]?.version).toBe("1.0.0");
+      await listPanelApps(a, "en");
+      // A single-window refresh keeps the other window's selected resources.
+      expect(await (await readerB(new Request(preparedB.src))).text()).toContain("Package 1.0.0");
+      const nextA = await api.preparePanelApp("panel-app:demo", a);
+      expect(
+        await (await panelAppElectronMock.protocolHandler!(new Request(nextA.src))).text(),
+      ).toContain("Package 2.0.0");
+      expect(
+        api.preparedPanelAppPartitionProjectPath(
+          initial.descriptors[0]!.hostId,
+          preparedA.partition,
+        ),
+      ).toBeNull();
+      expect(
+        api.preparedPanelAppPartitionProjectPath(
+          initial.descriptors[0]!.hostId,
+          preparedB.partition,
+        ),
+      ).toBe(b);
+      await expect(api.preparePanelApp("panel-app:demo", join(root, "unknown"))).rejects.toThrow();
+
+      const selectedA = (await core.listProjectPanelApps(a))[0]!,
+        selectedB = (await core.listProjectPanelApps(b))[0]!;
+      const shared = bridge.sharedToolJobs();
+      await expect(shared.bind(selectedA, b)).rejects.toThrow(/package changed/);
+      const coordinatorA = await shared.bind(selectedA, a),
+        coordinatorB = await shared.bind(selectedB, b);
+      const jobA = await coordinatorA.start({
+        entry: { name: "version", sha256: selectedA.nativeEntries!.version!.sha256 },
+        input: { request: {} },
+        recovery: "retry",
+      });
+      const jobB = await panelGuestHandler()({ sender: guestB }, "tasks.start", {
+        entry: "version",
+        input: { request: {} },
+        recovery: "retry",
+      });
+      for (const [coordinator, job, version] of [
+        [coordinatorA, jobA, "2.0.0"],
+        [coordinatorB, jobB, "1.0.0"],
+      ] as const) {
+        let current = await coordinator.get(job.id);
+        const deadline = Date.now() + 8000;
+        while (["queued", "running"].includes(current.status) && Date.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          current = await coordinator.get(job.id);
+        }
+        expect(current).toMatchObject({ status: "succeeded", result: { version } });
+      }
+      const phoneCatalog = await (await request("/api/v1/panels")).json();
+      expect(phoneCatalog.panels[0].version).toBe("1.0.0");
+      const response = await request("/api/v1/panels/runtime/prepare", {
+        appId: "demo",
+        revision: phoneCatalog.panels[0].revision,
+      });
+      expect(response.status).toBe(200);
+      const preparedPhone = await response.json();
+      expect(
+        await (await fetch(url + preparedPhone.src, { headers: { origin: "null" } })).text(),
+      ).toContain("Package 1.0.0");
+      const result = await request(`/api/v1/panels/runtime/${preparedPhone.instanceId}/call`, {
+        method: "tasks.get",
+        params: { id: jobB.id },
+      });
+      expect(result.status).toBe(200);
+      expect(await result.json()).toMatchObject({
+        id: jobB.id,
+        status: "succeeded",
+        result: { version: "1.0.0" },
+      });
+      writeFileSync(join(a, ".code-shell/settings.json"), '{"panelAppPins":null}');
+      const remaining = await listPanelAppsForProjects([a, b], "en");
+      expect(remaining.descriptors).toHaveLength(1);
+      expect(remaining.descriptors[0]!.projectPaths).toEqual([b]);
+      await expect(api.preparePanelApp("panel-app:demo", a)).rejects.toThrow();
+      expect(await (await readerB(new Request(preparedB.src))).text()).toContain("Package 1.0.0");
+    } finally {
+      await phone.close();
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await bridge.shutdownMedia();
+      api.replacePanelAppResources([]);
+      api.setPanelAppResourceAuthorizer(undefined);
+      panelAppElectronMock.ipcHandlers.clear();
+      panelAppElectronMock.userDataPath = previousData;
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 20000);
 });

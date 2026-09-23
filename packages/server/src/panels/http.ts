@@ -15,8 +15,8 @@ export function createPanelHttp(
     authorizePanelDirectory?: PanelDirectoryAuthorizer;
   },
 ) {
-  // Paired Desktop uses its native coordinator; activate pins there only when
-  // the native reader and protocol use the same project package selection.
+  // Embedded Desktop hosts opt in once their native coordinator and protocol
+  // implement the same selection. The current Desktop composition does so.
   const projectPackages = options.projectPackages ?? options.host === "hub";
   const management = createPanelManagementHttp({
     ...options,
