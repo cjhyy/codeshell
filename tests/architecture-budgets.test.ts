@@ -85,7 +85,10 @@ describe("architecture growth budgets", () => {
     // add nine declaration lines; no renderer runtime import is introduced.
     // Media playback adds the narrow get/release preview contract and shared
     // request/result types while all file access stays in main (+11).
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_864);
+    // Detailed run traces carry prompt/model/provider, duration and the token
+    // usage breakdown across the typed boundary; all of it is declaration-only
+    // and adds no renderer runtime import (+11).
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_875);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
