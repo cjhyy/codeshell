@@ -22,6 +22,7 @@ export interface ManagedPanel extends Omit<
   PanelAppPreview,
   "reviewToken" | "alreadyInstalled" | "warnings" | "source"
 > {
+  packageDigest?: string;
   revision: string;
   bound: boolean;
   enabled: boolean;

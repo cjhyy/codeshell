@@ -740,3 +740,40 @@ node scripts/smoke-core-exports.mjs
 同名 Panel 的 descriptor／protocol／inspection cache 选择、原生任务与远程页面一致性、
 活跃任务门禁、版本切换 UI 与实际双项目跨设备验收。测试直接准备项目 pin 配置，不能
 说用户界面已经支持完整版本锁定。整套版本和其他原目标仍未完成、未发布。
+
+
+### 增量 20：Hub 项目版本绑定与真实 HTTP 执行（2026-09-24）
+
+Hub 的管理列表、绑定与运行时共同启用项目包选择。新绑定先保留经过校验的安装包，
+审阅安装／升级将版本与内容摘要写入项目设置，解除绑定删除该项目 pin。更新分别检查
+项目选定版本与全局安装状态；Core 提交前重复检查，安装完成后在设置锁内检查项目状态。
+另一设备并发解除绑定时返回冲突、保留其修改和原 pin；新全局包可能已安装，但不会静默
+改动项目选择。旧项目的更新来源仍保留原分支，刷新预览后可明确升级到相同的新包。
+
+网页入口、普通原生入口和后台工具解析均使用选定快照。管理快照和执行包的摘要不一致时
+拒绝继续，防止跨两次读取的版本切换把旧权限与新程序拼在一起。全局包升级不改变另一
+个已固定项目的 revision 或已打开页面授权。全局卸载继续撤销注册可用性，保留包文件
+不表示仍获授权。
+
+验证：
+
+- 管理、HTTP、Hub 项目／worktree 绑定和真实 Hub 路由 24 项通过。其中新增两项目独立
+  升级、陈旧全局更新预览拒绝、安装后并发解除绑定不被覆盖，以及缺失包／坏配置拒绝。
+- 运行时与新项目版本 HTTP 集成共 49 项通过。新增测试使用实际 Core 安装器、真实 HTTP
+  路由及 Node 后台程序：两项目固定 1.0.0 后更新全局安装，A 明确重新绑定 2.0.0，B 的
+  已打开页面仍返回 1.0.0；两后台程序分别产出各自版本；重启 B 后读取原任务 ID 和结果；
+  篡改旧包拒绝访问，不退回完整的新全局包。测试身份由 Host fixture 提供，不是完整登录
+  或物理手机验收；认证／Origin／撤销另由现有真实 Hub 路由回归覆盖。
+- Server 构建与类型检查、Desktop／mobile 类型检查、改动 ESLint 和格式／差异检查通过。
+
+```sh
+bun test packages/server/src/panels/management.test.ts packages/server/src/panels/management-http.test.ts packages/server/src/panels/hub-binding.test.ts packages/server/src/serve/hub-panels.test.ts
+bun test packages/server/src/panels/project-packages.test.ts packages/server/src/panels/runtime.test.ts
+bun run --cwd packages/server build
+```
+
+尚未完成：原生 Desktop 的多项目 descriptor／protocol／inspection cache 以及配对 Web
+共同接入、已有未固定绑定迁移、任务跨项目升级后的历史展示／恢复、活跃任务完整升级门禁、
+版本选择／回滚 UI 和文档迁移。配对 Desktop Web 在原生 reader 接通前明确保留相同的全局
+读取方式，不能提前声称四组合版本一致性完成。当前修改仍在任务分支，未发布或部署；
+六个 Panel、Link Host 接入、中继、真实手机和整套部署验收等原目标继续保留。

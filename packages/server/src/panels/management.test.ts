@@ -16,6 +16,9 @@ import { join } from "node:path";
 import {
   installReviewedLocalPanelApp,
   listInstalledPanelApps,
+  listProjectPanelApps,
+  projectPanelAppPackagePins,
+  SettingsManager,
   previewLocalPanelApp,
   previewInstalledPanelAppUpdate,
 } from "@cjhyy/code-shell-core";
@@ -143,6 +146,110 @@ describe("shared Web panel management with the real Core installer", () => {
     expect(update.source.commit).toBe(commit);
     await api.install(owner, update.reviewToken);
     expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
+  });
+
+  test("project bindings retain independent versions and revisions through another project's update", async () => {
+    const first = service({ projectPackages: true });
+    const elsewhere = join(root, "other-project");
+    mkdirSync(elsewhere);
+    const second = service({ cwd: elsewhere, projectPackages: true });
+    await first.install(owner, (await first.preview(owner, input)).reviewToken);
+    const available = (await second.snapshot()).panels[0]!;
+    await second.binding(owner, available.id, true, available.revision);
+    const old = (await second.snapshot()).panels[0]!;
+    const selected = (await listProjectPanelApps(elsewhere))[0]!;
+    expect(selected.installPath).toContain("/.versions/test-panel/");
+    expect(projectPanelAppPackagePins(elsewhere)[old.id]).toEqual({
+      version: "1.0.0",
+      packageDigest: old.packageDigest!,
+    });
+    writePanel("2.0.0");
+    const firstOld = (await first.snapshot()).panels[0]!;
+    const update = await first.previewUpdate(owner, firstOld.id, firstOld.revision);
+    await first.install(owner, update.reviewToken);
+    expect((await first.snapshot()).panels[0]?.version).toBe("2.0.0");
+    expect((await second.snapshot()).panels[0]).toMatchObject({
+      version: "1.0.0",
+      revision: old.revision,
+      packageDigest: old.packageDigest,
+      enabled: true,
+    });
+    expect(readFileSync(join(selected.installPath, "app/index.html"), "utf8")).toContain("1.0.0");
+    // Another device can still change this project's binding using its old revision.
+    await second.binding(owner, old.id, false, old.revision);
+    expect(projectPanelAppPackagePins(elsewhere)[old.id]).toBeUndefined();
+    const latest = (await second.snapshot()).panels[0]!;
+    expect(latest.version).toBe("2.0.0");
+    await second.binding(owner, latest.id, true, latest.revision);
+    expect((await second.snapshot()).panels[0]).toMatchObject({ version: "2.0.0", bound: true });
+  });
+
+  test("project update review rejects a changed catalog without moving the old project pin", async () => {
+    const first = service({ projectPackages: true });
+    const second = service({ cwd: join(root, "other-project"), projectPackages: true });
+    mkdirSync(join(root, "other-project"));
+    await first.install(owner, (await first.preview(owner, input)).reviewToken);
+    const available = (await second.snapshot()).panels[0]!;
+    await second.binding(owner, available.id, true, available.revision);
+    const one = (await first.snapshot()).panels[0]!;
+    const two = (await second.snapshot()).panels[0]!;
+    writePanel("2.0.0");
+    const stale = await second.previewUpdate(owner, two.id, two.revision);
+    await first.install(
+      owner,
+      (await first.previewUpdate(owner, one.id, one.revision)).reviewToken,
+    );
+    await expect(second.install(owner, stale.reviewToken)).rejects.toMatchObject({ status: 409 });
+    expect((await second.snapshot()).panels[0]).toMatchObject({
+      version: "1.0.0",
+      revision: two.revision,
+    });
+    // Refreshing the review explicitly upgrades this project to the already installed bytes.
+    await second.install(
+      owner,
+      (await second.previewUpdate(owner, two.id, two.revision)).reviewToken,
+    );
+    expect((await second.snapshot()).panels[0]?.version).toBe("2.0.0");
+  });
+
+  test("post-install binding CAS preserves a concurrent device's unbind and old package pin", async () => {
+    const api = service({ projectPackages: true });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const old = (await api.snapshot()).panels[0]!;
+    const oldPins = projectPanelAppPackagePins(cwd);
+    writePanel("2.0.0");
+    const update = await api.previewUpdate(owner, old.id, old.revision);
+    let changed = false;
+    const otherDevice = {
+      ownerId: owner.ownerId,
+      authorize() {
+        const page = join(process.env.HOME!, ".code-shell/panel-apps/test-panel/app/index.html");
+        if (!changed && readFileSync(page, "utf8").includes("2.0.0")) {
+          changed = true;
+          new SettingsManager(cwd, "full").mutateSettingsForScope("project", cwd, (settings) => {
+            settings.panelAppBindings = [];
+          });
+        }
+        return true;
+      },
+    };
+    await expect(api.install(otherDevice, update.reviewToken)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(changed).toBe(true);
+    expect(projectPanelAppPackagePins(cwd)).toEqual(oldPins);
+    expect((await api.snapshot()).panels[0]).toMatchObject({ version: "1.0.0", bound: false });
+  });
+
+  test("missing pinned package and invalid project settings never fall through to the catalog", async () => {
+    const api = service({ projectPackages: true });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const selected = (await listProjectPanelApps(cwd))[0]!;
+    rmSync(selected.installPath, { recursive: true });
+    await expect(api.snapshot()).rejects.toThrow();
+    expect((await listInstalledPanelApps())[0]?.version).toBe("1.0.0");
+    writeFileSync(join(cwd, ".code-shell/settings.json"), '{"panelAppPins":null}');
+    await expect(api.snapshot()).rejects.toThrow();
   });
 
   test("owner-bound reviews expire on logout and pending network work cannot issue another review", async () => {

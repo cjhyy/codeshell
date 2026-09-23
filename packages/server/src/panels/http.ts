@@ -15,8 +15,12 @@ export function createPanelHttp(
     authorizePanelDirectory?: PanelDirectoryAuthorizer;
   },
 ) {
+  // Paired Desktop uses its native coordinator; activate pins there only when
+  // the native reader and protocol use the same project package selection.
+  const projectPackages = options.projectPackages ?? options.host === "hub";
   const management = createPanelManagementHttp({
     ...options,
+    projectPackages,
     compatibility: options.compatibility ?? panelWebCompatibility,
     onChanged: async (id, kind) => {
       await runtime?.invalidate(id);
@@ -25,6 +29,7 @@ export function createPanelHttp(
   });
   const runtime = createPanelRuntime({
     ...options,
+    projectPackages,
     snapshot: management.service.snapshot,
     createAgentTasks: (hooks) =>
       createPanelAgentTaskHost({ ...options.agentTaskOptions, ...hooks }),

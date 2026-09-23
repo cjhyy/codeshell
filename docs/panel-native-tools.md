@@ -371,10 +371,10 @@ not delete retained snapshots. There is deliberately no automatic history prunin
 until project/task reference tracking is connected; backups must retain the full
 Panel Apps directory.
 
-This establishes storage for project version pins, but does not yet activate them:
-Desktop still discovers resources globally by Panel ID, Web management still uses
-the global catalog, and Host binding writes, Desktop/Web runtime selection and task resolution must all
-be routed to an explicit reviewed package before claiming per-project versions.
+Hub management and runtime now select these project packages together. Native
+Desktop still discovers resources globally by Panel ID; paired Desktop Web keeps
+that same selection until the native descriptor/protocol/coordinator migration is
+complete. This is not yet complete cross-Host project version support.
 
 
 Core project package selection now reads the project-only `panelAppPins` record:
@@ -409,5 +409,30 @@ from the selected version. Main-project pins apply to worktrees. Pin changes are
 part of the Skill cache key; normal explicit Skill cache invalidation still
 applies to disk-content changes. Invalid pins never substitute catalog Skills,
 even in the administrative include-disabled view. Other Skill sources keep their
-existing behavior. Desktop/Web runtime and UI writes have not yet been switched
-to this selection contract.
+existing behavior.
+
+Hub `createPanelHttp` enables project package selection for both management and
+runtime. Reviewed installation and project binding persist the version/digest in
+one conditional settings mutation. An existing legacy install is retained before
+binding; unbinding removes this project's pin. Update reviews check both the
+selected project revision and the separate mutable catalog state, before and
+inside the install commit guard. After installing bytes, a project-state check
+under the settings lock prevents a concurrent device's binding change from being
+overwritten. A conflict may leave a new catalog package installed, but never
+silently moves the project's pin.
+
+The selected package supplies the HTML, native entries and background tool
+resolution. Runtime checks the package digest against its management snapshot;
+a concurrent version change cannot pair old permissions with new program bytes.
+Other pinned projects retain their revisions and open page grants across a
+catalog update. A real HTTP test executes both retained native versions and
+reopens the old project's completed task after a Host restart. Missing or corrupt
+retained bytes refuse access rather than falling back to the latest catalog.
+
+`projectPackages` is a Host composition option, not a guest request parameter.
+Paired Desktop leaves it disabled until its native reader uses the same package
+selection. Existing unpinned bindings are not automatically migrated. Desktop
+integration, migration, upgrade/rollback UI, data migrations, and task history
+across an explicit project upgrade remain outstanding. Existing global uninstall
+semantics remain: removing the registry entry revokes all projects even though
+retained package files are preserved.

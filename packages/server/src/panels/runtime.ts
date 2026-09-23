@@ -6,6 +6,7 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   listInstalledPanelApps,
+  listProjectPanelApps,
   CredentialStore,
   validateToolArgsStrict,
   type InstalledPanelApp,
@@ -186,6 +187,7 @@ export interface PanelTaskHost {
 export interface PanelRuntimeOptions {
   cwd: string;
   bindingCwd?: string;
+  projectPackages?: boolean;
   dataDir: string;
   host: "hub" | "desktop";
   publicPathPrefix?: string;
@@ -487,7 +489,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const assets = new Map<string, Grant>();
   const now = options.now ?? Date.now;
   const services = new PanelRuntimeServices({ dataDir: options.dataDir });
-  const installed = options.listInstalled ?? listInstalledPanelApps;
+  const installed =
+    options.listInstalled ??
+    (options.projectPackages
+      ? () => listProjectPanelApps(options.bindingCwd ?? options.cwd)
+      : listInstalledPanelApps);
   let closed = false;
   let generation = 0;
   let nextGuest = 0;
@@ -585,6 +591,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     if (
       !panel?.enabled ||
       panel.revision !== scope.revision ||
+      (panel.packageDigest !== undefined && panel.packageDigest !== app?.packageDigest) ||
       !app?.permissions.includes("process") ||
       !app.permissions.includes("resources")
     )
@@ -1125,6 +1132,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         error(400, "会话标识无效。");
       const app = (await installed()).find((candidate) => candidate.id === input.appId);
       if (!app) error(404, "面板已卸载。");
+      if (panel.packageDigest && panel.packageDigest !== app.packageDigest)
+        error(409, "项目面板版本已改变，请重新打开。");
       const root = await realpath(app.installPath),
         info = await lstat(app.installPath);
       if (info.isSymbolicLink() || !info.isDirectory()) error(403, "面板安装目录无效。");

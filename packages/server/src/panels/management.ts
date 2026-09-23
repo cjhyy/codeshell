@@ -11,8 +11,10 @@ import {
   installReviewedLocalPanelApp,
   invalidateSkillCache,
   listInstalledPanelApps,
+  listProjectPanelApps,
+  parsePanelAppPackagePins,
+  retainInstalledPanelApp,
   userHome,
-  panelAppInstallDir,
   panelAppsRoot,
   previewLocalPanelApp,
   resolvePanelAppBindingPolicy,
@@ -122,6 +124,8 @@ export interface PanelManagementOptions {
   cwd: string;
   /** Host-authorized main project for a worktree. Defaults to the exact cwd. */
   bindingCwd?: string;
+  /** Enable only when every runtime in this Host selects the project package. */
+  projectPackages?: boolean;
   /** Recheck a host-verified, frozen project/worktree association before use. */
   assertBinding?: () => void;
   withMutation?: <T>(write: () => Promise<T>) => Promise<T>;
@@ -146,6 +150,8 @@ interface HeldReview {
   public: PanelReview;
   source: GitPanelAppSourceInput;
   digest: string;
+  projectState: string;
+  catalogState?: string;
 }
 
 function invalid(): never {
@@ -291,6 +297,9 @@ export function createPanelManagement(options: PanelManagementOptions) {
         JSON.stringify({
           app,
           digest,
+          ...(options.projectPackages
+            ? { pin: parsePanelAppPackagePins(project ?? projectSettings())[app.id] ?? null }
+            : {}),
           bound: current.boundApps.has(app.id),
           disabled: current.globalDisabledApps.has(app.id),
         }),
@@ -298,15 +307,43 @@ export function createPanelManagement(options: PanelManagementOptions) {
       .digest("hex");
   }
 
-  async function catalogApp(id: string) {
-    const app = (await listInstalledPanelApps()).find((item) => item.id === id);
-    if (!app) throw new PanelManagementError(404, "not_found", "找不到这个面板，请刷新列表。");
-    const target = panelAppInstallDir(id);
-    const info = lstatSync(target);
+  function projectSettings(): Record<string, unknown> {
+    return new SettingsManager(workspace, "full").getRawForScope("project", workspace, {
+      strict: true,
+    });
+  }
+
+  // Compare the app-specific state under the project settings lock after package
+  // installation. Installing bytes must never overwrite another device's binding.
+  function projectState(id: string, project = projectSettings()): string {
+    const current = policy(project);
+    return JSON.stringify({
+      bound: current.boundApps.has(id),
+      disabled: current.globalDisabledApps.has(id),
+      pin: options.projectPackages ? (parsePanelAppPackagePins(project)[id] ?? null) : null,
+    });
+  }
+
+  const listApps = () =>
+    options.projectPackages ? listProjectPanelApps(workspace) : listInstalledPanelApps();
+
+  async function inspectApp(app: InstalledPanelApp) {
+    const info = lstatSync(app.installPath);
     if (info.isSymbolicLink() || !info.isDirectory())
       throw new PanelManagementError(403, "unsafe_path", "面板安装目录不支持链接。");
-    const preview = await previewLocalPanelApp({ kind: "dir", path: target });
+    const preview = await previewLocalPanelApp({ kind: "dir", path: app.installPath });
     return { app, digest: preview.reviewToken };
+  }
+
+  async function selectedApp(id: string) {
+    const app = (await listApps()).find((item) => item.id === id);
+    if (!app) throw new PanelManagementError(404, "not_found", "找不到这个面板，请刷新列表。");
+    return inspectApp(app);
+  }
+
+  async function catalogState(id: string): Promise<string> {
+    const app = (await listInstalledPanelApps()).find((item) => item.id === id);
+    return JSON.stringify(app ? await inspectApp(app) : null);
   }
 
   function savedSource(app: InstalledPanelApp, saved: Origins): PanelGitSource | undefined {
@@ -333,8 +370,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
     const current = policy();
     const saved = origins();
     const panels: ManagedPanel[] = [];
-    for (const listed of await listInstalledPanelApps()) {
-      const { app, digest } = await catalogApp(listed.id);
+    for (const listed of await listApps()) {
+      const { app, digest } = await inspectApp(listed);
       const source = savedSource(app, saved);
       const {
         installPath: _path,
@@ -409,7 +446,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
   async function issue(
     context: PanelOperationContext,
     input: unknown,
-    current?: { app: InstalledPanelApp; digest: string; revision: string },
+    current?: { app: InstalledPanelApp; digest: string; revision: string; catalogState: string },
   ): Promise<PanelReview> {
     return network(context, async (guard) => {
       prune();
@@ -449,6 +486,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
         public: value,
         source: pinnedSource,
         digest,
+        projectState: projectState(preview.id),
+        catalogState: current?.catalogState,
       });
       return value;
     });
@@ -473,14 +512,25 @@ export function createPanelManagement(options: PanelManagementOptions) {
     return next;
   }
 
-  function setBinding(app: InstalledPanelApp, digest: string, bound: boolean, expected?: string) {
+  function setBinding(
+    app: InstalledPanelApp,
+    bound: boolean,
+    expected?:
+      | { app: InstalledPanelApp; digest: string; revision: string }
+      | { projectState: string },
+  ) {
     options.assertBinding?.();
     if (!hasProject)
       throw new PanelManagementError(400, "project_required", "请先选择项目，再绑定面板。");
     const manager = new SettingsManager(workspace, "full");
     manager.mutateSettingsForScope("project", workspace, (current) => {
       options.assertBinding?.();
-      if (expected && revision(app, digest, current) !== expected)
+      if (
+        expected &&
+        ("revision" in expected
+          ? revision(expected.app, expected.digest, current) !== expected.revision
+          : projectState(app.id, current) !== expected.projectState)
+      )
         throw new PanelManagementError(409, "conflict", "面板配置已改变，请刷新后重试。");
       const bindings = new Set(
         Array.isArray(current.panelAppBindings)
@@ -490,6 +540,14 @@ export function createPanelManagement(options: PanelManagementOptions) {
       if (bound) bindings.add(app.id);
       else bindings.delete(app.id);
       current.panelAppBindings = [...bindings].sort();
+      if (options.projectPackages) {
+        const pins = parsePanelAppPackagePins(current);
+        if (bound) {
+          if (!app.packageDigest) throw new Error("Cannot bind an unverified Panel package");
+          pins[app.id] = { version: app.version, packageDigest: app.packageDigest };
+        } else delete pins[app.id];
+        current.panelAppPins = pins;
+      }
       const overrides =
         current.panelAppOverrides &&
         typeof current.panelAppOverrides === "object" &&
@@ -532,7 +590,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
       assertId(id);
       assertRevision(expected);
       await assertAuthorized(context);
-      const current = await catalogApp(id);
+      const current = await selectedApp(id);
       const currentRevision = revision(current.app, current.digest);
       if (currentRevision !== expected)
         throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
@@ -544,7 +602,11 @@ export function createPanelManagement(options: PanelManagementOptions) {
           "这个面板由本地来源安装，请在桌面端更新。",
         );
       const { commit: _commit, ...input } = source;
-      return issue(context, input, { ...current, revision: currentRevision });
+      return issue(context, input, {
+        ...current,
+        revision: currentRevision,
+        catalogState: await catalogState(id),
+      });
     },
     async install(context: PanelOperationContext, token: unknown, bind = true) {
       if (typeof token !== "string" || typeof bind !== "boolean") invalid();
@@ -561,8 +623,11 @@ export function createPanelManagement(options: PanelManagementOptions) {
           throw new PanelManagementError(409, "review_expired", "预览已失效，请重新检查来源。");
         const id = held.public.preview.id;
         if (held.public.kind === "update") {
-          const current = await catalogApp(id);
-          if (revision(current.app, current.digest) !== held.public.expectedRevision)
+          const current = await selectedApp(id);
+          if (
+            revision(current.app, current.digest) !== held.public.expectedRevision ||
+            (await catalogState(id)) !== held.catalogState
+          )
             throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
         } else if ((await listInstalledPanelApps()).some((item) => item.id === id))
           throw new PanelManagementError(
@@ -570,6 +635,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
             "already_installed",
             "这个面板已经安装，请检查更新。",
           );
+        if (projectState(id) !== held.projectState)
+          throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
         await guard();
         const installed = await installReviewedLocalPanelApp(
           held.source,
@@ -581,10 +648,15 @@ export function createPanelManagement(options: PanelManagementOptions) {
             recordedRef: held.public.source.ref,
             beforeCommit: async () => {
               if (held.public.kind === "update") {
-                const current = await catalogApp(id);
-                if (revision(current.app, current.digest) !== held.public.expectedRevision)
+                const current = await selectedApp(id);
+                if (
+                  revision(current.app, current.digest) !== held.public.expectedRevision ||
+                  (await catalogState(id)) !== held.catalogState
+                )
                   throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
               }
+              if (projectState(id) !== held.projectState)
+                throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
               await guard();
             },
           },
@@ -595,7 +667,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
         });
         await guard();
         if (bind && hasProject && held.public.compatibility.supported)
-          setBinding(installed, held.digest, true);
+          setBinding(installed, true, { projectState: held.projectState });
         invalidateSkillCache();
         await options.onChanged?.(id, held.public.kind);
         return { id };
@@ -611,15 +683,23 @@ export function createPanelManagement(options: PanelManagementOptions) {
       assertRevision(expected);
       if (typeof bound !== "boolean") invalid();
       return mutate(context, async (guard) => {
-        const current = await catalogApp(id);
+        const current = await selectedApp(id);
         if (bound && !compatibility(current.app).supported)
           throw new PanelManagementError(
             400,
             "unsupported",
             "这个面板需要当前 Web 环境未提供的能力。",
           );
+        // Legacy installs need a retained copy before the project can pin them.
+        // An already pinned project must keep its selected version, not the catalog's.
+        const app =
+          bound &&
+          options.projectPackages &&
+          !parsePanelAppPackagePins(projectSettings())[current.app.id]
+            ? await retainInstalledPanelApp(current.app.id, current.app.packageDigest!)
+            : current.app;
         await guard();
-        setBinding(current.app, current.digest, bound, expected);
+        setBinding(app, bound, { ...current, revision: expected });
         await options.onChanged?.(id, "binding");
         return snapshot();
       });
@@ -628,13 +708,13 @@ export function createPanelManagement(options: PanelManagementOptions) {
       assertId(id);
       assertRevision(expected);
       return mutate(context, async (guard) => {
-        const current = await catalogApp(id);
+        const current = await selectedApp(id);
         if (revision(current.app, current.digest) !== expected)
           throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
         await guard();
         await uninstallPanelApp(id, {
           beforeCommit: async () => {
-            const latest = await catalogApp(id);
+            const latest = await selectedApp(id);
             if (revision(latest.app, latest.digest) !== expected)
               throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
             await guard();
@@ -643,7 +723,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
         origins((value) => {
           delete value[id];
         });
-        if (hasProject) setBinding(current.app, current.digest, false);
+        if (hasProject) setBinding(current.app, false);
         invalidateSkillCache();
         await options.onChanged?.(id, "remove");
         return { removed: true as const };
