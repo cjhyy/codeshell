@@ -954,3 +954,49 @@ node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --project-pins
 版本读取／恢复与旧绑定迁移仍需后续完成。原生完整升级／恢复 UI、数据迁移与回滚、
 其他 Panel、远程 Link 接入、中继、真实手机与正式部署仍未完成。代码保留在任务分支，
 尚未发布，服务仓库仍依赖旧公开版本。
+
+
+### 增量 25：旧项目版本固化与未打开项目的迁移基准（2026-09-24）
+
+Core 在项目发现时批量迁移仅有 `panelAppBindings` 或旧 `panelAppOverrides.on` 的绑定。
+迁移校验对应不可变包，并在共同配置锁下仅补齐仍然缺失的项目 pin；并发设备写入了
+明确 pin 或解绑时保留其结果。已有配置、其它字段和全局禁用状态保持原样，未绑定、
+明确 off 或未安装的 App 不会因为迁移获得权限。重复读取不重复写入已经固定的配置。
+
+只做打开时迁移不足以保护未打开／离线磁盘上的旧项目，因此安装器在首次保留旧包、
+替换旧安装或卸载时，将准确包引用保存在 `.versions/<id>/legacy-projects.json`。后续
+更新和重新安装不移动这个首次捕获的引用。项目明确选择的版本优先于迁移基准；新项目
+仍通过审阅／绑定选择当前安装包，不受旧项目基准限制。这里保留的是新迁移机制首次
+捕获的已安装版本，不推测此前只有 ID 的配置曾使用过哪些历史版本。
+
+同步 Skill 扫描在配置尚未固化时也读取该基准，避免后台 Agent 先读新版 Skill、页面
+随后又迁回旧版。Desktop 发现和包检查缓存先迁移再捕获选择状态；Hub／配对 Web 管理
+快照先迁移再计算条件 revision。不可变包缺失／损坏、基准文件损坏或链接不能退回
+当前全局包。新的可变安装元数据也镜像保留基准引用，部分恢复遗漏基准记录时仍能发现
+旧包缺失；未改变全局 installed.json 的格式，已有不可变包的元数据也不重写。
+
+验证：
+
+- 安装器、提交保护、原生入口、注册表安全、更新检查和包快照共 6 文件 102 项通过。
+  覆盖未打开旧项目跨多次更新保持原包、迁移与升级竞争、并发设备 pin／解绑、卸载后
+  重装、损坏／链接基准、旧包缺失及部分恢复遗漏基准记录。
+- 增加多 App 批量迁移后，包快照文件 21 项通过；确认同时固化所有可用旧绑定，但不
+  启用全局禁用、项目 off 和未安装的 App，原有业务设置保持。
+- 共享管理、管理 HTTP、真实项目 HTTP、Desktop 项目包／管理／检查缓存及协议隔离
+  入口共 7 文件 35 项通过。真实 Hub HTTP 新增此前未打开的旧格式项目，在全局 2.0
+  下自动固化 1.0，实际页面和原生 Node 任务都返回 1.0；其它项目显式选择 2.0 仍通过。
+- 生产 Electron + 配对 HTTP `--legacy-projects`：在启动前保留旧 ID 绑定并将全局包
+  更新到 2.0；首次桌面发现即写入 1.0 pin，后续手机、账号、后台队列、文件交付及查询
+  使用旧包。排队／运行／等待手机确认仍阻止升级，任务实际退出后明确审阅升级到 2.0。
+- Core、Server、Desktop 构建、Desktop/mobile 类型检查和改动 ESLint 通过。
+
+```sh
+bun test packages/core/src/panel-apps/package-snapshots.test.ts packages/core/src/panel-apps/installer.test.ts packages/core/src/panel-apps/installer.commit-guard.test.ts packages/core/src/panel-apps/native-entries.test.ts packages/core/src/panel-apps/registry.security.test.ts packages/core/src/panel-apps/update-check.test.ts
+bun test packages/server/src/panels/management.test.ts packages/server/src/panels/management-http.test.ts packages/server/src/panels/project-packages.test.ts packages/desktop/src/main/panel-app-project-packages.test.ts packages/desktop/src/main/panel-app-management.test.ts packages/desktop/src/main/panel-app-protocol.test.ts packages/desktop/src/main/panel-app-inspection-cache.test.ts
+node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --legacy-projects
+```
+
+范围限制：这是可用旧绑定的版本迁移和缺失时拒绝替换，不是数据文档迁移或回滚界面。
+缺失旧包／损坏配置的项目仍需专门修复流程；任务历史跨版本恢复、完整多项目 UI 验收、
+其他 Panel、远程 Link、设备中继、物理手机和正式部署继续保留在原目标中。未发布，
+服务仓库公开依赖尚未升级到当前任务分支能力。

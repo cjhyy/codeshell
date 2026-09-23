@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
@@ -17,6 +18,8 @@ import {
   installReviewedLocalPanelApp,
   listInstalledPanelApps,
   listProjectPanelApps,
+  migrateProjectPanelAppPackagePins,
+  projectPanelAppPackagePins,
   panelAppPackageDir,
   previewLocalPanelApp,
   resolvePanelAppPackage,
@@ -209,7 +212,9 @@ test("same payload reuses its immutable directory despite changed installation m
   expect(next.packageDigest).toBe(first.packageDigest);
   expect((await stat(retained.installPath)).ino).toBe(before.ino);
   expect(await readFile(join(retained.installPath, ".cs-panel-app-meta.json"))).toEqual(metadata);
-  expect(await readdir(join(retained.installPath, ".."))).toEqual([first.packageDigest!]);
+  expect((await readdir(join(retained.installPath, ".."))).sort()).toEqual(
+    [first.packageDigest!, "legacy-projects.json"].sort(),
+  );
 });
 
 test("content changes cannot hide behind an unchanged semantic version", async () => {
@@ -333,7 +338,7 @@ test("a package pin alone grants no Skill binding and user pins cannot select a 
   await writeFile(
     join(root, "home/.code-shell/settings.json"),
     JSON.stringify({
-      panelAppPins: { [id]: { version: first.version, packageDigest: first.packageDigest } },
+      panelAppPins: { [id]: { version: "99.0.0", packageDigest: "f".repeat(64) } },
     }),
   );
   await writeFile(
@@ -342,9 +347,10 @@ test("a package pin alone grants no Skill binding and user pins cannot select a 
   );
   await writePackage("2.0.0");
   await install(true);
-  expect((await listProjectPanelApps(project))[0]?.version).toBe("2.0.0");
+  // The user-scope pin is ignored; this legacy binding keeps the pre-update package.
+  expect((await listProjectPanelApps(project))[0]?.version).toBe("1.0.0");
   expect(scanSkills(project).find((skill) => skill.name === `${id}:check`)?.content).toContain(
-    "2.0.0",
+    "1.0.0",
   );
 });
 
@@ -367,4 +373,178 @@ test("another project's catalog directory swap does not hide pinned packages or 
   await uninstallPanelApp(id);
   expect(await listProjectPanelApps(project)).toEqual([]);
   expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
+});
+
+test("a dormant legacy project preserves its pre-update package before and after migration", async () => {
+  const first = await install();
+  const project = join(root, "dormant");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  const settingsPath = join(project, ".code-shell/settings.json");
+  const settings = {
+    panelAppOverrides: { [id]: "on", "another-app": "off" },
+    customProjectNote: "keep me",
+  };
+  await writeFile(settingsPath, JSON.stringify(settings));
+  await writePackage("2.0.0");
+  await install(true);
+  // No project discovery or migration took place before the global update.
+  expect(JSON.parse(await readFile(settingsPath, "utf8"))).toEqual(settings);
+  expect(scanSkills(project).find((skill) => skill.name === `${id}:check`)?.content).toContain(
+    "1.0.0",
+  );
+  expect(projectPanelAppPackagePins(project)[id]).toEqual({
+    version: "1.0.0",
+    packageDigest: first.packageDigest!,
+  });
+  expect(await migrateProjectPanelAppPackagePins(project)).toEqual([id]);
+  const migrated = JSON.parse(await readFile(settingsPath, "utf8"));
+  expect(migrated).toMatchObject(settings);
+  expect(migrated.panelAppPins[id]).toEqual({
+    version: "1.0.0",
+    packageDigest: first.packageDigest!,
+  });
+  expect(await migrateProjectPanelAppPackagePins(project)).toEqual([]);
+  expect((await listProjectPanelApps(project))[0]!.version).toBe("1.0.0");
+  await writePackage("3.0.0");
+  await install(true);
+  expect((await listProjectPanelApps(project))[0]!.version).toBe("1.0.0");
+});
+
+test("migration preserves another device's explicit upgrade or unbind while package inspection awaits", async () => {
+  await install();
+  await writePackage("2.0.0");
+  const next = await install(true);
+  const project = join(root, "concurrent");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  const file = join(project, ".code-shell/settings.json");
+  writeFileSync(file, JSON.stringify({ panelAppBindings: [id] }));
+  const upgrading = migrateProjectPanelAppPackagePins(project);
+  // The async migration captured the legacy binding and yielded for package IO.
+  writeFileSync(
+    file,
+    JSON.stringify({
+      panelAppBindings: [id],
+      panelAppPins: {
+        [id]: { version: next.version, packageDigest: next.packageDigest! },
+      },
+      concurrentValue: "preserved",
+    }),
+  );
+  expect(await upgrading).toEqual([]);
+  expect((await listProjectPanelApps(project))[0]!.version).toBe("2.0.0");
+  expect(JSON.parse(await readFile(file, "utf8")).concurrentValue).toBe("preserved");
+  writeFileSync(file, JSON.stringify({ panelAppOverrides: { [id]: "on" } }));
+  const unbinding = migrateProjectPanelAppPackagePins(project);
+  writeFileSync(file, JSON.stringify({ panelAppOverrides: { [id]: "off" } }));
+  expect(await unbinding).toEqual([]);
+  expect(JSON.parse(await readFile(file, "utf8"))).toEqual({ panelAppOverrides: { [id]: "off" } });
+});
+
+test("migration racing a catalog upgrade keeps the actual old package and does not bind unused apps", async () => {
+  const first = await install();
+  const project = join(root, "race");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id] }),
+  );
+  await writePackage("2.0.0");
+  await Promise.all([install(true), migrateProjectPanelAppPackagePins(project)]);
+  expect(projectPanelAppPackagePins(project)[id]).toEqual({
+    version: first.version,
+    packageDigest: first.packageDigest!,
+  });
+  const unused = join(root, "unused");
+  await mkdir(unused);
+  expect(await migrateProjectPanelAppPackagePins(unused)).toEqual([]);
+  expect(projectPanelAppPackagePins(unused)).toEqual({});
+  expect((await listProjectPanelApps(unused))[0]!.version).toBe("2.0.0");
+});
+
+test("uninstall and reinstall do not silently upgrade dormant legacy bindings", async () => {
+  const first = await install();
+  const project = join(root, "reinstall");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id] }),
+  );
+  await uninstallPanelApp(id);
+  expect(await listProjectPanelApps(project)).toEqual([]);
+  await writePackage("2.0.0");
+  await install();
+  expect((await listProjectPanelApps(project))[0]!.packageDigest).toBe(first.packageDigest);
+});
+
+test("an unsafe or missing legacy baseline package never falls through to new catalog bytes", async () => {
+  const first = await install();
+  const project = join(root, "damaged-baseline");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  const settings = join(project, ".code-shell/settings.json");
+  await writeFile(settings, JSON.stringify({ panelAppBindings: [id] }));
+  await writePackage("2.0.0");
+  await install(true);
+  const baseline = join(panelAppPackageDir(id, first.packageDigest!), "..", "legacy-projects.json");
+  const original = await readFile(baseline);
+  await writeFile(baseline, "{bad json");
+  await expect(migrateProjectPanelAppPackagePins(project)).rejects.toThrow();
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
+  await rm(baseline);
+  await symlink(settings, baseline);
+  await expect(migrateProjectPanelAppPackagePins(project)).rejects.toThrow("bounded regular file");
+  await rm(baseline);
+  await writeFile(baseline, original);
+  await rm(panelAppPackageDir(id, first.packageDigest!), { recursive: true });
+  await expect(listProjectPanelApps(project)).rejects.toThrow();
+  expect(JSON.parse(await readFile(settings, "utf8")).panelAppPins).toBeUndefined();
+});
+
+test("a partial restore missing the baseline ledger still cannot adopt the latest catalog", async () => {
+  const first = await install();
+  const project = join(root, "partial-restore");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(project, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id] }),
+  );
+  await writePackage("2.0.0");
+  await install(true);
+  const oldDirectory = panelAppPackageDir(id, first.packageDigest!);
+  await rm(join(oldDirectory, "..", "legacy-projects.json"));
+  expect(projectPanelAppPackagePins(project)[id]?.version).toBe("1.0.0");
+  await rm(oldDirectory, { recursive: true });
+  await expect(migrateProjectPanelAppPackagePins(project)).rejects.toThrow();
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
+});
+
+test("batch migration pins all existing bound packages without enabling disabled, off or missing apps", async () => {
+  await install();
+  const manifestPath = join(source, ".codeshell-panel/panel.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  for (const nextId of ["second-panel", "off-panel"]) {
+    await writeFile(manifestPath, JSON.stringify({ ...manifest, id: nextId }));
+    await install();
+  }
+  const project = join(root, "batch-migration");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(root, "home/.code-shell/settings.json"),
+    JSON.stringify({ disabledPanelApps: [id] }),
+  );
+  const settingsFile = join(project, ".code-shell/settings.json");
+  const original = {
+    panelAppBindings: [id, "second-panel", "off-panel", "missing-panel"],
+    panelAppOverrides: { "off-panel": "off" },
+    unrelatedSetting: "keep",
+  };
+  await writeFile(settingsFile, JSON.stringify(original));
+  expect(await migrateProjectPanelAppPackagePins(project)).toEqual([id, "second-panel"]);
+  const current = JSON.parse(await readFile(settingsFile, "utf8"));
+  expect(current).toMatchObject(original);
+  expect(Object.keys(current.panelAppPins).sort()).toEqual([id, "second-panel"].sort());
+  expect(
+    scanSkills(project)
+      .filter((skill) => skill.source === "panel-app")
+      .map((skill) => skill.name),
+  ).toEqual(["second-panel:check"]);
 });

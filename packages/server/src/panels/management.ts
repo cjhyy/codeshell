@@ -14,6 +14,7 @@ import {
   invalidateSkillCache,
   listInstalledPanelApps,
   listProjectPanelApps,
+  migrateProjectPanelAppPackagePins,
   parsePanelAppPackagePins,
   retainInstalledPanelApp,
   userHome,
@@ -373,6 +374,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
   }
 
   async function snapshot(): Promise<PanelSnapshot> {
+    options.assertBinding?.();
+    if (options.projectPackages && hasProject) await migrateProjectPanelAppPackagePins(workspace);
     options.assertBinding?.();
     const project = projectSettings();
     const current = policy(project);

@@ -179,7 +179,29 @@ test("real Hub HTTP serves and executes each project's retained package across c
   const old = await second.bind(true);
   const original = await second.prepare();
   expect(await second.page(original)).toContain("Package 1.0.0");
+  // This project is not discovered until after the global catalog changes.
+  const dormantPath = join(root, "dormant-project");
+  mkdirSync(join(dormantPath, ".code-shell"), { recursive: true });
+  writeFileSync(
+    join(dormantPath, ".code-shell/settings.json"),
+    JSON.stringify({
+      panelAppOverrides: { "version-fixture": "on" },
+      migrationNote: "preserve",
+    }),
+  );
   await install("2.0.0", true);
+  const dormant = await host("dormant-project");
+  expect(await dormant.catalog()).toMatchObject({ version: "1.0.0", bound: true });
+  expect(
+    JSON.parse(readFileSync(join(dormantPath, ".code-shell/settings.json"), "utf8")),
+  ).toMatchObject({
+    panelAppPins: { "version-fixture": { version: "1.0.0", packageDigest: old.packageDigest } },
+    migrationNote: "preserve",
+  });
+  const migrated = await dormant.prepare();
+  expect(await dormant.page(migrated)).toContain("Package 1.0.0");
+  await dormant.run(migrated, "1.0.0");
+  await dormant.close();
   // A catalog update never changes a pinned project or revokes its open page.
   expect(await second.catalog()).toMatchObject({ version: "1.0.0", revision: old.revision });
   expect(await second.page(original)).toContain("Package 1.0.0");

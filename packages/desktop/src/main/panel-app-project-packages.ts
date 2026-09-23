@@ -1,5 +1,6 @@
 import {
   listProjectPanelApps,
+  migrateProjectPanelAppPackagePins,
   panelAppInstallDir,
   panelAppPackageDir,
   panelAppsRegistryPath,
@@ -12,6 +13,7 @@ import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
 export function projectPanelAppInspectionCache(projectPath: string): PanelAppInspectionCache {
   const pin = (id: string) => projectPanelAppPackagePins(projectPath)[id];
   return new PanelAppInspectionCache({
+    prepare: () => migrateProjectPanelAppPackagePins(projectPath),
     installPath(id) {
       const selected = pin(id);
       return selected ? panelAppPackageDir(id, selected.packageDigest) : panelAppInstallDir(id);

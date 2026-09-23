@@ -1,3 +1,9 @@
+import {
+  readLegacyPanelAppPackagePin,
+  legacyPanelAppPackageSelection,
+  rememberLegacyPanelAppPackagePin,
+} from "./legacy-packages.js";
+import type { PanelAppPackagePin } from "./bindings.js";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, existsSync } from "node:fs";
 import {
@@ -854,7 +860,15 @@ export async function retainInstalledPanelApp(
     if (inspected.packageDigest !== expectedPackageDigest) throw new PanelAppReviewChangedError();
     const prepared = await prepareRetainedPackage(source, expectedPackageDigest, record);
     try {
-      return await prepared.publish();
+      const retained = await prepared.publish();
+      const legacy = legacyPanelAppPackageSelection(id);
+      await rememberLegacyPanelAppPackagePin(
+        id,
+        legacy === undefined
+          ? { version: retained.version, packageDigest: expectedPackageDigest }
+          : legacy,
+      );
+      return retained;
     } finally {
       await prepared.dispose();
     }
@@ -887,6 +901,7 @@ async function installReviewedPanelAppFromRoot(
   let backup: string | undefined;
   let directoryReplaced = false;
   const retainedPackages: PreparedPackage[] = [];
+  let legacyPin: PanelAppPackagePin | null | undefined;
   let release: (() => Promise<void>) | undefined;
   try {
     await cp(sourceRoot, staging, { recursive: true });
@@ -923,6 +938,7 @@ async function installReviewedPanelAppFromRoot(
     // Keep the old payload before replacing its legacy catalog path. Existing
     // project pins and task recovery can retain the exact bytes after an update.
     if (previous && options.overwrite) {
+      legacyPin = null; // A broken legacy installation cannot silently adopt the replacement.
       const oldRoot = panelAppInstallDir(previous.id);
       const oldInfo = await lstat(oldRoot).catch((error: NodeJS.ErrnoException) => {
         if (error.code !== "ENOENT") throw error;
@@ -944,6 +960,7 @@ async function installReviewedPanelAppFromRoot(
           })
         : null;
       if (old) {
+        legacyPin = { version: old.manifest.version, packageDigest: old.packageDigest };
         if (old.manifest.id !== previous.id)
           throw new PanelAppInstallError("Installed Panel App ID does not match its record");
         retainedPackages.push(
@@ -954,6 +971,10 @@ async function installReviewedPanelAppFromRoot(
         );
       }
     }
+    const savedLegacy = previous
+      ? legacyPanelAppPackageSelection(copied.manifest.id)
+      : readLegacyPanelAppPackagePin(copied.manifest.id);
+    if (savedLegacy !== undefined) legacyPin = savedLegacy;
     const nextRecord: InstalledPanelAppRecord = {
       id: copied.manifest.id,
       version: copied.manifest.version,
@@ -961,11 +982,24 @@ async function installReviewedPanelAppFromRoot(
       installedAt: previous?.installedAt ?? installedAt,
       lastUpdated: installedAt,
     };
+    // A partial restore of only the current catalog must not upgrade dormant projects.
+    // Payload hashes already exclude this Host metadata.
+    await writeFile(
+      join(staging, PANEL_APP_META_FILE),
+      JSON.stringify({
+        schemaVersion: 1,
+        ...nextRecord,
+        ...(legacyPin === undefined ? {} : { legacyProjectPin: legacyPin }),
+      }) + "\n",
+      { mode: 0o600 },
+    );
     retainedPackages.push(await prepareRetainedPackage(staging, copied.packageDigest, nextRecord));
     // Hosts may need to recheck a reviewed revision and the authenticated owner
     // after staging work, immediately before making the installed snapshot visible.
     await options.beforeCommit?.();
     for (const retained of retainedPackages) await retained.publish();
+    if (legacyPin !== undefined)
+      await rememberLegacyPanelAppPackagePin(copied.manifest.id, legacyPin);
     ({ backup } = await replaceInstalledDirectory(
       copied.manifest.id,
       staging,
@@ -1108,7 +1142,36 @@ export async function uninstallPanelApp(
     if (!existsSync(directory))
       throw new PanelAppInstallError(`Panel App '${id}' is not installed`);
     const quarantine = join(panelAppsRoot(), `.remove-${id}-${randomUUID()}`);
-    await options.beforeCommit?.();
+    let retained: PreparedPackage | undefined;
+    let legacyPin: PanelAppPackagePin | null = null;
+    if (readLegacyPanelAppPackagePin(id) === undefined) {
+      const record = (await readInstalledPanelAppsRegistry()).find((app) => app.id === id);
+      const savedLegacy = legacyPanelAppPackageSelection(id);
+      if (savedLegacy !== undefined) legacyPin = savedLegacy;
+      const info = await lstat(directory);
+      const inspected =
+        info.isDirectory() && !info.isSymbolicLink()
+          ? await inspectPanelAppSource(directory).catch(() => null)
+          : null;
+      if (record && inspected?.manifest.id === id) {
+        if (savedLegacy === undefined)
+          legacyPin = {
+            version: inspected.manifest.version,
+            packageDigest: inspected.packageDigest,
+          };
+        retained = await prepareRetainedPackage(directory, inspected.packageDigest, {
+          ...record,
+          version: inspected.manifest.version,
+        });
+      }
+    }
+    try {
+      await options.beforeCommit?.();
+      await retained?.publish();
+      await rememberLegacyPanelAppPackagePin(id, legacyPin);
+    } finally {
+      await retained?.dispose();
+    }
     await rename(directory, quarantine);
     try {
       await removeInstalledPanelAppRecord(id);

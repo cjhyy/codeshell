@@ -49,6 +49,7 @@ export {
 } from "./bindings.js";
 export {
   projectPanelAppPackagePins,
+  migrateProjectPanelAppPackagePins,
   selectProjectPanelAppPackage,
   listProjectPanelApps,
 } from "./project-packages.js";

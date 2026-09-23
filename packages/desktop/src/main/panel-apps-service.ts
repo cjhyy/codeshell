@@ -5,6 +5,7 @@ import {
   isPanelAppBound,
   listInstalledPanelApps,
   listProjectPanelApps,
+  migrateProjectPanelAppPackagePins,
   projectPanelAppPackagePins,
   resolvePanelAppBindingPolicy,
   resolvePanelAppBindingProjectPath,
@@ -51,6 +52,7 @@ async function discoverPanelApps(
   let apps: InstalledPanelApp[];
   let pins: ReturnType<typeof projectPanelAppPackagePins>;
   try {
+    if (projectPath) await migrateProjectPanelAppPackagePins(projectPath);
     pins = projectPath ? projectPanelAppPackagePins(projectPath) : {};
     apps = projectPath ? await listProjectPanelApps(projectPath) : await listInstalledPanelApps();
     if (

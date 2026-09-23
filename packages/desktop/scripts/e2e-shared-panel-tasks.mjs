@@ -13,7 +13,8 @@ import {
   makeIsolatedElectronHome,
 } from "./electron-harness.mjs";
 
-const projectPins = process.argv.includes("--project-pins");
+const legacyProjects = process.argv.includes("--legacy-projects");
+const projectPins = legacyProjects || process.argv.includes("--project-pins");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-shared-task-e2e-");
 // Native package authorization intentionally rejects symlinked install roots.
@@ -147,16 +148,18 @@ try {
       } = await import("@cjhyy/code-shell-core");
       const current = (await listInstalledPanelApps()).find((item) => item.id === manifest.id);
       assert.ok(current?.packageDigest);
-      await retainInstalledPanelApp(manifest.id, current.packageDigest);
-      await writeFile(
-        join(project, ".code-shell/settings.json"),
-        JSON.stringify({
-          panelAppBindings: [manifest.id],
-          panelAppPins: {
-            [manifest.id]: { version: current.version, packageDigest: current.packageDigest },
-          },
-        }),
-      );
+      if (!legacyProjects) {
+        await retainInstalledPanelApp(manifest.id, current.packageDigest);
+        await writeFile(
+          join(project, ".code-shell/settings.json"),
+          JSON.stringify({
+            panelAppBindings: [manifest.id],
+            panelAppPins: {
+              [manifest.id]: { version: current.version, packageDigest: current.packageDigest },
+            },
+          }),
+        );
+      }
       const newer = join(isolated.home, "catalog-v2");
       await mkdir(join(newer, ".codeshell-panel"), { recursive: true });
       await mkdir(join(newer, "app/tools"), { recursive: true });
@@ -221,6 +224,11 @@ try {
   assert.ok(panel, "Panel was not installed");
   assert.equal(panel.version, "1.0.0");
   if (projectPins) assert.equal(panel.packagePinned, true);
+  if (legacyProjects) {
+    const migrated = JSON.parse(await readFile(join(project, ".code-shell/settings.json"), "utf8"));
+    assert.equal(migrated.panelAppPins[manifest.id].version, "1.0.0");
+    assert.equal(migrated.panelAppPins[manifest.id].packageDigest, panel.packageDigest);
+  }
   // The production native binding API materializes legacy pins and shares the
   // exact conditional revision with paired Web. No raw project settings write.
   const bindingBefore = await win.evaluate(
@@ -798,6 +806,7 @@ try {
       packageMutationBlocksQueuedRunningAndPreparing: true,
       projectUpdateAfterActualTaskExit: projectPins,
       projectPinnedAgainstNewerCatalog: projectPins,
+      legacyProjectAutomaticallyPinned: legacyProjects,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,
       sharedQueueControl: true,

@@ -444,6 +444,7 @@ export {
   listInstalledPanelApps,
   listProjectPanelApps,
   projectPanelAppPackagePins,
+  migrateProjectPanelAppPackagePins,
   selectProjectPanelAppPackage,
   parsePanelAppPackagePins,
   retainInstalledPanelApp,
