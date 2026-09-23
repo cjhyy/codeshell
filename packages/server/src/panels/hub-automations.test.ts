@@ -453,3 +453,76 @@ test("external cancellation records cancellation and an uncertain outcome pauses
     lastExecution: interrupted.lastExecution,
   });
 });
+
+test("conditional updates and deletion preserve another device's definition and ignore run counters", async () => {
+  const f = fixture();
+  const created = await f.call("createUnique", definition);
+  expect(created.revision).toMatch(/^[a-f0-9]{64}$/);
+  const changed = await f.call("updateIfRevision", {
+    id: created.id,
+    expectedRevision: created.revision,
+    prompt: "second device",
+  });
+  expect(changed.ok).toBe(true);
+  expect(changed.automation.revision).not.toBe(created.revision);
+  for (const method of ["updateIfRevision", "deleteIfRevision"]) {
+    expect(
+      await f.call(method, {
+        id: created.id,
+        expectedRevision: created.revision,
+        ...(method.startsWith("update") ? { prompt: "stale overwrite" } : {}),
+      }),
+    ).toEqual({ ok: false, conflict: true });
+  }
+  await f.call("runNow", { id: created.id });
+  await until(() => f.events.some((event) => event.type === "job_end"));
+  const after = (await f.call("list")).automations[0];
+  expect(after.prompt).toBe("second device");
+  expect(after.runCount).toBe(1);
+  expect(after.revision).toBe(changed.automation.revision);
+  expect(
+    await f.call("deleteIfRevision", { id: created.id, expectedRevision: after.revision }),
+  ).toEqual({ ok: true });
+  expect(
+    await f.call("deleteIfRevision", { id: created.id, expectedRevision: after.revision }),
+  ).toEqual({ ok: false, conflict: true });
+  await expect(
+    f.call("updateIfRevision", { id: created.id, prompt: "missing revision" }),
+  ).rejects.toThrow(/expectedRevision/);
+});
+
+test("revision check observes an independent writer between initial lookup and the locked mutation", async () => {
+  const { CronStore } = await import("@cjhyy/code-shell-core/internal");
+  const f = fixture();
+  const job = await f.call("createUnique", definition);
+  const mutate = CronStore.prototype.mutate;
+  let armed = true;
+  Object.defineProperty(CronStore.prototype, "mutate", {
+    configurable: true,
+    writable: true,
+    value: function (...args: any[]) {
+      if (armed) {
+        armed = false;
+        mutate.call(new CronStore(f.file, { strictRead: true }), (jobs) => ({
+          jobs: jobs.map((current) =>
+            current.id === job.id ? { ...current, prompt: "independent writer" } : current,
+          ),
+          result: null,
+        }));
+      }
+      return mutate.apply(this, args as never);
+    },
+  });
+  try {
+    expect(
+      await f.call("updateIfRevision", {
+        id: job.id,
+        expectedRevision: job.revision,
+        prompt: "stale caller",
+      }),
+    ).toEqual({ ok: false, conflict: true });
+    expect(JSON.parse(readFileSync(f.file, "utf8")).jobs[0].prompt).toBe("independent writer");
+  } finally {
+    CronStore.prototype.mutate = mutate;
+  }
+});

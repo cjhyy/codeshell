@@ -579,6 +579,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         dataDir: opts.dataDir,
         host: "hub",
         automations: {
+          conditionalMutations: true,
           call: (scope, method, params) => {
             if (!panelAutomations || closing) throw Error("Cloud automations are unavailable");
             return panelAutomations.host.call(scope, method, params);

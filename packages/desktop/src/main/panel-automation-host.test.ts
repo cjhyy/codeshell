@@ -131,3 +131,54 @@ test("wire calls cannot forge workspace, identity, permission, or method-specifi
     parsePanelAutomationCall("automations.createUnique", { ...input, prompt: "p".repeat(20001) }),
   ).toThrow();
 });
+
+test("paired conditional mutations detect native edits and exclude execution statistics", async () => {
+  const s = new CronScheduler();
+  s.setExecutionEnabled(false);
+  const host = createDesktopPanelAutomationHost(
+    () => deps,
+    () => s,
+  );
+  try {
+    const first = (await host.call(scope, "automations.createUnique", input)) as any;
+    s.update(first.id, { prompt: "native edit" });
+    expect(
+      await host.call(scope, "automations.updateIfRevision", {
+        id: first.id,
+        expectedRevision: first.revision,
+        prompt: "old page",
+      }),
+    ).toEqual({ ok: false, conflict: true });
+    expect(
+      await host.call(scope, "automations.deleteIfRevision", {
+        id: first.id,
+        expectedRevision: first.revision,
+      }),
+    ).toEqual({ ok: false, conflict: true });
+    const current = ((await host.call(scope, "automations.list")) as any).automations[0];
+    expect(current.prompt).toBe("native edit");
+    s.get(first.id)!.runCount++;
+    const updated = (await host.call(scope, "automations.updateIfRevision", {
+      id: first.id,
+      expectedRevision: current.revision,
+      prompt: "reviewed edit",
+    })) as any;
+    expect(updated.ok).toBe(true);
+    expect(updated.automation.prompt).toBe("reviewed edit");
+    expect(updated.automation.runCount).toBe(1);
+    await expect(
+      host.call({ ...scope, sessionId: "session-b" }, "automations.deleteIfRevision", {
+        id: first.id,
+        expectedRevision: updated.automation.revision,
+      }),
+    ).rejects.toThrow(/not available/);
+    expect(
+      await host.call(scope, "automations.deleteIfRevision", {
+        id: first.id,
+        expectedRevision: updated.automation.revision,
+      }),
+    ).toEqual({ ok: true });
+  } finally {
+    s.stopAll();
+  }
+});

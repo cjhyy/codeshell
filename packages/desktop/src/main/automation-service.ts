@@ -1,3 +1,4 @@
+import { panelAutomationRevision } from "@cjhyy/code-shell-server/panels";
 /**
  * Automation service — bridges the renderer's automation UI to the live
  * in-process CronScheduler held by main. Main injects the scheduler via
@@ -23,6 +24,7 @@ import { assertDesktopSessionId } from "./session-validation.js";
 
 export interface AutomationSummary {
   id: string;
+  revision?: string;
   name: string;
   schedule: string;
   prompt: string;
@@ -82,6 +84,7 @@ export function setAutomationScheduler(s: CronScheduler | null): void {
 export function automationSummary(job: CronJob): AutomationSummary {
   return {
     id: job.id,
+    revision: panelAutomationRevision(job),
     name: job.name,
     schedule: job.schedule,
     prompt: job.prompt,

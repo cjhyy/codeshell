@@ -1,6 +1,8 @@
 import { canonicalKey } from "@cjhyy/code-shell-core/internal";
 import {
   panelAutomationCreationKey,
+  assertPanelAutomationRevision,
+  PanelAutomationConflictError,
   parsePanelAutomationCall,
   type PanelAutomationHost,
 } from "@cjhyy/code-shell-server/panels";
@@ -17,6 +19,7 @@ export function createDesktopPanelAutomationHost(
   scheduler = requireAutomationScheduler,
 ): PanelAutomationHost {
   return {
+    conditionalMutations: true,
     async call(scope, method, params) {
       const operation = parsePanelAutomationCall(method, params);
       assertDesktopSessionId(scope.sessionId);
@@ -60,16 +63,29 @@ export function createDesktopPanelAutomationHost(
         );
       }
       const job = s.get(operation.id);
+      if (!job && operation.expectedRevision) return { ok: false, conflict: true };
       if (!job || !owns(job)) throw Error("Panel automation is not available in this project task");
       const assertCurrent = (current: Readonly<typeof job>) => {
         if (!owns(current)) throw Error("Panel automation binding changed; reload before retrying");
+        assertPanelAutomationRevision(current, operation.expectedRevision);
       };
       // No asynchronous gap between this final ownership check and mutation.
-      if (operation.action === "update") {
-        const updated = s.update(job.id, operation.patch, assertCurrent);
-        return updated ? automationSummary(updated) : null;
+      try {
+        if (operation.action === "update") {
+          const updated = s.update(job.id, operation.patch, assertCurrent);
+          if (operation.expectedRevision)
+            return updated
+              ? { ok: true, automation: automationSummary(updated) }
+              : { ok: false, conflict: true };
+          return updated ? automationSummary(updated) : null;
+        }
+        const ok = s[operation.action](job.id, assertCurrent);
+        return operation.expectedRevision && !ok ? { ok: false, conflict: true } : { ok };
+      } catch (error) {
+        if (operation.expectedRevision && error instanceof PanelAutomationConflictError)
+          return { ok: false, conflict: true };
+        throw error;
       }
-      return { ok: s[operation.action](job.id, assertCurrent) };
     },
   };
 }

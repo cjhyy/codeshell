@@ -210,6 +210,28 @@ durable task. Hub-authenticated HeadlessServer now composes a project-owned
 scheduler with the same automation interface; generic HTTP runtime embedders
 still need to inject an implementing Host.
 
+Implementing Hosts also advertise `automations.updateIfRevision` and
+`automations.deleteIfRevision`. Read the job's opaque `revision` from list/create
+responses, then send the ordinary mutation fields plus `expectedRevision`.
+The token identifies definition, binding, permission and enabled state; running
+counters, next-run timestamps and execution receipts do not invalidate it.
+The Host checks it inside the same CronStore transaction that writes the change.
+An update returns `{ok:true, automation}` and deletion returns `{ok:true}`.
+A changed or disappeared record returns `{ok:false, conflict:true}` without
+applying the caller's mutation. Re-read and review before another decision;
+never fall back to the unconditional method after a conflict or lost response.
+This job revision is separate from the Panel package revision and is not an
+authorization credential. Scope and package checks still
+apply before the conditional mutation.
+
+Desktop main, paired Web and Hub share this contract. Native guest operations
+recheck the current guest, project selection, workspace trust and Session after
+asynchronous authority lookup. Generic HTTP hosts must opt in with
+`PanelAutomationHost.conditionalMutations`; otherwise the methods are neither
+advertised nor dispatched. Older unconditional methods remain compatible and
+do not promise concurrent-edit protection. Clients must discover the exact
+method instead of assuming support from API version or a revision field alone.
+
 Server `/panels` exports `createHubPanelAutomationHost` as a project scheduling
 building block. The caller must supply a persistent package/binding authorizer
 and an executor that honors the resolved approval/sandbox policy, reserves the

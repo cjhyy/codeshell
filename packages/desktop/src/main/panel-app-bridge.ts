@@ -57,6 +57,7 @@ import {
   PanelBridgeError,
   panelBridgeFailure,
   panelAutomationCreationKey,
+  type PanelAutomationHost,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
 import type { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
@@ -242,6 +243,8 @@ export interface PanelAppBridgeOptions {
   automations?: {
     /** True only when create persists creationKey atomically with the job. */
     uniqueCreation?: boolean;
+    /** Shared project Host for transactionally checked mutations. */
+    conditional?: PanelAutomationHost;
     list(scope: { resumeSessionId: string }): Promise<
       Array<{
         id: string;
@@ -1205,6 +1208,8 @@ export class PanelAppBridge {
       taskCookies: !!this.options.cookieCredentials?.taskCredentials,
       automations: !!this.options.automations,
       automationUniqueCreate: this.options.automations?.uniqueCreation === true,
+      automationConditionalMutations:
+        this.options.automations?.conditional?.conditionalMutations === true,
       mediaMethods: [
         "media.status",
         "media.import",
@@ -1808,6 +1813,10 @@ export class PanelAppBridge {
       case "automations.createUnique":
         this.requirePermission(binding, "automations.manage");
         return this.createPanelAutomation(binding, params, true);
+      case "automations.updateIfRevision":
+      case "automations.deleteIfRevision":
+        this.requirePermission(binding, "automations.manage");
+        return this.conditionalPanelAutomation(binding, method, params);
       case "automations.update":
         this.requirePermission(binding, "automations.manage");
         return this.updatePanelAutomation(binding, params);
@@ -2187,6 +2196,41 @@ export class PanelAppBridge {
   private panelAutomationScope(binding: GuestBinding): { resumeSessionId: string } {
     this.panelAutomationHost(binding);
     return { resumeSessionId: binding.context.sessionId! };
+  }
+
+  private async conditionalPanelAutomation(binding: GuestBinding, method: string, params: unknown) {
+    const host = this.panelAutomationHost(binding).conditional;
+    if (!host?.conditionalMutations) throw Error("Conditional automation changes are unavailable");
+    this.requirePermission(binding, "context.workspace");
+    this.requirePermission(binding, "context.session");
+    const cwd = binding.context.cwd!;
+    const sessionId = binding.context.sessionId!;
+    return host.call(
+      {
+        appId: binding.resource.descriptor.appId,
+        cwd,
+        sessionId,
+        revision: binding.resource.descriptor.revision,
+        isAuthorized: async () => {
+          if (
+            this.guests.get(binding.guest.id) !== binding ||
+            binding.guest.isDestroyed() ||
+            binding.context.cwd !== cwd ||
+            binding.context.sessionId !== sessionId ||
+            !this.options.isWorkspaceTrusted(cwd)
+          )
+            return false;
+          try {
+            this.assertProjectBinding(binding);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+      },
+      method,
+      params,
+    );
   }
 
   private automationId(params: unknown): string {

@@ -49,6 +49,8 @@ const groups: Record<string, string[]> = {
     "automations.create",
     "automations.createUnique",
     "automations.update",
+    "automations.updateIfRevision",
+    "automations.deleteIfRevision",
     "automations.pause",
     "automations.resume",
     "automations.delete",
@@ -66,6 +68,7 @@ export function desktopPanelCapabilities(
     taskCookies?: boolean;
     automations: boolean;
     automationUniqueCreate?: boolean;
+    automationConditionalMutations?: boolean;
     tasks?: unknown;
     mediaMethods: string[];
     limits?: any;
@@ -92,6 +95,10 @@ export function desktopPanelCapabilities(
       ...entries.filter(
         (method) =>
           (method !== "automations.createUnique" || options.automationUniqueCreate === true) &&
+          (!method.endsWith("IfRevision") ||
+            (options.automationConditionalMutations === true &&
+              permitted.has("context.workspace") &&
+              permitted.has("context.session"))) &&
           (!(
             method.endsWith("authorizeProcess") ||
             method === "resources.capture" ||

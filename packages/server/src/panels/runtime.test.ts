@@ -249,6 +249,15 @@ describe("Panel HTTP runtime", () => {
     });
     const grant = await f.prepare();
     expect(grant.context.availableMethods).toContain("automations.createUnique");
+    expect(grant.context.availableMethods).not.toContain("automations.updateIfRevision");
+    expect(
+      (
+        await f.api(`${grant.instanceId}/call`, "POST", {
+          method: "automations.updateIfRevision",
+          params: { id: "job", expectedRevision: "a".repeat(64), prompt: "new" },
+        })
+      ).status,
+    ).toBe(501);
     expect(
       (await f.api(`${grant.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
         .status,

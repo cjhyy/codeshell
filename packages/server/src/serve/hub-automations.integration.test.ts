@@ -187,6 +187,8 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
       const body = (await response.json()) as any;
       expect(response.status, JSON.stringify(body)).toBe(200);
       expect(body.context.availableMethods).toContain("automations.createUnique");
+      expect(body.context.availableMethods).toContain("automations.updateIfRevision");
+      expect(body.context.availableMethods).toContain("automations.deleteIfRevision");
       return `/api/v1/panels/runtime/${body.instanceId}/call`;
     };
     let endpoint = await prepare();
@@ -207,6 +209,23 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
     expect(typeof job.id, JSON.stringify(created)).toBe("string");
     const replayed = await call("createUnique", definition);
     expect((replayed.result ?? replayed).id).toBe(job.id);
+    const edited = await call("updateIfRevision", {
+      id: job.id,
+      expectedRevision: job.revision,
+      prompt: "Write the proof file once.",
+    });
+    expect(edited.ok).toBe(true);
+    expect(await call("deleteIfRevision", { id: job.id, expectedRevision: job.revision })).toEqual({
+      ok: false,
+      conflict: true,
+    });
+    expect(
+      await call("updateIfRevision", {
+        id: job.id,
+        expectedRevision: job.revision,
+        prompt: "stale",
+      }),
+    ).toEqual({ ok: false, conflict: true });
     await call("runNow", { id: job.id });
     let admissionTimer: ReturnType<typeof setTimeout> | undefined;
     try {

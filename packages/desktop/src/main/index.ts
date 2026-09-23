@@ -801,6 +801,7 @@ const panelAppBridge = new PanelAppBridge({
   },
   automations: {
     uniqueCreation: true,
+    conditional: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
     list: async (scope) =>
       listAutomationsForResumeSession(scope.resumeSessionId, desktopAutomationAuthorityDeps()),
     create: async (input, scope) =>

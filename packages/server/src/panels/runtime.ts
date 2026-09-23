@@ -1281,6 +1281,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           if (method.startsWith("automations."))
             return (
               !!options.automations &&
+              (!method.endsWith("IfRevision") ||
+                options.automations.conditionalMutations === true) &&
               ["automations.manage", "context.workspace", "context.session"].every((permission) =>
                 app.permissions.includes(permission as never),
               ) &&
@@ -1423,6 +1425,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     if (!grant.app.permissions.includes(permission as never)) error(403, "面板未声明这个权限。");
     if (method.startsWith("automations.")) {
       if (!options.automations) error(501, "当前执行环境尚未接入面板自动化。");
+      if (method.endsWith("IfRevision") && !options.automations.conditionalMutations)
+        error(501, "当前执行环境尚未接入自动化版本检查。");
       if (
         !grant.app.permissions.includes("context.workspace") ||
         !grant.app.permissions.includes("context.session") ||

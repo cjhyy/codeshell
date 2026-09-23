@@ -14,6 +14,9 @@ import { panelExecutionGate } from "./execution-gate.js";
 import { readHubSessionState } from "../hub/session-management.js";
 import {
   panelAutomationCreationKey,
+  panelAutomationRevision,
+  assertPanelAutomationRevision,
+  PanelAutomationConflictError,
   parsePanelAutomationCall,
   type PanelAutomationHost,
 } from "./automations.js";
@@ -42,6 +45,7 @@ export interface HubPanelAutomationOptions {
 function summary(job: CronJob) {
   return {
     id: job.id,
+    revision: panelAutomationRevision(job),
     name: job.name,
     schedule: job.schedule,
     prompt: job.prompt,
@@ -305,6 +309,7 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
   }, 1000);
   ownerTimer.unref?.();
   const host: PanelAutomationHost = {
+    conditionalMutations: true,
     async call(scope, method, params) {
       assertOwner();
       const operation = parsePanelAutomationCall(method, params);
@@ -357,13 +362,31 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
         );
       }
       const job = scheduler.get(operation.id);
-      if (!job) throw Error("Automation task is unavailable");
-      guard(job);
-      if (operation.action === "update") {
-        const updated = scheduler.update(job.id, operation.patch, guard);
-        return updated ? summary(updated) : null;
+      if (!job) {
+        if (operation.expectedRevision) return { ok: false, conflict: true };
+        throw Error("Automation task is unavailable");
       }
-      return { ok: scheduler[operation.action](job.id, guard) };
+      guard(job);
+      const check = (current: Readonly<CronJob>) => {
+        guard(current);
+        assertPanelAutomationRevision(current, operation.expectedRevision);
+      };
+      try {
+        if (operation.action === "update") {
+          const updated = scheduler.update(job.id, operation.patch, check);
+          if (operation.expectedRevision)
+            return updated
+              ? { ok: true, automation: summary(updated) }
+              : { ok: false, conflict: true };
+          return updated ? summary(updated) : null;
+        }
+        const ok = scheduler[operation.action](job.id, check);
+        return operation.expectedRevision && !ok ? { ok: false, conflict: true } : { ok };
+      } catch (error) {
+        if (operation.expectedRevision && error instanceof PanelAutomationConflictError)
+          return { ok: false, conflict: true };
+        throw error;
+      }
     },
   };
   return { host, close, activeCount: () => active.size };

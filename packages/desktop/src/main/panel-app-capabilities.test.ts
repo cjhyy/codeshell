@@ -160,3 +160,24 @@ test("unique automation creation is advertised only by an implementing authorize
       .availableMethods,
   ).not.toContain("automations.createUnique");
 });
+
+test("conditional automation methods require an implementing Host and both context permissions", () => {
+  const modern = { ...options, automations: true, automationConditionalMutations: true };
+  for (const method of ["automations.updateIfRevision", "automations.deleteIfRevision"]) {
+    expect(
+      desktopPanelCapabilities(
+        ["automations.manage", "context.workspace", "context.session"],
+        modern,
+      ).availableMethods,
+    ).toContain(method);
+    expect(desktopPanelCapabilities(["automations.manage"], modern).availableMethods).not.toContain(
+      method,
+    );
+    expect(
+      desktopPanelCapabilities(["automations.manage", "context.workspace", "context.session"], {
+        ...modern,
+        automationConditionalMutations: false,
+      }).availableMethods,
+    ).not.toContain(method);
+  }
+});

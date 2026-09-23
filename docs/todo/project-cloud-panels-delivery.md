@@ -1732,3 +1732,56 @@ fencing，也不保证外部副作用恰好一次。所有共享文件写入进�
 提醒验收。真实行情、提醒产物、手机通知、旧任务迁移及多设备自动化定义更新
 仍需完成。Panel 变更是未发布源码，services 的公开依赖与运行镜像未更新；
 六 Panel 四组合、设备目录／中继、三仓兼容发布、目标部署及恢复／回滚仍继续。
+
+### 增量 43：跨端自动化条件更新／删除及冲突恢复（2026-09-24）
+
+此前页面 list 后的 update/delete 没有读取版本，其他设备在两步之间更新时可能
+被覆盖。本增量保留旧接口，并增加可探测、在持久存储锁内核对的条件操作。
+
+完成：
+
+- 共享 Panel Host 提供任务定义 revision，覆盖身份、名称、prompt、计划、绑定、
+  权限、启停、来源及停用原因；运行计数、下一运行时间与运行回执不造成编辑冲突。
+  revision 是内容摘要，不是单调计数或权限凭据，也不是 Panel 包修订字段。
+- 新增 updateIfRevision/deleteIfRevision，要求 expectedRevision。授权与项目
+  校验后，在 CronStore 的实际读改写事务里再次核对；不匹配或记录消失返回
+  `{ok:false,conflict:true}`，不落下调用者改动。旧无条件方法保持兼容。
+- Desktop native 借用和配对 Web 相同的 Host 检查，不新增调度器；guest、任务、
+  项目包选择与工作区信任在异步权限读取后重查。Hub 使用同一核对函数。嵌入式
+  HTTP Host 显式声明 conditionalMutations 后才广告／调用新方法。
+- 投资行情关注、资讯、市场脉搏与旧提醒清理接入共享客户端操作函数。新能力
+  声明后缺少 revision 则拒绝操作；冲突、响应丢失或其他失败不降级到无条件写入。
+  冲突后下一次点击只重新读取，不能自动覆盖或删除。旧 Host 沿用原能力边界。
+- 修复关注提醒 withFlight 收尾刷新会清除“需重新读取”状态的问题：自动刷新可
+  更新任务快照，但保留错误与重读意图，直到用户明确核对。
+
+验证：
+
+- Host 自动化、HTTP runtime、能力声明、原生服务／隔离协议和公开导出共 103 项、
+  986 个断言通过；新增真实 CronStore 的竞争写入测试，在初次查询与实际事务
+  之间由另一个 store 写入新 prompt，旧版本修改被拒绝。运行完成只增加计数，
+  不改变定义 revision。日志 `/tmp/automation-cas-regression.log`。
+- 真实 Electron main/preload/Panel guest＋配对 HTTP 验证双向读取相同 revision，
+  原生先更新、网页旧 update/delete 拒绝，网页核对后更新、原生旧 delete 拒绝，
+  最终按最新 revision 删除；原有任务、目录、队列、Cookie、退出／停远程服务
+  后任务继续的完整回归通过。日志 `/tmp/automation-cas-electron.log`。
+- 实际云端 HTTP 集成新增条件更新、旧版本删除／更新拒绝后，继续执行真实 Node
+  Core Worker 的文件写入、跨登录及重启检查，包含在上述 103 项中。模型仍受控。
+- Quant 全离线流程与 158 项测试通过；之后补充市场脉搏冲突只重读检查，该共享
+  helper 测试文件 4 项通过。完整 Chromium 页面回归通过，390px 关注流程覆盖
+  删除冲突、保留外部定义、禁止总开关、点击只重读、再次明确更新及无旧接口调用。
+  日志 `/tmp/automation-cas-quant-{tests-final,ui4}.log`、
+  `/tmp/automation-cas-pulse-test.log`；包 validate 通过。
+- Server、Desktop 构建与 Desktop 类型检查通过；改动文件 lint 无错误、保留两个
+  已有 prefer-const 警告；格式／diff 检查通过。日志
+  `/tmp/automation-cas-{server-build,desktop-build,desktop-types,lint}.log`。
+- 首轮新增控制器测试暴露收尾刷新清除冲突，修复后通过。UI 夹具扩展最初漏掉
+  list 分支大括号，导致后续存储调用提前返回；诊断后修复。随后旧接口快照断言
+  发现不应给模拟旧 Host 添加新字段，改为仅现代能力夹具提供 revision，最终全
+  浏览器通过。没有放宽生产权限或跳过旧流程断言来获得通过。
+
+边界：只调用旧无条件接口的客户端仍可覆盖，不能声称混用旧版本也具备并发保护。
+关注文档与自动化不属于同一个事务；新闻／市场脉搏等其他异步页面状态的完整跨项目
+切换验收、旧任务版本迁移、其他 Panel 的编辑接入、真实提醒／手机通知继续列为
+待办。当前变更未发布到 services 的固定依赖或部署镜像。六 Panel 四组合、设备
+目录／中继、兼容发布与目标部署／恢复／回滚仍未全部完成，保持完整目标推进。

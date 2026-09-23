@@ -399,13 +399,69 @@ try {
   assert.equal((await desktop("automations.list", {})).automations[0].enabled, false);
   await phoneCall("automations.update", { id: nativeAutomation.id, prompt: "Edited on phone" });
   assert.equal((await desktop("automations.list", {})).automations[0].prompt, "Edited on phone");
+  for (const method of ["automations.updateIfRevision", "automations.deleteIfRevision"]) {
+    assert.ok(phone.context.availableMethods.includes(method));
+    assert.ok((await desktop("context.get", {})).availableMethods.includes(method));
+  }
+  const observed = (await phoneCall("automations.list", {})).automations[0];
+  const changed = await desktop("automations.updateIfRevision", {
+    id: observed.id,
+    expectedRevision: observed.revision,
+    prompt: "New native definition",
+  });
+  assert.equal(changed.ok, true);
+  assert.notEqual(changed.automation.revision, observed.revision);
+  assert.deepEqual(
+    await phoneCall("automations.updateIfRevision", {
+      id: observed.id,
+      expectedRevision: observed.revision,
+      prompt: "Stale phone definition",
+    }),
+    { ok: false, conflict: true },
+  );
+  assert.deepEqual(
+    await phoneCall("automations.deleteIfRevision", {
+      id: observed.id,
+      expectedRevision: observed.revision,
+    }),
+    { ok: false, conflict: true },
+  );
+  const fromPhone = await phoneCall("automations.updateIfRevision", {
+    id: observed.id,
+    expectedRevision: changed.automation.revision,
+    prompt: "Reviewed phone definition",
+  });
+  assert.equal(fromPhone.ok, true);
+  assert.equal(
+    (await desktop("automations.list", {})).automations[0].revision,
+    fromPhone.automation.revision,
+  );
+  assert.deepEqual(
+    await desktop("automations.deleteIfRevision", {
+      id: observed.id,
+      expectedRevision: changed.automation.revision,
+    }),
+    { ok: false, conflict: true },
+  );
   const phoneCreated = await phoneCall("automations.createUnique", {
     ...automationInput,
     key: "phone-reminder",
   });
   assert.equal((await desktop("automations.list", {})).automations.length, 2);
-  await desktop("automations.delete", { id: phoneCreated.id });
-  await phoneCall("automations.delete", { id: nativeAutomation.id });
+  assert.deepEqual(
+    await desktop("automations.deleteIfRevision", {
+      id: phoneCreated.id,
+      expectedRevision: phoneCreated.revision,
+    }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    await phoneCall("automations.deleteIfRevision", {
+      id: nativeAutomation.id,
+      expectedRevision: fromPhone.automation.revision,
+    }),
+    { ok: true },
+  );
   assert.equal((await desktop("automations.list", {})).automations.length, 0);
   assert.equal(phone.context.capabilities.tasks.executionRevision, panel.revision);
   const projectDirectory = await desktop("filesystem.getKnownDirectory", { name: "project" });
@@ -924,6 +980,7 @@ try {
     JSON.stringify({
       actualElectron: true,
       sharedAutomationScheduler: true,
+      conditionalAutomationMutations: true,
       automationSessionAuthority: true,
       nativeConditionalProjectBinding: true,
       packageMutationBlocksQueuedRunningAndPreparing: true,
