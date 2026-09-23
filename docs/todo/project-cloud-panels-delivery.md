@@ -625,3 +625,44 @@ node packages/desktop/scripts/e2e-download-background.mjs /absolute/path/to/code
 仍为任务分支上的实现和验证，未发布完整版本。临时站点／测试账号与模拟手机宽度不能
 替代真实服务商或物理手机验收。云端完整下载、其余 Panel、版本锁定、Link 接入、远程
 中继和部署恢复等原目标保持未完成。
+
+
+### 增量 17：云端下载、跨登录接续和项目重启恢复（2026-09-23）
+
+Hub 的已接收原生任务改为项目持有：发起登录退出后任务继续运行，相同项目、Panel 和
+安装 revision 的其他授权页面收到任务摘要。准备阶段和未完成审批仍随登录撤销；
+已撤销页面无法继续查询、读取文件或启动进程。停止 Host／项目仍中断执行协调器，
+重新登录不自动重放未完成任务。此处指原生工具任务，不扩大为全部 Agent Task 的保证。
+
+真实 Docker 验收发现旧目录书签文件的锁落在 `/data.lock`，只读根文件系统会拒绝创建。
+Hub 改用数据卷内 `panel-directories/bookmarks.json`，锁也留在数据卷内；旧记录经过
+相同 app、项目和目录身份校验后迁移，保持原书签 ID。Desktop 共享布局不变。
+
+下载 Panel 现在通过事件及周期快照发现另一设备新增的已提交下载记录，并向任务协调器
+查询进度和完成产物；不导入未提交草稿，不推进当前编辑器的条件保存版本，不回写旧草稿。
+页面重开仍由项目记录和同一后台任务恢复历史。保存位置文案改为项目运行设备的所选目录，
+避免云端页面错误宣称文件保存在手机或用户电脑。
+
+验证证据：
+
+- Download 完整套件 247 项通过，新增已打开设备发现另一设备任务、无重复提交／条件保存的回归。
+- Server runtime 与书签迁移共 49 项通过，涵盖跨登录事件、退出后完成、旧授权失效与只读卷布局。
+- Server 类型检查、改动 Host ESLint、Panel 包校验通过。
+- 新增可复验的云端下载浏览器验收，复用两个真实 Docker 项目隔离检查。
+  实际安装 Download 包及容器中的 yt-dlp，用 FFmpeg 生成 H264 MP4，测试 HTTP 站点延迟返回文件。
+  1440px 登录提交任务，在运行中退出并关闭；另一独立 390px 登录看到原任务完成。
+  检查产物与源字节一致、另一个项目不可读取、父页面解码视频、保存到设备字节相同且无横向溢出。
+- 停止再启动项目，用新浏览器登录恢复相同任务 ID、成功状态、资源 ID 与文件字节，历史可播放；
+  后台任务数量仍为一，没有重新提交下载。整条真实 Docker 命令退出码 0。
+
+```sh
+bun test packages/server/src/panels/runtime.test.ts packages/server/src/panels/directory-bookmarks.test.ts
+npm test -- --suite video-download
+node scripts/smoke-project-sandboxes.mjs codeshell-project-runtime:project-cloud-panels --download-panel /absolute/path/to/codeshell-panel-apps/apps/video-download
+```
+
+浏览器证据图保存为任务工作区 `../evidence/cloud-download-preview-390.png` 并已目视检查。
+验收使用实际 Node、Docker、Chromium、产品工作台与安装包；模型响应和媒体站点为测试夹具，
+执行确认由测试点击允许。未调用外部模型或真实账号，不代表真实服务商、物理手机、云端带账号
+下载或完整四组合全部业务已经验收。其他五个 Panel、项目版本锁定、Link Host 接入、设备目录／
+中继／通知、公网部署与恢复回滚仍须继续，整套版本没有发布。

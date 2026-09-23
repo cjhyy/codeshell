@@ -29,6 +29,13 @@ export function desktopPanelDirectoryBookmarks(dataDir: string) {
   });
 }
 
+/** The file mutex uses a sibling of its parent; keep both inside the data volume. */
+export function hubPanelDirectoryBookmarks(dataDir: string) {
+  return new PanelAppDirectoryBookmarks(join(dataDir, "panel-directories", "bookmarks.json"), {
+    legacyFiles: [join(dataDir, "panel-web-directory-bookmarks.json")],
+  });
+}
+
 const MAX_RECORDS = 256;
 const MAX_BYTES = 256 * 1024;
 const ID = /^[a-f0-9-]{36}$/i;

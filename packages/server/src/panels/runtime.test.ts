@@ -1288,7 +1288,14 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     expect((await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed")).payload.id).toBe(
       job.id,
     );
-    expect((await runtimeEvents(f, otherOwner.instanceId, 0, "owner-b")).events).toEqual([]);
+    expect((await runtimeEvents(f, otherOwner.instanceId, 0, "owner-b")).events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: "tasks.changed",
+          payload: expect.objectContaining({ id: job.id }),
+        }),
+      ]),
+    );
     expect(f.runtime.activeTaskCount()).toBeGreaterThanOrEqual(0);
     expect((await f.api(f.grant.instanceId, "DELETE")).status).toBe(200);
     const reopened = await f.prepare();
@@ -1326,10 +1333,15 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     expect(f.runtime.activeTaskCount()).toBe(0);
   });
 
-  test("Web native task stops after its login owner is revoked", async () => {
+  test("Hub project task survives initiating login revocation and reports completion to another device", async () => {
     const f = await nativeToolFixture(
-      'process.stdin.resume(); process.stdin.on("end", () => setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{ok:true}})+"\\n"), 5000));',
+      'process.stdin.resume(); process.stdin.on("end", () => setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{ok:true}})+"\\n"), 500));',
     );
+    expect((f.grant.context as any).capabilities.tasks).toMatchObject({
+      ownership: "project",
+      sharedAcrossDevices: true,
+      continuesAfterLogout: true,
+    });
     const job = await f.start();
     const observer = await f.prepare("owner-b");
     let current: any;
@@ -1344,12 +1356,20 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     for (let attempt = 0; attempt < 100; attempt++) {
       const response = await f.call("tasks.get", { id: job.id }, observer.instanceId, "owner-b");
       current = await response.json();
-      if (current.status === "cancelled") break;
+      if (current.status === "succeeded") break;
       await Bun.sleep(20);
     }
-    expect(current.status).toBe("cancelled");
-    expect(current.result).toBeUndefined();
-    expect((await runtimeEvents(f, observer.instanceId, 0, "owner-b")).events).toEqual([]);
+    expect(current.status).toBe("succeeded");
+    expect(current.result).toEqual({ ok: true });
+    expect((await f.call("tasks.get", { id: job.id })).status).toBe(410);
+    expect((await runtimeEvents(f, observer.instanceId, 0, "owner-b")).events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: "tasks.changed",
+          payload: expect.objectContaining({ id: job.id, status: "succeeded" }),
+        }),
+      ]),
+    );
   });
 
   test("Desktop directory authority revocation invalidates existing Web process grants", async () => {

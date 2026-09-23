@@ -44,8 +44,8 @@ import {
   type TaskCookieSelection,
 } from "./task-cookies.js";
 import {
-  PanelAppDirectoryBookmarks,
   desktopPanelDirectoryBookmarks,
+  hubPanelDirectoryBookmarks,
   type PanelDirectoryAuthorizer,
 } from "./directory-bookmarks.js";
 import { handlePanelProcessDirectory } from "./process-files.js";
@@ -476,6 +476,8 @@ function injectBridge(html: string, source: string): string {
 /** Owner-bound capability grants serve reviewed static bytes to an opaque-origin iframe. */
 export function createPanelRuntime(options: PanelRuntimeOptions) {
   const publicPathPrefix = options.publicPathPrefix ?? "";
+  // An admitted task belongs to the project. Login/page grants only control access.
+  const projectOwnedTools = options.host === "hub" || !!options.sharedToolJobs;
   if (
     publicPathPrefix &&
     !/^\/p\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(publicPathPrefix)
@@ -494,7 +496,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const directoryBookmarks =
     options.host === "desktop"
       ? desktopPanelDirectoryBookmarks(options.dataDir)
-      : new PanelAppDirectoryBookmarks(join(options.dataDir, "panel-web-directory-bookmarks.json"));
+      : hubPanelDirectoryBookmarks(options.dataDir);
   const panelDataDirectory = (appId: string) =>
     join(
       options.dataDir,
@@ -713,9 +715,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           },
           preparation.controller.signal,
         );
-        if (!shared && !jobOwners.has(job.id)) jobOwners.set(job.id, { owner: grant.owner, scope });
+        if (!projectOwnedTools && !jobOwners.has(job.id))
+          jobOwners.set(job.id, { owner: grant.owner, scope });
         if (!(await authorized(grant))) {
-          if (!shared && jobOwners.get(job.id)?.owner === grant.owner) await service.cancel(job.id);
+          if (!projectOwnedTools && jobOwners.get(job.id)?.owner === grant.owner)
+            await service.cancel(job.id);
           error(410, "登录授权已撤销。");
         }
         if (!shared) emitTaskEvent(await service.get(job.id));
@@ -724,7 +728,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         if (preparation.controller.signal.aborted)
           error(
             410,
-            shared
+            projectOwnedTools
               ? "登录授权已撤销。请重新连接后查询任务，已接收的项目任务可能仍在运行。"
               : "登录授权已撤销，输入准备已取消。",
           );
@@ -790,9 +794,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         await taskConsentDetail(grant, previous.input, previous.entry.name);
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const job = await service.retry(input.id!);
-      if (!shared) jobOwners.set(job.id, { owner: grant.owner, scope });
+      if (!projectOwnedTools) jobOwners.set(job.id, { owner: grant.owner, scope });
       if (!(await authorized(grant))) {
-        if (!shared) await service.cancel(job.id);
+        if (!projectOwnedTools) await service.cancel(job.id);
         error(410, "登录授权已撤销，请重新连接后查看任务状态。");
       }
       if (!shared) emitTaskEvent(await service.get(job.id));
@@ -806,10 +810,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   }
   function emitTaskEvent(job: ToolJob) {
     const owner = jobOwners.get(job.id)?.owner;
-    if (!owner) return;
+    if (!projectOwnedTools && !owner) return;
     for (const grant of grants.values())
       if (
-        grant.owner === owner &&
+        (projectOwnedTools || grant.owner === owner) &&
+        job.scope.projectPath === (options.bindingCwd ?? options.cwd) &&
         grant.app.id === job.scope.appId &&
         grant.revision === job.scope.revision &&
         grant.app.permissions.includes("process") &&
@@ -1172,11 +1177,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                         ? !!sharedTools.cookies
                         : options.host === "hub" && !options.sharedToolJobs),
                     ...toolJobLimits,
-                    ownership: sharedTools ? "project" : "session",
+                    ownership: projectOwnedTools ? "project" : "session",
                     executionRevision: sharedTools?.scope.revision ?? panel.revision,
-                    sharedAcrossDevices: !!sharedTools,
+                    sharedAcrossDevices: projectOwnedTools,
                     continuesAfterDisconnect: true,
-                    continuesAfterLogout: !!sharedTools,
+                    continuesAfterLogout: projectOwnedTools,
                     maxHttpResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
                   }
                 : undefined,

@@ -1,7 +1,7 @@
 /**
  * Real Docker project integration check, driven by native Node and the built CLI.
  * Build the server and codeshell-project-runtime:local image before running:
- *   node scripts/smoke-project-sandboxes.mjs [image]
+ *   node scripts/smoke-project-sandboxes.mjs [image] [--download-panel /absolute/package/path]
  * CODESHELL_SMOKE_ROOT may point to a separate freshly built checkout.
  * Models run on loopback inside the containers with synthetic credentials. No
  * user model settings are loaded. Cleanup only touches this installation's labels.
@@ -29,6 +29,9 @@ const root = resolve(
 );
 const entry = join(root, "packages/server/dist/bin/code-shell-serve.js");
 const image = process.argv[2] ?? "codeshell-project-runtime:local";
+const downloadPanelIndex = process.argv.indexOf("--download-panel");
+const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
+if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
 const { WebSocket } = createRequire(join(root, "packages/server/package.json"))("ws");
@@ -682,6 +685,23 @@ try {
     "PASS: second project has its own real worker and cannot read the first project's file or session",
   );
 
+  let verifyDownloadRestart;
+  if (downloadPanel) {
+    const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
+    verifyDownloadRestart = await verifyCloudDownload({
+      docker,
+      json,
+      request,
+      serverUrl,
+      projectId: a.id,
+      otherProjectId: b.id,
+      container: containerA,
+      packagePath: downloadPanel,
+      evidenceDir: join(root, "..", "evidence"),
+      scratch,
+      password,
+    });
+  }
   await json(`/api/v1/projects/${a.id}/stop`, { method: "POST", body: {} });
   await waitUntil(() => rpcA.ws.readyState === WebSocket.CLOSED, "project stop closes its socket");
   const restarted = await start(a.id);
@@ -709,6 +729,7 @@ try {
   console.log(
     "PASS: stop/restart preserves project files and conversations, changes generation, and rejects old panel grants",
   );
+  await verifyDownloadRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",

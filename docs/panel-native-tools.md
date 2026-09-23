@@ -226,9 +226,13 @@ pending input preparation; a request whose reply was lost may already have been
 admitted, so reconnect and inspect task snapshots first. Any explicit resubmission
 must retain the same request key and input to deduplicate. Explicit task
 cancellation, project/app authorization revocation and Desktop shutdown keep their
-respective cancellation/interruption semantics. Standalone Hub currently reports
-session ownership and does cancel tasks on login-owner revocation; do not assume
-identical logout behavior without probing capabilities.
+respective cancellation/interruption semantics. Standalone Hub and Docker project
+runtimes now also report project ownership: admitted native jobs survive login
+revocation and publish summaries to all authorized pages of the same project and
+Panel revision. Logout still aborts pending approvals/input preparation and removes
+the revoked viewer's file/process grants. Stopping the Hub or project runtime
+interrupts its coordinator; a new login does not automatically replay unfinished
+jobs. Older Hosts may retain session ownership, so probe the advertised capabilities.
 
 Shared events contain summaries only, check both native and viewer authorization,
 and detach with the Panel grant. Reconnect via `tasks.list/get`, then follow
@@ -332,3 +336,11 @@ an uncertain reply and on reconnect, and require explicit recovery when no
 accepted record is found. Duplicate explicit submissions still use the existing
 request-key/digest gate. Native task records remain the execution authority when
 saving a separate Panel UI document fails.
+
+
+Cloud directory bookmarks live in `panel-directories/bookmarks.json` beneath the
+Host data directory. Its directory mutex stays inside the same writable volume,
+so a Docker runtime does not need to create `/data.lock` on its read-only root.
+Existing `panel-web-directory-bookmarks.json` IDs migrate on successful restore,
+after the same app/project and directory identity checks. Desktop keeps its
+existing shared store and mutex layout.
