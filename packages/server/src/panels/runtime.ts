@@ -1434,6 +1434,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           appId: grant.app.id,
           cwd: options.cwd,
           sessionId: grant.context.sessionId,
+          revision: grant.revision,
           isAuthorized: () => authorized(grant),
         },
         method,

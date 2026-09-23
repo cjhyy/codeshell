@@ -206,7 +206,23 @@ the persisted identity from the app, bound workspace, bound task and key; Panels
 cannot submit `creationKey` or workspace/task authority fields. Discover the
 method explicitly, not from an API version. Paired Desktop Web exposes the same
 automation methods when composed with main's live scheduler and a selected
-durable task. The cloud Panel runtime does not yet have a scheduler composition.
+durable task. The production cloud Panel runtime does not yet have a scheduler composition.
+
+Server `/panels` exports `createHubPanelAutomationHost` as a project scheduling
+building block. The caller must supply a persistent package/binding authorizer
+and an executor that honors the resolved approval/sandbox policy, reserves the
+bound Session against interactive work, and waits for real teardown on abort.
+It is not enabled just by constructing the HTTP runtime. Records live under
+`<dataDir>/panel-automations/records/cron.json`; a separate lifetime lease limits
+ownership to one live service using that private data directory. Startup rejects
+corrupt snapshots or another project's records. Each new job retains its Host
+selected Panel revision; a different revision cannot update, resume or manually
+run it, while list/pause/delete remain available to the authorized source Panel.
+Preparation and execution occupy the shared in-process Panel upgrade gate.
+Call and await `close()` before disposing the executor. A disconnected page does
+not own accepted jobs. Restart restores definitions without catch-up execution;
+persisted execution receipts and full worker/approval composition are still
+required before claiming cloud automation recovery or enabling the capability.
 
 The scheduler checks and creates under the same persistent store lock. An equal
 definition returns the retained job without resetting its paused state, counters

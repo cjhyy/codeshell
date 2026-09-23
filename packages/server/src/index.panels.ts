@@ -1,5 +1,6 @@
 export { createPanelHttp } from "./panels/http.js";
 export * from "./panels/automations.js";
+export * from "./panels/hub-automations.js";
 export { createPanelManagement, PanelManagementError } from "./panels/management.js";
 export { createPanelRuntime, panelWebCompatibility } from "./panels/runtime.js";
 export { PanelRuntimeServices } from "./panels/runtime-services.js";

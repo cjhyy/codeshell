@@ -241,6 +241,7 @@ describe("Panel HTTP runtime", () => {
           calls++;
           expect(scope.cwd).toBe(f.cwd);
           expect(scope.sessionId).toBe("session-1234");
+          expect(scope.revision).toBe(f.state.revision);
           expect(await scope.isAuthorized()).toBe(true);
           return { automations: [] };
         },

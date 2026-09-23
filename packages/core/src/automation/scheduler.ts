@@ -98,6 +98,8 @@ export interface CronJob {
   templateSource?: CronTemplateSource;
   /** Host-namespaced creation identity, unique among retained jobs. Immutable on update. */
   creationKey?: string;
+  /** Immutable Panel package identity chosen by a project Host at creation. */
+  panelSource?: { appId: string; revision: string };
 }
 
 /**
@@ -134,6 +136,7 @@ export interface CreateJobOptions {
   templateSource?: CronTemplateSource;
   /** Host-namespaced creation identity, unique among retained jobs. Immutable on update. */
   creationKey?: string;
+  panelSource?: CronJob["panelSource"];
 }
 
 /** Fields editable via update(). Any omitted field is left unchanged. */
@@ -523,6 +526,17 @@ export class CronScheduler {
     // surfaces at create time, not silently at the first missed tick.
     validateSchedule(schedule, opts?.timezone);
     if (
+      opts?.panelSource !== undefined &&
+      (!opts.panelSource ||
+        typeof opts.panelSource !== "object" ||
+        Array.isArray(opts.panelSource) ||
+        typeof opts.panelSource.appId !== "string" ||
+        !/^[a-z0-9][a-z0-9-]{0,127}$/.test(opts.panelSource.appId) ||
+        typeof opts.panelSource.revision !== "string" ||
+        !/^[a-f0-9]{64}$/.test(opts.panelSource.revision))
+    )
+      throw new Error("automation panelSource must identify a reviewed Panel revision");
+    if (
       opts?.creationKey !== undefined &&
       (typeof opts.creationKey !== "string" || !/^[A-Za-z0-9._:-]{1,256}$/.test(opts.creationKey))
     )
@@ -550,6 +564,8 @@ export class CronScheduler {
           job.templateSource?.templateId ?? null,
           job.templateSource?.revision ?? null,
           job.templateSource?.pluginVersion ?? null,
+          job.panelSource?.appId ?? null,
+          job.panelSource?.revision ?? null,
         ]);
       if (definition(existing) !== definition({ ...opts, name, schedule, prompt }))
         throw new Error(
@@ -581,6 +597,7 @@ export class CronScheduler {
           ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
           ...(opts?.templateSource !== undefined ? { templateSource: opts.templateSource } : {}),
           ...(opts?.creationKey !== undefined ? { creationKey: opts.creationKey } : {}),
+          ...(opts?.panelSource !== undefined ? { panelSource: { ...opts.panelSource } } : {}),
         };
         this.refreshNextRunForDisplay(job);
         return { jobs: [...jobs, job], result: job };
@@ -609,6 +626,7 @@ export class CronScheduler {
       ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
       ...(opts?.templateSource !== undefined ? { templateSource: opts.templateSource } : {}),
       ...(opts?.creationKey !== undefined ? { creationKey: opts.creationKey } : {}),
+      ...(opts?.panelSource !== undefined ? { panelSource: { ...opts.panelSource } } : {}),
     };
 
     this.jobs.set(id, job);
