@@ -96,3 +96,30 @@ test("strict save rejects duplicate creation keys while legacy storage remains c
   new CronStore(f.file).save([job, { ...job, id: "other" }]);
   expect(new CronStore(f.file).load()).toHaveLength(2);
 });
+
+test("last-execution checkpoints survive edits and malformed receipts fail strict reads", () => {
+  const f = fixture();
+  const job = f.scheduler.create("daily", "1d", "inspect");
+  const receipt = {
+    id: "run-1",
+    status: "completed" as const,
+    startedAt: 10,
+    finishedAt: 20,
+    detail: "done",
+  };
+  f.store.save([{ ...job, lastExecution: receipt }]);
+  f.scheduler.update(job.id, { prompt: "updated" });
+  expect(f.store.load()[0].lastExecution).toEqual(receipt);
+  for (const lastExecution of [
+    null,
+    { ...receipt, status: "unknown" },
+    { ...receipt, finishedAt: 1 },
+    { ...receipt, status: "running" },
+    { ...receipt, detail: "x".repeat(2001) },
+  ]) {
+    const bytes = JSON.stringify({ version: 1, jobs: [{ ...job, lastExecution }] });
+    writeFileSync(f.file, bytes);
+    expect(() => f.store.load()).toThrow(/lastExecution/);
+    expect(readFileSync(f.file, "utf8")).toBe(bytes);
+  }
+});

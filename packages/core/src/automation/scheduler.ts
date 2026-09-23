@@ -76,8 +76,16 @@ export interface CronJob {
   timezone?: string;
   /** Permission tier; defaults to read-only when unset. */
   permissionLevel?: CronPermissionLevel;
-  /** RunStore run id of the most recent execution (Phase 2 RunManager path). */
+  /** Latest execution identity: RunStore run id, or the composing Host's receipt id. */
   lastRunId?: string;
+  /** Host-owned durable checkpoint for the latest execution, not a replay instruction. */
+  lastExecution?: {
+    id: string;
+    status: "running" | "completed" | "failed" | "cancelled" | "interrupted";
+    startedAt: number;
+    finishedAt?: number;
+    detail?: string;
+  };
   /** True = one-shot: delete the job after its first real execution so it never
    *  fires again (e.g. "in 10 minutes, do X once"). */
   once?: boolean;
@@ -120,6 +128,8 @@ export interface CronJobLifecycleEvent {
 
 /** Optional semantic outcome returned by an executor after a non-throwing run. */
 export interface CronExecutionOutcome {
+  /** A host reports cancellation initiated outside the scheduler-owned signal. */
+  cancelled?: boolean;
   /** The run permanently disabled itself and should not be reported as success. */
   stoppedReason?: string;
 }
@@ -1055,11 +1065,12 @@ export class CronScheduler {
     try {
       const outcome = await this.onExecute?.(job, controller.signal);
       this.emitJobEvent({
-        type: controller.signal.aborted
-          ? "job_cancelled"
-          : outcome?.stoppedReason
-            ? "job_stopped"
-            : "job_end",
+        type:
+          controller.signal.aborted || outcome?.cancelled
+            ? "job_cancelled"
+            : outcome?.stoppedReason
+              ? "job_stopped"
+              : "job_end",
         job,
         durationMs: Date.now() - startedAt,
         ...(outcome?.stoppedReason ? { reason: outcome.stoppedReason } : {}),

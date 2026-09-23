@@ -1642,3 +1642,52 @@ fencing，也不保证外部副作用恰好一次。所有共享文件写入进�
 和持久执行回执；云端自动化继续不声明可用。增量 39 调度构件和本轮 Worker 契约
 是后续组合的两个必要部分，不替代完整云端流程。六 Panel 四组合、设备连接／
 通知、三仓库兼容发布、目标部署／恢复／回滚仍按总目标继续实施。
+
+### 增量 41：生产 Hub 云端自动化、共享 Worker 与持久执行回执（2026-09-24）
+
+完成：
+
+- Hub 认证模式的 HeadlessServer 正式组合项目调度 Host，Panel HTTP 在权限与
+  所选持久任务有效时声明自动化方法。通用 HTTP runtime 仍要求注入实现。
+  执行前检查项目绑定、启用状态、精确包修订及三项必需权限。
+- 调度复用项目同一个 Worker，持久 Session 在执行至清理期间排斥其他交互轮次；
+  配置修改、归档与包升级继续遵循现有占用检查。使用项目默认文本模型，通过
+  Host 路由无人值守审批，保留 Worker 审批连接／代次，重复审批只回答一次。
+  页面私有回调明确拒绝；轮次传递现有自动化权限与沙箱策略，禁止后台 Shell。
+- Worker 发送前在存储锁内复查定义并写入唯一 running 回执，终态落盘后才释放
+  执行。列表返回 latest lastExecution、时间、状态及诊断；回执 ID 同时用于
+  Session 的消息身份。删除记录不会在完成时复活，替换记录不会收到旧回执。
+- 主动取消记录 cancelled；Worker 退出、准入结果丢失记录 interrupted 并暂停
+  后续调度。启动遇到未完成回执同样暂停供用户核查，不自动重放外部副作用。
+  准入超时先终止并等待该 Worker 真正退出再释放 Session，占用不会仅随本地
+  RPC 超时消失。Host 关闭先请求停止调度并等待执行清理，再释放生命周期租约。
+- Core 严格读取校验新回执结构，并保留跨读取／编辑的字段；调度事件支持来自
+  其他入口的取消，避免误报成功。设备退出只撤销网页入口，不终止已接受任务。
+
+验证：
+
+- Core 自动化、Worker bridge、Panel 占用及整个 Server serve 目录共 260 项、
+  1012 个断言通过，日志 `/tmp/cloud-scheduler-regression.log`。
+- 实际 Hub HTTP／WebSocket、安装后的合成 Panel、持久 Session、Node Core
+  Worker 与 coding capability 完成真实 Write 文件；同 Session 的竞争请求和
+  归档被拒绝，退出第一登录后第二登录读取同一任务和完成回执，重启 Host 保留
+  记录且没有自动启动 Worker。模型响应为本地受控 HTTP 服务，尚非真实服务商。
+- 新 Worker 边界测试 5 项通过，涵盖审批去重与路由、内部页面调用拒绝、取消保持
+  占用、网页取消／进程退出分类、准入超时等待延迟退出。首次测试在预先调用
+  Bun rejects 断言时阻塞取消步骤；改为先捕获异步结果再断言后通过，没有修改
+  生产执行器来绕过失败。日志 `/tmp/cloud-scheduler-worker-tests2.log`。
+- 增补存储终态检查后云端调度测试 18 项、80 个断言通过：外部取消保留后续计划，
+  未知结果暂停且重启保持、每次执行使用新回执身份。日志
+  `/tmp/cloud-scheduler-receipt-tests.log`。
+- Core／Server 构建、Desktop 类型检查通过；改动文件 lint 无错误（两个已有
+  延迟初始化变量仍有 prefer-const 警告）。日志
+  `/tmp/cloud-scheduler-{core-build2,server-build2,desktop-types,lint-final}.log`。
+- Server 公开导出及隔离 Desktop Panel 协议兼容检查 4 项、32 断言通过，日志
+  `/tmp/cloud-scheduler-compatible-tests.log`；格式和 diff 检查通过。
+
+边界：这是当前任务分支源码的组合，不是已发布包或生产部署。services 仍固定
+0.9.22 公开依赖，现有运行镜像尚未包含本增量。当前只保存最近一次执行回执，
+完整输出在绑定 Session；实际手机推送、真实模型／行情、投资提示中项目锁定
+程序路径、自动化更新并发控制、各 Panel 四组合仍待完成。auto 沙箱仍受平台
+探测及降级规则约束，不能据此宣称不可信代码隔离或外部副作用恰好一次。
+三仓兼容发布、目标服务器部署与恢复／回滚继续按总目标推进，目标未完成。

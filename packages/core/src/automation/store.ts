@@ -136,6 +136,36 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     }
   }
   if (raw.once !== undefined && typeof raw.once !== "boolean") return invalid("once");
+  let lastExecution: CronJob["lastExecution"];
+  if (raw.lastExecution !== undefined) {
+    const value = raw.lastExecution as NonNullable<CronJob["lastExecution"]>;
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof value.id !== "string" ||
+      !SAFE_ID.test(value.id) ||
+      value.id.includes("..") ||
+      !["running", "completed", "failed", "cancelled", "interrupted"].includes(value.status) ||
+      !Number.isSafeInteger(value.startedAt) ||
+      value.startedAt < 0 ||
+      (value.status === "running"
+        ? value.finishedAt !== undefined
+        : !Number.isSafeInteger(value.finishedAt) || value.finishedAt! < value.startedAt) ||
+      (value.detail !== undefined &&
+        (typeof value.detail !== "string" ||
+          value.detail.length > 2000 ||
+          value.detail.includes("\0")))
+    )
+      return invalid("lastExecution");
+    lastExecution = {
+      id: value.id,
+      status: value.status,
+      startedAt: value.startedAt,
+      ...(value.finishedAt !== undefined ? { finishedAt: value.finishedAt } : {}),
+      ...(value.detail !== undefined ? { detail: value.detail } : {}),
+    };
+  }
   let panelSource: CronJob["panelSource"];
   if (raw.panelSource !== undefined) {
     const value = raw.panelSource as CronJob["panelSource"];
@@ -227,6 +257,7 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     ...(typeof raw.disabledReason === "string" ? { disabledReason: raw.disabledReason } : {}),
     ...(templateSource ? { templateSource } : {}),
     ...(panelSource ? { panelSource } : {}),
+    ...(lastExecution ? { lastExecution } : {}),
     ...(typeof raw.creationKey === "string" ? { creationKey: raw.creationKey } : {}),
   };
 }

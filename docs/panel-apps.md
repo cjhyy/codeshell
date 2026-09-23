@@ -199,14 +199,16 @@ Panel API v5 adds project-and-task-scoped automation calls for apps that declare
 current trusted workspace and current task; follow-up calls reject an
 automation from another workspace or task.
 
-An implementing Desktop Host can additionally advertise `automations.createUnique`
+An implementing Host can additionally advertise `automations.createUnique`
 in `availableMethods`, under the same permission. It accepts the create fields
 plus `key` (1–80 ASCII letters, digits, `.`, `_`, `:`, or `-`). The Host derives
 the persisted identity from the app, bound workspace, bound task and key; Panels
 cannot submit `creationKey` or workspace/task authority fields. Discover the
 method explicitly, not from an API version. Paired Desktop Web exposes the same
 automation methods when composed with main's live scheduler and a selected
-durable task. The production cloud Panel runtime does not yet have a scheduler composition.
+durable task. Hub-authenticated HeadlessServer now composes a project-owned
+scheduler with the same automation interface; generic HTTP runtime embedders
+still need to inject an implementing Host.
 
 Server `/panels` exports `createHubPanelAutomationHost` as a project scheduling
 building block. The caller must supply a persistent package/binding authorizer
@@ -220,9 +222,28 @@ selected Panel revision; a different revision cannot update, resume or manually
 run it, while list/pause/delete remain available to the authorized source Panel.
 Preparation and execution occupy the shared in-process Panel upgrade gate.
 Call and await `close()` before disposing the executor. A disconnected page does
-not own accepted jobs. Restart restores definitions without catch-up execution;
-persisted execution receipts and full worker/approval composition are still
-required before claiming cloud automation recovery or enabling the capability.
+not own accepted jobs. Restart restores definitions without catch-up execution.
+
+The Hub composition verifies the enabled, bound Panel's exact package revision
+and permissions before dispatch, and borrows the project's live Core Worker.
+It reserves the durable Session against concurrent interactive turns, uses the
+configured default text model, routes unattended approvals through the job's
+resolved policy, denies page-owned internal callbacks and disables background
+shells for that turn. Logging out does not cancel an accepted automation.
+Stopping the Host requests cancellation and waits for actual execution cleanup.
+
+Before sending a run, the Host persists `lastExecution` with a unique id and
+`running` status. List responses expose its timestamps, terminal status and
+optional diagnostic detail. Cancellation remains distinct from successful
+completion. Lost Worker outcomes become `interrupted` and disable the schedule;
+startup does the same for a leftover running receipt. Inspect results before
+explicitly resuming or retrying. Admission timeout terminates and awaits the
+Worker before releasing ownership; an uncooperative child can delay shutdown.
+These checkpoints prevent blind replay, not duplicate external side effects.
+They retain the latest execution, while the bound Session holds its transcript.
+All processes writing the same records must preserve the new receipt fields.
+Browser notifications currently require an active connection; phone push
+notifications and Panel-specific complete workflows are separate acceptance work.
 
 The trusted Worker protocol now accepts per-turn `sandboxMode` and
 `allowBackgroundShells`. These survive Session queueing and captured follow-up

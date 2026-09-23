@@ -473,6 +473,28 @@ export class WorkerBridgeCore {
     });
   }
 
+  /** Request shutdown and retain ownership until this exact child exits.
+   * Does not resolve merely because SIGTERM was sent; an uncooperative child
+   * remains owned so a caller cannot start competing work prematurely.
+   */
+  async stopAndWait(): Promise<void> {
+    const child = this.child;
+    if (!child || child.exitCode !== null || child.signalCode !== null) return;
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        child.off("exit", done);
+        child.off("error", spawnFailed);
+        resolve();
+      };
+      const spawnFailed = () => {
+        if (!child.pid) done();
+      };
+      child.once("exit", done);
+      child.on("error", spawnFailed);
+      child.kill("SIGTERM");
+    });
+  }
+
   /** Graceful shutdown: SIGTERM the worker (no-op when none is alive). */
   kill(): void {
     this.log("kill", { pid: this.child?.pid });

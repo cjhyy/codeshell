@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdirSync, lstatSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
@@ -16,6 +17,10 @@ import {
   parsePanelAutomationCall,
   type PanelAutomationHost,
 } from "./automations.js";
+
+/** A transport lost the outcome after dispatch. Never automatically replay it. */
+export class HubAutomationUncertainError extends Error {}
+export class HubAutomationCancelledError extends Error {}
 
 export interface HubPanelAutomationOptions {
   cwd: string;
@@ -51,11 +56,12 @@ function summary(job: CronJob) {
     nextRun: job.nextRun ?? null,
     disabledReason: job.disabledReason ?? null,
     panelSource: job.panelSource ? { ...job.panelSource } : null,
+    lastExecution: job.lastExecution ? { ...job.lastExecution } : null,
   };
 }
 
-/** Project-level scheduling building block. Not enabled by the Hub CLI until
- * its worker/approval/Session-reservation runner is supplied and verified.
+/** Project-owned scheduling. The Hub supplies its shared Worker, approval
+ * policy and Session reservation; embedded hosts may supply equivalent runners.
  */
 export function createHubPanelAutomationHost(options: HubPanelAutomationOptions) {
   const cwd = resolve(options.cwd);
@@ -88,8 +94,8 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
   const store = new CronStore(join(records, "cron.json"), { strictRead: true });
   const scheduler = new CronScheduler(store);
   const active = new Set<string>();
-  const assertOwner = () => {
-    if (closed || compromised) throw Error("Cloud automation owner is unavailable");
+  const assertStorage = () => {
+    if (compromised) throw Error("Cloud automation owner is unavailable");
     for (const { path, info } of identities) {
       const current = lstatSync(path);
       if (
@@ -100,6 +106,10 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
       )
         throw Error("Cloud automation storage or owner directory changed");
     }
+  };
+  const assertOwner = () => {
+    if (closed) throw Error("Cloud automation owner is unavailable");
+    assertStorage();
   };
   const assertSession = (sessionId: string) => {
     const state = readHubSessionState(options.sessionRootDir, sessionId);
@@ -150,12 +160,89 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
         current.permissionLevel !== job.permissionLevel
       )
         throw Error("Automation changed while preparing execution");
-      await options.execute({
-        job,
-        prompt: job.prompt,
-        signal,
-        ...resolveWritePolicy(job.permissionLevel),
+      if (current.lastExecution?.status === "running")
+        throw Error("Previous automation outcome is unknown; restart to reconcile before retrying");
+      const receipt: NonNullable<CronJob["lastExecution"]> = {
+        id: randomUUID(),
+        status: "running",
+        startedAt: Date.now(),
+      };
+      // Persist admission before any Worker frame or model/tool side effect.
+      store.mutate((jobs) => {
+        const latest = jobs.find((value) => value.id === job.id);
+        if (
+          !latest ||
+          latest.createdAt !== job.createdAt ||
+          latest.prompt !== job.prompt ||
+          latest.resumeSessionId !== job.resumeSessionId ||
+          latest.cwd !== job.cwd ||
+          latest.permissionLevel !== job.permissionLevel ||
+          latest.panelSource?.appId !== job.panelSource?.appId ||
+          latest.panelSource?.revision !== job.panelSource?.revision ||
+          latest.lastExecution?.status === "running"
+        )
+          throw Error("Automation changed or has an unresolved execution");
+        return {
+          jobs: jobs.map((value) =>
+            value.id === job.id
+              ? { ...value, lastExecution: receipt, lastRunId: receipt.id }
+              : value,
+          ),
+          result: null,
+        };
       });
+      job.lastRunId = live.lastRunId = receipt.id;
+      let failure: unknown;
+      let failed = false;
+      try {
+        await options.execute({
+          job,
+          prompt: job.prompt,
+          signal,
+          ...resolveWritePolicy(job.permissionLevel),
+        });
+      } catch (error) {
+        failure = error;
+        failed = true;
+      }
+      const uncertain = failure instanceof HubAutomationUncertainError;
+      const status = uncertain
+        ? "interrupted"
+        : signal.aborted || failure instanceof HubAutomationCancelledError
+          ? "cancelled"
+          : failed
+            ? "failed"
+            : "completed";
+      const detail = failed
+        ? String(failure instanceof Error ? failure.message : failure)
+            .replaceAll("\0", "")
+            .slice(0, 2000)
+        : undefined;
+      assertStorage();
+      // A deleted task stays deleted; a replacement never receives this run's receipt.
+      // If saving fails, the running checkpoint remains and later fires refuse it.
+      store.mutate((jobs) => ({
+        jobs: jobs.map((value) =>
+          value.id === job.id && value.lastExecution?.id === receipt.id
+            ? {
+                ...value,
+                lastExecution: {
+                  ...receipt,
+                  status,
+                  finishedAt: Math.max(Date.now(), receipt.startedAt),
+                  ...(detail ? { detail } : {}),
+                },
+                ...(uncertain
+                  ? { enabled: false, disabledReason: detail ?? "Execution outcome is unknown" }
+                  : {}),
+              }
+            : value,
+        ),
+        result: null,
+      }));
+      scheduler.loadJobs();
+      if (failure instanceof HubAutomationCancelledError) return { cancelled: true };
+      if (failed) throw failure;
     } finally {
       releaseExecution?.();
       active.delete(job.id);
@@ -181,6 +268,27 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
     // Validate ownership before loadJobs can arm timers or persist misfire stats.
     if (store.load().some((job) => job.cwd !== cwd))
       throw Error("Automation store belongs to another project");
+    if (store.load().some((job) => job.lastExecution?.status === "running")) {
+      store.mutate((jobs) => ({
+        jobs: jobs.map((job) =>
+          job.lastExecution?.status === "running"
+            ? {
+                ...job,
+                enabled: false,
+                disabledReason:
+                  "Previous execution was interrupted; inspect its results before resuming",
+                lastExecution: {
+                  ...job.lastExecution,
+                  status: "interrupted",
+                  finishedAt: Math.max(Date.now(), job.lastExecution.startedAt),
+                  detail: "Host stopped before recording a terminal outcome",
+                },
+              }
+            : job,
+        ),
+        result: null,
+      }));
+    }
     scheduler.loadJobs();
   } catch (error) {
     scheduler.stopAll();

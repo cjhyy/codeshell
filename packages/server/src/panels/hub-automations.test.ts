@@ -374,3 +374,82 @@ test("package upgrades wait for verification and real execution cleanup", async 
     execute.resolve();
   }
 });
+
+test("execution receipt is durable before dispatch and retains the terminal outcome", async () => {
+  const f: ReturnType<typeof fixture> = fixture({
+    execute: async (request) => {
+      const saved = JSON.parse(readFileSync(f.file, "utf8")).jobs[0];
+      expect(saved.lastExecution).toMatchObject({ id: request.job.lastRunId, status: "running" });
+      expect(saved.lastRunId).toBe(request.job.lastRunId);
+    },
+  });
+  const job = await f.call("createUnique", definition);
+  await f.call("runNow", { id: job.id });
+  await until(() => f.events.some((event) => event.type === "job_end"));
+  const completed = (await f.call("list")).automations[0].lastExecution;
+  expect(completed.status).toBe("completed");
+  expect(completed.finishedAt).toBeGreaterThanOrEqual(completed.startedAt);
+  await f.service.close();
+  const restarted = f.open();
+  expect(
+    ((await restarted.host.call(f.scope, "automations.list")) as any).automations[0].lastExecution,
+  ).toEqual(completed);
+});
+
+test("startup converts an unresolved running receipt to interrupted and pauses future dispatch", async () => {
+  const f = fixture();
+  const job = await f.call("createUnique", definition);
+  await f.service.close();
+  const snapshot = JSON.parse(readFileSync(f.file, "utf8"));
+  snapshot.jobs[0].lastExecution = {
+    id: "unconfirmed-run",
+    status: "running",
+    startedAt: Date.now() - 1000,
+  };
+  snapshot.jobs[0].schedule = "20";
+  writeFileSync(f.file, JSON.stringify(snapshot));
+  const restarted = f.open();
+  await Bun.sleep(100);
+  const saved = ((await restarted.host.call(f.scope, "automations.list")) as any).automations[0];
+  expect(saved.id).toBe(job.id);
+  expect(saved.enabled).toBe(false);
+  expect(saved.lastExecution.status).toBe("interrupted");
+  expect(saved.disabledReason).toContain("inspect its results");
+  expect(f.runs).toHaveLength(0);
+});
+
+test("external cancellation records cancellation and an uncertain outcome pauses the schedule", async () => {
+  const { HubAutomationCancelledError, HubAutomationUncertainError } =
+    await import("./hub-automations.js");
+  let uncertain = false;
+  const f = fixture({
+    execute: async () => {
+      if (uncertain) throw new HubAutomationUncertainError("Worker outcome was lost");
+      throw new HubAutomationCancelledError("Stopped from another device");
+    },
+  });
+  const job = await f.call("createUnique", definition);
+  await f.call("runNow", { id: job.id });
+  await until(() => f.events.some((event) => event.type === "job_cancelled"));
+  const cancelled = (await f.call("list")).automations[0];
+  expect(cancelled.lastExecution.status).toBe("cancelled");
+  expect(cancelled.enabled).toBe(true);
+  expect(cancelled.runCount).toBe(1);
+  uncertain = true;
+  await f.call("runNow", { id: job.id });
+  await until(() => f.events.some((event) => event.type === "job_error"));
+  const interrupted = (await f.call("list")).automations[0];
+  expect(interrupted.lastExecution.status).toBe("interrupted");
+  expect(interrupted.lastExecution.id).not.toBe(cancelled.lastExecution.id);
+  expect(interrupted.lastExecution.detail).toContain("outcome was lost");
+  expect(interrupted.enabled).toBe(false);
+  expect(interrupted.runCount).toBe(2);
+  await f.service.close();
+  const restarted = f.open();
+  expect(
+    ((await restarted.host.call(f.scope, "automations.list")) as any).automations[0],
+  ).toMatchObject({
+    enabled: false,
+    lastExecution: interrupted.lastExecution,
+  });
+});

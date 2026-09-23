@@ -1,3 +1,5 @@
+import { createHubPanelAutomationHost } from "../panels/hub-automations.js";
+import { createHubAutomationWorker } from "./automation-worker.js";
 import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
 import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 import { describeEnvironment, environmentIdentity } from "../environment-identity.js";
@@ -161,6 +163,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     passcode.set(generatedPasscode);
   }
 
+  let closing = false;
+  let panelAutomations: ReturnType<typeof createHubPanelAutomationHost> | undefined;
+  let automationWorker: ReturnType<typeof createHubAutomationWorker> | undefined;
   const tabs = new Set<WebSocket>();
   // Auth revocation callbacks are registered before configuration modules are ready.
   // eslint-disable-next-line prefer-const
@@ -219,7 +224,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   let configurationReloadFailed = false;
   const runUploads = new Map<string, PreparedHubUploads>();
   const isRunning = (sessionId: string): boolean =>
-    [...runningSessions.values()].includes(sessionId);
+    [...runningSessions.values()].includes(sessionId) || !!automationWorker?.ownsSession(sessionId);
   let nextTabId = 1;
   let nextWorkerRequestId = 1;
   const outbound = new HubOutboundTransport({
@@ -377,6 +382,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           typeof approval.requestId === "string" &&
           typeof approval.sessionId === "string"
         ) {
+          if (automationWorker?.handleApproval(approval)) return;
           const request = approval.request as
             | { toolName?: string; args?: Record<string, unknown> }
             | undefined;
@@ -514,6 +520,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       preparingRuns > 0 ||
       runningSessions.size > 0 ||
       (panels?.activeTaskCount() ?? 0) > 0 ||
+      (panelAutomations?.activeCount() ?? 0) > 0 ||
       pendingWorkerResponses.size > 0
     ) {
       throw new HubConfigurationError(409, "请等待当前任务完成后再保存配置。");
@@ -571,6 +578,12 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         ...panelBinding,
         dataDir: opts.dataDir,
         host: "hub",
+        automations: {
+          call: (scope, method, params) => {
+            if (!panelAutomations || closing) throw Error("Cloud automations are unavailable");
+            return panelAutomations.host.call(scope, method, params);
+          },
+        },
         publicPathPrefix: opts.publicPathPrefix,
         agentTaskOptions: {
           workerEntryPath: opts.workerEntryPath,
@@ -767,6 +780,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         if (webSocketPayloadBytes(data) > 1024 * 1024) {
           log("tab.frame_dropped", { reason: "payload too large" });
           ws.close(1009, "payload too large");
+          return;
+        }
+        if (closing) {
+          ws.close(1012, "server stopping");
           return;
         }
         const line = String(data);
@@ -1044,7 +1061,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
               const ownerId = tabAuth.get(ws)?.sessionId;
               const activeOwner =
                 typeof runSession === "string" ? runOwners.get(runSession) : undefined;
-              if (activeOwner && activeOwner !== ownerId) {
+              if (
+                (activeOwner && activeOwner !== ownerId) ||
+                (typeof runSession === "string" && automationWorker?.ownsSession(runSession))
+              ) {
                 sendToTab(
                   ws,
                   hostQueryError(
@@ -1151,6 +1171,75 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   });
 
   try {
+    if (hubAuth) {
+      automationWorker = createHubAutomationWorker({
+        bridge,
+        cwd: workspaceCwd,
+        model: () => new SettingsManager(workspaceCwd, "full").get().defaults.text,
+        reserve: (job, requestId) => {
+          if (closing || configurationChanging || configurationReloadFailed || preparingRuns > 0)
+            throw Error("Project configuration or run preparation is busy");
+          const sessionId = job.resumeSessionId!;
+          if (isRunning(sessionId) || runningSessions.size >= 64)
+            throw Error("The automation Session is busy; this occurrence was not dispatched");
+          if (resolve(readHubSessionState(sessionRootDir, sessionId).cwd) !== workspaceCwd)
+            throw Error("Automation Session changed workspace");
+          const baseline = readHubTranscript(sessionRootDir, sessionId).length;
+          runningSessions.set(requestId, sessionId);
+          runOwners.set(sessionId, requestId);
+          runReplay.begin(sessionId, requestId, baseline);
+          runInputs.set(requestId, {
+            sessionId,
+            echoed: false,
+            event: {
+              type: "session_user_message",
+              text: job.prompt,
+              clientMessageId: requestId,
+              attachments: [],
+            },
+          });
+          notify("serve/sessionStatus", { sessionId, running: true });
+          return () => {
+            runningSessions.delete(requestId);
+            runInputs.delete(requestId);
+            if (runOwners.get(sessionId) === requestId) runOwners.delete(sessionId);
+            runReplay.finish(sessionId, requestId);
+            notify("serve/sessionStatus", { sessionId, running: isRunning(sessionId) });
+          };
+        },
+      });
+      panelAutomations = createHubPanelAutomationHost({
+        cwd: workspaceCwd,
+        bindingCwd: panelBinding?.bindingCwd,
+        dataDir: opts.dataDir,
+        sessionRootDir,
+        assertExecutable: async (job) => {
+          panelBinding?.assertBinding();
+          const panel = (await panels!.service.snapshot()).panels.find(
+            (app) => app.id === job.panelSource?.appId,
+          );
+          panelBinding?.assertBinding();
+          if (
+            !panel?.enabled ||
+            panel.revision !== job.panelSource?.revision ||
+            !["automations.manage", "context.workspace", "context.session"].every((permission) =>
+              panel.permissions.includes(permission as never),
+            )
+          )
+            throw Error("The Panel package or automation permission is no longer authorized");
+        },
+        execute: (request) => automationWorker!.execute(request),
+        onJobEvent: (event) =>
+          notify("serve/automationStatus", {
+            type: event.type,
+            jobId: event.job.id,
+            sessionId: event.job.resumeSessionId,
+            appId: event.job.panelSource?.appId,
+            ...("reason" in event ? { reason: event.reason } : {}),
+            ...("error" in event ? { error: event.error } : {}),
+          }),
+      });
+    }
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
       server.listen(opts.port ?? 8790, host, () => {
@@ -1159,6 +1248,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       });
     });
   } catch (error) {
+    closing = true;
+    await panelAutomations?.close();
     clearInterval(pendingResponseReaper);
     if (authReaper) clearInterval(authReaper);
     await uploads?.close();
@@ -1168,7 +1259,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     links?.close();
     await panels?.close();
     files?.close();
-    bridge.kill();
+    await bridge.stopAndWait();
     wss.close();
     server.close();
     throw error;
@@ -1189,6 +1280,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     tabCount: () => tabs.size,
     pendingResponseCount: () => pendingWorkerResponses.size,
     close: async () => {
+      closing = true;
+      await panelAutomations?.close();
       clearInterval(pendingResponseReaper);
       if (authReaper) clearInterval(authReaper);
       await uploads?.close();
@@ -1206,7 +1299,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         }
       }
       tabs.clear();
-      bridge.kill();
+      await bridge.stopAndWait();
       await new Promise<void>((resolve) => {
         wss.close(() => {
           server.close(() => resolve());
