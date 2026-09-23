@@ -906,3 +906,51 @@ node packages/desktop/scripts/e2e-panel-app.mjs
 其他进程改变项目，条件写入会保留对方状态并返回失败，包可能已进入全局目录。旧未
 固定项目迁移、多版本任务历史／恢复、数据迁移及回滚 UI、真实双项目同时开窗仍未完成。
 其他 Panel、Link 接入、中继、手机和部署等完整目标继续保留，未发布。
+
+
+### 增量 24：Panel 执行与包修改的准入协调（2026-09-24）
+
+共享 Server 包新增进程内执行占用服务。Desktop、配对 Web 和 Hub 的 Panel 管理在
+检查占用后同步阻止受影响的新调用，安装、升级、绑定和卸载提交结束后释放；原有主
+Agent 配置检查继续执行。全局卸载检查所有项目，同项目的绑定／升级检查自身，其他
+项目已经固定包版本时允许继续执行；未固定或配置无法读取的项目不能视为不受影响。
+项目路径别名和 Git worktree 归到同一主项目，避免同项目被误判成独立项目。
+
+原生任务从授权前登记提交占用，已入队记录（包括暂停队列）持续参与检查，重试遵循
+相同准入规则。取消任务不提前释放占用，终态记录仍在实际清理时也计入。临时进程从
+授权／审批前开始占用，一直保持到实际 close 和进程组退出清理。Agent 子任务保持到
+session close；观察者回调失败不能打断任务及清理。
+
+Desktop 与 Web 的实际桥接操作都有占用记录，RPC 超时只结束调用方等待，后台实际
+操作结束后才释放。页面 Agent 工具超时后保留有界的待完成记录，迟到的真实响应或
+页面撤销才释放，伪造其他 guest 的响应不能释放。尚未结束的页面工具会阻止更新，
+用户可以等待其结束或关闭该页面；已经提交的后台任务仍按任务服务自己的生命周期处理。
+
+验证：
+
+- 执行门禁、真实任务存储、实际进程、Agent session 清理和真实 Core 安装器首轮
+  5 文件 49 项通过；覆盖授权尚未返回时的更新拒绝、暂停队列、取消等待退出、重试、
+  安装失败释放，以及项目 A 升级时项目 B 固定旧包继续运行。
+- Web runtime 与路径别名／worktree、门禁测试 3 文件 52 项通过；实际 HTTP 在升级期间
+  拒绝新进程（409），Web 等待审批及进程存活期间阻止修改，实际退出后允许修改。
+- 共享管理 HTTP、runtime、Agent Host、Desktop 管理／Agent 服务和协议隔离入口
+  7 文件 73 项通过。补充 Desktop 工具超时与实际 RPC 尚未结束的占用断言后，隔离
+  Electron mock 入口再次通过（内部 68 项）。检查中发现 macOS 路径别名差异，统一
+  规范路径后补充真实别名和 worktree 测试。
+- 生产 Electron + 配对 HTTP：项目固定 1.0、全局目录为 2.0；原生任务暂停排队、运行、
+  手机等待提交确认时，手机绑定修改和原生项目升级都被拒绝，项目保持 1.0。全部实际
+  任务退出后，同一份未消费审阅成功将项目升级到 2.0。跨设备任务 ID、账号、文件交付、
+  取消、退出登录、设备撤销、停止远程服务和结果恢复仍通过。
+- Server 与 Desktop 构建、Desktop/mobile 类型检查和改动 ESLint 通过。
+
+```sh
+bun test packages/server/src/panels/execution-gate.test.ts packages/server/src/panels/package-mutation.test.ts packages/server/src/panels/agent-task-execution.test.ts packages/server/src/panels/tool-jobs.test.ts packages/server/src/panels/process-service.test.ts packages/server/src/panels/management.test.ts packages/server/src/panels/runtime.test.ts
+bun test packages/desktop/src/main/panel-app-protocol.test.ts
+node packages/desktop/scripts/e2e-shared-panel-tasks.mjs --project-pins
+```
+
+范围限制：这是同一 Host 进程中共享 Panel 入口的执行协调，不是跨进程分布式锁，不能
+约束外部程序直接修改安装目录。Host 重启会把未完成持久记录标为 interrupted；其历史
+版本读取／恢复与旧绑定迁移仍需后续完成。原生完整升级／恢复 UI、数据迁移与回滚、
+其他 Panel、远程 Link 接入、中继、真实手机与正式部署仍未完成。代码保留在任务分支，
+尚未发布，服务仓库仍依赖旧公开版本。

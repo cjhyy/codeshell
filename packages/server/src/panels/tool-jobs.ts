@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { createHash, randomUUID } from "node:crypto";
 import { opendir } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
@@ -274,8 +275,11 @@ export class PanelToolJobService {
   private pumping = false;
   private shutdownPromise?: Promise<void>;
 
+  private readonly unregisterExecution: () => void;
+
   constructor(private readonly options: PanelToolJobServiceOptions) {
     this.storage = new ToolJobStorage(options.rootDir);
+    this.unregisterExecution = panelExecutionGate.register(() => this.executionScopes());
   }
   private readonly listeners = new Set<{
     scope: ToolJobScope;
@@ -290,14 +294,18 @@ export class PanelToolJobService {
       this.listeners.delete(listener);
     };
   }
+  private executionScopes(): ToolJobScope[] {
+    return [
+      ...[...this.preparing.values()].map((item) => item.scope),
+      ...[...this.jobs.values()]
+        .filter((job) => !TERMINAL.has(job.status) || this.active.has(job.id))
+        .map((job) => job.scope),
+    ];
+  }
   activeCount(projectPath?: string): number {
-    const matches = (scope: ToolJobScope) =>
-      !projectPath || scope.projectPath === resolve(projectPath);
-    return (
-      [...this.preparing.values()].filter((item) => matches(item.scope)).length +
-      [...this.jobs.values()].filter((job) => matches(job.scope) && !TERMINAL.has(job.status))
-        .length
-    );
+    return this.executionScopes().filter(
+      (scope) => !projectPath || scope.projectPath === resolve(projectPath),
+    ).length;
   }
   private now() {
     return this.options.now?.() ?? Date.now();
@@ -497,8 +505,15 @@ export class PanelToolJobService {
     request: ToolJobRequest,
     signal?: AbortSignal,
   ): Promise<ToolJob> {
-    signal?.throwIfAborted();
     const scope = scopeValue(rawScope);
+    return panelExecutionGate.run(scope, () => this.startAdmitted(scope, request, signal));
+  }
+  private async startAdmitted(
+    scope: ToolJobScope,
+    request: ToolJobRequest,
+    signal?: AbortSignal,
+  ): Promise<ToolJob> {
+    signal?.throwIfAborted();
     const entry = entryValue(request?.entry);
     if (!["manual", "retry"].includes(request.recovery))
       throw new Error("tool job recovery must be manual or retry");
@@ -781,6 +796,9 @@ export class PanelToolJobService {
   }
   async retry(rawScope: ToolJobScope, id: string): Promise<ToolJob> {
     const scope = scopeValue(rawScope);
+    return panelExecutionGate.run(scope, () => this.retryAdmitted(scope, id));
+  }
+  private async retryAdmitted(scope: ToolJobScope, id: string): Promise<ToolJob> {
     await this.initialize();
     await this.authorize(scope);
     const job = await this.exclusive(async () => {
@@ -878,5 +896,6 @@ export class PanelToolJobService {
     });
     this.listeners.clear();
     await this.storage.close();
+    this.unregisterExecution();
   }
 }

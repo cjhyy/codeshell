@@ -94,6 +94,8 @@ interface RunningProcess {
 }
 
 export interface PanelAppProcessServiceOptions {
+  /** Host lease from before async preparation until the actual process group has exited. */
+  acquireExecution?(owner: PanelProcessOwner): () => void;
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   /** Host-owned executable directories (for example CodeShell's managed bin). */
@@ -614,6 +616,8 @@ export class PanelAppProcessService {
       throw new Error(`Panel App may run at most ${MAX_CONCURRENT_PROCESSES} processes at once`);
     }
     // Admission is reserved before the first await, including a user's approval dialog.
+    const releaseExecution = this.options.acquireExecution?.(owner);
+    let processOwnsExecution = false;
     this.reservations.set(owner.guestId, reserved + 1);
     try {
       await this.authorize(owner, epoch);
@@ -834,10 +838,12 @@ export class PanelAppProcessService {
           // Keep the receipt only after the operating system reports the real close.
           if (!this.closed && (this.guestEpochs.get(owner.guestId) ?? 0) === epoch)
             this.receipts.add(record);
-        })();
+        })().finally(() => releaseExecution?.());
       });
+      processOwnsExecution = true;
       return { processId, executable: executable.name };
     } finally {
+      if (!processOwnsExecution) releaseExecution?.();
       const remaining = (this.reservations.get(owner.guestId) ?? 1) - 1;
       if (remaining) this.reservations.set(owner.guestId, remaining);
       else this.reservations.delete(owner.guestId);

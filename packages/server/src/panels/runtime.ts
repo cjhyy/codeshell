@@ -1,3 +1,4 @@
+import { panelExecutionGate, PanelExecutionBusyError } from "./execution-gate.js";
 import { randomBytes, createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, opendir, realpath, type FileHandle } from "node:fs/promises";
@@ -599,6 +600,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     return app;
   }
   const processes = new PanelAppProcessService({
+    acquireExecution: (owner) =>
+      panelExecutionGate.enter({
+        appId: owner.appId,
+        projectPath: options.bindingCwd ?? options.cwd,
+      }),
     approvalScope: "guest",
     resolvePackageEntry: async (owner, name) => {
       const taskScope = toolOwners.get(owner.guestId);
@@ -989,6 +995,15 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     scope: PanelTaskScope,
     input: Record<string, unknown>,
   ): Promise<unknown> {
+    return panelExecutionGate.run(
+      { appId: scope.appId, projectPath: options.bindingCwd ?? options.cwd },
+      () => onPanelActionAdmitted(scope, input),
+    );
+  }
+  async function onPanelActionAdmitted(
+    scope: PanelTaskScope,
+    input: Record<string, unknown>,
+  ): Promise<unknown> {
     const grant = grants.get(scope.instanceId);
     if (!grant || grant.owner !== scope.ownerId || !(await authorized(grant)))
       return { ok: false, detail: "面板已关闭或授权已撤销。" };
@@ -1031,12 +1046,19 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     )
       return { ok: false, detail: "用户取消了面板工具操作。" };
     if (grant.toolCalls.size >= 16) return { ok: false, detail: "面板工具调用过多。" };
+    const releaseExecution = panelExecutionGate.enter({
+      appId: grant.app.id,
+      projectPath: options.bindingCwd ?? options.cwd,
+    });
     const requestId = randomBytes(18).toString("base64url");
     const value = await new Promise<{ result?: unknown; error?: string }>((done) => {
-      const timer = setTimeout(() => finish({ error: "面板工具调用超时。" }), 45_000);
+      // Keep the operation occupied after the caller stops waiting. A late reply
+      // or revoked guest ends it; a timeout alone is not proof of termination.
+      const timer = setTimeout(() => done({ error: "面板工具调用超时。" }), 45_000);
       timer.unref();
       const finish = (result: { result?: unknown; error?: string }) => {
         if (!grant.toolCalls.delete(requestId)) return;
+        releaseExecution();
         clearTimeout(timer);
         done(result);
       };
@@ -1332,6 +1354,12 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     }
   }
   async function call(grant: Grant, input: Record<string, unknown>) {
+    return panelExecutionGate.run(
+      { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd },
+      () => callAdmitted(grant, input),
+    );
+  }
+  async function callAdmitted(grant: Grant, input: Record<string, unknown>) {
     if (!(await authorized(grant))) error(410, "面板授权已失效，请重新打开。");
     if (Object.keys(input).some((key) => !["method", "params"].includes(key)))
       error(400, "面板调用参数无效。");
@@ -1871,7 +1899,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         } else error(405, "不支持这个面板请求。");
       } catch (cause) {
         let status =
-          cause instanceof PanelManagementError
+          cause instanceof PanelManagementError || cause instanceof PanelExecutionBusyError
             ? cause.status
             : cause instanceof PanelBridgeError && cause.code === "RATE_LIMITED"
               ? 429

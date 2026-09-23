@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
@@ -1040,6 +1041,12 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       "fileArgumentHandle",
     ]);
     const events = await runtimeEvents(f, f.grant.instanceId);
+    const matches = (scope: { appId: string; projectPath: string }) =>
+      scope.appId === "synthetic-panel" && scope.projectPath === f.cwd;
+    const mutate = () => panelExecutionGate.mutate(matches, async () => {});
+    await panelExecutionGate.mutate(matches, async () => {
+      expect((await f.call("process.spawn", f.params)).status).toBe(409);
+    });
     const pending = f.call("process.spawn", {
       ...f.params,
       fileArgumentHandles: [authorization.fileArgumentHandle],
@@ -1050,6 +1057,7 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       "host.confirm",
       events.events.filter((item) => item.event === "host.confirm").at(-1)!.id,
     );
+    await expect(mutate()).rejects.toThrow("正在提交");
     await f.api(`${f.grant.instanceId}/confirm`, "POST", {
       requestId: event.payload.requestId,
       allowed: true,
@@ -1057,6 +1065,7 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     const response = await pending;
     expect(response.status).toBe(200);
     const started = await response.json();
+    await expect(mutate()).rejects.toThrow("正在提交");
     await f.read("process.write", {
       processId: started.processId,
       text: JSON.stringify({ value: "metadata" }),
@@ -1064,6 +1073,7 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     await f.read("process.end", { processId: started.processId });
     const exited = await waitRuntimeEvent(f, f.grant.instanceId, "process.exit");
     expect(exited.payload.code).toBe(0);
+    await mutate();
     const output = JSON.stringify((await runtimeEvents(f, f.grant.instanceId)).events);
     expect(output).toContain("metadata");
     expect(output).not.toContain("runtime-fixture-cookie");

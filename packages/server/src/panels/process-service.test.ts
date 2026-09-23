@@ -1,3 +1,4 @@
+import { PanelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, test } from "bun:test";
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -61,6 +62,57 @@ describe("shared Panel process lifecycle", () => {
     };
     return { root, binary, service, owner, params, events };
   }
+
+  test("package occupation spans approval, spawned process and revocation cleanup", async () => {
+    const gate = new PanelExecutionGate();
+    const scope = { appId: "fixture", projectPath: "/process-lease-test" };
+    const mutate = () =>
+      gate.mutate(
+        () => true,
+        async () => {},
+      );
+    const approval = deferred<boolean>();
+    let asked = false;
+    const f = await fixture({
+      acquireExecution: () => gate.enter(scope),
+      confirmExecution: async () => {
+        asked = true;
+        return approval.promise;
+      },
+    });
+    await writeFile(f.binary, "#!/bin/sh\nexec /bin/sleep 30\n");
+    const starting = f.service.start(f.owner, f.params);
+    try {
+      await eventually(() => asked);
+      await expect(mutate()).rejects.toThrow("正在提交");
+    } finally {
+      approval.resolve(true);
+    }
+    const process = await starting;
+    const exited = f.service.waitForExit(f.owner, process);
+    await expect(mutate()).rejects.toThrow("正在提交");
+    f.service.revokeGuest(f.owner.guestId);
+    await expect(mutate()).rejects.toThrow("正在提交");
+    await exited;
+    await new Promise((done) => setTimeout(done, 0));
+    await mutate();
+  });
+
+  test("refused execution releases admission, and a package write prevents spawning", async () => {
+    const gate = new PanelExecutionGate();
+    const f = await fixture({
+      acquireExecution: () => gate.enter({ appId: "fixture", projectPath: "/process-refusal" }),
+      confirmExecution: async () => false,
+    });
+    await expect(f.service.start(f.owner, f.params)).rejects.toThrow();
+    await gate.mutate(
+      () => true,
+      async () => {
+        await expect(f.service.start(f.owner, f.params)).rejects.toThrow("正在更新");
+      },
+    );
+    expect(f.events).toHaveLength(0);
+  });
 
   test("sealed input changed during process approval is rejected and cleaned before execution", async () => {
     let allowed = true,

@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { randomUUID } from "node:crypto";
 
 export type PanelAgentTaskStatus =
@@ -249,10 +250,11 @@ export class PanelAppAgentTaskService {
       cancelRequested: false,
       activity: [],
     };
+    const release = panelExecutionGate.enter(owner);
     this.tasks.set(task.id, task);
     this.trimHistory();
     this.emit(task);
-    void this.execute(task);
+    void this.execute(task).finally(release);
     return publicTask(task);
   }
 
@@ -354,7 +356,11 @@ export class PanelAppAgentTaskService {
   }
 
   private emit(task: StoredPanelAgentTask): void {
-    this.emitChanged(task.owner, publicTask(task));
+    try {
+      this.emitChanged(task.owner, publicTask(task));
+    } catch {
+      /* A disconnected viewer must not interrupt execution or cleanup. */
+    }
   }
 
   private recordProgress(task: StoredPanelAgentTask, progress: PanelAgentTaskProgressInput): void {

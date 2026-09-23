@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -82,6 +83,48 @@ describe("durable native tool jobs", () => {
     };
     return { calls, execute };
   }
+
+  test("package mutation cannot pass admission authorization, queued work, cancellation cleanup or retry", async () => {
+    const authorization = deferred<boolean>();
+    let authorizing = false;
+    const execution = controlled();
+    const f = await fixture({
+      execute: execution.execute,
+      isAuthorized: async () => {
+        authorizing = true;
+        return authorization.promise;
+      },
+    });
+    const matches = (value: ToolJobScope | { appId: string; projectPath: string }) =>
+      value.appId === scope.appId && value.projectPath === scope.projectPath;
+    const mutate = () => panelExecutionGate.mutate(matches, async () => {});
+    const starting = f.service.start(scope, request);
+    try {
+      await eventually(async () => authorizing || undefined);
+      expect(f.service.activeCount()).toBe(0); // Waiting for authorization is not yet a stored job.
+      await expect(mutate()).rejects.toThrow("正在提交");
+    } finally {
+      authorization.resolve(true);
+    }
+    const job = await starting;
+    await eventually(async () => execution.calls.length === 1 || undefined);
+    await expect(mutate()).rejects.toThrow("正在提交");
+    const cancelling = f.service.cancel(scope, job.id);
+    await eventually(async () => execution.calls[0]!.context.signal.aborted || undefined);
+    await expect(mutate()).rejects.toThrow("正在提交");
+    execution.calls[0]!.gate.resolve(null);
+    await cancelling;
+    await mutate();
+    await panelExecutionGate.mutate(matches, async () => {
+      await expect(f.service.start(scope, request)).rejects.toThrow("正在更新");
+      await expect(f.service.retry(scope, job.id)).rejects.toThrow("正在更新");
+    });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    await f.service.retry(scope, job.id);
+    await expect(mutate()).rejects.toThrow("排队");
+    await f.service.cancel(scope, job.id);
+    await mutate();
+  });
 
   test("a full durable queue stays paused without a page and honors scope concurrency", async () => {
     const execution = controlled();

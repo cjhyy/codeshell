@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
@@ -4772,51 +4773,57 @@ ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
     throw new Error("panel-apps:uninstall cwd must be a non-empty string");
   }
   const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  await uninstallPanelAppForUi(id);
-  panelAppBridge.revokeAppId(id);
-  try {
-    const settings = (await readSettings("user")) ?? {};
-    const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
-    if (Array.isArray(disabled)) {
-      await writeSettings("user", {
-        disabledPanelApps: disabled.filter((candidate) => candidate !== id),
-      });
-    }
-    if (authorizedCwd) {
-      const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
-      const bindings = Array.isArray(projectSettings.panelAppBindings)
-        ? projectSettings.panelAppBindings.filter(
-            (candidate): candidate is string => typeof candidate === "string" && candidate !== id,
-          )
-        : [];
-      // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
-      // a null delete when the key already exists, so on a project without
-      // panelAppOverrides the null lands in the file and the settings schema
-      // then rejects it wholesale.
-      const rawOverrides = projectSettings.panelAppOverrides;
-      const overrides: Record<string, "inherit" | "on" | "off"> = {};
-      if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
-        for (const [key, value] of Object.entries(rawOverrides as Record<string, unknown>)) {
-          if (key === id) continue;
-          if (value === "inherit" || value === "on" || value === "off") overrides[key] = value;
+  return panelExecutionGate.mutate(
+    (scope) => scope.appId === id,
+    async () => {
+      await uninstallPanelAppForUi(id);
+      panelAppBridge.revokeAppId(id);
+      try {
+        const settings = (await readSettings("user")) ?? {};
+        const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
+        if (Array.isArray(disabled)) {
+          await writeSettings("user", {
+            disabledPanelApps: disabled.filter((candidate) => candidate !== id),
+          });
         }
+        if (authorizedCwd) {
+          const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
+          const bindings = Array.isArray(projectSettings.panelAppBindings)
+            ? projectSettings.panelAppBindings.filter(
+                (candidate): candidate is string =>
+                  typeof candidate === "string" && candidate !== id,
+              )
+            : [];
+          // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
+          // a null delete when the key already exists, so on a project without
+          // panelAppOverrides the null lands in the file and the settings schema
+          // then rejects it wholesale.
+          const rawOverrides = projectSettings.panelAppOverrides;
+          const overrides: Record<string, "inherit" | "on" | "off"> = {};
+          if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
+            for (const [key, value] of Object.entries(rawOverrides as Record<string, unknown>)) {
+              if (key === id) continue;
+              if (value === "inherit" || value === "on" || value === "off") overrides[key] = value;
+            }
+          }
+          await writeSettings(
+            "project",
+            {
+              panelAppBindings: bindings,
+              panelAppOverrides: overrides,
+            },
+            authorizedCwd,
+          );
+        }
+      } catch (error) {
+        dlog("main", "panel_app.settings_cleanup_failed", {
+          id,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-      await writeSettings(
-        "project",
-        {
-          panelAppBindings: bindings,
-          panelAppOverrides: overrides,
-        },
-        authorizedCwd,
-      );
-    }
-  } catch (error) {
-    dlog("main", "panel_app.settings_cleanup_failed", {
-      id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  broadcastPanelAppsChanged(mainWindows);
+      broadcastPanelAppsChanged(mainWindows);
+    },
+  );
 });
 ipcMain.handle(
   "plugins:installLocal",

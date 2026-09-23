@@ -37,6 +37,7 @@ import {
   revokePanelAppMediaReads,
 } from "./panel-app-protocol.js";
 import {
+  panelExecutionGate,
   PanelToolJobService,
   PanelTaskCookieHost,
   taskCookieFromInput,
@@ -186,6 +187,7 @@ interface GuestBinding {
 
 interface PendingAgentToolCall {
   guestId: number;
+  releaseExecution(): void;
   resolve(value: unknown): void;
   reject(error: Error): void;
   timer: ReturnType<typeof setTimeout>;
@@ -459,6 +461,14 @@ export class PanelAppBridge {
       return this.getResourceService().openRead(scope, id, request);
     });
     this.processService = new PanelAppProcessService({
+      acquireExecution: (owner) => {
+        const projectPath =
+          this.toolOwners.get(owner.guestId)?.scope.projectPath ??
+          this.guests.get(owner.guestId)?.projectPath;
+        if (!projectPath)
+          throw new PanelBridgeError("REVOKED", "Panel execution owner is unavailable");
+        return panelExecutionGate.enter({ appId: owner.appId, projectPath });
+      },
       allowAuthorizedProcessWithoutPrompt: true,
       isOwnerAuthorized: async (owner) => {
         const task = this.toolOwners.get(owner.guestId);
@@ -726,6 +736,7 @@ export class PanelAppBridge {
       if (pending.guestId !== guestId) continue;
       clearTimeout(pending.timer);
       this.pendingAgentToolCalls.delete(requestId);
+      pending.releaseExecution();
       pending.reject(new Error("Panel App closed before its Agent tool completed"));
     }
   }
@@ -832,13 +843,25 @@ export class PanelAppBridge {
     if (validationError) {
       throw new Error(`Invalid Panel App tool input: ${validationError}`);
     }
+    if (
+      [...this.pendingAgentToolCalls.values()].filter(
+        (pending) => pending.guestId === binding.guest.id,
+      ).length >= 16
+    )
+      throw new Error("Panel App has too many unfinished Agent tool calls");
+    const releaseExecution = panelExecutionGate.enter({
+      appId: binding.resource.descriptor.appId,
+      projectPath: binding.projectPath,
+    });
     const requestId = randomUUID();
     const result = await new Promise<unknown>((resolveResult, reject) => {
       const timer = setTimeout(() => {
-        this.pendingAgentToolCalls.delete(requestId);
+        // A timeout stops waiting, not the guest operation. Retain the lease until
+        // its late response or guest revocation proves it can no longer execute.
         reject(new Error(`Panel App tool '${input.toolName}' timed out`));
       }, this.options.limits?.callTimeoutMs ?? CALL_TIMEOUT_MS);
       this.pendingAgentToolCalls.set(requestId, {
+        releaseExecution,
         guestId: binding.guest.id,
         resolve: resolveResult,
         reject,
@@ -853,6 +876,7 @@ export class PanelAppBridge {
       } catch (error) {
         clearTimeout(timer);
         this.pendingAgentToolCalls.delete(requestId);
+        releaseExecution();
         reject(
           error instanceof Error
             ? error
@@ -877,6 +901,7 @@ export class PanelAppBridge {
     const pending = this.pendingAgentToolCalls.get(response.requestId);
     if (!pending || pending.guestId !== sender.id) return;
     this.pendingAgentToolCalls.delete(response.requestId);
+    pending.releaseExecution();
     clearTimeout(pending.timer);
     if (response.ok === true) {
       pending.resolve(response.result ?? null);
@@ -1077,7 +1102,10 @@ export class PanelAppBridge {
     // Whole-file custody can outlast a normal UI RPC. Keep it guest-owned and
     // cancellable so a deadline or revoked guest cannot leave a copy running.
     const transfer = RESOURCE_TRANSFER_METHODS.has(method) ? new AbortController() : undefined;
-    const operation = this.dispatch(binding, method, params, transfer?.signal);
+    const operation = panelExecutionGate.run(
+      { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath },
+      () => this.dispatch(binding, method, params, transfer?.signal),
+    );
     if (transfer) {
       const settled = operation
         .then(

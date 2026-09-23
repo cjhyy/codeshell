@@ -28,6 +28,7 @@ import {
 import { basename, delimiter, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { Readable } from "node:stream";
+import { panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 import { PANEL_APP_API_VERSION } from "../src/shared/panel-apps.js";
 import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-electron-mock.js";
 
@@ -1601,6 +1602,20 @@ describeIsolated("PanelAppBridge", () => {
         },
       ),
     ).rejects.toThrow(/timed out/);
+    const mutate = () =>
+      panelExecutionGate.mutate(
+        (scope) => scope.appId === "demo" && scope.projectPath === "/repo",
+        async () => {},
+      );
+    await expect(mutate()).rejects.toThrow("正在提交");
+    expect((bridge as any).pendingAgentToolCalls.size).toBe(1);
+    const request = guest.sent.find((item) => item.channel === "panel-app:agent-tool-request")!;
+    panelAppElectronMock.ipcListeners.get("panel-app:agent-tool-response")?.(
+      { sender: guest },
+      { requestId: request.payload.requestId, ok: true, result: "late actual result" },
+    );
+    expect((bridge as any).pendingAgentToolCalls.size).toBe(0);
+    await mutate();
   });
 
   test("rejects an in-flight Agent tool immediately when its app is revoked", async () => {
@@ -2533,6 +2548,10 @@ describeIsolated("PanelAppBridge", () => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), "cspanel-limits-"));
     try {
       let hang = false;
+      let finishRead!: (value: unknown) => void;
+      const pendingRead = new Promise((done) => {
+        finishRead = done;
+      });
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: () => true,
@@ -2549,10 +2568,9 @@ describeIsolated("PanelAppBridge", () => {
           maxResultBytes: 64,
         },
       });
-      // Stub the handler entirely: return an oversized payload instantly, or park
-      // forever. No filesystem timing in the assertions.
+      // Park the actual operation beyond the RPC deadline, then explicitly finish it.
       (bridge as any).workspaceReadText = async () =>
-        hang ? new Promise<never>(() => undefined) : { path: "big.txt", text: "x".repeat(4096) };
+        hang ? pendingRead : { path: "big.txt", text: "x".repeat(4096) };
 
       bridge.registerIpc();
       const guest = fakeGuest(13);
@@ -2571,6 +2589,15 @@ describeIsolated("PanelAppBridge", () => {
       // 2nd call: never settles → the timeout wrapper rejects.
       hang = true;
       await expect(call("small.txt")).rejects.toThrow(/timed out/);
+      const mutate = () =>
+        panelExecutionGate.mutate(
+          (scope) => scope.appId === "demo" && scope.projectPath === realpathSync(workspaceRoot),
+          async () => {},
+        );
+      await expect(mutate()).rejects.toThrow("正在提交");
+      finishRead({ text: "finished after timeout" });
+      await new Promise((done) => setTimeout(done, 0));
+      await mutate();
       hang = false;
       // 3rd call: size again — proves a timeout did not consume the size check.
       await expect(call("big.txt")).rejects.toThrow(/result is too large/);

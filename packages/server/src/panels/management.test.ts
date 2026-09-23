@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -182,6 +183,62 @@ describe("shared Web panel management with the real Core installer", () => {
     expect(latest.version).toBe("2.0.0");
     await second.binding(owner, latest.id, true, latest.revision);
     expect((await second.snapshot()).panels[0]).toMatchObject({ version: "2.0.0", bound: true });
+  });
+
+  test("reviewed updates block affected work, allow other pinned projects and close admission during commit", async () => {
+    let checkWrite: (() => Promise<void>) | undefined;
+    const api = service({
+      projectPackages: true,
+      withMutation: async (write) => {
+        await checkWrite?.();
+        return write();
+      },
+    });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const old = (await api.snapshot()).panels[0]!;
+    const elsewhere = join(root, "pinned-project");
+    mkdirSync(elsewhere);
+    const other = service({ cwd: elsewhere, projectPackages: true });
+    const available = (await other.snapshot()).panels[0]!;
+    await other.binding(owner, available.id, true, available.revision);
+    writePanel("2.0.0");
+    const review = await api.previewUpdate(owner, old.id, old.revision);
+    const release = panelExecutionGate.enter({ appId: old.id, projectPath: cwd });
+    try {
+      await expect(api.install(owner, review.reviewToken)).rejects.toMatchObject({ status: 409 });
+      expect((await api.snapshot()).panels[0]!.version).toBe("1.0.0");
+    } finally {
+      release();
+    }
+    const releaseLegacy = panelExecutionGate.enter({
+      appId: old.id,
+      projectPath: join(root, "legacy"),
+    });
+    try {
+      await expect(api.install(owner, review.reviewToken)).rejects.toMatchObject({ status: 409 });
+    } finally {
+      releaseLegacy();
+    }
+    const releaseOther = panelExecutionGate.enter({ appId: old.id, projectPath: elsewhere });
+    checkWrite = async () => {
+      expect(() => panelExecutionGate.enter({ appId: old.id, projectPath: cwd })).toThrow(
+        "正在更新",
+      );
+      // This project's retained bytes do not change during the catalog update.
+      panelExecutionGate.enter({ appId: old.id, projectPath: elsewhere })();
+    };
+    try {
+      await api.install(owner, review.reviewToken);
+      expect((await api.snapshot()).panels[0]!.version).toBe("2.0.0");
+      expect((await other.snapshot()).panels[0]!.version).toBe("1.0.0");
+      checkWrite = undefined;
+      const updated = (await api.snapshot()).panels[0]!;
+      await expect(api.remove(owner, old.id, updated.revision)).rejects.toMatchObject({
+        status: 409,
+      });
+    } finally {
+      releaseOther();
+    }
   });
 
   test("project update review rejects a changed catalog without moving the old project pin", async () => {

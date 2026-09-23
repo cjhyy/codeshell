@@ -1,3 +1,5 @@
+import { panelExecutionGate } from "./execution-gate.js";
+import { panelPackageMutationMatches, type PanelPackageMutation } from "./package-mutation.js";
 import { createHash, randomBytes } from "node:crypto";
 import { lstatSync, mkdirSync, statSync } from "node:fs";
 import { basename, extname, isAbsolute, join, resolve } from "node:path";
@@ -581,6 +583,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
 
   async function mutate<T>(
     context: PanelOperationContext,
+    change: Pick<PanelPackageMutation, "appId" | "kind">,
     work: (guard: () => Promise<void>) => Promise<T>,
   ): Promise<T> {
     const expected = generation(context.ownerId);
@@ -591,7 +594,10 @@ export function createPanelManagement(options: PanelManagementOptions) {
         await guard();
         return work(guard);
       };
-      return options.withMutation ? options.withMutation(write) : write();
+      return panelExecutionGate.mutate(
+        panelPackageMutationMatches({ ...change, projectPath: options.bindingCwd ?? options.cwd }),
+        () => (options.withMutation ? options.withMutation(write) : write()),
+      );
     };
     const next = catalogMutation.then(run, run);
     catalogMutation = next.catch(() => undefined);
@@ -736,62 +742,71 @@ export function createPanelManagement(options: PanelManagementOptions) {
           "already_installed",
           "这个面板已经安装，请确认项目更新。",
         );
-      return mutate(context, async (guard) => {
-        await assertAuthorized(context, held.generation);
-        if (reviews.get(token) !== held || held.public.expiresAt <= now())
-          throw new PanelManagementError(409, "review_expired", "预览已失效，请重新检查来源。");
-        const id = held.public.preview.id;
-        if (held.public.kind === "update") {
-          const current = await selectedApp(id);
-          if (
-            revision(current.app, current.digest) !== held.public.expectedRevision ||
-            (await catalogState(id)) !== held.catalogState
-          )
-            throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
-        } else if ((await listInstalledPanelApps()).some((item) => item.id === id))
-          throw new PanelManagementError(
-            409,
-            "already_installed",
-            "这个面板已经安装，请检查更新。",
-          );
-        if (projectState(id) !== held.projectState)
-          throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
-        await guard();
-        const installed = await installReviewedLocalPanelApp(
-          held.source,
-          held.digest,
-          new Date(now()).toISOString(),
-          {
-            overwrite: held.public.kind === "update",
-            expectedId: id,
-            recordedRef: held.origin?.ref,
-            beforeCommit: async () => {
-              if (held.public.kind === "update") {
-                const current = await selectedApp(id);
-                if (
-                  revision(current.app, current.digest) !== held.public.expectedRevision ||
-                  (await catalogState(id)) !== held.catalogState
-                )
-                  throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
-              }
-              if (projectState(id) !== held.projectState)
-                throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
-              await guard();
+      return mutate(
+        context,
+        { appId: held.public.preview.id, kind: held.public.kind },
+        async (guard) => {
+          await assertAuthorized(context, held.generation);
+          if (reviews.get(token) !== held || held.public.expiresAt <= now())
+            throw new PanelManagementError(409, "review_expired", "预览已失效，请重新检查来源。");
+          const id = held.public.preview.id;
+          if (held.public.kind === "update") {
+            const current = await selectedApp(id);
+            if (
+              revision(current.app, current.digest) !== held.public.expectedRevision ||
+              (await catalogState(id)) !== held.catalogState
+            )
+              throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
+          } else if ((await listInstalledPanelApps()).some((item) => item.id === id))
+            throw new PanelManagementError(
+              409,
+              "already_installed",
+              "这个面板已经安装，请检查更新。",
+            );
+          if (projectState(id) !== held.projectState)
+            throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
+          await guard();
+          const installed = await installReviewedLocalPanelApp(
+            held.source,
+            held.digest,
+            new Date(now()).toISOString(),
+            {
+              overwrite: held.public.kind === "update",
+              expectedId: id,
+              recordedRef: held.origin?.ref,
+              beforeCommit: async () => {
+                if (held.public.kind === "update") {
+                  const current = await selectedApp(id);
+                  if (
+                    revision(current.app, current.digest) !== held.public.expectedRevision ||
+                    (await catalogState(id)) !== held.catalogState
+                  )
+                    throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
+                }
+                if (projectState(id) !== held.projectState)
+                  throw new PanelManagementError(
+                    409,
+                    "conflict",
+                    "项目面板配置已改变，请重新预览。",
+                  );
+                await guard();
+              },
             },
-          },
-        );
-        reviews.delete(token);
-        origins((value) => {
-          if (held.origin) value[id] = { source: held.origin, lastUpdated: installed.lastUpdated };
-          else delete value[id];
-        });
-        await guard();
-        if (bind && hasProject && held.public.compatibility.supported)
-          setBinding(installed, true, { projectState: held.projectState });
-        invalidateSkillCache();
-        await options.onChanged?.(id, held.public.kind);
-        return { id, packageDigest: installed.packageDigest };
-      });
+          );
+          reviews.delete(token);
+          origins((value) => {
+            if (held.origin)
+              value[id] = { source: held.origin, lastUpdated: installed.lastUpdated };
+            else delete value[id];
+          });
+          await guard();
+          if (bind && hasProject && held.public.compatibility.supported)
+            setBinding(installed, true, { projectState: held.projectState });
+          invalidateSkillCache();
+          await options.onChanged?.(id, held.public.kind);
+          return { id, packageDigest: installed.packageDigest };
+        },
+      );
     },
     async binding(
       context: PanelOperationContext,
@@ -802,7 +817,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
       assertId(id);
       assertRevision(expected);
       if (typeof bound !== "boolean") invalid();
-      return mutate(context, async (guard) => {
+      return mutate(context, { appId: id, kind: "binding" }, async (guard) => {
         const current = await selectedApp(id);
         if (bound && !compatibility(current.app).supported)
           throw new PanelManagementError(
@@ -827,7 +842,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
     async remove(context: PanelOperationContext, id: unknown, expected: unknown) {
       assertId(id);
       assertRevision(expected);
-      return mutate(context, async (guard) => {
+      return mutate(context, { appId: id, kind: "remove" }, async (guard) => {
         const current = await selectedApp(id);
         if (revision(current.app, current.digest) !== expected)
           throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");

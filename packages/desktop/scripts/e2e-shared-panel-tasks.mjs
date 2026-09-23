@@ -601,8 +601,44 @@ try {
     paused: true,
     maxConcurrent: 1,
   });
+  let packageReview;
+  const updateSource = { kind: "dir", path: join(isolated.home, "catalog-v2") };
+  if (projectPins) {
+    packageReview = await win.evaluate(
+      ({ source, cwd }) => window.codeshell.previewLocalPanelApp(source, cwd),
+      { source: updateSource, cwd: project },
+    );
+    assert.equal(packageReview.ok, true, JSON.stringify(packageReview));
+    assert.equal(packageReview.installedVersion, "1.0.0");
+    assert.equal(packageReview.preview.version, "2.0.0");
+  }
+  const assertPackageBusy = async () => {
+    const catalog = await json(await request("/api/v1/panels"));
+    const state = catalog.panels.find((item) => item.id === manifest.id);
+    const response = await request(`/api/v1/panels/${manifest.id}/binding`, "PATCH", {
+      bound: true,
+      expectedRevision: state.revision,
+    });
+    assert.equal(response.status, 409, await response.clone().text());
+    if (packageReview) {
+      const result = await win.evaluate((input) => window.codeshell.installLocalPanelApp(input), {
+        cwd: project,
+        source: updateSource,
+        reviewToken: packageReview.preview.reviewToken,
+        overwrite: true,
+      });
+      assert.equal(result.ok, false, JSON.stringify(result));
+      assert.match(result.error, /任务|运行|提交/);
+      const selected = await win.evaluate(
+        async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
+        project,
+      );
+      assert.equal(selected.version, "1.0.0");
+    }
+  };
   const first = await desktop("tasks.start", startInput);
   assert.equal((await phoneCall("tasks.get", { id: first.id })).status, "queued");
+  await assertPackageBusy();
   const resuming = phoneCall("tasks.queue.set", {
     expectedRevision: 1,
     paused: false,
@@ -646,6 +682,7 @@ try {
       ),
     "Phone did not receive Desktop progress",
   );
+  await assertPackageBusy();
   await phoneCall("tasks.cancel", { id: first.id });
   assert.equal((await desktop("tasks.get", { id: first.id })).status, "cancelled");
   const secondInput = {
@@ -661,6 +698,7 @@ try {
       ),
     "Remote tool did not require confirmation",
   );
+  await assertPackageBusy();
   await json(
     await request(`/api/v1/panels/runtime/${phone.instanceId}/confirm`, "POST", {
       requestId: confirmation.payload.requestId,
@@ -716,6 +754,21 @@ try {
   await win.evaluate(() => window.codeshell.mobileRemote.stop());
   assert.equal((await desktop("tasks.get", { id: third.id })).status, "running");
   await desktop("tasks.cancel", { id: third.id });
+  if (packageReview) {
+    // The same unconsumed review can commit once actual work has stopped.
+    const result = await win.evaluate((input) => window.codeshell.installLocalPanelApp(input), {
+      cwd: project,
+      source: updateSource,
+      reviewToken: packageReview.preview.reviewToken,
+      overwrite: true,
+    });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const selected = await win.evaluate(
+      async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
+      project,
+    );
+    assert.equal(selected.version, "2.0.0");
+  }
   const staleBinding = await win.evaluate(
     async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
     project,
@@ -742,6 +795,8 @@ try {
     JSON.stringify({
       actualElectron: true,
       nativeConditionalProjectBinding: true,
+      packageMutationBlocksQueuedRunningAndPreparing: true,
+      projectUpdateAfterActualTaskExit: projectPins,
       projectPinnedAgainstNewerCatalog: projectPins,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,
