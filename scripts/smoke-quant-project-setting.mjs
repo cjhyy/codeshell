@@ -32,9 +32,10 @@ try {
     permissions: ["storage"],
     isAuthorized: async () => active,
   });
-  const device = (cwd, service = new PanelRuntimeServices({ dataDir })) =>
+  const device = (cwd, key = "dataSources", service = new PanelRuntimeServices({ dataDir })) =>
     createProjectSetting({
-      key: "dataSources",
+      key,
+      label: key === "watchlist" ? "关注记录" : "数据源配置",
       currentEpoch: () => cwd,
       getContext: () => ({ availableMethods: methods }),
       hostCall: async (method, params) => {
@@ -89,8 +90,31 @@ try {
     code: "STORAGE_UNCERTAIN",
   });
   assert.equal(writes, beforeBlocked);
+  const watchA = device(projectA, "watchlist"),
+    watchB = device(projectA, "watchlist");
+  await watchA.load();
+  await watchA.save({ items: [{ symbol: "AAPL" }], watchlistMigrationVersion: 1 });
+  await watchB.load();
+  await watchB.assertCurrent();
+  await watchA.save({
+    items: [{ symbol: "AAPL" }, { symbol: "MSFT" }],
+    watchlistMigrationVersion: 1,
+  });
+  const beforeVerify = writes;
+  await assert.rejects(watchB.assertCurrent(), /其他页面或设备已修改关注记录/);
+  await assert.rejects(watchB.save({ items: [] }), { code: "STORAGE_CONFLICT" });
+  assert.equal(
+    writes,
+    beforeVerify,
+    "read verification must not adopt the competing version or permit stale writes",
+  );
+  assert.deepEqual(
+    (await device(projectA, "watchlist").load()).items.map((item) => item.symbol),
+    ["AAPL", "MSFT"],
+  );
+  assert.equal(await device(projectB, "watchlist").load(), null);
   console.log(
-    "✓ Quant project settings: actual Host disk/CAS, separate project isolation, recreated service, lost-response reconciliation and revoked owner; no real browser transport or market provider claimed",
+    "✓ Quant project settings: actual Host disk/CAS, separate project isolation, recreated service, lost-response reconciliation and revoked owner and pre-operation watchlist revision checks; no real browser transport or market provider claimed",
   );
 } finally {
   await rm(root, { recursive: true, force: true });
