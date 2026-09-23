@@ -97,21 +97,27 @@ handoff through `connectionIds` and `connectionArgument` in the input envelope.
 Keys are neither stored in task JSON nor sent to the Guest. A Panel interprets
 its provider-specific model parameters and constructs its own requests.
 
-## Background Cookie custody (unpublished, Host integration pending)
+## Background Cookie custody (unpublished)
 
 The generic executor accepts an optional `cookieArgument` envelope containing
 `credentialId`, `url`, `revision`, and `argumentName`. It rejects this input unless
-the Host explicitly configures a Cookie custody adapter. Desktop and Web do not
-advertise or enable this capability yet; existing Cookie process methods are
-unchanged.
+the Host explicitly configures a Cookie custody adapter. Desktop, paired Desktop
+Web and standalone Hub expose `credentials.cookies.listForTask({url})` and
+`capabilities.tasks.cookieCredentials` when the installed app has `process`,
+`resources` and `credentials.cookies`. Existing Cookie process methods are unchanged.
+The new list returns `{accounts:[{id,label,domain,revision}]}`. Use the selected
+account's ID and revision in the task envelope; never pass a Cookie value or path.
+Desktop uses its existing Host vault, paired Web shares the Desktop's frozen
+execution revision, and Hub reads only the current project's saved credentials.
 
 `PanelTaskCookieService` supplies safe account metadata, keyed credential versions,
 current-authorization checks, and private Netscape Cookie files. Its vault adapter
 and authorization callback are Host-owned. A revision is scoped to the app,
 project, package and saved account contents, using a private Host key; it is not
-an authorization token or proof of user consent. The Host must persist that key
-privately and obtain explicit consent naming the selected account, target site
-and reviewed tool at start and retry before enabling the adapter. A changed or
+an authorization token or proof of user consent. `PanelTaskCookieHost` persists
+the key privately under exclusive Host ownership. Desktop dialogs and authenticated
+Web confirmations name the selected account, target site and reviewed tool at
+start and retry, with authorization rechecked after the decision. A changed or
 removed account requires a new selection rather than silently adopting its new
 contents. Files contain only valid, unexpired cookies beneath the saved account
 domain; unrelated cookies from an all-sites browser capture are omitted.
@@ -120,10 +126,16 @@ Task JSON contains the selection only. The executor creates the temporary file
 outside task/resource directories at launch, passes its path through a sealed
 native argument, and rechecks authorization before launch, during execution and
 before accepting the result. Cleanup is awaited after native exit on success,
-failure, cancellation or revocation. Host crash cleanup, private-key lifecycle,
-Desktop/Web approval wiring and Download UI integration remain required before
-advertising the feature. Reviewed tools must not copy credentials into progress,
-output or artifacts; this custody mechanism does not sandbox their code.
+failure, cancellation or revocation. Host shutdown stops native tasks before closing
+the Cookie host. A new exclusive owner removes abandoned managed leases after a
+crash; it does not remove a live Host's files or regenerate a corrupted key.
+The key survives restart so unchanged account selections remain valid for explicit
+retry. The manager does not itself terminate orphaned programs after an OS-level
+crash. Download's script and UI integration remain pending; generic Host support
+does not mean that an existing Panel already uses it. Reviewed tools must not copy
+credentials into progress, output or artifacts; this custody mechanism does not
+sandbox their code. Web login capture/browser restoration remain unavailable;
+the new Web method selects previously saved accounts only.
 
 ## Discovery and transport
 

@@ -5,6 +5,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rename,
   rm,
@@ -14,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
-import type { InstalledPanelApp } from "@cjhyy/code-shell-core";
+import { CredentialStore, type InstalledPanelApp } from "@cjhyy/code-shell-core";
 import {
   createPanelRuntime,
   panelWebCompatibility,
@@ -26,6 +27,7 @@ import { PanelToolJobService, type ToolJobScope } from "./tool-jobs.js";
 import { createSharedPanelToolHost, type SharedPanelToolHost } from "./shared-tool-jobs.js";
 import { resolvePanelExecutable } from "./process-service.js";
 import { PanelResourceService } from "./resources/service.js";
+import { PanelTaskCookieHost } from "./task-cookie-host.js";
 import type { PanelSnapshot } from "./types.js";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -884,9 +886,15 @@ async function nodeProcessFixture() {
 async function nativeToolFixture(
   source: string,
   sharedToolJobs?: NonNullable<Parameters<typeof fixture>[0]>["sharedToolJobs"],
+  cookies = false,
 ) {
   const f = await fixture({
-    permissions: ["context.workspace", "process", "resources"],
+    permissions: [
+      "context.workspace",
+      "process",
+      "resources",
+      ...(cookies ? ["credentials.cookies" as const] : []),
+    ],
     sharedToolJobs,
   });
   const entry = "app/tools/sample.mjs";
@@ -922,6 +930,148 @@ async function nativeToolFixture(
 }
 
 describe("Panel HTTP host operations", () => {
+  async function cookieFixture(delay = 0) {
+    const f = await nativeToolFixture(
+      `import {readFile} from "node:fs/promises";
+let text="";for await(const chunk of process.stdin) text+=chunk;
+const request=JSON.parse(text), path=process.argv[process.argv.indexOf("--cookies-file")+1];
+const content=await readFile(path,"utf8");
+if(!content.includes("runtime-fixture-cookie")) process.exit(3);
+console.log(JSON.stringify({type:"progress",progress:{message:"cookie-read",fraction:0.5}}));
+setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:request.value}})),${delay});`,
+      undefined,
+      true,
+    );
+    const store = new CredentialStore(f.cwd);
+    const saved = {
+      id: "cookie-fixture",
+      type: "cookie" as const,
+      label: "Test saved login",
+      meta: { domain: "example.com" },
+      secret: JSON.stringify([
+        { domain: ".example.com", name: "session", value: "runtime-fixture-cookie" },
+      ]),
+    };
+    store.save("project", saved);
+    const accounts = await (
+      await f.call("credentials.cookies.listForTask", { url: "https://example.com/watch" })
+    ).json();
+    const input = {
+      entry: "sample",
+      recovery: "retry",
+      input: {
+        request: { value: "fixture" },
+        cookieArgument: {
+          argumentName: "--cookies-file",
+          credentialId: saved.id,
+          url: "https://example.com/watch",
+          revision: accounts.accounts[0].revision,
+        },
+      },
+    };
+    let cursor = 0;
+    async function consent(pending: Promise<Response>, allowed: boolean, during?: () => void) {
+      const event = await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm", cursor);
+      cursor = event.id;
+      expect(JSON.stringify(event.payload)).toContain("Test saved login");
+      expect(JSON.stringify(event.payload)).toContain("example.com");
+      expect(JSON.stringify(event.payload)).not.toContain("runtime-fixture-cookie");
+      during?.();
+      await f.api(`${f.grant.instanceId}/confirm`, "POST", {
+        requestId: event.payload.requestId,
+        allowed,
+      });
+      return pending;
+    }
+    async function status(id: string, wanted: string) {
+      let current: any;
+      for (let i = 0; i < 100; i++) {
+        current = await (await f.call("tasks.get", { id })).json();
+        if (current.status === wanted) return current;
+        await Bun.sleep(20);
+      }
+      throw new Error(`Cookie task expected ${wanted}, received ${current?.status}`);
+    }
+    return { ...f, store, saved, input, consent, status };
+  }
+  test("Web selected-account consent gates real native Cookie use and keeps secrets out of task records", async () => {
+    const f = await cookieFixture();
+    expect((f.grant.context as any).capabilities.tasks.cookieCredentials).toBe(true);
+    expect(f.grant.context.availableMethods).toContain("credentials.cookies.listForTask");
+    const denied = await f.consent(f.call("tasks.start", f.input), false);
+    expect(denied.status).toBe(403);
+    expect(await (await f.call("tasks.list", {})).json()).toEqual([]);
+    const response = await f.consent(f.call("tasks.start", f.input), true);
+    expect(response.status).toBe(200);
+    const job = await response.json();
+    const done = await f.status(job.id, "succeeded");
+    expect(done.result).toEqual({ ok: true, value: "fixture" });
+    expect(JSON.stringify(done)).not.toContain("runtime-fixture-cookie");
+    expect(
+      (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      ),
+    ).toEqual([]);
+  });
+  test("Web rechecks account replacement during consent before admitting the task", async () => {
+    const f = await cookieFixture();
+    const response = await f.consent(f.call("tasks.start", f.input), true, () => {
+      f.store.save("project", { ...f.saved, label: "Replacement account" });
+    });
+    expect(response.status).toBe(400);
+    expect(await (await f.call("tasks.list", {})).json()).toEqual([]);
+  });
+  test("logout during the post-consent Cookie lookup cannot admit a new task", async () => {
+    const f = await cookieFixture();
+    const observer = await f.prepare("owner-b");
+    let release!: () => void,
+      entered!: () => void,
+      checks = 0;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = PanelTaskCookieHost.prototype.check;
+    const mocked = spyOn(PanelTaskCookieHost.prototype, "check").mockImplementation(
+      async function (scope, selection) {
+        const result = await original.call(this, scope, selection);
+        if (++checks === 2) {
+          entered();
+          await waiting;
+        }
+        return result;
+      },
+    );
+    const pending = f.consent(f.call("tasks.start", f.input), true);
+    try {
+      await ready;
+      f.runtime.cancelOwner("owner-a");
+      release();
+      expect((await pending).status).toBe(410);
+      expect(await (await f.call("tasks.list", {}, observer.instanceId, "owner-b")).json()).toEqual(
+        [],
+      );
+    } finally {
+      release();
+      await pending;
+      mocked.mockRestore();
+    }
+  });
+  test("Web retry asks for the same saved account again, denial preserves cancellation and acceptance retains the task ID", async () => {
+    const f = await cookieFixture(500);
+    const response = await f.consent(f.call("tasks.start", f.input), true);
+    const job = await response.json();
+    await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed");
+    expect((await f.call("tasks.cancel", { id: job.id })).status).toBe(200);
+    await f.status(job.id, "cancelled");
+    expect((await f.consent(f.call("tasks.retry", { id: job.id }), false)).status).toBe(403);
+    await f.status(job.id, "cancelled");
+    const retry = await f.consent(f.call("tasks.retry", { id: job.id }), true);
+    expect((await retry.json()).id).toBe(job.id);
+    expect((await f.status(job.id, "succeeded")).result.ok).toBe(true);
+  });
   test("logout aborts input preparation before a native job can be published or run", async () => {
     const f = await nativeToolFixture("process.stdin.resume();");
     await f.prepare("owner-b");

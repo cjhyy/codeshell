@@ -89,7 +89,7 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   expect(value.capabilities.methodLimits["resources.references.pick"].timeoutMs).toBe(
     30 * 60 * 1000,
   );
-  expect(value.capabilities.tasks).toEqual({ durable: true });
+  expect(value.capabilities.tasks).toEqual({ durable: true, cookieCredentials: false });
   expect(value.capabilities.methodLimits["tasks.start"]).toMatchObject({
     maxParamsBytes: 2 * 1024 * 1024 + 8192,
   });
@@ -105,6 +105,24 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   });
   expect(noQueue.availableMethods).not.toContain("tasks.start");
   expect(noQueue.capabilities.tasks).toBeUndefined();
+});
+
+test("background Cookie metadata requires a configured service and all task permissions", () => {
+  const permissions = ["resources", "process", "credentials.cookies"] as const;
+  const enabled = desktopPanelCapabilities(permissions, { ...options, taskCookies: true });
+  expect(enabled.availableMethods).toContain("credentials.cookies.listForTask");
+  expect(enabled.capabilities.tasks).toMatchObject({ cookieCredentials: true });
+  expect(enabled.capabilities.methodLimits["tasks.retry"].timeoutMs).toBe(30 * 60 * 1000);
+  for (const permission of permissions) {
+    const missing = desktopPanelCapabilities(
+      permissions.filter((value) => value !== permission),
+      { ...options, taskCookies: true },
+    );
+    expect(missing.availableMethods).not.toContain("credentials.cookies.listForTask");
+  }
+  expect(desktopPanelCapabilities(permissions, options).availableMethods).not.toContain(
+    "credentials.cookies.listForTask",
+  );
 });
 
 test("versioned storage is advertised only with storage permission and bounded limits", () => {

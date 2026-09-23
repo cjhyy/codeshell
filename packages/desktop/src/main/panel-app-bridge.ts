@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "el
 import {
   listInstalledPanelApps,
   type InstalledPanelApp,
+  type Credential,
   panelAppInstallDir,
   panelAppsRegistryPath,
   resolvePanelAppBindingProjectPath,
@@ -39,6 +40,8 @@ import {
 } from "./panel-app-protocol.js";
 import {
   PanelToolJobService,
+  PanelTaskCookieHost,
+  taskCookieFromInput,
   createSharedPanelToolHost,
   desktopPanelDirectoryBookmarks,
   type SharedPanelToolHost,
@@ -200,6 +203,8 @@ export interface PanelAppBridgeOptions {
   showNotification?(notification: { title: string; body: string }): boolean;
   /** Host-owned Cookie login operations. Cookie values never cross into the Panel guest. */
   cookieCredentials?: {
+    /** Host-only vault access for versioned background task credentials. */
+    taskCredentials?(cwd: string): Promise<Credential[]>;
     list(cwd?: string): Promise<PanelAppCookieCredential[]>;
     loginAndSave(input: {
       appId: string;
@@ -429,6 +434,7 @@ export class PanelAppBridge {
     { guestId: number; settled: Promise<void> }
   >();
   private toolJobService?: PanelToolJobService;
+  private taskCookieHost?: PanelTaskCookieHost;
   private nextToolOwner = -1;
   private readonly toolOwners = new Map<number, { scope: ToolJobScope; appTitle: string }>();
 
@@ -642,6 +648,9 @@ export class PanelAppBridge {
     await this.getResourceService().initialize();
     await this.getToolJobService().initialize();
     await this.getMediaService().initialize();
+    // A damaged optional credential key must not prevent unrelated media recovery.
+    if (this.options.cookieCredentials?.taskCredentials)
+      await this.getTaskCookieHost().initialize();
   }
 
   async shutdownMedia(): Promise<void> {
@@ -650,6 +659,7 @@ export class PanelAppBridge {
     for (const controller of this.resourceTransfers.keys()) controller.abort();
     await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
     await this.toolJobService?.shutdown();
+    await this.taskCookieHost?.shutdown();
     await this.mediaService?.shutdown();
     await this.resourceService?.shutdown();
   }
@@ -1088,6 +1098,7 @@ export class PanelAppBridge {
                   method === "filesystem.pickDirectory" ||
                   method === "process.spawn" ||
                   method === "tasks.start" ||
+                  method === "tasks.retry" ||
                   method === "credentials.connections.authorizeProcess" ||
                   method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
@@ -1149,6 +1160,7 @@ export class PanelAppBridge {
       },
       audio: !!this.options.audioTranscription,
       cookies: !!this.options.cookieCredentials,
+      taskCookies: !!this.options.cookieCredentials?.taskCredentials,
       automations: !!this.options.automations,
       mediaMethods: [
         "media.status",
@@ -1238,6 +1250,9 @@ export class PanelAppBridge {
   /** Remote transports share project tasks but cannot shut down their coordinator. */
   sharedToolJobs(): SharedPanelToolHost {
     return createSharedPanelToolHost({
+      ...(this.options.cookieCredentials?.taskCredentials
+        ? { cookies: this.getTaskCookieHost() }
+        : {}),
       service: () => this.getToolJobService(),
       resolveScope: async (expected, projectPath) => {
         const installed = await this.installedToolApps.get(expected.id);
@@ -1254,9 +1269,71 @@ export class PanelAppBridge {
     });
   }
 
+  private getTaskCookieHost(): PanelTaskCookieHost {
+    const credentials = this.options.cookieCredentials?.taskCredentials;
+    if (!credentials)
+      throw new PanelBridgeError("NOT_SUPPORTED", "Background Cookie access is unavailable");
+    return (this.taskCookieHost ??= new PanelTaskCookieHost({
+      rootDirectory: join(app.getPath("userData"), "panel-task-cookies"),
+      credentials: (scope) => credentials(scope.projectPath),
+      authorize: async (scope) => {
+        if (!(await this.installedToolApp(scope)).permissions.includes("credentials.cookies"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires Cookie permission");
+      },
+    }));
+  }
+
+  private async confirmTaskCookie(binding: GuestBinding, input: unknown, entry: string) {
+    const selection = taskCookieFromInput(input);
+    if (!selection) return;
+    this.requirePermission(binding, "credentials.cookies");
+    const scope = {
+      appId: binding.resource.descriptor.appId,
+      projectPath: binding.projectPath,
+      revision: binding.resource.descriptor.revision,
+    };
+    const cwd = binding.cwd;
+    const host = this.getTaskCookieHost();
+    const account = await host.check(scope, selection);
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const decision = await dialog.showMessageBox(owner, {
+      type: "question",
+      buttons: ["Use saved login", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      title: binding.resource.descriptor.title,
+      message: `Use “${account.label}” for this background task?`,
+      detail: `Site: ${new URL(selection.url).hostname}\nTool: ${entry}\nProject: ${binding.projectPath}\nThe selected login will be passed privately to the reviewed program. The task may continue after this Panel closes.`,
+      noLink: true,
+    });
+    if (decision.response !== 0)
+      throw new PanelBridgeError("PERMISSION_DENIED", "Saved login use was cancelled");
+    if (
+      this.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      binding.cwd !== cwd ||
+      binding.resource.descriptor.revision !== scope.revision
+    )
+      throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie approval");
+    await this.trustedWorkspaceRoot(binding);
+    await host.check(scope, selection);
+    if (
+      this.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      binding.cwd !== cwd ||
+      !this.options.isWorkspaceTrusted(cwd ?? scope.projectPath)
+    )
+      throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie approval");
+    this.assertProjectBinding(binding);
+  }
+
   private getToolJobService(): PanelToolJobService {
     if (this.toolJobService) return this.toolJobService;
     const executor = createPanelToolExecutor({
+      ...(this.options.cookieCredentials?.taskCredentials
+        ? { cookies: this.getTaskCookieHost() }
+        : {}),
       processes: this.processService,
       resources: this.getResourceService(),
       owner: (job, send) => {
@@ -1338,6 +1415,7 @@ export class PanelAppBridge {
       const entry = (await this.installedToolApp(scope)).nativeEntries?.[input.entry ?? ""];
       if (!entry)
         throw new PanelBridgeError("NOT_SUPPORTED", "Installed native tool is unavailable");
+      await this.confirmTaskCookie(binding, input.input, input.entry!);
       return service.start(scope, {
         entry: { name: input.entry!, sha256: entry.sha256 },
         input: input.input,
@@ -1365,7 +1443,11 @@ export class PanelAppBridge {
     }
     if (method === "tasks.get") return service.get(scope, input.id!);
     if (method === "tasks.cancel") return service.cancel(scope, input.id!);
-    if (method === "tasks.retry") return service.retry(scope, input.id!);
+    if (method === "tasks.retry") {
+      const previous = await service.get(scope, input.id!);
+      await this.confirmTaskCookie(binding, previous.input, previous.entry.name);
+      return service.retry(scope, input.id!);
+    }
     throw new PanelBridgeError("NOT_SUPPORTED", "Unknown tool task operation");
   }
 
@@ -1630,6 +1712,20 @@ export class PanelAppBridge {
       case "credentials.cookies.list":
         this.requirePermission(binding, "credentials.cookies");
         return this.listCookieCredentials(binding, params);
+      case "credentials.cookies.listForTask": {
+        this.requirePermission(binding, "credentials.cookies");
+        this.requirePermission(binding, "process");
+        this.requirePermission(binding, "resources");
+        await this.trustedWorkspaceRoot(binding);
+        return this.getTaskCookieHost().list(
+          {
+            appId: binding.resource.descriptor.appId,
+            projectPath: binding.projectPath,
+            revision: binding.resource.descriptor.revision,
+          },
+          this.cookieCredentialUrl(params).toString(),
+        );
+      }
       case "credentials.cookies.loginAndSave":
         this.requirePermission(binding, "credentials.cookies");
         return this.loginAndSaveCookieCredential(binding, params);

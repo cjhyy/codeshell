@@ -6,6 +6,7 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   listInstalledPanelApps,
+  CredentialStore,
   validateToolArgsStrict,
   type InstalledPanelApp,
 } from "@cjhyy/code-shell-core";
@@ -35,6 +36,8 @@ import {
 } from "./tool-jobs.js";
 import type { SharedPanelToolHost, SharedPanelToolBinding } from "./shared-tool-jobs.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
+import { PanelTaskCookieHost } from "./task-cookie-host.js";
+import { taskCookieFromInput, type TaskCookieSelection } from "./task-cookies.js";
 import {
   PanelAppDirectoryBookmarks,
   desktopPanelDirectoryBookmarks,
@@ -71,6 +74,7 @@ const METHODS = [
   ...panelResourceMethods,
   ...panelToolJobMethods,
   "credentials.connections.list",
+  "credentials.cookies.listForTask",
   "credentials.connections.authorizeProcess",
   "agent.task.models",
   "agent.task.start",
@@ -93,6 +97,7 @@ const PERMISSIONS = new Set([
   "process",
   "resources",
   "credentials.connections",
+  "credentials.cookies",
   "agent.task",
 ]);
 const MIME: Record<string, string> = {
@@ -120,6 +125,9 @@ export const panelWebCompatibility: NonNullable<PanelManagementOptions["compatib
     ...app.permissions
       .filter((permission) => !PERMISSIONS.has(permission))
       .map((permission) => "网页暂不提供 " + permission + "，对应功能需要桌面客户端。"),
+    ...(app.permissions.includes("credentials.cookies")
+      ? ["网页可选择 Host 已保存的账号用于后台任务；登录采集和浏览器登录恢复仍需桌面端。"]
+      : []),
   ],
 });
 
@@ -189,6 +197,7 @@ export interface PanelRuntimeOptions {
 function methodPermission(method: string): string {
   if (method.startsWith("resources.")) return "resources";
   if (method.startsWith("credentials.connections.")) return "credentials.connections";
+  if (method.startsWith("credentials.cookies.")) return "credentials.cookies";
   if (method.startsWith("storage.")) return "storage";
   if (method.startsWith("process.") || method.startsWith("filesystem.")) return "process";
   if (method.startsWith("agent.task.")) return "agent.task";
@@ -487,6 +496,49 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const toolOwners = new Map<number, ToolJobScope>();
   const jobOwners = new Map<string, { owner: string; scope: ToolJobScope }>();
   let toolJobs: PanelToolJobService | undefined;
+  let taskCookies: PanelTaskCookieHost | undefined;
+  function getTaskCookies() {
+    if (options.host !== "hub" || options.sharedToolJobs)
+      throw new PanelBridgeError("NOT_SUPPORTED", "Background Cookie access is unavailable");
+    return (taskCookies ??= new PanelTaskCookieHost({
+      rootDirectory: join(options.dataDir, "panel-task-cookies"),
+      // A cloud project must not inherit credentials from the controller's user account.
+      credentials: async (scope) => new CredentialStore(scope.projectPath).list("project"),
+      authorize: async (scope) => {
+        if (!(await installedToolApp(scope)).permissions.includes("credentials.cookies"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires Cookie permission");
+      },
+    }));
+  }
+  function cookieAccess(grant: Grant) {
+    if (
+      !grant.app.permissions.includes("process") ||
+      !grant.app.permissions.includes("resources") ||
+      !grant.app.permissions.includes("credentials.cookies")
+    )
+      error(403, "后台账号访问缺少面板权限。");
+    if (grant.sharedTools) {
+      if (!grant.sharedTools.cookies) error(501, "当前 Host 不支持后台账号授权。");
+      return grant.sharedTools.cookies;
+    }
+    if (options.sharedToolJobs) error(410, "共享任务授权已失效。");
+    const scope = {
+      appId: grant.app.id,
+      projectPath: options.bindingCwd ?? options.cwd,
+      revision: grant.revision,
+    };
+    const host = getTaskCookies();
+    return {
+      list: (url: string) => host.list(scope, url),
+      check: (selection: TaskCookieSelection) => host.check(scope, selection),
+    };
+  }
+  async function taskConsentDetail(grant: Grant, input: unknown, entry: string) {
+    const selection = taskCookieFromInput(input);
+    if (!selection) return entry;
+    const account = await cookieAccess(grant).check(selection);
+    return `工具：${entry}\n账号：${account.label}\n站点：${new URL(selection.url).hostname}\n所选登录信息仅交付给已审查的后台程序，任务可在关闭页面后继续。`;
+  }
   const localToolRoot =
     options.host === "desktop"
       ? join(options.dataDir, "panel-web-tool-jobs", digest(Buffer.from(options.cwd)).slice(0, 24))
@@ -628,8 +680,12 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       const app = await installedToolApp(scope);
       const entry = app.nativeEntries?.[input.entry ?? ""];
       if (!entry) error(501, "安装的原生工具不可用。");
-      if (!(await confirm(grant, `启动 ${grant.app.title.default} 的后台工具？`, input.entry!)))
+      const detail = await taskConsentDetail(grant, input.input, input.entry!);
+      if (!(await confirm(grant, `启动 ${grant.app.title.default} 的后台工具？`, detail)))
         error(403, "你取消了后台工具执行。");
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      if (taskCookieFromInput(input.input))
+        await taskConsentDetail(grant, input.input, input.entry!);
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const preparation = {
         owner: grant.owner,
@@ -715,8 +771,13 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     if (method === "tasks.get") return service.get(input.id!);
     if (method === "tasks.cancel") return service.cancel(input.id!);
     if (method === "tasks.retry") {
-      if (!(await confirm(grant, `重试 ${grant.app.title.default} 的后台工具？`, input.id ?? "")))
+      const previous = await service.get(input.id!);
+      const detail = await taskConsentDetail(grant, previous.input, previous.entry.name);
+      if (!(await confirm(grant, `重试 ${grant.app.title.default} 的后台工具？`, detail)))
         error(403, "你取消了后台工具重试。");
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      if (taskCookieFromInput(previous.input))
+        await taskConsentDetail(grant, previous.input, previous.entry.name);
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const job = await service.retry(input.id!);
       if (!shared) jobOwners.set(job.id, { owner: grant.owner, scope });
@@ -751,6 +812,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   function getToolJobs(): PanelToolJobService {
     if (toolJobs) return toolJobs;
     const executor = createPanelToolExecutor({
+      ...(options.host === "hub" && !options.sharedToolJobs ? { cookies: getTaskCookies() } : {}),
       processes,
       resources,
       owner: (job, send) => {
@@ -1087,6 +1149,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                     available: true,
                     directoryBookmarks: true,
                     queueControl: true,
+                    cookieCredentials:
+                      app.permissions.includes("credentials.cookies") &&
+                      (sharedTools
+                        ? !!sharedTools.cookies
+                        : options.host === "hub" && !options.sharedToolJobs),
                     ...toolJobLimits,
                     ownership: sharedTools ? "project" : "session",
                     executionRevision: sharedTools?.scope.revision ?? panel.revision,
@@ -1116,7 +1183,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                   },
                   "tasks.find": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
                   "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
-                  "tasks.retry": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                  "tasks.retry": {
+                    maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                    timeoutMs: 30 * 60 * 1000,
+                  },
                   "tasks.cancel": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
                 },
               }
@@ -1124,6 +1194,15 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         },
         host: options.host,
         availableMethods: METHODS.filter((method) => {
+          if (method === "credentials.cookies.listForTask")
+            return (
+              app.permissions.includes("credentials.cookies") &&
+              app.permissions.includes("process") &&
+              app.permissions.includes("resources") &&
+              (sharedTools
+                ? !!sharedTools.cookies
+                : options.host === "hub" && !options.sharedToolJobs)
+            );
           if (method.startsWith("agent.task.") && !agentTasks) return false;
           if (method.startsWith("tasks."))
             return app.permissions.includes("process") && app.permissions.includes("resources");
@@ -1279,6 +1358,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         params,
         { resolveDirectory: (handle) => processes.directoryPath(processOwner, handle) },
       );
+    }
+    if (method === "credentials.cookies.listForTask") {
+      const value = await cookieAccess(grant).list((params as { url: string })?.url);
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      return value;
     }
     if (method === "credentials.connections.list") return panelConnections(options.cwd);
     if (method === "credentials.connections.authorizeProcess") {
@@ -1543,6 +1627,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       for (const preparation of preparing) preparation.cancelled = true;
       try {
         await toolJobs?.shutdown();
+        await taskCookies?.shutdown();
       } finally {
         processes.close();
         await Promise.all([resources.shutdown(), Promise.resolve(agentTasks?.close())]);

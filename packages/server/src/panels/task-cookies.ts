@@ -86,6 +86,19 @@ export function taskCookieSelection(raw: unknown): TaskCookieSelection {
   return { credentialId: input.credentialId, url: input.url, revision: input.revision };
 }
 
+/** Read only the selected credential reference from a native task envelope. */
+export function taskCookieFromInput(raw: unknown): TaskCookieSelection | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+  const argument = (raw as { cookieArgument?: unknown }).cookieArgument;
+  if (argument === undefined) return;
+  if (!argument || typeof argument !== "object" || Array.isArray(argument))
+    throw new Error("Invalid task Cookie argument");
+  const { argumentName, ...selection } = argument as Record<string, unknown>;
+  if (typeof argumentName !== "string" || !/^--[a-z][a-z0-9-]{0,63}$/.test(argumentName))
+    throw new Error("Invalid task Cookie argument");
+  return taskCookieSelection(selection);
+}
+
 /** Cookie custody only. Admission/retry consent belongs to the calling Host, not this vault. */
 export class PanelTaskCookieService {
   private readonly key: Buffer;

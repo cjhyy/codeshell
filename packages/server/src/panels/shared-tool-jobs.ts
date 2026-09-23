@@ -1,4 +1,6 @@
 import type { InstalledPanelApp } from "@cjhyy/code-shell-core";
+import type { PanelTaskCookieHost } from "./task-cookie-host.js";
+import type { TaskCookieSelection } from "./task-cookies.js";
 import type {
   PanelToolJobService,
   ToolJob,
@@ -23,6 +25,11 @@ export interface SharedPanelToolBinding {
   getQueue(): Promise<ToolQueueState>;
   setQueue(update: ToolQueueUpdate): Promise<ToolQueueWriteResult>;
   subscribe(listener: (job: ToolJobEvent) => void): () => void;
+  /** Safe metadata only. The transport must obtain selected-account consent before admission. */
+  cookies?: {
+    list(url: string): ReturnType<PanelTaskCookieHost["list"]>;
+    check(selection: TaskCookieSelection): ReturnType<PanelTaskCookieHost["check"]>;
+  };
 }
 export interface SharedPanelToolHost {
   /** Freeze the installed execution revision once; do not silently follow package updates. */
@@ -35,6 +42,7 @@ export interface SharedPanelToolHost {
 export function createSharedPanelToolHost(options: {
   service(): PanelToolJobService;
   resolveScope(app: InstalledPanelApp, projectPath: string): Promise<ToolJobScope>;
+  cookies?: Pick<PanelTaskCookieHost, "list" | "check">;
 }): SharedPanelToolHost {
   return {
     async bind(app, projectPath) {
@@ -53,6 +61,14 @@ export function createSharedPanelToolHost(options: {
         getQueue: () => service.getQueue(scope),
         setQueue: (update: ToolQueueUpdate) => service.setQueue(scope, update),
         subscribe: (listener: (job: ToolJobEvent) => void) => service.subscribe(scope, listener),
+        ...(options.cookies && app.permissions.includes("credentials.cookies")
+          ? {
+              cookies: {
+                list: (url: string) => options.cookies!.list(scope, url),
+                check: (selection: TaskCookieSelection) => options.cookies!.check(scope, selection),
+              },
+            }
+          : {}),
       });
     },
     activeCount: (projectPath) => options.service().activeCount(projectPath),

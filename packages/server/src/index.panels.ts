@@ -31,3 +31,4 @@ export * from "./panels/directory-bookmarks.js";
 
 export * from "./panels/shared-tool-jobs.js";
 export * from "./panels/task-cookies.js";
+export * from "./panels/task-cookie-host.js";

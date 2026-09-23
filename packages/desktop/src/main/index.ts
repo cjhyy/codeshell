@@ -659,6 +659,10 @@ const panelAppBridge = new PanelAppBridge({
     return true;
   },
   cookieCredentials: {
+    taskCredentials: async (cwd) => {
+      await migrateCredentialStore(cwd);
+      return new CredentialStore(cwd).list();
+    },
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
       return new CredentialStore(cwd)

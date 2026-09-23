@@ -3,7 +3,7 @@
 /* global document, window */
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
@@ -23,7 +23,7 @@ isolated.userDataDir = join(isolated.home, "electron-user-data");
 const project = join(isolated.home, "task-project");
 const install = join(isolated.codeShellHome, "panel-apps", "task-fixture");
 const installedAt = new Date().toISOString();
-const source = `import { writeFileSync } from "node:fs";
+const source = `import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 let input = "";
 process.stdin.setEncoding("utf8");
@@ -31,9 +31,12 @@ process.stdin.on("data", part => input += part);
 process.stdin.on("end", () => {
   const request = JSON.parse(input);
   const directory = process.argv[process.argv.indexOf("--output-dir") + 1];
-  writeFileSync(join(directory, request.message + ".txt"), request.message, { flag: "wx" });
+  const cookieIndex = process.argv.indexOf("--cookies-file");
+  const cookieRead = cookieIndex >= 0 && readFileSync(process.argv[cookieIndex+1],"utf8").includes("shared-cookie-fixture");
+  if (cookieIndex >= 0 && !cookieRead) process.exit(3);
+  if (cookieIndex < 0) writeFileSync(join(directory, request.message + ".txt"), request.message, { flag: "wx" });
   process.stdout.write(JSON.stringify({type:"progress", progress:{stage:"waiting", fraction:0.5}}) + "\\n");
-  setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{message:request.message}}) + "\\n"), request.delayMs);
+  setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{message:request.message,...(cookieRead?{cookieRead:true}:{})}}) + "\\n"), request.delayMs);
 });
 `;
 const manifest = {
@@ -45,7 +48,7 @@ const manifest = {
   icon: "panel",
   singleton: true,
   placement: "right-dock",
-  permissions: ["context.workspace", "process", "resources"],
+  permissions: ["context.workspace", "process", "resources", "credentials.cookies"],
   nativeEntries: {
     worker: {
       entry: "app/tools/worker.mjs",
@@ -105,6 +108,24 @@ try {
     writeFile(
       join(project, ".code-shell/settings.json"),
       JSON.stringify({ panelAppBindings: [manifest.id] }),
+    ),
+    writeFile(
+      join(project, ".code-shell/credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "shared-cookie",
+            type: "cookie",
+            label: "Shared fixture account",
+            meta: { domain: "example.com" },
+            secret: JSON.stringify([
+              { domain: ".example.com", name: "session", value: "shared-cookie-fixture" },
+            ]),
+          },
+        ],
+      }),
+      { mode: 0o600 },
     ),
     writeFile(
       join(isolated.codeShellHome, "desktop/recents.json"),
@@ -172,14 +193,18 @@ try {
       }),
     { guestId, id: panel.id, cwd: project },
   );
-  const desktop = (method, params) =>
-    view.evaluate(
+  let nextDesktopCall = 0;
+  const desktop = async (method, params) => {
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, nextDesktopCall - Date.now())));
+    nextDesktopCall = Date.now() + 450;
+    return view.evaluate(
       (view, { method, params }) =>
         view.executeJavaScript(
           `window.codeshellPanel.call(${JSON.stringify(method)}, ${JSON.stringify(params)})`,
         ),
       { method, params },
     );
+  };
   await until(
     () =>
       view
@@ -237,6 +262,104 @@ try {
     project,
   );
   assert.equal(await phoneCall("tasks.find", { requestKey: "desktop-and-phone" }), null);
+  assert.equal(phone.context.capabilities.tasks.cookieCredentials, true);
+  const accountQuery = { url: "https://example.com/watch" };
+  const accounts = await desktop("credentials.cookies.listForTask", accountQuery);
+  assert.deepEqual(await phoneCall("credentials.cookies.listForTask", accountQuery), accounts);
+  assert.equal(accounts.accounts[0].label, "Shared fixture account");
+  const cookieInput = {
+    entry: "worker",
+    recovery: "retry",
+    requestKey: "cookie-desktop",
+    input: {
+      request: { message: "cookie desktop", delayMs: 30000 },
+      cookieArgument: {
+        argumentName: "--cookies-file",
+        credentialId: accounts.accounts[0].id,
+        revision: accounts.accounts[0].revision,
+        url: accountQuery.url,
+      },
+    },
+  };
+  // Only native dialog responses are synthetic; real IPC, vault, file leases and tasks run.
+  await electron.evaluate(({ dialog }) => {
+    globalThis.__cookieDecision = 1;
+    globalThis.__cookiePrompts = [];
+    dialog.showMessageBox = async (_owner, options) => {
+      globalThis.__cookiePrompts.push(options);
+      return { response: globalThis.__cookieDecision, checkboxChecked: false };
+    };
+  });
+  await assert.rejects(desktop("tasks.start", cookieInput), /cancelled/i);
+  assert.equal(await desktop("tasks.find", { requestKey: cookieInput.requestKey }), null);
+  await electron.evaluate(() => {
+    globalThis.__cookieDecision = 0;
+  });
+  const cookieTask = await desktop("tasks.start", cookieInput);
+  await until(
+    async () => (await phoneCall("tasks.get", { id: cookieTask.id })).progress?.stage === "waiting",
+    "Cookie program not running",
+  );
+  await phoneCall("tasks.cancel", { id: cookieTask.id });
+  await electron.evaluate(() => {
+    globalThis.__cookieDecision = 1;
+  });
+  await assert.rejects(desktop("tasks.retry", { id: cookieTask.id }), /cancelled/i);
+  assert.equal((await desktop("tasks.get", { id: cookieTask.id })).status, "cancelled");
+  await electron.evaluate(() => {
+    globalThis.__cookieDecision = 0;
+  });
+  assert.equal((await desktop("tasks.retry", { id: cookieTask.id })).id, cookieTask.id);
+  await until(
+    async () => (await phoneCall("tasks.get", { id: cookieTask.id })).progress?.stage === "waiting",
+    "Cookie retry not running",
+  );
+  await phoneCall("tasks.cancel", { id: cookieTask.id });
+  const prompts = await electron.evaluate(() => globalThis.__cookiePrompts);
+  assert.equal(prompts.length, 4);
+  assert.ok(
+    prompts.every(
+      (prompt) =>
+        prompt.message.includes("Shared fixture account") && prompt.detail.includes("example.com"),
+    ),
+  );
+  const phoneCookie = phoneCall("tasks.start", {
+    ...cookieInput,
+    requestKey: "cookie-phone",
+    input: { ...cookieInput.input, request: { message: "cookie phone", delayMs: 100 } },
+  });
+  const cookieConsent = await until(
+    async () =>
+      (await json(await request(`/api/v1/panels/runtime/${phone.instanceId}/events`))).events.find(
+        (event) => event.event === "host.confirm",
+      ),
+    "Phone Cookie confirmation missing",
+  );
+  assert.match(JSON.stringify(cookieConsent.payload), /Shared fixture account/);
+  assert.doesNotMatch(JSON.stringify(cookieConsent.payload), /shared-cookie-fixture/);
+  await json(
+    await request(`/api/v1/panels/runtime/${phone.instanceId}/confirm`, "POST", {
+      requestId: cookieConsent.payload.requestId,
+      allowed: true,
+    }),
+  );
+  const phoneCookieTask = await phoneCookie;
+  await until(
+    async () => (await phoneCall("tasks.get", { id: phoneCookieTask.id })).status === "succeeded",
+    "Phone Cookie task failed",
+  );
+  const cookieResult = await desktop("tasks.get", { id: phoneCookieTask.id });
+  assert.equal(cookieResult.result.cookieRead, true);
+  assert.ok(!JSON.stringify(cookieResult).includes("shared-cookie-fixture"));
+  assert.deepEqual(
+    (await readdir(join(isolated.userDataDir, "panel-task-cookies"))).filter((name) =>
+      name.startsWith("cookies-"),
+    ),
+    [],
+  );
+  await json(
+    await request(`/api/v1/panels/runtime/${phone.instanceId}/events?after=${cookieConsent.id}`),
+  );
   const selectedFolder = join(isolated.home, "explicit-output");
   await mkdir(selectedFolder);
   // Only the OS picker result is synthetic. The real guest bridge, trust checks,
@@ -413,6 +536,10 @@ try {
       pairedHttp: true,
       sharedRevision: true,
       sharedTaskIds: true,
+      sharedCookieVersions: true,
+      desktopCookieStartRetryConsent: true,
+      phoneCookieConsent: true,
+      privateCookieCleanup: true,
       phoneCancellation: true,
       nativeProgress: true,
       deduplicated: true,
