@@ -42,6 +42,7 @@ import {
   PanelToolJobService,
   PanelTaskCookieHost,
   taskCookieFromInput,
+  taskCookieSelection,
   createSharedPanelToolHost,
   desktopPanelDirectoryBookmarks,
   type SharedPanelToolHost,
@@ -1283,7 +1284,12 @@ export class PanelAppBridge {
     }));
   }
 
-  private async confirmTaskCookie(binding: GuestBinding, input: unknown, entry: string) {
+  private async confirmTaskCookie(
+    binding: GuestBinding,
+    input: unknown,
+    entry: string,
+    background = true,
+  ) {
     const selection = taskCookieFromInput(input);
     if (!selection) return;
     this.requirePermission(binding, "credentials.cookies");
@@ -1303,8 +1309,10 @@ export class PanelAppBridge {
       defaultId: 1,
       cancelId: 1,
       title: binding.resource.descriptor.title,
-      message: `Use “${account.label}” for this background task?`,
-      detail: `Site: ${new URL(selection.url).hostname}\nTool: ${entry}\nProject: ${binding.projectPath}\nThe selected login will be passed privately to the reviewed program. The task may continue after this Panel closes.`,
+      message: background
+        ? `Use “${account.label}” for this background task?`
+        : `Use “${account.label}” with ${entry}?`,
+      detail: `Site: ${new URL(selection.url).hostname}\nTool: ${entry}\nProject: ${binding.projectPath}\nThe selected login will be passed privately to the program. ${background ? "The task may continue after this Panel closes." : "Closing this Panel or revoking access stops use of the temporary file."}`,
       noLink: true,
     });
     if (decision.response !== 0)
@@ -2409,7 +2417,61 @@ export class PanelAppBridge {
       credentialId?: unknown;
       url?: unknown;
       executableHandle?: unknown;
+      revision?: unknown;
     } | null;
+    if (input?.revision !== undefined) {
+      this.requirePermission(binding, "process");
+      this.requirePermission(binding, "resources");
+      const selection = taskCookieSelection({
+        credentialId: input.credentialId,
+        url: input.url,
+        revision: input.revision,
+      });
+      const owner = this.processOwner(binding);
+      const executable = this.processService.executableName(owner, input.executableHandle);
+      const scope = {
+        appId: binding.resource.descriptor.appId,
+        projectPath: binding.projectPath,
+        revision: binding.resource.descriptor.revision,
+      };
+      const cwd = binding.cwd;
+      const host = this.getTaskCookieHost();
+      await this.confirmTaskCookie(
+        binding,
+        { cookieArgument: { ...selection, argumentName: "--cookies" } },
+        executable,
+        false,
+      );
+      const validate = async () => {
+        await host.check(scope, selection);
+        if (
+          this.guests.get(binding.guest.id) !== binding ||
+          binding.guest.isDestroyed() ||
+          binding.cwd !== cwd ||
+          binding.resource.descriptor.revision !== scope.revision ||
+          !this.options.isWorkspaceTrusted(cwd ?? scope.projectPath)
+        )
+          throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie access");
+        this.assertProjectBinding(binding);
+      };
+      const lease = await host.materialize(scope, selection);
+      try {
+        await validate();
+        const sealed = await this.processService.grantFileArgument(owner, {
+          executableHandle: input.executableHandle,
+          argumentName: "--cookies",
+          path: lease.path,
+          validate,
+          cleanup: () => {
+            void lease.cleanup().catch(() => {});
+          },
+        });
+        return { authorized: true, fileArgumentHandle: sealed.handle, count: lease.count };
+      } catch (cause) {
+        await lease.cleanup();
+        throw cause;
+      }
+    }
     const credentialId = typeof input?.credentialId === "string" ? input.credentialId.trim() : "";
     if (!credentialId || credentialId.length > 160) {
       throw new Error("Cookie process authorization requires a saved credential id");

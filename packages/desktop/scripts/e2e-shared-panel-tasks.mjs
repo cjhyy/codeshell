@@ -31,7 +31,7 @@ process.stdin.on("data", part => input += part);
 process.stdin.on("end", () => {
   const request = JSON.parse(input);
   const directory = process.argv[process.argv.indexOf("--output-dir") + 1];
-  const cookieIndex = process.argv.indexOf("--cookies-file");
+  const cookieIndex = Math.max(process.argv.indexOf("--cookies-file"), process.argv.indexOf("--cookies"));
   const cookieRead = cookieIndex >= 0 && readFileSync(process.argv[cookieIndex+1],"utf8").includes("shared-cookie-fixture");
   if (cookieIndex >= 0 && !cookieRead) process.exit(3);
   if (cookieIndex < 0) writeFileSync(join(directory, request.message + ".txt"), request.message, { flag: "wx" });
@@ -360,6 +360,81 @@ try {
   await json(
     await request(`/api/v1/panels/runtime/${phone.instanceId}/events?after=${cookieConsent.id}`),
   );
+  // Paired Web uses the Desktop vault for short metadata processes too. It receives
+  // only an opaque grant; account consent and executable consent remain distinct.
+  assert.equal(phone.context.capabilities.process.cookieCredentials, true);
+  const executable = await phoneCall("process.find", { name: "node" });
+  const entry = await phoneCall("process.resolveEntry", {
+    name: "worker",
+    executableHandle: executable.handle,
+  });
+  const directory = await phoneCall("filesystem.getKnownDirectory", { name: "project" });
+  async function phoneConsent(pending) {
+    const event = await until(
+      async () =>
+        (
+          await json(await request(`/api/v1/panels/runtime/${phone.instanceId}/events`))
+        ).events.find((item) => item.event === "host.confirm"),
+      "Temporary-process confirmation missing",
+    );
+    assert.doesNotMatch(JSON.stringify(event), /shared-cookie-fixture/);
+    await json(
+      await request(`/api/v1/panels/runtime/${phone.instanceId}/confirm`, "POST", {
+        requestId: event.payload.requestId,
+        allowed: true,
+      }),
+    );
+    const result = await pending;
+    await json(
+      await request(`/api/v1/panels/runtime/${phone.instanceId}/events?after=${event.id}`),
+    );
+    return result;
+  }
+  const authorization = await phoneConsent(
+    phoneCall("credentials.cookies.authorizeProcess", {
+      executableHandle: executable.handle,
+      credentialId: accounts.accounts[0].id,
+      revision: accounts.accounts[0].revision,
+      url: accountQuery.url,
+    }),
+  );
+  assert.deepEqual(Object.keys(authorization).sort(), [
+    "authorized",
+    "count",
+    "fileArgumentHandle",
+  ]);
+  assert.equal(authorization.authorized, true);
+  const metadata = await phoneConsent(
+    phoneCall("process.spawn", {
+      executableHandle: executable.handle,
+      entryHandle: entry.handle,
+      directoryHandle: directory.handle,
+      fileArgumentHandles: [authorization.fileArgumentHandle],
+      args: [],
+      stdin: "pipe",
+    }),
+  );
+  await phoneCall("process.write", {
+    processId: metadata.processId,
+    text: JSON.stringify({ message: "phone metadata", delayMs: 100 }),
+  });
+  await phoneCall("process.end", { processId: metadata.processId });
+  const receipt = await until(async () => {
+    const value = await phoneCall("process.get", { processId: metadata.processId });
+    return value?.status === "exited" ? value : false;
+  }, "Paired metadata process did not finish");
+  assert.equal(receipt.code, 0);
+  assert.match(JSON.stringify(receipt), /cookieRead/);
+  assert.doesNotMatch(JSON.stringify(receipt), /shared-cookie-fixture/);
+  await json(await request(`/api/v1/panels/runtime/${phone.instanceId}`, "DELETE"));
+  await until(
+    async () =>
+      !(await readdir(join(isolated.userDataDir, "panel-task-cookies"))).some((name) =>
+        name.startsWith("cookies-"),
+      ),
+    "Paired temporary account file survived page closure",
+  );
+  phone = await openPhone();
   const selectedFolder = join(isolated.home, "explicit-output");
   await mkdir(selectedFolder);
   // Only the OS picker result is synthetic. The real guest bridge, trust checks,
@@ -539,6 +614,7 @@ try {
       sharedCookieVersions: true,
       desktopCookieStartRetryConsent: true,
       phoneCookieConsent: true,
+      phoneTemporaryCookieProcess: true,
       privateCookieCleanup: true,
       phoneCancellation: true,
       nativeProgress: true,

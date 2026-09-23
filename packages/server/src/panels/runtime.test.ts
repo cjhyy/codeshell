@@ -934,7 +934,7 @@ describe("Panel HTTP host operations", () => {
     const f = await nativeToolFixture(
       `import {readFile} from "node:fs/promises";
 let text="";for await(const chunk of process.stdin) text+=chunk;
-const request=JSON.parse(text), path=process.argv[process.argv.indexOf("--cookies-file")+1];
+const request=JSON.parse(text), index=process.argv.findIndex(arg=>arg==="--cookies-file"||arg==="--cookies"), path=process.argv[index+1];
 const content=await readFile(path,"utf8");
 if(!content.includes("runtime-fixture-cookie")) process.exit(3);
 console.log(JSON.stringify({type:"progress",progress:{message:"cookie-read",fraction:0.5}}));
@@ -994,6 +994,153 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     }
     return { ...f, store, saved, input, consent, status };
   }
+  async function processCookieFixture(delay = 0) {
+    const f = await cookieFixture(delay);
+    const read = async (method: string, params: unknown) => {
+      const response = await f.call(method, params);
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    const executable = await read("process.find", { name: "node" });
+    const entry = await read("process.resolveEntry", {
+      name: "sample",
+      executableHandle: executable.handle,
+    });
+    const directory = await read("filesystem.getKnownDirectory", { name: "project" });
+    const { argumentName: _argument, ...selection } = f.input.input.cookieArgument;
+    return {
+      ...f,
+      read,
+      selection,
+      executable,
+      params: {
+        executableHandle: executable.handle,
+        entryHandle: entry.handle,
+        directoryHandle: directory.handle,
+        args: [],
+        stdin: "pipe",
+      },
+    };
+  }
+
+  test("Web grants only an opaque account file to a temporary process after consent", async () => {
+    const f = await processCookieFixture();
+    expect(f.grant.context.availableMethods).toContain("credentials.cookies.authorizeProcess");
+    expect((f.grant.context as any).capabilities.process.cookieCredentials).toBe(true);
+    const request = { ...f.selection, executableHandle: f.executable.handle };
+    const denied = await f.consent(f.call("credentials.cookies.authorizeProcess", request), false);
+    expect(await denied.json()).toEqual({ authorized: false, cancelled: true });
+    const accepted = await f.consent(f.call("credentials.cookies.authorizeProcess", request), true);
+    const authorization = await accepted.json();
+    expect(authorization.authorized).toBe(true);
+    expect(Object.keys(authorization).sort()).toEqual([
+      "authorized",
+      "count",
+      "fileArgumentHandle",
+    ]);
+    const events = await runtimeEvents(f, f.grant.instanceId);
+    const pending = f.call("process.spawn", {
+      ...f.params,
+      fileArgumentHandles: [authorization.fileArgumentHandle],
+    });
+    const event = await waitRuntimeEvent(
+      f,
+      f.grant.instanceId,
+      "host.confirm",
+      events.events.filter((item) => item.event === "host.confirm").at(-1)!.id,
+    );
+    await f.api(`${f.grant.instanceId}/confirm`, "POST", {
+      requestId: event.payload.requestId,
+      allowed: true,
+    });
+    const response = await pending;
+    expect(response.status).toBe(200);
+    const started = await response.json();
+    await f.read("process.write", {
+      processId: started.processId,
+      text: JSON.stringify({ value: "metadata" }),
+    });
+    await f.read("process.end", { processId: started.processId });
+    const exited = await waitRuntimeEvent(f, f.grant.instanceId, "process.exit");
+    expect(exited.payload.code).toBe(0);
+    const output = JSON.stringify((await runtimeEvents(f, f.grant.instanceId)).events);
+    expect(output).toContain("metadata");
+    expect(output).not.toContain("runtime-fixture-cookie");
+    await f.api(f.grant.instanceId, "DELETE");
+    for (let i = 0; i < 50; i++) {
+      const files = (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      );
+      if (!files.length) return;
+      await Bun.sleep(10);
+    }
+    throw new Error("temporary account file was not cleaned after page closure");
+  });
+
+  test("Web rejects account changes during temporary-process consent without creating a file", async () => {
+    const f = await processCookieFixture();
+    const response = await f.consent(
+      f.call("credentials.cookies.authorizeProcess", {
+        ...f.selection,
+        executableHandle: f.executable.handle,
+      }),
+      true,
+      () => {
+        f.store.save("project", { ...f.saved, label: "Changed account" });
+      },
+    );
+    expect(response.status).toBe(400);
+    expect(
+      (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      ),
+    ).toEqual([]);
+  });
+
+  test("logout while a temporary account file is being prepared prevents its grant and cleans the file", async () => {
+    const f = await processCookieFixture();
+    let entered!: () => void, release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = PanelTaskCookieHost.prototype.materialize;
+    const mocked = spyOn(PanelTaskCookieHost.prototype, "materialize").mockImplementation(
+      async function (scope, selection) {
+        const lease = await original.call(this, scope, selection);
+        entered();
+        await waiting;
+        return lease;
+      },
+    );
+    const pending = f.consent(
+      f.call("credentials.cookies.authorizeProcess", {
+        ...f.selection,
+        executableHandle: f.executable.handle,
+      }),
+      true,
+    );
+    try {
+      await ready;
+      f.runtime.cancelOwner("owner-a");
+      release();
+      const response = await pending;
+      expect(response.status).toBe(410);
+      expect(await response.text()).not.toContain("fileArgumentHandle");
+      expect(
+        (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+          name.startsWith("cookies-"),
+        ),
+      ).toEqual([]);
+    } finally {
+      release();
+      await pending;
+      mocked.mockRestore();
+    }
+  });
+
   test("Web selected-account consent gates real native Cookie use and keeps secrets out of task records", async () => {
     const f = await cookieFixture();
     expect((f.grant.context as any).capabilities.tasks.cookieCredentials).toBe(true);

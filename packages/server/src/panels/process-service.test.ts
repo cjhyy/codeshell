@@ -62,6 +62,91 @@ describe("shared Panel process lifecycle", () => {
     return { root, binary, service, owner, params, events };
   }
 
+  test("sealed input changed during process approval is rejected and cleaned before execution", async () => {
+    let allowed = true,
+      cleaned = 0;
+    const decision = deferred<boolean>();
+    let asked = false;
+    const f = await fixture({
+      confirmExecution: async () => {
+        asked = true;
+        return decision.promise;
+      },
+    });
+    const file = join(f.root, "private-input");
+    await writeFile(file, "private-fixture");
+    const grant = await f.service.grantFileArgument(f.owner, {
+      executableHandle: f.params.executableHandle,
+      argumentName: "--input",
+      path: file,
+      validate: async () => {
+        if (!allowed) throw new Error("private authorization details");
+      },
+      cleanup: () => {
+        cleaned++;
+      },
+    });
+    const pending = f.service.start(f.owner, { ...f.params, fileArgumentHandles: [grant.handle] });
+    await eventually(() => asked);
+    allowed = false;
+    decision.resolve(true);
+    await expect(pending).rejects.toThrow(/authorization changed/);
+    expect(cleaned).toBe(1);
+    expect(await readFile(join(f.root, "marker"), "utf8").catch(() => "")).toBe("");
+  });
+
+  test("revoking a sealed input stops a running program and leaves no reusable grant", async () => {
+    let allowed = true,
+      cleaned = 0;
+    const f = await fixture();
+    const node = Bun.which("node")!;
+    await writeFile(f.binary, '#!/bin/sh\nexec "' + node + '" -e "setTimeout(() => {}, 10000)"\n');
+    const file = join(f.root, "private-input");
+    await writeFile(file, "private-fixture");
+    const grant = await f.service.grantFileArgument(f.owner, {
+      executableHandle: f.params.executableHandle,
+      argumentName: "--input",
+      path: file,
+      validate: async () => {
+        if (!allowed) throw new Error("private authorization details");
+      },
+      cleanup: () => {
+        cleaned++;
+      },
+    });
+    await f.service.start(f.owner, { ...f.params, fileArgumentHandles: [grant.handle] });
+    allowed = false;
+    await eventually(() => f.events.some((event) => event.event === "process.exit"));
+    expect(cleaned).toBe(1);
+    expect(JSON.stringify(f.events)).not.toContain("private authorization details");
+    await expect(
+      f.service.start(f.owner, { ...f.params, fileArgumentHandles: [grant.handle] }),
+    ).rejects.toThrow(/handle/);
+  });
+
+  test("revocation just before a fast process exits cannot report success", async () => {
+    let allowed = true;
+    const f = await fixture();
+    const send = f.owner.send;
+    f.owner.send = (event, payload) => {
+      send(event, payload);
+      if (event === "process.output") allowed = false;
+    };
+    const file = join(f.root, "private-input");
+    await writeFile(file, "private-fixture");
+    const grant = await f.service.grantFileArgument(f.owner, {
+      executableHandle: f.params.executableHandle,
+      argumentName: "--input",
+      path: file,
+      validate: async () => {
+        if (!allowed) throw new Error("revoked");
+      },
+    });
+    await f.service.start(f.owner, { ...f.params, fileArgumentHandles: [grant.handle] });
+    await eventually(() => f.events.some((event) => event.event === "process.exit"));
+    expect(f.events.find((event) => event.event === "process.exit")!.payload.code).toBe(1);
+  });
+
   test("revocation during confirmation cannot spawn or cache the approval", async () => {
     const confirmation = deferred<boolean>();
     let approvals = 0;

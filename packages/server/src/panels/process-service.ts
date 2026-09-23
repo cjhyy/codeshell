@@ -64,6 +64,7 @@ interface FileArgumentGrant extends OwnedGrant {
   path: string;
   directoryHandle?: string;
   cleanup: () => void;
+  validate?: () => Promise<void>;
 }
 
 interface EntryGrant extends OwnedGrant {
@@ -403,6 +404,7 @@ export class PanelAppProcessService {
       argumentName: unknown;
       path: string;
       cleanup?: () => void;
+      validate?: () => Promise<void>;
     },
   ): Promise<{ handle: string }> {
     owner = { ...owner };
@@ -422,6 +424,7 @@ export class PanelAppProcessService {
     await this.authorize(owner, epoch);
     const info = await stat(resolved);
     await this.authorize(owner, epoch);
+    await input.validate?.();
     this.assertLive(owner, epoch);
     if (!info.isFile()) throw new Error("sealed process input is not a file");
     const handle = randomUUID();
@@ -433,6 +436,7 @@ export class PanelAppProcessService {
       argumentName: input.argumentName,
       path: resolved,
       cleanup: input.cleanup ?? (() => undefined),
+      validate: input.validate,
     });
     return { handle };
   }
@@ -565,6 +569,29 @@ export class PanelAppProcessService {
     }
     const rawArgs = validateArguments(input.args);
     const fileArgumentHandles = validateFileArgumentHandles(input.fileArgumentHandles);
+    const validateInputs = async () => {
+      for (const handle of fileArgumentHandles) {
+        const grant = this.fileArguments.get(handle);
+        if (!grant || !sameProcessOwner(grant, owner))
+          throw new Error("sealed process input was revoked");
+        try {
+          await grant.validate?.();
+        } catch {
+          if (this.fileArguments.get(handle) === grant) {
+            this.fileArguments.delete(handle);
+            try {
+              grant.cleanup();
+            } catch {
+              /* Revocation still takes effect. */
+            }
+          }
+          throw new Error("sealed process input authorization changed; authorize it again");
+        }
+        this.assertLive(owner, epoch);
+        if (this.fileArguments.get(handle) !== grant)
+          throw new Error("sealed process input was revoked");
+      }
+    };
     const sealedArgs: string[] = [];
     for (const handle of fileArgumentHandles) {
       const grant = this.fileArguments.get(handle);
@@ -605,7 +632,8 @@ export class PanelAppProcessService {
         `${scope.appId}\0${scope.revision}\0${scope.executablePath}\0${scope.executableFingerprint}`;
       // Desktop already checks installed-app process permission and a trusted,
       // bound project in authorize(). Web keeps its per-guest confirmation path.
-      let approved = this.options.allowAuthorizedProcessWithoutPrompt === true ||
+      let approved =
+        this.options.allowAuthorizedProcessWithoutPrompt === true ||
         this.approvedExecutables.has(approvalKey);
       if (!approved && !guestScoped && this.options.isExecutionApproved) {
         approved = await this.options.isExecutionApproved(scope).catch(() => false);
@@ -639,6 +667,8 @@ export class PanelAppProcessService {
         if ((await verifyProcessEntry(entry.path, entry.sha256)) !== entry.identity)
           throw new Error("reviewed package entry was replaced; resolve it again");
       }
+      await validateInputs();
+      await this.authorize(owner, epoch);
       const env = safeProcessEnv(
         this.options.env ?? process.env,
         this.options.extraPathDirectories?.() ?? [],
@@ -661,7 +691,8 @@ export class PanelAppProcessService {
         )
           throw new Error("sealed directory argument was replaced");
       }
-      if (!this.options.allowAuthorizedProcessWithoutPrompt) this.approvedExecutables.add(approvalKey);
+      if (!this.options.allowAuthorizedProcessWithoutPrompt)
+        this.approvedExecutables.add(approvalKey);
       const processId = randomUUID();
       const child = spawn(executable.path, args, {
         cwd,
@@ -748,20 +779,58 @@ export class PanelAppProcessService {
         }),
       };
       this.processes.set(processId, running);
+      let checkingInputs = false;
+      const inputChecks = fileArgumentHandles.some(
+        (handle) => this.fileArguments.get(handle)?.validate,
+      )
+        ? setInterval(() => {
+            if (checkingInputs || this.processes.get(processId) !== running || running.termination)
+              return;
+            checkingInputs = true;
+            void validateInputs()
+              .catch(() => {
+                if (this.processes.get(processId) !== running || running.termination) return;
+                emit("process.output", {
+                  processId,
+                  stream: "stderr",
+                  text: "Process input authorization changed; CodeShell stopped it.\n",
+                });
+                this.terminate(running);
+              })
+              .finally(() => {
+                checkingInputs = false;
+              });
+          }, 1000)
+        : undefined;
+      inputChecks?.unref();
       child.once("close", (code, signal) => {
         void (async () => {
           clearTimeout(lifetime);
+          if (inputChecks) clearInterval(inputChecks);
           // Cancellation also waits for the process group, not just its leader.
           await running.termination;
-          finishExit({ code, signal });
+          let finalCode = code;
+          if (inputChecks && this.processes.get(processId) === running) {
+            try {
+              await validateInputs();
+            } catch {
+              finalCode = code === 0 ? 1 : code;
+              emit("process.output", {
+                processId,
+                stream: "stderr",
+                text: "Process input authorization changed; results were rejected.\n",
+              });
+            }
+          }
+          finishExit({ code: finalCode, signal });
           this.retiring.delete(processId);
           if (this.processes.get(processId)?.child !== child) return;
           this.processes.delete(processId);
           record.status = "exited";
           record.exitedAt = this.now();
-          record.code = code;
+          record.code = finalCode;
           record.signal = signal;
-          emit("process.exit", { processId, code, signal });
+          emit("process.exit", { processId, code: finalCode, signal });
           // Keep the receipt only after the operating system reports the real close.
           if (!this.closed && (this.guestEpochs.get(owner.guestId) ?? 0) === epoch)
             this.receipts.add(record);

@@ -104,7 +104,7 @@ The generic executor accepts an optional `cookieArgument` envelope containing
 the Host explicitly configures a Cookie custody adapter. Desktop, paired Desktop
 Web and standalone Hub expose `credentials.cookies.listForTask({url})` and
 `capabilities.tasks.cookieCredentials` when the installed app has `process`,
-`resources` and `credentials.cookies`. Existing Cookie process methods are unchanged.
+`resources` and `credentials.cookies`. Legacy Desktop Cookie process calls remain supported.
 The new list returns `{accounts:[{id,label,domain,revision}]}`. Use the selected
 account's ID and revision in the task envelope; never pass a Cookie value or path.
 Desktop uses its existing Host vault, paired Web shares the Desktop's frozen
@@ -131,11 +131,29 @@ the Cookie host. A new exclusive owner removes abandoned managed leases after a
 crash; it does not remove a live Host's files or regenerate a corrupted key.
 The key survives restart so unchanged account selections remain valid for explicit
 retry. The manager does not itself terminate orphaned programs after an OS-level
-crash. Download's script and UI integration remain pending; generic Host support
-does not mean that an existing Panel already uses it. Reviewed tools must not copy
+crash. Download's development package now uses these background handoffs; complete
+four-environment business acceptance remains separate. Reviewed tools must not copy
 credentials into progress, output or artifacts; this custody mechanism does not
 sandbox their code. Web login capture/browser restoration remain unavailable;
 the new Web method selects previously saved accounts only.
+
+For short account-authenticated processes, discover both
+`credentials.cookies.authorizeProcess` and `capabilities.process.cookieCredentials`.
+Pass `{credentialId,url,revision,executableHandle}` using the selected list revision.
+Desktop and Web ask for account consent, then return only
+`{authorized:true,fileArgumentHandle,count}`. Pass the handle to `process.spawn`;
+the Host fixes the private argument to `--cookies` and binds it to that executable
+and guest. Web also retains its separate executable confirmation. Paired Web uses
+the Desktop custody adapter and key rather than creating another vault.
+
+The process service rechecks Host-owned input validation after execution approval,
+while running, and before recording a successful exit. Changed account contents or
+revoked access invalidate the grant and stop a running program. Closing the guest
+revokes its temporary grants and cleans their leases. A successful short process
+may reuse the same grant within that guest, but a new account revision requires
+fresh authorization. This does not occupy the background task queue. A legacy
+Desktop call without `revision` retains its original authorization behavior;
+clients must not infer version checks from method availability alone.
 
 ## Discovery and transport
 

@@ -37,7 +37,11 @@ import {
 import type { SharedPanelToolHost, SharedPanelToolBinding } from "./shared-tool-jobs.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
 import { PanelTaskCookieHost } from "./task-cookie-host.js";
-import { taskCookieFromInput, type TaskCookieSelection } from "./task-cookies.js";
+import {
+  taskCookieFromInput,
+  taskCookieSelection,
+  type TaskCookieSelection,
+} from "./task-cookies.js";
 import {
   PanelAppDirectoryBookmarks,
   desktopPanelDirectoryBookmarks,
@@ -75,6 +79,7 @@ const METHODS = [
   ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.cookies.listForTask",
+  "credentials.cookies.authorizeProcess",
   "credentials.connections.authorizeProcess",
   "agent.task.models",
   "agent.task.start",
@@ -126,7 +131,9 @@ export const panelWebCompatibility: NonNullable<PanelManagementOptions["compatib
       .filter((permission) => !PERMISSIONS.has(permission))
       .map((permission) => "网页暂不提供 " + permission + "，对应功能需要桌面客户端。"),
     ...(app.permissions.includes("credentials.cookies")
-      ? ["网页可选择 Host 已保存的账号用于后台任务；登录采集和浏览器登录恢复仍需桌面端。"]
+      ? [
+          "网页可选择 Host 已保存的账号用于后台任务和受授权的临时程序；登录采集和浏览器登录恢复仍需桌面端。",
+        ]
       : []),
   ],
 });
@@ -531,6 +538,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     return {
       list: (url: string) => host.list(scope, url),
       check: (selection: TaskCookieSelection) => host.check(scope, selection),
+      materialize: (selection: TaskCookieSelection) => host.materialize(scope, selection),
     };
   }
   async function taskConsentDetail(grant: Grant, input: unknown, entry: string) {
@@ -1142,6 +1150,13 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         capabilities: {
           ...panelRuntimeCapabilities({
             process: app.permissions.includes("process"),
+            cookieProcess:
+              app.permissions.includes("process") &&
+              app.permissions.includes("resources") &&
+              app.permissions.includes("credentials.cookies") &&
+              (sharedTools
+                ? !!sharedTools.cookies?.materialize
+                : options.host === "hub" && !options.sharedToolJobs),
             resources: app.permissions.includes("resources") ? resources.capabilities() : undefined,
             tasks:
               app.permissions.includes("process") && app.permissions.includes("resources")
@@ -1194,13 +1209,18 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         },
         host: options.host,
         availableMethods: METHODS.filter((method) => {
-          if (method === "credentials.cookies.listForTask")
+          if (
+            method === "credentials.cookies.listForTask" ||
+            method === "credentials.cookies.authorizeProcess"
+          )
             return (
               app.permissions.includes("credentials.cookies") &&
               app.permissions.includes("process") &&
               app.permissions.includes("resources") &&
               (sharedTools
-                ? !!sharedTools.cookies
+                ? method === "credentials.cookies.authorizeProcess"
+                  ? !!sharedTools.cookies?.materialize
+                  : !!sharedTools.cookies
                 : options.host === "hub" && !options.sharedToolJobs)
             );
           if (method.startsWith("agent.task.") && !agentTasks) return false;
@@ -1363,6 +1383,53 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       const value = await cookieAccess(grant).list((params as { url: string })?.url);
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       return value;
+    }
+    if (method === "credentials.cookies.authorizeProcess") {
+      const value = params as {
+        credentialId?: unknown;
+        url?: unknown;
+        revision?: unknown;
+        executableHandle?: unknown;
+      };
+      const selection = taskCookieSelection({
+        credentialId: value?.credentialId,
+        url: value?.url,
+        revision: value?.revision,
+      });
+      const access = cookieAccess(grant);
+      if (!access.materialize) error(501, "当前 Host 不支持临时进程账号授权。");
+      const executable = processes.executableName(processOwner, value.executableHandle);
+      const account = await access.check(selection);
+      if (
+        !(await confirm(
+          grant,
+          "允许程序使用这个已保存账号？",
+          `程序：${executable}\n账号：${account.label}\n站点：${new URL(selection.url).hostname}\n登录信息仅通过私密文件交给所选程序；关闭页面或撤销授权会停止使用。`,
+        ))
+      )
+        return { authorized: false, cancelled: true };
+      const validate = async () => {
+        await access.check(selection);
+        if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      };
+      await validate();
+      const lease = await access.materialize(selection);
+      try {
+        await validate();
+        const sealed = await processes.grantFileArgument(processOwner, {
+          executableHandle: value.executableHandle,
+          argumentName: "--cookies",
+          path: lease.path,
+          validate,
+          cleanup: () => {
+            void lease.cleanup().catch(() => {});
+          },
+        });
+        return { authorized: true, fileArgumentHandle: sealed.handle, count: lease.count };
+      } catch (cause) {
+        await lease.cleanup();
+        throw cause;
+      }
     }
     if (method === "credentials.connections.list") return panelConnections(options.cwd);
     if (method === "credentials.connections.authorizeProcess") {

@@ -112,6 +112,7 @@ test("background Cookie metadata requires a configured service and all task perm
   const enabled = desktopPanelCapabilities(permissions, { ...options, taskCookies: true });
   expect(enabled.availableMethods).toContain("credentials.cookies.listForTask");
   expect(enabled.capabilities.tasks).toMatchObject({ cookieCredentials: true });
+  expect(enabled.capabilities.process).toMatchObject({ cookieCredentials: true });
   expect(enabled.capabilities.methodLimits["tasks.retry"].timeoutMs).toBe(30 * 60 * 1000);
   for (const permission of permissions) {
     const missing = desktopPanelCapabilities(
@@ -119,10 +120,14 @@ test("background Cookie metadata requires a configured service and all task perm
       { ...options, taskCookies: true },
     );
     expect(missing.availableMethods).not.toContain("credentials.cookies.listForTask");
+    expect((missing.capabilities.process as any)?.cookieCredentials).not.toBe(true);
   }
   expect(desktopPanelCapabilities(permissions, options).availableMethods).not.toContain(
     "credentials.cookies.listForTask",
   );
+  expect(
+    (desktopPanelCapabilities(permissions, options).capabilities.process as any)?.cookieCredentials,
+  ).not.toBe(true);
 });
 
 test("versioned storage is advertised only with storage permission and bounded limits", () => {

@@ -25,10 +25,11 @@ export interface SharedPanelToolBinding {
   getQueue(): Promise<ToolQueueState>;
   setQueue(update: ToolQueueUpdate): Promise<ToolQueueWriteResult>;
   subscribe(listener: (job: ToolJobEvent) => void): () => void;
-  /** Safe metadata only. The transport must obtain selected-account consent before admission. */
+  /** Host-only port. Materialized paths must never be returned to a browser. */
   cookies?: {
     list(url: string): ReturnType<PanelTaskCookieHost["list"]>;
     check(selection: TaskCookieSelection): ReturnType<PanelTaskCookieHost["check"]>;
+    materialize?(selection: TaskCookieSelection): ReturnType<PanelTaskCookieHost["materialize"]>;
   };
 }
 export interface SharedPanelToolHost {
@@ -42,7 +43,8 @@ export interface SharedPanelToolHost {
 export function createSharedPanelToolHost(options: {
   service(): PanelToolJobService;
   resolveScope(app: InstalledPanelApp, projectPath: string): Promise<ToolJobScope>;
-  cookies?: Pick<PanelTaskCookieHost, "list" | "check">;
+  cookies?: Pick<PanelTaskCookieHost, "list" | "check"> &
+    Partial<Pick<PanelTaskCookieHost, "materialize">>;
 }): SharedPanelToolHost {
   return {
     async bind(app, projectPath) {
@@ -66,6 +68,12 @@ export function createSharedPanelToolHost(options: {
               cookies: {
                 list: (url: string) => options.cookies!.list(scope, url),
                 check: (selection: TaskCookieSelection) => options.cookies!.check(scope, selection),
+                ...(options.cookies.materialize
+                  ? {
+                      materialize: (selection: TaskCookieSelection) =>
+                        options.cookies!.materialize!(scope, selection),
+                    }
+                  : {}),
               },
             }
           : {}),

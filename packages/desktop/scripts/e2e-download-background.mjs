@@ -284,6 +284,21 @@ try {
       'document.querySelector("#cookie-select").value = "download-fixture"; document.querySelector("#cookie-select").dispatchEvent(new Event("change", {bubbles:true}));',
     );
   }
+  if (authenticated) {
+    await guest('document.querySelector("#inspect-button").click()');
+    await until(
+      async () => {
+        const state = await guest(
+          '({state:document.querySelector("#inspect-status").dataset.state,text:document.querySelector("#inspect-status").textContent})',
+        );
+        if (state.state === "error")
+          throw new Error("Saved-account metadata failed: " + state.text);
+        return state.state === "ready";
+      },
+      "Saved-account metadata did not complete",
+      180000,
+    );
+  }
   await guest('document.querySelector("#download-button").click()');
   const admitted = await until(async () => {
     const jobs = await guest('window.codeshellPanel.call("tasks.list", {})');
@@ -342,7 +357,7 @@ try {
     assert.ok(authorizedRequests >= 2);
     assert.equal(deniedRequests, 0);
     const prompts = await electron.evaluate(() => globalThis.__downloadCookiePrompts);
-    assert.equal(prompts.length, 2);
+    assert.equal(prompts.length, 3);
     assert.ok(
       prompts.every((prompt) => JSON.stringify(prompt).includes("Download fixture account")),
     );
@@ -353,7 +368,7 @@ try {
       0,
     );
     console.log(
-      "Authenticated fixture passed: real HTTPS requests required saved Cookie; both tasks confirmed; no anonymous fallback; private files cleaned.",
+      "Authenticated fixture passed: real HTTPS requests required saved Cookie; metadata and both tasks confirmed; no anonymous fallback; private files cleaned.",
     );
   }
   console.log(

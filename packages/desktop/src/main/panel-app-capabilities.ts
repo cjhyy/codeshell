@@ -109,6 +109,7 @@ export function desktopPanelCapabilities(
     capabilities: {
       ...panelRuntimeCapabilities({
         process: permitted.has("process"),
+        cookieProcess: taskCookies,
         resources: permitted.has("resources")
           ? { ...(options.resources as Record<string, unknown>), pickReferences: true }
           : undefined,
