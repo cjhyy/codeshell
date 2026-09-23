@@ -44,6 +44,7 @@ async function fixture(
     origin?: string;
     publicPathPrefix?: string;
     agentTasks?: PanelTaskHost;
+    automations?: PanelRuntimeOptions["automations"];
     authorizePanelDirectory?: PanelRuntimeOptions["authorizePanelDirectory"];
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
     sharedToolJobs?: (input: {
@@ -127,6 +128,7 @@ async function fixture(
     sharedToolJobs: options.sharedToolJobs?.({ root, cwd, app }),
     publicPathPrefix: options.publicPathPrefix,
     agentTasks: options.agentTasks,
+    automations: options.automations,
     authorizePanelDirectory: options.authorizePanelDirectory,
     createAgentTasks: options.createAgentTasks,
     now: () => state.now,
@@ -210,6 +212,78 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("automation capabilities require a live Host, both context permissions and a selected task", async () => {
+    const permissions: InstalledPanelApp["permissions"] = [
+      "automations.manage",
+      "context.workspace",
+      "context.session",
+    ];
+    const missing = await fixture({ permissions });
+    const missingGrant = await missing.prepare();
+    expect(
+      (missingGrant.context.availableMethods as string[]).some((method) =>
+        method.startsWith("automations."),
+      ),
+    ).toBe(false);
+    expect(missingGrant.limitations.some((reason) => reason.includes("automations.manage"))).toBe(
+      true,
+    );
+    const unavailable = await missing.api(`${missingGrant.instanceId}/call`, "POST", {
+      method: "automations.list",
+      params: {},
+    });
+    expect(unavailable.status).toBe(501);
+    let calls = 0;
+    const f = await fixture({
+      permissions,
+      automations: {
+        call: async (scope) => {
+          calls++;
+          expect(scope.cwd).toBe(f.cwd);
+          expect(scope.sessionId).toBe("session-1234");
+          expect(await scope.isAuthorized()).toBe(true);
+          return { automations: [] };
+        },
+      },
+    });
+    const grant = await f.prepare();
+    expect(grant.context.availableMethods).toContain("automations.createUnique");
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
+        .status,
+    ).toBe(200);
+    const noTask = await f.prepare("owner-a", { sessionId: undefined });
+    expect(noTask.context.availableMethods).not.toContain("automations.list");
+    expect(
+      (await f.api(`${noTask.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
+        .status,
+    ).toBe(403);
+    f.state.owners.delete("owner-a");
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
+        .status,
+    ).not.toBe(200);
+    expect(calls).toBe(1);
+    const noPermission = await fixture({
+      permissions: ["context.workspace", "context.session"],
+      automations: {
+        call: async () => {
+          throw Error("must not reach Host");
+        },
+      },
+    });
+    const denied = await noPermission.prepare();
+    expect(denied.context.availableMethods).not.toContain("automations.list");
+    expect(
+      (
+        await noPermission.api(`${denied.instanceId}/call`, "POST", {
+          method: "automations.list",
+          params: {},
+        })
+      ).status,
+    ).toBe(403);
+  });
+
   test("Web capabilities disclose actual confirmation and result limits and mask native hand-offs", async () => {
     const f = await fixture({
       permissions: ["context.workspace", "resources", "credentials.connections"],

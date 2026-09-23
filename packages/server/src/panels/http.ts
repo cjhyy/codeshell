@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createPanelManagementHttp, type PanelManagementHttpOptions } from "./management-http.js";
 import type { PanelDirectoryAuthorizer } from "./directory-bookmarks.js";
 import type { SharedPanelToolHost } from "./shared-tool-jobs.js";
+import type { PanelAutomationHost } from "./automations.js";
 import { createPanelRuntime, panelWebCompatibility } from "./runtime.js";
 import { createPanelAgentTaskHost, type PanelAgentTaskHostOptions } from "./agent-task-host.js";
 
@@ -12,6 +13,7 @@ export function createPanelHttp(
     publicPathPrefix?: string;
     agentTaskOptions?: PanelAgentTaskHostOptions;
     sharedToolJobs?: SharedPanelToolHost;
+    automations?: PanelAutomationHost;
     authorizePanelDirectory?: PanelDirectoryAuthorizer;
   },
 ) {
@@ -21,7 +23,9 @@ export function createPanelHttp(
   const management = createPanelManagementHttp({
     ...options,
     projectPackages,
-    compatibility: options.compatibility ?? panelWebCompatibility,
+    compatibility:
+      options.compatibility ??
+      ((app) => panelWebCompatibility(app, { automations: !!options.automations })),
     onChanged: async (id, kind) => {
       await runtime?.invalidate(id);
       await options.onChanged?.(id, kind);

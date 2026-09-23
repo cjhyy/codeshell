@@ -393,6 +393,7 @@ import {
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
 import { createDesktopWebService } from "./desktop-web-service.js";
+import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
   installSkillFromDirectory,
@@ -935,6 +936,7 @@ const mobileRemote = new RemoteHostManager({
   uploads: mobileUploads,
   webApi: createDesktopWebService({
     devices: mobileDevices,
+    automations: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
     sharedToolJobs: panelAppBridge.sharedToolJobs(),
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),

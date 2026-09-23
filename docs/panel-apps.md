@@ -204,8 +204,9 @@ in `availableMethods`, under the same permission. It accepts the create fields
 plus `key` (1–80 ASCII letters, digits, `.`, `_`, `:`, or `-`). The Host derives
 the persisted identity from the app, bound workspace, bound task and key; Panels
 cannot submit `creationKey` or workspace/task authority fields. Discover the
-method explicitly, not from an API version. Paired Web and cloud Panel runtimes
-do not yet expose automation methods.
+method explicitly, not from an API version. Paired Desktop Web exposes the same
+automation methods when composed with main's live scheduler and a selected
+durable task. The cloud Panel runtime does not yet have a scheduler composition.
 
 The scheduler checks and creates under the same persistent store lock. An equal
 definition returns the retained job without resetting its paused state, counters
@@ -216,6 +217,16 @@ guarantee; different task bindings have separate identities. Existing unkeyed
 jobs are not automatically consolidated. A failed response must not trigger
 fallback to ordinary create. All processes writing the cron file must use a
 compatible Core version: older writers normalize away the new identity field.
+
+Paired Web verifies the selected task's persisted project/root authority against
+the authenticated workspace; a task ID supplied to `prepare` is not authority.
+It checks the paired owner and Panel binding again after asynchronous authority
+reads. Update/pause/resume/delete check the latest job ownership inside the cron
+store transaction. Manual run validates a freshly loaded job and dispatches to
+the existing Desktop executor. Closing a page, logging out or stopping the Web
+transport revokes control but does not delete accepted recurring jobs. Explicit
+automation deletion stops future scheduling; an already running execution uses
+the existing Desktop task lifecycle. No second scheduler is owned by Web.
 
 Panel API v6 adds opt-in microphone transcription for apps that declare
 `audio.transcribe`: `audio.status`, `audio.requestMicrophoneAccess`, and

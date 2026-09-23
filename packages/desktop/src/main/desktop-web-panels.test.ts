@@ -30,6 +30,8 @@ test("Desktop Web panels use paired authority and Electron's existing storage", 
       closeRevokesAssets: true,
       deviceRevocation: true,
       forgedBindingRejected: true,
+      sharedAutomationScheduler: true,
+      automationTaskScope: true,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

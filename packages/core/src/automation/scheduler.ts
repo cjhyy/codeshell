@@ -617,9 +617,15 @@ export class CronScheduler {
     return job;
   }
 
-  delete(id: string): boolean {
+  /** Optional synchronous guard runs on the current record while holding the store lock.
+   * It must not perform store I/O or re-enter the scheduler. Throw to reject a stale owner.
+   * The same contract applies to pause/resume/update guards below.
+   */
+  delete(id: string, assertCurrent?: (job: Readonly<CronJob>) => void): boolean {
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
+        const job = jobs.find((j) => j.id === id);
+        if (job) assertCurrent?.(job);
         const next = jobs.filter((j) => j.id !== id);
         return { jobs: next, result: next.length !== jobs.length };
       });
@@ -627,6 +633,8 @@ export class CronScheduler {
       return tx.result;
     }
 
+    const job = this.jobs.get(id);
+    if (job) assertCurrent?.(job);
     this.clearTimer(id);
     const deleted = this.jobs.delete(id);
     if (deleted) this.persist();
@@ -641,12 +649,13 @@ export class CronScheduler {
     return this.jobs.get(id);
   }
 
-  pause(id: string): boolean {
+  pause(id: string, assertCurrent?: (job: Readonly<CronJob>) => void): boolean {
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
         let changed = false;
         const next = jobs.map((j) => {
           if (j.id !== id) return j;
+          assertCurrent?.(j);
           changed = true;
           return { ...j, enabled: false };
         });
@@ -658,6 +667,7 @@ export class CronScheduler {
 
     const job = this.jobs.get(id);
     if (!job) return false;
+    assertCurrent?.(job);
     job.enabled = false;
     this.clearTimer(id);
     this.persist();
@@ -695,12 +705,13 @@ export class CronScheduler {
     return true;
   }
 
-  resume(id: string): boolean {
+  resume(id: string, assertCurrent?: (job: Readonly<CronJob>) => void): boolean {
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
         let changed = false;
         const next = jobs.map((j) => {
           if (j.id !== id) return j;
+          assertCurrent?.(j);
           changed = true;
           const job = { ...j, enabled: true, disabledReason: undefined };
           this.refreshNextRunForDisplay(job);
@@ -714,6 +725,7 @@ export class CronScheduler {
 
     const job = this.jobs.get(id);
     if (!job) return false;
+    assertCurrent?.(job);
     job.enabled = true;
     job.disabledReason = undefined;
     this.arm(job);
@@ -729,7 +741,11 @@ export class CronScheduler {
    * preserved — a paused job stays paused (no timer). Returns the updated job,
    * or null if the id is unknown.
    */
-  update(id: string, patch: UpdateJobPatch): CronJob | null {
+  update(
+    id: string,
+    patch: UpdateJobPatch,
+    assertCurrent?: (job: Readonly<CronJob>) => void,
+  ): CronJob | null {
     if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
       throw new Error("automation update patch must be an object");
     }
@@ -739,6 +755,7 @@ export class CronScheduler {
         let updated: CronJob | null = null;
         const next = jobs.map((j) => {
           if (j.id !== id) return j;
+          assertCurrent?.(j);
           const job = { ...j };
           this.assertBindingEditable(job, patch);
 
@@ -776,6 +793,7 @@ export class CronScheduler {
 
     const job = this.jobs.get(id);
     if (!job) return null;
+    assertCurrent?.(job);
     this.assertBindingEditable(job, patch);
 
     // Validate a new schedule/timezone BEFORE mutating anything.
@@ -841,9 +859,11 @@ export class CronScheduler {
    * Respects the re-entrancy guard (no-op if a run is already in flight) and
    * does not disturb the existing timer. Returns false if the id is unknown.
    */
-  runNow(id: string): boolean {
+  runNow(id: string, assertCurrent?: (job: Readonly<CronJob>) => void): boolean {
+    if (assertCurrent && this.store) this.loadJobs();
     const job = this.jobs.get(id);
     if (!job) return false;
+    assertCurrent?.(job);
     // Run-stat bookkeeping is shared with scheduled fires; nextRun is left as-is
     // (a manual run shouldn't shift the next scheduled occurrence). force=true
     // so a paused job can still be run on demand.

@@ -56,6 +56,7 @@ import {
   materializePanelConnections,
   PanelBridgeError,
   panelBridgeFailure,
+  panelAutomationCreationKey,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
 import type { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
@@ -2244,16 +2245,12 @@ export class PanelAppBridge {
       throw new Error("Panel App automation keys require automations.createUnique");
     const scope = this.panelAutomationScope(binding);
     const creationKey = unique
-      ? `panel:${createHash("sha256")
-          .update(
-            JSON.stringify([
-              binding.resource.descriptor.appId,
-              binding.context.cwd,
-              scope.resumeSessionId,
-              input!.key,
-            ]),
-          )
-          .digest("hex")}`
+      ? panelAutomationCreationKey(
+          binding.resource.descriptor.appId,
+          binding.context.cwd!,
+          scope.resumeSessionId,
+          input!.key as string,
+        )
       : undefined;
     const name = typeof input?.name === "string" ? input.name.trim() : "";
     const schedule = typeof input?.schedule === "string" ? input.schedule.trim() : "";

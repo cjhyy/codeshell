@@ -17,6 +17,7 @@ import {
   createPanelHttp,
   type SharedPanelToolHost,
   type PanelDirectoryAuthorizer,
+  type PanelAutomationHost,
 } from "@cjhyy/code-shell-server/panels";
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AgentBridge } from "./agent-bridge.js";
@@ -25,6 +26,7 @@ import type { AgentBridge } from "./agent-bridge.js";
 export function createDesktopWebService(options: {
   devices: TrustedDeviceStore;
   sharedToolJobs: SharedPanelToolHost;
+  automations?: PanelAutomationHost;
   authorizePanelDirectory: PanelDirectoryAuthorizer;
   getBridge: () => AgentBridge | null;
   remoteLink?: () => RemoteLinkConfiguration | undefined;
@@ -95,6 +97,7 @@ export function createDesktopWebService(options: {
               host: "desktop",
               projectPackages: true,
               sharedToolJobs: options.sharedToolJobs,
+              automations: options.automations,
               authorizePanelDirectory: options.authorizePanelDirectory,
               agentTaskOptions: {
                 buildEnv: () => ({

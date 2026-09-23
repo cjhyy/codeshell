@@ -1503,3 +1503,50 @@ Panel 实现提交：`bab4db4`（独立 Panel 仓库任务分支，尚未发布�
 进程需使用兼容 Core，旧版写入会丢弃新身份字段。自动化更新并发、关注记录与任务
 之间的事务、项目锁定程序入口、Web／云端自动化、真实手机和服务商、六 Panel
 四组合、设备中继／目录／通知及部署恢复／回滚／兼容发布继续保留为未完成。
+
+### 增量 38：配对 Web 复用桌面 Panel 自动化（2026-09-24）
+
+Panel 文档提交：`9c773bb`。本增量仅改变 Host，Panel 业务代码沿用增量 37；未发布。
+
+完成：
+
+- 共享 Panel HTTP 运行时提供可注入的自动化 Host 契约，具有实际实现、Panel
+  automations.manage／两项 context 权限及所选任务时才声明全部自动化方法。
+  未接入调度器的云端仍返回不支持，不因新增协议方法而冒充可执行。
+- 原生 Desktop 的配对网页使用 main 已有 CronScheduler，不启动第二个调度器。
+  支持 list/create/createUnique/update/pause/resume/runNow/delete，沿用现有
+  数据文件、任务 ID、调度执行器和权限级别。桌面／网页共享唯一身份派生函数。
+- 网页 prepare 中的 sessionId 仅是选择信息。每次操作读取持久 Session 的项目／
+  主根绑定，与已授权的目标工作区核对；异步读取后再次检查设备和 Panel 授权。
+  禁止 JSON 提交 cwd、项目／主根／绑定会话、原始 creationKey 等权限字段。
+- 调度器新增可选同步记录检查：update/pause/resume/delete 在写入文件锁内检查
+  当前任务归属，避免另一进程在初始查询后重绑任务造成越界操作；拒绝不会修改
+  磁盘。立即执行刷新任务后再检查归属，使用原执行回调，不创建独立运行环境。
+- 关闭网页、退出登录或停用远程服务只撤销操作入口；已接受的定时任务仍归桌面
+  调度器。删除阻止后续调度，在途执行遵循既有桌面任务生命周期。
+
+验证：
+
+- 共享 HTTP 运行时、Core 调度和桌面服务／协议共 80 项测试、756 个断言通过。
+  新覆盖不存在服务、缺少权限／任务时不声明能力、异步授权期间撤销、伪造任务
+  归属、其他项目任务不可见／不可改，以及磁盘被另一调度实例重绑后的原子拒绝。
+  日志 `/tmp/panel-web-automation-regression.log`。
+- 实际配对 HTTP 门面＋实际 CronStore 集成通过：并发创建一条、桌面暂停后网页
+  读取相同状态、网页修改后桌面可见、错误项目／会话拒绝、退出及关闭门面保留
+  调度记录。Electron 对象和持久会话权限读取是隔离夹具，单独记录其边界。
+- 实际 Electron `e2e-shared-panel-tasks.mjs` 扩展通过：真实 main/preload/Panel
+  guest 与配对 HTTP 共用任务 ID，唯一创建复用、双向查询／创建／修改／暂停／
+  删除；同时原有共享原生任务、目录、队列、Cookie、注销／停远程服务后任务
+  继续及产物恢复回归通过。使用临时项目与合成持久 Session，没有运行真实模型
+  提醒，没有使用物理手机。日志 `/tmp/panel-web-automation-electron.log`。
+- 手动执行的授权回调另以真实调度器＋受控执行器核验，确保只传当前绑定任务和
+  更新后的 prompt，记录一次运行。该文件最终 3 项、32 断言通过，日志
+  `/tmp/panel-web-automation-control-final.log`。
+- Core、Server、Desktop 构建，Desktop 类型检查及 Server 导出契约检查通过；
+  初次 Server 构建发现兼容说明回调参数类型过窄，修复为权限子集后重新构建通过。
+  日志 `/tmp/panel-web-automation-{core-build,server-build2,desktop-build,
+  desktop-types,exports}.log`。diff 检查通过，临时 Electron 目录已清理。
+
+仍未完成：云端长期调度器与 Agent 执行组合、真实行情／模型提醒与手机通知、全部
+Panel 四组合；项目锁定程序入口、旧会话权限迁移及 worktree 统一作用域、自动化
+内容的并发版本校验、设备目录／中继和部署恢复／回滚／兼容发布也继续列为待办。

@@ -56,8 +56,9 @@ import {
   panelExecutableDirectories,
   panelProcessInfo,
 } from "./process-service.js";
-import { PanelManagementError, type PanelManagementOptions } from "./management.js";
+import { PanelManagementError } from "./management.js";
 import type { PanelSnapshot } from "./types.js";
+import { panelAutomationMethods, type PanelAutomationHost } from "./automations.js";
 
 const ASSETS = "/api/v1/panel-assets/";
 const ROOT = "/api/v1/panels/runtime/";
@@ -77,6 +78,7 @@ const METHODS = [
   "external.open",
   "agent.submitPrompt",
   "notifications.send",
+  ...panelAutomationMethods,
   ...panelProcessMethods,
   ...panelResourceMethods,
   "resources.open",
@@ -126,13 +128,18 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
 };
-export const panelWebCompatibility: NonNullable<PanelManagementOptions["compatibility"]> = (
-  app,
+export const panelWebCompatibility = (
+  app: Pick<InstalledPanelApp, "permissions">,
+  options?: { automations?: boolean },
 ) => ({
   supported: true,
   reasons: [
     ...app.permissions
-      .filter((permission) => !PERMISSIONS.has(permission))
+      .filter(
+        (permission) =>
+          !PERMISSIONS.has(permission) &&
+          !(permission === "automations.manage" && options?.automations),
+      )
       .map((permission) => "网页暂不提供 " + permission + "，对应功能需要桌面客户端。"),
     ...(app.permissions.includes("credentials.cookies")
       ? [
@@ -199,6 +206,7 @@ export interface PanelRuntimeOptions {
   listInstalled?: () => Promise<InstalledPanelApp[]>;
   now?: () => number;
   agentTasks?: PanelTaskHost;
+  automations?: PanelAutomationHost;
   /** Reuse the Desktop coordinator; this transport never owns its lifetime. */
   sharedToolJobs?: SharedPanelToolHost;
   authorizePanelDirectory?: PanelDirectoryAuthorizer;
@@ -213,6 +221,7 @@ function methodPermission(method: string): string {
   if (method.startsWith("storage.")) return "storage";
   if (method.startsWith("process.") || method.startsWith("filesystem.")) return "process";
   if (method.startsWith("agent.task.")) return "agent.task";
+  if (method.startsWith("automations.")) return "automations.manage";
   if (method === "workspace.info") return "workspace.info";
   if (method === "workspace.writeText") return "workspace.write";
   return method.startsWith("workspace.") ? "workspace.read" : method;
@@ -1269,6 +1278,14 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                 : options.host === "hub" && !options.sharedToolJobs)
             );
           if (method.startsWith("agent.task.") && !agentTasks) return false;
+          if (method.startsWith("automations."))
+            return (
+              !!options.automations &&
+              ["automations.manage", "context.workspace", "context.session"].every((permission) =>
+                app.permissions.includes(permission as never),
+              ) &&
+              !!input.sessionId
+            );
           if (method.startsWith("tasks."))
             return app.permissions.includes("process") && app.permissions.includes("resources");
           if (
@@ -1404,6 +1421,25 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     }
     const permission = methodPermission(method);
     if (!grant.app.permissions.includes(permission as never)) error(403, "面板未声明这个权限。");
+    if (method.startsWith("automations.")) {
+      if (!options.automations) error(501, "当前执行环境尚未接入面板自动化。");
+      if (
+        !grant.app.permissions.includes("context.workspace") ||
+        !grant.app.permissions.includes("context.session") ||
+        typeof grant.context.sessionId !== "string"
+      )
+        error(403, "自动化需要已绑定的项目与对话。");
+      return options.automations.call(
+        {
+          appId: grant.app.id,
+          cwd: options.cwd,
+          sessionId: grant.context.sessionId,
+          isAuthorized: () => authorized(grant),
+        },
+        method,
+        params,
+      );
+    }
     const processOwner = {
       guestId: grant.guestId,
       appId: grant.app.id,

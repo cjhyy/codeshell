@@ -23,6 +23,7 @@ isolated.home = await realpath(isolated.home);
 isolated.codeShellHome = join(isolated.home, ".code-shell");
 isolated.userDataDir = join(isolated.home, "electron-user-data");
 const project = join(isolated.home, "task-project");
+const automationSessionId = "shared-automation-session";
 const install = join(isolated.codeShellHome, "panel-apps", "task-fixture");
 const installedAt = new Date().toISOString();
 const source = `import { readFileSync, writeFileSync } from "node:fs";
@@ -50,7 +51,14 @@ const manifest = {
   icon: "panel",
   singleton: true,
   placement: "right-dock",
-  permissions: ["context.workspace", "process", "resources", "credentials.cookies"],
+  permissions: [
+    "context.workspace",
+    "context.session",
+    "automations.manage",
+    "process",
+    "resources",
+    "credentials.cookies",
+  ],
   nativeEntries: {
     worker: {
       entry: "app/tools/worker.mjs",
@@ -214,6 +222,22 @@ try {
   )
     await viewOnly.click();
   await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), project);
+  const registeredProject = await win.evaluate(async (cwd) => {
+    const projects = await window.codeshell.projectRegistry.list();
+    return projects.find((entry) => entry.roots.some((root) => root.path === cwd));
+  }, project);
+  assert.ok(registeredProject, "Automation fixture project must be registered");
+  // Synthetic durable Session binding; no model execution is requested here.
+  const automationSessionDir = join(isolated.codeShellHome, "sessions", automationSessionId);
+  await mkdir(automationSessionDir, { recursive: true });
+  await writeFile(
+    join(automationSessionDir, "state.json"),
+    JSON.stringify({
+      sessionId: automationSessionId,
+      cwd: project,
+      project: { projectId: registeredProject.id, mainRootId: registeredProject.primaryRootId },
+    }),
+  );
   const panel = await win.evaluate(
     async (cwd) =>
       (await window.codeshell.listPanelApps(cwd, "en")).find(
@@ -279,7 +303,7 @@ try {
   });
   const guestId = await view.evaluate((view) => view.getWebContentsId());
   await win.evaluate(
-    ({ guestId, id, cwd }) =>
+    ({ guestId, id, cwd, sessionId }) =>
       window.codeshell.bindPanelApp({
         guestId,
         appDescriptorId: id,
@@ -287,12 +311,13 @@ try {
         bucket: "shared-task-test",
         projectPath: cwd,
         cwd,
+        sessionId,
         visible: true,
         busy: false,
         theme: "light",
         locale: "en",
       }),
-    { guestId, id: panel.id, cwd: project },
+    { guestId, id: panel.id, cwd: project, sessionId: automationSessionId },
   );
   let nextDesktopCall = 0;
   const desktop = async (method, params) => {
@@ -348,6 +373,7 @@ try {
       await request("/api/v1/panels/runtime/prepare", "POST", {
         appId: panel.id,
         revision: panel.revision,
+        sessionId: automationSessionId,
       }),
     );
   }
@@ -357,6 +383,30 @@ try {
     request(`/api/v1/panels/runtime/${phone.instanceId}/call`, "POST", { method, params }).then(
       json,
     );
+  assert.ok(phone.context.availableMethods.includes("automations.createUnique"));
+  const automationInput = {
+    key: "shared-reminder",
+    name: "Shared recurring reminder",
+    schedule: "1h",
+    prompt: "Fixture only; never run",
+    timezone: "UTC",
+  };
+  const nativeAutomation = await desktop("automations.createUnique", automationInput);
+  const phoneReplay = await phoneCall("automations.createUnique", automationInput);
+  assert.equal(phoneReplay.id, nativeAutomation.id);
+  assert.equal((await phoneCall("automations.list", {})).automations.length, 1);
+  await phoneCall("automations.pause", { id: nativeAutomation.id });
+  assert.equal((await desktop("automations.list", {})).automations[0].enabled, false);
+  await phoneCall("automations.update", { id: nativeAutomation.id, prompt: "Edited on phone" });
+  assert.equal((await desktop("automations.list", {})).automations[0].prompt, "Edited on phone");
+  const phoneCreated = await phoneCall("automations.createUnique", {
+    ...automationInput,
+    key: "phone-reminder",
+  });
+  assert.equal((await desktop("automations.list", {})).automations.length, 2);
+  await desktop("automations.delete", { id: phoneCreated.id });
+  await phoneCall("automations.delete", { id: nativeAutomation.id });
+  assert.equal((await desktop("automations.list", {})).automations.length, 0);
   assert.equal(phone.context.capabilities.tasks.executionRevision, panel.revision);
   const projectDirectory = await desktop("filesystem.getKnownDirectory", { name: "project" });
   assert.equal(
@@ -873,6 +923,8 @@ try {
   console.log(
     JSON.stringify({
       actualElectron: true,
+      sharedAutomationScheduler: true,
+      automationSessionAuthority: true,
       nativeConditionalProjectBinding: true,
       packageMutationBlocksQueuedRunningAndPreparing: true,
       projectUpdateAfterActualTaskExit: projectPins,
