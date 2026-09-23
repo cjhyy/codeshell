@@ -205,6 +205,7 @@
 已实现：Desktop / 单工作区 Hub / 项目控制服务的受认证 `/api/v1/environment`；稳定环境身份；Web 工作台与登录/项目页的连接管理；地址不保存配对令牌；环境切换保留原任务执行位置且沿用草稿离开确认。
 
 验证：
+
 - `bun run build:server`：通过。
 - Web typecheck：通过。
 - 环境存储、API 作用域、身份并发/损坏用例：20 通过。
@@ -219,4 +220,22 @@
 
 回归异常：完整 `hub-server.test.ts` 在已有 WebSocket 用例中触发 Bun 1.3.11 segmentation fault；不能标记整套服务端测试通过。崩溃进程已确认并终止，新增 HTTP 路径另以 Node 浏览器测试验证。后续须诊断运行器或以原生 Node 补齐等价回归。
 
-Docker：已启动 Docker Desktop（Engine 28.5.1），专用任务镜像构建进行中；尚未据此声明容器验收通过。
+Docker：专用任务镜像 `codeshell-project-runtime:project-cloud-panels` 已构建，`node scripts/smoke-project-sandboxes.mjs codeshell-project-runtime:project-cloud-panels` 通过。两个真实项目容器分别运行主 Agent / Panel 任务，文件和会话隔离；停止再启动保留文件/对话且旧授权失效。使用合成模型服务，不需要真实账号密钥。
+
+### 增量 2：独立服务仓库与 Link（2026-09-23）
+
+新仓库 `/Users/admin/Documents/个人学习/代码学习/codeshell-services`，分支 `codex/services/project-cloud-panels`，提交 `a6e8535`。使用固定公开 `@cjhyy/code-shell-server@0.9.22` 包，不复制引擎和共享 Host。
+
+已实现独立 Link 启动/管理/持久化、GitHub OAuth adapter、下游授权码 + S256、机密客户端认证、连接与仓库/action 授权范围、刷新轮换/重放检测、撤销及在途结果丢弃、加密凭据、在线备份与离线恢复。另有云端产品启动入口、Link 镜像/Compose、systemd 与 HTTPS 配置模板。
+
+验证：21 项测试在本机 Node 25.8.1 与镜像 Node 22.23.2 通过；真实 Chromium 在 390/1440px 完成管理及授权闭环；非 root、只读容器的健康检查、重启持久化、备份恢复通过。GitHub 上游使用受控测试响应，没有将它记为真实账号授权。具体证据在服务仓库 `docs/acceptance.md`。
+
+仍缺真实 GitHub App / 公网部署验收、现有 Host 远程 Link 适配、云端卷恢复/回滚、兼容版本发布与远程仓库。已向用户询问真实服务器、域名和 OAuth App 非密钥配置，独立工作继续。
+
+### 增量 3：原生桌面进入云端（2026-09-23）
+
+桌面侧栏新增“云端工作台”，在独立原生窗口打开输入的 HTTPS 首页地址（回环 HTTP 仅用于本机）。每个 origin 使用独立持久浏览器会话；云端窗口没有 Desktop preload、Node 或本地 Agent bridge。标题固定标识执行环境，同源页面可导航；不自动跳转到其他 origin 或打开任意弹窗。地址只保存规范化首页，不保存初始化/登录令牌。
+
+验证：主仓库完整构建、Desktop 生产构建、Desktop typecheck、改动文件 ESLint、17 项相关单元回归通过。真实 Electron smoke 验证无本地接口、同源导航、跨站导航拦截、多个环境 cookie 隔离及重开；生产主进程/preload/renderer + 真实项目控制服务 E2E 从侧栏打开、独立登录、创建云端项目、确认本地注册表未改变、重开恢复登录与项目均通过。
+
+仍未把该入口当作全部 Panel 功能对齐。跨域第三方网页弹窗/授权跳转、真实录音设备/通知、真实手机和各 Panel 长流程需后续验收。

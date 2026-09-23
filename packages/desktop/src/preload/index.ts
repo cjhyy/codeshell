@@ -875,6 +875,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktrees: boolean;
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
+  openCloudWorkbench: (address: string) => ipcRenderer.invoke("cloud:open-workbench", address),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:revealInFinder", path, cwd),

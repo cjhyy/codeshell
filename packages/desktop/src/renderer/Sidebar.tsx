@@ -26,6 +26,7 @@ import {
   Trash2,
   UsersRound,
   Wrench,
+  Cloud,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -175,6 +176,34 @@ export function Sidebar({
   const confirm = useConfirm();
   const prompt = usePrompt();
   const toast = useToast();
+
+  const openCloud = async (): Promise<void> => {
+    let previous = "";
+    try {
+      previous = window.localStorage.getItem("codeshell.cloud-workbench.v1") ?? "";
+    } catch {
+      /* Optional address bookmark. */
+    }
+    const address = await prompt({
+      title: t("sidebar.cloudWorkbench"),
+      message: t("sidebar.cloudAddress"),
+      detail: t("sidebar.cloudHint"),
+      placeholder: "https://cloud.example.com",
+      defaultValue: previous,
+      confirmLabel: t("sidebar.openCloud"),
+    });
+    if (!address) return;
+    try {
+      const result = await window.codeshell.openCloudWorkbench(address);
+      try {
+        window.localStorage.setItem("codeshell.cloud-workbench.v1", result.address);
+      } catch {
+        /* Opening still succeeds without local storage. */
+      }
+    } catch (error) {
+      toast({ message: String(error), variant: "error" });
+    }
+  };
 
   // Re-render when pages register/unregister (same idiom as panels/PanelArea.tsx:158).
   useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);
@@ -355,6 +384,12 @@ export function Sidebar({
           label={t("sidebar.search")}
           Icon={Search}
           onClick={onOpenSearch}
+          active={false}
+        />
+        <SidebarItem
+          label={t("sidebar.cloudWorkbench")}
+          Icon={Cloud}
+          onClick={() => void openCloud()}
           active={false}
         />
         {/* NOTE: this list used to be hardcoded; the GLOBAL pending-approvals

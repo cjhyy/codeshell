@@ -1488,6 +1488,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   /** In the parent: receive a popout's remove request. Returns unsubscribe. */
   onBrowserAnchorRemoveFromPopout(cb: (anchorId: unknown) => void): () => void;
 
+  /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
+  openCloudWorkbench(address: string): Promise<{ address: string }>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;
   /**
