@@ -5,6 +5,9 @@ import type {
   ToolJobEvent,
   ToolJobRequest,
   ToolJobScope,
+  ToolQueueState,
+  ToolQueueUpdate,
+  ToolQueueWriteResult,
 } from "./tool-jobs.js";
 
 /** Host composition only: no paths, scopes, or execution revisions come from HTTP callers. */
@@ -16,6 +19,8 @@ export interface SharedPanelToolBinding {
   get(id: string): Promise<ToolJob & { readOnly: boolean }>;
   cancel(id: string): Promise<ToolJob>;
   retry(id: string): Promise<ToolJob>;
+  getQueue(): Promise<ToolQueueState>;
+  setQueue(update: ToolQueueUpdate): Promise<ToolQueueWriteResult>;
   subscribe(listener: (job: ToolJobEvent) => void): () => void;
 }
 export interface SharedPanelToolHost {
@@ -43,6 +48,8 @@ export function createSharedPanelToolHost(options: {
         get: (id: string) => service.get(scope, id),
         cancel: (id: string) => service.cancel(scope, id),
         retry: (id: string) => service.retry(scope, id),
+        getQueue: () => service.getQueue(scope),
+        setQueue: (update: ToolQueueUpdate) => service.setQueue(scope, update),
         subscribe: (listener: (job: ToolJobEvent) => void) => service.subscribe(scope, listener),
       });
     },

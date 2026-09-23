@@ -5,7 +5,9 @@ import { ToolJobStorage, toolJobJson } from "./tool-jobs-storage.js";
 
 export const toolJobLimits = Object.freeze({
   maxJobs: 2000,
-  maxQueuedPerScope: 32,
+  maxQueuedPerScope: 128,
+  maxQueues: 512,
+  maxQueueCatalogBytes: 4 * 1024 * 1024,
   maxConcurrent: 2,
   maxInputBytes: 2 * 1024 * 1024 + 8 * 1024,
   maxResultBytes: 2 * 1024 * 1024,
@@ -17,6 +19,38 @@ export interface ToolJobScope {
   appId: string;
   projectPath: string;
   revision: string;
+}
+/** Scope-owned scheduling; pausing stops admission to execution, not active processes. */
+export interface ToolQueueState {
+  revision: number;
+  paused: boolean;
+  maxConcurrent: number;
+}
+export interface ToolQueueWriteResult {
+  saved: boolean;
+  queue: ToolQueueState;
+}
+export interface ToolQueueUpdate {
+  expectedRevision: number;
+  paused: boolean;
+  maxConcurrent: number;
+}
+interface StoredQueue extends ToolQueueState {
+  scope: ToolJobScope;
+}
+const queueKey = (scope: ToolJobScope) => JSON.stringify(scopeValue(scope));
+function queueState(value: ToolQueueState): ToolQueueState {
+  if (
+    !value ||
+    typeof value.paused !== "boolean" ||
+    !Number.isSafeInteger(value.revision) ||
+    value.revision < 0 ||
+    !Number.isSafeInteger(value.maxConcurrent) ||
+    value.maxConcurrent < 1 ||
+    value.maxConcurrent > toolJobLimits.maxConcurrent
+  )
+    throw new Error("Invalid tool queue state");
+  return { revision: value.revision, paused: value.paused, maxConcurrent: value.maxConcurrent };
 }
 export interface ToolJobEntry {
   name: string;
@@ -221,6 +255,7 @@ function storedValue(raw: unknown): StoredJob {
 export class PanelToolJobService {
   private readonly storage: ToolJobStorage;
   private readonly jobs = new Map<string, StoredJob>();
+  private readonly queues = new Map<string, StoredQueue>();
   private readonly active = new Map<string, ActiveJob>();
   private readonly preparing = new Map<
     string,
@@ -282,6 +317,15 @@ export class PanelToolJobService {
   private async load(): Promise<void> {
     await this.storage.initialize();
     try {
+      const queues = await this.storage.readQueueCatalog(toolJobLimits.maxQueueCatalogBytes);
+      if (!Array.isArray(queues) || queues.length > toolJobLimits.maxQueues)
+        throw new Error("Invalid tool queue catalog");
+      for (const raw of queues) {
+        const scope = scopeValue(raw?.scope),
+          key = queueKey(scope);
+        if (this.queues.has(key)) throw new Error("Duplicate tool queue scope");
+        this.queues.set(key, { scope, ...queueState(raw) });
+      }
       const listing = await opendir(await this.storage.directory());
       let examined = 0;
       for await (const item of listing) {
@@ -372,6 +416,71 @@ export class PanelToolJobService {
     const job = this.lookup(scope, id);
     return { ...publicJob(job), readOnly: job.scope.revision !== scope.revision };
   }
+  private queueFor(scope: ToolJobScope): ToolQueueState {
+    return queueState(
+      this.queues.get(queueKey(scope)) ?? {
+        revision: 0,
+        paused: false,
+        maxConcurrent: toolJobLimits.maxConcurrent,
+      },
+    );
+  }
+  async getQueue(rawScope: ToolJobScope): Promise<ToolQueueState> {
+    const scope = scopeValue(rawScope);
+    await this.initialize();
+    await this.authorize(scope);
+    return this.queueFor(scope);
+  }
+  async setQueue(rawScope: ToolJobScope, update: ToolQueueUpdate): Promise<ToolQueueWriteResult> {
+    const scope = scopeValue(rawScope);
+    const desired = queueState({
+      revision: update?.expectedRevision,
+      paused: update?.paused,
+      maxConcurrent: update?.maxConcurrent,
+    });
+    if (desired.revision >= Number.MAX_SAFE_INTEGER)
+      throw new Error("Tool queue revision exhausted");
+    await this.initialize();
+    await this.authorize(scope);
+    const result = await this.exclusive(async () => {
+      if (this.stopping) throw new Error("tool job service is shutting down");
+      await this.authorize(scope);
+      const current = this.queueFor(scope);
+      if (current.revision !== desired.revision) return { saved: false, queue: current };
+      const key = queueKey(scope);
+      if (!this.queues.has(key) && this.queues.size >= toolJobLimits.maxQueues)
+        throw new Error("Tool queue catalog is full");
+      const next = { scope, ...desired, revision: current.revision + 1 };
+      const catalog = new Map(this.queues);
+      catalog.set(key, next);
+      await this.storage.writeQueueCatalog(
+        [...catalog.values()],
+        toolJobLimits.maxQueueCatalogBytes,
+      );
+      this.queues.set(key, next);
+      return { saved: true, queue: queueState(next) };
+    });
+    this.schedule();
+    return result;
+  }
+  private runnable(job: StoredJob): boolean {
+    if (job.status !== "queued") return false;
+    const queue = this.queueFor(job.scope);
+    if (queue.paused) return false;
+    let active = 0;
+    for (const id of this.active.keys()) {
+      const running = this.jobs.get(id);
+      if (running && sameScope(running.scope, job.scope)) active++;
+    }
+    return active < queue.maxConcurrent;
+  }
+  private pendingCount(scope: ToolJobScope): number {
+    return (
+      [...this.jobs.values()].filter(
+        (job) => sameScope(job.scope, scope) && !TERMINAL.has(job.status),
+      ).length + [...this.preparing.values()].filter((job) => sameScope(job.scope, scope)).length
+    );
+  }
   async start(
     rawScope: ToolJobScope,
     request: ToolJobRequest,
@@ -433,11 +542,7 @@ export class PanelToolJobService {
         await this.storage.remove(oldest.id);
         this.jobs.delete(oldest.id);
       }
-      const pending =
-        [...this.jobs.values()].filter(
-          (job) => sameScope(job.scope, scope) && !TERMINAL.has(job.status),
-        ).length + [...this.preparing.values()].filter((job) => sameScope(job.scope, scope)).length;
-      if (pending >= toolJobLimits.maxQueuedPerScope)
+      if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)
         throw new Error("too many queued tool jobs for this workspace");
       const id = randomUUID();
       const controller = new AbortController();
@@ -540,7 +645,7 @@ export class PanelToolJobService {
           if (
             !this.stopping &&
             this.active.size < toolJobLimits.maxConcurrent &&
-            [...this.jobs.values()].some((job) => job.status === "queued")
+            [...this.jobs.values()].some((job) => this.runnable(job))
           )
             this.schedule();
         },
@@ -554,7 +659,7 @@ export class PanelToolJobService {
     while (!this.stopping && this.active.size < toolJobLimits.maxConcurrent) {
       const selected = await this.exclusive(async () => {
         if (this.stopping) return;
-        const current = [...this.jobs.values()].find((job) => job.status === "queued");
+        const current = [...this.jobs.values()].find((job) => this.runnable(job));
         if (!current) return;
         const job = structuredClone(current);
         job.status = "running";
@@ -674,6 +779,8 @@ export class PanelToolJobService {
         throw new Error("tool job must finish stopping before retry");
       if (current.recovery !== "retry" || !current.error?.retryable)
         throw new Error("tool job requires a new manually reviewed request");
+      if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)
+        throw new Error("too many queued tool jobs for this workspace");
       const next = structuredClone(current);
       next.status = "queued";
       delete next.error;

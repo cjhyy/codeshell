@@ -31,6 +31,7 @@ import {
   type ToolJob,
   type ToolJobScope,
   type ToolJobRequest,
+  type ToolQueueUpdate,
 } from "./tool-jobs.js";
 import type { SharedPanelToolHost, SharedPanelToolBinding } from "./shared-tool-jobs.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
@@ -339,7 +340,7 @@ function bridgeScript(id: string, origin: string): string {
       const requestId = String(++next);
       const timer = setTimeout(() => {
         pending.delete(requestId); reject(new Error("Panel request timed out"));
-      }, method === "tasks.start" ? 30 * 60 * 1000 : 60000);
+      }, ["tasks.start", "tasks.retry", "tasks.queue.set"].includes(method) ? 30 * 60 * 1000 : 60000);
       pending.set(requestId, { resolve, reject, timer });
       try {
         parent.postMessage({ type: "codeshell-panel:call", instanceId: id, requestId, method, params }, origin);
@@ -618,6 +619,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       get: (id: string) => getToolJobs().get(scope, id),
       cancel: (id: string) => getToolJobs().cancel(scope, id),
       retry: (id: string) => getToolJobs().retry(scope, id),
+      getQueue: () => getToolJobs().getQueue(scope),
+      setQueue: (update: ToolQueueUpdate) => getToolJobs().setQueue(scope, update),
     };
     if (options.sharedToolJobs && !shared) error(410, "共享任务授权已失效，请重新打开面板。");
     if (method === "tasks.start") {
@@ -662,6 +665,20 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       } finally {
         preparingTools.delete(preparation);
       }
+    }
+    if (method === "tasks.queue.get") return service.getQueue();
+    if (method === "tasks.queue.set") {
+      // Resuming may launch previously admitted jobs; use the existing owner consent gate.
+      if (
+        !(await confirm(
+          grant,
+          `调整 ${grant.app.title.default} 的后台队列？`,
+          "暂停只影响等待任务，正在执行的任务继续运行。",
+        ))
+      )
+        error(403, "你取消了队列调整。");
+      if (!(await authorized(grant))) error(410, "面板授权已失效。");
+      return service.setQueue(params as ToolQueueUpdate);
     }
     if (method === "tasks.list") {
       const offset = input.offset ?? 0,
@@ -1067,6 +1084,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                 ? {
                     available: true,
                     directoryBookmarks: true,
+                    queueControl: true,
                     ...toolJobLimits,
                     ownership: sharedTools ? "project" : "session",
                     executionRevision: sharedTools?.scope.revision ?? panel.revision,

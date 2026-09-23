@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   PanelToolJobService,
+  toolJobLimits,
   type PanelToolJobServiceOptions,
   type ToolJob,
   type ToolJobContext,
@@ -81,6 +82,89 @@ describe("durable native tool jobs", () => {
     };
     return { calls, execute };
   }
+
+  test("a full durable queue stays paused without a page and honors scope concurrency", async () => {
+    const execution = controlled();
+    const f = await fixture({ execute: execution.execute });
+    expect(
+      await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 }),
+    ).toEqual({ saved: true, queue: { revision: 1, paused: true, maxConcurrent: 1 } });
+    const ids: string[] = [];
+    for (let i = 0; i < toolJobLimits.maxQueuedPerScope; i++)
+      ids.push((await f.service.start(scope, { ...request, requestKey: `item-${i}` })).id);
+    expect(ids.length).toBeGreaterThanOrEqual(100);
+    expect(execution.calls).toHaveLength(0);
+    await expect(
+      f.service.start(scope, { ...request, requestKey: "over-capacity" }),
+    ).rejects.toThrow("too many queued");
+    // Retrying a terminal record must obey the same admission capacity as new work.
+    await f.service.cancel(scope, ids[ids.length - 1]!);
+    await f.service.start(scope, { ...request, requestKey: "replacement" });
+    await expect(f.service.retry(scope, ids[ids.length - 1]!)).rejects.toThrow("too many queued");
+    await f.service.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    await eventually(async () => (execution.calls.length === 1 ? true : undefined));
+    const other = { ...scope, projectPath: "/other-project" };
+    const foreign = await f.service.start(other, request);
+    await eventually(async () => (execution.calls.length === 2 ? true : undefined));
+    expect(execution.calls[1]!.job.id).toBe(foreign.id);
+    // Pausing does not cancel active work, but holds every remaining admission.
+    await f.service.setQueue(scope, { expectedRevision: 2, paused: true, maxConcurrent: 1 });
+    expect(execution.calls[0]!.context.signal.aborted).toBe(false);
+    execution.calls[0]!.gate.resolve({ completed: true });
+    await finished(f.service, ids[0]!);
+    expect((await f.service.get(scope, ids[1]!)).status).toBe("queued");
+    expect(execution.calls).toHaveLength(2);
+    await f.service.setQueue(scope, { expectedRevision: 3, paused: false, maxConcurrent: 1 });
+    await eventually(async () => (execution.calls.length === 3 ? true : undefined));
+    expect(execution.calls[2]!.job.id).toBe(ids[1]);
+    await f.service.setQueue(scope, { expectedRevision: 4, paused: true, maxConcurrent: 1 });
+  });
+
+  test("queue changes compare revisions across devices and survive Host restart", async () => {
+    const f = await fixture();
+    const changes = await Promise.all([
+      f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 }),
+      f.service.setQueue(scope, { expectedRevision: 0, paused: false, maxConcurrent: 2 }),
+    ]);
+    expect(changes.filter((result) => result.saved)).toHaveLength(1);
+    expect(changes[1]).toEqual({ saved: false, queue: changes[0]!.queue });
+    const waiting = await f.service.start(scope, request);
+    await f.service.shutdown();
+    const reopened = service(f.root);
+    expect(await reopened.getQueue(scope)).toEqual(changes[0]!.queue);
+    expect((await reopened.get(scope, waiting.id)).status).toBe("interrupted");
+    await reopened.retry(scope, waiting.id);
+    expect((await reopened.get(scope, waiting.id)).status).toBe("queued");
+    expect(await reopened.getQueue({ ...scope, revision: "new-package" })).toEqual({
+      revision: 0,
+      paused: false,
+      maxConcurrent: 2,
+    });
+    await reopened.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect((await finished(reopened, waiting.id)).status).toBe("succeeded");
+  });
+
+  test("queue validation, revoked access and corrupt catalog fail without starting work", async () => {
+    let authorized = true;
+    const f = await fixture({ isAuthorized: () => authorized });
+    for (const update of [
+      { expectedRevision: -1, paused: true, maxConcurrent: 1 },
+      { expectedRevision: 0, paused: true, maxConcurrent: 0 },
+      { expectedRevision: 0, paused: true, maxConcurrent: 3 },
+      { expectedRevision: 0, paused: "yes", maxConcurrent: 1 },
+    ])
+      await expect(f.service.setQueue(scope, update as never)).rejects.toThrow("Invalid");
+    authorized = false;
+    await expect(f.service.getQueue(scope)).rejects.toThrow("authorized");
+    await expect(
+      f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 }),
+    ).rejects.toThrow("authorized");
+    await f.service.shutdown();
+    await writeFile(join(f.root, "queues.json"), JSON.stringify({ malformed: true }));
+    const invalid = service(f.root);
+    await expect(invalid.initialize()).rejects.toThrow("Invalid tool queue catalog");
+    services.splice(services.indexOf(invalid), 1); // failed initialization already releases its lock
+  });
 
   test("shared subscriptions stay scoped, omit task inputs/results, detach, and isolate listener failures", async () => {
     const execution = controlled();

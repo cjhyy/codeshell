@@ -290,7 +290,51 @@ try {
     );
     return job.progress?.stage === "waiting";
   };
+  assert.deepEqual(
+    await desktop("tasks.queue.set", {
+      expectedRevision: 0,
+      paused: true,
+      maxConcurrent: 1,
+    }),
+    { saved: true, queue: { revision: 1, paused: true, maxConcurrent: 1 } },
+  );
+  assert.deepEqual(await phoneCall("tasks.queue.get", {}), {
+    revision: 1,
+    paused: true,
+    maxConcurrent: 1,
+  });
   const first = await desktop("tasks.start", startInput);
+  assert.equal((await phoneCall("tasks.get", { id: first.id })).status, "queued");
+  const resuming = phoneCall("tasks.queue.set", {
+    expectedRevision: 1,
+    paused: false,
+    maxConcurrent: 1,
+  });
+  const queueConsent = await until(
+    async () =>
+      (await json(await request(`/api/v1/panels/runtime/${phone.instanceId}/events`))).events.find(
+        (event) => event.event === "host.confirm",
+      ),
+    "Queue resume consent missing",
+  );
+  await json(
+    await request(`/api/v1/panels/runtime/${phone.instanceId}/confirm`, "POST", {
+      requestId: queueConsent.payload.requestId,
+      allowed: true,
+    }),
+  );
+  assert.deepEqual(await resuming, {
+    saved: true,
+    queue: { revision: 2, paused: false, maxConcurrent: 1 },
+  });
+  await json(
+    await request(`/api/v1/panels/runtime/${phone.instanceId}/events?after=${queueConsent.id}`),
+  );
+  assert.deepEqual(await desktop("tasks.queue.get", {}), {
+    revision: 2,
+    paused: false,
+    maxConcurrent: 1,
+  });
   await until(
     () => waiting(first.id),
     "Desktop native process did not reach its progress checkpoint",
@@ -358,6 +402,7 @@ try {
       actualElectron: true,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,
+      sharedQueueControl: true,
       pairedHttp: true,
       sharedRevision: true,
       sharedTaskIds: true,

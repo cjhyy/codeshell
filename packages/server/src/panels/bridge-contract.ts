@@ -37,6 +37,8 @@ export const panelToolJobMethods = [
   "tasks.get",
   "tasks.cancel",
   "tasks.retry",
+  "tasks.queue.get",
+  "tasks.queue.set",
 ];
 
 export const panelBridgeLimits = Object.freeze({

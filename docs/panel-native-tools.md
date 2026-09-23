@@ -213,3 +213,34 @@ outputs on explicit retry, and reports relative published names. A failed later
 file may leave earlier verified outputs in place. A task can also be interrupted
 after writing a file but before recording success, so its retry must reconcile
 existing files. The Host still captures task-directory artifacts as resources.
+
+### Durable queue scheduling
+
+Hosts advertising `capabilities.tasks.queueControl` expose `tasks.queue.get({})`
+and `tasks.queue.set({expectedRevision, paused, maxConcurrent})`. The queue belongs
+to the current app/project/execution revision. Clients cannot supply another scope.
+`get` returns `{revision, paused, maxConcurrent}`; `set` returns
+`{saved, queue}`. A stale revision returns `saved:false` with the current state;
+the client must reload and show the conflict, never silently overwrite it. After
+an uncertain response, query the state rather than retrying the mutation blindly.
+Paired Web and Desktop resolve to the same owning coordinator.
+
+Paused queues retain admitted jobs but do not start another executor. Already
+running work continues; explicit per-task cancellation remains separate. Changing
+concurrency likewise affects future starts and never kills running work. Scope
+concurrency cannot exceed the advertised Host limit (currently two across the
+coordinator). A paused scope does not hold up another authorized scope.
+
+Up to 128 unfinished/preparing jobs may be admitted per scope, covering the
+Download Panel's 100-item queue; each start and explicit retry enforces the same
+limit. The queue catalog is bounded to 512 scopes and 4 MiB and saved atomically.
+Queue state persists on Host restart. Unfinished jobs still become interrupted
+and require explicit retry, even when the saved queue is unpaused. A corrupt
+queue catalog fails initialization instead of silently losing a user's pause.
+Clients read queue state on reconnect and before edits; queue configuration does
+not currently emit its own event, so refresh it while presenting live controls.
+Web queue mutations use the owner confirmation gate and recheck authorization.
+
+This is shared Host infrastructure. Download UI submission, reconciliation of
+saved drafts with task IDs, Cookie grants, and its per-item pause behavior still
+need to be connected before declaring the download workflow page-independent.

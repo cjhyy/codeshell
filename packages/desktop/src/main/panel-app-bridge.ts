@@ -45,6 +45,7 @@ import {
   createPanelToolExecutor,
   toolJobLimits,
   type ToolJobScope,
+  type ToolQueueUpdate,
   type ToolJob,
   PanelResourceService,
   panelConnections,
@@ -1137,6 +1138,7 @@ export class PanelAppBridge {
       tasks: {
         available: true,
         directoryBookmarks: true,
+        queueControl: true,
         ...toolJobLimits,
         ownership: "project",
         executionRevision: binding.resource.descriptor.revision,
@@ -1342,6 +1344,8 @@ export class PanelAppBridge {
         requestKey: input.requestKey,
       });
     }
+    if (method === "tasks.queue.get") return service.getQueue(scope);
+    if (method === "tasks.queue.set") return service.setQueue(scope, params as ToolQueueUpdate);
     if (method === "tasks.list") {
       const offset = input.offset ?? 0,
         limit = input.limit ?? 50;
