@@ -88,8 +88,8 @@ interface ToolCallResultProps {
   expanded?: boolean;
   /**
    * When true, render as a single dim line — used for transient
-   * "this attempt failed and was retried" cases (e.g. Arena's
-   * fail-fast endpoint check) so the feed isn't swamped with scary
+   * "this attempt failed and was retried" cases (e.g. a tool's
+   * fail-fast parameter check) so the feed isn't swamped with scary
    * red error cards for what was just a parameter fix-up.
    */
   compact?: boolean;

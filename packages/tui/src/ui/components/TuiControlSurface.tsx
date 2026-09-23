@@ -12,11 +12,7 @@ import {
 export type { PendingQuestion } from "../pending-questions.js";
 import { OnboardingPrompt } from "./OnboardingPrompt.js";
 import { ModelSelector, type ModelEntry } from "./ModelSelector.js";
-import {
-  ModelManager,
-  type ArenaParticipantEntry,
-  type ProviderManagerEntry,
-} from "./ModelManager.js";
+import { ModelManager, type ProviderManagerEntry } from "./ModelManager.js";
 import { ProviderModelFlow } from "./ProviderModelFlow.js";
 import { SessionPicker, type SessionPickerEntry } from "./SessionPicker.js";
 import { getVisibleAgents, MAX_VISIBLE, type DockViewMode } from "./AgentDock.js";
@@ -25,7 +21,6 @@ import { chatStore, createEntry } from "../store.js";
 export interface ModelManagerState {
   entries: ModelEntry[];
   snapshot: { count: number; fetchedAt: string };
-  arenaParticipants: ArenaParticipantEntry[];
   providers: ProviderManagerEntry[];
 }
 
@@ -249,19 +244,7 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
       <ModelManager
         entries={modelManager.entries}
         snapshot={modelManager.snapshot}
-        arenaParticipants={modelManager.arenaParticipants}
         providers={modelManager.providers}
-        onSaveArena={async (list) => {
-          await client.query("config_set", "capabilities.arena.participants", list);
-          setModelManager((previous) =>
-            previous
-              ? {
-                  ...previous,
-                  arenaParticipants: list.map((key) => ({ kind: "key", value: key })),
-                }
-              : previous,
-          );
-        }}
         onSwitch={async (key) => {
           const result = await client.configure({
             sessionId: sidRef.current ?? sessionId,

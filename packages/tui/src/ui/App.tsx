@@ -30,7 +30,7 @@ import { AgentClient } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
-import type { ArenaParticipantEntry, ProviderManagerEntry } from "./components/ModelManager.js";
+import type { ProviderManagerEntry } from "./components/ModelManager.js";
 import type { SessionPickerEntry } from "./components/SessionPicker.js";
 import { TuiControlSurface, type ModelManagerState } from "./components/TuiControlSurface.js";
 import {
@@ -861,18 +861,6 @@ export function App({
           if (agentId !== undefined) break;
 
           const r = event.result;
-          // Arena routinely fails on the first attempt while the
-          // model is still discovering valid `participants` for the
-          // active endpoint (e.g. defaulting to "claude" on a
-          // DeepSeek-only session). The endpoint check fails fast
-          // now, so the retry loop is healthy — but visually it
-          // shows up as several scary "Arena error:" cards in a row.
-          // Mark those as compact so the feed reads "Arena …
-          // retrying" instead of "Arena exploded three times."
-          const looksLikeArenaRetry =
-            r.toolName === "Arena" &&
-            typeof r.result === "string" &&
-            r.result.startsWith("Arena error:");
 
           chatStore.update((prev) => {
             const filtered = prev.filter(
@@ -886,7 +874,6 @@ export function App({
                 result: r.result,
                 error: r.error,
                 agentId,
-                compact: looksLikeArenaRetry,
               }),
             ];
           });
@@ -1157,37 +1144,15 @@ export function App({
   const fetchModelManagerState = useCallback(async (): Promise<{
     entries: ModelEntry[];
     snapshot: { count: number; fetchedAt: string };
-    arenaParticipants: ArenaParticipantEntry[];
     providers: ProviderManagerEntry[];
   }> => {
-    const [modelsRes, arenaRes, legacyArenaRes, providersRes, snapMod] = await Promise.all([
+    const [modelsRes, providersRes, snapMod] = await Promise.all([
       client.query("models"),
-      client.query("config_get", "capabilities.arena.participants"),
-      client.query("config_get", "arena.participants"),
       client.query("providers"),
       import("@cjhyy/code-shell-core"),
     ]);
     const entries = (modelsRes.data as ModelEntry[]) ?? [];
     const snap = snapMod.getOpenRouterSnapshot();
-
-    // capabilities.arena.participants (or legacy arena.participants):
-    // Array<string | { name, model, ... }>. Strings are
-    // editable in-place; object entries surface as read-only labels so a
-    // hand-crafted settings.json round-trips intact.
-    const raw =
-      (arenaRes.data as { value?: unknown })?.value ??
-      (legacyArenaRes.data as { value?: unknown })?.value;
-    const arenaParticipants: ArenaParticipantEntry[] = Array.isArray(raw)
-      ? raw.map((item: unknown): ArenaParticipantEntry => {
-          if (typeof item === "string") return { kind: "key", value: item };
-          if (item && typeof item === "object") {
-            const obj = item as { name?: string; model?: string };
-            const label = obj.name ?? obj.model ?? "(未命名)";
-            return { kind: "object", label };
-          }
-          return { kind: "object", label: String(item) };
-        })
-      : [];
 
     // providers: server-enriched payload includes modelCount + cachedModels
     // + cachedAt alongside the raw settings.providers[] fields. We don't
@@ -1222,7 +1187,6 @@ export function App({
     return {
       entries,
       snapshot: { count: snap.count, fetchedAt: snap.fetchedAt },
-      arenaParticipants,
       providers,
     };
   }, [client]);
@@ -1599,7 +1563,7 @@ export function App({
 
       let streamPresentationFinalized = false;
       try {
-        // For real user input: prepend pending /arena-style context if any.
+        // For real user input: prepend any pending staged context.
         // Injections do not honor pendingContext (it belongs to the user
         // turn that staged it).
         let engineMessage = message;

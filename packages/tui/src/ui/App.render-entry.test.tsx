@@ -13,8 +13,8 @@ describe("renderEntry", () => {
     const entry = {
       id: "tool-1",
       type: "tool_result",
-      toolName: "Arena",
-      result: "Arena error: participant endpoint mismatch",
+      toolName: "Bash",
+      result: "Bash error: participant endpoint mismatch",
       compact: true,
     } as ChatEntry;
 
@@ -23,9 +23,9 @@ describe("renderEntry", () => {
       await flush();
 
       const output = plainText(harness);
-      expect(output).toContain("Arena retried");
+      expect(output).toContain("Bash retried");
       expect(output).toContain("participant endpoint mismatch");
-      expect(output).not.toContain("✓ Arena");
+      expect(output).not.toContain("✓ Bash");
     } finally {
       harness.unmount();
     }

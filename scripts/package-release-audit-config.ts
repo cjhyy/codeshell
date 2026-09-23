@@ -65,11 +65,6 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     publish: true,
   },
   {
-    directory: "packages/arena",
-    name: "@cjhyy/code-shell-arena",
-    publish: true,
-  },
-  {
     directory: "packages/coding",
     name: "@cjhyy/code-shell-capability-coding",
     publish: true,
@@ -101,6 +96,11 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     name: "@cjhyy/code-shell",
     publish: true,
     buildArgs: ["run", "scripts/build-meta.ts"],
+  },
+  {
+    directory: "packages/arena",
+    name: "@cjhyy/code-shell-arena",
+    publish: false,
   },
   {
     directory: "packages/cdp",

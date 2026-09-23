@@ -175,7 +175,6 @@ const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdi
 // Passing absolute import URLs keeps development and packaged resolution
 // identical; the worker's loader fails loud on a missing module.
 const codingModule = import.meta.resolve("@cjhyy/code-shell-capability-coding");
-const arenaCapabilityModule = import.meta.resolve("@cjhyy/code-shell-arena");
 const petCapabilityModule = import.meta.resolve("@cjhyy/code-shell-pet/capability");
 
 function normalizeCredentialResolveParams(params: Record<string, unknown> | undefined): {
@@ -326,9 +325,7 @@ export class AgentBridge implements PetStateBridge {
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_CAPABILITY_MODULES:
-          `${codingModule}#createCodingModule,` +
-          `${arenaCapabilityModule}#createArenaModule,` +
-          `${petCapabilityModule}#createPetModule`,
+          `${codingModule}#createCodingModule,` + `${petCapabilityModule}#createPetModule`,
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),

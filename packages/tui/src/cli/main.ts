@@ -144,37 +144,6 @@ program
     }
   });
 
-// ─── arena ────────────────────────────────────────────────────────
-
-addCommonOptions(
-  program
-    .command("arena")
-    .description("Multi-model review arena — agent gathers context, multiple models discuss")
-    .argument("<topic>", "What to review (agent will find relevant code)")
-    .option("--models <models>", "Connection IDs, preset aliases or model paths (comma-separated)")
-    .option(
-      "--mode <mode>",
-      "Arena mode: review, discussion, or planning (auto-detected if omitted)",
-    ),
-).action(async (topic: string, opts) => {
-  const { runArenaReview } = await import("./commands/arena.js");
-  const { SettingsManager, resolveLLMConfigForTag } = await import("@cjhyy/code-shell-core");
-  const settings = new SettingsManager(process.cwd()).get();
-  const llm = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
-  if (!llm) {
-    console.error("Error: 没有可用的文本模型连接。");
-    process.exit(1);
-  }
-  // Arena resolves exact modelConnections.id keys before legacy preset aliases.
-  await runArenaReview(
-    { topic, models: opts.models, mode: opts.mode },
-    {
-      llm,
-      clientDefaults: { temperature: 0.3 },
-    },
-  );
-});
-
 // ─── runs ────────────────────────────────────────────────────────
 
 import { createRunsCommand } from "./commands/runs.js";
@@ -235,7 +204,7 @@ function resolveOpts(opts: Record<string, unknown>) {
 //
 // Onboarding is no longer driven from here. REPL-style commands render the
 // Ink-based OnboardingPrompt themselves when no API key is configured;
-// headless commands (run, arena) check for a key in their own action and
+// headless commands (run) check for a key in their own action and
 // error out if missing. This keeps the input stack unified on Ink and
 // avoids the raw-mode/Ink stdin handoff we used to have to do.
 program.hook("preAction", async (thisCommand, actionCommand) => {

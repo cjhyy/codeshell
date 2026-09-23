@@ -1,4 +1,4 @@
-// Pre-package step: replace the core, coding, Arena, and Pet workspace
+// Pre-package step: replace the core, coding, and Pet workspace
 // SYMLINKS with real, self-contained directories inside desktop/node_modules.
 //
 // WHY THIS EXISTS
@@ -14,13 +14,13 @@
 // `files` field avoids it — both were tried and don't work.
 //
 // All of desktop's OTHER deps are build-time only (esbuild bundles main, vite
-// bundles the renderer). Core, coding, Arena, and Pet are runtime deps: main
-// spawns the coding worker, which composes core and dynamically loads Arena and
-// Pet through core's extension seam.
+// bundles the renderer). Core, coding, and Pet are runtime deps: main spawns
+// the coding worker, which composes core and dynamically loads Pet through
+// core's extension seam.
 //
 // THE FIX
 // -------
-// Materialize all four packages into real in-tree directories containing exactly
+// Materialize these packages into real in-tree directories containing exactly
 // what the app needs at runtime: dist/ + package.json, plus core's production
 // dependency closure. LICENSE and README are deliberately NOT copied — they
 // are the offending out-of-tree files and a bundled internal copy needs neither.
@@ -51,12 +51,10 @@ const repoRoot = resolve(desktopRoot, "../..");
 const linkSrc = resolve(repoRoot, "packages/link");
 const coreSrc = resolve(repoRoot, "packages/core");
 const codingSrc = resolve(repoRoot, "packages/coding");
-const arenaSrc = resolve(repoRoot, "packages/arena");
 const petSrc = resolve(repoRoot, "packages/pet");
 const linkTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-link");
 const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
 const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
-const arenaTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-arena");
 const petTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-pet");
 
 function log(msg: string): void {
@@ -68,7 +66,6 @@ function main(): void {
   if (!existsSync(linkSrc)) throw new Error(`Link package not found at ${linkSrc}`);
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
   if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
-  if (!existsSync(arenaSrc)) throw new Error(`Arena package not found at ${arenaSrc}`);
   if (!existsSync(petSrc)) throw new Error(`Pet package not found at ${petSrc}`);
   // Rebuild every direct desktop workspace dependency, in dependency order,
   // BEFORE the desktop bundle. Previously this step only asserted that
@@ -78,7 +75,7 @@ function main(): void {
   //     esbuild bundles it INTO main. A clean checkout failed to resolve it; a
   //     dev box with a stale dist packaged old browser-action code.
   //   - `bun run --cwd packages/desktop dist` only triggers desktop's own build,
-  //     so core/pet/arena/coding dist could predate the source by any amount.
+  //     so core/pet/coding dist could predate the source by any amount.
   // Building here makes `dist`/`pack` reproducible from a clean checkout and
   // removes the "did you remember to run the root build first?" failure mode.
   buildDesktopWorkspaceDependencies();
@@ -99,25 +96,20 @@ function main(): void {
   removeWorkspaceTarget(linkTarget, "Link");
   removeWorkspaceTarget(coreTarget, "core");
   removeWorkspaceTarget(codingTarget, "coding");
-  removeWorkspaceTarget(arenaTarget, "Arena");
   removeWorkspaceTarget(petTarget, "Pet");
 
   materializePackage(linkSrc, linkTarget);
   materializePackage(coreSrc, coreTarget);
   materializePackage(codingSrc, codingTarget);
-  materializePackage(arenaSrc, arenaTarget);
   materializePackage(petSrc, petTarget);
 
-  // Each materialized sibling owns its production closure. Arena imports zod
-  // directly, so relying on core's nested node_modules would break Node's
-  // sibling-package resolution in the packaged app.
+  // Each materialized sibling owns its production closure, so relying on
+  // core's nested node_modules would break Node's sibling-package resolution
+  // in the packaged app.
   installProductionDeps(coreSrc, coreTarget, "core");
-  installProductionDeps(arenaSrc, arenaTarget, "Arena");
   verifyMaterializedCapabilities();
 
-  log(
-    `materialized Link + core + coding + Arena + Pet into node_modules (LICENSE/README excluded)`,
-  );
+  log(`materialized Link + core + coding + Pet into node_modules (LICENSE/README excluded)`);
 }
 
 function verifyMaterializedCapabilities(): void {
@@ -126,7 +118,7 @@ function verifyMaterializedCapabilities(): void {
     "bun",
     [
       "--eval",
-      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
+      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
     ],
     { cwd: desktopRoot, stdio: "inherit" },
   );
@@ -172,7 +164,8 @@ function installProductionDeps(source: string, target: string, label: string): v
   };
   // Workspace siblings are materialized by this script and resolve through the
   // desktop node_modules ancestor. Bun cannot install `workspace:*` from the
-  // isolated minimal manifest, and doing so would duplicate core inside Arena.
+  // isolated minimal manifest, and doing so would duplicate core inside the
+  // materialized sibling.
   const dependencies = Object.fromEntries(
     Object.entries(pkg.dependencies ?? {}).filter(
       ([, version]) => !version.startsWith("workspace:"),

@@ -196,7 +196,11 @@ describe("workspace package boundaries", () => {
       }),
     ).toBe(true);
 
+    // Arena is version-tracked but unpublished: hosts no longer load it and the
+    // package is retained on disk only so the capability can be revived or
+    // deleted outright in a follow-up.
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
+      "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-cdp",
       "@cjhyy/code-shell-desktop",
     ]);
@@ -244,7 +248,6 @@ describe("workspace package boundaries", () => {
     );
     const allowedCompatibilityImports = new Set([
       join(repoRoot, "packages", "desktop", "src", "main", "settings-service.ts"),
-      join(repoRoot, "packages", "tui", "src", "ui", "components", "OnboardingPrompt.tsx"),
     ]);
     const offenders: string[] = [];
 

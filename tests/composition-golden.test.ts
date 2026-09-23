@@ -17,7 +17,6 @@ import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createCodingModule } from "@cjhyy/code-shell-capability-coding";
-import { createArenaModule } from "@cjhyy/code-shell-arena";
 import { createPetModule } from "@cjhyy/code-shell-pet";
 import { compileComposition } from "../packages/core/src/composition/compiler.js";
 import { toCompositionSnapshot } from "../packages/core/src/composition/snapshot.js";
@@ -29,10 +28,9 @@ describe("composition golden baseline", () => {
   const composition = compileComposition({
     modules: [
       createCodingModule() as unknown as AgentModule,
-      createArenaModule() as unknown as AgentModule,
       createPetModule() as unknown as AgentModule,
     ],
-    expectedModules: ["coding", "arena", "pet"],
+    expectedModules: ["coding", "pet"],
   });
   const snapshot = toCompositionSnapshot(composition);
 
@@ -53,7 +51,6 @@ describe("composition golden baseline", () => {
     const again = compileComposition({
       modules: [
         createCodingModule() as unknown as AgentModule,
-        createArenaModule() as unknown as AgentModule,
         createPetModule() as unknown as AgentModule,
       ],
     });
