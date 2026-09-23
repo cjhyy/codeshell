@@ -199,6 +199,24 @@ Panel API v5 adds project-and-task-scoped automation calls for apps that declare
 current trusted workspace and current task; follow-up calls reject an
 automation from another workspace or task.
 
+An implementing Desktop Host can additionally advertise `automations.createUnique`
+in `availableMethods`, under the same permission. It accepts the create fields
+plus `key` (1–80 ASCII letters, digits, `.`, `_`, `:`, or `-`). The Host derives
+the persisted identity from the app, bound workspace, bound task and key; Panels
+cannot submit `creationKey` or workspace/task authority fields. Discover the
+method explicitly, not from an API version. Paired Web and cloud Panel runtimes
+do not yet expose automation methods.
+
+The scheduler checks and creates under the same persistent store lock. An equal
+definition returns the retained job without resetting its paused state, counters
+or provenance. A different definition rejects; read and explicitly update the
+existing job instead. Deletion releases the identity. This is retained-job
+uniqueness, not an indefinite request receipt or an exactly-once execution
+guarantee; different task bindings have separate identities. Existing unkeyed
+jobs are not automatically consolidated. A failed response must not trigger
+fallback to ordinary create. All processes writing the cron file must use a
+compatible Core version: older writers normalize away the new identity field.
+
 Panel API v6 adds opt-in microphone transcription for apps that declare
 `audio.transcribe`: `audio.status`, `audio.requestMicrophoneAccess`, and
 `audio.transcribe`. The Host accepts audio-only capture from the reviewed main

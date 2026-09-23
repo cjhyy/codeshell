@@ -67,6 +67,8 @@ export interface CreateAutomationInput {
   resumeSessionId?: string;
   /** Main-only creator authority; never persisted. */
   authoritySessionId?: string;
+  /** Host-namespaced identity for explicit duplicate-safe creation. */
+  creationKey?: string;
   once?: boolean;
 }
 
@@ -158,6 +160,7 @@ export async function createAutomation(
     ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
     ...(input.resumeSessionId !== undefined ? { resumeSessionId: input.resumeSessionId } : {}),
     ...(input.once === true ? { once: true } : {}),
+    ...(input.creationKey !== undefined ? { creationKey: input.creationKey } : {}),
   });
   return automationSummary(job);
 }

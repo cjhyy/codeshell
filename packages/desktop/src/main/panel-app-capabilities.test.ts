@@ -142,3 +142,21 @@ test("versioned storage is advertised only with storage permission and bounded l
     maxResultBytes: 256 * 1024 + 8192,
   });
 });
+
+test("unique automation creation is advertised only by an implementing authorized host", () => {
+  const legacy = { ...options, automations: true };
+  expect(desktopPanelCapabilities(["automations.manage"], legacy).availableMethods).not.toContain(
+    "automations.createUnique",
+  );
+  const modern = { ...legacy, automationUniqueCreate: true };
+  expect(desktopPanelCapabilities(["automations.manage"], modern).availableMethods).toContain(
+    "automations.createUnique",
+  );
+  expect(desktopPanelCapabilities([], modern).availableMethods).not.toContain(
+    "automations.createUnique",
+  );
+  expect(
+    desktopPanelCapabilities(["automations.manage"], { ...modern, automations: false })
+      .availableMethods,
+  ).not.toContain("automations.createUnique");
+});

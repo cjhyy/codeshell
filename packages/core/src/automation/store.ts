@@ -131,6 +131,11 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
   }
   if (raw.once !== undefined && typeof raw.once !== "boolean") return invalid("once");
   if (
+    raw.creationKey !== undefined &&
+    (typeof raw.creationKey !== "string" || !/^[A-Za-z0-9._:-]{1,256}$/.test(raw.creationKey))
+  )
+    return invalid("creationKey");
+  if (
     raw.disabledReason !== undefined &&
     (typeof raw.disabledReason !== "string" || raw.disabledReason.length > 4_096)
   ) {
@@ -200,6 +205,7 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     ...(typeof raw.resumeSessionId === "string" ? { resumeSessionId: raw.resumeSessionId } : {}),
     ...(typeof raw.disabledReason === "string" ? { disabledReason: raw.disabledReason } : {}),
     ...(templateSource ? { templateSource } : {}),
+    ...(typeof raw.creationKey === "string" ? { creationKey: raw.creationKey } : {}),
   };
 }
 

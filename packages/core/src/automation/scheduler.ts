@@ -96,6 +96,8 @@ export interface CronJob {
    * The job remains standalone if the plugin is later updated or uninstalled.
    */
   templateSource?: CronTemplateSource;
+  /** Host-namespaced creation identity, unique among retained jobs. Immutable on update. */
+  creationKey?: string;
 }
 
 /**
@@ -130,6 +132,8 @@ export interface CreateJobOptions {
   once?: boolean;
   resumeSessionId?: string;
   templateSource?: CronTemplateSource;
+  /** Host-namespaced creation identity, unique among retained jobs. Immutable on update. */
+  creationKey?: string;
 }
 
 /** Fields editable via update(). Any omitted field is left unchanged. */
@@ -518,9 +522,47 @@ export class CronScheduler {
     // Validate the schedule up front (interval or cron expr) so a bad string
     // surfaces at create time, not silently at the first missed tick.
     validateSchedule(schedule, opts?.timezone);
+    if (
+      opts?.creationKey !== undefined &&
+      (typeof opts.creationKey !== "string" || !/^[A-Za-z0-9._:-]{1,256}$/.test(opts.creationKey))
+    )
+      throw new Error("automation creationKey must be a bounded opaque identity");
+    const existingForKey = (jobs: CronJob[]): CronJob | undefined => {
+      if (opts?.creationKey === undefined) return undefined;
+      const matches = jobs.filter((job) => job.creationKey === opts.creationKey);
+      if (matches.length > 1)
+        throw new Error("automation creationKey has duplicate persisted jobs");
+      const existing = matches[0];
+      if (!existing) return undefined;
+      const definition = (job: Partial<CronJob>) =>
+        JSON.stringify([
+          job.name,
+          job.schedule,
+          job.prompt,
+          job.cwd ?? null,
+          job.projectId ?? null,
+          job.rootId ?? null,
+          job.timezone ?? "UTC",
+          job.permissionLevel ?? "read-only",
+          job.once === true,
+          job.resumeSessionId ?? null,
+          job.templateSource?.installKey ?? null,
+          job.templateSource?.templateId ?? null,
+          job.templateSource?.revision ?? null,
+          job.templateSource?.pluginVersion ?? null,
+        ]);
+      if (definition(existing) !== definition({ ...opts, name, schedule, prompt }))
+        throw new Error(
+          "automation creationKey already belongs to a different definition; reload before updating",
+        );
+      // Replays never reset enabled state, counters, scheduling or provenance.
+      return existing;
+    };
 
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
+        const existing = existingForKey(jobs);
+        if (existing) return { jobs, result: existing };
         const id = this.nextPersistedId(jobs);
         const job: CronJob = {
           id,
@@ -538,6 +580,7 @@ export class CronScheduler {
           ...(opts?.once === true ? { once: true } : {}),
           ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
           ...(opts?.templateSource !== undefined ? { templateSource: opts.templateSource } : {}),
+          ...(opts?.creationKey !== undefined ? { creationKey: opts.creationKey } : {}),
         };
         this.refreshNextRunForDisplay(job);
         return { jobs: [...jobs, job], result: job };
@@ -546,6 +589,8 @@ export class CronScheduler {
       return this.jobs.get(tx.result.id) ?? tx.result;
     }
 
+    const existing = existingForKey([...this.jobs.values()]);
+    if (existing) return existing;
     const id = String(this.nextId++);
     const job: CronJob = {
       id,
@@ -563,6 +608,7 @@ export class CronScheduler {
       ...(opts?.once === true ? { once: true } : {}),
       ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
       ...(opts?.templateSource !== undefined ? { templateSource: opts.templateSource } : {}),
+      ...(opts?.creationKey !== undefined ? { creationKey: opts.creationKey } : {}),
     };
 
     this.jobs.set(id, job);

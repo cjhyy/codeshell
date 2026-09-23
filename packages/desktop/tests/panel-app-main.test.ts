@@ -2103,6 +2103,7 @@ describeIsolated("PanelAppBridge", () => {
       isPanelAppBound: () => true,
       getAgentBridge: () => null,
       automations: {
+        uniqueCreation: true,
         list: async (scope) => {
           listedScopes.push(scope);
           return jobs.filter((job) => job.id === "scoped");
@@ -2180,6 +2181,26 @@ describeIsolated("PanelAppBridge", () => {
       /not available in this project task/,
     );
     expect(await call("automations.pause", { id: "scoped" })).toEqual({ ok: true });
+    expect((await call("context.get", {})).availableMethods).toContain("automations.createUnique");
+    const uniqueInput = { key: "market-alert.us", name: "Unique", schedule: "1h", prompt: "p" };
+    await call("automations.createUnique", uniqueInput);
+    await call("automations.createUnique", uniqueInput);
+    const firstKey = created[1].input.creationKey;
+    expect(firstKey).toMatch(/^panel:[a-f0-9]{64}$/);
+    expect(created[2].input.creationKey).toBe(firstKey);
+    expect(created[1].input.key).toBeUndefined();
+    for (const key of ["", "bad key", "x".repeat(81), null])
+      await expect(call("automations.createUnique", { ...uniqueInput, key })).rejects.toThrow(
+        /bounded key/,
+      );
+    await expect(call("automations.create", uniqueInput)).rejects.toThrow(/createUnique/);
+    await expect(
+      call("automations.createUnique", { ...uniqueInput, creationKey: firstKey }),
+    ).rejects.toThrow(/authority fields/);
+    await bindBridgeGuest(28, { sessionId: "session-2", bucket: "repo::session-2" });
+    await call("automations.createUnique", uniqueInput);
+    expect(created.at(-1).input.creationKey).not.toBe(firstKey);
+    expect(created.at(-1).scope.resumeSessionId).toBe("session-2");
   });
 
   test("transcribes bounded microphone audio only with explicit permission", async () => {

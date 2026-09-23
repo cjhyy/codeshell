@@ -47,6 +47,7 @@ const groups: Record<string, string[]> = {
   "automations.manage": [
     "automations.list",
     "automations.create",
+    "automations.createUnique",
     "automations.update",
     "automations.pause",
     "automations.resume",
@@ -64,6 +65,7 @@ export function desktopPanelCapabilities(
     cookies: boolean;
     taskCookies?: boolean;
     automations: boolean;
+    automationUniqueCreate?: boolean;
     tasks?: unknown;
     mediaMethods: string[];
     limits?: any;
@@ -89,13 +91,15 @@ export function desktopPanelCapabilities(
     methods.push(
       ...entries.filter(
         (method) =>
-          !(
+          (method !== "automations.createUnique" || options.automationUniqueCreate === true) &&
+          (!(
             method.endsWith("authorizeProcess") ||
             method === "resources.capture" ||
             method === "resources.materialize" ||
             method === "resources.references.create" ||
             method === "resources.references.relink"
-          ) || permitted.has("process"),
+          ) ||
+            permitted.has("process")),
       ),
     );
   }

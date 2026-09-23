@@ -799,6 +799,7 @@ const panelAppBridge = new PanelAppBridge({
     },
   },
   automations: {
+    uniqueCreation: true,
     list: async (scope) =>
       listAutomationsForResumeSession(scope.resumeSessionId, desktopAutomationAuthorityDeps()),
     create: async (input, scope) =>

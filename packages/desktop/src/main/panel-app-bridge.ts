@@ -239,6 +239,8 @@ export interface PanelAppBridgeOptions {
   };
   /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
   automations?: {
+    /** True only when create persists creationKey atomically with the job. */
+    uniqueCreation?: boolean;
     list(scope: { resumeSessionId: string }): Promise<
       Array<{
         id: string;
@@ -262,6 +264,7 @@ export interface PanelAppBridgeOptions {
         prompt: string;
         timezone?: string;
         permissionLevel: "full";
+        creationKey?: string;
       },
       scope: { resumeSessionId: string },
     ): Promise<unknown>;
@@ -1200,6 +1203,7 @@ export class PanelAppBridge {
       cookies: !!this.options.cookieCredentials,
       taskCookies: !!this.options.cookieCredentials?.taskCredentials,
       automations: !!this.options.automations,
+      automationUniqueCreate: this.options.automations?.uniqueCreation === true,
       mediaMethods: [
         "media.status",
         "media.import",
@@ -1800,6 +1804,9 @@ export class PanelAppBridge {
       case "automations.create":
         this.requirePermission(binding, "automations.manage");
         return this.createPanelAutomation(binding, params);
+      case "automations.createUnique":
+        this.requirePermission(binding, "automations.manage");
+        return this.createPanelAutomation(binding, params, true);
       case "automations.update":
         this.requirePermission(binding, "automations.manage");
         return this.updatePanelAutomation(binding, params);
@@ -2204,9 +2211,16 @@ export class PanelAppBridge {
     return { host, automation, scope };
   }
 
-  private async createPanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
+  private async createPanelAutomation(
+    binding: GuestBinding,
+    params: unknown,
+    unique = false,
+  ): Promise<unknown> {
     const host = this.panelAutomationHost(binding);
+    if (unique && !host.uniqueCreation)
+      throw new Error("Panel App unique automation creation is unavailable");
     const input = params as {
+      key?: unknown;
       name?: unknown;
       schedule?: unknown;
       prompt?: unknown;
@@ -2218,12 +2232,29 @@ export class PanelAppBridge {
     } | null;
     if (
       input &&
-      ["cwd", "projectId", "rootId", "resumeSessionId"].some((key) =>
+      ["cwd", "projectId", "rootId", "resumeSessionId", "creationKey"].some((key) =>
         Object.prototype.hasOwnProperty.call(input, key),
       )
     ) {
       throw new Error("Panel App cannot submit automation workspace authority fields");
     }
+    if (unique && (typeof input?.key !== "string" || !/^[a-zA-Z0-9._:-]{1,80}$/.test(input.key)))
+      throw new Error("Panel App unique automation requires a bounded key");
+    if (!unique && input?.key !== undefined)
+      throw new Error("Panel App automation keys require automations.createUnique");
+    const scope = this.panelAutomationScope(binding);
+    const creationKey = unique
+      ? `panel:${createHash("sha256")
+          .update(
+            JSON.stringify([
+              binding.resource.descriptor.appId,
+              binding.context.cwd,
+              scope.resumeSessionId,
+              input!.key,
+            ]),
+          )
+          .digest("hex")}`
+      : undefined;
     const name = typeof input?.name === "string" ? input.name.trim() : "";
     const schedule = typeof input?.schedule === "string" ? input.schedule.trim() : "";
     const prompt = typeof input?.prompt === "string" ? input.prompt.trim() : "";
@@ -2244,8 +2275,9 @@ export class PanelAppBridge {
         prompt,
         ...(timezone ? { timezone } : {}),
         permissionLevel: "full",
+        ...(creationKey ? { creationKey } : {}),
       },
-      this.panelAutomationScope(binding),
+      scope,
     );
   }
 
