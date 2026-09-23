@@ -2,9 +2,7 @@
  * Cookie jar 工具(凭证模块第二期):core 侧的纯函数,把存进 CredentialStore 的
  * cookie 凭证(序列化的 jar)转成 yt-dlp/curl/wget/aria2 都吃的 Netscape cookies.txt。
  *
- * 形态与 desktop/src/main/credentials-service.ts 的 `formatNetscapeCookies` 一致
- * (desktop 在拓取那一刻用,core 在取用那一刻用)。core 不能 import desktop,故各持一份
- * 同语义的纯实现 —— 都无 Electron 依赖、可单测。
+ * Desktop 和后台任务共用这一实现；不依赖 Electron。
  */
 
 /** 与 Electron Cookie 对齐的最小子集(jar 里存的就是这个)。 */
@@ -61,8 +59,14 @@ export function formatNetscapeCookies(cookies: CookieLike[]): string {
   const lines = ["# Netscape HTTP Cookie File"];
   for (const c of cookies) {
     if (bad(c.name) || bad(c.value) || (c.domain && bad(c.domain))) continue;
-    const domain = c.domain ?? "";
-    const includeSub = c.hostOnly === true ? "FALSE" : "TRUE";
+    const rawDomain = c.domain ?? "";
+    // Netscape parsers require the leading dot and include-subdomains flag to
+    // agree. Without explicit hostOnly metadata, preserve the saved domain's
+    // scope instead of broadening an exact-host cookie to every subdomain.
+    const subdomains = c.hostOnly === false || (c.hostOnly !== true && rawDomain.startsWith("."));
+    const bareDomain = rawDomain.replace(/^\./, "");
+    const domain = subdomains && bareDomain ? `.${bareDomain}` : bareDomain;
+    const includeSub = domain.startsWith(".") ? "TRUE" : "FALSE";
     const path = c.path ?? "/";
     const secure = c.secure ? "TRUE" : "FALSE";
     const expiry =

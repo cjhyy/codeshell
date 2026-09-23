@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { formatNetscapeCookies, parseCookieJar, summarizeCookieExpiry } from "./cookie-jar.js";
 
 describe("formatNetscapeCookies", () => {
@@ -84,4 +85,54 @@ describe("summarizeCookieExpiry", () => {
       expiredCount: 0,
     });
   });
+});
+
+describe("Netscape consumer compatibility", () => {
+  const cookies = [
+    { name: "exact", value: "fixture", domain: "example.com" },
+    { name: "ip", value: "fixture", domain: "127.0.0.1" },
+    { name: "inferred-subdomains", value: "fixture", domain: ".example.com" },
+    { name: "explicit-subdomains", value: "fixture", domain: "example.com", hostOnly: false },
+    { name: "explicit-exact", value: "fixture", domain: ".example.com", hostOnly: true },
+  ];
+  test("missing hostOnly preserves exact scope and explicit scope normalizes domain syntax", () => {
+    const rows = formatNetscapeCookies(cookies)
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((row) => row.split("\t").slice(0, 2));
+    expect(rows).toEqual([
+      ["example.com", "FALSE"],
+      ["127.0.0.1", "FALSE"],
+      [".example.com", "TRUE"],
+      [".example.com", "TRUE"],
+      ["example.com", "FALSE"],
+    ]);
+  });
+  test.skipIf(!Bun.which("python3"))(
+    "Python's real MozillaCookieJar accepts all exported scope forms",
+    () => {
+      const program = `import http.cookiejar, json, pathlib, sys, tempfile
+with tempfile.TemporaryDirectory() as root:
+    path = pathlib.Path(root) / "cookies.txt"
+    path.write_text(sys.stdin.read())
+    jar = http.cookiejar.MozillaCookieJar(str(path))
+    jar.load(ignore_discard=True, ignore_expires=True)
+    print(json.dumps({cookie.name: [cookie.domain, cookie.domain_specified] for cookie in jar}))
+`;
+      const result = spawnSync("python3", ["-c", program], {
+        input: formatNetscapeCookies(cookies),
+        encoding: "utf8",
+        timeout: 10000,
+      });
+      expect(result.status, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({
+        exact: ["example.com", false],
+        ip: ["127.0.0.1", false],
+        "inferred-subdomains": [".example.com", true],
+        "explicit-subdomains": [".example.com", true],
+        "explicit-exact": ["example.com", false],
+      });
+    },
+  );
 });

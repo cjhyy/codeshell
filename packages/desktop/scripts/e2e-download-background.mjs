@@ -1,10 +1,12 @@
 /* Actual installed Download Panel, Electron bridge, native task and yt-dlp.
  * Uses only an isolated project and an FFmpeg-generated loopback video. */
+/* global window, document */
 import assert from "node:assert/strict";
-import { cp, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "node:http";
+import { createServer as createTlsServer } from "node:https";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -13,6 +15,7 @@ import {
   makeIsolatedElectronHome,
 } from "./electron-harness.mjs";
 const packagePath = process.argv[2];
+const authenticated = process.argv.includes("--cookies");
 if (!packagePath) throw new Error("Pass the Download Panel package directory");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-download-background-");
@@ -86,19 +89,115 @@ try {
     source,
   ]);
   const bytes = await readFile(source);
-  server = createServer((request, response) => {
+  let tls, caFile, fixtureBin;
+  const diagnostic = join(isolated.home, "fixture-downloader.log");
+  let authorizedRequests = 0,
+    deniedRequests = 0;
+  if (authenticated) {
+    caFile = join(isolated.home, "fixture-cert.pem");
+    const keyFile = join(isolated.home, "fixture-key.pem");
+    const configFile = join(isolated.home, "fixture-openssl.conf");
+    await writeFile(
+      configFile,
+      "[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=127.0.0.1\n[ext]\nsubjectAltName=IP:127.0.0.1\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\n",
+    );
+    await promisify(execFile)("openssl", [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-days",
+      "1",
+      "-config",
+      configFile,
+      "-keyout",
+      keyFile,
+      "-out",
+      caFile,
+    ]);
+    tls = { key: await readFile(keyFile), cert: await readFile(caFile) };
+    const downloader = (await promisify(execFile)("which", ["yt-dlp"])).stdout.trim();
+    fixtureBin = join(isolated.userDataDir, "bin");
+    await mkdir(fixtureBin, { recursive: true });
+    // Trust only this test CA through Python's SSL_CERT_FILE. No system trust
+    // store changes or disabled TLS verification; real yt-dlp handles the download.
+    await writeFile(
+      join(fixtureBin, "yt-dlp"),
+      "#!" +
+        process.execPath +
+        "\n" +
+        "const {spawnSync}=require('node:child_process'); const result=spawnSync(" +
+        JSON.stringify(downloader) +
+        `,["--compat-options","no-certifi",...process.argv.slice(2)],{stdio:['inherit','inherit','pipe'],env:{...process.env,SSL_CERT_FILE:${JSON.stringify(caFile)}}}); require('node:fs').writeFileSync(${JSON.stringify(diagnostic)},result.stderr || String(result.error || '')); process.stderr.write(result.stderr || ''); process.exit(result.status ?? 1);\n`,
+      { mode: 0o700 },
+    );
+    await promisify(execFile)(join(fixtureBin, "yt-dlp"), ["--ignore-config", "--version"], {
+      timeout: 120000,
+    });
+    await writeFile(
+      join(project, ".code-shell/credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "download-fixture",
+            type: "cookie",
+            label: "Download fixture account",
+            meta: { domain: "127.0.0.1" },
+            secret: JSON.stringify([
+              {
+                domain: "127.0.0.1",
+                path: "/",
+                secure: true,
+                name: "session",
+                value: "download-cookie-fixture",
+              },
+            ]),
+          },
+        ],
+      }),
+      { mode: 0o600 },
+    );
+  }
+  const respond = (request, response) => {
+    if (authenticated && request.headers.cookie !== "session=download-cookie-fixture") {
+      deniedRequests++;
+      response.writeHead(403).end("Fixture requires its saved account");
+      return;
+    }
+    if (authenticated) authorizedRequests++;
+
     response.writeHead(200, { "Content-Type": "video/mp4", "Content-Length": bytes.length });
     if (request.method === "HEAD") return response.end();
     const timer = setTimeout(() => response.end(bytes), 4000);
     response.on("close", () => clearTimeout(timer));
-  });
+  };
+  server = authenticated ? createTlsServer(tls, respond) : createServer(respond);
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
-  const url = `http://127.0.0.1:${server.address().port}/fixture.mp4`;
+  const url = `${authenticated ? "https" : "http"}://127.0.0.1:${server.address().port}/fixture.mp4`;
   electron = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    ...(authenticated
+      ? {
+          env: {
+            SSL_CERT_FILE: caFile,
+            REQUESTS_CA_BUNDLE: caFile,
+            PATH: fixtureBin + ":" + process.env.PATH,
+          },
+        }
+      : {}),
   });
+  if (authenticated)
+    await electron.evaluate(({ dialog }) => {
+      globalThis.__downloadCookiePrompts = [];
+      dialog.showMessageBox = async (_owner, options) => {
+        globalThis.__downloadCookiePrompts.push(options);
+        return { response: 0, checkboxChecked: false };
+      };
+    });
   const win = await findCodeShellWindow(electron);
   const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
   if (
@@ -171,6 +270,20 @@ try {
   await guest(
     'window.codeshellPanel.call("tasks.queue.set", {expectedRevision:0, paused:false, maxConcurrent:1})',
   );
+  if (authenticated) {
+    await until(
+      () =>
+        guest(
+          'document.querySelector("#cookie-select")?.querySelector(' +
+            JSON.stringify('option[value="download-fixture"]') +
+            ") !== null",
+        ),
+      "Saved download account was not listed",
+    );
+    await guest(
+      'document.querySelector("#cookie-select").value = "download-fixture"; document.querySelector("#cookie-select").dispatchEvent(new Event("change", {bubbles:true}));',
+    );
+  }
   await guest('document.querySelector("#download-button").click()');
   const admitted = await until(async () => {
     const jobs = await guest('window.codeshellPanel.call("tasks.list", {})');
@@ -188,7 +301,15 @@ try {
       const tasks = await guest('window.codeshellPanel.call("tasks.list", {})');
       const downloads = tasks.filter((task) => task.entry.name === "download-runtime");
       for (const task of downloads)
-        if (task.status === "failed") throw new Error(JSON.stringify(task.error));
+        if (task.status === "failed")
+          throw new Error(
+            JSON.stringify({
+              error: task.error,
+              authorizedRequests,
+              deniedRequests,
+              diagnostic: await readFile(diagnostic, "utf8").catch(() => "wrapper not invoked"),
+            }),
+          );
       return downloads.length === 2 && downloads.every((task) => task.status === "succeeded");
     },
     "Background queue did not finish after closing its original page",
@@ -198,6 +319,11 @@ try {
     const completed = await guest(
       `window.codeshellPanel.call("tasks.get", {id:${JSON.stringify(job.id)}})`,
     );
+    if (authenticated) {
+      assert.equal(completed.input.cookieArgument.credentialId, "download-fixture");
+      assert.equal(completed.input.request.useSavedLogin, true);
+      assert.doesNotMatch(JSON.stringify(completed), /download-cookie-fixture/);
+    }
     const artifact = completed.result.artifacts[0];
     assert.deepEqual(await readFile(join(project, artifact.published.path)), bytes);
   }
@@ -212,6 +338,24 @@ try {
     ).length,
     2,
   );
+  if (authenticated) {
+    assert.ok(authorizedRequests >= 2);
+    assert.equal(deniedRequests, 0);
+    const prompts = await electron.evaluate(() => globalThis.__downloadCookiePrompts);
+    assert.equal(prompts.length, 2);
+    assert.ok(
+      prompts.every((prompt) => JSON.stringify(prompt).includes("Download fixture account")),
+    );
+    assert.equal(
+      (await readdir(join(isolated.userDataDir, "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      ).length,
+      0,
+    );
+    console.log(
+      "Authenticated fixture passed: real HTTPS requests required saved Cookie; both tasks confirmed; no anonymous fallback; private files cleaned.",
+    );
+  }
   console.log(
     "Actual Download UI passed: native submission, page removal, remount recovery, two stable queued tasks and exact output bytes.",
   );

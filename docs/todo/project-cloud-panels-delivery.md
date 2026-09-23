@@ -460,3 +460,52 @@ HTTP 测试以真实 Node 程序使用测试 Cookie，验证拒绝不入队、�
 尚待完成：Download 脚本接受 Host Cookie 文件、UI 选择和保存账号版本、重新选择账号时的
 任务恢复，以及完整云端／手机业务验收。网页暂不提供登录采集与浏览器登录恢复。
 Host 崩溃后的孤儿程序终止沿用现有任务机制，凭据目录回收本身不承诺终止这些程序。
+
+
+### 增量 13：下载 Panel 后台账号与显式换号恢复（2026-09-23）
+
+下载 Panel 按 Host 能力读取 `credentials.cookies.listForTask`，把选中账号 ID、站点与
+授权版本写入项目队列。准备提交时再次查询，不接受选中后已变化的版本；账号消失或查询
+失败时保留原选择并显示错误，不静默改为匿名。正常重试继续使用 Host 内的原任务和原账号。
+停止的任务提供“用所选账号重试”，用户明确选择后创建新的请求，旧任务仍保留原授权记录。
+
+`download-runtime` 接受 `useSavedLogin` 业务标记；Cookie 文件仅来自 Host 的密封命令参数。
+账号标记和文件必须同时存在，且文件须为任务产物目录之外的私有普通文件；拒绝符号链接、
+硬链接、公开权限及浏览器 JSON 中的原始路径。yt-dlp 使用该文件，产物清单不会包含它，
+文件清理由 Host 负责。安装清单中的原生入口摘要同步更新。
+
+验证：下载完整套件 236 项通过；之后增加选中后账号版本变化的浏览器回归，相关 28 项
+账号／任务单测和 4 项 Chromium 界面回归通过（现有用例总数 237）。窄屏 390px 与桌面
+1440px 验证重开、原账号重试、明确换号；拒绝授权与账号变化均没有创建匿名任务或页面进程。
+原生入口测试用真实私有文件和受控子进程验证参数、产物排除、权限和错误；不是第三方授权测试。
+包校验、改动差异检查通过。实际 Electron 匿名下载也通过：两个后台任务，关闭／重开页面，
+原任务完成且输出与 FFmpeg 测试视频字节一致。
+
+完整范围仍未完成：网页登录采集、带账号的信息读取、真实第三方服务商、云端和物理手机
+下载业务验收。暂不支持带账号信息读取的入口会明确报错，不能作为功能对等验收通过。
+
+
+该真实链路另外发现并修复了通用 Cookie 导出问题：省略 `hostOnly` 且域名不带前导点时，
+旧实现仍输出包含子域标记 TRUE，Python/yt-dlp 的 Netscape 解析器会直接拒绝。
+现在缺省值按已保存域名推断作用范围，显式 hostOnly 会规范化域名前导点；Desktop 复用
+Core 的同一导出函数。真实 Python `MozillaCookieJar` 验证五种输入的可解析性及作用域，
+连同桌面凭据、后台凭据及原生 executor 共 45 项通过；Core 构建、Desktop 主进程构建、
+Desktop typecheck 与改动文件 ESLint 通过。
+
+
+修复后实际 Electron + 安装的 Download Panel + yt-dlp + 本机 HTTPS 站点的带账号下载通过：
+站点只向携带指定测试 Cookie 的请求返回 FFmpeg 视频；两项任务分别确认账号，删除原页面后
+继续排队并完成，重开查询同一任务 ID，交付文件字节一致，Cookie 临时目录清理完毕。
+测试仅替换系统确认框返回值；下载程序通过隔离工具适配器使用 `--compat-options no-certifi`
+与测试专用 `SSL_CERT_FILE` 信任临时 CA，没有关闭 TLS 验证或修改系统证书库。
+该兼容选项依据 [yt-dlp 官方说明](https://github.com/yt-dlp/yt-dlp#differences-in-default-behavior)；
+生产下载参数未增加此选项。全部账号和站点均为测试夹具，不包含个人凭据。
+
+复验命令：
+
+```sh
+node packages/desktop/scripts/e2e-download-background.mjs /absolute/path/to/codeshell-panel-apps/apps/video-download
+node packages/desktop/scripts/e2e-download-background.mjs /absolute/path/to/codeshell-panel-apps/apps/video-download --cookies
+```
+
+Panel 提交：`328156d`，仍位于本任务开发分支；尚未合并或发布整套版本。
