@@ -13,7 +13,10 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { skillTool } from "../tool-system/builtin/skill.js";
+import type { ToolContext } from "../tool-system/context.js";
 import {
   installReviewedLocalPanelApp,
   listInstalledPanelApps,
@@ -628,4 +631,45 @@ test("an unreadable legacy baseline does not prevent other bindings from migrati
   await writeFile(settingsFile, '{"panelAppPins":null}');
   await expect(inspectProjectPanelApps(project)).rejects.toThrow();
   expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
+});
+
+test("Skill execution paths resolve to each project's retained package, never the latest catalog", async () => {
+  await writeFile(
+    join(source, "agent/skills/check/SKILL.md"),
+    "---\nname: check\ndescription: Locate reviewed program\n---\nProgram directory: ${CODESHELL_SKILL_DIR}/../../../app/tools",
+  );
+  const first = await install();
+  const a = await pinProject("old package project", {
+    version: first.version,
+    packageDigest: first.packageDigest,
+  });
+  await writePackage("2.0.0");
+  await writeFile(
+    join(source, "agent/skills/check/SKILL.md"),
+    "---\nname: check\ndescription: Locate reviewed program\n---\nProgram directory: ${CODESHELL_SKILL_DIR}/../../../app/tools",
+  );
+  const second = await install(true);
+  const b = await pinProject("new package project", {
+    version: second.version,
+    packageDigest: second.packageDigest,
+  });
+  for (const [cwd, version] of [
+    [a, "1.0.0"],
+    [b, "2.0.0"],
+  ]) {
+    const instructions = await skillTool({ skill: `${id}:check` }, { cwd } as ToolContext);
+    const directory = instructions.match(/^Program directory: (.+)$/m)?.[1];
+    expect(directory).toBeTruthy();
+    expect(directory).not.toContain("${CODESHELL_SKILL_DIR}");
+    const output = execFileSync("node", [resolve(directory!, "check.mjs")], {
+      cwd,
+      encoding: "utf8",
+    });
+    expect(output).toBe(version);
+  }
+  await rm(panelAppPackageDir(id, first.packageDigest!), { recursive: true });
+  invalidateSkillCache();
+  const unavailable = await skillTool({ skill: `${id}:check` }, { cwd: a } as ToolContext);
+  expect(unavailable).toContain("not found");
+  expect(unavailable).not.toContain("Program directory:");
 });
