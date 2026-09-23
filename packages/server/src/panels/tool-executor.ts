@@ -6,6 +6,11 @@ import { processLimits } from "./process-state.js";
 import { PanelResourceService } from "./resources/service.js";
 import { resourceRelativePath } from "./resources/directories.js";
 import { materializePanelConnections, panelConnectionIds } from "./connections.js";
+import {
+  taskCookieSelection,
+  type PanelTaskCookieService,
+  type TaskCookieSelection,
+} from "./task-cookies.js";
 
 interface Scope {
   appId: string;
@@ -34,6 +39,7 @@ interface ToolInput {
   }>;
   connectionIds?: string[];
   connectionArgument?: string;
+  cookieArgument?: TaskCookieSelection & { argumentName: string };
 }
 export interface PanelToolExecutorOptions {
   processes: PanelAppProcessService;
@@ -47,6 +53,8 @@ export interface PanelToolExecutorOptions {
   authorize(scope: Scope): Promise<void>;
   authorizeConnections(scope: Scope): Promise<void>;
   sealedRoot: string;
+  /** Configure only when start/retry admission obtains explicit selected-account consent. */
+  cookies?: Pick<PanelTaskCookieService, "check" | "materialize">;
 }
 function toolInput(value: unknown): ToolInput {
   if (
@@ -61,6 +69,7 @@ function toolInput(value: unknown): ToolInput {
           "directoryArguments",
           "connectionIds",
           "connectionArgument",
+          "cookieArgument",
         ].includes(key),
     )
   )
@@ -119,8 +128,23 @@ function toolInput(value: unknown): ToolInput {
       argumentsSeen.has(input.connectionArgument)
     )
       throw new Error("Invalid connection argument");
+    argumentsSeen.add(input.connectionArgument);
   } else if (input.connectionArgument !== undefined)
     throw new Error("Connection selection is required");
+  if (input.cookieArgument !== undefined) {
+    const value = input.cookieArgument;
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof value.argumentName !== "string" ||
+      !/^--[a-z][a-z0-9-]{0,63}$/.test(value.argumentName) ||
+      argumentsSeen.has(value.argumentName)
+    )
+      throw new Error("Invalid Cookie argument");
+    const { argumentName: _argumentName, ...selection } = value;
+    taskCookieSelection(selection);
+  }
   return input;
 }
 async function childDirectory(root: string, relative?: string) {
@@ -147,6 +171,11 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
     await options.authorize(scope);
     for (const directory of input.directoryArguments ?? [])
       if (directory.directory === "bookmark") await bookmarkDirectory(scope, directory.bookmark!);
+    if (input.cookieArgument) {
+      if (!options.cookies) throw new Error("This Host does not support task Cookie authorization");
+      const { argumentName: _argumentName, ...selection } = input.cookieArgument;
+      await options.cookies.check(scope, selection);
+    }
   };
   return {
     async prepareInput(scope: Scope, raw: unknown, workDir: string, signal: AbortSignal) {
@@ -331,7 +360,7 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
         void stop();
       };
       context.signal.addEventListener("abort", abort, { once: true });
-      const cleanups: Array<() => void> = [];
+      const cleanups: Array<() => void | Promise<void>> = [];
       const resourceDirectoryHandles: string[] = [];
       let checking = false;
       const authorizationTimer = setInterval(() => {
@@ -392,6 +421,20 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
             argumentName: input.connectionArgument!,
             path: sealed.path,
             cleanup: sealed.cleanup,
+          });
+          fileArgumentHandles.push(argument.handle);
+        }
+        if (input.cookieArgument) {
+          const { argumentName, ...selection } = input.cookieArgument;
+          const sealed = await options.cookies!.materialize(job.scope, selection);
+          cleanups.push(sealed.cleanup);
+          const argument = await options.processes.grantFileArgument(owner, {
+            executableHandle: executable.handle,
+            argumentName,
+            path: sealed.path,
+            cleanup: () => {
+              void sealed.cleanup().catch(() => {});
+            },
           });
           fileArgumentHandles.push(argument.handle);
         }
@@ -505,7 +548,7 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
         for (const handle of resourceDirectoryHandles)
           options.resources.releaseDirectory(job.scope, handle);
         options.releaseOwner(owner);
-        for (const cleanup of cleanups) cleanup();
+        for (const cleanup of cleanups) await cleanup();
       }
     },
   };

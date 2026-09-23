@@ -97,6 +97,34 @@ handoff through `connectionIds` and `connectionArgument` in the input envelope.
 Keys are neither stored in task JSON nor sent to the Guest. A Panel interprets
 its provider-specific model parameters and constructs its own requests.
 
+## Background Cookie custody (unpublished, Host integration pending)
+
+The generic executor accepts an optional `cookieArgument` envelope containing
+`credentialId`, `url`, `revision`, and `argumentName`. It rejects this input unless
+the Host explicitly configures a Cookie custody adapter. Desktop and Web do not
+advertise or enable this capability yet; existing Cookie process methods are
+unchanged.
+
+`PanelTaskCookieService` supplies safe account metadata, keyed credential versions,
+current-authorization checks, and private Netscape Cookie files. Its vault adapter
+and authorization callback are Host-owned. A revision is scoped to the app,
+project, package and saved account contents, using a private Host key; it is not
+an authorization token or proof of user consent. The Host must persist that key
+privately and obtain explicit consent naming the selected account, target site
+and reviewed tool at start and retry before enabling the adapter. A changed or
+removed account requires a new selection rather than silently adopting its new
+contents. Files contain only valid, unexpired cookies beneath the saved account
+domain; unrelated cookies from an all-sites browser capture are omitted.
+
+Task JSON contains the selection only. The executor creates the temporary file
+outside task/resource directories at launch, passes its path through a sealed
+native argument, and rechecks authorization before launch, during execution and
+before accepting the result. Cleanup is awaited after native exit on success,
+failure, cancellation or revocation. Host crash cleanup, private-key lifecycle,
+Desktop/Web approval wiring and Download UI integration remain required before
+advertising the feature. Reviewed tools must not copy credentials into progress,
+output or artifacts; this custody mechanism does not sandbox their code.
+
 ## Discovery and transport
 
 Desktop and Web contexts advertise `availableMethods`, `capabilities` and
