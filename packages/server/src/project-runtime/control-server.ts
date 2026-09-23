@@ -1,3 +1,4 @@
+import { describeEnvironment } from "../environment-identity.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
@@ -154,6 +155,13 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
       }
       if (await auth.handle(request, response)) return;
       if (await transport.handle(request, response)) return;
+      if (pathname === "/api/v1/environment") {
+        if (!auth.isOriginAllowed(request)) throw new ProjectRegistryError(403, "请求来源无效。");
+        if (!(await auth.authenticate(request))) throw new ProjectRegistryError(401, "请先登录。");
+        if (request.method !== "GET") throw new ProjectRegistryError(405, "请求方法无效。");
+        json(response, 200, describeEnvironment(registry.installationId, "project-host"));
+        return;
+      }
       if (pathname === "/api/v1/projects" || pathname.startsWith("/api/v1/projects/")) {
         if (!auth.isOriginAllowed(request)) throw new ProjectRegistryError(403, "请求来源无效。");
         const session = await auth.authenticate(request);

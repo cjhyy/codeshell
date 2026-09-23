@@ -1,3 +1,4 @@
+import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import { Devices } from "./Devices.js";
 import { HubSettings, type HubSettingsSection } from "./HubSettings.js";
@@ -299,6 +300,15 @@ export function Workbench({
             <WorkbenchIcon name="sidebar" />
           </button>
         </div>
+        <EnvironmentMenu
+          discover={controller.workspaceApi}
+          navigate={(address) => {
+            const go = () => window.location.assign(address);
+            if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+              setPendingNavigation(() => go);
+            else go();
+          }}
+        />
         <nav className="workbench-nav" aria-label="主要功能">
           {onBackToProjects ? (
             <button

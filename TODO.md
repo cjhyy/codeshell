@@ -16,6 +16,8 @@
 
 ## 大功能升级（体量 L，分阶段落地）
 
+- **本地／云端项目与跨设备 Panel 完整版本**。完整目标、基线、逐项要求和实际验证见 [交付记录](docs/todo/project-cloud-panels-delivery.md)。包含所有 Panel、项目版本绑定、手机／电脑四组合、独立 Link／services 与部署恢复；环境入口增量不代表全量完成。
+
 - **Panel Host 整合与全部 Panel 服务端可用性**（Hub/Web 专项）。首期已确定面向个人或可信小团队自托管：统一 Host，保留 API 14 与存储兼容，复用项目 Docker；补齐后台任务、浏览器设备/文件/渲染适配、自动化/Cookie/PDF 等实际缺项，并让五个业务 Panel 加 Starter 全部通过桌面对照的完整流程验收。Web `tasks.*`、任务事件和服务端目录书签已在开发分支实现并通过局部回归；真实项目容器与全部 Panel 工作流仍未验收，不能据此发正式版。独立不可信 Runner 与多租户后置。见 [技术方案](docs/todo/panel-host-integration-and-server-isolation-2026-09-18.md) 和 [全量验收矩阵](docs/todo/panel-server-workflow-parity-2026-09-18.md)。
 - **独立 Link Server + 双向 OAuth2**。独立 Node/Docker 服务，上游保管和刷新第三方凭据，下游给 CodeShell 与其他应用签发按连接、操作、数据范围限制的授权；先单 owner、多应用、GitHub 只读闭环。client、同意页、grant、令牌轮换和撤销尚未实现，第三方原始 token 不下发。见 [Link Server 架构](docs/todo/link-server-oauth-architecture.md)。当前 Desktop/Hub 的本地 Link 管理不是该独立服务。
 - **Hub 与 Web 后续**。当前已有单管理员登录/设备撤销、Node/Docker 部署、共享 Web 工作台、模型/Skills/MCP/Link 管理、历史文件和基础 Web Panel；HTTPS 指引与隔离容器验收也已有记录。剩余是两宿主语义协议统一、Electron 原生窗口选择远端 Hub、独立 Hub 多 Workspace、插件市场，以及媒体/音频/Cookie/自动化/PDF 等完整原生 Panel SDK 的 Web 适配。多用户 Runtime/凭据/CLI HOME 隔离仍后置。见 [共享工作台](docs/todo/shared-web-workbench.md)、[Hub 迭代方案](docs/todo/codeshell-hub-iteration-design.md)、[Web 面板](docs/web-panels.md)。历史容器验收不表示本轮新增源码已重新构建部署。

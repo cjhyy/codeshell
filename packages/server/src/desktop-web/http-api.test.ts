@@ -490,3 +490,20 @@ test("logout cancels a real local model probe and forwards extra-route lifecycle
   await f.host.stop();
   expect(stopped).toBe(1);
 }, 10_000);
+
+test("paired devices discover the same desktop identity without disclosing workspace paths", async () => {
+  const f = await fixture();
+  expect((await f.request("/api/v1/environment")).status).toBe(401);
+  const cookie = await f.authenticate();
+  const response = await f.request("/api/v1/environment", cookie);
+  expect(response.status).toBe(200);
+  const environment = (await response.json()) as any;
+  expect(environment.kind).toBe("desktop");
+  expect(environment.entryPath).toBe("/mobile");
+  expect(JSON.stringify(environment)).not.toContain(f.root);
+  expect(((await (await f.request("/api/v1/environment", cookie)).json()) as any).id).toBe(
+    environment.id,
+  );
+  f.devices.revoke(f.device.id);
+  expect((await f.request("/api/v1/environment", cookie)).status).toBe(401);
+});

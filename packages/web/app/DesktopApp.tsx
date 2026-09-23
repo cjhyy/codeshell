@@ -1,3 +1,4 @@
+import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import {
   useRemoteApp,
@@ -69,6 +70,7 @@ export function DesktopApp() {
     return (
       <main className="desktop-connection">
         <div className="desktop-connection-card">
+          <EnvironmentMenu discover={false} />
           <h1>
             {unpaired ? "连接 CodeShell 桌面" : authError ? "桌面连接需要重试" : "正在连接桌面…"}
           </h1>

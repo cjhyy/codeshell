@@ -571,3 +571,31 @@ test("Hub replay and run authorization reject unsafe or oversized persisted reco
   tab.send("healthy-again", "agent/run", { sessionId, task: "Continues after repair" });
   expect((await tab.wait((message) => message.id === "healthy-again")).result.echo.cwd).toBe(cwd);
 });
+
+test("environment discovery is authenticated, origin-bound, and stable across restarts", async () => {
+  const f = await fixture();
+  expect((await fetch(f.server.url + "/api/v1/environment")).status).toBe(401);
+  const { cookie } = await login(f.server, true);
+  const response = await fetch(f.server.url + "/api/v1/environment", { headers: { cookie } });
+  expect(response.status).toBe(200);
+  const environment = (await response.json()) as any;
+  expect(environment.kind).toBe("hub");
+  expect(environment.entryPath).toBe("/");
+  expect(Object.keys(environment).sort()).toEqual(
+    ["version", "id", "name", "kind", "entryPath"].sort(),
+  );
+  expect(
+    (
+      await fetch(f.server.url + "/api/v1/environment", {
+        headers: { cookie, origin: "https://wrong.example" },
+      })
+    ).status,
+  ).toBe(403);
+  await f.server.close();
+  const restarted = await f.boot();
+  const again = await login(restarted);
+  const result = await fetch(restarted.url + "/api/v1/environment", {
+    headers: { cookie: again.cookie },
+  });
+  expect(((await result.json()) as any).id).toBe(environment.id);
+});

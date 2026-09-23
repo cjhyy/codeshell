@@ -1,3 +1,4 @@
+import { describeEnvironment, environmentIdentity } from "../environment-identity.js";
 // packages/server/src/serve/headless-server.ts
 //
 // Single-workspace Node host. The CLI uses Hub administrator sessions; the
@@ -115,6 +116,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     const { raw: _raw, text: _text, ...metadata } = data ?? {};
     opts.log(event, opts.debugLogs ? data : metadata);
   };
+  const environment =
+    opts.authMode === "hub"
+      ? describeEnvironment(await environmentIdentity(opts.dataDir), "hub")
+      : undefined;
   const workspaceCwd = resolve(opts.cwd);
   const panelBinding = opts.authMode === "hub" ? createHubPanelBinding(workspaceCwd) : undefined;
   const workerDataRoot = resolve(
@@ -365,22 +370,40 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           typeof approval.requestId === "string" &&
           typeof approval.sessionId === "string"
         ) {
-          const request = approval.request as { toolName?: string; args?: Record<string, unknown> } | undefined;
+          const request = approval.request as
+            | { toolName?: string; args?: Record<string, unknown> }
+            | undefined;
           if (request?.toolName === "__panel_action__") {
             const ownerId = runOwners.get(approval.sessionId);
-            const result = ownerId && panels
-              ? panels.panelAction(ownerId, approval.sessionId, request.args ?? {})
-              : Promise.resolve({ ok: false, detail: "当前对话没有可用的面板连接。" });
-            void result.catch(() => ({ ok: false, detail: "面板操作未完成。" })).then((answer) => {
-              if (!isRunning(approval.sessionId) || runOwners.get(approval.sessionId) !== ownerId) return;
-              return bridge.request("agent/approve", {
-                sessionId: approval.sessionId, requestId: approval.requestId,
-                connectionId: approval.connectionId, generation: approval.generation,
-                decision: { approved: true, answer: JSON.stringify(answer) },
-              }, { id: `panel-reply-${randomUUID()}`, consume: true, settleOnExit: true, failFast: true, timeoutMs: 5000,
-                meta: { origin: "host", producer: "hub-panel-action" },
-              });
-            }).catch(() => {});
+            const result =
+              ownerId && panels
+                ? panels.panelAction(ownerId, approval.sessionId, request.args ?? {})
+                : Promise.resolve({ ok: false, detail: "当前对话没有可用的面板连接。" });
+            void result
+              .catch(() => ({ ok: false, detail: "面板操作未完成。" }))
+              .then((answer) => {
+                if (!isRunning(approval.sessionId) || runOwners.get(approval.sessionId) !== ownerId)
+                  return;
+                return bridge.request(
+                  "agent/approve",
+                  {
+                    sessionId: approval.sessionId,
+                    requestId: approval.requestId,
+                    connectionId: approval.connectionId,
+                    generation: approval.generation,
+                    decision: { approved: true, answer: JSON.stringify(answer) },
+                  },
+                  {
+                    id: `panel-reply-${randomUUID()}`,
+                    consume: true,
+                    settleOnExit: true,
+                    failFast: true,
+                    timeoutMs: 5000,
+                    meta: { origin: "host", producer: "hub-panel-action" },
+                  },
+                );
+              })
+              .catch(() => {});
             return;
           }
           try {
@@ -546,7 +569,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
             ...process.env,
             CODE_SHELL_DATA_ROOT: workerDataRoot,
             CODE_SHELL_CREDENTIAL_ACCESS: "local",
-            ...(opts.workerCapabilityModules ? { CODE_SHELL_CAPABILITY_MODULES: opts.workerCapabilityModules } : {}),
+            ...(opts.workerCapabilityModules
+              ? { CODE_SHELL_CAPABILITY_MODULES: opts.workerCapabilityModules }
+              : {}),
           }),
         },
         onChanged: () => notify("serve/configurationChanged", {}),
@@ -642,6 +667,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         }
         if (!hubAuth.isOriginAllowed(req)) {
           hubJson(res, 403, { error: "origin rejected" });
+          return;
+        }
+        if (pathname === "/api/v1/environment" && req.method === "GET") {
+          hubJson(res, 200, environment);
           return;
         }
         if (await configuration!.handle(req, res)) return;
@@ -1003,10 +1032,18 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
             if (hubAuth && parsed.method === "agent/run") {
               const runSession = workerMessage.params?.sessionId;
               const ownerId = tabAuth.get(ws)?.sessionId;
-              const activeOwner = typeof runSession === "string" ? runOwners.get(runSession) : undefined;
+              const activeOwner =
+                typeof runSession === "string" ? runOwners.get(runSession) : undefined;
               if (activeOwner && activeOwner !== ownerId) {
-                sendToTab(ws, hostQueryError(workerMessage.id, -32009,
-                  "此对话正在另一台设备运行，请等待完成后再发送。"), "run-owner");
+                sendToTab(
+                  ws,
+                  hostQueryError(
+                    workerMessage.id,
+                    -32009,
+                    "此对话正在另一台设备运行，请等待完成后再发送。",
+                  ),
+                  "run-owner",
+                );
                 return;
               }
             }

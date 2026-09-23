@@ -50,3 +50,6 @@ export {
   type WebTranslationKey,
   type WebTranslateParams,
 } from "./i18n/translate.js";
+
+export { isEnvironmentDescriptor, projectReferenceKey } from "./lib/environment.js";
+export type { EnvironmentDescriptor, ProjectReference } from "./lib/environment.js";

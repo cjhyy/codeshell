@@ -136,3 +136,19 @@ test("a second control process cannot open the same registry", async () => {
   ).rejects.toThrow();
   expect((await f.request("/api/v1/projects")).status).toBe(200);
 });
+
+test("project host discovery stays on the authenticated control plane", async () => {
+  const f = await fixture();
+  expect((await fetch(f.server.url + "/api/v1/environment")).status).toBe(401);
+  const response = await f.request("/api/v1/environment");
+  expect(response.status).toBe(200);
+  const environment = (await response.json()) as any;
+  expect(environment.kind).toBe("project-host");
+  expect(environment.entryPath).toBe("/");
+  expect(JSON.stringify(environment)).not.toContain(f.root);
+  expect(
+    (await f.request("/api/v1/environment", "GET", undefined, { Origin: "https://wrong.example" }))
+      .status,
+  ).toBe(403);
+  expect((await f.request("/api/v1/environment", "POST", {})).status).toBe(405);
+});
