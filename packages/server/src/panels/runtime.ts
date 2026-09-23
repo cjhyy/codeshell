@@ -799,6 +799,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     if (method === "tasks.cancel") return service.cancel(input.id!);
     if (method === "tasks.retry") {
       const previous = await service.get(input.id!);
+      if (previous.readOnly)
+        throw new PanelBridgeError("NOT_SUPPORTED", "旧任务仅供查看，请检查输入后创建新任务。");
       const detail = await taskConsentDetail(grant, previous.input, previous.entry.name);
       if (!(await confirm(grant, `重试 ${grant.app.title.default} 的后台工具？`, detail)))
         error(403, "你取消了后台工具重试。");
@@ -883,6 +885,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       rootDir: localToolRoot,
       ...executor,
       isAuthorized: async (scope) => !!(await installedToolApp(scope).catch(() => null)),
+      describePackage: async (scope) => {
+        const app = await installedToolApp(scope);
+        if (!app.packageDigest) throw new Error("Project package digest is unavailable");
+        return { version: app.version, packageDigest: app.packageDigest };
+      },
       onEvent: emitTaskEvent,
     });
     return toolJobs;

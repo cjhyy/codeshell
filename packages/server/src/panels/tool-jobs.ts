@@ -57,6 +57,11 @@ export interface ToolJobEntry {
   name: string;
   sha256: string;
 }
+/** Host-selected package identity, never supplied by the task request. */
+export interface ToolJobPackage {
+  version: string;
+  packageDigest: string;
+}
 export interface ToolJobProgress {
   fraction?: number;
   stage?: string;
@@ -74,6 +79,7 @@ export interface ToolJob {
   id: string;
   scope: ToolJobScope;
   entry: ToolJobEntry;
+  package?: ToolJobPackage;
   input: unknown;
   recovery: "manual" | "retry";
   status: ToolJobStatus;
@@ -112,6 +118,8 @@ export interface PanelToolJobServiceOptions {
     signal: AbortSignal,
   ): Promise<unknown>;
   isAuthorized?(scope: ToolJobScope): boolean | Promise<boolean>;
+  /** Resolve and inspect the authorized project package, including its full content digest. */
+  describePackage?(scope: ToolJobScope): Promise<ToolJobPackage>;
   onEvent?(job: ToolJob): void;
   now?: () => number;
 }
@@ -218,6 +226,22 @@ function publicJob(job: StoredJob): ToolJob {
   } = job;
   return toolJobJson(value, toolJobLimits.maxRecordBytes);
 }
+function packageValue(value: ToolJobPackage): ToolJobPackage {
+  if (
+    !value ||
+    typeof value.version !== "string" ||
+    !value.version ||
+    value.version.length > 128 ||
+    /[\u0000-\u001f\u007f]/.test(value.version) ||
+    typeof value.packageDigest !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.packageDigest)
+  )
+    throw new Error("Invalid tool job package identity");
+  return { version: value.version, packageDigest: value.packageDigest };
+}
+function packageError(code: string, message: string, retryable = true): Error {
+  return Object.assign(new Error(message), { code, retryable });
+}
 function storedValue(raw: unknown): StoredJob {
   const job = toolJobJson(raw, toolJobLimits.maxRecordBytes) as StoredJob;
   if (
@@ -237,6 +261,7 @@ function storedValue(raw: unknown): StoredJob {
     throw new Error("invalid tool job record");
   job.scope = scopeValue(job.scope);
   job.entry = entryValue(job.entry);
+  if (job.package !== undefined) job.package = packageValue(job.package);
   job.input = toolJobJson(job.input, toolJobLimits.maxInputBytes);
   if (job.result !== undefined) job.result = toolJobJson(job.result, toolJobLimits.maxResultBytes);
   if (job.progress) job.progress = progressValue(job.progress);
@@ -318,6 +343,38 @@ export class PanelToolJobService {
   private async authorize(scope: ToolJobScope): Promise<void> {
     if (this.options.isAuthorized && !(await this.options.isAuthorized(scope)))
       throw new Error("tool job owner is no longer authorized");
+  }
+  private async describePackage(scope: ToolJobScope): Promise<ToolJobPackage | undefined> {
+    if (!this.options.describePackage) return undefined;
+    try {
+      return packageValue(await this.options.describePackage(scope));
+    } catch {
+      throw packageError("PACKAGE_UNAVAILABLE", "任务的项目安装包无法校验，请恢复原包后重试。");
+    }
+  }
+  private async verifyPackage(job: ToolJob): Promise<void> {
+    if (!job.package && !this.options.describePackage) return; // Legacy standalone embedders.
+    if (!job.package)
+      throw packageError(
+        "PACKAGE_UNKNOWN",
+        "旧任务未记录安装包版本，请检查输入并重新提交任务。",
+        false,
+      );
+    const current = await this.describePackage(job.scope);
+    if (!current) throw packageError("PACKAGE_UNAVAILABLE", "当前 Host 无法校验此任务的原安装包。");
+    if (
+      current.version !== job.package.version ||
+      current.packageDigest !== job.package.packageDigest
+    )
+      throw packageError(
+        "PACKAGE_CHANGED",
+        "项目安装包与任务启动时不一致，请恢复原版本，或检查输入并创建新任务。",
+      );
+  }
+  private readOnly(job: ToolJob, scope: ToolJobScope): boolean {
+    return (
+      job.scope.revision !== scope.revision || (!!this.options.describePackage && !job.package)
+    );
   }
   initialize(): Promise<void> {
     return (this.ready ??= this.load());
@@ -415,14 +472,14 @@ export class PanelToolJobService {
     return [...this.jobs.values()]
       .filter((job) => sameScope(job.scope, scope, false))
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map((job) => ({ ...publicJob(job), readOnly: job.scope.revision !== scope.revision }));
+      .map((job) => ({ ...publicJob(job), readOnly: this.readOnly(job, scope) }));
   }
   async get(rawScope: ToolJobScope, id: string): Promise<ToolJob & { readOnly: boolean }> {
     const scope = scopeValue(rawScope);
     await this.initialize();
     await this.authorize(scope);
     const job = this.lookup(scope, id);
-    return { ...publicJob(job), readOnly: job.scope.revision !== scope.revision };
+    return { ...publicJob(job), readOnly: this.readOnly(job, scope) };
   }
   async find(rawScope: ToolJobScope, requestKey: string): Promise<ToolJob | null> {
     const scope = scopeValue(rawScope);
@@ -599,6 +656,7 @@ export class PanelToolJobService {
     if (signal?.aborted) abort();
     try {
       controller!.signal.throwIfAborted();
+      const selectedPackage = await this.describePackage(scope);
       const workDir = await this.storage.directory(id!, true, true);
       controller!.signal.throwIfAborted();
       const prepared = this.options.prepareInput
@@ -609,6 +667,7 @@ export class PanelToolJobService {
         id: id!,
         scope,
         entry,
+        ...(selectedPackage ? { package: selectedPackage } : {}),
         input: toolJobJson(prepared, toolJobLimits.maxInputBytes),
         recovery: request.recovery,
         status: "queued",
@@ -620,6 +679,7 @@ export class PanelToolJobService {
         requestDigest,
       };
       await this.authorize(scope);
+      await this.verifyPackage(job);
       await this.exclusive(async () => {
         if (this.stopping || controller!.signal.aborted)
           throw new Error("tool job input preparation was interrupted");
@@ -719,6 +779,7 @@ export class PanelToolJobService {
     let failure: unknown;
     try {
       await this.authorize(job.scope);
+      await this.verifyPackage(job);
       if (this.stopping) controller.abort();
       if (controller.signal.aborted) throw new Error("tool job cancelled before execution");
       result = toolJobJson(
@@ -810,6 +871,7 @@ export class PanelToolJobService {
         throw new Error("tool job requires a new manually reviewed request");
       if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)
         throw new Error("too many queued tool jobs for this workspace");
+      await this.verifyPackage(current);
       const next = structuredClone(current);
       next.status = "queued";
       delete next.error;

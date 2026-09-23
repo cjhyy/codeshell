@@ -82,7 +82,22 @@ fractions come from the tool. A result's optional `artifacts` inventory names
 relative files and their sizes/digests; the Host captures them before publishing
 the successful receipt, adding each captured `asset` to its inventory entry.
 
-Jobs bind app, workspace, installation revision and entry hash. Guest closure
+Jobs bind app, workspace, installation revision and entry hash. New Desktop and
+Hub jobs also persist Host-selected `package: {version, packageDigest}`; the
+request cannot choose or replace this identity. Package selection is inspected
+before input preparation, checked again before admission, and verified before
+execution and explicit retry. An equal version label with a different digest is
+not the same package. Missing or changed packages reject retry without rewriting
+the original record; restoring the original authorized package permits retry.
+This does not bypass revision, entry, project binding or permission checks.
+
+Legacy records without package identity remain readable and are returned as
+`readOnly` by package-aware Hosts. Their original package cannot be inferred;
+create a new explicitly reviewed request after checking the inputs. Standalone
+embedders may omit the package resolver for legacy unversioned jobs, but they
+cannot execute or retry an identity-bearing record without verification.
+
+Guest closure
 allows them to continue; uninstall/update/revocation stops execution. Host
 shutdown waits for native exit and records interruption. `recovery: "retry"`
 permits explicit retries after interruption; it never blindly resumes or repeats

@@ -1424,6 +1424,11 @@ export class PanelAppBridge {
       rootDir: join(app.getPath("userData"), "panel-tool-jobs"),
       ...executor,
       isAuthorized: async (scope) => !!(await this.installedToolApp(scope).catch(() => null)),
+      describePackage: async (scope) => {
+        const installed = await this.installedToolApp(scope);
+        if (!installed.packageDigest) throw new Error("Project package digest is unavailable");
+        return { version: installed.version, packageDigest: installed.packageDigest };
+      },
       onEvent: (job) => {
         for (const binding of this.guests.values())
           if (
@@ -1496,6 +1501,8 @@ export class PanelAppBridge {
     if (method === "tasks.cancel") return service.cancel(scope, input.id!);
     if (method === "tasks.retry") {
       const previous = await service.get(scope, input.id!);
+      if (previous.readOnly)
+        throw new PanelBridgeError("NOT_SUPPORTED", "旧任务仅供查看，请检查输入后创建新任务。");
       await this.confirmTaskCookie(binding, previous.input, previous.entry.name);
       return service.retry(scope, input.id!);
     }

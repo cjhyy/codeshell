@@ -155,6 +155,8 @@ test("real Hub HTTP serves and executes each project's retained package across c
       const response = await pending;
       expect(response.status).toBe(200);
       const job = await response.json();
+      const selected = await catalog();
+      expect(job.package).toEqual({ version, packageDigest: selected.packageDigest });
       let current;
       while (Date.now() < deadline) {
         const status = await request(route + "/call", "POST", {
@@ -166,7 +168,11 @@ test("real Hub HTTP serves and executes each project's retained package across c
         if (["succeeded", "failed", "cancelled"].includes(current.status)) break;
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
-      expect(current).toMatchObject({ status: "succeeded", result: { version } });
+      expect(current).toMatchObject({
+        status: "succeeded",
+        result: { version },
+        package: job.package,
+      });
       return job.id;
     }
     return { cwd, api, request, catalog, bind, prepare, page, run, close };
@@ -205,10 +211,32 @@ test("real Hub HTTP serves and executes each project's retained package across c
   // A catalog update never changes a pinned project or revokes its open page.
   expect(await second.catalog()).toMatchObject({ version: "1.0.0", revision: old.revision });
   expect(await second.page(original)).toContain("Package 1.0.0");
+  const firstOldJob = await first.run(await first.prepare(), "1.0.0");
   await first.bind(false);
   await first.bind(true);
   const newer = await first.prepare();
   expect(await first.page(newer)).toContain("Package 2.0.0");
+  const oldHistory = await first.request(
+    `/api/v1/panels/runtime/${newer.instanceId}/call`,
+    "POST",
+    {
+      method: "tasks.get",
+      params: { id: firstOldJob },
+    },
+  );
+  expect(oldHistory.status).toBe(200);
+  expect(await oldHistory.json()).toMatchObject({
+    readOnly: true,
+    package: { version: "1.0.0", packageDigest: old.packageDigest },
+    result: { version: "1.0.0" },
+  });
+  // Fail before showing a consent request for an operation that cannot proceed.
+  const retry = await first.request(`/api/v1/panels/runtime/${newer.instanceId}/call`, "POST", {
+    method: "tasks.retry",
+    params: { id: firstOldJob },
+  });
+  expect(retry.status).not.toBe(200);
+  expect(await retry.text()).toContain("仅供查看");
   await first.run(newer, "2.0.0");
   const oldJob = await second.run(original, "1.0.0");
   await second.close();
@@ -229,6 +257,7 @@ test("real Hub HTTP serves and executes each project's retained package across c
     id: oldJob,
     status: "succeeded",
     result: { version: "1.0.0" },
+    package: { version: "1.0.0", packageDigest: old.packageDigest },
   });
   // A corrupt retained package cannot fall back to the valid latest catalog.
   const retained = (await listProjectPanelApps(restarted.cwd))[0]!;

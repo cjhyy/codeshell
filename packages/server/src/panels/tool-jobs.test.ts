@@ -84,6 +84,153 @@ describe("durable native tool jobs", () => {
     return { calls, execute };
   }
 
+  test("Host package identity survives queued restart, explicit retry and duplicate submission", async () => {
+    const identity = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    const f = await fixture({ describePackage: async () => identity });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const input = {
+      ...request,
+      requestKey: "package-identity",
+      package: { version: "spoofed", packageDigest: "c".repeat(64) },
+    };
+    const job = await f.service.start(scope, input);
+    expect(job.package).toEqual(identity);
+    expect(JSON.parse(await readFile(join(f.root, job.id, "job.json"), "utf8")).package).toEqual(
+      identity,
+    );
+    await f.service.shutdown();
+    const calls: ToolJob[] = [];
+    const reopened = service(f.root, {
+      describePackage: async () => identity,
+      execute: async (task) => {
+        calls.push(task);
+        return "completed";
+      },
+    });
+    expect(await reopened.get(scope, job.id)).toMatchObject({
+      package: identity,
+      status: "interrupted",
+      readOnly: false,
+    });
+    expect(calls).toHaveLength(0);
+    expect((await reopened.start(scope, input)).id).toBe(job.id);
+    await reopened.retry(scope, job.id);
+    await reopened.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect(await finished(reopened, job.id)).toMatchObject({
+      package: identity,
+      status: "succeeded",
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.package).toEqual(identity);
+    expect((await reopened.list({ ...scope, revision: "r2" }))[0]).toMatchObject({
+      package: identity,
+      readOnly: true,
+    });
+  });
+
+  test("retry rejects changed content even at the same version and revision without relabeling history", async () => {
+    const original = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    let selected = original;
+    let executions = 0;
+    const f = await fixture({
+      describePackage: async () => selected,
+      execute: async () => {
+        executions++;
+        return null;
+      },
+    });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    await f.service.cancel(scope, job.id);
+    const before = await f.service.get(scope, job.id);
+    selected = { ...original, packageDigest: "c".repeat(64) };
+    await expect(f.service.retry(scope, job.id)).rejects.toMatchObject({ code: "PACKAGE_CHANGED" });
+    expect(await f.service.get(scope, job.id)).toEqual(before);
+    expect(executions).toBe(0);
+    selected = original;
+    await f.service.retry(scope, job.id);
+    await f.service.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+    expect(executions).toBe(1);
+  });
+
+  test("package changes during input preparation or while queued cannot launch a different program", async () => {
+    const original = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    let selected = original;
+    let changeDuringPreparation = true;
+    let executions = 0;
+    const f = await fixture({
+      describePackage: async () => selected,
+      prepareInput: async (_scope, input) => {
+        if (changeDuringPreparation) selected = { ...original, packageDigest: "c".repeat(64) };
+        return input;
+      },
+      execute: async () => {
+        executions++;
+        return null;
+      },
+    });
+    await expect(f.service.start(scope, request)).rejects.toMatchObject({
+      code: "PACKAGE_CHANGED",
+    });
+    expect(await f.service.list(scope)).toEqual([]);
+    changeDuringPreparation = false;
+    selected = original;
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    selected = { ...original, version: "2.0.0" };
+    await f.service.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect(await finished(f.service, job.id)).toMatchObject({
+      package: original,
+      status: "failed",
+      error: { code: "PACKAGE_CHANGED", retryable: true },
+    });
+    expect(executions).toBe(0);
+  });
+
+  test("legacy history stays readable without inventing a package or retrying on a newer Host", async () => {
+    const f = await fixture();
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    await f.service.shutdown();
+    const reopened = service(f.root, {
+      describePackage: async () => ({ version: "2.0.0", packageDigest: "c".repeat(64) }),
+      execute: async () => {
+        throw new Error("must not execute");
+      },
+    });
+    const history = await reopened.get(scope, job.id);
+    expect(history).toMatchObject({ status: "interrupted", readOnly: true });
+    expect(history.package).toBeUndefined();
+    await expect(reopened.retry(scope, job.id)).rejects.toMatchObject({ code: "PACKAGE_UNKNOWN" });
+    expect((await reopened.list(scope))[0]!.package).toBeUndefined();
+  });
+
+  test("missing package inspection fails closed while retaining the original job for repair", async () => {
+    const identity = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    let unavailable = false;
+    const f = await fixture({
+      describePackage: async () => {
+        if (unavailable) throw new Error("missing package");
+        return identity;
+      },
+    });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    await f.service.cancel(scope, job.id);
+    unavailable = true;
+    await expect(f.service.retry(scope, job.id)).rejects.toMatchObject({
+      code: "PACKAGE_UNAVAILABLE",
+    });
+    expect((await f.service.get(scope, job.id)).package).toEqual(identity);
+    await f.service.shutdown();
+    const oldHost = service(f.root);
+    await expect(oldHost.retry(scope, job.id)).rejects.toMatchObject({
+      code: "PACKAGE_UNAVAILABLE",
+    });
+    expect((await oldHost.get(scope, job.id)).package).toEqual(identity);
+  });
+
   test("package mutation cannot pass admission authorization, queued work, cancellation cleanup or retry", async () => {
     const authorization = deferred<boolean>();
     let authorizing = false;

@@ -78,6 +78,7 @@ async function fixture(
   const app: InstalledPanelApp = {
     id: "synthetic-panel",
     version: "1",
+    packageDigest: "b".repeat(64),
     title: { default: "Synthetic panel" },
     entry: "app/index.html",
     icon: "panel",

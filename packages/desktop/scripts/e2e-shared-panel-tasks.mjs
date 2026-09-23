@@ -645,6 +645,9 @@ try {
     }
   };
   const first = await desktop("tasks.start", startInput);
+  assert.equal(first.package.version, "1.0.0");
+  assert.match(first.package.packageDigest, /^[a-f0-9]{64}$/);
+  assert.deepEqual((await phoneCall("tasks.get", { id: first.id })).package, first.package);
   assert.equal((await phoneCall("tasks.get", { id: first.id })).status, "queued");
   await assertPackageBusy();
   const resuming = phoneCall("tasks.queue.set", {
