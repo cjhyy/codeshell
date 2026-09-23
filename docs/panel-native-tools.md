@@ -32,6 +32,14 @@ images and audio/video; format interpretation belongs to the Panel.
   resource into a relative tool-input path.
 - `capture({directoryHandle,path,name?,mimeType?,expectedBytes?,expectedSha256?})`
   validates a complete tool output and atomically returns `{asset}`.
+- Web-only `open({assetId})` asks the authenticated workbench to preview a resource
+  and offer a browser download. Discover it through `availableMethods`; the
+  opaque Panel receives only `{opened:true}`, never an authenticated file URL.
+  The parent renders supported video/audio/raster images and provides download
+  only for other types, including HTML/SVG. Browser codec support still applies.
+  URLs retain the original project and exact page grant, support GET/HEAD/ranges,
+  and are reauthorized before and during streaming. Closing the Panel or revoking
+  its login invalidates these URLs even if another page still has resource access.
 
 Materialization and capture also require `process`. Directory grants retain
 filesystem identity; each path component, source identity, digest and scope is
@@ -179,9 +187,10 @@ without losing structured errors across Electron isolation. `retryAfterMs` is an
 continues to throw for compatibility. Admission queues and task/event decoding
 belong in the shared Panel SDK.
 
-Web supports native entry grants, process receipts/stdin, resources and selected
-connection handoff. Desktop background tool tasks and the legacy media picker,
-preview and document bridge are not advertised on Web. The full Video Studio
+Web supports native entry grants, process receipts/stdin, resources, native
+background tool tasks and selected connection handoff. Paired Web shares the
+Desktop task coordinator. Generic `resources.open` provides browser preview;
+the legacy Desktop media picker, preview and document bridge are not advertised on Web. The full Video Studio
 workflow currently requires Desktop; unsupported features must be explained
 before starting work.
 

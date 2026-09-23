@@ -142,6 +142,29 @@ export async function verifyPairedDownload({ win, project, url, bytes, expectedI
       confirmations.filter((text) => text.includes("Download fixture account")).length >= 2,
     );
     assert.ok(confirmations.every((text) => !text.includes("download-cookie-fixture")));
+    await frame.locator('[data-tab="history"]').click();
+    await frame.locator('[data-history-shortcut="play"]').first().click();
+    const preview = page.getByRole("region", { name: "文件预览", exact: true });
+    await preview.waitFor({ timeout: 30000 });
+    await until(
+      async () =>
+        preview.locator("video").evaluate((video) => video.readyState >= 1 && video.videoWidth > 0),
+      "Browser preview did not decode the downloaded video",
+      30000,
+    );
+    const media = await preview.locator("video").evaluate((video) => ({
+      width: video.videoWidth,
+      duration: video.duration,
+      src: video.currentSrc,
+    }));
+    assert.ok(media.duration > 0 && media.duration < 2);
+    assert.match(media.src, /\/resources\/asset-[a-f0-9]{64}/);
+    const previewSave = page.waitForEvent("download");
+    await preview.getByRole("link", { name: "保存到此设备", exact: true }).click();
+    assert.deepEqual(await readFile(await (await previewSave).path()), bytes);
+    await preview.getByRole("button", { name: "关闭预览", exact: true }).click();
+    await preview.waitFor({ state: "hidden" });
+    console.log("Paired browser: history playback decoded and preview download saved exact bytes.");
     await frame.locator('[data-tab="task"]').click();
     await frame.locator("#open-directory").click();
     const listingPromise = context.waitForEvent("page");

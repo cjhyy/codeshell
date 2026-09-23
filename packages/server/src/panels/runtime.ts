@@ -20,6 +20,7 @@ import {
   panelBridgeFailure,
 } from "./bridge-contract.js";
 import { PanelResourceService } from "./resources/service.js";
+import { servePanelResource } from "./resources/http.js";
 import {
   panelConnections,
   panelConnectionIds,
@@ -76,6 +77,7 @@ const METHODS = [
   "notifications.send",
   ...panelProcessMethods,
   ...panelResourceMethods,
+  "resources.open",
   ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.cookies.listForTask",
@@ -1362,6 +1364,26 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         emit(grant, event, payload),
     };
     if (method.startsWith("resources.")) {
+      if (method === "resources.open") {
+        const value = params as { assetId?: unknown } | null;
+        if (
+          !value ||
+          Object.keys(value).some((key) => key !== "assetId") ||
+          typeof value.assetId !== "string" ||
+          !/^(?:asset|external)-[a-f0-9]{64}$/.test(value.assetId)
+        )
+          error(400, "文件资源标识无效。");
+        const asset = await resources.get(
+          { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd },
+          value.assetId,
+        );
+        if (!(await authorized(grant))) error(410, "面板授权已失效。");
+        return {
+          effect: "resources.open",
+          asset,
+          url: `${ROOT}${grant.id}/resources/${asset.id}`,
+        };
+      }
       if (
         [
           "resources.materialize",
@@ -1713,16 +1735,42 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         }
         const directoryMatch =
           /^\/api\/v1\/panels\/runtime\/([\w-]+)\/directory\/([a-f0-9-]{36})$/.exec(url.pathname);
+        const resourceMatch =
+          /^\/api\/v1\/panels\/runtime\/([\w-]+)\/resources\/((?:asset|external)-[a-f0-9]{64})$/.exec(
+            url.pathname,
+          );
         const match =
           /^\/api\/v1\/panels\/runtime\/([\w-]+)(?:\/(call|renew|events|confirm|tool-results))?$/.exec(
             url.pathname,
-          ) ?? directoryMatch;
+          ) ??
+          directoryMatch ??
+          resourceMatch;
         const grant = match && grants.get(match[1]!);
         if (!grant) error(410, "面板连接已失效，请关闭后重新打开。");
         if (currentOwner !== grant.owner) error(403, "这个面板属于另一个登录会话。");
         activeGrant = grant;
         if (!(await authorized(grant))) error(410, "面板连接已失效，请关闭后重新打开。");
-        if (directoryMatch) {
+        if (resourceMatch) {
+          if (!grant.app.permissions.includes("resources")) error(403, "面板未声明资源权限。");
+          if (
+            [...url.searchParams.keys()].some((key) => !["download", "workspace"].includes(key)) ||
+            url.searchParams.getAll("download").length > 1 ||
+            url.searchParams.getAll("workspace").length > 1 ||
+            (url.searchParams.has("download") && url.searchParams.get("download") !== "1") ||
+            (url.searchParams.has("workspace") && url.searchParams.get("workspace") !== options.cwd)
+          )
+            error(400, "文件访问参数无效。");
+          await servePanelResource(request, response, {
+            service: resources,
+            scope: { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd },
+            id: resourceMatch[2]!,
+            download: url.searchParams.get("download") === "1",
+            isAuthorized: async () =>
+              currentOwner === grant.owner &&
+              (await options.isAuthorized(request)) &&
+              (await authorized(grant)),
+          });
+        } else if (directoryMatch) {
           if (!grant.app.permissions.includes("process")) error(403, "面板未声明这个权限。");
           const root = processes.directoryPath(
             {

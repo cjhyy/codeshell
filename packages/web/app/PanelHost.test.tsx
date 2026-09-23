@@ -771,3 +771,88 @@ test("revoked grants remove their previous directory download links", async () =
   await view.call("context.get");
   expect(text(view.tree)).not.toContain("查看并下载文件");
 });
+
+const previewAsset = {
+  id: `asset-${"a".repeat(64)}`,
+  name: "测试视频.mp4",
+  mimeType: "video/mp4",
+  bytes: 123,
+};
+const previewPath = `/api/v1/panels/runtime/${instanceId}/resources/${previewAsset.id}`;
+const previewEffect = { effect: "resources.open", asset: previewAsset, url: previewPath };
+
+test("browser preview and download retain the original project without exposing URLs to the iframe", async () => {
+  setApiWorkspace("/workspace/original");
+  setApiProject(projectA);
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.open") return Response.json(previewEffect);
+    },
+  });
+  setApiWorkspace("/workspace/later");
+  setApiProject(projectB);
+  await view.call("resources.open", { assetId: previewAsset.id });
+  const video = elements(view.tree).find((item) => item.type === "video")!;
+  expect(video.props).toMatchObject({ controls: true, playsInline: true, preload: "metadata" });
+  expect(video.props.autoPlay).toBeUndefined();
+  const url = new URL(video.props.src, "http://localhost");
+  expect(url.pathname).toBe(`/p/${projectA}${previewPath}`);
+  expect(url.searchParams.get("workspace")).toBe("/workspace/original");
+  const link = elements(view.tree).find(
+    (item) => item.type === "a" && text(item) === "保存到此设备",
+  )!;
+  const download = new URL(link.props.href, "http://localhost");
+  expect(download.pathname).toBe(url.pathname);
+  expect(download.searchParams.get("workspace")).toBe("/workspace/original");
+  expect(download.searchParams.get("download")).toBe("1");
+  expect(view.replies.at(-1)?.data.result).toEqual({ opened: true });
+  await act(async () => {
+    video.props.onError();
+    await flushMicrotasks();
+  });
+  expect(text(view.tree)).toContain("当前浏览器无法预览");
+  expect(elements(view.tree).some((item) => item.type === "video")).toBe(false);
+  await click(button(view.tree, "关闭预览"));
+  expect(text(view.tree)).not.toContain("保存到此设备");
+});
+
+for (const change of [
+  { url: "javascript:alert(1)" },
+  { url: `https://attacker.invalid${previewPath}` },
+  { url: previewPath.replace(instanceId, "other-instance-1234567890") },
+  { url: `${previewPath}?workspace=other` },
+  { asset: { ...previewAsset, id: `asset-${"b".repeat(64)}` } },
+  { asset: { ...previewAsset, bytes: -1 } },
+])
+  test(`rejects unsafe resource preview effects: ${JSON.stringify(change)}`, async () => {
+    const view = await fixture({
+      intercept(request) {
+        if (request.body?.method === "resources.open")
+          return Response.json({ ...previewEffect, ...change });
+      },
+    });
+    await view.call("resources.open", { assetId: previewAsset.id });
+    expect(view.replies.at(-1)?.data.error).toContain("预览链接无效");
+    expect(text(view.tree)).not.toContain("保存到此设备");
+  });
+
+for (const mimeType of ["text/html", "image/svg+xml", "application/pdf"])
+  test(`active or unsupported content is download-only: ${mimeType}`, async () => {
+    const view = await fixture({
+      intercept(request) {
+        if (request.body?.method === "resources.open")
+          return Response.json({ ...previewEffect, asset: { ...previewAsset, mimeType } });
+        if (request.body?.method === "context.get")
+          return Response.json({ error: "Panel closed" }, { status: 410 });
+      },
+    });
+    await view.call("resources.open", { assetId: previewAsset.id });
+    expect(
+      elements(view.tree).some((item) =>
+        ["img", "video", "audio", "object", "embed"].includes(String(item.type)),
+      ),
+    ).toBe(false);
+    expect(text(view.tree)).toContain("保存到此设备");
+    await view.call("context.get");
+    expect(text(view.tree)).not.toContain("保存到此设备");
+  });

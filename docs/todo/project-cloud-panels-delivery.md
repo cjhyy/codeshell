@@ -585,3 +585,43 @@ Panel 提交：`6fd63db`（版本化信息读取）、`86a2a2c`（Download LAN I
 仍待完成：真实服务商登录与采集、物理手机录音／弱网／锁屏等行为、云端真实下载，
 下载历史的客户端播放／打开，其余 Panel 全业务流程、项目版本绑定、Link Host 接入和
 公网部署／恢复／回滚。上述浏览器结果只证明记录的测试组合，不替代其他验收项。
+
+
+### 增量 16：下载历史的浏览器预览与资源流授权（2026-09-23）
+
+Web/Hub 新增通用 `resources.open({assetId})`，通过当前登录、Panel 实例和项目作用域
+解析资源。受信工作台验证资源 ID 与实例 URL，保留发起时的项目路由，渲染视频、音频、
+栅格图片并提供“保存到此设备”；不支持的类型及解码失败保留下载入口，HTML/SVG 不执行。
+不透明 Panel 只收到 `{opened:true}`，不会拿到工作台的认证资源 URL。
+
+资源 GET/HEAD 支持 Range、强制下载和禁止缓存；开始读取、逐块输出以及无数据期间
+均检查当前授权。关闭一个 Panel 实例即中断其文件流，不因另一个实例仍有资源权限而
+继续读取；退出登录也会关闭空闲流。错误不暴露内部文件路径。
+
+Download 保留后台产物资源 ID，并在历史保存、文件检查与重新打开时保留该字段。
+网页播放／打开先检查授权目录中的原文件，再打开资源；旧记录缺少资源 ID 时通过
+`resources.capture` 导入，并保存 ID。网页定位改用认证目录列表，不启动 Host 的系统
+播放器。桌面原有播放器与文件管理器流程继续兼容。
+
+验证：
+
+- Server HTTP runtime + Web PanelHost 共 90 项通过：范围读取、HEAD、下载、项目隔离、
+  错误 URL、跨登录访问、关闭授权、流中断、空闲时撤销及原项目路由。
+- Download 完整套件 246 项通过；新增 390/1440px 旧记录预览、重开资源复用、目录访问、
+  文件缺失和导入失败流程。目录相对路径补充根目录情况后相关模型／任务 27 项通过。
+- Server 构建、Server/Web 类型检查、Desktop 主进程和 mobile 构建、Desktop 类型检查、
+  改动 Host 代码 ESLint、Panel 包校验通过。
+- 真实 Electron＋安装 Download＋yt-dlp＋临时 HTTPS 测试账号，桌面两个后台下载以及
+  390px 配对工作台新增下载、关闭／重开继续通过。网页点击下载历史“播放”后，工作台
+  video 元素成功解码 FFmpeg 生成的 H264 MP4（非零视频宽度与约一秒时长）；预览下载
+  和目录列表下载均与源文件字节完全一致。整条命令退出码 0。
+
+```sh
+bun test packages/server/src/panels/runtime.test.ts packages/web/app/PanelHost.test.tsx
+npm test -- --suite video-download
+node packages/desktop/scripts/e2e-download-background.mjs /absolute/path/to/codeshell-panel-apps/apps/video-download --cookies --paired
+```
+
+仍为任务分支上的实现和验证，未发布完整版本。临时站点／测试账号与模拟手机宽度不能
+替代真实服务商或物理手机验收。云端完整下载、其余 Panel、版本锁定、Link 接入、远程
+中继和部署恢复等原目标保持未完成。

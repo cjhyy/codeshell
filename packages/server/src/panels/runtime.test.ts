@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
+import { Readable } from "node:stream";
 import {
   mkdir,
   mkdtemp,
@@ -1971,4 +1972,206 @@ describe("Desktop and Web shared native coordinator", () => {
     expect((await f.call("tasks.cancel", { id: job.id })).status).toBe(400);
     expect(await f.service.list(f.nativeScope)).toEqual([]);
   });
+});
+
+async function previewFixture(bytes: string | Uint8Array = "0123456789") {
+  const f = await fixture({ permissions: ["resources"] });
+  const service = new PanelResourceService({
+    rootDirectory: join(f.root, "data", "panel-app-media"),
+    isScopeAuthorized: () => true,
+  });
+  cleanups.push(() => service.shutdown());
+  const file = join(f.cwd, "preview.mp4");
+  await writeFile(file, bytes);
+  const asset = await service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+  const grant = await f.prepare();
+  const response = await f.api(`${grant.instanceId}/call`, "POST", {
+    method: "resources.open",
+    params: { assetId: asset.id },
+  });
+  expect(response.status).toBe(200);
+  const effect = await response.json();
+  return { ...f, service, asset, grant, effect, file };
+}
+
+test("resource preview streams scoped bytes with seeking, HEAD, and explicit download", async () => {
+  const f = await previewFixture();
+  expect(f.grant.context.availableMethods).toContain("resources.open");
+  expect(f.effect).toMatchObject({ effect: "resources.open", asset: f.asset });
+  const read = (suffix = "", init: RequestInit = {}) =>
+    fetch(f.url + f.effect.url + suffix, {
+      ...init,
+      headers: { Cookie: "session=owner-a", ...init.headers },
+    });
+  const range = await read("", { headers: { Range: "bytes=2-5" } });
+  expect(range.status).toBe(206);
+  expect(range.headers.get("content-range")).toBe("bytes 2-5/10");
+  expect(range.headers.get("content-type")).toBe("video/mp4");
+  expect(range.headers.get("cache-control")).toContain("no-store");
+  expect(await range.text()).toBe("2345");
+  const head = await read("", { method: "HEAD" });
+  expect(head.status).toBe(200);
+  expect(head.headers.get("content-length")).toBe("10");
+  expect(await head.text()).toBe("");
+  const invalid = await read("", { headers: { Range: "bytes=50-" } });
+  expect(invalid.status).toBe(416);
+  expect(await invalid.text()).toBe("");
+  const download = await read("?download=1&workspace=" + encodeURIComponent(f.cwd));
+  expect(download.headers.get("content-disposition")).toContain("attachment;");
+  expect(await download.text()).toBe("0123456789");
+  expect((await read("?workspace=other")).status).toBe(400);
+  expect((await read("?download=1&download=1")).status).toBe(400);
+  expect((await read("?path=/etc/passwd")).status).toBe(400);
+  expect((await read("", { method: "POST" })).status).toBe(405);
+});
+
+test("resource URLs cannot cross owners, projects, permissions, closed grants or revoked sessions", async () => {
+  const f = await previewFixture();
+  const read = (owner = "owner-a") =>
+    fetch(f.url + f.effect.url, { headers: { Cookie: `session=${owner}` } });
+  expect((await read("owner-b")).status).toBe(403);
+  const other = await f.service.library.importFile(
+    { appId: f.app.id, projectPath: f.cwd + "-other" },
+    f.file,
+  );
+  // Content IDs can be identical across projects; a project with no copy must not gain access.
+  const otherFile = join(f.cwd, "private.mp4");
+  await writeFile(otherFile, "other project bytes");
+  const privateAsset = await f.service.library.importFile(
+    { appId: f.app.id, projectPath: f.cwd + "-other" },
+    otherFile,
+  );
+  expect(other.id).toBe(f.asset.id);
+  const privateResponse = await fetch(f.url + f.effect.url.replace(f.asset.id, privateAsset.id), {
+    headers: { Cookie: "session=owner-a" },
+  });
+  expect(privateResponse.status).toBe(404);
+  expect(await privateResponse.text()).not.toContain(f.root);
+  await f.api(f.grant.instanceId, "DELETE");
+  expect((await read()).status).toBe(410);
+  const fresh = await f.prepare();
+  f.effect.url = f.effect.url.replace(f.grant.instanceId, fresh.instanceId);
+  f.state.owners.delete("owner-a");
+  expect((await read()).status).toBe(401);
+  f.state.owners.add("owner-a");
+  f.state.enabled = false;
+  expect((await read()).status).toBe(410);
+  const denied = await fixture({ permissions: [] });
+  const deniedGrant = await denied.prepare();
+  expect(deniedGrant.context.availableMethods).not.toContain("resources.open");
+  expect(
+    (await denied.api(`${deniedGrant.instanceId}/resources/${f.asset.id}`, "GET")).status,
+  ).toBe(403);
+});
+
+test("closing one resource reader interrupts its stream even while another grant keeps the scope alive", async () => {
+  const f = await previewFixture();
+  const file = join(f.cwd, "large.mp4");
+  await writeFile(file, Buffer.alloc(4 * 1024 * 1024, 42));
+  const asset = await f.service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+  const otherGrant = await f.prepare();
+  const original = PanelResourceService.prototype.openRead;
+  const slow = spyOn(PanelResourceService.prototype, "openRead").mockImplementation(
+    async function (scope, id, options) {
+      const result = await original.call(this, scope, id, options);
+      if (result.body) {
+        const source = result.body;
+        result.body = Readable.from(
+          (async function* () {
+            try {
+              for await (const chunk of source) {
+                for (let offset = 0; offset < chunk.length; offset += 32768) {
+                  await new Promise((resolve) => setTimeout(resolve, 30));
+                  yield chunk.subarray(offset, offset + 32768);
+                }
+              }
+            } finally {
+              source.destroy();
+            }
+          })(),
+          { objectMode: false },
+        );
+      }
+      return result;
+    },
+  );
+  try {
+    const response = await fetch(
+      `${f.url}/api/v1/panels/runtime/${f.grant.instanceId}/resources/${asset.id}`,
+      { headers: { Cookie: "session=owner-a" } },
+    );
+    expect(response.status).toBe(200);
+    const reader = response.body!.getReader();
+    let received = (await reader.read()).value!.length;
+    expect(received).toBeGreaterThan(0);
+    await f.api(f.grant.instanceId, "DELETE");
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        received += chunk.value.length;
+      }
+    } catch {
+      /* Node errors on premature close; Bun may return a short body. */
+    }
+    expect(received).toBeLessThan(asset.bytes);
+    expect(
+      (
+        await f.api(`${otherGrant.instanceId}/call`, "POST", {
+          method: "resources.get",
+          params: { id: asset.id },
+        })
+      ).status,
+    ).toBe(200);
+  } finally {
+    slow.mockRestore();
+  }
+});
+
+test("revoking a login stops an idle resource stream without waiting for another chunk", async () => {
+  const f = await previewFixture(Buffer.alloc(1024 * 1024, 42));
+  const original = PanelResourceService.prototype.openRead;
+  let idle: Readable | undefined;
+  const paused = spyOn(PanelResourceService.prototype, "openRead").mockImplementation(
+    async function (scope, id, options) {
+      const result = await original.call(this, scope, id, options);
+      result.body?.destroy();
+      idle = new Readable({ read() {} });
+      idle.push(Buffer.from("0"));
+      return { ...result, body: idle };
+    },
+  );
+  try {
+    const response = await fetch(f.url + f.effect.url, { headers: { Cookie: "session=owner-a" } });
+    const reader = response.body!.getReader();
+    expect((await reader.read()).value!.length).toBe(1);
+    f.state.owners.delete("owner-a");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const stopped = await Promise.race([
+        (async () => {
+          let received = 1;
+          try {
+            for (;;) {
+              const chunk = await reader.read();
+              if (chunk.done) return received < f.asset.bytes;
+              received += chunk.value.length;
+            }
+          } catch {
+            return received < f.asset.bytes;
+          }
+        })(),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => resolve(false), 2000);
+        }),
+      ]);
+      expect(stopped).toBe(true);
+      expect(idle!.destroyed).toBe(true);
+    } finally {
+      clearTimeout(timer);
+    }
+  } finally {
+    paused.mockRestore();
+    idle?.destroy();
+  }
 });
