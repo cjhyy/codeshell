@@ -86,6 +86,7 @@ describe("the agent/run wire contract", () => {
     const run = calls.find((call) => call.method === "agent/run");
     expect(run).toBeDefined();
     expect(run!.params.task).toBe("继续修那个 bug");
+    expect(run!.params.displayText).toBe("继续修那个 bug");
     expect(run!.params).not.toHaveProperty("message");
     expect(run!.params.sessionId).toBe("s-1");
     expect(run!.params.clientMessageId).toBe("c-1");
@@ -97,6 +98,7 @@ describe("the agent/run wire contract", () => {
     await runner.queueNextTurn({ sessionId: "s-1", text: "later", clientMessageId: "c-2" });
     const queued = calls.find((call) => call.method === "agent/run");
     expect(queued!.params.task).toBe("later");
+    expect(queued!.params.displayText).toBe("later");
     expect(queued!.params.requireExisting).toBe(true);
     expect(queued!.params).not.toHaveProperty("message");
   });
