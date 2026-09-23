@@ -54,6 +54,8 @@ export function buildRunToolContext(args: {
     ...args.base,
     approvalRouter: options?.approvalRouter ?? args.configApprovalRouter,
     permissionMode: args.runPermissionMode,
+    allowBackgroundShells:
+      args.base.allowBackgroundShells !== false && options?.allowBackgroundShells !== false,
     signal: options?.signal,
     planMode: args.runPlanMode,
     subAgentSpawner: args.subAgentSpawner,

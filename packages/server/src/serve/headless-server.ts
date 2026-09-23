@@ -1354,6 +1354,14 @@ function authorizeServeRequest(
     return hostQueryError(message.id ?? null, -32601, "Method is not available in Web serve mode");
   }
 
+  if (
+    message.method === "agent/run" &&
+    (Object.hasOwn(message.params ?? {}, "sandboxMode") ||
+      Object.hasOwn(message.params ?? {}, "allowBackgroundShells"))
+  ) {
+    return hostQueryError(message.id ?? null, -32602, "Execution policy is selected by the host");
+  }
+
   const rawSessionId = message.params?.sessionId;
   const sessionId =
     typeof rawSessionId === "string" && rawSessionId.length > 0 ? rawSessionId : null;

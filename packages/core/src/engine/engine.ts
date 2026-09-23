@@ -2170,14 +2170,17 @@ export class Engine {
     // solely from project/user settings rather than config.sandbox, while a
     // child intentionally skips project settings. Passing the complete
     // effective config is what makes undefined role sandbox mean inherit.
-    const sandboxRun = { cwd, workspaceContext };
+    const sandboxRun = { cwd, workspaceContext, sandboxMode: options?.sandboxMode };
     const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(sandboxRun);
 
     // Build the per-Engine ToolContext that will be threaded through every
     // tool call. Replaces the old module-level singleton setters used by
     // built-ins and product capabilities.
     const subAgentSpawner = createSubAgentSpawner({
-      parentConfig: this.config,
+      parentConfig:
+        options?.allowBackgroundShells === false
+          ? { ...this.config, allowBackgroundShells: false }
+          : this.config,
       getParentSessionId: () => getSession().state.sessionId,
       parentSandbox: sandboxConfig,
       presetName: this.preset.name,

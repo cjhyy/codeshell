@@ -224,6 +224,16 @@ not own accepted jobs. Restart restores definitions without catch-up execution;
 persisted execution receipts and full worker/approval composition are still
 required before claiming cloud automation recovery or enabling the capability.
 
+The trusted Worker protocol now accepts per-turn `sandboxMode` and
+`allowBackgroundShells`. These survive Session queueing and captured follow-up
+options, without mutating the Engine defaults used by a later ordinary turn.
+The sandbox mode override retains the resolved network/read/write restrictions;
+`allowBackgroundShells: false` also narrows child execution and cannot be relaxed
+by a caller when the Engine itself forbids background shells. Web serve rejects
+these fields in browser `agent/run` requests: only Host code selects the policy.
+`auto` retains Core's platform-dependent fallback behavior; passing that mode
+alone is not proof that an OS sandbox was available.
+
 The scheduler checks and creates under the same persistent store lock. An equal
 definition returns the retained job without resetting its paused state, counters
 or provenance. A different definition rejects; read and explicitly update the

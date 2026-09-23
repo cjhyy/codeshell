@@ -1598,3 +1598,47 @@ Panel 四组合；项目锁定程序入口、旧会话权限迁移及 worktree �
 fencing，也不保证外部副作用恰好一次。所有共享文件写入进程需兼容新的来源字段。
 六 Panel 四组合、设备目录／中继、三仓库兼容发布、目标服务器部署和完整恢复／
 回滚继续按总清单推进，目标未完成。
+
+### 增量 40：共享 Worker 的轮次执行策略与实际 Core 验证（2026-09-24）
+
+检查增量 39 的执行器组合时发现：现有 agent/run 可以传递 permissionMode，却
+无法把 CronRunRequest 的 sandboxMode 交给同一个持久 Session 的 Worker。直接
+修改 Engine 配置会影响其他轮次，另建 Engine 又会与 Worker 缓存的会话状态竞争。
+本增量补齐共享 Worker 所需的轮次契约，尚未启用云端调度入口。
+
+完成：
+
+- EngineRunOptions、Worker RunParams、AgentClient 字符串调用选项与 ChatSession
+  队列传递 sandboxMode／allowBackgroundShells。普通轮次省略时沿用原配置；
+  当前轮次的后续唤醒保留策略，下一轮不会继承临时覆盖。
+- RunEnvironmentResolver 只覆盖该轮 sandbox mode，保留既有网络、读写路径限制，
+  按最终配置选择／缓存后台，不修改 Engine 或项目设置。错误 mode 提前拒绝。
+- allowBackgroundShells=false 收紧实际 ToolContext 与子 Agent 父配置；true 不能
+  放宽 Engine 自己的禁止设置。实际 Bash 后台执行分支据此返回结构化失败。
+- AgentServer 的多会话和旧单 Engine 路径均传递并校验新参数。Web serve 浏览器
+  agent/run 禁止提交这两项 Host 专有字段；后续云端调度组合应由 Host 内部选定。
+
+验证：
+
+- 最终 59 项、187 个断言通过，覆盖协议排队／后续唤醒、非法参数、不改变下一轮、
+  沙箱约束保留／缓存、实际 Bash 禁止后台、子 Agent 继承、原有会话恢复与 Web
+  转发边界。日志 `/tmp/cloud-run-policy-regression-final.log`。
+- `automation-worker-policy.integration.test.ts` 启动真实 Node Core stdio Worker，
+  使用隔离 HOME、持久 Session、项目模型配置和本地受控模型 HTTP 服务；在原会话
+  中完成真实 Write，Host 使用 resolveWritePolicy(full) 回答实际工具审批，后台
+  Shell 被拒绝且未生成目标文件，随后同一 Worker generation／Session 继续普通
+  对话。该测试是直接 Worker 协议验证，没有通过生产云端自动化页面或定时器。
+- 真实 Engine 配合受控模型／自定义工具确认当前轮次背景执行开关为 false、下一
+  普通轮次恢复 true。没有把“下一轮没有报错”当作策略恢复的唯一证据。
+- Core／Server 最终构建、Desktop 类型检查、引擎构造边界、格式及 diff 检查通过。
+  日志 `/tmp/cloud-run-policy-{core-build-final,server-build-final,desktop-types,
+  engine-guard}.log`。
+- 新增 Bash 测试最初误按抛异常及 isError 断言；实际工具返回 `{ok:false,error}`，
+  修正为核对真实结构化失败和原因后通过。测试未执行被拒绝的 Shell 命令。
+
+边界：auto 模式仍遵循现有平台探测与不可用时降级规则；传递 auto 不代表已证实
+操作系统沙箱生效。实际模型服务是受控夹具，不是付费服务商或真实账号验收。
+本轮未完成 HeadlessServer 的自动化执行器组合、与交互轮次共享占用权、审批路由
+和持久执行回执；云端自动化继续不声明可用。增量 39 调度构件和本轮 Worker 契约
+是后续组合的两个必要部分，不替代完整云端流程。六 Panel 四组合、设备连接／
+通知、三仓库兼容发布、目标部署／恢复／回滚仍按总目标继续实施。

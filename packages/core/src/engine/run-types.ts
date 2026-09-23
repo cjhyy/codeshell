@@ -147,6 +147,10 @@ export interface EngineRunOptions {
   /** User-facing text persisted beside the full model-facing task. */
   displayText?: string;
   permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
+  /** Host-selected sandbox mode for this turn only; other sandbox restrictions remain. */
+  sandboxMode?: import("../tool-system/sandbox/index.js").SandboxMode;
+  /** False narrows this turn's policy; true cannot relax an Engine-level prohibition. */
+  allowBackgroundShells?: boolean;
   planMode?: boolean;
   approvalRouter?: ApprovalRouter;
   goal?: string | GoalConfig;
