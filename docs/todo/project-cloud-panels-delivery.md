@@ -1329,3 +1329,50 @@ OAuth、真实第三方账号、物理手机、旧 grant 清理的持久重试�
 
 尚未完成真实 GitHub／物理手机／真实 Docker 项目授权、全部 Panel 四组合业务、
 稳定设备目录／中继／通知、公网部署恢复回滚和兼容发布。没有发布新包或改变生产部署。
+
+### 增量 34：真实 Docker 项目 Link 闭环与窄屏项目身份（2026-09-24）
+
+完成与证据：
+
+- 新增 `scripts/smoke-docker-link.mjs`：真实 Node 项目控制服务和 Docker provider
+  创建两个独立项目容器／数据卷，通过私密配置挂载接入独立 Link 的 confidential
+  客户端。第三方服务仅替换为受控 GitHub 响应，Link 本身使用实际 HTTP／SQLite／OAuth。
+- 使用临时 HTTPS 代理和只含本次公开证书的派生测试镜像。容器通过
+  `NODE_EXTRA_CA_CERTS` 信任该证书，移除此配置的独立进程会拒绝 TLS；正常配置的
+  LinkAction 成功。没有关闭容器 TLS 校验。浏览器使用测试 DNS 解析和证书例外，
+  这不是公开 CA、公网域名或普通 Linux Docker 主机网络验收。
+- 390px Chromium 从项目 A 的实际 Link 页面发起授权、登录、同意、回调和返回；
+  项目 B 提交 A 的 attempt 得到 404。B 的连接列表为空，容器 B 使用 A 的连接 ID
+  调用公开 LinkAction 工具返回错误，第三方执行次数不增加。
+- 容器 A 的公开 LinkAction 只读动作通过独立 Link 返回预期 Issue；项目停止／重启
+  后保留同一连接 ID 并再次读取成功。断开后项目记录为空，独立 Link 中 grant 已撤销。
+  项目凭据文件不含 GitHub 原始 token，管理快照不含 confidential 客户端密钥。
+- 实际截图发现折叠侧栏时顶部不显示当前项目。共享 Workbench 增加持续可见的
+  项目／工作区名称，保留页面标题及执行位置；项目 A／B 切换显示对应名称。已查看
+  390px 截图，头部两行可读且无横向溢出。该改动也进入配对 Web 构建。
+
+验证命令与产物：
+
+```sh
+docker build --progress plain -t codeshell-project-runtime:link-recovery-76780d87 .
+node scripts/smoke-docker-link.mjs /path/to/codeshell-services/apps/link-server/http.mjs codeshell-project-runtime:link-recovery-76780d87
+```
+
+基底项目镜像来自 `76780d87` 的运行代码，镜像 ID 为
+`sha256:897dcae359a9113ba490c2ded76e7356e5a2efa7fe3faba622fd64e444e00d78`；
+控制服务网页使用本增量的 Workbench 构建。派生证书镜像在验证后移除，基础镜像保留。
+临时构建上下文只允许 Dockerfile 和公开证书，不传入测试私钥／数据库。
+脚本只按本次 installation 标签核对并清理容器、网络、卷；结束后已有其他容器仍正常运行。
+测试密钥、数据库与控制配置移除，仅保留浏览器截图。
+
+- Web、Desktop（含移动入口）构建及 Web 类型检查通过。
+- Workbench、DesktopApp、ProjectsGate、HubLinks 回归 **42 pass、184 assertions**。
+- 变更代码 ESLint、diff 检查通过。初次验证器的 Node 25 DNS 回调需要支持
+  `all: true` 地址数组，修正后完成最终完整验证；没有放宽产品网络／权限规则。
+- 日志 `/tmp/codeshell-docker-link-*`；最终截图目录
+  `/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-docker-link-VgOgQC`。
+
+本增量验证的是容器内公开 LinkAction 和实际浏览器流程，没有调用真实模型来驱动
+Agent，也不是物理手机或真实 GitHub 验收。仍待真实账号、公网部署／恢复／回滚、
+稳定设备目录／中继／通知、全部 Panel 四组合业务和兼容发布。服务仓库仍固定公开
+包 0.9.22，本轮未发布、未更新生产部署。

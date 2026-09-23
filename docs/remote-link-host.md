@@ -2,7 +2,7 @@
 
 状态：执行链、共享 Host 授权管理，以及 Hub 浏览器的配置接入、授权跳转、回调和断开
 已实现。Electron 云端窗口和配对 Web 也已接通并通过实际程序／浏览器测试，上游仍为
-测试账号。原生 Desktop 的 Link 管理入口、真实 Docker 项目授权与真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
+测试账号。原生 Desktop 和真实 Docker 项目授权已通过受控上游验收，真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
 `list_repositories`、`list_issues`、`get_issue` 只读动作。
 
 ## 授权由 Host 持有
@@ -16,7 +16,7 @@ Host 后续授权管理层须将 attempt 绑定发起 owner、目标凭据及配
 前后复查登录和项目。`completeRemoteLinkAuthorization(attempt, callbackUrl, id, label)`
 验证 state、callback 位置和重复参数，单次消费 attempt，兑换后读取实际授权账号、连接、
 操作与仓库范围，返回待保存 Credential。它不自行保存：Host 必须通过 CredentialStore
-条件写入，防止授权期间另一设备删除或替换连接。共享 `createLinkService` 已提供此管理层，Hub 浏览器入口已调用；原生桌面入口待接入。
+条件写入，防止授权期间另一设备删除或替换连接。共享 `createLinkService` 已提供此管理层，Hub／配对 Web 和原生桌面入口均已接入。
 
 保存的记录为 OAuth 类型，`linkExecutionBackend=remote`、`linkExecutionRuntime=server`、
 `agentExposable=false`。凭据存储沿用 Host 的 cipher：Desktop 使用主进程密钥；其他 Host
@@ -202,7 +202,7 @@ Link 的同域登录／同意，不支持任意第三方跨域登录链。
 授权，断开先撤销远端。桌面通用凭据写入／删除及旧 MCP OAuth 入口拒绝改动远程 Link
 记录，避免绕过撤销流程；此限制不等同对所有 Core／Agent 修改入口的全局审计。
 
-待完成：部署服务仓库采用兼容公开包、Docker 项目实际授权验收、
+待完成：部署服务仓库采用兼容公开包、
 可视化配置与通知、
 Panel 直接调用入口、真实账号和完整四组合验收。
 
@@ -236,3 +236,26 @@ OAuth 入口拒绝绕过、断开后远端全部授权撤销。上游账号仍�
 
 为 `smoke-remote-link.mjs` 追加 `desktop-retirement`，可验证真实独立 Link 授权留下
 私有清理记录后，启动生产 Electron、不进入任何 Link 页面即完成远端撤销并移除记录。
+
+### 实际 Docker 项目验收
+
+在 Docker Desktop 运行、已构建当前服务和项目镜像的机器上执行：
+
+```sh
+node scripts/smoke-docker-link.mjs /path/to/codeshell-services/apps/link-server/http.mjs codeshell-project-runtime:local
+```
+
+需要 OpenSSL、Node 和已安装的 Playwright Chromium。验证器启动原生 Node 控制服务、
+两个真实隔离项目容器、独立 Link 和临时 HTTPS 代理。项目镜像仅额外信任本次公开
+测试证书，通过 `host.docker.internal` 访问 Link；**没有关闭容器 Node 的 TLS 校验**。
+浏览器用本地解析规则和测试证书例外访问这套夹具，不能替代真实域名及公开 CA 验收。
+此脚本针对 Docker Desktop；普通 Linux 的真实部署应使用正常可解析、可验证的 Link 域名。
+
+390px 浏览器完成授权、回调和返回原项目；错误项目回调拒绝，另一项目的连接列表为空，
+容器内公开 LinkAction 工具不能用另一项目的连接访问服务。原项目调用真实 Link 只读
+接口取得受控上游结果，停止／重启后保持同一连接，断开后 Link grant 确认撤销。
+工作台顶栏持续显示当前项目和执行位置，切换项目同步更新。
+
+清理只处理本次安装标签匹配的容器／网络／卷及唯一的临时证书镜像，移除测试密钥、
+数据库和控制配置，仅保留浏览器截图。基础项目镜像保留。测试不会读取真实 GitHub
+凭据或模型配置，不代表真实 GitHub、物理手机、Agent 模型调用或公网部署完成。

@@ -539,9 +539,18 @@ export function Workbench({
           >
             <WorkbenchIcon name="sidebar" />
           </button>
-          <span className="topbar-title" title={currentTitle}>
-            {currentTitle}
-          </span>
+          <div className="topbar-context">
+            <span
+              className="topbar-project"
+              aria-label="当前项目"
+              title={projectName ?? workspaceName}
+            >
+              {projectName ?? workspaceName}
+            </span>
+            <span className="topbar-title" title={currentTitle}>
+              {currentTitle}
+            </span>
+          </div>
           <span className="connection-pill" title={`任务在${hostLabel}工作区执行`}>
             <span className={`dot ${connection}`} />
             <span>{hostLabel}</span>
