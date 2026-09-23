@@ -43,7 +43,12 @@ try {
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({ headless: true });
-  for (const width of [390, 1440]) {
+  for (const [width, unavailable] of [
+    [390, false],
+    [1440, false],
+    [390, true],
+    [1440, true],
+  ]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
     const failures = [];
     page.on("pageerror", (error) => failures.push(error.message));
@@ -82,7 +87,20 @@ try {
       let json;
       if (path === "/api/v1/panels")
         json = {
-          panels: [panel],
+          panels: unavailable && !mutations ? [] : [panel],
+          issues:
+            unavailable && !mutations
+              ? [
+                  {
+                    id: panel.id,
+                    version: panel.version,
+                    revision: panel.revision,
+                    code: "package_unavailable",
+                    bound: true,
+                    globalDisabled: false,
+                  },
+                ]
+              : [],
           workspace: "/project",
           hasProject: true,
           canRestorePackages: true,
@@ -92,8 +110,8 @@ try {
           appId: panel.id,
           title: panel.title,
           expectedRevision: panel.revision,
-          current: selected,
-          versions,
+          current: { ...selected, unavailable },
+          versions: unavailable ? [versions[0]] : versions,
           unavailablePackages: 1,
         };
       else if (path.endsWith("/restore-preview"))
@@ -101,9 +119,9 @@ try {
           ...versions[0],
           appId: panel.id,
           title: panel.title,
-          current: selected,
+          current: { ...selected, unavailable },
           expectedRevision: panel.revision,
-          addedPermissions: ["workspace.write"],
+          addedPermissions: unavailable ? versions[0].permissions : ["workspace.write"],
           reviewToken: "reviewed-restore",
           expiresAt: Date.now() + 60000,
         };
@@ -116,11 +134,19 @@ try {
       await route.fulfill({ json });
     });
     await page.goto(origin);
-    await page.getByRole("button", { name: "项目版本", exact: true }).click();
+    await page
+      .getByRole("button", { name: unavailable ? "检查可用版本" : "项目版本", exact: true })
+      .click();
     await page.getByRole("button", { name: "审阅 v1.0.0", exact: true }).click();
-    await page.getByText("新增权限", { exact: true }).waitFor();
+    await page
+      .getByText(unavailable ? "需重新确认" : "新增权限", { exact: true })
+      .first()
+      .waitFor();
     assert.equal(mutations, 0);
-    await page.screenshot({ path: join(scratch, `restore-${width}.png`), fullPage: true });
+    await page.screenshot({
+      path: join(scratch, `${unavailable ? "repair" : "restore"}-${width}.png`),
+      fullPage: true,
+    });
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       true,

@@ -111,7 +111,7 @@ export function createDesktopWebService(options: {
                       // Legacy projects still follow the catalog. Only a valid
                       // explicit pin protects another project's running work.
                       try {
-                        return !projectPanelAppPackagePins(otherProject)[id];
+                        return !projectPanelAppPackagePins(otherProject, id)[id];
                       } catch {
                         return true;
                       }

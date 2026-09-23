@@ -322,7 +322,7 @@ export function HubPanels({
       );
     }
   };
-  const loadHistory = async (panel: ManagedPanel) => {
+  const loadHistory = async (panel: Pick<ManagedPanel, "id" | "revision">) => {
     setReview(undefined);
     setRemoving(undefined);
     setRestoreReview(undefined);
@@ -411,6 +411,7 @@ export function HubPanels({
     discovery?.panels.filter(
       (candidate) =>
         !snapshot?.panels.some((panel) => panel.id === candidate.id) &&
+        !snapshot?.issues?.some((issue) => issue.id === candidate.id) &&
         discovery.panels.filter((other) => other.id === candidate.id).length === 1,
     ) ?? [];
   const latestRemoval = removing && snapshot?.panels.find((panel) => panel.id === removing.id);
@@ -423,7 +424,8 @@ export function HubPanels({
   const restorationStale =
     restoreStale ||
     (!!history &&
-      snapshot?.panels.find((panel) => panel.id === history.appId)?.revision !==
+      (snapshot?.panels.find((panel) => panel.id === history.appId)?.revision ??
+        snapshot?.issues?.find((issue) => issue.id === history.appId)?.revision) !==
         history.expectedRevision);
   return (
     <section className="hub-panels">
@@ -456,12 +458,28 @@ export function HubPanels({
         </p>
       )}
 
+      {snapshot?.issues
+        ?.filter((issue) => issue.id.toLowerCase().includes(needle))
+        .map((issue) => (
+          <section className="panels-warning" key={issue.id} aria-label="需要修复的面板">
+            <h2>{issue.id}</h2>
+            <p>项目记录版本：{issue.version ?? "未记录"}。安装包缺失或无法校验，面板暂不可用。</p>
+            <p>项目数据和任务记录仍保留。可检查宿主保留的版本，审阅权限后恢复。</p>
+            <button
+              disabled={!!busy || !issue.bound || !snapshot.canRestorePackages}
+              onClick={() => void loadHistory(issue)}
+            >
+              检查可用版本
+            </button>
+          </section>
+        ))}
+
       {history && (
         <section className="panels-review" aria-label="项目保留版本">
           <header className="panels-heading">
             <div>
               <h2>{panelTitle(history.title)} · 项目版本</h2>
-              <p>当前项目使用 v{history.current.version}</p>
+              <p>项目记录版本：{history.current.version}</p>
             </div>
             <button
               disabled={!!busy}
@@ -477,6 +495,11 @@ export function HubPanels({
           <p className="panels-warning">
             切换程序版本不会恢复旧数据。请先备份项目，确认该版本支持当前文档格式；任务与产物记录会保留。
           </p>
+          {history.current.unavailable && (
+            <p role="status">
+              当前安装包不可用，无法读取原权限；恢复前需重新审阅目标版本的全部权限。
+            </p>
+          )}
           {history.unavailablePackages > 0 && (
             <p role="status">有 {history.unavailablePackages} 个保留包无法校验，暂不能选择。</p>
           )}
@@ -512,7 +535,9 @@ export function HubPanels({
               {restoreReview.permissions.map((permission) => (
                 <div className="panels-permission" key={permission}>
                   <span>{permissionLabels[permission] ?? permission}</span>
-                  {restoreReview.addedPermissions.includes(permission) && <strong>新增权限</strong>}
+                  {restoreReview.addedPermissions.includes(permission) && (
+                    <strong>{restoreReview.current.unavailable ? "需重新确认" : "新增权限"}</strong>
+                  )}
                 </div>
               ))}
               <Compatibility value={restoreReview.compatibility} />
@@ -694,7 +719,8 @@ export function HubPanels({
       <section className="panels-section" aria-labelledby="installed-panels-heading">
         <div className="panels-heading">
           <h2 id="installed-panels-heading">
-            已安装面板{snapshot ? ` · ${snapshot.panels.length}` : ""}
+            已安装面板
+            {snapshot ? ` · ${snapshot.panels.length + (snapshot.issues?.length ?? 0)}` : ""}
           </h2>
           <input
             type="search"
@@ -709,16 +735,22 @@ export function HubPanels({
             {loading ? "正在读取面板…" : "暂时无法读取面板，请刷新重试。"}
           </p>
         )}
-        {snapshot && rows.length === 0 && (
-          <div className="panels-empty">
-            <strong>{snapshot.panels.length ? "没有匹配的面板" : "还没有安装面板"}</strong>
-            <p className="panels-muted">
-              {snapshot.panels.length
-                ? "试试其他名称或清除搜索。"
-                : "在下方粘贴 GitHub 仓库地址，或浏览官方面板仓库。"}
-            </p>
-          </div>
-        )}
+        {snapshot &&
+          rows.length === 0 &&
+          !snapshot.issues?.some((issue) => issue.id.toLowerCase().includes(needle)) && (
+            <div className="panels-empty">
+              <strong>
+                {snapshot.panels.length || snapshot.issues?.length
+                  ? "没有匹配的面板"
+                  : "还没有安装面板"}
+              </strong>
+              <p className="panels-muted">
+                {snapshot.panels.length || snapshot.issues?.length
+                  ? "试试其他名称或清除搜索。"
+                  : "在下方粘贴 GitHub 仓库地址，或浏览官方面板仓库。"}
+              </p>
+            </div>
+          )}
         <div className="panels-grid">
           {rows.map((panel) => (
             <article className="panels-card" key={panel.id}>

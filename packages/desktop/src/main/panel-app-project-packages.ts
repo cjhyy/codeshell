@@ -1,5 +1,5 @@
 import {
-  listProjectPanelApps,
+  inspectProjectPanelApps,
   migrateProjectPanelAppPackagePins,
   panelAppInstallDir,
   panelAppPackageDir,
@@ -11,16 +11,16 @@ import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
 
 /** The caller has already resolved and authorized the main binding project. */
 export function projectPanelAppInspectionCache(projectPath: string): PanelAppInspectionCache {
-  const pin = (id: string) => projectPanelAppPackagePins(projectPath)[id];
+  const pin = (id: string) => projectPanelAppPackagePins(projectPath, id)[id];
   return new PanelAppInspectionCache({
-    prepare: () => migrateProjectPanelAppPackagePins(projectPath),
+    prepare: (id) => migrateProjectPanelAppPackagePins(projectPath, id),
     installPath(id) {
       const selected = pin(id);
       return selected ? panelAppPackageDir(id, selected.packageDigest) : panelAppInstallDir(id);
     },
     selectionKey: (id) => JSON.stringify(pin(id) ?? null),
     registryPath: panelAppsRegistryPath,
-    listInstalled: () => listProjectPanelApps(projectPath),
+    listInstalled: async () => (await inspectProjectPanelApps(projectPath)).apps,
   });
 }
 
@@ -30,7 +30,7 @@ export function isPanelAppDescriptorSelected(
   projectPath: string,
 ): boolean {
   try {
-    const pin = projectPanelAppPackagePins(projectPath)[descriptor.appId];
+    const pin = projectPanelAppPackagePins(projectPath, descriptor.appId)[descriptor.appId];
     return pin
       ? descriptor.packagePinned === true &&
           descriptor.packageDigest === pin.packageDigest &&

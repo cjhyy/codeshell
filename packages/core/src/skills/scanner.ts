@@ -22,7 +22,7 @@ import {
   type PanelAppPackagePin,
 } from "../panel-apps/bindings.js";
 import { SettingsManager } from "../settings/manager.js";
-import { projectPanelAppPackagePins } from "../panel-apps/project-packages.js";
+import { inspectProjectPanelAppPackagePins } from "../panel-apps/project-packages.js";
 import { retainedPanelAppManifestSync } from "../panel-apps/package-content.js";
 
 type SkillSource = "project" | "user" | "plugin" | "panel-app";
@@ -229,7 +229,7 @@ function scanInstalledPlugins(results: SkillDefinition[]): void {
 
 function scanInstalledPanelApps(
   results: SkillDefinition[],
-  pins: Record<string, PanelAppPackagePin> | null,
+  pins: Record<string, PanelAppPackagePin | null> | null,
 ): void {
   if (!pins) return;
   const root = panelAppsRoot();
@@ -263,6 +263,7 @@ function scanInstalledPanelApps(
     let manifest: ReturnType<typeof PanelAppManifest.parse>;
     try {
       const pin = pins[id];
+      if (pin === null) continue;
       if (pin) {
         const retained = retainedPanelAppManifestSync(id, pin.packageDigest);
         if (retained.manifest.version !== pin.version) continue;
@@ -300,7 +301,10 @@ function scanInstalledPanelApps(
   }
 }
 
-function scanOnce(cwd: string, pins: Record<string, PanelAppPackagePin> | null): SkillDefinition[] {
+function scanOnce(
+  cwd: string,
+  pins: Record<string, PanelAppPackagePin | null> | null,
+): SkillDefinition[] {
   const results: SkillDefinition[] = [];
   const seen = new Set<string>();
   const seenBaseDirs = new Set<string>();
@@ -357,7 +361,7 @@ function skillsDirsMtime(cwd: string): string {
 
 const memoized = memoize(
   scanOnce,
-  (cwd: string, pins: Record<string, PanelAppPackagePin> | null) =>
+  (cwd: string, pins: Record<string, PanelAppPackagePin | null> | null) =>
     `${cwd}\0${userHome()}\0${installedPluginsMtime()}\0${installedPanelAppsMtime()}\0${skillsDirsMtime(cwd)}\0${JSON.stringify(pins)}`,
 );
 
@@ -408,9 +412,9 @@ function panelAppBindingPolicy(cwd: string): PanelAppBindingPolicy {
 }
 
 export function scanSkills(cwd: string, opts?: ScanSkillsOptions): SkillDefinition[] {
-  let pins: Record<string, PanelAppPackagePin> | null;
+  let pins: Record<string, PanelAppPackagePin | null> | null;
   try {
-    pins = projectPanelAppPackagePins(resolvePanelAppBindingProjectPath(cwd));
+    pins = inspectProjectPanelAppPackagePins(resolvePanelAppBindingProjectPath(cwd));
   } catch {
     // Even an administrative disabled-skill listing must not substitute latest
     // package instructions when project pins cannot be read.

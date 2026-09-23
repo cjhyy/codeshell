@@ -170,20 +170,24 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   useEffect(() => {
     let alive = true;
     const tracked = loadProjects();
+    const paths = [
+      ...new Set([
+        ...tracked.map((project) => project.path),
+        ...(activeProjectPath ? [activeProjectPath] : []),
+      ]),
+    ];
     setProjects(tracked);
     void Promise.all(
-      tracked.map(async (project) => {
+      paths.map(async (path) => {
         try {
-          return await window.codeshell.getPanelAppBindings(project.path);
+          return await window.codeshell.getPanelAppBindings(path);
         } catch {
           return null;
         }
       }),
     ).then((states) => {
       if (!alive) return;
-      setProjectBindings(
-        Object.fromEntries(tracked.map((project, index) => [project.path, states[index]])),
-      );
+      setProjectBindings(Object.fromEntries(paths.map((path, index) => [path, states[index]])));
       setGlobalDisabled(
         new Set(
           states.flatMap(
@@ -195,7 +199,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     return () => {
       alive = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, activeProjectPath]);
 
   const setProjectBinding = useCallback(
     async (appId: string, projectPath: string, bound: boolean) => {
@@ -494,7 +498,13 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         ...(app.agent?.tools.map((tool) => tool.name) ?? []),
       ].some((value) => value.toLowerCase().includes(needle)),
   );
-  const installedAppIds = useMemo(() => new Set((apps ?? []).map((app) => app.appId)), [apps]);
+  const faults = activeProjectPath
+    ? (projectBindings[activeProjectPath] ?? []).filter((app) => app.unavailable)
+    : [];
+  const installedAppIds = new Set([
+    ...(apps ?? []).map((app) => app.appId),
+    ...faults.map((app) => app.appId),
+  ]);
 
   const bindingsByApp = useMemo(() => {
     const map = new Map<string, ReturnType<typeof computeProjectBindings>>();
@@ -852,6 +862,38 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         )}
       </div>
 
+      {activeProjectPath &&
+        (projectBindings[activeProjectPath] ?? [])
+          .filter((app) => app.unavailable && app.appId.toLowerCase().includes(query.toLowerCase()))
+          .map((app) => (
+            <section
+              key={app.appId}
+              className="space-y-2 rounded-lg border p-3"
+              aria-label="需要修复的面板"
+            >
+              <strong className="break-all">{app.appId}</strong>
+              <p className="text-sm">
+                项目记录版本：{app.version}。安装包缺失或无法校验，面板暂不可用。
+              </p>
+              <p className="text-sm text-muted-foreground">
+                项目数据和任务记录仍保留。可检查宿主保留的版本，审阅权限后恢复。
+              </p>
+              <Button
+                variant="outline"
+                disabled={!!busy || !app.bound}
+                onClick={() =>
+                  setVersions({
+                    projectPath: activeProjectPath,
+                    appId: app.appId,
+                    revision: app.revision,
+                  })
+                }
+              >
+                检查可用版本
+              </Button>
+            </section>
+          ))}
+
       {apps && apps.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
@@ -881,7 +923,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
       {apps === null ? (
         <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>
-      ) : apps.length === 0 ? (
+      ) : apps.length === 0 && faults.length > 0 ? null : apps.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center">
           <PanelTop className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
           <div className="mt-3 text-sm font-medium text-foreground">{t("ext.panels.empty")}</div>

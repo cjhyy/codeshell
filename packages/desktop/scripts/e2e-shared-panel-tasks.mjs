@@ -786,15 +786,67 @@ try {
     const retained = history.versions.find((version) => version.version === "1.0.0");
     assert.ok(retained);
     const restoreReview = await win.evaluate(
-      ({ cwd, app, digest }) => window.codeshell.previewPanelAppRestore(cwd, app.appId, digest, app.revision),
+      ({ cwd, app, digest }) =>
+        window.codeshell.previewPanelAppRestore(cwd, app.appId, digest, app.revision),
       { cwd: project, app: selected, digest: retained.packageDigest },
     );
     await win.evaluate(({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token), {
-      cwd: project, token: restoreReview.reviewToken,
+      cwd: project,
+      token: restoreReview.reviewToken,
     });
-    const restored = await win.evaluate(async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0], project);
+    const restored = await win.evaluate(
+      async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
+      project,
+    );
     assert.equal(restored.version, "1.0.0");
     assert.equal(restored.packageDigest, first.package.packageDigest);
+    const selectedPath = join(
+      isolated.codeShellHome,
+      "panel-apps",
+      ".versions",
+      manifest.id,
+      restored.packageDigest,
+    );
+    await writeFile(join(selectedPath, "app/index.html"), "damaged package fixture");
+    const issue = await win.evaluate(
+      async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
+      project,
+    );
+    assert.equal(issue.unavailable, true);
+    assert.equal(issue.version, "1.0.0");
+    const executable = await win.evaluate(
+      (cwd) => window.codeshell.listPanelAppExtensions(cwd, "zh-CN"),
+      project,
+    );
+    assert.ok(!executable.some((app) => app.appId === manifest.id));
+    const available = await win.evaluate(
+      ({ cwd, app }) => window.codeshell.getPanelAppPackageHistory(cwd, app.appId, app.revision),
+      { cwd: project, app: issue },
+    );
+    assert.equal(available.current.unavailable, true);
+    const target = available.versions.find((version) => version.version === "2.0.0");
+    assert.ok(target);
+    const repair = await win.evaluate(
+      ({ cwd, app, digest }) =>
+        window.codeshell.previewPanelAppRestore(cwd, app.appId, digest, app.revision),
+      { cwd: project, app: issue, digest: target.packageDigest },
+    );
+    assert.deepEqual(repair.addedPermissions, repair.permissions);
+    await win.evaluate(({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token), {
+      cwd: project,
+      token: repair.reviewToken,
+    });
+    const repaired = await win.evaluate(
+      async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
+      project,
+    );
+    assert.equal(repaired.version, "2.0.0");
+    assert.ok(!repaired.unavailable);
+    assert.ok(
+      (
+        await win.evaluate((cwd) => window.codeshell.listPanelAppExtensions(cwd, "zh-CN"), project)
+      ).some((app) => app.appId === manifest.id),
+    );
   }
   const staleBinding = await win.evaluate(
     async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
@@ -825,6 +877,7 @@ try {
       packageMutationBlocksQueuedRunningAndPreparing: true,
       projectUpdateAfterActualTaskExit: projectPins,
       nativeReviewedPackageRestore: projectPins,
+      nativeDamagedPackageRepair: projectPins,
       projectPinnedAgainstNewerCatalog: projectPins,
       legacyProjectAutomaticallyPinned: legacyProjects,
       sharedDirectoryBookmarks: true,

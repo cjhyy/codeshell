@@ -4,8 +4,7 @@ import * as path from "node:path";
 import {
   isPanelAppBound,
   listInstalledPanelApps,
-  listProjectPanelApps,
-  migrateProjectPanelAppPackagePins,
+  inspectProjectPanelApps,
   projectPanelAppPackagePins,
   resolvePanelAppBindingPolicy,
   resolvePanelAppBindingProjectPath,
@@ -52,12 +51,16 @@ async function discoverPanelApps(
   let apps: InstalledPanelApp[];
   let pins: ReturnType<typeof projectPanelAppPackagePins>;
   try {
-    if (projectPath) await migrateProjectPanelAppPackagePins(projectPath);
-    pins = projectPath ? projectPanelAppPackagePins(projectPath) : {};
-    apps = projectPath ? await listProjectPanelApps(projectPath) : await listInstalledPanelApps();
+    const inspected = projectPath ? await inspectProjectPanelApps(projectPath) : undefined;
+    pins = inspected?.pins ?? {};
+    apps = inspected?.apps ?? (await listInstalledPanelApps());
     if (
       projectPath &&
-      JSON.stringify(pins) !== JSON.stringify(projectPanelAppPackagePins(projectPath))
+      apps.some(
+        (app) =>
+          JSON.stringify(pins[app.id]) !==
+          JSON.stringify(projectPanelAppPackagePins(projectPath, app.id)[app.id]),
+      )
     )
       throw new Error("Project package changed during discovery");
     if (

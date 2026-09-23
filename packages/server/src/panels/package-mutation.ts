@@ -19,7 +19,7 @@ export function panelPackageMutationMatches(change: PanelPackageMutation) {
     if (panelExecutionProject(bindingProject) === project) return true;
     if (change.kind === "binding") return false;
     try {
-      return !projectPanelAppPackagePins(bindingProject)[change.appId];
+      return !projectPanelAppPackagePins(bindingProject, change.appId)[change.appId];
     } catch {
       return true;
     } // An unreadable project cannot prove that it is insulated.

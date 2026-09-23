@@ -110,7 +110,12 @@ export function PanelAppVersionsDialog({
         {!history && !error && <p role="status">正在检查保留版本…</p>}
         {history && (
           <>
-            <p className="text-sm">当前项目使用 v{history.current.version}</p>
+            <p className="text-sm">项目记录版本：{history.current.version}</p>
+            {history.current.unavailable && (
+              <p role="status" className="text-sm">
+                当前安装包不可用，无法读取原权限；恢复前需重新审阅目标版本的全部权限。
+              </p>
+            )}
             {history.unavailablePackages > 0 && (
               <p className="text-sm">
                 有 {history.unavailablePackages} 个保留包无法校验，暂不能选择。
@@ -167,7 +172,8 @@ export function PanelAppVersionsDialog({
               {review.permissions.map((permission) => (
                 <li key={permission}>
                   {permissionLabels[permission] ?? permission}
-                  {review.addedPermissions.includes(permission) && " · 新增权限"}
+                  {review.addedPermissions.includes(permission) &&
+                    (review.current.unavailable ? " · 需重新确认" : " · 新增权限")}
                 </li>
               ))}
             </ul>

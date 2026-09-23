@@ -68,7 +68,7 @@ export class PanelAppInspectionCache {
 
   constructor(
     private readonly options: {
-      prepare?(): Promise<unknown>;
+      prepare?(id: string): Promise<unknown>;
       installPath(id: string): string;
       registryPath(): string;
       selectionKey?(id: string): string;
@@ -82,7 +82,7 @@ export class PanelAppInspectionCache {
 
   async get(id: string): Promise<InstalledPanelApp | undefined> {
     try {
-      await this.options.prepare?.();
+      await this.options.prepare?.(id);
       const selection = this.selection(id);
       const cached = this.entries.get(id);
       if (

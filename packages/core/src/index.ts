@@ -443,6 +443,8 @@ export {
   installReviewedPanelAppUpdate,
   listInstalledPanelApps,
   listProjectPanelApps,
+  inspectProjectPanelApps,
+  type ProjectPanelAppIssue,
   projectPanelAppPackagePins,
   migrateProjectPanelAppPackagePins,
   selectProjectPanelAppPackage,

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { legacyPanelAppPackageSelection } from "./legacy-packages.js";
 import { SettingsManager } from "../settings/manager.js";
 import {
@@ -20,12 +21,13 @@ import { readInstalledPanelAppsRegistry } from "./registry.js";
  */
 export function projectPanelAppPackagePins(
   projectPath: string,
+  appId?: string,
 ): Record<string, PanelAppPackagePin> {
   if (!projectPath) return {};
   const settings = new SettingsManager(projectPath, "full");
   const raw = settings.getRawForScope("project", projectPath, { strict: true });
   const pins = parsePanelAppPackagePins(raw);
-  for (const id of legacyBoundApps(raw)) {
+  for (const id of legacyBoundApps(raw).filter((id) => !appId || id === appId)) {
     if (pins[id]) continue;
     const baseline = legacyPanelAppPackageSelection(id);
     if (baseline === null)
@@ -33,6 +35,26 @@ export function projectPanelAppPackagePins(
         `Panel App '${id}' legacy package is unavailable; explicitly review a project version`,
       );
     if (baseline) pins[id] = baseline;
+  }
+  return appId ? (pins[appId] ? { [appId]: pins[appId]! } : {}) : pins;
+}
+
+/** Synchronous diagnostic selection for Skill scanning. A null entry denies that app only. */
+export function inspectProjectPanelAppPackagePins(
+  projectPath: string,
+): Record<string, PanelAppPackagePin | null> {
+  const raw = new SettingsManager(projectPath, "full").getRawForScope("project", projectPath, {
+    strict: true,
+  });
+  const pins: Record<string, PanelAppPackagePin | null> = parsePanelAppPackagePins(raw);
+  for (const id of legacyBoundApps(raw)) {
+    if (pins[id]) continue;
+    try {
+      const selected = legacyPanelAppPackageSelection(id);
+      if (selected !== undefined) pins[id] = selected;
+    } catch {
+      pins[id] = null;
+    }
   }
   return pins;
 }
@@ -46,12 +68,17 @@ function legacyBoundApps(raw: Record<string, unknown>): string[] {
 /** Materialize only existing explicit bindings, preserving concurrent pins and unbinds.
  * The caller authorizes the binding project. No new app or permission is enabled.
  */
-export async function migrateProjectPanelAppPackagePins(projectPath: string): Promise<string[]> {
+export async function migrateProjectPanelAppPackagePins(
+  projectPath: string,
+  appId?: string,
+): Promise<string[]> {
   if (!projectPath) return [];
   const manager = new SettingsManager(projectPath, "full");
   const raw = manager.getRawForScope("project", projectPath, { strict: true });
   const originalPins = parsePanelAppPackagePins(raw);
-  const pending = legacyBoundApps(raw).filter((id) => !originalPins[id]);
+  const pending = legacyBoundApps(raw).filter(
+    (id) => !originalPins[id] && (!appId || id === appId),
+  );
   if (!pending.length) return [];
   const installed = new Map((await listInstalledPanelApps()).map((app) => [app.id, app]));
   const registry = new Set((await readInstalledPanelAppsRegistry()).map((app) => app.id));
@@ -131,4 +158,59 @@ export async function listProjectPanelApps(projectPath: string): Promise<Install
     } else if (catalog.has(record.id)) selected.push(catalog.get(record.id)!);
   }
   return selected.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export interface ProjectPanelAppIssue {
+  id: string;
+  pin?: PanelAppPackagePin;
+  code: "package_unavailable";
+  /** Opaque identity of the registered installation and failed selection. */
+  selectionKey: string;
+}
+
+/** Separate failed selections from runnable apps. Never substitute catalog bytes for a failed pin.
+ * Invalid project configuration still rejects the whole read; individual package failures do not.
+ */
+export async function inspectProjectPanelApps(projectPath: string): Promise<{
+  apps: InstalledPanelApp[];
+  issues: ProjectPanelAppIssue[];
+  pins: Record<string, PanelAppPackagePin>;
+}> {
+  const settings = new SettingsManager(projectPath, "full");
+  parsePanelAppPackagePins(settings.getRawForScope("project", projectPath, { strict: true }));
+  const records = await readInstalledPanelAppsRegistry();
+  const catalog = new Map((await listInstalledPanelApps()).map((app) => [app.id, app]));
+  const apps: InstalledPanelApp[] = [];
+  const issues: ProjectPanelAppIssue[] = [];
+  const pins: Record<string, PanelAppPackagePin> = {};
+  for (const record of records) {
+    let pin: PanelAppPackagePin | undefined;
+    try {
+      pin = projectPanelAppPackagePins(projectPath, record.id)[record.id];
+      await migrateProjectPanelAppPackagePins(projectPath, record.id);
+      pin = projectPanelAppPackagePins(projectPath, record.id)[record.id];
+      const app = pin
+        ? await resolvePanelAppPackage(record.id, pin.packageDigest)
+        : catalog.get(record.id);
+      if (!app || (pin && pin.version !== app.version))
+        throw new PanelAppInstallError("Selected project package is unavailable");
+      if (
+        JSON.stringify(pin) !==
+        JSON.stringify(projectPanelAppPackagePins(projectPath, record.id)[record.id])
+      )
+        throw new PanelAppInstallError("Project package changed during inspection");
+      if (pin) pins[record.id] = pin;
+      apps.push(app);
+    } catch {
+      issues.push({
+        id: record.id,
+        ...(pin ? { pin } : {}),
+        code: "package_unavailable",
+        selectionKey: createHash("sha256").update(JSON.stringify({ record, pin })).digest("hex"),
+      });
+    }
+  }
+  // Do not turn a concurrent configuration corruption into an apparently healthy catalog.
+  parsePanelAppPackagePins(settings.getRawForScope("project", projectPath, { strict: true }));
+  return { apps: apps.sort((a, b) => a.id.localeCompare(b.id)), issues, pins };
 }

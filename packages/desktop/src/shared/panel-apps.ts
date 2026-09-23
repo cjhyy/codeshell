@@ -87,6 +87,7 @@ export interface PanelAppAgentToolInvocation {
 
 /** Conditional project-binding state; revision is distinct from the guest package revision. */
 export interface PanelAppBindingState {
+  unavailable?: boolean;
   appId: string;
   revision: string;
   bound: boolean;

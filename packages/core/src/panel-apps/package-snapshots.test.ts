@@ -19,6 +19,7 @@ import {
   listInstalledPanelApps,
   listRetainedPanelAppPackages,
   listProjectPanelApps,
+  inspectProjectPanelApps,
   migrateProjectPanelAppPackagePins,
   projectPanelAppPackagePins,
   panelAppPackageDir,
@@ -565,4 +566,66 @@ test("batch migration pins all existing bound packages without enabling disabled
       .filter((skill) => skill.source === "panel-app")
       .map((skill) => skill.name),
   ).toEqual(["second-panel:check"]);
+});
+
+test("a damaged project package is isolated while healthy packages and Skills keep their selection", async () => {
+  const first = await install();
+  const project = await pinProject("fault-isolation", {
+    version: first.version,
+    packageDigest: first.packageDigest,
+  });
+  const manifestPath = join(source, ".codeshell-panel/panel.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  await writeFile(manifestPath, JSON.stringify({ ...manifest, id: "healthy-panel" }));
+  const healthy = await install();
+  const settingsFile = join(project, ".code-shell/settings.json");
+  const raw = JSON.parse(await readFile(settingsFile, "utf8"));
+  raw.panelAppBindings.push(healthy.id);
+  await writeFile(settingsFile, JSON.stringify(raw));
+  await rm(panelAppPackageDir(id, first.packageDigest!), { recursive: true });
+  const result = await inspectProjectPanelApps(project);
+  expect(result.apps.map((app) => app.id)).toEqual([healthy.id]);
+  expect(result.issues).toMatchObject([
+    { id, code: "package_unavailable", pin: raw.panelAppPins[id] },
+  ]);
+  expect(JSON.parse(await readFile(settingsFile, "utf8")).panelAppPins[id]).toEqual(
+    raw.panelAppPins[id],
+  );
+  expect(
+    scanSkills(project)
+      .filter((skill) => skill.source === "panel-app")
+      .map((skill) => skill.name),
+  ).toEqual(["healthy-panel:check"]);
+  await uninstallPanelApp(id);
+  expect((await inspectProjectPanelApps(project)).issues).toEqual([]);
+});
+
+test("an unreadable legacy baseline does not prevent other bindings from migrating or exposing Skills", async () => {
+  const first = await install();
+  const manifestPath = join(source, ".codeshell-panel/panel.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  await writeFile(manifestPath, JSON.stringify({ ...manifest, id: "healthy-panel" }));
+  await install();
+  const project = join(root, "legacy-fault");
+  await mkdir(join(project, ".code-shell"), { recursive: true });
+  const settingsFile = join(project, ".code-shell/settings.json");
+  await writeFile(settingsFile, JSON.stringify({ panelAppBindings: [id, "healthy-panel"] }));
+  await writeFile(
+    join(panelAppPackageDir(id, first.packageDigest!), "..", "legacy-projects.json"),
+    "broken",
+  );
+  expect(
+    scanSkills(project)
+      .filter((skill) => skill.source === "panel-app")
+      .map((skill) => skill.name),
+  ).toEqual(["healthy-panel:check"]);
+  const inspected = await inspectProjectPanelApps(project);
+  expect(inspected.apps.map((app) => app.id)).toEqual(["healthy-panel"]);
+  expect(inspected.issues).toMatchObject([{ id, code: "package_unavailable" }]);
+  const saved = JSON.parse(await readFile(settingsFile, "utf8"));
+  expect(saved.panelAppPins[id]).toBeUndefined();
+  expect(saved.panelAppPins["healthy-panel"].version).toBe("1.0.0");
+  await writeFile(settingsFile, '{"panelAppPins":null}');
+  await expect(inspectProjectPanelApps(project)).rejects.toThrow();
+  expect(scanSkills(project).filter((skill) => skill.source === "panel-app")).toEqual([]);
 });

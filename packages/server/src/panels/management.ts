@@ -13,10 +13,9 @@ import {
   installReviewedLocalPanelApp,
   invalidateSkillCache,
   listInstalledPanelApps,
-  listProjectPanelApps,
+  inspectProjectPanelApps,
   listRetainedPanelAppPackages,
   resolvePanelAppPackage,
-  migrateProjectPanelAppPackagePins,
   parsePanelAppPackagePins,
   retainInstalledPanelApp,
   userHome,
@@ -40,6 +39,7 @@ import type {
   PanelReview,
   PanelProjectReview,
   PanelSnapshot,
+  PanelPackageIssue,
   PanelPackageHistory,
   PanelPackageRestoreReview,
 } from "./types.js";
@@ -346,7 +346,9 @@ export function createPanelManagement(options: PanelManagementOptions) {
   }
 
   const listApps = () =>
-    options.projectPackages ? listProjectPanelApps(workspace) : listInstalledPanelApps();
+    options.projectPackages
+      ? inspectProjectPanelApps(workspace).then((result) => result.apps)
+      : listInstalledPanelApps();
 
   async function inspectApp(app: InstalledPanelApp) {
     const info = lstatSync(app.installPath);
@@ -388,13 +390,32 @@ export function createPanelManagement(options: PanelManagementOptions) {
 
   async function snapshot(): Promise<PanelSnapshot> {
     options.assertBinding?.();
-    if (options.projectPackages && hasProject) await migrateProjectPanelAppPackagePins(workspace);
+    const inspected = options.projectPackages
+      ? await inspectProjectPanelApps(workspace)
+      : undefined;
+    const apps = inspected?.apps ?? (await listInstalledPanelApps());
     options.assertBinding?.();
     const project = projectSettings();
     const current = policy(project);
     const saved = origins();
     const panels: ManagedPanel[] = [];
-    for (const listed of await listApps()) {
+    const issues: PanelPackageIssue[] = (inspected?.issues ?? []).map((issue) => ({
+      id: issue.id,
+      code: issue.code,
+      version: issue.pin?.version,
+      packageDigest: issue.pin?.packageDigest,
+      bound: current.boundApps.has(issue.id),
+      globalDisabled: current.globalDisabledApps.has(issue.id),
+      revision: createHash("sha256")
+        .update(
+          JSON.stringify({
+            unavailable: issue.selectionKey,
+            state: projectState(issue.id, project),
+          }),
+        )
+        .digest("hex"),
+    }));
+    for (const listed of apps) {
       const { app, digest } = await inspectApp(listed);
       const source = savedSource(app, saved);
       const {
@@ -427,7 +448,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
     }
     // Never attach a new revision to stale displayed binding state. File and
     // package inspection above can yield to another device's mutation.
-    for (const app of panels) {
+    for (const app of [...panels, ...issues]) {
       const pin = options.projectPackages ? parsePanelAppPackagePins(project)[app.id] : undefined;
       if (
         projectState(app.id, project) !== projectState(app.id) ||
@@ -438,9 +459,36 @@ export function createPanelManagement(options: PanelManagementOptions) {
     }
     return {
       panels,
+      ...(issues.length ? { issues } : {}),
       workspace,
       hasProject,
       canRestorePackages: !!options.projectPackages && hasProject,
+    };
+  }
+
+  // A fault row is diagnostic only: it never supplies executable descriptors or permissions.
+  // Restoring it explicitly reviews every target permission because its old manifest is unavailable.
+  async function restorationSelection(id: string) {
+    const value = await snapshot();
+    const app = value.panels.find((item) => item.id === id);
+    if (app)
+      return {
+        title: app.title,
+        revision: app.revision,
+        permissions: app.permissions,
+        current: { version: app.version, packageDigest: app.packageDigest },
+      };
+    const issue = value.issues?.find((item) => item.id === id);
+    if (!issue) throw new PanelManagementError(404, "not_found", "找不到这个面板，请刷新列表。");
+    return {
+      title: { default: issue.id },
+      revision: issue.revision,
+      permissions: [] as InstalledPanelApp["permissions"],
+      current: {
+        version: issue.version ?? "未记录",
+        packageDigest: issue.packageDigest,
+        unavailable: true,
+      },
     };
   }
 
@@ -688,19 +736,19 @@ export function createPanelManagement(options: PanelManagementOptions) {
       if (!options.projectPackages || !hasProject)
         throw new PanelManagementError(400, "project_required", "请先选择支持独立版本的项目。");
       return network(context, async (guard) => {
-        const current = await selectedApp(id);
-        if (revision(current.app, current.digest) !== expected)
+        const current = await restorationSelection(id);
+        if (current.revision !== expected)
           throw new PanelManagementError(409, "conflict", "项目面板已改变，请刷新后重试。");
         const inventory = await listRetainedPanelAppPackages(id);
         await guard();
-        const latest = await selectedApp(id);
-        if (revision(latest.app, latest.digest) !== expected)
+        const latest = await restorationSelection(id);
+        if (latest.revision !== expected)
           throw new PanelManagementError(409, "conflict", "项目面板已改变，请刷新后重试。");
         return {
           appId: id,
-          title: current.app.title,
+          title: current.title,
           expectedRevision: expected,
-          current: { version: current.app.version, packageDigest: current.app.packageDigest },
+          current: current.current,
           versions: inventory.packages.map((app) => ({
             version: app.version,
             packageDigest: app.packageDigest!,
@@ -726,16 +774,16 @@ export function createPanelManagement(options: PanelManagementOptions) {
         prune();
         if (restores.size >= MAX_REVIEWS)
           throw new PanelManagementError(429, "busy", "待确认的版本过多，请稍后重试。");
-        const current = await selectedApp(id);
+        const current = await restorationSelection(id);
         if (!policy().boundApps.has(id))
           throw new PanelManagementError(400, "not_bound", "请先绑定项目，再选择项目版本。");
-        if (revision(current.app, current.digest) !== expected)
+        if (current.revision !== expected)
           throw new PanelManagementError(409, "conflict", "项目面板已改变，请刷新后重试。");
         const state = projectState(id);
         const target = await resolvePanelAppPackage(id, digest);
         await guard();
-        const latest = await selectedApp(id);
-        if (revision(latest.app, latest.digest) !== expected || projectState(id) !== state)
+        const latest = await restorationSelection(id);
+        if (latest.revision !== expected || projectState(id) !== state)
           throw new PanelManagementError(409, "conflict", "项目面板已改变，请重新审阅。");
         const value: PanelPackageRestoreReview = {
           appId: id,
@@ -744,10 +792,10 @@ export function createPanelManagement(options: PanelManagementOptions) {
           packageDigest: digest,
           permissions: target.permissions,
           addedPermissions: target.permissions.filter(
-            (permission) => !current.app.permissions.includes(permission),
+            (permission) => !current.permissions.includes(permission),
           ),
           compatibility: compatibility(target),
-          current: { version: current.app.version, packageDigest: current.app.packageDigest },
+          current: current.current,
           expectedRevision: expected,
           reviewToken: randomBytes(32).toString("base64url"),
           expiresAt: now() + REVIEW_TTL,
@@ -775,8 +823,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
         await assertAuthorized(context, held.generation);
         if (restores.get(token) !== held || held.public.expiresAt <= now())
           throw new PanelManagementError(409, "review_expired", "版本审阅已失效，请重新选择。");
-        const current = await selectedApp(review.appId);
-        if (revision(current.app, current.digest) !== review.expectedRevision)
+        const current = await restorationSelection(review.appId);
+        if (current.revision !== review.expectedRevision)
           throw new PanelManagementError(409, "conflict", "项目面板已改变，请重新审阅。");
         const target = await resolvePanelAppPackage(review.appId, review.packageDigest);
         if (target.version !== review.version || !compatibility(target).supported)

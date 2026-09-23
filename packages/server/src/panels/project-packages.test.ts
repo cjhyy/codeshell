@@ -299,7 +299,58 @@ test("real Hub HTTP serves and executes each project's retained package across c
   // A corrupt retained package cannot fall back to the valid latest catalog.
   const retained = (await listProjectPanelApps(restarted.cwd))[0]!;
   writeFileSync(join(retained.installPath, "app/tools/version.mjs"), "tampered");
-  expect((await restarted.request("/api/v1/panels")).status).not.toBe(200);
+  const damagedResponse = await restarted.request("/api/v1/panels");
+  expect(damagedResponse.status).toBe(200);
+  const damaged = await damagedResponse.json();
+  expect(damaged.panels).toEqual([]);
+  expect(damaged.issues).toMatchObject([
+    { id: retained.id, code: "package_unavailable", version: "1.0.0" },
+  ]);
+  expect(
+    (
+      await restarted.request(`/api/v1/panels/runtime/${restored.instanceId}/call`, "POST", {
+        method: "tasks.start",
+        params: { entry: "version", input: { request: {} } },
+      })
+    ).status,
+  ).not.toBe(200);
+  const repairHistoryResponse = await restarted.request(
+    "/api/v1/panels/version-fixture/versions",
+    "POST",
+    { expectedRevision: damaged.issues[0].revision },
+  );
+  expect(repairHistoryResponse.status).toBe(200);
+  const repairHistory = await repairHistoryResponse.json();
+  expect(repairHistory.current.unavailable).toBe(true);
+  expect(repairHistory.versions.map((item: any) => item.version)).toEqual(["2.0.0"]);
+  const repairResponse = await restarted.request(
+    "/api/v1/panels/version-fixture/restore-preview",
+    "POST",
+    {
+      expectedRevision: repairHistory.expectedRevision,
+      packageDigest: repairHistory.versions[0].packageDigest,
+    },
+  );
+  expect(repairResponse.status).toBe(200);
+  const repair = await repairResponse.json();
+  expect(repair.addedPermissions).toEqual(repair.permissions);
+  expect(
+    (await restarted.request("/api/v1/panels/restore", "POST", { reviewToken: repair.reviewToken }))
+      .status,
+  ).toBe(200);
+  const repaired = await restarted.prepare();
+  expect(await restarted.page(repaired)).toContain("Package 2.0.0");
+  await restarted.run(repaired, "2.0.0");
+  const preserved = await restarted.request(
+    `/api/v1/panels/runtime/${repaired.instanceId}/call`,
+    "POST",
+    { method: "tasks.get", params: { id: oldJob } },
+  );
+  expect(await preserved.json()).toMatchObject({
+    id: oldJob,
+    result: { version: "1.0.0" },
+    readOnly: true,
+  });
   expect(
     readFileSync(
       join(process.env.HOME!, ".code-shell/panel-apps/version-fixture/app/index.html"),

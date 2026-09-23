@@ -7,7 +7,7 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   listInstalledPanelApps,
-  listProjectPanelApps,
+  inspectProjectPanelApps,
   CredentialStore,
   validateToolArgsStrict,
   type InstalledPanelApp,
@@ -493,7 +493,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const installed =
     options.listInstalled ??
     (options.projectPackages
-      ? () => listProjectPanelApps(options.bindingCwd ?? options.cwd)
+      ? async () => (await inspectProjectPanelApps(options.bindingCwd ?? options.cwd)).apps
       : listInstalledPanelApps);
   let closed = false;
   let generation = 0;

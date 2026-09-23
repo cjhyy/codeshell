@@ -31,14 +31,25 @@ export function createDesktopPanelManagement(
   function states(
     snapshot: Awaited<ReturnType<typeof management.snapshot>>,
   ): PanelAppBindingState[] {
-    return snapshot.panels.map((app) => ({
-      appId: app.id,
-      revision: app.revision,
-      bound: app.bound,
-      globalDisabled: app.globalDisabled,
-      version: app.version,
-      packageDigest: app.packageDigest,
-    }));
+    return [
+      ...snapshot.panels.map((app) => ({
+        appId: app.id,
+        revision: app.revision,
+        bound: app.bound,
+        globalDisabled: app.globalDisabled,
+        version: app.version,
+        packageDigest: app.packageDigest,
+      })),
+      ...(snapshot.issues ?? []).map((issue) => ({
+        appId: issue.id,
+        revision: issue.revision,
+        bound: issue.bound,
+        globalDisabled: issue.globalDisabled,
+        version: issue.version ?? "未记录",
+        packageDigest: issue.packageDigest,
+        unavailable: true,
+      })),
+    ];
   }
   return {
     close: () => management.close(),

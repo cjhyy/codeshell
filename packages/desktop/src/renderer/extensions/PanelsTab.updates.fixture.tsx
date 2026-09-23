@@ -369,6 +369,72 @@ describe("Panel App update controls", () => {
     ]);
   });
 
+  test("an unavailable project package is repaired from a separate diagnostic row", async () => {
+    apps = [];
+    const calls: unknown[] = [];
+    const history = {
+      appId: "video-studio",
+      title: { default: "Video Studio" },
+      expectedRevision: "a".repeat(64),
+      current: { version: "0.6.2", packageDigest: "b".repeat(64), unavailable: true },
+      unavailablePackages: 0,
+      versions: [
+        {
+          version: "0.6.1",
+          packageDigest: "c".repeat(64),
+          permissions: ["workspace.write"],
+          compatibility: { supported: true, reasons: [] },
+        },
+      ],
+    };
+    Object.assign(window.codeshell, {
+      getPanelAppBindings: async () => [
+        {
+          appId: "video-studio",
+          revision: "a".repeat(64),
+          bound: true,
+          globalDisabled: false,
+          version: "0.6.2",
+          unavailable: true,
+        },
+      ],
+      getPanelAppPackageHistory: async (...args: unknown[]) => {
+        calls.push(["history", ...args]);
+        return history;
+      },
+      previewPanelAppRestore: async (...args: unknown[]) => {
+        calls.push(["preview", ...args]);
+        return {
+          ...history.versions[0],
+          appId: history.appId,
+          title: history.title,
+          current: history.current,
+          expectedRevision: history.expectedRevision,
+          addedPermissions: ["workspace.write"],
+          reviewToken: "native-restore-review",
+          expiresAt: Date.now() + 60_000,
+        };
+      },
+      restorePanelAppPackage: async (...args: unknown[]) => {
+        calls.push(["restore", ...args]);
+        return { id: history.appId, packageDigest: "c".repeat(64) };
+      },
+    });
+    await render();
+    await click("检查可用版本");
+    expect(textOf(document.body)).toContain("全部权限");
+    expect(textOf(document.body)).toContain("不会恢复旧数据");
+    await click("审阅 v0.6.1");
+    expect(textOf(document.body)).toContain("需重新确认");
+    expect(calls).toHaveLength(2);
+    await click("确认权限并恢复项目版本");
+    expect(calls).toEqual([
+      ["history", "/tmp/project", "video-studio", "a".repeat(64)],
+      ["preview", "/tmp/project", "video-studio", "c".repeat(64), "a".repeat(64)],
+      ["restore", "/tmp/project", "native-restore-review"],
+    ]);
+  });
+
   test("catalog changes from another window remove an obsolete update notice", async () => {
     await render();
     expect(textOf(container)).toContain("有更新");

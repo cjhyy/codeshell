@@ -122,6 +122,7 @@ interface Request {
 async function fixture(
   options: {
     panels?: ManagedPanel[];
+    issues?: PanelSnapshot["issues"];
     review?: PanelReview;
     discovery?: PanelDiscovery;
     canRestorePackages?: boolean;
@@ -131,6 +132,7 @@ async function fixture(
   ensureMiniDom();
   let snapshot: PanelSnapshot = {
     panels: options.panels ?? [],
+    issues: options.issues,
     workspace: "/workspace/original",
     hasProject: true,
     canRestorePackages: options.canRestorePackages,
@@ -573,4 +575,43 @@ test("a peer project change disables the held restore review without resubmittin
   expect(view.requests.filter((request) => request.url.pathname.endsWith("/restore"))).toHaveLength(
     0,
   );
+});
+
+test("an unavailable package has a repair entry without a runnable panel and reviews all permissions", async () => {
+  const data = restoreFixture();
+  const history = { ...data.history, current: { ...data.history.current, unavailable: true } };
+  const restore = {
+    ...data.restore,
+    current: history.current,
+    addedPermissions: data.restore.permissions,
+  };
+  const view = await fixture({
+    issues: [
+      {
+        id: data.installed.id,
+        revision: data.installed.revision,
+        version: "2.0.0",
+        code: "package_unavailable",
+        bound: true,
+        globalDisabled: false,
+      },
+    ],
+    canRestorePackages: true,
+    intercept: (request) => {
+      if (request.url.pathname.endsWith("/versions")) return Response.json(history);
+      if (request.url.pathname.endsWith("/restore-preview")) return Response.json(restore);
+      if (request.url.pathname.endsWith("/restore"))
+        return Response.json({ id: data.installed.id });
+    },
+  });
+  expect(text(view.tree)).toContain("安装包缺失或无法校验");
+  await click(button(view.tree, "检查可用版本"));
+  expect(text(view.tree)).toContain("全部权限");
+  await click(button(view.tree, "审阅 v1.0.0"));
+  expect(text(view.tree)).toContain("需重新确认");
+  await click(button(view.tree, "确认权限并恢复项目版本"));
+  expect(view.changed).toBe(1);
+  expect(view.requests.find((request) => request.url.pathname.endsWith("/restore"))?.body).toEqual({
+    reviewToken: restore.reviewToken,
+  });
 });

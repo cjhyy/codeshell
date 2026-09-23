@@ -39,8 +39,19 @@ export interface ManagedPanel extends Omit<
   compatibility: PanelCompatibility;
 }
 
+export interface PanelPackageIssue {
+  id: string;
+  revision: string;
+  code: "package_unavailable";
+  version?: string;
+  packageDigest?: string;
+  bound: boolean;
+  globalDisabled: boolean;
+}
+
 export interface PanelSnapshot {
   panels: ManagedPanel[];
+  issues?: PanelPackageIssue[];
   workspace: string;
   hasProject: boolean;
   canRestorePackages?: boolean;
@@ -82,7 +93,7 @@ export interface PanelPackageHistory {
   appId: string;
   title: PanelAppPreview["title"];
   expectedRevision: string;
-  current: { version: string; packageDigest?: string };
+  current: { version: string; packageDigest?: string; unavailable?: boolean };
   versions: PanelPackageVersion[];
   unavailablePackages: number;
 }

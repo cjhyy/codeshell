@@ -15,6 +15,7 @@ import {
   installReviewedLocalPanelApp,
   previewLocalPanelApp,
   listProjectPanelApps,
+  panelAppPackageDir,
 } from "@cjhyy/code-shell-core";
 import { createPanelManagement } from "@cjhyy/code-shell-server/panels";
 import { createProjectPanelAppUpdateService } from "./panel-app-update-service.js";
@@ -269,4 +270,33 @@ test("a new native project installation commits its exact reviewed pin and canno
   expect(settings.panelAppPins).toEqual({
     "new-panel": { version: "1.0.0", packageDigest: result.packageDigest },
   });
+});
+
+test("Desktop diagnoses a broken package separately and repairs its binding through reviewed history", async () => {
+  const { cwd, install } = await fixture();
+  const first = await install("broken-panel");
+  const healthy = await install("healthy-panel");
+  const desktop = createDesktopPanelManagement(cwd);
+  for (const state of await desktop.snapshot())
+    await desktop.binding(context, state.appId, true, state.revision);
+  const replacement = await install(first.id, "2.0.0", true);
+  rmSync(panelAppPackageDir(first.id, first.packageDigest!), { recursive: true });
+  const states = await desktop.snapshot();
+  const issue = states.find((item) => item.appId === first.id)!;
+  expect(issue).toMatchObject({ unavailable: true, version: "1.0.0", bound: true });
+  expect(states.find((item) => item.appId === healthy.id)?.unavailable).toBeUndefined();
+  const history = await desktop.packageHistory(context, issue.appId, issue.revision);
+  expect(history.current.unavailable).toBe(true);
+  const review = await desktop.previewRestore(
+    context,
+    issue.appId,
+    replacement.packageDigest,
+    issue.revision,
+  );
+  expect(review.addedPermissions).toEqual(review.permissions);
+  await desktop.restore(context, review.reviewToken);
+  expect((await desktop.snapshot()).find((item) => item.appId === first.id)).toMatchObject({
+    version: "2.0.0",
+  });
+  desktop.close();
 });

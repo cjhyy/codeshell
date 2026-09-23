@@ -2,7 +2,7 @@ import {
   assertSafePanelAppId,
   checkInstalledPanelAppUpdate,
   checkSelectedPanelAppUpdate,
-  listProjectPanelApps,
+  inspectProjectPanelApps,
   resolvePanelAppBindingProjectPath,
   getInstalledPanelAppUpdateIdentity,
   type InstalledPanelApp,
@@ -124,7 +124,7 @@ export const panelAppUpdateService = createPanelAppUpdateService({
 
 export function createProjectPanelAppUpdateService(cwd: string) {
   const getInstalled = async (id: string) =>
-    (await listProjectPanelApps(resolvePanelAppBindingProjectPath(cwd))).find(
+    (await inspectProjectPanelApps(resolvePanelAppBindingProjectPath(cwd))).apps.find(
       (app) => app.id === id,
     );
   return createPanelAppUpdateService({

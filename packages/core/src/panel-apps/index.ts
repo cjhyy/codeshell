@@ -53,6 +53,8 @@ export {
   migrateProjectPanelAppPackagePins,
   selectProjectPanelAppPackage,
   listProjectPanelApps,
+  inspectProjectPanelApps,
+  type ProjectPanelAppIssue,
 } from "./project-packages.js";
 export {
   checkInstalledPanelAppUpdate,

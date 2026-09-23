@@ -304,7 +304,11 @@ describe("shared Web panel management with the real Core installer", () => {
     await api.install(owner, (await api.preview(owner, input)).reviewToken);
     const selected = (await listProjectPanelApps(cwd))[0]!;
     rmSync(selected.installPath, { recursive: true });
-    await expect(api.snapshot()).rejects.toThrow();
+    const broken = await api.snapshot();
+    expect(broken.panels).toEqual([]);
+    expect(broken.issues).toMatchObject([
+      { id: selected.id, version: "1.0.0", code: "package_unavailable" },
+    ]);
     expect((await listInstalledPanelApps())[0]?.version).toBe("1.0.0");
     writeFileSync(join(cwd, ".code-shell/settings.json"), '{"panelAppPins":null}');
     await expect(api.snapshot()).rejects.toThrow();
@@ -346,6 +350,67 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await listInstalledPanelApps())[0]?.version).toBe("2.0.0");
     expect(readFileSync(join(cwd, "project-data.json"), "utf8")).toBe('{"documentVersion":2}');
     await expect(api.restore(owner, preview.reviewToken)).rejects.toMatchObject({ status: 409 });
+  });
+
+  test("missing selected bytes can be explicitly repaired without changing project data", async () => {
+    const { api, old, current } = await restorationFixture();
+    const config = join(cwd, ".code-shell/settings.json");
+    const original = readFileSync(config, "utf8");
+    rmSync(panelAppPackageDir(current.id, current.packageDigest!), { recursive: true });
+    const broken = await api.snapshot();
+    expect(broken.panels).toEqual([]);
+    expect(broken.issues).toMatchObject([{ id: current.id, version: "2.0.0", bound: true }]);
+    expect(readFileSync(config, "utf8")).toBe(original);
+    const issue = broken.issues![0]!;
+    const history = await api.packageHistory(owner, issue.id, issue.revision);
+    expect(history.current).toMatchObject({ version: "2.0.0", unavailable: true });
+    expect(history.versions.map((app) => app.version)).toEqual(["1.0.0"]);
+    const preview = await api.previewRestore(owner, issue.id, old.packageDigest, issue.revision);
+    expect(preview.addedPermissions).toEqual(preview.permissions);
+    writeFileSync(join(cwd, "project-data.json"), '{"documentVersion":2}');
+    await api.restore(owner, preview.reviewToken);
+    expect((await api.snapshot()).issues).toBeUndefined();
+    expect((await api.snapshot()).panels[0]?.version).toBe("1.0.0");
+    expect(readFileSync(join(cwd, "project-data.json"), "utf8")).toBe('{"documentVersion":2}');
+  });
+
+  test("a broken legacy baseline is repaired without inventing the original version", async () => {
+    const { api, old } = await restorationFixture();
+    new SettingsManager(cwd, "full").mutateSettingsForScope("project", cwd, (settings) => {
+      settings.panelAppPins = {};
+    });
+    writeFileSync(
+      join(panelAppPackageDir(old.id, old.packageDigest!), "..", "legacy-projects.json"),
+      "damaged",
+    );
+    const issue = (await api.snapshot()).issues![0]!;
+    expect(issue.version).toBeUndefined();
+    const history = await api.packageHistory(owner, issue.id, issue.revision);
+    expect(history.current).toEqual({
+      version: "未记录",
+      packageDigest: undefined,
+      unavailable: true,
+    });
+    const preview = await api.previewRestore(owner, issue.id, old.packageDigest, issue.revision);
+    expect(preview.addedPermissions).toEqual(preview.permissions);
+    await api.restore(owner, preview.reviewToken);
+    expect((await api.snapshot()).panels[0]?.version).toBe("1.0.0");
+  });
+
+  test("repair reviews reject concurrent project edits and corrupt configuration", async () => {
+    const { api, old, current } = await restorationFixture();
+    writeFileSync(
+      join(panelAppPackageDir(current.id, current.packageDigest!), "app/index.html"),
+      "damaged",
+    );
+    const issue = (await api.snapshot()).issues![0]!;
+    const preview = await api.previewRestore(owner, issue.id, old.packageDigest, issue.revision);
+    new SettingsManager(cwd, "full").mutateSettingsForScope("project", cwd, (settings) => {
+      settings.panelAppBindings = [];
+    });
+    await expect(api.restore(owner, preview.reviewToken)).rejects.toMatchObject({ status: 409 });
+    writeFileSync(join(cwd, ".code-shell/settings.json"), '{"panelAppPins":null}');
+    await expect(api.restore(owner, preview.reviewToken)).rejects.toThrow();
   });
 
   test("restore reviews enforce owner, expiration, revocation and concurrent project edits", async () => {
