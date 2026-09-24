@@ -646,9 +646,31 @@ export class CdpActionsDriver {
         deltaX: 0,
         deltaY,
       });
-      await delay(75);
-      const after = await this.readProgressState();
-      const documentChanged = before.documentId !== after.documentId;
+      // Wheel delivery can precede compositor/handler progress. Observe the one
+      // dispatched input for a bounded interval; never resend it to obtain proof.
+      const deadline = Date.now() + 1000;
+      let after = before;
+      let documentChanged = false;
+      let contentChanged = false;
+      let moved = false;
+      let extentChanged = false;
+      // The attempt limit also bounds observation if the system clock moves back.
+      for (let attempt = 0; attempt < 14; attempt++) {
+        await delay(75);
+        after = await this.readProgressState();
+        documentChanged = before.documentId !== after.documentId;
+        if (documentChanged) break;
+        const afterPixels = beforePixels === undefined ? undefined : await this.visualSignature();
+        contentChanged =
+          before.contentSignature !== after.contentSignature ||
+          (beforePixels !== undefined && afterPixels !== undefined && beforePixels !== afterPixels);
+        moved =
+          Math.abs(before.scroll.x - after.scroll.x) > 0.5 ||
+          Math.abs(before.scroll.y - after.scroll.y) > 0.5;
+        extentChanged =
+          before.scroll.maxX !== after.scroll.maxX || before.scroll.maxY !== after.scroll.maxY;
+        if (moved || extentChanged || contentChanged || Date.now() >= deadline) break;
+      }
       if (documentChanged) {
         return {
           ok: true,
@@ -659,15 +681,6 @@ export class CdpActionsDriver {
           contentChanged: before.contentSignature !== after.contentSignature,
         };
       }
-      const afterPixels = beforePixels === undefined ? undefined : await this.visualSignature();
-      const contentChanged =
-        before.contentSignature !== after.contentSignature ||
-        (beforePixels !== undefined && afterPixels !== undefined && beforePixels !== afterPixels);
-      const moved =
-        Math.abs(before.scroll.x - after.scroll.x) > 0.5 ||
-        Math.abs(before.scroll.y - after.scroll.y) > 0.5;
-      const extentChanged =
-        before.scroll.maxX !== after.scroll.maxX || before.scroll.maxY !== after.scroll.maxY;
       if (!moved && !extentChanged && !contentChanged) {
         return {
           ok: false,
