@@ -13,6 +13,7 @@
 - **数字人依赖编辑补齐**（S/M）。编辑器已能配置缺失 Skill 的安装源并保留 `requires`，但任意依赖项与外部 `tools` 的图形化增删尚未完整开放。数字人 JSON 导入导出、仓库分发和原地更新按钮都已实现，不再重复排期。发布目前生成仓库骨架，`git init/push` 仍是用户自行完成的后续步骤。
 - **TUI 子 agent 待办详情**（S）。主/子 `task_update` 已按 `agentId` 隔离，主待办不会串入子视图；后续可为每个子 agent 保留自己的 TodoWrite 快照并显示。不要再按旧 TaskCreate/Update singleton 设计实现。
 - **记忆提取后续精修**（S/M）。同批不同表述候选仍需刷新决策上下文；写决策模型尚需加入有界的旧正文对照。description、严格同批重复、独立存储根透传与保守 fallback 已补齐：相似度不再自动触发 UPDATE，auto/dream 只有完整字段严格相同才由 fallback NOOP；其他回退为 ADD，明确的模型 UPDATE 仍受 ownership 保护。模型失败时可能暂留重复，不能为了去重覆盖方向、否定或数值不同的事实；manual 相近主题继续保守跳过。来源见 [Memory Final Design](docs/todo/memory-final-design.md)。
+- **资源复制走写时复制（clone）**（S）。库内素材与任务目录同在 `userData`，同卷可零拷贝，但 Electron 的 Node（libuv）在 macOS 上对 `COPYFILE_FICLONE(_FORCE)` 不克隆（FORCE 直接 ENOSYS，2026-09-24 实测），Bun 则总是克隆；要生效需由 Host 调 `cp -c` 或原生 `clonefile`，克隆后仍需单遍哈希核对。授权守卫缓存已修复 ~10MB/s 的主因，外部原片可用 `resources.directRead` 免复制，此项只省剩余的同卷复制与磁盘占用。
 
 ## 大功能升级（体量 L，分阶段落地）
 
