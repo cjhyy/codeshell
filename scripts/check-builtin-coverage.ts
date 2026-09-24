@@ -99,6 +99,11 @@ function main(): number {
         "--config=./bunfig.coverage.toml",
         "packages/core/src/tool-system/builtin",
         "packages/core/src/tool-system/testing",
+        // Skill execution now selects retained project packages. Include its
+        // real installation/migration/path checks, already listed in the builtin
+        // coverage matrix, instead of measuring these imported helpers untested.
+        "packages/core/src/panel-apps/package-snapshots.test.ts",
+        "packages/core/src/tool-system/path-policy-panel-skill.test.ts",
         "--coverage",
         "--coverage-reporter=text",
         "--coverage-reporter=lcov",

@@ -1979,3 +1979,71 @@ tarball、47 个类型入口和 45 个运行入口。真实 Docker 验证离线�
 
 边界：这是候选源码与本机 Docker 验证。生产服务器恢复、跨版本数据迁移和升级回滚、
 正式兼容包／镜像发布、真实第三方授权以及其余 Panel 核心业务仍未完成。
+
+### 增量 49：独立 npm 安装、同包集执行镜像与发布检查（2026-09-24）
+
+此前跨仓接入通过临时包链接验证，不能证明部署后仍可运行。现改为真实打包五个公开
+依赖、生成临时锁文件、移动安装目录后 npm ci；检查包是安装字节、无工作区链接或
+registry 旧 Host 回落。产品仓库固定依赖和锁文件不会被验证脚本修改。
+
+- services 增加发布前能力检查：Cloud 项目、远程 Link、备份／恢复接口，五包版本、
+  嵌套旧版本以及 Web／Worker／coding 资产。当前公开 0.9.22 明确无法通过。
+- services 增加项目执行 Dockerfile，使用与控制服务相同的锁文件安装生产包，构建时
+  执行能力检查；保留控制服务现有固定启动路径的兼容别名，别名指向 npm 包文件。
+  不复制主仓源码、主机 node_modules 或机密配置。Panel 专属依赖仍归 Panel。
+- 主仓集成验证运行全部服务测试、浏览器受控 OAuth，并可从同一包集构建镜像，
+  用独立 npm 安装的控制服务执行原有两个项目的真实 Docker 验收。
+- services 增加手动 `cloud candidate` CI，以完整 Host commit SHA 在干净 Linux
+  构建／安装／运行，不发布包或镜像。主仓提交 `6687e5d2` 已推送候选分支；
+  services `8113b21` 已快进合入并推送 main。未合并主仓或 Panel 到 main。
+
+本机验证：
+
+- 独立安装后完整 25 项服务测试与 390／1440px 浏览器 OAuth 通过；修改嵌套包版本、
+  移除 Web 入口均被检查拒绝，恢复文件后通过。
+- 同包集镜像实际运行两个云端项目，主 Agent、审阅后的 Panel 原生任务、独立 Panel
+  Agent 任务、HTTP 产物、项目隔离、重启后的文件／会话以及旧授权失效全部通过。
+  模型为容器内测试服务，没有使用真实账号。日志 `/tmp/services-independent-install-docker-final.log`。
+- 最终独立安装检查日志 `/tmp/services-independent-install-final.log`；本地基线 25 项和
+  格式通过，Link 镜像重建及非 root／只读／重启／备份／恢复也通过，日志
+  `/tmp/services-link-image-smoke.log`。
+- 首轮版本检测错误使用 CommonJS 解析 import-only 导出，改为检查已安装包元数据；
+  首轮镜像遗漏控制服务固定启动路径，补齐安装包别名后重跑全部 Docker 流程通过。
+
+远程验证：services 候选运行 `35967748991` 在 Linux／Node 22.16 全部通过，服务矩阵
+`35967748154` 在 Node 22.16／22／24 全部通过。主仓完整 CI `35967824732` 找到
+架构限制、lint、覆盖率范围和旧测试夹具问题，后续修复单独记录；不是完整 CI 已绿。
+候选 tarball 仍保留源码中的
+0.9.22 版本字符串，明确仅为验证且运行后清理，不与 registry 已发布的 0.9.22 混用。
+正式版本更新与发布、真实模型／第三方账号／目标服务器验收、升级回滚和其余 Panel
+业务迁移仍待完成，整体 goal 保持进行中。
+
+### 增量 50：完整 CI 收尾与桌面入口拆分（2026-09-24）
+
+首次主仓完整 CI 35967824732 在 Core 两分片、类型、Windows 和 Electron E2E 通过，
+其余四个 job 失败。没有隐藏失败、跳过用例或降低覆盖率／lint 门槛。
+
+- 将项目 Panel 的审阅所有权、缓存和路由，以及远程 Link 的窗口生命周期与路由，
+  从 main/index.ts 移到 project-panel-ipc.ts 和 remote-link-ipc.ts；主入口从 7468 行
+  降为 7089 行，保留原 7156 行门槛。295 个 IPC 注册逐项保持，架构检查同时计入
+  拆出的模块，避免移动代码隐藏接口增长。新增 11 个项目／Link／Cloud 路由及有限的
+  preload 类型、协议转发和 SDK 导出在架构测试中明确记录功能边界。
+- Worker 测试清理不覆盖原失败；调度租约使用显式可变状态，保持回调初始化语义，
+  消除两条新增 warning。lint 保持零错误、105 个 warning 的原基线。
+- 覆盖率检查纳入已有的真实 Panel 安装／迁移／Skill 执行和路径授权验收；676 项
+  通过、3 项既有条件跳过，行／函数覆盖率 46.30%／40.48%，原门槛 45%／38% 不变。
+- 补全 MiniDOM 的默认 location，避免 UI 测试留下的浏览器环境让后续 Node Axios
+  初始化失败；旧 VM 夹具补齐真实 guest descriptor，并注入实际包选择检查和执行门禁。
+  不删除项目／路径／信任撤销断言。
+
+本地验收：全部工作区类型通过，架构检查通过；修复夹具与调度 27 项通过（协议测试
+通过独立进程运行实际桥接套件）；Web／Node／架构联合 27 项通过。重建 Server 和
+Desktop 后，真实 Electron 原生 Link、共享后台任务及 legacy-projects 变体验证通过，
+包含项目固定版本、审阅恢复、损坏包修复、运行任务退出后的升级与跨入口结果恢复。
+日志 `/tmp/project-cloud-extracted-native-link.log`、`/tmp/project-cloud-extracted-panel-tasks.log`、
+`/tmp/project-cloud-extracted-panel-versions.log`、`/tmp/project-cloud-ci-fixes-types-final.log`、
+`/tmp/project-cloud-ci-fixtures-fixed.log`、`/tmp/project-cloud-ci-lint-verified.log`。
+
+最终提交的远程完整 CI 和更新后 Linux 候选验收将另行记录。以上仍不等同真实服务商
+授权或生产上线；完整 goal 的 Panel 业务、数据迁移、设备中继、正式发布及目标部署
+与升级回滚仍保留。

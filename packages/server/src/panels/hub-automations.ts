@@ -81,14 +81,14 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
   // directories; neither nests a second acquisition of the same lock.
   let closed = false,
     compromised = false;
-  let leaseLost: (() => void) | undefined;
+  const leaseState: { lost?: () => void; timer?: ReturnType<typeof setInterval> } = {};
   const unlock = lockSync(owner, {
     stale: 30000,
     update: 10000,
     retries: 0,
     onCompromised: () => {
       compromised = true;
-      leaseLost?.();
+      leaseState.lost?.();
     },
   });
   const identities = [directory, records, owner, `${owner}.lock`].map((path) => ({
@@ -253,11 +253,10 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
     }
   });
   let closing: Promise<void> | undefined;
-  let ownerTimer: ReturnType<typeof setInterval> | undefined;
   const close = () => {
     if (closing) return closing;
     closed = true;
-    clearInterval(ownerTimer);
+    clearInterval(leaseState.timer);
     scheduler.setExecutionEnabled(false);
     scheduler.stopAll();
     closing = Promise.all([...active].map((id) => scheduler.abort(id))).then(() => {
@@ -265,7 +264,7 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
     });
     return closing;
   };
-  leaseLost = () => {
+  leaseState.lost = () => {
     void close().catch(() => {});
   };
   try {
@@ -299,15 +298,15 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
     unlock();
     throw error;
   }
-  ownerTimer = setInterval(() => {
+  leaseState.timer = setInterval(() => {
     try {
       assertOwner();
     } catch {
       compromised = true;
-      leaseLost?.();
+      leaseState.lost?.();
     }
   }, 1000);
-  ownerTimer.unref?.();
+  leaseState.timer.unref?.();
   const host: PanelAutomationHost = {
     conditionalMutations: true,
     async call(scope, method, params) {

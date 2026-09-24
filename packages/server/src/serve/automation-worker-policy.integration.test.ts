@@ -213,7 +213,9 @@ test("shared Node Worker resumes a durable Session with automation policy then a
     while (bridge.hasChild() && !exited && Date.now() < deadline) await Bun.sleep(10);
     model.closeAllConnections();
     await new Promise<void>((done) => model.close(() => done()));
-    if (bridge.hasChild()) throw Error("Core worker failed to exit after test");
-    await rm(root, { recursive: true, force: true });
+    // Preserve the original assertion failure and leave files for a worker that
+    // did not exit; the shutdown assertion below applies after successful work.
+    if (!bridge.hasChild()) await rm(root, { recursive: true, force: true });
   }
+  expect(bridge.hasChild()).toBe(false);
 }, 30000);
