@@ -1213,6 +1213,10 @@ export class PanelAppBridge {
         if (!(await this.installedToolApp(scope)).permissions.includes("credentials.connections"))
           throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
       },
+      authorizeDirectRead: async (scope) => {
+        if (!(await this.installedToolApp(scope)).permissions.includes("resources.directRead"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires direct read permission");
+      },
       appDataDirectory: async (scope) => {
         await this.installedToolApp(scope);
         const path = join(app.getPath("userData"), "panel-app-data", scope.appId);

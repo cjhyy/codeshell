@@ -19,6 +19,7 @@ export const PANEL_APP_PERMISSIONS = [
   "automations.manage",
   "process",
   "resources",
+  "resources.directRead",
   "credentials.connections",
   "media",
   "media.capture",
@@ -241,6 +242,16 @@ export const PanelAppManifest = z
         path: ["permissions"],
         message:
           "workspace.read, workspace.write, audio.transcribe, and media require context.workspace",
+      });
+    }
+    if (
+      value.permissions.includes("resources.directRead") &&
+      (!value.permissions.includes("resources") || !value.permissions.includes("process"))
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["permissions"],
+        message: "resources.directRead requires resources and process",
       });
     }
     if (

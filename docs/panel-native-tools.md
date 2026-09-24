@@ -74,6 +74,43 @@ fractions come from the tool. A result's optional `artifacts` inventory names
 relative files and their sizes/digests; the Host captures them before publishing
 the successful receipt, adding each captured `asset` to its inventory entry.
 
+### Reading originals in place
+
+Copying a multi-gigabyte external reference into every job is slow and doubles
+disk use. A Panel that declares `resources.directRead` (which requires
+`resources` and `process`) may mark a resource `"access": "read"` and name a
+launch argument for the Host's sealed manifest:
+
+```json
+{
+  "request": { "action": "the-panel-operation" },
+  "resources": [{ "assetId": "external-<digest>", "path": "source", "access": "read" }],
+  "originalsArgument": "--originals"
+}
+```
+
+The tool receives `--originals <file>`, an owner-only JSON file
+`{"originals":{"source":{"path":"/absolute/original","bytes":123}}}`. For a
+read resource `path` is only a key: nothing is written into the job directory.
+
+The grant is deliberately narrow:
+
+- Only `external-` references qualify: files the user selected through the
+  Host. Library `asset-` resources are Host custody and are always copied.
+- Only the reviewed tool process sees the manifest; the Guest and the persisted
+  job input never contain the path. The manifest is removed when the run ends.
+- There are no links, so a Guest-chosen name cannot redirect a tool's writes
+  onto the user's file. The tool opens an original only on purpose, and must
+  treat it as read-only.
+- Admission verifies availability. Each launch, including a retry, re-verifies
+  the original's identity: `INPUT_MISSING` (retryable, e.g. a disconnected
+  drive) or `INPUT_CHANGED` (not retryable) fails the job before the tool starts.
+- After the tool exits the Host verifies the original again and fails the job
+  with `INPUT_CHANGED` if it changed. Process approval is not an OS sandbox:
+  this reports a tool that wrote to its original, it cannot prevent it.
+
+`capabilities.tasks.directRead` is `true` only for Panels holding the grant.
+
 Jobs bind app, workspace, installation revision and entry hash. Guest closure
 allows them to continue; uninstall/update/revocation stops execution. Host
 shutdown waits for native exit and records interruption. `recovery: "retry"`

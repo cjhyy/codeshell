@@ -106,3 +106,17 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   expect(noQueue.availableMethods).not.toContain("tasks.start");
   expect(noQueue.capabilities.tasks).toBeUndefined();
 });
+
+test("Desktop advertises direct reads only to tasks of Panels holding that grant", () => {
+  const granted = desktopPanelCapabilities(
+    ["resources", "process", "resources.directRead"],
+    options,
+  );
+  expect(granted.capabilities.tasks).toEqual({ durable: true, directRead: true });
+  expect(desktopPanelCapabilities(["resources", "process"], options).capabilities.tasks).toEqual({
+    durable: true,
+  });
+  expect(
+    desktopPanelCapabilities(["resources", "resources.directRead"], options).capabilities.tasks,
+  ).toBeUndefined();
+});

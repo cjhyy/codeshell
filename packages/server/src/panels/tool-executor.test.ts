@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  readdir,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -28,7 +37,11 @@ describe("reviewed native tool executor", () => {
   afterEach(async () => {
     for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
   });
-  async function fixture(source: string, dropEvents = false) {
+  async function fixture(
+    source: string,
+    dropEvents = false,
+    options: { directRead?: boolean } = {},
+  ) {
     const root = await realpath(await mkdtemp(join(tmpdir(), "panel-tool-executor-")));
     cleanups.push(() => rm(root, { recursive: true, force: true }));
     const workDir = join(root, "work"),
@@ -86,6 +99,9 @@ describe("reviewed native tool executor", () => {
       },
       authorizeConnections: async () => {
         throw new Error("No test connections");
+      },
+      authorizeDirectRead: async () => {
+        if (!options.directRead) throw new Error("Tool requires direct read permission");
       },
     });
     const controller = new AbortController();
@@ -220,6 +236,142 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
         f.controller.signal,
       ),
     ).rejects.toThrow("Invalid tool resource");
+  });
+
+  // Reviewed tools read the Host's sealed manifest; the Guest only names keys.
+  const readOriginals =
+    'const args=process.argv.slice(2);const originals=JSON.parse(await readFile(args[args.indexOf("--originals")+1],"utf8")).originals;';
+  const reportInput = `import{readFile,readdir}from"node:fs/promises";${readRequest}${readOriginals}console.log(JSON.stringify({type:"result",result:{content:await readFile(originals["input.wav"].path,"utf8"),bytes:originals["input.wav"].bytes,job:await readdir(".")}}));`;
+  const directInput = (assetId: string) => ({
+    request: {},
+    resources: [{ assetId, path: "input.wav", access: "read" }],
+    originalsArgument: "--originals",
+  });
+  async function originalReference(f: Awaited<ReturnType<typeof fixture>>, content: string) {
+    const original = join(f.root, "original.wav");
+    await writeFile(original, content);
+    return {
+      original,
+      reference: await f.resources.references.createFromSelectedPath(scope, original),
+    };
+  }
+
+  test("direct read hands the verified original to the tool without copying it", async () => {
+    const f = await fixture(reportInput, false, { directRead: true });
+    const { original, reference } = await originalReference(f, "original reference content");
+    f.job.input = await f.executor.prepareInput(
+      scope,
+      directInput(reference.id),
+      f.workDir,
+      f.controller.signal,
+    );
+    expect(await readdir(f.workDir)).toEqual([]);
+    expect(JSON.stringify(f.job.input)).not.toContain(original);
+    expect(await f.executor.execute(f.job, f.context)).toEqual({
+      content: "original reference content",
+      bytes: Buffer.byteLength("original reference content"),
+      job: [],
+    });
+    expect(f.owners.size).toBe(0);
+    // The sealed manifest is removed with the run.
+    await eventually(async () => (await readdir(join(f.root, "sealed"))).length === 0);
+    // A retry re-verifies and hands the same original again.
+    expect(await f.executor.execute(f.job, f.context)).toMatchObject({
+      content: "original reference content",
+    });
+  });
+
+  test("a Panel cannot steer a tool's writes onto an original", async () => {
+    // The tool writes its output to the name the Panel used for the input.
+    const f = await fixture(
+      `import{writeFile}from"node:fs/promises";${readRequest}await writeFile("input.wav","tool output");console.log(JSON.stringify({type:"result",result:{ok:true}}));`,
+      false,
+      { directRead: true },
+    );
+    const { original, reference } = await originalReference(f, "original");
+    f.job.input = directInput(reference.id);
+    expect(await f.executor.execute(f.job, f.context)).toEqual({ ok: true });
+    expect(await readFile(original, "utf8")).toBe("original");
+    expect(await readFile(join(f.workDir, "input.wav"), "utf8")).toBe("tool output");
+  });
+
+  test("direct read needs its permission, a manifest argument and an external reference", async () => {
+    const denied = await fixture(reportInput);
+    const { reference } = await originalReference(denied, "content");
+    await expect(
+      denied.executor.prepareInput(
+        scope,
+        directInput(reference.id),
+        denied.workDir,
+        denied.controller.signal,
+      ),
+    ).rejects.toThrow("direct read permission");
+    // Denied at launch too, e.g. for a job admitted before the grant was dropped.
+    denied.job.input = directInput(reference.id);
+    await expect(denied.executor.execute(denied.job, denied.context)).rejects.toThrow(
+      "direct read permission",
+    );
+    const f = await fixture(reportInput, false, { directRead: true });
+    const file = join(f.root, "library.wav");
+    await writeFile(file, "library content");
+    const asset = await f.resources.library.importFile(scope, file);
+    const { reference: external } = await originalReference(f, "content");
+    for (const input of [
+      directInput(asset.id),
+      { ...directInput(external.id), originalsArgument: undefined },
+      { ...directInput(external.id), originalsArgument: "originals" },
+      { request: {}, originalsArgument: "--originals" },
+      {
+        ...directInput(external.id),
+        directoryArguments: [{ argumentName: "--originals", directory: "job" }],
+      },
+      {
+        ...directInput(external.id),
+        resources: [{ assetId: external.id, path: "input.wav", access: "write" }],
+      },
+    ])
+      await expect(
+        f.executor.prepareInput(scope, input, f.workDir, f.controller.signal),
+      ).rejects.toThrow(/Invalid tool|argument/);
+  });
+
+  test("direct read refuses an original that changed or went missing before launch", async () => {
+    const f = await fixture(reportInput, false, { directRead: true });
+    const { original, reference } = await originalReference(f, "original");
+    f.job.input = await f.executor.prepareInput(
+      scope,
+      directInput(reference.id),
+      f.workDir,
+      f.controller.signal,
+    );
+    await writeFile(original, "edited before launch");
+    await expect(f.executor.execute(f.job, f.context)).rejects.toMatchObject({
+      code: "INPUT_CHANGED",
+      retryable: false,
+    });
+    const gone = await fixture(reportInput, false, { directRead: true });
+    const second = await originalReference(gone, "original");
+    gone.job.input = directInput(second.reference.id);
+    await rm(second.original);
+    // Reconnecting the drive can make a retry succeed.
+    await expect(gone.executor.execute(gone.job, gone.context)).rejects.toMatchObject({
+      code: "INPUT_MISSING",
+      retryable: true,
+    });
+  });
+
+  test("direct read reports a tool that modified its original", async () => {
+    const f = await fixture(
+      `import{appendFile,readFile}from"node:fs/promises";${readRequest}${readOriginals}await appendFile(originals["input.wav"].path,"!");console.log(JSON.stringify({type:"result",result:{ok:true}}));`,
+      false,
+      { directRead: true },
+    );
+    const { reference } = await originalReference(f, "original");
+    f.job.input = directInput(reference.id);
+    await expect(f.executor.execute(f.job, f.context)).rejects.toMatchObject({
+      code: "INPUT_CHANGED",
+      retryable: false,
+    });
   });
 
   test("cancellation waits for native cleanup, including when exit events are dropped", async () => {

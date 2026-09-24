@@ -360,6 +360,26 @@ export class ExternalResourceReferences {
       }
     });
   }
+  /**
+   * Host-only: the verified absolute location of a reference, for a read-only
+   * handoff to a reviewed tool. Never return it to a Guest.
+   */
+  location(
+    scope: ResourceScope,
+    id: string,
+    options: ExternalReferenceOptions = {},
+  ): Promise<string> {
+    return this.locked(scope, async () => {
+      const record = await this.record(scope, id);
+      const source = await this.checked(scope, record, options);
+      try {
+        await source.verify();
+        return join(record.root, record.path);
+      } finally {
+        await source.close();
+      }
+    });
+  }
   relinkFromDirectory(
     scope: ResourceScope,
     id: string,

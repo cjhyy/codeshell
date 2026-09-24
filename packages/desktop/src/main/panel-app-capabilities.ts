@@ -96,7 +96,12 @@ export function desktopPanelCapabilities(
         resources: permitted.has("resources")
           ? { ...(options.resources as Record<string, unknown>), pickReferences: true }
           : undefined,
-        tasks: permitted.has("process") && permitted.has("resources") ? options.tasks : undefined,
+        tasks:
+          permitted.has("process") && permitted.has("resources")
+            ? permitted.has("resources.directRead")
+              ? { ...(options.tasks as Record<string, unknown>), directRead: true }
+              : options.tasks
+            : undefined,
         limits: options.limits,
       }),
       methodLimits: {
