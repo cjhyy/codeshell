@@ -1779,6 +1779,12 @@ export class PetDispatchService {
               kind: "im-gateway",
               channel: command.source.channel,
               target: command.source.target,
+              ...(command.source.senderId
+                ? {
+                    senderId: command.source.senderId,
+                    isDirectMessage: command.source.isDirectMessage === true,
+                  }
+                : {}),
               replyButton: command.source.capabilities?.outbound.button ?? "link",
               ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
             }

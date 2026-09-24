@@ -981,6 +981,7 @@ export async function enforcePathPolicyWithApproval(
   operation: PathOperation,
   ctx?: ToolContext,
 ): Promise<string | null> {
+  if (ctx?.signal?.aborted) return "Error: path approval cancelled — run stopped";
   if (ctx?.cwd === undefined) return null;
   // bypassPermissions ("完全访问") skips the path-approval layer entirely,
   // matching the tool-permission backend and CC (bypass skips ALL checks,
@@ -1028,6 +1029,8 @@ export async function enforcePathPolicyWithApproval(
   askChains.set(chainKey, currentTurn);
   try {
     await prevTurn;
+    // Stop drains the visible prompt; queued paths must not create another one.
+    if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";
     if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
     return await promptForPathApproval(
       c,
@@ -1089,6 +1092,8 @@ async function promptForPathApproval(
     })
   ).trim();
 
+  // A late answer must not grant access or persist permission after Stop.
+  if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";
   if (answer === ALLOW_ONCE) return null;
   if (answer === ALLOW_SESSION) {
     recordPathApproval("session", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
@@ -1098,7 +1103,10 @@ async function promptForPathApproval(
     recordPathApproval("project", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
     return null;
   }
-  return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
+  return (
+    `Error: path approval denied — ${c.reason}. Path: ${c.resolvedPath}` +
+    (answer && answer !== "拒绝" ? ` Approval response: ${answer}` : "")
+  );
 }
 
 /**
