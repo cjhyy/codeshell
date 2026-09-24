@@ -20,7 +20,7 @@ try {
   await cp(join(source, "apps/cloud-control"), join(root, "apps/cloud-control"), {
     recursive: true,
   });
-  for (const test of ["cloud-config.test.mjs", "cloud-control.test.mjs"])
+  for (const test of ["cloud-config.test.mjs", "cloud-control.test.mjs", "cloud-backup.test.mjs"])
     await cp(join(source, "tests", test), join(root, "tests", test));
   await symlink(
     join(repo, "packages/server"),
@@ -35,6 +35,7 @@ try {
         "--test-concurrency=1",
         "tests/cloud-config.test.mjs",
         "tests/cloud-control.test.mjs",
+        "tests/cloud-backup.test.mjs",
       ],
       { cwd: root, stdio: "inherit" },
     );

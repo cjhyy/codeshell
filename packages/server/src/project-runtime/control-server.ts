@@ -2,7 +2,8 @@ import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
 import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 import { describeEnvironment } from "../environment-identity.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { extname } from "node:path";
 import { createHubAuth } from "../hub/auth-http.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
@@ -81,6 +82,8 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 /** A small account/project gateway. It never creates a worker, executes tools or mounts cwd. */
 export async function startProjectControlServer(options: ProjectControlServerOptions) {
   const remoteLink = remoteLinkHostConfiguration(options.remoteLink, options.publicOrigin);
+  if (existsSync(join(options.dataDir, "restore-in-progress")))
+    throw new Error("Cloud installation restore is incomplete; do not start this directory.");
   const registry = new ProjectRegistry(options.dataDir);
   let proxy: ReturnType<typeof createProjectRuntimeProxy> | undefined;
   let manager: ProjectManager | undefined;

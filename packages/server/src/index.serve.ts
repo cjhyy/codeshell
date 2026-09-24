@@ -11,3 +11,9 @@ export {
   resolveWorkerEntry,
   runServeCli,
 } from "./serve/cli.js";
+export {
+  backupProjectInstallation,
+  restoreProjectInstallation,
+  type ProjectBackupOptions,
+  type ProjectRestoreOptions,
+} from "./project-runtime/backup.js";
