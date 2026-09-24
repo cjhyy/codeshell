@@ -2112,3 +2112,78 @@ Panel 提交 `f6c3940` 已推送任务分支，源代码和安装产物一起提
 CDP 构建、变更文件 lint／格式检查通过。日志 `/tmp/project-cloud-cdp-progress-final.log`。
 新提交的最终 PR CI 继续验收。整体目标的其他 Panel、配置修复、完整升级回滚、真实
 授权、设备中继、正式发布和目标服务器部署仍未完成，未将 goal 标记完成。
+
+### 增量 53：主仓合入与可保存的 Cloud／Link 部署候选（2026-09-24）
+
+主仓 PR #14 的最终 CI 35971844513 九个 job 全部通过，已合入远端 main
+`41223d86`。本机原 main 的其他未推送提交没有改动；本任务工作区只快进到远端集成
+提交。Panel PR #26 在 `f6c3940` 的两个完整检查均通过，但合入前远端新增 Video Studio
+0.7.1 播放原片复用和轨道删除。已合并 `67e9bf8`，仅安装产物发生冲突，按两边合并后的
+源码重新构建，保留升级备份及播放／轨道修改，提交 `2382f95`。完整离线检查通过，
+其中投资 203 项、下载 251 项、视频 971 项通过／3 项既有条件跳过；新组合实际 Host
+存储参与的完整 UI 463 项及真实媒体 179 项全部通过、零跳过。日志
+`/tmp/project-cloud-panel-merged-check.log`、`/tmp/project-cloud-panel-merged-ui.log`、
+`/tmp/project-cloud-panel-merged-media.log`。远端最终检查及合入另行记录，不能沿用
+合并前绿灯宣称完成。
+
+原独立服务验收结束后删除临时安装和镜像，只保留日志；现在主仓验收脚本支持
+`--docker --output <新目录>`，在干净的准确 Host／services 提交上执行，服务只复制
+Git 跟踪文件。五个 Host 包实际打包、搬移后安装、能力／浏览器检查和双项目 Docker
+验证通过，再构建并验证同包集 Link 的非 root／只读、认证、重启与备份恢复。
+
+- 成功后保存实际服务文件、包及锁文件、两份 Docker 归档和 `candidate.json`。
+  记录两个来源提交、文件大小／SHA-256、镜像 ID 与平台；不收集 node_modules 或
+  未跟踪配置，不覆盖已有目标目录，失败删除本次不完整输出。
+- 校验拒绝缺失、额外、篡改、越界、重复和符号链接条目。校验仅证明候选字节完整性，
+  不认证发布者；使用可信私有 CI artifact。候选包使用现有版本号但必须按提交／摘要
+  识别，不能冒充已发布 npm 同名版本。
+- Link Dockerfile 支持同包集 vendor；Cloud 接受完整本地 `sha256:` 镜像 ID，仍拒绝
+  缩写、错误摘要和可变标签。归档载入后无需打开可变镜像开关；正式 registry 发布
+  依赖、真实服务商、生产部署与跨版本回滚仍待完成。
+
+services 38 项测试及格式检查通过；覆盖搬移、失败清理、原目录保护、损坏／缺失／
+额外文件、符号链接及越界。Node 22.16／22／24 的 CI 35973239015 全通过。主仓
+`7d88bea4` 的完整 CI 35973237604 九个 job 全部通过；候选 Linux CI
+[35973201941](https://github.com/cjhyy/codeshell-services/actions/runs/35973201941)
+以 Host `7d88bea42196632b7aaca40c31042122d5d87506`、services
+`b88b1243d59fbe051ca7c27c24989dd202e65e6a` 完成真实安装、双项目执行与重启、
+Link 容器及归档校验，并成功上传私有 artifact
+`cloud-candidate-7d88bea42196632b7aaca40c31042122d5d87506`（ID 10797720263，
+保留 14 天）。两个镜像平台均为 linux/amd64。最初一次调度因填错 Host SHA 已主动
+取消（35973170757），不计入验收，也没有用它的结果替代本次成功运行。
+
+候选功能已通过主仓 [PR #15](https://github.com/cjhyy/codeshell/pull/15) 合入
+`ff5849d7`，services [PR #1](https://github.com/cjhyy/codeshell-services/pull/1)
+合入 `ee50ebf`。源码合入和私有候选都不代表正式发布，服务仓库 registry 固定依赖
+仍为 0.9.22；目标服务器和真实账号验收仍待配置。整体 goal 保持未完成。
+
+下载上述 artifact 到 `/tmp/codeshell-candidate-download.HTt8i3` 后，外层归档 SHA-256、
+逐文件校验、独立生产依赖安装和能力检查全部通过。实际 Docker 载入却发现构建端的
+config image ID 在目标 containerd 存储中不可查询；同一 OCI 归档被登记为 manifest
+digest。因此旧部署说明中直接照抄构建 ID 的步骤不足，不能把候选上传成功当作搬移
+验收完成。
+
+services `2e787d8` 新增加载工具：先校验全部候选文件和有限大小／深度的 OCI 元数据，
+读取归档中的内容身份，再加载、核对目标平台和完整层列表；两个镜像都通过后才返回
+该机器的不可变配置 ID。实际旧候选两份归档已在本机 containerd 加载并核对通过，
+运行镜像目标 ID 为 `sha256:f6537eaf1cffcdb9a620b6765d7d2d87787bfb6b9745e4d3ca2de9f0a7e6c199`。
+42 项服务测试与格式检查通过，覆盖经典／containerd 身份选择、元数据损坏、层不符
+和损坏候选禁止任何载入。日志 `/tmp/project-cloud-candidate-loaded-images.log`、
+`/tmp/project-cloud-candidate-image-tests-final.log`。安装生成的 node_modules 已移到
+下载目录的 `installed-node-modules-proof`，原候选重新保持可校验布局；归档仍保留。
+该修复 [PR #2](https://github.com/cjhyy/codeshell-services/pull/2) 与包含加载工具的
+新候选 CI 35975826437（Host `ff5849d7`／services `2e787d8`）正在复验，尚未合入。
+
+Panel 合并提交 `2382f95` 的 push CI 35973240836 全通过，PR CI 35973246892 则在
+463 项 UI 的一小时项目适应宽度断言失败一项，其余五个 job 通过。未绕过失败合入。
+检查发现适应缩放依据重绘前的旧视口计算，重绘后未复核。增加真实 CSS 布局收窄的
+确定性回归：旧实现读取 1244px 后在新 900px 视口仍保留旧缩放，修复前必现失败；
+重绘后收窄则重新计算，五项相关完整应用时间线测试通过。原 CI 未输出具体宽度，
+因此该回归证明的是同类布局变化缺口，不据此断言已经解释了全部可能时序。
+
+完整离线复验另遇到安装取消单测的 3 秒启动信号超时：单测在模拟安装器之前启动了
+本机真实 FFmpeg／FFprobe。该用例改用成功的探测程序夹具，保留真实安装器进程、
+取消／并发排斥和环境过滤断言，未放宽时限或跳过测试；真实媒体回归仍独立保留。
+15 项安装／缩放测试及完整 `npm run check` 再次全部通过。Panel `e9702a3` 已推送，
+PR #26 的新 CI 35975873439 正在复验。日志 `/tmp/project-cloud-timeline-layout-before.log`、
+`/tmp/project-cloud-timeline-layout-fixed.log`、`/tmp/project-cloud-panel-fit-check-final.log`。
