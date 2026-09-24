@@ -1,12 +1,12 @@
 # 优化实验室：个人先用技术方案
 
-日期：2026-09-22；2026-09-23 按评审修订（P1 拆为最小实验 P1a 与面板 P1b、推理 Token 上限口径、小样本门槛定位、开发集过拟合提示、人工判分检查点与盲评模板、执行时间账本与授权到期时间、可恢复状态、P2 工作量）。状态：待实现；本文是技术方案，不代表已运行优化实验、获得效果或完成预算授权。
+日期：2026-09-22；2026-09-23 按评审修订（改为 CodeShell 内置能力包、P1 拆为最小实验 P1a 与界面 P1b、推理 Token 上限口径、小样本门槛定位、开发集过拟合提示、人工判分检查点与盲评模板、执行时间账本与授权到期时间、可恢复状态、P2 工作量）。状态：待实现；本文是技术方案，不代表已运行优化实验、获得效果或完成预算授权。
 
-关联：[优化 Agent 总体设计](agent-optimization-agent.md)、[通用评测契约](agent-evals-platforms-and-adapters.md)、[现有评测说明](../../evals/harness/README.md)、[Panel 原生工具边界](../panel-native-tools.md)。本文收敛总体设计的首期范围；首期范围冲突时以本文为准。
+关联：[优化 Agent 总体设计](agent-optimization-agent.md)、[通用评测契约](agent-evals-platforms-and-adapters.md)、[现有评测说明](../../evals/harness/README.md)、[AgentModule 组装设计](agent-module-resolved-composition-design.md)。本文收敛总体设计的首期范围；首期范围冲突时以本文为准。
 
 ## 1. 决策摘要
 
-面向一个人先用、使用记录较少的情况，建设本地优先的 **Optimization Lab Panel**。用户选择记录、确认评测样本、授权实验预算，系统生成有限候选并提供效果与差异报告，用户另行决定是否采用。
+面向一个人先用、使用记录较少的情况，建设本地优先的 **Optimization Lab**，作为 CodeShell 内置能力包实现（见 §5.1），不是独立 Panel。用户选择记录、确认评测样本、授权实验预算，系统生成有限候选并提供效果与差异报告，用户另行决定是否采用。
 
 第一条闭环固定为：**一个项目、一类任务、一个目标模型、一个纯文本 Skill、最多两个候选、人工采纳**。
 
@@ -16,7 +16,7 @@
 - 支持付费模型 API，但授权、数据范围、总投入和不确定用量可见；默认不开启后台扫描、定期执行或自动追加预算。
 - 实验授权和正式采用是两个独立决定。候选不写入当前生效的 Skill、Memory、dream 或系统提示词。
 - 先交付“可实验、可审查、可导出”；随后交付“普通新任务按范围采用、可回滚”。前一阶段不能宣传为日常 Agent 已自动进化。
-- 先证明方法有用，再建界面：P1a 复用现有 native entry、后台任务和选中连接交接，只配一个最小授权页，产出一份文件报告，不改 Host、不做完整面板。P1a 的真实报告值得反复查看时再做 P1b 面板。
+- 先证明方法有用，再建界面：P1a 只接入 Desktop，只配一个最小授权页，产出一份文件报告；Core 只新增两项导出，不做完整界面。P1a 的真实报告值得反复查看时再做 P1b 界面。
 
 自用的成功标准：能从自己反复遇到的问题出发，用一次明确授权的实验得到一份可信的改动提案，并能决定是否使用。找到“没有值得采用的改动”也属于正常结果。
 
@@ -24,21 +24,21 @@
 
 以下结论来自本地源码核查，不代表已发布版本均具备这些能力。表中 `core/`、`desktop/` 分别指仓库内的 `packages/core/`、`packages/desktop/`。
 
-| 当前能力                                                                                   | 可以复用                                                               | 不能据此声称已经具备                                                  |
-| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `desktop/src/main/run-history-service.ts`、`runs-service.ts`、`renderer/runs/RunsView.tsx` | 运行索引、用户输入、回执、有限事件和用量展示                           | 最终模型请求、完整轨迹、历史模型配置和环境可重放                      |
-| `evals/harness`                                                                            | 硬断言与语义判分分离、证据清单、隔离环境、不可覆盖实验输出、请求级记录 | 任意任务/Skill 的通用评测器；现有 15 个案例不是 15 项真实模型通过结果 |
-| `evals/harness/provider-proxy.mjs`                                                         | 请求次数预占、单次输出上限、中止和未知 usage 语义                      | 累计输入与输出 Token 硬上限、精确账单封顶、多角色统一持久预算         |
-| Panel resources / native entries / tasks / connections                                     | 项目资源托管、经审查的原生子进程、后台任务、选中连接交接               | Panel 可直接读取全部运行历史、任意加载候选 Skill 或写正式配置         |
-| `core/src/skills/management.ts`                                                            | revision、冲突检查、原子编辑                                           | 实验版本历史、永久回滚副本、按模型启用                                |
-| `core/src/session/memory.ts` 与现有 Memory/Dream                                           | 现有记忆机制继续使用                                                   | 通用优化候选池；dream 会注入正常上下文，不能暂存未接受候选            |
+| 当前能力                                                                                   | 可以复用                                                                                                      | 不能据此声称已经具备                                                                                  |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `desktop/src/main/run-history-service.ts`、`runs-service.ts`、`renderer/runs/RunsView.tsx` | 运行索引、用户输入、回执、有限事件和用量展示                                                                  | 最终模型请求、完整轨迹、历史模型配置和环境可重放                                                      |
+| `evals/harness`                                                                            | 硬断言与语义判分分离、证据清单、隔离环境、不可覆盖实验输出、请求级记录                                        | 任意任务/Skill 的通用评测器；现有 15 个案例不是 15 项真实模型通过结果                                 |
+| `evals/harness/provider-proxy.mjs`                                                         | 请求次数预占、单次输出上限、中止和未知 usage 语义                                                             | 累计输入与输出 Token 硬上限、精确账单封顶、多角色统一持久预算                                         |
+| `core/src/composition`（AgentModule）与 `core/extension`                                   | 工具、behavior profile、隐藏 session kind、protocol queries 与 observer；`createLLMClient`、`SettingsManager` | 能力包读取 Skill 管理或跨进程锁（二者只在 `/internal`）、自行创建隔离会话、拦截 Engine 发出的模型请求 |
+| `core/src/skills/management.ts`                                                            | revision、冲突检查、原子编辑                                                                                  | 实验版本历史、永久回滚副本、按模型启用                                                                |
+| `core/src/session/memory.ts` 与现有 Memory/Dream                                           | 现有记忆机制继续使用                                                                                          | 通用优化候选池；dream 会注入正常上下文，不能暂存未接受候选                                            |
 
 关键限制：当前历史 `prompt` 是用户消息，最多 64 KiB；事件最多 200 条，读取 transcript 尾部最多 16 MiB；模型与 provider 来自会话当前 state。`sanitizeRunTraceValue` 是限长/限深度，不是完整脱敏器。因此旧记录默认只能作为问题来源，不能冒充冻结原版的执行证据。
 
 另有两个真实缺口：
 
-1. `runs:list/get` 是 Desktop 私有 IPC，不是已有 Panel API。需要显式证据导出，不给面板全盘会话读取权。P1a 用手工整理的样本绕开，不等待该能力。
-2. 现有 `agent.task` 只允许本 Panel 打包的 Skills，其 `maxTurns/maxContextTokens` 也不等于实验总预算。现有 Skill 工具读取 scanner 当前内容；“按模型启用、运行中固定版本”需要新能力，不能靠增加一个版本表实现。
+1. `runs:list/get` 是 Desktop main 私有 IPC，能力包所在的 agent server 进程读不到。P1b 由 Desktop main 按用户选定的 run IDs 生成证据包再交给模块，不给模块全盘会话读取权；P1a 用手工整理的样本绕开。
+2. 能力包的 query handler 只拿到参数，`ProtocolObserverHost` 不能创建会话或 Engine；hook 事件中也没有“模型请求前”，Engine 自行发出的请求无法入账。现有 Skill 工具读取 scanner 当前内容；“按模型启用、运行中固定版本”需要新能力，不能靠增加一个版本表实现。
 
 ## 3. 首期范围
 
@@ -71,13 +71,29 @@
 
 首次使用默认推荐手工整理 6–12 个独立案例，数量是产品引导值而非统计有效性保证。建议至少有开发集和保留集，覆盖原本成功的任务；不足时允许生成探索报告，但不显示“已验证可采用”。
 
-前台关闭后任务可继续；应用退出按 Host 任务机制中断。重新打开读取持久结果，不默默重新花费 Token。
+关闭实验页面后实验继续；agent server 或应用退出即中断（见 §5.1 生命周期限制）。重新打开读取持久结果，不默默重新花费 Token。
 
 ## 5. 模块归属与接入方式
 
-### 5.1 业务归独立 Panel
+### 5.1 内置能力包，而不是独立 Panel
 
-遵循 Panel ownership：面板位于独立的 `codeshell-panel-apps` 仓库，初拟 `apps/optimization-lab` 开发目录和 `panels/optimization-lab` 安装包。具体脚手架、构建和发布按该仓库约定实施。
+优化实验室是 CodeShell 内置能力，以能力包 `packages/optimization-lab` 实现（包名沿用 `@cjhyy/code-shell-capability-*`），导出 `createOptimizationLabModule(): AgentModule`，与 `coding`、`pet` 同层，只 import `@cjhyy/code-shell-core/extension`。
+
+`CODESHELL.md` 的 Panel feature ownership 约束的是 Panel 功能；本功能不做成 Panel 的理由是系统边界：它要读取运行历史和 Skill revision，P2 还要介入会话构造、模型请求入口和子任务作用域。做成 Panel 时，这些都要先给 Host 开专门接口才能跨越边界；内置后运行记录和 Skill 由 CodeShell 自己访问，只需把少数能力导出到 `/extension`（§5.2）。代价是业务逻辑变更随 CodeShell 发版。
+
+吸取 arena 的教训（2026-09-23 起已不在宿主中加载：无人使用，却每次发版都要 bump、构建、类型检查和审计）：
+
+- 模块由新增 feature flag 控制，默认关闭；关闭时不注册到组装根，界面无入口，不创建工作目录。
+- 包标记为 private，不进入 npm 发布流水线；Desktop 打包脚本与 package boundaries 测试同步登记。
+- P1a 只接入 Desktop 组装根（`desktop/src/main/agent-bridge.ts` 的模块列表与 `expectedModules`），TUI 和 server 暂不接入。
+- P1a 报告未证明价值时，移除组装根注册即可整体下线，不留用户可见入口。
+
+| 位置                        | 内容                                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `packages/optimization-lab` | 契约 schemas、控制器、账本、runner、优化策略、判分、报告；protocol queries 与进度 observer            |
+| Desktop main                | 把界面请求转发给 agent server 中的模块 queries；P1b 起从自身 `runs:list/get` 生成用户选定记录的证据包 |
+| Desktop renderer            | P1a 最小授权页；P1b 样本、进度与报告视图                                                              |
+| Core `/extension`           | 只新增经核实缺失的通用导出，见 §5.2                                                                   |
 
 | 模块（拟建）            | 职责                                           |
 | ----------------------- | ---------------------------------------------- |
@@ -94,27 +110,30 @@
 
 P1a 只实现最小切片：`DatasetBuilder` 仅校验并冻结手写 JSON 样本（不做导入界面和去重建议），`EvidenceImporter` 推迟到 P1b，`ReportBuilder` 输出 JSON 与 Markdown 文件，`CandidateStore` 只保存候选正文、父 hash 和 manifest。人工判分仅提供按阶段导出评分 JSON、回填校验和确认继续，不等待 P1b 的完整编辑界面。`ExperimentController`、`BudgetLedger`、`TaskRunner` / `Grader`、`OptimizerStrategy` 在 P1a 就须完整实现：它们承载花费与证据语义，事后补救代价最高。
 
-采用一个经审查的 native entry 运行控制器，使用现有后台 `tasks`、`resources`、选中连接交接。业务代码不导入 Host 进程；原生 entry 不是 OS 安全沙盒，不宣称能隔离恶意可执行代码。首期只运行受审查实现，模型无 Shell/任意代码工具。
+控制器运行在加载该模块的 agent server 进程内，通过 `protocol.queries` 暴露 `optimizationLab.*` 操作（计划校验、授权、开始/停止/继续、导出/导入评分、读取报告），通过 observer 的 `notify` 推送进度。P1a 的模型调用由模块用 `/extension` 已有的 `createLLMClient` 与 `SettingsManager` 按用户选中的连接发起，全部经过 `BudgetLedger`；凭据只在 agent server 进程内使用，不写进 Prompt、报告或数据文件。首期模型无 Shell/任意代码工具。
 
-### 5.2 Host 只补经确认缺失的通用能力
+生命周期限制：AgentModule Phase C 尚未完成，模块没有自有 lifetime 与 disposer，agent server 关闭即中断实验。P1a 接受这一点：中断按 §8.3 进入 `interrupted`，重启后由用户确认恢复；不为本功能提前另造一套 lifetime。
 
-以下为**拟议能力，不是已存在的方法名或 API 承诺**：
+### 5.2 Core 需补的能力
 
-| 能力                   | 具体消费者与必要性                       | 边界                                                                         |
-| ---------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
-| 选中运行证据导出       | 运行记录 UI → 评测面板，也可用于故障报告 | Host 选择器确认 run IDs、字段和附件；生成资源，不暴露任意目录或全部会话      |
-| 运行级指令快照         | 隔离评测与普通任务都需装载准确版本       | 只接收已授权 artifact，绑定来源 Skill/revision；保留权限、禁用规则和工具隔离 |
-| 配置版本授权与 binding | 人工采用/回滚，以及普通新任务版本解析    | Host 保存核准内容、范围和 active pointer；不接受任意路径写入或候选自行激活   |
+以下为**拟议能力，不是已存在的方法名或 API 承诺**。每项都对应一个已核实的缺口：
 
-第一阶段可通过导出文件再导入 resources 接通，不等待完整 Panel 历史 API。禁用能力通过 `availableMethods/capabilities` 发现；缺少快照/resolver 的 Host 只能报告或导出，不能显示“已用于普通任务”。
+| 阶段 | 能力                    | 已核实的缺口                                                                                                          | 边界                                                                                   |
+| ---- | ----------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| P1a  | 只读 Skill 快照导出     | Skill 管理只在 `core/internal/skills`，能力包只能 import `/extension`                                                 | 按 Skill ID 返回正文、元数据、revision 与 hash；只读，不含编辑、安装或扫描目录写入     |
+| P1a  | 跨进程文件锁导出        | `acquireLockOnPath` / `mutateJsonFile` 只在 `/internal`；Desktop、TUI、server 可能各起 agent server，账本须跨进程单写 | 原样复用现有实现与 CronStore 协议（锁内重读 + 临时文件 rename），不另写锁              |
+| P2   | 模型请求准入            | hook 事件没有“模型请求前”，试跑会话中 Engine 自行发出的请求无法入账                                                   | 请求发出前同步预留、失败即拒绝，完成后回调结算；只做准入，不内置预算策略               |
+| P2   | 隔离试跑会话            | query handler 只拿到参数，`ProtocolObserverHost` 不能创建会话或 Engine                                                | 以隐藏 session kind 启动，装载指定指令快照与 behavior profile，关闭 Memory/dream/hooks |
+| P2   | 指令快照与 binding 解析 | 现有 Skill 工具读取 scanner 当前内容                                                                                  | 会话构造时解析 binding 并冻结；不接受任意路径写入或候选自行激活                        |
+| P2   | 模块 lifetime           | AgentModule Phase C 未完成                                                                                            | 按 Phase C 设计实现，不为本功能单独造一套                                              |
 
-Core 只提供通用观察、request admission、指令快照/解析契约；不内置 Optimization Lab 角色、评分策略、平台 SDK 或固定查询。项目代码类任务以后由 coding 能力提供环境适配，不写进通用 Engine。
+Core 只提供通用导出、request admission、指令快照/解析契约；Optimization Lab 的角色、评分策略和 queries 全部留在能力包里。缺少 P2 能力时，界面只能报告或导出，不能显示“已用于普通任务”。项目代码类任务以后由 coding 能力提供环境适配，不写进通用 Engine。
 
 ### 5.3 先跑文本实验，再接真实运行路径
 
-最早可用版本由 Panel runner 直接运行冻结文本片段和合成只读资料，结果标记 `text_fragment`，不称为完整 Agent/Skill 工作流提升。
+最早可用版本由模块内的文本 runner 直接运行冻结文本片段和合成只读资料，结果标记 `text_fragment`，不称为完整 Agent/Skill 工作流提升。
 
-支持正式采用前，补上 `codeshell_isolated` 适配器：经受审查的 Core 组合/运行入口启动隔离任务，装载同一份 Skill 快照，所有实际请求经过统一预算入口。不得绕过现有 Engine 构造守卫，不临时安装候选到扫描目录。迁移后重新验证冻结候选；若根据隔离运行结果继续改写候选，已揭示的保留组降为开发数据，另建保留组。
+支持正式采用前，补上 `codeshell_isolated` 适配器：通过 §5.2 的隔离试跑会话启动任务，装载同一份 Skill 快照，所有实际请求经过模型请求准入进入统一预算入口。不得绕过现有 Engine 构造守卫，不临时安装候选到扫描目录。迁移后重新验证冻结候选；若根据隔离运行结果继续改写候选，已揭示的保留组降为开发数据，另建保留组。
 
 该适配器保留 Skill 的真实加载语义。每次试跑记录是否实际加载目标 Skill、加载 hash 和结果；未加载不能归因为 Skill 改善，也不能简单删除这类失败来提高通过率。仅显式选用 Skill 的测试，其结论也限定为“选用该 Skill 的任务”。
 
@@ -124,7 +143,7 @@ Core 只提供通用观察、request admission、指令快照/解析契约；不
 
 `EvidenceBundle` 包含 `schemaVersion`、来源 run/session/event IDs、输入与可选附件、工具事件引用、用户纠正、原始结果、完整性状态和脱敏记录。每个内容块有 hash、大小、是否截断；原始来源不可用时保留这个事实。
 
-- 用户指定本次读取哪些记录，不遍历个人全部会话；Panel 只能读自己被授权的项目资源。
+- 用户指定本次读取哪些记录，不遍历个人全部会话；模块只接收 Desktop 按用户选择生成的证据包，不自行扫描会话目录。
 - 默认去掉凭据、认证头和已识别密钥；再提供人工预览。结构化过滤不能保证发现自由文本中的全部个人信息。
 - “导入本地”不等于“允许发给模型”。授权单列明被测、优化、评分角色各自可收到的数据和连接。
 - 原始聊天、网页、工具返回中的指令均为不可信数据；不据此更改权限、评测规则或预算。
@@ -211,8 +230,8 @@ LLM 自动建议预期值属于可选付费步骤，也必须授权；它不能�
 - 账本先写再调用。崩溃后 `reserved/dispatched` 未结算项保持未知占用；不能当作从未调用。
 - 重启后显示 `interrupted` 并保留原阶段检查点，用户确认才恢复；只运行尚未发起的步骤，剩余授权、`expiresAt`、执行时间与最终阶段预留仍需有效，恢复不重置执行时间账本。未知请求不透明重放；确需重试消耗新的名额。
 - 等待人工评分时没有在途模型请求，也不后台发起付费调用。评分回填本身不自动恢复执行；等待不消耗执行时间，但 `expiresAt` 照常流逝。用户点击“继续”时重新检查授权、`expiresAt`、剩余执行时间、评分完整性和剩余预算。过期后仍允许本地回填评分和生成报告；若还需模型调用，必须先取得新的有效授权 revision。
-- 同一 experiment 的单 writer + Host task 幂等键防止双击、多窗口重复花费；锁获取非阻塞，不在同一进程内用同步等待阻塞异步持锁者。
-- 连接只交给经审查的控制器进程，模型和子任务只接触受限调用入口；不将凭据写进 Prompt、报告或资源包。
+- 同一 experiment 的跨进程单写者锁（§5.2，复用 CronStore 协议）加开始操作幂等键，防止双击、多窗口或多个 agent server 重复花费；锁获取非阻塞，不在同一进程内用同步等待阻塞异步持锁者。
+- 连接只在 agent server 进程内使用，模型和子任务只接触受限调用入口；不将凭据写进 Prompt、报告或数据文件。
 
 ## 9. 数据模型与存储
 
@@ -231,7 +250,7 @@ LLM 自动建议预期值属于可选付费步骤，也必须授权；它不能�
 | `EvaluationReport` | 不可变 trial 集合、汇总规则、结果分类、diff、费用与未知项                   |
 | `AdoptionReceipt`  | 报告与候选 hash、父 binding revision、确认作用域、操作者、前后版本          |
 
-控制器自有工作目录示意，实际目录由 Host 的项目/Panel scope 提供，不硬编码用户 HOME：
+工作目录位于 `codeShellHome()` 下按项目隔离的 `optimization-lab/<project-key>/`（示意如下），不硬编码用户 HOME，测试时随 `codeShellHome()` 指向隔离目录：
 
 ```text
 optimization-lab/
@@ -247,7 +266,7 @@ optimization-lab/
 
 候选目录不在 Skill 扫描根，正文也不以 `SKILL.md` 命名，避免日后扫描规则或宽泛 glob 误装载；来源 Skill ID、revision 与元数据写在同目录 `manifest.json`。保留集与完整 expected 只由控制器掌握，不作为资源/路径提供给候选生成或任务模型；被测执行每次仅收到本题输入和允许的 fixture。
 
-后台任务目录有保留期，不能承担永久保存。数据集、报告、候选、账本检查点和采用依据需捕获到 Panel 长期资源；恢复时验证 hash 和 sequence。普通任务需继续使用的已接受内容另由 Host 托管，不引用临时 task 目录。
+数据集、报告、候选、账本和采用依据都写入上述长期目录，不使用临时目录；恢复时验证 hash 和 sequence。普通任务需继续使用的已接受内容由 Core 的 binding 存储托管（P2），不引用实验目录。
 
 默认不上传任何实验资料。首期不自动删除已接受版本及其回滚依据；清理其他实验通过预览和确认执行，提示派生数据与导出副本也可能保留原始信息。
 
@@ -273,7 +292,7 @@ draft → ready → authorized → baselining
 
 ## 11. 如何判分与展示效果
 
-判定枚举和“硬断言与语义独立”的规则直接沿用 `evals/harness/cases.json` 的 `verdictPolicy`（`hardFailureCannotBeOverriddenBySemanticScore`、`missingEvidenceVerdict: inconclusive`、含 `not_evaluated` 的 `semanticStatuses`）。以 schema 常量复制进 Panel 契约并注明来源 `suiteVersion`，不另定一套近义状态。
+判定枚举和“硬断言与语义独立”的规则直接沿用 `evals/harness/cases.json` 的 `verdictPolicy`（`hardFailureCannotBeOverriddenBySemanticScore`、`missingEvidenceVerdict: inconclusive`、含 `not_evaluated` 的 `semanticStatuses`）。以 schema 常量复制进能力包契约并注明来源 `suiteVersion`，不另定一套近义状态。
 
 优先使用程序可验证条件，如输出 schema、必填字段、源资料数值一致、引用 ID 存在、工具返回对应真实 fixture。自由文本质量采用冻结 rubric 和人工复核；模型 judge 是辅助证据。
 
@@ -308,47 +327,47 @@ P1a 导出仅含当前阶段已完成 trial 的评分 JSON 模板，用户回填
 
 ### 12.1 阶段一：实验室内试用与导出（P1a 仅导出，实验室内试用属 P1b）
 
-用户可接受为“实验室首选版本”，后续该面板明确指定模型的任务装载这个不可变文本版本；也可导出供人工阅读。此阶段不改用户原 Skill，不影响普通对话，不宣称跨模型生效。
+用户可接受为“实验室首选版本”，后续实验室内明确指定模型的任务装载这个不可变文本版本；也可导出供人工阅读。此阶段不改用户原 Skill，不影响普通对话，不宣称跨模型生效。
 
 ### 12.2 阶段二：普通任务受控采用
 
-需要 Host 的通用 instruction snapshot/resolver；不是直接覆盖 `SKILL.md`。
+需要 Core 的通用 instruction snapshot/resolver（§5.2）；不是直接覆盖 `SKILL.md`。
 
 `AdoptionBinding` 最少包含：`projectId`、`agent/profile selector`、来源 Skill ID/revision、目标 model/config fingerprint、候选 artifact hash、report hash、binding revision 和启用状态。
 
-- Host 展示最终正文 diff、作用域、验证级别；原生确认绑定准确 hash，不接受面板传来的“已经同意”布尔值。
-- 正式 binding 必须关联有效的 `codeshell_isolated` 最终报告，候选 hash、父 revision、目标模型/config、数据集、评分器与加载证据一致，满足冻结门槛且所需人工评分已完成。Host 验证资源来源、运行回执与摘要关联；只有 `text_fragment` 报告或手填的验证标记不能通过此入口，UI 确认也不绕过证据门槛。
+- Desktop 确认界面展示最终正文 diff、作用域、验证级别；确认由 Desktop 原生对话框发起并绑定准确 hash，Core binding 入口不接受模块传来的“已经同意”布尔值。
+- 正式 binding 必须关联有效的 `codeshell_isolated` 最终报告，候选 hash、父 revision、目标模型/config、数据集、评分器与加载证据一致，满足冻结门槛且所需人工评分已完成。Core binding 入口验证报告来源、运行回执与摘要关联；只有 `text_fragment` 报告或手填的验证标记不能通过此入口，UI 确认也不绕过证据门槛。
 - 校验当前来源 Skill 与实验父 revision 一致、权限仍有效、项目仍受信任，随后原子更新 active binding，并持久化采用回执。冲突先提示，不能静默覆盖。
 - 新会话解析 matching binding，冻结已接受内容及来源快照。模型、profile、项目或来源 revision 不匹配时使用正常来源版本，显示优化未适用；不将未测模型自动归入适用范围。
 - 已有会话保留其版本，跨轮与 Skill 工具使用冻结快照，不能再次扫描时换成新正文。子任务重新匹配自己的模型/config、角色和作用域，只有匹配且显式传递时才继承；不匹配的子任务不得复制含该优化指令的父会话历史，应从获准输入和正常来源版本建立干净上下文。改变模型时新建/显式重置隔离会话，首期不保证在已含优化内容的旧上下文内安全“切回”。
 - Skill 禁用、权限撤销、项目失信等安全规则仍即时优先。正文若已经进入上下文，仅停用 loader 不够：硬撤销阻止后续请求并中止相关在途执行，确认停止后要求从干净上下文继续；不能宣称抹去了供应商已收到的内容。供应商同名别名漂移只能记录，不能承诺自动识别所有权重变化。
 - 采用后仍按 Skill 原有触发方式加载；不能把注册候选等同于每次自动执行。
 
-Host 管理正式 binding 和内容，Panel 管理实验业务与报告。两边通过 artifact/report hashes 和幂等 operation ID 关联；Host 的采用回执是生效事实。Panel 超时后先查询回执，不重复创建采用操作。
+Core 管理正式 binding 和内容，能力包管理实验业务与报告。两边通过 artifact/report hashes 和幂等 operation ID 关联；Core 的采用回执是生效事实。模块超时后先查询回执，不重复创建采用操作。
 
 ### 12.3 回滚
 
 回滚生成新 binding revision 指向此前版本或禁用覆盖，原版本与报告保留。要求当前 binding revision 与用户确认时一致；期间发生用户修改则重新预览，不能覆盖新改动。回滚影响新会话，旧会话显示所用旧版本并允许用户主动新建。
 
-首期同一作用域只支持一个修改目标 Skill 的有效 binding；若作用域重叠，必须替换明确的旧 binding 或拒绝。卸载面板时默认禁用其 binding，Host 保留回执和回滚内容，并按前述硬撤销流程停止受影响的执行。普通用户回滚可以只影响新会话；安全撤销/卸载不能继续携带旧正文运行，两者在 UI 和回执中区分。
+首期同一作用域只支持一个修改目标 Skill 的有效 binding；若作用域重叠，必须替换明确的旧 binding 或拒绝。关闭 feature flag 或移除模块时默认禁用其 binding，Core 保留回执和回滚内容，并按前述硬撤销流程停止受影响的执行。普通用户回滚可以只影响新会话；安全撤销/移除模块不能继续携带旧正文运行，两者在 UI 和回执中区分。
 
 ## 13. 实施拆分与交付门槛
 
 每个阶段单独提交和验收；跨仓库改动分别使用 task branch/worktree。真实模型运行在用户完成实验授权后进行，技术方案与本地测试不自动授予消费权。
 
-| 阶段                | 改动落点                                                                                                                                                                                                                               | 交付与验收                                                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| P0 材料与契约       | Panel 仓库：schemas、手写样本 JSON 的离线校验、切分与冻结                                                                                                                                                                              | 6–12 个合成/人工确认样本可校验、切分并生成 dataset hash；无模型调用；不改 CodeShell                                                      |
-| P1a 最小实验        | Panel native entry 中的 controller、ledger、文本 runner、`reflect_once_v1`、文件报告；复用现有 tasks 与选中连接交接；一个最小授权页（冻结计划、最坏情况上界、执行时间与到期时间、确认、开始/停止、导出/回填评分 JSON、继续、打开报告） | 授权后完成一次单模型、单正文实验，含必要人工判分检查点，产出 JSON + Markdown 报告（改动/效果/成本）；无 Host 改动；明确非完整 Agent 评测 |
-| P1b 面板            | 样本编辑、授权与进度视图、报告浏览、拒绝/导出/实验室内试用；CodeShell 选中运行证据导出                                                                                                                                                 | P1a 至少产出一份作者认为值得复看的报告后才启动；选定记录变成明确标记缺失/脱敏的数据包                                                    |
-| P2 日常可用         | Core 通用指令快照及必要请求边界；Host binding/确认；Panel isolated adapter                                                                                                                                                             | 同一运行路径验证 Skill；接受后指定项目/模型的新会话生效，旧会话不变；冲突保护与回滚通过                                                  |
-| P3 有使用证据后扩展 | 按真实需求分项                                                                                                                                                                                                                         | 多模型、Memory 提案、复杂工具 fixture、Langfuse 导入/导出、优化策略替换和主动建议                                                        |
+| 阶段                | 改动落点                                                                                                                                                                                                                                                                             | 交付与验收                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0 材料与契约       | `packages/optimization-lab`：schemas、手写样本 JSON 的离线校验、切分与冻结                                                                                                                                                                                                           | 6–12 个合成/人工确认样本可校验、切分并生成 dataset hash；无模型调用；不接入组装根                                                                              |
+| P1a 最小实验        | 能力包内 controller、ledger、文本 runner、`reflect_once_v1`、文件报告；Core `/extension` 导出只读 Skill 快照与跨进程锁；Desktop 组装根注册（feature flag 默认关）与一个最小授权页（冻结计划、最坏情况上界、执行时间与到期时间、确认、开始/停止、导出/回填评分 JSON、继续、打开报告） | 授权后完成一次单模型、单正文实验，含必要人工判分检查点，产出 JSON + Markdown 报告（改动/效果/成本）；Core 仅两项导出，TUI/server 不接入；明确非完整 Agent 评测 |
+| P1b 界面            | Desktop 样本编辑、授权与进度视图、报告浏览、拒绝/导出/实验室内试用；Desktop main 选中运行证据导出                                                                                                                                                                                    | P1a 至少产出一份作者认为值得复看的报告后才启动；选定记录变成明确标记缺失/脱敏的数据包                                                                          |
+| P2 日常可用         | Core：模型请求准入、隔离试跑会话、指令快照与 binding 解析、模块 lifetime；Desktop 采用确认；能力包 isolated adapter                                                                                                                                                                  | 同一运行路径验证 Skill；接受后指定项目/模型的新会话生效，旧会话不变；冲突保护与回滚通过                                                                        |
+| P3 有使用证据后扩展 | 按真实需求分项                                                                                                                                                                                                                                                                       | 多模型、Memory 提案、复杂工具 fixture、Langfuse 导入/导出、优化策略替换和主动建议                                                                              |
 
 优先完成 P0+P1a 供作者自用。P1a 的真实报告决定是否做 P1b，P1 的低样本反馈决定是否投入 P2；只有 P2 完成，产品才使用“接受后用于普通任务”的表述。不为未来平台化预先实现多租户或通用算法市场。
 
-P2 的体量明显大于 P1，是项目中较大的一半。Host 侧需新增指令快照、binding 存储与原生确认、会话构造时的版本解析、子任务作用域重新匹配，以及在途请求的硬撤销（§12.2）；最后一项改动 Engine 请求路径。决定是否投入 P2 时按这组工作量评估，不按表中一行估计。
+P2 的体量明显大于 P1，是项目中较大的一半。Core 侧需新增模型请求准入、隔离试跑会话、指令快照、binding 存储与确认、会话构造时的版本解析、子任务作用域重新匹配、模块 lifetime，以及在途请求的硬撤销（§12.2）；最后一项改动 Engine 请求路径。决定是否投入 P2 时按这组工作量评估，不按表中一行估计。
 
-P0/P1a 的建议实现文件职责（最终路径按 Panel 仓库脚手架确定）：`contracts`、`datasets`、`controller`、`budget-ledger`、`text-runner`、`reflect-once`、`grading`、`reports`、最小授权页与测试；`evidence-import` 与完整 UI 属于 P1b。不要从安装包运行仓库内的 `evals/harness/runner.mjs`；它是工程评测脚本，可复用契约/受审查的小模块，但不是稳定产品 SDK。
+P0/P1a 的建议实现文件职责（位于 `packages/optimization-lab/src`）：`contracts`、`datasets`、`controller`、`budget-ledger`、`text-runner`、`reflect-once`、`grading`、`reports`、`module`（AgentModule 工厂与 queries）与测试，外加 Desktop 最小授权页；`evidence-import` 与完整界面属于 P1b。不要在能力包里调用 `evals/harness/runner.mjs`；它是工程评测脚本，可复用契约/受审查的小模块，但不是稳定产品 SDK。
 
 ## 14. 测试与验收清单
 
@@ -375,7 +394,9 @@ P0/P1a 的建议实现文件职责（最终路径按 Panel 仓库脚手架确定
 - [ ] [P1a] 合法评分回填不改变计划/评分器 hash，不自动继续或调用模型；过期后仍可本地判分和生成新报告，已完成试跑不因晚判分失效，未完成试跑不被补分伪造完成。
 - [ ] [P2] 新旧会话版本分离、非目标模型回退、子任务重新匹配作用域；硬撤销后停止请求并从干净上下文继续。
 - [ ] [P2] 用户手改源 Skill、binding 冲突、回滚冲突不静默覆盖；部分 diff 采用必须新版本重测。
-- [ ] [P1a] 关闭面板、退出 Host、升级/卸载、任务目录清理后不丢永久报告或重复运行付费步骤。
+- [ ] [P1a] 关闭实验页面、退出应用、agent server 重启、升级后不丢永久报告，也不重复运行付费步骤。
+- [ ] [P1a] feature flag 关闭时模块不注册、界面无入口、不创建工作目录；开启后只有 Desktop 组装根加载该模块。
+- [ ] [P1a] 两个 agent server 进程同时开始或恢复同一实验时，只有一个取得写锁，另一个不发出任何模型请求。
 - [ ] [P1a] `outputCapCoversReasoning` 不为 `true` 时，授权页显示“Token 与费用无上界”，不展示 Token 上限值。
 - [ ] [P1a] 开发集过拟合提示对同一输入结果确定，且不改变任何判定或候选排序。
 
@@ -390,7 +411,7 @@ P1a 验收交付一份真实报告，哪怕结论是没有改进；不得预填�
 ## 15. 默认取舍与后续触发条件
 
 - **记录不多**：人工选题/验收优先，不建自动聚类和大规模清洗管线。
-- **业务形态变化快**：独立 Panel 发版；Host 的权限、资源和指令快照接口保持通用。
+- **业务形态变化快**：业务逻辑集中在能力包内，Core 只保留通用导出、请求准入和指令快照接口；未证明价值前以 feature flag 关闭且不发布包，下线只需移除注册。
 - **只有部分 trace**：允许开始 P1，不承诺历史重放；未来再补请求级 prompt/tool/schema 与配置采集。
 - **钱花了但没有改善**：保留原因、失败候选与实际投入，避免重复搜索；不自动扩预算。
 - **需要跨模型**：建立各自基线、预算与报告，再新增明确 binding；不迁移一个模型的“已验证”标签。
