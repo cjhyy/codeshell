@@ -14,6 +14,14 @@ const { createProjectSetting } = await import(
   pathToFileURL(join(resolve(process.argv[2]), "apps/quant-lab/app/modules/project-setting.mjs"))
     .href
 );
+const panelModule = (name) =>
+  pathToFileURL(join(resolve(process.argv[2]), "apps/quant-lab/app/modules", name)).href;
+const { readSelectionWatchDocument, selectionWatchDocument } = await import(
+  panelModule("selection-watch-document.mjs")
+);
+const { parseSelectionWatchStorage: normalizeWatch } = await import(
+  panelModule("a-share-selection-ui.mjs")
+);
 const root = await mkdtemp(join(tmpdir(), "codeshell-quant-storage-"));
 const dataDir = join(root, "data");
 const methods = ["storage.getSnapshot", "storage.compareAndSet"];
@@ -113,8 +121,62 @@ try {
     ["AAPL", "MSFT"],
   );
   assert.equal(await device(projectB, "watchlist").load(), null);
+  // Real disk persistence for long-term stocks/sectors, with two independent Hosts.
+  const key = "aShareSelectionWatch";
+  const longA = device(projectA, key),
+    longB = device(projectA, key);
+  await longA.load();
+  const initial = {
+    version: 2,
+    custom: { retained: true },
+    stocks: [{ symbol: "600519", name: "original", note: "retained" }],
+    sectors: [],
+  };
+  await longA.save(initial);
+  const beforeA = await longA.load(),
+    beforeB = await longB.load();
+  const remote = selectionWatchDocument(
+    beforeA,
+    normalizeWatch({
+      ...readSelectionWatchDocument(beforeA, normalizeWatch),
+      sectors: [{ id: "new_energy", name: "energy" }],
+    }),
+    normalizeWatch,
+  );
+  await longA.save(remote);
+  const draft = selectionWatchDocument(
+    beforeB,
+    normalizeWatch({
+      ...readSelectionWatchDocument(beforeB, normalizeWatch),
+      stocks: [{ symbol: "SH600519", name: "my draft", priority: "focus" }],
+    }),
+    normalizeWatch,
+  );
+  await assert.rejects(longB.save(draft), { code: "STORAGE_CONFLICT" });
+  assert.deepEqual(await device(projectA, key).load(), remote);
+  assert.equal(draft.stocks[0].note, "retained");
+  assert.equal(draft.stocks[0].priority, "focus");
+  const latest = await longB.load();
+  const merged = selectionWatchDocument(
+    latest,
+    normalizeWatch({
+      ...readSelectionWatchDocument(latest, normalizeWatch),
+      stocks: [{ symbol: "SH600519", name: "confirmed", priority: "focus" }],
+    }),
+    normalizeWatch,
+  );
+  commitResponseLoss = true;
+  const count = writes;
+  await longB.save(merged);
+  assert.equal(writes, count + 1);
+  assert.deepEqual(await device(projectA, key).load(), merged);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8"))[key], merged);
+  assert.deepEqual(merged.custom, initial.custom);
+  assert.equal(merged.stocks[0].note, "retained");
+  assert.equal(merged.sectors[0].id, "new_energy");
+  assert.equal(await device(projectB, key).load(), null);
   console.log(
-    "✓ Quant project settings: actual Host disk/CAS, separate project isolation, recreated service, lost-response reconciliation and revoked owner and pre-operation watchlist revision checks; no real browser transport or market provider claimed",
+    "✓ Quant project settings: actual Host disk/CAS, separate project isolation, recreated service, lost-response reconciliation and revoked owner and pre-operation watchlist revision checks, long-term watch conflict/reload and extension preservation; no real browser transport or market provider claimed",
   );
 } finally {
   await rm(root, { recursive: true, force: true });
