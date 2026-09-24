@@ -1,12 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import {
-  listInstalledPanelApps,
-  panelAppInstallDir,
-  panelAppsRegistryPath,
+  type InstalledPanelApp,
+  type Credential,
   resolvePanelAppBindingProjectPath,
   validateToolArgsStrict,
 } from "@cjhyy/code-shell-core";
 import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
+import { isDeepStrictEqual } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, type Stats } from "node:fs";
 import {
@@ -32,14 +32,23 @@ import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import {
   preparePanelApp,
   setPanelAppMediaReader,
+  setPanelAppResourceAuthorizer,
   setPanelAppCaptureAuthorizer,
   revokePanelAppMediaReads,
 } from "./panel-app-protocol.js";
 import {
+  panelExecutionGate,
   PanelToolJobService,
+  PanelTaskCookieHost,
+  taskCookieFromInput,
+  taskCookieSelection,
+  createSharedPanelToolHost,
+  desktopPanelDirectoryBookmarks,
+  type SharedPanelToolHost,
   createPanelToolExecutor,
   toolJobLimits,
   type ToolJobScope,
+  type ToolQueueUpdate,
   type ToolJob,
   PanelResourceService,
   panelConnections,
@@ -47,9 +56,15 @@ import {
   materializePanelConnections,
   PanelBridgeError,
   panelBridgeFailure,
+  panelAutomationCreationKey,
+  type PanelAutomationHost,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
-import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
+import type { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
+import {
+  isPanelAppDescriptorSelected,
+  projectPanelAppInspectionCache,
+} from "./panel-app-project-packages.js";
 import { desktopPanelCapabilities } from "./panel-app-capabilities.js";
 import { PanelMediaService } from "./media/panel-media-service.js";
 import {
@@ -58,10 +73,12 @@ import {
   panelProcessInfo,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
-import { PanelAppDirectoryBookmarks } from "./panel-app-directory-bookmarks.js";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
+  panelAppStorageSnapshot,
+  panelAppStorageChange,
+  applyPanelAppStorageChange,
   panelAppStorageQuotaBytes,
   preparePanelAppStorage,
   readPanelAppStorage,
@@ -172,6 +189,7 @@ interface GuestBinding {
 
 interface PendingAgentToolCall {
   guestId: number;
+  releaseExecution(): void;
   resolve(value: unknown): void;
   reject(error: Error): void;
   timer: ReturnType<typeof setTimeout>;
@@ -192,6 +210,8 @@ export interface PanelAppBridgeOptions {
   showNotification?(notification: { title: string; body: string }): boolean;
   /** Host-owned Cookie login operations. Cookie values never cross into the Panel guest. */
   cookieCredentials?: {
+    /** Host-only vault access for versioned background task credentials. */
+    taskCredentials?(cwd: string): Promise<Credential[]>;
     list(cwd?: string): Promise<PanelAppCookieCredential[]>;
     loginAndSave(input: {
       appId: string;
@@ -221,6 +241,10 @@ export interface PanelAppBridgeOptions {
   };
   /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
   automations?: {
+    /** True only when create persists creationKey atomically with the job. */
+    uniqueCreation?: boolean;
+    /** Shared project Host for transactionally checked mutations. */
+    conditional?: PanelAutomationHost;
     list(scope: { resumeSessionId: string }): Promise<
       Array<{
         id: string;
@@ -244,6 +268,7 @@ export interface PanelAppBridgeOptions {
         prompt: string;
         timezone?: string;
         permissionLevel: "full";
+        creationKey?: string;
       },
       scope: { resumeSessionId: string },
     ): Promise<unknown>;
@@ -411,9 +436,7 @@ export class PanelAppBridge {
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
   private readonly processService: PanelAppProcessService;
-  private readonly directoryBookmarks = new PanelAppDirectoryBookmarks(
-    join(app.getPath("userData"), "panel-app-directory-bookmarks.json"),
-  );
+  private readonly directoryBookmarks = desktopPanelDirectoryBookmarks(app.getPath("userData"));
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
   private resourceService?: PanelResourceService;
@@ -423,10 +446,14 @@ export class PanelAppBridge {
     { guestId: number; settled: Promise<void> }
   >();
   private toolJobService?: PanelToolJobService;
+  private taskCookieHost?: PanelTaskCookieHost;
   private nextToolOwner = -1;
   private readonly toolOwners = new Map<number, { scope: ToolJobScope; appTitle: string }>();
 
   constructor(private readonly options: PanelAppBridgeOptions) {
+    setPanelAppResourceAuthorizer((resource, projectPath) =>
+      isPanelAppDescriptorSelected(resource.descriptor, projectPath),
+    );
     setPanelAppCaptureAuthorizer(
       (scope) =>
         options.isPanelAppBound(scope.projectPath, scope.appId) &&
@@ -441,6 +468,14 @@ export class PanelAppBridge {
       return this.getResourceService().openRead(scope, id, request);
     });
     this.processService = new PanelAppProcessService({
+      acquireExecution: (owner) => {
+        const projectPath =
+          this.toolOwners.get(owner.guestId)?.scope.projectPath ??
+          this.guests.get(owner.guestId)?.projectPath;
+        if (!projectPath)
+          throw new PanelBridgeError("REVOKED", "Panel execution owner is unavailable");
+        return panelExecutionGate.enter({ appId: owner.appId, projectPath });
+      },
       allowAuthorizedProcessWithoutPrompt: true,
       isOwnerAuthorized: async (owner) => {
         const task = this.toolOwners.get(owner.guestId);
@@ -452,6 +487,7 @@ export class PanelAppBridge {
           binding.resource.descriptor.appId === owner.appId &&
           binding.resource.descriptor.revision === owner.revision &&
           this.options.isPanelAppBound(binding.projectPath, owner.appId) &&
+          isPanelAppDescriptorSelected(binding.resource.descriptor, binding.projectPath) &&
           this.options.isWorkspaceTrusted(binding.cwd ?? binding.projectPath)
         );
       },
@@ -636,6 +672,9 @@ export class PanelAppBridge {
     await this.getResourceService().initialize();
     await this.getToolJobService().initialize();
     await this.getMediaService().initialize();
+    // A damaged optional credential key must not prevent unrelated media recovery.
+    if (this.options.cookieCredentials?.taskCredentials)
+      await this.getTaskCookieHost().initialize();
   }
 
   async shutdownMedia(): Promise<void> {
@@ -644,6 +683,7 @@ export class PanelAppBridge {
     for (const controller of this.resourceTransfers.keys()) controller.abort();
     await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
     await this.toolJobService?.shutdown();
+    await this.taskCookieHost?.shutdown();
     await this.mediaService?.shutdown();
     await this.resourceService?.shutdown();
   }
@@ -703,6 +743,7 @@ export class PanelAppBridge {
       if (pending.guestId !== guestId) continue;
       clearTimeout(pending.timer);
       this.pendingAgentToolCalls.delete(requestId);
+      pending.releaseExecution();
       pending.reject(new Error("Panel App closed before its Agent tool completed"));
     }
   }
@@ -809,13 +850,25 @@ export class PanelAppBridge {
     if (validationError) {
       throw new Error(`Invalid Panel App tool input: ${validationError}`);
     }
+    if (
+      [...this.pendingAgentToolCalls.values()].filter(
+        (pending) => pending.guestId === binding.guest.id,
+      ).length >= 16
+    )
+      throw new Error("Panel App has too many unfinished Agent tool calls");
+    const releaseExecution = panelExecutionGate.enter({
+      appId: binding.resource.descriptor.appId,
+      projectPath: binding.projectPath,
+    });
     const requestId = randomUUID();
     const result = await new Promise<unknown>((resolveResult, reject) => {
       const timer = setTimeout(() => {
-        this.pendingAgentToolCalls.delete(requestId);
+        // A timeout stops waiting, not the guest operation. Retain the lease until
+        // its late response or guest revocation proves it can no longer execute.
         reject(new Error(`Panel App tool '${input.toolName}' timed out`));
       }, this.options.limits?.callTimeoutMs ?? CALL_TIMEOUT_MS);
       this.pendingAgentToolCalls.set(requestId, {
+        releaseExecution,
         guestId: binding.guest.id,
         resolve: resolveResult,
         reject,
@@ -830,6 +883,7 @@ export class PanelAppBridge {
       } catch (error) {
         clearTimeout(timer);
         this.pendingAgentToolCalls.delete(requestId);
+        releaseExecution();
         reject(
           error instanceof Error
             ? error
@@ -854,6 +908,7 @@ export class PanelAppBridge {
     const pending = this.pendingAgentToolCalls.get(response.requestId);
     if (!pending || pending.guestId !== sender.id) return;
     this.pendingAgentToolCalls.delete(response.requestId);
+    pending.releaseExecution();
     clearTimeout(pending.timer);
     if (response.ok === true) {
       pending.resolve(response.result ?? null);
@@ -1022,7 +1077,7 @@ export class PanelAppBridge {
           ? 128 * 1024
           : method === "workspace.writeText"
             ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
-            : method === "storage.set"
+            : method === "storage.set" || method === "storage.compareAndSet"
               ? this.storageQuotaBytes() + 8 * 1024
               : MAX_PARAMS_BYTES);
     if (jsonBytes(params) > paramsLimit) {
@@ -1054,7 +1109,10 @@ export class PanelAppBridge {
     // Whole-file custody can outlast a normal UI RPC. Keep it guest-owned and
     // cancellable so a deadline or revoked guest cannot leave a copy running.
     const transfer = RESOURCE_TRANSFER_METHODS.has(method) ? new AbortController() : undefined;
-    const operation = this.dispatch(binding, method, params, transfer?.signal);
+    const operation = panelExecutionGate.run(
+      { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath },
+      () => this.dispatch(binding, method, params, transfer?.signal),
+    );
     if (transfer) {
       const settled = operation
         .then(
@@ -1082,6 +1140,7 @@ export class PanelAppBridge {
                   method === "filesystem.pickDirectory" ||
                   method === "process.spawn" ||
                   method === "tasks.start" ||
+                  method === "tasks.retry" ||
                   method === "credentials.connections.authorizeProcess" ||
                   method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
@@ -1091,6 +1150,7 @@ export class PanelAppBridge {
     const resultLimit =
       limits?.maxResultBytes ??
       (method === "tasks.get" ||
+      method === "tasks.find" ||
       method === "tasks.start" ||
       method === "tasks.retry" ||
       method === "tasks.cancel"
@@ -1103,7 +1163,9 @@ export class PanelAppBridge {
               ? MAX_WORKSPACE_READ_BYTES * 6 + 8 * 1024
               : method === "workspace.list"
                 ? MAX_WORKSPACE_LIST_RESULT_BYTES
-                : MAX_RESULT_BYTES);
+                : method === "storage.getSnapshot" || method === "storage.compareAndSet"
+                  ? this.storageQuotaBytes() + 8192
+                  : MAX_RESULT_BYTES);
     if (jsonBytes(result) > resultLimit) {
       throw new PanelBridgeError("RESULT_TOO_LARGE", "Panel App result is too large");
     }
@@ -1117,7 +1179,10 @@ export class PanelAppBridge {
   }
 
   private assertProjectBinding(binding: GuestBinding): void {
-    if (!this.options.isPanelAppBound(binding.projectPath, binding.resource.descriptor.appId)) {
+    if (
+      !this.options.isPanelAppBound(binding.projectPath, binding.resource.descriptor.appId) ||
+      !isPanelAppDescriptorSelected(binding.resource.descriptor, binding.projectPath)
+    ) {
       throw new Error(
         `Panel App '${binding.resource.descriptor.appId}' is no longer bound to this project`,
       );
@@ -1127,10 +1192,24 @@ export class PanelAppBridge {
   private capabilitiesFor(binding: GuestBinding) {
     return desktopPanelCapabilities(binding.resource.descriptor.permissions, {
       resources: this.getResourceService().capabilities(),
-      tasks: { available: true, ...toolJobLimits },
+      tasks: {
+        available: true,
+        directoryBookmarks: true,
+        queueControl: true,
+        ...toolJobLimits,
+        ownership: "project",
+        executionRevision: binding.resource.descriptor.revision,
+        sharedAcrossDevices: true,
+        continuesAfterDisconnect: true,
+        continuesAfterLogout: true,
+      },
       audio: !!this.options.audioTranscription,
       cookies: !!this.options.cookieCredentials,
+      taskCookies: !!this.options.cookieCredentials?.taskCredentials,
       automations: !!this.options.automations,
+      automationUniqueCreate: this.options.automations?.uniqueCreation === true,
+      automationConditionalMutations:
+        this.options.automations?.conditional?.conditionalMutations === true,
       mediaMethods: [
         "media.status",
         "media.import",
@@ -1165,7 +1244,7 @@ export class PanelAppBridge {
       !this.options.isWorkspaceTrusted(scope.projectPath)
     )
       throw new PanelBridgeError("REVOKED", "Tool task authorization was revoked");
-    const installed = await this.installedToolApps.get(scope.appId);
+    const installed = await this.projectToolApps(scope.projectPath).get(scope.appId);
     if (
       !installed ||
       installedPanelAppRevision(installed) !== scope.revision ||
@@ -1176,20 +1255,146 @@ export class PanelAppBridge {
     return installed;
   }
 
-  private readonly installedToolApps = new PanelAppInspectionCache({
-    installPath: panelAppInstallDir,
-    registryPath: panelAppsRegistryPath,
-    listInstalled: listInstalledPanelApps,
-  });
+  private readonly installedToolApps = new Map<string, PanelAppInspectionCache>();
+  private projectToolApps(projectPath: string): PanelAppInspectionCache {
+    let cache = this.installedToolApps.get(projectPath);
+    if (!cache) {
+      cache = projectPanelAppInspectionCache(projectPath);
+      if (this.installedToolApps.size >= 64)
+        this.installedToolApps.delete(this.installedToolApps.keys().next().value!);
+      this.installedToolApps.set(projectPath, cache);
+    }
+    return cache;
+  }
 
   private toolSummary(job: ToolJob) {
     const { input: _input, result: _result, ...summary } = job;
     return summary;
   }
 
+  async authorizePanelDirectory(
+    expected: InstalledPanelApp,
+    projectPath: string,
+    workspacePath: string,
+  ): Promise<void> {
+    if (
+      !this.options.isPanelAppBound(projectPath, expected.id) ||
+      !this.options.isWorkspaceTrusted(projectPath) ||
+      !this.options.isWorkspaceTrusted(workspacePath)
+    )
+      throw new PanelBridgeError("REVOKED", "Directory project authorization was revoked");
+    const installed = await this.projectToolApps(projectPath).get(expected.id);
+    if (
+      !installed ||
+      !isDeepStrictEqual(installed, expected) ||
+      !installed.permissions.includes("process")
+    )
+      throw new PanelBridgeError(
+        "REVOKED",
+        "Installed directory consumer changed; reopen the Panel",
+      );
+    if (
+      !this.options.isPanelAppBound(projectPath, expected.id) ||
+      !this.options.isWorkspaceTrusted(projectPath) ||
+      !this.options.isWorkspaceTrusted(workspacePath)
+    )
+      throw new PanelBridgeError("REVOKED", "Directory project authorization was revoked");
+  }
+
+  /** Remote transports share project tasks but cannot shut down their coordinator. */
+  sharedToolJobs(): SharedPanelToolHost {
+    return createSharedPanelToolHost({
+      ...(this.options.cookieCredentials?.taskCredentials
+        ? { cookies: this.getTaskCookieHost() }
+        : {}),
+      service: () => this.getToolJobService(),
+      resolveScope: async (expected, projectPath) => {
+        const installed = await this.projectToolApps(projectPath).get(expected.id);
+        if (!installed || !isDeepStrictEqual(installed, expected))
+          throw new PanelBridgeError("REVOKED", "The installed package changed; reopen the Panel");
+        const scope = {
+          appId: installed.id,
+          projectPath,
+          revision: installedPanelAppRevision(installed),
+        };
+        await this.installedToolApp(scope);
+        return scope;
+      },
+    });
+  }
+
+  private getTaskCookieHost(): PanelTaskCookieHost {
+    const credentials = this.options.cookieCredentials?.taskCredentials;
+    if (!credentials)
+      throw new PanelBridgeError("NOT_SUPPORTED", "Background Cookie access is unavailable");
+    return (this.taskCookieHost ??= new PanelTaskCookieHost({
+      rootDirectory: join(app.getPath("userData"), "panel-task-cookies"),
+      credentials: (scope) => credentials(scope.projectPath),
+      authorize: async (scope) => {
+        if (!(await this.installedToolApp(scope)).permissions.includes("credentials.cookies"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires Cookie permission");
+      },
+    }));
+  }
+
+  private async confirmTaskCookie(
+    binding: GuestBinding,
+    input: unknown,
+    entry: string,
+    background = true,
+  ) {
+    const selection = taskCookieFromInput(input);
+    if (!selection) return;
+    this.requirePermission(binding, "credentials.cookies");
+    const scope = {
+      appId: binding.resource.descriptor.appId,
+      projectPath: binding.projectPath,
+      revision: binding.resource.descriptor.revision,
+    };
+    const cwd = binding.cwd;
+    const host = this.getTaskCookieHost();
+    const account = await host.check(scope, selection);
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const decision = await dialog.showMessageBox(owner, {
+      type: "question",
+      buttons: ["Use saved login", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      title: binding.resource.descriptor.title,
+      message: background
+        ? `Use “${account.label}” for this background task?`
+        : `Use “${account.label}” with ${entry}?`,
+      detail: `Site: ${new URL(selection.url).hostname}\nTool: ${entry}\nProject: ${binding.projectPath}\nThe selected login will be passed privately to the program. ${background ? "The task may continue after this Panel closes." : "Closing this Panel or revoking access stops use of the temporary file."}`,
+      noLink: true,
+    });
+    if (decision.response !== 0)
+      throw new PanelBridgeError("PERMISSION_DENIED", "Saved login use was cancelled");
+    if (
+      this.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      binding.cwd !== cwd ||
+      binding.resource.descriptor.revision !== scope.revision
+    )
+      throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie approval");
+    await this.trustedWorkspaceRoot(binding);
+    await host.check(scope, selection);
+    if (
+      this.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      binding.cwd !== cwd ||
+      !this.options.isWorkspaceTrusted(cwd ?? scope.projectPath)
+    )
+      throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie approval");
+    this.assertProjectBinding(binding);
+  }
+
   private getToolJobService(): PanelToolJobService {
     if (this.toolJobService) return this.toolJobService;
     const executor = createPanelToolExecutor({
+      ...(this.options.cookieCredentials?.taskCredentials
+        ? { cookies: this.getTaskCookieHost() }
+        : {}),
       processes: this.processService,
       resources: this.getResourceService(),
       owner: (job, send) => {
@@ -1213,6 +1418,10 @@ export class PanelAppBridge {
         if (!(await this.installedToolApp(scope)).permissions.includes("credentials.connections"))
           throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
       },
+      resolveDirectoryBookmark: async (scope, bookmark) => {
+        await this.installedToolApp(scope);
+        return this.directoryBookmarks.restore(scope.appId, scope.projectPath, bookmark);
+      },
       appDataDirectory: async (scope) => {
         await this.installedToolApp(scope);
         const path = join(app.getPath("userData"), "panel-app-data", scope.appId);
@@ -1225,6 +1434,11 @@ export class PanelAppBridge {
       rootDir: join(app.getPath("userData"), "panel-tool-jobs"),
       ...executor,
       isAuthorized: async (scope) => !!(await this.installedToolApp(scope).catch(() => null)),
+      describePackage: async (scope) => {
+        const installed = await this.installedToolApp(scope);
+        if (!installed.packageDigest) throw new Error("Project package digest is unavailable");
+        return { version: installed.version, packageDigest: installed.packageDigest };
+      },
       onEvent: (job) => {
         for (const binding of this.guests.values())
           if (
@@ -1267,6 +1481,7 @@ export class PanelAppBridge {
       const entry = (await this.installedToolApp(scope)).nativeEntries?.[input.entry ?? ""];
       if (!entry)
         throw new PanelBridgeError("NOT_SUPPORTED", "Installed native tool is unavailable");
+      await this.confirmTaskCookie(binding, input.input, input.entry!);
       return service.start(scope, {
         entry: { name: input.entry!, sha256: entry.sha256 },
         input: input.input,
@@ -1274,6 +1489,9 @@ export class PanelAppBridge {
         requestKey: input.requestKey,
       });
     }
+    if (method === "tasks.find") return service.find(scope, input.requestKey!);
+    if (method === "tasks.queue.get") return service.getQueue(scope);
+    if (method === "tasks.queue.set") return service.setQueue(scope, params as ToolQueueUpdate);
     if (method === "tasks.list") {
       const offset = input.offset ?? 0,
         limit = input.limit ?? 50;
@@ -1291,7 +1509,13 @@ export class PanelAppBridge {
     }
     if (method === "tasks.get") return service.get(scope, input.id!);
     if (method === "tasks.cancel") return service.cancel(scope, input.id!);
-    if (method === "tasks.retry") return service.retry(scope, input.id!);
+    if (method === "tasks.retry") {
+      const previous = await service.get(scope, input.id!);
+      if (previous.readOnly)
+        throw new PanelBridgeError("NOT_SUPPORTED", "旧任务仅供查看，请检查输入后创建新任务。");
+      await this.confirmTaskCookie(binding, previous.input, previous.entry.name);
+      return service.retry(scope, input.id!);
+    }
     throw new PanelBridgeError("NOT_SUPPORTED", "Unknown tool task operation");
   }
 
@@ -1477,6 +1701,10 @@ export class PanelAppBridge {
     switch (method) {
       case "context.get":
         return binding.context;
+      case "storage.getSnapshot":
+      case "storage.compareAndSet":
+        this.requirePermission(binding, "storage");
+        return this.storageVersioned(binding, method, params);
       case "storage.get":
         this.requirePermission(binding, "storage");
         return this.storageGet(binding, params);
@@ -1552,6 +1780,20 @@ export class PanelAppBridge {
       case "credentials.cookies.list":
         this.requirePermission(binding, "credentials.cookies");
         return this.listCookieCredentials(binding, params);
+      case "credentials.cookies.listForTask": {
+        this.requirePermission(binding, "credentials.cookies");
+        this.requirePermission(binding, "process");
+        this.requirePermission(binding, "resources");
+        await this.trustedWorkspaceRoot(binding);
+        return this.getTaskCookieHost().list(
+          {
+            appId: binding.resource.descriptor.appId,
+            projectPath: binding.projectPath,
+            revision: binding.resource.descriptor.revision,
+          },
+          this.cookieCredentialUrl(params).toString(),
+        );
+      }
       case "credentials.cookies.loginAndSave":
         this.requirePermission(binding, "credentials.cookies");
         return this.loginAndSaveCookieCredential(binding, params);
@@ -1568,6 +1810,13 @@ export class PanelAppBridge {
       case "automations.create":
         this.requirePermission(binding, "automations.manage");
         return this.createPanelAutomation(binding, params);
+      case "automations.createUnique":
+        this.requirePermission(binding, "automations.manage");
+        return this.createPanelAutomation(binding, params, true);
+      case "automations.updateIfRevision":
+      case "automations.deleteIfRevision":
+        this.requirePermission(binding, "automations.manage");
+        return this.conditionalPanelAutomation(binding, method, params);
       case "automations.update":
         this.requirePermission(binding, "automations.manage");
         return this.updatePanelAutomation(binding, params);
@@ -1655,13 +1904,29 @@ export class PanelAppBridge {
     const name = (params as { name?: unknown } | null)?.name;
     if (name === "project") {
       const root = await this.trustedWorkspaceRoot(binding);
-      return this.processService.grantDirectory(this.processOwner(binding), root);
+      const selected = await this.processService.grantDirectory(this.processOwner(binding), root);
+      const bookmark = this.directoryBookmarks.remember(
+        binding.resource.descriptor.appId,
+        root,
+        selected.path,
+      );
+      this.processService.directoryPath(this.processOwner(binding), selected.handle);
+      return { ...selected, bookmark };
     }
     if (name === "downloads") {
-      return this.processService.grantDirectory(
+      const selected = await this.processService.grantDirectory(
         this.processOwner(binding),
         app.getPath("downloads"),
       );
+      if (!binding.cwd || !this.options.isWorkspaceTrusted(binding.cwd)) return selected;
+      const projectPath = await this.trustedWorkspaceRoot(binding);
+      const bookmark = this.directoryBookmarks.remember(
+        binding.resource.descriptor.appId,
+        projectPath,
+        selected.path,
+      );
+      this.processService.directoryPath(this.processOwner(binding), selected.handle);
+      return { ...selected, bookmark };
     }
     if (name === "user-bin") {
       return this.grantManagedBinDirectory(binding);
@@ -1825,7 +2090,11 @@ export class PanelAppBridge {
     const projectPath = await this.trustedWorkspaceRoot(binding);
     const processOwner = this.processOwner(binding);
     const grant = await this.processService.grantDirectory(processOwner, selected.filePaths[0]);
-    const bookmark = this.directoryBookmarks.remember(binding.resource.descriptor.appId, projectPath, grant.path);
+    const bookmark = this.directoryBookmarks.remember(
+      binding.resource.descriptor.appId,
+      projectPath,
+      grant.path,
+    );
     this.processService.directoryPath(processOwner, grant.handle);
     return { ...grant, bookmark };
   }
@@ -1833,7 +2102,11 @@ export class PanelAppBridge {
   private async restoreProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
     const projectPath = await this.trustedWorkspaceRoot(binding);
     const bookmark = (params as { bookmark?: unknown } | null)?.bookmark;
-    const path = this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
+    const path = this.directoryBookmarks.restore(
+      binding.resource.descriptor.appId,
+      projectPath,
+      bookmark,
+    );
     const grant = await this.processService.grantDirectory(this.processOwner(binding), path);
     this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
     return { ...grant, bookmark };
@@ -1925,6 +2198,41 @@ export class PanelAppBridge {
     return { resumeSessionId: binding.context.sessionId! };
   }
 
+  private async conditionalPanelAutomation(binding: GuestBinding, method: string, params: unknown) {
+    const host = this.panelAutomationHost(binding).conditional;
+    if (!host?.conditionalMutations) throw Error("Conditional automation changes are unavailable");
+    this.requirePermission(binding, "context.workspace");
+    this.requirePermission(binding, "context.session");
+    const cwd = binding.context.cwd!;
+    const sessionId = binding.context.sessionId!;
+    return host.call(
+      {
+        appId: binding.resource.descriptor.appId,
+        cwd,
+        sessionId,
+        revision: binding.resource.descriptor.revision,
+        isAuthorized: async () => {
+          if (
+            this.guests.get(binding.guest.id) !== binding ||
+            binding.guest.isDestroyed() ||
+            binding.context.cwd !== cwd ||
+            binding.context.sessionId !== sessionId ||
+            !this.options.isWorkspaceTrusted(cwd)
+          )
+            return false;
+          try {
+            this.assertProjectBinding(binding);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+      },
+      method,
+      params,
+    );
+  }
+
   private automationId(params: unknown): string {
     const id = (params as { id?: unknown } | null)?.id;
     if (typeof id !== "string" || !id.trim() || id.length > 128) {
@@ -1948,9 +2256,16 @@ export class PanelAppBridge {
     return { host, automation, scope };
   }
 
-  private async createPanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
+  private async createPanelAutomation(
+    binding: GuestBinding,
+    params: unknown,
+    unique = false,
+  ): Promise<unknown> {
     const host = this.panelAutomationHost(binding);
+    if (unique && !host.uniqueCreation)
+      throw new Error("Panel App unique automation creation is unavailable");
     const input = params as {
+      key?: unknown;
       name?: unknown;
       schedule?: unknown;
       prompt?: unknown;
@@ -1962,12 +2277,25 @@ export class PanelAppBridge {
     } | null;
     if (
       input &&
-      ["cwd", "projectId", "rootId", "resumeSessionId"].some((key) =>
+      ["cwd", "projectId", "rootId", "resumeSessionId", "creationKey"].some((key) =>
         Object.prototype.hasOwnProperty.call(input, key),
       )
     ) {
       throw new Error("Panel App cannot submit automation workspace authority fields");
     }
+    if (unique && (typeof input?.key !== "string" || !/^[a-zA-Z0-9._:-]{1,80}$/.test(input.key)))
+      throw new Error("Panel App unique automation requires a bounded key");
+    if (!unique && input?.key !== undefined)
+      throw new Error("Panel App automation keys require automations.createUnique");
+    const scope = this.panelAutomationScope(binding);
+    const creationKey = unique
+      ? panelAutomationCreationKey(
+          binding.resource.descriptor.appId,
+          binding.context.cwd!,
+          scope.resumeSessionId,
+          input!.key as string,
+        )
+      : undefined;
     const name = typeof input?.name === "string" ? input.name.trim() : "";
     const schedule = typeof input?.schedule === "string" ? input.schedule.trim() : "";
     const prompt = typeof input?.prompt === "string" ? input.prompt.trim() : "";
@@ -1988,8 +2316,9 @@ export class PanelAppBridge {
         prompt,
         ...(timezone ? { timezone } : {}),
         permissionLevel: "full",
+        ...(creationKey ? { creationKey } : {}),
       },
-      this.panelAutomationScope(binding),
+      scope,
     );
   }
 
@@ -2211,7 +2540,61 @@ export class PanelAppBridge {
       credentialId?: unknown;
       url?: unknown;
       executableHandle?: unknown;
+      revision?: unknown;
     } | null;
+    if (input?.revision !== undefined) {
+      this.requirePermission(binding, "process");
+      this.requirePermission(binding, "resources");
+      const selection = taskCookieSelection({
+        credentialId: input.credentialId,
+        url: input.url,
+        revision: input.revision,
+      });
+      const owner = this.processOwner(binding);
+      const executable = this.processService.executableName(owner, input.executableHandle);
+      const scope = {
+        appId: binding.resource.descriptor.appId,
+        projectPath: binding.projectPath,
+        revision: binding.resource.descriptor.revision,
+      };
+      const cwd = binding.cwd;
+      const host = this.getTaskCookieHost();
+      await this.confirmTaskCookie(
+        binding,
+        { cookieArgument: { ...selection, argumentName: "--cookies" } },
+        executable,
+        false,
+      );
+      const validate = async () => {
+        await host.check(scope, selection);
+        if (
+          this.guests.get(binding.guest.id) !== binding ||
+          binding.guest.isDestroyed() ||
+          binding.cwd !== cwd ||
+          binding.resource.descriptor.revision !== scope.revision ||
+          !this.options.isWorkspaceTrusted(cwd ?? scope.projectPath)
+        )
+          throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie access");
+        this.assertProjectBinding(binding);
+      };
+      const lease = await host.materialize(scope, selection);
+      try {
+        await validate();
+        const sealed = await this.processService.grantFileArgument(owner, {
+          executableHandle: input.executableHandle,
+          argumentName: "--cookies",
+          path: lease.path,
+          validate,
+          cleanup: () => {
+            void lease.cleanup().catch(() => {});
+          },
+        });
+        return { authorized: true, fileArgumentHandle: sealed.handle, count: lease.count };
+      } catch (cause) {
+        await lease.cleanup();
+        throw cause;
+      }
+    }
     const credentialId = typeof input?.credentialId === "string" ? input.credentialId.trim() : "";
     if (!credentialId || credentialId.length > 160) {
       throw new Error("Cookie process authorization requires a saved credential id");
@@ -2293,6 +2676,40 @@ export class PanelAppBridge {
     const storage = await this.readStorage(binding);
     const key = this.storageKey(params);
     return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null;
+  }
+
+  private async storageVersioned(binding: GuestBinding, method: string, params: unknown) {
+    const projectPath = binding.projectPath;
+    const file = this.storagePath(binding);
+    const key = this.storageKey(params);
+    const change = method === "storage.compareAndSet" ? panelAppStorageChange(params) : null;
+    const assertAuthorized = async () => {
+      if (
+        this.guests.get(binding.guest.id) !== binding ||
+        binding.guest.isDestroyed() ||
+        binding.projectPath !== projectPath
+      )
+        throw new PanelBridgeError("REVOKED", "Panel App storage scope changed");
+      this.assertProjectBinding(binding);
+      this.requirePermission(binding, "storage");
+    };
+    if (!change) {
+      const snapshot = panelAppStorageSnapshot(
+        await readPanelAppStorage(file, this.storageQuotaBytes()),
+        key,
+      );
+      await assertAuthorized();
+      return snapshot;
+    }
+    return this.withStorageMutation(binding, async (file) => {
+      await assertAuthorized();
+      const storage = await readPanelAppStorage(file, this.storageQuotaBytes());
+      const result = applyPanelAppStorageChange(storage, change);
+      if (result.updated)
+        await writePanelAppStorage(file, storage, this.storageQuotaBytes(), assertAuthorized);
+      await assertAuthorized();
+      return result;
+    });
   }
 
   private async storageSet(binding: GuestBinding, params: unknown): Promise<boolean> {

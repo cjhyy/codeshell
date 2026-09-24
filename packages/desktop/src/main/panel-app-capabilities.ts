@@ -4,10 +4,17 @@ import {
   panelResourceMethods,
   panelToolJobMethods,
 } from "@cjhyy/code-shell-server/panels";
+import { panelAppStorageQuotaBytes } from "@cjhyy/code-shell-server/storage";
 import type { PanelAppPermission } from "../shared/panel-apps.js";
 
 const groups: Record<string, string[]> = {
-  storage: ["storage.get", "storage.set", "storage.delete"],
+  storage: [
+    "storage.get",
+    "storage.set",
+    "storage.delete",
+    "storage.getSnapshot",
+    "storage.compareAndSet",
+  ],
   "external.open": ["external.open"],
   "agent.submitPrompt": ["agent.submitPrompt"],
   "agent.task": [
@@ -40,7 +47,10 @@ const groups: Record<string, string[]> = {
   "automations.manage": [
     "automations.list",
     "automations.create",
+    "automations.createUnique",
     "automations.update",
+    "automations.updateIfRevision",
+    "automations.deleteIfRevision",
     "automations.pause",
     "automations.resume",
     "automations.delete",
@@ -55,13 +65,23 @@ export function desktopPanelCapabilities(
     resources: unknown;
     audio: boolean;
     cookies: boolean;
+    taskCookies?: boolean;
     automations: boolean;
+    automationUniqueCreate?: boolean;
+    automationConditionalMutations?: boolean;
     tasks?: unknown;
     mediaMethods: string[];
     limits?: any;
   },
 ) {
   const permitted = new Set<string>(permissions);
+  const taskCookies =
+    !!options.taskCookies &&
+    !!options.tasks &&
+    permitted.has("credentials.cookies") &&
+    permitted.has("process") &&
+    permitted.has("resources");
+  const storageBytes = panelAppStorageQuotaBytes(options.limits?.storageQuotaBytes) + 8192;
   const methods = ["context.get"];
   for (const [permission, entries] of Object.entries(groups)) {
     if (!permitted.has(permission)) continue;
@@ -74,32 +94,48 @@ export function desktopPanelCapabilities(
     methods.push(
       ...entries.filter(
         (method) =>
-          !(
+          (method !== "automations.createUnique" || options.automationUniqueCreate === true) &&
+          (!method.endsWith("IfRevision") ||
+            (options.automationConditionalMutations === true &&
+              permitted.has("context.workspace") &&
+              permitted.has("context.session"))) &&
+          (!(
             method.endsWith("authorizeProcess") ||
             method === "resources.capture" ||
             method === "resources.materialize" ||
             method === "resources.references.create" ||
             method === "resources.references.relink"
-          ) || permitted.has("process"),
+          ) ||
+            permitted.has("process")),
       ),
     );
   }
   if (permitted.has("media")) methods.push(...options.mediaMethods);
   if (options.tasks && permitted.has("process") && permitted.has("resources"))
     methods.push(...panelToolJobMethods);
+  if (taskCookies) methods.push("credentials.cookies.listForTask");
   return {
     host: "desktop" as const,
     availableMethods: methods,
     capabilities: {
       ...panelRuntimeCapabilities({
         process: permitted.has("process"),
+        cookieProcess: taskCookies,
         resources: permitted.has("resources")
           ? { ...(options.resources as Record<string, unknown>), pickReferences: true }
           : undefined,
-        tasks: permitted.has("process") && permitted.has("resources") ? options.tasks : undefined,
+        tasks:
+          permitted.has("process") && permitted.has("resources") && options.tasks
+            ? { ...(options.tasks as Record<string, unknown>), cookieCredentials: taskCookies }
+            : undefined,
         limits: options.limits,
       }),
       methodLimits: {
+        "storage.getSnapshot": { maxResultBytes: options.limits?.maxResultBytes ?? storageBytes },
+        "storage.compareAndSet": {
+          maxParamsBytes: options.limits?.maxParamsBytes ?? storageBytes,
+          maxResultBytes: options.limits?.maxResultBytes ?? storageBytes,
+        },
         "resources.references.pick": { timeoutMs: 30 * 60 * 1000 },
         "tasks.start": {
           maxParamsBytes: 2 * 1024 * 1024 + 8192,
@@ -107,7 +143,8 @@ export function desktopPanelCapabilities(
           timeoutMs: 30 * 60 * 1000,
         },
         "tasks.get": { maxResultBytes: 5 * 1024 * 1024 },
-        "tasks.retry": { maxResultBytes: 5 * 1024 * 1024 },
+        "tasks.find": { maxResultBytes: 5 * 1024 * 1024 },
+        "tasks.retry": { maxResultBytes: 5 * 1024 * 1024, timeoutMs: 30 * 60 * 1000 },
         "tasks.cancel": { maxResultBytes: 5 * 1024 * 1024 },
         "process.get": { maxResultBytes: 2 * 1024 * 1024 },
         "process.write": { maxParamsBytes: 128 * 1024 },

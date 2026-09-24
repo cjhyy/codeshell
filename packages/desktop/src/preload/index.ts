@@ -875,6 +875,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktrees: boolean;
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
+  openCloudWorkbench: (address: string) => ipcRenderer.invoke("cloud:open-workbench", address),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:revealInFinder", path, cwd),
@@ -1047,6 +1048,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:list", cwd, locale),
   listPanelAppExtensions: (cwd: string, locale: string) =>
     ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
+  getPanelAppBindings: (cwd: string) => ipcRenderer.invoke("panel-apps:bindings", cwd),
+  getPanelAppPackageHistory: (cwd: string, id: string, revision: string) =>
+    ipcRenderer.invoke("panel-apps:packageHistory", cwd, id, revision),
+  previewPanelAppRestore: (cwd: string, id: string, digest: string, revision: string) =>
+    ipcRenderer.invoke("panel-apps:previewRestore", cwd, id, digest, revision),
+  restorePanelAppPackage: (cwd: string, token: string) =>
+    ipcRenderer.invoke("panel-apps:restore", cwd, token),
+  setPanelAppProjectBinding: (cwd: string, id: string, bound: boolean, expectedRevision: string) =>
+    ipcRenderer.invoke("panel-apps:setProjectBinding", cwd, id, bound, expectedRevision),
   listPanelAppsForProjects: (projectPaths: string[], locale: string) =>
     ipcRenderer.invoke("panel-apps:listForProjects", projectPaths, locale),
   preparePanelApp: (id: string, projectPath: string) =>
@@ -1235,10 +1245,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("dialog:pickPanelAppSource", kind),
   previewLocalPanelApp: (
     input: import("@cjhyy/code-shell-core").PanelAppSourceInput,
+    cwd: string,
   ): Promise<
-    | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
+    | {
+        ok: true;
+        preview: import("@cjhyy/code-shell-core").PanelAppPreview;
+        installedVersion?: string;
+      }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke("panel-apps:previewLocal", input),
+  > => ipcRenderer.invoke("panel-apps:previewLocal", input, cwd),
   discoverGitPanelApps: (
     input: import("@cjhyy/code-shell-core").GitPanelAppSourceInput,
   ): Promise<
@@ -1250,16 +1265,24 @@ contextBridge.exposeInMainWorld("codeshell", {
   > => ipcRenderer.invoke("panel-apps:discoverGit", input),
   checkPanelAppUpdate: (
     id: string,
-    force?: boolean,
+    force: boolean | undefined,
+    cwd: string,
   ): Promise<import("@cjhyy/code-shell-core").PanelAppUpdateCheck> =>
-    ipcRenderer.invoke("panel-apps:checkUpdate", id, force),
+    ipcRenderer.invoke("panel-apps:checkUpdate", id, force, cwd),
   previewPanelAppUpdate: (
     id: string,
+    cwd: string,
+    expectedRevision: string,
   ): Promise<
-    | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
+    | {
+        ok: true;
+        preview: import("@cjhyy/code-shell-core").PanelAppPreview;
+        installedVersion?: string;
+      }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke("panel-apps:previewUpdate", id),
+  > => ipcRenderer.invoke("panel-apps:previewUpdate", id, cwd, expectedRevision),
   installLocalPanelApp: (input: {
+    cwd: string;
     source: import("@cjhyy/code-shell-core").PanelAppSourceInput;
     reviewToken: string;
     overwrite?: boolean;
@@ -1268,6 +1291,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   > => ipcRenderer.invoke("panel-apps:installLocal", input),
   installPanelAppUpdate: (input: {
+    cwd: string;
     id: string;
     reviewToken: string;
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }> =>
@@ -1434,6 +1458,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     logout: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:logout", credentialId),
   },
   links: {
+    remoteSnapshot: (cwd: string) => ipcRenderer.invoke("links:remoteSnapshot", cwd),
+    remoteStart: (cwd: string, requestId: string, input: unknown) =>
+      ipcRenderer.invoke("links:remoteStart", cwd, requestId, input),
+    remoteCancel: (cwd: string, requestId: string) =>
+      ipcRenderer.invoke("links:remoteCancel", cwd, requestId),
+    remoteRename: (cwd: string, id: string, label: string, revision: string) =>
+      ipcRenderer.invoke("links:remoteRename", cwd, id, label, revision),
+    remoteDisconnect: (cwd: string, id: string, revision: string) =>
+      ipcRenderer.invoke("links:remoteDisconnect", cwd, id, revision),
     listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
     cliStatus: (providerId: string, cwd?: string) =>
       ipcRenderer.invoke("links:cliStatus", providerId, cwd),

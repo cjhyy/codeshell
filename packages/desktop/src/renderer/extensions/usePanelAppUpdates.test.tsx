@@ -75,7 +75,7 @@ describe("Panel App update discovery", () => {
   });
 
   test("checks on entry and exposes an available version without an install request", async () => {
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     expect(calls).toEqual([["video-studio", false]]);
     expect(hook.result.current.availableCount).toBe(1);
     expect(hook.result.current.results["video-studio"]).toEqual(result());
@@ -86,7 +86,7 @@ describe("Panel App update discovery", () => {
     const waiting = Array.from({ length: 4 }, () => deferred<PanelAppUpdateCheck>());
     apps = [app("one"), app("two"), app("three")];
     check = () => waiting[calls.length - 1]!.promise;
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     expect(calls.map(([id]) => id)).toEqual(["one", "two"]);
 
     apps = [app("replacement"), app("four")];
@@ -116,7 +116,7 @@ describe("Panel App update discovery", () => {
     check = async () => {
       throw new Error("Network unavailable");
     };
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     expect(hook.result.current.availableCount).toBe(0);
     expect(hook.result.current.results["video-studio"]).toMatchObject({
       status: "error",
@@ -128,7 +128,7 @@ describe("Panel App update discovery", () => {
     const previous = deferred<PanelAppUpdateCheck>();
     check = () =>
       calls.length === 1 ? previous.promise : Promise.resolve(result(undefined, "0.6.3"));
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     apps = [app("video-studio", "0.6.3")];
     await hook.rerender();
     expect(hook.result.current.results["video-studio"]?.status).toBe("up-to-date");
@@ -143,7 +143,7 @@ describe("Panel App update discovery", () => {
   test("invalidation rejects a pending result even for a same-version reinstall", async () => {
     const previous = deferred<PanelAppUpdateCheck>();
     check = () => previous.promise;
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     await act(async () => {
       hook!.result.current.invalidate();
       previous.resolve(result());
@@ -159,7 +159,7 @@ describe("Panel App update discovery", () => {
   });
 
   test("focus uses the shared cache while an explicit retry bypasses it", async () => {
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
       await flushMicrotasks();
@@ -175,13 +175,36 @@ describe("Panel App update discovery", () => {
     ]);
   });
 
+  test("switching projects keeps discovery requests and late responses in their original project", async () => {
+    let cwd = "/first";
+    const first = deferred<PanelAppUpdateCheck>();
+    const targets: string[] = [];
+    Object.assign(window.codeshell, {
+      checkPanelAppUpdate: (_id: string, _force: boolean, target: string) => {
+        targets.push(target);
+        return target === "/first"
+          ? first.promise
+          : Promise.resolve({ ...result(), status: "up-to-date" });
+      },
+    });
+    hook = await renderHook(() => usePanelAppUpdates(apps, cwd));
+    cwd = "/second";
+    await hook.rerender();
+    expect(targets).toEqual(["/first", "/second"]);
+    await act(async () => {
+      first.resolve(result());
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.results["video-studio"]?.status).toBe("up-to-date");
+  });
+
   test("replacing the update source invalidates the former remote result", async () => {
     const previous = deferred<PanelAppUpdateCheck>();
     check = () =>
       calls.length === 1
         ? previous.promise
         : Promise.resolve({ ...result(), sourceKind: "zip", status: "unsupported" });
-    hook = await renderHook(() => usePanelAppUpdates(apps));
+    hook = await renderHook(() => usePanelAppUpdates(apps, "/project"));
     apps = [{ ...app(), updateSource: { kind: "zip", label: "panel.zip", available: true } }];
     await hook.rerender();
     await act(async () => {

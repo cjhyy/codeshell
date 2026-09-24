@@ -1,3 +1,4 @@
+import { panelAutomationRevision } from "@cjhyy/code-shell-server/panels";
 /**
  * Automation service — bridges the renderer's automation UI to the live
  * in-process CronScheduler held by main. Main injects the scheduler via
@@ -23,6 +24,7 @@ import { assertDesktopSessionId } from "./session-validation.js";
 
 export interface AutomationSummary {
   id: string;
+  revision?: string;
   name: string;
   schedule: string;
   prompt: string;
@@ -67,6 +69,8 @@ export interface CreateAutomationInput {
   resumeSessionId?: string;
   /** Main-only creator authority; never persisted. */
   authoritySessionId?: string;
+  /** Host-namespaced identity for explicit duplicate-safe creation. */
+  creationKey?: string;
   once?: boolean;
 }
 
@@ -80,6 +84,7 @@ export function setAutomationScheduler(s: CronScheduler | null): void {
 export function automationSummary(job: CronJob): AutomationSummary {
   return {
     id: job.id,
+    revision: panelAutomationRevision(job),
     name: job.name,
     schedule: job.schedule,
     prompt: job.prompt,
@@ -158,6 +163,7 @@ export async function createAutomation(
     ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
     ...(input.resumeSessionId !== undefined ? { resumeSessionId: input.resumeSessionId } : {}),
     ...(input.once === true ? { once: true } : {}),
+    ...(input.creationKey !== undefined ? { creationKey: input.creationKey } : {}),
   });
   return automationSummary(job);
 }

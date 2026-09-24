@@ -8,18 +8,21 @@ function identity(app: PanelAppExtensionSummary): string {
   return JSON.stringify([app.version, app.revision, app.updateSource]);
 }
 
-type CheckedApp = { identity: string; result: PanelAppUpdateCheck };
+type CheckedApp = { cwd: string; identity: string; result: PanelAppUpdateCheck };
 type CheckRequest = {
   app: PanelAppExtensionSummary;
+  cwd: string;
   identity: string;
   generation: number;
   force: boolean;
 };
 
 /** Version discovery only. Installing always goes through the separate package review. */
-export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
+export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null, cwd: string) {
   const [checked, setChecked] = useState<Record<string, CheckedApp>>({});
   const [checkingIds, setCheckingIds] = useState<ReadonlySet<string>>(() => new Set());
+  const cwdRef = useRef(cwd);
+  cwdRef.current = cwd;
   const appsRef = useRef(apps);
   appsRef.current = apps;
   const mounted = useRef(false);
@@ -35,7 +38,11 @@ export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
       void (async () => {
         let result: PanelAppUpdateCheck;
         try {
-          result = await window.codeshell.checkPanelAppUpdate(request.app.appId, request.force);
+          result = await window.codeshell.checkPanelAppUpdate(
+            request.app.appId,
+            request.force,
+            request.cwd,
+          );
         } catch (cause) {
           result = {
             id: request.app.appId,
@@ -49,6 +56,7 @@ export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
         const current = appsRef.current?.find((app) => app.appId === request.app.appId);
         if (
           mounted.current &&
+          request.cwd === cwdRef.current &&
           request.generation === generation.current &&
           current &&
           identity(current) === request.identity &&
@@ -58,7 +66,7 @@ export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
         ) {
           setChecked((previous) => ({
             ...previous,
-            [current.appId]: { identity: request.identity, result },
+            [current.appId]: { cwd: request.cwd, identity: request.identity, result },
           }));
         }
       })().finally(() => {
@@ -86,6 +94,7 @@ export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
       const nextGeneration = ++generation.current;
       queue.current = appsRef.current.map((app) => ({
         app,
+        cwd: cwdRef.current,
         identity: identity(app),
         generation: nextGeneration,
         force,
@@ -112,7 +121,7 @@ export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
     // Invalidate by catalog generation as well as version/revision identity.
     invalidate();
     checkAll();
-  }, [apps, checkAll, invalidate]);
+  }, [apps, cwd, checkAll, invalidate]);
 
   useEffect(() => {
     const refresh = () => {
@@ -130,10 +139,10 @@ export function usePanelAppUpdates(apps: PanelAppExtensionSummary[] | null) {
     const current: Record<string, PanelAppUpdateCheck> = {};
     for (const app of apps ?? []) {
       const entry = checked[app.appId];
-      if (entry?.identity === identity(app)) current[app.appId] = entry.result;
+      if (entry?.cwd === cwd && entry.identity === identity(app)) current[app.appId] = entry.result;
     }
     return current;
-  }, [apps, checked]);
+  }, [apps, checked, cwd]);
 
   return {
     results,

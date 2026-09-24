@@ -70,6 +70,9 @@ export interface AgentRunOptions {
   cwd?: string;
   sessionId?: string;
   permissionMode?: PermissionMode;
+  /** Trusted Host execution policy, local to this turn. */
+  sandboxMode?: RunParams["sandboxMode"];
+  allowBackgroundShells?: boolean;
   model?: string;
   planMode?: boolean;
   behaviorMode?: RunBehaviorMode;

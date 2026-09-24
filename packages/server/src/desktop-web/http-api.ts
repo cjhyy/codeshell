@@ -1,3 +1,4 @@
+import { describeEnvironment, environmentIdentity } from "../environment-identity.js";
 import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { isAbsolute } from "node:path";
@@ -410,6 +411,17 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
         }
         if (!current || !token)
           throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
+        if (url.pathname === "/api/v1/environment" && request.method === "GET") {
+          const id = await environmentIdentity(options.dataDir);
+          if (
+            closed ||
+            generation !== requestGeneration ||
+            principal(token)?.session !== current.session
+          )
+            throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
+          json(response, 200, describeEnvironment(id, "desktop"));
+          return true;
+        }
         const input = workspaceInput(request, url);
         const cwd = await options.resolveWorkspace(input, current.device.id);
         if (

@@ -13,8 +13,28 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute } from "node:path";
+import type { InstalledPanelApp } from "@cjhyy/code-shell-core";
+import { dirname, isAbsolute, join } from "node:path";
 import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
+
+export type PanelDirectoryAuthorizer = (
+  app: InstalledPanelApp,
+  projectPath: string,
+  workspacePath: string,
+) => Promise<void>;
+
+export function desktopPanelDirectoryBookmarks(dataDir: string) {
+  return new PanelAppDirectoryBookmarks(join(dataDir, "panel-app-directory-bookmarks.json"), {
+    legacyFiles: [join(dataDir, "panel-web-directory-bookmarks.json")],
+  });
+}
+
+/** The file mutex uses a sibling of its parent; keep both inside the data volume. */
+export function hubPanelDirectoryBookmarks(dataDir: string) {
+  return new PanelAppDirectoryBookmarks(join(dataDir, "panel-directories", "bookmarks.json"), {
+    legacyFiles: [join(dataDir, "panel-web-directory-bookmarks.json")],
+  });
+}
 
 const MAX_RECORDS = 256;
 const MAX_BYTES = 256 * 1024;
@@ -108,7 +128,10 @@ function write(file: string, bookmarks: Bookmark[]): void {
 
 /** The guest receives only a random bookmark. A path saved in guest storage grants nothing. */
 export class PanelAppDirectoryBookmarks {
-  constructor(private readonly file: string) {}
+  constructor(
+    private readonly file: string,
+    private readonly options: { legacyFiles?: readonly string[] } = {},
+  ) {}
 
   remember(appId: string, projectPath: string, path: string): string {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(appId) || !isAbsolute(projectPath) || !isAbsolute(path))
@@ -129,13 +152,28 @@ export class PanelAppDirectoryBookmarks {
     const release = acquireFileLock(this.file);
     try {
       const previous = read(this.file);
+      const existing = previous.find(
+        (item) =>
+          item.appId === appId &&
+          item.projectPath === projectPath &&
+          item.path === path &&
+          item.dev === info.dev &&
+          item.ino === info.ino,
+      );
+      if (existing) bookmark.id = existing.id;
       write(
         this.file,
         [
           bookmark,
           ...previous.filter(
             (item) =>
-              !(item.appId === appId && item.projectPath === projectPath && item.path === path),
+              item.id !== bookmark.id &&
+              !(
+                item.appId === appId &&
+                item.projectPath === projectPath &&
+                item.path === path &&
+                (item.dev !== info.dev || item.ino !== info.ino)
+              ),
           ),
         ].slice(0, MAX_RECORDS),
       );
@@ -147,10 +185,19 @@ export class PanelAppDirectoryBookmarks {
 
   restore(appId: string, projectPath: string, id: unknown): string {
     if (typeof id !== "string" || !ID.test(id)) throw new Error("Invalid directory bookmark");
-    const bookmark = read(this.file).find(
-      (item) => item.id === id && item.appId === appId && item.projectPath === projectPath,
-    );
-    if (!bookmark) throw new Error("Saved directory is unavailable; choose it again");
+    let bookmark = read(this.file).find((item) => item.id === id);
+    let legacy = false;
+    if (!bookmark) {
+      for (const file of this.options.legacyFiles ?? []) {
+        bookmark = read(file).find((item) => item.id === id);
+        if (bookmark) {
+          legacy = true;
+          break;
+        }
+      }
+    }
+    if (!bookmark || bookmark.appId !== appId || bookmark.projectPath !== projectPath)
+      throw new Error("Saved directory is unavailable; choose it again");
     try {
       const info = lstatSync(bookmark.path);
       if (
@@ -163,6 +210,31 @@ export class PanelAppDirectoryBookmarks {
         throw new Error("Saved directory changed");
     } catch {
       throw new Error("Saved directory changed; choose it again");
+    }
+    if (legacy) {
+      mkdirSync(dirname(this.file), { recursive: true, mode: 0o700 });
+      const release = acquireFileLock(this.file);
+      try {
+        const previous = read(this.file);
+        const existing = previous.find((item) => item.id === id);
+        if (
+          existing &&
+          (existing.appId !== bookmark.appId ||
+            existing.projectPath !== bookmark.projectPath ||
+            existing.path !== bookmark.path ||
+            existing.dev !== bookmark.dev ||
+            existing.ino !== bookmark.ino)
+        )
+          throw new Error("Saved directory identity conflicts with the current grant");
+        if (!existing) {
+          // Migration never silently evicts another live bookmark. Preserve legacy
+          // IDs as aliases when both interfaces previously selected the same path.
+          if (previous.length >= MAX_RECORDS) throw new Error("Panel directory bookmarks are full");
+          write(this.file, [bookmark, ...previous]);
+        }
+      } finally {
+        release();
+      }
     }
     return bookmark.path;
   }

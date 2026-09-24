@@ -1,3 +1,5 @@
+import { registerProjectPanelIpc } from "./project-panel-ipc.js";
+import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
@@ -20,6 +22,7 @@ import {
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
+import { openCloudWorkbench } from "./cloud-workbench-window.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
@@ -41,6 +44,7 @@ import {
   writeSettingsSchemaFile,
   userHome,
   CredentialStore,
+  isRemoteLinkCredential,
   summarizeCookieExpiry,
   materializeCookieSecret,
   type Credential,
@@ -59,8 +63,6 @@ import {
   listInstalledThemes,
   uninstallTheme,
   type InstalledTheme,
-  type GitPanelAppSourceInput,
-  type PanelAppSourceInput,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -381,7 +383,9 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
+import { createLinkService, remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService } from "./desktop-web-service.js";
+import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
   installSkillFromDirectory,
@@ -397,21 +401,7 @@ import {
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
-import {
-  isPanelAppBoundToProject,
-  listPanelAppExtensions,
-  listPanelApps,
-  listPanelAppsForProjects,
-} from "./panel-apps-service.js";
-import {
-  discoverGitPanelAppsForUi,
-  installPanelAppUpdateForUi,
-  installLocalPanelAppForUi,
-  previewPanelAppUpdateForUi,
-  previewLocalPanelAppForUi,
-  uninstallPanelAppForUi,
-} from "./panel-app-install-service.js";
-import { panelAppUpdateService } from "./panel-app-update-service.js";
+import { isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
@@ -658,6 +648,10 @@ const panelAppBridge = new PanelAppBridge({
     return true;
   },
   cookieCredentials: {
+    taskCredentials: async (cwd) => {
+      await migrateCredentialStore(cwd);
+      return new CredentialStore(cwd).list();
+    },
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
       return new CredentialStore(cwd)
@@ -787,6 +781,8 @@ const panelAppBridge = new PanelAppBridge({
     },
   },
   automations: {
+    uniqueCreation: true,
+    conditional: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
     list: async (scope) =>
       listAutomationsForResumeSession(scope.resumeSessionId, desktopAutomationAuthorityDeps()),
     create: async (input, scope) =>
@@ -922,7 +918,24 @@ const mobileRemote = new RemoteHostManager({
   uploads: mobileUploads,
   webApi: createDesktopWebService({
     devices: mobileDevices,
+    automations: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
+    sharedToolJobs: panelAppBridge.sharedToolJobs(),
+    authorizePanelDirectory: (app, projectPath, workspacePath) =>
+      panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
+    // A registered HTTPS origin is trusted deployment configuration, never a request header.
+    remoteLink: () =>
+      process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
+        ? remoteLinkFromEnvironment(
+            process.env,
+            process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN,
+            "/mobile/link/callback",
+          )
+        : undefined,
+    onPanelsChanged: (id, kind) => {
+      if (kind === "remove") panelAppBridge.revokeAppId(id);
+      broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
+    },
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
     onSessionsChanged: (cwd, sessionId) => {
       const line = JSON.stringify({
@@ -3300,6 +3313,9 @@ app.whenReady().then(async () => {
   // main to resolve/materialize secrets on demand; if safeStorage is unavailable
   // SafeStorageCipher intentionally falls back to `plain:` owner-only storage.
   setDefaultCredentialCipher(new SafeStorageCipher());
+  // Retired Link grants must resume cleanup even if no credentials page is opened.
+  const linkCleanup = createLinkService();
+  app.once("will-quit", () => linkCleanup.close());
   void knownAttachmentCwds()
     .then((cwds) => migrateKnownCredentialStores(cwds))
     .then((result) => dlog("credentials", "migration.done", { ...result }))
@@ -3812,31 +3828,18 @@ ipcMain.handle(
     return expandPluginCommand(cwd, name, rawArguments);
   },
 );
-ipcMain.handle("panel-apps:list", async (_e, cwd: string, locale: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof locale !== "string" || locale.length > 64) {
-    throw new Error("panel-apps:list requires locale");
-  }
-  return listPanelApps(cwd, locale);
-});
-ipcMain.handle("panel-apps:listExtensions", async (_e, cwd: string, locale: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof locale !== "string" || locale.length > 64) {
-    throw new Error("panel-apps:listExtensions requires locale");
-  }
-  return listPanelAppExtensions(cwd, locale);
-});
-ipcMain.handle("panel-apps:listForProjects", async (_e, projectPaths: string[], locale: string) => {
-  if (!Array.isArray(projectPaths) || projectPaths.length > 64) {
-    throw new Error("panel-apps:listForProjects requires projectPaths");
-  }
-  if (typeof locale !== "string" || locale.length > 64) {
-    throw new Error("panel-apps:listForProjects requires locale");
-  }
-  const authorizedPaths = await Promise.all(
-    projectPaths.map((path) => requireRendererProjectPath(path)),
-  );
-  return listPanelAppsForProjects(authorizedPaths, locale);
+registerProjectPanelIpc({
+  ipcMain,
+  requireRendererProjectPath,
+  withMutation: (cwd, write) =>
+    bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
+  onChanged: () => broadcastPanelAppsChanged(mainWindows),
+  revokeAppId: (id) => panelAppBridge.revokeAppId(id),
+  onCleanupError: (id, error) =>
+    dlog("main", "panel_app.settings_cleanup_failed", {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    }),
 });
 
 // ── Credentials (token/link store + cookie capture) ──────────────────
@@ -3855,6 +3858,8 @@ ipcMain.handle(
   "credentials:save",
   async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    assertGenericCredentialMutation(authorizedCwd, cred.id);
+    if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
     new CredentialStore(authorizedCwd || undefined).save(scope, cred);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
@@ -3864,12 +3869,29 @@ ipcMain.handle(
   "credentials:remove",
   async (_e, cwd: string, scope: CredentialScope, id: string) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    assertGenericCredentialMutation(authorizedCwd, id);
     new CredentialStore(authorizedCwd || undefined).remove(scope, id);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
+
+registerRemoteLinkIpc({
+  ipcMain,
+  requireRendererProjectPath,
+  isMainWindow: (sender) =>
+    [...mainWindows].some((win) => !win.isDestroyed() && win.webContents === sender),
+  withMutation: (cwd, write) =>
+    bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
+  onChanged: () => bridge?.notifyWebConfigurationChanged(),
+});
+
+function assertGenericCredentialMutation(cwd: string, id: string) {
+  const credential = new CredentialStore(cwd || undefined).resolve(id);
+  if (credential && isRemoteLinkCredential(credential))
+    throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
+}
 
 async function persistLocalLinkCredential(input: {
   cwd: string;
@@ -4080,6 +4102,7 @@ ipcMain.handle(
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
       throw new Error("credentials:patchMeta requires fields");
     }
+    assertGenericCredentialMutation(authorizedCwd, id);
     new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
     if (fields.meta && typeof fields.meta === "object" && "autoRefreshFromBrowser" in fields.meta) {
       if (fields.meta.autoRefreshFromBrowser === true) {
@@ -4099,19 +4122,23 @@ ipcMain.handle(
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
-ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) =>
-  getMcpOAuthService().login(normalizeMcpOAuthLoginInput(raw)),
-);
+ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
+  const input = normalizeMcpOAuthLoginInput(raw);
+  if (input.credentialId) assertGenericCredentialMutation("", input.credentialId);
+  return getMcpOAuthService().login(input);
+});
 ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
   if (typeof credentialId !== "string" || !credentialId) {
     throw new Error("mcpOAuth:refresh requires credentialId");
   }
+  assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().refresh(credentialId);
 });
 ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
   if (typeof credentialId !== "string" || !credentialId) {
     throw new Error("mcpOAuth:logout requires credentialId");
   }
+  assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().logout(credentialId);
 });
 function browserPartitionForBucket(bucket: unknown): string | undefined {
@@ -4578,110 +4605,6 @@ ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginI
 ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
   previewLocalPluginForUi(input),
 );
-ipcMain.handle("panel-apps:previewLocal", async (_e, input: PanelAppSourceInput) =>
-  previewLocalPanelAppForUi(input),
-);
-ipcMain.handle("panel-apps:discoverGit", async (_e, input: GitPanelAppSourceInput) =>
-  discoverGitPanelAppsForUi(input),
-);
-ipcMain.handle("panel-apps:previewUpdate", async (_e, id: string) => {
-  if (typeof id !== "string" || !id) throw new Error("panel-apps:previewUpdate requires id");
-  return previewPanelAppUpdateForUi(id);
-});
-ipcMain.handle("panel-apps:checkUpdate", async (_e, id: string, force?: boolean) => {
-  if (typeof id !== "string" || (force !== undefined && typeof force !== "boolean")) {
-    throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
-  }
-  return panelAppUpdateService.check(id, force === true);
-});
-ipcMain.handle(
-  "panel-apps:installLocal",
-  async (
-    _e,
-    input: {
-      source: PanelAppSourceInput;
-      reviewToken: string;
-      overwrite?: boolean;
-    },
-  ) => {
-    if (!input || !input.source || typeof input.reviewToken !== "string") {
-      throw new Error("panel-apps:installLocal requires source and reviewToken");
-    }
-    const result = await installLocalPanelAppForUi(input);
-    if (result.ok) broadcastPanelAppsChanged(mainWindows);
-    return result;
-  },
-);
-ipcMain.handle(
-  "panel-apps:installUpdate",
-  async (_e, input: { id: string; reviewToken: string }) => {
-    if (
-      !input ||
-      typeof input.id !== "string" ||
-      !input.id ||
-      typeof input.reviewToken !== "string"
-    ) {
-      throw new Error("panel-apps:installUpdate requires id and reviewToken");
-    }
-    const result = await installPanelAppUpdateForUi(input);
-    if (result.ok) broadcastPanelAppsChanged(mainWindows);
-    return result;
-  },
-);
-ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
-  if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
-    throw new Error("panel-apps:uninstall requires id");
-  }
-  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
-    throw new Error("panel-apps:uninstall cwd must be a non-empty string");
-  }
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  await uninstallPanelAppForUi(id);
-  panelAppBridge.revokeAppId(id);
-  try {
-    const settings = (await readSettings("user")) ?? {};
-    const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
-    if (Array.isArray(disabled)) {
-      await writeSettings("user", {
-        disabledPanelApps: disabled.filter((candidate) => candidate !== id),
-      });
-    }
-    if (authorizedCwd) {
-      const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
-      const bindings = Array.isArray(projectSettings.panelAppBindings)
-        ? projectSettings.panelAppBindings.filter(
-            (candidate): candidate is string => typeof candidate === "string" && candidate !== id,
-          )
-        : [];
-      // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
-      // a null delete when the key already exists, so on a project without
-      // panelAppOverrides the null lands in the file and the settings schema
-      // then rejects it wholesale.
-      const rawOverrides = projectSettings.panelAppOverrides;
-      const overrides: Record<string, "inherit" | "on" | "off"> = {};
-      if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
-        for (const [key, value] of Object.entries(rawOverrides as Record<string, unknown>)) {
-          if (key === id) continue;
-          if (value === "inherit" || value === "on" || value === "off") overrides[key] = value;
-        }
-      }
-      await writeSettings(
-        "project",
-        {
-          panelAppBindings: bindings,
-          panelAppOverrides: overrides,
-        },
-        authorizedCwd,
-      );
-    }
-  } catch (error) {
-    dlog("main", "panel_app.settings_cleanup_failed", {
-      id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  broadcastPanelAppsChanged(mainWindows);
-});
 ipcMain.handle(
   "plugins:installLocal",
   async (
@@ -6408,6 +6331,13 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   }
 }
 
+ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
+  const owner = BrowserWindow.fromWebContents(event.sender);
+  if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
+    throw new Error("云端入口仅允许从主窗口打开。");
+  return openCloudWorkbench(address);
+});
+
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
@@ -6543,6 +6473,9 @@ ipcMain.handle("settings:getConfiguration", async (_e, target: RendererConfigura
 function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new Error("patch must be object");
+  }
+  if (["panelAppBindings", "panelAppPins", "panelAppOverrides"].some((key) => key in patch)) {
+    throw new Error("Panel project bindings must use the reviewed project binding API");
   }
   try {
     if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {

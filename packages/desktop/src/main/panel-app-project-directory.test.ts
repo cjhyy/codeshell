@@ -16,7 +16,12 @@ const declaration = parsed.statements.find(
   (node): node is ts.ClassDeclaration =>
     ts.isClassDeclaration(node) && node.name?.text === "PanelAppBridge",
 )!;
-const methods = ["getKnownProcessDirectory", "pickProcessDirectory", "restoreProcessDirectory", "trustedWorkspaceRoot"].map((name) => {
+const methods = [
+  "getKnownProcessDirectory",
+  "pickProcessDirectory",
+  "restoreProcessDirectory",
+  "trustedWorkspaceRoot",
+].map((name) => {
   const method = declaration.members.find(
     (node) => ts.isMethodDeclaration(node) && node.name.getText(parsed) === name,
   );
@@ -46,9 +51,12 @@ async function fixture() {
     send() {},
   };
   const Bridge = runInNewContext(`${compiled}\nDirectoryBridge`, {
-    realpath, stat,
+    realpath,
+    stat,
     BrowserWindow: { fromId: () => ({ isDestroyed: () => false }) },
-    dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: [join(project, "videos")] }) },
+    dialog: {
+      showOpenDialog: async () => ({ canceled: false, filePaths: [join(project, "videos")] }),
+    },
     app: { getPath: () => project },
   });
   const bridge = new Bridge();
@@ -63,7 +71,7 @@ describe("Panel project process directory", () => {
   test("uses only the trusted bound project and returns an owner-scoped handle", async () => {
     const { bridge, project, service, owner } = await fixture();
     const directory = await bridge.getKnownProcessDirectory(
-      { cwd: project },
+      { cwd: project, resource: { descriptor: { appId: owner.appId } } },
       { name: "project", path: "/untrusted/override" },
     );
     expect(directory.path).toBe(await realpath(project));
@@ -83,13 +91,18 @@ describe("Panel project process directory", () => {
   });
 
   test("canonicalizes the bound path and rejects missing roots and ordinary files", async () => {
-    const { bridge, project } = await fixture();
+    const { bridge, project, owner } = await fixture();
     const alias = join(root, "project-alias");
     await symlink(project, alias, process.platform === "win32" ? "junction" : "dir");
     bridge.options.isWorkspaceTrusted = () => true;
-    expect((await bridge.getKnownProcessDirectory({ cwd: alias }, { name: "project" })).path).toBe(
-      await realpath(project),
-    );
+    expect(
+      (
+        await bridge.getKnownProcessDirectory(
+          { cwd: alias, resource: { descriptor: { appId: owner.appId } } },
+          { name: "project" },
+        )
+      ).path,
+    ).toBe(await realpath(project));
     await expect(
       bridge.getKnownProcessDirectory({ cwd: join(root, "missing") }, { name: "project" }),
     ).rejects.toThrow();
@@ -105,7 +118,9 @@ describe("Panel project process directory", () => {
     const videos = join(project, "videos");
     await mkdir(videos);
     const binding = {
-      cwd: project, projectPath: project, ownerWindowId: 1,
+      cwd: project,
+      projectPath: project,
+      ownerWindowId: 1,
       resource: { descriptor: { appId: "download-test" } },
     };
     const picked = await bridge.pickProcessDirectory(binding);
@@ -114,6 +129,11 @@ describe("Panel project process directory", () => {
     const renewed = await bridge.restoreProcessDirectory(binding, { bookmark: picked.bookmark });
     expect(renewed.handle).not.toBe(picked.handle);
     expect(service.directoryPath(owner, renewed.handle)).toBe(await realpath(videos));
-    await expect(bridge.restoreProcessDirectory({ ...binding, resource: { descriptor: { appId: "other-app" } } }, { bookmark: picked.bookmark })).rejects.toThrow();
+    await expect(
+      bridge.restoreProcessDirectory(
+        { ...binding, resource: { descriptor: { appId: "other-app" } } },
+        { bookmark: picked.bookmark },
+      ),
+    ).rejects.toThrow();
   });
 });

@@ -4,3 +4,5 @@ export * from "./links/device-oauth.js";
 export * from "./links/service.js";
 export * from "./links/types.js";
 export * from "./links/http.js";
+
+export * from "./links/remote-configuration.js";

@@ -88,6 +88,8 @@ export interface PanelEntry {
   readonly lifecycle?: { appId: string; panelId: string };
   /** Agent tools declared by an independently installed Panel App. */
   readonly agentTools?: PanelAppAgentToolDescriptor[];
+  /** Resolve version-specific metadata without changing a persisted dock key. */
+  readonly forProject?: (context: PanelAvailabilityContext) => PanelEntry | undefined;
 }
 
 const alwaysEnabled = (): boolean => true;
@@ -278,7 +280,8 @@ export class PanelRegistry {
 
   list(context: PanelAvailabilityContext): PanelEntry[] {
     return [...this.entries.values()]
-      .filter((entry) => entry.enabled(context))
+      .map((entry) => (entry.forProject ? entry.forProject(context) : entry))
+      .filter((entry): entry is PanelEntry => !!entry && entry.enabled(context))
       .sort((left, right) => left.order - right.order || left.key.localeCompare(right.key));
   }
 
@@ -320,60 +323,90 @@ export function replacePanelApps(
   boundProjectPath: string | null,
   boundProjectPathsByAppId?: Readonly<Record<string, readonly string[]>>,
 ): void {
+  const grouped = new Map<string, PanelAppDescriptor[]>();
+  for (const descriptor of descriptors) {
+    const group = grouped.get(descriptor.id) ?? [];
+    group.push(descriptor);
+    grouped.set(descriptor.id, group);
+  }
   PANEL_REGISTRY.replacePanelAppEntries(
-    descriptors.map((descriptor, index): PanelEntry => {
-      const boundPaths = boundProjectPathsByAppId
-        ? new Set<string>(boundProjectPathsByAppId[descriptor.appId] ?? [])
-        : new Set<string>(boundProjectPath ? [boundProjectPath] : []);
-      return {
-        key: descriptor.id,
-        owner: {
-          kind: "panel-app",
-          appId: descriptor.appId,
-        },
-        title: { kind: "literal", value: descriptor.title },
-        icon: resolvePanelAppIcon(descriptor.icon),
-        order: 1_000 + index,
-        singleton: descriptor.singleton,
-        agentTools: descriptor.agent?.tools.map((tool) => ({
-          ...tool,
-          inputSchema: { ...tool.inputSchema },
-        })),
-        enabled: ({ projectPath }) => Boolean(projectPath) && boundPaths.has(projectPath!),
-        render: ({
-          tabId,
-          bucket,
-          busy,
-          projectPath,
-          cwd,
-          engineSessionId,
-          foregroundVisible,
-          modelKey,
-          permissionMode,
-          planMode,
-          hasGoal,
-        }) =>
-          createElement(PanelAppHost, {
-            descriptor,
+    [...grouped.values()].map((group, index): PanelEntry => {
+      const entries = group.map((descriptor): PanelEntry => {
+        const advertised = boundProjectPathsByAppId?.[descriptor.appId];
+        const boundPaths = new Set(
+          descriptor.projectPaths
+            ? descriptor.projectPaths.filter(
+                (path) => !boundProjectPathsByAppId || advertised?.includes(path),
+              )
+            : (advertised ??
+                (boundProjectPathsByAppId ? [] : boundProjectPath ? [boundProjectPath] : [])),
+        );
+        return {
+          key: descriptor.id,
+          owner: {
+            kind: "panel-app",
+            appId: descriptor.appId,
+          },
+          title: { kind: "literal", value: descriptor.title },
+          icon: resolvePanelAppIcon(descriptor.icon),
+          order: 1_000 + index,
+          singleton: descriptor.singleton,
+          agentTools: descriptor.agent?.tools.map((tool) => ({
+            ...tool,
+            inputSchema: { ...tool.inputSchema },
+          })),
+          enabled: ({ projectPath }) => Boolean(projectPath) && boundPaths.has(projectPath!),
+          render: ({
             tabId,
             bucket,
             busy,
             projectPath,
             cwd,
             engineSessionId,
+            foregroundVisible,
             modelKey,
             permissionMode,
             planMode,
             hasGoal,
-            visible: foregroundVisible,
-          }),
+          }) =>
+            createElement(PanelAppHost, {
+              descriptor,
+              tabId,
+              bucket,
+              busy,
+              projectPath,
+              cwd,
+              engineSessionId,
+              modelKey,
+              permissionMode,
+              planMode,
+              hasGoal,
+              visible: foregroundVisible,
+            }),
+        };
+      });
+      const forProject = (context: PanelAvailabilityContext) => {
+        const matches = entries.filter((entry) => entry.enabled(context));
+        // Ambiguous Host data cannot silently select one version's tools.
+        return matches.length === 1 ? matches[0] : undefined;
+      };
+      return {
+        ...entries[0]!,
+        agentTools: entries.length === 1 ? entries[0]!.agentTools : undefined,
+        forProject,
+        enabled: (context) => !!forProject(context),
+        render: (context) => forProject(context)?.render(context) ?? null,
       };
     }),
   );
 }
 
-export function getPanelEntry(kind: PanelId): PanelEntry | undefined {
-  return PANEL_REGISTRY.get(kind);
+export function getPanelEntry(
+  kind: PanelId,
+  context?: PanelAvailabilityContext,
+): PanelEntry | undefined {
+  const entry = PANEL_REGISTRY.get(kind);
+  return context && entry?.forProject ? entry.forProject(context) : entry;
 }
 
 export function getEnabledPanelEntries(context: PanelAvailabilityContext): PanelEntry[] {

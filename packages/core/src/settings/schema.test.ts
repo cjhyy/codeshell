@@ -1,5 +1,6 @@
 import { describe, it, test, expect } from "bun:test";
 import { SettingsSchema } from "./schema.js";
+import { isProtectedSettingKey } from "./manager.js";
 
 describe("MCP startup policy", () => {
   test("preserves bounded per-server settings and plugin overrides", () => {
@@ -41,6 +42,19 @@ describe("disabledAgents", () => {
 });
 
 describe("Panel App settings", () => {
+  test("pins contain only a bounded package identity and cannot be written through generic config", () => {
+    const pin = { version: "1.0.0", packageDigest: "a".repeat(64) };
+    expect(SettingsSchema.parse({ panelAppPins: { demo: pin } }).panelAppPins.demo).toEqual(pin);
+    for (const pins of [
+      null,
+      { "../escape": pin },
+      { demo: { ...pin, installPath: "/tmp/package" } },
+      { demo: { ...pin, packageDigest: "latest" } },
+    ])
+      expect(SettingsSchema.safeParse({ panelAppPins: pins }).success).toBe(false);
+    expect(isProtectedSettingKey("panelAppPins")).toBe(true);
+    expect(isProtectedSettingKey("panelAppPins.demo.packageDigest")).toBe(true);
+  });
   it("defaults to an empty global denylist and no project bindings", () => {
     const parsed = SettingsSchema.parse({});
     expect(parsed.disabledPanelApps).toEqual([]);

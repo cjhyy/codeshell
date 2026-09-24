@@ -422,3 +422,41 @@ describe("Desktop workbench controller", () => {
     expect(sidebar).toContain("Codex");
   });
 });
+
+test("Link return restores its original management workspace and cannot send into another active project", async () => {
+  ensureMiniDom();
+  const previous = Object.getOwnPropertyDescriptor(window, "location");
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: {
+      pathname: "/mobile/",
+      search: "?view=links&workspace=%2Foriginal",
+    },
+  });
+  let sends = 0;
+  const app = remoteApp({
+    activeCwd: "/other",
+    activeProjectCwd: "/other",
+    sendChat: async () => {
+      sends++;
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    expect(getApiWorkspace()).toBe("/original");
+    await act(async () => {
+      hook.result.current.setDraft("keep in the original project");
+    });
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(false);
+    });
+    expect(sends).toBe(0);
+    expect(hook.result.current.draft).toBe("keep in the original project");
+    expect(hook.result.current.error).toContain("另一个工作区");
+  } finally {
+    await hook.unmount();
+    if (previous) Object.defineProperty(window, "location", previous);
+    else Reflect.deleteProperty(window, "location");
+  }
+});

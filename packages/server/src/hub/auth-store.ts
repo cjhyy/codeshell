@@ -183,6 +183,14 @@ export class HubAuthStore {
       .sort((a, b) => b.lastSeenAt - a.lastSeenAt);
   }
 
+  /** Offline restore must not resurrect sessions revoked after the snapshot. */
+  revokeAllSessions(): void {
+    this.mutate((record) => {
+      record.sessions = [];
+      return { result: undefined, changed: true };
+    });
+  }
+
   revoke(id: string): boolean {
     return this.mutate((record) => {
       const index = record.sessions.findIndex((session) => session.id === id);

@@ -14,9 +14,15 @@
 
 import {
   chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  openSync,
   mkdirSync,
   existsSync,
   readFileSync,
+  readSync,
   statSync,
   writeFileSync,
   renameSync,
@@ -130,6 +136,56 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     }
   }
   if (raw.once !== undefined && typeof raw.once !== "boolean") return invalid("once");
+  let lastExecution: CronJob["lastExecution"];
+  if (raw.lastExecution !== undefined) {
+    const value = raw.lastExecution as NonNullable<CronJob["lastExecution"]>;
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof value.id !== "string" ||
+      !SAFE_ID.test(value.id) ||
+      value.id.includes("..") ||
+      !["running", "completed", "failed", "cancelled", "interrupted"].includes(value.status) ||
+      !Number.isSafeInteger(value.startedAt) ||
+      value.startedAt < 0 ||
+      (value.status === "running"
+        ? value.finishedAt !== undefined
+        : !Number.isSafeInteger(value.finishedAt) || value.finishedAt! < value.startedAt) ||
+      (value.detail !== undefined &&
+        (typeof value.detail !== "string" ||
+          value.detail.length > 2000 ||
+          value.detail.includes("\0")))
+    )
+      return invalid("lastExecution");
+    lastExecution = {
+      id: value.id,
+      status: value.status,
+      startedAt: value.startedAt,
+      ...(value.finishedAt !== undefined ? { finishedAt: value.finishedAt } : {}),
+      ...(value.detail !== undefined ? { detail: value.detail } : {}),
+    };
+  }
+  let panelSource: CronJob["panelSource"];
+  if (raw.panelSource !== undefined) {
+    const value = raw.panelSource as CronJob["panelSource"];
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof value.appId !== "string" ||
+      !/^[a-z0-9][a-z0-9-]{0,127}$/.test(value.appId) ||
+      typeof value.revision !== "string" ||
+      !/^[a-f0-9]{64}$/.test(value.revision)
+    )
+      return invalid("panelSource");
+    panelSource = { appId: value.appId, revision: value.revision };
+  }
+  if (
+    raw.creationKey !== undefined &&
+    (typeof raw.creationKey !== "string" || !/^[A-Za-z0-9._:-]{1,256}$/.test(raw.creationKey))
+  )
+    return invalid("creationKey");
   if (
     raw.disabledReason !== undefined &&
     (typeof raw.disabledReason !== "string" || raw.disabledReason.length > 4_096)
@@ -200,6 +256,9 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     ...(typeof raw.resumeSessionId === "string" ? { resumeSessionId: raw.resumeSessionId } : {}),
     ...(typeof raw.disabledReason === "string" ? { disabledReason: raw.disabledReason } : {}),
     ...(templateSource ? { templateSource } : {}),
+    ...(panelSource ? { panelSource } : {}),
+    ...(lastExecution ? { lastExecution } : {}),
+    ...(typeof raw.creationKey === "string" ? { creationKey: raw.creationKey } : {}),
   };
 }
 
@@ -215,11 +274,14 @@ export function defaultCronStorePath(root?: string): string {
 export class CronStore {
   private readonly file: string;
 
-  constructor(file?: string) {
+  constructor(
+    file?: string,
+    private readonly options: { strictRead?: boolean } = {},
+  ) {
     this.file = file ?? defaultCronStorePath();
   }
 
-  /** Load all persisted jobs. Returns [] when absent or unreadable. */
+  /** Load persisted jobs. Strict hosts reject corrupt snapshots; legacy callers tolerate them. */
   load(): CronJob[] {
     return this.loadUnlocked();
   }
@@ -255,24 +317,73 @@ export class CronStore {
   }
 
   private loadUnlocked(): CronJob[] {
-    if (!existsSync(this.file)) return [];
+    if (!this.options.strictRead && !existsSync(this.file)) return [];
     try {
-      if (statSync(this.file).size > MAX_CRON_FILE_BYTES) {
-        throw new Error("cron store exceeds the maximum file size");
+      let raw: string;
+      if (this.options.strictRead) {
+        // Refuse links, directories and unbounded reads; validate the same open
+        // descriptor that supplies the snapshot, not a previously stat'ed path.
+        let fd: number;
+        try {
+          const info = lstatSync(this.file);
+          if (!info.isFile() || info.isSymbolicLink()) throw new Error("unsafe cron store file");
+          fd = openSync(
+            this.file,
+            constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+          );
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+          throw error;
+        }
+        try {
+          const info = fstatSync(fd);
+          if (!info.isFile() || info.size > MAX_CRON_FILE_BYTES)
+            throw new Error("unsafe or oversized cron store file");
+          const chunks: Buffer[] = [];
+          let bytes = 0;
+          while (bytes <= MAX_CRON_FILE_BYTES) {
+            const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, MAX_CRON_FILE_BYTES + 1 - bytes));
+            const count = readSync(fd, chunk, 0, chunk.length, null);
+            if (count === 0) break;
+            bytes += count;
+            chunks.push(chunk.subarray(0, count));
+          }
+          if (bytes > MAX_CRON_FILE_BYTES) throw new Error("oversized cron store file");
+          raw = Buffer.concat(chunks, bytes).toString("utf-8");
+        } finally {
+          closeSync(fd);
+        }
+      } else {
+        if (statSync(this.file).size > MAX_CRON_FILE_BYTES)
+          throw new Error("cron store exceeds the maximum file size");
+        raw = readFileSync(this.file, "utf-8");
       }
-      const raw = readFileSync(this.file, "utf-8");
       const parsed = JSON.parse(raw) as CronSnapshot;
-      if (!parsed || !Array.isArray(parsed.jobs)) return [];
+      if (!parsed || !Array.isArray(parsed.jobs)) {
+        if (this.options.strictRead) throw new Error("invalid cron snapshot");
+        return [];
+      }
+      if (this.options.strictRead && (parsed.version !== 1 || parsed.jobs.length > MAX_CRON_JOBS))
+        throw new Error("unsupported or oversized cron snapshot");
       const jobs: CronJob[] = [];
       const ids = new Set<string>();
+      const keys = new Set<string>();
       for (const value of parsed.jobs.slice(0, MAX_CRON_JOBS)) {
-        const job = normalizeJob(value, false);
+        const job = normalizeJob(value, !!this.options.strictRead);
+        if (
+          this.options.strictRead &&
+          job &&
+          (ids.has(job.id) || (job.creationKey !== undefined && keys.has(job.creationKey)))
+        )
+          throw new Error("duplicate cron job identity");
         if (!job || ids.has(job.id)) continue;
         ids.add(job.id);
+        if (job.creationKey !== undefined) keys.add(job.creationKey);
         jobs.push(job);
       }
       return jobs;
     } catch (err) {
+      if (this.options.strictRead) throw err;
       // Corrupt snapshot — log and start fresh rather than crashing startup.
       logger.warn("cron_store.load_failed", {
         cat: "cron",
@@ -289,11 +400,15 @@ export class CronStore {
     }
     const normalized: CronJob[] = [];
     const ids = new Set<string>();
+    const keys = new Set<string>();
     let estimatedBytes = 32;
     for (const value of jobs) {
       const job = normalizeJob(value, true)!;
       if (ids.has(job.id)) throw new Error(`duplicate cron job id: ${job.id}`);
       ids.add(job.id);
+      if (this.options.strictRead && job.creationKey !== undefined && keys.has(job.creationKey))
+        throw new Error("duplicate cron job creation key");
+      if (job.creationKey !== undefined) keys.add(job.creationKey);
       estimatedBytes += Buffer.byteLength(JSON.stringify(job)) + 2;
       if (estimatedBytes > MAX_CRON_FILE_BYTES) {
         throw new Error("cron store exceeds the maximum file size");
@@ -302,6 +417,11 @@ export class CronStore {
     }
     const dir = dirname(this.file);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+    if (this.options.strictRead) {
+      const info = lstatSync(dir);
+      if (!info.isDirectory() || info.isSymbolicLink())
+        throw new Error("unsafe cron store directory");
+    }
     if (process.platform !== "win32") chmodSync(dir, 0o700);
 
     const snapshot: CronSnapshot = { version: 1, jobs: normalized };
@@ -325,6 +445,11 @@ export class CronStore {
   private acquireStoreLock(): () => void {
     const dir = dirname(this.file);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+    if (this.options.strictRead) {
+      const info = lstatSync(dir);
+      if (!info.isDirectory() || info.isSymbolicLink())
+        throw new Error("unsafe cron store directory");
+    }
     if (process.platform !== "win32") chmodSync(dir, 0o700);
     const deadline = Date.now() + 1_000;
     let lastError: unknown;

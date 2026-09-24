@@ -229,6 +229,7 @@ test("a running deep link opens only its project and preserves its session", asy
   expect(view.child?.project?.id).toBe(projectB.id);
   expect(view.url.searchParams.get("session")).toBe("same-project-session");
   expect(view.requests.map((item) => item.path)).toEqual([
+    "/api/v1/environment",
     "/api/v1/projects",
     `/p/${projectB.id}/api/v1/configuration`,
   ]);
@@ -319,7 +320,10 @@ test("transient polling errors preserve an active draft; generation changes remo
 test("unknown deep links never send runtime requests, and auth rejection invokes the gate", async () => {
   const unknown = await fixture({ search: "?project=../../escape&session=wrong" });
   expect(unknown.child).toBeUndefined();
-  expect(unknown.requests).toHaveLength(1);
+  expect(unknown.requests.map((item) => item.path).sort()).toEqual([
+    "/api/v1/environment",
+    "/api/v1/projects",
+  ]);
   expect(unknown.url.searchParams.has("session")).toBe(false);
   await unknown.unmount();
   const denied = await fixture({
@@ -333,7 +337,9 @@ test("StrictMode retries the initial check without losing the selected project s
   const view = await fixture({ strict: true, search: `?project=${projectA.id}` });
   expect(view.child?.project?.id).toBe(projectA.id);
   expect(getApiProject()).toBe(projectA.id);
-  const runtimeRequests = view.requests.filter((item) => item.path !== "/api/v1/projects");
+  const runtimeRequests = view.requests.filter(
+    (item) => !["/api/v1/projects", "/api/v1/environment"].includes(item.path),
+  );
   expect(runtimeRequests.length).toBeGreaterThan(0);
   for (const request of runtimeRequests)
     expect(request.path).toBe(`/p/${projectA.id}/api/v1/configuration`);

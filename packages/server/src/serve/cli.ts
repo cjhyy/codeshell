@@ -1,3 +1,5 @@
+import { remoteLinkFromEnvironment } from "../links/remote-configuration.js";
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 // packages/server/src/serve/cli.ts
 //
 // `code-shell-serve` boots a single-workspace Hub under Node.js.
@@ -20,6 +22,7 @@ interface CliArgs {
   runtimeImage?: string;
   debugLogs?: boolean;
   publicOrigin?: string;
+  remoteLink?: RemoteLinkConfiguration;
   dataDir: string;
   staticRootDir?: string;
 }
@@ -107,8 +110,11 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
     }
     publicOrigin = url.origin;
   }
+  const remoteLink = remoteLinkFromEnvironment(env, publicOrigin);
+  if (remoteLink && authMode !== "hub") throw new Error("Remote Link requires --auth hub");
   return {
     authMode,
+    ...(remoteLink ? { remoteLink } : {}),
     runtime,
     ...(args["runtime-image"] ? { runtimeImage: args["runtime-image"] } : {}),
     ...(args["debug-logs"] ? { debugLogs: true } : {}),
@@ -166,6 +172,7 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
           port: parsed.port,
           dataDir: parsed.dataDir,
           publicOrigin: parsed.publicOrigin,
+          remoteLink: parsed.remoteLink,
           staticRootDir,
           runtimeImage: parsed.runtimeImage,
         })
@@ -175,6 +182,7 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
           cwd: parsed.cwd,
           dataDir: parsed.dataDir,
           authMode: parsed.authMode,
+          remoteLink: parsed.remoteLink,
           debugLogs: parsed.debugLogs,
           ...(parsed.publicOrigin ? { publicOrigin: parsed.publicOrigin } : {}),
           workerEntryPath: resolveWorkerEntry(),

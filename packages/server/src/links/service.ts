@@ -1,6 +1,12 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   CredentialStore,
+  beginRemoteLinkAuthorization,
+  completeRemoteLinkAuthorization,
+  revokeRemoteLinkAuthorization,
+  isRemoteLinkCredential,
+  type RemoteLinkConfiguration,
+  type RemoteLinkAttempt,
   connectCliLink,
   getCliLinkStatus,
   isCliLinkProvider,
@@ -68,6 +74,8 @@ export interface LinkServiceOptions {
   withMutation?: <T>(write: () => Promise<T>) => Promise<T>;
   onChanged?: () => void | Promise<void>;
   now?: () => number;
+  /** Trusted Host configuration; never accepted from a browser request. */
+  remoteLink?: () => RemoteLinkConfiguration | undefined;
   /** Test seams. Production delegates to Core's fixed provider and CLI executors. */
   validateToken?: typeof validateLocalLinkToken;
   cliStatus?: typeof getCliLinkStatus;
@@ -95,6 +103,13 @@ interface AuthorizationJob {
   timer?: ReturnType<typeof setTimeout>;
   operation: ActiveOperation;
 }
+interface RemoteAuthorizationJob {
+  context: LinkOperationContext;
+  attempt: RemoteLinkAttempt;
+  prepared: PreparedConnection;
+  public: LinkAuthorization;
+  completing: boolean;
+}
 type PreparedConnection = {
   input: LinkConnectionInput;
   id: string;
@@ -113,10 +128,47 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   const revisions = new Map<string, { signature: string; revision: string }>();
   const operations = new Set<ActiveOperation>();
   const jobs = new Map<string, AuthorizationJob>();
+  const remoteJobs = new Map<string, RemoteAuthorizationJob>();
   const revokedOwners = new Set<string>();
   let closed = false;
   let snapshotSignature = "";
   let snapshotRevision = randomUUID();
+  let cleanupRunning: Promise<void> | undefined;
+  // One bounded, unref'd sweep per service. Store leases arbitrate other windows/processes.
+  const cleanupTimer = setInterval(() => {
+    void retryRemoteCleanup();
+  }, 30_000);
+  cleanupTimer.unref?.();
+  const cleanupStartup = setTimeout(() => {
+    void retryRemoteCleanup();
+  }, 0);
+  cleanupStartup.unref?.();
+  function retryRemoteCleanup(): Promise<void> {
+    if (closed) return Promise.resolve();
+    if (cleanupRunning) return cleanupRunning;
+    cleanupRunning = (async () => {
+      if (!store.remoteLinkRetirementCount()) return;
+      for (let count = 0; count < 8 && !closed; count++) {
+        const claim = store.claimRemoteLinkRetirement(now());
+        if (!claim) break;
+        let success = false;
+        try {
+          await revokeRemoteLinkAuthorization(claim.credential);
+          success = true;
+        } catch {
+          /* Keep private custody and retry with persisted backoff. */
+        }
+        store.finishRemoteLinkRetirement(claim, success, now());
+      }
+    })()
+      .catch(() => {
+        // A locked/unreadable store remains untouched; the next sweep retries. No secrets in logs.
+      })
+      .finally(() => {
+        cleanupRunning = undefined;
+      });
+    return cleanupRunning;
+  }
 
   function unavailable(context: LinkOperationContext): void {
     if (closed) throw new LinkServiceError(503, "unavailable");
@@ -161,9 +213,10 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   }
   function isLink(credential: Credential): boolean {
     return (
-      credential.type === "link" &&
-      credential.meta?.linkExecutionRuntime === "local" &&
-      providers.some((provider) => provider.id === credential.meta?.linkProvider)
+      isRemoteLinkCredential(credential) ||
+      (credential.type === "link" &&
+        credential.meta?.linkExecutionRuntime === "local" &&
+        providers.some((provider) => provider.id === credential.meta?.linkProvider))
     );
   }
   function masked(credential: Credential, scope: "user" | "project"): MaskedLinkConnection {
@@ -172,21 +225,26 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       meta.linkAuthSource === "browser-oauth"
         ? summarizeOAuthCredentialSecret(credential.secret)
         : undefined;
-    const status = !isCredentialSecretAvailable(credential.secret)
-      ? "unavailable"
-      : oauth?.state === "expired"
-        ? "expired"
-        : oauth?.state === "invalid" || oauth?.state === "missing"
-          ? "invalid"
-          : "connected";
+    const remote = isRemoteLinkCredential(credential);
+    const status =
+      remote && meta.linkRemoteState !== "connected"
+        ? "unavailable"
+        : !isCredentialSecretAvailable(credential.secret)
+          ? "unavailable"
+          : oauth?.state === "expired"
+            ? "expired"
+            : oauth?.state === "invalid" || oauth?.state === "missing"
+              ? "invalid"
+              : "connected";
     return {
       id: credential.id,
       providerId: meta.linkProvider!,
       methodId: meta.linkConnectionMethod ?? "",
       label: credential.label,
-      runtime: "local",
-      authSource:
-        meta.linkExecutionBackend === "cli"
+      runtime: remote ? "server" : "local",
+      authSource: remote
+        ? "remote-link"
+        : meta.linkExecutionBackend === "cli"
           ? "cli-session"
           : meta.linkAuthSource === "browser-oauth"
             ? "browser-oauth"
@@ -210,6 +268,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const current = records();
     const ids = new Set(current.credentials.map((credential) => credential.id));
     for (const id of revisions.keys()) if (!ids.has(id)) revisions.delete(id);
+    const remoteConfig = options.remoteLink?.();
     const result = {
       providers: providers.map((provider) => ({
         ...provider,
@@ -222,7 +281,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         .map((credential) =>
           masked(credential, current.projectIds.has(credential.id) ? "project" : "user"),
         ),
-      capabilities: { token: true, cliBinding: true, deviceAuth: true },
+      capabilities: { token: true, cliBinding: true, deviceAuth: true, remoteAuth: !!remoteConfig },
+      ...(remoteConfig ? { remoteServer: { issuer: remoteConfig.issuer } } : {}),
+      remoteCleanupPending: store.remoteLinkRetirementCount(),
     };
     const signature = JSON.stringify(result);
     if (signature !== snapshotSignature) {
@@ -301,10 +362,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     await authorize(context);
     return result;
   }
-  function swap(prepared: PreparedConnection, next: Credential | null): void {
+  function swap(
+    prepared: PreparedConnection,
+    next: Credential | null,
+    retirement?: { retireExpected: boolean; adopt?: string; now: number },
+  ): void {
     const current = records();
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
-    if (!store.compareAndSwap("user", prepared.id, prepared.expected, next))
+    if (!store.compareAndSwap("user", prepared.id, prepared.expected, next, retirement))
       throw new LinkServiceError(409, "conflict");
   }
   async function commit(
@@ -312,7 +377,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     prepared: PreparedConnection,
     validation: LocalLinkValidationResult,
     secret: string,
-    authSource: MaskedLinkConnection["authSource"],
+    authSource: Exclude<MaskedLinkConnection["authSource"], "remote-link">,
   ): Promise<MaskedLinkConnection> {
     const credential: Credential = {
       id: prepared.id,
@@ -501,6 +566,35 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   async function disconnect(context: LinkOperationContext, id: string, expectedRevision: string) {
     await authorize(context);
     const credential = reviewed(safeId(id), expectedRevision);
+    if (isRemoteLinkCredential(credential)) {
+      // Disable local use before external I/O. Retain the disabled record if remote revocation
+      // fails so the user can retry; never report successful remote revocation on a timeout.
+      const disabled: Credential = {
+        ...credential,
+        meta: { ...credential.meta, linkRemoteState: "reconnect" },
+      };
+      await change(
+        context,
+        () =>
+          swap(
+            { id: credential.id, expected: credential, input: {} as LinkConnectionInput },
+            disabled,
+          ),
+        true,
+      );
+      try {
+        await revokeRemoteLinkAuthorization(disabled);
+      } catch {
+        throw new LinkServiceError(503, "unavailable");
+      }
+      await change(
+        context,
+        () =>
+          swap({ id: credential.id, expected: disabled, input: {} as LinkConnectionInput }, null),
+        true,
+      );
+      return;
+    }
     // Revocation must work during an active action; the host's credential observer aborts it.
     await change(
       context,
@@ -649,24 +743,180 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw publicLinkError(error);
     }
   }
+  function pruneRemoteJobs(): void {
+    for (const [id, job] of remoteJobs) if (job.attempt.expiresAt <= now()) remoteJobs.delete(id);
+  }
+  async function startRemoteAuth(
+    context: LinkOperationContext,
+    input: LinkConnectionInput,
+  ): Promise<LinkAuthorization> {
+    await authorize(context);
+    pruneRemoteJobs();
+    if (
+      remoteJobs.size >= 32 ||
+      [...remoteJobs.values()].filter(
+        (job) => job.context.ownerId === context.ownerId && job.public.state === "pending",
+      ).length >= 2
+    )
+      throw new LinkServiceError(409, "busy");
+    if (!input || input.providerId !== "github" || input.methodId !== "remote-link")
+      throw new LinkServiceError(400, "invalid_request");
+    const config = options.remoteLink?.();
+    if (!config) throw new LinkServiceError(503, "unavailable");
+    const id =
+      input.connectionId === undefined ? `link-remote-${randomUUID()}` : safeId(input.connectionId);
+    let expected: Credential | null = null;
+    if (input.expectedRevision === null) {
+      if (records().credentials.some((credential) => credential.id === id))
+        throw new LinkServiceError(409, "conflict");
+    } else {
+      expected = reviewed(id, input.expectedRevision);
+      if (!isRemoteLinkCredential(expected)) throw new LinkServiceError(409, "conflict");
+    }
+    const prepared = { id, expected, input: { ...input, label: string(input.label) } };
+    let attempt: RemoteLinkAttempt;
+    try {
+      attempt = beginRemoteLinkAuthorization(config, now());
+    } catch {
+      throw new LinkServiceError(400, "invalid_request");
+    }
+    const publicJob: LinkAuthorization = {
+      id: randomUUID(),
+      providerId: "github",
+      state: "pending",
+      redirect: {
+        authorizationUrl: attempt.authorizationUrl,
+        expiresAt: new Date(attempt.expiresAt).toISOString(),
+      },
+    };
+    remoteJobs.set(publicJob.id, {
+      context,
+      attempt,
+      prepared,
+      public: publicJob,
+      completing: false,
+    });
+    return structuredClone(publicJob);
+  }
+  async function completeRemoteAuth(
+    context: LinkOperationContext,
+    id: string,
+    callbackUrl: string,
+  ): Promise<LinkAuthorization> {
+    await authorize(context);
+    pruneRemoteJobs();
+    const job = remoteJobs.get(safeId(id));
+    if (!job || job.context.ownerId !== context.ownerId)
+      throw new LinkServiceError(404, "not_found");
+    if (job.completing || job.public.state !== "pending")
+      throw new LinkServiceError(409, "conflict");
+    const originalConfig = JSON.stringify(job.attempt.configuration);
+    const check = async () => {
+      await authorize(context);
+      await authorize(job.context);
+      if (
+        remoteJobs.get(id) !== job ||
+        job.attempt.expiresAt <= now() ||
+        job.public.state !== "pending"
+      )
+        throw new LinkServiceError(409, "cancelled");
+      // Re-normalize exactly as at start; a changed client, callback, issuer or secret invalidates the attempt.
+      const config = options.remoteLink?.();
+      if (
+        !config ||
+        JSON.stringify(beginRemoteLinkAuthorization(config, now()).configuration) !== originalConfig
+      )
+        throw new LinkServiceError(409, "conflict");
+    };
+    job.completing = true;
+    let credential: Credential | undefined;
+    let staged: string | undefined;
+    try {
+      await check();
+      credential = await completeRemoteLinkAuthorization(
+        job.attempt,
+        string(callbackUrl, 16_384),
+        job.prepared.id,
+        job.prepared.input.label,
+        {
+          now: now(),
+          onTokens: (minted) => {
+            credential = minted;
+            staged = store.stageRemoteLinkRetirement(minted, job.attempt.expiresAt + 60_000);
+          },
+        },
+      );
+      await check();
+      const guarded = {
+        ownerId: context.ownerId,
+        authorize: async () => {
+          await check();
+          return true;
+        },
+      };
+      const connection = await change(guarded, () => {
+        swap(job.prepared, credential!, {
+          retireExpected: !!job.prepared.expected,
+          adopt: staged,
+          now: now(),
+        });
+        return masked(credential!, "user");
+      });
+      job.public = { id, providerId: "github", state: "connected", connection };
+      // Replacing the active record and retaining its previous grant is one atomic write.
+      await retryRemoteCleanup();
+      if (store.remoteLinkRetirementCount()) job.public.previousGrantRevocationPending = true;
+      await authorize(context);
+      return structuredClone(job.public);
+    } catch (error) {
+      // If the callback minted a grant but its destination changed, do not leave it usable remotely.
+      if (staged) {
+        store.readyRemoteLinkRetirement(staged, now());
+        await retryRemoteCleanup();
+      } else if (credential) {
+        // Storage itself failed. Best effort only: no durable write can be promised then.
+        try {
+          await revokeRemoteLinkAuthorization(credential);
+        } catch {
+          /* Report failure below. */
+        }
+      }
+      job.public = {
+        id,
+        providerId: "github",
+        state: "failed",
+        errorCode: error instanceof LinkServiceError ? error.code : "authorization_failed",
+      };
+      if (error instanceof LinkServiceError) throw error;
+      throw new LinkServiceError(422, "authorization_failed");
+    }
+  }
   async function authorization(
     context: LinkOperationContext,
     id: string,
   ): Promise<LinkAuthorization> {
     await authorize(context);
     pruneJobs();
+    pruneRemoteJobs();
+    const remote = remoteJobs.get(safeId(id));
+    if (remote) {
+      if (remote.context.ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
+      return structuredClone(remote.public);
+    }
     const job = jobs.get(safeId(id));
     if (!job || job.ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
     return structuredClone(job.public);
   }
   async function cancelAuthorization(context: LinkOperationContext, id: string): Promise<void> {
     await authorization(context, id);
+    remoteJobs.delete(id);
     const job = jobs.get(id);
     if (job) cancelJob(job);
     await authorize(context);
   }
   function cancelOwner(ownerId: string): void {
     revokedOwners.add(ownerId);
+    for (const [id, job] of remoteJobs) if (job.context.ownerId === ownerId) remoteJobs.delete(id);
     for (const operation of operations)
       if (operation.ownerId === ownerId) {
         operation.controller.abort();
@@ -680,6 +930,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   }
   function close(): void {
     closed = true;
+    clearInterval(cleanupTimer);
+    clearTimeout(cleanupStartup);
+    remoteJobs.clear();
     for (const operation of operations) operation.controller.abort();
     operations.clear();
     for (const job of jobs.values()) cancelJob(job);
@@ -695,6 +948,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     rename,
     disconnect,
     startDeviceAuth,
+    startRemoteAuth,
+    completeRemoteAuth,
+    retryRemoteCleanup,
     authorization,
     cancelAuthorization,
     cancelOwner,

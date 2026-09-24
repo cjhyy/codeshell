@@ -122,6 +122,36 @@ const unsubscribe = window.codeshellPanel.on("context.changed", (next) => {
 });
 ```
 
+Project documents can use optimistic concurrency when `availableMethods` includes
+both `storage.getSnapshot` and `storage.compareAndSet`:
+
+```js
+const before = await window.codeshellPanel.call("storage.getSnapshot", { key: "draft" });
+const result = await window.codeshellPanel.call("storage.compareAndSet", {
+  key: "draft", expectedRevision: before.revision, value: editedDocument,
+});
+if (!result.updated) {
+  // Keep the local draft; show the conflict and explicitly reload/merge.
+  // Do not adopt result.snapshot.revision and blindly retry the old draft.
+}
+```
+
+A snapshot is `{ exists, value, revision }`. An absent key has `exists: false`,
+`value: null`, and `revision: null`; a stored JSON null has a non-null revision.
+The revision hashes the key and JSON content, not an edit counter: identical
+content has the same revision, including an intervening change back to that content.
+`compareAndSet` requires the observed revision (null for absence) and either
+`value` or `remove: true`. It returns `{ updated, snapshot }`; conflicts do not
+write. An unrelated key does not invalidate the document. Desktop and remote Web
+share the existing per-app/per-project JSON file and per-file lock, including
+cross-process writers. No format migration or new permission is required.
+
+Older `storage.get/set/delete` remain compatible; old clients may still perform
+unconditional writes. New clients detect their changed content on their next
+conditional save. These methods do not synchronize the local draft automatically.
+On a lost response, query the stored snapshot first; do not replay an uncertain
+write. A new Host capability does not by itself migrate every Panel's storage.
+
 No Host capability is granted by default.
 
 | Permission                | Capability                                                                                                                                                                                                                                                           |
@@ -168,6 +198,104 @@ Panel API v5 adds project-and-task-scoped automation calls for apps that declare
 `automations.runNow`, and `automations.delete`. Creation always binds the
 current trusted workspace and current task; follow-up calls reject an
 automation from another workspace or task.
+
+An implementing Host can additionally advertise `automations.createUnique`
+in `availableMethods`, under the same permission. It accepts the create fields
+plus `key` (1–80 ASCII letters, digits, `.`, `_`, `:`, or `-`). The Host derives
+the persisted identity from the app, bound workspace, bound task and key; Panels
+cannot submit `creationKey` or workspace/task authority fields. Discover the
+method explicitly, not from an API version. Paired Desktop Web exposes the same
+automation methods when composed with main's live scheduler and a selected
+durable task. Hub-authenticated HeadlessServer now composes a project-owned
+scheduler with the same automation interface; generic HTTP runtime embedders
+still need to inject an implementing Host.
+
+Implementing Hosts also advertise `automations.updateIfRevision` and
+`automations.deleteIfRevision`. Read the job's opaque `revision` from list/create
+responses, then send the ordinary mutation fields plus `expectedRevision`.
+The token identifies definition, binding, permission and enabled state; running
+counters, next-run timestamps and execution receipts do not invalidate it.
+The Host checks it inside the same CronStore transaction that writes the change.
+An update returns `{ok:true, automation}` and deletion returns `{ok:true}`.
+A changed or disappeared record returns `{ok:false, conflict:true}` without
+applying the caller's mutation. Re-read and review before another decision;
+never fall back to the unconditional method after a conflict or lost response.
+This job revision is separate from the Panel package revision and is not an
+authorization credential. Scope and package checks still
+apply before the conditional mutation.
+
+Desktop main, paired Web and Hub share this contract. Native guest operations
+recheck the current guest, project selection, workspace trust and Session after
+asynchronous authority lookup. Generic HTTP hosts must opt in with
+`PanelAutomationHost.conditionalMutations`; otherwise the methods are neither
+advertised nor dispatched. Older unconditional methods remain compatible and
+do not promise concurrent-edit protection. Clients must discover the exact
+method instead of assuming support from API version or a revision field alone.
+
+Server `/panels` exports `createHubPanelAutomationHost` as a project scheduling
+building block. The caller must supply a persistent package/binding authorizer
+and an executor that honors the resolved approval/sandbox policy, reserves the
+bound Session against interactive work, and waits for real teardown on abort.
+It is not enabled just by constructing the HTTP runtime. Records live under
+`<dataDir>/panel-automations/records/cron.json`; a separate lifetime lease limits
+ownership to one live service using that private data directory. Startup rejects
+corrupt snapshots or another project's records. Each new job retains its Host
+selected Panel revision; a different revision cannot update, resume or manually
+run it, while list/pause/delete remain available to the authorized source Panel.
+Preparation and execution occupy the shared in-process Panel upgrade gate.
+Call and await `close()` before disposing the executor. A disconnected page does
+not own accepted jobs. Restart restores definitions without catch-up execution.
+
+The Hub composition verifies the enabled, bound Panel's exact package revision
+and permissions before dispatch, and borrows the project's live Core Worker.
+It reserves the durable Session against concurrent interactive turns, uses the
+configured default text model, routes unattended approvals through the job's
+resolved policy, denies page-owned internal callbacks and disables background
+shells for that turn. Logging out does not cancel an accepted automation.
+Stopping the Host requests cancellation and waits for actual execution cleanup.
+
+Before sending a run, the Host persists `lastExecution` with a unique id and
+`running` status. List responses expose its timestamps, terminal status and
+optional diagnostic detail. Cancellation remains distinct from successful
+completion. Lost Worker outcomes become `interrupted` and disable the schedule;
+startup does the same for a leftover running receipt. Inspect results before
+explicitly resuming or retrying. Admission timeout terminates and awaits the
+Worker before releasing ownership; an uncooperative child can delay shutdown.
+These checkpoints prevent blind replay, not duplicate external side effects.
+They retain the latest execution, while the bound Session holds its transcript.
+All processes writing the same records must preserve the new receipt fields.
+Browser notifications currently require an active connection; phone push
+notifications and Panel-specific complete workflows are separate acceptance work.
+
+The trusted Worker protocol now accepts per-turn `sandboxMode` and
+`allowBackgroundShells`. These survive Session queueing and captured follow-up
+options, without mutating the Engine defaults used by a later ordinary turn.
+The sandbox mode override retains the resolved network/read/write restrictions;
+`allowBackgroundShells: false` also narrows child execution and cannot be relaxed
+by a caller when the Engine itself forbids background shells. Web serve rejects
+these fields in browser `agent/run` requests: only Host code selects the policy.
+`auto` retains Core's platform-dependent fallback behavior; passing that mode
+alone is not proof that an OS sandbox was available.
+
+The scheduler checks and creates under the same persistent store lock. An equal
+definition returns the retained job without resetting its paused state, counters
+or provenance. A different definition rejects; read and explicitly update the
+existing job instead. Deletion releases the identity. This is retained-job
+uniqueness, not an indefinite request receipt or an exactly-once execution
+guarantee; different task bindings have separate identities. Existing unkeyed
+jobs are not automatically consolidated. A failed response must not trigger
+fallback to ordinary create. All processes writing the cron file must use a
+compatible Core version: older writers normalize away the new identity field.
+
+Paired Web verifies the selected task's persisted project/root authority against
+the authenticated workspace; a task ID supplied to `prepare` is not authority.
+It checks the paired owner and Panel binding again after asynchronous authority
+reads. Update/pause/resume/delete check the latest job ownership inside the cron
+store transaction. Manual run validates a freshly loaded job and dispatches to
+the existing Desktop executor. Closing a page, logging out or stopping the Web
+transport revokes control but does not delete accepted recurring jobs. Explicit
+automation deletion stops future scheduling; an already running execution uses
+the existing Desktop task lifecycle. No second scheduler is owned by Web.
 
 Panel API v6 adds opt-in microphone transcription for apps that declare
 `audio.transcribe`: `audio.status`, `audio.requestMicrophoneAccess`, and

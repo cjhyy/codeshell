@@ -54,6 +54,10 @@ export interface TurnOpts {
   attachments?: InputAttachmentMeta[];
   /** Permission mode snapshot for this queued turn only. */
   permissionMode?: PermissionMode;
+  /** Host-selected sandbox mode for this turn only; other sandbox restrictions remain. */
+  sandboxMode?: import("../tool-system/sandbox/index.js").SandboxMode;
+  /** False narrows this turn's policy; true cannot relax an Engine-level prohibition. */
+  allowBackgroundShells?: boolean;
   /** Plan-mode snapshot for this queued turn only. */
   planMode?: boolean;
   /** Named behavior profile snapshot for this queued turn only. */
@@ -203,6 +207,8 @@ export class ChatSession {
         : undefined,
       disableGoal: opts.disableGoal,
       permissionMode: opts.permissionMode,
+      sandboxMode: opts.sandboxMode,
+      allowBackgroundShells: opts.allowBackgroundShells,
       planMode: opts.planMode,
       behaviorMode: opts.behaviorMode,
       toolAllowlist: opts.toolAllowlist ? [...opts.toolAllowlist] : undefined,
@@ -511,6 +517,8 @@ export class ChatSession {
         archiveBeforeCurrentTurn: next.opts.archiveBeforeCurrentTurn,
         attachments: next.opts.attachments,
         permissionMode: next.opts.permissionMode,
+        sandboxMode: next.opts.sandboxMode,
+        allowBackgroundShells: next.opts.allowBackgroundShells,
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
         toolAllowlist: next.opts.toolAllowlist,

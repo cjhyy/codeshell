@@ -328,3 +328,30 @@ test("a never-started project can be inspected or stopped without invoking Docke
   expect(docker.commands).toEqual([]);
   expect(() => provider.ensure(fresh, origin)).toThrow("generation must be allocated");
 });
+
+test("remote Link deployment configuration reaches only the private project secret and changes container identity", async () => {
+  const remoteLink = {
+    issuer: "https://link.example",
+    clientId: "project-client",
+    clientSecret: "private-downstream-client",
+    redirectUri: origin.publicOrigin + "/link/callback",
+  };
+  const { provider, docker, dataDir } = await fixture({ remoteLink });
+  await provider.ensure(project, origin);
+  const first = [...docker.containers.values()][0].Config.Labels[
+    `${PROJECT_RUNTIME_LABEL}.configuration`
+  ];
+  expect(
+    JSON.parse(
+      await readFile(join(dataDir, "project-runtime-secrets", project.id, "runtime.json"), "utf8"),
+    ).remoteLink,
+  ).toEqual(remoteLink);
+  expect(JSON.stringify(docker.commands)).not.toContain(remoteLink.clientSecret);
+  remoteLink.clientId = "changed-client";
+  await expect(provider.ensure(project, origin)).rejects.toThrow("still running");
+  await provider.stop(project);
+  await provider.ensure(project, origin);
+  expect(
+    [...docker.containers.values()][0].Config.Labels[`${PROJECT_RUNTIME_LABEL}.configuration`],
+  ).not.toBe(first);
+});

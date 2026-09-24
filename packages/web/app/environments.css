@@ -1,0 +1,94 @@
+.environment-trigger {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.environment-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  overflow: auto;
+  border: 1px solid var(--border, #777);
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--bg, #151719);
+  color: var(--text, #f5f5f5);
+}
+.environment-dialog::backdrop {
+  background: #0008;
+}
+.environment-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.environment-dialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.environment-dialog p {
+  line-height: 1.6;
+}
+.environment-location,
+.environment-list small {
+  overflow-wrap: anywhere;
+}
+.environment-list {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.environment-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 10px;
+  border-bottom: 1px solid var(--border, #777);
+}
+.environment-list li > div {
+  flex: 1;
+  min-width: 0;
+}
+.environment-list small {
+  display: block;
+  margin-top: 4px;
+  opacity: 0.7;
+}
+.environment-dialog form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+.environment-dialog label {
+  display: grid;
+  gap: 6px;
+}
+.environment-dialog input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--border, #777);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+}
+.environment-dialog button {
+  min-height: 44px;
+}
+.environment-hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+@media (max-width: 420px) {
+  .environment-list li {
+    flex-wrap: wrap;
+  }
+  .environment-list li > div {
+    flex-basis: 100%;
+  }
+}

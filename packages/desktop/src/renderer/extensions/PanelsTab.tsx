@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { readScopedSettings } from "../settingsAuthority";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Briefcase,
@@ -23,6 +22,7 @@ import type {
   GitPanelAppDiscovery,
   GitPanelAppSourceInput,
   PanelAppExtensionSummary,
+  PanelAppBindingState,
   PanelAppPreview,
   PanelAppSourceInput,
 } from "../../preload/types";
@@ -32,15 +32,14 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "../i18n/I18nProvider";
 import { loadProjects, projectLabel, type TrackedProject } from "../projects";
-import { writeSettings } from "../settingsBus";
 import { useAlert, useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
+import { PanelAppVersionsDialog } from "./PanelAppVersionsDialog";
 import { usePanelAppUpdates } from "./usePanelAppUpdates";
 import {
   bindingBusyKey,
   computeProjectBindings,
-  withoutLegacyOverride,
   type ProjectSettingsMap,
 } from "./panelAppBindings";
 import {
@@ -56,9 +55,15 @@ interface Props {
   query: string;
 }
 
-type PanelAppReviewState =
-  | { mode: "install"; source: PanelAppSourceInput; preview: PanelAppPreview }
-  | { mode: "update"; appId: string; installedVersion: string; preview: PanelAppPreview };
+type PanelAppReviewState = { projectPath: string } & (
+  | {
+      mode: "install";
+      source: PanelAppSourceInput;
+      preview: PanelAppPreview;
+      installedVersion?: string;
+    }
+  | { mode: "update"; appId: string; installedVersion: string; preview: PanelAppPreview }
+);
 
 export function nextPanelAppBindings(value: unknown, appId: string, bound: boolean): string[] {
   const bindings = new Set(
@@ -95,16 +100,37 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [gitBusyTarget, setGitBusyTarget] = useState<string | null>(null);
   const [gitDiscovery, setGitDiscovery] = useState<GitPanelAppDiscovery | null>(null);
   const [review, setReview] = useState<PanelAppReviewState | null>(null);
+  const [versions, setVersions] = useState<{
+    projectPath: string;
+    appId: string;
+    revision: string;
+  } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
-  const [projectSettings, setProjectSettings] = useState<ProjectSettingsMap>({});
+  const [projectBindings, setProjectBindings] = useState<
+    Record<string, PanelAppBindingState[] | null>
+  >({});
+  const projectSettings: ProjectSettingsMap = Object.fromEntries(
+    Object.entries(projectBindings).map(([path, states]) => [
+      path,
+      states
+        ? { panelAppBindings: states.filter((app) => app.bound).map((app) => app.appId) }
+        : null,
+    ]),
+  );
   const [globalDisabled, setGlobalDisabled] = useState<ReadonlySet<string>>(() => new Set());
   const [bindingBusy, setBindingBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const confirm = useConfirm();
   const alert = useAlert();
   const toast = useToast();
-  const updates = usePanelAppUpdates(apps);
+  const targetRef = useRef({ cwd, activeProjectPath });
+  targetRef.current = { cwd, activeProjectPath };
+  useEffect(() => {
+    setReview(null);
+    setVersions(null);
+  }, [cwd, activeProjectPath]);
+  const updates = usePanelAppUpdates(apps, cwd);
   const invalidateUpdates = updates.invalidate;
 
   useEffect(() => {
@@ -124,7 +150,6 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
   useEffect(() => {
     let alive = true;
-    setError(null);
     window.codeshell
       .listPanelAppExtensions(cwd, lang)
       .then((next) => {
@@ -140,92 +165,65 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     };
   }, [cwd, lang, reloadKey]);
 
-  /**
-   * Read every tracked project's bindings so one app card can show its state
-   * across all projects without switching the active project. This reads raw
-   * settings (1 + N small getSettings calls) instead of calling
-   * listPanelAppExtensions per project — that call re-hashes every installed
-   * app's files, so N projects would mean N full catalog scans in main.
-   */
+  // Each row carries the Host revision it displayed. A click must not obtain a
+  // fresh revision silently and overwrite a phone's intervening change.
   useEffect(() => {
     let alive = true;
     const tracked = loadProjects();
+    const paths = [
+      ...new Set([
+        ...tracked.map((project) => project.path),
+        ...(activeProjectPath ? [activeProjectPath] : []),
+      ]),
+    ];
     setProjects(tracked);
-    void (async () => {
-      const [user, ...scoped] = await Promise.all([
-        window.codeshell
-          .getSettings("user")
-          .then((value) => value ?? {})
-          .catch(() => null),
-        ...tracked.map((project) =>
-          readScopedSettings("project", project.path)
-            .then((value) => (value ?? {}) as Record<string, unknown>)
-            // A per-project read must not fail the whole list: null marks the
-            // row unreadable so a permissions error is distinguishable from
-            // an explicit opt-out.
-            .catch(() => null),
-        ),
-      ]);
+    void Promise.all(
+      paths.map(async (path) => {
+        try {
+          return await window.codeshell.getPanelAppBindings(path);
+        } catch {
+          return null;
+        }
+      }),
+    ).then((states) => {
       if (!alive) return;
-      const next: ProjectSettingsMap = {};
-      tracked.forEach((project, index) => {
-        next[project.path] = scoped[index] ?? null;
-      });
-      setProjectSettings(next);
-      const raw = (user as { disabledPanelApps?: unknown } | null)?.disabledPanelApps;
+      setProjectBindings(Object.fromEntries(paths.map((path, index) => [path, states[index]])));
       setGlobalDisabled(
-        new Set(Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : []),
+        new Set(
+          states.flatMap(
+            (items) => items?.filter((app) => app.globalDisabled).map((app) => app.appId) ?? [],
+          ),
+        ),
       );
-    })();
+    });
     return () => {
       alive = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, activeProjectPath]);
 
   const setProjectBinding = useCallback(
     async (appId: string, projectPath: string, bound: boolean) => {
       setBindingBusy(bindingBusyKey(appId, projectPath));
       setError(null);
-      let previous: ProjectSettingsMap | null = null;
       try {
-        const settings = (await readScopedSettings("project", projectPath)) ?? {};
-        const nextBindings = nextPanelAppBindings(settings.panelAppBindings, appId, bound);
-        const nextOverrides = withoutLegacyOverride(settings.panelAppOverrides, appId);
-        // Apply locally first: the row is the only thing that changed, and a
-        // full reload here is what made the tab flash on every click.
-        setProjectSettings((current) => {
-          previous = current;
-          return {
-            ...current,
-            [projectPath]: {
-              ...settings,
-              panelAppBindings: nextBindings,
-              panelAppOverrides: nextOverrides,
-            },
-          };
-        });
-        await writeSettings(
-          "project",
-          {
-            panelAppBindings: nextBindings,
-            // Send the full surviving map, NOT `{[appId]: null}`. main's
-            // deepMerge only honors a null delete when the key already exists;
-            // on a project whose settings had no panelAppOverrides at all it
-            // wrote the null through verbatim, and the settings schema then
-            // rejected the file — which made panelAppPolicy fail closed and
-            // silently unbind every app in that project.
-            panelAppOverrides: nextOverrides,
-          },
+        const state = projectBindings[projectPath]?.find((app) => app.appId === appId);
+        if (!state) throw new Error(t("ext.panels.bindingChanged"));
+        const next = await window.codeshell.setPanelAppProjectBinding(
           projectPath,
+          appId,
+          bound,
+          state.revision,
         );
+        setProjectBindings((current) => ({ ...current, [projectPath]: next }));
+        return true;
       } catch (cause) {
-        if (previous) setProjectSettings(previous);
         setError(String((cause as Error)?.message ?? cause));
+        return false;
       } finally {
         setBindingBusy(null);
       }
     },
-    [],
+    [projectBindings, t],
   );
 
   const pickAndReview = async (kind: "dir" | "zip") => {
@@ -234,6 +232,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setError(t("ext.panels.projectRequired"));
       return;
     }
+    const projectPath = activeProjectPath;
     const picked = await window.codeshell.pickPanelAppSource(kind);
     if (!picked) return;
     setInstallBusy(kind);
@@ -242,12 +241,19 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         kind: picked.kind,
         path: picked.path,
       };
-      const result = await window.codeshell.previewLocalPanelApp(source);
+      const result = await window.codeshell.previewLocalPanelApp(source, projectPath);
+      if (targetRef.current.activeProjectPath !== projectPath) return;
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setReview({ mode: "install", source, preview: result.preview });
+      setReview({
+        mode: "install",
+        projectPath,
+        source,
+        preview: result.preview,
+        installedVersion: result.installedVersion,
+      });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
@@ -260,16 +266,24 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setError(t("ext.panels.projectRequired"));
       return;
     }
+    const projectPath = activeProjectPath;
     setGitBusyTarget(source.subdir ?? source.url);
     setInstallBusy("git");
     setError(null);
     try {
-      const result = await window.codeshell.previewLocalPanelApp(source);
+      const result = await window.codeshell.previewLocalPanelApp(source, projectPath);
+      if (targetRef.current.activeProjectPath !== projectPath) return;
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setReview({ mode: "install", source, preview: result.preview });
+      setReview({
+        mode: "install",
+        projectPath,
+        source,
+        preview: result.preview,
+        installedVersion: result.installedVersion,
+      });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
@@ -333,6 +347,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       try {
         const result = await window.codeshell.installPanelAppUpdate({
           id: review.appId,
+          cwd: review.projectPath,
           reviewToken: preview.reviewToken,
         });
         if (!result.ok) {
@@ -355,11 +370,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       return;
     }
 
-    if (!activeProjectPath) {
-      setError(t("ext.panels.projectRequired"));
-      return;
-    }
-    const bindingProjectPath = activeProjectPath;
+    const bindingProjectPath = review.projectPath;
     const { source } = review;
     let overwrite = false;
     if (preview.alreadyInstalled) {
@@ -374,6 +385,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     setError(null);
     try {
       let result = await window.codeshell.installLocalPanelApp({
+        cwd: bindingProjectPath,
         source,
         reviewToken: preview.reviewToken,
         overwrite,
@@ -386,6 +398,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         });
         if (!approved) return;
         result = await window.codeshell.installLocalPanelApp({
+          cwd: bindingProjectPath,
           source,
           reviewToken: preview.reviewToken,
           overwrite: true,
@@ -396,7 +409,6 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         setError(result.error);
         return;
       }
-      await setProjectBinding(preview.id, bindingProjectPath, true);
       // Reveal the project list once so the user sees which project it bound to.
       setExpanded((current) => new Set(current).add(preview.id));
       setReview(null);
@@ -423,13 +435,20 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     setCheckingUpdate(app.id);
     setError(null);
     try {
-      const result = await window.codeshell.previewPanelAppUpdate(app.appId);
+      if (!cwd || !app.bindingRevision) throw new Error(t("ext.panels.bindingChanged"));
+      const result = await window.codeshell.previewPanelAppUpdate(
+        app.appId,
+        cwd,
+        app.bindingRevision,
+      );
+      if (targetRef.current.cwd !== cwd) return;
       if (!result.ok) {
         setError(result.error);
         return;
       }
       setReview({
         mode: "update",
+        projectPath: cwd,
         appId: app.appId,
         installedVersion: app.version,
         preview: result.preview,
@@ -479,7 +498,13 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         ...(app.agent?.tools.map((tool) => tool.name) ?? []),
       ].some((value) => value.toLowerCase().includes(needle)),
   );
-  const installedAppIds = useMemo(() => new Set((apps ?? []).map((app) => app.appId)), [apps]);
+  const faults = activeProjectPath
+    ? (projectBindings[activeProjectPath] ?? []).filter((app) => app.unavailable)
+    : [];
+  const installedAppIds = new Set([
+    ...(apps ?? []).map((app) => app.appId),
+    ...faults.map((app) => app.appId),
+  ]);
 
   const bindingsByApp = useMemo(() => {
     const map = new Map<string, ReturnType<typeof computeProjectBindings>>();
@@ -494,15 +519,26 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
   return (
     <div className="space-y-3">
+      {versions && (
+        <PanelAppVersionsDialog
+          key={`${versions.projectPath}:${versions.appId}:${versions.revision}`}
+          {...versions}
+          onClose={() => setVersions(null)}
+          onChanged={() => {
+            invalidateUpdates();
+            setReloadKey((key) => key + 1);
+          }}
+        />
+      )}
       {review && (
         <PanelAppInstallReviewDialog
           preview={review.preview}
-          action={review.mode}
-          installedVersion={
-            review.mode === "update"
-              ? review.installedVersion
-              : apps?.find((app) => app.appId === review.preview.id)?.version
+          projectLabel={
+            projects.find((project) => project.path === review.projectPath)?.name ??
+            review.projectPath
           }
+          action={review.mode}
+          installedVersion={review.installedVersion}
           busy={installBusy !== null || (review.mode === "update" && busy === review.appId)}
           onCancel={() => setReview(null)}
           onInstall={() => void installReviewed()}
@@ -826,6 +862,38 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         )}
       </div>
 
+      {activeProjectPath &&
+        (projectBindings[activeProjectPath] ?? [])
+          .filter((app) => app.unavailable && app.appId.toLowerCase().includes(query.toLowerCase()))
+          .map((app) => (
+            <section
+              key={app.appId}
+              className="space-y-2 rounded-lg border p-3"
+              aria-label="需要修复的面板"
+            >
+              <strong className="break-all">{app.appId}</strong>
+              <p className="text-sm">
+                项目记录版本：{app.version}。安装包缺失或无法校验，面板暂不可用。
+              </p>
+              <p className="text-sm text-muted-foreground">
+                项目数据和任务记录仍保留。可检查宿主保留的版本，审阅权限后恢复。
+              </p>
+              <Button
+                variant="outline"
+                disabled={!!busy || !app.bound}
+                onClick={() =>
+                  setVersions({
+                    projectPath: activeProjectPath,
+                    appId: app.appId,
+                    revision: app.revision,
+                  })
+                }
+              >
+                检查可用版本
+              </Button>
+            </section>
+          ))}
+
       {apps && apps.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
@@ -855,7 +923,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
       {apps === null ? (
         <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>
-      ) : apps.length === 0 ? (
+      ) : apps.length === 0 && faults.length > 0 ? null : apps.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center">
           <PanelTop className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
           <div className="mt-3 text-sm font-medium text-foreground">{t("ext.panels.empty")}</div>
@@ -1051,9 +1119,35 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                                     aria-hidden="true"
                                   />
                                 ) : null}
+                                {row.bound && !row.unreadable && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={rowBusy}
+                                    onClick={() => {
+                                      const state = projectBindings[row.projectPath]?.find(
+                                        (value) => value.appId === app.appId,
+                                      );
+                                      if (state)
+                                        setVersions({
+                                          projectPath: row.projectPath,
+                                          appId: app.appId,
+                                          revision: state.revision,
+                                        });
+                                    }}
+                                  >
+                                    项目版本
+                                  </Button>
+                                )}
                                 <Switch
                                   checked={row.bound || row.vetoedByGlobalDenylist}
-                                  disabled={rowBusy}
+                                  disabled={
+                                    rowBusy ||
+                                    row.unreadable ||
+                                    !projectBindings[row.projectPath]?.some(
+                                      (state) => state.appId === app.appId,
+                                    )
+                                  }
                                   aria-label={t("ext.panels.bindingRowAria", {
                                     title: app.title,
                                     project: project ? projectLabel(project) : row.projectPath,
@@ -1076,7 +1170,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     variant="outline"
                     size="sm"
                     className="h-7 gap-1 px-2 text-xs"
-                    disabled={busy === app.id || !app.updateSource.available}
+                    disabled={
+                      busy === app.id ||
+                      !activeProjectPath ||
+                      !app.bindingRevision ||
+                      !app.updateSource.available
+                    }
                     title={
                       app.updateSource.available
                         ? t("ext.panels.updateFromSource")

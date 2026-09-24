@@ -138,12 +138,17 @@ export interface Credential {
     linkProvider?: string;
     /** Provider-specific connection method, e.g. fine-grained-pat or github-app. */
     linkConnectionMethod?: string;
-    /** Where Link actions execute. Local is preferred when both runtimes are usable. */
+    /** Where the selected Link executes; runtime must not silently select another account. */
     linkExecutionRuntime?: "local" | "server";
     /** How a local Link credential was obtained without exposing its secret to the renderer. */
     linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
     /** Fixed execution adapter. CLI bindings never resolve or copy a provider token. */
-    linkExecutionBackend?: "http-token" | "cli";
+    linkExecutionBackend?: "http-token" | "cli" | "remote";
+    /** Remote Link authority; downstream tokens remain in the Host credential store. */
+    linkRemoteIssuer?: string;
+    linkRemoteConnectionId?: string;
+    linkRemoteGrantId?: string;
+    linkRemoteState?: "connected" | "refreshing" | "reconnect";
     /** False for provider-owned Link secrets that must only flow through LinkAction. */
     agentExposable?: boolean;
     /** Stable upstream account/user id returned by the provider validation endpoint. */

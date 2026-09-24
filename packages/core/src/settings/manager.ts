@@ -54,6 +54,7 @@ const PROTECTED_SETTING_ROOTS = new Set([
   "hooks",
   "mcpServers",
   "mcpServerOverrides",
+  "panelAppPins",
 ]);
 
 /**
@@ -589,16 +590,22 @@ export class SettingsManager {
    * object directly to a renderer or remote client. The workspace trust gate
    * still applies. Every call parses a fresh object, so callers cannot mutate
    * the effective settings cache through this view.
+   * Strict reads reject existing unsafe or malformed files instead of returning
+   * an empty layer; use them when absence would change code-selection authority.
    */
-  getRawForScope(scope: "user" | "project" | "local", cwd?: string): Record<string, unknown> {
+  getRawForScope(
+    scope: "user" | "project" | "local",
+    cwd?: string,
+    options: { strict?: boolean } = {},
+  ): Record<string, unknown> {
     const path =
       scope === "user"
         ? join(this.userConfigDir(), "settings.json")
         : scope === "local"
-          ? this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.local.json")
-          : this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.json");
+          ? this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.local.json", options.strict)
+          : this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.json", options.strict);
     if (!path) return {};
-    const raw = this.readJsonObject(path);
+    const raw = options.strict ? this.readJsonObjectForMutation(path) : this.readJsonObject(path);
     // Same workspace-trust gate as load(): project/local scope reads bypass the
     // merge, so an untrusted project's dangerous fields (for example an MCP
     // server or setup script) must be stripped here too.
@@ -638,8 +645,13 @@ export class SettingsManager {
       const root = realpathSync(cwd);
       if (!lstatSync(root).isDirectory()) throw new Error("project root is not a directory");
       const stateDir = join(root, ".code-shell");
-      if (existsSync(stateDir)) {
-        const info = lstatSync(stateDir);
+      let info: ReturnType<typeof lstatSync> | undefined;
+      try {
+        info = lstatSync(stateDir);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      if (info) {
         if (info.isSymbolicLink() || !info.isDirectory()) {
           throw new Error("project .code-shell must be a real directory");
         }
@@ -662,8 +674,8 @@ export class SettingsManager {
   /**
    * Same resolution as readJsonObject (JSON wins, sibling YAML is folded in),
    * but a resolved file that cannot be read as a bounded object THROWS instead
-   * of degrading to {}. Only the read-modify-write path uses this: rewriting
-   * the whole object off a silently-empty read destroys the file's contents.
+   * of degrading to {}. Mutations and package-pin authority reads use this:
+   * an unreadable document must not become a write base or select latest code.
    */
   private readJsonObjectForMutation(path: string): Record<string, unknown> {
     const resolved = resolveConfigPath(path);
@@ -673,7 +685,14 @@ export class SettingsManager {
       // bound). Only the former may start from {}; the latter must not be
       // overwritten, so re-check the candidates before deciding.
       for (const candidate of settingsCandidatePaths(path)) {
-        if (existsSync(candidate)) {
+        let present = false;
+        try {
+          lstatSync(candidate);
+          present = true;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+        if (present) {
           throw new Error(
             `settings file exists but could not be read as a valid, bounded object: ${candidate}. ` +
               `Refusing to overwrite it. Fix or move the file, then retry.`,

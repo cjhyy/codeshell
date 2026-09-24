@@ -5,7 +5,6 @@ import type {
   PanelAppExtensionSummary,
   PanelAppPreview,
   PanelAppUpdateCheck,
-  RendererConfigurationTarget,
 } from "../../preload/types";
 import { loadProjects, saveProjects, type TrackedProject } from "../projects";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
@@ -44,6 +43,7 @@ function panel(id = "video-studio", kind: "git" | "dir" | "zip" = "git"): PanelA
     title: id === "video-studio" ? "视频工作台" : id,
     version: "0.6.2",
     revision: "revision-1",
+    bindingRevision: "a".repeat(64),
     hostId: id,
     kind: "panel-app",
     icon: "panel",
@@ -79,7 +79,7 @@ describe("Panel App update controls", () => {
   let savedBridge: PropertyDescriptor | undefined;
   let savedStorage: PropertyDescriptor | undefined;
   let savedProjects: TrackedProject[];
-  let configurationReads: RendererConfigurationTarget[];
+  let bindingReads: string[];
   let apps: PanelAppExtensionSummary[];
   let changed: (() => void) | undefined;
   let checks: Array<[string, boolean | undefined]>;
@@ -104,7 +104,7 @@ describe("Panel App update controls", () => {
         addedAt: 1,
       },
     ]);
-    configurationReads = [];
+    bindingReads = [];
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
       value: { getItem: () => null, setItem: () => undefined },
@@ -127,9 +127,15 @@ describe("Panel App update controls", () => {
       value: {
         listPanelAppExtensions: async () => [...apps],
         getSettings: async () => ({}),
-        getConfigurationSettings: async (target: RendererConfigurationTarget) => {
-          configurationReads.push(target);
-          return {};
+        getPanelAppBindings: async (cwd: string) => {
+          bindingReads.push(cwd);
+          return apps.map((app) => ({
+            appId: app.appId,
+            revision: "a".repeat(64),
+            bound: app.projectBound,
+            globalDisabled: false,
+            version: app.version,
+          }));
         },
         onPanelAppsChanged: (callback: () => void) => {
           changed = callback;
@@ -191,9 +197,78 @@ describe("Panel App update controls", () => {
     });
   }
 
+  test("project toggles send the displayed Host revision and surface a concurrent phone change", async () => {
+    const writes: unknown[] = [];
+    Object.assign(window.codeshell, {
+      setPanelAppProjectBinding: async (...input: unknown[]) => {
+        writes.push(input);
+        throw new Error("面板配置已改变，请刷新后重试。");
+      },
+      setConfigurationSettings: () => {
+        throw new Error("Generic settings must not write Panel bindings");
+      },
+    });
+    await render();
+    await click("展开");
+    const toggle = nodes(container).find((node) => props(node).role === "switch");
+    expect(toggle).toBeDefined();
+    await act(async () => {
+      props(toggle).onClick({
+        stopPropagation() {},
+        isPropagationStopped: () => false,
+        defaultPrevented: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(writes).toEqual([["/tmp/project", "video-studio", true, "a".repeat(64)]]);
+    expect(textOf(container)).toContain("面板配置已改变，请刷新后重试。");
+    expect(
+      props(nodes(container).find((node) => props(node).role === "switch"))["aria-checked"],
+    ).toBe(false);
+  });
+
+  test("a rejected project installation never reports success or attempts a separate binding", async () => {
+    const writes: unknown[] = [];
+    Object.assign(window.codeshell, {
+      pickPanelAppSource: async () => ({ kind: "dir", path: "/source" }),
+      previewLocalPanelApp: async (_source: unknown, cwd: string) => {
+        expect(cwd).toBe("/tmp/project");
+        return {
+          ok: true,
+          preview: {
+            ...preview,
+            alreadyInstalled: false,
+            source: { kind: "dir", label: "source" },
+          },
+        };
+      },
+      installLocalPanelApp: async (input: unknown) => {
+        writes.push(input);
+        return { ok: false, error: "项目面板配置已改变，请重新预览。" };
+      },
+      setPanelAppProjectBinding: async () => {
+        throw new Error("Installation must bind inside the reviewed Host operation");
+      },
+    });
+    await render();
+    await click("选择源码文件夹");
+    expect(textOf(document.body)).toContain("目标项目：Panel updates");
+    await click("确认并安装");
+    expect(textOf(document.body)).not.toContain("已安装并绑定到");
+    expect(textOf(container)).toContain("项目面板配置已改变，请重新预览。");
+    expect(writes).toEqual([
+      {
+        cwd: "/tmp/project",
+        source: { kind: "dir", path: "/source" },
+        reviewToken: preview.reviewToken,
+        overwrite: false,
+      },
+    ]);
+  });
+
   test("automatically displays the newer version and its source without opening a dialog", async () => {
     await render();
-    expect(configurationReads).toEqual([{ projectId: "panel-updates-project" }]);
+    expect(bindingReads).toEqual(["/tmp/project"]);
     expect(textOf(container)).toContain("有更新");
     expect(textOf(container)).toContain("v0.6.2 → v0.6.3");
     expect(textOf(container)).toContain("1 个可更新");
@@ -228,12 +303,136 @@ describe("Panel App update controls", () => {
     expect(textOf(document.body)).toContain("v0.6.2 → v0.6.3");
     expect(textOf(document.body)).toContain("Host 权限");
     await click("确认并更新");
-    expect(installs).toEqual([{ id: "video-studio", reviewToken: "reviewed-package-token" }]);
+    expect(installs).toEqual([
+      { cwd: "/tmp/project", id: "video-studio", reviewToken: "reviewed-package-token" },
+    ]);
     expect(textOf(container)).not.toContain("有更新");
     expect(textOf(container)).not.toContain("个可更新");
     expect(textOf(container)).toContain("v0.6.3");
     expect(textOf(container)).toContain("已是来源中的最新版本");
     expect(button("从源码更新", container)).toBeDefined();
+  });
+
+  test("a bound project's retained version is reviewed before the native restore token is submitted", async () => {
+    apps = [{ ...panel(), projectBound: true }];
+    const calls: unknown[] = [];
+    const history = {
+      appId: "video-studio",
+      title: { default: "Video Studio" },
+      expectedRevision: "a".repeat(64),
+      current: { version: "0.6.2", packageDigest: "b".repeat(64) },
+      unavailablePackages: 0,
+      versions: [
+        {
+          version: "0.6.1",
+          packageDigest: "c".repeat(64),
+          permissions: ["workspace.write"],
+          compatibility: { supported: true, reasons: [] },
+        },
+      ],
+    };
+    Object.assign(window.codeshell, {
+      getPanelAppPackageHistory: async (...args: unknown[]) => {
+        calls.push(["history", ...args]);
+        return history;
+      },
+      previewPanelAppRestore: async (...args: unknown[]) => {
+        calls.push(["preview", ...args]);
+        return {
+          ...history.versions[0],
+          appId: history.appId,
+          title: history.title,
+          current: history.current,
+          expectedRevision: history.expectedRevision,
+          addedPermissions: ["workspace.write"],
+          reviewToken: "native-restore-review",
+          expiresAt: Date.now() + 60_000,
+        };
+      },
+      restorePanelAppPackage: async (...args: unknown[]) => {
+        calls.push(["restore", ...args]);
+        return { id: history.appId, packageDigest: "c".repeat(64) };
+      },
+    });
+    await render();
+    await click("展开");
+    await click("项目版本");
+    expect(textOf(document.body)).toContain("不会恢复旧数据");
+    await click("审阅 v0.6.1");
+    expect(textOf(document.body)).toContain("新增权限");
+    expect(calls).toHaveLength(2);
+    await click("确认权限并恢复项目版本");
+    expect(calls).toEqual([
+      ["history", "/tmp/project", "video-studio", "a".repeat(64)],
+      ["preview", "/tmp/project", "video-studio", "c".repeat(64), "a".repeat(64)],
+      ["restore", "/tmp/project", "native-restore-review"],
+    ]);
+  });
+
+  test("an unavailable project package is repaired from a separate diagnostic row", async () => {
+    apps = [];
+    const calls: unknown[] = [];
+    const history = {
+      appId: "video-studio",
+      title: { default: "Video Studio" },
+      expectedRevision: "a".repeat(64),
+      current: { version: "0.6.2", packageDigest: "b".repeat(64), unavailable: true },
+      unavailablePackages: 0,
+      versions: [
+        {
+          version: "0.6.1",
+          packageDigest: "c".repeat(64),
+          permissions: ["workspace.write"],
+          compatibility: { supported: true, reasons: [] },
+        },
+      ],
+    };
+    Object.assign(window.codeshell, {
+      getPanelAppBindings: async () => [
+        {
+          appId: "video-studio",
+          revision: "a".repeat(64),
+          bound: true,
+          globalDisabled: false,
+          version: "0.6.2",
+          unavailable: true,
+        },
+      ],
+      getPanelAppPackageHistory: async (...args: unknown[]) => {
+        calls.push(["history", ...args]);
+        return history;
+      },
+      previewPanelAppRestore: async (...args: unknown[]) => {
+        calls.push(["preview", ...args]);
+        return {
+          ...history.versions[0],
+          appId: history.appId,
+          title: history.title,
+          current: history.current,
+          expectedRevision: history.expectedRevision,
+          addedPermissions: ["workspace.write"],
+          reviewToken: "native-restore-review",
+          expiresAt: Date.now() + 60_000,
+        };
+      },
+      restorePanelAppPackage: async (...args: unknown[]) => {
+        calls.push(["restore", ...args]);
+        return { id: history.appId, packageDigest: "c".repeat(64) };
+      },
+    });
+    await render();
+    await click("检查可用版本");
+    expect(textOf(document.body)).toContain("全部权限");
+    expect(textOf(document.body)).toContain("不会恢复旧数据");
+    await click("审阅 v0.6.1");
+    expect(textOf(document.body)).toContain("需重新确认");
+    expect(calls).toHaveLength(2);
+    await click("确认权限并恢复项目版本");
+    expect(calls).toEqual([
+      ["history", "/tmp/project", "video-studio", "a".repeat(64)],
+      ["preview", "/tmp/project", "video-studio", "c".repeat(64), "a".repeat(64)],
+      ["restore", "/tmp/project", "native-restore-review"],
+    ]);
   });
 
   test("catalog changes from another window remove an obsolete update notice", async () => {

@@ -89,7 +89,7 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   expect(value.capabilities.methodLimits["resources.references.pick"].timeoutMs).toBe(
     30 * 60 * 1000,
   );
-  expect(value.capabilities.tasks).toEqual({ durable: true });
+  expect(value.capabilities.tasks).toEqual({ durable: true, cookieCredentials: false });
   expect(value.capabilities.methodLimits["tasks.start"]).toMatchObject({
     maxParamsBytes: 2 * 1024 * 1024 + 8192,
   });
@@ -105,4 +105,79 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   });
   expect(noQueue.availableMethods).not.toContain("tasks.start");
   expect(noQueue.capabilities.tasks).toBeUndefined();
+});
+
+test("background Cookie metadata requires a configured service and all task permissions", () => {
+  const permissions = ["resources", "process", "credentials.cookies"] as const;
+  const enabled = desktopPanelCapabilities(permissions, { ...options, taskCookies: true });
+  expect(enabled.availableMethods).toContain("credentials.cookies.listForTask");
+  expect(enabled.capabilities.tasks).toMatchObject({ cookieCredentials: true });
+  expect(enabled.capabilities.process).toMatchObject({ cookieCredentials: true });
+  expect(enabled.capabilities.methodLimits["tasks.retry"].timeoutMs).toBe(30 * 60 * 1000);
+  for (const permission of permissions) {
+    const missing = desktopPanelCapabilities(
+      permissions.filter((value) => value !== permission),
+      { ...options, taskCookies: true },
+    );
+    expect(missing.availableMethods).not.toContain("credentials.cookies.listForTask");
+    expect((missing.capabilities.process as any)?.cookieCredentials).not.toBe(true);
+  }
+  expect(desktopPanelCapabilities(permissions, options).availableMethods).not.toContain(
+    "credentials.cookies.listForTask",
+  );
+  expect(
+    (desktopPanelCapabilities(permissions, options).capabilities.process as any)?.cookieCredentials,
+  ).not.toBe(true);
+});
+
+test("versioned storage is advertised only with storage permission and bounded limits", () => {
+  const missing = desktopPanelCapabilities([], options);
+  expect(missing.availableMethods).not.toContain("storage.getSnapshot");
+  expect(missing.availableMethods).not.toContain("storage.compareAndSet");
+  const allowed = desktopPanelCapabilities(["storage"], options);
+  expect(allowed.availableMethods).toContain("storage.getSnapshot");
+  expect(allowed.availableMethods).toContain("storage.compareAndSet");
+  expect(allowed.capabilities.methodLimits["storage.compareAndSet"]).toEqual({
+    maxParamsBytes: 256 * 1024 + 8192,
+    maxResultBytes: 256 * 1024 + 8192,
+  });
+});
+
+test("unique automation creation is advertised only by an implementing authorized host", () => {
+  const legacy = { ...options, automations: true };
+  expect(desktopPanelCapabilities(["automations.manage"], legacy).availableMethods).not.toContain(
+    "automations.createUnique",
+  );
+  const modern = { ...legacy, automationUniqueCreate: true };
+  expect(desktopPanelCapabilities(["automations.manage"], modern).availableMethods).toContain(
+    "automations.createUnique",
+  );
+  expect(desktopPanelCapabilities([], modern).availableMethods).not.toContain(
+    "automations.createUnique",
+  );
+  expect(
+    desktopPanelCapabilities(["automations.manage"], { ...modern, automations: false })
+      .availableMethods,
+  ).not.toContain("automations.createUnique");
+});
+
+test("conditional automation methods require an implementing Host and both context permissions", () => {
+  const modern = { ...options, automations: true, automationConditionalMutations: true };
+  for (const method of ["automations.updateIfRevision", "automations.deleteIfRevision"]) {
+    expect(
+      desktopPanelCapabilities(
+        ["automations.manage", "context.workspace", "context.session"],
+        modern,
+      ).availableMethods,
+    ).toContain(method);
+    expect(desktopPanelCapabilities(["automations.manage"], modern).availableMethods).not.toContain(
+      method,
+    );
+    expect(
+      desktopPanelCapabilities(["automations.manage", "context.workspace", "context.session"], {
+        ...modern,
+        automationConditionalMutations: false,
+      }).availableMethods,
+    ).not.toContain(method);
+  }
 });

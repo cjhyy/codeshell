@@ -102,13 +102,33 @@ export function createPanelManagementHttp(options: PanelManagementHttpOptions) {
             input.reviewToken,
             input.bind as boolean | undefined,
           );
-        } else {
-          const match = /^\/api\/v1\/panels\/([^/]+)(?:\/(binding|update-preview))?$/.exec(
-            url.pathname,
+        } else if (url.pathname === ROOT + "/restore" && method === "POST") {
+          result = await service.restore(
+            context,
+            (await body(request, ["reviewToken"])).reviewToken,
           );
+        } else {
+          const match =
+            /^\/api\/v1\/panels\/([^/]+)(?:\/(binding|update-preview|versions|restore-preview))?$/.exec(
+              url.pathname,
+            );
           if (!match) throw new PanelManagementError(404, "not_found", "找不到这个面板操作。");
           const id = decodeURIComponent(match[1]!);
-          if (match[2] === "binding" && method === "PATCH") {
+          if (match[2] === "versions" && method === "POST") {
+            result = await service.packageHistory(
+              context,
+              id,
+              (await body(request, ["expectedRevision"])).expectedRevision,
+            );
+          } else if (match[2] === "restore-preview" && method === "POST") {
+            const input = await body(request, ["packageDigest", "expectedRevision"]);
+            result = await service.previewRestore(
+              context,
+              id,
+              input.packageDigest,
+              input.expectedRevision,
+            );
+          } else if (match[2] === "binding" && method === "PATCH") {
             const input = await body(request, ["bound", "expectedRevision"]);
             result = await service.binding(context, id, input.bound, input.expectedRevision);
           } else if (match[2] === "update-preview" && method === "POST")

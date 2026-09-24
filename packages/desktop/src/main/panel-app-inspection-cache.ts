@@ -60,30 +60,54 @@ async function unchanged(value: Snapshot): Promise<boolean> {
  * Native launch also retains its independent entry hash verification.
  */
 export class PanelAppInspectionCache {
-  private readonly entries = new Map<string, { app: InstalledPanelApp; snapshot: Snapshot }>();
+  private readonly entries = new Map<
+    string,
+    { app: InstalledPanelApp; snapshot: Snapshot; selection: string }
+  >();
   private readonly pending = new Map<string, Promise<InstalledPanelApp | undefined>>();
 
   constructor(
     private readonly options: {
+      prepare?(id: string): Promise<unknown>;
       installPath(id: string): string;
       registryPath(): string;
+      selectionKey?(id: string): string;
       listInstalled(): Promise<InstalledPanelApp[]>;
     },
   ) {}
 
-  async get(id: string): Promise<InstalledPanelApp | undefined> {
-    const cached = this.entries.get(id);
-    if (cached && (await unchanged(cached.snapshot))) return cached.app;
-    this.entries.delete(id);
-    let pending = this.pending.get(id);
-    if (!pending) {
-      pending = this.inspect(id).finally(() => this.pending.delete(id));
-      this.pending.set(id, pending);
-    }
-    return pending;
+  private selection(id: string): string {
+    return JSON.stringify([this.options.installPath(id), this.options.selectionKey?.(id)]);
   }
 
-  private async inspect(id: string): Promise<InstalledPanelApp | undefined> {
+  async get(id: string): Promise<InstalledPanelApp | undefined> {
+    try {
+      await this.options.prepare?.(id);
+      const selection = this.selection(id);
+      const cached = this.entries.get(id);
+      if (
+        cached &&
+        cached.selection === selection &&
+        (await unchanged(cached.snapshot)) &&
+        this.selection(id) === selection
+      )
+        return cached.app;
+      this.entries.delete(id);
+      const key = JSON.stringify([id, selection]);
+      let pending = this.pending.get(key);
+      if (!pending) {
+        pending = this.inspect(id, selection).finally(() => this.pending.delete(key));
+        this.pending.set(key, pending);
+      }
+      const app = await pending;
+      return this.selection(id) === selection ? app : undefined;
+    } catch {
+      // Invalid/missing pins and unsafe settings are not a request for latest.
+      return undefined;
+    }
+  }
+
+  private async inspect(id: string, selection: string): Promise<InstalledPanelApp | undefined> {
     // Take the identity snapshot BEFORE inspection, then verify it afterwards:
     // a replacement during inspection must never become a trusted cache entry.
     let before: Snapshot;
@@ -93,9 +117,15 @@ export class PanelAppInspectionCache {
       return undefined;
     }
     const app = (await this.options.listInstalled()).find((candidate) => candidate.id === id);
-    if (!app || app.installPath !== before.root || !(await unchanged(before))) return undefined;
+    if (
+      !app ||
+      app.installPath !== before.root ||
+      !(await unchanged(before)) ||
+      this.selection(id) !== selection
+    )
+      return undefined;
     if (this.entries.size >= 32) this.entries.delete(this.entries.keys().next().value!);
-    this.entries.set(id, { app, snapshot: before });
+    this.entries.set(id, { app, snapshot: before, selection });
     return app;
   }
 }

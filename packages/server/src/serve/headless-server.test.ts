@@ -262,6 +262,34 @@ describe("headless serve — WS pipe", () => {
     ws.close();
   });
 
+  test("browser runs cannot override host-selected sandbox or background policy", async () => {
+    const server = await boot();
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    try {
+      for (const [id, policy] of [
+        ["sandbox", { sandboxMode: "off" }],
+        ["background", { allowBackgroundShells: true }],
+      ] as const) {
+        ws.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            method: "agent/run",
+            params: { task: "hi", ...policy },
+          }),
+        );
+        const reply = await nextMessage(ws, (message) => message.id === id);
+        expect(reply.error).toMatchObject({
+          code: -32602,
+          message: "Execution policy is selected by the host",
+        });
+      }
+      expect(server.bridge.hasChild()).toBe(false);
+    } finally {
+      ws.close();
+    }
+  });
+
   test("session queries are persisted, workspace-scoped, and include a readable preview", async () => {
     const server = await boot({ seedSession: true });
     const ws = await openWs(server, { "x-access-passcode": PASSCODE });

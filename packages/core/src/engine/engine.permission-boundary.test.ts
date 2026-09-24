@@ -94,6 +94,7 @@ function makeEngine(initialMode: "default" | "bypassPermissions") {
   scenarios.set(model, scenario);
 
   const approvals: ApprovalRequest[] = [];
+  const backgroundPolicy: Array<boolean | undefined> = [];
   const executions: Array<{ planMode: boolean | undefined; permissionMode: string | undefined }> =
     [];
   const engine = new Engine({
@@ -121,11 +122,12 @@ function makeEngine(initialMode: "default" | "bypassPermissions") {
     },
     async (_args, ctx?: ToolContext) => {
       executions.push({ planMode: ctx?.planMode, permissionMode: ctx?.permissionMode });
+      backgroundPolicy.push(ctx?.allowBackgroundShells);
       return "mutated";
     },
   );
   (engine as any).hooks.clear();
-  return { engine, cwd, model, scenario, approvals, executions };
+  return { engine, cwd, model, scenario, approvals, executions, backgroundPolicy };
 }
 
 afterEach(() => {
@@ -183,4 +185,23 @@ describe("Engine permission context changes at run boundaries", () => {
     expect(approvals).toHaveLength(0);
     expect(executions).toEqual([{ planMode: false, permissionMode: "bypassPermissions" }]);
   });
+});
+
+it("an unattended background restriction does not change the next Engine turn", async () => {
+  const { engine, cwd, scenario, backgroundPolicy } = makeEngine("default");
+  try {
+    const first = engine.run("first", {
+      sessionId: "background-policy",
+      cwd,
+      allowBackgroundShells: false,
+    });
+    await scenario.firstEntered.promise;
+    scenario.releaseFirst.resolve();
+    await first;
+    await engine.run("second", { sessionId: "background-policy", cwd });
+    expect(backgroundPolicy).toEqual([false, true]);
+  } finally {
+    scenario.releaseFirst.resolve();
+    await engine.dispose();
+  }
 });

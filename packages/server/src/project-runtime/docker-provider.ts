@@ -1,3 +1,5 @@
+import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { chmod, lstat, mkdir, open, rename, rm } from "node:fs/promises";
@@ -25,6 +27,7 @@ export interface DockerProjectProviderOptions {
   installationId: string;
   dataDir: string;
   image?: string;
+  remoteLink?: RemoteLinkConfiguration;
   limits?: { memoryMb?: number; cpus?: number; pids?: number };
   commandTimeoutMs?: number;
   startupTimeoutMs?: number;
@@ -318,6 +321,9 @@ export function createDockerProjectProvider(
       password: project.runtimePassword,
       publicOrigin,
       publicPathPrefix: `/p/${project.id}`,
+      ...(options.remoteLink
+        ? { remoteLink: remoteLinkHostConfiguration(options.remoteLink, publicOrigin) }
+        : {}),
     };
     const configuration = createHash("sha256").update(JSON.stringify(secret)).digest("hex");
     const configLabel = `${PROJECT_RUNTIME_LABEL}.configuration`;

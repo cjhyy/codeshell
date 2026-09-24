@@ -1,10 +1,13 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
+import { Readable } from "node:stream";
 import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rename,
   rm,
@@ -14,7 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
-import type { InstalledPanelApp } from "@cjhyy/code-shell-core";
+import { CredentialStore, type InstalledPanelApp } from "@cjhyy/code-shell-core";
 import {
   createPanelRuntime,
   panelWebCompatibility,
@@ -22,8 +25,11 @@ import {
   type PanelTaskHost,
   type PanelTaskScope,
 } from "./runtime.js";
+import { PanelToolJobService, type ToolJobScope } from "./tool-jobs.js";
+import { createSharedPanelToolHost, type SharedPanelToolHost } from "./shared-tool-jobs.js";
 import { resolvePanelExecutable } from "./process-service.js";
 import { PanelResourceService } from "./resources/service.js";
+import { PanelTaskCookieHost } from "./task-cookie-host.js";
 import type { PanelSnapshot } from "./types.js";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -38,7 +44,14 @@ async function fixture(
     origin?: string;
     publicPathPrefix?: string;
     agentTasks?: PanelTaskHost;
+    automations?: PanelRuntimeOptions["automations"];
+    authorizePanelDirectory?: PanelRuntimeOptions["authorizePanelDirectory"];
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
+    sharedToolJobs?: (input: {
+      root: string;
+      cwd: string;
+      app: InstalledPanelApp;
+    }) => SharedPanelToolHost;
   } = {},
 ) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-panel-http-")));
@@ -66,6 +79,7 @@ async function fixture(
   const app: InstalledPanelApp = {
     id: "synthetic-panel",
     version: "1",
+    packageDigest: "b".repeat(64),
     title: { default: "Synthetic panel" },
     entry: "app/index.html",
     icon: "panel",
@@ -110,9 +124,12 @@ async function fixture(
   const runtime = createPanelRuntime({
     cwd,
     dataDir: join(root, "data"),
-    host: "hub",
+    host: options.sharedToolJobs ? "desktop" : "hub",
+    sharedToolJobs: options.sharedToolJobs?.({ root, cwd, app }),
     publicPathPrefix: options.publicPathPrefix,
     agentTasks: options.agentTasks,
+    automations: options.automations,
+    authorizePanelDirectory: options.authorizePanelDirectory,
     createAgentTasks: options.createAgentTasks,
     now: () => state.now,
     ownerId: async (request) => ownerOf(request),
@@ -195,6 +212,88 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("automation capabilities require a live Host, both context permissions and a selected task", async () => {
+    const permissions: InstalledPanelApp["permissions"] = [
+      "automations.manage",
+      "context.workspace",
+      "context.session",
+    ];
+    const missing = await fixture({ permissions });
+    const missingGrant = await missing.prepare();
+    expect(
+      (missingGrant.context.availableMethods as string[]).some((method) =>
+        method.startsWith("automations."),
+      ),
+    ).toBe(false);
+    expect(missingGrant.limitations.some((reason) => reason.includes("automations.manage"))).toBe(
+      true,
+    );
+    const unavailable = await missing.api(`${missingGrant.instanceId}/call`, "POST", {
+      method: "automations.list",
+      params: {},
+    });
+    expect(unavailable.status).toBe(501);
+    let calls = 0;
+    const f = await fixture({
+      permissions,
+      automations: {
+        call: async (scope) => {
+          calls++;
+          expect(scope.cwd).toBe(f.cwd);
+          expect(scope.sessionId).toBe("session-1234");
+          expect(scope.revision).toBe(f.state.revision);
+          expect(await scope.isAuthorized()).toBe(true);
+          return { automations: [] };
+        },
+      },
+    });
+    const grant = await f.prepare();
+    expect(grant.context.availableMethods).toContain("automations.createUnique");
+    expect(grant.context.availableMethods).not.toContain("automations.updateIfRevision");
+    expect(
+      (
+        await f.api(`${grant.instanceId}/call`, "POST", {
+          method: "automations.updateIfRevision",
+          params: { id: "job", expectedRevision: "a".repeat(64), prompt: "new" },
+        })
+      ).status,
+    ).toBe(501);
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
+        .status,
+    ).toBe(200);
+    const noTask = await f.prepare("owner-a", { sessionId: undefined });
+    expect(noTask.context.availableMethods).not.toContain("automations.list");
+    expect(
+      (await f.api(`${noTask.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
+        .status,
+    ).toBe(403);
+    f.state.owners.delete("owner-a");
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "automations.list", params: {} }))
+        .status,
+    ).not.toBe(200);
+    expect(calls).toBe(1);
+    const noPermission = await fixture({
+      permissions: ["context.workspace", "context.session"],
+      automations: {
+        call: async () => {
+          throw Error("must not reach Host");
+        },
+      },
+    });
+    const denied = await noPermission.prepare();
+    expect(denied.context.availableMethods).not.toContain("automations.list");
+    expect(
+      (
+        await noPermission.api(`${denied.instanceId}/call`, "POST", {
+          method: "automations.list",
+          params: {},
+        })
+      ).status,
+    ).toBe(403);
+  });
+
   test("Web capabilities disclose actual confirmation and result limits and mask native hand-offs", async () => {
     const f = await fixture({
       permissions: ["context.workspace", "resources", "credentials.connections"],
@@ -566,6 +665,46 @@ describe("Panel HTTP runtime", () => {
     expect((await fetch(f.url + grant.src)).status).toBe(200);
   });
 
+  test("two HTTP Panel instances detect conflicting project saves", async () => {
+    const f = await fixture();
+    const [one, two] = await Promise.all([f.prepare(), f.prepare()]);
+    const call = async (grant: typeof one, method: string, params: unknown) => {
+      const response = await f.api(`${grant.instanceId}/call`, "POST", { method, params });
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    for (const grant of [one, two]) {
+      const context = await call(grant, "context.get", {});
+      expect(context.availableMethods).toContain("storage.getSnapshot");
+      expect(context.availableMethods).toContain("storage.compareAndSet");
+      expect(await call(grant, "storage.getSnapshot", { key: "draft" })).toEqual({
+        exists: false,
+        value: null,
+        revision: null,
+      });
+    }
+    const desktop = await call(one, "storage.compareAndSet", {
+      key: "draft",
+      value: { source: "desktop" },
+      expectedRevision: null,
+    });
+    expect(desktop.updated).toBe(true);
+    expect(
+      await call(two, "storage.compareAndSet", {
+        key: "draft",
+        value: { source: "phone" },
+        expectedRevision: null,
+      }),
+    ).toEqual({ updated: false, snapshot: desktop.snapshot });
+    expect(
+      await call(two, "storage.compareAndSet", {
+        key: "draft",
+        value: { source: "merged" },
+        expectedRevision: desktop.snapshot.revision,
+      }),
+    ).toMatchObject({ updated: true, snapshot: { value: { source: "merged" } } });
+  });
+
   test("uses scope-bound storage and workspace operations and returns only validated host effects", async () => {
     const f = await fixture();
     const grant = await f.prepare();
@@ -831,8 +970,20 @@ async function nodeProcessFixture() {
   return { ...f, grant, params, directory, call };
 }
 
-async function nativeToolFixture(source: string) {
-  const f = await fixture({ permissions: ["context.workspace", "process", "resources"] });
+async function nativeToolFixture(
+  source: string,
+  sharedToolJobs?: NonNullable<Parameters<typeof fixture>[0]>["sharedToolJobs"],
+  cookies = false,
+) {
+  const f = await fixture({
+    permissions: [
+      "context.workspace",
+      "process",
+      "resources",
+      ...(cookies ? ["credentials.cookies" as const] : []),
+    ],
+    sharedToolJobs,
+  });
   const entry = "app/tools/sample.mjs";
   await mkdir(join(f.installPath, "app", "tools"), { recursive: true });
   await writeFile(join(f.installPath, entry), source);
@@ -866,6 +1017,304 @@ async function nativeToolFixture(source: string) {
 }
 
 describe("Panel HTTP host operations", () => {
+  async function cookieFixture(delay = 0) {
+    const f = await nativeToolFixture(
+      `import {readFile} from "node:fs/promises";
+let text="";for await(const chunk of process.stdin) text+=chunk;
+const request=JSON.parse(text), index=process.argv.findIndex(arg=>arg==="--cookies-file"||arg==="--cookies"), path=process.argv[index+1];
+const content=await readFile(path,"utf8");
+if(!content.includes("runtime-fixture-cookie")) process.exit(3);
+console.log(JSON.stringify({type:"progress",progress:{message:"cookie-read",fraction:0.5}}));
+setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:request.value}})),${delay});`,
+      undefined,
+      true,
+    );
+    const store = new CredentialStore(f.cwd);
+    const saved = {
+      id: "cookie-fixture",
+      type: "cookie" as const,
+      label: "Test saved login",
+      meta: { domain: "example.com" },
+      secret: JSON.stringify([
+        { domain: ".example.com", name: "session", value: "runtime-fixture-cookie" },
+      ]),
+    };
+    store.save("project", saved);
+    const accounts = await (
+      await f.call("credentials.cookies.listForTask", { url: "https://example.com/watch" })
+    ).json();
+    const input = {
+      entry: "sample",
+      recovery: "retry",
+      input: {
+        request: { value: "fixture" },
+        cookieArgument: {
+          argumentName: "--cookies-file",
+          credentialId: saved.id,
+          url: "https://example.com/watch",
+          revision: accounts.accounts[0].revision,
+        },
+      },
+    };
+    let cursor = 0;
+    async function consent(pending: Promise<Response>, allowed: boolean, during?: () => void) {
+      const event = await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm", cursor);
+      cursor = event.id;
+      expect(JSON.stringify(event.payload)).toContain("Test saved login");
+      expect(JSON.stringify(event.payload)).toContain("example.com");
+      expect(JSON.stringify(event.payload)).not.toContain("runtime-fixture-cookie");
+      during?.();
+      await f.api(`${f.grant.instanceId}/confirm`, "POST", {
+        requestId: event.payload.requestId,
+        allowed,
+      });
+      return pending;
+    }
+    async function status(id: string, wanted: string) {
+      let current: any;
+      for (let i = 0; i < 100; i++) {
+        current = await (await f.call("tasks.get", { id })).json();
+        if (current.status === wanted) return current;
+        await Bun.sleep(20);
+      }
+      throw new Error(`Cookie task expected ${wanted}, received ${current?.status}`);
+    }
+    return { ...f, store, saved, input, consent, status };
+  }
+  async function processCookieFixture(delay = 0) {
+    const f = await cookieFixture(delay);
+    const read = async (method: string, params: unknown) => {
+      const response = await f.call(method, params);
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    const executable = await read("process.find", { name: "node" });
+    const entry = await read("process.resolveEntry", {
+      name: "sample",
+      executableHandle: executable.handle,
+    });
+    const directory = await read("filesystem.getKnownDirectory", { name: "project" });
+    const { argumentName: _argument, ...selection } = f.input.input.cookieArgument;
+    return {
+      ...f,
+      read,
+      selection,
+      executable,
+      params: {
+        executableHandle: executable.handle,
+        entryHandle: entry.handle,
+        directoryHandle: directory.handle,
+        args: [],
+        stdin: "pipe",
+      },
+    };
+  }
+
+  test("Web grants only an opaque account file to a temporary process after consent", async () => {
+    const f = await processCookieFixture();
+    expect(f.grant.context.availableMethods).toContain("credentials.cookies.authorizeProcess");
+    expect((f.grant.context as any).capabilities.process.cookieCredentials).toBe(true);
+    const request = { ...f.selection, executableHandle: f.executable.handle };
+    const denied = await f.consent(f.call("credentials.cookies.authorizeProcess", request), false);
+    expect(await denied.json()).toEqual({ authorized: false, cancelled: true });
+    const accepted = await f.consent(f.call("credentials.cookies.authorizeProcess", request), true);
+    const authorization = await accepted.json();
+    expect(authorization.authorized).toBe(true);
+    expect(Object.keys(authorization).sort()).toEqual([
+      "authorized",
+      "count",
+      "fileArgumentHandle",
+    ]);
+    const events = await runtimeEvents(f, f.grant.instanceId);
+    const matches = (scope: { appId: string; projectPath: string }) =>
+      scope.appId === "synthetic-panel" && scope.projectPath === f.cwd;
+    const mutate = () => panelExecutionGate.mutate(matches, async () => {});
+    await panelExecutionGate.mutate(matches, async () => {
+      expect((await f.call("process.spawn", f.params)).status).toBe(409);
+    });
+    const pending = f.call("process.spawn", {
+      ...f.params,
+      fileArgumentHandles: [authorization.fileArgumentHandle],
+    });
+    const event = await waitRuntimeEvent(
+      f,
+      f.grant.instanceId,
+      "host.confirm",
+      events.events.filter((item) => item.event === "host.confirm").at(-1)!.id,
+    );
+    await expect(mutate()).rejects.toThrow("正在提交");
+    await f.api(`${f.grant.instanceId}/confirm`, "POST", {
+      requestId: event.payload.requestId,
+      allowed: true,
+    });
+    const response = await pending;
+    expect(response.status).toBe(200);
+    const started = await response.json();
+    await expect(mutate()).rejects.toThrow("正在提交");
+    await f.read("process.write", {
+      processId: started.processId,
+      text: JSON.stringify({ value: "metadata" }),
+    });
+    await f.read("process.end", { processId: started.processId });
+    const exited = await waitRuntimeEvent(f, f.grant.instanceId, "process.exit");
+    expect(exited.payload.code).toBe(0);
+    await mutate();
+    const output = JSON.stringify((await runtimeEvents(f, f.grant.instanceId)).events);
+    expect(output).toContain("metadata");
+    expect(output).not.toContain("runtime-fixture-cookie");
+    await f.api(f.grant.instanceId, "DELETE");
+    for (let i = 0; i < 50; i++) {
+      const files = (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      );
+      if (!files.length) return;
+      await Bun.sleep(10);
+    }
+    throw new Error("temporary account file was not cleaned after page closure");
+  });
+
+  test("Web rejects account changes during temporary-process consent without creating a file", async () => {
+    const f = await processCookieFixture();
+    const response = await f.consent(
+      f.call("credentials.cookies.authorizeProcess", {
+        ...f.selection,
+        executableHandle: f.executable.handle,
+      }),
+      true,
+      () => {
+        f.store.save("project", { ...f.saved, label: "Changed account" });
+      },
+    );
+    expect(response.status).toBe(400);
+    expect(
+      (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      ),
+    ).toEqual([]);
+  });
+
+  test("logout while a temporary account file is being prepared prevents its grant and cleans the file", async () => {
+    const f = await processCookieFixture();
+    let entered!: () => void, release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = PanelTaskCookieHost.prototype.materialize;
+    const mocked = spyOn(PanelTaskCookieHost.prototype, "materialize").mockImplementation(
+      async function (scope, selection) {
+        const lease = await original.call(this, scope, selection);
+        entered();
+        await waiting;
+        return lease;
+      },
+    );
+    const pending = f.consent(
+      f.call("credentials.cookies.authorizeProcess", {
+        ...f.selection,
+        executableHandle: f.executable.handle,
+      }),
+      true,
+    );
+    try {
+      await ready;
+      f.runtime.cancelOwner("owner-a");
+      release();
+      const response = await pending;
+      expect(response.status).toBe(410);
+      expect(await response.text()).not.toContain("fileArgumentHandle");
+      expect(
+        (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+          name.startsWith("cookies-"),
+        ),
+      ).toEqual([]);
+    } finally {
+      release();
+      await pending;
+      mocked.mockRestore();
+    }
+  });
+
+  test("Web selected-account consent gates real native Cookie use and keeps secrets out of task records", async () => {
+    const f = await cookieFixture();
+    expect((f.grant.context as any).capabilities.tasks.cookieCredentials).toBe(true);
+    expect(f.grant.context.availableMethods).toContain("credentials.cookies.listForTask");
+    const denied = await f.consent(f.call("tasks.start", f.input), false);
+    expect(denied.status).toBe(403);
+    expect(await (await f.call("tasks.list", {})).json()).toEqual([]);
+    const response = await f.consent(f.call("tasks.start", f.input), true);
+    expect(response.status).toBe(200);
+    const job = await response.json();
+    const done = await f.status(job.id, "succeeded");
+    expect(done.result).toEqual({ ok: true, value: "fixture" });
+    expect(JSON.stringify(done)).not.toContain("runtime-fixture-cookie");
+    expect(
+      (await readdir(join(f.root, "data", "panel-task-cookies"))).filter((name) =>
+        name.startsWith("cookies-"),
+      ),
+    ).toEqual([]);
+  });
+  test("Web rechecks account replacement during consent before admitting the task", async () => {
+    const f = await cookieFixture();
+    const response = await f.consent(f.call("tasks.start", f.input), true, () => {
+      f.store.save("project", { ...f.saved, label: "Replacement account" });
+    });
+    expect(response.status).toBe(400);
+    expect(await (await f.call("tasks.list", {})).json()).toEqual([]);
+  });
+  test("logout during the post-consent Cookie lookup cannot admit a new task", async () => {
+    const f = await cookieFixture();
+    const observer = await f.prepare("owner-b");
+    let release!: () => void,
+      entered!: () => void,
+      checks = 0;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = PanelTaskCookieHost.prototype.check;
+    const mocked = spyOn(PanelTaskCookieHost.prototype, "check").mockImplementation(
+      async function (scope, selection) {
+        const result = await original.call(this, scope, selection);
+        if (++checks === 2) {
+          entered();
+          await waiting;
+        }
+        return result;
+      },
+    );
+    const pending = f.consent(f.call("tasks.start", f.input), true);
+    try {
+      await ready;
+      f.runtime.cancelOwner("owner-a");
+      release();
+      expect((await pending).status).toBe(410);
+      expect(await (await f.call("tasks.list", {}, observer.instanceId, "owner-b")).json()).toEqual(
+        [],
+      );
+    } finally {
+      release();
+      await pending;
+      mocked.mockRestore();
+    }
+  });
+  test("Web retry asks for the same saved account again, denial preserves cancellation and acceptance retains the task ID", async () => {
+    const f = await cookieFixture(500);
+    const response = await f.consent(f.call("tasks.start", f.input), true);
+    const job = await response.json();
+    await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed");
+    expect((await f.call("tasks.cancel", { id: job.id })).status).toBe(200);
+    await f.status(job.id, "cancelled");
+    expect((await f.consent(f.call("tasks.retry", { id: job.id }), false)).status).toBe(403);
+    await f.status(job.id, "cancelled");
+    const retry = await f.consent(f.call("tasks.retry", { id: job.id }), true);
+    expect((await retry.json()).id).toBe(job.id);
+    expect((await f.status(job.id, "succeeded")).result.ok).toBe(true);
+  });
   test("logout aborts input preparation before a native job can be published or run", async () => {
     const f = await nativeToolFixture("process.stdin.resume();");
     await f.prepare("owner-b");
@@ -934,7 +1383,14 @@ describe("Panel HTTP host operations", () => {
     expect((await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed")).payload.id).toBe(
       job.id,
     );
-    expect((await runtimeEvents(f, otherOwner.instanceId, 0, "owner-b")).events).toEqual([]);
+    expect((await runtimeEvents(f, otherOwner.instanceId, 0, "owner-b")).events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: "tasks.changed",
+          payload: expect.objectContaining({ id: job.id }),
+        }),
+      ]),
+    );
     expect(f.runtime.activeTaskCount()).toBeGreaterThanOrEqual(0);
     expect((await f.api(f.grant.instanceId, "DELETE")).status).toBe(200);
     const reopened = await f.prepare();
@@ -972,10 +1428,15 @@ describe("Panel HTTP host operations", () => {
     expect(f.runtime.activeTaskCount()).toBe(0);
   });
 
-  test("Web native task stops after its login owner is revoked", async () => {
+  test("Hub project task survives initiating login revocation and reports completion to another device", async () => {
     const f = await nativeToolFixture(
-      'process.stdin.resume(); process.stdin.on("end", () => setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{ok:true}})+"\\n"), 5000));',
+      'process.stdin.resume(); process.stdin.on("end", () => setTimeout(() => process.stdout.write(JSON.stringify({type:"result",result:{ok:true}})+"\\n"), 500));',
     );
+    expect((f.grant.context as any).capabilities.tasks).toMatchObject({
+      ownership: "project",
+      sharedAcrossDevices: true,
+      continuesAfterLogout: true,
+    });
     const job = await f.start();
     const observer = await f.prepare("owner-b");
     let current: any;
@@ -990,12 +1451,44 @@ describe("Panel HTTP host operations", () => {
     for (let attempt = 0; attempt < 100; attempt++) {
       const response = await f.call("tasks.get", { id: job.id }, observer.instanceId, "owner-b");
       current = await response.json();
-      if (current.status === "cancelled") break;
+      if (current.status === "succeeded") break;
       await Bun.sleep(20);
     }
-    expect(current.status).toBe("cancelled");
-    expect(current.result).toBeUndefined();
-    expect((await runtimeEvents(f, observer.instanceId, 0, "owner-b")).events).toEqual([]);
+    expect(current.status).toBe("succeeded");
+    expect(current.result).toEqual({ ok: true });
+    expect((await f.call("tasks.get", { id: job.id })).status).toBe(410);
+    expect((await runtimeEvents(f, observer.instanceId, 0, "owner-b")).events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: "tasks.changed",
+          payload: expect.objectContaining({ id: job.id, status: "succeeded" }),
+        }),
+      ]),
+    );
+  });
+
+  test("Desktop directory authority revocation invalidates existing Web process grants", async () => {
+    let trusted = true;
+    const checked: string[][] = [];
+    const f = await fixture({
+      permissions: ["context.workspace", "process"],
+      authorizePanelDirectory: async (app, project, workspace) => {
+        checked.push([app.id, project, workspace]);
+        if (!trusted) throw new Error("workspace trust revoked");
+      },
+    });
+    const grant = await f.prepare();
+    const call = () =>
+      f.api(`${grant.instanceId}/call`, "POST", {
+        method: "filesystem.getKnownDirectory",
+        params: { name: "downloads" },
+      });
+    expect((await call()).status).toBe(200);
+    expect(checked.at(-1)).toEqual([f.app.id, f.cwd, f.cwd]);
+    trusted = false;
+    expect((await call()).status).toBe(410);
+    trusted = true;
+    expect((await call()).status).toBe(410);
   });
 
   test("Web restores only a bookmarked server directory after reopening the Panel", async () => {
@@ -1441,4 +1934,359 @@ test("filesystem.openDirectory returns an authenticated browser URL that downloa
   ).toBe(400);
   f.runtime.cancelOwner("owner-a");
   expect((await f.api(downloadPath, "GET")).status).toBe(410);
+});
+
+describe("Desktop and Web shared native coordinator", () => {
+  async function sharedFixture() {
+    let service!: PanelToolJobService;
+    let nativeScope!: ToolJobScope;
+    let host!: SharedPanelToolHost;
+    let allowNative = true;
+    const executed: string[] = [];
+    const f = await nativeToolFixture("process.stdin.resume();", ({ root, cwd }) => {
+      nativeScope = { appId: "synthetic-panel", projectPath: cwd, revision: "native-r1" };
+      service = new PanelToolJobService({
+        rootDir: join(root, "data", "panel-tool-jobs"),
+        isAuthorized: (scope) => allowNative && scope.revision === nativeScope.revision,
+        execute: async (job, context) => {
+          executed.push(job.id);
+          await context.reportProgress({ stage: "waiting", fraction: 0.5 });
+          await new Promise<void>((done) => {
+            context.signal.addEventListener("abort", () => done(), { once: true });
+            if (context.signal.aborted) done();
+          });
+          return {};
+        },
+      });
+      cleanups.push(() => service.shutdown());
+      host = createSharedPanelToolHost({
+        service: () => service,
+        resolveScope: async () => nativeScope,
+      });
+      return host;
+    });
+    return {
+      ...f,
+      service,
+      nativeScope,
+      host,
+      executed,
+      revokeNative: () => {
+        allowNative = false;
+      },
+    };
+  }
+
+  test("Desktop and phone see the same task ID, receive scoped events and deduplicate submission", async () => {
+    const f = await sharedFixture();
+    expect((f.grant.context as any).capabilities.tasks).toMatchObject({
+      ownership: "project",
+      executionRevision: "native-r1",
+      sharedAcrossDevices: true,
+      continuesAfterLogout: true,
+    });
+    const native = await f.service.start(f.nativeScope, {
+      entry: { name: "sample", sha256: f.app.nativeEntries!.sample!.sha256 },
+      input: { request: { value: "fixture" } },
+      recovery: "retry",
+      requestKey: "both-devices",
+    });
+    const event = await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed");
+    expect(event.payload.id).toBe(native.id);
+    expect(event.payload.scope).toEqual(f.nativeScope);
+    expect(event.payload).not.toHaveProperty("input");
+    expect((await f.start("both-devices")).id).toBe(native.id);
+    expect(await (await f.call("tasks.list")).json()).toMatchObject([{ id: native.id }]);
+    const phone = await f.prepare("owner-b");
+    const stopped = await f.call("tasks.cancel", { id: native.id }, phone.instanceId, "owner-b");
+    expect(stopped.status).toBe(200);
+    expect((await stopped.json()).status).toBe("cancelled");
+    expect((await f.service.get(f.nativeScope, native.id)).status).toBe("cancelled");
+    expect(f.executed).toEqual([native.id]);
+  });
+
+  test("logout and HTTP shutdown detach access while project tasks remain under the Desktop owner", async () => {
+    const f = await sharedFixture();
+    const job = await f.start("phone-start");
+    const observer = await f.prepare("owner-b");
+    f.state.owners.delete("owner-a");
+    f.runtime.cancelOwner("owner-a");
+    expect((await f.call("tasks.list")).status).toBe(401);
+    expect(
+      await (await f.call("tasks.get", { id: job.id }, observer.instanceId, "owner-b")).json(),
+    ).toMatchObject({ id: job.id, status: "running" });
+    await f.runtime.close();
+    expect((await f.service.get(f.nativeScope, job.id)).status).toBe("running");
+    const reopened = await f.host.bind(f.app, f.cwd);
+    expect((await reopened.get(job.id)).id).toBe(job.id);
+    await reopened.cancel(job.id);
+    expect((await f.service.get(f.nativeScope, job.id)).status).toBe("cancelled");
+  });
+
+  test("project invalidation stops its shared work without cancelling another project's task", async () => {
+    const f = await sharedFixture();
+    const job = await f.start();
+    const otherScope = { ...f.nativeScope, projectPath: join(f.root, "other-project") };
+    const other = await f.service.start(otherScope, {
+      entry: { name: "sample", sha256: f.app.nativeEntries!.sample!.sha256 },
+      input: {},
+      recovery: "retry",
+    });
+    expect(f.service.activeCount(f.cwd)).toBe(1);
+    expect(f.service.activeCount(otherScope.projectPath)).toBe(1);
+    await f.runtime.invalidate(f.app.id);
+    expect((await f.service.get(f.nativeScope, job.id)).status).toBe("cancelled");
+    expect(["running", "queued"]).toContain((await f.service.get(otherScope, other.id)).status);
+    expect(f.service.activeCount(f.cwd)).toBe(0);
+    await f.service.cancel(otherScope, other.id);
+  });
+
+  test("native authorization and frozen package revision remain enforced behind Web authorization", async () => {
+    const f = await sharedFixture();
+    const job = await f.start();
+    const captured = await f.host.bind(f.app, f.cwd);
+    f.nativeScope.revision = "native-r2";
+    await expect(captured.get(job.id)).rejects.toThrow("authorized");
+    expect((await f.call("tasks.get", { id: job.id })).status).toBe(400);
+    f.revokeNative();
+    expect((await f.call("tasks.list")).status).toBe(400);
+    await f.host.invalidate(f.cwd);
+  });
+
+  test("old Web records remain read-only and cannot be retried through the shared coordinator", async () => {
+    const f = await sharedFixture();
+    const legacyScope = { appId: f.app.id, projectPath: f.cwd, revision: f.state.revision };
+    const root = join(
+      f.root,
+      "data",
+      "panel-web-tool-jobs",
+      createHash("sha256").update(f.cwd).digest("hex").slice(0, 24),
+    );
+    const legacy = new PanelToolJobService({
+      rootDir: root,
+      execute: async () => ({ legacy: true }),
+    });
+    const job = await legacy.start(legacyScope, {
+      entry: { name: "sample", sha256: f.app.nativeEntries!.sample!.sha256 },
+      input: { old: true },
+      recovery: "retry",
+    });
+    await legacy.shutdown();
+    const records = await (await f.call("tasks.list")).json();
+    expect(records).toMatchObject([
+      { id: job.id, readOnly: true, historySource: "desktop-web-legacy" },
+    ]);
+    expect(await (await f.call("tasks.get", { id: job.id })).json()).toMatchObject({
+      id: job.id,
+      readOnly: true,
+      input: { old: true },
+    });
+    const retry = await f.call("tasks.retry", { id: job.id });
+    expect(retry.status).toBe(400);
+    expect(await retry.json()).toMatchObject({ code: "NOT_SUPPORTED" });
+    expect((await f.call("tasks.cancel", { id: job.id })).status).toBe(400);
+    expect(await f.service.list(f.nativeScope)).toEqual([]);
+  });
+});
+
+async function previewFixture(bytes: string | Uint8Array = "0123456789") {
+  const f = await fixture({ permissions: ["resources"] });
+  const service = new PanelResourceService({
+    rootDirectory: join(f.root, "data", "panel-app-media"),
+    isScopeAuthorized: () => true,
+  });
+  cleanups.push(() => service.shutdown());
+  const file = join(f.cwd, "preview.mp4");
+  await writeFile(file, bytes);
+  const asset = await service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+  const grant = await f.prepare();
+  const response = await f.api(`${grant.instanceId}/call`, "POST", {
+    method: "resources.open",
+    params: { assetId: asset.id },
+  });
+  expect(response.status).toBe(200);
+  const effect = await response.json();
+  return { ...f, service, asset, grant, effect, file };
+}
+
+test("resource preview streams scoped bytes with seeking, HEAD, and explicit download", async () => {
+  const f = await previewFixture();
+  expect(f.grant.context.availableMethods).toContain("resources.open");
+  expect(f.effect).toMatchObject({ effect: "resources.open", asset: f.asset });
+  const read = (suffix = "", init: RequestInit = {}) =>
+    fetch(f.url + f.effect.url + suffix, {
+      ...init,
+      headers: { Cookie: "session=owner-a", ...init.headers },
+    });
+  const range = await read("", { headers: { Range: "bytes=2-5" } });
+  expect(range.status).toBe(206);
+  expect(range.headers.get("content-range")).toBe("bytes 2-5/10");
+  expect(range.headers.get("content-type")).toBe("video/mp4");
+  expect(range.headers.get("cache-control")).toContain("no-store");
+  expect(await range.text()).toBe("2345");
+  const head = await read("", { method: "HEAD" });
+  expect(head.status).toBe(200);
+  expect(head.headers.get("content-length")).toBe("10");
+  expect(await head.text()).toBe("");
+  const invalid = await read("", { headers: { Range: "bytes=50-" } });
+  expect(invalid.status).toBe(416);
+  expect(await invalid.text()).toBe("");
+  const download = await read("?download=1&workspace=" + encodeURIComponent(f.cwd));
+  expect(download.headers.get("content-disposition")).toContain("attachment;");
+  expect(await download.text()).toBe("0123456789");
+  expect((await read("?workspace=other")).status).toBe(400);
+  expect((await read("?download=1&download=1")).status).toBe(400);
+  expect((await read("?path=/etc/passwd")).status).toBe(400);
+  expect((await read("", { method: "POST" })).status).toBe(405);
+});
+
+test("resource URLs cannot cross owners, projects, permissions, closed grants or revoked sessions", async () => {
+  const f = await previewFixture();
+  const read = (owner = "owner-a") =>
+    fetch(f.url + f.effect.url, { headers: { Cookie: `session=${owner}` } });
+  expect((await read("owner-b")).status).toBe(403);
+  const other = await f.service.library.importFile(
+    { appId: f.app.id, projectPath: f.cwd + "-other" },
+    f.file,
+  );
+  // Content IDs can be identical across projects; a project with no copy must not gain access.
+  const otherFile = join(f.cwd, "private.mp4");
+  await writeFile(otherFile, "other project bytes");
+  const privateAsset = await f.service.library.importFile(
+    { appId: f.app.id, projectPath: f.cwd + "-other" },
+    otherFile,
+  );
+  expect(other.id).toBe(f.asset.id);
+  const privateResponse = await fetch(f.url + f.effect.url.replace(f.asset.id, privateAsset.id), {
+    headers: { Cookie: "session=owner-a" },
+  });
+  expect(privateResponse.status).toBe(404);
+  expect(await privateResponse.text()).not.toContain(f.root);
+  await f.api(f.grant.instanceId, "DELETE");
+  expect((await read()).status).toBe(410);
+  const fresh = await f.prepare();
+  f.effect.url = f.effect.url.replace(f.grant.instanceId, fresh.instanceId);
+  f.state.owners.delete("owner-a");
+  expect((await read()).status).toBe(401);
+  f.state.owners.add("owner-a");
+  f.state.enabled = false;
+  expect((await read()).status).toBe(410);
+  const denied = await fixture({ permissions: [] });
+  const deniedGrant = await denied.prepare();
+  expect(deniedGrant.context.availableMethods).not.toContain("resources.open");
+  expect(
+    (await denied.api(`${deniedGrant.instanceId}/resources/${f.asset.id}`, "GET")).status,
+  ).toBe(403);
+});
+
+test("closing one resource reader interrupts its stream even while another grant keeps the scope alive", async () => {
+  const f = await previewFixture();
+  const file = join(f.cwd, "large.mp4");
+  await writeFile(file, Buffer.alloc(4 * 1024 * 1024, 42));
+  const asset = await f.service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+  const otherGrant = await f.prepare();
+  const original = PanelResourceService.prototype.openRead;
+  const slow = spyOn(PanelResourceService.prototype, "openRead").mockImplementation(
+    async function (scope, id, options) {
+      const result = await original.call(this, scope, id, options);
+      if (result.body) {
+        const source = result.body;
+        result.body = Readable.from(
+          (async function* () {
+            try {
+              for await (const chunk of source) {
+                for (let offset = 0; offset < chunk.length; offset += 32768) {
+                  await new Promise((resolve) => setTimeout(resolve, 30));
+                  yield chunk.subarray(offset, offset + 32768);
+                }
+              }
+            } finally {
+              source.destroy();
+            }
+          })(),
+          { objectMode: false },
+        );
+      }
+      return result;
+    },
+  );
+  try {
+    const response = await fetch(
+      `${f.url}/api/v1/panels/runtime/${f.grant.instanceId}/resources/${asset.id}`,
+      { headers: { Cookie: "session=owner-a" } },
+    );
+    expect(response.status).toBe(200);
+    const reader = response.body!.getReader();
+    let received = (await reader.read()).value!.length;
+    expect(received).toBeGreaterThan(0);
+    await f.api(f.grant.instanceId, "DELETE");
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        received += chunk.value.length;
+      }
+    } catch {
+      /* Node errors on premature close; Bun may return a short body. */
+    }
+    expect(received).toBeLessThan(asset.bytes);
+    expect(
+      (
+        await f.api(`${otherGrant.instanceId}/call`, "POST", {
+          method: "resources.get",
+          params: { id: asset.id },
+        })
+      ).status,
+    ).toBe(200);
+  } finally {
+    slow.mockRestore();
+  }
+});
+
+test("revoking a login stops an idle resource stream without waiting for another chunk", async () => {
+  const f = await previewFixture(Buffer.alloc(1024 * 1024, 42));
+  const original = PanelResourceService.prototype.openRead;
+  let idle: Readable | undefined;
+  const paused = spyOn(PanelResourceService.prototype, "openRead").mockImplementation(
+    async function (scope, id, options) {
+      const result = await original.call(this, scope, id, options);
+      result.body?.destroy();
+      idle = new Readable({ read() {} });
+      idle.push(Buffer.from("0"));
+      return { ...result, body: idle };
+    },
+  );
+  try {
+    const response = await fetch(f.url + f.effect.url, { headers: { Cookie: "session=owner-a" } });
+    const reader = response.body!.getReader();
+    expect((await reader.read()).value!.length).toBe(1);
+    f.state.owners.delete("owner-a");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const stopped = await Promise.race([
+        (async () => {
+          let received = 1;
+          try {
+            for (;;) {
+              const chunk = await reader.read();
+              if (chunk.done) return received < f.asset.bytes;
+              received += chunk.value.length;
+            }
+          } catch {
+            return received < f.asset.bytes;
+          }
+        })(),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => resolve(false), 2000);
+        }),
+      ]);
+      expect(stopped).toBe(true);
+      expect(idle!.destroyed).toBe(true);
+    } finally {
+      clearTimeout(timer);
+    }
+  } finally {
+    paused.mockRestore();
+    idle?.destroy();
+  }
 });

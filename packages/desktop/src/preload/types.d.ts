@@ -50,6 +50,7 @@ export type {
 import type { SessionCatalogApi } from "../shared/session-catalog";
 import type {
   PanelAppBindInput,
+  PanelAppBindingState,
   PanelAppDescriptor,
   PanelAppExtensionSummary,
   PanelAppHostContext,
@@ -73,6 +74,7 @@ import type {
 import type { DigitalHumanTeam } from "../shared/digital-human-team";
 export type {
   PanelAppBindInput,
+  PanelAppBindingState,
   PanelAppDescriptor,
   PanelAppExtensionSummary,
   PanelAppHostContext,
@@ -644,8 +646,13 @@ export interface CredentialView {
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
-    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
-    linkExecutionBackend?: "http-token" | "cli";
+    linkAuthSource?:
+      | "manual-token"
+      | "github-cli"
+      | "cli-session"
+      | "browser-oauth"
+      | "remote-link";
+    linkExecutionBackend?: "http-token" | "cli" | "remote";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;
@@ -1297,6 +1304,20 @@ export interface CodeshellApi extends ProjectAuthorityApi {
     logout(credentialId: string): Promise<{ removed: true; remoteRevoked: boolean }>;
   };
   links: {
+    remoteSnapshot(cwd: string): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
+    remoteStart(
+      cwd: string,
+      requestId: string,
+      input: import("@cjhyy/code-shell-link").LinkConnectionInput,
+    ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
+    remoteCancel(cwd: string, requestId: string): Promise<boolean>;
+    remoteRename(
+      cwd: string,
+      id: string,
+      label: string,
+      revision: string,
+    ): Promise<import("@cjhyy/code-shell-link").MaskedLinkConnection>;
+    remoteDisconnect(cwd: string, id: string, revision: string): Promise<void>;
     listLocalProviders(): Promise<LocalLinkProviderView[]>;
     cliStatus(providerId: string, cwd?: string): Promise<CliLinkStatusView>;
     cliInstallStatus(providerId: string): Promise<ManagedCliInstallStatusView>;
@@ -1353,8 +1374,13 @@ export interface CodeshellApi extends ProjectAuthorityApi {
           linkProvider?: string;
           linkConnectionMethod?: string;
           linkExecutionRuntime?: "local" | "server";
-          linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
-          linkExecutionBackend?: "http-token" | "cli";
+          linkAuthSource?:
+            | "manual-token"
+            | "github-cli"
+            | "cli-session"
+            | "browser-oauth"
+            | "remote-link";
+          linkExecutionBackend?: "http-token" | "cli" | "remote";
           agentExposable?: boolean;
           linkAccountId?: string;
           linkAccountLabel?: string;
@@ -1488,6 +1514,8 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   /** In the parent: receive a popout's remove request. Returns unsubscribe. */
   onBrowserAnchorRemoveFromPopout(cb: (anchorId: unknown) => void): () => void;
 
+  /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
+  openCloudWorkbench(address: string): Promise<{ address: string }>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;
   /**
@@ -1695,6 +1723,20 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   onPluginCommandsChanged(cb: () => void): () => void;
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
+  getPanelAppBindings(cwd: string): Promise<PanelAppBindingState[]>;
+  getPanelAppPackageHistory(
+    cwd: string, id: string, revision: string,
+  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageHistory>;
+  previewPanelAppRestore(
+    cwd: string, id: string, digest: string, revision: string,
+  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageRestoreReview>;
+  restorePanelAppPackage(cwd: string, token: string): Promise<{ id: string; packageDigest: string }>;
+  setPanelAppProjectBinding(
+    cwd: string,
+    id: string,
+    bound: boolean,
+    expectedRevision: string,
+  ): Promise<PanelAppBindingState[]>;
   /**
    * Descriptors for every app bound by any of `projectPaths`, plus which of
    * those projects bind each app. Panel buckets are per project, so the dock
@@ -2032,28 +2074,41 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   /** Validate a Panel App with the dedicated Panel App package rules. */
   previewLocalPanelApp(
     input: PanelAppSourceInput,
-  ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+    cwd: string,
+  ): Promise<
+    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+  >;
   /** Discover every installable Panel App in a public GitHub repository. */
   discoverGitPanelApps(
     input: GitPanelAppSourceInput,
   ): Promise<{ ok: true; discovery: GitPanelAppDiscovery } | { ok: false; error: string }>;
   /** Read-only version discovery; does not review or install a package. */
-  checkPanelAppUpdate(id: string, force?: boolean): Promise<PanelAppUpdateCheck>;
+  checkPanelAppUpdate(
+    id: string,
+    force: boolean | undefined,
+    cwd: string,
+  ): Promise<PanelAppUpdateCheck>;
   /** Revalidate the original folder, archive, or GitHub source for an installed Panel App. */
   previewPanelAppUpdate(
     id: string,
-  ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+    cwd: string,
+    expectedRevision: string,
+  ): Promise<
+    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+  >;
   /** Install a reviewed Panel App into the independent Panel App registry. */
   installLocalPanelApp(input: {
+    cwd: string;
     source: PanelAppSourceInput;
     reviewToken: string;
     overwrite?: boolean;
   }): Promise<
-    | { ok: true; id: string }
+    | { ok: true; id: string; packageDigest: string }
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   >;
   /** Apply an explicitly reviewed update from the app's remembered source. */
   installPanelAppUpdate(input: {
+    cwd: string;
     id: string;
     reviewToken: string;
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }>;

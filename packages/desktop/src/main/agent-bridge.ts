@@ -53,6 +53,8 @@ import {
   replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
 import {
+  executeRemoteLinkAction,
+  type RemoteLinkActionRequest,
   ErrorCodes,
   Methods,
   SessionManager,
@@ -323,6 +325,7 @@ export class AgentBridge implements PetStateBridge {
       entryPath: agentEntry,
       buildEnv: () => ({
         ...process.env,
+        CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_CAPABILITY_MODULES:
@@ -1043,7 +1046,8 @@ export class AgentBridge implements PetStateBridge {
     if (
       parsed.method !== "desktop/credentialResolve" &&
       parsed.method !== "desktop/credentialMaterializeCookie" &&
-      parsed.method !== "desktop/oauthAccessResolve"
+      parsed.method !== "desktop/oauthAccessResolve" &&
+      parsed.method !== "desktop/remoteLinkAction"
     ) {
       return false;
     }
@@ -1058,6 +1062,14 @@ export class AgentBridge implements PetStateBridge {
             id,
             result: resolveCredentialValueForWorker(
               normalizeCredentialResolveParams(parsed.params),
+            ),
+          };
+        } else if (parsed.method === "desktop/remoteLinkAction") {
+          reply = {
+            jsonrpc: "2.0",
+            id,
+            result: await executeRemoteLinkAction(
+              parsed.params as unknown as RemoteLinkActionRequest,
             ),
           };
         } else if (parsed.method === "desktop/credentialMaterializeCookie") {

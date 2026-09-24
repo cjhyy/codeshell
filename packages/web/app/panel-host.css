@@ -134,3 +134,42 @@
     max-height: 160px;
   }
 }
+
+.panel-host-preview {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+.panel-host-preview header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.panel-host-preview h2 {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.panel-host-preview button {
+  flex-shrink: 0;
+}
+.panel-host-preview video,
+.panel-host-preview audio,
+.panel-host-preview img {
+  display: block;
+  width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+.panel-host-preview a {
+  display: inline-block;
+  padding: 10px 12px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 7px;
+  text-decoration: none;
+}

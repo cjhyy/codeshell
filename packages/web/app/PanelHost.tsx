@@ -17,6 +17,12 @@ type PanelEffect =
   | { effect: "agent.submitPrompt"; prompt: string; sessionId: string }
   | { effect: "external.open"; url: string }
   | { effect: "host.confirm"; requestId: string; title: string; body: string; expiresAt: number };
+interface ResourcePreview {
+  name: string;
+  url: string;
+  downloadUrl: string;
+  kind: "video" | "audio" | "image" | "file";
+}
 interface Confirmation {
   effect: PanelEffect;
   finish: (approved: boolean) => void;
@@ -53,6 +59,45 @@ function safeDirectoryUrl(value: unknown, instanceId: string): value is string {
       value.slice(prefix.length),
     )
   );
+}
+function resourcePreview(
+  value: unknown,
+  instanceId: string,
+  assetId: unknown,
+): Omit<ResourcePreview, "downloadUrl"> | undefined {
+  if (!isRecord(value) || value.effect !== "resources.open" || !isRecord(value.asset)) return;
+  const asset = value.asset;
+  if (
+    typeof asset.id !== "string" ||
+    !/^(?:asset|external)-[a-f0-9]{64}$/.test(asset.id) ||
+    asset.id !== assetId ||
+    value.url !== `${ROOT}/${instanceId}/resources/${asset.id}` ||
+    typeof asset.name !== "string" ||
+    !asset.name ||
+    asset.name.length > 1024 ||
+    typeof asset.mimeType !== "string" ||
+    !Number.isSafeInteger(asset.bytes) ||
+    Number(asset.bytes) < 0
+  )
+    return;
+  const kind = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"].includes(asset.mimeType)
+    ? "video"
+    : [
+          "audio/mpeg",
+          "audio/mp4",
+          "audio/ogg",
+          "audio/wav",
+          "audio/webm",
+          "audio/flac",
+          "audio/aac",
+        ].includes(asset.mimeType)
+      ? "audio"
+      : ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif", "image/bmp"].includes(
+            asset.mimeType,
+          )
+        ? "image"
+        : "file";
+  return { name: asset.name, url: value.url as string, kind };
 }
 function safeAssetPath(value: unknown): value is string {
   if (
@@ -102,6 +147,15 @@ export function PanelHost({
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
   const [directory, setDirectory] = React.useState<{ path: string; url?: string }>();
+  const [preview, setPreview] = React.useState<ResourcePreview>();
+  const [previewError, setPreviewError] = React.useState(false);
+  const previewElement = React.useRef<HTMLElement>(null);
+  React.useEffect(() => {
+    if (preview) {
+      previewElement.current?.focus();
+      previewElement.current?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [preview]);
   const [connectionStatus, setConnectionStatus] = React.useState("");
   const [confirmationError, setConfirmationError] = React.useState("");
   const [confirmation, setConfirmation] = React.useState<Confirmation>();
@@ -180,6 +234,8 @@ export function PanelHost({
     setError("");
     setNotice("");
     setDirectory(undefined);
+    setPreview(undefined);
+    setPreviewError(false);
     setConnectionStatus("");
     setConfirmationError("");
     setConfirmation(undefined);
@@ -214,6 +270,7 @@ export function PanelHost({
       if (handshakeTimeout) clearTimeout(handshakeTimeout);
       setPrepared(undefined);
       setDirectory(undefined);
+      setPreview(undefined);
       setLoading(false);
       setConfirming(false);
       setConnectionStatus("");
@@ -524,6 +581,21 @@ export function PanelHost({
           if (disposed || controller.signal.aborted) return;
           setNotice("面板任务已提交到当前对话，可切换到对话查看进度。");
           reply(child, requestId, accepted);
+        } else if (data.method === "resources.open") {
+          setPreview(undefined);
+          setPreviewError(false);
+          const resource = resourcePreview(
+            result,
+            grant.instanceId,
+            isRecord(data.params) ? data.params.assetId : undefined,
+          );
+          if (!resource) throw new Error("面板文件预览链接无效，请重新打开文件。");
+          setPreview({
+            ...resource,
+            url: apiUrl(resource.url, workspace, projectId),
+            downloadUrl: apiUrl(`${resource.url}?download=1`, workspace, projectId),
+          });
+          reply(child, requestId, { opened: true });
         } else if (data.method === "filesystem.openDirectory") {
           setDirectory(undefined);
           if (!isRecord(result) || result.effect !== data.method || typeof result.path !== "string")
@@ -704,6 +776,54 @@ export function PanelHost({
             </a>
           )}
         </div>
+      )}
+      {preview && (
+        <section
+          className="panel-host-preview"
+          aria-label="文件预览"
+          tabIndex={-1}
+          ref={previewElement}
+        >
+          <header>
+            <h2>{preview.name}</h2>
+            <button onClick={() => setPreview(undefined)}>关闭预览</button>
+          </header>
+          {!previewError && preview.kind === "video" && (
+            <video
+              key={preview.url}
+              src={preview.url}
+              controls
+              playsInline
+              preload="metadata"
+              onError={() => setPreviewError(true)}
+            />
+          )}
+          {!previewError && preview.kind === "audio" && (
+            <audio
+              key={preview.url}
+              src={preview.url}
+              controls
+              preload="metadata"
+              onError={() => setPreviewError(true)}
+            />
+          )}
+          {!previewError && preview.kind === "image" && (
+            <img
+              key={preview.url}
+              src={preview.url}
+              alt={preview.name}
+              onError={() => setPreviewError(true)}
+            />
+          )}
+          {(previewError || preview.kind === "file") && (
+            <p role="status">
+              当前浏览器无法预览此文件。可以保存后打开；若保存失败，请重新打开面板检查访问权限。
+            </p>
+          )}
+          <a href={preview.downloadUrl} download={preview.name}>
+            保存到此设备
+          </a>
+        </section>
       )}
       {connectionStatus && (
         <p className="panel-host-notice" role="status">
