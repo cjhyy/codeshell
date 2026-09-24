@@ -398,6 +398,7 @@ import {
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
 import {
+  invalidatePanelAppBindingGuard,
   isPanelAppBoundToProject,
   listPanelAppExtensions,
   listPanelApps,
@@ -4680,6 +4681,7 @@ ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
       error: error instanceof Error ? error.message : String(error),
     });
   }
+  invalidatePanelAppBindingGuard();
   broadcastPanelAppsChanged(mainWindows);
 });
 ipcMain.handle(
@@ -6558,9 +6560,13 @@ async function applyRendererSettingsSideEffects(
   scope: SettingsScope,
   patch: Record<string, unknown>,
 ): Promise<void> {
+  const touchesPanelApps =
+    "disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch;
+  // Before any await: a failing side effect must not leave the guard on the old binding.
+  if (touchesPanelApps) invalidatePanelAppBindingGuard();
   if ("git" in patch) void applyGitPathFromSettings();
   if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
-  if ("disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch) {
+  if (touchesPanelApps) {
     broadcastPanelAppsChanged(mainWindows);
   }
   if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {

@@ -13,6 +13,7 @@ import type { PanelAppDescriptor, PanelAppExtensionSummary } from "../shared/pan
 import { dlog } from "./desktop-logger.js";
 import { replacePanelAppResources, type PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { isPanelAppAvailable, summarizePanelApp, type PanelAppPolicy } from "./panel-app-policy.js";
+import { createPanelAppPolicyMemo } from "./panel-app-policy-memo.js";
 
 function localizedTitle(app: InstalledPanelApp, locale: string): string {
   return locale.toLowerCase().startsWith("zh")
@@ -118,52 +119,73 @@ function updateSource(app: InstalledPanelApp): PanelAppExtensionSummary["updateS
   return { kind, label: path.basename(app.source), available };
 }
 
+function readPanelAppPolicy(cwd: string): PanelAppPolicy {
+  const projectPath = cwd ? resolvePanelAppBindingProjectPath(cwd) : "";
+  const settings = new SettingsManager(projectPath || process.cwd(), "full");
+  const global = settings.getForScope("user") as Record<string, unknown>;
+  const scoped = projectPath
+    ? (settings.getForScope("project", projectPath) as Record<string, unknown>)
+    : undefined;
+  const binding = resolvePanelAppBindingPolicy(global, scoped, Boolean(projectPath));
+  const projectOverrides: Record<string, "on" | "off"> = {};
+  const rawOverrides =
+    scoped?.panelAppOverrides &&
+    typeof scoped.panelAppOverrides === "object" &&
+    !Array.isArray(scoped.panelAppOverrides)
+      ? (scoped.panelAppOverrides as Record<string, unknown>)
+      : {};
+  for (const [id, value] of Object.entries(rawOverrides)) {
+    if (value !== "on" && value !== "off") continue;
+    projectOverrides[id] = value;
+  }
+  return {
+    boundApps: binding.boundApps,
+    globalDisabledApps: binding.globalDisabledApps,
+    projectOverrides,
+  };
+}
+
+function unreadablePanelAppPolicy(cwd: string, error: unknown): PanelAppPolicy {
+  // Fail closed: a settings read error must not expose every installed app.
+  // But log it — a single invalid key (e.g. a persisted null in
+  // panelAppOverrides) rejects the whole file here and silently unbinds every
+  // Panel App in the project, which is indistinguishable from "not bound".
+  dlog("main", "panel_app.policy_read_failed", {
+    cwd,
+    error: error instanceof Error ? error.message : String(error),
+  });
+  return {
+    boundApps: new Set(),
+    globalDisabledApps: new Set(),
+    projectOverrides: {},
+  };
+}
+
 function panelAppPolicy(cwd: string): PanelAppPolicy {
   try {
-    const projectPath = cwd ? resolvePanelAppBindingProjectPath(cwd) : "";
-    const settings = new SettingsManager(projectPath || process.cwd(), "full");
-    const global = settings.getForScope("user") as Record<string, unknown>;
-    const scoped = projectPath
-      ? (settings.getForScope("project", projectPath) as Record<string, unknown>)
-      : undefined;
-    const binding = resolvePanelAppBindingPolicy(global, scoped, Boolean(projectPath));
-    const projectOverrides: Record<string, "on" | "off"> = {};
-    const rawOverrides =
-      scoped?.panelAppOverrides &&
-      typeof scoped.panelAppOverrides === "object" &&
-      !Array.isArray(scoped.panelAppOverrides)
-        ? (scoped.panelAppOverrides as Record<string, unknown>)
-        : {};
-    for (const [id, value] of Object.entries(rawOverrides)) {
-      if (value !== "on" && value !== "off") continue;
-      projectOverrides[id] = value;
-    }
-    return {
-      boundApps: binding.boundApps,
-      globalDisabledApps: binding.globalDisabledApps,
-      projectOverrides,
-    };
+    return readPanelAppPolicy(cwd);
   } catch (error) {
-    // Fail closed: a settings read error must not expose every installed app.
-    // But log it — a single invalid key (e.g. a persisted null in
-    // panelAppOverrides) rejects the whole file here and silently unbinds every
-    // Panel App in the project, which is indistinguishable from "not bound".
-    dlog("main", "panel_app.policy_read_failed", {
-      cwd,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return {
-      boundApps: new Set(),
-      globalDisabledApps: new Set(),
-      projectOverrides: {},
-    };
+    return unreadablePanelAppPolicy(cwd, error);
   }
+}
+
+// Only successful reads are memoized: an unreadable file denies this call alone.
+const guardPolicy = createPanelAppPolicyMemo(readPanelAppPolicy, { ttlMs: 500, maxEntries: 64 });
+
+/** Call after any in-process write to Panel App bindings or global disables. */
+export function invalidatePanelAppBindingGuard(): void {
+  guardPolicy.invalidate();
 }
 
 /** Synchronous runtime guard used by the WebView bridge on every bind/call. */
 export function isPanelAppBoundToProject(cwd: string, appId: string): boolean {
   if (!cwd || !appId) return false;
-  const policy = panelAppPolicy(cwd);
+  let policy: PanelAppPolicy;
+  try {
+    policy = guardPolicy.get(cwd);
+  } catch (error) {
+    policy = unreadablePanelAppPolicy(cwd, error);
+  }
   return isPanelAppBound(appId, {
     hasProject: true,
     boundApps: policy.boundApps,
