@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cp,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -17,12 +18,17 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const [sourceArg, option, ...extra] = process.argv.slice(2);
-if (!sourceArg || (option && option !== "--docker") || extra.length)
+const [sourceArg, ...options] = process.argv.slice(2);
+const docker = options[0] === "--docker";
+const outputArg = docker && options[1] === "--output" ? options[2] : undefined;
+if (
+  !sourceArg ||
+  (options.length && (!docker || (options.length !== 1 && !(options.length === 3 && outputArg))))
+)
   throw new Error(
-    "Usage: node scripts/smoke-services-cloud-entry.mjs /path/to/codeshell-services [--docker]",
+    "Usage: node scripts/smoke-services-cloud-entry.mjs /path/to/codeshell-services [--docker [--output /new/candidate-directory]]",
   );
 const source = resolve(sourceArg);
 const root = await mkdtemp(join(tmpdir(), "codeshell-services-packaged-"));
@@ -31,6 +37,9 @@ const installed = join(root, "relocated");
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const json = async (path) => JSON.parse(await readFile(path, "utf8"));
 let imageId;
+const images = [];
+let provenance;
+let sourceFiles;
 
 function run(command, args, cwd, env = process.env, capture = false) {
   return new Promise((done, fail) => {
@@ -59,8 +68,51 @@ function run(command, args, cwd, env = process.env, capture = false) {
 }
 
 try {
+  if (outputArg) {
+    await assert.rejects(
+      lstat(resolve(outputArg)),
+      { code: "ENOENT" },
+      "Candidate output must not exist",
+    );
+    provenance = {};
+    for (const [name, path] of [
+      ["host", repo],
+      ["services", source],
+    ]) {
+      assert.equal(
+        await run("git", ["status", "--porcelain"], path, process.env, true),
+        "",
+        `Candidate export requires a clean ${name} checkout`,
+      );
+      provenance[name] = await run("git", ["rev-parse", "HEAD"], path, process.env, true);
+    }
+    sourceFiles = (
+      await run(
+        "git",
+        [
+          "ls-files",
+          "-z",
+          "--",
+          "apps",
+          "scripts",
+          "tests",
+          "docs",
+          "deploy",
+          "README.md",
+          "package.json",
+          "package-lock.json",
+          ".dockerignore",
+        ],
+        source,
+        process.env,
+        true,
+      )
+    )
+      .split("\0")
+      .filter(Boolean);
+  }
   await mkdir(stage);
-  for (const path of [
+  for (const path of sourceFiles ?? [
     "apps",
     "scripts",
     "tests",
@@ -70,8 +122,10 @@ try {
     "package.json",
     "package-lock.json",
     ".dockerignore",
-  ])
+  ]) {
+    await mkdir(dirname(join(stage, path)), { recursive: true });
     await cp(join(source, path), join(stage, path), { recursive: true });
+  }
   await mkdir(join(stage, "vendor"));
   const workspace = new Map();
   for (const directory of await readdir(join(repo, "packages"))) {
@@ -178,7 +232,7 @@ try {
   await check();
   await run("npm", ["test"], installed);
   await run("npm", ["run", "test:browser"], installed);
-  if (option === "--docker") {
+  if (docker) {
     const idFile = join(root, "runtime-image.id");
     await run(
       "docker",
@@ -190,13 +244,80 @@ try {
     const tag = `codeshell-services-smoke:${basename(root).toLowerCase()}`;
     await run("docker", ["tag", imageId, tag], installed);
     try {
-      await run(process.execPath, [join(repo, "scripts/smoke-project-sandboxes.mjs"), tag], repo, {
-        ...process.env,
-        CODESHELL_SMOKE_INSTALLATION: installed,
-      });
+      await run(
+        process.execPath,
+        [join(repo, "scripts/smoke-project-sandboxes.mjs"), outputArg ? imageId : tag],
+        repo,
+        {
+          ...process.env,
+          CODESHELL_SMOKE_INSTALLATION: installed,
+        },
+      );
+      if (outputArg) {
+        const archive = join(root, "runtime.tar");
+        const platform = await run(
+          "docker",
+          ["image", "inspect", imageId, "--format", "{{.Os}}/{{.Architecture}}"],
+          installed,
+          process.env,
+          true,
+        );
+        await run("docker", ["save", "--output", archive, imageId], installed);
+        images.push({ role: "runtime", id: imageId, platform, archive });
+      }
     } finally {
       await run("docker", ["image", "rm", tag], installed);
     }
+    if (outputArg) {
+      const linkIdFile = join(root, "link-image.id");
+      await run(
+        "docker",
+        ["build", "--iidfile", linkIdFile, "-f", "deploy/Dockerfile.link", "."],
+        installed,
+      );
+      const linkId = (await readFile(linkIdFile, "utf8")).trim();
+      assert.match(linkId, /^sha256:[a-f0-9]{64}$/);
+      await run(process.execPath, ["scripts/smoke-link-container.mjs", linkId], installed);
+      const archive = join(root, "link.tar");
+      const platform = await run(
+        "docker",
+        ["image", "inspect", linkId, "--format", "{{.Os}}/{{.Architecture}}"],
+        installed,
+        process.env,
+        true,
+      );
+      await run("docker", ["save", "--output", archive, linkId], installed);
+      images.push({ role: "link", id: linkId, platform, archive });
+    }
+  }
+  if (outputArg) {
+    for (const [name, path] of [
+      ["host", repo],
+      ["services", source],
+    ]) {
+      assert.equal(
+        await run("git", ["status", "--porcelain"], path, process.env, true),
+        "",
+        `${name} changed during verification`,
+      );
+      assert.equal(
+        await run("git", ["rev-parse", "HEAD"], path, process.env, true),
+        provenance[name],
+        `${name} commit changed during verification`,
+      );
+    }
+    const { exportCandidate } = await import(
+      pathToFileURL(join(installed, "scripts/lib/candidate-bundle.mjs")).href
+    );
+    await exportCandidate({
+      installation: installed,
+      output: resolve(outputArg),
+      sourceFiles,
+      sources: provenance,
+      packages: inventory,
+      images,
+    });
+    console.log(`Verified private candidate saved: ${resolve(outputArg)}`);
   }
   console.log(
     `✓ Independent services installation: ${inventory.length} real tarballs, relocated npm ci, release capability gate, complete service tests and browser OAuth${imageId ? ", packaged runtime image and two real project containers" : ""}.`,
