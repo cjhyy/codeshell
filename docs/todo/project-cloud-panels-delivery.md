@@ -2047,3 +2047,27 @@ Desktop 后，真实 Electron 原生 Link、共享后台任务及 legacy-project
 最终提交的远程完整 CI 和更新后 Linux 候选验收将另行记录。以上仍不等同真实服务商
 授权或生产上线；完整 goal 的 Panel 业务、数据迁移、设备中继、正式发布及目标部署
 与升级回滚仍保留。
+
+### 增量 51：最新候选服务验收与桌面测试隔离（2026-09-24）
+
+Host `c0af86ba`／services `04b058c` 的独立候选 CI
+[35969080635](https://github.com/cjhyy/codeshell-services/actions/runs/35969080635)
+通过，覆盖 Linux／Node 22.16 干净构建、真实 npm 安装、25 项服务测试、浏览器
+受控 OAuth 与同包集双项目 Docker 执行。这仍是候选验证，未发布包或部署生产服务。
+
+同一 Host 提交的完整 CI
+[35969022071](https://github.com/cjhyy/codeshell/actions/runs/35969022071)
+有 8 个 job 通过（含核心、类型、lint、覆盖率、Windows、Electron E2E），桌面分片
+13 项旧缓存配额测试失败。定位为 AppCodexSession 测试只恢复全局 window 描述符，
+却把 sessionCatalog 接口留在共享 MiniDOM 对象上；后续旧缓存测试误走 Main 存储。
+现按测试恢复该对象的 codeshell、localStorage 和 innerWidth 原始描述符，不修改
+产品存储逻辑、不跳过用例。预先创建 MiniDOM 后以相同种子验证，修复前 7 通过／
+13 失败，修复后 20 项全部通过；桌面类型、变更文件格式与 lint 通过。
+
+日志 `/tmp/project-cloud-quota-existing-dom-before.log`、
+`/tmp/project-cloud-quota-existing-dom-after.log`、
+`/tmp/project-cloud-quota-cleanup-types.log`。随后与 CI 相同的完整桌面分片通过：
+4375 通过、68 项既有条件跳过、零失败，538 文件／14913 次断言；日志
+`/tmp/project-cloud-desktop-shard-final.log`。独立浏览器步骤及最终远程 CI 结果另行记录。
+实施顺序明确调整为先收尾桌面／云端、真实 Link、兼容发布及部署恢复；手机 Panel
+操作适配后置，设备目录／中继／通知仍单独保留。整体 goal 未完成。
