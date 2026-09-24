@@ -27,14 +27,22 @@ import { fileURLToPath } from "node:url";
 const root = resolve(
   process.env.CODESHELL_SMOKE_ROOT ?? dirname(fileURLToPath(import.meta.url)) + "/..",
 );
-const entry = join(root, "packages/server/dist/bin/code-shell-serve.js");
+// Release verification can exercise a real npm installation instead of a workspace.
+const installation = process.env.CODESHELL_SMOKE_INSTALLATION;
+const serverRoot = installation
+  ? join(resolve(installation), "node_modules/@cjhyy/code-shell-server")
+  : join(root, "packages/server");
+const entry = join(serverRoot, "dist/bin/code-shell-serve.js");
+const containerCore = installation
+  ? "/opt/codeshell/node_modules/@cjhyy/code-shell-core/dist/index.js"
+  : "/opt/codeshell/packages/core/dist/index.js";
 const image = process.argv[2] ?? "codeshell-project-runtime:local";
 const downloadPanelIndex = process.argv.indexOf("--download-panel");
 const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
 if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
-const { WebSocket } = createRequire(join(root, "packages/server/package.json"))("ws");
+const { WebSocket } = createRequire(join(serverRoot, "package.json"))("ws");
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-project-smoke-")));
 const dataDir = join(scratch, "data");
 const isolatedHome = join(scratch, "home");
@@ -275,7 +283,7 @@ async function installFixture(container) {
     input: `
     import { mkdirSync, writeFileSync, openSync } from "node:fs";
     import { spawn } from "node:child_process";
-    import { previewLocalPanelApp, installReviewedLocalPanelApp } from "/opt/codeshell/packages/core/dist/index.js";
+    import { previewLocalPanelApp, installReviewedLocalPanelApp } from ${JSON.stringify(containerCore)};
     const source = "/tmp/project-smoke-panel";
     for (const path of [source + "/.codeshell-panel", source + "/app", source + "/app/tools", "/workspace/.code-shell"])
       mkdirSync(path, { recursive: true });
