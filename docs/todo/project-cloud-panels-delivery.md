@@ -2187,3 +2187,40 @@ Panel 合并提交 `2382f95` 的 push CI 35973240836 全通过，PR CI 359732468
 15 项安装／缩放测试及完整 `npm run check` 再次全部通过。Panel `e9702a3` 已推送，
 PR #26 的新 CI 35975873439 正在复验。日志 `/tmp/project-cloud-timeline-layout-before.log`、
 `/tmp/project-cloud-timeline-layout-fixed.log`、`/tmp/project-cloud-panel-fit-check-final.log`。
+
+
+### 增量 54：镜像搬移修复合入与回测参数保护（2026-09-24）
+
+最新私有候选 CI [35975826437](https://github.com/cjhyy/codeshell-services/actions/runs/35975826437)
+全部通过，使用 Host `ff5849d7`／services `2e787d8`，包括真实安装、双项目执行、
+Link 容器、两个镜像加载后的身份校验与归档。候选 artifact ID 10798281934，
+名称 `cloud-candidate-ff5849d70e10f4183296e7b6663315f2b11e803b`，
+证据 artifact ID 10798112817。services [PR #2](https://github.com/cjhyy/codeshell-services/pull/2)
+已合入 main `956f4932d879ba58ac626a32e155b1a3ed718618`；Node 22.16／22／24
+检查均通过。这仍是私有候选与源码集成，不代表真实服务商授权、公开发布或目标服务器部署。
+
+Panel PR #26 的 PR CI 35975873439 全部通过；同一 head `e9702a3` 的 push CI
+35975868340 在 463 项界面测试中通过 462 项，剩余粗剪队列用例等待合成画面像素时
+超时（`tests/video-studio-rough-cut-ui.test.mjs:1648`）。此前时间线适应宽度回归通过。
+该粗剪用例本地单独运行通过，日志 `/tmp/project-cloud-rough-cut-ci-repro.log`；未改断言、
+未增加超时、未跳过用例。只复验已终止运行中的失败 job，原 run 35975868340 的
+第二次尝试目前运行中；不把单独通过视为已解释原失败，也不在复验完成前合入。
+
+投资 Panel 使用独立分支 `codex/quant-lab/backtest-project-storage`，提交
+`fdc3eecd9999a5dd128f8eb6a0306cb6f5728819`，
+[PR #27](https://github.com/cjhyy/codeshell-panel-apps/pull/27) 暂基于尚未合入的 PR #26
+分支，待基线合入后改回 main。回测参数复用现有 Host 版本校验：打开不写默认值，
+有效编辑自动条件保存，读取失败、冲突或结果不明保留草稿并阻止继续写入；响应丢失
+先查询而不重发。旧 Host 明示缺少冲突检查并呈现写入失败。参数备份包含未填完的
+原始输入，支持当前项目的明确载入，并继续使用当前版本校验。项目切换不补发旧写入，
+迟到的参数／已保存策略读取不能修改新项目；未确认草稿仅在本页按项目保留，关闭前
+需要导出，不声称无效草稿已具备跨设备持久化。空白数字字段也不会被静默转为零。
+
+203 项 Quant 测试通过；完整实际界面脚本包含新增冲突、备份／载入、读写故障、
+响应丢失、队列写入、项目切换、迟到读取、未知记录和旧 Host 场景，最终通过。
+完整 `npm run check` 通过，保留已有的可选真实语音运行环境跳过项；最终包校验通过。
+日志 `/tmp/quant-backtest-storage-ui-verified.log`、`/tmp/quant-backtest-storage-unit.log`、
+`/tmp/quant-backtest-storage-check.log`、`/tmp/quant-backtest-storage-validate-final.log`。
+界面保存状态已截图核对。新 PR CI 35977959393 与 push CI 35977943164 正在运行，
+尚未合入、未发布 Panel 版本。整体 goal 保持 active，其他业务、升级恢复、真实部署、
+设备中继与后置手机操作验收继续保留。
