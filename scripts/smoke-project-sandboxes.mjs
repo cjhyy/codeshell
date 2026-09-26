@@ -710,8 +710,76 @@ try {
       password,
     });
   }
+  const [beforeRecovery] = JSON.parse(await docker(["container", "inspect", containerA]));
+  assert.equal(beforeRecovery.Config.Labels[label], installationId);
+  const workspaceMount = beforeRecovery.Mounts.find((mount) => mount.Destination === "/workspace");
+  assert.equal(workspaceMount?.Type, "volume");
+  const [workspaceVolume] = JSON.parse(await docker(["volume", "inspect", workspaceMount.Name]));
+  assert.equal(workspaceVolume.Labels[label], installationId);
   await json(`/api/v1/projects/${a.id}/stop`, { method: "POST", body: {} });
   await waitUntil(() => rpcA.ws.readyState === WebSocket.CLOSED, "project stop closes its socket");
+  assert.equal(
+    (await docker(["ps", "-q", "--filter", `volume=${workspaceMount.Name}`])).trim(),
+    "",
+  );
+  // Exercise the delivered administrator command against the actual stopped
+  // project's volume, at its original canonical path, then restart that project.
+  const recoveryEntry = installation
+    ? "/opt/codeshell/node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js"
+    : "/opt/codeshell/packages/server/dist/bin/code-shell-settings-recovery.js";
+  await docker(
+    [
+      "run",
+      "--rm",
+      "-i",
+      "--network",
+      "none",
+      "--read-only",
+      "--no-healthcheck",
+      "--label",
+      `${label}=${installationId}`,
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+      "--mount",
+      `type=volume,source=${workspaceMount.Name},target=/workspace`,
+      "--entrypoint",
+      "node",
+      image,
+      "--input-type=module",
+    ],
+    {
+      input: `
+    import assert from "node:assert/strict";
+    import { execFileSync } from "node:child_process";
+    import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+    const file = "/workspace/.code-shell/settings.json";
+    const original = existsSync(file) ? readFileSync(file) : null;
+    const temporary = mkdtempSync("/tmp/settings-recovery-");
+    const candidate = temporary + "/reviewed.json";
+    const call = (args) => JSON.parse(execFileSync(process.execPath,
+      [${JSON.stringify(recoveryEntry)}, ...args, "--project", "/workspace"],
+      { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] }));
+    try {
+      const reviewed = { ...(original ? JSON.parse(original.toString("utf8")) : {}),
+        recoveryIntegrationProbe: true };
+      writeFileSync(candidate, JSON.stringify(reviewed), { mode: 0o600 });
+      const inspection = call(["inspect", "--from", candidate]);
+      assert.ok(["valid", "missing"].includes(inspection.status));
+      const repaired = call(["repair", "--from", candidate,
+        "--expected-revision", inspection.revision,
+        "--candidate-sha256", inspection.candidate.sha256]);
+      assert.equal(repaired.status, "valid");
+      assert.equal(JSON.parse(readFileSync(file, "utf8")).recoveryIntegrationProbe, true);
+      const restored = call(["restore", "--backup-id", repaired.backupId,
+        "--expected-revision", repaired.revision]);
+      assert.equal(restored.status, inspection.status);
+      if (original === null) assert.equal(existsSync(file), false);
+      else assert.equal(readFileSync(file).equals(original), true);
+      console.log("PASS: offline recovery repaired and exactly restored the stopped project volume");
+    } finally { rmSync(temporary, { recursive: true, force: true }); }
+  `,
+    },
+  );
   const restarted = await start(a.id);
   assert.equal(restarted.generation, runningA.generation + 1);
   assert.equal(
