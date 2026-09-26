@@ -1,5 +1,5 @@
 /* Actual installed Video Studio in production Web and isolated Docker projects. */
-/* global document */
+/* global document, window */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -57,7 +57,7 @@ export async function verifyCloudVideoRecovery({
     assert.equal(response.status, 200, `Missing actual video project file ${path}`);
     return response.text();
   };
-  const readDocument = async (project, key = "video-studio-current") => {
+  const readWorkspaceValue = async (project, key) => {
     const index = JSON.parse(
       await readFileText(project, `video-studio-data/documents/indexes/${key}/index.json`),
     );
@@ -74,12 +74,18 @@ export async function verifyCloudVideoRecovery({
     const bytes = Buffer.concat(parts);
     assert.equal(bytes.length, entry.bytes);
     assert.equal(createHash("sha256").update(bytes).digest("hex"), entry.sha256);
-    const packed = JSON.parse(bytes);
+    return { data: JSON.parse(bytes), storageRevision: entry.revision };
+  };
+  const readDocument = async (project) => {
+    const { data: packed, storageRevision } = await readWorkspaceValue(
+      project,
+      "video-studio-current",
+    );
     assert.equal(
       createHash("sha256").update(JSON.stringify(packed.data)).digest("hex"),
       packed.sha256,
     );
-    return { document: packed.data, storageRevision: entry.revision };
+    return { document: packed.data, storageRevision };
   };
   const until = async (check) => {
     const deadline = Date.now() + 150000;
@@ -95,6 +101,25 @@ export async function verifyCloudVideoRecovery({
     const browser = await chromium.launch();
     const pages = [],
       errors = [];
+    let approving = false;
+    const timer = setInterval(() => {
+      if (approving) return;
+      approving = true;
+      void (async () => {
+        for (const page of pages) {
+          if (page.isClosed()) continue;
+          const confirm = page
+            .locator(".panel-host-confirm")
+            .getByRole("button", { name: "确认执行", exact: true });
+          if ((await confirm.isVisible()) && (await confirm.isEnabled()))
+            await confirm.click({ timeout: 2000 });
+        }
+      })()
+        .catch(() => {})
+        .finally(() => {
+          approving = false;
+        });
+    }, 200);
     try {
       const open = async (project) => {
         const context = await browser.newContext({
@@ -127,7 +152,12 @@ export async function verifyCloudVideoRecovery({
           null,
           { timeout: 150_000 },
         );
-        return { page, frame };
+        const call = (method, params = {}) =>
+          frame.evaluate(({ method, params }) => window.codeshellPanel.call(method, params), {
+            method,
+            params,
+          });
+        return { page, frame, call };
       };
       await action(open);
       assert.deepEqual(errors, [], "Installed Video must not raise page errors");
@@ -147,11 +177,12 @@ export async function verifyCloudVideoRecovery({
       }
       throw error;
     } finally {
+      clearInterval(timer);
       await browser.close();
     }
   }
 
-  let finalDocument;
+  let finalDocument, statusJobId;
   const edit = async (frame, name) => {
     await frame.locator("#project-name").fill(name);
     await frame.locator("#project-name").press("Tab");
@@ -220,6 +251,39 @@ export async function verifyCloudVideoRecovery({
         return value.document.name === "Cloud video after restore" && value;
       })
     ).document;
+    assert.equal(
+      await reopened.frame.locator(".editor-cleanup-warning").count(),
+      0,
+      "Restoring a cloud document must complete task/draft cleanup",
+    );
+    await reopened.frame.locator('#studio .rail [data-tab="jobs"]').click();
+    const statusJob = await until(async () => {
+      const jobs = await reopened.call("tasks.list");
+      for (const item of jobs) {
+        if (item.entry?.name !== "media-runtime") continue;
+        const job = await reopened.call("tasks.get", { id: item.id });
+        if (job.input?.request?.action !== "status") continue;
+        if (["failed", "cancelled", "interrupted"].includes(job.status))
+          throw new Error(JSON.stringify(job.error));
+        if (job.status === "succeeded") return job;
+      }
+      return false;
+    });
+    statusJobId = statusJob.id;
+    assert.equal(
+      statusJob.result.result.ffmpeg.available,
+      true,
+      "The actual container's FFmpeg must be usable",
+    );
+    const journal = await readWorkspaceValue(projectA, "video-studio-native-media-v1");
+    assert.ok(
+      journal.data.recipes.some(
+        (recipe) => recipe.id === statusJobId && recipe.action === "status",
+      ),
+    );
+    console.log(
+      "PASS: actual cloud Video Studio completes restore cleanup and persists its reviewed native runtime probe recipe",
+    );
     await reopened.page.screenshot({
       path: join(evidenceDir, "cloud-video-recovery.png"),
       fullPage: true,
@@ -239,6 +303,12 @@ export async function verifyCloudVideoRecovery({
       );
       assert.equal(await b.frame.locator("#project-name").inputValue(), other.name);
       assert.deepEqual((await readDocument(projectA)).document, finalDocument);
+      const journal = await readWorkspaceValue(projectA, "video-studio-native-media-v1");
+      assert.ok(journal.data.recipes.some((recipe) => recipe.id === statusJobId));
+      const native = await a.call("tasks.get", { id: statusJobId });
+      assert.equal(native.status, "succeeded");
+      assert.equal(await a.frame.locator(".editor-cleanup-warning").count(), 0);
+
       await a.frame.locator('[data-action="versions"]').first().click();
       const pending = a.page.waitForEvent("download", { timeout: 150000 });
       await a.frame.getByRole("button", { name: "导出原格式", exact: true }).click();
