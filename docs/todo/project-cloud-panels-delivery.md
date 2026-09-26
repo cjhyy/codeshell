@@ -3383,8 +3383,15 @@ CI 36258193513／36258165847 已启动。
 复查另发现：空阈值后更改组合方式会沿用旧阈值并显示已保存。新增浏览器断言
 修复前失败（`/tmp/quant-signal-invalid-before.log`）；本地后续修复使无效输入
 阻止保存与筛选、保留原始输入，明确重置模板才替换它。20 项复验通过
-（`/tmp/quant-signal-invalid-after.log`）；最终完整界面／仓库检查正在进行，
-后续修复尚未提交，不能把原提交的 CI 当作最终组合验收。
+（`/tmp/quant-signal-invalid-after.log`）。最终修复提交
+`81e2252421a8726ed4f454086b43720333d621a2` 已推送同一 PR；20 项复验
+`/tmp/quant-signal-last-focused.log`、完整 UI `/tmp/quant-signal-full-ui-final.log`
+和最终完整检查 `/tmp/quant-signal-check-latest.log` 全部终止并通过。最终包
+在现有程序调试镜像中以只读挂载、断网方式执行 Host 安装预检通过，日志
+`/tmp/quant-signal-final-preflight.log`；仍不代表真实云端完整投资业务验收。
+远程 CI 36258489107／36258486588 已确认为运行中；旧提交两轮 CI
+36258193513／36258165847 因已被替代而取消，未以旧结果代替新提交。
+PR #44 尚未合并，干净的任务工作树保留以继续验收。
 
 没有公开发布。最新三仓候选仍锁定原 Panel `5ee9bc69`，不包含此投资修复。
 整体 goal 保持 active：六 Panel 其余业务／任务恢复、真实模型／Link、正式发布
