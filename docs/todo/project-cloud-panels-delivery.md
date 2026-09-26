@@ -3494,3 +3494,29 @@ Host 依赖任务工作树 `cloud-video-task-recovery/codeshell` 正增加实际
 `/tmp/cloud-video-task-smoke.log` 正在运行，尚未确认业务结果。
 整体 goal 保持 active；真实服务接入、其他业务恢复、正式交付／目标部署以及
 设备目录／安全中继等范围不变，手机操作优化后置。
+
+
+增量 84 最终交付：Linux 候选 36260424368 已 success，日志
+`/tmp/cloud-video-linux-candidate.log` 核对了六包生命周期、求职／设计／视频
+业务恢复与重启、Link 备份恢复、归档逐文件校验和镜像重载。锁定 Host
+`fa7086ad`、Panel `90788fa`、services `f06d687d`；私有部署 artifact
+10912177653（452608075 bytes），证据 10912072973。PR #45 已合入
+Panel `9e5734caf7223aa541870d6591c7a26551e3cca6`；Host PR #24 已合入
+`3bfac3f75ec7a3da15e0d2dc6c3fef40e45c93bb`。核对干净、无活跃进程后，
+仅这两个已完成任务的工作树和本地／远程分支已删除，截图保留。没有公开发布。
+
+增量 85 后续：Host 提交 `62bdadba` 已建立
+[PR #25](https://github.com/cjhyy/codeshell/pull/25) 并附到任务；初次 CI
+36262035997 全部通过。同步父 PR 合并后，Host 为 `72f8c47e`，Panel 为
+`58216d9`，逐文件比较确认仅合并历史变化、代码树未变；最终提交继续跑 CI。
+本机第一次加强验收 `/tmp/cloud-video-task-smoke.log` exit 1，已通过六包
+生命周期但在导出原备份后等待恢复按钮超时；失败截图及文本保留于
+`codeshell-project-smoke-2W4w29`，已查看，不能把此轮写成任务／重启通过。
+
+实际原因复验：媒体服务初始化较慢时，编辑器已可操作，初始化末尾的整页刷新
+会替换用户已打开的历史窗口。新增受控慢初始化浏览器用例在原代码上失败
+（`/tmp/video-cloud-history-before.log`，窗口身份／打开状态断言失败）。修复
+后保留打开中的对话框，5 项历史、原字节导出、恢复失败重试和关闭后阻止迟到
+恢复检查通过（`/tmp/video-cloud-history-after.log`）。源与生成包已更新；
+完整 npm check `/tmp/video-cloud-tasks-history-check.log` 和第二轮实际容器
+`/tmp/cloud-video-task-smoke-v2.log` 正在运行，尚未确认最终结果。
