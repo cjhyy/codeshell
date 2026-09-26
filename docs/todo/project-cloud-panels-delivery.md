@@ -2408,3 +2408,52 @@ PR #28 仍为草稿，最终 CI 36227010197／36227007835 已排队。Quant PR #
 CI 36227021653／36227019158 排队／运行。最终完整远程验收仍需通过后才能合入；
 两项均未发布。整体 goal 保持 active，目标服务器／真实服务商和正式兼容版本、
 其余业务持久化及完整升级恢复仍未完成，手机操作继续后置。
+
+
+### 增量 59：录制素材零时长帧与设计草稿并发保护（2026-09-26）
+
+Video `753a0b2` 的两次 Linux UI 验收均在录制后重开并导出失败（36227010197／
+36227007835）；Quant 组合亦失败。未合入这些提交。原片预览冻结后，旧实时导出也
+经过严格帧校验。完整录制用例在本机复现：等待下载时读到真实帧 timestamp=0、
+duration=0、currentTime=0、readyState=4；新呈现通知没有到达。诊断日志
+`/tmp/video-recorded-source-diagnostic.log`，诊断替换构造器代码已移除，没有交付到测试。
+
+`e6bbc0c8b9f981b6bb4825c858810b6e7f85cd35` 接受时间戳恰好匹配当前目标的有效帧，
+无需依赖零／缺失的时长或呈现回调；其他位置仍核对帧区间或对应回执，旧画面拒绝和
+原截止时间保留。完整摄像头／麦克风录制、保存、重开、WebM 导出及真实声音检查
+通过，`/tmp/video-recorded-source-exact-after.log`。另加真实像素的零时长／无回调
+回归，25 项 media-pool 用例通过；完整媒体 190 项通过、零跳过，
+`/tmp/video-zero-duration-media.log`。完整离线 check 与 validate 通过，源码、README
+与全部生成包同步。最终 CI 36227959480／36227957671 正在运行，媒体已通过。
+
+Quant 组合 `07db8eb7a4504eadfe08b45f23b22c8405d1237a` 已包括该修复，构建一致性和
+包校验通过（`/tmp/quant-exact-frame-build-check.log`、
+`/tmp/quant-exact-frame-validate.log`）；CI 36227976326／36227974232 运行中。
+PR #28 和 #27 尚未合入／发布，最终 UI 验收仍需通过。
+
+新工作树 `design-project-recovery/codeshell-panel-apps` 从最新 Panel main `a301c46`
+创建，分支 `codex/design-studio/project-recovery`。确认原设计自动恢复直接覆盖
+`storage.set`，保存／打开会直接删除恢复记录，切换项目的回调还会向已变化的 Host
+提交旧草稿。提交 `f634a70` 改为项目／恢复会话限定的版本条件操作；响应丢失先读
+核对，冲突不更新写入基准，不重发；读取失败和坏记录不当空记录覆盖或删除。
+拆分恢复文件的每次调用／重试检查原项目代次，保存／打开只能清除原恢复会话记录。
+
+界面显示明确失败原因，可下载带项目身份和原始记录的恢复备份，再明确读取最新记录；
+旧 Host 显示无并发保护限制。切换项目不补发旧写入，未确认旧草稿保存在页面内供下载。
+这是临时保护，不是持久跨设备备份或独立可迁移设计包；未添加备份导入，资源和基线
+仍依赖原项目。没有新增 Host 权限，也不宣称全部设计业务已经验收。
+
+11 项针对性检查通过：两实例覆盖／删除竞争、丢失写入回执、错误快照、能力变化、
+旧队列；实际应用双窗口冲突、下载备份、明确重读、切换项目、读取失败和坏记录保留。
+日志 `/tmp/design-recovery-final-focused.log`。新浏览器测试最初静态文件根路径多一个
+斜杠，导致资源被测试服务拒绝；修正夹具后通过，未改应用等待／断言以绕过失败。
+完整离线 check（含新增 suite）、类型和 validate 通过，
+`/tmp/design-project-recovery-check.log`、`/tmp/design-project-recovery-types.log`、
+`/tmp/design-project-recovery-validate.log`。后续最后的会话守卫／坏记录用例重验通过。
+
+合并待验收 Video 分支后，Design 最终组合提交
+`c54147cc8104a0b8a5670f5137ca64da005d35de` 的构建一致性和 validate 通过；
+[PR #29](https://github.com/cjhyy/codeshell-panel-apps/pull/29) 已创建并附到任务，保持
+草稿等待远程组合验收。先合入 #28，再保证该 PR 差异只保留设计恢复业务。
+整体 goal 保持 active，真实服务商／目标部署、正式发布、其余业务和完整升级恢复
+仍需继续；手机界面继续后置。
