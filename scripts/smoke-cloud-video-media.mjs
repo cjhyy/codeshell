@@ -1,4 +1,5 @@
 /* Actual source upload, native inspection/render and authenticated browser delivery. */
+/* global document */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -59,9 +60,21 @@ export async function verifyCloudVideoMedia({ page, frame, call, readDocument, u
   const dialog = frame.locator("#editor-workspace .ew-dialog[open]");
   await dialog.locator('input[name="width"]').fill("320");
   await dialog.locator('input[name="height"]').fill("180");
+  assert.deepEqual(
+    await dialog
+      .locator("form")
+      .evaluate((form) =>
+        [...form.elements]
+          .filter((item) => item.willValidate && !item.validity.valid)
+          .map((item) => ({ name: item.name, message: item.validationMessage })),
+      ),
+    [],
+  );
   const oldIds = new Set((await call("tasks.list")).map((job) => job.id));
   await dialog.getByRole("button", { name: "开始导出", exact: true }).click();
   const rendered = await until(async () => {
+    const error = await frame.evaluate(() => document.querySelector(".ew-form-error")?.textContent);
+    if (error) throw new Error(`Cloud export submission: ${error}`);
     for (const item of await call("tasks.list")) {
       if (oldIds.has(item.id) || item.entry?.name !== "editor-runtime") continue;
       const job = await call("tasks.get", { id: item.id });
