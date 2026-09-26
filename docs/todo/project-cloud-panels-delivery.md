@@ -3600,3 +3600,41 @@ MP4 渲染、浏览器预览／精确字节下载及重启资源保存的容器�
 36265102905／36265123639 正在运行。真实媒体容器验收仍为同一进程／日志，
 已进入视频原备份恢复阶段，未重启或扩大超时。另发现旧制作任务页仍直接调用
 media.export／media.reveal，后续须一并适配，不能把导出记录入口修复当作全量完成。
+
+增量 85 Linux 结果：候选 **36264155117 失败**，没有生成新部署候选。
+完整日志 `/tmp/cloud-video-task-linux.log` 显示求职／设计业务先通过，视频恢复
+等待“已从升级前备份恢复工程”超过 150 秒。后续的 candidate.json 缺失只是
+派生错误；安装步骤的管道由 tee 隐藏了原进程 exit 1，不能记录为验收通过。
+没有扩大超时或合并 PR #46／#25。Host #25 新增安全耗时诊断和失败截图到
+可上传 evidence 目录，提交 `870b97ea` 的 CI 36265791453 九类全部通过。
+
+### 增量 88：候选失败传播与诊断保存（2026-09-27，已合并）
+
+独立 services 分支 `codex/services/candidate-failure-evidence` 的
+[PR #4](https://github.com/cjhyy/codeshell-services/pull/4) 已附到任务、合入
+`594aec9b39ba6e3ffebc13629adfc198d1f236f7`。候选步骤显式选择 Bash 的
+errexit/pipefail，防止 tee 吞掉错误，并保留已知测试截图及方法／状态／耗时
+记录，不上传原始凭据或整个控制目录。模拟子进程 exit 7 经管道仍为 7；
+CI 36265814405／36265872061 的 Node 22.16／22／24 全通过。干净已合并
+工作树和本地／远程任务分支已清理；原 services checkout 保持原样。
+
+为诊断同一恢复超时，新候选 **36266030775** 已确认运行中，固定 Host
+`870b97ea`、Panel `13dfc42` 和 services `594aec9b`。包含新增诊断而非仅
+重复旧请求，结果未定；此前成功 artifact 10912177653 仍是最后完成候选。
+
+增量 87 实际媒体进展：首次 `/tmp/cloud-video-media-before.log` exit 1，真实
+WAV 上传、原生分析、SHA 和原字节回读均通过，随后导出没有启动任务。截图
+`codeshell-project-smoke-kyUUNV/video-error-2.png` 已查看。最小真实浏览器
+回归确认 opaque iframe 禁止原生 form submit：点击按钮后对话框不关闭且
+无任务提交。Panel 的表单直接处理按钮激活并阻止默认原生提交，保留校验、
+重复提交和工程身份检查，不增加 Host iframe 权限。54 项工作台浏览器回归
+通过，包括 sandbox 点击／回车、无效宽度拦截；生产制作任务另补 cloud
+resources.open 和桌面优先、无能力拒绝、初始化失败不半启用，共 68 项通过。
+
+Panel #47 最终提交 `f114cb6` 已推送，源和生成包一起提交。完整离线检查在
+表单／制作任务实现上通过；最后收紧初始化失败顺序后，重新通过制作回归、
+类型、生成和 build:check。Host 媒体验收提交 `04434500` 已推送并建立
+[PR #27](https://github.com/cjhyy/codeshell/pull/27)（draft，已附到任务）。
+第二轮 `/tmp/cloud-video-media-v2.log` 仍在运行，使用含表单／制作任务修复
+的独立 staging；该 staging 早于最后初始化顺序调整，不冒充 f114cb6 完整
+安装包验收。原生渲染及成品／重启尚未证明。整体 goal active，未公开发布。
