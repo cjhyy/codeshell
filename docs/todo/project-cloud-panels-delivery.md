@@ -2495,3 +2495,44 @@ server 包目录并核对包名，只使用和清理自己的临时项目，不�
 `/tmp/design-capture-build-check.log`、`/tmp/design-capture-validate.log`）。PR #27／
 #28／#29 仍未合入，等待最终组合 CI；未发布。整体 goal 仍 active，原始完整范围
 与真实账号／模型、部署、兼容发布及剩余业务恢复门槛不变。
+
+
+### 增量 61：WebM 首画面延迟与最终组合重验（2026-09-26）
+
+上轮 Video `e0fdbbc` 和 Quant `c127ed2` 的两次完整 CI 均通过。Design
+`6ea8591` 的 PR CI 36228868345 通过，但 push CI 36228866225 在摄像头／麦克风
+录制、保存、重开后的 WebM 导出等待下载超时，仍未合入。日志
+`/tmp/design-final-ui-failure.log` 只证明导出未在测试时限内完成，未保存实际帧时序。
+本轮为该 UI 检查加入有界帧时间诊断，不放宽超时或声音／画面断言。
+
+实际 FFmpeg WebM 夹具让音轨先于视频开始。修复前，定位到 0 秒后，媒体时钟为 0、
+seek 已结束、readyState=4；冻结帧 timestamp=100000、duration=100000，呈现回执
+同为 100000，仍被旧的“帧不得晚于时钟”条件拒绝直到超时。
+`/tmp/video-delayed-track-before.log` 稳定复现，不能据此断言先前 CI 的全部根因。
+
+Video 提交 `7b5874dc259b5a9664606299781ceae9195deda2` 允许经当前寻址呈现回执确认
+的准确冻结帧，覆盖音轨早于首画面的情况。无对应回执时仍要求准确时间戳或帧区间；
+寻址完成、目标时钟、旧回执拒绝和资源释放约束不变，不扩大容差或截止时间。
+源码、README 与生成包同步。26 项取帧测试通过；完整媒体 191 项通过、零跳过，
+`/tmp/video-delayed-track-after.log`、`/tmp/video-delayed-track-media.log`。
+真实录制／重开／有声导出通过，`/tmp/video-delayed-track-recording.log`；完整离线
+check 和 validate 通过，`/tmp/video-delayed-track-check.log`、
+`/tmp/video-delayed-track-validate.log`。
+
+Quant 最终组合为 `6339361dc05d5e6c862f879bb301c26686a3b386`，Design 为
+`27cc22090773458edb62fa216ec791c01bb3dcf2`。两者构建一致性与包校验通过，日志前缀
+`/tmp/quant-delayed-track-`、`/tmp/design-delayed-track-`。最终 CI：Video
+36229833251／36229831062，Quant 36229844771／36229842635，Design
+36229855710／36229853626，已确认排队或运行中；尚未合入或发布。
+
+求职草稿继续审计：现有 `job-hunt-critical-drafts-v1` 是没有项目归属的浏览器全局
+记录，初始化和切换项目会把旧本地状态带入新的项目同步；延迟保存和异步快照操作
+缺少项目代次检查。单凭 cwd 不足以区分同源下均为 `/workspace` 的云端项目。
+新工作树 `job-hunt-project-drafts/codeshell-panel-apps` 已完成依赖安装，暂无产品
+修改；不能标为修复完成。原定层级分支名被已有 `codex/job-hunt-hq` 引用阻挡，保留
+未知归属旧分支，使用 `codex/job-hunt-hq-project-drafts`。后续优先评估使用项目 Host
+存储条件创建持久随机归属标识，避免仅为浏览器备份新增 Host 接口；跨项目异步操作
+仍需单独封锁，不能只改一个浏览器 key 就声称整条流程安全。
+
+整体 goal 保持 active；真实账号／模型、目标服务器、兼容发布、完整升级恢复、
+其余 Panel 业务与设备中继范围均保留，手机 Panel 操作优化后置。
