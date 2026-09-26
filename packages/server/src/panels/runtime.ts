@@ -199,11 +199,11 @@ export interface PanelRuntimeOptions {
   dataDir: string;
   host: "hub" | "desktop";
   publicPathPrefix?: string;
-  snapshot: () => Promise<PanelSnapshot>;
+  snapshot: (appId?: string) => Promise<PanelSnapshot>;
   ownerId: (request: IncomingMessage) => Promise<string | undefined>;
   isAuthorized: (request: IncomingMessage) => Promise<boolean>;
   /** Host/test seam. HTTP callers never provide install paths or this catalog. */
-  listInstalled?: () => Promise<InstalledPanelApp[]>;
+  listInstalled?: (appId?: string) => Promise<InstalledPanelApp[]>;
   now?: () => number;
   agentTasks?: PanelTaskHost;
   automations?: PanelAutomationHost;
@@ -502,7 +502,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const installed =
     options.listInstalled ??
     (options.projectPackages
-      ? async () => (await inspectProjectPanelApps(options.bindingCwd ?? options.cwd)).apps
+      ? async (appId?: string) =>
+          (await inspectProjectPanelApps(options.bindingCwd ?? options.cwd, appId)).apps
       : listInstalledPanelApps);
   let closed = false;
   let generation = 0;
@@ -596,8 +597,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   async function installedToolApp(scope: ToolJobScope) {
     if (closed || scope.projectPath !== (options.bindingCwd ?? options.cwd))
       throw new PanelBridgeError("REVOKED", "Tool task workspace is unavailable");
-    const panel = (await snapshot()).panels.find((candidate) => candidate.id === scope.appId);
-    const app = (await installed()).find((candidate) => candidate.id === scope.appId);
+    const panel = (await snapshot(scope.appId)).panels.find(
+      (candidate) => candidate.id === scope.appId,
+    );
+    const app = (await installed(scope.appId)).find((candidate) => candidate.id === scope.appId);
     if (
       !panel?.enabled ||
       panel.revision !== scope.revision ||
@@ -659,7 +662,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     rootDirectory: join(options.dataDir, "panel-app-media"),
     isScopeAuthorized: async (scope) => {
       if (scope.projectPath === (options.bindingCwd ?? options.cwd)) {
-        const panel = (await snapshot()).panels.find((candidate) => candidate.id === scope.appId);
+        const panel = (await snapshot(scope.appId)).panels.find(
+          (candidate) => candidate.id === scope.appId,
+        );
         if (panel?.enabled && panel.permissions.includes("resources")) return true;
       }
       for (const grant of grants.values())
@@ -903,15 +908,15 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     });
     return toolJobs;
   }
-  let readingSnapshot: Promise<PanelSnapshot> | undefined;
-  function snapshot() {
+  const readingSnapshots = new Map<string, Promise<PanelSnapshot>>();
+  function snapshot(appId: string) {
     // Parallel module requests share current disk work, without a stale TTL
     // that could keep an unbound or updated package authorized.
-    const pending = readingSnapshot ?? options.snapshot();
-    readingSnapshot = pending;
+    const pending = readingSnapshots.get(appId) ?? options.snapshot(appId);
+    readingSnapshots.set(appId, pending);
     void pending
       .finally(() => {
-        if (readingSnapshot === pending) readingSnapshot = undefined;
+        if (readingSnapshots.get(appId) === pending) readingSnapshots.delete(appId);
       })
       .catch(() => {});
     return pending;
@@ -1110,7 +1115,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       return false;
     }
     try {
-      const panel = (await snapshot()).panels.find((candidate) => candidate.id === grant.app.id);
+      const panel = (await snapshot(grant.app.id)).panels.find(
+        (candidate) => candidate.id === grant.app.id,
+      );
       const info = await lstat(grant.root);
       const ownerStillAuthorized = await options.isAuthorized(grant.request);
       const currentOwner = await options.ownerId(grant.request);
@@ -1159,7 +1166,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         )
       )
         error(400, "面板参数无效。");
-      const panel = (await snapshot()).panels.find((candidate) => candidate.id === input.appId);
+      const panel = (await snapshot(input.appId)).panels.find(
+        (candidate) => candidate.id === input.appId,
+      );
       if (!panel?.enabled || !panel.compatibility.supported)
         error(403, "请先将面板绑定到当前工作区。");
       if (panel.revision !== input.revision) error(409, "面板已经更新，请重新打开。");
@@ -1168,7 +1177,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         (typeof input.sessionId !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(input.sessionId))
       )
         error(400, "会话标识无效。");
-      const app = (await installed()).find((candidate) => candidate.id === input.appId);
+      const app = (await installed(input.appId)).find((candidate) => candidate.id === input.appId);
       if (!app) error(404, "面板已卸载。");
       if (panel.packageDigest && panel.packageDigest !== app.packageDigest)
         error(409, "项目面板版本已改变，请重新打开。");

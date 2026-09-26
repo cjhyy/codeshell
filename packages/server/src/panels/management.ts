@@ -388,12 +388,13 @@ export function createPanelManagement(options: PanelManagementOptions) {
     };
   }
 
-  async function snapshot(): Promise<PanelSnapshot> {
+  async function snapshot(appId?: string): Promise<PanelSnapshot> {
+    if (appId !== undefined) assertSafePanelAppId(appId);
     options.assertBinding?.();
     const inspected = options.projectPackages
-      ? await inspectProjectPanelApps(workspace)
+      ? await inspectProjectPanelApps(workspace, appId)
       : undefined;
-    const apps = inspected?.apps ?? (await listInstalledPanelApps());
+    const apps = inspected?.apps ?? (await listInstalledPanelApps(appId));
     options.assertBinding?.();
     const project = projectSettings();
     const current = policy(project);

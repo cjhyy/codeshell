@@ -603,6 +603,34 @@ test("a damaged project package is isolated while healthy packages and Skills ke
   expect((await inspectProjectPanelApps(project)).issues).toEqual([]);
 });
 
+test("scoped inspection verifies its live package without migrating unrelated bindings", async () => {
+  const first = await install();
+  const project = await pinProject("scoped-inspection", {
+    version: first.version,
+    packageDigest: first.packageDigest,
+  });
+  const manifestPath = join(source, ".codeshell-panel/panel.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  await writeFile(manifestPath, JSON.stringify({ ...manifest, id: "other-panel" }));
+  await install();
+  const settingsFile = join(project, ".code-shell/settings.json");
+  const raw = JSON.parse(await readFile(settingsFile, "utf8"));
+  raw.panelAppBindings.push("other-panel");
+  await writeFile(settingsFile, JSON.stringify(raw));
+  expect((await inspectProjectPanelApps(project, id)).apps.map((app) => app.id)).toEqual([id]);
+  expect(
+    JSON.parse(await readFile(settingsFile, "utf8")).panelAppPins["other-panel"],
+  ).toBeUndefined();
+  expect((await listProjectPanelApps(project, id)).map((app) => app.id)).toEqual([id]);
+  expect((await listInstalledPanelApps(id)).map((app) => app.id)).toEqual([id]);
+  await writeFile(join(panelAppPackageDir(id, first.packageDigest!), "app/index.html"), "tampered");
+  const damaged = await inspectProjectPanelApps(project, id);
+  expect(damaged.apps).toEqual([]);
+  expect(damaged.issues).toMatchObject([{ id, code: "package_unavailable" }]);
+  await expect(listProjectPanelApps(project, id)).rejects.toThrow();
+  await expect(inspectProjectPanelApps(project, "../other")).rejects.toThrow();
+});
+
 test("an unreadable legacy baseline does not prevent other bindings from migrating or exposing Skills", async () => {
   const first = await install();
   const manifestPath = join(source, ".codeshell-panel/panel.json");
