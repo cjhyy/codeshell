@@ -2,7 +2,7 @@
   "name": "@cjhyy/code-shell-capability-optimization-lab",
   "version": "0.9.22",
   "private": true,
-  "description": "Optimization Lab capability for CodeShell \u2014 budgeted, reviewable Skill optimization experiments.",
+  "description": "Optimization Lab capability for CodeShell — budgeted, reviewable Skill optimization experiments.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

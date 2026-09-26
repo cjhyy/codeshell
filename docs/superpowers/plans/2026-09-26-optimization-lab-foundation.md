@@ -1,6 +1,6 @@
 # 优化实验室执行计划（路线图 + 计划 A：地基）
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 执行方式：独立 worktree、并行子代理、逐任务 RED/GREEN 与 Conventional Commit。原建议的 superpowers 执行技能在本环境不可用，已用同等的分工、审查与验证流程完成实施。
 
 > 设计来源：`docs/todo/optimization-lab-mvp.md`（内置能力包版本）。
 > 代码事实基线：`origin/main` @ `ae600ba9`（2026-09-26 调研）。执行时若 `origin/main` 已前进，先按 Task 0 重新核对本文引用的行号。
@@ -14,14 +14,57 @@
 
 ---
 
+## 实施记录（2026-09-26）
+
+实现提交范围：`8be20e23..55fc29ff`（包含起点的 Core 快照提交）。本地 main 与方案分支已在独立任务 worktree 合流；最终验证前刷新至 `origin/main` 的 `520d8b2a`。仅将验证后的结果一次性集成，不提前推送未完成的主线合流。
+
+实际实现修正了原示例的以下问题；下文代码块保留原计划思路，维护时以源码和本节为准：
+
+- Skill 降级快照复用 `readBoundedSkillFile` 与 `validateSkillMarkdown`，不绕过符号链接、普通文件、大小和 Markdown 校验。共享读取器增加 O_NONBLOCK，缓存文件被替换成 FIFO 时立即拒绝，不阻塞 worker；有带超时的独立进程回归测试。
+- canonical JSON 拒绝非 JSON 值、非有限数字、循环、稀疏数组、访问器等；case 排序使用确定的 code-unit 顺序，不依赖系统 locale。
+- 已有 manifest 严格校验 schema、规范化字段、内容 hash、逐例 hash、summary 与目录 hash；损坏时拒绝且保留原字节，不覆盖。
+- runnable 样本不接受未冻结的 fixtureRefs，资料先内联 input；每例 hardAssertions/rubric 的 criterion ID 必须唯一。
+- 原始/规范化数据与最终清单均有 16 MiB 上限；超量返回 dataset_too_large，写入前不创建目录。
+- 增加六个独立进程争抢冻结的测试、特殊键、损坏清单与幂等字节验证。
+- 版本校验脚本要求显式版本参数，当前为 `bun scripts/verify-release-versions.ts 0.9.22`。
+- 人工发消息的检查改用隔离 HOME 的真实编译后 worker 冒烟：关闭时查询不存在且无实验目录；开启时校验/冻结 6 个样本；重启后重复冻结保持原内容。假模型端点记录请求数必须为 0，不修改用户设置或发起真实模型请求。
+- 本次包含合流带来的 preload 运行轨迹声明预算修正（+11 行），不移除仍在 main 的 Arena。
+
+计划 B 已按实际契约写入 [实验引擎执行计划](2026-09-26-optimization-lab-engine.md)，引擎与授权界面尚未实施。本阶段没有优化效果报告，不代表已完成 P1a。
+
+### 最终验证
+
+- 完整 `bun run typecheck` 通过；版本同步、CI 测试路径守卫、变更文件 ESLint/Prettier 与 diff 检查通过。
+- 单进程 `bun test packages tests` 在现有 `hub-server.test.ts` 的 WebSocket 测试期间触发 Bun 1.3.11 原生段错误；不能记为通过。该文件独立运行 14 项通过。最终采用仓库 CI 的四组范围运行，Desktop 组额外保留 CI 排除的真实浏览器文件，没有删减测试来规避问题。
+
+| 分组                        | 通过 | 跳过 | 失败 |
+| --------------------------- | ---: | ---: | ---: |
+| core-engine                 | 1735 |    3 |    0 |
+| core-rest                   | 2714 |    0 |    0 |
+| desktop                     | 4409 |   68 |    0 |
+| rest（含 optimization-lab） | 4051 |   71 |    0 |
+
+跳过含已有的真实外部 Agent opt-in 测试与必须由独立子进程入口运行的 Panel fixture；Panel 的父测试另行启动并验证这些 fixtures。以上为分组运行计数，不将重复注册的 fixture 当成额外覆盖。
+
+```bash
+bun test packages/core/src/engine packages/core/src/tool-system
+bun test packages/core --path-ignore-patterns '**/src/engine/**' --path-ignore-patterns '**/src/tool-system/**'
+bun test packages/desktop
+bun test tests packages/coding packages/tui packages/pet packages/server packages/chat packages/web packages/arena packages/cdp packages/link packages/optimization-lab
+```
+
+- 快照/管理安全回归单独复核：26 项通过，含 FIFO 子进程测试。数据集及模块组合测试 60 项通过，含六进程争抢；完整分组已包含这些最终源码。
+- 完整 Desktop `predist` 在独立验证 worktree 成功。与任务分支生产代码一致，物化包不是 symlink，Node capability import 成功，Core 产物包含 O_NONBLOCK 修复。
+- `node scripts/smoke-optimization-lab.mjs` 对物化包通过：默认关闭时查询不注册且无实验目录；开启时冻结 6 个样本；重启后 hash、清单内容和 mtime 不变；假模型端点收到 0 个请求。
+
 ## 路线图
 
-| 顺序 | 计划                                | 交付物                                                                                                | 通过标准                                                       | 状态                                                                    |
-| ---- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| 0    | 集成前置                            | 本地 `main` 与 `origin/main` 合流；方案分支合入                                                       | `bun test packages tests` 与 typecheck 全绿                    | 本文 Task 0                                                             |
-| A    | 地基（P0 + Core 导出 + 按开关加载） | 私有包可构建、可打包、开关打开时被 worker 加载；样本可校验、切分、冻结出 dataset hash                 | 本文 Task 1–12 全部完成；不发出任何模型请求                    | 本文详细展开                                                            |
-| B    | P1a 引擎                            | 计量 fetch 与预算账本、租约、控制器状态机、文本 runner、`reflect_once_v1`、判分检查点与盲评模板、报告 | 离线测试覆盖方案 §14 全部 `[P1a]` 项（用假 fetch，不花钱）     | A 合入后另写 `docs/superpowers/plans/<date>-optimization-lab-engine.md` |
-| C    | P1a 接入                            | Desktop main 转发与 worker 保活、最小授权页（轮询状态）、评分 JSON 导出/回填                          | 在 Desktop 中授权并跑完一次真实实验，产出 JSON + Markdown 报告 | B 合入后另写 `...-optimization-lab-desktop.md`                          |
+| 顺序 | 计划                                | 交付物                                                                                                | 通过标准                                                       | 状态                                                      |
+| ---- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------- |
+| 0    | 集成前置                            | 本地 `main` 与 `origin/main` 合流；方案分支合入                                                       | `bun test packages tests` 与 typecheck 全绿                    | 本文 Task 0                                               |
+| A    | 地基（P0 + Core 导出 + 按开关加载） | 私有包可构建、可打包、开关打开时被 worker 加载；样本可校验、切分、冻结出 dataset hash                 | 本文 Task 1–12 全部完成；不发出任何模型请求                    | 已实施，见上方最终验证                                    |
+| B    | P1a 引擎                            | 计量 fetch 与预算账本、租约、控制器状态机、文本 runner、`reflect_once_v1`、判分检查点与盲评模板、报告 | 离线测试覆盖方案 §14 全部 `[P1a]` 项（用假 fetch，不花钱）     | [计划已写，待实施](2026-09-26-optimization-lab-engine.md) |
+| C    | P1a 接入                            | Desktop main 转发与 worker 保活、最小授权页（轮询状态）、评分 JSON 导出/回填                          | 在 Desktop 中授权并跑完一次真实实验，产出 JSON + Markdown 报告 | B 合入后另写 `...-optimization-lab-desktop.md`            |
 
 B、C 依赖 A 定下的类型和存储布局，所以等 A 合入后再按实际代码写细，避免计划与代码脱节。
 
@@ -88,7 +131,7 @@ packages/optimization-lab/
 
 截至 2026-09-26：本地 `main` 比 `origin/main` 多 12 个提交（包含方案文档 `580033ad`、`fc3e528d`），`origin/main` 比本地多 58 个提交；方案分支 `codex/docs/optimization-lab-builtin` 是本地 `main` 的快进。arena 移除提交只在 `codex/arena/remove-call-sites` 上，不在 `origin/main`。
 
-- [ ] **Step 1: 在独立 worktree 合流，不动任何活跃 checkout**
+- [x] **Step 1: 在独立 worktree 合流，不动任何活跃 checkout**
 
 ```bash
 git fetch origin
@@ -99,13 +142,13 @@ git merge --no-ff origin/main
 
 有冲突时逐个解决，不用 `-X ours`，也不丢弃未知改动（CODESHELL.md 分支规则）。
 
-- [ ] **Step 2: 合入方案分支**
+- [x] **Step 2: 合入方案分支**
 
 ```bash
 git merge --no-ff codex/docs/optimization-lab-builtin
 ```
 
-- [ ] **Step 3: 验证**
+- [x] **Step 3: 验证**
 
 ```bash
 bun install
@@ -115,14 +158,14 @@ bun test packages tests
 
 Expected: 全部通过。失败时先确认是否合流前就已失败（用 `origin/main` worktree 对照）。
 
-- [ ] **Step 4: 快进 main 并推送（推送需负责人确认）**
+- [x] **Step 4: 快进 main 并推送（推送需负责人确认）**
 
 ```bash
 git -C <主仓库路径> fetch . codex/integration/main-sync:main
 git push origin main
 ```
 
-- [ ] **Step 5: 为计划 A 开任务分支**
+- [x] **Step 5: 为计划 A 开任务分支**
 
 ```bash
 git worktree add -b codex/optimization-lab/foundation ../wt-optlab-foundation main
@@ -141,7 +184,7 @@ git worktree add -b codex/optimization-lab/foundation ../wt-optlab-foundation ma
 
 背景：`scanSkills(cwd)`（`skills/scanner.ts:414`）按名字找 Skill，`content` 已去掉 frontmatter；`readSkillBundle(dir)`（`skills/management.ts:174`）给出整个目录的 revision 和完整 SKILL.md，遇到符号链接会抛错；`parseFrontmatter`（`skills/frontmatter.ts:18`）拆分 frontmatter 与正文。hub 对无法管理的 Skill 用 `sha256(content)` 作 revision（`server/src/hub/skills-management.ts:149-162`），这里同样回退，但标出 `revisionKind`，并把 `extraFiles` 设为 `null`（未知），让调用方可以保守拒绝。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```ts
 // packages/core/src/skills/snapshot.test.ts
@@ -219,14 +262,14 @@ describe("readSkillSnapshot", () => {
 });
 ```
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/core/src/skills/snapshot.test.ts`
 Expected: FAIL，`Cannot find module './snapshot.js'`。
 
 如果实现之后第一个用例仍拿到 `null`，说明项目级 Skill 没被扫描到：对照 `packages/core/src/skills/scanner.test.ts` 的临时项目写法（是否需要信任项目或设置 HOME）调整 `project()`，不要改扫描器。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 ```ts
 // packages/core/src/skills/snapshot.ts
@@ -236,10 +279,9 @@ Expected: FAIL，`Cannot find module './snapshot.js'`。
  * Skill's text right now, and which revision is it".
  */
 import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
 import { dirname } from "node:path";
 import { parseFrontmatter } from "./frontmatter.js";
-import { MAX_SKILL_MARKDOWN_BYTES, readSkillBundle } from "./management.js";
+import { readBoundedSkillFile, readSkillBundle, validateSkillMarkdown } from "./management.js";
 import { scanSkills, type SkillDefinition } from "./scanner.js";
 
 export interface SkillSnapshot {
@@ -276,10 +318,7 @@ export function readSkillSnapshot(name: string, cwd: string): SkillSnapshot | nu
     revisionKind = "bundle";
     extraFiles = bundle.files.map((file) => file.path).filter((path) => path !== "SKILL.md");
   } catch {
-    if (statSync(skill.filePath).size > MAX_SKILL_MARKDOWN_BYTES) {
-      throw new Error(`Skill ${name}: SKILL.md exceeds ${MAX_SKILL_MARKDOWN_BYTES} bytes`);
-    }
-    markdown = readFileSync(skill.filePath, "utf8");
+    markdown = validateSkillMarkdown(readBoundedSkillFile(skill.filePath).toString("utf8"));
     revision = createHash("sha256").update(markdown).digest("hex");
     revisionKind = "markdown";
     extraFiles = null;
@@ -299,12 +338,12 @@ export function readSkillSnapshot(name: string, cwd: string): SkillSnapshot | nu
 }
 ```
 
-- [ ] **Step 4: 运行，确认通过**
+- [x] **Step 4: 运行，确认通过**
 
 Run: `bun test packages/core/src/skills/snapshot.test.ts`
 Expected: 5 pass, 0 fail。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/core/src/skills/snapshot.ts packages/core/src/skills/snapshot.test.ts
@@ -324,7 +363,7 @@ git commit -m "feat(core): add read-only skill snapshot"
 
 背景：`acquireLockOnPath`、`mutateJsonFile` 目前只在 `/internal`（`index.internal.ts:55`）；`resolveLLMConfigForTag` 只在根入口（`index.ts:93`）。能力包按 ESLint 规则只能 import `/extension`（`eslint.config.js:264-269`）。`index.extension.ts` 现有 46 条 `export` 语句，正好等于预算，所以必须同时调高预算并写明理由。
 
-- [ ] **Step 1: 写失败测试**：在 `extensionRuntimeContract` 数组末尾（`"logger",` 之后）加：
+- [x] **Step 1: 写失败测试**：在 `extensionRuntimeContract` 数组末尾（`"logger",` 之后）加：
 
 ```ts
   "readSkillSnapshot",
@@ -345,18 +384,18 @@ expect(extensionApi.resolveLLMConfigForTag).toBe(
 );
 ```
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/core/src/index.exports.test.ts`
 Expected: FAIL，`/extension must export readSkillSnapshot`。
 
-- [ ] **Step 3: 实现**：在 `index.extension.ts` 的 `export { SessionManager, codeShellHome } from "./session/session-manager.js";` 之后加：
+- [x] **Step 3: 实现**：在 `index.extension.ts` 的 `export { SessionManager, codeShellHome } from "./session/session-manager.js";` 之后加：
 
 ```ts
 // Optimization Lab host reads (docs/todo/optimization-lab-mvp.md §5.2). Each is
 // an existing implementation re-exported for capability packages: an exact
 // read-only Skill snapshot, the shared cross-process file lock, and the text
-// connection resolver. None grants Skill editing or credential access.
+// connection resolver. Skill editing remains on the host-only surface; connection credentials stay in the worker.
 export { readSkillSnapshot, type SkillSnapshot } from "./skills/snapshot.js";
 export { acquireLockOnPath, mutateJsonFile } from "./utils/file-mutex.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
@@ -371,7 +410,7 @@ export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
       "packages/core/src/index.extension.ts": 49,
 ```
 
-- [ ] **Step 4: 运行，确认通过**
+- [x] **Step 4: 运行，确认通过**
 
 ```bash
 bun test packages/core/src/index.exports.test.ts tests/architecture-budgets.test.ts
@@ -380,7 +419,7 @@ bun run --filter '@cjhyy/code-shell-core' typecheck
 
 Expected: 全部 PASS，typecheck 无错误。
 
-- [ ] **Step 5: 重建 core 并跑下游**（下游包测试吃的是 core 的 `dist`）
+- [x] **Step 5: 重建 core 并跑下游**（下游包测试吃的是 core 的 `dist`）
 
 ```bash
 bun run --filter '@cjhyy/code-shell-core' build
@@ -389,7 +428,7 @@ bun test packages/pet packages/coding
 
 Expected: 与改动前结果一致。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/core/src/index.extension.ts packages/core/src/index.exports.test.ts tests/architecture-budgets.test.ts
@@ -406,7 +445,7 @@ git commit -m "feat(core): expose skill snapshot, file lock and text resolver to
 - Modify: `packages/core/src/settings/feature-flags.ts`（`FEATURE_FLAGS` 对象末尾，`external_host_tools` 之后）
 - Test: `packages/core/src/settings/feature-flags.test.ts`（`featureFlagNames lists every known flag`，约在 `:36-46`）
 
-- [ ] **Step 1: 写失败测试**：把 `featureFlagNames` 用例的期望数组改为：
+- [x] **Step 1: 写失败测试**：把 `featureFlagNames` 用例的期望数组改为：
 
 ```ts
 expect([...featureFlagNames()].sort()).toEqual([
@@ -432,12 +471,12 @@ test("optimization_lab defaults OFF and can be switched on", () => {
 
 （如该文件尚未 import `isFeatureEnabled`，在顶部 import 中补上。）
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/core/src/settings/feature-flags.test.ts`
 Expected: FAIL，数组缺少 `optimization_lab`。
 
-- [ ] **Step 3: 实现**：在 `external_host_tools: {...},` 之后加：
+- [x] **Step 3: 实现**：在 `external_host_tools: {...},` 之后加：
 
 ```ts
   /**
@@ -451,12 +490,12 @@ Expected: FAIL，数组缺少 `optimization_lab`。
   },
 ```
 
-- [ ] **Step 4: 运行，确认通过**
+- [x] **Step 4: 运行，确认通过**
 
 Run: `bun test packages/core/src/settings/feature-flags.test.ts`
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/core/src/settings/feature-flags.ts packages/core/src/settings/feature-flags.test.ts
@@ -475,12 +514,12 @@ git commit -m "feat(core): add default-off optimization_lab feature flag"
 - Test: `packages/optimization-lab/src/index.exports.test.ts`、`src/module.test.ts`
 - Modify: 根 `tsconfig.json` 的 `paths`（在 `@cjhyy/code-shell-pet/disclosure` 那行之后）
 
-- [ ] **Step 1: 确认版本号**
+- [x] **Step 1: 确认版本号**
 
 Run: `node -p "require('./package.json').version"`
 Expected: 输出当前发布版本（调研时为 `0.9.22`）。下面 `package.json` 的 `version` 必须与之相同，否则 `scripts/verify-release-versions.ts` 会失败。
 
-- [ ] **Step 2: 写包清单与配置**
+- [x] **Step 2: 写包清单与配置**
 
 ```json
 {
@@ -565,7 +604,7 @@ preload = ["../core/test-setup.ts"]
       ],
 ```
 
-- [ ] **Step 3: 写失败测试**
+- [x] **Step 3: 写失败测试**
 
 ```ts
 // packages/optimization-lab/src/index.exports.test.ts
@@ -606,12 +645,12 @@ describe("createOptimizationLabModule", () => {
 });
 ```
 
-- [ ] **Step 4: 运行，确认失败**
+- [x] **Step 4: 运行，确认失败**
 
 Run: `bun test packages/optimization-lab`
 Expected: FAIL，`Cannot find module './index.capability.js'`。
 
-- [ ] **Step 5: 最小实现**
+- [x] **Step 5: 最小实现**
 
 ```ts
 // packages/optimization-lab/src/module.ts
@@ -635,7 +674,7 @@ export { createOptimizationLabModule } from "./module.js";
 export { createOptimizationLabModule } from "./module.js";
 ```
 
-- [ ] **Step 6: 安装并运行**
+- [x] **Step 6: 安装并运行**
 
 ```bash
 bun install
@@ -645,7 +684,7 @@ bun run --filter '@cjhyy/code-shell-capability-optimization-lab' typecheck
 
 Expected: `bun.lock` 新增 `packages/optimization-lab` 工作区条目；测试 3 pass；typecheck 无错误。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/optimization-lab tsconfig.json
@@ -663,7 +702,7 @@ git commit -m "feat(optimization-lab): scaffold private capability package"
 
 不改 `tests/composition-golden.test.ts` 和 `tests/fixtures/composition-golden.json`：golden 用它自己写死的模块列表，Desktop 按开关加载新模块不影响它，fixture 也禁止随手重生成。
 
-- [ ] **Step 1: 写测试**
+- [x] **Step 1: 写测试**
 
 ```ts
 // tests/optimization-lab-composition.test.ts
@@ -692,12 +731,12 @@ describe("optimization lab composition", () => {
 });
 ```
 
-- [ ] **Step 2: 运行**
+- [x] **Step 2: 运行**
 
 Run: `bun test tests/optimization-lab-composition.test.ts tests/composition-golden.test.ts`
 Expected: 两个文件都 PASS（golden 未受影响）。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write tests/optimization-lab-composition.test.ts
@@ -719,16 +758,16 @@ git commit -m "test: compose optimization lab with the desktop module set"
 - `tests/package-boundaries.test.ts:119-125`、`:199-202`
 - `CODESHELL.md:10`、`:121`、`:152`
 
-- [ ] **Step 1: 先跑守卫，确认失败**
+- [x] **Step 1: 先跑守卫，确认失败**
 
 ```bash
-bun scripts/verify-release-versions.ts
+bun scripts/verify-release-versions.ts 0.9.22
 bun test tests/package-boundaries.test.ts
 ```
 
 Expected: 两者都 FAIL，报 `packages/optimization-lab/package.json` 未在 `RELEASE_PACKAGES` 中声明。
 
-- [ ] **Step 2: `scripts/package-release-audit-config.ts`**：在 `packages/desktop` 那一项之后加：
+- [x] **Step 2: `scripts/package-release-audit-config.ts`**：在 `packages/desktop` 那一项之后加：
 
 ```ts
   {
@@ -738,7 +777,7 @@ Expected: 两者都 FAIL，报 `packages/optimization-lab/package.json` 未在 `
   },
 ```
 
-- [ ] **Step 3: `tests/package-boundaries.test.ts`**
+- [x] **Step 3: `tests/package-boundaries.test.ts`**
 
 能力包清单（约 `:119-125`）改为：
 
@@ -761,19 +800,19 @@ expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).t
 ]);
 ```
 
-- [ ] **Step 4: 根 `package.json` 的 `build`**：在 `bun run --filter '@cjhyy/code-shell-pet' build && ` 之后插入：
+- [x] **Step 4: 根 `package.json` 的 `build`**：在 `bun run --filter '@cjhyy/code-shell-pet' build && ` 之后插入：
 
 ```text
 bun run --filter '@cjhyy/code-shell-capability-optimization-lab' build &&
 ```
 
-- [ ] **Step 5: `Dockerfile`**：在 `COPY packages/link/package.json packages/link/package.json` 之后加：
+- [x] **Step 5: `Dockerfile`**：在 `COPY packages/link/package.json packages/link/package.json` 之后加：
 
 ```dockerfile
 COPY packages/optimization-lab/package.json packages/optimization-lab/package.json
 ```
 
-- [ ] **Step 6: `.github/workflows/ci.yml`**：`rest` 分片的 `paths` 末尾追加 `packages/optimization-lab`：
+- [x] **Step 6: `.github/workflows/ci.yml`**：`rest` 分片的 `paths` 末尾追加 `packages/optimization-lab`：
 
 ```yaml
 paths: >-
@@ -782,26 +821,26 @@ paths: >-
   packages/link packages/optimization-lab
 ```
 
-- [ ] **Step 7: `eslint.config.js`**
+- [x] **Step 7: `eslint.config.js`**
   - `workspacePackageRoots` 数组在 `"pet",` 之后加 `"optimization-lab",`。
   - `capabilityPackageRoots` 改为 `["coding", "arena", "pet", "optimization-lab"]`。
   - 启用 `custom-rules/codeshell-boundary-imports` 的 `files` 数组加一行 `"packages/optimization-lab/src/**/*.{ts,tsx}",`。
 
-- [ ] **Step 8: `CODESHELL.md`**：把 `:10`、`:152` 的包数量 11 改为 12；在 `:121` 的构建顺序注释中，把新包放在 pet 之后。
+- [x] **Step 8: `CODESHELL.md`**：把 `:10`、`:152` 的包数量 11 改为 12；在 `:121` 的构建顺序注释中，把新包放在 pet 之后。
 
-- [ ] **Step 9: 验证**
+- [x] **Step 9: 验证**
 
 ```bash
-bun scripts/verify-release-versions.ts
+bun scripts/verify-release-versions.ts 0.9.22
 bun test tests/package-boundaries.test.ts tests/publish-release-packages.test.ts
 ./node_modules/.bin/eslint packages/optimization-lab/src
 ```
 
 Expected: 全部通过。
 
-- [ ] **Step 10: 验证边界规则真的生效**：临时新建 `packages/optimization-lab/src/__probe__.ts`，内容为 `import "@cjhyy/code-shell-core/internal";`，运行 `./node_modules/.bin/eslint packages/optimization-lab/src/__probe__.ts`。Expected：报 `capabilityToCoreEntry`。确认后删除该文件。
+- [x] **Step 10: 验证边界规则真的生效**：临时新建 `packages/optimization-lab/src/__probe__.ts`，内容为 `import "@cjhyy/code-shell-core/internal";`，运行 `./node_modules/.bin/eslint packages/optimization-lab/src/__probe__.ts`。Expected：报 `capabilityToCoreEntry`。确认后删除该文件。
 
-- [ ] **Step 11: 提交**
+- [x] **Step 11: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write package.json eslint.config.js scripts/package-release-audit-config.ts tests/package-boundaries.test.ts .github/workflows/ci.yml CODESHELL.md
@@ -821,7 +860,7 @@ git commit -m "build: register the private optimization lab package"
 
 背景：Desktop 通过 `import.meta.resolve` 在运行时引用能力包，所以新包必须是运行时 `dependency`，并且要物化到 `node_modules`。新包直接依赖 zod，要和 arena 一样单独安装生产依赖。
 
-- [ ] **Step 1: 先改依赖，确认守卫失败**：在 `packages/desktop/package.json` 的 `dependencies` 里、`"@cjhyy/code-shell-capability-coding"` 之后加：
+- [x] **Step 1: 先改依赖，确认守卫失败**：在 `packages/desktop/package.json` 的 `dependencies` 里、`"@cjhyy/code-shell-capability-coding"` 之后加：
 
 ```json
     "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
@@ -830,7 +869,7 @@ git commit -m "build: register the private optimization lab package"
 Run: `bun install && bun test packages/desktop/scripts/build-workspace-dependencies.test.ts`
 Expected: FAIL，构建顺序表与 desktop 的 workspace 依赖不一致。
 
-- [ ] **Step 2: 构建顺序**：在 `build-workspace-dependencies.ts` 的 pet 条目之后加：
+- [x] **Step 2: 构建顺序**：在 `build-workspace-dependencies.ts` 的 pet 条目之后加：
 
 ```ts
   {
@@ -843,7 +882,7 @@ Expected: FAIL，构建顺序表与 desktop 的 workspace 依赖不一致。
 Run: `bun test packages/desktop/scripts/build-workspace-dependencies.test.ts`
 Expected: PASS。
 
-- [ ] **Step 3: `predist.ts`**，逐处修改：
+- [x] **Step 3: `predist.ts`**，逐处修改：
 
 常量区（`petTarget` 之后）：
 
@@ -887,7 +926,7 @@ installProductionDeps(optimizationLabSrc, optimizationLabTarget, "Optimization L
 
 日志改为 `materialized Link + core + coding + Arena + Pet + Optimization Lab into node_modules (LICENSE/README excluded)`。
 
-- [ ] **Step 4: 验证**
+- [x] **Step 4: 验证**
 
 ```bash
 bun test packages/desktop/scripts
@@ -898,7 +937,7 @@ Expected: PASS；`packages/optimization-lab/dist/index.capability.js` 存在。
 
 完整的 `predist` 会构建全部包和 Desktop 产物，耗时较长：放到 Task 12 统一跑一次。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/desktop/package.json packages/desktop/scripts/build-workspace-dependencies.ts packages/desktop/scripts/predist.ts
@@ -918,7 +957,7 @@ git commit -m "build(desktop): package the optimization lab capability"
 
 背景：`buildEnv` 在每次拉起 worker 时调用，所以开关切换会在下一次拉起 worker 时生效。新包只在开关打开时才 `import.meta.resolve`，这样开关关闭时，即使包缺失也不会影响 worker。Desktop main 目前按用户级设置读取开关（`main/index.ts:1524-1530`），这里保持同样的口径。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```ts
 // packages/desktop/src/main/capability-modules-env.test.ts
@@ -948,12 +987,12 @@ describe("composeCapabilityModulesEnv", () => {
 });
 ```
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/desktop/src/main/capability-modules-env.test.ts`
 Expected: FAIL，找不到模块。
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 ```ts
 // packages/desktop/src/main/capability-modules-env.ts
@@ -1000,7 +1039,7 @@ export function readUserFeatureFlags(cwd: string): FeatureFlagOverrides {
 }
 ```
 
-- [ ] **Step 4: 接入 `agent-bridge.ts`**：顶部 import 区加：
+- [x] **Step 4: 接入 `agent-bridge.ts`**：顶部 import 区加：
 
 ```ts
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
@@ -1016,7 +1055,7 @@ import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-
         ),
 ```
 
-- [ ] **Step 5: 验证**
+- [x] **Step 5: 验证**
 
 ```bash
 bun test packages/desktop/src/main/capability-modules-env.test.ts tests/architecture-budgets.test.ts
@@ -1025,7 +1064,7 @@ bun run --filter '@cjhyy/code-shell-desktop' typecheck
 
 Expected: PASS；typecheck 无错误。如果 `architecture-budgets` 对 `agent-bridge.ts` 有行数预算并因此失败：本改动净增约 2 行，按该测试的惯例调高预算并注明原因。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/desktop/src/main/capability-modules-env.ts packages/desktop/src/main/capability-modules-env.test.ts packages/desktop/src/main/agent-bridge.ts
@@ -1043,7 +1082,7 @@ git commit -m "feat(desktop): load the optimization lab module behind its featur
 - Create: `packages/optimization-lab/src/contracts/verdict-policy.ts`
 - Test: `packages/optimization-lab/src/contracts/canonical-json.test.ts`、`verdict-policy.test.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```ts
 // packages/optimization-lab/src/contracts/canonical-json.test.ts
@@ -1088,12 +1127,12 @@ describe("verdict policy", () => {
 });
 ```
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/optimization-lab/src/contracts`
 Expected: FAIL，找不到模块。
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 ```ts
 // packages/optimization-lab/src/contracts/canonical-json.ts
@@ -1144,12 +1183,12 @@ export const VERDICT_POLICY = {
 } as const;
 ```
 
-- [ ] **Step 4: 运行，确认通过**
+- [x] **Step 4: 运行，确认通过**
 
 Run: `bun test packages/optimization-lab/src/contracts`
 Expected: 4 pass。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/optimization-lab/src/contracts
@@ -1169,7 +1208,7 @@ git commit -m "feat(optimization-lab): add canonical hashing and verdict policy 
 
 方案 §6.2 的字段在这里落地。首期只有“一类任务”，所以 `taskFamily` 放在数据集层，不放在每个样本上。硬断言只提供确定性检查：`contains`、`not_contains`、`json_field_equals`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```ts
 // packages/optimization-lab/src/contracts/dataset.test.ts
@@ -1281,12 +1320,12 @@ describe("validateDataset", () => {
 });
 ```
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/optimization-lab/src/contracts/dataset.test.ts`
 Expected: FAIL，找不到模块。
 
-- [ ] **Step 3: 实现 schema**
+- [x] **Step 3: 实现 schema**
 
 ```ts
 // packages/optimization-lab/src/contracts/eval-case.ts
@@ -1352,7 +1391,7 @@ export type EvalCase = z.infer<typeof EvalCaseSchema>;
 export type DatasetInput = z.infer<typeof DatasetInputSchema>;
 ```
 
-- [ ] **Step 4: 实现校验**
+- [x] **Step 4: 实现校验**
 
 ```ts
 // packages/optimization-lab/src/contracts/dataset.ts
@@ -1484,12 +1523,12 @@ export function validateDataset(raw: unknown): DatasetValidation {
 }
 ```
 
-- [ ] **Step 5: 运行，确认通过**
+- [x] **Step 5: 运行，确认通过**
 
 Run: `bun test packages/optimization-lab/src/contracts/dataset.test.ts`
 Expected: 7 pass。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/optimization-lab/src/contracts
@@ -1511,7 +1550,7 @@ git commit -m "feat(optimization-lab): validate evaluation datasets"
 
 冻结后的清单不可变：同一内容永远得到同一 `datasetHash`，已存在的清单不覆写。写入用 Task 2 导出的 `mutateJsonFile`（锁内重读 + 临时文件 rename）。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```ts
 // packages/optimization-lab/src/store-paths.test.ts
@@ -1642,12 +1681,12 @@ describe("optimization lab queries", () => {
 });
 ```
 
-- [ ] **Step 2: 运行，确认失败**
+- [x] **Step 2: 运行，确认失败**
 
 Run: `bun test packages/optimization-lab/src/store-paths.test.ts packages/optimization-lab/src/queries.test.ts`
 Expected: FAIL，找不到模块。
 
-- [ ] **Step 3: 实现存储路径**
+- [x] **Step 3: 实现存储路径**
 
 ```ts
 // packages/optimization-lab/src/store-paths.ts
@@ -1667,7 +1706,7 @@ export function labRoot(cwd: string): string {
 }
 ```
 
-- [ ] **Step 4: 实现冻结**：在 `contracts/dataset.ts` 顶部 import 区补上：
+- [x] **Step 4: 实现冻结**：在 `contracts/dataset.ts` 顶部 import 区补上：
 
 ```ts
 import { join } from "node:path";
@@ -1758,7 +1797,7 @@ export function freezeDataset(
 }
 ```
 
-- [ ] **Step 5: 实现 queries 并挂到模块**
+- [x] **Step 5: 实现 queries 并挂到模块**
 
 ```ts
 // packages/optimization-lab/src/queries.ts
@@ -1823,7 +1862,7 @@ expect(Object.keys(rootApi).sort()).toEqual([
 ]);
 ```
 
-- [ ] **Step 6: 运行，确认通过**
+- [x] **Step 6: 运行，确认通过**
 
 ```bash
 bun test packages/optimization-lab tests/optimization-lab-composition.test.ts
@@ -1833,7 +1872,7 @@ bun run --filter '@cjhyy/code-shell-capability-optimization-lab' typecheck
 
 Expected: 全部 PASS；typecheck、eslint 无错误。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 ./node_modules/.bin/prettier --write packages/optimization-lab/src
@@ -1845,39 +1884,30 @@ git commit -m "feat(optimization-lab): freeze datasets and expose dataset querie
 
 ## Task 12：整体验证与交付
 
-- [ ] **Step 1: 全量门禁**
+- [x] **Step 1: 全量门禁**
 
 ```bash
 bun run typecheck
 bun test packages tests
-bun scripts/verify-release-versions.ts
+bun scripts/verify-release-versions.ts 0.9.22
 ```
 
-Expected: 全部通过。有失败时先在 `main` 的 worktree 上复现，确认是否本分支引入。
+Expected: 全部通过；若单进程运行器出现原生崩溃，按上方“最终验证”的完整 CI 分组覆盖，并如实记录。断言失败不能通过分组或删测试掩盖。
 
-- [ ] **Step 2: Desktop 打包验证**
+- [x] **Step 2: Desktop 打包验证**
 
 Run: `bun run --cwd packages/desktop predist`
 Expected: 结尾输出 `materialized Link + core + coding + Arena + Pet + Optimization Lab into node_modules`，且 `verifyMaterializedCapabilities` 的 import 不报错。
 
-- [ ] **Step 3: 开关关闭时的真机检查**：用默认设置启动 Desktop（`bun run dev:desktop`），新建会话并发一条消息。Expected：会话正常；`~/.code-shell/optimization-lab` 不存在。
+- [x] **Step 3: 编译后 worker 检查**：运行 `node scripts/smoke-optimization-lab.mjs --workspace`。使用临时 HOME、项目和假模型端点启动真实 worker；开关关闭对应模块列表中没有实验室，validate/freeze 查询都应返回 Unknown query，且实验目录不存在。
 
-- [ ] **Step 4: 开关打开时的真机检查**：在用户设置 `~/.code-shell/settings.json` 中加 `"featureFlags": { "optimization_lab": true }`，重启 Desktop 并发一条消息拉起 worker。在 Desktop 开发者工具的控制台执行：
+- [x] **Step 4: 打包产物与重启检查**：Task 12 Step 2 完成后运行 `node scripts/smoke-optimization-lab.mjs`（默认严格要求物化后的包）。开启模块，验证 6 个样本并冻结；重启 worker 后以逆序数据再冻结，检查 hash、完整 manifest、文件字节和 mtime 均未变化。假模型端点请求数必须为 0。用户级开关与项目/本地设置相反时的选择由 `capability-modules-env.test.ts` 的隔离进程测试覆盖。此项替代原人工改用户设置并发送模型消息的步骤；不声称完成尚未建设的授权页或真实实验 UI 验收。
 
-```js
-await window.codeshell.rpc?.("agent/query", {
-  type: "optimization_lab_validate_dataset",
-  dataset: {},
-});
-```
+- [x] **Step 5: 更新方案状态**：在 `docs/todo/optimization-lab-mvp.md` 顶部状态行注明“计划 A（地基）已实施”，并附提交范围；`TODO.md` 对应条目同步。
 
-如果 `window.codeshell` 没有暴露通用 `rpc`，改为在 main 进程日志里确认 worker 启动参数中的 `CODE_SHELL_CAPABILITY_MODULES` 含 `#createOptimizationLabModule`。Expected：返回 `{ type, data: { ok: false, issues: [...] } }`，或日志中能看到该模块。检查完把设置改回。
+- [x] **Step 6: 集成**：按 CODESHELL.md 分支规则，刷新 `origin/main`、在任务分支上解决冲突、重跑 Step 1，然后快进或普通合并进 `main`。推送前需负责人确认。
 
-- [ ] **Step 5: 更新方案状态**：在 `docs/todo/optimization-lab-mvp.md` 顶部状态行注明“计划 A（地基）已实施”，并附提交范围；`TODO.md` 对应条目同步。
-
-- [ ] **Step 6: 集成**：按 CODESHELL.md 分支规则，刷新 `origin/main`、在任务分支上解决冲突、重跑 Step 1，然后快进或普通合并进 `main`。推送前需负责人确认。
-
-- [ ] **Step 7: 写计划 B**：以本计划落地的类型（`DatasetManifest`、`EvalCase`、`labRoot`）为基础，写 `docs/superpowers/plans/<date>-optimization-lab-engine.md`。
+- [x] **Step 7: 写计划 B**：以本计划落地的类型（`DatasetManifest`、`EvalCase`、`labRoot`）为基础，写 `docs/superpowers/plans/<date>-optimization-lab-engine.md`。
 
 ---
 

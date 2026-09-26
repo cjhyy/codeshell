@@ -1,6 +1,6 @@
 # 优化实验室：个人先用技术方案
 
-日期：2026-09-22；2026-09-23 按评审修订（改为 CodeShell 内置能力包、P1 拆为最小实验 P1a 与界面 P1b、推理 Token 上限口径、小样本门槛定位、开发集过拟合提示、人工判分检查点与盲评模板、执行时间账本与授权到期时间、可恢复状态、P2 工作量）。状态：待实现；本文是技术方案，不代表已运行优化实验、获得效果或完成预算授权。
+日期：2026-09-22；2026-09-23 按评审修订（改为 CodeShell 内置能力包、P1 拆为最小实验 P1a 与界面 P1b、推理 Token 上限口径、小样本门槛定位、开发集过拟合提示、人工判分检查点与盲评模板、执行时间账本与授权到期时间、可恢复状态、P2 工作量）。状态：计划 A（地基）已实施，提交范围 `8be20e23..55fc29ff`（含起点）；[计划 B](../superpowers/plans/2026-09-26-optimization-lab-engine.md) 已写、待实施，P1a 实验引擎及授权页未完成。本文不代表已运行优化实验、获得效果或完成预算授权。
 
 关联：[优化 Agent 总体设计](agent-optimization-agent.md)、[通用评测契约](agent-evals-platforms-and-adapters.md)、[现有评测说明](../../evals/harness/README.md)、[AgentModule 组装设计](agent-module-resolved-composition-design.md)。本文收敛总体设计的首期范围；首期范围冲突时以本文为准。
 
@@ -81,7 +81,7 @@
 
 `CODESHELL.md` 的 Panel feature ownership 约束的是 Panel 功能；本功能不做成 Panel 的理由是系统边界：它要读取运行历史和 Skill revision，P2 还要介入会话构造、模型请求入口和子任务作用域。做成 Panel 时，这些都要先给 Host 开专门接口才能跨越边界；内置后运行记录和 Skill 由 CodeShell 自己访问，只需把少数能力导出到 `/extension`（§5.2）。代价是业务逻辑变更随 CodeShell 发版。
 
-吸取 arena 的教训（2026-09-23 起已不在宿主中加载：无人使用，却每次发版都要 bump、构建、类型检查和审计）：
+吸取 Arena 维护成本的教训（移除工作另在任务分支；本次集成基线的宿主仍加载 Arena，不能把未合入改动当作主线事实）：
 
 - 模块由新增 feature flag 控制，默认关闭；关闭时不注册到组装根，界面无入口，不创建工作目录。
 - 包标记为 private，不进入 npm 发布流水线；Desktop 打包脚本与 package boundaries 测试同步登记。
@@ -116,13 +116,13 @@ P1a 只实现最小切片：`DatasetBuilder` 仅校验并冻结手写 JSON 样�
 
 ### 5.2 Core 需补的能力
 
-以下为**拟议能力，不是已存在的方法名或 API 承诺**。每项都对应一个已核实的缺口：
+P1a 的三项导出已由计划 A 实施（只读快照、共享文件锁、文本连接解析）；P2 项仍是拟议能力，不是已存在的 API 承诺。下表保留原缺口与约束：
 
 | 阶段 | 能力                    | 已核实的缺口                                                                                                          | 边界                                                                                                                                                                                             |
 | ---- | ----------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | P1a  | 只读 Skill 快照导出     | Skill 管理只在 `core/internal/skills`，能力包只能 import `/extension`                                                 | 按 Skill ID 返回正文、元数据、revision 与 hash；只读，不含编辑、安装或扫描目录写入                                                                                                               |
 | P1a  | 跨进程文件锁导出        | `acquireLockOnPath` / `mutateJsonFile` 只在 `/internal`；Desktop、TUI、server 可能各起 agent server，账本须跨进程单写 | 原样复用现有实现，不另写锁。该锁是同步的（`Atomics.wait`，默认最多等 30 秒，10 秒未释放视为过期），只能用于短临界区；实验单写者用租约记录（owner、心跳时间）实现，每次写账本时短暂加锁并校验租约 |
-| P1a  | 文本连接解析导出        | query handler 只拿到参数，拿不到 Engine 的 `modelPool`；`resolveLLMConfigForTag` 只在根入口                           | 原样导出现有解析函数，按用户选中的连接 id 得到 `LLMConfig`；凭据不离开 agent server 进程                                                                                                         |
+| P1a  | 文本连接解析导出        | query handler 只拿到参数，拿不到 Engine 的 `modelPool`；`resolveLLMConfigForTag` 只在根入口                           | 原样导出现有解析函数；该函数允许回退，B 必须先按选中连接过滤 settings，缺失时拒绝而非换用默认连接。凭据不离开 agent server 进程                                                                  |
 | P2   | 模型请求准入            | hook 事件没有“模型请求前”，试跑会话中 Engine 自行发出的请求无法入账                                                   | 请求发出前同步预留、失败即拒绝，完成后回调结算；只做准入，不内置预算策略                                                                                                                         |
 | P2   | 隔离试跑会话            | query handler 只拿到参数，`ProtocolObserverHost` 不能创建会话或 Engine                                                | 以隐藏 session kind 启动，装载指定指令快照与 behavior profile，关闭 Memory/dream/hooks                                                                                                           |
 | P2   | 指令快照与 binding 解析 | 现有 Skill 工具读取 scanner 当前内容                                                                                  | 会话构造时解析 binding 并冻结；不接受任意路径写入或候选自行激活                                                                                                                                  |
