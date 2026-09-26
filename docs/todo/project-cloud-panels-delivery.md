@@ -2999,3 +2999,41 @@ v1 仍可验证，但不能冒充完整三仓候选。没有自动安装、授�
 业务与长任务恢复、跨版本数据迁移和升级回滚、真实模型与第三方账号、目标服务器
 部署及恢复演练。设备目录／安全中继仍待完成，手机 Panel 交互后置。公共依赖仍是
 0.9.22，私有候选不等于正式发布；缺少真实服务配置不阻止剩余代码工作。
+
+
+### 增量 74：六个实际候选包的云端安装与恢复（2026-09-26）
+
+此前完整候选包含实际 Panel，但双项目容器执行只安装示例 Panel。本轮 Host 任务
+`codex/server/installed-panel-lifecycle` 将候选六包传给现有真实 Docker 验收，
+通过容器内公开 SDK 安装到两个独立项目，再走认证 HTTP 绑定、选择和存储接口。
+五个声明 storage 的业务包写入各自项目数据；Starter 未增加或绕过存储权限。
+
+逐包在容器副本的入口 HTML 添加测试注释：旧审阅凭据必须拒绝更新，已安装摘要
+保持；重新审阅后目录包可以更新，但项目仍选择原摘要。测试刻意保持相同版本号，
+验证实际内容摘要决定包身份。HTTP 历史列出两份包，审阅切换后新入口包含标记，
+旧授权失效；回退后使用原入口、原数据，另一项目仍保留原包和独立数据。最后删除
+安装来源目录，停止／启动项目，六个原摘要和存储数据仍可恢复。
+
+这些是包生命周期和 Host 数据保存验收；没有启动六个 Panel 的全部浏览器业务，也
+没有验证真实文档 schema 升降级、真实模型或新增权限交互。更新只触及临时容器副本，
+不改原候选或用户本机安装目录。新增入口为 `scripts/smoke-candidate-panel-lifecycle.mjs`，
+由 `smoke-services-cloud-entry --panels` 自动串入既有容器流程。
+
+本地 server 构建、五 tarball 独立移位安装、六包预检、60 项服务测试与受控浏览器
+OAuth 通过；本地 Docker 构建在 npm 下载 webidl-conversions 时 ECONNRESET，未到
+新断言。保留日志 `/tmp/installed-panel-lifecycle-docker.log`，未把该结果标为通过。
+转 Linux 同一提交验收，没有修改网络设置或放宽检查。
+
+Host 最终 `a36caf75b951c216f9cd2cb919aa1a3a61dce7a8` 的完整 CI 36242773655
+全部通过，包括 Electron／Windows。Linux 候选
+[36242780285](https://github.com/cjhyy/codeshell-services/actions/runs/36242780285)
+成功，服务 `f06d687d3aa8b6b1a4c6009ff6b86e487dcf3bd9`、Panels
+`430a72e1200c562cb619974be33d7440ff1d4177`。日志
+`/tmp/installed-panel-lifecycle-ci.log` 明确记录六包安装、受控更新／回退和重启
+三条 PASS；导出后的原始包预检、归档与镜像加载也通过。私有完整 artifact
+10906017588（452572946 bytes），证据 artifact 10906582041。
+
+[Host PR #19](https://github.com/cjhyy/codeshell/pull/19) 已合入
+`bc4170122cd01c8021d3fb9e9d6a6c8ea1493269`，未公开发布。整体 goal 继续 active：
+完整界面安装／升级／恢复、业务文档迁移和长任务恢复、真实服务商、正式版本与目标
+部署／恢复演练以及设备目录／安全中继仍未完成；手机 Panel 交互继续后置。
