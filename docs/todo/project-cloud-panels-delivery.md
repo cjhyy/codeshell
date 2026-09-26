@@ -2224,3 +2224,41 @@ Panel PR #26 的 PR CI 35975873439 全部通过；同一 head `e9702a3` 的 push
 界面保存状态已截图核对。新 PR CI 35977959393 与 push CI 35977943164 正在运行，
 尚未合入、未发布 Panel 版本。整体 goal 保持 active，其他业务、升级恢复、真实部署、
 设备中继与后置手机操作验收继续保留。
+
+### 增量 55：Panel 基线合入与视频解码帧修复复验（2026-09-26）
+
+Panel [PR #26](https://github.com/cjhyy/codeshell-panel-apps/pull/26) 已合入
+`a301c4664d6f00600894044f76695b2642cefa13`。Quant 回测保护 PR #27 已改以 main 为
+基线，但尚未合入；它的 Quant 检查通过，组合版本仍被 Video Studio 的 Linux 媒体与
+安装包检查阻止。不能把业务检查通过等同整个组合版本可交付。
+
+Video Studio 独立任务分支为 `codex/video-studio/decoded-frame-readiness`，
+[PR #28](https://github.com/cjhyy/codeshell-panel-apps/pull/28) 保持 draft。
+首版 `b62301e` 取消呈现回调的强制等待后，本地检查通过，但 Linux 实际导出出现
+黑帧及 compound/unpack 画面差异；同时发现源 README 改动后遗漏重新生成安装包。
+两项都没有绕过验收或合入。
+
+后续提交 `17c5abc855a0e79a6a09c9007885cf1c554b51d3` 在 seek 完成后冻结
+`VideoFrame`，以帧时间范围核验实际解码内容；容器时长取整／缺失时可用匹配的呈现
+回执。普通暂停／同帧重复寻址不依赖额外呈现回调；旧帧候选继续在原截止时间内等待，
+替换、取消、超时与关闭释放冻结帧和轮询。源文件、README 和完整生成包一起提交。
+
+- 20 项实际浏览器取帧测试通过，含模拟滞留旧帧、真实 MP4/WebM、缺失回调、时长
+  取整／缺失、超时后不继续轮询、实例复用和帧资源释放；日志
+  `/tmp/video-frozen-pool-final.log`。
+- 完整实际媒体套件 180 项通过、零跳过；含此前 Linux 失败的多机位画面／PCM 与
+  NTSC compound/unpack。之后新增四项取帧回归单独通过；日志
+  `/tmp/video-frozen-media.log`。本机通过不能替代 Linux 结果。
+- 类型、构建、确定性产物、完整 `npm run check` 和 `npm run validate` 通过，保留既有
+  可选语音环境跳过项；日志 `/tmp/video-frozen-check.log`、
+  `/tmp/video-frozen-validate.log`。实际 Host 存储的完整 UI 仍在运行，日志
+  `/tmp/video-frozen-ui.log`。
+- 当前提交的 Linux PR CI 为
+  [36220353371](https://github.com/cjhyy/codeshell-panel-apps/actions/runs/36220353371)，
+  push CI 为 36220350511，已确认运行中。先验收此提交，再将最终可接受修复合入
+  Quant 分支并验收组合。旧失败运行没有重启，不作为新版本证据。
+
+整体 goal 保持未完成：配置损坏与完整升级恢复、其余 Panel 的持久化／后台任务接入、
+真实 Link／模型／服务商验收、三仓正式版本交付、目标服务器部署及跨版本恢复回滚
+仍需完成。手机界面后置；设备目录、中继和通知仍独立保留。已准备的配置恢复任务
+工作树尚未实现，不计入已完成内容。
