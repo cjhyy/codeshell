@@ -373,3 +373,13 @@ export {
 } from "./updater.js";
 
 export { resolveInstance, type ResolvedInstance } from "./model-catalog/resolve.js";
+
+// Trusted administrator recovery; deliberately absent from protocol config setters.
+export {
+  inspectProjectSettingsRecovery,
+  repairProjectSettings,
+  restoreProjectSettings,
+  type RecoveryScope,
+  type SettingsRecoveryInspection,
+  type SettingsRecoveryResult,
+} from "./settings/recovery.js";
