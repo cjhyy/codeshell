@@ -3232,3 +3232,46 @@ PR #42 已合入 `b1ce6c08a9b40688b4ebc8d4e8243e913336bb96`，未公开发布。
 代理或目标部署验收；三仓候选需后续重新构建才包含本变更。整体 goal 保持 active，
 真实模型／授权、六 Panel 剩余业务与任务恢复、正式发布与目标部署／恢复演练、设备
 目录和安全中继仍未完成；手机 Panel 操作优化后置。
+
+
+### 增量 80：真实云端发现并修复求职草稿初始化失败（2026-09-27）
+
+Host 隔离任务 `codex/server/cloud-job-hunt-recovery` 正在为三仓候选增加真实求职
+Panel 界面验收。实际的 Cloud 控制进程、双 Docker 项目、生产 Web 工作台、安装包
+与权限接口均未替换。首轮六包安装／版本生命周期通过后，求职页面因不透明来源
+iframe 禁止访问 `localStorage` 而停止初始化；原始日志
+`/tmp/cloud-job-hunt-smoke.log` 与临时证据目录
+`/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-project-smoke-jymYSt/`
+记录实际报错和截图。
+
+Panel 分支 `codex/job-hunt-hq-sandbox-drafts` 保留 Host 的项目草稿保存。仅在浏览器
+存储明确报 SecurityError 时改用页面生命周期的临时副本，供同一页面项目切换和
+草稿导出；界面明确提示临时副本关闭后不保留。持久浏览器存储正常时行为不变，
+损坏记录／其他异常仍阻止覆盖；未放宽 Host 的同源或网络隔离。保存完成提示等待
+最新输入的 Host 确认，较早写入的迟到响应不能把后续输入误报为已保存。
+
+对应真实问题的浏览器回归修复前失败；修复后包括立即切换项目／最新保存确认在内
+的 72 项、本地完整检查和 54 文件安装包预检通过。提交
+`4c3a2088e073abfe2c3a8a0dcc3991296713e19b` 的
+[Panel PR #43](https://github.com/cjhyy/codeshell-panel-apps/pull/43) 已附到任务；
+CI 36253790347／36253833574 全部六类检查通过，已合入
+`5ee9bc6999e771d3dbca9c82bbe5464a946a0292`。证据为
+`/tmp/job-hunt-sandbox-{before,after,guard,check,preflight}.log` 和
+`/tmp/job-hunt-sandbox-ci-package.log`，未公开发布。
+
+真实云端复验已证明修复后页面能打开并完成旧根升级；大样本升级和编辑保存也已
+通过对应步骤。前一次样本经正常整理后小于分片阈值，后改用既有分片测试中的
+150 条样本，保留分片断言。另一轮人工种入旧草稿与页面自动保存竞争，现将测试
+准备写入安排在预览完成后，保留条件写入断言。完整导出／恢复／重启验收尚未通过，
+Host 新脚本仍是该独立工作树中的未提交工作；不能据此标记云端业务完整完成。
+
+本机新基础镜像构建因 Debian HTTP 下载连接失败中止。调试镜像复用已有系统
+依赖层，但重新安装当前锁定的程序依赖并构建当前 Host；使用不可变镜像 ID
+`sha256:224993fd7850af7d0dd838b36efcfaa3d9bdbca5f303b2d2f0f720dc15d01269`。
+本机 Docker 列表仍有标签但标签 inspect 失败，ID inspect 成功；没有重建或删除
+用户镜像来绕过。此镜像仅供调试，后续仍须运行实际安装包的完整 Linux 候选构建。
+源包暂存 `/tmp/cloud-job-hunt-stage-tNaeez/panels` 来自准确提交 `4c3a2088`；
+当前复验日志 `/tmp/cloud-job-hunt-smoke-v5.log`，运行状态需实时核对。
+
+整体 goal 保持 active：完整云端业务、真实模型与 Link 授权、三仓正式交付与目标
+部署／恢复演练、设备目录／安全中继仍待完成，手机交互优化后置。
