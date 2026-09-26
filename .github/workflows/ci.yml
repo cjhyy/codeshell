@@ -123,6 +123,15 @@ jobs:
           sudo apt-get install --no-install-recommends -y ffmpeg
           ffmpeg -version
           ffprobe -version
+      # Use the browser revision selected by the frozen Playwright dependency.
+      # The runner's /usr/bin/chromium has repeatedly stalled at --version or
+      # before exposing its debugging endpoint, before test assertions run.
+      - name: install locked desktop test browser
+        if: matrix.shard == 'desktop'
+        working-directory: packages/desktop
+        run: |
+          node node_modules/playwright/cli.js install --with-deps chromium
+          node -e "const fs = require('node:fs'); const browser = require('playwright').chromium.executablePath(); fs.accessSync(browser, fs.constants.X_OK); fs.appendFileSync(process.env.GITHUB_ENV, 'CHROME_PATH=' + browser + '\n');"
       # Windows and other focused jobs still list literal paths. Keep their
       # references checked even though this Linux job now runs the full suite.
       - name: verify workflow test paths exist
