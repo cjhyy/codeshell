@@ -1152,9 +1152,11 @@ function installedPanelApp(
   };
 }
 
-export async function listInstalledPanelApps(): Promise<InstalledPanelApp[]> {
+export async function listInstalledPanelApps(appId?: string): Promise<InstalledPanelApp[]> {
+  if (appId !== undefined) assertSafePanelAppId(appId);
   const output: InstalledPanelApp[] = [];
   for (const record of await readInstalledPanelAppsRegistry()) {
+    if (appId !== undefined && record.id !== appId) continue;
     try {
       const root = await realpath(panelAppInstallDir(record.id));
       const inspected = await inspectPanelAppSource(root);

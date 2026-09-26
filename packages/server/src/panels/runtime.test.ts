@@ -118,6 +118,7 @@ async function fixture(
     now: 1000,
     owners: new Set(["owner-a", "owner-b"]),
     beforeSnapshot: undefined as (() => Promise<void>) | undefined,
+    snapshotAppIds: [] as Array<string | undefined>,
   };
   const ownerOf = (request: IncomingMessage) =>
     /(?:^|;\s*)session=([^;]+)/.exec(request.headers.cookie ?? "")?.[1];
@@ -135,7 +136,8 @@ async function fixture(
     ownerId: async (request) => ownerOf(request),
     isAuthorized: async (request) => state.owners.has(ownerOf(request) ?? ""),
     listInstalled: async () => (state.present ? [structuredClone(app)] : []),
-    snapshot: async (): Promise<PanelSnapshot> => {
+    snapshot: async (appId): Promise<PanelSnapshot> => {
+      state.snapshotAppIds.push(appId);
       await state.beforeSnapshot?.();
       const {
         installPath: _installPath,
@@ -212,6 +214,20 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("each call rechecks only its selected Panel and immediately observes revocation", async () => {
+    const f = await fixture({ permissions: ["context.workspace"] });
+    const grant = await f.prepare();
+    const before = f.state.snapshotAppIds.length;
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "context.get" })).status,
+    ).toBe(200);
+    expect(f.state.snapshotAppIds.length).toBeGreaterThan(before);
+    expect(f.state.snapshotAppIds.every((id) => id === f.app.id)).toBe(true);
+    f.state.enabled = false;
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "context.get" })).status,
+    ).toBe(410);
+  });
   test("automation capabilities require a live Host, both context permissions and a selected task", async () => {
     const permissions: InstalledPanelApp["permissions"] = [
       "automations.manage",
