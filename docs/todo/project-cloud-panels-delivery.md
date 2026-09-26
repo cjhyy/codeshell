@@ -3310,7 +3310,10 @@ lint 通过。真实 Docker 脚本完整通过：`/tmp/cloud-job-hunt-smoke-v6.l
 主仓 CI 36255437397 首轮仅桌面 Puppeteer 启动阶段等待 WS 端点 20 秒超时，
 没有运行测试断言；其余八类检查通过。诊断记录 Chromium 153.0.8010.0 与 D-Bus
 错误，日志 `/tmp/cloud-job-hunt-ci-desktop-failure.log`；已针对失败项重跑，
-未放宽超时或测试断言，结果仍待确认。
+未放宽超时或测试断言。第二次运行现已全部九类 CI 通过；桌面 job
+108442080234 的日志 `/tmp/cloud-job-hunt-ci-desktop-retry.log` 确认 4391 项
+桌面分片、1 项 Chromium、5 项 Playwright 和 14 项 Puppeteer 全部通过。
+首次启动超时仍保留为已知 CI 稳定性问题，不能据重跑通过宣称根因已修复。
 
 三仓 Linux 候选运行 36255443999 正在执行，锁定 Host `c2e0e27e`、Panel
 `5ee9bc6999e771d3dbca9c82bbe5464a946a0292` 及 services main。需要验收完成
