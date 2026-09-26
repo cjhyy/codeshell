@@ -183,9 +183,16 @@ export async function verifyCloudVideoRecovery({
       assert.deepEqual(errors, [], "Installed Video must not raise page errors");
     } catch (error) {
       await writeFile(join(scratch, "video-bridge-timings.json"), JSON.stringify(bridgeTimings));
+      await writeFile(
+        join(evidenceDir, "cloud-video-bridge-timings.json"),
+        JSON.stringify(bridgeTimings),
+      );
       for (const [index, page] of pages.entries()) {
         await page
           .screenshot({ path: join(scratch, `video-error-${index}.png`), fullPage: true })
+          .catch(() => {});
+        await page
+          .screenshot({ path: join(evidenceDir, `cloud-video-error-${index}.png`), fullPage: true })
           .catch(() => {});
         for (const [frameIndex, frame] of page.frames().entries())
           await writeFile(
