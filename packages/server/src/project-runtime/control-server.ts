@@ -22,6 +22,8 @@ export interface ProjectControlServerOptions {
   remoteLink?: RemoteLinkConfiguration;
   staticRootDir?: string;
   runtimeImage?: string;
+  /** Trusted operator configuration, never accepted from project requests. */
+  runtimeSeccompProfile?: string;
   /** Dependency injection for lifecycle/transport integration tests. */
   provider?: ProjectRuntimeProvider;
 }
@@ -118,6 +120,7 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
         installationId: registry.installationId,
         dataDir: options.dataDir,
         image: options.runtimeImage,
+        seccompProfile: options.runtimeSeccompProfile,
         remoteLink,
       });
     manager = new ProjectManager({
