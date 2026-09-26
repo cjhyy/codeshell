@@ -3520,3 +3520,16 @@ Panel `9e5734caf7223aa541870d6591c7a26551e3cca6`；Host PR #24 已合入
 恢复检查通过（`/tmp/video-cloud-history-after.log`）。源与生成包已更新；
 完整 npm check `/tmp/video-cloud-tasks-history-check.log` 和第二轮实际容器
 `/tmp/cloud-video-task-smoke-v2.log` 正在运行，尚未确认最终结果。
+
+
+增量 85 当前检查点：完整 `/tmp/video-cloud-tasks-history-check.log` 已 exit 0。
+窗口修复提交 `15d03ab3391935814192cb4f913f747ef4205a63` 已推送 Panel
+PR #46，源和生成安装包一起提交；最终 CI 36262853622 in_progress，
+36262850078 queued。Host PR #25 最终合并主线提交仍为 `72f8c47e`，CI
+36262294902 初轮八类通过、桌面 Chromium 等待 WS 端点 20 秒超时，发生在
+Puppeteer 断言前。日志 `/tmp/cloud-video-task-host-ci-failure.log` 保留，
+已针对失败项重跑并确认运行中，未改超时／测试条件；启动稳定性根因未修复。
+第二轮本机脚本进程已确认为运行中，日志 `/tmp/cloud-video-task-smoke-v2.log`
+已通过六包真实安装、隔离和审阅升级／回退；完整视频任务／重启仍待结果。
+尚未为这组后续提交启动新的三仓候选，须待实际业务复验后再验收和合并。
+两个后续工作树干净保留，整体 goal 保持 active，未公开发布。
