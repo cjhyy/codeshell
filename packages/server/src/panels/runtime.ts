@@ -2015,6 +2015,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           bytes = Buffer.from(injectBridge(bytes.toString("utf8"), source));
           const resourceOrigin = grant.origin;
           const assetSource = resourceOrigin + source;
+          // Panels export their own generated files (for example JSON backups).
+          // Download permission does not grant origin access, network fetches or popups.
+          // The embedding iframe must enable the same permission.
           response.setHeader(
             "Content-Security-Policy",
             "default-src 'none'; script-src " +
@@ -2027,7 +2030,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               assetSource +
               " blob:; font-src " +
               assetSource +
-              " data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts; frame-ancestors " +
+              " data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
               resourceOrigin,
           );
           response.setHeader(

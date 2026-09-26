@@ -911,7 +911,7 @@ export function PanelHost({
           ref={frame}
           src={prepared.src}
           title={`${panel.title["zh-CN"] || panel.title.default}面板`}
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-downloads"
           referrerPolicy="no-referrer"
           inert={!!confirmation || confirming}
           onLoad={() => frameLifecycle.current?.loaded()}

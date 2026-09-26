@@ -233,7 +233,7 @@ test("iframe remains opaque and prepare alone does not mark it loaded", async ()
   setApiWorkspace("/workspace/测试 %20");
   const view = await fixture();
   const frame = view.attach()!;
-  expect(frame.props.sandbox).toBe("allow-scripts");
+  expect(frame.props.sandbox).toBe("allow-scripts allow-downloads");
   expect(frame.props.referrerPolicy).toBe("no-referrer");
   expect(frame.props.src).toContain("workspace=");
   expect(new URL(frame.props.src, "http://localhost").searchParams.get("workspace")).toBe(

@@ -209,6 +209,13 @@ the legacy Desktop media picker, preview and document bridge are not advertised 
 workflow currently requires Desktop; unsupported features must be explained
 before starting work.
 
+Web Panel frames permit browser downloads of generated files, such as a JSON
+backup, using Blob URLs and download anchors. Both the iframe and asset response
+CSP permit `allow-downloads`; the frame retains an opaque origin and cannot access
+the workbench document, browser storage, or fetch the network. Exporting existing
+server resources still uses the authorized Host resource interfaces. Panels must
+use Host storage for durable drafts when browser storage is unavailable.
+
 ## Validation and release status
 
 The API 14 implementation is complete in the published 0.9.11 release. Local
