@@ -1,0 +1,35 @@
+{
+  "name": "@cjhyy/code-shell-capability-optimization-lab",
+  "version": "0.9.22",
+  "private": true,
+  "description": "Optimization Lab capability for CodeShell \u2014 budgeted, reviewable Skill optimization experiments.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./capability": {
+      "types": "./dist/index.capability.d.ts",
+      "import": "./dist/index.capability.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "license": "MIT"
+}

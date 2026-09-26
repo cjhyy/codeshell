@@ -1,0 +1,4 @@
+[test]
+# Keep tests isolated from the real CodeShell home when run from this package.
+timeout = 30000
+preload = ["../core/test-setup.ts"]
