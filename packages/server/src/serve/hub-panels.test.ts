@@ -96,7 +96,9 @@ test("Hub panel routes enforce authentication and Origin, share bindings, and re
   const asset = await fetch(base + grant.src, { headers: { origin: "null" } });
   expect(asset.status).toBe(200);
   expect(asset.headers.get("access-control-allow-origin")).toBe("*");
-  expect(asset.headers.get("content-security-policy")).toContain("sandbox allow-scripts;");
+  expect(asset.headers.get("content-security-policy")).toContain(
+    "sandbox allow-scripts allow-downloads;",
+  );
   expect(await asset.text()).toContain("_codeshell_bridge.js");
   const call = `/api/v1/panels/runtime/${grant.instanceId}/call`;
   expect(
