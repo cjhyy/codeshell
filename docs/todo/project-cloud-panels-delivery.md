@@ -3284,7 +3284,7 @@ Host 新脚本仍是该独立工作树中的未提交工作；不能据此标记
 部署／恢复演练、设备目录／安全中继仍待完成，手机交互优化后置。
 
 
-### 增量 81：Web 备份下载与真实云端恢复闭环（2026-09-27，验收中）
+### 增量 81：Web 备份下载与真实云端恢复闭环（2026-09-27）
 
 Host 分支 `codex/server/cloud-job-hunt-recovery` 补 iframe 与资产 CSP 的
 `allow-downloads`，允许 Panel 导出自行生成的文件。仍保留不透明来源、禁止网络
@@ -3315,8 +3315,12 @@ lint 通过。真实 Docker 脚本完整通过：`/tmp/cloud-job-hunt-smoke-v6.l
 桌面分片、1 项 Chromium、5 项 Playwright 和 14 项 Puppeteer 全部通过。
 首次启动超时仍保留为已知 CI 稳定性问题，不能据重跑通过宣称根因已修复。
 
-三仓 Linux 候选运行 36255443999 正在执行，锁定 Host `c2e0e27e`、Panel
-`5ee9bc6999e771d3dbca9c82bbe5464a946a0292` 及 services main。需要验收完成
-再决定合并，不把运行中当成成功。没有公开发布。整体 goal 仍 active；六 Panel
+三仓 Linux 候选 36255443999 已全部通过，锁定 Host `c2e0e27e`、Panel
+`5ee9bc6999e771d3dbca9c82bbe5464a946a0292` 和 services
+`f06d687d3aa8b6b1a4c6009ff6b86e487dcf3bd9`。实际日志
+`/tmp/cloud-job-hunt-linux-candidate.log` 确认完整云端 UI 导出／恢复／重启、
+Link 容器备份恢复、归档逐文件校验和镜像重载通过。私有候选 artifact
+10910448008（452579408 bytes）、证据 10910403105 已上传。PR #22 已合入
+`e54af3d06ce71bf01e4999586b1d52c2cc885cda`；没有公开发布。整体 goal 仍 active；六 Panel
 其余业务／任务恢复、真实模型与 Link 授权、正式发布和目标部署／恢复、设备目录
 和安全中继仍未完成，手机交互优化继续后置。
