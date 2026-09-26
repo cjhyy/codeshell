@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import {
   cp,
   lstat,
@@ -327,6 +328,9 @@ try {
           join(repo, "scripts/smoke-project-sandboxes.mjs"),
           outputArg ? imageId : tag,
           ...(panelInventory ? ["--candidate-panels", join(installed, "panels")] : []),
+          ...(existsSync(join(installed, "deploy/seccomp/chromium.json"))
+            ? ["--runtime-seccomp-profile", join(installed, "deploy/seccomp/chromium.json")]
+            : []),
         ],
         repo,
         {
