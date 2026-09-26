@@ -82,6 +82,11 @@ const expectedRuntimeExportsByPartition = {
     "validateWorkspaceContext",
     "workspacePrimaryRoot",
   ],
+  settingsRecovery: [
+    "inspectProjectSettingsRecovery",
+    "repairProjectSettings",
+    "restoreProjectSettings",
+  ],
   logging: ["rotateLogs", "recordUIEvent"],
   managedRuntimes: ["createManagedRuntimeProvider", "ManagedRuntimeError"],
   toolSystemAndHostServices: [
@@ -250,6 +255,9 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "inspectProjectSettingsRecovery",
+  "repairProjectSettings",
+  "restoreProjectSettings",
   "createManagedRuntimeProvider",
   "ManagedRuntimeError",
   "sliceAnsi",
