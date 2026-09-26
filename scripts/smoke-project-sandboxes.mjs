@@ -42,6 +42,15 @@ const candidatePanels =
   candidatePanelsIndex >= 0 ? process.argv[candidatePanelsIndex + 1] : undefined;
 if (candidatePanelsIndex >= 0 && !candidatePanels)
   throw new Error("Pass the staged candidate Panel root");
+// Focus an individual business UI while retaining real package lifecycle checks.
+// Release candidates omit this option and always run all business checks.
+const businessIndex = process.argv.indexOf("--candidate-business");
+const candidateBusiness = businessIndex < 0 ? "all" : process.argv[businessIndex + 1];
+if (
+  !["all", "job-hunt", "design", "video"].includes(candidateBusiness) ||
+  (businessIndex >= 0 && !candidatePanels)
+)
+  throw new Error("--candidate-business requires staged Panels and all, job-hunt, design or video");
 const downloadPanelIndex = process.argv.indexOf("--download-panel");
 const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
 if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
@@ -701,6 +710,7 @@ try {
   let verifyCandidateRestart;
   let verifyJobHuntRestart;
   let verifyDesignRestart;
+  let verifyVideoRestart;
   if (candidatePanels) {
     const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
     verifyCandidateRestart = await verifyCandidatePanelLifecycle({
@@ -715,6 +725,8 @@ try {
       projectB: b.id,
       panelHarness,
     });
+  }
+  if (candidatePanels && ["all", "job-hunt"].includes(candidateBusiness)) {
     const { verifyCloudJobHuntRecovery } = await import("./smoke-cloud-job-hunt-recovery.mjs");
     verifyJobHuntRestart = await verifyCloudJobHuntRecovery({
       docker,
@@ -729,7 +741,7 @@ try {
       evidenceDir: join(root, "..", "evidence"),
     });
   }
-  if (candidatePanels) {
+  if (candidatePanels && ["all", "design"].includes(candidateBusiness)) {
     const { verifyCloudDesignRecovery } = await import("./smoke-cloud-design-recovery.mjs");
     verifyDesignRestart = await verifyCloudDesignRecovery({
       docker,
@@ -741,6 +753,20 @@ try {
       projectA: a.id,
       projectB: b.id,
       candidatePanels,
+      scratch,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels && ["all", "video"].includes(candidateBusiness)) {
+    const { verifyCloudVideoRecovery } = await import("./smoke-cloud-video-recovery.mjs");
+    verifyVideoRestart = await verifyCloudVideoRecovery({
+      json,
+      request,
+      panelHarness,
+      serverUrl,
+      password,
+      projectA: a.id,
+      projectB: b.id,
       scratch,
       evidenceDir: join(root, "..", "evidence"),
     });
@@ -861,6 +887,7 @@ try {
   await verifyCandidateRestart?.();
   await verifyJobHuntRestart?.();
   await verifyDesignRestart?.();
+  await verifyVideoRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",
