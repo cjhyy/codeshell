@@ -3282,3 +3282,38 @@ Host 新脚本仍是该独立工作树中的未提交工作；不能据此标记
 
 整体 goal 保持 active：完整云端业务、真实模型与 Link 授权、三仓正式交付与目标
 部署／恢复演练、设备目录／安全中继仍待完成，手机交互优化后置。
+
+
+### 增量 81：Web 备份下载与真实云端恢复闭环（2026-09-27，验收中）
+
+Host 分支 `codex/server/cloud-job-hunt-recovery` 补 iframe 与资产 CSP 的
+`allow-downloads`，允许 Panel 导出自行生成的文件。仍保留不透明来源、禁止网络
+fetch、表单、弹窗及父页面访问；项目文件仍通过已有授权接口取得。没有把求职
+业务规则移入 Host。
+
+新增真实安装包验收加入三仓候选的双 Docker 项目流程。大 v1 根迁移为独立分片，
+真实页面编辑后预览原备份；下载的原根按字节比较并用 Node 独立核对摘要。另一
+授权客户端写入未来时间的旧草稿后，通过实际恢复界面还原，再编辑新内容；另一
+项目不受影响。停止／启动项目并删除原始包来源后，六包仍按原摘要重开，求职的新
+恢复标识、后续编辑和备份列表保留。实际 iframe 验证父页面、浏览器存储和 fetch
+仍被隔离。
+
+本地 92 项 Web／runtime／Hub 测试、服务构建、Web／server 类型检查及改动文件
+lint 通过。真实 Docker 脚本完整通过：`/tmp/cloud-job-hunt-smoke-v6.log`。
+恢复界面截图已查看：
+`/Users/admin/.codex/worktrees/cloud-job-hunt-recovery/evidence/cloud-job-hunt-restore.png`。
+本机镜像 `sha256:64c14db98431d441dbdaae0f8fdd2599376d0f57c040bbf8c7dded48408aaedb`
+复用已有系统依赖层、重新构建当前程序，仅是本地调试证据。
+
+提交 `c2e0e27e1edcb76a47b96a0d6672977f808fd862` 已推送；
+[Host PR #22](https://github.com/cjhyy/codeshell/pull/22) 已创建并附到任务。
+主仓 CI 36255437397 首轮仅桌面 Puppeteer 启动阶段等待 WS 端点 20 秒超时，
+没有运行测试断言；其余八类检查通过。诊断记录 Chromium 153.0.8010.0 与 D-Bus
+错误，日志 `/tmp/cloud-job-hunt-ci-desktop-failure.log`；已针对失败项重跑，
+未放宽超时或测试断言，结果仍待确认。
+
+三仓 Linux 候选运行 36255443999 正在执行，锁定 Host `c2e0e27e`、Panel
+`5ee9bc6999e771d3dbca9c82bbe5464a946a0292` 及 services main。需要验收完成
+再决定合并，不把运行中当成成功。没有公开发布。整体 goal 仍 active；六 Panel
+其余业务／任务恢复、真实模型与 Link 授权、正式发布和目标部署／恢复、设备目录
+和安全中继仍未完成，手机交互优化继续后置。
