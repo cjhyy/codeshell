@@ -3271,7 +3271,14 @@ Host 新脚本仍是该独立工作树中的未提交工作；不能据此标记
 本机 Docker 列表仍有标签但标签 inspect 失败，ID inspect 成功；没有重建或删除
 用户镜像来绕过。此镜像仅供调试，后续仍须运行实际安装包的完整 Linux 候选构建。
 源包暂存 `/tmp/cloud-job-hunt-stage-tNaeez/panels` 来自准确提交 `4c3a2088`；
-当前复验日志 `/tmp/cloud-job-hunt-smoke-v5.log`，运行状态需实时核对。
+最终该轮复验 `/tmp/cloud-job-hunt-smoke-v5.log` 已终止（exit 1）：大数据分片迁移、
+实际页面编辑、备份校验／预览和另一客户端的条件草稿更新已通过，点击下载后
+没有触发浏览器 download 事件。生产 Web 的 iframe 与资产 CSP 均只允许
+`sandbox allow-scripts`，未允许下载；不能把已生成归档等同导出成功。原始证据
+保留在 `codeshell-project-smoke-D4MxKU` 临时目录。下一步补通 Host 的通用导出
+能力并保持同源／网络隔离，再完成实际恢复、重启和完整 Linux 候选验收。
+两项已合并的 Panel 任务工作树／本地和远程分支均已清理；Host 工作树仍保留
+未提交的新验收脚本，当前没有仍在运行的该轮 Docker 测试。
 
 整体 goal 保持 active：完整云端业务、真实模型与 Link 授权、三仓正式交付与目标
 部署／恢复演练、设备目录／安全中继仍待完成，手机交互优化后置。
