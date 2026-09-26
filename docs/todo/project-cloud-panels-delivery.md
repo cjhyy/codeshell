@@ -3638,3 +3638,37 @@ Panel #47 最终提交 `f114cb6` 已推送，源和生成包一起提交。完�
 第二轮 `/tmp/cloud-video-media-v2.log` 仍在运行，使用含表单／制作任务修复
 的独立 staging；该 staging 早于最后初始化顺序调整，不冒充 f114cb6 完整
 安装包验收。原生渲染及成品／重启尚未证明。整体 goal active，未公开发布。
+
+
+### 增量 89：任务恢复候选通过与授权检查范围（2026-09-27）
+
+Linux 三仓候选 36266030775 已成功，固定 Host `870b97ea`、Panel `13dfc42`
+和 services `594aec9b`。完整日志 `/tmp/cloud-video-task-diagnostic-linux.log`
+确认六包生命周期、求职／设计业务恢复、视频草稿清理／原生 FFmpeg 检测／任务
+日记、项目重启及 Link 备份恢复通过。归档和镜像加载校验通过；最新私有候选
+artifact **10914521627**（452586851 bytes），证据 **10914745039**。
+视频恢复请求到完成仍需约 118 秒，不代表此前超时的性能问题已消除。
+Host PR #25 合入 `0adbe939a8eae92e019bfb1de971820a838c0490`，Panel PR #46
+合入 `30e1e0d7a50a6d28c9453fe72a5333582a72b5c8`；最终提交全部仓库 CI 通过。
+该候选不含后续完整媒体渲染／交付或授权范围优化，没有公开发布。
+
+第二轮实际媒体 `/tmp/cloud-video-media-v2.log` 已失败：真实 WAV 导入／原生
+分析及字节回读通过，修复后的表单已提交，但导出准备超过 150 秒，未到完整
+渲染验收。截图已查看；不能记录为成品输出或浏览器依赖通过。
+Panel #47 的最终 f114cb6 CI 有三个界面失败，其余五类通过。三个失败均来自
+桌面模拟 Host 未声明 media.export，能力感知界面因此不显示原播放／保存按钮。
+仅补齐对应测试 Host 的能力与保存响应，保留播放／保存断言；三个原失败用例
+已通过 `/tmp/video-cloud-delivery-fixtures.log`，完整界面回归正在运行。
+
+独立 Host 分支 `codex/server/panel-authorization-scope`、PR #28（draft，已附）
+提交 `f3822bb0` 将实时授权检查限定到当前 Panel，管理目录仍完整枚举。
+严格配置、包字节完整性、解绑／版本变更与目录成员资格校验保留；仅同一 Panel
+的在途读取共享，不使用 TTL。188 项回归、工作区类型、服务构建、lint（已有
+警告、无错误）通过，远端 CI 进行中。真实新容器同一目录实测：全七包扫描
+613／432ms，Video 单包 106／98ms，Download 单包 40／40ms，记录见
+`/tmp/panel-auth-scope-container-benchmark.log`。这只证明检查成本降低。
+
+本机媒体第三轮最初因临时 staging 的 Starter 目录误命名为 starter 而失败，
+修正为契约要求的 starter-panel 后重新运行，未改包内容或放宽断言。
+当前 `/tmp/cloud-video-media-v3b.log` 使用 final f114cb6 生成包及新构建的授权
+优化 core/server 调试镜像，仍在执行；最终成功与依赖问题尚待核实。
