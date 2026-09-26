@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import puppeteer from "puppeteer-core/lib/esm/puppeteer/puppeteer-core.js";
 import type { Browser, Page } from "puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js";
 import { PuppeteerBrowserDriver } from "./puppeteer-browser-driver.js";
@@ -12,15 +13,26 @@ const executablePath = [
 ].find((path): path is string => !!path && existsSync(path));
 let browser: Browser;
 beforeAll(async () => {
-  if (executablePath)
+  if (executablePath) {
+    if (process.env.CI) {
+      console.info(
+        "Puppeteer integration browser:",
+        executablePath,
+        execFileSync(executablePath, ["--version"], { encoding: "utf8", timeout: 5000 }).trim(),
+      );
+    }
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
+      // Report the browser's own startup failure before Bun's 30s hook limit.
+      timeout: 20_000,
+      dumpio: Boolean(process.env.CI),
       // Chromium 141 clips compositor wheel hit tests to its native window
       // after screenshot() activates it. Keep that window larger than our
       // 1000×700 emulated test viewport. Production connects with viewport=null.
       args: ["--no-sandbox", "--window-size=1200,900"],
     });
+  }
 });
 afterAll(async () => {
   await browser?.close();
