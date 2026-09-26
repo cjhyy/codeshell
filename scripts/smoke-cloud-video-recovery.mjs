@@ -6,6 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { verifyCloudVideoMedia, verifyCloudSourcePlayback } from "./smoke-cloud-video-media.mjs";
+import { verifyCloudVideoRecording } from "./smoke-cloud-video-recording.mjs";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
@@ -99,7 +100,11 @@ export async function verifyCloudVideoRecovery({
   };
   await mkdir(evidenceDir, { recursive: true });
   async function browserRun(action) {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({
+      channel: "chromium",
+      chromiumSandbox: true,
+      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+    });
     const pages = [],
       errors = [],
       bridgeTimings = [];
@@ -127,6 +132,7 @@ export async function verifyCloudVideoRecovery({
         const context = await browser.newContext({
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
+          permissions: ["microphone"],
         });
         const page = await context.newPage();
         pages.push(page);
@@ -211,7 +217,7 @@ export async function verifyCloudVideoRecovery({
     }
   }
 
-  let finalDocument, statusJobId, delivered;
+  let finalDocument, statusJobId, delivered, recorded;
   const edit = async (frame, name) => {
     await frame.locator("#project-name").fill(name);
     await frame.locator("#project-name").press("Tab");
@@ -316,6 +322,15 @@ export async function verifyCloudVideoRecovery({
       "PASS: actual cloud Video Studio completes restore cleanup and persists its reviewed native runtime probe recipe",
     );
     await reopened.frame.locator('#studio .rail [data-tab="media"]').click();
+    recorded = await verifyCloudVideoRecording({
+      ...reopened,
+      otherCall: b.call,
+      until,
+      evidenceDir,
+      readDocument: () => readDocument(projectA),
+    });
+    reopened.frame = recorded.frame;
+    reopened.call = recorded.call;
     delivered = await verifyCloudVideoMedia({
       ...reopened,
       until,
@@ -346,7 +361,7 @@ export async function verifyCloudVideoRecovery({
       const native = await a.call("tasks.get", { id: statusJobId });
       assert.equal(native.status, "succeeded");
       assert.equal((await a.call("tasks.get", { id: delivered.jobId })).status, "succeeded");
-      for (const assetId of [delivered.source, delivered.video]) {
+      for (const assetId of [delivered.source, delivered.video, recorded.resourceId]) {
         const { asset } = await a.call("resources.get", { id: assetId });
         assert.equal(asset.id, assetId);
         assert.ok(Number.isSafeInteger(asset.bytes) && asset.bytes > 0);
@@ -375,6 +390,17 @@ export async function verifyCloudVideoRecovery({
         kind: "video",
         until,
       });
+
+      await verifyCloudSourcePlayback({
+        frame: a.frame,
+        assetId: recorded.assetId,
+        kind: "audio",
+        until,
+      });
+      await assert.rejects(b.call("resources.get", { id: recorded.resourceId }));
+      console.log(
+        "PASS: cloud recorded original and editor attachment survive project restart and still play through the scoped resource grant",
+      );
 
       await a.frame.locator('[data-action="versions"]').first().click();
       const pending = a.page.waitForEvent("download", { timeout: 150000 });
