@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -97,6 +98,41 @@ describe("readSkillSnapshot", () => {
     mkdirSync(filePath);
     expect(() => readSkillSnapshot(NAME, cwd)).toThrow();
   });
+
+  test.skipIf(process.platform === "win32")(
+    "rejects a FIFO replacing cached SKILL.md without blocking the worker",
+    () => {
+      const { cwd, filePath } = project();
+      const script = `
+        import { execFileSync } from "node:child_process";
+        import { rmSync } from "node:fs";
+        import { readSkillSnapshot } from ${JSON.stringify(join(import.meta.dir, "snapshot.ts"))};
+        if (!readSkillSnapshot(${JSON.stringify(NAME)}, ${JSON.stringify(cwd)})) {
+          throw new Error("fixture was not discovered");
+        }
+        rmSync(${JSON.stringify(filePath)});
+        execFileSync("mkfifo", [${JSON.stringify(filePath)}]);
+        let rejected = false;
+        try { readSkillSnapshot(${JSON.stringify(NAME)}, ${JSON.stringify(cwd)}); }
+        catch { rejected = true; }
+        if (!rejected) throw new Error("FIFO was accepted");
+        console.log("FIFO rejected");
+      `;
+      // A separate, bounded process makes the regression fail instead of
+      // hanging the entire test runner in a blocking open(2).
+      const child = spawnSync(process.execPath, ["-e", script], {
+        encoding: "utf8",
+        timeout: 5000,
+        killSignal: "SIGKILL",
+        env: { ...process.env, HOME: cwd, USERPROFILE: cwd },
+      });
+      expect(child.error).toBeUndefined();
+      expect(child.status).toBe(0);
+      expect(child.stderr).toBe("");
+      expect(child.stdout.trim()).toBe("FIFO rejected");
+    },
+    10_000,
+  );
 
   test("rejects oversized markdown instead of falling back around the bundle limit", () => {
     const { cwd, filePath } = project();
