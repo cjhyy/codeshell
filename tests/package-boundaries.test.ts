@@ -120,6 +120,7 @@ describe("workspace package boundaries", () => {
       "@cjhyy/code-shell-capability-coding",
       "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-pet",
+      "@cjhyy/code-shell-capability-optimization-lab",
     ]) {
       expect(runtimeWorkspaceDependencies(capability)).toEqual(["@cjhyy/code-shell-core"]);
     }
@@ -197,6 +198,7 @@ describe("workspace package boundaries", () => {
     ).toBe(true);
 
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
+      "@cjhyy/code-shell-capability-optimization-lab",
       "@cjhyy/code-shell-cdp",
       "@cjhyy/code-shell-desktop",
     ]);
