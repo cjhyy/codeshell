@@ -700,6 +700,7 @@ try {
 
   let verifyCandidateRestart;
   let verifyJobHuntRestart;
+  let verifyDesignRestart;
   if (candidatePanels) {
     const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
     verifyCandidateRestart = await verifyCandidatePanelLifecycle({
@@ -724,6 +725,22 @@ try {
       containerB,
       projectA: a.id,
       projectB: b.id,
+      scratch,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels) {
+    const { verifyCloudDesignRecovery } = await import("./smoke-cloud-design-recovery.mjs");
+    verifyDesignRestart = await verifyCloudDesignRecovery({
+      docker,
+      request,
+      serverUrl,
+      password,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      candidatePanels,
       scratch,
       evidenceDir: join(root, "..", "evidence"),
     });
@@ -843,6 +860,7 @@ try {
   await verifyDownloadRestart?.();
   await verifyCandidateRestart?.();
   await verifyJobHuntRestart?.();
+  await verifyDesignRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",
