@@ -36,7 +36,6 @@ export async function verifyCloudJobHuntRecovery({
   containerB,
   projectA,
   projectB,
-  scratch,
   evidenceDir,
 }) {
   await mkdir(evidenceDir, { recursive: true });
@@ -155,14 +154,20 @@ export async function verifyCloudJobHuntRecovery({
     } catch (error) {
       for (const [index, page] of pages.entries()) {
         await page
-          .screenshot({ path: join(scratch, `job-hunt-error-${index}.png`), fullPage: true })
+          .screenshot({
+            path: join(evidenceDir, `cloud-job-hunt-error-${index}.png`),
+            fullPage: true,
+          })
           .catch(() => {});
         for (const [frameIndex, frame] of page.frames().entries()) {
           const text = await frame
             .locator("body")
             .innerText()
             .catch(() => "unavailable");
-          await writeFile(join(scratch, `job-hunt-error-${index}-${frameIndex}.txt`), text);
+          await writeFile(
+            join(evidenceDir, `cloud-job-hunt-error-${index}-${frameIndex}.txt`),
+            text,
+          );
         }
       }
       throw error;
@@ -330,6 +335,13 @@ export async function verifyCloudJobHuntRecovery({
     );
     await a.frame.locator('[data-resume-mode="preview"]').click();
     await a.frame.locator("#print-resume").click();
+    // Exercise the owner confirmation in the real Host UI. The fixture only
+    // authorizes this PDF entry, never arbitrary background confirmations.
+    const consent = a.page.locator(".panel-host-confirm");
+    await consent.waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await consent.locator("h2").innerText(), /^启动 .+ 的后台工具？$/);
+    assert.match(await consent.locator("pre").innerText(), /resume-pdf/);
+    await consent.getByRole("button", { name: "确认执行", exact: true }).click();
     const pdfJob = await until(async () => {
       for (const summary of await a.call("tasks.list", { limit: 50 })) {
         if (summary.entry?.name !== "resume-pdf") continue;
