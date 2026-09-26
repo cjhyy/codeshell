@@ -4082,3 +4082,48 @@ d97cff4b5c7c9c4132b4e6121a84e7ec682d6edd。没有公开发布或正式部署。
 干净，初次 lsof 仅看到并行状态检查本身，检查结束后再次确认无活跃 cwd。
 三个已合并工作树及本地／远程任务分支已删除，原始 checkouts、录音分支和所有
 无关任务保留。增量 98 组合 CI 36279471524 已确认运行，来源 de99cd81。
+
+增量 98 收尾：组合 CI 36279471524 九类检查全部通过，Host #32 已普通合并为
+5b2ff8a23fe39e12f94e2ead1259c7a836073edc。确认准确 HEAD 包含于 origin/main、
+工作树干净；状态检查退出后从另一工作树再次检查 lsof 无占用，已清理录音 Host
+旧工作树及本地／远程分支。未将通用录音能力的完成记为全部 Panel 录音业务完成。
+
+### 增量 99：视频云端录音消费端及真实容器验收（2026-09-27，进行中）
+
+最新主线创建 `video-cloud-recording` 下三仓独立工作树。Panel 分支
+`codex/video-studio/cloud-recording` 按实际 resources.recordAudio/list/get/open
+能力接入可信工作台录音，不再从禁止麦克风的 iframe 采集。原始音频先进入项目
+资源，用户再明确加入工程；保存失败、丢失录音回复和关闭页面后可刷新项目音频
+找回、打开下载或重试。通过 Panel 原生 inspect 取得真实音频时长，再条件发布
+素材；重复加入复用已有资源，作用域／工程代数拒绝旧响应。普通录制最长 600 秒，
+声音参考最长 30 秒；桌面保留原摄像头／屏幕／麦克风录制。云端摄像头／屏幕、
+真实设备、转写及声音模型未算完成。
+
+79 项录音与生产控制器检查、12 项浏览器录制流程通过；完整编辑器新增场景验证
+工程保存失败后仍能下载、重开找回、同一资源只发布一次。首次完整页面夹具因
+任务 entry 回执误写成字符串被真实桥拒绝；改为实际 Host 的对象回执后通过，
+没有修改生产授权。66 项完整编辑器／口播／声音准备 UI 检查通过，全仓 npm check
+通过，最终类型、确定性生成包、安装预检及 diff 通过。已提交源码与安装包。
+日志 /tmp/video-cloud-recording-unit.log、/tmp/video-cloud-recording-browser.log、
+/tmp/video-cloud-recording-main-final.log、/tmp/video-cloud-recording-ui-regression.log、
+/tmp/video-cloud-recording-check.log、/tmp/video-cloud-recording-validate.log。
+
+Panel 最终 67fb9fd8a5b0416c10a325b4632220901b9ef914，
+[Panel #53](https://github.com/cjhyy/codeshell-panel-apps/pull/53) 为 draft。
+Host 分支 `codex/server/cloud-video-recording` 扩展原有两项目安装包验收：真实
+MediaRecorder 编码／试听／原始备份、关闭 Panel 后找回、容器检查后加入、另一
+项目拒绝读取、重启后校验字节和播放。仅设备输入为模拟麦克风，不替换编码或
+原生处理。完整 Chromium 保持沙箱；server 构建、语法、lint、格式、diff 通过。
+Host 1ebe6d776ad7e877a7bc967c8f4e14620a5c5568，
+[Host #33](https://github.com/cjhyy/codeshell/pull/33) 为 draft。
+
+services 分支 `codex/services/cloud-recording-acceptance` 为临时候选 runner 上
+准确 Chromium 路径添加 userns AppArmor profile；不关闭全局策略或浏览器沙箱。
+63 项检查、工作流格式与 diff 通过，e36f3280226bd95d6a78f0373b3bd0133c945bcd，
+[services #7](https://github.com/cjhyy/codeshell-services/pull/7) 为 draft。
+三 PR 已附任务。准确三个提交已启动完整候选
+[36281034958](https://github.com/cjhyy/codeshell-services/actions/runs/36281034958)，
+首次确认 queued，尚未取得真实容器结果。不能用上述控制器／页面检查代替新增
+云端业务通过；最新成功候选仍是增量 97 的 36278228806。整体 goal 保持 active，
+未公开发布或正式部署；手机界面后置，全部业务／真实账号模型／目标部署与统一
+设备目录中继仍需完成。
