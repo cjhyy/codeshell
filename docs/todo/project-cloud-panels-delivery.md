@@ -3459,3 +3459,38 @@ Host 后续提交 `fa7086ad7747fd7b06a4ccc34eeba83b4c4fd4b3` 修正保存状态
 锁定 Host `fa7086ad`、Panel `90788fa`、services `f06d687d`。Panel 两轮 CI
 除 Video UI 尚在运行外其余均通过；两个 PR 仍为草稿，完整视频恢复和重启
 尚未通过，整体范围与未完成项不变。
+
+
+增量 84 最新验收：最终精确安装包的本机聚焦视频复验
+`/tmp/cloud-video-smoke-focused.log` 已 exit 0，包含编辑、独立登录重开、
+备份下载、恢复后编辑，以及项目重启／删除安装来源后保留工程和原始备份。
+已查看截图 `cloud-video-recovery/evidence/cloud-video-recovery.png`；其中
+附属粗剪草稿清理仍报缺失 media.document.get，不能据工程恢复通过宣称全业务完成。
+Panel CI 36259870990／36259857173 全部通过。Host 最终 CI 36260394100
+全部九类通过；初轮 Chromium --version 的 5 秒启动查询超时发生在 Puppeteer
+断言之前，未改代码或超时，重跑成功，日志 `/tmp/cloud-video-host-ci-retry.log`。
+CI 启动不稳定根因仍未修复。三仓候选 36260424368 已再次确认 in_progress，
+两个 PR 仍为草稿，没有公开发布。
+
+### 增量 85：云端视频附属文档与任务记录（2026-09-27，进行中）
+
+Panel 分支 `codex/video-studio/cloud-task-documents` 基于 PR #45 提交，
+新增 Panel 内部文档适配，将生产、粗剪、同步恢复、素材检测和任务日志接到已有
+workspace 文档后端；桌面仍使用其原生文档接口。首次发现固定项目与能力，后续
+变化停止旧操作并要求重开；排队请求先复制，避免异步期间输入改变。
+
+日志读取原先把未知版本当成空列表，可被下一任务覆盖。新增回归先复现失败，
+再对版本、结构、重复 ID 和容量等作完整验证；不兼容／损坏时在新任务启动前
+停止，保留原文。101 项相关回归、完整 npm check、类型、确定构建和安装包
+校验通过（Video Studio 39 文件）；完整 UI 463 项通过的运行早于最终日志保护，
+最终版本仍须远程 CI 验证，未以旧 UI 结果代替新提交。
+
+提交 `e3a1235238ce6b0c3615994886c6da385667e9a1` 已推送，
+[Panel PR #46](https://github.com/cjhyy/codeshell-panel-apps/pull/46) 草稿已附到任务。
+CI 36261851582／36261820987 已确认运行中。相关日志
+`/tmp/video-cloud-documents-{check-final,regression-final,ui}.log`。
+Host 依赖任务工作树 `cloud-video-task-recovery/codeshell` 正增加实际安装包的
+草稿清理、原生 runtime 检测任务及日志重启断言；代码尚未提交，本机双容器
+`/tmp/cloud-video-task-smoke.log` 正在运行，尚未确认业务结果。
+整体 goal 保持 active；真实服务接入、其他业务恢复、正式交付／目标部署以及
+设备目录／安全中继等范围不变，手机操作优化后置。
