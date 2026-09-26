@@ -3779,3 +3779,46 @@ Panel #47 已通过普通合并纳入同一修复，最终
 `e7c90c8deac30c022ff76f8c8246465d648992d8`。这是含实际修复的新候选，不是因
 观察超时重启旧任务；旧 36269363113 已明确失败。结果未定，不宣称预览下载
 和重启全流程通过。相关 PR 描述已补旧候选的真实失败位置，避免仍归因缺浏览器。
+
+
+### 增量 93：视频同步恢复的资源查询契约（2026-09-27，进行中）
+
+检查素材预览时发现 `main.ts` 的处理声音试听与 `editor/sync-bridge.ts` 的
+暂存恢复使用 `resources.get({assetId})`，实际 Host 服务只接受 `{id}`。
+原同步测试错误要求 assetId，主页面模拟同时接受两种字段，因此掩盖了错误。
+独立分支 `codex/video-studio/resource-metadata-contract` 从主线建立，先收紧
+模拟 Host 的契约；旧实现的三项持久回执／部分暂存恢复／取消测试均复现失败。
+随后只修正两处查询参数，资源物化／读取仍保留其正确的 assetId 参数。
+
+修复提交 `88c710e` 已推送，[PR #49](https://github.com/cjhyy/codeshell-panel-apps/pull/49)
+为 draft，已附到任务。14 项实际原生同步回归、53 项主页面浏览器回归通过；
+源码与生成安装包一起提交。全仓检查与最终 CI 进行中，尚未合并。
+证据：`/tmp/video-resource-contract-before.log`、`/tmp/video-resource-contract-sync.log`、
+`/tmp/video-resource-contract-ui.log`。这不解决云端 /media 路由与 iframe CSP；
+不宣称处理声音的云端试听或整体素材预览已经通过。
+
+
+增量 91 合并：Host #29 以最终 `22a67b60` 合入
+`ef319e2e0736620557f1789c46b95848d7a3aaca`；services #5 以最终 `e7c90c8`
+合入 `336cf8e6a9f38ae96e13b8556b531224495a2e94`。合并前核对最新主线、
+实际差异、全部 CI、可合并状态以及已完成的本机／Linux 隔离验收。
+Host #29 干净无活跃进程的工作树、本地及远程分支已清理（远程 Git 两次 TLS
+失败后，经 GitHub API 核对准确 SHA 再删除）。services 工作树／分支暂保留，
+新完整候选仍使用该任务来源。未公开发布，也不代表完整 Panel 业务通过。
+Host #27 同步主线后的 `ac68a32b8062c2711de22ec448ebd809aba2757b` 已推送，
+与候选固定的 `04366665` tree 均为 `ee2646d151187a400ec7511d5b6c725220ff19f2`，
+没有新增代码变化；最终 CI 重新运行。
+
+增量 92 CI：同一 `ec4622a` 的 PR 工作流 36270369919 全部成功；push 工作流
+36270356790 的界面检查 463／464 通过，一小时时间轴缩放在 30 秒等待失败。
+该前端代码不在此 PR 差异中；没有直接忽略。对应本机单项复验通过
+`/tmp/video-export-streams-timeline-recheck.log`，只重跑已失败的 CI job，保留
+原检查和超时，结果未定。#48 暂不合并。完整候选 36270422890 仍在运行。
+
+增量 93 检查：首次全仓 npm check 在 Apple Silicon 安装器取消用例失败，
+等待 3 秒仍未出现 installer-started；原生同步和主页面均已通过。未改无关代码
+或扩大超时。该 8 项安装器文件独立复验全部成功
+`/tmp/video-resource-contract-audio8-recheck.log`，完整检查复验进行中
+`/tmp/video-resource-contract-check-v2.log`。最终 `88c710ec128c72be0dab194e4eb95353197a79a9`
+的远端 CI 除两个界面 job 尚在运行外均通过。保留首次失败，不把局部通过当作
+全仓成功；#49 仍为 draft。
