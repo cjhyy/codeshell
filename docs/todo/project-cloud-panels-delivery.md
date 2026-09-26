@@ -2956,3 +2956,46 @@ PR #39 进一步复现导出写入期间继续编辑时的版本回执错误：�
 跨版本升级和回滚，以及真实服务商与目标服务器部署验收。手机 Panel 交互继续后置；
 设备目录／安全中继是独立未完成项。真实凭据与服务器信息尚缺，但仍有可独立推进
 的代码与集成工作。没有进行公开发布，也没有把受控测试等同于上线验收。
+
+
+### 增量 73：三仓私有部署候选完成（2026-09-26）
+
+设计交付 PR #39 最终 `ac8905d9cae3b1f0bad88958e336653da04af04d` 的两组 CI
+36241287921／36241284990 全部通过，合入 `430a72e1200c562cb619974be33d7440ff1d4177`。
+PR #38／#39 的自身工作树确认干净、无活跃进程且被 main 包含后，已清理本地工作树
+及本地／远端任务分支；原始用户检出保持不变。
+
+新任务 Host `codex/server/panel-candidate` 与 services `codex/services/panel-candidate`
+把实际 Panel 套件纳入候选。新增 `--panels` 源码输入，服务工作流固定完整 Panel SHA，
+先验证类型及已提交构建，再从该提交读取 Git blob。只保留五个业务 Panel 加 Starter
+的安装目录，Video Studio 使用构建产物；不复制忽略文件、源代码工具或开发依赖。
+实际独立安装的候选 Host 对六个包进行只读安装预检，导出后再次预检。
+
+候选格式 v2 增加准确来源和每包 ID／版本／目录／内容摘要，逐文件清单覆盖全部
+资源。校验拒绝漏包、重复包、错版本、改字节、路径替换、摘要错误和降级伪装。旧
+v1 仍可验证，但不能冒充完整三仓候选。没有自动安装、授予权限或运行模型／业务。
+
+验证：服务 60 项测试、格式通过，独立五 tarball 移位安装、六包预检、配置恢复与
+390／1440px 受控 OAuth 通过；日志 `/tmp/services-panel-candidate-test.log`、
+`/tmp/services-panel-candidate-format.log`、`/tmp/host-panel-candidate-local.log`。
+服务 CI 36241714860／36241750788 的 Node 22.16／22／24 全部通过；Host 完整 CI
+36241749440 全部通过，包括 Electron 与 Windows。
+
+最终 Linux 候选 CI [36241763436](https://github.com/cjhyy/codeshell-services/actions/runs/36241763436)
+成功：Host `f0e6d208fc649a6f27242a8f87fe3fca03eff439`、services
+`292b6da308ab4fe44e1158502799ddf9caf8522f`、Panels
+`ac8905d9cae3b1f0bad88958e336653da04af04d`。候选导出、全部摘要、导出后六包预检、
+双项目 Docker、Link 容器与镜像重新加载均成功。私有完整 artifact 10906535658
+（452565992 bytes，保留 14 天），证据 artifact 10906465696；日志
+`/tmp/three-repository-candidate-36241763436.log`。归档包含真实六包目录，不能把
+通用双项目任务验证解读为六个 Panel 的全部业务在容器中执行。
+
+[Host PR #18](https://github.com/cjhyy/codeshell/pull/18) 已合入
+`fab3f40cc64d3b05cdc96ead7099a962ceca6e20`；
+[services PR #3](https://github.com/cjhyy/codeshell-services/pull/3) 已合入
+`f06d687d3aa8b6b1a4c6009ff6b86e487dcf3bd9`。未公开发布。
+
+整体 goal 仍 active：下一步补实际包的项目安装／重开及版本更新路径，继续六个 Panel
+业务与长任务恢复、跨版本数据迁移和升级回滚、真实模型与第三方账号、目标服务器
+部署及恢复演练。设备目录／安全中继仍待完成，手机 Panel 交互后置。公共依赖仍是
+0.9.22，私有候选不等于正式发布；缺少真实服务配置不阻止剩余代码工作。
