@@ -346,8 +346,22 @@ export async function verifyCloudVideoRecovery({
       const native = await a.call("tasks.get", { id: statusJobId });
       assert.equal(native.status, "succeeded");
       assert.equal((await a.call("tasks.get", { id: delivered.jobId })).status, "succeeded");
-      for (const assetId of [delivered.source, delivered.video])
-        assert.equal((await a.call("resources.get", { assetId })).asset.id, assetId);
+      for (const assetId of [delivered.source, delivered.video]) {
+        const { asset } = await a.call("resources.get", { id: assetId });
+        assert.equal(asset.id, assetId);
+        assert.ok(Number.isSafeInteger(asset.bytes) && asset.bytes > 0);
+        const hash = createHash("sha256");
+        for (let offset = 0; offset < asset.bytes; ) {
+          const part = await a.call("resources.read", { assetId, offset, length: 32768 });
+          const bytes = Buffer.from(part.dataBase64, "base64");
+          assert.equal(part.offset, offset);
+          assert.equal(part.totalBytes, asset.bytes);
+          assert.ok(bytes.length > 0 && bytes.length <= Math.min(32768, asset.bytes - offset));
+          hash.update(bytes);
+          offset += bytes.length;
+        }
+        assert.equal(`asset-${hash.digest("hex")}`, assetId);
+      }
       assert.equal(await a.frame.locator(".editor-cleanup-warning").count(), 0);
 
       await a.frame.locator('[data-action="versions"]').first().click();
