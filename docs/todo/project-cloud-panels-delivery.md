@@ -2357,3 +2357,54 @@ Video `77c384d` 的两次独立 CI 最终全通过，但 Quant 组合 `b31c64d` 
 
 整体 goal 保持 active。剩余业务接入、完整升级恢复、服务端恢复入口、真实账号／模型、
 三仓正式兼容版本、目标服务器与跨版本恢复仍须完成；设备中继及手机操作后置。
+
+
+### 增量 58：服务端恢复交付与原片冻结预览（2026-09-26）
+
+Host `codex/server/settings-recovery` 的 [PR #17](https://github.com/cjhyy/codeshell/pull/17)
+为五包云端安装补齐 `code-shell-settings-recovery`，使用同一 Core 离线检查、审阅修复
+和逐字节恢复，不启动服务、Worker、引导或模型设置。严格区分各动作参数，拒绝重复／
+混用参数，不回显无效参数值。服务包 bin、实际安装验证和运行镜像检查一同交付。
+文档 `docs/settings-recovery.md` 说明先停止项目、同一卷／挂载路径／用户、覆盖镜像
+入口及只读候选文件。管理员操作仍不是在线 Panel 修复权限。
+
+最终 Host 提交 `eb62498361c1968488a682da96769622ed71089d` 已包含最新主仓
+`a9ff18b8`。根类型检查、21 项恢复／CLI 测试和已构建 Node 命令通过；五个实际包
+移位安装不依赖 TUI，42 项服务测试及 390/1440px 受控上游 OAuth 通过。候选
+[36226281163](https://github.com/cjhyy/codeshell-services/actions/runs/36226281163) 全部通过，
+包含实际镜像内命令、两个项目容器、Link、归档与镜像加载；特别在控制器停止项目后
+核对卷无运行容器占用，再挂载原 `/workspace` 修复／恢复，随后启动同一项目并检查
+文件、会话与授权代次。候选 artifact 10900947343（444868298 bytes），证据 artifact
+10900708911，日志 `/tmp/server-settings-recovery-candidate-eb624983.log`。未发布包／镜像。
+
+主仓最终 CI 36226251315 的第一次桌面分片在 Puppeteer 启动 hook 超时，0 项业务
+测试执行，其余分片、Electron、Windows、类型和 lint 均通过。实际本地同文件
+14 项／95 断言通过（`/tmp/server-recovery-puppeteer-local.log`）。随后只重验已失败的
+桌面分片，通过后最终 CI 全绿；没有放宽断言或增加超时时限，也不据此声称已定位
+浏览器启动超时的底层原因。PR #17 已合入 main
+`ca9895ed040a8d0d8dbb01e048c5d8727d934bff`。
+
+Video 早到呈现回执修复 `5f59d2b` 的两次完整 CI 均通过。随后 Quant 组合一次界面
+验收读取旧时间线元素宽度 0；`8cba2a7` 改为同一次 page evaluation 查询并测量当前
+节点，保留 900px、缩放、滚动和刻度断言。旧日志未记录节点连接状态，不能断言已
+重建当时全部时序。Quant `18d1392` 最终两次完整 Linux 验收通过。
+
+Video 同一提交的一次 Linux 运行另外在原片重开预览失败（CI 36225760422），其他
+运行通过；调查发现该旧界面仍直接绘制 HTMLVideoElement，没有复用已验证的冻结帧。
+新提交 `753a0b29ad6aabe11d689e23df5d30fc98c1147e` 让原片静态预览共用寻帧验证，
+检查请求／素材归属后持有精确帧，播放时跟随实时画面；替换、卸载、隐藏时释放缓存。
+不改工程格式或权限，源码、README 和生成包同步提交。
+
+真实 MP4 回归保留实际解码，只令目标预览对可变视频元素的直接读取为黑场；旧实现
+读到 1 种颜色且未持有／释放帧，测试失败，新实现通过实际像素及替换／释放断言。
+日志 `/tmp/video-legacy-frozen-before.log`、`/tmp/video-legacy-frozen-after.log`。完整
+原片导入／预览／新浏览器上下文／粗剪保留／重新连接 UI 通过；最终完整媒体
+189 项通过、零跳过，`/tmp/video-legacy-frozen-media.log`。全离线 check、类型、
+确定性构建与 validate 通过（已有可选真实语音运行时跳过仍保留），日志
+`/tmp/video-legacy-frozen-check.log`、`/tmp/video-legacy-frozen-validate.log`。
+
+PR #28 仍为草稿，最终 CI 36227010197／36227007835 已排队。Quant PR #27 组合提交
+`394678dd43bad5064bf32335637742e95550245e` 已推送，构建校验及 validate 通过，
+CI 36227021653／36227019158 排队／运行。最终完整远程验收仍需通过后才能合入；
+两项均未发布。整体 goal 保持 active，目标服务器／真实服务商和正式兼容版本、
+其余业务持久化及完整升级恢复仍未完成，手机操作继续后置。
