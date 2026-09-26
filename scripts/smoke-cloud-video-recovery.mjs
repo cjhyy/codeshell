@@ -100,7 +100,8 @@ export async function verifyCloudVideoRecovery({
   async function browserRun(action) {
     const browser = await chromium.launch();
     const pages = [],
-      errors = [];
+      errors = [],
+      bridgeTimings = [];
     let approving = false;
     const timer = setInterval(() => {
       if (approving) return;
@@ -128,6 +129,25 @@ export async function verifyCloudVideoRecovery({
         });
         const page = await context.newPage();
         pages.push(page);
+        const started = new WeakMap();
+        page.on("request", (request) => {
+          if (!new URL(request.url()).pathname.includes("/panels/runtime/")) return;
+          try {
+            const method = request.postDataJSON()?.method;
+            if (typeof method === "string") started.set(request, { method, at: Date.now() });
+          } catch {
+            // Asset requests have no JSON body. Never record URLs, grants or parameters.
+          }
+        });
+        page.on("response", (response) => {
+          const request = started.get(response.request());
+          if (request)
+            bridgeTimings.push({
+              method: request.method,
+              milliseconds: Date.now() - request.at,
+              status: response.status(),
+            });
+        });
         page.on("pageerror", (error) => errors.push(error.message));
         await page.goto(`${serverUrl}/?project=${project}`);
         await page.getByLabel("用户名", { exact: true }).fill("smoke-admin");
@@ -162,6 +182,7 @@ export async function verifyCloudVideoRecovery({
       await action(open);
       assert.deepEqual(errors, [], "Installed Video must not raise page errors");
     } catch (error) {
+      await writeFile(join(scratch, "video-bridge-timings.json"), JSON.stringify(bridgeTimings));
       for (const [index, page] of pages.entries()) {
         await page
           .screenshot({ path: join(scratch, `video-error-${index}.png`), fullPage: true })
@@ -233,10 +254,12 @@ export async function verifyCloudVideoRecovery({
     assert.deepEqual(JSON.parse(await readFile(await download.path(), "utf8")), original);
     assert.deepEqual((await readDocument(projectA)).document, changed.document);
     await reopened.frame.getByRole("button", { name: "恢复为当前工程", exact: true }).click();
+    console.log("Video cloud recovery: original backup restoration requested");
     await reopened.frame
       .locator("#toast")
       .filter({ hasText: "已从升级前备份恢复工程" })
       .waitFor({ timeout: 150000 });
+    console.log("Video cloud recovery: original backup restoration completed");
     const restored = await readDocument(projectA);
     assert.equal(restored.document.name, original.name);
     assert.equal(
