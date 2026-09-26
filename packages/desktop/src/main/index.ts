@@ -346,6 +346,7 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
+import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
 import {
   getGitStatus,
   getGitBranches,
@@ -6427,6 +6428,9 @@ ipcMain.handle("pty:kill", (e, sessionId: string) => {
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────
+registerLocalFilePreviewIpc(ipcMain, (sender) =>
+  [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+);
 ipcMain.handle("fsRoot:readDir", async (_e, projectId: string, rootId: string, dir?: string) => {
   const root = await requireRendererProjectRoot(projectId, rootId);
   return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);

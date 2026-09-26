@@ -9,13 +9,16 @@ const WORKTREE = "/repo/.worktrees/feature";
 
 let root: Root | null = null;
 let container: HTMLElement;
-let cwd = WORKTREE;
+let cwd: string | null = WORKTREE;
+let revealCwd: string | null | undefined;
 let revealPath = `${WORKTREE}/src/worktree.ts`;
 let revealNonce = 1;
 let revealConsumed = false;
 const readProjectDirs: Array<[string, string, string | undefined]> = [];
 const readSessionDirs: Array<[string, string, string | undefined]> = [];
 const readSessionFiles: Array<[string, string, string]> = [];
+const readLocalFiles: string[] = [];
+const consumedNonces: number[] = [];
 let project: TrackedProject | undefined;
 let engineSessionId: string | undefined;
 let sessionMainRootId: string | undefined;
@@ -36,6 +39,14 @@ function findElement(node: unknown, tagName: string): any {
   return undefined;
 }
 
+function textOf(node: any): string {
+  return node.nodeType === 3
+    ? (node.nodeValue ?? node.textContent ?? "")
+    : node.childNodes?.length
+      ? node.childNodes.map(textOf).join("")
+      : (node.textContent ?? "");
+}
+
 async function render(): Promise<void> {
   await act(async () => {
     root?.render(
@@ -44,7 +55,13 @@ async function render(): Promise<void> {
         project={project}
         engineSessionId={engineSessionId}
         sessionMainRootId={sessionMainRootId}
-        revealFile={{ path: revealPath, cwd, nonce: revealNonce, consumed: revealConsumed }}
+        revealFile={{
+          path: revealPath,
+          cwd: revealCwd === undefined ? cwd : revealCwd,
+          nonce: revealNonce,
+          consumed: revealConsumed,
+        }}
+        onRevealConsumed={(nonce) => consumedNonces.push(nonce)}
       />,
     );
     await flushMicrotasks();
@@ -63,6 +80,9 @@ beforeEach(async () => {
   readProjectDirs.length = 0;
   readSessionDirs.length = 0;
   readSessionFiles.length = 0;
+  readLocalFiles.length = 0;
+  consumedNonces.length = 0;
+  revealCwd = undefined;
   project = {
     id: "project-1",
     name: "Project",
@@ -79,6 +99,15 @@ beforeEach(async () => {
   revealConsumed = false;
   Object.assign(window, {
     codeshell: {
+      readLocalFilePreview: async (path: string) => {
+        readLocalFiles.push(path);
+        return {
+          path,
+          text: "external file content",
+          size: 21,
+          ...(path.endsWith(".png") ? { imageDataUrl: "data:image/png;base64,AA==" } : {}),
+        };
+      },
       readProjectDir: async (projectId: string, rootId: string, dir?: string) => {
         readProjectDirs.push([projectId, rootId, dir]);
         return [];
@@ -108,6 +137,141 @@ afterEach(async () => {
 });
 
 describe("FilesPanel workspace identity", () => {
+  test("keeps an external reveal when switching workspaces from a secondary root", async () => {
+    project = {
+      ...project!,
+      roots: [...project!.roots, { id: "secondary", path: "/other", name: "other", addedAt: 1 }],
+    };
+    revealConsumed = true;
+    await render();
+    await act(async () => {
+      reactPropsOf(findElement(container, "SELECT")).onChange({ target: { value: "secondary" } });
+      await flushMicrotasks();
+    });
+
+    cwd = "/repo/another-worktree";
+    revealPath = "/outside/simultaneous.txt";
+    revealNonce += 1;
+    revealConsumed = false;
+    await render();
+    expect(readLocalFiles).toEqual([revealPath]);
+    expect(textOf(container)).toContain("external file content");
+    expect(findElement(container, "INPUT")).toBeUndefined();
+    expect(consumedNonces.filter((nonce) => nonce === revealNonce)).toHaveLength(1);
+  });
+
+  test("previews an external file without a tree and restores the tree for a project file", async () => {
+    readSessionDirs.length = 0;
+    readSessionFiles.length = 0;
+    revealPath = "/outside/notes.txt";
+    revealNonce += 1;
+    await render();
+
+    expect(textOf(container)).toContain("external file content");
+    expect(readLocalFiles).toEqual(["/outside/notes.txt"]);
+    expect(readSessionFiles).toEqual([]);
+    expect(readSessionDirs).toEqual([]);
+    expect(findElement(container, "INPUT")).toBeUndefined();
+    expect(consumedNonces.at(-1)).toBe(revealNonce);
+
+    revealConsumed = true;
+    await render();
+    expect(textOf(container)).toContain("external file content");
+    expect(findElement(container, "INPUT")).toBeUndefined();
+
+    revealConsumed = false;
+    revealPath = `${WORKTREE}/src/another.ts`;
+    revealNonce += 1;
+    await render();
+    expect(findElement(container, "INPUT")).toBeDefined();
+    expect(readSessionFiles.at(-1)).toEqual(["session-1", "primary", revealPath]);
+    expect(readLocalFiles).toEqual(["/outside/notes.txt"]);
+  });
+
+  test("opens an absolute file when no project is selected", async () => {
+    cwd = null;
+    project = undefined;
+    engineSessionId = undefined;
+    sessionMainRootId = undefined;
+    revealPath = "/outside/no-project.txt";
+    revealNonce += 1;
+    await render();
+
+    expect(textOf(container)).toContain("external file content");
+    expect(readLocalFiles).toEqual([revealPath]);
+    expect(findElement(container, "INPUT")).toBeUndefined();
+  });
+
+  test("uses the clicked link's directory for relative file paths", async () => {
+    revealCwd = "/outside/docs";
+    revealPath = "notes.txt";
+    revealNonce += 1;
+    await render();
+    expect(readLocalFiles).toEqual(["/outside/docs/notes.txt"]);
+    expect(textOf(container)).toContain("external file content");
+  });
+
+  test("previews external images through the single-file reader", async () => {
+    revealPath = "/outside/picture.png";
+    revealNonce += 1;
+    await render();
+    expect(readLocalFiles).toEqual([revealPath]);
+    expect(reactPropsOf(findElement(container, "IMG")).src).toBe("data:image/png;base64,AA==");
+    expect(findElement(container, "INPUT")).toBeUndefined();
+  });
+
+  test("renders external Markdown as a document", async () => {
+    window.codeshell.readLocalFilePreview = async (path) => ({
+      path,
+      text: "# External document\n\nReadable outside the project.",
+      size: 50,
+    });
+    revealPath = "/outside/document.md";
+    revealNonce += 1;
+    await render();
+    expect(textOf(findElement(container, "H1"))).toBe("External document");
+    expect(textOf(container)).toContain("Readable outside the project.");
+    expect(findElement(container, "INPUT")).toBeUndefined();
+  });
+
+  test("keeps a manually hidden tree hidden after previewing an external file", async () => {
+    // The first button is the tree visibility control in the panel toolbar.
+    await act(async () => {
+      reactPropsOf(findElement(container, "BUTTON")).onClick();
+      await flushMicrotasks();
+    });
+    expect(findElement(container, "INPUT")).toBeUndefined();
+    revealPath = "/outside/notes.txt";
+    revealNonce += 1;
+    await render();
+    revealPath = `${WORKTREE}/src/another.ts`;
+    revealNonce += 1;
+    await render();
+    expect(findElement(container, "INPUT")).toBeUndefined();
+    expect(readSessionFiles.at(-1)).toEqual(["session-1", "primary", revealPath]);
+  });
+
+  test("shows failed external reads and retries when the same link is clicked again", async () => {
+    window.codeshell.readLocalFilePreview = async () => {
+      throw new Error("file no longer exists");
+    };
+    revealPath = "/outside/missing.txt";
+    revealNonce += 1;
+    await render();
+    expect(textOf(container)).toContain("file no longer exists");
+    expect(consumedNonces.at(-1)).toBe(revealNonce);
+
+    window.codeshell.readLocalFilePreview = async () => ({
+      path: revealPath,
+      text: "restored external file",
+      size: 22,
+    });
+    revealNonce += 1;
+    await render();
+    expect(textOf(container)).toContain("restored external file");
+    expect(textOf(container)).not.toContain("file no longer exists");
+  });
+
   test("a successful same-file refresh recovers a failed preview read", async () => {
     const text = (node: any): string =>
       node.nodeType === 3

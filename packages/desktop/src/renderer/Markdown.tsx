@@ -352,7 +352,7 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
               );
             }
             // A path reference: render it as a file link ONLY if the file
-            // actually exists in the workspace (checked async in PathLink).
+            // actually exists (checked async in PathLink).
             // Missing files fall back to plain text, so a path the model
             // invented — or `obj.method` shaped like a path — never becomes a
             // dead link. The link shows just the filename; hover reveals the
@@ -477,7 +477,7 @@ function toAbsolute(path: string, cwd?: string | null): string {
 // also clears the cache so a just-written file re-validates immediately.
 const existsCache = new Map<string, boolean>();
 
-function checkExists(
+async function checkExists(
   sessionId: string | null,
   sessionMainRootId: string | null,
   rootStatus: MarkdownRootStatus | undefined,
@@ -486,14 +486,25 @@ function checkExists(
 ): Promise<boolean> {
   const root = cwd ?? "";
   const key = `${sessionId ?? ""}\0${sessionMainRootId ?? ""}\0${rootStatus ?? ""}\0${root}\0${path}`;
-  if (existsCache.get(key) === true) return Promise.resolve(true);
-  if (!sessionId || !sessionMainRootId) return Promise.resolve(false);
-  if (!isAbsolutePath(path) && rootStatus !== "ok") return Promise.resolve(false);
-  const p = window.codeshell.sessionFileExists(sessionId, sessionMainRootId, path);
-  return p.then((ok) => {
+  if (existsCache.get(key) === true) return true;
+  const absolute = isAbsolutePath(path);
+  if (!absolute && rootStatus !== "ok") return false;
+  try {
+    // Desktop can check an absolute file without a project. This checks only
+    // metadata; external file contents are read after the user opens the link.
+    // Web and older bridges retain their Session-scoped existence check.
+    let ok: boolean;
+    if (absolute && typeof window.codeshell.localFileExists === "function") {
+      ok = await window.codeshell.localFileExists(path);
+    } else {
+      if (!sessionId || !sessionMainRootId) return false;
+      ok = await window.codeshell.sessionFileExists(sessionId, sessionMainRootId, path);
+    }
     if (ok) existsCache.set(key, true); // memoize positives only
     return ok;
-  });
+  } catch {
+    return false;
+  }
 }
 
 // A bump source so PathLink re-checks existence after an AI turn writes files.
@@ -514,9 +525,9 @@ function subscribeFilesChanged(cb: () => void): () => void {
 }
 
 /**
- * A file path mentioned in an answer. We confirm the file EXISTS in the
- * workspace before making it clickable — a path the model invented, or a
- * dotted token shaped like a path (`obj.method`), resolves to nothing and
+ * A file path mentioned in an answer. We confirm the file EXISTS before
+ * making it clickable — a path the model invented, or a dotted token shaped
+ * like a path (`obj.method`), resolves to nothing and
  * stays plain text. When it does exist the label is just the filename;
  * hovering shows the full (absolute) path. Click opens it in the Files panel;
  * ⌘/Ctrl-click escapes to the OS editor.
