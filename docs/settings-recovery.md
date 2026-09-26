@@ -11,6 +11,39 @@ complete settings document; it never guesses missing permissions, deletes Panel
 pins to select the latest package, or resets a damaged document to defaults.
 This does not replace package repair, document migration, or server-volume backup.
 
+## Server-only installation
+
+The compatible `@cjhyy/code-shell-server` package also installs
+`code-shell-settings-recovery`. It accepts the same actions and options shown
+below, without the `settings-recovery` subcommand:
+
+```sh
+code-shell-settings-recovery inspect --project /absolute/project
+code-shell-settings-recovery repair --project /absolute/project \
+  --from /private/corrected.json \
+  --expected-revision <revision-from-inspect> \
+  --candidate-sha256 <candidate-sha256-from-inspect>
+```
+
+This entry needs neither TUI nor Electron, model credentials, normal startup
+configuration, an HTTP listener, nor a running worker. It uses the same Core
+recovery operations and backups. Help and inspection do not initialize a project.
+Older published packages may not contain it; use the compatible verified package
+or deployment candidate, rather than silently falling back to a different version.
+
+For a Docker project, first stop the project through its controller and verify its
+container has stopped. Run a one-off container from the same verified runtime
+image, using the same project workspace volume, mount path and filesystem user.
+Override the normal server entrypoint with Node and invoke
+`/opt/codeshell/node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js`
+with `--project /workspace`. Mount the reviewed candidate read-only at its explicit
+`--from` path. Do not expose ports or pass model/Link credentials. Mount the workspace
+writable for repair/restore so the original and current bytes can be backed up.
+Keep `/workspace` consistent: recovery revisions and backups bind the canonical
+project path. A changed mount path is not the same recovery target. Restart the
+project only after reviewing the reported status; the recovery command never stops
+or restarts containers itself.
+
 ## Inspect and prepare
 
 ```sh
