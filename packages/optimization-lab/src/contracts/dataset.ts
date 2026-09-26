@@ -1,5 +1,9 @@
+import { join } from "node:path";
+import { z } from "zod";
+import { mutateJsonFile } from "@cjhyy/code-shell-core/extension";
+import { VERDICT_POLICY_SUITE_VERSION } from "./verdict-policy.js";
 import { canonicalJson, sha256Hex } from "./canonical-json.js";
-import { DatasetInputSchema, type DatasetInput } from "./eval-case.js";
+import { DatasetInputSchema, type DatasetInput, type EvalCase } from "./eval-case.js";
 
 export interface DatasetIssue {
   level: "error" | "warning";
@@ -26,9 +30,19 @@ export interface DatasetValidation {
 /** Holdout source groups below this give an exploratory report, never "verified". */
 export const MIN_HOLDOUT_SOURCE_GROUPS = 3;
 
+/** Matches the bounded JSON storage contract; includes all dataset text. */
+export const MAX_DATASET_BYTES = 16 * 1024 * 1024;
+const datasetTooLarge = (): DatasetIssue => ({
+  level: "error",
+  code: "dataset_too_large",
+  message: `dataset manifest exceeds ${MAX_DATASET_BYTES} bytes`,
+});
+
 export function validateDataset(raw: unknown): DatasetValidation {
   try {
-    canonicalJson(raw);
+    if (Buffer.byteLength(canonicalJson(raw), "utf8") > MAX_DATASET_BYTES) {
+      return { ok: false, issues: [datasetTooLarge()] };
+    }
   } catch (error) {
     return {
       ok: false,
@@ -47,6 +61,9 @@ export function validateDataset(raw: unknown): DatasetValidation {
     };
   }
   const dataset = parsed.data;
+  if (Buffer.byteLength(canonicalJson(dataset), "utf8") > MAX_DATASET_BYTES) {
+    return { ok: false, issues: [datasetTooLarge()] };
+  }
   const issues: DatasetIssue[] = [];
   const error = (code: string, message: string, caseId?: string) =>
     issues.push({ level: "error", code, message, caseId });
@@ -153,4 +170,147 @@ export function validateDataset(raw: unknown): DatasetValidation {
       sourceGroups: groupSplits.size,
     },
   };
+}
+
+export interface DatasetManifest {
+  schemaVersion: 1;
+  datasetHash: string;
+  frozenAt: string;
+  title: string;
+  taskFamily: string;
+  verdictPolicySuiteVersion: string;
+  cases: EvalCase[];
+  caseHashes: Record<string, string>;
+  summary: DatasetSummary;
+}
+
+export type FreezeResult =
+  | { ok: true; created: boolean; path: string; manifest: DatasetManifest }
+  | { ok: false; issues: DatasetIssue[] };
+
+const hashSchema = z.string().regex(/^[a-f0-9]{64}$/);
+const countSchema = z.number().int().nonnegative().max(200);
+const manifestSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    datasetHash: hashSchema,
+    frozenAt: z.string().datetime(),
+    title: DatasetInputSchema.shape.title,
+    taskFamily: DatasetInputSchema.shape.taskFamily,
+    verdictPolicySuiteVersion: z.literal(VERDICT_POLICY_SUITE_VERSION),
+    cases: DatasetInputSchema.shape.cases,
+    caseHashes: z.record(hashSchema),
+    summary: z
+      .object({
+        dev: countSchema,
+        holdout: countSchema,
+        runnableDev: countSchema,
+        runnableHoldout: countSchema,
+        sourceGroups: countSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+function contentForHash(dataset: DatasetInput) {
+  return {
+    schemaVersion: 1 as const,
+    title: dataset.title,
+    taskFamily: dataset.taskFamily,
+    verdictPolicySuiteVersion: VERDICT_POLICY_SUITE_VERSION,
+    // Locale collation differs across machines. IDs use stable code-unit order.
+    cases: [...dataset.cases].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+  };
+}
+
+function hashesForCases(cases: EvalCase[]): Record<string, string> {
+  // fromEntries creates own data properties even for keys such as constructor.
+  return Object.fromEntries(cases.map((item) => [item.id, sha256Hex(canonicalJson(item))]));
+}
+
+function readManifest(text: string, datasetHash: string, path: string): DatasetManifest {
+  const corrupt = () => new Error(`dataset manifest at ${path} failed integrity validation`);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw corrupt();
+  }
+  const parsed = manifestSchema.safeParse(raw);
+  if (!parsed.success) throw corrupt();
+  const manifest = parsed.data;
+  // Defaults must already be persisted. Never silently repair a partial file.
+  if (canonicalJson(raw) !== canonicalJson(manifest)) throw corrupt();
+  const validation = validateDataset({
+    schemaVersion: manifest.schemaVersion,
+    title: manifest.title,
+    taskFamily: manifest.taskFamily,
+    cases: manifest.cases,
+  });
+  if (!validation.ok || !validation.dataset) throw corrupt();
+  const content = contentForHash(validation.dataset);
+  if (
+    manifest.datasetHash !== datasetHash ||
+    sha256Hex(canonicalJson(content)) !== datasetHash ||
+    canonicalJson(manifest.cases) !== canonicalJson(content.cases) ||
+    canonicalJson(manifest.caseHashes) !== canonicalJson(hashesForCases(content.cases)) ||
+    canonicalJson(manifest.summary) !== canonicalJson(validation.summary)
+  ) {
+    throw corrupt();
+  }
+  return manifest;
+}
+
+/**
+ * Freeze content into <labRoot>/datasets/<hash>/manifest.json, under the shared
+ * cross-process lock. An existing file must verify completely and is never
+ * rewritten. Time is metadata; content hashes do not depend on when it froze.
+ */
+export function freezeDataset(
+  raw: unknown,
+  labRootDir: string,
+  now: () => Date = () => new Date(),
+): FreezeResult {
+  const validation = validateDataset(raw);
+  if (!validation.ok || !validation.dataset || !validation.summary) {
+    return { ok: false, issues: validation.issues };
+  }
+  const content = contentForHash(validation.dataset);
+  const datasetHash = sha256Hex(canonicalJson(content));
+  const caseHashes = hashesForCases(content.cases);
+  const path = join(labRootDir, "datasets", datasetHash, "manifest.json");
+  const summary = validation.summary;
+  const createManifest = (frozenAt: string): DatasetManifest => ({
+    ...content,
+    datasetHash,
+    frozenAt,
+    caseHashes,
+    summary,
+  });
+  const serialize = (value: DatasetManifest | undefined) => `${JSON.stringify(value, null, 2)}\n`;
+  // Timestamp has a fixed ISO width. Check the complete, formatted artifact
+  // before the lock creates any directory, without evaluating a new timestamp
+  // when the immutable manifest already exists.
+  if (
+    Buffer.byteLength(serialize(createManifest("9999-12-31T23:59:59.999Z")), "utf8") >
+    MAX_DATASET_BYTES
+  ) {
+    return { ok: false, issues: [datasetTooLarge()] };
+  }
+  const outcome = mutateJsonFile<
+    DatasetManifest | undefined,
+    { created: boolean; manifest: DatasetManifest }
+  >(path, {
+    parse: (text) => (text === undefined ? undefined : readManifest(text, datasetHash, path)),
+    serialize,
+    maxBytes: MAX_DATASET_BYTES,
+    mutation: (current) => {
+      if (current !== undefined) return { result: { created: false, manifest: current } };
+      const frozenAt = manifestSchema.shape.frozenAt.parse(now().toISOString());
+      const manifest = createManifest(frozenAt);
+      return { value: manifest, result: { created: true, manifest } };
+    },
+  });
+  if (!outcome) throw new Error(`freezing dataset ${datasetHash} produced no result`);
+  return { ok: true, path, ...outcome };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateDataset } from "./dataset.js";
+import { MAX_DATASET_BYTES, validateDataset } from "./dataset.js";
 
 function evalCase(
   id: string,
@@ -167,4 +167,17 @@ describe("dataset boundaries", () => {
     expect(result.dataset?.cases[0]?.rubric).toEqual([]);
     expect(JSON.stringify(input)).toBe(before);
   });
+});
+
+test("rejects datasets beyond the total JSON byte budget", () => {
+  const input = dataset(
+    Array.from({ length: 130 }, (_, index) =>
+      evalCase(`d${index}`, index < 65 ? "dev" : "holdout", `g${index}`, {
+        input: `${index}:`.padEnd(65536, "x"),
+        expected: "x".repeat(65536),
+      }),
+    ),
+  );
+  expect(Buffer.byteLength(JSON.stringify(input))).toBeGreaterThan(MAX_DATASET_BYTES);
+  expect(codes(validateDataset(input))).toContain("dataset_too_large");
 });

@@ -4,6 +4,13 @@ import * as rootApi from "./index.js";
 
 describe("optimization-lab package entry contracts", () => {
   it("keeps the capability entry to the module factory", () => {
+    expect(Object.keys(rootApi).sort()).toEqual([
+      "VERDICT_POLICY",
+      "VERDICT_POLICY_SUITE_VERSION",
+      "createOptimizationLabModule",
+      "freezeDataset",
+      "validateDataset",
+    ]);
     expect(Object.keys(capabilityApi).sort()).toEqual(["createOptimizationLabModule"]);
     expect(capabilityApi.createOptimizationLabModule).toBe(rootApi.createOptimizationLabModule);
   });
