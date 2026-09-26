@@ -97,7 +97,8 @@ describe("architecture growth budgets", () => {
     // Media playback adds the narrow get/release preview contract and shared
     // request/result types while all file access stays in main (+11).
     // +55 declaration lines for those explicit project/version/Link contracts.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_919);
+    // Main-branch integration retains the detailed run-trace declarations (+11).
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_930);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
