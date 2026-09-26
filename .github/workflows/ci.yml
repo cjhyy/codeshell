@@ -176,6 +176,11 @@ jobs:
           bun run --cwd packages/desktop build
       - name: real Electron E2E
         run: xvfb-run -a bun run --cwd packages/desktop test:e2e
+      - name: install browser for real Hub panel recovery
+        working-directory: packages/desktop
+        run: bunx playwright install --with-deps chromium
+      - name: real Node Hub panel install and recovery UI
+        run: bun run test:server-panel-recovery
 
   tests-windows:
     name: tests (windows port — real win32)
