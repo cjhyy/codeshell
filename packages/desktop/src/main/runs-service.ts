@@ -25,6 +25,18 @@ const MAX_CHECKPOINT_BYTES = 2 * 1024 * 1024;
 const MAX_RUN_DIRECTORIES = 10_000;
 const MAX_CHECKPOINTS = 1_000;
 const MAX_ARTIFACTS = 10_000;
+const MAX_TRACE_STRING = 64 * 1024;
+const MAX_TRACE_ARRAY_ITEMS = 200;
+const MAX_TRACE_OBJECT_KEYS = 200;
+const MAX_TRACE_DEPTH = 8;
+
+export interface RunUsageDetail {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+}
 
 export interface RunSummary {
   runId: string;
@@ -46,6 +58,12 @@ export interface RunSummary {
 }
 
 export interface RunDetail extends RunSummary {
+  /** Model-facing user input when the durable transcript still contains it. */
+  prompt: string | null;
+  model: string | null;
+  provider: string | null;
+  durationMs: number | null;
+  usage: RunUsageDetail | null;
   attemptCount: number;
   latestCheckpointId: string | null;
   latestApprovalId: string | null;
@@ -65,6 +83,63 @@ export interface RunDetail extends RunSummary {
     nextAction: string | null;
   }>;
   artifacts: string[];
+}
+
+function finiteNonNegative(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+export function parseRunUsage(value: unknown): RunUsageDetail | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const usage = value as Record<string, unknown>;
+  const promptTokens = finiteNonNegative(usage.promptTokens);
+  const completionTokens = finiteNonNegative(usage.completionTokens);
+  const totalTokens = finiteNonNegative(usage.totalTokens);
+  if (promptTokens === undefined || completionTokens === undefined || totalTokens === undefined) {
+    return null;
+  }
+  const cacheReadTokens = finiteNonNegative(usage.cacheReadTokens);
+  const cacheCreationTokens = finiteNonNegative(usage.cacheCreationTokens);
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    ...(cacheReadTokens === undefined ? {} : { cacheReadTokens }),
+    ...(cacheCreationTokens === undefined ? {} : { cacheCreationTokens }),
+  };
+}
+
+/** Keep trace payloads useful without letting one image/base64 blob overwhelm IPC or the UI. */
+export function sanitizeRunTraceValue(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") {
+    return value.length <= MAX_TRACE_STRING
+      ? value
+      : `${value.slice(0, MAX_TRACE_STRING)}\n… [truncated ${value.length - MAX_TRACE_STRING} chars]`;
+  }
+  if (value === null || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : String(value);
+  if (depth >= MAX_TRACE_DEPTH) return "[max depth reached]";
+  if (Array.isArray(value)) {
+    const items = value
+      .slice(0, MAX_TRACE_ARRAY_ITEMS)
+      .map((item) => sanitizeRunTraceValue(item, depth + 1));
+    if (value.length > MAX_TRACE_ARRAY_ITEMS) {
+      items.push(`[${value.length - MAX_TRACE_ARRAY_ITEMS} more items]`);
+    }
+    return items;
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of entries.slice(0, MAX_TRACE_OBJECT_KEYS)) {
+      out[key.slice(0, 512)] = sanitizeRunTraceValue(item, depth + 1);
+    }
+    if (entries.length > MAX_TRACE_OBJECT_KEYS) {
+      out.__truncated__ = `${entries.length - MAX_TRACE_OBJECT_KEYS} more fields`;
+    }
+    return out;
+  }
+  return String(value);
 }
 
 async function readBoundedFile(file: string, maxBytes: number): Promise<string> {
@@ -247,7 +322,12 @@ export async function getRun(runId: string, baseDir: string = RUNS_DIR): Promise
           ) {
             return null;
           }
-          return event as unknown as RunDetail["events"][number];
+          return {
+            eventId: event.eventId,
+            type: event.type,
+            timestamp: event.timestamp,
+            data: sanitizeRunTraceValue(event.data) as Record<string, unknown>,
+          };
         } catch {
           return null;
         }
@@ -305,6 +385,19 @@ export async function getRun(runId: string, baseDir: string = RUNS_DIR): Promise
 
   return {
     ...base,
+    prompt: base.objective || null,
+    model: typeof s.model === "string" ? s.model.slice(0, 4_096) : null,
+    provider: typeof s.provider === "string" ? s.provider.slice(0, 4_096) : null,
+    durationMs:
+      base.startedAt !== null && base.finishedAt !== null
+        ? Math.max(0, base.finishedAt - base.startedAt)
+        : null,
+    usage: parseRunUsage(
+      s.usage ??
+        (s.metadata && typeof s.metadata === "object" && !Array.isArray(s.metadata)
+          ? (s.metadata as Record<string, unknown>).usage
+          : undefined),
+    ),
     attemptCount:
       typeof s.attemptCount === "number" && Number.isSafeInteger(s.attemptCount) && s.attemptCount >= 0
         ? s.attemptCount

@@ -397,9 +397,9 @@ export class ChromeExtensionBackend {
           detail: blocked(tab.url).detail,
         } satisfies BrowserExtract;
       },
-      waitForLoad: async (timeoutMs) => {
+      waitForLoad: async (timeoutMs, condition) => {
         const tab = await currentTab();
-        return allowed(tab) ? driver.waitForLoad(timeoutMs) : blocked(tab.url);
+        return allowed(tab) ? driver.waitForLoad(timeoutMs, condition) : blocked(tab.url);
       },
       hover: async (ref) => {
         const tab = await currentTab();
@@ -469,7 +469,7 @@ export class ChromeExtensionBackend {
       scroll: (dir, amount) => forward({ action: "scroll", dir, amount }),
       readContent: (options) => forward({ action: "readContent", ...options }),
       extractLinks: () => forward({ action: "extractLinks" }),
-      waitForLoad: (timeoutMs) => forward({ action: "waitForLoad", timeoutMs }),
+      waitForLoad: (timeoutMs, condition) => forward({ action: "waitForLoad", timeoutMs, condition }),
       hover: (ref) => forward({ action: "hover", ref }),
       selectOption: (ref, value) => forward({ action: "selectOption", ref, value }),
       pressKey: (key, ref) => forward({ action: "pressKey", key, ref }),

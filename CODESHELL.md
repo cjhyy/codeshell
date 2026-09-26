@@ -7,7 +7,7 @@ Guidance for AI assistants (Code Shell, Claude Code, Codex) working in this repo
 
 **CodeShell** — a general-purpose AI Agent orchestration framework. The engine is domain-agnostic; "coding" is expressed as a preset, not hardcoded. Design principles: (1) Core First (engine decoupled from domain), (2) Presets over Hardcoding, (3) Secure by Default (permission-gated tools), (4) Long-running Ready (Task/Cron/Sleep/Sub-Agent are first-class).
 
-## Monorepo layout (11 packages)
+## Monorepo layout (12 packages)
 
 ```
 packages/
@@ -17,6 +17,8 @@ packages/
   arena/    @cjhyy/code-shell-arena    — optional Arena capability built on core/extension.
   pet/      @cjhyy/code-shell-pet      — Pet (Mimi) capability: behavior profile, DelegateWork tool,
                                           projection observer. Loaded by hosts via extension seams.
+  optimization-lab/ @cjhyy/code-shell-capability-optimization-lab — private experimental capability;
+                  Desktop-only, feature flag optimization_lab defaults off.
   server/   @cjhyy/code-shell-server   — pure-Node remote transport layer (HTTP+WS host, pairing,
                                           passcode, tunnel, rooms, uploads). Extracted from desktop
                                           main; the seed of the future auth-gateway server.
@@ -116,7 +118,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: link → core → pet → arena → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
+bun run build          # filter order: link → core → pet → optimization-lab → arena → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)
@@ -149,7 +151,7 @@ observe deleted or partially emitted dependency files.
 - **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). Coding policy lives in
   `packages/coding/`; hosts compose that package explicitly. There is no `src/core` directory.
 - **Root typecheck is a clean-checkout gate**: `bun run typecheck` first builds package declaration
-  boundaries, then checks all 11 workspace packages, including Desktop's main/preload/renderer/mobile
+  boundaries, then checks all 12 workspace packages, including Desktop's main/preload/renderer/mobile
   configs and the standalone Web SPA. `bun run typecheck:workspaces` is the faster no-emit-only pass
   when dependency packages are already built.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):

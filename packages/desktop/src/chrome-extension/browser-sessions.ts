@@ -256,7 +256,7 @@ export async function dispatchExtensionAction(
     case "extractLinks":
       return driver.extractLinks();
     case "waitForLoad":
-      return driver.waitForLoad(request.timeoutMs);
+      return driver.waitForLoad(request.timeoutMs, request.condition);
     case "hover":
       return driver.hover(request.ref ?? "");
     case "selectOption":
