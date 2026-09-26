@@ -190,6 +190,19 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: real Node Hub panel install and recovery UI
         run: bun run test:server-panel-recovery
+      # Keep the browser sandbox enabled on Ubuntu's user-namespace-restricted
+      # runner; authorize only the exact pinned Playwright Chromium executable.
+      - name: Allow sandboxed browser audio acceptance
+        working-directory: packages/desktop
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import { writeFileSync } from 'node:fs';
+          writeFileSync('/tmp/codeshell-audio-chromium.apparmor', `abi <abi/4.0>,\ninclude <tunables/global>\nprofile codeshell-audio-ci "${chromium.executablePath()}" flags=(unconfined) {\n  userns,\n}\n`);
+          NODE
+          sudo apparmor_parser -r /tmp/codeshell-audio-chromium.apparmor
+      - name: Browser recording and interrupted upload recovery
+        run: bun scripts/smoke-panel-audio-capture.mjs
 
   tests-windows:
     name: tests (windows port — real win32)

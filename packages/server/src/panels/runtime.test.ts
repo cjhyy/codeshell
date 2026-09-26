@@ -2125,6 +2125,54 @@ async function previewFixture(bytes: string | Uint8Array = "0123456789") {
   return { ...f, service, asset, grant, effect, file };
 }
 
+test("browser audio chooser requires resources, bounded options and a current grant while iframe microphone stays denied", async () => {
+  const f = await fixture({ permissions: ["resources"] });
+  const grant = await f.prepare();
+  expect(grant.context.availableMethods).toContain("resources.recordAudio");
+  expect(grant.context.capabilities.methodLimits["resources.recordAudio"].timeoutMs).toBe(
+    30 * 60_000,
+  );
+  const response = await f.api(`${grant.instanceId}/call`, "POST", {
+    method: "resources.recordAudio",
+    params: { maxDurationSeconds: 45, maxBytes: 1024 },
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    effect: "resources.recordAudio",
+    maxDurationSeconds: 45,
+    maxBytes: 1024,
+  });
+  const asset = await fetch(f.url + grant.src);
+  expect(asset.headers.get("permissions-policy")).toContain("microphone=()");
+  for (const params of [
+    { maxDurationSeconds: 601 },
+    { maxDurationSeconds: 1.5 },
+    { maxBytes: 26 * 1024 * 1024 },
+    { maxBytes: 0 },
+    { autoStart: true },
+    [],
+  ]) {
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "resources.recordAudio", params }))
+        .status,
+    ).toBe(400);
+  }
+  const denied = await fixture({ permissions: [] });
+  const deniedGrant = await denied.prepare();
+  expect(deniedGrant.context.availableMethods).not.toContain("resources.recordAudio");
+  expect(
+    (
+      await denied.api(`${deniedGrant.instanceId}/call`, "POST", {
+        method: "resources.recordAudio",
+      })
+    ).status,
+  ).toBe(403);
+  f.state.enabled = false;
+  expect(
+    (await f.api(`${grant.instanceId}/call`, "POST", { method: "resources.recordAudio" })).status,
+  ).toBe(410);
+});
+
 test("resource preview streams scoped bytes with seeking, HEAD, and explicit download", async () => {
   const f = await previewFixture();
   expect(f.grant.context.availableMethods).toContain("resources.open");

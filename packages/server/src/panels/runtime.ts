@@ -83,6 +83,7 @@ const METHODS = [
   ...panelResourceMethods,
   "resources.open",
   "resources.preview",
+  "resources.recordAudio",
   ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.cookies.listForTask",
@@ -397,7 +398,7 @@ function bridgeScript(id: string, origin: string): string {
       const requestId = String(++next);
       const timer = setTimeout(() => {
         pending.delete(requestId); reject(new Error("Panel request timed out"));
-      }, ["tasks.start", "tasks.retry", "tasks.queue.set"].includes(method) ? 30 * 60 * 1000 : 60000);
+      }, ["tasks.start", "tasks.retry", "tasks.queue.set", "resources.recordAudio"].includes(method) ? 30 * 60 * 1000 : 60000);
       pending.set(requestId, { resolve, reject, timer });
       try {
         parent.postMessage({ type: "codeshell-panel:call", instanceId: id, requestId, method, params }, origin);
@@ -1278,21 +1279,28 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               consentTimeoutMs: 50000,
             },
           }),
-          ...(app.permissions.includes("process") && app.permissions.includes("resources")
+          ...(app.permissions.includes("resources")
             ? {
                 methodLimits: {
-                  "tasks.start": {
-                    maxParamsBytes: toolJobLimits.maxInputBytes,
-                    maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
-                    timeoutMs: 30 * 60 * 1000,
-                  },
-                  "tasks.find": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
-                  "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
-                  "tasks.retry": {
-                    maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
-                    timeoutMs: 30 * 60 * 1000,
-                  },
-                  "tasks.cancel": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                  "resources.recordAudio": { timeoutMs: 30 * 60 * 1000 },
+                  ...(app.permissions.includes("process")
+                    ? {
+                        "tasks.start": {
+                          maxParamsBytes: toolJobLimits.maxInputBytes,
+                          maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                          timeoutMs: 30 * 60 * 1000,
+                        },
+                        "tasks.find": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                        "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                        "tasks.retry": {
+                          maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                          timeoutMs: 30 * 60 * 1000,
+                        },
+                        "tasks.cancel": {
+                          maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                        },
+                      }
+                    : {}),
                 },
               }
             : {}),
@@ -1490,6 +1498,27 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         emit(grant, event, payload),
     };
     if (method.startsWith("resources.")) {
+      if (method === "resources.recordAudio") {
+        const value = (params ?? {}) as Record<string, unknown>;
+        const maxDurationSeconds = value.maxDurationSeconds ?? 300;
+        const maxBytes = value.maxBytes ?? 16 * 1024 * 1024;
+        if (
+          !value ||
+          typeof value !== "object" ||
+          Array.isArray(value) ||
+          Object.keys(value).some((key) => !["maxDurationSeconds", "maxBytes"].includes(key)) ||
+          !Number.isInteger(maxDurationSeconds) ||
+          Number(maxDurationSeconds) < 1 ||
+          Number(maxDurationSeconds) > 600 ||
+          !Number.isInteger(maxBytes) ||
+          Number(maxBytes) < 1 ||
+          Number(maxBytes) > 25 * 1024 * 1024
+        )
+          error(400, "录音限制无效。");
+        // This effect only opens a trusted chooser. Device access and upload each
+        // require an explicit user action; the iframe retains microphone=().
+        return { effect: "resources.recordAudio", maxDurationSeconds, maxBytes };
+      }
       if (method === "resources.open" || method === "resources.preview") {
         const value = params as { assetId?: unknown } | null;
         if (
