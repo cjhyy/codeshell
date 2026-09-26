@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { verifyCloudVideoMedia } from "./smoke-cloud-video-media.mjs";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
@@ -210,7 +211,7 @@ export async function verifyCloudVideoRecovery({
     }
   }
 
-  let finalDocument, statusJobId;
+  let finalDocument, statusJobId, delivered;
   const edit = async (frame, name) => {
     await frame.locator("#project-name").fill(name);
     await frame.locator("#project-name").press("Tab");
@@ -314,6 +315,13 @@ export async function verifyCloudVideoRecovery({
     console.log(
       "PASS: actual cloud Video Studio completes restore cleanup and persists its reviewed native runtime probe recipe",
     );
+    await reopened.frame.locator('#studio .rail [data-tab="media"]').click();
+    delivered = await verifyCloudVideoMedia({
+      ...reopened,
+      until,
+      readDocument: () => readDocument(projectA),
+    });
+    finalDocument = (await readDocument(projectA)).document;
     await reopened.page.screenshot({
       path: join(evidenceDir, "cloud-video-recovery.png"),
       fullPage: true,
@@ -337,6 +345,23 @@ export async function verifyCloudVideoRecovery({
       assert.ok(journal.data.recipes.some((recipe) => recipe.id === statusJobId));
       const native = await a.call("tasks.get", { id: statusJobId });
       assert.equal(native.status, "succeeded");
+      assert.equal((await a.call("tasks.get", { id: delivered.jobId })).status, "succeeded");
+      for (const assetId of [delivered.source, delivered.video]) {
+        const { asset } = await a.call("resources.get", { id: assetId });
+        assert.equal(asset.id, assetId);
+        assert.ok(Number.isSafeInteger(asset.bytes) && asset.bytes > 0);
+        const hash = createHash("sha256");
+        for (let offset = 0; offset < asset.bytes; ) {
+          const part = await a.call("resources.read", { assetId, offset, length: 32768 });
+          const bytes = Buffer.from(part.dataBase64, "base64");
+          assert.equal(part.offset, offset);
+          assert.equal(part.totalBytes, asset.bytes);
+          assert.ok(bytes.length > 0 && bytes.length <= Math.min(32768, asset.bytes - offset));
+          hash.update(bytes);
+          offset += bytes.length;
+        }
+        assert.equal(`asset-${hash.digest("hex")}`, assetId);
+      }
       assert.equal(await a.frame.locator(".editor-cleanup-warning").count(), 0);
 
       await a.frame.locator('[data-action="versions"]').first().click();
