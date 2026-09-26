@@ -3533,3 +3533,40 @@ Puppeteer 断言前。日志 `/tmp/cloud-video-task-host-ci-failure.log` 保留�
 已通过六包真实安装、隔离和审阅升级／回退；完整视频任务／重启仍待结果。
 尚未为这组后续提交启动新的三仓候选，须待实际业务复验后再验收和合并。
 两个后续工作树干净保留，整体 goal 保持 active，未公开发布。
+
+
+增量 85 第三轮：Panel `15d03ab` 的 CI 36262853622／36262850078 全部通过。
+第二轮真实容器 `/tmp/cloud-video-task-smoke-v2.log` 已 exit 1：恢复窗口不再
+消失，但恢复请求在 150 秒内尚未完成，截图仍显示忙碌，不能认定任务恢复通过。
+证据目录 `codeshell-project-smoke-04Y8EM` 的截图／文本已查看。没有扩大验收
+超时。减少文档适配的重复远程 context 查询：每次文档操作进入和返回前核对
+作用域，每次实际文件写入前再核对；每个文件访问仍由 Host 的固定 grant 授权。
+补回归确认最后一次读期间切换项目也不得把旧结果交给页面。102 项回归、类型及
+完整 npm check（`/tmp/video-cloud-roundtrips-check.log`）通过，提交 `13dfc42`
+已推送 Panel PR #46，源和生成包同时提交。
+
+Host PR #25 新增仅记录方法名／HTTP 状态／耗时的失败诊断，不记录 URL、grant
+或参数，并打印恢复请求及完成阶段。同步 CI 修复后最终提交 `0b2c1731`，脚本
+语法／lint、工作流路径检查通过。第三轮本机 `/tmp/cloud-video-task-smoke-v3.log`
+已确认运行中，通过六包实际生命周期，视频／任务／重启结果仍待核实；此轮
+使用新优化生成包，未用上一轮成功 CI 代替新代码结果。
+
+### 增量 86：固定 CI 浏览器来源（2026-09-27，已合并）
+
+Host CI 36262294902 两次均在 Puppeteer 断言前失败：第一次等待系统 Chromium
+的调试端点超时，第二次连 --version 查询都在 5 秒内未返回。分别保留
+`/tmp/cloud-video-task-host-ci-{failure,retry-failure}.log`。未继续依赖重复重跑。
+
+独立分支 `codex/ci/locked-browser` 在桌面 CI 安装步骤使用冻结依赖中现有的
+Playwright CLI 安装其对应 Chromium，校验可执行文件后设置 CHROME_PATH；
+安装失败会中止，不改变测试断言、启动超时或生产浏览器选择。CDP／Playwright
+已有发现逻辑也优先使用该浏览器。锁定依赖为 Playwright 1.60.0，对应 Chromium
+148.0.7778.96；没有更新包依赖。
+
+完整构建、工作流引用／格式检查以及本机 1 + 5 + 14 项真实浏览器测试通过。
+Linux CI 36263309712 首轮九类全部通过；日志 `/tmp/locked-ci-browser-linux.log`
+确认实际采用下载的 148 浏览器，4391 项桌面分片及全部 20 项真实浏览器断言通过。
+[Host PR #26](https://github.com/cjhyy/codeshell/pull/26) 已附到任务并合入
+`5320f296ad96a83b06e0c4bd8c213e8a80a8b268`。这解决了 CI 浏览器来源不固定，
+不宣称系统浏览器本身的超时根因已经定位。干净且无活跃进程的该任务工作树及
+本地／远程分支已清理，其他工作树保留。整体 goal active，没有公开发布。
