@@ -37,6 +37,10 @@ const containerCore = installation
   ? "/opt/codeshell/node_modules/@cjhyy/code-shell-core/dist/index.js"
   : "/opt/codeshell/packages/core/dist/index.js";
 const image = process.argv[2] ?? "codeshell-project-runtime:local";
+const seccompIndex = process.argv.indexOf("--runtime-seccomp-profile");
+const seccompProfile = seccompIndex < 0 ? undefined : process.argv[seccompIndex + 1];
+if (seccompIndex >= 0 && (!seccompProfile || !existsSync(seccompProfile)))
+  throw new Error("Pass an existing administrator seccomp profile");
 const candidatePanelsIndex = process.argv.indexOf("--candidate-panels");
 const candidatePanels =
   candidatePanelsIndex >= 0 ? process.argv[candidatePanelsIndex + 1] : undefined;
@@ -466,6 +470,7 @@ try {
       "docker",
       "--runtime-image",
       image,
+      ...(seccompProfile ? ["--runtime-seccomp-profile", resolve(seccompProfile)] : []),
       "--host",
       "127.0.0.1",
       "--port",
@@ -514,6 +519,25 @@ try {
   await start(b.id);
   const containerA = `codeshell-${installationId}-${a.id}`;
   const containerB = `codeshell-${installationId}-${b.id}`;
+  if (seccompProfile) {
+    const configured = JSON.parse(readFileSync(seccompProfile, "utf8"));
+    for (const container of [containerA, containerB]) {
+      const [inspection] = JSON.parse(await docker(["container", "inspect", container]));
+      const security = inspection.HostConfig.SecurityOpt;
+      const applied = security.find((value) => value.startsWith("seccomp="));
+      assert.ok(applied, "The explicit operator seccomp profile must reach Docker");
+      assert.deepEqual(JSON.parse(applied.slice(8)), configured);
+      assert.ok(security.includes("no-new-privileges:true"));
+      assert.equal(inspection.Config.User, "1000:1000");
+      assert.equal(inspection.HostConfig.ReadonlyRootfs, true);
+      assert.equal(inspection.HostConfig.Privileged, false);
+      assert.deepEqual(inspection.HostConfig.CapDrop, ["ALL"]);
+      assert.notEqual(inspection.HostConfig.IpcMode, "host");
+    }
+    console.log(
+      "PASS: explicit seccomp bytes applied to both non-root, read-only, capability-dropped project runtimes",
+    );
+  }
   for (const container of [containerA, containerB]) await installFixture(container);
   console.log(
     "PASS: native control CLI, administrator setup, two real Docker runtimes, isolated loopback models",
