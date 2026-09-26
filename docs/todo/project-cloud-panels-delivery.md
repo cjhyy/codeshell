@@ -3072,3 +3072,46 @@ Host 任务 `codex/desktop/panel-recovery-ui` 在隔离 Electron 用户目录中
 整体 goal 保持 active：Web 完整安装与恢复界面、业务文档迁移／旧任务恢复、真实
 模型和第三方授权、正式版本和目标服务器部署／恢复演练、设备目录与安全中继仍待
 完成；手机 Panel 触控与窄屏优化后置。真实配置缺失不阻止剩余代码工作。
+
+
+### 增量 76：Web 界面连接真实 Node Host 的包恢复验收（2026-09-26）
+
+Host 任务 `codex/server/web-panel-recovery` 新增 `scripts/smoke-web-panel-recovery.mjs`。
+两个真实 Node Hub 工作区共享包目录，各自使用登录、HTTP、项目绑定与持久存储。
+浏览器运行完整生产 Web 工作台，操作安装来源、审阅安装、绑定另一项目、增加权限
+更新、历史回退、损坏保留包后的权限重审和恢复。没有拦截浏览器 API，也没有替换
+Core 安装器、授权或存储；只有上游 GitHub commit／ZIP 回复来自临时 Git 仓库。
+
+审阅 v1 后先推进来源 HEAD 到 v2，再确认仍安装准确 v1 提交。项目 A 更新到 v2，B
+继续使用 v1。两个实际沙箱 iframe 通过 Host storage.compareAndSet 写入不同文档，
+各版本重开后读取原值；审阅未确认时完整项目快照不变。损坏共享 v1 字节后，两项目
+均显示不可用，修复 A 不改变 B，恢复目标的三项权限必须重新确认。来源下载返回
+503 时，已有选择不变。最后删除临时来源仓库，退出整个 Node Host 进程并在原地址
+启动新进程；两个项目重新登录、打开 Panel，版本及不同文档仍保留，未发生来源下载。
+
+本地完整 workspace 构建、脚本 lint／format 及真实 Node／Chromium 流程通过；日志
+`/tmp/web-panel-recovery-process-restart.log`。已查看实际修复界面截图。专用合成文档
+只证明 Host 存储与包生命周期，不证明六个 Panel 的领域 schema 迁移、真实 GitHub
+网络／账号、真实模型或 Docker 云端代理及目标部署。
+
+新增根脚本 `test:server-panel-recovery`，CI 在现有 Electron 验收之后安装 Chromium
+并执行该流程。提交 `d0504cfada20e447583c92d480b6d42b54138c0a` 已推送，
+[Host PR #21](https://github.com/cjhyy/codeshell/pull/21) 已创建并附到任务。
+首轮 CI 36245776624 的新增真实 Node／Web 流程、Electron、类型、lint、Windows
+及其他测试均通过；日志 `/tmp/web-panel-recovery-ci-browser.log` 保存新断言结果。
+桌面 job 的既有 Puppeteer 测试在浏览器启动 hook 超时，未执行任何断言；失败日志
+`/tmp/web-panel-recovery-ci-failed.log`。相同套件本地 14 项通过，
+`/tmp/web-panel-recovery-puppeteer-local.log`；未改驱动、超时或断言，仅对已终止的
+失败桌面 job 发起同提交复验。第二次仍在同一启动 hook 超时，日志
+`/tmp/web-panel-recovery-ci-retry-failed.log`，未盲目继续重跑。提交 `1e12d468` 增加
+CI 浏览器路径／版本与 stderr 诊断，并使浏览器自身启动限制短于 Bun hook 限制；
+相同 14 项本地检查再次通过。最终 `1e12d468b403eb63e202d4102c135c197b9e7868` 的
+完整 CI 36246501954 全部通过；日志 `/tmp/web-panel-recovery-ci-final-browser.log`
+记录完整新流程通过，`/tmp/web-panel-recovery-ci-desktop-diagnostics.log` 记录
+Chromium 153.0.8010.0 及 14 项驱动检查通过。前两次启动超时的根因尚未确认，
+不将增加诊断等同于已修复该原因。PR #21 已合入
+`1841d7df39b2870d788e8a3611b46de2c62aed25`，未公开发布。
+
+整体 goal 继续 active：六个 Panel 完整业务、业务迁移和长任务恢复、真实服务商、
+三仓正式版本与目标服务器部署／恢复、设备目录／安全中继仍未完成；手机 Panel
+交互优化后置。本轮补真实界面与 Host 联动的证据，不将受控来源当成真实上线验收。
