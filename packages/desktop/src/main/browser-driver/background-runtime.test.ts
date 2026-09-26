@@ -117,6 +117,28 @@ function harness(options?: {
 }
 
 describe("BackgroundBrowserRuntime", () => {
+  test("forwards targeted waits without changing the authorized target", async () => {
+    const calls: unknown[] = [];
+    const h = harness({
+      overrides: {
+        waitForLoad: async (...args) => {
+          calls.push(args);
+          return { ok: true };
+        },
+      },
+    });
+    const lease = h.runtime.acquire({ ownerId: "wait-condition", partition: "test-wait" });
+    const condition = { text: "Loaded", state: "visible" } as const;
+    try {
+      expect(await lease.bridge.waitForLoad(500, condition)).toMatchObject({ ok: true });
+      expect(calls).toEqual([[500, condition]]);
+      expect(h.openOptions).toHaveLength(1);
+    } finally {
+      lease.release();
+      h.runtime.closeAll();
+    }
+  });
+
   test("tool lease release preserves control; takeover requires an explicit resume", async () => {
     const h = harness();
     const options = { ownerId: "persistent-control", partition: "test-control" };

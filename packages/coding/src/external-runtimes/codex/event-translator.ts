@@ -53,6 +53,12 @@ export interface CodexEventTranslatorOptions {
   codeshellServerName?: string;
 }
 
+type TurnTokenUsage = {
+  promptTokens?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+};
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -113,6 +119,10 @@ export class CodexEventTranslator {
   private readonly codeshellServer: string;
   private turnNumber = 0;
   private activeTurnId: string | undefined;
+  private usageTurnId: string | undefined;
+  private cumulativeUsage: TurnTokenUsage = {};
+  private turnUsageBaseline: TurnTokenUsage = {};
+  private turnUsage: TurnTokenUsage = {};
   /** Turns that reached a terminal state. Late events for these are dropped. */
   private readonly finishedTurns = new Set<string>();
   /**
@@ -200,7 +210,11 @@ export class CodexEventTranslator {
     // and the daemon created the turn anyway, or completion beat it here). It
     // must not reactivate the session.
     if (turnId && this.finishedTurns.has(turnId)) return [];
+    if (turnId && turnId === this.activeTurnId) return [];
     this.activeTurnId = turnId;
+    // Usage may arrive before turn/started. Keep the counts already attributed
+    // to this turn, and reset only when a different user turn begins.
+    if (!turnId || turnId !== this.usageTurnId) this.resetTurnUsage(turnId);
     this.turnNumber += 1;
     return [{ type: "stream_request_start", turnNumber: this.turnNumber }];
   }
@@ -255,8 +269,47 @@ export class CodexEventTranslator {
     return delta ? [{ type: "thinking_delta", text: delta }] : [];
   }
 
+  private resetTurnUsage(turnId: string | undefined): void {
+    this.usageTurnId = turnId;
+    this.turnUsageBaseline = { ...this.cumulativeUsage };
+    this.turnUsage = {};
+  }
+
+  private updateTurnUsage(
+    key: keyof TurnTokenUsage,
+    last: number | undefined,
+    total: number | undefined,
+  ): number | undefined {
+    if (total !== undefined) {
+      if (
+        this.turnUsage[key] === undefined &&
+        this.turnUsageBaseline[key] !== undefined &&
+        total < this.turnUsageBaseline[key]
+      ) {
+        // A provider accounting window can restart between turns. Rebase the
+        // first update only: a lower snapshot during the same turn may instead
+        // be an out-of-order delivery, which must not count as fresh work.
+        this.turnUsageBaseline[key] = 0;
+        this.cumulativeUsage[key] = 0;
+      }
+      // A resumed thread has history, but no local baseline yet. Its first
+      // update identifies that history as total - last. Subsequent updates use
+      // cumulative differences, so repeated notifications never add usage twice
+      // and intermediate model requests remain counted throughout the turn.
+      this.turnUsageBaseline[key] ??= Math.max(0, total - (last ?? 0));
+      this.turnUsage[key] = Math.max(this.turnUsage[key] ?? 0, total - this.turnUsageBaseline[key]);
+      this.cumulativeUsage[key] = Math.max(this.cumulativeUsage[key] ?? 0, total);
+    } else if (last !== undefined) {
+      // Older/partial notifications have no reliable request identity. Preserve
+      // the snapshot without adding it repeatedly as if each delivery were work.
+      this.turnUsage[key] = Math.max(this.turnUsage[key] ?? 0, last);
+    }
+    return this.turnUsage[key];
+  }
+
   private onTokenUsage(params: Record<string, unknown>): StreamEvent[] {
-    if (this.isStale(str(params.turnId))) return [];
+    const turnId = str(params.turnId) ?? this.activeTurnId;
+    if (this.isStale(turnId)) return [];
     const usage = asRecord(params.tokenUsage);
     const total = asRecord(usage?.total);
     const last = asRecord(usage?.last);
@@ -264,6 +317,7 @@ export class CodexEventTranslator {
       typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
     const promptTokens = number(last?.inputTokens);
     if (promptTokens === undefined) return [];
+    if (turnId && turnId !== this.usageTurnId) this.resetTurnUsage(turnId);
     const cacheReadTokens = number(last?.cachedInputTokens);
     const cumulativePromptTokens = number(total?.inputTokens);
     const cumulativeCacheReadTokens = number(total?.cachedInputTokens);
@@ -271,6 +325,21 @@ export class CodexEventTranslator {
     const cumulativeCacheCreationTokens = number(total?.cacheWriteInputTokens);
     const completionTokens = number(last?.outputTokens);
     const cumulativeCompletionTokens = number(total?.outputTokens);
+    const singleTurnPromptTokens = this.updateTurnUsage(
+      "promptTokens",
+      promptTokens,
+      cumulativePromptTokens,
+    );
+    const singleTurnCacheReadTokens = this.updateTurnUsage(
+      "cacheReadTokens",
+      cacheReadTokens,
+      cumulativeCacheReadTokens,
+    );
+    const singleTurnCacheCreationTokens = this.updateTurnUsage(
+      "cacheCreationTokens",
+      cacheCreationTokens,
+      cumulativeCacheCreationTokens,
+    );
     return [
       {
         type: "usage_update",
@@ -279,11 +348,9 @@ export class CodexEventTranslator {
         promptTokensConfidence: "high",
         ...(cacheReadTokens !== undefined ? { cacheReadTokens } : {}),
         ...(cacheCreationTokens !== undefined ? { cacheCreationTokens } : {}),
-        singleTurnPromptTokens: promptTokens,
-        ...(cacheReadTokens !== undefined ? { singleTurnCacheReadTokens: cacheReadTokens } : {}),
-        ...(cacheCreationTokens !== undefined
-          ? { singleTurnCacheCreationTokens: cacheCreationTokens }
-          : {}),
+        singleTurnPromptTokens,
+        ...(singleTurnCacheReadTokens !== undefined ? { singleTurnCacheReadTokens } : {}),
+        ...(singleTurnCacheCreationTokens !== undefined ? { singleTurnCacheCreationTokens } : {}),
         ...(cumulativePromptTokens !== undefined ? { cumulativePromptTokens } : {}),
         ...(cumulativeCacheReadTokens !== undefined ? { cumulativeCacheReadTokens } : {}),
         ...(cumulativeCacheCreationTokens !== undefined ? { cumulativeCacheCreationTokens } : {}),

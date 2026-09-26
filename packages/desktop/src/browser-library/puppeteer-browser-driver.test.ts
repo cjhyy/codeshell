@@ -40,6 +40,72 @@ async function withPage(run: (page: Page, driver: PuppeteerBrowserDriver) => Pro
 
 describe("Puppeteer exact-node BrowserBridge", () => {
   test.skipIf(!executablePath)(
+    "waits for delayed visible text and a disappearing loading indicator",
+    async () => {
+      await withPage(async (page, driver) => {
+        await page.setContent(
+          '<div id="loading">Loading</div><section id="results" hidden>Loaded</section><div hidden>Secret hidden text</div>',
+        );
+        await page.evaluate(() => {
+          setTimeout(() => {
+            document.getElementById("loading")!.remove();
+            document.getElementById("results")!.hidden = false;
+          }, 150);
+        });
+        expect(
+          await driver.waitForLoad(2000, { selector: "#results", text: "Loaded" }),
+        ).toMatchObject({ ok: true });
+        expect(
+          await driver.waitForLoad(1000, { selector: "#loading", state: "hidden" }),
+        ).toMatchObject({ ok: true });
+        expect(await driver.waitForLoad(100, { text: "Secret hidden text" })).toMatchObject({
+          ok: false,
+          code: "TIMEOUT",
+        });
+        expect(await driver.waitForLoad(1000, { selector: "[" })).toMatchObject({
+          ok: false,
+          code: "FAILED",
+        });
+        expect(await driver.waitForLoad(Number.NaN)).toMatchObject({ ok: true });
+        expect((await driver.snapshot()).detail).toBeUndefined();
+        await page.setContent('<div style="position:fixed">Fixed-position result</div>');
+        expect(await driver.waitForLoad(1000, { text: "Fixed-position result" })).toMatchObject({
+          ok: true,
+        });
+      });
+    },
+  );
+
+  test.skipIf(!executablePath)(
+    "observes a usable DOM while an unrelated resource is still loading",
+    async () => {
+      const server = Bun.serve({
+        port: 0,
+        fetch(request) {
+          if (new URL(request.url).pathname === "/pending") return new Promise<Response>(() => {});
+          return new Response('<button>Ready control</button><img src="/pending">', {
+            headers: { "content-type": "text/html" },
+          });
+        },
+      });
+      try {
+        await withPage(async (page, driver) => {
+          await page.goto(`http://127.0.0.1:${server.port}`, { waitUntil: "domcontentloaded" });
+          expect(await page.evaluate(() => document.readyState)).toBe("interactive");
+          const result = await driver.waitForLoad(1000);
+          expect(result.ok).toBe(true);
+          expect(result.detail).toContain("dynamic content may still be loading");
+          expect((await driver.snapshot()).elements.some((el) => el.name === "Ready control")).toBe(
+            true,
+          );
+        });
+      } finally {
+        server.stop(true);
+      }
+    },
+  );
+
+  test.skipIf(!executablePath)(
     "finds native editing hosts and buttons after a large ARIA table",
     async () => {
       await withPage(async (page, driver) => {

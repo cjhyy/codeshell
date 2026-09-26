@@ -41,13 +41,15 @@ describe("Puppeteer observation handle cleanup", () => {
       ),
       evaluate: mock(async () => false),
     };
+    const mainFrame = { evaluateHandle: async () => result };
     const driver = new PuppeteerBrowserDriver({
       on() {},
       off() {},
       isClosed: () => false,
       url: () => "https://example.test/cleanup",
       title: async () => "Cleanup fixture",
-      frames: () => [{ evaluateHandle: async () => result }],
+      frames: () => [mainFrame],
+      mainFrame: () => mainFrame,
     } as unknown as Page);
     return { driver, result, nodes, metadata, first, ignored, last };
   }
@@ -134,4 +136,124 @@ describe("Puppeteer observation handle cleanup", () => {
     }
     expect(f.first.dispose).toHaveBeenCalledTimes(1);
   });
+
+  test("a stalled child returns partial results, frees the queue and disposes late handles", async () => {
+    const f = fixture();
+    const late = fixture();
+    const [main] = f.driver.page.frames();
+    let finishChild!: (value: typeof late.result) => void;
+    const child = {
+      frameElement: async () => ({ evaluate: async () => true, dispose: async () => {} }),
+      evaluateHandle: () =>
+        new Promise<typeof late.result>((resolve) => {
+          finishChild = resolve;
+        }),
+    };
+    f.driver.page.frames = () => [main!, child as never];
+    try {
+      const first = await f.driver.snapshot();
+      expect(first.elements).toHaveLength(2);
+      expect(first.warnings?.[0]).toContain("child frame 1 did not respond");
+      // The next observation must not wait for the abandoned child operation.
+      f.driver.page.frames = () => [main!];
+      const next = await f.driver.snapshot();
+      expect(next.elements).toHaveLength(2);
+      expect(next.warnings).toBeUndefined();
+      finishChild(late.result);
+      for (let i = 0; i < 30; i++) await Promise.resolve();
+      expect(late.first.dispose).toHaveBeenCalledTimes(1);
+      expect(late.last.dispose).toHaveBeenCalledTimes(1);
+      expect((f.driver as any).refs.size).toBe(2);
+    } finally {
+      f.driver.dispose();
+      late.driver.dispose();
+    }
+  });
+
+  test("does not wait for an invisible child's execution context", async () => {
+    const f = fixture();
+    const [main] = f.driver.page.frames();
+    const child = {
+      frameElement: async () => ({ evaluate: async () => false, dispose: async () => {} }),
+      evaluateHandle: mock(async () => {
+        throw new Error("must not enter hidden frame");
+      }),
+    };
+    f.driver.page.frames = () => [main!, child as never];
+    try {
+      expect((await f.driver.snapshot()).elements).toHaveLength(2);
+      expect(child.evaluateHandle).not.toHaveBeenCalled();
+    } finally {
+      f.driver.dispose();
+    }
+  });
+
+  test("a wait deadline releases the queue, aborts the poller and cleans late handles", async () => {
+    const f = fixture();
+    let finish!: (value: { dispose: () => Promise<void> }) => void;
+    let signal: AbortSignal | undefined;
+    f.driver.page.waitForFunction = ((_fn: unknown, options: { signal: AbortSignal }) => {
+      signal = options.signal;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    }) as never;
+    const lateDispose = mock(async () => {});
+    try {
+      expect(await f.driver.waitForLoad(30, { text: "Ready" })).toMatchObject({
+        ok: false,
+        code: "TIMEOUT",
+      });
+      expect(signal?.aborted).toBe(true);
+      expect((await f.driver.snapshot()).elements).toHaveLength(2);
+      finish({ dispose: lateDispose });
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+      expect(lateDispose).toHaveBeenCalledTimes(1);
+    } finally {
+      f.driver.dispose();
+    }
+  });
+
+  test("native viewport capture remains available after a main-frame timeout", async () => {
+    const f = fixture();
+    const [frame] = f.driver.page.frames();
+    frame!.evaluateHandle = (() => new Promise(() => {})) as never;
+    const evaluate = mock(() => new Promise<never>(() => {}));
+    f.driver.page.evaluate = evaluate as never;
+    const captureScreenshot = mock(async () => ({
+      ok: true,
+      base64: "QUJD",
+      mediaType: "image/png",
+    }));
+    const driver = new PuppeteerBrowserDriver(f.driver.page, { captureScreenshot });
+    try {
+      expect(await driver.snapshot()).toMatchObject({ code: "TIMEOUT", elements: [] });
+      expect(await driver.screenshot()).toMatchObject({ ok: true, base64: "QUJD" });
+      expect(evaluate).not.toHaveBeenCalled();
+      expect(captureScreenshot).toHaveBeenCalledTimes(1);
+      driver.dispose();
+      expect((await driver.screenshot()).ok).toBe(false);
+      expect(captureScreenshot).toHaveBeenCalledTimes(1);
+    } finally {
+      driver.dispose();
+      f.driver.dispose();
+    }
+  }, 12_000);
+
+  test("a stalled screenshot cannot block the next structured observation", async () => {
+    const f = fixture();
+    const driver = new PuppeteerBrowserDriver(f.driver.page, {
+      captureScreenshot: () => new Promise(() => {}),
+    });
+    try {
+      expect(await driver.screenshot()).toMatchObject({
+        ok: false,
+        detail: "screenshot did not respond within 4000ms",
+      });
+      expect((await driver.snapshot()).elements).toHaveLength(2);
+    } finally {
+      driver.dispose();
+      f.driver.dispose();
+    }
+  }, 6000);
 });
