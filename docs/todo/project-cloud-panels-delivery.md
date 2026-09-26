@@ -3901,3 +3901,45 @@ Host 672b8210bb980a8b5420ff51bfef12994b2f0319 增加真实安装包验收：操�
 且准确 HEAD 已包含于各自 origin/main，已删除这三个任务工作树及本地／远程分支。
 保留所有无关工作树、未完成分支和父目录证据。增量 95 的完整组合 npm check
 已结束通过，随后 UI 回归仍在运行；新候选已进入真实安装包／Docker 验收步骤。
+
+
+增量 95 收尾：候选 [36273228148](https://github.com/cjhyy/codeshell-services/actions/runs/36273228148)
+成功，来源 Host 672b8210bb980a8b5420ff51bfef12994b2f0319、Panel
+ d0917940a9d7006c920835919b7600a8e6944fec、services 336cf8e。
+日志 `/tmp/cloud-inline-preview-success.log` 明确记录初次实际声音／视频播放、
+视频画布回读、导出与下载，以及停止重启后声音／视频再次播放通过；原始资源、
+成品完整摘要、文档／原备份和六包／求职／设计／Link 既有检查全部保留。
+候选 artifact 10917245305（623192038 bytes），证据 artifact 10916139848；
+归档检查与镜像重载通过。未发布或正式部署。
+
+Host #30 最终九类 CI 36273205717 全通过，合入
+6efacc23329651607c8090dc7dabd0e2b19dc1aa。Panel #50 最终 CI
+36273205784／36273177818 全通过，本机 468 项完整 UI exit 0，合入
+2c3297268c3f39ef4dc928ca7711f7adc95e02e3。两侧都核对最新主线、准确 HEAD、
+工作树干净和可合并状态后，普通 PR 合并；没有跳过保护。
+
+### 增量 96：本人声音样本的云端试听（2026-09-27，进行中）
+
+从最新 Panel 主线建立独立工作树 voice-cloud-preview/codeshell-panel-apps，
+分支 codex/video-studio/voice-cloud-preview；显式纳入 #50 的前置契约。
+检查发现本人声音样本仍写死 /media URL。先用 scoped URL／缺少连接的回归复现，
+初次复用 MediaLibrary 地址又被真实浏览器暴露：新配音发布的样本不保证已经
+解码入库，两个原有流程超时。因此最终改为单独 resources.preview 授权，
+不依赖解码缓存；当前项目控制器仅在内存保留 URL，版本／资源／请求身份检查
+拒绝迟到响应；授权失败保留结果及错误，显式刷新重取 URL，不重复语音任务。
+参考音频和样本的 HTTP 地址都采用 anonymous CORS。
+
+最终 39 项控制器检查、9 项真实 MP3/WAV 浏览器流程通过（含 scoped URL 和
+页面重开）；全仓 npm check exit 0，日志 /tmp/voice-cloud-preview-check.log
+确认包括最后新增的手动授权重试用例。最终重新生成包、类型、build:check 和
+全部安装预检通过。首次八浏览器用例中的两项失败记录在
+/tmp/voice-cloud-preview-browser.log；修复后八项及新增九项全部通过，未放宽超时。
+新 browser 夹具首次未完成引擎准备，错误为“本机文字配音尚未就绪”；通过既有
+setup 流程准备后测试通过，没有改动生产推理策略。
+
+提交 5ae64369234a78d4002246a2319ae07cba6bdf0f；#50 合并后正常合并主线，
+最终 889aa3c56080bcc9f7622f7ea3196ffeb2ac94a8 组合类型与确定性包复验通过。
+[Panel #51](https://github.com/cjhyy/codeshell-panel-apps/pull/51) 为 draft，已附任务，
+最终 CI 运行中。声音模型为受控夹具；不把界面播放当作 Linux 实际模型生成。
+整体 goal 仍 active，真实账号／模型、六 Panel 全业务、目标部署与正式发布、
+统一设备目录／中继等尚未完成；手机界面优化后置。
