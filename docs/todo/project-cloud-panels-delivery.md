@@ -3672,3 +3672,49 @@ Panel #47 的最终 f114cb6 CI 有三个界面失败，其余五类通过。三�
 修正为契约要求的 starter-panel 后重新运行，未改包内容或放宽断言。
 当前 `/tmp/cloud-video-media-v3b.log` 使用 final f114cb6 生成包及新构建的授权
 优化 core/server 调试镜像，仍在执行；最终成功与依赖问题尚待核实。
+
+
+增量 89 收尾：Host #28 合入 `60db68c7b599bf0a6be1cffe9783edbd2e2f1099`。
+同步最新主线后的 `b9b9a32e` 全部九类 CI 36267678238 通过；原生产修改与已实测
+调试镜像一致，合并只加入此前 #25 的验收脚本。已合并的 #25／#46／#28 干净
+工作树及本地／远程分支清理完成，其他任务和原始 checkout 均保留。
+第三轮 `/tmp/cloud-video-media-v3b.log` 已明确失败于真实 render 任务：缺少
+Chrome／Chromium／Edge。导出准备已在原超时内完成并提交真实渲染任务；
+截图 `/Users/admin/.codex/worktrees/panel-authorization-scope/evidence/cloud-video-error-2.png`
+已查看，显示可重试的浏览器缺失错误。完整 MP4／下载／重启仍未通过。
+截图还显示已持久化资源的原素材预览处于“素材待重连”，后续需检查云端素材
+预览适配，不能用最终资源下载验收替代时间轴／素材播放。
+
+Panel #47 新提交 `6ab0f54` 只修正三个桌面测试 Host 的能力声明和保存响应。
+同步主线后的最终 `67c5161bd154796cff6052802d72d22f8b0c189b` 代码树未新增变化。
+完整本地 468 项 UI 通过（`/tmp/video-cloud-final-ui.log`），最终远端
+36267837928／36267835337 六类全部通过。Host #27 已同步授权优化主线，最终
+`0957e4e8` 的九类 CI 36267973203 全部通过。两 PR 仍为 draft，等待完整媒体
+业务及部署依赖验收，未将界面 CI 当作渲染通过。
+
+### 增量 90：云端浏览器依赖与沙箱探测（2026-09-27，仅探测）
+
+新本地探测镜像 `codeshell-cloud-browser:probe`（基于授权优化调试镜像，
+apt 安装 Chromium 154.0.8037.57）确认：现有非 root、只读根、cap-drop ALL、
+no-new-privileges、有限资源的 Docker 默认配置报 No usable sandbox。
+没有采用 --no-sandbox、SYS_ADMIN、privileged 或 host IPC。
+
+官方参考 https://playwright.dev/docs/next/docker 建议允许用户命名空间的
+seccomp 配置。固定 v1.60.0 源文件下载至 `/tmp/cloud-browser-seccomp-probe.json`，
+SHA-256 `cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849`。
+原配置在 cap-drop ALL 下仍报 sys_chroot 失败；增加 chroot 系统调用可达性
+（不增加内核能力，仍由内核校验）后，保留上述限制成功加载空白页。
+配置 `/tmp/cloud-browser-seccomp-chroot-probe.json` 仅用于无网络、无用户数据
+的临时探测容器；尚未集成到任何生产配置。
+
+进一步用当前 Panel 的真实 CaptionBrowser 类打包独立探针，保留其原始启动
+参数和私有 CDP pipe，在同样的受限容器中绘制 320×180 canvas，成功返回
+1948 字节 PNG：`/tmp/cloud-caption-browser-probe.log`。没有添加禁用浏览器
+沙箱的参数。chrome://sandbox 的 CLI 探测只返回 New Tab，不作为沙箱状态证明。
+这仅证明当前类与候选配置可启动／绘图，不证明完整视频渲染或该配置已达到
+发布标准。下一步需要审查系统调用配置及来源许可，提供管理员控制的通用
+运行配置入口、在 services 组合浏览器依赖，然后复验完整任务；不能静默
+改变所有项目的默认隔离策略。尚无该项生产代码改动。
+
+整体 goal 仍 active：完整成品、其他 Panel 业务／迁移、真实服务商／模型、
+目标部署与发布、设备目录／中继等仍未完成；手机触控／窄屏优化后置。
