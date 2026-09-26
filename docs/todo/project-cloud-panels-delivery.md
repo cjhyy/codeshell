@@ -3402,3 +3402,43 @@ PR #44 尚未合并，干净的任务工作树保留以继续验收。
 全部六类检查通过，实际完整检查日志 `/tmp/quant-signal-ci-package.log` 已核对。
 PR #44 已合入 `f01888a999572f39774e2ab54ea498f60e7767fc`，干净且无活跃进程
 的任务工作树、本地和远程分支已清理。没有公开发布；原三仓候选仍不包含此修复。
+
+
+### 增量 84：视频工程的云端项目存储与恢复验收（2026-09-27，进行中）
+
+真实生产 Web、已安装 Video Studio 和两个 Docker 项目复现了原版本直接显示
+“恢复失败”、编辑器未初始化的问题。云端没有桌面的 `media.document` 服务，
+原回退 IndexedDB 在不透明来源 iframe 不可用。日志
+`/tmp/cloud-video-smoke-before.log`（exit 1）及
+`codeshell-project-smoke-UU4iBk/video-error-0.png`、页面文本保留，截图已查看。
+
+Panel 分支 `codex/video-studio/cloud-project-storage` 在保留桌面原存储的同时，
+让编辑器发现已有 workspace 能力后改用项目内 `video-studio-data/documents/`。
+带摘要的不可变分块先写入，版本索引按内容版本条件提交；保留 20 个历史版本，
+归档和升级前原始备份独立保存。冲突、损坏、缺块时停止覆盖，写入回执丢失时
+先核对已落盘结果。新增 workspace.read/write 权限，更新安装必须审阅权限；
+本次未给 Host 增加视频业务接口。原媒体导入／渲染和附属任务日志适配仍待完成。
+
+五项针对性测试覆盖大 Unicode 数据、竞争写入、迟到/丢失回执、损坏记录与
+超过 20 版后的原始升级备份。完整 npm check 通过
+(`/tmp/video-cloud-full-check.log`)，463 项 Video UI 通过
+(`/tmp/video-cloud-ui.log`)；最后补选项与版本整数边界后，类型、构建一致性、
+39 文件安装包验证和五项检查再次通过。提交
+`90788fa9ad32a2ebaec8e38dffe918e1823b656d` 已推送，
+[Panel PR #45](https://github.com/cjhyy/codeshell-panel-apps/pull/45) 为草稿并已附到任务，
+CI 36259870990／36259857173 运行中。
+
+Host 分支 `codex/server/cloud-video-recovery` 增加实际云端恢复验收到候选流程，
+包括时间轴编辑、独立登录重开、原始备份下载、恢复与继续编辑、重启和删除包来源。
+提交 `48de6b4ac197780344a9ea4e94f8f46826b946a8` 已推送，
+[Host PR #24](https://github.com/cjhyy/codeshell/pull/24) 为草稿并已附到任务。
+服务构建、脚本语法和 lint 已通过；Host CI 36260001850 运行中。
+本机实际双容器 `/tmp/cloud-video-smoke-after.log` 仍在运行，已通过六包生命周期、
+求职与设计业务步骤，尚未确认视频及最终重启步骤通过。调试阶段安装包来自
+`/tmp/cloud-video-stage-path.txt` 指向的独立暂存目录，后续校验使用提交精确版本。
+
+准确三仓 Linux 候选 36259999515 已启动并确认运行中，锁定 Host `48de6b4a`、
+Panel `90788fa`（已包含投资修复）及 services `f06d687d`。不能将正在运行当作通过，
+两个 PR 均尚未合并，未公开发布。整个 goal 保持 active；真实模型与 Link 账号、
+剩余 Panel 业务／任务恢复、正式部署／回滚、设备目录／安全中继仍待完成，
+手机触控优化继续后置。
