@@ -310,6 +310,10 @@ const extensionRuntimeContract = [
   "BUILTIN_TOOLS",
   "derivePresetExposure",
   "logger",
+  "readSkillSnapshot",
+  "acquireLockOnPath",
+  "mutateJsonFile",
+  "resolveLLMConfigForTag",
 ] as const;
 
 // Stable workspace data-source schema/constants surface. Host runtime belongs
@@ -378,6 +382,11 @@ describe("core public/internal export contract", () => {
     // Process singletons shared by hosts (via /internal) and capability
     // packages (via /extension) must be the same instance.
     expect(extensionApi.notificationQueue).toBe(internalApi.notificationQueue);
+
+    // Shared host helpers must retain their identity across supported entries.
+    expect(extensionApi.acquireLockOnPath).toBe(internalApi.acquireLockOnPath);
+    expect(extensionApi.mutateJsonFile).toBe(internalApi.mutateJsonFile);
+    expect(extensionApi.resolveLLMConfigForTag).toBe(publicApi.resolveLLMConfigForTag);
 
     // The extension entry stays narrow: no Engine, no host UI utilities.
     expect(extensionApi).not.toHaveProperty("Engine");

@@ -172,7 +172,9 @@ describe("architecture growth budgets", () => {
       // The remote Link client is an intentional public SDK capability consumed
       // by standalone Hosts; tokens stay in their credential authority.
       "packages/core/src/index.ts": 124,
-      "packages/core/src/index.extension.ts": 46,
+      // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
+      // the shared file lock, and text-connection resolution (§5.2 of the plan).
+      "packages/core/src/index.extension.ts": 49,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by
