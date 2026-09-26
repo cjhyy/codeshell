@@ -3037,3 +3037,38 @@ Host 最终 `a36caf75b951c216f9cd2cb919aa1a3a61dce7a8` 的完整 CI 36242773655
 `bc4170122cd01c8021d3fb9e9d6a6c8ea1493269`，未公开发布。整体 goal 继续 active：
 完整界面安装／升级／恢复、业务文档迁移和长任务恢复、真实服务商、正式版本与目标
 部署／恢复演练以及设备目录／安全中继仍未完成；手机 Panel 交互继续后置。
+
+
+### 增量 75：双窗口真实安装与恢复验收及启动崩溃修复（2026-09-26）
+
+Host 任务 `codex/desktop/panel-recovery-ui` 在隔离 Electron 用户目录中打开两个真实
+项目窗口，仅控制原生目录选择器。通过界面执行安装、增加权限的来源更新、历史版本
+回退、故意损坏保留包后的审阅修复。审阅未确认前不绑定／升级，项目 A 的更新和修复
+不改项目 B 的 pin；损坏包不自动跟随最新版，修复重新展示目标包全部权限。已有项目
+文档字节保持。这是专用测试包的真实管理界面验收，不是六个 Panel 的业务数据迁移。
+
+测试发现新窗口偶发空白：React 已渲染 Main 提供的新项目，而配置查询使用的模块
+快照仍等待父组件 effect 更新，抛出 `project configuration requires a live V2 project id`。
+改为 React 订阅同一份项目快照，移除渲染后的双份状态同步；保留 Main V2 身份校验，
+不将缺失项目降级为全局配置。回归在修复前稳定失败，修复后通过，并验证替换根目录
+与移除项目时不保留旧路径。
+
+本地项目／注册表 12 项、会话压缩 2 项、快捷聊天 47 项、草稿配置 2 项通过；Desktop
+类型、针对性 lint 和 renderer 构建通过。最终两窗口 Electron 验收通过，正常退出。
+日志 `/tmp/panel-recovery-registry-{before,final}.log`、`/tmp/panel-recovery-ui-final.log`、
+`/tmp/panel-recovery-{compact,quickchat,drafts-final,typecheck,lint-final}.log`。新增脚本
+进入默认 Electron CI。最初失败窗口导致退出保存受阻，测试现在只对其隔离子进程
+实施有界清理，并把强制清理作为失败报告，不以此掩盖启动问题。
+
+提交 `994e00c9b04faa6138afd87eef7cdd5fb39d10da` 已推送，
+[Host PR #20](https://github.com/cjhyy/codeshell/pull/20) 已创建并附到任务。
+首轮 CI 36244652655 的类型、全部测试、Electron 和 Windows 均通过，lint 拒绝测试
+清理逻辑在 finally 内抛错。改为保留原始异常、强制清理时设置失败退出码；本地 lint
+及完整 Electron 流程重新通过。最终提交 `0237baaa9a2fbe6857b1218b5b00b28fdb587375`
+已推送，最终完整 CI 36244792129 全部通过，包括 Electron 与 Windows；日志
+`/tmp/panel-recovery-ci-final.log` 记录真实双窗口验收通过。PR #20 已合入
+`d719d7af35a1d94c8acfc124378672b5f43ceeaa`，未公开发布。
+
+整体 goal 保持 active：Web 完整安装与恢复界面、业务文档迁移／旧任务恢复、真实
+模型和第三方授权、正式版本和目标服务器部署／恢复演练、设备目录与安全中继仍待
+完成；手机 Panel 触控与窄屏优化后置。真实配置缺失不阻止剩余代码工作。
