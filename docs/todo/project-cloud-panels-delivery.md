@@ -3442,3 +3442,20 @@ Panel `90788fa`（已包含投资修复）及 services `f06d687d`。不能将正
 两个 PR 均尚未合并，未公开发布。整个 goal 保持 active；真实模型与 Link 账号、
 剩余 Panel 业务／任务恢复、正式部署／回滚、设备目录／安全中继仍待完成，
 手机触控优化继续后置。
+
+
+增量 84 后续：本机全流程 `/tmp/cloud-video-smoke-after.log` 已结束（exit 1）。
+两个真实项目均已迁移为新工程存储，A 的矩形编辑已实际持久化为第二版；
+脚本随后等待被设计为隐藏的 `[data-ew-save]` 元素“可见”而超时，日志明确
+显示该元素文本已为“已保存”。失败截图位于 `codeshell-project-smoke-fSTUMo`，
+已查看，不能把此轮记为完整恢复通过。
+
+Host 后续提交 `fa7086ad7747fd7b06a4ccc34eeba83b4c4fd4b3` 修正保存状态
+观察方式，保留实际文件内容断言，并新增仅供调试的 business 选择参数；正式候选
+默认仍跑全部业务。语法／lint 通过，新 Host CI 36260394100 运行中。
+最终 Panel 精确跟踪文件暂存由 `/tmp/cloud-video-final-stage-path.txt` 指向，
+本机聚焦视频复验 `/tmp/cloud-video-smoke-focused.log` 正在运行。
+旧候选 36259999515 已确认 cancelled；新准确候选 36260424368 已启动，
+锁定 Host `fa7086ad`、Panel `90788fa`、services `f06d687d`。Panel 两轮 CI
+除 Video UI 尚在运行外其余均通过；两个 PR 仍为草稿，完整视频恢复和重启
+尚未通过，整体范围与未完成项不变。
