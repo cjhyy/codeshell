@@ -37,6 +37,11 @@ const containerCore = installation
   ? "/opt/codeshell/node_modules/@cjhyy/code-shell-core/dist/index.js"
   : "/opt/codeshell/packages/core/dist/index.js";
 const image = process.argv[2] ?? "codeshell-project-runtime:local";
+const candidatePanelsIndex = process.argv.indexOf("--candidate-panels");
+const candidatePanels =
+  candidatePanelsIndex >= 0 ? process.argv[candidatePanelsIndex + 1] : undefined;
+if (candidatePanelsIndex >= 0 && !candidatePanels)
+  throw new Error("Pass the staged candidate Panel root");
 const downloadPanelIndex = process.argv.indexOf("--download-panel");
 const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
 if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
@@ -693,6 +698,22 @@ try {
     "PASS: second project has its own real worker and cannot read the first project's file or session",
   );
 
+  let verifyCandidateRestart;
+  if (candidatePanels) {
+    const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
+    verifyCandidateRestart = await verifyCandidatePanelLifecycle({
+      docker,
+      json,
+      request,
+      containerCore,
+      packageRoot: candidatePanels,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      panelHarness,
+    });
+  }
   let verifyDownloadRestart;
   if (downloadPanel) {
     const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
@@ -806,6 +827,7 @@ try {
     "PASS: stop/restart preserves project files and conversations, changes generation, and rejects old panel grants",
   );
   await verifyDownloadRestart?.();
+  await verifyCandidateRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",

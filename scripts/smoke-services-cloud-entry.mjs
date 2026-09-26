@@ -323,7 +323,11 @@ try {
     try {
       await run(
         process.execPath,
-        [join(repo, "scripts/smoke-project-sandboxes.mjs"), outputArg ? imageId : tag],
+        [
+          join(repo, "scripts/smoke-project-sandboxes.mjs"),
+          outputArg ? imageId : tag,
+          ...(panelInventory ? ["--candidate-panels", join(installed, "panels")] : []),
+        ],
         repo,
         {
           ...process.env,
