@@ -181,7 +181,10 @@ describe("architecture growth budgets", () => {
       // catalog resolver (+1); credentials remain on the reviewed Host surface.
       // Verified application-owned runtime discovery adds one Host-only module;
       // it neither selects executables for consumers nor grants execution.
-      "packages/core/src/index.internal.ts": 84,
+      // Offline project settings inspection, reviewed repair and exact rollback
+      // add one Host-only module for the administrator CLI. The public SDK and
+      // extension contracts do not expose configuration recovery authority.
+      "packages/core/src/index.internal.ts": 85,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
