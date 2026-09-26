@@ -4057,3 +4057,28 @@ profile，保留全机限制。最终 d9f272d9ffcc5ec60357370f7610fb1e970abb37�
 CI 36279137987 已确认运行。消费端接入、真实设备／模型和全部 Panel 业务仍未完成。
 整体 goal active，真实服务商／模型、目标部署／发布和统一目录／中继仍待完成，
 手机触控／窄屏优化继续后置。
+
+增量 97 收尾：候选 [36278228806](https://github.com/cjhyy/codeshell-services/actions/runs/36278228806)
+完整成功。实际 iframe 的 PDF 任务经 owner 确认后生成可选中文字、保存来源回执、
+拒绝另一项目读取、下载完整相同字节；停止重启及删除包来源后文件、任务、回执和
+再次下载保留。六包生命周期、求职／设计恢复、视频原素材播放／画布／MP4／重启、
+Link 受控授权／备份恢复等既有门槛同时通过。候选逐文件校验、镜像重载和归档通过。
+候选 artifact 10918805636（698413424 bytes），证据 10918381181，日志
+/tmp/job-hunt-pdf-candidate-success.log。轻量证据已下载到
+/tmp/cloud-pdf-success-evidence，检查页面截图和选择文本，并渲染查看实际 Linux PDF。
+
+最终三仓 CI 全通过，主线均为候选 HEAD 的祖先且工作树干净；通过匹配准确 HEAD 的
+普通 PR 合并：Host #31 -> 4e50f3796357f29a32a24f7d2772d0bccae6a9da，
+Panel #52 -> 3239de97a21310e9cc32a82dddb9e5f714969a3c，services #6 ->
+d97cff4b5c7c9c4132b4e6121a84e7ec682d6edd。没有公开发布或正式部署。
+
+增量 98 复验：d9f272d9 的完整 CI 36279137987 全部成功；Linux job 108507504109
+明确完成 Browser recording and interrupted upload recovery，真实麦克风录制仍用
+模拟设备，未将其记为真实账号／物理设备验收。正常合并新主线仅带入已验收 PDF
+脚本，得到 de99cd81977df5d9b7c6d9cefb161434be46419d；脚本语法与 diff 通过，
+已推送等待该组合 CI，#32 仍 draft。整体目标仍 active。
+
+增量 97 清理完成：三个 PDF 任务准确 HEAD 均已包含在各自 origin/main；工作树
+干净，初次 lsof 仅看到并行状态检查本身，检查结束后再次确认无活跃 cwd。
+三个已合并工作树及本地／远程任务分支已删除，原始 checkouts、录音分支和所有
+无关任务保留。增量 98 组合 CI 36279471524 已确认运行，来源 de99cd81。
