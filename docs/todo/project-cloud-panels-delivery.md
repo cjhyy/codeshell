@@ -2262,3 +2262,48 @@ Video Studio 独立任务分支为 `codex/video-studio/decoded-frame-readiness`�
 真实 Link／模型／服务商验收、三仓正式版本交付、目标服务器部署及跨版本恢复回滚
 仍需完成。手机界面后置；设备目录、中继和通知仍独立保留。已准备的配置恢复任务
 工作树尚未实现，不计入已完成内容。
+
+### 增量 56：确认微秒寻帧根因与管理员配置恢复（2026-09-26）
+
+Video Studio `17c5abc` 的 463 项本地完整界面测试通过，日志
+`/tmp/video-frozen-ui.log`；Linux 媒体仍失败。诊断提交 `b10eae4` 的真实 Linux 日志
+显示目标 26/30 秒被截断为 0.866666，已解码帧 timestamp=833333、duration=33333，
+随后无新的呈现回调；另一次运行在当前帧暂不可读时抛出异常。没有增加时限或忽略失败。
+日志 `/tmp/video-decoded-timing-linux.log`。
+
+用真实红蓝交替的 30 fps 视频与暂不可读取帧对象的夹具建立两项回归，修复前都失败，
+日志 `/tmp/video-microsecond-before.log`。`77c384d4081461ff1897131e743fbd428f3e439f`
+统一定位到不早于目标 tick 的首个可表示微秒，对 `InvalidStateError` 在原截止时间内
+重试。22 项取帧回归与完整 186 项本机媒体测试通过、零跳过；类型、完整 check、
+确定性构建及包校验通过。日志 `/tmp/video-microsecond-after.log`、
+`/tmp/video-microsecond-media.log`、`/tmp/video-microsecond-check.log`。
+
+该提交的 Linux PR CI 36221313375 与 push CI 36221311253 均已通过媒体及安装包检查。
+PR 媒体为 185 通过、0 失败、1 项 macOS 语音按平台跳过，实际多机位和 NTSC 导出
+通过；日志 `/tmp/video-microsecond-linux-media.log`。完整 UI 尚在运行，PR #28 未合入。
+Quant 分支已合并此修复为 `b31c64da90f7c9bf0ab517003edfcf0ae3cb083b`，本地确定性
+构建与 validate 通过；组合 PR CI 36221557647、push CI 36221554809 已开始，PR #27
+仍未合入。不能以视频单分支通过替代组合验收。
+
+Host 独立分支 `codex/platform/project-config-recovery` 新增提交
+`f457f0e0976133070b01d0c3802c88846cceaf4c`，
+[PR #16](https://github.com/cjhyy/codeshell/pull/16)。管理员可在已停止的项目上使用
+`settings-recovery inspect / repair / restore`。检查只给状态／摘要，不打印配置值；
+修复必须匹配项目版本与完整候选 JSON 摘要，先保留原始字节，再通过现有目录锁原子
+替换。YAML 不改写但计入版本；回滚前再备份当前 JSON，拒绝损坏／跨项目／跨作用域
+备份和已变化的 YAML。私有备份目录设置 Git 忽略规则，配置与备份均拒绝链接和越界
+大小。不会自动删除 pin、猜测权限或暴露给普通 Panel／配对端；引导初始化被跳过。
+
+- 配置及 CLI 回归 168 项通过；最后补实际 Git 排除验证后，21 项恢复／CLI 用例通过。
+  日志 `/tmp/project-config-recovery-settings-final.log`、
+  `/tmp/project-config-recovery-final-tests.log`；含两个独立进程竞争同一版本。
+- 已构建的实际 Node CLI 在临时项目跑通读取不写文件、修复、逐字节回滚，不依赖
+  模型或普通启动配置；完整 build 与最终根 typecheck 通过。
+- 全仓 lint 零错误，保留 105 条既有警告；新增／修改文件定向 lint 无警告。
+  日志 `/tmp/project-config-recovery-types-final.log`、
+  `/tmp/project-config-recovery-lint-final.log`。远程 CI 36221584263 已排队，尚未合入。
+- 使用边界见 `docs/settings-recovery.md`。这是离线管理员恢复路径，不主动停止进程，
+  不等于桌面／云端在线修复 UI、全部包恢复、文档迁移或服务器跨版本回滚已经完成。
+
+整体 goal 保持 active，真实服务商与目标部署验收、正式三仓发布、其余业务持久化和
+任务恢复、设备中继及后置手机界面仍按原范围推进。
