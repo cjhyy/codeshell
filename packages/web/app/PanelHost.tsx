@@ -3,6 +3,7 @@ import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { api, ApiError } from "./auth.js";
 import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import { connectPanelRuntime, type PanelRuntimeEvent } from "./panel-runtime-connection.js";
+import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
 import "./panel-host.css";
 
 const ROOT = "/api/v1/panels/runtime";
@@ -159,6 +160,8 @@ export function PanelHost({
   const [connectionStatus, setConnectionStatus] = React.useState("");
   const [confirmationError, setConfirmationError] = React.useState("");
   const [confirmation, setConfirmation] = React.useState<Confirmation>();
+  const [audioRequest, setAudioRequest] = React.useState<PanelAudioRequest>();
+  const activeAudio = React.useRef<PanelAudioRequest | undefined>(undefined);
   const [confirming, setConfirming] = React.useState(false);
   const [reload, setReload] = React.useState(0);
   const callbacks = React.useRef({ onClose, onAuthLost, onDirtyChange, onSubmitPrompt, busy });
@@ -169,12 +172,12 @@ export function PanelHost({
   const confirmationElement = React.useRef<HTMLElement>(null);
 
   React.useEffect(() => {
-    callbacks.current.onDirtyChange?.(!!confirmation || confirming);
+    callbacks.current.onDirtyChange?.(!!confirmation || confirming || !!audioRequest);
     if (confirmation) {
       confirmationElement.current?.focus();
       confirmationElement.current?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [confirmation, confirming]);
+  }, [confirmation, confirming, audioRequest]);
 
   React.useEffect(() => {
     const workspace = getApiWorkspace() ?? "";
@@ -240,6 +243,7 @@ export function PanelHost({
     setConfirmationError("");
     setConfirmation(undefined);
     setConfirming(false);
+    setAudioRequest(undefined);
 
     const closeGrant = (grant: PreparedPanel) => {
       if (closeRequested) return;
@@ -307,7 +311,14 @@ export function PanelHost({
       );
     };
     const showNextHostConfirmation = () => {
-      if (disposed || !scope.grant || activeConfirmation.current || submissionActive) return;
+      if (
+        disposed ||
+        !scope.grant ||
+        activeConfirmation.current ||
+        activeAudio.current ||
+        submissionActive
+      )
+        return;
       const effect = queuedConfirmations.shift();
       if (!effect) return;
       if (effect.expiresAt <= Date.now()) {
@@ -424,7 +435,7 @@ export function PanelHost({
     };
     const confirm = (effect: Exclude<PanelEffect, { effect: "host.confirm" }>): Promise<boolean> =>
       new Promise((resolve) => {
-        if (activeConfirmation.current || submissionActive) {
+        if (activeConfirmation.current || activeAudio.current || submissionActive) {
           resolve(false);
           return;
         }
@@ -581,6 +592,76 @@ export function PanelHost({
           if (disposed || controller.signal.aborted) return;
           setNotice("面板任务已提交到当前对话，可切换到对话查看进度。");
           reply(child, requestId, accepted);
+        } else if (data.method === "resources.recordAudio") {
+          if (
+            !isRecord(result) ||
+            result.effect !== data.method ||
+            !Number.isInteger(result.maxDurationSeconds) ||
+            Number(result.maxDurationSeconds) < 1 ||
+            Number(result.maxDurationSeconds) > 600 ||
+            !Number.isInteger(result.maxBytes) ||
+            Number(result.maxBytes) < 1 ||
+            Number(result.maxBytes) > 25 * 1024 * 1024
+          )
+            throw new Error("录音请求无效。");
+          if (activeAudio.current || activeConfirmation.current || submissionActive)
+            throw new Error("请先完成当前的录音或确认操作。");
+          const captured = await new Promise<unknown>((resolve, reject) => {
+            let settled = false;
+            const finish = (value: unknown, failure?: Error) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              controller.signal.removeEventListener("abort", abort);
+              if (activeAudio.current === pending) {
+                activeAudio.current = undefined;
+                if (!disposed) setAudioRequest(undefined);
+              }
+              if (failure) reject(failure);
+              else resolve(value);
+              showNextHostConfirmation();
+            };
+            const abort = () => finish(undefined, new Error("录音已关闭或授权已结束。"));
+            const timer = setTimeout(
+              () => finish(undefined, new Error("录音操作已超时，请重新打开。")),
+              25 * 60_000,
+            );
+            const pending: PanelAudioRequest = {
+              signal: controller.signal,
+              maxDurationSeconds: Number(result.maxDurationSeconds),
+              maxBytes: Number(result.maxBytes),
+              call: async (method, params, operationSignal) => {
+                const signal = operationSignal
+                  ? AbortSignal.any([controller.signal, operationSignal])
+                  : controller.signal;
+                signal.throwIfAborted();
+                if (disposed || scope.grant !== grant) throw new Error("当前项目授权已结束。");
+                try {
+                  const value = await api<unknown>(
+                    apiUrl(`${ROOT}/${grant.instanceId}/call`, workspace, projectId),
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ method, params }),
+                      signal,
+                    },
+                  );
+                  signal.throwIfAborted();
+                  if (disposed || scope.grant !== grant) throw new Error("当前项目授权已结束。");
+                  return value;
+                } catch (cause) {
+                  if (cause instanceof ApiError && [401, 403, 410].includes(cause.status))
+                    terminate(cause);
+                  throw cause;
+                }
+              },
+              finish,
+            };
+            activeAudio.current = pending;
+            controller.signal.addEventListener("abort", abort, { once: true });
+            setAudioRequest(pending);
+          });
+          reply(child, requestId, captured);
         } else if (data.method === "resources.open") {
           setPreview(undefined);
           setPreviewError(false);
@@ -843,6 +924,7 @@ export function PanelHost({
           正在打开面板…
         </p>
       )}
+      {audioRequest && <PanelAudioDialog request={audioRequest} />}
       {confirmation && (
         <section
           className="panel-host-confirm"
@@ -913,7 +995,7 @@ export function PanelHost({
           title={`${panel.title["zh-CN"] || panel.title.default}面板`}
           sandbox="allow-scripts allow-downloads"
           referrerPolicy="no-referrer"
-          inert={!!confirmation || confirming}
+          inert={!!confirmation || confirming || !!audioRequest}
           onLoad={() => frameLifecycle.current?.loaded()}
           allow="camera 'none'; microphone 'none'; geolocation 'none'; display-capture 'none'; clipboard-read 'none'; clipboard-write 'none'"
           className="panel-host-frame"
