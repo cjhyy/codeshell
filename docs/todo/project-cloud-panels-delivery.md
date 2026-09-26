@@ -2307,3 +2307,53 @@ Host 独立分支 `codex/platform/project-config-recovery` 新增提交
 
 整体 goal 保持 active，真实服务商与目标部署验收、正式三仓发布、其余业务持久化和
 任务恢复、设备中继及后置手机界面仍按原范围推进。
+
+### 增量 57：配置恢复合入、更新部署候选与呈现回执修复（2026-09-26）
+
+Host [PR #16](https://github.com/cjhyy/codeshell/pull/16) 已合入 main
+`520d8b2abbc2306a4970a7b5da34f703fac978cb`。先前两个失败分别是新增内部函数未加入
+精确导出清单，以及内部模块数量预算未记录该恢复入口；补齐精确清单与带边界说明的
+预算，公共 SDK／extension 预算不变。27 项恢复、CLI、导出及架构检查通过，日志
+`/tmp/project-config-recovery-contract-final.log`。最终提交 `a6f02db1` 的完整 CI
+[36224154237](https://github.com/cjhyy/codeshell/actions/runs/36224154237) 全部通过，
+包含 Electron、Windows、所有测试分片、类型与 lint。已清理合入后的专用工作树和分支，
+未修改用户原工作区。
+
+用上述合入 Host 与 services `956f4932d879ba58ac626a32e155b1a3ed718618` 重新构建
+私有部署候选，CI [36224563408](https://github.com/cjhyy/codeshell-services/actions/runs/36224563408)
+全部通过：五个真实 tarball、移位安装、发布能力检查、服务测试、受控浏览器 OAuth、
+两个隔离项目容器、Link 镜像、归档校验及加载后镜像身份检查。候选 artifact
+10899924126（444821991 bytes，保留至 2026-10-10），证据 artifact 10899739495；
+日志 `/tmp/project-cloud-candidate-520d8b2a.log`。镜像为 linux/amd64。这是私有候选，
+不是 registry 包／镜像发布，也不代表真实账号或目标服务器验收完成。五包候选没有
+TUI，因此不能宣称其中已经附带新的 `code-shell settings-recovery` 管理命令；
+服务端管理入口的交付与实际停止项目后的修复／回滚仍需补齐。
+
+Video `77c384d` 的两次独立 CI 最终全通过，但 Quant 组合 `b31c64d` 的两次 Linux
+媒体检查都在 WebM 导出失败：目标 0.166833 秒、帧 timestamp=133000、duration=33000，
+未保留可用的呈现回执。没有据独立绿灯合入。发现呈现通知可先于 seek/readiness 完成，
+旧实现把该通知丢弃。真实 WebM 0.5005 秒的确定性顺序回归在修复前失败、修复后通过，
+日志 `/tmp/video-early-receipt-before.log`、`/tmp/video-early-receipt-guarded.log`。
+
+`9e0029011949724b967f9123412118d20298a1e3` 保留先到的呈现回执，仍要求 seek 完成、
+目标时钟和冻结帧的 timestamp 一致；改变目标时拒绝 seek 前的旧呈现时间，继续监听
+后续回执，原位置可复用已有呈现。取消／超时清理回调，未扩大媒体等待时限或取帧
+容差。24 项取帧回归全通过、零跳过；保留旧帧拒绝、暂不可读重试和资源释放断言。
+源码、README 与生成包同步提交。完整 check、确定性构建和包校验通过，日志
+`/tmp/video-early-receipt-check.log`、`/tmp/video-early-receipt-validate.log`。
+
+完整媒体检查另发现旧播放验收在固定 30ms 后读取音量时仍是 1：实际 AudioContext
+已标 running，但音频时钟前后均为 0.005333 秒，尚未处理下一个音频块。单独运行也
+复现，日志 `/tmp/video-audio-gain-diagnostic.log`。`5f59d2bdbd4c38643912b0ba715b4d3ba750fabd`
+让该测试在有界等待中观察音频时钟真正前进，保留所有音量与来源时间精度断言；单项
+及完整媒体重验通过。最终完整媒体 188 项通过、零跳过，日志
+`/tmp/video-early-receipt-media-final.log`，不是只跑过滤用例作为验收。
+
+修复 `9e00290` 的 Linux 媒体已通过，但尚不替代最终提交与组合验收。PR #28 仍为
+草稿，最终 `5f59d2b` 的 CI 36224922238／36224919754 正在运行。Quant PR #27 已合并
+该提交为 `c4ca6aab771bd50ab2950861740621f7c4ec3eba`；本地 build:check 与 validate
+通过，日志 `/tmp/quant-receipt-build-check.log`、`/tmp/quant-receipt-validate.log`。
+组合 CI 36225000861／36224999019 已开始排队／运行，未合入、未发布。
+
+整体 goal 保持 active。剩余业务接入、完整升级恢复、服务端恢复入口、真实账号／模型、
+三仓正式兼容版本、目标服务器与跨版本恢复仍须完成；设备中继及手机操作后置。
