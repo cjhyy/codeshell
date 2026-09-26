@@ -2306,3 +2306,94 @@ test("revoking a login stops an idle resource stream without waiting for another
     idle?.destroy();
   }
 });
+
+async function inlinePreview(f: Awaited<ReturnType<typeof previewFixture>>, id = f.asset.id) {
+  const response = await f.api(`${f.grant.instanceId}/call`, "POST", {
+    method: "resources.preview",
+    params: { assetId: id },
+  });
+  expect(response.status).toBe(200);
+  return response.json();
+}
+
+test("inline resource capability supports opaque media readers, ranges and HEAD without a cookie", async () => {
+  const f = await previewFixture();
+  expect(f.grant.context.availableMethods).toContain("resources.preview");
+  const value = await inlinePreview(f);
+  expect(value.asset).toEqual(f.asset);
+  expect(value.effect).toBeUndefined();
+  expect(value.url).toStartWith(f.url + "/api/v1/panel-assets/");
+  const response = await fetch(value.url, { headers: { Origin: "null", Range: "bytes=2-5" } });
+  expect(response.status).toBe(206);
+  expect(response.headers.get("access-control-allow-origin")).toBe("*");
+  expect(response.headers.get("cross-origin-resource-policy")).toBe("cross-origin");
+  expect(response.headers.get("content-security-policy")).toBe("default-src 'none'; sandbox");
+  expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(response.headers.get("content-range")).toBe("bytes 2-5/10");
+  expect(await response.text()).toBe("2345");
+  const head = await fetch(value.url, { method: "HEAD" });
+  expect(head.status).toBe(200);
+  expect(head.headers.get("content-length")).toBe("10");
+  expect(await head.text()).toBe("");
+  expect((await fetch(value.url, { method: "POST" })).status).toBe(405);
+  expect((await fetch(value.url, { headers: { Range: "bytes=80-" } })).status).toBe(416);
+});
+
+test("inline resource capability cannot serve scripts, HTML, SVG, foreign project bytes or paths", async () => {
+  const f = await previewFixture();
+  const value = await inlinePreview(f);
+  for (const extension of ["js", "html", "svg"]) {
+    const file = join(f.cwd, `active.${extension}`);
+    await writeFile(file, `${extension}: globalThis.unreviewedResourceExecuted = true`);
+    const asset = await f.service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+    const response = await f.api(`${f.grant.instanceId}/call`, "POST", {
+      method: "resources.preview",
+      params: { assetId: asset.id },
+    });
+    expect(response.status).toBe(400);
+    expect((await fetch(value.url.replace(f.asset.id, asset.id))).status).toBe(403);
+  }
+  const file = join(f.cwd, "foreign.mp4");
+  await writeFile(file, "other project private bytes");
+  const foreign = await f.service.library.importFile(
+    { appId: f.app.id, projectPath: f.cwd + "-other" },
+    file,
+  );
+  expect((await fetch(value.url.replace(f.asset.id, foreign.id))).status).toBe(404);
+  expect((await fetch(value.url.replace(f.asset.id, "not-an-id"))).status).toBe(404);
+  // Invalid resource requests must not revoke unrelated valid media on the page.
+  expect(await (await fetch(value.url)).text()).toBe("0123456789");
+  const extra = await f.api(`${f.grant.instanceId}/call`, "POST", {
+    method: "resources.preview",
+    params: { assetId: f.asset.id, path: "/etc/passwd" },
+  });
+  expect(extra.status).toBe(400);
+});
+
+test("inline resource capability expires on session revocation, Panel removal and page closure", async () => {
+  for (const revoke of ["session", "panel", "page", "expiry"]) {
+    const f = await previewFixture();
+    const value = await inlinePreview(f);
+    if (revoke === "session") f.state.owners.delete("owner-a");
+    if (revoke === "panel") f.state.enabled = false;
+    if (revoke === "page") await f.api(f.grant.instanceId, "DELETE");
+    if (revoke === "expiry") f.state.now += 31 * 60_000;
+    expect([404, 410]).toContain((await fetch(value.url)).status);
+  }
+  const f = await fixture({ permissions: [] });
+  const grant = await f.prepare();
+  expect(grant.context.availableMethods).not.toContain("resources.preview");
+  const path = grant.src.replace(
+    /app\/index\.html$/,
+    "_codeshell_resources/asset-" + "a".repeat(64),
+  );
+  expect((await fetch(f.url + path)).status).toBe(403);
+  expect(
+    (
+      await f.api(`${grant.instanceId}/call`, "POST", {
+        method: "resources.preview",
+        params: { assetId: "asset-" + "a".repeat(64) },
+      })
+    ).status,
+  ).toBe(403);
+});

@@ -82,6 +82,7 @@ const METHODS = [
   ...panelProcessMethods,
   ...panelResourceMethods,
   "resources.open",
+  "resources.preview",
   ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.cookies.listForTask",
@@ -128,6 +129,32 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
 };
+// The asset origin is also an allowed script source. Never expose uploaded
+// documents or executable MIME types there, even with a resource permission.
+const INLINE_RESOURCE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "image/bmp",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/ogg",
+  "audio/webm",
+  "audio/flac",
+  "audio/aac",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "font/woff",
+  "font/woff2",
+  "font/ttf",
+  "font/otf",
+]);
+const INLINE_RESOURCE_PATH = "_codeshell_resources/";
 export const panelWebCompatibility = (
   app: Pick<InstalledPanelApp, "permissions">,
   options?: { automations?: boolean },
@@ -1463,7 +1490,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         emit(grant, event, payload),
     };
     if (method.startsWith("resources.")) {
-      if (method === "resources.open") {
+      if (method === "resources.open" || method === "resources.preview") {
         const value = params as { assetId?: unknown } | null;
         if (
           !value ||
@@ -1477,6 +1504,14 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           value.assetId,
         );
         if (!(await authorized(grant))) error(410, "面板授权已失效。");
+        if (method === "resources.preview") {
+          if (!INLINE_RESOURCE_TYPES.has(asset.mimeType))
+            error(400, "此资源类型不能在面板内播放或显示。");
+          return {
+            asset,
+            url: `${grant.origin}${publicPathPrefix}${ASSETS}${grant.asset}/${INLINE_RESOURCE_PATH}${asset.id}`,
+          };
+        }
         return {
           effect: "resources.open",
           asset,
@@ -2006,6 +2041,24 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           return true;
         }
         const path = parts.map(decodeURIComponent).join("/");
+        if (path.startsWith(INLINE_RESOURCE_PATH)) {
+          if (!grant.app.permissions.includes("resources")) error(403, "面板未声明资源权限。");
+          const id = path.slice(INLINE_RESOURCE_PATH.length);
+          if (!/^(?:asset|external)-[a-f0-9]{64}$/.test(id)) error(404, "文件资源标识无效。");
+          const scope = { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd };
+          const asset = await resources.get(scope, id).catch(() => error(404, "文件资源不可用。"));
+          if (!INLINE_RESOURCE_TYPES.has(asset.mimeType)) error(403, "资源类型不可预览。");
+          // A direct navigation must not turn project data into an active document.
+          response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+          await servePanelResource(request, response, {
+            service: resources,
+            scope,
+            id,
+            download: false,
+            isAuthorized: () => authorized(grant),
+          });
+          return true;
+        }
         let bytes: Buffer;
         if (path === "_codeshell_bridge.js")
           bytes = Buffer.from(bridgeScript(grant.id, grant.origin));

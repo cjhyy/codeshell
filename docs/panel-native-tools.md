@@ -209,6 +209,24 @@ the legacy Desktop media picker, preview and document bridge are not advertised 
 workflow currently requires Desktop; unsupported features must be explained
 before starting work.
 
+Web also advertises `resources.preview({assetId})` for inline media. It returns
+`{asset, url}` without opening a workbench preview. The URL belongs to the current
+opaque Panel asset grant and keeps the public project-proxy prefix. Use it with
+an image/audio/video element and `crossOrigin = "anonymous"` before setting `src`
+when pixels or Web Audio are needed; general `fetch` remains blocked by the frame
+CSP. It streams with Range/HEAD support rather than materializing a large Blob.
+
+The URL is a bearer capability for that Panel's project scope. Do not persist or
+share it; obtain another after reopening the Panel. Closing or expiring the grant,
+revoking its login, or changing Panel authorization stops access, including active
+readers. Only raster image, audio, video and font MIME types are served; HTML, SVG,
+scripts and arbitrary documents cannot enter the reviewed asset script origin.
+Responses prevent MIME sniffing and active-document execution. This method needs
+the existing `resources` permission and is optional; Desktop retains its current
+media URL contract. Run `bun scripts/smoke-panel-inline-resources.mjs` after the
+server build to verify actual opaque-origin image drawing, WAV seeking, proxy
+prefix routing, blocked fetch access and session revocation in Chromium.
+
 Web Panel frames permit browser downloads of generated files, such as a JSON
 backup, using Blob URLs and download anchors. Both the iframe and asset response
 CSP permit `allow-downloads`; the frame retains an opaque origin and cannot access
