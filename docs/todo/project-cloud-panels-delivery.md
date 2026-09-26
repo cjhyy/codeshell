@@ -2701,3 +2701,50 @@ validate 通过（`/tmp/design-context-job-combined-*.log`）。PR #32 的最终
 
 整体 goal 保持 active；真实第三方／模型、目标部署、三仓正式兼容版本、完整跨版本
 恢复与回滚、其余业务和设备目录／安全中继仍保留；手机 Panel 操作优化继续后置。
+
+
+### 增量 66：封面冻结修复合入与旧设计草稿重建（2026-09-26）
+
+Design 项目隔离 `d99e59b` 的 push CI 36233953426 通过，但 PR CI 36233955297
+媒体检查失败：真实黑色 WebM 首帧封面在 Image.decode 报 EncodingError，日志
+`/tmp/design-context-media-failure.log`。没有据另一次绿灯合入。日志未记录全部回调
+时序，不能直接断言首帧失败的全部原因。通过已完成 job 的日志接口取得证据；整个
+run 尚在运行时 gh run view 暂不能提供日志，没有因此重启任务。
+
+发现封面仍仅等待呈现回调，再直接绘制可变 video 表面。真实媒体回归屏蔽回调后，
+修复前稳定得到 missing=true（`/tmp/video-frozen-covers-before.log`）。独立 Video
+`9651b1185c00086a513525bbb598b77d933af77f` 改为复用既有已校验冻结帧流程，保留可选
+封面的原一秒截止时间，成功／失败均释放帧。有效解码帧不再依赖回调；真正错误与
+取消仍保留。替换旧“必须等通知”的断言为实际帧暂不可读时不能发布、恢复后可发布
+且帧已释放；新回归核对真实像素并拒绝可变 video Canvas 读取，未放宽像素或时间限制。
+
+完整媒体 194 项通过、零跳过，`/tmp/video-frozen-covers-media.log`；完整离线 check、
+类型、构建一致性与 validate 通过，`/tmp/video-frozen-covers-{check,validate}.log`。
+源码／README／生成包同步。PR #34 已附到任务，最终两组 CI 36235132807／36235129150
+全部通过，刷新 main 后合入 `639a48c5f232e38a322a179e22e75e8e9ccef715`。自身干净、
+无活跃进程且已合入的工作树和本地分支已清理；远端分支删除遇连接错误待重试。
+
+新分支 `codex/design-studio/legacy-recovery-import`／工作树 `design-legacy-recovery`
+提交 `1a4d0af`，补旧草稿日志导入。备份选择器保留坏记录供诊断，并能选择其他草稿
+或 Host 保存的恢复指针。内置基线直接校验；外部基线要求内容 SHA-256 精确匹配，
+索引页面／兼容分片／恢复日志指针和图片字体逐项验证。先核对操作类型和记录的修改前
+状态再重放，拒绝未知操作、任意字段赋值及不完整排序；不修改原日志。准备阶段只读，
+确认后走完整备份的只创建新文件流程，保留当前画布与已有文件。项目切换／取消后旧
+操作不能继续。没有可校验基础版本或缺少原资源时明确停止，不臆造丢失数据。
+
+32 项针对性会话／实际浏览器／备份检查全部通过、零跳过，
+`/tmp/design-legacy-focused.log`。真实 Node Host 维护脚本增加原版本日志重建，准确
+使用实际文件 revision；恢复到另一项目、删除原项目后重建 Host、资源读取、重复恢复、
+冲突保留与撤销均通过（`/tmp/design-legacy-real-host.log`）。日志有 128 MiB 输入／
+读取、256 草稿及单条 100000 操作限制，没有新增 Host 权限。
+
+同步封面修复后，Design 隔离组合 `68f4900` 的完整 check／validate、完整备份组合的
+构建一致性／validate、旧日志组合 `1508e8631d2c7564ac6e4401659582d8d995a574` 的完整
+check／validate 均通过，日志 `/tmp/design-context-covers-*.log`、
+`/tmp/design-portable-covers-*.log`、`/tmp/design-legacy-combined-*.log`。原可选真实
+语音运行时跳过保留。同步 PR #34 的 main 合并提交后，逐一确认工作树内容无变化；
+最终提交为隔离 `16b4690`、完整备份 `7a98768`、旧日志 `66b4bbd`。隔离已推送；另两项
+及远端旧分支清理遇 GitHub SSL 连接错误，正在重试，不能标为远端交付完成。
+
+整体 goal 仍 active；真实第三方／模型、目标部署、三仓正式发布、完整跨版本升级与
+回滚、其余业务和设备目录／安全中继仍需继续。手机 Panel 操作优化保持后置。
