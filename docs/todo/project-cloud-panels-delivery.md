@@ -3326,7 +3326,7 @@ Link 容器备份恢复、归档逐文件校验和镜像重载通过。私有候
 和安全中继仍未完成，手机交互优化继续后置。
 
 
-### 增量 82：设计 Panel 的真实云端跨项目备份与恢复（2026-09-27，验收中）
+### 增量 82：设计 Panel 的真实云端跨项目备份与恢复（2026-09-27）
 
 Host 独立分支 `codex/server/cloud-design-recovery` 从已合并 PR #22 的
 `e54af3d0` 开始，只增加实际安装包验收，不迁移或复制 Panel 业务实现到 Host。
@@ -3348,11 +3348,44 @@ Host 独立分支 `codex/server/cloud-design-recovery` 从已合并 PR #22 的
 [Host PR #23](https://github.com/cjhyy/codeshell/pull/23) 已附到任务；
 主仓 CI 36256833709 全部九类检查首轮通过。
 
-Linux 三仓候选 36256841491 正在运行，锁定该 Host 提交、Panel `5ee9bc69`
-及 services `f06d687d`。PR 尚未合并；没有公开发布。本机复用已验证的程序调试
-镜像不能代替这轮实际包 Linux 验收。已合并 PR #22 的干净、无活跃进程任务
-工作树和本地／远程分支已清理；PR #23 的工作树继续保留。
+Linux 三仓候选 36256841491 已全部通过，锁定该 Host 提交、Panel `5ee9bc69`
+及 services `f06d687d`。日志 `/tmp/cloud-design-linux-candidate.log` 确认实际
+设计页面完整流程／重启、Link 备份恢复、归档校验与镜像重载；候选 artifact
+10911187854（452597267 bytes）和证据 10910453691 已上传。PR #23 已合入
+`35e035714880d9cc2278989c17eaf1fa08db5ae2`，没有公开发布。已合并 PR #22／#23
+的干净、无活跃进程任务工作树和本地／远程分支均已清理，截图在父目录保留。
 
 这次验证设计文件、索引页面和 PNG 资源的备份／恢复，不代表设计的 HTML 导入、
 字体、所有交付工具或六 Panel 全部业务已完成。整体 goal 仍 active；真实模型／
 Link、其余业务与任务恢复、正式部署／回滚、设备目录和安全中继继续待做。
+
+
+### 增量 83：投资自定义筛选条件的多设备保存保护（2026-09-27，验收中）
+
+剩余存储路径审查发现 `selection-signal-lab.mjs` 直接 `storage.set`，另一设备
+会覆盖先前保存；读取失败／不兼容记录则回退默认值，后续编辑覆盖原记录。新增
+回归三项在修复前均失败，日志 `/tmp/quant-signal-before.log`。
+
+Panel 分支 `codex/quant-lab/signal-storage` 复用既有条件存储模块，冲突与不明
+结果停止自动覆盖，保留草稿并提供下载／明确重读。记录版本或字段不兼容时停止
+自动保存、保留原记录并纳入备份；旧 Host 继续原接口并显示并发限制。排队保存
+与 CSV 导出固定项目代次，切换后停止后续读取和旧回执更新；未保存原项目输入
+留在当前页面供下载，关闭页面不会持久保留这些草稿。
+
+20 项存储／控制器／独立浏览器上下文检查、完整 Quant UI、完整 npm check 和
+当前 Host 安装预检已通过；安装预检首次参数误传字符串，按实际 `{kind,path}`
+接口纠正后通过，未变更产品接口。日志 `/tmp/quant-signal-{regression,final-focused,
+formatted-tests,browser,full-ui,check-final,preflight}.log`。截图已查看。提交
+`e4404f30f8570e2f810fd8e3c1c1817e2d536b47` 的
+[Panel PR #44](https://github.com/cjhyy/codeshell-panel-apps/pull/44) 已附到任务，
+CI 36258193513／36258165847 已启动。
+
+复查另发现：空阈值后更改组合方式会沿用旧阈值并显示已保存。新增浏览器断言
+修复前失败（`/tmp/quant-signal-invalid-before.log`）；本地后续修复使无效输入
+阻止保存与筛选、保留原始输入，明确重置模板才替换它。20 项复验通过
+（`/tmp/quant-signal-invalid-after.log`）；最终完整界面／仓库检查正在进行，
+后续修复尚未提交，不能把原提交的 CI 当作最终组合验收。
+
+没有公开发布。最新三仓候选仍锁定原 Panel `5ee9bc69`，不包含此投资修复。
+整体 goal 保持 active：六 Panel 其余业务／任务恢复、真实模型／Link、正式发布
+与目标部署／恢复、设备目录和安全中继继续待做，手机触控优化后置。
