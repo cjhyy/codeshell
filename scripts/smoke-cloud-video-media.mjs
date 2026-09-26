@@ -1,5 +1,5 @@
 /* Actual source upload, native inspection/render and authenticated browser delivery. */
-/* global document */
+/* global document, window, HTMLMediaElement */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -23,6 +23,61 @@ function audioFixture() {
   for (let i = 0; i < samples; i++)
     bytes.writeInt16LE(Math.round(8192 * Math.sin((2 * Math.PI * 440 * i) / rate)), 44 + i * 2);
   return bytes;
+}
+
+/** Exercise the installed source-monitor UI and observe its actual media element. */
+export async function verifyCloudSourcePlayback({ frame, assetId, kind, until }) {
+  await frame.evaluate(() => {
+    const original = HTMLMediaElement.prototype.play;
+    window.__cloudSourcePlayback = { original, media: undefined };
+    HTMLMediaElement.prototype.play = function (...args) {
+      window.__cloudSourcePlayback.media = this;
+      return original.apply(this, args);
+    };
+  });
+  try {
+    await frame.locator('#studio .rail [data-tab="media"]').click();
+    await frame.locator(`[data-preview-asset="${assetId}"]`).click();
+    await frame.locator('[data-action="play"]').first().click();
+    await until(() =>
+      frame.evaluate((kind) => {
+        const media = window.__cloudSourcePlayback.media;
+        return (
+          !!media &&
+          media.tagName.toLowerCase() === kind &&
+          media.readyState >= 2 &&
+          media.currentTime > 0.1 &&
+          Number.isFinite(media.duration) &&
+          media.duration > 0 &&
+          new URL(media.currentSrc).pathname.includes("/_codeshell_resources/") &&
+          !media.error &&
+          (kind !== "video" || (media.videoWidth > 0 && media.videoHeight > 0))
+        );
+      }, kind),
+    );
+    if (kind === "video") {
+      assert.ok(
+        await frame.locator("#preview").evaluate((canvas) => {
+          const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+          return pixels.data.length > 0 && canvas.toDataURL("image/png").length > 100;
+        }),
+        "The source monitor canvas must remain readable in the opaque iframe",
+      );
+    }
+    console.log(
+      `PASS: installed cloud source monitor decodes and plays actual ${kind} through its scoped grant`,
+    );
+  } finally {
+    await frame.evaluate(() => {
+      const state = window.__cloudSourcePlayback;
+      if (state) {
+        state.media?.pause();
+        HTMLMediaElement.prototype.play = state.original;
+        delete window.__cloudSourcePlayback;
+      }
+    });
+    await frame.locator('#studio .rail [data-tab="media"]').click();
+  }
 }
 
 export async function verifyCloudVideoMedia({ page, frame, call, readDocument, until }) {
@@ -55,6 +110,7 @@ export async function verifyCloudVideoMedia({ page, frame, call, readDocument, u
   console.log(
     "PASS: cloud Video imports actual WAV bytes and persists native-inspected source metadata",
   );
+  await verifyCloudSourcePlayback({ frame, assetId: asset.id, kind: "audio", until });
   await frame.locator(`[data-add-asset="${asset.id}"]`).click();
   await frame.locator('[data-action="export"]').first().click();
   const dialog = frame.locator("#editor-workspace .ew-dialog[open]");
@@ -105,5 +161,27 @@ export async function verifyCloudVideoMedia({ page, frame, call, readDocument, u
   console.log(
     "PASS: cloud Video renders actual MP4, decodes the preview and saves exact verified output bytes",
   );
-  return { source: asset.resourceId, jobId: rendered.id, video: result.video.id };
+  // Re-import the actual output, then play it in the editor (not the outer workbench viewer).
+  await page.getByRole("button", { name: "关闭预览", exact: true }).click();
+  await frame.locator("[data-editor-media-input]").setInputFiles({
+    name: "cloud-rendered-source.mp4",
+    mimeType: "video/mp4",
+    buffer: saved,
+  });
+  const imported = await until(async () => {
+    const errors = await frame.locator(".editor-import-status li").allTextContents();
+    if (errors.length) throw new Error(errors.join("\n"));
+    return (await readDocument()).document.assets.find(
+      (item) => item.name === "cloud-rendered-source.mp4",
+    );
+  });
+  assert.equal(imported.resourceId, result.video.id);
+  await verifyCloudSourcePlayback({ frame, assetId: imported.id, kind: "video", until });
+  return {
+    source: asset.resourceId,
+    sourceAsset: asset.id,
+    videoAsset: imported.id,
+    jobId: rendered.id,
+    video: result.video.id,
+  };
 }

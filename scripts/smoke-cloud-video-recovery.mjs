@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { verifyCloudVideoMedia } from "./smoke-cloud-video-media.mjs";
+import { verifyCloudVideoMedia, verifyCloudSourcePlayback } from "./smoke-cloud-video-media.mjs";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
@@ -363,6 +363,18 @@ export async function verifyCloudVideoRecovery({
         assert.equal(`asset-${hash.digest("hex")}`, assetId);
       }
       assert.equal(await a.frame.locator(".editor-cleanup-warning").count(), 0);
+      await verifyCloudSourcePlayback({
+        frame: a.frame,
+        assetId: delivered.sourceAsset,
+        kind: "audio",
+        until,
+      });
+      await verifyCloudSourcePlayback({
+        frame: a.frame,
+        assetId: delivered.videoAsset,
+        kind: "video",
+        until,
+      });
 
       await a.frame.locator('[data-action="versions"]').first().click();
       const pending = a.page.waitForEvent("download", { timeout: 150000 });
