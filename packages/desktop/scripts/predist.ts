@@ -1,4 +1,4 @@
-// Pre-package step: replace the core, coding, Arena, and Pet workspace
+// Pre-package step: replace the core and capability workspace
 // SYMLINKS with real, self-contained directories inside desktop/node_modules.
 //
 // WHY THIS EXISTS
@@ -14,13 +14,13 @@
 // `files` field avoids it — both were tried and don't work.
 //
 // All of desktop's OTHER deps are build-time only (esbuild bundles main, vite
-// bundles the renderer). Core, coding, Arena, and Pet are runtime deps: main
-// spawns the coding worker, which composes core and dynamically loads Arena and
-// Pet through core's extension seam.
+// bundles the renderer). Core, coding, Arena, Pet, and Optimization Lab are
+// runtime deps: main spawns the coding worker, which dynamically loads the
+// capabilities through core's extension seam.
 //
 // THE FIX
 // -------
-// Materialize all four packages into real in-tree directories containing exactly
+// Materialize the runtime packages into real in-tree directories containing exactly
 // what the app needs at runtime: dist/ + package.json, plus core's production
 // dependency closure. LICENSE and README are deliberately NOT copied — they
 // are the offending out-of-tree files and a bundled internal copy needs neither.
@@ -58,6 +58,11 @@ const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
 const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
 const arenaTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-arena");
 const petTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-pet");
+const optimizationLabSrc = resolve(repoRoot, "packages/optimization-lab");
+const optimizationLabTarget = resolve(
+  desktopRoot,
+  "node_modules/@cjhyy/code-shell-capability-optimization-lab",
+);
 
 function log(msg: string): void {
   // eslint-disable-next-line no-console
@@ -70,6 +75,9 @@ function main(): void {
   if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
   if (!existsSync(arenaSrc)) throw new Error(`Arena package not found at ${arenaSrc}`);
   if (!existsSync(petSrc)) throw new Error(`Pet package not found at ${petSrc}`);
+  if (!existsSync(optimizationLabSrc)) {
+    throw new Error(`Optimization Lab package not found at ${optimizationLabSrc}`);
+  }
   // Rebuild every direct desktop workspace dependency, in dependency order,
   // BEFORE the desktop bundle. Previously this step only asserted that
   // each `dist` existed (see copyDir) — so whatever a developer or CI job had
@@ -101,22 +109,25 @@ function main(): void {
   removeWorkspaceTarget(codingTarget, "coding");
   removeWorkspaceTarget(arenaTarget, "Arena");
   removeWorkspaceTarget(petTarget, "Pet");
+  removeWorkspaceTarget(optimizationLabTarget, "Optimization Lab");
 
   materializePackage(linkSrc, linkTarget);
   materializePackage(coreSrc, coreTarget);
   materializePackage(codingSrc, codingTarget);
   materializePackage(arenaSrc, arenaTarget);
   materializePackage(petSrc, petTarget);
+  materializePackage(optimizationLabSrc, optimizationLabTarget);
 
-  // Each materialized sibling owns its production closure. Arena imports zod
-  // directly, so relying on core's nested node_modules would break Node's
+  // Each materialized sibling owns its production closure. Arena and
+  // Optimization Lab import zod directly; core's nested node_modules cannot serve
   // sibling-package resolution in the packaged app.
   installProductionDeps(coreSrc, coreTarget, "core");
   installProductionDeps(arenaSrc, arenaTarget, "Arena");
+  installProductionDeps(optimizationLabSrc, optimizationLabTarget, "Optimization Lab");
   verifyMaterializedCapabilities();
 
   log(
-    `materialized Link + core + coding + Arena + Pet into node_modules (LICENSE/README excluded)`,
+    `materialized Link + core + coding + Arena + Pet + Optimization Lab into node_modules (LICENSE/README excluded)`,
   );
 }
 
@@ -126,7 +137,7 @@ function verifyMaterializedCapabilities(): void {
     "bun",
     [
       "--eval",
-      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
+      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding'); await import('@cjhyy/code-shell-capability-optimization-lab/capability')",
     ],
     { cwd: desktopRoot, stdio: "inherit" },
   );

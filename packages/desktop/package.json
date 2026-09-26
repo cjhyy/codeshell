@@ -160,6 +160,7 @@
   "dependencies": {
     "@cjhyy/code-shell-arena": "workspace:*",
     "@cjhyy/code-shell-capability-coding": "workspace:*",
+    "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-pet": "workspace:*",
     "node-pty": "^1.1.0",

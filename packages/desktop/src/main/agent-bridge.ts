@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
+import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
@@ -328,10 +329,11 @@ export class AgentBridge implements PetStateBridge {
         CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
-        CODE_SHELL_CAPABILITY_MODULES:
-          `${codingModule}#createCodingModule,` +
-          `${arenaCapabilityModule}#createArenaModule,` +
-          `${petCapabilityModule}#createPetModule`,
+        CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
+          { coding: codingModule, arena: arenaCapabilityModule, pet: petCapabilityModule },
+          readUserFeatureFlags(resolveNoRepoCwd()),
+          () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
+        ),
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),

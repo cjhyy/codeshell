@@ -2877,6 +2877,17 @@ export interface RunSummary {
 }
 
 export interface RunDetail extends RunSummary {
+  prompt: string | null;
+  model: string | null;
+  provider: string | null;
+  durationMs: number | null;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    cacheReadTokens?: number;
+    cacheCreationTokens?: number;
+  } | null;
   attemptCount: number;
   latestCheckpointId: string | null;
   latestApprovalId: string | null;

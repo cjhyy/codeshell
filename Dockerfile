@@ -14,6 +14,7 @@ COPY packages/coding/package.json packages/coding/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/desktop/package.json packages/desktop/package.json
 COPY packages/link/package.json packages/link/package.json
+COPY packages/optimization-lab/package.json packages/optimization-lab/package.json
 COPY packages/pet/package.json packages/pet/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/tui/package.json packages/tui/package.json

@@ -97,6 +97,7 @@
       "dependencies": {
         "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
+        "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-pet": "workspace:*",
         "node-pty": "^1.1.0",
@@ -160,6 +161,14 @@
     "packages/link": {
       "name": "@cjhyy/code-shell-link",
       "version": "0.9.22",
+    },
+    "packages/optimization-lab": {
+      "name": "@cjhyy/code-shell-capability-optimization-lab",
+      "version": "0.9.22",
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+        "zod": "^3.24.2",
+      },
     },
     "packages/pet": {
       "name": "@cjhyy/code-shell-pet",
@@ -319,6 +328,8 @@
     "@cjhyy/code-shell-arena": ["@cjhyy/code-shell-arena@workspace:packages/arena"],
 
     "@cjhyy/code-shell-capability-coding": ["@cjhyy/code-shell-capability-coding@workspace:packages/coding"],
+
+    "@cjhyy/code-shell-capability-optimization-lab": ["@cjhyy/code-shell-capability-optimization-lab@workspace:packages/optimization-lab"],
 
     "@cjhyy/code-shell-cdp": ["@cjhyy/code-shell-cdp@workspace:packages/cdp"],
 
