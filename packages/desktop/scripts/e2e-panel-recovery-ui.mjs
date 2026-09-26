@@ -306,7 +306,10 @@ try {
       await electron.close();
     } finally {
       clearTimeout(killTimer);
-      if (forcedShutdown) throw new Error("Isolated Electron did not close cleanly");
+    }
+    if (forcedShutdown) {
+      console.error("Isolated Electron did not close cleanly");
+      process.exitCode = 1;
     }
   }
   await isolated.cleanup();
