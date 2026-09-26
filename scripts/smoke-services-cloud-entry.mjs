@@ -41,13 +41,24 @@ const images = [];
 let provenance;
 let sourceFiles;
 
-function run(command, args, cwd, env = process.env, capture = false) {
+function run(command, args, cwd, env = process.env, capture = false, input) {
   return new Promise((done, fail) => {
     const child = spawn(command, args, {
       cwd,
       env,
-      stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
+      stdio: [
+        input === undefined ? (capture ? "ignore" : "inherit") : "pipe",
+        capture ? "pipe" : "inherit",
+        capture ? "pipe" : "inherit",
+      ],
     });
+    let inputError;
+    if (input !== undefined) {
+      child.stdin.on("error", (error) => {
+        inputError = error;
+      });
+      child.stdin.end(input);
+    }
     let output = "";
     let errors = "";
     if (capture)
@@ -60,9 +71,12 @@ function run(command, args, cwd, env = process.env, capture = false) {
       });
     child.once("error", fail);
     child.once("close", (code) =>
-      code === 0
+      code === 0 && !inputError
         ? done(output.trim())
-        : fail(new Error(`${command} ${args[0]} failed (${code}): ${errors.slice(-8000)}`)),
+        : fail(
+            inputError ??
+              new Error(`${command} ${args[0]} failed (${code}): ${errors.slice(-8000)}`),
+          ),
     );
   });
 }
@@ -205,6 +219,14 @@ try {
     }
   }
   await run(process.execPath, ["scripts/check-cloud-runtime.mjs"], installed);
+  await run(
+    process.execPath,
+    [
+      join(repo, "scripts/smoke-settings-recovery.mjs"),
+      join(installed, "node_modules/@cjhyy/code-shell-server"),
+    ],
+    installed,
+  );
   // A green dependency inventory is insufficient: exercise broken deployed layouts.
   const check = () =>
     run(process.execPath, ["scripts/check-cloud-runtime.mjs"], installed, process.env, true);
@@ -241,6 +263,32 @@ try {
     );
     imageId = (await readFile(idFile, "utf8")).trim();
     assert.match(imageId, /^sha256:[a-f0-9]{64}$/);
+    // The command must exist in the production image, without TUI, a network,
+    // a running project or a writable root. Only this temporary fixture is written.
+    await run(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--no-healthcheck",
+        "--tmpfs",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "-i",
+        "--entrypoint",
+        "node",
+        imageId,
+        "--input-type=module",
+        "-",
+        "/opt/codeshell/node_modules/@cjhyy/code-shell-server",
+      ],
+      installed,
+      process.env,
+      false,
+      await readFile(join(repo, "scripts/smoke-settings-recovery.mjs"), "utf8"),
+    );
     const tag = `codeshell-services-smoke:${basename(root).toLowerCase()}`;
     await run("docker", ["tag", imageId, tag], installed);
     try {

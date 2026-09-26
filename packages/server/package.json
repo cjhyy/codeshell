@@ -40,7 +40,8 @@
     }
   },
   "bin": {
-    "code-shell-serve": "./dist/bin/code-shell-serve.js"
+    "code-shell-serve": "./dist/bin/code-shell-serve.js",
+    "code-shell-settings-recovery": "./dist/bin/code-shell-settings-recovery.js"
   },
   "files": [
     "dist"
