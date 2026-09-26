@@ -3718,3 +3718,64 @@ SHA-256 `cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849`。
 
 整体 goal 仍 active：完整成品、其他 Panel 业务／迁移、真实服务商／模型、
 目标部署与发布、设备目录／中继等仍未完成；手机触控／窄屏优化后置。
+
+
+### 增量 91：可配置云端浏览器与完整候选失败（2026-09-27）
+
+Host 独立分支 `codex/server/runtime-seccomp`、[PR #29](https://github.com/cjhyy/codeshell/pull/29)
+提交 `22a67b60f2b31395cbb761801de6dc35a64c6d00` 已提供管理员显式配置入口。
+启动时有界读取并固定配置内容，默认拒绝规则、非符号链接常规文件检查，私有
+只读快照，摘要参与运行配置身份；旧运行容器配置不同则拒绝，停止后可重建并
+保留卷。未指定时保留默认隔离。74 项运行／CLI 检查和最后 23 项安全检查、
+完整类型／lint 与最终九类 CI 36269178428 通过；仍为 draft，未发布。
+
+Services 独立分支 `codex/services/cloud-browser-runtime`、[PR #5](https://github.com/cjhyy/codeshell-services/pull/5)
+最终 `e7c90c8deac30c022ff76f8c8246465d648992d8`：项目镜像安装 Chromium 并
+记录实际程序版本；可选 CLOUD_RUNTIME_SECCOMP_PROFILE 配置，旧 SDK 不支持时
+明确拒绝启动；收录固定 Playwright v1.60.0 配置、原始 SHA、许可证和新增 chroot
+规则说明。未使用 privileged、SYS_ADMIN、host IPC 或 --no-sandbox。
+62 项完整检查及随后 3 项启动检查通过；最终 CI 36269216650／36269219848 的
+Node 22.16／22／24 全通过。公开依赖仍为 0.9.22，未发布。
+
+Host #27 同步 #29 后最终 `04366665feeb49c391d9419621e7296ce56bed06`，九类
+CI 36269188299 全通过。本机 `/tmp/cloud-video-media-seccomp-v3.log` 确认
+双容器应用精确配置并保留原隔离条件，恢复／原生探测／真实 WAV 导入和字节
+校验通过；渲染报“导出文件必须包含一个画面流和一个混音流”。没有证明成品。
+
+Linux 候选 **36269363113 失败**，固定上述 Host／services 与 Panel
+`67c5161bd154796cff6052802d72d22f8b0c189b`。日志
+`/tmp/cloud-browser-candidate-failed.log` 确认六包版本生命周期、求职／设计业务、
+Video 工程恢复和实际素材导入通过，最终渲染在同一输出流检查失败。没有新
+成功候选或正式部署。浏览器已能实际运行，不能再把此失败描述为缺少浏览器。
+
+### 增量 92：短视频导出遗漏音频的修复（2026-09-27，进行中）
+
+独立 Panel 工作树 `video-export-streams/codeshell-panel-apps`、分支
+`codex/video-studio/export-streams` 从最新主线 30e1e0d 建立。FFmpeg 5 的
+最小真实复现表明 -frames:v 30 可使一秒 MP4 仅包含视频；移除此重复限制后
+同样输入生成完整音频与视频。实现继续精确产生有限 frameCount 帧并关闭 stdin，
+混音通过 atrim 精确限制样本，不放宽 verifyExportOutput。
+
+新增实际导出检查覆盖 1／30／75 帧、准确视频帧数、音频时长、完整解码及内容
+末尾的可听能量，避免只有音频头或尾部静音也通过。本机 9 项真实渲染检查通过
+`/tmp/video-export-streams-render-tests.log`。相同新增用例经打包后在非 root、
+只读根、cap-drop ALL、no-new-privileges、无网络的 Chromium 容器运行，旧生产
+函数失败、新生产函数全部通过：`/tmp/video-export-streams-linux-before.log`、
+`/tmp/video-export-streams-linux-after.log`。全仓检查和完整媒体回归仍进行中。
+完整新候选／云端预览下载与重启验收尚待完成；编辑器素材预览仍是单独缺口。
+整体 goal active，手机触控／窄屏优化后置，真实服务商／目标部署条件仍待提供。
+
+
+增量 92 检查点：Panel 修复提交 `ec4622acea8f34dba5a5d926bd32bc57b44a60ae`
+已推送，[PR #48](https://github.com/cjhyy/codeshell-panel-apps/pull/48) 为 draft，
+已附到任务。完整 npm run check exit 0，包含类型、确定性生成包与安装包校验；
+195 项完整媒体回归 exit 0（`/tmp/video-export-streams-media.log`）。最终远端
+CI 36270356790／36270369919 仍进行中，尚未合并。
+
+Panel #47 已通过普通合并纳入同一修复，最终
+`409e814dd74200de343fd0e1fb7347b663897bed`，组合类型与 build:check 通过，
+已推送且最终 CI 运行中。新 Linux 三仓候选 **36270422890** 已确认在运行，
+固定此 Panel、Host `04366665feeb49c391d9419621e7296ce56bed06` 与 services
+`e7c90c8deac30c022ff76f8c8246465d648992d8`。这是含实际修复的新候选，不是因
+观察超时重启旧任务；旧 36269363113 已明确失败。结果未定，不宣称预览下载
+和重启全流程通过。相关 PR 描述已补旧候选的真实失败位置，避免仍归因缺浏览器。
