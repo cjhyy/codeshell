@@ -5,13 +5,17 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+const exec = promisify(execFile);
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
 const ROOT = "job-hunt-panel.json";
-const originalResume = "# Cloud recovery original\n\nPreserved career evidence.";
-const editedResume = "# Cloud recovery edited\n\nNewer work before restore.";
-const freshResume = "# Cloud recovery after restore\n\nNew work survives restart.";
+const publicBody = "\n\nfixture@example.com\n\n## 项目经验\n\n- 完成公开恢复验证项目";
+const originalResume = "# Cloud recovery original" + publicBody;
+const editedResume = "# Cloud recovery edited" + publicBody;
+const freshResume = "# Cloud recovery after restore" + publicBody;
 
 async function until(read, description, timeout = 150_000) {
   const deadline = Date.now() + timeout;
@@ -32,14 +36,13 @@ export async function verifyCloudJobHuntRecovery({
   containerB,
   projectA,
   projectB,
-  scratch,
   evidenceDir,
 }) {
   await mkdir(evidenceDir, { recursive: true });
   const source = (schemaVersion, markdown) => ({
     schemaVersion,
     updatedAt: "2026-01-01T00:00:00Z",
-    profile: { name: "Recovery fixture" },
+    profile: { name: "Recovery fixture", role: "Engineer", contact: "fixture@example.com" },
     jobs: [],
     versions: [],
     resume: {
@@ -48,6 +51,18 @@ export async function verifyCloudJobHuntRecovery({
       title: "Cloud base",
       markdown,
       updatedAt: "2026-01-01T00:00:00Z",
+      claimEvidence: [
+        {
+          claim: "完成公开恢复验证项目",
+          status: "verified",
+          importance: "core",
+          whyItMatters: "验证公开输出",
+          sources: [
+            { kind: "user", label: "Fixture", locator: "test", evidence: "PRIVATE PDF EVIDENCE" },
+          ],
+          interviewQuestions: [{ question: "PRIVATE PDF INTERVIEW QUESTION" }],
+        },
+      ],
     },
     questionBank: Array.from({ length: 150 }, (_, i) => ({
       id: `q-${i}`,
@@ -139,14 +154,20 @@ export async function verifyCloudJobHuntRecovery({
     } catch (error) {
       for (const [index, page] of pages.entries()) {
         await page
-          .screenshot({ path: join(scratch, `job-hunt-error-${index}.png`), fullPage: true })
+          .screenshot({
+            path: join(evidenceDir, `cloud-job-hunt-error-${index}.png`),
+            fullPage: true,
+          })
           .catch(() => {});
         for (const [frameIndex, frame] of page.frames().entries()) {
           const text = await frame
             .locator("body")
             .innerText()
             .catch(() => "unavailable");
-          await writeFile(join(scratch, `job-hunt-error-${index}-${frameIndex}.txt`), text);
+          await writeFile(
+            join(evidenceDir, `cloud-job-hunt-error-${index}-${frameIndex}.txt`),
+            text,
+          );
         }
       }
       throw error;
@@ -159,7 +180,41 @@ export async function verifyCloudJobHuntRecovery({
     await frame.locator('[data-resume-mode="edit"]').click();
     await frame.locator("#resume-editor").fill(markdown);
   };
-  let restoredMarker, backupPath;
+  let restoredMarker, backupPath, pdfReceipt, pdfBytes;
+  async function pdfResource(call, receipt) {
+    const chunks = [];
+    for (let offset = 0; offset < receipt.size; ) {
+      const part = await call("resources.read", {
+        assetId: receipt.assetId,
+        offset,
+        length: 32768,
+      });
+      const chunk = Buffer.from(part.dataBase64, "base64");
+      assert.equal(part.offset, offset);
+      assert.equal(part.totalBytes, receipt.size);
+      assert.ok(chunk.length);
+      chunks.push(chunk);
+      offset += chunk.length;
+    }
+    const bytes = Buffer.concat(chunks);
+    assert.equal(bytes.length, receipt.size);
+    assert.equal(bytes.subarray(0, 5).toString(), "%PDF-");
+    assert.equal(`asset-${createHash("sha256").update(bytes).digest("hex")}`, receipt.assetId);
+    return bytes;
+  }
+  async function downloadPdf(a) {
+    await a.frame.locator('.side-nav [data-view-target="resumes"]').click();
+    await a.frame.locator('[data-resume-workspace="files"]').click();
+    await a.frame
+      .locator(`#resume-file-list [data-resume-asset-id="${pdfReceipt.assetId}"]`)
+      .click();
+    const preview = a.page.getByRole("region", { name: "文件预览", exact: true });
+    await preview.waitFor();
+    const download = a.page.waitForEvent("download");
+    await preview.getByRole("link", { name: "保存到此设备", exact: true }).click();
+    assert.deepEqual(await readFile(await (await download).path()), pdfBytes);
+    await a.page.getByRole("button", { name: "关闭预览", exact: true }).click();
+  }
   await browserRun(async (open) => {
     const a = await open(projectA),
       b = await open(projectB);
@@ -278,6 +333,51 @@ export async function verifyCloudJobHuntRecovery({
     console.log(
       "PASS: actual installed Job Hunt in two Docker projects migrates a large v1 root, exports exact old bytes, restores through the production UI, rejects a stale future draft and saves fresh work without changing the other project",
     );
+    await a.frame.locator('[data-resume-mode="preview"]').click();
+    await a.frame.locator("#print-resume").click();
+    // Exercise the owner confirmation in the real Host UI. The fixture only
+    // authorizes this PDF entry, never arbitrary background confirmations.
+    const consent = a.page.locator(".panel-host-confirm");
+    await consent.waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await consent.locator("h2").innerText(), /^启动 .+ 的后台工具？$/);
+    assert.match(await consent.locator("pre").innerText(), /resume-pdf/);
+    await consent.getByRole("button", { name: "确认执行", exact: true }).click();
+    const pdfJob = await until(async () => {
+      for (const summary of await a.call("tasks.list", { limit: 50 })) {
+        if (summary.entry?.name !== "resume-pdf") continue;
+        const job = await a.call("tasks.get", { id: summary.id });
+        if (["failed", "cancelled", "interrupted"].includes(job.status))
+          throw new Error(`Cloud PDF failed: ${JSON.stringify(job.error)}`);
+        if (job.status === "succeeded") return job;
+      }
+      return false;
+    }, "installed Job Hunt generates a real cloud PDF");
+    assert.doesNotMatch(
+      pdfJob.input.request.html,
+      /PRIVATE PDF EVIDENCE|PRIVATE PDF INTERVIEW QUESTION/,
+    );
+    pdfReceipt = await until(
+      async () =>
+        JSON.parse(await readRoot(projectA)).resume.pdfExports?.find(
+          (item) => item.taskId === pdfJob.id,
+        ),
+      "cloud PDF receipt persists",
+    );
+    pdfBytes = await pdfResource(a.call, pdfReceipt);
+    await assert.rejects(b.call("resources.get", { id: pdfReceipt.assetId }));
+    const pdfPath = join(evidenceDir, "cloud-job-hunt-resume.pdf");
+    await writeFile(pdfPath, pdfBytes);
+    const { stdout: pdfText } = await exec("pdftotext", [pdfPath, "-"]);
+    assert.match(pdfText, /Cloud recovery after restore/);
+    assert.match(pdfText, /项目经验/);
+    assert.doesNotMatch(pdfText, /PRIVATE PDF/);
+    await writeFile(join(evidenceDir, "cloud-job-hunt-resume.txt"), pdfText);
+    await downloadPdf(a);
+    await a.page.screenshot({ path: join(evidenceDir, "cloud-job-hunt-pdf.png"), fullPage: true });
+    assert.equal(await readRoot(projectB), other);
+    console.log(
+      "PASS: installed cloud Job Hunt produces selectable Chinese PDF text using its reviewed task, captures project-isolated bytes, persists the source receipt and downloads the exact PDF through the real UI",
+    );
   });
   return async () =>
     browserRun(async (open) => {
@@ -298,6 +398,15 @@ export async function verifyCloudJobHuntRecovery({
       );
       console.log(
         "PASS: after project stop/start and original package source removal, real Job Hunt reopens the restored generation with later edits and its backup catalog intact",
+      );
+      await a.frame.locator("#snapshot-recovery-close").click();
+      assert.deepEqual(await pdfResource(a.call, pdfReceipt), pdfBytes);
+      const job = await a.call("tasks.get", { id: pdfReceipt.taskId });
+      assert.equal(job.status, "succeeded");
+      assert.equal(job.input.request.source.updatedAt, pdfReceipt.sourceUpdatedAt);
+      await downloadPdf(a);
+      console.log(
+        "PASS: cloud resume PDF bytes, task history, source receipt and exact UI download survive project stop/start and package-source removal",
       );
     });
 }
