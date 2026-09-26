@@ -4012,3 +4012,48 @@ Host 分支 `codex/server/cloud-resume-pdf` 从最新主线创建独立工作树
 725b1d56903d1d5038e42204e71506b2652ea8ac、services
 094806c775c03cdd9ab4cba3fbd888f1f5141192。三个 PR 继续保持 draft，待实际安装包
 与容器业务验收，不以普通 CI 代替新增场景通过。
+
+增量 97 后续：Panel 725b1d5 的两轮完整 CI 最终全部成功。三仓候选
+[36277200702](https://github.com/cjhyy/codeshell-services/actions/runs/36277200702)
+失败，日志 /tmp/job-hunt-pdf-candidate-failed.log：旧数据迁移、恢复和新草稿保存
+通过，点击 PDF 后等待 150 秒未看到任务。代码核对发现该浏览器验收遗漏 Host 的
+后台工具确认；生产确认保留，验收新增检查标题与 resume-pdf 入口后点击确认，
+失败页面／iframe 文本改存到候选证据目录。Host #31 新提交
+eb66f3f06726aad67c085ab560aa3252dcc98bf1，语法、lint、格式通过，最终九类 CI
+36278225748 成功。新候选
+[36278228806](https://github.com/cjhyy/codeshell-services/actions/runs/36278228806)
+使用新 Host、原 Panel 725b1d5 和 services 094806c，已确认进入真实运行镜像验收；
+尚未结束，不能把脚本修复当作云端 PDF 已通过。三个 PR 继续 draft。
+
+### 增量 98：可信工作台录音与项目资源保存（2026-09-27，进行中）
+
+独立工作树 panel-audio-capture/codeshell，从最新 main 6efacc23 创建分支
+codex/web/panel-audio-capture。实际消费者缺口是求职的桌面 audio.transcribe／
+麦克风调用，以及视频的 iframe getUserMedia；云端 iframe 明确禁止麦克风。
+新增可选 resources.recordAudio，沿用资源权限，只返回打开可信工作台录音器的
+受限效果。用户明确开始才申请设备权限，停止／试听后再次确认保存；模型、
+转写与领域参数继续留在 Panel。未降低 iframe 沙箱或麦克风权限。
+
+录音请求固定原项目和页面 grant，最长 600 秒／25 MiB；面板关闭或授权撤销后
+停止轨道，迟到的设备授权也释放；上传可取消。页面保存原录音用于试听和本机
+备份；分块／完成响应丢失时不自动重传，用户明确保存后查询同一上传并恢复，
+最终要求资源摘要、长度和 MIME 匹配。控制台保留部分上传的既有过期清理策略。
+文档记录 HTTPS、浏览器支持、页面内临时保存和 25 分钟选择器超时边界。
+
+54 项录音／上传／Host 页面检查通过，54 项真实 HTTP runtime 契约通过；完整
+bun run typecheck、变更 lint、工作流引用和 diff 通过。实际 Chromium 使用模拟
+麦克风，但 MediaRecorder、WebM 编码、试听、Host HTTP 和资源服务真实；丢弃已
+提交 write／finish 的响应后，备份仍可下载、只开一个上传、最终项目资源字节
+一致，再录音时撤销授权释放全部轨道。截图已查看。日志
+/tmp/panel-audio-final-tests.log、/tmp/panel-audio-runtime-tests.log、
+/tmp/panel-audio-browser-final.log、/tmp/panel-audio-full-typecheck.log。
+
+首轮浏览器构建因测试入口的 react-dom 解析位置错误失败，改用 Web 包解析器；
+第二轮 headless shell 的模拟音频设备返回 NotSupportedError，改用锁定版本完整
+Chromium 的新 headless 模式及测试设备授权。没有替换实际 MediaRecorder，也没有
+关闭浏览器沙箱。Linux CI 增加该场景，对准确 Chromium 路径配置 AppArmor userns
+profile，保留全机限制。最终 d9f272d9ffcc5ec60357370f7610fb1e970abb37，
+[Host #32](https://github.com/cjhyy/codeshell/pull/32) 已附任务，为 draft；
+CI 36279137987 已确认运行。消费端接入、真实设备／模型和全部 Panel 业务仍未完成。
+整体 goal active，真实服务商／模型、目标部署／发布和统一目录／中继仍待完成，
+手机触控／窄屏优化继续后置。
