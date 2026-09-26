@@ -3852,3 +3852,47 @@ Panel #48 随主线纳入已合并 #49，最终
 同提交另一完整工作流通过；不隐去原失败，也不把旧提交 CI 当作最终提交通过。
 整体 goal active，仍待完整候选、编辑器资源播放、其他 Panel 业务与迁移、
 真实服务商／模型、目标部署与发布、设备目录／中继等工作；手机界面后置。
+
+
+### 增量 94：完整云端视频交付候选与主线合并（2026-09-27）
+
+候选 [36271484163](https://github.com/cjhyy/codeshell-services/actions/runs/36271484163)
+已成功，来源 Host ee77529772ea5f3194cf2687ac402cd54201fadf、Panel
+ d91ca2d89ec630940dac3bccc2e36deaa26abd93、services
+336cf8e6a9f38ae96e13b8556b531224495a2e94。实际媒体导入／原生检查、MP4
+渲染、320×180 解码、精确下载字节，以及停止／重启后的原素材和成品 SHA-256
+全部通过。求职／设计恢复、六包生命周期和两个项目隔离、Link 受控 OAuth／
+重启／备份恢复、真实安装包与镜像重载等既有门槛同时通过。
+日志 `/tmp/cloud-video-delivery-success.log`；候选 artifact 10916007929
+（623190890 bytes），证据 artifact 10915972917。未公开发布，未完成目标部署。
+
+Host #27 最终 ee775297 的全部九类 CI 通过，合入 4e63c470。
+Panel #48 最终 494440f 的完整 CI 通过，合入 24f38ef；首次 ec4622a 的时间轴
+超时仍保留，未改测试。Panel #47 候选 d91ca2d 的六类 CI 通过，随后普通合并
+最新主线得到 96fd5df；两者 tree 同为 708f608c8a13b6d058c56a2dd45d5aa5c7a18fd2，
+合入 72bc983。没有将合并提交的新 CI 说成已通过。
+
+### 增量 95：编辑器内授权素材流（2026-09-27，进行中）
+
+Host 分支 codex/server/panel-inline-resources、[PR #30](https://github.com/cjhyy/codeshell/pull/30)
+增加 resources.preview，沿用 resources 权限，返回当前页面 grant 下的只读 URL。
+支持 Range／HEAD；会话、包版本、页面授权失效时停止服务；资源按项目和 Panel
+取回，拒绝 HTML／JS／SVG 等主动内容，不增加 iframe 网络或沙箱权限。
+53 项运行契约、真实 opaque iframe 图片画布回读／WAV 解码与 seek／撤销验证、
+完整 workspace 类型及 lint 通过。实现 5908958f，合并主线后 f2cf8d33。
+
+Panel 分支 codex/video-studio/inline-resources、[PR #50](https://github.com/cjhyy/codeshell-panel-apps/pull/50)
+接入原素材、代理、声音试听、浏览器元数据检查与 MediaLibrary；HTTP 媒体采用
+anonymous CORS，项目切换后旧授权结果不落入新素材库。桌面保留原媒体协议；
+旧云端缺少能力会明确要求更新。源码和生成包提交 8133afd，合并最新主线并从
+组合源码重建生成文件后 d0917940a9d7006c920835919b7600a8e6944fec。
+7 项 source preview、195 项媒体、69 项主页面／素材库回归、类型与包校验通过；
+组合全仓 npm check 完成后继续完整 UI 回归，日志 /tmp/video-inline-merged-check.log
+与 /tmp/video-inline-merged-ui.log。两 PR 均为 draft，远端 CI 仍在运行。
+
+Host 672b8210bb980a8b5420ff51bfef12994b2f0319 增加真实安装包验收：操作原素材
+预览与播放按钮，观察实际 HTMLMediaElement 的解码、推进、授权资源路径，视频
+画布可回读；导出成品重新导入编辑器后再播放，并在项目重启后复验声音与视频。
+未将外层工作台成品预览作为编辑器通过的证据。新候选 36273228148 已确认运行，
+固定上述 Host、Panel d091794 和 services 主线 336cf8e。结果未定，不声明全云端
+编辑器预览完成。整体 goal 仍 active，真实账号／模型与目标部署条件仍待提供。
