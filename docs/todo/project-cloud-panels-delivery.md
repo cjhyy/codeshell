@@ -3948,3 +3948,56 @@ setup 流程准备后测试通过，没有改动生产推理策略。
 工作树干净，等待正在结束的 git fetch 后重新检查 lsof，确认无活跃 cwd 使用。
 两任务工作树与本地／远程分支已删除；保留 #51、目标记录分支及其他任务。
 #51 最终 889aa3c 的 CI 36274441246／36274459081 已确认运行中，尚未合并。
+
+增量 96 收尾：上述两轮最终 CI 全部成功，Panel #51 合入
+`b4a7db3fb3198fba482df7375288ee8b3053d1d4`。准确提交包含于主线、工作树干净，
+重新检查确认无活跃 cwd 后，任务工作树及本地／远程分支均已清理。
+
+### 增量 97：求职云端 PDF 业务与部署字体（2026-09-27，进行中）
+
+Panel 分支 `codex/job-hunt-hq-cloud/pdf-export` 使用替代 scope，因为已有无关分支
+`codex/job-hunt-hq` 占用 Git 前缀，原分支保持不动。最新主线建立独立工作树后，
+普通快进纳入 #51。新增审核原生 `resume-pdf` 入口及 process／resources 权限，
+使用同包打印 CSS；公开内容先去除内部证据和按钮，原生模板再次移除主动内容，
+禁用页面脚本、网络与导航，损坏图片明确失败。浏览器保持沙箱，限制请求、产物
+大小和运行时间，取消等待浏览器退出并删除本次临时配置。
+
+云端根据实际方法选择持久任务，桌面保留原打印接口。固定来源与内容的提交 key
+处理重复点击／回复丢失；任务页支持查询、取消、明确重试和项目资源下载，重开
+不会自动重跑。回执保存来源版本，修改后的简历不会被旧生成结果标为最新；文件
+生成但项目记录写入失败时仍可下载，刷新会重试记录保存。旧桌面路径记录兼容。
+另外核对 Host 重试复用任务目录，改为按 PDF 内容摘要命名不可变临时产物，避免
+“文件已写出、回执未捕获”后重试卡在 EEXIST；保留旧文件，相同字节可以复用。
+
+本机全仓 npm check 成功（后续来源记录与清理细化另有针对性检查），求职套件
+82 项通过，最后新增的写入失败恢复与原云端场景共两项完整页面检查通过；9 项
+任务／来源模型、7 项实际 PDF／CLI（含中文 A4、多页照片、取消、重试）通过。
+安装预检通过；日志 `/tmp/job-hunt-pdf-check.log`、`/tmp/job-hunt-pdf-suite-final.log`、
+`/tmp/job-hunt-pdf-ui-final.log`、`/tmp/job-hunt-pdf-task-final.log`、
+`/tmp/job-hunt-pdf-native-retry.log`、`/tmp/job-hunt-pdf-validate-retry.log`。
+已渲染并查看实际打印 CSS 的中文 PDF 页面，未把测试文件作为用户交付文件。
+
+首次 Linux PDF job 失败：下载的 Chromium 在 Ubuntu runner 上因 AppArmor 限制
+用户命名空间而无可用沙箱。原失败日志 `/tmp/job-hunt-pdf-linux-failed.log` 与空白页
+独立探针 `/tmp/job-hunt-pdf-linux-probe.log` 保留。按 Chromium 官方说明，仅对
+该临时 runner 上的准确测试浏览器路径加载 userns profile，没有关闭全局策略或
+Chromium 沙箱。`852570a` 的 Linux job 108501466794 已通过七项检查；之后的
+重试修复 `725b1d56903d1d5038e42204e71506b2652ea8ac` CI 尚在运行。
+[Panel #52](https://github.com/cjhyy/codeshell-panel-apps/pull/52) 已附任务，为 draft。
+
+services 分支 `codex/services/cloud-pdf-fonts` 从主线创建独立工作树，加入 Noto CJK
+字体并记录安装版本，候选 runner 增加 Poppler、保存 PDF／文本／截图证据。
+63 项测试、文档格式和 diff 检查通过；最终 `094806c775c03cdd9ab4cba3fbd888f1f5141192`，
+[services #6](https://github.com/cjhyy/codeshell-services/pull/6) 已附任务，为 draft。
+
+Host 分支 `codex/server/cloud-resume-pdf` 从最新主线创建独立工作树，扩展已有真实
+求职恢复验收：通过实际安装的 iframe 导出、检查中文可选文本与私密证据排除、
+跨项目资源拒绝、完整字节下载，以及停止／重启后的文件和任务恢复。只增加验收，
+不改变 Host 业务接口；语法、ESLint、格式和 diff 通过。最终
+`15e9c0ffa488bfb832056f665f38b685399a2c0a`，
+[Host #31](https://github.com/cjhyy/codeshell/pull/31) 已附任务，为 draft。
+
+第一次候选 36277000745 因随后补上输出中断重试修复，明确取消旧来源运行，
+不是成功候选。36277189291 误传短 SHA，被完整 SHA 校验拒绝，未进入业务验收；
+已改用三个准确提交重新发起候选。实际项目容器结果、最终 CI、合并与正式发布
+均尚未完成；既有成功候选仍是 36273228148，整体 goal 保持 active。
