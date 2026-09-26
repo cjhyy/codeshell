@@ -701,6 +701,7 @@ try {
   let verifyCandidateRestart;
   let verifyJobHuntRestart;
   let verifyDesignRestart;
+  let verifyVideoRestart;
   if (candidatePanels) {
     const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
     verifyCandidateRestart = await verifyCandidatePanelLifecycle({
@@ -741,6 +742,20 @@ try {
       projectA: a.id,
       projectB: b.id,
       candidatePanels,
+      scratch,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels) {
+    const { verifyCloudVideoRecovery } = await import("./smoke-cloud-video-recovery.mjs");
+    verifyVideoRestart = await verifyCloudVideoRecovery({
+      json,
+      request,
+      panelHarness,
+      serverUrl,
+      password,
+      projectA: a.id,
+      projectB: b.id,
       scratch,
       evidenceDir: join(root, "..", "evidence"),
     });
@@ -861,6 +876,7 @@ try {
   await verifyCandidateRestart?.();
   await verifyJobHuntRestart?.();
   await verifyDesignRestart?.();
+  await verifyVideoRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",
