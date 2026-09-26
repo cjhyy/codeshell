@@ -2457,3 +2457,41 @@ PR #28 和 #27 尚未合入／发布，最终 UI 验收仍需通过。
 草稿等待远程组合验收。先合入 #28，再保证该 PR 差异只保留设计恢复业务。
 整体 goal 保持 active，真实服务商／目标部署、正式发布、其余业务和完整升级恢复
 仍需继续；手机界面继续后置。
+
+
+### 增量 60：独立画面采样与真实 Design 存储验收（2026-09-26）
+
+Video `e6bbc0c` 的 push CI 36227957671 全通过，但 PR CI 36227959480 在粗剪队列
+最后选择蓝色片段的像素比较超时；未据另一次绿灯合入。Quant `07db8eb` 和 Design
+`c54147c` 的两次完整 CI 随后均通过。发现独立 `captureAssetFrame`（Agent 的
+`inspect_video_frame` 使用入口）仍只等待 seeked，再直接从可变视频表面编码 JPEG。
+这一入口的结果也是该 UI 测试的预期像素来源；旧失败日志不足以断言其全部实际时序。
+
+新回归保留真实解码和 JPEG 编码，只令可变视频表面的直接 Canvas 读取为黑场。
+修复前得到有效格式但无真实像素的黑色 JPEG（1132 bytes、mutableReads=1），
+修复后读取冻结帧并保留原预览时间，日志 `/tmp/video-capture-frozen-before.log`、
+`/tmp/video-capture-frozen-after.log`。`e0fdbbc1bd66e9bb646290a454a9dfebfd94d3b1`
+让独立采样也验证并冻结实际帧，在完成／失败后释放。原图片路径保留，图像大小／
+编码上限不变；粗剪检查保留原像素容差并增加失败诊断（预期／实际中心色、播放头、
+选中片段及提示），不扩大等待时限。
+
+受影响的完整粗剪队列流程通过，`/tmp/video-capture-frozen-roughcut.log`。完整媒体
+190 项通过、零跳过，`/tmp/video-capture-media.log`；完整离线 check、类型、构建
+一致性与 validate 通过，源码／README／生成包同步提交。最终 CI
+36228852034／36228849737 运行中。没有将单项通过作为整体 UI 验收，也没有重跑
+旧失败任务来代替修复。
+
+Design 用当前恢复模块连接实际已构建 Node Host 的磁盘存储，验证两个实例竞争仅
+一个成功、旧实例不能清除新记录、重新构建 Host 实例后重读、另一项目隔离、撤销
+拒绝写入及重新加载后的条件删除。最初手写临时夹具 key 含不允许的冒号，Host 正确
+拒绝；改为合法 key 后通过，未放宽 Host 校验。验证已纳入
+`scripts/design-studio-host-storage.mjs`（提交 `cce6de5`），接受明确的兼容已构建
+server 包目录并核对包名，只使用和清理自己的临时项目，不修改产品依赖。日志
+`/tmp/design-host-storage-maintained.log`，不是内存模拟或真实云端用户验收。
+
+同步最终采样修复后，Quant 为 `c127ed204e316abddedd652bbbf403539dfb5231`，Design
+为 `6ea85916f949e0e9ef567dc1b9f437bdb6954958`。两者本地组合构建一致性和包校验
+通过（`/tmp/quant-capture-build-check.log`、`/tmp/quant-capture-validate.log`、
+`/tmp/design-capture-build-check.log`、`/tmp/design-capture-validate.log`）。PR #27／
+#28／#29 仍未合入，等待最终组合 CI；未发布。整体 goal 仍 active，原始完整范围
+与真实账号／模型、部署、兼容发布及剩余业务恢复门槛不变。
