@@ -155,7 +155,10 @@ export async function verifyCloudVideoRecovery({
   const edit = async (frame, name) => {
     await frame.locator("#project-name").fill(name);
     await frame.locator("#project-name").press("Tab");
-    await frame.locator("#save-state").filter({ hasText: "已保存" }).waitFor({ timeout: 150000 });
+    await frame
+      .locator("[data-ew-save]")
+      .filter({ hasText: "已保存" })
+      .waitFor({ state: "attached", timeout: 150000 });
   };
   await browserRun(async (open) => {
     const a = await open(projectA),
@@ -169,14 +172,14 @@ export async function verifyCloudVideoRecovery({
     await a.frame
       .locator("[data-ew-save]")
       .filter({ hasText: "已保存" })
-      .waitFor({ timeout: 150000 });
+      .waitFor({ state: "attached", timeout: 150000 });
     const horizontal = a.frame.getByLabel("水平位置（%）", { exact: true });
     await horizontal.fill("37");
     await horizontal.press("Tab");
     await a.frame
       .locator("[data-ew-save]")
       .filter({ hasText: "已保存" })
-      .waitFor({ timeout: 150000 });
+      .waitFor({ state: "attached", timeout: 150000 });
     await edit(a.frame, "Cloud edited video");
     const changed = await until(async () => {
       const value = await readDocument(projectA);
