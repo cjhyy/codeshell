@@ -4516,3 +4516,59 @@ shell 命令已完成推送并开始容器验证，没有重复启动同一活�
 证据目录 /Users/admin/.codex/worktrees/cloud-quant-backtest/evidence。Quant 完整
 Linux 打包候选尚未启动，需要本机门槛通过及与已验收主线正常整合后再开始。
 所有未完任务工作树保留，goal active，未公开发布或目标部署。
+
+### 增量 109：真实语音与下载候选通过，启动含 Quant 的组合验收（2026-09-27）
+
+[真实语音完整候选 36287706235](https://github.com/cjhyy/codeshell-services/actions/runs/36287706235)
+成功。固定 Host 41b5c07a0e236e2eea50829e6552984cda4d7106、Panel
+94867b9f1434fd4443f1890b5a1e3b366c3ec113、services
+28247d5cb145ef4396c552998794e881ccb27bfb。候选 artifact 10920969274
+（698481117 字节），证据 10920899601（1162122 字节）。runtime
+sha256:7626484df2067f51c6fe82b6f03b5e8b75f82f55786ffd9d1f77dc8d0681d9ea，
+Link sha256:36d4326e2ee1483b40fef1ab44d46b65f04f814f092958dc2d172406a15c3b44，
+linux/amd64。已核对真实转写和 stop/start 后原录音、任务、答案保留且无再次服务请求，
+原有 Video／Design／PDF／六包／受控 Link／备份／候选字节和镜像重载全部通过。
+日志 /tmp/cloud-real-speech-candidate-success.log，证据
+/tmp/cloud-real-speech-success-evidence。provider JSON actualCloudTask=true，
+执行器 8073c16d939af604154abd7d1f909af9a7bca42fd2a944bb8e35a4e92040ec95；
+权重及公共样本摘要与之前固定值一致。未把英文 tiny.en 当作中文质量证据。
+
+刷新三仓 origin/main、核对祖先和最终全部 CI 后，按既有授权合入 Host #35 至
+87d7674c68ab506132ed1da9281c1c06338ff25a、Panel #56 至
+55270170a21c50783f0993c4c288fb513dd2e12b、services #8 至
+724a4d79dccbd977c16fc0519e9423a1456eb1e3。PR 描述按最终行为与证据重写。
+核对 clean／祖先／lsof 后删除 cloud-real-speech 三个工作树和本地／远程分支；
+保留原始用户与其他活跃任务。
+
+[下载完整候选 36288203397](https://github.com/cjhyy/codeshell-services/actions/runs/36288203397)
+成功，固定 Host 4038ee0a27971a9e6052b9657b7fc27e4c251f98、Panel
+9239cc41ce15d3c2510b0f72a837363eeccb2946、services
+01723925a204983fb1aa3942c42a69c46c8a9301。候选 artifact 10921062458
+（698462562 字节），证据 10921781610（1203181 字节）。runtime
+sha256:380be0da96a4bb183d83cbb6284c40ce6343b5f2db6e348ac2f6221be9b0ecfd，
+Link sha256:d3739c21733e9155a08c128dc1e20611169d92af4adcfc6ce5fd7c298862b797。
+实际独立 npm 五包与新镜像通过下载、发起端退出继续、双登录、隔离、播放／精确
+保存、重启不重提，以及原有完整门槛。日志 /tmp/candidate-download-linux-success.log，
+证据 /tmp/candidate-download-linux-evidence；下载器版本／摘要与固定夹具一致。
+
+下载分支正常整合上述新 main：Host 3931c031c9a2b48e74e3d0303d79888424e70c0f，
+Panel 5227536edec28c5aaef2a667f610a9bf404a62ac，services
+38b136928fde2b66d9cde618a341b81a71698263。Host services-entry 参数冲突保留
+--download-fixture 和 --speech-bundle，两端不同端口，没有用 ours 丢弃修改。
+语法／lint／格式通过，services 63 项及格式通过，业务安装包无新增变化。最终
+组合 CI 待终态，因此 #36／#57／#9 保持 draft。
+
+Quant 本机第三轮 /tmp/quant-cloud-local-third.log 终态通过（session 95103 已收回）：
+真实六包生命周期后，160 行合成 CSV、125000 参数、原数据指纹、策略／报告／CSV
+原字节、独立登录、第二项目保持默认参数且无产物、重启原文件保留且无重复通过。
+已查看 cloud-quant-backtest.png。第一轮折叠控件遗漏、第二轮过早读取 CSV 的
+失败记录仍保留，不把本机旧 arm64 镜像当作最新 Linux 发布候选。
+
+Quant 分支正常整合已接受下载／语音支持，Host
+5b33d145fd29ce1e2144abf344cce84335f5418a；services
+bca724adb4ca6a65088002db10f78ce6f755e005。解决业务选项／夹具解析和证据列表／
+文档的正常合并冲突，保留所有已有检查。语法／lint／格式通过，services 63 项通过。
+[完整组合 36289352541](https://github.com/cjhyy/codeshell-services/actions/runs/36289352541)
+固定上述 Host／services 及 Panel 5227536e，real_speech=true；包括实际转写、下载、
+Quant 和原有业务。完整组合与最终 CI 待终态，#37／#10 保持 draft。
+公开发布、真实目标部署、真实 Link 账号和设备目录／中继仍未完成，goal active。
