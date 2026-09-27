@@ -34,14 +34,32 @@ await new Promise((done, fail) => {
       stdio: "inherit",
     },
   );
-  const timer = setTimeout(() => child.kill("SIGTERM"), 8 * 60_000);
-  child.once("error", (error) => {
+  let interrupted = false;
+  let forceTimer;
+  const interrupt = () => {
+    if (interrupted) return;
+    interrupted = true;
+    child.kill("SIGTERM");
+    // The smoke first finishes/aborts its current operation, then closes the
+    // controller and removes only its resources. Force exit is a last resort.
+    forceTimer = setTimeout(() => child.kill("SIGKILL"), 4 * 60_000);
+  };
+  process.on("SIGTERM", interrupt);
+  process.on("SIGINT", interrupt);
+  const timer = setTimeout(interrupt, 8 * 60_000);
+  const finished = () => {
     clearTimeout(timer);
+    clearTimeout(forceTimer);
+    process.off("SIGTERM", interrupt);
+    process.off("SIGINT", interrupt);
+  };
+  child.once("error", (error) => {
+    finished();
     fail(error);
   });
   child.once("close", (code) => {
-    clearTimeout(timer);
-    if (code === 0) done();
+    finished();
+    if (code === 0 && !interrupted) done();
     else fail(new Error(`Installed Cloud backup/restore acceptance failed (${code}).`));
   });
 });
