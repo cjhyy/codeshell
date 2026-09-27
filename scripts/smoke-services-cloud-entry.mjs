@@ -289,6 +289,33 @@ try {
   await check();
   await run("npm", ["test"], installed);
   await run("npm", ["run", "test:browser"], installed);
+  const relayManifest = join(installed, "device-relay-candidate.json");
+  await writeFile(
+    relayManifest,
+    JSON.stringify(
+      {
+        hostHead:
+          provenance?.host ?? (await run("git", ["rev-parse", "HEAD"], repo, process.env, true)),
+        servicesHead:
+          provenance?.services ??
+          (await run("git", ["rev-parse", "HEAD"], source, process.env, true)),
+        packages: inventory,
+      },
+      null,
+      2,
+    ) + "\n",
+    { flag: "wx" },
+  );
+  await run(
+    process.execPath,
+    [
+      join(repo, "scripts/smoke-device-relay.mjs"),
+      installed,
+      relayManifest,
+      join(repo, "..", "evidence", `device-relay-acceptance-${basename(root)}.json`),
+    ],
+    installed,
+  );
   if (docker) {
     const downloadFixture = panelInventory ? join(root, "download-fixture") : undefined;
     if (downloadFixture)
