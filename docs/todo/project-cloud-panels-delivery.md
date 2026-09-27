@@ -4127,3 +4127,53 @@ services 分支 `codex/services/cloud-recording-acceptance` 为临时候选 runn
 云端业务通过；最新成功候选仍是增量 97 的 36278228806。整体 goal 保持 active，
 未公开发布或正式部署；手机界面后置，全部业务／真实账号模型／目标部署与统一
 设备目录中继仍需完成。
+
+
+增量 99 后续：首次候选 36281034958 失败，验收脚本将隐藏且为空的 role=alert
+误判为错误；查看页面截图后，Host #33 的 b968ddad 改为仅检查可见非空错误，
+完整九类 CI 36282041874 通过。第二候选 36282062769 仍失败，这次是真实问题：
+重新打开 Panel 后，编辑器已显示，但制作记录尚未恢复，加入项目录音提前触发
+requireHost 的未启用判断；原始录音保留。未将修正验收脚本算作生产流程完成。
+
+Panel #53 新提交 e5c389070f3a9480e91aa7dbb875eb6681f3f0d9 将初始化合并为同一个
+Promise，录音加入等待记录恢复并在等待后重新检查工程归属；关闭后不创建轮询。
+73 项制作控制器检查通过，包含恢复等待和期间切换工程；完整页面验证延迟恢复、
+保存失败后重开及重复加入。类型、确定性安装包、预检和 diff 通过。已提交源码
+及生成包，最终 CI 待完成。新候选
+[36282931762](https://github.com/cjhyy/codeshell-services/actions/runs/36282931762)
+固定 Host b968ddad8fac5f9cb700d534eec4fdba627b134c、Panel e5c3890 和 services
+ e36f3280226bd95d6a78f0373b3bd0133c945bcd，已确认运行。视频三个 PR 继续 draft。
+第二失败日志 /tmp/cloud-video-recording-candidate-second-failed.log，截图与调用时序
+/tmp/cloud-video-recording-second-evidence；修复检查 /tmp/video-cloud-recording-init-*.log。
+
+### 增量 100：求职项目录音与持久转写任务（2026-09-27，进行中）
+
+独立工作树 job-hunt-cloud-audio，Panel 分支 codex/job-hunt-hq-cloud/audio-practice。
+通过声明的可选能力接入可信工作台录音；选择项目音频和语音连接后，明确发送至
+Panel 自有 interview-transcribe 原生入口。新增 credentials.connections 权限，
+只交付所选连接，密钥不进入任务 JSON／结果／页面。支持 OpenAI 兼容 HTTPS 与
+Host 已授权的回环服务。最长录音 120 秒、16 MiB、请求 120 秒、文字 6000 字。
+
+任务保存录音身份、连接指纹、题目／练习场次和原回答摘要，正文不发送给转写服务。
+持久写入请求标记后才发网络请求；失败、取消及结果不明时均不自动重发，成功回执
+可重读。用户明确选择原录音并确认才创建新请求；取消保留原文件。转写文字只在
+用户校对后加入回答，题目或回答变化则保留文字而拒绝覆盖；跨项目迟到响应停止。
+原桌面音频流程继续适用于缺少该能力组合的 Host。
+
+全仓 npm check 通过；最终求职套件 97 项、实际完整页面 2 项通过，覆盖关闭／切换、
+丢提交回复、结果找回、拒绝覆盖新回答、取消和明确再次发送。原生测试使用真实 HTTP
+验证 multipart、选定连接、取消、重入、错误脱敏、重定向与大小限制。包预检和 diff
+通过。Panel b53c6fb88e3066c769019f9d854aa3afa0cfd5b0，
+[Panel #54](https://github.com/cjhyy/codeshell-panel-apps/pull/54) draft，已附任务。
+日志 /tmp/job-hunt-cloud-audio-check.log、/tmp/job-hunt-cloud-audio-final-suite.log、
+/tmp/job-hunt-cloud-audio-final-ui.log、/tmp/job-hunt-cloud-audio-final-validate.log。
+
+Host 分支 codex/server/cloud-interview-audio，5078a66fcf10a88bf9bb7ab7f2fd248ee0d58ab3，
+[Host #34](https://github.com/cjhyy/codeshell/pull/34) draft，已附任务。增加真实安装包
+容器验收：可信录音、原始字节、选定连接交付、真实 native process／HTTP、跨项目
+拒绝、换浏览器恢复、手动应用、取消与项目重启后不重发。输入设备和语音响应受控，
+不声称实际识别质量或物理麦克风通过。语法、lint、格式和 diff 通过，完整 CI 待完成。
+候选 [36283000541](https://github.com/cjhyy/codeshell-services/actions/runs/36283000541)
+固定上述 Host／Panel 和 services e36f3280，已启动，首次 queued。完整容器结果尚未
+取得，两 PR 不合并；服务公网部署、真实提供商、正式发布和统一目录／中继仍待完成，
+手机操作优化继续后置。整体 goal 保持 active。
