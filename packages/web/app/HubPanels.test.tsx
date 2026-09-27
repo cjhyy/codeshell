@@ -8,7 +8,7 @@ import type {
   PanelSnapshot,
 } from "../../server/src/panels/types.js";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
-import { setApiWorkspace } from "./api-context.js";
+import { setApiWorkspace, setApiProject } from "./api-context.js";
 import { HubPanels } from "./HubPanels.js";
 
 type Element = React.ReactElement<Record<string, any>>;
@@ -111,6 +111,7 @@ afterEach(async () => {
   for (const unmount of unmounts.splice(0)) await unmount();
   globalThis.fetch = originalFetch;
   setApiWorkspace(undefined);
+  setApiProject(null);
 });
 
 interface Request {
@@ -556,6 +557,107 @@ test("retained version restoration reviews permissions and submits only the owne
   expect(view.changed).toBe(1);
   expect(text(view.tree)).toContain("已恢复为 v1.0.0");
 });
+
+test("closing a restore review cancels it on the Host and keeps the dialog on cancellation failure", async () => {
+  const data = restoreFixture();
+  let rejectCancellation = true;
+  const view = await fixture({
+    panels: [data.installed],
+    canRestorePackages: true,
+    intercept: (request) => {
+      if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
+      if (request.url.pathname.endsWith("/restore-preview")) return Response.json(data.restore);
+      if (request.url.pathname.endsWith("/restore/review") && request.method === "DELETE")
+        return rejectCancellation
+          ? Response.json({ error: "Cancellation unavailable" }, { status: 503 })
+          : Response.json({ cancelled: true });
+    },
+  });
+  await click(button(view.tree, "项目版本"));
+  await click(button(view.tree, "审阅 v1.0.0"));
+  await click(button(view.tree, "关闭版本记录"));
+  expect(text(view.tree)).toContain("Cancellation unavailable");
+  expect(button(view.tree, "确认权限并恢复项目版本")).toBeDefined();
+  rejectCancellation = false;
+  await click(button(view.tree, "关闭版本记录"));
+  expect(text(view.tree)).not.toContain("确认权限并恢复项目版本");
+  expect(
+    view.requests
+      .filter((request) => request.url.pathname.endsWith("/restore/review"))
+      .map((request) => ({ method: request.method, body: request.body })),
+  ).toEqual([
+    { method: "DELETE", body: { reviewToken: data.restore.reviewToken } },
+    { method: "DELETE", body: { reviewToken: data.restore.reviewToken } },
+  ]);
+  expect(view.changed).toBe(0);
+});
+
+test("opening uninstall releases the prior version review without restoring or uninstalling", async () => {
+  const data = restoreFixture();
+  const view = await fixture({
+    panels: [data.installed],
+    canRestorePackages: true,
+    intercept: (request) => {
+      if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
+      if (request.url.pathname.endsWith("/restore-preview")) return Response.json(data.restore);
+      if (request.url.pathname.endsWith("/restore/review"))
+        return Response.json({ cancelled: true });
+    },
+  });
+  await click(button(view.tree, "项目版本"));
+  await click(button(view.tree, "审阅 v1.0.0"));
+  await click(button(view.tree, "卸载"));
+  const cancellations = view.requests.filter((request) =>
+    request.url.pathname.endsWith("/restore/review"),
+  );
+  expect(cancellations.map(({ method, body }) => ({ method, body }))).toEqual([
+    { method: "DELETE", body: { reviewToken: data.restore.reviewToken } },
+  ]);
+  expect(text(view.tree)).not.toContain("确认权限并恢复项目版本");
+  expect(view.changed).toBe(0);
+});
+
+for (const late of [false, true])
+  test(`leaving a workspace cancels ${late ? "late" : "held"} restore review at its original target`, async () => {
+    const data = restoreFixture();
+    let release!: (response: Response) => void;
+    const delayed = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    const view = await fixture({
+      panels: [data.installed],
+      canRestorePackages: true,
+      intercept: (request) => {
+        if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
+        if (request.url.pathname.endsWith("/restore-preview"))
+          return late ? delayed : Response.json(data.restore);
+        if (request.url.pathname.endsWith("/restore/review"))
+          return Response.json({ cancelled: true });
+      },
+    });
+    await click(button(view.tree, "项目版本"));
+    await click(button(view.tree, "审阅 v1.0.0"));
+    const issued = view.requests.find((request) =>
+      request.url.pathname.endsWith("/restore-preview"),
+    )!;
+    setApiWorkspace("/workspace/new");
+    setApiProject("12345678-1234-1234-1234-123456789abc");
+    await view.unmount();
+    if (late) {
+      release(Response.json(data.restore));
+      await act(async () => {
+        await flushMicrotasks();
+      });
+    }
+    const cancellations = view.requests.filter((request) =>
+      request.url.pathname.endsWith("/restore/review"),
+    );
+    expect(cancellations).toHaveLength(1);
+    expect(cancellations[0]!.url.pathname).toBe("/api/v1/panels/restore/review");
+    expect(cancellations[0]!.url.search).toBe(issued.url.search);
+    expect(cancellations[0]!.body).toEqual({ reviewToken: data.restore.reviewToken });
+    expect(view.changed).toBe(0);
+  });
 
 test("a peer project change disables the held restore review without resubmitting it", async () => {
   const data = restoreFixture();

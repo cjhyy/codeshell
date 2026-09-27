@@ -51,11 +51,11 @@ if (candidatePanelsIndex >= 0 && !candidatePanels)
 const businessIndex = process.argv.indexOf("--candidate-business");
 const candidateBusiness = businessIndex < 0 ? "all" : process.argv[businessIndex + 1];
 if (
-  !["all", "job-hunt", "design", "video", "quant"].includes(candidateBusiness) ||
+  !["all", "packages", "job-hunt", "design", "video", "quant"].includes(candidateBusiness) ||
   (businessIndex >= 0 && !candidatePanels)
 )
   throw new Error(
-    "--candidate-business requires staged Panels and all, job-hunt, design, video or quant",
+    "--candidate-business requires staged Panels and all, packages, job-hunt, design, video or quant",
   );
 const speechIndex = process.argv.indexOf("--speech-bundle");
 const speechBundle = speechIndex < 0 ? undefined : process.argv[speechIndex + 1];
@@ -820,6 +820,9 @@ try {
       projectA: a.id,
       projectB: b.id,
       panelHarness,
+      serverUrl,
+      password,
+      evidenceDir: join(root, "..", "evidence"),
     });
   }
   if (candidatePanels && ["all", "job-hunt"].includes(candidateBusiness)) {

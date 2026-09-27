@@ -22,6 +22,10 @@
       "types": "./dist/index.remote-relay.d.ts",
       "import": "./dist/index.remote-relay.js"
     },
+    "./auth": {
+      "types": "./dist/index.auth.d.ts",
+      "import": "./dist/index.auth.js"
+    },
     "./mobile-remote": {
       "types": "./dist/index.mobile-remote.d.ts",
       "import": "./dist/index.mobile-remote.js"

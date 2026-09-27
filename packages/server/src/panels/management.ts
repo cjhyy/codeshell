@@ -810,6 +810,16 @@ export function createPanelManagement(options: PanelManagementOptions) {
         return value;
       });
     },
+    async cancelRestore(context: PanelOperationContext, token: unknown) {
+      if (typeof token !== "string") invalid();
+      await assertAuthorized(context);
+      prune();
+      const held = restores.get(token);
+      if (held && held.owner !== context.ownerId)
+        throw new PanelManagementError(403, "review_owner", "请在当前设备取消这个版本审阅。");
+      restores.delete(token);
+      return { cancelled: true };
+    },
     async restore(context: PanelOperationContext, token: unknown) {
       if (typeof token !== "string") invalid();
       prune();
@@ -832,6 +842,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
           throw new PanelManagementError(400, "unsupported", "这个版本无法在当前环境使用。");
         await guard();
         await assertAuthorized(context, held.generation);
+        if (restores.get(token) !== held || held.public.expiresAt <= now())
+          throw new PanelManagementError(409, "review_expired", "版本审阅已失效，请重新选择。");
         setBinding(target, true, { projectState: held.projectState });
         restores.delete(token);
         await options.onChanged?.(review.appId, "binding");
