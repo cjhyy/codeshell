@@ -177,3 +177,8 @@ Docker 部署到其他机器见 [Docker 部署说明](../../docs/docker-deployme
 更新 Hub 后需重建并重启服务。Desktop Web 的入口构建到 `packages/desktop/out/mobile`，
 还依赖新的主进程 HTTP 接线，因此必须重新构建 Desktop 并重启应用；只更新 Hub 的 `dist-app`
 或刷新旧桌面的浏览器页面不会完成升级。
+
+The focused `/remote-relay` entry also exposes `environmentIdentity(dataDir)` so
+desktop enrollment uses the same stable identity as its Web descriptor. It is not
+added to the root entry. `DeviceRelayState` includes terminal `unauthorized` for
+TLS-verified 401/403 control handshakes; temporary failures continue reconnecting.

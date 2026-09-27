@@ -1,3 +1,4 @@
+import { authRefusalAcceptance } from "./auth-refusal.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
@@ -37,6 +38,7 @@ execFileSync(
   { stdio: "ignore" },
 );
 const cert = await readFile(join(root, "cert.pem"));
+await authRefusalAcceptance(api, { cert, key: await readFile(join(root, "key.pem")) });
 const relay = await relayFixture(root, { cert, key: await readFile(join(root, "key.pem")) }, api);
 const externalHost = new URL(relay.publicOrigin).host;
 const config = {

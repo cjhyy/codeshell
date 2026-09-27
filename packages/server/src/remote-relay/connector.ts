@@ -14,7 +14,7 @@ import {
   RELAY_SETUP_TIMEOUT_MS,
 } from "./protocol.js";
 
-export type DeviceRelayState = "connecting" | "ready" | "disconnected" | "closed";
+export type DeviceRelayState = "connecting" | "ready" | "disconnected" | "unauthorized" | "closed";
 /** Issued by RemoteHostManager.relayTarget(), bound to one running relay Host. */
 export interface RelayLocalTarget {
   readonly port: number;
@@ -129,6 +129,16 @@ export function createDeviceRelayConnector(
     );
     ws.on("error", () => {
       /* close owns cleanup/retry; never log credentials or request data. */
+    });
+    ws.on("unexpected-response", (_request, response) => {
+      if (current() && (response.statusCode === 401 || response.statusCode === 403)) {
+        // A verified TLS endpoint rejected this credential. Retrying cannot
+        // restore authority; network failures and 5xx still use normal retry.
+        running = false;
+        state("unauthorized");
+      }
+      response.destroy();
+      ws.terminate();
     });
     ws.on("pong", () => {
       if (current()) lastPong = Date.now();

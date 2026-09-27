@@ -11,6 +11,7 @@ import * as linksApi from "./index.links.js";
 import * as panelsApi from "./index.panels.js";
 import * as remoteRelayApi from "./index.remote-relay.js";
 import * as authApi from "./index.auth.js";
+import { environmentIdentity } from "./environment-identity.js";
 import { createHubAuth, HUB_SESSION_COOKIE } from "./hub/auth-http.js";
 
 const repoRoot = join(import.meta.dir, "../../..");
@@ -46,7 +47,28 @@ describe("Server package public entry contracts", () => {
     expect(Object.keys(workerApi).sort()).toEqual(["WorkerBridgeCore", "previewLine"]);
   });
 
-  test("keeps remote relay a focused, transport-only public capability", () => {
+  test("keeps outbound transport and enrollment identity in the focused remote-relay capability", () => {
+    expect(Object.keys(remoteRelayApi).sort()).toEqual([
+      "RELAY_CONNECT_PATH",
+      "RELAY_CONTROL_MAX_BYTES",
+      "RELAY_DATA_CHUNK_BYTES",
+      "RELAY_DATA_MAX_BYTES",
+      "RELAY_MAX_STREAMS",
+      "RELAY_PING_INTERVAL_MS",
+      "RELAY_PONG_TIMEOUT_MS",
+      "RELAY_PROTOCOL_VERSION",
+      "RELAY_SETUP_TIMEOUT_MS",
+      "RELAY_STREAMS_PATH",
+      "createDeviceRelayConnector",
+      "createRelayByteStream",
+      "environmentIdentity",
+      "isRelayHostId",
+      "isRelayOrigin",
+      "isRelayToken",
+      "parseRelayControlMessage",
+    ]);
+    expect(remoteRelayApi.environmentIdentity).toBe(environmentIdentity);
+    expect("environmentIdentity" in rootApi).toBe(false);
     expect(typeof remoteRelayApi.createDeviceRelayConnector).toBe("function");
     expect(typeof remoteRelayApi.createRelayByteStream).toBe("function");
     expect(typeof remoteRelayApi.parseRelayControlMessage).toBe("function");
