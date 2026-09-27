@@ -4650,3 +4650,58 @@ lint/格式通过，新 Docker 镜像尚在构建，不能把旧镜像失败算�
 任务与资源、Link、部署发布及备份恢复继续。可以现有包验收公共流程，不能因
 验收暴露 Panel 业务缺口就继续扩展业务修改。Host #38 取消版本审阅属于通用管理
 能力，继续验证。暂缓事项不冒充完成，整体 goal 不暂停。
+
+## 增量 112：组合候选通过、版本取消回归、恢复验收缺口（2026-09-27）
+
+[组合候选 36289352541](https://github.com/cjhyy/codeshell-services/actions/runs/36289352541)
+成功，准确来源为 Host 5b33d145fd29ce1e2144abf344cce84335f5418a、Panels
+5227536edec28c5aaef2a667f610a9bf404a62ac、services
+bca724adb4ca6a65088002db10f78ce6f755e005，real_speech=true。
+候选 artifact 10922107486（698461823 字节），证据10922236612（1385906 字节）；
+runtime sha256:935f2fef5968eee7c88acd6e538fa171747ec084ae1569d94526f91232cd8745，
+Link sha256:d60deaeefc23972d64bff273015d150a5c7ff0e624e9a0ecf533bd45155cd329。
+日志 /tmp/combined-speech-download-quant-success.log；证据目录
+/tmp/combined-speech-download-quant-evidence。不包含后续 Host #38 与 Link #12。
+
+下载 Host #36／Panel #57／services #9 最终检查通过并合入 f13aaafd／57703cbb／
+3a9622ec，所属任务工作树及分支经 clean／祖先／无活动 cwd 检查清理，证据保留。
+Quant Host #37 的36291232942九项、services #10 的36291253866／36291256170
+六项检查通过，合入4b51781f／d684888b。
+
+Host #38 桌面与 Web 取消生命周期验证55项／359断言通过，renderer fixture13场景
+通过，Server/Web构建通过。发起时固定项目／URL，退出时取消原审阅，迟到预览
+清理原目标；取消失败可重试。日志 /tmp/cloud-panel-version-ui-final-tests.log、
+/tmp/cloud-panel-version-ui-web-lifecycle-tests.log、/tmp/cloud-panel-version-ui-final-build.log。
+全新 Docker 构建遭 Debian／Docker Hub 网络失败，未记为通过；聚焦回归用已验证
+基础64c14db98431d441dbdaae0f8fdd2599376d0f57c040bbf8c7dded48408aaedb叠加
+新构建Host/Web，得到0a64f1c157cd801484da7769f48ddde5f712f354bdf2feb2cab9a3afbc68c4ca。
+实际双容器六包审阅／取消／确认／回退、数据隔离、授权失效、删除来源及重启检查
+通过，日志 /tmp/cloud-panel-version-ui-fixed-local.log。十二张成功截图和原失败
+证据保留；这不替代干净源码的完整Linux候选。
+
+67d90206 的 CI36291244337架构检查发现原IPC文件超行数预算；preload两文件也
+有同类问题。6ad2d849提取同族版本IPC/API/types模块，原入口降至302／1862／2924
+行，不提高行数预算；新增认证取消路由明确令总路由295→296，preload总调用293。
+六项架构／契约／隔离检查、lint/格式通过，最终
+[CI36291898983](https://github.com/cjhyy/codeshell/actions/runs/36291898983)
+九类全部通过，含全仓类型、Electron与真实Windows。失败日志仍保留在
+/tmp/cloud-panel-version-ui-ci-rest-failed.log；#38及services#11待新组合候选后合入。
+
+[services #12](https://github.com/cjhyy/codeshell-services/pull/12) 恢复预检先只读
+检查原库schema=1、必需表列、完整性、外键、加密key_check，避免构造器补表将空库
+或损坏库误判成功。合法空业务库仍接受，失败清理新目标及WAL/SHM，源备份和已有
+目标不变。修复前五反例复现；九项恢复测试及71项服务测试通过；最终CI36291739360／
+36291747931六项通过，合入88dfe726。日志 /tmp/link-restore-preflight-{before,focused,tests,format-final}.log。
+
+新审计发现：当前候选仅调用Link恢复与settings修复，没有整套Cloud安装目录／
+项目卷恢复。旧独立smoke-cloud-backup虽有真实Docker验证，但依赖本地dist与开发
+镜像，不能代表当前候选安装。已另开平台任务，使用候选公开API/CLI及不可变镜像，
+在归档前验证新安装身份、卷字节与权限、旧会话撤销和恢复项目启动。目标服务器与
+跨版本回滚仍单独待验收。Panel具体内容保持冻结，goal active，未发布或部署。
+
+services #11 正常合入 Link #12 至291a59e508da2b8088036b1cfb5dc6ca278dda52，
+71测试和格式通过。以Host6ad2d849、Panel57703cbb、该services提交启动候选
+36292336451后，独立复查发现DELETE /panels/restore会抢占合法ID为restore的
+卸载请求。此运行因已知代码问题主动停止，改用两段取消地址并补回归后重验；
+不是由于网络观察错误重跑。Quant两任务树和Link preflight树经清洁／已合并／
+无活动cwd核验后安全清理，四个Quant证据文件内容哈希未变。
