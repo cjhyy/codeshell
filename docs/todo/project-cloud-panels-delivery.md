@@ -4324,3 +4324,58 @@ codex/job-hunt-hq 前缀仍占用，保留）。新增可重复 runner、输入�
 工程”，该候选不含 93f05c1 修复。求职音频、视频录音与其他先行步骤通过，但整轮
 不计为成功。日志 /tmp/cloud-video-recording-combined-before-fix-failed.log。
 修复候选 36284934774 仍运行中，继续使用原 run，不重启。
+
+### 增量 104：视频组合候选通过，模型工具合入，推进真实云端推理（2026-09-27）
+
+上一轮实际进展为真实模型 runner／CI／文档及本机推理。本轮下载 Linux 实际模型
+run 36285425726 的 artifact 10920253282（3304 字节），确认 linux/x64、Node22.16，
+WAV／WebM 实际识别、服务关闭后的相同结果与原字节通过；准确模型与原生入口
+摘要与本机一致。/tmp/job-hunt-real-model-linux-evidence/acceptance.json 和
+provider.log 已检查。Panel #55 的两轮最终 CI 36285423238／36285425675 全部成功，
+合入 428195467674bb6268c34e329645f76eab51b83b。
+
+完整视频组合 [36284934774](https://github.com/cjhyy/codeshell-services/actions/runs/36284934774)
+成功，固定 Host ec8f6a347eb416e2e20ef507734de04c61fff65f、Panel
+93f05c1e27182858840d7f531ff5d74ced8d58a0、services
+6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73。候选 artifact 10920588125
+（698476989 字节），证据 10920523340（1158492 字节）。runtime 镜像
+sha256:50b458969700f2a322cf144b99b885fc62e70377bb71ac0cf24c832df3bb2a8d，
+Link 镜像 sha256:17208387745ba6df89bdba8f52b2c80add4adc8d911332a43024991a70a25c1f，
+平台 linux/amd64。实际录音／保存／关页恢复／原生检查／仅加入一次、后续 WAV
+导入、MP4 导出／下载和源音视频播放通过；重启后录音、编辑器附件、文档、原备份
+完整保留。六包生命周期、求职音频／中文 PDF、设计、Link 受控授权与容器备份、
+归档字节和镜像重载全部通过。
+
+日志 /tmp/cloud-video-recording-candidate-success.log，证据
+/tmp/cloud-video-recording-success-evidence；已查看 cloud-video-recovery.png。
+Host #33 全九类 CI 通过且合入 59214e88f3a7f5a03fd9a5e93a99bab8bbcfb2cb。
+Panel #53 正常合入最新主线 #55 后为 f9551ebefc52f157095bd27f2b700aa808d35da3；
+与候选在 apps／panels／templates 内的唯一差异是求职 README 五行，业务源码和
+生成包不变。全仓 npm check 再次通过并推送，CI 36286460417／36286463342 待完成。
+/tmp/video-cloud-recording-final-main-check.log；PR 描述已按最终行为和证据重写。
+
+新增三仓 cloud-real-speech 工作树。Panel 自有测试 Dockerfile 固定源码／权重／
+公共音频，导出 Debian CPU 执行器；Host 仅增加验收参数及容器安装／真实网关和
+浏览器录音验证；services candidate 增加可选 real_speech，不改变默认模式，也
+不把权重烘入生产镜像。测试执行器放临时项目目录，权重和日志放 /tmp；不提高
+权限或改变只读根目录、非 root、隔离网络和 /tmp 不可执行限制。英文 tiny.en
+会忽略 UI 的语言提示，此夹具只证明推理／传输／持久任务，不证明中文准确率。
+
+本机构建 Linux arm64 bundle 通过。初次容器检查发现 Docker archive 无法访问
+运行中的 tmpfs，改为由原非 root Node 进程流式写入并校验摘要；第二次发现 /tmp
+默认不可执行，未放宽限制，将执行器改写测试项目目录。最终容器 loader／copy／
+CPU 实际识别通过，容器已按本任务随机身份清理。日志
+/tmp/cloud-real-speech-bundle-build.log、/tmp/cloud-real-speech-bundle-probe.log。
+Host 语法／lint／格式／server build 通过；Panel 包预检通过；services 63 项测试、
+格式和 diff 通过。新增 runtime helper 及业务验证尚需完整云端终态。
+
+[Panel #56](https://github.com/cjhyy/codeshell-panel-apps/pull/56) b34589122982f3df11b04910d424e216242f92d7，
+[Host #35](https://github.com/cjhyy/codeshell/pull/35) ed4fc7fe95cd60f76a4be5b7451bb63dfee38c48，
+[services #8](https://github.com/cjhyy/codeshell-services/pull/8) 28247d5cb145ef4396c552998794e881ccb27bfb，
+均 draft 并已附任务。Panel 分支正常合入已容器通过的视频依赖，#53 合入前保持
+依赖说明。新完整候选 [36286470665](https://github.com/cjhyy/codeshell-services/actions/runs/36286470665)
+已确认运行，启用 real_speech；不能提前记为成功。
+
+已按 clean／祖先关系／lsof 核对并清理 real-interview-speech Panel、video-cloud-recording
+Host 与 services 的工作树和本地／远程分支。video-cloud-recording Panel 和新三仓
+工作树保留。原始用户工作树不动。整体 goal active，未公开发布或目标部署。
