@@ -446,6 +446,32 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await api.snapshot()).panels[0]?.bound).toBe(false);
   });
 
+  test("cancelled restore reviews release capacity without changing pins or other owner reviews", async () => {
+    const { api, old, current } = await restorationFixture();
+    const preview = () => api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const reviews = [];
+    for (let i = 0; i < 8; i++) reviews.push(await preview());
+    await expect(preview()).rejects.toMatchObject({ status: 429 });
+    const token = reviews[0]!.reviewToken;
+    await expect(api.cancelRestore({ ...owner, ownerId: "other" }, token)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      api.cancelRestore({ ...owner, authorize: async () => false }, token),
+    ).rejects.toMatchObject({ status: 401 });
+    await expect(preview()).rejects.toMatchObject({ status: 429 });
+    await api.cancelRestore(owner, token);
+    await api.cancelRestore(owner, token);
+    await expect(api.restore(owner, token)).rejects.toMatchObject({ status: 409 });
+    for (let i = 0; i < 12; i++) {
+      const review = await preview();
+      await api.cancelRestore(owner, review.reviewToken);
+    }
+    expect((await api.snapshot()).panels[0]?.packageDigest).toBe(current.packageDigest);
+    await api.restore(owner, reviews[1]!.reviewToken);
+    expect((await api.snapshot()).panels[0]?.packageDigest).toBe(old.packageDigest);
+  });
+
   test("restore refuses live execution and rechecks target bytes after review", async () => {
     const { api, old, current } = await restorationFixture();
     const preview = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
