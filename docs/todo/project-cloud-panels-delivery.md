@@ -4766,3 +4766,54 @@ repeated-boundary,adjacent-node,native-after-build}.log。历史段错误发生�
 离线不迁移／写入不盲重发。中继是受信组件，不声称端到端加密；尚未实现。
 Panel内部修改冻结；真实Link账号、发布／目标部署、跨版本回滚及稳定中继未完成，
 goal保持active。
+
+## 增量 114：整套恢复候选通过并合入，稳定中继进入实现（2026-09-27）
+
+[完整候选 36293191310](https://github.com/cjhyy/codeshell-services/actions/runs/36293191310)
+成功。准确来源 Host `72181eb9364730e98f2bfd9e8d13499b35013ac8`、Panels
+`57703cbb75ed44dce004215ad7075480c289becb`、services
+`df223e8b9358bc32868bed26e26e90cf47681c6a`，real_speech=true。所有实际包安装、
+原有语音／下载／Quant 等业务检查、六包公共版本实际界面流程、Link 恢复、整套
+Cloud 备份恢复、归档校验和镜像重新加载均通过。无新增 Panel 包内容修改。
+
+候选 artifact `10923142742`，698498820 字节，digest
+`sha256:b3208696577576be08a21961df916e40dc6eec9f885469b3ff31e6acc821ad95`，
+2026-10-11 到期。证据 artifact `10922868292`，3095502 字节，digest
+`sha256:02a9b1a910b3177624eb86781dd06e520549f728597aa89c6575729a63021fc8`，
+2026-10-04 到期。日志 `/tmp/cloud-restore-candidate-success.log`；下载证据
+`/tmp/cloud-restore-candidate-evidence/`。十二张公共版本流程截图存在，已查看实际
+Starter 审阅界面；Cloud receipt 四组检查、passed 和 cleanupPassed 均通过。
+
+最终 linux/amd64 runtime 为
+`sha256:53611b815d3449038a5633045435c7f1aedab05c304a101484d0c174a4985ec9`，
+Link 为 `sha256:8c16cb3bc21bb432851b54b660b2f30714e8b847cbe2f651e7b6dedb02faaacc`。
+恢复 helper registry source 为
+`node:22-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9`，
+本次 linux/amd64 实际 ID 为
+`sha256:c72861c6705868ed7f08e1cf22ef4f7ba07a82c19a54ba65d931c442d3575889`。
+helper 不在两个镜像的候选归档内，目标需另外按记录 digest 准备。
+
+核对最终 CI 与准确 HEAD 后，Host #39／#38、services #13／#11 均已合入；主干
+分别为 `c580967978b4c65333dbc895d4225ba2578b3a8c`、
+`f5fafe4dc7b7be192530cfa799cea920a4cbcba8`。各自主干与验收来源的树 diff 为空。
+四个 cloud-panel-version-ui／candidate-cloud-restore 任务树和分支经 clean、
+HEAD 祖先与无进程 cwd 检查清理，不使用 force；父目录 evidence 保留。
+
+新 Host [#40](https://github.com/cjhyy/codeshell/pull/40) 分支
+`codex/server/relay-owner-auth` 提供版本化 `/auth`，复用既有单 owner 认证。
+运行时只导出 createHubAuth／HUB_SESSION_COOKIE，保留最小类型；没有改认证行为。
+提交 df9c5bac 正常合入新 main；45 项／303 断言、十 tarball、48 严格类型入口、
+46 运行时入口及隔离原生 Node HTTP 初始化／登录／Origin／撤销／重载／退出通过。
+日志 `/tmp/relay-owner-auth-combined-{package-release,tests}.log`。CI36296341550
+八项通过，rest 失败为原精确入口契约遗漏新增 /auth；正在补齐契约及源码别名，
+没有重跑掩盖失败、没有合并。候选 tarball 尚非公开版本。
+
+稳定设备中继另在两仓 `codex/server/device-relay`、`codex/services/device-relay`
+任务树实施。服务侧真实 SQLite／文件锁和配置共 11 项通过，含原身份丢失拒绝、
+旧代次隔离、重启离线、重登记／撤销、回调抛错仍释放全部连接和锁；HTTP/WSS 代理
+正在实现。Host 提供协议、每请求独立数据 WSS、固定回环连接器和 relay 模式；
+独立审查要求目标绑定 Host 启动代次，停止同步撤销，防端口复用误暴露其他进程。
+两仓真实 TLS／双电脑双手机／上传与撤销等仍待验收，不把存储单测当作远程交付。
+
+目标服务器与真实 provider 配置仍未提供；没有正式部署、公开包／镜像发布或
+跨版本迁移回滚保证。Panel 具体内容与手机操作界面冻结，goal 保持 active。
