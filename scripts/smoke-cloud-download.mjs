@@ -1,8 +1,9 @@
 /* Actual installed Download in a Docker project, through the production Web workbench. */
 /* global window, document */
 import assert from "node:assert/strict";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile, lstat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
@@ -30,6 +31,9 @@ export async function verifyCloudDownload({
   scratch,
   password,
   evidenceDir,
+  containerCore = "/opt/codeshell/packages/core/dist/index.js",
+  alreadyInstalled = false,
+  fixturePath,
 }) {
   await mkdir(evidenceDir, { recursive: true });
   const files = [];
@@ -43,12 +47,53 @@ export async function verifyCloudDownload({
       }
     }
   }
-  await collect(resolve(packagePath));
+  if (!alreadyInstalled) await collect(resolve(packagePath));
+  if (fixturePath) {
+    const metadata = JSON.parse(await readFile(join(fixturePath, "fixture.json"), "utf8"));
+    const executable = join(fixturePath, "yt-dlp");
+    const info = await lstat(executable);
+    assert.ok(info.isFile() && info.size > 0 && info.size < 20 * 1024 * 1024);
+    const bytes = await readFile(executable);
+    assert.match(metadata.version, /^20\d{2}\.\d{2}\.\d{2}$/);
+    assert.match(metadata.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), metadata.sha256);
+    // Write as the existing non-root container user; do not depend on Docker's
+    // archive API across tmpfs mounts or change the production runtime image.
+    await docker(
+      [
+        "exec",
+        "-i",
+        container,
+        "node",
+        "-e",
+        `
+      const fs = require("node:fs"), crypto = require("node:crypto");
+      const parts = [];
+      process.stdin.on("data", part => parts.push(part));
+      process.stdin.on("end", () => {
+        const bytes = Buffer.concat(parts);
+        if (crypto.createHash("sha256").update(bytes).digest("hex") !== ${JSON.stringify(metadata.sha256)}) throw new Error("Downloader hash mismatch");
+        fs.mkdirSync("/data/panel-bin", { recursive: true });
+        fs.writeFileSync("/data/panel-bin/yt-dlp", bytes, { flag: "wx", mode: 0o755 });
+      });
+    `,
+      ],
+      { input: bytes },
+    );
+    const version = (
+      await docker(["exec", container, "/data/panel-bin/yt-dlp", "--ignore-config", "--version"])
+    ).trim();
+    assert.equal(version, metadata.version);
+    await writeFile(
+      join(evidenceDir, "cloud-download-provider.json"),
+      JSON.stringify(metadata, null, 2),
+    );
+  }
   await docker(["exec", "-i", container, "node", "--input-type=module"], {
     input: `
     import { mkdirSync, writeFileSync, openSync } from "node:fs";
     import { spawn, execFileSync } from "node:child_process";
-    import { previewLocalPanelApp, installReviewedLocalPanelApp } from "/opt/codeshell/packages/core/dist/index.js";
+    const { previewLocalPanelApp, installReviewedLocalPanelApp } = await import(${JSON.stringify(containerCore)});
     const source = { kind: "dir", path: "/tmp/cloud-download-panel" };
     const { dirname, join } = await import("node:path");
     for (const [relative, bytes] of ${JSON.stringify(files)}) {
@@ -56,11 +101,13 @@ export async function verifyCloudDownload({
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, Buffer.from(bytes, "base64"));
     }
-    const review = await previewLocalPanelApp(source);
-    await installReviewedLocalPanelApp(source, review.reviewToken, new Date().toISOString());
+    if (!${JSON.stringify(alreadyInstalled)}) {
+      const review = await previewLocalPanelApp(source);
+      await installReviewedLocalPanelApp(source, review.reviewToken, new Date().toISOString());
+    }
     mkdirSync("/workspace/fixture", { recursive: true });
     execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=green:s=128x72:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", "/workspace/fixture/source.mp4"]);
-    const sourceCode = 'import {createServer} from "node:http"; import {readFileSync,writeFileSync} from "node:fs"; const bytes=readFileSync("/workspace/fixture/source.mp4"); createServer((req,res)=>{if(!["/first.mp4","/second.mp4"].includes(req.url)){res.writeHead(404).end();return;} res.writeHead(200,{"content-type":"video/mp4","content-length":bytes.length}); res.flushHeaders(); const timer=setTimeout(()=>res.end(bytes),5000); res.on("close",()=>clearTimeout(timer));}).listen(18792,"127.0.0.1",()=>writeFileSync("/workspace/fixture/ready","ready"));';
+    const sourceCode = 'import {createServer} from "node:http"; import {readFileSync,writeFileSync} from "node:fs"; const bytes=readFileSync("/workspace/fixture/source.mp4"); createServer((req,res)=>{if(!["/first.mp4","/second.mp4"].includes(req.url)){res.writeHead(404).end();return;} res.writeHead(200,{"content-type":"video/mp4","content-length":bytes.length}); res.flushHeaders(); const timer=setTimeout(()=>res.end(bytes),5000); res.on("close",()=>clearTimeout(timer));}).listen(18793,"127.0.0.1",()=>writeFileSync("/workspace/fixture/ready","ready"));';
     writeFileSync("/workspace/fixture/server.mjs", sourceCode);
     const output = openSync("/workspace/fixture/server.log", "a");
     spawn(process.execPath, ["/workspace/fixture/server.mjs"], { detached: true, stdio: ["ignore", output, output] }).unref();
@@ -82,10 +129,11 @@ export async function verifyCloudDownload({
     (item) => item.id === "video-download",
   );
   assert.ok(panel);
-  await json(`/p/${projectId}/api/v1/panels/video-download/binding`, {
-    method: "PATCH",
-    body: { bound: true, expectedRevision: panel.revision },
-  });
+  if (!alreadyInstalled)
+    await json(`/p/${projectId}/api/v1/panels/video-download/binding`, {
+      method: "PATCH",
+      body: { bound: true, expectedRevision: panel.revision },
+    });
   const original = Buffer.from(
     await (
       await request(`/p/${projectId}/api/v1/files/content?path=fixture/source.mp4`)
@@ -94,7 +142,7 @@ export async function verifyCloudDownload({
   assert.ok(original.length > 500);
 
   async function browserRun(action) {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({ channel: "chromium", chromiumSandbox: true });
     const contexts = [];
     const pages = [];
     const errors = [];
@@ -171,6 +219,12 @@ export async function verifyCloudDownload({
               fullPage: true,
             })
             .catch(() => {});
+          await page
+            .screenshot({
+              path: join(evidenceDir, `cloud-download-error-${index}.png`),
+              fullPage: true,
+            })
+            .catch(() => {});
           for (const [frameIndex, frame] of page.frames().entries()) {
             const content = await frame
               .locator("body")
@@ -195,7 +249,7 @@ export async function verifyCloudDownload({
     const capabilities = await desktop.frame.evaluate(() => window.codeshellPanel.getContext());
     assert.equal(capabilities.capabilities.tasks.ownership, "project");
     assert.equal(capabilities.capabilities.tasks.continuesAfterLogout, true);
-    await desktop.frame.locator("#url-input").fill("http://127.0.0.1:18792/first.mp4");
+    await desktop.frame.locator("#url-input").fill("http://127.0.0.1:18793/first.mp4");
     await desktop.frame.locator("#download-button").click();
     const started = await until(async () => {
       const jobs = await desktop.call("tasks.list");
