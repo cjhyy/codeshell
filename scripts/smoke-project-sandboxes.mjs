@@ -57,9 +57,21 @@ if (
   throw new Error(
     "--candidate-business requires staged Panels and all, job-hunt, design, video or quant",
   );
+const speechIndex = process.argv.indexOf("--speech-bundle");
+const speechBundle = speechIndex < 0 ? undefined : process.argv[speechIndex + 1];
+if (speechIndex >= 0 && (!speechBundle || !candidatePanels))
+  throw new Error("--speech-bundle requires a bundle path and staged candidate Panels");
+const { loadSpeechFixture, installSpeechFixture } =
+  await import("./smoke-cloud-speech-fixture.mjs");
+const speechFixture = speechBundle ? await loadSpeechFixture(speechBundle) : undefined;
 const downloadPanelIndex = process.argv.indexOf("--download-panel");
 const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
 if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
+const downloadFixtureIndex = process.argv.indexOf("--download-fixture");
+const downloadFixture =
+  downloadFixtureIndex < 0 ? undefined : process.argv[downloadFixtureIndex + 1];
+if (downloadFixtureIndex >= 0 && (!downloadFixture || (!candidatePanels && !downloadPanel)))
+  throw new Error("--download-fixture requires a fixture path and a Download package");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
 const { WebSocket } = createRequire(join(serverRoot, "package.json"))("ws");
@@ -213,7 +225,7 @@ async function connect(projectId) {
 }
 
 // Serialized into the container. Its only credential and endpoint are synthetic.
-async function fixtureModel() {
+async function fixtureModel(realSpeech) {
   const { createServer } = await import("node:http");
   const { appendFileSync, writeFileSync } = await import("node:fs");
   const assert = (await import("node:assert/strict")).default;
@@ -235,7 +247,11 @@ async function fixtureModel() {
         assert.equal(bytes.subarray(0, 4).toString("hex"), "1a45dfa3");
         assert.equal(form.get("language"), "zh");
         assert.equal(form.get("response_format"), "json");
-        assert.ok(["fixture-transcribe", "fixture-transcribe-slow"].includes(form.get("model")));
+        assert.ok(
+          [realSpeech ? "tiny.en" : "fixture-transcribe", "fixture-transcribe-slow"].includes(
+            form.get("model"),
+          ),
+        );
         const { createHash } = await import("node:crypto");
         appendFileSync(
           "/workspace/audio-requests.jsonl",
@@ -246,8 +262,22 @@ async function fixtureModel() {
           }) + "\n",
         );
         if (form.get("model") === "fixture-transcribe-slow") return;
+        let text = "这是受控服务返回的面试转写，用于验证保存和恢复。";
+        if (realSpeech) {
+          // Keep the synthetic credential at this validated gateway. Only the
+          // recorded bytes and model fields reach the local real provider.
+          const response = await fetch("http://127.0.0.1:18792/v1/audio/transcriptions", {
+            method: "POST",
+            body: form,
+            signal: AbortSignal.timeout(90000),
+          });
+          assert.equal(response.status, 200);
+          text = (await response.json()).text?.trim();
+          assert.match(text.toLowerCase(), /ask not/);
+          assert.match(text.toLowerCase(), /country/);
+        }
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ text: "这是受控服务返回的面试转写，用于验证保存和恢复。" }));
+        res.end(JSON.stringify({ text }));
         return;
       }
       assert.equal(req.url, "/v1/chat/completions");
@@ -329,7 +359,8 @@ async function fixtureModel() {
 }
 
 async function installFixture(container) {
-  const modelSource = `(${fixtureModel.toString()})().catch(error => { console.error(error); process.exit(1); });`;
+  if (speechFixture) await installSpeechFixture(docker, container, speechFixture);
+  const modelSource = `(${fixtureModel.toString()})(${!!speechFixture}).catch(error => { console.error(error); process.exit(1); });`;
   await docker(["exec", "-i", container, "node", "--input-type=module"], {
     input: `
     import { mkdirSync, writeFileSync, openSync } from "node:fs";
@@ -357,7 +388,7 @@ async function installFixture(container) {
       ],
       modelConnections: [
         { id: "project-fixture", catalogId: "openai", tag: "text", model: "gpt-4o-mini", credentialId: "fixture-key" },
-        { id: "audio-fixture", catalogId: "openai-transcribe", tag: "audio", model: "fixture-transcribe", credentialId: "audio-fixture-key" },
+        { id: "audio-fixture", catalogId: "openai-transcribe", tag: "audio", model: ${JSON.stringify(speechFixture ? "tiny.en" : "fixture-transcribe")}, credentialId: "audio-fixture-key" },
         { id: "audio-fixture-slow", catalogId: "openai-transcribe", tag: "audio", model: "fixture-transcribe-slow", credentialId: "audio-fixture-key" },
       ],
       defaults: { text: "project-fixture" },
@@ -794,6 +825,7 @@ try {
   if (candidatePanels && ["all", "job-hunt"].includes(candidateBusiness)) {
     const { verifyCloudJobHuntRecovery } = await import("./smoke-cloud-job-hunt-recovery.mjs");
     verifyJobHuntRestart = await verifyCloudJobHuntRecovery({
+      speechFixture,
       docker,
       request,
       serverUrl,
@@ -852,7 +884,7 @@ try {
     });
   }
   let verifyDownloadRestart;
-  if (downloadPanel) {
+  if (downloadPanel || (downloadFixture && candidateBusiness === "all")) {
     const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
     verifyDownloadRestart = await verifyCloudDownload({
       docker,
@@ -863,6 +895,9 @@ try {
       otherProjectId: b.id,
       container: containerA,
       packagePath: downloadPanel,
+      containerCore,
+      alreadyInstalled: !!candidatePanels,
+      fixturePath: downloadFixture,
       evidenceDir: join(root, "..", "evidence"),
       scratch,
       password,
@@ -1012,6 +1047,16 @@ try {
       `,
       ]).catch(String);
       writeFileSync(join(scratch, `${id}-fixture.log`), diagnostics);
+      if (speechFixture) {
+        const evidenceDir = join(root, "..", "evidence");
+        mkdirSync(evidenceDir, { recursive: true });
+        writeFileSync(
+          join(evidenceDir, `cloud-job-hunt-speech-error-${id}.log`),
+          await docker(["exec", id, "cat", "/tmp/codeshell-real-speech/provider.log"]).catch(
+            String,
+          ),
+        );
+      }
     }
   }
   await stopControl().catch((error) => {

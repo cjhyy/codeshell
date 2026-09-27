@@ -25,15 +25,19 @@ const [sourceArg, ...options] = process.argv.slice(2);
 let docker = false;
 let outputArg;
 let panelsArg;
+let speechBundle;
 for (let i = 0; i < options.length; i++) {
   if (options[i] === "--docker" && !docker) docker = true;
-  else if (["--output", "--panels"].includes(options[i])) {
+  else if (["--output", "--panels", "--speech-bundle"].includes(options[i])) {
     const key = options[i];
     const value = options[++i];
     assert.ok(value && !value.startsWith("--"), `${key} needs a path`);
     if (key === "--output") {
       assert.equal(outputArg, undefined);
       outputArg = value;
+    } else if (key === "--speech-bundle") {
+      assert.equal(speechBundle, undefined);
+      speechBundle = resolve(value);
     } else {
       assert.equal(panelsArg, undefined);
       panelsArg = resolve(value);
@@ -44,6 +48,7 @@ if (!sourceArg || (outputArg && !docker))
   throw new Error(
     "Usage: node scripts/smoke-services-cloud-entry.mjs /path/to/codeshell-services [--panels /clean/panel-checkout] [--docker [--output /new/candidate-directory]]",
   );
+assert.ok(!speechBundle || (docker && panelsArg), "--speech-bundle requires --docker and --panels");
 const source = resolve(sourceArg);
 const root = await mkdtemp(join(tmpdir(), "codeshell-services-packaged-"));
 const stage = join(root, "stage");
@@ -285,6 +290,13 @@ try {
   await run("npm", ["test"], installed);
   await run("npm", ["run", "test:browser"], installed);
   if (docker) {
+    const downloadFixture = panelInventory ? join(root, "download-fixture") : undefined;
+    if (downloadFixture)
+      await run(
+        process.execPath,
+        [join(panelsArg, "scripts/prepare-download-fixture.mjs"), downloadFixture],
+        repo,
+      );
     const idFile = join(root, "runtime-image.id");
     await run(
       "docker",
@@ -328,6 +340,8 @@ try {
           join(repo, "scripts/smoke-project-sandboxes.mjs"),
           outputArg ? imageId : tag,
           ...(panelInventory ? ["--candidate-panels", join(installed, "panels")] : []),
+          ...(downloadFixture ? ["--download-fixture", downloadFixture] : []),
+          ...(speechBundle ? ["--speech-bundle", speechBundle] : []),
           ...(existsSync(join(installed, "deploy/seccomp/chromium.json"))
             ? ["--runtime-seccomp-profile", join(installed, "deploy/seccomp/chromium.json")]
             : []),
