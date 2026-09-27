@@ -78,7 +78,7 @@ export interface RemoteHostManagerOptions {
    */
   mobileDevUrl?: string;
   /** One-time upload tickets. The route remains behind the tunnel passcode gate. */
-  uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers">;
+  uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers" | "revokeDevice">;
   /** Optional shared Web HTTP facade. Pairing, uploads, and /mobile retain their routes. */
   webApi?: DesktopWebHttpApi;
 }
@@ -536,6 +536,9 @@ export class RemoteHostManager extends EventEmitter {
 
   /** Call after revoking/removing a trusted device to release both transports immediately. */
   revokeDevice(deviceId: string): void {
+    void this.opts.uploads?.revokeDevice(deviceId).catch((error) => {
+      this.emit("host-error", error instanceof Error ? error.message : String(error));
+    });
     this.opts.webApi?.revokeDevice(deviceId);
     for (const client of this.wss?.clients ?? []) {
       if (this.authed.get(client) !== deviceId) continue;
