@@ -11,6 +11,7 @@ const exec = promisify(execFile);
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
+import { verifyCloudInterviewAudio } from "./smoke-cloud-interview-audio.mjs";
 const ROOT = "job-hunt-panel.json";
 const publicBody = "\n\nfixture@example.com\n\n## 项目经验\n\n- 完成公开恢复验证项目";
 const originalResume = "# Cloud recovery original" + publicBody;
@@ -68,7 +69,17 @@ export async function verifyCloudJobHuntRecovery({
       id: `q-${i}`,
       question: `Recovery question ${i}`,
       notes: "x".repeat(3000),
-      status: "inbox",
+      status: i === 0 ? "ready" : "inbox",
+      ...(i === 0
+        ? {
+            type: "technical",
+            category: "系统可靠性",
+            competency: "数据恢复",
+            answerPoints: ["保存", "校验", "恢复"],
+            recommendedAnswer: "先校验完整性，再恢复到明确的目标项目。",
+            sourceRefs: ["user:fixture"],
+          }
+        : {}),
       origin: "manual",
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-01T00:00:00Z",
@@ -105,7 +116,11 @@ export async function verifyCloudJobHuntRecovery({
       ]),
     );
   async function browserRun(action) {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({
+      channel: "chromium",
+      chromiumSandbox: true,
+      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+    });
     const pages = [],
       errors = [];
     try {
@@ -113,6 +128,7 @@ export async function verifyCloudJobHuntRecovery({
         const context = await browser.newContext({
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
+          permissions: ["microphone"],
         });
         const page = await context.newPage();
         pages.push(page);
@@ -180,7 +196,7 @@ export async function verifyCloudJobHuntRecovery({
     await frame.locator('[data-resume-mode="edit"]').click();
     await frame.locator("#resume-editor").fill(markdown);
   };
-  let restoredMarker, backupPath, pdfReceipt, pdfBytes;
+  let restoredMarker, backupPath, pdfReceipt, pdfBytes, verifyAudioRestart;
   async function pdfResource(call, receipt) {
     const chunks = [];
     for (let offset = 0; offset < receipt.size; ) {
@@ -378,6 +394,23 @@ export async function verifyCloudJobHuntRecovery({
     console.log(
       "PASS: installed cloud Job Hunt produces selectable Chinese PDF text using its reviewed task, captures project-isolated bytes, persists the source receipt and downloads the exact PDF through the real UI",
     );
+    verifyAudioRestart = await verifyCloudInterviewAudio({
+      a,
+      b,
+      open: () => open(projectA),
+      until,
+      evidenceDir,
+      readRequests: async () =>
+        JSON.parse(
+          await docker([
+            "exec",
+            containerA,
+            "node",
+            "-e",
+            'const fs=require("node:fs"); const p="/workspace/audio-requests.jsonl"; console.log(JSON.stringify(fs.existsSync(p)?fs.readFileSync(p,"utf8").trim().split("\\n").filter(Boolean).map(JSON.parse):[]));',
+          ]),
+        ),
+    });
   });
   return async () =>
     browserRun(async (open) => {
@@ -405,6 +438,7 @@ export async function verifyCloudJobHuntRecovery({
       assert.equal(job.status, "succeeded");
       assert.equal(job.input.request.source.updatedAt, pdfReceipt.sourceUpdatedAt);
       await downloadPdf(a);
+      await verifyAudioRestart(a);
       console.log(
         "PASS: cloud resume PDF bytes, task history, source receipt and exact UI download survive project stop/start and package-source removal",
       );
