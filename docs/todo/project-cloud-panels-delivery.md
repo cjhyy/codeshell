@@ -4705,3 +4705,64 @@ services #11 正常合入 Link #12 至291a59e508da2b8088036b1cfb5dc6ca278dda52�
 卸载请求。此运行因已知代码问题主动停止，改用两段取消地址并补回归后重验；
 不是由于网络观察错误重跑。Quant两任务树和Link preflight树经清洁／已合并／
 无活动cwd核验后安全清理，四个Quant证据文件内容哈希未变。
+
+## 增量 113：整套 Cloud 恢复成为候选门槛（2026-09-27）
+
+Host #38 的取消接口改为两段地址，避免抢占合法 Panel ID `restore` 的卸载。
+最终提交0e737426b7f801457bc2f903ba69757c30b82b67，49项聚焦测试／344断言通过，
+包含真实安装、绑定、审阅、取消、旧token拒绝和卸载；四文件lint/格式及Server/Web
+构建通过。CI36292462082九类全部通过；旧候选36292336451确认cancelled。
+
+新增配套draft [Host #39](https://github.com/cjhyy/codeshell/pull/39) 与
+[services #13](https://github.com/cjhyy/codeshell-services/pull/13)，均已附任务。
+分支codex/server/candidate-cloud-restore与codex/services/candidate-cloud-restore，
+工作树位于 `/Users/admin/.codex/worktrees/candidate-cloud-restore/`。两者正常合入
+待合并的Host #38和services #11，保留所有原有候选流程。
+
+新门槛从实际移位npm安装加载公开Server API，通过HTTP初始化／登录／创建项目，
+调用services cloud-backup/cloud-restore CLI。运行与helper均使用不可变本地ID，
+记录helper registry digest、实际ID和平台。helper未装入现有两镜像候选，目标服务器
+需另按已记录digest准备，不能声称当前候选是完整离线恢复介质。
+
+主代理准备独立五tarball安装，使用Host0e737426新构建及既有已验证runtime
+sha256:0a64f1c157cd801484da7769f48ddde5f712f354bdf2feb2cab9a3afbc68c4ca，
+helper来源node:22-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9，
+本机image ID同为上述48e4…、linux/arm64。两次实际恢复通过，日志
+/tmp/cloud-restore-local-first.log及/tmp/cloud-restore-local-wrapper.log；证据
+`candidate-cloud-restore/evidence/cloud-restore-local.json`和
+`cloud-restore-wrapper-local.json`。通过包括离线／占卷保护、两卷字节、uid和模式、
+软硬链接、备份后原卷变更不污染快照、未启动项目、旧session撤销、新登录、实际
+容器重启及认证HTTP读文件、再次备份、checksum拒绝和解包失败标记／清理。
+
+实际初次入口发现macOS `/var`与`/private/var` symlink导致main判断静默跳过，
+已用realpath比较并补真实进程负例。Host wrapper额外拒绝旧证据、静默exit0、
+失败恢复／清理、错误镜像和缺少流程的receipt；完整性不依赖单一退出码。
+
+独立审查发现8分钟SIGTERM会跳过finally，已补协作取消及4分钟清理宽限。
+资源创建命令先在原有界限内结束，再进入清理；HTTP取消后关闭控制服务并排空项目
+启动。主代理在首个实际夹具PASS后发送SIGTERM，进程非0、receipt passed=false／
+cleanupPassed=true，前后所有installation-labeled容器／卷／网络集合完全一致。
+日志/tmp/cloud-restore-local-signal.log，证据cloud-restore-signal-local.json。
+最终所有异步清理完成后才采样取消状态，再同步写≤64KiB的新receipt，消除取消与
+成功记录不一致的窄窗口；已有receipt不覆盖，强杀／机器宕机不保证清理。
+
+Host九项进程测试、Services75项全套通过；最终receipt修改后四项聚焦、格式、语法
+和diff检查通过。services最终df223e8b的CI36293136813／36293138597六项全通过。
+Host72181eb9的CI36293014515尚待最后终态，不将先前1268e3aa九类通过冒充它。
+[完整候选36293191310](https://github.com/cjhyy/codeshell-services/actions/runs/36293191310)
+已启动，固定Host72181eb9364730e98f2bfd9e8d13499b35013ac8、Panels
+57703cbb75ed44dce004215ad7075480c289becb、services
+df223e8b9358bc32868bed26e26e90cf47681c6a，real_speech=true。
+本机回归与新的干净Linux完整候选分开记录；#38/#39、services#11/#13尚待组合结果。
+
+另完成历史Bun Hub WS只读诊断：原文件14项／90断言，前两项同进程50轮100项／750
+断言，相邻27项及构建后独立Node背压1项全部通过。日志/tmp/hub-ws-audit-{isolated,
+repeated-boundary,adjacent-node,native-after-build}.log。历史段错误发生在完整进程
+约417秒后；当前Bun仍1.3.11 af24e281，原测试文件未变，没有可归因的修复。
+这里只补回归证据，整仓单进程偶发崩溃根因仍待定位。
+
+设备连接另形成只读设计docs/todo/device-relay-delivery-plan.md：每电脑独立origin，
+复用Host配对与最终授权，单owner目录和电脑出站凭据分离，服务签发连接代次，
+离线不迁移／写入不盲重发。中继是受信组件，不声称端到端加密；尚未实现。
+Panel内部修改冻结；真实Link账号、发布／目标部署、跨版本回滚及稳定中继未完成，
+goal保持active。
