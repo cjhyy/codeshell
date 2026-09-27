@@ -18,6 +18,10 @@
       "types": "./dist/index.worker.d.ts",
       "import": "./dist/index.worker.js"
     },
+    "./auth": {
+      "types": "./dist/index.auth.d.ts",
+      "import": "./dist/index.auth.js"
+    },
     "./mobile-remote": {
       "types": "./dist/index.mobile-remote.d.ts",
       "import": "./dist/index.mobile-remote.js"

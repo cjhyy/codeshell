@@ -462,6 +462,44 @@ for (const entry of entries) {
   );
 }
 
+function assertOwnerAuthConsumer(consumerDirectory: string): void {
+  const sourcePath = join(consumerDirectory, "owner-auth.ts");
+  writeFileSync(
+    sourcePath,
+    readFileSync(join(REPO_ROOT, "scripts/fixtures/package-release-auth.ts")),
+  );
+  const outputDirectory = join(consumerDirectory, "owner-auth");
+  runCommand(
+    "strict published owner auth consumer",
+    "bun",
+    [
+      join(REPO_ROOT, "node_modules/typescript/bin/tsc"),
+      "--module",
+      "NodeNext",
+      "--moduleResolution",
+      "NodeNext",
+      "--target",
+      "ES2022",
+      "--strict",
+      "--skipLibCheck",
+      "false",
+      "--types",
+      "node",
+      "--outDir",
+      outputDirectory,
+      sourcePath,
+    ],
+    consumerDirectory,
+  );
+  runCommand(
+    "packed owner auth HTTP lifecycle (Node)",
+    "node",
+    [join(outputDirectory, "owner-auth.js")],
+    consumerDirectory,
+    { ...process.env, CODE_SHELL_HOME: join(consumerDirectory, "home/.code-shell") },
+  );
+}
+
 function runFullSmoke(records: readonly AuditedPackageRecord[]): void {
   const temporaryRoot = mkdtempSync(join(tmpdir(), "codeshell-package-release-"));
   try {
@@ -472,6 +510,7 @@ function runFullSmoke(records: readonly AuditedPackageRecord[]): void {
     linkInstalledDependencies(packedRecords, consumerDirectory);
     assertStrictDeclarations(packedRecords, consumerDirectory);
     assertRuntimeImports(packedRecords, consumerDirectory);
+    assertOwnerAuthConsumer(consumerDirectory);
     console.log(
       `\nPackage release smoke passed: ${packedRecords.length} tarballs, ${packedRecords.reduce(
         (count, record) => count + record.entries.filter((entry) => entry.typeImport).length,
