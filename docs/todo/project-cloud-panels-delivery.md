@@ -4817,3 +4817,61 @@ HEAD 祖先与无进程 cwd 检查清理，不使用 force；父目录 evidence 
 
 目标服务器与真实 provider 配置仍未提供；没有正式部署、公开包／镜像发布或
 跨版本迁移回滚保证。Panel 具体内容与手机操作界面冻结，goal 保持 active。
+
+
+## 增量 115：稳定中继候选与撤销流程收尾（2026-09-27）
+
+Panel 具体内容继续冻结。Host #40 最终 `cf7086b3` 的 49 项／340 断言及
+CI36296819060 九类通过，合入 `afb3506402feaa97a1be43f3b92e20928a07d192`。
+精确公开入口及源码别名按新增 `/auth` 补齐；认证行为未改。任务树在 clean、
+已合入和无活动使用检查后移除，包与日志留存。
+
+已通过候选 36293191310 的原始 ZIP 保存为
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36293191310.zip`，
+698498820 字节、SHA256 与上节 artifact digest 一致，ZIP CRC 通过。旁存 receipt
+及 evidence，文件权限 0600、父目录 0700；不重新打包或把旧验收冒充新中继候选。
+
+新 draft [Host #41](https://github.com/cjhyy/codeshell/pull/41)、
+[Host #42](https://github.com/cjhyy/codeshell/pull/42)、
+[Host #43](https://github.com/cjhyy/codeshell/pull/43) 及
+[services #14](https://github.com/cjhyy/codeshell-services/pull/14) 已附任务。
+分支分别为 codex/server/device-relay、codex/server/download-revocation、
+codex/server/candidate-device-relay 与 codex/services/device-relay。
+#43 正常合入 #41/#42；`4d788a5d92fd2914a4bb2c2489723690b469dad2` 的
+CI36298248518 九类全部通过。该提交仍不包含接下来的上传撤销补丁。
+
+独立原生流式检查复现正常 EOF 导致慢读丢失最后字节，修复后 16/32/64/96KiB 和
+1MiB+13 全部一致，日志 `/tmp/codeshell-relay-byte-audit{-fixed,}.log`。
+真实 HTTP 的 96MiB 下载在撤销手机后原先仍能读到撤销后写入的尾部；修复后的
+Desktop 与 Hub 会关闭该会话的活动响应，另一个会话完整完成。已完成的响应及
+已接受的后台任务不会被一起取消。Host #42 `57c097c9` CI36298100124 九类通过。
+
+services 对真实 SCRYPTREQUEST 期间关闭的 setup/login 增加等待，再释放目录锁；
+旧实现失败、新实现通过，保留 `/tmp/device-relay-auth-shutdown-{before,after}.log`。
+空 SQLite 已有文件拒绝重新初始化身份，缺失身份关系、关闭回调异常、IPv6 地址、
+数据票据失败握手和认证正文期间退出均补边界。候选 receipt 必须证实真实哈希
+处理结束后才释放目录，不能只以 HTTP 进程退出推断成功。
+
+独立 Node22.16 以 Host `7c5b0a7ab4d72846046d43bc72ed2ce7c18a0db8` 和 services
+`c3edaa0d2f881bfa4cfacbcb46e9ebd893b51789` 的真实五包安装通过旧合同 14 项
+TLS/WSS 验收，清理完成。receipt 位于
+`/Users/admin/.codex/worktrees/device-relay/evidence/device-relay-acceptance-node22-c3edaa0-7c5b0a7.json`。
+包哈希、原 manifest 哈希、fixture/服务文件哈希和实际 Node 版本已独立核对。
+该证据覆盖下载撤销，但不能算作新增上传门槛通过。
+
+后续实际上传探针发现：已开始的手机 A 上传在撤销后仍可完成 4MiB 临时文件，
+A 未使用票据也可上传 256KiB；B 上传正常，新 A WS/chat 已拒绝。日志
+`/tmp/codeshell-upload-revoke-probe-real.log`。这是临时上传写入未撤销，未证明
+工作区或执行授权绕过。`codex/server/upload-revocation` 正在修复：同步拒绝新
+begin/claim 与未使用票据，中断活动 PUT，等待完整 rename/cleanup；已 claim 的
+任务物料保留至 finalize，失败 release 则清理，不返回可重用状态。
+
+services `258ab984163e4559eee82944cbfda3817bc67f8c` 的第八项验收加入正在上传、
+未使用票据、其他手机和已认领资源四项真实行为。root 包装器要求四项布尔、
+准确十四项名称与来源、passed/cleanupPassed 和 authShutdown；当前 23 项／47
+断言通过。每次证据文件独立，断言失败保留原结果；4 分钟期限后的强杀不冒充
+成功清理报告，父进程仅在子进程退出后删除其私有临时目录。
+
+最终上传修复、精确新包的 Node22.16 验收及完整 Linux 候选尚待；桌面设置接入、
+真实服务器／Link provider、公开发布和跨版本部署回滚也未完成。中继为单 owner
+受信 TLS 终止组件，尚非物理手机或公网部署验收，goal active。
