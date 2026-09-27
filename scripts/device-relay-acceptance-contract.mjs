@@ -14,4 +14,17 @@ export const DEVICE_RELAY_ACCEPTANCE_CHECKS = Object.freeze([
   "restart preserves stable directory and owner, starts offline, and accepts only new ready leases",
   "computer revocation aborts active HTTP and rejects further traffic",
   "Host stop synchronously revokes connector target lifetime",
+  "offline directory recovery preserves host origins and requires fresh owner and computer authorization",
+]);
+
+export const DEVICE_RELAY_RECOVERY_CHECKS = Object.freeze([
+  "passed",
+  "revokedSnapshotCredentials",
+  "revokedOwnerSessions",
+  "revokedEnrollmentTickets",
+  "preservedHostOrigins",
+  "freshEnrollmentConnected",
+  "sourceUnchanged",
+  "incompleteRestoreRejected",
+  "activeServiceRejected",
 ]);

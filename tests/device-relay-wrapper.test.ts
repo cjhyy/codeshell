@@ -34,7 +34,7 @@ function fixture(action = "", options: { missing?: boolean; signal?: boolean } =
     const receipt={candidateOnly:true,protocolVersion:1,passed:true,cleanupPassed:true,
       runtime:process.version,hostHead:manifest.hostHead,servicesHead:manifest.servicesHead,
       manifestSha256:createHash("sha256").update(manifestBytes).digest("hex"),
-      details:{authShutdown:{passed:true,realScryptActions:["setup","login"],waitedForHandlersBeforeReleasingDirectory:true},phoneUploadRevocation:{abortActive:true,rejectUnused:true,preserveOther:true,preserveClaimed:true}},
+      details:{authShutdown:{passed:true,realScryptActions:["setup","login"],waitedForHandlersBeforeReleasingDirectory:true},phoneUploadRevocation:{abortActive:true,rejectUnused:true,preserveOther:true,preserveClaimed:true},directoryRecovery:{passed:true,revokedSnapshotCredentials:true,revokedOwnerSessions:true,revokedEnrollmentTickets:true,preservedHostOrigins:true,freshEnrollmentConnected:true,sourceUnchanged:true,incompleteRestoreRejected:true,activeServiceRejected:true}},
       results:${JSON.stringify(DEVICE_RELAY_ACCEPTANCE_CHECKS.map((name) => ({ name, status: "pass" })))} };
     writeFileSync(${JSON.stringify(launched)},process.env.TMPDIR);
     writeFileSync(join(process.env.TMPDIR,"private-fixture-key"),"test-only");
@@ -62,7 +62,7 @@ describe("installed device relay candidate gate", () => {
   test("accepts every required stage from the matching candidate and removes private temporary data", () => {
     const candidate = fixture();
     expect(candidate.run()).toContain("evidence verified");
-    expect(JSON.parse(readFileSync(candidate.output, "utf8")).results).toHaveLength(14);
+    expect(JSON.parse(readFileSync(candidate.output, "utf8")).results).toHaveLength(15);
     expect(existsSync(candidate.scratch())).toBe(false);
   });
   for (const [name, action] of [
@@ -71,6 +71,24 @@ describe("installed device relay candidate gate", () => {
     ["failed cleanup", "receipt.cleanupPassed=false;"],
     ["missing auth shutdown coverage", "delete receipt.details.authShutdown;"],
     ["missing upload revocation coverage", "delete receipt.details.phoneUploadRevocation;"],
+    ["the previous fourteen-stage receipt", "receipt.results.pop();"],
+    ["missing directory recovery coverage", "delete receipt.details.directoryRecovery;"],
+    [
+      "recovered revoked computer credentials",
+      "receipt.details.directoryRecovery.revokedSnapshotCredentials=false;",
+    ],
+    [
+      "recovered revoked owner sessions",
+      "receipt.details.directoryRecovery.revokedOwnerSessions=false;",
+    ],
+    [
+      "an incomplete restore that can start",
+      "receipt.details.directoryRecovery.incompleteRestoreRejected=false;",
+    ],
+    [
+      "a recovery that changes the original source",
+      "receipt.details.directoryRecovery.sourceUnchanged=false;",
+    ],
     [
       "destroying already claimed task resources",
       "receipt.details.phoneUploadRevocation.preserveClaimed=false;",

@@ -13,7 +13,7 @@ passing substitute. The fixture requires Node 22.16+ and `openssl`; it creates a
 private, locally trusted CA and only binds test listeners to loopback. It does not
 disable certificate/hostname verification or change system DNS.
 
-The Host wrapper independently requires all 14 network/authorization stages,
+The Host wrapper independently requires all 15 network/authorization/recovery stages,
 including an actual production file download and active upload interrupted by
 phone revocation, rejection of unused upload tickets, other phones and already
 claimed task resources remaining available, single-use tickets, obsolete connections,
@@ -25,6 +25,13 @@ The installed-candidate script uses a unique receipt filename for each invocatio
 under `evidence/device-relay-acceptance-*.json`, so a retry preserves earlier
 successes and failures. Setup and login must also demonstrate that real password
 hashing/persistence finishes before shutdown releases the directory lock.
+
+Offline directory recovery must retain computer origins while rejecting every old
+computer credential, owner session and enrollment ticket. A fresh enrollment must
+connect successfully at the same origin. The report must separately demonstrate
+that the original installation is unchanged, an active service prevents backup,
+and an incomplete restore cannot start. The previous fourteen-stage receipt does
+not satisfy this recovery gate, even if its overall result is successful.
 
 To recheck an existing installed candidate with a fresh evidence destination:
 
