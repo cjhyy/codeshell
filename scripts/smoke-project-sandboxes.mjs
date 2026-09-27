@@ -217,6 +217,37 @@ async function fixtureModel() {
   const assert = (await import("node:assert/strict")).default;
   const server = createServer((req, res) => {
     void (async () => {
+      if (req.url === "/v1/audio/transcriptions") {
+        assert.equal(req.headers.authorization, "Bearer audio-smoke-only");
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        const form = await new Request("http://localhost/v1/audio/transcriptions", {
+          method: "POST",
+          headers: req.headers,
+          body: Buffer.concat(chunks),
+        }).formData();
+        assert.deepEqual([...form.keys()].sort(), ["file", "language", "model", "response_format"]);
+        const file = form.get("file");
+        const bytes = Buffer.from(await file.arrayBuffer());
+        assert.equal(file.type, "audio/webm");
+        assert.equal(bytes.subarray(0, 4).toString("hex"), "1a45dfa3");
+        assert.equal(form.get("language"), "zh");
+        assert.equal(form.get("response_format"), "json");
+        assert.ok(["fixture-transcribe", "fixture-transcribe-slow"].includes(form.get("model")));
+        const { createHash } = await import("node:crypto");
+        appendFileSync(
+          "/workspace/audio-requests.jsonl",
+          JSON.stringify({
+            model: form.get("model"),
+            bytes: bytes.length,
+            assetId: `asset-${createHash("sha256").update(bytes).digest("hex")}`,
+          }) + "\n",
+        );
+        if (form.get("model") === "fixture-transcribe-slow") return;
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ text: "这是受控服务返回的面试转写，用于验证保存和恢复。" }));
+        return;
+      }
       assert.equal(req.url, "/v1/chat/completions");
       assert.equal(req.headers.authorization, "Bearer project-smoke-only");
       const chunks = [];
@@ -318,8 +349,15 @@ async function installFixture(container) {
     const review = await previewLocalPanelApp({ kind: "dir", path: source });
     await installReviewedLocalPanelApp({ kind: "dir", path: source }, review.reviewToken, new Date().toISOString());
     writeFileSync("/workspace/.code-shell/settings.local.json", JSON.stringify({
-      credentials: [{ id: "fixture-key", catalogId: "openai", apiKey: "project-smoke-only", baseUrl: "http://127.0.0.1:18791/v1" }],
-      modelConnections: [{ id: "project-fixture", catalogId: "openai", tag: "text", model: "gpt-4o-mini", credentialId: "fixture-key" }],
+      credentials: [
+        { id: "fixture-key", catalogId: "openai", apiKey: "project-smoke-only", baseUrl: "http://127.0.0.1:18791/v1" },
+        { id: "audio-fixture-key", catalogId: "openai-transcribe", apiKey: "audio-smoke-only", baseUrl: "http://127.0.0.1:18791/v1" },
+      ],
+      modelConnections: [
+        { id: "project-fixture", catalogId: "openai", tag: "text", model: "gpt-4o-mini", credentialId: "fixture-key" },
+        { id: "audio-fixture", catalogId: "openai-transcribe", tag: "audio", model: "fixture-transcribe", credentialId: "audio-fixture-key" },
+        { id: "audio-fixture-slow", catalogId: "openai-transcribe", tag: "audio", model: "fixture-transcribe-slow", credentialId: "audio-fixture-key" },
+      ],
       defaults: { text: "project-fixture" },
       permissions: { defaultMode: "default", rules: [{ tool: "Write", decision: "ask" }] },
       autoUpdates: false,
