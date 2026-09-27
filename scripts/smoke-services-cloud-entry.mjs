@@ -285,6 +285,13 @@ try {
   await run("npm", ["test"], installed);
   await run("npm", ["run", "test:browser"], installed);
   if (docker) {
+    const downloadFixture = panelInventory ? join(root, "download-fixture") : undefined;
+    if (downloadFixture)
+      await run(
+        process.execPath,
+        [join(panelsArg, "scripts/prepare-download-fixture.mjs"), downloadFixture],
+        repo,
+      );
     const idFile = join(root, "runtime-image.id");
     await run(
       "docker",
@@ -328,6 +335,7 @@ try {
           join(repo, "scripts/smoke-project-sandboxes.mjs"),
           outputArg ? imageId : tag,
           ...(panelInventory ? ["--candidate-panels", join(installed, "panels")] : []),
+          ...(downloadFixture ? ["--download-fixture", downloadFixture] : []),
           ...(existsSync(join(installed, "deploy/seccomp/chromium.json"))
             ? ["--runtime-seccomp-profile", join(installed, "deploy/seccomp/chromium.json")]
             : []),
