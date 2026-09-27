@@ -97,11 +97,17 @@ maintain an additional request queue or implement a credit protocol. A caller
 must also honor Node's writable backpressure instead of buffering entire bodies.
 
 The stream represents a whole TCP connection. An HTTP `request.end()` marks the
-HTTP message body, not stream EOF. Use Node's HTTP parser/client with
-`Connection: close`; do not end the Duplex after merely sending a request. There
-is no custom half-close protocol. Normal completion drains queued final bytes;
-cancellation and revocation destroy the connection. The service must close a
-response whose headers were already sent instead of replaying it after loss.
+HTTP message body, not stream EOF. Use Node's HTTP parser/client with a dedicated,
+non-reusing Agent and `Connection: keep-alive` toward the Host. This lets a Host
+reject an unread upload while its response is still being parsed. Stop forwarding
+the browser body on final response headers, then destroy this one-request stream
+after the response completes; browser responses still use `Connection: close`.
+Do not end the Duplex after merely sending a request. There is no custom
+half-close protocol. Normal completion drains queued final bytes; cancellation
+and revocation destroy the connection immediately. An abnormal local close may
+flush already-read response bytes for at most two seconds; HTTP framing still
+rejects truncated responses. If the Host forcibly closes before any response is
+read, report a network failure. Never fabricate a response or replay the request.
 
 ## Verification scope
 
@@ -109,8 +115,9 @@ response whose headers were already sent instead of replaying it after loss.
 process with a locally trusted TLS certificate, real control/data WSS and the
 actual RemoteHostManager. It exercises passcode and Origin rejection, independent
 paired phones, phone revocation, uploads, built mobile serving, control reconnect,
-Host stop with port reuse, stale welcome, large responses, Range bytes, slow
-consumers, cancellation, binary/size limits, stream concurrency and a lost POST
+Host stop with port reuse, stale welcome, early upload rejection, truncated
+responses, large responses, Range bytes, slow consumers, concurrent cancellation,
+binary/size limits, stream concurrency and a lost POST
 response without replay. Existing remote Host tests cover LAN/tunnel compatibility.
 The fixture relay is a protocol peer; it does not establish that the companion
 service's enrollment, directory or full proxy has passed its own acceptance.

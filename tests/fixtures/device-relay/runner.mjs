@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { createServer, request } from "node:http";
+import { Agent, createServer, request } from "node:http";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -70,14 +70,18 @@ const host = new RemoteHostManager({
 host.on("host-error", () => {});
 async function http(path, { headers = {}, method = "GET", body, slow = false } = {}) {
   const { stream } = await relay.open();
+  // This connection belongs to one request only. Keep the upstream TCP open
+  // until the response is parsed, even when the Host rejects an unread body.
+  const agent = new Agent({ keepAlive: false, maxSockets: 1 });
+  agent.createConnection = () => stream;
   return new Promise((resolve, reject) => {
     const req = request(
       {
         hostname: externalHost,
         path,
         method,
-        headers: { Host: externalHost, Connection: "close", ...headers },
-        createConnection: () => stream,
+        headers: { Host: externalHost, Connection: "keep-alive", ...headers },
+        agent,
       },
       async (res) => {
         try {
@@ -93,6 +97,7 @@ async function http(path, { headers = {}, method = "GET", body, slow = false } =
       },
     );
     req.on("error", reject);
+    req.once("close", () => agent.destroy());
     req.end(body);
   });
 }
@@ -266,6 +271,19 @@ try {
   const large = Buffer.alloc(5 * 1024 * 1024 + 117, 0x93);
   let writes = 0;
   const plain = createServer((req, res) => {
+    if (req.url === "/reject-upload") {
+      // Reject before consuming the body. The one-use client must parse this
+      // final response before closing its still-writing connection.
+      res.writeHead(404, { "Content-Length": 17 });
+      res.end("ticket is revoked");
+      return;
+    }
+    if (req.url === "/truncated-response") {
+      res.writeHead(404, { "Content-Length": 1024 });
+      res.write("short");
+      setImmediate(() => res.destroy());
+      return;
+    }
     if (req.url === "/write") {
       writes++;
       res.destroy();
@@ -290,6 +308,29 @@ try {
     });
     connector.start();
     await until(() => relay.current?.ready);
+    const rejectedBody = Buffer.alloc(4 * 1024 * 1024);
+    const concurrent = await relay.open();
+    concurrent.stream.write(
+      `GET /large HTTP/1.1\r\nHost: ${externalHost}\r\nConnection: close\r\n\r\n`,
+    );
+    await delay(50);
+    for (let index = 0; index < 12; index++) {
+      const pending = http("/reject-upload", {
+        method: "PUT",
+        headers: { "Content-Length": String(rejectedBody.length) },
+        body: rejectedBody,
+      });
+      if (index === 4) {
+        const closed = once(concurrent.stream, "close");
+        concurrent.stream.destroy();
+        await closed;
+      }
+      const early = await pending;
+      assert.equal(early.status, 404, `early response ${index}`);
+      assert.equal(early.body.toString(), "ticket is revoked");
+    }
+    await assert.rejects(http("/truncated-response"));
+    console.log("PASS 12 early HTTP rejections, concurrent cancellation and truncated response");
     assert.deepEqual((await http("/large", { slow: true })).body, large);
     assert.deepEqual(
       (await http("/large", { headers: { Range: "bytes=23-1023" } })).body,
