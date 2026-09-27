@@ -29,6 +29,7 @@ async function until(read, description, timeout = 150_000) {
 }
 
 export async function verifyCloudJobHuntRecovery({
+  speechFixture,
   docker,
   request,
   serverUrl,
@@ -119,7 +120,11 @@ export async function verifyCloudJobHuntRecovery({
     const browser = await chromium.launch({
       channel: "chromium",
       chromiumSandbox: true,
-      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+      args: [
+        "--use-fake-device-for-media-stream",
+        "--use-fake-ui-for-media-stream",
+        ...(speechFixture ? [`--use-file-for-fake-audio-capture=${speechFixture.audioPath}`] : []),
+      ],
     });
     const pages = [],
       errors = [];
@@ -395,6 +400,7 @@ export async function verifyCloudJobHuntRecovery({
       "PASS: installed cloud Job Hunt produces selectable Chinese PDF text using its reviewed task, captures project-isolated bytes, persists the source receipt and downloads the exact PDF through the real UI",
     );
     verifyAudioRestart = await verifyCloudInterviewAudio({
+      realSpeech: !!speechFixture,
       a,
       b,
       open: () => open(projectA),
@@ -411,6 +417,20 @@ export async function verifyCloudJobHuntRecovery({
           ]),
         ),
     });
+    if (speechFixture) {
+      await writeFile(
+        join(evidenceDir, "cloud-job-hunt-speech-provider.log"),
+        await docker(["exec", containerA, "cat", "/tmp/codeshell-real-speech/provider.log"]),
+      );
+      await writeFile(
+        join(evidenceDir, "cloud-job-hunt-speech-provider.json"),
+        JSON.stringify(
+          { revision: speechFixture.revision, hashes: speechFixture.hashes, actualCloudTask: true },
+          null,
+          2,
+        ),
+      );
+    }
   });
   return async () =>
     browserRun(async (open) => {
