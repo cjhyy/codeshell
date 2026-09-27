@@ -4262,3 +4262,23 @@ Panel CI 36284497787／36284499739 仍进行中。第四视频候选 36284063778
 使用上述两提交及 services main 6bb70f6 启动，等待三仓组合终态。PR #53／#33
 继续 draft。手机界面后置，整体目标 active；真实提供商、部署发布和设备目录／
 中继未完成。
+
+增量 102 后续：第四视频候选 36284063778 终态失败，录音／找回／检查／播放阶段
+通过；随后 WAV 导入时编辑会话仍处于持久保存，报“正在保存并切换工程”，保留
+已上传原件。已读取失败日志并查看 cloud-video-error-2.png，证据目录
+/tmp/cloud-video-recording-fourth-evidence，日志
+/tmp/cloud-video-recording-candidate-fourth-failed.log。
+
+Panel 新提交 93f05c1e27182858840d7f531ff5d74ced8d58a0 等待当前提交回执后才计划
+素材加入，重新取得版本并核对原工程；取消／关闭／工程替换均阻止等待中的写入。
+不重放旧写入、不重上传文件。9 项真实 Chromium 导入检查（含并发提交、等待期
+取消／关闭／替换）、完整 npm check、类型、确定性包和预检均通过。日志
+/tmp/video-cloud-import-busy-{ui,check,build,validate}.log。源码及生成包已推送到
+Panel #53，PR 描述已重写为最终行为与验收限制，仍为 draft。
+
+候选 36284626623 已启动时尚未包含这次修复，不能作为修复证据。派发
+36284913462 时误填短 Panel SHA，输入验证阶段失败，无业务验收结果；随后使用
+完整 40 位 SHA 启动 [36284934774](https://github.com/cjhyy/codeshell-services/actions/runs/36284934774)，
+固定 Panel 93f05c1、Host ec8f6a347eb416e2e20ef507734de04c61fff65f、services
+6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73，结果待完成。未将失败候选或本机检查
+算作容器通过；整体目标仍 active，未正式发布或部署。
