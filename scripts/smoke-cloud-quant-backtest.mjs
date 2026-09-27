@@ -59,7 +59,7 @@ export async function verifyCloudQuantBacktest({
       const response = await request(
         `/p/${project}/api/v1/files/content?path=${encodeURIComponent(entry.path)}`,
       );
-      assert.equal(response.status, 200);
+      assert.equal(response.status, 200, `Quant output unreadable: ${entry.path}`);
       output.push({
         path: entry.path,
         content: Buffer.from(await response.arrayBuffer()).toString("utf8"),
@@ -176,6 +176,12 @@ export async function verifyCloudQuantBacktest({
       ["#export-backtest", directories[2]],
     ]) {
       await first.frame.locator(button).click();
+      // A directory entry can appear before the atomic write finishes. Observe
+      // the application's completed operation before reading its final bytes.
+      await until(
+        () => first.frame.locator(button).isEnabled(),
+        `Quant save did not finish: ${directory}`,
+      );
       await until(
         async () => (await files(projectA, directory)).length === 1,
         `Quant output missing: ${directory}`,
