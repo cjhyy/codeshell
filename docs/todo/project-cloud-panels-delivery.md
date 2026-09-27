@@ -4282,3 +4282,39 @@ Panel #53，PR 描述已重写为最终行为与验收限制，仍为 draft。
 固定 Panel 93f05c1、Host ec8f6a347eb416e2e20ef507734de04c61fff65f、services
 6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73，结果待完成。未将失败候选或本机检查
 算作容器通过；整体目标仍 active，未正式发布或部署。
+
+### 增量 103：真实本地语音模型验证及独立 Linux 验收（2026-09-27）
+
+上一轮为实际进展：提交并验证视频并发保存／素材导入修复，更新文档并启动准确
+组合候选。本轮实时查询确认候选 36284934774 仍运行，在实际容器步骤；Panel
+93f05c1 的最终两轮 CI 36284904695／36284906448 全部通过（含完整视频 UI），
+Host ec8f6a34 九类 CI 已通过。未因观察等待而重启，也未提前合并 #53／#33。
+
+在专用临时目录编译上游 whisper.cpp v1.9.4，准确源码
+927cfce34f31707e17f2bff35c349632fb9e2c3a；CPU 执行，tiny.en 模型 SHA-256
+921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f，公开 JFK
+WAV 摘要 59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e。
+未用私人音频、密钥或付费服务，也没有更改已安装桌面模型。本机缺 CMake，使用
+该临时目录私有 venv 安装构建工具，未更改全局 Python 环境。
+
+实际 Panel 原生 interview-transcribe CLI 经所选空密钥回环连接，发送 WAV 和
+FFmpeg 编码 WebM 的真实 multipart；实际模型均识别出公开示例语句。停止模型
+服务后重跑相同任务得到完全相同的持久结果，两个原音频摘要不变。该连接文件
+由验收构造，不声称它是 Host 授权；本项不替代容器／UI、中文准确率、物理录音
+或目标部署。生产入口摘要
+1b7ddc280937609978961bb90a8076b70f2da645df80dc00bd4165dcd6ffaff7。
+
+独立新工作树 /Users/admin/.codex/worktrees/real-interview-speech/codeshell-panel-apps，
+从最新 main ff1c8ad2 创建 codex/job-hunt-hq-cloud/real-speech-acceptance（原有
+codex/job-hunt-hq 前缀仍占用，保留）。新增可重复 runner、输入摘要限制、结果与
+日志证据、失败清理和离线重读；新增针对入口／runner 变化的 PR Linux 实际模型
+工作流，合入后也可手动触发。没有新权限或生产行为变化。README 与专用文档
+明确验收边界。原生 7 项、安装预检、语法／格式／diff 通过；仓库 runner 实际
+本机验证通过。证据目录
+/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-whisper-real-6f4k7r3q/repository-acceptance。
+
+[Panel #55](https://github.com/cjhyy/codeshell-panel-apps/pull/55) 已创建为 draft 并附任务，
+最终提交 2e8ee12d17b888328b1f4d1c6ff7e11003a2f012。首次手动派发因新 workflow
+尚不在默认分支收到 404，未启动；已添加相关 PR 路径触发，实际模型 Linux run
+36285425726 已确认 queued，普通 CI 36285425675／36285423238 待终态。未将本机
+结果等同 Linux 通过。整体 goal active；真实授权、部署发布与设备连接等继续待办。
