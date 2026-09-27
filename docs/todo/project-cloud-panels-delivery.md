@@ -4439,3 +4439,45 @@ Panel #56 正常合入该 main 为 94867b9f1434fd4443f1890b5a1e3b366c3ec113，
 固定 Host 41b5c07a0e236e2eea50829e6552984cda4d7106、上述 Panel、services
 28247d5cb145ef4396c552998794e881ccb27bfb，real_speech=true，正在运行。
 三仓真实模型 PR 保持 draft，未公开发布或目标部署；goal active。
+
+### 增量 107：把实际下载接入三仓候选（2026-09-27）
+
+上一轮为进展：合入视频 Panel，修正额外观察的限流并重开有代码变化的候选。
+本轮权威查询确认 36287706235 仍在 Install real packages and exercise the runtime
+image 阶段。Host #35 的最终 36287574392 九类 CI 全通过；Panel #56 的
+36287700409 全部通过，36287698233 尚有 UI 运行，其余通过。未当作停止或重新启动。
+
+检查发现 smoke-services-cloud-entry 只传 --candidate-panels，没有启用既有下载
+业务验收；原下载脚本还假定工作区 core 路径、重新安装同包、与新语音夹具占用相同
+18792 端口，且生产镜像没有预装 yt-dlp。按三仓 main 创建 candidate-download
+独立工作树，不动任何旧工作树。Panel 自有 prepare-download-fixture 固定官方
+2026.08.19 Python zipapp 及 SHA-256
+1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6，
+实际 GitHub Release 下载并校验成功，文件位于 /tmp/codeshell-candidate-download-fixture。
+该脚本拒绝已有输出目录，不改变正常 Panel 安装器和生产包／镜像。
+
+Host 候选在隔离项目创建前准备固定夹具，再以原非 root Node 流式写入 /data/panel-bin，
+再次校验摘要与实际版本。候选复用生命周期检查已安装的真实包／绑定，core 路径
+显式传入，HTTP 媒体夹具改 18793，真实 Chromium 开启 sandbox。将原实际下载、
+退出后继续、独立登录、项目隔离、预览／原字节保存、项目重启无重复提交串进候选。
+services 保存 cloud-download 图片和 provenance JSON，并说明这不是公网站点、
+账号、在线安装器和目标部署证据。
+
+Host 安装及 server build、语法、ESLint、Prettier、diff 通过；services 63 项测试和
+仓库／workflow 格式检查通过。真实本机云端验收使用现有 Linux arm64 镜像
+sha256:64c14db98431d441dbdaae0f8fdd2599376d0f57c040bbf8c7dded48408aaedb，
+实际双项目隔离、下载、发起设备退出继续、独立 1440/390 登录、播放、保存相同
+文件及重启任务／资源无重复全部通过。日志 /tmp/candidate-download-local-cloud.log；
+证据 /Users/admin/.codex/worktrees/candidate-download/evidence，已查看预览截图。
+这不证明最新五包重新构建的镜像通过；没有把旧本机镜像当作发布候选。
+
+创建并附任务的 draft PR：
+[Host #36](https://github.com/cjhyy/codeshell/pull/36)、
+[Panel #57](https://github.com/cjhyy/codeshell-panel-apps/pull/57)、
+[services #9](https://github.com/cjhyy/codeshell-services/pull/9)。
+Host 4038ee0a27971a9e6052b9657b7fc27e4c251f98 包含下载接入和从 #35 复用的
+有界 Video 导出观察修正；Panel 9239cc41ce15d3c2510b0f72a837363eeccb2946；
+services 01723925a204983fb1aa3942c42a69c46c8a9301。
+完整候选 [36288203397](https://github.com/cjhyy/codeshell-services/actions/runs/36288203397)
+已确认 queued，使用上述准确提交，保留全部已有受控业务检查；真实语音候选
+36287706235 独立继续。两组终态未取得，三仓新 PR 不合入、不发布，goal active。
