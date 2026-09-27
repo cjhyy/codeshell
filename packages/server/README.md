@@ -13,6 +13,7 @@ CodeShell 服务端传输与管理服务（纯 Node、零 Electron）：mobile r
 | `@cjhyy/code-shell-server/storage`       | 磁盘 Session、附件暂存、图片探测和稳定 client-message ID          |
 | `@cjhyy/code-shell-server/worker`        | 与传输无关的 stdio worker 生命周期和行协议桥接                    |
 | `@cjhyy/code-shell-server/auth`          | 独立服务可复用的单 owner HTTP 初始化、登录及会话撤销              |
+| `@cjhyy/code-shell-server/remote-relay`  | 设备出站 WSS 连接器、固定回环目标、受限二进制字节流与 v1 协议     |
 | `@cjhyy/code-shell-server/mobile-remote` | 配对、访问门禁、rooms、上传、LAN/tunnel host 和移动端协议类型     |
 | `@cjhyy/code-shell-server/serve`         | Headless HTTP/WebSocket host 与 `code-shell-serve` CLI 组合默认值 |
 | `@cjhyy/code-shell-server/desktop-web`   | 设备配对换 Cookie、已知 Workspace 校验与共享管理 HTTP API         |
@@ -32,6 +33,11 @@ Link 和独立服务认证分别使用 `/links`、`/auth` 入口。新消费方�
 Agent 策略由产品宿主通过 `ResidentAgentOptions.appendSystemPrompt` 注入。
 `/serve` 则是有意保留的开箱即用产品入口：CLI 被调用时解析 Coding stdio
 worker 和已构建的 Web app。
+
+电脑出站中继使用 `/remote-relay`。先以 `mode: "relay"` 启动已配置访问口令的
+`RemoteHostManager`，再把 `host.relayTarget()` 交给连接器；该能力在 Host 停止时立即
+撤销，不能继续暴露复用原端口的其他服务。协议、生命周期和真实网络测试范围见
+[设备中继说明](../../docs/device-relay.md)。桌面登记设置和物理手机验收仍是后续工作。
 
 ## 独立服务的单 owner 认证
 

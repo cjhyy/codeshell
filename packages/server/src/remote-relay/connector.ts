@@ -173,7 +173,7 @@ export function createDeviceRelayConnector(
         if (current() && ws.readyState === ws.OPEN)
           ws.send(JSON.stringify({ type: "failed", v: 1, leaseId, streamId: message.streamId }));
       };
-      if (owned.size >= RELAY_MAX_STREAMS) return failed();
+      if (streams.size >= RELAY_MAX_STREAMS) return failed();
       const stream = openRelayStream(config, message, failed);
       owned.set(message.streamId, stream);
       streams.add(stream);
