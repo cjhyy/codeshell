@@ -4603,3 +4603,41 @@ ready／断线检测；remote-host-manager 保留配对与 HTTP／WS 校验，tr
 稳定出站中继。工作包 E 记录主机身份／连接代次、凭据分离、Host 最终授权、离线
 不迁移和实际网络验证等实施约束；这只是后续实现依据，不标记远程能力完成。
 goal active，真实发布／目标部署／Link 账号与统一设备中继仍未完成。
+
+
+## 增量 111：云端版本审阅取消泄漏修复与实际界面验收（2026-09-27）
+
+Panel #58 的 CI 36289654608／36289658478 全部七类检查通过，合入 main
+`52d63d575843b63ba06541ac36fc32fce89a1139`，旧独立工作树已安全清理。
+下载 #57 正常合入至 `a0f7a96`，与前一个被验证提交树内容一致；CI
+36290247410／36290249550 最后仍有 UI 在运行。Host #37 的36289309813 九类
+检查和 services #10 的36289328577／36289330875 均全通过；
+整套真实语音＋下载＋Quant 候选36289352541仍 live，尚不记整套通过。
+
+新 [Host #38](https://github.com/cjhyy/codeshell/pull/38) 在
+`/Users/admin/.codex/worktrees/cloud-panel-version-ui/codeshell`，测试提交
+`3f715776`，修复提交 `5abd1a95`。六包 lifecycle 通过真实控制代理登录工作台，
+按包内容编号选择保留版本，检查审阅和取消不改项目，再确认切换及回退；原来的
+独立项目数据、旧授权失效、删除来源及重启检查仍保留。新增 packages 聚焦模式
+只供单项诊断，完整候选依然默认 all。
+
+第一轮使用现有 arm64 镜像64c14db9…，日志
+`/tmp/cloud-panel-version-ui-local.log`。Design／Job Hunt／Quant 及 Starter
+首个选择已经过实际界面，Starter 回退第二次审阅失败，页面明确显示
+“待确认的版本过多，请稍后重试。”失败正文／截图位于
+`/Users/admin/.codex/worktrees/cloud-panel-version-ui/evidence/cloud-panel-version-error-starter-panel.*`。
+根因是 Web 关闭审阅仅清理 React 状态，Host 保留 token 直到八分钟过期，
+多次取消耗尽八条容量。不是延长等待或放大配额可替代的业务修复。
+
+修复提供 DELETE /api/v1/panels/restore，验证认证及 token 归属，过期或重复
+取消幂等；不会改项目 pin 或数据。Web 关闭、切换目标或面板前取消旧审阅，
+取消失败保留界面可重试；真正恢复在最终写入前复验 token，避免取消后仍提交。
+43 项 Host/HTTP/Web 验证通过，含容量释放、不同归属拒绝、撤销后不可提交和
+失败 UI；日志 `/tmp/cloud-panel-version-ui-cancel-tests.log`。Server/Web 构建、
+lint/格式通过，新 Docker 镜像尚在构建，不能把旧镜像失败算作修复后通过。
+
+[services #11](https://github.com/cjhyy/codeshell-services/pull/11) 提交722bf21，
+记录 cloud-panel-version PNG/TXT 证据和边界；63测试及格式通过。
+两个新 PR 均附任务并保持 draft。尚未运行新一轮完整 Linux 候选；先完成新镜像
+实际回归，再与已通过的下载／Quant 整合。真实领域数据迁移、安装来源、服务
+跨版本回滚、发布及目标部署不在本次通过范围，goal 保持 active。
