@@ -89,12 +89,12 @@ export async function verifyCloudVideoRecovery({
     );
     return { document: packed.data, storageRevision };
   };
-  const until = async (check) => {
+  const until = async (check, intervalMs = 350) => {
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline) {
       const value = await check();
       if (value) return value;
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, intervalMs));
     }
     throw new Error("Video save did not complete");
   };
