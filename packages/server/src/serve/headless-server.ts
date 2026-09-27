@@ -46,6 +46,7 @@ import {
   readHubTranscript,
 } from "../hub/session-management.js";
 import { createHubFiles } from "../hub/files.js";
+import { createSessionHttpResponses } from "../session-http-responses.js";
 import { WorkerBridgeCore, previewLine, type WorkerBridgeLog } from "../worker-bridge-core.js";
 
 export interface HeadlessServeOptions {
@@ -164,6 +165,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   }
 
   let closing = false;
+  const responses = createSessionHttpResponses();
   let panelAutomations: ReturnType<typeof createHubPanelAutomationHost> | undefined;
   let automationWorker: ReturnType<typeof createHubAutomationWorker> | undefined;
   const tabs = new Set<WebSocket>();
@@ -183,6 +185,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           dataDir: opts.dataDir,
           publicOrigin: opts.publicOrigin,
           onRevoke: (sessionId) => {
+            responses.cancelOwner(sessionId);
             mcp?.cancelOwner(sessionId);
             configuration?.cancelOwner(sessionId);
             links?.cancelOwner(sessionId);
@@ -693,6 +696,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           hubJson(res, 403, { error: "origin rejected" });
           return;
         }
+        if (closing) {
+          hubJson(res, 503, { error: "server is closing" });
+          return;
+        }
+        responses.track(session.id, res);
         if (pathname === "/api/v1/environment" && req.method === "GET") {
           hubJson(res, 200, environment);
           return;
@@ -1250,6 +1258,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     });
   } catch (error) {
     closing = true;
+    responses.clear();
     await panelAutomations?.close();
     clearInterval(pendingResponseReaper);
     if (authReaper) clearInterval(authReaper);
@@ -1282,6 +1291,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     pendingResponseCount: () => pendingWorkerResponses.size,
     close: async () => {
       closing = true;
+      responses.clear();
       await panelAutomations?.close();
       clearInterval(pendingResponseReaper);
       if (authReaper) clearInterval(authReaper);

@@ -484,8 +484,11 @@ test("logout cancels a real local model probe and forwards extra-route lifecycle
       );
     }),
   ]);
+  // Native Node aborts the response; Bun's HTTP shim can finish it empty.
+  // Neither transport may return the protected probe result after revocation.
+  const pendingBody = pending.then((response) => response.text()).catch(() => null);
   expect((await f.request("/api/v1/auth/logout", cookie, { method: "POST" })).status).toBe(200);
-  expect((await pending).status).toBe(401);
+  expect([null, ""]).toContain(await pendingBody);
   expect(f.revoked).toContain(owner!);
   await f.host.stop();
   expect(stopped).toBe(1);
