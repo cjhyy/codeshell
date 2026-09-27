@@ -6,7 +6,10 @@ import { lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEVICE_RELAY_ACCEPTANCE_CHECKS } from "./device-relay-acceptance-contract.mjs";
+import {
+  DEVICE_RELAY_ACCEPTANCE_CHECKS,
+  DEVICE_RELAY_RECOVERY_CHECKS,
+} from "./device-relay-acceptance-contract.mjs";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 async function boundedFile(path) {
@@ -114,6 +117,12 @@ export async function verifyInstalledDeviceRelay(installation, manifestPath, evi
         receipt.details?.phoneUploadRevocation?.[check],
         true,
         `Phone upload revocation did not verify ${check}`,
+      );
+    for (const check of DEVICE_RELAY_RECOVERY_CHECKS)
+      assert.equal(
+        receipt.details?.directoryRecovery?.[check],
+        true,
+        `Directory recovery did not verify ${check}`,
       );
     assert.deepEqual(
       receipt.results
