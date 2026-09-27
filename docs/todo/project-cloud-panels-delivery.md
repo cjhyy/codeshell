@@ -4481,3 +4481,38 @@ services 01723925a204983fb1aa3942c42a69c46c8a9301。
 完整候选 [36288203397](https://github.com/cjhyy/codeshell-services/actions/runs/36288203397)
 已确认 queued，使用上述准确提交，保留全部已有受控业务检查；真实语音候选
 36287706235 独立继续。两组终态未取得，三仓新 PR 不合入、不发布，goal active。
+
+### 增量 108：新增实际 Quant 云端回测门槛，保留失败证据（2026-09-27）
+
+上一轮是进展：下载候选接入、实际本机容器下载通过、三仓草稿及准确提交候选启动。
+本轮确认真实语音 36287706235 和下载 36288203397 均仍在实际运行镜像检查阶段。
+Host #35 的 36287574392、#36 的 36288197774 九类 CI 全通过；Panel #56 两轮
+36287698233／36287700409 全通过。没有因耗时取消或重开，也没有把局部 CI 当作
+完整容器通过。
+
+从最新 main 创建独立 cloud-quant-backtest Host／services 工作树。Host 增加
+smoke-cloud-quant-backtest，candidate-business 支持 quant，完整候选也纳入该项。
+读取准确候选 Panel 的引擎，只用它校验测试 CSV 指纹；真实业务由已安装的浏览器
+Panel 完成：项目 CSV 载入、参数保存、运行回测、策略／报告／明细导出，实际 HTTP
+返回字节核对。独立浏览器登录及重启检查同一参数与原文件，另一项目不产生结果。
+重启后的文件检查走 HTTP，不依赖已停止容器的旧 ID。services 保留截图／失败正文，
+说明不验证实际行情、投资表现、研究模型和自动化通知。没有修改 Panel 算法或权限。
+
+Host server build、语法、ESLint、Prettier、diff 检查通过。使用之前记录的 arm64
+镜像 64c14db98431，本地先阶段化准确 Panel 9239cc41 的六包至
+/tmp/codeshell-quant-cloud-panels（使用候选 staging helper 和当前构建的 Host 预检）。
+首轮 /tmp/quant-cloud-local.log 参数保存成功，因高级 CSV 输入区尚未展开，浏览器
+填充超时；已查看 cloud-quant-error-0.png 并补真实展开操作，不强制填隐藏控件。
+第二轮 /tmp/quant-cloud-local-second.log 实际运行回测且策略／报告已写出，读取
+CSV 时 HTTP 404。截图正文仍显示之前的报告保存提示，新增等待导出按钮恢复可用
+再读文件，并把读取失败的实际路径加入诊断；未宣称已确定生产根因或验收通过。
+
+[Host #37](https://github.com/cjhyy/codeshell/pull/37)
+1c71ca306e586692d2d4780564aaffa5e5c3ebea，
+[services #10](https://github.com/cjhyy/codeshell-services/pull/10)
+4583c59cf8cedcdfa98d7fd1e5303c5b21d2a633，均 draft 且已附任务。
+本机第三轮 session 95103 仍在运行，日志 /tmp/quant-cloud-local-third.log；实际
+shell 命令已完成推送并开始容器验证，没有重复启动同一活跃进程。
+证据目录 /Users/admin/.codex/worktrees/cloud-quant-backtest/evidence。Quant 完整
+Linux 打包候选尚未启动，需要本机门槛通过及与已验收主线正常整合后再开始。
+所有未完任务工作树保留，goal active，未公开发布或目标部署。
