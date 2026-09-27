@@ -89,6 +89,10 @@ export async function verifyCloudVideoMedia({ page, frame, call, readDocument, u
   });
   const asset = await until(async () => {
     const errors = await frame.locator(".editor-import-status li").allTextContents();
+    const pending = await frame
+      .locator('.editor-import-status:visible [role="status"]')
+      .allTextContents();
+    errors.push(...pending.filter((message) => message.startsWith("素材尚未加入工程：")));
     if (errors.length) throw new Error(errors.join("\n"));
     const value = await readDocument();
     return value.document.assets.find((item) => item.name === "cloud-source.wav");
