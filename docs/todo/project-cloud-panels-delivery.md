@@ -4185,3 +4185,44 @@ rmSync 重试，不吞掉持续失败，也不改变沙箱／PDF 执行。Panel 
 工作流格式与 diff 通过，已推送待最终 CI。已有容器候选 36283000541 的业务源码
 仍为 b53c6fb，已确认在真实运行镜像验收中，未取消或重开；最终组合仍须单独核对。
 日志 /tmp/job-hunt-audio-pdf-ci-failed.log。
+
+增量 99 第三候选 36282931762 失败，但新增录音阶段实际通过：真实 WebM 保存、
+关闭后找回、容器原生检查、仅加入一次、另一项目拒绝读取及真实源音频播放均有
+PASS 记录。随后 WAV 导入触发真实 429，截图明确显示“素材尚未加入工程：面板
+请求过于频繁”；调用时序证实多个模块的单独预算合计越过 Host 240 次/分钟限制。
+没有提高 Host 限额，也没有将该候选算成功。
+
+Panel #53 的 2cbf4c5f3b10d0b0f288c175268b34b3d3aef5fc 新增 Panel 侧共用请求队列，
+位于实际 Host 调用边界，包含新鲜上下文读取；文件传输独立计量，取消不等待普通
+队列，页面关闭阻止未发出的调用。仅有结构化 RATE_LIMITED 且给出有效等待时间的
+执行前拒绝可有限重试；网络、存储、超时及未知结果不重发。83 项相关检查、12 项
+录音浏览器检查、2 项完整编辑器回归、全仓 npm check、类型、确定性构建、预检与
+差异检查通过。Host #33 的 e178b2569942518bb7799cb021fabda5b03165d0 补充在导入
+提示保留错误时立即报告，不再等到超时；语法、lint、格式通过。最终 CI 待完成。
+
+第四候选 [36284063778](https://github.com/cjhyy/codeshell-services/actions/runs/36284063778)
+固定上述 Panel／Host 与 services e36f3280226bd95d6a78f0373b3bd0133c945bcd，
+已启动，首次 queued。日志 /tmp/cloud-video-recording-candidate-third-failed.log，
+截图与时序 /tmp/cloud-video-recording-third-evidence；修复检查
+/tmp/video-cloud-traffic-{unit,main,recording,check,typecheck,final-buildcheck,validate}.log。
+
+增量 100 最新 CI：Panel 00b83eb 的两轮完整检查 36283145183／36283147542 全部通过，
+两轮 PDF 均通过；Host 5078a66f 的九类 CI 36282991704 全部通过。候选 36283000541
+仍经实时查询确认运行中，未取消／重启，仍等待真实容器终态，PR #54／#34 保持 draft。
+
+### 增量 101：投资公开数据源的真实只读验证（2026-09-27，部分验收）
+
+使用现有 Panel b53c6fb／00b83eb 的零依赖 CLI，在独立临时目录取腾讯 SH600519
+和 Yahoo AAPL 的 2025-01 指定历史区间；未使用账号密钥，未触碰个人项目或持仓。
+真实接口分别返回 18／20 根日线，CSV、来源、复权口径、日期与元数据记录一致；
+改变已有数据的复权口径被拒绝，原 CSV／元数据字节保持不变。
+
+明确同来源刷新后，腾讯指纹不变；Yahoo 调整历史数值出现细微变化，因此“刷新后
+完全相同字节”的额外断言失败，不能记为稳定数据。随后通过实际 engine.mjs 的 CSV
+解析及 fingerprintBars 复验，两来源当前数据指纹都与 sidecar 一致；Yahoo 指纹由
+fnv1a32:a5702c95 变为 fnv1a32:c714f68b，变化被保存记录。此处未证明上游变化原因，
+也未修改生产数值或放宽一致性验证。证据
+/tmp/quant-live-provider-acceptance.log；临时资料及 verified.json 位于
+/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-live-market-oQQzZU。
+这是本机真实公开来源与解析验证，不替代云端界面、付费来源、自动化和全部业务验收。
+整体目标仍 active；真实账号／模型、目标部署／发布和设备目录／中继仍未完成。
