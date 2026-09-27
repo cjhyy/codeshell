@@ -138,6 +138,13 @@ export function registerProjectPanelIpc(deps: {
     const cwd = await requireRendererProjectPath(rawCwd);
     return desktopPanelManager(cwd).management.restore(desktopPanelContext(event, cwd), token);
   });
+  ipcMain.handle("panel-apps:cancelRestore", async (event, rawCwd: string, token: string) => {
+    const cwd = await requireRendererProjectPath(rawCwd);
+    return desktopPanelManager(cwd).management.cancelRestore(
+      desktopPanelContext(event, cwd),
+      token,
+    );
+  });
   ipcMain.handle(
     "panel-apps:setProjectBinding",
     async (event, cwd: string, id: string, bound: boolean, expectedRevision: string) => {

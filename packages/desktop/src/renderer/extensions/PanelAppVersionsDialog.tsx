@@ -71,7 +71,11 @@ export function PanelAppVersionsDialog({
     };
   }, [projectPath, appId, revision]);
 
-  async function run<T>(operation: () => Promise<T>, accept: (value: T) => void) {
+  async function run<T>(
+    operation: () => Promise<T>,
+    accept: (value: T) => void,
+    keepReviewOnFailure = false,
+  ) {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
@@ -82,15 +86,21 @@ export function PanelAppVersionsDialog({
     } catch (cause) {
       if (alive.current) {
         setError(String(cause instanceof Error ? cause.message : cause));
-        setReview(undefined);
+        if (!keepReviewOnFailure) setReview(undefined);
       }
     } finally {
       pending.current = false;
       if (alive.current) setBusy(false);
     }
   }
+  async function cancelReview() {
+    if (!review) return;
+    await window.codeshell.cancelPanelAppRestore(projectPath, review.reviewToken);
+    if (alive.current) setReview(undefined);
+  }
+  const close = () => void run(cancelReview, onClose, true);
   return (
-    <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !busy && close()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -142,14 +152,17 @@ export function PanelAppVersionsDialog({
                   }
                   onClick={() =>
                     void run(
-                      () =>
-                        window.codeshell.previewPanelAppRestore(
+                      async () => {
+                        await cancelReview();
+                        return window.codeshell.previewPanelAppRestore(
                           projectPath,
                           appId,
                           version.packageDigest,
                           history.expectedRevision,
-                        ),
+                        );
+                      },
                       setReview,
+                      true,
                     )
                   }
                 >
@@ -198,7 +211,7 @@ export function PanelAppVersionsDialog({
             </Button>
           </section>
         )}
-        <Button variant="outline" disabled={busy} onClick={onClose}>
+        <Button variant="outline" disabled={busy} onClick={close}>
           关闭版本记录
         </Button>
       </DialogContent>

@@ -369,6 +369,58 @@ describe("Panel App update controls", () => {
     ]);
   });
 
+  test("native version dialog keeps failed cancellations retryable and releases reviews before closing", async () => {
+    apps = [{ ...panel(), projectBound: true }];
+    const cancelled: unknown[] = [];
+    let failCancellation = true;
+    const version = {
+      version: "0.6.1",
+      packageDigest: "c".repeat(64),
+      permissions: ["storage"],
+      compatibility: { supported: true, reasons: [] },
+    };
+    const history = {
+      appId: "video-studio",
+      title: { default: "Video Studio" },
+      expectedRevision: "a".repeat(64),
+      current: { version: "0.6.2", packageDigest: "b".repeat(64) },
+      unavailablePackages: 0,
+      versions: [version],
+    };
+    Object.assign(window.codeshell, {
+      getPanelAppPackageHistory: async () => history,
+      previewPanelAppRestore: async () => ({
+        ...version,
+        appId: history.appId,
+        title: history.title,
+        current: history.current,
+        expectedRevision: history.expectedRevision,
+        addedPermissions: [],
+        reviewToken: "cancel-native-review",
+        expiresAt: Date.now() + 60_000,
+      }),
+      cancelPanelAppRestore: async (...args: unknown[]) => {
+        cancelled.push(args);
+        if (failCancellation) throw new Error("Cancellation unavailable");
+        return { cancelled: true };
+      },
+    });
+    await render();
+    await click("展开");
+    await click("项目版本");
+    await click("审阅 v0.6.1");
+    await click("关闭版本记录");
+    expect(textOf(document.body)).toContain("Cancellation unavailable");
+    expect(textOf(document.body)).toContain("确认权限并恢复项目版本");
+    failCancellation = false;
+    await click("关闭版本记录");
+    expect(textOf(document.body)).not.toContain("确认权限并恢复项目版本");
+    expect(cancelled).toEqual([
+      ["/tmp/project", "cancel-native-review"],
+      ["/tmp/project", "cancel-native-review"],
+    ]);
+  });
+
   test("an unavailable project package is repaired from a separate diagnostic row", async () => {
     apps = [];
     const calls: unknown[] = [];

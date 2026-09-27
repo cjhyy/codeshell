@@ -1055,6 +1055,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:previewRestore", cwd, id, digest, revision),
   restorePanelAppPackage: (cwd: string, token: string) =>
     ipcRenderer.invoke("panel-apps:restore", cwd, token),
+  cancelPanelAppRestore: (cwd: string, token: string) =>
+    ipcRenderer.invoke("panel-apps:cancelRestore", cwd, token),
   setPanelAppProjectBinding: (cwd: string, id: string, bound: boolean, expectedRevision: string) =>
     ipcRenderer.invoke("panel-apps:setProjectBinding", cwd, id, bound, expectedRevision),
   listPanelAppsForProjects: (projectPaths: string[], locale: string) =>
