@@ -4226,3 +4226,39 @@ fnv1a32:a5702c95 变为 fnv1a32:c714f68b，变化被保存记录。此处未证�
 /var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-live-market-oQQzZU。
 这是本机真实公开来源与解析验证，不替代云端界面、付费来源、自动化和全部业务验收。
 整体目标仍 active；真实账号／模型、目标部署／发布和设备目录／中继仍未完成。
+
+### 增量 102：求职录音候选通过并合入，启动视频组合验收（2026-09-27）
+
+完整候选 [36283000541](https://github.com/cjhyy/codeshell-services/actions/runs/36283000541)
+成功，固定 Host 5078a66fcf10a88bf9bb7ab7f2fd248ee0d58ab3、Panel
+b53c6fb88e3066c769019f9d854aa3afa0cfd5b0、services
+e36f3280226bd95d6a78f0373b3bd0133c945bcd。候选 artifact 10920375258
+（698464621 字节），证据 artifact 10919548814；runtime 镜像
+sha256:9acd246598e47b86cd3c47756369f8e5d7de0ebc9a676ccada54ee3639004aa8，
+Link 镜像 sha256:b2535d7fb6eb15cfc23716092b03b82c38e53cc2bb7cc21dcb312d8c187f6de4，
+平台 linux/amd64。日志 /tmp/job-hunt-cloud-audio-candidate-success.log；已下载并
+查看 /tmp/job-hunt-cloud-audio-success-evidence/evidence/cloud-job-hunt-audio.png。
+
+实际可信 MediaRecorder WebM 进入项目资源，选定连接经原生进程发送真实 multipart
+HTTP 至受控转写服务；换登录后结果可找回，新回答拒绝覆盖，明确应用和取消保留
+原件。另一个项目不能读取任务或资源；项目停止／重启及移除安装源后，原字节、
+完成／取消任务和回答保留，请求计数仍为 2。六包生命周期、中文 PDF／设计恢复、
+视频既有处理、Link 受控授权及备份、归档与镜像重载同时通过。本候选不包含视频
+新增录音消费和共享请求队列，不代表真实语音模型或生产部署。
+
+Panel 最终 00b83eb 与候选业务版本仅差 CI 临时 Chromium 目录清理的有界重试；
+最终两轮 CI 全绿。Panel #54／Host #34／services #7 已合入，合并提交分别为
+ff1c8ad2a591cd4b1fdf8b1fd5e923edafb40bbb、
+8b6a40f104b7f094dd8d3565c2051071c6463ded、
+6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73。求职两个工作树经 clean、祖先关系和
+进程占用核对后移除，本地／远程任务分支删除成功。services 工作树暂保留供当前
+视频候选引用。原始用户工作树不变，未公开发布。
+
+视频两分支正常合入最新 main：Host ec8f6a347eb416e2e20ef507734de04c61fff65f，
+Panel cdb399f146d1233c5a2fb2e4277f3e5f434e89a3。本机 Host 脚本语法／lint／diff、
+Panel 全仓 check 与求职完整页面回归通过并推送；Host CI 36284370705 九类通过，
+Panel CI 36284497787／36284499739 仍进行中。第四视频候选 36284063778 未结束。
+新组合候选 [36284626623](https://github.com/cjhyy/codeshell-services/actions/runs/36284626623)
+使用上述两提交及 services main 6bb70f6 启动，等待三仓组合终态。PR #53／#33
+继续 draft。手机界面后置，整体目标 active；真实提供商、部署发布和设备目录／
+中继未完成。
