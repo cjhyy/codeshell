@@ -4572,3 +4572,34 @@ bca724adb4ca6a65088002db10f78ce6f755e005。解决业务选项／夹具解析和�
 固定上述 Host／services 及 Panel 5227536e，real_speech=true；包括实际转写、下载、
 Quant 和原有业务。完整组合与最终 CI 待终态，#37／#10 保持 draft。
 公开发布、真实目标部署、真实 Link 账号和设备目录／中继仍未完成，goal active。
+
+### 增量 110：修复 PDF CI 的浏览器探测清理，核对设备连接缺口（2026-09-27）
+
+上一轮为明确进展：真实语音三仓合入、下载完整候选通过、Quant 本机通过并启动
+统一候选。36289352541 本轮确认仍在 Install real packages and exercise the runtime
+image 阶段，没有取消／重开。Host #36 的 36289258481 最终九类检查全通过。
+
+Panel #57 合并主线后的 36289258445 PDF job 108536039159 失败，日志
+/tmp/candidate-download-pdf-failed.log。Chromium spawnSync 探测报告 status=0，
+随后删除 profile 的 Default 目录报 ENOTEMPTY，PDF 测试未开始。另一轮
+36289260311 的 PDF 检查通过。原同步 CLI 超时／退出流程没有可靠管理整个浏览器
+进程树，不能靠增加删除重试或忽略清理错误解决。
+
+从 main 5527017 新建 ci-browser-probe Panel 工作树，提交
+3751e20（完整 SHA 见仓库）；仅修改 validate.yml 探测。用相同 Chromium 路径、
+chromiumSandbox=true 的 persistent context 打开 about:blank，await close 完成后
+异步删除当前任务 profile；保持 AppArmor 规则、失败行为及所有 PDF 检查。提取准确
+workflow 源运行本机探测成功，七项实际 native PDF 全通过，日志
+/tmp/ci-browser-probe-pdf-local.log，格式／diff 通过。
+[Panel #58](https://github.com/cjhyy/codeshell-panel-apps/pull/58) draft 且已附任务；
+Linux 36289654608/job108537167583 与 36289658478/job108537178086 的 PDF 检查
+均已通过，其他全仓检查仍运行。#57 正常合入该任务至
+8de917b3ba55d596223157cc18b6993376c2ee9f；业务包没有变化，当前组合候选继续
+原准确业务版本，不为 CI-only 修复重开容器候选。两个 PR 的最终 CI 尚待完成。
+
+另核对设备侧：Host mobile-remote/tunnel-manager 管理临时 cloudflared 连接、
+ready／断线检测；remote-host-manager 保留配对与 HTTP／WS 校验，trusted-device-store
+持久化手机授权和撤销。services 只有 Link／Cloud 产品组合，尚无统一主机目录或
+稳定出站中继。工作包 E 记录主机身份／连接代次、凭据分离、Host 最终授权、离线
+不迁移和实际网络验证等实施约束；这只是后续实现依据，不标记远程能力完成。
+goal active，真实发布／目标部署／Link 账号与统一设备中继仍未完成。
