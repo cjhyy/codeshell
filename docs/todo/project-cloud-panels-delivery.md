@@ -4975,3 +4975,65 @@ SHA256 `cbe37cf6b1855ec6eaaefe4511149ea1e367c79854e788603ef94497a2ad251e`。
 含七份最终 UI/网络证据和先前失败及哈希索引，权限0600/目录0700。原始证据未覆盖。
 公开发布、真实 provider、目标域名/TLS/服务器部署、实体手机弱网与跨版本回滚
 仍待；当前是已验收本机组件与运行中的完整候选，goal active。
+
+
+## 增量 118：最终完整候选通过，两仓代码已合入（2026-09-27）
+
+Host 最终 `7a21a6d73f5ef9b6a645c1a1d9bcee0741393e01` 的 CI36301526311 与
+CI36301566604 全九类通过；Services `ec7fac7c43254a73c8200795278e3f43168a1dd4`
+六项 CI 全通过。完整 Linux/Node22.16 候选
+[36301566352](https://github.com/cjhyy/codeshell-services/actions/runs/36301566352)
+在 real_speech=true 下所有步骤成功，第三仓固定原有
+`57703cbb75ed44dce004215ad7075480c289becb`，不修改 Panel 内容。
+
+实际安装五包、真实 TLS/WSS 十四阶段及清理通过，真实 setup/login 关闭等待、上传
+撤销四项全 true；主代理核对 receipt SHA 和结果，另一代理逐个核对十五源文件、
+五包及源码身份。Linux receipt SHA256
+`f486ce60966904bc86b60de3211df2fd9650924b228e6bba51e7ae3274476fa4`。
+完整 Cloud 备份/恢复四项通过，含两卷、权限/链接、原卷保留、旧会话撤销、新登录、
+恢复后启动与再次备份、损坏拒绝及不完整恢复拒绝启动；receipt SHA256
+`1dc97efb039adc7deae4e3bf41ab377b84b788465cdf31dcecfa621b8ba7c17f`。
+原始日志、小型 artifact 与机器可读审计保留于
+`/Users/admin/.codex/worktrees/device-relay/evidence/linux-candidate-36301566352/`。
+
+候选归档 artifact10925942917，698572338B，GitHub SHA256
+`223c88383587355ecbabb29c8c102f0ddb6479e08947076353e615f0611f0d41`，到期2026-10-11。
+独立 evidence artifact10926391840，3069884B，SHA256
+`de21ff3a257b30741284a4508dcc06b5778b0c0a175874591573ebb28385a83a`，到期2026-10-04。
+receipt 属于独立 evidence，不冒充已嵌入部署 tar。
+镜像校验与重新加载均通过：runtime
+`sha256:986eeb9ca33c17009fdd42c426803610bc06e5a73698a78520d10d0f2e82b34b`，Link
+`sha256:1f5837db2c42232d744bfa0bc9b86fb4e2fdf93d8ea39f8667b4bab5fcfad742`，linux/amd64。
+恢复 helper 使用已固定 registry digest48e4b67 与实际IDc72861c，未内附候选两镜像，
+目标仍需独立准备，不虚构完全离线安装。
+
+最终对照 origin/main 后，Host [#43](https://github.com/cjhyy/codeshell/pull/43)
+正常合入 `220a3799d9c2ef5a3a769a61ba2e582aa841d3f4`；#41/#42/#44/#45 的
+mergedAt 均实际确认。Services [#14](https://github.com/cjhyy/codeshell-services/pull/14)
+正常合入 `809dd334a7ffff1df4a6ae86c7651c838a4a993c`。两主干分别与原始已验收
+7a21/ec7 整树比较无差异；不重新标记候选来源，不将后续纯文档变化混入原档。
+
+最后修正两处文档：目录 CLI 不自动加载外部env，需要systemd
+EnvironmentFile或显式Node --env-file；README误称receipt在tar，实际在独立evidence。
+从新main独立建立 `codex/services/device-relay-deployment-docs`，
+[#15](https://github.com/cjhyy/codeshell-services/pull/15) 的 `84addd2413122b83ee5f452141836f4398cab941`
+仅改 README/device-relay/acceptance 三份文档。env-file实际配置解析、模板/链接、
+格式/diff与六项CI通过；正常合入 `a87cfe0c7fc2a1938caf69020841425d32691527`。
+不修改冻结程序/依赖/锁文件，不为文档重跑昂贵候选；原tar中的启动说明参照新runbook。
+原始ZIP已完整保留到
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36301566352.zip`，
+同名receipt记录GitHub SHA256/大小、ZIP CRC与内部tar SHA全部通过，文件0600，
+主代理再次复核ZIP SHA/大小/权限一致。内部tar SHA256
+`e4579723d402801584e6eef4e6e9a8f1b129576d091db488491bc9fc328e7860`。
+GitHub下载曾以EOF中断，保留原27,672,576字节并使用同一官方artifact的有界Range
+续传，未覆盖成功证据或重跑CI，最终所有校验通过。完整Linux小证据和审计还另存为
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36301566352-evidence/`。
+Host五个本轮任务树与本地/远程分支均已安全清理，移除前逐个确认 clean、祖先、
+PR实际合入和无进程/文件占用。原用户树/goal树/其他任务与父 artifacts/evidence 保留。
+Services两任务树及本地/远程分支也已清理：clean、ancestor、无cwd/openfiles核验通过，
+worktree remove未force，原用户Services树956f493与原status保持不变。清理回执保留于
+`device-relay/evidence/services-worktree-cleanup-20260927.json` 并复制到上述稳定证据目录。
+Services文档CI36303872985/36303896895六项全成功，main相对候选ec7仅三文档变化。
+
+真实 provider/目标配置仍缺，公开包和镜像未发布；公网与实体手机、目标恢复及
+跨版本升级回滚仍待。Panel业务按最新用户要求冻结，goal仍未完成。
