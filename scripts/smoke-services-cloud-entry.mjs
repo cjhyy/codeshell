@@ -352,6 +352,37 @@ try {
           CODESHELL_SMOKE_INSTALLATION: installed,
         },
       );
+      // Exercise the actual deployment CLIs and complete installation restore,
+      // not only the settings-file repair covered by the sandbox smoke above.
+      const runtimeDockerfile = await readFile(
+        join(installed, "deploy/Dockerfile.project-runtime"),
+        "utf8",
+      );
+      const helperSource = /^ARG NODE_IMAGE=(\S+@sha256:[a-f0-9]{64})$/m.exec(
+        runtimeDockerfile,
+      )?.[1];
+      assert.ok(helperSource, "Backup helper requires the reviewed immutable Node base image");
+      await run("docker", ["pull", helperSource], installed);
+      const helperId = await run(
+        "docker",
+        ["image", "inspect", helperSource, "--format", "{{.Id}}"],
+        installed,
+        process.env,
+        true,
+      );
+      assert.match(helperId, /^sha256:[a-f0-9]{64}$/);
+      await run(
+        process.execPath,
+        [
+          join(repo, "scripts/smoke-cloud-backup.mjs"),
+          installed,
+          imageId,
+          helperId,
+          helperSource,
+          join(repo, "..", "evidence", "cloud-backup-restore.json"),
+        ],
+        repo,
+      );
       if (outputArg) {
         const archive = join(root, "runtime.tar");
         const platform = await run(

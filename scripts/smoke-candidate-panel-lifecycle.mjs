@@ -1,9 +1,11 @@
 // Exercise delivered Panel bytes in real project containers. Package installation
-// uses the public SDK as an administrator; binding, storage and restore use HTTP.
+// uses the public SDK as an administrator; binding and storage use HTTP.
+// Package selection uses the actual cloud UI through the control proxy.
 // Controlled HTML-only updates prove package selection, not domain data migration.
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { selectCloudPanelVersion } from "./smoke-cloud-panel-version-ui.mjs";
 
 const ids = [
   "design-studio",
@@ -102,6 +104,9 @@ export async function verifyCandidatePanelLifecycle({
   projectA,
   projectB,
   panelHarness,
+  serverUrl,
+  password,
+  evidenceDir,
 }) {
   const files = [];
   async function collect(root, prefix = "") {
@@ -150,18 +155,7 @@ export async function verifyCandidatePanelLifecycle({
     return response.text();
   };
   const select = async (project, id, digest) => {
-    const current = await panel(project, id);
-    const review = await json(root(project) + `/${id}/restore-preview`, {
-      method: "POST",
-      body: { packageDigest: digest, expectedRevision: current.revision },
-    });
-    assert.equal(review.packageDigest, digest);
-    assert.ok(review.compatibility.supported);
-    assert.deepEqual(review.permissions, current.permissions);
-    await json(root(project) + "/restore", {
-      method: "POST",
-      body: { reviewToken: review.reviewToken },
-    });
+    await selectCloudPanelVersion({ serverUrl, password, project, id, digest, json, evidenceDir });
     assert.equal((await panel(project, id)).packageDigest, digest);
   };
   const snapshots = new Map();
@@ -235,7 +229,7 @@ export async function verifyCandidatePanelLifecycle({
       );
   }
   console.log(
-    "PASS: all six real packages reject stale reviewed updates, retain the pinned bytes across catalog changes, and restore through reviewed HTTP selection without losing project storage",
+    "PASS: all six real packages reject stale reviewed updates, retain the pinned bytes across catalog changes, and restore through actual cloud UI review, cancel and confirmation without losing project storage",
   );
   // Remove the source directories before restarting: only installed/retained bytes
   // in the project's persistent home may provide the next runtime.
