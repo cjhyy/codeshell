@@ -1,3 +1,4 @@
+import { deviceRelayApi } from "./device-relay-api.js";
 /**
  * Preload — bridges the renderer (browser context) to Electron main's
  * ipcMain via contextBridge. The renderer never imports core; it sees
@@ -1711,7 +1712,9 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── Mobile Web Remote (LAN phone controller; off by default) ──────────
   mobileRemote: {
-    start: (opts?: { mode?: "lan" | "tunnel" }) => ipcRenderer.invoke("mobileRemote:start", opts),
+    relay: deviceRelayApi,
+    start: (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
+      ipcRenderer.invoke("mobileRemote:start", opts),
     stop: () => ipcRenderer.invoke("mobileRemote:stop"),
     pairingUrl: () => ipcRenderer.invoke("mobileRemote:pairingUrl"),
     status: () => ipcRenderer.invoke("mobileRemote:status"),

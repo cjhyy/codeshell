@@ -1,3 +1,4 @@
+import type { DesktopRelayApi } from "../shared/device-relay.js";
 /**
  * Renderer-visible types for window.codeshell. Imports `type`-only from
  * core; nothing at runtime crosses the boundary (the lint rule that bans
@@ -2281,21 +2282,22 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
   /**
    * Mobile Web Remote — Electron-hosted LAN HTTP/WebSocket controller for a
    * trusted phone. Off by default; `start` binds to localhost/LAN and returns
-   * a one-time pairing URL. No public relay (see mobile-remote design spec).
+   * a one-time pairing URL. Public relay uses a separate desktop registration and the same phone authorization.
    */
   mobileRemote: {
-    start(opts?: { mode?: "lan" | "tunnel" }): Promise<{
+    relay: DesktopRelayApi;
+    start(opts?: { mode?: "lan" | "tunnel" | "relay" }): Promise<{
       url: string;
       pairingUrl: string;
       expiresAt: number;
-      mode: "lan" | "tunnel";
+      mode: "lan" | "tunnel" | "relay";
     }>;
     stop(): Promise<void>;
     pairingUrl(): Promise<{ pairingUrl: string; expiresAt: number }>;
     status(): Promise<{
       running: boolean;
       url?: string;
-      mode?: "lan" | "tunnel";
+      mode?: "lan" | "tunnel" | "relay";
       tunnelRunning?: boolean;
       tunnelConnected?: boolean;
     }>;
