@@ -4875,3 +4875,43 @@ services `258ab984163e4559eee82944cbfda3817bc67f8c` 的第八项验收加入正�
 最终上传修复、精确新包的 Node22.16 验收及完整 Linux 候选尚待；桌面设置接入、
 真实服务器／Link provider、公开发布和跨版本部署回滚也未完成。中继为单 owner
 受信 TLS 终止组件，尚非物理手机或公网部署验收，goal active。
+
+
+## 增量 116：上传修复通过，实际候选门槛发现提前拒绝响应丢失（2026-09-27）
+
+[Host #44](https://github.com/cjhyy/codeshell/pull/44) `382c2fabb33c0abf5f555ad7194776a7bd3d24ff`
+修复上传撤销，49 项／180 断言、lint/type/format、CI36299003797 九类均通过。
+完整 PUT/rename 收尾纳入 activeTransfers；撤销同步隔离、等待全部异步清理后上报
+失败。真实 EISDIR 加另一路延迟 unlink 证明 revoke 与 stop 不因首个错误提前返回。
+已 claim 物料保留，release 不将撤销后的票据恢复为可用。
+
+Host #41 正常合入 #44 和 root 候选 gate 后为
+`30b228592b3ea4e4363aacc4f09ac96ee48df512`，#43 已快进到同一提交。Server build、
+十四文件 116 项／513 断言、类型、格式通过，CI36299873137 九类全通过。五包保存于
+`/Users/admin/.codex/worktrees/device-relay/artifacts/30b228592b3ea4e4363aacc4f09ac96ee48df512/`，
+Server SHA256 `58b3e9d16c3953ffea4cdfe41c2604f0a03cb2d0d309ebd6aaac94aad95a3105`。
+Services `0cc890539f051d9225ba74432e8d77fcb33c74d9` 最终六项 CI 全通过。
+
+独立 Node22.16 安装的十四项 TLS/WSS 直接验收成功，receipt 为
+`device-relay/evidence/device-relay-acceptance-node22-0cc8905-30b2285.json`，
+passed/cleanupPassed、真实 setup/login 等待和四项 phoneUploadRevocation 都为 true。
+安装保留在 `/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-relay-node22-final-e1yti9tc`。
+主代理随后使用真实 Host wrapper 验证同一安装，得到失败而非以第一次绿灯归档：
+`device-relay/evidence/device-relay-wrapper-node22-0cc8905-30b2285.json`，
+passed=false／cleanupPassed=true，第八项 fail、后六项 not-run；日志
+`/tmp/device-relay-wrapper-node22-final.log`。原成功、失败和安装均未覆盖。
+
+只读诊断复制件确认旧票据返回 502/computer_connection_failed。原生 TLS/HTTP
+探针确认本地 Host 已交付完整 119 字节 404，但随后 TCP EPIPE/readEnded=false/
+writeFinished=false 令 local-stream 立即 terminate WSS，丢掉已排队的响应。
+证据 `/tmp/device-relay-unused-diagnostic.log` 和
+`/tmp/codeshell-relay-early-response-probe.log`。这不是票据仍被接受，而是拒绝
+响应传输丢失。修复正在保留已读响应的有界收尾；无响应错误、非法帧和显式停止仍
+立即撤销，真正 HTTP 截断必须保留失败。Services `e73c76058085066f97d7df50add25146508932c6`
+把同一旧票据请求设为 4MiB 并输出失败状态/长度，未放宽拒绝状态或十四项合同。
+
+下一项桌面设置接入已独立在 `codex/desktop/device-relay` 开始，先合入 30b 作为
+代码依赖而非交付证明。已有公共工作台确实可手动切换电脑/云端地址并分别选项目；
+新增入口负责目录登记、仅主进程可读的系统密钥环密文、启停与连接状态。默认关闭，
+不改 Panel，不宣称已完成实际 Electron／物理手机／公网验收。公开发布、真实
+provider 与目标部署仍待；完整 Linux 中继候选因该已知问题尚未启动，goal active。
