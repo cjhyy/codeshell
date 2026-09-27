@@ -132,18 +132,27 @@ export async function verifyCloudVideoMedia({ page, frame, call, readDocument, u
   );
   const oldIds = new Set((await call("tasks.list")).map((job) => job.id));
   await dialog.getByRole("button", { name: "开始导出", exact: true }).click();
+  // The installed Panel already polls its jobs. Keep this independent observer
+  // below the remaining Host budget and stop re-reading completed preparation.
+  let renderId;
   const rendered = await until(async () => {
     const error = await frame.evaluate(() => document.querySelector(".ew-form-error")?.textContent);
     if (error) throw new Error(`Cloud export submission: ${error}`);
-    for (const item of await call("tasks.list")) {
+    const jobs = renderId
+      ? [{ id: renderId, entry: { name: "editor-runtime" } }]
+      : await call("tasks.list");
+    for (const item of jobs) {
       if (oldIds.has(item.id) || item.entry?.name !== "editor-runtime") continue;
       const job = await call("tasks.get", { id: item.id });
       if (["failed", "cancelled", "interrupted"].includes(job.status))
         throw new Error(`Cloud export ${job.input?.request?.action}: ${JSON.stringify(job.error)}`);
-      if (job.input?.request?.action === "render" && job.status === "succeeded") return job;
+      if (job.input?.request?.action === "render") {
+        renderId = job.id;
+        if (job.status === "succeeded") return job;
+      } else if (job.status === "succeeded") oldIds.add(job.id);
     }
     return false;
-  });
+  }, 5000);
   const result = rendered.result?.result ?? rendered.result;
   assert.equal(result.verified, true);
   assert.match(result.video.id, /^asset-[a-f0-9]{64}$/);

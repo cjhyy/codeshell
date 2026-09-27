@@ -1,6 +1,7 @@
 /* Installed Job Hunt, trusted MediaRecorder and durable container tasks.
- * The microphone and speech response are controlled; resource bytes, selected
- * credential handoff, HTTP request, cancellation and persistence are real. */
+ * The microphone is synthetic. Speech is controlled by default; the optional
+ * real-speech fixture runs actual CPU inference on recorded public audio.
+ * Resource bytes, credential handoff, cancellation and persistence are real. */
 /* global document */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -8,7 +9,16 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const TRANSCRIPT = "这是受控服务返回的面试转写，用于验证保存和恢复。";
-export async function verifyCloudInterviewAudio({ a, b, open, until, evidenceDir, readRequests }) {
+export async function verifyCloudInterviewAudio({
+  a,
+  b,
+  open,
+  until,
+  evidenceDir,
+  readRequests,
+  realSpeech = false,
+}) {
+  let transcript = TRANSCRIPT;
   const practice = async ({ frame }) => {
     await frame.locator('.side-nav [data-view-target="interviews"]').click();
     await frame.locator("#quick-practice-interview-question").click();
@@ -31,15 +41,14 @@ export async function verifyCloudInterviewAudio({ a, b, open, until, evidenceDir
   const dialog = a.page.getByRole("region", { name: "录音", exact: true });
   await dialog.getByRole("button", { name: "开始录音", exact: true }).click();
   await a.page.waitForFunction(
-    () => {
+    (seconds) => {
       const error = document.querySelector('.panel-host-audio [role="alert"]')?.textContent?.trim();
       if (error) throw new Error(error);
-      return /[2-9]\s+秒/.test(
-        document.querySelector('.panel-host-audio [role="status"]')?.textContent ?? "",
-      );
+      const status = document.querySelector('.panel-host-audio [role="status"]')?.textContent ?? "";
+      return Number(status.match(/(\d+)\s+秒/)?.[1] ?? 0) >= seconds;
     },
-    null,
-    { timeout: 15000 },
+    realSpeech ? 13 : 2,
+    { timeout: realSpeech ? 30000 : 15000 },
   );
   await dialog.getByRole("button", { name: "停止录音", exact: true }).click();
   await dialog.locator("audio").waitFor();
@@ -76,7 +85,15 @@ export async function verifyCloudInterviewAudio({ a, b, open, until, evidenceDir
     () => findJob("audio-fixture", "succeeded"),
     "installed interview transcription finishes",
   );
-  assert.equal((succeeded.result?.result ?? succeeded.result).text, TRANSCRIPT);
+  const recognized = (succeeded.result?.result ?? succeeded.result).text;
+  if (realSpeech) {
+    assert.match(recognized.toLowerCase(), /ask not/);
+    assert.match(recognized.toLowerCase(), /country/);
+    transcript = recognized;
+    console.log(
+      "PASS: trusted browser recording reached the real CPU model through the selected cloud task connection",
+    );
+  } else assert.equal(recognized, transcript);
   assert.doesNotMatch(JSON.stringify(succeeded), /audio-smoke-only|原始回答/);
   assert.equal(succeeded.recovery, "manual");
   await assert.rejects(b.call("tasks.get", { id: succeeded.id }));
@@ -94,7 +111,7 @@ export async function verifyCloudInterviewAudio({ a, b, open, until, evidenceDir
   await refresh(ui);
   const row = ui.locator(`[data-audio-task-id="${succeeded.id}"]`);
   await row.getByLabel("转写文字，可选中复制").waitFor();
-  assert.equal(await row.getByLabel("转写文字，可选中复制").inputValue(), TRANSCRIPT);
+  assert.equal(await row.getByLabel("转写文字，可选中复制").inputValue(), transcript);
   await a.frame.locator("#panel-interview-answer").fill("新的手动回答");
   await row.getByRole("button", { name: "加入当前回答", exact: true }).click();
   await ui.getByRole("status").filter({ hasText: "题目或回答已经变化" }).waitFor();
@@ -103,13 +120,13 @@ export async function verifyCloudInterviewAudio({ a, b, open, until, evidenceDir
   await row.getByRole("button", { name: "加入当前回答", exact: true }).click();
   await until(
     async () =>
-      (await a.frame.locator("#panel-interview-answer").inputValue()) === `原始回答\n${TRANSCRIPT}`,
+      (await a.frame.locator("#panel-interview-answer").inputValue()) === `原始回答\n${transcript}`,
     "reviewed transcript is added to unchanged answer",
   );
   await until(
     async () =>
       (await a.call("storage.getSnapshot", { key: "job-hunt-state-v1" })).value?.interviewDraft
-        ?.answer === `原始回答\n${TRANSCRIPT}`,
+        ?.answer === `原始回答\n${transcript}`,
     "transcribed answer draft persists in original project",
   );
   await a.frame.locator("#interview-audio-resource").selectOption(assetId);
@@ -158,12 +175,12 @@ export async function verifyCloudInterviewAudio({ a, b, open, until, evidenceDir
   return async (client) => {
     const job = await client.call("tasks.get", { id: succeeded.id });
     assert.equal(job.status, "succeeded");
-    assert.equal((job.result?.result ?? job.result).text, TRANSCRIPT);
+    assert.equal((job.result?.result ?? job.result).text, transcript);
     assert.equal((await client.call("tasks.get", { id: running.id })).status, "cancelled");
     assert.equal(
       (await client.call("storage.getSnapshot", { key: "job-hunt-state-v1" })).value.interviewDraft
         .answer,
-      `原始回答\n${TRANSCRIPT}`,
+      `原始回答\n${transcript}`,
     );
     assert.equal(
       (await readRequests()).length,
