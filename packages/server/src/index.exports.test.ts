@@ -9,6 +9,7 @@ import * as serveApi from "./index.serve.js";
 import * as desktopWebApi from "./index.desktop-web.js";
 import * as linksApi from "./index.links.js";
 import * as panelsApi from "./index.panels.js";
+import * as remoteRelayApi from "./index.remote-relay.js";
 import * as authApi from "./index.auth.js";
 import { createHubAuth, HUB_SESSION_COOKIE } from "./hub/auth-http.js";
 
@@ -45,6 +46,16 @@ describe("Server package public entry contracts", () => {
     expect(Object.keys(workerApi).sort()).toEqual(["WorkerBridgeCore", "previewLine"]);
   });
 
+  test("keeps remote relay a focused, transport-only public capability", () => {
+    expect(typeof remoteRelayApi.createDeviceRelayConnector).toBe("function");
+    expect(typeof remoteRelayApi.createRelayByteStream).toBe("function");
+    expect(typeof remoteRelayApi.parseRelayControlMessage).toBe("function");
+    expect(remoteRelayApi.RELAY_STREAMS_PATH).toBe("/api/v1/remote-hosts/streams/");
+    expect("RemoteHostManager" in remoteRelayApi).toBe(false);
+    expect("createHubAuth" in remoteRelayApi).toBe(false);
+    expect("WorkerBridgeCore" in remoteRelayApi).toBe(false);
+  });
+
   test("keeps single-owner auth explicit and reuses the existing implementation", () => {
     expect(Object.keys(authApi).sort()).toEqual(["HUB_SESSION_COOKIE", "createHubAuth"]);
     expect(authApi.createHubAuth).toBe(createHubAuth);
@@ -66,10 +77,15 @@ describe("Server package public entry contracts", () => {
       "./links",
       "./mobile-remote",
       "./panels",
+      "./remote-relay",
       "./serve",
       "./storage",
       "./worker",
     ]);
+    expect(manifest.exports["./remote-relay"]).toEqual({
+      types: "./dist/index.remote-relay.d.ts",
+      import: "./dist/index.remote-relay.js",
+    });
     expect(manifest.exports["./auth"]).toEqual({
       types: "./dist/index.auth.d.ts",
       import: "./dist/index.auth.js",
@@ -87,6 +103,9 @@ describe("Server package public entry contracts", () => {
       compilerOptions: { paths: Record<string, string[]> };
     };
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/*"]).toBeUndefined();
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/remote-relay"]).toEqual([
+      "packages/server/src/index.remote-relay.ts",
+    ]);
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/auth"]).toEqual([
       "packages/server/src/index.auth.ts",
     ]);
