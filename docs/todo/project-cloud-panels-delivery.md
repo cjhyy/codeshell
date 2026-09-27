@@ -4403,3 +4403,39 @@ Host 与 services 的工作树和本地／远程分支。video-cloud-recording P
 36286397212／36286428942 全部通过。完整容器候选 36286470665 仍等待终态。
 两次 GitHub 读取短暂 EOF 只视为观察失败，继续查询同一 run，没有取消或重开。
 目标仍 active；公开发布、目标部署、真实 Link 账号与设备目录／中继继续未完成。
+
+### 增量 106：确认真实转写阶段，修正独立导出观察的限流（2026-09-27）
+
+候选 [36286470665](https://github.com/cjhyy/codeshell-services/actions/runs/36286470665)
+终态 failure。日志 /tmp/cloud-real-speech-candidate-failed.log，证据 artifact
+10920484934（1300412 字节）下载到 /tmp/cloud-real-speech-failed-evidence。
+provider JSON 确认 actualCloudTask=true，固定源码 927cfce34f31707e17f2bff35c349632fb9e2c3a、
+模型 921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f，
+Linux amd64 执行器 8073c16d939af604154abd7d1f909af9a7bca42fd2a944bb8e35a4e92040ec95。
+实际可信录音、项目原始 WebM、选定连接传递、CPU 模型转写、独立浏览器恢复、
+手动答案保护和受控慢请求取消通过。未到后续项目重启恢复，不算完整云端验收。
+
+失败发生在独立 Video 导出观察：smoke-cloud-video-media 每 350ms 轮询列表及
+所有新 editor-runtime 任务，包含已完成的准备任务，与生产 Panel 的有界轮询
+叠加；最终 raw tasks.get 返回 HTTP 429／RATE_LIMITED。桥接证据共 1146 条，
+包括 99 次 tasks.list、263 次 tasks.get；末尾保留 429。已查看两个失败截图，
+原项目处于导出中，另一项目未改变。没有把错误归为真实模型失败或提高服务端限额。
+
+Host #35 提交 41b5c07a0e236e2eea50829e6552984cda4d7106 将独立观察间隔设为
+五秒，停止读取成功的非渲染准备任务，发现 render 后只读取该任务。失败／取消／
+中断仍报错，150 秒截止时间不变，不加入盲重试或改变生产代码。语法、Prettier、
+ESLint、diff 检查通过。修正后是否全流程通过仍需容器候选证明。
+
+Video #53 的两轮最终完整 CI 36286868594／36286871146 已全部通过。
+主线最新 4281954 是该分支祖先；apps／panels／templates 相对成功候选仅求职
+README 五行差异。按既有授权合入 872b4193dae33dc42c06c2cfb4190747811ab36b。
+原媒体时钟停止原因仍未知，诊断提交不算生产修复。核对 clean／祖先／lsof 后
+删除 video-cloud-recording Panel 工作树和本地／远程分支，保留所有其他任务。
+
+Panel #56 正常合入该 main 为 94867b9f1434fd4443f1890b5a1e3b366c3ec113，
+相对 b3458912 业务包没有新增差异，增加的是之前的测试诊断。全仓 npm check
+通过，日志 /tmp/cloud-real-speech-panel-final-check.log。
+新完整候选 [36287706235](https://github.com/cjhyy/codeshell-services/actions/runs/36287706235)
+固定 Host 41b5c07a0e236e2eea50829e6552984cda4d7106、上述 Panel、services
+28247d5cb145ef4396c552998794e881ccb27bfb，real_speech=true，正在运行。
+三仓真实模型 PR 保持 draft，未公开发布或目标部署；goal active。
