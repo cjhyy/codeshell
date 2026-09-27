@@ -34,7 +34,7 @@ function fixture(action = "", options: { missing?: boolean; signal?: boolean } =
     const receipt={candidateOnly:true,protocolVersion:1,passed:true,cleanupPassed:true,
       runtime:process.version,hostHead:manifest.hostHead,servicesHead:manifest.servicesHead,
       manifestSha256:createHash("sha256").update(manifestBytes).digest("hex"),
-      details:{authShutdown:{passed:true,realScryptActions:["setup","login"],waitedForHandlersBeforeReleasingDirectory:true}},
+      details:{authShutdown:{passed:true,realScryptActions:["setup","login"],waitedForHandlersBeforeReleasingDirectory:true},phoneUploadRevocation:{abortActive:true,rejectUnused:true,preserveOther:true,preserveClaimed:true}},
       results:${JSON.stringify(DEVICE_RELAY_ACCEPTANCE_CHECKS.map((name) => ({ name, status: "pass" })))} };
     writeFileSync(${JSON.stringify(launched)},process.env.TMPDIR);
     writeFileSync(join(process.env.TMPDIR,"private-fixture-key"),"test-only");
@@ -70,6 +70,11 @@ describe("installed device relay candidate gate", () => {
     ["a missing revocation check", "receipt.results.splice(7,1);"],
     ["failed cleanup", "receipt.cleanupPassed=false;"],
     ["missing auth shutdown coverage", "delete receipt.details.authShutdown;"],
+    ["missing upload revocation coverage", "delete receipt.details.phoneUploadRevocation;"],
+    [
+      "destroying already claimed task resources",
+      "receipt.details.phoneUploadRevocation.preserveClaimed=false;",
+    ],
     [
       "releasing the directory before auth settles",
       "receipt.details.authShutdown.waitedForHandlersBeforeReleasingDirectory=false;",

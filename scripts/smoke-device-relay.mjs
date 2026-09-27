@@ -109,6 +109,12 @@ export async function verifyInstalledDeviceRelay(installation, manifestPath, evi
       ["login", "setup"],
       "Setup and login must both be exercised during shutdown",
     );
+    for (const check of ["abortActive", "rejectUnused", "preserveOther", "preserveClaimed"])
+      assert.equal(
+        receipt.details?.phoneUploadRevocation?.[check],
+        true,
+        `Phone upload revocation did not verify ${check}`,
+      );
     assert.deepEqual(
       receipt.results
         ?.map(({ name, status }) => ({ name, status }))

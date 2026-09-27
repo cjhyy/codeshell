@@ -14,8 +14,9 @@ private, locally trusted CA and only binds test listeners to loopback. It does n
 disable certificate/hostname verification or change system DNS.
 
 The Host wrapper independently requires all 14 network/authorization stages,
-including an actual production file download interrupted by phone revocation,
-another phone's download continuing, single-use tickets, obsolete connections,
+including an actual production file download and active upload interrupted by
+phone revocation, rejection of unused upload tickets, other phones and already
+claimed task resources remaining available, single-use tickets, obsolete connections,
 restart/offline behavior, and a committed POST not replayed after connection loss.
 It also requires matching source/manifest identity, a successful overall result
 and successful cleanup. A zero exit status, a partial report, or a receipt from a

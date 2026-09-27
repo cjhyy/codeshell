@@ -7,7 +7,7 @@ export const DEVICE_RELAY_ACCEPTANCE_CHECKS = Object.freeze([
   "real upload/file download byte equality, slow reader and authenticated fixture Range",
   "slow WebSocket reader receives complete final 2 MiB message before close",
   "HTTP cancellation reaches Host and real per-computer stream capacity is enforced",
-  "phone revocation aborts its production download and tabs while preserving another phone's download",
+  "phone revocation aborts downloads, uploads and tabs while preserving other phones and claimed resources",
   "disconnect after a committed POST and reconnect never replay the action",
   "re-enrollment keeps computer origin while rotating credential and fencing old connections",
   "real WSS tickets bind host/lease, consume once including failed handshakes, and fence old close callbacks",
