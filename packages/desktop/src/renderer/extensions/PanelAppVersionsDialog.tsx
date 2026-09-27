@@ -33,6 +33,15 @@ const permissionLabels: Record<string, string> = {
   "media.capture": "使用麦克风、摄像头或屏幕录制",
 };
 
+type RestoreLease = { projectPath: string; reviewToken: string };
+
+function abandonReview(lease: RestoreLease) {
+  // Navigation cannot wait for IPC; the Host's TTL reclaims failed cleanup.
+  void window.codeshell
+    .cancelPanelAppRestore(lease.projectPath, lease.reviewToken)
+    .catch(() => undefined);
+}
+
 export function PanelAppVersionsDialog({
   projectPath,
   appId,
@@ -50,24 +59,29 @@ export function PanelAppVersionsDialog({
   const [review, setReview] = useState<PanelPackageRestoreReview>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const alive = useRef(false);
+  const lifecycle = useRef({ active: false });
+  const lease = useRef<RestoreLease | undefined>(undefined);
   const pending = useRef(false);
   useEffect(() => {
-    alive.current = true;
-    let current = true;
+    const current = { active: true };
+    lifecycle.current = current;
+    pending.current = false;
+    setBusy(false);
     setHistory(undefined);
     setReview(undefined);
     void window.codeshell
       .getPanelAppPackageHistory(projectPath, appId, revision)
       .then((value) => {
-        if (current) setHistory(value);
+        if (current.active) setHistory(value);
       })
       .catch((cause) => {
-        if (current) setError(String(cause instanceof Error ? cause.message : cause));
+        if (current.active) setError(String(cause instanceof Error ? cause.message : cause));
       });
     return () => {
-      current = false;
-      alive.current = false;
+      current.active = false;
+      const held = lease.current;
+      lease.current = undefined;
+      if (held) abandonReview(held);
     };
   }, [projectPath, appId, revision]);
 
@@ -77,26 +91,52 @@ export function PanelAppVersionsDialog({
     keepReviewOnFailure = false,
   ) {
     if (pending.current) return;
+    const current = lifecycle.current;
     pending.current = true;
     setBusy(true);
     setError("");
     try {
       const value = await operation();
-      if (alive.current) accept(value);
+      if (current.active) accept(value);
     } catch (cause) {
-      if (alive.current) {
+      if (current.active) {
         setError(String(cause instanceof Error ? cause.message : cause));
         if (!keepReviewOnFailure) setReview(undefined);
       }
     } finally {
-      pending.current = false;
-      if (alive.current) setBusy(false);
+      if (current.active) {
+        pending.current = false;
+        setBusy(false);
+      }
     }
   }
   async function cancelReview() {
-    if (!review) return;
-    await window.codeshell.cancelPanelAppRestore(projectPath, review.reviewToken);
-    if (alive.current) setReview(undefined);
+    const held = lease.current;
+    if (!held) return;
+    await window.codeshell.cancelPanelAppRestore(held.projectPath, held.reviewToken);
+    if (lease.current === held) {
+      lease.current = undefined;
+      setReview(undefined);
+    }
+  }
+  async function previewVersion(packageDigest: string) {
+    if (!history) return;
+    const current = lifecycle.current;
+    await cancelReview();
+    if (!current.active) return;
+    const value = await window.codeshell.previewPanelAppRestore(
+      projectPath,
+      appId,
+      packageDigest,
+      history.expectedRevision,
+    );
+    const held = { projectPath, reviewToken: value.reviewToken };
+    if (!current.active) {
+      abandonReview(held);
+      return;
+    }
+    lease.current = held;
+    return value;
   }
   const close = () => void run(cancelReview, onClose, true);
   return (
@@ -151,19 +191,7 @@ export function PanelAppVersionsDialog({
                     version.packageDigest === history.current.packageDigest
                   }
                   onClick={() =>
-                    void run(
-                      async () => {
-                        await cancelReview();
-                        return window.codeshell.previewPanelAppRestore(
-                          projectPath,
-                          appId,
-                          version.packageDigest,
-                          history.expectedRevision,
-                        );
-                      },
-                      setReview,
-                      true,
-                    )
+                    void run(() => previewVersion(version.packageDigest), setReview, true)
                   }
                 >
                   {version.packageDigest === history.current.packageDigest
@@ -201,9 +229,11 @@ export function PanelAppVersionsDialog({
                 void run(
                   () => window.codeshell.restorePanelAppPackage(projectPath, review.reviewToken),
                   () => {
+                    lease.current = undefined;
                     onChanged();
                     onClose();
                   },
+                  true,
                 );
               }}
             >
