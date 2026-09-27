@@ -65,6 +65,7 @@ import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { ProjectAuthorityApi } from "./project-authority-types";
+import type { ProjectPanelVersionApi } from "./project-panel-version-types";
 import type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -1030,7 +1031,7 @@ export type ImGatewayUiEvent =
       conversation: DingTalkDiscoveredConversation;
     };
 
-export interface CodeshellApi extends ProjectAuthorityApi {
+export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionApi {
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
   sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */
@@ -1724,22 +1725,6 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
   getPanelAppBindings(cwd: string): Promise<PanelAppBindingState[]>;
-  getPanelAppPackageHistory(
-    cwd: string,
-    id: string,
-    revision: string,
-  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageHistory>;
-  previewPanelAppRestore(
-    cwd: string,
-    id: string,
-    digest: string,
-    revision: string,
-  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageRestoreReview>;
-  restorePanelAppPackage(
-    cwd: string,
-    token: string,
-  ): Promise<{ id: string; packageDigest: string }>;
-  cancelPanelAppRestore(cwd: string, token: string): Promise<{ cancelled: boolean }>;
   setPanelAppProjectBinding(
     cwd: string,
     id: string,
