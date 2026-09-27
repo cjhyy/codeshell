@@ -23,8 +23,8 @@ const sockets = new Set(),
 const credential = randomBytes(32).toString("base64url"),
   ticket = randomBytes(32).toString("base64url"),
   hostId = randomUUID();
+const publicOrigin = `https://${hostId}.devices.test`;
 let identity,
-  publicOrigin = `https://${hostId}.devices.test`,
   revoked = false;
 async function openSettings(win) {
   const remote = win.getByRole("button", { name: /^(手机遥控|Mobile remote)$/i });
