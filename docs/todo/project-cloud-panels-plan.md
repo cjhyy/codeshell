@@ -461,8 +461,8 @@ Panel b34589122982f3df11b04910d424e216242f92d7、services
   恢复项目实际启动／HTTP 读文件、再次备份、损坏拒绝及未完成恢复不可启动。
   SIGTERM 演练确认非零退出、失败证据和资源清理，既有资源未变。
 - Host wrapper 九项进程测试、services 75 项测试通过；最终小幅证据写入修正后
-  聚焦四项及格式通过，最终 services 两轮六项 CI 全通过。Host 最终 CI 与新
-  完整候选 36293191310 仍待终态，相关 PR 保持 draft。
+  聚焦四项及格式通过，最终 services 两轮六项 CI 全通过。Host 最终
+  CI 36293014515 九类全通过；完整候选 36293191310 仍运行，相关 PR 保持 draft。
 - 新完整候选固定 Host `72181eb9`、Panels `57703cbb`、services `df223e8b`，
   `real_speech=true`，同时覆盖公共版本取消修复、Link 恢复预检和 Cloud 整套恢复。
   本机使用既有不可变运行镜像的回归不冒充这个干净 Linux 候选的结果。

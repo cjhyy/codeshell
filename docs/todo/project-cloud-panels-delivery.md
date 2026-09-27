@@ -4748,7 +4748,7 @@ cleanupPassed=true，前后所有installation-labeled容器／卷／网络集合
 
 Host九项进程测试、Services75项全套通过；最终receipt修改后四项聚焦、格式、语法
 和diff检查通过。services最终df223e8b的CI36293136813／36293138597六项全通过。
-Host72181eb9的CI36293014515尚待最后终态，不将先前1268e3aa九类通过冒充它。
+Host72181eb9的CI36293014515最终九类全通过，已核对准确HEAD。
 [完整候选36293191310](https://github.com/cjhyy/codeshell-services/actions/runs/36293191310)
 已启动，固定Host72181eb9364730e98f2bfd9e8d13499b35013ac8、Panels
 57703cbb75ed44dce004215ad7075480c289becb、services
