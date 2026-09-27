@@ -76,7 +76,9 @@ export async function verifyCloudVideoRecording({
   await frame.locator("#host-recording-name").fill("Cloud recorded original");
   await recovered.getByRole("button", { name: "保存到素材库", exact: true }).click();
   const asset = await until(async () => {
-    const error = await frame.locator('[role="alert"]').allTextContents();
+    const error = (await frame.locator('[role="alert"]:visible').allTextContents())
+      .map((message) => message.trim())
+      .filter(Boolean);
     if (error.length) throw new Error(error.join("\n"));
     return (await readDocument()).document.assets.find((item) => item.resourceId === resourceId);
   });
