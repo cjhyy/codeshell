@@ -18,6 +18,10 @@
       "types": "./dist/index.worker.d.ts",
       "import": "./dist/index.worker.js"
     },
+    "./remote-relay": {
+      "types": "./dist/index.remote-relay.d.ts",
+      "import": "./dist/index.remote-relay.js"
+    },
     "./mobile-remote": {
       "types": "./dist/index.mobile-remote.d.ts",
       "import": "./dist/index.mobile-remote.js"
