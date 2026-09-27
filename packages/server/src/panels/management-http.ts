@@ -107,7 +107,7 @@ export function createPanelManagementHttp(options: PanelManagementHttpOptions) {
             context,
             (await body(request, ["reviewToken"])).reviewToken,
           );
-        } else if (url.pathname === ROOT + "/restore" && method === "DELETE") {
+        } else if (url.pathname === ROOT + "/restore/review" && method === "DELETE") {
           result = await service.cancelRestore(
             context,
             (await body(request, ["reviewToken"])).reviewToken,

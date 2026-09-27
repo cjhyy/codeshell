@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPanelManagementHttp } from "./management-http.js";
 import { publicPanelError } from "./management.js";
+import { installReviewedLocalPanelApp, previewLocalPanelApp } from "@cjhyy/code-shell-core";
 
 let root: string;
 let previousHome: string | undefined;
@@ -24,6 +25,7 @@ beforeEach(async () => {
   commitFailure = undefined;
   api = createPanelManagementHttp({
     cwd,
+    projectPackages: true,
     ownerId: async () => owner,
     isAuthorized: async () => Boolean(owner),
     resolveCommit: async () => {
@@ -100,13 +102,65 @@ test("closed HTTP services cannot return an authenticated catalog", async () => 
 });
 
 test("restore review cancellation is authenticated, strict and idempotent over HTTP", async () => {
-  const path = "/api/v1/panels/restore";
+  const path = "/api/v1/panels/restore/review";
   const response = await request(path, "DELETE", { reviewToken: "expired-review" });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ cancelled: true });
   expect((await request(path, "DELETE", { appId: "arbitrary" })).status).toBe(400);
   owner = undefined;
   expect((await request(path, "DELETE", { reviewToken: "expired-review" })).status).toBe(401);
+});
+
+test("a Panel named restore can cancel its version review and still be uninstalled through HTTP", async () => {
+  const sourceRoot = join(root, "restore-source");
+  mkdirSync(join(sourceRoot, ".codeshell-panel"), { recursive: true });
+  mkdirSync(join(sourceRoot, "app"));
+  writeFileSync(
+    join(sourceRoot, ".codeshell-panel/panel.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      id: "restore",
+      title: { default: "Restore" },
+      version: "1.0.0",
+      entry: "app/index.html",
+      placement: "right-dock",
+      icon: "panel",
+      singleton: true,
+      permissions: [],
+    }),
+  );
+  writeFileSync(join(sourceRoot, "app/index.html"), "<!doctype html><body>Restore</body>");
+  const source = { kind: "dir" as const, path: sourceRoot };
+  const preview = await previewLocalPanelApp(source);
+  await installReviewedLocalPanelApp(source, preview.reviewToken, new Date().toISOString());
+  const installed = (await (await request("/api/v1/panels")).json()).panels[0];
+  const binding = await request("/api/v1/panels/restore/binding", "PATCH", {
+    bound: true,
+    expectedRevision: installed.revision,
+  });
+  expect(binding.status).toBe(200);
+  const bound = (await binding.json()).panels[0];
+  const reviewed = await request("/api/v1/panels/restore/restore-preview", "POST", {
+    packageDigest: bound.packageDigest,
+    expectedRevision: bound.revision,
+  });
+  expect(reviewed.status).toBe(200);
+  const { reviewToken } = await reviewed.json();
+  const cancelled = await request("/api/v1/panels/restore/review", "DELETE", { reviewToken });
+  expect(cancelled.status).toBe(200);
+  expect(await cancelled.json()).toEqual({ cancelled: true });
+  expect((await (await request("/api/v1/panels")).json()).panels).toMatchObject([
+    { id: "restore", version: "1.0.0", bound: true },
+  ]);
+  const staleRestore = await request("/api/v1/panels/restore", "POST", { reviewToken });
+  expect(staleRestore.status).toBe(409);
+  expect(await staleRestore.json()).toMatchObject({ code: "review_expired" });
+  const removed = await request("/api/v1/panels/restore", "DELETE", {
+    expectedRevision: bound.revision,
+  });
+  expect(removed.status).toBe(200);
+  expect(await removed.json()).toEqual({ removed: true });
+  expect((await (await request("/api/v1/panels")).json()).panels).toEqual([]);
 });
 
 test("GitHub rate limits remain actionable in the real HTTP discovery response", async () => {

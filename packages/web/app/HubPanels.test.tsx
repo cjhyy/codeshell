@@ -567,7 +567,7 @@ test("closing a restore review cancels it on the Host and keeps the dialog on ca
     intercept: (request) => {
       if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
       if (request.url.pathname.endsWith("/restore-preview")) return Response.json(data.restore);
-      if (request.url.pathname.endsWith("/restore") && request.method === "DELETE")
+      if (request.url.pathname.endsWith("/restore/review") && request.method === "DELETE")
         return rejectCancellation
           ? Response.json({ error: "Cancellation unavailable" }, { status: 503 })
           : Response.json({ cancelled: true });
@@ -583,7 +583,7 @@ test("closing a restore review cancels it on the Host and keeps the dialog on ca
   expect(text(view.tree)).not.toContain("确认权限并恢复项目版本");
   expect(
     view.requests
-      .filter((request) => request.url.pathname.endsWith("/restore"))
+      .filter((request) => request.url.pathname.endsWith("/restore/review"))
       .map((request) => ({ method: request.method, body: request.body })),
   ).toEqual([
     { method: "DELETE", body: { reviewToken: data.restore.reviewToken } },
@@ -600,14 +600,15 @@ test("opening uninstall releases the prior version review without restoring or u
     intercept: (request) => {
       if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
       if (request.url.pathname.endsWith("/restore-preview")) return Response.json(data.restore);
-      if (request.url.pathname.endsWith("/restore")) return Response.json({ cancelled: true });
+      if (request.url.pathname.endsWith("/restore/review"))
+        return Response.json({ cancelled: true });
     },
   });
   await click(button(view.tree, "项目版本"));
   await click(button(view.tree, "审阅 v1.0.0"));
   await click(button(view.tree, "卸载"));
   const cancellations = view.requests.filter((request) =>
-    request.url.pathname.endsWith("/restore"),
+    request.url.pathname.endsWith("/restore/review"),
   );
   expect(cancellations.map(({ method, body }) => ({ method, body }))).toEqual([
     { method: "DELETE", body: { reviewToken: data.restore.reviewToken } },
@@ -630,7 +631,8 @@ for (const late of [false, true])
         if (request.url.pathname.endsWith("/versions")) return Response.json(data.history);
         if (request.url.pathname.endsWith("/restore-preview"))
           return late ? delayed : Response.json(data.restore);
-        if (request.url.pathname.endsWith("/restore")) return Response.json({ cancelled: true });
+        if (request.url.pathname.endsWith("/restore/review"))
+          return Response.json({ cancelled: true });
       },
     });
     await click(button(view.tree, "项目版本"));
@@ -648,10 +650,10 @@ for (const late of [false, true])
       });
     }
     const cancellations = view.requests.filter((request) =>
-      request.url.pathname.endsWith("/restore"),
+      request.url.pathname.endsWith("/restore/review"),
     );
     expect(cancellations).toHaveLength(1);
-    expect(cancellations[0]!.url.pathname).toBe("/api/v1/panels/restore");
+    expect(cancellations[0]!.url.pathname).toBe("/api/v1/panels/restore/review");
     expect(cancellations[0]!.url.search).toBe(issued.url.search);
     expect(cancellations[0]!.body).toEqual({ reviewToken: data.restore.reviewToken });
     expect(view.changed).toBe(0);

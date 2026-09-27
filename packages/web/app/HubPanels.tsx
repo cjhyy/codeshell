@@ -350,9 +350,14 @@ export function HubPanels({
   };
   const cancelRestoreReview = async () => {
     if (!restoreReview) return true;
-    const result = await run<{ cancelled: boolean }>("正在关闭版本审阅…", "/restore", "DELETE", {
-      reviewToken: restoreReview.reviewToken,
-    });
+    const result = await run<{ cancelled: boolean }>(
+      "正在关闭版本审阅…",
+      "/restore/review",
+      "DELETE",
+      {
+        reviewToken: restoreReview.reviewToken,
+      },
+    );
     if (!result?.cancelled) return false;
     restoreLease.current = undefined;
     setRestoreReview(undefined);
@@ -383,7 +388,7 @@ export function HubPanels({
   const previewRestore = async (packageDigest: string) => {
     if (!history) return;
     if (!(await cancelRestoreReview())) return;
-    const target = apiUrl(`${ROOT}/restore`);
+    const target = apiUrl(`${ROOT}/restore/review`);
     const result = await run<PanelPackageRestoreReview>(
       "正在审阅项目版本…",
       `/${encodeURIComponent(history.appId)}/restore-preview`,
