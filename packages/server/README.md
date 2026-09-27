@@ -33,6 +33,12 @@ Agent 策略由产品宿主通过 `ResidentAgentOptions.appendSystemPrompt` 注�
 `/serve` 则是有意保留的开箱即用产品入口：CLI 被调用时解析 Coding stdio
 worker 和已构建的 Web app。
 
+`MobileUploadService.revokeDevice(deviceId)` 同步禁止该设备的新票据和领取操作，
+中止尚未被任务认领的上传，并返回可等待的临时文件清理结果。`RemoteHostManager`
+的同名方法会调用它、报告异步清理错误；`stop()` 会等待清理完成。已被任务认领的
+附件保留至原持有者 `finalize` 或 `release`；撤销后的 `release` 不会重新开放票据。
+自定义 `uploads` 适配器也必须实现这项设备级撤销。其他设备的上传不受影响。
+
 ## 独立服务的单 owner 认证
 
 `/auth` 直接复用 Hub 的认证实现，运行时仅导出 `createHubAuth` 和
