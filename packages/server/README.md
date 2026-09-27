@@ -73,6 +73,10 @@ Desktop Web 不会创建第二个 Hub Worker，也不需要再建 Hub 管理员�
 `hub/` 与 `/links` 实现。Electron 原生 renderer 仍使用原来的 IPC。
 具体文件与环境差异见 [共享 Web 工作台](../../docs/todo/shared-web-workbench.md)。
 
+Desktop Web 和 Hub 在注销或显式撤销会话时，会关闭该会话尚未完成的受保护 HTTP
+响应，包括正在下载的文件，并停止源文件读取、释放句柄。其他会话的下载不受影响；
+已经返回接受结果的后台任务仍由原来的任务生命周期管理。注销请求本身仍返回成功。
+
 ## code-shell-serve — 个人 Hub Web host
 
 在任意机器上把一个 workspace 变成浏览器可访问的 CodeShell：
