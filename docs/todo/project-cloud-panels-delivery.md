@@ -4379,3 +4379,27 @@ Host 语法／lint／格式／server build 通过；Panel 包预检通过；serv
 已按 clean／祖先关系／lsof 核对并清理 real-interview-speech Panel、video-cloud-recording
 Host 与 services 的工作树和本地／远程分支。video-cloud-recording Panel 和新三仓
 工作树保留。原始用户工作树不动。整体 goal active，未公开发布或目标部署。
+
+### 增量 105：保留媒体播放失败现场，继续原云端候选（2026-09-27）
+
+上一轮为实际进展：完成视频候选验收、合入模型工具和 Host #33、实现并启动真实
+云端模型候选。本轮核对发现 Panel f9551eb 的 36286460417/media job 108528056980
+终态失败，另一轮 36286463342 的同项通过。下载已结束 job 的完整日志，定位一个
+实际子测试 playback reconnects video audio and follows both trimmed sources after
+ eviction：playOwnedSequence 15 秒没有源帧推进，抛出“素材播放中断”。报告中的
+两项 failure 为子测试与父测试，不是两个独立失败。日志
+/tmp/video-cloud-final-media-ci-failed.log。未把本次失败当成可以忽略的瞬态。
+
+本机八次针对性重复通过。Panel #53 新提交 8f35429939a01f2902b629969fdf498046c7864b
+保留失败前最近十个媒体／音频时钟采样，以及当时素材缓冲、解码、连接和可见性
+状态；不改生产播放逻辑、不跳过测试、不扩大超时。新诊断版针对检查和完整媒体
+文件 24 项通过，后者没有跳过。日志 /tmp/video-cloud-playback-repeat.log、
+/tmp/video-cloud-playback-diagnostics-test.log、/tmp/video-cloud-playback-full-diagnostics.log。
+新 CI 36286868594／36286871146 运行中。根因仍未确认，PR #53 保持 draft；已通过
+的视频候选仍只证明记录的 93f05c1 业务提交，不把新增诊断当成问题修复。
+
+云端真实模型 Host ed4fc7fe 的 CI 36286445846 九类全部通过；services 28247d5
+两轮 Node 22.16／22／24 六项全部通过；Panel b3458912 的两轮完整 CI
+36286397212／36286428942 全部通过。完整容器候选 36286470665 仍等待终态。
+两次 GitHub 读取短暂 EOF 只视为观察失败，继续查询同一 run，没有取消或重开。
+目标仍 active；公开发布、目标部署、真实 Link 账号与设备目录／中继继续未完成。
