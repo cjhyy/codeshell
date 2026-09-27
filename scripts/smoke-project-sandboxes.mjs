@@ -51,11 +51,11 @@ if (candidatePanelsIndex >= 0 && !candidatePanels)
 const businessIndex = process.argv.indexOf("--candidate-business");
 const candidateBusiness = businessIndex < 0 ? "all" : process.argv[businessIndex + 1];
 if (
-  !["all", "packages", "job-hunt", "design", "video"].includes(candidateBusiness) ||
+  !["all", "packages", "job-hunt", "design", "video", "quant"].includes(candidateBusiness) ||
   (businessIndex >= 0 && !candidatePanels)
 )
   throw new Error(
-    "--candidate-business requires staged Panels and all, packages, job-hunt, design or video",
+    "--candidate-business requires staged Panels and all, packages, job-hunt, design, video or quant",
   );
 const speechIndex = process.argv.indexOf("--speech-bundle");
 const speechBundle = speechIndex < 0 ? undefined : process.argv[speechIndex + 1];
@@ -67,6 +67,11 @@ const speechFixture = speechBundle ? await loadSpeechFixture(speechBundle) : und
 const downloadPanelIndex = process.argv.indexOf("--download-panel");
 const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
 if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
+const downloadFixtureIndex = process.argv.indexOf("--download-fixture");
+const downloadFixture =
+  downloadFixtureIndex < 0 ? undefined : process.argv[downloadFixtureIndex + 1];
+if (downloadFixtureIndex >= 0 && (!downloadFixture || (!candidatePanels && !downloadPanel)))
+  throw new Error("--download-fixture requires a fixture path and a Download package");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
 const { WebSocket } = createRequire(join(serverRoot, "package.json"))("ws");
@@ -801,6 +806,7 @@ try {
   let verifyJobHuntRestart;
   let verifyDesignRestart;
   let verifyVideoRestart;
+  let verifyQuantRestart;
   if (candidatePanels) {
     const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
     verifyCandidateRestart = await verifyCandidatePanelLifecycle({
@@ -865,8 +871,23 @@ try {
       evidenceDir: join(root, "..", "evidence"),
     });
   }
+  if (candidatePanels && ["all", "quant"].includes(candidateBusiness)) {
+    const { verifyCloudQuantBacktest } = await import("./smoke-cloud-quant-backtest.mjs");
+    verifyQuantRestart = await verifyCloudQuantBacktest({
+      docker,
+      request,
+      serverUrl,
+      password,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      candidatePanels,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
   let verifyDownloadRestart;
-  if (downloadPanel) {
+  if (downloadPanel || (downloadFixture && candidateBusiness === "all")) {
     const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
     verifyDownloadRestart = await verifyCloudDownload({
       docker,
@@ -877,6 +898,9 @@ try {
       otherProjectId: b.id,
       container: containerA,
       packagePath: downloadPanel,
+      containerCore,
+      alreadyInstalled: !!candidatePanels,
+      fixturePath: downloadFixture,
       evidenceDir: join(root, "..", "evidence"),
       scratch,
       password,
@@ -982,6 +1006,7 @@ try {
   await verifyJobHuntRestart?.();
   await verifyDesignRestart?.();
   await verifyVideoRestart?.();
+  await verifyQuantRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",
