@@ -4915,3 +4915,63 @@ writeFinished=false 令 local-stream 立即 terminate WSS，丢掉已排队的�
 新增入口负责目录登记、仅主进程可读的系统密钥环密文、启停与连接状态。默认关闭，
 不改 Panel，不宣称已完成实际 Electron／物理手机／公网验收。公开发布、真实
 provider 与目标部署仍待；完整 Linux 中继候选因该已知问题尚未启动，goal active。
+
+
+## 增量 117：桌面接入与实际中继验收通过，最终 Linux 候选启动（2026-09-27）
+
+进一步真实轨迹证明：第一版 Host 有界 flush 仅能保存已读响应；固定十二案例中，
+九次 TCP EPIPE 前 bytesRead=0，读侧已被原生 Socket 销毁，不能通过延迟销毁外层
+恢复尚未读到的字节。最终改用单次专用 keep-alive 请求使 Host 可以交付提前拒绝，
+最终响应头后停止继续向 Host 转发。Services 自身丢弃余下客户端输入，避免 pause
+未读输入令浏览器完整响应遭 RST；响应完整后关闭该单请求流和上游，绝不复用。
+
+真实 TCP 反例原先在 404 头后仍从 64KiB 转发到 4MiB；修复后 Host 始终只收
+64KiB，浏览器精确收到 512KiB+137 的响应，后续请求使用新连接，真正 Content-Length
+截断仍失败。Host 实际 TLS runner 同时覆盖十二次 4MiB 早拒绝、并行取消、截断、
+慢读尾部、非法帧及停止后端口复用。Host 修复 `f3c57ada` 的 116 项／513 断言及
+CI36301155265 九类全通过；Services `ec7fac7c43254a73c8200795278e3f43168a1dd4`
+96 项和 CI36301221058/36301222099 六项通过，日志
+`/tmp/device-relay-services-early-response-tests.log`。
+
+桌面 [#45](https://github.com/cjhyy/codeshell/pull/45) 分支 `codex/desktop/device-relay`
+从原主干正常合入底层，独立实现 `db97dd7a`，再合入 f3 为
+`7563e615b9a4cc0f5078d026d68e53d58b1467d4`。root #43 快进到同一组合。桌面使用
+同一 environmentIdentity、独立 OS 密钥环密文存储和主窗口 IPC；不可用/明文后端
+拒绝登记。登记前预检，停止可取消在途登记；目录明确 401/403 停止并删除凭据，
+网络/5xx 保留重试。默认关闭；停止连接、本机忘记和目录撤销文案分开。
+
+实际 Electron 生产构建配隔离配置、真实 OS safeStorage 和 TLS/WSS 协议夹具完成
+登记/票据清空/身份一致、口令与二维码、连接/停止、活跃退出、同配置重启默认关闭、
+401 清理、重新登记/移除和 LAN 启停。协议夹具不冒充真实 Services，后者独立验收。
+日志 `/tmp/desktop-relay-electron-final.log`，截图
+`/tmp/codeshell-desktop-device-relay-ui.png` 已由主代理查看。34 项／311 断言及后续
+删除失败/契约检查通过；合并后十一项／168 断言通过，主进程原入口行数下降；
+IPC 数量仅增加三项已审阅操作，没有抬文件行数预算或提供凭据读取。
+
+最终 7563 的 Server build、十八文件 128 项／584 断言、类型和 diff 通过；五包
+manifest 在 `device-relay/artifacts/7563e615b9a4cc0f5078d026d68e53d58b1467d4/`，
+Server SHA256 `0c48c4d99a7205e8ebf051bfad4876c6bfc2cb625c9a0b1ca59e76a441060537`。
+与 Services ec7 的全新 Node22.16 安装由真实 root wrapper 验收，十四阶段和清理
+全通过，真实认证关闭及上传四项全 true。receipt
+`device-relay/evidence/device-relay-acceptance-node22-ec7fac7-7563e61.json`，6475B，
+SHA256 `cbe37cf6b1855ec6eaaefe4511149ea1e367c79854e788603ef94497a2ad251e`。
+主代理核对源、manifest、五包/npm integrity、服务/fixture 哈希；另一代理逐字节
+核对 1328 个已安装文件与包、八服务文件和七夹具与提交，均一致。
+
+7563 的 CI36301242788 八类成功，仅 e2e-device-relay.mjs 的不变 publicOrigin
+使用 let 新增 prefer-const，警告106超过原105。最终
+`7a21a6d73f5ef9b6a645c1a1d9bcee0741393e01` 仅将该夹具变量改 const；单文件零
+警告、全局0 errors/105 warnings通过，未抬预算，未改变生产包。旧失败日志
+`/tmp/desktop-relay-ci-36301242788-guards.log` 与修复日志
+`/tmp/desktop-relay-ci-baseline-fixed.log` 保留。新最终 CI36301526311/#43 CI 仍待。
+
+[完整 Linux 候选36301566352](https://github.com/cjhyy/codeshell-services/actions/runs/36301566352)
+已 dispatch，精确 Host7a21、Servicesec7、Panels57703cbb，real_speech=true。
+现有 Panel 包保持原样。最终来源会重新构建实际包、镜像并完成旧有业务/恢复与新
+中继门槛，尚未完成，不提前 ready/merge 或称生产交付。
+
+稳定证据副本位于
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/device-relay-local-7563e615/`，
+含七份最终 UI/网络证据和先前失败及哈希索引，权限0600/目录0700。原始证据未覆盖。
+公开发布、真实 provider、目标域名/TLS/服务器部署、实体手机弱网与跨版本回滚
+仍待；当前是已验收本机组件与运行中的完整候选，goal active。
