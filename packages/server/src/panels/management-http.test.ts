@@ -99,6 +99,16 @@ test("closed HTTP services cannot return an authenticated catalog", async () => 
   expect(await response.json()).toMatchObject({ code: "login_required" });
 });
 
+test("restore review cancellation is authenticated, strict and idempotent over HTTP", async () => {
+  const path = "/api/v1/panels/restore";
+  const response = await request(path, "DELETE", { reviewToken: "expired-review" });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ cancelled: true });
+  expect((await request(path, "DELETE", { appId: "arbitrary" })).status).toBe(400);
+  owner = undefined;
+  expect((await request(path, "DELETE", { reviewToken: "expired-review" })).status).toBe(401);
+});
+
 test("GitHub rate limits remain actionable in the real HTTP discovery response", async () => {
   commitFailure = new Error("GitHub API 速率限制（每小时 60 次未鉴权请求），稍后再试");
   const response = await request("/api/v1/panels/github/discover", "POST", {

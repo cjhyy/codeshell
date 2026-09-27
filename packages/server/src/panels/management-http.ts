@@ -107,6 +107,11 @@ export function createPanelManagementHttp(options: PanelManagementHttpOptions) {
             context,
             (await body(request, ["reviewToken"])).reviewToken,
           );
+        } else if (url.pathname === ROOT + "/restore" && method === "DELETE") {
+          result = await service.cancelRestore(
+            context,
+            (await body(request, ["reviewToken"])).reviewToken,
+          );
         } else {
           const match =
             /^\/api\/v1\/panels\/([^/]+)(?:\/(binding|update-preview|versions|restore-preview))?$/.exec(

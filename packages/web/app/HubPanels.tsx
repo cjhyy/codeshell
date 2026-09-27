@@ -322,7 +322,20 @@ export function HubPanels({
       );
     }
   };
+  const cancelRestoreReview = async () => {
+    if (!restoreReview) return true;
+    const result = await run<{ cancelled: boolean }>("正在关闭版本审阅…", "/restore", "DELETE", {
+      reviewToken: restoreReview.reviewToken,
+    });
+    if (!result?.cancelled) return false;
+    setRestoreReview(undefined);
+    return true;
+  };
+  const closeHistory = async () => {
+    if (await cancelRestoreReview()) setHistory(undefined);
+  };
   const loadHistory = async (panel: Pick<ManagedPanel, "id" | "revision">) => {
+    if (!(await cancelRestoreReview())) return;
     setReview(undefined);
     setRemoving(undefined);
     setRestoreReview(undefined);
@@ -342,6 +355,7 @@ export function HubPanels({
   };
   const previewRestore = async (packageDigest: string) => {
     if (!history) return;
+    if (!(await cancelRestoreReview())) return;
     const result = await run<PanelPackageRestoreReview>(
       "正在审阅项目版本…",
       `/${encodeURIComponent(history.appId)}/restore-preview`,
@@ -481,13 +495,7 @@ export function HubPanels({
               <h2>{panelTitle(history.title)} · 项目版本</h2>
               <p>项目记录版本：{history.current.version}</p>
             </div>
-            <button
-              disabled={!!busy}
-              onClick={() => {
-                setHistory(undefined);
-                setRestoreReview(undefined);
-              }}
-            >
+            <button disabled={!!busy} onClick={() => void closeHistory()}>
               关闭版本记录
             </button>
           </header>
