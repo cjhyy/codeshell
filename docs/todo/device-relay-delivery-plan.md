@@ -8,6 +8,19 @@ Node22.16 真实 TLS/WSS、实际 Electron/OS 密钥环和完整 Linux 候选 36
 Services 后续纯文档 #15 合入 `a87cfe0c`，补配置加载与独立验收 artifact 位置，
 不改变候选源码/包。公网部署、真实 provider 与物理手机未验收，Panel 内容冻结。
 
+## 设备目录恢复候选（检查点119）
+
+原候选通过网络/撤销/重启，不包含设备目录快照恢复。真实旧版本探针确认直接复制
+旧快照会恢复曾撤销的session/credential/ticket；本轮已补受控停机备份与新目录恢复。
+完整Linux候选36306016201（准确Host8314/Servicesbab72/Panel577）通过第十五stage、
+九项恢复、Cloud恢复、真实语音、镜像校验及归档，原始ZIP已保全。Host #46已合入
+99940e7f；Services #16代码bab72及纯文档774a1c7已合入49bcc157，最终六项CI全通过。
+Node22.16完整166项、独立恢复70项、初始化故障10项及有限同schema升级回退均通过。
+只有命令成功后才配置恢复目标；失败或中断目标不得上线，初次mkdir到首文件之间的
+强制kill不宣称零窗口原子保证。公网/provider/目标机器及实体手机仍待，Panel冻结。
+before、故障和版本切换证据在`project-cloud-panels/artifacts/device-relay-recovery/`；
+新候选证据在`project-cloud-panels/artifacts/cloud-candidate-36306016201-evidence/`。
+
 ## 产品边界
 
 services 提供设备目录和受信中继；桌面主动建立出站连接；手机访问电脑的稳定地址，

@@ -5037,3 +5037,90 @@ Services文档CI36303872985/36303896895六项全成功，main相对候选ec7仅�
 
 真实 provider/目标配置仍缺，公开包和镜像未发布；公网与实体手机、目标恢复及
 跨版本升级回滚仍待。Panel业务按最新用户要求冻结，goal仍未完成。
+
+
+## 增量 119：电脑目录恢复与完整候选通过（2026-09-27）
+
+上一轮确实完成原范围代码/文档合入、完整Linux候选及归档保全；这不是无进展等待。
+本轮从当前main重新核对剩余运维边界，发现新设备目录只说明停机复制，未像Cloud/Link
+提供清除历史权限的恢复路径。Node22.16对精确Host7563/Servicesec7隔离复现已证实
+旧快照复活owner session、电脑凭据与已消费ticket；缺auth可重新bootstrap，缺DB可
+启动空目录；异步登录未排空就撤销可再次签发；中间auth symlink可越选定根。
+原始before证据已保全 `artifacts/device-relay-recovery/before.log`，不涉及真实用户凭据。
+
+Host独立分支`codex/server/device-relay-recovery-gate`的
+`8314bdff5c6c622e16409c22c5930fb0e63bc8b8`，draft
+[#46](https://github.com/cjhyy/codeshell/pull/46)，新增第十五个明确恢复stage与九项结果
+强制检查；旧十四阶段receipt不可通过。20项进程tests/44断言、格式、diff与
+[CI36304583671](https://github.com/cjhyy/codeshell/actions/runs/36304583671)全九类通过。
+只改gate/test/doc四文件，五个生产包源码不变，尚未合入。
+
+Services在独立`codex/services/device-relay-recovery`实现停机备份、新目录恢复，
+先在私密scratch完成schema/auth/身份验证及所有权限撤销，再发布到带marker和无效DB
+占位的新目标。保留hostId/env/owner/origin，清票据/凭据/会话，epoch/generation递增；
+所有异步工作及锁释放完成才移除marker。原目录不能被修改，缺失/损坏不能靠初始化补全。
+独立真实TLS helper与负例单测已合入工作分支。Node22.16诊断副本50/50测试无skip，
+真实TLS helper九字段全部true；独立审阅副本也50/50通过。两者不是最终冻结安装
+receipt，仍须实际候选wrapper与完整Linux验收。
+
+主代理还实证并交实现方修正：目录rename+symlink后仅查lock inode会错误认作仍持锁；
+SQLite `NOT LIKE 'sqlite_%'`的下划线通配导致sqliteevil额外表被忽略。当前锁已纳入
+根目录身份，schema使用严格GLOB，marker用lstat拒绝dangling链接；最终复验仍待。
+独立审阅又复现首次目标文件写入ENOSPC留下空目录可bootstrap；9729237先创建无效DB
+占位，捕获初始化错误时仅按原目录inode删除确为空的目录，并补故障注入测试。
+mkdir到首个文件间强制kill仍可能留下空目录，runbook明确只有命令成功后才能切换
+服务配置；失败或中断目标不得上线，不声称任意系统调用点零窗口原子发布。
+Services最终冻结`bab72a7892b1c6e8f177519ef780f391c9730c09`，draft
+[#16](https://github.com/cjhyy/codeshell-services/pull/16)。使用原Host7563真实五包
+新建隔离安装，Node22.16全套166/166无skip，实际Host wrapper十五阶段/九项恢复/
+cleanup全true，receipt SHA256
+`a833f380c6b3334a4bfd1be6e36bf2e907e1b59a33415331d345194dd040ab35`。
+root将20份源/fixture文件逐字节与bab72及实际安装比较一致，manifest与五tarball
+也匹配；审计在`artifacts/device-relay-recovery/root-local-audit.json`。
+独立恢复70/70无skip、初始化故障及目录保护10/10通过；六项Services常规CI全通过。
+完整Linux候选[36306016201](https://github.com/cjhyy/codeshell-services/actions/runs/36306016201)
+已触发，准确Host8314/Servicesbab72/Panel577，real_speech=true，尚在运行。
+没有把旧生产包源7563重标为8314；新Linux会重新构建8314并记录独立receipt。
+
+等待Linux期间，独立代理用Node22.16/Host7563实际五包补有限的schema=1升级回退：
+五个独立进程严格关服退出后依次运行ec7→bab72→ec7，以及新工具恢复→bab72重新授权
+→ec7读取完成态恢复。八项全true、清理通过，正常切换保留owner/session/installation/
+host/environment/电脑凭据；新代码票据能由旧代码消费，恢复已撤销权限未复活。
+receipt SHA256 `defe2226427a942ccd86483c7a1046204161614f84178c94fbd790909dec8c0f`，
+完整输入/脚本/日志保留`artifacts/device-relay-recovery/schema1-ec7-bab-evidence.json`。
+不泛化为公开版本、Cloud/Link跨schema或目标服务器升级回滚已验收。
+
+上述为开发期间的顺序记录；最终完整Linux候选36306016201于08:56:01Z全部SUCCESS，
+准确Host8314/Servicesbab72/Panel577。十五阶段、九项恢复/四项上传/真实auth排空/
+cleanup全部通过；Linux relay receipt SHA256
+`63fbec1889c57a8f4ab8090196acbee3342e5ecf8e36cefe1fff491f960af303`。
+完整Cloud恢复receipt SHA256
+`5a35a931bb100806476856d668c1b028a21cd9f65e67fe466fcfbb9f13a9efbb`。
+runtime镜像`sha256:37be7da497a6a79e565fbb2e071e79697e8926bc5b6491da5aeb1bb16c75e3d6`，
+Link镜像`sha256:564d014a9f0e97c60c4a28f88aef957d1bdb32e51709bfe03e28e121363613dd`，
+均linux/amd64，归档校验与加载通过。固定helper仍另行准备，未嵌入候选。
+
+部署artifact10927644045，698610825字节，ZIP SHA256
+`5a05172dc0e3c470ead6fbd95f67d8dbed627781c51758c48241cf00a9e62ab3`，到期2026-10-11。
+内层tar SHA256 `635e4cd5e676c68d5af878350c3fb1d4424085715bcbbffdf622b7a740125d15`。
+小证据artifact10927768370，3073156字节，SHA256
+`816433f2723a75437f6c325552a2dda074542e594f047b892c346f39e8a509d8`，到期2026-10-04。
+唯一下载与streaming归档检查核对342份文件、五包、六Panel和两镜像；root另核本地
+ZIP完整SHA/大小/0600权限一致。原始ZIP与同名receipt保留于
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36306016201.zip`，
+完整审计在同层`cloud-candidate-36306016201-evidence/final-delivery-audit.json`。
+不覆盖上一轮成功归档，不将后续文档或合并提交重标为候选源。
+
+Host #46正常合入`99940e7f807223081a08e72c8590ad3f37fe233f`，fetch后与8314全树无差异。
+Host gate任务树及本地/远程分支已安全移除，clean/ancestor/无占用均核实；原主树
+a8d9e087/原分支/clean保持不变，清理回执在`artifacts/device-relay-recovery/`。
+Services最终文档`774a1c771d95fc73e3d61ffe713a7749783822ac`仅改docs/acceptance.md，
+六项常规CI36307980346/36307976700全部通过，不为纯文档重复运行完整候选。
+PR16于09:08:41Z正常合入`49bcc157e49b01d2fff5b16bb9425338ce3063b4`，fetch确认main
+相对冻结候选bab72仍仅有该验收文档变化，已完成代码与文档合入。
+Services两棵任务树及本地分支已在clean/ancestor/无文件占用检查后无force移除；
+远程recovery按最终774a1c7精确lease删除，fixture从未push。primary仍956f493/原分支/
+clean保持不变，安装stage、所有证据与原始归档保留，清理回执已另存稳定artifact目录。
+
+Panel内容保持冻结；公开发布、真实provider、目标部署信息仍缺，目标机器和公开版本
+升级恢复、实体手机尚未验收。已完成源码与私有候选不等于上线；goal active。
