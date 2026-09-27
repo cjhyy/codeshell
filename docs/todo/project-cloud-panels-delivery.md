@@ -4177,3 +4177,11 @@ Host 分支 codex/server/cloud-interview-audio，5078a66fcf10a88bf9bb7ab7f2fd248
 固定上述 Host／Panel 和 services e36f3280，已启动，首次 queued。完整容器结果尚未
 取得，两 PR 不合并；服务公网部署、真实提供商、正式发布和统一目录／中继仍待完成，
 手机操作优化继续后置。整体 goal 保持 active。
+
+增量 100 CI 跟进：Panel b53c6fb 的一轮 PDF job 108518293798 在测试前的 Chromium
+探针目录清理处 ENOTEMPTY 失败，浏览器主进程状态为 0；另一轮同提交 PDF job
+108518147804 通过。检查终态 job 日志后，为该任务私有临时目录增加有上限的
+rmSync 重试，不吞掉持续失败，也不改变沙箱／PDF 执行。Panel 新提交 00b83eb，
+工作流格式与 diff 通过，已推送待最终 CI。已有容器候选 36283000541 的业务源码
+仍为 b53c6fb，已确认在真实运行镜像验收中，未取消或重开；最终组合仍须单独核对。
+日志 /tmp/job-hunt-audio-pdf-ci-failed.log。
