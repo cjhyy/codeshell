@@ -287,6 +287,20 @@ test("Desktop diagnoses a broken package separately and repairs its binding thro
   expect(states.find((item) => item.appId === healthy.id)?.unavailable).toBeUndefined();
   const history = await desktop.packageHistory(context, issue.appId, issue.revision);
   expect(history.current.unavailable).toBe(true);
+  const cancelled = await desktop.previewRestore(
+    context,
+    issue.appId,
+    replacement.packageDigest,
+    issue.revision,
+  );
+  await desktop.cancelRestore(context, cancelled.reviewToken);
+  await expect(desktop.restore(context, cancelled.reviewToken)).rejects.toMatchObject({
+    status: 409,
+  });
+  expect((await desktop.snapshot()).find((item) => item.appId === first.id)).toMatchObject({
+    unavailable: true,
+    version: "1.0.0",
+  });
   const review = await desktop.previewRestore(
     context,
     issue.appId,

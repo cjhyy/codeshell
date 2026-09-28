@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -355,3 +355,98 @@ test("remote Link deployment configuration reaches only the private project secr
     [...docker.containers.values()][0].Config.Labels[`${PROJECT_RUNTIME_LABEL}.configuration`],
   ).not.toBe(first);
 });
+
+test("operator seccomp is snapshotted, privately copied and changes runtime identity without losing volumes", async () => {
+  const sourceRoot = await mkdtemp(join(tmpdir(), "codeshell-seccomp-source-"));
+  temporary.push(sourceRoot);
+  const source = join(sourceRoot, "profile.json");
+  const original = { defaultAction: "SCMP_ACT_ERRNO", syscalls: [] };
+  await writeFile(source, JSON.stringify(original));
+  const first = await fixture({ seccompProfile: source });
+  await writeFile(source, "invalid modified source");
+  await first.provider.ensure(project, origin);
+  const create = first.docker.commands.find(
+    (args) => args[0] === "container" && args[1] === "create",
+  )!;
+  const security = first.docker.values(create, "--security-opt");
+  expect(security).toContain("no-new-privileges:true");
+  const copied = security.find((value) => value.startsWith("seccomp="))!.slice(8);
+  expect(copied).toStartWith(join(first.dataDir, "project-runtime-security"));
+  expect(copied).not.toBe(source);
+  expect(JSON.parse(await readFile(copied, "utf8"))).toEqual(original);
+  expect((await stat(copied)).mode & 0o777).toBe(0o400);
+  expect(create).toContain("ALL");
+  expect(create).toContain("--read-only");
+  expect(create).not.toContain("--privileged");
+  const names = [...first.docker.volumes.keys()];
+  const changed = { ...original, syscalls: [{ names: ["unshare"], action: "SCMP_ACT_ALLOW" }] };
+  await writeFile(source, JSON.stringify(changed));
+  const second = createDockerProjectProvider({
+    installationId,
+    dataDir: first.dataDir,
+    command: first.docker.command,
+    healthCheck: async () => true,
+    seccompProfile: source,
+  });
+  providers.push(second);
+  await expect(second.ensure(project, origin)).rejects.toThrow("still running");
+  await second.stop(project);
+  await second.ensure(project, origin);
+  expect([...first.docker.volumes.keys()]).toEqual(names);
+  expect(
+    first.docker.commands.filter((args) => args[0] === "container" && args[1] === "rm"),
+  ).toHaveLength(1);
+  const last = first.docker.commands
+    .filter((args) => args[0] === "container" && args[1] === "create")
+    .at(-1)!;
+  const nextPath = first.docker
+    .values(last, "--security-opt")
+    .find((value) => value.startsWith("seccomp="))!
+    .slice(8);
+  expect(nextPath).not.toBe(copied);
+  expect(JSON.parse(await readFile(nextPath, "utf8"))).toEqual(changed);
+});
+
+test("invalid operator security configuration cannot fall back to Docker defaults", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "codeshell-invalid-seccomp-"));
+  temporary.push(directory);
+  const path = join(directory, "profile.json");
+  for (const contents of [
+    "unconfined",
+    '{"secret":"do-not-echo"}',
+    JSON.stringify({ defaultAction: "SCMP_ACT_ALLOW", syscalls: [] }),
+    "x".repeat(1024 * 1024 + 1),
+  ]) {
+    await writeFile(path, contents);
+    const docker = fakeDocker();
+    expect(() =>
+      createDockerProjectProvider({
+        installationId,
+        dataDir: directory,
+        command: docker.command,
+        seccompProfile: path,
+      }),
+    ).toThrow("deny-by-default");
+    expect(docker.commands).toEqual([]);
+  }
+  await expect(fixture({ seccompProfile: directory })).rejects.toThrow("regular JSON");
+});
+
+test.skipIf(process.platform === "win32")(
+  "security configuration rejects symlink sources and redirected private storage",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-seccomp-symlink-"));
+    temporary.push(root);
+    const file = join(root, "profile.json"),
+      link = join(root, "linked.json");
+    await writeFile(file, JSON.stringify({ defaultAction: "SCMP_ACT_ERRNO", syscalls: [] }));
+    await symlink(file, link);
+    await expect(fixture({ seccompProfile: link })).rejects.toThrow("regular JSON");
+    const f = await fixture({ seccompProfile: file });
+    await symlink(root, join(f.dataDir, "project-runtime-security"));
+    await expect(f.provider.ensure(project, origin)).rejects.toThrow(
+      "Unsafe project runtime security directory",
+    );
+    expect(f.docker.containers.size).toBe(0);
+  },
+);

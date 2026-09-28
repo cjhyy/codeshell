@@ -209,6 +209,56 @@ the legacy Desktop media picker, preview and document bridge are not advertised 
 workflow currently requires Desktop; unsupported features must be explained
 before starting work.
 
+Web also advertises `resources.preview({assetId})` for inline media. It returns
+`{asset, url}` without opening a workbench preview. The URL belongs to the current
+opaque Panel asset grant and keeps the public project-proxy prefix. Use it with
+an image/audio/video element and `crossOrigin = "anonymous"` before setting `src`
+when pixels or Web Audio are needed; general `fetch` remains blocked by the frame
+CSP. It streams with Range/HEAD support rather than materializing a large Blob.
+
+The URL is a bearer capability for that Panel's project scope. Do not persist or
+share it; obtain another after reopening the Panel. Closing or expiring the grant,
+revoking its login, or changing Panel authorization stops access, including active
+readers. Only raster image, audio, video and font MIME types are served; HTML, SVG,
+scripts and arbitrary documents cannot enter the reviewed asset script origin.
+Responses prevent MIME sniffing and active-document execution. This method needs
+the existing `resources` permission and is optional; Desktop retains its current
+media URL contract. Run `bun scripts/smoke-panel-inline-resources.mjs` after the
+server build to verify actual opaque-origin image drawing, WAV seeking, proxy
+prefix routing, blocked fetch access and session revocation in Chromium.
+
+Web advertises `resources.recordAudio({maxDurationSeconds?, maxBytes?})` with the
+existing `resources` permission. It opens the trusted workbench's recording chooser;
+it never gives microphone access to the Panel iframe. The user must click Start,
+grant browser/device permission, stop/review the recording, then explicitly save
+to the current project. Defaults are 300 seconds and 16 MiB, with hard limits of
+600 seconds and 25 MiB. Device capture needs HTTPS (or a trusted localhost origin)
+and MediaRecorder support. This uses the browser device, not the server's microphone.
+
+The result is `{asset}` from the normal project resource upload, or
+`{cancelled:true}`. The caller must discover this method rather than infer it from
+an API version. Desktop retains its existing capture APIs. The chooser holds the
+original grant/project throughout capture and saving; closing the Panel or revoking
+its grant stops the tracks. Recordings remain in this page until saved or discarded;
+the user can download a local backup. A failed upload retains the recording and
+explicit Save retries query the same upload before resuming. A lost final receipt
+uses idempotent finish, not another recording/upload. Partial uploads retain the
+resource service's existing expiry policy. The chooser times out after 25 minutes;
+the bridge advertises a 30-minute method timeout.
+
+Transcription, voice engines, model choice and domain policies stay in Panel packages.
+`bun scripts/smoke-panel-audio-capture.mjs` exercises the production workbench and
+real resource service with Chromium's synthetic microphone and real WebM encoding,
+lost write/finalize replies, exact downloaded bytes and authorization revocation.
+This does not constitute physical-device or transcription-model acceptance.
+
+Web Panel frames permit browser downloads of generated files, such as a JSON
+backup, using Blob URLs and download anchors. Both the iframe and asset response
+CSP permit `allow-downloads`; the frame retains an opaque origin and cannot access
+the workbench document, browser storage, or fetch the network. Exporting existing
+server resources still uses the authorized Host resource interfaces. Panels must
+use Host storage for durable drafts when browser storage is unavailable.
+
 ## Validation and release status
 
 The API 14 implementation is complete in the published 0.9.11 release. Local

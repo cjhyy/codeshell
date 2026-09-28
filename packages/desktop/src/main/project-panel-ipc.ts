@@ -13,6 +13,7 @@ import {
 } from "./panel-apps-service.js";
 import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
 import {
   panelAppUpdateService,
   createProjectPanelAppUpdateService,
@@ -111,32 +112,11 @@ export function registerProjectPanelIpc(deps: {
     cwd = await requireRendererProjectPath(cwd);
     return createDesktopPanelManagement(cwd).snapshot();
   });
-  ipcMain.handle(
-    "panel-apps:packageHistory",
-    async (event, rawCwd: string, id: string, revision: string) => {
-      const cwd = await requireRendererProjectPath(rawCwd);
-      return desktopPanelManager(cwd).management.packageHistory(
-        desktopPanelContext(event, cwd),
-        id,
-        revision,
-      );
-    },
-  );
-  ipcMain.handle(
-    "panel-apps:previewRestore",
-    async (event, rawCwd: string, id: string, digest: string, revision: string) => {
-      const cwd = await requireRendererProjectPath(rawCwd);
-      return desktopPanelManager(cwd).management.previewRestore(
-        desktopPanelContext(event, cwd),
-        id,
-        digest,
-        revision,
-      );
-    },
-  );
-  ipcMain.handle("panel-apps:restore", async (event, rawCwd: string, token: string) => {
-    const cwd = await requireRendererProjectPath(rawCwd);
-    return desktopPanelManager(cwd).management.restore(desktopPanelContext(event, cwd), token);
+  registerProjectPanelVersionIpc({
+    ipcMain,
+    requireRendererProjectPath,
+    desktopPanelManager,
+    desktopPanelContext,
   });
   ipcMain.handle(
     "panel-apps:setProjectBinding",

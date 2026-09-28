@@ -55,7 +55,7 @@ function normalizedContentType(value: string | undefined): string {
 }
 
 function reply(res: ServerResponse, status: number, message: string): void {
-  if (res.headersSent || res.writableEnded) return;
+  if (res.destroyed || res.headersSent || res.writableEnded) return;
   res.writeHead(status, { "content-type": "text/plain; charset=utf-8" });
   res.end(message);
 }
@@ -65,10 +65,17 @@ interface ActiveTransfer {
   done: Promise<void>;
 }
 
+async function awaitCleanup(tasks: Promise<unknown>[]): Promise<void> {
+  const results = await Promise.allSettled(tasks);
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
+}
+
 /** One-time, device-bound HTTP upload tickets backed by a temporary spool. */
 export class MobileUploadService {
   private readonly uploads = new Map<string, UploadRecord>();
   private readonly activeTransfers = new Map<string, ActiveTransfer>();
+  private readonly revokedDevices = new Map<string, Promise<void>>();
   private readonly now: () => number;
   private readonly uploadTtlMs: number;
   private readonly startupCleanup: Promise<void>;
@@ -102,6 +109,7 @@ export class MobileUploadService {
     expiresAt: number;
   } {
     if (this.disposed) throw new Error("upload service is shutting down");
+    if (this.revokedDevices.has(deviceId)) throw new Error("upload device was revoked");
     void this.cleanupExpired().catch(() => undefined);
     const mime = normalizedContentType(metadata.mime) as MobileImageMime;
     if (!deviceId.trim()) throw new Error("authenticated device is required");
@@ -185,6 +193,28 @@ export class MobileUploadService {
     // same .part path and reset/delete each other's record. The duplicate now
     // receives the existing 409 above while this first request runs normally.
     record.status = "uploading";
+    const controller = new AbortController();
+    const abortRequest = () => req.destroy();
+    controller.signal.addEventListener("abort", abortRequest, { once: true });
+    // Track preparation, transfer, rename and cleanup as one operation. A
+    // revocation must not finish while filesystem work can still create a spool.
+    const done = this.receivePut(uploadId, record, req, res, controller);
+    this.activeTransfers.set(uploadId, { controller, done });
+    try {
+      await done;
+    } finally {
+      controller.signal.removeEventListener("abort", abortRequest);
+      if (this.activeTransfers.get(uploadId)?.done === done) this.activeTransfers.delete(uploadId);
+    }
+  }
+
+  private async receivePut(
+    uploadId: string,
+    record: UploadRecord,
+    req: IncomingMessage,
+    res: ServerResponse,
+    controller: AbortController,
+  ): Promise<void> {
     try {
       await this.ensurePrivateRoot();
     } catch {
@@ -192,6 +222,10 @@ export class MobileUploadService {
         record.status = "pending";
       }
       reply(res, 500, "upload storage is unavailable");
+      return;
+    }
+    if (controller.signal.aborted || this.uploads.get(uploadId) !== record) {
+      reply(res, 404, "upload ticket was revoked or expired");
       return;
     }
     const partPath = join(this.opts.rootDir, `${uploadId}.part`);
@@ -210,7 +244,6 @@ export class MobileUploadService {
         callback(null, chunk);
       },
     });
-    const controller = new AbortController();
     const deadline = setTimeout(
       () => {
         deadlineExpired = true;
@@ -224,10 +257,9 @@ export class MobileUploadService {
       counter,
       createWriteStream(partPath, { flags: "wx", mode: 0o600 }),
       {
-      signal: controller.signal,
+        signal: controller.signal,
       },
     );
-    this.activeTransfers.set(uploadId, { controller, done: transfer });
     try {
       await transfer;
       if (received !== record.size) {
@@ -275,14 +307,12 @@ export class MobileUploadService {
       );
     } finally {
       clearTimeout(deadline);
-      if (this.activeTransfers.get(uploadId)?.done === transfer) {
-        this.activeTransfers.delete(uploadId);
-      }
     }
   }
 
   /** Atomically move a ready upload into a request-owned lease. */
   claim(deviceId: string, uploadId: string): ClaimedMobileUpload {
+    if (this.revokedDevices.has(deviceId)) throw new Error("upload device was revoked");
     const record = this.uploads.get(uploadId);
     if (!record || record.expiresAt <= this.now()) {
       if (record) void this.expire(uploadId, record);
@@ -314,7 +344,10 @@ export class MobileUploadService {
   async release(deviceId: string, uploadId: string, claimId: string): Promise<void> {
     const record = this.assertClaimOwner(deviceId, uploadId, claimId);
     delete record.claimId;
-    if (record.claimAttempts >= MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS) {
+    if (
+      this.revokedDevices.has(deviceId) ||
+      record.claimAttempts >= MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS
+    ) {
       this.uploads.delete(uploadId);
       if (record.path) await rm(record.path, { force: true }).catch(() => undefined);
       return;
@@ -340,6 +373,31 @@ export class MobileUploadService {
     await this.cleanupOrphanSpools(now, false);
   }
 
+  /** Fence new tickets immediately; retain only leases already owned by a request. */
+  revokeDevice(deviceId: string): Promise<void> {
+    const previous = this.revokedDevices.get(deviceId);
+    if (previous) return previous;
+    const records = [...this.uploads].filter(
+      ([, record]) => record.deviceId === deviceId && record.status !== "claimed",
+    );
+    const transfers = records.flatMap(([uploadId]) => {
+      const transfer = this.activeTransfers.get(uploadId);
+      return transfer ? [transfer] : [];
+    });
+    // Queue cleanup after the synchronous fence/deletion/abort below. Keeping
+    // the promise also lets stop/dispose await (and report) failed unlinks.
+    const cleanup = Promise.resolve().then(async () => {
+      await Promise.allSettled(transfers.map((transfer) => transfer.done));
+      await awaitCleanup(
+        records.map(([uploadId, record]) => this.cleanupRecordFiles(uploadId, record, true)),
+      );
+    });
+    this.revokedDevices.set(deviceId, cleanup);
+    for (const [uploadId] of records) this.uploads.delete(uploadId);
+    for (const transfer of transfers) transfer.controller.abort(new Error("upload device revoked"));
+    return cleanup;
+  }
+
   /** Abort all in-flight transfers and invalidate every outstanding ticket. */
   async cancelActiveTransfers(): Promise<void> {
     await this.ready();
@@ -349,9 +407,10 @@ export class MobileUploadService {
       transfer.controller.abort(new Error("upload service stopped"));
     }
     await Promise.allSettled([...this.activeTransfers.values()].map((item) => item.done));
-    await Promise.allSettled(
-      records.map(([uploadId, record]) => this.cleanupRecordFiles(uploadId, record)),
-    );
+    await awaitCleanup([
+      ...this.revokedDevices.values(),
+      ...records.map(([uploadId, record]) => this.cleanupRecordFiles(uploadId, record)),
+    ]);
   }
 
   /** Fully await timer shutdown, active aborts, and every spool unlink. */
@@ -376,12 +435,18 @@ export class MobileUploadService {
     await this.cleanupRecordFiles(uploadId, record);
   }
 
-  private async cleanupRecordFiles(uploadId: string, record?: UploadRecord): Promise<void> {
-    await Promise.allSettled([
+  private async cleanupRecordFiles(
+    uploadId: string,
+    record?: UploadRecord,
+    strict = false,
+  ): Promise<void> {
+    const removals = [
       rm(join(this.opts.rootDir, `${uploadId}.part`), { force: true }),
       rm(join(this.opts.rootDir, `${uploadId}.upload`), { force: true }),
       ...(record?.path ? [rm(record.path, { force: true })] : []),
-    ]);
+    ];
+    if (strict) await awaitCleanup(removals);
+    else await Promise.allSettled(removals);
   }
 
   private async cleanupOrphanSpools(now: number, removeAll: boolean): Promise<void> {

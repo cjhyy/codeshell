@@ -1,3 +1,6 @@
+import { MobileRemoteController } from "./mobile-remote-controller.js";
+import { DeviceRelayStore } from "./device-relay-store.js";
+import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 /**
@@ -15,6 +18,7 @@ import {
   session,
   shell,
   systemPreferences,
+  safeStorage,
   webContents,
   Notification,
   screen,
@@ -43,6 +47,7 @@ import {
   SessionManager,
   writeSettingsSchemaFile,
   userHome,
+  codeShellHome,
   CredentialStore,
   isRemoteLinkCredential,
   summarizeCookieExpiry,
@@ -336,8 +341,6 @@ import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
   type GatewayControlEventInput,
-  type MobileRemoteGatewayStatus,
-  type MobileRemoteOpenResult,
   type PetChatControlRequest,
   type PetChatControlResult,
 } from "./im-gateway-control-server.js";
@@ -976,6 +979,25 @@ const tunnelManager = new TunnelManager({
 });
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
+});
+const mobileRemoteController = new MobileRemoteController({
+  host: mobileRemote,
+  tunnel: tunnelManager,
+  binary: cloudflaredBinary,
+  passcode: accessPasscode,
+  environmentDir: join(codeShellHome(), "desktop"),
+  store: new DeviceRelayStore(resolve(app.getPath("userData"), "mobile-remote", "relay.enc"), {
+    available: () =>
+      safeStorage.isEncryptionAvailable() &&
+      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
+    encrypt: (value) => safeStorage.encryptString(value),
+    decrypt: (value) => safeStorage.decryptString(value),
+  }),
+  changed: (status) => {
+    for (const window of mainWindows) {
+      if (!window.isDestroyed()) window.webContents.send("mobileRemote:relayStatusChanged", status);
+    }
+  },
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -5314,132 +5336,18 @@ ipcMain.handle("managed-runtimes:list", managedRuntimeHandlers.list);
 ipcMain.handle("managed-runtimes:resolve", managedRuntimeHandlers.resolve);
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
-// In-flight mutex for mobileRemote:start. Without it, a concurrent second
-// start (double-click / multi-window / IPC re-entry) sees an already-running
-// tunnel child, throws, and its catch UNCONDITIONALLY tears down the FIRST
-// call's tunnel — so both fail. Reusing the in-flight promise makes concurrent
-// starts idempotent: the second caller awaits the first's result instead of
-// launching a competing start.
-let mobileRemoteStartInFlight: Promise<{
-  url: string;
-  pairingUrl: string;
-  expiresAt: number;
-  mode: "tunnel" | "lan";
-}> | null = null;
+const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
+  mobileRemoteController.start(opts);
+const stopMobileRemote = () => mobileRemoteController.stop();
+const createMobileRemotePairingUrl = () => mobileRemoteController.pairingUrl();
+const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
+registerDeviceRelayIpc({
+  ipcMain,
+  controller: mobileRemoteController,
+  isMainWindow: (sender) =>
+    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+});
 
-async function startMobileRemote(opts?: {
-  mode?: "lan" | "tunnel";
-}): Promise<MobileRemoteOpenResult> {
-  if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
-  const run = (async () => {
-    const mode = opts?.mode ?? "lan";
-    const existing = mobileRemote.status();
-    const reusableTunnelUrl = mode === "tunnel" ? tunnelManager.publicUrl() : undefined;
-    if (
-      existing?.mode === mode &&
-      ((mode === "lan" && !tunnelManager.isRunning()) ||
-        (tunnelManager.isConnected() && reusableTunnelUrl))
-    ) {
-      if (reusableTunnelUrl) mobileRemote.setPublicBaseUrl(reusableTunnelUrl);
-      const pairing = mobileRemote.createPairingUrl();
-      return {
-        url: reusableTunnelUrl ?? existing.url,
-        pairingUrl: pairing.url,
-        expiresAt: pairing.expiresAt,
-        mode,
-      };
-    }
-    if (existing || tunnelManager.isRunning()) {
-      await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
-    }
-    if (mode === "tunnel") {
-      // Public tunnel: passcode MUST be set first (UI also disables the button).
-      if (!accessPasscode.isSet()) {
-        throw new Error("请先设置访问口令,再开启公网模式");
-      }
-      // Ensure cloudflared is present (no-op if already downloaded).
-      await cloudflaredBinary.ensureBinary();
-      // Bind loopback; cloudflared connects to 127.0.0.1.
-      const started = await mobileRemote.start({
-        mode: "tunnel",
-        host: "lan",
-        port: 0,
-        passcode: accessPasscode,
-      });
-      try {
-        const { url } = await tunnelManager.start(started.port);
-        mobileRemote.setPublicBaseUrl(url);
-        const pairing = mobileRemote.createPairingUrl();
-        return {
-          url,
-          pairingUrl: pairing.url,
-          expiresAt: pairing.expiresAt,
-          mode: "tunnel" as const,
-        };
-      } catch (err) {
-        // Tunnel failed (binary error / 15s URL timeout): tear everything down
-        // and surface a friendly error so the UI returns to the off state.
-        await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
-        throw new Error(`公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`, {
-          cause: err,
-        });
-      }
-    }
-    // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
-    // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
-    const started = await mobileRemote.start({ host: "lan", port: 0 });
-    const pairing = mobileRemote.createPairingUrl();
-    return {
-      url: started.url,
-      pairingUrl: pairing.url,
-      expiresAt: pairing.expiresAt,
-      mode: "lan" as const,
-    };
-  })();
-  mobileRemoteStartInFlight = run;
-  try {
-    return await run;
-  } finally {
-    if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
-  }
-}
-
-async function stopMobileRemote(): Promise<void> {
-  await Promise.all([tunnelManager.stop(), mobileRemote.stop()]);
-}
-
-function createMobileRemotePairingUrl(): { pairingUrl: string; expiresAt: number } {
-  const pairing = mobileRemote.createPairingUrl();
-  return { pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
-}
-
-function getMobileRemoteGatewayStatus(): MobileRemoteGatewayStatus {
-  const status = mobileRemote.status();
-  return {
-    running: Boolean(status),
-    url:
-      status?.mode === "tunnel"
-        ? tunnelManager.isConnected()
-          ? tunnelManager.publicUrl()
-          : undefined
-        : status?.url,
-    mode: status?.mode,
-    tunnelRunning: tunnelManager.isRunning(),
-    tunnelConnected: tunnelManager.isConnected(),
-    passcodeSet: accessPasscode.isSet(),
-    onlineDeviceCount: mobileRemote.onlineDeviceIds().length,
-  };
-}
-
-ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) =>
-  startMobileRemote(opts),
-);
-ipcMain.handle("mobileRemote:stop", async () => stopMobileRemote());
-// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
-// the QR after a settings-page remount (pairingUrl is renderer-local state and
-// is lost on navigation) without restarting the host.
-ipcMain.handle("mobileRemote:pairingUrl", async () => createMobileRemotePairingUrl());
-ipcMain.handle("mobileRemote:status", async () => getMobileRemoteGatewayStatus());
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {
   mobileDevices.revoke(id);
@@ -7070,8 +6978,7 @@ app.on("before-quit", (event) => {
     externalRuntimeService = null;
     await Promise.allSettled([
       imGatewayService.dispose(),
-      tunnelManager.stop(),
-      mobileRemote.stop(),
+      mobileRemoteController.dispose(),
       gatewayControlServer?.stop(),
       petWorkInboxFlush,
       petLongTaskFlush,

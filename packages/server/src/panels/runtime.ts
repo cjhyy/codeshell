@@ -82,6 +82,8 @@ const METHODS = [
   ...panelProcessMethods,
   ...panelResourceMethods,
   "resources.open",
+  "resources.preview",
+  "resources.recordAudio",
   ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.cookies.listForTask",
@@ -128,6 +130,32 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
 };
+// The asset origin is also an allowed script source. Never expose uploaded
+// documents or executable MIME types there, even with a resource permission.
+const INLINE_RESOURCE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "image/bmp",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/ogg",
+  "audio/webm",
+  "audio/flac",
+  "audio/aac",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "font/woff",
+  "font/woff2",
+  "font/ttf",
+  "font/otf",
+]);
+const INLINE_RESOURCE_PATH = "_codeshell_resources/";
 export const panelWebCompatibility = (
   app: Pick<InstalledPanelApp, "permissions">,
   options?: { automations?: boolean },
@@ -199,11 +227,11 @@ export interface PanelRuntimeOptions {
   dataDir: string;
   host: "hub" | "desktop";
   publicPathPrefix?: string;
-  snapshot: () => Promise<PanelSnapshot>;
+  snapshot: (appId?: string) => Promise<PanelSnapshot>;
   ownerId: (request: IncomingMessage) => Promise<string | undefined>;
   isAuthorized: (request: IncomingMessage) => Promise<boolean>;
   /** Host/test seam. HTTP callers never provide install paths or this catalog. */
-  listInstalled?: () => Promise<InstalledPanelApp[]>;
+  listInstalled?: (appId?: string) => Promise<InstalledPanelApp[]>;
   now?: () => number;
   agentTasks?: PanelTaskHost;
   automations?: PanelAutomationHost;
@@ -370,7 +398,7 @@ function bridgeScript(id: string, origin: string): string {
       const requestId = String(++next);
       const timer = setTimeout(() => {
         pending.delete(requestId); reject(new Error("Panel request timed out"));
-      }, ["tasks.start", "tasks.retry", "tasks.queue.set"].includes(method) ? 30 * 60 * 1000 : 60000);
+      }, ["tasks.start", "tasks.retry", "tasks.queue.set", "resources.recordAudio"].includes(method) ? 30 * 60 * 1000 : 60000);
       pending.set(requestId, { resolve, reject, timer });
       try {
         parent.postMessage({ type: "codeshell-panel:call", instanceId: id, requestId, method, params }, origin);
@@ -502,7 +530,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const installed =
     options.listInstalled ??
     (options.projectPackages
-      ? async () => (await inspectProjectPanelApps(options.bindingCwd ?? options.cwd)).apps
+      ? async (appId?: string) =>
+          (await inspectProjectPanelApps(options.bindingCwd ?? options.cwd, appId)).apps
       : listInstalledPanelApps);
   let closed = false;
   let generation = 0;
@@ -596,8 +625,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   async function installedToolApp(scope: ToolJobScope) {
     if (closed || scope.projectPath !== (options.bindingCwd ?? options.cwd))
       throw new PanelBridgeError("REVOKED", "Tool task workspace is unavailable");
-    const panel = (await snapshot()).panels.find((candidate) => candidate.id === scope.appId);
-    const app = (await installed()).find((candidate) => candidate.id === scope.appId);
+    const panel = (await snapshot(scope.appId)).panels.find(
+      (candidate) => candidate.id === scope.appId,
+    );
+    const app = (await installed(scope.appId)).find((candidate) => candidate.id === scope.appId);
     if (
       !panel?.enabled ||
       panel.revision !== scope.revision ||
@@ -659,7 +690,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     rootDirectory: join(options.dataDir, "panel-app-media"),
     isScopeAuthorized: async (scope) => {
       if (scope.projectPath === (options.bindingCwd ?? options.cwd)) {
-        const panel = (await snapshot()).panels.find((candidate) => candidate.id === scope.appId);
+        const panel = (await snapshot(scope.appId)).panels.find(
+          (candidate) => candidate.id === scope.appId,
+        );
         if (panel?.enabled && panel.permissions.includes("resources")) return true;
       }
       for (const grant of grants.values())
@@ -903,15 +936,15 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     });
     return toolJobs;
   }
-  let readingSnapshot: Promise<PanelSnapshot> | undefined;
-  function snapshot() {
+  const readingSnapshots = new Map<string, Promise<PanelSnapshot>>();
+  function snapshot(appId: string) {
     // Parallel module requests share current disk work, without a stale TTL
     // that could keep an unbound or updated package authorized.
-    const pending = readingSnapshot ?? options.snapshot();
-    readingSnapshot = pending;
+    const pending = readingSnapshots.get(appId) ?? options.snapshot(appId);
+    readingSnapshots.set(appId, pending);
     void pending
       .finally(() => {
-        if (readingSnapshot === pending) readingSnapshot = undefined;
+        if (readingSnapshots.get(appId) === pending) readingSnapshots.delete(appId);
       })
       .catch(() => {});
     return pending;
@@ -1110,7 +1143,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       return false;
     }
     try {
-      const panel = (await snapshot()).panels.find((candidate) => candidate.id === grant.app.id);
+      const panel = (await snapshot(grant.app.id)).panels.find(
+        (candidate) => candidate.id === grant.app.id,
+      );
       const info = await lstat(grant.root);
       const ownerStillAuthorized = await options.isAuthorized(grant.request);
       const currentOwner = await options.ownerId(grant.request);
@@ -1159,7 +1194,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         )
       )
         error(400, "面板参数无效。");
-      const panel = (await snapshot()).panels.find((candidate) => candidate.id === input.appId);
+      const panel = (await snapshot(input.appId)).panels.find(
+        (candidate) => candidate.id === input.appId,
+      );
       if (!panel?.enabled || !panel.compatibility.supported)
         error(403, "请先将面板绑定到当前工作区。");
       if (panel.revision !== input.revision) error(409, "面板已经更新，请重新打开。");
@@ -1168,7 +1205,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         (typeof input.sessionId !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(input.sessionId))
       )
         error(400, "会话标识无效。");
-      const app = (await installed()).find((candidate) => candidate.id === input.appId);
+      const app = (await installed(input.appId)).find((candidate) => candidate.id === input.appId);
       if (!app) error(404, "面板已卸载。");
       if (panel.packageDigest && panel.packageDigest !== app.packageDigest)
         error(409, "项目面板版本已改变，请重新打开。");
@@ -1242,21 +1279,28 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               consentTimeoutMs: 50000,
             },
           }),
-          ...(app.permissions.includes("process") && app.permissions.includes("resources")
+          ...(app.permissions.includes("resources")
             ? {
                 methodLimits: {
-                  "tasks.start": {
-                    maxParamsBytes: toolJobLimits.maxInputBytes,
-                    maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
-                    timeoutMs: 30 * 60 * 1000,
-                  },
-                  "tasks.find": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
-                  "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
-                  "tasks.retry": {
-                    maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
-                    timeoutMs: 30 * 60 * 1000,
-                  },
-                  "tasks.cancel": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                  "resources.recordAudio": { timeoutMs: 30 * 60 * 1000 },
+                  ...(app.permissions.includes("process")
+                    ? {
+                        "tasks.start": {
+                          maxParamsBytes: toolJobLimits.maxInputBytes,
+                          maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                          timeoutMs: 30 * 60 * 1000,
+                        },
+                        "tasks.find": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                        "tasks.get": { maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024 },
+                        "tasks.retry": {
+                          maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                          timeoutMs: 30 * 60 * 1000,
+                        },
+                        "tasks.cancel": {
+                          maxResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                        },
+                      }
+                    : {}),
                 },
               }
             : {}),
@@ -1454,7 +1498,28 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         emit(grant, event, payload),
     };
     if (method.startsWith("resources.")) {
-      if (method === "resources.open") {
+      if (method === "resources.recordAudio") {
+        const value = (params ?? {}) as Record<string, unknown>;
+        const maxDurationSeconds = value.maxDurationSeconds ?? 300;
+        const maxBytes = value.maxBytes ?? 16 * 1024 * 1024;
+        if (
+          !value ||
+          typeof value !== "object" ||
+          Array.isArray(value) ||
+          Object.keys(value).some((key) => !["maxDurationSeconds", "maxBytes"].includes(key)) ||
+          !Number.isInteger(maxDurationSeconds) ||
+          Number(maxDurationSeconds) < 1 ||
+          Number(maxDurationSeconds) > 600 ||
+          !Number.isInteger(maxBytes) ||
+          Number(maxBytes) < 1 ||
+          Number(maxBytes) > 25 * 1024 * 1024
+        )
+          error(400, "录音限制无效。");
+        // This effect only opens a trusted chooser. Device access and upload each
+        // require an explicit user action; the iframe retains microphone=().
+        return { effect: "resources.recordAudio", maxDurationSeconds, maxBytes };
+      }
+      if (method === "resources.open" || method === "resources.preview") {
         const value = params as { assetId?: unknown } | null;
         if (
           !value ||
@@ -1468,6 +1533,14 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           value.assetId,
         );
         if (!(await authorized(grant))) error(410, "面板授权已失效。");
+        if (method === "resources.preview") {
+          if (!INLINE_RESOURCE_TYPES.has(asset.mimeType))
+            error(400, "此资源类型不能在面板内播放或显示。");
+          return {
+            asset,
+            url: `${grant.origin}${publicPathPrefix}${ASSETS}${grant.asset}/${INLINE_RESOURCE_PATH}${asset.id}`,
+          };
+        }
         return {
           effect: "resources.open",
           asset,
@@ -1997,6 +2070,24 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           return true;
         }
         const path = parts.map(decodeURIComponent).join("/");
+        if (path.startsWith(INLINE_RESOURCE_PATH)) {
+          if (!grant.app.permissions.includes("resources")) error(403, "面板未声明资源权限。");
+          const id = path.slice(INLINE_RESOURCE_PATH.length);
+          if (!/^(?:asset|external)-[a-f0-9]{64}$/.test(id)) error(404, "文件资源标识无效。");
+          const scope = { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd };
+          const asset = await resources.get(scope, id).catch(() => error(404, "文件资源不可用。"));
+          if (!INLINE_RESOURCE_TYPES.has(asset.mimeType)) error(403, "资源类型不可预览。");
+          // A direct navigation must not turn project data into an active document.
+          response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+          await servePanelResource(request, response, {
+            service: resources,
+            scope,
+            id,
+            download: false,
+            isAuthorized: () => authorized(grant),
+          });
+          return true;
+        }
         let bytes: Buffer;
         if (path === "_codeshell_bridge.js")
           bytes = Buffer.from(bridgeScript(grant.id, grant.origin));
@@ -2015,6 +2106,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           bytes = Buffer.from(injectBridge(bytes.toString("utf8"), source));
           const resourceOrigin = grant.origin;
           const assetSource = resourceOrigin + source;
+          // Panels export their own generated files (for example JSON backups).
+          // Download permission does not grant origin access, network fetches or popups.
+          // The embedding iframe must enable the same permission.
           response.setHeader(
             "Content-Security-Policy",
             "default-src 'none'; script-src " +
@@ -2027,7 +2121,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               assetSource +
               " blob:; font-src " +
               assetSource +
-              " data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts; frame-ancestors " +
+              " data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
               resourceOrigin,
           );
           response.setHeader(

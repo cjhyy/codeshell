@@ -101,9 +101,24 @@ export function HubPanels({
   const operation = React.useRef<AbortController | undefined>(undefined);
   const read = React.useRef<AbortController | undefined>(undefined);
   const queuedRefresh = React.useRef(false);
+  const restoreLease = React.useRef<{ target: string; token: string } | undefined>(undefined);
   const reviewHeading = React.useRef<HTMLHeadingElement>(null);
   const callbacks = React.useRef({ onAuthLost, onDirtyChange, onChanged, onOpen });
   callbacks.current = { onAuthLost, onDirtyChange, onChanged, onOpen };
+
+  function discardRestoreLease(lease: { target: string; token: string }) {
+    // Use the URL captured at issuance. api() would apply the newly selected
+    // project to an unprefixed URL after leaving a local workspace.
+    void fetch(lease.target, {
+      method: "DELETE",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewToken: lease.token }),
+      keepalive: true,
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => {}); // Unknown/failed cleanup remains bounded by the Host TTL.
+  }
 
   const dirty = !!(
     busy ||
@@ -126,6 +141,10 @@ export function HubPanels({
       mounted.current = false;
       operation.current?.abort();
       read.current?.abort();
+      if (restoreLease.current) {
+        discardRestoreLease(restoreLease.current);
+        restoreLease.current = undefined;
+      }
       callbacks.current.onDirtyChange?.(false);
     };
   }, []);
@@ -162,8 +181,9 @@ export function HubPanels({
     method: string,
     body: Record<string, unknown>,
     mutation = false,
+    onAbandoned?: (value: T) => void,
   ): Promise<T | undefined> {
-    if (operation.current) return undefined;
+    if (operation.current || !mounted.current) return undefined;
     const controller = new AbortController();
     operation.current = controller;
     read.current?.abort();
@@ -180,7 +200,10 @@ export function HubPanels({
         body: JSON.stringify(body),
         signal: controller.signal,
       });
-      if (controller.signal.aborted || !mounted.current) return undefined;
+      if (controller.signal.aborted || !mounted.current) {
+        onAbandoned?.(result);
+        return undefined;
+      }
       if (mutation) {
         queuedRefresh.current = true;
         callbacks.current.onChanged?.();
@@ -208,6 +231,7 @@ export function HubPanels({
   }
 
   const discover = async (source: GitPanelAppSourceInput) => {
+    if (!(await cancelRestoreReview())) return;
     setHistory(undefined);
     setRestoreReview(undefined);
     setBatch(undefined);
@@ -222,6 +246,7 @@ export function HubPanels({
     if (result) setDiscovery(result);
   };
   const previewSource = async (source: GitPanelAppSourceInput) => {
+    if (!(await cancelRestoreReview())) return;
     setHistory(undefined);
     setRestoreReview(undefined);
     const result = await run<PanelReview>("正在准备安装审阅…", "/preview", "POST", { source });
@@ -235,6 +260,7 @@ export function HubPanels({
     }
   };
   const previewUpdate = async (panel: ManagedPanel) => {
+    if (!(await cancelRestoreReview())) return;
     setHistory(undefined);
     setRestoreReview(undefined);
     const result = await run<PanelReview>(
@@ -322,7 +348,26 @@ export function HubPanels({
       );
     }
   };
+  const cancelRestoreReview = async () => {
+    if (!restoreReview) return true;
+    const result = await run<{ cancelled: boolean }>(
+      "正在关闭版本审阅…",
+      "/restore/review",
+      "DELETE",
+      {
+        reviewToken: restoreReview.reviewToken,
+      },
+    );
+    if (!result?.cancelled) return false;
+    restoreLease.current = undefined;
+    setRestoreReview(undefined);
+    return true;
+  };
+  const closeHistory = async () => {
+    if (await cancelRestoreReview()) setHistory(undefined);
+  };
   const loadHistory = async (panel: Pick<ManagedPanel, "id" | "revision">) => {
+    if (!(await cancelRestoreReview())) return;
     setReview(undefined);
     setRemoving(undefined);
     setRestoreReview(undefined);
@@ -342,6 +387,8 @@ export function HubPanels({
   };
   const previewRestore = async (packageDigest: string) => {
     if (!history) return;
+    if (!(await cancelRestoreReview())) return;
+    const target = apiUrl(`${ROOT}/restore/review`);
     const result = await run<PanelPackageRestoreReview>(
       "正在审阅项目版本…",
       `/${encodeURIComponent(history.appId)}/restore-preview`,
@@ -350,8 +397,15 @@ export function HubPanels({
         packageDigest,
         expectedRevision: history.expectedRevision,
       },
+      false,
+      (value) => discardRestoreLease({ target, token: value.reviewToken }),
     );
     if (result) {
+      if (!mounted.current) {
+        discardRestoreLease({ target, token: result.reviewToken });
+        return;
+      }
+      restoreLease.current = { target, token: result.reviewToken };
       setRestoreReview(result);
       setRestoreStale(false);
     }
@@ -373,6 +427,7 @@ export function HubPanels({
       true,
     );
     if (result) {
+      restoreLease.current = undefined;
       setNotice(
         `${panelTitle(restoreReview.title)} 的项目版本已恢复为 v${restoreReview.version}。`,
       );
@@ -481,13 +536,7 @@ export function HubPanels({
               <h2>{panelTitle(history.title)} · 项目版本</h2>
               <p>项目记录版本：{history.current.version}</p>
             </div>
-            <button
-              disabled={!!busy}
-              onClick={() => {
-                setHistory(undefined);
-                setRestoreReview(undefined);
-              }}
-            >
+            <button disabled={!!busy} onClick={() => void closeHistory()}>
               关闭版本记录
             </button>
           </header>
@@ -816,7 +865,8 @@ export function HubPanels({
                 <button
                   className="panels-danger"
                   disabled={unavailable}
-                  onClick={() => {
+                  onClick={async () => {
+                    if (!(await cancelRestoreReview()) || !mounted.current) return;
                     setRemoving(panel);
                     setReview(undefined);
                     setHistory(undefined);

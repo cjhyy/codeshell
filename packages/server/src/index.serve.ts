@@ -17,3 +17,8 @@ export {
   type ProjectBackupOptions,
   type ProjectRestoreOptions,
 } from "./project-runtime/backup.js";
+
+export {
+  readProjectSeccompProfile,
+  type ProjectSeccompProfile,
+} from "./project-runtime/seccomp.js";

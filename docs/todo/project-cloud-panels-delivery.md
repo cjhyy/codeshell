@@ -1,6 +1,6 @@
 # 本地／云端项目、跨设备 Panel 与独立服务：交付记录
 
-状态：实施中，整套目标尚未完成。工作包与发布门槛见 [总实施清单](project-cloud-panels-plan.md)。完整原始目标见 [objective](project-cloud-panels-objective.md)。
+当前状态（2026-09-28）：本地与完整 Linux 候选验证通过；缺少目标服务器、域名/TLS 和真实 provider 配置，goal 处于 blocked，整套目标尚未完成。Panel 内部内容与手机适配继续暂缓。工作包与发布门槛见 [总实施清单](project-cloud-panels-plan.md)。完整原始目标见 [objective](project-cloud-panels-objective.md)。下文为各检查点的历史记录。
 
 ## 初次检查基线（历史记录；当前状态见增量与总实施清单）
 
@@ -2224,3 +2224,2903 @@ Panel PR #26 的 PR CI 35975873439 全部通过；同一 head `e9702a3` 的 push
 界面保存状态已截图核对。新 PR CI 35977959393 与 push CI 35977943164 正在运行，
 尚未合入、未发布 Panel 版本。整体 goal 保持 active，其他业务、升级恢复、真实部署、
 设备中继与后置手机操作验收继续保留。
+
+### 增量 55：Panel 基线合入与视频解码帧修复复验（2026-09-26）
+
+Panel [PR #26](https://github.com/cjhyy/codeshell-panel-apps/pull/26) 已合入
+`a301c4664d6f00600894044f76695b2642cefa13`。Quant 回测保护 PR #27 已改以 main 为
+基线，但尚未合入；它的 Quant 检查通过，组合版本仍被 Video Studio 的 Linux 媒体与
+安装包检查阻止。不能把业务检查通过等同整个组合版本可交付。
+
+Video Studio 独立任务分支为 `codex/video-studio/decoded-frame-readiness`，
+[PR #28](https://github.com/cjhyy/codeshell-panel-apps/pull/28) 保持 draft。
+首版 `b62301e` 取消呈现回调的强制等待后，本地检查通过，但 Linux 实际导出出现
+黑帧及 compound/unpack 画面差异；同时发现源 README 改动后遗漏重新生成安装包。
+两项都没有绕过验收或合入。
+
+后续提交 `17c5abc855a0e79a6a09c9007885cf1c554b51d3` 在 seek 完成后冻结
+`VideoFrame`，以帧时间范围核验实际解码内容；容器时长取整／缺失时可用匹配的呈现
+回执。普通暂停／同帧重复寻址不依赖额外呈现回调；旧帧候选继续在原截止时间内等待，
+替换、取消、超时与关闭释放冻结帧和轮询。源文件、README 和完整生成包一起提交。
+
+- 20 项实际浏览器取帧测试通过，含模拟滞留旧帧、真实 MP4/WebM、缺失回调、时长
+  取整／缺失、超时后不继续轮询、实例复用和帧资源释放；日志
+  `/tmp/video-frozen-pool-final.log`。
+- 完整实际媒体套件 180 项通过、零跳过；含此前 Linux 失败的多机位画面／PCM 与
+  NTSC compound/unpack。之后新增四项取帧回归单独通过；日志
+  `/tmp/video-frozen-media.log`。本机通过不能替代 Linux 结果。
+- 类型、构建、确定性产物、完整 `npm run check` 和 `npm run validate` 通过，保留既有
+  可选语音环境跳过项；日志 `/tmp/video-frozen-check.log`、
+  `/tmp/video-frozen-validate.log`。实际 Host 存储的完整 UI 仍在运行，日志
+  `/tmp/video-frozen-ui.log`。
+- 当前提交的 Linux PR CI 为
+  [36220353371](https://github.com/cjhyy/codeshell-panel-apps/actions/runs/36220353371)，
+  push CI 为 36220350511，已确认运行中。先验收此提交，再将最终可接受修复合入
+  Quant 分支并验收组合。旧失败运行没有重启，不作为新版本证据。
+
+整体 goal 保持未完成：配置损坏与完整升级恢复、其余 Panel 的持久化／后台任务接入、
+真实 Link／模型／服务商验收、三仓正式版本交付、目标服务器部署及跨版本恢复回滚
+仍需完成。手机界面后置；设备目录、中继和通知仍独立保留。已准备的配置恢复任务
+工作树尚未实现，不计入已完成内容。
+
+### 增量 56：确认微秒寻帧根因与管理员配置恢复（2026-09-26）
+
+Video Studio `17c5abc` 的 463 项本地完整界面测试通过，日志
+`/tmp/video-frozen-ui.log`；Linux 媒体仍失败。诊断提交 `b10eae4` 的真实 Linux 日志
+显示目标 26/30 秒被截断为 0.866666，已解码帧 timestamp=833333、duration=33333，
+随后无新的呈现回调；另一次运行在当前帧暂不可读时抛出异常。没有增加时限或忽略失败。
+日志 `/tmp/video-decoded-timing-linux.log`。
+
+用真实红蓝交替的 30 fps 视频与暂不可读取帧对象的夹具建立两项回归，修复前都失败，
+日志 `/tmp/video-microsecond-before.log`。`77c384d4081461ff1897131e743fbd428f3e439f`
+统一定位到不早于目标 tick 的首个可表示微秒，对 `InvalidStateError` 在原截止时间内
+重试。22 项取帧回归与完整 186 项本机媒体测试通过、零跳过；类型、完整 check、
+确定性构建及包校验通过。日志 `/tmp/video-microsecond-after.log`、
+`/tmp/video-microsecond-media.log`、`/tmp/video-microsecond-check.log`。
+
+该提交的 Linux PR CI 36221313375 与 push CI 36221311253 均已通过媒体及安装包检查。
+PR 媒体为 185 通过、0 失败、1 项 macOS 语音按平台跳过，实际多机位和 NTSC 导出
+通过；日志 `/tmp/video-microsecond-linux-media.log`。完整 UI 尚在运行，PR #28 未合入。
+Quant 分支已合并此修复为 `b31c64da90f7c9bf0ab517003edfcf0ae3cb083b`，本地确定性
+构建与 validate 通过；组合 PR CI 36221557647、push CI 36221554809 已开始，PR #27
+仍未合入。不能以视频单分支通过替代组合验收。
+
+Host 独立分支 `codex/platform/project-config-recovery` 新增提交
+`f457f0e0976133070b01d0c3802c88846cceaf4c`，
+[PR #16](https://github.com/cjhyy/codeshell/pull/16)。管理员可在已停止的项目上使用
+`settings-recovery inspect / repair / restore`。检查只给状态／摘要，不打印配置值；
+修复必须匹配项目版本与完整候选 JSON 摘要，先保留原始字节，再通过现有目录锁原子
+替换。YAML 不改写但计入版本；回滚前再备份当前 JSON，拒绝损坏／跨项目／跨作用域
+备份和已变化的 YAML。私有备份目录设置 Git 忽略规则，配置与备份均拒绝链接和越界
+大小。不会自动删除 pin、猜测权限或暴露给普通 Panel／配对端；引导初始化被跳过。
+
+- 配置及 CLI 回归 168 项通过；最后补实际 Git 排除验证后，21 项恢复／CLI 用例通过。
+  日志 `/tmp/project-config-recovery-settings-final.log`、
+  `/tmp/project-config-recovery-final-tests.log`；含两个独立进程竞争同一版本。
+- 已构建的实际 Node CLI 在临时项目跑通读取不写文件、修复、逐字节回滚，不依赖
+  模型或普通启动配置；完整 build 与最终根 typecheck 通过。
+- 全仓 lint 零错误，保留 105 条既有警告；新增／修改文件定向 lint 无警告。
+  日志 `/tmp/project-config-recovery-types-final.log`、
+  `/tmp/project-config-recovery-lint-final.log`。远程 CI 36221584263 已排队，尚未合入。
+- 使用边界见 `docs/settings-recovery.md`。这是离线管理员恢复路径，不主动停止进程，
+  不等于桌面／云端在线修复 UI、全部包恢复、文档迁移或服务器跨版本回滚已经完成。
+
+整体 goal 保持 active，真实服务商与目标部署验收、正式三仓发布、其余业务持久化和
+任务恢复、设备中继及后置手机界面仍按原范围推进。
+
+### 增量 57：配置恢复合入、更新部署候选与呈现回执修复（2026-09-26）
+
+Host [PR #16](https://github.com/cjhyy/codeshell/pull/16) 已合入 main
+`520d8b2abbc2306a4970a7b5da34f703fac978cb`。先前两个失败分别是新增内部函数未加入
+精确导出清单，以及内部模块数量预算未记录该恢复入口；补齐精确清单与带边界说明的
+预算，公共 SDK／extension 预算不变。27 项恢复、CLI、导出及架构检查通过，日志
+`/tmp/project-config-recovery-contract-final.log`。最终提交 `a6f02db1` 的完整 CI
+[36224154237](https://github.com/cjhyy/codeshell/actions/runs/36224154237) 全部通过，
+包含 Electron、Windows、所有测试分片、类型与 lint。已清理合入后的专用工作树和分支，
+未修改用户原工作区。
+
+用上述合入 Host 与 services `956f4932d879ba58ac626a32e155b1a3ed718618` 重新构建
+私有部署候选，CI [36224563408](https://github.com/cjhyy/codeshell-services/actions/runs/36224563408)
+全部通过：五个真实 tarball、移位安装、发布能力检查、服务测试、受控浏览器 OAuth、
+两个隔离项目容器、Link 镜像、归档校验及加载后镜像身份检查。候选 artifact
+10899924126（444821991 bytes，保留至 2026-10-10），证据 artifact 10899739495；
+日志 `/tmp/project-cloud-candidate-520d8b2a.log`。镜像为 linux/amd64。这是私有候选，
+不是 registry 包／镜像发布，也不代表真实账号或目标服务器验收完成。五包候选没有
+TUI，因此不能宣称其中已经附带新的 `code-shell settings-recovery` 管理命令；
+服务端管理入口的交付与实际停止项目后的修复／回滚仍需补齐。
+
+Video `77c384d` 的两次独立 CI 最终全通过，但 Quant 组合 `b31c64d` 的两次 Linux
+媒体检查都在 WebM 导出失败：目标 0.166833 秒、帧 timestamp=133000、duration=33000，
+未保留可用的呈现回执。没有据独立绿灯合入。发现呈现通知可先于 seek/readiness 完成，
+旧实现把该通知丢弃。真实 WebM 0.5005 秒的确定性顺序回归在修复前失败、修复后通过，
+日志 `/tmp/video-early-receipt-before.log`、`/tmp/video-early-receipt-guarded.log`。
+
+`9e0029011949724b967f9123412118d20298a1e3` 保留先到的呈现回执，仍要求 seek 完成、
+目标时钟和冻结帧的 timestamp 一致；改变目标时拒绝 seek 前的旧呈现时间，继续监听
+后续回执，原位置可复用已有呈现。取消／超时清理回调，未扩大媒体等待时限或取帧
+容差。24 项取帧回归全通过、零跳过；保留旧帧拒绝、暂不可读重试和资源释放断言。
+源码、README 与生成包同步提交。完整 check、确定性构建和包校验通过，日志
+`/tmp/video-early-receipt-check.log`、`/tmp/video-early-receipt-validate.log`。
+
+完整媒体检查另发现旧播放验收在固定 30ms 后读取音量时仍是 1：实际 AudioContext
+已标 running，但音频时钟前后均为 0.005333 秒，尚未处理下一个音频块。单独运行也
+复现，日志 `/tmp/video-audio-gain-diagnostic.log`。`5f59d2bdbd4c38643912b0ba715b4d3ba750fabd`
+让该测试在有界等待中观察音频时钟真正前进，保留所有音量与来源时间精度断言；单项
+及完整媒体重验通过。最终完整媒体 188 项通过、零跳过，日志
+`/tmp/video-early-receipt-media-final.log`，不是只跑过滤用例作为验收。
+
+修复 `9e00290` 的 Linux 媒体已通过，但尚不替代最终提交与组合验收。PR #28 仍为
+草稿，最终 `5f59d2b` 的 CI 36224922238／36224919754 正在运行。Quant PR #27 已合并
+该提交为 `c4ca6aab771bd50ab2950861740621f7c4ec3eba`；本地 build:check 与 validate
+通过，日志 `/tmp/quant-receipt-build-check.log`、`/tmp/quant-receipt-validate.log`。
+组合 CI 36225000861／36224999019 已开始排队／运行，未合入、未发布。
+
+整体 goal 保持 active。剩余业务接入、完整升级恢复、服务端恢复入口、真实账号／模型、
+三仓正式兼容版本、目标服务器与跨版本恢复仍须完成；设备中继及手机操作后置。
+
+
+### 增量 58：服务端恢复交付与原片冻结预览（2026-09-26）
+
+Host `codex/server/settings-recovery` 的 [PR #17](https://github.com/cjhyy/codeshell/pull/17)
+为五包云端安装补齐 `code-shell-settings-recovery`，使用同一 Core 离线检查、审阅修复
+和逐字节恢复，不启动服务、Worker、引导或模型设置。严格区分各动作参数，拒绝重复／
+混用参数，不回显无效参数值。服务包 bin、实际安装验证和运行镜像检查一同交付。
+文档 `docs/settings-recovery.md` 说明先停止项目、同一卷／挂载路径／用户、覆盖镜像
+入口及只读候选文件。管理员操作仍不是在线 Panel 修复权限。
+
+最终 Host 提交 `eb62498361c1968488a682da96769622ed71089d` 已包含最新主仓
+`a9ff18b8`。根类型检查、21 项恢复／CLI 测试和已构建 Node 命令通过；五个实际包
+移位安装不依赖 TUI，42 项服务测试及 390/1440px 受控上游 OAuth 通过。候选
+[36226281163](https://github.com/cjhyy/codeshell-services/actions/runs/36226281163) 全部通过，
+包含实际镜像内命令、两个项目容器、Link、归档与镜像加载；特别在控制器停止项目后
+核对卷无运行容器占用，再挂载原 `/workspace` 修复／恢复，随后启动同一项目并检查
+文件、会话与授权代次。候选 artifact 10900947343（444868298 bytes），证据 artifact
+10900708911，日志 `/tmp/server-settings-recovery-candidate-eb624983.log`。未发布包／镜像。
+
+主仓最终 CI 36226251315 的第一次桌面分片在 Puppeteer 启动 hook 超时，0 项业务
+测试执行，其余分片、Electron、Windows、类型和 lint 均通过。实际本地同文件
+14 项／95 断言通过（`/tmp/server-recovery-puppeteer-local.log`）。随后只重验已失败的
+桌面分片，通过后最终 CI 全绿；没有放宽断言或增加超时时限，也不据此声称已定位
+浏览器启动超时的底层原因。PR #17 已合入 main
+`ca9895ed040a8d0d8dbb01e048c5d8727d934bff`。
+
+Video 早到呈现回执修复 `5f59d2b` 的两次完整 CI 均通过。随后 Quant 组合一次界面
+验收读取旧时间线元素宽度 0；`8cba2a7` 改为同一次 page evaluation 查询并测量当前
+节点，保留 900px、缩放、滚动和刻度断言。旧日志未记录节点连接状态，不能断言已
+重建当时全部时序。Quant `18d1392` 最终两次完整 Linux 验收通过。
+
+Video 同一提交的一次 Linux 运行另外在原片重开预览失败（CI 36225760422），其他
+运行通过；调查发现该旧界面仍直接绘制 HTMLVideoElement，没有复用已验证的冻结帧。
+新提交 `753a0b29ad6aabe11d689e23df5d30fc98c1147e` 让原片静态预览共用寻帧验证，
+检查请求／素材归属后持有精确帧，播放时跟随实时画面；替换、卸载、隐藏时释放缓存。
+不改工程格式或权限，源码、README 和生成包同步提交。
+
+真实 MP4 回归保留实际解码，只令目标预览对可变视频元素的直接读取为黑场；旧实现
+读到 1 种颜色且未持有／释放帧，测试失败，新实现通过实际像素及替换／释放断言。
+日志 `/tmp/video-legacy-frozen-before.log`、`/tmp/video-legacy-frozen-after.log`。完整
+原片导入／预览／新浏览器上下文／粗剪保留／重新连接 UI 通过；最终完整媒体
+189 项通过、零跳过，`/tmp/video-legacy-frozen-media.log`。全离线 check、类型、
+确定性构建与 validate 通过（已有可选真实语音运行时跳过仍保留），日志
+`/tmp/video-legacy-frozen-check.log`、`/tmp/video-legacy-frozen-validate.log`。
+
+PR #28 仍为草稿，最终 CI 36227010197／36227007835 已排队。Quant PR #27 组合提交
+`394678dd43bad5064bf32335637742e95550245e` 已推送，构建校验及 validate 通过，
+CI 36227021653／36227019158 排队／运行。最终完整远程验收仍需通过后才能合入；
+两项均未发布。整体 goal 保持 active，目标服务器／真实服务商和正式兼容版本、
+其余业务持久化及完整升级恢复仍未完成，手机操作继续后置。
+
+
+### 增量 59：录制素材零时长帧与设计草稿并发保护（2026-09-26）
+
+Video `753a0b2` 的两次 Linux UI 验收均在录制后重开并导出失败（36227010197／
+36227007835）；Quant 组合亦失败。未合入这些提交。原片预览冻结后，旧实时导出也
+经过严格帧校验。完整录制用例在本机复现：等待下载时读到真实帧 timestamp=0、
+duration=0、currentTime=0、readyState=4；新呈现通知没有到达。诊断日志
+`/tmp/video-recorded-source-diagnostic.log`，诊断替换构造器代码已移除，没有交付到测试。
+
+`e6bbc0c8b9f981b6bb4825c858810b6e7f85cd35` 接受时间戳恰好匹配当前目标的有效帧，
+无需依赖零／缺失的时长或呈现回调；其他位置仍核对帧区间或对应回执，旧画面拒绝和
+原截止时间保留。完整摄像头／麦克风录制、保存、重开、WebM 导出及真实声音检查
+通过，`/tmp/video-recorded-source-exact-after.log`。另加真实像素的零时长／无回调
+回归，25 项 media-pool 用例通过；完整媒体 190 项通过、零跳过，
+`/tmp/video-zero-duration-media.log`。完整离线 check 与 validate 通过，源码、README
+与全部生成包同步。最终 CI 36227959480／36227957671 正在运行，媒体已通过。
+
+Quant 组合 `07db8eb7a4504eadfe08b45f23b22c8405d1237a` 已包括该修复，构建一致性和
+包校验通过（`/tmp/quant-exact-frame-build-check.log`、
+`/tmp/quant-exact-frame-validate.log`）；CI 36227976326／36227974232 运行中。
+PR #28 和 #27 尚未合入／发布，最终 UI 验收仍需通过。
+
+新工作树 `design-project-recovery/codeshell-panel-apps` 从最新 Panel main `a301c46`
+创建，分支 `codex/design-studio/project-recovery`。确认原设计自动恢复直接覆盖
+`storage.set`，保存／打开会直接删除恢复记录，切换项目的回调还会向已变化的 Host
+提交旧草稿。提交 `f634a70` 改为项目／恢复会话限定的版本条件操作；响应丢失先读
+核对，冲突不更新写入基准，不重发；读取失败和坏记录不当空记录覆盖或删除。
+拆分恢复文件的每次调用／重试检查原项目代次，保存／打开只能清除原恢复会话记录。
+
+界面显示明确失败原因，可下载带项目身份和原始记录的恢复备份，再明确读取最新记录；
+旧 Host 显示无并发保护限制。切换项目不补发旧写入，未确认旧草稿保存在页面内供下载。
+这是临时保护，不是持久跨设备备份或独立可迁移设计包；未添加备份导入，资源和基线
+仍依赖原项目。没有新增 Host 权限，也不宣称全部设计业务已经验收。
+
+11 项针对性检查通过：两实例覆盖／删除竞争、丢失写入回执、错误快照、能力变化、
+旧队列；实际应用双窗口冲突、下载备份、明确重读、切换项目、读取失败和坏记录保留。
+日志 `/tmp/design-recovery-final-focused.log`。新浏览器测试最初静态文件根路径多一个
+斜杠，导致资源被测试服务拒绝；修正夹具后通过，未改应用等待／断言以绕过失败。
+完整离线 check（含新增 suite）、类型和 validate 通过，
+`/tmp/design-project-recovery-check.log`、`/tmp/design-project-recovery-types.log`、
+`/tmp/design-project-recovery-validate.log`。后续最后的会话守卫／坏记录用例重验通过。
+
+合并待验收 Video 分支后，Design 最终组合提交
+`c54147cc8104a0b8a5670f5137ca64da005d35de` 的构建一致性和 validate 通过；
+[PR #29](https://github.com/cjhyy/codeshell-panel-apps/pull/29) 已创建并附到任务，保持
+草稿等待远程组合验收。先合入 #28，再保证该 PR 差异只保留设计恢复业务。
+整体 goal 保持 active，真实服务商／目标部署、正式发布、其余业务和完整升级恢复
+仍需继续；手机界面继续后置。
+
+
+### 增量 60：独立画面采样与真实 Design 存储验收（2026-09-26）
+
+Video `e6bbc0c` 的 push CI 36227957671 全通过，但 PR CI 36227959480 在粗剪队列
+最后选择蓝色片段的像素比较超时；未据另一次绿灯合入。Quant `07db8eb` 和 Design
+`c54147c` 的两次完整 CI 随后均通过。发现独立 `captureAssetFrame`（Agent 的
+`inspect_video_frame` 使用入口）仍只等待 seeked，再直接从可变视频表面编码 JPEG。
+这一入口的结果也是该 UI 测试的预期像素来源；旧失败日志不足以断言其全部实际时序。
+
+新回归保留真实解码和 JPEG 编码，只令可变视频表面的直接 Canvas 读取为黑场。
+修复前得到有效格式但无真实像素的黑色 JPEG（1132 bytes、mutableReads=1），
+修复后读取冻结帧并保留原预览时间，日志 `/tmp/video-capture-frozen-before.log`、
+`/tmp/video-capture-frozen-after.log`。`e0fdbbc1bd66e9bb646290a454a9dfebfd94d3b1`
+让独立采样也验证并冻结实际帧，在完成／失败后释放。原图片路径保留，图像大小／
+编码上限不变；粗剪检查保留原像素容差并增加失败诊断（预期／实际中心色、播放头、
+选中片段及提示），不扩大等待时限。
+
+受影响的完整粗剪队列流程通过，`/tmp/video-capture-frozen-roughcut.log`。完整媒体
+190 项通过、零跳过，`/tmp/video-capture-media.log`；完整离线 check、类型、构建
+一致性与 validate 通过，源码／README／生成包同步提交。最终 CI
+36228852034／36228849737 运行中。没有将单项通过作为整体 UI 验收，也没有重跑
+旧失败任务来代替修复。
+
+Design 用当前恢复模块连接实际已构建 Node Host 的磁盘存储，验证两个实例竞争仅
+一个成功、旧实例不能清除新记录、重新构建 Host 实例后重读、另一项目隔离、撤销
+拒绝写入及重新加载后的条件删除。最初手写临时夹具 key 含不允许的冒号，Host 正确
+拒绝；改为合法 key 后通过，未放宽 Host 校验。验证已纳入
+`scripts/design-studio-host-storage.mjs`（提交 `cce6de5`），接受明确的兼容已构建
+server 包目录并核对包名，只使用和清理自己的临时项目，不修改产品依赖。日志
+`/tmp/design-host-storage-maintained.log`，不是内存模拟或真实云端用户验收。
+
+同步最终采样修复后，Quant 为 `c127ed204e316abddedd652bbbf403539dfb5231`，Design
+为 `6ea85916f949e0e9ef567dc1b9f437bdb6954958`。两者本地组合构建一致性和包校验
+通过（`/tmp/quant-capture-build-check.log`、`/tmp/quant-capture-validate.log`、
+`/tmp/design-capture-build-check.log`、`/tmp/design-capture-validate.log`）。PR #27／
+#28／#29 仍未合入，等待最终组合 CI；未发布。整体 goal 仍 active，原始完整范围
+与真实账号／模型、部署、兼容发布及剩余业务恢复门槛不变。
+
+
+### 增量 61：WebM 首画面延迟与最终组合重验（2026-09-26）
+
+上轮 Video `e0fdbbc` 和 Quant `c127ed2` 的两次完整 CI 均通过。Design
+`6ea8591` 的 PR CI 36228868345 通过，但 push CI 36228866225 在摄像头／麦克风
+录制、保存、重开后的 WebM 导出等待下载超时，仍未合入。日志
+`/tmp/design-final-ui-failure.log` 只证明导出未在测试时限内完成，未保存实际帧时序。
+本轮为该 UI 检查加入有界帧时间诊断，不放宽超时或声音／画面断言。
+
+实际 FFmpeg WebM 夹具让音轨先于视频开始。修复前，定位到 0 秒后，媒体时钟为 0、
+seek 已结束、readyState=4；冻结帧 timestamp=100000、duration=100000，呈现回执
+同为 100000，仍被旧的“帧不得晚于时钟”条件拒绝直到超时。
+`/tmp/video-delayed-track-before.log` 稳定复现，不能据此断言先前 CI 的全部根因。
+
+Video 提交 `7b5874dc259b5a9664606299781ceae9195deda2` 允许经当前寻址呈现回执确认
+的准确冻结帧，覆盖音轨早于首画面的情况。无对应回执时仍要求准确时间戳或帧区间；
+寻址完成、目标时钟、旧回执拒绝和资源释放约束不变，不扩大容差或截止时间。
+源码、README 与生成包同步。26 项取帧测试通过；完整媒体 191 项通过、零跳过，
+`/tmp/video-delayed-track-after.log`、`/tmp/video-delayed-track-media.log`。
+真实录制／重开／有声导出通过，`/tmp/video-delayed-track-recording.log`；完整离线
+check 和 validate 通过，`/tmp/video-delayed-track-check.log`、
+`/tmp/video-delayed-track-validate.log`。
+
+Quant 最终组合为 `6339361dc05d5e6c862f879bb301c26686a3b386`，Design 为
+`27cc22090773458edb62fa216ec791c01bb3dcf2`。两者构建一致性与包校验通过，日志前缀
+`/tmp/quant-delayed-track-`、`/tmp/design-delayed-track-`。最终 CI：Video
+36229833251／36229831062，Quant 36229844771／36229842635，Design
+36229855710／36229853626，已确认排队或运行中；尚未合入或发布。
+
+求职草稿继续审计：现有 `job-hunt-critical-drafts-v1` 是没有项目归属的浏览器全局
+记录，初始化和切换项目会把旧本地状态带入新的项目同步；延迟保存和异步快照操作
+缺少项目代次检查。单凭 cwd 不足以区分同源下均为 `/workspace` 的云端项目。
+新工作树 `job-hunt-project-drafts/codeshell-panel-apps` 已完成依赖安装，暂无产品
+修改；不能标为修复完成。原定层级分支名被已有 `codex/job-hunt-hq` 引用阻挡，保留
+未知归属旧分支，使用 `codex/job-hunt-hq-project-drafts`。后续优先评估使用项目 Host
+存储条件创建持久随机归属标识，避免仅为浏览器备份新增 Host 接口；跨项目异步操作
+仍需单独封锁，不能只改一个浏览器 key 就声称整条流程安全。
+
+整体 goal 保持 active；真实账号／模型、目标服务器、兼容发布、完整升级恢复、
+其余 Panel 业务与设备中继范围均保留，手机 Panel 操作优化后置。
+
+
+### 增量 62：已合入媒体／回测，以及求职草稿项目隔离（2026-09-26）
+
+Video `7b5874d` 的 CI 36229833251／36229831062、Quant `6339361` 的
+36229844771／36229842635、Design `27cc220` 的 36229855710／36229853626
+均已完整通过。刷新 main 后依次合入 PR #28（合并 `9322648`）与 PR #27
+（合并 `337d3c9`）。Quant 接受树与最新 main 无内容差异；两个任务的工作树均
+干净、无活跃进程，已删除自己的临时工作树及本地／远程分支，原始主目录未改。
+这些合入不等于发布。
+
+Design 合并最新主线成为 `94085841f84bed572a7aa5eb2da71faa63c3e37b`，最终差异只含
+Design 恢复；完整组合 check 和 validate 通过（`/tmp/design-final-combined-*.log`）。
+CI 36230738166／36230736595 已确认运行中，PR #29 仍未合入／发布。
+
+求职分支 `codex/job-hunt-hq-project-drafts` 提交 `2bbc4db`，合并 main 后再提交
+`9dcc47dc0c6deab8d85a6b2f931592da4c07a46b`。通过项目 Host 存储条件创建持久随机
+草稿标识，不以 cwd 作为唯一身份；同源且目录同名的两个项目仍分开。各浏览器窗口
+保留独立副本，Host 小状态按读取版本条件保存；冲突、错误快照、读取失败和不明
+写入回执停止覆盖，不重复发送不明写入。旧全局浏览器草稿不自动归属或删除，备份
+下载保留原始记录、当前输入和页面内旧项目草稿。
+
+项目切换取消旧计时器，读取／分片／重试／写入回执检查原项目代次；切回原项目可
+恢复其未确认输入。初始化先订阅上下文变化并取得当前项目存储，旧回调不能覆盖新
+项目。明确重新读取不会重新应用刚舍弃的浏览器输入，但保留旧输入供备份。Host
+存储读取失败停止编辑，不按空状态覆盖。旧 Host 显示无并发保护限制，禁用自动
+浏览器恢复，保留原 Host 缓存路径。Agent 工具也拒绝未成功加载的项目。
+
+14 项针对性检查全部通过、零跳过，`/tmp/job-drafts-final-focused.log`：项目身份、
+并发初始化／保存、丢失和不明回执、错误快照、坏浏览器记录；实际页面同路径项目
+切换、旧读取、未触发的缓存／快照保存、已发出的缓存回执、切回原项目恢复，以及
+明确重读不会反复应用旧草稿。前三轮 validate 揭示的是新增 scope 参数使旧源码
+结构断言不匹配；更新对应三个断言以保持原流程约束，未删除验证或扩大等待时限。
+完整组合离线 check 与 validate 通过，`/tmp/job-drafts-combined-*.log`；之后明确
+重读补丁重验全部 14 项与 validate（`/tmp/job-drafts-final-validate.log`）。原可选
+真实语音运行时跳过保留，没有用它们证明模型环境完成。
+
+维护脚本 `scripts/job-hunt-host-draft-storage.mjs` 使用实际已构建 Node Host 磁盘
+存储，验证竞争仅一方成功、稳定归属、不同窗口副本、同路径不同 Host、重启和撤销。
+`/tmp/job-drafts-real-host-final.log` 通过，仅创建／清理自身临时目录，无用户数据。
+[PR #30](https://github.com/cjhyy/codeshell-panel-apps/pull/30) 已创建草稿并附到任务；
+CI 36230870765／36230841138 已确认运行中，尚未合入或发布。
+
+此变更不包含备份导入、旧无归属草稿自动迁移，也不证明所有求职异步业务控制器、
+真实模型／录音／PDF 流程已验收。浏览器副本仍仅保留于该浏览器；跨设备恢复需要
+已成功落盘的 Host 项目数据。整体 goal 继续 active，完整原范围与部署／发布门槛
+不变，真实服务商、模型和目标服务器输入仍缺；没有发布公开包或镜像。
+
+
+### 增量 63：设计恢复合入、求职备份导入与视频首帧校验（2026-09-26）
+
+Design 最终组合 `9408584` 的 CI 36230738166／36230736595 全部通过，PR #29
+合入 main `28b361b10c72e4f99ec46ba56581a6aba40ab39d`。确认干净且无活跃进程后，
+已清理自己的设计工作树和本地／远程分支。设计备份导入及完整可迁移设计包仍未实现。
+
+求职旧组合 `9dcc47d` 的 PR CI 36230870765 通过，但 push CI 36230841138 在录制、
+保存、重开后的导出失败；未忽略该失败或据另一次绿灯合入。日志记录真实帧时间戳
+8000、duration=0、媒体时间=0；不能据此推断全部呈现回调时序。
+
+独立 Video PR #31（`codex/video-studio/initial-frame-receipt`，`d1677ab`）统一媒体
+加载入口，在首次加载完成且媒体时间为零时记录实际冻结帧的源与时间戳，立即释放帧。
+初始空隙只能接受匹配该来源与初始时间戳的帧；旧画面拒绝、寻址条件、原截止时间和
+释放约束不变。真实延迟 WebM、零时长且无呈现回调的回归修复前失败、修复后通过；
+另验证三次注入旧画面均被拒绝。完整媒体 192 项通过、零跳过；随后新增旧画面回归的
+最终取帧 28 项通过。真实录制／重开／有声导出、完整离线 check 与 validate 通过，
+源码和生成包同步。日志 `/tmp/video-initial-receipt-*.log`。CI 36232099253／
+36231986992 已确认运行，包、媒体及其他业务检查通过，完整 UI 验收尚未完成。
+PR 已附到任务；尚未合入或发布。
+
+求职新增 `9ac499a`：备份导入预览来源和目标项目，明确选择恢复内容，先归档原输入，
+再条件保存。简历恢复生成当前项目新版本并清除旧证据和外部关联；答案必须选择当前
+项目问题，不自动提交练习。项目切换、输入变化或并发冲突中止旧预览；项目文件写入
+失败保留可恢复的纯文本记录。明确重读会归档损坏浏览器记录的原始字节，原记录不删，
+只绕过已有精确备份的相同坏副本。旧无归属记录仍不自动分配项目。
+
+24 项针对性检查通过、零跳过，`/tmp/job-draft-import-all-focused.log`；实际 Node
+Host 磁盘存储验收通过，`/tmp/job-draft-import-final-host.log`。合并最新 main 与
+Video PR #31 后，最终组合 `92f635dcbd13637b1498006a6b529c2017088dfc` 的完整离线
+check、类型／构建一致性和 validate 通过，`/tmp/job-draft-import-combined-*.log`。
+原可选真实语音运行时跳过保留，不能作为真实模型验收。PR #30 保持草稿，等待该最终
+组合远程验收与 Video #31 先合入。旧 Host 无条件存储时不能使用本次受保护导入。
+
+整体 goal 仍 active；手机 Panel 交互优化继续后置。主线未收尾的范围包括项目路由与
+其他异步业务、六 Panel 核心流程和后台任务恢复、完整数据迁移及升级回滚、真实第三方
+和模型、三仓正式兼容发布与目标部署验收，以及设备目录／安全中继。真实账号、模型、
+目标服务器和域名仍缺；本轮没有公开发布包、镜像或标签。
+
+
+### 增量 64：首帧修复合入与同路径设计项目隔离（2026-09-26）
+
+Video PR #31 的两组完整 CI 36231986992／36232099253 全部通过；刷新 main 后，
+准确提交 `d1677ab` 已合入 `f0b11f9dccf6abb73d37222dd9ea8e8cc5f7faf7`。确认自身工作树
+干净、无活跃进程且提交已被主线包含后，清理了自身工作树与本地／远程任务分支。
+尚未公开发布。
+
+求职组合 `92f635d` 的 CI 36232324487／36232322063 全部通过。同步新的 main 后为
+`7001d6fd3616548d294e1bb6bc8be136966acd9b`，完整本地 check 与 validate 通过，日志
+`/tmp/job-context-main-*.log`。已推送，最终 CI 36233227021／36233225229 已确认
+排队或运行，PR #30 仍待最终验收。PR 描述更新遇到一次网络 EOF，随后同一更新成功；
+没有重跑或重启 CI。
+
+原计划继续设计备份导入，但先发现同路径云端项目隔离缺口：Design 仅比较 cwd，
+两个项目都挂载 `/workspace` 时不切换画布，下载备份也按 cwd 合并旧草稿。新工作树
+`design-backup-import/codeshell-panel-apps` 的任务分支已改为
+`codex/design-studio/project-context`，优先修复实际数据归属问题，不声称导入已完成。
+
+`42d062c` 在目录或 session 改变时更新项目代次，保留每次切换的独立草稿与来源会话；
+先订阅上下文再读初始状态，迟到的初始读取不覆盖更新通知。恢复分片和基线读请求
+绑定原项目。`7c9e18c` 在新项目读取期间暂停画布／顶栏编辑、快捷键和自动恢复写入，
+此时下载备份不把尚未切换的旧画布标记为新项目。同项目换会话也保守地重读，备份的
+会话元数据不改变 Host 的授权或存储范围。
+
+同路径回归修复前超时失败（`/tmp/design-context-before.log`），修复后通过。最终
+16 项会话存储和实际浏览器回归通过、零跳过（`/tmp/design-context-loading-focused.log`），
+包括同目录三个项目分别保留备份、启动过程中切换、旧读取／保存回执晚到和新项目
+读取期间的编辑及备份行为。中间新增测试误点了没有错误状态时隐藏的重读按钮，已
+调整为真实损坏记录导致按钮可见的流程，没有放宽等待或产品约束。最终组合
+`7c9e18ce7251a71707ea5c4ff82aa1c7087b7c3f` 的完整本地 check 与 validate 已通过，
+日志 `/tmp/design-context-final-check.log`、`/tmp/design-context-final-validate.log`；
+原可选真实语音运行时跳过保留。[PR #32](https://github.com/cjhyy/codeshell-panel-apps/pull/32)
+已创建草稿并附到任务，CI 36233330050／36233327515 已确认运行，尚未合入或发布。
+
+整体 goal 保持 active。设计备份导入、可迁移资源包、其余异步业务与完整升级恢复、
+真实服务商／模型、正式发布及目标部署、设备目录和安全中继均未据本轮修复打勾。
+手机 Panel 交互优化继续后置。
+
+
+### 增量 65：求职恢复合入与完整设计备份（2026-09-26）
+
+求职 `7001d6f` 的最终 CI 36233227021／36233225229 全部通过；刷新 main 后合入
+PR #30，合并提交 `c2f1fd65d014c03b2a36f52d4d61d69d7070973b`。确认干净、无活跃
+进程且提交被主线包含后，清理自己的求职工作树及本地／远程分支，原主目录未改。
+
+Design 项目隔离 `7c9e18c` 的 CI 36233330050／36233327515 全部通过。同步求职已
+合入的 main 后为 `d99e59b565cb4822261fc86bfa2b93acc34ec3d8`，完整本地 check 与
+validate 通过（`/tmp/design-context-job-combined-*.log`）。PR #32 的最终组合 CI
+36233955297／36233953426 正在运行，尚未合入。
+
+新分支 `codex/design-studio/portable-backup`／工作树 `design-portable-backup` 从
+最新 main 建立并集成待验收的项目隔离补丁。提交 `43c4e0c` 添加完整设计备份：
+下载包含全部页面与逐项校验的项目图片／字体字节，索引中未查看的页面也会加载；
+总文件上限 128 MiB。导入先展示来源、目标项目、页数和资源数，完整验证后明确确认
+恢复到独立新文件。资源与页面分片按验证后的摘要生成路径，只创建或复用相同字节，
+最后提交主文件；不覆盖当前画布、草稿或已有不同内容文件。回执丢失只读取核对，
+项目切换／关闭对话框停止后续动作，已发出的原项目写入仍可能完成。
+
+25 项针对性存储／浏览器／备份模块检查通过、零跳过，
+`/tmp/design-portable-final-focused.log`。随后增加 1000 图层的大文档索引恢复，
+6 项模块检查通过（`/tmp/design-portable-large-final.log`）；最初夹具使用不存在的
+`rect` 类型被正常拒绝，修正为 `rectangle` 后通过，未放宽文档校验。12 页索引设计
+实际浏览器验证下载全部页面、保留来源与原画布。真实 Node Host 维护脚本
+`scripts/design-studio-portable-host.mjs` 验证独立项目恢复、删除原项目后仍可读取、
+重建 Host、资源完整、相同重试、不同内容保留及撤销拒绝，
+`/tmp/design-portable-real-host.log` 通过；仅操作自己的临时目录。
+
+完整离线检查与 validate 通过后，同步最终项目隔离／main 为组合
+`948a8d44e1700b15eb87ff35a23f6989561b49f5`。最终组合 check／validate 均通过，
+其中全部 26 项针对性检查通过、零跳过；原可选真实语音运行时跳过保留。日志
+`/tmp/design-portable-combined-*.log`。[PR #33](https://github.com/cjhyy/codeshell-panel-apps/pull/33)
+已创建草稿并附到任务，CI 36234100652／36234097803 已确认运行，尚未合入／发布。
+新恢复入口明确区分完整备份与旧草稿日志；旧日志仍依赖原
+项目基线和资源，其导入尚未完成。没有据此声称任意项目文件可迁移，也没有发布。
+
+整体 goal 保持 active；真实第三方／模型、目标部署、三仓正式兼容版本、完整跨版本
+恢复与回滚、其余业务和设备目录／安全中继仍保留；手机 Panel 操作优化继续后置。
+
+
+### 增量 66：封面冻结修复合入与旧设计草稿重建（2026-09-26）
+
+Design 项目隔离 `d99e59b` 的 push CI 36233953426 通过，但 PR CI 36233955297
+媒体检查失败：真实黑色 WebM 首帧封面在 Image.decode 报 EncodingError，日志
+`/tmp/design-context-media-failure.log`。没有据另一次绿灯合入。日志未记录全部回调
+时序，不能直接断言首帧失败的全部原因。通过已完成 job 的日志接口取得证据；整个
+run 尚在运行时 gh run view 暂不能提供日志，没有因此重启任务。
+
+发现封面仍仅等待呈现回调，再直接绘制可变 video 表面。真实媒体回归屏蔽回调后，
+修复前稳定得到 missing=true（`/tmp/video-frozen-covers-before.log`）。独立 Video
+`9651b1185c00086a513525bbb598b77d933af77f` 改为复用既有已校验冻结帧流程，保留可选
+封面的原一秒截止时间，成功／失败均释放帧。有效解码帧不再依赖回调；真正错误与
+取消仍保留。替换旧“必须等通知”的断言为实际帧暂不可读时不能发布、恢复后可发布
+且帧已释放；新回归核对真实像素并拒绝可变 video Canvas 读取，未放宽像素或时间限制。
+
+完整媒体 194 项通过、零跳过，`/tmp/video-frozen-covers-media.log`；完整离线 check、
+类型、构建一致性与 validate 通过，`/tmp/video-frozen-covers-{check,validate}.log`。
+源码／README／生成包同步。PR #34 已附到任务，最终两组 CI 36235132807／36235129150
+全部通过，刷新 main 后合入 `639a48c5f232e38a322a179e22e75e8e9ccef715`。自身干净、
+无活跃进程且已合入的工作树和本地分支已清理；远端分支删除遇连接错误待重试。
+
+新分支 `codex/design-studio/legacy-recovery-import`／工作树 `design-legacy-recovery`
+提交 `1a4d0af`，补旧草稿日志导入。备份选择器保留坏记录供诊断，并能选择其他草稿
+或 Host 保存的恢复指针。内置基线直接校验；外部基线要求内容 SHA-256 精确匹配，
+索引页面／兼容分片／恢复日志指针和图片字体逐项验证。先核对操作类型和记录的修改前
+状态再重放，拒绝未知操作、任意字段赋值及不完整排序；不修改原日志。准备阶段只读，
+确认后走完整备份的只创建新文件流程，保留当前画布与已有文件。项目切换／取消后旧
+操作不能继续。没有可校验基础版本或缺少原资源时明确停止，不臆造丢失数据。
+
+32 项针对性会话／实际浏览器／备份检查全部通过、零跳过，
+`/tmp/design-legacy-focused.log`。真实 Node Host 维护脚本增加原版本日志重建，准确
+使用实际文件 revision；恢复到另一项目、删除原项目后重建 Host、资源读取、重复恢复、
+冲突保留与撤销均通过（`/tmp/design-legacy-real-host.log`）。日志有 128 MiB 输入／
+读取、256 草稿及单条 100000 操作限制，没有新增 Host 权限。
+
+同步封面修复后，Design 隔离组合 `68f4900` 的完整 check／validate、完整备份组合的
+构建一致性／validate、旧日志组合 `1508e8631d2c7564ac6e4401659582d8d995a574` 的完整
+check／validate 均通过，日志 `/tmp/design-context-covers-*.log`、
+`/tmp/design-portable-covers-*.log`、`/tmp/design-legacy-combined-*.log`。原可选真实
+语音运行时跳过保留。同步 PR #34 的 main 合并提交后，逐一确认工作树内容无变化；
+最终提交为隔离 `16b4690`、完整备份 `7a98768`、旧日志 `66b4bbd`。隔离已推送；另两项
+及远端旧分支清理遇 GitHub SSL 连接错误，正在重试，不能标为远端交付完成。
+
+整体 goal 仍 active；真实第三方／模型、目标部署、三仓正式发布、完整跨版本升级与
+回滚、其余业务和设备目录／安全中继仍需继续。手机 Panel 操作优化保持后置。
+
+
+### 增量 67：项目隔离合入与另存草稿恢复（2026-09-26）
+
+GitHub 连接已恢复。此前积压的 Host 交付记录、完整设计备份和旧日志提交已上传，
+Video 已合入分支的远端清理也已完成。Design 隔离最终提交 `16b4690` 的两组 CI
+36236866177／36236863918 全部通过，PR #32 合入 main
+`c32f94df9fb43f42c41ecc85fa158a79f65a84aa`。确认自身工作树干净、无活跃进程且被
+main 包含后，已清理工作树及本地／远端任务分支；用户原 checkout 未改动。
+
+完整设计备份 PR #33 同步该 main 后为
+`8800cd52d01dc5ec4472ca839e662be82d4b5c74`，确认与之前通过本地验证的组合内容
+相同，仅整合提交历史。已推送并更新说明；最终 CI 36237590485／36237588373 的
+包、媒体、设计、投资与下载检查通过，完整 Video 界面检查仍在运行，未合入或发布。
+
+实际浏览器复现另存草稿缺陷：已有两页设计更换目标文件名并增加第三页，重开后
+只剩两页（`/tmp/design-saveas-before.log`）。修复使用恢复格式 v2 分开保存原基础
+文件和新目标路径，绑定原文件的版本；基础文件变化时停止重放并保留原记录。
+旧阅读器拒绝并保留 v2，避免误用新目标作为基线。未保存设计反复恢复后仍携带内置
+基础文档，不再变成依赖不存在文件的日志。备份导入与真实 Host 脚本同时支持 v2。
+
+最终 36 项会话／实际浏览器／备份检查通过，零跳过，
+`/tmp/design-saveas-final-focused.log`。实际 Node Host 验证准确基线、独立目标资源、
+源项目删除后重启读取、安全重试、冲突保留和撤销通过，
+`/tmp/design-saveas-real-host.log`。完整离线 check 与 validate 通过，
+`/tmp/design-saveas-check.log`、`/tmp/design-saveas-validate.log`；原可选真实语音运行时
+跳过保留，没有据此宣称真实模型验收完成。修复提交 `88e07b7`，随后同步 PR #33 的
+最新历史，确认文件无变化，最终为 `b777fb5917dd8acb9d38ef9e23f86321a5b36ca8`。
+
+[PR #35](https://github.com/cjhyy/codeshell-panel-apps/pull/35) 已创建草稿并附到任务，
+包含旧日志导入和另存恢复；依赖 PR #33 先合入。最终 CI
+36237801828／36237777457 已确认运行。原日志缺少准确基础版本或资源时仍不能凭空
+重建，显示明确错误并保留原输入。没有新增 Host 权限；尚未合入或公开发布。
+
+整体 goal 保持 active。待完成范围继续包括其余业务及异步路由、完整升级回滚、
+真实第三方／模型、三仓正式发布、目标部署、设备目录／安全中继。手机 Panel 操作
+优化后置；外部输入仍缺真实服务配置、目标服务器和域名，不阻止其余代码收尾。
+
+
+### 增量 68：完整设计备份合入与旧事务回滚隔离（2026-09-26）
+
+PR #33 最终两组 CI 36237590485／36237588373 全部通过，刷新 main 后准确提交
+`8800cd5` 合入 `d3a650dc57ba3177e4fd1f6b52f912791e5c7a18`。确认自身工作树干净、
+无活跃进程、提交被 main 包含后，清理完整备份工作树及本地／远端分支。未公开发布。
+PR #35 同步 main 后为 `b070bde127fb76065ed998280f6b6b649e877465`，逐文件确认
+与已验证组合 `b777fb5` 无差异。最终 CI 36238184900／36238182221 已确认运行。
+
+继续业务项目路由审查时，在独立任务分支 `codex/design-studio/async-project-guards`
+复现 Agent 保存回执晚到导致的跨项目回滚：两个 Host 项目同为 `/workspace`，
+切换到只有一页的新项目后，旧保存的失败处理将其画布替换成旧项目两页。
+真实浏览器回归修复前失败 `2 !== 1`，`/tmp/design-async-before.log`。
+
+新提交 `4ca72bd` 给 Agent 编辑、HTML 导入、资源写入和事务回滚保留原项目代次；
+切换项目后不能恢复旧画布／历史／资源到新项目。排队事务保留发起代次；文件分片
+写入、冲突探测和资源缓存读取固定原项目，异步构建后再次校验再发出后续请求。
+已发出的原项目写入仍可能完成，不能将取消回执解释成未落盘。没有新增 Host 权限。
+
+四条真实浏览器回归通过，覆盖编辑保存、资源分片、HTML 导入和显式回滚，资源场景
+另断言旧分片冲突探测不读取新项目同名文件。40 项会话／浏览器／备份针对性检查通过，
+零跳过，`/tmp/design-async-focused.log`。完整离线 check、类型／构建一致性与 validate
+通过，`/tmp/design-async-check.log`、`/tmp/design-async-validate.log`；原可选语音运行时
+跳过保留。此次验证不代表真实服务商、物理手机或所有设计异步控制器均已验收。
+
+同步 PR #35 与 main 最新历史后，确认内容无变化，最终提交
+`66c797cc63a981ff64fb840ce49bcd539322979c` 已推送。
+[PR #36](https://github.com/cjhyy/codeshell-panel-apps/pull/36) 已创建草稿并附到任务，
+依赖 PR #35 先合入；CI 36238317485／36238299461 已确认运行。未合入或发布。
+后续仍需检查设计保存期间继续编辑的脏状态，以及分页／资源加载和预览等异步路径；
+本轮没有以事务路径回归代替这些控制器的验收。
+
+整体 goal 仍 active。其余业务恢复、完整数据迁移／升级回滚、真实服务商和模型、三仓
+正式发布、目标部署、设备目录／安全中继仍需完成。手机 Panel 交互继续后置。
+
+
+### 增量 69：旧草稿恢复合入与保存期间编辑保留（2026-09-26）
+
+PR #35 最终组合 `b070bde` 的两组 CI 36238184900／36238182221 全部通过，刷新
+main 后合入 `3b7531d6c4bee76aa96c094ac21e59c32c8f6615`。确认自身工作树干净、无
+活跃进程且被 main 包含，已清理工作树及本地／远端分支；用户原 checkout 未改动。
+PR #36 同步 main 后为 `99295e7712ce7661de8a8a41e7d82c5f9e2779d7`，文件与原已验证
+组合完全一致；最终 CI 36238804811／36238802667 已确认运行，未合入或发布。
+
+独立任务 `codex/design-studio/save-edit-recovery` 复现保存期间编辑丢失恢复状态：
+先保存两页，再在写回执到达前新增第三页，普通文件与分页文件都会显示“已保存”，
+从而错误清除新修改的草稿。两个真实浏览器回归修复前失败，
+`/tmp/design-save-edit-before.log`。修复提交 `d762863` 只将请求捕获的文档建立为
+保存基线，后续编辑继续保持脏状态并生成基于实际落盘版本的恢复增量。
+
+分页保存回执分别更新持久索引和当前缓存，保留新增／删除／排序及已加载页面中的
+新修改；对保存后才加载的页面保留其原基线，避免将新内容当作恢复起点。旧文档实例
+回执也不能仅凭路径相同认领新画布。三个针对性实际浏览器流程通过，包括普通文件、
+分页文件保存中新增页面，以及十二页文件保存中加载并重命名原来未加载的页面；均验证
+重开恢复、再次保存和再次重开的最终内容，`/tmp/design-save-edit-cases.log`。
+
+43 项会话／实际浏览器／备份检查通过、零跳过，
+`/tmp/design-save-edit-focused.log`。完整离线 check、类型／构建一致性与 validate
+通过，`/tmp/design-save-edit-check.log`、`/tmp/design-save-edit-validate.log`；原可选
+真实语音运行时跳过保留。没有新增 Host 权限；不据此声称真实服务商、物理手机或
+目标部署已经验收，也不声称主设计与单独恢复记录具有原子落盘保证。
+
+同步最新 main／PR #36 历史后确认文件无变化，最终
+`2a83434bb539120715d1ac12a9c908bec339af16` 已推送。
+[PR #37](https://github.com/cjhyy/codeshell-panel-apps/pull/37) 已创建草稿并附到任务，
+依赖 PR #36 先合入。最终 CI 36238996263／36238978909 已确认运行，尚未合入或发布。
+
+整体 goal 保持 active。后续仍需设计分页／资源／预览异步路径审查、其余 Panel 业务
+和长任务恢复、完整数据迁移及升级回滚、真实第三方／模型、三仓正式发布及目标部署，
+还有设备目录／安全中继。手机 Panel 交互优化继续后置。
+
+
+### 增量 70：事务隔离合入与页面／资源加载归属（2026-09-26）
+
+PR #36 最终组合 `99295e7` 的两组 CI 36238804811／36238802667 全部通过。刷新
+main 后合入 `f34b6716ea9e8dae660676d608e34e37d1b83fcc`，确认自身工作树干净、
+无活跃进程且被 main 包含，已清理工作树及本地／远端任务分支。未公开发布。
+PR #37 同步 main 后为 `77790262b76e76f2da8983b72f6fdefd4d75fb4c`；确认文件与
+原已验证组合完全一致。最终 CI 36239454329／36239451955 的包、媒体、设计、投资、
+下载检查通过，Video 完整界面检查仍在运行，未合入。
+
+独立任务 `codex/design-studio/async-load-scope` 复现分页校验晚到的跨项目问题：
+旧项目已读取页面、尚在完成摘要校验时切换到同目录的新项目，旧激活流程随后使用
+新缓存，令新活动页的 nodes 变成 null，元数据读取报错。
+`/tmp/design-load-scope-before.log` 为修复前失败证据。
+
+提交 `ff8ba16` 在页面加载、全页加载、缓存压缩、图片资源校验、字体加载和活动页切换
+入口捕获原项目代次及文档实例，在异步结果应用前再次校验。同项目新建设计也会令
+原结果失效；旧字体不能在加载结束后安装进新文档。已经发出的只读操作可能完成，
+本轮不宣称可撤回这些读取，也不宣称所有预览／导出控制器已验收。
+
+四条实际浏览器回归通过：延迟页面摘要、图片摘要、受控字体解码，以及同项目内换
+文档。字体解码器在测试中受控暂停，仅验证完成后的安装边界，不作为字体渲染保真
+验收。测试开发中修正了图片夹具缺少的标准属性，并通过文件对话框点击可见新建入口；
+未放宽产品文档校验或等待限制。新项目初始化本身可能清理空恢复记录，因此检查的是
+旧结果释放后不能新增新项目写入，而非禁止初始化的合法写入。
+
+47 项会话／实际浏览器／备份针对性检查通过、零跳过，
+`/tmp/design-load-scope-focused.log`。完整离线 check、类型／构建一致性与 validate
+通过，`/tmp/design-load-scope-check.log`、`/tmp/design-load-scope-validate.log`；原可选
+语音运行时跳过保留。没有新增 Host 权限，未作真实服务商或目标部署完成声明。
+
+同步最新 main／PR #37 历史后确认文件无变化，最终
+`0e3f77271a084a8ab4e5f31aaad6897c92fb846b` 已推送。
+[PR #38](https://github.com/cjhyy/codeshell-panel-apps/pull/38) 已创建草稿并附到任务，
+依赖 PR #37 先合入；CI 36239650797／36239631705 已确认运行。尚未合入或发布。
+后续继续核查预览、前端生成／对比和 PRD 提交给 Agent 的完整控制器边界。
+
+整体 goal 继续 active；其他 Panel 业务与任务恢复、完整数据迁移／升级回滚、真实
+第三方／模型、三仓正式发布及目标部署、设备目录／安全中继均仍保留。手机 Panel
+交互优化后置，不能据设计 Panel 的这些修复把整体交付标记完成。
+
+
+### 增量 71：保存编辑修复合入与设计交付归属（2026-09-26）
+
+PR #37 最终组合 `7779026` 的两组 CI 36239454329／36239451955 全部通过，刷新
+main 后合入 `8fc40e21b0c95dac21b4d411438d4308ee77b244`。确认自身工作树干净、无
+活跃进程且被 main 包含后，已清理工作树及本地／远端分支。未公开发布。
+PR #38 同步 main 后为 `39d4309c649eb38e0c145846e95700bc3ad9d511`，文件与此前通过
+本地验证的组合无变化。最终 CI 36240202777／36240199653 最后确认仍在运行，
+没有因观察超时或网络错误重新启动。
+
+新任务 `codex/design-studio/delivery-scope` 复现同项目更换设计时的交付串线：
+旧 PRD 读取暂停期间明确确认新建设计，原流程在回执到达后保存新画布并提交旧需求。
+实际浏览器回归在修复前失败，`/tmp/design-delivery-before.log`；修复后通过。
+测试中显式接受新建的未保存确认，避免把取消新建误当成换文档。
+
+提交 `22ba344` 将 PRD／设计交给 Agent、SVG／前端导出、实现对比和检查报告绑定原
+项目、文档实例与路径。读取、保存、依赖读取、输出冲突探测和后续写入／提交前后
+重新检查归属；SVG 保留与已保存设计对应的资源字节，清理阶段不整理替代文档缓存。
+已经发出的原项目写入／提交仍可能完成，取消不代表未落盘，不能盲目重试。
+
+六条实际浏览器取消流程通过：PRD、SVG、直接 Agent 提交、HTML 生成、对比依赖
+读取、检查报告；另一个正常流程仍能保存、提交原 PRD 并导出 SVG。54 项会话／
+浏览器／备份检查全部通过、零跳过，`/tmp/design-delivery-focused.log`。完整离线
+check、类型／构建一致性及 validate 通过，`/tmp/design-delivery-check.log`、
+`/tmp/design-delivery-validate.log`；原可选真实语音运行时跳过保留。无新增 Host 权限。
+测试的 Agent 提交由桥接夹具接受，没有真实服务商调用或外发消息。
+
+同步最新 main／PR #38 历史后确认文件无变化，最终
+`5504f93aad113f4cfcfe4ce4944def765d5b6374` 已推送。
+[PR #39](https://github.com/cjhyy/codeshell-panel-apps/pull/39) 已创建草稿并附到任务，
+依赖 PR #38 先合入。随后两次 GraphQL 和一次 REST 查询均返回 EOF，暂未获取该
+最终提交的 CI 运行 ID／状态；不能把分支推送等同远端检查通过，也没有重新触发 CI。
+
+整体 goal 继续 active。设计其他并发读取与输出元数据一致性仍应审查；这批交付保护
+不代替其他 Panel 业务和长任务、完整升级迁移回滚、真实第三方／模型、三仓正式发布
+及目标部署、设备目录／安全中继。手机 Panel 操作优化继续后置。
+
+
+### 增量 72：加载保护合入、导出回执修复与整体交付缺口（2026-09-26）
+
+GitHub 查询恢复。PR #38 最终 CI 36240202777／36240199653 全部通过，已合入
+`1284fefa57d3a84f1c9861dbe7d6213f86512991`。PR #39 的原提交 `5504f93` 两组
+CI 36240457406／36240524646 也全部通过；这不覆盖后续修复。
+
+PR #39 进一步复现导出写入期间继续编辑时的版本回执错误：实际 HTML 来自旧快照，
+回执却使用新画布版本。改为返回捕获的导出源版本，实际浏览器回归先失败后通过。
+55 项针对性检查全部通过；完整 check 与 validate 通过，原可选真实语音运行时跳过
+保留。日志为 `/tmp/design-delivery-receipt-{before,focused,check,validate}.log`。
+同步已合入 main 后提交并推送 `ac8905d`；最终 CI 待验收，PR #39 尚未合入。
+
+整体交付复核发现：服务仓库 candidate 工作流仅固定 Host 与 services 提交，
+尚未纳入六个实际 Panel 安装包及其准确提交，不能视为三仓完整兼容交付。服务仍
+固定公开 0.9.22；新能力已验证为私有候选，不是已发布版本。
+
+整体 goal 保持 active。优先完成六个 Panel 的核心业务／任务恢复、三仓候选集成、
+跨版本升级和回滚，以及真实服务商与目标服务器部署验收。手机 Panel 交互继续后置；
+设备目录／安全中继是独立未完成项。真实凭据与服务器信息尚缺，但仍有可独立推进
+的代码与集成工作。没有进行公开发布，也没有把受控测试等同于上线验收。
+
+
+### 增量 73：三仓私有部署候选完成（2026-09-26）
+
+设计交付 PR #39 最终 `ac8905d9cae3b1f0bad88958e336653da04af04d` 的两组 CI
+36241287921／36241284990 全部通过，合入 `430a72e1200c562cb619974be33d7440ff1d4177`。
+PR #38／#39 的自身工作树确认干净、无活跃进程且被 main 包含后，已清理本地工作树
+及本地／远端任务分支；原始用户检出保持不变。
+
+新任务 Host `codex/server/panel-candidate` 与 services `codex/services/panel-candidate`
+把实际 Panel 套件纳入候选。新增 `--panels` 源码输入，服务工作流固定完整 Panel SHA，
+先验证类型及已提交构建，再从该提交读取 Git blob。只保留五个业务 Panel 加 Starter
+的安装目录，Video Studio 使用构建产物；不复制忽略文件、源代码工具或开发依赖。
+实际独立安装的候选 Host 对六个包进行只读安装预检，导出后再次预检。
+
+候选格式 v2 增加准确来源和每包 ID／版本／目录／内容摘要，逐文件清单覆盖全部
+资源。校验拒绝漏包、重复包、错版本、改字节、路径替换、摘要错误和降级伪装。旧
+v1 仍可验证，但不能冒充完整三仓候选。没有自动安装、授予权限或运行模型／业务。
+
+验证：服务 60 项测试、格式通过，独立五 tarball 移位安装、六包预检、配置恢复与
+390／1440px 受控 OAuth 通过；日志 `/tmp/services-panel-candidate-test.log`、
+`/tmp/services-panel-candidate-format.log`、`/tmp/host-panel-candidate-local.log`。
+服务 CI 36241714860／36241750788 的 Node 22.16／22／24 全部通过；Host 完整 CI
+36241749440 全部通过，包括 Electron 与 Windows。
+
+最终 Linux 候选 CI [36241763436](https://github.com/cjhyy/codeshell-services/actions/runs/36241763436)
+成功：Host `f0e6d208fc649a6f27242a8f87fe3fca03eff439`、services
+`292b6da308ab4fe44e1158502799ddf9caf8522f`、Panels
+`ac8905d9cae3b1f0bad88958e336653da04af04d`。候选导出、全部摘要、导出后六包预检、
+双项目 Docker、Link 容器与镜像重新加载均成功。私有完整 artifact 10906535658
+（452565992 bytes，保留 14 天），证据 artifact 10906465696；日志
+`/tmp/three-repository-candidate-36241763436.log`。归档包含真实六包目录，不能把
+通用双项目任务验证解读为六个 Panel 的全部业务在容器中执行。
+
+[Host PR #18](https://github.com/cjhyy/codeshell/pull/18) 已合入
+`fab3f40cc64d3b05cdc96ead7099a962ceca6e20`；
+[services PR #3](https://github.com/cjhyy/codeshell-services/pull/3) 已合入
+`f06d687d3aa8b6b1a4c6009ff6b86e487dcf3bd9`。未公开发布。
+
+整体 goal 仍 active：下一步补实际包的项目安装／重开及版本更新路径，继续六个 Panel
+业务与长任务恢复、跨版本数据迁移和升级回滚、真实模型与第三方账号、目标服务器
+部署及恢复演练。设备目录／安全中继仍待完成，手机 Panel 交互后置。公共依赖仍是
+0.9.22，私有候选不等于正式发布；缺少真实服务配置不阻止剩余代码工作。
+
+
+### 增量 74：六个实际候选包的云端安装与恢复（2026-09-26）
+
+此前完整候选包含实际 Panel，但双项目容器执行只安装示例 Panel。本轮 Host 任务
+`codex/server/installed-panel-lifecycle` 将候选六包传给现有真实 Docker 验收，
+通过容器内公开 SDK 安装到两个独立项目，再走认证 HTTP 绑定、选择和存储接口。
+五个声明 storage 的业务包写入各自项目数据；Starter 未增加或绕过存储权限。
+
+逐包在容器副本的入口 HTML 添加测试注释：旧审阅凭据必须拒绝更新，已安装摘要
+保持；重新审阅后目录包可以更新，但项目仍选择原摘要。测试刻意保持相同版本号，
+验证实际内容摘要决定包身份。HTTP 历史列出两份包，审阅切换后新入口包含标记，
+旧授权失效；回退后使用原入口、原数据，另一项目仍保留原包和独立数据。最后删除
+安装来源目录，停止／启动项目，六个原摘要和存储数据仍可恢复。
+
+这些是包生命周期和 Host 数据保存验收；没有启动六个 Panel 的全部浏览器业务，也
+没有验证真实文档 schema 升降级、真实模型或新增权限交互。更新只触及临时容器副本，
+不改原候选或用户本机安装目录。新增入口为 `scripts/smoke-candidate-panel-lifecycle.mjs`，
+由 `smoke-services-cloud-entry --panels` 自动串入既有容器流程。
+
+本地 server 构建、五 tarball 独立移位安装、六包预检、60 项服务测试与受控浏览器
+OAuth 通过；本地 Docker 构建在 npm 下载 webidl-conversions 时 ECONNRESET，未到
+新断言。保留日志 `/tmp/installed-panel-lifecycle-docker.log`，未把该结果标为通过。
+转 Linux 同一提交验收，没有修改网络设置或放宽检查。
+
+Host 最终 `a36caf75b951c216f9cd2cb919aa1a3a61dce7a8` 的完整 CI 36242773655
+全部通过，包括 Electron／Windows。Linux 候选
+[36242780285](https://github.com/cjhyy/codeshell-services/actions/runs/36242780285)
+成功，服务 `f06d687d3aa8b6b1a4c6009ff6b86e487dcf3bd9`、Panels
+`430a72e1200c562cb619974be33d7440ff1d4177`。日志
+`/tmp/installed-panel-lifecycle-ci.log` 明确记录六包安装、受控更新／回退和重启
+三条 PASS；导出后的原始包预检、归档与镜像加载也通过。私有完整 artifact
+10906017588（452572946 bytes），证据 artifact 10906582041。
+
+[Host PR #19](https://github.com/cjhyy/codeshell/pull/19) 已合入
+`bc4170122cd01c8021d3fb9e9d6a6c8ea1493269`，未公开发布。整体 goal 继续 active：
+完整界面安装／升级／恢复、业务文档迁移和长任务恢复、真实服务商、正式版本与目标
+部署／恢复演练以及设备目录／安全中继仍未完成；手机 Panel 交互继续后置。
+
+
+### 增量 75：双窗口真实安装与恢复验收及启动崩溃修复（2026-09-26）
+
+Host 任务 `codex/desktop/panel-recovery-ui` 在隔离 Electron 用户目录中打开两个真实
+项目窗口，仅控制原生目录选择器。通过界面执行安装、增加权限的来源更新、历史版本
+回退、故意损坏保留包后的审阅修复。审阅未确认前不绑定／升级，项目 A 的更新和修复
+不改项目 B 的 pin；损坏包不自动跟随最新版，修复重新展示目标包全部权限。已有项目
+文档字节保持。这是专用测试包的真实管理界面验收，不是六个 Panel 的业务数据迁移。
+
+测试发现新窗口偶发空白：React 已渲染 Main 提供的新项目，而配置查询使用的模块
+快照仍等待父组件 effect 更新，抛出 `project configuration requires a live V2 project id`。
+改为 React 订阅同一份项目快照，移除渲染后的双份状态同步；保留 Main V2 身份校验，
+不将缺失项目降级为全局配置。回归在修复前稳定失败，修复后通过，并验证替换根目录
+与移除项目时不保留旧路径。
+
+本地项目／注册表 12 项、会话压缩 2 项、快捷聊天 47 项、草稿配置 2 项通过；Desktop
+类型、针对性 lint 和 renderer 构建通过。最终两窗口 Electron 验收通过，正常退出。
+日志 `/tmp/panel-recovery-registry-{before,final}.log`、`/tmp/panel-recovery-ui-final.log`、
+`/tmp/panel-recovery-{compact,quickchat,drafts-final,typecheck,lint-final}.log`。新增脚本
+进入默认 Electron CI。最初失败窗口导致退出保存受阻，测试现在只对其隔离子进程
+实施有界清理，并把强制清理作为失败报告，不以此掩盖启动问题。
+
+提交 `994e00c9b04faa6138afd87eef7cdd5fb39d10da` 已推送，
+[Host PR #20](https://github.com/cjhyy/codeshell/pull/20) 已创建并附到任务。
+首轮 CI 36244652655 的类型、全部测试、Electron 和 Windows 均通过，lint 拒绝测试
+清理逻辑在 finally 内抛错。改为保留原始异常、强制清理时设置失败退出码；本地 lint
+及完整 Electron 流程重新通过。最终提交 `0237baaa9a2fbe6857b1218b5b00b28fdb587375`
+已推送，最终完整 CI 36244792129 全部通过，包括 Electron 与 Windows；日志
+`/tmp/panel-recovery-ci-final.log` 记录真实双窗口验收通过。PR #20 已合入
+`d719d7af35a1d94c8acfc124378672b5f43ceeaa`，未公开发布。
+
+整体 goal 保持 active：Web 完整安装与恢复界面、业务文档迁移／旧任务恢复、真实
+模型和第三方授权、正式版本和目标服务器部署／恢复演练、设备目录与安全中继仍待
+完成；手机 Panel 触控与窄屏优化后置。真实配置缺失不阻止剩余代码工作。
+
+
+### 增量 76：Web 界面连接真实 Node Host 的包恢复验收（2026-09-26）
+
+Host 任务 `codex/server/web-panel-recovery` 新增 `scripts/smoke-web-panel-recovery.mjs`。
+两个真实 Node Hub 工作区共享包目录，各自使用登录、HTTP、项目绑定与持久存储。
+浏览器运行完整生产 Web 工作台，操作安装来源、审阅安装、绑定另一项目、增加权限
+更新、历史回退、损坏保留包后的权限重审和恢复。没有拦截浏览器 API，也没有替换
+Core 安装器、授权或存储；只有上游 GitHub commit／ZIP 回复来自临时 Git 仓库。
+
+审阅 v1 后先推进来源 HEAD 到 v2，再确认仍安装准确 v1 提交。项目 A 更新到 v2，B
+继续使用 v1。两个实际沙箱 iframe 通过 Host storage.compareAndSet 写入不同文档，
+各版本重开后读取原值；审阅未确认时完整项目快照不变。损坏共享 v1 字节后，两项目
+均显示不可用，修复 A 不改变 B，恢复目标的三项权限必须重新确认。来源下载返回
+503 时，已有选择不变。最后删除临时来源仓库，退出整个 Node Host 进程并在原地址
+启动新进程；两个项目重新登录、打开 Panel，版本及不同文档仍保留，未发生来源下载。
+
+本地完整 workspace 构建、脚本 lint／format 及真实 Node／Chromium 流程通过；日志
+`/tmp/web-panel-recovery-process-restart.log`。已查看实际修复界面截图。专用合成文档
+只证明 Host 存储与包生命周期，不证明六个 Panel 的领域 schema 迁移、真实 GitHub
+网络／账号、真实模型或 Docker 云端代理及目标部署。
+
+新增根脚本 `test:server-panel-recovery`，CI 在现有 Electron 验收之后安装 Chromium
+并执行该流程。提交 `d0504cfada20e447583c92d480b6d42b54138c0a` 已推送，
+[Host PR #21](https://github.com/cjhyy/codeshell/pull/21) 已创建并附到任务。
+首轮 CI 36245776624 的新增真实 Node／Web 流程、Electron、类型、lint、Windows
+及其他测试均通过；日志 `/tmp/web-panel-recovery-ci-browser.log` 保存新断言结果。
+桌面 job 的既有 Puppeteer 测试在浏览器启动 hook 超时，未执行任何断言；失败日志
+`/tmp/web-panel-recovery-ci-failed.log`。相同套件本地 14 项通过，
+`/tmp/web-panel-recovery-puppeteer-local.log`；未改驱动、超时或断言，仅对已终止的
+失败桌面 job 发起同提交复验。第二次仍在同一启动 hook 超时，日志
+`/tmp/web-panel-recovery-ci-retry-failed.log`，未盲目继续重跑。提交 `1e12d468` 增加
+CI 浏览器路径／版本与 stderr 诊断，并使浏览器自身启动限制短于 Bun hook 限制；
+相同 14 项本地检查再次通过。最终 `1e12d468b403eb63e202d4102c135c197b9e7868` 的
+完整 CI 36246501954 全部通过；日志 `/tmp/web-panel-recovery-ci-final-browser.log`
+记录完整新流程通过，`/tmp/web-panel-recovery-ci-desktop-diagnostics.log` 记录
+Chromium 153.0.8010.0 及 14 项驱动检查通过。前两次启动超时的根因尚未确认，
+不将增加诊断等同于已修复该原因。PR #21 已合入
+`1841d7df39b2870d788e8a3611b46de2c62aed25`，未公开发布。
+
+整体 goal 继续 active：六个 Panel 完整业务、业务迁移和长任务恢复、真实服务商、
+三仓正式版本与目标服务器部署／恢复、设备目录／安全中继仍未完成；手机 Panel
+交互优化后置。本轮补真实界面与 Host 联动的证据，不将受控来源当成真实上线验收。
+
+
+### 增量 77：求职 Panel 并发大快照不再复用可变分片（2026-09-26）
+
+复现实际存储模型的数据覆盖：两个窗口从同一根索引选择同一备用 A/B 目录，后写窗口
+即使根文件版本检查失败，仍能先覆盖获胜窗口的分片；连续三次保存还会改变旧读者
+手中根索引对应的内容。两项回归在修复前失败，日志
+`/tmp/job-hunt-generations-before.log`。
+
+Panel 任务分支 `codex/job-hunt-hq-snapshot-generations` 改为每次生成独立的随机目录，
+使用分片格式 v2、仅创建写入和最后提交根文件的条件更新。持久化模块由实际页面
+调用，沿用项目作用域校验与批次节流；失败或失去执行作用域不提交根文件。旧 A/B
+分片 v1 可读，替换前先将旧根文件原文写入新目录 `previous-root.json`；备份失败
+阻止保存，旧分片保持不动，包括新快照缩小为单文件的情况。分支标准层级命名被
+已有未知归属的本地 `codex/job-hunt-hq` 引用占用，保留该引用并使用上述独立分支。
+
+实际两页应用通过共享、受控的 Host 条件写入接口验收：后写窗口捕获旧根文件后等待，
+先写窗口提交成功，再让后写窗口继续；冲突显示、独立分片、重新打开获胜数据及旧
+根备份均通过。测试以成功根写入作为竞争顺序的证据；最初的浏览器异步轮询未正确
+建立该顺序，已改成 Host 写入确认触发的等待。Host 仍为测试实现，不能替代真实
+部署或六个 Panel 的全部业务验收。
+
+本地求职套件 37 项、完整 `npm run check`、包验证与安装包预检通过；日志
+`/tmp/job-hunt-generations-{storage,check,validate,preflight}.log`，单独双页验收日志
+`/tmp/job-hunt-generations-ui-debug2.log`。离线检查的通过不代表真实模型已安装或
+执行。最终提交 `18980ec1ef74b5d9b86fbc88e3cfe2b996601863` 已推送，
+[Panel PR #40](https://github.com/cjhyy/codeshell-panel-apps/pull/40) 已创建并附到任务；
+CI 36248046216 与 36248028855 的全部六类检查通过；包检查实际日志
+`/tmp/job-hunt-generations-ci-package.log` 确认双页验收及 37 项通过。PR #40 已合入
+`ed7d62bdb54fd4d8118385e30fda82fbe347db94`，未公开发布。
+
+兼容边界：旧 Panel 不能读取新分片索引；恢复旧根只恢复迁移前的数据，不保留后续
+编辑。历史和未提交分片暂不自动清理，避免破坏其他读者／备份引用，磁盘占用会增长。
+完整恢复入口、保留策略、其他业务格式／旧任务迁移仍待完成，不把本轮备份机制当作
+完整跨版本回滚。三仓候选也需在后续重新生成才能包含本修复。
+
+整体 goal 保持 active：六个 Panel 完整业务和后台任务恢复、真实模型／授权、正式
+发布与目标部署／恢复、安全中继／设备目录仍未完成；手机 Panel 交互优化继续后置。
+
+
+### 增量 78：旧根升级实际落盘与独立的原始快照备份（2026-09-26）
+
+Panel 任务 `codex/job-hunt-hq-root-recovery` 复现 schema-v1 根升级被语义无变化优化
+跳过：真实页面打开后，内存已规范化为 v2，但磁盘根文件仍为 v1。回归修复前失败，
+`/tmp/job-hunt-root-migration-before.log`。根版本升级现在持续标记为待迁移，成功
+条件写入才清除；备份失败保留 v1 和待办，明确重试仍先备份再完成升级。
+
+新增 `snapshot-backup.mjs`：旧根升级、旧 A/B 写入及显式存储迁移前，将原根文本与
+全部引用分片保存到独立的 `career-data/panel-backups/g-<id>/`。原始文本保留未知
+字段、空白及 Unicode；128 MiB 以内的序列化归档按有界 UTF-8 安全片段创建，最后
+写 `manifest.json` 完成标记，包含 SHA-256、字节数与块数。只读重建验证每块、完整
+摘要、根和分片结构；即使原根／原分片移除，也能重建。原有 `previous-root.json`
+保留兼容。备份和后续分片／根提交共享项目作用域与调用节流；不清理其他写入者或
+旧读者的数据，没有新增 Host 权限。
+
+真实磁盘测试覆盖超过单写上限的 v1、未知字段和 Unicode 原字节、删除原分片后
+重建、写块／完成标记失败、缺失／损坏内容、非法路径和索引、项目切换、备份后
+另一窗口先提交根文件、v2 存储迁移。真实页面测试覆盖自动升级、失败后重试及完整
+双窗口竞争；两次大备份遵循生产 12 次调用／10.1 秒节流，测试等待相应延长，仍以
+实际根写入作为竞争顺序的唯一依据，不跳过节流或冲突断言。
+
+本地求职套件 47 项、完整 `npm run check`、安装包预检通过。证据：
+`/tmp/job-hunt-root-recovery-{suite-final,check,preflight}.log`，
+`/tmp/job-hunt-root-backup-tests.log`。最终提交
+`d6cda802319ac4d975ab9bf8dbe39aa359e3444d` 已推送，
+[Panel PR #41](https://github.com/cjhyy/codeshell-panel-apps/pull/41) 已创建并附到任务；
+CI 36249463113／36249440714 的全部六类检查通过；实际 CI 日志
+`/tmp/job-hunt-root-recovery-ci-package.log` 确认旧根升级、失败重试、超大原文档备份
+和 47 项通过。PR #41 已合入 `6a762e2b14cdb91aa0b2f605941fe9758aa27edc`，
+未公开发布。
+
+边界：归档只覆盖结构化快照，不含照片、JD 原件、外部资源和浏览器草稿；摘要能力
+不可用时停止迁移。只读重建不自动覆盖当前项目，也不是用户可操作的完整回滚界面。
+下一步仍需备份选择、预览和明确确认的恢复入口，恢复前保留当前数据并防止旧草稿
+自动回放；当前归档只接受可解析的 v1／v2 根，损坏主文件的原文保护和恢复还需补齐。
+历史保留／清理策略仍待完成。本轮不改变其余五个 Panel 或服务端。
+
+整体 goal 继续 active：六个 Panel 完整业务和任务恢复、数据恢复界面、真实模型／
+第三方授权、三仓正式发布与目标部署／恢复、设备目录和安全中继仍未完成；手机
+Panel 的触控与窄屏优化继续后置。
+
+
+### 增量 79：求职项目快照恢复入口与草稿防回放（2026-09-26）
+
+Panel 任务 `codex/job-hunt-hq-restore-ui` 在 PR #41 的独立备份上补实际恢复入口：
+项目内备份列表、准确备份位置、完整文件导入、校验／预览和明确确认，以及原文、
+快照和草稿下载。确认前比较项目状态，保留当前已保存文件、未保存业务快照和当前
+项目客户端草稿。损坏主文件按原文保留；新的独立分片先写，根文件最后条件提交。
+备份失败或竞争写入不覆盖当前文档；响应丢失只读回确认一次，结果不明不重复写。
+
+恢复标识与根文件一同提交，旧 Host 缓存和所有浏览器写入者的旧草稿即使时间戳在
+未来，也不自动回放；新标识的后续输入仍可恢复。旧 Host 缓存替换前单独持久归档，
+浏览器原记录保留。项目切换使旧恢复失效；旧操作的迟到错误不会清空新项目的预览。
+
+真实磁盘与浏览器页面测试覆盖缺失／损坏根、超大分片独立恢复、恢复前未保存内容、
+原文及草稿下载、完整备份导入、并发更新、备份失败、项目切换、旧请求迟到、旧草稿
+防回放及单次写入确认。新增页面测试首次暴露测试 Host 重排文件 JSON 导致原文
+读回不一致，已修正测试实现以保留写入字节。完整检查第一轮因扩展列表测试实现时
+误用另一夹具变量失败，已修正；未改产品超时或放宽断言。最终求职套件 68 项和
+完整 `npm run check` 通过，最后补充的损坏根重新读取页面测试单独通过。安装包
+预检 53 个文件通过，实际桌面尺寸恢复弹窗截图已查看，无新增 Host 权限。
+
+证据：`/tmp/job-hunt-restore-fullcheck-final.log`、
+`/tmp/job-hunt-restore-corrupt-load.log`、`/tmp/job-hunt-restore-preflight.log`、
+`/tmp/job-hunt-restore-backend.log`、`/tmp/job-hunt-restore-scope.log`、
+`/tmp/job-hunt-restore-dialog.png`。提交
+`11aa05e3301ad3323fb8611460588fdab7eb424f` 已推送；
+[Panel PR #42](https://github.com/cjhyy/codeshell-panel-apps/pull/42) 已创建并附到任务。
+CI 36252407120 和 36252384368 的全部六类检查通过；实际日志
+`/tmp/job-hunt-restore-ci-package.log` 确认恢复界面／跨项目迟到请求及 68 项通过。
+PR #42 已合入 `b1ce6c08a9b40688b4ebc8d4e8243e913336bb96`，未公开发布。
+
+边界：这是结构化项目快照与当前项目草稿的恢复，不恢复外部资源或后台任务。历史
+归档／分片仍不自动清理。真实页面使用受控 Host 接口，不替代真实服务商、实际云端
+代理或目标部署验收；三仓候选需后续重新构建才包含本变更。整体 goal 保持 active，
+真实模型／授权、六 Panel 剩余业务与任务恢复、正式发布与目标部署／恢复演练、设备
+目录和安全中继仍未完成；手机 Panel 操作优化后置。
+
+
+### 增量 80：真实云端发现并修复求职草稿初始化失败（2026-09-27）
+
+Host 隔离任务 `codex/server/cloud-job-hunt-recovery` 正在为三仓候选增加真实求职
+Panel 界面验收。实际的 Cloud 控制进程、双 Docker 项目、生产 Web 工作台、安装包
+与权限接口均未替换。首轮六包安装／版本生命周期通过后，求职页面因不透明来源
+iframe 禁止访问 `localStorage` 而停止初始化；原始日志
+`/tmp/cloud-job-hunt-smoke.log` 与临时证据目录
+`/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-project-smoke-jymYSt/`
+记录实际报错和截图。
+
+Panel 分支 `codex/job-hunt-hq-sandbox-drafts` 保留 Host 的项目草稿保存。仅在浏览器
+存储明确报 SecurityError 时改用页面生命周期的临时副本，供同一页面项目切换和
+草稿导出；界面明确提示临时副本关闭后不保留。持久浏览器存储正常时行为不变，
+损坏记录／其他异常仍阻止覆盖；未放宽 Host 的同源或网络隔离。保存完成提示等待
+最新输入的 Host 确认，较早写入的迟到响应不能把后续输入误报为已保存。
+
+对应真实问题的浏览器回归修复前失败；修复后包括立即切换项目／最新保存确认在内
+的 72 项、本地完整检查和 54 文件安装包预检通过。提交
+`4c3a2088e073abfe2c3a8a0dcc3991296713e19b` 的
+[Panel PR #43](https://github.com/cjhyy/codeshell-panel-apps/pull/43) 已附到任务；
+CI 36253790347／36253833574 全部六类检查通过，已合入
+`5ee9bc6999e771d3dbca9c82bbe5464a946a0292`。证据为
+`/tmp/job-hunt-sandbox-{before,after,guard,check,preflight}.log` 和
+`/tmp/job-hunt-sandbox-ci-package.log`，未公开发布。
+
+真实云端复验已证明修复后页面能打开并完成旧根升级；大样本升级和编辑保存也已
+通过对应步骤。前一次样本经正常整理后小于分片阈值，后改用既有分片测试中的
+150 条样本，保留分片断言。另一轮人工种入旧草稿与页面自动保存竞争，现将测试
+准备写入安排在预览完成后，保留条件写入断言。完整导出／恢复／重启验收尚未通过，
+Host 新脚本仍是该独立工作树中的未提交工作；不能据此标记云端业务完整完成。
+
+本机新基础镜像构建因 Debian HTTP 下载连接失败中止。调试镜像复用已有系统
+依赖层，但重新安装当前锁定的程序依赖并构建当前 Host；使用不可变镜像 ID
+`sha256:224993fd7850af7d0dd838b36efcfaa3d9bdbca5f303b2d2f0f720dc15d01269`。
+本机 Docker 列表仍有标签但标签 inspect 失败，ID inspect 成功；没有重建或删除
+用户镜像来绕过。此镜像仅供调试，后续仍须运行实际安装包的完整 Linux 候选构建。
+源包暂存 `/tmp/cloud-job-hunt-stage-tNaeez/panels` 来自准确提交 `4c3a2088`；
+最终该轮复验 `/tmp/cloud-job-hunt-smoke-v5.log` 已终止（exit 1）：大数据分片迁移、
+实际页面编辑、备份校验／预览和另一客户端的条件草稿更新已通过，点击下载后
+没有触发浏览器 download 事件。生产 Web 的 iframe 与资产 CSP 均只允许
+`sandbox allow-scripts`，未允许下载；不能把已生成归档等同导出成功。原始证据
+保留在 `codeshell-project-smoke-D4MxKU` 临时目录。下一步补通 Host 的通用导出
+能力并保持同源／网络隔离，再完成实际恢复、重启和完整 Linux 候选验收。
+两项已合并的 Panel 任务工作树／本地和远程分支均已清理；Host 工作树仍保留
+未提交的新验收脚本，当前没有仍在运行的该轮 Docker 测试。
+
+整体 goal 保持 active：完整云端业务、真实模型与 Link 授权、三仓正式交付与目标
+部署／恢复演练、设备目录／安全中继仍待完成，手机交互优化后置。
+
+
+### 增量 81：Web 备份下载与真实云端恢复闭环（2026-09-27）
+
+Host 分支 `codex/server/cloud-job-hunt-recovery` 补 iframe 与资产 CSP 的
+`allow-downloads`，允许 Panel 导出自行生成的文件。仍保留不透明来源、禁止网络
+fetch、表单、弹窗及父页面访问；项目文件仍通过已有授权接口取得。没有把求职
+业务规则移入 Host。
+
+新增真实安装包验收加入三仓候选的双 Docker 项目流程。大 v1 根迁移为独立分片，
+真实页面编辑后预览原备份；下载的原根按字节比较并用 Node 独立核对摘要。另一
+授权客户端写入未来时间的旧草稿后，通过实际恢复界面还原，再编辑新内容；另一
+项目不受影响。停止／启动项目并删除原始包来源后，六包仍按原摘要重开，求职的新
+恢复标识、后续编辑和备份列表保留。实际 iframe 验证父页面、浏览器存储和 fetch
+仍被隔离。
+
+本地 92 项 Web／runtime／Hub 测试、服务构建、Web／server 类型检查及改动文件
+lint 通过。真实 Docker 脚本完整通过：`/tmp/cloud-job-hunt-smoke-v6.log`。
+恢复界面截图已查看：
+`/Users/admin/.codex/worktrees/cloud-job-hunt-recovery/evidence/cloud-job-hunt-restore.png`。
+本机镜像 `sha256:64c14db98431d441dbdaae0f8fdd2599376d0f57c040bbf8c7dded48408aaedb`
+复用已有系统依赖层、重新构建当前程序，仅是本地调试证据。
+
+提交 `c2e0e27e1edcb76a47b96a0d6672977f808fd862` 已推送；
+[Host PR #22](https://github.com/cjhyy/codeshell/pull/22) 已创建并附到任务。
+主仓 CI 36255437397 首轮仅桌面 Puppeteer 启动阶段等待 WS 端点 20 秒超时，
+没有运行测试断言；其余八类检查通过。诊断记录 Chromium 153.0.8010.0 与 D-Bus
+错误，日志 `/tmp/cloud-job-hunt-ci-desktop-failure.log`；已针对失败项重跑，
+未放宽超时或测试断言。第二次运行现已全部九类 CI 通过；桌面 job
+108442080234 的日志 `/tmp/cloud-job-hunt-ci-desktop-retry.log` 确认 4391 项
+桌面分片、1 项 Chromium、5 项 Playwright 和 14 项 Puppeteer 全部通过。
+首次启动超时仍保留为已知 CI 稳定性问题，不能据重跑通过宣称根因已修复。
+
+三仓 Linux 候选 36255443999 已全部通过，锁定 Host `c2e0e27e`、Panel
+`5ee9bc6999e771d3dbca9c82bbe5464a946a0292` 和 services
+`f06d687d3aa8b6b1a4c6009ff6b86e487dcf3bd9`。实际日志
+`/tmp/cloud-job-hunt-linux-candidate.log` 确认完整云端 UI 导出／恢复／重启、
+Link 容器备份恢复、归档逐文件校验和镜像重载通过。私有候选 artifact
+10910448008（452579408 bytes）、证据 10910403105 已上传。PR #22 已合入
+`e54af3d06ce71bf01e4999586b1d52c2cc885cda`；没有公开发布。整体 goal 仍 active；六 Panel
+其余业务／任务恢复、真实模型与 Link 授权、正式发布和目标部署／恢复、设备目录
+和安全中继仍未完成，手机交互优化继续后置。
+
+
+### 增量 82：设计 Panel 的真实云端跨项目备份与恢复（2026-09-27）
+
+Host 独立分支 `codex/server/cloud-design-recovery` 从已合并 PR #22 的
+`e54af3d0` 开始，只增加实际安装包验收，不迁移或复制 Panel 业务实现到 Host。
+精确候选中的设计编码模块生成索引页面和真实 PNG 资源样本，两个 Docker 项目
+分别保留自己的设计文件；生产 Web 登录、iframe、权限、HTTP 与磁盘均未模拟。
+
+实际页面导出的备份包含未打开的索引页面和原始图片字节。增加页面并保存后，将
+备份文件上传到第二个项目，先验证预览未写入目标，再验证同名目标冲突保留原文。
+改用新路径后恢复独立副本，当前画布不变；从真实打开文件界面选择副本并重新导出，
+全部页面与资源和源备份一致。原项目的保存结果、目标原文件均保持。停止／启动
+项目并删除安装来源后，保存页面、恢复副本和图片数据仍能重开／导出。
+
+本机完整 Docker 验收已终止并通过（exit 0）：`/tmp/cloud-design-smoke-v1.log`。
+恢复界面截图已查看：
+`/Users/admin/.codex/worktrees/cloud-design-recovery/evidence/cloud-design-restore.png`。
+编写样本时已核对内部状态与仓库文档格式，将第二个项目的输入先序列化为正式文档；
+该修正在设计模块首次加载前完成，最终运行对应提交
+`168b0199534cfa1bc4a15730445ea33d27e578fe`。脚本格式／lint、服务构建通过。
+[Host PR #23](https://github.com/cjhyy/codeshell/pull/23) 已附到任务；
+主仓 CI 36256833709 全部九类检查首轮通过。
+
+Linux 三仓候选 36256841491 已全部通过，锁定该 Host 提交、Panel `5ee9bc69`
+及 services `f06d687d`。日志 `/tmp/cloud-design-linux-candidate.log` 确认实际
+设计页面完整流程／重启、Link 备份恢复、归档校验与镜像重载；候选 artifact
+10911187854（452597267 bytes）和证据 10910453691 已上传。PR #23 已合入
+`35e035714880d9cc2278989c17eaf1fa08db5ae2`，没有公开发布。已合并 PR #22／#23
+的干净、无活跃进程任务工作树和本地／远程分支均已清理，截图在父目录保留。
+
+这次验证设计文件、索引页面和 PNG 资源的备份／恢复，不代表设计的 HTML 导入、
+字体、所有交付工具或六 Panel 全部业务已完成。整体 goal 仍 active；真实模型／
+Link、其余业务与任务恢复、正式部署／回滚、设备目录和安全中继继续待做。
+
+
+### 增量 83：投资自定义筛选条件的多设备保存保护（2026-09-27，验收中）
+
+剩余存储路径审查发现 `selection-signal-lab.mjs` 直接 `storage.set`，另一设备
+会覆盖先前保存；读取失败／不兼容记录则回退默认值，后续编辑覆盖原记录。新增
+回归三项在修复前均失败，日志 `/tmp/quant-signal-before.log`。
+
+Panel 分支 `codex/quant-lab/signal-storage` 复用既有条件存储模块，冲突与不明
+结果停止自动覆盖，保留草稿并提供下载／明确重读。记录版本或字段不兼容时停止
+自动保存、保留原记录并纳入备份；旧 Host 继续原接口并显示并发限制。排队保存
+与 CSV 导出固定项目代次，切换后停止后续读取和旧回执更新；未保存原项目输入
+留在当前页面供下载，关闭页面不会持久保留这些草稿。
+
+20 项存储／控制器／独立浏览器上下文检查、完整 Quant UI、完整 npm check 和
+当前 Host 安装预检已通过；安装预检首次参数误传字符串，按实际 `{kind,path}`
+接口纠正后通过，未变更产品接口。日志 `/tmp/quant-signal-{regression,final-focused,
+formatted-tests,browser,full-ui,check-final,preflight}.log`。截图已查看。提交
+`e4404f30f8570e2f810fd8e3c1c1817e2d536b47` 的
+[Panel PR #44](https://github.com/cjhyy/codeshell-panel-apps/pull/44) 已附到任务，
+CI 36258193513／36258165847 已启动。
+
+复查另发现：空阈值后更改组合方式会沿用旧阈值并显示已保存。新增浏览器断言
+修复前失败（`/tmp/quant-signal-invalid-before.log`）；本地后续修复使无效输入
+阻止保存与筛选、保留原始输入，明确重置模板才替换它。20 项复验通过
+（`/tmp/quant-signal-invalid-after.log`）。最终修复提交
+`81e2252421a8726ed4f454086b43720333d621a2` 已推送同一 PR；20 项复验
+`/tmp/quant-signal-last-focused.log`、完整 UI `/tmp/quant-signal-full-ui-final.log`
+和最终完整检查 `/tmp/quant-signal-check-latest.log` 全部终止并通过。最终包
+在现有程序调试镜像中以只读挂载、断网方式执行 Host 安装预检通过，日志
+`/tmp/quant-signal-final-preflight.log`；仍不代表真实云端完整投资业务验收。
+远程 CI 36258489107／36258486588 已确认为运行中；旧提交两轮 CI
+36258193513／36258165847 因已被替代而取消，未以旧结果代替新提交。
+PR #44 尚未合并，干净的任务工作树保留以继续验收。
+
+没有公开发布。最新三仓候选仍锁定原 Panel `5ee9bc69`，不包含此投资修复。
+整体 goal 保持 active：六 Panel 其余业务／任务恢复、真实模型／Link、正式发布
+与目标部署／恢复、设备目录和安全中继继续待做，手机触控优化后置。
+
+
+增量 83 验收结论：最终提交 `81e2252` 的 CI 36258489107／36258486588
+全部六类检查通过，实际完整检查日志 `/tmp/quant-signal-ci-package.log` 已核对。
+PR #44 已合入 `f01888a999572f39774e2ab54ea498f60e7767fc`，干净且无活跃进程
+的任务工作树、本地和远程分支已清理。没有公开发布；原三仓候选仍不包含此修复。
+
+
+### 增量 84：视频工程的云端项目存储与恢复验收（2026-09-27，进行中）
+
+真实生产 Web、已安装 Video Studio 和两个 Docker 项目复现了原版本直接显示
+“恢复失败”、编辑器未初始化的问题。云端没有桌面的 `media.document` 服务，
+原回退 IndexedDB 在不透明来源 iframe 不可用。日志
+`/tmp/cloud-video-smoke-before.log`（exit 1）及
+`codeshell-project-smoke-UU4iBk/video-error-0.png`、页面文本保留，截图已查看。
+
+Panel 分支 `codex/video-studio/cloud-project-storage` 在保留桌面原存储的同时，
+让编辑器发现已有 workspace 能力后改用项目内 `video-studio-data/documents/`。
+带摘要的不可变分块先写入，版本索引按内容版本条件提交；保留 20 个历史版本，
+归档和升级前原始备份独立保存。冲突、损坏、缺块时停止覆盖，写入回执丢失时
+先核对已落盘结果。新增 workspace.read/write 权限，更新安装必须审阅权限；
+本次未给 Host 增加视频业务接口。原媒体导入／渲染和附属任务日志适配仍待完成。
+
+五项针对性测试覆盖大 Unicode 数据、竞争写入、迟到/丢失回执、损坏记录与
+超过 20 版后的原始升级备份。完整 npm check 通过
+(`/tmp/video-cloud-full-check.log`)，463 项 Video UI 通过
+(`/tmp/video-cloud-ui.log`)；最后补选项与版本整数边界后，类型、构建一致性、
+39 文件安装包验证和五项检查再次通过。提交
+`90788fa9ad32a2ebaec8e38dffe918e1823b656d` 已推送，
+[Panel PR #45](https://github.com/cjhyy/codeshell-panel-apps/pull/45) 为草稿并已附到任务，
+CI 36259870990／36259857173 运行中。
+
+Host 分支 `codex/server/cloud-video-recovery` 增加实际云端恢复验收到候选流程，
+包括时间轴编辑、独立登录重开、原始备份下载、恢复与继续编辑、重启和删除包来源。
+提交 `48de6b4ac197780344a9ea4e94f8f46826b946a8` 已推送，
+[Host PR #24](https://github.com/cjhyy/codeshell/pull/24) 为草稿并已附到任务。
+服务构建、脚本语法和 lint 已通过；Host CI 36260001850 运行中。
+本机实际双容器 `/tmp/cloud-video-smoke-after.log` 仍在运行，已通过六包生命周期、
+求职与设计业务步骤，尚未确认视频及最终重启步骤通过。调试阶段安装包来自
+`/tmp/cloud-video-stage-path.txt` 指向的独立暂存目录，后续校验使用提交精确版本。
+
+准确三仓 Linux 候选 36259999515 已启动并确认运行中，锁定 Host `48de6b4a`、
+Panel `90788fa`（已包含投资修复）及 services `f06d687d`。不能将正在运行当作通过，
+两个 PR 均尚未合并，未公开发布。整个 goal 保持 active；真实模型与 Link 账号、
+剩余 Panel 业务／任务恢复、正式部署／回滚、设备目录／安全中继仍待完成，
+手机触控优化继续后置。
+
+
+增量 84 后续：本机全流程 `/tmp/cloud-video-smoke-after.log` 已结束（exit 1）。
+两个真实项目均已迁移为新工程存储，A 的矩形编辑已实际持久化为第二版；
+脚本随后等待被设计为隐藏的 `[data-ew-save]` 元素“可见”而超时，日志明确
+显示该元素文本已为“已保存”。失败截图位于 `codeshell-project-smoke-fSTUMo`，
+已查看，不能把此轮记为完整恢复通过。
+
+Host 后续提交 `fa7086ad7747fd7b06a4ccc34eeba83b4c4fd4b3` 修正保存状态
+观察方式，保留实际文件内容断言，并新增仅供调试的 business 选择参数；正式候选
+默认仍跑全部业务。语法／lint 通过，新 Host CI 36260394100 运行中。
+最终 Panel 精确跟踪文件暂存由 `/tmp/cloud-video-final-stage-path.txt` 指向，
+本机聚焦视频复验 `/tmp/cloud-video-smoke-focused.log` 正在运行。
+旧候选 36259999515 已确认 cancelled；新准确候选 36260424368 已启动，
+锁定 Host `fa7086ad`、Panel `90788fa`、services `f06d687d`。Panel 两轮 CI
+除 Video UI 尚在运行外其余均通过；两个 PR 仍为草稿，完整视频恢复和重启
+尚未通过，整体范围与未完成项不变。
+
+
+增量 84 最新验收：最终精确安装包的本机聚焦视频复验
+`/tmp/cloud-video-smoke-focused.log` 已 exit 0，包含编辑、独立登录重开、
+备份下载、恢复后编辑，以及项目重启／删除安装来源后保留工程和原始备份。
+已查看截图 `cloud-video-recovery/evidence/cloud-video-recovery.png`；其中
+附属粗剪草稿清理仍报缺失 media.document.get，不能据工程恢复通过宣称全业务完成。
+Panel CI 36259870990／36259857173 全部通过。Host 最终 CI 36260394100
+全部九类通过；初轮 Chromium --version 的 5 秒启动查询超时发生在 Puppeteer
+断言之前，未改代码或超时，重跑成功，日志 `/tmp/cloud-video-host-ci-retry.log`。
+CI 启动不稳定根因仍未修复。三仓候选 36260424368 已再次确认 in_progress，
+两个 PR 仍为草稿，没有公开发布。
+
+### 增量 85：云端视频附属文档与任务记录（2026-09-27，进行中）
+
+Panel 分支 `codex/video-studio/cloud-task-documents` 基于 PR #45 提交，
+新增 Panel 内部文档适配，将生产、粗剪、同步恢复、素材检测和任务日志接到已有
+workspace 文档后端；桌面仍使用其原生文档接口。首次发现固定项目与能力，后续
+变化停止旧操作并要求重开；排队请求先复制，避免异步期间输入改变。
+
+日志读取原先把未知版本当成空列表，可被下一任务覆盖。新增回归先复现失败，
+再对版本、结构、重复 ID 和容量等作完整验证；不兼容／损坏时在新任务启动前
+停止，保留原文。101 项相关回归、完整 npm check、类型、确定构建和安装包
+校验通过（Video Studio 39 文件）；完整 UI 463 项通过的运行早于最终日志保护，
+最终版本仍须远程 CI 验证，未以旧 UI 结果代替新提交。
+
+提交 `e3a1235238ce6b0c3615994886c6da385667e9a1` 已推送，
+[Panel PR #46](https://github.com/cjhyy/codeshell-panel-apps/pull/46) 草稿已附到任务。
+CI 36261851582／36261820987 已确认运行中。相关日志
+`/tmp/video-cloud-documents-{check-final,regression-final,ui}.log`。
+Host 依赖任务工作树 `cloud-video-task-recovery/codeshell` 正增加实际安装包的
+草稿清理、原生 runtime 检测任务及日志重启断言；代码尚未提交，本机双容器
+`/tmp/cloud-video-task-smoke.log` 正在运行，尚未确认业务结果。
+整体 goal 保持 active；真实服务接入、其他业务恢复、正式交付／目标部署以及
+设备目录／安全中继等范围不变，手机操作优化后置。
+
+
+增量 84 最终交付：Linux 候选 36260424368 已 success，日志
+`/tmp/cloud-video-linux-candidate.log` 核对了六包生命周期、求职／设计／视频
+业务恢复与重启、Link 备份恢复、归档逐文件校验和镜像重载。锁定 Host
+`fa7086ad`、Panel `90788fa`、services `f06d687d`；私有部署 artifact
+10912177653（452608075 bytes），证据 10912072973。PR #45 已合入
+Panel `9e5734caf7223aa541870d6591c7a26551e3cca6`；Host PR #24 已合入
+`3bfac3f75ec7a3da15e0d2dc6c3fef40e45c93bb`。核对干净、无活跃进程后，
+仅这两个已完成任务的工作树和本地／远程分支已删除，截图保留。没有公开发布。
+
+增量 85 后续：Host 提交 `62bdadba` 已建立
+[PR #25](https://github.com/cjhyy/codeshell/pull/25) 并附到任务；初次 CI
+36262035997 全部通过。同步父 PR 合并后，Host 为 `72f8c47e`，Panel 为
+`58216d9`，逐文件比较确认仅合并历史变化、代码树未变；最终提交继续跑 CI。
+本机第一次加强验收 `/tmp/cloud-video-task-smoke.log` exit 1，已通过六包
+生命周期但在导出原备份后等待恢复按钮超时；失败截图及文本保留于
+`codeshell-project-smoke-2W4w29`，已查看，不能把此轮写成任务／重启通过。
+
+实际原因复验：媒体服务初始化较慢时，编辑器已可操作，初始化末尾的整页刷新
+会替换用户已打开的历史窗口。新增受控慢初始化浏览器用例在原代码上失败
+（`/tmp/video-cloud-history-before.log`，窗口身份／打开状态断言失败）。修复
+后保留打开中的对话框，5 项历史、原字节导出、恢复失败重试和关闭后阻止迟到
+恢复检查通过（`/tmp/video-cloud-history-after.log`）。源与生成包已更新；
+完整 npm check `/tmp/video-cloud-tasks-history-check.log` 和第二轮实际容器
+`/tmp/cloud-video-task-smoke-v2.log` 正在运行，尚未确认最终结果。
+
+
+增量 85 当前检查点：完整 `/tmp/video-cloud-tasks-history-check.log` 已 exit 0。
+窗口修复提交 `15d03ab3391935814192cb4f913f747ef4205a63` 已推送 Panel
+PR #46，源和生成安装包一起提交；最终 CI 36262853622 in_progress，
+36262850078 queued。Host PR #25 最终合并主线提交仍为 `72f8c47e`，CI
+36262294902 初轮八类通过、桌面 Chromium 等待 WS 端点 20 秒超时，发生在
+Puppeteer 断言前。日志 `/tmp/cloud-video-task-host-ci-failure.log` 保留，
+已针对失败项重跑并确认运行中，未改超时／测试条件；启动稳定性根因未修复。
+第二轮本机脚本进程已确认为运行中，日志 `/tmp/cloud-video-task-smoke-v2.log`
+已通过六包真实安装、隔离和审阅升级／回退；完整视频任务／重启仍待结果。
+尚未为这组后续提交启动新的三仓候选，须待实际业务复验后再验收和合并。
+两个后续工作树干净保留，整体 goal 保持 active，未公开发布。
+
+
+增量 85 第三轮：Panel `15d03ab` 的 CI 36262853622／36262850078 全部通过。
+第二轮真实容器 `/tmp/cloud-video-task-smoke-v2.log` 已 exit 1：恢复窗口不再
+消失，但恢复请求在 150 秒内尚未完成，截图仍显示忙碌，不能认定任务恢复通过。
+证据目录 `codeshell-project-smoke-04Y8EM` 的截图／文本已查看。没有扩大验收
+超时。减少文档适配的重复远程 context 查询：每次文档操作进入和返回前核对
+作用域，每次实际文件写入前再核对；每个文件访问仍由 Host 的固定 grant 授权。
+补回归确认最后一次读期间切换项目也不得把旧结果交给页面。102 项回归、类型及
+完整 npm check（`/tmp/video-cloud-roundtrips-check.log`）通过，提交 `13dfc42`
+已推送 Panel PR #46，源和生成包同时提交。
+
+Host PR #25 新增仅记录方法名／HTTP 状态／耗时的失败诊断，不记录 URL、grant
+或参数，并打印恢复请求及完成阶段。同步 CI 修复后最终提交 `0b2c1731`，脚本
+语法／lint、工作流路径检查通过。第三轮本机 `/tmp/cloud-video-task-smoke-v3.log`
+已确认运行中，通过六包实际生命周期，视频／任务／重启结果仍待核实；此轮
+使用新优化生成包，未用上一轮成功 CI 代替新代码结果。
+
+### 增量 86：固定 CI 浏览器来源（2026-09-27，已合并）
+
+Host CI 36262294902 两次均在 Puppeteer 断言前失败：第一次等待系统 Chromium
+的调试端点超时，第二次连 --version 查询都在 5 秒内未返回。分别保留
+`/tmp/cloud-video-task-host-ci-{failure,retry-failure}.log`。未继续依赖重复重跑。
+
+独立分支 `codex/ci/locked-browser` 在桌面 CI 安装步骤使用冻结依赖中现有的
+Playwright CLI 安装其对应 Chromium，校验可执行文件后设置 CHROME_PATH；
+安装失败会中止，不改变测试断言、启动超时或生产浏览器选择。CDP／Playwright
+已有发现逻辑也优先使用该浏览器。锁定依赖为 Playwright 1.60.0，对应 Chromium
+148.0.7778.96；没有更新包依赖。
+
+完整构建、工作流引用／格式检查以及本机 1 + 5 + 14 项真实浏览器测试通过。
+Linux CI 36263309712 首轮九类全部通过；日志 `/tmp/locked-ci-browser-linux.log`
+确认实际采用下载的 148 浏览器，4391 项桌面分片及全部 20 项真实浏览器断言通过。
+[Host PR #26](https://github.com/cjhyy/codeshell/pull/26) 已附到任务并合入
+`5320f296ad96a83b06e0c4bd8c213e8a80a8b268`。这解决了 CI 浏览器来源不固定，
+不宣称系统浏览器本身的超时根因已经定位。干净且无活跃进程的该任务工作树及
+本地／远程分支已清理，其他工作树保留。整体 goal active，没有公开发布。
+
+增量 85 更新：第三轮本机真实双容器 `/tmp/cloud-video-task-smoke-v3.log`
+已 exit 0。实际恢复、草稿清理、原生 FFmpeg 检测任务、工作区任务日记以及
+项目停止／重启后同一任务、工程和原备份均通过。最终 Panel `13dfc42` 的
+CI 36263722547／36263719216 六类全部通过；Host `0b2c1731` 的
+CI 36263676615 九类全部通过。三仓候选 36264155117 已启动并确认运行中，
+固定上述 Host／Panel 与 services `f06d687d`，尚不宣称联合验收通过。
+PR #46／#25 仍待此项验收与合并。
+
+### 增量 87：云端视频实际素材到成品（2026-09-27，进行中）
+
+分别建立独立任务工作树／分支 Host `codex/server/cloud-video-media-flow`
+和 Panel `codex/video-studio/cloud-media-delivery`，从最新主线建立后快进
+到上述待合并前置提交。补真实 WAV 上传／原生分析、资源字节复验、时间轴、
+MP4 渲染、浏览器预览／精确字节下载及重启资源保存的容器验收。
+本机首次运行 `/tmp/cloud-video-media-before.log` 仍在执行，结果未定。
+
+导出记录在云端错误调用桌面 media.export／media.reveal，浏览器回归先复现：
+云端没有预览保存按钮，无交付能力时仍显示两个无效桌面操作。改为按 Host
+声明能力提供桌面保存或 resources.open 授权预览，后者标注“预览与保存”；
+没有目录显示能力时不显示桌面目录动作。24 项导出记录浏览器回归已通过。
+完整检查运行中，源码及生成包尚未提交；不以此代替原生渲染验收。
+
+增量 87 检查点：Panel `db97734` 已推送并建立
+[PR #47](https://github.com/cjhyy/codeshell-panel-apps/pull/47)（draft，已附到任务）。
+完整 npm check exit 0，25 项导出记录浏览器回归通过，含同时具备桌面／浏览器
+交付能力时保留桌面保存；重新生成包并通过 build:check、diff 检查。最终 CI
+36265102905／36265123639 正在运行。真实媒体容器验收仍为同一进程／日志，
+已进入视频原备份恢复阶段，未重启或扩大超时。另发现旧制作任务页仍直接调用
+media.export／media.reveal，后续须一并适配，不能把导出记录入口修复当作全量完成。
+
+增量 85 Linux 结果：候选 **36264155117 失败**，没有生成新部署候选。
+完整日志 `/tmp/cloud-video-task-linux.log` 显示求职／设计业务先通过，视频恢复
+等待“已从升级前备份恢复工程”超过 150 秒。后续的 candidate.json 缺失只是
+派生错误；安装步骤的管道由 tee 隐藏了原进程 exit 1，不能记录为验收通过。
+没有扩大超时或合并 PR #46／#25。Host #25 新增安全耗时诊断和失败截图到
+可上传 evidence 目录，提交 `870b97ea` 的 CI 36265791453 九类全部通过。
+
+### 增量 88：候选失败传播与诊断保存（2026-09-27，已合并）
+
+独立 services 分支 `codex/services/candidate-failure-evidence` 的
+[PR #4](https://github.com/cjhyy/codeshell-services/pull/4) 已附到任务、合入
+`594aec9b39ba6e3ffebc13629adfc198d1f236f7`。候选步骤显式选择 Bash 的
+errexit/pipefail，防止 tee 吞掉错误，并保留已知测试截图及方法／状态／耗时
+记录，不上传原始凭据或整个控制目录。模拟子进程 exit 7 经管道仍为 7；
+CI 36265814405／36265872061 的 Node 22.16／22／24 全通过。干净已合并
+工作树和本地／远程任务分支已清理；原 services checkout 保持原样。
+
+为诊断同一恢复超时，新候选 **36266030775** 已确认运行中，固定 Host
+`870b97ea`、Panel `13dfc42` 和 services `594aec9b`。包含新增诊断而非仅
+重复旧请求，结果未定；此前成功 artifact 10912177653 仍是最后完成候选。
+
+增量 87 实际媒体进展：首次 `/tmp/cloud-video-media-before.log` exit 1，真实
+WAV 上传、原生分析、SHA 和原字节回读均通过，随后导出没有启动任务。截图
+`codeshell-project-smoke-kyUUNV/video-error-2.png` 已查看。最小真实浏览器
+回归确认 opaque iframe 禁止原生 form submit：点击按钮后对话框不关闭且
+无任务提交。Panel 的表单直接处理按钮激活并阻止默认原生提交，保留校验、
+重复提交和工程身份检查，不增加 Host iframe 权限。54 项工作台浏览器回归
+通过，包括 sandbox 点击／回车、无效宽度拦截；生产制作任务另补 cloud
+resources.open 和桌面优先、无能力拒绝、初始化失败不半启用，共 68 项通过。
+
+Panel #47 最终提交 `f114cb6` 已推送，源和生成包一起提交。完整离线检查在
+表单／制作任务实现上通过；最后收紧初始化失败顺序后，重新通过制作回归、
+类型、生成和 build:check。Host 媒体验收提交 `04434500` 已推送并建立
+[PR #27](https://github.com/cjhyy/codeshell/pull/27)（draft，已附到任务）。
+第二轮 `/tmp/cloud-video-media-v2.log` 仍在运行，使用含表单／制作任务修复
+的独立 staging；该 staging 早于最后初始化顺序调整，不冒充 f114cb6 完整
+安装包验收。原生渲染及成品／重启尚未证明。整体 goal active，未公开发布。
+
+
+### 增量 89：任务恢复候选通过与授权检查范围（2026-09-27）
+
+Linux 三仓候选 36266030775 已成功，固定 Host `870b97ea`、Panel `13dfc42`
+和 services `594aec9b`。完整日志 `/tmp/cloud-video-task-diagnostic-linux.log`
+确认六包生命周期、求职／设计业务恢复、视频草稿清理／原生 FFmpeg 检测／任务
+日记、项目重启及 Link 备份恢复通过。归档和镜像加载校验通过；最新私有候选
+artifact **10914521627**（452586851 bytes），证据 **10914745039**。
+视频恢复请求到完成仍需约 118 秒，不代表此前超时的性能问题已消除。
+Host PR #25 合入 `0adbe939a8eae92e019bfb1de971820a838c0490`，Panel PR #46
+合入 `30e1e0d7a50a6d28c9453fe72a5333582a72b5c8`；最终提交全部仓库 CI 通过。
+该候选不含后续完整媒体渲染／交付或授权范围优化，没有公开发布。
+
+第二轮实际媒体 `/tmp/cloud-video-media-v2.log` 已失败：真实 WAV 导入／原生
+分析及字节回读通过，修复后的表单已提交，但导出准备超过 150 秒，未到完整
+渲染验收。截图已查看；不能记录为成品输出或浏览器依赖通过。
+Panel #47 的最终 f114cb6 CI 有三个界面失败，其余五类通过。三个失败均来自
+桌面模拟 Host 未声明 media.export，能力感知界面因此不显示原播放／保存按钮。
+仅补齐对应测试 Host 的能力与保存响应，保留播放／保存断言；三个原失败用例
+已通过 `/tmp/video-cloud-delivery-fixtures.log`，完整界面回归正在运行。
+
+独立 Host 分支 `codex/server/panel-authorization-scope`、PR #28（draft，已附）
+提交 `f3822bb0` 将实时授权检查限定到当前 Panel，管理目录仍完整枚举。
+严格配置、包字节完整性、解绑／版本变更与目录成员资格校验保留；仅同一 Panel
+的在途读取共享，不使用 TTL。188 项回归、工作区类型、服务构建、lint（已有
+警告、无错误）通过，远端 CI 进行中。真实新容器同一目录实测：全七包扫描
+613／432ms，Video 单包 106／98ms，Download 单包 40／40ms，记录见
+`/tmp/panel-auth-scope-container-benchmark.log`。这只证明检查成本降低。
+
+本机媒体第三轮最初因临时 staging 的 Starter 目录误命名为 starter 而失败，
+修正为契约要求的 starter-panel 后重新运行，未改包内容或放宽断言。
+当前 `/tmp/cloud-video-media-v3b.log` 使用 final f114cb6 生成包及新构建的授权
+优化 core/server 调试镜像，仍在执行；最终成功与依赖问题尚待核实。
+
+
+增量 89 收尾：Host #28 合入 `60db68c7b599bf0a6be1cffe9783edbd2e2f1099`。
+同步最新主线后的 `b9b9a32e` 全部九类 CI 36267678238 通过；原生产修改与已实测
+调试镜像一致，合并只加入此前 #25 的验收脚本。已合并的 #25／#46／#28 干净
+工作树及本地／远程分支清理完成，其他任务和原始 checkout 均保留。
+第三轮 `/tmp/cloud-video-media-v3b.log` 已明确失败于真实 render 任务：缺少
+Chrome／Chromium／Edge。导出准备已在原超时内完成并提交真实渲染任务；
+截图 `/Users/admin/.codex/worktrees/panel-authorization-scope/evidence/cloud-video-error-2.png`
+已查看，显示可重试的浏览器缺失错误。完整 MP4／下载／重启仍未通过。
+截图还显示已持久化资源的原素材预览处于“素材待重连”，后续需检查云端素材
+预览适配，不能用最终资源下载验收替代时间轴／素材播放。
+
+Panel #47 新提交 `6ab0f54` 只修正三个桌面测试 Host 的能力声明和保存响应。
+同步主线后的最终 `67c5161bd154796cff6052802d72d22f8b0c189b` 代码树未新增变化。
+完整本地 468 项 UI 通过（`/tmp/video-cloud-final-ui.log`），最终远端
+36267837928／36267835337 六类全部通过。Host #27 已同步授权优化主线，最终
+`0957e4e8` 的九类 CI 36267973203 全部通过。两 PR 仍为 draft，等待完整媒体
+业务及部署依赖验收，未将界面 CI 当作渲染通过。
+
+### 增量 90：云端浏览器依赖与沙箱探测（2026-09-27，仅探测）
+
+新本地探测镜像 `codeshell-cloud-browser:probe`（基于授权优化调试镜像，
+apt 安装 Chromium 154.0.8037.57）确认：现有非 root、只读根、cap-drop ALL、
+no-new-privileges、有限资源的 Docker 默认配置报 No usable sandbox。
+没有采用 --no-sandbox、SYS_ADMIN、privileged 或 host IPC。
+
+官方参考 https://playwright.dev/docs/next/docker 建议允许用户命名空间的
+seccomp 配置。固定 v1.60.0 源文件下载至 `/tmp/cloud-browser-seccomp-probe.json`，
+SHA-256 `cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849`。
+原配置在 cap-drop ALL 下仍报 sys_chroot 失败；增加 chroot 系统调用可达性
+（不增加内核能力，仍由内核校验）后，保留上述限制成功加载空白页。
+配置 `/tmp/cloud-browser-seccomp-chroot-probe.json` 仅用于无网络、无用户数据
+的临时探测容器；尚未集成到任何生产配置。
+
+进一步用当前 Panel 的真实 CaptionBrowser 类打包独立探针，保留其原始启动
+参数和私有 CDP pipe，在同样的受限容器中绘制 320×180 canvas，成功返回
+1948 字节 PNG：`/tmp/cloud-caption-browser-probe.log`。没有添加禁用浏览器
+沙箱的参数。chrome://sandbox 的 CLI 探测只返回 New Tab，不作为沙箱状态证明。
+这仅证明当前类与候选配置可启动／绘图，不证明完整视频渲染或该配置已达到
+发布标准。下一步需要审查系统调用配置及来源许可，提供管理员控制的通用
+运行配置入口、在 services 组合浏览器依赖，然后复验完整任务；不能静默
+改变所有项目的默认隔离策略。尚无该项生产代码改动。
+
+整体 goal 仍 active：完整成品、其他 Panel 业务／迁移、真实服务商／模型、
+目标部署与发布、设备目录／中继等仍未完成；手机触控／窄屏优化后置。
+
+
+### 增量 91：可配置云端浏览器与完整候选失败（2026-09-27）
+
+Host 独立分支 `codex/server/runtime-seccomp`、[PR #29](https://github.com/cjhyy/codeshell/pull/29)
+提交 `22a67b60f2b31395cbb761801de6dc35a64c6d00` 已提供管理员显式配置入口。
+启动时有界读取并固定配置内容，默认拒绝规则、非符号链接常规文件检查，私有
+只读快照，摘要参与运行配置身份；旧运行容器配置不同则拒绝，停止后可重建并
+保留卷。未指定时保留默认隔离。74 项运行／CLI 检查和最后 23 项安全检查、
+完整类型／lint 与最终九类 CI 36269178428 通过；仍为 draft，未发布。
+
+Services 独立分支 `codex/services/cloud-browser-runtime`、[PR #5](https://github.com/cjhyy/codeshell-services/pull/5)
+最终 `e7c90c8deac30c022ff76f8c8246465d648992d8`：项目镜像安装 Chromium 并
+记录实际程序版本；可选 CLOUD_RUNTIME_SECCOMP_PROFILE 配置，旧 SDK 不支持时
+明确拒绝启动；收录固定 Playwright v1.60.0 配置、原始 SHA、许可证和新增 chroot
+规则说明。未使用 privileged、SYS_ADMIN、host IPC 或 --no-sandbox。
+62 项完整检查及随后 3 项启动检查通过；最终 CI 36269216650／36269219848 的
+Node 22.16／22／24 全通过。公开依赖仍为 0.9.22，未发布。
+
+Host #27 同步 #29 后最终 `04366665feeb49c391d9419621e7296ce56bed06`，九类
+CI 36269188299 全通过。本机 `/tmp/cloud-video-media-seccomp-v3.log` 确认
+双容器应用精确配置并保留原隔离条件，恢复／原生探测／真实 WAV 导入和字节
+校验通过；渲染报“导出文件必须包含一个画面流和一个混音流”。没有证明成品。
+
+Linux 候选 **36269363113 失败**，固定上述 Host／services 与 Panel
+`67c5161bd154796cff6052802d72d22f8b0c189b`。日志
+`/tmp/cloud-browser-candidate-failed.log` 确认六包版本生命周期、求职／设计业务、
+Video 工程恢复和实际素材导入通过，最终渲染在同一输出流检查失败。没有新
+成功候选或正式部署。浏览器已能实际运行，不能再把此失败描述为缺少浏览器。
+
+### 增量 92：短视频导出遗漏音频的修复（2026-09-27，进行中）
+
+独立 Panel 工作树 `video-export-streams/codeshell-panel-apps`、分支
+`codex/video-studio/export-streams` 从最新主线 30e1e0d 建立。FFmpeg 5 的
+最小真实复现表明 -frames:v 30 可使一秒 MP4 仅包含视频；移除此重复限制后
+同样输入生成完整音频与视频。实现继续精确产生有限 frameCount 帧并关闭 stdin，
+混音通过 atrim 精确限制样本，不放宽 verifyExportOutput。
+
+新增实际导出检查覆盖 1／30／75 帧、准确视频帧数、音频时长、完整解码及内容
+末尾的可听能量，避免只有音频头或尾部静音也通过。本机 9 项真实渲染检查通过
+`/tmp/video-export-streams-render-tests.log`。相同新增用例经打包后在非 root、
+只读根、cap-drop ALL、no-new-privileges、无网络的 Chromium 容器运行，旧生产
+函数失败、新生产函数全部通过：`/tmp/video-export-streams-linux-before.log`、
+`/tmp/video-export-streams-linux-after.log`。全仓检查和完整媒体回归仍进行中。
+完整新候选／云端预览下载与重启验收尚待完成；编辑器素材预览仍是单独缺口。
+整体 goal active，手机触控／窄屏优化后置，真实服务商／目标部署条件仍待提供。
+
+
+增量 92 检查点：Panel 修复提交 `ec4622acea8f34dba5a5d926bd32bc57b44a60ae`
+已推送，[PR #48](https://github.com/cjhyy/codeshell-panel-apps/pull/48) 为 draft，
+已附到任务。完整 npm run check exit 0，包含类型、确定性生成包与安装包校验；
+195 项完整媒体回归 exit 0（`/tmp/video-export-streams-media.log`）。最终远端
+CI 36270356790／36270369919 仍进行中，尚未合并。
+
+Panel #47 已通过普通合并纳入同一修复，最终
+`409e814dd74200de343fd0e1fb7347b663897bed`，组合类型与 build:check 通过，
+已推送且最终 CI 运行中。新 Linux 三仓候选 **36270422890** 已确认在运行，
+固定此 Panel、Host `04366665feeb49c391d9419621e7296ce56bed06` 与 services
+`e7c90c8deac30c022ff76f8c8246465d648992d8`。这是含实际修复的新候选，不是因
+观察超时重启旧任务；旧 36269363113 已明确失败。结果未定，不宣称预览下载
+和重启全流程通过。相关 PR 描述已补旧候选的真实失败位置，避免仍归因缺浏览器。
+
+
+### 增量 93：视频同步恢复的资源查询契约（2026-09-27，进行中）
+
+检查素材预览时发现 `main.ts` 的处理声音试听与 `editor/sync-bridge.ts` 的
+暂存恢复使用 `resources.get({assetId})`，实际 Host 服务只接受 `{id}`。
+原同步测试错误要求 assetId，主页面模拟同时接受两种字段，因此掩盖了错误。
+独立分支 `codex/video-studio/resource-metadata-contract` 从主线建立，先收紧
+模拟 Host 的契约；旧实现的三项持久回执／部分暂存恢复／取消测试均复现失败。
+随后只修正两处查询参数，资源物化／读取仍保留其正确的 assetId 参数。
+
+修复提交 `88c710e` 已推送，[PR #49](https://github.com/cjhyy/codeshell-panel-apps/pull/49)
+为 draft，已附到任务。14 项实际原生同步回归、53 项主页面浏览器回归通过；
+源码与生成安装包一起提交。全仓检查与最终 CI 进行中，尚未合并。
+证据：`/tmp/video-resource-contract-before.log`、`/tmp/video-resource-contract-sync.log`、
+`/tmp/video-resource-contract-ui.log`。这不解决云端 /media 路由与 iframe CSP；
+不宣称处理声音的云端试听或整体素材预览已经通过。
+
+
+增量 91 合并：Host #29 以最终 `22a67b60` 合入
+`ef319e2e0736620557f1789c46b95848d7a3aaca`；services #5 以最终 `e7c90c8`
+合入 `336cf8e6a9f38ae96e13b8556b531224495a2e94`。合并前核对最新主线、
+实际差异、全部 CI、可合并状态以及已完成的本机／Linux 隔离验收。
+Host #29 干净无活跃进程的工作树、本地及远程分支已清理（远程 Git 两次 TLS
+失败后，经 GitHub API 核对准确 SHA 再删除）。services 工作树／分支暂保留，
+新完整候选仍使用该任务来源。未公开发布，也不代表完整 Panel 业务通过。
+Host #27 同步主线后的 `ac68a32b8062c2711de22ec448ebd809aba2757b` 已推送，
+与候选固定的 `04366665` tree 均为 `ee2646d151187a400ec7511d5b6c725220ff19f2`，
+没有新增代码变化；最终 CI 重新运行。
+
+增量 92 CI：同一 `ec4622a` 的 PR 工作流 36270369919 全部成功；push 工作流
+36270356790 的界面检查 463／464 通过，一小时时间轴缩放在 30 秒等待失败。
+该前端代码不在此 PR 差异中；没有直接忽略。对应本机单项复验通过
+`/tmp/video-export-streams-timeline-recheck.log`，只重跑已失败的 CI job，保留
+原检查和超时，结果未定。#48 暂不合并。完整候选 36270422890 仍在运行。
+
+增量 93 检查：首次全仓 npm check 在 Apple Silicon 安装器取消用例失败，
+等待 3 秒仍未出现 installer-started；原生同步和主页面均已通过。未改无关代码
+或扩大超时。该 8 项安装器文件独立复验全部成功
+`/tmp/video-resource-contract-audio8-recheck.log`，完整检查复验进行中
+`/tmp/video-resource-contract-check-v2.log`。最终 `88c710ec128c72be0dab194e4eb95353197a79a9`
+的远端 CI 除两个界面 job 尚在运行外均通过。保留首次失败，不把局部通过当作
+全仓成功；#49 仍为 draft。
+
+
+增量 92 真实云端结果：候选 **36270422890 已失败**，但这次真实 MP4 渲染、
+浏览器 320×180 解码、精确下载字节已经通过；停止／重启项目与六包重开也通过。
+最终失败点是 `smoke-cloud-video-recovery.mjs:350` 的验收代码错用
+resources.get({assetId})，Host 正确拒绝无效字段，尚不能声称重启后媒体验证通过。
+日志 `/tmp/cloud-video-fixed-candidate-failed.log` 已核对。Host #27 修正为 `{id}`，
+并追加逐块读取原素材／导出视频、总长度和完整 SHA-256 一致性验证，防止仅剩
+资源元数据也通过。语法、lint 与 diff 检查通过，提交
+`ee77529772ea5f3194cf2687ac402cd54201fadf` 已推送，最终 CI 运行中。
+
+Panel #47 通过普通合并纳入 #49；冲突仅位于生成 main.mjs 与 inventory，已由
+合并后的源码重新构建解决。类型、确定性 build:check 通过；最终
+`d91ca2d89ec630940dac3bccc2e36deaa26abd93` 已推送。新完整候选 **36271484163**
+已确认运行中，固定该 Panel、上述 Host 和 services 主线
+`336cf8e6a9f38ae96e13b8556b531224495a2e94`。未发布新版本，仍没有比
+10914521627 更新的成功完整候选；新候选结果未定。
+
+增量 93 收尾：完整本机检查复验 exit 0，最终 `88c710e` 远端全部 CI 通过，
+Panel #49 合入 `d2e64dcfce7363885349a5b20f14430ba98c980d`。工作树干净、
+无活跃进程且主线包含准确提交后，工作树及本地／远程分支已清理。services #5
+也已核对主线与 e7c90c8 的 tree 相同，旧候选已结束、新候选改从 main 运行，
+干净无活跃进程的工作树和本地／远程分支清理完成，原始 checkouts 不变。
+
+Panel #48 随主线纳入已合并 #49，最终
+`494440f9de5481ad4d0f242a4e4bd6108bee8e79` 已推送，组合类型和包一致性通过，
+最终 CI 重新运行。之前 ec4622a 的一项时间轴 CI 超时仍有独立失败 job 复验在跑，
+同提交另一完整工作流通过；不隐去原失败，也不把旧提交 CI 当作最终提交通过。
+整体 goal active，仍待完整候选、编辑器资源播放、其他 Panel 业务与迁移、
+真实服务商／模型、目标部署与发布、设备目录／中继等工作；手机界面后置。
+
+
+### 增量 94：完整云端视频交付候选与主线合并（2026-09-27）
+
+候选 [36271484163](https://github.com/cjhyy/codeshell-services/actions/runs/36271484163)
+已成功，来源 Host ee77529772ea5f3194cf2687ac402cd54201fadf、Panel
+ d91ca2d89ec630940dac3bccc2e36deaa26abd93、services
+336cf8e6a9f38ae96e13b8556b531224495a2e94。实际媒体导入／原生检查、MP4
+渲染、320×180 解码、精确下载字节，以及停止／重启后的原素材和成品 SHA-256
+全部通过。求职／设计恢复、六包生命周期和两个项目隔离、Link 受控 OAuth／
+重启／备份恢复、真实安装包与镜像重载等既有门槛同时通过。
+日志 `/tmp/cloud-video-delivery-success.log`；候选 artifact 10916007929
+（623190890 bytes），证据 artifact 10915972917。未公开发布，未完成目标部署。
+
+Host #27 最终 ee775297 的全部九类 CI 通过，合入 4e63c470。
+Panel #48 最终 494440f 的完整 CI 通过，合入 24f38ef；首次 ec4622a 的时间轴
+超时仍保留，未改测试。Panel #47 候选 d91ca2d 的六类 CI 通过，随后普通合并
+最新主线得到 96fd5df；两者 tree 同为 708f608c8a13b6d058c56a2dd45d5aa5c7a18fd2，
+合入 72bc983。没有将合并提交的新 CI 说成已通过。
+
+### 增量 95：编辑器内授权素材流（2026-09-27，进行中）
+
+Host 分支 codex/server/panel-inline-resources、[PR #30](https://github.com/cjhyy/codeshell/pull/30)
+增加 resources.preview，沿用 resources 权限，返回当前页面 grant 下的只读 URL。
+支持 Range／HEAD；会话、包版本、页面授权失效时停止服务；资源按项目和 Panel
+取回，拒绝 HTML／JS／SVG 等主动内容，不增加 iframe 网络或沙箱权限。
+53 项运行契约、真实 opaque iframe 图片画布回读／WAV 解码与 seek／撤销验证、
+完整 workspace 类型及 lint 通过。实现 5908958f，合并主线后 f2cf8d33。
+
+Panel 分支 codex/video-studio/inline-resources、[PR #50](https://github.com/cjhyy/codeshell-panel-apps/pull/50)
+接入原素材、代理、声音试听、浏览器元数据检查与 MediaLibrary；HTTP 媒体采用
+anonymous CORS，项目切换后旧授权结果不落入新素材库。桌面保留原媒体协议；
+旧云端缺少能力会明确要求更新。源码和生成包提交 8133afd，合并最新主线并从
+组合源码重建生成文件后 d0917940a9d7006c920835919b7600a8e6944fec。
+7 项 source preview、195 项媒体、69 项主页面／素材库回归、类型与包校验通过；
+组合全仓 npm check 完成后继续完整 UI 回归，日志 /tmp/video-inline-merged-check.log
+与 /tmp/video-inline-merged-ui.log。两 PR 均为 draft，远端 CI 仍在运行。
+
+Host 672b8210bb980a8b5420ff51bfef12994b2f0319 增加真实安装包验收：操作原素材
+预览与播放按钮，观察实际 HTMLMediaElement 的解码、推进、授权资源路径，视频
+画布可回读；导出成品重新导入编辑器后再播放，并在项目重启后复验声音与视频。
+未将外层工作台成品预览作为编辑器通过的证据。新候选 36273228148 已确认运行，
+固定上述 Host、Panel d091794 和 services 主线 336cf8e。结果未定，不声明全云端
+编辑器预览完成。整体 goal 仍 active，真实账号／模型与目标部署条件仍待提供。
+
+增量 94 清理：确认 Host #27、Panel #47/#48 的工作树均干净、无活跃 cwd 使用，
+且准确 HEAD 已包含于各自 origin/main，已删除这三个任务工作树及本地／远程分支。
+保留所有无关工作树、未完成分支和父目录证据。增量 95 的完整组合 npm check
+已结束通过，随后 UI 回归仍在运行；新候选已进入真实安装包／Docker 验收步骤。
+
+
+增量 95 收尾：候选 [36273228148](https://github.com/cjhyy/codeshell-services/actions/runs/36273228148)
+成功，来源 Host 672b8210bb980a8b5420ff51bfef12994b2f0319、Panel
+ d0917940a9d7006c920835919b7600a8e6944fec、services 336cf8e。
+日志 `/tmp/cloud-inline-preview-success.log` 明确记录初次实际声音／视频播放、
+视频画布回读、导出与下载，以及停止重启后声音／视频再次播放通过；原始资源、
+成品完整摘要、文档／原备份和六包／求职／设计／Link 既有检查全部保留。
+候选 artifact 10917245305（623192038 bytes），证据 artifact 10916139848；
+归档检查与镜像重载通过。未发布或正式部署。
+
+Host #30 最终九类 CI 36273205717 全通过，合入
+6efacc23329651607c8090dc7dabd0e2b19dc1aa。Panel #50 最终 CI
+36273205784／36273177818 全通过，本机 468 项完整 UI exit 0，合入
+2c3297268c3f39ef4dc928ca7711f7adc95e02e3。两侧都核对最新主线、准确 HEAD、
+工作树干净和可合并状态后，普通 PR 合并；没有跳过保护。
+
+### 增量 96：本人声音样本的云端试听（2026-09-27，进行中）
+
+从最新 Panel 主线建立独立工作树 voice-cloud-preview/codeshell-panel-apps，
+分支 codex/video-studio/voice-cloud-preview；显式纳入 #50 的前置契约。
+检查发现本人声音样本仍写死 /media URL。先用 scoped URL／缺少连接的回归复现，
+初次复用 MediaLibrary 地址又被真实浏览器暴露：新配音发布的样本不保证已经
+解码入库，两个原有流程超时。因此最终改为单独 resources.preview 授权，
+不依赖解码缓存；当前项目控制器仅在内存保留 URL，版本／资源／请求身份检查
+拒绝迟到响应；授权失败保留结果及错误，显式刷新重取 URL，不重复语音任务。
+参考音频和样本的 HTTP 地址都采用 anonymous CORS。
+
+最终 39 项控制器检查、9 项真实 MP3/WAV 浏览器流程通过（含 scoped URL 和
+页面重开）；全仓 npm check exit 0，日志 /tmp/voice-cloud-preview-check.log
+确认包括最后新增的手动授权重试用例。最终重新生成包、类型、build:check 和
+全部安装预检通过。首次八浏览器用例中的两项失败记录在
+/tmp/voice-cloud-preview-browser.log；修复后八项及新增九项全部通过，未放宽超时。
+新 browser 夹具首次未完成引擎准备，错误为“本机文字配音尚未就绪”；通过既有
+setup 流程准备后测试通过，没有改动生产推理策略。
+
+提交 5ae64369234a78d4002246a2319ae07cba6bdf0f；#50 合并后正常合并主线，
+最终 889aa3c56080bcc9f7622f7ea3196ffeb2ac94a8 组合类型与确定性包复验通过。
+[Panel #51](https://github.com/cjhyy/codeshell-panel-apps/pull/51) 为 draft，已附任务，
+最终 CI 运行中。声音模型为受控夹具；不把界面播放当作 Linux 实际模型生成。
+整体 goal 仍 active，真实账号／模型、六 Panel 全业务、目标部署与正式发布、
+统一设备目录／中继等尚未完成；手机界面优化后置。
+
+增量 95 清理完成：Host #30／Panel #50 的准确提交均已包含于 origin/main；
+工作树干净，等待正在结束的 git fetch 后重新检查 lsof，确认无活跃 cwd 使用。
+两任务工作树与本地／远程分支已删除；保留 #51、目标记录分支及其他任务。
+#51 最终 889aa3c 的 CI 36274441246／36274459081 已确认运行中，尚未合并。
+
+增量 96 收尾：上述两轮最终 CI 全部成功，Panel #51 合入
+`b4a7db3fb3198fba482df7375288ee8b3053d1d4`。准确提交包含于主线、工作树干净，
+重新检查确认无活跃 cwd 后，任务工作树及本地／远程分支均已清理。
+
+### 增量 97：求职云端 PDF 业务与部署字体（2026-09-27，进行中）
+
+Panel 分支 `codex/job-hunt-hq-cloud/pdf-export` 使用替代 scope，因为已有无关分支
+`codex/job-hunt-hq` 占用 Git 前缀，原分支保持不动。最新主线建立独立工作树后，
+普通快进纳入 #51。新增审核原生 `resume-pdf` 入口及 process／resources 权限，
+使用同包打印 CSS；公开内容先去除内部证据和按钮，原生模板再次移除主动内容，
+禁用页面脚本、网络与导航，损坏图片明确失败。浏览器保持沙箱，限制请求、产物
+大小和运行时间，取消等待浏览器退出并删除本次临时配置。
+
+云端根据实际方法选择持久任务，桌面保留原打印接口。固定来源与内容的提交 key
+处理重复点击／回复丢失；任务页支持查询、取消、明确重试和项目资源下载，重开
+不会自动重跑。回执保存来源版本，修改后的简历不会被旧生成结果标为最新；文件
+生成但项目记录写入失败时仍可下载，刷新会重试记录保存。旧桌面路径记录兼容。
+另外核对 Host 重试复用任务目录，改为按 PDF 内容摘要命名不可变临时产物，避免
+“文件已写出、回执未捕获”后重试卡在 EEXIST；保留旧文件，相同字节可以复用。
+
+本机全仓 npm check 成功（后续来源记录与清理细化另有针对性检查），求职套件
+82 项通过，最后新增的写入失败恢复与原云端场景共两项完整页面检查通过；9 项
+任务／来源模型、7 项实际 PDF／CLI（含中文 A4、多页照片、取消、重试）通过。
+安装预检通过；日志 `/tmp/job-hunt-pdf-check.log`、`/tmp/job-hunt-pdf-suite-final.log`、
+`/tmp/job-hunt-pdf-ui-final.log`、`/tmp/job-hunt-pdf-task-final.log`、
+`/tmp/job-hunt-pdf-native-retry.log`、`/tmp/job-hunt-pdf-validate-retry.log`。
+已渲染并查看实际打印 CSS 的中文 PDF 页面，未把测试文件作为用户交付文件。
+
+首次 Linux PDF job 失败：下载的 Chromium 在 Ubuntu runner 上因 AppArmor 限制
+用户命名空间而无可用沙箱。原失败日志 `/tmp/job-hunt-pdf-linux-failed.log` 与空白页
+独立探针 `/tmp/job-hunt-pdf-linux-probe.log` 保留。按 Chromium 官方说明，仅对
+该临时 runner 上的准确测试浏览器路径加载 userns profile，没有关闭全局策略或
+Chromium 沙箱。`852570a` 的 Linux job 108501466794 已通过七项检查；之后的
+重试修复 `725b1d56903d1d5038e42204e71506b2652ea8ac` CI 尚在运行。
+[Panel #52](https://github.com/cjhyy/codeshell-panel-apps/pull/52) 已附任务，为 draft。
+
+services 分支 `codex/services/cloud-pdf-fonts` 从主线创建独立工作树，加入 Noto CJK
+字体并记录安装版本，候选 runner 增加 Poppler、保存 PDF／文本／截图证据。
+63 项测试、文档格式和 diff 检查通过；最终 `094806c775c03cdd9ab4cba3fbd888f1f5141192`，
+[services #6](https://github.com/cjhyy/codeshell-services/pull/6) 已附任务，为 draft。
+
+Host 分支 `codex/server/cloud-resume-pdf` 从最新主线创建独立工作树，扩展已有真实
+求职恢复验收：通过实际安装的 iframe 导出、检查中文可选文本与私密证据排除、
+跨项目资源拒绝、完整字节下载，以及停止／重启后的文件和任务恢复。只增加验收，
+不改变 Host 业务接口；语法、ESLint、格式和 diff 通过。最终
+`15e9c0ffa488bfb832056f665f38b685399a2c0a`，
+[Host #31](https://github.com/cjhyy/codeshell/pull/31) 已附任务，为 draft。
+
+第一次候选 36277000745 因随后补上输出中断重试修复，明确取消旧来源运行，
+不是成功候选。36277189291 误传短 SHA，被完整 SHA 校验拒绝，未进入业务验收；
+已改用三个准确提交重新发起候选。实际项目容器结果、最终 CI、合并与正式发布
+均尚未完成；既有成功候选仍是 36273228148，整体 goal 保持 active。
+
+增量 97 最新检查：最终 Panel `725b1d5` 的两轮 Linux PDF job
+108502036830／108502027486 全部成功，含输出中断后的明确重试；两轮完整 CI
+36277161680／36277158298 其余项目仍在运行。Host #31 最终九类 CI
+36276986431 全部成功；services #6 最终 Node 22.16／22／24 两轮 CI
+36276886171／36276888415 全部成功。新完整候选
+[36277200702](https://github.com/cjhyy/codeshell-services/actions/runs/36277200702)
+已确认运行中，固定 Host 15e9c0ffa488bfb832056f665f38b685399a2c0a、Panel
+725b1d56903d1d5038e42204e71506b2652ea8ac、services
+094806c775c03cdd9ab4cba3fbd888f1f5141192。三个 PR 继续保持 draft，待实际安装包
+与容器业务验收，不以普通 CI 代替新增场景通过。
+
+增量 97 后续：Panel 725b1d5 的两轮完整 CI 最终全部成功。三仓候选
+[36277200702](https://github.com/cjhyy/codeshell-services/actions/runs/36277200702)
+失败，日志 /tmp/job-hunt-pdf-candidate-failed.log：旧数据迁移、恢复和新草稿保存
+通过，点击 PDF 后等待 150 秒未看到任务。代码核对发现该浏览器验收遗漏 Host 的
+后台工具确认；生产确认保留，验收新增检查标题与 resume-pdf 入口后点击确认，
+失败页面／iframe 文本改存到候选证据目录。Host #31 新提交
+eb66f3f06726aad67c085ab560aa3252dcc98bf1，语法、lint、格式通过，最终九类 CI
+36278225748 成功。新候选
+[36278228806](https://github.com/cjhyy/codeshell-services/actions/runs/36278228806)
+使用新 Host、原 Panel 725b1d5 和 services 094806c，已确认进入真实运行镜像验收；
+尚未结束，不能把脚本修复当作云端 PDF 已通过。三个 PR 继续 draft。
+
+### 增量 98：可信工作台录音与项目资源保存（2026-09-27，进行中）
+
+独立工作树 panel-audio-capture/codeshell，从最新 main 6efacc23 创建分支
+codex/web/panel-audio-capture。实际消费者缺口是求职的桌面 audio.transcribe／
+麦克风调用，以及视频的 iframe getUserMedia；云端 iframe 明确禁止麦克风。
+新增可选 resources.recordAudio，沿用资源权限，只返回打开可信工作台录音器的
+受限效果。用户明确开始才申请设备权限，停止／试听后再次确认保存；模型、
+转写与领域参数继续留在 Panel。未降低 iframe 沙箱或麦克风权限。
+
+录音请求固定原项目和页面 grant，最长 600 秒／25 MiB；面板关闭或授权撤销后
+停止轨道，迟到的设备授权也释放；上传可取消。页面保存原录音用于试听和本机
+备份；分块／完成响应丢失时不自动重传，用户明确保存后查询同一上传并恢复，
+最终要求资源摘要、长度和 MIME 匹配。控制台保留部分上传的既有过期清理策略。
+文档记录 HTTPS、浏览器支持、页面内临时保存和 25 分钟选择器超时边界。
+
+54 项录音／上传／Host 页面检查通过，54 项真实 HTTP runtime 契约通过；完整
+bun run typecheck、变更 lint、工作流引用和 diff 通过。实际 Chromium 使用模拟
+麦克风，但 MediaRecorder、WebM 编码、试听、Host HTTP 和资源服务真实；丢弃已
+提交 write／finish 的响应后，备份仍可下载、只开一个上传、最终项目资源字节
+一致，再录音时撤销授权释放全部轨道。截图已查看。日志
+/tmp/panel-audio-final-tests.log、/tmp/panel-audio-runtime-tests.log、
+/tmp/panel-audio-browser-final.log、/tmp/panel-audio-full-typecheck.log。
+
+首轮浏览器构建因测试入口的 react-dom 解析位置错误失败，改用 Web 包解析器；
+第二轮 headless shell 的模拟音频设备返回 NotSupportedError，改用锁定版本完整
+Chromium 的新 headless 模式及测试设备授权。没有替换实际 MediaRecorder，也没有
+关闭浏览器沙箱。Linux CI 增加该场景，对准确 Chromium 路径配置 AppArmor userns
+profile，保留全机限制。最终 d9f272d9ffcc5ec60357370f7610fb1e970abb37，
+[Host #32](https://github.com/cjhyy/codeshell/pull/32) 已附任务，为 draft；
+CI 36279137987 已确认运行。消费端接入、真实设备／模型和全部 Panel 业务仍未完成。
+整体 goal active，真实服务商／模型、目标部署／发布和统一目录／中继仍待完成，
+手机触控／窄屏优化继续后置。
+
+增量 97 收尾：候选 [36278228806](https://github.com/cjhyy/codeshell-services/actions/runs/36278228806)
+完整成功。实际 iframe 的 PDF 任务经 owner 确认后生成可选中文字、保存来源回执、
+拒绝另一项目读取、下载完整相同字节；停止重启及删除包来源后文件、任务、回执和
+再次下载保留。六包生命周期、求职／设计恢复、视频原素材播放／画布／MP4／重启、
+Link 受控授权／备份恢复等既有门槛同时通过。候选逐文件校验、镜像重载和归档通过。
+候选 artifact 10918805636（698413424 bytes），证据 10918381181，日志
+/tmp/job-hunt-pdf-candidate-success.log。轻量证据已下载到
+/tmp/cloud-pdf-success-evidence，检查页面截图和选择文本，并渲染查看实际 Linux PDF。
+
+最终三仓 CI 全通过，主线均为候选 HEAD 的祖先且工作树干净；通过匹配准确 HEAD 的
+普通 PR 合并：Host #31 -> 4e50f3796357f29a32a24f7d2772d0bccae6a9da，
+Panel #52 -> 3239de97a21310e9cc32a82dddb9e5f714969a3c，services #6 ->
+d97cff4b5c7c9c4132b4e6121a84e7ec682d6edd。没有公开发布或正式部署。
+
+增量 98 复验：d9f272d9 的完整 CI 36279137987 全部成功；Linux job 108507504109
+明确完成 Browser recording and interrupted upload recovery，真实麦克风录制仍用
+模拟设备，未将其记为真实账号／物理设备验收。正常合并新主线仅带入已验收 PDF
+脚本，得到 de99cd81977df5d9b7c6d9cefb161434be46419d；脚本语法与 diff 通过，
+已推送等待该组合 CI，#32 仍 draft。整体目标仍 active。
+
+增量 97 清理完成：三个 PDF 任务准确 HEAD 均已包含在各自 origin/main；工作树
+干净，初次 lsof 仅看到并行状态检查本身，检查结束后再次确认无活跃 cwd。
+三个已合并工作树及本地／远程任务分支已删除，原始 checkouts、录音分支和所有
+无关任务保留。增量 98 组合 CI 36279471524 已确认运行，来源 de99cd81。
+
+增量 98 收尾：组合 CI 36279471524 九类检查全部通过，Host #32 已普通合并为
+5b2ff8a23fe39e12f94e2ead1259c7a836073edc。确认准确 HEAD 包含于 origin/main、
+工作树干净；状态检查退出后从另一工作树再次检查 lsof 无占用，已清理录音 Host
+旧工作树及本地／远程分支。未将通用录音能力的完成记为全部 Panel 录音业务完成。
+
+### 增量 99：视频云端录音消费端及真实容器验收（2026-09-27，进行中）
+
+最新主线创建 `video-cloud-recording` 下三仓独立工作树。Panel 分支
+`codex/video-studio/cloud-recording` 按实际 resources.recordAudio/list/get/open
+能力接入可信工作台录音，不再从禁止麦克风的 iframe 采集。原始音频先进入项目
+资源，用户再明确加入工程；保存失败、丢失录音回复和关闭页面后可刷新项目音频
+找回、打开下载或重试。通过 Panel 原生 inspect 取得真实音频时长，再条件发布
+素材；重复加入复用已有资源，作用域／工程代数拒绝旧响应。普通录制最长 600 秒，
+声音参考最长 30 秒；桌面保留原摄像头／屏幕／麦克风录制。云端摄像头／屏幕、
+真实设备、转写及声音模型未算完成。
+
+79 项录音与生产控制器检查、12 项浏览器录制流程通过；完整编辑器新增场景验证
+工程保存失败后仍能下载、重开找回、同一资源只发布一次。首次完整页面夹具因
+任务 entry 回执误写成字符串被真实桥拒绝；改为实际 Host 的对象回执后通过，
+没有修改生产授权。66 项完整编辑器／口播／声音准备 UI 检查通过，全仓 npm check
+通过，最终类型、确定性生成包、安装预检及 diff 通过。已提交源码与安装包。
+日志 /tmp/video-cloud-recording-unit.log、/tmp/video-cloud-recording-browser.log、
+/tmp/video-cloud-recording-main-final.log、/tmp/video-cloud-recording-ui-regression.log、
+/tmp/video-cloud-recording-check.log、/tmp/video-cloud-recording-validate.log。
+
+Panel 最终 67fb9fd8a5b0416c10a325b4632220901b9ef914，
+[Panel #53](https://github.com/cjhyy/codeshell-panel-apps/pull/53) 为 draft。
+Host 分支 `codex/server/cloud-video-recording` 扩展原有两项目安装包验收：真实
+MediaRecorder 编码／试听／原始备份、关闭 Panel 后找回、容器检查后加入、另一
+项目拒绝读取、重启后校验字节和播放。仅设备输入为模拟麦克风，不替换编码或
+原生处理。完整 Chromium 保持沙箱；server 构建、语法、lint、格式、diff 通过。
+Host 1ebe6d776ad7e877a7bc967c8f4e14620a5c5568，
+[Host #33](https://github.com/cjhyy/codeshell/pull/33) 为 draft。
+
+services 分支 `codex/services/cloud-recording-acceptance` 为临时候选 runner 上
+准确 Chromium 路径添加 userns AppArmor profile；不关闭全局策略或浏览器沙箱。
+63 项检查、工作流格式与 diff 通过，e36f3280226bd95d6a78f0373b3bd0133c945bcd，
+[services #7](https://github.com/cjhyy/codeshell-services/pull/7) 为 draft。
+三 PR 已附任务。准确三个提交已启动完整候选
+[36281034958](https://github.com/cjhyy/codeshell-services/actions/runs/36281034958)，
+首次确认 queued，尚未取得真实容器结果。不能用上述控制器／页面检查代替新增
+云端业务通过；最新成功候选仍是增量 97 的 36278228806。整体 goal 保持 active，
+未公开发布或正式部署；手机界面后置，全部业务／真实账号模型／目标部署与统一
+设备目录中继仍需完成。
+
+
+增量 99 后续：首次候选 36281034958 失败，验收脚本将隐藏且为空的 role=alert
+误判为错误；查看页面截图后，Host #33 的 b968ddad 改为仅检查可见非空错误，
+完整九类 CI 36282041874 通过。第二候选 36282062769 仍失败，这次是真实问题：
+重新打开 Panel 后，编辑器已显示，但制作记录尚未恢复，加入项目录音提前触发
+requireHost 的未启用判断；原始录音保留。未将修正验收脚本算作生产流程完成。
+
+Panel #53 新提交 e5c389070f3a9480e91aa7dbb875eb6681f3f0d9 将初始化合并为同一个
+Promise，录音加入等待记录恢复并在等待后重新检查工程归属；关闭后不创建轮询。
+73 项制作控制器检查通过，包含恢复等待和期间切换工程；完整页面验证延迟恢复、
+保存失败后重开及重复加入。类型、确定性安装包、预检和 diff 通过。已提交源码
+及生成包，最终 CI 待完成。新候选
+[36282931762](https://github.com/cjhyy/codeshell-services/actions/runs/36282931762)
+固定 Host b968ddad8fac5f9cb700d534eec4fdba627b134c、Panel e5c3890 和 services
+ e36f3280226bd95d6a78f0373b3bd0133c945bcd，已确认运行。视频三个 PR 继续 draft。
+第二失败日志 /tmp/cloud-video-recording-candidate-second-failed.log，截图与调用时序
+/tmp/cloud-video-recording-second-evidence；修复检查 /tmp/video-cloud-recording-init-*.log。
+
+### 增量 100：求职项目录音与持久转写任务（2026-09-27，进行中）
+
+独立工作树 job-hunt-cloud-audio，Panel 分支 codex/job-hunt-hq-cloud/audio-practice。
+通过声明的可选能力接入可信工作台录音；选择项目音频和语音连接后，明确发送至
+Panel 自有 interview-transcribe 原生入口。新增 credentials.connections 权限，
+只交付所选连接，密钥不进入任务 JSON／结果／页面。支持 OpenAI 兼容 HTTPS 与
+Host 已授权的回环服务。最长录音 120 秒、16 MiB、请求 120 秒、文字 6000 字。
+
+任务保存录音身份、连接指纹、题目／练习场次和原回答摘要，正文不发送给转写服务。
+持久写入请求标记后才发网络请求；失败、取消及结果不明时均不自动重发，成功回执
+可重读。用户明确选择原录音并确认才创建新请求；取消保留原文件。转写文字只在
+用户校对后加入回答，题目或回答变化则保留文字而拒绝覆盖；跨项目迟到响应停止。
+原桌面音频流程继续适用于缺少该能力组合的 Host。
+
+全仓 npm check 通过；最终求职套件 97 项、实际完整页面 2 项通过，覆盖关闭／切换、
+丢提交回复、结果找回、拒绝覆盖新回答、取消和明确再次发送。原生测试使用真实 HTTP
+验证 multipart、选定连接、取消、重入、错误脱敏、重定向与大小限制。包预检和 diff
+通过。Panel b53c6fb88e3066c769019f9d854aa3afa0cfd5b0，
+[Panel #54](https://github.com/cjhyy/codeshell-panel-apps/pull/54) draft，已附任务。
+日志 /tmp/job-hunt-cloud-audio-check.log、/tmp/job-hunt-cloud-audio-final-suite.log、
+/tmp/job-hunt-cloud-audio-final-ui.log、/tmp/job-hunt-cloud-audio-final-validate.log。
+
+Host 分支 codex/server/cloud-interview-audio，5078a66fcf10a88bf9bb7ab7f2fd248ee0d58ab3，
+[Host #34](https://github.com/cjhyy/codeshell/pull/34) draft，已附任务。增加真实安装包
+容器验收：可信录音、原始字节、选定连接交付、真实 native process／HTTP、跨项目
+拒绝、换浏览器恢复、手动应用、取消与项目重启后不重发。输入设备和语音响应受控，
+不声称实际识别质量或物理麦克风通过。语法、lint、格式和 diff 通过，完整 CI 待完成。
+候选 [36283000541](https://github.com/cjhyy/codeshell-services/actions/runs/36283000541)
+固定上述 Host／Panel 和 services e36f3280，已启动，首次 queued。完整容器结果尚未
+取得，两 PR 不合并；服务公网部署、真实提供商、正式发布和统一目录／中继仍待完成，
+手机操作优化继续后置。整体 goal 保持 active。
+
+增量 100 CI 跟进：Panel b53c6fb 的一轮 PDF job 108518293798 在测试前的 Chromium
+探针目录清理处 ENOTEMPTY 失败，浏览器主进程状态为 0；另一轮同提交 PDF job
+108518147804 通过。检查终态 job 日志后，为该任务私有临时目录增加有上限的
+rmSync 重试，不吞掉持续失败，也不改变沙箱／PDF 执行。Panel 新提交 00b83eb，
+工作流格式与 diff 通过，已推送待最终 CI。已有容器候选 36283000541 的业务源码
+仍为 b53c6fb，已确认在真实运行镜像验收中，未取消或重开；最终组合仍须单独核对。
+日志 /tmp/job-hunt-audio-pdf-ci-failed.log。
+
+增量 99 第三候选 36282931762 失败，但新增录音阶段实际通过：真实 WebM 保存、
+关闭后找回、容器原生检查、仅加入一次、另一项目拒绝读取及真实源音频播放均有
+PASS 记录。随后 WAV 导入触发真实 429，截图明确显示“素材尚未加入工程：面板
+请求过于频繁”；调用时序证实多个模块的单独预算合计越过 Host 240 次/分钟限制。
+没有提高 Host 限额，也没有将该候选算成功。
+
+Panel #53 的 2cbf4c5f3b10d0b0f288c175268b34b3d3aef5fc 新增 Panel 侧共用请求队列，
+位于实际 Host 调用边界，包含新鲜上下文读取；文件传输独立计量，取消不等待普通
+队列，页面关闭阻止未发出的调用。仅有结构化 RATE_LIMITED 且给出有效等待时间的
+执行前拒绝可有限重试；网络、存储、超时及未知结果不重发。83 项相关检查、12 项
+录音浏览器检查、2 项完整编辑器回归、全仓 npm check、类型、确定性构建、预检与
+差异检查通过。Host #33 的 e178b2569942518bb7799cb021fabda5b03165d0 补充在导入
+提示保留错误时立即报告，不再等到超时；语法、lint、格式通过。最终 CI 待完成。
+
+第四候选 [36284063778](https://github.com/cjhyy/codeshell-services/actions/runs/36284063778)
+固定上述 Panel／Host 与 services e36f3280226bd95d6a78f0373b3bd0133c945bcd，
+已启动，首次 queued。日志 /tmp/cloud-video-recording-candidate-third-failed.log，
+截图与时序 /tmp/cloud-video-recording-third-evidence；修复检查
+/tmp/video-cloud-traffic-{unit,main,recording,check,typecheck,final-buildcheck,validate}.log。
+
+增量 100 最新 CI：Panel 00b83eb 的两轮完整检查 36283145183／36283147542 全部通过，
+两轮 PDF 均通过；Host 5078a66f 的九类 CI 36282991704 全部通过。候选 36283000541
+仍经实时查询确认运行中，未取消／重启，仍等待真实容器终态，PR #54／#34 保持 draft。
+
+### 增量 101：投资公开数据源的真实只读验证（2026-09-27，部分验收）
+
+使用现有 Panel b53c6fb／00b83eb 的零依赖 CLI，在独立临时目录取腾讯 SH600519
+和 Yahoo AAPL 的 2025-01 指定历史区间；未使用账号密钥，未触碰个人项目或持仓。
+真实接口分别返回 18／20 根日线，CSV、来源、复权口径、日期与元数据记录一致；
+改变已有数据的复权口径被拒绝，原 CSV／元数据字节保持不变。
+
+明确同来源刷新后，腾讯指纹不变；Yahoo 调整历史数值出现细微变化，因此“刷新后
+完全相同字节”的额外断言失败，不能记为稳定数据。随后通过实际 engine.mjs 的 CSV
+解析及 fingerprintBars 复验，两来源当前数据指纹都与 sidecar 一致；Yahoo 指纹由
+fnv1a32:a5702c95 变为 fnv1a32:c714f68b，变化被保存记录。此处未证明上游变化原因，
+也未修改生产数值或放宽一致性验证。证据
+/tmp/quant-live-provider-acceptance.log；临时资料及 verified.json 位于
+/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-live-market-oQQzZU。
+这是本机真实公开来源与解析验证，不替代云端界面、付费来源、自动化和全部业务验收。
+整体目标仍 active；真实账号／模型、目标部署／发布和设备目录／中继仍未完成。
+
+### 增量 102：求职录音候选通过并合入，启动视频组合验收（2026-09-27）
+
+完整候选 [36283000541](https://github.com/cjhyy/codeshell-services/actions/runs/36283000541)
+成功，固定 Host 5078a66fcf10a88bf9bb7ab7f2fd248ee0d58ab3、Panel
+b53c6fb88e3066c769019f9d854aa3afa0cfd5b0、services
+e36f3280226bd95d6a78f0373b3bd0133c945bcd。候选 artifact 10920375258
+（698464621 字节），证据 artifact 10919548814；runtime 镜像
+sha256:9acd246598e47b86cd3c47756369f8e5d7de0ebc9a676ccada54ee3639004aa8，
+Link 镜像 sha256:b2535d7fb6eb15cfc23716092b03b82c38e53cc2bb7cc21dcb312d8c187f6de4，
+平台 linux/amd64。日志 /tmp/job-hunt-cloud-audio-candidate-success.log；已下载并
+查看 /tmp/job-hunt-cloud-audio-success-evidence/evidence/cloud-job-hunt-audio.png。
+
+实际可信 MediaRecorder WebM 进入项目资源，选定连接经原生进程发送真实 multipart
+HTTP 至受控转写服务；换登录后结果可找回，新回答拒绝覆盖，明确应用和取消保留
+原件。另一个项目不能读取任务或资源；项目停止／重启及移除安装源后，原字节、
+完成／取消任务和回答保留，请求计数仍为 2。六包生命周期、中文 PDF／设计恢复、
+视频既有处理、Link 受控授权及备份、归档与镜像重载同时通过。本候选不包含视频
+新增录音消费和共享请求队列，不代表真实语音模型或生产部署。
+
+Panel 最终 00b83eb 与候选业务版本仅差 CI 临时 Chromium 目录清理的有界重试；
+最终两轮 CI 全绿。Panel #54／Host #34／services #7 已合入，合并提交分别为
+ff1c8ad2a591cd4b1fdf8b1fd5e923edafb40bbb、
+8b6a40f104b7f094dd8d3565c2051071c6463ded、
+6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73。求职两个工作树经 clean、祖先关系和
+进程占用核对后移除，本地／远程任务分支删除成功。services 工作树暂保留供当前
+视频候选引用。原始用户工作树不变，未公开发布。
+
+视频两分支正常合入最新 main：Host ec8f6a347eb416e2e20ef507734de04c61fff65f，
+Panel cdb399f146d1233c5a2fb2e4277f3e5f434e89a3。本机 Host 脚本语法／lint／diff、
+Panel 全仓 check 与求职完整页面回归通过并推送；Host CI 36284370705 九类通过，
+Panel CI 36284497787／36284499739 仍进行中。第四视频候选 36284063778 未结束。
+新组合候选 [36284626623](https://github.com/cjhyy/codeshell-services/actions/runs/36284626623)
+使用上述两提交及 services main 6bb70f6 启动，等待三仓组合终态。PR #53／#33
+继续 draft。手机界面后置，整体目标 active；真实提供商、部署发布和设备目录／
+中继未完成。
+
+增量 102 后续：第四视频候选 36284063778 终态失败，录音／找回／检查／播放阶段
+通过；随后 WAV 导入时编辑会话仍处于持久保存，报“正在保存并切换工程”，保留
+已上传原件。已读取失败日志并查看 cloud-video-error-2.png，证据目录
+/tmp/cloud-video-recording-fourth-evidence，日志
+/tmp/cloud-video-recording-candidate-fourth-failed.log。
+
+Panel 新提交 93f05c1e27182858840d7f531ff5d74ced8d58a0 等待当前提交回执后才计划
+素材加入，重新取得版本并核对原工程；取消／关闭／工程替换均阻止等待中的写入。
+不重放旧写入、不重上传文件。9 项真实 Chromium 导入检查（含并发提交、等待期
+取消／关闭／替换）、完整 npm check、类型、确定性包和预检均通过。日志
+/tmp/video-cloud-import-busy-{ui,check,build,validate}.log。源码及生成包已推送到
+Panel #53，PR 描述已重写为最终行为与验收限制，仍为 draft。
+
+候选 36284626623 已启动时尚未包含这次修复，不能作为修复证据。派发
+36284913462 时误填短 Panel SHA，输入验证阶段失败，无业务验收结果；随后使用
+完整 40 位 SHA 启动 [36284934774](https://github.com/cjhyy/codeshell-services/actions/runs/36284934774)，
+固定 Panel 93f05c1、Host ec8f6a347eb416e2e20ef507734de04c61fff65f、services
+6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73，结果待完成。未将失败候选或本机检查
+算作容器通过；整体目标仍 active，未正式发布或部署。
+
+### 增量 103：真实本地语音模型验证及独立 Linux 验收（2026-09-27）
+
+上一轮为实际进展：提交并验证视频并发保存／素材导入修复，更新文档并启动准确
+组合候选。本轮实时查询确认候选 36284934774 仍运行，在实际容器步骤；Panel
+93f05c1 的最终两轮 CI 36284904695／36284906448 全部通过（含完整视频 UI），
+Host ec8f6a34 九类 CI 已通过。未因观察等待而重启，也未提前合并 #53／#33。
+
+在专用临时目录编译上游 whisper.cpp v1.9.4，准确源码
+927cfce34f31707e17f2bff35c349632fb9e2c3a；CPU 执行，tiny.en 模型 SHA-256
+921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f，公开 JFK
+WAV 摘要 59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e。
+未用私人音频、密钥或付费服务，也没有更改已安装桌面模型。本机缺 CMake，使用
+该临时目录私有 venv 安装构建工具，未更改全局 Python 环境。
+
+实际 Panel 原生 interview-transcribe CLI 经所选空密钥回环连接，发送 WAV 和
+FFmpeg 编码 WebM 的真实 multipart；实际模型均识别出公开示例语句。停止模型
+服务后重跑相同任务得到完全相同的持久结果，两个原音频摘要不变。该连接文件
+由验收构造，不声称它是 Host 授权；本项不替代容器／UI、中文准确率、物理录音
+或目标部署。生产入口摘要
+1b7ddc280937609978961bb90a8076b70f2da645df80dc00bd4165dcd6ffaff7。
+
+独立新工作树 /Users/admin/.codex/worktrees/real-interview-speech/codeshell-panel-apps，
+从最新 main ff1c8ad2 创建 codex/job-hunt-hq-cloud/real-speech-acceptance（原有
+codex/job-hunt-hq 前缀仍占用，保留）。新增可重复 runner、输入摘要限制、结果与
+日志证据、失败清理和离线重读；新增针对入口／runner 变化的 PR Linux 实际模型
+工作流，合入后也可手动触发。没有新权限或生产行为变化。README 与专用文档
+明确验收边界。原生 7 项、安装预检、语法／格式／diff 通过；仓库 runner 实际
+本机验证通过。证据目录
+/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-whisper-real-6f4k7r3q/repository-acceptance。
+
+[Panel #55](https://github.com/cjhyy/codeshell-panel-apps/pull/55) 已创建为 draft 并附任务，
+最终提交 2e8ee12d17b888328b1f4d1c6ff7e11003a2f012。首次手动派发因新 workflow
+尚不在默认分支收到 404，未启动；已添加相关 PR 路径触发，实际模型 Linux run
+36285425726 已确认 queued，普通 CI 36285425675／36285423238 待终态。未将本机
+结果等同 Linux 通过。整体 goal active；真实授权、部署发布与设备连接等继续待办。
+
+增量 103 运行核对：实际模型 Linux 36285425726 已进入固定 CPU server 构建；
+旧组合候选 36284626623 终态失败，确认同为“素材尚未加入工程：正在保存并切换
+工程”，该候选不含 93f05c1 修复。求职音频、视频录音与其他先行步骤通过，但整轮
+不计为成功。日志 /tmp/cloud-video-recording-combined-before-fix-failed.log。
+修复候选 36284934774 仍运行中，继续使用原 run，不重启。
+
+### 增量 104：视频组合候选通过，模型工具合入，推进真实云端推理（2026-09-27）
+
+上一轮实际进展为真实模型 runner／CI／文档及本机推理。本轮下载 Linux 实际模型
+run 36285425726 的 artifact 10920253282（3304 字节），确认 linux/x64、Node22.16，
+WAV／WebM 实际识别、服务关闭后的相同结果与原字节通过；准确模型与原生入口
+摘要与本机一致。/tmp/job-hunt-real-model-linux-evidence/acceptance.json 和
+provider.log 已检查。Panel #55 的两轮最终 CI 36285423238／36285425675 全部成功，
+合入 428195467674bb6268c34e329645f76eab51b83b。
+
+完整视频组合 [36284934774](https://github.com/cjhyy/codeshell-services/actions/runs/36284934774)
+成功，固定 Host ec8f6a347eb416e2e20ef507734de04c61fff65f、Panel
+93f05c1e27182858840d7f531ff5d74ced8d58a0、services
+6bb70f6b27ea1fafd6a2d5a9a555fc455e613c73。候选 artifact 10920588125
+（698476989 字节），证据 10920523340（1158492 字节）。runtime 镜像
+sha256:50b458969700f2a322cf144b99b885fc62e70377bb71ac0cf24c832df3bb2a8d，
+Link 镜像 sha256:17208387745ba6df89bdba8f52b2c80add4adc8d911332a43024991a70a25c1f，
+平台 linux/amd64。实际录音／保存／关页恢复／原生检查／仅加入一次、后续 WAV
+导入、MP4 导出／下载和源音视频播放通过；重启后录音、编辑器附件、文档、原备份
+完整保留。六包生命周期、求职音频／中文 PDF、设计、Link 受控授权与容器备份、
+归档字节和镜像重载全部通过。
+
+日志 /tmp/cloud-video-recording-candidate-success.log，证据
+/tmp/cloud-video-recording-success-evidence；已查看 cloud-video-recovery.png。
+Host #33 全九类 CI 通过且合入 59214e88f3a7f5a03fd9a5e93a99bab8bbcfb2cb。
+Panel #53 正常合入最新主线 #55 后为 f9551ebefc52f157095bd27f2b700aa808d35da3；
+与候选在 apps／panels／templates 内的唯一差异是求职 README 五行，业务源码和
+生成包不变。全仓 npm check 再次通过并推送，CI 36286460417／36286463342 待完成。
+/tmp/video-cloud-recording-final-main-check.log；PR 描述已按最终行为和证据重写。
+
+新增三仓 cloud-real-speech 工作树。Panel 自有测试 Dockerfile 固定源码／权重／
+公共音频，导出 Debian CPU 执行器；Host 仅增加验收参数及容器安装／真实网关和
+浏览器录音验证；services candidate 增加可选 real_speech，不改变默认模式，也
+不把权重烘入生产镜像。测试执行器放临时项目目录，权重和日志放 /tmp；不提高
+权限或改变只读根目录、非 root、隔离网络和 /tmp 不可执行限制。英文 tiny.en
+会忽略 UI 的语言提示，此夹具只证明推理／传输／持久任务，不证明中文准确率。
+
+本机构建 Linux arm64 bundle 通过。初次容器检查发现 Docker archive 无法访问
+运行中的 tmpfs，改为由原非 root Node 进程流式写入并校验摘要；第二次发现 /tmp
+默认不可执行，未放宽限制，将执行器改写测试项目目录。最终容器 loader／copy／
+CPU 实际识别通过，容器已按本任务随机身份清理。日志
+/tmp/cloud-real-speech-bundle-build.log、/tmp/cloud-real-speech-bundle-probe.log。
+Host 语法／lint／格式／server build 通过；Panel 包预检通过；services 63 项测试、
+格式和 diff 通过。新增 runtime helper 及业务验证尚需完整云端终态。
+
+[Panel #56](https://github.com/cjhyy/codeshell-panel-apps/pull/56) b34589122982f3df11b04910d424e216242f92d7，
+[Host #35](https://github.com/cjhyy/codeshell/pull/35) ed4fc7fe95cd60f76a4be5b7451bb63dfee38c48，
+[services #8](https://github.com/cjhyy/codeshell-services/pull/8) 28247d5cb145ef4396c552998794e881ccb27bfb，
+均 draft 并已附任务。Panel 分支正常合入已容器通过的视频依赖，#53 合入前保持
+依赖说明。新完整候选 [36286470665](https://github.com/cjhyy/codeshell-services/actions/runs/36286470665)
+已确认运行，启用 real_speech；不能提前记为成功。
+
+已按 clean／祖先关系／lsof 核对并清理 real-interview-speech Panel、video-cloud-recording
+Host 与 services 的工作树和本地／远程分支。video-cloud-recording Panel 和新三仓
+工作树保留。原始用户工作树不动。整体 goal active，未公开发布或目标部署。
+
+### 增量 105：保留媒体播放失败现场，继续原云端候选（2026-09-27）
+
+上一轮为实际进展：完成视频候选验收、合入模型工具和 Host #33、实现并启动真实
+云端模型候选。本轮核对发现 Panel f9551eb 的 36286460417/media job 108528056980
+终态失败，另一轮 36286463342 的同项通过。下载已结束 job 的完整日志，定位一个
+实际子测试 playback reconnects video audio and follows both trimmed sources after
+ eviction：playOwnedSequence 15 秒没有源帧推进，抛出“素材播放中断”。报告中的
+两项 failure 为子测试与父测试，不是两个独立失败。日志
+/tmp/video-cloud-final-media-ci-failed.log。未把本次失败当成可以忽略的瞬态。
+
+本机八次针对性重复通过。Panel #53 新提交 8f35429939a01f2902b629969fdf498046c7864b
+保留失败前最近十个媒体／音频时钟采样，以及当时素材缓冲、解码、连接和可见性
+状态；不改生产播放逻辑、不跳过测试、不扩大超时。新诊断版针对检查和完整媒体
+文件 24 项通过，后者没有跳过。日志 /tmp/video-cloud-playback-repeat.log、
+/tmp/video-cloud-playback-diagnostics-test.log、/tmp/video-cloud-playback-full-diagnostics.log。
+新 CI 36286868594／36286871146 运行中。根因仍未确认，PR #53 保持 draft；已通过
+的视频候选仍只证明记录的 93f05c1 业务提交，不把新增诊断当成问题修复。
+
+云端真实模型 Host ed4fc7fe 的 CI 36286445846 九类全部通过；services 28247d5
+两轮 Node 22.16／22／24 六项全部通过；Panel b3458912 的两轮完整 CI
+36286397212／36286428942 全部通过。完整容器候选 36286470665 仍等待终态。
+两次 GitHub 读取短暂 EOF 只视为观察失败，继续查询同一 run，没有取消或重开。
+目标仍 active；公开发布、目标部署、真实 Link 账号与设备目录／中继继续未完成。
+
+### 增量 106：确认真实转写阶段，修正独立导出观察的限流（2026-09-27）
+
+候选 [36286470665](https://github.com/cjhyy/codeshell-services/actions/runs/36286470665)
+终态 failure。日志 /tmp/cloud-real-speech-candidate-failed.log，证据 artifact
+10920484934（1300412 字节）下载到 /tmp/cloud-real-speech-failed-evidence。
+provider JSON 确认 actualCloudTask=true，固定源码 927cfce34f31707e17f2bff35c349632fb9e2c3a、
+模型 921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f，
+Linux amd64 执行器 8073c16d939af604154abd7d1f909af9a7bca42fd2a944bb8e35a4e92040ec95。
+实际可信录音、项目原始 WebM、选定连接传递、CPU 模型转写、独立浏览器恢复、
+手动答案保护和受控慢请求取消通过。未到后续项目重启恢复，不算完整云端验收。
+
+失败发生在独立 Video 导出观察：smoke-cloud-video-media 每 350ms 轮询列表及
+所有新 editor-runtime 任务，包含已完成的准备任务，与生产 Panel 的有界轮询
+叠加；最终 raw tasks.get 返回 HTTP 429／RATE_LIMITED。桥接证据共 1146 条，
+包括 99 次 tasks.list、263 次 tasks.get；末尾保留 429。已查看两个失败截图，
+原项目处于导出中，另一项目未改变。没有把错误归为真实模型失败或提高服务端限额。
+
+Host #35 提交 41b5c07a0e236e2eea50829e6552984cda4d7106 将独立观察间隔设为
+五秒，停止读取成功的非渲染准备任务，发现 render 后只读取该任务。失败／取消／
+中断仍报错，150 秒截止时间不变，不加入盲重试或改变生产代码。语法、Prettier、
+ESLint、diff 检查通过。修正后是否全流程通过仍需容器候选证明。
+
+Video #53 的两轮最终完整 CI 36286868594／36286871146 已全部通过。
+主线最新 4281954 是该分支祖先；apps／panels／templates 相对成功候选仅求职
+README 五行差异。按既有授权合入 872b4193dae33dc42c06c2cfb4190747811ab36b。
+原媒体时钟停止原因仍未知，诊断提交不算生产修复。核对 clean／祖先／lsof 后
+删除 video-cloud-recording Panel 工作树和本地／远程分支，保留所有其他任务。
+
+Panel #56 正常合入该 main 为 94867b9f1434fd4443f1890b5a1e3b366c3ec113，
+相对 b3458912 业务包没有新增差异，增加的是之前的测试诊断。全仓 npm check
+通过，日志 /tmp/cloud-real-speech-panel-final-check.log。
+新完整候选 [36287706235](https://github.com/cjhyy/codeshell-services/actions/runs/36287706235)
+固定 Host 41b5c07a0e236e2eea50829e6552984cda4d7106、上述 Panel、services
+28247d5cb145ef4396c552998794e881ccb27bfb，real_speech=true，正在运行。
+三仓真实模型 PR 保持 draft，未公开发布或目标部署；goal active。
+
+### 增量 107：把实际下载接入三仓候选（2026-09-27）
+
+上一轮为进展：合入视频 Panel，修正额外观察的限流并重开有代码变化的候选。
+本轮权威查询确认 36287706235 仍在 Install real packages and exercise the runtime
+image 阶段。Host #35 的最终 36287574392 九类 CI 全通过；Panel #56 的
+36287700409 全部通过，36287698233 尚有 UI 运行，其余通过。未当作停止或重新启动。
+
+检查发现 smoke-services-cloud-entry 只传 --candidate-panels，没有启用既有下载
+业务验收；原下载脚本还假定工作区 core 路径、重新安装同包、与新语音夹具占用相同
+18792 端口，且生产镜像没有预装 yt-dlp。按三仓 main 创建 candidate-download
+独立工作树，不动任何旧工作树。Panel 自有 prepare-download-fixture 固定官方
+2026.08.19 Python zipapp 及 SHA-256
+1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6，
+实际 GitHub Release 下载并校验成功，文件位于 /tmp/codeshell-candidate-download-fixture。
+该脚本拒绝已有输出目录，不改变正常 Panel 安装器和生产包／镜像。
+
+Host 候选在隔离项目创建前准备固定夹具，再以原非 root Node 流式写入 /data/panel-bin，
+再次校验摘要与实际版本。候选复用生命周期检查已安装的真实包／绑定，core 路径
+显式传入，HTTP 媒体夹具改 18793，真实 Chromium 开启 sandbox。将原实际下载、
+退出后继续、独立登录、项目隔离、预览／原字节保存、项目重启无重复提交串进候选。
+services 保存 cloud-download 图片和 provenance JSON，并说明这不是公网站点、
+账号、在线安装器和目标部署证据。
+
+Host 安装及 server build、语法、ESLint、Prettier、diff 通过；services 63 项测试和
+仓库／workflow 格式检查通过。真实本机云端验收使用现有 Linux arm64 镜像
+sha256:64c14db98431d441dbdaae0f8fdd2599376d0f57c040bbf8c7dded48408aaedb，
+实际双项目隔离、下载、发起设备退出继续、独立 1440/390 登录、播放、保存相同
+文件及重启任务／资源无重复全部通过。日志 /tmp/candidate-download-local-cloud.log；
+证据 /Users/admin/.codex/worktrees/candidate-download/evidence，已查看预览截图。
+这不证明最新五包重新构建的镜像通过；没有把旧本机镜像当作发布候选。
+
+创建并附任务的 draft PR：
+[Host #36](https://github.com/cjhyy/codeshell/pull/36)、
+[Panel #57](https://github.com/cjhyy/codeshell-panel-apps/pull/57)、
+[services #9](https://github.com/cjhyy/codeshell-services/pull/9)。
+Host 4038ee0a27971a9e6052b9657b7fc27e4c251f98 包含下载接入和从 #35 复用的
+有界 Video 导出观察修正；Panel 9239cc41ce15d3c2510b0f72a837363eeccb2946；
+services 01723925a204983fb1aa3942c42a69c46c8a9301。
+完整候选 [36288203397](https://github.com/cjhyy/codeshell-services/actions/runs/36288203397)
+已确认 queued，使用上述准确提交，保留全部已有受控业务检查；真实语音候选
+36287706235 独立继续。两组终态未取得，三仓新 PR 不合入、不发布，goal active。
+
+### 增量 108：新增实际 Quant 云端回测门槛，保留失败证据（2026-09-27）
+
+上一轮是进展：下载候选接入、实际本机容器下载通过、三仓草稿及准确提交候选启动。
+本轮确认真实语音 36287706235 和下载 36288203397 均仍在实际运行镜像检查阶段。
+Host #35 的 36287574392、#36 的 36288197774 九类 CI 全通过；Panel #56 两轮
+36287698233／36287700409 全通过。没有因耗时取消或重开，也没有把局部 CI 当作
+完整容器通过。
+
+从最新 main 创建独立 cloud-quant-backtest Host／services 工作树。Host 增加
+smoke-cloud-quant-backtest，candidate-business 支持 quant，完整候选也纳入该项。
+读取准确候选 Panel 的引擎，只用它校验测试 CSV 指纹；真实业务由已安装的浏览器
+Panel 完成：项目 CSV 载入、参数保存、运行回测、策略／报告／明细导出，实际 HTTP
+返回字节核对。独立浏览器登录及重启检查同一参数与原文件，另一项目不产生结果。
+重启后的文件检查走 HTTP，不依赖已停止容器的旧 ID。services 保留截图／失败正文，
+说明不验证实际行情、投资表现、研究模型和自动化通知。没有修改 Panel 算法或权限。
+
+Host server build、语法、ESLint、Prettier、diff 检查通过。使用之前记录的 arm64
+镜像 64c14db98431，本地先阶段化准确 Panel 9239cc41 的六包至
+/tmp/codeshell-quant-cloud-panels（使用候选 staging helper 和当前构建的 Host 预检）。
+首轮 /tmp/quant-cloud-local.log 参数保存成功，因高级 CSV 输入区尚未展开，浏览器
+填充超时；已查看 cloud-quant-error-0.png 并补真实展开操作，不强制填隐藏控件。
+第二轮 /tmp/quant-cloud-local-second.log 实际运行回测且策略／报告已写出，读取
+CSV 时 HTTP 404。截图正文仍显示之前的报告保存提示，新增等待导出按钮恢复可用
+再读文件，并把读取失败的实际路径加入诊断；未宣称已确定生产根因或验收通过。
+
+[Host #37](https://github.com/cjhyy/codeshell/pull/37)
+1c71ca306e586692d2d4780564aaffa5e5c3ebea，
+[services #10](https://github.com/cjhyy/codeshell-services/pull/10)
+4583c59cf8cedcdfa98d7fd1e5303c5b21d2a633，均 draft 且已附任务。
+本机第三轮 session 95103 仍在运行，日志 /tmp/quant-cloud-local-third.log；实际
+shell 命令已完成推送并开始容器验证，没有重复启动同一活跃进程。
+证据目录 /Users/admin/.codex/worktrees/cloud-quant-backtest/evidence。Quant 完整
+Linux 打包候选尚未启动，需要本机门槛通过及与已验收主线正常整合后再开始。
+所有未完任务工作树保留，goal active，未公开发布或目标部署。
+
+### 增量 109：真实语音与下载候选通过，启动含 Quant 的组合验收（2026-09-27）
+
+[真实语音完整候选 36287706235](https://github.com/cjhyy/codeshell-services/actions/runs/36287706235)
+成功。固定 Host 41b5c07a0e236e2eea50829e6552984cda4d7106、Panel
+94867b9f1434fd4443f1890b5a1e3b366c3ec113、services
+28247d5cb145ef4396c552998794e881ccb27bfb。候选 artifact 10920969274
+（698481117 字节），证据 10920899601（1162122 字节）。runtime
+sha256:7626484df2067f51c6fe82b6f03b5e8b75f82f55786ffd9d1f77dc8d0681d9ea，
+Link sha256:36d4326e2ee1483b40fef1ab44d46b65f04f814f092958dc2d172406a15c3b44，
+linux/amd64。已核对真实转写和 stop/start 后原录音、任务、答案保留且无再次服务请求，
+原有 Video／Design／PDF／六包／受控 Link／备份／候选字节和镜像重载全部通过。
+日志 /tmp/cloud-real-speech-candidate-success.log，证据
+/tmp/cloud-real-speech-success-evidence。provider JSON actualCloudTask=true，
+执行器 8073c16d939af604154abd7d1f909af9a7bca42fd2a944bb8e35a4e92040ec95；
+权重及公共样本摘要与之前固定值一致。未把英文 tiny.en 当作中文质量证据。
+
+刷新三仓 origin/main、核对祖先和最终全部 CI 后，按既有授权合入 Host #35 至
+87d7674c68ab506132ed1da9281c1c06338ff25a、Panel #56 至
+55270170a21c50783f0993c4c288fb513dd2e12b、services #8 至
+724a4d79dccbd977c16fc0519e9423a1456eb1e3。PR 描述按最终行为与证据重写。
+核对 clean／祖先／lsof 后删除 cloud-real-speech 三个工作树和本地／远程分支；
+保留原始用户与其他活跃任务。
+
+[下载完整候选 36288203397](https://github.com/cjhyy/codeshell-services/actions/runs/36288203397)
+成功，固定 Host 4038ee0a27971a9e6052b9657b7fc27e4c251f98、Panel
+9239cc41ce15d3c2510b0f72a837363eeccb2946、services
+01723925a204983fb1aa3942c42a69c46c8a9301。候选 artifact 10921062458
+（698462562 字节），证据 10921781610（1203181 字节）。runtime
+sha256:380be0da96a4bb183d83cbb6284c40ce6343b5f2db6e348ac2f6221be9b0ecfd，
+Link sha256:d3739c21733e9155a08c128dc1e20611169d92af4adcfc6ce5fd7c298862b797。
+实际独立 npm 五包与新镜像通过下载、发起端退出继续、双登录、隔离、播放／精确
+保存、重启不重提，以及原有完整门槛。日志 /tmp/candidate-download-linux-success.log，
+证据 /tmp/candidate-download-linux-evidence；下载器版本／摘要与固定夹具一致。
+
+下载分支正常整合上述新 main：Host 3931c031c9a2b48e74e3d0303d79888424e70c0f，
+Panel 5227536edec28c5aaef2a667f610a9bf404a62ac，services
+38b136928fde2b66d9cde618a341b81a71698263。Host services-entry 参数冲突保留
+--download-fixture 和 --speech-bundle，两端不同端口，没有用 ours 丢弃修改。
+语法／lint／格式通过，services 63 项及格式通过，业务安装包无新增变化。最终
+组合 CI 待终态，因此 #36／#57／#9 保持 draft。
+
+Quant 本机第三轮 /tmp/quant-cloud-local-third.log 终态通过（session 95103 已收回）：
+真实六包生命周期后，160 行合成 CSV、125000 参数、原数据指纹、策略／报告／CSV
+原字节、独立登录、第二项目保持默认参数且无产物、重启原文件保留且无重复通过。
+已查看 cloud-quant-backtest.png。第一轮折叠控件遗漏、第二轮过早读取 CSV 的
+失败记录仍保留，不把本机旧 arm64 镜像当作最新 Linux 发布候选。
+
+Quant 分支正常整合已接受下载／语音支持，Host
+5b33d145fd29ce1e2144abf344cce84335f5418a；services
+bca724adb4ca6a65088002db10f78ce6f755e005。解决业务选项／夹具解析和证据列表／
+文档的正常合并冲突，保留所有已有检查。语法／lint／格式通过，services 63 项通过。
+[完整组合 36289352541](https://github.com/cjhyy/codeshell-services/actions/runs/36289352541)
+固定上述 Host／services 及 Panel 5227536e，real_speech=true；包括实际转写、下载、
+Quant 和原有业务。完整组合与最终 CI 待终态，#37／#10 保持 draft。
+公开发布、真实目标部署、真实 Link 账号和设备目录／中继仍未完成，goal active。
+
+### 增量 110：修复 PDF CI 的浏览器探测清理，核对设备连接缺口（2026-09-27）
+
+上一轮为明确进展：真实语音三仓合入、下载完整候选通过、Quant 本机通过并启动
+统一候选。36289352541 本轮确认仍在 Install real packages and exercise the runtime
+image 阶段，没有取消／重开。Host #36 的 36289258481 最终九类检查全通过。
+
+Panel #57 合并主线后的 36289258445 PDF job 108536039159 失败，日志
+/tmp/candidate-download-pdf-failed.log。Chromium spawnSync 探测报告 status=0，
+随后删除 profile 的 Default 目录报 ENOTEMPTY，PDF 测试未开始。另一轮
+36289260311 的 PDF 检查通过。原同步 CLI 超时／退出流程没有可靠管理整个浏览器
+进程树，不能靠增加删除重试或忽略清理错误解决。
+
+从 main 5527017 新建 ci-browser-probe Panel 工作树，提交
+3751e20（完整 SHA 见仓库）；仅修改 validate.yml 探测。用相同 Chromium 路径、
+chromiumSandbox=true 的 persistent context 打开 about:blank，await close 完成后
+异步删除当前任务 profile；保持 AppArmor 规则、失败行为及所有 PDF 检查。提取准确
+workflow 源运行本机探测成功，七项实际 native PDF 全通过，日志
+/tmp/ci-browser-probe-pdf-local.log，格式／diff 通过。
+[Panel #58](https://github.com/cjhyy/codeshell-panel-apps/pull/58) draft 且已附任务；
+Linux 36289654608/job108537167583 与 36289658478/job108537178086 的 PDF 检查
+均已通过，其他全仓检查仍运行。#57 正常合入该任务至
+8de917b3ba55d596223157cc18b6993376c2ee9f；业务包没有变化，当前组合候选继续
+原准确业务版本，不为 CI-only 修复重开容器候选。两个 PR 的最终 CI 尚待完成。
+
+另核对设备侧：Host mobile-remote/tunnel-manager 管理临时 cloudflared 连接、
+ready／断线检测；remote-host-manager 保留配对与 HTTP／WS 校验，trusted-device-store
+持久化手机授权和撤销。services 只有 Link／Cloud 产品组合，尚无统一主机目录或
+稳定出站中继。工作包 E 记录主机身份／连接代次、凭据分离、Host 最终授权、离线
+不迁移和实际网络验证等实施约束；这只是后续实现依据，不标记远程能力完成。
+goal active，真实发布／目标部署／Link 账号与统一设备中继仍未完成。
+
+
+## 增量 111：云端版本审阅取消泄漏修复与实际界面验收（2026-09-27）
+
+Panel #58 的 CI 36289654608／36289658478 全部七类检查通过，合入 main
+`52d63d575843b63ba06541ac36fc32fce89a1139`，旧独立工作树已安全清理。
+下载 #57 正常合入至 `a0f7a96`，与前一个被验证提交树内容一致；CI
+36290247410／36290249550 最后仍有 UI 在运行。Host #37 的36289309813 九类
+检查和 services #10 的36289328577／36289330875 均全通过；
+整套真实语音＋下载＋Quant 候选36289352541仍 live，尚不记整套通过。
+
+新 [Host #38](https://github.com/cjhyy/codeshell/pull/38) 在
+`/Users/admin/.codex/worktrees/cloud-panel-version-ui/codeshell`，测试提交
+`3f715776`，修复提交 `5abd1a95`。六包 lifecycle 通过真实控制代理登录工作台，
+按包内容编号选择保留版本，检查审阅和取消不改项目，再确认切换及回退；原来的
+独立项目数据、旧授权失效、删除来源及重启检查仍保留。新增 packages 聚焦模式
+只供单项诊断，完整候选依然默认 all。
+
+第一轮使用现有 arm64 镜像64c14db9…，日志
+`/tmp/cloud-panel-version-ui-local.log`。Design／Job Hunt／Quant 及 Starter
+首个选择已经过实际界面，Starter 回退第二次审阅失败，页面明确显示
+“待确认的版本过多，请稍后重试。”失败正文／截图位于
+`/Users/admin/.codex/worktrees/cloud-panel-version-ui/evidence/cloud-panel-version-error-starter-panel.*`。
+根因是 Web 关闭审阅仅清理 React 状态，Host 保留 token 直到八分钟过期，
+多次取消耗尽八条容量。不是延长等待或放大配额可替代的业务修复。
+
+修复提供 DELETE /api/v1/panels/restore，验证认证及 token 归属，过期或重复
+取消幂等；不会改项目 pin 或数据。Web 关闭、切换目标或面板前取消旧审阅，
+取消失败保留界面可重试；真正恢复在最终写入前复验 token，避免取消后仍提交。
+43 项 Host/HTTP/Web 验证通过，含容量释放、不同归属拒绝、撤销后不可提交和
+失败 UI；日志 `/tmp/cloud-panel-version-ui-cancel-tests.log`。Server/Web 构建、
+lint/格式通过，新 Docker 镜像尚在构建，不能把旧镜像失败算作修复后通过。
+
+[services #11](https://github.com/cjhyy/codeshell-services/pull/11) 提交722bf21，
+记录 cloud-panel-version PNG/TXT 证据和边界；63测试及格式通过。
+两个新 PR 均附任务并保持 draft。尚未运行新一轮完整 Linux 候选；先完成新镜像
+实际回归，再与已通过的下载／Quant 整合。真实领域数据迁移、安装来源、服务
+跨版本回滚、发布及目标部署不在本次通过范围，goal 保持 active。
+
+
+## 用户调整：暂停 Panel 具体内容修改（2026-09-27）
+
+用户最新要求“Panel 具体内容先不改了”。执行约束已置于计划顶部：暂停 Panel
+内部业务／模型／数据规则／内部界面改动，保留现有工作；平台公共安装、版本、
+任务与资源、Link、部署发布及备份恢复继续。可以现有包验收公共流程，不能因
+验收暴露 Panel 业务缺口就继续扩展业务修改。Host #38 取消版本审阅属于通用管理
+能力，继续验证。暂缓事项不冒充完成，整体 goal 不暂停。
+
+## 增量 112：组合候选通过、版本取消回归、恢复验收缺口（2026-09-27）
+
+[组合候选 36289352541](https://github.com/cjhyy/codeshell-services/actions/runs/36289352541)
+成功，准确来源为 Host 5b33d145fd29ce1e2144abf344cce84335f5418a、Panels
+5227536edec28c5aaef2a667f610a9bf404a62ac、services
+bca724adb4ca6a65088002db10f78ce6f755e005，real_speech=true。
+候选 artifact 10922107486（698461823 字节），证据10922236612（1385906 字节）；
+runtime sha256:935f2fef5968eee7c88acd6e538fa171747ec084ae1569d94526f91232cd8745，
+Link sha256:d60deaeefc23972d64bff273015d150a5c7ff0e624e9a0ecf533bd45155cd329。
+日志 /tmp/combined-speech-download-quant-success.log；证据目录
+/tmp/combined-speech-download-quant-evidence。不包含后续 Host #38 与 Link #12。
+
+下载 Host #36／Panel #57／services #9 最终检查通过并合入 f13aaafd／57703cbb／
+3a9622ec，所属任务工作树及分支经 clean／祖先／无活动 cwd 检查清理，证据保留。
+Quant Host #37 的36291232942九项、services #10 的36291253866／36291256170
+六项检查通过，合入4b51781f／d684888b。
+
+Host #38 桌面与 Web 取消生命周期验证55项／359断言通过，renderer fixture13场景
+通过，Server/Web构建通过。发起时固定项目／URL，退出时取消原审阅，迟到预览
+清理原目标；取消失败可重试。日志 /tmp/cloud-panel-version-ui-final-tests.log、
+/tmp/cloud-panel-version-ui-web-lifecycle-tests.log、/tmp/cloud-panel-version-ui-final-build.log。
+全新 Docker 构建遭 Debian／Docker Hub 网络失败，未记为通过；聚焦回归用已验证
+基础64c14db98431d441dbdaae0f8fdd2599376d0f57c040bbf8c7dded48408aaedb叠加
+新构建Host/Web，得到0a64f1c157cd801484da7769f48ddde5f712f354bdf2feb2cab9a3afbc68c4ca。
+实际双容器六包审阅／取消／确认／回退、数据隔离、授权失效、删除来源及重启检查
+通过，日志 /tmp/cloud-panel-version-ui-fixed-local.log。十二张成功截图和原失败
+证据保留；这不替代干净源码的完整Linux候选。
+
+67d90206 的 CI36291244337架构检查发现原IPC文件超行数预算；preload两文件也
+有同类问题。6ad2d849提取同族版本IPC/API/types模块，原入口降至302／1862／2924
+行，不提高行数预算；新增认证取消路由明确令总路由295→296，preload总调用293。
+六项架构／契约／隔离检查、lint/格式通过，最终
+[CI36291898983](https://github.com/cjhyy/codeshell/actions/runs/36291898983)
+九类全部通过，含全仓类型、Electron与真实Windows。失败日志仍保留在
+/tmp/cloud-panel-version-ui-ci-rest-failed.log；#38及services#11待新组合候选后合入。
+
+[services #12](https://github.com/cjhyy/codeshell-services/pull/12) 恢复预检先只读
+检查原库schema=1、必需表列、完整性、外键、加密key_check，避免构造器补表将空库
+或损坏库误判成功。合法空业务库仍接受，失败清理新目标及WAL/SHM，源备份和已有
+目标不变。修复前五反例复现；九项恢复测试及71项服务测试通过；最终CI36291739360／
+36291747931六项通过，合入88dfe726。日志 /tmp/link-restore-preflight-{before,focused,tests,format-final}.log。
+
+新审计发现：当前候选仅调用Link恢复与settings修复，没有整套Cloud安装目录／
+项目卷恢复。旧独立smoke-cloud-backup虽有真实Docker验证，但依赖本地dist与开发
+镜像，不能代表当前候选安装。已另开平台任务，使用候选公开API/CLI及不可变镜像，
+在归档前验证新安装身份、卷字节与权限、旧会话撤销和恢复项目启动。目标服务器与
+跨版本回滚仍单独待验收。Panel具体内容保持冻结，goal active，未发布或部署。
+
+services #11 正常合入 Link #12 至291a59e508da2b8088036b1cfb5dc6ca278dda52，
+71测试和格式通过。以Host6ad2d849、Panel57703cbb、该services提交启动候选
+36292336451后，独立复查发现DELETE /panels/restore会抢占合法ID为restore的
+卸载请求。此运行因已知代码问题主动停止，改用两段取消地址并补回归后重验；
+不是由于网络观察错误重跑。Quant两任务树和Link preflight树经清洁／已合并／
+无活动cwd核验后安全清理，四个Quant证据文件内容哈希未变。
+
+## 增量 113：整套 Cloud 恢复成为候选门槛（2026-09-27）
+
+Host #38 的取消接口改为两段地址，避免抢占合法 Panel ID `restore` 的卸载。
+最终提交0e737426b7f801457bc2f903ba69757c30b82b67，49项聚焦测试／344断言通过，
+包含真实安装、绑定、审阅、取消、旧token拒绝和卸载；四文件lint/格式及Server/Web
+构建通过。CI36292462082九类全部通过；旧候选36292336451确认cancelled。
+
+新增配套draft [Host #39](https://github.com/cjhyy/codeshell/pull/39) 与
+[services #13](https://github.com/cjhyy/codeshell-services/pull/13)，均已附任务。
+分支codex/server/candidate-cloud-restore与codex/services/candidate-cloud-restore，
+工作树位于 `/Users/admin/.codex/worktrees/candidate-cloud-restore/`。两者正常合入
+待合并的Host #38和services #11，保留所有原有候选流程。
+
+新门槛从实际移位npm安装加载公开Server API，通过HTTP初始化／登录／创建项目，
+调用services cloud-backup/cloud-restore CLI。运行与helper均使用不可变本地ID，
+记录helper registry digest、实际ID和平台。helper未装入现有两镜像候选，目标服务器
+需另按已记录digest准备，不能声称当前候选是完整离线恢复介质。
+
+主代理准备独立五tarball安装，使用Host0e737426新构建及既有已验证runtime
+sha256:0a64f1c157cd801484da7769f48ddde5f712f354bdf2feb2cab9a3afbc68c4ca，
+helper来源node:22-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9，
+本机image ID同为上述48e4…、linux/arm64。两次实际恢复通过，日志
+/tmp/cloud-restore-local-first.log及/tmp/cloud-restore-local-wrapper.log；证据
+`candidate-cloud-restore/evidence/cloud-restore-local.json`和
+`cloud-restore-wrapper-local.json`。通过包括离线／占卷保护、两卷字节、uid和模式、
+软硬链接、备份后原卷变更不污染快照、未启动项目、旧session撤销、新登录、实际
+容器重启及认证HTTP读文件、再次备份、checksum拒绝和解包失败标记／清理。
+
+实际初次入口发现macOS `/var`与`/private/var` symlink导致main判断静默跳过，
+已用realpath比较并补真实进程负例。Host wrapper额外拒绝旧证据、静默exit0、
+失败恢复／清理、错误镜像和缺少流程的receipt；完整性不依赖单一退出码。
+
+独立审查发现8分钟SIGTERM会跳过finally，已补协作取消及4分钟清理宽限。
+资源创建命令先在原有界限内结束，再进入清理；HTTP取消后关闭控制服务并排空项目
+启动。主代理在首个实际夹具PASS后发送SIGTERM，进程非0、receipt passed=false／
+cleanupPassed=true，前后所有installation-labeled容器／卷／网络集合完全一致。
+日志/tmp/cloud-restore-local-signal.log，证据cloud-restore-signal-local.json。
+最终所有异步清理完成后才采样取消状态，再同步写≤64KiB的新receipt，消除取消与
+成功记录不一致的窄窗口；已有receipt不覆盖，强杀／机器宕机不保证清理。
+
+Host九项进程测试、Services75项全套通过；最终receipt修改后四项聚焦、格式、语法
+和diff检查通过。services最终df223e8b的CI36293136813／36293138597六项全通过。
+Host72181eb9的CI36293014515最终九类全通过，已核对准确HEAD。
+[完整候选36293191310](https://github.com/cjhyy/codeshell-services/actions/runs/36293191310)
+已启动，固定Host72181eb9364730e98f2bfd9e8d13499b35013ac8、Panels
+57703cbb75ed44dce004215ad7075480c289becb、services
+df223e8b9358bc32868bed26e26e90cf47681c6a，real_speech=true。
+本机回归与新的干净Linux完整候选分开记录；#38/#39、services#11/#13尚待组合结果。
+
+另完成历史Bun Hub WS只读诊断：原文件14项／90断言，前两项同进程50轮100项／750
+断言，相邻27项及构建后独立Node背压1项全部通过。日志/tmp/hub-ws-audit-{isolated,
+repeated-boundary,adjacent-node,native-after-build}.log。历史段错误发生在完整进程
+约417秒后；当前Bun仍1.3.11 af24e281，原测试文件未变，没有可归因的修复。
+这里只补回归证据，整仓单进程偶发崩溃根因仍待定位。
+
+设备连接另形成只读设计docs/todo/device-relay-delivery-plan.md：每电脑独立origin，
+复用Host配对与最终授权，单owner目录和电脑出站凭据分离，服务签发连接代次，
+离线不迁移／写入不盲重发。中继是受信组件，不声称端到端加密；尚未实现。
+Panel内部修改冻结；真实Link账号、发布／目标部署、跨版本回滚及稳定中继未完成，
+goal保持active。
+
+## 增量 114：整套恢复候选通过并合入，稳定中继进入实现（2026-09-27）
+
+[完整候选 36293191310](https://github.com/cjhyy/codeshell-services/actions/runs/36293191310)
+成功。准确来源 Host `72181eb9364730e98f2bfd9e8d13499b35013ac8`、Panels
+`57703cbb75ed44dce004215ad7075480c289becb`、services
+`df223e8b9358bc32868bed26e26e90cf47681c6a`，real_speech=true。所有实际包安装、
+原有语音／下载／Quant 等业务检查、六包公共版本实际界面流程、Link 恢复、整套
+Cloud 备份恢复、归档校验和镜像重新加载均通过。无新增 Panel 包内容修改。
+
+候选 artifact `10923142742`，698498820 字节，digest
+`sha256:b3208696577576be08a21961df916e40dc6eec9f885469b3ff31e6acc821ad95`，
+2026-10-11 到期。证据 artifact `10922868292`，3095502 字节，digest
+`sha256:02a9b1a910b3177624eb86781dd06e520549f728597aa89c6575729a63021fc8`，
+2026-10-04 到期。日志 `/tmp/cloud-restore-candidate-success.log`；下载证据
+`/tmp/cloud-restore-candidate-evidence/`。十二张公共版本流程截图存在，已查看实际
+Starter 审阅界面；Cloud receipt 四组检查、passed 和 cleanupPassed 均通过。
+
+最终 linux/amd64 runtime 为
+`sha256:53611b815d3449038a5633045435c7f1aedab05c304a101484d0c174a4985ec9`，
+Link 为 `sha256:8c16cb3bc21bb432851b54b660b2f30714e8b847cbe2f651e7b6dedb02faaacc`。
+恢复 helper registry source 为
+`node:22-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9`，
+本次 linux/amd64 实际 ID 为
+`sha256:c72861c6705868ed7f08e1cf22ef4f7ba07a82c19a54ba65d931c442d3575889`。
+helper 不在两个镜像的候选归档内，目标需另外按记录 digest 准备。
+
+核对最终 CI 与准确 HEAD 后，Host #39／#38、services #13／#11 均已合入；主干
+分别为 `c580967978b4c65333dbc895d4225ba2578b3a8c`、
+`f5fafe4dc7b7be192530cfa799cea920a4cbcba8`。各自主干与验收来源的树 diff 为空。
+四个 cloud-panel-version-ui／candidate-cloud-restore 任务树和分支经 clean、
+HEAD 祖先与无进程 cwd 检查清理，不使用 force；父目录 evidence 保留。
+
+新 Host [#40](https://github.com/cjhyy/codeshell/pull/40) 分支
+`codex/server/relay-owner-auth` 提供版本化 `/auth`，复用既有单 owner 认证。
+运行时只导出 createHubAuth／HUB_SESSION_COOKIE，保留最小类型；没有改认证行为。
+提交 df9c5bac 正常合入新 main；45 项／303 断言、十 tarball、48 严格类型入口、
+46 运行时入口及隔离原生 Node HTTP 初始化／登录／Origin／撤销／重载／退出通过。
+日志 `/tmp/relay-owner-auth-combined-{package-release,tests}.log`。CI36296341550
+八项通过，rest 失败为原精确入口契约遗漏新增 /auth；正在补齐契约及源码别名，
+没有重跑掩盖失败、没有合并。候选 tarball 尚非公开版本。
+
+稳定设备中继另在两仓 `codex/server/device-relay`、`codex/services/device-relay`
+任务树实施。服务侧真实 SQLite／文件锁和配置共 11 项通过，含原身份丢失拒绝、
+旧代次隔离、重启离线、重登记／撤销、回调抛错仍释放全部连接和锁；HTTP/WSS 代理
+正在实现。Host 提供协议、每请求独立数据 WSS、固定回环连接器和 relay 模式；
+独立审查要求目标绑定 Host 启动代次，停止同步撤销，防端口复用误暴露其他进程。
+两仓真实 TLS／双电脑双手机／上传与撤销等仍待验收，不把存储单测当作远程交付。
+
+目标服务器与真实 provider 配置仍未提供；没有正式部署、公开包／镜像发布或
+跨版本迁移回滚保证。Panel 具体内容与手机操作界面冻结，goal 保持 active。
+
+
+## 增量 115：稳定中继候选与撤销流程收尾（2026-09-27）
+
+Panel 具体内容继续冻结。Host #40 最终 `cf7086b3` 的 49 项／340 断言及
+CI36296819060 九类通过，合入 `afb3506402feaa97a1be43f3b92e20928a07d192`。
+精确公开入口及源码别名按新增 `/auth` 补齐；认证行为未改。任务树在 clean、
+已合入和无活动使用检查后移除，包与日志留存。
+
+已通过候选 36293191310 的原始 ZIP 保存为
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36293191310.zip`，
+698498820 字节、SHA256 与上节 artifact digest 一致，ZIP CRC 通过。旁存 receipt
+及 evidence，文件权限 0600、父目录 0700；不重新打包或把旧验收冒充新中继候选。
+
+新 draft [Host #41](https://github.com/cjhyy/codeshell/pull/41)、
+[Host #42](https://github.com/cjhyy/codeshell/pull/42)、
+[Host #43](https://github.com/cjhyy/codeshell/pull/43) 及
+[services #14](https://github.com/cjhyy/codeshell-services/pull/14) 已附任务。
+分支分别为 codex/server/device-relay、codex/server/download-revocation、
+codex/server/candidate-device-relay 与 codex/services/device-relay。
+#43 正常合入 #41/#42；`4d788a5d92fd2914a4bb2c2489723690b469dad2` 的
+CI36298248518 九类全部通过。该提交仍不包含接下来的上传撤销补丁。
+
+独立原生流式检查复现正常 EOF 导致慢读丢失最后字节，修复后 16/32/64/96KiB 和
+1MiB+13 全部一致，日志 `/tmp/codeshell-relay-byte-audit{-fixed,}.log`。
+真实 HTTP 的 96MiB 下载在撤销手机后原先仍能读到撤销后写入的尾部；修复后的
+Desktop 与 Hub 会关闭该会话的活动响应，另一个会话完整完成。已完成的响应及
+已接受的后台任务不会被一起取消。Host #42 `57c097c9` CI36298100124 九类通过。
+
+services 对真实 SCRYPTREQUEST 期间关闭的 setup/login 增加等待，再释放目录锁；
+旧实现失败、新实现通过，保留 `/tmp/device-relay-auth-shutdown-{before,after}.log`。
+空 SQLite 已有文件拒绝重新初始化身份，缺失身份关系、关闭回调异常、IPv6 地址、
+数据票据失败握手和认证正文期间退出均补边界。候选 receipt 必须证实真实哈希
+处理结束后才释放目录，不能只以 HTTP 进程退出推断成功。
+
+独立 Node22.16 以 Host `7c5b0a7ab4d72846046d43bc72ed2ce7c18a0db8` 和 services
+`c3edaa0d2f881bfa4cfacbcb46e9ebd893b51789` 的真实五包安装通过旧合同 14 项
+TLS/WSS 验收，清理完成。receipt 位于
+`/Users/admin/.codex/worktrees/device-relay/evidence/device-relay-acceptance-node22-c3edaa0-7c5b0a7.json`。
+包哈希、原 manifest 哈希、fixture/服务文件哈希和实际 Node 版本已独立核对。
+该证据覆盖下载撤销，但不能算作新增上传门槛通过。
+
+后续实际上传探针发现：已开始的手机 A 上传在撤销后仍可完成 4MiB 临时文件，
+A 未使用票据也可上传 256KiB；B 上传正常，新 A WS/chat 已拒绝。日志
+`/tmp/codeshell-upload-revoke-probe-real.log`。这是临时上传写入未撤销，未证明
+工作区或执行授权绕过。`codex/server/upload-revocation` 正在修复：同步拒绝新
+begin/claim 与未使用票据，中断活动 PUT，等待完整 rename/cleanup；已 claim 的
+任务物料保留至 finalize，失败 release 则清理，不返回可重用状态。
+
+services `258ab984163e4559eee82944cbfda3817bc67f8c` 的第八项验收加入正在上传、
+未使用票据、其他手机和已认领资源四项真实行为。root 包装器要求四项布尔、
+准确十四项名称与来源、passed/cleanupPassed 和 authShutdown；当前 23 项／47
+断言通过。每次证据文件独立，断言失败保留原结果；4 分钟期限后的强杀不冒充
+成功清理报告，父进程仅在子进程退出后删除其私有临时目录。
+
+最终上传修复、精确新包的 Node22.16 验收及完整 Linux 候选尚待；桌面设置接入、
+真实服务器／Link provider、公开发布和跨版本部署回滚也未完成。中继为单 owner
+受信 TLS 终止组件，尚非物理手机或公网部署验收，goal active。
+
+
+## 增量 116：上传修复通过，实际候选门槛发现提前拒绝响应丢失（2026-09-27）
+
+[Host #44](https://github.com/cjhyy/codeshell/pull/44) `382c2fabb33c0abf5f555ad7194776a7bd3d24ff`
+修复上传撤销，49 项／180 断言、lint/type/format、CI36299003797 九类均通过。
+完整 PUT/rename 收尾纳入 activeTransfers；撤销同步隔离、等待全部异步清理后上报
+失败。真实 EISDIR 加另一路延迟 unlink 证明 revoke 与 stop 不因首个错误提前返回。
+已 claim 物料保留，release 不将撤销后的票据恢复为可用。
+
+Host #41 正常合入 #44 和 root 候选 gate 后为
+`30b228592b3ea4e4363aacc4f09ac96ee48df512`，#43 已快进到同一提交。Server build、
+十四文件 116 项／513 断言、类型、格式通过，CI36299873137 九类全通过。五包保存于
+`/Users/admin/.codex/worktrees/device-relay/artifacts/30b228592b3ea4e4363aacc4f09ac96ee48df512/`，
+Server SHA256 `58b3e9d16c3953ffea4cdfe41c2604f0a03cb2d0d309ebd6aaac94aad95a3105`。
+Services `0cc890539f051d9225ba74432e8d77fcb33c74d9` 最终六项 CI 全通过。
+
+独立 Node22.16 安装的十四项 TLS/WSS 直接验收成功，receipt 为
+`device-relay/evidence/device-relay-acceptance-node22-0cc8905-30b2285.json`，
+passed/cleanupPassed、真实 setup/login 等待和四项 phoneUploadRevocation 都为 true。
+安装保留在 `/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-relay-node22-final-e1yti9tc`。
+主代理随后使用真实 Host wrapper 验证同一安装，得到失败而非以第一次绿灯归档：
+`device-relay/evidence/device-relay-wrapper-node22-0cc8905-30b2285.json`，
+passed=false／cleanupPassed=true，第八项 fail、后六项 not-run；日志
+`/tmp/device-relay-wrapper-node22-final.log`。原成功、失败和安装均未覆盖。
+
+只读诊断复制件确认旧票据返回 502/computer_connection_failed。原生 TLS/HTTP
+探针确认本地 Host 已交付完整 119 字节 404，但随后 TCP EPIPE/readEnded=false/
+writeFinished=false 令 local-stream 立即 terminate WSS，丢掉已排队的响应。
+证据 `/tmp/device-relay-unused-diagnostic.log` 和
+`/tmp/codeshell-relay-early-response-probe.log`。这不是票据仍被接受，而是拒绝
+响应传输丢失。修复正在保留已读响应的有界收尾；无响应错误、非法帧和显式停止仍
+立即撤销，真正 HTTP 截断必须保留失败。Services `e73c76058085066f97d7df50add25146508932c6`
+把同一旧票据请求设为 4MiB 并输出失败状态/长度，未放宽拒绝状态或十四项合同。
+
+下一项桌面设置接入已独立在 `codex/desktop/device-relay` 开始，先合入 30b 作为
+代码依赖而非交付证明。已有公共工作台确实可手动切换电脑/云端地址并分别选项目；
+新增入口负责目录登记、仅主进程可读的系统密钥环密文、启停与连接状态。默认关闭，
+不改 Panel，不宣称已完成实际 Electron／物理手机／公网验收。公开发布、真实
+provider 与目标部署仍待；完整 Linux 中继候选因该已知问题尚未启动，goal active。
+
+
+## 增量 117：桌面接入与实际中继验收通过，最终 Linux 候选启动（2026-09-27）
+
+进一步真实轨迹证明：第一版 Host 有界 flush 仅能保存已读响应；固定十二案例中，
+九次 TCP EPIPE 前 bytesRead=0，读侧已被原生 Socket 销毁，不能通过延迟销毁外层
+恢复尚未读到的字节。最终改用单次专用 keep-alive 请求使 Host 可以交付提前拒绝，
+最终响应头后停止继续向 Host 转发。Services 自身丢弃余下客户端输入，避免 pause
+未读输入令浏览器完整响应遭 RST；响应完整后关闭该单请求流和上游，绝不复用。
+
+真实 TCP 反例原先在 404 头后仍从 64KiB 转发到 4MiB；修复后 Host 始终只收
+64KiB，浏览器精确收到 512KiB+137 的响应，后续请求使用新连接，真正 Content-Length
+截断仍失败。Host 实际 TLS runner 同时覆盖十二次 4MiB 早拒绝、并行取消、截断、
+慢读尾部、非法帧及停止后端口复用。Host 修复 `f3c57ada` 的 116 项／513 断言及
+CI36301155265 九类全通过；Services `ec7fac7c43254a73c8200795278e3f43168a1dd4`
+96 项和 CI36301221058/36301222099 六项通过，日志
+`/tmp/device-relay-services-early-response-tests.log`。
+
+桌面 [#45](https://github.com/cjhyy/codeshell/pull/45) 分支 `codex/desktop/device-relay`
+从原主干正常合入底层，独立实现 `db97dd7a`，再合入 f3 为
+`7563e615b9a4cc0f5078d026d68e53d58b1467d4`。root #43 快进到同一组合。桌面使用
+同一 environmentIdentity、独立 OS 密钥环密文存储和主窗口 IPC；不可用/明文后端
+拒绝登记。登记前预检，停止可取消在途登记；目录明确 401/403 停止并删除凭据，
+网络/5xx 保留重试。默认关闭；停止连接、本机忘记和目录撤销文案分开。
+
+实际 Electron 生产构建配隔离配置、真实 OS safeStorage 和 TLS/WSS 协议夹具完成
+登记/票据清空/身份一致、口令与二维码、连接/停止、活跃退出、同配置重启默认关闭、
+401 清理、重新登记/移除和 LAN 启停。协议夹具不冒充真实 Services，后者独立验收。
+日志 `/tmp/desktop-relay-electron-final.log`，截图
+`/tmp/codeshell-desktop-device-relay-ui.png` 已由主代理查看。34 项／311 断言及后续
+删除失败/契约检查通过；合并后十一项／168 断言通过，主进程原入口行数下降；
+IPC 数量仅增加三项已审阅操作，没有抬文件行数预算或提供凭据读取。
+
+最终 7563 的 Server build、十八文件 128 项／584 断言、类型和 diff 通过；五包
+manifest 在 `device-relay/artifacts/7563e615b9a4cc0f5078d026d68e53d58b1467d4/`，
+Server SHA256 `0c48c4d99a7205e8ebf051bfad4876c6bfc2cb625c9a0b1ca59e76a441060537`。
+与 Services ec7 的全新 Node22.16 安装由真实 root wrapper 验收，十四阶段和清理
+全通过，真实认证关闭及上传四项全 true。receipt
+`device-relay/evidence/device-relay-acceptance-node22-ec7fac7-7563e61.json`，6475B，
+SHA256 `cbe37cf6b1855ec6eaaefe4511149ea1e367c79854e788603ef94497a2ad251e`。
+主代理核对源、manifest、五包/npm integrity、服务/fixture 哈希；另一代理逐字节
+核对 1328 个已安装文件与包、八服务文件和七夹具与提交，均一致。
+
+7563 的 CI36301242788 八类成功，仅 e2e-device-relay.mjs 的不变 publicOrigin
+使用 let 新增 prefer-const，警告106超过原105。最终
+`7a21a6d73f5ef9b6a645c1a1d9bcee0741393e01` 仅将该夹具变量改 const；单文件零
+警告、全局0 errors/105 warnings通过，未抬预算，未改变生产包。旧失败日志
+`/tmp/desktop-relay-ci-36301242788-guards.log` 与修复日志
+`/tmp/desktop-relay-ci-baseline-fixed.log` 保留。新最终 CI36301526311/#43 CI 仍待。
+
+[完整 Linux 候选36301566352](https://github.com/cjhyy/codeshell-services/actions/runs/36301566352)
+已 dispatch，精确 Host7a21、Servicesec7、Panels57703cbb，real_speech=true。
+现有 Panel 包保持原样。最终来源会重新构建实际包、镜像并完成旧有业务/恢复与新
+中继门槛，尚未完成，不提前 ready/merge 或称生产交付。
+
+稳定证据副本位于
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/device-relay-local-7563e615/`，
+含七份最终 UI/网络证据和先前失败及哈希索引，权限0600/目录0700。原始证据未覆盖。
+公开发布、真实 provider、目标域名/TLS/服务器部署、实体手机弱网与跨版本回滚
+仍待；当前是已验收本机组件与运行中的完整候选，goal active。
+
+
+## 增量 118：最终完整候选通过，两仓代码已合入（2026-09-27）
+
+Host 最终 `7a21a6d73f5ef9b6a645c1a1d9bcee0741393e01` 的 CI36301526311 与
+CI36301566604 全九类通过；Services `ec7fac7c43254a73c8200795278e3f43168a1dd4`
+六项 CI 全通过。完整 Linux/Node22.16 候选
+[36301566352](https://github.com/cjhyy/codeshell-services/actions/runs/36301566352)
+在 real_speech=true 下所有步骤成功，第三仓固定原有
+`57703cbb75ed44dce004215ad7075480c289becb`，不修改 Panel 内容。
+
+实际安装五包、真实 TLS/WSS 十四阶段及清理通过，真实 setup/login 关闭等待、上传
+撤销四项全 true；主代理核对 receipt SHA 和结果，另一代理逐个核对十五源文件、
+五包及源码身份。Linux receipt SHA256
+`f486ce60966904bc86b60de3211df2fd9650924b228e6bba51e7ae3274476fa4`。
+完整 Cloud 备份/恢复四项通过，含两卷、权限/链接、原卷保留、旧会话撤销、新登录、
+恢复后启动与再次备份、损坏拒绝及不完整恢复拒绝启动；receipt SHA256
+`1dc97efb039adc7deae4e3bf41ab377b84b788465cdf31dcecfa621b8ba7c17f`。
+原始日志、小型 artifact 与机器可读审计保留于
+`/Users/admin/.codex/worktrees/device-relay/evidence/linux-candidate-36301566352/`。
+
+候选归档 artifact10925942917，698572338B，GitHub SHA256
+`223c88383587355ecbabb29c8c102f0ddb6479e08947076353e615f0611f0d41`，到期2026-10-11。
+独立 evidence artifact10926391840，3069884B，SHA256
+`de21ff3a257b30741284a4508dcc06b5778b0c0a175874591573ebb28385a83a`，到期2026-10-04。
+receipt 属于独立 evidence，不冒充已嵌入部署 tar。
+镜像校验与重新加载均通过：runtime
+`sha256:986eeb9ca33c17009fdd42c426803610bc06e5a73698a78520d10d0f2e82b34b`，Link
+`sha256:1f5837db2c42232d744bfa0bc9b86fb4e2fdf93d8ea39f8667b4bab5fcfad742`，linux/amd64。
+恢复 helper 使用已固定 registry digest48e4b67 与实际IDc72861c，未内附候选两镜像，
+目标仍需独立准备，不虚构完全离线安装。
+
+最终对照 origin/main 后，Host [#43](https://github.com/cjhyy/codeshell/pull/43)
+正常合入 `220a3799d9c2ef5a3a769a61ba2e582aa841d3f4`；#41/#42/#44/#45 的
+mergedAt 均实际确认。Services [#14](https://github.com/cjhyy/codeshell-services/pull/14)
+正常合入 `809dd334a7ffff1df4a6ae86c7651c838a4a993c`。两主干分别与原始已验收
+7a21/ec7 整树比较无差异；不重新标记候选来源，不将后续纯文档变化混入原档。
+
+最后修正两处文档：目录 CLI 不自动加载外部env，需要systemd
+EnvironmentFile或显式Node --env-file；README误称receipt在tar，实际在独立evidence。
+从新main独立建立 `codex/services/device-relay-deployment-docs`，
+[#15](https://github.com/cjhyy/codeshell-services/pull/15) 的 `84addd2413122b83ee5f452141836f4398cab941`
+仅改 README/device-relay/acceptance 三份文档。env-file实际配置解析、模板/链接、
+格式/diff与六项CI通过；正常合入 `a87cfe0c7fc2a1938caf69020841425d32691527`。
+不修改冻结程序/依赖/锁文件，不为文档重跑昂贵候选；原tar中的启动说明参照新runbook。
+原始ZIP已完整保留到
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36301566352.zip`，
+同名receipt记录GitHub SHA256/大小、ZIP CRC与内部tar SHA全部通过，文件0600，
+主代理再次复核ZIP SHA/大小/权限一致。内部tar SHA256
+`e4579723d402801584e6eef4e6e9a8f1b129576d091db488491bc9fc328e7860`。
+GitHub下载曾以EOF中断，保留原27,672,576字节并使用同一官方artifact的有界Range
+续传，未覆盖成功证据或重跑CI，最终所有校验通过。完整Linux小证据和审计还另存为
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36301566352-evidence/`。
+Host五个本轮任务树与本地/远程分支均已安全清理，移除前逐个确认 clean、祖先、
+PR实际合入和无进程/文件占用。原用户树/goal树/其他任务与父 artifacts/evidence 保留。
+Services两任务树及本地/远程分支也已清理：clean、ancestor、无cwd/openfiles核验通过，
+worktree remove未force，原用户Services树956f493与原status保持不变。清理回执保留于
+`device-relay/evidence/services-worktree-cleanup-20260927.json` 并复制到上述稳定证据目录。
+Services文档CI36303872985/36303896895六项全成功，main相对候选ec7仅三文档变化。
+
+真实 provider/目标配置仍缺，公开包和镜像未发布；公网与实体手机、目标恢复及
+跨版本升级回滚仍待。Panel业务按最新用户要求冻结，goal仍未完成。
+
+
+## 增量 119：电脑目录恢复与完整候选通过（2026-09-27）
+
+上一轮确实完成原范围代码/文档合入、完整Linux候选及归档保全；这不是无进展等待。
+本轮从当前main重新核对剩余运维边界，发现新设备目录只说明停机复制，未像Cloud/Link
+提供清除历史权限的恢复路径。Node22.16对精确Host7563/Servicesec7隔离复现已证实
+旧快照复活owner session、电脑凭据与已消费ticket；缺auth可重新bootstrap，缺DB可
+启动空目录；异步登录未排空就撤销可再次签发；中间auth symlink可越选定根。
+原始before证据已保全 `artifacts/device-relay-recovery/before.log`，不涉及真实用户凭据。
+
+Host独立分支`codex/server/device-relay-recovery-gate`的
+`8314bdff5c6c622e16409c22c5930fb0e63bc8b8`，draft
+[#46](https://github.com/cjhyy/codeshell/pull/46)，新增第十五个明确恢复stage与九项结果
+强制检查；旧十四阶段receipt不可通过。20项进程tests/44断言、格式、diff与
+[CI36304583671](https://github.com/cjhyy/codeshell/actions/runs/36304583671)全九类通过。
+只改gate/test/doc四文件，五个生产包源码不变，尚未合入。
+
+Services在独立`codex/services/device-relay-recovery`实现停机备份、新目录恢复，
+先在私密scratch完成schema/auth/身份验证及所有权限撤销，再发布到带marker和无效DB
+占位的新目标。保留hostId/env/owner/origin，清票据/凭据/会话，epoch/generation递增；
+所有异步工作及锁释放完成才移除marker。原目录不能被修改，缺失/损坏不能靠初始化补全。
+独立真实TLS helper与负例单测已合入工作分支。Node22.16诊断副本50/50测试无skip，
+真实TLS helper九字段全部true；独立审阅副本也50/50通过。两者不是最终冻结安装
+receipt，仍须实际候选wrapper与完整Linux验收。
+
+主代理还实证并交实现方修正：目录rename+symlink后仅查lock inode会错误认作仍持锁；
+SQLite `NOT LIKE 'sqlite_%'`的下划线通配导致sqliteevil额外表被忽略。当前锁已纳入
+根目录身份，schema使用严格GLOB，marker用lstat拒绝dangling链接；最终复验仍待。
+独立审阅又复现首次目标文件写入ENOSPC留下空目录可bootstrap；9729237先创建无效DB
+占位，捕获初始化错误时仅按原目录inode删除确为空的目录，并补故障注入测试。
+mkdir到首个文件间强制kill仍可能留下空目录，runbook明确只有命令成功后才能切换
+服务配置；失败或中断目标不得上线，不声称任意系统调用点零窗口原子发布。
+Services最终冻结`bab72a7892b1c6e8f177519ef780f391c9730c09`，draft
+[#16](https://github.com/cjhyy/codeshell-services/pull/16)。使用原Host7563真实五包
+新建隔离安装，Node22.16全套166/166无skip，实际Host wrapper十五阶段/九项恢复/
+cleanup全true，receipt SHA256
+`a833f380c6b3334a4bfd1be6e36bf2e907e1b59a33415331d345194dd040ab35`。
+root将20份源/fixture文件逐字节与bab72及实际安装比较一致，manifest与五tarball
+也匹配；审计在`artifacts/device-relay-recovery/root-local-audit.json`。
+独立恢复70/70无skip、初始化故障及目录保护10/10通过；六项Services常规CI全通过。
+完整Linux候选[36306016201](https://github.com/cjhyy/codeshell-services/actions/runs/36306016201)
+已触发，准确Host8314/Servicesbab72/Panel577，real_speech=true，尚在运行。
+没有把旧生产包源7563重标为8314；新Linux会重新构建8314并记录独立receipt。
+
+等待Linux期间，独立代理用Node22.16/Host7563实际五包补有限的schema=1升级回退：
+五个独立进程严格关服退出后依次运行ec7→bab72→ec7，以及新工具恢复→bab72重新授权
+→ec7读取完成态恢复。八项全true、清理通过，正常切换保留owner/session/installation/
+host/environment/电脑凭据；新代码票据能由旧代码消费，恢复已撤销权限未复活。
+receipt SHA256 `defe2226427a942ccd86483c7a1046204161614f84178c94fbd790909dec8c0f`，
+完整输入/脚本/日志保留`artifacts/device-relay-recovery/schema1-ec7-bab-evidence.json`。
+不泛化为公开版本、Cloud/Link跨schema或目标服务器升级回滚已验收。
+
+上述为开发期间的顺序记录；最终完整Linux候选36306016201于08:56:01Z全部SUCCESS，
+准确Host8314/Servicesbab72/Panel577。十五阶段、九项恢复/四项上传/真实auth排空/
+cleanup全部通过；Linux relay receipt SHA256
+`63fbec1889c57a8f4ab8090196acbee3342e5ecf8e36cefe1fff491f960af303`。
+完整Cloud恢复receipt SHA256
+`5a35a931bb100806476856d668c1b028a21cd9f65e67fe466fcfbb9f13a9efbb`。
+runtime镜像`sha256:37be7da497a6a79e565fbb2e071e79697e8926bc5b6491da5aeb1bb16c75e3d6`，
+Link镜像`sha256:564d014a9f0e97c60c4a28f88aef957d1bdb32e51709bfe03e28e121363613dd`，
+均linux/amd64，归档校验与加载通过。固定helper仍另行准备，未嵌入候选。
+
+部署artifact10927644045，698610825字节，ZIP SHA256
+`5a05172dc0e3c470ead6fbd95f67d8dbed627781c51758c48241cf00a9e62ab3`，到期2026-10-11。
+内层tar SHA256 `635e4cd5e676c68d5af878350c3fb1d4424085715bcbbffdf622b7a740125d15`。
+小证据artifact10927768370，3073156字节，SHA256
+`816433f2723a75437f6c325552a2dda074542e594f047b892c346f39e8a509d8`，到期2026-10-04。
+唯一下载与streaming归档检查核对342份文件、五包、六Panel和两镜像；root另核本地
+ZIP完整SHA/大小/0600权限一致。原始ZIP与同名receipt保留于
+`/Users/admin/.codex/worktrees/project-cloud-panels/artifacts/cloud-candidate-36306016201.zip`，
+完整审计在同层`cloud-candidate-36306016201-evidence/final-delivery-audit.json`。
+不覆盖上一轮成功归档，不将后续文档或合并提交重标为候选源。
+
+Host #46正常合入`99940e7f807223081a08e72c8590ad3f37fe233f`，fetch后与8314全树无差异。
+Host gate任务树及本地/远程分支已安全移除，clean/ancestor/无占用均核实；原主树
+a8d9e087/原分支/clean保持不变，清理回执在`artifacts/device-relay-recovery/`。
+Services最终文档`774a1c771d95fc73e3d61ffe713a7749783822ac`仅改docs/acceptance.md，
+六项常规CI36307980346/36307976700全部通过，不为纯文档重复运行完整候选。
+PR16于09:08:41Z正常合入`49bcc157e49b01d2fff5b16bb9425338ce3063b4`，fetch确认main
+相对冻结候选bab72仍仅有该验收文档变化，已完成代码与文档合入。
+Services两棵任务树及本地分支已在clean/ancestor/无文件占用检查后无force移除；
+远程recovery按最终774a1c7精确lease删除，fixture从未push。primary仍956f493/原分支/
+clean保持不变，安装stage、所有证据与原始归档保留，清理回执已另存稳定artifact目录。
+
+Panel内容保持冻结；公开发布、真实provider、目标部署信息仍缺，目标机器和公开版本
+升级恢复、实体手机尚未验收。已完成源码与私有候选不等于上线；goal active。
