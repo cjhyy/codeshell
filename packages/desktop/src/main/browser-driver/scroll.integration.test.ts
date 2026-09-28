@@ -175,33 +175,34 @@ for (const backend of ["cdp", "playwright"] as const) {
   });
 }
 
-test.skipIf(!launchCandidate)(
-  "Playwright observes delayed canvas painting without repeating wheel input",
-  async () => {
-    await withDriver("playwright", async (page, driver) => {
-      await page.setContent(`<style>body{margin:0;overflow:hidden}canvas{position:absolute;left:580px;top:80px;width:400px;height:550px}</style><canvas width="400" height="550"></canvas>
+for (const backend of ["cdp", "playwright"] as const)
+  test.skipIf(!launchCandidate)(
+    `${backend} observes delayed canvas painting without repeating wheel input`,
+    async () => {
+      await withDriver(backend, async (page, driver) => {
+        await page.setContent(`<style>body{margin:0;overflow:hidden}canvas{position:absolute;left:580px;top:80px;width:400px;height:550px}</style><canvas width="400" height="550"></canvas>
       <script>const c=document.querySelector('canvas'),ctx=c.getContext('2d');ctx.fillStyle='red';ctx.fillRect(0,0,400,550);c.addEventListener('wheel',e=>{window.trusted=e.isTrusted;window.wheelCount=(window.wheelCount||0)+1;setTimeout(()=>{ctx.fillStyle='blue';ctx.fillRect(0,0,400,550)},250)})</script>`);
-      const wheel = spyOn(page.mouse, "wheel");
-      try {
-        const result = await driver.scroll("down", 450);
-        const delivery = await page.evaluate(() => ({
-          trusted: (window as any).trusted,
-          wheelCount: (window as any).wheelCount,
-        }));
-        expect({ ...result, ...delivery }).toMatchObject({
-          ok: true,
-          trusted: true,
-          wheelCount: 1,
-          contentChanged: true,
-          scroll: { target: "canvas", positionKnown: false },
-        });
-        expect(wheel).toHaveBeenCalledTimes(1);
-      } finally {
-        wheel.mockRestore();
-      }
-    });
-  },
-);
+        const wheel = spyOn(page.mouse, "wheel");
+        try {
+          const result = await driver.scroll("down", 450);
+          const delivery = await page.evaluate(() => ({
+            trusted: (window as any).trusted,
+            wheelCount: (window as any).wheelCount,
+          }));
+          expect({ ...result, ...delivery }).toMatchObject({
+            ok: true,
+            trusted: true,
+            wheelCount: 1,
+            contentChanged: true,
+            scroll: { target: "canvas", positionKnown: false },
+          });
+          expect(wheel).toHaveBeenCalledTimes(backend === "playwright" ? 1 : 0);
+        } finally {
+          wheel.mockRestore();
+        }
+      });
+    },
+  );
 
 for (const observation of ["evaluate", "screenshot"] as const) {
   test.skipIf(!launchCandidate)(

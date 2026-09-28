@@ -264,7 +264,12 @@ export class TurnLoop {
 
   /** Last emitted ctx token estimate; used to skip no-op usage_update events. */
   private lastCtxEmit = -1;
-  private currentTurnUsage: TokenUsage = {
+  /**
+   * One user submission's usage across all model/tool steps and continuations.
+   * Engine creates a fresh loop per submission, but may re-enter this instance
+   * to drain background completions within the same run, so run() must retain it.
+   */
+  private currentRunUsage: TokenUsage = {
     promptTokens: 0,
     completionTokens: 0,
     totalTokens: 0,
@@ -796,7 +801,7 @@ export class TurnLoop {
     requestKind: PromptCacheDiagnosticSample["requestKind"] = "primary",
     recordCacheDiagnostics = true,
   ): void {
-    this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
+    this.currentRunUsage = addTokenUsage(this.currentRunUsage, usage);
     this.deps.onAgentUsage?.(usage);
     this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
     if (recordCacheDiagnostics && this.deps.recordCacheReadDiagnostics) {
@@ -826,19 +831,17 @@ export class TurnLoop {
       derivedOverhead: overhead,
       prev: this.lastCtxEmit,
     });
-    const promptChanged = promptTokens !== this.lastCtxEmit;
-    if (promptChanged) this.lastCtxEmit = promptTokens;
+    // A response adds billed usage even when its prompt size is unchanged.
+    // Only the estimate-only path may skip an unchanged context reading.
+    this.lastCtxEmit = promptTokens;
     // Forward the provider's cache counts so the UI can show a hit rate. Only
     // attach fields the provider actually reported — a spread keeps them off
     // the event entirely when undefined, so the renderer can tell "no cache
     // info this turn" from "0 cached". Estimate-path emits don't call this and
     // so carry no cache fields (correct: an estimate has no cache reading).
-    const singleTurnCacheHitRate = cacheHitRateFromUsage(this.currentTurnUsage);
+    const singleTurnCacheHitRate = cacheHitRateFromUsage(this.currentRunUsage);
     const cumulative = this.currentCumulativeUsage;
     const cumulativeHitRate = cumulative ? cumulativeCacheHitRate(cumulative) : undefined;
-    if (!promptChanged && singleTurnCacheHitRate === undefined && cumulativeHitRate === undefined) {
-      return;
-    }
     this.config.onStream({
       type: "usage_update",
       promptTokens,
@@ -848,9 +851,9 @@ export class TurnLoop {
       ...(usage.cacheCreationTokens !== undefined
         ? { cacheCreationTokens: usage.cacheCreationTokens }
         : {}),
-      singleTurnPromptTokens: this.currentTurnUsage.promptTokens,
-      singleTurnCacheReadTokens: this.currentTurnUsage.cacheReadTokens ?? 0,
-      singleTurnCacheCreationTokens: this.currentTurnUsage.cacheCreationTokens ?? 0,
+      singleTurnPromptTokens: this.currentRunUsage.promptTokens,
+      singleTurnCacheReadTokens: this.currentRunUsage.cacheReadTokens ?? 0,
+      singleTurnCacheCreationTokens: this.currentRunUsage.cacheCreationTokens ?? 0,
       ...(singleTurnCacheHitRate !== undefined ? { singleTurnCacheHitRate } : {}),
       ...(cumulative
         ? {
@@ -935,13 +938,6 @@ export class TurnLoop {
           };
         }
         this.turnCount++;
-        this.currentTurnUsage = {
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-          cacheReadTokens: 0,
-          cacheCreationTokens: 0,
-        };
 
         // Abort fast-path: bail at the loop TOP before doing any per-turn work.
         // Without this, an aborted child (parent abort, or the 30min per-call
@@ -1178,7 +1174,7 @@ export class TurnLoop {
         this.lastCompletedModelTurn = this.turnCount;
         messages = this.redactConsumedSensitiveToolResults(messages);
 
-        // Record the response once into current-turn and whole-session counters.
+        // Record the response once into user-run and whole-session counters.
         if (response!.usage?.promptTokens !== undefined) {
           this.recordResponseUsage(response!.usage);
           this.emitCtxFromUsage(response!.usage, messages);
@@ -2030,6 +2026,7 @@ export class TurnLoop {
       );
       if (summaryResponse.usage?.promptTokens !== undefined) {
         this.recordResponseUsage(summaryResponse.usage, "primary", false);
+        this.emitCtxFromUsage(summaryResponse.usage, summaryMessages);
       }
       if (this.goalTracker && summaryResponse.usage) {
         recordGoalUsage(

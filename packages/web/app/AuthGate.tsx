@@ -1,3 +1,4 @@
+import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import { App } from "./App.js";
 import { ProjectsGate } from "./ProjectsGate.js";
@@ -125,6 +126,7 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
   return (
     <main className="auth-page">
       <section className="auth-card">
+        <EnvironmentMenu discover={false} />
         <div className="auth-brand">
           CodeShell <span>Hub</span>
         </div>

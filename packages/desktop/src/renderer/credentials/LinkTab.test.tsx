@@ -224,7 +224,7 @@ describe("LinkTab integrations", () => {
     ).toBe("GatewayReply");
   });
 
-  test("prefers a usable local connection and falls back to the server", () => {
+  test("uses a sole valid connection and requires a choice when several are saved", () => {
     const local: MaskedCredentialView = {
       id: "link-github-fine-grained-pat",
       type: "link",
@@ -241,16 +241,18 @@ describe("LinkTab integrations", () => {
       meta: { oauthProvider: "github", linkExecutionRuntime: "server" },
     };
 
-    expect(resolvePreferredLinkRuntime([server, local], "github")).toBe("local");
+    expect(resolvePreferredLinkRuntime([server, local], "github")).toBeNull();
+    expect(resolvePreferredLinkRuntime([local], "github")).toBe("local");
+    expect(resolvePreferredLinkRuntime([server], "github")).toBe("server");
     expect(
       resolvePreferredLinkRuntime(
         [server, { ...local, oauthStatus: { state: "expired" } }],
         "github",
       ),
-    ).toBe("server");
-    expect(resolvePreferredLinkRuntime([server, { ...local, hasSecret: false }], "github")).toBe(
-      "server",
-    );
+    ).toBeNull();
+    expect(
+      resolvePreferredLinkRuntime([server, { ...local, hasSecret: false }], "github"),
+    ).toBeNull();
     expect(
       resolvePreferredLinkRuntime(
         [

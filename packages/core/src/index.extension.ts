@@ -101,6 +101,12 @@ export type { AgentPreset } from "./preset/index.js";
 export { BUILTIN_TOOLS, derivePresetExposure } from "./tool-system/builtin/index.js";
 export type { BuiltinTool } from "./tool-system/builtin/index.js";
 export { SessionManager, codeShellHome } from "./session/session-manager.js";
+// Reviewed Optimization Lab foundations (docs/todo/optimization-lab-mvp.md §5.2):
+// read-only Skill snapshots, shared cross-process persistence, and the existing
+// text-connection resolver. Skill editing remains on the host-only surface.
+export { readSkillSnapshot, type SkillSnapshot } from "./skills/snapshot.js";
+export { acquireLockOnPath, mutateJsonFile } from "./utils/file-mutex.js";
+export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
 export { invalidateFileCache } from "./tool-system/builtin/file-cache.js";
 export { notificationQueue } from "./tool-system/builtin/agent-notifications.js";
 export { resolveExecutable, resolveGit } from "./utils/exec.js";

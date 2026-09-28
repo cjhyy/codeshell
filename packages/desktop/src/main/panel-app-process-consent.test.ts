@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { panelExecutionGate, PanelBridgeError } from "@cjhyy/code-shell-server/panels";
+import { isPanelAppDescriptorSelected } from "./panel-app-project-packages.js";
 import { PanelAppProcessApprovalStore } from "./panel-app-process-approval-store.js";
 import { PanelAppProcessService, type PanelProcessOwner } from "./panel-app-process-service.js";
 
@@ -52,6 +54,10 @@ async function fixture() {
   const createService = (identity = owner) => {
     const optionsForHost = runInNewContext(`${compiled}\noptionsForHost`, {
       processApprovalStore: new PanelAppProcessApprovalStore(file),
+      panelExecutionGate,
+      PanelBridgeError,
+      isPanelAppDescriptorSelected,
+      join,
       panelExecutableDirectories: () => [root],
       app: { getPath: () => root },
       BrowserWindow: { fromId: () => ({ isDestroyed: () => false }) },
@@ -117,8 +123,12 @@ async function fixture() {
     deny: () => {
       response = 1;
     },
-    setTrusted: (value: boolean) => { trusted = value; },
-    setBound: (value: boolean) => { bound = value; },
+    setTrusted: (value: boolean) => {
+      trusted = value;
+    },
+    setBound: (value: boolean) => {
+      bound = value;
+    },
   };
 }
 

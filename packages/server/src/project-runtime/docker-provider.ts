@@ -1,3 +1,6 @@
+import { readProjectSeccompProfile, materializeProjectSeccompProfile } from "./seccomp.js";
+import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { chmod, lstat, mkdir, open, rename, rm } from "node:fs/promises";
@@ -25,6 +28,9 @@ export interface DockerProjectProviderOptions {
   installationId: string;
   dataDir: string;
   image?: string;
+  /** Administrator-owned seccomp JSON; omitted keeps the Docker default. */
+  seccompProfile?: string;
+  remoteLink?: RemoteLinkConfiguration;
   limits?: { memoryMb?: number; cpus?: number; pids?: number };
   commandTimeoutMs?: number;
   startupTimeoutMs?: number;
@@ -156,6 +162,10 @@ export function createDockerProjectProvider(
   const image = options.image ?? DEFAULT_PROJECT_RUNTIME_IMAGE;
   if (!/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image))
     throw new ProjectRuntimeError("Invalid project runtime image.");
+  const seccomp =
+    options.seccompProfile === undefined
+      ? undefined
+      : readProjectSeccompProfile(options.seccompProfile);
   const dataDir = resolve(options.dataDir);
   if (/[\0,\r\n]/.test(dataDir))
     throw new ProjectRuntimeError("Unsupported project metadata path.");
@@ -318,8 +328,13 @@ export function createDockerProjectProvider(
       password: project.runtimePassword,
       publicOrigin,
       publicPathPrefix: `/p/${project.id}`,
+      ...(options.remoteLink
+        ? { remoteLink: remoteLinkHostConfiguration(options.remoteLink, publicOrigin) }
+        : {}),
     };
-    const configuration = createHash("sha256").update(JSON.stringify(secret)).digest("hex");
+    const configuration = createHash("sha256")
+      .update(JSON.stringify(seccomp ? { secret, seccomp: seccomp.sha256 } : secret))
+      .digest("hex");
     const configLabel = `${PROJECT_RUNTIME_LABEL}.configuration`;
     const generationLabel = `${PROJECT_RUNTIME_LABEL}.generation`;
     const imageResult = await invoke(["image", "inspect", image], signal);
@@ -403,6 +418,11 @@ export function createDockerProjectProvider(
         "--entrypoint",
         "node",
       ];
+      if (seccomp) {
+        const path = await materializeProjectSeccompProfile(dataDir, seccomp);
+        interrupted(signal);
+        args.push("--security-opt", `seccomp=${path}`);
+      }
       for (const [key, value] of Object.entries({
         ...expected,
         [generationLabel]: String(project.generation),

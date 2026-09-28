@@ -27,6 +27,46 @@ function mobileFixture(base: string): string {
 }
 
 describe("RemoteHostManager", () => {
+  test("device upload cleanup errors are reported and stop still closes the listener", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-upload-revoke-failure-"));
+    const rootDir = join(dir, "spool");
+    const uploads = new MobileUploadService({ rootDir, cleanupIntervalMs: 0 });
+    await uploads.ready();
+    const ticket = uploads.begin("device-a", {
+      clientId: "blocked",
+      name: "photo.png",
+      mime: "image/png",
+      size: 1,
+    });
+    // An actual filesystem obstruction must not become a successful receipt.
+    mkdirSync(join(rootDir, `${ticket.uploadId}.upload`));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      uploads,
+      onClientEvent() {},
+    });
+    const failure = new Promise<string>((resolve) => host.once("host-error", resolve));
+    await host.start({ host: "127.0.0.1", port: 0 });
+    const listener = (host as unknown as { server: import("node:http").Server }).server;
+    try {
+      host.revokeDevice("device-a");
+      expect(() =>
+        uploads.begin("device-a", {
+          clientId: "late",
+          name: "photo.png",
+          mime: "image/png",
+          size: 1,
+        }),
+      ).toThrow(/revoked/);
+      expect(await failure).toBeTruthy();
+      await expect(host.stop()).rejects.toThrow();
+      expect(listener.listening).toBe(false);
+    } finally {
+      await host.stop().catch(() => undefined);
+      await uploads.dispose().catch(() => undefined);
+    }
+  });
+
   test.each(["web", "upload"])(
     "a failed %s cleanup still closes the listener and cleans the other service",
     async (failedService) => {

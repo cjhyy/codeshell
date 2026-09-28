@@ -18,6 +18,7 @@ interface Props {
   action: "install" | "update";
   preview: PanelAppPreview;
   installedVersion?: string;
+  projectLabel?: string;
   onCancel: () => void;
   onInstall: () => void;
 }
@@ -27,6 +28,7 @@ export function PanelAppInstallReviewDialog({
   action,
   preview,
   installedVersion,
+  projectLabel,
   onCancel,
   onInstall,
 }: Props) {
@@ -47,6 +49,11 @@ export function PanelAppInstallReviewDialog({
               ? t("ext.panels.reviewUpdateDescription")
               : t("ext.panels.reviewDescription")}
           </DialogDescription>
+          {projectLabel && (
+            <p className="text-sm font-medium">
+              {t("ext.panels.reviewProject", { project: projectLabel })}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <span className="text-base font-semibold text-foreground">{preview.title.default}</span>
             <Badge variant="secondary">{preview.id}</Badge>

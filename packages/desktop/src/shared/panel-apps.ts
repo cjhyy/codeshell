@@ -52,6 +52,10 @@ export interface PanelAppDescriptor {
   appId: string;
   title: string;
   version: string;
+  /** A project-specific variant; undefined is the legacy single-version catalog. */
+  projectPaths?: string[];
+  packageDigest?: string;
+  packagePinned?: boolean;
   description?: string;
   icon: PanelAppIconName;
   singleton: boolean;
@@ -81,9 +85,21 @@ export interface PanelAppAgentToolInvocation {
   arguments: Record<string, unknown>;
 }
 
+/** Conditional project-binding state; revision is distinct from the guest package revision. */
+export interface PanelAppBindingState {
+  unavailable?: boolean;
+  appId: string;
+  revision: string;
+  bound: boolean;
+  globalDisabled: boolean;
+  version: string;
+  packageDigest?: string;
+}
+
 /** Extensions-page view of an independently installed Desktop Panel App. */
 export interface PanelAppExtensionSummary extends PanelAppDescriptor {
   kind: "panel-app";
+  bindingRevision?: string;
   /**
    * Effective state for the queried project. Identical to `projectBound`
    * unless a legacy user-level `disabledPanelApps` entry still vetoes the app;

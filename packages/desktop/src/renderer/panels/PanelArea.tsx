@@ -252,7 +252,11 @@ function ResolvedPanelArea({
   const [maximized, setMaximized] = useState(false);
 
   const addTab = (kind: PanelTab): void => {
-    const entry = getPanelEntry(kind);
+    const entry = getPanelEntry(kind, {
+      projectPath,
+      cwd,
+      engineSessionId: engineSessionId ?? null,
+    });
     if (!entry || !enabledPanelIds.has(kind)) return;
     if (entry.singleton) {
       const existing = activeTabs.find((candidate) => candidate.kind === kind);
@@ -370,7 +374,11 @@ function ResolvedPanelArea({
         {activeTabs.length > 0 ? (
           <PanelTabStrip
             tabs={activeTabs.map((tab) => {
-              const entry = getPanelEntry(tab.kind);
+              const entry = getPanelEntry(tab.kind, {
+                projectPath,
+                cwd,
+                engineSessionId: engineSessionId ?? null,
+              });
               return {
                 id: tab.id,
                 label: entry
@@ -464,7 +472,11 @@ function ResolvedPanelArea({
               labelledBy={`${panelDomId}-tab-${panelTab.id}`}
             >
               <DesktopPanelLifecycleBoundary
-                entry={getPanelEntry(panelTab.kind)}
+                entry={getPanelEntry(panelTab.kind, {
+                  projectPath,
+                  cwd,
+                  engineSessionId: engineSessionId ?? null,
+                })}
                 host={builtinPanelAppHost}
                 tabId={panelTab.id}
                 bucket={bucket}
@@ -628,7 +640,11 @@ function PanelBody({
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
   builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
 }) {
-  const entry = getPanelEntry(tab.kind);
+  const entry = getPanelEntry(tab.kind, {
+    projectPath,
+    cwd,
+    engineSessionId: engineSessionId ?? null,
+  });
   if (!entry) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">

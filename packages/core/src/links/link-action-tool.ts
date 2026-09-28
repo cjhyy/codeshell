@@ -12,6 +12,7 @@ import {
   getCliLinkStatus,
   isCliLinkProvider,
 } from "./cli.js";
+import { isRemoteLinkCredential } from "./remote.js";
 import { getLinkStatus } from "./status.js";
 
 const TOOL_NAME = "LinkAction";
@@ -19,7 +20,7 @@ const TOOL_NAME = "LinkAction";
 export const linkActionToolDef: ToolDefinition = {
   name: TOOL_NAME,
   description:
-    "Inspect Link connections and use local provider actions without exposing tokens. Call " +
+    "Inspect Link connections and use local or remote provider actions without exposing tokens. Select connectionId when multiple accounts exist. Call " +
     "with no arguments for saved connection status and available actions. Call with provider " +
     "and no action to also check its current CLI login, even when no saved Link is usable. " +
     "Check this before claiming a service is signed out: UseCredential hides Link credentials. " +
@@ -39,6 +40,11 @@ export const linkActionToolDef: ToolDefinition = {
         description:
           "Provider action id. Omit to check connections, CLI login, and available actions.",
       },
+      connectionId: {
+        type: "string",
+        description:
+          "Exact saved connection ID. Required when multiple saved connections exist; never silently switches accounts.",
+      },
       params: {
         type: "object",
         description: "Action-specific parameters. List the provider first when unsure.",
@@ -48,39 +54,36 @@ export const linkActionToolDef: ToolDefinition = {
   },
 };
 
-interface ConnectedLocalLink {
+interface ConnectedLink {
   credential: CredentialMetadata;
   providerId: string;
 }
 
 function isUsableLinkCredential(credential: CredentialMetadata): boolean {
+  if (isRemoteLinkCredential(credential))
+    return (
+      credential.meta?.linkRemoteState === "connected" &&
+      (credential.oauthStatus?.state === "valid" || !!credential.oauthStatus?.hasRefreshToken)
+    );
   return !credential.oauthStatus || credential.oauthStatus.state === "valid";
 }
 
-function connectedLocalLinks(ctx?: ToolContext): ConnectedLocalLink[] {
+function connectedLinks(ctx?: ToolContext): ConnectedLink[] {
   const cwd = ctx?.cwd ?? process.cwd();
   const scope = credentialAccessScope(ctx?.settingsScope);
   return getCredentialAccess()
     .listMasked(cwd, scope)
     .flatMap((credential) => {
       const providerId = credential.meta?.linkProvider;
-      return credential.type === "link" &&
+      return (credential.type === "link" || isRemoteLinkCredential(credential)) &&
         credential.hasSecret &&
         isUsableLinkCredential(credential) &&
-        credential.meta?.linkExecutionRuntime === "local" &&
+        (credential.meta?.linkExecutionRuntime === "local" || isRemoteLinkCredential(credential)) &&
         typeof providerId === "string" &&
         getLocalLinkProvider(providerId)
         ? [{ credential, providerId }]
         : [];
     });
-}
-
-function newestConnection(connections: ConnectedLocalLink[]): ConnectedLocalLink | undefined {
-  return [...connections].sort((left, right) => {
-    const l = Date.parse(left.credential.meta?.linkLastVerifiedAt ?? "") || 0;
-    const r = Date.parse(right.credential.meta?.linkLastVerifiedAt ?? "") || 0;
-    return r - l;
-  })[0];
 }
 
 function parseParams(value: unknown): Record<string, unknown> {
@@ -107,27 +110,43 @@ async function inspectConnections(
       },
       { getCliStatus },
     );
-    let links: ConnectedLocalLink[] = [];
+    let links: ConnectedLink[] = [];
     if (status.credentialStore.state === "checked") {
       try {
-        links = connectedLocalLinks(ctx);
+        links = connectedLinks(ctx);
       } catch {
         // A credential store change must not discard an independently checked CLI login.
       }
     }
     const providers = status.providers.map((provider) => {
-      const connection = newestConnection(
-        links.filter(
-          (candidate) =>
-            candidate.providerId === provider.id &&
-            provider.connections.some(
-              (saved) => saved.id === candidate.credential.id && saved.state === "ready",
-            ),
-        ),
+      const available = links.filter(
+        (candidate) =>
+          candidate.providerId === provider.id &&
+          provider.connections.some(
+            (saved) => saved.id === candidate.credential.id && saved.state === "ready",
+          ),
       );
+      const connection = available.length === 1 ? available[0] : undefined;
       const capabilities = connection?.credential.meta?.linkCapabilityIds;
       return {
         ...provider,
+        connections: provider.connections.map((saved) => {
+          const candidate = links.find((item) => item.credential.id === saved.id);
+          return {
+            ...saved,
+            actions: candidate
+              ? getLocalLinkProvider(provider.id)!
+                  .actions.filter((action) => {
+                    const capabilities = candidate.credential.meta?.linkCapabilityIds;
+                    return isRemoteLinkCredential(candidate.credential)
+                      ? capabilities?.includes(`${provider.id}.${action.id}`)
+                      : !capabilities?.length ||
+                          capabilities.includes(`${provider.id}.${action.id}`);
+                  })
+                  .map(({ id, title, description, risk }) => ({ id, title, description, risk }))
+              : [],
+          };
+        }),
         cliSupported: isCliLinkProvider(provider.id),
         account: connection?.credential.meta?.linkAccountLabel,
         verifiedAt: connection?.credential.meta?.linkLastVerifiedAt,
@@ -149,7 +168,12 @@ async function inspectConnections(
     return JSON.stringify(
       providerId
         ? { kind: "provider_actions", provider: providerId, ...providers[0], ...metadata }
-        : { kind: "providers", runtimePreference: "local-first", providers, ...metadata },
+        : {
+            kind: "providers",
+            connectionSelection: "explicit-if-multiple",
+            providers,
+            ...metadata,
+          },
     );
   } catch (error) {
     if (ctx?.signal?.aborted || (error instanceof Error && error.name === "AbortError")) {
@@ -182,14 +206,57 @@ export async function linkActionTool(
   if (!providerId) {
     return JSON.stringify({ kind: "error", error: "Provider is required to run an action." });
   }
-  const links = connectedLocalLinks(ctx);
+  const links = connectedLinks(ctx);
   const provider = getLocalLinkProvider(providerId);
   if (!provider) {
     return JSON.stringify({ kind: "error", error: `Unknown local Link provider: ${providerId}` });
   }
-  const connection = newestConnection(
-    links.filter((candidate) => candidate.providerId === providerId),
+  if (
+    args.connectionId !== undefined &&
+    (typeof args.connectionId !== "string" || !args.connectionId)
+  )
+    return JSON.stringify({
+      kind: "error",
+      error: "connectionId must identify a saved connection.",
+    });
+  const saved = getCredentialAccess()
+    .listMasked(ctx?.cwd ?? process.cwd(), credentialAccessScope(ctx?.settingsScope))
+    .filter(
+      (credential) =>
+        credential.meta?.linkProvider === providerId &&
+        (credential.meta.linkExecutionRuntime === "local" || isRemoteLinkCredential(credential)),
+    );
+  if (args.connectionId === undefined && saved.length > 1)
+    return JSON.stringify({
+      kind: "connection_required",
+      provider: providerId,
+      connections: saved.map((credential) => ({
+        id: credential.id,
+        label: credential.label,
+        account: credential.meta?.linkAccountLabel,
+        runtime: credential.meta?.linkExecutionRuntime,
+        available: links.some((item) => item.credential.id === credential.id),
+      })),
+      error: "Select a connectionId explicitly before running this action.",
+    });
+  const candidates = links.filter(
+    (candidate) =>
+      candidate.providerId === providerId &&
+      (args.connectionId === undefined || candidate.credential.id === args.connectionId),
   );
+  if (candidates.length > 1)
+    return JSON.stringify({
+      kind: "connection_required",
+      provider: providerId,
+      connections: candidates.map(({ credential }) => ({
+        id: credential.id,
+        label: credential.label,
+        account: credential.meta?.linkAccountLabel,
+        runtime: credential.meta?.linkExecutionRuntime,
+      })),
+      error: "Select a connectionId explicitly before running this action.",
+    });
+  const connection = candidates[0];
   if (!connection) {
     return JSON.stringify({
       kind: "error",
@@ -253,10 +320,11 @@ export async function linkActionTool(
     const live = access.resolveMeta(cwd, connection.credential.id, scope);
     return Boolean(
       live?.hasSecret &&
-      live.type === "link" &&
-      live.meta?.linkExecutionRuntime === "local" &&
-      live.meta.linkProvider === providerId &&
-      live.meta.linkLastVerifiedAt === connection.credential.meta?.linkLastVerifiedAt,
+      (live.type === "link" || isRemoteLinkCredential(live)) &&
+      live.meta?.linkExecutionRuntime === connection.credential.meta?.linkExecutionRuntime &&
+      live.meta?.linkRemoteGrantId === connection.credential.meta?.linkRemoteGrantId &&
+      live.meta?.linkProvider === providerId &&
+      live.meta?.linkLastVerifiedAt === connection.credential.meta?.linkLastVerifiedAt,
     );
   };
   const unsubscribe = access.subscribe?.(
@@ -275,7 +343,18 @@ export async function linkActionTool(
   try {
     assertConnected();
     let data: unknown;
-    if (connection.credential.meta?.linkExecutionBackend === "cli") {
+    if (isRemoteLinkCredential(connection.credential)) {
+      if (!access.executeRemoteLinkAction || !connection.credential.meta?.linkRemoteGrantId)
+        throw new Error("Remote Link actions are unavailable on this Host");
+      data = await access.executeRemoteLinkAction({
+        cwd,
+        scope,
+        id: connection.credential.id,
+        grantId: connection.credential.meta.linkRemoteGrantId,
+        action: actionId,
+        params,
+      });
+    } else if (connection.credential.meta?.linkExecutionBackend === "cli") {
       if (!isCliLinkProvider(providerId)) {
         throw new Error(`${provider.displayName} does not support local CLI execution`);
       }
@@ -306,7 +385,8 @@ export async function linkActionTool(
       kind: "action_result",
       provider: providerId,
       action: actionId,
-      runtime: "local",
+      runtime: connection.credential.meta?.linkExecutionRuntime,
+      connectionId: connection.credential.id,
       untrustedExternalContent: true,
       data,
     });
@@ -331,12 +411,13 @@ export function isLinkActionAvailable(
       .listMasked(cwd, credentialAccessScope(settingsScope))
       .some(
         (credential) =>
-          credential.type === "link" &&
+          (credential.type === "link" || isRemoteLinkCredential(credential)) &&
           credential.hasSecret &&
           isUsableLinkCredential(credential) &&
-          credential.meta?.linkExecutionRuntime === "local" &&
-          Boolean(credential.meta.linkProvider) &&
-          Boolean(getLocalLinkProvider(credential.meta.linkProvider!)),
+          (credential.meta?.linkExecutionRuntime === "local" ||
+            isRemoteLinkCredential(credential)) &&
+          Boolean(credential.meta?.linkProvider) &&
+          Boolean(getLocalLinkProvider(credential.meta?.linkProvider ?? "")),
       );
   } catch {
     return false;

@@ -481,12 +481,12 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
             detail,
           }),
         ),
-      waitForLoad: (timeoutMs) =>
+      waitForLoad: (timeoutMs, condition) =>
         safely(
           () =>
             use(async (target) =>
               allowed(target)
-                ? target.driver.waitForLoad(timeoutMs)
+                ? target.driver.waitForLoad(timeoutMs, condition)
                 : { ok: false, detail: deniedDetail(target) },
             ),
           failResult,

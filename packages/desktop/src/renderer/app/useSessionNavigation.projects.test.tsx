@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act, useEffect, useState } from "react";
+import { act, useState } from "react";
 import type { LocalProject } from "../../preload/project-authority-types";
 import {
   loadProjects,
+  projectIdForPath,
   saveProjects,
   trackedProjectFromRegistry,
   type TrackedProject,
 } from "../projects";
 import type { SessionIndex } from "../transcripts";
 import { ensureMiniDom, renderHook } from "../test-utils/renderHook";
+import { useTrackedProjects } from "./useTrackedProjects";
 import { useProjectRegistrySync } from "./useProjectRegistrySync";
 import { useSessionNavigation } from "./useSessionNavigation";
 
@@ -47,10 +49,9 @@ describe("project picker and registry synchronization", () => {
   let hook: Awaited<ReturnType<typeof renderHook<ReturnType<typeof useHarness>>>> | undefined;
 
   function useHarness() {
-    const [projects, setProjects] = useState<TrackedProject[]>([]);
+    const [projects, setProjects] = useTrackedProjects();
     const [sessionIndices, setSessionIndices] = useState(initialIndices);
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-    useEffect(() => saveProjects(projects), [projects]);
     useProjectRegistrySync({
       setProjects,
       setSessionIndices,
@@ -77,7 +78,15 @@ describe("project picker and registry synchronization", () => {
       setView: () => {},
       setRunsInitialRunId: () => {},
     });
-    return { ...navigation, projects, sessionIndices, activeProjectId, setSessionIndices };
+    const renderedTargets = projects.map((item) => projectIdForPath(item.path));
+    return {
+      ...navigation,
+      projects,
+      sessionIndices,
+      activeProjectId,
+      setSessionIndices,
+      renderedTargets,
+    };
   }
 
   beforeEach(() => {
@@ -136,6 +145,28 @@ describe("project picker and registry synchronization", () => {
       for (const listener of listeners) listener(projects);
     });
   }
+
+  test("resolves project configuration during the first render after registry hydration", async () => {
+    diskProjects = [project];
+    hook = await renderHook(useHarness);
+    expect(hook.result.current.projects).toHaveLength(1);
+    expect(hook.result.current.renderedTargets).toEqual([project.id]);
+  });
+
+  test("resolves replaced registry roots in the same render and removes stale paths", async () => {
+    diskProjects = [project];
+    hook = await renderHook(useHarness);
+    const replacement = {
+      ...project,
+      roots: [{ ...project.roots[0]!, path: "/workspace/moved-travel" }],
+    };
+    await broadcast([replacement]);
+    expect(hook.result.current.renderedTargets).toEqual([project.id]);
+    expect(projectIdForPath(project.roots[0]!.path)).toBeUndefined();
+    await broadcast([]);
+    expect(hook.result.current.projects).toEqual([]);
+    expect(projectIdForPath(replacement.roots[0]!.path)).toBeUndefined();
+  });
 
   test("keeps one project when its registry broadcast arrives before the picker response", async () => {
     hook = await renderHook(useHarness);

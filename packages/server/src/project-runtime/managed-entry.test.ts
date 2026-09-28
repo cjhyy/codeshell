@@ -84,3 +84,26 @@ test("an incomplete persistent account does not reopen unmanaged setup", async (
     "initialization is incomplete",
   );
 });
+
+test("managed runtime accepts only Link callback configuration for its own public origin", async () => {
+  const { file } = await fixture();
+  const remoteLink = {
+    issuer: "https://link.example",
+    clientId: "client",
+    redirectUri: secret.publicOrigin + "/link/callback",
+  };
+  await chmod(file, 0o600);
+  await writeFile(file, JSON.stringify({ ...secret, remoteLink }));
+  await chmod(file, 0o444);
+  expect((await readManagedProjectSecret(file)).remoteLink).toEqual(remoteLink);
+  await chmod(file, 0o600);
+  await writeFile(
+    file,
+    JSON.stringify({
+      ...secret,
+      remoteLink: { ...remoteLink, redirectUri: "https://other.example/link/callback" },
+    }),
+  );
+  await chmod(file, 0o444);
+  await expect(readManagedProjectSecret(file)).rejects.toThrow("Remote Link requires");
+});

@@ -157,7 +157,12 @@ export function readBoundedSkillFile(
   filePath: string,
   maxBytes = MAX_SKILL_MARKDOWN_BYTES,
 ): Buffer {
-  const fd = openSync(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  // A FIFO must not block open before fstat can reject it. O_NONBLOCK has no
+  // effect on regular files; fall back on platforms without that POSIX flag.
+  const fd = openSync(
+    filePath,
+    constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK ?? 0),
+  );
   try {
     const info = fstatSync(fd);
     if (!info.isFile() || info.size > maxBytes)

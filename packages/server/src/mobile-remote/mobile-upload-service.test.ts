@@ -93,6 +93,50 @@ function fakePut(
 }
 
 describe("MobileUploadService", () => {
+  test("revocation fences preparation immediately and waits until no late spool can be created", async () => {
+    const service = makeService();
+    await service.ready();
+    const ticket = service.begin("device-a", {
+      clientId: "preparing",
+      name: "photo.png",
+      mime: "image/png",
+      size: PNG.length,
+    });
+    await service.cleanupExpired();
+    let enter!: () => void, resume!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      enter = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const internal = service as unknown as { ensurePrivateRoot(): Promise<void> };
+    const original = internal.ensurePrivateRoot.bind(service);
+    internal.ensurePrivateRoot = async () => {
+      enter();
+      await released;
+      await original();
+    };
+    const put = fakePut(service, ticket.uploadId, "image/png", PNG.length);
+    put.request.end(PNG);
+    await entered;
+    let settled = false;
+    const cleanup = service.revokeDevice("device-a").then(() => {
+      settled = true;
+    });
+    try {
+      expect(put.request.destroyed).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(settled).toBe(false);
+    } finally {
+      resume();
+    }
+    await cleanup;
+    await put.done;
+    expect(put.response.status).toBe(404);
+    expect(readdirSync(roots.at(-1)!)).toEqual([]);
+  });
+
   test("keeps the first PUT successful when the same ticket is submitted concurrently", async () => {
     const service = makeService();
     await service.ready();

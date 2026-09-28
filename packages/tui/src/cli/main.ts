@@ -190,6 +190,12 @@ program.addCommand(createPluginCommand());
 import { createLinkCommand, isLinkStatusCommand } from "./commands/link.js";
 program.addCommand(createLinkCommand());
 
+import {
+  createSettingsRecoveryCommand,
+  isSettingsRecoveryCommand,
+} from "./commands/settings-recovery.js";
+program.addCommand(createSettingsRecoveryCommand());
+
 // ─── Default: if no command, go to REPL or run ───────────────────
 // Register root options after subcommands and keep passThroughOptions enabled:
 // Commander otherwise lets root parsing/defaults interfere with subcommand
@@ -241,7 +247,7 @@ function resolveOpts(opts: Record<string, unknown>) {
 program.hook("preAction", async (thisCommand, actionCommand) => {
   // This diagnostic only reads connection metadata and CLI login. Shared setup
   // rotates logs and writes the settings schema, neither of which it needs.
-  if (isLinkStatusCommand(actionCommand)) return;
+  if (isLinkStatusCommand(actionCommand) || isSettingsRecoveryCommand(actionCommand)) return;
   const opts = thisCommand.opts();
   await setup({
     cwd: process.cwd(),

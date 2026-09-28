@@ -69,6 +69,15 @@ export const FEATURE_FLAGS = {
     default: true,
     description: "Expose allowlisted CodeShell tools to an external Agent Runtime",
   },
+  /**
+   * Optimization Lab (docs/todo/optimization-lab-mvp.md). Default OFF while the
+   * experimental capability is being evaluated. Desktop loads its module only
+   * when this flag is enabled.
+   */
+  optimization_lab: {
+    default: false,
+    description: "Load the experimental Optimization Lab module in Desktop",
+  },
 } as const;
 
 export type FeatureFlagName = keyof typeof FEATURE_FLAGS;

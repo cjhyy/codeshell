@@ -370,9 +370,23 @@ button.workspace-button:hover {
   padding: 0 20px;
   border-bottom: 1px solid var(--subtle);
 }
+.topbar-context {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.topbar-project {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .topbar-title {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

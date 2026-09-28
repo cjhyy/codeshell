@@ -121,6 +121,26 @@ describe("McpOAuthService", () => {
     expect(changed).toBe(1);
   });
 
+  test("remote Link grants cannot be resolved through the generic MCP token path", async () => {
+    const { service, store } = makeService({});
+    store.save("user", {
+      id: "remote-github",
+      type: "oauth",
+      label: "Remote Link",
+      secret: JSON.stringify({
+        accessToken: "downstream-only",
+        refreshToken: "rotating",
+        expiresAt: "2099-01-01T00:00:00.000Z",
+      }),
+      meta: {
+        linkExecutionBackend: "remote",
+        linkExecutionRuntime: "server",
+        agentExposable: false,
+      },
+    });
+    await expect(service.resolveAccessToken("remote-github")).rejects.toThrow("unavailable");
+  });
+
   test("singleflights refresh, rotates tokens and preserves an omitted refresh token", async () => {
     const now = Date.UTC(2026, 0, 1);
     let calls = 0;
@@ -733,11 +753,7 @@ describe("McpOAuthService", () => {
         return { accessToken: "new-access", tokenType: "Bearer" };
       },
     });
-    const saveCollision = (
-      id: string,
-      oauthProvider: string,
-      mcpServerUrl: string,
-    ): void => {
+    const saveCollision = (id: string, oauthProvider: string, mcpServerUrl: string): void => {
       store.save("user", {
         id,
         type: "oauth",
@@ -756,9 +772,9 @@ describe("McpOAuthService", () => {
         credentialId: "provider-collision",
       }),
     ).rejects.toThrow(/MCP_OAUTH_INVALID_REQUEST/);
-    await expect(
-      service.login({ source: "catalog", profileId: profile.id }),
-    ).rejects.toThrow(/MCP_OAUTH_INVALID_REQUEST/);
+    await expect(service.login({ source: "catalog", profileId: profile.id })).rejects.toThrow(
+      /MCP_OAUTH_INVALID_REQUEST/,
+    );
 
     expect(authorizeCalls).toBe(0);
     expect(parseOAuthCredentialSecret(store.resolve("provider-collision")!.secret!)).toMatchObject({
@@ -826,7 +842,10 @@ describe("McpOAuthService", () => {
     });
     await relogin;
     const requestSettledBeforeOldRefresh = await Promise.race([
-      requestDuringLogin.then(() => true, () => true),
+      requestDuringLogin.then(
+        () => true,
+        () => true,
+      ),
       new Promise<false>((resolve) => setTimeout(() => resolve(false), 0)),
     ]);
 

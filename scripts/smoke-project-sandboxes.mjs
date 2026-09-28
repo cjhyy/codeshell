@@ -1,7 +1,7 @@
 /**
  * Real Docker project integration check, driven by native Node and the built CLI.
  * Build the server and codeshell-project-runtime:local image before running:
- *   node scripts/smoke-project-sandboxes.mjs [image]
+ *   node scripts/smoke-project-sandboxes.mjs [image] [--download-panel /absolute/package/path]
  * CODESHELL_SMOKE_ROOT may point to a separate freshly built checkout.
  * Models run on loopback inside the containers with synthetic credentials. No
  * user model settings are loaded. Cleanup only touches this installation's labels.
@@ -27,11 +27,54 @@ import { fileURLToPath } from "node:url";
 const root = resolve(
   process.env.CODESHELL_SMOKE_ROOT ?? dirname(fileURLToPath(import.meta.url)) + "/..",
 );
-const entry = join(root, "packages/server/dist/bin/code-shell-serve.js");
+// Release verification can exercise a real npm installation instead of a workspace.
+const installation = process.env.CODESHELL_SMOKE_INSTALLATION;
+const serverRoot = installation
+  ? join(resolve(installation), "node_modules/@cjhyy/code-shell-server")
+  : join(root, "packages/server");
+const entry = join(serverRoot, "dist/bin/code-shell-serve.js");
+const containerCore = installation
+  ? "/opt/codeshell/node_modules/@cjhyy/code-shell-core/dist/index.js"
+  : "/opt/codeshell/packages/core/dist/index.js";
 const image = process.argv[2] ?? "codeshell-project-runtime:local";
+const seccompIndex = process.argv.indexOf("--runtime-seccomp-profile");
+const seccompProfile = seccompIndex < 0 ? undefined : process.argv[seccompIndex + 1];
+if (seccompIndex >= 0 && (!seccompProfile || !existsSync(seccompProfile)))
+  throw new Error("Pass an existing administrator seccomp profile");
+const candidatePanelsIndex = process.argv.indexOf("--candidate-panels");
+const candidatePanels =
+  candidatePanelsIndex >= 0 ? process.argv[candidatePanelsIndex + 1] : undefined;
+if (candidatePanelsIndex >= 0 && !candidatePanels)
+  throw new Error("Pass the staged candidate Panel root");
+// Focus an individual business UI while retaining real package lifecycle checks.
+// Release candidates omit this option and always run all business checks.
+const businessIndex = process.argv.indexOf("--candidate-business");
+const candidateBusiness = businessIndex < 0 ? "all" : process.argv[businessIndex + 1];
+if (
+  !["all", "packages", "job-hunt", "design", "video", "quant"].includes(candidateBusiness) ||
+  (businessIndex >= 0 && !candidatePanels)
+)
+  throw new Error(
+    "--candidate-business requires staged Panels and all, packages, job-hunt, design, video or quant",
+  );
+const speechIndex = process.argv.indexOf("--speech-bundle");
+const speechBundle = speechIndex < 0 ? undefined : process.argv[speechIndex + 1];
+if (speechIndex >= 0 && (!speechBundle || !candidatePanels))
+  throw new Error("--speech-bundle requires a bundle path and staged candidate Panels");
+const { loadSpeechFixture, installSpeechFixture } =
+  await import("./smoke-cloud-speech-fixture.mjs");
+const speechFixture = speechBundle ? await loadSpeechFixture(speechBundle) : undefined;
+const downloadPanelIndex = process.argv.indexOf("--download-panel");
+const downloadPanel = downloadPanelIndex >= 0 ? process.argv[downloadPanelIndex + 1] : undefined;
+if (downloadPanelIndex >= 0 && !downloadPanel) throw new Error("Pass the Download package path");
+const downloadFixtureIndex = process.argv.indexOf("--download-fixture");
+const downloadFixture =
+  downloadFixtureIndex < 0 ? undefined : process.argv[downloadFixtureIndex + 1];
+if (downloadFixtureIndex >= 0 && (!downloadFixture || (!candidatePanels && !downloadPanel)))
+  throw new Error("--download-fixture requires a fixture path and a Download package");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
-const { WebSocket } = createRequire(join(root, "packages/server/package.json"))("ws");
+const { WebSocket } = createRequire(join(serverRoot, "package.json"))("ws");
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-project-smoke-")));
 const dataDir = join(scratch, "data");
 const isolatedHome = join(scratch, "home");
@@ -182,12 +225,61 @@ async function connect(projectId) {
 }
 
 // Serialized into the container. Its only credential and endpoint are synthetic.
-async function fixtureModel() {
+async function fixtureModel(realSpeech) {
   const { createServer } = await import("node:http");
   const { appendFileSync, writeFileSync } = await import("node:fs");
   const assert = (await import("node:assert/strict")).default;
   const server = createServer((req, res) => {
     void (async () => {
+      if (req.url === "/v1/audio/transcriptions") {
+        assert.equal(req.headers.authorization, "Bearer audio-smoke-only");
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        const form = await new Request("http://localhost/v1/audio/transcriptions", {
+          method: "POST",
+          headers: req.headers,
+          body: Buffer.concat(chunks),
+        }).formData();
+        assert.deepEqual([...form.keys()].sort(), ["file", "language", "model", "response_format"]);
+        const file = form.get("file");
+        const bytes = Buffer.from(await file.arrayBuffer());
+        assert.equal(file.type, "audio/webm");
+        assert.equal(bytes.subarray(0, 4).toString("hex"), "1a45dfa3");
+        assert.equal(form.get("language"), "zh");
+        assert.equal(form.get("response_format"), "json");
+        assert.ok(
+          [realSpeech ? "tiny.en" : "fixture-transcribe", "fixture-transcribe-slow"].includes(
+            form.get("model"),
+          ),
+        );
+        const { createHash } = await import("node:crypto");
+        appendFileSync(
+          "/workspace/audio-requests.jsonl",
+          JSON.stringify({
+            model: form.get("model"),
+            bytes: bytes.length,
+            assetId: `asset-${createHash("sha256").update(bytes).digest("hex")}`,
+          }) + "\n",
+        );
+        if (form.get("model") === "fixture-transcribe-slow") return;
+        let text = "这是受控服务返回的面试转写，用于验证保存和恢复。";
+        if (realSpeech) {
+          // Keep the synthetic credential at this validated gateway. Only the
+          // recorded bytes and model fields reach the local real provider.
+          const response = await fetch("http://127.0.0.1:18792/v1/audio/transcriptions", {
+            method: "POST",
+            body: form,
+            signal: AbortSignal.timeout(90000),
+          });
+          assert.equal(response.status, 200);
+          text = (await response.json()).text?.trim();
+          assert.match(text.toLowerCase(), /ask not/);
+          assert.match(text.toLowerCase(), /country/);
+        }
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ text }));
+        return;
+      }
       assert.equal(req.url, "/v1/chat/completions");
       assert.equal(req.headers.authorization, "Bearer project-smoke-only");
       const chunks = [];
@@ -267,12 +359,13 @@ async function fixtureModel() {
 }
 
 async function installFixture(container) {
-  const modelSource = `(${fixtureModel.toString()})().catch(error => { console.error(error); process.exit(1); });`;
+  if (speechFixture) await installSpeechFixture(docker, container, speechFixture);
+  const modelSource = `(${fixtureModel.toString()})(${!!speechFixture}).catch(error => { console.error(error); process.exit(1); });`;
   await docker(["exec", "-i", container, "node", "--input-type=module"], {
     input: `
     import { mkdirSync, writeFileSync, openSync } from "node:fs";
     import { spawn } from "node:child_process";
-    import { previewLocalPanelApp, installReviewedLocalPanelApp } from "/opt/codeshell/packages/core/dist/index.js";
+    import { previewLocalPanelApp, installReviewedLocalPanelApp } from ${JSON.stringify(containerCore)};
     const source = "/tmp/project-smoke-panel";
     for (const path of [source + "/.codeshell-panel", source + "/app", source + "/app/tools", "/workspace/.code-shell"])
       mkdirSync(path, { recursive: true });
@@ -289,8 +382,15 @@ async function installFixture(container) {
     const review = await previewLocalPanelApp({ kind: "dir", path: source });
     await installReviewedLocalPanelApp({ kind: "dir", path: source }, review.reviewToken, new Date().toISOString());
     writeFileSync("/workspace/.code-shell/settings.local.json", JSON.stringify({
-      credentials: [{ id: "fixture-key", catalogId: "openai", apiKey: "project-smoke-only", baseUrl: "http://127.0.0.1:18791/v1" }],
-      modelConnections: [{ id: "project-fixture", catalogId: "openai", tag: "text", model: "gpt-4o-mini", credentialId: "fixture-key" }],
+      credentials: [
+        { id: "fixture-key", catalogId: "openai", apiKey: "project-smoke-only", baseUrl: "http://127.0.0.1:18791/v1" },
+        { id: "audio-fixture-key", catalogId: "openai-transcribe", apiKey: "audio-smoke-only", baseUrl: "http://127.0.0.1:18791/v1" },
+      ],
+      modelConnections: [
+        { id: "project-fixture", catalogId: "openai", tag: "text", model: "gpt-4o-mini", credentialId: "fixture-key" },
+        { id: "audio-fixture", catalogId: "openai-transcribe", tag: "audio", model: ${JSON.stringify(speechFixture ? "tiny.en" : "fixture-transcribe")}, credentialId: "audio-fixture-key" },
+        { id: "audio-fixture-slow", catalogId: "openai-transcribe", tag: "audio", model: "fixture-transcribe-slow", credentialId: "audio-fixture-key" },
+      ],
       defaults: { text: "project-fixture" },
       permissions: { defaultMode: "default", rules: [{ tool: "Write", decision: "ask" }] },
       autoUpdates: false,
@@ -441,6 +541,7 @@ try {
       "docker",
       "--runtime-image",
       image,
+      ...(seccompProfile ? ["--runtime-seccomp-profile", resolve(seccompProfile)] : []),
       "--host",
       "127.0.0.1",
       "--port",
@@ -489,6 +590,25 @@ try {
   await start(b.id);
   const containerA = `codeshell-${installationId}-${a.id}`;
   const containerB = `codeshell-${installationId}-${b.id}`;
+  if (seccompProfile) {
+    const configured = JSON.parse(readFileSync(seccompProfile, "utf8"));
+    for (const container of [containerA, containerB]) {
+      const [inspection] = JSON.parse(await docker(["container", "inspect", container]));
+      const security = inspection.HostConfig.SecurityOpt;
+      const applied = security.find((value) => value.startsWith("seccomp="));
+      assert.ok(applied, "The explicit operator seccomp profile must reach Docker");
+      assert.deepEqual(JSON.parse(applied.slice(8)), configured);
+      assert.ok(security.includes("no-new-privileges:true"));
+      assert.equal(inspection.Config.User, "1000:1000");
+      assert.equal(inspection.HostConfig.ReadonlyRootfs, true);
+      assert.equal(inspection.HostConfig.Privileged, false);
+      assert.deepEqual(inspection.HostConfig.CapDrop, ["ALL"]);
+      assert.notEqual(inspection.HostConfig.IpcMode, "host");
+    }
+    console.log(
+      "PASS: explicit seccomp bytes applied to both non-root, read-only, capability-dropped project runtimes",
+    );
+  }
   for (const container of [containerA, containerB]) await installFixture(container);
   console.log(
     "PASS: native control CLI, administrator setup, two real Docker runtimes, isolated loopback models",
@@ -682,8 +802,180 @@ try {
     "PASS: second project has its own real worker and cannot read the first project's file or session",
   );
 
+  let verifyCandidateRestart;
+  let verifyJobHuntRestart;
+  let verifyDesignRestart;
+  let verifyVideoRestart;
+  let verifyQuantRestart;
+  if (candidatePanels) {
+    const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
+    verifyCandidateRestart = await verifyCandidatePanelLifecycle({
+      docker,
+      json,
+      request,
+      containerCore,
+      packageRoot: candidatePanels,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      panelHarness,
+      serverUrl,
+      password,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels && ["all", "job-hunt"].includes(candidateBusiness)) {
+    const { verifyCloudJobHuntRecovery } = await import("./smoke-cloud-job-hunt-recovery.mjs");
+    verifyJobHuntRestart = await verifyCloudJobHuntRecovery({
+      speechFixture,
+      docker,
+      request,
+      serverUrl,
+      password,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      scratch,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels && ["all", "design"].includes(candidateBusiness)) {
+    const { verifyCloudDesignRecovery } = await import("./smoke-cloud-design-recovery.mjs");
+    verifyDesignRestart = await verifyCloudDesignRecovery({
+      docker,
+      request,
+      serverUrl,
+      password,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      candidatePanels,
+      scratch,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels && ["all", "video"].includes(candidateBusiness)) {
+    const { verifyCloudVideoRecovery } = await import("./smoke-cloud-video-recovery.mjs");
+    verifyVideoRestart = await verifyCloudVideoRecovery({
+      json,
+      request,
+      panelHarness,
+      serverUrl,
+      password,
+      projectA: a.id,
+      projectB: b.id,
+      scratch,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  if (candidatePanels && ["all", "quant"].includes(candidateBusiness)) {
+    const { verifyCloudQuantBacktest } = await import("./smoke-cloud-quant-backtest.mjs");
+    verifyQuantRestart = await verifyCloudQuantBacktest({
+      docker,
+      request,
+      serverUrl,
+      password,
+      containerA,
+      containerB,
+      projectA: a.id,
+      projectB: b.id,
+      candidatePanels,
+      evidenceDir: join(root, "..", "evidence"),
+    });
+  }
+  let verifyDownloadRestart;
+  if (downloadPanel || (downloadFixture && candidateBusiness === "all")) {
+    const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
+    verifyDownloadRestart = await verifyCloudDownload({
+      docker,
+      json,
+      request,
+      serverUrl,
+      projectId: a.id,
+      otherProjectId: b.id,
+      container: containerA,
+      packagePath: downloadPanel,
+      containerCore,
+      alreadyInstalled: !!candidatePanels,
+      fixturePath: downloadFixture,
+      evidenceDir: join(root, "..", "evidence"),
+      scratch,
+      password,
+    });
+  }
+  const [beforeRecovery] = JSON.parse(await docker(["container", "inspect", containerA]));
+  assert.equal(beforeRecovery.Config.Labels[label], installationId);
+  const workspaceMount = beforeRecovery.Mounts.find((mount) => mount.Destination === "/workspace");
+  assert.equal(workspaceMount?.Type, "volume");
+  const [workspaceVolume] = JSON.parse(await docker(["volume", "inspect", workspaceMount.Name]));
+  assert.equal(workspaceVolume.Labels[label], installationId);
   await json(`/api/v1/projects/${a.id}/stop`, { method: "POST", body: {} });
   await waitUntil(() => rpcA.ws.readyState === WebSocket.CLOSED, "project stop closes its socket");
+  assert.equal(
+    (await docker(["ps", "-q", "--filter", `volume=${workspaceMount.Name}`])).trim(),
+    "",
+  );
+  // Exercise the delivered administrator command against the actual stopped
+  // project's volume, at its original canonical path, then restart that project.
+  const recoveryEntry = installation
+    ? "/opt/codeshell/node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js"
+    : "/opt/codeshell/packages/server/dist/bin/code-shell-settings-recovery.js";
+  await docker(
+    [
+      "run",
+      "--rm",
+      "-i",
+      "--network",
+      "none",
+      "--read-only",
+      "--no-healthcheck",
+      "--label",
+      `${label}=${installationId}`,
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+      "--mount",
+      `type=volume,source=${workspaceMount.Name},target=/workspace`,
+      "--entrypoint",
+      "node",
+      image,
+      "--input-type=module",
+    ],
+    {
+      input: `
+    import assert from "node:assert/strict";
+    import { execFileSync } from "node:child_process";
+    import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+    const file = "/workspace/.code-shell/settings.json";
+    const original = existsSync(file) ? readFileSync(file) : null;
+    const temporary = mkdtempSync("/tmp/settings-recovery-");
+    const candidate = temporary + "/reviewed.json";
+    const call = (args) => JSON.parse(execFileSync(process.execPath,
+      [${JSON.stringify(recoveryEntry)}, ...args, "--project", "/workspace"],
+      { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] }));
+    try {
+      const reviewed = { ...(original ? JSON.parse(original.toString("utf8")) : {}),
+        recoveryIntegrationProbe: true };
+      writeFileSync(candidate, JSON.stringify(reviewed), { mode: 0o600 });
+      const inspection = call(["inspect", "--from", candidate]);
+      assert.ok(["valid", "missing"].includes(inspection.status));
+      const repaired = call(["repair", "--from", candidate,
+        "--expected-revision", inspection.revision,
+        "--candidate-sha256", inspection.candidate.sha256]);
+      assert.equal(repaired.status, "valid");
+      assert.equal(JSON.parse(readFileSync(file, "utf8")).recoveryIntegrationProbe, true);
+      const restored = call(["restore", "--backup-id", repaired.backupId,
+        "--expected-revision", repaired.revision]);
+      assert.equal(restored.status, inspection.status);
+      if (original === null) assert.equal(existsSync(file), false);
+      else assert.equal(readFileSync(file).equals(original), true);
+      console.log("PASS: offline recovery repaired and exactly restored the stopped project volume");
+    } finally { rmSync(temporary, { recursive: true, force: true }); }
+  `,
+    },
+  );
   const restarted = await start(a.id);
   assert.equal(restarted.generation, runningA.generation + 1);
   assert.equal(
@@ -709,6 +1001,12 @@ try {
   console.log(
     "PASS: stop/restart preserves project files and conversations, changes generation, and rejects old panel grants",
   );
+  await verifyDownloadRestart?.();
+  await verifyCandidateRestart?.();
+  await verifyJobHuntRestart?.();
+  await verifyDesignRestart?.();
+  await verifyVideoRestart?.();
+  await verifyQuantRestart?.();
   success = true;
   console.log(
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",
@@ -752,6 +1050,16 @@ try {
       `,
       ]).catch(String);
       writeFileSync(join(scratch, `${id}-fixture.log`), diagnostics);
+      if (speechFixture) {
+        const evidenceDir = join(root, "..", "evidence");
+        mkdirSync(evidenceDir, { recursive: true });
+        writeFileSync(
+          join(evidenceDir, `cloud-job-hunt-speech-error-${id}.log`),
+          await docker(["exec", id, "cat", "/tmp/codeshell-real-speech/provider.log"]).catch(
+            String,
+          ),
+        );
+      }
     }
   }
   await stopControl().catch((error) => {

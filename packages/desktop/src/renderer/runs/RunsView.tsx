@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from "react";
-import { Activity, FileClock, Loader2, RefreshCw } from "lucide-react";
+import { Activity, Clock3, Coins, FileClock, Loader2, RefreshCw, Wrench } from "lucide-react";
 import type { RunSummary, RunDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,6 +87,31 @@ function formatTime(timestamp: number, lang: string, compact = false): string {
         }
       : undefined,
   );
+}
+
+function formatDuration(durationMs: number | null): string {
+  if (durationMs === null || !Number.isFinite(durationMs)) return "—";
+  if (durationMs < 1_000) return `${Math.round(durationMs)} ms`;
+  const seconds = durationMs / 1_000;
+  if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)} s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ${Math.round(seconds % 60)}s`;
+}
+
+function traceJson(value: unknown): string {
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function eventDetailTitle(event: RunDetail["events"][number], t: TFunction): string {
+  const base = EVENT_LABELS[event.type] ? t(EVENT_LABELS[event.type]) : event.type;
+  const toolName = typeof event.data.toolName === "string" ? event.data.toolName : null;
+  const role = typeof event.data.role === "string" ? event.data.role : null;
+  return toolName ? `${base} · ${toolName}` : role ? `${base} · ${role}` : base;
 }
 
 export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}) {
@@ -412,13 +437,29 @@ function Section({
   );
 }
 
+function TracePayload({ value }: { value: unknown }) {
+  return (
+    <pre className="max-h-96 min-w-0 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/50 p-3 font-mono text-[11px] leading-relaxed text-foreground">
+      {traceJson(value)}
+    </pre>
+  );
+}
+
 function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; lang: string }) {
+  const toolUses = detail.events.filter((event) => event.type === "tool_use");
+  const toolResults = new Map(
+    detail.events
+      .filter((event) => event.type === "tool_result")
+      .map((event) => [String(event.data.toolCallId ?? ""), event] as const),
+  );
   const metadata = [
     { label: t("auto.runs.runId"), value: detail.runId },
     { label: t("auto.runs.updatedAt"), value: formatTime(detail.updatedAt, lang) },
     { label: t("auto.runs.cwd"), value: detail.cwd },
     ...(detail.preset ? [{ label: t("auto.runs.preset"), value: detail.preset }] : []),
     ...(detail.sessionId ? [{ label: t("auto.runs.sessionId"), value: detail.sessionId }] : []),
+    ...(detail.model ? [{ label: t("auto.runs.model"), value: detail.model }] : []),
+    ...(detail.provider ? [{ label: t("auto.runs.provider"), value: detail.provider }] : []),
     { label: t("auto.runs.attempts"), value: String(detail.attemptCount) },
   ];
   return (
@@ -440,6 +481,32 @@ function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; l
           </div>
         ))}
       </dl>
+      <div className="grid min-w-0 grid-cols-2 gap-2 @min-[520px]/run-detail:grid-cols-4">
+        <TraceMetric
+          icon={<Clock3 size={15} aria-hidden />}
+          label={t("auto.runs.duration")}
+          value={formatDuration(detail.durationMs)}
+        />
+        <TraceMetric
+          icon={<Coins size={15} aria-hidden />}
+          label={t("auto.runs.totalTokens")}
+          value={detail.usage ? detail.usage.totalTokens.toLocaleString() : "—"}
+        />
+        <TraceMetric
+          icon={<Coins size={15} aria-hidden />}
+          label={t("auto.runs.inputOutputTokens")}
+          value={
+            detail.usage
+              ? `${detail.usage.promptTokens.toLocaleString()} / ${detail.usage.completionTokens.toLocaleString()}`
+              : "—"
+          }
+        />
+        <TraceMetric
+          icon={<Wrench size={15} aria-hidden />}
+          label={t("auto.runs.toolCalls")}
+          value={String(toolUses.length)}
+        />
+      </div>
       {detail.error && (
         <div
           role="alert"
@@ -455,6 +522,59 @@ function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; l
           </p>
         </Section>
       )}
+      <Section title={t("auto.runs.prompt")}>
+        {detail.prompt ? (
+          <TracePayload value={detail.prompt} />
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("auto.runs.promptUnavailable")}</p>
+        )}
+      </Section>
+      <Section title={t("auto.runs.tools")} count={toolUses.length}>
+        {toolUses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("auto.runs.noToolCalls")}</p>
+        ) : (
+          <ol className="space-y-2">
+            {toolUses.map((event) => {
+              const callId = String(event.data.toolCallId ?? "");
+              const result = toolResults.get(callId);
+              return (
+                <li key={event.eventId} className="min-w-0 rounded-xl border border-border/70">
+                  <details>
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm marker:content-none">
+                      <span className="min-w-0 break-all font-medium">
+                        {String(event.data.toolName ?? t("auto.runs.unknownTool"))}
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                        {result?.data.error
+                          ? t("auto.runs.toolError")
+                          : result
+                            ? t("auto.runs.toolDone")
+                            : t("auto.runs.toolNoResult")}
+                      </span>
+                    </summary>
+                    <div className="space-y-3 border-t border-border/60 p-3">
+                      <TraceField label={t("auto.runs.toolInput")} value={event.data.args ?? {}} />
+                      {result && (
+                        <TraceField
+                          label={
+                            result.data.error ? t("auto.runs.toolError") : t("auto.runs.toolOutput")
+                          }
+                          value={
+                            result.data.error ??
+                            result.data.result ??
+                            result.data.contentBlocks ??
+                            null
+                          }
+                        />
+                      )}
+                    </div>
+                  </details>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </Section>
       <Section title={t("auto.runs.checkpoints")} count={detail.checkpoints.length}>
         {detail.checkpoints.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
@@ -503,26 +623,58 @@ function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; l
         {detail.events.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
         ) : (
-          <ol className="divide-y divide-border/60">
-            {detail.events
-              .slice()
-              .reverse()
-              .map((event) => (
-                <li
-                  key={event.eventId}
-                  className="flex min-w-0 flex-wrap items-center justify-between gap-2 py-2 text-xs"
-                >
-                  <span className="min-w-0 break-all" title={event.type}>
-                    {EVENT_LABELS[event.type] ? t(EVENT_LABELS[event.type]) : event.type}
-                  </span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatTime(event.timestamp, lang)}
-                  </span>
-                </li>
-              ))}
+          <ol className="space-y-2">
+            {detail.events.map((event) => (
+              <li key={event.eventId} className="min-w-0 rounded-xl border border-border/70">
+                <details>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs marker:content-none">
+                    <span className="min-w-0 break-all" title={event.type}>
+                      {eventDetailTitle(event, t)}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      {formatTime(event.timestamp, lang)}
+                    </span>
+                  </summary>
+                  <div className="border-t border-border/60 p-3">
+                    <TracePayload value={event.data} />
+                  </div>
+                </details>
+              </li>
+            ))}
           </ol>
         )}
       </Section>
+    </div>
+  );
+}
+
+function TraceMetric({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-border/70 bg-card px-3 py-2.5">
+      <span className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        {icon}
+        {label}
+      </span>
+      <strong className="block truncate text-sm font-semibold tabular-nums" title={value}>
+        {value}
+      </strong>
+    </div>
+  );
+}
+
+function TraceField({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className="min-w-0">
+      <h4 className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</h4>
+      <TracePayload value={value} />
     </div>
   );
 }

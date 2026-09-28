@@ -150,6 +150,21 @@ export class ProjectRegistry {
     this.controllerLock.release();
   }
 
+  /** Offline restore only: new Docker namespace, same project credentials for restored data volumes. */
+  renewInstallationForRestore(): void {
+    if (this.all().some((project) => project.status !== "stopped"))
+      throw new Error("Stop all projects before restoring an installation.");
+    const next = structuredClone(this.data);
+    next.installationId = randomUUID();
+    for (const project of next.projects) {
+      if (project.generation > 0) project.generation += 1;
+      project.updatedAt = Math.max(project.updatedAt, this.now());
+      delete project.error;
+    }
+    this.write(next);
+    this.data = next;
+  }
+
   get installationId(): string {
     this.assertStorage();
     return this.data.installationId;

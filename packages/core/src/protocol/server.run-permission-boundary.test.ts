@@ -113,3 +113,91 @@ describe("queued run permission context", () => {
     ]);
   });
 });
+
+it("keeps queued sandbox/background policy local to its turn and follow-ups", async () => {
+  const entered = deferred(),
+    release = deferred();
+  const observed: any[] = [];
+  const engine = {
+    isHeadless: () => true,
+    async run(task: string, opts: any) {
+      if (task === "first") {
+        entered.resolve();
+        await release.promise;
+      }
+      observed.push({
+        task,
+        sandboxMode: opts.sandboxMode,
+        allowBackgroundShells: opts.allowBackgroundShells,
+      });
+      return result(task);
+    },
+  } as unknown as Engine;
+  const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
+  const transport = makeTransport();
+  new AgentServer({ chatManager: manager, transport: transport.transport });
+  transport.deliver({
+    jsonrpc: "2.0",
+    id: 11,
+    method: "agent/run",
+    params: {
+      sessionId: "run-policy",
+      task: "first",
+      sandboxMode: "auto",
+      allowBackgroundShells: false,
+    },
+  });
+  await entered.promise;
+  expect(manager.get("run-policy")!.captureFollowUpOptions()).toMatchObject({
+    sandboxMode: "auto",
+    allowBackgroundShells: false,
+  });
+  transport.deliver({
+    jsonrpc: "2.0",
+    id: 12,
+    method: "agent/run",
+    params: { sessionId: "run-policy", task: "next" },
+  });
+  expect(observed).toEqual([]);
+  release.resolve();
+  const deadline = Date.now() + 3000;
+  while (!transport.sent.some((message) => message.id === 12)) {
+    if (Date.now() > deadline) throw Error("queued run did not settle");
+    await Bun.sleep(1);
+  }
+  expect(observed).toEqual([
+    { task: "first", sandboxMode: "auto", allowBackgroundShells: false },
+    { task: "next", sandboxMode: undefined, allowBackgroundShells: undefined },
+  ]);
+});
+
+it("rejects malformed execution policy before creating a Session", async () => {
+  let creates = 0;
+  const manager = new ChatSessionManager({
+    runtime: {} as never,
+    engineFactory: () => {
+      creates++;
+      throw Error("must not create");
+    },
+  });
+  const transport = makeTransport();
+  new AgentServer({ chatManager: manager, transport: transport.transport });
+  let id = 20;
+  for (const policy of [
+    { sandboxMode: "invalid" },
+    { sandboxMode: null },
+    { allowBackgroundShells: "false" },
+  ]) {
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: ++id,
+      method: "agent/run",
+      params: { sessionId: "bad-policy", task: "bad", ...policy },
+    });
+  }
+  await Bun.sleep(10);
+  expect(creates).toBe(0);
+  expect(
+    transport.sent.filter((message) => message.error).map((message) => message.error.code),
+  ).toEqual([-32602, -32602, -32602]);
+});

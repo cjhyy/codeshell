@@ -80,6 +80,7 @@ const { App } = await import("./App");
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 const originalLocalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
 let root: Root | null = null;
+let restoreWindowProperties: (() => void) | undefined;
 
 function installStorage(): { storage: Storage; exhaustQuota: () => void } {
   const data = new Map<string, string>();
@@ -154,6 +155,8 @@ afterEach(async () => {
   sidebarProps = null;
   visibleSessionIds = [];
   resetExternalRuntimeSessions();
+  restoreWindowProperties?.();
+  restoreWindowProperties = undefined;
   for (const [key, descriptor] of [
     ["window", originalWindow],
     ["localStorage", originalLocalStorage],
@@ -201,6 +204,19 @@ test.each([
   ],
 ] as const)("%s", async (_label, emitSessionStarted, quotaFull, fromDisk, persistenceMode) => {
   ensureMiniDom();
+  // The shared MiniDOM may already exist. Restoring the global window descriptor
+  // alone would leave our sessionCatalog bridge on that same object and redirect
+  // later legacy-storage tests through this test's in-memory Main implementation.
+  const testWindow = window;
+  const windowProperties = ["codeshell", "localStorage", "innerWidth"].map(
+    (key) => [key, Object.getOwnPropertyDescriptor(testWindow, key)] as const,
+  );
+  restoreWindowProperties = () => {
+    for (const [key, descriptor] of windowProperties) {
+      if (descriptor) Object.defineProperty(testWindow, key, descriptor);
+      else delete (testWindow as unknown as Record<string, unknown>)[key];
+    }
+  };
   const { storage, exhaustQuota } = installStorage();
   const fillTranscriptCache = () => {
     storage.setItem(

@@ -38,6 +38,71 @@ export function panelAppStorageKey(params: unknown): string {
   return key;
 }
 
+export interface PanelAppStorageSnapshot {
+  exists: boolean;
+  value: unknown;
+  /** Content revision, not an edit counter. null means the key is absent. */
+  revision: string | null;
+}
+
+export interface PanelAppStorageChange {
+  key: string;
+  expectedRevision: string | null;
+  remove: boolean;
+  value?: unknown;
+}
+
+/** Snapshot hashes include the key; legacy JSON files require no migration. */
+export function panelAppStorageSnapshot(
+  storage: PanelAppStorage,
+  key: string,
+): PanelAppStorageSnapshot {
+  const exists = Object.hasOwn(storage, key);
+  const value = exists ? storage[key] : null;
+  return {
+    exists,
+    value,
+    revision: exists
+      ? `sha256:${createHash("sha256")
+          .update(JSON.stringify([key, value]))
+          .digest("hex")}`
+      : null,
+  };
+}
+
+/** Validate and copy before any async work, so a caller cannot change a pending write. */
+export function panelAppStorageChange(params: unknown): PanelAppStorageChange {
+  const key = panelAppStorageKey(params);
+  const input = params as Record<string, unknown>;
+  const expectedRevision = input.expectedRevision;
+  if (
+    expectedRevision !== null &&
+    (typeof expectedRevision !== "string" || !/^sha256:[0-9a-f]{64}$/.test(expectedRevision))
+  )
+    throw new Error("storage.compareAndSet requires expectedRevision (sha256 or null)");
+  if (input.remove !== undefined && typeof input.remove !== "boolean")
+    throw new Error("storage remove must be a boolean");
+  const remove = input.remove === true;
+  if (remove && Object.hasOwn(input, "value"))
+    throw new Error("storage removal cannot also include a value");
+  const encoded = remove ? undefined : JSON.stringify(input.value);
+  if (!remove && encoded === undefined)
+    throw new Error("Panel App storage only accepts JSON values");
+  return { key, expectedRevision, remove, ...(remove ? {} : { value: JSON.parse(encoded!) }) };
+}
+
+/** Call only under the shared per-file lock; conflict never changes the store. */
+export function applyPanelAppStorageChange(
+  storage: PanelAppStorage,
+  change: PanelAppStorageChange,
+) {
+  const current = panelAppStorageSnapshot(storage, change.key);
+  if (current.revision !== change.expectedRevision) return { updated: false, snapshot: current };
+  if (change.remove) delete storage[change.key];
+  else storage[change.key] = change.value;
+  return { updated: true, snapshot: panelAppStorageSnapshot(storage, change.key) };
+}
+
 function emptyStorage(): PanelAppStorage {
   // A null prototype is important here: valid app keys include names such as
   // `__proto__`, `constructor`, and `toString`. They must remain data keys and

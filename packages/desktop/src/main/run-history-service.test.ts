@@ -39,6 +39,8 @@ describe("Session execution history", () => {
       JSON.stringify({
         sessionId,
         cwd: "/workspace",
+        model: "trace-model",
+        provider: "trace-provider",
         status: "active",
         origin: "desktop",
         kind: "work",
@@ -85,6 +87,11 @@ describe("Session execution history", () => {
     const detail = await getRunHistory("session:s-1:receipt-1", options);
     expect(detail).toMatchObject({
       objective: "visible objective",
+      prompt: "model prompt",
+      model: "trace-model",
+      provider: "trace-provider",
+      durationMs: 10,
+      usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
       startedAt: 10,
       finishedAt: 20,
       summary: "actual answer",
@@ -94,6 +101,10 @@ describe("Session execution history", () => {
       "tool-1",
       "receipt-1",
     ]);
+    expect(detail?.events[1]?.data).toEqual({
+      toolName: "Read",
+      args: { file: "/workspace/file" },
+    });
     expect(detail?.metadata).toMatchObject({
       historySource: "session_receipt",
       terminalReason: "completed",

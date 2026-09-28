@@ -780,9 +780,9 @@ type StreamEventPayload =
       cacheReadTokens?: number;
       cacheCreationTokens?: number;
       /**
-       * Prompt-cache metrics for the current turn only. These are reset at the
-       * start of each turn-loop iteration and sum every LLM response in that
-       * turn, including max-token continuations.
+       * Accumulated prompt-cache metrics for the current user submission/run.
+       * These include all model/tool steps and max-token continuations, and
+       * reset for the next submission rather than each model response.
        */
       singleTurnPromptTokens?: number;
       singleTurnCacheReadTokens?: number;

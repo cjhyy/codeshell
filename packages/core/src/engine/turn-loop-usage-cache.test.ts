@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
-import type { LLMResponse, Message, StreamEvent, TokenUsage } from "../types.js";
+import type { LLMResponse, Message, StreamEvent, TokenUsage, ToolCall } from "../types.js";
 import { estimateTokens } from "../context/compaction.js";
 import { ContextManager } from "../context/manager.js";
 
@@ -88,6 +88,9 @@ function makeDeps(
     },
     isConcurrencySafe() {
       return false;
+    },
+    async executeSingle(call: ToolCall) {
+      return { id: call.id, toolName: call.toolName, result: "ok" };
     },
   } as unknown as TurnLoopDeps["toolExecutor"];
 
@@ -447,5 +450,126 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(finalUpdate.singleTurnCacheReadTokens).toBe(900);
     expect(finalUpdate.singleTurnCacheCreationTokens).toBe(50);
     expect(finalUpdate.singleTurnCacheHitRate).toBeCloseTo(0.75, 5);
+  });
+
+  it("accumulates tool steps and continuations across the whole user run", async () => {
+    const events = await runCapturingEvents([
+      {
+        ...respWithCache(),
+        toolCalls: [{ id: "read-1", toolName: "Read", args: {} }],
+        stopReason: "tool_use",
+      },
+      { ...respWithCache(), text: "part one", stopReason: "max_tokens" },
+      {
+        ...respWithCache(),
+        text: "part two",
+        usage: {
+          promptTokens: 200,
+          completionTokens: 10,
+          totalTokens: 210,
+          cacheReadTokens: 100,
+          cacheCreationTokens: 0,
+        },
+      },
+    ]);
+    const updates = events.filter(
+      (event): event is Extract<StreamEvent, { type: "usage_update" }> =>
+        event.type === "usage_update" && event.singleTurnPromptTokens !== undefined,
+    );
+    expect(updates.map((event) => event.singleTurnPromptTokens)).toEqual([1000, 2000, 2200]);
+    expect(updates.at(-1)).toMatchObject({
+      promptTokens: 200,
+      singleTurnPromptTokens: 2200,
+      singleTurnCacheReadTokens: 1700,
+      singleTurnCacheCreationTokens: 100,
+    });
+    expect(updates.at(-1)!.singleTurnCacheHitRate).toBeCloseTo(1700 / 2200, 5);
+  });
+
+  it("emits accumulated usage for uncached continuations with unchanged prompt size", async () => {
+    const events = await runCapturingEvents([
+      { ...respNoCache(), text: "part one", stopReason: "max_tokens" },
+      { ...respNoCache(), text: "part two" },
+    ]);
+    const updates = events.filter(
+      (event): event is Extract<StreamEvent, { type: "usage_update" }> =>
+        event.type === "usage_update" && event.singleTurnPromptTokens !== undefined,
+    );
+    expect(updates.map((event) => event.singleTurnPromptTokens)).toEqual([1000, 2000]);
+    expect(updates.at(-1)).toMatchObject({
+      promptTokens: 1000,
+      singleTurnCacheReadTokens: 0,
+      singleTurnCacheCreationTokens: 0,
+    });
+  });
+
+  it("retains usage when the same user run re-enters its loop for background completion", async () => {
+    const { deps } = makeDeps([respWithCache(), respWithCache()]);
+    const events: StreamEvent[] = [];
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => events.push(event),
+    });
+    const first = await loop.run([{ role: "user", content: "start" }]);
+    await loop.run([
+      ...first.messages,
+      { role: "user", content: "<system-reminder>Background work completed.</system-reminder>" },
+    ]);
+    const updates = events.filter(
+      (event): event is Extract<StreamEvent, { type: "usage_update" }> =>
+        event.type === "usage_update" && event.singleTurnPromptTokens !== undefined,
+    );
+    expect(updates.map((event) => event.singleTurnPromptTokens)).toEqual([1000, 2000]);
+  });
+
+  it("starts the next user run at zero while keeping session totals cumulative", async () => {
+    let cumulativePromptTokens = 0;
+    const { deps } = makeDeps([respWithCache()], (usage) => ({
+      cumulativePromptTokens: (cumulativePromptTokens += usage.promptTokens),
+      cumulativeCacheReadTokens: 0,
+      cumulativeCacheCreationTokens: 0,
+    }));
+    const events: StreamEvent[] = [];
+    const config: TurnLoopConfig = {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => events.push(event),
+    };
+    const first = await new TurnLoop(deps, config).run([{ role: "user", content: "first" }]);
+    await new TurnLoop(deps, config).run([...first.messages, { role: "user", content: "second" }]);
+    const updates = events.filter(
+      (event): event is Extract<StreamEvent, { type: "usage_update" }> =>
+        event.type === "usage_update" && event.singleTurnPromptTokens !== undefined,
+    );
+    expect(updates.map((event) => event.singleTurnPromptTokens)).toEqual([1000, 1000]);
+    expect(updates.map((event) => event.cumulativePromptTokens)).toEqual([1000, 2000]);
+  });
+
+  it("includes the final max-turn summary in the emitted user-run usage", async () => {
+    const { deps } = makeDeps([
+      {
+        ...respWithCache(),
+        toolCalls: [{ id: "read-1", toolName: "Read", args: {} }],
+        stopReason: "tool_use",
+      },
+      respWithCache(),
+    ]);
+    const events: StreamEvent[] = [];
+    const result = await new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => events.push(event),
+    }).run([{ role: "user", content: "start" }]);
+    const updates = events.filter(
+      (event): event is Extract<StreamEvent, { type: "usage_update" }> =>
+        event.type === "usage_update" && event.singleTurnPromptTokens !== undefined,
+    );
+    expect(result.reason).toBe("max_turns");
+    expect(updates.at(-1)).toMatchObject({
+      singleTurnPromptTokens: 2000,
+      singleTurnCacheReadTokens: 1600,
+      singleTurnCacheCreationTokens: 100,
+    });
   });
 });

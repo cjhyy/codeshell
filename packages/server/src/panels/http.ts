@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createPanelManagementHttp, type PanelManagementHttpOptions } from "./management-http.js";
+import type { PanelDirectoryAuthorizer } from "./directory-bookmarks.js";
+import type { SharedPanelToolHost } from "./shared-tool-jobs.js";
+import type { PanelAutomationHost } from "./automations.js";
 import { createPanelRuntime, panelWebCompatibility } from "./runtime.js";
 import { createPanelAgentTaskHost, type PanelAgentTaskHostOptions } from "./agent-task-host.js";
 
@@ -9,11 +12,20 @@ export function createPanelHttp(
     host: "hub" | "desktop";
     publicPathPrefix?: string;
     agentTaskOptions?: PanelAgentTaskHostOptions;
+    sharedToolJobs?: SharedPanelToolHost;
+    automations?: PanelAutomationHost;
+    authorizePanelDirectory?: PanelDirectoryAuthorizer;
   },
 ) {
+  // Embedded Desktop hosts opt in once their native coordinator and protocol
+  // implement the same selection. The current Desktop composition does so.
+  const projectPackages = options.projectPackages ?? options.host === "hub";
   const management = createPanelManagementHttp({
     ...options,
-    compatibility: options.compatibility ?? panelWebCompatibility,
+    projectPackages,
+    compatibility:
+      options.compatibility ??
+      ((app) => panelWebCompatibility(app, { automations: !!options.automations })),
     onChanged: async (id, kind) => {
       await runtime?.invalidate(id);
       await options.onChanged?.(id, kind);
@@ -21,6 +33,7 @@ export function createPanelHttp(
   });
   const runtime = createPanelRuntime({
     ...options,
+    projectPackages,
     snapshot: management.service.snapshot,
     createAgentTasks: (hooks) =>
       createPanelAgentTaskHost({ ...options.agentTaskOptions, ...hooks }),

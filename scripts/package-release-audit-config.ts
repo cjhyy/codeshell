@@ -112,6 +112,11 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     name: "@cjhyy/code-shell-desktop",
     publish: false,
   },
+  {
+    directory: "packages/optimization-lab",
+    name: "@cjhyy/code-shell-capability-optimization-lab",
+    publish: false,
+  },
 ];
 
 export const PUBLIC_RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = RELEASE_PACKAGES.filter(

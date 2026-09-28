@@ -12,6 +12,7 @@ import {
   type BrowserTab,
   type BrowserInspectOptions,
   type BrowserInspectResult,
+  type BrowserWaitCondition,
 } from "@cjhyy/code-shell-core";
 import {
   READ_PAGE_STATE_EXPRESSION,
@@ -25,6 +26,7 @@ import {
 import type { BrowserContext, ElementHandle, Page } from "playwright-core";
 import { collectPageNodes, readFrameText } from "../../browser-library/dom-observation.js";
 import { observeScrollProgress } from "../../browser-library/scroll-observation.js";
+import { browserWaitTimeout, pageWaitCondition } from "../../browser-library/wait-condition.js";
 import {
   createPlaywrightInspector,
   type BrowserInspector,
@@ -412,10 +414,29 @@ export class PlaywrightBrowserDriver implements BrowserBridge {
     }
   }
 
-  async waitForLoad(timeoutMs = DEFAULT_NAVIGATION_TIMEOUT_MS): Promise<BrowserResult> {
+  async waitForLoad(timeoutMs?: number, condition?: BrowserWaitCondition): Promise<BrowserResult> {
     try {
-      await this.page().waitForLoadState("load", { timeout: timeoutMs });
-      return { ok: true, code: "OK", documentId: this.documentId(this.page()) };
+      const page = this.page();
+      const ready = await page.waitForFunction(pageWaitCondition, condition, {
+        polling: 100,
+        timeout: browserWaitTimeout(timeoutMs),
+      });
+      try {
+        const value = await ready.jsonValue();
+        if (typeof value === "object" && value?.invalidSelector)
+          return { ok: false, code: "FAILED", detail: "invalid CSS selector for wait" };
+      } finally {
+        void ready.dispose().catch(() => undefined);
+      }
+      return {
+        ok: true,
+        code: "OK",
+        documentId: this.documentId(page),
+        detail:
+          condition?.selector || condition?.text
+            ? "Requested main-document condition met; take a fresh observation before acting"
+            : "DOM ready; dynamic content may still be loading",
+      };
     } catch (error) {
       return playwrightFailure(error);
     }
@@ -710,8 +731,9 @@ function playwrightFailure(error: unknown): BrowserResult {
   const stale = /strict mode|not attached|detached|resolved to \d+ elements/i.test(detail);
   return {
     ok: false,
-    code: stale ? "STALE_SNAPSHOT" : "FAILED",
-    retryable: stale || /timeout/i.test(detail),
+    code: stale ? "STALE_SNAPSHOT" : /timeout|timed out/i.test(detail) ? "TIMEOUT" : "FAILED",
+    // Timed-out writes may already have succeeded; observation is required.
+    retryable: stale,
     staleRef: stale || undefined,
     detail,
   };

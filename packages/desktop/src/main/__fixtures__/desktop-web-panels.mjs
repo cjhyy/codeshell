@@ -37,7 +37,14 @@ writeFileSync(
     icon: "panel",
     singleton: true,
     placement: "right-dock",
-    permissions: ["context.workspace", "storage", "workspace.read", "workspace.write"],
+    permissions: [
+      "context.workspace",
+      "context.session",
+      "automations.manage",
+      "storage",
+      "workspace.read",
+      "workspace.write",
+    ],
   }),
 );
 writeFileSync(
@@ -57,6 +64,34 @@ mock.module("electron", () => ({
 const panelsModule = await import(join(repository, "packages/server/src/index.panels.ts"));
 mock.module("@cjhyy/code-shell-server/panels", () => panelsModule);
 const { createDesktopWebService } = await import(join(desktopMain, "desktop-web-service.ts"));
+const { createDesktopPanelAutomationHost } = await import(
+  join(desktopMain, "panel-automation-host.ts")
+);
+const { CronScheduler, CronStore } = await import("@cjhyy/code-shell-core/internal");
+const scheduler = new CronScheduler(new CronStore(join(root, "cron.json")));
+scheduler.setExecutionEnabled(false);
+const automationHost = createDesktopPanelAutomationHost(
+  () => ({
+    requireRendererPath: async (cwd) => cwd,
+    isNoRepoCwd: () => false,
+    resolveExactRoot: () => undefined,
+    resolveProjectRootById: (projectId, rootId) => ({
+      projectId,
+      rootId,
+      cwd: projectId === "first" ? first : second,
+    }),
+    resolveSessionAuthority: async (sessionId) =>
+      sessionId === "session-first" || sessionId === "session-second"
+        ? {
+            sessionId,
+            cwd: sessionId === "session-first" ? first : second,
+            projectId: sessionId === "session-first" ? "first" : "second",
+            rootId: "main",
+          }
+        : undefined,
+  }),
+  () => scheduler,
+);
 const { SettingsManager, installReviewedLocalPanelApp, previewLocalPanelApp } =
   await import("@cjhyy/code-shell-core");
 const { TrustedDeviceStore } = await import("@cjhyy/code-shell-server/mobile-remote");
@@ -103,6 +138,17 @@ const bridge = {
 const allowed = new Set([first, second, forged]);
 const api = createDesktopWebService({
   devices,
+  automations: automationHost,
+  sharedToolJobs: {
+    bind: async () => {
+      throw new Error("This storage-only fixture must not bind native tasks");
+    },
+    activeCount: () => 0,
+    invalidate: async () => {},
+  },
+  authorizePanelDirectory: async () => {
+    throw new Error("Storage fixture cannot grant a directory");
+  },
   getBridge: () => bridge,
   resolveWorkspace: async (cwd) => (allowed.has(cwd ?? first) ? (cwd ?? first) : undefined),
   onSessionsChanged: () => {},
@@ -153,12 +199,12 @@ async function list(cwd) {
   assert.equal(response.status, 200);
   return (await response.json()).panels[0];
 }
-async function prepare(cwd) {
+async function prepare(cwd, sessionId = cwd === first ? "session-first" : "session-second") {
   const panel = await list(cwd);
   const response = await request("/api/v1/panels/runtime/prepare", {
     cwd,
     method: "POST",
-    body: { appId: panel.id, revision: panel.revision },
+    body: { appId: panel.id, revision: panel.revision, sessionId },
   });
   assert.equal(response.status, 200, await response.clone().text());
   return response.json();
@@ -179,6 +225,43 @@ try {
   assert.equal((await request("/api/v1/panels", { cwd: forged })).status, 403);
   const grantA = await prepare(first);
   const grantB = await prepare(second);
+  assert.ok(grantA.context.availableMethods.includes("automations.createUnique"));
+  assert.equal(
+    grantA.limitations.some((reason) => reason.includes("automations.manage")),
+    false,
+  );
+  const automationInput = {
+    name: "phone reminder",
+    schedule: "1h",
+    prompt: "fixture prompt",
+    key: "market.us",
+    timezone: "UTC",
+  };
+  const [jobA, replay] = await Promise.all([
+    call(first, grantA, "automations.createUnique", automationInput),
+    call(first, grantA, "automations.createUnique", automationInput),
+  ]);
+  assert.equal(jobA.id, replay.id);
+  assert.equal(scheduler.list().length, 1);
+  scheduler.pause(jobA.id);
+  assert.equal((await call(first, grantA, "automations.list", {})).automations[0].enabled, false);
+  await call(first, grantA, "automations.update", { id: jobA.id, prompt: "from phone" });
+  assert.equal(scheduler.get(jobA.id).prompt, "from phone");
+  assert.deepEqual((await call(second, grantB, "automations.list", {})).automations, []);
+  const forgedSession = await prepare(first, "session-second");
+  for (const [grant, cwd, method, params] of [
+    [forgedSession, first, "automations.list", {}],
+    [grantB, second, "automations.delete", { id: jobA.id }],
+    [grantA, first, "automations.createUnique", { ...automationInput, cwd: second }],
+  ]) {
+    const denied = await request(`/api/v1/panels/runtime/${grant.instanceId}/call`, {
+      cwd,
+      method: "POST",
+      body: { method, params },
+    });
+    assert.notEqual(denied.status, 200, await denied.text());
+  }
+  assert.equal(scheduler.list().length, 1);
   assert.equal(await call(first, grantA, "storage.get", { key: "marker" }), "desktop-first");
   assert.equal(await call(second, grantB, "storage.get", { key: "marker" }), "desktop-second");
   for (const grant of [grantA, grantB]) {
@@ -226,7 +309,7 @@ try {
     200,
   );
   assert.equal((await request(grantA.src, { authenticated: false, origin: "null" })).status, 404);
-  assert.equal((await request(grantB.src, { authenticated: false, origin: "null" })).status, 404);
+  assert.equal((await request(grantB.src, { authenticated: false, origin: "null" })).status, 200);
   assert.equal((await list(second)).bound, true);
   const next = await prepare(second);
   assert.equal(
@@ -240,9 +323,11 @@ try {
   assert.equal((await request("/api/v1/auth/logout", { method: "POST", body: {} })).status, 200);
   assert.equal((await request(next.src, { authenticated: false, origin: "null" })).status, 404);
   assert.equal((await request("/api/v1/panels", { cwd: second })).status, 401);
+  assert.equal(scheduler.list().length, 1, "logout revokes control, not accepted recurring jobs");
   await login();
   const closing = await prepare(second);
   await api.close();
+  assert.equal(scheduler.list().length, 1, "closing Web must not own the Desktop scheduler");
   assert.equal((await request(closing.src, { authenticated: false, origin: "null" })).status, 404);
   api.start();
   await login();
@@ -260,14 +345,17 @@ try {
       workspaceIsolation: true,
       opaqueModuleAssets: true,
       mutationGate: true,
-      crossWorkspaceInvalidation: true,
+      projectScopedInvalidation: true,
       logoutRevokesAssets: true,
       closeRevokesAssets: true,
       deviceRevocation: true,
       forgedBindingRejected: true,
+      sharedAutomationScheduler: true,
+      automationTaskScope: true,
     }),
   );
 } finally {
+  scheduler.stopAll();
   await api.close();
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));

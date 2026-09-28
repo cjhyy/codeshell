@@ -154,6 +154,16 @@ function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {
 
 function runInputError(params: RunParams): string | null {
   if (typeof params.task !== "string") return "task must be a string";
+  if (
+    params.sandboxMode !== undefined &&
+    !["off", "auto", "seatbelt", "bwrap"].includes(params.sandboxMode)
+  )
+    return "sandboxMode must be off, auto, seatbelt or bwrap";
+  if (
+    params.allowBackgroundShells !== undefined &&
+    typeof params.allowBackgroundShells !== "boolean"
+  )
+    return "allowBackgroundShells must be boolean";
   const hasAttachment =
     Array.isArray(params.attachments) && params.attachments.some(isValidRunAttachment);
   if (params.task.trim().length === 0 && !hasAttachment) {
@@ -2006,6 +2016,8 @@ export class AgentServer {
             typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
           archiveBeforeCurrentTurn: params.archiveBeforeCurrentTurn,
           permissionMode: params.permissionMode,
+          sandboxMode: params.sandboxMode,
+          allowBackgroundShells: params.allowBackgroundShells,
           planMode: params.planMode,
           behaviorMode: params.behaviorMode,
           toolAllowlist: params.toolAllowlist,
@@ -2179,6 +2191,8 @@ export class AgentServer {
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         permissionMode: params.permissionMode,
+        sandboxMode: params.sandboxMode,
+        allowBackgroundShells: params.allowBackgroundShells,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
         toolAllowlist: params.toolAllowlist,
@@ -4308,7 +4322,7 @@ export class AgentServer {
       scroll: (dir, amount) => call("scroll", { dir, amount }),
       readContent: (options) => call("readContent", { ...(options ?? {}) }),
       extractLinks: () => call("extractLinks", {}),
-      waitForLoad: (timeoutMs) => call("waitForLoad", { timeoutMs }),
+      waitForLoad: (timeoutMs, condition) => call("waitForLoad", { timeoutMs, condition }),
       hover: (ref) => call("hover", { ref }),
       selectOption: (ref, value) => call("selectOption", { ref, value }),
       pressKey: (key, ref) => call("pressKey", { key, ref }),

@@ -4,6 +4,8 @@ import * as path from "node:path";
 import {
   isPanelAppBound,
   listInstalledPanelApps,
+  inspectProjectPanelApps,
+  projectPanelAppPackagePins,
   resolvePanelAppBindingPolicy,
   resolvePanelAppBindingProjectPath,
   SettingsManager,
@@ -13,6 +15,8 @@ import type { PanelAppDescriptor, PanelAppExtensionSummary } from "../shared/pan
 import { dlog } from "./desktop-logger.js";
 import { replacePanelAppResources, type PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { isPanelAppAvailable, summarizePanelApp, type PanelAppPolicy } from "./panel-app-policy.js";
+
+import { createDesktopPanelManagement } from "./panel-app-management.js";
 
 function localizedTitle(app: InstalledPanelApp, locale: string): string {
   return locale.toLowerCase().startsWith("zh")
@@ -36,14 +40,38 @@ export function installedPanelAppRevision(app: InstalledPanelApp): string {
   return hash.digest("hex");
 }
 
-async function discoverPanelApps(locale: string): Promise<{
+async function discoverPanelApps(
+  locale: string,
+  projectPath = "",
+): Promise<{
   descriptors: PanelAppDescriptor[];
   resources: PanelAppProtocolResource[];
   sources: Map<string, InstalledPanelApp>;
 }> {
   let apps: InstalledPanelApp[];
+  let pins: ReturnType<typeof projectPanelAppPackagePins>;
   try {
-    apps = await listInstalledPanelApps();
+    const inspected = projectPath ? await inspectProjectPanelApps(projectPath) : undefined;
+    pins = inspected?.pins ?? {};
+    apps = inspected?.apps ?? (await listInstalledPanelApps());
+    if (
+      projectPath &&
+      apps.some(
+        (app) =>
+          JSON.stringify(pins[app.id]) !==
+          JSON.stringify(projectPanelAppPackagePins(projectPath, app.id)[app.id]),
+      )
+    )
+      throw new Error("Project package changed during discovery");
+    if (
+      apps.some(
+        (app) =>
+          pins[app.id] &&
+          (pins[app.id]!.version !== app.version ||
+            pins[app.id]!.packageDigest !== app.packageDigest),
+      )
+    )
+      throw new Error("Project package changed during discovery");
   } catch {
     return { descriptors: [], resources: [], sources: new Map() };
   }
@@ -67,6 +95,9 @@ async function discoverPanelApps(locale: string): Promise<{
       appId: app.id,
       title: localizedTitle(app, locale),
       version: app.version,
+      packageDigest: app.packageDigest,
+      packagePinned: !!pins[app.id],
+      ...(projectPath ? { projectPaths: [projectPath] } : {}),
       ...(app.description ? { description: app.description } : {}),
       icon: app.icon,
       singleton: app.singleton,
@@ -176,28 +207,40 @@ export async function listPanelAppExtensions(
   locale: string,
 ): Promise<PanelAppExtensionSummary[]> {
   const policy = panelAppPolicy(cwd);
-  const discovered = await discoverPanelApps(locale);
-  return discovered.descriptors.map((app) =>
-    summarizePanelApp(
-      app,
-      policy,
-      discovered.sources.get(app.appId)
-        ? updateSource(discovered.sources.get(app.appId)!)
-        : { kind: "dir", label: "", available: false },
-    ),
+  const discovered = await discoverPanelApps(
+    locale,
+    cwd ? resolvePanelAppBindingProjectPath(cwd) : "",
   );
+  const bindings = cwd ? await createDesktopPanelManagement(cwd).snapshot() : [];
+  return discovered.descriptors.map((app) => {
+    const binding = bindings.find((item) => item.appId === app.appId);
+    if (
+      cwd &&
+      (!binding || binding.version !== app.version || binding.packageDigest !== app.packageDigest)
+    )
+      throw new Error("项目面板版本已改变，请刷新后重试。");
+    return {
+      ...summarizePanelApp(
+        app,
+        policy,
+        discovered.sources.get(app.appId)
+          ? updateSource(discovered.sources.get(app.appId)!)
+          : { kind: "dir", label: "", available: false },
+      ),
+      ...(binding
+        ? {
+            bindingRevision: binding.revision,
+            projectBound: binding.bound,
+            enabled: binding.bound && !binding.globalDisabled,
+          }
+        : {}),
+    };
+  });
 }
 
-/**
- * Runtime descriptors for the session-owned dock across several projects.
- *
- * Panel buckets are per project and the Extensions screen can bind an app to a
- * project that is not the active one, so the renderer needs the union of every
- * project's bound apps plus which projects bind each one. Filtering to a single
- * cwd (as `listPanelApps` does) would leave a session in another project with
- * an empty dock. The catalog is discovered once and the policy is evaluated per
- * project, so this costs one scan regardless of project count.
- */
+const projectDiscoveries = new Map<string, object>();
+
+/** Runtime variants keep the stable dock ID but select package bytes per project. */
 export async function listPanelAppsForProjects(
   projectPaths: readonly string[],
   locale: string,
@@ -205,35 +248,41 @@ export async function listPanelAppsForProjects(
   descriptors: PanelAppDescriptor[];
   boundProjectPathsByAppId: Record<string, string[]>;
 }> {
-  const discovered = await discoverPanelApps(locale);
-  replacePanelAppResources(discovered.resources);
+  const variants = new Map<string, PanelAppDescriptor>();
   const boundProjectPathsByAppId: Record<string, string[]> = {};
-  for (const projectPath of new Set(projectPaths.filter(Boolean))) {
-    const policy = panelAppPolicy(projectPath);
-    // Report BOTH the requested path and the path bindings actually resolve to
-    // (a worktree or subdirectory resolves up to its project root). The
-    // renderer compares the dock's projectPath against this list, and those two
-    // are not always the same string.
-    const canonical = resolvePanelAppBindingProjectPath(projectPath);
-    for (const app of discovered.descriptors) {
-      if (!isPanelAppAvailable(app, policy)) continue;
-      const paths = (boundProjectPathsByAppId[app.appId] ??= []);
-      if (!paths.includes(projectPath)) paths.push(projectPath);
-      if (canonical && !paths.includes(canonical)) paths.push(canonical);
+  const byCanonical = new Map<string, Set<string>>();
+  for (const requested of new Set(projectPaths.filter(Boolean))) {
+    const canonical = resolvePanelAppBindingProjectPath(requested);
+    if (!canonical) continue;
+    const paths = byCanonical.get(canonical) ?? new Set([canonical]);
+    paths.add(requested);
+    byCanonical.set(canonical, paths);
+  }
+  for (const [canonical, paths] of byCanonical) {
+    const discovery = {};
+    projectDiscoveries.set(canonical, discovery);
+    const discovered = await discoverPanelApps(locale, canonical);
+    if (projectDiscoveries.get(canonical) !== discovery) continue;
+    projectDiscoveries.delete(canonical);
+    const policy = panelAppPolicy(canonical);
+    const enabled = discovered.descriptors.filter((app) => isPanelAppAvailable(app, policy));
+    const enabledHosts = new Set(enabled.map((app) => app.hostId));
+    replacePanelAppResources(
+      discovered.resources.filter((resource) => enabledHosts.has(resource.descriptor.hostId)),
+      canonical,
+    );
+    for (const app of enabled) {
+      const bound = (boundProjectPathsByAppId[app.appId] ??= []);
+      for (const projectPath of paths) if (!bound.includes(projectPath)) bound.push(projectPath);
+      const existing = variants.get(app.hostId);
+      const projectPaths = new Set([...(existing?.projectPaths ?? []), ...paths]);
+      variants.set(app.hostId, { ...app, projectPaths: [...projectPaths] });
     }
   }
-  return {
-    descriptors: discovered.descriptors.filter((app) => boundProjectPathsByAppId[app.appId]),
-    boundProjectPathsByAppId,
-  };
+  return { descriptors: [...variants.values()], boundProjectPathsByAppId };
 }
 
-/** Runtime descriptors for the session-owned dock. */
+/** Runtime descriptors for one project; other windows keep their own resources. */
 export async function listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]> {
-  const discovered = await discoverPanelApps(locale);
-  // Resources cover every installed app. Project policy filters only the
-  // window's descriptors so one window cannot revoke another's app protocol.
-  replacePanelAppResources(discovered.resources);
-  const policy = panelAppPolicy(cwd);
-  return discovered.descriptors.filter((app) => isPanelAppAvailable(app, policy));
+  return (await listPanelAppsForProjects(cwd ? [cwd] : [], locale)).descriptors;
 }

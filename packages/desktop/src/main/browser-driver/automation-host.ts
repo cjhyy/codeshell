@@ -10,7 +10,12 @@
  * so the routing is unit-testable and the driver module stays UI-agnostic.
  */
 
-import type { BrowserBridge, BrowserSnapshot, BrowserInspectOptions } from "@cjhyy/code-shell-core";
+import type {
+  BrowserBridge,
+  BrowserSnapshot,
+  BrowserInspectOptions,
+  BrowserWaitCondition,
+} from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
 import {
   acquireElectronBrowser,
@@ -111,6 +116,7 @@ export interface BrowserActionRequest {
   dir?: "up" | "down";
   amount?: number;
   timeoutMs?: number;
+  condition?: BrowserWaitCondition;
   /** readContent: opaque continuation from a previous read. */
   cursor?: string;
   /** readContent: requested text chunk size (driver clamps it). */
@@ -360,7 +366,7 @@ async function performBrowserAction(
         result = await driver.extractLinks();
         break;
       case "waitForLoad":
-        result = await driver.waitForLoad(req.timeoutMs);
+        result = await driver.waitForLoad(req.timeoutMs, req.condition);
         break;
       case "hover":
         result = await driver.hover(req.ref ?? "");
@@ -445,7 +451,7 @@ export async function dispatchBrowserBridgeAction(
         result = await bridge.extractLinks();
         break;
       case "waitForLoad":
-        result = await bridge.waitForLoad(req.timeoutMs);
+        result = await bridge.waitForLoad(req.timeoutMs, req.condition);
         break;
       case "hover":
         result = await bridge.hover(req.ref ?? "");

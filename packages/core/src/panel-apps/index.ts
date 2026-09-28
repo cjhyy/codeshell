@@ -15,6 +15,7 @@ export {
   PanelAppReviewChangedError,
   assertSafePanelAppId,
   panelAppInstallDir,
+  panelAppPackageDir,
   panelAppsRegistryPath,
   panelAppsRoot,
 } from "./paths.js";
@@ -23,6 +24,9 @@ export {
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
   listInstalledPanelApps,
+  retainInstalledPanelApp,
+  resolvePanelAppPackage,
+  listRetainedPanelAppPackages,
   previewInstalledPanelAppUpdate,
   previewLocalPanelApp,
   uninstallPanelApp,
@@ -41,9 +45,20 @@ export {
   resolvePanelAppBindingPolicy,
   resolvePanelAppBindingProjectPath,
   type PanelAppBindingPolicy,
+  parsePanelAppPackagePins,
+  type PanelAppPackagePin,
 } from "./bindings.js";
 export {
+  projectPanelAppPackagePins,
+  migrateProjectPanelAppPackagePins,
+  selectProjectPanelAppPackage,
+  listProjectPanelApps,
+  inspectProjectPanelApps,
+  type ProjectPanelAppIssue,
+} from "./project-packages.js";
+export {
   checkInstalledPanelAppUpdate,
+  checkSelectedPanelAppUpdate,
   getInstalledPanelAppUpdateIdentity,
   type PanelAppUpdateCheck,
   type InstalledPanelAppUpdateIdentity,

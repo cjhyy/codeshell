@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import {
   browserObserveTool,
   browserActTool,
@@ -42,6 +42,171 @@ describe("browser tools — host without a browser bridge", () => {
   });
 });
 describe("browser_observe", () => {
+  test.each(["snapshot", "read", "extract"])(
+    "%s timeout falls back once without replaying actions",
+    async (mode) => {
+      const failed = {
+        ok: false,
+        code: "TIMEOUT" as const,
+        detail: "page did not respond",
+        url: "https://example.test",
+        elements: [],
+        text: "",
+        links: [],
+        images: [],
+        videos: [],
+      };
+      const screenshot = mock(async () => ({ ok: true, base64: "QUJD", mediaType: "image/png" }));
+      const snapshot = mock(async () => failed);
+      const navigate = mock(async () => ({ ok: true }));
+      const out = await browserObserveTool(
+        { mode },
+        ctxVision({
+          snapshot,
+          readContent: async () => failed,
+          extractLinks: async () => failed,
+          screenshot,
+          navigate,
+        }),
+      );
+      expect(typeof out).toBe("object");
+      if (typeof out === "object") {
+        expect(out.result).toContain("structured read is incomplete");
+        expect(out.result).toContain("No action was retried");
+        expect(out.contentBlocks).toHaveLength(1);
+      }
+      expect(screenshot).toHaveBeenCalledTimes(1);
+      expect(navigate).not.toHaveBeenCalled();
+      if (mode === "snapshot") expect(snapshot).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  test("fallback respects vision, opt-out, cancellation and policy/target failures", async () => {
+    const screenshot = mock(async () => ({ ok: true, base64: "QUJD", mediaType: "image/png" }));
+    for (const code of ["BLOCKED", "NEEDS_HUMAN", "TARGET_CLOSED", "FAILED"] as const) {
+      await browserObserveTool(
+        {},
+        ctxVision({
+          screenshot,
+          snapshot: async () => ({ code, detail: "unavailable", url: "", elements: [] }),
+        }),
+      );
+    }
+    const snapshot = async () => ({
+      code: "TIMEOUT" as const,
+      detail: "timed out",
+      url: "",
+      elements: [],
+    });
+    await browserObserveTool({}, ctxWith({ screenshot, snapshot }));
+    await browserObserveTool({ fallback: "none" }, ctxVision({ screenshot, snapshot }));
+    await browserObserveTool(
+      {},
+      { ...ctxVision({ screenshot, snapshot }), signal: AbortSignal.abort() },
+    );
+    expect(screenshot).not.toHaveBeenCalled();
+  });
+
+  test("fallback failure preserves the original timeout without retry loops", async () => {
+    const screenshot = mock(async () => {
+      throw new Error("capture failed");
+    });
+    const out = await browserObserveTool(
+      {},
+      ctxVision({
+        snapshot: async () => ({
+          code: "TIMEOUT",
+          detail: "original timeout",
+          url: "",
+          elements: [],
+        }),
+        screenshot,
+      }),
+    );
+    expect(out).toContain("original timeout");
+    expect(out).toContain("Screenshot fallback unavailable");
+    expect(screenshot).toHaveBeenCalledTimes(1);
+  });
+
+  test("a hung screenshot fallback has its own deadline", async () => {
+    const screenshot = mock(() => new Promise<never>(() => {}));
+    const started = Date.now();
+    const out = await browserObserveTool(
+      {},
+      ctxVision({
+        snapshot: async () => ({
+          code: "TIMEOUT",
+          detail: "original timeout",
+          url: "",
+          elements: [],
+        }),
+        screenshot,
+      }),
+    );
+    expect(out).toContain("screenshot fallback timed out");
+    expect(Date.now() - started).toBeLessThan(6500);
+    expect(screenshot).toHaveBeenCalledTimes(1);
+  }, 7000);
+
+  test("cancelling a pending fallback returns promptly and discards late images", async () => {
+    const controller = new AbortController();
+    const screenshot = mock(() => {
+      controller.abort();
+      return new Promise<never>(() => {});
+    });
+    const out = await browserObserveTool(
+      {},
+      {
+        ...ctxVision({
+          snapshot: async () => ({
+            code: "TIMEOUT",
+            detail: "original timeout",
+            url: "",
+            elements: [],
+          }),
+          screenshot,
+        }),
+        signal: controller.signal,
+      },
+    );
+    expect(typeof out).toBe("string");
+    expect(out).toContain("original timeout");
+    expect(screenshot).toHaveBeenCalledTimes(1);
+  });
+  test("partial frame observations preserve usable content without claiming a complete read", async () => {
+    const warnings = ["child frame 1 did not respond within 2000ms"];
+    const ctx = ctxWith({
+      snapshot: async () => ({
+        url: "https://example.com",
+        elements: [{ ref: "e1", role: "button", name: "Visible action" }],
+        warnings,
+      }),
+      readContent: async () => ({
+        ok: true,
+        url: "https://example.com",
+        text: "Visible content",
+        done: true,
+        warnings,
+      }),
+      extractLinks: async () => ({
+        ok: true,
+        url: "https://example.com",
+        links: [],
+        images: [],
+        videos: [],
+        warnings,
+      }),
+    });
+    for (const mode of ["snapshot", "read", "extract"]) {
+      const out = await browserObserveTool({ mode }, ctx);
+      expect(out).toContain("Observation incomplete");
+      expect(out).toContain("child frame 1");
+      expect(out).not.toContain("Read: complete");
+    }
+    expect(await browserObserveTool({ mode: "snapshot" }, ctx)).toContain("Visible action");
+    expect(await browserObserveTool({ mode: "read" }, ctx)).toContain("Visible content");
+  });
+
   test("canvas read does not equate complete DOM text with the end of its contents", async () => {
     const out = await browserObserveTool(
       { mode: "read" },
@@ -222,6 +387,58 @@ describe("browser_observe", () => {
     if (typeof out === "object" && "contentBlocks" in out)
       expect(out.contentBlocks![0]).toMatchObject({ type: "image" });
   });
+});
+
+describe("slow-page actions", () => {
+  test("targeted wait forwards the condition and cannot claim the whole page is ready", async () => {
+    const waitForLoad = mock(async () => ({ ok: true }));
+    const out = await browserActTool(
+      { action: "wait", text: "Loaded", selector: "#results", state: "visible", timeout_ms: 1000 },
+      ctxWith({ waitForLoad }),
+    );
+    expect(waitForLoad).toHaveBeenCalledWith(1000, {
+      selector: "#results",
+      text: "Loaded",
+      state: "visible",
+    });
+    expect(out).toContain("Requested condition met");
+    expect(out).not.toContain("Page ready");
+  });
+
+  test("invalid waits never reach the driver", async () => {
+    const waitForLoad = mock(async () => ({ ok: true }));
+    for (const args of [
+      { text: " " },
+      { selector: 123 },
+      { state: "hidden" },
+      { text: "ready", state: "invalid" },
+      { timeout_ms: 0 },
+      { timeout_ms: NaN },
+    ]) {
+      expect(
+        await browserActTool({ action: "wait", ...args }, ctxWith({ waitForLoad })),
+      ).toStartWith("Error:");
+    }
+    expect(waitForLoad).not.toHaveBeenCalled();
+  });
+
+  test.each(["click", "type", "select", "press_key"])(
+    "%s timeout does not repeat an uncertain write",
+    async (action) => {
+      const write = mock(async () => ({
+        ok: false,
+        code: "TIMEOUT" as const,
+        detail: "input timed out",
+      }));
+      const out = await browserActTool(
+        { action, ref: "e1", text: "hello", value: "one", key: "Enter" },
+        ctxWith({ click: write, type: write, selectOption: write, pressKey: write }),
+      );
+      expect(out).toContain("Action outcome is unknown");
+      expect(out).toContain("verify whether it already succeeded");
+      expect(write).toHaveBeenCalledTimes(1);
+    },
+  );
 });
 
 describe("browser_act", () => {

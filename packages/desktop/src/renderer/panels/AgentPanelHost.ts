@@ -53,7 +53,7 @@ export function resolveAgentPanelHostRequest(
   }
 
   const panelId = request.panelId ?? "";
-  const entry = getPanelEntry(panelId);
+  const entry = getPanelEntry(panelId, options.availability);
   if (!entry || !entry.enabled(options.availability)) {
     return Promise.resolve({
       requestId: request.requestId,

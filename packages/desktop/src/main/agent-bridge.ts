@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
+import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
@@ -53,6 +54,8 @@ import {
   replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
 import {
+  executeRemoteLinkAction,
+  type RemoteLinkActionRequest,
   ErrorCodes,
   Methods,
   SessionManager,
@@ -323,12 +326,14 @@ export class AgentBridge implements PetStateBridge {
       entryPath: agentEntry,
       buildEnv: () => ({
         ...process.env,
+        CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
-        CODE_SHELL_CAPABILITY_MODULES:
-          `${codingModule}#createCodingModule,` +
-          `${arenaCapabilityModule}#createArenaModule,` +
-          `${petCapabilityModule}#createPetModule`,
+        CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
+          { coding: codingModule, arena: arenaCapabilityModule, pet: petCapabilityModule },
+          readUserFeatureFlags(resolveNoRepoCwd()),
+          () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
+        ),
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),
@@ -1043,7 +1048,8 @@ export class AgentBridge implements PetStateBridge {
     if (
       parsed.method !== "desktop/credentialResolve" &&
       parsed.method !== "desktop/credentialMaterializeCookie" &&
-      parsed.method !== "desktop/oauthAccessResolve"
+      parsed.method !== "desktop/oauthAccessResolve" &&
+      parsed.method !== "desktop/remoteLinkAction"
     ) {
       return false;
     }
@@ -1058,6 +1064,14 @@ export class AgentBridge implements PetStateBridge {
             id,
             result: resolveCredentialValueForWorker(
               normalizeCredentialResolveParams(parsed.params),
+            ),
+          };
+        } else if (parsed.method === "desktop/remoteLinkAction") {
+          reply = {
+            jsonrpc: "2.0",
+            id,
+            result: await executeRemoteLinkAction(
+              parsed.params as unknown as RemoteLinkActionRequest,
             ),
           };
         } else if (parsed.method === "desktop/credentialMaterializeCookie") {
