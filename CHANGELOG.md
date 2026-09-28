@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.23] - 2026-09-28
+
+### Added
+
+- Open cloud workspaces from Desktop with an explicit project and execution
+  location; register computers with a configured self-hosted relay and retain
+  pairing, passcode and device revocation controls.
+- Pin Panel package versions per project, review updates, restore retained
+  versions and repair missing packages while keeping running tasks attached to
+  their original package identity.
+- Manage shared background tasks and directory bookmarks from paired Web clients,
+  persist cloud project automations, and connect Desktop and Web accounts through
+  an independently configured Link service.
+- Preview individual local text, Markdown and image files outside the current
+  project. Allow reviewed native tools with explicit permission to read selected
+  original files without copying them into every job.
+
+### Fixed
+
+- Return delegated Mimi questions and tool approvals to their originating private
+  chat, handling confirmation replies before bound-session routing and rejecting
+  expired, duplicate and cancelled decisions.
+- Revalidate original-file references after approval and during native execution;
+  stop forgotten, relinked or revoked inputs and clean private per-run manifests.
+  Cache successful Panel policy lookups briefly with explicit invalidation to
+  avoid repeated settings work during large transfers.
+- Improve project settings repair, package and cloud volume recovery, task replay,
+  account isolation and device-owned upload/download cancellation across relay
+  reconnects and restarts.
+- Correct turn token totals and expand execution traces; improve browser actions
+  on slow pages, stalled frames and delayed scrolling.
+
 ## [0.9.22] - 2026-09-21
 
 ### Fixed
