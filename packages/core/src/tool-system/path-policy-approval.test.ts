@@ -401,3 +401,61 @@ describe("并发路径审批串行化(burst dedupe)", () => {
     cleanup();
   });
 });
+
+describe("path approval cancellation", () => {
+  test("reports an unattended timeout to the model instead of claiming the user refused", async () => {
+    const cwd = tmpWorkspace();
+    try {
+      const result = await enforcePathPolicyWithApproval(
+        join(homedir(), ".claude"),
+        "read",
+        ctxAnswering(cwd, "Confirmation timed out; skip this operation"),
+      );
+      expect(result).toContain("timed out; skip this operation");
+      expect(result).not.toContain("denied by user");
+    } finally {
+      cleanup();
+    }
+  });
+  test("stopping parallel reads drains queued prompts and ignores late grants", async () => {
+    const cwd = tmpWorkspace();
+    const controller = new AbortController();
+    let calls = 0;
+    let answer!: (value: string) => void;
+    const ctx = {
+      cwd,
+      sessionId: "cancel-parallel-paths",
+      signal: controller.signal,
+      askUser: async () => {
+        calls++;
+        return new Promise<string>((resolve) => {
+          answer = resolve;
+        });
+      },
+    } as unknown as ToolContext;
+    try {
+      const first = enforcePathPolicyWithApproval(join(homedir(), ".claude"), "read", ctx);
+      const second = enforcePathPolicyWithApproval(join(homedir(), ".codex"), "read", ctx);
+      await Promise.resolve();
+      expect(calls).toBe(1);
+      controller.abort();
+      answer("本目录本会话允许");
+      const results = await Promise.all([first, second]);
+      expect(results.every((result) => result?.includes("cancelled"))).toBe(true);
+      expect(calls).toBe(1);
+      // The late answer must not have persisted a grant for a subsequent run.
+      const next = {
+        ...ctx,
+        signal: new AbortController().signal,
+        askUser: async () => {
+          calls++;
+          return "拒绝";
+        },
+      };
+      await enforcePathPolicyWithApproval(join(homedir(), ".claude"), "read", next);
+      expect(calls).toBe(2);
+    } finally {
+      cleanup();
+    }
+  });
+});
