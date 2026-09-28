@@ -126,7 +126,11 @@ export function desktopPanelCapabilities(
           : undefined,
         tasks:
           permitted.has("process") && permitted.has("resources") && options.tasks
-            ? { ...(options.tasks as Record<string, unknown>), cookieCredentials: taskCookies }
+            ? {
+                ...(options.tasks as Record<string, unknown>),
+                cookieCredentials: taskCookies,
+                ...(permitted.has("resources.directRead") ? { directRead: true } : {}),
+              }
             : undefined,
         limits: options.limits,
       }),

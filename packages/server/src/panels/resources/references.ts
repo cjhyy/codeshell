@@ -360,6 +360,35 @@ export class ExternalResourceReferences {
       }
     });
   }
+  /**
+   * Host-only: the verified absolute location of a reference, for a read-only
+   * handoff to a reviewed tool. Never return it to a Guest.
+   */
+  location(
+    scope: ResourceScope,
+    id: string,
+    options: ExternalReferenceOptions = {},
+  ): Promise<string> {
+    return this.locked(scope, async () => {
+      const record = await this.record(scope, id);
+      const source = await this.checked(scope, record, options);
+      try {
+        await source.verify();
+        return join(record.root, record.path);
+      } catch (error) {
+        // A drive may disappear after checked() returns. Preserve revocation
+        // and abort semantics before hiding native errors containing its path.
+        await this.authorize(scope, options);
+        if (error instanceof ReferenceUnavailable) throw error;
+        const code = (error as NodeJS.ErrnoException).code;
+        throw new ReferenceUnavailable(
+          ["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes(code ?? "") ? "missing" : "changed",
+        );
+      } finally {
+        await source.close();
+      }
+    });
+  }
   relinkFromDirectory(
     scope: ResourceScope,
     id: string,

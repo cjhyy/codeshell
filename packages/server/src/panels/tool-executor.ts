@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, lstat, realpath } from "node:fs/promises";
+import { mkdir, mkdtemp, lstat, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PanelAppProcessService, type PanelProcessOwner } from "./process-service.js";
 import { processLimits } from "./process-state.js";
@@ -28,9 +28,15 @@ interface ExecutionContext {
   signal: AbortSignal;
   reportProgress(progress: { fraction?: number; stage?: string; message?: string }): Promise<void>;
 }
+interface ToolResource {
+  assetId: string;
+  path: string;
+  /** "read": no copy; the Host lists the verified original under `path` in the sealed manifest. */
+  access?: "copy" | "read";
+}
 interface ToolInput {
   request: Record<string, unknown>;
-  resources?: Array<{ assetId: string; path: string }>;
+  resources?: ToolResource[];
   directoryArguments?: Array<{
     argumentName: string;
     directory: "job" | "app-data" | "bookmark";
@@ -39,6 +45,8 @@ interface ToolInput {
   }>;
   connectionIds?: string[];
   connectionArgument?: string;
+  /** Required with `access: "read"` resources: the sealed manifest's launch argument. */
+  originalsArgument?: string;
   cookieArgument?: TaskCookieSelection & { argumentName: string };
 }
 export interface PanelToolExecutorOptions {
@@ -52,9 +60,29 @@ export interface PanelToolExecutorOptions {
   resolveDirectoryBookmark?(scope: Scope, bookmark: string): Promise<string>;
   authorize(scope: Scope): Promise<void>;
   authorizeConnections(scope: Scope): Promise<void>;
+  /** Grants `access: "read"` resources; hosts without it refuse direct reads. */
+  authorizeDirectRead?(scope: Scope): Promise<void>;
   sealedRoot: string;
   /** Configure only when start/retry admission obtains explicit selected-account consent. */
   cookies?: Pick<PanelTaskCookieService, "check" | "materialize">;
+}
+function directReads(input: ToolInput) {
+  return (input.resources ?? []).filter((resource) => resource.access === "read");
+}
+function originalUnavailable(state: "missing" | "changed", during = false) {
+  return state === "missing"
+    ? Object.assign(new Error("A read-only original is unavailable; reconnect it and retry"), {
+        code: "INPUT_MISSING",
+        retryable: true,
+      })
+    : Object.assign(
+        new Error(
+          during
+            ? "A read-only original changed while the tool ran; check it before running again"
+            : "A read-only original changed; select it again",
+        ),
+        { code: "INPUT_CHANGED", retryable: false },
+      );
 }
 function toolInput(value: unknown): ToolInput {
   if (
@@ -69,6 +97,7 @@ function toolInput(value: unknown): ToolInput {
           "directoryArguments",
           "connectionIds",
           "connectionArgument",
+          "originalsArgument",
           "cookieArgument",
         ].includes(key),
     )
@@ -86,8 +115,11 @@ function toolInput(value: unknown): ToolInput {
   for (const resource of input.resources ?? []) {
     if (
       !resource ||
-      Object.keys(resource).some((key) => !["assetId", "path"].includes(key)) ||
-      !/^(?:asset|external)-[a-f0-9]{64}$/.test(resource.assetId)
+      Object.keys(resource).some((key) => !["assetId", "path", "access"].includes(key)) ||
+      !/^(?:asset|external)-[a-f0-9]{64}$/.test(resource.assetId) ||
+      (resource.access !== undefined && !["copy", "read"].includes(resource.access)) ||
+      // Library assets are Host custody; only a user-selected original may be read in place.
+      (resource.access === "read" && !resource.assetId.startsWith("external-"))
     )
       throw new Error("Invalid tool resource");
     resourceRelativePath(resource.path);
@@ -131,6 +163,16 @@ function toolInput(value: unknown): ToolInput {
     argumentsSeen.add(input.connectionArgument);
   } else if (input.connectionArgument !== undefined)
     throw new Error("Connection selection is required");
+  if (directReads(input).length) {
+    if (
+      !input.originalsArgument ||
+      !/^--[a-z][a-z0-9-]{0,63}$/.test(input.originalsArgument) ||
+      argumentsSeen.has(input.originalsArgument)
+    )
+      throw new Error("Invalid originals argument");
+    argumentsSeen.add(input.originalsArgument);
+  } else if (input.originalsArgument !== undefined)
+    throw new Error("Invalid originals argument: no resource uses read access");
   if (input.cookieArgument !== undefined) {
     const value = input.cookieArgument;
     if (
@@ -169,6 +211,7 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
   };
   const authorize = async (scope: Scope, input: ToolInput) => {
     await options.authorize(scope);
+    await authorizeDirectRead(scope, input);
     for (const directory of input.directoryArguments ?? [])
       if (directory.directory === "bookmark") await bookmarkDirectory(scope, directory.bookmark!);
     if (input.cookieArgument) {
@@ -177,31 +220,66 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
       await options.cookies.check(scope, selection);
     }
   };
+  const authorizeDirectRead = async (scope: Scope, input: ToolInput) => {
+    if (!directReads(input).length) return;
+    if (!options.authorizeDirectRead)
+      throw new Error("This host cannot hand originals to tools; copy the resource instead");
+    await options.authorizeDirectRead(scope);
+  };
+  const materialize = async (
+    scope: Scope,
+    resources: ToolResource[],
+    workDir: string,
+    signal: AbortSignal,
+  ) => {
+    const handle = createHash("sha256").update(workDir).digest("hex");
+    try {
+      for (const { assetId, path } of resources) {
+        await options.resources.dispatch(
+          scope,
+          "resources.materialize",
+          { assetId, path, directoryHandle: handle },
+          {
+            signal,
+            resolveDirectory: async () => {
+              await options.authorize(scope);
+              return workDir;
+            },
+          },
+        );
+      }
+    } finally {
+      options.resources.releaseDirectory(scope, handle);
+    }
+  };
+  /** Verify each original now; keys are the Guest's names, paths never leave the Host. */
+  const verifiedOriginals = async (scope: Scope, input: ToolInput, signal: AbortSignal) => {
+    const originals: Record<string, { path: string; bytes: number }> = Object.create(null);
+    for (const resource of directReads(input)) {
+      const reference = await options.resources.references.get(scope, resource.assetId);
+      if (reference.state !== "available") throw originalUnavailable(reference.state);
+      originals[resource.path] = {
+        path: await options.resources.references.location(scope, resource.assetId, { signal }),
+        bytes: reference.bytes,
+      };
+    }
+    return originals;
+  };
   return {
     async prepareInput(scope: Scope, raw: unknown, workDir: string, signal: AbortSignal) {
       const input = toolInput(raw);
       await authorize(scope, input);
-      const handle = createHash("sha256").update(workDir).digest("hex");
-      try {
-        for (const resource of input.resources ?? []) {
-          await options.resources.dispatch(
-            scope,
-            "resources.materialize",
-            { ...resource, directoryHandle: handle },
-            {
-              signal,
-              resolveDirectory: async () => {
-                await options.authorize(scope);
-                return workDir;
-              },
-            },
-          );
-        }
-        if (input.connectionIds) await options.authorizeConnections(scope);
-        return input;
-      } finally {
-        options.resources.releaseDirectory(scope, handle);
-      }
+      await materialize(
+        scope,
+        (input.resources ?? []).filter((resource) => resource.access !== "read"),
+        workDir,
+        signal,
+      );
+      // Originals are verified again and sealed at each launch, so a retry cannot run
+      // against a file that changed after the task was admitted.
+      await verifiedOriginals(scope, input, signal);
+      if (input.connectionIds) await options.authorizeConnections(scope);
+      return input;
     },
     async execute(job: Job, context: ExecutionContext) {
       const input = toolInput(job.input);
@@ -389,6 +467,8 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
         });
         if (entry.sha256 !== job.entry.sha256)
           throw new Error("Installed tool changed; start a new job");
+        await authorizeDirectRead(job.scope, input);
+        const originals = await verifiedOriginals(job.scope, input, context.signal);
         const directory = await options.processes.grantDirectory(owner, context.workDir);
         resourceDirectoryHandles.push(directory.handle);
         const fileArgumentHandles: string[] = [];
@@ -421,6 +501,33 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
             argumentName: input.connectionArgument!,
             path: sealed.path,
             cleanup: sealed.cleanup,
+          });
+          fileArgumentHandles.push(argument.handle);
+        }
+        if (Object.keys(originals).length) {
+          // A manifest rather than links: a Guest-chosen name must never redirect a tool's
+          // writes onto the user's file. The tool opens an original only on purpose.
+          await mkdir(options.sealedRoot, { recursive: true, mode: 0o700 });
+          const sealed = await mkdtemp(join(options.sealedRoot, "originals-"));
+          const cleanup = () => rm(sealed, { recursive: true, force: true }).catch(() => {});
+          cleanups.push(cleanup);
+          const path = join(sealed, "originals.json");
+          await writeFile(path, JSON.stringify({ originals }), { mode: 0o600, flag: "wx" });
+          const argument = await options.processes.grantFileArgument(owner, {
+            executableHandle: executable.handle,
+            argumentName: input.originalsArgument!,
+            path,
+            cleanup,
+            // The approval may wait, and a reference may be forgotten or relinked
+            // while the child runs. Reuse the process grant's launch/live checks.
+            validate: async () => {
+              await authorize(job.scope, input);
+              const current = await verifiedOriginals(job.scope, input, context.signal);
+              for (const [key, original] of Object.entries(originals)) {
+                if (current[key]?.path !== original.path || current[key]?.bytes !== original.bytes)
+                  throw originalUnavailable("changed", true);
+              }
+            },
           });
           fileArgumentHandles.push(argument.handle);
         }
@@ -494,6 +601,10 @@ export function createPanelToolExecutor(options: PanelToolExecutorOptions) {
         await progress;
         context.signal.throwIfAborted();
         if (failed) throw failed;
+        for (const resource of directReads(input)) {
+          const reference = await options.resources.references.get(job.scope, resource.assetId);
+          if (reference.state !== "available") throw originalUnavailable(reference.state, true);
+        }
         if (receipt.code !== 0 || result === undefined)
           throw new Error("Tool did not return a completed result");
         const value = result as { artifacts?: unknown };

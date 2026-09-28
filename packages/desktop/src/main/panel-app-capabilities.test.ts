@@ -107,6 +107,31 @@ test("Desktop advertises only implemented services and the larger bounded protoc
   expect(noQueue.capabilities.tasks).toBeUndefined();
 });
 
+test("Desktop advertises direct reads only to tasks of Panels holding that grant", () => {
+  const granted = desktopPanelCapabilities(
+    ["resources", "process", "resources.directRead"],
+    options,
+  );
+  expect(granted.capabilities.tasks).toEqual({
+    durable: true,
+    directRead: true,
+    cookieCredentials: false,
+  });
+  expect(desktopPanelCapabilities(["resources", "process"], options).capabilities.tasks).toEqual({
+    durable: true,
+    cookieCredentials: false,
+  });
+  expect(
+    desktopPanelCapabilities(["resources", "resources.directRead"], options).capabilities.tasks,
+  ).toBeUndefined();
+  expect(
+    desktopPanelCapabilities(["resources", "process", "resources.directRead"], {
+      ...options,
+      tasks: undefined,
+    }).capabilities.tasks,
+  ).toBeUndefined();
+});
+
 test("background Cookie metadata requires a configured service and all task permissions", () => {
   const permissions = ["resources", "process", "credentials.cookies"] as const;
   const enabled = desktopPanelCapabilities(permissions, { ...options, taskCookies: true });

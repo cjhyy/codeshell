@@ -406,7 +406,7 @@ import {
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
-import { isPanelAppBoundToProject } from "./panel-apps-service.js";
+import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
@@ -894,6 +894,9 @@ function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void 
 }
 
 function broadcastPanelAppsChanged(windows: Iterable<BrowserWindow>): void {
+  // Project management and paired Web write bindings outside settings:set.
+  // Invalidate before notifying any client or awaiting another side effect.
+  invalidatePanelAppBindingGuard();
   for (const window of windows) {
     if (window.isDestroyed()) continue;
     window.webContents.send("panel-apps:changed");
@@ -6443,9 +6446,13 @@ async function applyRendererSettingsSideEffects(
   scope: SettingsScope,
   patch: Record<string, unknown>,
 ): Promise<void> {
+  const touchesPanelApps =
+    "disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch;
+  // Before any await: a failing side effect must not leave the guard on the old binding.
+  if (touchesPanelApps) invalidatePanelAppBindingGuard();
   if ("git" in patch) void applyGitPathFromSettings();
   if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
-  if ("disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch) {
+  if (touchesPanelApps) {
     broadcastPanelAppsChanged(mainWindows);
   }
   if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {

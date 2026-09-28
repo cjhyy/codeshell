@@ -105,11 +105,13 @@ export function PanelAppInstallReviewDialog({
                       ? "麦克风、摄像头与屏幕录制"
                       : permission === "resources"
                         ? "存取已授权文件与工具结果"
-                        : permission === "credentials.connections"
-                          ? "让工具使用选定的服务连接"
-                          : permission === "process"
-                            ? "运行已审核工具与后台任务"
-                            : permission}
+                        : permission === "resources.directRead"
+                          ? "让工具直接读取你选择的原文件（不复制）"
+                          : permission === "credentials.connections"
+                            ? "让工具使用选定的服务连接"
+                            : permission === "process"
+                              ? "运行已审核工具与后台任务"
+                              : permission}
                   </Badge>
                 ))
               )}

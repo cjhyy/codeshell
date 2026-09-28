@@ -16,6 +16,7 @@ export const PANEL_APP_PERMISSION_NAMES = [
   "automations.manage",
   "process",
   "resources",
+  "resources.directRead",
   "credentials.connections",
   "media",
   "media.capture",

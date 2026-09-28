@@ -109,6 +109,7 @@ const PERMISSIONS = new Set([
   "notifications.send",
   "process",
   "resources",
+  "resources.directRead",
   "credentials.connections",
   "credentials.cookies",
   "agent.task",
@@ -909,6 +910,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         if (!app.permissions.includes("credentials.connections"))
           throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
       },
+      authorizeDirectRead: async (scope) => {
+        const app = await installedToolApp(scope);
+        if (!app.permissions.includes("resources.directRead"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires direct read permission");
+      },
       resolveDirectoryBookmark: async (scope, bookmark) => {
         await installedToolApp(scope);
         return directoryBookmarks.restore(scope.appId, scope.projectPath, bookmark);
@@ -1267,6 +1273,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                     continuesAfterDisconnect: true,
                     continuesAfterLogout: projectOwnedTools,
                     maxHttpResultBytes: toolJobLimits.maxRecordBytes + 128 * 1024,
+                    ...(app.permissions.includes("resources.directRead")
+                      ? { directRead: true }
+                      : {}),
                   }
                 : undefined,
             limits: {

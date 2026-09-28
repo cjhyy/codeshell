@@ -1418,6 +1418,10 @@ export class PanelAppBridge {
         if (!(await this.installedToolApp(scope)).permissions.includes("credentials.connections"))
           throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires connection permission");
       },
+      authorizeDirectRead: async (scope) => {
+        if (!(await this.installedToolApp(scope)).permissions.includes("resources.directRead"))
+          throw new PanelBridgeError("PERMISSION_DENIED", "Tool requires direct read permission");
+      },
       resolveDirectoryBookmark: async (scope, bookmark) => {
         await this.installedToolApp(scope);
         return this.directoryBookmarks.restore(scope.appId, scope.projectPath, bookmark);
