@@ -1,3 +1,5 @@
+import { DeviceRelaySettings } from "./DeviceRelaySettings";
+import type { DesktopRelayStatus } from "../../shared/device-relay.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readScopedSettings } from "../settingsAuthority";
 import { Folder, Trash2 } from "lucide-react";
@@ -34,14 +36,14 @@ interface ScopedProps {
   activeProjectPath: string | null;
 }
 
-type MobileRemoteMode = "lan" | "tunnel";
+type MobileRemoteMode = "lan" | "tunnel" | "relay";
 
 const MOBILE_REMOTE_MODE_KEY = "codeshell.mobileRemote.mode";
 
 export function loadMobileRemoteMode(): MobileRemoteMode {
   try {
     const raw = globalThis.localStorage?.getItem(MOBILE_REMOTE_MODE_KEY);
-    return raw === "tunnel" ? "tunnel" : "lan";
+    return raw === "tunnel" || raw === "relay" ? raw : "lan";
   } catch {
     return "lan";
   }
@@ -1554,14 +1556,18 @@ function relativeTime(ts?: number): string {
 
 /**
  * Mobile Web Remote — start/stop a LAN HTTP/WebSocket host so a trusted phone
- * can drive CodeShell chat + approvals. Off by default; no public relay. The
- * pairing URL is one-time (10-min TTL) and must be opened on the phone.
+ * can drive CodeShell chat + approvals. Off by default; relay mode preserves
+ * the existing phone gates. The pairing URL is one-time (10-min TTL) and must be opened on the phone.
  */
 export function MobileRemoteSection() {
   const confirm = useConfirm();
   const prompt = usePrompt();
   const toast = useToast();
   const { t } = useT();
+  const [relay, setRelay] = useState<DesktopRelayStatus>({
+    state: "unregistered",
+    registered: false,
+  });
   const [onlineIds, setOnlineIds] = useState<string[]>([]);
   const [status, setStatus] = useState<{
     running: boolean;
@@ -1613,6 +1619,8 @@ export function MobileRemoteSection() {
   const refresh = useCallback(async () => {
     const next = await window.codeshell.mobileRemote.status();
     setStatus(next);
+    setRelay(await window.codeshell.mobileRemote.relay.status());
+    if (!next.url) setPairingUrl(undefined);
     if (next.running && next.mode) {
       setMode(next.mode);
     }
@@ -1648,7 +1656,7 @@ export function MobileRemoteSection() {
       const st = await refresh();
       // Host still running after a remount but the QR is renderer-local state
       // and was lost → re-mint one so the page isn't stuck with no way back.
-      if (st?.running && (st.mode !== "tunnel" || st.tunnelConnected)) void regenPairing();
+      if (st?.running && st.url) void regenPairing();
     })();
   }, [refresh, regenPairing]);
 
@@ -1670,11 +1678,18 @@ export function MobileRemoteSection() {
         void refresh();
       }
     });
+    const offRelay = window.codeshell.mobileRemote.relay.onStatus((next) => {
+      setRelay(next);
+      if (next.state !== "ready") setPairingUrl(undefined);
+      void refresh();
+      if (next.state === "ready" && !pairingUrl) void regenPairing();
+    });
     const offOnline = window.codeshell.mobileRemote.onOnlineChange((ids) => setOnlineIds(ids));
     return () => {
       offProgress();
       offTunnel();
       offOnline();
+      offRelay();
     };
   }, [pairingUrl, refresh, regenPairing, toast, t]);
 
@@ -1807,18 +1822,24 @@ export function MobileRemoteSection() {
       <div className="mt-3 max-w-xs">
         <Select
           value={mode}
-          onChange={(v) => setMode(v === "tunnel" ? "tunnel" : "lan")}
+          onChange={(v) => setMode(v === "tunnel" || v === "relay" ? v : "lan")}
           disabled={busy || status.running}
           options={[
             { value: "lan", label: t("settingsX.adv.modeLan") },
             { value: "tunnel", label: t("settingsX.adv.modeTunnel") },
+            { value: "relay", label: t("settingsX.adv.modeRelay") },
           ]}
         />
       </div>
 
-      {mode === "tunnel" ? (
+      {mode === "relay" ? (
+        <DeviceRelaySettings status={relay} busy={busy || status.running} refresh={refresh} />
+      ) : null}
+      {mode !== "lan" ? (
         <div className="mt-3 space-y-3 rounded-md border border-border p-3">
-          <p className="text-xs text-muted-foreground">{t("settingsX.adv.tunnelDesc")}</p>
+          {mode === "tunnel" ? (
+            <p className="text-xs text-muted-foreground">{t("settingsX.adv.tunnelDesc")}</p>
+          ) : null}
 
           {/* 访问口令 */}
           <div className="space-y-1.5">
@@ -1855,7 +1876,7 @@ export function MobileRemoteSection() {
           </div>
 
           {/* cloudflared 下载 */}
-          {!cloudflaredInstalled ? (
+          {mode !== "tunnel" ? null : !cloudflaredInstalled ? (
             <div className="space-y-1.5">
               <Button
                 type="button"
@@ -1886,9 +1907,18 @@ export function MobileRemoteSection() {
         <Button
           type="button"
           onClick={start}
-          disabled={busy || status.running || (mode === "tunnel" && !passcodeSet)}
+          disabled={
+            busy ||
+            status.running ||
+            (mode !== "lan" && !passcodeSet) ||
+            (mode === "relay" && !relay.registered)
+          }
         >
-          {mode === "tunnel" ? t("settingsX.adv.startTunnel") : t("settingsX.adv.startMobile")}
+          {mode === "relay"
+            ? t("settingsX.adv.startRelay")
+            : mode === "tunnel"
+              ? t("settingsX.adv.startTunnel")
+              : t("settingsX.adv.startMobile")}
         </Button>
         <Button type="button" variant="outline" onClick={stop} disabled={busy || !status.running}>
           {t("settingsX.adv.stop")}
@@ -1911,7 +1941,7 @@ export function MobileRemoteSection() {
             : t("settingsX.adv.tunnelDisconnected")}
         </p>
       ) : null}
-      {status.running && !pairingUrl ? (
+      {status.running && status.url && !pairingUrl ? (
         <div className="mt-2">
           <Button type="button" variant="outline" size="sm" onClick={() => void regenPairing()}>
             {t("settingsX.adv.regenQr")}

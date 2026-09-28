@@ -1,3 +1,4 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { createHash, randomUUID } from "node:crypto";
 import { opendir } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
@@ -5,7 +6,9 @@ import { ToolJobStorage, toolJobJson } from "./tool-jobs-storage.js";
 
 export const toolJobLimits = Object.freeze({
   maxJobs: 2000,
-  maxQueuedPerScope: 32,
+  maxQueuedPerScope: 128,
+  maxQueues: 512,
+  maxQueueCatalogBytes: 4 * 1024 * 1024,
   maxConcurrent: 2,
   maxInputBytes: 2 * 1024 * 1024 + 8 * 1024,
   maxResultBytes: 2 * 1024 * 1024,
@@ -18,9 +21,46 @@ export interface ToolJobScope {
   projectPath: string;
   revision: string;
 }
+/** Scope-owned scheduling; pausing stops admission to execution, not active processes. */
+export interface ToolQueueState {
+  revision: number;
+  paused: boolean;
+  maxConcurrent: number;
+}
+export interface ToolQueueWriteResult {
+  saved: boolean;
+  queue: ToolQueueState;
+}
+export interface ToolQueueUpdate {
+  expectedRevision: number;
+  paused: boolean;
+  maxConcurrent: number;
+}
+interface StoredQueue extends ToolQueueState {
+  scope: ToolJobScope;
+}
+const queueKey = (scope: ToolJobScope) => JSON.stringify(scopeValue(scope));
+function queueState(value: ToolQueueState): ToolQueueState {
+  if (
+    !value ||
+    typeof value.paused !== "boolean" ||
+    !Number.isSafeInteger(value.revision) ||
+    value.revision < 0 ||
+    !Number.isSafeInteger(value.maxConcurrent) ||
+    value.maxConcurrent < 1 ||
+    value.maxConcurrent > toolJobLimits.maxConcurrent
+  )
+    throw new Error("Invalid tool queue state");
+  return { revision: value.revision, paused: value.paused, maxConcurrent: value.maxConcurrent };
+}
 export interface ToolJobEntry {
   name: string;
   sha256: string;
+}
+/** Host-selected package identity, never supplied by the task request. */
+export interface ToolJobPackage {
+  version: string;
+  packageDigest: string;
 }
 export interface ToolJobProgress {
   fraction?: number;
@@ -39,6 +79,7 @@ export interface ToolJob {
   id: string;
   scope: ToolJobScope;
   entry: ToolJobEntry;
+  package?: ToolJobPackage;
   input: unknown;
   recovery: "manual" | "retry";
   status: ToolJobStatus;
@@ -52,6 +93,8 @@ export interface ToolJob {
   error?: { code: string; message: string; retryable: boolean };
   result?: unknown;
 }
+export type ToolJobEvent = Omit<ToolJob, "input" | "result">;
+
 export interface ToolJobRequest {
   entry: ToolJobEntry;
   input: unknown;
@@ -75,6 +118,8 @@ export interface PanelToolJobServiceOptions {
     signal: AbortSignal,
   ): Promise<unknown>;
   isAuthorized?(scope: ToolJobScope): boolean | Promise<boolean>;
+  /** Resolve and inspect the authorized project package, including its full content digest. */
+  describePackage?(scope: ToolJobScope): Promise<ToolJobPackage>;
   onEvent?(job: ToolJob): void;
   now?: () => number;
 }
@@ -83,6 +128,30 @@ interface StoredJob extends ToolJob {
   requestKey?: string;
   requestDigest: string;
 }
+type PreparationOutcome = { job: ToolJob } | { error: unknown };
+
+async function waitPreparation(result: Promise<PreparationOutcome>, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  let abort: (() => void) | undefined;
+  try {
+    const outcome = signal
+      ? await Promise.race([
+          result,
+          new Promise<never>((_resolve, reject) => {
+            abort = () => reject(signal.reason ?? new Error("Tool request cancelled"));
+            signal.addEventListener("abort", abort, { once: true });
+            if (signal.aborted) abort();
+          }),
+        ])
+      : await result;
+    signal?.throwIfAborted();
+    if ("error" in outcome) throw outcome.error;
+    return outcome.job;
+  } finally {
+    if (abort) signal?.removeEventListener("abort", abort);
+  }
+}
+
 interface ActiveJob {
   controller: AbortController;
   done: Promise<void>;
@@ -157,6 +226,22 @@ function publicJob(job: StoredJob): ToolJob {
   } = job;
   return toolJobJson(value, toolJobLimits.maxRecordBytes);
 }
+function packageValue(value: ToolJobPackage): ToolJobPackage {
+  if (
+    !value ||
+    typeof value.version !== "string" ||
+    !value.version ||
+    value.version.length > 128 ||
+    /[\u0000-\u001f\u007f]/.test(value.version) ||
+    typeof value.packageDigest !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.packageDigest)
+  )
+    throw new Error("Invalid tool job package identity");
+  return { version: value.version, packageDigest: value.packageDigest };
+}
+function packageError(code: string, message: string, retryable = true): Error {
+  return Object.assign(new Error(message), { code, retryable });
+}
 function storedValue(raw: unknown): StoredJob {
   const job = toolJobJson(raw, toolJobLimits.maxRecordBytes) as StoredJob;
   if (
@@ -176,6 +261,7 @@ function storedValue(raw: unknown): StoredJob {
     throw new Error("invalid tool job record");
   job.scope = scopeValue(job.scope);
   job.entry = entryValue(job.entry);
+  if (job.package !== undefined) job.package = packageValue(job.package);
   job.input = toolJobJson(job.input, toolJobLimits.maxInputBytes);
   if (job.result !== undefined) job.result = toolJobJson(job.result, toolJobLimits.maxResultBytes);
   if (job.progress) job.progress = progressValue(job.progress);
@@ -195,10 +281,18 @@ function storedValue(raw: unknown): StoredJob {
 export class PanelToolJobService {
   private readonly storage: ToolJobStorage;
   private readonly jobs = new Map<string, StoredJob>();
+  private readonly queues = new Map<string, StoredQueue>();
   private readonly active = new Map<string, ActiveJob>();
   private readonly preparing = new Map<
     string,
-    { scope: ToolJobScope; controller: AbortController; done: Promise<void> }
+    {
+      scope: ToolJobScope;
+      controller: AbortController;
+      done: Promise<void>;
+      requestKey?: string;
+      requestDigest: string;
+      result: Promise<PreparationOutcome>;
+    }
   >();
   private ready?: Promise<void>;
   private serial: Promise<unknown> = Promise.resolve();
@@ -206,14 +300,37 @@ export class PanelToolJobService {
   private pumping = false;
   private shutdownPromise?: Promise<void>;
 
+  private readonly unregisterExecution: () => void;
+
   constructor(private readonly options: PanelToolJobServiceOptions) {
     this.storage = new ToolJobStorage(options.rootDir);
+    this.unregisterExecution = panelExecutionGate.register(() => this.executionScopes());
   }
-  activeCount(): number {
-    return (
-      this.preparing.size +
-      [...this.jobs.values()].filter((job) => !TERMINAL.has(job.status)).length
-    );
+  private readonly listeners = new Set<{
+    scope: ToolJobScope;
+    send: (job: ToolJobEvent) => void;
+  }>();
+
+  /** Trusted Host subscription. Transports must recheck their viewer's authorization. */
+  subscribe(rawScope: ToolJobScope, send: (job: ToolJobEvent) => void): () => void {
+    const listener = { scope: scopeValue(rawScope), send };
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  private executionScopes(): ToolJobScope[] {
+    return [
+      ...[...this.preparing.values()].map((item) => item.scope),
+      ...[...this.jobs.values()]
+        .filter((job) => !TERMINAL.has(job.status) || this.active.has(job.id))
+        .map((job) => job.scope),
+    ];
+  }
+  activeCount(projectPath?: string): number {
+    return this.executionScopes().filter(
+      (scope) => !projectPath || scope.projectPath === resolve(projectPath),
+    ).length;
   }
   private now() {
     return this.options.now?.() ?? Date.now();
@@ -227,12 +344,53 @@ export class PanelToolJobService {
     if (this.options.isAuthorized && !(await this.options.isAuthorized(scope)))
       throw new Error("tool job owner is no longer authorized");
   }
+  private async describePackage(scope: ToolJobScope): Promise<ToolJobPackage | undefined> {
+    if (!this.options.describePackage) return undefined;
+    try {
+      return packageValue(await this.options.describePackage(scope));
+    } catch {
+      throw packageError("PACKAGE_UNAVAILABLE", "任务的项目安装包无法校验，请恢复原包后重试。");
+    }
+  }
+  private async verifyPackage(job: ToolJob): Promise<void> {
+    if (!job.package && !this.options.describePackage) return; // Legacy standalone embedders.
+    if (!job.package)
+      throw packageError(
+        "PACKAGE_UNKNOWN",
+        "旧任务未记录安装包版本，请检查输入并重新提交任务。",
+        false,
+      );
+    const current = await this.describePackage(job.scope);
+    if (!current) throw packageError("PACKAGE_UNAVAILABLE", "当前 Host 无法校验此任务的原安装包。");
+    if (
+      current.version !== job.package.version ||
+      current.packageDigest !== job.package.packageDigest
+    )
+      throw packageError(
+        "PACKAGE_CHANGED",
+        "项目安装包与任务启动时不一致，请恢复原版本，或检查输入并创建新任务。",
+      );
+  }
+  private readOnly(job: ToolJob, scope: ToolJobScope): boolean {
+    return (
+      job.scope.revision !== scope.revision || (!!this.options.describePackage && !job.package)
+    );
+  }
   initialize(): Promise<void> {
     return (this.ready ??= this.load());
   }
   private async load(): Promise<void> {
     await this.storage.initialize();
     try {
+      const queues = await this.storage.readQueueCatalog(toolJobLimits.maxQueueCatalogBytes);
+      if (!Array.isArray(queues) || queues.length > toolJobLimits.maxQueues)
+        throw new Error("Invalid tool queue catalog");
+      for (const raw of queues) {
+        const scope = scopeValue(raw?.scope),
+          key = queueKey(scope);
+        if (this.queues.has(key)) throw new Error("Duplicate tool queue scope");
+        this.queues.set(key, { scope, ...queueState(raw) });
+      }
       const listing = await opendir(await this.storage.directory());
       let examined = 0;
       for await (const item of listing) {
@@ -279,6 +437,15 @@ export class PanelToolJobService {
     } catch {
       /* A caller may reconnect via list/get. */
     }
+    for (const listener of this.listeners) {
+      if (!sameScope(listener.scope, job.scope)) continue;
+      try {
+        const { input: _input, result: _result, ...event } = publicJob(job);
+        listener.send(event);
+      } catch {
+        /* One viewer must not interrupt persistence. */
+      }
+    }
   }
   private lookup(scope: ToolJobScope, id: string, mutate = false): StoredJob {
     if (typeof id !== "string") throw new Error("tool job ID is required");
@@ -289,6 +456,15 @@ export class PanelToolJobService {
       throw new Error("old-revision tool jobs are read-only; create a new compatible task");
     return job;
   }
+  /** Scoped existence check for transports merging read-only legacy history. */
+  async has(rawScope: ToolJobScope, id: string): Promise<boolean> {
+    const scope = scopeValue(rawScope);
+    await this.initialize();
+    await this.authorize(scope);
+    if (typeof id !== "string") throw new Error("tool job ID is required");
+    const job = this.jobs.get(id);
+    return !!job && sameScope(job.scope, scope, false);
+  }
   async list(rawScope: ToolJobScope): Promise<Array<ToolJob & { readOnly: boolean }>> {
     const scope = scopeValue(rawScope);
     await this.initialize();
@@ -296,22 +472,105 @@ export class PanelToolJobService {
     return [...this.jobs.values()]
       .filter((job) => sameScope(job.scope, scope, false))
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map((job) => ({ ...publicJob(job), readOnly: job.scope.revision !== scope.revision }));
+      .map((job) => ({ ...publicJob(job), readOnly: this.readOnly(job, scope) }));
   }
   async get(rawScope: ToolJobScope, id: string): Promise<ToolJob & { readOnly: boolean }> {
     const scope = scopeValue(rawScope);
     await this.initialize();
     await this.authorize(scope);
     const job = this.lookup(scope, id);
-    return { ...publicJob(job), readOnly: job.scope.revision !== scope.revision };
+    return { ...publicJob(job), readOnly: this.readOnly(job, scope) };
+  }
+  async find(rawScope: ToolJobScope, requestKey: string): Promise<ToolJob | null> {
+    const scope = scopeValue(rawScope);
+    if (typeof requestKey !== "string" || !requestKey || requestKey.length > 160)
+      throw new Error("invalid tool job request key");
+    await this.initialize();
+    await this.authorize(scope);
+    const job = [...this.jobs.values()].find(
+      (item) => sameScope(item.scope, scope) && item.requestKey === requestKey,
+    );
+    return job ? publicJob(job) : null;
+  }
+  private queueFor(scope: ToolJobScope): ToolQueueState {
+    return queueState(
+      this.queues.get(queueKey(scope)) ?? {
+        revision: 0,
+        paused: false,
+        maxConcurrent: toolJobLimits.maxConcurrent,
+      },
+    );
+  }
+  async getQueue(rawScope: ToolJobScope): Promise<ToolQueueState> {
+    const scope = scopeValue(rawScope);
+    await this.initialize();
+    await this.authorize(scope);
+    return this.queueFor(scope);
+  }
+  async setQueue(rawScope: ToolJobScope, update: ToolQueueUpdate): Promise<ToolQueueWriteResult> {
+    const scope = scopeValue(rawScope);
+    const desired = queueState({
+      revision: update?.expectedRevision,
+      paused: update?.paused,
+      maxConcurrent: update?.maxConcurrent,
+    });
+    if (desired.revision >= Number.MAX_SAFE_INTEGER)
+      throw new Error("Tool queue revision exhausted");
+    await this.initialize();
+    await this.authorize(scope);
+    const result = await this.exclusive(async () => {
+      if (this.stopping) throw new Error("tool job service is shutting down");
+      await this.authorize(scope);
+      const current = this.queueFor(scope);
+      if (current.revision !== desired.revision) return { saved: false, queue: current };
+      const key = queueKey(scope);
+      if (!this.queues.has(key) && this.queues.size >= toolJobLimits.maxQueues)
+        throw new Error("Tool queue catalog is full");
+      const next = { scope, ...desired, revision: current.revision + 1 };
+      const catalog = new Map(this.queues);
+      catalog.set(key, next);
+      await this.storage.writeQueueCatalog(
+        [...catalog.values()],
+        toolJobLimits.maxQueueCatalogBytes,
+      );
+      this.queues.set(key, next);
+      return { saved: true, queue: queueState(next) };
+    });
+    this.schedule();
+    return result;
+  }
+  private runnable(job: StoredJob): boolean {
+    if (job.status !== "queued") return false;
+    const queue = this.queueFor(job.scope);
+    if (queue.paused) return false;
+    let active = 0;
+    for (const id of this.active.keys()) {
+      const running = this.jobs.get(id);
+      if (running && sameScope(running.scope, job.scope)) active++;
+    }
+    return active < queue.maxConcurrent;
+  }
+  private pendingCount(scope: ToolJobScope): number {
+    return (
+      [...this.jobs.values()].filter(
+        (job) => sameScope(job.scope, scope) && !TERMINAL.has(job.status),
+      ).length + [...this.preparing.values()].filter((job) => sameScope(job.scope, scope)).length
+    );
   }
   async start(
     rawScope: ToolJobScope,
     request: ToolJobRequest,
     signal?: AbortSignal,
   ): Promise<ToolJob> {
-    signal?.throwIfAborted();
     const scope = scopeValue(rawScope);
+    return panelExecutionGate.run(scope, () => this.startAdmitted(scope, request, signal));
+  }
+  private async startAdmitted(
+    scope: ToolJobScope,
+    request: ToolJobRequest,
+    signal?: AbortSignal,
+  ): Promise<ToolJob> {
+    signal?.throwIfAborted();
     const entry = entryValue(request?.entry);
     if (!["manual", "retry"].includes(request.recovery))
       throw new Error("tool job recovery must be manual or retry");
@@ -335,6 +594,8 @@ export class PanelToolJobService {
     await this.initialize();
     await this.authorize(scope);
     let done!: () => void;
+    let settle!: (value: PreparationOutcome) => void;
+    let outcome!: PreparationOutcome;
     const reservation = await this.exclusive(async () => {
       signal?.throwIfAborted();
       if (this.stopping) throw new Error("tool job service is shutting down");
@@ -347,6 +608,14 @@ export class PanelToolJobService {
             throw new Error("tool job request key was already used for different input");
           return { existing };
         }
+        const pending = [...this.preparing.values()].find(
+          (item) => sameScope(item.scope, scope) && item.requestKey === request.requestKey,
+        );
+        if (pending) {
+          if (pending.requestDigest !== requestDigest)
+            throw new Error("tool job request key was already used for different input");
+          return { following: pending.result };
+        }
       }
       while (this.jobs.size + this.preparing.size >= toolJobLimits.maxJobs) {
         const oldest = [...this.jobs.values()]
@@ -356,17 +625,18 @@ export class PanelToolJobService {
         await this.storage.remove(oldest.id);
         this.jobs.delete(oldest.id);
       }
-      const pending =
-        [...this.jobs.values()].filter(
-          (job) => sameScope(job.scope, scope) && !TERMINAL.has(job.status),
-        ).length + [...this.preparing.values()].filter((job) => sameScope(job.scope, scope)).length;
-      if (pending >= toolJobLimits.maxQueuedPerScope)
+      if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)
         throw new Error("too many queued tool jobs for this workspace");
       const id = randomUUID();
       const controller = new AbortController();
       this.preparing.set(id, {
         scope,
         controller,
+        requestKey: request.requestKey,
+        requestDigest,
+        result: new Promise<PreparationOutcome>((resolveResult) => {
+          settle = resolveResult;
+        }),
         done: new Promise<void>((resolve) => {
           done = resolve;
         }),
@@ -374,12 +644,19 @@ export class PanelToolJobService {
       return { id, controller };
     });
     if (reservation.existing) return publicJob(reservation.existing);
+    if (reservation.following) {
+      const job = await waitPreparation(reservation.following, signal);
+      await this.authorize(scope);
+      signal?.throwIfAborted();
+      return toolJobJson(job, toolJobLimits.maxRecordBytes);
+    }
     const { id, controller } = reservation;
     const abort = () => controller!.abort(signal?.reason);
     signal?.addEventListener("abort", abort, { once: true });
     if (signal?.aborted) abort();
     try {
       controller!.signal.throwIfAborted();
+      const selectedPackage = await this.describePackage(scope);
       const workDir = await this.storage.directory(id!, true, true);
       controller!.signal.throwIfAborted();
       const prepared = this.options.prepareInput
@@ -390,6 +667,7 @@ export class PanelToolJobService {
         id: id!,
         scope,
         entry,
+        ...(selectedPackage ? { package: selectedPackage } : {}),
         input: toolJobJson(prepared, toolJobLimits.maxInputBytes),
         recovery: request.recovery,
         status: "queued",
@@ -401,6 +679,7 @@ export class PanelToolJobService {
         requestDigest,
       };
       await this.authorize(scope);
+      await this.verifyPackage(job);
       await this.exclusive(async () => {
         if (this.stopping || controller!.signal.aborted)
           throw new Error("tool job input preparation was interrupted");
@@ -427,14 +706,18 @@ export class PanelToolJobService {
         }
       });
       this.schedule();
-      return publicJob(job);
+      const result = publicJob(job);
+      outcome = { job: publicJob(job) };
+      return result;
     } catch (error) {
+      outcome = { error };
       const path = await this.storage.directory(id!).catch(() => undefined);
       if (path && !this.jobs.has(id!)) await this.storage.remove(id!);
       throw error;
     } finally {
       signal?.removeEventListener("abort", abort);
       this.preparing.delete(id!);
+      settle(outcome);
       done();
     }
   }
@@ -448,7 +731,7 @@ export class PanelToolJobService {
           if (
             !this.stopping &&
             this.active.size < toolJobLimits.maxConcurrent &&
-            [...this.jobs.values()].some((job) => job.status === "queued")
+            [...this.jobs.values()].some((job) => this.runnable(job))
           )
             this.schedule();
         },
@@ -462,7 +745,7 @@ export class PanelToolJobService {
     while (!this.stopping && this.active.size < toolJobLimits.maxConcurrent) {
       const selected = await this.exclusive(async () => {
         if (this.stopping) return;
-        const current = [...this.jobs.values()].find((job) => job.status === "queued");
+        const current = [...this.jobs.values()].find((job) => this.runnable(job));
         if (!current) return;
         const job = structuredClone(current);
         job.status = "running";
@@ -496,6 +779,7 @@ export class PanelToolJobService {
     let failure: unknown;
     try {
       await this.authorize(job.scope);
+      await this.verifyPackage(job);
       if (this.stopping) controller.abort();
       if (controller.signal.aborted) throw new Error("tool job cancelled before execution");
       result = toolJobJson(
@@ -573,6 +857,9 @@ export class PanelToolJobService {
   }
   async retry(rawScope: ToolJobScope, id: string): Promise<ToolJob> {
     const scope = scopeValue(rawScope);
+    return panelExecutionGate.run(scope, () => this.retryAdmitted(scope, id));
+  }
+  private async retryAdmitted(scope: ToolJobScope, id: string): Promise<ToolJob> {
     await this.initialize();
     await this.authorize(scope);
     const job = await this.exclusive(async () => {
@@ -582,6 +869,9 @@ export class PanelToolJobService {
         throw new Error("tool job must finish stopping before retry");
       if (current.recovery !== "retry" || !current.error?.retryable)
         throw new Error("tool job requires a new manually reviewed request");
+      if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)
+        throw new Error("too many queued tool jobs for this workspace");
+      await this.verifyPackage(current);
       const next = structuredClone(current);
       next.status = "queued";
       delete next.error;
@@ -594,12 +884,30 @@ export class PanelToolJobService {
     this.schedule();
     return job;
   }
-  async cancelApp(appId: string): Promise<void> {
+  async cancelProject(projectPath: string, appId?: string): Promise<void> {
     await this.initialize();
-    for (const item of this.preparing.values())
-      if (item.scope.appId === appId) item.controller.abort();
+    const project = resolve(projectPath);
+    const ids = appId
+      ? [appId]
+      : [
+          ...new Set([
+            ...[...this.preparing.values()]
+              .filter((item) => item.scope.projectPath === project)
+              .map((item) => item.scope.appId),
+            ...[...this.jobs.values()]
+              .filter((job) => job.scope.projectPath === project)
+              .map((job) => job.scope.appId),
+          ]),
+        ];
+    await Promise.all(ids.map((id) => this.cancelApp(id, project)));
+  }
+  async cancelApp(appId: string, projectPath?: string): Promise<void> {
+    await this.initialize();
+    const matches = (scope: ToolJobScope) =>
+      scope.appId === appId && (!projectPath || scope.projectPath === resolve(projectPath));
+    for (const item of this.preparing.values()) if (matches(item.scope)) item.controller.abort();
     const matching = [...this.jobs.values()].filter(
-      (job) => job.scope.appId === appId && !TERMINAL.has(job.status),
+      (job) => matches(job.scope) && !TERMINAL.has(job.status),
     );
     // Revocation bypasses the now-revoked caller grant but still waits for real exits.
     await this.exclusive(async () => {
@@ -648,6 +956,8 @@ export class PanelToolJobService {
         await this.commit(job);
       }
     });
+    this.listeners.clear();
     await this.storage.close();
+    this.unregisterExecution();
   }
 }

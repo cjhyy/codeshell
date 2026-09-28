@@ -4,16 +4,11 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 
-/** Subset of Electron's Cookie we rely on (keeps the formatter unit-testable). */
-export interface ElectronCookieLike {
-  domain?: string;
-  hostOnly?: boolean;
-  path?: string;
-  secure?: boolean;
-  expirationDate?: number;
-  name: string;
-  value: string;
-}
+import { formatNetscapeCookies, type CookieLike } from "@cjhyy/code-shell-core";
+export { formatNetscapeCookies };
+
+/** Subset of Electron's Cookie shared by desktop and background exports. */
+export type ElectronCookieLike = CookieLike;
 
 /** Validate the complete input before clear-mode restoration can change storage. */
 export function isRestorableCookieJar(value: unknown): value is ElectronCookieLike[] {
@@ -58,29 +53,6 @@ export function isRestorableCookieJar(value: unknown): value is ElectronCookieLi
 export const BROWSER_PARTITION = "persist:browser";
 const LEASE_DIR = join(tmpdir(), "codeshell-cookie-leases");
 const LEASE_MAX_AGE_MS = 5 * 60 * 1000;
-
-function bad(s: string): boolean {
-  return s.includes("\t") || s.includes("\n") || s.includes("\r");
-}
-
-/**
- * Electron Cookie[] → Netscape cookies.txt string. Pure (no Electron import) so
- * it's unit-testable in bun. yt-dlp / curl / wget / aria2 all eat this format.
- */
-export function formatNetscapeCookies(cookies: ElectronCookieLike[]): string {
-  const lines = ["# Netscape HTTP Cookie File"];
-  for (const c of cookies) {
-    if (bad(c.name) || bad(c.value) || (c.domain && bad(c.domain))) continue;
-    const domain = c.domain ?? "";
-    const includeSub = c.hostOnly === true ? "FALSE" : "TRUE";
-    const path = c.path ?? "/";
-    const secure = c.secure ? "TRUE" : "FALSE";
-    const expiry =
-      typeof c.expirationDate === "number" ? String(Math.floor(c.expirationDate)) : "0";
-    lines.push([domain, includeSub, path, secure, expiry, c.name, c.value].join("\t"));
-  }
-  return lines.join("\n") + "\n";
-}
 
 export function sanitizeBrowserPartition(partition?: string): string {
   if (partition === undefined) return BROWSER_PARTITION;

@@ -18,8 +18,13 @@ export interface CredentialView {
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
-    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
-    linkExecutionBackend?: "http-token" | "cli";
+    linkAuthSource?:
+      | "manual-token"
+      | "github-cli"
+      | "cli-session"
+      | "browser-oauth"
+      | "remote-link";
+    linkExecutionBackend?: "http-token" | "cli" | "remote";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;

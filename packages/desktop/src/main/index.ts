@@ -1,3 +1,8 @@
+import { MobileRemoteController } from "./mobile-remote-controller.js";
+import { DeviceRelayStore } from "./device-relay-store.js";
+import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
+import { registerProjectPanelIpc } from "./project-panel-ipc.js";
+import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
@@ -13,6 +18,7 @@ import {
   session,
   shell,
   systemPreferences,
+  safeStorage,
   webContents,
   Notification,
   screen,
@@ -20,6 +26,7 @@ import {
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
+import { openCloudWorkbench } from "./cloud-workbench-window.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
@@ -40,7 +47,9 @@ import {
   SessionManager,
   writeSettingsSchemaFile,
   userHome,
+  codeShellHome,
   CredentialStore,
+  isRemoteLinkCredential,
   summarizeCookieExpiry,
   materializeCookieSecret,
   type Credential,
@@ -59,8 +68,6 @@ import {
   listInstalledThemes,
   uninstallTheme,
   type InstalledTheme,
-  type GitPanelAppSourceInput,
-  type PanelAppSourceInput,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -334,8 +341,6 @@ import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
   type GatewayControlEventInput,
-  type MobileRemoteGatewayStatus,
-  type MobileRemoteOpenResult,
   type PetChatControlRequest,
   type PetChatControlResult,
 } from "./im-gateway-control-server.js";
@@ -381,7 +386,9 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
+import { createLinkService, remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService } from "./desktop-web-service.js";
+import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
   installSkillFromDirectory,
@@ -397,22 +404,7 @@ import {
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
-import {
-  invalidatePanelAppBindingGuard,
-  isPanelAppBoundToProject,
-  listPanelAppExtensions,
-  listPanelApps,
-  listPanelAppsForProjects,
-} from "./panel-apps-service.js";
-import {
-  discoverGitPanelAppsForUi,
-  installPanelAppUpdateForUi,
-  installLocalPanelAppForUi,
-  previewPanelAppUpdateForUi,
-  previewLocalPanelAppForUi,
-  uninstallPanelAppForUi,
-} from "./panel-app-install-service.js";
-import { panelAppUpdateService } from "./panel-app-update-service.js";
+import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
@@ -659,6 +651,10 @@ const panelAppBridge = new PanelAppBridge({
     return true;
   },
   cookieCredentials: {
+    taskCredentials: async (cwd) => {
+      await migrateCredentialStore(cwd);
+      return new CredentialStore(cwd).list();
+    },
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
       return new CredentialStore(cwd)
@@ -788,6 +784,8 @@ const panelAppBridge = new PanelAppBridge({
     },
   },
   automations: {
+    uniqueCreation: true,
+    conditional: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
     list: async (scope) =>
       listAutomationsForResumeSession(scope.resumeSessionId, desktopAutomationAuthorityDeps()),
     create: async (input, scope) =>
@@ -893,6 +891,9 @@ function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void 
 }
 
 function broadcastPanelAppsChanged(windows: Iterable<BrowserWindow>): void {
+  // Project management and paired Web write bindings outside settings:set.
+  // Invalidate before notifying any client or awaiting another side effect.
+  invalidatePanelAppBindingGuard();
   for (const window of windows) {
     if (window.isDestroyed()) continue;
     window.webContents.send("panel-apps:changed");
@@ -923,7 +924,24 @@ const mobileRemote = new RemoteHostManager({
   uploads: mobileUploads,
   webApi: createDesktopWebService({
     devices: mobileDevices,
+    automations: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
+    sharedToolJobs: panelAppBridge.sharedToolJobs(),
+    authorizePanelDirectory: (app, projectPath, workspacePath) =>
+      panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
+    // A registered HTTPS origin is trusted deployment configuration, never a request header.
+    remoteLink: () =>
+      process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
+        ? remoteLinkFromEnvironment(
+            process.env,
+            process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN,
+            "/mobile/link/callback",
+          )
+        : undefined,
+    onPanelsChanged: (id, kind) => {
+      if (kind === "remove") panelAppBridge.revokeAppId(id);
+      broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
+    },
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
     onSessionsChanged: (cwd, sessionId) => {
       const line = JSON.stringify({
@@ -963,6 +981,25 @@ const tunnelManager = new TunnelManager({
 });
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
+});
+const mobileRemoteController = new MobileRemoteController({
+  host: mobileRemote,
+  tunnel: tunnelManager,
+  binary: cloudflaredBinary,
+  passcode: accessPasscode,
+  environmentDir: join(codeShellHome(), "desktop"),
+  store: new DeviceRelayStore(resolve(app.getPath("userData"), "mobile-remote", "relay.enc"), {
+    available: () =>
+      safeStorage.isEncryptionAvailable() &&
+      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
+    encrypt: (value) => safeStorage.encryptString(value),
+    decrypt: (value) => safeStorage.decryptString(value),
+  }),
+  changed: (status) => {
+    for (const window of mainWindows) {
+      if (!window.isDestroyed()) window.webContents.send("mobileRemote:relayStatusChanged", status);
+    }
+  },
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -3301,6 +3338,9 @@ app.whenReady().then(async () => {
   // main to resolve/materialize secrets on demand; if safeStorage is unavailable
   // SafeStorageCipher intentionally falls back to `plain:` owner-only storage.
   setDefaultCredentialCipher(new SafeStorageCipher());
+  // Retired Link grants must resume cleanup even if no credentials page is opened.
+  const linkCleanup = createLinkService();
+  app.once("will-quit", () => linkCleanup.close());
   void knownAttachmentCwds()
     .then((cwds) => migrateKnownCredentialStores(cwds))
     .then((result) => dlog("credentials", "migration.done", { ...result }))
@@ -3813,31 +3853,18 @@ ipcMain.handle(
     return expandPluginCommand(cwd, name, rawArguments);
   },
 );
-ipcMain.handle("panel-apps:list", async (_e, cwd: string, locale: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof locale !== "string" || locale.length > 64) {
-    throw new Error("panel-apps:list requires locale");
-  }
-  return listPanelApps(cwd, locale);
-});
-ipcMain.handle("panel-apps:listExtensions", async (_e, cwd: string, locale: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof locale !== "string" || locale.length > 64) {
-    throw new Error("panel-apps:listExtensions requires locale");
-  }
-  return listPanelAppExtensions(cwd, locale);
-});
-ipcMain.handle("panel-apps:listForProjects", async (_e, projectPaths: string[], locale: string) => {
-  if (!Array.isArray(projectPaths) || projectPaths.length > 64) {
-    throw new Error("panel-apps:listForProjects requires projectPaths");
-  }
-  if (typeof locale !== "string" || locale.length > 64) {
-    throw new Error("panel-apps:listForProjects requires locale");
-  }
-  const authorizedPaths = await Promise.all(
-    projectPaths.map((path) => requireRendererProjectPath(path)),
-  );
-  return listPanelAppsForProjects(authorizedPaths, locale);
+registerProjectPanelIpc({
+  ipcMain,
+  requireRendererProjectPath,
+  withMutation: (cwd, write) =>
+    bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
+  onChanged: () => broadcastPanelAppsChanged(mainWindows),
+  revokeAppId: (id) => panelAppBridge.revokeAppId(id),
+  onCleanupError: (id, error) =>
+    dlog("main", "panel_app.settings_cleanup_failed", {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    }),
 });
 
 // ── Credentials (token/link store + cookie capture) ──────────────────
@@ -3856,6 +3883,8 @@ ipcMain.handle(
   "credentials:save",
   async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    assertGenericCredentialMutation(authorizedCwd, cred.id);
+    if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
     new CredentialStore(authorizedCwd || undefined).save(scope, cred);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
@@ -3865,12 +3894,29 @@ ipcMain.handle(
   "credentials:remove",
   async (_e, cwd: string, scope: CredentialScope, id: string) => {
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    assertGenericCredentialMutation(authorizedCwd, id);
     new CredentialStore(authorizedCwd || undefined).remove(scope, id);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
+
+registerRemoteLinkIpc({
+  ipcMain,
+  requireRendererProjectPath,
+  isMainWindow: (sender) =>
+    [...mainWindows].some((win) => !win.isDestroyed() && win.webContents === sender),
+  withMutation: (cwd, write) =>
+    bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
+  onChanged: () => bridge?.notifyWebConfigurationChanged(),
+});
+
+function assertGenericCredentialMutation(cwd: string, id: string) {
+  const credential = new CredentialStore(cwd || undefined).resolve(id);
+  if (credential && isRemoteLinkCredential(credential))
+    throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
+}
 
 async function persistLocalLinkCredential(input: {
   cwd: string;
@@ -4081,6 +4127,7 @@ ipcMain.handle(
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
       throw new Error("credentials:patchMeta requires fields");
     }
+    assertGenericCredentialMutation(authorizedCwd, id);
     new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
     if (fields.meta && typeof fields.meta === "object" && "autoRefreshFromBrowser" in fields.meta) {
       if (fields.meta.autoRefreshFromBrowser === true) {
@@ -4100,19 +4147,23 @@ ipcMain.handle(
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
-ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) =>
-  getMcpOAuthService().login(normalizeMcpOAuthLoginInput(raw)),
-);
+ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
+  const input = normalizeMcpOAuthLoginInput(raw);
+  if (input.credentialId) assertGenericCredentialMutation("", input.credentialId);
+  return getMcpOAuthService().login(input);
+});
 ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
   if (typeof credentialId !== "string" || !credentialId) {
     throw new Error("mcpOAuth:refresh requires credentialId");
   }
+  assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().refresh(credentialId);
 });
 ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
   if (typeof credentialId !== "string" || !credentialId) {
     throw new Error("mcpOAuth:logout requires credentialId");
   }
+  assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().logout(credentialId);
 });
 function browserPartitionForBucket(bucket: unknown): string | undefined {
@@ -4579,111 +4630,6 @@ ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginI
 ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
   previewLocalPluginForUi(input),
 );
-ipcMain.handle("panel-apps:previewLocal", async (_e, input: PanelAppSourceInput) =>
-  previewLocalPanelAppForUi(input),
-);
-ipcMain.handle("panel-apps:discoverGit", async (_e, input: GitPanelAppSourceInput) =>
-  discoverGitPanelAppsForUi(input),
-);
-ipcMain.handle("panel-apps:previewUpdate", async (_e, id: string) => {
-  if (typeof id !== "string" || !id) throw new Error("panel-apps:previewUpdate requires id");
-  return previewPanelAppUpdateForUi(id);
-});
-ipcMain.handle("panel-apps:checkUpdate", async (_e, id: string, force?: boolean) => {
-  if (typeof id !== "string" || (force !== undefined && typeof force !== "boolean")) {
-    throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
-  }
-  return panelAppUpdateService.check(id, force === true);
-});
-ipcMain.handle(
-  "panel-apps:installLocal",
-  async (
-    _e,
-    input: {
-      source: PanelAppSourceInput;
-      reviewToken: string;
-      overwrite?: boolean;
-    },
-  ) => {
-    if (!input || !input.source || typeof input.reviewToken !== "string") {
-      throw new Error("panel-apps:installLocal requires source and reviewToken");
-    }
-    const result = await installLocalPanelAppForUi(input);
-    if (result.ok) broadcastPanelAppsChanged(mainWindows);
-    return result;
-  },
-);
-ipcMain.handle(
-  "panel-apps:installUpdate",
-  async (_e, input: { id: string; reviewToken: string }) => {
-    if (
-      !input ||
-      typeof input.id !== "string" ||
-      !input.id ||
-      typeof input.reviewToken !== "string"
-    ) {
-      throw new Error("panel-apps:installUpdate requires id and reviewToken");
-    }
-    const result = await installPanelAppUpdateForUi(input);
-    if (result.ok) broadcastPanelAppsChanged(mainWindows);
-    return result;
-  },
-);
-ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
-  if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
-    throw new Error("panel-apps:uninstall requires id");
-  }
-  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
-    throw new Error("panel-apps:uninstall cwd must be a non-empty string");
-  }
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  await uninstallPanelAppForUi(id);
-  panelAppBridge.revokeAppId(id);
-  try {
-    const settings = (await readSettings("user")) ?? {};
-    const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
-    if (Array.isArray(disabled)) {
-      await writeSettings("user", {
-        disabledPanelApps: disabled.filter((candidate) => candidate !== id),
-      });
-    }
-    if (authorizedCwd) {
-      const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
-      const bindings = Array.isArray(projectSettings.panelAppBindings)
-        ? projectSettings.panelAppBindings.filter(
-            (candidate): candidate is string => typeof candidate === "string" && candidate !== id,
-          )
-        : [];
-      // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
-      // a null delete when the key already exists, so on a project without
-      // panelAppOverrides the null lands in the file and the settings schema
-      // then rejects it wholesale.
-      const rawOverrides = projectSettings.panelAppOverrides;
-      const overrides: Record<string, "inherit" | "on" | "off"> = {};
-      if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
-        for (const [key, value] of Object.entries(rawOverrides as Record<string, unknown>)) {
-          if (key === id) continue;
-          if (value === "inherit" || value === "on" || value === "off") overrides[key] = value;
-        }
-      }
-      await writeSettings(
-        "project",
-        {
-          panelAppBindings: bindings,
-          panelAppOverrides: overrides,
-        },
-        authorizedCwd,
-      );
-    }
-  } catch (error) {
-    dlog("main", "panel_app.settings_cleanup_failed", {
-      id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  invalidatePanelAppBindingGuard();
-  broadcastPanelAppsChanged(mainWindows);
-});
 ipcMain.handle(
   "plugins:installLocal",
   async (
@@ -5392,132 +5338,18 @@ ipcMain.handle("managed-runtimes:list", managedRuntimeHandlers.list);
 ipcMain.handle("managed-runtimes:resolve", managedRuntimeHandlers.resolve);
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
-// In-flight mutex for mobileRemote:start. Without it, a concurrent second
-// start (double-click / multi-window / IPC re-entry) sees an already-running
-// tunnel child, throws, and its catch UNCONDITIONALLY tears down the FIRST
-// call's tunnel — so both fail. Reusing the in-flight promise makes concurrent
-// starts idempotent: the second caller awaits the first's result instead of
-// launching a competing start.
-let mobileRemoteStartInFlight: Promise<{
-  url: string;
-  pairingUrl: string;
-  expiresAt: number;
-  mode: "tunnel" | "lan";
-}> | null = null;
+const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
+  mobileRemoteController.start(opts);
+const stopMobileRemote = () => mobileRemoteController.stop();
+const createMobileRemotePairingUrl = () => mobileRemoteController.pairingUrl();
+const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
+registerDeviceRelayIpc({
+  ipcMain,
+  controller: mobileRemoteController,
+  isMainWindow: (sender) =>
+    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+});
 
-async function startMobileRemote(opts?: {
-  mode?: "lan" | "tunnel";
-}): Promise<MobileRemoteOpenResult> {
-  if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
-  const run = (async () => {
-    const mode = opts?.mode ?? "lan";
-    const existing = mobileRemote.status();
-    const reusableTunnelUrl = mode === "tunnel" ? tunnelManager.publicUrl() : undefined;
-    if (
-      existing?.mode === mode &&
-      ((mode === "lan" && !tunnelManager.isRunning()) ||
-        (tunnelManager.isConnected() && reusableTunnelUrl))
-    ) {
-      if (reusableTunnelUrl) mobileRemote.setPublicBaseUrl(reusableTunnelUrl);
-      const pairing = mobileRemote.createPairingUrl();
-      return {
-        url: reusableTunnelUrl ?? existing.url,
-        pairingUrl: pairing.url,
-        expiresAt: pairing.expiresAt,
-        mode,
-      };
-    }
-    if (existing || tunnelManager.isRunning()) {
-      await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
-    }
-    if (mode === "tunnel") {
-      // Public tunnel: passcode MUST be set first (UI also disables the button).
-      if (!accessPasscode.isSet()) {
-        throw new Error("请先设置访问口令,再开启公网模式");
-      }
-      // Ensure cloudflared is present (no-op if already downloaded).
-      await cloudflaredBinary.ensureBinary();
-      // Bind loopback; cloudflared connects to 127.0.0.1.
-      const started = await mobileRemote.start({
-        mode: "tunnel",
-        host: "lan",
-        port: 0,
-        passcode: accessPasscode,
-      });
-      try {
-        const { url } = await tunnelManager.start(started.port);
-        mobileRemote.setPublicBaseUrl(url);
-        const pairing = mobileRemote.createPairingUrl();
-        return {
-          url,
-          pairingUrl: pairing.url,
-          expiresAt: pairing.expiresAt,
-          mode: "tunnel" as const,
-        };
-      } catch (err) {
-        // Tunnel failed (binary error / 15s URL timeout): tear everything down
-        // and surface a friendly error so the UI returns to the off state.
-        await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
-        throw new Error(`公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`, {
-          cause: err,
-        });
-      }
-    }
-    // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
-    // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
-    const started = await mobileRemote.start({ host: "lan", port: 0 });
-    const pairing = mobileRemote.createPairingUrl();
-    return {
-      url: started.url,
-      pairingUrl: pairing.url,
-      expiresAt: pairing.expiresAt,
-      mode: "lan" as const,
-    };
-  })();
-  mobileRemoteStartInFlight = run;
-  try {
-    return await run;
-  } finally {
-    if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
-  }
-}
-
-async function stopMobileRemote(): Promise<void> {
-  await Promise.all([tunnelManager.stop(), mobileRemote.stop()]);
-}
-
-function createMobileRemotePairingUrl(): { pairingUrl: string; expiresAt: number } {
-  const pairing = mobileRemote.createPairingUrl();
-  return { pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
-}
-
-function getMobileRemoteGatewayStatus(): MobileRemoteGatewayStatus {
-  const status = mobileRemote.status();
-  return {
-    running: Boolean(status),
-    url:
-      status?.mode === "tunnel"
-        ? tunnelManager.isConnected()
-          ? tunnelManager.publicUrl()
-          : undefined
-        : status?.url,
-    mode: status?.mode,
-    tunnelRunning: tunnelManager.isRunning(),
-    tunnelConnected: tunnelManager.isConnected(),
-    passcodeSet: accessPasscode.isSet(),
-    onlineDeviceCount: mobileRemote.onlineDeviceIds().length,
-  };
-}
-
-ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) =>
-  startMobileRemote(opts),
-);
-ipcMain.handle("mobileRemote:stop", async () => stopMobileRemote());
-// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
-// the QR after a settings-page remount (pairingUrl is renderer-local state and
-// is lost on navigation) without restarting the host.
-ipcMain.handle("mobileRemote:pairingUrl", async () => createMobileRemotePairingUrl());
-ipcMain.handle("mobileRemote:status", async () => getMobileRemoteGatewayStatus());
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {
   mobileDevices.revoke(id);
@@ -6410,6 +6242,13 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   }
 }
 
+ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
+  const owner = BrowserWindow.fromWebContents(event.sender);
+  if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
+    throw new Error("云端入口仅允许从主窗口打开。");
+  return openCloudWorkbench(address);
+});
+
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
@@ -6545,6 +6384,9 @@ ipcMain.handle("settings:getConfiguration", async (_e, target: RendererConfigura
 function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new Error("patch must be object");
+  }
+  if (["panelAppBindings", "panelAppPins", "panelAppOverrides"].some((key) => key in patch)) {
+    throw new Error("Panel project bindings must use the reviewed project binding API");
   }
   try {
     if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {
@@ -7139,8 +6981,7 @@ app.on("before-quit", (event) => {
     externalRuntimeService = null;
     await Promise.allSettled([
       imGatewayService.dispose(),
-      tunnelManager.stop(),
-      mobileRemote.stop(),
+      mobileRemoteController.dispose(),
       gatewayControlServer?.stop(),
       petWorkInboxFlush,
       petLongTaskFlush,

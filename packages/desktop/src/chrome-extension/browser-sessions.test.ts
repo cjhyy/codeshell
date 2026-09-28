@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
-import { ExtensionBrowserSessions } from "./browser-sessions.js";
+import { ExtensionBrowserSessions, dispatchExtensionAction } from "./browser-sessions.js";
+import { dispatchBrowserBridgeAction } from "../main/browser-driver/automation-host.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -11,6 +12,27 @@ function deferred<T>() {
 }
 
 describe("extension grants around official Puppeteer connections", () => {
+  test("desktop and extension dispatch preserve a targeted wait condition", async () => {
+    const calls: unknown[] = [];
+    const bridge = {
+      waitForLoad: async (...args: unknown[]) => {
+        calls.push(args);
+        return { ok: true };
+      },
+    } as unknown as BrowserBridge;
+    const request = {
+      action: "waitForLoad",
+      timeoutMs: 500,
+      condition: { text: "Loaded", state: "visible" },
+    } as const;
+    await dispatchExtensionAction(bridge, request);
+    await dispatchBrowserBridgeAction(request, bridge);
+    expect(calls).toEqual([
+      [500, request.condition],
+      [500, request.condition],
+    ]);
+  });
+
   test("a resume queued before takeover cannot restore control afterwards", async () => {
     const started = deferred<void>();
     const finish = deferred<{ ok: true }>();

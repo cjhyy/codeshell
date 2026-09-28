@@ -15,7 +15,7 @@ export async function connectGrantedTab(
 ): Promise<ExtensionConnection> {
   const transport = await ExtensionTransport.connectTab(tabId);
   try {
-    const browser = await connect({ transport, defaultViewport: null, protocolTimeout: 10_000 });
+    const browser = await connect({ transport, defaultViewport: null, protocolTimeout: 65_000 });
     const pages = await browser.pages();
     if (pages.length !== 1) {
       await browser.disconnect();

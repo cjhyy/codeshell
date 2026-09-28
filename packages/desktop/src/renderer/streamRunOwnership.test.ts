@@ -45,6 +45,59 @@ function usageBetweenUsers(state: MessagesReducerState, name: string) {
 }
 
 describe("stream run ownership", () => {
+  test("the footer uses whole-run snapshots across model steps without adding them twice", () => {
+    let state = start(user(INITIAL_STATE, "a"), "a");
+    state = usage(state, "a", 1000, 800);
+    state = event(state, "a", {
+      type: "usage_update",
+      promptTokens: 300,
+      singleTurnPromptTokens: 1300,
+      singleTurnCacheReadTokens: 900,
+      singleTurnCacheCreationTokens: 50,
+    });
+    state = event(state, "a", {
+      type: "stream_request_start",
+      turnNumber: 2,
+      messageId: "assistant-a-step-2",
+    });
+    state = event(state, "a", {
+      type: "usage_update",
+      promptTokens: 2000,
+      singleTurnPromptTokens: 3300,
+      singleTurnCacheReadTokens: 2500,
+      singleTurnCacheCreationTokens: 100,
+    });
+    // Context estimates and session totals must not overwrite the turn total.
+    state = event(state, "a", { type: "usage_update", promptTokens: 2100 });
+    state = event(state, "a", {
+      type: "usage_update",
+      promptTokens: 53_300,
+      cumulativePromptTokens: 53_300,
+    });
+    // Final settlement also includes auxiliary calls, without a context reading.
+    const settled: StreamEvent = {
+      type: "usage_update",
+      promptTokens: 0,
+      singleTurnPromptTokens: 3400,
+      singleTurnCacheReadTokens: 2550,
+      singleTurnCacheCreationTokens: 120,
+    };
+    state = event(event(state, "a", settled), "a", settled);
+    state = event(state, "a", { type: "turn_complete", reason: "completed" });
+    expect(state.promptTokens).toBe(2100);
+    expect(usageBetweenUsers(state, "a")).toMatchObject([
+      { promptTokens: 3400, cacheReadTokens: 2550, cacheCreationTokens: 120 },
+    ]);
+
+    state = start(user(state, "b"), "b");
+    state = usage(state, "b", 42, 10);
+    state = event(state, "b", { type: "turn_complete", reason: "completed" });
+    expect(usageBetweenUsers(state, "a")).toMatchObject([{ promptTokens: 3400 }]);
+    expect(usageBetweenUsers(state, "b")).toMatchObject([
+      { promptTokens: 42, cacheReadTokens: 10, cacheCreationTokens: 0 },
+    ]);
+  });
+
   test("Stop after injected guidance still updates the original run's usage", () => {
     let state = start(user(INITIAL_STATE, "a"), "a");
     state = usage(state, "a", 100);

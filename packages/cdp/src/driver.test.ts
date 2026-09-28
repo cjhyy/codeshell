@@ -222,6 +222,38 @@ describe("CdpActionsDriver.focusNode", () => {
 });
 
 describe("CdpActionsDriver.scroll", () => {
+  test("waits for delayed progress without dispatching a second wheel", async () => {
+    let dispatched = false;
+    let observations = 0;
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            textLength: 100,
+            scroll: {
+              x: 0,
+              y: dispatched && ++observations >= 3 ? 300 : 0,
+              maxX: 0,
+              maxY: 2000,
+              viewportWidth: 800,
+              viewportHeight: 600,
+              atTop: false,
+              atEnd: false,
+            },
+          },
+        },
+      }),
+      "Input.dispatchMouseEvent": () => {
+        dispatched = true;
+        return {};
+      },
+    });
+    const driver = new CdpActionsDriver(send, () => ({ url: "u" }));
+    expect(await driver.scroll("down", 300)).toMatchObject({ ok: true, scroll: { y: 300 } });
+    expect(observations).toBe(3);
+    expect(calls.filter((call) => call.params?.type === "mouseWheel")).toHaveLength(1);
+  });
+
   test("dispatches mouseWheel with signed deltaY", async () => {
     let y = 0;
     const { send, calls } = fakeCdp({

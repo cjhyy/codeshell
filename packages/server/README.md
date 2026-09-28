@@ -12,6 +12,8 @@ CodeShell 服务端传输与管理服务（纯 Node、零 Electron）：mobile r
 | ---------------------------------------- | ----------------------------------------------------------------- |
 | `@cjhyy/code-shell-server/storage`       | 磁盘 Session、附件暂存、图片探测和稳定 client-message ID          |
 | `@cjhyy/code-shell-server/worker`        | 与传输无关的 stdio worker 生命周期和行协议桥接                    |
+| `@cjhyy/code-shell-server/auth`          | 独立服务可复用的单 owner HTTP 初始化、登录及会话撤销              |
+| `@cjhyy/code-shell-server/remote-relay`  | 设备出站 WSS 连接器、固定回环目标、受限二进制字节流与 v1 协议     |
 | `@cjhyy/code-shell-server/mobile-remote` | 配对、访问门禁、rooms、上传、LAN/tunnel host 和移动端协议类型     |
 | `@cjhyy/code-shell-server/serve`         | Headless HTTP/WebSocket host 与 `code-shell-serve` CLI 组合默认值 |
 | `@cjhyy/code-shell-server/desktop-web`   | 设备配对换 Cookie、已知 Workspace 校验与共享管理 HTTP API         |
@@ -24,13 +26,46 @@ import { WorkerBridgeCore } from "@cjhyy/code-shell-server/worker";
 ```
 
 包根入口保留 storage、worker、mobile-remote、serve 和 desktop-web 的兼容导出；
-Link 使用独立 `/links` 入口。新消费方应避免根入口，以免只使用 storage
+Link 和独立服务认证分别使用 `/links`、`/auth` 入口。新消费方应避免根入口，以免只使用 storage
 或 transport 时也求值无关的宿主组合。
 
 `/storage`、`/worker` 和 `/mobile-remote` 没有 Coding/Web 静态导入。外部
 Agent 策略由产品宿主通过 `ResidentAgentOptions.appendSystemPrompt` 注入。
 `/serve` 则是有意保留的开箱即用产品入口：CLI 被调用时解析 Coding stdio
 worker 和已构建的 Web app。
+
+电脑出站中继使用 `/remote-relay`。先以 `mode: "relay"` 启动已配置访问口令的
+`RemoteHostManager`，再把 `host.relayTarget()` 交给连接器；该能力在 Host 停止时立即
+撤销，不能继续暴露复用原端口的其他服务。协议、生命周期和真实网络测试范围见
+[设备中继说明](../../docs/device-relay.md)。桌面登记设置和物理手机验收仍是后续工作。
+
+`MobileUploadService.revokeDevice(deviceId)` 同步禁止该设备的新票据和领取操作，
+中止尚未被任务认领的上传，并返回可等待的临时文件清理结果。`RemoteHostManager`
+的同名方法会调用它、报告异步清理错误；`stop()` 会等待清理完成。已被任务认领的
+附件保留至原持有者 `finalize` 或 `release`；撤销后的 `release` 不会重新开放票据。
+自定义 `uploads` 适配器也必须实现这项设备级撤销。其他设备的上传不受影响。
+
+## 独立服务的单 owner 认证
+
+`/auth` 直接复用 Hub 的认证实现，运行时仅导出 `createHubAuth` 和
+`HUB_SESSION_COOKIE`，同时提供 `HubAuth`、`HubAuthOptions`、`HubSession` 类型。
+它不会创建 HTTP listener、Worker、项目或设备中继，也不提供多租户身份体系。
+
+宿主通过 `createHubAuth({ dataDir, publicOrigin, onRevoke })` 创建认证服务，先将请求
+交给 `auth.handle(request, response)` 处理现有 `/api/v1/auth/*` 端点。其他受保护
+路由必须同时检查 `auth.isOriginAllowed(request)` 和 `await auth.authenticate(request)`；
+认证成功本身不授予文件、工具或手机配对权限。
+
+`publicOrigin` 是部署者配置的可信根 Origin，公网必须使用 HTTPS，不能从请求的
+转发头推导。`dataDir` 保存单 owner 账号和会话；首次返回的 `bootstrapToken` 应交给
+管理员私密保存，不能记录到公共日志。`onRevoke(sessionId)` 用于同步撤销宿主持有的
+连接，长期连接还应重新检查会话有效性；Cookie/令牌只能用于本服务。
+多个独立认证服务应使用不同主机名和数据目录；Cookie 不按端口隔离，只更换监听
+端口不能隔离浏览器登录。
+
+`HubAuth.store` 保留原有返回类型，供宿主检查活动会话；本入口不额外导出 store
+构造器或令牌解析工具。`bun run test:package-release` 会从实际 tarball 的公开入口
+检查严格 NodeNext 类型，并用原生 Node HTTP 验证初始化、登录、Origin、撤销和重载。
 
 ## 两种宿主，共用浏览器工作台
 
@@ -43,6 +78,10 @@ Desktop Web 不会创建第二个 Hub Worker，也不需要再建 Hub 管理员�
 管理服务。宿主注入已知 Workspace 解析、运行门禁和热更新回调；业务服务复用
 `hub/` 与 `/links` 实现。Electron 原生 renderer 仍使用原来的 IPC。
 具体文件与环境差异见 [共享 Web 工作台](../../docs/todo/shared-web-workbench.md)。
+
+Desktop Web 和 Hub 在注销或显式撤销会话时，会关闭该会话尚未完成的受保护 HTTP
+响应，包括正在下载的文件，并停止源文件读取、释放句柄。其他会话的下载不受影响；
+已经返回接受结果的后台任务仍由原来的任务生命周期管理。注销请求本身仍返回成功。
 
 ## code-shell-serve — 个人 Hub Web host
 
@@ -138,3 +177,8 @@ Docker 部署到其他机器见 [Docker 部署说明](../../docs/docker-deployme
 更新 Hub 后需重建并重启服务。Desktop Web 的入口构建到 `packages/desktop/out/mobile`，
 还依赖新的主进程 HTTP 接线，因此必须重新构建 Desktop 并重启应用；只更新 Hub 的 `dist-app`
 或刷新旧桌面的浏览器页面不会完成升级。
+
+The focused `/remote-relay` entry also exposes `environmentIdentity(dataDir)` so
+desktop enrollment uses the same stable identity as its Web descriptor. It is not
+added to the root entry. `DeviceRelayState` includes terminal `unauthorized` for
+TLS-verified 401/403 control handshakes; temporary failures continue reconnecting.

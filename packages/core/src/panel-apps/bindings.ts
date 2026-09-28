@@ -1,5 +1,27 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
+import { z } from "zod";
+
+/** Package references are identities, never caller-selected filesystem paths. */
+export const PanelAppPackagePinSchema = z
+  .object({
+    version: z.string().min(1).max(80),
+    packageDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+export const PanelAppPackagePinsSchema = z.record(
+  z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+  PanelAppPackagePinSchema,
+);
+export type PanelAppPackagePin = z.infer<typeof PanelAppPackagePinSchema>;
+
+export function parsePanelAppPackagePins(
+  projectSettings: Record<string, unknown> | undefined,
+): Record<string, PanelAppPackagePin> {
+  return PanelAppPackagePinsSchema.parse(
+    projectSettings?.panelAppPins === undefined ? {} : projectSettings.panelAppPins,
+  );
+}
 
 export interface PanelAppBindingPolicy {
   /** Panel Apps are unavailable without a concrete project. */

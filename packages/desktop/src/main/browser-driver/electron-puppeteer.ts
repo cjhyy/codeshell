@@ -185,7 +185,7 @@ export function getElectronBrowser(wc: WebContents): Promise<PuppeteerBrowserDri
       throw new Error(PAUSED);
     }
     target.transport = transport;
-    const browser = await connect({ transport, defaultViewport: null, protocolTimeout: 5000 });
+    const browser = await connect({ transport, defaultViewport: null, protocolTimeout: 65_000 });
     if (!target.active) {
       await browser.disconnect();
       throw new Error(PAUSED);

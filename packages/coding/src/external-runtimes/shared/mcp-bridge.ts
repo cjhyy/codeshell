@@ -105,18 +105,6 @@ export function threadIdFromMeta(params: unknown): string | undefined {
   return undefined;
 }
 
-function turnIdFromMeta(params: unknown): string | undefined {
-  if (!params || typeof params !== "object") return undefined;
-  const meta = (params as { _meta?: unknown })._meta;
-  if (!meta || typeof meta !== "object") return undefined;
-  const turn = (meta as Record<string, unknown>)["x-codex-turn-metadata"];
-  if (turn && typeof turn === "object") {
-    const id = (turn as { turn_id?: unknown }).turn_id;
-    if (typeof id === "string" && id) return id;
-  }
-  return undefined;
-}
-
 /** Model-facing text for a routing refusal. Says what happened without leaking
  *  which other sessions exist. */
 function missMessage(reason: SessionContextMissReason): string {
@@ -341,7 +329,10 @@ export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise
       const started = Date.now();
       // The host is the authorization boundary; the bridge only routes.
       const outcome = await resolved.host.execute({
-        id: turnIdFromMeta(message.params) ?? `mcp-${randomBytes(6).toString("hex")}`,
+        // One turn can contain many calls, including parallel ones. A turn id
+        // aliases their transcript/UI entries and overwrites navigate with a
+        // later observe error. Mint a host identity for each actual invocation.
+        id: `mcp-${randomBytes(12).toString("hex")}`,
         name,
         input: params?.arguments ?? {},
       });

@@ -44,3 +44,12 @@ export function panelAppInstallDir(id: string): string {
 export function panelAppsRegistryPath(): string {
   return join(panelAppsRoot(), "installed.json");
 }
+
+/** Host-owned immutable package address; never accept a path from project settings. */
+export function panelAppPackageDir(id: string, digest: string): string {
+  assertSafePanelAppId(id);
+  if (!/^[a-f0-9]{64}$/.test(digest)) {
+    throw new PanelAppInstallError("Panel App package digest is invalid");
+  }
+  return join(panelAppsRoot(), ".versions", id, digest);
+}

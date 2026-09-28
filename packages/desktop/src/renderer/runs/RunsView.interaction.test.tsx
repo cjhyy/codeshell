@@ -40,6 +40,11 @@ function run(runId: string, status = "running"): RunDetail {
     sessionId: `session-${runId}`,
     error: null,
     summary: `摘要 ${runId}`,
+    prompt: `完整 prompt ${runId}`,
+    model: "test-model",
+    provider: "test-provider",
+    durationMs: 1_250,
+    usage: { promptTokens: 120, completionTokens: 30, totalTokens: 150 },
     attemptCount: 1,
     latestCheckpointId: null,
     latestApprovalId: null,
@@ -48,7 +53,24 @@ function run(runId: string, status = "running"): RunDetail {
     checkpoints: [],
     artifacts: [`/workspace/${"artifact/".repeat(15)}file.txt`],
     events: [
-      { eventId: `event-${runId}`, type: "run_started", timestamp: 1_800_000_001_000, data: {} },
+      {
+        eventId: `started-${runId}`,
+        type: "run_started",
+        timestamp: 1_800_000_000_000,
+        data: {},
+      },
+      {
+        eventId: `tool-${runId}`,
+        type: "tool_use",
+        timestamp: 1_800_000_000_100,
+        data: { toolName: "Read", toolCallId: `call-${runId}`, args: { file: "/tmp/a" } },
+      },
+      {
+        eventId: `result-${runId}`,
+        type: "tool_result",
+        timestamp: 1_800_000_001_000,
+        data: { toolName: "Read", toolCallId: `call-${runId}`, result: "file body" },
+      },
     ],
   };
 }
@@ -154,6 +176,11 @@ describe("RunsView loading and selection", () => {
     expect(textOf(pane())).toContain("开始运行");
     expect(textOf(pane())).toContain("session-b");
     expect(textOf(pane())).toContain(run("b").cwd);
+    expect(textOf(pane())).toContain("完整 prompt b");
+    expect(textOf(pane())).toContain("test-model");
+    expect(textOf(pane())).toContain("150");
+    expect(textOf(pane())).toContain("Read");
+    expect(textOf(pane())).toContain("调用工具 · Read");
   });
 
   test("an initial run outside the list can load, and a newer deep link ignores the older response", async () => {

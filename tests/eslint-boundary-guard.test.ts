@@ -22,6 +22,21 @@ function lintStdin(filename: string, source: string) {
 
 describe("ESLint CodeShell package boundary guards", () => {
   it(
+    "keeps optimization lab on the extension contract",
+    () => {
+      const result = lintStdin(
+        "packages/optimization-lab/src/__lint_boundary_probe__.ts",
+        'export { mutateJsonFile } from "@cjhyy/code-shell-core/internal";',
+      );
+      expect(result.status).not.toBe(0);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "capability packages must import core through @cjhyy/code-shell-core/extension",
+      );
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
+  it(
     "rejects host leaks and capability imports outside the extension contract",
     () => {
       const probes = [

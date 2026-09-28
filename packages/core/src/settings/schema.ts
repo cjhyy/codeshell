@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { WorkspaceSourceBindingSchema } from "../sources/types.js";
+import { PanelAppPackagePinsSchema } from "../panel-apps/bindings.js";
 import {
   MAX_MCP_CONNECT_RETRIES,
   MAX_MCP_CONNECT_TIMEOUT_MS,
@@ -447,6 +448,9 @@ export const SettingsSchema = z
      * UI, Agent tools, bundled Skills, or project-scoped storage.
      */
     panelAppBindings: z.array(z.string()).default([]),
+
+    /** Reviewed package selected independently for each bound Panel in this project. */
+    panelAppPins: PanelAppPackagePinsSchema.default({}),
 
     /**
      * Legacy per-project Panel App policy. `on` is read as an explicit binding

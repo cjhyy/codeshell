@@ -13,6 +13,8 @@ import type { MobileViewerIdentity } from "./viewer-identity.js";
 import type { MobileUploadService } from "./mobile-upload-service.js";
 import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import type { DesktopWebHttpApi } from "../desktop-web/http-api.js";
+import type { RelayLocalTarget } from "../remote-relay/connector.js";
+import { isRelayOrigin } from "../remote-relay/protocol.js";
 
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
@@ -47,10 +49,11 @@ export interface RemoteHostStartOptions {
   /**
    * "lan" (default) keeps the existing LAN behaviour unchanged. "tunnel" binds
    * 127.0.0.1 (cloudflared connects to loopback) and inserts a passcode gate in
-   * front of every HTTP route and the WS upgrade.
+   * front of every HTTP route and the WS upgrade. "relay" also requires an
+   * initialized passcode and a stable HTTPS origin before pairing/WS upgrades.
    */
-  mode?: "lan" | "tunnel";
-  /** Required in tunnel mode: the public access gate. Ignored in lan mode. */
+  mode?: "lan" | "tunnel" | "relay";
+  /** Required and initialized in relay mode; public gate for tunnel mode too. */
   passcode?: AccessPasscode;
 }
 
@@ -58,7 +61,7 @@ export interface RemoteHostStarted {
   host: string;
   port: number;
   url: string;
-  mode: "lan" | "tunnel";
+  mode: "lan" | "tunnel" | "relay";
 }
 
 export interface RemoteHostManagerOptions {
@@ -75,7 +78,7 @@ export interface RemoteHostManagerOptions {
    */
   mobileDevUrl?: string;
   /** One-time upload tickets. The route remains behind the tunnel passcode gate. */
-  uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers">;
+  uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers" | "revokeDevice">;
   /** Optional shared Web HTTP facade. Pairing, uploads, and /mobile retain their routes. */
   webApi?: DesktopWebHttpApi;
 }
@@ -86,6 +89,7 @@ export class RemoteHostManager extends EventEmitter {
   private started?: RemoteHostStarted;
   private starting?: Promise<RemoteHostStarted>;
   private stopping?: Promise<void>;
+  private relayLifetime?: AbortController;
   private pairing = new PairingTokenManager();
   /** ws → authenticated device id. A socket absent here is unauthenticated. */
   private authed = new WeakMap<WebSocket, string>();
@@ -155,8 +159,13 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   private async startOnce(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
-    const tunnel = options.mode === "tunnel";
-    this.passcode = tunnel ? options.passcode : undefined;
+    const relay = options.mode === "relay";
+    const publicAccess = relay || options.mode === "tunnel";
+    if (relay && !options.passcode?.isSet()) {
+      throw new Error("Relay mode requires an initialized access passcode");
+    }
+    if (relay) this.publicBaseUrl = undefined;
+    this.passcode = publicAccess ? options.passcode : undefined;
     const gate = this.passcode;
     this.opts.webApi?.start();
     const server = createServer((req, res) => {
@@ -209,7 +218,7 @@ export class RemoteHostManager extends EventEmitter {
       if (req.url && /^\/mobile(?:[/?#]|$)/.test(req.url)) {
         serveMobile(req, res, {
           rootDir: this.mobileRootDir,
-          devUrl: tunnel ? undefined : this.mobileDevUrl,
+          devUrl: publicAccess ? undefined : this.mobileDevUrl,
         });
         return;
       }
@@ -235,6 +244,15 @@ export class RemoteHostManager extends EventEmitter {
         }
         if (!isWebSocketPath) {
           socket.destroy();
+          return;
+        }
+        if (
+          relay &&
+          (!this.publicBaseUrl ||
+            req.headers.origin !== this.publicBaseUrl ||
+            req.headers.host !== new URL(this.publicBaseUrl).host)
+        ) {
+          socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
           return;
         }
         if (
@@ -326,7 +344,7 @@ export class RemoteHostManager extends EventEmitter {
     // host: "lan" → resolve the Mac's real LAN IPv4 so a phone on the same
     // Wi-Fi can reach us. We bind that concrete address (never 0.0.0.0). If no
     // LAN interface is found, fall back to the requested host (e.g. localhost).
-    const bindHost = tunnel
+    const bindHost = publicAccess
       ? "127.0.0.1"
       : options.host === "lan"
         ? (resolveLanHost() ?? "127.0.0.1")
@@ -359,11 +377,12 @@ export class RemoteHostManager extends EventEmitter {
     }
     const addr = server.address();
     const port = typeof addr === "object" && addr ? addr.port : options.port;
+    this.relayLifetime = relay ? new AbortController() : undefined;
     this.started = {
       host: bindHost,
       port,
       url: `http://${bindHost}:${port}`,
-      mode: tunnel ? "tunnel" : "lan",
+      mode: options.mode ?? "lan",
     };
     return this.started;
   }
@@ -374,11 +393,35 @@ export class RemoteHostManager extends EventEmitter {
    * address, not the loopback bind). Pass undefined to clear it.
    */
   setPublicBaseUrl(url?: string): void {
+    if (this.started?.mode === "relay" && url !== undefined && !isRelayOrigin(url)) {
+      throw new Error("Relay mode requires a canonical HTTPS origin");
+    }
     this.publicBaseUrl = url;
+  }
+
+  /** Fixed loopback authority, revoked synchronously when this Host stops. */
+  relayTarget(): RelayLocalTarget {
+    const started = this.started;
+    const lifetime = this.relayLifetime;
+    if (started?.mode !== "relay" || !lifetime || lifetime.signal.aborted) {
+      throw new Error("Remote host is not running in relay mode");
+    }
+    return Object.freeze({
+      port: started.port,
+      signal: lifetime.signal,
+      setPublicBaseUrl: (origin: string) => {
+        lifetime.signal.throwIfAborted();
+        if (this.started !== started) throw new Error("Relay Host generation expired");
+        this.setPublicBaseUrl(origin);
+      },
+    });
   }
 
   createPairingUrl(): { token: string; url: string; expiresAt: number } {
     if (!this.started) throw new Error("Remote host is not running");
+    if (this.started.mode === "relay" && !this.publicBaseUrl) {
+      throw new Error("Relay public origin is not configured");
+    }
     const token = this.pairing.createToken();
     const base = this.publicBaseUrl ?? this.started.url;
     return {
@@ -493,6 +536,9 @@ export class RemoteHostManager extends EventEmitter {
 
   /** Call after revoking/removing a trusted device to release both transports immediately. */
   revokeDevice(deviceId: string): void {
+    void this.opts.uploads?.revokeDevice(deviceId).catch((error) => {
+      this.emit("host-error", error instanceof Error ? error.message : String(error));
+    });
     this.opts.webApi?.revokeDevice(deviceId);
     for (const client of this.wss?.clients ?? []) {
       if (this.authed.get(client) !== deviceId) continue;
@@ -502,6 +548,9 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   stop(): Promise<void> {
+    // Listeners synchronously fence and destroy outbound sockets before the
+    // loopback listener can close or its port can be reused by another Host.
+    this.relayLifetime?.abort();
     if (this.stopping) return this.stopping;
     const attempt = Promise.resolve()
       .then(() => this.stopOnce())
@@ -514,6 +563,8 @@ export class RemoteHostManager extends EventEmitter {
 
   private async stopOnce(): Promise<void> {
     if (this.starting) await this.starting.catch(() => undefined);
+    this.relayLifetime?.abort();
+    this.relayLifetime = undefined;
     const server = this.server;
     // Forcibly drop live WS sockets first. wss.close() alone waits for clients
     // to disconnect, so a phone left connected would hang stop() indefinitely.

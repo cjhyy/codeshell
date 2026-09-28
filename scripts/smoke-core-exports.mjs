@@ -35,6 +35,9 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "inspectProjectSettingsRecovery",
+  "repairProjectSettings",
+  "restoreProjectSettings",
   "sliceAnsi",
   "getGraphemeSegmenter",
   "logForDebugging",
@@ -117,6 +120,9 @@ assert.equal("Arena" in internalApi, false);
 // Includes the reviewed host-only managed-runtime and model-instance types;
 // neither surface is added to the stable public root.
 const expectedInternalTypeExports = [
+  "RecoveryScope",
+  "SettingsRecoveryInspection",
+  "SettingsRecoveryResult",
   "ApprovalRequest",
   "ApprovalResult",
   "ApprovalScope",

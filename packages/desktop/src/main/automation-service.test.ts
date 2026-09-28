@@ -382,3 +382,25 @@ test("reloadAutomations calls scheduler.loadJobs", () => {
   expect(loaded).toBe(1);
   setAutomationScheduler(null);
 });
+
+test("authorized unique creation preserves one task and rejects a different session or definition", async () => {
+  sched.setExecutionEnabled(false);
+  const input = {
+    name: "Unique",
+    schedule: "1h",
+    prompt: "p",
+    resumeSessionId: "session-job-hunt",
+    creationKey: "panel:test",
+  };
+  const [one, two] = await Promise.all([createAutomation(input), createAutomation(input)]);
+  expect(one.id).toBe(two.id);
+  expect(listAutomations()).toHaveLength(1);
+  expect(sched.get(one.id)?.creationKey).toBe(input.creationKey);
+  await expect(createAutomation({ ...input, prompt: "changed" })).rejects.toThrow(
+    /different definition/,
+  );
+  await expect(
+    createAutomation({ ...input, resumeSessionId: "session-secondary" }),
+  ).rejects.toThrow(/different definition/);
+  expect(listAutomations()).toHaveLength(1);
+});

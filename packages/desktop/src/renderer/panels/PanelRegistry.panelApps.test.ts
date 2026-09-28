@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import type { ReactElement } from "react";
+import type { PanelRenderContext } from "./PanelRegistry";
 import type { PanelAppDescriptor } from "../../shared/panel-apps";
-import { getEnabledPanelEntries, replacePanelApps } from "./PanelRegistry";
+import { getEnabledPanelEntries, getPanelEntry, replacePanelApps } from "./PanelRegistry";
 
 const descriptor = (appId: string): PanelAppDescriptor => ({
   id: `panel-app:${appId}`,
@@ -79,4 +81,65 @@ describe("replacePanelApps project scoping", () => {
     expect(enabledKeys("/repo")).toEqual(["panel-app:studio"]);
     expect(enabledKeys("/elsewhere")).toEqual([]);
   });
+});
+
+test("one dock key resolves project-specific page descriptors, titles and Agent tools", () => {
+  const one = {
+    ...descriptor("studio"),
+    title: "Studio One",
+    hostId: "one",
+    revision: "one",
+    projectPaths: ["/one", "/one/worktree"],
+    agent: {
+      tools: [
+        { name: "old_tool", description: "old", inputSchema: { type: "object" }, readOnly: true },
+      ],
+      skills: [],
+    },
+  };
+  const two = {
+    ...descriptor("studio"),
+    title: "Studio Two",
+    hostId: "two",
+    revision: "two",
+    projectPaths: ["/two"],
+    agent: {
+      tools: [
+        { name: "new_tool", description: "new", inputSchema: { type: "object" }, readOnly: true },
+      ],
+      skills: [],
+    },
+  };
+  replacePanelApps([one, two], "/one", { studio: ["/one", "/one/worktree", "/two"] });
+  for (const [projectPath, selected] of [
+    ["/one", one],
+    ["/one/worktree", one],
+    ["/two", two],
+  ] as const) {
+    expect(enabledKeys(projectPath)).toEqual(["panel-app:studio"]);
+    const context = { projectPath, cwd: projectPath, engineSessionId: null };
+    const entry = getPanelEntry("panel-app:studio", context)!;
+    expect(entry.title).toEqual({ kind: "literal", value: selected.title });
+    expect(entry.agentTools?.[0]?.name).toBe(selected.agent.tools[0]!.name);
+    const rendered = getPanelEntry("panel-app:studio")!.render(
+      context as PanelRenderContext,
+    ) as ReactElement<{ descriptor: PanelAppDescriptor }>;
+    expect(rendered.props.descriptor.hostId).toBe(selected.hostId);
+  }
+  expect(
+    getPanelEntry("panel-app:studio", {
+      projectPath: "/other",
+      cwd: "/other",
+      engineSessionId: null,
+    }),
+  ).toBeUndefined();
+  expect(getPanelEntry("panel-app:studio")!.agentTools).toBeUndefined();
+});
+
+test("ambiguous variants and omitted authoritative bindings never choose the first version", () => {
+  const one = { ...descriptor("studio"), projectPaths: ["/one"] };
+  replacePanelApps([one, { ...one, hostId: "another" }], "/one", { studio: ["/one"] });
+  expect(enabledKeys("/one")).toEqual([]);
+  replacePanelApps([one], "/one", {});
+  expect(enabledKeys("/one")).toEqual([]);
 });

@@ -65,6 +65,19 @@ const ACTIVE_PROJECT_KEY = "codeshell.activeRepoId";
 const REMOVED_PATHS_KEY = "codeshell.removedRepoPaths";
 
 let projectSnapshot: TrackedProject[] = [];
+const projectListeners = new Set<() => void>();
+
+/** Stable snapshot for React; callers must replace it through saveProjects. */
+export function getProjectSnapshot(): TrackedProject[] {
+  return projectSnapshot;
+}
+
+export function subscribeProjects(listener: () => void): () => void {
+  projectListeners.add(listener);
+  return () => {
+    projectListeners.delete(listener);
+  };
+}
 let legacyProjectsRead = false;
 let legacyProjectsSnapshot: TrackedProject[] = [];
 
@@ -76,6 +89,7 @@ export function loadProjects(): TrackedProject[] {
 /** Replace the renderer projection after a V2 list/change notification. */
 export function saveProjects(projects: TrackedProject[]): void {
   projectSnapshot = projects.slice();
+  for (const listener of projectListeners) listener();
 }
 
 /** Read codeshell.repos at most once, solely for the one-time upgrade migration. */

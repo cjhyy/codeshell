@@ -1,3 +1,5 @@
+import { remoteLinkFromEnvironment } from "../links/remote-configuration.js";
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 // packages/server/src/serve/cli.ts
 //
 // `code-shell-serve` boots a single-workspace Hub under Node.js.
@@ -18,8 +20,10 @@ interface CliArgs {
   authMode: "hub" | "passcode";
   runtime: "local" | "docker";
   runtimeImage?: string;
+  runtimeSeccompProfile?: string;
   debugLogs?: boolean;
   publicOrigin?: string;
+  remoteLink?: RemoteLinkConfiguration;
   dataDir: string;
   staticRootDir?: string;
 }
@@ -35,6 +39,7 @@ Options:
   --auth <mode>        hub (default) or legacy passcode
   --runtime <mode>     local (default) or Docker project sandboxes
   --runtime-image <tag> Prebuilt project image (default: codeshell-project-runtime:local)
+  --runtime-seccomp-profile <path> Administrator-owned Docker seccomp JSON
   --public-url <url>   External HTTPS origin for reverse-proxy deployments
   --passcode <code>    Set or rotate the legacy passcode (selects passcode mode)
   --data-dir <path>    Persistent server data (auth, uploads and worker sessions)
@@ -50,6 +55,7 @@ const VALUE_FLAGS = new Set([
   "--auth",
   "--runtime",
   "--runtime-image",
+  "--runtime-seccomp-profile",
   "--public-url",
   "--data-dir",
   "--static-root",
@@ -90,6 +96,9 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
     throw new Error("Docker projects require --auth hub");
   if (args["runtime-image"] && runtime !== "docker")
     throw new Error("--runtime-image requires --runtime docker");
+  if (args["runtime-seccomp-profile"] !== undefined && runtime !== "docker")
+    throw new Error("--runtime-seccomp-profile requires --runtime docker");
+  if (args["runtime-seccomp-profile"] === "") throw new Error("Empty runtime seccomp profile");
   let publicOrigin: string | undefined;
   const publicUrl = args["public-url"] ?? env.CODE_SHELL_SERVE_PUBLIC_URL;
   if (publicUrl) {
@@ -107,10 +116,16 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
     }
     publicOrigin = url.origin;
   }
+  const remoteLink = remoteLinkFromEnvironment(env, publicOrigin);
+  if (remoteLink && authMode !== "hub") throw new Error("Remote Link requires --auth hub");
   return {
     authMode,
+    ...(remoteLink ? { remoteLink } : {}),
     runtime,
     ...(args["runtime-image"] ? { runtimeImage: args["runtime-image"] } : {}),
+    ...(args["runtime-seccomp-profile"]
+      ? { runtimeSeccompProfile: resolve(args["runtime-seccomp-profile"]) }
+      : {}),
     ...(args["debug-logs"] ? { debugLogs: true } : {}),
     ...(publicOrigin ? { publicOrigin } : {}),
     cwd: resolve(args.cwd ?? process.cwd()),
@@ -166,8 +181,10 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
           port: parsed.port,
           dataDir: parsed.dataDir,
           publicOrigin: parsed.publicOrigin,
+          remoteLink: parsed.remoteLink,
           staticRootDir,
           runtimeImage: parsed.runtimeImage,
+          runtimeSeccompProfile: parsed.runtimeSeccompProfile,
         })
       : await startHeadlessServer({
           host: parsed.host,
@@ -175,6 +192,7 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
           cwd: parsed.cwd,
           dataDir: parsed.dataDir,
           authMode: parsed.authMode,
+          remoteLink: parsed.remoteLink,
           debugLogs: parsed.debugLogs,
           ...(parsed.publicOrigin ? { publicOrigin: parsed.publicOrigin } : {}),
           workerEntryPath: resolveWorkerEntry(),

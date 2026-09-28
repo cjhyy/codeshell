@@ -2,6 +2,9 @@
 export {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
+  panelAppStorageSnapshot,
+  panelAppStorageChange,
+  applyPanelAppStorageChange,
   panelAppStoragePath,
   panelAppStorageQuotaBytes,
   preparePanelAppStorage,

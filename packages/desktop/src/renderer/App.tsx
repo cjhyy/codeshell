@@ -70,14 +70,12 @@ import type {
 } from "../preload/types";
 import {
   loadProjects,
-  saveProjects,
   loadActiveProjectId,
   saveActiveProjectId,
   unmarkProjectPathRemoved,
   reconcileProjectsFromDiskWithRemap,
   projectLabel,
   trackedProjectFromRegistry,
-  type TrackedProject,
 } from "./projects";
 import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
@@ -127,6 +125,7 @@ import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
 import { readReviewAvailability, useReviewAvailability } from "./panels/useReviewAvailability";
+import { useTrackedProjects } from "./app/useTrackedProjects";
 import { useProjectRegistrySync } from "./app/useProjectRegistrySync";
 import { useExternalRuntimeModels } from "./app/useExternalRuntimeModels";
 
@@ -211,7 +210,7 @@ function App() {
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
   const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
-  const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
+  const [projects, setProjects] = useTrackedProjects();
   const [sessionWorkspaceProfiles, setSessionWorkspaceProfiles] = useState<
     Array<{ name: string; label: string }>
   >([]);
@@ -567,7 +566,9 @@ function App() {
       void applyPanelApps([], null);
       return;
     }
+    let refreshGeneration = 0;
     const refresh = () => {
+      const generation = ++refreshGeneration;
       const projectPath = activeProject?.path ?? null;
       // Register apps bound by ANY tracked project, not just the active one:
       // panel buckets are per project and bindings are editable for any project
@@ -586,18 +587,22 @@ function App() {
         if (projectPath && !paths.includes(projectPath)) paths.push(projectPath);
         void listForProjects(paths, lang)
           .then((result) => {
+            if (generation !== refreshGeneration) return;
             void applyPanelApps(result.descriptors, projectPath, result.boundProjectPathsByAppId);
           })
           .catch(() => {
+            if (generation !== refreshGeneration) return;
             void applyPanelApps([], projectPath);
           });
         return;
       }
       void listApps(projectPath ?? "", lang)
         .then((apps) => {
+          if (generation !== refreshGeneration) return;
           void applyPanelApps(apps, projectPath);
         })
         .catch(() => {
+          if (generation !== refreshGeneration) return;
           void applyPanelApps([], projectPath);
         });
     };
@@ -744,9 +749,6 @@ function App() {
     return map;
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
-  useEffect(() => {
-    saveProjects(projects);
-  }, [projects]);
   useEffect(() => {
     let cancelled = false;
     void window.codeshell

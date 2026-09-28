@@ -7,7 +7,14 @@
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getRun, listRuns, type RunDetail, type RunSummary } from "./runs-service.js";
+import {
+  getRun,
+  listRuns,
+  parseRunUsage,
+  sanitizeRunTraceValue,
+  type RunDetail,
+  type RunSummary,
+} from "./runs-service.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 
 const MAX_STATE_BYTES = 2 * 1024 * 1024;
@@ -16,6 +23,7 @@ const MAX_SCAN_BYTES = 256 * 1024 * 1024;
 const MAX_SESSIONS = 2_000;
 const MAX_HISTORY = 1_000;
 const MAX_TEXT = 16_000;
+const MAX_PROMPT_TEXT = 64 * 1024;
 const SESSION_RUN_PREFIX = "session:";
 
 interface HistoryOptions {
@@ -34,14 +42,14 @@ function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function text(value: unknown): string {
-  if (typeof value === "string") return value.slice(0, MAX_TEXT);
+function text(value: unknown, maxLength = MAX_TEXT): string {
+  if (typeof value === "string") return value.slice(0, maxLength);
   if (!Array.isArray(value)) return "";
   return value
     .filter((block) => record(block) && block.type === "text" && typeof block.text === "string")
-    .map((block) => block.text.slice(0, MAX_TEXT))
+    .map((block) => block.text.slice(0, maxLength))
     .join("")
-    .slice(0, MAX_TEXT);
+    .slice(0, maxLength);
 }
 
 /** Read a fixed snapshot length; reject links and keep only complete JSONL rows. */
@@ -190,12 +198,17 @@ function receipts(sessionId: string, state: Record<string, unknown>, events: Eve
         turnCount: result.turnCount,
         usage: result.usage,
       },
+      prompt: input ? text(input.event.data.content, MAX_PROMPT_TEXT) || null : null,
+      model: typeof state.model === "string" ? state.model.slice(0, 4_096) : null,
+      provider: typeof state.provider === "string" ? state.provider.slice(0, 4_096) : null,
+      durationMs: start === null ? null : Math.max(0, event.timestamp - start),
+      usage: parseRunUsage(result.usage),
       // When an input lies outside the tail window, the receipt alone is known.
       events: events.slice(Math.max(input?.index ?? index, index - 199), index + 1).map((item) => ({
         eventId: item.id,
         type: item.type,
         timestamp: item.timestamp,
-        data: {},
+        data: sanitizeRunTraceValue(item.data) as Record<string, unknown>,
       })),
       checkpoints: [],
       artifacts: [],

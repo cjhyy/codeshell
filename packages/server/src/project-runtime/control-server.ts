@@ -1,5 +1,9 @@
+import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
+import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
+import { describeEnvironment } from "../environment-identity.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { extname } from "node:path";
 import { createHubAuth } from "../hub/auth-http.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
@@ -15,8 +19,11 @@ export interface ProjectControlServerOptions {
   port: number;
   dataDir: string;
   publicOrigin?: string;
+  remoteLink?: RemoteLinkConfiguration;
   staticRootDir?: string;
   runtimeImage?: string;
+  /** Trusted operator configuration, never accepted from project requests. */
+  runtimeSeccompProfile?: string;
   /** Dependency injection for lifecycle/transport integration tests. */
   provider?: ProjectRuntimeProvider;
 }
@@ -76,6 +83,9 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 
 /** A small account/project gateway. It never creates a worker, executes tools or mounts cwd. */
 export async function startProjectControlServer(options: ProjectControlServerOptions) {
+  const remoteLink = remoteLinkHostConfiguration(options.remoteLink, options.publicOrigin);
+  if (existsSync(join(options.dataDir, "restore-in-progress")))
+    throw new Error("Cloud installation restore is incomplete; do not start this directory.");
   const registry = new ProjectRegistry(options.dataDir);
   let proxy: ReturnType<typeof createProjectRuntimeProxy> | undefined;
   let manager: ProjectManager | undefined;
@@ -110,6 +120,8 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
         installationId: registry.installationId,
         dataDir: options.dataDir,
         image: options.runtimeImage,
+        seccompProfile: options.runtimeSeccompProfile,
+        remoteLink,
       });
     manager = new ProjectManager({
       registry,
@@ -154,6 +166,13 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
       }
       if (await auth.handle(request, response)) return;
       if (await transport.handle(request, response)) return;
+      if (pathname === "/api/v1/environment") {
+        if (!auth.isOriginAllowed(request)) throw new ProjectRegistryError(403, "请求来源无效。");
+        if (!(await auth.authenticate(request))) throw new ProjectRegistryError(401, "请先登录。");
+        if (request.method !== "GET") throw new ProjectRegistryError(405, "请求方法无效。");
+        json(response, 200, describeEnvironment(registry.installationId, "project-host"));
+        return;
+      }
       if (pathname === "/api/v1/projects" || pathname.startsWith("/api/v1/projects/")) {
         if (!auth.isOriginAllowed(request)) throw new ProjectRegistryError(403, "请求来源无效。");
         const session = await auth.authenticate(request);

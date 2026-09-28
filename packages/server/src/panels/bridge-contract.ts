@@ -35,8 +35,11 @@ export const panelToolJobMethods = [
   "tasks.start",
   "tasks.list",
   "tasks.get",
+  "tasks.find",
   "tasks.cancel",
   "tasks.retry",
+  "tasks.queue.get",
+  "tasks.queue.set",
 ];
 
 export const panelBridgeLimits = Object.freeze({
@@ -82,6 +85,7 @@ export function panelBridgeFailure(error: unknown) {
 }
 export function panelRuntimeCapabilities(input: {
   process: boolean;
+  cookieProcess?: boolean;
   resources?: unknown;
   tasks?: unknown;
   limits?: Partial<Record<keyof typeof panelBridgeLimits, number>>;
@@ -99,7 +103,14 @@ export function panelRuntimeCapabilities(input: {
       "INVALID_ARGUMENT",
       "OPERATION_FAILED",
     ],
-    ...(input.process ? { process: processLimits } : {}),
+    ...(input.process
+      ? {
+          process: {
+            ...processLimits,
+            ...(input.cookieProcess ? { cookieCredentials: true } : {}),
+          },
+        }
+      : {}),
     ...(input.resources
       ? {
           resources: {

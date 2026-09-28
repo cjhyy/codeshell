@@ -206,3 +206,34 @@ describe("RunEnvironmentResolver", () => {
     expect(resolvedRoots[1]).toContain(canonicalPath("/docs-b"));
   });
 });
+
+it("per-turn sandbox mode preserves restrictions and does not mutate later turns", async () => {
+  const config = {
+    llm: { provider: "x", model: "m" },
+    sandbox: { ...defaultSandboxConfig("off"), network: "deny", deniedReads: ["/secret"] },
+  } as EngineConfig;
+  const modes: string[] = [];
+  const resolver = new RunEnvironmentResolver({
+    config: () => config,
+    settings: () => ({ get: () => ({}), getForScope: () => ({}) }),
+    credentialAccess: { envExposures: () => ({}) },
+    resolveBackend: async (value) => {
+      modes.push(value.mode);
+      return offBackend;
+    },
+  });
+  const run = { cwd: "/repo", workspaceContext: legacySingleRootWorkspace("/repo") };
+  const narrowed = { ...run, sandboxMode: "auto" as const };
+  expect(resolver.resolveSandboxConfig(narrowed)).toMatchObject({
+    mode: "auto",
+    network: "deny",
+    deniedReads: ["/secret"],
+  });
+  await resolver.resolveSandbox(narrowed);
+  await resolver.resolveSandbox(run);
+  expect(modes).toEqual(["auto", "off"]);
+  expect(config.sandbox?.mode).toBe("off");
+  expect(() => resolver.resolveSandboxConfig({ ...run, sandboxMode: "invalid" as any })).toThrow(
+    /sandboxMode/,
+  );
+});
