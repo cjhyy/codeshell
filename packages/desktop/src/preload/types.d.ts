@@ -96,6 +96,7 @@ export type {
   LocalProject,
   LocalProjectRoot,
   FileContent,
+  LocalFilePreview,
   FsEntry,
   ProjectCwdResolution,
   ProjectResolveSource,

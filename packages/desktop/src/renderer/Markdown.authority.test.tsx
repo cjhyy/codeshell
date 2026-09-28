@@ -20,6 +20,12 @@ function findPathLink(node: MiniElementNode): MiniElementNode | null {
   return null;
 }
 
+function reactPropsOf(node: MiniElementNode): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactProps$"));
+  return key ? current[key] : {};
+}
+
 let root: Root | null = null;
 let container: HTMLElement | null = null;
 
@@ -67,11 +73,164 @@ function authority(mainRootId: string): SessionWorkspaceAuthority {
 }
 
 describe("Markdown Session root authority", () => {
+  test.each([
+    { name: "without a project", cwd: null, sessionId: undefined, rootStatus: undefined },
+    {
+      name: "outside an unavailable project root",
+      cwd: "/roots/unavailable",
+      sessionId: "session-external-file",
+      rootStatus: "root_replaced" as const,
+    },
+  ])("opens an existing absolute file $name without reading its contents", async (context) => {
+    const path = context.sessionId
+      ? "/outside-project/external.md"
+      : "/outside-project/no-project.md";
+    const checks: string[] = [];
+    const opened: unknown[] = [];
+    let contentReads = 0;
+    let sessionChecks = 0;
+    Object.assign(window, {
+      codeshell: {
+        localFileExists: async (candidate: string) => {
+          checks.push(candidate);
+          return true;
+        },
+        sessionFileExists: async () => {
+          sessionChecks += 1;
+          return false;
+        },
+        readLocalFilePreview: async () => {
+          contentReads += 1;
+        },
+      },
+    });
+    const onOpen = (event: Event) => opened.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-file", onOpen);
+    try {
+      await renderMarkdown(
+        <Markdown
+          text={`[report](${path})`}
+          cwd={context.cwd}
+          sessionId={context.sessionId}
+          rootStatus={context.rootStatus}
+        />,
+      );
+
+      const link = findPathLink(container!);
+      expect(link?.getAttribute?.("title")).toBe(path);
+      expect(checks).toEqual([path]);
+      expect(sessionChecks).toBe(0);
+      expect(contentReads).toBe(0);
+      let prevented = false;
+      reactPropsOf(link!).onClick({
+        metaKey: false,
+        ctrlKey: false,
+        preventDefault: () => {
+          prevented = true;
+        },
+      });
+      expect(prevented).toBe(true);
+      expect(opened).toEqual([{ path, cwd: context.cwd }]);
+    } finally {
+      window.removeEventListener("codeshell:open-file", onOpen);
+    }
+  });
+
+  test.each(["missing", "failed"] as const)(
+    "keeps an absolute file as plain text when its metadata check is %s",
+    async (result) => {
+      Object.assign(window, {
+        codeshell: {
+          localFileExists: async () => {
+            if (result === "failed") throw new Error("File metadata unavailable");
+            return false;
+          },
+        },
+      });
+
+      await renderMarkdown(<Markdown text={`[report](/outside-project/${result}.md)`} />);
+
+      expect(findPathLink(container!)).toBeNull();
+    },
+  );
+
+  test("uses Session authority for absolute links when local metadata checks are unavailable", async () => {
+    const calls: Array<[string, string, string]> = [];
+    Object.assign(window, {
+      codeshell: {
+        sessionFileExists: async (sessionId: string, rootId: string, path: string) => {
+          calls.push([sessionId, rootId, path]);
+          return true;
+        },
+      },
+    });
+
+    await renderMarkdown(
+      <Markdown
+        text="[web file](/roots/web-root/report.md)"
+        sessionId="session-web-file"
+        sessionMainRootId="web-root"
+        rootStatus="ok"
+      />,
+    );
+
+    expect(calls).toEqual([["session-web-file", "web-root", "/roots/web-root/report.md"]]);
+    expect(findPathLink(container!)).not.toBeNull();
+  });
+
+  test("keeps absolute links inert without either local checks or Session authority", async () => {
+    Object.assign(window, { codeshell: {} });
+
+    await renderMarkdown(<Markdown text="[unavailable](/outside-project/no-bridge.md)" />);
+
+    expect(findPathLink(container!)).toBeNull();
+  });
+
+  test("keeps denied images in an external document as explicit file links", async () => {
+    const imageReads: Array<[string, unknown]> = [];
+    let localReads = 0;
+    const opened: unknown[] = [];
+    Object.assign(window, {
+      codeshell: {
+        readImageDataUrl: async (path: string, context: unknown) => {
+          imageReads.push([path, context]);
+          throw new Error("project authority is required");
+        },
+        readLocalFilePreview: async () => {
+          localReads += 1;
+        },
+      },
+    });
+    const onOpen = (event: Event) => opened.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-file", onOpen);
+    try {
+      await renderMarkdown(<Markdown text="![Neighbour](diagram.png)" cwd="/outside-project" />);
+
+      const link = findPathLink(container!);
+      expect(imageReads).toEqual([["/outside-project/diagram.png", { cwd: "/outside-project" }]]);
+      expect(localReads).toBe(0);
+      expect(link).not.toBeNull();
+      reactPropsOf(link!).onClick({
+        metaKey: false,
+        ctrlKey: false,
+        preventDefault: () => undefined,
+      });
+      expect(opened).toEqual([{ path: "diagram.png", cwd: "/outside-project" }]);
+    } finally {
+      window.removeEventListener("codeshell:open-file", onOpen);
+    }
+  });
+
   test("re-resolves the same relative file against the migrated Session main root", async () => {
     const calls: Array<[string, string, string]> = [];
     let authorityCalls = 0;
+    let localChecks = 0;
     Object.assign(window, {
       codeshell: {
+        localFileExists: async () => {
+          localChecks += 1;
+          return true;
+        },
         getSessionWorkspaceAuthority: async () => {
           authorityCalls += 1;
           return authority("old-root");
@@ -111,6 +270,7 @@ describe("Markdown Session root authority", () => {
       ["session-migrate", "new-root", "docs/same-relative.md"],
     ]);
     expect(authorityCalls).toBe(0);
+    expect(localChecks).toBe(0);
     expect(findPathLink(container!)?.getAttribute?.("title")).toBe(
       "/roots/new-root/docs/same-relative.md",
     );
@@ -120,8 +280,13 @@ describe("Markdown Session root authority", () => {
     "fails closed for relative files when rootStatus is %s",
     async (rootStatus) => {
       const calls: Array<[string, string, string]> = [];
+      let localChecks = 0;
       Object.assign(window, {
         codeshell: {
+          localFileExists: async () => {
+            localChecks += 1;
+            return true;
+          },
           getSessionWorkspaceAuthority: async () => authority("old-root"),
           sessionFileExists: async (sessionId: string, rootId: string, path: string) => {
             calls.push([sessionId, rootId, path]);
@@ -141,6 +306,7 @@ describe("Markdown Session root authority", () => {
       );
 
       expect(calls).toEqual([]);
+      expect(localChecks).toBe(0);
       expect(findPathLink(container!)).toBeNull();
     },
   );
