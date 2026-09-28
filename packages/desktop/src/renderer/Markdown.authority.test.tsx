@@ -186,6 +186,41 @@ describe("Markdown Session root authority", () => {
     expect(findPathLink(container!)).toBeNull();
   });
 
+  test("keeps denied images in an external document as explicit file links", async () => {
+    const imageReads: Array<[string, unknown]> = [];
+    let localReads = 0;
+    const opened: unknown[] = [];
+    Object.assign(window, {
+      codeshell: {
+        readImageDataUrl: async (path: string, context: unknown) => {
+          imageReads.push([path, context]);
+          throw new Error("project authority is required");
+        },
+        readLocalFilePreview: async () => {
+          localReads += 1;
+        },
+      },
+    });
+    const onOpen = (event: Event) => opened.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-file", onOpen);
+    try {
+      await renderMarkdown(<Markdown text="![Neighbour](diagram.png)" cwd="/outside-project" />);
+
+      const link = findPathLink(container!);
+      expect(imageReads).toEqual([["/outside-project/diagram.png", { cwd: "/outside-project" }]]);
+      expect(localReads).toBe(0);
+      expect(link).not.toBeNull();
+      reactPropsOf(link!).onClick({
+        metaKey: false,
+        ctrlKey: false,
+        preventDefault: () => undefined,
+      });
+      expect(opened).toEqual([{ path: "diagram.png", cwd: "/outside-project" }]);
+    } finally {
+      window.removeEventListener("codeshell:open-file", onOpen);
+    }
+  });
+
   test("re-resolves the same relative file against the migrated Session main root", async () => {
     const calls: Array<[string, string, string]> = [];
     let authorityCalls = 0;

@@ -256,7 +256,7 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
                 </a>
               );
             }
-            const localDecoded = src ? decodePathHref(src) ?? decodeLocalPathHref(src) : null;
+            const localDecoded = src ? (decodePathHref(src) ?? decodeLocalPathHref(src)) : null;
             // Accept Codex-style ![label](path.mp3) as well as ordinary links.
             // Bare filenames in image syntax are relative file references too.
             const mediaPath = localDecoded?.path ?? (src ? decodeLocalMediaPath(src) : null);
@@ -308,8 +308,8 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
             const schemeDecoded = href ? decodePathHref(href) : null;
             const localDecoded = href ? decodeLocalPathHref(href) : null;
             const mediaFilename = href ? decodeLocalMediaPath(href) : null;
-            const decoded = schemeDecoded ?? localDecoded ??
-              (mediaFilename ? { path: mediaFilename } : null);
+            const decoded =
+              schemeDecoded ?? localDecoded ?? (mediaFilename ? { path: mediaFilename } : null);
             const isPathLink = decoded !== null;
             const mediaKind = decoded ? classifyMediaPath(decoded.path) : null;
             if (decoded && mediaKind && !decoded.line) {
@@ -659,12 +659,22 @@ function InlineImageLink({
       return;
     }
     setLoading(true);
-    void window.codeshell.readImageDataUrl(abs, { cwd: cwd ?? undefined }).then((dataUrl) => {
-      if (cancelled) return;
-      setLoading(false);
-      if (dataUrl) setSrc(dataUrl);
-      else setFailed(true);
-    });
+    void window.codeshell
+      .readImageDataUrl(abs, { cwd: cwd ?? undefined })
+      .then((dataUrl) => {
+        if (cancelled) return;
+        setLoading(false);
+        if (dataUrl) setSrc(dataUrl);
+        else setFailed(true);
+      })
+      .catch(() => {
+        // Opening an external document grants only that file, so neighbouring
+        // images can still be denied. Offer an explicit link without widening
+        // the passive image read to the single-file preview API.
+        if (cancelled) return;
+        setLoading(false);
+        setFailed(true);
+      });
     return () => {
       cancelled = true;
     };
