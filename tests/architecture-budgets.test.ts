@@ -71,13 +71,17 @@ describe("architecture growth budgets", () => {
     // part of this feature's reviewed transport contract, total 295 routes.
     // +1 authenticated, owner-scoped cancelRestore route releases abandoned
     // version reviews. Count the extracted version registrar in the same budget.
+    // +3 reviewed device registration/status/forget operations, no credential read.
+    // +2 main-frame-only Desktop file metadata/preview operations. These read an
+    // explicitly selected file without granting access to its parent directory.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g),
-    ).toBeLessThanOrEqual(299); // +3 reviewed registration/status/forget operations, no credential read.
+        matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g),
+    ).toBeLessThanOrEqual(301);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.

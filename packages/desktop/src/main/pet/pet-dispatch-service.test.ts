@@ -377,6 +377,8 @@ describe("PetDispatchService", () => {
           kind: "im-gateway",
           channel: "wechat",
           target: "owner-conversation",
+          senderId: "owner-sender",
+          isDirectMessage: true,
           capabilities: textOnlyChannelCapabilities,
         },
       }),
@@ -394,12 +396,15 @@ describe("PetDispatchService", () => {
     expect(starts).toEqual([
       {
         clientMessageId: "client-delegate",
+        senderId: "owner-sender",
         task: "修复 CodeShell 登录问题",
         workspacePath: "/work/codeshell",
         completionTarget: {
           kind: "im-gateway",
           channel: "wechat",
           target: "owner-conversation",
+          senderId: "owner-sender",
+          isDirectMessage: true,
           replyButton: "link",
         },
       },

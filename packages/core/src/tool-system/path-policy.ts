@@ -486,7 +486,9 @@ export function revalidateFinalWritePath(
   const currentWorkspace = safeRealpath(workspaceRoot);
   const sameTarget = normPath(currentPath) === normPath(approved.resolvedPath);
   const sameWorkspace = normPath(currentWorkspace) === normPath(approved.workspacePath);
-  const currentRoots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(safeRealpath);
+  const currentRoots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(
+    safeRealpath,
+  );
   const currentMatchedRoot = currentRoots.find((root) => isInsideDir(currentPath, root));
   const crossedWorkspaceBoundary = approved.insideWorkspace && currentMatchedRoot === undefined;
   const changedMatchedRoot =
@@ -586,7 +588,9 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
 
   if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
 
-  return registeredPluginSkillBases(codeShellRoot).some((base) => isSkillTreeResource(resolved, base));
+  return registeredPluginSkillBases(codeShellRoot).some((base) =>
+    isSkillTreeResource(resolved, base),
+  );
 }
 
 function registeredPluginSkillBases(codeShellRoot: string): string[] {
@@ -981,6 +985,7 @@ export async function enforcePathPolicyWithApproval(
   operation: PathOperation,
   ctx?: ToolContext,
 ): Promise<string | null> {
+  if (ctx?.signal?.aborted) return "Error: path approval cancelled — run stopped";
   if (ctx?.cwd === undefined) return null;
   // bypassPermissions ("完全访问") skips the path-approval layer entirely,
   // matching the tool-permission backend and CC (bypass skips ALL checks,
@@ -1028,6 +1033,8 @@ export async function enforcePathPolicyWithApproval(
   askChains.set(chainKey, currentTurn);
   try {
     await prevTurn;
+    // Stop drains the visible prompt; queued paths must not create another one.
+    if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";
     if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
     return await promptForPathApproval(
       c,
@@ -1089,6 +1096,8 @@ async function promptForPathApproval(
     })
   ).trim();
 
+  // A late answer must not grant access or persist permission after Stop.
+  if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";
   if (answer === ALLOW_ONCE) return null;
   if (answer === ALLOW_SESSION) {
     recordPathApproval("session", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
@@ -1098,7 +1107,10 @@ async function promptForPathApproval(
     recordPathApproval("project", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
     return null;
   }
-  return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
+  return (
+    `Error: path approval denied — ${c.reason}. Path: ${c.resolvedPath}` +
+    (answer && answer !== "拒绝" ? ` Approval response: ${answer}` : "")
+  );
 }
 
 /**

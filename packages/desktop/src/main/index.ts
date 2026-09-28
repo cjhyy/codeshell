@@ -187,6 +187,7 @@ import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closu
 import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
+import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import {
   openLinkedSessionFromIpc,
@@ -349,6 +350,7 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
+import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
 import {
   getGitStatus,
   getGitBranches,
@@ -831,6 +833,7 @@ let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
+let petImDecisions: PetImDecisions | null = null;
 let unsubscribePetLongTaskStream: (() => void) | null = null;
 let unsubscribePetReportStream: (() => void) | null = null;
 let disposePetIpc: (() => void) | null = null;
@@ -1927,6 +1930,39 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petLongTaskCoordinator = longTaskCoordinator;
+    const decisionBridge = bridge;
+    petImDecisions = new PetImDecisions({
+      read: () => {
+        pendingMobileApprovals.setWorkerState(
+          decisionBridge.workerGeneration(),
+          decisionBridge.hasLiveWorker(),
+        );
+        return collectImDecisions(
+          aggregator.getSnapshot(),
+          longTaskStore.getSnapshot().tasks,
+          pendingMobileApprovals.replayAllLines(),
+        );
+      },
+      approve: async (entry, decision) => {
+        const { request: _request, ...route } = entry.envelope;
+        const outcome = await decisionBridge.requestWorker(
+          "agent/approve",
+          { ...route, decision },
+          15_000,
+          { meta: { origin: "host", producer: "pet-im-decision" } },
+        );
+        if (!outcome.ok) throw new Error(outcome.message);
+        mobileOrchestrator.broadcastApprovalResolved({
+          sessionId: route.sessionId,
+          requestId: route.requestId,
+          approved: decision.approved,
+          answer: decision.answer,
+        });
+      },
+      publish: publishGatewayControlEvent,
+      onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
+    });
+    petImDecisions.start();
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
       if (!snapshotEntry) return;
       void longTaskCoordinator
@@ -3079,6 +3115,10 @@ async function dispatchGatewayPetChat(
   const dispatcher = petDispatchService;
   if (!dispatcher) throw new Error("Mimi Pet 尚未就绪，请稍后重试");
   const sessionId = await dispatcher.getSessionId();
+  // Handle exact confirmation codes before any model, Session binding, or chat
+  // scheduler can consume the reply as a new task or inferred authorization.
+  const decisionReply = await petImDecisions?.reply(request);
+  if (decisionReply !== undefined) return { text: decisionReply, petSessionId: sessionId };
   const cwd = resolveNoRepoCwd();
   const attachments: InputAttachmentMeta[] = [];
   let totalBytes = 0;
@@ -3303,7 +3343,8 @@ app.whenReady().then(async () => {
     pairingUrl: () => createMobileRemotePairingUrl(),
     petChat: (request) => dispatchGatewayPetChat(request),
     routeSession: async (request) =>
-      sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" },
+      (await petImDecisions?.replyToSession(request)) ??
+      (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
   });
   await gatewayControlServer.start().catch((error) => {
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
@@ -6338,6 +6379,9 @@ ipcMain.handle("pty:kill", (e, sessionId: string) => {
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────
+registerLocalFilePreviewIpc(ipcMain, (sender) =>
+  [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+);
 ipcMain.handle("fsRoot:readDir", async (_e, projectId: string, rootId: string, dir?: string) => {
   const root = await requireRendererProjectRoot(projectId, rootId);
   return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
@@ -6955,6 +6999,8 @@ app.on("before-quit", (event) => {
     reconcileExternalAdapters = null;
     petDispatchService = null;
     petHostActionReceiptService = null;
+    petImDecisions?.stop();
+    petImDecisions = null;
     petLongTaskCoordinator?.stop();
     petLongTaskCoordinator = null;
     unsubscribePetLongTaskStream?.();

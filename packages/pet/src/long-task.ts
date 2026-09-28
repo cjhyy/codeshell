@@ -44,6 +44,9 @@ export interface PetLongTaskCompletionTarget {
   kind: "im-gateway";
   channel: string;
   target: string;
+  /** Authenticated origin; required for replying to permission prompts over IM. */
+  senderId?: string;
+  isDirectMessage?: boolean;
   /** How this route renders a GatewayReply URL action. */
   replyButton?: "native" | "link";
   /** Host-mediated attachment kinds supported by the originating route. */
@@ -335,6 +338,12 @@ function normalizeCompletionTarget(value: unknown): PetLongTaskCompletionTarget 
     kind: "im-gateway",
     channel,
     target,
+    ...(typeof record.senderId === "string" &&
+    record.senderId.trim() &&
+    record.senderId.length <= 4_096 &&
+    !/[\u0000-\u001f\u007f]/u.test(record.senderId)
+      ? { senderId: record.senderId.trim(), isDirectMessage: record.isDirectMessage === true }
+      : {}),
     ...(replyButton ? { replyButton } : {}),
     ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
   };

@@ -47,6 +47,10 @@ export interface FileContent {
   size: number;
 }
 
+export interface LocalFilePreview extends FileContent {
+  imageDataUrl?: string;
+}
+
 export interface LocalProjectRoot {
   id: string;
   path: string;
@@ -155,4 +159,8 @@ export interface ProjectAuthorityApi {
   readSessionDir(sessionId: string, rootId: string, dir?: string): Promise<FsEntry[]>;
   readSessionFileContent(sessionId: string, rootId: string, path: string): Promise<FileContent>;
   sessionFileExists(sessionId: string, rootId: string, path: string): Promise<boolean>;
+  /** Metadata-only lookup for absolute paths mentioned in Desktop chat. */
+  localFileExists(absPath: string): Promise<boolean>;
+  /** Read one explicitly opened file without granting access to its directory. */
+  readLocalFilePreview(absPath: string): Promise<LocalFilePreview>;
 }
