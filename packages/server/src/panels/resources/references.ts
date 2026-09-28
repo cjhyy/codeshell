@@ -375,6 +375,15 @@ export class ExternalResourceReferences {
       try {
         await source.verify();
         return join(record.root, record.path);
+      } catch (error) {
+        // A drive may disappear after checked() returns. Preserve revocation
+        // and abort semantics before hiding native errors containing its path.
+        await this.authorize(scope, options);
+        if (error instanceof ReferenceUnavailable) throw error;
+        const code = (error as NodeJS.ErrnoException).code;
+        throw new ReferenceUnavailable(
+          ["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes(code ?? "") ? "missing" : "changed",
+        );
       } finally {
         await source.close();
       }
