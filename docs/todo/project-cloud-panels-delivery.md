@@ -1,6 +1,6 @@
 # 本地／云端项目、跨设备 Panel 与独立服务：交付记录
 
-状态：实施中，整套目标尚未完成。工作包与发布门槛见 [总实施清单](project-cloud-panels-plan.md)。完整原始目标见 [objective](project-cloud-panels-objective.md)。
+当前状态（2026-09-28）：本地与完整 Linux 候选验证通过；缺少目标服务器、域名/TLS 和真实 provider 配置，goal 处于 blocked，整套目标尚未完成。Panel 内部内容与手机适配继续暂缓。工作包与发布门槛见 [总实施清单](project-cloud-panels-plan.md)。完整原始目标见 [objective](project-cloud-panels-objective.md)。下文为各检查点的历史记录。
 
 ## 初次检查基线（历史记录；当前状态见增量与总实施清单）
 
