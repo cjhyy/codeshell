@@ -95,10 +95,6 @@ function harness(...fixtures: ReturnType<typeof fixture>[]) {
         target: "conversation",
         senderId: "owner",
         isDirectMessage: true,
-        capabilities: {
-          inbound: { text: true, attachments: [] },
-          outbound: { text: true, button: "link", attachments: [] },
-        },
         ...origin,
       },
     });
@@ -308,6 +304,123 @@ describe("IM task confirmations", () => {
   });
 });
 
+test("HTTP gateway resolves exact decisions before bound Sessions and Mimi", async () => {
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { GatewayControlServer } = await import("../im-gateway-control-server.js");
+  const { DesktopControlClient } = await import("../../../../chat/src/desktop-control-client.js");
+  const { ChatGateway } = await import("../../../../chat/src/chat-gateway.js");
+  const { createBoundSessionChat } = await import("../../../../chat/src/bound-session-chat.js");
+  const { createMimiPetChat } = await import("../../../../chat/src/gateway.js");
+  const { BUILTIN_CHANNEL_CAPABILITIES } = await import("../../../../chat/src/channel.js");
+  type ChannelAdapter = import("../../../../chat/src/channel.js").ChannelAdapter;
+  type ChannelMessage = import("../../../../chat/src/channel.js").ChannelMessage;
+  const root = mkdtempSync(join(tmpdir(), "im-decision-gateway-"));
+  const descriptorPath = join(root, "control.json");
+  const f = fixture("bound");
+  const h = harness(f);
+  const code = f.read()[0]!.code;
+  const boundMessages: string[] = [];
+  const mimiMessages: string[] = [];
+  const replies: string[] = [];
+  const server = new GatewayControlServer({
+    descriptorPath,
+    open: async () => {
+      throw new Error("Remote must not open");
+    },
+    close: async () => {},
+    status: () => ({
+      running: false,
+      tunnelRunning: false,
+      tunnelConnected: false,
+      passcodeSet: false,
+      onlineDeviceCount: 0,
+    }),
+    pairingUrl: () => {
+      throw new Error("Pairing must not occur");
+    },
+    routeSession: async (request) => {
+      const decision = await h.relay.replyToSession(request);
+      if (decision) return decision;
+      if (request.target === "unbound") return { kind: "not-bound" };
+      boundMessages.push(request.text);
+      return { kind: "accepted" };
+    },
+    petChat: async (request) => {
+      mimiMessages.push(request.message);
+      return { text: "Mimi reply", petSessionId: "pet" };
+    },
+  });
+  try {
+    await server.start();
+    const desktop = new DesktopControlClient({
+      descriptorPath,
+      autoLaunch: false,
+      args: [],
+      startupTimeoutMs: 1_000,
+    });
+    const adapter: ChannelAdapter = {
+      channel: "wechat",
+      capabilities: BUILTIN_CHANNEL_CAPABILITIES.wechat,
+      run: async () => {},
+      send: async (_target, message) => {
+        replies.push(message.text ?? "");
+      },
+    };
+    const gateway = new ChatGateway({
+      adapters: [adapter],
+      onError: (error) => {
+        throw error;
+      },
+    });
+    // Production cli.ts middleware order: bound Session routing runs before Mimi.
+    gateway.use(createBoundSessionChat({ desktop }));
+    gateway.use(createMimiPetChat({ desktop }));
+    const say = (text: string, overrides: Partial<ChannelMessage> = {}) =>
+      gateway.dispatch(
+        { ...adapter, channel: overrides.channel ?? adapter.channel },
+        {
+          channel: "wechat",
+          target: "conversation",
+          senderId: "owner",
+          isDirectMessage: true,
+          text,
+          messageId: crypto.randomUUID(),
+          ...overrides,
+        },
+      );
+    for (const origin of [
+      { senderId: "other" },
+      { target: "another-room" },
+      { channel: "telegram" },
+      { isDirectMessage: false },
+    ]) {
+      await say(`回答 ${code} 1`, origin);
+      expect(replies.at(-1)).toContain("不属于当前私聊");
+    }
+    expect(h.approvals).toHaveLength(0);
+    expect(boundMessages).toEqual([]);
+    expect(mimiMessages).toEqual([]);
+    await say(`回答 ${code} 1`);
+    expect(replies.at(-1)).toContain("已处理");
+    expect(h.approvals).toHaveLength(1);
+    await say(`回答 ${code} 1`);
+    expect(replies.at(-1)).toContain("已结束");
+    expect(h.approvals).toHaveLength(1);
+    expect(boundMessages).toEqual([]);
+    expect(mimiMessages).toEqual([]);
+    await say("ordinary bound chat");
+    expect(boundMessages).toEqual(["ordinary bound chat"]);
+    await say("ordinary unbound chat", { target: "unbound" });
+    expect(mimiMessages).toEqual(["ordinary unbound chat"]);
+    expect(replies.at(-1)).toBe("Mimi reply");
+  } finally {
+    await server.stop();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("worker protocol: IM answer releases the original read; Stop drains queued reads", async () => {
   const { AgentServer } = await import("../../../../core/src/protocol/server.js");
   const { ChatSessionManager } =
@@ -423,10 +536,6 @@ test("worker protocol: IM answer releases the original read; Stop drains queued 
         target: "conversation",
         senderId: "owner",
         isDirectMessage: true,
-        capabilities: {
-          inbound: { text: true, attachments: [] },
-          outbound: { text: true, attachments: [], button: "link" },
-        },
       },
     });
     expect(reply).toContain("已处理");

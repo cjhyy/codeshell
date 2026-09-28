@@ -4,6 +4,7 @@ import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type {
   GatewayControlEventInput,
   PetChatControlRequest,
+  SessionRouteControlRequest,
 } from "../im-gateway-control-server.js";
 
 type Decision = { approved: boolean; answer?: string; reason?: string; failure?: "timed_out" };
@@ -245,7 +246,21 @@ export class PetImDecisions {
     ].join("\n");
   }
 
-  async reply(request: PetChatControlRequest): Promise<string | undefined> {
+  /** The gateway probes bound Sessions before it reaches the Pet chat endpoint. */
+  async replyToSession(
+    request: SessionRouteControlRequest,
+  ): Promise<{ kind: "status"; text: string } | undefined> {
+    const text = await this.reply({ message: request.text, origin: request });
+    return text === undefined ? undefined : { kind: "status", text };
+  }
+
+  async reply(request: {
+    message: string;
+    origin?: Pick<
+      NonNullable<PetChatControlRequest["origin"]>,
+      "channel" | "target" | "senderId" | "isDirectMessage"
+    >;
+  }): Promise<string | undefined> {
     const match = /^(?:回答|\/decision)\s+([a-f0-9]{12})\s+([\s\S]+)$/iu.exec(
       request.message.trim(),
     );

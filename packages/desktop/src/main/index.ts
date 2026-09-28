@@ -3339,7 +3339,8 @@ app.whenReady().then(async () => {
     pairingUrl: () => createMobileRemotePairingUrl(),
     petChat: (request) => dispatchGatewayPetChat(request),
     routeSession: async (request) =>
-      sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" },
+      (await petImDecisions?.replyToSession(request)) ??
+      (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
   });
   await gatewayControlServer.start().catch((error) => {
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });

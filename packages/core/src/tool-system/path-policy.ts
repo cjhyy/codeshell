@@ -486,7 +486,9 @@ export function revalidateFinalWritePath(
   const currentWorkspace = safeRealpath(workspaceRoot);
   const sameTarget = normPath(currentPath) === normPath(approved.resolvedPath);
   const sameWorkspace = normPath(currentWorkspace) === normPath(approved.workspacePath);
-  const currentRoots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(safeRealpath);
+  const currentRoots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(
+    safeRealpath,
+  );
   const currentMatchedRoot = currentRoots.find((root) => isInsideDir(currentPath, root));
   const crossedWorkspaceBoundary = approved.insideWorkspace && currentMatchedRoot === undefined;
   const changedMatchedRoot =
@@ -586,7 +588,9 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
 
   if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
 
-  return registeredPluginSkillBases(codeShellRoot).some((base) => isSkillTreeResource(resolved, base));
+  return registeredPluginSkillBases(codeShellRoot).some((base) =>
+    isSkillTreeResource(resolved, base),
+  );
 }
 
 function registeredPluginSkillBases(codeShellRoot: string): string[] {
