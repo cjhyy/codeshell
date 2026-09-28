@@ -150,6 +150,18 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
   });
 
+  test("scoped management snapshots keep current authorization and do not return another app", async () => {
+    const api = service({ projectPackages: true });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const full = await api.snapshot();
+    expect(await api.snapshot("test-panel")).toEqual(full);
+    expect((await api.snapshot("absent-panel")).panels).toEqual([]);
+    const current = full.panels[0]!;
+    await api.binding(owner, current.id, false, current.revision);
+    expect((await api.snapshot(current.id)).panels[0]?.enabled).toBe(false);
+    await expect(api.snapshot("../test-panel")).rejects.toThrow();
+  });
+
   test("project bindings retain independent versions and revisions through another project's update", async () => {
     const first = service({ projectPackages: true });
     const elsewhere = join(root, "other-project");
@@ -432,6 +444,32 @@ describe("shared Web panel management with the real Core installer", () => {
     await api.binding(owner, current.id, false, current.revision);
     await expect(api.restore(owner, stale.reviewToken)).rejects.toMatchObject({ status: 409 });
     expect((await api.snapshot()).panels[0]?.bound).toBe(false);
+  });
+
+  test("cancelled restore reviews release capacity without changing pins or other owner reviews", async () => {
+    const { api, old, current } = await restorationFixture();
+    const preview = () => api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const reviews = [];
+    for (let i = 0; i < 8; i++) reviews.push(await preview());
+    await expect(preview()).rejects.toMatchObject({ status: 429 });
+    const token = reviews[0]!.reviewToken;
+    await expect(api.cancelRestore({ ...owner, ownerId: "other" }, token)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      api.cancelRestore({ ...owner, authorize: async () => false }, token),
+    ).rejects.toMatchObject({ status: 401 });
+    await expect(preview()).rejects.toMatchObject({ status: 429 });
+    await api.cancelRestore(owner, token);
+    await api.cancelRestore(owner, token);
+    await expect(api.restore(owner, token)).rejects.toMatchObject({ status: 409 });
+    for (let i = 0; i < 12; i++) {
+      const review = await preview();
+      await api.cancelRestore(owner, review.reviewToken);
+    }
+    expect((await api.snapshot()).panels[0]?.packageDigest).toBe(current.packageDigest);
+    await api.restore(owner, reviews[1]!.reviewToken);
+    expect((await api.snapshot()).panels[0]?.packageDigest).toBe(old.packageDigest);
   });
 
   test("restore refuses live execution and rechecks target bytes after review", async () => {

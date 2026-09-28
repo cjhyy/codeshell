@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import {
   cp,
   lstat,
@@ -21,15 +22,33 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const [sourceArg, ...options] = process.argv.slice(2);
-const docker = options[0] === "--docker";
-const outputArg = docker && options[1] === "--output" ? options[2] : undefined;
-if (
-  !sourceArg ||
-  (options.length && (!docker || (options.length !== 1 && !(options.length === 3 && outputArg))))
-)
+let docker = false;
+let outputArg;
+let panelsArg;
+let speechBundle;
+for (let i = 0; i < options.length; i++) {
+  if (options[i] === "--docker" && !docker) docker = true;
+  else if (["--output", "--panels", "--speech-bundle"].includes(options[i])) {
+    const key = options[i];
+    const value = options[++i];
+    assert.ok(value && !value.startsWith("--"), `${key} needs a path`);
+    if (key === "--output") {
+      assert.equal(outputArg, undefined);
+      outputArg = value;
+    } else if (key === "--speech-bundle") {
+      assert.equal(speechBundle, undefined);
+      speechBundle = resolve(value);
+    } else {
+      assert.equal(panelsArg, undefined);
+      panelsArg = resolve(value);
+    }
+  } else throw new Error(`Unknown or repeated option: ${options[i]}`);
+}
+if (!sourceArg || (outputArg && !docker))
   throw new Error(
-    "Usage: node scripts/smoke-services-cloud-entry.mjs /path/to/codeshell-services [--docker [--output /new/candidate-directory]]",
+    "Usage: node scripts/smoke-services-cloud-entry.mjs /path/to/codeshell-services [--panels /clean/panel-checkout] [--docker [--output /new/candidate-directory]]",
   );
+assert.ok(!speechBundle || (docker && panelsArg), "--speech-bundle requires --docker and --panels");
 const source = resolve(sourceArg);
 const root = await mkdtemp(join(tmpdir(), "codeshell-services-packaged-"));
 const stage = join(root, "stage");
@@ -40,6 +59,7 @@ let imageId;
 const images = [];
 let provenance;
 let sourceFiles;
+let panelInventory;
 
 function run(command, args, cwd, env = process.env, capture = false, input) {
   return new Promise((done, fail) => {
@@ -219,6 +239,21 @@ try {
     }
   }
   await run(process.execPath, ["scripts/check-cloud-runtime.mjs"], installed);
+  if (panelsArg) {
+    panelInventory = JSON.parse(
+      await run(
+        process.execPath,
+        ["scripts/stage-candidate-panels.mjs", panelsArg, join(installed, "panels")],
+        installed,
+        process.env,
+        true,
+      ),
+    );
+    if (provenance) provenance.panels = panelInventory.revision;
+    console.log(
+      `✓ Six committed Panel packages preflighted by the independently installed Host: ${panelInventory.revision}`,
+    );
+  }
   await run(
     process.execPath,
     [
@@ -254,7 +289,41 @@ try {
   await check();
   await run("npm", ["test"], installed);
   await run("npm", ["run", "test:browser"], installed);
+  const relayManifest = join(installed, "device-relay-candidate.json");
+  await writeFile(
+    relayManifest,
+    JSON.stringify(
+      {
+        hostHead:
+          provenance?.host ?? (await run("git", ["rev-parse", "HEAD"], repo, process.env, true)),
+        servicesHead:
+          provenance?.services ??
+          (await run("git", ["rev-parse", "HEAD"], source, process.env, true)),
+        packages: inventory,
+      },
+      null,
+      2,
+    ) + "\n",
+    { flag: "wx" },
+  );
+  await run(
+    process.execPath,
+    [
+      join(repo, "scripts/smoke-device-relay.mjs"),
+      installed,
+      relayManifest,
+      join(repo, "..", "evidence", `device-relay-acceptance-${basename(root)}.json`),
+    ],
+    installed,
+  );
   if (docker) {
+    const downloadFixture = panelInventory ? join(root, "download-fixture") : undefined;
+    if (downloadFixture)
+      await run(
+        process.execPath,
+        [join(panelsArg, "scripts/prepare-download-fixture.mjs"), downloadFixture],
+        repo,
+      );
     const idFile = join(root, "runtime-image.id");
     await run(
       "docker",
@@ -294,12 +363,52 @@ try {
     try {
       await run(
         process.execPath,
-        [join(repo, "scripts/smoke-project-sandboxes.mjs"), outputArg ? imageId : tag],
+        [
+          join(repo, "scripts/smoke-project-sandboxes.mjs"),
+          outputArg ? imageId : tag,
+          ...(panelInventory ? ["--candidate-panels", join(installed, "panels")] : []),
+          ...(downloadFixture ? ["--download-fixture", downloadFixture] : []),
+          ...(speechBundle ? ["--speech-bundle", speechBundle] : []),
+          ...(existsSync(join(installed, "deploy/seccomp/chromium.json"))
+            ? ["--runtime-seccomp-profile", join(installed, "deploy/seccomp/chromium.json")]
+            : []),
+        ],
         repo,
         {
           ...process.env,
           CODESHELL_SMOKE_INSTALLATION: installed,
         },
+      );
+      // Exercise the actual deployment CLIs and complete installation restore,
+      // not only the settings-file repair covered by the sandbox smoke above.
+      const runtimeDockerfile = await readFile(
+        join(installed, "deploy/Dockerfile.project-runtime"),
+        "utf8",
+      );
+      const helperSource = /^ARG NODE_IMAGE=(\S+@sha256:[a-f0-9]{64})$/m.exec(
+        runtimeDockerfile,
+      )?.[1];
+      assert.ok(helperSource, "Backup helper requires the reviewed immutable Node base image");
+      await run("docker", ["pull", helperSource], installed);
+      const helperId = await run(
+        "docker",
+        ["image", "inspect", helperSource, "--format", "{{.Id}}"],
+        installed,
+        process.env,
+        true,
+      );
+      assert.match(helperId, /^sha256:[a-f0-9]{64}$/);
+      await run(
+        process.execPath,
+        [
+          join(repo, "scripts/smoke-cloud-backup.mjs"),
+          installed,
+          imageId,
+          helperId,
+          helperSource,
+          join(repo, "..", "evidence", "cloud-backup-restore.json"),
+        ],
+        repo,
       );
       if (outputArg) {
         const archive = join(root, "runtime.tar");
@@ -364,7 +473,14 @@ try {
       sources: provenance,
       packages: inventory,
       images,
+      panels: panelInventory?.panels,
     });
+    if (panelInventory)
+      await run(
+        process.execPath,
+        ["scripts/verify-candidate-panels.mjs", resolve(outputArg)],
+        installed,
+      );
     console.log(`Verified private candidate saved: ${resolve(outputArg)}`);
   }
   console.log(

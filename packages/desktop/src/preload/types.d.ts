@@ -1,3 +1,4 @@
+import type { DesktopRelayApi } from "../shared/device-relay.js";
 /**
  * Renderer-visible types for window.codeshell. Imports `type`-only from
  * core; nothing at runtime crosses the boundary (the lint rule that bans
@@ -65,6 +66,7 @@ import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { ProjectAuthorityApi } from "./project-authority-types";
+import type { ProjectPanelVersionApi } from "./project-panel-version-types";
 import type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -1030,7 +1032,7 @@ export type ImGatewayUiEvent =
       conversation: DingTalkDiscoveredConversation;
     };
 
-export interface CodeshellApi extends ProjectAuthorityApi {
+export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionApi {
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
   sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */
@@ -1724,13 +1726,6 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
   getPanelAppBindings(cwd: string): Promise<PanelAppBindingState[]>;
-  getPanelAppPackageHistory(
-    cwd: string, id: string, revision: string,
-  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageHistory>;
-  previewPanelAppRestore(
-    cwd: string, id: string, digest: string, revision: string,
-  ): Promise<import("@cjhyy/code-shell-server/panels").PanelPackageRestoreReview>;
-  restorePanelAppPackage(cwd: string, token: string): Promise<{ id: string; packageDigest: string }>;
   setPanelAppProjectBinding(
     cwd: string,
     id: string,
@@ -2287,21 +2282,22 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   /**
    * Mobile Web Remote — Electron-hosted LAN HTTP/WebSocket controller for a
    * trusted phone. Off by default; `start` binds to localhost/LAN and returns
-   * a one-time pairing URL. No public relay (see mobile-remote design spec).
+   * a one-time pairing URL. Public relay uses a separate desktop registration and the same phone authorization.
    */
   mobileRemote: {
-    start(opts?: { mode?: "lan" | "tunnel" }): Promise<{
+    relay: DesktopRelayApi;
+    start(opts?: { mode?: "lan" | "tunnel" | "relay" }): Promise<{
       url: string;
       pairingUrl: string;
       expiresAt: number;
-      mode: "lan" | "tunnel";
+      mode: "lan" | "tunnel" | "relay";
     }>;
     stop(): Promise<void>;
     pairingUrl(): Promise<{ pairingUrl: string; expiresAt: number }>;
     status(): Promise<{
       running: boolean;
       url?: string;
-      mode?: "lan" | "tunnel";
+      mode?: "lan" | "tunnel" | "relay";
       tunnelRunning?: boolean;
       tunnelConnected?: boolean;
     }>;

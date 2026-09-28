@@ -177,12 +177,12 @@ describe("Panel App update controls", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
   });
 
-  async function render() {
+  async function render(projectPath = "/tmp/project") {
     await act(async () => {
       root.render(
         <ToastProvider>
           <DialogProvider>
-            <PanelsTab cwd="/tmp/project" activeProjectPath="/tmp/project" query="" />
+            <PanelsTab cwd={projectPath} activeProjectPath={projectPath} query="" />
           </DialogProvider>
         </ToastProvider>,
       );
@@ -195,6 +195,44 @@ describe("Panel App update controls", () => {
       props(button(label)).onClick();
       await flushMicrotasks();
     });
+  }
+
+  function stubRetainedVersion() {
+    apps = [{ ...panel(), projectBound: true }];
+    const cancelled: unknown[] = [];
+    const version = {
+      version: "0.6.1",
+      packageDigest: "c".repeat(64),
+      permissions: ["storage"],
+      compatibility: { supported: true, reasons: [] },
+    };
+    const history = {
+      appId: "video-studio",
+      title: { default: "Video Studio" },
+      expectedRevision: "a".repeat(64),
+      current: { version: "0.6.2", packageDigest: "b".repeat(64) },
+      unavailablePackages: 0,
+      versions: [version],
+    };
+    const review = {
+      ...version,
+      appId: history.appId,
+      title: history.title,
+      current: history.current,
+      expectedRevision: history.expectedRevision,
+      addedPermissions: [],
+      reviewToken: "cancel-native-review",
+      expiresAt: Date.now() + 60_000,
+    };
+    Object.assign(window.codeshell, {
+      getPanelAppPackageHistory: async () => history,
+      previewPanelAppRestore: async () => review,
+      cancelPanelAppRestore: async (...args: unknown[]) => {
+        cancelled.push(args);
+        return { cancelled: true };
+      },
+    });
+    return { cancelled, review };
   }
 
   test("project toggles send the displayed Host revision and surface a concurrent phone change", async () => {
@@ -367,6 +405,98 @@ describe("Panel App update controls", () => {
       ["preview", "/tmp/project", "video-studio", "c".repeat(64), "a".repeat(64)],
       ["restore", "/tmp/project", "native-restore-review"],
     ]);
+  });
+
+  test("native version dialog keeps failed cancellations retryable and releases reviews before closing", async () => {
+    const { cancelled } = stubRetainedVersion();
+    let failCancellation = true;
+    Object.assign(window.codeshell, {
+      cancelPanelAppRestore: async (...args: unknown[]) => {
+        cancelled.push(args);
+        if (failCancellation) throw new Error("Cancellation unavailable");
+        return { cancelled: true };
+      },
+    });
+    await render();
+    await click("展开");
+    await click("项目版本");
+    await click("审阅 v0.6.1");
+    await click("关闭版本记录");
+    expect(textOf(document.body)).toContain("Cancellation unavailable");
+    expect(textOf(document.body)).toContain("确认权限并恢复项目版本");
+    failCancellation = false;
+    await click("关闭版本记录");
+    expect(textOf(document.body)).not.toContain("确认权限并恢复项目版本");
+    expect(cancelled).toEqual([
+      ["/tmp/project", "cancel-native-review"],
+      ["/tmp/project", "cancel-native-review"],
+    ]);
+  });
+
+  test("a failed native restore keeps its review available for cancellation", async () => {
+    const { cancelled, review } = stubRetainedVersion();
+    Object.assign(window.codeshell, {
+      restorePanelAppPackage: async () => {
+        throw new Error("任务正在运行，请结束后修改面板。");
+      },
+    });
+    await render();
+    await click("展开");
+    await click("项目版本");
+    await click("审阅 v0.6.1");
+    await click("确认权限并恢复项目版本");
+    expect(textOf(document.body)).toContain("任务正在运行，请结束后修改面板。");
+    expect(button("确认权限并恢复项目版本")).toBeDefined();
+    expect(cancelled).toEqual([]);
+    await click("关闭版本记录");
+    expect(cancelled).toEqual([["/tmp/project", review.reviewToken]]);
+    expect(textOf(document.body)).not.toContain("确认权限并恢复项目版本");
+  });
+
+  test("leaving a native version review releases its original project lease even if cleanup fails", async () => {
+    const { cancelled, review } = stubRetainedVersion();
+    Object.assign(window.codeshell, {
+      cancelPanelAppRestore: async (...args: unknown[]) => {
+        cancelled.push(args);
+        throw new Error("Host unavailable during navigation");
+      },
+    });
+    await render();
+    await click("展开");
+    await click("项目版本");
+    await click("审阅 v0.6.1");
+    await render("/tmp/other-project");
+    expect(cancelled).toEqual([["/tmp/project", review.reviewToken]]);
+    expect(textOf(document.body)).not.toContain("确认权限并恢复项目版本");
+    expect(textOf(document.body)).not.toContain("Host unavailable during navigation");
+  });
+
+  test("a native preview that resolves after project navigation releases only its issuing project token", async () => {
+    const { cancelled, review } = stubRetainedVersion();
+    let complete!: (value: typeof review) => void;
+    const requested: unknown[] = [];
+    Object.assign(window.codeshell, {
+      previewPanelAppRestore: (...args: unknown[]) => {
+        requested.push(args);
+        return new Promise<typeof review>((resolve) => {
+          complete = resolve;
+        });
+      },
+    });
+    await render();
+    await click("展开");
+    await click("项目版本");
+    await click("审阅 v0.6.1");
+    expect(requested).toEqual([["/tmp/project", "video-studio", "c".repeat(64), "a".repeat(64)]]);
+    await render("/tmp/other-project");
+    expect(cancelled).toEqual([]);
+    await act(async () => {
+      complete(review);
+      await flushMicrotasks();
+    });
+    expect(cancelled).toEqual([["/tmp/project", review.reviewToken]]);
+    expect(textOf(document.body)).not.toContain("确认权限并恢复项目版本");
+    expect(requested).toHaveLength(1);
   });
 
   test("an unavailable project package is repaired from a separate diagnostic row", async () => {

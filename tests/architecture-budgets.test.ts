@@ -69,11 +69,15 @@ describe("architecture growth budgets", () => {
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
     // part of this feature's reviewed transport contract, total 295 routes.
+    // +1 authenticated, owner-scoped cancelRestore route releases abandoned
+    // version reviews. Count the extracted version registrar in the same budget.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g),
-    ).toBeLessThanOrEqual(295);
+        matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g),
+    ).toBeLessThanOrEqual(299); // +3 reviewed registration/status/forget operations, no credential read.
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -84,10 +88,17 @@ describe("architecture growth budgets", () => {
     // authority and streaming remain in the extracted main-process service (+5).
     // Project package reviews/restores, independent Link and Cloud window APIs
     // add only typed invoke adapters; ownership lives in the extracted IPC modules.
+    // The project-version bridge is extracted without changing its exposed methods.
+    // Count those invokes too, preserving the existing transport surface ceiling.
     expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_866);
     expect(
-      matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g),
-    ).toBeLessThanOrEqual(300);
+      matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
+        matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
+        matches(
+          "packages/desktop/src/preload/project-panel-version-api.ts",
+          /ipcRenderer\.invoke\(/g,
+        ),
+    ).toBeLessThanOrEqual(303);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening

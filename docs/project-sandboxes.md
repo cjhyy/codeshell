@@ -98,3 +98,20 @@ node scripts/smoke-project-sandboxes.mjs
 ```
 
 脚本只清理本次创建且带有对应安装标识的容器、网络和卷。已有 Hub 进程仍需按所选部署方式更新，不会因为代码测试通过自动升级。镜像中的下载器固定为经校验的 [yt-dlp 2026.08.19](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.08.19)，避免使用基础发行版中过旧的版本；其他版本升级需要更新 Dockerfile 中的下载地址与校验值。
+
+
+### 管理员提供的 seccomp 策略
+
+默认保持 Docker 的系统调用策略。需要运行依赖用户命名空间的软件时，管理员可用
+`--runtime-seccomp-profile /absolute/path/profile.json` 指定已审阅的 Linux OCI
+seccomp JSON；SDK 对应 `runtimeSeccompProfile`。网页／Panel／项目配置不能选择该文件。
+文件必须是有界普通 JSON 文件且默认动作为 `SCMP_ACT_ERRNO`；Docker 校验其余规则。
+这只验证配置格式，不能替代管理员对系统调用授权的审阅。
+
+控制服务启动时固定文件内容，创建容器前将其写入私有数据目录；摘要进入容器配置
+身份。更新策略须先停止项目并重启控制服务。不同配置的运行中容器拒绝复用，停止的
+容器在下次启动时重建，数据卷保留。原文件变动不会悄悄改变当前控制进程的策略。
+不设置此选项时旧容器配置身份保持兼容。非 root、只读根、cap-drop ALL、
+no-new-privileges、网络及资源限制仍保留；不得用策略选择替代这些约束。
+
+实际业务需要的策略和系统依赖由部署产品组合，Host 不内置浏览器专属规则。

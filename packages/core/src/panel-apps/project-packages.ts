@@ -12,7 +12,7 @@ import {
   resolvePanelAppPackage,
   type InstalledPanelApp,
 } from "./installer.js";
-import { PanelAppInstallError } from "./paths.js";
+import { PanelAppInstallError, assertSafePanelAppId } from "./paths.js";
 import { readInstalledPanelAppsRegistry } from "./registry.js";
 
 /** Effective selection includes the first captured package of unversioned legacy bindings.
@@ -80,7 +80,7 @@ export async function migrateProjectPanelAppPackagePins(
     (id) => !originalPins[id] && (!appId || id === appId),
   );
   if (!pending.length) return [];
-  const installed = new Map((await listInstalledPanelApps()).map((app) => [app.id, app]));
+  const installed = new Map((await listInstalledPanelApps(appId)).map((app) => [app.id, app]));
   const registry = new Set((await readInstalledPanelAppsRegistry()).map((app) => app.id));
   const prepared = new Map<string, PanelAppPackagePin>();
   for (const id of pending) {
@@ -137,14 +137,19 @@ export async function selectProjectPanelAppPackage(
   return selected;
 }
 
-export async function listProjectPanelApps(projectPath: string): Promise<InstalledPanelApp[]> {
-  await migrateProjectPanelAppPackagePins(projectPath);
+export async function listProjectPanelApps(
+  projectPath: string,
+  appId?: string,
+): Promise<InstalledPanelApp[]> {
+  if (appId !== undefined) assertSafePanelAppId(appId);
+  await migrateProjectPanelAppPackagePins(projectPath, appId);
   const pins = projectPanelAppPackagePins(projectPath);
   // A removed global catalog entry stays unavailable; a retained file is not a grant.
   const records = await readInstalledPanelAppsRegistry();
-  const catalog = new Map((await listInstalledPanelApps()).map((app) => [app.id, app]));
+  const catalog = new Map((await listInstalledPanelApps(appId)).map((app) => [app.id, app]));
   const selected: InstalledPanelApp[] = [];
   for (const record of records) {
+    if (appId !== undefined && record.id !== appId) continue;
     const pin = pins[record.id];
     if (pin) {
       // The mutable catalog directory may be swapping during another project's
@@ -171,19 +176,24 @@ export interface ProjectPanelAppIssue {
 /** Separate failed selections from runnable apps. Never substitute catalog bytes for a failed pin.
  * Invalid project configuration still rejects the whole read; individual package failures do not.
  */
-export async function inspectProjectPanelApps(projectPath: string): Promise<{
+export async function inspectProjectPanelApps(
+  projectPath: string,
+  appId?: string,
+): Promise<{
   apps: InstalledPanelApp[];
   issues: ProjectPanelAppIssue[];
   pins: Record<string, PanelAppPackagePin>;
 }> {
+  if (appId !== undefined) assertSafePanelAppId(appId);
   const settings = new SettingsManager(projectPath, "full");
   parsePanelAppPackagePins(settings.getRawForScope("project", projectPath, { strict: true }));
   const records = await readInstalledPanelAppsRegistry();
-  const catalog = new Map((await listInstalledPanelApps()).map((app) => [app.id, app]));
+  const catalog = new Map((await listInstalledPanelApps(appId)).map((app) => [app.id, app]));
   const apps: InstalledPanelApp[] = [];
   const issues: ProjectPanelAppIssue[] = [];
   const pins: Record<string, PanelAppPackagePin> = {};
   for (const record of records) {
+    if (appId !== undefined && record.id !== appId) continue;
     let pin: PanelAppPackagePin | undefined;
     try {
       pin = projectPanelAppPackagePins(projectPath, record.id)[record.id];

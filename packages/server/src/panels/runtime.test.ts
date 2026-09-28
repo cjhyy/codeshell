@@ -118,6 +118,7 @@ async function fixture(
     now: 1000,
     owners: new Set(["owner-a", "owner-b"]),
     beforeSnapshot: undefined as (() => Promise<void>) | undefined,
+    snapshotAppIds: [] as Array<string | undefined>,
   };
   const ownerOf = (request: IncomingMessage) =>
     /(?:^|;\s*)session=([^;]+)/.exec(request.headers.cookie ?? "")?.[1];
@@ -135,7 +136,8 @@ async function fixture(
     ownerId: async (request) => ownerOf(request),
     isAuthorized: async (request) => state.owners.has(ownerOf(request) ?? ""),
     listInstalled: async () => (state.present ? [structuredClone(app)] : []),
-    snapshot: async (): Promise<PanelSnapshot> => {
+    snapshot: async (appId): Promise<PanelSnapshot> => {
+      state.snapshotAppIds.push(appId);
       await state.beforeSnapshot?.();
       const {
         installPath: _installPath,
@@ -212,6 +214,20 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("each call rechecks only its selected Panel and immediately observes revocation", async () => {
+    const f = await fixture({ permissions: ["context.workspace"] });
+    const grant = await f.prepare();
+    const before = f.state.snapshotAppIds.length;
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "context.get" })).status,
+    ).toBe(200);
+    expect(f.state.snapshotAppIds.length).toBeGreaterThan(before);
+    expect(f.state.snapshotAppIds.every((id) => id === f.app.id)).toBe(true);
+    f.state.enabled = false;
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "context.get" })).status,
+    ).toBe(410);
+  });
   test("automation capabilities require a live Host, both context permissions and a selected task", async () => {
     const permissions: InstalledPanelApp["permissions"] = [
       "automations.manage",
@@ -429,7 +445,7 @@ describe("Panel HTTP runtime", () => {
     expect(response.headers.get("referrer-policy")).toBe("no-referrer");
     const csp = response.headers.get("content-security-policy")!;
     expect(csp).toContain(`script-src ${f.url}/api/v1/panel-assets/`);
-    expect(csp).toContain("sandbox allow-scripts;");
+    expect(csp).toContain("sandbox allow-scripts allow-downloads;");
     expect(csp).not.toContain("allow-same-origin");
     expect(csp).toContain("connect-src 'none'");
     expect(csp).toContain(`frame-ancestors ${f.url}`);
@@ -2109,6 +2125,54 @@ async function previewFixture(bytes: string | Uint8Array = "0123456789") {
   return { ...f, service, asset, grant, effect, file };
 }
 
+test("browser audio chooser requires resources, bounded options and a current grant while iframe microphone stays denied", async () => {
+  const f = await fixture({ permissions: ["resources"] });
+  const grant = await f.prepare();
+  expect(grant.context.availableMethods).toContain("resources.recordAudio");
+  expect(grant.context.capabilities.methodLimits["resources.recordAudio"].timeoutMs).toBe(
+    30 * 60_000,
+  );
+  const response = await f.api(`${grant.instanceId}/call`, "POST", {
+    method: "resources.recordAudio",
+    params: { maxDurationSeconds: 45, maxBytes: 1024 },
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    effect: "resources.recordAudio",
+    maxDurationSeconds: 45,
+    maxBytes: 1024,
+  });
+  const asset = await fetch(f.url + grant.src);
+  expect(asset.headers.get("permissions-policy")).toContain("microphone=()");
+  for (const params of [
+    { maxDurationSeconds: 601 },
+    { maxDurationSeconds: 1.5 },
+    { maxBytes: 26 * 1024 * 1024 },
+    { maxBytes: 0 },
+    { autoStart: true },
+    [],
+  ]) {
+    expect(
+      (await f.api(`${grant.instanceId}/call`, "POST", { method: "resources.recordAudio", params }))
+        .status,
+    ).toBe(400);
+  }
+  const denied = await fixture({ permissions: [] });
+  const deniedGrant = await denied.prepare();
+  expect(deniedGrant.context.availableMethods).not.toContain("resources.recordAudio");
+  expect(
+    (
+      await denied.api(`${deniedGrant.instanceId}/call`, "POST", {
+        method: "resources.recordAudio",
+      })
+    ).status,
+  ).toBe(403);
+  f.state.enabled = false;
+  expect(
+    (await f.api(`${grant.instanceId}/call`, "POST", { method: "resources.recordAudio" })).status,
+  ).toBe(410);
+});
+
 test("resource preview streams scoped bytes with seeking, HEAD, and explicit download", async () => {
   const f = await previewFixture();
   expect(f.grant.context.availableMethods).toContain("resources.open");
@@ -2289,4 +2353,95 @@ test("revoking a login stops an idle resource stream without waiting for another
     paused.mockRestore();
     idle?.destroy();
   }
+});
+
+async function inlinePreview(f: Awaited<ReturnType<typeof previewFixture>>, id = f.asset.id) {
+  const response = await f.api(`${f.grant.instanceId}/call`, "POST", {
+    method: "resources.preview",
+    params: { assetId: id },
+  });
+  expect(response.status).toBe(200);
+  return response.json();
+}
+
+test("inline resource capability supports opaque media readers, ranges and HEAD without a cookie", async () => {
+  const f = await previewFixture();
+  expect(f.grant.context.availableMethods).toContain("resources.preview");
+  const value = await inlinePreview(f);
+  expect(value.asset).toEqual(f.asset);
+  expect(value.effect).toBeUndefined();
+  expect(value.url).toStartWith(f.url + "/api/v1/panel-assets/");
+  const response = await fetch(value.url, { headers: { Origin: "null", Range: "bytes=2-5" } });
+  expect(response.status).toBe(206);
+  expect(response.headers.get("access-control-allow-origin")).toBe("*");
+  expect(response.headers.get("cross-origin-resource-policy")).toBe("cross-origin");
+  expect(response.headers.get("content-security-policy")).toBe("default-src 'none'; sandbox");
+  expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(response.headers.get("content-range")).toBe("bytes 2-5/10");
+  expect(await response.text()).toBe("2345");
+  const head = await fetch(value.url, { method: "HEAD" });
+  expect(head.status).toBe(200);
+  expect(head.headers.get("content-length")).toBe("10");
+  expect(await head.text()).toBe("");
+  expect((await fetch(value.url, { method: "POST" })).status).toBe(405);
+  expect((await fetch(value.url, { headers: { Range: "bytes=80-" } })).status).toBe(416);
+});
+
+test("inline resource capability cannot serve scripts, HTML, SVG, foreign project bytes or paths", async () => {
+  const f = await previewFixture();
+  const value = await inlinePreview(f);
+  for (const extension of ["js", "html", "svg"]) {
+    const file = join(f.cwd, `active.${extension}`);
+    await writeFile(file, `${extension}: globalThis.unreviewedResourceExecuted = true`);
+    const asset = await f.service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+    const response = await f.api(`${f.grant.instanceId}/call`, "POST", {
+      method: "resources.preview",
+      params: { assetId: asset.id },
+    });
+    expect(response.status).toBe(400);
+    expect((await fetch(value.url.replace(f.asset.id, asset.id))).status).toBe(403);
+  }
+  const file = join(f.cwd, "foreign.mp4");
+  await writeFile(file, "other project private bytes");
+  const foreign = await f.service.library.importFile(
+    { appId: f.app.id, projectPath: f.cwd + "-other" },
+    file,
+  );
+  expect((await fetch(value.url.replace(f.asset.id, foreign.id))).status).toBe(404);
+  expect((await fetch(value.url.replace(f.asset.id, "not-an-id"))).status).toBe(404);
+  // Invalid resource requests must not revoke unrelated valid media on the page.
+  expect(await (await fetch(value.url)).text()).toBe("0123456789");
+  const extra = await f.api(`${f.grant.instanceId}/call`, "POST", {
+    method: "resources.preview",
+    params: { assetId: f.asset.id, path: "/etc/passwd" },
+  });
+  expect(extra.status).toBe(400);
+});
+
+test("inline resource capability expires on session revocation, Panel removal and page closure", async () => {
+  for (const revoke of ["session", "panel", "page", "expiry"]) {
+    const f = await previewFixture();
+    const value = await inlinePreview(f);
+    if (revoke === "session") f.state.owners.delete("owner-a");
+    if (revoke === "panel") f.state.enabled = false;
+    if (revoke === "page") await f.api(f.grant.instanceId, "DELETE");
+    if (revoke === "expiry") f.state.now += 31 * 60_000;
+    expect([404, 410]).toContain((await fetch(value.url)).status);
+  }
+  const f = await fixture({ permissions: [] });
+  const grant = await f.prepare();
+  expect(grant.context.availableMethods).not.toContain("resources.preview");
+  const path = grant.src.replace(
+    /app\/index\.html$/,
+    "_codeshell_resources/asset-" + "a".repeat(64),
+  );
+  expect((await fetch(f.url + path)).status).toBe(403);
+  expect(
+    (
+      await f.api(`${grant.instanceId}/call`, "POST", {
+        method: "resources.preview",
+        params: { assetId: "asset-" + "a".repeat(64) },
+      })
+    ).status,
+  ).toBe(403);
 });

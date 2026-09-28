@@ -9,6 +9,10 @@ import * as serveApi from "./index.serve.js";
 import * as desktopWebApi from "./index.desktop-web.js";
 import * as linksApi from "./index.links.js";
 import * as panelsApi from "./index.panels.js";
+import * as remoteRelayApi from "./index.remote-relay.js";
+import * as authApi from "./index.auth.js";
+import { environmentIdentity } from "./environment-identity.js";
+import { createHubAuth, HUB_SESSION_COOKIE } from "./hub/auth-http.js";
 
 const repoRoot = join(import.meta.dir, "../../..");
 
@@ -43,6 +47,45 @@ describe("Server package public entry contracts", () => {
     expect(Object.keys(workerApi).sort()).toEqual(["WorkerBridgeCore", "previewLine"]);
   });
 
+  test("keeps outbound transport and enrollment identity in the focused remote-relay capability", () => {
+    expect(Object.keys(remoteRelayApi).sort()).toEqual([
+      "RELAY_CONNECT_PATH",
+      "RELAY_CONTROL_MAX_BYTES",
+      "RELAY_DATA_CHUNK_BYTES",
+      "RELAY_DATA_MAX_BYTES",
+      "RELAY_MAX_STREAMS",
+      "RELAY_PING_INTERVAL_MS",
+      "RELAY_PONG_TIMEOUT_MS",
+      "RELAY_PROTOCOL_VERSION",
+      "RELAY_SETUP_TIMEOUT_MS",
+      "RELAY_STREAMS_PATH",
+      "createDeviceRelayConnector",
+      "createRelayByteStream",
+      "environmentIdentity",
+      "isRelayHostId",
+      "isRelayOrigin",
+      "isRelayToken",
+      "parseRelayControlMessage",
+    ]);
+    expect(remoteRelayApi.environmentIdentity).toBe(environmentIdentity);
+    expect("environmentIdentity" in rootApi).toBe(false);
+    expect(typeof remoteRelayApi.createDeviceRelayConnector).toBe("function");
+    expect(typeof remoteRelayApi.createRelayByteStream).toBe("function");
+    expect(typeof remoteRelayApi.parseRelayControlMessage).toBe("function");
+    expect(remoteRelayApi.RELAY_STREAMS_PATH).toBe("/api/v1/remote-hosts/streams/");
+    expect("RemoteHostManager" in remoteRelayApi).toBe(false);
+    expect("createHubAuth" in remoteRelayApi).toBe(false);
+    expect("WorkerBridgeCore" in remoteRelayApi).toBe(false);
+  });
+
+  test("keeps single-owner auth explicit and reuses the existing implementation", () => {
+    expect(Object.keys(authApi).sort()).toEqual(["HUB_SESSION_COOKIE", "createHubAuth"]);
+    expect(authApi.createHubAuth).toBe(createHubAuth);
+    expect(authApi.HUB_SESSION_COOKIE).toBe(HUB_SESSION_COOKIE);
+    expect("createHubAuth" in rootApi).toBe(false);
+    expect("HUB_SESSION_COOKIE" in rootApi).toBe(false);
+  });
+
   test("declares exact package exports and source aliases", () => {
     const manifest = JSON.parse(
       readFileSync(join(repoRoot, "packages/server/package.json"), "utf8"),
@@ -51,14 +94,24 @@ describe("Server package public entry contracts", () => {
     };
     expect(Object.keys(manifest.exports).sort()).toEqual([
       ".",
+      "./auth",
       "./desktop-web",
       "./links",
       "./mobile-remote",
       "./panels",
+      "./remote-relay",
       "./serve",
       "./storage",
       "./worker",
     ]);
+    expect(manifest.exports["./remote-relay"]).toEqual({
+      types: "./dist/index.remote-relay.d.ts",
+      import: "./dist/index.remote-relay.js",
+    });
+    expect(manifest.exports["./auth"]).toEqual({
+      types: "./dist/index.auth.d.ts",
+      import: "./dist/index.auth.js",
+    });
     expect(manifest.exports["./storage"]).toEqual({
       types: "./dist/index.storage.d.ts",
       import: "./dist/index.storage.js",
@@ -72,6 +125,12 @@ describe("Server package public entry contracts", () => {
       compilerOptions: { paths: Record<string, string[]> };
     };
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/*"]).toBeUndefined();
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/remote-relay"]).toEqual([
+      "packages/server/src/index.remote-relay.ts",
+    ]);
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/auth"]).toEqual([
+      "packages/server/src/index.auth.ts",
+    ]);
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/storage"]).toEqual([
       "packages/server/src/index.storage.ts",
     ]);

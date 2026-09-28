@@ -70,14 +70,12 @@ import type {
 } from "../preload/types";
 import {
   loadProjects,
-  saveProjects,
   loadActiveProjectId,
   saveActiveProjectId,
   unmarkProjectPathRemoved,
   reconcileProjectsFromDiskWithRemap,
   projectLabel,
   trackedProjectFromRegistry,
-  type TrackedProject,
 } from "./projects";
 import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
@@ -127,6 +125,7 @@ import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
 import { readReviewAvailability, useReviewAvailability } from "./panels/useReviewAvailability";
+import { useTrackedProjects } from "./app/useTrackedProjects";
 import { useProjectRegistrySync } from "./app/useProjectRegistrySync";
 import { useExternalRuntimeModels } from "./app/useExternalRuntimeModels";
 
@@ -211,7 +210,7 @@ function App() {
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
   const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
-  const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
+  const [projects, setProjects] = useTrackedProjects();
   const [sessionWorkspaceProfiles, setSessionWorkspaceProfiles] = useState<
     Array<{ name: string; label: string }>
   >([]);
@@ -750,9 +749,6 @@ function App() {
     return map;
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
-  useEffect(() => {
-    saveProjects(projects);
-  }, [projects]);
   useEffect(() => {
     let cancelled = false;
     void window.codeshell

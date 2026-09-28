@@ -5,6 +5,7 @@ import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
 import { setApiWorkspace, setApiProject } from "./api-context.js";
 import { PanelHost } from "./PanelHost.js";
+import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
 
 type Element = React.ReactElement<Record<string, any>>;
 function elements(node: React.ReactNode): Element[] {
@@ -229,11 +230,71 @@ async function fixture(
   };
 }
 
+test("recording chooser fixes the project, refuses concurrent requests, and aborts on unmount", async () => {
+  setApiProject(projectA);
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.recordAudio")
+        return Response.json({
+          effect: "resources.recordAudio",
+          maxDurationSeconds: 60,
+          maxBytes: 1024,
+        });
+    },
+  });
+  await view.call("resources.recordAudio", {}, "record-1");
+  const request = elements(view.tree).find((item) => item.type === PanelAudioDialog)!.props
+    .request as PanelAudioRequest;
+  expect(request).toBeDefined();
+  expect(view.dirty).toBe(true);
+  expect(view.attach()!.props.inert).toBe(true);
+  expect(view.replies.some((item) => item.data.requestId === "record-1")).toBe(false);
+  await view.call("resources.recordAudio", {}, "record-2");
+  expect(view.replies.find((item) => item.data.requestId === "record-2")?.data.error).toContain(
+    "先完成",
+  );
+  setApiProject(projectB);
+  await request.call("resources.upload.get", { sessionId: "fixture" });
+  expect(view.requests.at(-1)!.url.pathname).toContain(`/p/${projectA}/`);
+  await view.unmount();
+  expect(request.signal.aborted).toBe(true);
+  await expect(request.call("resources.upload.finish", { sessionId: "fixture" })).rejects.toThrow();
+  expect(view.replies.some((item) => item.data.requestId === "record-1")).toBe(false);
+});
+
+test("cancelling the trusted recording chooser completes without creating an upload", async () => {
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.recordAudio")
+        return Response.json({
+          effect: "resources.recordAudio",
+          maxDurationSeconds: 60,
+          maxBytes: 1024,
+        });
+    },
+  });
+  await view.call("resources.recordAudio", {}, "record-cancel");
+  const request = elements(view.tree).find((item) => item.type === PanelAudioDialog)!.props
+    .request as PanelAudioRequest;
+  await act(async () => {
+    request.finish({ cancelled: true });
+    await flushMicrotasks();
+  });
+  expect(view.replies.find((item) => item.data.requestId === "record-cancel")?.data.result).toEqual(
+    { cancelled: true },
+  );
+  expect(view.requests.some((item) => item.body?.method?.startsWith("resources.upload."))).toBe(
+    false,
+  );
+  expect(view.dirty).toBe(false);
+  expect(view.attach()!.props.inert).toBe(false);
+});
+
 test("iframe remains opaque and prepare alone does not mark it loaded", async () => {
   setApiWorkspace("/workspace/测试 %20");
   const view = await fixture();
   const frame = view.attach()!;
-  expect(frame.props.sandbox).toBe("allow-scripts");
+  expect(frame.props.sandbox).toBe("allow-scripts allow-downloads");
   expect(frame.props.referrerPolicy).toBe("no-referrer");
   expect(frame.props.src).toContain("workspace=");
   expect(new URL(frame.props.src, "http://localhost").searchParams.get("workspace")).toBe(
