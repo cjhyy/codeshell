@@ -197,7 +197,11 @@ describe("workspace package boundaries", () => {
       }),
     ).toBe(true);
 
+    // Arena is version-tracked but unpublished: hosts no longer load it and the
+    // package is retained on disk only so the capability can be revived or
+    // deleted outright in a follow-up.
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
+      "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-capability-optimization-lab",
       "@cjhyy/code-shell-cdp",
       "@cjhyy/code-shell-desktop",
@@ -240,13 +244,30 @@ describe("workspace package boundaries", () => {
     expect(releaseHelper).not.toContain("replaceAll(current, target)");
   });
 
+  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+    "rejects an unpublished workspace in a public package's %s",
+    async (field) => {
+      const all = await workspaceManifests();
+      // The publisher loads only public manifests, so the retired package is
+      // deliberately absent from this map even if its old npm version exists.
+      const manifests = new Map(PUBLIC_RELEASE_PACKAGES.map(({ name }) => [name, all.get(name)!]));
+      const tui = manifests.get("@cjhyy/code-shell-tui")!;
+      manifests.set(tui.name, {
+        ...tui,
+        [field]: { ...tui[field], "@cjhyy/code-shell-arena": "workspace:*" },
+      });
+      expect(validatePublicReleaseOrder(manifests)).toContain(
+        "@cjhyy/code-shell-tui: runtime dependency @cjhyy/code-shell-arena is a private workspace and will not be published",
+      );
+    },
+  );
+
   it("keeps product hosts on focused Coding and Arena entries", () => {
     const hosts = ["desktop", "tui", "server"].flatMap((name) =>
       sourceFiles(join(repoRoot, "packages", name, "src")),
     );
     const allowedCompatibilityImports = new Set([
       join(repoRoot, "packages", "desktop", "src", "main", "settings-service.ts"),
-      join(repoRoot, "packages", "tui", "src", "ui", "components", "OnboardingPrompt.tsx"),
     ]);
     const offenders: string[] = [];
 

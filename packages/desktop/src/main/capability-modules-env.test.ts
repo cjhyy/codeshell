@@ -5,9 +5,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { composeCapabilityModulesEnv } from "./capability-modules-env.js";
 
-const urls = { coding: "file:///coding.js", arena: "file:///arena.js", pet: "file:///pet.js" };
-const baseline =
-  "file:///coding.js#createCodingModule,file:///arena.js#createArenaModule,file:///pet.js#createPetModule";
+const urls = { coding: "file:///coding.js", pet: "file:///pet.js" };
+const baseline = "file:///coding.js#createCodingModule,file:///pet.js#createPetModule";
 const roots: string[] = [];
 
 afterEach(() => {

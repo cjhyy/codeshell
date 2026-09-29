@@ -7,7 +7,6 @@ import {
 
 export interface CoreCapabilityModuleUrls {
   readonly coding: string;
-  readonly arena: string;
   readonly pet: string;
 }
 
@@ -17,11 +16,7 @@ export function composeCapabilityModulesEnv(
   flags: FeatureFlagOverrides,
   resolveOptimizationLab: () => string,
 ): string {
-  const entries = [
-    `${urls.coding}#createCodingModule`,
-    `${urls.arena}#createArenaModule`,
-    `${urls.pet}#createPetModule`,
-  ];
+  const entries = [`${urls.coding}#createCodingModule`, `${urls.pet}#createPetModule`];
   if (isFeatureEnabled(flags, "optimization_lab")) {
     entries.push(`${resolveOptimizationLab()}#createOptimizationLabModule`);
   }

@@ -20,4 +20,21 @@ describe("interactive command options", () => {
       expect(result.stdout).toContain("--prefill <text>");
     }
   });
+
+  test("does not advertise or accept the retired Arena subcommand", () => {
+    const entrypoint = fileURLToPath(new URL("./main.ts", import.meta.url));
+    const help = spawnSync(process.execPath, [entrypoint, "--help"], {
+      encoding: "utf-8",
+      timeout: 10_000,
+    });
+    expect(help.status, help.stderr).toBe(0);
+    expect(help.stdout).not.toMatch(/\barena\b/i);
+
+    const retired = spawnSync(process.execPath, [entrypoint, "arena", "review changes"], {
+      encoding: "utf-8",
+      timeout: 10_000,
+    });
+    expect(retired.status).toBe(1);
+    expect(retired.stderr).toContain("too many arguments");
+  });
 });

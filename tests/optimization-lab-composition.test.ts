@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createArenaModule } from "@cjhyy/code-shell-arena";
 import { createCodingModule } from "@cjhyy/code-shell-capability-coding";
 import { createOptimizationLabModule } from "@cjhyy/code-shell-capability-optimization-lab";
 import { createPetModule } from "@cjhyy/code-shell-pet";
@@ -12,11 +11,10 @@ describe("optimization lab composition", () => {
       compileComposition({
         modules: [
           createCodingModule() as unknown as AgentModule,
-          createArenaModule() as unknown as AgentModule,
           createPetModule() as unknown as AgentModule,
           createOptimizationLabModule() as unknown as AgentModule,
         ],
-        expectedModules: ["coding", "arena", "pet", "optimization-lab"],
+        expectedModules: ["coding", "pet", "optimization-lab"],
       }),
     ).not.toThrow();
   });

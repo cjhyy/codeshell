@@ -30,7 +30,6 @@ function entry(source, name, file) {
 const workerEntry = entry("core", "code-shell-core", "cli/agent-server-stdio.js");
 const modules = [
   ["coding", "code-shell-capability-coding", "index.capability.js", "createCodingModule"],
-  ["arena", "code-shell-arena", "index.runtime.js", "createArenaModule"],
   ["pet", "code-shell-pet", "index.capability.js", "createPetModule"],
   [
     "optimization-lab",
@@ -106,7 +105,7 @@ async function withWorker(enabled, inspect) {
       CODE_SHELL_HOME: dataHome,
       CODE_SHELL_DATA_ROOT: dataHome,
       CODESHELL_AGENT_STDIO: "1",
-      CODE_SHELL_CAPABILITY_MODULES: modules.slice(0, enabled ? 4 : 3).join(","),
+      CODE_SHELL_CAPABILITY_MODULES: (enabled ? modules : modules.slice(0, -1)).join(","),
     },
     stdio: ["pipe", "pipe", "pipe"],
   });

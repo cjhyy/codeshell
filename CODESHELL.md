@@ -14,7 +14,7 @@ packages/
   link/     @cjhyy/code-shell-link     — framework-independent Link provider manifests and authorization guides.
   core/     @cjhyy/code-shell-core     — engine, tools, hooks, protocol. UI-agnostic, domain-agnostic.
   coding/   @cjhyy/code-shell-capability-coding — optional coding/git/LSP/worktree capability pack.
-  arena/    @cjhyy/code-shell-arena    — optional Arena capability built on core/extension.
+  arena/    @cjhyy/code-shell-arena    — retained private Arena source; not loaded by hosts or published.
   pet/      @cjhyy/code-shell-pet      — Pet (Mimi) capability: behavior profile, DelegateWork tool,
                                           projection observer. Loaded by hosts via extension seams.
   optimization-lab/ @cjhyy/code-shell-capability-optimization-lab — private experimental capability;
@@ -118,7 +118,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: link → core → pet → optimization-lab → arena → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
+bun run build          # filter order: link → core → pet → optimization-lab → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)
@@ -183,7 +183,7 @@ observe deleted or partially emitted dependency files.
 ## Known Architecture Debt (context only, not asks)
 
 - **`engine.ts` remains a large orchestrator.** Its old `core → tool-system → engine` type cycle is already broken and shared engine types have moved out; keep future extraction incremental and preserve the protocol construction guard.
-- **Arena is an optional product capability**, owned by `packages/arena` and composed by hosts through `@cjhyy/code-shell-core/extension`. Do not add Arena imports, built-ins, settings, or fixed RPC queries back into core.
+- **Arena source is retained in the private `packages/arena` workspace**; hosts no longer load it and releases do not publish it. Its source and tests remain available through `@cjhyy/code-shell-core/extension`. Do not add Arena imports, built-ins, settings, or fixed RPC queries back into core.
 - **Pet is likewise out of core** (`packages/pet`): the Mimi behavior profile, DelegateWork tool and projection state machine ride the generic extension seams (`RunBehaviorProfile`, `catalogTools`, `createProtocolObserver`, `validateRunParams`, `hiddenSessionKinds`). Do not add pet literals back into engine/protocol; the only sanctioned residue is the deprecated `petRuntimeContext`/`petWorkspaces`/`petWorkDelegation` wire aliases and the two projection method-name strings in `Methods`. The desktop worker loads pet via `CODE_SHELL_CAPABILITY_MODULES`.
 - **Plugin SessionStart hooks are wired** and receive `source: "startup" | "resume"`; plugin `SKILL.md` files still are not auto-injected unless a hook emits messages or the model invokes the `Skill` tool.
 

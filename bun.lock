@@ -95,7 +95,6 @@
       "name": "@cjhyy/code-shell-desktop",
       "version": "0.9.23",
       "dependencies": {
-        "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
@@ -202,7 +201,6 @@
       },
       "dependencies": {
         "@alcalzone/ansi-tokenize": "^0.3.0",
-        "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "auto-bind": "^5.0.1",

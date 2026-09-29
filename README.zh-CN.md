@@ -103,7 +103,7 @@ bun run dev          # 以开发模式启动桌面应用
 | ----------------- | ---------------------------------- | ------------------------------------------------------------------------ |
 | `harness-min`     | 供其他产品嵌入的领域无关 core 默认 | 最小文件、shell、MCP、memory、task 与 agent 机制                         |
 | `general`         | 通用编排、研究、自动化、长期任务   | 仅核心编排工具                                                           |
-| `terminal-coding` | 终端原生编码助手                   | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena` |
+| `terminal-coding` | 终端原生编码助手                   | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief` |
 
 Preset 决定 system prompt、内置工具集和权限默认值。可通过 SDK、CLI `--preset` 参数或 settings 配置。
 
@@ -138,7 +138,7 @@ provider、凭证、cookie 或 goal 相关工具。
 - **Planning / orchestration**：`AskUserQuestion`, `AskUserQuestionAsync`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
 - **Automation / integration**：`CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `AddMarketplace`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
 - **Memory / credentials / goals**：`MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `UseCredential`, `InjectCredential`, `complete_goal`, `cancel_goal`
-- **Terminal-coding preset extras**：`EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`
+- **Terminal-coding preset extras**：`EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`
 
 ---
 
@@ -238,7 +238,7 @@ packages/
 ├── link/      # 与框架无关的 Link provider 清单和授权指南
 ├── core/      # 领域无关的 Engine、context、MCP、hooks、sessions、runs、memory
 ├── coding/    # 编码 capability：tools、git/worktrees、LSP、review、prompt/presets
-├── arena/     # 可选的多模型 Arena capability
+├── arena/     # 保留的私有 Arena 源码（宿主不再加载）
 ├── pet/       # Mimi 行为、DelegateWork、投影协议、数字人团队
 ├── server/    # Headless HTTP/WebSocket host、rooms、uploads、mobile remote
 ├── web/       # 浏览器安全的远程客户端状态与 SPA

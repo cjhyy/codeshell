@@ -188,10 +188,20 @@ describe("release helper modes and target checkout", () => {
     expect(run.logs.length).toBeGreaterThan(0);
   });
 
-  test("resumes the release after nine already-published packages in dependency order", async () => {
-    const run = fixture([...Array.from({ length: 9 }, () => true), false], [{ status: 0 }]);
+  test("resumes the release after every earlier package is already published", async () => {
+    // Derived from the public release set so the scenario stays "all but the
+    // last are published, resume on the final one" as that set changes.
+    const alreadyPublished = PUBLIC_RELEASE_PACKAGES.length - 1;
+    const run = fixture(
+      [...Array.from({ length: alreadyPublished }, () => true), false],
+      [{ status: 0 }],
+    );
     await main(["--execute"], run.runtime);
-    expect(run.counts()).toEqual({ lookups: 10, attempts: 1, tagChecks: 9 });
+    expect(run.counts()).toEqual({
+      lookups: alreadyPublished + 1,
+      attempts: 1,
+      tagChecks: alreadyPublished,
+    });
     expect(run.published).toEqual([publishCommands("latest").at(-1)!]);
   });
 

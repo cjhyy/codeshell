@@ -15,7 +15,6 @@ export const DESKTOP_WORKSPACE_BUILD_ORDER = [
     packageName: "@cjhyy/code-shell-capability-optimization-lab",
     relativeDir: "packages/optimization-lab",
   },
-  { label: "arena", packageName: "@cjhyy/code-shell-arena", relativeDir: "packages/arena" },
   {
     label: "coding",
     packageName: "@cjhyy/code-shell-capability-coding",

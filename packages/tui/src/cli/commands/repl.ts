@@ -33,7 +33,6 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
 import { compileComposition } from "@cjhyy/code-shell-core";
-import { createArenaModule } from "@cjhyy/code-shell-arena/runtime";
 import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
@@ -115,7 +114,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     provider = result.provider;
     model = result.model;
     baseUrl = result.baseUrl;
-    // Reload settings — the wizard has just persisted the model pool / arena
+    // Reload settings — the wizard has just persisted the model pool
     // entries, and downstream code (e.g. /model) reads them from settings.
     settings = settingsManager.get();
   }
@@ -149,11 +148,11 @@ export async function replCommand(options: ReplOptions): Promise<void> {
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
   const maxContextTokens = resolveMaxContextTokens(llmConfig, settings.context.maxTokens);
-  // TUI is a product composition root: coding + arena, compiled once. The
-  // cron engine gets its own coding-only composition (arena is interactive).
+  // TUI is a product composition root: coding, compiled once. The cron engine
+  // gets its own composition so interactive-only modules never reach it.
   const composition = compileComposition({
-    modules: [createCodingModule(), createArenaModule()],
-    expectedModules: ["coding", "arena"],
+    modules: [createCodingModule()],
+    expectedModules: ["coding"],
   });
   const cronComposition = compileComposition({ modules: [createCodingModule()] });
 

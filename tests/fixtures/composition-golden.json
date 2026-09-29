@@ -14,13 +14,8 @@
         "source": "host"
       },
       {
-        "id": "arena",
-        "order": 2,
-        "source": "host"
-      },
-      {
         "id": "pet",
-        "order": 3,
+        "order": 2,
         "source": "host"
       }
     ],
@@ -750,12 +745,6 @@
           "harness-min",
           "general"
         ]
-      },
-      {
-        "name": "Arena",
-        "moduleId": "arena",
-        "exposure": "always",
-        "presetTags": []
       }
     ],
     "presets": [
@@ -796,12 +785,7 @@
         "moduleId": "pet"
       }
     ],
-    "queries": [
-      {
-        "type": "arena_status",
-        "moduleId": "arena"
-      }
-    ],
+    "queries": [],
     "observers": [
       "pet"
     ],

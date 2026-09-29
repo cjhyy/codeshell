@@ -65,11 +65,6 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     publish: true,
   },
   {
-    directory: "packages/arena",
-    name: "@cjhyy/code-shell-arena",
-    publish: true,
-  },
-  {
     directory: "packages/coding",
     name: "@cjhyy/code-shell-capability-coding",
     publish: true,
@@ -101,6 +96,11 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     name: "@cjhyy/code-shell",
     publish: true,
     buildArgs: ["run", "scripts/build-meta.ts"],
+  },
+  {
+    directory: "packages/arena",
+    name: "@cjhyy/code-shell-arena",
+    publish: false,
   },
   {
     directory: "packages/cdp",
@@ -143,6 +143,7 @@ export function validatePublicReleaseOrder(
 ): string[] {
   const errors: string[] = [];
   const publicNames = new Set(PUBLIC_RELEASE_PACKAGES.map((definition) => definition.name));
+  const privateNames = new Set(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name));
   const published = new Set<string>();
 
   for (const definition of PUBLIC_RELEASE_PACKAGES) {
@@ -157,6 +158,11 @@ export function validatePublicReleaseOrder(
       ...Object.keys(manifest.peerDependencies ?? {}),
     ];
     for (const dependency of runtimeDependencies) {
+      if (privateNames.has(dependency)) {
+        errors.push(
+          `${definition.name}: runtime dependency ${dependency} is a private workspace and will not be published`,
+        );
+      }
       if (publicNames.has(dependency) && !published.has(dependency)) {
         errors.push(`${definition.name}: public dependency ${dependency} must be published first`);
       }

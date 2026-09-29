@@ -3,9 +3,7 @@
  *
  * Thin wrapper around ProviderModelFlow:
  *   1. <ProviderModelFlow switchToNewModelOnFinish={true} />  (Esc cancels)
- *   2. Optional Arena participant multi-select over the newly-added aliases
- *      (skipped when only one model was added)
- *   3. Append everything to settings.json and resolve via onComplete
+ *   2. Append everything to settings.json and resolve via onComplete
  *
  * Append-only: re-running /login adds providers/models on top of what's
  * already there. To start over the user runs /logout first.
@@ -19,10 +17,7 @@ import {
   detectEnvKeys,
   appendOnboardingResult,
 } from "@cjhyy/code-shell-core/internal";
-import { saveArenaSettingsByKeys } from "@cjhyy/code-shell-arena";
 import type { ProviderConfig } from "@cjhyy/code-shell-core/internal";
-
-type Step = "flow" | "arena";
 
 interface OnboardingPromptProps {
   onComplete: (result: OnboardingResult) => void;
@@ -44,53 +39,21 @@ export function OnboardingPrompt({
   existingModelKeys = [],
   existingModelIds = [],
 }: OnboardingPromptProps) {
-  const [step, setStep] = useState<Step>("flow");
   const [flowResult, setFlowResult] = useState<FlowResult | null>(null);
-  // Arena: which newly-added model aliases participate.
-  const [arenaPicks, setArenaPicks] = useState<Set<string>>(new Set());
-  const [arenaIdx, setArenaIdx] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // ─── Arena step input ──────────────────────────────────────────────
-  useInput((input, key) => {
-    if (saveError) {
-      if (key.escape) {
-        onCancel();
-      } else if (key.return && flowResult) {
-        finish(flowResult, arenaPicks);
-      }
-      return;
-    }
-    if (step !== "arena" || !flowResult) return;
-    const aliases = flowResult.addedModels.map((m) => m.key);
+  // ─── Save-error retry input ────────────────────────────────────────
+  useInput((_input, key) => {
+    if (!saveError) return;
     if (key.escape) {
-      finish(flowResult, new Set());
-      return;
-    }
-    if (input === "s" || input === "S") {
-      finish(flowResult, new Set());
-      return;
-    }
-    if (key.upArrow) {
-      setArenaIdx((i) => Math.max(0, i - 1));
-    } else if (key.downArrow) {
-      setArenaIdx((i) => Math.min(aliases.length - 1, i + 1));
-    } else if (input === " ") {
-      const k = aliases[arenaIdx];
-      if (!k) return;
-      setArenaPicks((prev) => {
-        const next = new Set(prev);
-        if (next.has(k)) next.delete(k);
-        else next.add(k);
-        return next;
-      });
-    } else if (key.return) {
-      finish(flowResult, arenaPicks);
+      onCancel();
+    } else if (key.return && flowResult) {
+      finish(flowResult);
     }
   });
 
   // ─── Persist & resolve ─────────────────────────────────────────────
-  function finish(result: FlowResult, picks: Set<string>): void {
+  function finish(result: FlowResult): void {
     if (result.addedModels.length === 0) {
       onCancel();
       return;
@@ -125,10 +88,6 @@ export function OnboardingPrompt({
         })),
         activeId: result.activeModelKey ?? result.addedModels[0]?.key ?? "",
       });
-
-      if (picks.size >= 2) {
-        saveArenaSettingsByKeys([...picks]);
-      }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
       return;
@@ -145,12 +104,7 @@ export function OnboardingPrompt({
       onCancel();
       return;
     }
-    if (r.addedModels.length === 1) {
-      // Only one model — Arena needs ≥2, so skip the picker entirely.
-      finish(r, new Set());
-      return;
-    }
-    setStep("arena");
+    finish(r);
   }
 
   // ─── Render ────────────────────────────────────────────────────────
@@ -171,60 +125,21 @@ export function OnboardingPrompt({
     );
   }
 
-  if (step === "flow") {
-    return (
-      <ProviderModelFlow
-        existingProviders={existingProviders}
-        existingModelKeys={existingModelKeys}
-        existingModelIds={existingModelIds}
-        detectedEnvKeys={detectEnvKeys().map((d) => ({
-          envKey: d.envKey,
-          apiKey: d.apiKey,
-          // ProviderDef.id matches ProviderKindName values for the known
-          // kinds we surface; "openrouter"/"openai"/"anthropic"/etc. all line up.
-          kindHint: (d.provider.id as ProviderKindName) ?? "openai",
-        }))}
-        switchToNewModelOnFinish={true}
-        onFinish={handleFlowFinish}
-        onCancel={onCancel}
-      />
-    );
-  }
-
-  if (step === "arena" && flowResult) {
-    const aliases = flowResult.addedModels;
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        <Box>
-          <Text color="ansi:cyan" bold>
-            {"✦ Arena participants"}
-          </Text>
-        </Box>
-        <Box marginTop={1} marginLeft={2}>
-          <Text dim>Space toggles · Enter finishes · s skips · Esc cancels.</Text>
-        </Box>
-        <Box marginLeft={2}>
-          <Text dim>Pick at least 2 to enable /arena, or skip.</Text>
-        </Box>
-        {aliases.map((m, i) => {
-          const focused = i === arenaIdx;
-          const checked = arenaPicks.has(m.key);
-          return (
-            <Box key={m.key} marginLeft={2}>
-              <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
-                {focused ? "❯ " : "  "}
-                {`[${checked ? "x" : " "}] ${m.key}`}
-              </Text>
-              <Text dim>
-                {"  "}
-                {m.model}
-              </Text>
-            </Box>
-          );
-        })}
-      </Box>
-    );
-  }
-
-  return null;
+  return (
+    <ProviderModelFlow
+      existingProviders={existingProviders}
+      existingModelKeys={existingModelKeys}
+      existingModelIds={existingModelIds}
+      detectedEnvKeys={detectEnvKeys().map((d) => ({
+        envKey: d.envKey,
+        apiKey: d.apiKey,
+        // ProviderDef.id matches ProviderKindName values for the known
+        // kinds we surface; "openrouter"/"openai"/"anthropic"/etc. all line up.
+        kindHint: (d.provider.id as ProviderKindName) ?? "openai",
+      }))}
+      switchToNewModelOnFinish={true}
+      onFinish={handleFlowFinish}
+      onCancel={onCancel}
+    />
+  );
 }
