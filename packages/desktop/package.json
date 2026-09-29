@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.9.22",
+  "version": "0.9.23",
   "private": true,
   "license": "MIT",
   "description": "Electron desktop client for CodeShell — the full desktop agent app.",
@@ -23,7 +23,7 @@
     "build:mobile": "vite build -c vite.mobile.config.ts",
     "mock-provider": "bun run scripts/mock-provider-server.mjs",
     "test:mock-provider": "bun test scripts/mock-provider-server.test.mjs",
-    "test:e2e": "node scripts/smoke-panels.mjs && node scripts/e2e-settings.mjs && node scripts/e2e-link.mjs && node scripts/e2e-digital-humans.mjs && node scripts/e2e-panel-app.mjs && node scripts/e2e-search.mjs && node scripts/e2e-navigation.mjs && node scripts/e2e-workspace-pages.mjs && node scripts/e2e-automation-binding.mjs && node scripts/e2e-operations-pages.mjs && node scripts/e2e-activity-history.mjs && node scripts/e2e-model-settings.mjs",
+    "test:e2e": "node scripts/smoke-panels.mjs && node scripts/e2e-settings.mjs && node scripts/e2e-link.mjs && node scripts/e2e-digital-humans.mjs && node scripts/e2e-panel-app.mjs && node scripts/e2e-panel-recovery-ui.mjs && node scripts/e2e-search.mjs && node scripts/e2e-navigation.mjs && node scripts/e2e-workspace-pages.mjs && node scripts/e2e-automation-binding.mjs && node scripts/e2e-operations-pages.mjs && node scripts/e2e-activity-history.mjs && node scripts/e2e-model-settings.mjs",
     "test:e2e:automation-binding": "node scripts/e2e-automation-binding.mjs",
     "test:e2e:link": "node scripts/e2e-link.mjs",
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",
@@ -35,6 +35,7 @@
     "test:e2e:media-playback": "node scripts/e2e-media-playback.mjs",
     "test:e2e:model-settings": "node scripts/e2e-model-settings.mjs",
     "test:e2e:settings": "node scripts/e2e-settings.mjs",
+    "test:e2e:panel-recovery": "node scripts/e2e-panel-recovery-ui.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",
     "smoke:background-browser": "esbuild scripts/smoke-background-browser.ts --bundle --platform=node --format=esm --outfile=out/smoke-background-browser.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-background-browser.mjs",
     "smoke:cookie-sync": "esbuild scripts/smoke-cookie-credential-auto-refresh.ts --bundle --platform=node --format=esm --outfile=out/smoke-cookie-credential-auto-refresh.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-cookie-credential-auto-refresh.mjs",
@@ -48,7 +49,12 @@
     "runtime:smoke": "bun run scripts/verify-managed-runtime.ts out/managed-runtimes",
     "test:managed-node": "bun test scripts/managed-node-runtime.test.ts scripts/managed-node-signing.test.ts",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test:e2e:download-background": "node scripts/e2e-download-background.mjs",
+    "test:e2e:shared-panel-tasks": "node scripts/e2e-shared-panel-tasks.mjs",
+    "test:e2e:cloud-workbench": "node scripts/e2e-cloud-workbench.mjs",
+    "smoke:cloud-workbench": "esbuild scripts/smoke-cloud-workbench.ts --bundle --platform=node --format=esm --outfile=out/smoke-cloud-workbench.mjs --external:electron && electron out/smoke-cloud-workbench.mjs",
+    "test:e2e:device-relay": "node scripts/e2e-device-relay.mjs"
   },
   "build": {
     "appId": "com.cjhyy.codeshell",
@@ -155,6 +161,7 @@
   "//deps": "Runtime deps ONLY. The main process is esbuild-bundled (everything inlined except `electron` + `@cjhyy/code-shell-core`), and the renderer is vite-bundled — so node_modules is NOT shipped except for what's resolved at runtime: node-pty (native, can't bundle) and code-shell-core (spawned as a child process). Everything else is build-time → devDependencies. This is also what keeps electron-builder from walking bun's .bun-store symlinks and ENOENT-ing during packaging (electron-builder skips devDependencies). When adding a dep: if it's `require`d unbundled at runtime (a native addon, or anything kept `external` in scripts/build.ts), it goes here; otherwise it's a devDependency.",
   "dependencies": {
     "@cjhyy/code-shell-capability-coding": "workspace:*",
+    "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-pet": "workspace:*",
     "node-pty": "^1.1.0",

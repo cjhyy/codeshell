@@ -17,6 +17,9 @@ import { basename, dirname, extname, isAbsolute, join, resolve, sep } from "node
 import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
+  panelAppStorageSnapshot,
+  panelAppStorageChange,
+  applyPanelAppStorageChange,
   panelAppStorageKey,
   panelAppStoragePath,
   preparePanelAppStorage,
@@ -41,6 +44,8 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 const METHOD_PERMISSIONS: Record<string, string> = {
   "storage.get": "storage",
+  "storage.getSnapshot": "storage",
+  "storage.compareAndSet": "storage",
   "storage.set": "storage",
   "storage.delete": "storage",
   "workspace.info": "workspace.info",
@@ -182,10 +187,15 @@ export class PanelRuntimeServices {
     const key = panelAppStorageKey(params);
     const file = panelAppStoragePath(this.dataDir, scope.appId, scope.projectPath);
     const quota = DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES;
-    if (method === "storage.get") {
+    if (method === "storage.get" || method === "storage.getSnapshot") {
       const state = await readPanelAppStorage(file, quota);
-      return Object.hasOwn(state, key) ? state[key] : null;
+      return method === "storage.getSnapshot"
+        ? panelAppStorageSnapshot(state, key)
+        : Object.hasOwn(state, key)
+          ? state[key]
+          : null;
     }
+    const change = method === "storage.compareAndSet" ? panelAppStorageChange(params) : null;
     const encoded =
       method === "storage.set" ? JSON.stringify((params as { value?: unknown })?.value) : null;
     if (method === "storage.set" && encoded === undefined)
@@ -196,6 +206,12 @@ export class PanelRuntimeServices {
       const release = await storageLock(file);
       try {
         const state = await readPanelAppStorage(file, quota);
+        if (change) {
+          const result = applyPanelAppStorageChange(state, change);
+          if (result.updated)
+            await writePanelAppStorage(file, state, quota, () => authorized(scope));
+          return result;
+        }
         const existed = Object.hasOwn(state, key);
         if (method === "storage.set") state[key] = JSON.parse(encoded!);
         else delete state[key];

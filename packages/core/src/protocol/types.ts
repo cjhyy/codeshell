@@ -151,6 +151,10 @@ export interface RunParams {
    * When omitted, the engine keeps its configured default.
    */
   permissionMode?: PermissionMode;
+  /** Host-selected sandbox mode for this turn only; other sandbox restrictions remain. */
+  sandboxMode?: import("../tool-system/sandbox/index.js").SandboxMode;
+  /** False narrows this turn's policy; true cannot relax an Engine-level prohibition. */
+  allowBackgroundShells?: boolean;
   /**
    * Per-run model pool key. Applied after the session exists and before the
    * turn starts, so cold desktop runs don't need a separate pre-run configure

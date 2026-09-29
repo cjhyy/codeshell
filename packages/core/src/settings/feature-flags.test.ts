@@ -38,11 +38,19 @@ describe("feature flags", () => {
       "external_agent_runtime",
       "external_host_tools",
       "fast_mode",
+      "optimization_lab",
       "shell_snapshot",
       "shell_tool",
       "undo",
       "web_search",
     ]);
+  });
+
+  test("optimization_lab defaults OFF and can be switched on", () => {
+    expect(isFeatureEnabled(undefined, "optimization_lab")).toBe(false);
+    expect(isFeatureEnabled({}, "optimization_lab")).toBe(false);
+    expect(isFeatureEnabled({ optimization_lab: true }, "optimization_lab")).toBe(true);
+    expect(isFeatureEnabled({ optimization_lab: false }, "optimization_lab")).toBe(false);
   });
 
   test("both external-runtime flags default ON, and stay switchable off", () => {

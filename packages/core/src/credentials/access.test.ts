@@ -85,6 +85,16 @@ describe("createIpcCredentialAccess", () => {
           id: msg.id,
           result: { cookiesFile: "/tmp/cookies.txt", count: 3 },
         });
+      } else if (msg.method === "desktop/remoteLinkAction") {
+        expect(msg.params).toEqual({
+          cwd: "/repo",
+          id: "remote",
+          scope: "project",
+          grantId: "selected-grant",
+          action: "list_repositories",
+          params: {},
+        });
+        main.send({ jsonrpc: "2.0", id: msg.id, result: { repositories: [] } });
       } else if (msg.method === "desktop/oauthAccessResolve") {
         expect(msg.params).toEqual({ id: "oauth", scope: "full", forceRefresh: true });
         main.send({
@@ -107,10 +117,21 @@ describe("createIpcCredentialAccess", () => {
       accessToken: "access-only",
       expiresAt: "2030-01-01T00:00:00.000Z",
     });
+    await expect(
+      access.executeRemoteLinkAction?.({
+        cwd: "/repo",
+        id: "remote",
+        scope: "project",
+        grantId: "selected-grant",
+        action: "list_repositories",
+        params: {},
+      }),
+    ).resolves.toEqual({ repositories: [] });
     expect(seenMethods).toEqual([
       "desktop/credentialResolve",
       "desktop/credentialMaterializeCookie",
       "desktop/oauthAccessResolve",
+      "desktop/remoteLinkAction",
     ]);
     unsubscribe?.();
   });

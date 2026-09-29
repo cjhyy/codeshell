@@ -1,4 +1,6 @@
 export { createPanelHttp } from "./panels/http.js";
+export * from "./panels/automations.js";
+export * from "./panels/hub-automations.js";
 export { createPanelManagement, PanelManagementError } from "./panels/management.js";
 export { createPanelRuntime, panelWebCompatibility } from "./panels/runtime.js";
 export { PanelRuntimeServices } from "./panels/runtime-services.js";
@@ -28,3 +30,10 @@ export * from "./panels/connections.js";
 export * from "./panels/tool-jobs.js";
 export * from "./panels/tool-executor.js";
 export * from "./panels/directory-bookmarks.js";
+
+export * from "./panels/shared-tool-jobs.js";
+export * from "./panels/task-cookies.js";
+export * from "./panels/task-cookie-host.js";
+
+export * from "./panels/execution-gate.js";
+export * from "./panels/package-mutation.js";

@@ -200,3 +200,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+.links-heading > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

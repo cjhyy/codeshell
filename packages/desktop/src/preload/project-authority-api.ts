@@ -109,5 +109,7 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       ipcRenderer.invoke("fsSession:readFile", sessionId, rootId, path),
     sessionFileExists: (sessionId: string, rootId: string, path: string) =>
       ipcRenderer.invoke("fsSession:exists", sessionId, rootId, path),
+    localFileExists: (absPath: string) => ipcRenderer.invoke("fsLocal:exists", absPath),
+    readLocalFilePreview: (absPath: string) => ipcRenderer.invoke("fsLocal:readPreview", absPath),
   };
 }

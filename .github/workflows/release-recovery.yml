@@ -96,14 +96,15 @@ jobs:
             if (source.sha !== process.env.VERIFIED_SHA) throw new Error('Source changed during recovery');
 
       - name: publish only missing npm package versions
+        # Use the verified tag's package set; later releases can retire packages.
+        working-directory: release-source
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           NPM_TAG=latest
           case "$RELEASE_TAG" in *-*) NPM_TAG=next ;; esac
-          bun run scripts/publish-release-packages.ts \
-            --repo-root "$GITHUB_WORKSPACE/release-source" --tag "$NPM_TAG" --execute
+          bun run scripts/publish-release-packages.ts --tag "$NPM_TAG" --execute
 
       - name: publish GitHub Release with the original installers
         env:

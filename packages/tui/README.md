@@ -38,7 +38,6 @@ code-shell run "summarize the changes in this repo and list follow-ups"
 | `repl` | Interactive REPL mode (the default when no subcommand is given). |
 | `sessions` | List recent sessions. |
 | `runs` | List and inspect long-running automation runs. |
-| `arena` | Multi-model review arena — the agent gathers context, then multiple models discuss (a differentiator: review/compare across models). |
 | `plugin` | Manage installed plugins: `install`, `list`, `update`, and `uninstall`. |
 | `link status [provider]` | Check saved Link connections and local CLI login; add `--json` for structured output. |
 

@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-tui",
-  "version": "0.9.22",
+  "version": "0.9.23",
   "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,6 @@
   },
   "dependencies": {
     "@cjhyy/code-shell-capability-coding": "workspace:*",
-    "@cjhyy/code-shell-arena": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@alcalzone/ansi-tokenize": "^0.3.0",
     "auto-bind": "^5.0.1",

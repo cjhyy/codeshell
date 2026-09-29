@@ -1,3 +1,4 @@
+import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import { Devices } from "./Devices.js";
 import { HubSettings, type HubSettingsSection } from "./HubSettings.js";
@@ -89,7 +90,9 @@ export function Workbench({
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const [view, setView] = React.useState<
     "chat" | "settings" | "files" | "history" | "links" | "panels" | "panel"
-  >("chat");
+  >(() =>
+    new URLSearchParams(window.location?.search ?? "").get("view") === "links" ? "links" : "chat",
+  );
   const [openedPanel, setOpenedPanel] = React.useState<{
     panel: ManagedPanel;
     workspaceKey: string;
@@ -299,6 +302,15 @@ export function Workbench({
             <WorkbenchIcon name="sidebar" />
           </button>
         </div>
+        <EnvironmentMenu
+          discover={controller.workspaceApi}
+          navigate={(address) => {
+            const go = () => window.location.assign(address);
+            if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+              setPendingNavigation(() => go);
+            else go();
+          }}
+        />
         <nav className="workbench-nav" aria-label="主要功能">
           {onBackToProjects ? (
             <button
@@ -527,9 +539,18 @@ export function Workbench({
           >
             <WorkbenchIcon name="sidebar" />
           </button>
-          <span className="topbar-title" title={currentTitle}>
-            {currentTitle}
-          </span>
+          <div className="topbar-context">
+            <span
+              className="topbar-project"
+              aria-label="当前项目"
+              title={projectName ?? workspaceName}
+            >
+              {projectName ?? workspaceName}
+            </span>
+            <span className="topbar-title" title={currentTitle}>
+              {currentTitle}
+            </span>
+          </div>
           <span className="connection-pill" title={`任务在${hostLabel}工作区执行`}>
             <span className={`dot ${connection}`} />
             <span>{hostLabel}</span>

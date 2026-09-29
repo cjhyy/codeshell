@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { parseServeArgs, resolveWorkerEntry } from "./cli.js";
 
 describe("parseServeArgs", () => {
@@ -13,6 +13,17 @@ describe("parseServeArgs", () => {
     );
     expect(() => parseServeArgs(["--runtime", "invalid"], {})).toThrow("runtime");
     expect(() => parseServeArgs(["--runtime-image", "codeshell:test"], {})).toThrow("requires");
+  });
+  test("seccomp configuration is an explicit operator-only Docker option", () => {
+    const flag = "--runtime-seccomp-profile";
+    expect(
+      parseServeArgs(["--runtime", "docker", flag, "/tmp/profile.json"], {}).runtimeSeccompProfile,
+    ).toBe(resolve("/tmp/profile.json"));
+    expect(() => parseServeArgs([flag, "/tmp/profile.json"], {})).toThrow(
+      "requires --runtime docker",
+    );
+    expect(() => parseServeArgs(["--runtime", "docker", flag, ""], {})).toThrow("Empty");
+    expect(parseServeArgs([], {}).runtimeSeccompProfile).toBeUndefined();
   });
   test("defaults: loopback host, port 8790, dataDir under CODE_SHELL_HOME", () => {
     const args = parseServeArgs([], { CODE_SHELL_HOME: "/tmp/cs-home" } as NodeJS.ProcessEnv);

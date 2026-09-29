@@ -1,5 +1,3 @@
-import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
-
 /**
  * 能力总览 — unified, scope-aware capability view (spec §7.5).
  *
@@ -40,8 +38,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PanelAppExtensionSummary } from "../../preload/types";
-import { nextPanelAppBindings } from "../extensions/PanelsTab";
-import { withoutLegacyOverride } from "../extensions/panelAppBindings";
 import { notifySettingsChanged } from "../settingsBus";
 import {
   type CapabilityKind,
@@ -290,19 +286,12 @@ export function CapabilitiesOverviewSection({
     setSavingPanelApp(app.appId);
     setError(null);
     try {
-      const settings = (await readScopedSettings("project", projectPath)) ?? {};
-      await updateScopedSettings(
-        "project",
-        {
-          panelAppBindings: nextPanelAppBindings(settings.panelAppBindings, app.appId, bound),
-          // Retire the legacy tri-state entry so the binding list is the only
-          // source of truth, matching the Extensions → Panel Apps write. Send
-          // the full surviving map: a `{[appId]: null}` patch is written through
-          // verbatim when the project had no panelAppOverrides key, which makes
-          // the settings file fail schema validation.
-          panelAppOverrides: withoutLegacyOverride(settings.panelAppOverrides, app.appId),
-        },
+      if (!app.bindingRevision) throw new Error(t("ext.panels.bindingChanged"));
+      await window.codeshell.setPanelAppProjectBinding(
         projectPath,
+        app.appId,
+        bound,
+        app.bindingRevision,
       );
       // Panel App bindings gate the dock and the agent tool surface, so main
       // must re-broadcast; listCapabilities alone would not do it.

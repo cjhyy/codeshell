@@ -5,6 +5,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   stat,
@@ -341,6 +342,82 @@ test("Host-selected paths revalidate their selection callback before publishing 
     }),
   ).rejects.toThrow(/closed/);
 });
+
+test("location hides native paths when the selected directory disappears during its final verification", async () => {
+  const f = await fixture();
+  const reference = await f.reference("selected original");
+  let checks = 0;
+  expect(
+    await f.service.references.location(f.scope, reference.id, {
+      assertAuthorized: () => {
+        checks += 1;
+      },
+    }),
+  ).toBe(await realpath(join(f.sourceRoot, "source.mp4")));
+  // The final held-directory verification authorizes before and after checking
+  // its names. Move the real directory at that last pre-check boundary.
+  const beforeFinalDirectoryCheck = checks - 1;
+  expect(beforeFinalDirectoryCheck).toBeGreaterThan(0);
+  checks = 0;
+  const relocated = join(f.root, "relocated");
+  const failure = await f.service.references
+    .location(f.scope, reference.id, {
+      async assertAuthorized() {
+        if (++checks === beforeFinalDirectoryCheck) await rename(f.sourceRoot, relocated);
+      },
+    })
+    .then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+  expect(failure).toBeInstanceOf(Error);
+  expect(failure).toMatchObject({
+    state: "missing",
+    message: "Referenced file is unavailable; reconnect it",
+  });
+  expect(String(failure)).not.toContain(f.root);
+  expect(await readFile(join(relocated, "source.mp4"), "utf8")).toBe("selected original");
+});
+
+test.each(["scope", "selection", "abort"] as const)(
+  "location preserves %s revocation when the final source verification fails",
+  async (mode) => {
+    const f = await fixture();
+    const reference = await f.reference("selected original");
+    let checks = 0;
+    await f.service.references.location(f.scope, reference.id, {
+      assertAuthorized: () => {
+        checks += 1;
+      },
+    });
+    const beforeFinalDirectoryCheck = checks - 1;
+    checks = 0;
+    const controller = new AbortController();
+    const reason = new Error(`Location ${mode} revoked`);
+    const failure = await f.service.references
+      .location(f.scope, reference.id, {
+        signal: controller.signal,
+        async assertAuthorized() {
+          if (++checks < beforeFinalDirectoryCheck) return;
+          if (checks === beforeFinalDirectoryCheck) {
+            await rename(f.sourceRoot, join(f.root, "relocated"));
+            if (mode === "scope") f.revoke();
+            if (mode === "abort") controller.abort(reason);
+          }
+          if (mode === "selection") throw reason;
+        },
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+    if (mode === "scope")
+      expect(failure).toMatchObject({
+        message: "External resource access is no longer authorized",
+      });
+    else expect(failure).toBe(reason);
+  },
+);
 
 test("revocation during metadata publication removes the unpublished reference and preserves the original", async () => {
   const f = await fixture(),

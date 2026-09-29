@@ -5,7 +5,7 @@ const { basename, join, resolve } = require("node:path");
 
 const REQUIRED_JOBS = [
   "verify tag matches package versions",
-  "package release smoke (ten tarballs)",
+  "package release smoke (nine tarballs)",
   "package (ubuntu-latest)",
   "package (macos-latest)",
   "package (windows-latest)",
@@ -49,7 +49,13 @@ async function validateReleaseRecovery({ github, context, tag, sourceRunId }) {
     per_page: 100,
   });
   for (const name of REQUIRED_JOBS) {
-    const matches = jobs.filter((job) => job.name === name);
+    // Earlier immutable tags included Arena as a tenth public package. Keep
+    // their verified runs recoverable without accepting duplicate smoke gates.
+    const names =
+      name === "package release smoke (nine tarballs)"
+        ? [name, "package release smoke (ten tarballs)"]
+        : [name];
+    const matches = jobs.filter((job) => names.includes(job.name));
     requireCondition(
       matches.length === 1 &&
         matches[0].status === "completed" &&

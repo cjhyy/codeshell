@@ -61,3 +61,16 @@ test("native declarations require process permission and reject path traversal",
     false,
   );
 });
+test("direct read of originals is a separate grant that needs resources and process", () => {
+  const permissions = ["process", "resources", "context.workspace", "resources.directRead"];
+  expect(PanelAppManifest.safeParse({ ...manifest(), permissions }).success).toBe(true);
+  for (const missing of ["process", "resources"]) {
+    const { nativeEntries: _entries, ...plain } = manifest();
+    expect(
+      PanelAppManifest.safeParse({
+        ...plain,
+        permissions: permissions.filter((permission) => permission !== missing),
+      }).success,
+    ).toBe(false);
+  }
+});

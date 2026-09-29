@@ -1,9 +1,11 @@
+import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   PanelToolJobService,
+  toolJobLimits,
   type PanelToolJobServiceOptions,
   type ToolJob,
   type ToolJobContext,
@@ -81,6 +83,321 @@ describe("durable native tool jobs", () => {
     };
     return { calls, execute };
   }
+
+  test("Host package identity survives queued restart, explicit retry and duplicate submission", async () => {
+    const identity = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    const f = await fixture({ describePackage: async () => identity });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const input = {
+      ...request,
+      requestKey: "package-identity",
+      package: { version: "spoofed", packageDigest: "c".repeat(64) },
+    };
+    const job = await f.service.start(scope, input);
+    expect(job.package).toEqual(identity);
+    expect(JSON.parse(await readFile(join(f.root, job.id, "job.json"), "utf8")).package).toEqual(
+      identity,
+    );
+    await f.service.shutdown();
+    const calls: ToolJob[] = [];
+    const reopened = service(f.root, {
+      describePackage: async () => identity,
+      execute: async (task) => {
+        calls.push(task);
+        return "completed";
+      },
+    });
+    expect(await reopened.get(scope, job.id)).toMatchObject({
+      package: identity,
+      status: "interrupted",
+      readOnly: false,
+    });
+    expect(calls).toHaveLength(0);
+    expect((await reopened.start(scope, input)).id).toBe(job.id);
+    await reopened.retry(scope, job.id);
+    await reopened.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect(await finished(reopened, job.id)).toMatchObject({
+      package: identity,
+      status: "succeeded",
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.package).toEqual(identity);
+    expect((await reopened.list({ ...scope, revision: "r2" }))[0]).toMatchObject({
+      package: identity,
+      readOnly: true,
+    });
+  });
+
+  test("retry rejects changed content even at the same version and revision without relabeling history", async () => {
+    const original = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    let selected = original;
+    let executions = 0;
+    const f = await fixture({
+      describePackage: async () => selected,
+      execute: async () => {
+        executions++;
+        return null;
+      },
+    });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    await f.service.cancel(scope, job.id);
+    const before = await f.service.get(scope, job.id);
+    selected = { ...original, packageDigest: "c".repeat(64) };
+    await expect(f.service.retry(scope, job.id)).rejects.toMatchObject({ code: "PACKAGE_CHANGED" });
+    expect(await f.service.get(scope, job.id)).toEqual(before);
+    expect(executions).toBe(0);
+    selected = original;
+    await f.service.retry(scope, job.id);
+    await f.service.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+    expect(executions).toBe(1);
+  });
+
+  test("package changes during input preparation or while queued cannot launch a different program", async () => {
+    const original = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    let selected = original;
+    let changeDuringPreparation = true;
+    let executions = 0;
+    const f = await fixture({
+      describePackage: async () => selected,
+      prepareInput: async (_scope, input) => {
+        if (changeDuringPreparation) selected = { ...original, packageDigest: "c".repeat(64) };
+        return input;
+      },
+      execute: async () => {
+        executions++;
+        return null;
+      },
+    });
+    await expect(f.service.start(scope, request)).rejects.toMatchObject({
+      code: "PACKAGE_CHANGED",
+    });
+    expect(await f.service.list(scope)).toEqual([]);
+    changeDuringPreparation = false;
+    selected = original;
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    selected = { ...original, version: "2.0.0" };
+    await f.service.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect(await finished(f.service, job.id)).toMatchObject({
+      package: original,
+      status: "failed",
+      error: { code: "PACKAGE_CHANGED", retryable: true },
+    });
+    expect(executions).toBe(0);
+  });
+
+  test("legacy history stays readable without inventing a package or retrying on a newer Host", async () => {
+    const f = await fixture();
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    await f.service.shutdown();
+    const reopened = service(f.root, {
+      describePackage: async () => ({ version: "2.0.0", packageDigest: "c".repeat(64) }),
+      execute: async () => {
+        throw new Error("must not execute");
+      },
+    });
+    const history = await reopened.get(scope, job.id);
+    expect(history).toMatchObject({ status: "interrupted", readOnly: true });
+    expect(history.package).toBeUndefined();
+    await expect(reopened.retry(scope, job.id)).rejects.toMatchObject({ code: "PACKAGE_UNKNOWN" });
+    expect((await reopened.list(scope))[0]!.package).toBeUndefined();
+  });
+
+  test("missing package inspection fails closed while retaining the original job for repair", async () => {
+    const identity = { version: "1.0.0", packageDigest: "b".repeat(64) };
+    let unavailable = false;
+    const f = await fixture({
+      describePackage: async () => {
+        if (unavailable) throw new Error("missing package");
+        return identity;
+      },
+    });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    const job = await f.service.start(scope, request);
+    await f.service.cancel(scope, job.id);
+    unavailable = true;
+    await expect(f.service.retry(scope, job.id)).rejects.toMatchObject({
+      code: "PACKAGE_UNAVAILABLE",
+    });
+    expect((await f.service.get(scope, job.id)).package).toEqual(identity);
+    await f.service.shutdown();
+    const oldHost = service(f.root);
+    await expect(oldHost.retry(scope, job.id)).rejects.toMatchObject({
+      code: "PACKAGE_UNAVAILABLE",
+    });
+    expect((await oldHost.get(scope, job.id)).package).toEqual(identity);
+  });
+
+  test("package mutation cannot pass admission authorization, queued work, cancellation cleanup or retry", async () => {
+    const authorization = deferred<boolean>();
+    let authorizing = false;
+    const execution = controlled();
+    const f = await fixture({
+      execute: execution.execute,
+      isAuthorized: async () => {
+        authorizing = true;
+        return authorization.promise;
+      },
+    });
+    const matches = (value: ToolJobScope | { appId: string; projectPath: string }) =>
+      value.appId === scope.appId && value.projectPath === scope.projectPath;
+    const mutate = () => panelExecutionGate.mutate(matches, async () => {});
+    const starting = f.service.start(scope, request);
+    try {
+      await eventually(async () => authorizing || undefined);
+      expect(f.service.activeCount()).toBe(0); // Waiting for authorization is not yet a stored job.
+      await expect(mutate()).rejects.toThrow("正在提交");
+    } finally {
+      authorization.resolve(true);
+    }
+    const job = await starting;
+    await eventually(async () => execution.calls.length === 1 || undefined);
+    await expect(mutate()).rejects.toThrow("正在提交");
+    const cancelling = f.service.cancel(scope, job.id);
+    await eventually(async () => execution.calls[0]!.context.signal.aborted || undefined);
+    await expect(mutate()).rejects.toThrow("正在提交");
+    execution.calls[0]!.gate.resolve(null);
+    await cancelling;
+    await mutate();
+    await panelExecutionGate.mutate(matches, async () => {
+      await expect(f.service.start(scope, request)).rejects.toThrow("正在更新");
+      await expect(f.service.retry(scope, job.id)).rejects.toThrow("正在更新");
+    });
+    await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 });
+    await f.service.retry(scope, job.id);
+    await expect(mutate()).rejects.toThrow("排队");
+    await f.service.cancel(scope, job.id);
+    await mutate();
+  });
+
+  test("a full durable queue stays paused without a page and honors scope concurrency", async () => {
+    const execution = controlled();
+    const f = await fixture({ execute: execution.execute });
+    expect(
+      await f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 }),
+    ).toEqual({ saved: true, queue: { revision: 1, paused: true, maxConcurrent: 1 } });
+    const ids: string[] = [];
+    for (let i = 0; i < toolJobLimits.maxQueuedPerScope; i++)
+      ids.push((await f.service.start(scope, { ...request, requestKey: `item-${i}` })).id);
+    expect(ids.length).toBeGreaterThanOrEqual(100);
+    expect(execution.calls).toHaveLength(0);
+    await expect(
+      f.service.start(scope, { ...request, requestKey: "over-capacity" }),
+    ).rejects.toThrow("too many queued");
+    // Retrying a terminal record must obey the same admission capacity as new work.
+    await f.service.cancel(scope, ids[ids.length - 1]!);
+    await f.service.start(scope, { ...request, requestKey: "replacement" });
+    await expect(f.service.retry(scope, ids[ids.length - 1]!)).rejects.toThrow("too many queued");
+    await f.service.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    await eventually(async () => (execution.calls.length === 1 ? true : undefined));
+    const other = { ...scope, projectPath: "/other-project" };
+    const foreign = await f.service.start(other, request);
+    await eventually(async () => (execution.calls.length === 2 ? true : undefined));
+    expect(execution.calls[1]!.job.id).toBe(foreign.id);
+    // Pausing does not cancel active work, but holds every remaining admission.
+    await f.service.setQueue(scope, { expectedRevision: 2, paused: true, maxConcurrent: 1 });
+    expect(execution.calls[0]!.context.signal.aborted).toBe(false);
+    execution.calls[0]!.gate.resolve({ completed: true });
+    await finished(f.service, ids[0]!);
+    expect((await f.service.get(scope, ids[1]!)).status).toBe("queued");
+    expect(execution.calls).toHaveLength(2);
+    await f.service.setQueue(scope, { expectedRevision: 3, paused: false, maxConcurrent: 1 });
+    await eventually(async () => (execution.calls.length === 3 ? true : undefined));
+    expect(execution.calls[2]!.job.id).toBe(ids[1]);
+    await f.service.setQueue(scope, { expectedRevision: 4, paused: true, maxConcurrent: 1 });
+  });
+
+  test("queue changes compare revisions across devices and survive Host restart", async () => {
+    const f = await fixture();
+    const changes = await Promise.all([
+      f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 }),
+      f.service.setQueue(scope, { expectedRevision: 0, paused: false, maxConcurrent: 2 }),
+    ]);
+    expect(changes.filter((result) => result.saved)).toHaveLength(1);
+    expect(changes[1]).toEqual({ saved: false, queue: changes[0]!.queue });
+    const waiting = await f.service.start(scope, request);
+    await f.service.shutdown();
+    const reopened = service(f.root);
+    expect(await reopened.getQueue(scope)).toEqual(changes[0]!.queue);
+    expect((await reopened.get(scope, waiting.id)).status).toBe("interrupted");
+    await reopened.retry(scope, waiting.id);
+    expect((await reopened.get(scope, waiting.id)).status).toBe("queued");
+    expect(await reopened.getQueue({ ...scope, revision: "new-package" })).toEqual({
+      revision: 0,
+      paused: false,
+      maxConcurrent: 2,
+    });
+    await reopened.setQueue(scope, { expectedRevision: 1, paused: false, maxConcurrent: 1 });
+    expect((await finished(reopened, waiting.id)).status).toBe("succeeded");
+  });
+
+  test("queue validation, revoked access and corrupt catalog fail without starting work", async () => {
+    let authorized = true;
+    const f = await fixture({ isAuthorized: () => authorized });
+    for (const update of [
+      { expectedRevision: -1, paused: true, maxConcurrent: 1 },
+      { expectedRevision: 0, paused: true, maxConcurrent: 0 },
+      { expectedRevision: 0, paused: true, maxConcurrent: 3 },
+      { expectedRevision: 0, paused: "yes", maxConcurrent: 1 },
+    ])
+      await expect(f.service.setQueue(scope, update as never)).rejects.toThrow("Invalid");
+    authorized = false;
+    await expect(f.service.getQueue(scope)).rejects.toThrow("authorized");
+    await expect(
+      f.service.setQueue(scope, { expectedRevision: 0, paused: true, maxConcurrent: 1 }),
+    ).rejects.toThrow("authorized");
+    await f.service.shutdown();
+    await writeFile(join(f.root, "queues.json"), JSON.stringify({ malformed: true }));
+    const invalid = service(f.root);
+    await expect(invalid.initialize()).rejects.toThrow("Invalid tool queue catalog");
+    services.splice(services.indexOf(invalid), 1); // failed initialization already releases its lock
+  });
+
+  test("request lookup distinguishes absent, accepted and foreign-scope work without starting anything", async () => {
+    const f = await fixture();
+    expect(await f.service.find(scope, "lost-reply")).toBeNull();
+    const job = await f.service.start(scope, { ...request, requestKey: "lost-reply" });
+    expect((await f.service.find(scope, "lost-reply"))?.id).toBe(job.id);
+    expect(await f.service.find({ ...scope, revision: "r2" }, "lost-reply")).toBeNull();
+    expect(await f.service.find({ ...scope, projectPath: "/other" }, "lost-reply")).toBeNull();
+    await expect(f.service.find(scope, "")).rejects.toThrow("request key");
+    expect((await f.service.list(scope)).length).toBe(1);
+  });
+
+  test("shared subscriptions stay scoped, omit task inputs/results, detach, and isolate listener failures", async () => {
+    const execution = controlled();
+    const f = await fixture({ execute: execution.execute });
+    const events: unknown[] = [];
+    const otherScope = { ...scope, projectPath: "/other-workspace" };
+    const wrongRevision = { ...scope, revision: "r2" };
+    const foreignEvents: unknown[] = [];
+    f.service.subscribe(scope, () => {
+      throw new Error("disconnected viewer");
+    });
+    const stop = f.service.subscribe(scope, (event) => events.push(event));
+    f.service.subscribe(otherScope, (event) => foreignEvents.push(event));
+    f.service.subscribe(wrongRevision, (event) => foreignEvents.push(event));
+    const job = await f.service.start(scope, request);
+    await eventually(async () => (execution.calls.length ? true : undefined));
+    await execution.calls[0]!.context.reportProgress({ stage: "working" });
+    expect(events.length).toBeGreaterThanOrEqual(3);
+    for (const event of events) {
+      expect(event).not.toHaveProperty("input");
+      expect(event).not.toHaveProperty("result");
+      expect(event).toMatchObject({ id: job.id });
+    }
+    expect(foreignEvents).toEqual([]);
+    expect(await f.service.has(scope, job.id)).toBe(true);
+    expect(await f.service.has(otherScope, job.id)).toBe(false);
+    stop();
+    const count = events.length;
+    execution.calls[0]!.gate.resolve({ privateOutput: "result" });
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+    expect(events).toHaveLength(count);
+  });
 
   test("cancelled input preparation cannot publish even if its preparer returns normally", async () => {
     const entered = deferred<AbortSignal>();
@@ -289,6 +606,95 @@ describe("durable native tool jobs", () => {
       f.service.start(scope, { ...request, input: { changed: true }, requestKey: "once" }),
     ).rejects.toThrow(/different input/);
     expect(calls).toBe(1);
+  });
+
+  test("concurrent identical starts share input preparation and one task ID", async () => {
+    let prepared = 0,
+      executed = 0;
+    const gate = deferred<unknown>();
+    gates.push(gate);
+    const f = await fixture({
+      prepareInput: async (_scope, input) => {
+        prepared++;
+        await gate.promise;
+        return input;
+      },
+      execute: async () => {
+        executed++;
+        return null;
+      },
+    });
+    const starts = Array.from({ length: 8 }, () =>
+      f.service.start(scope, { ...request, requestKey: "shared" }),
+    );
+    await eventually(async () => (prepared ? true : undefined));
+    await expect(
+      f.service.start(scope, { ...request, input: { wrong: true }, requestKey: "shared" }),
+    ).rejects.toThrow(/different input/);
+    gate.resolve(null);
+    const jobs = await Promise.all(starts);
+    expect(new Set(jobs.map((job) => job.id)).size).toBe(1);
+    expect(prepared).toBe(1);
+    await finished(f.service, jobs[0]!.id);
+    expect(executed).toBe(1);
+  });
+
+  test("cancelling a duplicate waiter does not cancel the original task preparation", async () => {
+    const gate = deferred<unknown>();
+    gates.push(gate);
+    let signal: AbortSignal | undefined;
+    const f = await fixture({
+      prepareInput: async (_scope, input, _work, supplied) => {
+        signal = supplied;
+        await gate.promise;
+        return input;
+      },
+    });
+    const original = f.service.start(scope, { ...request, requestKey: "shared" });
+    await eventually(async () => (signal ? true : undefined));
+    const controller = new AbortController();
+    const duplicate = f.service.start(
+      scope,
+      { ...request, requestKey: "shared" },
+      controller.signal,
+    );
+    controller.abort(new Error("duplicate closed"));
+    await expect(duplicate).rejects.toThrow("duplicate closed");
+    expect(signal!.aborted).toBe(false);
+    gate.resolve(null);
+    const job = await original;
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
+  });
+
+  test("failed shared preparation rejects all waiters and permits a later explicit retry", async () => {
+    const gate = deferred<unknown>();
+    gates.push(gate);
+    let failure = true,
+      prepared = 0;
+    const f = await fixture({
+      prepareInput: async (_scope, input) => {
+        prepared++;
+        await gate.promise;
+        if (failure) throw new Error("input unavailable");
+        return input;
+      },
+    });
+    const pending = [
+      f.service.start(scope, { ...request, requestKey: "shared" }),
+      f.service.start(scope, { ...request, requestKey: "shared" }),
+    ];
+    const results = Promise.allSettled(pending);
+    await eventually(async () => (prepared ? true : undefined));
+    gate.resolve(null);
+    expect(
+      (await results).every(
+        (value) => value.status === "rejected" && value.reason.message === "input unavailable",
+      ),
+    ).toBe(true);
+    expect(await f.service.list(scope)).toEqual([]);
+    failure = false;
+    const job = await f.service.start(scope, { ...request, requestKey: "shared" });
+    expect((await finished(f.service, job.id)).status).toBe("succeeded");
   });
 
   test("revocation stops native work, denies new reads, and disables retry", async () => {

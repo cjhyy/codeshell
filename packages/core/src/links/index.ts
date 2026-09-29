@@ -39,3 +39,15 @@ export type {
   LocalLinkActionSpec,
   LocalLinkProviderSpec,
 } from "./types.js";
+
+export {
+  beginRemoteLinkAuthorization,
+  completeRemoteLinkAuthorization,
+  revokeRemoteLinkAuthorization,
+  executeRemoteLinkAction,
+  isRemoteLinkCredential,
+  RemoteLinkError,
+  type RemoteLinkConfiguration,
+  type RemoteLinkAttempt,
+  type RemoteLinkActionRequest,
+} from "./remote.js";

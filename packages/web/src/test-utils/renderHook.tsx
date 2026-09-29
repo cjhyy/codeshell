@@ -250,8 +250,9 @@ class MiniDocumentFragment extends MiniNode {
   override nodeName = "#document-fragment";
 
   constructor(
-    ownerDocument: MiniDocument | null =
-      ((globalThis as typeof globalThis & { document?: MiniDocument }).document ?? null),
+    ownerDocument: MiniDocument | null = (
+      globalThis as typeof globalThis & { document?: MiniDocument }
+    ).document ?? null,
   ) {
     super();
     this.ownerDocument = ownerDocument;
@@ -366,6 +367,8 @@ export function ensureMiniDom(): void {
   const doc = new MiniDocument();
   const win = new MiniEventTarget() as MiniEventTarget & Record<string, unknown>;
   win.document = doc;
+  // Browser-aware dependencies need a complete location even in Node tests.
+  win.location = new URL("http://localhost/");
   win.Event = MiniEvent;
   win.CustomEvent = MiniEvent;
   win.Node = MiniNode;

@@ -1,3 +1,4 @@
+import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import { api, ApiError } from "./auth.js";
 import { setApiProject, setApiWorkspace, validProjectId } from "./api-context.js";
@@ -301,6 +302,7 @@ export function ProjectsGate({
         <div className="auth-brand">
           CodeShell <span>Hub</span>
         </div>
+        <EnvironmentMenu />
         <h1>你的项目</h1>
         <p>每个项目有独立的运行环境、文件、会话和配置。启动后进入同一个工作台。</p>
       </header>

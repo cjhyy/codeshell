@@ -20,7 +20,7 @@ function sourceFixture() {
   };
   const jobs = [
     "verify tag matches package versions",
-    "package release smoke (ten tarballs)",
+    "package release smoke (nine tarballs)",
     "package (ubuntu-latest)",
     "package (macos-latest)",
     "package (windows-latest)",
@@ -74,6 +74,17 @@ describe("release recovery source gate", () => {
     expect(await fixture.validate()).toEqual({ sha, artifactIds: "1,2,3" });
     fixture.reference.object.type = "tag";
     expect((await fixture.validate()).sha).toBe(sha);
+  });
+  test("recovers earlier ten-package tags but refuses duplicate smoke gates", async () => {
+    const fixture = sourceFixture();
+    fixture.jobs[1]!.name = "package release smoke (ten tarballs)";
+    expect(await fixture.validate()).toEqual({ sha, artifactIds: "1,2,3" });
+    fixture.jobs.push({
+      name: "package release smoke (nine tarballs)",
+      status: "completed",
+      conclusion: "success",
+    });
+    await expect(fixture.validate()).rejects.toThrow("Source prerequisite did not succeed");
   });
   test("rejects moved tags and runs from another event or repository", async () => {
     for (const mutate of [

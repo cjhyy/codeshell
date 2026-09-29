@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-server",
-  "version": "0.9.22",
+  "version": "0.9.23",
   "description": "CodeShell server transport layer — mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,6 +17,14 @@
     "./worker": {
       "types": "./dist/index.worker.d.ts",
       "import": "./dist/index.worker.js"
+    },
+    "./remote-relay": {
+      "types": "./dist/index.remote-relay.d.ts",
+      "import": "./dist/index.remote-relay.js"
+    },
+    "./auth": {
+      "types": "./dist/index.auth.d.ts",
+      "import": "./dist/index.auth.js"
     },
     "./mobile-remote": {
       "types": "./dist/index.mobile-remote.d.ts",
@@ -40,7 +48,8 @@
     }
   },
   "bin": {
-    "code-shell-serve": "./dist/bin/code-shell-serve.js"
+    "code-shell-serve": "./dist/bin/code-shell-serve.js",
+    "code-shell-settings-recovery": "./dist/bin/code-shell-settings-recovery.js"
   },
   "files": [
     "dist"

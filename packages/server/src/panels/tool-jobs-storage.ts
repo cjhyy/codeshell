@@ -143,6 +143,38 @@ export class ToolJobStorage {
     }
   }
 
+  async readQueueCatalog(limit: number): Promise<unknown> {
+    try {
+      return await this.read(join(await this.directory(), "queues.json"), limit);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  }
+
+  async writeQueueCatalog(value: unknown, limit: number): Promise<void> {
+    const directory = await this.directory();
+    const temporary = join(directory, `${randomUUID()}.tmp`);
+    try {
+      const file = await open(temporary, "wx", 0o600);
+      try {
+        await file.writeFile(JSON.stringify(toolJobJson(value, limit)));
+        await file.sync();
+      } finally {
+        await file.close();
+      }
+      await this.directory();
+      await rename(temporary, join(directory, "queues.json"));
+      const parent = await open(directory, "r").catch(() => null);
+      if (parent) {
+        await parent.sync().catch(() => {});
+        await parent.close();
+      }
+    } finally {
+      await rm(temporary, { force: true }).catch(() => {});
+    }
+  }
+
   async close(): Promise<void> {
     if (!this.nonce) return;
     const path = join(await this.directory(), "owner.lock");

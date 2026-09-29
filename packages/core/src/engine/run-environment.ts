@@ -4,6 +4,7 @@ import {
   resolveSandboxBackend,
   type SandboxBackend,
   type SandboxConfig,
+  type SandboxMode,
 } from "../tool-system/sandbox/index.js";
 import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js";
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
@@ -26,6 +27,7 @@ export interface RunEnvironmentResolverDeps {
 }
 
 export interface RunEnvironmentInput {
+  sandboxMode?: SandboxMode;
   cwd: string;
   workspaceContext: WorkspaceContext;
 }
@@ -73,8 +75,19 @@ export class RunEnvironmentResolver {
     } catch {
       // Missing settings fall through to the run default.
     }
+    const resolved = resolveSandboxConfig(
+      config.sandbox,
+      projectSandbox,
+      globalSandbox,
+      config.headless === true,
+    );
+    if (
+      run.sandboxMode !== undefined &&
+      !["off", "auto", "seatbelt", "bwrap"].includes(run.sandboxMode)
+    )
+      throw new Error("Invalid run sandboxMode");
     return appendWorkspaceRoots(
-      resolveSandboxConfig(config.sandbox, projectSandbox, globalSandbox, config.headless === true),
+      run.sandboxMode === undefined ? resolved : { ...resolved, mode: run.sandboxMode },
       run,
     );
   }

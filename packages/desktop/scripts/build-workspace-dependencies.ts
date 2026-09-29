@@ -11,6 +11,11 @@ export const DESKTOP_WORKSPACE_BUILD_ORDER = [
   { label: "core", packageName: "@cjhyy/code-shell-core", relativeDir: "packages/core" },
   { label: "pet", packageName: "@cjhyy/code-shell-pet", relativeDir: "packages/pet" },
   {
+    label: "optimization-lab",
+    packageName: "@cjhyy/code-shell-capability-optimization-lab",
+    relativeDir: "packages/optimization-lab",
+  },
+  {
     label: "coding",
     packageName: "@cjhyy/code-shell-capability-coding",
     relativeDir: "packages/coding",

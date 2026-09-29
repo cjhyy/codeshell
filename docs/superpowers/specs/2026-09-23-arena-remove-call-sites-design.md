@@ -2,7 +2,7 @@
 
 日期:2026-09-23
 分支:`codex/arena/remove-call-sites`
-状态:已批准,待实施
+状态:调用点移除与 main 冲突整合已完成；构建、类型、发布包和回归检查通过
 
 ## 背景
 
@@ -140,3 +140,11 @@ Renderer **零 arena 引用**(已核验)。Desktop 中 Arena 仅为 LLM 可调�
 
 本地 `main` 领先 `origin/main` 8 个提交(未推送的已合并工作)。本分支从本地 `main`
 起(已包含 origin/main),不丢内容。
+
+## 2026-09-28 集成补充
+
+- 保留 Arena 包及实现源码，标记为私有并从宿主运行依赖、自动构建和 npm 发布集合移除。版本号仍与其他 workspace 同步，源码测试和类型检查继续保留。
+- 保留 `packages/tui/src/cli/commands/arena.ts` 原文件，但从 TUI 编译与发布输出排除，公共 TUI 不再依赖未发布的 Arena 包。
+- 保留 main 新增的 Optimization Lab 用户开关、宿主加载及打包流程。
+- 当前发布检查覆盖 9 个公共包；历史恢复仍接受已完成的 10 包检查，并使用已验证原始 tag 的发布脚本与包集合。
+- 不迁移、不删除用户已有 Arena 设置；既有显式退出登录清理逻辑不变。

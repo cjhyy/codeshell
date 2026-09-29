@@ -48,13 +48,13 @@ export interface MobileRemoteOpenResult {
   url: string;
   pairingUrl: string;
   expiresAt: number;
-  mode: "tunnel" | "lan";
+  mode: "tunnel" | "lan" | "relay";
 }
 
 export interface MobileRemoteGatewayStatus {
   running: boolean;
   url?: string;
-  mode?: "tunnel" | "lan";
+  mode?: "tunnel" | "lan" | "relay";
   tunnelRunning: boolean;
   tunnelConnected: boolean;
   passcodeSet: boolean;

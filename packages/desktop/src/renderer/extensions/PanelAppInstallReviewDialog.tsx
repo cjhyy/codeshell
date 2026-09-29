@@ -18,6 +18,7 @@ interface Props {
   action: "install" | "update";
   preview: PanelAppPreview;
   installedVersion?: string;
+  projectLabel?: string;
   onCancel: () => void;
   onInstall: () => void;
 }
@@ -27,6 +28,7 @@ export function PanelAppInstallReviewDialog({
   action,
   preview,
   installedVersion,
+  projectLabel,
   onCancel,
   onInstall,
 }: Props) {
@@ -47,6 +49,11 @@ export function PanelAppInstallReviewDialog({
               ? t("ext.panels.reviewUpdateDescription")
               : t("ext.panels.reviewDescription")}
           </DialogDescription>
+          {projectLabel && (
+            <p className="text-sm font-medium">
+              {t("ext.panels.reviewProject", { project: projectLabel })}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <span className="text-base font-semibold text-foreground">{preview.title.default}</span>
             <Badge variant="secondary">{preview.id}</Badge>
@@ -98,11 +105,13 @@ export function PanelAppInstallReviewDialog({
                       ? "麦克风、摄像头与屏幕录制"
                       : permission === "resources"
                         ? "存取已授权文件与工具结果"
-                        : permission === "credentials.connections"
-                          ? "让工具使用选定的服务连接"
-                          : permission === "process"
-                            ? "运行已审核工具与后台任务"
-                            : permission}
+                        : permission === "resources.directRead"
+                          ? "让工具直接读取你选择的原文件（不复制）"
+                          : permission === "credentials.connections"
+                            ? "让工具使用选定的服务连接"
+                            : permission === "process"
+                              ? "运行已审核工具与后台任务"
+                              : permission}
                   </Badge>
                 ))
               )}

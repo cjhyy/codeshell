@@ -15,7 +15,7 @@ const GitSource = z
   })
   .strict();
 
-const RegistryEntry = z
+export const InstalledPanelAppRecordSchema = z
   .object({
     id: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
     version: z.string().min(1).max(80),
@@ -28,13 +28,13 @@ const RegistryEntry = z
 const Registry = z
   .object({
     version: z.literal(1),
-    apps: z.array(RegistryEntry).max(1_024),
+    apps: z.array(InstalledPanelAppRecordSchema).max(1_024),
   })
   .strict();
 
 const MAX_PANEL_APP_REGISTRY_BYTES = 4 * 1024 * 1024;
 
-export type InstalledPanelAppRecord = z.infer<typeof RegistryEntry>;
+export type InstalledPanelAppRecord = z.infer<typeof InstalledPanelAppRecordSchema>;
 
 async function registryEntry(path: string): Promise<Awaited<ReturnType<typeof lstat>> | null> {
   try {
@@ -151,7 +151,7 @@ export async function upsertInstalledPanelAppRecord(
   await mutateRegistry((current) => ({
     apps: [
       ...current.filter((candidate) => candidate.id !== record.id),
-      RegistryEntry.parse(record),
+      InstalledPanelAppRecordSchema.parse(record),
     ],
     result: undefined,
   }));

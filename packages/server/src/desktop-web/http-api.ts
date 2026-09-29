@@ -1,3 +1,4 @@
+import { describeEnvironment, environmentIdentity } from "../environment-identity.js";
 import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { isAbsolute } from "node:path";
@@ -8,6 +9,7 @@ import { createHubSessions } from "../hub/session-management.js";
 import { createHubSkills } from "../hub/skills-management.js";
 import type { TrustedDeviceStore } from "../mobile-remote/trusted-device-store.js";
 import type { TrustedDevicePublic } from "../mobile-remote/types.js";
+import { createSessionHttpResponses } from "../session-http-responses.js";
 
 const COOKIE = "cs_desktop_session";
 const SESSION_TTL = 30 * 60_000;
@@ -184,12 +186,14 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
   if (!Number.isSafeInteger(ttl) || ttl < 1000 || ttl > 24 * 60 * 60_000)
     throw new Error("Desktop HTTP session lifetime must be between one second and one day");
   const sessions = new Map<string, BrowserSession>();
+  const responses = createSessionHttpResponses();
   const identities = new WeakMap<IncomingMessage, RequestIdentity>();
   const workspaces = new Map<string, ReturnType<typeof createServices>>();
   let generation = 0;
   let closed = false;
 
   function cancelSession(session: BrowserSession): void {
+    responses.cancelOwner(session.id);
     for (const services of workspaces.values()) {
       services.configuration.cancelOwner(session.id);
       services.mcp.cancelOwner(session.id);
@@ -410,6 +414,18 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
         }
         if (!current || !token)
           throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
+        responses.track(current.session.id, response);
+        if (url.pathname === "/api/v1/environment" && request.method === "GET") {
+          const id = await environmentIdentity(options.dataDir);
+          if (
+            closed ||
+            generation !== requestGeneration ||
+            principal(token)?.session !== current.session
+          )
+            throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
+          json(response, 200, describeEnvironment(id, "desktop"));
+          return true;
+        }
         const input = workspaceInput(request, url);
         const cwd = await options.resolveWorkspace(input, current.device.id);
         if (

@@ -44,15 +44,15 @@ function joinPath(base: string, child: string): string {
 /**
  * Resolve a path from a chat link to an absolute path inside `root`. Accepts
  * either an already-absolute path or one relative to root. Returns null if the
- * result escapes the workspace root — those open in the OS editor instead, since
- * the lazy tree can only reach files under root. Handles POSIX and Windows
+ * result escapes the workspace root — those use a single-file preview without
+ * the tree. Handles POSIX and Windows
  * absolute paths; no `..` normalization beyond the containment check, mirroring
  * the main-side resolveWithin guard.
  */
 function resolveUnderRoot(root: string, path: string): string | null {
   const r = noTrailingSlash(root);
   const abs = isAbsolutePath(path) ? noTrailingSlash(path) : joinPath(r, path);
-  const prefix = r.includes("\\") ? `${r}\\` : `${r}/`;
+  const prefix = /[\\/]$/.test(r) ? r : r.includes("\\") ? `${r}\\` : `${r}/`;
   if (abs !== r && !abs.startsWith(prefix)) return null;
   if (/[\\/]\.\.[\\/]/.test(abs) || /[\\/]\.\.$/.test(abs)) return null;
   return abs;
@@ -63,12 +63,14 @@ function resolveUnderRoot(root: string, path: string): string | null {
  *  reveal the file. */
 function ancestorDirs(root: string, file: string): Set<string> {
   const r = noTrailingSlash(root);
-  const rel = noTrailingSlash(file).slice(r.length + 1); // path under root
-  const parts = rel.split("/").slice(0, -1); // drop the filename
+  const rel = noTrailingSlash(file)
+    .slice(r.length)
+    .replace(/^[\\/]+/, "");
+  const parts = rel.split(/[\\/]/).slice(0, -1); // drop the filename
   const dirs = new Set<string>([r]);
   let acc = r;
   for (const part of parts) {
-    acc = `${acc}/${part}`;
+    acc = joinPath(acc, part);
     dirs.add(acc);
   }
   return dirs;
@@ -100,6 +102,7 @@ interface Props {
 interface FileSystemReader {
   readDir: (root: string, dir: string) => Promise<FsEntry[]>;
   readFile: (root: string, path: string) => Promise<FileContent>;
+  readImage: (root: string, path: string) => Promise<string | null>;
 }
 
 const UNAVAILABLE_FILE_SYSTEM: FileSystemReader = {
@@ -107,6 +110,15 @@ const UNAVAILABLE_FILE_SYSTEM: FileSystemReader = {
   readFile: async () => {
     throw new Error("project or Session file authority is required");
   },
+  readImage: (root, path) => window.codeshell.readImageDataUrl(path, { cwd: root }),
+};
+
+// Explicitly opened local files do not grant directory or project access.
+const LOCAL_FILE_SYSTEM: FileSystemReader = {
+  readDir: async () => [],
+  readFile: async (_root, path) => window.codeshell.readLocalFilePreview(path),
+  readImage: async (_root, path) =>
+    (await window.codeshell.readLocalFilePreview(path)).imageDataUrl ?? null,
 };
 
 const FileSystemContext = React.createContext<FileSystemReader>(UNAVAILABLE_FILE_SYSTEM);
@@ -138,18 +150,34 @@ export function FilesPanel({
       ...project.roots.filter((root) => root.id !== mainRootId),
     ];
   }, [project, sessionMainRootId, workspaceCwd]);
-  const [selectedRootId, setSelectedRootId] = useState<string | null>(
-    sessionMainRootId ?? project?.primaryRootId ?? null,
+  const defaultRootId = sessionMainRootId ?? project?.primaryRootId ?? null;
+  const rootSelectionKey = JSON.stringify([
+    project?.id,
+    project?.primaryRootId,
+    sessionMainRootId,
+    workspaceCwd,
+  ]);
+  const [rootSelection, setRootSelection] = useState({ key: rootSelectionKey, id: defaultRootId });
+  // Resolve the new workspace's default root during render. Waiting for the
+  // reset effect would let a simultaneous file request be consumed against the
+  // previous secondary root, then cleared when the default root takes over.
+  const selectedRootId = rootSelection.key === rootSelectionKey ? rootSelection.id : defaultRootId;
+  const setSelectedRootId = React.useCallback(
+    (id: string) => {
+      setRootSelection({ key: rootSelectionKey, id });
+    },
+    [rootSelectionKey],
   );
   useEffect(() => {
-    setSelectedRootId(sessionMainRootId ?? project?.primaryRootId ?? null);
-  }, [project?.id, project?.primaryRootId, sessionMainRootId, workspaceCwd]);
+    setRootSelection({ key: rootSelectionKey, id: defaultRootId });
+  }, [rootSelectionKey, defaultRootId]);
   const activeRoot =
     rootOptions.find((root) => root.id === selectedRootId) ?? rootOptions[0] ?? null;
   const cwd = activeRoot?.path ?? null;
   const fileSystem = useMemo<FileSystemReader>(() => {
     if (engineSessionId && sessionMainRootId && activeRoot) {
       return {
+        readImage: UNAVAILABLE_FILE_SYSTEM.readImage,
         readDir: (_root, dir) =>
           window.codeshell.readSessionDir(engineSessionId, activeRoot.id, dir),
         readFile: (_root, path) =>
@@ -158,6 +186,7 @@ export function FilesPanel({
     }
     if (!project || !activeRoot) return UNAVAILABLE_FILE_SYSTEM;
     return {
+      readImage: UNAVAILABLE_FILE_SYSTEM.readImage,
       readDir: (_root, dir) => window.codeshell.readProjectDir(project.id, activeRoot.id, dir),
       readFile: (_root, path) =>
         window.codeshell.readProjectFileContent(project.id, activeRoot.id, path),
@@ -188,6 +217,22 @@ export function FilesPanel({
   const selectedRootRef = useRef(cwd);
   const selectedForCurrentRoot = selectedRootRef.current === cwd ? selected : null;
   const revealDirsForCurrentRoot = previousRootRef.current === cwd ? revealDirs : new Set<string>();
+  const lastRevealNonceRef = useRef<number | null>(null);
+  const revealPath = revealFile
+    ? isAbsolutePath(revealFile.path)
+      ? revealFile.path
+      : revealFile.cwd || cwd || workspaceCwd
+        ? joinPath((revealFile.cwd || cwd || workspaceCwd)!, revealFile.path)
+        : null
+    : null;
+  const externalPreview =
+    !!selectedForCurrentRoot && (!cwd || !resolveUnderRoot(cwd, selectedForCurrentRoot));
+  const pendingExternalPreview =
+    !!revealFile &&
+    !revealFile.consumed &&
+    !!revealPath &&
+    !rootOptions.some((root) => resolveUnderRoot(root.path, revealPath));
+  const treeAvailable = !!cwd && !externalPreview && !pendingExternalPreview;
 
   useEffect(() => {
     if (previousRootRef.current === cwd) return;
@@ -205,8 +250,8 @@ export function FilesPanel({
   }, []);
 
   // A chat answer's path link was clicked: App focused this panel and handed us
-  // the file. Resolve to an absolute path under cwd, select it, and force every
-  // ancestor directory open so the tree reveals + scrolls to it.
+  // the file. Select the absolute path; only project files reveal ancestors in
+  // the tree. An external path can be previewed even without an active project.
   //
   // `revealFile.consumed` (set by App after a path-link open is delivered)
   // marks a request as already-handled. A manually opened Files tab (+ menu)
@@ -216,24 +261,39 @@ export function FilesPanel({
   // sends a fresh (un-consumed) request, which still reveals — including into a
   // brand-new tab opened by that same click.
   useEffect(() => {
-    if (!revealFile || revealFile.consumed || !cwd) return;
-    const containingRoot = rootOptions.find((root) => resolveUnderRoot(root.path, revealFile.path));
+    if (
+      !revealFile ||
+      revealFile.consumed ||
+      !revealPath ||
+      lastRevealNonceRef.current === revealFile.nonce
+    )
+      return;
+    const containingRoot = rootOptions.find((root) => resolveUnderRoot(root.path, revealPath));
     if (containingRoot && containingRoot.id !== activeRoot?.id) {
       setSelectedRootId(containingRoot.id);
       return;
     }
-    const abs = resolveUnderRoot(cwd, revealFile.path);
-    if (!abs) return;
+    const abs = cwd ? resolveUnderRoot(cwd, revealPath) : null;
+    lastRevealNonceRef.current = revealFile.nonce;
     selectedRootRef.current = cwd;
-    setSelected(abs);
-    setRevealDirs(ancestorDirs(cwd, abs));
+    setSelected(abs ?? revealPath);
+    setRevealDirs(cwd && abs ? ancestorDirs(cwd, abs) : new Set());
+    setReloadNonce((n) => n + 1);
     // Tell the parent we handled this nonce. Consuming AFTER the reveal (rather
     // than on a setTimeout in App) is what fixes the "click once opens an empty
     // tab, click again to see the file" race: when this same click also created
     // the Files tab, this effect runs on the freshly-mounted panel and reveals
     // immediately — the request is only marked consumed once that has happened.
     onRevealConsumed?.(revealFile.nonce);
-  }, [activeRoot?.id, cwd, onRevealConsumed, revealFile, rootOptions]);
+  }, [
+    activeRoot?.id,
+    cwd,
+    onRevealConsumed,
+    revealFile,
+    revealPath,
+    rootOptions,
+    setSelectedRootId,
+  ]);
 
   useEffect(() => {
     if (!treeOpen || !selectedForCurrentRoot || !cwd) return;
@@ -243,7 +303,7 @@ export function FilesPanel({
     setRevealDirs((prev) => (sameStringSet(prev, dirs) ? prev : dirs));
   }, [cwd, selectedForCurrentRoot, treeOpen]);
 
-  if (!cwd) {
+  if (!cwd && !selectedForCurrentRoot && !pendingExternalPreview) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
         {t("panels.common.selectProjectFirst")}
@@ -252,9 +312,9 @@ export function FilesPanel({
   }
 
   return (
-    <FileSystemContext.Provider value={fileSystem}>
+    <FileSystemContext.Provider value={externalPreview ? LOCAL_FILE_SYSTEM : fileSystem}>
       <div className="flex min-h-0 flex-1">
-        {treeOpen && (
+        {treeAvailable && treeOpen && cwd && (
           <div className="flex w-72 shrink-0 flex-col border-r border-border">
             <div className="shrink-0 border-b border-border p-2">
               {rootOptions.length > 1 && (
@@ -301,15 +361,17 @@ export function FilesPanel({
         )}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
-            <button
-              type="button"
-              aria-label={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
-              title={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
-              className="rounded-md p-1 text-muted-foreground hover:bg-accent"
-              onClick={() => setTreeOpen((v) => !v)}
-            >
-              <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
-            </button>
+            {treeAvailable && (
+              <button
+                type="button"
+                aria-label={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
+                title={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
+                className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+                onClick={() => setTreeOpen((v) => !v)}
+              >
+                <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
+              </button>
+            )}
             <div className="flex-1" />
             <button
               type="button"
@@ -323,7 +385,11 @@ export function FilesPanel({
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             {selectedForCurrentRoot ? (
-              <FileViewer root={cwd} path={selectedForCurrentRoot} reloadNonce={reloadNonce} />
+              <FileViewer
+                root={cwd ?? ""}
+                path={selectedForCurrentRoot}
+                reloadNonce={reloadNonce}
+              />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
                 <Folder className="h-7 w-7" />
@@ -643,14 +709,15 @@ function ImagePreview({
   reloadNonce: number;
 }) {
   const { t } = useT();
+  const fileSystem = React.useContext(FileSystemContext);
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let cancelled = false;
     setSrc(null);
     setFailed(false);
-    void window.codeshell
-      .readImageDataUrl(path, { cwd: root })
+    void fileSystem
+      .readImage(root, path)
       .then((url) => {
         if (cancelled) return;
         if (url) setSrc(url);
@@ -662,7 +729,7 @@ function ImagePreview({
     return () => {
       cancelled = true;
     };
-  }, [path, reloadNonce]);
+  }, [fileSystem, root, path, reloadNonce]);
 
   if (failed)
     return (

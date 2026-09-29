@@ -8,9 +8,10 @@
  * also proves Panel App updates do not own plugin automation content.
  */
 /* global document, window */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, realpath } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PanelRuntimeServices } from "@cjhyy/code-shell-server/panels";
 import {
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -20,7 +21,7 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-panel-app-e2e-");
-const home = isolated.home;
+const home = await realpath(isolated.home);
 const pluginDir = join(home, ".code-shell", "plugins", "panel-e2e");
 const panelAppDir = join(home, ".code-shell", "panel-apps", "panel-e2e");
 const panelAssetsDir = join(panelAppDir, "app");
@@ -30,6 +31,7 @@ const projectDir = join(home, "project-e2e");
 const installedAt = new Date().toISOString();
 
 let app;
+let win;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -272,9 +274,11 @@ try {
       CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
     },
   });
-  const win = await findCodeShellWindow(app);
+  win = await findCodeShellWindow(app);
   win.on("pageerror", (error) => console.error("renderer pageerror:", error.message));
 
+  await dismissTrustDialog(win);
+  await win.getByText("project-e2e", { exact: true }).click();
   await dismissTrustDialog(win);
   const extensionsEntry = win.getByRole("button", { name: /^(扩展|Extensions)$/ });
   await extensionsEntry.waitFor({ state: "visible" });
@@ -388,6 +392,67 @@ try {
       42,
     "scoped storage round-trip failed",
   );
+  assert(
+    context.availableMethods.includes("storage.getSnapshot") &&
+      context.availableMethods.includes("storage.compareAndSet"),
+    "versioned storage was not advertised",
+  );
+  const webStorage = new PanelRuntimeServices({ dataDir: isolated.userDataDir });
+  const webScope = {
+    appId: "panel-e2e",
+    cwd: projectDir,
+    projectPath: projectDir,
+    permissions: ["storage"],
+    isAuthorized: async () => true,
+  };
+  const desktopStorage = (method, params) =>
+    execute(
+      firstView,
+      `window.codeshellPanel.call(${JSON.stringify(method)}, ${JSON.stringify(params)})`,
+    );
+  const before = await desktopStorage("storage.getSnapshot", { key: "shared-draft" });
+  assert(before.revision === null, "new document unexpectedly existed");
+  const webSaved = await webStorage.call(webScope, "storage.compareAndSet", {
+    key: "shared-draft",
+    expectedRevision: null,
+    value: "saved from remote Host",
+  });
+  const conflict = await desktopStorage("storage.compareAndSet", {
+    key: "shared-draft",
+    expectedRevision: before.revision,
+    value: "stale desktop edit",
+  });
+  assert(
+    !conflict.updated && conflict.snapshot.revision === webSaved.snapshot.revision,
+    "Desktop failed to detect the remote Host edit",
+  );
+  const large = "x".repeat(180 * 1024);
+  const next = await desktopStorage("storage.compareAndSet", {
+    key: "shared-draft",
+    expectedRevision: conflict.snapshot.revision,
+    value: large,
+  });
+  assert(
+    next.updated && next.snapshot.value.length === large.length,
+    "versioned storage protocol limits rejected an in-quota document",
+  );
+  assert(
+    (await webStorage.call(webScope, "storage.getSnapshot", { key: "shared-draft" })).revision ===
+      next.snapshot.revision,
+    "Desktop and Web disagree about the saved revision",
+  );
+  for (let index = 0; index < 4; index++) {
+    const params = { key: `race-${index}`, expectedRevision: null };
+    const results = await Promise.all([
+      desktopStorage("storage.compareAndSet", { ...params, value: "desktop" }),
+      webStorage.call(webScope, "storage.compareAndSet", { ...params, value: "web" }),
+    ]);
+    assert(
+      results.filter((result) => result.updated).length === 1,
+      "Desktop/Web cross-process storage race lost an update",
+    );
+  }
+
   const networkBlocked = await execute(
     firstView,
     'fetch("https://example.com").then(() => false, () => true)',
@@ -395,16 +460,20 @@ try {
   assert(networkBlocked, "CSP did not block external network access");
 
   await installFixture("1.0.1", "panel-v2", false);
-  const updatePreview = await win.evaluate(() =>
-    window.codeshell.previewPanelAppUpdate("panel-e2e"),
-  );
-  assert(updatePreview.ok, `Panel App source update preview failed: ${updatePreview.error}`);
-  assert(updatePreview.preview.version === "1.0.1", "source update preview used a stale manifest");
-  const updateResult = await win.evaluate(
-    ({ id, reviewToken }) => window.codeshell.installPanelAppUpdate({ id, reviewToken }),
-    { id: "panel-e2e", reviewToken: updatePreview.preview.reviewToken },
-  );
-  assert(updateResult.ok, `Panel App source update failed: ${updateResult.error}`);
+  await win.getByRole("button", { name: /^(从源码更新|Update from source)$/ }).click();
+  const reviewDialog = win.getByRole("dialog");
+  await reviewDialog.getByText(/v1\.0\.0 → v1\.0\.1/).waitFor({ state: "visible" });
+  await reviewDialog
+    .getByText(/(?:目标项目|Target project).*project-e2e/)
+    .waitFor({ state: "visible" });
+  await reviewDialog.getByRole("button", { name: /^(确认并更新|Review and update)$/ }).click();
+  await reviewDialog.waitFor({ state: "hidden" });
+  await win.waitForFunction(async (cwd) => {
+    const selected = (await window.codeshell.getPanelAppBindings(cwd)).find(
+      (item) => item.appId === "panel-e2e",
+    );
+    return selected?.version === "1.0.1" && selected?.bound && !!selected?.packageDigest;
+  }, projectDir);
   const staleReviewRejected = await win.evaluate(
     async ({ revision, cwd }) => {
       try {
@@ -456,6 +525,15 @@ try {
   );
 
   console.log("Panel App Electron E2E: passed");
+} catch (error) {
+  console.error(
+    "Panel test page:",
+    await win
+      ?.locator("#root")
+      .innerText()
+      .catch(() => "unavailable"),
+  );
+  throw error;
 } finally {
   await app?.close().catch(() => undefined);
   await isolated.cleanup();

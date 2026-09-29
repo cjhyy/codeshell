@@ -103,7 +103,7 @@ It gives you chat with streaming output, a side-by-side file / browser / termina
 | ----------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `harness-min`     | Domain-neutral core default for embedding                      | Minimal filesystem, shell, MCP, memory, task and agent mechanisms        |
 | `general`         | General orchestration, research, automation, long-running work | Core orchestration tools only                                            |
-| `terminal-coding` | Terminal-native coding assistant                               | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena` |
+| `terminal-coding` | Terminal-native coding assistant                               | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief` |
 
 Presets select the system prompt, the built-in tool set, and permission defaults. Configure via the SDK, the CLI `--preset` flag, or settings.
 
@@ -139,7 +139,7 @@ need unavailable providers, credentials, cookies, or an active goal.
 - **Planning / orchestration**: `AskUserQuestion`, `AskUserQuestionAsync`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
 - **Automation / integration**: `CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `AddMarketplace`, `InstallCapability`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`, `ConfigureModelConnection`
 - **Memory / credentials / goals**: `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `UseCredential`, `InjectCredential`, `complete_goal`, `cancel_goal`
-- **Terminal-coding preset extras**: `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`
+- **Terminal-coding preset extras**: `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`
 
 `InstallCapability` lets a conversation list, inspect, install, update, enable, disable, and
 uninstall marketplace plugins, standalone project Skills, and MCP servers. MCP configuration
@@ -254,7 +254,7 @@ packages/
 ├── link/      # Framework-independent Link provider manifests and authorization guides
 ├── core/      # Domain-agnostic engine, context, MCP, hooks, sessions, runs, memory
 ├── coding/    # Coding capability pack: tools, git/worktrees, LSP, review, prompt/presets
-├── arena/     # Optional multi-model Arena capability
+├── arena/     # Retained private Arena source (not loaded by hosts)
 ├── pet/       # Mimi behavior, DelegateWork, projection protocol, digital-human teams
 ├── server/    # Headless HTTP/WebSocket host, rooms, uploads, mobile remote
 ├── web/       # Browser-safe remote client state and SPA

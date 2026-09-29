@@ -120,6 +120,7 @@ describe("workspace package boundaries", () => {
       "@cjhyy/code-shell-capability-coding",
       "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-pet",
+      "@cjhyy/code-shell-capability-optimization-lab",
     ]) {
       expect(runtimeWorkspaceDependencies(capability)).toEqual(["@cjhyy/code-shell-core"]);
     }
@@ -201,6 +202,7 @@ describe("workspace package boundaries", () => {
     // deleted outright in a follow-up.
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
       "@cjhyy/code-shell-arena",
+      "@cjhyy/code-shell-capability-optimization-lab",
       "@cjhyy/code-shell-cdp",
       "@cjhyy/code-shell-desktop",
     ]);
@@ -241,6 +243,24 @@ describe("workspace package boundaries", () => {
     expect(releaseHelper).toContain("bun install --lockfile-only --ignore-scripts");
     expect(releaseHelper).not.toContain("replaceAll(current, target)");
   });
+
+  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+    "rejects an unpublished workspace in a public package's %s",
+    async (field) => {
+      const all = await workspaceManifests();
+      // The publisher loads only public manifests, so the retired package is
+      // deliberately absent from this map even if its old npm version exists.
+      const manifests = new Map(PUBLIC_RELEASE_PACKAGES.map(({ name }) => [name, all.get(name)!]));
+      const tui = manifests.get("@cjhyy/code-shell-tui")!;
+      manifests.set(tui.name, {
+        ...tui,
+        [field]: { ...tui[field], "@cjhyy/code-shell-arena": "workspace:*" },
+      });
+      expect(validatePublicReleaseOrder(manifests)).toContain(
+        "@cjhyy/code-shell-tui: runtime dependency @cjhyy/code-shell-arena is a private workspace and will not be published",
+      );
+    },
+  );
 
   it("keeps product hosts on focused Coding and Arena entries", () => {
     const hosts = ["desktop", "tui", "server"].flatMap((name) =>

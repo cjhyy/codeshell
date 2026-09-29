@@ -61,10 +61,27 @@ describe("architecture growth budgets", () => {
     // The 2026-09-20 media preview authority adds 42 lines of composition-only
     // wiring. Path validation, scoped authorization, Range streaming and
     // lifecycle cleanup remain extracted in media-preview-{authority,service}.
+    // Project review ownership/caches and remote Link window lifetimes now live
+    // in focused IPC modules. Keep the main-entry ceiling unchanged.
     expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_156);
-    expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
-      290,
-    );
+    expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
+    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(117);
+    // Count extracted registrations too: moving a route cannot hide API growth.
+    // New explicit project-package, remote-Link and Cloud-window operations are
+    // part of this feature's reviewed transport contract, total 295 routes.
+    // +1 authenticated, owner-scoped cancelRestore route releases abandoned
+    // version reviews. Count the extracted version registrar in the same budget.
+    // +3 reviewed device registration/status/forget operations, no credential read.
+    // +2 main-frame-only Desktop file metadata/preview operations. These read an
+    // explicitly selected file without granting access to its parent directory.
+    expect(
+      matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g),
+    ).toBeLessThanOrEqual(301);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -73,10 +90,19 @@ describe("architecture growth budgets", () => {
     // These are transport adapters (+26 over the 1_802-line main baseline).
     // Media preview adds two typed invokes and one shared request/result import;
     // authority and streaming remain in the extracted main-process service (+5).
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_833);
+    // Project package reviews/restores, independent Link and Cloud window APIs
+    // add only typed invoke adapters; ownership lives in the extracted IPC modules.
+    // The project-version bridge is extracted without changing its exposed methods.
+    // Count those invokes too, preserving the existing transport surface ceiling.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_866);
     expect(
-      matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g),
-    ).toBeLessThanOrEqual(300);
+      matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
+        matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
+        matches(
+          "packages/desktop/src/preload/project-panel-version-api.ts",
+          /ipcRenderer\.invoke\(/g,
+        ),
+    ).toBeLessThanOrEqual(303);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -85,10 +111,9 @@ describe("architecture growth budgets", () => {
     // add nine declaration lines; no renderer runtime import is introduced.
     // Media playback adds the narrow get/release preview contract and shared
     // request/result types while all file access stays in main (+11).
-    // Detailed run traces carry prompt/model/provider, duration and the token
-    // usage breakdown across the typed boundary; all of it is declaration-only
-    // and adds no renderer runtime import (+11).
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_875);
+    // +55 declaration lines for those explicit project/version/Link contracts.
+    // Main-branch integration retains the detailed run-trace declarations (+11).
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_930);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -98,7 +123,8 @@ describe("architecture growth budgets", () => {
     // acknowledgement before updating this component's transcript state (+25
     // over 2_748). Availability checks remain in useReviewAvailability.ts;
     // per-session approval policy remains in app/approvalPermission.ts.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_773);
+    // +6 generation checks keep stale project refreshes out of live UI state.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_779);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
@@ -126,7 +152,9 @@ describe("architecture growth budgets", () => {
     // fence, pending approval entry/timer and transport response, so admission
     // and retirement stay together here. Follow-up turn delivery is extracted
     // to async-user-answer.ts; no published entry-point budget is widened.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_004);
+    // Per-turn sandbox/background-shell policy is validated and forwarded at
+    // protocol ingress; enforcement remains in the run environment and tools.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_011);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -148,15 +176,20 @@ describe("architecture growth budgets", () => {
     // v0.9.20 threads current-run MCP connection health into dynamic context
     // (+15 net). Connection policy, retries and user-facing formatting remain
     // extracted under tool-system; Engine only places the result for this run.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_425);
+    // +3 lines pass the frozen per-turn policy into the existing child spawner.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_428);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
     const exportBudgets: Record<string, number> = {
       // Re-tightened after the composition cutover deleted the legacy
       // registerCapability/registerPreset/registerSection export surface.
-      "packages/core/src/index.ts": 123,
-      "packages/core/src/index.extension.ts": 46,
+      // The remote Link client is an intentional public SDK capability consumed
+      // by standalone Hosts; tokens stay in their credential authority.
+      "packages/core/src/index.ts": 124,
+      // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
+      // the shared file lock, and text-connection resolution (§5.2 of the plan).
+      "packages/core/src/index.extension.ts": 49,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by
@@ -166,7 +199,10 @@ describe("architecture growth budgets", () => {
       // catalog resolver (+1); credentials remain on the reviewed Host surface.
       // Verified application-owned runtime discovery adds one Host-only module;
       // it neither selects executables for consumers nor grants execution.
-      "packages/core/src/index.internal.ts": 84,
+      // Offline project settings inspection, reviewed repair and exact rollback
+      // add one Host-only module for the administrator CLI. The public SDK and
+      // extension contracts do not expose configuration recovery authority.
+      "packages/core/src/index.internal.ts": 85,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
@@ -180,7 +216,9 @@ describe("architecture growth budgets", () => {
       "packages/server/src/index.ts": 7,
       // Shared transcript replay (+1) folds persisted records through the web
       // stream reducer, giving reconnecting clients the same message state.
-      "packages/web/src/index.ts": 15,
+      // Environment identity and project-reference contracts are shared by the
+      // desktop remote entry and standalone Web; no platform authority is exported.
+      "packages/web/src/index.ts": 17,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

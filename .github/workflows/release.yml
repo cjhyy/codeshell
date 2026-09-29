@@ -50,7 +50,7 @@ jobs:
           bun run scripts/verify-release-versions.ts "$TAG"
 
   package-release-smoke:
-    name: package release smoke (ten tarballs)
+    name: package release smoke (nine tarballs)
     needs: verify-version
     if: ${{ always() && needs.verify-version.result != 'failure' }}
     runs-on: ubuntu-latest

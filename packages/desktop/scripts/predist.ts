@@ -1,4 +1,4 @@
-// Pre-package step: replace the core, coding, and Pet workspace
+// Pre-package step: replace the core and capability workspace
 // SYMLINKS with real, self-contained directories inside desktop/node_modules.
 //
 // WHY THIS EXISTS
@@ -14,13 +14,13 @@
 // `files` field avoids it — both were tried and don't work.
 //
 // All of desktop's OTHER deps are build-time only (esbuild bundles main, vite
-// bundles the renderer). Core, coding, and Pet are runtime deps: main spawns
-// the coding worker, which composes core and dynamically loads Pet through
-// core's extension seam.
+// bundles the renderer). Core, coding, Pet, and Optimization Lab are
+// runtime deps: main spawns the coding worker, which dynamically loads the
+// capabilities through core's extension seam.
 //
 // THE FIX
 // -------
-// Materialize these packages into real in-tree directories containing exactly
+// Materialize the runtime packages into real in-tree directories containing exactly
 // what the app needs at runtime: dist/ + package.json, plus core's production
 // dependency closure. LICENSE and README are deliberately NOT copied — they
 // are the offending out-of-tree files and a bundled internal copy needs neither.
@@ -56,6 +56,11 @@ const linkTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-link");
 const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
 const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
 const petTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-pet");
+const optimizationLabSrc = resolve(repoRoot, "packages/optimization-lab");
+const optimizationLabTarget = resolve(
+  desktopRoot,
+  "node_modules/@cjhyy/code-shell-capability-optimization-lab",
+);
 
 function log(msg: string): void {
   // eslint-disable-next-line no-console
@@ -67,6 +72,9 @@ function main(): void {
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
   if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
   if (!existsSync(petSrc)) throw new Error(`Pet package not found at ${petSrc}`);
+  if (!existsSync(optimizationLabSrc)) {
+    throw new Error(`Optimization Lab package not found at ${optimizationLabSrc}`);
+  }
   // Rebuild every direct desktop workspace dependency, in dependency order,
   // BEFORE the desktop bundle. Previously this step only asserted that
   // each `dist` existed (see copyDir) — so whatever a developer or CI job had
@@ -97,19 +105,24 @@ function main(): void {
   removeWorkspaceTarget(coreTarget, "core");
   removeWorkspaceTarget(codingTarget, "coding");
   removeWorkspaceTarget(petTarget, "Pet");
+  removeWorkspaceTarget(optimizationLabTarget, "Optimization Lab");
 
   materializePackage(linkSrc, linkTarget);
   materializePackage(coreSrc, coreTarget);
   materializePackage(codingSrc, codingTarget);
   materializePackage(petSrc, petTarget);
+  materializePackage(optimizationLabSrc, optimizationLabTarget);
 
-  // Each materialized sibling owns its production closure, so relying on
-  // core's nested node_modules would break Node's sibling-package resolution
-  // in the packaged app.
+  // Each materialized sibling owns its production closure.
+  // Optimization Lab imports zod directly; core's nested node_modules cannot serve
+  // sibling-package resolution in the packaged app.
   installProductionDeps(coreSrc, coreTarget, "core");
+  installProductionDeps(optimizationLabSrc, optimizationLabTarget, "Optimization Lab");
   verifyMaterializedCapabilities();
 
-  log(`materialized Link + core + coding + Pet into node_modules (LICENSE/README excluded)`);
+  log(
+    `materialized Link + core + coding + Pet + Optimization Lab into node_modules (LICENSE/README excluded)`,
+  );
 }
 
 function verifyMaterializedCapabilities(): void {
@@ -118,7 +131,7 @@ function verifyMaterializedCapabilities(): void {
     "bun",
     [
       "--eval",
-      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
+      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding'); await import('@cjhyy/code-shell-capability-optimization-lab/capability')",
     ],
     { cwd: desktopRoot, stdio: "inherit" },
   );
@@ -164,8 +177,7 @@ function installProductionDeps(source: string, target: string, label: string): v
   };
   // Workspace siblings are materialized by this script and resolve through the
   // desktop node_modules ancestor. Bun cannot install `workspace:*` from the
-  // isolated minimal manifest, and doing so would duplicate core inside the
-  // materialized sibling.
+  // isolated minimal manifest, and doing so would duplicate core inside a capability.
   const dependencies = Object.fromEntries(
     Object.entries(pkg.dependencies ?? {}).filter(
       ([, version]) => !version.startsWith("workspace:"),

@@ -65,7 +65,12 @@ export function PanelAppHost({
     }
     window.codeshell.preparePanelApp(descriptor.id, projectPath).then(
       (result) => {
-        if (alive) setPrepared(result);
+        if (!alive) return;
+        if (result.revision !== descriptor.revision) {
+          setError("Panel App version changed. Refresh the project before reopening.");
+          return;
+        }
+        setPrepared(result);
       },
       (reason) => {
         if (alive) setError(reason instanceof Error ? reason.message : String(reason));
@@ -74,7 +79,7 @@ export function PanelAppHost({
     return () => {
       alive = false;
     };
-  }, [cwd, descriptor.hostId, descriptor.id, projectPath, retryNonce]);
+  }, [cwd, descriptor.hostId, descriptor.id, descriptor.revision, projectPath, retryNonce]);
 
   useEffect(() => {
     const view = viewRef.current;

@@ -333,7 +333,9 @@ export class McpOAuthService {
       validateOAuthEndpoint(requested.serverUrl, "MCP server URL");
       this.assertLoginCredentialOwnership(requested);
       if (this.logins.has(requested.credentialId)) {
-        throw new Error(`OAuth credential "${requested.credentialId}" login is already in progress`);
+        throw new Error(
+          `OAuth credential "${requested.credentialId}" login is already in progress`,
+        );
       }
       const spec = this.withStoredLoginMetadata(requested);
       if (this.loggingOut.has(spec.credentialId)) throw this.unavailable(spec.credentialId);
@@ -853,7 +855,12 @@ export class McpOAuthService {
 
   private oauthCredential(id: string): Credential {
     const cred = this.store.resolve(id, "full");
-    if (!cred || cred.type !== "oauth" || !cred.secret) {
+    if (
+      !cred ||
+      cred.type !== "oauth" ||
+      cred.meta?.linkExecutionBackend === "remote" ||
+      !cred.secret
+    ) {
       throw new Error(`OAuth credential "${id}" is unavailable`);
     }
     return cred;
@@ -889,7 +896,12 @@ export class McpOAuthService {
   private credentialForGeneration(id: string, generation: number): Credential {
     if (!this.isCurrentGeneration(id, generation)) throw new StaleOAuthOperationError();
     const credential = this.store.resolve(id, "full");
-    if (!credential || credential.type !== "oauth" || !credential.secret) {
+    if (
+      !credential ||
+      credential.type !== "oauth" ||
+      credential.meta?.linkExecutionBackend === "remote" ||
+      !credential.secret
+    ) {
       throw new StaleOAuthOperationError();
     }
     return credential;
