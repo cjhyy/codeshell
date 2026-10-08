@@ -194,7 +194,11 @@ describe("architecture growth budgets", () => {
     // connection ownership and transport cancellation. The usage query reuses
     // resolveEngineForSessionQuery, rejects aggregation without an explicit
     // trusted local Host, and delegates receipt reads to Engine/UsageLedger.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_126);
+    // +12 reviewed lifecycle lines retain a cloned, resolver-free final pending
+    // decision snapshot after owner disconnect and before observer disposal.
+    // Full close flushes terminal notifications before closing transport, then
+    // drops this metadata cache; no observer, tool resolver or grant is retained.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_138);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
