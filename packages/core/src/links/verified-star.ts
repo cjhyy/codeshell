@@ -17,9 +17,10 @@ export async function verifiedGithubSetStarred(options: {
 }): Promise<{ receipt: OperationReceipt; data: unknown }> {
   const { ctx, connection, assertConnected } = options;
   if (!ctx.operations || !ctx.executeBoundTool) throw new OperationFailure("unsupported");
+  if (connection.meta?.linkExecutionBackend === "cli") throw new OperationFailure("unsupported");
   const params = githubSetStarredParameters(options.params);
   const target = { owner: params.owner, repo: params.repo };
-  const channel = connection.meta?.linkExecutionBackend === "cli" ? "cli" : "link";
+  const channel = "link" as const;
   const read = async (action: "get_repository" | "get_starred") => {
     assertConnected();
     const execution = await ctx.executeBoundTool!(
@@ -45,18 +46,14 @@ export async function verifiedGithubSetStarred(options: {
     return asRecord(output.data);
   };
   let alreadySatisfied = false;
+  let repositoryId: number | undefined;
   const receipt = await ctx.operations.controller.run(
     {
       sessionId: ctx.operations.sessionId,
       intentId: `${ctx.originClientMessageId ?? ctx.operations.runId}:github.set_starred`,
       service: "github",
       action: "set_starred",
-      channel:
-        channel === "cli"
-          ? "cli"
-          : connection.meta?.linkExecutionRuntime === "server"
-            ? "remote-link"
-            : "local-link",
+      channel: connection.meta?.linkExecutionRuntime === "server" ? "remote-link" : "local-link",
       account: {
         id: connection.meta?.linkAccountId ?? null,
         connectionId: connection.id,
@@ -125,6 +122,7 @@ export async function verifiedGithubSetStarred(options: {
           repository.full_name.toLowerCase() !== `${params.owner}/${params.repo}`
         )
           throw new OperationFailure("validation");
+        repositoryId = repository!.id as number;
         const state = await read("get_starred");
         if (typeof state?.starred !== "boolean") throw new OperationFailure("validation");
         alreadySatisfied = state.starred === params.starred;
@@ -132,18 +130,29 @@ export async function verifiedGithubSetStarred(options: {
       // Exact closed-set native approval is completed by LinkAction before this adapter.
       authorize: async () => true,
       execute: async () => {
+        if (!repositoryId) throw new OperationFailure("validation");
         if (!alreadySatisfied) await options.execute();
         return {
-          id: `${params.starred ? "starred" : "unstarred"}/${alreadySatisfied ? "unchanged" : "changed"}`,
+          id: `${repositoryId}/${params.starred ? "starred" : "unstarred"}/${alreadySatisfied ? "unchanged" : "changed"}`,
         };
       },
       verify: async (reference) => {
-        if (
-          !new RegExp(`^${params.starred ? "starred" : "unstarred"}/(?:changed|unchanged)$`).test(
-            reference.id,
-          )
-        )
+        const match = reference.id.match(
+          new RegExp(
+            `^([1-9][0-9]*)/${params.starred ? "starred" : "unstarred"}/(?:changed|unchanged)$`,
+          ),
+        );
+        if (!match || !Number.isSafeInteger(Number(match[1])))
           throw new OperationFailure("validation");
+        // Persisted identity survives restart; a reused repository name cannot
+        // establish the original target's postcondition after a rename/recreate.
+        const observed = await read("get_repository");
+        if (
+          observed?.id !== Number(match[1]) ||
+          typeof observed.full_name !== "string" ||
+          observed.full_name.toLowerCase() !== `${params.owner}/${params.repo}`
+        )
+          return false;
         return (await read("get_starred"))?.starred === params.starred;
       },
     },

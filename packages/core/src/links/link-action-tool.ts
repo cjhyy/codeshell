@@ -282,6 +282,15 @@ export async function linkActionTool(
       error: `Unknown ${provider.displayName} Link Action: ${actionId}`,
     });
   }
+  const reviewedWrite =
+    providerId === "github" && ["create_issue", "set_starred"].includes(actionId);
+  if ((action.risk === "write" && !reviewedWrite) || (reviewedWrite && action.risk !== "write"))
+    return JSON.stringify({
+      kind: "error",
+      provider: providerId,
+      action: actionId,
+      error: "Unsupported verified write adapter. A reviewed persistent controller is required.",
+    });
   if (!allowsLinkAction(connection.credential, providerId, actionId)) {
     return JSON.stringify({
       kind: "error",

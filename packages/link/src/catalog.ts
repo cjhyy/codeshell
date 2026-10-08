@@ -114,8 +114,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
           command: "gh",
           displayName: text("使用 GitHub CLI 登录", "Sign in with GitHub CLI"),
           summary: text(
-            "复用本机 GitHub CLI 会话；明确连接后可审批创建 Issue、设置当前账号的 Star，不复制或保存 Token。",
-            "Explicitly connect this device’s GitHub CLI session to approve issue creation and account Star changes, without copying or storing its token.",
+            "复用本机 GitHub CLI 会话，不复制或保存 Token。CLI 可读取 Star 状态；设置 Star 请明确连接 PAT 或浏览器 OAuth。",
+            "Reuse this device’s GitHub CLI session without copying or storing its token. CLI can read Star state; explicitly connect PAT or browser OAuth to change Stars.",
           ),
           installUrl: "https://cli.github.com/",
           privacyNote: text(

@@ -7,11 +7,16 @@ The existing native Link write approval describes those exact detached values.
 It adds no sidebar or Panel feature.
 
 The owning Engine's OperationController validates the repository's positive ID
-and exact full name, reads the current account's Star state, sends at most one
+and exact full name, persists that numeric ID in its operation reference,
+reads the current account's Star state, sends at most one
 mutation, and independently reads the resulting state through the same bound
 ToolExecutor, permission rules, hooks, and live connection checks. Already
 satisfied state receives an explicit `changed: false` result only after another
-independent read. A write acknowledgement alone never proves success.
+independent identity and state read. Verification requires the same persisted ID
+and full name. A renamed/deleted/recreated target stays unverified across restart;
+a new same-name repository cannot satisfy the old operation. GitHub's mutation API
+addresses repository names and offers no atomic ID precondition here, so the
+identity/read-to-write race can be detected afterward, not eliminated. A write acknowledgement alone never proves success.
 
 One trusted user intent owns one Star target. The existing HMAC ledger binds
 intent, account, connection, remote grant, verification generation, target,
@@ -39,8 +44,12 @@ The fixed provider endpoints are:
 
 Status endpoints accept legal empty and plain-text responses without JSON parsing.
 All other statuses fail closed. HTTP mutations use the existing single physical
-send transport; managed `gh api --include` parses one exact HTTP status, accepts
-its documented HTTP-404 exit only for reads, and rejects killed/error processes.
+send transport. CLI **Star writes are disabled**, even for manually edited saved
+grants, because real gh automatically follows a 307 with another mutation.
+Managed `gh api --include` supports only the new read actions: it parses one exact
+HTTP status, accepts its HTTP-404 exit only for reads, and rejects killed/error
+processes. New CLI connections never include the Star write capability. Explicitly
+connect PAT or browser OAuth for Star writes; no automatic backend fallback occurs.
 Remote resources remain restricted to repositories explicitly selected in the
 grant. The companion services PR adds the reviewed adapter whitelist and consent
 labels, preserves old grants, and disables its refresh/retry path for Star writes.
@@ -48,8 +57,8 @@ It is tested locally and is **not deployed** pending real-provider acceptance.
 
 Validation uses private HOME, USERPROFILE, app state, and an allowlisted environment
 before importing Core. The actual compiled SDK Engine consumer covers verified
-Star, an unknown response plus restart without resend, and a real managed CLI
-child path. The worker and every CLI subprocess emit exact-localhost bootstrap
+Star, an unknown response plus restart without resend, and a managed **fixture CLI** child read path. That synthetic executable validates
+the adapter and child isolation; it does not establish real gh transport safety. The worker and every CLI subprocess emit exact-localhost bootstrap
 receipts containing PID, parent PID, and private-home hash. Fake models and
 synthetic localhost credentials make no paid-model or real GitHub writes. This
 network guard confines trusted test HTTP clients; it is not an OS sandbox.
@@ -62,3 +71,23 @@ Official contracts checked:
 
 Real upstream write acceptance, other verified write consumers, batch slots,
 manual reconciliation, and retaining/compacting operation history remain open.
+
+The optional `node scripts/audit-github-cli-star.mjs` diagnostic separately ran
+installed **gh 2.87.3** against a controlled localhost server with a private HOME
+and synthetic GH_TOKEN. PUT and DELETE each followed HTTP 307 to `/destination`,
+producing a second physical mutation; fresh EOF cases each sent once. The native
+Go binary is not confined by the Node HTTP guard. Its only destination and every
+redirect in this diagnostic are controlled localhost URLs, with update checks
+disabled. This is a diagnostic for that installed version, not an assurance about
+all gh versions or failure modes.
+
+Source audit: [gh 2.87.3 HTTP client](https://github.com/cli/cli/blob/v2.87.3/api/http_client.go)
+uses [go-gh 2.13.0](https://github.com/cli/go-gh/blob/v2.13.0/pkg/api/http_client.go),
+whose client keeps Go's default redirect behavior. A future CLI Star writer needs
+a reviewed, enforceable single-send mode before its capability can be advertised.
+
+Unregistered `risk: write` Link actions now fail before native approval or
+transport: only reviewed fixed adapters may enter the persistent controller.
+Unknown/running receipts retain the existing no-reconciliation behavior. Only
+succeeded-but-unverified receipts may be independently rechecked; neither path
+repeats the mutation.

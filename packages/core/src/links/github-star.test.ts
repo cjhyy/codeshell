@@ -43,6 +43,9 @@ function fixture(backend: "remote" | "oauth" = "remote") {
       linkCapabilityIds: [...caps],
     },
   };
+  let repositoryId = 123,
+    replaceOnWrite = false,
+    replaceAfterState = false;
   let starred = false,
     lose = false,
     mismatch = false,
@@ -58,13 +61,15 @@ function fixture(backend: "remote" | "oauth" = "remote") {
   }) => {
     calls.push(action);
     if (action === "get_repository")
-      return { id: 123, full_name: wrongTarget ? "other/repo" : "acme/repo" };
+      return { id: repositoryId, full_name: wrongTarget ? "other/repo" : "acme/repo" };
     if (action === "get_starred") {
       if (revoke) credential.meta!.linkCapabilityIds = ["github.set_starred"];
+      if (replaceAfterState) repositoryId = 999;
       return { starred: mismatch && calls.includes("set_starred") ? !starred : starred };
     }
     if (action === "set_starred") {
       starred = params.starred as boolean;
+      if (replaceOnWrite) repositoryId = 999;
       if (lose) throw new Error("Lost response");
       return { acknowledged: true };
     }
@@ -144,6 +149,12 @@ function fixture(backend: "remote" | "oauth" = "remote") {
     mismatch: () => {
       mismatch = true;
     },
+    replaceOnWrite: () => {
+      replaceOnWrite = true;
+    },
+    replaceAfterState: () => {
+      replaceAfterState = true;
+    },
     wrongTarget: () => {
       wrongTarget = true;
     },
@@ -166,9 +177,15 @@ test.each(["remote", "oauth"] as const)(
       changed: true,
       verified: true,
     });
-    expect(f.calls).toEqual(["get_repository", "get_starred", "set_starred", "get_starred"]);
+    expect(f.calls).toEqual([
+      "get_repository",
+      "get_starred",
+      "set_starred",
+      "get_repository",
+      "get_starred",
+    ]);
     expect((await f.invoke()).operation.id).toBe(output.operation.id);
-    expect(f.calls).toHaveLength(4);
+    expect(f.calls).toHaveLength(5);
     expect((await f.invoke({ owner: "acme", repo: "other", starred: true })).kind).toBe("error");
     expect((await f.invoke({ owner: "acme", repo: "repo", starred: false })).kind).toBe("error");
   },
@@ -182,7 +199,7 @@ test.each([true, false])(
     const output = await f.invoke({ owner: "acme", repo: "repo", starred: desired });
     expect(output.operation.state).toBe("verified");
     expect(output.data.changed).toBe(false);
-    expect(f.calls).toEqual(["get_repository", "get_starred", "get_starred"]);
+    expect(f.calls).toEqual(["get_repository", "get_starred", "get_repository", "get_starred"]);
   },
 );
 
@@ -242,8 +259,52 @@ test("account and grant changes cannot reuse a previous trusted Star intent", as
     expect((await f.invoke()).operation.state).toBe("verified");
     f.credential.meta![field] = "other-binding";
     expect((await f.invoke()).kind).toBe("error");
-    expect(f.calls).toHaveLength(4);
+    expect(f.calls).toHaveLength(5);
   }
+});
+
+test("future unregistered writes fail before approval and transport while reads still work", async () => {
+  const f = fixture(),
+    provider = getLocalLinkProvider("github")!;
+  let approvals = 0,
+    sends = 0;
+  f.ctx.askUser = async () => {
+    approvals++;
+    return "允许执行";
+  };
+  const action = {
+    id: "future_write",
+    title: "Fixture",
+    description: "Synthetic",
+    risk: "write" as const,
+    execute: async () => {
+      sends++;
+      return {};
+    },
+  };
+  provider.actions.push(action);
+  f.credential.meta!.linkCapabilityIds!.push("github.future_write");
+  try {
+    const output = await f.invoke({}, { action: "future_write" });
+    expect(output.kind).toBe("error");
+    expect(output.error).toContain("Unsupported verified write adapter");
+    expect(approvals).toBe(0);
+    expect(sends).toBe(0);
+    expect(f.calls).toEqual([]);
+    expect(
+      (await f.invoke({ owner: "acme", repo: "repo" }, { action: "get_starred" })).data.starred,
+    ).toBe(false);
+  } finally {
+    provider.actions.splice(provider.actions.indexOf(action), 1);
+  }
+});
+
+test("CLI Star writes fail closed even with a manually saved explicit capability", async () => {
+  const f = fixture("oauth");
+  delete f.credential.meta!.linkAuthSource;
+  f.credential.meta!.linkExecutionBackend = "cli";
+  expect((await f.invoke()).kind).toBe("error");
+  expect(f.calls).toEqual([]);
 });
 
 test("declining native write approval sends no validation or mutation request", async () => {
@@ -271,8 +332,27 @@ test("read hook target mutation fails closed; display hook leaves private verify
     return { additionalContext: "Fixture display" };
   });
   expect((await next.invoke(undefined, { hooks: display })).operation.state).toBe("verified");
-  expect(observed).toBe(4);
+  expect(observed).toBe(5);
 });
+
+test.each([false, true])(
+  "repository replacement after validation keeps durable identity, including no-op=%s",
+  async (noop) => {
+    const f = fixture();
+    if (noop) {
+      f.setStarred(true);
+      f.replaceAfterState();
+    } else f.replaceOnWrite();
+    const output = await f.invoke();
+    expect(output.kind).toBe("unverified_write");
+    expect(output.operation.state).toBe("succeeded");
+    expect(output.operation.reference.id).toStartWith("123/");
+    expect(output.operation.error).toBe("postcondition_failed");
+    f.ctx.operations!.controller = new OperationController(new OperationLedger(f.ctx.cwd!));
+    expect((await f.invoke()).kind).toBe("unverified_write");
+    expect(f.calls.filter((x) => x === "set_starred")).toHaveLength(noop ? 0 : 1);
+  },
+);
 
 test("write acknowledgement cannot replace independent matching read", async () => {
   const f = fixture();
@@ -339,10 +419,10 @@ test("managed CLI status parsing accepts real gh empty responses and 404 exit on
     starred: true,
   });
   for (const starred of [true, false])
-    expect(
-      await executeCliLinkAction("github", "set_starred", { ...params, starred }, {}, run),
-    ).toEqual({ acknowledged: true });
-  expect(calls.map((x) => x[x.indexOf("--method") + 1])).toEqual(["GET", "PUT", "DELETE"]);
+    await expect(
+      executeCliLinkAction("github", "set_starred", { ...params, starred }, {}, run),
+    ).rejects.toThrow("redirects");
+  expect(calls).toHaveLength(1);
   const notStarred = async () => {
     throw Object.assign(new Error("HTTP 404"), {
       code: 1,

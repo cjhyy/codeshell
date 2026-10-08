@@ -71,6 +71,8 @@ if (process.argv[2] === "--worker") {
         );
       const unknown = JSON.stringify(request.messages).includes("fixture unknown");
       const cli = JSON.stringify(request.messages).includes("fixture cli");
+      const replacement = JSON.stringify(request.messages).includes("fixture replacement");
+      const noop = JSON.stringify(request.messages).includes("fixture noop");
       return hasResult
         ? { text: "Model claims success", toolCalls: [], stopReason: "stop", usage }
         : {
@@ -83,12 +85,20 @@ if (process.argv[2] === "--worker") {
                 toolName: "LinkAction",
                 args: {
                   provider: "github",
-                  action: "set_starred",
+                  action: cli ? "get_starred" : "set_starred",
                   connectionId: credential.id,
                   params: {
                     owner: "fixture",
-                    repo: unknown ? "unknown" : cli ? "cli" : "success",
-                    starred: true,
+                    repo: unknown
+                      ? "unknown"
+                      : cli
+                        ? "cli"
+                        : replacement
+                          ? "replacement"
+                          : noop
+                            ? "noop"
+                            : "success",
+                    ...(cli ? {} : { starred: true }),
                   },
                 },
               },
@@ -134,6 +144,24 @@ if (process.argv[2] === "--worker") {
       behaviorMode: "verification-fixture",
     });
     assert.equal(verified.reason, "completed");
+    const noOp = await engine.run("fixture noop", {
+      sessionId: "noop-session",
+      clientMessageId: "noop-input",
+      behaviorMode: "verification-fixture",
+    });
+    assert.equal(noOp.reason, "completed");
+    const replaced = await engine.run("fixture replacement", {
+      sessionId: "replacement-session",
+      clientMessageId: "replacement-input",
+      behaviorMode: "verification-fixture",
+    });
+    assert.equal(replaced.reason, "unverified_write");
+    const replacementTranscript = readFileSync(
+      join(root, "sessions/replacement-session/transcript.jsonl"),
+      "utf8",
+    );
+    assert.ok(replacementTranscript.includes("123/starred/changed"));
+    assert.ok(replacementTranscript.includes("postcondition_failed"));
     const events = [];
     const uncertain = await engine.run("fixture unknown", {
       sessionId: "unknown-session",
@@ -166,6 +194,12 @@ if (process.argv[2] === "--worker") {
       behaviorMode: "verification-fixture",
     });
     assert.equal(resumed.reason, "unverified_write");
+    const replacementResume = await restarted.run("fixture replacement; continue", {
+      sessionId: "replacement-session",
+      clientMessageId: "replacement-continue",
+      behaviorMode: "verification-fixture",
+    });
+    assert.equal(replacementResume.reason, "unverified_write");
   } finally {
     await restarted.dispose();
     core.setDefaultCredentialAccess(null);
@@ -218,13 +252,24 @@ if (process.argv[2] === "--worker") {
     }
     const data =
       input.action === "get_repository"
-        ? { id: 123, full_name: `fixture/${input.params.repo}` }
+        ? {
+            id:
+              input.params.repo === "replacement" &&
+              calls.some(
+                (call) => call.action === "set_starred" && call.params.repo === "replacement",
+              )
+                ? 999
+                : 123,
+            full_name: `fixture/${input.params.repo}`,
+          }
         : input.action === "set_starred"
           ? { acknowledged: true }
           : {
-              starred: calls.some(
-                (call) => call.action === "set_starred" && call.params.repo === input.params.repo,
-              ),
+              starred:
+                input.params.repo === "noop" ||
+                calls.some(
+                  (call) => call.action === "set_starred" && call.params.repo === input.params.repo,
+                ),
             };
     response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(data));
   });
@@ -302,24 +347,32 @@ request.on("error", () => { process.exitCode = 1; }); request.end(JSON.stringify
     assert.equal(code, 0, output.slice(-4000));
     assert.deepEqual(
       calls.filter((call) => call.params.repo === "success").map((call) => call.action),
-      ["get_repository", "get_starred", "set_starred", "get_starred"],
+      ["get_repository", "get_starred", "set_starred", "get_repository", "get_starred"],
     );
     assert.deepEqual(
       calls.filter((call) => call.params.repo === "unknown").map((call) => call.action),
       ["get_repository", "get_starred", "set_starred"],
     );
+    assert.deepEqual(
+      calls.filter((call) => call.params.repo === "noop").map((call) => call.action),
+      ["get_repository", "get_starred", "get_repository", "get_starred"],
+    );
+    assert.deepEqual(
+      calls.filter((call) => call.params.repo === "replacement").map((call) => call.action),
+      ["get_repository", "get_starred", "set_starred", "get_repository"],
+    );
     if (process.platform !== "win32") {
       assert.deepEqual(
         calls.filter((call) => call.params.repo === "cli").map((call) => call.action),
-        ["get_repository", "get_starred", "set_starred", "get_starred"],
+        ["get_starred"],
       );
       const allReceipts = readFileSync(receipts, "utf8").trim().split("\n").map(JSON.parse);
       assert.equal(
         allReceipts.length,
-        9,
-        "Every managed CLI account check and action must emit a guarded receipt",
+        3,
+        "The managed read-only CLI account check and action must emit guarded receipts",
       );
-      assert.equal(new Set(allReceipts.map((receipt) => receipt.pid)).size, 9);
+      assert.equal(new Set(allReceipts.map((receipt) => receipt.pid)).size, 3);
       for (const receipt of allReceipts.slice(1)) {
         assert.equal(receipt.ppid, child.pid);
         assert.equal(receipt.origin, origin);

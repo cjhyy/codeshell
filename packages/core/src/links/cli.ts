@@ -1,4 +1,4 @@
-import { githubRepositoryParameters, githubSetStarredParameters } from "./github-star.js";
+import { githubRepositoryParameters } from "./github-star.js";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -439,7 +439,9 @@ export async function connectCliLink(
   return {
     providerId,
     identity: await liveIdentity(providerId, options, run),
-    capabilityIds: provider.actions.map((action) => `${providerId}.${action.id}`),
+    capabilityIds: provider.actions
+      .filter((action) => !(providerId === "github" && action.id === "set_starred"))
+      .map((action) => `${providerId}.${action.id}`),
     verifiedAt: new Date().toISOString(),
   };
 }
@@ -477,6 +479,10 @@ async function executeGithubCliAction(
   options: { cwd?: string; signal?: AbortSignal },
   run: CliLinkCommandRunner,
 ): Promise<unknown> {
+  if (actionId === "set_starred")
+    throw new Error(
+      "GitHub CLI Star writes are unavailable because gh may follow mutation redirects; explicitly connect PAT/OAuth for this action",
+    );
   if (actionId === "list_repositories") {
     const limit = intParam(params, "limit", 30, 100);
     const data = await api("github", `user/repos?per_page=${limit}&sort=updated`, options, run);
@@ -508,12 +514,9 @@ async function executeGithubCliAction(
       "html_url",
     ]);
   }
-  if (actionId === "get_starred" || actionId === "set_starred") {
-    const target =
-      actionId === "set_starred"
-        ? githubSetStarredParameters(params)
-        : githubRepositoryParameters(params);
-    const method = "starred" in target ? (target.starred ? "PUT" : "DELETE") : "GET";
+  if (actionId === "get_starred") {
+    const target = githubRepositoryParameters(params);
+    const method = "GET";
     const args = [
       "api",
       `user/starred/${target.owner}/${target.repo}`,
@@ -527,7 +530,6 @@ async function executeGithubCliAction(
       "-H",
       "X-GitHub-Api-Version: 2022-11-28",
     ];
-    if (method !== "GET") args.push("-H", "Content-Length: 0");
     let result: CliLinkCommandResult;
     try {
       result = await run("github", CONFIG.github.command, args, { ...options, timeoutMs: 30_000 });
@@ -535,7 +537,6 @@ async function executeGithubCliAction(
       // gh exits nonzero for an HTTP 404 but includes the status with --include.
       // Never infer a false state from stderr text or another process failure.
       if (
-        method !== "GET" ||
         !error ||
         typeof error !== "object" ||
         !("stdout" in error) ||
@@ -551,8 +552,7 @@ async function executeGithubCliAction(
     const statuses = [...result.stdout.matchAll(/^HTTP\/\S+ (\d{3})(?: |\r?$)/gm)];
     if (statuses.length !== 1) throw new Error("GitHub CLI returned an invalid Star status");
     const status = Number(statuses[0]![1]);
-    if (method === "GET" && [204, 404].includes(status)) return { starred: status === 204 };
-    if (method !== "GET" && status === 204) return { acknowledged: true };
+    if ([204, 404].includes(status)) return { starred: status === 204 };
     throw new Error(`GitHub CLI Star request failed (HTTP ${status})`);
   }
   if (actionId === "get_readme") {

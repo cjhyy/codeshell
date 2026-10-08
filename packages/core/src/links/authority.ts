@@ -33,6 +33,12 @@ export function allowsLinkAction(
   provider: string,
   action: string,
 ): boolean {
+  if (
+    provider === "github" &&
+    action === "set_starred" &&
+    credential.meta?.linkExecutionBackend === "cli"
+  )
+    return false;
   const ids = credential.meta?.linkCapabilityIds;
   if (
     credential.meta?.linkExecutionRuntime === "server" ||
