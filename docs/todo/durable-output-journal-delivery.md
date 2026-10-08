@@ -173,3 +173,11 @@ storage. The shared browser projection runs on both live reducer entrances and
 durable replay. Actual Engine tests enqueue file+image guidance during the first
 response, prove a subsequent model request consumed both attachments, evict the
 RAM prefix, and compare live/recovered display fields in Desktop and Hub.
+
+Cache admission also binds the verified file stamp to the captured scan size:
+an append between size capture and stamp capture cannot cache an older head
+under the new full-file identity. A scheduled real writer regression proves
+the next fresh query sees that last durable append even if no further output
+changes the stamp. Attachment-steer live/recovery tests enter through the actual
+ChatSession queue; its envelope preserves the queued input's own submit id while
+retaining the parent run id, so the original user bubble is not overwritten.

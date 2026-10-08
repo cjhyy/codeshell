@@ -14,6 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import * as fs from "node:fs";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
 import {
@@ -235,6 +236,43 @@ describe("Session output journal", () => {
         hook.mockRestore();
       }
     }
+  });
+  test("an append between the captured size and stamp cannot poison the current-head cache", () => {
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "old prefix" });
+    const inode = statSync(f.file).ino;
+    const original = fs.fstatSync;
+    let appended = false;
+    let latest: string | undefined;
+    const hook = spyOn(fs, "fstatSync").mockImplementation(((
+      fd: number,
+      options?: { bigint?: boolean },
+    ) => {
+      const stat = original(fd, options as never);
+      if (!appended && options?.bigint && Number(stat.ino) === inode) {
+        appended = true;
+        latest = f.writer.append({ type: "text_delta", text: "last durable append" });
+        return original(fd, options as never);
+      }
+      return stat;
+    }) as typeof fs.fstatSync);
+    try {
+      // Appending at the first journal stamp happens after readOutputJournal
+      // has captured its scan size. This request may freeze the older prefix.
+      expect(readOutputJournal(f.root, f.id).status).toBe("ok");
+      expect(appended).toBe(true);
+    } finally {
+      hook.mockRestore();
+    }
+    // No further append changes the stamp: a fresh read must see the last
+    // published cursor rather than reuse an old head under that newer stamp.
+    const current = readOutputJournal(f.root, f.id);
+    expect(current.status).toBe("ok");
+    expect(current.through).toBe(latest!);
+    expect(current.frames.at(-1)?.event).toMatchObject({
+      type: "text_delta",
+      text: "last durable append",
+    });
   });
   test("child forwarding retains origin while the parent commits its own distinct scope", () => {
     const parent = fixture(),

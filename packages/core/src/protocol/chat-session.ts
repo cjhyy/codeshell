@@ -498,7 +498,16 @@ export class ChatSession {
         }
         onStream?.(
           (runId || clientMessageId) && !("agentId" in event && event.agentId !== undefined)
-            ? { ...event, runId, clientMessageId }
+            ? {
+                ...event,
+                runId,
+                // Rich queued input owns its submit identity. Other stream
+                // events retain this run's envelope, including legacy peers.
+                clientMessageId:
+                  event.type === "steer_injected" && event.transcriptMessage
+                    ? event.clientMessageId
+                    : clientMessageId,
+              }
             : event,
         );
       };

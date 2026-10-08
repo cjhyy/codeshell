@@ -391,7 +391,10 @@ function verifiedFile(fd: number, file: string, start: Position, size: number): 
   const result = { stamp, head, checkpoints };
   // A concurrent append may leave the frozen scan valid, but its new stamp
   // cannot certify the unseen tail. Rebuild on the next request instead.
-  if (fileStamp(fd) === stamp) {
+  if (fileStamp(fd) === stamp && fstatSync(fd).size === size) {
+    // The caller captured `size` before reading the header. A worker may
+    // finish an append before this function captures `stamp`; never certify
+    // that older scan bound with the newer full-file cache identity.
     verifiedFiles.delete(file);
     verifiedFiles.set(file, result);
     if (verifiedFiles.size > MAX_VERIFIED_FILES)

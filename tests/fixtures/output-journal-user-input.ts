@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "../../packages/core/src/engine/engine.js";
+import { ChatSession } from "../../packages/core/src/protocol/chat-session.js";
 import { LLMClientBase } from "../../packages/core/src/llm/client-base.js";
 import { registerProvider } from "../../packages/core/src/llm/client-factory.js";
 import type { CreateMessageOptions } from "../../packages/core/src/llm/types.js";
@@ -109,7 +110,7 @@ export async function outputUserInputFixture(
       ? "Inspect these attachments"
       : "";
   try {
-    const result = await engine.run(mode === "steer" ? "Start before steering" : prompt, {
+    const options = {
       sessionId,
       behaviorMode: "fixture",
       clientMessageId: "fixture-input",
@@ -118,7 +119,7 @@ export async function outputUserInputFixture(
         : {}),
       ...(mode === "injected" ? { injected: true } : {}),
       ...(mode === "agent" ? { agentDirection: { envelopeIds: [], correlationIds: [] } } : {}),
-      onStream: (event) => {
+      onStream: (event: StreamEvent) => {
         events.push(event);
         if (mode === "steer" && !steerAccepted && event.type === "text_delta") {
           const queued = engine.enqueueSteer(
@@ -132,7 +133,15 @@ export async function outputUserInputFixture(
           steerAccepted = true;
         }
       },
-    });
+    };
+    // Exercise the real Host queue/envelope, not only raw Engine callbacks.
+    const result =
+      mode === "steer"
+        ? await new ChatSession({ id: sessionId, engine }).enqueueTurn(
+            "Start before steering",
+            options,
+          )
+        : await engine.run(prompt, options);
     if (result.reason !== "completed")
       throw new Error(`Fixture run failed: ${result.reason}: ${result.text}`);
     const transcript = readFileSync(join(sessionRoot, sessionId, "transcript.jsonl"), "utf8")
