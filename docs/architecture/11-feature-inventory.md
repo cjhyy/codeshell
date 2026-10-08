@@ -322,3 +322,12 @@
 | **主题系统** | 解析主题色和主题设置 | `packages/tui/src/ui/theme.ts:31`，`packages/tui/src/ui/theme.ts:71` | 配置主题后自动应用 |
 | **性能探针** | 可选事件循环、stream rate、render frame 性能探针 | `packages/tui/src/ui/perf-probes.ts:31`，`packages/tui/src/ui/perf-probes.ts:80`，`packages/tui/src/ui/perf-probes.ts:240` | 设置 `CODESHELL_UI_PERF=1` 后启用 |
 | **CLI 输出渲染器** | headless 输出 text/json/jsonl/stream-json，并压缩工具输出摘要 | `packages/tui/src/cli/output/renderer.ts:119` | `code-shell run -o jsonl` 或 `-o stream-json` |
+
+
+## 四、本地任务中心（2026-10-08 补充）
+
+桌面侧边栏和命令面板的「任务中心」统一查看本地 Session、历史 Run、自动化、Mimi 委派、子 Agent、后台 shell/job 与 external runtime。默认分为等待处理、运行中、失败、已完成；支持来源、项目/工作区、状态和标题筛选。每条记录可打开原始会话或详情，只展示权威来源支持的控制动作；自动化的暂停/继续控制 schedule，立即运行独立于执行 Session 的取消。
+
+主进程读模型位于 `packages/desktop/src/main/task-inbox/`，页面位于 `packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx`。投影写入 `<userData>/task-inbox/v1.json`（0600），保留全部非终态与最近 2,000 条终态，损坏文件隔离后从来源重建；不迁移权威任务存储。`featureFlags.taskInboxV1: false` 可停用。本功能限本地桌面端。
+
+详见[设计](../superpowers/specs/2026-09-01-local-task-center-design.md)和[实施与验证记录](../superpowers/plans/2026-09-01-local-task-center.md)。
