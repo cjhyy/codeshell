@@ -15,6 +15,7 @@ describe("PageRegistry", () => {
       "extensions",
       "digital_humans",
       "task_inbox",
+      "optimization_lab",
       "automation",
       "credentials",
     ]);
@@ -26,6 +27,7 @@ describe("PageRegistry", () => {
       { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
       { kind: "i18n", key: "sidebar.taskInbox" },
+      { kind: "i18n", key: "sidebar.optimizationLab" },
       { kind: "i18n", key: "sidebar.automation" },
       { kind: "i18n", key: "sidebar.credentials" },
     ]);
@@ -126,6 +128,7 @@ describe("migrated builtin pages", () => {
       "extensions",
       "digital_humans",
       "task_inbox",
+      "optimization_lab",
       "automation",
       "credentials",
     ]);

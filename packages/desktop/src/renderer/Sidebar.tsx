@@ -101,6 +101,7 @@ interface SidebarProps {
   activeProjectPath: string | null;
   viewMode: ViewMode;
   taskInboxEnabled?: boolean;
+  optimizationLabEnabled?: boolean;
 }
 
 const COMPACT_SESSION_LIMIT = 5;
@@ -129,6 +130,7 @@ export function shouldPromptForPrimaryTrust(level: "trusted" | "untrusted" | "un
 
 export function Sidebar({
   taskInboxEnabled = true,
+  optimizationLabEnabled = false,
   projects,
   sessions,
   activeProjectId,
@@ -210,7 +212,9 @@ export function Sidebar({
   // Re-render when pages register/unregister (same idiom as panels/PanelArea.tsx:158).
   useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);
   const navPages = PAGE_REGISTRY.navEntries().filter(
-    (page) => page.key !== "task_inbox" || taskInboxEnabled,
+    (page) =>
+      (page.key !== "task_inbox" || taskInboxEnabled) &&
+      (page.key !== "optimization_lab" || optimizationLabEnabled),
   );
 
   // Pin sort (sortProjects: pinned first, then by addedAt asc).

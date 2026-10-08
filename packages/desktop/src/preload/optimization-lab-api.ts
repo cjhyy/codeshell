@@ -1,0 +1,12 @@
+import type { IpcRenderer } from "electron";
+import type { OptimizationLabApi } from "../shared/optimization-lab";
+export type { OptimizationLabApi } from "../shared/optimization-lab";
+
+export function createOptimizationLabApi(ipc: Pick<IpcRenderer, "invoke">): OptimizationLabApi {
+  return {
+    query: (type, input) => ipc.invoke("optimizationLab:query", type, input),
+    authorize: (input) => ipc.invoke("optimizationLab:authorize", input),
+    exportFile: (input) => ipc.invoke("optimizationLab:exportFile", input),
+    importGrading: (input) => ipc.invoke("optimizationLab:importGrading", input),
+  };
+}

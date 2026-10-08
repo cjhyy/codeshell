@@ -392,6 +392,7 @@ import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
 import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
+import { registerOptimizationLabIpc } from "./optimization-lab-ipc.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
@@ -6842,6 +6843,37 @@ function taskInboxEnabled(): boolean {
   const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
   return settings.featureFlags?.taskInboxV1 !== false;
 }
+taskInboxDisposers.push(
+  registerOptimizationLabIpc({
+    ipc: ipcMain,
+    windows: () => [...mainWindows],
+    enabled: () =>
+      new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user").featureFlags
+        ?.optimization_lab === true,
+    resolveTarget: resolveRendererConfigurationTarget,
+    trusted: async (cwd) => (await getTrust(cwd)) === "trusted",
+    query: async (type, params) => {
+      if (!bridge) throw new Error("Optimization Lab worker is unavailable");
+      return bridge.requestOptimizationLab(type, params);
+    },
+    skills: (cwd) => listSkills(cwd),
+    confirm: (window, options) => dialog.showMessageBox(window, options),
+    save: async (window, name) => {
+      const result = await dialog.showSaveDialog(window, {
+        defaultPath: name,
+        filters: [{ name: "Optimization Lab", extensions: [name.endsWith(".md") ? "md" : "json"] }],
+      });
+      return result.canceled ? undefined : result.filePath;
+    },
+    choose: async (window) => {
+      const result = await dialog.showOpenDialog(window, {
+        properties: ["openFile"],
+        filters: [{ name: "Grading JSON", extensions: ["json"] }],
+      });
+      return result.canceled ? undefined : result.filePaths[0];
+    },
+  }),
+);
 const taskInboxSources = createTaskInboxSources({
   diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
   sessionCatalog: () => sessionCatalogStore.load(),

@@ -1,0 +1,670 @@
+import { useEffect, useRef, useState } from "react";
+import { FlaskConical, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { LabQueryType } from "../../shared/optimization-lab";
+import { useT } from "../i18n";
+import { OptimizationLabSummary } from "./OptimizationLabSummary";
+
+interface Discovery {
+  skills: Array<{ name: string; source: string; enabled?: boolean }>;
+  connections: Array<{
+    id: string;
+    label: string;
+    model: string;
+    provider: string;
+    eligible: boolean;
+    reason?: string;
+  }>;
+}
+export interface LabSnapshot {
+  id: string;
+  plan: Record<string, any>;
+  state: { revision: number; status: string; phase?: string; [key: string]: any };
+  estimate?: { maxRequests: number; maxExecutionMs: number; [key: string]: unknown };
+  [key: string]: any;
+}
+
+const sampleDataset = JSON.stringify(
+  {
+    schemaVersion: 1,
+    title: "Text task examples",
+    taskFamily: "summarize",
+    cases: Array.from({ length: 6 }, (_, index) => ({
+      id: `example-${index + 1}`,
+      version: 1,
+      sourceGroupId: `source-${index + 1}`,
+      provenance: "synthetic",
+      caseRole: index === 0 ? "target_failure" : "regression",
+      split: index < 3 ? "dev" : "holdout",
+      input: `Summarize this independently reviewed example ${index + 1}.`,
+      fixtureRefs: [],
+      rubric: [
+        { id: "quality", text: "Faithful, concise and complete.", requiresHumanGrading: true },
+      ],
+      hardAssertions: [],
+      readiness: "runnable",
+      missingEvidence: [],
+    })),
+  },
+  null,
+  2,
+);
+const activeStatuses = new Set([
+  "baselining",
+  "proposing",
+  "screening",
+  "final_evaluating",
+  "running",
+]);
+
+export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: string | null }) {
+  const { t } = useT();
+  const [enabled, setEnabled] = useState(false);
+  const [discovery, setDiscovery] = useState<Discovery>({ skills: [], connections: [] });
+  const [experiments, setExperiments] = useState<any[]>([]);
+  const [skillName, setSkillName] = useState("");
+  const [targetId, setTargetId] = useState("");
+  const [optimizerId, setOptimizerId] = useState("");
+  const [datasetText, setDatasetText] = useState(sampleDataset);
+  const [validation, setValidation] = useState<any>(null);
+  const [objective, setObjective] = useState<"quality" | "cost">("quality");
+  const [limits, setLimits] = useState({
+    maxRequests: 32,
+    maxExecutionMs: 600_000,
+    maxOutputTokens: 2048,
+    timeoutMs: 30_000,
+    maxCandidates: 1,
+  });
+  const [maxEstimatedTokens, setMaxTokens] = useState("");
+  const [maxFee, setMaxFee] = useState("");
+  const [expiryMinutes, setExpiryMinutes] = useState(60);
+  const [authorizationRequests, setAuthorizationRequests] = useState(32);
+  const [authorizationExecutionMs, setAuthorizationExecutionMs] = useState(600_000);
+  const [snapshot, setSnapshot] = useState<LabSnapshot | null>(null);
+  const [report, setReport] = useState<{ hash: string; markdown: string; json: unknown } | null>(
+    null,
+  );
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const epoch = useRef(0);
+  const errorMessage = (failure: unknown) => {
+    const message = String(failure);
+    return /(?:unknown|unsupported|not registered).*optimization_lab_|optimization_lab_.*(?:unknown|unsupported|not registered)/i.test(
+      message,
+    )
+      ? t("optimizationLab.restartRequired")
+      : message;
+  };
+  const target = activeProjectId ? { projectId: activeProjectId } : null;
+  useEffect(() => {
+    if (!snapshot) return;
+    setAuthorizationRequests(
+      snapshot.grant?.maxRequests ?? snapshot.estimate?.maxRequests ?? limits.maxRequests,
+    );
+    setAuthorizationExecutionMs(
+      snapshot.grant?.maxExecutionMs ?? snapshot.estimate?.maxExecutionMs ?? limits.maxExecutionMs,
+    );
+  }, [snapshot?.id, snapshot?.grant?.revision]);
+  const query = async <T,>(
+    type: LabQueryType,
+    params: Record<string, unknown> = {},
+  ): Promise<T> => {
+    if (!target) return Promise.reject(new Error(t("optimizationLab.selectProject")));
+    const current = epoch.current;
+    const result = await window.codeshell.optimizationLab.query<T>(type, { target, ...params });
+    if (current !== epoch.current) throw new Error("Project changed");
+    return result;
+  };
+  const run = async (action: () => Promise<void>) => {
+    const current = epoch.current;
+    setPending(true);
+    setError("");
+    try {
+      await action();
+    } catch (failure) {
+      if (current === epoch.current) setError(errorMessage(failure));
+    } finally {
+      if (current === epoch.current) setPending(false);
+    }
+  };
+  const loadList = async () => {
+    const result = await query<any>("list");
+    setExperiments(Array.isArray(result) ? result : (result.experiments ?? []));
+  };
+  useEffect(() => {
+    const current = ++epoch.current;
+    setSnapshot(null);
+    setReport(null);
+    setValidation(null);
+    setError("");
+    setPending(false);
+    void window.codeshell
+      .getSettings("user")
+      .then((settings) => {
+        const on =
+          (settings?.featureFlags as Record<string, boolean> | undefined)?.optimization_lab ===
+          true;
+        if (current !== epoch.current) return;
+        setEnabled(on);
+        if (!on || !activeProjectId) return;
+        setPending(true);
+        return Promise.all([
+          window.codeshell.optimizationLab.query<Discovery>("discover", {
+            target: { projectId: activeProjectId },
+          }),
+          window.codeshell.optimizationLab.query<any>("list", {
+            target: { projectId: activeProjectId },
+          }),
+        ]).then(([found, saved]) => {
+          if (current !== epoch.current) return;
+          setDiscovery(found);
+          setSkillName(found.skills[0]?.name ?? "");
+          const first = found.connections.find((connection) => connection.eligible)?.id ?? "";
+          setTargetId(first);
+          setOptimizerId(first);
+          setExperiments(Array.isArray(saved) ? saved : (saved.experiments ?? []));
+        });
+      })
+      .catch((failure) => {
+        if (current === epoch.current) setError(errorMessage(failure));
+      })
+      .finally(() => {
+        if (current === epoch.current) setPending(false);
+      });
+    return () => {
+      epoch.current++;
+    };
+  }, [activeProjectId]);
+  useEffect(() => {
+    if (!snapshot || !target || !activeStatuses.has(snapshot.state.status)) return;
+    const current = epoch.current;
+    let inFlight = false;
+    const timer = setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
+      void window.codeshell.optimizationLab
+        .query<LabSnapshot>("status", { target, id: snapshot.id })
+        .then((next) => {
+          if (current === epoch.current) setSnapshot(next);
+        })
+        .catch((failure) => {
+          if (current === epoch.current) setError(errorMessage(failure));
+        })
+        .finally(() => {
+          inFlight = false;
+        });
+    }, 1200);
+    return () => clearInterval(timer);
+  }, [activeProjectId, snapshot?.id, snapshot?.state.status]);
+  const act = (type: "start" | "continue" | "stop" | "revoke") =>
+    run(async () => {
+      if (!snapshot) return;
+      const next = await query<LabSnapshot>(type, {
+        id: snapshot.id,
+        expectedRevision: snapshot.state.revision,
+        operationId:
+          type === "start"
+            ? (snapshot.grant?.startOperationId ?? crypto.randomUUID())
+            : crypto.randomUUID(),
+      });
+      setSnapshot(next);
+      setReport(null);
+      await loadList();
+    });
+  const inputClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
+  const field = (key: keyof typeof limits, label: string) => (
+    <label className="space-y-1 text-sm" key={key}>
+      <span>{label}</span>
+      <input
+        data-testid={`optimization-lab-${key}`}
+        className={inputClass}
+        type="number"
+        min={1}
+        step={1}
+        value={limits[key]}
+        onChange={(event) =>
+          setLimits((current) => ({ ...current, [key]: Number(event.target.value) }))
+        }
+      />
+    </label>
+  );
+  if (!enabled) return <div className="p-6">{t("optimizationLab.disabled")}</div>;
+  if (!target) return <div className="p-6">{t("optimizationLab.selectProject")}</div>;
+  const status = snapshot?.state.status ?? "draft";
+  const running = activeStatuses.has(status);
+  const waiting = status.startsWith("awaiting_");
+  return (
+    <div data-testid="optimization-lab-page" className="h-full overflow-y-auto p-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold">
+              <FlaskConical size={22} />
+              {t("optimizationLab.title")}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">{t("optimizationLab.subtitle")}</p>
+          </div>
+          <Button
+            variant="outline"
+            disabled={pending}
+            onClick={() =>
+              void run(async () => {
+                await loadList();
+                if (snapshot) setSnapshot(await query("get", { id: snapshot.id }));
+              })
+            }
+          >
+            <RefreshCw size={14} />
+            {t("optimizationLab.refresh")}
+          </Button>
+        </div>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
+          >
+            {error}
+          </p>
+        )}
+        <section className="rounded-xl border p-4 space-y-3">
+          <h2 className="font-medium">{t("optimizationLab.saved")}</h2>
+          <select
+            data-testid="optimization-lab-saved"
+            className={inputClass}
+            value={snapshot?.id ?? ""}
+            disabled={pending}
+            onChange={(event) => {
+              const id = event.target.value;
+              void run(async () => {
+                setReport(null);
+                setSnapshot(id ? await query("get", { id }) : null);
+              });
+            }}
+          >
+            <option value="">{t("optimizationLab.newExperiment")}</option>
+            {experiments.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title ?? item.id} · {item.status ?? item.state?.status}
+              </option>
+            ))}
+          </select>
+        </section>
+        {!snapshot && (
+          <section className="rounded-xl border p-4 space-y-4">
+            <h2 className="font-medium">{t("optimizationLab.materials")}</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label className="space-y-1 text-sm">
+                <span>{t("optimizationLab.skill")}</span>
+                <select
+                  data-testid="optimization-lab-skill"
+                  className={inputClass}
+                  value={skillName}
+                  onChange={(e) => setSkillName(e.target.value)}
+                >
+                  {discovery.skills.map((skill) => (
+                    <option key={skill.name} value={skill.name}>
+                      {skill.name} · {skill.source}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {[
+                {
+                  label: t("optimizationLab.target"),
+                  id: "target-connection",
+                  value: targetId,
+                  set: setTargetId,
+                },
+                {
+                  label: t("optimizationLab.optimizer"),
+                  id: "optimizer-connection",
+                  value: optimizerId,
+                  set: setOptimizerId,
+                },
+              ].map((item) => (
+                <label key={item.id} className="space-y-1 text-sm">
+                  <span>{item.label}</span>
+                  <select
+                    data-testid={`optimization-lab-${item.id}`}
+                    className={inputClass}
+                    value={item.value}
+                    onChange={(e) => item.set(e.target.value)}
+                  >
+                    {discovery.connections.map((connection) => (
+                      <option
+                        key={connection.id}
+                        value={connection.id}
+                        disabled={!connection.eligible}
+                      >
+                        {connection.label} · {connection.model}
+                        {connection.reason ? ` (${connection.reason})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+            {discovery.connections
+              .filter((item) => !item.eligible)
+              .map((item) => (
+                <p className="text-xs text-muted-foreground" key={item.id}>
+                  {item.label}: {item.reason}
+                </p>
+              ))}
+            <p className="text-sm text-muted-foreground">{t("optimizationLab.datasetHelp")}</p>
+            <textarea
+              data-testid="optimization-lab-dataset"
+              aria-label={t("optimizationLab.dataset")}
+              className={`${inputClass} min-h-64 font-mono text-xs`}
+              value={datasetText}
+              onChange={(e) => {
+                setDatasetText(e.target.value);
+                setValidation(null);
+              }}
+            />
+            <Button
+              data-testid="optimization-lab-validate"
+              variant="outline"
+              disabled={pending}
+              onClick={() =>
+                void run(async () => {
+                  const dataset = JSON.parse(datasetText);
+                  const valid = await query<any>("validate_dataset", { dataset });
+                  setValidation(valid);
+                  if (valid.ok)
+                    setValidation({ ...valid, frozen: await query("freeze_dataset", { dataset }) });
+                })
+              }
+            >
+              {t("optimizationLab.validateFreeze")}
+            </Button>
+            {validation && (
+              <pre
+                data-testid="optimization-lab-validation"
+                className="max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap"
+              >
+                {JSON.stringify(validation, null, 2)}
+              </pre>
+            )}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {field("maxRequests", t("optimizationLab.maxRequests"))}
+              {field("maxExecutionMs", t("optimizationLab.maxExecution"))}
+              {field("maxOutputTokens", t("optimizationLab.maxOutput"))}
+              {field("timeoutMs", t("optimizationLab.timeout"))}
+              <label className="space-y-1 text-sm">
+                <span>{t("optimizationLab.candidates")}</span>
+                <select
+                  className={inputClass}
+                  value={limits.maxCandidates}
+                  onChange={(e) =>
+                    setLimits((current) => ({ ...current, maxCandidates: Number(e.target.value) }))
+                  }
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>{t("optimizationLab.objective")}</span>
+                <select
+                  className={inputClass}
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value as "quality" | "cost")}
+                >
+                  <option value="quality">{t("optimizationLab.quality")}</option>
+                  <option value="cost">{t("optimizationLab.cost")}</option>
+                </select>
+              </label>
+            </div>
+            <Button
+              data-testid="optimization-lab-prepare"
+              disabled={pending || !skillName || !targetId || !optimizerId}
+              onClick={() =>
+                void run(async () => {
+                  const prepared = await query<LabSnapshot>("prepare", {
+                    dataset: JSON.parse(datasetText),
+                    skillName,
+                    targetConnectionId: targetId,
+                    optimizerConnectionId: optimizerId,
+                    objective,
+                    limits: { ...limits, repeats: 1 },
+                  });
+                  setSnapshot(prepared);
+                  await loadList();
+                })
+              }
+            >
+              {t("optimizationLab.prepare")}
+            </Button>
+          </section>
+        )}
+        {snapshot && (
+          <>
+            <section className="rounded-xl border p-4 space-y-3">
+              <h2 className="font-medium">{t("optimizationLab.frozenPlan")}</h2>
+              <OptimizationLabSummary snapshot={snapshot} />
+            </section>
+            <section className="rounded-xl border p-4 space-y-4">
+              <h2 className="font-medium">{t("optimizationLab.authorization")}</h2>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="space-y-1 text-sm">
+                  <span>{t("optimizationLab.maxRequests")}</span>
+                  <input
+                    data-testid="optimization-lab-authorization-requests"
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={authorizationRequests}
+                    onChange={(e) => setAuthorizationRequests(Number(e.target.value))}
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span>{t("optimizationLab.maxExecution")}</span>
+                  <input
+                    data-testid="optimization-lab-authorization-execution"
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={authorizationExecutionMs}
+                    onChange={(e) => setAuthorizationExecutionMs(Number(e.target.value))}
+                  />
+                </label>
+
+                <label className="space-y-1 text-sm">
+                  <span>{t("optimizationLab.tokenThreshold")}</span>
+                  <input
+                    data-testid="optimization-lab-token-threshold"
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    value={maxEstimatedTokens}
+                    placeholder={t("optimizationLab.unknown")}
+                    onChange={(e) => setMaxTokens(e.target.value)}
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span>{t("optimizationLab.feeThreshold")}</span>
+                  <input
+                    data-testid="optimization-lab-fee-threshold"
+                    className={inputClass}
+                    type="number"
+                    min={0.000001}
+                    step="any"
+                    value={maxFee}
+                    placeholder={t("optimizationLab.unknown")}
+                    onChange={(e) => setMaxFee(e.target.value)}
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span>{t("optimizationLab.expiry")}</span>
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    value={expiryMinutes}
+                    onChange={(e) => setExpiryMinutes(Number(e.target.value))}
+                  />
+                </label>
+              </div>
+              <Button
+                data-testid="optimization-lab-authorize"
+                variant="outline"
+                disabled={
+                  pending || running || ["report_ready", "cancelled", "failed"].includes(status)
+                }
+                onClick={() =>
+                  void run(async () => {
+                    const current = epoch.current;
+                    const next = await window.codeshell.optimizationLab.authorize({
+                      target,
+                      id: snapshot.id,
+                      expectedRevision: snapshot.state.revision,
+                      planHash: snapshot.plan.planHash,
+                      operationId: crypto.randomUUID(),
+                      expiresAt: new Date(Date.now() + expiryMinutes * 60_000).toISOString(),
+                      limits: {
+                        maxRequests: authorizationRequests,
+                        maxExecutionMs: authorizationExecutionMs,
+                        maxEstimatedTokens: maxEstimatedTokens ? Number(maxEstimatedTokens) : null,
+                        maxEstimatedCostUsd: maxFee ? Number(maxFee) : null,
+                      },
+                    });
+                    if (next && current === epoch.current) setSnapshot(next as LabSnapshot);
+                  })
+                }
+              >
+                {t("optimizationLab.authorize")}
+              </Button>
+              <p className="text-sm text-muted-foreground">{t("optimizationLab.authorizeHelp")}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  data-testid="optimization-lab-start"
+                  disabled={pending || status !== "authorized"}
+                  onClick={() => void act("start")}
+                >
+                  {t("optimizationLab.start")}
+                </Button>
+                <Button
+                  data-testid="optimization-lab-continue"
+                  disabled={
+                    pending || !(waiting || ["interrupted", "budget_exhausted"].includes(status))
+                  }
+                  onClick={() => void act("continue")}
+                >
+                  {t("optimizationLab.continue")}
+                </Button>
+                <Button
+                  data-testid="optimization-lab-stop"
+                  variant="outline"
+                  disabled={pending || !(running || waiting)}
+                  onClick={() => void act("stop")}
+                >
+                  {t("optimizationLab.stop")}
+                </Button>
+                <Button
+                  data-testid="optimization-lab-revoke"
+                  variant="outline"
+                  disabled={
+                    pending ||
+                    ["draft", "ready", "report_ready", "cancelled", "failed"].includes(status)
+                  }
+                  onClick={() => void act("revoke")}
+                >
+                  {t("optimizationLab.revoke")}
+                </Button>
+              </div>
+            </section>
+            <section className="rounded-xl border p-4 space-y-3">
+              <h2 className="font-medium">{t("optimizationLab.gradingReport")}</h2>
+              <p className="text-sm text-muted-foreground">{t("optimizationLab.gradingHelp")}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  data-testid="optimization-lab-export-grading"
+                  variant="outline"
+                  disabled={pending || running}
+                  onClick={() =>
+                    void run(async () => {
+                      await window.codeshell.optimizationLab.exportFile({
+                        target,
+                        id: snapshot.id,
+                        kind: "grading",
+                      });
+                    })
+                  }
+                >
+                  {t("optimizationLab.exportGrading")}
+                </Button>
+                <Button
+                  data-testid="optimization-lab-import-grading"
+                  variant="outline"
+                  disabled={pending || running}
+                  onClick={() =>
+                    void run(async () => {
+                      const current = epoch.current;
+                      const next = await window.codeshell.optimizationLab.importGrading({
+                        target,
+                        id: snapshot.id,
+                        expectedRevision: snapshot.state.revision,
+                      });
+                      if (next && current === epoch.current) {
+                        setSnapshot(next as LabSnapshot);
+                        setReport(null);
+                      }
+                    })
+                  }
+                >
+                  {t("optimizationLab.importGrading")}
+                </Button>
+                <Button
+                  data-testid="optimization-lab-open-report"
+                  variant="outline"
+                  disabled={pending || running}
+                  onClick={() =>
+                    void run(async () => {
+                      setReport(await query("report", { id: snapshot.id }));
+                    })
+                  }
+                >
+                  {t("optimizationLab.openReport")}
+                </Button>
+              </div>
+              {report && (
+                <>
+                  <p className="break-all font-mono text-xs">{report.hash}</p>
+                  <pre
+                    data-testid="optimization-lab-report"
+                    className="max-h-[36rem] overflow-auto rounded-md bg-muted p-4 text-xs whitespace-pre-wrap"
+                  >
+                    {report.markdown}
+                  </pre>
+                  <div className="flex gap-2">
+                    {(["report-markdown", "report-json"] as const).map((kind) => (
+                      <Button
+                        key={kind}
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() =>
+                          void run(async () => {
+                            await window.codeshell.optimizationLab.exportFile({
+                              target,
+                              id: snapshot.id,
+                              kind,
+                            });
+                          })
+                        }
+                      >
+                        {kind === "report-json" ? "JSON" : "Markdown"}
+                      </Button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

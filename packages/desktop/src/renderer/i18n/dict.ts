@@ -35,6 +35,7 @@ import { mobile } from "@cjhyy/code-shell-web";
 import { pet } from "./ns/pet";
 import { digitalHumans } from "./ns/digital-humans";
 import { taskInbox } from "./ns/task-inbox";
+import { optimizationLab } from "./ns/optimization-lab";
 import { projectConfig } from "./ns/project-config";
 
 export const messages = {
@@ -52,6 +53,7 @@ export const messages = {
     ...digitalHumans.zh,
     ...projectConfig.zh,
     ...taskInbox.zh,
+    ...optimizationLab.zh,
   },
   en: {
     ...core.en,
@@ -67,6 +69,7 @@ export const messages = {
     ...digitalHumans.en,
     ...projectConfig.en,
     ...taskInbox.en,
+    ...optimizationLab.en,
   },
 } as const;
 
