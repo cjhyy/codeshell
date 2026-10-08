@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { SessionManager, type EncryptionCipher } from "@cjhyy/code-shell-core";
+import type { EncryptionCipher } from "@cjhyy/code-shell-core";
 import {
   ModelRequestKeyStore,
+  assertDurableRequestOwner,
   type ModelRequestSigner,
   type ModelRequestSignInput,
 } from "@cjhyy/code-shell-core/internal";
@@ -57,17 +58,7 @@ export function createDesktopModelRequestSigner(options: {
       }
       if (!options.encryptionAvailable())
         throw new Error("Host request key encryption unavailable");
-      const state = new SessionManager(options.sessionStorageDir).readSessionState(
-        subject.sessionId,
-      );
-      if (
-        !state ||
-        state.ephemeral === true ||
-        subject.sessionId.startsWith("qchat-") ||
-        state.costState?.accountingSessionId !== subject.sessionInstanceId ||
-        state.costState?.sessionScopeId !== scopeId
-      )
-        throw new Error("Durable request signing incarnation mismatch");
+      assertDurableRequestOwner(subject, options.sessionStorageDir);
       return keys.sign(input);
     },
     dispose() {

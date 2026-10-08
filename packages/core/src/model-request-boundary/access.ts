@@ -23,6 +23,11 @@ export function getDefaultModelRequestSigner(): ModelRequestSigner {
   );
 }
 
+/** Trusted isolated Run Hosts own and dispose this signer; durable subjects are refused. */
+export function createEphemeralModelRequestSigner(): ModelRequestSigner {
+  return new ModelRequestKeyStore({ custodyMode: "ephemeral-memory" });
+}
+
 /** Narrow worker→Main request: prehashes only, no key retrieval or message contents. */
 export function createIpcModelRequestSigner(
   transport: Pick<Transport, "send" | "onMessage">,

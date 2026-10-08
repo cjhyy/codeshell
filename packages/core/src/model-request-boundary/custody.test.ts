@@ -164,6 +164,9 @@ test("ephemeral keys never create custody files and are destroyed with the Host 
   const replacement = await store.sign(ephemeral);
   expect(replacement.keyId).not.toBe(first.keyId);
   expect(existsSync(folder)).toBe(false);
+  await expect(
+    new ModelRequestKeyStore({ custodyMode: "ephemeral-memory" }).sign(input),
+  ).rejects.toThrow("cannot sign a durable Session");
 });
 
 test("restart and concurrent independent Host processes retain exactly one durable Session key", async () => {

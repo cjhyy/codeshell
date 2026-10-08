@@ -94,6 +94,7 @@ export { resolveThemeSetting, type SystemTheme } from "./utils/systemTheme.js";
 export { rotateLogs } from "./logging/logger.js";
 export { recordUIEvent } from "./logging/session-recorder.js";
 export { ModelRequestKeyStore } from "./model-request-boundary/custody.js";
+export { assertDurableRequestOwner } from "./model-request-boundary/session-owner.js";
 export {
   createIpcModelRequestSigner,
   setDefaultModelRequestSigner,

@@ -53,12 +53,15 @@ interface KeyRecord {
 export class ModelRequestKeyStore implements ModelRequestSigner {
   private readonly ephemeralKeys = new Map<string, { keyId: string; key: Buffer }>();
   constructor(
-    private readonly options: {
-      directory: string;
-      cipher: EncryptionCipher;
-      custodyMode: Exclude<ModelRequestCustody, "ephemeral-memory">;
-    },
+    private readonly options:
+      | {
+          directory: string;
+          cipher: EncryptionCipher;
+          custodyMode: Exclude<ModelRequestCustody, "ephemeral-memory">;
+        }
+      | { custodyMode: "ephemeral-memory" },
   ) {
+    if (options.custodyMode === "ephemeral-memory") return;
     if (
       !options.directory ||
       !["host-encrypted", "owner-only-plaintext"].includes(options.custodyMode)
@@ -128,6 +131,8 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
   }
 
   private keyFor(ownerDigest: string): { record: KeyRecord; key: Buffer } {
+    if (this.options.custodyMode === "ephemeral-memory")
+      throw new Error("Ephemeral request signer cannot sign a durable Session");
     mkdirSync(this.options.directory, { recursive: true, mode: 0o700 });
     const directory = lstatSync(this.options.directory);
     if (

@@ -19,6 +19,7 @@ export interface ModelRequestBinding {
   configVersion: number;
   provider: string;
   model: string;
+  ensureDurableOwner?: () => void;
 }
 interface LogicalCall {
   binding: ModelRequestBinding;
@@ -40,6 +41,21 @@ interface ProviderProjection {
 }
 const logicalCalls = new AsyncLocalStorage<LogicalCall>();
 const projections = new AsyncLocalStorage<ProviderProjection>();
+
+/** Metadata only, for trusted transport accounting; never an admission/permission grant. */
+export function currentModelRequestCall():
+  | Readonly<{ logicalCallId: string; provider: string; model: string }>
+  | undefined {
+  const call = logicalCalls.getStore();
+  return (
+    call &&
+    Object.freeze({
+      logicalCallId: call.logicalCallId,
+      provider: call.binding.provider,
+      model: call.binding.model,
+    })
+  );
+}
 
 /** One UUID per main-model invocation; transparent SDK retries remain in this call. */
 export async function withModelRequestBoundary<T>(
@@ -170,6 +186,7 @@ export function requestBoundaryFetch(
         : messages;
     let signatures;
     try {
+      call.binding.ensureDurableOwner?.();
       signatures = await call.binding.signer.sign({
         subject: call.binding.subject,
         prehashes: {
