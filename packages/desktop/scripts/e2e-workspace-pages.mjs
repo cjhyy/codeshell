@@ -14,6 +14,8 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
+  openSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -334,6 +336,34 @@ try {
   await dismissTrustDialog();
   await installSyntheticMetadata();
 
+  const settingsMenu = await openSettingsMenu(win);
+  const sidebarNav = win.locator("aside nav");
+  for (const label of [
+    /^(任务中心|Task center)$/,
+    /^(凭证|Credentials)$/,
+    /^(云端工作台|Cloud workbench)$/,
+    /^(优化实验室|Optimization Lab)$/,
+  ]) {
+    assert(
+      (await sidebarNav.getByRole("button", { name: label }).count()) === 0,
+      `Secondary workspace entry ${label} is absent from the primary sidebar`,
+    );
+  }
+  assert(
+    await settingsMenu.getByRole("menuitem", { name: "凭证", exact: true }).isVisible(),
+    "Credentials remain available from Settings",
+  );
+  assert(
+    await settingsMenu.getByRole("menuitem", { name: "云端工作台", exact: true }).isVisible(),
+    "Cloud workbench remains available from Settings",
+  );
+  assert(
+    (await settingsMenu.getByRole("menuitem", { name: "优化实验室", exact: true }).count()) === 0,
+    "Optimization Lab stays hidden while its feature flag is off",
+  );
+  await win.keyboard.press("Escape");
+  await settingsMenu.waitFor({ state: "hidden" });
+
   for (const page of [
     { label: "扩展", id: "extensions", title: "插件包" },
     { label: "凭证", id: "credentials", title: "凭证" },
@@ -342,7 +372,8 @@ try {
     // Navigate at desktop width; narrow layouts keep their drawer closed and
     // must retain focus when the existing page changes its column arrangement.
     await win.setViewportSize({ width: 1280, height: 820 });
-    await win.getByRole("button", { name: page.label, exact: true }).first().click();
+    if (page.id === "credentials") await navigateSettingsMenu(win, page.label);
+    else await win.getByRole("button", { name: page.label, exact: true }).first().click();
     await win.waitForFunction(
       (id) => JSON.parse(localStorage.getItem("codeshell.view") || "{}").viewMode === id,
       page.id,
@@ -362,6 +393,12 @@ try {
       [390, 700, "-narrow"],
     ]) {
       await win.setViewportSize({ width, height });
+      if (page.id === "credentials") {
+        await navigateSettingsMenu(win, "凭证");
+        await heading.waitFor({ state: "visible" });
+        if (width === 390)
+          await win.locator('[data-sidebar-action="toggle"][aria-expanded="false"]').waitFor();
+      }
       for (const dark of [false, true]) {
         await win.evaluate(
           (enabled) => document.documentElement.classList.toggle("dark", enabled),

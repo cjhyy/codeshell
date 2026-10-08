@@ -16,6 +16,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(
@@ -179,7 +180,7 @@ async function launch() {
     await viewOnly.click();
     await viewOnly.waitFor({ state: "hidden" });
   }
-  await win.getByRole("button", { name: /^(任务中心|Task center)$/ }).waitFor();
+  await win.getByRole("button", { name: /^(设置|Settings)$/ }).waitFor();
   await win.evaluate(() => {
     localStorage.setItem("codeshell.uiLanguage", "zh");
     window.dispatchEvent(new window.Event("codeshell:language-changed"));
@@ -236,7 +237,12 @@ async function coreRegistry(operation, input) {
     { operation, input, registryBootstrap },
   );
 }
-async function openTaskCenter() {
+async function openTaskCenter({ commandPalette = false } = {}) {
+  if (!commandPalette) {
+    await navigateSettingsMenu(win, "任务中心", { activity: true });
+    await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
+    return;
+  }
   await win.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
   const palette = win.getByRole("dialog", { name: "命令面板", exact: true });
   await palette.waitFor({ state: "visible" });
@@ -278,6 +284,7 @@ async function terminateOwnedProcessGroup(pgid) {
 try {
   await seedAuthority();
   await launch();
+  await openTaskCenter({ commandPalette: true });
   const initial = await until(async () => {
     const value = await list();
     return value.records.some((record) => record.sourceId === "task-inbox-mimi-done") &&

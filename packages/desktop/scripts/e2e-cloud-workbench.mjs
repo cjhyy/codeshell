@@ -1,4 +1,4 @@
-/* global window */
+/* global document, window */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -48,8 +49,8 @@ try {
     )
   )
     await viewOnly.click();
-  await win.getByRole("button", { name: /^(云端工作台|Cloud workbench)$/ }).click();
-  const prompt = win.getByRole("dialog");
+  await navigateSettingsMenu(win, /^(云端工作台|Cloud workbench)$/);
+  const prompt = win.getByRole("dialog", { name: /^(云端工作台|Cloud workbench)$/ });
   await prompt.getByPlaceholder("https://cloud.example.com").fill(control.url);
   const opened = app.waitForEvent("window");
   await prompt.getByRole("button", { name: /打开工作台|Open workbench/ }).click();
@@ -79,7 +80,41 @@ try {
     "The clean cloud address was not saved",
   );
   await cloud.close();
-  await win.getByRole("button", { name: /^(云端工作台|Cloud workbench)$/ }).click();
+
+  await win.setViewportSize({ width: 390, height: 760 });
+  await navigateSettingsMenu(win, /^(云端工作台|Cloud workbench)$/);
+  const address = prompt.getByPlaceholder("https://cloud.example.com");
+  await address.waitFor({ state: "visible" });
+  await win.waitForFunction(
+    (node) => node === document.activeElement,
+    await address.elementHandle(),
+  );
+  for (let index = 0; index < 6; index += 1) {
+    await win.keyboard.press("Tab");
+    assert(
+      await prompt.evaluate((node) => node.contains(document.activeElement)),
+      `Cloud address prompt retains keyboard focus after Tab ${index + 1}`,
+    );
+  }
+  await win.keyboard.press("Escape");
+  await prompt.waitFor({ state: "hidden" });
+  const drawer = win.getByRole("dialog", { name: /^(导航|Navigation)$/ });
+  await drawer.waitFor({ state: "visible" });
+  const settings = drawer.getByRole("button", { name: /^(设置|Settings)$/ });
+  await win.waitForFunction(
+    (node) => node === document.activeElement,
+    await settings.elementHandle(),
+  );
+  assert(
+    (await win.locator('[data-sidebar-action="toggle"]').getAttribute("aria-expanded")) === "true",
+    "Escape closes only the Cloud prompt and keeps the narrow sidebar open",
+  );
+  assert(app.windows().length === 1, "Cancelling the Cloud prompt opens no remote window");
+  await win.keyboard.press("Escape");
+  await drawer.waitFor({ state: "hidden" });
+  await win.setViewportSize({ width: 1280, height: 820 });
+
+  await navigateSettingsMenu(win, /^(云端工作台|Cloud workbench)$/);
   await prompt.getByPlaceholder("https://cloud.example.com").waitFor();
   assert(
     (await prompt.getByPlaceholder("https://cloud.example.com").inputValue()) === `${control.url}/`,
@@ -91,7 +126,7 @@ try {
   await again.getByRole("heading", { name: "Cloud-only project", exact: true }).waitFor();
   assert(errors.length === 0 && cloudErrors.length === 0, "Renderer errors occurred");
   console.log(
-    "PASS: production Desktop sidebar -> isolated cloud window -> real Hub login -> cloud project creation -> unchanged local registry -> login/project preserved on reopen",
+    "PASS: production Desktop settings menu -> isolated cloud window -> real Hub login -> cloud project creation -> unchanged local registry -> narrow Cloud prompt focus/Tab/Escape -> login/project preserved on reopen",
   );
 } finally {
   await app?.close().catch(() => {});

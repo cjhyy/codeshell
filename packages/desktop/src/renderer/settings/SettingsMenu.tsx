@@ -9,6 +9,10 @@ import {
   Activity,
   ShieldCheck,
   ScrollText,
+  ListTodo,
+  KeyRound,
+  Cloud,
+  FlaskConical,
 } from "lucide-react";
 import { saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { useT } from "../i18n/I18nProvider";
@@ -28,12 +32,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-export type ActivityPage = "sessions" | "runs" | "approvals" | "logs";
+export type ActivityPage = "task_inbox" | "sessions" | "runs" | "approvals" | "logs";
 
 interface Props {
   onOpenSettingsPage: () => void;
-  /** History pages also stay available from the global command palette. */
-  onNavigate?: (page: ActivityPage) => void;
+  /** Task and history pages also stay available from the global command palette. */
+  onNavigate?: (page: ActivityPage | "credentials" | "optimization_lab") => void;
+  onOpenCloudWorkbench?: () => void;
+  taskInboxEnabled?: boolean;
+  optimizationLabEnabled?: boolean;
   /** When sidebar is collapsed the trigger goes straight to settings. */
   sidebarCollapsed?: boolean;
   petWidgetVisible: boolean;
@@ -46,6 +53,9 @@ const LANGUAGES: UILanguage[] = ["zh", "en"];
 export function SettingsMenu({
   onOpenSettingsPage,
   onNavigate,
+  onOpenCloudWorkbench,
+  taskInboxEnabled = true,
+  optimizationLabEnabled = false,
   sidebarCollapsed,
   petWidgetVisible,
   onTogglePetWidget,
@@ -144,6 +154,9 @@ export function SettingsMenu({
                 onEscapeKeyDown={(event) => closeSubmenu(event, "activity")}
               >
                 {[
+                  ...(taskInboxEnabled
+                    ? [{ page: "task_inbox" as const, label: t("taskInbox.title"), Icon: ListTodo }]
+                    : []),
                   {
                     page: "sessions" as const,
                     label: t("auto.sessions.title"),
@@ -170,6 +183,34 @@ export function SettingsMenu({
             </DropdownMenuPortal>
           </DropdownMenuSub>
         )}
+        {onNavigate && (
+          <DropdownMenuItem
+            className="rounded-lg py-2"
+            onSelect={() => closeThenNavigate(() => onNavigate("credentials"))}
+          >
+            <KeyRound size={14} aria-hidden />
+            {t("sidebar.credentials")}
+          </DropdownMenuItem>
+        )}
+        {onOpenCloudWorkbench && (
+          <DropdownMenuItem
+            className="rounded-lg py-2"
+            onSelect={() => closeThenNavigate(onOpenCloudWorkbench)}
+          >
+            <Cloud size={14} aria-hidden />
+            {t("sidebar.cloudWorkbench")}
+          </DropdownMenuItem>
+        )}
+        {onNavigate && optimizationLabEnabled && (
+          <DropdownMenuItem
+            className="rounded-lg py-2"
+            onSelect={() => closeThenNavigate(() => onNavigate("optimization_lab"))}
+          >
+            <FlaskConical size={14} aria-hidden />
+            {t("sidebar.optimizationLab")}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
         <DropdownMenuItem className="rounded-lg py-2" onSelect={onTogglePetWidget}>
           <Ghost size={14} aria-hidden />
           {t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}

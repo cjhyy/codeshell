@@ -162,7 +162,7 @@
 | **技能 tab** | 技能列表、搜索、启停、详情 modal | `packages/desktop/src/renderer/extensions/SkillsTab.tsx:31`，`packages/desktop/src/renderer/extensions/SkillDetailModal.tsx:15` | Extensions -> Skills |
 | **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |
 | **市场 tab + 安装任务面板** | 浏览市场插件、安装、查看后台 install jobs 并重试 | `packages/desktop/src/renderer/extensions/MarketList.tsx:84`，`packages/desktop/src/renderer/extensions/MarketDetail.tsx:23`，`packages/desktop/src/renderer/extensions/PluginInstallJobsPanel.tsx:89` | Extensions -> Market |
-| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credentials/CredentialsPage.tsx:11` | 侧栏点 Credentials |
+| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credentials/CredentialsPage.tsx:11` | 设置菜单 → 凭证 |
 | **Cookie 登录态桥接** | 登录 URL、列域名、预览 cookie、捕获/恢复浏览器 cookie | `packages/desktop/src/renderer/credentials/CookieTab.tsx:55` | Credentials -> Cookie |
 | **Permission Token / Link** | 新增、保存、删除 token/link 凭证 | `packages/desktop/src/renderer/credentials/TokenTab.tsx:17`，`packages/desktop/src/renderer/credentials/LinkTab.tsx:16` | Credentials -> Token 或 Link |
 
@@ -326,7 +326,9 @@
 
 ## 四、本地任务中心（2026-10-08 补充）
 
-桌面侧边栏和命令面板的「任务中心」统一查看本地 Session、历史 Run、自动化、Mimi 委派、子 Agent、后台 shell/job 与 external runtime。默认分为等待处理、运行中、失败、已完成；支持来源、项目/工作区、状态和标题筛选。每条记录可打开原始会话或详情，只展示权威来源支持的控制动作；自动化的暂停/继续控制 schedule，立即运行独立于执行 Session 的取消。
+桌面「设置 → 活动记录 → 任务中心」和命令面板统一查看本地 Session、历史 Run、自动化、Mimi 委派、子 Agent、后台 shell/job 与 external runtime。默认分为等待处理、运行中、失败、已完成；支持来源、项目/工作区、状态和标题筛选。每条记录可打开原始会话或详情，只展示权威来源支持的控制动作；自动化的暂停/继续控制 schedule，立即运行独立于执行 Session 的取消。
+
+侧栏一级导航保留日常工作入口；凭证、云端工作台和启用后的优化实验室收进设置菜单。活动记录继续提供会话历史、运行记录、审批和日志。
 
 主进程读模型位于 `packages/desktop/src/main/task-inbox/`，页面位于 `packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx`。投影写入 `<userData>/task-inbox/v1.json`（0600），保留全部非终态与最近 2,000 条终态，损坏文件隔离后从来源重建；不迁移权威任务存储。`featureFlags.taskInboxV1: false` 可停用。本功能限本地桌面端。
 
