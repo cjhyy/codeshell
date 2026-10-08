@@ -5,9 +5,10 @@
 测试账号。原生 Desktop 和真实 Docker 项目授权已通过受控上游验收，真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
 `list_repositories`、`list_issues`、`get_issue` 只读动作。
 
-不同授权方式共用 UI 的后续设计见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
-该方案结合 Relay 已有的网页授权、API Key、扫码、二次认证及授权后资源选择，描述统一
-连接任务与步骤的迁移，尚未作为产品协议实现。
+不同授权方式已接入首版通用 UI，见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
+Desktop 与 Hub Web 共用授权 controller 和步骤视图，Host 提供统一任务及步骤提交 API；
+Token、CLI 会话、设备码和 GitHub 远端网页授权已有真实适配器。扫码和追加验证码目前仅有
+公共视图，不作为生产连接能力发布。独立 Link 服务 `a9923817` 已于 2026-10-08 更新线上实例。
 
 ## 授权由 Host 持有
 

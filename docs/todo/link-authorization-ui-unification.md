@@ -1,7 +1,28 @@
 # Link 授权 UI 通用化方案
 
-状态：设计提案，尚未迁移产品代码。核验基线：CodeShell `26fa5880`、独立
-Link 服务 `bfd2be5`；参考原版 Relay `9a2b67ea70` 的客户端实现（2026-10-08 核验）。
+状态：首版已实现，覆盖 Desktop、Hub Web、共享 Host 和独立 Link 服务。
+独立 Link 服务 `a9923817` 已于 2026-10-08 部署；参考原版 Relay `9a2b67ea70` 的客户端实现。
+
+## 首版交付范围
+
+- `@cjhyy/code-shell-link` 提供授权方式目录及单个当前步骤；Host 发布
+  `capabilities.authorizationSteps: 1`，旧客户端仍可使用原有授权 API。
+- Desktop 与 Hub Web 使用同一个浏览器安全 controller 和步骤组件。Token、CLI 会话、
+  设备码与远端网页授权均接入统一任务；平台适配器分别管理原生窗口和网页跳转。
+- Host 新增 `POST /api/v1/links/authorizations` 和
+  `POST /api/v1/links/authorizations/:id/responses`，保留查询和取消入口。步骤提交绑定
+  owner、项目、目标连接 revision 和 step ID；查询不触发绑定或重复授权。
+- 原生桌面可以受控安装／登录 CLI；Web 只能操作服务器已提供的会话，不能要求浏览器
+  启动本地命令。绑定前显示并核验实际账号；账号改变时需重新确认。
+- 独立服务已提取可信 Provider registry、GitHub adapter、执行协调器和通用权限／资源确认页，
+  并提供 `GET /api/v1/links/providers`。Host 校验目录与自身固定执行适配器后才发布可用能力。
+  GitHub 是当前唯一生产远端适配器，旧 URL、授权数据及只读动作保持兼容。
+- 普通用户直接进入第三方授权，不再登录 Link 或输入管理员密码。管理员接口继续独立保护。
+
+扫码、追加验证码和资源选择有公共类型与视图，并通过模拟步骤检查续步和移动端布局；
+当前没有生产扫码或追加验证码适配器，因此目录不会宣称这些连接方式可用。
+GitHub 资源确认发生在独立服务，Host 只在收到并验证最终 callback 后保存连接。
+以下保留设计依据与后续扩展约束；实际接口以 `packages/link/src/management-types.ts` 为准。
 
 目标是让所有连接器共用连接入口、进度、结果和管理界面，同时按实际授权方式展示必要步骤。
 用户点击“连接”后直接进入当前可用的首选方式；只有确实需要选择时，才显示方式选择。
@@ -107,7 +128,8 @@ Host 保管的凭据，也可以获得 Link 保管的凭据，不能由“服务
 
 ## 一个连接任务，有限的下一步交互
 
-复用 `LinkAuthorization`，让每次响应只描述当前下一步。以下为拟议类型，并非已发布 API。
+复用 `LinkAuthorization`，让每次响应只描述当前下一步。以下是设计示意；实现保留可选字段
+兼容旧客户端，准确类型见公共包 `management-types.ts`。
 
 ```ts
 type LinkAuthorizationStep = {
