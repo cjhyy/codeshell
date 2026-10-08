@@ -147,6 +147,82 @@ describe("listDiskSessions", () => {
     expect((await listDiskSessions({ limit: 10 }, dir)).sessions).toEqual([]);
   });
 
+  it("lets the host rebuild child tasks without a parent or surviving worktree", async () => {
+    const removedCwd = path.join(dir, "removed-worktree");
+    mkSession(
+      dir,
+      "child",
+      {
+        parentSessionId: "missing-parent",
+        origin: "subagent",
+        cwd: removedCwd,
+        startedAt: 20,
+        status: "completed",
+        title: "Finished child",
+      },
+      1000,
+    );
+    mkSession(dir, "normal", { parentSessionId: null }, 500);
+    mkSession(dir, "deleted-project", { parentSessionId: null, cwd: removedCwd }, 2000);
+    const result = await listDiskSessions({ limit: 10, includeSubagents: true }, dir);
+    expect(result.sessions.map((session) => session.id)).toEqual(["child", "normal"]);
+    expect(result.sessions[0]).toMatchObject({
+      engineSessionId: "child",
+      parentSessionId: "missing-parent",
+      origin: "subagent",
+      cwd: removedCwd,
+      status: "completed",
+      createdAt: 20,
+    });
+    expect(
+      (await listDiskSessions({ limit: 10 }, dir)).sessions.map((session) => session.id),
+    ).toEqual(["normal"]);
+  });
+
+  it("keeps complete host scans paginated and excludes archived/internal child records", async () => {
+    for (let i = 0; i < 5; i++)
+      mkSession(
+        dir,
+        `child-${i}`,
+        { parentSessionId: i % 2 ? "parent" : "orphan", origin: "subagent" },
+        1000 + i,
+      );
+    mkSession(
+      dir,
+      "hidden",
+      { parentSessionId: "parent", origin: "subagent", ephemeral: true },
+      9000,
+    );
+    mkSession(
+      dir,
+      "archived",
+      { parentSessionId: "parent", origin: "subagent", archivedAt: 10 },
+      8000,
+    );
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < 10; page++) {
+      const result = await listDiskSessions({ limit: 2, includeSubagents: true, cursor }, dir);
+      ids.push(...result.sessions.map((session) => session.id));
+      if (!result.nextCursor) break;
+      cursor = result.nextCursor;
+    }
+    expect(ids).toEqual(["child-4", "child-3", "child-2", "child-1", "child-0"]);
+    expect(
+      (
+        await listDiskSessions({ limit: 20, includeSubagents: true, includeArchived: true }, dir)
+      ).sessions.map((session) => session.id),
+    ).toContain("archived");
+    expect(
+      (
+        await listDiskSessions(
+          { limit: 20, includeSubagents: true, parentSessionId: "parent" },
+          dir,
+        )
+      ).sessions.map((session) => session.id),
+    ).toEqual(["child-3", "child-1"]);
+  });
+
   it("rejects an invalid parent filter instead of silently listing top-level sessions", async () => {
     mkSession(dir, "top-1", { parentSessionId: null }, 1000);
     for (const parentSessionId of ["", ".", "..", "../parent", "parent/child", "a".repeat(129)]) {

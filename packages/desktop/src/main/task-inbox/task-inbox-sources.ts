@@ -149,7 +149,16 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
   adapters: TaskInboxActionAdapter[];
 } {
   let pendingSessions: Promise<TaskInboxRecordV1[]> | undefined;
+  let pendingDisk: ReturnType<TaskInboxSourcesDeps["diskSessions"]> | undefined;
   let pendingBackground: Promise<TaskInboxBackgroundEntry[]> | undefined;
+
+  const diskSessions = (): ReturnType<TaskInboxSourcesDeps["diskSessions"]> => {
+    if (!pendingDisk)
+      pendingDisk = deps.diskSessions().finally(() => {
+        pendingDisk = undefined;
+      });
+    return pendingDisk;
+  };
 
   const background = (): Promise<TaskInboxBackgroundEntry[]> => {
     if (!deps.background?.available()) return Promise.resolve([]);
@@ -164,7 +173,12 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
   const sessions = (): Promise<TaskInboxRecordV1[]> => {
     if (pendingSessions) return pendingSessions;
     pendingSessions = (async () => {
-      const [disk, catalog] = await Promise.all([deps.diskSessions(), deps.sessionCatalog?.()]);
+      const [disk, catalog] = await Promise.all([diskSessions(), deps.sessionCatalog?.()]);
+      const children = new Set(
+        disk
+          .filter((row) => row.origin === "subagent" || row.parentSessionId)
+          .map((row) => row.engineSessionId),
+      );
       const metadata = new Map<string, { row: SessionSummary; workspacePath: string }>();
       for (const [workspacePath, index] of Object.entries(catalog?.indices ?? {})) {
         for (const row of index.sessions) {
@@ -177,6 +191,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
       const diskById = new Map(disk.map((row) => [row.engineSessionId, row]));
       const records: TaskInboxRecordV1[] = [];
       for (const id of new Set([...diskById.keys(), ...projection.keys()])) {
+        if (children.has(id)) continue;
         const durable = diskById.get(id);
         const live = projection.get(id);
         const meta = metadata.get(id);
@@ -201,8 +216,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
           ? ("waiting" as const)
           : sessionStatus(durable, live, running, liveFresh);
         const capabilities: TaskAction[] = ["open"];
-        if (running || externalWaiting || (liveFresh && status === "waiting"))
-          capabilities.push("cancel");
+        if (running || externalWaiting) capabilities.push("cancel");
         // Runtime allocation is not proof that a turn is active.
         if (
           isExternal &&
@@ -334,7 +348,10 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
         : undefined;
     // Shell ids are process-local counters. Fence every registry identity by
     // owner and start/generation so a new worker cannot overwrite old results.
-    const sourceId = `${workId}:${revision(entry.executionOrigin, entry.sourceSession.sessionId, startedAt, entry.kind === "subagent" ? entry.runtimeGeneration : undefined).slice(0, 24)}`;
+    const sourceId =
+      entry.kind === "subagent" && entry.childSessionId
+        ? entry.childSessionId
+        : `${workId}:${revision(entry.executionOrigin, entry.sourceSession.sessionId, startedAt, entry.kind === "subagent" ? entry.runtimeGeneration : undefined).slice(0, 24)}`;
     const rawStatus = shell ? shell.status : entry.kind !== "shell" ? entry.status : undefined;
     const status =
       shell?.status === "exited" ? (shell.exitCode === 0 ? "done" : "failed") : statusOf(rawStatus);
@@ -379,11 +396,71 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     });
   };
 
+  const subagents = async (): Promise<TaskInboxRecordV1[]> => {
+    const [entries, disk] = await Promise.all([background(), diskSessions()]);
+    const children = new Map(
+      disk
+        .filter((row) => row.origin === "subagent" || row.parentSessionId)
+        .map((row) => [row.engineSessionId, row]),
+    );
+    const records = new Map<string, TaskInboxRecordV1>();
+    for (const child of children.values()) {
+      const status = sessionStatus(child, undefined, false, false);
+      const record = mapTaskInboxRecord({
+        source: "subagent",
+        sourceId: child.engineSessionId,
+        sessionId: child.engineSessionId,
+        ...(child.parentSessionId ? { parentSessionId: child.parentSessionId } : {}),
+        title: clean(child.title, 1024) ?? child.engineSessionId,
+        status,
+        capabilities: ["open"],
+        createdAt: child.createdAt ?? child.updatedAt,
+        updatedAt: child.updatedAt,
+        sourceRevision: revision(
+          "durable-subagent",
+          child.engineSessionId,
+          child.runId,
+          status,
+          child.updatedAt,
+        ),
+        ...(child.cwd ? { workspacePath: child.cwd } : {}),
+      });
+      records.set(record.sourceId, record);
+    }
+    for (const entry of entries) {
+      if (entry.kind !== "subagent") continue;
+      const live = backgroundRecord(entry);
+      const durable = records.get(live.sourceId);
+      if (!durable) {
+        records.set(live.sourceId, live);
+        continue;
+      }
+      // A terminal state saved by the child is stronger than a delayed running
+      // registry snapshot. A genuinely newer resumed run has a newer start.
+      const durableTerminal = TERMINAL.has(durable.status) && durable.updatedAt >= live.updatedAt;
+      const selected = durableTerminal
+        ? { ...durable, createdAt: Math.min(durable.createdAt, live.createdAt) }
+        : {
+            ...durable,
+            ...live,
+            createdAt: Math.min(durable.createdAt, live.createdAt),
+            updatedAt: Math.max(durable.updatedAt, live.updatedAt),
+            ...(live.workspacePath || durable.workspacePath
+              ? { workspacePath: live.workspacePath ?? durable.workspacePath }
+              : {}),
+          };
+      if (!TERMINAL.has(selected.status)) delete selected.terminalAt;
+      records.set(live.sourceId, selected);
+    }
+    return [...records.values()];
+  };
+
   const readSource = async (source: TaskSource): Promise<TaskInboxRecordV1[]> => {
     if (source === "session" || source === "external-runtime")
       return (await sessions()).filter((record) => record.source === source);
     if (source === "automation") return deps.automations?.list().map(automationRecord) ?? [];
     if (source === "mimi-delegation") return deps.mimi?.snapshot().tasks.map(mimiRecord) ?? [];
+    if (source === "subagent") return subagents();
     if (source === "legacy-run")
       return ((await deps.runs?.list()) ?? []).map((run) =>
         mapTaskInboxRecord({
