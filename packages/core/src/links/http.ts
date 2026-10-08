@@ -27,14 +27,14 @@ export class LinkProviderHttpError extends Error {
 
 export interface LinkHttpRequest {
   url: URL;
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   headers: Record<string, string>;
   body?: unknown;
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;
 }
 
-export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown> {
+async function linkResponse(request: LinkHttpRequest): Promise<Response> {
   if (
     request.url.protocol !== "https:" ||
     !LOCAL_LINK_ALLOWED_HOSTS.has(request.url.hostname.toLowerCase())
@@ -42,10 +42,10 @@ export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown
     throw new Error(`Link provider host is not allowed: ${request.url.hostname}`);
   }
   const fetchImpl =
-    request.fetchImpl ?? ((request.method ?? "GET") === "POST" ? requestOnce : fetch);
+    request.fetchImpl ?? ((request.method ?? "GET") !== "GET" ? requestOnce : fetch);
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const signal = request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
-  const response = await fetchImpl(request.url, {
+  return fetchImpl(request.url, {
     method: request.method ?? "GET",
     headers: {
       Accept: "application/json",
@@ -56,6 +56,27 @@ export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown
     redirect: "error",
     signal,
   });
+}
+
+/** Fixed status-only endpoints may legitimately return empty or non-JSON bodies. */
+export async function linkRequestStatus(
+  request: LinkHttpRequest,
+  accepted: readonly number[],
+): Promise<number> {
+  const response = await linkResponse(request);
+  const text = await readResponseText(response);
+  if (accepted.includes(response.status)) return response.status;
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  throw new LinkProviderHttpError(response.status, normalizeProviderError(response.status, data));
+}
+
+export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown> {
+  const response = await linkResponse(request);
   const text = await readResponseText(response);
   let data: unknown;
   try {

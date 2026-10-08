@@ -25,6 +25,12 @@ describe("Link provider catalog", () => {
     expect(githubUrl.searchParams.get("contents")).toBe("read");
     expect(githubUrl.searchParams.get("issues")).toBe("write");
     expect(githubUrl.searchParams.get("pull_requests")).toBe("read");
+    expect(githubUrl.searchParams.get("starring")).toBe("write");
+    expect(github.connectionMethods[0]!.authGuide!.permissions).toContainEqual({
+      id: "starring",
+      label: "Starring: write (account; Star / Unstar)",
+      level: "required",
+    });
 
     const gitlab = getLinkProviderManifest("gitlab")!;
     const gitlabUrl = new URL(gitlab.connectionMethods[0]!.authGuide!.createCredentialUrl);

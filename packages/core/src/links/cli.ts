@@ -1,3 +1,4 @@
+import { githubRepositoryParameters } from "./github-star.js";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -438,7 +439,9 @@ export async function connectCliLink(
   return {
     providerId,
     identity: await liveIdentity(providerId, options, run),
-    capabilityIds: provider.actions.map((action) => `${providerId}.${action.id}`),
+    capabilityIds: provider.actions
+      .filter((action) => action.risk !== "write")
+      .map((action) => `${providerId}.${action.id}`),
     verifiedAt: new Date().toISOString(),
   };
 }
@@ -497,6 +500,57 @@ async function executeGithubCliAction(
   const owner = pathSegmentParam(params, "owner", { required: true, maxLength: 100 })!;
   const repo = pathSegmentParam(params, "repo", { required: true, maxLength: 100 })!;
   const base = `repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  if (actionId === "get_repository") {
+    githubRepositoryParameters(params);
+    return pick(await api("github", base, options, run), [
+      "id",
+      "full_name",
+      "private",
+      "archived",
+      "html_url",
+    ]);
+  }
+  if (actionId === "get_starred") {
+    const target = githubRepositoryParameters(params);
+    const method = "GET";
+    const args = [
+      "api",
+      `user/starred/${target.owner}/${target.repo}`,
+      "--hostname",
+      CONFIG.github.hostname,
+      "--method",
+      method,
+      "--include",
+      "-H",
+      "Accept: application/vnd.github+json",
+      "-H",
+      "X-GitHub-Api-Version: 2022-11-28",
+    ];
+    let result: CliLinkCommandResult;
+    try {
+      result = await run("github", CONFIG.github.command, args, { ...options, timeoutMs: 30_000 });
+    } catch (error) {
+      // gh exits nonzero for an HTTP 404 but includes the status with --include.
+      // Never infer a false state from stderr text or another process failure.
+      if (
+        !error ||
+        typeof error !== "object" ||
+        !("stdout" in error) ||
+        !("code" in error) ||
+        error.code !== 1 ||
+        ("signal" in error && Boolean(error.signal)) ||
+        ("killed" in error && Boolean(error.killed)) ||
+        !/^HTTP\/\S+ 404(?: |\r?$)/m.test(String(error.stdout))
+      )
+        throw new Error(safeMessage(error) || "GitHub CLI Star request failed", { cause: error });
+      result = { stdout: String(error.stdout), stderr: "" };
+    }
+    const statuses = [...result.stdout.matchAll(/^HTTP\/\S+ (\d{3})(?: |\r?$)/gm)];
+    if (statuses.length !== 1) throw new Error("GitHub CLI returned an invalid Star status");
+    const status = Number(statuses[0]![1]);
+    if ([204, 404].includes(status)) return { starred: status === 204 };
+    throw new Error(`GitHub CLI Star request failed (HTTP ${status})`);
+  }
   if (actionId === "get_readme") {
     const result = githubFile(await api("github", `${base}/readme`, options, run), owner, repo);
     return { ...result, size: undefined };
@@ -591,17 +645,6 @@ async function executeGithubCliAction(
       "deletions",
       "changed_files",
     ]);
-  }
-  if (actionId === "create_issue") {
-    const title = stringParam(params, "title", { required: true, maxLength: 256 })!;
-    const body = stringParam(params, "body", { maxLength: 20_000 });
-    const data = await api(
-      "github",
-      `${base}/issues`,
-      { ...options, method: "POST", input: { title, ...(body ? { body } : {}) } },
-      run,
-    );
-    return pick(data, ["number", "title", "state", "html_url", "created_at"]);
   }
   throw new Error(`Unknown GitHub CLI Link Action: ${actionId}`);
 }
@@ -831,6 +874,13 @@ export async function executeCliLinkAction(
   options: { cwd?: string; signal?: AbortSignal } = {},
   run: CliLinkCommandRunner = runCliLinkCommand,
 ): Promise<unknown> {
+  if (
+    getLocalLinkProvider(providerId)?.actions.find((action) => action.id === actionId)?.risk ===
+    "write"
+  )
+    throw new Error(
+      "CLI write actions are unavailable because the backend may follow redirects; explicitly connect PAT/OAuth or remote Link",
+    );
   if (providerId === "github") return executeGithubCliAction(actionId, params, options, run);
   if (providerId === "gitlab") return executeGitlabCliAction(actionId, params, options, run);
   if (providerId === "notion") return executeNotionCliAction(actionId, params, options, run);

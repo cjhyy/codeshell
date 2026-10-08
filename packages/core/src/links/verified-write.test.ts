@@ -236,18 +236,13 @@ test.each(["remote", "oauth"] as const)(
 );
 
 test.skipIf(process.platform === "win32")(
-  "managed CLI account check, single write and independent read all use the real process path",
+  "legacy managed CLI write grant is rejected before any transport",
   async () => {
     const f = await fixture("cli");
     const result = await f.invoke();
-    expect(result.kind).toBe("action_result");
-    expect(result.operation.state).toBe("verified");
-    expect(result.operation.channel).toBe("cli");
-    expect(f.calls.map((call) => call.action)).toEqual([
-      "list_issues",
-      "create_issue",
-      "get_issue",
-    ]);
+    expect(result.kind).toBe("error");
+    expect(result.error).toContain("CLI write actions");
+    expect(f.calls).toEqual([]);
     expect(f.resolutions()).toBe(0);
   },
 );

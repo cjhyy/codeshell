@@ -15,6 +15,9 @@ export const REMOTE_LINK_PROVIDER_ADAPTERS = [
       "list_pull_requests",
       "get_pull_request",
       "create_issue",
+      "get_repository",
+      "get_starred",
+      "set_starred",
     ],
   },
   { id: "gitlab", name: "GitLab", group: "projects", actions: ["list_projects", "list_issues"] },
@@ -229,8 +232,13 @@ export function prepareRemoteLinkAction(
       assertKeys(params, ["owner", "repo", "path", "ref"]);
       pathParam(params, "path", { required: true, maxLength: 2_000 });
       output.path = stringParam(params, "path", { required: true, maxLength: 2_000 });
-    } else if (action === "get_readme") assertKeys(params, ["owner", "repo"]);
-    else if (action === "get_pull_request") {
+    } else if (["get_readme", "get_repository", "get_starred"].includes(action))
+      assertKeys(params, ["owner", "repo"]);
+    else if (action === "set_starred") {
+      assertKeys(params, ["owner", "repo", "starred"]);
+      if (typeof params.starred !== "boolean") throw new Error("GitHub starred must be a boolean");
+      output.starred = params.starred;
+    } else if (action === "get_pull_request") {
       assertKeys(params, ["owner", "repo", "pull_number"]);
       output.pull_number = intParam(params, "pull_number", 0, Number.MAX_SAFE_INTEGER);
     } else if (action === "list_pull_requests") {
@@ -394,6 +402,19 @@ export function normalizeRemoteLinkActionResult(
       };
     }
     if (!record) throw new Error("Invalid remote Link result");
+    if (action === "get_repository") {
+      if (!permitted(record.full_name))
+        throw new Error("Remote Link returned an unauthorized repository");
+      return pick(record, ["id", "full_name", "private", "archived", "html_url"]);
+    }
+    if (action === "get_starred") {
+      if (typeof record.starred !== "boolean") throw new Error("Invalid remote Star state");
+      return { starred: record.starred };
+    }
+    if (action === "set_starred") {
+      if (record.acknowledged !== true) throw new Error("Invalid remote Star acknowledgement");
+      return { acknowledged: true };
+    }
     if (["get_readme", "get_file"].includes(action)) {
       if (action === "get_file" && record.type !== "file")
         throw new Error("GitHub path is not a file");

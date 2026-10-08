@@ -159,6 +159,9 @@ jobs:
       - name: compiled SDK verified Link write lifecycle
         if: matrix.shard == 'core-engine'
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs
+      - name: compiled SDK GitHub Star lifecycle
+        if: matrix.shard == 'core-engine'
+        run: bun run test:github-star
       # The large Desktop Bun process can stall real Chromium load callbacks.
       # Run each browser suite in its own process, keeping every assertion and
       # the same 30-second timeout as the rest of the shard.
