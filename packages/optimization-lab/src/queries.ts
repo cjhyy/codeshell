@@ -2,7 +2,13 @@ import type { ExtensionQueryHandler } from "@cjhyy/code-shell-core/extension";
 import { z } from "zod";
 import { freezeDataset, validateDataset } from "./contracts/dataset.js";
 import { labRoot, projectKey } from "./store-paths.js";
-import { OptimizationLabController, PrepareSchema, type ControllerOptions } from "./controller.js";
+import {
+  OptimizationLabController,
+  PrepareSchema,
+  PrepareTrialSchema,
+  type ControllerOptions,
+} from "./controller.js";
+import { importEvidenceBundle } from "./evidence.js";
 
 const cwd = z.string({ required_error: "cwd is required" }).min(1);
 const identity = z.object({ cwd, id: z.string().min(1) }).strict();
@@ -51,6 +57,10 @@ export function createOptimizationLabQueries(
       return fn(schema.parse(payload));
     };
   return {
+    optimization_lab_import_evidence: handler(
+      z.object({ cwd, bundle: z.unknown() }).strict(),
+      (p) => importEvidenceBundle(options.root ?? labRoot(p.cwd), projectKey(p.cwd), p.bundle),
+    ),
     optimization_lab_validate_dataset: handler(
       z.object({ dataset: z.unknown(), cwd: cwd.optional() }).strict(),
       (p) => validateDataset(p.dataset),
@@ -64,6 +74,9 @@ export function createOptimizationLabQueries(
     ),
     optimization_lab_list: handler(z.object({ cwd }).strict(), (p) => controller(p.cwd).list()),
     optimization_lab_prepare: handler(PrepareSchema, (p) => controller(p.cwd).prepare(p)),
+    optimization_lab_prepare_trial: handler(PrepareTrialSchema, (p) =>
+      controller(p.cwd).prepareTrial(p),
+    ),
     optimization_lab_get: handler(identity, (p) => controller(p.cwd).get(p.id)),
     optimization_lab_status: handler(identity, (p) => controller(p.cwd).get(p.id)),
     optimization_lab_grant: handler(grant, (p) => controller(p.cwd).grant(p.id, p)),

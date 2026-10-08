@@ -464,6 +464,14 @@ export function DatasetEditor({
                     ])}
                   </div>
                   {textField(index, "input", t("optimizationLab.editor.input"), true)}
+                  {item.evidence && (
+                    <details className="rounded-md bg-muted p-2 text-xs">
+                      <summary>{t("optimizationLab.evidenceProvenance")}</summary>
+                      <pre className="whitespace-pre-wrap break-all">
+                        {JSON.stringify(item.evidence, null, 2)}
+                      </pre>
+                    </details>
+                  )}
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"

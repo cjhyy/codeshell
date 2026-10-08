@@ -42,6 +42,15 @@ export const EvalCaseSchema = z
     hardAssertions: z.array(HardAssertionSchema).max(16).default([]),
     readiness: z.enum(["analysis_only", "runnable"]),
     missingEvidence: z.array(z.string().min(1).max(500)).max(32).default([]),
+    evidence: z
+      .object({
+        bundleHash: z.string().regex(/^[a-f0-9]{64}$/),
+        runId: z.string().min(1).max(512),
+        purpose: z.literal("problem_source_only"),
+        blockHashes: z.array(z.string().regex(/^[a-f0-9]{64}$/)).max(50),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
