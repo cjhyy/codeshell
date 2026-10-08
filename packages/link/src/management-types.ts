@@ -128,6 +128,8 @@ export interface LinkSnapshot {
     deviceAuth: boolean;
     remoteAuth?: boolean;
     authorizationSteps?: 1;
+    /** Same-origin launch tickets complete in the original owner without browser cookies. */
+    browserHandoff?: 1;
   };
   remoteServer?: { issuer: string };
   /** Count only; retired secrets never leave the Host. Retried after restart with backoff. */
