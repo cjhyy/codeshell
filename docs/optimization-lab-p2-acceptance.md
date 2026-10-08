@@ -20,3 +20,7 @@ Verified scenarios:
 - Dedicated native IPC adoption, cancellation/evidence-change revalidation, preload routing and explicit Session scope selection in the existing Lab page.
 
 The focused fixture/tests are normal product acceptance. They do not constitute validation of tool-bearing Agent workflows, live providers or external side effects.
+
+## Local gates
+
+After normal integration of `origin/main` at `754e8edd` (cost ledger and operation lifecycle): package release smoke passed with 9 tarballs and 47 typed entries; root workspace typecheck, Desktop production build, engine-bypass and workflow test-path checks passed. ESLint reported zero errors. The compiled P2 fixture passed for both SDK providers and all scope/revocation cases. A focused combined run passed 140 tests across 15 files; the earlier full Lab and related lifecycle/UI run passed 299 tests across 38 files. Live provider and tool workflow validation remains outside this acceptance.

@@ -228,6 +228,7 @@ export function authorizationMessage(snapshot: any, input: LabAuthorizationInput
         ]
       : []),
     `Skill: ${plan.skill?.name ?? "?"}\nRevision / 修订: ${plan.skill?.revision ?? "?"}`,
+    `Evaluation mode / 评估模式: ${plan.runnerVersion === "codeshell_isolated_v1" ? "Isolated ephemeral Engine/Session with fixed instructions, no tools / 固定指令的临时隔离 Engine/Session，无工具" : "Standalone text fragment / 独立文本片段"}`,
     `Target model / 目标模型: ${describeConnection("target")}`,
     `Optimizer / 优化模型: ${plan.fixedCandidate ? "none / 不调用" : describeConnection("optimizer")}`,
     `Dataset hash / 样本哈希: ${plan.datasetHash ?? "?"}\nCounts / 数量: ${JSON.stringify(snapshot.datasetSummary ?? "see reviewed frozen dataset / 见已审核冻结样本")}`,

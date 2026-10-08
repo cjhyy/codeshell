@@ -219,6 +219,9 @@ try {
   });
   assert.equal(anthropicTrial.status, "completed", JSON.stringify(anthropicTrial));
   assert.equal(anthropicAdmitted, 1);
+  assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "memory")), false);
+  assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "dream")), false);
+  assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "sessions", ".operations")), false);
   const binding = store.adopt({
     scope: { cwd, provider: "openai", model: "fixture-model" },
     name,

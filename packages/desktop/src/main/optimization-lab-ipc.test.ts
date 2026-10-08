@@ -628,7 +628,10 @@ describe("Optimization Lab trusted Desktop bridge", () => {
   });
   test("native confirmation binds hash and revision and grants without starting", async () => {
     const fixture = setup();
+    Object.assign(fixture.snapshot.plan, { runnerVersion: "codeshell_isolated_v1" });
     await fixture.invoke("authorize", fixture.authorization);
+    expect(fixture.dialogs[0].detail).toContain("Isolated ephemeral Engine/Session");
+    expect(fixture.dialogs[0].detail).toContain("no tools");
     expect(fixture.calls.map((call) => call.type)).toEqual([
       "optimization_lab_get",
       "optimization_lab_get",
