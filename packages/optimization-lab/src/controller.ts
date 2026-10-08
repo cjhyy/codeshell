@@ -128,7 +128,7 @@ export class OptimizationLabController {
     this.store = new ExperimentStore(options.root ?? labRoot(cwd));
     this.lease = new ExperimentLease(this.store);
     this.ledger = new ExperimentLedger(this.store);
-    this.loadSettings = options.loadSettings ?? (() => new SettingsManager(cwd).get());
+    this.loadSettings = options.loadSettings ?? (() => new SettingsManager(cwd, "full").get());
     this.enabled =
       options.enabled ??
       (() =>
@@ -390,6 +390,7 @@ export class OptimizationLabController {
         });
         const trial: Trial = {
           schemaVersion: 1,
+          grantRevision: operation.grantRevision,
           trialId: p.trialId,
           planHash: snapshot.plan.planHash,
           caseId: p.caseId,

@@ -12,6 +12,7 @@ import type { ResolvedConnection } from "./providers/connection.js";
 
 export interface Trial {
   schemaVersion: 1;
+  grantRevision?: number | null;
   trialId: string;
   planHash: string;
   caseId: string;
@@ -160,10 +161,11 @@ export async function runTrial(options: {
     systemPrompt: `Optimization Lab text_fragment_v1\nApply the following frozen Skill instructions to the current user input. This is a standalone text evaluation without tools.\n\n${options.body}`,
     input: options.case.input,
   });
+  const { text, ...result } = execution;
   return {
     ...base,
-    ...execution,
-    output: execution.text,
+    ...result,
+    output: text,
     assertions:
       execution.text === null
         ? []
