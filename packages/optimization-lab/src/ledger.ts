@@ -8,12 +8,22 @@ import {
   openSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { z } from "zod";
 import { canonicalJson, sha256Hex } from "./contracts/canonical-json.js";
-import { ResourceAllocationSchema, type ResourceAllocation } from "./contracts/experiment.js";
+import {
+  HashSchema,
+  ResourceAllocationSchema,
+  type ResourceAllocation,
+} from "./contracts/experiment.js";
 import { assertGrantActive, type BudgetGrant } from "./contracts/grant.js";
-import { ExperimentStore, readBoundedFile, writeAtomicFile, type LeaseFence } from "./store.js";
+import {
+  ExperimentStore,
+  ExperimentIdSchema,
+  readBoundedFile,
+  writeAtomicFile,
+  type LeaseFence,
+} from "./store.js";
 
 export type CallRole = "baseline" | "optimizer" | "screening" | "final";
 const RoleSchema = z.enum(["baseline", "optimizer", "screening", "final"]);
@@ -102,6 +112,8 @@ export interface LedgerSummary {
 const EventSchema = z
   .object({
     schemaVersion: z.literal(1),
+    experimentId: ExperimentIdSchema,
+    planHash: HashSchema,
     sequence: z.number().int().positive().safe(),
     eventId: z.string().uuid(),
     kind: z.enum([
@@ -149,7 +161,13 @@ const SettlePayloadSchema = z
     actualCostUsd: finite.nullable(),
   })
   .strict();
-const UnknownPayloadSchema = z.object({ reason: z.string().min(1).max(256) }).strict();
+const UnknownPayloadSchema = z
+  .object({
+    reason: z.string().min(1).max(256),
+    usage: LedgerUsageSchema.nullable().optional(),
+    responseModel: z.string().min(1).max(256).nullable().optional(),
+  })
+  .strict();
 const FinishPayloadSchema = z.object({ elapsedMs: integer }).strict();
 const empty = z.object({}).strict();
 const MAX_LEDGER_BYTES = 16 * 1024 * 1024;
@@ -302,10 +320,12 @@ function summarize(events: LedgerEvent[], initialFinal: ResourceAllocation): Led
         throw new Error("optimization_lab: invalid dispatch transition");
       attempt.status = "dispatched";
     } else if (event.kind === "unknown") {
-      UnknownPayloadSchema.parse(event.payload);
+      const payload = UnknownPayloadSchema.parse(event.payload);
       if (!["reserved", "dispatched"].includes(attempt.status))
         throw new Error("optimization_lab: invalid unknown transition");
       attempt.status = "unknown";
+      attempt.usage = payload.usage ?? null;
+      attempt.responseModel = payload.responseModel ?? null;
     } else if (event.kind === "settle") {
       if (attempt.status !== "dispatched")
         throw new Error("optimization_lab: invalid settle transition");
@@ -369,7 +389,7 @@ export class ExperimentLedger {
     readonly now: () => number = Date.now,
   ) {}
 
-  private readEvents(directory: string): LedgerEvent[] {
+  private readEvents(directory: string, planHash: string): LedgerEvent[] {
     const path = join(directory, "ledger.jsonl");
     const text = readBoundedFile(path, MAX_LEDGER_BYTES);
     if (text === undefined) return [];
@@ -387,6 +407,8 @@ export class ExperimentLedger {
       }
       const { hash, ...content } = event;
       if (
+        event.experimentId !== basename(directory) ||
+        event.planHash !== planHash ||
         event.sequence !== events.length + 1 ||
         event.previousHash !== (events.at(-1)?.hash ?? null) ||
         sha256Hex(canonicalJson(content)) !== hash ||
@@ -433,6 +455,8 @@ export class ExperimentLedger {
   ): LedgerEvent {
     const content = {
       schemaVersion: 1 as const,
+      experimentId: basename(directory),
+      planHash: grant.planHash,
       sequence: events.length + 1,
       eventId: randomUUID(),
       at,
@@ -486,7 +510,7 @@ export class ExperimentLedger {
         assertGrantActive(snapshot.grant, snapshot.plan.planHash, now);
         if (snapshot.state.stopRequested) throw new Error("optimization_lab: stop requested");
       }
-      const events = this.readEvents(directory);
+      const events = this.readEvents(directory, snapshot.plan.planHash);
       const summary = summarize(events, snapshot.plan.finalAllocation);
       return fn(directory, events, summary, snapshot.grant, now);
     });
@@ -495,7 +519,10 @@ export class ExperimentLedger {
   summary(id: string): LedgerSummary {
     return this.store.withLock(id, (directory) => {
       const snapshot = this.store.readUnlocked(directory, id);
-      return summarize(this.readEvents(directory), snapshot.plan.finalAllocation);
+      return summarize(
+        this.readEvents(directory, snapshot.plan.planHash),
+        snapshot.plan.finalAllocation,
+      );
     });
   }
 
@@ -543,6 +570,14 @@ export class ExperimentLedger {
     identity.parse(input.operationId);
     RoleSchema.parse(input.role);
     return this.context(id, fence, (directory, events, summary, grant, now) => {
+      const plan = this.store.readUnlocked(directory, id).plan;
+      const limits = input.role === "optimizer" ? plan.bounds.optimization : plan.bounds.trial;
+      if (
+        input.timeoutMs !== limits.timeoutMs ||
+        input.maxRequests !== limits.maxRequests ||
+        input.maxOutputTokens !== limits.maxOutputTokens
+      )
+        throw new Error("optimization_lab: operation limits differ from frozen plan");
       const existing = summary.operations[input.operationId];
       if (existing) {
         if (
@@ -566,12 +601,17 @@ export class ExperimentLedger {
       });
       if (payload.finalPhase !== (input.role === "final"))
         throw new Error("optimization_lab: final role mismatch");
-      if (now + payload.timeoutMs > Date.parse(grant.expiresAt))
+      const requiredFinalWindow = payload.finalPhase
+        ? summary.finalAllocation.executionMs
+        : payload.timeoutMs + summary.finalAllocation.executionMs;
+      if (now + requiredFinalWindow > Date.parse(grant.expiresAt))
         throw new Error("optimization_lab: insufficient time before grant expiry");
       if (payload.finalPhase && summary.finalAllocation.executionMs < payload.timeoutMs)
         throw new Error("optimization_lab: final execution allocation insufficient");
       const hypothetical: LedgerEvent = {
         schemaVersion: 1,
+        experimentId: id,
+        planHash: grant.planHash,
         sequence: events.length + 1,
         eventId: randomUUID(),
         kind: "operation_begin",
@@ -637,6 +677,8 @@ export class ExperimentLedger {
       });
       const hypothetical: LedgerEvent = {
         schemaVersion: 1,
+        experimentId: id,
+        planHash: grant.planHash,
         sequence: events.length + 1,
         eventId: randomUUID(),
         kind: "reserve",
@@ -741,7 +783,11 @@ export class ExperimentLedger {
             operationId: attempt.operationId,
             attemptId: attempt.attemptId,
             role: attempt.role,
-            payload: { reason: "usage_unavailable" },
+            payload: {
+              reason: "usage_unavailable",
+              usage: input.usage,
+              responseModel: input.responseModel,
+            },
           });
           return;
         }
@@ -855,8 +901,15 @@ export class ExperimentLedger {
   setFinalAllocation(id: string, fence: LeaseFence, allocation: ResourceAllocation): void {
     const payload = ResourceAllocationSchema.parse(allocation);
     this.context(id, fence, (directory, events, summary, grant, now) => {
+      if (
+        payload.requests !== summary.finalAllocation.requests ||
+        payload.executionMs !== summary.finalAllocation.executionMs
+      )
+        throw new Error("optimization_lab: final denominator cannot change");
       const hypothetical: LedgerEvent = {
         schemaVersion: 1,
+        experimentId: id,
+        planHash: grant.planHash,
         sequence: events.length + 1,
         eventId: randomUUID(),
         kind: "final_allocation",

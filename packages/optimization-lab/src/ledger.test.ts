@@ -186,7 +186,7 @@ describe("durable request budget ledger", () => {
         maxRequests: 2,
         maxOutputTokens: 100,
       }),
-    ).toThrow("identity conflict");
+    ).toThrow("limits differ");
   });
   test("final resources stay ringfenced from search then are consumed by final trials", () => {
     const f = setup({
@@ -362,6 +362,73 @@ describe("durable request budget ledger", () => {
     writeFileSync(path, good.split("\n")[0] + "\nINVALID\n");
     expect(() => f.ledger.summary(f.id)).toThrow("corrupt ledger");
   });
+  test("operation limits and final denominator cannot be changed to bypass budget", () => {
+    const f = setup();
+    for (const patch of [{ timeoutMs: 1 }, { maxRequests: 1 }, { maxOutputTokens: 1 }]) {
+      expect(() =>
+        f.ledger.beginOperation(f.id, f.fence, {
+          operationId: "bad",
+          role: "baseline",
+          timeoutMs: 1000,
+          maxRequests: 2,
+          maxOutputTokens: 100,
+          ...patch,
+        }),
+      ).toThrow("frozen plan");
+    }
+    expect(() =>
+      f.ledger.setFinalAllocation(f.id, f.fence, { ...f.plan.finalAllocation, requests: 1 }),
+    ).toThrow("denominator");
+    expect(() =>
+      f.ledger.setFinalAllocation(f.id, f.fence, { ...f.plan.finalAllocation, executionMs: 1000 }),
+    ).toThrow("denominator");
+    expect(f.ledger.summary(f.id).sequence).toBe(0);
+  });
+  test("ledger copied from another experiment fails plan and experiment binding", () => {
+    const f = setup();
+    begin(f);
+    reserve(f);
+    const second = f.store.create(f.plan);
+    writeFileSync(
+      join(f.store.directory(second.state.id), "ledger.jsonl"),
+      readFileSync(join(f.store.directory(f.id), "ledger.jsonl")),
+    );
+    expect(() => f.ledger.summary(second.state.id)).toThrow("hash chain");
+  });
+  test("mixed roles share one cumulative budget and retain reservation revisions", () => {
+    const f = setup();
+    for (const [index, role] of (["baseline", "screening", "optimizer"] as const).entries()) {
+      const limits = role === "optimizer" ? f.plan.bounds.optimization : f.plan.bounds.trial;
+      const operationId = `mixed-${index}`;
+      f.ledger.beginOperation(f.id, f.fence, { operationId, role, ...limits });
+      reserve(f, `attempt-${index}`, operationId);
+      f.ledger.dispatch(f.id, f.fence, `attempt-${index}`);
+      settle(f, `attempt-${index}`);
+      f.ledger.finishOperation(f.id, f.fence, operationId, 10);
+    }
+    expect(f.ledger.summary(f.id).totals).toMatchObject({
+      requests: 3,
+      reportedTokens: 210,
+      reportedExecutionMs: 30,
+    });
+    f.store.appendGrant(f.id, grantFor(f.plan.planHash, f.now(), { revision: 2, maxRequests: 20 }));
+    begin(f, "after-renewal");
+    reserve(f, "renewed", "after-renewal");
+    expect(f.ledger.summary(f.id).attempts.renewed.grantRevision).toBe(2);
+    expect(f.ledger.summary(f.id).attempts["attempt-0"].grantRevision).toBe(1);
+  });
+  test("partial known usage remains auditable while full estimate stays unknown", () => {
+    const f = setup();
+    begin(f);
+    reserve(f);
+    f.ledger.dispatch(f.id, f.fence, "attempt-a");
+    const partial = { ...usage, outputTokens: null };
+    settle(f, "attempt-a", partial);
+    const summary = f.ledger.summary(f.id);
+    expect(summary.attempts["attempt-a"].usage).toEqual(partial);
+    expect(summary.totals.unknownTokens).toBe(100);
+    expect(summary.totals.reportedTokens).toBe(0);
+  });
   test("repair path cannot be a symlink", () => {
     const f = setup();
     begin(f);
@@ -379,7 +446,7 @@ test("SIGKILL after dispatch retains unknown expenditure on replacement process"
   const storeUrl = new URL("./store.ts", import.meta.url).href;
   const leaseUrl = new URL("./lease.ts", import.meta.url).href;
   const ledgerUrl = new URL("./ledger.ts", import.meta.url).href;
-  const script = `import { ExperimentStore } from ${JSON.stringify(storeUrl)}; import { ExperimentLease } from ${JSON.stringify(leaseUrl)}; import { ExperimentLedger } from ${JSON.stringify(ledgerUrl)}; const store=new ExperimentStore(process.argv[1]); const id=process.argv[2]; const lease=new ExperimentLease(store,{owner:'crashing',ttlMs:100}); const fence=lease.acquire(id); const ledger=new ExperimentLedger(store); ledger.beginOperation(id,fence,{operationId:'crash-op',role:'baseline',timeoutMs:1000,maxRequests:1,maxOutputTokens:100}); ledger.reserveAttempt(id,fence,{operationId:'crash-op',attemptId:'crash-attempt',estimatedTokens:100,estimatedCostUsd:0.01}); ledger.dispatch(id,fence,'crash-attempt'); console.log('dispatched'); setInterval(()=>{},1000); await new Promise(()=>{});`;
+  const script = `import { ExperimentStore } from ${JSON.stringify(storeUrl)}; import { ExperimentLease } from ${JSON.stringify(leaseUrl)}; import { ExperimentLedger } from ${JSON.stringify(ledgerUrl)}; const store=new ExperimentStore(process.argv[1]); const id=process.argv[2]; const lease=new ExperimentLease(store,{owner:'crashing',ttlMs:100}); const fence=lease.acquire(id); const ledger=new ExperimentLedger(store); ledger.beginOperation(id,fence,{operationId:'crash-op',role:'baseline',timeoutMs:1000,maxRequests:2,maxOutputTokens:100}); ledger.reserveAttempt(id,fence,{operationId:'crash-op',attemptId:'crash-attempt',estimatedTokens:100,estimatedCostUsd:0.01}); ledger.dispatch(id,fence,'crash-attempt'); console.log('dispatched'); setInterval(()=>{},1000); await new Promise(()=>{});`;
   const child = Bun.spawn([process.execPath, "-e", script, f.root, f.id], {
     stdout: "pipe",
     stderr: "pipe",
@@ -408,7 +475,7 @@ test("SIGKILL after dispatch retains unknown expenditure on replacement process"
       operationId: "crash-op",
       role: "baseline",
       timeoutMs: 1000,
-      maxRequests: 1,
+      maxRequests: 2,
       maxOutputTokens: 100,
     }).status,
   ).toBe("unknown");

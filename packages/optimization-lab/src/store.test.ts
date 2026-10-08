@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
-  chmodSync,
+  statSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -127,8 +127,7 @@ describe("bounded experiment storage", () => {
     const f = setup();
     if (process.platform !== "win32") {
       const path = join(f.store.directory(f.id), "state.json");
-      expect(Bun.file(path).exists()).resolves.toBe(true);
-      chmodSync(path, 0o600);
+      expect(statSync(path).mode & 0o777).toBe(0o600);
     }
   });
 });
