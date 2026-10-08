@@ -13,6 +13,7 @@ export interface LinkAuthorizationLabels {
   secondFactor: string;
   detectSession: string;
   bindSession: string;
+  loginSession: string;
   notInstalled: string;
   notAuthenticated: string;
   authenticated: string;
@@ -46,6 +47,7 @@ const DEFAULT_LABELS: LinkAuthorizationLabels = {
   secondFactor: "完成服务商要求的追加验证",
   detectSession: "检查登录状态",
   bindSession: "使用这个账号",
+  loginSession: "登录账号",
   notInstalled: "此环境尚未安装对应 CLI。",
   notAuthenticated: "请先在当前环境登录对应 CLI，再检查状态。",
   authenticated: "已登录",
@@ -302,6 +304,11 @@ export function LinkAuthorizationStepView(props: LinkAuthorizationStepViewProps)
               <button type="button" disabled={disabled} onClick={() => respond("detect-session")}>
                 {labels.detectSession}
               </button>
+              {!step.session.authenticated && step.session.canLogin && (
+                <button type="button" disabled={disabled} onClick={() => respond("login-session")}>
+                  {labels.loginSession}
+                </button>
+              )}
               {step.session.authenticated && (
                 <button type="button" disabled={disabled} onClick={() => respond("bind-session")}>
                   {labels.bindSession}

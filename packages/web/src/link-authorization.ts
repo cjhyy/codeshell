@@ -69,17 +69,29 @@ const SUPPORTED_STEPS = new Set([
 ]);
 
 function assertAuthorization(value: LinkAuthorization, expectedId?: string): void {
-  if (!value.id || (expectedId && value.id !== expectedId))
+  if (typeof value.id !== "string" || !value.id || (expectedId && value.id !== expectedId))
     throw new Error("授权响应与当前连接不匹配。");
   if (!["pending", "connected", "failed", "cancelled"].includes(value.state))
     throw new Error("无法识别授权状态，请更新客户端。");
   if (value.state === "connected" && !value.connection)
     throw new Error("服务尚未确认连接已保存，请刷新后重试。");
+  if (
+    value.state === "connected" &&
+    (value.connection?.providerId !== value.providerId ||
+      (value.methodId && value.connection.methodId !== value.methodId))
+  )
+    throw new Error("保存的连接与当前授权不匹配。");
   const step = getLinkAuthorizationStep(value);
   if (value.state === "pending" && (!step || !SUPPORTED_STEPS.has(step.kind)))
     throw new Error("当前客户端不支持这个授权步骤，请更新客户端。");
   if (step && (!step.id || !Number.isFinite(Date.parse(step.expiresAt))))
     throw new Error("授权步骤缺少有效期限，请重新连接。");
+  if (
+    value.expiresAt &&
+    (!Number.isFinite(Date.parse(value.expiresAt)) ||
+      (step && Date.parse(step.expiresAt) > Date.parse(value.expiresAt)))
+  )
+    throw new Error("授权任务的有效期限无效，请重新连接。");
 }
 
 /**
@@ -276,6 +288,11 @@ export class LinkAuthorizationController {
 
   clearError(): void {
     this.publish({ ...this.value, error: undefined });
+  }
+  reset(): void {
+    if (this.value.busy || this.value.authorization?.state === "pending") return;
+    this.stop();
+    this.publish({ busy: false });
   }
   dispose(): void {
     const authorization = this.value.authorization;
