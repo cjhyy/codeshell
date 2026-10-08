@@ -5,6 +5,9 @@
 测试账号。原生 Desktop 和真实 Docker 项目授权已通过受控上游验收，真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
 `list_repositories`、`list_issues`、`get_issue` 只读动作。
 
+不同授权方式共用 UI 的后续设计见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
+该方案描述统一连接任务与步骤的迁移，尚未作为产品协议实现。
+
 ## 授权由 Host 持有
 
 `beginRemoteLinkAuthorization({ issuer, clientId, redirectUri, clientSecret? })` 生成 S256
