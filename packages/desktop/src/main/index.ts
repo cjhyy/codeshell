@@ -6904,44 +6904,6 @@ taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
-ipcMain.handle(
-  "sessions:listDisk",
-  async (
-    _e,
-    opts: {
-      limit?: number;
-      cursor?: string;
-      parentSessionId?: string;
-    },
-  ) => {
-    const limit =
-      typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
-        ? Math.min(opts.limit, 200)
-        : 30;
-    if (
-      opts?.cursor !== undefined &&
-      (typeof opts.cursor !== "string" || opts.cursor.length > 512 || opts.cursor.includes("\0"))
-    ) {
-      throw new Error("invalid session cursor");
-    }
-    if (opts?.parentSessionId !== undefined) assertDesktopSessionId(opts.parentSessionId);
-    return listDiskSessions({
-      limit,
-      cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
-      parentSessionId: opts?.parentSessionId,
-    });
-  },
-);
-ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
-  assertDesktopSessionId(sessionId);
-  if (
-    sinceId !== undefined &&
-    (typeof sinceId !== "string" || sinceId.length > 512 || sinceId.includes("\0"))
-  ) {
-    throw new Error("invalid transcript cursor");
-  }
-  return getSessionEvents(sessionId, typeof sinceId === "string" ? sinceId : undefined);
-});
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   await deleteRunDir(runId);
