@@ -108,7 +108,7 @@ export function LinkConnectionDialog({
     if (
       mode?.kind !== "local-session" ||
       authorization?.step?.kind !== "local-session" ||
-      !authorization.step.session.canLogin
+      authorization.step.session.canInstall !== true
     ) {
       setCanInstall(false);
       return;
@@ -126,7 +126,7 @@ export function LinkConnectionDialog({
   }, [
     api,
     authorization?.step?.kind,
-    authorization?.step?.kind === "local-session" && authorization.step.session.canLogin,
+    authorization?.step?.kind === "local-session" && authorization.step.session.canInstall,
     input.providerId,
     mode?.kind,
   ]);
@@ -161,7 +161,15 @@ export function LinkConnectionDialog({
     });
   };
   const install = async () => {
-    if (!modeId || busy) return;
+    if (
+      !modeId ||
+      busy ||
+      !canInstall ||
+      authorization?.step?.kind !== "local-session" ||
+      authorization.step.session.canInstall !== true ||
+      authorization.step.session.installed
+    )
+      return;
     setInstalling(true);
     setOpenError("");
     try {
@@ -271,6 +279,7 @@ export function LinkConnectionDialog({
             </p>
           )}
           {authorization?.step?.kind === "local-session" &&
+            authorization.step.session.canInstall === true &&
             !authorization.step.session.installed &&
             canInstall && (
               <Button

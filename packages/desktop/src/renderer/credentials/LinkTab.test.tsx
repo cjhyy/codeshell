@@ -33,6 +33,8 @@ const {
   resolvePreferredLinkRuntime,
 } = await import("./LinkTab");
 const { DialogProvider } = await import("../ui/DialogProvider");
+const { LinkConnectionDialog } = await import("./LinkConnectionDialog");
+const { Github } = await import("lucide-react");
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -913,6 +915,101 @@ describe("LinkTab integrations", () => {
       findElements(container, "INPUT").some((input) => reactPropsOf(input).name === "token"),
     ).toBe(false);
   });
+
+  test.each([
+    { canInstall: true, supported: true, expected: true },
+    { canInstall: false, supported: true, expected: false },
+    { canInstall: true, supported: false, expected: false },
+  ])(
+    "offers CLI installation independently from CLI login permission (%j)",
+    async ({ canInstall, supported, expected }) => {
+      ensureMiniDom();
+      let starts = 0;
+      let installations = 0;
+      let installChecks = 0;
+      let connected = 0;
+      const expiresAt = new Date(Date.now() + 60_000).toISOString();
+      Object.assign(window, {
+        codeshell: {
+          links: {
+            authorizationStart: async () => ({
+              id: `cli-install-${++starts}`,
+              providerId: "github",
+              methodId: "fine-grained-pat",
+              state: "pending",
+              expiresAt,
+              step: {
+                id: `cli-step-${starts}`,
+                kind: "local-session",
+                expiresAt,
+                session: {
+                  installed: installations > 0,
+                  authenticated: false,
+                  canLogin: false,
+                  canInstall,
+                },
+              },
+            }),
+            authorizationCancel: async () => undefined,
+            cliInstallStatus: async () => {
+              installChecks++;
+              return { supported };
+            },
+            installCli: async () => {
+              installations++;
+            },
+          },
+        },
+      });
+      const container = document.createElement("div") as unknown as HTMLElement;
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(
+          <LinkConnectionDialog
+            cwd="/repo"
+            providerName="GitHub"
+            icon={Github}
+            input={{
+              providerId: "github",
+              methodId: "fine-grained-pat",
+              label: "GitHub",
+              expectedRevision: null,
+            }}
+            modes={[
+              {
+                id: "cli-session",
+                methodId: "fine-grained-pat",
+                kind: "local-session",
+                label: "CLI",
+                available: true,
+              },
+            ]}
+            onClose={() => undefined}
+            onConnected={() => {
+              connected++;
+            }}
+          />,
+        );
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      const install = buttonWithLabel(container, "安装并继续连接");
+      expect(Boolean(install)).toBe(expected);
+      expect(installChecks).toBe(canInstall ? 1 : 0);
+      expect(buttonWithLabel(container, "登录账号")).toBeUndefined();
+      if (expected) {
+        await act(async () => {
+          reactPropsOf(install).onClick();
+          await flushMicrotasks();
+          await flushMicrotasks();
+        });
+        expect(installations).toBe(1);
+        expect(starts).toBe(2);
+        expect(buttonWithLabel(container, "安装并继续连接")).toBeUndefined();
+        expect(connected).toBe(0);
+      }
+    },
+  );
 
   test("offers a zero-copy CLI session before the manual token fallback", async () => {
     ensureMiniDom();
