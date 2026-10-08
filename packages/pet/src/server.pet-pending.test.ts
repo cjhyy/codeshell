@@ -112,7 +112,7 @@ describe("AgentServer Pet pending projection", () => {
     expect(server.getPendingDecisionSnapshot()).toContainEqual(
       expect.objectContaining({ requestId, status: "resolved" }),
     );
-    server.close();
+    await server.close();
   });
 
   test("classifies AskUser explicitly and excludes internal browser waits", async () => {
@@ -153,7 +153,7 @@ describe("AgentServer Pet pending projection", () => {
     });
     await tick();
     expect(server.getPendingDecisionSnapshot()[0]?.status).toBe("cancelled");
-    server.close();
+    await server.close();
   });
 
   test("records timeout, explicit close, server close and owner disconnect terminal states", async () => {
@@ -213,10 +213,12 @@ describe("AgentServer Pet pending projection", () => {
         "shutdown me",
       );
       const shutdownRequest = t.sent.at(-1).params.requestId as string;
-      server.close();
+      const closing = server.close();
       expect(server.getPendingDecisionSnapshot()).toContainEqual(
         expect.objectContaining({ requestId: shutdownRequest, status: "cancelled" }),
       );
+      await closing;
+      expect(server.getPendingDecisionSnapshot()).toEqual([]);
     } finally {
       timeoutSpy.mockRestore();
     }
@@ -252,6 +254,12 @@ describe("AgentServer Pet pending projection", () => {
     expect(server.getPendingDecisionSnapshot()).toContainEqual(
       expect.objectContaining({ requestId: disconnectRequest, status: "owner-lost" }),
     );
-    server.close();
+    const snapshot = server.getPendingDecisionSnapshot() as Array<{ status: string }>;
+    snapshot[0]!.status = "resolved";
+    expect(server.getPendingDecisionSnapshot()).toContainEqual(
+      expect.objectContaining({ requestId: disconnectRequest, status: "owner-lost" }),
+    );
+    await server.close();
+    expect(server.getPendingDecisionSnapshot()).toEqual([]);
   });
 });

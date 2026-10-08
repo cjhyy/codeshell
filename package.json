@@ -26,9 +26,9 @@
     "dev:desktop": "bun run --filter '@cjhyy/code-shell-desktop' dev",
     "dev:tui": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run packages/tui/src/cli/main.ts",
     "dev:bigtranscript": "bun run scripts/render-bigtranscript-dev.ts",
-    "test": "bun test --timeout 30000 tests packages",
-    "test:core": "bun test --timeout 30000 packages/core/src",
-    "test:mimi-chat": "bun test --timeout 30000 tests/mimi-chat-replay.test.ts tests/mimi-bound-session-replay.test.ts packages/chat/src packages/pet/src packages/desktop/src/main/pet packages/desktop/src/main/im-gateway-service.test.ts packages/core/src/engine/engine.profile-max-turns.test.ts packages/core/src/engine/engine.profile-input-change.test.ts packages/core/src/engine/turn-loop-steer-backfill.test.ts",
+    "test": "node scripts/run-bun-test-shard.mjs --timeout 30000 tests packages",
+    "test:core": "node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src",
+    "test:mimi-chat": "node scripts/run-bun-test-shard.mjs --timeout 30000 tests/mimi-chat-replay.test.ts tests/mimi-bound-session-replay.test.ts packages/chat/src packages/pet/src packages/desktop/src/main/pet packages/desktop/src/main/im-gateway-service.test.ts packages/core/src/engine/engine.profile-max-turns.test.ts packages/core/src/engine/engine.profile-input-change.test.ts packages/core/src/engine/turn-loop-steer-backfill.test.ts",
     "test:coverage": "bun run scripts/check-builtin-coverage.ts",
     "test:e2e": "bun run build && bun run --cwd packages/desktop build && bun run --cwd packages/desktop test:e2e",
     "smoke": "bun run build && bun run --cwd packages/desktop build && bun run --cwd packages/desktop smoke",
@@ -37,7 +37,7 @@
     "evals:list": "node evals/harness/runner.mjs --list",
     "evals:validate": "node evals/harness/runner.mjs --validate",
     "evals:live": "node evals/harness/runner.mjs --live",
-    "test:evals": "bun test tests/harness-evals-*.test.ts",
+    "test:evals": "node scripts/run-bun-test-shard.mjs tests/harness-evals-*.test.ts",
     "test:package-release": "bun run scripts/package-release-smoke.ts",
     "test:watch": "bun test --timeout 30000 --watch tests packages",
     "bench:render": "bun run bench/render-tail.bench.ts && bun run bench/render-streaming.bench.ts && bun run bench/render-spinner.bench.ts && bun run bench/render-wheel.bench.ts",
@@ -47,7 +47,8 @@
     "lint:engine-bypass": "bash scripts/check-no-engine-bypass.sh",
     "lint:workflow-test-paths": "node scripts/check-workflow-test-paths.mjs",
     "lint:baseline": "node scripts/check-lint-baseline.mjs",
-    "format": "prettier --write 'packages/**/*.ts'"
+    "format": "prettier --write 'packages/**/*.ts'",
+    "test:upload-documents": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

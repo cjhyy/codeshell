@@ -80,7 +80,7 @@ MVP 三个实现，core 不出现任何 Figma/Notion 字样：
    - **每个 workspace 隐式自带一个内置源**（如 `id: "project-uploads"`，label "项目文件"），**不进全局 catalog**——上传的文件天然项目本地，三层模型通过"隐式定义 + 默认绑定"保持不破。
    - 文件落 `${cwd}/.code-shell/uploads/`（上传 = 拷贝进该目录；删除 = 移除文件）。
    - scope：MVP 单一 scope（全部上传文件）；未来可按子目录分 scope。
-   - 无凭证；但 **read 仍走 ReadSource 审批 + 大小上限 + 不可信包裹**——上传的 PDF/文档同样可能携带注入内容。
+   - 无凭证；但 **read / query / chunk 仍走同一个逐文件 ReadSource 审批 + 大小上限 + 不可信包裹**——上传的 PDF/文档同样可能携带注入内容。
    - 路径安全：resourceId 解析必须 canonicalize 并限制在 uploads 目录内（防 `../` 逃逸）。
 
 4. **link**：复用已审查的十家 Link provider 及其 25 个 discovery/read 动作，不接写动作。`credentialRef` 精确选中已保存连接；`adapterConfig = { providerId, action, params }` 固定一个查询视图。唯一 scope 为 `<provider>:<action>`，唯一 resource 为 `result`，ListSources 只列这个静态 metadata，不调用上游。可为不同查询创建不同 source。
@@ -148,7 +148,8 @@ MVP 先落**页面框架 + 数据源区块**，数字人/能力区块直接挂�
 - ✅ 现有十家 Link 的固定只读视图，复用已有授权，不宣称额外 provider/任意查询或真账号已验收
 - ✅ Profile allowlist/scopes/deny 求交及运行时接线
 - ❌ 跨 workspace 共享 binding / 源内容索引与 RAG
-- ❌ 上传文件的解析/向量化（模型按需 ReadSource 原文，超限截断）
+- ✅ 2026-10-09：上传文件有界 UTF-8 / DOCX / PPTX / XLSX / PDF 文本解析和逐文件词法分块索引，复用 ReadSource；PDF 是 Node 22.13+ 的可选能力。实现与限制见[上传交付边界](workspace-upload-document-index-delivery.md)。
+- ❌ 向量化、跨资源检索、OCR、版式还原。
 
 ## 10. 决策记录
 

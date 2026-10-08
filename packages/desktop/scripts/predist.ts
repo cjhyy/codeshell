@@ -163,7 +163,7 @@ function materializePackage(source: string, target: string): void {
 // packaged app crashed at runtime with `Cannot find package 'cross-spawn'`.
 //
 // Instead, let bun compute the closure: write a minimal package.json carrying
-// ONLY core's `dependencies`, then `bun install --production --linker=hoisted`.
+// core's `dependencies` and `optionalDependencies`, then `bun install --production --linker=hoisted`.
 // `--production` drops devDependencies; `--linker=hoisted` produces a flat tree
 // of REAL directories (no symlinks into an absolute .bun store path that won't
 // exist on the user's machine). This is self-maintaining: when a dep bumps and
@@ -174,6 +174,7 @@ function installProductionDeps(source: string, target: string, label: string): v
     name: string;
     version: string;
     dependencies?: Record<string, string>;
+    optionalDependencies?: Record<string, string>;
   };
   // Workspace siblings are materialized by this script and resolve through the
   // desktop node_modules ancestor. Bun cannot install `workspace:*` from the
@@ -194,6 +195,7 @@ function installProductionDeps(source: string, target: string, label: string): v
         name: pkg.name,
         version: pkg.version,
         dependencies,
+        optionalDependencies: pkg.optionalDependencies,
       },
       null,
       2,

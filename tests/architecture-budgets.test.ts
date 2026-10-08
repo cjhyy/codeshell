@@ -61,11 +61,19 @@ describe("architecture growth budgets", () => {
     // The 2026-09-20 media preview authority adds 42 lines of composition-only
     // wiring. Path validation, scoped authorization, Range streaming and
     // lifecycle cleanup remain extracted in media-preview-{authority,service}.
-    // Project review ownership/caches and remote Link window lifetimes now live
-    // in focused IPC modules. Keep the main-entry ceiling unchanged.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_156);
+    // Project review ownership/caches and remote Link window lifetimes live in
+    // focused IPC modules. Usage history adds only its import and one local IPC
+    // registration; validation, Session identity and bounded receipt reads stay
+    // in usage-history-service.ts and core/cost-ledger. The formatted Lab host
+    // registration accounts for the remaining two lines over the extracted
+    // 7_152-line root. Pin this reviewed composition-only result exactly.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_157);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
-    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(117);
+    // The five generic Link authorization operations reuse the window/project
+    // owner and live reauthorization guard here. Challenge state, provider
+    // protocols and native browser handoff remain in server/links and
+    // remote-link-{manager,window}; this registrar holds no provider tokens.
+    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(173);
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
     // part of this feature's reviewed transport contract, total 295 routes.
@@ -76,6 +84,9 @@ describe("architecture growth budgets", () => {
     // explicitly selected file without granting access to its parent directory.
     // Count the full session transcript registrar, including its two previously
     // extracted routes, and three reviewed Task Center list/get/act routes.
+    // The reviewed additions are five Link challenge operations, four Lab
+    // operations and one usage-history query. Count every registration, including
+    // the extracted modules, with no allowance for future routes.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
@@ -85,10 +96,11 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
-        // Four reviewed local-only Lab routes: query, native authorization,
-        // grading import and selected export. No remote grant route is added.
+        // Eight local-only Lab routes: the original four plus evidence preview/
+        // import and native dataset import/export. Their selected-file checks
+        // remain in this extracted, owner-scoped registrar.
         matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
-    ).toBeLessThanOrEqual(310);
+    ).toBeLessThanOrEqual(320);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -103,7 +115,13 @@ describe("architecture growth budgets", () => {
     // Count those invokes too, preserving the existing transport surface ceiling.
     // Session history invokes remain counted after extraction. Task Center adds
     // three reviewed invokes; its changed-event subscription adds no invoke.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_866);
+    // Link challenge start/get/respond/cancel/open are typed invoke adapters;
+    // challenge custody remains in the Host. Usage history adds one invoke to
+    // the extracted read-only service. The actual combined root is 1_871 lines.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_871);
+    // Include all eight extracted Lab invokes and the five generic Link
+    // challenge invokes plus usage history. Main-only routes remain counted
+    // above even when no renderer adapter exists; do not equate the totals.
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
@@ -114,7 +132,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(310);
+    ).toBeLessThanOrEqual(313);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -126,7 +144,10 @@ describe("architecture growth budgets", () => {
     // +55 declaration lines for those explicit project/version/Link contracts.
     // Main-branch integration retains the detailed run-trace declarations (+11).
     // Lab adds its extracted API type import and one typed capability property (+2).
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_932);
+    // Generic Link challenge contracts, the bounded UsageQuery/Summary method
+    // and Profile sourceAccess transport fields add declarations only. Host
+    // authorization and source-permission intersection remain outside preload.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_954);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -167,7 +188,17 @@ describe("architecture growth budgets", () => {
     // to async-user-answer.ts; no published entry-point budget is widened.
     // Per-turn sandbox/background-shell policy is validated and forwarded at
     // protocol ingress; enforcement remains in the run environment and tools.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_011);
+    // Runtime lifecycle adds awaited host activation, owner-scoped observer
+    // shutdown and a single close promise. Lifetime/activation algorithms stay
+    // in composition/{lifetime,activation,protocol-attach}; AgentServer retains
+    // connection ownership and transport cancellation. The usage query reuses
+    // resolveEngineForSessionQuery, rejects aggregation without an explicit
+    // trusted local Host, and delegates receipt reads to Engine/UsageLedger.
+    // +12 reviewed lifecycle lines retain a cloned, resolver-free final pending
+    // decision snapshot after owner disconnect and before observer disposal.
+    // Full close flushes terminal notifications before closing transport, then
+    // drops this metadata cache; no observer, tool resolver or grant is retained.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_138);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -190,7 +221,17 @@ describe("architecture growth budgets", () => {
     // (+15 net). Connection policy, retries and user-facing formatting remain
     // extracted under tool-system; Engine only places the result for this run.
     // +3 lines pass the frozen per-turn policy into the existing child spawner.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_428);
+    // The reviewed 259-line net growth owns Engine/Session/run lifetime scopes,
+    // awaited readiness and shutdown; implementation lives in composition's
+    // lifetime/activation modules. Cost accounting binds the current Session,
+    // run and ancestry to UsageLedger; storage/pricing/summary logic is extracted
+    // under cost-ledger and physical request receipts stay in llm. Workspace
+    // Profile/source guards and the trusted document executable are ToolContext
+    // wiring; source parsing/authorization stay under sources. Per-run operation
+    // controller binding and finalization fences delegate to operations/{ledger,
+    // controller,resolver}. Keep these private owner boundaries together and
+    // pin the actual combined Engine size, with no future-feature allowance.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_687);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -199,10 +240,17 @@ describe("architecture growth budgets", () => {
       // registerCapability/registerPreset/registerSection export surface.
       // The remote Link client is an intentional public SDK capability consumed
       // by standalone Hosts; tokens stay in their credential authority.
-      "packages/core/src/index.ts": 124,
+      // +2 LifetimeScope runtime/type statements for standalone SDK module
+      // owners; +2 Local OAuth and reviewed remote-provider adapters for external
+      // Hosts; +2 UsageLedger runtime/type statements for durable SDK accounting.
+      // Profile sourceAccess extends the existing source export statement.
+      // Parser executables and cache invalidation remain Host-only below.
+      "packages/core/src/index.ts": 130,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
-      "packages/core/src/index.extension.ts": 49,
+      // +1 type-only LifetimeScope/Disposable contract lets capability modules
+      // declare owned resources without exposing Host parser/runtime authority.
+      "packages/core/src/index.extension.ts": 50,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by
@@ -217,7 +265,10 @@ describe("architecture growth budgets", () => {
       // extension contracts do not expose configuration recovery authority.
       // Task Center requires one source-fenced background lifecycle module for
       // Host registries. Listing/cancellation stay off public and extension APIs.
-      "packages/core/src/index.internal.ts": 86,
+      // +2 reviewed upload Host seams: exact-file index invalidation for the
+      // upload lifecycle, and a verified managed parser executable resolver for
+      // Desktop/stdio. Neither is exported by the public/extension entries.
+      "packages/core/src/index.internal.ts": 88,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
@@ -233,7 +284,10 @@ describe("architecture growth budgets", () => {
       // stream reducer, giving reconnecting clients the same message state.
       // Environment identity and project-reference contracts are shared by the
       // desktop remote entry and standalone Web; no platform authority is exported.
-      "packages/web/src/index.ts": 17,
+      // +2 browser-safe Link challenge controller/presentation modules shared by
+      // Desktop and Web; transport custody, token refresh and grants remain Host
+      // responsibilities. These modules import no native/credential authority.
+      "packages/web/src/index.ts": 19,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

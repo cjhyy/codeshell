@@ -46,7 +46,7 @@ export interface ProtocolObserver {
   onSessionClosed?: (sessionId: string) => void;
   /** The server is shutting down. */
   onServerClose?: () => void;
-  /** Resolver-free pending-decision projections for host/debug snapshots. */
+  /** Cloneable, resolver-free pending-decision metadata for host/debug snapshots. */
   snapshotPendingDecisions?: () => readonly unknown[];
 }
 
@@ -58,7 +58,7 @@ export interface ProtocolObserverHost {
   projectionGeneration: () => number;
   /** Persisted session kind, when the session is live and its engine knows it. */
   getSessionKind: (sessionId: string) => string | undefined;
-  /** True once the server's transport owner disconnected. */
+  /** True after disconnect or when transport close begins, after final lifecycle notifications. */
   isTransportDisconnected: () => boolean;
   /** Server → client notification. */
   notify: (method: string, params: Record<string, unknown>) => void;

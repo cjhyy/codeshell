@@ -8,6 +8,7 @@ import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { SettingsManager } from "../settings/manager.js";
+import { saveWorkspaceProfile } from "../profile/store.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 import type { PermissionMode, SessionProjectBinding, SessionWorkspace } from "../types.js";
 import type { LLMResponse } from "../types.js";
@@ -334,6 +335,15 @@ describe("ChatSessionManager resident Engine root migration", () => {
       writeRoot(oldRoot, "old");
       writeRoot(newRoot, "new");
       mkdirSync(process.env.CODE_SHELL_HOME, { recursive: true });
+      // Selected Profiles must exist and explicitly narrow their bound sources.
+      // An unknown identity intentionally fails closed in the source resolver.
+      for (const marker of ["old", "new"] as const)
+        saveWorkspaceProfile({
+          name: `${marker}-profile`,
+          label: `${marker} profile`,
+          basePreset: "general",
+          sourceAccess: [{ sourceId: `${marker}-source`, scopes: [`${marker}-scope`] }],
+        });
       writeFileSync(
         join(process.env.CODE_SHELL_HOME, "sources.json"),
         JSON.stringify({

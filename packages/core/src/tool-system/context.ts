@@ -264,6 +264,8 @@ export interface ToolRunYieldController {
 
 export interface ToolContext {
   instructionSnapshots?: readonly import("../skills/instruction-bindings.js").InstructionSnapshot[];
+  /** Trusted Host resolver for an isolated PDF Node process; never model/settings input. */
+  documentParserExecutable?: (signal?: AbortSignal) => Promise<string>;
   /** Host-owned durable write control; never populated from model arguments. */
   operations?: {
     controller: import("../operations/controller.js").OperationController;

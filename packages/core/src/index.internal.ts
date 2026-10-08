@@ -256,6 +256,8 @@ export {
   defaultMcpResourceAdapter,
 } from "./sources/adapters/mcp-resource.js";
 export { listBindings, bindSource, unbindSource } from "./sources/binding.js";
+export { invalidateUploadedDocumentIndex } from "./sources/documents/index-store.js";
+export { createManagedDocumentParserResolver } from "./sources/documents/runtime.js";
 export { resolveEffectiveSourceAccess } from "./sources/resolve.js";
 export { defaultCredentialStatus } from "./sources/credential-status.js";
 export { buildSourcesContextSummary } from "./sources/context-summary.js";
