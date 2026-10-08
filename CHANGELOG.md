@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
-## [0.9.24] - 2026-10-08
+## [0.9.25] - 2026-10-08
+
+Version 0.9.24 was tagged but not published because its Windows installer build
+encountered an incompatible Visual Studio 2026 runner. This release pins the
+Windows packaging environment to Windows 2022 with Visual Studio 2022.
 
 ### Added
 
