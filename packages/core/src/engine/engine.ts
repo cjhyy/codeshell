@@ -3246,6 +3246,7 @@ export class Engine {
         systemPrompt: fullSystemPrompt,
         tools: toolDefs,
         sessionId: sid,
+        cwd,
         isSubAgent: this.config.isSubAgent === true,
         consumePendingCompactInfo: () => {
           const info = pendingCompactInfo;

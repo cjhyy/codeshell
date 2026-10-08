@@ -24,6 +24,7 @@ import type { DirectionEnvelope } from "../tool-system/builtin/agent-notificatio
 import { buildAgentDirectionMessage } from "../tool-system/builtin/agent-notifications.js";
 import type { LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import { newTurnId } from "./turn-state.js";
+import { outputUserMessage } from "./run-output-user-message.js";
 import { ModelFacade, type ModelCallRecordingOptions } from "./model-facade.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -138,6 +139,8 @@ export interface TurnLoopDeps {
   ctxOverheadStore: CtxOverheadStore;
   /** Current session id, used to key the overhead store. */
   sessionId: string;
+  /** Input display paths use the same workspace as attachment preparation. */
+  cwd?: string;
   /**
    * Carried into every hook emit's `ctx.data.isSubAgent` so handlers can
    * skip noisy injections for spawned children. Set by Engine from
@@ -2275,7 +2278,23 @@ export class TurnLoop {
       this.trackFreshImageMessage(message);
       this.deps.transcript.appendMessage("user", content, { steerId: id, clientMessageId });
       this.deps.setOriginClientMessageId?.(clientMessageId);
-      this.config.onStream?.({ type: "steer_injected", text, id });
+      const display = outputUserMessage(
+        { role: "user", content, clientMessageId },
+        this.deps.sessionId,
+        this.deps.cwd ?? "",
+      );
+      this.config.onStream?.({
+        type: "steer_injected",
+        text,
+        id,
+        ...(display.transcriptMessage
+          ? {
+              transcriptMessage: display.transcriptMessage,
+              sessionId: this.deps.sessionId,
+              clientMessageId,
+            }
+          : {}),
+      });
     }
     return consumed;
   }

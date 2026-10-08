@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import {
   appendFileSync,
   chmodSync,
@@ -155,6 +155,86 @@ describe("Session output journal", () => {
     expect(
       readOutputJournal(f.root, f.id, { after: first.next, through: first.through }).status,
     ).toBe("incomplete");
+  });
+  test("a live writer refuses same-length committed record/header rewrites before publishing another cursor", () => {
+    for (const mode of ["record", "header"] as const) {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "before" });
+      f.writer.append({ type: "text_delta", text: "second" });
+      const stat = statSync(f.file);
+      const raw = readFileSync(f.file, "utf8");
+      const lines = raw.split("\n");
+      if (mode === "record") lines[1] = lines[1].replace('"before"', '"broken"');
+      else {
+        const header = JSON.parse(lines[0]);
+        header.journalId = `${header.journalId[0] === "a" ? "b" : "a"}${header.journalId.slice(1)}`;
+        lines[0] = JSON.stringify(header);
+      }
+      const changed = lines.join("\n");
+      expect(Buffer.byteLength(changed)).toBe(Buffer.byteLength(raw));
+      writeFileSync(f.file, changed);
+      utimesSync(f.file, stat.atime, stat.mtime);
+      expect(() => f.writer.append({ type: "text_delta", text: "never published" })).toThrow();
+      expect(readFileSync(f.file, "utf8")).toBe(changed);
+    }
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "intact" });
+    const stat = statSync(f.file);
+    utimesSync(f.file, stat.atime, new Date(stat.mtimeMs + 1000));
+    expect(f.writer.append({ type: "text_delta", text: "still intact" })).toEqual(
+      expect.any(String),
+    );
+    expect(readOutputJournal(f.root, f.id).status).toBe("ok");
+  });
+  test("a mutation while assembling a page rechecks header, pin and sticky failure, while allowing a new run owner", () => {
+    for (const mode of ["header", "pin", "failure", "run-owner"] as const) {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "mutation-boundary" });
+      const first = readOutputJournal(f.root, f.id);
+      expect(first.status).toBe("ok");
+      let changed = false;
+      const byteLength = Buffer.byteLength;
+      // Schedule actual file/state mutations after the cached prefix/header
+      // read and frame parse. Do not replace file I/O or its return values.
+      const hook = spyOn(Buffer, "byteLength").mockImplementation((value, encoding) => {
+        const length = byteLength(value, encoding);
+        if (
+          !changed &&
+          typeof value === "string" &&
+          value.includes('"cursor":') &&
+          value.includes("mutation-boundary")
+        ) {
+          changed = true;
+          if (mode === "header") {
+            const lines = readFileSync(f.file, "utf8").split("\n");
+            const header = JSON.parse(lines[0]);
+            header.journalId = `${header.journalId[0] === "a" ? "b" : "a"}${header.journalId.slice(1)}`;
+            lines[0] = JSON.stringify(header);
+            writeFileSync(f.file, lines.join("\n"));
+          } else {
+            const file = join(f.root, f.id, "state.json");
+            const state = JSON.parse(readFileSync(file, "utf8"));
+            if (mode === "pin") delete state.outputJournalIdentity;
+            else if (mode === "failure") state.outputRecoveryIncomplete = true;
+            else state.runId = "new-owner";
+            writeFileSync(file, JSON.stringify(state));
+          }
+        }
+        return length;
+      });
+      try {
+        const page = readOutputJournal(f.root, f.id, { through: first.through });
+        expect(changed).toBe(true);
+        if (mode === "run-owner") expect(page.status).toBe("ok");
+        else {
+          expect(["incomplete", "cursor_invalid"]).toContain(page.status);
+          expect(page.complete).toBe(false);
+          expect(page.frames).toEqual([]);
+        }
+      } finally {
+        hook.mockRestore();
+      }
+    }
   });
   test("child forwarding retains origin while the parent commits its own distinct scope", () => {
     const parent = fixture(),

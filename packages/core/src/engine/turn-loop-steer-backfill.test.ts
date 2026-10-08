@@ -403,7 +403,18 @@ describe("TurnLoop steer finalize backfill", () => {
       type: "steer_injected",
       text: "inspect this screenshot",
       id: "steer-image",
+      sessionId: deps.sessionId,
+      clientMessageId: "client-image",
+      transcriptMessage: {
+        cwd: "",
+        content: imageContent.map((block) =>
+          block.type === "image"
+            ? { type: "image", source: { media_type: "image/png", byteLength: 8 } }
+            : block,
+        ),
+      },
     });
+    expect(JSON.stringify(events)).not.toContain("iVBORw0KGgo=");
   });
 
   it("requeues a steer when attachment preparation fails without changing a completed run to model_error", async () => {

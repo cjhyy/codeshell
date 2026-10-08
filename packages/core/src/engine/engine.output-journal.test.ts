@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, truncateSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
@@ -33,8 +41,8 @@ class JournalFailureClient extends LLMClientBase {
 }
 registerProvider("output-journal-fault-fixture", JournalFailureClient);
 
-for (const fault of [false, true]) {
-  test(`actual Engine.run without options ${fault ? "fences a swallowed write failure" : "persists complete output"}`, async () => {
+for (const fault of ["none", "truncate", "record-rewrite", "header-rewrite"] as const) {
+  test(`actual Engine.run without options ${fault === "none" ? "persists complete output" : `fences swallowed ${fault}`}`, async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-output-no-options-"));
     const model = `no-options-${fault}-${Math.random()}`;
     const sessionRoot = join(root, "sessions");
@@ -64,18 +72,34 @@ for (const fault of [false, true]) {
     let calls = 0;
     scenarios.set(model, () => {
       calls++;
-      if (fault)
-        truncateSync(join(sessionRoot, readdirSync(sessionRoot)[0], "output-journal.jsonl"), 0);
+      const file = join(sessionRoot, readdirSync(sessionRoot)[0], "output-journal.jsonl");
+      if (fault === "truncate") truncateSync(file, 0);
+      else if (fault !== "none") {
+        const raw = readFileSync(file, "utf8");
+        const lines = raw.split("\n");
+        if (fault === "record-rewrite") lines[1] = lines[1].replace("standard", "modified");
+        else {
+          const header = JSON.parse(lines[0]);
+          header.journalId = `${header.journalId[0] === "a" ? "b" : "a"}${header.journalId.slice(1)}`;
+          lines[0] = JSON.stringify(header);
+        }
+        const changed = lines.join("\n");
+        expect(changed).not.toBe(raw);
+        expect(Buffer.byteLength(changed)).toBe(Buffer.byteLength(raw));
+        writeFileSync(file, changed);
+      }
     });
     try {
       const result = await engine.run("Use the standard SDK overload");
       expect(calls).toBe(1);
-      if (fault) {
+      if (fault !== "none") {
         expect(result.reason).toBe("model_error");
         expect(
           engine.getSessionManager().readSessionState(result.sessionId)?.outputRecoveryIncomplete,
         ).toBe(true);
-        expect(readOutputJournal(sessionRoot, result.sessionId).status).toBe("incomplete");
+        expect(["incomplete", "cursor_invalid"]).toContain(
+          readOutputJournal(sessionRoot, result.sessionId).status,
+        );
       } else {
         expect(result.reason).toBe("completed");
         const page = readOutputJournal(sessionRoot, result.sessionId);

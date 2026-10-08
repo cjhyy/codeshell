@@ -4,6 +4,7 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { FoldItem, SessionSnapshot, SessionTranscriptPage } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { bucketKey, loadTranscript, saveTranscript, type SessionIndex } from "../transcripts";
+import { applyStreamEvent, INITIAL_STATE } from "../types";
 import { transcriptsReducer, type TranscriptsMap } from "../transcriptsReducer";
 import { foldTranscript } from "../automation/foldTranscript";
 import { flushSessionPersistence } from "../sessionPersistence";
@@ -194,7 +195,7 @@ describe("transcript history hydration after a background resume", () => {
     }
   });
 
-  for (const mode of ["normal", "attachment-only", "injected", "agent"] as const) {
+  for (const mode of ["normal", "attachment-only", "injected", "agent", "steer"] as const) {
     test(`existing hydration preserves actual Engine ${mode} input display after RAM eviction`, async () => {
       const fixture = await outputUserInputFixture(mode);
       const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
@@ -235,10 +236,13 @@ describe("transcript history hydration after a background resume", () => {
           ]);
           expect(JSON.stringify(hook.result.current.state)).not.toContain("PRIVATE_MACHINE_INPUT");
         } else {
-          expect(users).toHaveLength(1);
-          expect(users[0]).toMatchObject({
+          expect(users).toHaveLength(mode === "steer" ? 2 : 1);
+          expect(users.at(-1)).toMatchObject({
             text: fixture.prompt,
-            clientMessageId: "fixture-input",
+            clientMessageId: mode === "steer" ? "fixture-steer-client" : "fixture-input",
+            ...(mode === "steer"
+              ? { steerId: "fixture-steer", injected: true, pending: false }
+              : {}),
             attachments: fixture.attachments.map((attachment) => ({
               kind: attachment.kind,
               path: attachment.path,
@@ -249,6 +253,17 @@ describe("transcript history hydration after a background resume", () => {
               mime: attachment.mime,
             })),
           });
+        }
+        if (mode === "steer") {
+          const live = fixture.events.reduce(
+            (state, event) => applyStreamEvent(state, event),
+            INITIAL_STATE,
+          );
+          const display = (messages: typeof live.messages) =>
+            messages
+              .filter((message) => message.kind === "user" && message.steerId === "fixture-steer")
+              .map(({ id: _id, createdAt: _createdAt, ...message }) => message);
+          expect(display(live.messages)).toEqual(display(hook.result.current.state.messages));
         }
         expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
       } finally {

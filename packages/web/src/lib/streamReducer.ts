@@ -16,6 +16,8 @@
  * by agentId so a subagent never clobbers the main list).
  */
 
+import { projectOutputUserEvent } from "./userMessageDisplay.js";
+
 /** Strip <system-reminder>…</system-reminder> blocks from tool output before
  *  rendering — they're context for the model, not status for the user. */
 function stripSystemReminders(s: string): string {
@@ -168,7 +170,8 @@ function asStreamEvent(
 export function reduceStream(state: ChatState, raw: unknown): ChatState {
   const unwrapped = asStreamEvent(raw);
   if (!unwrapped) return state;
-  const { event, sessionId } = unwrapped;
+  const { sessionId } = unwrapped;
+  const event = projectOutputUserEvent(unwrapped.event);
   const type = event.type as string;
   let s = state;
   if (sessionId && sessionId !== s.sessionId) {
@@ -619,6 +622,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     }
 
     case "session_user_message":
+    case "steer_injected":
     case "user_message": {
       if (
         event.injected === true ||

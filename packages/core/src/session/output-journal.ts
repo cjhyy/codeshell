@@ -444,6 +444,7 @@ export function readOutputJournal(
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
     fd = openRegular(location.file, constants.O_RDONLY);
     const size = fstatSync(fd).size;
+    const headerStamp = fileStamp(fd);
     const { header, identity, start } = readHeader(fd, location);
     if (!pinned)
       throw new JournalError("incomplete", "Output journal identity was never committed");
@@ -491,11 +492,19 @@ export function readOutputJournal(
       next = current;
       if (frames.length >= maxFrames) break;
     }
-    if (fileStamp(fd) !== verified.stamp) {
+    if (headerStamp !== verified.stamp || fileStamp(fd) !== verified.stamp) {
       // Appends do not invalidate a frozen page. A changed file must re-prove
-      // that complete old prefix, including all bytes before `after`.
-      const frozen = scan(fd, start, through.offset);
+      // its pinned header and complete old prefix, including before `after`.
+      // A worker may keep appending beyond `through` throughout this bounded
+      // scan. The verified frozen prefix, not a globally stable file stamp,
+      // is the recovery boundary. Arbitrary writes bypassing owner locks have
+      // the usual filesystem TOCTOU limit after this validation point.
+      const changedHeader = readHeader(fd, location);
+      const frozen = scan(fd, changedHeader.start, through.offset);
       if (
+        changedHeader.identity !== identity ||
+        changedHeader.start.hash !== start.hash ||
+        changedHeader.start.offset !== start.offset ||
         frozen.sequence !== through.sequence ||
         frozen.hash !== through.hash ||
         frozen.offset !== through.offset
@@ -511,9 +520,16 @@ export function readOutputJournal(
       finalFile.ino !== openFile.ino
     )
       invalid("Output journal was replaced during recovery");
-    const finalDirectory = lstatSync(location.directory);
-    if (finalDirectory.dev !== location.stat.dev || finalDirectory.ino !== location.stat.ino)
+    const finalLocation = sessionLocation(root, sessionId);
+    if (
+      finalLocation.stat.dev !== location.stat.dev ||
+      finalLocation.stat.ino !== location.stat.ino ||
+      finalLocation.state.startedAt !== location.state.startedAt ||
+      finalLocation.state.outputJournalIdentity !== start.hash
+    )
       invalid("Session was replaced during recovery");
+    if (finalLocation.state.outputRecoveryIncomplete)
+      throw new JournalError("incomplete", "This Session recorded an output persistence failure");
     return {
       version: 1,
       status: "ok",
@@ -550,6 +566,7 @@ export class SessionOutputJournal {
   private readonly identity: string;
   private position: Position;
   private readonly fileIdentity: { dev: number; ino: number };
+  private verifiedStamp: string;
   readonly identityPin: string;
   constructor(
     root: string,
@@ -597,10 +614,13 @@ export class SessionOutputJournal {
         }
       }
       if (process.platform !== "win32") fchmodSync(fd, 0o600);
+      const scannedStamp = fileStamp(fd);
       const loaded = readHeader(fd, this.location);
       this.identity = loaded.identity;
       this.identityPin = loaded.start.hash;
       this.position = scan(fd, loaded.start, fstatSync(fd).size);
+      if (fileStamp(fd) !== scannedStamp)
+        invalid("Output journal changed during owner verification");
       if (!this.location.state.outputJournalIdentity) {
         if (this.position.sequence > 0)
           throw new JournalError(
@@ -616,6 +636,7 @@ export class SessionOutputJournal {
         fsyncSync(fd);
       }
       this.fileIdentity = fstatSync(fd);
+      this.verifiedStamp = fileStamp(fd);
     } finally {
       if (fd !== undefined) closeSync(fd);
       release();
@@ -717,6 +738,23 @@ export class SessionOutputJournal {
         stat.size !== this.position.offset
       )
         invalid("Output journal changed under its owner");
+      const stamp = fileStamp(fd);
+      if (stamp !== this.verifiedStamp) {
+        // A local tool may have changed committed bytes without changing inode
+        // or length. Ordinary owned appends carry their own completed stamp
+        // forward, so only an unexpected stamp change requires a prefix scan.
+        const loaded = readHeader(fd, this.location);
+        const verified = scan(fd, loaded.start, stat.size);
+        if (
+          loaded.identity !== this.identity ||
+          loaded.start.hash !== this.identityPin ||
+          verified.sequence !== this.position.sequence ||
+          verified.offset !== this.position.offset ||
+          verified.hash !== this.position.hash ||
+          fileStamp(fd) !== stamp
+        )
+          invalid("Output journal committed prefix changed under its owner");
+      }
       let next = this.position;
       const linesToWrite: string[] = [];
       for (const payload of values) {
@@ -739,6 +777,7 @@ export class SessionOutputJournal {
       fsyncSync(fd);
       this.assertOwner();
       this.position = next;
+      this.verifiedStamp = fileStamp(fd);
       return token(this.identity, next);
     } finally {
       if (fd !== undefined) closeSync(fd);

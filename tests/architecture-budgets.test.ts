@@ -252,9 +252,10 @@ describe("architecture growth budgets", () => {
     // incarnation/storage scope, composition/config versions and borrowed or
     // owned Host signer enter the existing model facade. Provider projection,
     // validation, custody and durable event writes remain in dedicated modules.
-    // +4 net lines bind the run-owned persist-before-publish policy. Journal
+    // +5 net lines bind persist-before-publish and the workspace path used
+    // by the shared input display projection for queued attachment steering. Journal
     // ownership/failure fencing remain in run-stream.ts and session/output-journal.ts.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_884);
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_885);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

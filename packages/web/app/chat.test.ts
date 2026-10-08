@@ -13,7 +13,7 @@ import {
 } from "../../core/src/session/output-journal.js";
 import { outputUserInputFixture } from "../../../tests/fixtures/output-journal-user-input.js";
 
-for (const mode of ["normal", "attachment-only", "injected", "agent"] as const) {
+for (const mode of ["normal", "attachment-only", "injected", "agent", "steer"] as const) {
   test(`Hub existing recovery preserves actual Engine ${mode} input display`, async () => {
     const fixture = await outputUserInputFixture(mode);
     try {
@@ -32,6 +32,16 @@ for (const mode of ["normal", "attachment-only", "injected", "agent"] as const) 
         [],
       );
       expect(result).not.toBeNull();
+      if (mode === "steer") {
+        const live = fixture.events.reduce(reduceStream, initialChatState());
+        const display = (items: typeof live.items) =>
+          items
+            .filter(
+              (item) => item.kind === "user" && item.clientMessageId === "fixture-steer-client",
+            )
+            .map(({ id: _id, ...item }) => item);
+        expect(display(live.items)).toEqual(display(result!.chat.items));
+      }
       const users = result!.chat.items.filter((item) => item.kind === "user");
       expect(users).toEqual(
         chatFromTranscript(fixture.transcript).items.filter((item) => item.kind === "user"),
@@ -40,10 +50,10 @@ for (const mode of ["normal", "attachment-only", "injected", "agent"] as const) 
         expect(users).toEqual([]);
         expect(JSON.stringify(result!.chat)).not.toContain("PRIVATE_MACHINE_INPUT");
       } else {
-        expect(users).toHaveLength(1);
-        expect(users[0]).toMatchObject({
+        expect(users).toHaveLength(mode === "steer" ? 2 : 1);
+        expect(users.at(-1)).toMatchObject({
           text: fixture.prompt,
-          clientMessageId: "fixture-input",
+          clientMessageId: mode === "steer" ? "fixture-steer-client" : "fixture-input",
           attachments: fixture.attachments.map((attachment) => ({
             name: attachment.originalName,
             size: attachment.size,

@@ -28,6 +28,17 @@ the state lock, then checks them again after flushing. Existing Desktop deletion
 quiesces the worker before deleting Session files. A late writer cannot recreate
 a deleted/reused Session. Archive retains the existing read policy. Ephemeral
 Sessions keep their ordinary process-local stream and never create this file.
+The writer retains the nanosecond file stamp of its last successful flush. An
+unexpected stamp change requires rechecking the pinned header and complete old
+prefix before another cursor can be published, including same-length in-place
+damage with restored mtime. Ordinary owned appends update their own stamp and do
+not rescan the full prefix per chunk. Recovery also rechecks header identity on
+changed stamps and the Session pin/sticky failure before returning a page; a
+new run owner alone does not invalidate an older frozen prefix. A continuously
+appending worker may change the whole-file stamp during that check: recovery
+verifies the pinned header and frozen prefix hash rather than requiring a
+globally stable file. Arbitrary writes bypassing the owner lock retain the
+filesystem TOCTOU limitation after the bounded verification point.
 
 Only an unfinished final logical event may be isolated after a crash: either an
 unterminated line, or complete newline records belonging to a fragment group
@@ -154,3 +165,11 @@ not a cross-machine latency guarantee):
 The near-budget result reads about 2.73 journal lengths, rather than one full
 journal per page. The cold verification still blocks its calling thread for the
 measured scan duration; active file changes can require additional full scans.
+
+Queued attachment steering uses the same generic input display projection as
+initial user input. The existing `steer_injected` event retains its queued id,
+Session and submit identity; image payloads stay in model/canonical transcript
+storage. The shared browser projection runs on both live reducer entrances and
+durable replay. Actual Engine tests enqueue file+image guidance during the first
+response, prove a subsequent model request consumed both attachments, evict the
+RAM prefix, and compare live/recovered display fields in Desktop and Hub.

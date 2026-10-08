@@ -12,6 +12,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -73,6 +74,135 @@ async function measureJournal(core, root, sessionId, expectedHash) {
   } finally {
     fs.readSync = original;
     syncBuiltinESMExports();
+  }
+}
+
+// A genuinely independent writer can append while the Main-thread reader is
+// synchronously validating and paging an older frozen, cache-cold prefix.
+async function appendChild([root, sessionId, runId, progressFile, stopFile]) {
+  const core = await import("@cjhyy/code-shell-core/internal");
+  const writer = new core.SessionOutputJournal(root, sessionId, runId);
+  const progress = (count) => {
+    writeFileSync(progressFile + ".tmp", JSON.stringify({ pid: process.pid, count }), {
+      mode: 0o600,
+    });
+    renameSync(progressFile + ".tmp", progressFile);
+  };
+  progress(0);
+  for (let count = 1; count <= 4000 && !existsSync(stopFile); count++) {
+    writer.append({ type: "text_delta", text: `tail-${count}-` + "y".repeat(4096) });
+    progress(count);
+    await wait(2);
+  }
+}
+
+async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
+  const sessionRoot = join(root, "concurrent-sessions"),
+    manager = new core.SessionManager(sessionRoot),
+    sessionId = "frozen-append",
+    runId = "append-run";
+  const session = manager.create(cwd, "fixture", "fixture", sessionId);
+  manager.startSessionRun(session.state, runId);
+  const writer = new journalApi.SessionOutputJournal(
+    sessionRoot,
+    sessionId,
+    runId,
+    session.transcript.getEvents()[0].id,
+  );
+  const text = "prefix-汉🙂" + "x".repeat(60 * 1024),
+    expected = createHash("sha256");
+  let through;
+  for (let count = 0; count < 192; count++) {
+    through = writer.append({ type: "text_delta", text });
+    expected.update(text);
+  }
+  const prefixBytes = statSync(join(sessionRoot, sessionId, "output-journal.jsonl")).size;
+  assert.ok(prefixBytes > 8 * 1024 * 1024);
+  const environmentRoot = mkdtempSync(join(root, "append-worker-")),
+    clean = createBunTestEnvironment(process.env, environmentRoot),
+    progressFile = join(environmentRoot, "progress.json"),
+    stopFile = join(environmentRoot, "stop");
+  const env = {
+    ...confinedWorkerEnvironment(clean, clean.HOME, origin, preload),
+    CODESHELL_COST_SMOKE_GUARD_LOG: join(environmentRoot, "guard.jsonl"),
+  };
+  const child = spawn(
+    process.execPath,
+    [
+      resolve(repo, "scripts/smoke-output-journal.mjs"),
+      "--append-worker",
+      sessionRoot,
+      sessionId,
+      runId,
+      progressFile,
+      stopFile,
+    ],
+    { cwd: repo, env, stdio: ["ignore", "ignore", "pipe"] },
+  );
+  let stderr = "";
+  child.stderr.on("data", (value) => {
+    stderr = (stderr + value).slice(-4000);
+  });
+  const exited = once(child, "exit");
+  try {
+    await workerGuard(child, env);
+    for (let count = 0; count < 1000; count++) {
+      if (existsSync(progressFile) && JSON.parse(readFileSync(progressFile, "utf8")).count > 0)
+        break;
+      if (child.exitCode !== null) throw new Error("Append worker exited: " + stderr);
+      await wait(10);
+    }
+    const before = JSON.parse(readFileSync(progressFile, "utf8"));
+    assert.equal(before.pid, child.pid);
+    assert.ok(before.count > 0);
+    const recovery = { incomplete: false },
+      actual = createHash("sha256"),
+      began = performance.now();
+    let pages = 0;
+    // This Session has never been read by this process: the first request is a
+    // cold large-prefix scan, while the independently scheduled child appends.
+    while (true) {
+      const page = journalApi.readOutputJournal(sessionRoot, sessionId, {
+        through,
+        ...(recovery.cursor ? { after: recovery.cursor } : {}),
+        maxFrames: 16,
+      });
+      assert.equal(page.status, "ok", JSON.stringify({ page, stderr }));
+      pages++;
+      const done = journalApi.applyOutputJournalPage(recovery, page, (event) => {
+        if (event.type === "text_delta") actual.update(event.text);
+      });
+      assert.equal(recovery.incomplete, false);
+      if (done) break;
+      assert.ok(pages < 100);
+    }
+    const after = JSON.parse(readFileSync(progressFile, "utf8"));
+    assert.equal(actual.digest("hex"), expected.digest("hex"));
+    assert.ok(
+      after.count > before.count,
+      "Independent worker must append during frozen pagination",
+    );
+    assert.ok(after.count < 4000, "Writer must still be active when frozen pagination finishes");
+    assert.equal(child.exitCode, null);
+    const timing = {
+      prefixBytes,
+      pages,
+      milliseconds: Math.round(performance.now() - began),
+      appendedDuringPaging: after.count - before.count,
+      actualWriterPid: child.pid,
+      actualWorkerReceipt: true,
+      frozenCursorStable: recovery.cursor === through,
+    };
+    assert.equal(timing.frozenCursorStable, true);
+    writeFileSync(stopFile, "stop", { mode: 0o600 });
+    const [code] = await exited;
+    assert.equal(code, 0, stderr);
+    assert.notEqual(journalApi.readOutputJournal(sessionRoot, sessionId).through, through);
+    return timing;
+  } finally {
+    writeFileSync(stopFile, "stop", { mode: 0o600 });
+    if (child.exitCode === null) child.kill("SIGKILL");
+    await exited;
   }
 }
 
@@ -373,7 +503,9 @@ async function hubChild(args) {
   }
 }
 
-if (process.argv[2] === "--hub") {
+if (process.argv[2] === "--append-worker") {
+  await appendChild(process.argv.slice(3));
+} else if (process.argv[2] === "--hub") {
   await hubChild(process.argv.slice(3));
 } else {
   assert.equal(process.env.HOME, realpathSync(process.env.HOME));
@@ -511,7 +643,17 @@ if (process.argv[2] === "--hub") {
     // A static log must not reread its complete prefix on every page. Includes
     // Session metadata, header and both sparse seek checks, not only body bytes.
     assert.ok(nearBudgetTiming.allPagesReadBytes < nearBudgetTiming.journalBytes * 8);
-    console.log(JSON.stringify({ modelJournalTiming, nearBudgetTiming }));
+    const concurrentAppendTiming = await concurrentFrozenPages(
+      core,
+      {
+        ...journalApi,
+        SessionOutputJournal: journalCore.SessionOutputJournal,
+      },
+      root,
+      origin,
+      cwd,
+    );
+    console.log(JSON.stringify({ modelJournalTiming, nearBudgetTiming, concurrentAppendTiming }));
     const handlers = new Map();
     registerSessionTranscriptIpc({ handle: (name, listener) => handlers.set(name, listener) });
     const recover = (store) =>

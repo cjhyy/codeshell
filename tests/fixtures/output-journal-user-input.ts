@@ -8,9 +8,12 @@ import { registerProvider } from "../../packages/core/src/llm/client-factory.js"
 import type { CreateMessageOptions } from "../../packages/core/src/llm/types.js";
 import type { InputAttachmentMeta, StreamEvent } from "../../packages/core/src/types.js";
 
+const modelRequests = new Map<string, string[]>();
+
 class InputDisplayClient extends LLMClientBase {
   protected initClient(): void {}
   async createMessage(options: CreateMessageOptions) {
+    modelRequests.get(this.config.apiKey ?? "")?.push(JSON.stringify(options.messages));
     for (let index = 0; index < 12; index++) options.onChunk?.({ type: "text", text: "reply " });
     return {
       text: "reply ".repeat(12),
@@ -24,7 +27,7 @@ registerProvider("output-user-display-fixture", InputDisplayClient);
 
 /** Actual Engine/attachment policy; callers use their existing recovery adapter. */
 export async function outputUserInputFixture(
-  mode: "normal" | "attachment-only" | "injected" | "agent",
+  mode: "normal" | "attachment-only" | "injected" | "agent" | "steer",
 ) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-output-input-")));
   const sessionRoot = join(root, "sessions"),
@@ -56,18 +59,21 @@ export async function outputUserInputFixture(
       createdAt: 1,
     };
   });
+  const apiKey = `synthetic-${createHash("sha256").update(root).digest("hex")}`;
+  const requests: string[] = [];
+  modelRequests.set(apiKey, requests);
   const engine = new Engine({
     cwd: root,
     sessionStorageDir: sessionRoot,
     settingsScope: "isolated",
     headless: true,
-    maxTurns: 2,
+    maxTurns: mode === "steer" ? 3 : 2,
     enabledBuiltinTools: [],
     llm: {
       provider: "output-user-display-fixture",
       providerKind: "openai",
       model: "gpt-4o",
-      apiKey: "synthetic",
+      apiKey,
     } as never,
     behaviorProfiles: [
       {
@@ -89,28 +95,42 @@ export async function outputUserInputFixture(
     provider: "output-user-display-fixture",
     providerKind: "openai",
     model: "gpt-4o",
-    apiKey: "synthetic",
+    apiKey,
   });
   engine.switchModel("fixture", { persist: false });
   if (engine.getConfig().llm.providerKind !== "openai")
     throw new Error("Fixture lost vision provider kind");
   const events: StreamEvent[] = [];
+  let steerAccepted = false;
   const hidden = mode === "agent" || mode === "injected";
   const prompt = hidden
     ? "<system-reminder>PRIVATE_MACHINE_INPUT</system-reminder>"
-    : mode === "normal"
+    : mode === "normal" || mode === "steer"
       ? "Inspect these attachments"
       : "";
   try {
-    const result = await engine.run(prompt, {
+    const result = await engine.run(mode === "steer" ? "Start before steering" : prompt, {
       sessionId,
       behaviorMode: "fixture",
       clientMessageId: "fixture-input",
-      ...(!hidden ? { attachments, ...(prompt ? { displayText: prompt } : {}) } : {}),
+      ...(!hidden && mode !== "steer"
+        ? { attachments, ...(prompt ? { displayText: prompt } : {}) }
+        : {}),
       ...(mode === "injected" ? { injected: true } : {}),
       ...(mode === "agent" ? { agentDirection: { envelopeIds: [], correlationIds: [] } } : {}),
       onStream: (event) => {
         events.push(event);
+        if (mode === "steer" && !steerAccepted && event.type === "text_delta") {
+          const queued = engine.enqueueSteer(
+            sessionId,
+            prompt,
+            "fixture-steer",
+            "fixture-steer-client",
+            attachments,
+          );
+          if (!queued.accepted) throw new Error("Actual Engine rejected active attachment steer");
+          steerAccepted = true;
+        }
       },
     });
     if (result.reason !== "completed")
@@ -129,6 +149,16 @@ export async function outputUserInputFixture(
       )
     )
       throw new Error("Fixture did not send a real image block through Engine");
+    if (
+      !hidden &&
+      !requests.some(
+        (request) =>
+          request.includes(png.toString("base64")) && request.includes(attachments[0].path),
+      )
+    )
+      throw new Error("The actual model request did not consume the prepared attachments");
+    if (mode === "steer" && (!steerAccepted || requests.length < 2))
+      throw new Error("Fixture never consumed steer in a subsequent model request");
     if (journal.includes(png.toString("base64"))) throw new Error("Journal duplicated image bytes");
     if (journal.includes("PRIVATE_MACHINE_INPUT")) throw new Error("Journal exposed hidden input");
     return {
@@ -145,6 +175,7 @@ export async function outputUserInputFixture(
     rmSync(root, { recursive: true, force: true });
     throw error;
   } finally {
+    modelRequests.delete(apiKey);
     await engine.dispose();
   }
 }
