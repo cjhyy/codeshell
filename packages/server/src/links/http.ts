@@ -5,7 +5,12 @@ import {
   publicLinkError,
   type LinkServiceOptions,
 } from "./service.js";
-import type { LinkConnectionInput, LinkOperationContext, TokenConnectionInput } from "./types.js";
+import type {
+  LinkAuthorizationResponse,
+  LinkConnectionInput,
+  LinkOperationContext,
+  TokenConnectionInput,
+} from "./types.js";
 
 const ROOT = "/api/v1/links";
 const MAX_BODY_BYTES = 32 * 1024;
@@ -95,15 +100,43 @@ export function createLinkHttp(options: LinkHttpOptions) {
         const owner = await context(request, () => abandoned || request.aborted);
         const method = request.method;
         let result: unknown;
-        if (url.pathname === ROOT && method === "GET") result = service.snapshot();
-        else {
+        if (url.pathname === ROOT && method === "GET") {
+          await service.refreshRemoteCatalog(owner);
+          result = service.snapshot();
+        } else {
           const cli = /^\/api\/v1\/links\/providers\/([^/]+)\/cli$/.exec(url.pathname);
           const connection = /^\/api\/v1\/links\/connections\/([^/]+)$/.exec(url.pathname);
           const remoteComplete = /^\/api\/v1\/links\/authorizations\/([^/]+)\/complete$/.exec(
             url.pathname,
           );
           const authorization = /^\/api\/v1\/links\/authorizations\/([^/]+)$/.exec(url.pathname);
-          if (remoteComplete && method === "POST") {
+          const respond = /^\/api\/v1\/links\/authorizations\/([^/]+)\/responses$/.exec(
+            url.pathname,
+          );
+          if (url.pathname === ROOT + "/authorizations" && method === "POST") {
+            const input = await body(request);
+            fields(input, [
+              "providerId",
+              "methodId",
+              "label",
+              "connectionId",
+              "expectedRevision",
+              "authModeId",
+            ]);
+            result = await service.startAuthorization(
+              owner,
+              input as unknown as LinkConnectionInput,
+              input.authModeId,
+            );
+          } else if (respond && method === "POST") {
+            const input = await body(request);
+            fields(input, ["stepId", "operation", "input"]);
+            result = await service.respondAuthorization(
+              owner,
+              decodeURIComponent(respond[1]!),
+              input as unknown as LinkAuthorizationResponse,
+            );
+          } else if (remoteComplete && method === "POST") {
             const input = await body(request);
             fields(input, ["callbackUrl"]);
             result = await service.completeRemoteAuth(

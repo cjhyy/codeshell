@@ -28,7 +28,7 @@ export function openNativeLinkAuthorization(input: NativeLinkAuthorizationInput)
     height: 800,
     minWidth: 390,
     minHeight: 540,
-    title: `连接 GitHub · ${new URL(issuer).host}`,
+    title: `连接 ${input.providerName ?? "GitHub"}`,
     webPreferences: {
       session: browserSession,
       sandbox: true,
@@ -64,6 +64,12 @@ export function openNativeLinkAuthorization(input: NativeLinkAuthorizationInput)
     if (!window.isDestroyed()) window.destroy();
   });
   return {
+    focus: () => {
+      if (!window.isDestroyed()) {
+        window.show();
+        window.focus();
+      }
+    },
     close: () => {
       if (!window.isDestroyed()) window.destroy();
     },

@@ -1311,6 +1311,23 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
     logout(credentialId: string): Promise<{ removed: true; remoteRevoked: boolean }>;
   };
   links: {
+    authorizationStart(
+      cwd: string,
+      requestId: string,
+      input: import("@cjhyy/code-shell-link").LinkConnectionInput,
+      authModeId: string,
+    ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
+    authorizationGet(
+      cwd: string,
+      id: string,
+    ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
+    authorizationRespond(
+      cwd: string,
+      id: string,
+      response: import("@cjhyy/code-shell-link").LinkAuthorizationResponse,
+    ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
+    authorizationCancel(cwd: string, id: string): Promise<void>;
+    authorizationOpen(cwd: string, id: string): Promise<boolean>;
     remoteSnapshot(cwd: string): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
     remoteStart(
       cwd: string,

@@ -4,11 +4,14 @@ import type {
   LinkOperationContext,
   LinkService,
 } from "@cjhyy/code-shell-server/links";
+import { createNativeLinkAuthorizationManager } from "./link-authorization-manager.js";
 
 export interface NativeLinkAuthorizationWindow {
   close(): void;
+  focus?(): void;
 }
 export interface NativeLinkAuthorizationInput {
+  providerName?: string;
   authorizationUrl: string;
   redirectUri: string;
   onCallback: (url: string) => void;
@@ -29,8 +32,10 @@ export function createNativeRemoteLinkManager(options: {
   >();
   const cancelledRequests = new Map<string, { ownerId: string; expiresAt: number }>();
   const service = options.service;
+  const authorization = createNativeLinkAuthorizationManager(options);
   return {
     service,
+    authorization,
     async start(
       context: LinkOperationContext,
       requestId: string,
@@ -122,10 +127,12 @@ export function createNativeRemoteLinkManager(options: {
       return true;
     },
     cancelOwner(ownerId: string) {
+      authorization.cancelOwner(ownerId);
       service.cancelOwner(ownerId);
       for (const flow of [...flows.values()]) if (flow.ownerId === ownerId) flow.cancel();
     },
     close() {
+      authorization.close();
       service.close();
       cancelledRequests.clear();
       for (const flow of [...flows.values()]) flow.cancel();

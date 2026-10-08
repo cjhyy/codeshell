@@ -1449,6 +1449,16 @@ contextBridge.exposeInMainWorld("codeshell", {
     logout: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:logout", credentialId),
   },
   links: {
+    authorizationStart: (cwd: string, requestId: string, input: unknown, authModeId: string) =>
+      ipcRenderer.invoke("links:authorizationStart", cwd, requestId, input, authModeId),
+    authorizationGet: (cwd: string, id: string) =>
+      ipcRenderer.invoke("links:authorizationGet", cwd, id),
+    authorizationRespond: (cwd: string, id: string, response: unknown) =>
+      ipcRenderer.invoke("links:authorizationRespond", cwd, id, response),
+    authorizationCancel: (cwd: string, id: string) =>
+      ipcRenderer.invoke("links:authorizationCancel", cwd, id),
+    authorizationOpen: (cwd: string, id: string) =>
+      ipcRenderer.invoke("links:authorizationOpen", cwd, id),
     remoteSnapshot: (cwd: string) => ipcRenderer.invoke("links:remoteSnapshot", cwd),
     remoteStart: (cwd: string, requestId: string, input: unknown) =>
       ipcRenderer.invoke("links:remoteStart", cwd, requestId, input),

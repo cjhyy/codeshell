@@ -80,6 +80,74 @@ async function fixture(options: Partial<LinkHttpOptions> = {}) {
 }
 
 describe("shared Link HTTP boundary", () => {
+  test("unified authorization separates read-only begin/status from current-step submission", async () => {
+    const { api, store } = await fixture();
+    const { token, ...connection } = input;
+    const started = await api("/authorizations", "POST", { ...connection, authModeId: "token" });
+    expect(started.status).toBe(200);
+    const job = await started.json();
+    expect(job.step.kind).toBe("credential-input");
+    expect(store.list()).toEqual([]);
+    expect(await (await api(`/authorizations/${job.id}`)).json()).toEqual(job);
+    expect(
+      (
+        await api(`/authorizations/${job.id}/responses`, "POST", {
+          stepId: "old",
+          operation: "submit",
+          input: { token },
+        })
+      ).status,
+    ).toBe(409);
+    const done = await (
+      await api(`/authorizations/${job.id}/responses`, "POST", {
+        stepId: job.step.id,
+        operation: "submit",
+        input: { token },
+      })
+    ).json();
+    expect(done.state).toBe("connected");
+    expect(done.connection.account.label).toBe("fixture");
+    expect(done.step).toBeUndefined();
+    expect(JSON.stringify(done)).not.toContain(token);
+    expect(store.resolve(done.connection.id)?.secret).toBe(token);
+  });
+  test("unified endpoints reject untrusted fields and require the same authenticated owner", async () => {
+    const { api } = await fixture();
+    const { token: _token, ...connection } = input;
+    expect(
+      (
+        await api("/authorizations", "POST", {
+          ...connection,
+          authModeId: "token",
+          issuer: "https://untrusted.example",
+        })
+      ).status,
+    ).toBe(400);
+    const job = await (
+      await api("/authorizations", "POST", { ...connection, authModeId: "token" })
+    ).json();
+    expect(
+      (
+        await api(
+          `/authorizations/${job.id}/responses`,
+          "POST",
+          { stepId: job.step.id, operation: "submit", input: { token: "value" } },
+          { "x-test-owner": "unknown" },
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await api(`/authorizations/${job.id}/responses`, "POST", {
+          stepId: job.step.id,
+          operation: "submit",
+          input: { token: "value", command: "untrusted" },
+        })
+      ).status,
+    ).toBe(400);
+    expect((await api(`/authorizations/${job.id}`, "DELETE")).status).toBe(200);
+    expect((await (await api(`/authorizations/${job.id}`)).json()).state).toBe("cancelled");
+  });
   test("requires authenticated owner and the host origin boundary", async () => {
     const { api } = await fixture();
     expect((await api("", "GET", undefined, { "x-test-owner": "unknown" })).status).toBe(401);
