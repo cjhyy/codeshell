@@ -49,8 +49,8 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const workspaceHeaders = apiWorkspaceHeaders();
+export async function api<T>(path: string, init: RequestInit = {}, scope?: ApiScope): Promise<T> {
+  const workspaceHeaders = scope ? apiWorkspaceHeaders(scope.workspace) : apiWorkspaceHeaders();
   const request = { ...init };
   if (
     Object.keys(workspaceHeaders).length &&
@@ -64,11 +64,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     request.headers = headers;
   }
-  const response = await fetch(apiUrl(path, ""), {
-    ...request,
-    credentials: "same-origin",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    scope ? apiUrl(path, scope.workspace, scope.projectId) : apiUrl(path, ""),
+    {
+      ...request,
+      credentials: "same-origin",
+      cache: "no-store",
+    },
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = typeof body.error === "string" ? body.error : body.error?.message;

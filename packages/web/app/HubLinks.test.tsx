@@ -9,7 +9,7 @@ import {
   type MaskedLinkConnection,
 } from "@cjhyy/code-shell-link";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
-import { setApiWorkspace } from "./api-context.js";
+import { setApiProject, setApiWorkspace } from "./api-context.js";
 import { HubLinks } from "./HubLinks.js";
 import { LinkAuthorizationStepView } from "../src/link-authorization-view.js";
 
@@ -84,11 +84,18 @@ afterEach(async () => {
   for (const unmount of unmounts.splice(0)) await unmount();
   globalThis.fetch = originalFetch;
   setApiWorkspace(undefined);
+  setApiProject(null);
 });
 
 async function fixture(
   connections: MaskedLinkConnection[],
-  options: { modern?: boolean; strict?: boolean; response?: LinkAuthorization } = {},
+  options: {
+    modern?: boolean;
+    strict?: boolean;
+    remoteDefault?: boolean;
+    response?: LinkAuthorization;
+    cancelGate?: Promise<void>;
+  } = {},
 ) {
   ensureMiniDom();
   let snapshot: LinkSnapshot = {
@@ -127,6 +134,27 @@ async function fixture(
     },
     revision: "snapshot-1",
   };
+  if (options.remoteDefault) {
+    snapshot.providers[0].connectionMethods = [
+      ...snapshot.providers[0].connectionMethods,
+      {
+        id: "remote-link",
+        displayName: { zh: "服务器授权", en: "Server authorization" },
+        executionRuntime: "server",
+        secretLocation: "server",
+        authKind: "oauth",
+        availability: "available",
+      },
+    ];
+    snapshot.providers[0].authModes!.unshift({
+      id: "remote-link",
+      methodId: "remote-link",
+      kind: "redirect",
+      label: "网页授权",
+      available: true,
+      preferred: true,
+    });
+  }
   const requests: Array<{ url: URL; method: string; body?: any }> = [];
   globalThis.fetch = (async (path, init) => {
     const url = new URL(String(path), "http://localhost");
@@ -137,7 +165,7 @@ async function fixture(
       return Response.json({
         id: "modern-attempt",
         providerId: "github",
-        methodId,
+        methodId: JSON.parse(String(init?.body)).methodId,
         state: "pending",
         step: {
           id: "modern-step",
@@ -161,8 +189,10 @@ async function fixture(
         connection: connection(),
       });
     }
-    if (url.pathname === "/api/v1/links/authorizations/modern-attempt" && method === "DELETE")
+    if (url.pathname === "/api/v1/links/authorizations/modern-attempt" && method === "DELETE") {
+      await options.cancelGate;
       return Response.json({ cancelled: true });
+    }
     if (url.pathname === "/api/v1/links/authorizations/device" && method === "POST")
       return Response.json({
         id: "pending-authorization",
@@ -414,4 +444,105 @@ test("an unsupported successful response cannot close the dialog or announce a s
   expect(text(view.tree)).not.toContain("授权完成，连接已保存");
   expect(text(view.tree)).toContain("服务尚未确认");
   expect(view.dirty).toBe(true);
+});
+
+test("new connections use the provider default across methods while existing local connections retain their method", async () => {
+  const fresh = await fixture([], { modern: true, remoteDefault: true });
+  await click(findButton(fresh.tree, "添加连接"));
+  expect(fresh.requests.find((request) => request.method === "POST")?.body).toMatchObject({
+    authModeId: "remote-link",
+    methodId: "remote-link",
+  });
+  await fresh.unmount();
+  const existing = await fixture([connection()], { modern: true, remoteDefault: true });
+  await click(findButton(existing.tree, "管理连接"));
+  expect(existing.requests.some((request) => request.method === "POST")).toBe(false);
+  await click(findButton(existing.tree, "重新连接"));
+  expect(existing.requests.find((request) => request.method === "POST")?.body).toMatchObject({
+    authModeId: "token",
+    methodId,
+    connectionId: connection().id,
+  });
+});
+
+test("an authorization begun outside a project keeps that scope after a project switch, including cancellation", async () => {
+  setApiProject(null);
+  setApiWorkspace("/original");
+  const response: LinkAuthorization = {
+    id: "modern-attempt",
+    providerId: "github",
+    methodId,
+    state: "pending",
+    step: {
+      id: "retry-step",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      kind: "credential-input",
+      purpose: "credential",
+      fields: [{ id: "token", label: "Token", secret: true, required: true }],
+    },
+    errorCode: "provider_rejected",
+  };
+  const view = await fixture([], { modern: true, response });
+  await click(findButton(view.tree, "添加连接"));
+  setApiProject("22222222-2222-4222-8222-222222222222");
+  setApiWorkspace("/later");
+  await act(async () => {
+    elements(view.tree)
+      .find((element) => element.type === LinkAuthorizationStepView)!
+      .props.onRespond({ stepId: "modern-step", operation: "submit", input: { token: "fixture" } });
+    await flushMicrotasks();
+  });
+  await click(findButton(view.tree, "关闭"));
+  const responses = view.requests.filter((request) =>
+    request.url.pathname.includes("modern-attempt"),
+  );
+  expect(responses.map((request) => request.url.pathname)).toEqual([
+    "/api/v1/links/authorizations/modern-attempt/responses",
+    "/api/v1/links/authorizations/modern-attempt",
+  ]);
+  expect(
+    responses.every((request) => request.url.searchParams.get("workspace") === "/original"),
+  ).toBe(true);
+});
+
+test("legacy device cancellation also retains its captured root scope after selecting another project", async () => {
+  setApiProject(null);
+  setApiWorkspace("/original");
+  const view = await fixture([connection()]);
+  await click(findButton(view.tree, "管理连接"));
+  await click(findButton(view.tree, "开始授权"));
+  setApiProject("22222222-2222-4222-8222-222222222222");
+  setApiWorkspace("/later");
+  await click(findButton(view.tree, "取消授权"));
+  const cancel = view.requests.find((request) => request.method === "DELETE")!;
+  expect(cancel.url.pathname).toBe("/api/v1/links/authorizations/pending-authorization");
+  expect(cancel.url.searchParams.get("workspace")).toBe("/original");
+});
+
+test("disconnect retains its reviewed scope across the preceding authorization cancellation", async () => {
+  setApiProject(null);
+  setApiWorkspace("/original");
+  let release!: () => void;
+  const cancelGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const view = await fixture([connection()], { modern: true, cancelGate });
+  await click(findButton(view.tree, "管理连接"));
+  await click(findButton(view.tree, "重新连接"));
+  await click(findButton(view.tree, "断开"));
+  await click(findButton(view.tree, "确认断开"));
+  setApiProject("22222222-2222-4222-8222-222222222222");
+  setApiWorkspace("/later");
+  await act(async () => {
+    release();
+    await flushMicrotasks();
+  });
+  const deletions = view.requests.filter((request) => request.method === "DELETE");
+  expect(deletions.map((request) => request.url.pathname)).toEqual([
+    "/api/v1/links/authorizations/modern-attempt",
+    `/api/v1/links/connections/${connection().id}`,
+  ]);
+  expect(
+    deletions.every((request) => request.url.searchParams.get("workspace") === "/original"),
+  ).toBe(true);
 });

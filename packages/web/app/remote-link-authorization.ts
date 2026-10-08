@@ -148,18 +148,38 @@ export function takeLinkCallback(
 export async function completeLinkCallback(
   callback: Exclude<LinkCallback, { error: string }>,
 ): Promise<LinkAuthorization> {
+  const target = new URL(callback.pending.target, window.location.origin);
+  const scope = callbackScope(target);
   if (callback.denied) {
-    await api(callback.pending.target, { method: "DELETE" });
+    await api(callback.pending.target, { method: "DELETE" }, scope);
     return { id: "", providerId: callback.pending.providerId ?? "", state: "cancelled" };
   }
   // Preserve the project's query on the callback endpoint. Never infer the target from the current view.
-  const target = new URL(callback.pending.target, window.location.origin);
   target.pathname += "/complete";
-  return api(target.pathname + target.search, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callbackUrl: callback.callbackUrl }),
-  });
+  return api(
+    target.pathname + target.search,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callbackUrl: callback.callbackUrl }),
+    },
+    scope,
+  );
+}
+
+function callbackScope(target: URL): ApiScope {
+  return {
+    workspace: target.searchParams.get("workspace") ?? "",
+    projectId: /^\/p\/([a-f0-9-]{36})\//.exec(target.pathname)?.[1] ?? null,
+  };
+}
+
+/** Reconcile only the captured Host attempt; never exchange the one-time code again. */
+export function queryLinkCallback(
+  callback: Exclude<LinkCallback, { error: string }>,
+): Promise<LinkAuthorization> {
+  const target = new URL(callback.pending.target, window.location.origin);
+  return api(callback.pending.target, {}, callbackScope(target));
 }
 
 /** Ordinary workbench startup must not depend on browser storage availability. */

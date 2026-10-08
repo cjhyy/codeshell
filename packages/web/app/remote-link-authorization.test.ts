@@ -3,7 +3,11 @@ import {
   rememberRemoteLink,
   remoteLinkAuthorizationUrl,
   takeLinkCallback,
+  completeLinkCallback,
+  queryLinkCallback,
 } from "./remote-link-authorization.js";
+import { setApiProject, setApiWorkspace } from "./api-context.js";
+import { ensureMiniDom } from "../src/test-utils/renderHook.js";
 const origin = "https://hub.example",
   issuer = "https://link.example";
 const id = "11111111-1111-4111-8111-111111111111",
@@ -199,4 +203,48 @@ test("the shared redirect step retains provider identity without legacy redirect
   expect(takeLinkCallback(f.location, f.history, f.storage)).toMatchObject({
     pending: { providerId: "fixture-provider" },
   });
+});
+
+test("callback exchange, reconciliation and denial keep a captured root Host after a later project selection", async () => {
+  ensureMiniDom();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ method: string; target: string }> = [];
+  const callback = {
+    callbackUrl: "https://hub.example/link/callback?state=one&code=fixture",
+    denied: false,
+    pending: {
+      target: `/api/v1/links/authorizations/${id}?workspace=%2Foriginal`,
+      state: "one",
+      redirectUri: "https://hub.example/link/callback",
+      returnUrl: "/?view=links",
+      expiresAt: Date.now() + 10000,
+      providerId: "fixture-provider",
+    },
+  };
+  setApiProject(projectId);
+  setApiWorkspace("/later");
+  globalThis.fetch = (async (target, init) => {
+    calls.push({ method: init?.method ?? "GET", target: String(target) });
+    return Response.json({ id, providerId: "fixture-provider", state: "pending" });
+  }) as typeof fetch;
+  try {
+    await completeLinkCallback(callback);
+    await queryLinkCallback(callback);
+    expect(await completeLinkCallback({ ...callback, denied: true })).toMatchObject({
+      state: "cancelled",
+      providerId: "fixture-provider",
+    });
+    expect(calls).toEqual([
+      {
+        method: "POST",
+        target: `/api/v1/links/authorizations/${id}/complete?workspace=%2Foriginal`,
+      },
+      { method: "GET", target: callback.pending.target },
+      { method: "DELETE", target: callback.pending.target },
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    setApiProject(null);
+    setApiWorkspace(undefined);
+  }
 });

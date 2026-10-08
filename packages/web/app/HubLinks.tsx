@@ -16,7 +16,13 @@ import {
   selectPreferredLinkAuthMode,
 } from "../src/index.js";
 import { api, ApiError } from "./auth.js";
-import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
+import {
+  apiUrl,
+  captureApiScope,
+  getApiWorkspace,
+  getApiProject,
+  type ApiScope,
+} from "./api-context.js";
 import "./hub-links.css";
 
 const ROOT = "/api/v1/links";
@@ -71,14 +77,14 @@ export function HubLinks({
   const [cli, setCli] = React.useState<CliStatus>();
   const [authorization, setAuthorization] = React.useState<LinkAuthorization>();
   const [authModeId, setAuthModeId] = React.useState<string>();
-  const attemptTargets = React.useRef(new Map<string, string>());
+  const attemptTargets = React.useRef(new Map<string, { target: string; scope: ApiScope }>());
   const handoffs = React.useRef(new Set<string>());
   const controller = React.useMemo(
     () =>
       new LinkAuthorizationController({
         begin: async (connectionInput, modeId) => {
-          const workspace = getApiWorkspace() ?? "";
-          const projectId = getApiProject();
+          const scope = captureApiScope();
+          const { workspace, projectId } = scope;
           const value = await api<LinkAuthorization>(
             apiUrl(`${ROOT}/authorizations`, workspace, projectId),
             {
@@ -86,28 +92,41 @@ export function HubLinks({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ ...connectionInput, authModeId: modeId }),
             },
+            scope,
           );
-          attemptTargets.current.set(
-            value.id,
-            apiUrl(`${ROOT}/authorizations/${encodeURIComponent(value.id)}`, workspace, projectId),
-          );
+          attemptTargets.current.set(value.id, {
+            target: apiUrl(
+              `${ROOT}/authorizations/${encodeURIComponent(value.id)}`,
+              workspace,
+              projectId,
+            ),
+            scope,
+          });
           return value;
         },
-        status: (id) => api<LinkAuthorization>(attemptTargets.current.get(id)!),
+        status: (id) => {
+          const attempt = attemptTargets.current.get(id)!;
+          return api<LinkAuthorization>(attempt.target, {}, attempt.scope);
+        },
         respond: (id, response) => {
-          const target = new URL(attemptTargets.current.get(id)!, window.location.origin);
+          const attempt = attemptTargets.current.get(id)!;
+          const target = new URL(attempt.target, window.location.origin);
           target.pathname += "/responses";
-          return api<LinkAuthorization>(target.pathname + target.search, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response),
-          });
+          return api<LinkAuthorization>(
+            target.pathname + target.search,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(response),
+            },
+            attempt.scope,
+          );
         },
         cancel: async (id) => {
           if (handoffs.current.has(id)) return;
-          const target = attemptTargets.current.get(id);
-          if (!target) return;
-          await api(target, { method: "DELETE", keepalive: true });
+          const attempt = attemptTargets.current.get(id);
+          if (!attempt) return;
+          await api(attempt.target, { method: "DELETE", keepalive: true }, attempt.scope);
           attemptTargets.current.delete(id);
         },
       }),
@@ -123,6 +142,7 @@ export function HubLinks({
   const editorElement = React.useRef<HTMLElement>(null);
   const write = React.useRef<AbortController | undefined>(undefined);
   const authUrl = React.useRef<string | undefined>(undefined);
+  const authScope = React.useRef<ApiScope | undefined>(undefined);
   const read = React.useRef<AbortController | undefined>(undefined);
   const callbacks = React.useRef({ onAuthLost, onDirtyChange });
   callbacks.current = { onAuthLost, onDirtyChange };
@@ -165,7 +185,9 @@ export function HubLinks({
         if (lifecycle.current === instance) controller.dispose();
       });
       if (authUrl.current)
-        void api(authUrl.current, { method: "DELETE", keepalive: true }).catch(() => {});
+        void api(authUrl.current, { method: "DELETE", keepalive: true }, authScope.current).catch(
+          () => {},
+        );
     };
   }, [controller]);
   React.useEffect(() => {
@@ -204,11 +226,12 @@ export function HubLinks({
   React.useEffect(() => {
     if (authorization?.state !== "pending" || !authUrl.current) return;
     const url = authUrl.current;
+    const scope = authScope.current;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const next = await api<LinkAuthorization>(url, { signal: controller.signal });
+        const next = await api<LinkAuthorization>(url, { signal: controller.signal }, scope);
         if (controller.signal.aborted || authUrl.current !== url) return;
         setAuthorization(next);
         if (next.state === "connected") {
@@ -266,13 +289,23 @@ export function HubLinks({
       if (mounted.current) setBusy(false);
     }
   }
-  function mutate<T>(path: string, method: string, body: unknown, signal: AbortSignal) {
-    return api<T>(path, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal,
-    });
+  function mutate<T>(
+    path: string,
+    method: string,
+    body: unknown,
+    signal: AbortSignal,
+    scope?: ApiScope,
+  ) {
+    return api<T>(
+      path,
+      {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+      },
+      scope,
+    );
   }
   function input(): LinkConnectionInput {
     return {
@@ -293,14 +326,21 @@ export function HubLinks({
     if (busy || flow.busy || genericPending || authorization?.state === "pending") return;
     if (dirty && !window.confirm("放弃当前未保存的连接修改？")) return;
     controller.reset();
-    const preferred = selectPreferredLinkAuthMode(provider, original?.methodId);
-    const method =
-      provider.connectionMethods.find((item) => item.id === original?.methodId) ??
-      provider.connectionMethods.find((item) => item.id === preferred?.methodId) ??
-      provider.connectionMethods.find(
-        (item) => item.executionRuntime === "local" && item.availability === "available",
-      );
-    if (!method) return;
+    // A new connection follows the provider default across all methods. Managing
+    // an existing connection keeps its explicit credential/runtime method.
+    const preferred = original
+      ? selectPreferredLinkAuthMode(provider, original.methodId)
+      : selectPreferredLinkAuthMode(provider);
+    const method = original
+      ? provider.connectionMethods.find((item) => item.id === original.methodId)
+      : (provider.connectionMethods.find((item) => item.id === preferred?.methodId) ??
+        provider.connectionMethods.find(
+          (item) => item.executionRuntime === "local" && item.availability === "available",
+        ));
+    if (!method) {
+      setError("当前环境未提供此连接的授权方式，请检查服务器连接设置。");
+      return;
+    }
     const next: Editor = {
       provider,
       original,
@@ -361,8 +401,9 @@ export function HubLinks({
     }
     if (!authUrl.current) return;
     const url = authUrl.current;
+    const scope = authScope.current;
     await operation(
-      (signal) => api(url, { method: "DELETE", signal }),
+      (signal) => api(url, { method: "DELETE", signal }, scope),
       () => {
         authUrl.current = undefined;
         setAuthorization(undefined);
@@ -378,14 +419,15 @@ export function HubLinks({
     } else if (!unavailable && (!dirty || window.confirm("放弃未保存的连接修改？")))
       setEditor(undefined);
   }
-  function disconnect(connection: MaskedLinkConnection) {
+  function disconnect(connection: MaskedLinkConnection, scope = captureApiScope()) {
     if (
       generic &&
       controller.getSnapshot().authorization?.state === "pending" &&
       editor?.original?.id === connection.id
     ) {
       void controller.cancel().then(() => {
-        if (controller.getSnapshot().authorization?.state !== "pending") disconnect(connection);
+        if (controller.getSnapshot().authorization?.state !== "pending")
+          disconnect(connection, scope);
       });
       return;
     }
@@ -393,12 +435,17 @@ export function HubLinks({
       editor?.original?.id === connection.id && authorization?.state === "pending"
         ? authUrl.current
         : undefined;
-    const target = apiUrl(`${ROOT}/connections/${encodeURIComponent(connection.id)}`);
+    const target = apiUrl(
+      `${ROOT}/connections/${encodeURIComponent(connection.id)}`,
+      scope.workspace,
+      scope.projectId,
+    );
+    const pendingScope = authScope.current;
     void operation(
       async (signal) => {
         if (pendingUrl) {
           try {
-            await api(pendingUrl, { method: "DELETE", signal });
+            await api(pendingUrl, { method: "DELETE", signal }, pendingScope);
           } catch (cause) {
             if (!(cause instanceof ApiError && cause.status === 404)) throw cause;
           }
@@ -407,7 +454,7 @@ export function HubLinks({
             setAuthorization(undefined);
           }
         }
-        return mutate(target, "DELETE", { expectedRevision: connection.revision }, signal);
+        return mutate(target, "DELETE", { expectedRevision: connection.revision }, signal, scope);
       },
       () => {
         if (editor?.original?.id === connection.id) setEditor(undefined);
@@ -709,19 +756,22 @@ export function HubLinks({
                         onClick={() => {
                           const workspace = getApiWorkspace() ?? "";
                           const projectId = getApiProject();
+                          const scope = { workspace, projectId };
                           const target = apiUrl(
                             `${ROOT}/authorizations/device`,
                             workspace,
                             projectId,
                           );
                           void operation(
-                            (signal) => mutate<LinkAuthorization>(target, "POST", input(), signal),
+                            (signal) =>
+                              mutate<LinkAuthorization>(target, "POST", input(), signal, scope),
                             (value) => {
                               authUrl.current = apiUrl(
                                 `${ROOT}/authorizations/${encodeURIComponent(value.id)}`,
                                 workspace,
                                 projectId,
                               );
+                              authScope.current = scope;
                               setAuthorization(value);
                             },
                           );
