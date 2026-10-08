@@ -145,6 +145,49 @@ test("all 10 providers/27 read actions reuse exact saved grant and caller creden
   expect(calls).toBe(27);
 }, 30_000);
 
+test.each(["http-token", "cli"] as const)(
+  "%s Star source readiness requires an explicit saved read grant without resolving credentials",
+  async (backend) => {
+    const meta: CredentialMetadata = {
+      ...credential(),
+      type: "link",
+      oauthStatus: undefined,
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkExecutionBackend: backend,
+        linkAccountId: "42",
+      },
+    };
+    let io = 0;
+    setDefaultCredentialAccess({
+      listMasked: () => [meta],
+      resolveMeta: () => meta,
+      envExposures: () => ({}),
+      resolveValue: async () => {
+        io++;
+        throw new Error("Source readiness must not resolve credentials");
+      },
+    });
+    for (const action of ["get_repository", "get_starred"]) {
+      const def = definition("github", action);
+      bind(def);
+      for (const capabilities of [undefined, [], ["github.list_repositories"]]) {
+        meta.meta!.linkCapabilityIds = capabilities;
+        expect(isLinkSourceAvailable(def, context())).toBe(false);
+        expect(await listSourcesTool({}, context())).toContain("unavailable");
+      }
+      meta.meta!.linkCapabilityIds = [`github.${action}`];
+      expect(isLinkSourceAvailable(def, context())).toBe(true);
+      expect(await listSourcesTool({}, context())).not.toContain("unavailable");
+    }
+    // Existing unscoped read bindings retain their previous readiness semantics.
+    delete meta.meta!.linkCapabilityIds;
+    expect(isLinkSourceAvailable(definition(), context())).toBe(true);
+    expect(io).toBe(0);
+  },
+);
+
 test("local GitHub view uses production LinkAction HTTP path and original link-purpose credential access", async () => {
   const meta: CredentialMetadata = {
     id: "connection-1",
