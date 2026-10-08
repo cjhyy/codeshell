@@ -23,6 +23,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
   let importPromise: Promise<string | null> | undefined;
   let validationPromise: Promise<any> | undefined;
   let exports: Array<{ target: { projectId: string }; text: string }>;
+  let evidenceCalls: string[];
   const find = (id: string) =>
     descendants(container).find((node) => props(node)["data-testid"] === `optimization-lab-${id}`)!;
   const click = async (id: string) => {
@@ -38,6 +39,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
     importPromise = undefined;
     validationPromise = undefined;
     exports = [];
+    evidenceCalls = [];
     calls = [];
     authorizations = [];
     accepted = false;
@@ -63,6 +65,48 @@ describe("Optimization Lab manual Desktop workflow", () => {
       value: {
         getSettings: async () => ({ featureFlags: { optimization_lab: enabled } }),
         optimizationLab: {
+          previewEvidence: async () => {
+            evidenceCalls.push("preview");
+            return {
+              previewId: "preview",
+              bundle: {
+                bundleHash: "e".repeat(64),
+                runs: [
+                  {
+                    runId: "selected",
+                    blocks: [],
+                    missingEvidence: ["historical snapshot missing"],
+                  },
+                ],
+              },
+            };
+          },
+          importEvidence: async () => {
+            evidenceCalls.push("confirm");
+            return accepted
+              ? {
+                  cases: [
+                    {
+                      id: "evidence-selected",
+                      version: 1,
+                      sourceGroupId: "selected",
+                      provenance: "real",
+                      caseRole: "target_failure",
+                      split: "dev",
+                      input: "Reviewed input",
+                      readiness: "analysis_only",
+                      missingEvidence: ["confirm criteria"],
+                      evidence: {
+                        bundleHash: "e".repeat(64),
+                        runId: "selected",
+                        purpose: "problem_source_only",
+                        blockHashes: [],
+                      },
+                    },
+                  ],
+                }
+              : null;
+          },
           query: async (type: string, input: any) => {
             calls.push({ type, input });
             if (type === "discover")
@@ -140,6 +184,56 @@ describe("Optimization Lab manual Desktop workflow", () => {
     enabled = true;
     await mount(null);
     expect(calls).toHaveLength(0);
+  });
+  test("evidence preview and native cancellation do not edit cases or authorize spending", async () => {
+    await mount();
+    await act(async () => {
+      props(find("evidence-ids")).onChange({ target: { value: "selected" } });
+      await flushMicrotasks();
+    });
+    await click("preview-evidence");
+    expect(find("evidence-preview")).toBeDefined();
+    await click("import-evidence");
+    expect(evidenceCalls).toEqual(["preview", "confirm"]);
+    expect(authorizations).toHaveLength(0);
+    expect(calls.map((call) => call.type)).toEqual(["discover", "list"]);
+    accepted = true;
+    await click("import-evidence");
+    await click("dataset-json");
+    const draft = JSON.parse(props(find("dataset")).value);
+    expect(draft.cases.at(-1)).toMatchObject({
+      provenance: "real",
+      readiness: "analysis_only",
+      evidence: { runId: "selected" },
+    });
+    expect(draft.cases.at(-1).expected).toBeUndefined();
+    expect(calls.some((call) => call.type === "start")).toBe(false);
+  });
+  test("fixed candidate selection freezes source identity and uses a separate prepare_trial authorization", async () => {
+    snapshot.state = { revision: 10, status: "report_ready", data: { reportRef: "report" } };
+    snapshot.candidates = [
+      {
+        hash: "c".repeat(64),
+        bodyHash: "d".repeat(64),
+        body: "Fixed instructions",
+        explanation: "Earlier proposal",
+      },
+    ];
+    await mount();
+    await click("prepare");
+    await click("try-candidate");
+    expect(find("trial-source")).toBeDefined();
+    await click("prepare");
+    const prepared = calls.find((call) => call.type === "prepare_trial")!;
+    expect(prepared.input).toMatchObject({
+      sourceExperimentId: "experiment-1",
+      candidateHash: "c".repeat(64),
+    });
+    expect(prepared.input.targetConnectionId).toBeUndefined();
+    expect(prepared.input.optimizerConnectionId).toBeUndefined();
+    await click("authorize");
+    expect(authorizations).toHaveLength(1);
+    expect(calls.some((call) => call.type === "start")).toBe(false);
   });
   test("dataset freeze and preparing are offline; native cancel never starts", async () => {
     await mount();

@@ -6,6 +6,7 @@ import { useT } from "../i18n";
 import { OptimizationLabSummary } from "./OptimizationLabSummary";
 import { DatasetEditor } from "./DatasetEditor";
 import { datasetDrafts } from "./dataset-drafts";
+import type { EvidenceBundle } from "@cjhyy/code-shell-capability-optimization-lab";
 
 interface Discovery {
   skills: Array<{ name: string; source: string; enabled?: boolean }>;
@@ -76,6 +77,18 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
     () => (activeProjectId && datasetDrafts.get(activeProjectId)) ?? sampleDataset,
   );
   const [validation, setValidation] = useState<any>(null);
+  const [evidenceIds, setEvidenceIds] = useState("");
+  const [evidencePreview, setEvidencePreview] = useState<{
+    previewId: string;
+    bundle: EvidenceBundle;
+  } | null>(null);
+  const [trialSource, setTrialSource] = useState<{
+    id: string;
+    hash: string;
+    bodyHash: string;
+    body: string;
+    model: string;
+  } | null>(null);
   const [objective, setObjective] = useState<"quality" | "cost">("quality");
   const [limits, setLimits] = useState({
     maxRequests: 32,
@@ -310,58 +323,82 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
         {!snapshot && (
           <section className="rounded-xl border p-4 space-y-4">
             <h2 className="font-medium">{t("optimizationLab.materials")}</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="space-y-1 text-sm">
-                <span>{t("optimizationLab.skill")}</span>
-                <select
-                  data-testid="optimization-lab-skill"
-                  className={inputClass}
-                  value={skillName}
-                  onChange={(e) => setSkillName(e.target.value)}
-                >
-                  {discovery.skills.map((skill) => (
-                    <option key={skill.name} value={skill.name}>
-                      {skill.name} · {skill.source}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {[
-                {
-                  label: t("optimizationLab.target"),
-                  id: "target-connection",
-                  value: targetId,
-                  set: setTargetId,
-                },
-                {
-                  label: t("optimizationLab.optimizer"),
-                  id: "optimizer-connection",
-                  value: optimizerId,
-                  set: setOptimizerId,
-                },
-              ].map((item) => (
-                <label key={item.id} className="space-y-1 text-sm">
-                  <span>{item.label}</span>
+            {trialSource && (
+              <div
+                className="rounded-md bg-muted p-3 text-sm space-y-2"
+                data-testid="optimization-lab-trial-source"
+              >
+                <p>{t("optimizationLab.fixedTrialHelp")}</p>
+                <p>
+                  {trialSource.model} · {trialSource.hash}
+                </p>
+                <details>
+                  <summary>{t("optimizationLab.fixedBody")}</summary>
+                  <pre className="whitespace-pre-wrap max-h-64 overflow-auto">
+                    {trialSource.body}
+                  </pre>
+                </details>
+                <Button variant="outline" disabled={pending} onClick={() => setTrialSource(null)}>
+                  {t("optimizationLab.normalExperiment")}
+                </Button>
+              </div>
+            )}
+            {!trialSource && (
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="space-y-1 text-sm">
+                  <span>{t("optimizationLab.skill")}</span>
                   <select
-                    data-testid={`optimization-lab-${item.id}`}
+                    data-testid="optimization-lab-skill"
                     className={inputClass}
-                    value={item.value}
-                    onChange={(e) => item.set(e.target.value)}
+                    value={skillName}
+                    disabled={Boolean(trialSource)}
+                    onChange={(e) => setSkillName(e.target.value)}
                   >
-                    {discovery.connections.map((connection) => (
-                      <option
-                        key={connection.id}
-                        value={connection.id}
-                        disabled={!connection.eligible}
-                      >
-                        {connection.label} · {connection.model}
-                        {connection.reason ? ` (${connection.reason})` : ""}
+                    {discovery.skills.map((skill) => (
+                      <option key={skill.name} value={skill.name}>
+                        {skill.name} · {skill.source}
                       </option>
                     ))}
                   </select>
                 </label>
-              ))}
-            </div>
+                {[
+                  {
+                    label: t("optimizationLab.target"),
+                    id: "target-connection",
+                    value: targetId,
+                    set: setTargetId,
+                  },
+                  {
+                    label: t("optimizationLab.optimizer"),
+                    id: "optimizer-connection",
+                    value: optimizerId,
+                    set: setOptimizerId,
+                  },
+                ].map((item) => (
+                  <label key={item.id} className="space-y-1 text-sm">
+                    <span>{item.label}</span>
+                    <select
+                      data-testid={`optimization-lab-${item.id}`}
+                      className={inputClass}
+                      value={item.value}
+                      disabled={Boolean(trialSource)}
+                      onChange={(e) => item.set(e.target.value)}
+                    >
+                      {discovery.connections.map((connection) => (
+                        <option
+                          key={connection.id}
+                          value={connection.id}
+                          disabled={!connection.eligible}
+                        >
+                          {connection.label} · {connection.model}
+                          {connection.reason ? ` (${connection.reason})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            )}
             {discovery.connections
               .filter((item) => !item.eligible)
               .map((item) => (
@@ -370,6 +407,79 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
                 </p>
               ))}
             <p className="text-sm text-muted-foreground">{t("optimizationLab.datasetHelp")}</p>
+            <div className="rounded-md border p-3 space-y-3">
+              <label className="block text-sm space-y-1">
+                <span>{t("optimizationLab.evidenceIds")}</span>
+                <textarea
+                  data-testid="optimization-lab-evidence-ids"
+                  className={inputClass}
+                  value={evidenceIds}
+                  disabled={pending}
+                  onChange={(event) => {
+                    setEvidenceIds(event.target.value);
+                    setEvidencePreview(null);
+                  }}
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">{t("optimizationLab.evidenceHelp")}</p>
+              <Button
+                data-testid="optimization-lab-preview-evidence"
+                variant="outline"
+                disabled={pending || !evidenceIds.trim()}
+                onClick={() =>
+                  void run(async () => {
+                    const current = epoch.current;
+                    const preview = await window.codeshell.optimizationLab.previewEvidence({
+                      target,
+                      runIds: evidenceIds.split(/\s+/).filter(Boolean),
+                    });
+                    if (current === epoch.current) setEvidencePreview(preview);
+                  })
+                }
+              >
+                {t("optimizationLab.previewEvidence")}
+              </Button>
+              {evidencePreview && (
+                <div data-testid="optimization-lab-evidence-preview" className="space-y-2">
+                  <p className="text-sm">{t("optimizationLab.evidenceReview")}</p>
+                  <pre className="max-h-80 overflow-auto text-xs whitespace-pre-wrap">
+                    {JSON.stringify(evidencePreview.bundle, null, 2)}
+                  </pre>
+                  <Button
+                    data-testid="optimization-lab-import-evidence"
+                    disabled={pending}
+                    onClick={() =>
+                      void run(async () => {
+                        const current = epoch.current;
+                        const revision = datasetRevision.current;
+                        const imported = await window.codeshell.optimizationLab.importEvidence({
+                          target,
+                          previewId: evidencePreview.previewId,
+                          bundleHash: evidencePreview.bundle.bundleHash,
+                        });
+                        if (!imported || current !== epoch.current) return;
+                        if (revision !== datasetRevision.current)
+                          throw new Error(t("optimizationLab.evidenceDraftChanged"));
+                        const dataset = JSON.parse(datasetText);
+                        if (!Array.isArray(dataset.cases)) throw new Error("Invalid draft cases");
+                        const ids = new Set(dataset.cases.map((item: any) => item.id));
+                        for (const item of imported.cases) {
+                          let id = item.id,
+                            suffix = 1;
+                          while (ids.has(id)) id = `${item.id}-${suffix++}`;
+                          ids.add(id);
+                          dataset.cases.push({ ...item, id });
+                        }
+                        editDataset(JSON.stringify(dataset, null, 2));
+                        setEvidencePreview(null);
+                      })
+                    }
+                  >
+                    {t("optimizationLab.importEvidence")}
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 data-testid="optimization-lab-import-dataset"
@@ -446,6 +556,7 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
                 <select
                   className={inputClass}
                   value={limits.maxCandidates}
+                  disabled={Boolean(trialSource)}
                   onChange={(e) =>
                     setLimits((current) => ({ ...current, maxCandidates: Number(e.target.value) }))
                   }
@@ -468,23 +579,30 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
             </div>
             <Button
               data-testid="optimization-lab-prepare"
-              disabled={pending || !skillName || !targetId || !optimizerId}
+              disabled={pending || (!trialSource && (!skillName || !targetId || !optimizerId))}
               onClick={() =>
                 void run(async () => {
-                  const prepared = await query<LabSnapshot>("prepare", {
-                    dataset: JSON.parse(datasetText),
-                    skillName,
-                    targetConnectionId: targetId,
-                    optimizerConnectionId: optimizerId,
-                    objective,
-                    limits: { ...limits, repeats: 1 },
-                  });
+                  const prepared = await query<LabSnapshot>(
+                    trialSource ? "prepare_trial" : "prepare",
+                    {
+                      dataset: JSON.parse(datasetText),
+                      ...(trialSource
+                        ? { sourceExperimentId: trialSource.id, candidateHash: trialSource.hash }
+                        : {
+                            skillName,
+                            targetConnectionId: targetId,
+                            optimizerConnectionId: optimizerId,
+                          }),
+                      objective,
+                      limits: { ...limits, repeats: 1 },
+                    },
+                  );
                   setSnapshot(prepared);
                   await loadList();
                 })
               }
             >
-              {t("optimizationLab.prepare")}
+              {t(trialSource ? "optimizationLab.prepareTrial" : "optimizationLab.prepare")}
             </Button>
           </section>
         )}
@@ -493,6 +611,39 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
             <section className="rounded-xl border p-4 space-y-3">
               <h2 className="font-medium">{t("optimizationLab.frozenPlan")}</h2>
               <OptimizationLabSummary snapshot={snapshot} />
+              {!running && hasReport && snapshot.candidates?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {t("optimizationLab.fixedTrialHelp")}
+                  </p>
+                  {snapshot.candidates.map((candidate: any) => (
+                    <div key={candidate.hash} className="rounded-md border p-3 space-y-2 text-sm">
+                      <p>{candidate.explanation}</p>
+                      <p className="break-all text-xs">{candidate.hash}</p>
+                      <Button
+                        data-testid="optimization-lab-try-candidate"
+                        disabled={pending}
+                        variant="outline"
+                        onClick={() => {
+                          setTrialSource({
+                            id: snapshot.id,
+                            hash: candidate.hash,
+                            bodyHash: candidate.bodyHash,
+                            body: candidate.body,
+                            model: `${snapshot.plan.connections.target.connectionId} / ${snapshot.plan.connections.target.modelId}`,
+                          });
+                          setSnapshot(null);
+                          setReport(null);
+                          setValidation(null);
+                          setEvidencePreview(null);
+                        }}
+                      >
+                        {t("optimizationLab.tryCandidate")}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
             <section className="rounded-xl border p-4 space-y-4">
               <h2 className="font-medium">{t("optimizationLab.authorization")}</h2>

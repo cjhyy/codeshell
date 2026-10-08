@@ -30,6 +30,7 @@ const CASE_FIELDS = [
   "hardAssertions",
   "readiness",
   "missingEvidence",
+  "evidence",
 ];
 const MAX_EDITOR_BYTES = 16 * 1024 * 1024;
 
@@ -113,6 +114,20 @@ export function parseEditableDataset(text: string): EditorParseResult {
       );
       if (Object.hasOwn(item, "expected"))
         requireType(typeof item.expected === "string", `${path}.expected`);
+      if (Object.hasOwn(item, "evidence")) {
+        const evidence = object(
+          item.evidence,
+          ["bundleHash", "runId", "purpose", "blockHashes"],
+          `${path}.evidence`,
+        );
+        requireType(
+          typeof evidence.bundleHash === "string" &&
+            typeof evidence.runId === "string" &&
+            evidence.purpose === "problem_source_only",
+          `${path}.evidence`,
+        );
+        strings(evidence.blockHashes, `${path}.evidence.blockHashes`, 50);
+      }
       for (const key of ["fixtureRefs", "missingEvidence"])
         if (Object.hasOwn(item, key)) strings(item[key], `${path}.${key}`, 32);
       if (Object.hasOwn(item, "rubric")) {

@@ -1,6 +1,20 @@
 export const optimizationLab = {
   zh: {
     optimizationLab: {
+      evidenceProvenance: "原始证据来源（仅问题来源，不是历史重放）",
+      evidenceIds: "选中运行 ID（每行一个，从活动记录复制）",
+      evidenceHelp: "只读取指定运行，最多 20 条；不扫描其他会话，不读取附件内容，不调用模型。",
+      previewEvidence: "预览选中证据",
+      evidenceReview:
+        "核对输入、原始结果、工具引用、纠正、缺失字段、截断与脱敏。密钥过滤不能保证识别所有个人信息。历史配置不可复现，历史输出不是答案。",
+      importEvidence: "确认并导入为分析样本",
+      evidenceDraftChanged: "草稿已改变，请重新导入已确认的证据。",
+      fixedTrialHelp:
+        "固定候选仅在实验室内按原目标模型与配置比较；新题集和预算需重新原生授权，不修改生效 Skill。重复已揭示的保留案例不能证明独立提升。",
+      fixedBody: "查看固定正文",
+      normalExperiment: "返回新优化实验",
+      tryCandidate: "使用此固定候选试用",
+      prepareTrial: "冻结候选试用计划",
       importDataset: "导入样本 JSON",
       exportDataset: "导出样本 JSON",
       draftHelp: "草稿按项目保留到当前窗口关闭；需要长期保存请导出 JSON。",
@@ -142,6 +156,22 @@ export const optimizationLab = {
   },
   en: {
     optimizationLab: {
+      evidenceProvenance: "Original evidence provenance (problem source, not historical replay)",
+      evidenceIds: "Selected run IDs (one per line, copied from activity history)",
+      evidenceHelp:
+        "Reads only the selected runs, at most 20. No other-session scan, attachment reads or model calls.",
+      previewEvidence: "Preview selected evidence",
+      evidenceReview:
+        "Review input, historical output, tools, corrections, missing fields, truncation and redaction. Key filters cannot detect all personal data. Historical configuration is unavailable; old output is not an answer key.",
+      importEvidence: "Confirm and import analysis cases",
+      evidenceDraftChanged: "The draft changed. Import the reviewed evidence again.",
+      fixedTrialHelp:
+        "A fixed candidate is compared only inside the Lab using its original target model/config. A new dataset and budget require native authorization; active Skills stay unchanged. Previously revealed holdout cases do not prove independent improvement.",
+      fixedBody: "Review frozen body",
+      normalExperiment: "Return to a new optimization experiment",
+      tryCandidate: "Try this fixed candidate",
+      prepareTrial: "Freeze candidate trial plan",
+
       importDataset: "Import dataset JSON",
       exportDataset: "Export dataset JSON",
       draftHelp:

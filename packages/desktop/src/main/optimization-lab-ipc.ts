@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { constants, promises as fs } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve as resolvePath } from "node:path";
 import { LAB_QUERY_TYPES, type LabAuthorizationInput } from "../shared/optimization-lab.js";
+import type { EvidenceBundle } from "@cjhyy/code-shell-capability-optimization-lab";
 
 const MAX_JSON_BYTES = 16 * 1024 * 1024;
 const queryTypes = new Set<string>(LAB_QUERY_TYPES);
@@ -20,6 +21,7 @@ interface Deps {
   confirm(window: BrowserWindow, options: MessageBoxOptions): Promise<{ response: number }>;
   save(window: BrowserWindow, name: string): Promise<string | undefined>;
   choose(window: BrowserWindow): Promise<string | undefined>;
+  evidence?(cwd: string, runIds: string[]): Promise<EvidenceBundle>;
 }
 
 function datasetInput(input: unknown, exporting = false): Record<string, unknown> {
@@ -220,11 +222,16 @@ export function authorizationMessage(snapshot: any, input: LabAuthorizationInput
   return [
     `Experiment / 实验: ${input.id}`,
     `Plan hash / 计划哈希: ${input.planHash}`,
+    ...(plan.fixedCandidate
+      ? [
+          `Fixed candidate trial / 固定候选试用: ${plan.fixedCandidate.candidateHash}\nBody: ${plan.fixedCandidate.bodyHash}\nSource experiment: ${plan.fixedCandidate.sourceExperimentId}\nSource plan/report: ${plan.fixedCandidate.sourcePlanHash} / ${plan.fixedCandidate.sourceReportHash}\nNo optimizer calls; this does not adopt the candidate into ordinary tasks. / 无优化调用，不会采用到普通任务。`,
+        ]
+      : []),
     `Skill: ${plan.skill?.name ?? "?"}\nRevision / 修订: ${plan.skill?.revision ?? "?"}`,
     `Target model / 目标模型: ${describeConnection("target")}`,
-    `Optimizer / 优化模型: ${describeConnection("optimizer")}`,
+    `Optimizer / 优化模型: ${plan.fixedCandidate ? "none / 不调用" : describeConnection("optimizer")}`,
     `Dataset hash / 样本哈希: ${plan.datasetHash ?? "?"}\nCounts / 数量: ${JSON.stringify(snapshot.datasetSummary ?? "see reviewed frozen dataset / 见已审核冻结样本")}`,
-    `External data / 外发数据: ${JSON.stringify(plan.externalData)}\nTarget receives Skill and current case input; optimizer receives Skill and development feedback; holdout never enters optimizer; grading stays local. / 目标模型接收正文和当前题，优化模型接收正文和开发反馈，保留题不进入优化模型，本地人工评分。`,
+    `External data / 外发数据: ${JSON.stringify(plan.externalData)}\n${plan.fixedCandidate ? "Only the target receives the frozen body and current case; there are no optimizer calls. Grading stays local. / 仅目标模型接收固定正文和当前题，不调用优化模型，评分留在本地。" : "Target receives Skill and current case input; optimizer receives Skill and development feedback; holdout never enters optimizer; grading stays local. / 目标模型接收正文和当前题，优化模型接收正文和开发反馈，保留题不进入优化模型，本地人工评分。"}`,
     `Output limits / 输出限制: ${JSON.stringify(plan.bounds)}\nFinal evaluation allocation / 最终验收预留: ${JSON.stringify(plan.finalAllocation)}`,
     `Request limit / 请求上限: ${input.limits.maxRequests}`,
     `Execution time limit / 执行时间上限: ${input.limits.maxExecutionMs} ms`,
@@ -240,6 +247,17 @@ export function authorizationMessage(snapshot: any, input: LabAuthorizationInput
 /** Local top-frame bridge; no raw worker grant is exposed through preload or Web. */
 export function registerOptimizationLabIpc(deps: Deps): () => void {
   const channels: string[] = [];
+  // Preview receipts are window/project bound and short-lived; arbitrary renderer bundles are refused.
+  const previews = new Map<
+    string,
+    {
+      window: BrowserWindow;
+      frame: BrowserWindow["webContents"]["mainFrame"];
+      cwd: string;
+      bundle: EvidenceBundle;
+      expiresAt: number;
+    }
+  >();
   const owner = (event: IpcMainInvokeEvent): BrowserWindow => {
     const window = deps.windows().find((w) => !w.isDestroyed() && w.webContents === event.sender);
     if (!window || event.senderFrame !== event.sender.mainFrame)
@@ -249,27 +267,48 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
   };
   const resolve = async (
     input: Record<string, unknown>,
+    check: () => void,
   ): Promise<Record<string, unknown> & { cwd: string }> => {
+    check();
     const target = await deps.resolveTarget(input.target);
-    if (target.kind !== "project" || !(await deps.trusted(target.cwd)))
-      throw new Error("Lab requires a trusted tracked project");
+    check();
+    if (target.kind !== "project") throw new Error("Lab requires a trusted tracked project");
+    const trusted = await deps.trusted(target.cwd);
+    check();
+    if (!trusted) throw new Error("Lab requires a trusted tracked project");
     const { target: _target, ...params } = input;
     return { ...params, cwd: target.cwd };
   };
   const handle = (
     channel: string,
-    handler: (window: BrowserWindow, args: unknown[]) => Promise<unknown>,
+    handler: (window: BrowserWindow, args: unknown[], check: () => void) => Promise<unknown>,
   ) => {
     channels.push(channel);
-    deps.ipc.handle(channel, (event, ...args) => handler(owner(event), args));
+    deps.ipc.handle(channel, (event, ...args) => {
+      const window = owner(event);
+      const frame = event.senderFrame;
+      const check = () => {
+        if (owner(event) !== window || event.sender.mainFrame !== frame)
+          throw new Error("Lab originating frame changed");
+      };
+      return handler(window, args, check);
+    });
+  };
+  const query = async (check: () => void, type: string, params: Record<string, unknown>) => {
+    check();
+    const result = await deps.query(type, params);
+    check();
+    return result;
   };
   const fileRevalidation = (
     window: BrowserWindow,
     input: Record<string, unknown>,
     cwd: string,
+    assertOriginal: () => void,
   ): (() => Promise<void>) => {
     const frame = window.webContents.mainFrame;
     const available = () => {
+      assertOriginal();
       if (
         window.isDestroyed() ||
         !deps.windows().includes(window) ||
@@ -280,20 +319,88 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     };
     return async () => {
       available();
-      const current = await resolve(input);
+      const current = await resolve(input, assertOriginal);
       available();
       if (current.cwd !== cwd) throw new Error("Project primary changed during file operation");
     };
   };
-  handle("optimizationLab:query", async (_window, args) => {
+  handle("optimizationLab:query", async (_window, args, check) => {
     if (args.length !== 2 || typeof args[0] !== "string" || !queryTypes.has(args[0]))
       throw new Error("Unsupported Lab query");
     const input = record(args[1]);
-    const params = await resolve(input);
-    const result = await deps.query(`optimization_lab_${args[0]}`, params);
+    const params = await resolve(input, check);
+    const result = await query(check, `optimization_lab_${args[0]}`, params);
     return args[0] === "discover" ? { ...result, skills: deps.skills(params.cwd) } : result;
   });
-  handle("optimizationLab:authorize", async (window, args) => {
+  handle("optimizationLab:previewEvidence", async (window, args, check) => {
+    if (args.length !== 1 || !deps.evidence) throw new Error("Evidence import unavailable");
+    const input = record(args[0]);
+    if (
+      Object.keys(input).some((key) => !["target", "runIds"].includes(key)) ||
+      !Array.isArray(input.runIds) ||
+      input.runIds.length < 1 ||
+      input.runIds.length > 20 ||
+      input.runIds.some((id) => typeof id !== "string" || id.length > 512)
+    )
+      throw new Error("Invalid selected run IDs");
+    const params = await resolve(input, check);
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
+    const bundle = await deps.evidence(params.cwd, input.runIds as string[]);
+    await revalidate();
+    for (const [id, prior] of previews)
+      if (prior.window === window || prior.expiresAt <= Date.now()) previews.delete(id);
+    if (previews.size >= 32) throw new Error("Too many evidence previews");
+    const previewId = randomUUID();
+    previews.set(previewId, {
+      window,
+      frame: window.webContents.mainFrame,
+      cwd: params.cwd,
+      bundle,
+      expiresAt: Date.now() + 10 * 60_000,
+    });
+    return { previewId, bundle };
+  });
+  handle("optimizationLab:importEvidence", async (window, args, check) => {
+    if (args.length !== 1) throw new Error("Invalid evidence confirmation");
+    const input = record(args[0]);
+    if (
+      Object.keys(input).some((key) => !["target", "previewId", "bundleHash"].includes(key)) ||
+      typeof input.previewId !== "string"
+    )
+      throw new Error("Invalid evidence confirmation");
+    const params = await resolve(input, check);
+    const prior = previews.get(input.previewId);
+    if (
+      !prior ||
+      prior.window !== window ||
+      prior.frame !== window.webContents.mainFrame ||
+      prior.cwd !== params.cwd ||
+      prior.expiresAt <= Date.now() ||
+      prior.bundle.bundleHash !== input.bundleHash
+    )
+      throw new Error("Evidence preview expired or changed");
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
+    const confirmation = await deps.confirm(window, {
+      type: "question",
+      title: "Optimization Lab / 优化实验室",
+      message: "Import this reviewed evidence locally? / 将已预览证据导入本地？",
+      detail: `Bundle: ${prior.bundle.bundleHash}\nSelected runs: ${prior.bundle.runs.map((run) => run.runId).join(", ")}\nSecrets are filtered heuristically; review personal data yourself. No model call is authorized. Imported cases remain analysis_only until you confirm the input and independent criteria. / 脱敏为启发式处理，个人信息需人工复核。本次不授权模型调用，样本默认仅用于分析。`,
+      buttons: ["Cancel / 取消", "Import / 导入"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (confirmation.response !== 1) return null;
+    await revalidate();
+    if (previews.get(input.previewId) !== prior || prior.expiresAt <= Date.now())
+      throw new Error("Evidence preview expired or changed");
+    previews.delete(input.previewId);
+    return query(check, "optimization_lab_import_evidence", {
+      cwd: params.cwd,
+      bundle: prior.bundle,
+    });
+  });
+  handle("optimizationLab:authorize", async (window, args, check) => {
     if (args.length !== 1) throw new Error("Invalid Lab authorization");
     const input = record(args[0]);
     identity(input);
@@ -333,8 +440,8 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
           Number(limits[key]) <= 0)
       )
         throw new Error("Invalid Lab limits");
-    const params = await resolve(input);
-    const snapshot = await deps.query("optimization_lab_get", { cwd: params.cwd, id: params.id });
+    const params = await resolve(input, check);
+    const snapshot = await query(check, "optimization_lab_get", { cwd: params.cwd, id: params.id });
     const message = authorizationMessage(snapshot, input as unknown as LabAuthorizationInput);
     const confirmation = await deps.confirm(window, {
       type: "question",
@@ -350,23 +457,25 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     // Re-resolve mounted primary, trust and flag after a potentially long native dialog.
     if (window.isDestroyed() || !deps.enabled())
       throw new Error("Lab authorization is no longer available");
-    const current = await resolve(input);
+    const current = await resolve(input, check);
     if (current.cwd !== params.cwd) throw new Error("Project primary changed during authorization");
     authorizationMessage(
-      await deps.query("optimization_lab_get", { cwd: params.cwd, id: params.id }),
+      await query(check, "optimization_lab_get", { cwd: params.cwd, id: params.id }),
       input as unknown as LabAuthorizationInput,
     );
-    return deps.query("optimization_lab_grant", params);
+    return query(check, "optimization_lab_grant", params);
   });
-  handle("optimizationLab:exportFile", async (window, args) => {
+  handle("optimizationLab:exportFile", async (window, args, check) => {
     if (args.length !== 1) throw new Error("Invalid Lab export");
     const input = record(args[0]);
     identity(input);
     if (!["grading", "report-json", "report-markdown"].includes(String(input.kind)))
       throw new Error("Invalid export kind");
-    const params = await resolve(input);
+    const params = await resolve(input, check);
     const grading = input.kind === "grading";
-    const artifact = await deps.query(
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
+    const artifact = await query(
+      check,
       grading ? "optimization_lab_export_grading" : "optimization_lab_report",
       { cwd: params.cwd, id: input.id },
     );
@@ -381,33 +490,34 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
       `optimization-${input.id}-${String(input.kind)}.${markdown ? "md" : "json"}`,
     );
     if (!destination) return false;
-    await fs.writeFile(destination, content, { encoding: "utf8", mode: 0o600 });
+    await revalidate();
+    await writeDatasetFile(destination, content, deps.artifactRoot(), revalidate);
     return true;
   });
-  handle("optimizationLab:importGrading", async (window, args) => {
+  handle("optimizationLab:importGrading", async (window, args, check) => {
     if (args.length !== 1) throw new Error("Invalid grading import");
     const input = record(args[0]);
     identity(input);
     revision(input);
-    const params = await resolve(input);
-    const revalidate = fileRevalidation(window, input, params.cwd);
+    const params = await resolve(input, check);
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
     const source = await deps.choose(window);
     if (!source) return null;
     await revalidate();
     const grading = JSON.parse(await readBoundedUtf8File(source));
     await revalidate();
-    return deps.query("optimization_lab_import_grading", {
+    return query(check, "optimization_lab_import_grading", {
       cwd: params.cwd,
       id: params.id,
       expectedRevision: input.expectedRevision,
       grading,
     });
   });
-  handle("optimizationLab:importDataset", async (window, args) => {
+  handle("optimizationLab:importDataset", async (window, args, check) => {
     if (args.length !== 1) throw new Error("Invalid dataset import");
     const input = datasetInput(args[0]);
-    const params = await resolve(input);
-    const revalidate = fileRevalidation(window, input, params.cwd);
+    const params = await resolve(input, check);
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
     const source = await deps.choose(window);
     if (!source) return null;
     await revalidate();
@@ -415,11 +525,11 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     await revalidate();
     return text;
   });
-  handle("optimizationLab:exportDataset", async (window, args) => {
+  handle("optimizationLab:exportDataset", async (window, args, check) => {
     if (args.length !== 1) throw new Error("Invalid dataset export");
     const input = datasetInput(args[0], true);
-    const params = await resolve(input);
-    const revalidate = fileRevalidation(window, input, params.cwd);
+    const params = await resolve(input, check);
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
     const destination = await deps.save(window, "optimization-dataset.json");
     if (!destination) return false;
     await revalidate();
@@ -427,6 +537,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     return true;
   });
   return () => {
+    previews.clear();
     for (const channel of channels) deps.ipc.removeHandler(channel);
   };
 }

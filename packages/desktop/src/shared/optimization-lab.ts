@@ -1,4 +1,5 @@
 import type { RendererConfigurationTarget } from "./renderer-configuration";
+import type { EvidenceBundle, EvalCase } from "@cjhyy/code-shell-capability-optimization-lab";
 
 export const LAB_QUERY_TYPES = [
   "discover",
@@ -6,6 +7,7 @@ export const LAB_QUERY_TYPES = [
   "validate_dataset",
   "freeze_dataset",
   "prepare",
+  "prepare_trial",
   "get",
   "status",
   "start",
@@ -36,6 +38,15 @@ export interface LabAuthorizationInput extends LabQueryInput {
   };
 }
 export interface OptimizationLabApi {
+  previewEvidence(input: {
+    target: LabTarget;
+    runIds: string[];
+  }): Promise<{ previewId: string; bundle: EvidenceBundle }>;
+  importEvidence(input: {
+    target: LabTarget;
+    previewId: string;
+    bundleHash: string;
+  }): Promise<{ bundle: EvidenceBundle; cases: EvalCase[] } | null>;
   query<T = unknown>(type: LabQueryType, input: LabQueryInput): Promise<T>;
   authorize(input: LabAuthorizationInput): Promise<unknown | null>;
   exportFile(
