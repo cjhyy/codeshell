@@ -34,6 +34,8 @@ export interface TaskInboxRecordV1 {
   title: string;
   status: TaskStatus;
   sessionId?: string;
+  /** Actual execution identity for precise historical Run association. */
+  runId?: string;
   parentSessionId?: string;
   automationId?: string;
   projectId?: string;
@@ -94,6 +96,7 @@ const RECORD_FIELDS = new Set([
   "title",
   "status",
   "sessionId",
+  "runId",
   "parentSessionId",
   "automationId",
   "projectId",
@@ -202,7 +205,13 @@ export function parseTaskInboxRecord(value: unknown): TaskInboxRecordV1 {
     sourceRevision: checkedTaskText(raw.sourceRevision, "revision", 1024),
   };
   if (attempt !== undefined) result.attempt = attempt;
-  for (const key of ["sessionId", "parentSessionId", "automationId", "projectId"] as const) {
+  for (const key of [
+    "sessionId",
+    "runId",
+    "parentSessionId",
+    "automationId",
+    "projectId",
+  ] as const) {
     if (raw[key] !== undefined) result[key] = checkedId(raw[key], key);
   }
   for (const key of ["workspacePath", "summary", "error"] as const) {

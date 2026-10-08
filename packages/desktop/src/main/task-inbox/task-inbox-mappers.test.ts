@@ -75,6 +75,7 @@ describe("task inbox normalized model", () => {
       parseTaskInboxRecord({ ...task({ source: "external-runtime" }), externalCli: "other" }),
     ).toThrow();
     expect(() => parseTaskInboxRecord({ ...task(), externalCli: "codex" })).toThrow();
+    expect(() => parseTaskInboxRecord({ ...task(), runId: "bad\nrun" })).toThrow();
   });
   test("Mimi, automation execution and child associations each suppress their duplicate Session", () => {
     for (const source of [
@@ -111,6 +112,28 @@ describe("task inbox normalized model", () => {
     const previous = task({ source: "mimi-delegation", attempt: 0, status: "failed" });
     const current = task({ source: "mimi-delegation", attempt: 1, updatedAt: 3 });
     expect(deduplicateTaskInboxRecords([previous, current])).toEqual([current]);
+  });
+  test("historical Runs share a Session without collapsing distinct executions", () => {
+    const session = task({ sessionId: "s1", runId: "current-run" });
+    const oldRun = task({
+      source: "legacy-run",
+      sourceId: "old-run",
+      sessionId: "s1",
+      status: "done",
+    });
+    const currentRun = task({
+      source: "legacy-run",
+      sourceId: "current-run",
+      sessionId: "s1",
+      status: "done",
+    });
+    expect(deduplicateTaskInboxRecords([session, oldRun, currentRun])).toEqual([session, oldRun]);
+    expect(deduplicateTaskInboxRecords([task({ sessionId: "s1" }), oldRun])).toHaveLength(2);
+    const delegation = task({ source: "mimi-delegation", sourceId: "delegated", sessionId: "s1" });
+    expect(deduplicateTaskInboxRecords([session, delegation, oldRun, currentRun])).toEqual([
+      delegation,
+      oldRun,
+    ]);
   });
   test("waiting and interrupted tasks sort above active, failure and completion", () => {
     const records = ["done", "running", "failed", "waiting", "interrupted"].map((status) =>

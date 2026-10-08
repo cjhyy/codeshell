@@ -122,6 +122,18 @@ describe("task inbox persistent projection", () => {
       capabilities: ["open"],
     });
   });
+  test("legacy-run source filter retains older executions of a currently represented Session", () => {
+    const { store } = setup();
+    store.upsertMany([
+      task("s1", { sessionId: "s1", runId: "current-run" }),
+      task("old-run", { source: "legacy-run", sessionId: "s1", status: "done" }),
+      task("current-run", { source: "legacy-run", sessionId: "s1", status: "done" }),
+    ]);
+    expect(store.list({ source: "legacy-run" }).records.map((row) => row.sourceId)).toEqual([
+      "old-run",
+    ]);
+    expect(store.get("session:s1")?.runId).toBe("current-run");
+  });
   test("list filters and paginates a stable version; changed cursor restarts safely", () => {
     const { store } = setup();
     store.upsertMany([

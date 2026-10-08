@@ -248,6 +248,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
             source,
             sourceId: id,
             sessionId: id,
+            ...((live?.runId ?? durable?.runId) ? { runId: live?.runId ?? durable?.runId } : {}),
             title: clean(meta?.row.title ?? durable?.title ?? live?.title, 1024) ?? id,
             status,
             capabilities,
