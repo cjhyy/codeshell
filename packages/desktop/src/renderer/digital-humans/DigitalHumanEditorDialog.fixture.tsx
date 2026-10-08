@@ -1,5 +1,6 @@
 // Isolate shared dialog mocks from other renderer suites while exercising the real editor.
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 import { mock } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -60,6 +61,26 @@ if (scenario !== "prototype-sources") {
     skills: [{ source: "github", repo: "owner/skills", scope: "project", fullDepth: false }],
     tools: [],
   };
+}
+if (scenario.startsWith("dependencies-")) {
+  profile.requires = {
+    skills: [
+      {
+        source: "github",
+        repo: "owner/skills",
+        skills: ["research"],
+        scope: "project",
+        fullDepth: true,
+      },
+      { source: "github", repo: "owner/all", scope: "project", fullDepth: false },
+    ],
+    tools: [{ bin: "node", minVersion: "22.1", hint: "Install Node" }],
+  };
+  profile.plugins = ["research-plugin"];
+  profile.mcp = ["sources"];
+  profile.agents = ["reviewer"];
+  profile.version = "1.2.3";
+  if (scenario === "dependencies-sync") profile.requires.skills.pop();
 }
 const preview = {
   needsInstall: true,
@@ -139,6 +160,19 @@ async function skillsTab() {
   const skillTab = nodes(nav).filter((node) => node.tagName === "BUTTON")[2];
   await update(() => props(skillTab).onClick());
 }
+async function settingsTab() {
+  const nav = find((node) => node.tagName === "NAV");
+  const tab = nodes(nav).filter((node) => node.tagName === "BUTTON")[3];
+  await update(() => props(tab).onClick());
+}
+const control = (id: string) => find((node) => props(node).id === id);
+const button = (id: string) => find((node) => props(node)["data-testid"] === id);
+const change = (id: string, value: string) =>
+  update(() => props(control(id)).onChange({ target: { value } }));
+const click = (id: string) => update(() => props(button(id)).onClick());
+const saveButton = () => find((node) => node.tagName === "BUTTON" && props(node).type === "submit");
+const submit = () =>
+  update(() => props(find((node) => node.tagName === "FORM")).onSubmit({ preventDefault() {} }));
 const installButton = () =>
   find((node) => node.tagName === "BUTTON" && textOf(node) === "检查并安装");
 async function switchProfile() {
@@ -226,6 +260,164 @@ try {
     );
     await update(() => requestClose(false));
     assert.deepEqual(openChanges, [], "Installation supplied by the parent keeps the editor open");
+  } else if (scenario === "dependencies-roundtrip") {
+    await settingsTab();
+    assert.equal(props(control("requirement-repository-0")).value, "owner/skills");
+    assert.equal(props(control("requirement-repository-0-depth"))["aria-checked"], true);
+    assert.equal(props(control("requirement-tool-version-0")).value, "22.1");
+    await change("requirement-repository-0", "owner/new-skills");
+    await click("requirement-repository-0-add-skill");
+    await change("requirement-repository-0-skill-1", "summarize");
+    await click("requirement-remove-repository-1");
+    await click("requirement-add-repository");
+    await change("requirement-repository-1", "owner/new-all");
+    await update(() =>
+      props(control("requirement-repository-1-depth")).onClick({
+        defaultPrevented: false,
+        isPropagationStopped: () => false,
+        stopPropagation() {},
+      }),
+    );
+    await click("requirement-remove-tool-0");
+    await click("requirement-add-tool");
+    await change("requirement-tool-0", "ffmpeg");
+    await change("requirement-tool-version-0", "7.1.0");
+    await change("requirement-tool-hint-0", "brew install ffmpeg");
+    await submit();
+    assert.deepEqual(saved[0]?.requires, {
+      skills: [
+        {
+          source: "github",
+          repo: "owner/new-skills",
+          skills: ["research", "summarize"],
+          scope: "project",
+          fullDepth: true,
+        },
+        { source: "github", repo: "owner/new-all", scope: "project", fullDepth: true },
+      ],
+      tools: [{ bin: "ffmpeg", minVersion: "7.1.0", hint: "brew install ffmpeg" }],
+    });
+    assert.deepEqual(saved[0]?.plugins, profile.plugins);
+    assert.deepEqual(saved[0]?.mcp, profile.mcp);
+    assert.deepEqual(saved[0]?.agents, profile.agents);
+    assert.equal(saved[0]?.version, profile.version);
+    assert.equal(
+      previewCalls.length,
+      0,
+      "Saving declarations must not review or execute installation",
+    );
+    assert.equal(installCalls.length, 0);
+    const { mkdtempSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const temporaryHome = mkdtempSync(join(tmpdir(), "digital-human-editor-"));
+    const persistProfile = (value: Omit<DigitalHumanProfileEntry, "active">) => {
+      // A separate Bun process exercises core persistence without pulling Node
+      // internals into the renderer fixture's TypeScript/browser boundary.
+      const storePath = fileURLToPath(
+        new URL("../../../../core/src/profile/store.ts", import.meta.url),
+      );
+      const result = Bun.spawnSync({
+        cmd: [
+          process.execPath,
+          "-e",
+          `
+          import { saveWorkspaceProfile, readWorkspaceProfile } from ${JSON.stringify(storePath)};
+          const profile = JSON.parse(await new Response(Bun.stdin.stream()).text());
+          saveWorkspaceProfile(profile);
+          process.stdout.write(JSON.stringify(readWorkspaceProfile(profile.name)));
+        `,
+        ],
+        stdin: new TextEncoder().encode(JSON.stringify(value)),
+        env: { ...process.env, CODE_SHELL_HOME: temporaryHome },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      assert.equal(result.exitCode, 0, result.stderr.toString());
+      return JSON.parse(result.stdout.toString()) as Omit<DigitalHumanProfileEntry, "active">;
+    };
+    try {
+      const loaded = persistProfile(saved[0]!);
+      assert.deepEqual(loaded.requires, saved[0]?.requires);
+      editorProps = { ...editorProps, open: false };
+      await render();
+      editorProps = { ...editorProps, open: true, profile: { ...loaded, active: false } };
+      await render();
+      await settingsTab();
+      assert.equal(props(control("requirement-repository-0-skill-1")).value, "summarize");
+      assert.equal(props(control("requirement-tool-hint-0")).value, "brew install ffmpeg");
+      await click("requirement-remove-repository-1");
+      await click("requirement-remove-repository-0");
+      await click("requirement-remove-tool-0");
+      await submit();
+      assert.equal(
+        Object.hasOwn(saved[1]!, "requires"),
+        false,
+        "Removing all rows removes the declaration",
+      );
+      assert.equal(persistProfile(saved[1]!).requires, undefined);
+    } finally {
+      rmSync(temporaryHome, { recursive: true, force: true });
+    }
+  } else if (scenario === "dependencies-validation") {
+    await settingsTab();
+    await change("requirement-repository-0", "https://github.com/owner/repo");
+    assert.equal(props(saveButton()).disabled, true);
+    assert.ok(nodes(container).some((node) => props(node).role === "alert"));
+    await submit();
+    assert.equal(saved.length, 0);
+    await change("requirement-repository-0", "owner/repo");
+    await change("requirement-repository-0-skill-0", "--all");
+    assert.equal(props(saveButton()).disabled, true);
+    await change("requirement-repository-0-skill-0", "*");
+    assert.equal(props(saveButton()).disabled, true);
+    await change("requirement-repository-0-skill-0", "research");
+    await click("requirement-repository-0-add-skill");
+    await change("requirement-repository-0-skill-1", "research");
+    assert.equal(props(saveButton()).disabled, true);
+    await change("requirement-repository-0-skill-1", "review");
+    await change("requirement-tool-version-0", "v22.1");
+    assert.equal(props(saveButton()).disabled, true);
+    await change("requirement-tool-version-0", "22.1.0");
+    assert.equal(props(saveButton()).disabled, false);
+    await change("requirement-tool-0", "");
+    assert.equal(props(saveButton()).disabled, true);
+    await change("requirement-tool-0", "node");
+    await click("requirement-add-repository");
+    assert.equal(props(saveButton()).disabled, true);
+    await click("requirement-remove-repository-2");
+    assert.equal(props(saveButton()).disabled, false);
+    await submit();
+    assert.equal(saved.length, 1);
+  } else if (scenario === "dependencies-sync") {
+    await skillsTab();
+    await change("digital-human-skill-repo", "owner/changed");
+    await settingsTab();
+    assert.equal(props(control("requirement-repository-0")).value, "owner/changed");
+    await change("requirement-repository-0", "owner/second");
+    await update(() =>
+      props(control("requirement-repository-0-depth")).onClick({
+        defaultPrevented: false,
+        isPropagationStopped: () => false,
+        stopPropagation() {},
+      }),
+    );
+    await skillsTab();
+    assert.equal(props(control("digital-human-skill-repo")).value, "owner/second");
+    await submit();
+    assert.equal(saved[0]?.requires?.skills[0]?.fullDepth, true);
+    await settingsTab();
+    await click("requirement-remove-repository-0");
+    await skillsTab();
+    assert.equal(props(control("digital-human-skill-repo")).value, "");
+    await submit();
+    assert.deepEqual(saved[1]?.requires?.skills, []);
+  } else if (scenario === "dependencies-discard") {
+    await settingsTab();
+    await change("requirement-tool-hint-0", "Install another version");
+    await update(() => requestClose(false));
+    assert.equal(confirmCount, 1, "Dependency-only edits need the unsaved-changes prompt");
+    assert.deepEqual(openChanges, [false]);
   } else throw new Error(`Unknown scenario: ${scenario}`);
 } finally {
   await update(() => root.unmount());
