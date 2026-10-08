@@ -57,4 +57,4 @@ bun run --cwd packages/desktop predist
 bun run --cwd packages/desktop test:e2e:optimization-lab
 ```
 
-已通过全仓构建/类型检查、Desktop 构建及 183 项集成 focused tests；ESLint 为零错误、105 条既有警告且 baseline guard 通过。真实 Electron 首轮 27 次本地 HTTP 覆盖完整 13 请求实验、三个人工评分阶段、原生取消/撤销、在途停止、报告重开和源 Skill 不变。最终补充验收与 CI 结果在合并前更新；无真实模型实验与真实收益结论。
+已通过全仓构建/类型检查、Desktop 构建及 183 项集成 focused tests；ESLint 为零错误、105 条既有警告且 baseline guard 通过。真实 Electron 最终 33 次本地 HTTP 覆盖完整 13 请求实验、三个人工评分阶段、原生取消/撤销、在途停止、报告重开、页面关闭保活、worker/应用 SIGKILL、父管道关闭退出及显式继续仅运行未发出题目；源 Skill 不变，重启零自动请求。最终 CI 结果见 [PR #55](https://github.com/cjhyy/codeshell/pull/55)。无真实模型实验与真实收益结论。
