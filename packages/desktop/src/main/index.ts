@@ -392,6 +392,7 @@ import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
 import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
+import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
@@ -6842,6 +6843,15 @@ function taskInboxEnabled(): boolean {
   const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
   return settings.featureFlags?.taskInboxV1 !== false;
 }
+taskInboxDisposers.push(
+  registerOptimizationLabHost({
+    windows: () => [...mainWindows],
+    settingsCwd: resolveNoRepoCwd,
+    resolveTarget: resolveRendererConfigurationTarget,
+    trust: getTrust,
+    bridge: () => bridge,
+  }),
+);
 const taskInboxSources = createTaskInboxSources({
   diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
   sessionCatalog: () => sessionCatalogStore.load(),

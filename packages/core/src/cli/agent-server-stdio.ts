@@ -456,7 +456,7 @@ const agentServer = new AgentServer({
 // SIGINT (Ctrl+C), or SIGHUP would drop the process without closing sessions,
 // clearing the idle sweeper, or terminating child MCP/tool processes.
 // AgentServer.close() → chatManager.closeAll() also reaps background shells.
-installGracefulShutdown(agentServer);
+installGracefulShutdown(agentServer, { parentInput: process.stdin });
 
 // Reap orphaned background shells left by a previously-crashed worker
 // (design §难点1): a worker crash detaches its `npm run dev` children, which
@@ -472,4 +472,5 @@ try {
 }
 
 // Keep the process alive — readline in StdioTransport holds the event loop.
-// On parent close / stdin EOF the process will exit naturally.
+// Parent close / stdin EOF goes through the shutdown handler even if a module
+// still owns timers or in-flight HTTP requests.

@@ -79,6 +79,7 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
 import { useTaskInboxFeature } from "./task-inbox/useTaskInboxFeature";
+import { useOptimizationLabFeature } from "./optimization-lab/useOptimizationLabFeature";
 import { PAGE_REGISTRY } from "./pages/PageRegistry";
 import { replacePanelApps } from "./panels/PanelRegistry";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
@@ -262,6 +263,7 @@ function App() {
     setGoalOverrides,
   } = useBucketOverrides();
   const [settingsRevision, setSettingsRevision] = useState(0);
+  const optimizationLabEnabled = useOptimizationLabFeature(settingsRevision, setView);
   const [settingsInitialModule, setSettingsInitialModule] = useState<
     SettingsModuleId | undefined
   >();
@@ -2224,6 +2226,7 @@ function App() {
               activeProjectPath={activeProject?.path ?? null}
               viewMode={view.viewMode}
               taskInboxEnabled={taskInboxEnabled}
+              optimizationLabEnabled={optimizationLabEnabled}
             />
           </ResponsiveSidebar>
 
@@ -2286,6 +2289,7 @@ function App() {
                     runsInitialRunId,
                     onOpenTaskInboxRecord,
                     activeProjectPath: activeProject?.path ?? null,
+                    activeProjectId: activeProject?.id ?? null,
                     onNewSession: handleNewConversation,
                     onSessionRenamed,
                     onSessionDeleted,
