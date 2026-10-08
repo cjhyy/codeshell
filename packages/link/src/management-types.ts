@@ -72,7 +72,13 @@ export type LinkAuthorizationStep = {
     }
   | {
       kind: "local-session";
-      session: { installed: boolean; authenticated: boolean; account?: string; message?: string };
+      session: {
+        installed: boolean;
+        authenticated: boolean;
+        account?: string;
+        message?: string;
+        canLogin?: boolean;
+      };
     }
   | {
       kind: "consent";
@@ -85,7 +91,13 @@ export type LinkAuthorizationStep = {
 
 export interface LinkAuthorizationResponse {
   stepId: string;
-  operation: "submit" | "detect-session" | "bind-session" | "confirm" | "refresh-qr";
+  operation:
+    | "submit"
+    | "detect-session"
+    | "login-session"
+    | "bind-session"
+    | "confirm"
+    | "refresh-qr";
   input?: Record<string, string | string[] | boolean>;
 }
 
