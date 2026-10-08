@@ -132,6 +132,13 @@ export function previewProfilePluginExport(
   if (!profile) throw new Error("selected Profile is missing");
   if (profile.name !== name)
     throw new Error("Profile definition name does not match its selected directory");
+  if (
+    profile.skills.some(
+      (name) => !name.split(":").every(safeSegment) || name.split(":").length > 2,
+    ) ||
+    profile.agents.some((name) => !safeSegment(name))
+  )
+    throw new Error("Profile static component references must be literal names, not private paths");
   const reader = new ProfileExportReader();
   let sources;
   try {

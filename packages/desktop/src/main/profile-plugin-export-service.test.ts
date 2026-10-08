@@ -143,6 +143,14 @@ describe("reviewed static Profile plugin export", () => {
     expect(String(caught)).toContain("unavailable or invalid");
     expect(String(caught)).not.toContain(home);
     expect(String(caught)).not.toContain("PRIVATE_MALFORMED_SECRET");
+    profile({ skills: ["/PRIVATE_SOURCE_PATH_SENTINEL"] });
+    try {
+      choose();
+    } catch (error) {
+      caught = error;
+    }
+    expect(String(caught)).toContain("literal names");
+    expect(String(caught)).not.toContain("PRIVATE_SOURCE_PATH_SENTINEL");
   });
 
   test("reads actual local Skill priority and only explicitly selected supporting text", () => {
