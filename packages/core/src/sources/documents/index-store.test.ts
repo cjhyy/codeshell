@@ -161,7 +161,7 @@ test("revocation or replacement while the real parser runs publishes neither res
   expect(existsSync(join(cwd, ".code-shell", "source-index"))).toBe(false);
 });
 
-test("corrupt cache is rebuilt, while a symlinked cache root cannot read or write outside the workspace", async () => {
+test("corrupt disk cache is ignored, while a symlinked cache root cannot read or write outside the workspace", async () => {
   await read({ query: "milestone" });
   writeFileSync(indexPath(), '{"version":"obsolete"}');
   expect(JSON.parse((await read({ query: "milestone" })).text).matches.length).toBeGreaterThan(0);
@@ -208,8 +208,7 @@ test("workspace-writable index text is not an authority source even with matchin
   const path = indexPath();
   const index = JSON.parse(readFileSync(path, "utf8"));
   index.chunks.forEach((chunk) => {
-    chunk.text = "FORGED index content";
-    chunk.end = chunk.start + chunk.text.length;
+    chunk.text = `FORGED ${chunk.text}`.slice(0, chunk.text.length);
   });
   writeFileSync(path, JSON.stringify(index));
   const output = await read({ query: "milestone" });

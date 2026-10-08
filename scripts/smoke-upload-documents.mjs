@@ -155,11 +155,11 @@ try {
     .find((path) => JSON.parse(readFileSync(path, "utf8")).resourceId === "brief.docx");
   const forged = JSON.parse(readFileSync(docxIndexPath, "utf8"));
   forged.chunks.forEach((chunk) => {
-    chunk.text = "FORGED milestone";
-    chunk.end = chunk.start + chunk.text.length;
+    // Preserve every schema/hash/offset/chunk-ID field and the text length.
+    chunk.text = `FORGED ${chunk.text}`.slice(0, chunk.text.length);
   });
   writeFileSync(docxIndexPath, JSON.stringify(forged));
-  assert.ok(!(await run("brief.docx", { query: "FORGED" })).includes("FORGED milestone"));
+  assert.ok(!(await run("brief.docx", { query: "FORGED" })).includes("FORGED"));
   const coreUrl = import.meta.resolve("@cjhyy/code-shell-core");
   const cold = spawnSync(
     process.execPath,
@@ -184,6 +184,7 @@ try {
     { env: process.env, encoding: "utf8", timeout: 20_000 },
   );
   assert.equal(cold.status, 0, cold.stderr + cold.stdout);
+  assert.ok(!readFileSync(docxIndexPath, "utf8").includes("FORGED"));
   writeFileSync(
     join(root, "brief.docx"),
     officeZip({ "word/document.xml": wordXml("Replacement milestone") }),

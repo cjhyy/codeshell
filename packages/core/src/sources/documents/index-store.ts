@@ -5,7 +5,6 @@ import { parseDocumentIsolated } from "./worker.js";
 import {
   DOCUMENT_PARSER_VERSION,
   MAX_DOCUMENT_CHUNKS,
-  MAX_DOCUMENT_TEXT_BYTES,
   type DocumentChunk,
   type DocumentIndex,
   type ParsedDocument,
