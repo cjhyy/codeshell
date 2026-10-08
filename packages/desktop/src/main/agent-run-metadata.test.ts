@@ -57,6 +57,16 @@ function baseDeps() {
 
 describe("prepareAgentRunMetadata", () => {
   const meta = { origin: "renderer" as const, producer: "agent:msg" };
+  test("background cancellation cannot bypass the task inbox through renderer RPC", () => {
+    const line = JSON.stringify({
+      method: "agent/backgroundWorkCancel",
+      params: { sessionId: "s1", kind: "shell", id: "job1" },
+    });
+    expect(() => prepareAgentRunMetadata(line, meta, baseDeps())).toThrow("host authority");
+    expect(
+      prepareAgentRunMetadata(line, { origin: "host", producer: "task-inbox" }, baseDeps()).outLine,
+    ).toBe(line);
+  });
   test("strips main-only browser routing fields and injects main-owned trust", () => {
     const line = JSON.stringify({
       jsonrpc: "2.0",

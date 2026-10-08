@@ -83,6 +83,9 @@ export function prepareAgentRunMetadata(
   } catch {
     return { parsed, outLine: line, meta };
   }
+  if (parsed.method === "agent/backgroundWorkCancel" && meta.origin !== "host") {
+    throw new AgentRunMetadataError("Background task controls require host authority");
+  }
   if (parsed.method !== "agent/run") return { parsed, outLine: line, meta };
 
   const paramsRecord =

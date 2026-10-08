@@ -127,7 +127,10 @@ import {
   parseExternalGoalInput,
 } from "./external-runtime-goal-rpc.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
-import { removeExternalRuntimeBinding } from "./external-runtime-state.js";
+import {
+  removeExternalRuntimeBinding,
+  readExternalRuntimeBinding,
+} from "./external-runtime-state.js";
 import {
   ExternalRuntimeApprovals,
   parseExternalApprovalDecision,
@@ -384,6 +387,14 @@ import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
+import { SessionCatalogStore } from "./session-catalog-store.js";
+import {
+  createTaskInboxSources,
+  type TaskInboxBackgroundEntry,
+} from "./task-inbox/task-inbox-sources.js";
+import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
+import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
+import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
@@ -490,6 +501,7 @@ import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js
 import { resolveModelMeta } from "./model-meta-service.js";
 import { deleteRunDir } from "./runs-service.js";
 import { listRunsForUi, getRunHistory } from "./run-history-service.js";
+import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
   checkForUpdate,
@@ -833,6 +845,9 @@ let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
+let taskInboxService: ReturnType<typeof createTaskInboxService> | undefined;
+const taskInboxDisposers: Array<() => void> = [];
+const taskInboxAutomationSessions = new Map<string, string>();
 let petImDecisions: PetImDecisions | null = null;
 let unsubscribePetLongTaskStream: (() => void) | null = null;
 let unsubscribePetReportStream: (() => void) | null = null;
@@ -1540,6 +1555,27 @@ async function createWindow(): Promise<BrowserWindow> {
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
     const externalBridge = bridge;
+    taskInboxDisposers.push(
+      bridge.subscribeOutbound((_line, entry) => {
+        const event = entry?.event as { type?: string } | undefined;
+        if (
+          event?.type &&
+          [
+            "session_started",
+            "run_result",
+            "approval_request",
+            "approval_resolved",
+            "ask_user",
+            "agent_started",
+            "agent_completed",
+            "background_task_started",
+            "background_task_completed",
+          ].includes(event.type)
+        ) {
+          taskInboxService?.scheduleRefresh();
+        }
+      }),
+    );
     // Approvals reach the SAME renderer dialog the native path uses — the
     // renderer cannot tell which transport a prompt arrived over, so there is
     // only one approval UI to keep correct.
@@ -1573,9 +1609,12 @@ async function createWindow(): Promise<BrowserWindow> {
       emit: (sessionId, event) => {
         const ownerId = externalBridge.panelOwnerWebContentsId(sessionId);
         sendToOwnerWindow(ownerId, "externalRuntime:event", { sessionId, event });
+        taskInboxService?.scheduleRefresh();
       },
-      sessionStateChanged: (sessionId, active, ownerId) =>
-        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active }),
+      sessionStateChanged: (sessionId, active, ownerId) => {
+        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
+        taskInboxService?.scheduleRefresh();
+      },
       // The host seams the exposed tools need. `panels` points at the same
       // requestPanelHost the native protocol line reaches, so owner routing,
       // the timeout and invoke's fail-closed behaviour are shared rather than
@@ -1703,6 +1742,7 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petStateAggregator = aggregator;
+    taskInboxDisposers.push(aggregator.subscribe(() => taskInboxService?.scheduleRefresh()));
 
     // Toggle-driven external-CLI session adapters (Codex / Claude). The
     // controller folds each session cwd's capabilityOverrides.pet over the
@@ -1763,6 +1803,7 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
     petLongTaskStore = longTaskStore;
+    taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
     const petMemoryStoreInstance = new PetMemoryStore(
       resolve(app.getPath("userData"), "pet", "memories.json"),
     );
@@ -2055,6 +2096,10 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
+      taskInbox: async () => {
+        if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
+        return taskInboxPetView(await taskInboxService.reconcile());
+      },
       hostActionReceipts: petHostActionReceipts,
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
@@ -3423,8 +3468,13 @@ app.whenReady().then(async () => {
     // snapshot + renderer stream, so automation sessions reconnect identically
     // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
     // before any window (and thus the bridge) exists.
-    const emitAutomationEvent = (sessionId: string, event: unknown) =>
+    const emitAutomationEvent = (sessionId: string, event: unknown) => {
       bridge?.ingestExternalEvent(sessionId, event, { browserVisibility: "hidden" });
+      if ((event as { type?: string })?.type === "run_result") {
+        taskInboxAutomationSessions.delete(sessionId);
+        taskInboxService?.scheduleRefresh();
+      }
+    };
     const announceAutomationSession = (meta: {
       sessionId: string;
       cwd: string;
@@ -3432,7 +3482,11 @@ app.whenReady().then(async () => {
       prompt: string;
       cronJobId: string;
       clientMessageId?: string;
-    }) => bridge?.broadcastAutomationSession(meta);
+    }) => {
+      taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
+      bridge?.broadcastAutomationSession(meta);
+      taskInboxService?.scheduleRefresh();
+    };
     // Each fired job runs as a one-shot read-only headless Engine, which
     // auto-writes a full transcript.jsonl (like interactive chat). The emit
     // callback streams events to a live snapshot for renderer reconnect; the
@@ -3496,6 +3550,12 @@ app.whenReady().then(async () => {
       store: new CronStore(defaultCronStorePath()),
       runner: automationRunner,
       onJobEvent: (event) => {
+        if (event.type !== "job_start") {
+          for (const [sessionId, jobId] of taskInboxAutomationSessions) {
+            if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);
+          }
+        }
+        taskInboxService?.scheduleRefresh();
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
@@ -3515,6 +3575,11 @@ app.whenReady().then(async () => {
     // Automation is non-critical to the GUI — never block startup on it.
     console.error("automation: failed to start", err);
   }
+
+  taskInboxDisposers.push(
+    agentNotificationBus.subscribe(() => taskInboxService?.scheduleRefresh()),
+  );
+  taskInboxService?.start();
 
   // Defer initial sweep so the renderer has a chance to push current
   // git prefs via `git:setPrefs` first. Subsequent sweeps run hourly.
@@ -6769,10 +6834,121 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   return getRunHistory(runId);
 });
 registerSessionTranscriptIpc(ipcMain);
-const sessionCatalogIpc = registerSessionCatalogIpc(ipcMain, () => [
-  ...mainWindows,
-  ...(petWidgetWindow ? [petWidgetWindow] : []),
-]);
+const sessionCatalogStore = new SessionCatalogStore();
+const sessionCatalogIpc = registerSessionCatalogIpc(
+  ipcMain,
+  () => [...mainWindows, ...(petWidgetWindow ? [petWidgetWindow] : [])],
+  sessionCatalogStore,
+);
+function taskInboxEnabled(): boolean {
+  const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
+  return settings.featureFlags?.taskInboxV1 !== false;
+}
+const taskInboxSources = createTaskInboxSources({
+  diskSessions: listAllDiskSessions,
+  sessionCatalog: () => sessionCatalogStore.load(),
+  sessionProjection: () => petStateAggregator?.getSnapshot(),
+  native: {
+    hasLiveWorker: () => !!bridge?.hasLiveWorker() || taskInboxAutomationSessions.size > 0,
+    isSessionRunning: (id) => taskInboxAutomationSessions.has(id) || !!bridge?.isSessionRunning(id),
+    cancel: async (id) => {
+      const jobId = taskInboxAutomationSessions.get(id);
+      if (jobId) return cancelAutomationRun(jobId);
+      if (!bridge?.hasLiveWorker() || !bridge.isSessionRunning(id)) return false;
+      const result = await bridge.requestWorker("agent/cancel", { sessionId: id }, 15_000, {
+        failFast: true,
+        settleOnExit: true,
+        meta: { origin: "host", producer: "task-inbox" },
+      });
+      if (!result.ok) throw new Error(result.message);
+      return true;
+    },
+  },
+  runs: { list: listRuns },
+  automations: {
+    list: listAutomations,
+    get: getAutomation,
+    pause: pauseAutomation,
+    resume: resumeAutomation,
+    runNow: runAutomationNow,
+  },
+  mimi: {
+    snapshot: () => {
+      if (!petLongTaskStore) throw new Error("Delegation ledger is not ready");
+      return petLongTaskStore.getSnapshot();
+    },
+    get: (id) => petLongTaskStore?.get(id),
+    control: async (request) => {
+      if (!petLongTaskCoordinator) throw new Error("Delegation controller is not ready");
+      return petLongTaskCoordinator.control(request);
+    },
+  },
+  external: {
+    hasSession: (id) => !!externalRuntimeService?.hasSession(id),
+    isSessionRunning: (id) => !!externalRuntimeService?.isSessionRunning(id),
+    hasPending: (id) => !!externalRuntimeApprovals?.hasPendingSession(id),
+    kind: (id) => readExternalRuntimeBinding(id)?.kind,
+    interrupt: async (id) => {
+      if (!externalRuntimeService?.hasSession(id))
+        throw new Error("External runtime is unavailable");
+      await externalRuntimeService.interrupt(id);
+    },
+  },
+  background: {
+    available: () => !!bridge?.hasLiveWorker(),
+    list: async () => {
+      if (!bridge?.hasLiveWorker()) throw new Error("Background worker is unavailable");
+      const result = await bridge.requestWorker(
+        "agent/backgroundWork",
+        { sessionId: "task-inbox", scope: "all" },
+        5_000,
+        {
+          failFast: true,
+          settleOnExit: true,
+          meta: { origin: "host", producer: "task-inbox" },
+        },
+      );
+      if (!result.ok) throw new Error(result.message);
+      const value = result.result as { items?: TaskInboxBackgroundEntry[] };
+      if (!Array.isArray(value?.items)) throw new Error("Invalid background task snapshot");
+      return value.items;
+    },
+    cancel: async (entry) => {
+      if (!bridge?.hasLiveWorker()) return false;
+      const result = await bridge.requestWorker(
+        "agent/backgroundWorkCancel",
+        {
+          sessionId: entry.sourceSession.sessionId,
+          kind: entry.kind,
+          workId:
+            entry.kind === "shell"
+              ? entry.shell.shellId
+              : entry.kind === "subagent"
+                ? entry.agentId
+                : entry.jobId,
+          expectedStartedAt: entry.kind === "shell" ? entry.shell.startedAt : entry.startedAt,
+          ...(entry.kind === "subagent"
+            ? { expectedRuntimeGeneration: entry.runtimeGeneration }
+            : {}),
+        },
+        15_000,
+        { failFast: true, settleOnExit: true, meta: { origin: "host", producer: "task-inbox" } },
+      );
+      if (!result.ok) throw new Error(result.message);
+      return (result.result as { cancelled?: boolean })?.cancelled === true;
+    },
+  },
+});
+taskInboxService = createTaskInboxService({
+  filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
+  ...taskInboxSources,
+  enabled: taskInboxEnabled,
+  onError: (error) => dlog("main", "task-inbox.projection.failed", { error: String(error) }),
+});
+taskInboxDisposers.push(
+  registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
+  sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
+);
 ipcMain.handle(
   "sessions:listDisk",
   async (
@@ -6989,6 +7165,8 @@ app.on("before-quit", (event) => {
       return;
     }
     // Drain the last debounced rotations before the browser contexts are closed.
+    taskInboxService?.dispose();
+    for (const dispose of taskInboxDisposers.splice(0)) dispose();
     const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
     browserRuntime.closeAll();
     bridge?.kill();
