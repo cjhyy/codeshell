@@ -10,6 +10,7 @@ export interface SourceAdapterContext {
   signal?: AbortSignal;
   executeBoundTool?: ToolContext["executeBoundTool"];
   assertAuthorized?: () => void;
+  documentParserExecutable?: ToolContext["documentParserExecutable"];
 }
 
 export interface ConnectorAdapter {
@@ -23,7 +24,13 @@ export interface ConnectorAdapter {
   read(
     definition: SourceDefinition,
     resourceId: string,
-    options: SourceAdapterContext & { maxBytes: number },
+    options: SourceAdapterContext & {
+      maxBytes: number;
+      /** Uploaded documents only; the exact source/scope/resource remains required. */
+      query?: string;
+      limit?: number;
+      chunk?: string;
+    },
   ): Promise<SourceContent>;
 }
 

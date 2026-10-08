@@ -13,7 +13,8 @@ export const projectConfig = {
         subtitle: "上传项目资料，或从全局连接库绑定当前项目可见的范围。",
         loading: "正在加载数据源…",
         uploadTitle: "上传文件",
-        uploadSubtitle: "文件保存在项目的 .code-shell/uploads 目录；读取内容时仍会请求批准。",
+        uploadSubtitle:
+          "文件保存在当前项目。批准读取后，可解析和查询文本、DOCX、PPTX、XLSX 与 PDF 内容；查询限定到具体文件。扫描件需先转为文字。",
         upload: "上传文件",
         uploadDone: "已上传",
         noUploads: "还没有上传文件。",
@@ -90,7 +91,7 @@ export const projectConfig = {
         loading: "Loading data sources…",
         uploadTitle: "Uploaded files",
         uploadSubtitle:
-          "Files are stored in .code-shell/uploads; reading their content still requires approval.",
+          "Files stay in this project. Approved reads can parse and query text, DOCX, PPTX, XLSX and PDF within one exact file. Scanned images need a text export.",
         upload: "Upload files",
         uploadDone: "Uploaded",
         noUploads: "No uploaded files yet.",
