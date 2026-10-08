@@ -68,7 +68,7 @@ const GUIDANCE =
 
 // Do not return entire CredentialMetadata objects, even though they are called
 // masked: they can contain secret hints and unrelated provider metadata.
-function connectionStatus(credential: CredentialMetadata): LinkConnectionStatus {
+export function savedLinkConnectionStatus(credential: CredentialMetadata): LinkConnectionStatus {
   const meta = credential.meta;
   const result: LinkConnectionStatus = {
     id: credential.id,
@@ -206,7 +206,7 @@ export async function getLinkStatus(
         const provider = selected[index]!;
         const connections = credentials
           .filter((credential) => credentialProvider(credential) === provider.id)
-          .map(connectionStatus);
+          .map(savedLinkConnectionStatus);
         let cli: LinkCliStatus;
         if (!isCliLinkProvider(provider.id)) {
           cli = {

@@ -5,6 +5,7 @@
  * 设计稿：docs/superpowers/specs/2026-07-15-workspace-profile-design.md
  */
 import { z } from "zod";
+import { ProfileSourceAccessSchema } from "../sources/types.js";
 
 /** 目录名即机器标识：小写字母/数字开头，可含 - _，防路径逃逸。 */
 export const WORKSPACE_PROFILE_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
@@ -123,6 +124,8 @@ export const WorkspaceProfileSchema = z.object({
   skills: capabilityListSchema.default([]),
   mcp: capabilityListSchema.default([]),
   agents: capabilityListSchema.default([]),
+  /** Can only narrow workspace bindings, including project uploads; never grants new access. */
+  sourceAccess: ProfileSourceAccessSchema.optional(),
   /** 数字人主指令，注入系统提示（优先级低于本地 CLAUDE.md，高于 preset sections）。 */
   mainInstruction: z.string().max(WORKSPACE_PROFILE_LIMITS.mainInstruction).optional(),
   /** true → 挂载 profiles/<name>/ 为第二记忆层（跟数字人走）。 */

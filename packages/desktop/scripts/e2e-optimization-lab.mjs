@@ -4,10 +4,12 @@
  */
 /* global document, localStorage, structuredClone, window */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { confinedWorkerEnvironment } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
 import {
   captureRendererErrors,
   findCodeShellWindow,
@@ -32,6 +34,7 @@ const candidateBody = "Return a concise answer. Cite each source using [S1].\n";
 const requests = [];
 const rendererErrors = [];
 const upstreamErrors = [];
+const mainErrors = [];
 let app;
 let win;
 let stage = "initialize";
@@ -40,6 +43,9 @@ let releaseRequest;
 const gradingFile = join(isolated.home, "grading.json");
 const datasetFile = join(isolated.home, "dataset.json");
 const exportedDataset = join(isolated.home, "dataset-export.json");
+const guardLog = join(isolated.home, "network-guard.jsonl");
+const guardedMain = join(isolated.home, "guarded-main.mjs");
+const guardUrl = new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href;
 
 const dataset = {
   schemaVersion: 1,
@@ -113,6 +119,26 @@ async function json(file, value) {
   await writeFile(file, JSON.stringify(value, null, 2), { mode: 0o600 });
 }
 async function seed() {
+  // Electron GUI startup can discard NODE_OPTIONS. Load the test guard before
+  // the production Main, then use an explicit preload for its owned Node worker.
+  await writeFile(
+    guardedMain,
+    `import { app } from "electron";
+import children from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+app.setAppPath(${JSON.stringify(appDir)});
+await import(${JSON.stringify(guardUrl)});
+const spawn = children.spawn;
+children.spawn = function (command, args, options) {
+  if (args?.some((argument) => argument.includes("agent-server-stdio")))
+    args = ["--import", ${JSON.stringify(guardUrl)}, ...args];
+  return spawn.call(this, command, args, options);
+};
+syncBuiltinESMExports();
+await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)});
+`,
+    { mode: 0o600 },
+  );
   await mkdir(join(project, ".agents", "skills", skillName), { recursive: true });
   await writeFile(join(project, ".agents", "skills", skillName, "SKILL.md"), source);
   const now = Date.now();
@@ -163,9 +189,29 @@ async function seed() {
     ],
     defaults: { text: "lab-connection" },
   });
+  await json(join(isolated.codeShellHome, "runs", "selected-lab-evidence", "run.json"), {
+    cwd: project,
+    objective: "Review the selected document. Bearer LOCAL_EVIDENCE_SECRET",
+    summary: "Wrong historical output",
+    model: "CURRENT_STATE_NOT_A_HISTORICAL_MODEL",
+  });
 }
 async function launch() {
-  app = await launchCodeShellElectron({ appDir, ...isolated });
+  app = await launchCodeShellElectron({
+    appDir,
+    ...isolated,
+    mainEntry: guardedMain,
+    env: {
+      ...confinedWorkerEnvironment(process.env, isolated.home, new URL(endpoint).origin, guardUrl),
+      ...Object.fromEntries(
+        Object.keys(process.env)
+          .filter((key) => /^(https?_proxy|all_proxy|no_proxy)$/i.test(key))
+          .map((key) => [key, ""]),
+      ),
+      CODESHELL_COST_SMOKE_GUARD_LOG: guardLog,
+    },
+  });
+  app.process().stderr.on("data", (value) => mainErrors.push(String(value)));
   win = await findCodeShellWindow(app);
   rendererErrors.push(captureRendererErrors(win));
   await win.waitForFunction(() => !!window.codeshell?.optimizationLab);
@@ -201,10 +247,37 @@ async function installDialogs() {
   });
 }
 async function query(type, params = {}) {
-  return win.evaluate(
+  const result = await win.evaluate(
     ({ type, params, target }) =>
       window.codeshell.optimizationLab.query(type, { target, ...params }),
     { type, params, target },
+  );
+  await assertWorkerConfinement();
+  return result;
+}
+async function assertWorkerConfinement() {
+  const actual = await app.evaluate(() => ({
+    home: process.env.HOME,
+    workerPid: process
+      ._getActiveHandles()
+      .find((handle) =>
+        handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
+      )?.pid,
+  }));
+  assert.equal(actual.home, isolated.home, "Electron HOME is isolated before Core imports");
+  assert.ok(Number.isInteger(actual.workerPid), "Observe this app's known direct worker");
+  const records = (await readFile(guardLog, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.ok(
+    records.some(
+      (record) =>
+        record.pid === actual.workerPid &&
+        record.origin === new URL(endpoint).origin &&
+        record.homeId === createHash("sha256").update(isolated.home).digest("hex"),
+    ),
+    "The actual worker installed exact-origin network confinement before Core",
   );
 }
 async function until(read, message, timeout = 30000) {
@@ -442,6 +515,43 @@ async function editDatasetOffline() {
   }
   return edited;
 }
+async function importEvidenceOffline() {
+  await win.getByTestId("optimization-lab-evidence-ids").fill("selected-lab-evidence");
+  await win.getByTestId("optimization-lab-preview-evidence").click();
+  await win.getByTestId("optimization-lab-evidence-preview").waitFor();
+  const preview = await win.getByTestId("optimization-lab-evidence-preview").innerText();
+  assert.ok(!preview.includes("LOCAL_EVIDENCE_SECRET"));
+  assert.ok(!preview.includes("CURRENT_STATE_NOT_A_HISTORICAL_MODEL"));
+  assert.ok(preview.includes("historicalConfiguration"));
+  await win.getByTestId("optimization-lab-import-evidence").click();
+  await until(
+    () => win.getByTestId("optimization-lab-import-evidence").isEnabled(),
+    "Cancelled native evidence import did not settle",
+  );
+  assert.equal(requests.length, 0, "Cancelled evidence import never calls models");
+  await app.evaluate(() => {
+    globalThis.__labDialogs.accept = true;
+  });
+  await win.getByTestId("optimization-lab-import-evidence").click();
+  await win.getByTestId("optimization-lab-evidence-preview").waitFor({ state: "detached" });
+  await win.getByTestId("optimization-lab-dataset-json").click();
+  const draft = JSON.parse(await win.getByTestId("optimization-lab-dataset").inputValue());
+  const imported = draft.cases.at(-1);
+  assert.equal(imported.provenance, "real");
+  assert.equal(imported.readiness, "analysis_only");
+  assert.equal(imported.expected, undefined);
+  assert.ok(imported.evidence.bundleHash);
+  assert.ok(imported.missingEvidence.length);
+  await app.evaluate(() => {
+    globalThis.__labDialogs.accept = false;
+  });
+  await win.getByTestId("optimization-lab-dataset-form").click();
+  assert.equal(
+    requests.length,
+    0,
+    "Evidence preview and native-confirmed local import never call models",
+  );
+}
 async function authorizePage() {
   await win.getByTestId("optimization-lab-authorize").click();
   await until(
@@ -516,6 +626,8 @@ try {
   await seed();
   await launch();
   await openPage();
+  stage = "selected evidence preview, redaction and native local import";
+  await importEvidenceOffline();
   stage = "visual dataset editor and native JSON files";
   await editDatasetOffline();
   stage = "prepare through actual page and real worker";
@@ -699,6 +811,49 @@ try {
   await launch();
   assert.equal(requests.length, 31, "App restart never starts a saved experiment");
   await recoverWithoutReplay(crashedApp.id, 31, appPayload);
+  stage = "fixed candidate trial through page, new native grant and no optimizer";
+  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await win.getByTestId("optimization-lab-try-candidate").click();
+  await win.getByTestId("optimization-lab-trial-source").waitFor();
+  const fresh = structuredClone(dataset);
+  fresh.title = "Fresh fixed candidate trial";
+  for (const item of fresh.cases) {
+    item.id = `fresh-${item.id}`;
+    item.sourceGroupId = `fresh-${item.sourceGroupId}`;
+    item.input = `Fresh independently reviewed task: ${item.input}`;
+  }
+  await win.getByTestId("optimization-lab-dataset-json").click();
+  await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(fresh));
+  await win.getByTestId("optimization-lab-prepare").click();
+  await win.getByTestId("optimization-lab-state").waitFor();
+  const fixedId = await until(
+    () => win.getByTestId("optimization-lab-saved").inputValue(),
+    "Fixed trial was not selected",
+  );
+  const fixed = await query("get", { id: fixedId });
+  assert.equal(fixed.plan.strategyVersion, "fixed_candidate_trial_v1");
+  assert.equal(fixed.plan.fixedCandidate.sourcePlanHash, prepared.plan.planHash);
+  assert.equal(
+    fixed.plan.connections.target.configHash,
+    prepared.plan.connections.target.configHash,
+  );
+  const beforeTrial = requests.length;
+  await authorizePage();
+  assert.equal((await query("get", { id: fixedId })).grant, null);
+  assert.equal(requests.length, beforeTrial, "Cancel a new fixed trial grant sends nothing");
+  await app.evaluate(() => {
+    globalThis.__labDialogs.accept = true;
+  });
+  await authorizePage();
+  await win.getByTestId("optimization-lab-start").click();
+  await completed(fixedId);
+  assert.equal(
+    requests.length - beforeTrial,
+    12,
+    "Fixed trial has 12 paired calls and zero proposal call",
+  );
+  assert.ok(requests.slice(beforeTrial).every((request) => !request.optimizing));
+  assert.equal((await query("report", { id: fixedId })).json.adoptionEligible, false);
   assert.equal(
     await readFile(join(project, ".agents", "skills", skillName, "SKILL.md"), "utf8"),
     source,
@@ -706,10 +861,12 @@ try {
   assert.equal(rendererErrors.flat().length, 0);
   assert.deepEqual(upstreamErrors, []);
   console.log(
-    "PASS Optimization Lab: actual UI + worker, native authorization, page-close keepalive, 13-call paired experiment, durable report reopen, native grading files, revoke, in-flight stop, worker/app crash recovery without automatic spending or uncertain replay",
+    "PASS Optimization Lab: selected evidence preview/redaction/native import, fixed candidate new authorization/12 calls/zero optimizer, actual UI + worker, native authorization, page-close keepalive, 13-call paired experiment, durable report reopen, native grading files, revoke, in-flight stop, worker/app crash recovery without automatic spending or uncertain replay",
   );
 } catch (error) {
   console.error(`Optimization Lab E2E failed at ${stage}:`, error);
+  if (mainErrors.length)
+    console.error("Isolated Electron stderr:", mainErrors.join("").slice(-4000));
   if (upstreamErrors.length) console.error("Local fixture upstream failures:", upstreamErrors);
   if (win && !win.isClosed())
     console.error(

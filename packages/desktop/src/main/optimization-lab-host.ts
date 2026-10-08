@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { AgentBridge } from "./agent-bridge.js";
 import { registerOptimizationLabIpc } from "./optimization-lab-ipc.js";
 import { listSkills } from "./skills-service.js";
+import { previewOptimizationLabEvidence } from "./optimization-lab-evidence.js";
 
 type LabIpcDeps = Parameters<typeof registerOptimizationLabIpc>[0];
 
@@ -30,6 +31,7 @@ export function registerOptimizationLabHost(deps: {
       return bridge.requestOptimizationLab(type, params);
     },
     skills: (cwd) => listSkills(cwd),
+    evidence: previewOptimizationLabEvidence,
     confirm: (window, options) => dialog.showMessageBox(window, options),
     save: async (window, name) => {
       const result = await dialog.showSaveDialog(window, {

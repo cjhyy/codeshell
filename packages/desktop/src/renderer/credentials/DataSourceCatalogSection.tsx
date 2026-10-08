@@ -3,11 +3,13 @@ import type { SourceDefinition } from "@cjhyy/code-shell-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT, type TFunction } from "../i18n";
 import { useConfirm } from "../ui/DialogProvider";
+import type { LocalLinkProviderView, MaskedCredentialView } from "../../preload/types";
 
-type EditableSourceKind = "mock" | "mcp-resource";
+type EditableSourceKind = "mock" | "mcp-resource" | "link";
 
 function errorText(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
@@ -17,6 +19,7 @@ function kindLabel(t: TFunction, kind: string): string {
   if (kind === "mock") return t("ext.link.sourcesKindMock");
   if (kind === "mcp-resource") return t("ext.link.sourcesKindMcpResource");
   if (kind === "local-files") return t("projectConfig.dataSources.kindLocalFiles");
+  if (kind === "link") return t("ext.link.sourcesKindLink");
   return kind;
 }
 
@@ -34,9 +37,53 @@ export function DataSourceCatalogSection({
   const [kind, setKind] = React.useState<EditableSourceKind>("mock");
   const [label, setLabel] = React.useState("");
   const [server, setServer] = React.useState("");
+  const [connections, setConnections] = React.useState<MaskedCredentialView[]>([]);
+  const [providers, setProviders] = React.useState<LocalLinkProviderView[]>([]);
+  const [connectionId, setConnectionId] = React.useState("");
+  const [actionId, setActionId] = React.useState("");
+  const [params, setParams] = React.useState("{}");
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (kind !== "link") return;
+    let cancelled = false;
+    void Promise.all([
+      window.codeshell.credentials.list(""),
+      window.codeshell.links.listLocalProviders(),
+    ])
+      .then(([credentials, nextProviders]) => {
+        if (cancelled) return;
+        setConnections(
+          credentials.filter(
+            (entry) =>
+              entry.hasSecret &&
+              entry.meta?.linkProvider &&
+              (entry.type === "link" || entry.meta.linkExecutionRuntime === "server"),
+          ),
+        );
+        setProviders(nextProviders);
+      })
+      .catch((caught) => {
+        if (!cancelled) setError(errorText(caught));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
+
+  const connection = connections.find((entry) => entry.id === connectionId);
+  const provider = providers.find((entry) => entry.id === connection?.meta?.linkProvider);
+  const actions =
+    provider?.actions.filter(
+      (entry) =>
+        entry.risk !== "write" &&
+        (connection?.meta?.linkExecutionRuntime === "server"
+          ? connection.meta.linkCapabilityIds?.includes(`${provider.id}.${entry.id}`)
+          : !connection?.meta?.linkCapabilityIds?.length ||
+            connection.meta.linkCapabilityIds.includes(`${provider.id}.${entry.id}`)),
+    ) ?? [];
 
   const refresh = React.useCallback(async () => {
     const next = await window.codeshell.listSourceCatalog();
@@ -77,11 +124,27 @@ export function DataSourceCatalogSection({
       setError(t("ext.link.sourcesServerRequired"));
       return;
     }
+    let linkConfig: Record<string, unknown> | undefined;
+    if (kind === "link") {
+      if (!connection || !provider || !actions.some((entry) => entry.id === actionId)) {
+        setError(t("ext.link.sourcesLinkRequired"));
+        return;
+      }
+      try {
+        const parsed = JSON.parse(params);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+        linkConfig = { providerId: provider.id, action: actionId, params: parsed };
+      } catch {
+        setError(t("ext.link.sourcesParamsInvalid"));
+        return;
+      }
+    }
     const definition: SourceDefinition = {
       id: trimmedId,
       kind,
       label: trimmedLabel,
-      adapterConfig: kind === "mcp-resource" ? { server: trimmedServer } : {},
+      adapterConfig: linkConfig ?? (kind === "mcp-resource" ? { server: trimmedServer } : {}),
+      ...(kind === "link" ? { credentialRef: connectionId } : {}),
       enabled: true,
     };
     if (await run(() => window.codeshell.saveSourceCatalog(definition))) {
@@ -89,6 +152,9 @@ export function DataSourceCatalogSection({
       setKind("mock");
       setLabel("");
       setServer("");
+      setConnectionId("");
+      setActionId("");
+      setParams("{}");
     }
   };
 
@@ -136,6 +202,7 @@ export function DataSourceCatalogSection({
               options={[
                 { value: "mock", label: kindLabel(t, "mock") },
                 { value: "mcp-resource", label: kindLabel(t, "mcp-resource") },
+                { value: "link", label: kindLabel(t, "link") },
               ]}
             />
           </label>
@@ -160,6 +227,52 @@ export function DataSourceCatalogSection({
                 onChange={(event) => setServer(event.target.value)}
               />
             </label>
+          ) : null}
+          {kind === "link" ? (
+            <>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                <span>{t("ext.link.sourcesConnection")}</span>
+                <SimpleSelect
+                  size="sm"
+                  value={connectionId}
+                  disabled={busy}
+                  ariaLabel={t("ext.link.sourcesConnection")}
+                  onChange={(value) => {
+                    setConnectionId(value);
+                    setActionId("");
+                  }}
+                  options={connections.map((entry) => ({
+                    value: entry.id,
+                    label: `${entry.label} (${entry.meta?.linkAccountLabel ?? entry.meta?.linkProvider})`,
+                  }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                <span>{t("ext.link.sourcesAction")}</span>
+                <SimpleSelect
+                  size="sm"
+                  value={actionId}
+                  disabled={busy}
+                  ariaLabel={t("ext.link.sourcesAction")}
+                  onChange={setActionId}
+                  options={actions.map((entry) => ({
+                    value: entry.id,
+                    label: `${entry.title} (${entry.id})`,
+                  }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2">
+                <span>{t("ext.link.sourcesParams")}</span>
+                <Textarea
+                  name="source-link-params"
+                  value={params}
+                  disabled={busy}
+                  onChange={(event) => setParams(event.target.value)}
+                />
+                <p>{t("ext.link.sourcesLinkHelp")}</p>
+                {actions.find((entry) => entry.id === actionId)?.description}
+              </label>
+            </>
           ) : null}
         </div>
         <Button

@@ -39,6 +39,7 @@ function statusLabel(t: TFunction, status: EffectiveSourceAccess["status"]): str
 function kindLabel(t: TFunction, kind: string): string {
   if (kind === "mock") return t("projectConfig.dataSources.kindMock");
   if (kind === "mcp-resource") return t("projectConfig.dataSources.kindMcpResource");
+  if (kind === "link") return t("ext.link.sourcesKindLink");
   if (kind === "local-files") return t("projectConfig.dataSources.kindLocalFiles");
   return kind;
 }
@@ -285,9 +286,12 @@ export function DataSourcesSection({
                     variant="outline"
                     disabled={busy}
                     onClick={() =>
-                      void act(() => window.codeshell.unbindProjectSource(projectId, item.sourceId), {
-                        successMessage: t("projectConfig.dataSources.unbindDone"),
-                      })
+                      void act(
+                        () => window.codeshell.unbindProjectSource(projectId, item.sourceId),
+                        {
+                          successMessage: t("projectConfig.dataSources.unbindDone"),
+                        },
+                      )
                     }
                   >
                     {t("projectConfig.dataSources.unbind")}

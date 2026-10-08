@@ -253,6 +253,11 @@ export const digitalHumans = {
           "建议包含角色定位、工作步骤、证据标准、禁止事项和输出格式；具体任务请留在会话中说明。",
         settings: "运行设置",
         settingsDescription: "配置长期记忆、能力隔离和所需依赖。",
+        sourceAccess: "数据源权限 (JSON)",
+        sourceAccessDescription:
+          "留空继承项目绑定；[] 禁用全部数据源，包括项目上传。填写 sourceId、scopes 和 readPolicy（ask 或 deny）只会缩小项目权限，不能新增授权。",
+        sourceAccessInvalid:
+          "请填写有效的权限数组，源 ID 和范围不可重复，readPolicy 只能是 ask 或 deny。",
         skillLibrary: "可携带的 Skills",
         skillsInstalled: "已安装",
         skillsEnabled: "当前可用",
@@ -708,6 +713,11 @@ export const digitalHumans = {
           "Include the role, workflow, evidence standards, prohibited actions, and output format. Put task-specific instructions in the Session.",
         settings: "Runtime settings",
         settingsDescription: "Configure long-term memory, capability isolation, and requirements.",
+        sourceAccess: "Source access policy (JSON)",
+        sourceAccessDescription:
+          "Leave empty to inherit project bindings; [] disables all sources, including uploads. Entries use sourceId, scopes, and readPolicy (ask or deny). A Profile only narrows project access and cannot add authority.",
+        sourceAccessInvalid:
+          "Enter a valid access array with unique source IDs/scopes and ask or deny readPolicy.",
         skillLibrary: "Portable Skills",
         skillsInstalled: "Installed",
         skillsEnabled: "Available",

@@ -12,6 +12,7 @@ import {
   localFilesAdapter,
 } from "../../sources/adapters/local-files.js";
 import { defaultMcpResourceAdapter } from "../../sources/adapters/mcp-resource.js";
+import { linkSourceAdapter } from "../../sources/adapters/link.js";
 import { mockAdapter } from "../../sources/adapters/mock.js";
 import { defaultCredentialStatus } from "../../sources/credential-status.js";
 import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../sources/resolve.js";
@@ -30,27 +31,50 @@ export function registerBuiltinSourceAdapters(): void {
   registerConnectorAdapter(mockAdapter);
   registerConnectorAdapter(localFilesAdapter);
   registerConnectorAdapter(mcpResourceAdapter);
+  registerConnectorAdapter(linkSourceAdapter);
 }
 
 registerBuiltinSourceAdapters();
 
-function accessFor(cwd: string): EffectiveSourceAccess[] {
-  const settings = new SettingsManager(cwd, "full");
+function accessFor(cwd: string, ctx?: ToolContext): EffectiveSourceAccess[] {
+  if (ctx?.isSourceProfileCurrent && !ctx.isSourceProfileCurrent()) return [];
+  const settingsScope = ctx?.settingsScope ?? "project";
+  const settings = new SettingsManager(cwd, settingsScope);
   return resolveEffectiveSourceAccess({
     cwd,
     settings,
     credentialStatus: defaultCredentialStatus,
+    settingsScope,
+    workspaceProfileName: ctx?.workspaceProfileName,
   });
+}
+
+function authorityIsCurrent(
+  access: EffectiveSourceAccess,
+  cwd: string,
+  ctx?: ToolContext,
+): boolean {
+  return (
+    JSON.stringify(accessFor(cwd, ctx).find((item) => item.sourceId === access.sourceId)) ===
+    JSON.stringify(access)
+  );
 }
 
 async function resourcesFor(
   access: EffectiveSourceAccess,
   scope: string,
   cwd: string,
+  ctx?: ToolContext,
 ): Promise<SourceResourceMeta[]> {
   if (access.sourceId === LOCAL_FILES_SOURCE_ID) return listLocalFiles(cwd);
   if (!access.definition) return [];
-  return (await connectorAdapterFor(access.kind)?.listResources(access.definition, scope)) ?? [];
+  return (
+    (await connectorAdapterFor(access.kind)?.listResources(access.definition, scope, {
+      cwd,
+      settingsScope: ctx?.settingsScope ?? "project",
+      signal: ctx?.signal,
+    })) ?? []
+  );
 }
 
 export const listSourcesToolDef: ToolDefinition = {
@@ -65,11 +89,13 @@ export async function listSourcesTool(
   ctx?: ToolContext,
 ): Promise<string> {
   const cwd = ctx?.cwd ?? process.cwd();
-  const access = accessFor(cwd);
+  const access = accessFor(cwd, ctx);
   if (access.length === 0) return "No data sources are bound to this workspace.";
 
   const lines: string[] = [];
   for (const item of access) {
+    if (!authorityIsCurrent(item, cwd, ctx))
+      return "Error: source authorization changed during listing.";
     lines.push(
       `## ${item.label} (id: ${item.sourceId}, kind: ${item.kind}, status: ${item.status}, readPolicy: ${item.readPolicy})`,
     );
@@ -78,11 +104,14 @@ export async function listSourcesTool(
     for (const scope of item.scopes) {
       let resources: SourceResourceMeta[] = [];
       try {
-        resources = await resourcesFor(item, scope, cwd);
+        resources = await resourcesFor(item, scope, cwd, ctx);
       } catch {
         // Listing is metadata-only and best effort. A temporarily failing scope
         // must not expose content or make the other bound sources disappear.
       }
+
+      if (!authorityIsCurrent(item, cwd, ctx))
+        return "Error: source authorization changed during listing.";
 
       lines.push(`### scope: ${scope}`);
       for (const resource of resources.filter((candidate) => candidate.scopeId === scope)) {
@@ -95,6 +124,8 @@ export async function listSourcesTool(
     }
   }
 
+  if (access.some((item) => !authorityIsCurrent(item, cwd, ctx)))
+    return "Error: source authorization changed during listing.";
   return lines.join("\n");
 }
 
@@ -121,11 +152,11 @@ export async function readSourceTool(
   const source = String(args.source ?? "");
   const scope = String(args.scope ?? "");
   const resource = String(args.resource ?? "");
-  const signal = args.__signal as AbortSignal | undefined;
+  const signal = ctx?.signal ?? (args.__signal as AbortSignal | undefined);
 
   // Second authorization gate after approval: the source must still be bound
   // and healthy, and the requested scope must still be explicitly selected.
-  const access = accessFor(cwd).find((item) => item.sourceId === source);
+  const access = accessFor(cwd, ctx).find((item) => item.sourceId === source);
   if (!access) return `Error: source "${source}" is not bound to this workspace.`;
   if (access.status !== "ok") return `Error: source "${source}" is ${access.status}.`;
   if (access.readPolicy === "deny") {
@@ -143,7 +174,10 @@ export async function readSourceTool(
     // Validate resource ownership from the selected scope's metadata before
     // any content read. This prevents a valid id from another scope being used
     // after approval with otherwise unchanged source/scope arguments.
-    const resources = await resourcesFor(access, scope, cwd);
+    signal?.throwIfAborted();
+    const resources = await resourcesFor(access, scope, cwd, ctx);
+    if (!authorityIsCurrent(access, cwd, ctx))
+      return "Error: source authorization changed during the read.";
     const listed = resources.some(
       (candidate) => candidate.id === resource && candidate.scopeId === scope,
     );
@@ -155,7 +189,15 @@ export async function readSourceTool(
       maxBytes: DEFAULT_MAX_BYTES,
       signal,
       cwd,
+      settingsScope: ctx?.settingsScope ?? "project",
+      executeBoundTool: ctx?.executeBoundTool,
+      assertAuthorized: () => {
+        if (!authorityIsCurrent(access, cwd, ctx)) throw new Error("Source authorization changed");
+      },
     });
+    signal?.throwIfAborted();
+    if (!authorityIsCurrent(access, cwd, ctx))
+      return "Error: source authorization changed during the read.";
     if (content.resourceId !== resource) {
       return `Error: source "${source}" returned a different resource id.`;
     }

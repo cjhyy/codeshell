@@ -63,6 +63,34 @@ function catalog(record: string[]): BuiltinTool[] {
 const PRESET_RULES = [{ tool: "Watched", decision: "allow" as const }];
 
 describe("settings parity between Native Engine and SessionToolHost", () => {
+  test.each(["full", "project", "isolated"] as const)(
+    "tool credential scope follows host %s and cannot be widened by overrides",
+    async (settingsScope) => {
+      const cwd = projectDenying("Unrelated");
+      const entry = catalog([])[0]!;
+      const host = createSessionToolHost({
+        businessSessionId: `scope-${settingsScope}`,
+        cwd,
+        registry: new ToolRegistry({
+          toolCatalog: [{ ...entry, execute: async (_args, ctx) => String(ctx?.settingsScope) }],
+        }),
+        permissionMode: "default",
+        presetRules: PRESET_RULES,
+        projectTrusted: true,
+        planMode: false,
+        settingsScope,
+        contextOverrides: { settingsScope: "full" },
+        exposure: { mode: "allowlist", toolNames: new Set(["Watched"]) },
+        visibility: { cwd, hasGoal: false, host: "desktop", isSubAgent: false },
+      });
+      try {
+        const result = await host.execute({ id: "scope", name: "Watched", arguments: {} });
+        expect(result.result).toBe(settingsScope);
+      } finally {
+        await host.dispose();
+      }
+    },
+  );
   test("a user deny rule blocks the external runtime too", async () => {
     const cwd = projectDenying("Watched");
     const record: string[] = [];
