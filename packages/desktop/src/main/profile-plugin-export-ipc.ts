@@ -63,6 +63,7 @@ export function registerProfilePluginExportIpc(
       const reviewedToken = token(reviewToken);
       if (acceptLosses !== true) throw new Error("explicit loss acceptance is required");
       const authority = await resolveTarget(target);
+      owner(event);
       const context = JSON.stringify(authority);
       const snapshot = reviews.get(id, context, reviewedToken);
       if (!snapshot.canExport)
@@ -82,6 +83,7 @@ export function registerProfilePluginExportIpc(
       }
       owner(event);
       const current = await resolveTarget(target);
+      owner(event);
       if (JSON.stringify(current) !== context) {
         reviews.cancel(id, reviewedToken);
         throw new Error("configuration context changed during destination selection");

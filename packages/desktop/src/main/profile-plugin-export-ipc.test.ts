@@ -43,6 +43,7 @@ function harness() {
   const event = { sender, senderFrame: frame };
   let authority = { kind: "project", projectId: "project", mainRootId: "main-root", cwd };
   let dialogCount = 0;
+  let mainWindow = true;
   let pick: () => Promise<any> = async () => ({ canceled: true });
   let resolver = async (_input: unknown) => authority;
   registerProfilePluginExportIpc(
@@ -54,7 +55,7 @@ function harness() {
       },
     } as any,
     { fromWebContents: () => ({}) } as any,
-    (candidate) => candidate === (sender as any),
+    (candidate) => mainWindow && candidate === (sender as any),
     ((input) => resolver(input)) as any,
   );
   return {
@@ -69,6 +70,12 @@ function harness() {
     },
     changeAuthority: () => {
       authority = { ...authority, mainRootId: "replacement-root" };
+    },
+    revokeMainWindow: () => {
+      mainWindow = false;
+    },
+    replaceMainFrame: () => {
+      sender.mainFrame = {};
     },
     dialogs: () => dialogCount,
     destroy: () => destroy(),
@@ -172,3 +179,38 @@ test("an older authority lookup cannot replace a newer context's private preview
   );
   h.destroy();
 });
+
+for (const stage of ["before native picker", "before write"] as const) {
+  for (const ownership of ["window", "frame"] as const) {
+    test(`commit rechecks ${ownership} ownership after authority lookup ${stage}`, async () => {
+      const h = harness();
+      const preview = await selected(h);
+      const output = join(root, "output.plugin");
+      h.setPick(async () => ({ canceled: false, filePath: output }));
+      let calls = 0;
+      let release: () => void = () => {};
+      let entered: () => void = () => {};
+      const pending = new Promise<void>((done) => {
+        entered = done;
+      });
+      h.setResolver(async () => {
+        const pause = ++calls === (stage === "before native picker" ? 1 : 2);
+        if (pause) {
+          entered();
+          await new Promise<void>((done) => {
+            release = done;
+          });
+        }
+        return { kind: "project", projectId: "project", mainRootId: "main-root", cwd };
+      });
+      const commit = h.call("commitPluginExport", preview.reviewToken, target, true);
+      await pending;
+      if (ownership === "window") h.revokeMainWindow();
+      else h.replaceMainFrame();
+      release();
+      await expect(commit).rejects.toThrow("main window");
+      expect(h.dialogs()).toBe(stage === "before native picker" ? 0 : 1);
+      expect(existsSync(output)).toBe(false);
+    });
+  }
+}

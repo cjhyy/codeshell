@@ -23,7 +23,7 @@ Profile 内部 name 必须匹配被选目录。项目/会话 authority 决定实
 
 源文本总读取预算 4 MiB，单文本 256 KiB，目录 inventory 256 entries/8 层；生成包最多 4 MiB UTF-8、256 文件、单文本 256 KiB。超限报错/阻断，不能截断后成功。选中文本通过非 symlink 路径、O_NOFOLLOW、open/fstat、inode/size/时间戳和读取后身份核验；仅 UTF-8 文本。这里限制 UTF-8 payload 与 bounded metadata，未声称 JavaScript 的物理 heap 恰好等于 payload 字节数。
 
-Main 最多保留四份有界私有 RAM review（每个 renderer owner 一份，十分钟自动释放）。取消、窗口销毁、替代预览或过期使 token 失效；preview 迟到响应不能覆盖较新 context。commit 使用审过的字节，源文件之后被替换也不重新读取；选择变化必须重审。原生 picker 返回后重新核验 owner/configurationTarget，context 改变或取消则不写包。
+Main 最多保留四份有界私有 RAM review（每个 renderer owner 一份，十分钟自动释放）。取消、窗口销毁、替代预览或过期使 token 失效；preview 迟到响应不能覆盖较新 context。commit 使用审过的字节，源文件之后被替换也不重新读取；选择变化必须重审。每次 await authority 与原生 picker 返回后重新核验 owner/configurationTarget；最终解析期间窗口或 frame 归属改变、context 改变或取消均不写包。
 
 输出采用 exclusive mkdir，新目标必须不存在（包括已有空目录），不使用可能覆盖空目录的 POSIX rename。文件 wx/O_NOFOLLOW、open/fstat 核验并 fsync；manifest 最后写。POSIX 先 fsync payload 目录/root/parent，再写 manifest 并 flush 其目录；Windows 只承诺 regular-file flush，不宣称目录 crash-atomic。旧安装器未改成 manifest-only，导出也不承诺整个目录对并行外部进程不可见。失败只删除 identity 相同的自建文件，并用非递归 rmdir 清理自建目录；未知新增或替换的内容保留，错误提示可能有不完整目录，不能递归删除用户数据。
 
@@ -32,3 +32,5 @@ Main 最多保留四份有界私有 RAM review（每个 renderer owner 一份，
 Guarded private-HOME 单元回归覆盖选择/空壳、默认与空 allowlist、冲突/缺失、动态标记、预批准、no-repo 零 resolver/零 native dialog、Main owner/context/cancel、源替换、损坏 Profile 错误脱敏、UTF-8/symlink/单文件/总量/目录 inventory 边界，以及现有高级入口和完整文本/loss 接受按钮。
 
 `node scripts/run-isolated-node-smoke.mjs scripts/smoke-profile-plugin-export.mjs` 在 Core import 前隔离 HOME 并拒绝全部网络，用已编译 Core 与真实 Main 写入 adapter 完成：源插件 bare Skill 引用 → 导出 → 原 installer preview → 明确 install → 原 Skill/Agent loader → resolveAgentTypeOverrides，最终 namespace 精确匹配新插件。禁止读取的 memory/credentials/MCP/source 文件带 sentinel 且通过实际 open/read guard 核验零读取；另注入 native EIO，验证 payload barrier 失败无 manifest，并保留未知文件。没有真实模型、OAuth、账号或第三方写入。
+
+`node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-profile-plugin-export.mjs` 在独立私有 HOME、pre-Core 网络 guard 下打开真实 Electron 的 Settings 高级入口，使用生产 Main/preload/renderer preview IPC，验证组件/附属文本选择、完整长文本、损失说明和接受门槛；1440/820/390 px 布局无横向溢出，可用 `--screenshot-dir` 保存截图。只有 `dialog.showSaveDialog` 取消结果被 stub，生产 commit handler 保持真实；这不代表物理点击原生 sheet，取消后没有写包。该 fixture 已加入 Desktop E2E。
