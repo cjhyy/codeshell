@@ -202,7 +202,9 @@ describe("architecture growth budgets", () => {
       // Offline project settings inspection, reviewed repair and exact rollback
       // add one Host-only module for the administrator CLI. The public SDK and
       // extension contracts do not expose configuration recovery authority.
-      "packages/core/src/index.internal.ts": 85,
+      // Task Center requires one source-fenced background lifecycle module for
+      // Host registries. Listing/cancellation stay off public and extension APIs.
+      "packages/core/src/index.internal.ts": 86,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
