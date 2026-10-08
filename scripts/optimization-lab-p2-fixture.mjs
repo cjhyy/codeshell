@@ -71,6 +71,44 @@ try {
   assert.equal(readFileSync(skillFile, "utf8"), source);
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "memory")), false);
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "dream")), false);
+  const constructionAbort = new AbortController();
+  const requestsBeforeAbort = observations.length;
+  await assert.rejects(
+    core.runIsolatedInstruction({
+      cwd,
+      llm,
+      get clientDefaults() {
+        constructionAbort.abort();
+        return { retryMaxAttempts: 1, fetch: upstream };
+      },
+      name,
+      sourceRevision,
+      body: "EARLY_CANCELLED_INSTRUCTION",
+      task: "Cancelled during Host construction",
+      signal: constructionAbort.signal,
+      receiptRoot: bindingRoot,
+    }),
+    /cancelled/i,
+  );
+  assert.equal(observations.length, requestsBeforeAbort);
+  const pendingStartAbort = new AbortController();
+  const pendingStart = await core.runIsolatedInstruction({
+    cwd,
+    llm,
+    clientDefaults: { retryMaxAttempts: 1, fetch: upstream },
+    name,
+    sourceRevision,
+    body: "PENDING_CANCELLED_INSTRUCTION",
+    get task() {
+      queueMicrotask(() => pendingStartAbort.abort());
+      return "Cancelled immediately after run admission";
+    },
+    signal: pendingStartAbort.signal,
+    receiptRoot: bindingRoot,
+  });
+  assert.equal(pendingStart.reason, "aborted_streaming");
+  assert.equal(pendingStart.receipt.completed, false);
+  assert.equal(observations.length, requestsBeforeAbort);
   mkdirSync(join(root, "other"), { recursive: true });
   const { runTrial } = await import("../packages/optimization-lab/dist/runner.js");
   const { planContent } =
@@ -548,6 +586,8 @@ try {
       idleRevocationPreservesActiveSession: true,
       staleOwnerCannotReplaceNewBinding: true,
       inactiveRevocationPreservesNormalReplies: true,
+      constructionAbortSendsNoRequest: true,
+      pendingStartAbortSendsNoRequest: true,
       sourceRevisionCheckedOnResume: true,
       originalMessagesRetained: true,
       revokedRunSignalAborted: true,

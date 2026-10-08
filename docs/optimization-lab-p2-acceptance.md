@@ -13,6 +13,7 @@ Local acceptance uses `scripts/optimization-lab-p2-fixture.mjs` against compiled
 Verified scenarios:
 
 - Real OpenAI and Anthropic SDK isolated trials each produce one metered request, authoritative usage and an exact loading receipt; no tools are exposed.
+- Construction-time cancellation and cancellation immediately after run admission produce zero provider requests. A separate Bun fixture checks nine constructor/abort/error/close cleanup paths in its own process.
 - Project/model selection, exact receipt schema, source revision changes and revision-protected idempotent revocation.
 - Two fixed Skills across Profile/allowlist changes, continuous restricted runs retaining new normal replies, and a Session override preserving the other Skill.
 - Two Engines successively owning the same durable Session: revoking the former project binding preserves the newer Session override.

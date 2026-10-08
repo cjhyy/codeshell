@@ -24,7 +24,8 @@ export async function runIsolatedInstruction(input: {
   signal?: AbortSignal;
   receiptRoot?: string;
 }) {
-  if (input.signal?.aborted) throw new Error("Isolated run cancelled");
+  const signal = input.signal;
+  if (signal?.aborted) throw new Error("Isolated run cancelled");
   const snapshot: InstructionSnapshot = {
     bindingId: randomUUID(),
     cwd: realpathSync(input.cwd),
@@ -37,29 +38,31 @@ export async function runIsolatedInstruction(input: {
     revision: instructionHash(input.sourceRevision + "\0" + input.body),
   };
   const [serverTransport, clientTransport] = createInProcessTransport();
-  const handle = createServer({
-    transport: serverTransport,
-    cwd: input.cwd,
-    llm: input.llm,
-    engineOverrides: {
-      clientDefaults: input.clientDefaults,
-      settingsScope: "isolated",
-      isSubAgent: true,
-      maxTurns: 4,
-      enabledBuiltinTools: [],
-      allowBackgroundShells: false,
-      instructionSnapshots: [snapshot],
-      skillAllowlist: [],
-      headless: true,
-    },
-  });
-  const client = createClient({ transport: clientTransport });
+  let handle: ReturnType<typeof createServer> | undefined;
+  let client: ReturnType<typeof createClient> | undefined;
   const abort = () => {
-    void client.cancel().catch(() => {});
+    void client?.cancel().catch(() => {});
   };
-  input.signal?.addEventListener("abort", abort, { once: true });
   try {
-    const result = await client.run({
+    handle = createServer({
+      transport: serverTransport,
+      cwd: input.cwd,
+      llm: input.llm,
+      engineOverrides: {
+        clientDefaults: input.clientDefaults,
+        settingsScope: "isolated",
+        isSubAgent: true,
+        maxTurns: 4,
+        enabledBuiltinTools: [],
+        allowBackgroundShells: false,
+        instructionSnapshots: [snapshot],
+        skillAllowlist: [],
+        headless: true,
+      },
+    });
+    client = createClient({ transport: clientTransport });
+    signal?.addEventListener("abort", abort, { once: true });
+    const runParams = {
       sessionId: `isolated-${randomUUID()}`,
       task: input.task,
       cwd: input.cwd,
@@ -69,11 +72,13 @@ export async function runIsolatedInstruction(input: {
       skillAllowlist: [],
       allowBackgroundShells: false,
       disableGoal: true,
-    });
+    };
+    if (signal?.aborted) throw new Error("Isolated run cancelled");
+    const result = await client.run(runParams);
     const loaded = handle.engine.getLoadedInstructionSnapshots();
     const completed =
       result.reason === "completed" &&
-      !input.signal?.aborted &&
+      !signal?.aborted &&
       loaded.length === 1 &&
       loaded[0]?.revision === snapshot.revision;
     const receipt: InstructionValidationReceipt = {
@@ -95,14 +100,14 @@ export async function runIsolatedInstruction(input: {
     );
     return { ...result, receipt };
   } finally {
-    input.signal?.removeEventListener("abort", abort);
+    signal?.removeEventListener("abort", abort);
     try {
-      await handle.close();
+      await handle?.close();
     } finally {
       try {
-        client.close();
+        client?.close();
       } finally {
-        await handle.engine.dispose();
+        await handle?.engine.dispose();
       }
     }
   }
