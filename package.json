@@ -50,7 +50,8 @@
     "format": "prettier --write 'packages/**/*.ts'",
     "test:upload-documents": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs",
     "test:github-star": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-github-star.mjs",
-    "test:output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal.mjs"
+    "test:output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal.mjs",
+    "test:deferred-tools": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-deferred-tools.mjs"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

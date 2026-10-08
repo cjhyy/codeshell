@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
@@ -146,6 +147,7 @@ test("actual Engine keeps sensitive raw tool results out of output journal, reco
   const placeholder = "[private tool result withheld]";
   const engine = new Engine({
     llm: { provider: "output-journal-private-fixture", model, apiKey: "synthetic" } as never,
+    modules: [initialToolsFixtureModule(["PrivateFixture"])],
     cwd: root,
     sessionStorageDir: join(root, "sessions"),
     settingsScope: "isolated",

@@ -255,7 +255,10 @@ describe("architecture growth budgets", () => {
     // +5 net lines bind persist-before-publish and the workspace path used
     // by the shared input display projection for queued attachment steering. Journal
     // ownership/failure fencing remain in run-stream.ts and session/output-journal.ts.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_885);
+    // Progressive tools add exactly 10 wiring lines: a run-local surface wraps
+    // the existing catalog assembler and supplies active/eligible callbacks.
+    // Selection, immutable snapshots and execution gates stay in their owners.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_895);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

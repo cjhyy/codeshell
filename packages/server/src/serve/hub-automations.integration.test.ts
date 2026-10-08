@@ -126,21 +126,26 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
         res.write(
           `data: ${JSON.stringify({ id: "hub-fixture", object: "chat.completion.chunk", created: 1, model: "gpt-4o-mini", choices: [{ index: 0, delta, finish_reason }] })}\n\n`,
         );
-      if (body.tools?.length && !body.messages.some((message: any) => message.role === "tool")) {
-        writes++;
+      if (
+        body.tools?.length &&
+        !body.messages.some((message: any) => message.tool_call_id === "write-result")
+      ) {
+        const writeActive = body.tools.some((tool: any) => tool.function.name === "Write");
+        if (writeActive) writes++;
         frame({
           role: "assistant",
           tool_calls: [
             {
               index: 0,
-              id: "write-result",
+              id: writeActive ? "write-result" : "load-write",
               type: "function",
               function: {
-                name: "Write",
-                arguments: JSON.stringify({
-                  file_path: proof,
-                  content: "cloud automation completed\n",
-                }),
+                name: writeActive ? "Write" : "ToolSearch",
+                arguments: JSON.stringify(
+                  writeActive
+                    ? { file_path: proof, content: "cloud automation completed\n" }
+                    : { query: "select:Write" },
+                ),
               },
             },
           ],

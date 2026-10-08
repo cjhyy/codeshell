@@ -26,16 +26,16 @@ import { join } from "node:path";
 import { Engine } from "../packages/core/src/engine/engine.js";
 import { AgentServer } from "../packages/core/src/protocol/server.js";
 import { ChatSessionManager } from "../packages/core/src/protocol/chat-session-manager.js";
-import {
-  registerProvider,
-  PROVIDER_REGISTRY,
-} from "../packages/core/src/llm/client-factory.js";
+import { registerProvider, PROVIDER_REGISTRY } from "../packages/core/src/llm/client-factory.js";
 import { LLMClientBase } from "../packages/core/src/llm/client-base.js";
 import type { LLMResponse } from "../packages/core/src/types.js";
 import type { CreateMessageOptions } from "../packages/core/src/llm/types.js";
 import { __setVideoProviderForTests } from "../packages/core/src/tool-system/builtin/generate-video.js";
 import { FakeVideoProvider } from "../packages/core/src/tool-system/builtin/video-providers.js";
-import { notificationQueue, agentNotificationBus } from "../packages/core/src/tool-system/builtin/agent-notifications.js";
+import {
+  notificationQueue,
+  agentNotificationBus,
+} from "../packages/core/src/tool-system/builtin/agent-notifications.js";
 import { backgroundJobRegistry } from "../packages/core/src/tool-system/builtin/background-jobs.js";
 
 // Submits video #1 first. Then submits video #2 ONLY after it sees video #1's
@@ -52,14 +52,38 @@ const script = { callCount: 0, submitted: 0 };
 class ScriptedClient extends LLMClientBase {
   protected initClient(): void {}
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    if (!options.tools?.length) {
+      return { text: "auxiliary", toolCalls: [], stopReason: "stop" };
+    }
     script.callCount += 1;
     const txt = JSON.stringify(options.messages ?? []);
     const sawV1Done = txt.includes("shot 1") && txt.includes("Video saved");
+    if (
+      (script.submitted === 0 || (sawV1Done && script.submitted === 1)) &&
+      !options.tools.some((tool) => tool.name === "GenerateVideo")
+    ) {
+      return {
+        text: "",
+        toolCalls: [
+          {
+            id: `load-video-${script.submitted}`,
+            toolName: "ToolSearch",
+            args: { query: "select:GenerateVideo" },
+          },
+        ],
+        stopReason: "tool_use",
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      };
+    }
     const emit = (n: number): LLMResponse =>
       ({
         text: `submitting video ${n}`,
         toolCalls: [
-          { id: `call-${n}`, toolName: "GenerateVideo", args: { prompt: `shot ${n}`, pollIntervalMs: 30 } },
+          {
+            id: `call-${n}`,
+            toolName: "GenerateVideo",
+            args: { prompt: `shot ${n}`, pollIntervalMs: 30 },
+          },
         ],
         stopReason: "tool_use",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
@@ -107,7 +131,9 @@ function makeTransport() {
   return {
     transport: {
       send: () => {},
-      onMessage: (cb: (msg: unknown) => void) => { onMsg = cb; },
+      onMessage: (cb: (msg: unknown) => void) => {
+        onMsg = cb;
+      },
       close: () => {},
     } as any,
     deliver: (msg: unknown) => onMsg(msg),
@@ -136,7 +162,13 @@ describe("Sequential background videos complete via notification-wakeup", () => 
       runtime: {} as never,
       engineFactory: () =>
         new Engine({
-          llm: { provider: "openai", providerKind: "openai", model: "gpt-5", apiKey: "test", enableStreaming: false },
+          llm: {
+            provider: "openai",
+            providerKind: "openai",
+            model: "gpt-5",
+            apiKey: "test",
+            enableStreaming: false,
+          },
           cwd,
           sessionStorageDir: join(cwd, ".code-shell", "sessions"),
           enabledBuiltinTools: ["GenerateVideo"],

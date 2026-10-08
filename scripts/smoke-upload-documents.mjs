@@ -140,6 +140,7 @@ try {
       const result = await engine.run("Read the exact fixture PDF", {
         sessionId: "document-engine",
         behaviorMode: "document-smoke",
+        toolAllowlist: ["ReadSource"],
       });
       assert.equal(result.text, "document engine completed");
       assert.ok(toolResult.includes("Native PDF milestone"), toolResult);

@@ -319,16 +319,15 @@ export class PromptComposer {
       });
     }
 
-    // Keep a compact name index for discovery. Providers already send every
-    // full description and input schema in their native tools field; repeating
-    // those descriptions here can add thousands of tokens to each request.
+    // Keep the complete eligible name index for discovery and capability guidance.
+    // The native tools field supplies definitions only for the run's active set.
     if (tools.length > 0) {
       sections.push({
         name: "tool_definitions",
         // A reused composer must reflect the current run's visible tool names.
         cacheBreak: true,
         compute: () =>
-          `# Available Tools\n\nDescriptions and input schemas are provided in the tools field.\n${tools.map((tool) => tool.name).join(", ")}`,
+          `# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field.${tools.some((tool) => tool.name === "ToolSearch") ? ' Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" loads its definition for the next model step. Selection does not grant permission.' : ""}\n${tools.map((tool) => tool.name).join(", ")}`,
       });
     }
 

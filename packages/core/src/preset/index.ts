@@ -30,8 +30,31 @@ export interface AgentPreset {
   /** Ordered list of prompt section filenames (without .md). */
   promptSections: readonly string[];
   builtinTools: string[];
+  /** Initial model tools. Other eligible tools require ToolSearch selection. Omit for eager hosts. */
+  initialToolNames?: readonly string[];
   defaultPermissionRules: PermissionRule[];
 }
+
+// Initial prompt policy belongs to presets; eligibility and permission stay independent.
+const INITIAL_GENERAL_TOOLS = [
+  "Read",
+  "Write",
+  "Edit",
+  "Glob",
+  "Grep",
+  "Bash",
+  "AskUserQuestion",
+  "AskUserQuestionAsync",
+  "Agent",
+  "ToolSearch",
+  "TodoWrite",
+  "Skill",
+  "SaveContextNote",
+  "NewContext",
+  "SearchHistory",
+  "complete_goal",
+  "cancel_goal",
+] as const;
 
 const HARNESS_MIN_EXPOSURE = deriveBuiltinPresetExposure("harness-min");
 const GENERAL_EXPOSURE = deriveBuiltinPresetExposure("general");
@@ -45,6 +68,7 @@ export const BUILTIN_AGENT_PRESETS: Record<BuiltinPresetName, AgentPreset> = {
     description: "Domain-neutral orchestration with the minimal reusable tool surface.",
     promptSections: ["harness-base", "orchestration", "tone"],
     builtinTools: HARNESS_MIN_EXPOSURE.builtinTools,
+    initialToolNames: INITIAL_GENERAL_TOOLS,
     defaultPermissionRules: HARNESS_MIN_EXPOSURE.defaultPermissionRules,
   },
   general: {
@@ -54,6 +78,7 @@ export const BUILTIN_AGENT_PRESETS: Record<BuiltinPresetName, AgentPreset> = {
       "Domain-agnostic orchestration for research, operations, automation, and long-running tasks.",
     promptSections: ["base", "orchestration", "browser", "tone"],
     builtinTools: GENERAL_EXPOSURE.builtinTools,
+    initialToolNames: INITIAL_GENERAL_TOOLS,
     defaultPermissionRules: GENERAL_EXPOSURE.defaultPermissionRules,
   },
 };
