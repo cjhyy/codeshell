@@ -71,6 +71,8 @@ if (process.argv[2] === "--worker") {
         );
       const unknown = JSON.stringify(request.messages).includes("fixture unknown");
       const cli = JSON.stringify(request.messages).includes("fixture cli");
+      const cliWrite = JSON.stringify(request.messages).includes("fixture cli-write");
+      const issue = JSON.stringify(request.messages).includes("fixture cli-write create_issue");
       const replacement = JSON.stringify(request.messages).includes("fixture replacement");
       const noop = JSON.stringify(request.messages).includes("fixture noop");
       return hasResult
@@ -85,7 +87,7 @@ if (process.argv[2] === "--worker") {
                 toolName: "LinkAction",
                 args: {
                   provider: "github",
-                  action: cli ? "get_starred" : "set_starred",
+                  action: issue ? "create_issue" : cli && !cliWrite ? "get_starred" : "set_starred",
                   connectionId: credential.id,
                   params: {
                     owner: "fixture",
@@ -98,7 +100,11 @@ if (process.argv[2] === "--worker") {
                           : noop
                             ? "noop"
                             : "success",
-                    ...(cli ? {} : { starred: true }),
+                    ...(issue
+                      ? { title: "Synthetic blocked issue" }
+                      : cli && !cliWrite
+                        ? {}
+                        : { starred: true }),
                   },
                 },
               },
@@ -107,6 +113,7 @@ if (process.argv[2] === "--worker") {
     }
   }
   core.registerProvider("verified-write-fixture", FixtureProvider);
+  let approvals = 0;
   const createEngine = () => {
     // Explicitly confined SDK consumer; no user settings, modules, memory or title.
     const engine = new core.Engine({
@@ -119,7 +126,10 @@ if (process.argv[2] === "--worker") {
       headless: true,
       isSubAgent: true,
       permissionMode: "bypassPermissions",
-      askUser: async () => "允许执行",
+      askUser: async () => {
+        approvals++;
+        return "允许执行";
+      },
       behaviorProfiles: [
         {
           id: "verification-fixture",
@@ -208,6 +218,8 @@ if (process.argv[2] === "--worker") {
     credential.type = "link";
     credential.meta.linkExecutionRuntime = "local";
     credential.meta.linkExecutionBackend = "cli";
+    // An old explicit write grant must not revive the disabled CLI writer.
+    credential.meta.linkCapabilityIds.push("github.create_issue");
     delete credential.meta.linkRemoteState;
     delete credential.meta.linkRemoteGrantId;
     core.setDefaultCredentialAccess({
@@ -230,6 +242,21 @@ if (process.argv[2] === "--worker") {
         ).reason,
         "completed",
       );
+      const previousApprovals = approvals;
+      for (const action of ["set_starred", "create_issue"]) {
+        await cliEngine.run(`fixture cli-write ${action}`, {
+          sessionId: `cli-blocked-${action}`,
+          clientMessageId: `cli-blocked-${action}`,
+          behaviorMode: "verification-fixture",
+        });
+        assert.ok(
+          readFileSync(
+            join(root, `sessions/cli-blocked-${action}/transcript.jsonl`),
+            "utf8",
+          ).includes("CLI write actions"),
+        );
+      }
+      assert.equal(approvals, previousApprovals, "CLI writes must fail before native approval");
     } finally {
       await cliEngine.dispose();
       core.setDefaultCredentialAccess(null);

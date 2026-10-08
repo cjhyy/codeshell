@@ -59,7 +59,7 @@ It is tested locally and is **not deployed** pending real-provider acceptance.
 
 Validation uses private HOME, USERPROFILE, app state, and an allowlisted environment
 before importing Core. The actual compiled SDK Engine consumer covers verified
-Star, an unknown response plus restart without resend, and a managed **fixture CLI** child read path. That synthetic executable validates
+Star, an unknown response plus restart without resend, and a managed **fixture CLI** child read path. The compiled Engine also rejects old explicit CLI issue/Star write grants before approval, with no additional child or HTTP request. That synthetic executable validates
 the adapter and child isolation; it does not establish real gh transport safety. The worker and every CLI subprocess emit exact-localhost bootstrap
 receipts containing PID, parent PID, and private-home hash. Fake models and
 synthetic localhost credentials make no paid-model or real GitHub writes. This
