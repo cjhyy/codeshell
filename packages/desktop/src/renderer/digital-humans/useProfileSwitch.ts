@@ -41,7 +41,7 @@ export function useProfileSwitch(
   }, [key]);
 
   React.useEffect(() => {
-    if (!recoveryCheckReady) {
+    if (!recoveryCheckReady || "noRepo" in target) {
       setUnavailableDefault(null);
       return;
     }

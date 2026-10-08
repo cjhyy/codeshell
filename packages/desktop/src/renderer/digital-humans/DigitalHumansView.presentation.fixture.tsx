@@ -86,6 +86,14 @@ Object.defineProperty(window, "codeshell", {
     activateProfile: async (...args: unknown[]) => {
       activations.push(args);
     },
+    previewProfileSwitch: async (_target: unknown, name: string | null) => {
+      if (name === null) return { before: null };
+      throw new Error("A stale dependency check must not request a candidate review");
+    },
+    adoptProfileSwitch: async (...args: unknown[]) => {
+      activations.push(args);
+      return { status: "adopted" };
+    },
     addProfileRepo: async (repo: string) => {
       repoCalls.push(repo);
       return { ok: false, error: "Source unavailable: " + "x".repeat(180) };

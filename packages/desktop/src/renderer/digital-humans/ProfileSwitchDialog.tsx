@@ -87,14 +87,19 @@ export function ProfileSwitchDialog({
             <div>
               <dt className="font-medium">{t("digitalHumans.switchPreview.instruction")}</dt>
               <dd>
-                {preview.instruction.changed === null
-                  ? unknown
-                  : t(
+                {preview.instruction.changed === null ? (
+                  unknown
+                ) : (
+                  <>
+                    {t(
                       preview.instruction.changed
                         ? "digitalHumans.switchPreview.changed"
                         : "digitalHumans.switchPreview.unchanged",
                     )}{" "}
-                · {preview.instruction.beforeLength ?? unknown} → {preview.instruction.afterLength}
+                    · {preview.instruction.beforeLength}
+                  </>
+                )}{" "}
+                → {preview.instruction.afterLength}
               </dd>
             </div>
             <div>
