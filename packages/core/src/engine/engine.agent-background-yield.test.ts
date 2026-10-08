@@ -131,10 +131,15 @@ function harness(options: { explicit: boolean; headless?: boolean; mixedBatch?: 
     return agentTool(args, { ...ctx!, subAgentSpawner: spawner });
   });
   const completeEvents = () =>
-    events.filter(
-      (event): event is Extract<StreamEvent, { type: "turn_complete" }> =>
-        event.type === "turn_complete" && !event.agentId,
-    );
+    events
+      .filter(
+        (event): event is Extract<StreamEvent, { type: "turn_complete" }> =>
+          event.type === "turn_complete" && !event.agentId,
+      )
+      .map(({ outputCursor, ...event }) => {
+        expect(outputCursor).toEqual(expect.any(String));
+        return event;
+      });
   return {
     engine,
     directory,

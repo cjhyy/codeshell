@@ -13,6 +13,23 @@ import { describe, it, expect } from "bun:test";
 import { SessionSnapshotStore } from "./SessionSnapshotStore";
 
 describe("SessionSnapshotStore", () => {
+  it("bounds bytes across sessions and retains a durable cursor when a large frame is evicted", () => {
+    const store = new SessionSnapshotStore({ maxBytesPerSession: 200, maxTotalBytes: 250 });
+    store.append("a", { type: "text_delta", text: "a".repeat(100), outputCursor: "cursor-a" });
+    store.append("b", { type: "text_delta", text: "b".repeat(100) });
+    expect(store.get("a").events).toEqual([]);
+    expect(store.get("a").outputCursor).toBe("cursor-a");
+    store.append("b", { type: "text_delta", text: "huge".repeat(100), outputCursor: "cursor-b" });
+    expect(store.get("b").events).toEqual([]);
+    expect(store.get("b").nextSeq).toBe(3);
+    expect(store.get("b").outputCursor).toBe("cursor-b");
+    store.append("b", { type: "turn_complete", reason: "completed", outputCursor: "cursor-c" });
+    expect(store.get("b").events.map((entry) => entry.seq)).toEqual([3]);
+    expect(store.get("b").topLevelRunning).toBe(false);
+    store.forget("b");
+    store.append("c", { type: "text_delta", text: "remaining" });
+    expect(store.get("c").events).toHaveLength(1);
+  });
   it("keeps one epoch across sessions but changes it when Main restarts", () => {
     const before = new SessionSnapshotStore();
     before.append("saved", { type: "text_delta", text: "old" });

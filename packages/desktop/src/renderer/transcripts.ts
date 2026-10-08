@@ -27,6 +27,7 @@ import { getSessionPersistence } from "./sessionPersistence";
 export type { SessionIndex, SessionSummary } from "../shared/session-catalog";
 import type { MessagesReducerState } from "./types";
 import { INITIAL_STATE, applyStreamEvent } from "./types";
+import { compareOutputCursors } from "@cjhyy/code-shell-web";
 
 const TRANSCRIPT_MSG_CAP = 500;
 // Tool output and screenshots can make even a short conversation enormous.
@@ -46,7 +47,17 @@ export function applyTranscriptStreamEvent(
   event: RendererStreamEvent,
   clock: () => number | undefined = Date.now,
 ): MessagesReducerState {
-  if (event.type !== "context_transfer") return applyStreamEvent(state, event, clock);
+  if (event.type !== "context_transfer") {
+    if (
+      event.outputCursor &&
+      state.outputCursor &&
+      compareOutputCursors(event.outputCursor, state.outputCursor) !== undefined &&
+      compareOutputCursors(event.outputCursor, state.outputCursor)! <= 0
+    )
+      return state;
+    const next = applyStreamEvent(state, event, clock);
+    return event.outputCursor ? { ...next, outputCursor: event.outputCursor } : next;
+  }
   return {
     ...state,
     messages: [
@@ -691,6 +702,9 @@ function parseTranscriptSnapshot(raw: string | null): MessagesReducerState {
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
       snapshotSeq: parsed.snapshotSeq ?? 0,
+      ...(typeof parsed.outputCursor === "string" && parsed.outputCursor.length <= 2048
+        ? { outputCursor: parsed.outputCursor }
+        : {}),
       ...(typeof parsed.snapshotEpoch === "string" && parsed.snapshotEpoch
         ? { snapshotEpoch: parsed.snapshotEpoch }
         : {}),

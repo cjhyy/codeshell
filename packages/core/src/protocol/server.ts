@@ -43,6 +43,7 @@ import { diskDefaultsFrom } from "../engine/engine.js";
 import { ISOLATED_TASK_BEHAVIOR_MODE } from "../engine/run-types.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
+import { readOutputJournal } from "../session/output-journal.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import type {
@@ -3283,6 +3284,37 @@ export class AgentServer {
     const engine = this.legacyEngine ?? this.detachedQueryEngine();
 
     switch (params.type) {
+      case "output_journal": {
+        if (!params.sessionId) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "sessionId required for output_journal",
+            ),
+          );
+          break;
+        }
+        const owner = await this.resolveEngineForSessionQuery(
+          req,
+          params.sessionId,
+          engine,
+          "output_journal",
+        );
+        if (!owner) break;
+        const data = readOutputJournal(
+          owner.getSessionManager().getStorageDir(),
+          params.sessionId,
+          {
+            after: params.after,
+            through: params.through,
+            maxBytes: params.maxBytes,
+            maxFrames: params.maxFrames,
+          },
+        );
+        this.transport.send(createResponse(req.id, { type: "output_journal", data }));
+        break;
+      }
       case "usage": {
         const scope = params.scope ?? (params.sessionId ? "session" : "runtime");
         if (

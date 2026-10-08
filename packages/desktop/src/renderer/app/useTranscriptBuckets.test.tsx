@@ -4,10 +4,26 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { FoldItem, SessionSnapshot, SessionTranscriptPage } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { bucketKey, loadTranscript, saveTranscript, type SessionIndex } from "../transcripts";
+import { applyStreamEvent, appendUserMessage, INITIAL_STATE } from "../types";
 import { transcriptsReducer, type TranscriptsMap } from "../transcriptsReducer";
 import { foldTranscript } from "../automation/foldTranscript";
 import { flushSessionPersistence } from "../sessionPersistence";
 import { INITIAL_CHAT_HISTORY_BYTES, useTranscriptBuckets } from "./useTranscriptBuckets";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { SessionManager } from "../../../../core/src/session/session-manager.js";
+import {
+  SessionOutputJournal,
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+} from "../../../../core/src/session/output-journal.js";
+import { SessionSnapshotStore } from "../../main/SessionSnapshotStore.js";
+import { transcriptToFoldItems } from "../../main/transcript-reader.js";
+import {
+  outputUserInputFixture,
+  outputForwardedInputFixture,
+} from "../../../../../tests/fixtures/output-journal-user-input.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -128,6 +144,183 @@ describe("transcript history hydration after a background resume", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
     if (savedBridge) Object.defineProperty(window, "codeshell", savedBridge);
     else Reflect.deleteProperty(window, "codeshell");
+  });
+
+  test("existing hydration recovers a long prefix evicted from Main through the v2 journal", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-hydrate-journal-"));
+    const manager = new SessionManager(root);
+    const session = manager.create(root, "fixture", "fixture", "saved");
+    manager.startSessionRun(session.state, "run");
+    const writer = new SessionOutputJournal(
+      root,
+      "saved",
+      "run",
+      session.transcript.getEvents()[0].id,
+    );
+    const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
+    const publish = (event: StreamEvent) =>
+      snapshots.append("saved", { ...event, outputCursor: writer.append(event) });
+    try {
+      initial = {};
+      readDisk = async () => [];
+      publish({ type: "session_user_message", text: "question", clientMessageId: "client" });
+      publish({ type: "session_started", sessionId: "saved", runId: "run", promptTokens: 0 });
+      publish({ type: "stream_request_start", turnNumber: 1, messageId: "durable-reply" });
+      const parts = Array.from({ length: 12 }, (_, index) => `${index}汉🙂`);
+      for (const text of parts) publish({ type: "text_delta", text });
+      readSnapshot = async () => snapshots.get("saved") as SessionSnapshot;
+      window.codeshell.getSessionOutputJournal = async (_id, options) => ({
+        ...readOutputJournal(root, "saved", { ...options, maxFrames: 128 }),
+        legacyBaseComplete: true,
+        legacyBaseItems: [],
+      });
+      hook = await renderHook(useHarness);
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.state.messages).toContainEqual(
+        expect.objectContaining({
+          id: "durable-reply",
+          text: parts.join(""),
+          done: false,
+        }),
+      );
+      expect(hook.result.current.awaitingHydration).toBe(false);
+      expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
+      expect(hook.result.current.busyKeys.has(bucket)).toBe(true);
+      expect(
+        hook.result.current.state.messages.filter((message) => message.kind === "turn_end"),
+      ).toEqual([]);
+    } finally {
+      await hook?.unmount();
+      hook = undefined;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  for (const mode of [
+    "normal",
+    "attachment-only",
+    "injected",
+    "agent",
+    "steer",
+    "steer-text",
+  ] as const) {
+    test(`existing hydration preserves actual Engine ${mode} input display after RAM eviction`, async () => {
+      const fixture = await outputUserInputFixture(mode);
+      const steering = mode === "steer" || mode === "steer-text";
+      const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
+      for (const event of fixture.events) snapshots.append("saved", event);
+      try {
+        initial = {};
+        readDisk = async () => [];
+        readSnapshot = async () => snapshots.get("saved") as SessionSnapshot;
+        window.codeshell.getSessionOutputJournal = async (_id, options) => {
+          const page = readOutputJournal(fixture.sessionRoot, "saved", {
+            ...options,
+            maxFrames: 2,
+          });
+          const base = readOutputJournalLegacyBase(
+            fixture.sessionRoot,
+            "saved",
+            page.legacyBaseThroughEventId,
+          );
+          return {
+            ...page,
+            legacyBaseComplete: base.complete,
+            legacyBaseItems: transcriptToFoldItems(
+              base.events.map((event) => JSON.stringify(event)).join("\n"),
+            ),
+          };
+        };
+        hook = await renderHook(useHarness);
+        await act(async () => {
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.awaitingHydration).toBe(false);
+        const users = hook.result.current.state.messages.filter(
+          (message) => message.kind === "user",
+        );
+        if (mode === "injected" || mode === "agent") {
+          expect(users).toEqual([
+            expect.objectContaining({ text: "", injected: true, clientMessageId: "fixture-input" }),
+          ]);
+          expect(JSON.stringify(hook.result.current.state)).not.toContain("PRIVATE_MACHINE_INPUT");
+        } else {
+          expect(users).toHaveLength(steering ? 2 : 1);
+          expect(users.at(-1)).toMatchObject({
+            text: fixture.prompt,
+            clientMessageId: steering ? "fixture-steer-client" : "fixture-input",
+            ...(steering ? { steerId: "fixture-steer", injected: true, pending: false } : {}),
+            ...(mode === "steer-text"
+              ? {}
+              : {
+                  attachments: fixture.attachments.map((attachment) => ({
+                    kind: attachment.kind,
+                    path: attachment.path,
+                    absPath: attachment.absPath,
+                    sessionId: "saved",
+                    originalName: attachment.originalName,
+                    size: attachment.size,
+                    mime: attachment.mime,
+                  })),
+                }),
+          });
+        }
+        if (steering) {
+          const live = fixture.events.reduce(
+            (state, event) => applyStreamEvent(state, event),
+            INITIAL_STATE,
+          );
+          const display = (messages: typeof live.messages) =>
+            messages
+              .filter((message) => message.kind === "user" && message.steerId === "fixture-steer")
+              .map(({ id: _id, createdAt: _createdAt, ...message }) => message);
+          expect(display(live.messages)).toEqual(display(hook.result.current.state.messages));
+        }
+        expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
+      } finally {
+        await hook?.unmount();
+        hook = undefined;
+        fixture.cleanup();
+      }
+    });
+  }
+
+  test("real child forwarding preserves input origin without changing the parent user feed", () => {
+    const parent = appendUserMessage(
+      { ...INITIAL_STATE, sessionId: "saved" },
+      "parent question",
+      1,
+      false,
+      false,
+      undefined,
+      false,
+      "parent-submit",
+    );
+    const events = outputForwardedInputFixture();
+    expect(events[0]).toMatchObject({
+      agentId: "child-agent",
+      sessionId: "child-session",
+      id: "child-queue",
+      clientMessageId: "parent-submit",
+    });
+    expect(events[2]).toMatchObject({
+      type: "session_user_message",
+      agentId: "child-agent",
+      sessionId: "child-session",
+      clientMessageId: "child-submit",
+    });
+    expect(events[1]).toMatchObject({
+      type: "session_user_message",
+      agentId: "child-agent",
+      sessionId: "child-session",
+      clientMessageId: "parent-submit",
+    });
+    expect(
+      applyStreamEvent(INITIAL_STATE, { ...events[1], agentId: undefined } as StreamEvent).messages,
+    ).toHaveLength(1);
+    expect(events.reduce((state, event) => applyStreamEvent(state, event), parent)).toBe(parent);
   });
 
   test("replays an older cache prefix before merging a completed steer reply from disk", async () => {
