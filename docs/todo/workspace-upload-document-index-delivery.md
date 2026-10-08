@@ -62,3 +62,4 @@ Desktop 覆盖/删除上传时清除对应索引；外部编辑在下次读取�
 - 实际执行 Desktop `predist`，可选 PDF 包及 native canvas 闭包保留。用真实 ASAR 归档与相同 unpack 规则验收：Electron 从归档载入生产 worker，Office 走 Electron 子进程，PDF 走物理 unpacked 入口/依赖 + verified managed Node，均读取真实文本。macOS arm64 fixture 的归档为 182,518 字节、unpacked 解析闭包为 63,385,807 字节（约 60.45 MiB）；完整 Core production 闭包约 154.08 MB，没有全部展开。此数据为运行文件体积，不能等同完整安装器压缩体积；其它平台/架构的 native canvas 需各自打包 runner 验收。
 - 发布包门槛通过 9 个 tarball / 47 个声明入口，另在实际打包后的 SDK consumer 执行解析/查询/覆盖/删除及伪造冷缓存拒绝；不使用付费模型或第三方账号，不把 fixture 当成真实用户资料覆盖率。
 - 合并成本账本与 Operation Controller main 后的最终组合检查：1,456 项 Source/完整 ToolSystem/Link/Operation/Engine/账本/Desktop 测试通过，3 项真实模型测试跳过；12 包类型与变更生产代码 ESLint 通过。真实 SDK 写操作独立回读/重启不重复发送烟测及最新 Desktop production/managed PDF/ASAR 均通过；既有 Workspace 页面 Electron 验收通过。
+- CI 测试分片与覆盖率门槛同时要求子进程成功退出和完整、数量一致、零失败的 JUnit 报告；提前退出、空运行、截断或不一致报告明确失败。配置单测改用无启动副作用的 stdio helper，真实 worker 的 parent-EOF 清理保持不变。完整 Core rest 分片实际执行 2,897 项测试/407 个文件，零失败并生成完整报告；架构预算按当前实际接线、IPC 与导出数量逐项说明，不预留未来功能增长。
