@@ -1,10 +1,12 @@
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
+import { isolatedBackendTest } from "../../test-utils/backend-test.js";
 import { executeText, runTrial } from "../runner.js";
 import { resolveSelectedConnection } from "./connection.js";
 import { createMeteredFetch, type MeterAccounting } from "./metered-fetch.js";
 import type { ResolvedConnection } from "./connection.js";
 import type { ExperimentPlan } from "../contracts/experiment.js";
 import type { EvalCase } from "../contracts/eval-case.js";
+const test = isolatedBackendTest(import.meta.path);
 
 function connection(provider: "openai" | "anthropic"): ResolvedConnection {
   return {

@@ -1,9 +1,11 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect } from "bun:test";
+import { isolatedBackendTest } from "../test-utils/backend-test.js";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { OptimizationLabController } from "./controller.js";
 import type { LabSettings } from "./providers/connection.js";
+const test = isolatedBackendTest(import.meta.path);
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
