@@ -6,7 +6,8 @@
 `list_repositories`、`list_issues`、`get_issue` 只读动作。
 
 不同授权方式共用 UI 的后续设计见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
-该方案描述统一连接任务与步骤的迁移，尚未作为产品协议实现。
+该方案结合 Relay 已有的网页授权、API Key、扫码、二次认证及授权后资源选择，描述统一
+连接任务与步骤的迁移，尚未作为产品协议实现。
 
 ## 授权由 Host 持有
 
