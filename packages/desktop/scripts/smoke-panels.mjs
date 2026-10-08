@@ -285,11 +285,20 @@ try {
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
   await dismissTrustDialog(win);
   await win.getByText(basename(projectPath), { exact: true }).click();
-  const storage = await app.evaluate(({ safeStorage }) => ({
+  const storage = await app.evaluate(({ app, safeStorage }) => ({
     available: safeStorage.isEncryptionAvailable(),
     backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : "os-keychain",
+    mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+    passwordStore: app.commandLine.getSwitchValue("password-store"),
   }));
   console.log(`Electron request custody: ${JSON.stringify(storage)}`);
+  assert(
+    storage.available &&
+      !storage.mockKeychain &&
+      (process.platform !== "linux" ||
+        (storage.backend === "gnome_libsecret" && storage.passwordStore === "gnome-libsecret")),
+    "Provider smoke requires actual OS key storage without Playwright's keychain mocks",
+  );
 
   await win.waitForFunction(
     () =>
