@@ -80,6 +80,8 @@ export interface OAuthCredentialPublicStatus {
   expiresAt?: string;
   expiresInMs?: number;
   hasRefreshToken?: boolean;
+  /** Refresh material is configured and its known lifetime has not ended. */
+  canRefresh?: boolean;
   tokenEndpoint?: string;
   clientId?: string;
   scope?: string;
@@ -149,6 +151,8 @@ export interface Credential {
     linkRemoteConnectionId?: string;
     linkRemoteGrantId?: string;
     linkRemoteState?: "connected" | "refreshing" | "reconnect";
+    /** Durable device OAuth rotation marker; an incomplete rotation is never replayed. */
+    linkOAuthState?: "connected" | "refreshing" | "reconnect";
     /** False for provider-owned Link secrets that must only flow through LinkAction. */
     agentExposable?: boolean;
     /** Stable upstream account/user id returned by the provider validation endpoint. */

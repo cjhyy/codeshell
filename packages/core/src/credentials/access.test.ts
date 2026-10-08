@@ -136,3 +136,33 @@ describe("createIpcCredentialAccess", () => {
     unsubscribe?.();
   });
 });
+
+test("local OAuth worker seam returns only action data and propagates cancellation to Host", async () => {
+  const [main, worker] = createInProcessTransport();
+  const access = createIpcCredentialAccess(worker);
+  const seen: Array<{ method: string; params: unknown }> = [];
+  main.onMessage((message) => {
+    if (!("method" in message)) return;
+    seen.push({ method: message.method, params: message.params });
+  });
+  const controller = new AbortController();
+  const pending = access.executeLocalOAuthLinkAction!(
+    {
+      id: "selected-link",
+      scope: "full",
+      accountId: "42",
+      verifiedAt: "2026-10-09T10:00:00Z",
+      action: "get_issue",
+      params: { owner: "acme", repo: "demo", issue_number: 1 },
+    },
+    { signal: controller.signal },
+  );
+  controller.abort();
+  await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  expect(seen.map((item) => item.method)).toEqual([
+    "desktop/localOAuthLinkAction",
+    "desktop/localOAuthLinkActionCancel",
+  ]);
+  expect(seen[1]!.params).toEqual({ requestId: "cred-1" });
+  expect(JSON.stringify(seen)).not.toContain("refreshToken");
+});

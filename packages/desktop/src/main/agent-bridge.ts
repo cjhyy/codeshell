@@ -55,6 +55,8 @@ import {
 } from "./browser-runtime/index.js";
 import {
   executeRemoteLinkAction,
+  executeLocalOAuthLinkAction,
+  type LocalOAuthLinkActionRequest,
   type RemoteLinkActionRequest,
   ErrorCodes,
   Methods,
@@ -290,6 +292,7 @@ export class AgentBridge implements PetStateBridge {
    */
   private readonly panelHostWindowRoutes = new PanelHostWindowRoutes();
   private credentialSnapshotRevision = 0;
+  private readonly localOAuthLinkActions = new Map<string | number, AbortController>();
   private readonly credentialSnapshotCwds = new Set<string>();
   private readonly quickChatForkRouter: QuickChatForkRouter | null;
   private readonly petProjectionObservers = new Set<
@@ -1072,9 +1075,17 @@ export class AgentBridge implements PetStateBridge {
       parsed.method !== "desktop/credentialResolve" &&
       parsed.method !== "desktop/credentialMaterializeCookie" &&
       parsed.method !== "desktop/oauthAccessResolve" &&
-      parsed.method !== "desktop/remoteLinkAction"
+      parsed.method !== "desktop/remoteLinkAction" &&
+      parsed.method !== "desktop/localOAuthLinkAction" &&
+      parsed.method !== "desktop/localOAuthLinkActionCancel"
     ) {
       return false;
+    }
+    if (parsed.method === "desktop/localOAuthLinkActionCancel") {
+      const requestId = parsed.params?.requestId;
+      if (typeof requestId === "string" || typeof requestId === "number")
+        this.localOAuthLinkActions.get(requestId)?.abort();
+      return true;
     }
     const id = parsed.id;
     if (id === undefined) return true;
@@ -1089,6 +1100,23 @@ export class AgentBridge implements PetStateBridge {
               normalizeCredentialResolveParams(parsed.params),
             ),
           };
+        } else if (parsed.method === "desktop/localOAuthLinkAction") {
+          if (this.localOAuthLinkActions.has(id))
+            throw new Error("Local Link request is already running");
+          const controller = new AbortController();
+          this.localOAuthLinkActions.set(id, controller);
+          try {
+            reply = {
+              jsonrpc: "2.0",
+              id,
+              result: await executeLocalOAuthLinkAction(
+                parsed.params as unknown as LocalOAuthLinkActionRequest,
+                { signal: controller.signal },
+              ),
+            };
+          } finally {
+            this.localOAuthLinkActions.delete(id);
+          }
         } else if (parsed.method === "desktop/remoteLinkAction") {
           reply = {
             jsonrpc: "2.0",

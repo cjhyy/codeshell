@@ -315,7 +315,7 @@ describe("shared Link management", () => {
 });
 
 describe("owner-bound Link device authorization", () => {
-  test("expired browser OAuth is visible as expired even when it has refresh material", async () => {
+  test("refreshable browser OAuth stays connected without rotating during snapshots", async () => {
     const { service, store } = fixture();
     const connection = await service.connectToken(owner, input);
     const credential = store.resolve(connection.id)!;
@@ -333,7 +333,7 @@ describe("owner-bound Link device authorization", () => {
       }),
     });
     const current = service.snapshot().connections[0]!;
-    expect(current.status).toBe("expired");
+    expect(current.status).toBe("connected");
     expect(current.expiresAt).toBe("2000-01-01T00:00:00.000Z");
     expect(JSON.stringify(current)).not.toContain("expired-access");
     expect(JSON.stringify(current)).not.toContain("unused-refresh");

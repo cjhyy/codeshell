@@ -51,3 +51,9 @@ export {
   type RemoteLinkAttempt,
   type RemoteLinkActionRequest,
 } from "./remote.js";
+
+export {
+  executeLocalOAuthLinkAction,
+  LocalOAuthLinkError,
+  type LocalOAuthLinkActionRequest,
+} from "./local-oauth.js";

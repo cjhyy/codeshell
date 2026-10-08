@@ -65,6 +65,11 @@ function isUsableLinkCredential(credential: CredentialMetadata): boolean {
       credential.meta?.linkRemoteState === "connected" &&
       (credential.oauthStatus?.state === "valid" || !!credential.oauthStatus?.hasRefreshToken)
     );
+  if (credential.meta?.linkAuthSource === "browser-oauth")
+    return (
+      credential.meta.linkOAuthState !== "reconnect" &&
+      (credential.oauthStatus?.state === "valid" || credential.oauthStatus?.canRefresh === true)
+    );
   return !credential.oauthStatus || credential.oauthStatus.state === "valid";
 }
 
@@ -324,6 +329,9 @@ export async function linkActionTool(
       live.meta?.linkExecutionRuntime === connection.credential.meta?.linkExecutionRuntime &&
       live.meta?.linkRemoteGrantId === connection.credential.meta?.linkRemoteGrantId &&
       live.meta?.linkProvider === providerId &&
+      live.meta?.linkAccountId === connection.credential.meta?.linkAccountId &&
+      live.meta?.linkOAuthState !== "reconnect" &&
+      (!live.meta?.linkCapabilityIds || live.meta.linkCapabilityIds.includes(capabilityId)) &&
       live.meta?.linkLastVerifiedAt === connection.credential.meta?.linkLastVerifiedAt,
     );
   };
@@ -365,6 +373,22 @@ export async function linkActionTool(
       await assertCliLinkAccount(providerId, accountId, { cwd, signal });
       assertConnected();
       data = await executeCliLinkAction(providerId, actionId, params, { cwd, signal });
+    } else if (connection.credential.meta?.linkAuthSource === "browser-oauth") {
+      const meta = connection.credential.meta;
+      if (!access.executeLocalOAuthLinkAction || !meta.linkAccountId || !meta.linkLastVerifiedAt)
+        throw new Error("Local OAuth Link actions are unavailable on this Host");
+      data = await access.executeLocalOAuthLinkAction(
+        {
+          cwd,
+          scope,
+          id: connection.credential.id,
+          accountId: meta.linkAccountId,
+          verifiedAt: meta.linkLastVerifiedAt,
+          action: actionId,
+          params,
+        },
+        { signal },
+      );
     } else {
       // Resolve on every invocation (and after write approval). Disconnecting the
       // credential therefore invalidates the next action instead of reusing an old token.

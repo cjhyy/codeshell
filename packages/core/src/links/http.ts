@@ -13,6 +13,16 @@ const LOCAL_LINK_ALLOWED_HOSTS = new Set([
   "api.vercel.com",
 ]);
 
+export class LinkProviderHttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "LinkProviderHttpError";
+  }
+}
+
 export interface LinkHttpRequest {
   url: URL;
   method?: "GET" | "POST";
@@ -51,7 +61,7 @@ export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown
     throw new Error(`Link provider returned invalid JSON (HTTP ${response.status})`);
   }
   if (!response.ok) {
-    throw new Error(normalizeProviderError(response.status, data));
+    throw new LinkProviderHttpError(response.status, normalizeProviderError(response.status, data));
   }
   return data;
 }
