@@ -1,6 +1,6 @@
 # Workspace 数据源 Profile 权限与 Link 只读视图
 
-2026-10-09。本轮源码实现复用现有设置入口；不新增侧栏。写操作、上传解析/索引、任意查询及新增服务商仍未完成。
+2026-10-09。本轮源码实现复用现有设置入口；不新增侧栏。本轮不含写操作、上传解析/索引、任意查询及新增服务商；随后完成的有界上传解析/逐文件词法索引见[独立交付边界](workspace-upload-document-index-delivery.md)。
 
 Profile 的 `sourceAccess` 省略继承 workspace binding，显式空数组拒绝所有源（含项目上传）。声明的 source/scopes 只取交集，任意 deny 禁读。Session pin 优先，缺失 Profile fail-closed。项目预览、动态摘要和工具统一求交；读取和 metadata await 结束时复查当前绑定、源定义、Profile revision 与 live pin。
 

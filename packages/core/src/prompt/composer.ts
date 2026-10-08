@@ -11,7 +11,10 @@ import { SectionCache, type PromptSection } from "./section-cache.js";
 import { scanInstructions, combineInstructions, type ScanOptions } from "./instruction-scanner.js";
 import { MemoryManager } from "../session/memory.js";
 import { scanSkills } from "../skills/index.js";
-import { buildSkillListing } from "../tool-system/builtin/skill-prompt.js";
+import {
+  buildSkillListing,
+  type SkillListingOptions,
+} from "../tool-system/builtin/skill-prompt.js";
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
 import type { BuiltinTool } from "../tool-system/builtin/index.js";
 import type { CapabilityDynamicContextProvider } from "../capabilities/index.js";
@@ -61,7 +64,7 @@ export interface ComposerOptions {
   /**
    * Skills the active digital human declares (`WorkspaceProfile.skills`).
    *
-   * Used only to warn when a declared skill is not actually installed here.
+   * Prioritizes installed declarations and warns when a declared skill is absent.
    * `requires` installs per project, so a digital human summoned in a project
    * that never got the install has an instruction telling it to use `/x` while
    * `/x` does not exist — a real session then called `/hyperframes`, got
@@ -69,6 +72,7 @@ export interface ComposerOptions {
    * line and stops the flailing.
    */
   profileDeclaredSkills?: readonly string[];
+  skillListing?: SkillListingOptions;
   /** 激活数字人的可移植记忆层根目录（portableMemory=true 时由 engine 传入）。 */
   profileMemoryDir?: string;
   /**
@@ -230,7 +234,11 @@ export class PromptComposer {
       disabledPlugins: this.options.disabledPlugins,
       skillAllowlist: this.options.skillAllowlist,
     });
-    const skillsListing = buildSkillListing(skills);
+    const skillsListing = buildSkillListing(skills, {
+      ...this.options.skillListing,
+      preferredSkills: this.options.skillAllowlist,
+      declaredSkills: this.options.profileDeclaredSkills,
+    });
     const declaredSkillGap = this.buildDeclaredSkillGap(skills);
     // Capability and sources context are independent I/O — resolve them
     // concurrently instead of serially.

@@ -627,6 +627,10 @@ export class AgentServer {
   private readonly approvalRouter: ApprovalRouter;
   private approvalConnectionUnregister: (() => void) | null = null;
   private disconnected = false;
+  /** Full close flushes terminal notifications before physically closing transport. */
+  private transportDisconnected = false;
+  /** Final resolver-free metadata survives observer disposal until full close. */
+  private disconnectedPendingDecisions: readonly unknown[] | null = null;
   private readonly moduleScope: LifetimeScope;
   private readonly moduleReady: Promise<void>;
   private readonly hasHostActivators: boolean;
@@ -794,7 +798,7 @@ export class AgentServer {
           .getSessionManager?.()
           .readSessionKind?.(sessionId);
       },
-      isTransportDisconnected: () => this.disconnected,
+      isTransportDisconnected: () => this.transportDisconnected,
       notify: (method, params) => this.notify(method, params),
     };
     this.moduleReady = attachProtocolContributions({
@@ -4822,9 +4826,7 @@ export class AgentServer {
       resolveClose = resolve;
       rejectClose = reject;
     });
-    this.observeServerClose();
     this.disconnectTransport("server closing", false);
-    if (this.hostActivationPending) void this.moduleScope.dispose().catch(() => {});
     // Detach the bg-agent bus subscription first so a final flurry of
     // completions during shutdown can't race the `shutdown` status
     // notify below. Safe to call repeatedly — the unsubscribe is a
@@ -4865,6 +4867,9 @@ export class AgentServer {
     }
     this.pendingApprovals.clear();
     this.clearAllApprovalTimers();
+    this.disconnectedPendingDecisions = this.getPendingDecisionSnapshot();
+    this.observeServerClose();
+    if (this.hostActivationPending) void this.moduleScope.dispose().catch(() => {});
 
     const transportErrors: unknown[] = [];
     try {
@@ -4872,6 +4877,7 @@ export class AgentServer {
     } catch (error) {
       transportErrors.push(error);
     }
+    this.transportDisconnected = true;
     try {
       this.transport.close();
     } catch (error) {
@@ -4899,6 +4905,7 @@ export class AgentServer {
       } catch (error) {
         errors.push(error);
       }
+      this.disconnectedPendingDecisions = [];
       if (errors.length) throw new AggregateError(errors, "AgentServer shutdown failed");
     })().then(resolveClose, rejectClose);
     void this.closing.catch((error) =>
@@ -4916,31 +4923,36 @@ export class AgentServer {
   private disconnectTransport(reason: string, releaseModules: boolean): void {
     if (this.disconnected) return;
     this.disconnected = true;
-    this.observeServerClose();
+    if (releaseModules) this.transportDisconnected = true;
     if (this.bgAgentBusUnsubscribe) {
       this.bgAgentBusUnsubscribe();
       this.bgAgentBusUnsubscribe = null;
     }
-    if (releaseModules)
-      void this.moduleScope
-        .dispose()
-        .catch((error) =>
-          logger.warn("agent_server.module_dispose_failed", { error: String(error) }),
-        );
     for (const start of this.runStarts) start.abort();
     const unregister = this.approvalConnectionUnregister;
     this.approvalConnectionUnregister = null;
     if (unregister) {
       this.approvalRouter.deregister(this.connectionId, reason);
     }
+    if (releaseModules) {
+      this.disconnectedPendingDecisions = this.getPendingDecisionSnapshot();
+      this.observeServerClose();
+      void this.moduleScope
+        .dispose()
+        .catch((error) =>
+          logger.warn("agent_server.module_dispose_failed", { error: String(error) }),
+        );
+    }
   }
 
   /** Resolver-free metadata view for extension projections and protocol snapshots. */
   getPendingDecisionSnapshot(): readonly unknown[] {
+    if (this.disconnectedPendingDecisions !== null)
+      return structuredClone(this.disconnectedPendingDecisions);
     const entries: unknown[] = [];
     this.forEachObserver("snapshotPendingDecisions", (observer) => {
       const snapshot = observer.snapshotPendingDecisions?.();
-      if (snapshot) entries.push(...snapshot);
+      if (snapshot) entries.push(...structuredClone(snapshot));
     });
     return entries;
   }

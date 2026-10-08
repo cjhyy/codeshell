@@ -1734,6 +1734,7 @@ export class Engine {
         );
 
         const { promptComposer, toolDefs, mcpFailureSummary } = await this.wireRunTooling({
+          taskText,
           options,
           session,
           cwd,
@@ -2830,6 +2831,7 @@ export class Engine {
    * this method — only the composer and tool defs cross back out.
    */
   private async wireRunTooling(args: {
+    taskText: string;
     options: EngineRunOptions | undefined;
     session: SessionBundle;
     cwd: string;
@@ -2847,6 +2849,7 @@ export class Engine {
     mcpFailureSummary: string;
   }> {
     const {
+      taskText,
       options,
       session,
       cwd,
@@ -2881,7 +2884,9 @@ export class Engine {
     // a skill, so the full skills listing would be dead context for every one
     // of its turns (e.g. the Pet manager) — inject none via an empty allowlist.
     const runAllowedToolNames = toolCtx.allowedToolNames;
-    const profileCanUseSkills = !runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name);
+    const profileCanUseSkills =
+      Boolean(this.toolRegistry.getTool(skillToolDef.name)) &&
+      (!runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name));
     const promptComposer = new PromptComposer(
       buildPromptComposerConfig({
         cwd,
@@ -2913,6 +2918,21 @@ export class Engine {
         disabledSkills,
         disabledPlugins,
         skillAllowlist: profileCanUseSkills ? toolCtx.skillAllowlist : [],
+        skillListing: {
+          maxContextTokens: this.maxContextTokens,
+          task: taskText,
+          recentSkills: [
+            ...new Set(
+              session.transcript
+                .getEvents("tool_use")
+                .slice(-256)
+                .reverse()
+                .filter((event) => event.data.toolName === "Skill")
+                .map((event) => (event.data.args as Record<string, unknown> | undefined)?.skill)
+                .filter((name): name is string => typeof name === "string"),
+            ),
+          ].slice(0, 32),
+        },
         memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
         memoryCurrentProjectOnly: profile?.memoryCurrentProjectOnly,
         disableInstructions: profile?.disableInstructions,
@@ -4610,6 +4630,7 @@ export class Engine {
       askUserAsync: this.config.askUserAsync,
       browser: this.config.browserBridge,
       workspaceBridge: this.config.workspaceBridge,
+      documentParserExecutable: this.config.documentParserExecutable,
       panels: this.config.panelBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,

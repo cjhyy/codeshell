@@ -31,11 +31,11 @@
  */
 
 import { join } from "node:path";
+import { createManagedDocumentParserResolver } from "../sources/documents/runtime.js";
 import { existsSync, readdirSync } from "node:fs";
 import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
-import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
 import { assertSafeSessionId, SessionManager, sessionsRoot } from "../session/session-manager.js";
 import { validateSettings, type ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
@@ -44,7 +44,7 @@ import { createNotification, Methods } from "../protocol/types.js";
 import { setCronChangedSink, setCronCreateAuthority } from "../tool-system/builtin/cron.js";
 import { setModelCatalogChangedSink } from "../tool-system/builtin/edit-model-catalog.js";
 import { setCapabilityChangedSink } from "../tool-system/builtin/install-capability.js";
-import { SettingsManager, noRepoDir } from "../settings/manager.js";
+import { SettingsManager } from "../settings/manager.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
@@ -64,6 +64,7 @@ import {
 import { createDesktopAutomationAuthorityClient } from "../automation/desktop-authority-client.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
+import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
 
 /**
  * Load AgentModules from CODE_SHELL_CAPABILITY_MODULES: comma-separated
@@ -93,39 +94,14 @@ async function loadConfiguredAgentModules(): Promise<AgentModule[]> {
   return modules;
 }
 
-/**
- * Resolve per-session agent config: protocol slice overrides win, else fall
- * back to disk settings.agent.*. Fixes the bug where settings.agent.* never
- * reached session engines (slice arrived with only permissionMode+cwd).
- */
-export function resolveSessionAgentConfig(slice: EngineConfigSlice, settings: ValidatedSettings) {
-  return {
-    preset: slice.preset ?? settings.agent.preset ?? settings.profile?.preset,
-    customSystemPrompt: slice.customSystemPrompt ?? settings.agent.customSystemPrompt,
-    appendSystemPrompt: slice.appendSystemPrompt ?? settings.agent.appendSystemPrompt,
-  };
-}
-
-/**
- * Resolve a session's effective cwd. A protocol slice with an explicit cwd
- * points the session at that project; a slice WITHOUT a cwd is a no-repo
- * "纯聊天" session (the renderer omits cwd when no project is selected) and must
- * land in the no-repo sandbox (~/.code-shell/no-repo) — NOT the worker's boot
- * cwd.
- *
- * Why not the boot cwd: this stdio worker is long-lived and reused across
- * sessions/projects, so its boot cwd is whatever project first spawned it.
- * Inheriting it for a no-repo chat would (a) silently run the chat against a
- * stale, unrelated project's files and (b) defeat the no-repo skill/plugin
- * whitelist inversion (which only fires when cwd === noRepoDir).
- */
-export function resolveSessionCwd(slice: EngineConfigSlice): string {
-  return slice.cwd ?? noRepoDir();
-}
-
 // ─── Read base config from environment / settings ─────────────────
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
+// Capture only the parent Host distribution root, before project settings/env are read.
+const documentRuntimeRoot = process.env.CODE_SHELL_DOCUMENT_RUNTIME_ROOT;
+const documentParserExecutable = documentRuntimeRoot
+  ? createManagedDocumentParserResolver(documentRuntimeRoot)
+  : undefined;
 // Compile ONCE at the host root; seed engine, per-session engines and the
 // AgentServer all consume this same composition (design §9.3).
 const composition = compileComposition({ modules: await loadConfiguredAgentModules() });
@@ -327,6 +303,7 @@ const chatManager = new ChatSessionManager({
       // session it creates is a desktop-origin session.
       origin: "desktop",
       builtinToolHost: "desktop",
+      documentParserExecutable,
       composition,
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",

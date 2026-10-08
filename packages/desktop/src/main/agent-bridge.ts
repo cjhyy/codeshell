@@ -25,7 +25,8 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
-import { BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
+import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
 import { dlog } from "./desktop-logger.js";
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
@@ -337,6 +338,11 @@ export class AgentBridge implements PetStateBridge {
       buildEnv: () => ({
         ...process.env,
         CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+        CODE_SHELL_DOCUMENT_RUNTIME_ROOT: desktopManagedRuntimeRoot({
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appPath: app.getAppPath(),
+        }),
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",

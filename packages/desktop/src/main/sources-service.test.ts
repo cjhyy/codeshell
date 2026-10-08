@@ -22,6 +22,7 @@ import {
   uploadFiles,
   workspaceAccess,
 } from "./sources-service.js";
+import { localFilesAdapter, localFilesSourceFor } from "@cjhyy/code-shell-core/internal";
 
 let home: string;
 let cwd: string;
@@ -155,5 +156,27 @@ describe("desktop sources service", () => {
     const root = join(cwd, ".code-shell", "uploads");
     expect(readFileSync(join(root, "brief.md"), "utf8")).toBe("second");
     expect(readdirSync(root).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  test("overwrite and delete remove the derived document index as well as invalidate old content", async () => {
+    const picked = join(sourceDir, "brief.md");
+    writeFileSync(picked, "Project milestone");
+    uploadFiles(cwd, [picked]);
+    const read = () =>
+      localFilesAdapter.read(localFilesSourceFor(cwd), "brief.md", {
+        cwd,
+        maxBytes: 10_000,
+        query: "milestone",
+      });
+    await read();
+    const index = join(cwd, ".code-shell", "source-index");
+    expect(readdirSync(index)).toHaveLength(1);
+    writeFileSync(picked, "Replacement milestone");
+    uploadFiles(cwd, [picked]);
+    expect(readdirSync(index)).toEqual([]);
+    expect((await read()).text).toContain("Replacement milestone");
+    expect(readdirSync(index)).toHaveLength(1);
+    deleteUpload(cwd, "brief.md");
+    expect(readdirSync(index)).toEqual([]);
   });
 });

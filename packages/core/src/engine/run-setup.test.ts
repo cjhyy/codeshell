@@ -169,6 +169,11 @@ describe("buildPromptComposerConfig", () => {
       disabledSkills: ["legacy-skill"],
       disabledPlugins: ["legacy-plugin"],
       skillAllowlist: ["approved-skill"],
+      skillListing: {
+        maxContextTokens: 64_000,
+        task: "current task",
+        recentSkills: ["approved-skill"],
+      },
       memoriesMaxAgeDays: 30,
       memoryCurrentProjectOnly: true,
       goalToolState: { hasGoal: true },
@@ -196,6 +201,7 @@ describe("buildPromptComposerConfig", () => {
       goalToolState: { hasGoal: true },
       capabilityPromptSections: { extra: "section" },
     });
+    expect(config.skillListing).toEqual(input.skillListing);
     expect(config.instructionOptions).toEqual({
       compatFileNames: ["CLAUDE.md"],
       boundaryFinder,
