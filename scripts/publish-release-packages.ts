@@ -25,6 +25,11 @@ const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const NPM_REGISTRY = "https://registry.npmjs.org/";
 const MAX_ATTEMPTS = 4;
 const RETRY_DELAYS_MS = [2_000, 5_000, 10_000];
+// Public metadata took 4–6 minutes to appear during v0.9.27. Give the entire
+// accepted batch ten minutes, concurrently, rather than ten minutes per package.
+const CONFIRMATION_BUDGET_MS = 10 * 60 * 1_000;
+const CONFIRMATION_POLL_MS = 10_000;
+const REGISTRY_REQUEST_TIMEOUT_MS = 15_000;
 
 export interface PublishAttempt {
   status: number | null;
@@ -34,10 +39,11 @@ export interface PublishAttempt {
 }
 
 export interface PublishRuntime {
-  lookupVersion(name: string, version: string): Promise<boolean>;
-  verifyTag(name: string, version: string, tag: string): Promise<void>;
+  lookupVersion(name: string, version: string, timeoutMs?: number): Promise<boolean>;
+  verifyTag(name: string, version: string, tag: string, timeoutMs?: number): Promise<void>;
   publish(command: readonly string[]): PublishAttempt;
   sleep(ms: number): Promise<void>;
+  now(): number;
   log(message: string): void;
 }
 
@@ -63,6 +69,7 @@ export async function registryVersionExists(
   name: string,
   version: string,
   request: RegistryRequest = fetch,
+  timeoutMs = REGISTRY_REQUEST_TIMEOUT_MS,
 ): Promise<boolean> {
   const url = new URL(`${encodeURIComponent(name)}/${encodeURIComponent(version)}`, NPM_REGISTRY);
   // A release may have appeared after an earlier cached 404, including after
@@ -72,7 +79,7 @@ export async function registryVersionExists(
   try {
     response = await request(url, {
       headers: { accept: "application/json", "cache-control": "no-cache" },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new RegistryLookupError(true);
@@ -102,6 +109,7 @@ export async function verifyRegistryTag(
   version: string,
   tag: string,
   request: RegistryRequest = fetch,
+  timeoutMs = REGISTRY_REQUEST_TIMEOUT_MS,
 ): Promise<void> {
   const url = new URL(`-/package/${encodeURIComponent(name)}/dist-tags`, NPM_REGISTRY);
   url.searchParams.set("release-check", `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -109,7 +117,7 @@ export async function verifyRegistryTag(
   try {
     response = await request(url, {
       headers: { accept: "application/json", "cache-control": "no-cache" },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new RegistryLookupError(true);
@@ -152,8 +160,10 @@ function publishFailure(result: PublishAttempt): { transient: boolean; summary: 
 
 function defaultRuntime(repoRoot: string): PublishRuntime {
   return {
-    lookupVersion: registryVersionExists,
-    verifyTag: verifyRegistryTag,
+    lookupVersion: (name, version, timeoutMs) =>
+      registryVersionExists(name, version, fetch, timeoutMs),
+    verifyTag: (name, version, tag, timeoutMs) =>
+      verifyRegistryTag(name, version, tag, fetch, timeoutMs),
     publish: (command) => {
       const result = spawnSync(command[0], command.slice(1), {
         cwd: repoRoot,
@@ -171,17 +181,18 @@ function defaultRuntime(repoRoot: string): PublishRuntime {
       };
     },
     sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
+    now: () => performance.now(),
     log: (message) => console.log(message),
   };
 }
 
-export async function publishReleasePackage(
+async function submitReleasePackage(
   name: string,
   version: string,
   tag: string,
   command: readonly string[],
   runtime: PublishRuntime,
-): Promise<"published" | "existing"> {
+): Promise<"accepted" | "existing"> {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let failure: { transient: boolean; summary: string };
     try {
@@ -192,8 +203,8 @@ export async function publishReleasePackage(
       }
       const result = runtime.publish(command);
       if (!result.error && result.status === 0) {
-        runtime.log(`✓ Published ${name}@${version}`);
-        return "published";
+        runtime.log(`Publisher accepted ${name}@${version}; public registry confirmation pending`);
+        return "accepted";
       }
       failure = publishFailure(result);
       // Even permanent "version already exists" responses can be an accepted
@@ -231,6 +242,96 @@ export async function publishReleasePackage(
     await runtime.sleep(delay);
   }
   throw new Error(`publish attempts exhausted for ${name}@${version}`);
+}
+
+interface AcceptedPackage {
+  name: string;
+  version: string;
+}
+
+/** Read-only acceptance: never retry a successful publish or change a dist-tag. */
+async function confirmAcceptedPackages(
+  packages: readonly AcceptedPackage[],
+  tag: string,
+  runtime: PublishRuntime,
+): Promise<void> {
+  if (packages.length === 0) return;
+  const deadline = runtime.now() + CONFIRMATION_BUDGET_MS;
+  const pending = new Map(packages.map((entry) => [entry.name, entry]));
+  const reasons = new Map<string, string>();
+  const requestTimeout = () =>
+    Math.max(1, Math.ceil(Math.min(REGISTRY_REQUEST_TIMEOUT_MS, deadline - runtime.now())));
+  while (runtime.now() < deadline) {
+    const failures = await Promise.all(
+      [...pending.values()].map(async ({ name, version }) => {
+        try {
+          if (!(await runtime.lookupVersion(name, version, requestTimeout()))) {
+            reasons.set(name, "exact version is not visible");
+            return;
+          }
+          if (runtime.now() >= deadline) return;
+          await runtime.verifyTag(name, version, tag, requestTimeout());
+          if (runtime.now() < deadline) pending.delete(name);
+        } catch (error) {
+          // A stale/missing tag and transient reads may be propagation delays.
+          // Unexpected errors and permanent HTTP/metadata failures remain fatal;
+          // never include raw request diagnostics (possibly credentials) in logs.
+          const summary =
+            error instanceof RegistryLookupError || error instanceof RegistryTagError
+              ? error.message
+              : "registry confirmation failed";
+          if (
+            !(error instanceof RegistryTagError) &&
+            !(error instanceof RegistryLookupError && (error.transient || error.status === 404))
+          ) {
+            return `public registry confirmation failed for ${name}@${version}: ${summary}`;
+          }
+          reasons.set(name, summary);
+        }
+      }),
+    );
+    const failure = failures.find((entry) => entry !== undefined);
+    if (failure) throw new Error(failure);
+    if (pending.size === 0) {
+      for (const { name, version } of packages) {
+        runtime.log(
+          `✓ Published ${name}@${version}; public exact version and dist-tag ${tag} confirmed`,
+        );
+      }
+      return;
+    }
+    const remaining = deadline - runtime.now();
+    if (remaining <= 0) break;
+    runtime.log(
+      `Waiting for public registry confirmation of ${pending.size} package(s); ${Math.ceil(remaining / 1_000)}s remaining`,
+    );
+    await runtime.sleep(Math.min(CONFIRMATION_POLL_MS, remaining));
+  }
+  throw new Error(
+    `public registry confirmation timed out after ${CONFIRMATION_BUDGET_MS / 1_000}s: ${[
+      ...pending.values(),
+    ]
+      .map(
+        ({ name, version }) =>
+          `${name}@${version} (${reasons.get(name) ?? "read deadline reached"})`,
+      )
+      .join(
+        "; ",
+      )}; publisher accepted these packages, so inspect public metadata before any explicit recovery; do not automatically republish or move dist-tags`,
+  );
+}
+
+export async function publishReleasePackage(
+  name: string,
+  version: string,
+  tag: string,
+  command: readonly string[],
+  runtime: PublishRuntime,
+): Promise<"published" | "existing"> {
+  const result = await submitReleasePackage(name, version, tag, command, runtime);
+  if (result === "existing") return result;
+  await confirmAcceptedPackages([{ name, version }], tag, runtime);
+  return "published";
 }
 
 function readManifest(path: string): PublishManifest {
@@ -331,12 +432,22 @@ export async function main(
     return;
   }
 
+  const accepted: AcceptedPackage[] = [];
   for (const [index, command] of commands.entries()) {
     const definition = PUBLIC_RELEASE_PACKAGES[index];
     runtime.log(`${options.mode === "execute" ? "→" : "would run:"} ${command.join(" ")}`);
     if (options.mode !== "execute") continue;
-    await publishReleasePackage(definition.name, rootVersion, options.tag, command, runtime);
+    const result = await submitReleasePackage(
+      definition.name,
+      rootVersion,
+      options.tag,
+      command,
+      runtime,
+    );
+    if (result === "accepted") accepted.push({ name: definition.name, version: rootVersion });
   }
+
+  await confirmAcceptedPackages(accepted, options.tag, runtime);
 
   if (options.mode === "dry-run") {
     runtime.log(

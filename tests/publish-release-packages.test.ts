@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   main,
   parsePublishArgs,
@@ -31,6 +32,7 @@ function fixture(exists: boolean[], results: PublishAttempt[]) {
   let lookups = 0;
   let attempts = 0;
   let tagChecks = 0;
+  let elapsed = 0;
   const runtime: PublishRuntime = {
     lookupVersion: async () => exists[lookups++] ?? false,
     verifyTag: async () => {
@@ -42,7 +44,9 @@ function fixture(exists: boolean[], results: PublishAttempt[]) {
     },
     sleep: async (ms) => {
       delays.push(ms);
+      elapsed += ms;
     },
+    now: () => elapsed,
     log: (message) => {
       logs.push(message);
     },
@@ -66,7 +70,7 @@ describe("resumable release publication", () => {
     "error: publish failed with status 502",
     "ECONNRESET",
   ])("retries a transient publish failure: %s", async (stderr) => {
-    const run = fixture([false, false, false], [{ status: 1, stderr }, { status: 0 }]);
+    const run = fixture([false, false, false, true], [{ status: 1, stderr }, { status: 0 }]);
     expect(await publishReleasePackage(name, version, "latest", command, run.runtime)).toBe(
       "published",
     );
@@ -136,6 +140,112 @@ describe("resumable release publication", () => {
     expect(run.counts().attempts).toBe(0);
     expect(run.delays).toEqual([]);
   });
+
+  test("accepts exit zero only after an exact version and requested tag read", async () => {
+    const run = fixture([false, true], [{ status: 0 }]);
+    run.runtime.verifyTag = async () => {
+      expect(run.logs.some((message) => message.includes("✓ Published"))).toBe(false);
+    };
+    expect(await publishReleasePackage(name, version, "next", command, run.runtime)).toBe(
+      "published",
+    );
+    expect(run.counts().attempts).toBe(1);
+    expect(run.logs.at(-1)).toContain("public exact version and dist-tag next confirmed");
+  });
+
+  test("allows five minutes of public visibility delay without publishing again", async () => {
+    const run = fixture([], [{ status: 0 }]);
+    run.runtime.lookupVersion = async () => run.runtime.now() >= 5 * 60_000;
+    expect(await publishReleasePackage(name, version, "latest", command, run.runtime)).toBe(
+      "published",
+    );
+    expect(run.counts().attempts).toBe(1);
+    expect(run.runtime.now()).toBe(5 * 60_000);
+    expect(run.counts().tagChecks).toBe(1);
+  });
+
+  test("times out an accepted but invisible version without another publish or a success log", async () => {
+    const run = fixture([], [{ status: 0 }]);
+    await expect(
+      publishReleasePackage(name, version, "latest", command, run.runtime),
+    ).rejects.toThrow("public registry confirmation timed out after 600s");
+    expect(run.counts().attempts).toBe(1);
+    expect(run.counts().tagChecks).toBe(0);
+    expect(run.runtime.now()).toBe(600_000);
+    expect(run.logs.join("\n")).not.toContain("✓ Published");
+  });
+
+  test("waits for a delayed tag, including transient public read failures", async () => {
+    const run = fixture([false, ...Array.from({ length: 4 }, () => true)], [{ status: 0 }]);
+    let reads = 0;
+    run.runtime.verifyTag = () =>
+      verifyRegistryTag(name, version, "latest", async () => {
+        reads++;
+        if (reads === 1) return new Response("missing", { status: 404 });
+        if (reads === 2) return new Response("down", { status: 503 });
+        return Response.json({ latest: reads === 3 ? "0.9.6" : version });
+      });
+    expect(await publishReleasePackage(name, version, "latest", command, run.runtime)).toBe(
+      "published",
+    );
+    expect(run.counts().attempts).toBe(1);
+    expect(run.delays).toEqual([10_000, 10_000, 10_000]);
+  });
+
+  test("never moves a newer tag when the publisher reported success", async () => {
+    const run = fixture([], [{ status: 0 }]);
+    run.runtime.lookupVersion = async () => run.counts().attempts > 0;
+    run.runtime.verifyTag = () =>
+      verifyRegistryTag(name, version, "latest", async () => Response.json({ latest: "0.10.0" }));
+    await expect(
+      publishReleasePackage(name, version, "latest", command, run.runtime),
+    ).rejects.toThrow("do not automatically republish or move dist-tags");
+    expect(run.counts().attempts).toBe(1);
+    expect(run.runtime.now()).toBe(600_000);
+    expect(run.logs.join("\n")).not.toContain("✓ Published");
+  });
+
+  test("preserves permanent read failures and redacts unexpected confirmation errors", async () => {
+    for (const permanent of [true, false]) {
+      const run = fixture([], [{ status: 0, stdout: "npm_PUBLISH_SECRET" }]);
+      run.runtime.lookupVersion = async () => {
+        if (run.counts().attempts === 0) return false;
+        if (!permanent) throw new Error("npm_READ_SECRET");
+        return registryVersionExists(
+          name,
+          version,
+          async () => new Response("no", { status: 401 }),
+        );
+      };
+      await expect(
+        publishReleasePackage(name, version, "latest", command, run.runtime),
+      ).rejects.toThrow(permanent ? "HTTP 401" : "registry confirmation failed");
+      expect(run.counts().attempts).toBe(1);
+      expect(run.delays).toEqual([]);
+      expect(run.logs.join("\n")).not.toContain("SECRET");
+    }
+  });
+
+  test("caps reads by the remaining global deadline and rejects a late tag response", async () => {
+    const run = fixture([], [{ status: 0 }]);
+    let clock = 0;
+    run.runtime.now = () => clock;
+    run.runtime.lookupVersion = async (_name, _version, timeoutMs) => {
+      if (run.counts().attempts === 0) return false;
+      expect(timeoutMs).toBe(15_000);
+      clock = 597_000;
+      return true;
+    };
+    run.runtime.verifyTag = async (_name, _version, _tag, timeoutMs) => {
+      expect(timeoutMs).toBe(3_000);
+      clock += timeoutMs!;
+    };
+    await expect(
+      publishReleasePackage(name, version, "latest", command, run.runtime),
+    ).rejects.toThrow("confirmation timed out");
+    expect(run.counts().attempts).toBe(1);
+    expect(run.logs.join("\n")).not.toContain("✓ Published");
+  });
 });
 
 describe("public registry verification", () => {
@@ -193,16 +303,94 @@ describe("release helper modes and target checkout", () => {
     // last are published, resume on the final one" as that set changes.
     const alreadyPublished = PUBLIC_RELEASE_PACKAGES.length - 1;
     const run = fixture(
-      [...Array.from({ length: alreadyPublished }, () => true), false],
+      [...Array.from({ length: alreadyPublished }, () => true), false, true],
       [{ status: 0 }],
     );
     await main(["--execute"], run.runtime);
     expect(run.counts()).toEqual({
-      lookups: alreadyPublished + 1,
+      lookups: alreadyPublished + 2,
       attempts: 1,
-      tagChecks: alreadyPublished,
+      tagChecks: alreadyPublished + 1,
     });
     expect(run.published).toEqual([publishCommands("latest").at(-1)!]);
+  });
+
+  test("submits all packages before concurrent confirmation under one batch budget", async () => {
+    const run = fixture([], []);
+    const total = PUBLIC_RELEASE_PACKAGES.length;
+    let confirmations = 0;
+    let releaseReads!: () => void;
+    const gate = new Promise<void>((done) => (releaseReads = done));
+    run.runtime.lookupVersion = async () => {
+      if (run.counts().attempts < total) return false;
+      confirmations++;
+      if (confirmations === total) releaseReads();
+      await gate;
+      return true;
+    };
+    await main(["--execute"], run.runtime);
+    expect(run.counts().attempts).toBe(total);
+    expect(run.counts().tagChecks).toBe(total);
+    expect(confirmations).toBe(total);
+    expect(run.delays).toEqual([]);
+  }, 1_000);
+
+  test("bounds a whole invisible batch at ten minutes, rather than ten minutes per package", async () => {
+    const run = fixture([], []);
+    await expect(main(["--execute"], run.runtime)).rejects.toThrow(
+      "confirmation timed out after 600s",
+    );
+    expect(run.counts().attempts).toBe(PUBLIC_RELEASE_PACKAGES.length);
+    expect(run.runtime.now()).toBe(600_000);
+    expect(run.logs.join("\n")).not.toContain("✓ Published");
+  });
+
+  test("Bun publish --cwd selects the intended package in an isolated dry run", () => {
+    const target = mkdtempSync(join(tmpdir(), "codeshell-publish-cwd-"));
+    roots.push(target);
+    const child = join(target, "packages", "child");
+    const home = join(target, "home");
+    mkdirSync(child, { recursive: true });
+    mkdirSync(home);
+    writeFileSync(
+      join(target, "package.json"),
+      JSON.stringify({ name: "cwd-root-fixture", version: "1.0.0" }),
+    );
+    writeFileSync(
+      join(child, "package.json"),
+      JSON.stringify({ name: "cwd-child-fixture", version: "2.0.0" }),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        "publish",
+        "--cwd",
+        "packages/child",
+        "--dry-run",
+        "--ignore-scripts",
+        "--registry",
+        "http://127.0.0.1:1",
+      ],
+      {
+        cwd: target,
+        // No inherited credentials or operator configuration. The unreachable
+        // registry also makes an accidental publish fail rather than write.
+        env: {
+          PATH: process.env.PATH,
+          HOME: home,
+          USERPROFILE: home,
+          // Bun 1.3.11 requires a token even for --dry-run; this fixture value
+          // grants no authority and the only configured origin is loopback.
+          NPM_CONFIG_TOKEN: "dry-run-fixture-token",
+        },
+        encoding: "utf8",
+        timeout: 5_000,
+      },
+    );
+    expect(result.status).toBe(0);
+    expect(result.error).toBeUndefined();
+    expect(`${result.stdout}\n${result.stderr}`).toContain("cwd-child-fixture@2.0.0");
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain("cwd-root-fixture@1.0.0");
   });
 
   test("reads and verifies versions from an explicit target checkout", async () => {
