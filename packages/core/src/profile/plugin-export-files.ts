@@ -70,7 +70,14 @@ export class ProfileExportReader {
       if (!stat.isDirectory() || stat.isSymbolicLink())
         throw new Error("source directory is not a regular, non-symlink directory");
       if (boundary) this.chain(boundary, path);
-      return realpathSync(path);
+      const resolved = realpathSync(path);
+      if (
+        (boundary && !contained(boundary, resolved)) ||
+        !sameIdentity(stat, lstatSync(resolved, { bigint: true })) ||
+        !sameFile(stat, lstatSync(path, { bigint: true }))
+      )
+        throw new Error("source directory changed while resolving");
+      return resolved;
     } catch (error) {
       if (missing(error)) return undefined;
       throw error;

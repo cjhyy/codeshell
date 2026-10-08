@@ -131,7 +131,11 @@ export function writeProfilePluginSnapshot(
           throw new Error("export file changed while opening");
         const bytes = Buffer.from(file.text);
         let offset = 0;
-        while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset);
+        while (offset < bytes.length) {
+          const written = writeSync(fd, bytes, offset, bytes.length - offset);
+          if (written <= 0) throw new Error("export write made no progress");
+          offset += written;
+        }
         fsyncSync(fd);
         assertDirs();
         if (

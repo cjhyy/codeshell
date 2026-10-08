@@ -162,11 +162,18 @@ try {
       .readFileSync(join(dirname(loadedSkill.filePath), "reference.txt"), "utf8")
       .includes("SELECTED_SUPPORT_TEXT"),
   );
-  const loadedAgent = core.loadAgentDefinitionsForCwd(cwd).get(agent.exportName);
+  const registry = core.loadAgentDefinitionsForCwd(cwd);
+  const loadedAgent = registry.get(agent.exportName);
   assert.deepEqual(loadedAgent.tools, []);
   assert.deepEqual(loadedAgent.mcp, []);
   assert.deepEqual(loadedAgent.skills, [skill.exportName]);
   assert.equal(loadedAgent.pluginName, preview.pluginName);
+  const { resolveAgentTypeOverrides } =
+    await import("../packages/core/dist/tool-system/builtin/agent.js");
+  const spawnOverrides = resolveAgentTypeOverrides(agent.exportName, registry);
+  assert.deepEqual(spawnOverrides.skillAllowlist, [`${preview.pluginName}:${skill.exportName}`]);
+  assert.deepEqual(spawnOverrides.toolAllowlist, []);
+  assert.deepEqual(spawnOverrides.mcpAllowlist, []);
   const report = JSON.parse(fs.readFileSync(join(output, "export-report.json"), "utf8"));
   assert.equal(report.schemaVersion, 1);
   for (const file of report.files)
@@ -175,7 +182,7 @@ try {
   const failed = join(root, "failed.plugin");
   let injected = false;
   fs.fsyncSync = (fd) => {
-    if (!injected && fs.fstatSync(fd).isDirectory()) {
+    if (!injected && (process.platform === "win32" || fs.fstatSync(fd).isDirectory())) {
       injected = true;
       put(join(failed, "unknown.txt"), "PRESERVE_UNKNOWN");
       throw Object.assign(new Error("fixture EIO"), { code: "EIO" });
@@ -197,7 +204,9 @@ try {
       bytes: preview.totalBytes,
       selectedSupport: true,
       originalLoaders: true,
-      denyAlllistsPreserved: true,
+      agentDenyAllListsPreserved: true,
+      pluginAgentSpawnNamespace: true,
+      posixPayloadDirectoryBarrier: process.platform !== "win32",
       sourceReplacementFrozen: true,
       forbiddenReads,
       eioPreservesUnknown: true,

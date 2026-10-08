@@ -78,7 +78,11 @@ function staticSkill(raw: string, name: string): string {
       (Array.isArray(tools) && tools.every((item) => typeof item === "string"))
     )
   )
-    throw new Error("Skill tool restrictions cannot be faithfully exported");
+    throw new Error("Skill tool policy cannot be faithfully exported");
+  if ((typeof tools === "string" && tools.trim()) || (Array.isArray(tools) && tools.length))
+    throw new Error(
+      "non-empty Skill allowed-tools can pre-approve tools in CC; static export blocks this grant",
+    );
   for (const field of ["model", "argument-hint", "license", "compatibility"]) {
     if (fm[field] !== undefined && typeof fm[field] !== "string")
       throw new Error("Skill frontmatter field has an unsupported value");
@@ -87,10 +91,14 @@ function staticSkill(raw: string, name: string): string {
     if (fm[field] !== undefined && typeof fm[field] !== "boolean")
       throw new Error("Skill invocation restriction has an unsupported value");
   }
-  if (JSON.stringify(tools ?? []).includes("mcp__"))
-    throw new Error("Skill MCP tool restrictions have no faithful static mapping");
-  // Preserve every supported policy field, including explicit empty allowlists.
-  return `---\n${stringifyYaml({ ...fm, name }).trimEnd()}\n---\n${raw.slice(match[0].length)}`;
+  const body = raw.slice(match[0].length);
+  if (/!`/.test(body) || /(?:^|\n)[ \t]*(?:`{3,}|~{3,})!/.test(body))
+    throw new Error(
+      "Skill body contains a CC dynamic command marker; static export never executes or removes it",
+    );
+  // Empty Skill tool policy is preserved without claiming it denies tools.
+  // Agent allowlists have a different contract and are handled separately.
+  return `---\n${stringifyYaml({ ...fm, name }).trimEnd()}\n---\n${body}`;
 }
 
 export function safeExportRelativePath(path: string): boolean {
@@ -226,7 +234,7 @@ export function previewProfilePluginExport(
   if (selection.textFileIds.some((id) => !offeredText.has(id)))
     throw new Error("supporting text selection is stale or not part of a selected Skill");
   const losses = [
-    "Static CodeShell / CC-lineage directory package only. No Codex compatibility or equivalent Profile behavior is promised.",
+    "CodeShell static plugin in CC directory layout. Only the existing CodeShell installer/loaders are verified; CC execution, Codex compatibility and equivalent Profile behavior are not promised.",
     "Review every selected text for secrets and private paths. Only explicitly selected static text is copied; scripts/assets and external references are not resolved.",
     "Profile activation, base preset, always-on instruction injection and host permission settings are not reproduced. Unspecified Agent allowlists keep their existing inherit semantics on the receiving host; explicit empty lists remain empty.",
     `Not exported: ${profile.plugins.length} plugin references, ${profile.mcp.length} MCP references, ${profile.requires?.skills.length ?? 0} Skill acquisition requirements, ${profile.requires?.tools.length ?? 0} external-tool requirements. No dependency is fetched or installed.`,
@@ -235,7 +243,8 @@ export function previewProfilePluginExport(
     selection.includeInstruction
       ? "Main instruction is included only as docs/profile-instructions.md reference text; it is not injected or automatically loaded."
       : "Main instruction is omitted (default).",
-    "Component names are mapped deterministically. References embedded in prose are not rewritten. Model/tool/sandbox availability depends on the receiving host.",
+    "Component names are mapped deterministically. References embedded in prose are not rewritten. CodeShell Agent tools/skills/mcp/sandbox fields may not impose the same constraints on other hosts; model/tool/sandbox availability depends on the receiving host.",
+    "CC dynamic context markers and non-empty Skill allowed-tools pre-approval are blocked. CodeShell does not apply that Skill pre-approval; empty Skill policy is not a deny-tools guarantee. Real CC runtime behavior has not been tested. References: https://code.claude.com/docs/en/skills#inject-dynamic-context and https://code.claude.com/docs/en/skills#pre-approve-tools-for-a-skill",
   ];
   const canExport =
     sources.some((item) => item.component.selected && !item.component.blocked) &&
@@ -244,11 +253,11 @@ export function previewProfilePluginExport(
     add("docs/profile-instructions.md", profile.mainInstruction);
   add(
     ".claude-plugin/plugin.json",
-    `${JSON.stringify({ name: pluginName, version: "1.0.0", description: "Reviewed static components exported from a CodeShell Profile" }, null, 2)}\n`,
+    `${JSON.stringify({ name: pluginName, version: "1.0.0", description: "Reviewed static CodeShell components (CC directory layout)" }, null, 2)}\n`,
   );
   add(
     "README.md",
-    `# ${pluginName}\n\nA reviewed static CodeShell / CC-lineage plugin directory.\n\n${losses.map((loss) => `- ${loss}`).join("\n")}\n\nSee export-report.json for component mappings, exclusions and SHA-256 hashes. Import using the existing local-plugin preview, then explicitly approve installation. Export does not install or activate anything.\n`,
+    `# ${pluginName}\n\nA reviewed CodeShell static plugin (CC directory layout).\n\n${losses.map((loss) => `- ${loss}`).join("\n")}\n\nSee export-report.json for component mappings, exclusions and SHA-256 hashes. Import using the existing CodeShell local-plugin preview, then explicitly approve installation. Export does not install or activate anything.\n`,
   );
   const report = {
     schemaVersion: 1,

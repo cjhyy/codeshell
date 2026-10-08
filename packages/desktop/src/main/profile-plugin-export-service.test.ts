@@ -26,6 +26,7 @@ import {
   ProfilePluginExportReviews,
   writeProfilePluginSnapshot,
 } from "./profile-plugin-export-service.js";
+import { resolveAgentTypeOverrides } from "../../../core/src/tool-system/builtin/agent.js";
 
 let root: string, home: string, cwd: string;
 let previous: Record<string, string | undefined>;
@@ -217,6 +218,39 @@ describe("reviewed static Profile plugin export", () => {
       "multiple Agent",
     );
   });
+  test.each([
+    "inline !`echo NEVER_EXECUTE`",
+    "```!\necho NEVER_EXECUTE\n```",
+    "~~~!\necho NEVER_EXECUTE\n~~~",
+    "literal example of !`command`",
+  ])("blocks dynamic CC Skill context without executing or deleting text: %s", (body) => {
+    skill("chosen", skillText.replace("REVIEWED_SKILL_BODY", body));
+    const snapshot = choose();
+    expect(snapshot.canExport).toBe(false);
+    expect(snapshot.components[0].blocked).toContain("dynamic command marker");
+    expect(snapshot.files.some((file) => file.path.endsWith("SKILL.md"))).toBe(false);
+  });
+  test.each(["[Read]", "Read, Write", "[mcp__private__read]"])(
+    "blocks non-empty Skill pre-approved tool grants %s",
+    (policy) => {
+      skill("chosen", skillText.replace("allowed-tools: []", `allowed-tools: ${policy}`));
+      const snapshot = choose();
+      expect(snapshot.canExport).toBe(false);
+      expect(snapshot.components[0].blocked).toContain("pre-approve");
+    },
+  );
+  test.each(["[]", '""'])(
+    "retains empty Skill policy %s without a deny-tools promise",
+    (policy) => {
+      skill("chosen", skillText.replace("allowed-tools: []", `allowed-tools: ${policy}`));
+      const snapshot = choose();
+      expect(snapshot.canExport).toBe(true);
+      expect(snapshot.files.find((file) => file.path.endsWith("SKILL.md"))?.text).toContain(
+        `allowed-tools: ${policy}`,
+      );
+      expect(snapshot.losses.join(" ")).toContain("not a deny-tools guarantee");
+    },
+  );
   test.skipIf(process.platform === "win32")(
     "qualified Skill collision cannot silently substitute a plugin for the runtime's local Skill",
     () => {
@@ -406,5 +440,12 @@ describe("reviewed static Profile plugin export", () => {
     expect(get("deny").mcp).toEqual([]);
     expect(get("limited").skills).toEqual([snapshot.components[0].exportName]);
     expect(get("limited").pluginName).toBe(snapshot.pluginName);
+    expect(resolveAgentTypeOverrides(get("limited").name, agents).skillAllowlist).toEqual([
+      `${snapshot.pluginName}:${snapshot.components[0].exportName}`,
+    ]);
+    expect(resolveAgentTypeOverrides(get("deny").name, agents).toolAllowlist).toEqual([]);
+    expect(resolveAgentTypeOverrides(get("deny").name, agents).skillAllowlist).toEqual([]);
+    expect(resolveAgentTypeOverrides(get("deny").name, agents).mcpAllowlist).toEqual([]);
+    expect(resolveAgentTypeOverrides(get("default").name, agents).skillAllowlist).toBeUndefined();
   });
 });

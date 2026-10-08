@@ -202,7 +202,7 @@ export const settingsNs = {
           projectRequired: "静态插件导出需要选中已有项目或会话，以确定组件来源。",
           title: "导出静态插件 · {name}",
           description:
-            "选择并审阅静态 Skill / Agent，另存为新的 CodeShell / CC 目录包。不会安装或激活；不保证与数字人权限、记忆、常驻指令或 Codex 等价。",
+            "选择并审阅静态 Skill / Agent，另存为 CodeShell 静态插件（CC 目录格式）。不会安装或激活；未验收 CC 执行，不保证其他宿主保留 Agent 权限，也不保证数字人记忆、常驻指令或 Codex 兼容。",
           working: "正在准备或保存已审阅内容…",
           components: "明确选择要导出的组件",
           empty: "没有可导出的 Skill / Agent。可继续使用原有 JSON 定义导出。",
@@ -1165,7 +1165,7 @@ export const settingsNs = {
             "Select an existing project or session to resolve static plugin component sources.",
           title: "Export static plugin · {name}",
           description:
-            "Select and review static Skills / Agents, then save a new CodeShell / CC directory package. Nothing is installed or activated; Profile permissions, memory, always-on instructions and Codex compatibility are not promised.",
+            "Select and review static Skills / Agents, then save a CodeShell static plugin (CC directory layout). Nothing is installed or activated. CC execution is untested; other hosts may not retain Agent permissions. Profile memory, always-on instructions and Codex compatibility are not promised.",
           working: "Preparing or saving reviewed content…",
           components: "Explicitly select components",
           empty:
