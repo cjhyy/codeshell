@@ -8,7 +8,8 @@
 - `@cjhyy/code-shell-link` 提供授权方式目录及单个当前步骤；Host 发布
   `capabilities.authorizationSteps: 1`，旧客户端仍可使用原有授权 API。
 - Desktop 与 Hub Web 使用同一个浏览器安全 controller 和步骤组件。Token、CLI 会话、
-  设备码与远端网页授权均接入统一任务；平台适配器分别管理原生窗口和网页跳转。
+  设备码与远端网页授权均接入统一任务；Desktop 网页授权使用系统浏览器和本地回调，
+  避免内置窗口限制服务商的二次验证；Web 平台适配器管理网页跳转。
 - Host 新增 `POST /api/v1/links/authorizations` 和
   `POST /api/v1/links/authorizations/:id/responses`，保留查询和取消入口。步骤提交绑定
   owner、项目、目标连接 revision 和 step ID；查询不触发绑定或重复授权。

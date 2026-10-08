@@ -359,11 +359,15 @@ export function LinkConnectionDialog({
 
 function authorizationLabels(lang: "zh" | "en"): Partial<LinkAuthorizationLabels> {
   return lang === "zh"
-    ? { submit: "验证并连接" }
+    ? {
+        submit: "验证并连接",
+        openPage: "在系统浏览器中继续授权",
+        waitingBrowser: "请在系统浏览器中完成登录、二次验证和授权。完成后会自动回到 CodeShell。",
+      }
     : {
-        openPage: "Open authorization page",
+        openPage: "Continue in your browser",
         waitingBrowser:
-          "Complete authorization in the provider window. This connection will be confirmed automatically.",
+          "Complete sign-in, two-factor verification, and authorization in your browser. CodeShell will return automatically when the connection is saved.",
         deviceInstruction: "Enter this code on the authorization page:",
         copy: "Copy code",
         submit: "Verify and connect",
