@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import { lstatSync } from "node:fs";
+import { readBoundedFile } from "../store.js";
 import { z } from "zod";
 import { mutateJsonFile } from "@cjhyy/code-shell-core/extension";
 import { VERDICT_POLICY_SUITE_VERSION } from "./verdict-policy.js";
@@ -313,4 +315,22 @@ export function freezeDataset(
   });
   if (!outcome) throw new Error(`freezing dataset ${datasetHash} produced no result`);
   return { ok: true, path, ...outcome };
+}
+
+/** Recompute the complete frozen manifest; self-reported hash fields are insufficient. */
+export function readFrozenDataset(labRootDir: string, datasetHash: string): DatasetManifest {
+  hashSchema.parse(datasetHash);
+  for (const path of [
+    labRootDir,
+    join(labRootDir, "datasets"),
+    join(labRootDir, "datasets", datasetHash),
+  ]) {
+    const info = lstatSync(path);
+    if (info.isSymbolicLink() || !info.isDirectory())
+      throw new Error("optimization_lab: unsafe dataset directory");
+  }
+  const path = join(labRootDir, "datasets", datasetHash, "manifest.json");
+  const text = readBoundedFile(path, MAX_DATASET_BYTES);
+  if (text === undefined) throw new Error("optimization_lab: frozen dataset missing");
+  return readManifest(text, datasetHash, path);
 }
