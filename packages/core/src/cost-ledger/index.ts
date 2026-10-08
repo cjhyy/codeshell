@@ -1,6 +1,7 @@
 export { UsageLedger } from "./store.js";
 export {
   currentUsageOwner,
+  currentUsageAttempt,
   withUsageOwner,
   withUsagePurpose,
   withUsageAttempt,

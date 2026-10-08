@@ -40,9 +40,7 @@ export async function createLLMClient(
   }
 
   const client = new Cls(config, defaults);
-  const createMessage = client.createMessage.bind(client);
-  client.createMessage = (options) =>
-    client.withUsageAccounting(options, () => createMessage(options));
+  client.enableUsageAccounting();
   return client;
 }
 

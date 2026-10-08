@@ -971,6 +971,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
     ipcRenderer.invoke("logs:tail", bucket, lines),
+  getUsageSummary: (query?: import("@cjhyy/code-shell-core").UsageQuery) =>
+    ipcRenderer.invoke("usage:summary", query),
   listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   ...createSessionTranscriptApi(ipcRenderer),

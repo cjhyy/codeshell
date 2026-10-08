@@ -13,6 +13,8 @@ import {
   withUsagePurpose,
 } from "../cost-ledger/context.js";
 
+const accountingWrappers = new WeakSet<(options: CreateMessageOptions) => Promise<LLMResponse>>();
+
 function emptyUsageTracker(): LLMUsageTracker {
   return {
     records: [],
@@ -69,11 +71,22 @@ export abstract class LLMClientBase {
     this.imageDetail = defaults?.imageDetail;
     this.fetch = usageTrackingFetch(defaults?.fetch ?? globalThis.fetch);
     this.initClient();
+    this.enableUsageAccounting();
   }
 
   protected abstract initClient(): void;
 
   abstract createMessage(options: CreateMessageOptions): Promise<LLMResponse>;
+
+  /** Also supports directly constructed SDK clients; the factory rechecks class fields. */
+  enableUsageAccounting(): void {
+    const original = this.createMessage;
+    if (typeof original !== "function" || accountingWrappers.has(original)) return;
+    const wrapped = (options: CreateMessageOptions) =>
+      this.withUsageAccounting(options, () => original.call(this, options));
+    accountingWrappers.add(wrapped);
+    this.createMessage = wrapped;
+  }
 
   protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions, reported = true): void {
     if (options?.requestVisible !== false) {

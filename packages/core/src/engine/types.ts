@@ -234,6 +234,8 @@ export interface EngineHookConfig {
 }
 
 export interface EngineResult {
+  /** Physical request accounting identity of this execution; replay keeps it. */
+  runId?: string;
   text: string;
   reason: TerminalReason;
   completionKind?: TurnCompletionKind;

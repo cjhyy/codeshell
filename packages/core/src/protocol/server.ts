@@ -2073,6 +2073,7 @@ export class AgentServer {
           sessionId: result.sessionId ?? sid,
           turnCount: result.turnCount,
           usage: result.usage,
+          ...(result.runId ? { runId: result.runId } : {}),
           ...(result.extensions ? { extensions: result.extensions } : {}),
           petWorkDelegation: result.petWorkDelegation,
         };
@@ -2239,6 +2240,7 @@ export class AgentServer {
         sessionId: result.sessionId,
         turnCount: result.turnCount,
         usage: result.usage,
+        ...(result.runId ? { runId: result.runId } : {}),
         ...(result.extensions ? { extensions: result.extensions } : {}),
         petWorkDelegation: result.petWorkDelegation,
       };

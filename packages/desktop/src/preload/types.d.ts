@@ -1697,6 +1697,9 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
   renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
   /** Session receipts are opt-in; automation migration consumes legacy managed runs only. */
+  getUsageSummary(
+    query?: import("@cjhyy/code-shell-core").UsageQuery,
+  ): Promise<import("@cjhyy/code-shell-core").UsageSummary>;
   listRuns(options?: { includeSessions?: boolean }): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;

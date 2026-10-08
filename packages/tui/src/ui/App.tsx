@@ -27,7 +27,7 @@ import {
 } from "./components/VirtualMessageList.js";
 import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mode.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
-import { costTracker, formatUsageCost, type UsageSummary } from "@cjhyy/code-shell-core";
+import { formatUsageCost, type UsageSummary } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
 import type { ProviderManagerEntry } from "./components/ModelManager.js";

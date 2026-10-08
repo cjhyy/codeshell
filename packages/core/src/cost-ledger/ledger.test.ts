@@ -237,3 +237,183 @@ test("streamed billing survives a consumer error and a later fallback gets its o
   expect(ledger.summary().promptTokens).toBe(200);
   expect(ledger.summary().unknownUsageRequests).toBe(0);
 });
+
+test("disabled nested billing clears the parent's HTTP attempt context", async () => {
+  const { withUsageAttempt, usageTrackingFetch, recordOwnedUsage } = await import("./context.js");
+  const ledger = new UsageLedger();
+  const tracked = usageTrackingFetch((async () => jsonResponse()) as typeof fetch);
+  await withUsageOwner(ledger.owner("parent"), () =>
+    withUsageAttempt(identity, true, async () => {
+      await tracked("http://localhost/parent");
+      recordOwnedUsage(identity, usage);
+      await withUsageAttempt(identity, false, () => tracked("http://localhost/unbilled"));
+    }),
+  );
+  expect(ledger.summary().requests).toBe(1);
+  expect(ledger.summary().unknownUsageRequests).toBe(0);
+});
+
+test("identical SIDs in different identity stores stay separate in one Runtime", () => {
+  const ledger = new UsageLedger();
+  for (const scope of ["alice", "bob"]) {
+    const receipt = ledger.begin(ledger.owner("same", undefined, [], "main", scope), identity);
+    ledger.settle(receipt, usage);
+    ledger.finish(receipt, "completed");
+  }
+  expect(ledger.summary().requests).toBe(2);
+  expect(ledger.summary().bySession).toHaveLength(2);
+  expect(ledger.summary({ scope: "session", sessionId: "same" }, "alice").requests).toBe(1);
+  expect(ledger.summary({ scope: "session", sessionId: "same" }, "bob").requests).toBe(1);
+});
+
+test("direct SDK construction accounts real localhost retry attempts and explicitly reported zero usage", async () => {
+  const { OpenAIClient } = await import("../llm/providers/openai.js");
+  const { currentUsageAttempt } = await import("./context.js");
+  const ledger = new UsageLedger();
+  const ids: string[] = [];
+  let calls = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch() {
+      calls++;
+      if (calls === 1)
+        return new Response('{"error":{"message":"retry"}}', {
+          status: 500,
+          headers: { "content-type": "application/json", "retry-after-ms": "1" },
+        });
+      return jsonResponse({ usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } });
+    },
+  });
+  try {
+    const client = new OpenAIClient(
+      { ...identity, apiKey: "synthetic", baseUrl: `http://127.0.0.1:${server.port}/v1` },
+      {
+        retryMaxAttempts: 1,
+        fetch: ((...args: Parameters<typeof fetch>) => {
+          ids.push(currentUsageAttempt()!.requestId);
+          return fetch(...args);
+        }) as typeof fetch,
+      },
+    );
+    await withUsageOwner(ledger.owner("source"), () => client.createMessage(options));
+    expect(calls).toBe(2);
+    expect(new Set(ids).size).toBe(2);
+    expect(ledger.summary().requests).toBe(2);
+    expect(ledger.summary().unknownCostRequests).toBe(1);
+    expect(ledger.summary().unknownUsageRequests).toBe(1);
+    expect(ledger.summary().knownEstimatedCostUsd).toBe(0);
+  } finally {
+    await server.stop(true);
+  }
+});
+
+test("two processes cannot overwrite an external receipt after both observe it absent", async () => {
+  const storageDir = directory();
+  const gate = join(storageDir, "gate");
+  const modulePath = new URL("./store.ts", import.meta.url).pathname;
+  const code = `import { UsageLedger } from ${JSON.stringify(modulePath)};
+    import { existsSync, writeFileSync } from 'node:fs';
+    const [root, ready, gate] = process.argv.slice(-3);
+    const ledger = new UsageLedger({storageDir:root});
+    const original = ledger.begin.bind(ledger);
+    ledger.begin = (...args) => {
+      writeFileSync(ready, 'ready');
+      const until = Date.now()+5000;
+      while (!existsSync(gate)) { if(Date.now()>until) throw new Error('barrier timeout'); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,10); }
+      return original(...args);
+    };
+    try { ledger.recordExternal(ledger.owner('same'), {provider:'openai',model:'gpt-4o',source:'receipt-fixture',requestId:'one',usage:{promptTokens:100,completionTokens:20,totalTokens:120}}); console.log('written'); }
+    catch(error) { console.log(error.message); }`;
+  const ready = [join(storageDir, "one.ready"), join(storageDir, "two.ready")];
+  const processes = ready.map((file) =>
+    Bun.spawn([process.execPath, "--eval", code, storageDir, file, gate], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
+  const { existsSync } = await import("node:fs");
+  try {
+    const deadline = Date.now() + 5000;
+    while (!ready.every(existsSync)) {
+      if (Date.now() > deadline)
+        throw new Error("children did not reach the external write barrier");
+      await Bun.sleep(10);
+    }
+    writeFileSync(gate, "go");
+    const outputs = await Promise.all(
+      processes.map(async (child) => {
+        const out = await new Response(child.stdout).text();
+        const err = await new Response(child.stderr).text();
+        expect(await child.exited).toBe(0);
+        expect(err).toBe("");
+        return out.trim();
+      }),
+    );
+    expect(outputs.sort()).toEqual(["External usage identity conflict", "written"]);
+    expect(new UsageLedger({ storageDir }).summary({ scope: "store" }).requests).toBe(1);
+  } finally {
+    for (const child of processes) child.kill();
+  }
+});
+
+test("legacy coverage gaps remain explicit after the Session reference is saved and restored", () => {
+  const ledger = new UsageLedger();
+  ledger.noteHistoricalGap("legacy");
+  bill(ledger, "legacy");
+  const reference = ledger.sessionState("legacy");
+  const restarted = new UsageLedger();
+  expect(restarted.adoptSession("legacy", reference)).toBe(true);
+  expect(restarted.summary({ scope: "session", sessionId: "legacy" }).partial).toBe(true);
+});
+
+test("copied Session references cannot adopt the same SID in another storage scope", () => {
+  const storageDir = directory();
+  const ledger = new UsageLedger({ storageDir });
+  const owner = ledger.owner("same", undefined, [], "main", "/private/session-scope-A");
+  const receipt = ledger.begin(owner, identity);
+  ledger.settle(receipt, usage);
+  ledger.finish(receipt, "completed");
+  const reference = ledger.sessionState("same", "/private/session-scope-A");
+  expect(reference.sessionScopeId).toMatch(/^[a-f0-9]{64}$/);
+  expect(JSON.stringify(reference)).not.toContain("/private/session-scope-A");
+  expect(ledger.adoptSession("same", reference, "/private/session-scope-B")).toBe(false);
+  expect(
+    ledger.summary({ scope: "session", sessionId: "same" }, "/private/session-scope-B").requests,
+  ).toBe(0);
+  const restarted = new UsageLedger({ storageDir });
+  expect(
+    restarted.adoptSession("same", structuredClone(reference), "/private/session-scope-B"),
+  ).toBe(false);
+  expect(
+    restarted.adoptSession("same", structuredClone(reference), "/private/session-scope-A"),
+  ).toBe(true);
+  expect(
+    restarted.summary({ scope: "session", sessionId: "same" }, "/private/session-scope-A").requests,
+  ).toBe(1);
+  const unpinned = { ...reference, sessionScopeId: undefined };
+  expect(
+    new UsageLedger({ storageDir }).adoptSession("same", unpinned, "/private/session-scope-A"),
+  ).toBe(false);
+});
+
+test("public ledger queries reject malformed scope, ownership and pagination before scanning", () => {
+  const ledger = new UsageLedger({ storageDir: directory() });
+  for (const invalid of [
+    null,
+    [],
+    { scope: "bogus" },
+    { scope: null },
+    { sessionId: 7 },
+    { sessionId: "" },
+    { includeChildren: "true" },
+    { includeChildren: 1 },
+    { limit: null },
+    { cursor: 42 },
+    { since: 2, until: 1 },
+  ]) {
+    expect(() => ledger.summary(invalid as never)).toThrow("Invalid usage query");
+  }
+  expect(() => ledger.summary({ scope: "session" })).toThrow("Session is required");
+  expect(ledger.summary().persistenceErrors).toBe(0);
+});

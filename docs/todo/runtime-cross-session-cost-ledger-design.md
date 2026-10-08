@@ -1,9 +1,9 @@
 # Runtime 跨 Session 成本账本设计
 
-状态：待实施。2026-10-09 基于代码审计制定；AgentModule Phase C 的 PR #62 独立交付。
+状态：已实施，2026-10-09。实现、验证和限制见 [交付记录](runtime-cross-session-cost-ledger-delivery.md)；AgentModule Phase C 的 PR #62 独立交付。
 本设计记录真实请求费用与归属，不承担 Phase D 的请求参数编译或验证。
 
-## 需要解决的实际问题
+## 实施前审计的问题（2026-10-09）
 
 - `LLMClientBase.onUsage` 是进程全局单个 callback，仅携带 model 和 tokens，没有 Runtime、
   Session、run 或请求身份。`EngineRuntime.costTracker` 当前没有接入实际请求。
@@ -18,7 +18,7 @@
 
 ## 账本与身份
 
-每个真实 provider attempt 有随机、稳定且不复用的 `requestId`。费用 receipt 包含：
+内置 provider 的 SDK 每次调用配置的 underlying `fetch` 都获得随机、稳定且不复用的 `requestId`。任意自定义 fetch 内部的网络重试不可观测，不宣称这些重试已被单独记录。费用 receipt 包含：
 
 - schema version、requestId、storage namespace、runtime instanceId。
 - owning sessionId、runId（可空）、parent sessionId/祖先归属；不从全局 logger fallback 猜 SID。
@@ -34,9 +34,9 @@
 或重启发现未结算的旧 attempt，保留 unknown，不补零或猜测费用。先获得 usage 再发生解析
 失败时，已知 usage 不能被后续 error 分支覆盖。流式 fallback 的新请求拥有新 ID，分别计费。
 
-Provider 的重试循环里，每次真正调用 SDK 建立新的 attempt；纯本地参数失败不建立收费请求。
-内置 OpenAI/Anthropic 均在真实 SDK 边界接入。第三方 provider 使用公开的 usage accounting
-helper；仅返回 aggregate usage 的兼容 provider 要明确覆盖级别，不能宣称有物理重试证据。
+SDK 的透明重试每次调用配置的 underlying fetch 时建立新的 attempt；纯本地参数失败不建立收费请求。
+内置 OpenAI/Anthropic 在该 fetch 边界接入。第三方 provider 若只调用 recordUsage 而没有使用
+被包装的 fetch，只能留下已报告 usage 的兼容 receipt，不能宣称有独立重试或全部失败尝试的证据。
 
 ## Runtime、Session 与跨进程存储
 
@@ -55,7 +55,9 @@ Receipt 文件是 source of truth，单条原子发布/更新，pending 到 repo
 读取有日期/分页/条数上限并返回覆盖信息；索引是可重建加速数据，不能成为丢账的单点。
 若需要锁，临界区只做同步有界读改写，不持锁 await；遵循仓库现有锁争用约束。
 
-Session costState 仅保存 versioned ledger reference/摘要，不能 restore 整个 Runtime tracker。
+Session costState 仅保存 versioned ledger reference/摘要，包含随机 accountingSessionId 与不可逆
+sessionScopeId（Session storage scope 的 SHA256）。adopt 必须同时匹配 namespace、SID 与 scope pin；
+无 pin 的旧引用和复制到另一 storage scope 的引用拒绝导入，并标记历史覆盖不足。不能 restore 整个 Runtime tracker。
 resume、重复输入 replay 和 UI reload 读取相同 receipt；不重灌历史累计 totals。fork 新建
 会话，不复制已收费 request identity。旧 costState 不具备可靠 Session 归属，显示历史覆盖
 不足/兼容 counters，不自动将它迁为另一份已知账单。
@@ -93,7 +95,8 @@ request count、tokens/cache tokens、Session/模型/用途分组、scope 和覆
 协议只返回安全 summary，不返回磁盘路径、密钥或原始请求内容。
 
 TUI `/cost` 与 footer 使用 owning Session/Runtime 的 summary。Desktop 在现有活动记录、
-运行详情/用量区展示费用覆盖与跨 Session 汇总；Web 使用已有运行/用量入口。沿用 preload/
+运行详情/用量区展示费用覆盖与跨 Session 汇总。独立 Web 当前没有运行/用量页面，此次只提供
+可复用的协议查询，未新增 Web 页面。沿用 preload/
 host bridge 边界和 i18n，不增加侧栏、任务中心或新的业务主导航。
 
 ## 实施范围与验收
@@ -102,7 +105,7 @@ host bridge 边界和 i18n，不增加侧栏、任务中心或新的业务主导
 `llm/client-base.ts`、LLM types/内置 provider usage 边界、model facade、run accounting、
 session open/finalize、auxiliary/title/subagent、Session persistence 与 protocol query。
 Host 调整 stdio/TCP/TUI Runtime wiring，Desktop 使用现有 runs service/preload/RunsView/i18n，
-Web 只修改现有用量消费。Phase D 不混入该 PR。
+独立 Web 沿用现有协议客户端，不增加页面。Phase D 不混入该 PR。
 
 主要验收：
 

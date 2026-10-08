@@ -246,6 +246,7 @@ export interface RunParams {
 }
 
 export interface RunResult {
+  runId?: string;
   text: string;
   reason: TerminalReason;
   completionKind?: import("../types.js").TurnCompletionKind;

@@ -386,6 +386,7 @@ export class AgentClient {
     } else if (type === "permission_set") {
       params.value = arg;
     } else if (
+      type === "usage" ||
       type === "provider_add" ||
       type === "model_add" ||
       type === "provider_refresh" ||

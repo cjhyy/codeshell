@@ -43,6 +43,12 @@ function textId(value: unknown): value is string {
     !/[\x00-\x1f]/.test(value)
   );
 }
+/** A stable, irreversible pin; persisted references never expose the Session storage path. */
+function sessionScopeId(scope: string): string {
+  if (typeof scope !== "string" || !scope || scope.length > 16_384 || scope.includes("\0"))
+    throw new Error("Invalid usage Session scope");
+  return createHash("sha256").update(scope).digest("hex");
+}
 function normalizeUsage(value: unknown): TokenUsage | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const usage = value as TokenUsage;
@@ -113,6 +119,11 @@ export class UsageLedger {
   private readonly sessionAccountingIds = new Map<string, string>();
   private persistenceErrors = 0;
   private invalidReceipts = 0;
+  private readonly historicalGaps = new Set<string>();
+
+  noteHistoricalGap(sessionId: string, sessionScope = "default"): void {
+    this.historicalGaps.add(JSON.stringify([sessionScope, sessionId]));
+  }
 
   noteAccountingFailure(): void {
     this.persistenceErrors++;
@@ -171,8 +182,14 @@ export class UsageLedger {
   begin(
     owner: UsageOwner,
     identity: UsageIdentity,
-    external?: { source: string; requestId: string },
+    external?: { source: string; requestId: string; usage?: TokenUsage },
   ): UsageReceipt {
+    if (
+      owner.ledger !== this ||
+      ![identity.provider, identity.model].every(textId) ||
+      (identity.providerKind !== undefined && !textId(identity.providerKind))
+    )
+      throw new Error("Invalid usage identity");
     const requestId = createHash("sha256")
       .update(
         JSON.stringify([
@@ -203,6 +220,12 @@ export class UsageLedger {
       estimatedCostUsd: null,
       pricing: null,
     };
+    if (external) {
+      receipt.usage = normalizeUsage(external.usage);
+      if (receipt.usage) Object.assign(receipt, estimateReceipt(receipt, receipt.usage));
+      receipt.outcome = "completed";
+      receipt.settledAt = this.now();
+    }
     if (external && this.persist(receipt, true) === "exists")
       throw new Error("External usage identity conflict");
     this.records.set(requestId, receipt);
@@ -227,9 +250,18 @@ export class UsageLedger {
   }
 
   recordExternal(owner: UsageOwner, input: ExternalBilledUsage): UsageReceipt {
+    return this.recordExternalWithStatus(owner, input).receipt;
+  }
+
+  recordExternalWithStatus(
+    owner: UsageOwner,
+    input: ExternalBilledUsage,
+  ): { receipt: UsageReceipt; recorded: boolean } {
     if (
       ![input.source, input.requestId, input.provider, input.model].every(textId) ||
+      owner.ledger !== this ||
       input.source === "provider" ||
+      (input.providerKind !== undefined && !textId(input.providerKind)) ||
       (input.usage !== undefined && !normalizeUsage(input.usage))
     )
       throw new Error("Invalid external usage receipt");
@@ -247,12 +279,14 @@ export class UsageLedger {
         JSON.stringify(existing.usage) !== JSON.stringify(normalizeUsage(input.usage))
       )
         throw new Error("External usage identity conflict");
-      return structuredClone(existing);
+      return { receipt: structuredClone(existing), recorded: false };
     }
-    const receipt = this.begin(owner, input, { source: input.source, requestId: input.requestId });
-    this.settle(receipt, input.usage ?? null);
-    this.finish(receipt, "completed");
-    return structuredClone(receipt);
+    const receipt = this.begin(owner, input, {
+      source: input.source,
+      requestId: input.requestId,
+      usage: input.usage,
+    });
+    return { receipt: structuredClone(receipt), recorded: true };
   }
 
   sessionState(sessionId: string, sessionScope = "default"): Record<string, unknown> {
@@ -263,6 +297,10 @@ export class UsageLedger {
       namespace: this.namespace,
       sessionId,
       accountingSessionId: owner.accountingSessionId,
+      sessionScopeId: sessionScopeId(sessionScope),
+      historicalCoverageIncomplete:
+        this.historicalGaps.has(JSON.stringify([sessionScope, sessionId])) ||
+        this.persistenceErrors > 0,
       summary: this.summary({ scope: "session", sessionId }, sessionScope),
     };
   }
@@ -276,6 +314,7 @@ export class UsageLedger {
       reference.kind !== "usage-ledger" ||
       reference.namespace !== this.namespace ||
       reference.sessionId !== sessionId ||
+      reference.sessionScopeId !== sessionScopeId(sessionScope) ||
       typeof reference.accountingSessionId !== "string" ||
       !/^[a-f0-9-]{36}$/.test(reference.accountingSessionId)
     )
@@ -284,10 +323,22 @@ export class UsageLedger {
     const current = this.sessionAccountingIds.get(key);
     if (current && current !== reference.accountingSessionId) return false;
     this.sessionAccountingIds.set(key, reference.accountingSessionId);
+    if (reference.historicalCoverageIncomplete === true) this.historicalGaps.add(key);
     return true;
   }
 
   summary(query: UsageQuery = {}, sessionScope = "default"): UsageSummary {
+    if (
+      !query ||
+      typeof query !== "object" ||
+      Array.isArray(query) ||
+      (query.scope !== undefined && !["runtime", "session", "store"].includes(query.scope)) ||
+      (query.sessionId !== undefined && !textId(query.sessionId)) ||
+      (query.includeChildren !== undefined && typeof query.includeChildren !== "boolean") ||
+      (query.limit !== undefined && !Number.isSafeInteger(query.limit))
+    )
+      throw new Error("Invalid usage query");
+    sessionScopeId(sessionScope);
     const scope = query.scope ?? "runtime";
     if (scope === "session" && !textId(query.sessionId))
       throw new Error("Usage Session is required");
@@ -299,7 +350,9 @@ export class UsageLedger {
       (query.since !== undefined && (!Number.isFinite(query.since) || query.since < 0)) ||
       (query.until !== undefined && (!Number.isFinite(query.until) || query.until < 0)) ||
       (query.runId !== undefined && !textId(query.runId)) ||
-      (query.cursor !== undefined && !/^[a-f0-9]{64}$/.test(query.cursor))
+      (query.cursor !== undefined &&
+        (typeof query.cursor !== "string" || !/^[a-f0-9]{64}$/.test(query.cursor))) ||
+      (query.since !== undefined && query.until !== undefined && query.since > query.until)
     )
       throw new Error("Invalid usage query");
     const ids = new Set(this.records.keys());
@@ -358,7 +411,12 @@ export class UsageLedger {
       scope,
       ...(query.sessionId ? { sessionId: query.sessionId } : {}),
       includesChildren: query.includeChildren === true,
-      partial: partial || this.persistenceErrors > 0 || this.invalidReceipts > 0,
+      partial:
+        partial ||
+        this.persistenceErrors > 0 ||
+        this.invalidReceipts > 0 ||
+        (scope === "session" &&
+          this.historicalGaps.has(JSON.stringify([sessionScope, query.sessionId]))),
       persistenceErrors: this.persistenceErrors,
       invalidReceipts: this.invalidReceipts,
       scannedReceipts: selected.length,

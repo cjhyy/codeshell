@@ -113,7 +113,7 @@ export function recordOwnedUsage(identity: UsageIdentity, usage: TokenUsage | nu
   });
 }
 
-/** One receipt per actual HTTP attempt, including the SDK's own transparent retries. */
+/** One receipt per SDK call of configured fetch; retries hidden inside that fetch are unobservable. */
 export function usageTrackingFetch(underlying: typeof globalThis.fetch): typeof globalThis.fetch {
   return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
     const call = attempts.getStore();

@@ -1231,6 +1231,11 @@ export class Engine {
         "Cannot summarize an image-only context package without textual or tool facts",
       );
     }
+    if (sourceSessionId && this.config.costStore) {
+      const persisted = this.sessionManager.readSessionState(sourceSessionId)?.costState;
+      const legacy = persisted?.kind === "usage-ledger" ? persisted.legacyStore : persisted;
+      if (legacy !== undefined) this.config.costStore.restore(legacy);
+    }
     const billingOwner = this.usageOwnerForSession(
       sourceSessionId ?? "unattributed",
       undefined,
@@ -1840,6 +1845,7 @@ export class Engine {
           profile,
           getProfileReportedResults: () => profileReportedResults,
         });
+        finalized.runId = runId;
         if (options?.clientMessageId) {
           this.appendClientRunReceipt(session, options.clientMessageId, finalized);
         }
@@ -1853,6 +1859,7 @@ export class Engine {
         options,
         persistFinalRunState: (state) => this.persistFinalRunState(state),
       });
+      failed.runId = runId;
       if (options?.clientMessageId) {
         this.appendClientRunReceipt(session, options.clientMessageId, failed);
       }
@@ -2618,7 +2625,8 @@ export class Engine {
       this.runIds.get(session.state),
     );
     toolCtx.recordExternalBilledUsage = (input) => {
-      this.usageLedger.recordExternal(billedOwner, input);
+      const result = this.usageLedger.recordExternalWithStatus(billedOwner, input);
+      if (result.recorded && input.usage) recordExternalBilledUsage(input.usage);
     };
 
     // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
@@ -3414,7 +3422,13 @@ export class Engine {
       if (!this.sessionManager.exists(current)) break;
       const state = this.sessionManager.readSessionState(current);
       if (!state) break;
-      this.usageLedger.adoptSession(current, state.costState, this.sessionManager.getStorageDir());
+      const adopted = this.usageLedger.adoptSession(
+        current,
+        state.costState,
+        this.sessionManager.getStorageDir(),
+      );
+      if (!adopted && (state.costState != null || (state.tokenUsage?.totalTokens ?? 0) > 0))
+        this.usageLedger.noteHistoricalGap(current, this.sessionManager.getStorageDir());
       if (current !== sessionId) ancestors.push(current);
       current = state.parentSessionId;
     }
