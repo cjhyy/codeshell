@@ -4,10 +4,12 @@
  */
 /* global document, localStorage, structuredClone, window */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { confinedWorkerEnvironment } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
 import {
   captureRendererErrors,
   findCodeShellWindow,
@@ -32,6 +34,7 @@ const candidateBody = "Return a concise answer. Cite each source using [S1].\n";
 const requests = [];
 const rendererErrors = [];
 const upstreamErrors = [];
+const mainErrors = [];
 let app;
 let win;
 let stage = "initialize";
@@ -40,6 +43,9 @@ let releaseRequest;
 const gradingFile = join(isolated.home, "grading.json");
 const datasetFile = join(isolated.home, "dataset.json");
 const exportedDataset = join(isolated.home, "dataset-export.json");
+const guardLog = join(isolated.home, "network-guard.jsonl");
+const guardedMain = join(isolated.home, "guarded-main.mjs");
+const guardUrl = new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href;
 
 const dataset = {
   schemaVersion: 1,
@@ -113,6 +119,26 @@ async function json(file, value) {
   await writeFile(file, JSON.stringify(value, null, 2), { mode: 0o600 });
 }
 async function seed() {
+  // Electron GUI startup can discard NODE_OPTIONS. Load the test guard before
+  // the production Main, then use an explicit preload for its owned Node worker.
+  await writeFile(
+    guardedMain,
+    `import { app } from "electron";
+import children from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+app.setAppPath(${JSON.stringify(appDir)});
+await import(${JSON.stringify(guardUrl)});
+const spawn = children.spawn;
+children.spawn = function (command, args, options) {
+  if (args?.some((argument) => argument.includes("agent-server-stdio")))
+    args = ["--import", ${JSON.stringify(guardUrl)}, ...args];
+  return spawn.call(this, command, args, options);
+};
+syncBuiltinESMExports();
+await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)});
+`,
+    { mode: 0o600 },
+  );
   await mkdir(join(project, ".agents", "skills", skillName), { recursive: true });
   await writeFile(join(project, ".agents", "skills", skillName, "SKILL.md"), source);
   const now = Date.now();
@@ -171,7 +197,21 @@ async function seed() {
   });
 }
 async function launch() {
-  app = await launchCodeShellElectron({ appDir, ...isolated });
+  app = await launchCodeShellElectron({
+    appDir,
+    ...isolated,
+    mainEntry: guardedMain,
+    env: {
+      ...confinedWorkerEnvironment(process.env, isolated.home, new URL(endpoint).origin, guardUrl),
+      ...Object.fromEntries(
+        Object.keys(process.env)
+          .filter((key) => /^(https?_proxy|all_proxy|no_proxy)$/i.test(key))
+          .map((key) => [key, ""]),
+      ),
+      CODESHELL_COST_SMOKE_GUARD_LOG: guardLog,
+    },
+  });
+  app.process().stderr.on("data", (value) => mainErrors.push(String(value)));
   win = await findCodeShellWindow(app);
   rendererErrors.push(captureRendererErrors(win));
   await win.waitForFunction(() => !!window.codeshell?.optimizationLab);
@@ -207,10 +247,37 @@ async function installDialogs() {
   });
 }
 async function query(type, params = {}) {
-  return win.evaluate(
+  const result = await win.evaluate(
     ({ type, params, target }) =>
       window.codeshell.optimizationLab.query(type, { target, ...params }),
     { type, params, target },
+  );
+  await assertWorkerConfinement();
+  return result;
+}
+async function assertWorkerConfinement() {
+  const actual = await app.evaluate(() => ({
+    home: process.env.HOME,
+    workerPid: process
+      ._getActiveHandles()
+      .find((handle) =>
+        handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
+      )?.pid,
+  }));
+  assert.equal(actual.home, isolated.home, "Electron HOME is isolated before Core imports");
+  assert.ok(Number.isInteger(actual.workerPid), "Observe this app's known direct worker");
+  const records = (await readFile(guardLog, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.ok(
+    records.some(
+      (record) =>
+        record.pid === actual.workerPid &&
+        record.origin === new URL(endpoint).origin &&
+        record.homeId === createHash("sha256").update(isolated.home).digest("hex"),
+    ),
+    "The actual worker installed exact-origin network confinement before Core",
   );
 }
 async function until(read, message, timeout = 30000) {
@@ -457,6 +524,10 @@ async function importEvidenceOffline() {
   assert.ok(!preview.includes("CURRENT_STATE_NOT_A_HISTORICAL_MODEL"));
   assert.ok(preview.includes("historicalConfiguration"));
   await win.getByTestId("optimization-lab-import-evidence").click();
+  await until(
+    () => win.getByTestId("optimization-lab-import-evidence").isEnabled(),
+    "Cancelled native evidence import did not settle",
+  );
   assert.equal(requests.length, 0, "Cancelled evidence import never calls models");
   await app.evaluate(() => {
     globalThis.__labDialogs.accept = true;
@@ -794,6 +865,8 @@ try {
   );
 } catch (error) {
   console.error(`Optimization Lab E2E failed at ${stage}:`, error);
+  if (mainErrors.length)
+    console.error("Isolated Electron stderr:", mainErrors.join("").slice(-4000));
   if (upstreamErrors.length) console.error("Local fixture upstream failures:", upstreamErrors);
   if (win && !win.isClosed())
     console.error(

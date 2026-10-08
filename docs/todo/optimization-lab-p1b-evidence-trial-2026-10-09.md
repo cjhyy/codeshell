@@ -6,7 +6,7 @@
 
 在实验室材料区填写从活动记录复制的运行 ID（每行一个，最多 20 条）。支持 managed run ID 与 `session:<sessionId>:<receiptEventId>` 持久运行回执。Desktop main 只定位这些来源，先核对来源当前持久记录的项目 realpath，再打开该来源的 trace；不调用个人全历史扫描，不读取附件或 artifact 路径。能力包没有会话目录读取权。
 
-文件通过不跟随链接的有界 inode 读取，读取前后验证 inode、大小与修改时间。快照限 8 MiB，trace 取最多 8 MiB 的尾窗且丢弃不完整 JSONL 行；解析损坏、缺输入、窗口截断、最多 200 个事件或 50 个内容块的裁切均作为缺失/截断事实保留。每块最多 32 KiB UTF-8，整个 bundle 最多 2 MiB。正在变化的文件要求重新预览，不把读取竞争静默当完整证据。交错的其他提交文本不返回，无法精确归属的工具事件省略并注明缺失。
+读取期间持有来源 root 与运行目录的句柄，逐次复核 dev/ino 与 realpath；文件通过不跟随链接的有界 inode 读取，读取前后验证 inode、大小与修改时间，最后重读原快照并核对身份和项目绑定。快照限 8 MiB，trace 取最多 8 MiB 的尾窗且丢弃不完整 JSONL 行；解析损坏、缺输入、窗口截断、最多 200 个事件或 50 个内容块的裁切均作为缺失/截断事实保留。每块最多 32 KiB UTF-8，整个 bundle 最多 2 MiB。正在变化的文件要求重新预览，不把读取竞争静默当完整证据。交错的其他提交文本不返回，steerId 本身不证明属于所选回执，无法精确归属的纠正和工具事件省略并注明缺失。
 
 `EvidenceBundle` 固定版本、project key、导入时间、run/session/event IDs、内容类型、脱敏后 hash/字节数、原始块字节数、截断和脱敏规则记录、完整性缺失及 bundle hash。默认清除认证头、常见密钥、凭据字段、含凭据 URL、URL token 与 inline binary；这是启发式处理，不能保证发现自由文本中的全部密钥或个人信息，用户必须预览。Hash 检查能发现持久内容错配，不是外部来源签名或历史配置真实性证明。
 
@@ -31,5 +31,6 @@
 - 能力包/Host/renderer fixtures 覆盖脱敏、hash 篡改、项目越权、symlink、尾部截断、缺历史配置/metadata-only、交错提交隔离、预览取消/失效、同源组约束，以及新授权和固定正文/模型绑定。
 - 固定试用 fixture 覆盖零 optimizer 调用、原版/候选配对、两个人工评分检查点、已揭示保留集结论降级、来源候选错误、父 revision/目标配置冲突和生效 Skill 不变。
 - 生产 Electron + preload + Main + 真实 worker + localhost HTTP 的验收脚本 `packages/desktop/scripts/e2e-optimization-lab.mjs` 新增证据预览/取消/确认导入及固定候选新授权/12 次比较调用；保留原有报告重开、原生评分文件、撤销、在途停止和 worker/app 崩溃恢复。
+- 验收从独立临时 HOME 启动；测试 ESM bootstrap 在生产 Main/Core 导入前校验 HOME 并安装准确 localhost fixture origin 白名单，owned worker 显式 preload 同一 guard。首个实验请求前按实际 worker PID 核对 HOME/origin 收据；fetch、HTTP/HTTPS 与跳转均拒绝其它 origin。共享隔离自测另覆盖 child/grandchild 继承，禁止目标服务器实际收到 0 次请求。
 
 运行结果和最终 CI 见对应 PR。所有模型返回来自明确标记的本机确定性 HTTP fixture；没有三方真实账号或真实模型收益验收。
