@@ -348,6 +348,15 @@ function setup() {
       externalDataRoles: ["task", "optimizer"],
     },
   };
+  const adoptionPreview = {
+    id: snapshot.id,
+    reportHash: hash,
+    body: "Adopt this frozen body",
+    sourceRevision: "b".repeat(64),
+    skillName: "example",
+    scope: { provider: "openai", model: "fixture" },
+    receiptIds: ["receipt"],
+  };
   const dialogs: any[] = [];
   const evidenceReads: unknown[] = [];
   const dispose = registerOptimizationLabIpc({
@@ -367,6 +376,7 @@ function setup() {
     artifactRoot: () => artifactRoot,
     query: async (type, params) => {
       calls.push({ type, params });
+      if (type.endsWith("adoption_preview")) return structuredClone(adoptionPreview);
       if (type.endsWith("get")) return structuredClone(snapshot);
       if (type.endsWith("discover")) return { connections: [] };
       if (type.endsWith("report"))
@@ -426,6 +436,7 @@ function setup() {
     dialogs,
     snapshot,
     authorization,
+    adoptionPreview,
     dispose,
     fileDialogs,
     enable: (on: boolean) => {
@@ -693,5 +704,55 @@ describe("Optimization Lab trusted Desktop bridge", () => {
     expect(
       isOptimizationLabQuery({ method: "agent/run", params: { type: "optimization_lab_grant" } }),
     ).toBe(false);
+  });
+});
+
+describe("Optimization Lab scoped native adoption", () => {
+  const request = {
+    target: { projectId: "project" },
+    id: "experiment-1",
+    reportHash: hash,
+    scope: { kind: "project" },
+  };
+  test("only the dedicated native channel can adopt an exact preview", async () => {
+    const f = setup();
+    await expect(f.invoke("query", "adopt", request)).rejects.toThrow("Unsupported");
+    await f.invoke("adopt", request);
+    expect(f.calls.map((call) => call.type)).toEqual([
+      "optimization_lab_adoption_preview",
+      "optimization_lab_adoption_preview",
+      "optimization_lab_adopt",
+    ]);
+    expect(f.calls.at(-1)!.params).toEqual({
+      cwd: "/authoritative/primary",
+      id: "experiment-1",
+      reportHash: hash,
+    });
+    expect(f.dialogs[0].detail).toContain("Adopt this frozen body");
+    expect(f.dialogs[0].detail).toContain("no-tools");
+  });
+  test("cancelled confirmation and changed evidence never adopt", async () => {
+    const cancelled = setup();
+    cancelled.confirm(0);
+    expect(await cancelled.invoke("adopt", request)).toBeNull();
+    expect(cancelled.calls).toHaveLength(1);
+    const changed = setup();
+    changed.duringConfirmation(() => {
+      changed.adoptionPreview.body = "Changed body";
+    });
+    await expect(changed.invoke("adopt", request)).rejects.toThrow("changed");
+    expect(changed.calls.some((call) => call.type === "optimization_lab_adopt")).toBe(false);
+  });
+  test("requires explicit scope and rechecks feature/project after confirmation", async () => {
+    const f = setup();
+    await expect(f.invoke("adopt", { ...request, scope: { kind: "global" } })).rejects.toThrow(
+      "explicit",
+    );
+    await expect(f.invoke("adopt", { ...request, scope: { kind: "session" } })).rejects.toThrow(
+      "explicit",
+    );
+    f.duringConfirmation(() => f.enable(false));
+    await expect(f.invoke("adopt", request)).rejects.toThrow();
+    expect(f.calls.some((call) => call.type === "optimization_lab_adopt")).toBe(false);
   });
 });

@@ -92,6 +92,8 @@ export function createMeteredFetch(options: {
   signal?: AbortSignal;
   upstream?: typeof globalThis.fetch;
   now?: () => number;
+  /** A fresh no-tools Engine turn, still subject to the same physical-request gate. */
+  agentStream?: boolean;
 }): MeteredTransport {
   const { connection, limits, accounting } = options;
   const now = options.now ?? Date.now;
@@ -129,7 +131,7 @@ export function createMeteredFetch(options: {
     const cap = body.max_completion_tokens ?? body.max_tokens;
     if (
       body.model !== connection.identity.modelId ||
-      body.stream === true ||
+      (body.stream === true && !options.agentStream) ||
       cap !== limits.maxOutputTokens
     ) {
       throw new Error(
@@ -143,7 +145,19 @@ export function createMeteredFetch(options: {
       "max_tokens",
       "max_completion_tokens",
       "stream",
+      ...(options.agentStream ? ["stream_options", "prompt_cache_key"] : []),
     ]);
+    if (
+      body.stream_options !== undefined &&
+      canonicalJson(body.stream_options) !== canonicalJson({ include_usage: true })
+    )
+      throw new Error("Unapproved Engine stream parameters");
+    if (
+      body.prompt_cache_key !== undefined &&
+      (typeof body.prompt_cache_key !== "string" ||
+        !/^cs:[a-f0-9]{48}$/.test(body.prompt_cache_key))
+    )
+      throw new Error("Unapproved Engine prompt cache identity");
     for (const key of Object.keys(connection.wireParameters)) baseKeys.add(key);
     if (Object.keys(body).some((key) => !baseKeys.has(key)))
       throw new Error("provider request contains an unapproved parameter");
@@ -211,9 +225,31 @@ export function createMeteredFetch(options: {
       );
       let parsed: any;
       try {
-        parsed = JSON.parse(responseText);
+        if (body.stream === true && response.ok) {
+          let terminal = false;
+          let model: string | undefined;
+          let mergedUsage: Record<string, unknown> = {};
+          for (const block of responseText.split(/\r?\n\r?\n/)) {
+            const data = block
+              .split(/\r?\n/)
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart())
+              .join("\n");
+            if (!data) continue;
+            if (data === "[DONE]") {
+              terminal = true;
+              continue;
+            }
+            const frame = JSON.parse(data);
+            model = frame.model ?? frame.message?.model ?? model;
+            if (frame.usage) mergedUsage = { ...mergedUsage, ...frame.usage };
+            if (frame.message?.usage) mergedUsage = { ...mergedUsage, ...frame.message.usage };
+            if (frame.type === "message_stop") terminal = true;
+          }
+          parsed = { model, ...(terminal ? { usage: mergedUsage } : {}) };
+        } else parsed = JSON.parse(responseText);
       } catch {
-        throw new Error("provider response is not valid JSON");
+        throw new Error("provider response is not valid bounded model evidence");
       }
       responseModel =
         typeof parsed?.model === "string" && parsed.model.length <= 256 ? parsed.model : null;

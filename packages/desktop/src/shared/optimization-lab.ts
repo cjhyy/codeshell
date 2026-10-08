@@ -3,6 +3,8 @@ import type { EvidenceBundle, EvalCase } from "@cjhyy/code-shell-capability-opti
 
 export const LAB_QUERY_TYPES = [
   "discover",
+  "bindings",
+  "revoke_binding",
   "list",
   "validate_dataset",
   "freeze_dataset",
@@ -38,6 +40,13 @@ export interface LabAuthorizationInput extends LabQueryInput {
   };
 }
 export interface OptimizationLabApi {
+  adopt(
+    input: LabQueryInput & {
+      id: string;
+      reportHash: string;
+      scope: { kind: "project" } | { kind: "session"; sessionId: string };
+    },
+  ): Promise<unknown | null>;
   previewEvidence(input: {
     target: LabTarget;
     runIds: string[];

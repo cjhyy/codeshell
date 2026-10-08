@@ -35,12 +35,16 @@ export function createRunUsageAccounting(args: {
   updatePersistedSessionState: (sid: string, patch: SessionStateFieldPatch) => void;
   costStore: EngineConfig["costStore"];
   /** engine 侧闭包 (usage) => turnLoop.recordGoalJudgeUsage(usage)(turnLoop 延迟赋值)。 */
-  recordGoalJudgeUsage: (
-    usage: TokenUsage,
-  ) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
+  recordGoalJudgeUsage: (usage: TokenUsage) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
 }): RunUsageAccounting {
-  const { session, sid, resumeState, updatePersistedSessionState, costStore, recordGoalJudgeUsage } =
-    args;
+  const {
+    session,
+    sid,
+    resumeState,
+    updatePersistedSessionState,
+    costStore,
+    recordGoalJudgeUsage,
+  } = args;
   let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
   let externalRunUsage: TokenUsage = {
     promptTokens: 0,
@@ -103,6 +107,7 @@ export function wireRunModelFacade(args: {
   auxSummaryClient: LLMClientBase;
   transcript: Transcript;
   accounting: RunUsageAccounting;
+  assertInstructionsCurrent?: () => void;
 }): {
   modelFacade: ModelFacade;
   getRunUsage: () => ReturnType<ModelFacade["getUsage"]>;
@@ -119,14 +124,14 @@ export function wireRunModelFacade(args: {
       totalPromptTokens: visible.totalPromptTokens + externalRunUsage.promptTokens,
       totalCompletionTokens: visible.totalCompletionTokens + externalRunUsage.completionTokens,
       totalTokens: visible.totalTokens + externalRunUsage.totalTokens,
-      totalCacheReadTokens:
-        visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
+      totalCacheReadTokens: visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
       totalCacheCreationTokens:
         visible.totalCacheCreationTokens + (externalRunUsage.cacheCreationTokens ?? 0),
     };
   };
   const callPrimaryModel = modelFacade.call.bind(modelFacade);
   modelFacade.call = async (...callArgs: Parameters<ModelFacade["call"]>) => {
+    args.assertInstructionsCurrent?.();
     // A primary-model summary may itself exhaust the Goal budget. Do not
     // issue the main turn request after that billed sub-call; return control
     // to TurnLoop, whose existing post-response guard emits and persists the
@@ -151,6 +156,7 @@ export function wireRunModelFacade(args: {
   // request out of the foreground tracker while billing and reporting it to
   // the owning session/Goal budget.
   modelFacade.summarize = async (sysPrompt: string, userMsg: string, signal?: AbortSignal) => {
+    args.assertInstructionsCurrent?.();
     const resp = await auxSummaryClient.createMessage({
       systemPrompt: sysPrompt,
       messages: [{ role: "user", content: userMsg }],

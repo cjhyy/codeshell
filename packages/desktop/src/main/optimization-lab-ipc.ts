@@ -400,6 +400,53 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
       bundle: prior.bundle,
     });
   });
+  handle("optimizationLab:adopt", async (window, args, check) => {
+    if (args.length !== 1) throw new Error("Invalid adoption request");
+    const input = record(args[0]);
+    identity(input);
+    if (
+      Object.keys(input).some((key) => !["target", "id", "reportHash", "scope"].includes(key)) ||
+      typeof input.reportHash !== "string" ||
+      !/^[a-f0-9]{64}$/.test(input.reportHash)
+    )
+      throw new Error("Invalid adoption request");
+    const scope = input.scope as Record<string, unknown> | undefined;
+    if (
+      !scope ||
+      (scope.kind !== "project" && scope.kind !== "session") ||
+      Object.keys(scope).some((key) => !["kind", "sessionId"].includes(key)) ||
+      (scope.kind === "project" && scope.sessionId !== undefined) ||
+      (scope.kind === "session" &&
+        (typeof scope.sessionId !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(scope.sessionId)))
+    )
+      throw new Error("Choose an explicit project or Session scope");
+    const params = await resolve(input, check);
+    const request = {
+      cwd: params.cwd,
+      id: input.id,
+      ...(scope.kind === "session" ? { sessionId: scope.sessionId } : {}),
+    };
+    const preview = await query(check, "optimization_lab_adoption_preview", request);
+    if (preview.reportHash !== input.reportHash) throw new Error("Adoption report changed");
+    const detail = `Skill: ${preview.skillName}\nSource revision: ${preview.sourceRevision}\nReport: ${preview.reportHash}\nProject: ${params.cwd}\nScope: ${scope.kind === "session" ? `Session ${scope.sessionId} (next run)` : "new Sessions in this project"}\nModel: ${preview.scope.provider} / ${preview.scope.model}\n\n${preview.body}\n\nThis is a no-tools isolated instruction evaluation. No tool workflow was validated. Source SKILL.md is preserved. Revoke to stop runs using this revision and restore the source for future runs. / 这是无工具的隔离指令验证，未验证有工具工作流。源 Skill 保留，撤销会停止使用该版本的运行。`;
+    const result = await deps.confirm(window, {
+      type: "question",
+      title: "Optimization Lab / 优化实验室",
+      message: "Adopt this exact revision in the selected scope? / 在指定范围采用这个固定版本？",
+      detail,
+      buttons: ["Cancel / 取消", "Adopt / 采用"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (result.response !== 1) return null;
+    const revalidate = fileRevalidation(window, input, params.cwd, check);
+    await revalidate();
+    const latest = await query(check, "optimization_lab_adoption_preview", request);
+    if (JSON.stringify(latest) !== JSON.stringify(preview))
+      throw new Error("Adoption evidence changed during confirmation");
+    return query(check, "optimization_lab_adopt", { ...request, reportHash: preview.reportHash });
+  });
   handle("optimizationLab:authorize", async (window, args, check) => {
     if (args.length !== 1) throw new Error("Invalid Lab authorization");
     const input = record(args[0]);

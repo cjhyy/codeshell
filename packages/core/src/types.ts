@@ -364,6 +364,10 @@ export interface SessionState {
    * transcript flush failure) and must fail closed instead of using the tail.
    */
   completedSnapshotVersion?: 1;
+  /** Frozen host-authorized instruction bindings; an empty array freezes the original version. */
+  instructionContextStartEventId?: string;
+  instructionContextRevisions?: string[];
+  instructionSnapshots?: import("./skills/instruction-bindings.js").InstructionSnapshot[];
   invokedSkills: string[];
   /**
    * Owning parent session for a sub-agent run; `null` explicitly marks a

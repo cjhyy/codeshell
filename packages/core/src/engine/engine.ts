@@ -1,3 +1,4 @@
+import { Transcript } from "../session/transcript.js";
 /**
  * Engine — the main facade that wires all components together.
  */
@@ -174,7 +175,15 @@ import {
   buildRunFailureResult,
 } from "./run-finalize.js";
 import { join } from "node:path";
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
 
 /**
@@ -431,6 +440,14 @@ export class Engine {
    */
   private runInProgress = false;
   private runAbort?: AbortController;
+  private revokedInstructionContext: SessionBundle | undefined;
+  private activeInstructionSessionId: string | undefined;
+  private instructionWatches = new Map<string, () => void>();
+  private loadedInstructionSnapshots: import("../skills/instruction-bindings.js").InstructionSnapshot[] =
+    [];
+  getLoadedInstructionSnapshots() {
+    return structuredClone(this.loadedInstructionSnapshots);
+  }
   private runSettled?: Promise<void>;
   private disposed = false;
   private agentControlStateListener?: (state: LiveChildState) => void;
@@ -1347,6 +1364,7 @@ export class Engine {
       throw new Error("Engine.run() cannot start while another run is in progress");
     }
     this.runInProgress = true;
+    this.loadedInstructionSnapshots = [];
     const abort = (this.runAbort = new AbortController());
     let settle!: () => void;
     this.runSettled = new Promise<void>((resolve) => {
@@ -1365,14 +1383,95 @@ export class Engine {
         await this.activeRunScope?.dispose();
       } finally {
         this.activeRunScope = undefined;
+        this.activeInstructionSessionId = undefined;
         try {
-          this.permissionController.applyPending();
+          if (this.revokedInstructionContext) {
+            const revoked = this.revokedInstructionContext;
+            this.revokedInstructionContext = undefined;
+            this.clearInstructionContext(revoked);
+          }
         } finally {
-          this.runInProgress = false;
-          this.runAbort = undefined;
-          settle();
+          try {
+            this.permissionController.applyPending();
+          } finally {
+            this.runInProgress = false;
+            this.runAbort = undefined;
+            settle();
+          }
         }
       }
+    }
+  }
+
+  /** Remove all context derived from a revoked instruction, retaining the audit transcript. */
+  private clearInstructionContext(
+    session: SessionBundle,
+    retainedSnapshots = (session.state.instructionSnapshots ?? []).filter((snapshot) =>
+      this.composition.engine.instructionBindings.some((provider) =>
+        provider.value.isCurrent(snapshot),
+      ),
+    ),
+  ): void {
+    const events = session.transcript.getEvents();
+    const start = events.findIndex(
+      (event) => event.id === session.state.instructionContextStartEventId,
+    );
+    const retainedEvents = events.filter(
+      (event, index) =>
+        (start >= 0 && index < start) ||
+        (event.type === "message" &&
+          event.data.role === "user" &&
+          event.data.injected !== true &&
+          event.data.authority !== "agent"),
+    );
+    const retained = Transcript.fromMemoryEvents(
+      "instruction-revocation",
+      retainedEvents,
+    ).toMessagesWithIndex();
+    const through = events.at(-1);
+    if (through) {
+      const note = session.transcript.appendContextNote(
+        "Instruction revision revoked; prior effective context cleared.",
+        through.id,
+      );
+      if (
+        !note ||
+        !session.transcript.appendContextCheckpoint({
+          version: 1,
+          noteId: note.id,
+          coveredThroughEventId: through.id,
+          messages: retained.messages.length
+            ? retained.messages
+            : [
+                {
+                  role: "user",
+                  content: "Instruction revision revoked; continue only from new user input.",
+                },
+              ],
+          clientMessageIds: [...retained.liveIndexByClientMessageId],
+        })
+      )
+        throw new Error("Could not clear revoked instruction context");
+    }
+    session.state.instructionContextStartEventId = undefined;
+    session.state.instructionContextRevisions = [];
+    session.state.instructionSnapshots = retainedSnapshots;
+    session.state.invokedSkills = [];
+    session.state.contextUsageAnchor = undefined;
+    this.sessionManager.saveStateOrUpdateFields(session.state, {
+      instructionSnapshots: retainedSnapshots,
+      instructionContextStartEventId: undefined,
+      instructionContextRevisions: [],
+      invokedSkills: [],
+      contextUsageAnchor: undefined,
+    });
+    this.compactedMessagesBySession.delete(session.state.sessionId);
+    if (
+      this.lastSessionId === session.state.sessionId ||
+      this.activeInstructionSessionId === session.state.sessionId
+    ) {
+      this.lastMessages = [];
+      this.loadedInstructionSnapshots = [];
     }
   }
 
@@ -1589,6 +1688,150 @@ export class Engine {
     });
     this.runIds.set(session.state, runId);
     let messages = openedMessages;
+    const instructionProviders = this.composition.engine.instructionBindings;
+    const isInstructionCurrent = (
+      snapshot: import("../skills/instruction-bindings.js").InstructionSnapshot,
+    ) =>
+      snapshot.cwd === realpathSync(cwd) &&
+      (!snapshot.sessionId || snapshot.sessionId === session.state.sessionId) &&
+      instructionProviders.some((provider) => provider.value.isCurrent(snapshot));
+    if (
+      session.state.instructionSnapshots?.some((snapshot) => !isInstructionCurrent(snapshot)) &&
+      !this.config.instructionSnapshots
+    ) {
+      this.clearInstructionContext(
+        session,
+        session.state.instructionSnapshots.filter(isInstructionCurrent),
+      );
+      messages = session.transcript.toMessages();
+    }
+    if (session.state.instructionSnapshots === undefined) {
+      session.state.instructionSnapshots = this.config.instructionSnapshots
+        ? structuredClone([...this.config.instructionSnapshots])
+        : !resumedFromDisk && !profile?.disableInstructions
+          ? instructionProviders.flatMap((provider) =>
+              provider.value.resolve({
+                cwd,
+                provider: this.config.llm.provider,
+                model: this.config.llm.model,
+                sessionId: session.state.sessionId,
+              }),
+            )
+          : [];
+      this.sessionManager.saveStateOrUpdateFields(session.state, {
+        instructionSnapshots: session.state.instructionSnapshots,
+      });
+    }
+    if (!profile?.disableInstructions && resumedFromDisk) {
+      const targeted = instructionProviders.flatMap((provider) =>
+        provider.value.resolve(
+          {
+            cwd,
+            provider: this.config.llm.provider,
+            model: this.config.llm.model,
+            sessionId: session.state.sessionId,
+          },
+          true,
+        ),
+      );
+      if (
+        targeted.some(
+          (snapshot) =>
+            !session.state.instructionSnapshots?.some(
+              (old) => old.bindingId === snapshot.bindingId,
+            ),
+        )
+      ) {
+        const previous = session.state.instructionSnapshots;
+        if (previous.length) {
+          this.clearInstructionContext(session);
+          messages = session.transcript.toMessages();
+        }
+        session.state.instructionSnapshots = [
+          ...previous.filter((old) => !targeted.some((snapshot) => snapshot.name === old.name)),
+          ...targeted,
+        ];
+      }
+    }
+    const effectiveSnapshots = session.state.instructionSnapshots.filter((snapshot) => {
+      if (
+        snapshot.provider !== this.config.llm.provider ||
+        snapshot.model !== this.config.llm.model
+      )
+        return false;
+      // Only the trusted isolated Host config overrides the ordinary Skill visibility rules.
+      if (this.config.instructionSnapshots) return true;
+      const pluginName = snapshot.name.includes(":")
+        ? snapshot.name.slice(0, snapshot.name.indexOf(":"))
+        : undefined;
+      return (
+        !profile?.disableInstructions &&
+        !toolCtx.disabledSkills?.includes(snapshot.name) &&
+        !(pluginName && toolCtx.disabledPlugins?.includes(pluginName)) &&
+        (toolCtx.skillAllowlist === undefined || toolCtx.skillAllowlist.includes(snapshot.name))
+      );
+    });
+    const effectiveRevisions = effectiveSnapshots
+      .map((snapshot) => `${snapshot.bindingId}:${snapshot.revision}`)
+      .sort();
+    const priorRevisions =
+      session.state.instructionContextRevisions ??
+      session.state.instructionSnapshots
+        .map((snapshot) => `${snapshot.bindingId}:${snapshot.revision}`)
+        .sort();
+    if (
+      JSON.stringify(effectiveRevisions) !== JSON.stringify(priorRevisions) &&
+      session.state.instructionContextStartEventId
+    ) {
+      this.clearInstructionContext(session, session.state.instructionSnapshots);
+      messages = session.transcript.toMessages();
+    }
+    if (effectiveSnapshots.length && !session.state.instructionContextStartEventId)
+      session.state.instructionContextStartEventId = runId;
+    session.state.instructionContextRevisions = effectiveRevisions;
+    this.sessionManager.saveStateOrUpdateFields(session.state, {
+      instructionSnapshots: session.state.instructionSnapshots,
+      instructionContextStartEventId: session.state.instructionContextStartEventId,
+      instructionContextRevisions: effectiveRevisions,
+    });
+    toolCtx.instructionSnapshots = effectiveSnapshots;
+    this.activeInstructionSessionId = session.state.sessionId;
+    const hadInstructionWatch = this.instructionWatches.has(session.state.sessionId);
+    this.instructionWatches.get(session.state.sessionId)?.();
+    const watchDisposers = instructionProviders.flatMap((provider) => {
+      const owned = effectiveSnapshots.filter((snapshot) => provider.value.isCurrent(snapshot));
+      return owned.length
+        ? [
+            provider.value.subscribe(owned, () => {
+              if (
+                this.runInProgress &&
+                this.activeInstructionSessionId === session.state.sessionId
+              ) {
+                this.revokedInstructionContext = session;
+                this.runAbort?.abort(new Error("Instruction binding revoked"));
+              } else {
+                try {
+                  this.clearInstructionContext(session);
+                } catch (error) {
+                  logger.warn("engine.instruction_context_clear_failed", {
+                    sessionId: session.state.sessionId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                }
+              }
+            }),
+          ]
+        : [];
+    });
+    const disposeWatch = () => {
+      for (const dispose of watchDisposers) dispose();
+    };
+    this.instructionWatches.set(session.state.sessionId, disposeWatch);
+    if (!hadInstructionWatch)
+      sessionLifetime.scope.own(() => {
+        this.instructionWatches.get(session.state.sessionId)?.();
+        this.instructionWatches.delete(session.state.sessionId);
+      });
     toolCtx.contextStrategy = this.resolveContextStrategy(profile);
     const contextNotes =
       toolCtx.contextStrategy === "notes" ? new SessionContextNotes(session.transcript) : undefined;
@@ -1716,6 +1959,7 @@ export class Engine {
         contextManager,
         profile,
         profileParams,
+        instructionSnapshots: effectiveSnapshots,
       });
 
       // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
@@ -2060,6 +2304,7 @@ export class Engine {
     contextManager: ContextManager;
     profile: RunBehaviorProfile | undefined;
     profileParams: Readonly<Record<string, unknown>>;
+    instructionSnapshots: readonly import("../skills/instruction-bindings.js").InstructionSnapshot[];
   }): Promise<{
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     fullSystemPrompt: string;
@@ -2102,10 +2347,21 @@ export class Engine {
           ],
         }
       : baseDynamicContextMsg;
+    this.loadedInstructionSnapshots = structuredClone([...args.instructionSnapshots]);
+    const frozenInstructions = args.instructionSnapshots
+      .map(
+        (snapshot) => `# Frozen Skill: ${snapshot.name} (${snapshot.revision})\n${snapshot.body}`,
+      )
+      .join("\n\n");
     const fullSystemPrompt = composeRunSystemPrompt({
-      baseSystemPrompt: toolDefs.some((tool) => tool.name === "SaveContextNote")
-        ? `${baseSystemPrompt}\n\n${loadSection("context-notes")}`
-        : baseSystemPrompt,
+      baseSystemPrompt: [
+        toolDefs.some((tool) => tool.name === "SaveContextNote")
+          ? `${baseSystemPrompt}\n\n${loadSection("context-notes")}`
+          : baseSystemPrompt,
+        frozenInstructions,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
       profile,
       profileParams,
     });
@@ -2467,6 +2723,21 @@ export class Engine {
       auxSummaryClient,
       transcript: session.transcript,
       accounting,
+      assertInstructionsCurrent: () => {
+        if (
+          !this.config.instructionSnapshots &&
+          toolCtx.instructionSnapshots?.some(
+            (snapshot) =>
+              !this.composition.engine.instructionBindings.some((provider) =>
+                provider.value.isCurrent(snapshot),
+              ),
+          )
+        ) {
+          this.revokedInstructionContext = session;
+          this.runAbort?.abort(new Error("Instruction revision is no longer current"));
+          throw new Error("Instruction revision is no longer current");
+        }
+      },
     });
 
     // Session-cumulative usage baseline: the LLM client is recreated per run

@@ -3,6 +3,8 @@ import {
   isFeatureEnabled,
   SettingsManager,
   readSkillSnapshot,
+  InstructionBindingStore,
+  SessionManager,
 } from "@cjhyy/code-shell-core/extension";
 import { z } from "zod";
 import { canonicalJson, sha256Hex } from "./contracts/canonical-json.js";
@@ -57,6 +59,7 @@ export const PrepareSchema = z
     targetConnectionId: z.string().min(1).max(256),
     optimizerConnectionId: z.string().min(1).max(256),
     objective: z.enum(["quality", "cost"]),
+    executionMode: z.enum(["text_fragment", "codeshell_isolated"]).optional(),
     limits: z
       .object({
         maxRequests: positive.max(10000),
@@ -88,6 +91,7 @@ export interface ControllerOptions {
   enabled?: () => boolean;
   upstream?: typeof globalThis.fetch;
   root?: string;
+  bindingRoot?: string;
 }
 type PendingTrial = {
   caseId: string;
@@ -150,10 +154,85 @@ export class OptimizationLabController {
           "optimization_lab",
         ));
   }
+  listBindings() {
+    return new InstructionBindingStore(this.options.bindingRoot).list(this.cwd);
+  }
+  adoptionPreview(id: string, sessionId?: string) {
+    const snapshot = this.store.read(id);
+    if (sessionId) {
+      const session = new SessionManager().readSessionState(sessionId);
+      if (
+        !session ||
+        session.ephemeral ||
+        (session.kind && session.kind !== "work") ||
+        projectKey(session.cwd) !== projectKey(this.cwd)
+      )
+        throw new Error("Adoption Session must be an ordinary Session in the selected project");
+    }
+    const report = this.report(id);
+    const json = report.json as any;
+    const selected = this.candidates(id, this.data(snapshot)).find(
+      (candidate) => candidate.bodyHash === json.change?.bodyHash,
+    );
+    if (
+      snapshot.plan.projectKey !== projectKey(this.cwd) ||
+      json.adoptionEligible !== true ||
+      json.partial ||
+      !selected
+    )
+      throw new Error("A qualifying isolated final report is required before adoption");
+    const trials = this.trials(id, this.data(snapshot)).filter(
+      (trial) => trial.bodyHash === selected.bodyHash && trial.status === "completed",
+    );
+    const receiptIds = trials
+      .map((trial) => trial.instructionReceiptId)
+      .filter((id): id is string => Boolean(id));
+    if (receiptIds.length !== trials.length || !receiptIds.length)
+      throw new Error("Isolated loading evidence is incomplete");
+    return {
+      id,
+      reportHash: report.hash,
+      body: selected.body,
+      sourceRevision: snapshot.plan.skill.revision,
+      skillName: snapshot.plan.skill.name,
+      scope: {
+        cwd: this.cwd,
+        provider: this.resolve(snapshot.plan, "target").config.provider,
+        model: snapshot.plan.connections.target.modelId,
+        ...(sessionId ? { sessionId } : {}),
+      },
+      receiptIds,
+    };
+  }
+  adopt(id: string, reportHash: string, sessionId?: string) {
+    if (!this.enabled()) throw new Error("Optimization Lab disabled");
+    const preview = this.adoptionPreview(id, sessionId);
+    if (preview.reportHash !== reportHash) throw new Error("Adoption report changed");
+    return new InstructionBindingStore(this.options.bindingRoot).adopt({
+      scope: preview.scope,
+      name: preview.skillName,
+      sourceRevision: preview.sourceRevision,
+      body: preview.body,
+      evidenceHash: reportHash,
+      receiptIds: preview.receiptIds,
+    });
+  }
+  revokeBinding(bindingId: string, revision: string) {
+    const binding = new InstructionBindingStore(this.options.bindingRoot).revoke(
+      this.cwd,
+      bindingId,
+      revision,
+    );
+    const sourceChanged =
+      readSkillSnapshot(binding.snapshot.name, this.cwd)?.revision !==
+      binding.snapshot.sourceRevision;
+    return { ...binding, rollbackStatus: sourceChanged ? "source_changed" : "source_restored" };
+  }
   discover() {
     return {
       connections: discoverConnections(this.loadSettings()),
       supportedMode: "text_fragment",
+      supportedModes: ["text_fragment", "codeshell_isolated"],
       supportedJudgeMode: "human",
       automaticAdoption: false,
     };
@@ -205,6 +284,7 @@ export class OptimizationLabController {
         targetConnectionId: source.plan.connections.target.connectionId,
         optimizerConnectionId: source.plan.connections.target.connectionId,
         objective: input.objective,
+        executionMode: input.executionMode,
         limits: { ...input.limits, maxCandidates: 1 },
       },
       { source, candidate, reportHash: progress.reportRef },
@@ -243,7 +323,7 @@ export class OptimizationLabController {
       input.limits.repeats;
     const finalAllocation = {
       requests: holdoutOperations * limits.maxRequests,
-      estimatedTokens: holdoutOperations * (maxContextBytes + 8192 + limits.maxOutputTokens),
+      estimatedTokens: holdoutOperations * (maxContextBytes + 64 * 1024 + limits.maxOutputTokens),
       estimatedCostUsd: null,
       executionMs: holdoutOperations * limits.timeoutMs,
     };
@@ -264,7 +344,8 @@ export class OptimizationLabController {
         extraFiles: [],
       },
       connections: { target: target.identity, optimizer: optimizer.identity },
-      runnerVersion: "text_fragment_v1",
+      runnerVersion:
+        input.executionMode === "codeshell_isolated" ? "codeshell_isolated_v1" : "text_fragment_v1",
       strategyVersion: fixed ? "fixed_candidate_trial_v1" : "reflect_once_v1",
       ...(fixed
         ? {
@@ -821,7 +902,7 @@ export class OptimizationLabController {
           operationId,
           attemptId,
           estimatedTokens:
-            (limits.inputTokenUpperBound ?? plan.bounds.maxContextBytes + 8192) +
+            (limits.inputTokenUpperBound ?? plan.bounds.maxContextBytes + 64 * 1024) +
             limits.maxOutputTokens,
           estimatedCostUsd: null,
         }),
@@ -905,6 +986,8 @@ export class OptimizationLabController {
         accounting,
         signal: abort.signal,
         upstream: this.options.upstream,
+        cwd: this.cwd,
+        bindingRoot: this.options.bindingRoot,
       });
       if (item.readiness === "runnable")
         this.ledger.finishOperation(id, fence, operationId, trial.elapsedMs);

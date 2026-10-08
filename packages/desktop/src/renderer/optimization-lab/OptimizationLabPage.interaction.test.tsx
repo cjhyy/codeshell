@@ -24,6 +24,8 @@ describe("Optimization Lab manual Desktop workflow", () => {
   let validationPromise: Promise<any> | undefined;
   let exports: Array<{ target: { projectId: string }; text: string }>;
   let evidenceCalls: string[];
+  let adoptions: any[];
+  let reportEligible: boolean;
   const find = (id: string) =>
     descendants(container).find((node) => props(node)["data-testid"] === `optimization-lab-${id}`)!;
   const click = async (id: string) => {
@@ -40,6 +42,8 @@ describe("Optimization Lab manual Desktop workflow", () => {
     validationPromise = undefined;
     exports = [];
     evidenceCalls = [];
+    adoptions = [];
+    reportEligible = false;
     calls = [];
     authorizations = [];
     accepted = false;
@@ -65,6 +69,10 @@ describe("Optimization Lab manual Desktop workflow", () => {
       value: {
         getSettings: async () => ({ featureFlags: { optimization_lab: enabled } }),
         optimizationLab: {
+          adopt: async (input: any) => {
+            adoptions.push(input);
+            return null;
+          },
           previewEvidence: async () => {
             evidenceCalls.push("preview");
             return {
@@ -122,7 +130,13 @@ describe("Optimization Lab manual Desktop workflow", () => {
                   },
                 ],
               };
-            if (type === "list") return [];
+            if (type === "list" || type === "bindings") return [];
+            if (type === "report")
+              return {
+                hash: "d".repeat(64),
+                markdown: "Fixture report",
+                json: { adoptionEligible: reportEligible },
+              };
             if (type === "validate_dataset")
               return validationPromise ?? { ok: true, issues: [], summary: { dev: 3, holdout: 3 } };
             if (type === "freeze_dataset") return { datasetHash: "b".repeat(64) };
@@ -196,7 +210,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
     await click("import-evidence");
     expect(evidenceCalls).toEqual(["preview", "confirm"]);
     expect(authorizations).toHaveLength(0);
-    expect(calls.map((call) => call.type)).toEqual(["discover", "list"]);
+    expect(calls.map((call) => call.type)).toEqual(["discover", "list", "bindings"]);
     accepted = true;
     await click("import-evidence");
     await click("dataset-json");
@@ -235,6 +249,39 @@ describe("Optimization Lab manual Desktop workflow", () => {
     expect(authorizations).toHaveLength(1);
     expect(calls.some((call) => call.type === "start")).toBe(false);
   });
+  test("isolated execution freezes its mode and eligible adoption chooses an explicit native Session scope", async () => {
+    reportEligible = true;
+    snapshot.state = { ...snapshot.state, status: "report_ready", data: { reportRef: "report" } };
+    await mount();
+    await act(async () => {
+      props(find("execution-mode")).onChange({ target: { value: "codeshell_isolated" } });
+      await flushMicrotasks();
+    });
+    await click("prepare");
+    expect(calls.find((call) => call.type === "prepare")?.input.executionMode).toBe(
+      "codeshell_isolated",
+    );
+    await click("open-report");
+    await act(async () => {
+      props(find("adoption-scope")).onChange({ target: { value: "session" } });
+      await flushMicrotasks();
+    });
+    expect(props(find("adopt")).disabled).toBe(true);
+    await act(async () => {
+      props(find("adoption-session")).onChange({ target: { value: "ordinary-session" } });
+      await flushMicrotasks();
+    });
+    await click("adopt");
+    expect(adoptions).toEqual([
+      {
+        target: { projectId: "project-1" },
+        id: snapshot.id,
+        reportHash: "d".repeat(64),
+        scope: { kind: "session", sessionId: "ordinary-session" },
+      },
+    ]);
+    expect(calls.some((call) => call.type === "adopt" || call.type === "start")).toBe(false);
+  });
   test("dataset freeze and preparing are offline; native cancel never starts", async () => {
     await mount();
     await click("validate");
@@ -242,6 +289,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
     expect(calls.map((call) => call.type)).toEqual([
       "discover",
       "list",
+      "bindings",
       "validate_dataset",
       "freeze_dataset",
       "prepare",
@@ -292,7 +340,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
     await mount("project-a");
     await click("export-dataset");
     expect(exports.at(-1)?.text).toBe(imported);
-    expect(calls.every((call) => ["discover", "list"].includes(call.type))).toBe(true);
+    expect(calls.every((call) => ["discover", "list", "bindings"].includes(call.type))).toBe(true);
   });
   test("cancelled import keeps the draft; late import cannot populate another project", async () => {
     datasetDrafts.set("project-a", "original draft");

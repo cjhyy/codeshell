@@ -263,6 +263,7 @@ export interface ToolRunYieldController {
 }
 
 export interface ToolContext {
+  instructionSnapshots?: readonly import("../skills/instruction-bindings.js").InstructionSnapshot[];
   /** Active working directory for this Engine. */
   cwd: string;
   /** Resolved strategy for the current session's model context. */
