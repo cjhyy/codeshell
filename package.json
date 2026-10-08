@@ -48,7 +48,8 @@
     "lint:workflow-test-paths": "node scripts/check-workflow-test-paths.mjs",
     "lint:baseline": "node scripts/check-lint-baseline.mjs",
     "format": "prettier --write 'packages/**/*.ts'",
-    "test:upload-documents": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs"
+    "test:upload-documents": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs",
+    "test:deferred-tools": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-deferred-tools.mjs"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

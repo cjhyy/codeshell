@@ -26,6 +26,41 @@ import type { CapabilityOverride } from "../settings/schema.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import type { PermissionController } from "./permission-controller.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
+import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { logger } from "../logging/logger.js";
+
+/** Keep capability discovery complete while freezing schemas once per model step. */
+export function initializeRunToolSurface(
+  toolCtx: ToolContext,
+  initialToolNames: readonly string[] | undefined,
+  assembleCatalog: () => ToolDefinition[],
+): ToolDefinition[] {
+  const catalog = assembleCatalog();
+  const surface = new RunToolSurface(
+    catalog.some((tool) => tool.name === "ToolSearch") ? initialToolNames : undefined,
+  );
+  toolCtx.runToolSurface = surface;
+  surface.updateCatalog(catalog);
+  toolCtx.refreshRunToolEligibility = () => surface.updateCatalog(assembleCatalog());
+  let previousNames: string[] | undefined;
+  toolCtx.refreshRunTools = () => {
+    toolCtx.refreshRunToolEligibility!();
+    const snapshot = surface.snapshot();
+    const names = snapshot.map((tool) => tool.name);
+    toolCtx.modelToolNames = new Set(names);
+    if (JSON.stringify(names) !== JSON.stringify(previousNames)) {
+      logger.info("tool.surface.changed", {
+        cat: "tool",
+        reason: previousNames ? "selection_or_eligibility_change" : "initial",
+        activeTools: names,
+        eligibleCount: surface.getCatalog().length,
+      });
+      previousNames = names;
+    }
+    return snapshot;
+  };
+  return catalog;
+}
 
 /** engine.ts L1485-1522 —— ToolContext 组装(spawner、agentDefinitions、base 由调用方传入)。 */
 export function buildRunToolContext(args: {
@@ -369,6 +404,8 @@ export function assembleRunToolDefs(args: {
       ),
     );
     toolCtx.disabledBuiltins = disabledBuiltins;
+  } else {
+    toolCtx.disabledBuiltins = undefined;
   }
   // MCP tool exposure is per-SESSION even though the pool/registry are
   // worker-shared (B1): a server connected by another project's session

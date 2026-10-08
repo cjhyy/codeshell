@@ -1,10 +1,4 @@
-/**
- * Built-in ToolSearch tool — deferred tool schema discovery.
- *
- * MCP tools are initially registered with name-only (deferred).
- * The model uses ToolSearch to discover full schemas on demand,
- * saving context by not loading all MCP tool schemas upfront.
- */
+/** Built-in ToolSearch — discover eligible tools and load selected schemas for this run. */
 
 import type { ToolDefinition, RegisteredTool } from "../../types.js";
 import type { ToolRegistry } from "../registry.js";
@@ -14,24 +8,38 @@ import { browserDiscoveryScore, isBuiltinBrowserTool } from "../browser-discover
 import { PLAN_MODE_ALLOWED_TOOLS } from "../plan-mode-allowlist.js";
 import { formatMcpConnectionFailures } from "../mcp-health.js";
 
+const MAX_QUERY_LENGTH = 2048;
+const MAX_RESULTS = 20;
+const MAX_PURPOSE_LENGTH = 180;
+const MAX_SERVER_DISPLAY_LENGTH = 120;
+const MAX_OUTPUT_LENGTH = 8192;
+const MAX_HEALTH_LENGTH = 2048;
+const METADATA_SEPARATOR = "\n\n---\n\n";
+const OMITTED_METADATA_NOTICE =
+  "Some matching tools were omitted because their metadata exceeds the output budget.";
+
 export const toolSearchToolDef: ToolDefinition = {
   name: "ToolSearch",
   description:
-    "Search only the tools available in the current Session context by name or keyword. " +
-    "Some tools (especially from MCP servers) are deferred — their full schemas " +
-    "are only loaded when you search for them. If an exact tool is reported unavailable, " +
+    "Find tools available in the current Session context by name or keyword. " +
+    "Keyword searches return compact metadata and schemaRef values. " +
+    'Use "select:ToolName" (or comma-separated names) to load full schemas into the next ' +
+    "model request for this run. If an exact tool is reported unavailable, " +
     "do not retry unless the Session context changes.",
   inputSchema: {
     type: "object",
     properties: {
       query: {
         type: "string",
+        maxLength: MAX_QUERY_LENGTH,
         description:
-          'Query to find tools. Use "select:ToolName" for exact match, or keywords to search.',
+          'Keywords to find tools, or "select:Name1,Name2" to load at most 20 exact tools.',
       },
       max_results: {
-        type: "number",
-        description: "Maximum results to return (default: 5)",
+        type: "integer",
+        minimum: 1,
+        maximum: MAX_RESULTS,
+        description: "Maximum keyword results to return (default: 5, maximum: 20)",
       },
     },
     required: ["query"],
@@ -42,15 +50,23 @@ export async function toolSearchTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
-  const query = args.query as string;
-  if (!query) return "Error: query is required";
-  if (!ctx?.toolRegistry) return "Error: ToolSearch is not configured (no registry in ctx)";
+  if (typeof args.query !== "string" || !args.query.trim()) {
+    return "Error: query is required and must be a non-empty string";
+  }
+  if (args.query.length > MAX_QUERY_LENGTH) {
+    return `Error: query must be at most ${MAX_QUERY_LENGTH} characters`;
+  }
+  const query = args.query.trim();
+  const currentDefinitions = ctx?.runToolSurface?.getCatalog() ?? ctx?.searchableToolDefinitions;
+  if (!ctx || (!currentDefinitions && !ctx.toolRegistry)) {
+    return "Error: ToolSearch is not configured (no registry in ctx)";
+  }
 
-  // Floor to default on non-positive: a negative max_results would reach
-  // `.slice(0, maxResults)` with a negative end (= all but the last N), silently
-  // returning the wrong tool set. `|| 5` only caught 0/NaN, not negatives.
-  const rawMax = args.max_results as number;
-  const maxResults = Math.min(typeof rawMax === "number" && rawMax > 0 ? rawMax : 5, 20);
+  const rawMax = args.max_results;
+  const maxResults =
+    typeof rawMax === "number" && Number.isSafeInteger(rawMax) && rawMax > 0
+      ? Math.min(rawMax, MAX_RESULTS)
+      : 5;
   const queryLower = query.toLowerCase();
   const failures = new Map(
     [...(ctx.mcpServerFailures ?? [])].filter(([server]) => {
@@ -64,66 +80,74 @@ export async function toolSearchTool(
       );
     }),
   );
-  const health = formatMcpConnectionFailures(failures);
+  const health = truncateText(formatMcpConnectionFailures(failures), MAX_HEALTH_LENGTH);
+  const resultBudget = MAX_OUTPUT_LENGTH - (health ? health.length + 2 : 0);
   const withHealth = (result: string) => (health ? `${health}\n\n${result}` : result);
 
-  const currentDefinitions = ctx.searchableToolDefinitions;
-  if (currentDefinitions) {
-    const currentTools = currentDefinitions.map((definition) =>
-      definitionToSearchableTool(definition, ctx.toolRegistry),
-    );
-    if (query.startsWith("select:")) {
-      const names = query
-        .slice(7)
-        .split(",")
-        .map((name) => name.trim());
-      return withHealth(matchCurrentExact(currentTools, names));
-    }
-    return withHealth(searchCurrentByKeyword(currentTools, query, maxResults));
-  }
+  const tools = currentDefinitions
+    ? currentDefinitions.map((definition) =>
+        definitionToSearchableTool(definition, ctx.toolRegistry),
+      )
+    : ctx.toolRegistry!.listToolsDetailed().filter((tool) => isVisible(tool, ctx));
 
-  // The tool registry is worker-SHARED (B1): it holds MCP tools registered by
-  // every session, including servers another project enabled. ToolSearch is a
-  // side door around the per-turn toolDefs filter — without this gate it would
-  // surface (and let the model `select:` into) MCP tools from a server THIS
-  // session never enabled, which is exactly the chrome-devtools-in-writeflow
-  // leak. Mirror the engine's toolDefs visibility: keep an MCP tool only when
-  // its server is in this session's allowedMcpServers. Undefined set = no
-  // gating (sub-agents / hosts that don't populate it).
-  const visible = (tool: RegisteredTool): boolean => {
-    if (ctx.disabledBuiltins?.has(tool.name)) return false;
-    if (ctx.allowedToolNames && !ctx.allowedToolNames.has(tool.name)) return false;
-    if (ctx.planMode && !PLAN_MODE_ALLOWED_TOOLS.has(tool.name)) return false;
-    if (tool.source !== "mcp") {
-      if (isBuiltinBrowserTool(tool) && !ctx.browser) return false;
-      const guard = ctx.toolRegistry!.getAvailabilityGuard(tool.name);
-      return !guard || !ctx.toolVisibility || guard(ctx.toolVisibility);
-    }
-    const allowed = ctx.allowedMcpServers;
-    return (
-      (!allowed || allowed.has(tool.serverName ?? "")) &&
-      isRegisteredMcpToolAllowed(tool, ctx.mcpToolPolicies)
-    );
-  };
-
-  // "select:Name1,Name2" → exact match
   if (query.startsWith("select:")) {
     const names = query
       .slice(7)
       .split(",")
-      .map((n) => n.trim());
-    return withHealth(matchExact(ctx.toolRegistry, names, visible));
+      .map((name) => name.trim());
+    if (names.some((name) => !name) || names.length > MAX_RESULTS) {
+      return `Error: select requires between 1 and ${MAX_RESULTS} non-empty tool names`;
+    }
+    if (ctx.runToolSurface) {
+      const { selected, unavailable } = ctx.runToolSurface.select(names);
+      return withHealth(
+        [
+          ...(selected.length ? [`Selected tools for this run: ${selected.join(", ")}.`] : []),
+          ...unavailable.map(unavailableTool),
+        ].join("\n"),
+      );
+    }
+    // Legacy contexts can discover metadata, but have no per-run loading state to mutate.
+    const byName = new Map(tools.map((tool) => [tool.name, tool]));
+    const metadata: string[] = [];
+    const unavailable: string[] = [];
+    for (const name of new Set(names)) {
+      const tool = byName.get(name);
+      if (tool) metadata.push(formatToolMetadata(tool));
+      else
+        unavailable.push(currentDefinitions ? unavailableTool(name) : `Tool "${name}" not found.`);
+    }
+    // Preserve every unavailable-name receipt; the bounded query limits their combined size.
+    const unavailableText = unavailable.join("\n");
+    const metadataBudget = resultBudget - (unavailableText ? unavailableText.length + 2 : 0);
+    const metadataText = formatBoundedMetadata(metadata, metadataBudget);
+    return withHealth([unavailableText, metadataText].filter(Boolean).join("\n\n"));
   }
 
-  // Keyword search
-  return withHealth(searchByKeyword(ctx.toolRegistry, query, maxResults, visible));
+  return withHealth(searchByKeyword(tools, query, maxResults, resultBudget));
+}
+
+function isVisible(tool: RegisteredTool, ctx: ToolContext): boolean {
+  if (ctx.disabledBuiltins?.has(tool.name)) return false;
+  if (ctx.allowedToolNames && !ctx.allowedToolNames.has(tool.name)) return false;
+  if (ctx.planMode && !PLAN_MODE_ALLOWED_TOOLS.has(tool.name)) return false;
+  if (tool.source !== "mcp") {
+    if (isBuiltinBrowserTool(tool) && !ctx.browser) return false;
+    const guard = ctx.toolRegistry!.getAvailabilityGuard(tool.name);
+    return !guard || !ctx.toolVisibility || guard(ctx.toolVisibility);
+  }
+  // The registry is worker-shared; fallback discovery must retain the run's visibility gates.
+  return (
+    (!ctx.allowedMcpServers || ctx.allowedMcpServers.has(tool.serverName ?? "")) &&
+    isRegisteredMcpToolAllowed(tool, ctx.mcpToolPolicies)
+  );
 }
 
 function definitionToSearchableTool(
   definition: ToolDefinition,
-  registry: ToolRegistry,
+  registry?: ToolRegistry,
 ): RegisteredTool {
-  const registered = registry.getTool(definition.name);
+  const registered = registry?.getTool(definition.name);
   return {
     name: definition.name,
     description: definition.description,
@@ -135,95 +159,74 @@ function definitionToSearchableTool(
   };
 }
 
-function matchCurrentExact(tools: RegisteredTool[], names: string[]): string {
-  const byName = new Map(tools.map((tool) => [tool.name, tool]));
-  return names
-    .map((name) => {
-      const tool = byName.get(name);
-      return tool
-        ? formatTool(tool)
-        : `Tool "${name}" is not available in the current Session context. Do not retry unless the Session context changes.`;
-    })
-    .join("\n\n---\n\n");
-}
-
-function searchCurrentByKeyword(
-  tools: RegisteredTool[],
-  query: string,
-  maxResults: number,
-): string {
-  return searchDetailedTools(tools, query, maxResults);
-}
-
-function matchExact(
-  registry: ToolRegistry,
-  names: string[],
-  visible: (t: RegisteredTool) => boolean,
-): string {
-  const results: string[] = [];
-  for (const name of names) {
-    const tool = registry.getTool(name);
-    if (tool && visible(tool)) {
-      results.push(formatTool(tool));
-    } else {
-      results.push(`Tool "${name}" not found.`);
-    }
-  }
-  return results.join("\n\n---\n\n");
+function unavailableTool(name: string): string {
+  return `Tool "${name}" is not available in the current Session context. Do not retry unless the Session context changes.`;
 }
 
 function searchByKeyword(
-  registry: ToolRegistry,
+  tools: RegisteredTool[],
   query: string,
   maxResults: number,
-  visible: (t: RegisteredTool) => boolean,
-): string {
-  const allTools = registry.listToolsDetailed().filter(visible);
-  return searchDetailedTools(allTools, query, maxResults);
-}
-
-function searchDetailedTools(
-  allTools: RegisteredTool[],
-  query: string,
-  maxResults: number,
+  resultBudget: number,
 ): string {
   const queryLower = query.toLowerCase();
   const keywords = queryLower.split(/\s+/);
-
-  // Score each tool
-  const scored = allTools.map((tool) => {
-    let score = browserDiscoveryScore(tool, query);
-    const nameLower = tool.name.toLowerCase();
-    const descLower = tool.description.toLowerCase();
-
-    for (const kw of keywords) {
-      if (nameLower.includes(kw)) score += 10;
-      if (descLower.includes(kw)) score += 3;
-    }
-
-    // Exact name match bonus
-    if (nameLower === queryLower) score += 50;
-
-    return { tool, score };
-  });
-
-  const matches = scored
-    .filter((s) => s.score > 0)
+  const matches = tools
+    .map((tool) => {
+      let score = browserDiscoveryScore(tool, query);
+      const nameLower = tool.name.toLowerCase();
+      const descriptionLower = tool.description.toLowerCase();
+      for (const keyword of keywords) {
+        if (nameLower.includes(keyword)) score += 10;
+        if (descriptionLower.includes(keyword)) score += 3;
+      }
+      if (nameLower === queryLower) score += 50;
+      return { tool, score };
+    })
+    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, maxResults);
 
-  if (matches.length === 0) {
-    return `No tools matching "${query}". Available tools: ${allTools.map((t) => t.name).join(", ")}`;
-  }
-
-  return matches.map((m) => formatTool(m.tool)).join("\n\n---\n\n");
+  if (!matches.length) return `No tools matching "${query}".`;
+  return formatBoundedMetadata(
+    matches.map(({ tool }) => formatToolMetadata(tool)),
+    resultBudget,
+  );
 }
 
-function formatTool(tool: RegisteredTool): string {
+function formatToolMetadata(tool: RegisteredTool): string {
+  const description = tool.description.replace(/\s+/g, " ").trim();
+  const purpose = truncateText(description, MAX_PURPOSE_LENGTH);
+  const server = tool.serverName
+    ? truncateText(tool.serverName.replace(/\s+/g, " ").trim(), MAX_SERVER_DISPLAY_LENGTH)
+    : "";
   return (
     `### ${tool.name}\n` +
-    `Source: ${tool.source}${tool.serverName ? ` (${tool.serverName})` : ""}\n` +
-    `${tool.description}\n` +
-    `Parameters: ${JSON.stringify(tool.inputSchema, null, 2)}`
+    `Source: ${tool.source}${server ? ` (${server})` : ""}\n` +
+    `Purpose: ${purpose}\n` +
+    `schemaRef: select:${tool.name}`
   );
+}
+
+/** Keep complete names and selection references, omitting entries that cannot fit. */
+function formatBoundedMetadata(entries: string[], budget: number): string {
+  const result: string[] = [];
+  let length = 0;
+  let omitted = false;
+  const entryBudget = budget - OMITTED_METADATA_NOTICE.length - METADATA_SEPARATOR.length;
+  for (const entry of entries) {
+    const addition = entry.length + (result.length ? METADATA_SEPARATOR.length : 0);
+    if (length + addition > entryBudget) {
+      omitted = true;
+      continue;
+    }
+    result.push(entry);
+    length += addition;
+  }
+  if (omitted) result.push(OMITTED_METADATA_NOTICE);
+  return result.join(METADATA_SEPARATOR);
+}
+
+function truncateText(text: string, limit: number): string {
+  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }

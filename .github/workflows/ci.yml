@@ -59,6 +59,8 @@ jobs:
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-runtime-cost-ledger.mjs
       - name: Compiled SDK, stdio and TUI model request boundaries
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-model-request-boundaries.mjs
+      - name: Compiled SDK progressive tool discovery and bound source consumer
+        run: bun run test:deferred-tools
 
   # The suite is split across parallel shards rather than run as one job.
   #

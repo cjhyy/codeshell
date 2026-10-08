@@ -134,6 +134,10 @@ export interface TurnLoopDeps {
   transcript: Transcript;
   systemPrompt: string;
   tools: import("../types.js").ToolDefinition[];
+  /** One frozen active snapshot per model step, including retries and continuation. */
+  getTools?: () => import("../types.js").ToolDefinition[];
+  /** Complete eligibility metadata, including deferred sensitive-result tools. */
+  getEligibleTools?: () => readonly import("../types.js").ToolDefinition[];
   /** Per-sid overhead cache so the ctx bar doesn't drop between turns. */
   ctxOverheadStore: CtxOverheadStore;
   /** Current session id, used to key the overhead store. */
@@ -253,6 +257,11 @@ export function toolResultToBlock(result: ToolResult): ContentBlock {
 
 export class TurnLoop {
   private turnCount = 0;
+  private modelStepTools: import("../types.js").ToolDefinition[] | undefined;
+
+  private get currentTools(): import("../types.js").ToolDefinition[] {
+    return this.modelStepTools ?? this.deps.tools;
+  }
   /** Tool IDs already emitted as tool_use_start during streaming (to avoid duplicates). */
   private streamedToolIds = new Set<string>();
   /**
@@ -815,7 +824,7 @@ export class TurnLoop {
         requestKind,
         fingerprint: this.deps.model.getPromptPrefixFingerprint(
           this.deps.systemPrompt,
-          this.deps.tools,
+          this.currentTools,
         ),
       });
     }
@@ -896,9 +905,14 @@ export class TurnLoop {
     let messages = [...initialMessages];
     let finalText = "";
     const budgetTracker = createBudgetTracker();
-    const sensitiveGoalResultTools = this.config.goal
-      ? new Set(this.deps.tools.filter((tool) => tool.sensitiveResult).map((tool) => tool.name))
-      : undefined;
+    const sensitiveGoalResultTools = this.config.goal ? new Set<string>() : undefined;
+    const retainSensitiveMetadata = () => {
+      if (!sensitiveGoalResultTools) return;
+      for (const tool of this.deps.getEligibleTools?.() ?? this.deps.tools) {
+        if (tool.sensitiveResult) sensitiveGoalResultTools.add(tool.name);
+      }
+    };
+    retainSensitiveMetadata();
     // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
     // wall-clock start now and accumulates prompt+completion tokens across
     // every turn; the guardrail below force-stops the run once any configured
@@ -1096,6 +1110,8 @@ export class TurnLoop {
           return { text: finalText, reason: "completed", messages };
         }
         // Model call (with streaming fallback and max_output_tokens continuation)
+        this.modelStepTools = this.deps.getTools?.() ?? this.deps.tools;
+        retainSensitiveMetadata();
         this.config.onStream?.({
           type: "stream_request_start",
           turnNumber: this.turnCount,
@@ -1302,7 +1318,7 @@ export class TurnLoop {
               const contResponse = await this.deps.model.call(
                 this.deps.systemPrompt,
                 preparedContinuationMessages,
-                this.deps.tools,
+                this.currentTools,
                 this.config.onStream,
                 this.config.signal,
                 this.modelCallRecordingOptions(preparedContinuationMessages),
@@ -1652,6 +1668,7 @@ export class TurnLoop {
         for (const result of results) {
           resultBlocks.push(toolResultToBlock(result));
           const streamResult = toolResultForDisplay(result);
+          retainSensitiveMetadata();
           const sensitiveByMetadata = sensitiveGoalResultTools?.has(result.toolName) === true;
           const transcriptResult = sensitiveByMetadata
             ? SENSITIVE_TOOL_RESULT_PLACEHOLDER
@@ -2128,7 +2145,7 @@ export class TurnLoop {
       return await this.deps.model.call(
         this.deps.systemPrompt,
         messages,
-        this.deps.tools,
+        this.currentTools,
         wrappedStream,
         this.config.signal,
         this.modelCallRecordingOptions(messages, assistantMessageId),
@@ -2184,7 +2201,7 @@ export class TurnLoop {
       const response = await this.deps.model.callWithoutStreaming(
         this.deps.systemPrompt,
         messages,
-        this.deps.tools,
+        this.currentTools,
         this.config.signal,
         this.modelCallRecordingOptions(messages, assistantMessageId),
       );

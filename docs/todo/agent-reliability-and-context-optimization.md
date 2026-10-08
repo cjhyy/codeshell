@@ -408,9 +408,11 @@ interface VerifiedWriteResult<T = unknown> {
 
 ### 10.1 当前膨胀来源
 
+以下保留实施前的问题基线；当前源码进展和未交付边界见 10.2 的实现记录，不代表已发布或部署。
+
 1. 主模型每轮携带 61 个工具定义；
 2. System Prompt 又生成一份工具名称和描述，而 Provider 的原生 `tools` 字段已经包含 description/schema；
-3. `ToolSearch` 目前主要只为 MCP 工具做 Deferred Discovery；
+3. 既有 `ToolSearch` 虽有 MCP Deferred Discovery 的说明，但仍返回完整定义，且没有 Run 活动集合；
 4. Skill Listing 将所有 Skill 的完整 description 全量渲染，没有字符或 Token 预算；
 5. `SendMessageToSession` 把所有目标 Session 的 ID 和标题同时写进 description 和 enum；
 6. `UseCredential` 把实时凭证名称写进工具 description；
@@ -421,7 +423,7 @@ interface VerifiedWriteResult<T = unknown> {
 
 #### Task Capability Router
 
-在 Run 开始前根据用户意图选择一个稳定的工具 Profile，复用当前已有的 `EngineRunOptions.toolAllowlist` / `RunBehaviorProfile.allowedToolNames`：
+后续可以在 Run 开始前选择稳定的工具 Profile；权限范围仍由 `EngineRunOptions.toolAllowlist` / `RunBehaviorProfile.allowedToolNames` 控制，不能把权限 allowlist 当作渐进加载集合，也不能依赖用户 prompt 猜测静默收窄能力：
 
 - 普通 Run 初始暴露 8–15 个相关工具；
 - 3–5 个跨任务核心工具始终可用；
@@ -440,6 +442,19 @@ interface VerifiedWriteResult<T = unknown> {
 - 重型媒体工具。
 
 ToolSearch 搜索结果应返回紧凑的名称、用途和 schema 引用。只有明确 `select:` 后，工具完整定义才进入本 Run 的活动集合。
+
+#### 2026-10-09 源码实现记录：通用渐进工具面
+
+- Core 的 `AgentPreset.initialToolNames` 声明初始 schema，first-party Core/coding 普通运行暴露 8–15 个工具。coding 的 ApplyPatch 策略属于 coding preset；Goal controls 和 notes 仍按既有可用性 gate 暴露，不依用户文字推断任务类型。
+- 每个 Run 的 `RunToolSurface` 保存 eligible catalog 与粘性的 selected names。选择只增加本 Run 的 schema；撤权立即隐藏并禁止执行，重新授权后恢复既有选择顺序。未声明 initial names、显式 Run allowlist、behavior profile allowlist，以及无 ToolSearch 的目录保留 eager 兼容。
+- ToolSearch keyword 只返回 name、最多 180 字用途、source、完整 `select:Name` 引用；搜索和选择回执合计最多 8,192 字符（含有界 MCP 健康提示），每次最多 20 个结果或选择名、query 最多 2,048 字符。超预算条目省略并提示，不把 schema 定义串写回结果。
+- 每个模型步骤从 Run state 生成冻结的 native tools 快照；该步骤的 SDK retry、stream fallback、截断 continuation 和 Phase D 正文摘要使用相同快照。ToolSearch 的选择从下一步骤生效，同批伪造 inactive 调用在 hook/approval/handler 前拒绝。
+- 完整 eligible 名称仍进入能力指引与 Goal 敏感元数据。registry、CapabilityService、协议工具目录及 SessionToolHost 的完整 host catalog APIs 不收窄。执行器继续执行 allowlist、availability、MCP policy、path policy、permission 和 hooks；内部 ReadSource→LinkAction 仅免除模型 schema 加载门槛，保留授权与参数约束。
+- 复用现有 MCP manager、连接与项目 policy；真实 stdio 延迟连接可搜索、显式 select 后暴露 schema。已经注册到 Run registry 的插件/连接工具自动适用；不新增插件运行时、连接器协议、UI 或 sidebar。
+
+本地验收入口为 guarded Bun 的 `run-tool-surface.test.ts`、`tool-search.test.ts`、`run-tooling.deferred.test.ts`、`run-tooling.mcp.test.ts`、`turn-loop-deferred-tools.test.ts` 和真实 Link source consumer；编译 SDK 验收用 `bun run test:deferred-tools`，须先完成 `test:package-release`。Node wrapper 提供私有 HOME，fixture 在导入 Core 前限定网络到本地 exact origin。上传 parser smoke 明确限定 ReadSource，因为 `enabledBuiltinTools` 是增量安装，真实 harness 目录仍含 ToolSearch；parser 原有内容与授权断言全部保留。
+
+仍未实现：按任务意图自动路由、跨 Run/Session 持久 schema 选择、MCP transport 懒连接、新连接器接入、真实 provider 的长程 cache/token 收益评估。固定 preset 初始集合是当前策略；目录和选择回执的字符上限不等于精确 token 预算。源码/本地 fixture 验收不等于正式发布、真实账号或部署验收。
 
 #### Skill Listing Budget
 
