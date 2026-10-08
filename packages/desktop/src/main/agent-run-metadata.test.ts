@@ -63,6 +63,9 @@ describe("prepareAgentRunMetadata", () => {
       params: { sessionId: "s1", kind: "shell", id: "job1" },
     });
     expect(() => prepareAgentRunMetadata(line, meta, baseDeps())).toThrow("host authority");
+    expect(() =>
+      prepareAgentRunMetadata(line, { origin: "mobile", producer: "remote" }, baseDeps()),
+    ).toThrow("host authority");
     expect(
       prepareAgentRunMetadata(line, { origin: "host", producer: "task-inbox" }, baseDeps()).outLine,
     ).toBe(line);

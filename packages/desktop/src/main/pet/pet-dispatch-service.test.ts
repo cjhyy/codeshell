@@ -4,6 +4,8 @@ import { validatePetRunParams } from "@cjhyy/code-shell-pet";
 import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
 import { boundedWorld, PetDispatchService, stringifyBoundedPetWorld } from "./pet-dispatch-service";
+import { taskInboxPetView } from "../task-inbox/task-inbox-pet-view";
+import { mapTaskInboxRecord } from "../task-inbox/task-inbox-mappers";
 
 const snapshot: DesktopPetProjectionSnapshot = {
   version: 4,
@@ -80,6 +82,74 @@ function imSource(senderId: string) {
 }
 
 describe("PetDispatchService", () => {
+  test("uses the shared task view in queries and manager context without accepting a spoofed view", async () => {
+    const taskInbox = taskInboxPetView({
+      version: 12,
+      errors: [{ source: "background-shell", message: "worker disconnected" }],
+      records: ["running", "waiting"].map((status, index) =>
+        mapTaskInboxRecord({
+          source: "session",
+          sourceId: `shared-${status}`,
+          title: `Shared ${status}`,
+          status,
+          sourceRevision: "r1",
+          createdAt: 1,
+          updatedAt: index + 2,
+        }),
+      ),
+    });
+    let managerWorld: Record<string, unknown> | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          managerWorld = JSON.parse(String(params.petRuntimeContext));
+          return { ok: true, result: { text: "shared tasks" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      taskInbox: () => taskInbox,
+      worldContext: () => ({ taskInbox: { tasks: [{ taskKey: "spoofed" }] } }),
+    });
+    expect(await service.dispatch({ type: "get_global_status" })).toMatchObject({ taskInbox });
+    expect(await service.dispatch({ type: "list_pending" })).toMatchObject({
+      taskInbox: {
+        version: 12,
+        total: 2,
+        staleSources: ["background-shell"],
+        tasks: [expect.objectContaining({ taskKey: "session:shared-waiting" })],
+      },
+    });
+    await service.dispatch({ type: "chat", message: "show my tasks" });
+    expect(managerWorld?.taskInbox).toEqual(taskInbox);
+  });
+
+  test("task projection failure preserves existing Mimi queries", async () => {
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: { requestWorker: async () => ({ ok: true, result: {} }) },
+      hostCwd: "/safe/pet",
+      taskInbox: () => {
+        throw new Error("projection unavailable");
+      },
+    });
+    const status = await service.dispatch({ type: "get_global_status" });
+    expect(status).toMatchObject({ ok: true, type: "global_status", runningCount: 1 });
+    expect(status).not.toHaveProperty("taskInbox");
+    expect(await service.dispatch({ type: "list_pending" })).toMatchObject({
+      ok: true,
+      pending: [{ requestId: "req-a" }],
+    });
+  });
+
   test("keeps deterministic commands off the model and reuses safe navigation", async () => {
     let workerCalls = 0;
     const service = new PetDispatchService({
