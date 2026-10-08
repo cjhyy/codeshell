@@ -65,11 +65,13 @@ describe("Engine prompt_too_long terminal event", () => {
       expect(events).toContainEqual({
         type: "error",
         error: "Context limit exceeded after 3 recovery attempts",
+        outputCursor: expect.any(String),
       });
       expect(events).toContainEqual({
         type: "turn_complete",
         reason: "prompt_too_long",
         text: result.text,
+        outputCursor: expect.any(String),
       });
 
       const statePath = join(dir, "sessions", result.sessionId, "state.json");

@@ -59,7 +59,11 @@ test("actual Engine rejects a swallowed journal write failure and never reports 
     ],
   });
   engine.getHookRegistry().clear();
-  scenarios.set(model, () => chmodSync(file, 0o400));
+  let requests = 0;
+  scenarios.set(model, () => {
+    requests++;
+    chmodSync(file, 0o400);
+  });
   const events: StreamEvent[] = [];
   try {
     const result = await engine.run("Return a fixture confirmation", {
@@ -86,6 +90,22 @@ test("actual Engine rejects a swallowed journal write failure and never reports 
     expect(state.status).toBe("model_error");
     expect(state.outputRecoveryIncomplete).toBe(true);
     expect(readOutputJournal(join(root, "sessions"), "fault").status).toBe("incomplete");
+    chmodSync(file, 0o600);
+    const next = await engine.run("A fresh intent cannot bypass a damaged output journal", {
+      sessionId: "fault",
+      clientMessageId: "second-intent",
+      behaviorMode: "journal-fixture",
+      onStream: (event) => {
+        events.push(event);
+      },
+    });
+    expect(next.reason).toBe("model_error");
+    expect(requests).toBe(1);
+    expect(events.at(-1)).toMatchObject({
+      type: "turn_complete",
+      reason: "model_error",
+      outputRecovery: "incomplete",
+    });
   } finally {
     scenarios.delete(model);
     chmodSync(file, 0o600);

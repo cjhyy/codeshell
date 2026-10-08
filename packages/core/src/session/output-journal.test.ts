@@ -79,6 +79,11 @@ describe("Session output journal", () => {
     copyFileSync(f.file, f.file + ".replacement");
     renameSync(f.file + ".replacement", f.file);
     expect(readOutputJournal(f.root, f.id, { after: cursor }).status).toBe("cursor_invalid");
+    expect(readOutputJournal(f.root, f.id).status).toBe("ok");
+    new SessionOutputJournal(f.root, f.id, "next-run").append({
+      type: "text_delta",
+      text: "restored owner",
+    });
     rmSync(join(f.root, f.id), { recursive: true });
     expect(readOutputJournal(f.root, f.id).status).toBe("unavailable");
     const newSession = f.manager.create(f.root, "fixture", "fixture", f.id);
@@ -103,6 +108,28 @@ describe("Session output journal", () => {
     writeFileSync(f.file, raw.replace("完整🙂", "changed"));
     expect(readOutputJournal(f.root, f.id).status).toBe("incomplete");
     expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow("continuity");
+  });
+  test("a committed identity pin fences missing/zero/replaced journals after a cold owner restart", () => {
+    for (const mode of ["empty", "missing", "header"] as const) {
+      const f = fixture();
+      const published = f.writer.append({ type: "text_delta", text: "published-prefix" });
+      expect(f.manager.saveState(f.session.state)).toBe(true);
+      expect(f.manager.readSessionState(f.id)?.outputJournalIdentity).toEqual(expect.any(String));
+      if (mode === "empty") truncateSync(f.file, 0);
+      else if (mode === "missing") rmSync(f.file);
+      else {
+        const text = readFileSync(f.file, "utf8");
+        writeFileSync(f.file, text.replace(/"journalId":"[^"]+"/, '"journalId":"replaced"'));
+      }
+      expect(["incomplete", "cursor_invalid"]).toContain(readOutputJournal(f.root, f.id).status);
+      expect(readOutputJournal(f.root, f.id, { after: published }).complete).toBe(false);
+      const restarted = new SessionManager(f.root);
+      const state = restarted.readSessionState(f.id)!;
+      restarted.startSessionRun(state, "new-owner");
+      expect(() => new SessionOutputJournal(f.root, f.id, "new-owner")).toThrow();
+      if (mode === "empty") expect(statSync(f.file).size).toBe(0);
+      if (mode === "missing") expect(existsSync(f.file)).toBe(false);
+    }
   });
   test("a truncated frozen upper bound is invalid and malformed complete records are incomplete", () => {
     const f = fixture();

@@ -124,6 +124,7 @@ describe("Engine.enqueueSteer active-run gate", () => {
         type: "steer_injected",
         text: "queued during shutdown",
         id: "steer-final",
+        outputCursor: expect.any(String),
       });
       expect(result.reason).toBe("completed");
       expect(result.text).toBe("continued");

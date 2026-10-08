@@ -4,6 +4,7 @@ import { createServer as createTcpServer } from "node:net";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { createHash, randomBytes } from "node:crypto";
+import { syncBuiltinESMExports } from "node:module";
 import {
   existsSync,
   mkdirSync,
@@ -11,6 +12,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,6 +29,51 @@ const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = resolve(repo, "packages/core/dist/cli/agent-server-stdio.js");
 const preload = new URL("./runtime-cost-smoke-isolation.mjs", import.meta.url).href;
+
+async function measureJournal(core, root, sessionId, expectedHash) {
+  const fs = (await import("node:fs")).default;
+  const original = fs.readSync;
+  let readBytes = 0,
+    pages = 0;
+  fs.readSync = (...args) => {
+    const bytes = original(...args);
+    readBytes += bytes;
+    return bytes;
+  };
+  syncBuiltinESMExports();
+  const began = performance.now(),
+    outputHash = createHash("sha256");
+  const recovery = { incomplete: false };
+  try {
+    let page = core.readOutputJournal(root, sessionId);
+    const coldFirstPageMs = performance.now() - began,
+      coldReadBytes = readBytes;
+    while (true) {
+      pages++;
+      const complete = core.applyOutputJournalPage(recovery, page, (event) => {
+        if (event.type === "text_delta") outputHash.update(event.text);
+      });
+      assert.equal(recovery.incomplete, false);
+      if (complete) break;
+      page = core.readOutputJournal(root, sessionId, {
+        after: recovery.cursor,
+        through: recovery.through,
+      });
+    }
+    assert.equal(outputHash.digest("hex"), expectedHash);
+    return {
+      journalBytes: statSync(join(root, sessionId, "output-journal.jsonl")).size,
+      coldFirstPageMs: Math.round(coldFirstPageMs),
+      coldReadBytes,
+      allPagesMs: Math.round(performance.now() - began),
+      allPagesReadBytes: readBytes,
+      pages,
+    };
+  } finally {
+    fs.readSync = original;
+    syncBuiltinESMExports();
+  }
+}
 
 // An ordinary HTTP upgrade keeps the exact-origin guard active. The ws client
 // injects its own createConnection callback, which that guard correctly rejects.
@@ -292,7 +339,10 @@ async function hubChild(args) {
         .map((item) => item.text)
         .join("");
       assert.equal(hash(text), expectedHash);
-      await assert.rejects(query({ type: "output_journal", sessionId: "../escape" }), /Session|会话/);
+      await assert.rejects(
+        query({ type: "output_journal", sessionId: "../escape" }),
+        /Session|会话/,
+      );
       return {
         through: restored.outputCursor,
         epoch: detail.streamCursor.epoch,
@@ -379,6 +429,8 @@ if (process.argv[2] === "--hub") {
   const origin = `http://127.0.0.1:${http.address().port}`;
   installLocalNetworkGuard(origin);
   const core = await import("@cjhyy/code-shell-core");
+  const journalCore = await import("@cjhyy/code-shell-core/internal");
+  const journalWeb = await import(pathToFileURL(join(repo, "packages/web/dist/index.js")));
   const { registerSessionTranscriptIpc, SessionSnapshotStore, recoverDesktopOutputJournal } =
     await import(pathToFileURL(adapters));
   const storage = dirname(core.sessionsRoot());
@@ -421,6 +473,44 @@ if (process.argv[2] === "--hub") {
     assert.equal(result.reason, "completed");
     assert.equal(hash(result.text), expectedHash);
     assert.ok(frames > 2000);
+    const journalApi = {
+      ...journalCore,
+      applyOutputJournalPage: journalWeb.applyOutputJournalPage,
+    };
+    const modelJournalTiming = await measureJournal(
+      journalApi,
+      core.sessionsRoot(),
+      "long-output",
+      expectedHash,
+    );
+    const budgetRoot = join(root, "budget-sessions"),
+      manager = new core.SessionManager(budgetRoot);
+    const budgetSession = manager.create(cwd, "fixture", "fixture", "near-budget");
+    manager.startSessionRun(budgetSession.state, "budget-run");
+    const writer = new journalCore.SessionOutputJournal(
+      budgetRoot,
+      "near-budget",
+      "budget-run",
+      budgetSession.transcript.getEvents()[0].id,
+    );
+    const budgetText = "x".repeat(15 * 1024 * 1024),
+      budgetHash = createHash("sha256");
+    for (let index = 0; index < 6; index++) {
+      writer.append({ type: "text_delta", text: budgetText });
+      budgetHash.update(budgetText);
+    }
+    assert.throws(() => writer.append({ type: "text_delta", text: budgetText }), /storage budget/);
+    const nearBudgetTiming = await measureJournal(
+      journalApi,
+      budgetRoot,
+      "near-budget",
+      budgetHash.digest("hex"),
+    );
+    assert.ok(nearBudgetTiming.journalBytes > 120 * 1024 * 1024);
+    // A static log must not reread its complete prefix on every page. Includes
+    // Session metadata, header and both sparse seek checks, not only body bytes.
+    assert.ok(nearBudgetTiming.allPagesReadBytes < nearBudgetTiming.journalBytes * 8);
+    console.log(JSON.stringify({ modelJournalTiming, nearBudgetTiming }));
     const handlers = new Map();
     registerSessionTranscriptIpc({ handle: (name, listener) => handlers.set(name, listener) });
     const recover = (store) =>

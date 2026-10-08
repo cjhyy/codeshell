@@ -336,6 +336,8 @@ export interface SessionState {
   runId?: string;
   /** Sticky recovery barrier after an output persistence/budget failure. */
   outputRecoveryIncomplete?: boolean;
+  /** Immutable journal header pin, committed before any output cursor is published. */
+  outputJournalIdentity?: string;
   clientMessageId?: string;
   /**
    * Monotonic prompt-cache counters for the whole session. These only increase

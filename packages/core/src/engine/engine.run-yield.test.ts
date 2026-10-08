@@ -76,10 +76,15 @@ function makeEngine(
 }
 
 function turnCompletes(events: StreamEvent[]): Extract<StreamEvent, { type: "turn_complete" }>[] {
-  return events.filter(
-    (event): event is Extract<StreamEvent, { type: "turn_complete" }> =>
-      event.type === "turn_complete",
-  );
+  return events
+    .filter(
+      (event): event is Extract<StreamEvent, { type: "turn_complete" }> =>
+        event.type === "turn_complete",
+    )
+    .map(({ outputCursor, ...event }) => {
+      expect(outputCursor).toEqual(expect.any(String));
+      return event;
+    });
 }
 
 /** Model rounds inside the turn loop; fire-and-forget aux calls (session

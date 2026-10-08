@@ -80,6 +80,7 @@ export function buildWrappedOnStream(args: {
             runId,
             index > 0 ? events[index - 1].id : undefined,
           );
+          session.state.outputJournalIdentity = journal.identityPin;
           const message = events[index].data;
           const content = message.content;
           const text =

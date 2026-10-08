@@ -104,7 +104,9 @@ describe("architecture growth budgets", () => {
         // adoption. Exact body/scope review and post-dialog revalidation remain
         // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
         matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
-    ).toBeLessThanOrEqual(321);
+      // +1 read-only, bounded Session output-journal page route. Its file/owner
+      // validation and recovery algorithm stay in Core and the extracted adapters.
+    ).toBeLessThanOrEqual(322);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -136,7 +138,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(314);
+    ).toBeLessThanOrEqual(315);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -151,7 +153,8 @@ describe("architecture growth budgets", () => {
     // Generic Link challenge contracts, the bounded UsageQuery/Summary method
     // and Profile sourceAccess transport fields add declarations only. Host
     // authorization and source-permission intersection remain outside preload.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_954);
+    // +9 declaration lines for the optional bounded output-journal adapter.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_963);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -202,7 +205,9 @@ describe("architecture growth budgets", () => {
     // decision snapshot after owner disconnect and before observer disposal.
     // Full close flushes terminal notifications before closing transport, then
     // drops this metadata cache; no observer, tool resolver or grant is retained.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_138);
+    // +32 ingress lines resolve the existing Session owner and forward bounded
+    // journal queries; persistence, cursor validation and paging remain extracted.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_170);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -247,7 +252,9 @@ describe("architecture growth budgets", () => {
     // incarnation/storage scope, composition/config versions and borrowed or
     // owned Host signer enter the existing model facade. Provider projection,
     // validation, custody and durable event writes remain in dedicated modules.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_880);
+    // +4 net lines bind the run-owned persist-before-publish policy. Journal
+    // ownership/failure fencing remain in run-stream.ts and session/output-journal.ts.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_884);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -294,7 +301,8 @@ describe("architecture growth budgets", () => {
       // +4 Host-only statements provide durable key custody, persisted owner
       // validation, private worker/default-signer adapters and their types.
       // None grants renderer or model RPC access to signing keys.
-      "packages/core/src/index.internal.ts": 92,
+      // +1 Host-only journal reader/writer/type statement. No stable SDK growth.
+      "packages/core/src/index.internal.ts": 93,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
@@ -313,7 +321,8 @@ describe("architecture growth budgets", () => {
       // +2 browser-safe Link challenge controller/presentation modules shared by
       // Desktop and Web; transport custody, token refresh and grants remain Host
       // responsibilities. These modules import no native/credential authority.
-      "packages/web/src/index.ts": 19,
+      // +1 shared bounded output-journal recovery reducer statement.
+      "packages/web/src/index.ts": 20,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);
