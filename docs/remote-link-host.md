@@ -327,3 +327,15 @@ node scripts/smoke-docker-link.mjs /path/to/codeshell-services/apps/link-server/
 清理只处理本次安装标签匹配的容器／网络／卷及唯一的临时证书镜像，移除测试密钥、
 数据库和控制配置，仅保留浏览器截图。基础项目镜像保留。测试不会读取真实 GitHub
 凭据或模型配置，不代表真实 GitHub、物理手机、Agent 模型调用或公网部署完成。
+
+### 本地续期与写请求的单次发送
+
+本地 GitHub/GitLab 的 rotating refresh-token 请求和本地 Link 的 POST 写操作默认与远程
+Link 共用私有 Node HTTP 单次发送通道：不复用连接、不跟随重定向、不自动重发。
+续期先持久化 `refreshing`，响应丢失后保存 `reconnect`；重新打开同一凭据不再次发送旧
+refresh token。写请求响应丢失只返回错误，不自动执行第二次。Host 显式注入的
+`fetchImpl` 是受信任的传输替换，其重试策略由注入者负责。
+
+`node scripts/smoke-local-link-default-transport.mjs` 使用公开 SDK 的默认传输，将物理
+socket 目的地约束到 localhost 受控上游，分别验证两家续期及 GitHub 写请求在服务端
+已收到请求、返回前断连时只有一个 POST；测试使用合成凭据，不替代真实账号验收。

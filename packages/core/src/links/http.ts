@@ -1,3 +1,5 @@
+import { requestOnce } from "./request-once.js";
+
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 20_000;
 const LOCAL_LINK_ALLOWED_HOSTS = new Set([
@@ -39,7 +41,8 @@ export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown
   ) {
     throw new Error(`Link provider host is not allowed: ${request.url.hostname}`);
   }
-  const fetchImpl = request.fetchImpl ?? fetch;
+  const fetchImpl =
+    request.fetchImpl ?? ((request.method ?? "GET") === "POST" ? requestOnce : fetch);
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const signal = request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
   const response = await fetchImpl(request.url, {

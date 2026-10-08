@@ -9,7 +9,7 @@
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | Link 统一授权前置批次 | 已合入 main（PR60）；系统浏览器 broker 完成本地 Web／Electron 验证，独立提交集成中                                                   | Desktop/Web/Host 授权、取消/过期/重试、CLI 安装与登录、系统浏览器回调、发布声明和 CI 均通过后合入远端 main                     |
 | 全部远程 Link         | Host PR61 和 services PR18 已合入各自 main，10 provider／26 action 跨仓验证通过；services PR19 凭据托管及 Host PR63 本地续期也已合入 | 固定可信 adapter、账号/作用域/资源过滤、逐家协议与刷新、全部 action、错误/越权/取消/分页验证；未配置的 provider 不公开为可连接 |
-| Services 公开包兼容   | PR17 已合入 main，固定五个公开包为 0.9.26；目标服务器仅完成候选准备                                                                  | 同版本五包、完整能力/资产检查、Node 22 服务测试、浏览器授权、容器及恢复验收；记录准确包集与部署版本                            |
+| Services 公开包兼容   | PR17 已合入 main，固定五个公开包为 0.9.26；目标 Link 已升级 82d0e4d/schema 3 并完成 GitHub 真实只读及离线恢复                        | 同版本五包、完整能力/资产检查、Node 22 服务测试、浏览器授权、容器及恢复验收；记录准确包集与部署版本                            |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                                              | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证 |
 | 跨 Session 成本       | 已完成独立 receipt ledger 设计，实施中；沿用现有活动记录／用量入口                                                                   | 请求身份、真实 usage、unknown、子 Agent 去重、恢复隔离、查询权限和公开包验收                                                   |
 
@@ -17,7 +17,7 @@
 原有 GitHub 连接在停机维护中完成一次自动续期、原账号校验、资源发现和现有 grant 下的
 只读调用；既有账号绑定、客户端和授权关系保持不变。在线／停机／升级后备份及新旧工具
 离线恢复通过，密钥另存 root 私有备份；不把离线恢复当成实际线上降级。完整证据见
-[目标 Link 验收](https://github.com/cjhyy/codeshell-services/blob/codex/services/link-target-acceptance/docs/link-target-acceptance-2026-10-09.md)。VPN 路径问题通过
+[目标 Link 验收](https://github.com/cjhyy/codeshell-services/blob/0469c4b87e14b4816c304bfbec4d314fd5c46781/docs/link-target-acceptance-2026-10-09.md)。VPN 路径问题通过
 单连接绑定物理网卡解决，不修改系统路由或关闭证书验证。生产私密配置只确认已配置
 GitHub OAuth；其余 provider 应用配置和真实账号验收仍待提供，不能以受控上游替代。
 继续保留现有密钥、数据与可恢复备份，遵守迁移和跨版本回滚限制。
