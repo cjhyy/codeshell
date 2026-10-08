@@ -4,6 +4,8 @@ export type { OptimizationLabApi } from "../shared/optimization-lab";
 
 export function createOptimizationLabApi(ipc: Pick<IpcRenderer, "invoke">): OptimizationLabApi {
   return {
+    previewEvidence: (input) => ipc.invoke("optimizationLab:previewEvidence", input),
+    importEvidence: (input) => ipc.invoke("optimizationLab:importEvidence", input),
     query: (type, input) => ipc.invoke("optimizationLab:query", type, input),
     authorize: (input) => ipc.invoke("optimizationLab:authorize", input),
     exportFile: (input) => ipc.invoke("optimizationLab:exportFile", input),

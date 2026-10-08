@@ -1,6 +1,6 @@
 # 优化实验室：个人先用技术方案
 
-日期：2026-09-22；2026-09-23 按评审修订；2026-10-08 更新实施状态。计划 A 地基、计划 B 的 P1a 文本实验引擎及 Desktop 最小授权/评分/报告页面已实现，P1b 中的[完整样本编辑与 JSON 文件交换](optimization-lab-editor-2026-10-08.md)已按用户后续交付要求补齐。无付费自动验收和限制见[引擎交付记录](optimization-lab-acceptance-2026-10-08.md)。真实模型实验及作者收益评价尚未执行；P1b 证据导入/实验室内试用及 P2 仍后续，本文不提供消费授权。
+日期：2026-09-22；2026-09-23 按评审修订；2026-10-08 更新实施状态。计划 A 地基、计划 B 的 P1a 文本实验引擎及 Desktop 最小授权/评分/报告页面已实现，P1b 中的[完整样本编辑与 JSON 文件交换](optimization-lab-editor-2026-10-08.md)已按用户后续交付要求补齐。无付费自动验收和限制见[引擎交付记录](optimization-lab-acceptance-2026-10-08.md)。真实模型实验及作者收益评价尚未执行；P1b 的[选定运行证据导入和固定候选试用](optimization-lab-p1b-evidence-trial-2026-10-09.md)已实施并按无付费 fixture 验收；P2 仍后续，本文不提供消费授权。
 
 关联：[优化 Agent 总体设计](agent-optimization-agent.md)、[通用评测契约](agent-evals-platforms-and-adapters.md)、[现有评测说明](../../evals/harness/README.md)、[AgentModule 组装设计](agent-module-resolved-composition-design.md)。本文收敛总体设计的首期范围；首期范围冲突时以本文为准。
 
@@ -376,8 +376,8 @@ P0/P1a 的建议实现文件职责（位于 `packages/optimization-lab/src`）�
 
 标注 [P1a] 的是 P1a 交付门槛；[P1b]、[P2] 在对应阶段完成。
 
-- [ ] [P1b] 旧 trace 缺失、尾部截断、当前模型字段均不被升级成可复现历史快照。
-- [ ] [P1b] 密钥样例被移除，预览和确认前没有外发；未选记录、另一项目资源不可读取。
+- [x] [P1b] 旧 trace 缺失、尾部截断、当前模型字段均不被升级成可复现历史快照。
+- [x] [P1b] 密钥样例被移除，预览和确认前没有外发；未选记录、另一项目资源不可读取。
 - [ ] [P1a] 同源样本不跨 dev/holdout；候选模型收到的 payload 无保留集输入/答案；被测模型无 expected。
 - [ ] [P1a] 未授权、过期/撤销授权和计划 hash 不匹配时上游请求数为零。
 - [ ] [P1a] 剩余执行时间不足以预留 trial 窗口时不启动；临近 `expiresAt` 的请求取更早的截止时间，到期主动取消在途请求，不等待较晚的 trial timeout；收尾超时保持未知用量且不发新请求。

@@ -34,7 +34,7 @@ import {
 import type { MeterAccounting } from "./providers/metered-fetch.js";
 import { runTrial, type Trial } from "./runner.js";
 import { reflectOnce } from "./strategy.js";
-import type { Candidate } from "./candidate.js";
+import { candidateHash, type Candidate } from "./candidate.js";
 import {
   createGradingTemplate,
   fullyGraded,
@@ -46,6 +46,7 @@ import {
   type GradingTemplate,
 } from "./grading.js";
 import { buildReport, trialVerdict } from "./report.js";
+import { verifyEvidenceReferences } from "./evidence.js";
 
 const positive = z.number().int().positive().safe();
 export const PrepareSchema = z
@@ -68,6 +69,17 @@ export const PrepareSchema = z
         maxContextBytes: positive.max(4 * 1024 * 1024).optional(),
       })
       .strict(),
+  })
+  .strict();
+
+export const PrepareTrialSchema = PrepareSchema.omit({
+  skillName: true,
+  targetConnectionId: true,
+  optimizerConnectionId: true,
+})
+  .extend({
+    sourceExperimentId: z.string().min(1).max(128),
+    candidateHash: z.string().regex(/^[a-f0-9]{64}$/),
   })
   .strict();
 
@@ -158,12 +170,55 @@ export class OptimizationLabController {
   }
 
   prepare(raw: unknown) {
-    const input = PrepareSchema.parse(raw);
+    return this.preparePlan(PrepareSchema.parse(raw));
+  }
+
+  /** A fresh frozen plan/authorization, never an installation or mutation of the source. */
+  prepareTrial(raw: unknown) {
+    const input = PrepareTrialSchema.parse(raw);
+    const source = this.store.read(input.sourceExperimentId);
+    const progress = this.data(source);
+    if (!progress.reportRef || activeStages.has(source.state.status))
+      throw new Error("Source experiment needs a durable report before trial");
+    this.store.getJson(input.sourceExperimentId, "reports", progress.reportRef);
+    const candidate = this.candidates(input.sourceExperimentId, progress).find(
+      (item) => candidateHash(item) === input.candidateHash,
+    );
+    if (
+      !candidate ||
+      sha256Hex(candidate.body) !== candidate.bodyHash ||
+      candidate.parentBodyHash !== source.plan.skill.bodyHash ||
+      candidate.markdown !== source.plan.skill.frontmatterOriginal + candidate.body
+    )
+      throw new Error("Source candidate integrity mismatch");
+    const current = readSkillSnapshot(source.plan.skill.name, this.cwd);
+    if (!current || current.revision !== source.plan.skill.revision)
+      throw new Error("Source Skill revision changed; create a new experiment");
+    this.resolve(source.plan, "target");
+    return this.preparePlan(
+      {
+        cwd: input.cwd,
+        dataset: input.dataset,
+        skillName: source.plan.skill.name,
+        targetConnectionId: source.plan.connections.target.connectionId,
+        optimizerConnectionId: source.plan.connections.target.connectionId,
+        objective: input.objective,
+        limits: { ...input.limits, maxCandidates: 1 },
+      },
+      { source, candidate, reportHash: progress.reportRef },
+    );
+  }
+
+  private preparePlan(
+    input: z.infer<typeof PrepareSchema>,
+    fixed?: { source: ExperimentSnapshot; candidate: Candidate; reportHash: string },
+  ) {
     if (projectKey(input.cwd) !== projectKey(this.cwd)) throw new Error("project mismatch");
     const frozen = freezeDataset(input.dataset, this.store.root);
     if (!frozen.ok)
       throw new Error(`dataset invalid: ${frozen.issues.map((item) => item.code).join(", ")}`);
     const dataset = readFrozenDataset(this.store.root, frozen.manifest.datasetHash);
+    verifyEvidenceReferences(this.store.root, projectKey(this.cwd), dataset.cases);
     const skill = readSkillSnapshot(input.skillName, this.cwd);
     if (!skill || skill.revisionKind !== "bundle" || skill.extraFiles?.length !== 0)
       throw new Error("P1a requires a safely readable single-file Skill bundle");
@@ -171,6 +226,7 @@ export class OptimizationLabController {
     const settings = this.loadSettings();
     const target = resolveSelectedConnection(settings, input.targetConnectionId);
     const optimizer = resolveSelectedConnection(settings, input.optimizerConnectionId);
+    if (fixed) assertSameConnection(target, fixed.source.plan.connections.target);
     const maxContextBytes = input.limits.maxContextBytes ?? 256 * 1024;
     const limits: OperationLimits = {
       maxRequests: 1,
@@ -207,7 +263,20 @@ export class OptimizationLabController {
       },
       connections: { target: target.identity, optimizer: optimizer.identity },
       runnerVersion: "text_fragment_v1",
-      strategyVersion: "reflect_once_v1",
+      strategyVersion: fixed ? "fixed_candidate_trial_v1" : "reflect_once_v1",
+      ...(fixed
+        ? {
+            fixedCandidate: {
+              sourceExperimentId: fixed.source.state.id,
+              sourcePlanHash: fixed.source.plan.planHash,
+              sourceReportHash: fixed.reportHash,
+              candidateHash: candidateHash(fixed.candidate),
+              bodyHash: fixed.candidate.bodyHash,
+              body: fixed.candidate.body,
+              revealedHoldoutCaseIds: this.revealedHoldoutCases(dataset, fixed.source),
+            },
+          }
+        : {}),
       estimatorVersion: "utf8_conservative_v1",
       verdictPolicySuiteVersion: VERDICT_POLICY_SUITE_VERSION,
       scorerHash: sha256Hex(
@@ -254,7 +323,7 @@ export class OptimizationLabController {
       },
       externalData: {
         target: "current_case_input_and_skill",
-        optimizer: "skill_and_dev_feedback",
+        optimizer: fixed ? "none" : "skill_and_dev_feedback",
         judge: "none",
       },
       finalAllocation,
@@ -264,15 +333,23 @@ export class OptimizationLabController {
       dataset.cases.some(
         (item) =>
           item.readiness === "runnable" &&
-          Buffer.byteLength(item.input + skill.body, "utf8") + 512 > maxContextBytes,
+          Math.max(
+            Buffer.byteLength(item.input + skill.body, "utf8"),
+            fixed ? Buffer.byteLength(item.input + fixed.candidate.body, "utf8") : 0,
+          ) +
+            512 >
+            maxContextBytes,
       )
     )
       throw new Error("case input and Skill exceed frozen context bound");
     const created = this.store.create(plan);
+    const candidateRefs = fixed
+      ? [this.store.putJson(created.state.id, "candidates", fixed.candidate).hash]
+      : [];
     const snapshot = this.store.mutate(created.state.id, {}, (state) => {
       state.data = {
         trialRefs: [],
-        candidateRefs: [],
+        candidateRefs,
         gradingRefs: [],
         preparedLimits: {
           maxRequests: input.limits.maxRequests,
@@ -289,7 +366,8 @@ export class OptimizationLabController {
       estimate: {
         maxRequests: input.limits.maxRequests,
         maxExecutionMs: input.limits.maxExecutionMs,
-        plannedRequests: (devOperations + 1) * limits.maxRequests + finalAllocation.requests,
+        plannedRequests:
+          (devOperations + (fixed ? 0 : 1)) * limits.maxRequests + finalAllocation.requests,
         finalReservedRequests: finalAllocation.requests,
         worstCaseTokens: worstCaseTokens(plan, input.limits.maxRequests),
         worstCaseCostUsd: null,
@@ -307,13 +385,52 @@ export class OptimizationLabController {
   private data(snapshot: ExperimentSnapshot): Progress {
     return snapshot.state.data as unknown as Progress;
   }
+  private revealedHoldoutCases(dataset: DatasetManifest, source: ExperimentSnapshot): string[] {
+    const groups = new Set<string>();
+    const inputs = new Set<string>();
+    const seen = new Set<string>();
+    let prior: ExperimentSnapshot | undefined = source;
+    while (prior) {
+      if (seen.has(prior.state.id) || seen.size >= 32)
+        throw new Error("Candidate source history is cyclic or exceeds the supported bound");
+      seen.add(prior.state.id);
+      const previous = readFrozenDataset(this.store.root, prior.plan.datasetHash);
+      for (const item of previous.cases) {
+        groups.add(item.sourceGroupId);
+        inputs.add(sha256Hex(item.input.trim()));
+      }
+      const ancestry: ExperimentPlan["fixedCandidate"] = prior.plan.fixedCandidate;
+      if (!ancestry) break;
+      const next = this.store.read(ancestry.sourceExperimentId);
+      if (next.plan.planHash !== ancestry.sourcePlanHash)
+        throw new Error("Candidate ancestry changed");
+      prior = next;
+    }
+    return dataset.cases
+      .filter(
+        (item) =>
+          item.split === "holdout" &&
+          (groups.has(item.sourceGroupId) || inputs.has(sha256Hex(item.input.trim()))),
+      )
+      .map((item) => item.id);
+  }
   private trials(id: string, data: Progress) {
     return (data.trialRefs ?? []).map((hash) => this.store.getJson<Trial>(id, "trials", hash));
   }
   private candidates(id: string, data: Progress) {
-    return (data.candidateRefs ?? []).map((hash) =>
+    const candidates = (data.candidateRefs ?? []).map((hash) =>
       this.store.getJson<Candidate>(id, "candidates", hash),
     );
+    const fixed = this.store.read(id).plan.fixedCandidate;
+    if (
+      fixed &&
+      (candidates.length !== 1 ||
+        candidateHash(candidates[0]!) !== fixed.candidateHash ||
+        candidates[0]!.body !== fixed.body ||
+        candidates[0]!.bodyHash !== fixed.bodyHash)
+    )
+      throw new Error("Fixed candidate artifact binding changed");
+    return candidates;
   }
   private grades(id: string, data: Progress) {
     return (data.gradingRefs ?? []).map((hash) => {
@@ -336,6 +453,12 @@ export class OptimizationLabController {
       ...snapshot,
       id,
       ledger: this.ledger.summary(id),
+      candidates: this.candidates(id, this.data(snapshot)).map((candidate) => ({
+        hash: candidateHash(candidate),
+        bodyHash: candidate.bodyHash,
+        body: candidate.body,
+        explanation: candidate.explanation,
+      })),
       datasetSummary: dataset.summary,
       estimate: {
         maxRequests,
@@ -344,7 +467,7 @@ export class OptimizationLabController {
           (dataset.summary.runnableDev *
             snapshot.plan.bounds.repeats *
             (1 + snapshot.plan.bounds.maxCandidates) +
-            1) *
+            (snapshot.plan.fixedCandidate ? 0 : 1)) *
             snapshot.plan.bounds.trial.maxRequests +
           snapshot.plan.finalAllocation.requests,
         finalReservedRequests: snapshot.plan.finalAllocation.requests,
@@ -552,7 +675,7 @@ export class OptimizationLabController {
         if (!state.startedAt) state.startedAt = new Date().toISOString();
         if (state.status === "awaiting_baseline_grading") {
           d.baselineGradingHashes = [...d.gradingRefs];
-          state.status = "proposing";
+          state.status = snapshot.plan.fixedCandidate ? "screening" : "proposing";
         } else if (state.status === "awaiting_screening_grading") {
           d.screeningGradingHashes = [...d.gradingRefs];
           state.status = "screening";
@@ -836,6 +959,15 @@ export class OptimizationLabController {
     const grades = this.grades(id, data);
     const trials = this.trials(id, data);
     const candidates = this.candidates(id, data);
+    if (snapshot.plan.fixedCandidate) {
+      // Explicit trial choice is not a claim that screening passed or automatic adoption.
+      this.ledger.setFinalAllocation(id, fence, snapshot.plan.finalAllocation);
+      this.store.mutate(id, { fence }, (state) => {
+        (state.data as unknown as Progress).selectedBodyHash =
+          snapshot.plan.fixedCandidate!.bodyHash;
+      });
+      return snapshot.plan.fixedCandidate.bodyHash;
+    }
     const ranked = candidates
       .map((candidate) => {
         const own = trials.filter(
@@ -997,9 +1129,11 @@ export class OptimizationLabController {
             throw new Error("baseline execution evidence is incomplete");
           if (this.checkpoint(id, fence, "baseline", "awaiting_baseline_grading")) return;
           this.store.mutate(id, { fence }, (state) => {
-            state.status = "proposing";
+            state.status = plan.fixedCandidate ? "screening" : "proposing";
           });
         } else if (snapshot.state.status === "proposing") {
+          if (plan.fixedCandidate)
+            throw new Error("A fixed candidate trial cannot optimize instructions");
           if (data.pendingOptimizer)
             throw new Error("interrupted optimizer operation cannot be replayed");
           if (!data.optimizerRef) {

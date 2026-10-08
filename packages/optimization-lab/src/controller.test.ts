@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { OptimizationLabController } from "./controller.js";
 import type { LabSettings } from "./providers/connection.js";
+import { readFrozenDataset } from "./contracts/dataset.js";
 const test = isolatedBackendTest(import.meta.path);
 const roots: string[] = [];
 afterEach(() => {
@@ -173,6 +174,134 @@ function grade(controller: OptimizationLabController, id: string) {
     }
   return controller.importGrading(id, template, controller.get(id).state.revision);
 }
+
+function trialInput(s: ReturnType<typeof setup>, fresh = true) {
+  const source = s.controller.get(s.prepared.id);
+  const dataset = readFrozenDataset(s.controller.store.root, source.plan.datasetHash);
+  return {
+    cwd: s.cwd,
+    sourceExperimentId: source.id,
+    candidateHash: source.candidates[0]!.hash,
+    objective: "quality",
+    dataset: {
+      schemaVersion: 1,
+      title: "Fixed trial",
+      taskFamily: dataset.taskFamily,
+      cases: dataset.cases.map((item) =>
+        fresh
+          ? {
+              ...item,
+              id: `fresh-${item.id}`,
+              sourceGroupId: `fresh-${item.sourceGroupId}`,
+              input: `New independent material: ${item.input}`,
+            }
+          : item,
+      ),
+    },
+    limits: {
+      maxRequests: 30,
+      maxExecutionMs: 60000,
+      maxOutputTokens: 1000,
+      timeoutMs: 1000,
+      maxCandidates: 1,
+      repeats: 1,
+    },
+  };
+}
+
+test("fixed candidate trials freeze provenance and model, require fresh authorization and make zero optimizer calls", async () => {
+  const s = setup();
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  await wait(s.controller, s.prepared.id);
+  const sourceReport = s.controller.report(s.prepared.id);
+  const before = s.payloads.length;
+  const trial = s.controller.prepareTrial(trialInput(s));
+  expect(trial.plan.fixedCandidate!.sourceReportHash).toBe(sourceReport.hash);
+  expect(trial.plan.connections.target).toEqual(s.prepared.plan.connections.target);
+  expect(trial.plan.externalData.optimizer).toBe("none");
+  expect(trial.estimate.plannedRequests).toBe(12);
+  expect(s.payloads).toHaveLength(before);
+  expect(() => s.controller.start(trial.id, trial.state.revision, "unapproved")).toThrow(
+    "authorized",
+  );
+  const granted = s.controller.grant(trial.id, {
+    expectedRevision: trial.state.revision,
+    planHash: trial.plan.planHash,
+    operationId: "native-fixed",
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    limits: { maxRequests: 30, maxExecutionMs: 60000 },
+  });
+  s.controller.start(trial.id, granted.state.revision, "native-fixed");
+  const done = await wait(s.controller, trial.id);
+  expect(done.state.status).toBe("report_ready");
+  expect(s.payloads.slice(before)).toHaveLength(12);
+  expect(JSON.stringify(s.payloads.slice(before))).not.toContain("reflect_once_v1");
+  expect(done.ledger.totals.requests).toBe(12);
+  expect((s.controller.report(trial.id).json as any).adoptionEligible).toBe(false);
+  expect(readFileSync(s.skillPath, "utf8")).toBe(s.skill);
+  expect(s.controller.report(s.prepared.id).hash).toBe(sourceReport.hash);
+});
+
+test("reusing revealed holdout remains inconclusive; wrong candidates and changed model or parent fail before requests", async () => {
+  const s = setup();
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  await wait(s.controller, s.prepared.id);
+  const input = trialInput(s, false);
+  const before = s.payloads.length;
+  expect(() => s.controller.prepareTrial({ ...input, candidateHash: "a".repeat(64) })).toThrow(
+    "candidate",
+  );
+  s.settings.modelConnections![0]!.model = "other-model";
+  expect(() => s.controller.prepareTrial(input)).toThrow("connection changed");
+  s.settings.modelConnections![0]!.model = "lab-model";
+  const trial = s.controller.prepareTrial(input);
+  expect(trial.plan.fixedCandidate!.revealedHoldoutCaseIds).toHaveLength(3);
+  const grant = s.controller.grant(trial.id, {
+    expectedRevision: trial.state.revision,
+    planHash: trial.plan.planHash,
+    operationId: "fixed",
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    limits: { maxRequests: 30, maxExecutionMs: 60000 },
+  });
+  s.controller.start(trial.id, grant.state.revision, "fixed");
+  await wait(s.controller, trial.id);
+  expect((s.controller.report(trial.id).json as any).effect.conclusion).toBe("inconclusive");
+  writeFileSync(s.skillPath, s.skill + "Changed by user.");
+  expect(() => s.controller.prepareTrial(input)).toThrow("revision changed");
+  expect(s.payloads.length - before).toBe(12);
+});
+
+test("fixed candidate trial preserves both human checkpoints without reflection", async () => {
+  const s = setup({ human: true });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  await wait(s.controller, s.prepared.id);
+  let next = grade(s.controller, s.prepared.id);
+  s.controller.start(next.id, next.state.revision, "source-baseline", true);
+  await wait(s.controller, next.id);
+  next = grade(s.controller, next.id);
+  s.controller.start(next.id, next.state.revision, "source-screen", true);
+  await wait(s.controller, next.id);
+  const trial = s.controller.prepareTrial(trialInput(s));
+  const before = s.payloads.length;
+  const grant = s.controller.grant(trial.id, {
+    expectedRevision: trial.state.revision,
+    planHash: trial.plan.planHash,
+    operationId: "human-fixed",
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    limits: { maxRequests: 30, maxExecutionMs: 60000 },
+  });
+  s.controller.start(trial.id, grant.state.revision, "human-fixed");
+  expect((await wait(s.controller, trial.id)).state.status).toBe("awaiting_baseline_grading");
+  expect(s.payloads.length - before).toBe(3);
+  next = grade(s.controller, trial.id);
+  s.controller.start(next.id, next.state.revision, "trial-baseline", true);
+  expect((await wait(s.controller, trial.id)).state.status).toBe("awaiting_screening_grading");
+  expect(s.payloads.length - before).toBe(6);
+  next = grade(s.controller, trial.id);
+  s.controller.start(next.id, next.state.revision, "trial-screen", true);
+  await wait(s.controller, trial.id);
+  expect(s.payloads.length - before).toBe(12);
+});
 
 test("six-case experiment closes without touching live Skill and never leaks holdout to optimizer", async () => {
   const s = setup();

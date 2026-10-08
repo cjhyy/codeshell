@@ -1,4 +1,6 @@
 export { createOptimizationLabModule } from "./module.js";
+export { buildEvidenceBundle } from "./evidence.js";
+export type { EvidenceBundle, EvidenceSourceRun } from "./evidence.js";
 export { freezeDataset, validateDataset } from "./contracts/dataset.js";
 export type {
   DatasetIssue,

@@ -163,6 +163,12 @@ async function seed() {
     ],
     defaults: { text: "lab-connection" },
   });
+  await json(join(isolated.codeShellHome, "runs", "selected-lab-evidence", "run.json"), {
+    cwd: project,
+    objective: "Review the selected document. Bearer LOCAL_EVIDENCE_SECRET",
+    summary: "Wrong historical output",
+    model: "CURRENT_STATE_NOT_A_HISTORICAL_MODEL",
+  });
 }
 async function launch() {
   app = await launchCodeShellElectron({ appDir, ...isolated });
@@ -442,6 +448,39 @@ async function editDatasetOffline() {
   }
   return edited;
 }
+async function importEvidenceOffline() {
+  await win.getByTestId("optimization-lab-evidence-ids").fill("selected-lab-evidence");
+  await win.getByTestId("optimization-lab-preview-evidence").click();
+  await win.getByTestId("optimization-lab-evidence-preview").waitFor();
+  const preview = await win.getByTestId("optimization-lab-evidence-preview").innerText();
+  assert.ok(!preview.includes("LOCAL_EVIDENCE_SECRET"));
+  assert.ok(!preview.includes("CURRENT_STATE_NOT_A_HISTORICAL_MODEL"));
+  assert.ok(preview.includes("historicalConfiguration"));
+  await win.getByTestId("optimization-lab-import-evidence").click();
+  assert.equal(requests.length, 0, "Cancelled evidence import never calls models");
+  await app.evaluate(() => {
+    globalThis.__labDialogs.accept = true;
+  });
+  await win.getByTestId("optimization-lab-import-evidence").click();
+  await win.getByTestId("optimization-lab-evidence-preview").waitFor({ state: "detached" });
+  await win.getByTestId("optimization-lab-dataset-json").click();
+  const draft = JSON.parse(await win.getByTestId("optimization-lab-dataset").inputValue());
+  const imported = draft.cases.at(-1);
+  assert.equal(imported.provenance, "real");
+  assert.equal(imported.readiness, "analysis_only");
+  assert.equal(imported.expected, undefined);
+  assert.ok(imported.evidence.bundleHash);
+  assert.ok(imported.missingEvidence.length);
+  await app.evaluate(() => {
+    globalThis.__labDialogs.accept = false;
+  });
+  await win.getByTestId("optimization-lab-dataset-form").click();
+  assert.equal(
+    requests.length,
+    0,
+    "Evidence preview and native-confirmed local import never call models",
+  );
+}
 async function authorizePage() {
   await win.getByTestId("optimization-lab-authorize").click();
   await until(
@@ -516,6 +555,8 @@ try {
   await seed();
   await launch();
   await openPage();
+  stage = "selected evidence preview, redaction and native local import";
+  await importEvidenceOffline();
   stage = "visual dataset editor and native JSON files";
   await editDatasetOffline();
   stage = "prepare through actual page and real worker";
@@ -699,6 +740,49 @@ try {
   await launch();
   assert.equal(requests.length, 31, "App restart never starts a saved experiment");
   await recoverWithoutReplay(crashedApp.id, 31, appPayload);
+  stage = "fixed candidate trial through page, new native grant and no optimizer";
+  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await win.getByTestId("optimization-lab-try-candidate").click();
+  await win.getByTestId("optimization-lab-trial-source").waitFor();
+  const fresh = structuredClone(dataset);
+  fresh.title = "Fresh fixed candidate trial";
+  for (const item of fresh.cases) {
+    item.id = `fresh-${item.id}`;
+    item.sourceGroupId = `fresh-${item.sourceGroupId}`;
+    item.input = `Fresh independently reviewed task: ${item.input}`;
+  }
+  await win.getByTestId("optimization-lab-dataset-json").click();
+  await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(fresh));
+  await win.getByTestId("optimization-lab-prepare").click();
+  await win.getByTestId("optimization-lab-state").waitFor();
+  const fixedId = await until(
+    () => win.getByTestId("optimization-lab-saved").inputValue(),
+    "Fixed trial was not selected",
+  );
+  const fixed = await query("get", { id: fixedId });
+  assert.equal(fixed.plan.strategyVersion, "fixed_candidate_trial_v1");
+  assert.equal(fixed.plan.fixedCandidate.sourcePlanHash, prepared.plan.planHash);
+  assert.equal(
+    fixed.plan.connections.target.configHash,
+    prepared.plan.connections.target.configHash,
+  );
+  const beforeTrial = requests.length;
+  await authorizePage();
+  assert.equal((await query("get", { id: fixedId })).grant, null);
+  assert.equal(requests.length, beforeTrial, "Cancel a new fixed trial grant sends nothing");
+  await app.evaluate(() => {
+    globalThis.__labDialogs.accept = true;
+  });
+  await authorizePage();
+  await win.getByTestId("optimization-lab-start").click();
+  await completed(fixedId);
+  assert.equal(
+    requests.length - beforeTrial,
+    12,
+    "Fixed trial has 12 paired calls and zero proposal call",
+  );
+  assert.ok(requests.slice(beforeTrial).every((request) => !request.optimizing));
+  assert.equal((await query("report", { id: fixedId })).json.adoptionEligible, false);
   assert.equal(
     await readFile(join(project, ".agents", "skills", skillName, "SKILL.md"), "utf8"),
     source,
@@ -706,7 +790,7 @@ try {
   assert.equal(rendererErrors.flat().length, 0);
   assert.deepEqual(upstreamErrors, []);
   console.log(
-    "PASS Optimization Lab: actual UI + worker, native authorization, page-close keepalive, 13-call paired experiment, durable report reopen, native grading files, revoke, in-flight stop, worker/app crash recovery without automatic spending or uncertain replay",
+    "PASS Optimization Lab: selected evidence preview/redaction/native import, fixed candidate new authorization/12 calls/zero optimizer, actual UI + worker, native authorization, page-close keepalive, 13-call paired experiment, durable report reopen, native grading files, revoke, in-flight stop, worker/app crash recovery without automatic spending or uncertain replay",
   );
 } catch (error) {
   console.error(`Optimization Lab E2E failed at ${stage}:`, error);

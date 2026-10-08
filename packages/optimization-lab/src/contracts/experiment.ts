@@ -93,7 +93,19 @@ export const ExperimentPlanContentSchema = z
       .object({ target: ConnectionIdentitySchema, optimizer: ConnectionIdentitySchema })
       .strict(),
     runnerVersion: z.literal(RUNNER_VERSION),
-    strategyVersion: z.literal(STRATEGY_VERSION),
+    strategyVersion: z.enum([STRATEGY_VERSION, "fixed_candidate_trial_v1"]),
+    fixedCandidate: z
+      .object({
+        sourceExperimentId: z.string().regex(/^exp_[a-f0-9-]{36}$/),
+        sourcePlanHash: HashSchema,
+        sourceReportHash: HashSchema,
+        candidateHash: HashSchema,
+        bodyHash: HashSchema,
+        body: text,
+        revealedHoldoutCaseIds: z.array(z.string().min(1).max(64)).max(200),
+      })
+      .strict()
+      .optional(),
     estimatorVersion: z.literal(ESTIMATOR_VERSION),
     verdictPolicySuiteVersion: z.literal(VERDICT_POLICY_SUITE_VERSION),
     scorerHash: HashSchema,
@@ -127,7 +139,7 @@ export const ExperimentPlanContentSchema = z
     externalData: z
       .object({
         target: z.literal("current_case_input_and_skill"),
-        optimizer: z.literal("skill_and_dev_feedback"),
+        optimizer: z.enum(["skill_and_dev_feedback", "none"]),
         judge: z.literal("none"),
       })
       .strict(),
@@ -141,6 +153,18 @@ export const ExperimentPlanSchema = ExperimentPlanContentSchema.extend({ planHas
 
 function validateContent(content: ExperimentPlanContent): void {
   const { skill } = content;
+  const fixed = content.fixedCandidate;
+  if (
+    (content.strategyVersion === "fixed_candidate_trial_v1") !== Boolean(fixed) ||
+    (fixed
+      ? content.externalData.optimizer !== "none" ||
+        content.bounds.maxCandidates !== 1 ||
+        sha256Hex(fixed.body) !== fixed.bodyHash ||
+        Buffer.byteLength(fixed.body) > content.bounds.maxBodyBytes ||
+        fixed.bodyHash === skill.bodyHash
+      : content.externalData.optimizer !== "skill_and_dev_feedback")
+  )
+    throw new Error("optimization_lab: fixed candidate binding mismatch");
   if (
     sha256Hex(skill.markdown) !== skill.markdownHash ||
     sha256Hex(skill.body) !== skill.bodyHash

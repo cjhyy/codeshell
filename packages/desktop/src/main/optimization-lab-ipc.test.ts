@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { registerOptimizationLabIpc } from "./optimization-lab-ipc";
 import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/optimization-lab";
+import { buildEvidenceBundle } from "@cjhyy/code-shell-capability-optimization-lab";
 
 const roots: string[] = [];
 const spies: Array<{ mockRestore(): void }> = [];
@@ -302,7 +303,7 @@ describe("Optimization Lab editable dataset files", () => {
     spies.push(spy);
     await expect(
       fixture.invoke("exportDataset", { ...datasetTarget, text: "new" }),
-    ).rejects.toThrow("no longer");
+    ).rejects.toThrow(/no longer|disabled/);
     expect(await readFile(destination, "utf8")).toBe("original");
     expect(await readdir(root)).toEqual(["draft.json"]);
     expect(fixture.calls).toHaveLength(0);
@@ -329,6 +330,7 @@ function setup() {
   let selectedFile: string | undefined;
   let confirming: (() => void) | undefined;
   let selecting: (() => void) | undefined;
+  let resolving: (() => void) | undefined;
   let destroyed = false;
   let registered = true;
   let primary = "/authoritative/primary";
@@ -347,6 +349,7 @@ function setup() {
     },
   };
   const dialogs: any[] = [];
+  const evidenceReads: unknown[] = [];
   const dispose = registerOptimizationLabIpc({
     ipc: {
       handle: (channel, handler) => handlers.set(channel, handler as any),
@@ -355,6 +358,7 @@ function setup() {
     windows: () => (registered ? [window] : []) as any,
     enabled: () => enabled,
     resolveTarget: async (target) => {
+      resolving?.();
       if (JSON.stringify(target) !== JSON.stringify({ projectId: "project" }))
         throw new Error("stable project identity required");
       return { kind: targetKind, cwd: primary };
@@ -370,6 +374,20 @@ function setup() {
       return snapshot;
     },
     skills: () => [{ name: "example", source: "project" }],
+    evidence: async (cwd, runIds) => {
+      evidenceReads.push({ cwd, runIds });
+      return buildEvidenceBundle(
+        "a".repeat(16),
+        runIds.map((runId) => ({
+          runId,
+          sessionId: null,
+          source: "managed_run" as const,
+          blocks: [{ kind: "input" as const, eventId: null, text: "Selected input" }],
+          missingEvidence: [],
+          truncated: false,
+        })),
+      );
+    },
     confirm: async (_window, options) => {
       dialogs.push(options);
       confirming?.();
@@ -404,6 +422,7 @@ function setup() {
     handlers,
     event,
     calls,
+    evidenceReads,
     dialogs,
     snapshot,
     authorization,
@@ -423,6 +442,9 @@ function setup() {
     },
     duringFileDialog: (action: () => void) => {
       selecting = action;
+    },
+    duringResolve: (action: () => void) => {
+      resolving = action;
     },
     destroy: () => {
       destroyed = true;
@@ -451,6 +473,82 @@ function setup() {
 }
 
 describe("Optimization Lab trusted Desktop bridge", () => {
+  test("navigation during target resolution is rejected before source/worker access or dialogs", async () => {
+    for (const channel of ["query", "previewEvidence", "importDataset", "authorize"] as const) {
+      const f = setup();
+      f.duringResolve(() => f.navigate());
+      const args =
+        channel === "query"
+          ? ["discover", datasetTarget]
+          : channel === "previewEvidence"
+            ? [{ ...datasetTarget, runIds: ["selected"] }]
+            : channel === "authorize"
+              ? [f.authorization]
+              : [datasetTarget];
+      await expect(f.invoke(channel, ...args)).rejects.toThrow("top frame");
+      expect(f.calls).toHaveLength(0);
+      expect(f.evidenceReads).toHaveLength(0);
+      expect(f.dialogs).toHaveLength(0);
+      expect(f.fileDialogs).toHaveLength(0);
+    }
+  });
+  test("a new top frame in the same window cannot import the prior frame's preview receipt", async () => {
+    const f = setup();
+    const preview = await f.invoke("previewEvidence", { ...datasetTarget, runIds: ["chosen"] });
+    f.navigate();
+    await expect(
+      f.handlers.get("optimizationLab:importEvidence")!(
+        { ...f.event, senderFrame: f.event.sender.mainFrame },
+        { ...datasetTarget, previewId: preview.previewId, bundleHash: preview.bundle.bundleHash },
+      ),
+    ).rejects.toThrow("expired or changed");
+    expect(f.calls).toHaveLength(0);
+  });
+  test("selected evidence preview sends nothing to worker and only its native-confirmed receipt can import", async () => {
+    const f = setup();
+    await expect(f.invoke("query", "import_evidence", datasetTarget)).rejects.toThrow(
+      "Unsupported",
+    );
+    const preview = await f.invoke("previewEvidence", { ...datasetTarget, runIds: ["chosen-run"] });
+    expect(f.evidenceReads).toHaveLength(1);
+    expect(f.calls).toHaveLength(0);
+    const input = {
+      ...datasetTarget,
+      previewId: preview.previewId,
+      bundleHash: preview.bundle.bundleHash,
+    };
+    await expect(
+      f.invoke("importEvidence", { ...input, bundleHash: "f".repeat(64) }),
+    ).rejects.toThrow("expired or changed");
+    f.confirm(0);
+    expect(await f.invoke("importEvidence", input)).toBeNull();
+    expect(f.calls).toHaveLength(0);
+    f.confirm(1);
+    await f.invoke("importEvidence", input);
+    expect(f.calls).toHaveLength(1);
+    expect(f.calls[0]!.type).toBe("optimization_lab_import_evidence");
+    expect(f.calls[0]!.params.bundle).toEqual(preview.bundle);
+    await expect(f.invoke("importEvidence", input)).rejects.toThrow("expired or changed");
+  });
+  test("evidence receipts are invalidated by a newer preview, project change, revoked trust or frame navigation", async () => {
+    for (const change of ["preview", "project", "trust", "frame"] as const) {
+      const f = setup();
+      const preview = await f.invoke("previewEvidence", { ...datasetTarget, runIds: ["chosen"] });
+      const input = {
+        ...datasetTarget,
+        previewId: preview.previewId,
+        bundleHash: preview.bundle.bundleHash,
+      };
+      f.confirm(1);
+      if (change === "preview")
+        await f.invoke("previewEvidence", { ...datasetTarget, runIds: ["new"] });
+      if (change === "project") f.primary("/other/project");
+      if (change === "trust") f.duringConfirmation(() => f.trust(false));
+      if (change === "frame") f.duringConfirmation(() => f.navigate());
+      await expect(f.invoke("importEvidence", input)).rejects.toThrow();
+      expect(f.calls).toHaveLength(0);
+    }
+  });
   test("unwraps the actual agent/query type+data envelope and refuses mismatched responses", () => {
     const data = { connections: [] };
     expect(
@@ -541,7 +639,9 @@ describe("Optimization Lab trusted Desktop bridge", () => {
     expect(changed.calls.every((call) => call.type !== "optimization_lab_grant")).toBe(true);
     const disabled = setup();
     disabled.duringConfirmation(() => disabled.enable(false));
-    await expect(disabled.invoke("authorize", disabled.authorization)).rejects.toThrow("no longer");
+    await expect(disabled.invoke("authorize", disabled.authorization)).rejects.toThrow(
+      /no longer|disabled/,
+    );
     expect(disabled.calls.every((call) => call.type !== "optimization_lab_grant")).toBe(true);
   });
   test("grading imports use native file selection, reject symlinks and preserve exact revision", async () => {

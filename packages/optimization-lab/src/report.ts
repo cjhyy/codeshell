@@ -5,7 +5,7 @@ import {
   worstCaseTokens,
   type ExperimentPlan,
 } from "./contracts/experiment.js";
-import type { Candidate } from "./candidate.js";
+import { candidateHash, type Candidate } from "./candidate.js";
 import { verifyGradingRecord, type GradingRecord } from "./grading.js";
 import { evaluateAssertions } from "./assertions.js";
 import { overfitHints } from "./overfit-hints.js";
@@ -169,9 +169,12 @@ export function buildReport(options: {
       sha256Hex(candidate.body) !== candidate.bodyHash ||
       candidate.parentBodyHash !== plan.skill.bodyHash ||
       candidate.markdown !== plan.skill.frontmatterOriginal + candidate.body ||
-      candidate.sourceCaseIds.some(
-        (id) => !dataset.cases.some((item) => item.id === id && item.split === "dev"),
-      )
+      (plan.fixedCandidate
+        ? candidateHash(candidate) !== plan.fixedCandidate.candidateHash ||
+          candidate.body !== plan.fixedCandidate.body
+        : candidate.sourceCaseIds.some(
+            (id) => !dataset.cases.some((item) => item.id === id && item.split === "dev"),
+          ))
     )
       throw new Error("report candidate integrity mismatch");
   }
@@ -268,6 +271,7 @@ export function buildReport(options: {
     pairs.length > 0 &&
     pairs.every((pair) => pair.original !== null && pair.candidate !== null);
   const sufficient =
+    !plan.fixedCandidate?.revealedHoldoutCaseIds.length &&
     sourceGroups >= plan.acceptance.minHoldoutSourceGroups &&
     plannedRunnable.length >= plan.acceptance.minPairedCases;
   // Frozen regression cases may live in dev; holdout improvements cannot erase them.
@@ -351,6 +355,18 @@ export function buildReport(options: {
     status: options.status,
     partial: options.status !== "report_ready" || !complete,
     adoptionEligible: false,
+    ...(plan.fixedCandidate
+      ? {
+          fixedCandidateTrial: {
+            sourceExperimentId: plan.fixedCandidate.sourceExperimentId,
+            sourcePlanHash: plan.fixedCandidate.sourcePlanHash,
+            sourceReportHash: plan.fixedCandidate.sourceReportHash,
+            candidateHash: plan.fixedCandidate.candidateHash,
+            bodyHash: plan.fixedCandidate.bodyHash,
+            revealedHoldoutCaseIds: plan.fixedCandidate.revealedHoldoutCaseIds,
+          },
+        }
+      : {}),
     change: selected
       ? {
           bodyHash: selected.bodyHash,
@@ -425,6 +441,11 @@ export function buildReport(options: {
     gradingHashes: [...new Set(grades.map((record) => record.recordHash))].sort(compare),
     feedbackHashes: [...(options.feedbackHashes ?? [])].sort(compare),
     limitations: [
+      ...(plan.fixedCandidate
+        ? [
+            "The candidate was explicitly frozen from an earlier report; this trial makes no optimization calls. Previously revealed cases are not fresh independent holdout evidence.",
+          ]
+        : []),
       "Standalone text_fragment evaluates instructions, not Skill loading, tools or an Agent workflow.",
       "Model aliases and upstream environment are not pinned implementation identities.",
       "Blind grading hides candidate identity in metadata; output content may still reveal it.",
@@ -451,7 +472,7 @@ export function buildReport(options: {
     "",
     selected?.explanation ?? "No candidate selected.",
     "",
-    `Development sources: ${report.change?.sourceCaseIds.join(", ") || "none"}.`,
+    `${plan.fixedCandidate ? `Earlier experiment ${plan.fixedCandidate.sourceExperimentId} development sources` : "Development sources"}: ${report.change?.sourceCaseIds.join(", ") || "none"}.`,
     "",
     report.change?.bodyDiff ? fence(report.change.bodyDiff, "diff") : "",
     "",
