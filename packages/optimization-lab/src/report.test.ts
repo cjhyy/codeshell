@@ -30,7 +30,7 @@ function fixture(semantic = false, analysisOnly = false) {
         version: 1,
         sourceGroupId: `source-${index + 1}`,
         provenance: "synthetic",
-        caseRole: index === 5 ? "regression" : "target_failure",
+        caseRole: index === 0 || index === 5 ? "regression" : "target_failure",
         split: index < 3 ? "dev" : "holdout",
         input: `Source ${index + 1}`,
         readiness: index === 6 ? "analysis_only" : "runnable",
@@ -45,7 +45,7 @@ function fixture(semantic = false, analysisOnly = false) {
   const content = planContent();
   content.datasetHash = frozen.manifest.datasetHash;
   content.acceptance.criticalHardAssertionIds = [];
-  content.acceptance.regressionCaseIds = ["case-6"];
+  content.acceptance.regressionCaseIds = ["case-1", "case-6"];
   content.acceptance.minPairedCases = 3;
   const plan = createExperimentPlan(content);
   const body = "Cite sources with [S1].";
@@ -165,6 +165,30 @@ describe("immutable experiment reports", () => {
     const first = buildReport(options);
     const second = buildReport({ ...options, trials: [...options.trials].reverse() });
     expect(second).toEqual(first);
+  });
+  test("known frozen development regressions veto holdout improvement", () => {
+    const { options, trial } = fixture();
+    const rephase = (item: Trial, phase: Trial["phase"]): Trial => {
+      const result = { ...item, phase };
+      result.trialId = sha256Hex(
+        canonicalJson({
+          planHash: result.planHash,
+          caseId: result.caseId,
+          bodyHash: result.bodyHash,
+          phase,
+          repeat: result.repeat,
+        }),
+      );
+      return result;
+    };
+    options.trials.push(
+      rephase(trial("case-1", false, true), "baseline"),
+      rephase(trial("case-1", true, false), "screening"),
+    );
+    const report = buildReport(options);
+    expect(report.json.effect.conclusion).toBe("regressed");
+    expect(report.json.effect.knownDevelopmentRegression).toBe(true);
+    expect(report.markdown).toContain("Frozen development regression case-1");
   });
   test("hard failure cannot be overridden by semantic passing grades", () => {
     const { options, trial } = fixture(true);

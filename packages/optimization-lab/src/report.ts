@@ -270,9 +270,42 @@ export function buildReport(options: {
   const sufficient =
     sourceGroups >= plan.acceptance.minHoldoutSourceGroups &&
     plannedRunnable.length >= plan.acceptance.minPairedCases;
+  // Frozen regression cases may live in dev; holdout improvements cannot erase them.
+  const developmentRegressionPairs = dataset.cases
+    .filter((item) => item.split === "dev" && plan.acceptance.regressionCaseIds.includes(item.id))
+    .map((item) => {
+      const original = pairedVerdict(
+        sortedTrials.filter(
+          (trial) =>
+            trial.phase === "baseline" &&
+            trial.caseId === item.id &&
+            trial.bodyHash === plan.skill.bodyHash,
+        ),
+        dataset,
+        grades,
+        plan.bounds.repeats,
+      );
+      const candidate = pairedVerdict(
+        sortedTrials.filter(
+          (trial) =>
+            trial.phase === "screening" &&
+            trial.caseId === item.id &&
+            trial.bodyHash === selected?.bodyHash,
+        ),
+        dataset,
+        grades,
+        plan.bounds.repeats,
+      );
+      return {
+        caseId: item.id,
+        original,
+        candidate,
+        regressed: original === true && candidate === false,
+      };
+    });
+  const knownDevelopmentRegression = developmentRegressionPairs.some((pair) => pair.regressed);
   const criticalFailure = sortedTrials.some(
     (trial) =>
-      trial.phase === "holdout" &&
       trial.bodyHash === selected?.bodyHash &&
       trial.assertions.some(
         (assertion) =>
@@ -292,7 +325,7 @@ export function buildReport(options: {
   const costReductionRatio =
     costComparable && baselineCost > 0 ? 1 - candidateCost / baselineCost : null;
   let conclusion: "improved" | "no_improvement" | "regressed" | "inconclusive" = "inconclusive";
-  if (count("regressed") > 0) conclusion = "regressed";
+  if (count("regressed") > 0 || knownDevelopmentRegression) conclusion = "regressed";
   else if (complete && sufficient && options.status === "report_ready") {
     if (criticalFailure) conclusion = "no_improvement";
     else if (plan.objective.kind === "quality")
@@ -344,6 +377,8 @@ export function buildReport(options: {
       regressed: count("regressed"),
       unchanged: count("unchanged"),
       unknown: count("unknown"),
+      knownDevelopmentRegression,
+      developmentRegressionPairs,
       byCaseRole: Object.fromEntries(
         (["target_failure", "regression"] as const).map((role) => [
           role,
@@ -364,6 +399,8 @@ export function buildReport(options: {
       devCases: dataset.cases.filter((item) => item.split === "dev").length,
       holdoutCases: pairs.length,
       analysisOnlyCases: dataset.cases.filter((item) => item.readiness === "analysis_only").length,
+      plannedRegressionCases: plan.acceptance.regressionCaseIds.length,
+      developmentRegressionCases: developmentRegressionPairs.length,
       runnableHoldoutCases: plannedRunnable.length,
       pairedHoldoutCases: pairs.filter((pair) => pair.original !== null && pair.candidate !== null)
         .length,
@@ -426,6 +463,11 @@ export function buildReport(options: {
     "## Effect",
     "",
     `Holdout: ${count("improved")} improved, ${count("regressed")} regressed, ${count("unchanged")} unchanged, ${count("unknown")} unknown.`,
+    "",
+    ...developmentRegressionPairs.map(
+      (pair) =>
+        `Frozen development regression ${cell(pair.caseId)}: original ${verdict(pair.original)}, candidate ${verdict(pair.candidate)}${pair.regressed ? " — regressed" : ""}.`,
+    ),
     "",
     ...Object.entries(report.effect.byCaseRole).map(
       ([role, counts]) =>
