@@ -213,7 +213,6 @@ export class PanelResourceService {
     let clone: Awaited<ReturnType<typeof stageResourceClone>>;
     let destination: Awaited<ReturnType<typeof open>> | undefined;
     let published = false;
-    let retryWithoutClone = false;
     let identity: { dev: number; ino: number } | undefined;
     try {
       await directory.verify();
@@ -322,9 +321,7 @@ export class PanelResourceService {
       // Different bind mounts can share st_dev yet refuse hard links. Retry
       // with a temporary file inside the target grant, after releasing this
       // private clone and all held descriptors in finally.
-      if (clone && !published && (error as NodeJS.ErrnoException).code === "EXDEV")
-        retryWithoutClone = true;
-      else throw error;
+      if (!(clone && !published && (error as NodeJS.ErrnoException).code === "EXDEV")) throw error;
     } finally {
       await destination?.close().catch(() => {});
       const current = await lstat(temporary).catch(() => undefined);
@@ -333,8 +330,7 @@ export class PanelResourceService {
       await clone?.close();
       await directory.close();
     }
-    if (retryWithoutClone) return this.materialize(scope, raw, context, false);
-    throw new Error("Resource materialization did not complete");
+    return this.materialize(scope, raw, context, false);
   }
   private async capture(scope: ResourceScope, raw: unknown, context: PanelResourceCallContext) {
     const input = object(raw, [
