@@ -28,7 +28,12 @@ main、aux summary、tool summary、goal judge、title、context package、manua
 - 核心受影响回归：1392 pass / 0 fail，235 个文件，5201 assertions。覆盖 ledger、所有 LLM、Engine、protocol、Session、CostTracker 与 Goal stop hooks。
 - 账本/真实 Engine/Host 冷读定向：22 pass / 0 fail。包括复制同 SID state 到另一 storage、restart/fork/replay、生产 SubAgentSpawner、晚到 title、external 重发、SDK 真正 fetch retry、流式失败后 fallback、缺 usage/零 usage/未知价格、账本故障不额外付费、两个 Bun 进程并发发布。
 - 本地隔离 guard 自测：非白名单本地服务收到 0 次请求；允许服务收到 7 次。fetch 固定 exact HTTP 127.0.0.1:port 并 `redirect:error`；http/https request/get（含 ESM named import）同样校验；移除代理环境；stdio child/grandchild 都验证独立 HOME、preload guard 和父子 PID 收据。HOME hash 不匹配在加载 Core 前拒绝。
-- 最终发布包、工作区类型、Desktop/TUI UI 回归与已编译 Node SDK/stdio/TUI 消费 smoke 的结果在 PR 验证记录中补充。
+- 发布包检查：9 tarballs、47 typed entries、45 runtime imports，packed Node owner HTTP 生命周期通过。
+- `bun run typecheck`：完整构建、12 workspaces 类型与 Web SPA 通过；Desktop main/preload/renderer/mobile/Chrome extension 构建通过。
+- Desktop Main 冷读、运行记录交互、TUI terminal render/命令/JSON renderer：26 pass / 0 fail，143 assertions。组合后的核心定向 32 pass / 0 fail。
+- Lint：0 errors、105 个既有 warnings；engine-bypass 与 workflow test paths guard 通过。
+- 已编译纯 Node SDK、真实 stdio worker run→关闭→restart 冷读→replay（无新请求且 runId 相同）、TUI CLI 持久账本全部通过。实际 worker/TUI PID 的独立 HOME hash/origin/父 PID guard 收据均核验；本地服务收到 4 次请求，worker 2 receipt，TUI 2 receipt（含退出时尚未到服务的 pending title，费用 unknown）。
+- CI typecheck job 增加 guard 自检和三种已编译消费者 smoke，确保最终合入 head 持续验证。
 
 消费 smoke 使用合成任务和本地 HTTP fixture；在 Core 加载前安装网络 guard，向 worker 发送 agent/run 前校验实际 PID 的 origin/HOME 启动收据。失败时保留私有 fixture 以便诊断，成功才清理。尚未执行完整 Electron GUI 人工操作；React 运行记录页交互、TUI 实际 terminal render、Main 冷读和真实 stdio worker 是独立的自动验证证据。
 

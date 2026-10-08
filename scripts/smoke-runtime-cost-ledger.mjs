@@ -181,7 +181,18 @@ try {
     maxTurns: 1,
     isSubAgent: true,
     headless: true,
-    behaviorProfiles: [{ id: "cost-smoke", disableSessionTitle: true, disableHooks: true }],
+    behaviorProfiles: [
+      {
+        id: "cost-smoke",
+        disableSessionTitle: true,
+        disableHooks: true,
+        disableInstructions: true,
+        disableMemoryContext: true,
+        disableCapabilityContext: true,
+        disableSourcesContext: true,
+        disableMcp: true,
+      },
+    ],
   });
   sdk.getHookRegistry().clear();
   const sdkBefore = requests;
