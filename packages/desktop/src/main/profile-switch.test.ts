@@ -95,6 +95,47 @@ afterAll(() => {
 });
 
 describe("reviewed Desktop Profile switch", () => {
+  test("corrupt candidate preview/adopt IPC errors disclose no private path or input", async () => {
+    const handlers = new Map<string, (...args: any[]) => any>();
+    let reloads = 0;
+    registerProfileSwitchIpc({
+      ipcMain: {
+        handle: (channel, listener) => {
+          handlers.set(channel, listener);
+        },
+      },
+      resolveTarget: async () => target,
+      withMutation: async (_cwd, write) => {
+        const result = await write();
+        reloads++;
+        return result;
+      },
+    });
+    const reviewed = await handlers.get("profiles:previewSwitch")!(
+      {},
+      { projectId: target.projectId },
+      "next",
+    );
+    const path = join(process.env.CODE_SHELL_HOME!, "profiles", "next", "profile.json");
+    writeFileSync(path, '{"PRIVATE_CANDIDATE_SECRET":');
+    const before = tree(root);
+    for (const [channel, extra] of [
+      ["profiles:previewSwitch", []],
+      ["profiles:adoptSwitch", [reviewed.revision]],
+    ] as const) {
+      let caught: unknown;
+      try {
+        await handlers.get(channel)!({}, { projectId: target.projectId }, "next", ...extra);
+      } catch (error) {
+        caught = error;
+      }
+      expect(String(caught)).toContain("invalid or unavailable");
+      expect(String(caught)).not.toContain(root);
+      expect(String(caught)).not.toContain("PRIVATE_CANDIDATE_SECRET");
+    }
+    expect(tree(root)).toEqual(before);
+    expect(reloads).toBe(0);
+  });
   test("preview is read-only, metadata-only and requirements never execute", () => {
     const before = tree(root);
     const review = previewProfileSwitch(target, "next");
