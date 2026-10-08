@@ -10,6 +10,7 @@ import {
   rmSync,
   statSync,
   truncateSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -142,6 +143,18 @@ describe("Session output journal", () => {
       expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow("pin");
       expect(readOutputJournal(f.root, f.id).complete).toBe(false);
     }
+  });
+  test("cached positions still detect same-size corruption before after, even with restored mtime", () => {
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "before" });
+    f.writer.append({ type: "text_delta", text: "second" });
+    const first = readOutputJournal(f.root, f.id, { maxFrames: 1 });
+    const stat = statSync(f.file);
+    writeFileSync(f.file, readFileSync(f.file, "utf8").replace('"before"', '"broken"'));
+    utimesSync(f.file, stat.atime, stat.mtime);
+    expect(
+      readOutputJournal(f.root, f.id, { after: first.next, through: first.through }).status,
+    ).toBe("incomplete");
   });
   test("a truncated frozen upper bound is invalid and malformed complete records are incomplete", () => {
     const f = fixture();

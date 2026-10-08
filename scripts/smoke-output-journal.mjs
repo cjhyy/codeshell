@@ -7,6 +7,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { syncBuiltinESMExports } from "node:module";
 import {
   existsSync,
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -411,7 +412,7 @@ if (process.argv[2] === "--hub") {
     requests++;
     assert.equal(body.stream, true);
     response.setHeader("content-type", "text/event-stream");
-    for (const text of parts) {
+    for (const text of requests === 1 ? parts : parts.slice(0, 2)) {
       const chunk = {
         id: "fixture",
         object: "chat.completion.chunk",
@@ -534,6 +535,46 @@ if (process.argv[2] === "--hub") {
     assert.equal(workerOne.through, workerTwo.through);
     assert.equal(workerOne.through, before.outputCursor);
     assert.notEqual(workerOne.pid, workerTwo.pid);
+    let compiledSdkFailure = false;
+    if (process.platform !== "win32" && process.getuid?.() !== 0) {
+      const faultFile = join(core.sessionsRoot(), "disk-fault", "output-journal.jsonl");
+      const failedEvents = [];
+      try {
+        const failure = await engine.run("Local SDK disk failure fixture", {
+          sessionId: "disk-fault",
+          clientMessageId: "fault-submit",
+          behaviorMode: "output-fixture",
+          onStream: (event) => {
+            failedEvents.push(event);
+            if (event.type === "text_delta") chmodSync(faultFile, 0o400);
+          },
+        });
+        assert.equal(failure.reason, "model_error");
+        assert.equal(
+          failedEvents.some(
+            (event) => event.type === "turn_complete" && event.reason === "completed",
+          ),
+          false,
+        );
+        assert.equal(failedEvents.at(-1).outputRecovery, "incomplete");
+        assert.equal(
+          journalCore.readOutputJournal(core.sessionsRoot(), "disk-fault").status,
+          "incomplete",
+        );
+        chmodSync(faultFile, 0o600);
+        const requestsBefore = requests;
+        const sticky = await engine.run("A new intent cannot bypass the failure", {
+          sessionId: "disk-fault",
+          clientMessageId: "fault-retry",
+          behaviorMode: "output-fixture",
+        });
+        assert.equal(sticky.reason, "model_error");
+        assert.equal(requests, requestsBefore);
+        compiledSdkFailure = true;
+      } finally {
+        if (existsSync(faultFile)) chmodSync(faultFile, 0o600);
+      }
+    }
     const hubEnvironment = createBunTestEnvironment(process.env, join(root, "hub-environment"));
     const hub = spawn(
       process.execPath,
@@ -549,7 +590,7 @@ if (process.argv[2] === "--hub") {
     );
     const [hubCode] = await once(hub, "exit");
     assert.equal(hubCode, 0);
-    assert.equal(requests, 1);
+    assert.equal(requests, compiledSdkFailure ? 2 : 1);
     console.log(
       JSON.stringify({
         sdkRequests: requests,
@@ -561,6 +602,7 @@ if (process.argv[2] === "--hub") {
         desktopTransportEpochChanged: true,
         stdioRestartCursorStable: true,
         actualWorkerReceipts: 2,
+        compiledSdkFailure,
         noExternalNetwork: true,
       }),
     );
