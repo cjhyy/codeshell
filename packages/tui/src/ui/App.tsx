@@ -27,7 +27,8 @@ import {
 } from "./components/VirtualMessageList.js";
 import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mode.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
-import { formatUsageCost, type UsageSummary } from "@cjhyy/code-shell-core";
+import { formatUsageCost } from "@cjhyy/code-shell-core";
+import { useSessionUsage } from "./hooks/useSessionUsage.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
 import type { ProviderManagerEntry } from "./components/ModelManager.js";
@@ -351,8 +352,13 @@ export function App({
       });
   }, [client, sessionId]);
   const [showBanner, setShowBanner] = useState(true);
-  const [totalTokens, setTotalTokens] = useState(0);
-  const [totalCost, setTotalCost] = useState<string | undefined>();
+  const { summary: sessionUsage, refresh: refreshUsage } = useSessionUsage(
+    client,
+    sessionId,
+    sidRef,
+  );
+  const totalTokens = sessionUsage?.totalTokens ?? 0;
+  const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;
   const [contextTokens, setContextTokens] = useState(0);
   const [currentEffort, setCurrentEffort] = useState(effort);
   const [permMode, setPermMode] = useState<TuiPermissionMode>("normal");
@@ -1656,20 +1662,7 @@ export function App({
         }
 
         setSessionId(result.sessionId);
-        let sessionUsage: UsageSummary | undefined;
-        try {
-          sessionUsage = (
-            await client.query("usage", {
-              sessionId: result.sessionId,
-              scope: "session",
-              includeChildren: true,
-            })
-          ).data as UsageSummary;
-          setTotalTokens(sessionUsage.totalTokens);
-          setTotalCost(formatUsageCost(sessionUsage));
-        } catch {
-          /* Older protocol hosts may not expose receipt accounting. */
-        }
+        await refreshUsage(result.sessionId);
 
         const elapsed = Date.now() - runStartRef.current;
         const parts: string[] = [formatDuration(elapsed)];
@@ -1739,7 +1732,15 @@ export function App({
       }
       return true;
     },
-    [client, sessionId, model, clearThinkingBuffer, finalizeStreamPresentation, setSessionId],
+    [
+      client,
+      sessionId,
+      model,
+      clearThinkingBuffer,
+      finalizeStreamPresentation,
+      setSessionId,
+      refreshUsage,
+    ],
   );
 
   // Background sub-agent completion → main-agent turn injection.

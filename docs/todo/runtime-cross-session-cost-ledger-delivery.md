@@ -19,7 +19,7 @@ main、aux summary、tool summary、goal judge、title、context package、manua
 - `Engine.getUsageSummary` 和公开 `UsageLedger.summary` 提供有界 runtime/session/store 查询，并验证 scope、SID、includeChildren、日期、cursor 和 limit。
 - `agent/query type:usage` 默认只允许 owned Session，聚合需要 Host 显式 `allowUsageAggregation:true`，带多租户 identity resolver 的协议 Host 无法开启该聚合捷径。
 - Desktop 在现有运行记录页显示跨会话估算与选中 Session（含 children）覆盖；Main 冷读持久账本，preload 仅返回安全摘要。没有增加侧栏或导航。
-- TUI `/cost`、footer 使用真实 Session/Runtime 摘要，取消 primary-model 猜测的每轮费用；退出费用说明写 stderr，保证 JSON stdout 可解析，只有未知请求也可显示覆盖说明。
+- TUI `/cost`、footer 使用真实 Session/Runtime 摘要，取消 primary-model 猜测的每轮费用；恢复时按 SID 查询，切换立即隐藏旧摘要，generation fence 阻止晚到查询覆盖新会话/较新结果。旧 Host/错误响应清空费用，不保留另一会话金额。退出费用说明写 stderr，保证 JSON stdout 可解析，只有未知请求也可显示覆盖说明。
 - stdio/TCP、TUI Host 显式配置持久 storage；独立 SDK 默认内存，只有明确 sessionStorageDir/ledger 配置才持久化。
 - 独立 Web 当前没有现成运行/用量页面，本次提供协议能力，未新增 Web GUI。
 
@@ -33,6 +33,7 @@ main、aux summary、tool summary、goal judge、title、context package、manua
 - Desktop Main 冷读、运行记录交互、TUI terminal render/命令/JSON renderer：26 pass / 0 fail，143 assertions。组合后的核心定向 32 pass / 0 fail。
 - Lint：0 errors、105 个既有 warnings；engine-bypass 与 workflow test paths guard 通过。
 - 已编译纯 Node SDK、真实 stdio worker run→关闭→restart 冷读→replay（无新请求且 runId 相同）、TUI CLI 持久账本全部通过。实际 worker/TUI PID 的独立 HOME hash/origin/父 PID guard 收据均核验；本地服务收到 4 次请求，worker 2 receipt，TUI 2 receipt（含退出时尚未到服务的 pending title，费用 unknown）。
+- TUI Session 水合与已有外部 turn/TodoWrite/terminal footer：9 pass / 0 fail，55 assertions，覆盖跨 SID 晚到、同 SID 新旧查询竞争和失败后清空。
 - CI typecheck job 增加 guard 自检和三种已编译消费者 smoke，确保最终合入 head 持续验证。
 
 消费 smoke 使用合成任务和本地 HTTP fixture；在 Core 加载前安装网络 guard，向 worker 发送 agent/run 前校验实际 PID 的 origin/HOME 启动收据。失败时保留私有 fixture 以便诊断，成功才清理。尚未执行完整 Electron GUI 人工操作；React 运行记录页交互、TUI 实际 terminal render、Main 冷读和真实 stdio worker 是独立的自动验证证据。
