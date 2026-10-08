@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertBunTestCompletion } from "./bun-test-completion.mjs";
 
 const MIN_LINES = 0.45;
 const MIN_FUNCTIONS = 0.38;
@@ -113,6 +114,8 @@ function main(): number {
         "--coverage-reporter=text",
         "--coverage-reporter=lcov",
         `--coverage-dir=${directory}`,
+        "--reporter=junit",
+        `--reporter-outfile=${join(directory, "junit.xml")}`,
       ],
       {
         cwd: fileURLToPath(new URL("..", import.meta.url)),
@@ -121,6 +124,7 @@ function main(): number {
     );
     if (result.error) throw result.error;
     if (result.status !== 0) return result.status ?? 1;
+    assertBunTestCompletion(join(directory, "junit.xml"));
     console.log(
       assertCoverage(summarizeCoverage(readFileSync(join(directory, "lcov.info"), "utf8"))),
     );
