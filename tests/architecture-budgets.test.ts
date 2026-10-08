@@ -125,7 +125,8 @@ describe("architecture growth budgets", () => {
     // request/result types while all file access stays in main (+11).
     // +55 declaration lines for those explicit project/version/Link contracts.
     // Main-branch integration retains the detailed run-trace declarations (+11).
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_930);
+    // Lab adds its extracted API type import and one typed capability property (+2).
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_932);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
