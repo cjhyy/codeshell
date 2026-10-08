@@ -150,7 +150,7 @@ export async function finalizeRunSuccess(args: {
     recordExternalBilledUsage,
     profile,
   } = args;
-  let unverified = false;
+  let unverified: boolean;
   // Seal pending operations for aborted/failed runs too; late callbacks must not
   // mutate an already published terminal receipt into apparent success.
   try {
