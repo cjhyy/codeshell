@@ -53,6 +53,12 @@ export {
 } from "./remote.js";
 
 export {
+  executeLocalOAuthLinkAction,
+  LocalOAuthLinkError,
+  type LocalOAuthLinkActionRequest,
+} from "./local-oauth.js";
+
+export {
   REMOTE_LINK_PROVIDER_ADAPTERS,
   LEGACY_GITHUB_ACTIONS,
   getRemoteLinkProviderAdapter,
