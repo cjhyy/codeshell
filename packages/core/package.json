@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "cross-spawn": "^7.0.6",
     "glob": "^11.0.0",
     "gpt-tokenizer": "^3.4.0",

@@ -19,6 +19,12 @@ describe("OAuth credential secret schema", () => {
         expiresAt: "2030-01-01T00:00:00.000Z",
         tokenEndpoint: "https://auth.example.com/oauth/token",
         clientId: "client-abc",
+        issuer: "https://auth.example.com",
+        clientRegistration: {
+          clientId: "client-abc",
+          clientSecret: "registration-secret",
+          issuer: "https://auth.example.com",
+        },
         scope: "read write",
       }),
     );
@@ -28,6 +34,10 @@ describe("OAuth credential secret schema", () => {
     expect(secret.expiresAt).toBe("2030-01-01T00:00:00.000Z");
     expect(secret.tokenEndpoint).toBe("https://auth.example.com/oauth/token");
     expect(secret.clientId).toBe("client-abc");
+    expect(secret.clientRegistration?.issuer).toBe("https://auth.example.com");
+    expect(mergeOAuthTokenResponse(secret, { access_token: "rotated" }).clientRegistration).toEqual(
+      secret.clientRegistration,
+    );
     expect(secret.scope).toBe("read write");
   });
 
