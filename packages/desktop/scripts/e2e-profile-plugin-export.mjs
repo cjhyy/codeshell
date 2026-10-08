@@ -1,5 +1,5 @@
 /* Real Settings export review; no model/tool execution. The OS picker alone is stubbed. */
-/* global document, localStorage, window */
+/* global localStorage, window */
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
