@@ -34,7 +34,8 @@ The fixed provider endpoints are:
 - `GET /repos/{owner}/{repo}` for identity.
 - `GET /user/starred/{owner}/{repo}`: 204 means true, 404 means false.
 - `PUT` or `DELETE /user/starred/{owner}/{repo}`: 204 acknowledges the send,
-  with `Content-Length: 0` and no JSON payload.
+  with `Content-Length: 0` and no JSON payload. GitHub requests explicitly name
+  `User-Agent: CodeShell-Link`, including the Node single-send transport.
 
 Status endpoints accept legal empty and plain-text responses without JSON parsing.
 All other statuses fail closed. HTTP mutations use the existing single physical

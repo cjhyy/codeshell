@@ -31,6 +31,7 @@ const githubHeaders = (token: string): Record<string, string> => ({
   ...bearer(token),
   Accept: "application/vnd.github+json",
   "X-GitHub-Api-Version": GITHUB_API_VERSION,
+  "User-Agent": "CodeShell-Link",
 });
 
 function action(

@@ -296,7 +296,10 @@ test.each(["token", "oauth"] as const)(
     expect(calls.map((c) => c.method)).toEqual(["GET", "GET", "PUT", "DELETE"]);
     expect(calls.every((c) => c.redirect === "error")).toBe(true);
     expect(calls[2]!.body).toBeUndefined();
-    expect(calls[2]!.headers).toMatchObject({ "Content-Length": "0" });
+    expect(calls[2]!.headers).toMatchObject({
+      "Content-Length": "0",
+      "User-Agent": "CodeShell-Link",
+    });
     status = 404;
     await expect(
       provider.actions
