@@ -49,6 +49,30 @@ describe("skillTool honors ctx.skillAllowlist", () => {
     expect(out).toContain("body of allowed");
   });
 
+  test("metadata discovery keeps invocation visibility and never returns the body", async () => {
+    const ctx = { cwd, skillAllowlist: ["allowed"] } as unknown as ToolContext;
+    const catalog = JSON.parse(await skillTool({ query: "", limit: 1 }, ctx));
+    expect(catalog.results.map((s) => s.name)).toEqual(["allowed"]);
+    expect(catalog.total).toBe(1);
+    expect(JSON.stringify(catalog)).not.toContain("body of");
+    expect(JSON.stringify(catalog)).not.toContain("SKILL.md");
+    ctx.disabledSkills = ["allowed"];
+    expect(JSON.parse(await skillTool({ query: "" }, ctx)).results).toEqual([]);
+    ctx.skillAllowlist = [];
+    expect(JSON.parse(await skillTool({ query: "" }, ctx)).total).toBe(0);
+  });
+
+  test("catalog rejects invalid pagination before scanning", async () => {
+    for (const args of [
+      { query: "", limit: 11 },
+      { query: "", offset: -1 },
+      { query: "", offset: 0.5 },
+      { query: "x".repeat(1_025) },
+    ]) {
+      expect(await skillTool(args, { cwd } as ToolContext)).toStartWith("Error:");
+    }
+  });
+
   test("plugin instructions remain readable while same-run MCP failures are explicit", async () => {
     const plugin = join(home, ".code-shell", "plugins", "fixture");
     const skill = join(plugin, "skills", "read");

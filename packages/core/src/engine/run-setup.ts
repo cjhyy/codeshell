@@ -61,6 +61,7 @@ export interface RunPromptComposerConfigInput {
   disabledSkills: ComposerOptions["disabledSkills"];
   disabledPlugins: ComposerOptions["disabledPlugins"];
   skillAllowlist: ComposerOptions["skillAllowlist"];
+  skillListing?: ComposerOptions["skillListing"];
   memoriesMaxAgeDays: ComposerOptions["memoriesMaxAgeDays"];
   memoryCurrentProjectOnly?: ComposerOptions["memoryCurrentProjectOnly"];
   disableInstructions?: ComposerOptions["disableInstructions"];
@@ -93,6 +94,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     disabledSkills,
     disabledPlugins,
     skillAllowlist,
+    skillListing,
     memoriesMaxAgeDays,
     memoryCurrentProjectOnly,
     disableInstructions,
@@ -118,10 +120,11 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     // WorkspaceProfile（数字人）：mainInstruction 从库活读（settings 只记名字）。
     // 命名注意：engine 的局部变量 `profile` 已被 RunBehaviorProfile 占用。
     profileMainInstruction: workspaceProfile?.mainInstruction,
-    // Only for the "declared but absent" notice; `requires` installs per project,
+    // Also prioritizes installed profile skills in the bounded listing. `requires` installs per project,
     // so a profile summoned where the install never ran would otherwise instruct
     // the model to call skills that do not exist here.
     profileDeclaredSkills: workspaceProfile?.skills,
+    skillListing,
     sessionBrief,
     profileMemoryDir,
     instructionOptions: {
