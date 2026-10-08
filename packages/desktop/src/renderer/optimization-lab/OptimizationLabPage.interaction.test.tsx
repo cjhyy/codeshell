@@ -80,7 +80,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
               };
             if (type === "list") return [];
             if (type === "validate_dataset")
-              return validationPromise ?? { ok: true, summary: { dev: 3, holdout: 3 } };
+              return validationPromise ?? { ok: true, issues: [], summary: { dev: 3, holdout: 3 } };
             if (type === "freeze_dataset") return { datasetHash: "b".repeat(64) };
             if (type === "start")
               snapshot = {

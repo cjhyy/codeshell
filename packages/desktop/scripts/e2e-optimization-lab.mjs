@@ -366,11 +366,36 @@ async function editDatasetOffline() {
     "Editing invalidates validation",
   );
   await win.getByTestId("optimization-lab-case-add").click();
+  await win.getByTestId("optimization-lab-case-6-fixtureRefs-add").click();
+  await win.getByTestId("optimization-lab-case-6-fixtureRefs-0").fill("reference line 1\nline 2");
+  await win.getByTestId("optimization-lab-case-6-missingEvidence-add").click();
+  await win.getByTestId("optimization-lab-case-6-missingEvidence-0").fill("missing line 1\nline 2");
+  await win.getByTestId("optimization-lab-case-6-assertion-add").click();
+  await win
+    .getByTestId("optimization-lab-case-6-assertion-0-kind")
+    .selectOption("json_field_equals");
+  await win.getByTestId("optimization-lab-case-6-assertion-0-path-0").fill("nested\nfield");
+  await win.getByTestId("optimization-lab-case-6-assertion-0-value-type").selectOption("number");
+  await win.getByTestId("optimization-lab-case-6-assertion-0-value").fill("1.25");
+  await win.getByTestId("optimization-lab-export-dataset").click();
+  await until(async () => {
+    try {
+      return JSON.parse(await readFile(exportedDataset, "utf8")).cases.length === 7;
+    } catch {
+      return false;
+    }
+  }, "Advanced form fields were not exported");
+  const advanced = JSON.parse(await readFile(exportedDataset, "utf8")).cases[6];
+  assert.deepEqual(advanced.fixtureRefs, ["reference line 1\nline 2"]);
+  assert.deepEqual(advanced.missingEvidence, ["missing line 1\nline 2"]);
+  assert.deepEqual(advanced.hardAssertions[0].path, ["nested\nfield"]);
+  assert.equal(advanced.hardAssertions[0].value, 1.25, "Numeric JSON assertion stays numeric");
   await win.getByTestId("optimization-lab-case-6-remove").click();
   await win.getByTestId("optimization-lab-export-dataset").click();
   await until(async () => {
     try {
-      return JSON.parse(await readFile(exportedDataset, "utf8")).title === edited.title;
+      const exported = JSON.parse(await readFile(exportedDataset, "utf8"));
+      return exported.title === edited.title && exported.cases.length === 6;
     } catch {
       return false;
     }
