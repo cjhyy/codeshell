@@ -8,11 +8,45 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.27] - 2026-10-09
+
+### Added
+
+- Complete the configured remote Link adapters for ten providers, retain exact
+  account/resource grants, and support rotating local GitHub/GitLab OAuth tokens
+  and system-browser authorization handoffs. Real account acceptance and service
+  deployment remain separate from these Host changes.
+- Add verified GitHub issue creation and single-repository Star/Unstar actions
+  with durable operation receipts, independent readback and no automatic resend
+  after an unknown result. New Star actions require explicit grants.
+- Parse bounded Office and PDF uploads and search authorized local text chunks.
+  Desktop uses its verified managed Node runtime for PDF parsing; Core PDF support
+  requires Node 22.13+ and the optional parser dependency.
+- Add cross-session request receipts and cost estimates to existing activity
+  records and TUI usage views, with visible unknown usage and pricing coverage.
+- Add durable model request boundaries and Host-owned signing of actual provider
+  request projections. Desktop requires available OS key storage and rejects
+  plaintext backends before sending; Node/TUI retain explicit plaintext custody.
+- Add isolated, tool-free Optimization Lab Agent trials, frozen instruction
+  revisions, native scope-specific adoption and revocation. The Lab remains off
+  by default; authorized reports and budget evidence remain durable.
+
 ### Changed
 
 - Simplify Desktop navigation: move Task center into Settings → Activity, and
   move credentials, Cloud workbench and the optional Optimization Lab into the
   settings menu. Keep their existing pages, controls and feature flags available.
+- Bound Skill metadata by model context budget and provide permission-filtered
+  search and pagination without loading Skill bodies into the initial context.
+- Manage Host/Engine/Session/run resources with explicit ownership and cleanup.
+- Restrict CLI Link bindings to reads: reviewed HTTP adapters handle writes.
+
+### Fixed
+
+- Require complete zero-failure Bun shard reports and private test environments.
+  Native packed consumers and spawned workers receive isolation before Core loads.
+- Exercise actual Linux SecretService in Electron acceptance instead of
+  Playwright's default plaintext and mock-keychain switches.
 
 ## [0.9.26] - 2026-10-08
 
