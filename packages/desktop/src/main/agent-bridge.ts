@@ -111,7 +111,7 @@ import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.
 import { readExternalRuntimeBinding } from "./external-runtime-state.js";
 import type { ExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { getTrustCachedSync } from "./trust-store.js";
-import { isOptimizationLabQuery } from "../shared/optimization-lab.js";
+import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/optimization-lab.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { resolveSessionRunWorkspace } from "./session-run-workspace.js";
@@ -1440,7 +1440,7 @@ export class AgentBridge implements PetStateBridge {
           meta: { origin: "host", producer: "desktop-optimization-lab" },
         },
       );
-      if (outcome.status === "result") return outcome.result;
+      if (outcome.status === "result") return unwrapOptimizationLabReply(type, outcome.result);
       if (outcome.status === "error")
         throw new Error(outcome.error.message ?? "Optimization Lab query failed");
       throw new Error(`Optimization Lab worker ${outcome.status}`);

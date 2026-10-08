@@ -53,3 +53,13 @@ export function isOptimizationLabQuery(message: { method?: unknown; params?: unk
   const type = (message.params as Record<string, unknown>).type;
   return typeof type === "string" && type.startsWith("optimization_lab_");
 }
+
+/** agent/query uses a typed data envelope, unlike ordinary protocol methods. */
+export function unwrapOptimizationLabReply(type: string, reply: unknown): unknown {
+  if (!reply || typeof reply !== "object" || Array.isArray(reply))
+    throw new Error("Invalid Optimization Lab worker reply");
+  const envelope = reply as Record<string, unknown>;
+  if (envelope.type !== type || !Object.prototype.hasOwnProperty.call(envelope, "data"))
+    throw new Error("Mismatched Optimization Lab worker reply");
+  return envelope.data;
+}

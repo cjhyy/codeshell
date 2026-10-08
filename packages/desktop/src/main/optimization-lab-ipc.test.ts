@@ -3,7 +3,7 @@ import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerOptimizationLabIpc } from "./optimization-lab-ipc";
-import { isOptimizationLabQuery } from "../shared/optimization-lab";
+import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/optimization-lab";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -105,6 +105,21 @@ function setup() {
 }
 
 describe("Optimization Lab trusted Desktop bridge", () => {
+  test("unwraps the actual agent/query type+data envelope and refuses mismatched responses", () => {
+    const data = { connections: [] };
+    expect(
+      unwrapOptimizationLabReply("optimization_lab_discover", {
+        type: "optimization_lab_discover",
+        data,
+      }),
+    ).toBe(data);
+    expect(() =>
+      unwrapOptimizationLabReply("optimization_lab_discover", { connections: [] }),
+    ).toThrow("Mismatched");
+    expect(() =>
+      unwrapOptimizationLabReply("optimization_lab_grant", { type: "optimization_lab_get", data }),
+    ).toThrow("Mismatched");
+  });
   test("rejects non-top-frame, flag-off, arbitrary paths and untrusted projects before worker access", async () => {
     const fixture = setup();
     const handler = fixture.handlers.get("optimizationLab:query")!;
