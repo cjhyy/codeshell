@@ -115,7 +115,8 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
   });
   cleanups.push(async () => http.close());
   const origin = await listen(
-    createServer((req, res) => {
+    createServer(async (req, res) => {
+      if (await http.handlePublic(req, res)) return;
       if (req.headers.origin !== origin) {
         res.writeHead(403).end();
         return;
@@ -152,6 +153,7 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
   const complete = (job: LinkAuthorization, owner = "one") =>
     api(`/authorizations/${job.id}/complete`, "POST", { callbackUrl: callback(job) }, owner);
   return {
+    origin,
     store,
     http,
     api,
@@ -187,6 +189,43 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
     },
   };
 }
+test("system browser handoff saves through the original Host without sharing its owner cookies", async () => {
+  const f = await fixture();
+  const job = await f.start();
+  const response = await f.api(`/authorizations/${job.id}/browser`, "POST", {});
+  expect(response.status).toBe(200);
+  const { launchUrl } = await response.json();
+  const launch = new URL(launchUrl);
+  const opened = await fetch(f.origin + launch.pathname + launch.search, { redirect: "manual" });
+  expect(opened.status).toBe(303);
+  expect(opened.headers.get("location")).toBe(job.redirect!.authorizationUrl);
+  const callback = new URL(f.callback(job));
+  const completed = await fetch(f.origin + callback.pathname + callback.search, {
+    redirect: "manual",
+  });
+  expect(completed.status).toBe(303);
+  expect(completed.headers.get("location")).toBe("/link/authorization-result");
+  const saved = await (await f.api(`/authorizations/${job.id}`)).json();
+  expect(saved.state).toBe("connected");
+  expect(saved.connection.providerId).toBe("github");
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(1);
+  await fetch(f.origin + callback.pathname + callback.search, { redirect: "manual" });
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(1);
+});
+
+test("revoking the original browser owner invalidates an already launched external handoff", async () => {
+  const f = await fixture();
+  const job = await f.start();
+  const { launchUrl } = await (await f.api(`/authorizations/${job.id}/browser`, "POST", {})).json();
+  const launch = new URL(launchUrl);
+  await fetch(f.origin + launch.pathname + launch.search, { redirect: "manual" });
+  f.deny("one");
+  const callback = new URL(f.callback(job));
+  await fetch(f.origin + callback.pathname + callback.search, { redirect: "manual" });
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(0);
+  expect(f.store.list()).toHaveLength(0);
+});
+
 test("authenticated HTTP authorization saves only through Host and remote disconnect revokes the grant", async () => {
   const f = await fixture();
   const job = await f.start();

@@ -27,6 +27,7 @@ import {
   findCodeShellWindow,
 } from "../packages/desktop/scripts/electron-harness.mjs";
 import { verifyNativeLinkUI } from "./verify-native-link-ui.mjs";
+import { verifyCloudLinkBrowserUI } from "./verify-cloud-link-browser-ui.mjs";
 const mode = process.argv[3] ?? "web";
 const packagedApplication = process.argv[4] ?? process.env.CODESHELL_LINK_SMOKE_APP;
 assert.ok(
@@ -311,6 +312,25 @@ try {
           ),
           200,
         );
+      }
+      if (mode === "web" || mode === "electron") {
+        console.log(
+          "Link browser handoff:",
+          JSON.stringify(
+            await verifyCloudLinkBrowserUI({
+              desktop: mode === "electron" ? desktop : undefined,
+              page,
+              hubOrigin,
+              issuer,
+              screenshots,
+              readLinkState: async () =>
+                (await request("/api/v1/links", { headers: { cookie } })).json(),
+            }),
+          ),
+        );
+        if (mode === "electron") await page.close();
+        else await context.close();
+        continue;
       }
       if (mode === "electron") {
         // This remote BrowserWindow also uses an isolated Electron Session.

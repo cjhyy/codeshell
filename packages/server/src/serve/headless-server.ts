@@ -571,6 +571,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   links = hubAuth
     ? createLinkHttp({
         ...configurationOptions,
+        browserHandoff: !opts.publicPathPrefix,
         remoteLink: () => remoteLink,
         onChanged: () => notify("serve/configurationChanged", {}),
       })
@@ -684,6 +685,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       return;
     }
     if (hubAuth) {
+      if (await links?.handlePublic(req, res)) return;
       if (await panels?.handleAssets(req, res)) return;
       if (await hubAuth.handle(req, res)) return;
       if (pathname.startsWith("/api/")) {

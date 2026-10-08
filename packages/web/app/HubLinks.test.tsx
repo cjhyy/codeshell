@@ -93,6 +93,7 @@ async function fixture(
     modern?: boolean;
     strict?: boolean;
     remoteDefault?: boolean;
+    browserHandoff?: string;
     response?: LinkAuthorization;
     cancelGate?: Promise<void>;
   } = {},
@@ -131,6 +132,7 @@ async function fixture(
       cliBinding: true,
       deviceAuth: true,
       ...(options.modern ? { authorizationSteps: 1 as const } : {}),
+      ...(options.browserHandoff ? { browserHandoff: 1 as const } : {}),
     },
     revision: "snapshot-1",
   };
@@ -167,14 +169,23 @@ async function fixture(
         providerId: "github",
         methodId: JSON.parse(String(init?.body)).methodId,
         state: "pending",
-        step: {
-          id: "modern-step",
-          kind: "credential-input",
-          purpose: "credential",
-          fields: [{ id: "token", label: "Token", secret: true, required: true }],
-          expiresAt: new Date(Date.now() + 60_000).toISOString(),
-        },
+        step: options.browserHandoff
+          ? {
+              id: "browser-step",
+              kind: "redirect",
+              authorizationUrl: "https://link.example/oauth/authorize",
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            }
+          : {
+              id: "modern-step",
+              kind: "credential-input",
+              purpose: "credential",
+              fields: [{ id: "token", label: "Token", secret: true, required: true }],
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            },
       });
+    if (url.pathname === "/api/v1/links/authorizations/modern-attempt/browser" && method === "POST")
+      return Response.json({ launchUrl: options.browserHandoff });
     if (
       url.pathname === "/api/v1/links/authorizations/modern-attempt/responses" &&
       method === "POST"
@@ -463,6 +474,49 @@ test("new connections use the provider default across methods while existing loc
     methodId,
     connectionId: connection().id,
   });
+});
+
+test("browser handoff opens only the Host ticket and keeps polling the captured attempt", async () => {
+  const launch = `http://localhost/link/authorize?ticket=${"a".repeat(43)}`;
+  const view = await fixture([], { modern: true, remoteDefault: true, browserHandoff: launch });
+  const opened: string[] = [];
+  const original = window.open;
+  window.open = ((url: string | URL) => {
+    opened.push(String(url));
+    return null;
+  }) as typeof window.open;
+  try {
+    await click(findButton(view.tree, "添加连接"));
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    const step = elements(view.tree).find((element) => element.type === LinkAuthorizationStepView)!;
+    expect(step.props.busy).toBe(false);
+    step.props.onOpenUrl("https://untrusted.example/ignored");
+    expect(opened).toEqual([launch]);
+    expect(view.dirty).toBe(true);
+    expect(
+      view.requests.find((request) => request.url.pathname.endsWith("/browser"))?.body,
+    ).toEqual({});
+    await click(findButton(view.tree, "取消授权"));
+    expect(view.requests.filter((request) => request.method === "DELETE")).toHaveLength(1);
+  } finally {
+    window.open = original;
+  }
+});
+
+test("a foreign browser launch URL fails closed and cancels the private attempt", async () => {
+  const view = await fixture([], {
+    modern: true,
+    remoteDefault: true,
+    browserHandoff: `https://other.example/link/authorize?ticket=${"a".repeat(43)}`,
+  });
+  await click(findButton(view.tree, "添加连接"));
+  await act(async () => {
+    await flushMicrotasks();
+  });
+  expect(text(view.tree)).toContain("授权浏览器入口无效");
+  expect(view.requests.filter((request) => request.method === "DELETE")).toHaveLength(1);
 });
 
 test("an authorization begun outside a project keeps that scope after a project switch, including cancellation", async () => {

@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createLinkBrowserHandoff } from "./browser-handoff.js";
 import {
   createLinkService,
   LinkServiceError,
@@ -16,6 +17,8 @@ const ROOT = "/api/v1/links";
 const MAX_BODY_BYTES = 32 * 1024;
 
 export interface LinkHttpOptions extends LinkServiceOptions {
+  /** Project gateways own the public callback; private runtimes must not advertise it themselves. */
+  browserHandoff?: boolean;
   ownerId: (request: IncomingMessage) => Promise<string | undefined>;
   isAuthorized: (request: IncomingMessage) => Promise<boolean>;
 }
@@ -69,6 +72,7 @@ function fields(input: Record<string, unknown>, allowed: readonly string[]): voi
 /** Host authenticates and validates Origin first; writes independently recheck the same owner. */
 export function createLinkHttp(options: LinkHttpOptions) {
   const service = createLinkService(options);
+  const browser = createLinkBrowserHandoff(options.now);
   async function context(
     request: IncomingMessage,
     abandoned: () => boolean,
@@ -86,8 +90,12 @@ export function createLinkHttp(options: LinkHttpOptions) {
   }
   return {
     service,
-    close: service.close,
+    close: async () => {
+      browser.close();
+      await service.close();
+    },
     cancelOwner: service.cancelOwner,
+    handlePublic: browser.handle,
     async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
       const url = new URL(request.url ?? "/", "http://localhost");
       if (url.pathname !== ROOT && !url.pathname.startsWith(ROOT + "/")) return false;
@@ -102,13 +110,26 @@ export function createLinkHttp(options: LinkHttpOptions) {
         let result: unknown;
         if (url.pathname === ROOT && method === "GET") {
           await service.refreshRemoteCatalog(owner);
-          result = service.snapshot();
+          const snapshot = service.snapshot();
+          const configured = options.remoteLink?.();
+          result = {
+            ...snapshot,
+            capabilities: {
+              ...snapshot.capabilities,
+              ...(options.browserHandoff !== false &&
+              configured &&
+              new URL(configured.redirectUri).pathname === "/link/callback"
+                ? { browserHandoff: 1 }
+                : {}),
+            },
+          };
         } else {
           const cli = /^\/api\/v1\/links\/providers\/([^/]+)\/cli$/.exec(url.pathname);
           const connection = /^\/api\/v1\/links\/connections\/([^/]+)$/.exec(url.pathname);
           const remoteComplete = /^\/api\/v1\/links\/authorizations\/([^/]+)\/complete$/.exec(
             url.pathname,
           );
+          const handoff = /^\/api\/v1\/links\/authorizations\/([^/]+)\/browser$/.exec(url.pathname);
           const authorization = /^\/api\/v1\/links\/authorizations\/([^/]+)$/.exec(url.pathname);
           const respond = /^\/api\/v1\/links\/authorizations\/([^/]+)\/responses$/.exec(
             url.pathname,
@@ -127,6 +148,27 @@ export function createLinkHttp(options: LinkHttpOptions) {
               owner,
               input as unknown as LinkConnectionInput,
               input.authModeId,
+            );
+          } else if (handoff && method === "POST") {
+            fields(await body(request), []);
+            const id = decodeURIComponent(handoff[1]!);
+            const check = async () => {
+              const job = await service.authorization(owner, id);
+              if (job.state !== "pending") throw new LinkServiceError(409, "conflict");
+              return job;
+            };
+            const configured = options.remoteLink?.();
+            if (!configured) throw new LinkServiceError(503, "unavailable");
+            result = browser.create(
+              await check(),
+              {
+                check: async () => {
+                  await check();
+                },
+                complete: (callbackUrl) => service.completeRemoteAuth(owner, id, callbackUrl),
+                cancel: () => service.cancelAuthorization(owner, id),
+              },
+              new URL(configured.redirectUri).origin,
             );
           } else if (respond && method === "POST") {
             const input = await body(request);
