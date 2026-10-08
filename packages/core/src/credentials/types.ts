@@ -161,6 +161,8 @@ export interface Credential {
     linkAccountLabel?: string;
     /** Safe resource labels returned during validation for a compact Link card preview. */
     linkResourceLabels?: string[];
+    /** Reviewed provider-owned groups selected in the downstream Link consent. */
+    linkResourceGroups?: Array<{ id: string; items: Array<{ id: string; label: string }> }>;
     /** Provider Action ids enabled for this connection. */
     linkCapabilityIds?: string[];
     /** ISO timestamp of the last successful live provider validation. */

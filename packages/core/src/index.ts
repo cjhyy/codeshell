@@ -785,3 +785,14 @@ export {
   LocalOAuthLinkError,
   type LocalOAuthLinkActionRequest,
 } from "./links/local-oauth.js";
+
+export {
+  REMOTE_LINK_PROVIDER_ADAPTERS,
+  LEGACY_GITHUB_ACTIONS,
+  getRemoteLinkProviderAdapter,
+  reviewedRemoteLinkActions,
+  normalizeRemoteLinkResourceId,
+  parseRemoteLinkResourceGroups,
+  type RemoteLinkProviderId,
+  type RemoteLinkResourceGroup,
+} from "./links/remote-adapters.js";
