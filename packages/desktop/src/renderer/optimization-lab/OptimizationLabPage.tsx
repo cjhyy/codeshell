@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import type { LabQueryType } from "../../shared/optimization-lab";
 import { useT } from "../i18n";
 import { OptimizationLabSummary } from "./OptimizationLabSummary";
+import { DatasetEditor } from "./DatasetEditor";
+import { datasetDrafts } from "./dataset-drafts";
 
 interface Discovery {
   skills: Array<{ name: string; source: string; enabled?: boolean }>;
@@ -57,7 +59,12 @@ const activeStatuses = new Set([
   "running",
 ]);
 
-export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: string | null }) {
+export function OptimizationLabPage(props: { activeProjectId?: string | null }) {
+  // A project change remounts all experiment and authorization state before paint.
+  return <OptimizationLabProjectPage key={props.activeProjectId ?? "none"} {...props} />;
+}
+
+function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: string | null }) {
   const { t } = useT();
   const [enabled, setEnabled] = useState(false);
   const [discovery, setDiscovery] = useState<Discovery>({ skills: [], connections: [] });
@@ -65,7 +72,9 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
   const [skillName, setSkillName] = useState("");
   const [targetId, setTargetId] = useState("");
   const [optimizerId, setOptimizerId] = useState("");
-  const [datasetText, setDatasetText] = useState(sampleDataset);
+  const [datasetText, setDatasetText] = useState(
+    () => (activeProjectId && datasetDrafts.get(activeProjectId)) ?? sampleDataset,
+  );
   const [validation, setValidation] = useState<any>(null);
   const [objective, setObjective] = useState<"quality" | "cost">("quality");
   const [limits, setLimits] = useState({
@@ -87,6 +96,13 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const epoch = useRef(0);
+  const datasetRevision = useRef(0);
+  const editDataset = (text: string) => {
+    datasetRevision.current++;
+    setDatasetText(text);
+    setValidation(null);
+    if (activeProjectId) datasetDrafts.set(activeProjectId, text);
+  };
   const errorMessage = (failure: unknown) => {
     const message = String(failure);
     return /(?:unknown|unsupported|not registered).*optimization_lab_|optimization_lab_.*(?:unknown|unsupported|not registered)/i.test(
@@ -354,15 +370,43 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
                 </p>
               ))}
             <p className="text-sm text-muted-foreground">{t("optimizationLab.datasetHelp")}</p>
-            <textarea
-              data-testid="optimization-lab-dataset"
-              aria-label={t("optimizationLab.dataset")}
-              className={`${inputClass} min-h-64 font-mono text-xs`}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                data-testid="optimization-lab-import-dataset"
+                variant="outline"
+                disabled={pending}
+                onClick={() =>
+                  void run(async () => {
+                    const current = epoch.current;
+                    const text = await window.codeshell.optimizationLab.importDataset({ target });
+                    if (text !== null && current === epoch.current) editDataset(text);
+                  })
+                }
+              >
+                {t("optimizationLab.importDataset")}
+              </Button>
+              <Button
+                data-testid="optimization-lab-export-dataset"
+                variant="outline"
+                disabled={pending}
+                onClick={() =>
+                  void run(async () => {
+                    await window.codeshell.optimizationLab.exportDataset({
+                      target,
+                      text: datasetText,
+                    });
+                  })
+                }
+              >
+                {t("optimizationLab.exportDataset")}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("optimizationLab.draftHelp")}</p>
+            <DatasetEditor
               value={datasetText}
-              onChange={(e) => {
-                setDatasetText(e.target.value);
-                setValidation(null);
-              }}
+              onChange={editDataset}
+              validation={validation}
+              disabled={pending}
             />
             <Button
               data-testid="optimization-lab-validate"
@@ -371,10 +415,14 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
               onClick={() =>
                 void run(async () => {
                   const dataset = JSON.parse(datasetText);
+                  const revision = datasetRevision.current;
                   const valid = await query<any>("validate_dataset", { dataset });
+                  if (revision !== datasetRevision.current) return;
                   setValidation(valid);
-                  if (valid.ok)
-                    setValidation({ ...valid, frozen: await query("freeze_dataset", { dataset }) });
+                  if (valid.ok) {
+                    const frozen = await query("freeze_dataset", { dataset });
+                    if (revision === datasetRevision.current) setValidation({ ...valid, frozen });
+                  }
                 })
               }
             >
