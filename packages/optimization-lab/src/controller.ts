@@ -177,6 +177,8 @@ export class OptimizationLabController {
   prepareTrial(raw: unknown) {
     const input = PrepareTrialSchema.parse(raw);
     const source = this.store.read(input.sourceExperimentId);
+    if (source.plan.projectKey !== projectKey(this.cwd))
+      throw new Error("Source candidate belongs to another project");
     const progress = this.data(source);
     if (!progress.reportRef || activeStages.has(source.state.status))
       throw new Error("Source experiment needs a durable report before trial");
@@ -402,7 +404,10 @@ export class OptimizationLabController {
       const ancestry: ExperimentPlan["fixedCandidate"] = prior.plan.fixedCandidate;
       if (!ancestry) break;
       const next = this.store.read(ancestry.sourceExperimentId);
-      if (next.plan.planHash !== ancestry.sourcePlanHash)
+      if (
+        next.plan.planHash !== ancestry.sourcePlanHash ||
+        next.plan.projectKey !== projectKey(this.cwd)
+      )
         throw new Error("Candidate ancestry changed");
       prior = next;
     }

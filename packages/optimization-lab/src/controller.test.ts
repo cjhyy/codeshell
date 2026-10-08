@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { OptimizationLabController } from "./controller.js";
 import type { LabSettings } from "./providers/connection.js";
 import { readFrozenDataset } from "./contracts/dataset.js";
+import { createExperimentPlan } from "./contracts/experiment.js";
 const test = isolatedBackendTest(import.meta.path);
 const roots: string[] = [];
 afterEach(() => {
@@ -248,6 +249,13 @@ test("reusing revealed holdout remains inconclusive; wrong candidates and change
   await wait(s.controller, s.prepared.id);
   const input = trialInput(s, false);
   const before = s.payloads.length;
+  const { planHash: _sourceHash, ...foreignContent } = s.prepared.plan;
+  const foreign = s.controller.store.create(
+    createExperimentPlan({ ...foreignContent, projectKey: "f".repeat(16) }),
+  );
+  expect(() =>
+    s.controller.prepareTrial({ ...input, sourceExperimentId: foreign.state.id }),
+  ).toThrow("another project");
   expect(() => s.controller.prepareTrial({ ...input, candidateHash: "a".repeat(64) })).toThrow(
     "candidate",
   );

@@ -443,7 +443,7 @@ export function buildReport(options: {
     limitations: [
       ...(plan.fixedCandidate
         ? [
-            "The candidate was explicitly frozen from an earlier report; this trial makes no optimization calls. Previously revealed cases are not fresh independent holdout evidence.",
+            "The candidate was explicitly frozen from an earlier report; this trial makes no optimization calls. Earlier search costs remain in that source report and are not included in this trial ledger. Previously revealed cases are not fresh independent holdout evidence.",
           ]
         : []),
       "Standalone text_fragment evaluates instructions, not Skill loading, tools or an Agent workflow.",
