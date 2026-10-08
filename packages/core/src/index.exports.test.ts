@@ -324,7 +324,6 @@ const extensionRuntimeContract = [
   "logger",
   "readSkillSnapshot",
   "InstructionBindingStore",
-  "InstructionSnapshotSchema",
   "instructionHash",
   "runIsolatedInstruction",
   "acquireLockOnPath",
