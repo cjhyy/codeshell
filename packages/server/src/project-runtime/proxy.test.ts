@@ -121,7 +121,9 @@ async function fixture() {
         body: (await body(req)).toString(),
       });
       res.setHeader("Set-Cookie", "runtime-secret=must-not-reach-browser; HttpOnly");
-      if (req.url === `/api/v1/links/authorizations/${AUTHORIZATION_ID}`) {
+      if (req.url === "/api/v1/links") {
+        json(res, { capabilities: { authorizationSteps: 1, remoteAuth: true }, connections: [] });
+      } else if (req.url === `/api/v1/links/authorizations/${AUTHORIZATION_ID}`) {
         json(res, {
           id: AUTHORIZATION_ID,
           providerId: "figma",
@@ -318,6 +320,18 @@ test("external browser callback returns to its captured project and lease withou
   expect(JSON.parse(exchange[0].body).callbackUrl).toBe(
     `${ORIGIN}/link/callback?state=${f.linkState}&code=private-code`,
   );
+});
+
+test("the public project gateway adds browser handoff for a compatible older private runtime", async () => {
+  const f = await fixture();
+  const response = await f.fetchProject("/api/v1/links");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("set-cookie")).toBeNull();
+  expect((await response.json()).capabilities).toEqual({
+    authorizationSteps: 1,
+    remoteAuth: true,
+    browserHandoff: 1,
+  });
 });
 
 test("project restart or owner revocation invalidates an external browser callback", async () => {

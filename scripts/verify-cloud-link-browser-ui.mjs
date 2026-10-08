@@ -17,9 +17,26 @@ export async function verifyCloudLinkBrowserUI({
   let browser, context;
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const dialogs = [];
+  page.on("dialog", (dialog) => {
+    dialogs.push(dialog.type());
+    void dialog.accept().catch(() => {});
+  });
   const countWindows = () =>
     desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
   const initialWindows = desktop ? await countWindows() : undefined;
+  const ownerCookieNames = new Set(
+    desktop
+      ? await desktop.evaluate(async ({ BrowserWindow }, origin) => {
+          const window = BrowserWindow.getAllWindows().find((item) =>
+            item.webContents.getURL().startsWith(origin),
+          );
+          return (await window.webContents.session.cookies.get({ url: origin })).map(
+            (cookie) => cookie.name,
+          );
+        }, hubOrigin)
+      : (await page.context().cookies(hubOrigin)).map((cookie) => cookie.name),
+  );
   try {
     if (desktop) {
       await desktop.evaluate(({ shell }) => {
@@ -79,12 +96,39 @@ export async function verifyCloudLinkBrowserUI({
         assert.equal(url.origin, hubOrigin);
         assert.equal(url.pathname, "/link/authorize");
         assert.match(url.searchParams.get("ticket"), /^[A-Za-z0-9_-]{43}$/);
-        assert.equal(
-          (await context.cookies(hubOrigin)).length,
-          0,
+        assert.ok(
+          (await context.cookies(hubOrigin)).every((cookie) => !ownerCookieNames.has(cookie.name)),
           "System browser must not receive cloud owner cookies",
         );
         authorizationPage = await context.newPage();
+        // Playwright's routes can miss a later URL in a server redirect chain.
+        // Intercept only the real upstream navigation at Chromium's request stage.
+        const cdp = await context.newCDPSession(authorizationPage);
+        await cdp.send("Fetch.enable", {
+          patterns: [{ urlPattern: "https://github.com/*", requestStage: "Request" }],
+        });
+        cdp.on("Fetch.requestPaused", async ({ requestId, request }) => {
+          try {
+            const target = new URL(request.url);
+            assert.equal(target.pathname, "/login/oauth/authorize");
+            assert.ok(target.searchParams.get("state"));
+            const callback = new URL("/oauth/upstream/github/callback", issuer);
+            callback.search = new URLSearchParams({
+              code: "fixture-alice",
+              state: target.searchParams.get("state"),
+            }).toString();
+            await cdp.send("Fetch.fulfillRequest", {
+              requestId,
+              responseCode: 303,
+              responseHeaders: [{ name: "location", value: callback.href }],
+            });
+          } catch (error) {
+            errors.push(error.message);
+            await cdp
+              .send("Fetch.failRequest", { requestId, errorReason: "Aborted" })
+              .catch(() => {});
+          }
+        });
         await authorizationPage.goto(launch);
         assert.equal(
           await countWindows(),
@@ -98,7 +142,24 @@ export async function verifyCloudLinkBrowserUI({
       }
       authorizationPage.setDefaultTimeout(15_000);
       authorizationPage.on("pageerror", (error) => errors.push(error.message));
-      await authorizationPage.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
+      await authorizationPage
+        .getByRole("button", { name: "允许读取和创建 Issue", exact: true })
+        .waitFor()
+        .catch(async (error) => {
+          await authorizationPage.screenshot({
+            path: join(screenshots, "external-consent-failure.png"),
+            fullPage: true,
+          });
+          console.log(
+            "External consent diagnostics",
+            JSON.stringify({
+              path: new URL(authorizationPage.url()).pathname,
+              body: (await authorizationPage.locator("body").innerText()).slice(0, 900),
+              screenshots,
+            }),
+          );
+          throw error;
+        });
       assert.equal(
         new URL(page.url()).origin,
         hubOrigin,
@@ -114,7 +175,9 @@ export async function verifyCloudLinkBrowserUI({
       fullPage: true,
     });
     await authorizationPage.locator('input[type="checkbox"][value="owner/repo"]').check();
-    await authorizationPage.getByRole("button", { name: "允许只读访问", exact: true }).click();
+    await authorizationPage
+      .getByRole("button", { name: "允许读取和创建 Issue", exact: true })
+      .click();
     await authorizationPage
       .getByText("授权已处理。请返回原工作台查看连接结果；可以关闭此页面。", { exact: true })
       .waitFor();
@@ -126,7 +189,12 @@ export async function verifyCloudLinkBrowserUI({
       null,
     );
     if (desktop) {
-      assert.equal((await context.cookies(hubOrigin)).length, 0);
+      assert.ok(ownerCookieNames.size > 0, "Fixture workbench has an authenticated owner");
+      assert.ok(
+        (await context.cookies(hubOrigin)).every((cookie) => !ownerCookieNames.has(cookie.name)),
+        "Loopback ports share cookie hosts; only the Link browser cookie may be present",
+      );
+      assert.equal((await context.request.get(hubOrigin + "/api/v1/links")).status(), 401);
       assert.equal(await page.evaluate(() => typeof window.codeshell), "undefined");
     }
     await page.screenshot({ path: join(screenshots, "external-connected.png"), fullPage: true });
@@ -143,6 +211,7 @@ export async function verifyCloudLinkBrowserUI({
       .waitFor();
     await page.getByText("授权已取消。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
+    assert.deepEqual(dialogs, [], "Browser handoff must preserve the workbench without navigation");
     await authorizationPage.close();
     return {
       mode: desktop ? "Electron + isolated system Chromium" : "Chromium popup",

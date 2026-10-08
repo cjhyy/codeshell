@@ -9,8 +9,8 @@ import {
   PlaintextCipher,
   type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
-import { createLinkHttp } from "./http.js";
-import { createLinkService, type LinkServiceOptions } from "./service.js";
+import { createLinkHttp, type LinkHttpOptions } from "./http.js";
+import { createLinkService } from "./service.js";
 import type { LinkAuthorization } from "./types.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -37,7 +37,7 @@ async function listen(server: Server) {
   });
   return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 }
-async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
+async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHandoff"> = {}) {
   const directory = mkdtempSync(join(tmpdir(), "host-remote-link-"));
   cleanups.push(async () => rmSync(directory, { recursive: true, force: true }));
   const store = new CredentialStore(undefined, new PlaintextCipher(), directory);
@@ -189,8 +189,18 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
     },
   };
 }
+test("private runtimes retain legacy completion without advertising a public browser callback", async () => {
+  const f = await fixture({ browserHandoff: false });
+  const snapshot = await (await f.api("")).json();
+  expect(snapshot.capabilities.browserHandoff).toBeUndefined();
+  const job = await f.start();
+  expect((await f.complete(job)).status).toBe(200);
+  expect(f.store.list()).toHaveLength(1);
+});
+
 test("system browser handoff saves through the original Host without sharing its owner cookies", async () => {
   const f = await fixture();
+  expect((await (await f.api("")).json()).capabilities.browserHandoff).toBe(1);
   const job = await f.start();
   const response = await f.api(`/authorizations/${job.id}/browser`, "POST", {});
   expect(response.status).toBe(200);

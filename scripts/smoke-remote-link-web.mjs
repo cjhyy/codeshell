@@ -424,7 +424,7 @@ try {
       await beginGitHubAuthorization();
       console.log("Link verifier: waiting for public GitHub consent", mode);
       await page
-        .getByRole("button", { name: "允许只读访问", exact: true })
+        .getByRole("button", { name: "允许读取和创建 Issue", exact: true })
         .waitFor()
         .catch(async (error) => {
           await page.screenshot({
@@ -477,7 +477,7 @@ try {
         );
       }
       await page.locator('input[type="checkbox"][value="owner/repo"]').check();
-      await page.getByRole("button", { name: "允许只读访问", exact: true }).click();
+      await page.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).click();
       await page.getByText("已连接 alice，授权已保存到原项目。", { exact: true }).waitFor();
       assert.equal(new URL(page.url()).search, "");
       assert.equal(completes, 1);
@@ -531,7 +531,7 @@ try {
       if (mode === "paired") {
         await page.getByRole("link", { name: "返回原项目", exact: true }).click();
         await beginGitHubAuthorization();
-        await page.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
+        await page.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).waitFor();
         const devices = await localWindow.evaluate(() =>
           window.codeshell.mobileRemote.listDevices(),
         );
@@ -541,7 +541,7 @@ try {
           devices[0].id,
         );
         await page.locator('input[type="checkbox"][value="owner/repo"]').check();
-        await page.getByRole("button", { name: "允许只读访问", exact: true }).click();
+        await page.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).click();
         await page
           .getByText("原登录已失效。请返回工作台登录，并重新发起授权。", { exact: true })
           .waitFor();

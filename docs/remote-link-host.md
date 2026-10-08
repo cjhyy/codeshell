@@ -161,7 +161,7 @@ code-shell-serve --auth hub --public-url https://hub.example --cwd /workspace
 可选客户端密钥从普通 Agent worker 和 Panel Agent worker 环境中剔除。
 
 浏览器在 Link 页选择“通过 Link 添加账号”，填写名称后前往授权。首次连接直接进入
-GitHub 登录和授权，随后选择仓库并允许只读访问，不需要注册或登录 Link，也不需要
+相应 provider 登录和授权，随后明确选择资源并审阅请求范围，不需要注册或登录 Link，也不需要
 管理员密码。回调页立即清除地址栏中的授权码，通过原工作台登录完成授权；返回时仍打开
 原项目的 Link 页。多个远程账号和本地连接可同时存在，远程连接支持改名、重新授权和断开。
 拒绝授权会取消原私有 attempt。回调请求结果不明时仅提供查询，不重复提交授权码。
@@ -171,19 +171,25 @@ Link 的用户授权会话与管理后台会话独立，用户只能授权本会
 有效期内可复用已验证账号；“使用其他 GitHub 账号”会重新进入 GitHub 验证。
 管理员密码仅用于服务部署后的客户端登记、连接管理和撤销，不出现在普通连接流程中。
 
-浏览器 sessionStorage 只存授权 ID、state、到期时间和 Host／项目路由，不存令牌或 PKCE
-verifier；读取后移除。普通工作台启动不依赖 sessionStorage，可用性受限的浏览器会在
+支持 `browserHandoff: 1` 的 Hub 通过短期单次 ticket 打开授权页，原工作台保留登录和轮询，
+不依赖 sessionStorage，也不向系统浏览器传递 owner cookie。独立浏览器回到 Host 的公开
+`/link/callback` 后，Host 使用发起时捕获的 owner、项目、私有 PKCE attempt 和任务 ID 完成
+授权；每次重新检查原登录、配置、连接 revision 和项目租约。授权码只兑换一次，结果页面
+重定向到不含 code/state 的 `/link/authorization-result`。授权期间关闭、退出或取消不能保存。
+新 project gateway 为兼容旧 private runtime 提供同一 broker；private runtime 本身不声明公共回调能力。
+
+缺少此能力的旧 Host 仍使用原浏览器导航。其 sessionStorage 只存授权 ID、state、到期时间和 Host／项目路由，不存令牌或 PKCE
+verifier；读取后移除。普通工作台启动不依赖 sessionStorage，可用性受限的旧浏览器会在
 授权流程给出明确错误。回调页面不绕过身份校验，换登录或原登录撤销后需要重新授权。
 
 ## 桌面云端窗口和配对 Web
 
-Electron 云端窗口允许从工作台发起符合 PKCE 格式的 `/oauth/authorize` 导航。
-授权允许该 Link origin 的仓库确认，以及由它发起的固定 GitHub HTTPS OAuth 入口。
-GitHub 登录和二次验证限定在 GitHub 同域，并必须经 Link 的
-`/oauth/upstream/github/callback` 返回，才能进入原工作台的 `/link/callback`。
-流程最长十分钟，Host 回调的 state 必须匹配。回到工作台、关闭窗口或超时后撤销临时导航资格。
-子框架不能开启授权流程，其他外部导航、弹窗、webview 仍被拦截。Link 页面显示其
-实际域名标题，没有 Desktop preload，也不获得云端工作台的录音、通知和下载权限。
+Electron 云端窗口只将自身 Host origin 的 `/link/authorize?ticket=...` 单次入口交给系统
+浏览器，不创建内嵌 OAuth 窗口。云端工作台保留原页面和登录；系统浏览器既没有 Desktop
+preload，也不获得云端 owner cookie。Figma 等不支持嵌入式浏览器的 provider 因此使用正常
+系统浏览器授权。票据、state 和私有 attempt 最长十分钟，过期或原权限失效后不能兑换。
+旧 Host 的兼容导航仍限制为配置 Link origin、静态允许的十家 provider HTTPS 登录域名、
+匹配 provider 的 `/oauth/upstream/<provider>/callback` 和原 Host 回调；其他弹窗及外部导航继续拦截。
 
 配对 Web 使用不同的注册回调：`https://你的电脑远程域名/mobile/link/callback`。
 在 Desktop 主进程启动环境设置：
@@ -282,8 +288,11 @@ LinkAction、刷新、服务端撤销及 Host 断开。GitHub 响应是受控夹
 `node scripts/smoke-remote-link-web.mjs /path/to/codeshell-services/apps/link-server/http.mjs`
 使用已构建 Web、真实 Node Hub 和独立 Link，在 390／1440px Chromium 完成授权、回调、
 返回连接列表、断开以及拒绝授权，并核对服务端 grant 撤销。
-可追加 `electron` 验证实际桌面的隔离云端窗口（包括 GitHub 授权、域名标题、无本地 preload、
-外部导航拦截），追加 `paired` 验证实际 Desktop 的配对 Web（390px、原工作区返回、错误
+可追加 `electron` 验证实际桌面的隔离云端窗口和系统浏览器交接。测试只替换 OS 浏览器
+启动器为独立 Chromium，核验不新增 Electron OAuth 窗口、系统浏览器拿不到 owner cookie、
+不能访问 Hub 的认证 API、干净回调后原工作台轮询完成、断开撤销和拒绝授权。Web 的
+390／1440px 使用实际弹出页完成同一交接。上游 OAuth 仍是受控响应，未验证真实 provider 登录。
+追加 `paired` 验证实际 Desktop 的配对 Web（390px、原工作区返回、错误
 项目回调和设备撤销拒绝）。配对测试将隔离测试进程的网络接口枚举置空以采用已有回环
 回退，不打开 LAN 监听，也不修改用户真实项目或网络设置。它不代替真实公网隧道、物理
 手机、真实服务商或实际 Docker 项目授权验收。
