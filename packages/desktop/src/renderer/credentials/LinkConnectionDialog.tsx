@@ -105,7 +105,11 @@ export function LinkConnectionDialog({
     onConnected();
   }, [authorization, connected, onConnected]);
   React.useEffect(() => {
-    if (mode?.kind !== "local-session" || authorization?.step?.kind !== "local-session") {
+    if (
+      mode?.kind !== "local-session" ||
+      authorization?.step?.kind !== "local-session" ||
+      !authorization.step.session.canLogin
+    ) {
       setCanInstall(false);
       return;
     }
@@ -119,7 +123,13 @@ export function LinkConnectionDialog({
     return () => {
       active = false;
     };
-  }, [api, authorization?.step?.kind, input.providerId, mode?.kind]);
+  }, [
+    api,
+    authorization?.step?.kind,
+    authorization?.step?.kind === "local-session" && authorization.step.session.canLogin,
+    input.providerId,
+    mode?.kind,
+  ]);
 
   const changeMode = async (nextModeId: string) => {
     if (busy || nextModeId === modeId) return;
