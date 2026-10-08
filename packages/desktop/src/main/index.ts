@@ -6843,13 +6843,15 @@ function taskInboxEnabled(): boolean {
   const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
   return settings.featureFlags?.taskInboxV1 !== false;
 }
-taskInboxDisposers.push(registerOptimizationLabHost({
-  windows: () => [...mainWindows],
-  settingsCwd: resolveNoRepoCwd,
-  resolveTarget: resolveRendererConfigurationTarget,
-  trust: getTrust,
-  bridge: () => bridge,
-}));
+taskInboxDisposers.push(
+  registerOptimizationLabHost({
+    windows: () => [...mainWindows],
+    settingsCwd: resolveNoRepoCwd,
+    resolveTarget: resolveRendererConfigurationTarget,
+    trust: getTrust,
+    bridge: () => bridge,
+  }),
+);
 const taskInboxSources = createTaskInboxSources({
   diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
   sessionCatalog: () => sessionCatalogStore.load(),
