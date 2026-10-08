@@ -59,6 +59,6 @@ Desktop 覆盖/删除上传时清除对应索引；外部编辑在下次读取�
 - Desktop 上传服务：覆盖与删除清除已有实际派生索引。
 - 官方 SHA-256 验证的 Node 20.10.0 / 22.13.0 / 22.16.0 跑编译后的生产 Core/ToolExecutor/解析子进程；前者验证 Office 与 PDF 版本门禁，后两者验证真实 PDF。另实际暂时移除可选 PDF 包验证缺依赖说明；已还原。
 - Electron RunAsNode 跑相同生产路径，验证实际 Node 20.18.3 → manifest/hash 验证的 managed Node 24.21.0 → 真 PDF 子进程。CI 增加三个原生 Node 版本烟测及 Electron managed PDF 烟测。
-- 实际执行 Desktop `predist`，可选 PDF 包及 native canvas 闭包保留。用真实 ASAR 归档与相同 unpack 规则验收：Electron 从归档载入生产 worker，Office 走 Electron 子进程，PDF 走物理 unpacked 入口/依赖 + verified managed Node，均读取真实文本。macOS arm64 fixture 的归档为 182,518 字节、unpacked 解析闭包为 63,385,807 字节（约 60.45 MiB）；完整 Core production 闭包约 154.03 MB，没有全部展开。此数据为运行文件体积，不能等同完整安装器压缩体积；其它平台/架构的 native canvas 需各自打包 runner 验收。
+- 实际执行 Desktop `predist`，可选 PDF 包及 native canvas 闭包保留。用真实 ASAR 归档与相同 unpack 规则验收：Electron 从归档载入生产 worker，Office 走 Electron 子进程，PDF 走物理 unpacked 入口/依赖 + verified managed Node，均读取真实文本。macOS arm64 fixture 的归档为 182,518 字节、unpacked 解析闭包为 63,385,807 字节（约 60.45 MiB）；完整 Core production 闭包约 154.08 MB，没有全部展开。此数据为运行文件体积，不能等同完整安装器压缩体积；其它平台/架构的 native canvas 需各自打包 runner 验收。
 - 发布包门槛通过 9 个 tarball / 47 个声明入口，另在实际打包后的 SDK consumer 执行解析/查询/覆盖/删除及伪造冷缓存拒绝；不使用付费模型或第三方账号，不把 fixture 当成真实用户资料覆盖率。
-- 合并成本账本 main 后的最终组合检查：136 项 Source/权限/Engine/账本/Desktop 测试通过、12 包类型检查通过、变更生产代码 ESLint 通过；Desktop production 构建及既有 Workspace 页面 Electron 验收通过。
+- 合并成本账本与 Operation Controller main 后的最终组合检查：1,456 项 Source/完整 ToolSystem/Link/Operation/Engine/账本/Desktop 测试通过，3 项真实模型测试跳过；12 包类型与变更生产代码 ESLint 通过。真实 SDK 写操作独立回读/重启不重复发送烟测及最新 Desktop production/managed PDF/ASAR 均通过；既有 Workspace 页面 Electron 验收通过。
