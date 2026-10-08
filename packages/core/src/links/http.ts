@@ -58,7 +58,10 @@ export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    throw new Error(`Link provider returned invalid JSON (HTTP ${response.status})`);
+    throw new LinkProviderHttpError(
+      response.status,
+      `Link provider returned invalid JSON (HTTP ${response.status})`,
+    );
   }
   if (!response.ok) {
     throw new LinkProviderHttpError(response.status, normalizeProviderError(response.status, data));

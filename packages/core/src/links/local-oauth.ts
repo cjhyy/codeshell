@@ -141,7 +141,11 @@ export async function executeLocalOAuthLinkAction(
       credential.meta.linkLastVerifiedAt !== input.verifiedAt
     )
       throw new LocalOAuthLinkError("changed");
-    if (credential.meta.linkOAuthState === "reconnect") throw new LocalOAuthLinkError("reconnect");
+    if (
+      credential.meta.linkOAuthState !== undefined &&
+      !["connected", "refreshing"].includes(credential.meta.linkOAuthState)
+    )
+      throw new LocalOAuthLinkError("reconnect");
     return credential;
   };
   let current = read();
@@ -233,6 +237,7 @@ export async function executeLocalOAuthLinkAction(
                   client_id: previous.clientId!,
                   grant_type: "refresh_token",
                   refresh_token: previous.refreshToken!,
+                  ...(providerId === "gitlab" && previous.scope ? { scope: previous.scope } : {}),
                 }),
               }),
             );
@@ -360,7 +365,13 @@ export async function executeLocalOAuthLinkAction(
     result = await execute();
   } catch (error) {
     if (!(error instanceof LinkProviderHttpError) || error.status !== 401) throw error;
-    if (action.risk === "write") throw new LocalOAuthLinkError("reconnect");
+    if (action.risk === "write") {
+      store.compareAndSwap(layer, input.id, current, {
+        ...current,
+        meta: { ...current.meta, linkOAuthState: "reconnect" },
+      });
+      throw new LocalOAuthLinkError("reconnect");
+    }
     await refresh(secret.accessToken);
     originalAuthority = authority(current);
     try {

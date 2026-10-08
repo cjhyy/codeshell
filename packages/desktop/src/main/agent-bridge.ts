@@ -293,6 +293,7 @@ export class AgentBridge implements PetStateBridge {
   private readonly panelHostWindowRoutes = new PanelHostWindowRoutes();
   private credentialSnapshotRevision = 0;
   private readonly localOAuthLinkActions = new Map<string | number, AbortController>();
+  private localOAuthLinkEpoch = 0;
   private readonly credentialSnapshotCwds = new Set<string>();
   private readonly quickChatForkRouter: QuickChatForkRouter | null;
   private readonly petProjectionObservers = new Set<
@@ -356,6 +357,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onSpawnError: () => {
+        this.abortLocalOAuthLinkActions();
         this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
@@ -367,6 +369,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onExit: ({ code, clean, gaveUp }) => {
+        this.abortLocalOAuthLinkActions();
         this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
@@ -1060,6 +1063,12 @@ export class AgentBridge implements PetStateBridge {
     return true;
   }
 
+  private abortLocalOAuthLinkActions(): void {
+    this.localOAuthLinkEpoch++;
+    for (const controller of this.localOAuthLinkActions.values()) controller.abort();
+    this.localOAuthLinkActions.clear();
+  }
+
   private maybeHandleCredentialAccessMessage(line: string): boolean {
     let parsed: {
       id?: string | number;
@@ -1089,6 +1098,7 @@ export class AgentBridge implements PetStateBridge {
     }
     const id = parsed.id;
     if (id === undefined) return true;
+    const workerEpoch = this.localOAuthLinkEpoch;
     void (async () => {
       let reply: Record<string, unknown>;
       try {
@@ -1115,7 +1125,8 @@ export class AgentBridge implements PetStateBridge {
               ),
             };
           } finally {
-            this.localOAuthLinkActions.delete(id);
+            if (this.localOAuthLinkActions.get(id) === controller)
+              this.localOAuthLinkActions.delete(id);
           }
         } else if (parsed.method === "desktop/remoteLinkAction") {
           reply = {
@@ -1154,6 +1165,11 @@ export class AgentBridge implements PetStateBridge {
           error: { code: -32603, message: err instanceof Error ? err.message : String(err) },
         };
       }
+      if (
+        parsed.method === "desktop/localOAuthLinkAction" &&
+        workerEpoch !== this.localOAuthLinkEpoch
+      )
+        return;
       this.core.sendLine(JSON.stringify(reply));
     })();
     return true;

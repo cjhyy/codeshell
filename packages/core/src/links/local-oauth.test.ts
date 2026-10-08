@@ -84,6 +84,7 @@ function upstream(
       expect(body.get("grant_type")).toBe("refresh_token");
       expect(body.get("client_id")).toBe("public-client");
       expect(body.has("client_secret")).toBe(false);
+      if (f.input.id.endsWith("gitlab")) expect(body.get("scope")).toBe("read_api read_user");
       await options.onToken?.();
       return json({
         access_token: "new-access",
@@ -321,4 +322,67 @@ test("revoked authority during an in-flight action discards its output", async (
   await expect(
     executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl: u.fetchImpl }),
   ).rejects.toMatchObject({ code: "forbidden" });
+});
+
+test("late concurrent 401 uses the already rotated credential without consuming refresh twice", async () => {
+  const f = fixture("github", false);
+  let release!: () => void;
+  const delayed = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let oldReads = 0,
+    newReads = 0,
+    refreshes = 0;
+  const fetchImpl = asGlobalFetch(async (url, init) => {
+    if (String(url) === f.tokenEndpoint) {
+      refreshes++;
+      return json({
+        access_token: "new-access",
+        refresh_token: "rotated",
+        token_type: "bearer",
+        expires_in: 7200,
+      });
+    }
+    if (String(url) === "https://api.github.com/user") return json({ id: 42, login: "owner" });
+    if (new Headers(init?.headers).get("authorization") === "Bearer old-access") {
+      oldReads++;
+      if (oldReads === 2) await delayed;
+      else await new Promise((resolve) => setTimeout(resolve, 15));
+      return json({ message: "expired" }, 401);
+    }
+    newReads++;
+    if (newReads === 1) release();
+    return json({ number: 1, title: "Issue" });
+  });
+  await Promise.all([
+    executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl }),
+    executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl }),
+  ]);
+  expect({ oldReads, newReads, refreshes }).toEqual({ oldReads: 2, newReads: 2, refreshes: 1 });
+});
+
+for (const status of [403, 429, 502])
+  test(`HTTP ${status} never refreshes or repeats a local action`, async () => {
+    const f = fixture("github", false);
+    let calls = 0;
+    const fetchImpl = asGlobalFetch(async (url) => {
+      calls++;
+      expect(String(url)).toContain("/issues/1");
+      return json({ message: "provider failure" }, status);
+    });
+    await expect(
+      executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl }),
+    ).rejects.toBeInstanceOf(Error);
+    expect(calls).toBe(1);
+  });
+
+test("unknown expiry with no refresh token retains a valid long-lived device access token", async () => {
+  const f = fixture("github", false),
+    secret = JSON.parse(f.credential.secret!);
+  delete secret.expiresAt;
+  delete secret.refreshToken;
+  f.store.save("user", { ...f.credential, secret: JSON.stringify(secret) });
+  const u = upstream(f);
+  await executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl: u.fetchImpl });
+  expect(u.counts).toEqual({ action: 1, refresh: 0, account: 0 });
 });

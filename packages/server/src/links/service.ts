@@ -259,7 +259,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       (remote && meta.linkRemoteState !== "connected") ||
       (meta.linkAuthSource === "browser-oauth" &&
         meta.linkOAuthState &&
-        meta.linkOAuthState !== "connected")
+        meta.linkOAuthState !== "connected") ||
+      (meta.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0)
         ? "unavailable"
         : !isCredentialSecretAvailable(credential.secret)
           ? "unavailable"

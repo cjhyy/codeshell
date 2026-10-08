@@ -107,6 +107,9 @@ function connectionStatus(credential: CredentialMetadata): LinkConnectionStatus 
   } else if (credential.oauthStatus?.state === "invalid") {
     result.state = "invalid";
     result.reason = "Saved authorization is invalid. Reconnect this Link.";
+  } else if (meta?.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0) {
+    result.state = "unavailable";
+    result.reason = "Local OAuth authorization no longer permits these actions.";
   } else if (!result.runtime) {
     result.state = "unavailable";
     result.reason = "Saved Link has no execution runtime. Reconnect it to enable local LinkAction.";

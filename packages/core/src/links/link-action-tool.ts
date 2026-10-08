@@ -67,6 +67,7 @@ function isUsableLinkCredential(credential: CredentialMetadata): boolean {
     );
   if (credential.meta?.linkAuthSource === "browser-oauth")
     return (
+      Boolean(credential.meta.linkCapabilityIds?.length) &&
       credential.meta.linkOAuthState !== "reconnect" &&
       (credential.oauthStatus?.state === "valid" || credential.oauthStatus?.canRefresh === true)
     );
@@ -404,8 +405,7 @@ export async function linkActionTool(
         token,
         params,
         signal,
-        authKind:
-          connection.credential.meta?.linkAuthSource === "browser-oauth" ? "oauth" : "token",
+        authKind: "token",
       });
     }
     // Cancellation is advisory to transports. Recheck both the live binding

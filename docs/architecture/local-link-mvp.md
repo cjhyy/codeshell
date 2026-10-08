@@ -161,6 +161,10 @@ GitHub App 与 GitLab 的本地设备授权保存结构化 token/expiry/client �
 
 协议依据：[GitHub 设备授权 token 刷新](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens)
 允许省略 device flow 的 client_secret，并轮换两个 token；[GitLab OAuth 2.0](https://docs.gitlab.com/api/oauth2/)
-公开客户端不保存 client_secret，refresh grant 轮换原 token。没有 refresh token、刷新 token 已到期
+公开客户端不保存 client_secret，refresh grant 轮换原 token。GitLab 刷新显式携带当前 scope，
+避免服务器按原始 refresh grant 恢复已经缩小的权限；实现依据
+[GitLab 的 Doorkeeper 配置](https://gitlab.com/gitlab-org/gitlab/-/raw/master/config/initializers/doorkeeper.rb)
+与 [Doorkeeper refresh grant](https://github.com/doorkeeper-gem/doorkeeper/blob/main/lib/doorkeeper/oauth/refresh_token_request.rb)，
+设备授权没有初始 redirect_uri。没有 refresh token、刷新 token 已到期
 或 Host 遗留未知轮换状态时，需要重新进行设备授权。HTTP fixtures 使用合成账号和 token，
 实际账号可用性仍以真实 provider 授权验收为准。
