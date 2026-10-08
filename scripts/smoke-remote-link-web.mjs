@@ -1,3 +1,4 @@
+/* global window, document, sessionStorage */
 /** Real browser flow through the built Web app, Node Hub and independent Link.
  * GitHub responses are controlled; this does not claim a real provider login.
  */
@@ -52,7 +53,6 @@ const hubPort = hubProbe.address().port;
 await new Promise((done) => hubProbe.close(done));
 let hubOrigin = `http://127.0.0.1:${hubPort}`;
 const screenshots = await mkdtemp(join(tmpdir(), "codeshell-remote-link-web-ui-"));
-let calls = 0;
 const app = await startLinkServer({
   port,
   publicOrigin: issuer,
@@ -86,7 +86,6 @@ const app = await startLinkServer({
     async action(action, input, credential, resources) {
       assert.equal(credential.access_token, "UPSTREAM-ONLY-IN-LINK");
       assert.deepEqual(resources, ["owner/repo"]);
-      calls++;
       return action === "get_issue"
         ? { number: input.number, title: "real Link route" }
         : [{ id: 1, full_name: "owner/repo" }];
@@ -580,9 +579,18 @@ try {
       }),
     );
   }
+} catch (error) {
+  console.error(
+    String(error instanceof Error ? error.message : error).replace(
+      /https?:\/\/[^\s"'<>]+/g,
+      "[redacted-url]",
+    ),
+  );
+  process.exitCode = 1;
 } finally {
   await browser?.close();
   if (desktop) {
+    const child = desktop.process();
     let timer;
     await Promise.race([
       desktop.close().catch(() => {}),
@@ -591,7 +599,6 @@ try {
       }),
     ]);
     clearTimeout(timer);
-    const child = desktop.process();
     if (child.exitCode === null && child.signalCode === null) {
       child.kill("SIGKILL");
       await new Promise((resolve) => child.once("exit", resolve));

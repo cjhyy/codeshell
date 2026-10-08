@@ -1,3 +1,4 @@
+/* global window */
 /* Real Desktop UI and standalone Link HTTP, using an isolated system-browser fixture. */
 import assert from "node:assert/strict";
 import { join } from "node:path";
@@ -55,13 +56,19 @@ export async function verifyNativeLinkUI({
   let browser;
   try {
     await desktop.evaluate(
-      ({ shell }, config) => {
+      ({ shell, safeStorage }, config) => {
         Object.assign(process.env, config);
-        process.__codeshellSystemBrowserFixture = { original: shell.openExternal, urls: [] };
+        process.__codeshellSystemBrowserFixture = {
+          original: shell.openExternal,
+          encryptionAvailable: safeStorage.isEncryptionAvailable,
+          urls: [],
+        };
         // Intercept only the Electron adapter. Never change OS registrations or user browser profiles.
         shell.openExternal = async (url) => {
           process.__codeshellSystemBrowserFixture.urls.push(String(url));
         };
+        // The temporary store exercises the shipped fallback without touching the user's keychain.
+        safeStorage.isEncryptionAvailable = () => false;
       },
       {
         CODE_SHELL_REMOTE_LINK_ISSUER: issuer,
@@ -80,31 +87,46 @@ export async function verifyNativeLinkUI({
       holdCallback = false,
       heldCallback;
     await context.route("**/*", async (route) => {
-      const target = new URL(route.request().url());
-      if (target.origin === "https://github.com") {
-        assert.equal(target.pathname, "/login/oauth/authorize");
-        githubNavigations++;
-        const upstream = new URL("/oauth/upstream/github/callback", issuer);
-        upstream.search = new URLSearchParams({
-          code: accountCode,
-          state: target.searchParams.get("state"),
-        }).toString();
-        return route.fulfill({ status: 302, headers: { location: upstream.href } });
+      try {
+        const target = new URL(route.request().url());
+        if (target.origin === callback.origin) return route.continue();
+        if (target.origin !== issuer) return route.abort();
+        if (target.pathname === "/login") linkLogins++;
+        // Playwright routes only the first URL in a redirect chain. Replace the
+        // provider redirect at the issuer, preserving the real service cookies.
+        const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
+        const location = response.headers().location;
+        const next = location ? new URL(location, issuer) : undefined;
+        if (next?.origin === "https://github.com") {
+          assert.equal(next.pathname, "/login/oauth/authorize");
+          githubNavigations++;
+          const upstream = new URL("/oauth/upstream/github/callback", issuer);
+          upstream.search = new URLSearchParams({
+            code: accountCode,
+            state: next.searchParams.get("state"),
+          }).toString();
+          return route.fulfill({
+            response,
+            headers: { ...response.headers(), location: upstream.href },
+          });
+        }
+        if (
+          holdCallback &&
+          next?.origin === callback.origin &&
+          next.pathname === callback.pathname
+        ) {
+          heldCallback = next.href;
+          return route.fulfill({
+            status: 200,
+            contentType: "text/html",
+            body: "Callback held by isolated fixture",
+          });
+        }
+        return route.fulfill({ response });
+      } catch (error) {
+        errors.push(safeError(error));
+        return route.abort();
       }
-      if (target.origin === issuer && target.pathname === "/login") linkLogins++;
-      if (
-        holdCallback &&
-        target.origin === callback.origin &&
-        target.pathname === callback.pathname
-      ) {
-        heldCallback = target.href;
-        return route.fulfill({
-          status: 200,
-          contentType: "text/html",
-          body: "Callback held by isolated fixture",
-        });
-      }
-      return route.continue();
     });
     await win.setViewportSize({ width: 1440, height: 1000 });
     const openLinks = async () => {
@@ -181,12 +203,19 @@ export async function verifyNativeLinkUI({
       await auth.screenshot({
         path: join(screenshots, `native-consent-${account}.png`),
         fullPage: true,
+        animations: "disabled",
       });
       await auth.getByRole("button", { name: deny ? "取消" : "允许只读访问", exact: true }).click();
       if (deny) {
-        await management.getByText(/授权已取消|Authorization cancelled/).waitFor();
+        await auth.getByText("授权响应已处理", { exact: true }).waitFor();
+        assert.equal(await auth.getByText("连接已完成", { exact: true }).count(), 0);
+        await management
+          .getByText(/授权已取消|授权未完成|Authorization cancelled|Authorization did not complete/)
+          .first()
+          .waitFor();
         await management.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
       } else {
+        await auth.getByText("连接已完成", { exact: true }).waitFor();
         await management
           .getByRole("heading", { name: /^(已连接 GitHub|Connected GitHub)$/ })
           .waitFor();
@@ -276,6 +305,7 @@ export async function verifyNativeLinkUI({
     await win.screenshot({
       path: join(screenshots, "native-connections-1440.png"),
       fullPage: true,
+      animations: "disabled",
     });
     await consent(
       await start(management.getByRole("button", { name: "添加账号", exact: true })),
@@ -299,12 +329,15 @@ export async function verifyNativeLinkUI({
       assert.equal(await count(), 2);
       return { auth, url };
     }
-    async function rejectLateCallback(url) {
+    async function rejectLateCallback(url, receiverActive = false) {
       const response = await fetch(url, {
         redirect: "error",
         signal: AbortSignal.timeout(2000),
       }).catch(() => undefined);
-      assert.ok(!response || response.status >= 400, "Late callback was accepted");
+      assert.ok(
+        receiverActive ? response && response.status >= 400 : !response || response.status >= 400,
+        "Late callback was accepted or did not reach the active receiver",
+      );
       await response?.body?.cancel();
       assert.equal(await count(), 2, "Late callback saved a connection");
     }
@@ -323,7 +356,7 @@ export async function verifyNativeLinkUI({
     const replacement = await start(
       management.getByRole("button", { name: "添加账号", exact: true }),
     );
-    await rejectLateCallback(cancelled.url);
+    await rejectLateCallback(cancelled.url, true);
     await management.locator('[data-link-authorization-step="redirect"]').waitFor();
     await management.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
     await management.waitFor({ state: "hidden" });
@@ -369,8 +402,11 @@ export async function verifyNativeLinkUI({
         realDesktop: true,
         realStandaloneLink: true,
         systemBrowserAdapter: "isolated Chromium fixture",
+        credentialCipher: "isolated temporary store using shipped plaintext fallback",
         noExtraElectronWindow: true,
         loopbackCallback: true,
+        callbackPageWaitsForHostSave: true,
+        denialNeverClaimsSaved: true,
         multipleAccounts: true,
         noLinkLogin: true,
         adminConnectionsHidden: true,
@@ -386,14 +422,16 @@ export async function verifyNativeLinkUI({
       }),
     );
   } catch (error) {
-    throw new Error(safeError(error));
+    throw new Error(safeError(error), { cause: error });
   } finally {
     win.off("pageerror", onError);
     await browser?.close();
     await desktop
-      .evaluate(({ shell }) => {
+      .evaluate(({ shell, safeStorage }) => {
         if (process.__codeshellSystemBrowserFixture) {
           shell.openExternal = process.__codeshellSystemBrowserFixture.original;
+          safeStorage.isEncryptionAvailable =
+            process.__codeshellSystemBrowserFixture.encryptionAvailable;
           delete process.__codeshellSystemBrowserFixture;
         }
       })
