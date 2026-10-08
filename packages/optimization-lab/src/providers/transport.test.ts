@@ -347,3 +347,38 @@ test("Anthropic unsupported top_p fails local preflight", () => {
   } as any;
   expect(() => resolveSelectedConnection(settings, "lab")).toThrow();
 });
+
+test("real OpenAI SDK internal retry has a distinct durable admission for every HTTP", async () => {
+  const a = accounting(3);
+  let calls = 0;
+  const result = await executeText({
+    connection: connection("openai"),
+    systemPrompt: "frozen",
+    input: "current",
+    limits,
+    maxContextBytes: 10000,
+    accounting: a,
+    upstream: (async () => {
+      calls++;
+      if (calls === 1)
+        return new Response(
+          JSON.stringify({ error: { message: "rate limited", type: "rate_limit_error" } }),
+          { status: 429, headers: { "content-type": "application/json", "retry-after-ms": "1" } },
+        );
+      return new Response(
+        JSON.stringify({
+          model: "lab-fixture",
+          choices: [{ message: { content: "good" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 8, completion_tokens: 2 },
+        }),
+        { headers: { "content-type": "application/json" } },
+      );
+    }) as typeof fetch,
+  });
+  expect(calls).toBe(2);
+  expect(a.count).toBe(2);
+  expect(result.observations).toHaveLength(2);
+  expect(new Set(result.observations.map((item) => item.attemptId)).size).toBe(2);
+  expect(result.observations.map((item) => item.outcome)).toEqual(["unknown", "settled"]);
+  expect(result.status).toBe("unknown");
+});
