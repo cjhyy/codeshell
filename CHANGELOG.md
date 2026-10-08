@@ -23,9 +23,9 @@ breaking.
 
 ### Fixed
 
-- Simplify Link connection and authorization, allowing GitHub authorization
-  without an administrator login while enforcing bounded navigation and callback
-  validation in the isolated native authorization window.
+- Simplify Link connection and authorization. Support GitHub authorization without
+  an administrator login with compatible Link services, enforcing bounded
+  navigation and callback validation in the isolated native authorization window.
 - Refresh memory write context, compare bounded previous content, and use
   verified resource cloning for managed file handoffs where supported.
 - Stop stdio workers when their controlling parent closes, and preserve task
