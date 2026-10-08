@@ -192,6 +192,12 @@ if (process.argv[2] !== "--consume") {
             type: "function",
             function: { name: "ListSources", arguments: "{}" },
           },
+          {
+            index: 1,
+            id: "synthetic-tool-call-two",
+            type: "function",
+            function: { name: "ListSources", arguments: "{}" },
+          },
         ],
       };
       response.choices[0].finish_reason = "tool_calls";
@@ -522,7 +528,7 @@ if (process.argv[2] !== "--consume") {
     richProof.boundaries.at(-1).data.messageDigest,
   );
   const richEvents = transcriptEvents(engineConfig.sessionStorageDir, "proof-rich");
-  assert.ok(richEvents.some((event) => event.type === "tool_result"));
+  assert.equal(richEvents.filter((event) => event.type === "tool_result").length, 2);
   assert.ok(
     richEvents.some(
       (event) => event.type === "message" && event.data.steerId === "synthetic-steer",
@@ -630,8 +636,11 @@ if (process.argv[2] !== "--consume") {
   });
   const workerStorage = join(root, "data", "sessions");
   function worker() {
-    const childEnv = { ...env };
-    delete childEnv.CODE_SHELL_CREDENTIAL_ACCESS;
+    const childEnv = {
+      ...env,
+      CODE_SHELL_CREDENTIAL_ACCESS: "local",
+      CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
+    };
     const child = spawn(
       process.execPath,
       [resolve("packages/core/dist/cli/agent-server-stdio.js")],

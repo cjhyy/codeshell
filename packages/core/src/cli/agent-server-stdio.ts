@@ -398,6 +398,13 @@ const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 // and keeps credential resolution in its safeStorage-owning main process.
 if (process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local") {
   setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
+}
+// Desktop pins Host custody even if a shell inherited the headless credential
+// override. Local credential selection must never downgrade request key custody.
+if (
+  process.env.CODE_SHELL_MODEL_REQUEST_SIGNING === "host" ||
+  process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local"
+) {
   setDefaultModelRequestSigner(createIpcModelRequestSigner(stdioTransport));
 }
 setCronCreateAuthority(createDesktopAutomationAuthorityClient(stdioTransport));

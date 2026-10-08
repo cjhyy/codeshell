@@ -339,6 +339,7 @@ export class AgentBridge implements PetStateBridge {
         CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
+        CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
         CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
           { coding: codingModule, pet: petCapabilityModule },
           readUserFeatureFlags(resolveNoRepoCwd()),
