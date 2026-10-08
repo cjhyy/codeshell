@@ -15,8 +15,9 @@
  * Why a separate sink from logger.ts?
  *   - logger.ts is the terse process-wide log (~/.code-shell/logs/) and stays
  *     small for production observability.
- *   - This sink keeps full prompt/response bodies for post-mortem debugging
- *     and is gated to local-dev only (bun run dev / CODE_SHELL_DEV=1).
+ *   - This sink records metadata in local-dev runs. Full model request,
+ *     response and error contents additionally require the explicit
+ *     CODE_SHELL_RECORD_MODEL_CONTENT=1 diagnostic opt-in.
  *
  * Why JSONL not markdown?
  *   - `jq` can slice on any field in one command: tool histograms, slowest
@@ -28,14 +29,7 @@
  * RETENTION_DAYS.
  */
 
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  rmSync,
-  statSync,
-} from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const RETENTION_DAYS = 7;
@@ -62,6 +56,8 @@ function isLocalDev(): boolean {
 }
 
 const ENABLED = isLocalDev();
+// --debug and running from src/ must never implicitly opt in to prompt content.
+const RECORD_MODEL_CONTENT = process.env.CODE_SHELL_RECORD_MODEL_CONTENT === "1";
 
 // Anchor the log dir at the repo root. We can't trust process.cwd() because
 // the CLI may run from any subdirectory; instead walk up from this source
@@ -246,9 +242,10 @@ export function recordLLMRequest(sid: string, req: RecordLLMRequest, reqId: stri
     maxTokens: req.maxTokens,
     toolCount: Array.isArray(req.tools) ? (req.tools as unknown[]).length : 0,
     messageCount: Array.isArray(req.messages) ? (req.messages as unknown[]).length : undefined,
-    systemPrompt: req.systemPrompt,
-    tools: req.tools,
-    messages: req.messages,
+    contentRecorded: RECORD_MODEL_CONTENT,
+    ...(RECORD_MODEL_CONTENT
+      ? { systemPrompt: req.systemPrompt, tools: req.tools, messages: req.messages }
+      : {}),
   });
 }
 
@@ -271,8 +268,8 @@ export function recordLLMResponse(sid: string, resp: RecordLLMResponse, reqId: s
     ttftMs: resp.ttftMs,
     usage: resp.usage,
     toolCallCount: resp.toolCalls?.length ?? 0,
-    text: resp.text,
-    toolCalls: resp.toolCalls,
+    contentRecorded: RECORD_MODEL_CONTENT,
+    ...(RECORD_MODEL_CONTENT ? { text: resp.text, toolCalls: resp.toolCalls } : {}),
   });
 }
 
@@ -282,8 +279,13 @@ export function recordLLMError(sid: string, reqId: string, err: unknown, duratio
     type: "llm.error",
     reqId,
     durationMs,
-    message: err instanceof Error ? err.message : String(err),
-    stack: err instanceof Error ? err.stack : undefined,
+    contentRecorded: RECORD_MODEL_CONTENT,
+    ...(RECORD_MODEL_CONTENT
+      ? {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        }
+      : {}),
   });
 }
 
@@ -324,11 +326,7 @@ export function recordToolResult(
   });
 }
 
-export function recordEvent(
-  sid: string,
-  name: string,
-  data?: Record<string, unknown>,
-): void {
+export function recordEvent(sid: string, name: string, data?: Record<string, unknown>): void {
   if (!ENABLED) return;
   write(sid, "engine", { type: name, ...(data ?? {}) });
 }
@@ -362,4 +360,3 @@ export function recordSessionEnd(
   });
   states.delete(sid);
 }
-
