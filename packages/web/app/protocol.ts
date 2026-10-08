@@ -13,8 +13,6 @@ export interface SessionSummary {
   customTitle?: string;
   lastActiveAt?: number;
   running?: boolean;
-  outputJournal?: import("@cjhyy/code-shell-core/internal").OutputJournalPage;
-  legacyBaseComplete?: boolean;
   sessionId: string;
   cwd: string;
   startedAt: number;
@@ -43,6 +41,8 @@ export interface HubStreamCursor {
 }
 
 export interface SessionDetailData {
+  outputJournal?: import("@cjhyy/code-shell-core/internal").OutputJournalPage;
+  legacyBaseComplete?: boolean;
   state: Record<string, unknown>;
   transcript: Array<Record<string, unknown>>;
   running?: boolean;

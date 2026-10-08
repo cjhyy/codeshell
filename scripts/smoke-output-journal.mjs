@@ -292,7 +292,7 @@ async function hubChild(args) {
         .map((item) => item.text)
         .join("");
       assert.equal(hash(text), expectedHash);
-      await assert.rejects(query({ type: "output_journal", sessionId: "../escape" }), /Session/);
+      await assert.rejects(query({ type: "output_journal", sessionId: "../escape" }), /Session|会话/);
       return {
         through: restored.outputCursor,
         epoch: detail.streamCursor.epoch,
