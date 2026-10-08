@@ -78,8 +78,11 @@ export function rankSkillsForDiscovery(
 
 export function skillListingBudget(options: SkillListingOptions = {}): number {
   const context = options.maxContextTokens ?? 128_000;
-  const budget = options.maxTokens ?? context * 0.01;
-  return Number.isFinite(budget) ? Math.max(0, Math.min(2_048, Math.floor(budget))) : 0;
+  const budget = context * 0.01;
+  const requested = options.maxTokens ?? budget;
+  return Number.isFinite(budget) && Number.isFinite(requested)
+    ? Math.max(0, Math.min(2_048, Math.floor(budget), Math.floor(requested)))
+    : 0;
 }
 
 /** Budget includes headings and discovery guidance. Bodies remain on demand. */

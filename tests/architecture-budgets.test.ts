@@ -231,7 +231,11 @@ describe("architecture growth budgets", () => {
     // controller binding and finalization fences delegate to operations/{ledger,
     // controller,resolver}. Keep these private owner boundaries together and
     // pin the actual combined Engine size, with no future-feature allowance.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_687);
+    // Skill metadata adds 20 reviewed wiring lines: the current model window,
+    // task and up to 32 recent requests enter existing prompt composition, and
+    // registry/allowlist gates suppress unusable listings. Budgeting, ranking
+    // and discovery remain in builtin/skill-prompt.ts; no new Host API is added.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_707);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

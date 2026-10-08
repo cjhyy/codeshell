@@ -89,6 +89,8 @@ describe("bounded skill discovery", () => {
     expect(buildSkillListing([], { maxTokens: 100 })).toBe("");
     expect(buildSkillListing(skills, { maxTokens: 1 })).toBe("");
     expect(skillListingBudget({ maxContextTokens: 1_000_000 })).toBe(2_048);
+    expect(skillListingBudget({ maxContextTokens: 2_000, maxTokens: 2_048 })).toBe(20);
+    expect(skillListingBudget({ maxContextTokens: 64_000, maxTokens: 100 })).toBe(100);
   });
 
   test("nonempty multilingual and punctuation queries never silently list the entire catalog", () => {
