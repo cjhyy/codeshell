@@ -265,8 +265,9 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
               ? { automationId: durable?.automationId ?? meta?.row.cronJobId }
               : {}),
             ...(durable?.projectId ? { projectId: durable.projectId } : {}),
+            ...(live?.external?.cli ? { externalCli: live.external.cli } : {}),
             ...(durable?.cwd || live?.external?.cwd || meta?.workspacePath
-              ? { workspacePath: durable?.cwd || live?.external?.cwd || meta?.workspacePath }
+              ? { workspacePath: live?.external?.cwd || durable?.cwd || meta?.workspacePath }
               : {}),
             ...(clean(live?.summary) ? { summary: clean(live?.summary) } : {}),
             ...(live?.terminal?.at !== undefined && TERMINAL.has(status)

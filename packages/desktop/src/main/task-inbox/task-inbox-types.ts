@@ -38,6 +38,8 @@ export interface TaskInboxRecordV1 {
   automationId?: string;
   projectId?: string;
   workspacePath?: string;
+  /** Navigation locator for an observed CLI transcript; never grants runtime control. */
+  externalCli?: "codex" | "claude";
   summary?: string;
   error?: string;
   artifacts: Array<{ kind: string; label: string; uri: string }>;
@@ -96,6 +98,7 @@ const RECORD_FIELDS = new Set([
   "automationId",
   "projectId",
   "workspacePath",
+  "externalCli",
   "summary",
   "error",
   "artifacts",
@@ -205,6 +208,14 @@ export function parseTaskInboxRecord(value: unknown): TaskInboxRecordV1 {
   for (const key of ["workspacePath", "summary", "error"] as const) {
     if (raw[key] !== undefined)
       result[key] = checkedTaskText(raw[key], key, key === "workspacePath" ? 4096 : 16_384, true);
+  }
+  if (raw.externalCli !== undefined) {
+    if (
+      raw.source !== "external-runtime" ||
+      (raw.externalCli !== "codex" && raw.externalCli !== "claude")
+    )
+      throw new Error("Invalid external task CLI");
+    result.externalCli = raw.externalCli;
   }
   if (raw.terminalAt !== undefined) result.terminalAt = checkedTime(raw.terminalAt, "terminalAt");
   if (raw.stale !== undefined) {

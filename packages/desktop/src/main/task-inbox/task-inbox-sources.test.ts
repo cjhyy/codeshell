@@ -369,6 +369,7 @@ describe("task inbox authoritative sources", () => {
       status: "running",
       capabilities: ["open"],
       workspacePath: "/cli-project",
+      externalCli: "codex",
     });
     expect((await adapter(sources, "external-runtime").act(running, "cancel")).status).toBe(
       "unavailable",
@@ -418,6 +419,35 @@ describe("task inbox authoritative sources", () => {
       status: "running",
       capabilities: ["open", "cancel"],
     });
+  });
+
+  test("external transcript navigation uses observed CLI metadata and never infers a CLI from binding kind", async () => {
+    const observed = createTaskInboxSources(
+      base({
+        sessionProjection: () =>
+          projection([
+            live({
+              external: { cli: "claude", cwd: "/observed-project" },
+              freshness: { source: "external-tail", observedAt: 100, workerState: "active" },
+            }),
+          ]),
+      }),
+    );
+    expect((await read(observed, "external-runtime"))[0]).toMatchObject({
+      externalCli: "claude",
+      workspacePath: "/observed-project",
+    });
+    const owned = createTaskInboxSources(
+      base({
+        external: {
+          hasSession: () => true,
+          kind: () => "codex",
+          isSessionRunning: () => false,
+          interrupt: async () => {},
+        },
+      }),
+    );
+    expect((await read(owned, "external-runtime"))[0]?.externalCli).toBeUndefined();
   });
 
   test("new normal terminal supersedes an older durable background yield", async () => {
