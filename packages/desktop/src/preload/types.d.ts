@@ -37,6 +37,7 @@ import type {
   QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { TaskInboxApi } from "./task-inbox-api";
+import type { OptimizationLabApi } from "./optimization-lab-api";
 import type { PetApi } from "./pet-api";
 import type {
   StreamEventEnvelope,
@@ -1040,6 +1041,7 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
   /** Read-only bounded Pet projection. */
   pet: PetApi;
   taskInbox: TaskInboxApi;
+  optimizationLab: OptimizationLabApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
   /** Absolute local path for a File explicitly selected or dropped by the user. */

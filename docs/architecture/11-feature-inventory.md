@@ -331,3 +331,9 @@
 主进程读模型位于 `packages/desktop/src/main/task-inbox/`，页面位于 `packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx`。投影写入 `<userData>/task-inbox/v1.json`（0600），保留全部非终态与最近 2,000 条终态，损坏文件隔离后从来源重建；不迁移权威任务存储。`featureFlags.taskInboxV1: false` 可停用。本功能限本地桌面端。
 
 详见[设计](../superpowers/specs/2026-09-01-local-task-center-design.md)和[实施与验证记录](../superpowers/plans/2026-09-01-local-task-center.md)。
+
+## 五、优化实验室 P1a（2026-10-08 补充）
+
+Desktop 的默认关闭用户级 `optimization_lab` 开关加载私有能力包。最小页面支持样本 JSON 校验、冻结计划、选择 Skill/模型连接、原生预算授权、开始/停止/撤销/显式继续、人工评分文件导入导出和不可变报告。引擎运行原版开发集、一次反思生成有限正文候选、开发筛选和固定原版/候选保留集配对；真实 HTTP 计量、最终额度保护、generation 租约和 durable ledger 防止重放及预算归零。
+
+本轮是 `text_fragment` 实验闭环，自动验证使用本地假服务；不宣称真实收益、完整 Agent 验证或普通任务采用。Token/费用最坏上界未知、价格未知和实际 usage 缺失均明确显示。P1b 证据导入/实验室内试用、P2 隔离执行/范围化采用/回滚仍待实施。实现与测试边界见[交付记录](../todo/optimization-lab-acceptance-2026-10-08.md)。

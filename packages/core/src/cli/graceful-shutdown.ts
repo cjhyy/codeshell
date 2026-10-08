@@ -14,6 +14,8 @@ export interface GracefulShutdownOptions {
   proc?: ProcLike;
   /** Signals to handle. Defaults to SIGTERM, SIGINT, SIGHUP. */
   signals?: string[];
+  /** Stdio hosts terminate when the controlling parent's input pipe ends. */
+  parentInput?: { once(event: "end", listener: () => void): unknown };
 }
 
 /**
@@ -48,4 +50,5 @@ export function installGracefulShutdown(
   for (const sig of signals) {
     proc.on(sig, shutdown);
   }
+  options.parentInput?.once("end", shutdown);
 }

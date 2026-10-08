@@ -20,6 +20,7 @@ import { deviceRelayApi } from "./device-relay-api.js";
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
 import { createTaskInboxApi } from "./task-inbox-api";
+import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
@@ -506,6 +507,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Read-only local Pet projection; no transcript, resolver, approval or mutation routes. */
   pet: createPetApi(ipcRenderer),
   taskInbox: createTaskInboxApi(ipcRenderer),
+  optimizationLab: createOptimizationLabApi(ipcRenderer),
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),

@@ -84,8 +84,11 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g),
-    ).toBeLessThanOrEqual(306);
+        matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
+        // Four reviewed local-only Lab routes: query, native authorization,
+        // grading import and selected export. No remote grant route is added.
+        matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
+    ).toBeLessThanOrEqual(310);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -109,8 +112,9 @@ describe("architecture growth budgets", () => {
           /ipcRenderer\.invoke\(/g,
         ) +
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(306);
+        matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
+        matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
+    ).toBeLessThanOrEqual(310);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -121,7 +125,8 @@ describe("architecture growth budgets", () => {
     // request/result types while all file access stays in main (+11).
     // +55 declaration lines for those explicit project/version/Link contracts.
     // Main-branch integration retains the detailed run-trace declarations (+11).
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_930);
+    // Lab adds its extracted API type import and one typed capability property (+2).
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_932);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and

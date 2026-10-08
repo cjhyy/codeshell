@@ -111,6 +111,7 @@ import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.
 import { readExternalRuntimeBinding } from "./external-runtime-state.js";
 import type { ExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { getTrustCachedSync } from "./trust-store.js";
+import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/optimization-lab.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { resolveSessionRunWorkspace } from "./session-run-workspace.js";
@@ -299,6 +300,7 @@ export class AgentBridge implements PetStateBridge {
   >();
   private petSnapshotRequestId = 0;
   private petHostRequestId = 0;
+  private readonly trustedLabRequests = new Set<string>();
   private readonly petWorkerGeneration = new PetWorkerProjectionGeneration();
   private panelHostRequestId = 0;
   private readonly pendingPanelHostRequests = new Map<
@@ -668,6 +670,12 @@ export class AgentBridge implements PetStateBridge {
   ): { line: string; method?: string } {
     const prepared = prepareAgentRunMetadata(line, meta, this.agentRunMetadataDeps());
     const parsed = prepared.parsed;
+    if (
+      isOptimizationLabQuery(parsed) &&
+      (meta.origin !== "host" || !this.trustedLabRequests.has(String(parsed.id)))
+    ) {
+      throw new Error("Optimization Lab requires the dedicated local application bridge");
+    }
     let outLine = line;
     if (parsed.method === "agent/run") {
       if (this.webConfiguration.runBlocked) {
@@ -732,6 +740,22 @@ export class AgentBridge implements PetStateBridge {
         throw error;
       }
       const parsed = prepared.parsed;
+      if (isOptimizationLabQuery(parsed)) {
+        if (parsed.id !== undefined && !event.sender.isDestroyed()) {
+          event.sender.send(
+            "agent:msg",
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: parsed.id,
+              error: {
+                code: -32601,
+                message: "Optimization Lab requires the dedicated local application bridge",
+              },
+            }),
+          );
+        }
+        return;
+      }
       const externalGoalReply = this.externalGoalRpcHandler?.(parsed, event.sender.id);
       if (externalGoalReply) {
         void externalGoalReply.then((reply) => {
@@ -1392,6 +1416,37 @@ export class AgentBridge implements PetStateBridge {
 
   hasLiveWorker(): boolean {
     return this.core.hasLiveWorker();
+  }
+
+  /** Main-only authority: generic renderer/mobile/serve frames cannot mint this admission. */
+  async requestOptimizationLab(type: string, params: Record<string, unknown>): Promise<unknown> {
+    if (!/^optimization_lab_[a-z_]+$/.test(type)) throw new Error("Invalid Optimization Lab query");
+    const id = `desktop-optimization-lab-${randomUUID()}`;
+    this.trustedLabRequests.add(id);
+    try {
+      // StdioTransport's open stdin retains the worker even after this page closes.
+      // No synthetic chat/run is needed, and a restarted worker never auto-resumes.
+      const outcome = await this.core.request(
+        "agent/query",
+        { ...params, type },
+        {
+          id,
+          timeoutMs: 30_000,
+          consume: true,
+          settleOnExit: true,
+          failFast: true,
+          ensureWorker: true,
+          ensureWorkerCwd: typeof params.cwd === "string" ? params.cwd : undefined,
+          meta: { origin: "host", producer: "desktop-optimization-lab" },
+        },
+      );
+      if (outcome.status === "result") return unwrapOptimizationLabReply(type, outcome.result);
+      if (outcome.status === "error")
+        throw new Error(outcome.error.message ?? "Optimization Lab query failed");
+      throw new Error(`Optimization Lab worker ${outcome.status}`);
+    } finally {
+      this.trustedLabRequests.delete(id);
+    }
   }
 
   workerGeneration(): number {

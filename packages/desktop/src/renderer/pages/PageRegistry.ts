@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   KeyRound,
+  FlaskConical,
   ListTodo,
   MessageSquare,
   PlayCircle,
@@ -51,6 +52,7 @@ export interface PageRenderContext {
   onOpenTaskInboxRecord?: TaskInboxPageProps["onOpenTaskInboxRecord"];
   /** Active repository, used by project-aware standalone pages. */
   activeProjectPath: string | null;
+  activeProjectId?: string | null;
   /** Start a conversation from a standalone page through the host's normal flow. */
   onNewSession?: () => void;
   /** Update the host's cached session metadata after successful history-page mutations. */
@@ -104,6 +106,11 @@ const ExtensionsPage: LazyExoticComponent<
 const TaskInboxPage: LazyExoticComponent<ComponentType<TaskInboxPageProps>> = lazy(() =>
   import("../task-inbox/TaskInboxPage").then((module) => ({ default: module.TaskInboxPage })),
 );
+const OptimizationLabPage = lazy(() =>
+  import("../optimization-lab/OptimizationLabPage").then((module) => ({
+    default: module.OptimizationLabPage,
+  })),
+);
 
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
   builtin({
@@ -127,6 +134,13 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     icon: ListTodo,
     nav: { order: 5, target: "task_inbox", isActive: (mode) => mode === "task_inbox" },
     render: ({ onOpenTaskInboxRecord }) => createElement(TaskInboxPage, { onOpenTaskInboxRecord }),
+  }),
+  builtin({
+    key: "optimization_lab",
+    title: { kind: "i18n", key: "sidebar.optimizationLab" },
+    icon: FlaskConical,
+    nav: { order: 7, target: "optimization_lab", isActive: (mode) => mode === "optimization_lab" },
+    render: ({ activeProjectId }) => createElement(OptimizationLabPage, { activeProjectId }),
   }),
   builtin({
     key: "automation",
