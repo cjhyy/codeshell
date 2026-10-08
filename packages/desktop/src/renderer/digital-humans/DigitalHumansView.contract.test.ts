@@ -328,10 +328,11 @@ describe("DigitalHumansView contract", () => {
     // Existing multi-source requirements are preserved; each missing Skill can
     // name or change its trusted source without rewriting unrelated rows.
     expect(editor).toContain("digitalHumanSkillSourcesByName");
-    expect(editor).toContain("replaceDigitalHumanSkillSources");
-    expect(editor).toContain("changedSkillInstallRepos");
+    expect(editor).toContain("replaceDigitalHumanSkillSourceDraft");
+    expect(editor).toContain("DigitalHumanRequirementsEditor");
+    expect(editor).toContain("requirementValidation.valid");
     expect(editor).toContain("missingSkillSourceRows.map");
-    expect(editor).toContain("const requirementTools = profile?.requires?.tools ?? []");
+    expect(editor).toContain("normalizeDigitalHumanRequirements(requires)");
     expect(editor).toContain("nextRequirements ? { requires: nextRequirements }");
     expect(source).toContain("editorSaveFlowLock.current");
     expect(source).toContain("editorSaveFlowBusy || operations.isBusy");

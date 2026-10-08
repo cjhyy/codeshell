@@ -7,18 +7,20 @@
 
 ## 仍有明确后续的设计
 
+> 2026-10-08：补录[本地统一任务中心](../superpowers/specs/2026-09-01-local-task-center-design.md)，设计完成、尚待开发；[实施计划](../superpowers/plans/2026-09-01-local-task-center.md)保留分批验收。云端最新状态以[总实施清单](project-cloud-panels-plan.md)顶部检查点为准。
+
 | 文档                                                                                                                                         | 当前状态与剩余范围                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [独立 Link Server](link-server-oauth-architecture.md)                                                                                        | 独立服务与双向 OAuth 尚未实现；现有本地 Link/Hub 管理能力不是该服务                                                       |
-| [Hub 迭代](codeshell-hub-iteration-design.md) / [远程服务架构](codeshell-hub-remote-service-architecture.md)                                 | 单管理员部署、共享工作台和基础 Web Panel 已实现；语义协议、远端原生窗口、完整 Panel 适配及多用户后置                      |
+| [独立 Link Server](link-server-oauth-architecture.md)                                                                                        | 独立服务与双向 OAuth 已实现并通过受控上游验证；真实账号、正式发布与生产部署仍待验收                                                       |
+| [Hub 迭代](codeshell-hub-iteration-design.md) / [远程服务架构](codeshell-hub-remote-service-architecture.md)                                 | 原生云端窗口、设备目录／中继及 Linux 候选已验证；正式部署、实体手机、完整 Panel 适配与多用户边界另列                      |
 | [AgentModule / ResolvedComposition](agent-module-resolved-composition-design.md)                                                             | Phase A/B 已实现；Phase C lifetime/disposer 与 Phase D 请求边界仍待做                                                     |
 | [Agent 可靠性与上下文](agent-reliability-and-context-optimization.md)                                                                        | 大部分 Operation/Capability/评测设计仍待实现；09-03 缓存与若干旧缺口已被后续修复覆盖                                      |
 | [聊天历史恢复边界](2026-09-11-overnight-todo-audit.md)                                                                                       | 有界快照/实时交接、重试和 epoch 隔离已补回归；必要前缀淘汰时保留可见内容并报告失败，完整 durable raw 长段恢复仍需设计     |
 | [Harness 评测](codeshell-harness-evals.md) / [通用评测层](agent-evals-platforms-and-adapters.md) / [优化 Agent](agent-optimization-agent.md) | 设计阶段；未接入平台、上传真实会话或运行完整模型对照实验                                                                  |
 | [Codex Cloud 远程任务](codex-cloud-remote-tasks-design.md)                                                                                   | 方向核验与取舍；原生 Cloud 接入未实现，不与本地 Codex runtime 混称                                                        |
-| [Memory 最终设计](memory-final-design.md)                                                                                                    | P0/P1 已实现；P2 按决策挂起；description、严格同批重复、保守 fallback 与 baseDir 已修；剩余同批上下文刷新、旧正文有界对照 |
+| [Memory 最终设计](memory-final-design.md)                                                                                                    | P0/P1 已实现；P2 按决策挂起；同批决策上下文刷新与有界旧正文对照已于 10-08 补齐，保守 fallback 与 ownership 保留 |
 | [Workspace 数据源 ADR](workspace-datasource-binding-adr.md)                                                                                  | 只读 MVP 已实现；Profile 求交、写操作、真实 adapter 和解析索引后续                                                        |
-| [WorkspaceProfile 历史讨论](workspace-profile-讨论稿.md)                                                                                     | MVP、portable memory、导入导出和仓库分发已实现；经验运营、完整依赖编辑、plugin 降级仍可规划                               |
+| [WorkspaceProfile 历史讨论](workspace-profile-讨论稿.md)                                                                                     | MVP、portable memory、导入导出、仓库分发与完整依赖编辑已实现；经验运营、受约束 dream、切换预览和 plugin 降级仍待做                               |
 | [Worktree / Session 隔离](worktree-session-isolation-research.md)                                                                            | DriveAgent 外部运行时隔离已实现；原生 Agent 隔离是独立后续，不能把旧外部隔离缺口重复实施                                  |
 | [视频工作台](video-studio-panel.md)                                                                                                          | 产品草案；媒体宿主能力已有在途实现，具体面板工程与验收需另看对应面板仓库                                                  |
 | [早期 Roadmap](roadmap.md)                                                                                                                   | 保留产品方向；Arena 已抽包、HTTP serve 已实现，不再按旧状态表排工                                                         |

@@ -11,6 +11,13 @@ describe("digital-human dependency editor interactions", () => {
     "target-change",
     "stale-discard",
     "parent-installing",
+    "dependencies-roundtrip",
+    "dependencies-validation",
+    "dependencies-sync",
+    "dependencies-discard",
+    "dependencies-source-metadata",
+    "dependencies-user-source-replace",
+    "dependencies-saved-normalization",
   ])("%s", (scenario) => {
     const result = Bun.spawnSync({
       cmd: [

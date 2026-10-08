@@ -2,7 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { link, lstat, open, rm } from "node:fs/promises";
 import { ResourceLibrary, mediaSourceIdentity } from "./library.js";
-import { mediaScopeKey, normalizeMediaScope } from "./storage.js";
+import { mediaDirectory, mediaScopeKey, normalizeMediaScope } from "./storage.js";
+import { stageResourceClone } from "./clone.js";
 import {
   openResourceDirectory,
   resourceRelativePath,
@@ -199,49 +200,80 @@ export class PanelResourceService {
       await directory.close();
     }
   }
-  private async materialize(scope: ResourceScope, raw: unknown, context: PanelResourceCallContext) {
+  private async materialize(
+    scope: ResourceScope,
+    raw: unknown,
+    context: PanelResourceCallContext,
+    cloneManaged = true,
+  ): Promise<{ assetId: string; path: string; bytes: number; sha256: string }> {
     const input = object(raw, ["assetId", "directoryHandle", "path"]);
     const asset = await this.get(scope, assetId(input.assetId));
     const directory = await this.directory(scope, input, context, true);
-    const temporary = directory.location(`.${randomUUID()}.resource-partial`);
+    let temporary = directory.location(`.${randomUUID()}.resource-partial`);
+    let clone: Awaited<ReturnType<typeof stageResourceClone>>;
     let destination: Awaited<ReturnType<typeof open>> | undefined;
     let published = false;
     let identity: { dev: number; ino: number } | undefined;
     try {
       await directory.verify();
-      destination = await open(
-        temporary,
-        constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
-        0o600,
-      );
-      identity = await destination.stat();
-      const source = await this.openRead(scope, asset.id, { signal: context.signal });
-      const hash = createHash("sha256");
-      let bytes = 0;
-      try {
-        for await (const chunk of source.body!) {
-          await directory.verify();
-          if (bytes + chunk.length > asset.bytes) throw new Error("Resource content changed");
-          hash.update(chunk);
-          let offset = 0;
-          while (offset < chunk.length) {
-            const written = await destination.write(
-              chunk,
-              offset,
-              chunk.length - offset,
-              bytes + offset,
-            );
-            if (!written.bytesWritten) throw new Error("Resource copy stopped making progress");
-            offset += written.bytesWritten;
-          }
-          bytes += chunk.length;
-        }
-      } finally {
-        source.body?.destroy();
+      if (cloneManaged && "sha256" in asset) {
+        const sourcePath = await this.library.resolvePath(scope, asset.id);
+        const stagingDirectory = await mediaDirectory(this.options.rootDirectory, [
+          "scopes",
+          mediaScopeKey(scope),
+          "materialize",
+        ]);
+        clone = await stageResourceClone({
+          sourcePath,
+          stagingDirectory,
+          targetDevice: directory.identities.at(-1)!.dev,
+          verify: directory.verify,
+          signal: context.signal,
+        });
       }
-      const sha256 = hash.digest("hex");
-      if (bytes !== asset.bytes || ("sha256" in asset && sha256 !== asset.sha256))
-        throw new Error("Resource content failed integrity validation");
+      if (clone) {
+        temporary = clone.path;
+        destination = clone.handle;
+      } else {
+        destination = await open(
+          temporary,
+          constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
+          0o600,
+        );
+      }
+      identity = await destination.stat();
+      let sha256: string;
+      if (clone && "sha256" in asset) {
+        sha256 = asset.sha256;
+      } else {
+        const source = await this.openRead(scope, asset.id, { signal: context.signal });
+        const hash = createHash("sha256");
+        let bytes = 0;
+        try {
+          for await (const chunk of source.body!) {
+            await directory.verify();
+            if (bytes + chunk.length > asset.bytes) throw new Error("Resource content changed");
+            hash.update(chunk);
+            let offset = 0;
+            while (offset < chunk.length) {
+              const written = await destination.write(
+                chunk,
+                offset,
+                chunk.length - offset,
+                bytes + offset,
+              );
+              if (!written.bytesWritten) throw new Error("Resource copy stopped making progress");
+              offset += written.bytesWritten;
+            }
+            bytes += chunk.length;
+          }
+        } finally {
+          source.body?.destroy();
+        }
+        sha256 = hash.digest("hex");
+        if (bytes !== asset.bytes || ("sha256" in asset && sha256 !== asset.sha256))
+          throw new Error("Resource content failed integrity validation");
+      }
       await destination.sync();
       // A tool may share the granted directory. Verify the actual destination,
       // not only the source stream, before publishing the materialized file.
@@ -268,6 +300,7 @@ export class PanelResourceService {
         copiedHash.digest("hex") !== sha256
       )
         throw new Error("Materialized resource failed integrity verification");
+      await clone?.verify();
       await destination.close();
       destination = undefined;
       await directory.verify();
@@ -285,14 +318,19 @@ export class PanelResourceService {
         if (current && sameResourceIdentity(current, identity))
           await rm(directory.path, { force: true }).catch(() => {});
       }
-      throw error;
+      // Different bind mounts can share st_dev yet refuse hard links. Retry
+      // with a temporary file inside the target grant, after releasing this
+      // private clone and all held descriptors in finally.
+      if (!(clone && !published && (error as NodeJS.ErrnoException).code === "EXDEV")) throw error;
     } finally {
       await destination?.close().catch(() => {});
       const current = await lstat(temporary).catch(() => undefined);
       if (current && identity && sameResourceIdentity(current, identity))
         await rm(temporary, { force: true }).catch(() => {});
+      await clone?.close();
       await directory.close();
     }
+    return this.materialize(scope, raw, context, false);
   }
   private async capture(scope: ResourceScope, raw: unknown, context: PanelResourceCallContext) {
     const input = object(raw, [
