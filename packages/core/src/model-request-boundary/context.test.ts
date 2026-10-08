@@ -151,7 +151,7 @@ describe("request boundary at the configured provider fetch", () => {
   test("custody or boundary/attempt durability failure is fatal and performs zero sends", async () => {
     for (const failure of ["custody", "model_request_boundary", "model_request_attempt"] as const) {
       const { binding, transcript } = fixture((file, line) => {
-        if (line.includes(`\"type\":\"${failure}\"`)) throw new Error("synthetic disk failure");
+        if (line.includes(`"type":"${failure}"`)) throw new Error("synthetic disk failure");
         // Custom writer is trusted to complete the event synchronously.
       });
       if (failure === "custody")

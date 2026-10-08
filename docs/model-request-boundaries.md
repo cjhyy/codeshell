@@ -39,6 +39,12 @@ provider, refuses an unavailable or plaintext backend, and signs transient
 prehashes over private worker IPC. Renderer and model RPC surfaces cannot retrieve
 keys or use the signing service.
 
+An explicitly supplied SDK signer is borrowed by the parent and ordinary Agent
+children. The caller owns its disposal; closing a child never disposes that Host
+authority. Desktop pins signing to Main even if the worker inherits a headless
+local credential setting. Pending worker signing requests are rejected and their
+timers released before graceful worker shutdown waits for active sessions.
+
 Ephemeral sessions use Host-memory keys and memory-only events. Desktop requires
 an active native Quick Chat owner, pins the first signing incarnation to the
 current worker generation, and wipes ephemeral keys when that generation ends.
@@ -59,11 +65,13 @@ uses a fresh HOME, an exact localhost origin guard installed before Core loads,
 and checks the actual child/worker bootstrap receipt. Redirects and inherited
 proxies are disabled.
 
-The consumer checks OpenAI transparent retry, Anthropic streaming, image
-conversion, a real read-only tool roundtrip, queued steering, runtime hook
+The consumer checks OpenAI transparent retry and a real stream parse failure
+followed by a distinct non-streaming logical call, Anthropic streaming, image
+conversion, a real read-only tool batch, queued steering, runtime hook
 injection, tool visibility and composition changes, archived history and resumed
 Session keys, worker restart/client-message replay, and Host-encrypted worker
-signing. Independently recomputed keyed digests are compared with the JSON bodies
+signing, pending-signature shutdown, and ordinary Agent children borrowing an SDK
+Host signer. Independently recomputed keyed digests are compared with the JSON bodies
 received by the local server. Real production Transcript writer faults at both
 the logical boundary and physical attempt append, and a custody failure, produce
 zero server requests and no fallback. Not-sent accounting receipts carry known

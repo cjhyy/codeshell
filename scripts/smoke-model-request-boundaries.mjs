@@ -8,7 +8,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -92,9 +91,17 @@ if (process.argv[2] !== "--consume") {
     for await (const chunk of req) raw += chunk;
     const body = JSON.parse(raw);
     requests++;
-    appendFileSync(requestsFile, JSON.stringify({ sequence: requests, body }) + "\n", {
-      mode: 0o600,
-    });
+    appendFileSync(
+      requestsFile,
+      JSON.stringify({
+        sequence: requests,
+        body,
+        physicalAttemptId: req.headers["x-proof-attempt"],
+      }) + "\n",
+      {
+        mode: 0o600,
+      },
+    );
     if (body.model.startsWith("claude")) {
       const message = {
         id: "fixture",
@@ -202,7 +209,38 @@ if (process.argv[2] !== "--consume") {
       };
       response.choices[0].finish_reason = "tool_calls";
     }
+    if (
+      body.stream &&
+      JSON.stringify(body.messages).includes("proof-agent-parent") &&
+      !body.messages.some((message) => message.role === "tool")
+    ) {
+      assert.ok(body.tools.some((tool) => tool.function.name === "Agent"));
+      response.choices[0].delta = {
+        tool_calls: [
+          {
+            index: 0,
+            id: "synthetic-agent-call",
+            type: "function",
+            function: {
+              name: "Agent",
+              arguments: JSON.stringify({
+                description: "synthetic child proof",
+                prompt: "proof-agent-child: Return one confirmation",
+                max_turns: 4,
+              }),
+            },
+          },
+        ],
+      };
+      response.choices[0].finish_reason = "tool_calls";
+    }
     res.setHeader("content-type", body.stream ? "text/event-stream" : "application/json");
+    if (body.stream && JSON.stringify(body.messages).includes("proof-fallback")) {
+      // A parser failure after a real delta must create one new non-streaming
+      // logical call, rather than hiding it as a retry of the same boundary.
+      res.end(`data: ${JSON.stringify(response)}\n\ndata: {synthetic-invalid-json}\n\n`);
+      return;
+    }
     res.end(
       body.stream
         ? `data: ${JSON.stringify(response)}\n\ndata: [DONE]\n\n`
@@ -292,6 +330,7 @@ if (process.argv[2] !== "--consume") {
   );
   const core = await import("@cjhyy/code-shell-core");
   const host = await import("@cjhyy/code-shell-core/internal");
+  const extension = await import("@cjhyy/code-shell-core/extension");
   const profiles = [
     {
       id: "proof",
@@ -328,14 +367,21 @@ if (process.argv[2] !== "--consume") {
     cipher: new core.PlaintextCipher(),
     custodyMode: "owner-only-plaintext",
   });
-  async function verifyAttempts(storage, sid, signer, marker) {
+  async function verifyAttempts(storage, sid, signer, marker, includeNonStreaming = false) {
     const events = transcriptEvents(storage, sid);
     const boundaries = events.filter((event) => event.type === "model_request_boundary");
     const attempts = events.filter((event) => event.type === "model_request_attempt");
     assert.ok(boundaries.length > 0);
     assert.ok(attempts.length >= boundaries.length);
+    const attemptIds = new Set(attempts.map((event) => event.data.physicalAttemptId));
     const bodies = readLines(join(root, "requests.jsonl"))
-      .filter((entry) => entry.body.stream && JSON.stringify(entry.body.messages).includes(marker))
+      .filter(
+        (entry) =>
+          (entry.body.stream || includeNonStreaming) &&
+          (entry.physicalAttemptId
+            ? attemptIds.has(entry.physicalAttemptId)
+            : JSON.stringify(entry.body.messages).includes(marker)),
+      )
       .map((entry) => entry.body);
     assert.equal(bodies.length, attempts.length);
     const expected = [];
@@ -430,6 +476,27 @@ if (process.argv[2] !== "--consume") {
   assert.notEqual(
     secondProof.boundaries.at(-1).data.systemPromptDigest,
     firstProof.boundaries[0].data.systemPromptDigest,
+  );
+  sdk = new core.Engine(engineConfig);
+  sdk.getHookRegistry().clear();
+  const fallback = await sdk.run("proof-fallback: Return one confirmation", {
+    sessionId: "proof-fallback",
+    behaviorMode: "proof",
+  });
+  assert.equal(fallback.reason, "completed");
+  await sdk.dispose();
+  const fallbackProof = await verifyAttempts(
+    engineConfig.sessionStorageDir,
+    "proof-fallback",
+    ownerKeys,
+    "proof-fallback",
+    true,
+  );
+  assert.equal(fallbackProof.boundaries.length, 2);
+  assert.equal(fallbackProof.attempts.length, 2);
+  assert.notEqual(
+    fallbackProof.boundaries[0].data.logicalCallId,
+    fallbackProof.boundaries[1].data.logicalCallId,
   );
   // A real Engine preflight failure must not reach the fixture or fallback.
   const beforeReject = readLines(join(root, "requests.jsonl")).length;
@@ -634,6 +701,55 @@ if (process.argv[2] !== "--consume") {
     cipher,
     custodyMode: "host-encrypted",
   });
+  const signedSubjects = [];
+  let borrowedDisposals = 0;
+  sdk = new core.Engine({
+    ...engineConfig,
+    preset: "general",
+    isSubAgent: false,
+    clientDefaults: {
+      fetch(input, init) {
+        const headers = new Headers(init?.headers);
+        const attempt = extension.currentUsageAttempt();
+        if (attempt) headers.set("x-proof-attempt", attempt.requestId);
+        return globalThis.fetch(input, { ...init, headers });
+      },
+    },
+    modelRequestSigner: {
+      async sign(input) {
+        signedSubjects.push(input.subject);
+        host.assertDurableRequestOwner(input.subject, engineConfig.sessionStorageDir);
+        return encryptedKeys.sign(input);
+      },
+      dispose() {
+        borrowedDisposals++;
+      },
+    },
+  });
+  sdk.getHookRegistry().clear();
+  const agent = await sdk.run("proof-agent-parent: Delegate the synthetic task", {
+    sessionId: "proof-agent-parent",
+    behaviorMode: "proof",
+    toolAllowlist: ["Agent"],
+  });
+  assert.equal(agent.reason, "completed");
+  await sdk.dispose();
+  const childSubject = signedSubjects.find((subject) => subject.sessionId !== "proof-agent-parent");
+  assert.ok(childSubject, "ordinary Agent child must use the SDK Host signer");
+  assert.equal(borrowedDisposals, 0, "child and parent must not dispose a borrowed Host signer");
+  const childProof = await verifyAttempts(
+    engineConfig.sessionStorageDir,
+    childSubject.sessionId,
+    encryptedKeys,
+    "proof-agent-child",
+  );
+  assert.equal(childProof.boundaries[0].data.custodyMode, "host-encrypted");
+  await verifyAttempts(
+    engineConfig.sessionStorageDir,
+    "proof-agent-parent",
+    encryptedKeys,
+    "proof-agent-parent",
+  );
   const workerStorage = join(root, "data", "sessions");
   function worker({ pauseSigning = false } = {}) {
     const childEnv = {
@@ -813,10 +929,12 @@ if (process.argv[2] !== "--consume") {
     );
     console.log(
       JSON.stringify({
-        sdk: "compiled SDK + transparent retry + resume/config/archive",
+        sdk: "compiled SDK + transparent retry + stream parse fallback + resume/config/archive",
         rich: "actual image/tool/steer/hook/catalog and composition change; Anthropic projection",
         rejected: "real Engine custody and boundary/attempt writer failures zero fetch/fallback",
-        desktopWorker: "actual stdio + private Host encrypted signing + restart/replay",
+        desktopWorker:
+          "actual stdio + private Host encrypted signing + restart/replay + pending shutdown",
+        subagent: "ordinary Agent child borrows SDK Host signer without disposing it",
         tui: "compiled CLI + durable evidence",
         sdkAttempts: secondProof.attempts.length,
         workerAttempts: afterRestart.attempts.length,

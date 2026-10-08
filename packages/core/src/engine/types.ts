@@ -111,7 +111,7 @@ export interface EngineConfig {
    */
   goal?: string | GoalConfig;
   sessionStorageDir?: string;
-  /** Host custody for main-model evidence; Node defaults explicitly to owner-only 0600 keys. */
+  /** Borrowed Host custody, inherited by children; caller owns disposal. Node defaults to 0600 keys. */
   modelRequestSigner?: import("../model-request-boundary/types.js").ModelRequestSigner;
   maxContextTokens?: number;
   /** Override settings.context.strategy and the active behavior profile's default. */
