@@ -97,10 +97,11 @@ describe("AutomationView interaction", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
   });
 
-  async function renderView() {
+  async function renderView(initialAutomationId?: string) {
     await act(async () => {
       root.render(
         <AutomationView
+          initialAutomationId={initialAutomationId}
           projects={[]}
           sessionIndices={{}}
           onCreateConversational={() => createCalls++}
@@ -162,6 +163,15 @@ describe("AutomationView interaction", () => {
     expect(document.activeElement).toBe(choices[0]);
   });
 
+  test("task-center deep links select the exact automation and missing IDs do not silently select another", async () => {
+    await renderView("weekly");
+    const detail = descendants(container).find((node) => props(node).role === "region");
+    expect(detail?.getAttribute("aria-label")).toBe(secondJob.name);
+    expect(writes).toEqual([]);
+    await renderView("missing");
+    expect(textOf(container)).toContain("找不到原始任务");
+    expect(writes).toEqual([]);
+  });
   test("the empty state has one working conversational creation entry", async () => {
     jobs = [];
     await renderView();
