@@ -92,10 +92,14 @@ export type BackgroundWorkEntry =
       /** Full shell snapshot — the panel already renders this shape (output/kill
        *  still go through the dedicated agent/backgroundShells RPC by shellId). */
       shell: BgShell;
+      canCancel?: boolean;
     }>
   | WithSource<{
       kind: "subagent";
       agentId: string;
+      childSessionId?: string;
+      runtimeGeneration?: number;
+      canCancel?: boolean;
       name?: string;
       agentType?: string;
       description: string;
@@ -106,6 +110,7 @@ export type BackgroundWorkEntry =
   | WithSource<{
       kind: "job";
       jobId: string;
+      canCancel?: boolean;
       description: string;
       status: BackgroundJobStatus;
       startedAt: number;
@@ -190,7 +195,12 @@ export function listBackgroundWorkForUI(
       ? backgroundShellManager.list()
       : backgroundShellManager.listForSession(sessionId);
   for (const s of shells) {
-    entries.push({ kind: "shell", shell: s, sourceSession: sourceSession(sessionId, s.sessionId) });
+    entries.push({
+      kind: "shell",
+      shell: s,
+      canCancel: s.status === "starting" || s.status === "running",
+      sourceSession: sourceSession(sessionId, s.sessionId),
+    });
   }
 
   const now = Date.now();
@@ -199,12 +209,18 @@ export function listBackgroundWorkForUI(
   for (const a of agents) {
     // Keep running agents, plus finished ones still inside their fade window so
     // a completion is briefly visible. (finishedFadeAt = finishedAt + 30s.)
-    const fresh = a.status === "running" || (a.finishedFadeAt != null && a.finishedFadeAt > now);
+    const fresh =
+      a.status === "running" ||
+      a.status === "cancelling" ||
+      (a.finishedFadeAt != null && a.finishedFadeAt > now);
     if (!fresh) continue;
     const ownerSessionId = a.sessionId ?? sessionId;
     entries.push({
       kind: "subagent",
       agentId: a.agentId,
+      childSessionId: a.childSessionId,
+      runtimeGeneration: a.runtimeGeneration,
+      canCancel: a.status === "running" && typeof a.abort === "function",
       name: a.name,
       agentType: a.agentType,
       description: a.description,
@@ -224,6 +240,7 @@ export function listBackgroundWorkForUI(
     entries.push({
       kind: "job",
       jobId: j.jobId,
+      canCancel: j.status === "running" && typeof j.abort === "function",
       description: j.description,
       status: j.status,
       startedAt: j.startedAt,
@@ -245,4 +262,49 @@ export function listBackgroundWorkForUI(
   }
 
   return entries;
+}
+
+/** Main-owned control path. The host must authorize the source Session before
+ * forwarding this request; registry ownership and attempt are checked again
+ * here so a delayed UI command cannot cancel a replacement process. */
+export async function cancelBackgroundWorkForUI(input: {
+  sessionId: string;
+  kind: BackgroundWorkKind;
+  workId: string;
+  expectedStartedAt: number;
+  expectedRuntimeGeneration?: number;
+}): Promise<boolean> {
+  if (input.kind === "shell") {
+    const shell = backgroundShellManager.get(input.workId);
+    if (
+      !shell ||
+      shell.sessionId !== input.sessionId ||
+      shell.startedAt !== input.expectedStartedAt ||
+      (shell.status !== "running" && shell.status !== "starting")
+    )
+      return false;
+    return (await backgroundShellManager.kill(input.workId, input.sessionId)).ok;
+  }
+  if (input.kind === "subagent") {
+    const agent = asyncAgentRegistry.get(input.workId);
+    if (
+      !agent ||
+      agent.sessionId !== input.sessionId ||
+      agent.startedAt !== input.expectedStartedAt ||
+      agent.runtimeGeneration !== input.expectedRuntimeGeneration ||
+      agent.status !== "running"
+    )
+      return false;
+    return asyncAgentRegistry.cancel(input.workId);
+  }
+  const job = backgroundJobRegistry.get(input.workId);
+  if (
+    !job ||
+    job.sessionId !== input.sessionId ||
+    job.startedAt !== input.expectedStartedAt ||
+    job.status !== "running" ||
+    typeof job.abort !== "function"
+  )
+    return false;
+  return backgroundJobRegistry.cancel(input.workId);
 }

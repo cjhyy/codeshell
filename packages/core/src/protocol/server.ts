@@ -75,7 +75,10 @@ import {
 import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
-import { listBackgroundWorkForUI } from "../tool-system/builtin/background-work.js";
+import {
+  cancelBackgroundWorkForUI,
+  listBackgroundWorkForUI,
+} from "../tool-system/builtin/background-work.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import type { ChatSession } from "./chat-session.js";
@@ -1380,6 +1383,9 @@ export class AgentServer {
         break;
       case Methods.BackgroundWork:
         this.handleBackgroundWork(req);
+        break;
+      case Methods.BackgroundWorkCancel:
+        await this.handleBackgroundWorkCancel(req);
         break;
       case Methods.PluginCommandsList:
         this.handlePluginCommandsList(req);
@@ -2956,6 +2962,45 @@ export class AgentServer {
     const scope = params.scope === "all" ? "all" : "session";
     const items = listBackgroundWorkForUI(sessionId, { scope });
     this.transport.send(createResponse(req.id, { items }));
+  }
+
+  private async handleBackgroundWorkCancel(req: RpcRequest): Promise<void> {
+    const params = req.params ?? {};
+    const validId = (value: unknown): value is string =>
+      typeof value === "string" &&
+      value.length > 0 &&
+      value.length <= 256 &&
+      /^[A-Za-z0-9._-]+$/.test(value) &&
+      !value.includes("..");
+    if (
+      !validId(params.sessionId) ||
+      !validId(params.workId) ||
+      !["shell", "subagent", "job"].includes(String(params.kind)) ||
+      typeof params.expectedStartedAt !== "number" ||
+      !Number.isFinite(params.expectedStartedAt) ||
+      params.expectedStartedAt < 0 ||
+      (params.expectedRuntimeGeneration !== undefined &&
+        (typeof params.expectedRuntimeGeneration !== "number" ||
+          !Number.isSafeInteger(params.expectedRuntimeGeneration) ||
+          params.expectedRuntimeGeneration < 0))
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "valid source Session, work id, kind and attempt are required",
+        ),
+      );
+      return;
+    }
+    const cancelled = await cancelBackgroundWorkForUI({
+      sessionId: params.sessionId,
+      workId: params.workId,
+      kind: params.kind as "shell" | "subagent" | "job",
+      expectedStartedAt: params.expectedStartedAt,
+      expectedRuntimeGeneration: params.expectedRuntimeGeneration as number | undefined,
+    });
+    this.transport.send(createResponse(req.id, { cancelled }));
   }
 
   // ─── CloseSession ───────────────────────────────────────────────

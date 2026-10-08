@@ -645,6 +645,8 @@ export const Methods = {
    *  for the desktop background panel. Output/kill of a shell still goes through
    *  BackgroundShells by shellId; this is list-only across all three kinds. */
   BackgroundWork: "agent/backgroundWork",
+  /** Host-authorized cancellation, scoped to a source Session and attempt. */
+  BackgroundWorkCancel: "agent/backgroundWorkCancel",
   /** Read-only bounded Pet projection plus the ordered-delta cursor. */
   GetPetProjectionSnapshot: "agent/getPetProjectionSnapshot",
   /** Discover enabled plugin slash commands without exposing their source bodies or file paths. */
