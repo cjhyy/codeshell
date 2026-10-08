@@ -100,11 +100,11 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
-        // Eight local-only Lab routes: the original four plus evidence preview/
-        // import and native dataset import/export. Their selected-file checks
-        // remain in this extracted, owner-scoped registrar.
+        // Nine local-only Lab routes: eight existing operations plus P2 native
+        // adoption. Exact body/scope review and post-dialog revalidation remain
+        // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
         matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
-    ).toBeLessThanOrEqual(320);
+    ).toBeLessThanOrEqual(321);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -123,7 +123,7 @@ describe("architecture growth budgets", () => {
     // challenge custody remains in the Host. Usage history adds one invoke to
     // the extracted read-only service. The actual combined root is 1_871 lines.
     expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_871);
-    // Include all eight extracted Lab invokes and the five generic Link
+    // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
     expect(
@@ -136,7 +136,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(313);
+    ).toBeLessThanOrEqual(314);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -235,6 +235,10 @@ describe("architecture growth budgets", () => {
     // controller binding and finalization fences delegate to operations/{ledger,
     // controller,resolver}. Keep these private owner boundaries together and
     // pin the actual combined Engine size, with no future-feature allowance.
+    // P2 adds 131 lines binding frozen instructions to Engine-owned run/watch/
+    // abort/cache lifetimes. Snapshot selection, revision comparison and
+    // checkpoint persistence are extracted to engine-instruction-context.ts.
+    // The real no-tools Lab and ordinary Session consumers exercise this seam.
     // Skill metadata adds 20 reviewed wiring lines: the current model window,
     // task and up to 32 recent requests enter existing prompt composition, and
     // registry/allowlist gates suppress unusable listings. Budgeting, ranking
@@ -243,7 +247,7 @@ describe("architecture growth budgets", () => {
     // incarnation/storage scope, composition/config versions and borrowed or
     // owned Host signer enter the existing model facade. Provider projection,
     // validation, custody and durable event writes remain in dedicated modules.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_749);
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_880);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -264,10 +268,12 @@ describe("architecture growth budgets", () => {
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
       // declare owned resources without exposing Host parser/runtime authority.
+      // +3 P2 declarations: Host binding/hash/types and the isolated instruction
+      // runner, consumed by optimization-lab. The stable SDK stays unchanged.
       // +4 reviewed extension statements: memory-only ephemeral signer factory,
       // read-only current logical/physical attempt identities, and signer type.
       // Isolated capability Hosts own the ephemeral signer's disposal.
-      "packages/core/src/index.extension.ts": 54,
+      "packages/core/src/index.extension.ts": 57,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by

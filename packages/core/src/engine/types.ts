@@ -94,6 +94,8 @@ export interface EngineConfig {
    * dev server. Defaults to true (interactive sessions allow it).
    */
   allowBackgroundShells?: boolean;
+  /** Trusted host snapshots for an isolated, fresh Engine. Never accepted from model/RPC input. */
+  instructionSnapshots?: readonly import("../skills/instruction-bindings.js").InstructionSnapshot[];
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
   responseLanguage?: string;

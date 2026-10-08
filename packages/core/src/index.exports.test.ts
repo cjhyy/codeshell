@@ -346,6 +346,9 @@ const extensionRuntimeContract = [
   "derivePresetExposure",
   "logger",
   "readSkillSnapshot",
+  "InstructionBindingStore",
+  "instructionHash",
+  "runIsolatedInstruction",
   "acquireLockOnPath",
   "mutateJsonFile",
   "resolveLLMConfigForTag",
@@ -426,6 +429,16 @@ describe("core public/internal export contract", () => {
     // The extension entry stays narrow: no Engine, no host UI utilities.
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
+    for (const name of [
+      "InstructionBindingStore",
+      "InstructionSnapshotSchema",
+      "instructionHash",
+      "runIsolatedInstruction",
+    ]) {
+      expect(publicApi, `${name} belongs to the trusted capability contract`).not.toHaveProperty(
+        name,
+      );
+    }
     for (const name of [
       "canonicalKey",
       "canonicalPath",

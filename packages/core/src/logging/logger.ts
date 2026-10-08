@@ -158,6 +158,12 @@ function resolveCategoryFilter(): Set<string> | null {
 // scope, like the initial setup before any Engine has started.
 
 const _sidAls = new AsyncLocalStorage<string>();
+const _loggingSuppressed = new AsyncLocalStorage<boolean>();
+
+/** Internal Host scope for ephemeral work; sibling async work keeps its logging policy. */
+export function runWithoutLogging<T>(fn: () => T): T {
+  return _loggingSuppressed.run(true, fn);
+}
 let _currentSidFallback: string = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export function setCurrentSid(sid: string): void {
@@ -265,6 +271,7 @@ class Logger {
   }
 
   error(msgOrErr: string | Error | unknown, data?: Record<string, unknown> | Error): void {
+    if (_loggingSuppressed.getStore()) return;
     let msg: string;
     let entryData: Record<string, unknown> | undefined;
     let errObj: Error | undefined;
@@ -303,6 +310,7 @@ class Logger {
   }
 
   private write(level: LogLevel, msg: string, data?: Record<string, unknown>): void {
+    if (_loggingSuppressed.getStore()) return;
     if (!this.enabled) return;
     if (LEVEL_ORDER[level] < LEVEL_ORDER[this.minLevel]) return;
 

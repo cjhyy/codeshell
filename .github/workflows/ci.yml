@@ -151,6 +151,11 @@ jobs:
         run: bun run build
       - name: test shard
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
+      - name: Compiled isolated instruction adoption lifecycle
+        if: matrix.shard == 'rest'
+        run: |
+          bun scripts/run-isolated-node-smoke.mjs scripts/optimization-lab-p2-cleanup-fixture.mjs
+          node scripts/run-isolated-node-smoke.mjs scripts/optimization-lab-p2-fixture.mjs
       - name: compiled SDK verified Link write lifecycle
         if: matrix.shard == 'core-engine'
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs

@@ -1,4 +1,4 @@
-import { createLLMClient } from "@cjhyy/code-shell-core/extension";
+import { createLLMClient, runIsolatedInstruction } from "@cjhyy/code-shell-core/extension";
 import { canonicalJson, sha256Hex } from "./contracts/canonical-json.js";
 import type { EvalCase } from "./contracts/eval-case.js";
 import type { ExperimentPlan, OperationLimits } from "./contracts/experiment.js";
@@ -13,6 +13,7 @@ import type { ResolvedConnection } from "./providers/connection.js";
 export interface Trial {
   schemaVersion: 1;
   grantRevision?: number | null;
+  instructionReceiptId?: string;
   trialId: string;
   planHash: string;
   caseId: string;
@@ -122,6 +123,8 @@ export async function runTrial(options: {
   accounting: MeterAccounting;
   signal?: AbortSignal;
   upstream?: typeof globalThis.fetch;
+  cwd?: string;
+  bindingRoot?: string;
 }): Promise<Trial> {
   const bodyHash = sha256Hex(options.body);
   const identity = {
@@ -154,6 +157,62 @@ export async function runTrial(options: {
       reason: "analysis_only: no request issued",
     };
   if (options.case.fixtureRefs.length) throw new Error("unfrozen fixtures cannot be executed");
+  if (options.plan.runnerVersion === "codeshell_isolated_v1") {
+    if (!options.cwd) throw new Error("Isolated Engine requires a trusted project root");
+    const started = Date.now();
+    const transport = createMeteredFetch({
+      ...options,
+      limits: options.plan.bounds.trial,
+      maxContextBytes: options.plan.bounds.maxContextBytes,
+      agentStream: true,
+    });
+    let result: Awaited<ReturnType<typeof runIsolatedInstruction>> | undefined;
+    let failure: unknown;
+    try {
+      result = await runIsolatedInstruction({
+        cwd: options.cwd,
+        llm: { ...options.connection.config, maxTokens: options.plan.bounds.trial.maxOutputTokens },
+        clientDefaults: {
+          temperature: options.connection.temperature,
+          timeout: options.plan.bounds.trial.timeoutMs,
+          retryMaxAttempts: 1,
+          fetch: transport.fetch,
+        },
+        name: options.plan.skill.name,
+        sourceRevision: options.plan.skill.revision,
+        body: options.body,
+        task: options.case.input,
+        signal: options.signal,
+        receiptRoot: options.bindingRoot,
+      });
+    } catch (error) {
+      failure = error;
+    }
+    if (transport.admissionError) throw transport.admissionError;
+    const valid =
+      Boolean(result?.receipt.completed) &&
+      transport.observations.length > 0 &&
+      transport.observations.every(
+        (item) =>
+          item.outcome === "settled" && item.responseModel === options.connection.identity.modelId,
+      );
+    return {
+      ...base,
+      status: valid ? "completed" : transport.observations.length ? "unknown" : "failed",
+      output: result?.text ?? null,
+      responseModel: transport.observations.at(-1)?.responseModel ?? null,
+      assertions: result ? evaluateAssertions(result.text, options.case.hardAssertions) : [],
+      requestIds: transport.observations.map((item) => item.attemptId),
+      observations: transport.observations,
+      elapsedMs: Date.now() - started,
+      reason: valid
+        ? null
+        : failure
+          ? "Isolated Engine failed or request admission denied"
+          : "Isolated instruction loading or model usage evidence is incomplete",
+      ...(result ? { instructionReceiptId: result.receipt.id } : {}),
+    };
+  }
   const execution = await executeText({
     ...options,
     limits: options.plan.bounds.trial,
