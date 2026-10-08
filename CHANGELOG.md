@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [Unreleased]
+
+### Changed
+
+- Simplify Desktop navigation: move Task center into Settings → Activity, and
+  move credentials, Cloud workbench and the optional Optimization Lab into the
+  settings menu. Keep their existing pages, controls and feature flags available.
+
 ## [0.9.26] - 2026-10-08
 
 ### Added

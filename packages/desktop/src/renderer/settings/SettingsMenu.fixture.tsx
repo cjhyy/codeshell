@@ -94,25 +94,22 @@ const select = async (label: string) => {
   });
   await settleClose();
 };
-try {
-  await settle(() =>
+const render = (taskInboxEnabled = true, optimizationLabEnabled = false) =>
+  settle(() =>
     root.render(
       <SettingsMenu
         petWidgetVisible={false}
         onTogglePetWidget={() => {}}
         onNavigate={record}
+        onOpenCloudWorkbench={() => record("cloud")}
         onOpenSettingsPage={() => record("settings")}
+        taskInboxEnabled={taskInboxEnabled}
+        optimizationLabEnabled={optimizationLabEnabled}
       />,
     ),
   );
-  trigger().focus();
-  await open();
-  await select("打开设置…");
-  assert.equal(actions[0]?.page, "settings");
-  assert.equal(actions[0]?.focus, trigger());
-  assert.notEqual(actions[0]?.pointerEvents, "none");
-  await open();
-  await settle(() =>
+const openActivity = () =>
+  settle(() =>
     props(item("活动记录")).onClick({
       defaultPrevented: false,
       preventDefault() {
@@ -120,6 +117,16 @@ try {
       },
     }),
   );
+try {
+  await render();
+  trigger().focus();
+  await open();
+  await select("打开设置…");
+  assert.equal(actions[0]?.page, "settings");
+  assert.equal(actions[0]?.focus, trigger());
+  assert.notEqual(actions[0]?.pointerEvents, "none");
+  await open();
+  await openActivity();
   await select("日志");
   assert.equal(actions[1]?.page, "logs");
   assert.equal(actions[1]?.focus, trigger());
@@ -133,6 +140,28 @@ try {
     "The settings trigger can reopen after navigation",
   );
   assert.equal(actions.length, 2, "Reopening does not repeat a previous action");
+  assert.equal(item("优化实验室"), undefined, "Optimization Lab stays hidden by default");
+  await select("凭证");
+  await open();
+  await select("云端工作台");
+  await open();
+  await openActivity();
+  await select("任务中心");
+  await render(false, true);
+  await open();
+  await select("优化实验室");
+  await open();
+  await openActivity();
+  assert.equal(item("任务中心"), undefined, "Disabled Task center is absent from activity");
+  assert.ok(item("日志"), "Other activity pages remain available");
+  assert.deepEqual(
+    actions.map(({ page }) => page),
+    ["settings", "logs", "credentials", "cloud", "task_inbox", "optimization_lab"],
+  );
+  for (const action of actions) {
+    assert.equal(action.focus, trigger(), `${action.page} restores menu trigger focus`);
+    assert.notEqual(action.pointerEvents, "none", `${action.page} releases pointer locks`);
+  }
 } finally {
   await settle(() => root.unmount());
   await settleClose();

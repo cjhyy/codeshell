@@ -14,10 +14,7 @@ describe("PageRegistry", () => {
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
       "extensions",
       "digital_humans",
-      "task_inbox",
-      "optimization_lab",
       "automation",
-      "credentials",
     ]);
   });
 
@@ -26,10 +23,7 @@ describe("PageRegistry", () => {
     expect(titles).toEqual([
       { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
-      { kind: "i18n", key: "sidebar.taskInbox" },
-      { kind: "i18n", key: "sidebar.optimizationLab" },
       { kind: "i18n", key: "sidebar.automation" },
-      { kind: "i18n", key: "sidebar.credentials" },
     ]);
   });
 
@@ -45,10 +39,13 @@ describe("PageRegistry", () => {
     expect(automation.nav!.isActive("runs")).toBe(false);
   });
 
-  it("keeps settings routable without duplicating it in first-level nav", () => {
-    const settings = PAGE_REGISTRY.get("settings_page")!;
-    expect(settings.nav).toBeUndefined();
-    expect(PAGE_REGISTRY.has("settings_page")).toBe(true);
+  it("keeps utility pages routable through settings and the command palette", () => {
+    for (const key of ["settings_page", "task_inbox", "credentials", "optimization_lab"]) {
+      expect(PAGE_REGISTRY.has(key)).toBe(true);
+      expect(PAGE_REGISTRY.get(key)!.nav).toBeUndefined();
+    }
+    expect(PAGE_REGISTRY.get("task_inbox")!.render).toBeFunction();
+    expect(PAGE_REGISTRY.get("optimization_lab")!.render).toBeFunction();
   });
 
   it("marks unmigrated builtins as legacy-rendered", () => {
@@ -127,10 +124,7 @@ describe("migrated builtin pages", () => {
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
       "extensions",
       "digital_humans",
-      "task_inbox",
-      "optimization_lab",
       "automation",
-      "credentials",
     ]);
   });
 

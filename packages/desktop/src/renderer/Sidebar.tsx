@@ -26,7 +26,6 @@ import {
   Trash2,
   UsersRound,
   Wrench,
-  Cloud,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -85,7 +84,7 @@ interface SidebarProps {
 
   onNewConversation: () => void;
   onOpenSearch: () => void;
-  /** Navigate to a registry page's target view (sidebar first-level nav). */
+  /** Navigate to a registry page from the sidebar or its settings menu. */
   onNavigate: (mode: ViewMode) => void;
   onOpenProjectConfig: (id: string) => void;
   onOpenSettingsPage: () => void;
@@ -211,11 +210,7 @@ export function Sidebar({
 
   // Re-render when pages register/unregister (same idiom as panels/PanelArea.tsx:158).
   useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);
-  const navPages = PAGE_REGISTRY.navEntries().filter(
-    (page) =>
-      (page.key !== "task_inbox" || taskInboxEnabled) &&
-      (page.key !== "optimization_lab" || optimizationLabEnabled),
-  );
+  const navPages = PAGE_REGISTRY.navEntries();
 
   // Pin sort (sortProjects: pinned first, then by addedAt asc).
   const orderedProjects = useMemo(() => sortProjects(projects), [projects]);
@@ -394,12 +389,6 @@ export function Sidebar({
           onClick={onOpenSearch}
           active={false}
         />
-        <SidebarItem
-          label={t("sidebar.cloudWorkbench")}
-          Icon={Cloud}
-          onClick={() => void openCloud()}
-          active={false}
-        />
         {/* NOTE: this list used to be hardcoded; the GLOBAL pending-approvals
             badge history note from the automation item still applies — the
             per-session asking dot + dock badge (setBadgeCount) cover it. */}
@@ -534,6 +523,9 @@ export function Sidebar({
             <SettingsMenu
               onOpenSettingsPage={onOpenSettingsPage}
               onNavigate={onNavigate}
+              onOpenCloudWorkbench={() => void openCloud()}
+              taskInboxEnabled={taskInboxEnabled}
+              optimizationLabEnabled={optimizationLabEnabled}
               sidebarCollapsed={sidebarCollapsed}
               petWidgetVisible={petWidgetVisible}
               onTogglePetWidget={onTogglePetWidget}

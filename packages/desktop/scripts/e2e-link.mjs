@@ -17,6 +17,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -121,7 +122,7 @@ try {
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
   await dismissTrustDialog(win);
 
-  await win.getByRole("button", { name: /^(凭证|Credentials)$/i }).click();
+  await navigateSettingsMenu(win, /^(凭证|Credentials)$/i);
   await win
     .getByRole("heading", { name: /^(凭证|Credentials)$/i })
     .waitFor({ state: "visible", timeout: 20_000 });

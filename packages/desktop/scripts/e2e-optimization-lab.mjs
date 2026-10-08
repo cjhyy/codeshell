@@ -13,6 +13,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -173,7 +174,7 @@ async function launch() {
     localStorage.setItem("codeshell.uiLanguage", "en");
   }, projectId);
   await win.reload();
-  await win.getByRole("button", { name: /^(Optimization Lab|优化实验室)$/ }).waitFor();
+  await win.getByRole("button", { name: /^(Settings|设置)$/ }).waitFor();
   await installDialogs();
 }
 async function installDialogs() {
@@ -216,7 +217,7 @@ async function until(read, message, timeout = 30000) {
   throw new Error(message);
 }
 async function openPage() {
-  await win.getByRole("button", { name: /^(Optimization Lab|优化实验室)$/ }).click();
+  await navigateSettingsMenu(win, /^(Optimization Lab|优化实验室)$/);
   await win.getByTestId("optimization-lab-page").waitFor();
 }
 
@@ -405,7 +406,7 @@ async function editDatasetOffline() {
     edited,
     "Form and native export preserve all other fields",
   );
-  await win.getByRole("button", { name: /^(Task center|任务中心)$/ }).click();
+  await navigateSettingsMenu(win, /^(Task center|任务中心)$/, { activity: true });
   await openPage();
   assert.equal(
     await win.getByTestId("optimization-lab-dataset-title").inputValue(),
@@ -539,7 +540,7 @@ try {
   blockRequests = true;
   await win.getByTestId("optimization-lab-start").click();
   await until(async () => requests.length === 1, "First model request did not start");
-  await win.getByRole("button", { name: /^(Task center|任务中心)$/ }).click();
+  await navigateSettingsMenu(win, /^(Task center|任务中心)$/, { activity: true });
   await win.getByTestId("optimization-lab-page").waitFor({ state: "detached" });
   assert.equal(await win.getByTestId("optimization-lab-page").count(), 0);
   blockRequests = false;
