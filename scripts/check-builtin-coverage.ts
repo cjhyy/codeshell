@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertBunTestCompletion } from "./run-bun-test-shard.mjs";
+import { assertBunTestCompletion } from "./bun-test-completion.mjs";
 
 const MIN_LINES = 0.45;
 const MIN_FUNCTIONS = 0.38;

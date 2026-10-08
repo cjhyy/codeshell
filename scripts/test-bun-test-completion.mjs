@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertBunTestCompletion } from "./run-bun-test-shard.mjs";
+import { assertBunTestCompletion } from "./bun-test-completion.mjs";
 
 const directory = mkdtempSync(join(tmpdir(), "codeshell-bun-completion-test-"));
 const wrapper = fileURLToPath(new URL("./run-bun-test-shard.mjs", import.meta.url));
 try {
+  const alias = join(directory, "entry-alias.mjs");
+  if (process.platform !== "win32") symlinkSync(wrapper, alias);
   const cases = [
     [
       "pass",
@@ -31,7 +33,8 @@ try {
   for (const [name, body, succeeds] of cases) {
     const fixture = join(directory, `${name}.test.ts`);
     writeFileSync(fixture, `import { test, expect, afterAll, describe } from "bun:test";\n${body}`);
-    const result = spawnSync(process.execPath, [wrapper, "--timeout", "30000", fixture], {
+    const entry = name === "pass" && process.platform !== "win32" ? alias : wrapper;
+    const result = spawnSync(process.execPath, [entry, "--timeout", "30000", fixture], {
       encoding: "utf8",
       timeout: 35_000,
     });
