@@ -53,6 +53,9 @@ const app = await startLinkServer({
         credential: { access_token: "UPSTREAM-ONLY-IN-LINK" },
       };
     },
+    async repositories() {
+      return { repositories: [{ fullName: "owner/repo", private: true }], truncated: false };
+    },
     async action(action, input, credential, resources) {
       assert.equal(credential.access_token, "UPSTREAM-ONLY-IN-LINK");
       assert.deepEqual(resources, ["owner/repo"]);

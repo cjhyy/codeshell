@@ -57,7 +57,7 @@ const app = await startLinkServer({
   provider: {
     async begin(state) {
       return {
-        url: `https://github.com/login/oauth/authorize?state=${state}`,
+        url: `https://github.com/login/oauth/authorize?client_id=fixture-client&state=${state}`,
         verifier: "fixture",
       };
     },
@@ -70,6 +70,9 @@ const app = await startLinkServer({
             : { id: "1", login: "alice" },
         credential: { access_token: "UPSTREAM-ONLY-IN-LINK" },
       };
+    },
+    async repositories() {
+      return { repositories: [{ fullName: "owner/repo", private: true }], truncated: false };
     },
     async action(action, input, credential, resources) {
       assert.equal(credential.access_token, "UPSTREAM-ONLY-IN-LINK");
@@ -97,36 +100,23 @@ try {
   assert.equal(login.status, 303);
   const cookie = login.headers.get("set-cookie").split(";")[0];
   const snapshot = await (await request("/api/v1/links", { headers: { cookie } })).json();
-  const upstream = await form(
-    "/api/v1/links/providers/github/authorize",
-    { csrf: snapshot.csrf },
-    cookie,
-  );
-  const state = new URL(upstream.headers.get("location")).searchParams.get("state");
-  assert.equal(
-    (
-      await request(`/oauth/upstream/github/callback?code=one&state=${state}`, {
-        headers: { cookie },
-      })
-    ).status,
-    303,
-  );
-  if (mode === "native") {
-    const second = await form(
+  const seedUpstream = async (code) => {
+    const upstream = await form(
       "/api/v1/links/providers/github/authorize",
       { csrf: snapshot.csrf },
       cookie,
     );
-    const secondState = new URL(second.headers.get("location")).searchParams.get("state");
+    const state = new URL(upstream.headers.get("location")).searchParams.get("state");
     assert.equal(
       (
-        await request(`/oauth/upstream/github/callback?code=two&state=${secondState}`, {
+        await request(`/oauth/upstream/github/callback?code=${code}&state=${state}`, {
           headers: { cookie },
         })
       ).status,
       303,
     );
-  }
+  };
+  if (mode !== "native") await seedUpstream("one");
   if (mode !== "web") {
     const desktopHome = join(root, "desktop-home");
     const localProjects = [join(desktopHome, "project-a"), join(desktopHome, "project-b")];
@@ -186,7 +176,7 @@ try {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        name: "Host integration fixture",
+        name: "CodeShell",
         redirectUris: [
           mode === "native"
             ? "http://127.0.0.1:43827/link/callback"
@@ -202,6 +192,7 @@ try {
       issuer,
       client,
       screenshots,
+      seedSecondAccount: () => seedUpstream("two"),
       readLinkState: async () => (await request("/api/v1/links", { headers: { cookie } })).json(),
     });
   } else {
@@ -323,7 +314,7 @@ try {
       );
       if (mode !== "web") {
         await page.locator('input[name="password"]').fill("long-private-fixture-password");
-        await page.getByRole("button", { name: "登录", exact: true }).click();
+        await page.getByRole("button", { name: "登录并继续", exact: true }).click();
       }
       await page.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
       if (mode === "electron") {
@@ -356,7 +347,7 @@ try {
           "An attempt belongs to its original project handler",
         );
       }
-      await page.locator('textarea[name="repositories"]').fill("owner/repo");
+      await page.locator('input[type="checkbox"][value="owner/repo"]').check();
       await page.getByRole("button", { name: "允许只读访问", exact: true }).click();
       await page.getByText("已连接 alice，授权已保存到原项目。", { exact: true }).waitFor();
       assert.equal(new URL(page.url()).search, "");
@@ -406,7 +397,7 @@ try {
       // Refusal returns to the same Host and cancels the private attempt without exchanging a code.
       await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
       await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
-      await page.getByRole("button", { name: "拒绝", exact: true }).click();
+      await page.getByRole("button", { name: "取消", exact: true }).click();
       await page.getByText("授权已取消，没有新增连接。", { exact: true }).waitFor();
       assert.equal(completes, 1);
       if (mode === "paired") {
@@ -422,7 +413,7 @@ try {
           (id) => window.codeshell.mobileRemote.revokeDevice(id),
           devices[0].id,
         );
-        await page.locator('textarea[name="repositories"]').fill("owner/repo");
+        await page.locator('input[type="checkbox"][value="owner/repo"]').check();
         await page.getByRole("button", { name: "允许只读访问", exact: true }).click();
         await page
           .getByText("原登录已失效。请返回工作台登录，并重新发起授权。", { exact: true })

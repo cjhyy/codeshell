@@ -125,6 +125,9 @@ try {
           credential: { access_token: "UPSTREAM-ONLY-IN-LINK" },
         };
       },
+      async repositories() {
+        return { repositories: [{ fullName: "owner/repo", private: true }], truncated: false };
+      },
       async action(action, input, credential, resources) {
         assert.equal(credential.access_token, "UPSTREAM-ONLY-IN-LINK");
         assert.deepEqual(resources, ["owner/repo"]);
@@ -276,7 +279,7 @@ try {
   await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
   await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
   await page.locator('input[name="password"]').fill(password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByRole("button", { name: "登录并继续", exact: true }).click();
   assert.equal(
     (
       await context.request.post(
@@ -289,7 +292,7 @@ try {
     ).status(),
     404,
   );
-  await page.locator('textarea[name="repositories"]').fill("owner/repo");
+  await page.locator('input[type="checkbox"][value="owner/repo"]').check();
   await page.getByRole("button", { name: "允许只读访问", exact: true }).click();
   await page.getByText("已连接 alice，授权已保存到原项目。", { exact: true }).waitFor();
   await page.getByRole("link", { name: "返回原项目", exact: true }).click();
