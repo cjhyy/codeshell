@@ -195,9 +195,17 @@ describe("transcript history hydration after a background resume", () => {
     }
   });
 
-  for (const mode of ["normal", "attachment-only", "injected", "agent", "steer"] as const) {
+  for (const mode of [
+    "normal",
+    "attachment-only",
+    "injected",
+    "agent",
+    "steer",
+    "steer-text",
+  ] as const) {
     test(`existing hydration preserves actual Engine ${mode} input display after RAM eviction`, async () => {
       const fixture = await outputUserInputFixture(mode);
+      const steering = mode === "steer" || mode === "steer-text";
       const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
       for (const event of fixture.events) snapshots.append("saved", event);
       try {
@@ -236,25 +244,27 @@ describe("transcript history hydration after a background resume", () => {
           ]);
           expect(JSON.stringify(hook.result.current.state)).not.toContain("PRIVATE_MACHINE_INPUT");
         } else {
-          expect(users).toHaveLength(mode === "steer" ? 2 : 1);
+          expect(users).toHaveLength(steering ? 2 : 1);
           expect(users.at(-1)).toMatchObject({
             text: fixture.prompt,
-            clientMessageId: mode === "steer" ? "fixture-steer-client" : "fixture-input",
-            ...(mode === "steer"
-              ? { steerId: "fixture-steer", injected: true, pending: false }
-              : {}),
-            attachments: fixture.attachments.map((attachment) => ({
-              kind: attachment.kind,
-              path: attachment.path,
-              absPath: attachment.absPath,
-              sessionId: "saved",
-              originalName: attachment.originalName,
-              size: attachment.size,
-              mime: attachment.mime,
-            })),
+            clientMessageId: steering ? "fixture-steer-client" : "fixture-input",
+            ...(steering ? { steerId: "fixture-steer", injected: true, pending: false } : {}),
+            ...(mode === "steer-text"
+              ? {}
+              : {
+                  attachments: fixture.attachments.map((attachment) => ({
+                    kind: attachment.kind,
+                    path: attachment.path,
+                    absPath: attachment.absPath,
+                    sessionId: "saved",
+                    originalName: attachment.originalName,
+                    size: attachment.size,
+                    mime: attachment.mime,
+                  })),
+                }),
           });
         }
-        if (mode === "steer") {
+        if (steering) {
           const live = fixture.events.reduce(
             (state, event) => applyStreamEvent(state, event),
             INITIAL_STATE,

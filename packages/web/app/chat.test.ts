@@ -13,9 +13,17 @@ import {
 } from "../../core/src/session/output-journal.js";
 import { outputUserInputFixture } from "../../../tests/fixtures/output-journal-user-input.js";
 
-for (const mode of ["normal", "attachment-only", "injected", "agent", "steer"] as const) {
+for (const mode of [
+  "normal",
+  "attachment-only",
+  "injected",
+  "agent",
+  "steer",
+  "steer-text",
+] as const) {
   test(`Hub existing recovery preserves actual Engine ${mode} input display`, async () => {
     const fixture = await outputUserInputFixture(mode);
+    const steering = mode === "steer" || mode === "steer-text";
     try {
       const read = (options = {}) =>
         readOutputJournal(fixture.sessionRoot, "saved", { ...options, maxFrames: 2 });
@@ -32,7 +40,7 @@ for (const mode of ["normal", "attachment-only", "injected", "agent", "steer"] a
         [],
       );
       expect(result).not.toBeNull();
-      if (mode === "steer") {
+      if (steering) {
         const live = fixture.events.reduce(reduceStream, initialChatState());
         const display = (items: typeof live.items) =>
           items
@@ -50,16 +58,20 @@ for (const mode of ["normal", "attachment-only", "injected", "agent", "steer"] a
         expect(users).toEqual([]);
         expect(JSON.stringify(result!.chat)).not.toContain("PRIVATE_MACHINE_INPUT");
       } else {
-        expect(users).toHaveLength(mode === "steer" ? 2 : 1);
+        expect(users).toHaveLength(steering ? 2 : 1);
         expect(users.at(-1)).toMatchObject({
           text: fixture.prompt,
-          clientMessageId: mode === "steer" ? "fixture-steer-client" : "fixture-input",
-          attachments: fixture.attachments.map((attachment) => ({
-            name: attachment.originalName,
-            size: attachment.size,
-            mime: attachment.mime,
-            path: attachment.path,
-          })),
+          clientMessageId: steering ? "fixture-steer-client" : "fixture-input",
+          ...(mode === "steer-text"
+            ? {}
+            : {
+                attachments: fixture.attachments.map((attachment) => ({
+                  name: attachment.originalName,
+                  size: attachment.size,
+                  mime: attachment.mime,
+                  path: attachment.path,
+                })),
+              }),
         });
       }
     } finally {

@@ -501,10 +501,10 @@ export class ChatSession {
             ? {
                 ...event,
                 runId,
-                // Rich queued input owns its submit identity. Other stream
+                // New queued input owns its submit identity. Other stream
                 // events retain this run's envelope, including legacy peers.
                 clientMessageId:
-                  event.type === "steer_injected" && event.transcriptMessage
+                  event.type === "steer_injected" && event.sessionId === this.id
                     ? event.clientMessageId
                     : clientMessageId,
               }

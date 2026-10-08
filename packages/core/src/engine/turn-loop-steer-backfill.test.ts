@@ -259,6 +259,8 @@ describe("TurnLoop steer finalize backfill", () => {
       type: "steer_injected",
       text: "check the adjacent result first",
       id: "steer-after-tool",
+      sessionId: deps.sessionId,
+      clientMessageId: "client-after-tool",
     });
   });
 
@@ -295,6 +297,8 @@ describe("TurnLoop steer finalize backfill", () => {
       type: "steer_injected",
       text: "one more thing",
       id: "steer-1",
+      sessionId: deps.sessionId,
+      clientMessageId: "client-1",
     });
   });
 
@@ -624,6 +628,14 @@ describe("TurnLoop steer finalize backfill", () => {
         (e) =>
           typeof e === "object" && e !== null && (e as { type?: string }).type === "steer_injected",
       ),
-    ).toEqual([{ type: "steer_injected", text: "first steer", id: "steer-1" }]);
+    ).toEqual([
+      {
+        type: "steer_injected",
+        text: "first steer",
+        id: "steer-1",
+        sessionId: deps.sessionId,
+        clientMessageId: "client-dup",
+      },
+    ]);
   });
 });

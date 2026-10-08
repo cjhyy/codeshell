@@ -2304,13 +2304,9 @@ export class TurnLoop {
         type: "steer_injected",
         text,
         id,
-        ...(display.transcriptMessage
-          ? {
-              transcriptMessage: display.transcriptMessage,
-              sessionId: this.deps.sessionId,
-              clientMessageId,
-            }
-          : {}),
+        sessionId: this.deps.sessionId,
+        ...(clientMessageId ? { clientMessageId } : {}),
+        ...(display.transcriptMessage ? { transcriptMessage: display.transcriptMessage } : {}),
       });
     }
     return consumed;

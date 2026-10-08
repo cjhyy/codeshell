@@ -28,8 +28,9 @@ registerProvider("output-user-display-fixture", InputDisplayClient);
 
 /** Actual Engine/attachment policy; callers use their existing recovery adapter. */
 export async function outputUserInputFixture(
-  mode: "normal" | "attachment-only" | "injected" | "agent" | "steer",
+  mode: "normal" | "attachment-only" | "injected" | "agent" | "steer" | "steer-text",
 ) {
+  const steering = mode === "steer" || mode === "steer-text";
   const root = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-output-input-")));
   const sessionRoot = join(root, "sessions"),
     sessionId = "saved";
@@ -68,7 +69,7 @@ export async function outputUserInputFixture(
     sessionStorageDir: sessionRoot,
     settingsScope: "isolated",
     headless: true,
-    maxTurns: mode === "steer" ? 3 : 2,
+    maxTurns: steering ? 3 : 2,
     enabledBuiltinTools: [],
     llm: {
       provider: "output-user-display-fixture",
@@ -106,7 +107,7 @@ export async function outputUserInputFixture(
   const hidden = mode === "agent" || mode === "injected";
   const prompt = hidden
     ? "<system-reminder>PRIVATE_MACHINE_INPUT</system-reminder>"
-    : mode === "normal" || mode === "steer"
+    : mode === "normal" || steering
       ? "Inspect these attachments"
       : "";
   try {
@@ -114,20 +115,18 @@ export async function outputUserInputFixture(
       sessionId,
       behaviorMode: "fixture",
       clientMessageId: "fixture-input",
-      ...(!hidden && mode !== "steer"
-        ? { attachments, ...(prompt ? { displayText: prompt } : {}) }
-        : {}),
+      ...(!hidden && !steering ? { attachments, ...(prompt ? { displayText: prompt } : {}) } : {}),
       ...(mode === "injected" ? { injected: true } : {}),
       ...(mode === "agent" ? { agentDirection: { envelopeIds: [], correlationIds: [] } } : {}),
       onStream: (event: StreamEvent) => {
         events.push(event);
-        if (mode === "steer" && !steerAccepted && event.type === "text_delta") {
+        if (steering && !steerAccepted && event.type === "text_delta") {
           const queued = engine.enqueueSteer(
             sessionId,
             prompt,
             "fixture-steer",
             "fixture-steer-client",
-            attachments,
+            mode === "steer" ? attachments : undefined,
           );
           if (!queued.accepted) throw new Error("Actual Engine rejected active attachment steer");
           steerAccepted = true;
@@ -135,13 +134,12 @@ export async function outputUserInputFixture(
       },
     };
     // Exercise the real Host queue/envelope, not only raw Engine callbacks.
-    const result =
-      mode === "steer"
-        ? await new ChatSession({ id: sessionId, engine }).enqueueTurn(
-            "Start before steering",
-            options,
-          )
-        : await engine.run(prompt, options);
+    const result = steering
+      ? await new ChatSession({ id: sessionId, engine }).enqueueTurn(
+          "Start before steering",
+          options,
+        )
+      : await engine.run(prompt, options);
     if (result.reason !== "completed")
       throw new Error(`Fixture run failed: ${result.reason}: ${result.text}`);
     const transcript = readFileSync(join(sessionRoot, sessionId, "transcript.jsonl"), "utf8")
@@ -151,6 +149,7 @@ export async function outputUserInputFixture(
     const journal = readFileSync(join(sessionRoot, sessionId, "output-journal.jsonl"), "utf8");
     if (
       !hidden &&
+      mode !== "steer-text" &&
       !transcript.some(
         (event) =>
           Array.isArray(event.data?.content) &&
@@ -160,13 +159,14 @@ export async function outputUserInputFixture(
       throw new Error("Fixture did not send a real image block through Engine");
     if (
       !hidden &&
+      mode !== "steer-text" &&
       !requests.some(
         (request) =>
           request.includes(png.toString("base64")) && request.includes(attachments[0].path),
       )
     )
       throw new Error("The actual model request did not consume the prepared attachments");
-    if (mode === "steer" && (!steerAccepted || requests.length < 2))
+    if (steering && (!steerAccepted || requests.length < 2))
       throw new Error("Fixture never consumed steer in a subsequent model request");
     if (journal.includes(png.toString("base64"))) throw new Error("Journal duplicated image bytes");
     if (journal.includes("PRIVATE_MACHINE_INPUT")) throw new Error("Journal exposed hidden input");

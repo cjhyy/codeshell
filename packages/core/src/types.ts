@@ -681,6 +681,7 @@ type StreamEventPayload =
       type: "steer_injected";
       text: string;
       id?: string;
+      /** New producers bind the queued input identity to this Session. */
       sessionId?: string;
     } & UserMessageDisplayPayload)
   | { type: "text_delta"; text: string; tokens?: number; agentId?: string }

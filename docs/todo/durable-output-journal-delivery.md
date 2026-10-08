@@ -178,6 +178,14 @@ Cache admission also binds the verified file stamp to the captured scan size:
 an append between size capture and stamp capture cannot cache an older head
 under the new full-file identity. A scheduled real writer regression proves
 the next fresh query sees that last durable append even if no further output
-changes the stamp. Attachment-steer live/recovery tests enter through the actual
-ChatSession queue; its envelope preserves the queued input's own submit id while
+changes the stamp. Plaintext and attachment-steer live/recovery tests enter through the actual
+ChatSession queue; all new steer events bind their own submit identity to a
+Session id. The envelope preserves that queued input's own submit id while
 retaining the parent run id, so the original user bubble is not overwritten.
+
+The only Core steer producer is TurnLoop. ChatSession's run-envelope wrapper
+keeps a Session-bound steer's own submit id and the parent run id; protocol
+notifications, Main snapshots and Hub replay retain these fields. Desktop
+recognizes the new Session-bound identity and keeps old peers' unbound envelopes
+compatible. The same rule applies to plaintext and file/image guidance, and both
+actual ChatSession modes compare live with journal replay through both reducers.
