@@ -1,5 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { closeSync, constants, fsyncSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fsyncSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { canonicalJson, sha256Hex } from "./contracts/canonical-json.js";
@@ -33,6 +41,9 @@ export interface BeginOperationInput {
   finalPhase?: boolean;
 }
 export interface OperationReservation extends BeginOperationInput {
+  owner: string;
+  generation: number;
+  grantRevision: number;
   startedAt: number;
   deadlineAt: number;
   status: "active" | "settled" | "unknown";
@@ -40,6 +51,9 @@ export interface OperationReservation extends BeginOperationInput {
   attemptIds: string[];
 }
 export interface AttemptReservation {
+  owner: string;
+  generation: number;
+  grantRevision: number;
   attemptId: string;
   operationId: string;
   role: CallRole;
@@ -204,6 +218,9 @@ function summarize(events: LedgerEvent[], initialFinal: ResourceAllocation): Led
       operations[event.operationId] = {
         operationId: event.operationId,
         role: event.role,
+        owner: event.owner,
+        generation: event.generation,
+        grantRevision: event.grantRevision,
         ...payload,
         startedAt: event.at,
         status: "active",
@@ -220,6 +237,11 @@ function summarize(events: LedgerEvent[], initialFinal: ResourceAllocation): Led
     const operation = operations[event.operationId];
     if (!operation || operation.role !== event.role || operation.status !== "active")
       throw new Error("optimization_lab: event has no active operation");
+    if (
+      !["unknown", "operation_unknown"].includes(event.kind) &&
+      (event.owner !== operation.owner || event.generation !== operation.generation)
+    )
+      throw new Error("optimization_lab: operation writer generation mismatch");
     if (event.kind === "operation_finish" || event.kind === "operation_unknown") {
       if (
         event.attemptId !== null ||
@@ -243,6 +265,9 @@ function summarize(events: LedgerEvent[], initialFinal: ResourceAllocation): Led
         throw new Error("optimization_lab: duplicate or excess attempt");
       attempts[event.attemptId] = {
         attemptId: event.attemptId,
+        owner: event.owner,
+        generation: event.generation,
+        grantRevision: event.grantRevision,
         operationId: event.operationId,
         role: event.role,
         ...payload,
@@ -302,7 +327,7 @@ function summarize(events: LedgerEvent[], initialFinal: ResourceAllocation): Led
   }
   const totals = zeroTotals();
   for (const attempt of Object.values(attempts)) {
-    totals.requests += 1;
+    totals.requests = checkedSum(totals.requests, 1);
     if (attempt.status === "settled") {
       totals.reportedTokens = checkedSum(totals.reportedTokens, usageTokens(attempt.usage!)!);
       if (attempt.actualCostUsd === null) {
@@ -379,6 +404,9 @@ export class ExperimentLedger {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       }
+      const repairInfo = lstatSync(repairDirectory);
+      if (repairInfo.isSymbolicLink() || !repairInfo.isDirectory())
+        throw new Error("optimization_lab: unsafe ledger repair directory");
       const evidence = JSON.stringify({
         schemaVersion: 1,
         originalHash: sha256Hex(text),
@@ -516,7 +544,17 @@ export class ExperimentLedger {
     RoleSchema.parse(input.role);
     return this.context(id, fence, (directory, events, summary, grant, now) => {
       const existing = summary.operations[input.operationId];
-      if (existing) return existing; // Idempotent identity never reopens or resets deadline.
+      if (existing) {
+        if (
+          existing.role !== input.role ||
+          existing.timeoutMs !== input.timeoutMs ||
+          existing.maxRequests !== input.maxRequests ||
+          existing.maxOutputTokens !== input.maxOutputTokens ||
+          Boolean(existing.finalPhase) !== (input.finalPhase ?? input.role === "final")
+        )
+          throw new Error("optimization_lab: operation identity conflict");
+        return existing; // Idempotent identity never reopens or resets deadline.
+      }
       if (Object.values(summary.operations).some((operation) => operation.status === "active"))
         throw new Error("optimization_lab: another operation is active");
       const payload = BeginPayloadSchema.parse({
@@ -585,7 +623,13 @@ export class ExperimentLedger {
       if (summary.attempts[attemptId])
         throw new Error("optimization_lab: attempt identity already used");
       const operation = summary.operations[input.operationId];
-      if (!operation || operation.status !== "active" || now >= operation.deadlineAt)
+      if (
+        !operation ||
+        operation.status !== "active" ||
+        now >= operation.deadlineAt ||
+        operation.owner !== fence.owner ||
+        operation.generation !== fence.generation
+      )
         throw new Error("optimization_lab: operation missing, closed or expired");
       const payload = ReservePayloadSchema.parse({
         estimatedTokens: input.estimatedTokens,
@@ -639,7 +683,9 @@ export class ExperimentLedger {
         attempt.status !== "reserved" ||
         !operation ||
         operation.status !== "active" ||
-        now >= operation.deadlineAt
+        now >= operation.deadlineAt ||
+        operation.owner !== fence.owner ||
+        operation.generation !== fence.generation
       )
         throw new Error("optimization_lab: attempt cannot dispatch");
       this.assertBudget(summary, grant);
@@ -683,7 +729,11 @@ export class ExperimentLedger {
             throw new Error("optimization_lab: conflicting duplicate settlement");
           return;
         }
-        if (attempt.status !== "dispatched")
+        if (
+          attempt.status !== "dispatched" ||
+          attempt.owner !== fence.owner ||
+          attempt.generation !== fence.generation
+        )
           throw new Error("optimization_lab: attempt cannot settle");
         if (input.usage === null || usageTokens(LedgerUsageSchema.parse(input.usage)) === null) {
           this.append(directory, events, fence, grant, {
@@ -745,6 +795,8 @@ export class ExperimentLedger {
         const operation = summary.operations[operationId];
         if (!operation) throw new Error("optimization_lab: unknown operation");
         if (operation.status !== "active") return;
+        if (operation.owner !== fence.owner || operation.generation !== fence.generation)
+          throw new Error("optimization_lab: operation writer generation mismatch");
         if (
           operation.attemptIds.some((attemptId) =>
             ["reserved", "dispatched"].includes(summary.attempts[attemptId].status),

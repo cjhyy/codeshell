@@ -183,8 +183,8 @@ export function writeAtomicFile(path: string, text: string, maxBytes = MAX_ARTIF
   }
 }
 
-function readJson<T>(path: string): T | undefined {
-  const text = readBoundedFile(path);
+function readJson<T>(path: string, maxBytes = MAX_ARTIFACT_BYTES): T | undefined {
+  const text = readBoundedFile(path, maxBytes);
   if (text === undefined) return undefined;
   try {
     return JSON.parse(text) as T;
@@ -286,13 +286,12 @@ export class ExperimentStore {
         .filter((name) => /^[1-9][0-9]*\.json$/.test(name))
         .map((name) => Number(name.slice(0, -5)))
         .sort((a, b) => a - b);
-      if (revisions.length > 10000)
-        throw new Error("optimization_lab: grant history exceeds bound");
+      if (revisions.length > 1000) throw new Error("optimization_lab: grant history exceeds bound");
       for (let index = 0; index < revisions.length; index++) {
         const revision = revisions[index];
         if (revision !== index + 1) throw new Error("optimization_lab: grant history gap");
         const next = verifyBudgetGrant(
-          readJson(join(grantsDirectory, `${revision}.json`)),
+          readJson(join(grantsDirectory, `${revision}.json`), 4096),
           plan.planHash,
         );
         if (
