@@ -4,7 +4,7 @@ import { credentialAccessScope, getCredentialAccess } from "../credentials/acces
 import { getLocalLinkProvider } from "../links/providers.js";
 import { isRemoteLinkCredential } from "../links/remote.js";
 import { savedLinkConnectionStatus } from "../links/status.js";
-import { linkAuthoritySnapshot } from "../links/authority.js";
+import { allowsLinkAction, linkAuthoritySnapshot } from "../links/authority.js";
 import type { SourceAdapterContext } from "./adapter.js";
 import type { SourceDefinition } from "./types.js";
 
@@ -72,10 +72,7 @@ export function isLinkSourceAvailable(
         ))
     )
       return false;
-    const capabilities = credential.meta?.linkCapabilityIds;
-    return remote
-      ? !!capabilities?.includes(`${view.providerId}.${view.action}`)
-      : !capabilities?.length || capabilities.includes(`${view.providerId}.${view.action}`);
+    return allowsLinkAction(credential, view.providerId, view.action);
   } catch {
     return false;
   }

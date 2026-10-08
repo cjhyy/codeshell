@@ -276,6 +276,7 @@ function collectEngine(
     promptSections,
     dynamicContextProviders: collectMany(registered, (m) => m.engine?.dynamicContextProviders),
     instructionBoundaries: collectSingle(registered, (m) => m.engine?.instructionBoundary),
+    instructionBindings: collectSingle(registered, (m) => m.engine?.instructionBindings),
     artifactDetectors: collectMany(registered, (m) => m.engine?.artifactDetectors),
     fileHistory: collectMany(registered, (m) => m.engine?.fileHistory),
     sessionWorkspaces: collectSingle(registered, (m) => m.engine?.sessionWorkspace),

@@ -384,3 +384,57 @@ test("real OpenAI SDK internal retry has a distinct durable admission for every 
   expect(result.observations.map((item) => item.outcome)).toEqual(["unknown", "settled"]);
   expect(result.status).toBe("unknown");
 });
+
+test("isolated Engine SSE requires terminal authoritative usage and keeps partial streams unknown", async () => {
+  for (const provider of ["openai", "anthropic"] as const) {
+    for (const complete of [true, false]) {
+      const a = accounting(1);
+      const frames =
+        provider === "openai"
+          ? [{ model: "lab-fixture", usage: { prompt_tokens: 12, completion_tokens: 4 } }]
+          : [
+              {
+                type: "message_start",
+                message: { model: "lab-fixture", usage: { input_tokens: 12, output_tokens: 0 } },
+              },
+              { type: "message_delta", usage: { output_tokens: 4 } },
+            ];
+      const stream =
+        frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join("") +
+        (complete
+          ? provider === "openai"
+            ? "data: [DONE]\n\n"
+            : 'data: {"type":"message_stop"}\n\n'
+          : "");
+      const transport = createMeteredFetch({
+        connection: connection(provider),
+        limits,
+        maxContextBytes: 10000,
+        accounting: a,
+        agentStream: true,
+        upstream: (async () =>
+          new Response(stream, {
+            headers: { "content-type": "text/event-stream" },
+          })) as typeof fetch,
+      });
+      await transport.fetch(
+        `http://localhost:9001${provider === "openai" ? "/chat/completions" : "/v1/messages"}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            model: "lab-fixture",
+            messages: [{ role: "user", content: "current case" }],
+            max_tokens: 100,
+            temperature: 0.3,
+            stream: true,
+          }),
+        },
+      );
+      expect(a.count).toBe(1);
+      expect(transport.observations[0]?.outcome).toBe(complete ? "settled" : "unknown");
+      expect(transport.observations[0]?.usage).toEqual(
+        complete ? expect.objectContaining({ inputTokens: 12, outputTokens: 4 }) : null,
+      );
+    }
+  }
+});

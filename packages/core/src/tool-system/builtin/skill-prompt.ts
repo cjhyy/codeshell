@@ -102,7 +102,7 @@ export function buildSkillListing(
       const colon = skill.name.indexOf(":");
       const group = colon > 0 ? skill.name.slice(0, colon) : "用户 / 项目";
       const rows = groups.get(group) ?? [];
-      rows.push(`- ${skill.name}${description ? `: ${description}` : ""}`);
+      rows.push(`- ${skill.name}:${description ? ` ${description}` : ""}`);
       groups.set(group, rows);
     }
     const sections = [...groups]

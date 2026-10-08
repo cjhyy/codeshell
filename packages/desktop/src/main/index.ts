@@ -215,6 +215,7 @@ import {
 } from "../shared/pet-settings.js";
 import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
+import { createDesktopModelRequestSigner } from "./model-request-signing-service.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { listDesktopLinkProviders } from "./link-provider-catalog.js";
 import { createDesktopLinkConnections } from "./link-connections.js";
@@ -1547,6 +1548,16 @@ async function createWindow(): Promise<BrowserWindow> {
           input as unknown as CreateAutomationInput,
           desktopAutomationAuthorityDeps(),
         )) as unknown as Record<string, unknown>,
+      createDesktopModelRequestSigner({
+        hostDirectory: codeShellHome(),
+        sessionStorageDir: sessionsRoot(),
+        cipher: new SafeStorageCipher(),
+        encryptionAvailable: () =>
+          safeStorage.isEncryptionAvailable() &&
+          (process.platform !== "linux" ||
+            safeStorage.getSelectedStorageBackend() !== "basic_text"),
+        hasActiveEphemeralOwner: (sessionId) => quickChatOwnership.hasActiveOwner(sessionId),
+      }),
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the

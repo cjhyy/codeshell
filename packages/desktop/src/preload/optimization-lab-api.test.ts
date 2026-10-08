@@ -26,6 +26,7 @@ test("lab preload has dedicated authorization and native file channels, no raw g
   await api.exportDataset({ target, text: '{\n  "cases": []\n}\n' });
   await api.previewEvidence({ target, runIds: ["run-1"] });
   await api.importEvidence({ target, previewId: "preview", bundleHash: "a".repeat(64) });
+  await api.adopt({ target, id: "one", reportHash: "a".repeat(64), scope: { kind: "project" } });
   expect(calls.map((call) => call[0])).toEqual([
     "optimizationLab:query",
     "optimizationLab:authorize",
@@ -35,6 +36,7 @@ test("lab preload has dedicated authorization and native file channels, no raw g
     "optimizationLab:exportDataset",
     "optimizationLab:previewEvidence",
     "optimizationLab:importEvidence",
+    "optimizationLab:adopt",
   ]);
   expect(calls[4]).toEqual(["optimizationLab:importDataset", { target }]);
   expect(calls[5]).toEqual([

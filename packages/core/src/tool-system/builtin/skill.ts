@@ -114,6 +114,10 @@ export async function skillTool(args: Record<string, unknown>, ctx?: ToolContext
     }
   }
 
+  const frozen = ctx?.instructionSnapshots?.find((snapshot) => snapshot.name === skillName);
+  if (frozen)
+    return `Frozen Skill revision: ${frozen.revision}\n\n${frozen.body.replace(/\$ARGUMENTS/g, skillArgs).replace(/\{args\}/g, skillArgs)}`;
+
   // A4: scan skills from the Engine's cwd, not the host process cwd.
   const skills = scanSkills(ctx?.cwd ?? process.cwd(), {
     disabledSkills,

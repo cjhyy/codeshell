@@ -10,9 +10,10 @@ import type { CreateMessageOptions } from "../types.js";
  */
 
 /** Stub that records each request body and always succeeds. */
-function clientThatSucceeds(
-  config: ConstructorParameters<typeof OpenAIClient>[0],
-): { client: OpenAIClient; bodies: () => any[] } {
+function clientThatSucceeds(config: ConstructorParameters<typeof OpenAIClient>[0]): {
+  client: OpenAIClient;
+  bodies: () => any[];
+} {
   const bodies: any[] = [];
   const client = new OpenAIClient(config);
   (client as any)._client = {
@@ -39,6 +40,32 @@ const opts: CreateMessageOptions = {
 };
 
 describe("OpenAIClient extraBody passthrough", () => {
+  it("cannot replace the selected model, visible tools, conversation or transport mode", async () => {
+    const { client, bodies } = clientThatSucceeds({
+      provider: "openai",
+      model: "gpt-4o",
+      apiKey: "test",
+      extraBody: {
+        model: "other-model",
+        messages: [{ role: "user", content: "unreviewed replacement" }],
+        tools: [{ type: "function", function: { name: "HiddenTool" } }],
+        stream: true,
+        stream_options: { include_usage: false },
+      },
+    });
+    await client.createMessage(opts);
+    expect(bodies()[0]).toMatchObject({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "sys" },
+        { role: "user", content: "hi" },
+      ],
+    });
+    expect(bodies()[0].stream).toBeFalsy();
+    expect(bodies()[0].tools).toBeUndefined();
+    expect(bodies()[0].stream_options).toBeUndefined();
+  });
+
   it("injects every extraBody key into the request body", async () => {
     // gpt-4o accepts classic sampling params (temperature/top_p not rejected).
     const { client, bodies } = clientThatSucceeds({

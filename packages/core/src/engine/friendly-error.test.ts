@@ -2,6 +2,21 @@ import { describe, it, expect } from "bun:test";
 import { friendlyError, formatFriendlyError } from "./friendly-error.js";
 
 describe("friendlyError", () => {
+  it("explains fail-closed request custody and durability without provider credentials", () => {
+    const custody = formatFriendlyError(
+      new Error("Model request boundary validation failed (custody)"),
+    );
+    expect(custody).toContain("Host could not securely sign this Session");
+    expect(custody).toContain("system keyring");
+    expect(custody).toContain("This attempt was stopped before sending");
+    const durability = formatFriendlyError(
+      new Error("Model request boundary validation failed (transcript)"),
+    );
+    expect(durability).toContain("recorded durably");
+    expect(durability).toContain("storage is writable");
+    expect(durability).not.toContain("retried automatically");
+  });
+
   it("maps 401 / invalid key to an auth message + suggestion", () => {
     const f = friendlyError(new Error("Request failed: 401 invalid api key"));
     expect(f.message).toContain("Authentication failed");

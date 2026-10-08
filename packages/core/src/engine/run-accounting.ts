@@ -15,6 +15,7 @@ import type { LLMClientBase } from "../llm/client-base.js";
 import type { Transcript } from "../session/transcript.js";
 import type { SessionBundle, SessionStateFieldPatch } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
+import type { ModelRequestBinding } from "../model-request-boundary/context.js";
 import type { TurnLoop } from "./turn-loop.js";
 
 export interface RunUsageAccounting {
@@ -106,6 +107,8 @@ export function wireRunModelFacade(args: {
   auxSummaryClient: LLMClientBase;
   transcript: Transcript;
   accounting: RunUsageAccounting;
+  assertInstructionsCurrent?: () => void;
+  requestBinding?: ModelRequestBinding;
 }): {
   modelFacade: ModelFacade;
   getRunUsage: () => ReturnType<ModelFacade["getUsage"]>;
@@ -113,7 +116,7 @@ export function wireRunModelFacade(args: {
   const { llmClient, auxSummaryClient, transcript, accounting } = args;
 
   // Create components (requires resolved llmClient).
-  const modelFacade = new ModelFacade(llmClient, transcript);
+  const modelFacade = new ModelFacade(llmClient, transcript, args.requestBinding);
   const getRunUsage = () => {
     const visible = modelFacade.getUsage();
     const externalRunUsage = accounting.getExternalRunUsage();
@@ -129,6 +132,7 @@ export function wireRunModelFacade(args: {
   };
   const callPrimaryModel = modelFacade.call.bind(modelFacade);
   modelFacade.call = async (...callArgs: Parameters<ModelFacade["call"]>) => {
+    args.assertInstructionsCurrent?.();
     // A primary-model summary may itself exhaust the Goal budget. Do not
     // issue the main turn request after that billed sub-call; return control
     // to TurnLoop, whose existing post-response guard emits and persists the
@@ -153,6 +157,7 @@ export function wireRunModelFacade(args: {
   // request out of the foreground tracker while billing and reporting it to
   // the owning session/Goal budget.
   modelFacade.summarize = async (sysPrompt: string, userMsg: string, signal?: AbortSignal) => {
+    args.assertInstructionsCurrent?.();
     const resp = await auxSummaryClient.createMessage({
       systemPrompt: sysPrompt,
       messages: [{ role: "user", content: userMsg }],

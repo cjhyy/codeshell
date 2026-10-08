@@ -299,6 +299,9 @@ type ForkEventPolicy = "copy" | "skip";
  * malformed persisted transcripts.
  */
 const FORK_EVENT_POLICY = {
+  // Signed wire receipts remain bound to the original Session incarnation.
+  model_request_boundary: "skip",
+  model_request_attempt: "skip",
   message: "copy",
   tool_use: "copy",
   tool_result: "copy",

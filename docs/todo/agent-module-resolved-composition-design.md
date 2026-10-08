@@ -1,6 +1,6 @@
 # AgentModule 与 ResolvedComposition 统一组合设计
 
-> 状态：**Phase A（Compiler+golden）、Phase B（一次性 cutover）和 Phase C（生命周期 disposer）已实现**；Phase D（request boundary）待做。
+> 状态：**Phase A（Compiler+golden）、Phase B（一次性 cutover）、Phase C（生命周期 disposer）和 Phase D（request boundary）已实现**；Phase D 的最终组合 CI／Linux 真实密钥库验收仍待完成，具体边界见[请求证据交付](../model-request-boundaries.md)。
 > golden 基线：`tests/fixtures/composition-golden.json`（当前审阅基线以文件的 `baselineCommit` 为准；旧路径生成的拓扑在 cutover 后由新工厂逐项复现）。
 > 版本说明：cutover 的 0.9.0 发布迁移已完成；后续发布按当前版本与正常 release 流程递增，本设计不再要求回退到 0.9.0。
 > 日期：2026-08-14；落地 2026-08-15。
@@ -650,7 +650,7 @@ Transcript 默认只记录 digest 和事件锚点，不复制完整 system promp
 - `systemPromptDigest` 与 `messageDigest` 是 keyed HMAC：key 为 Session 级持久化 key，存入现有凭证加密边界（safeStorage 一线），不得与 transcript 同目录落盘。**不能复用** prompt-cache diagnostics 的进程级随机 key（`randomBytes(32)`，进程重启即失效，resume 后 digest 永远对不上，§11.3 不变量 3 将无法成立）；也不能记录裸敏感值的普通 hash（低熵内容可被字典攻击还原）。
 - `messageDigest` 对实际发送给 provider 的规范化 message projection 计算。
 - 该事件只证明请求版本与可校验一致性，不宣称仅凭 digest 可以恢复完整 request。
-- 完整模型请求目前由 dev-gated 的 session-recorder 记录（`CODE_SHELL_DEV`/`--debug` 判定，写盘为完整 prompt/messages，仅图片 base64 脱敏）。本阶段要求把它改为显式诊断开关并如实标注记录范围；扩大脱敏范围可另行跟进。
+- 完整模型诊断只在原诊断入口同时显式设置 `CODE_SHELL_RECORD_MODEL_CONTENT=1` 时记录；单独 `CODE_SHELL_DEV`/`--debug` 默认只记录 metadata。正文记录范围见[诊断开关](../model-request-diagnostics.md)，不把它当作默认请求证据。
 
 ### 11.3 不变量
 
@@ -658,7 +658,7 @@ Transcript 默认只记录 digest 和事件锚点，不复制完整 system promp
 
 1. 每次主模型调用恰有一个 request boundary。
 2. boundary 位于对应 request 之前，且属于当前开放 turn/step。
-3. 从 Transcript 派生的 message 部分与实际发送 messages 的 digest 相同。
+3. `sourceContextDigest` 单独覆盖 Transcript 派生的 Core 上下文；`messageDigest` 覆盖实际 provider messages。运行时 hook、图片裁剪等变换后两者不要求相同，不把 source event IDs 宣称为完整 wire 重建来源。
 4. 实际 tool definitions digest 等于 boundary 的 tool catalog digest。
 5. Engine 与 AgentServer/host 报告的 composition digest 一致。
 

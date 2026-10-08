@@ -57,6 +57,26 @@ export function createOptimizationLabQueries(
       return fn(schema.parse(payload));
     };
   return {
+    optimization_lab_bindings: handler(z.object({ cwd }).strict(), (p) =>
+      controller(p.cwd).listBindings(),
+    ),
+    optimization_lab_adoption_preview: handler(
+      identity.extend({ sessionId: z.string().min(1).max(128).optional() }),
+      (p) => controller(p.cwd).adoptionPreview(p.id, p.sessionId),
+    ),
+    optimization_lab_adopt: handler(
+      identity.extend({
+        reportHash: z.string().regex(/^[a-f0-9]{64}$/),
+        sessionId: z.string().min(1).max(128).optional(),
+      }),
+      (p) => controller(p.cwd).adopt(p.id, p.reportHash, p.sessionId),
+    ),
+    optimization_lab_revoke_binding: handler(
+      z
+        .object({ cwd, bindingId: z.string().uuid(), revision: z.string().regex(/^[a-f0-9]{64}$/) })
+        .strict(),
+      (p) => controller(p.cwd).revokeBinding(p.bindingId, p.revision),
+    ),
     optimization_lab_import_evidence: handler(
       z.object({ cwd, bundle: z.unknown() }).strict(),
       (p) => importEvidenceBundle(options.root ?? labRoot(p.cwd), projectKey(p.cwd), p.bundle),

@@ -345,6 +345,9 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         maxContextTokens: deps.parentConfig.maxContextTokens ?? 200_000,
         sessionStorageDir: deps.parentConfig.sessionStorageDir,
         usageLedger: deps.parentConfig.usageLedger,
+        // The child borrows the same Host authority; Engine never disposes a
+        // signer explicitly supplied in its config.
+        modelRequestSigner: deps.parentConfig.modelRequestSigner,
         headless: deps.parentConfig.headless,
         readOnlySession: deps.parentConfig.readOnlySession || request.readOnlySession,
         projectTrusted: deps.parentConfig.projectTrusted,

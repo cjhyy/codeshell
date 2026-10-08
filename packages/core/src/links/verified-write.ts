@@ -26,8 +26,9 @@ export async function verifiedGithubCreateIssue(options: {
 }): Promise<{ receipt: OperationReceipt; data: unknown }> {
   const { ctx, connection, assertConnected } = options;
   if (!ctx.operations || !ctx.executeBoundTool) throw new OperationFailure("unsupported");
+  if (connection.meta?.linkExecutionBackend === "cli") throw new OperationFailure("unsupported");
   const params = githubCreateIssueParameters(options.params);
-  const channel = connection.meta?.linkExecutionBackend === "cli" ? "cli" : "link";
+  const channel = "link" as const;
   const read = async (
     action: "list_issues" | "get_issue",
     readParams: Record<string, unknown>,
@@ -64,12 +65,7 @@ export async function verifiedGithubCreateIssue(options: {
       intentId: `${ctx.originClientMessageId ?? ctx.operations.runId}:github.create_issue`,
       service: "github",
       action: "create_issue",
-      channel:
-        connection.meta?.linkExecutionBackend === "cli"
-          ? "cli"
-          : connection.meta?.linkExecutionRuntime === "server"
-            ? "remote-link"
-            : "local-link",
+      channel: connection.meta?.linkExecutionRuntime === "server" ? "remote-link" : "local-link",
       account: {
         id: connection.meta?.linkAccountId ?? null,
         connectionId: connection.id,

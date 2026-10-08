@@ -71,48 +71,32 @@ describe("CLI Link sessions", () => {
     expect(calls.some((call) => call.includes("token"))).toBe(false);
   });
 
-  test("runs GitHub writes with fixed argv and a JSON stdin body", async () => {
-    let captured:
-      | { command: string; args: string[]; input?: string; signal?: AbortSignal }
-      | undefined;
-    const signal = new AbortController().signal;
-    const run: CliLinkCommandRunner = async (_provider, command, args, options) => {
-      captured = { command, args, input: options.input, signal: options.signal };
-      return {
-        stdout: JSON.stringify({
-          number: 9,
-          title: "Shell-safe title",
-          state: "open",
-          html_url: "https://github.com/acme/repo/issues/9",
-        }),
-        stderr: "",
-      };
+  test("rejects GitHub writes without launching any CLI command", async () => {
+    let sends = 0;
+    const run: CliLinkCommandRunner = async () => {
+      sends++;
+      return { stdout: "", stderr: "" };
     };
+    for (const [action, params] of [
+      ["create_issue", { owner: "acme", repo: "repo", title: "Synthetic" }],
+      ["set_starred", { owner: "acme", repo: "repo", starred: true }],
+    ] as const)
+      await expect(executeCliLinkAction("github", action, params, {}, run)).rejects.toThrow(
+        "redirects",
+      );
+    expect(sends).toBe(0);
+  });
 
-    const result = await executeCliLinkAction(
-      "github",
-      "create_issue",
-      { owner: "acme", repo: "repo", title: "$(touch /tmp/nope)", body: "`whoami`" },
-      { signal },
-      run,
-    );
-    expect(result).toMatchObject({ number: 9, state: "open" });
-    expect(captured?.command).toBe("gh");
-    expect(captured?.args).toEqual([
-      "api",
-      "repos/acme/repo/issues",
-      "--hostname",
-      "github.com",
-      "--method",
-      "POST",
-      "--input",
-      "-",
-    ]);
-    expect(JSON.parse(captured?.input ?? "{}")).toEqual({
-      title: "$(touch /tmp/nope)",
-      body: "`whoami`",
+  test("new GitHub CLI connections advertise reads without write capabilities", async () => {
+    const run: CliLinkCommandRunner = async (_provider, _command, args) => ({
+      stdout: args[0] === "auth" ? "signed in" : JSON.stringify({ id: 42, login: "octocat" }),
+      stderr: "",
     });
-    expect(captured?.signal).toBe(signal);
+    const validation = await connectCliLink("github", {}, run);
+    expect(validation.capabilityIds).toContain("github.get_repository");
+    expect(validation.capabilityIds).toContain("github.get_starred");
+    expect(validation.capabilityIds).not.toContain("github.create_issue");
+    expect(validation.capabilityIds).not.toContain("github.set_starred");
   });
 
   test("normalizes GitLab project results", async () => {
