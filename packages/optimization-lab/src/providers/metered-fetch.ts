@@ -218,7 +218,7 @@ export function createMeteredFetch(options: {
       responseModel =
         typeof parsed?.model === "string" && parsed.model.length <= 256 ? parsed.model : null;
       usage = response.ok ? extractUsage(parsed, connection.config.provider) : null;
-      outcome = response.ok && usage && responseModel ? "settled" : "unknown";
+      outcome = response.ok && usage ? "settled" : "unknown";
       return new Response(responseText, {
         status: response.status,
         statusText: response.statusText,

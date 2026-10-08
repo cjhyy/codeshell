@@ -305,3 +305,27 @@ test("wire gate rejects images, tools and request-model changes before upstream"
   expect(calls).toBe(0);
   expect(a.count).toBe(0);
 });
+
+test("missing response model invalidates pairing while retaining known token usage", async () => {
+  const a = accounting();
+  const result = await executeText({
+    connection: connection("openai"),
+    systemPrompt: "body",
+    input: "input",
+    limits,
+    maxContextBytes: 10000,
+    accounting: a,
+    upstream: (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "answer" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 20, completion_tokens: 5 },
+        }),
+        { headers: { "content-type": "application/json" } },
+      )) as typeof fetch,
+  });
+  expect(result.status).toBe("unknown");
+  expect(result.responseModel).toBeNull();
+  expect(result.observations[0]?.outcome).toBe("settled");
+  expect(result.observations[0]?.usage?.inputTokens).toBe(20);
+});

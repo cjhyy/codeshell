@@ -364,3 +364,46 @@ test("new worker recovers dispatched steps as unknown and never replays them", a
   expect(JSON.stringify(s.payloads)).not.toContain("reflect_once_v1");
   expect(finished.ledger.totals.requests).toBe(3);
 });
+
+test("default Desktop controller reads user connections through full settings scope", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "lab-user-settings-"));
+  roots.push(cwd);
+  const userDir = join(cwd, "isolated-home", ".code-shell");
+  mkdirSync(userDir, { recursive: true });
+  writeFileSync(
+    join(userDir, "settings.json"),
+    JSON.stringify({
+      credentials: [
+        { id: "key", catalogId: "openai", apiKey: "fake-key", baseUrl: "http://localhost:9100/v1" },
+      ],
+      modelConnections: [
+        {
+          id: "user-only",
+          catalogId: "openai",
+          tag: "text",
+          model: "lab-fixture",
+          credentialId: "key",
+        },
+      ],
+      defaults: { text: "user-only" },
+    }),
+  );
+  const modulePath = new URL("./controller.ts", import.meta.url).pathname;
+  const result = Bun.spawnSync(
+    [
+      process.execPath,
+      "-e",
+      `import { OptimizationLabController } from ${JSON.stringify(modulePath)}; const controller = new OptimizationLabController(${JSON.stringify(cwd)}); process.stdout.write(JSON.stringify(controller.discover()));`,
+    ],
+    { env: { ...process.env, HOME: join(cwd, "isolated-home") }, stdout: "pipe", stderr: "pipe" },
+  );
+  expect(result.exitCode).toBe(0);
+  const discovered = JSON.parse(result.stdout.toString());
+  expect(discovered.connections).toContainEqual({
+    id: "user-only",
+    label: "user-only",
+    model: "lab-fixture",
+    provider: "openai",
+    eligible: true,
+  });
+});
