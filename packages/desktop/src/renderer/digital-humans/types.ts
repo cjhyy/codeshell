@@ -161,6 +161,7 @@ export interface DigitalHumanProfileEntry {
    */
   exclusiveCapabilities: boolean;
   version?: string;
+  sourceAccess?: Array<{ sourceId: string; scopes: string[]; readPolicy: "ask" | "deny" }>;
   /**
    * Dependency declaration (GitHub Skill sources and required binaries).
    * Editing declarations does not authorize installation or execute tool hints.

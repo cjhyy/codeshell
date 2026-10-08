@@ -12,6 +12,7 @@ import { localFilesAdapter } from "../../sources/adapters/local-files.js";
 import { mockAdapter } from "../../sources/adapters/mock.js";
 import { bindSource } from "../../sources/binding.js";
 import { saveSourceDefinition } from "../../sources/catalog.js";
+import { saveWorkspaceProfile } from "../../profile/store.js";
 import type { ToolContext } from "../context.js";
 import { BUILTIN_TOOLS } from "./index.js";
 import { listSourcesTool, readSourceTool, registerBuiltinSourceAdapters } from "./sources.js";
@@ -61,6 +62,56 @@ describe("ListSources", () => {
 });
 
 describe("ReadSource", () => {
+  test.each(["metadata", "content", "profile", "pin"])(
+    "rejects changed authority after %s await",
+    async (change) => {
+      const settings = new SettingsManager(cwd, "full");
+      saveWorkspaceProfile({
+        name: "limited",
+        label: "Limited",
+        basePreset: "general",
+        sourceAccess: [{ sourceId: "m1", scopes: ["alpha"], readPolicy: "ask" }],
+      });
+      const context = ctx();
+      context.workspaceProfileName = "limited";
+      let current = true;
+      context.isSourceProfileCurrent = () => current;
+      let reads = 0;
+      const revoke = () => {
+        if (change === "profile")
+          saveWorkspaceProfile({
+            name: "limited",
+            label: "Limited",
+            basePreset: "general",
+            sourceAccess: [],
+          });
+        else if (change === "pin") current = false;
+        else bindSource(settings, cwd, { sourceId: "m1", scopes: ["alpha"], readPolicy: "deny" });
+      };
+      registerConnectorAdapter({
+        ...mockAdapter,
+        async listResources(...args) {
+          const resources = await mockAdapter.listResources(...args);
+          if (change === "metadata") revoke();
+          return resources;
+        },
+        async read(...args) {
+          reads++;
+          const content = await mockAdapter.read(...args);
+          revoke();
+          return content;
+        },
+      });
+      const output = await readSourceTool(
+        { source: "m1", scope: "alpha", resource: "alpha/doc-1" },
+        context,
+      );
+      expect(output).toContain("authorization changed");
+      expect(output).not.toContain("alpha doc one");
+      expect(reads).toBe(change === "metadata" ? 0 : 1);
+    },
+  );
+
   test("reads bound mock content wrapped as untrusted with provenance", async () => {
     const out = await readSourceTool(
       { source: "m1", scope: "alpha", resource: "alpha/doc-1" },

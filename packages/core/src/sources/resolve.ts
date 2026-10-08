@@ -1,8 +1,10 @@
 /**
  * EffectiveSourceAccess：binding × source.enabled × credential 状态求交，
- * 默认 deny（ADR §1.3/§3）。`profile` 参数为 Profile 求交预留（ADR §6），
- * 本期恒不传；接线时 effective = binding ∩ profile 声明，只能收窄。
+ * 默认 deny（ADR §1.3/§3）。Profile 只收窄 binding，不能扩大授权。
  */
+import { createHash } from "node:crypto";
+import { resolveActiveWorkspaceProfileSelection } from "../profile/resolve.js";
+import type { WorkspaceProfile } from "../profile/types.js";
 import type { SettingsManager } from "../settings/manager.js";
 import {
   LOCAL_FILES_SOURCE_ID,
@@ -11,10 +13,14 @@ import {
 } from "./adapters/local-files.js";
 import { listBindings } from "./binding.js";
 import { readSourceDefinition } from "./catalog.js";
+import { isLinkSourceAvailable, linkSourceAuthorityRevision } from "./link-view.js";
 import type { SourceDefinition, WorkspaceSourceBinding } from "./types.js";
 
 export type SourceAccessStatus = "ok" | "dangling" | "unavailable";
-export type CredentialStatusFn = (ref: string) => "ok" | "missing" | "expired";
+export type CredentialStatusFn = (
+  ref: string,
+  context?: { cwd: string; settingsScope?: import("../settings/manager.js").SettingsScope },
+) => "ok" | "missing" | "expired";
 
 export interface EffectiveSourceAccess {
   sourceId: string;
@@ -24,23 +30,32 @@ export interface EffectiveSourceAccess {
   readPolicy: "ask" | "deny";
   status: SourceAccessStatus;
   definition?: SourceDefinition;
+  /** Opaque Profile identity/revision for final authority checks, never prompt content. */
+  profileRevision?: string;
+  /** Opaque account/grant/resource snapshot; never contains bearer material. */
+  credentialRevision?: string;
 }
 
 export interface ResolveSourceAccessInput {
   cwd: string;
   settings: SettingsManager;
   credentialStatus: CredentialStatusFn;
-  /** Profile 求交预留（ADR §6）；本期不实现。 */
-  profile?: { requiredSources?: string[] };
+  settingsScope?: import("../settings/manager.js").SettingsScope;
+  workspaceProfileName?: string;
+  /** Explicit trusted Profile input; omitted resolves Session pin/project selection. */
+  profile?: Pick<WorkspaceProfile, "name" | "sourceAccess">;
 }
 
 function statusOf(
   definition: SourceDefinition | undefined,
   credentialStatus: CredentialStatusFn,
+  context: { cwd: string; settingsScope?: import("../settings/manager.js").SettingsScope },
 ): SourceAccessStatus {
   if (!definition) return "dangling";
   if (!definition.enabled) return "unavailable";
-  if (definition.credentialRef && credentialStatus(definition.credentialRef) !== "ok") {
+  if (definition.kind === "link" && !isLinkSourceAvailable(definition, context))
+    return "unavailable";
+  if (definition.credentialRef && credentialStatus(definition.credentialRef, context) !== "ok") {
     return "unavailable";
   }
   return "ok";
@@ -64,8 +79,11 @@ export function resolveEffectiveSourceAccess(
       kind: definition?.kind ?? "unknown",
       scopes: binding.scopes,
       readPolicy: binding.readPolicy,
-      status: statusOf(definition, input.credentialStatus),
+      status: statusOf(definition, input.credentialStatus, input),
       ...(definition ? { definition } : {}),
+      ...(definition?.kind === "link"
+        ? { credentialRevision: linkSourceAuthorityRevision(definition, input) }
+        : {}),
     } satisfies EffectiveSourceAccess;
   });
 
@@ -83,5 +101,29 @@ export function resolveEffectiveSourceAccess(
     });
   }
 
-  return access;
+  const selection = input.profile
+    ? { name: input.profile.name, profile: input.profile }
+    : resolveActiveWorkspaceProfileSelection({
+        cwd: input.cwd,
+        settings: input.settings,
+        sessionProfile: input.workspaceProfileName,
+      });
+  // A missing selected Profile must not silently restore unrestricted bindings.
+  if (selection.name && !selection.profile) return [];
+  const profileRevision = selection.name
+    ? createHash("sha256").update(JSON.stringify(selection)).digest("hex")
+    : undefined;
+  const rules = selection.profile?.sourceAccess;
+  return access.flatMap((item) => {
+    const rule = rules?.find((candidate) => candidate.sourceId === item.sourceId);
+    if (rules !== undefined && !rule) return [];
+    return [
+      {
+        ...item,
+        scopes: rule ? item.scopes.filter((scope) => rule.scopes.includes(scope)) : item.scopes,
+        readPolicy: item.readPolicy === "deny" || rule?.readPolicy === "deny" ? "deny" : "ask",
+        ...(profileRevision ? { profileRevision } : {}),
+      },
+    ];
+  });
 }

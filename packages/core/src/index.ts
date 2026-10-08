@@ -185,6 +185,8 @@ export {
   SOURCE_KINDS,
   SourceDefinitionSchema,
   WorkspaceSourceBindingSchema,
+  ProfileSourceAccessSchema,
+  type ProfileSourceAccess,
   type SourceKind,
   type SourceDefinition,
   type WorkspaceSourceBinding,

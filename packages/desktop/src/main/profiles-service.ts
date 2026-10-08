@@ -329,6 +329,7 @@ export interface ProfileListEntry {
   agents: string[];
   mainInstruction: string | undefined;
   requires?: WorkspaceProfile["requires"];
+  sourceAccess?: WorkspaceProfile["sourceAccess"];
   active: boolean;
   portableMemory: boolean;
   exclusiveCapabilities: boolean;
@@ -350,6 +351,7 @@ export function listProfiles(cwd?: string): ProfileListEntry[] {
     agents: profile.agents,
     mainInstruction: profile.mainInstruction,
     ...(profile.requires ? { requires: profile.requires } : {}),
+    ...(profile.sourceAccess !== undefined ? { sourceAccess: profile.sourceAccess } : {}),
     active: profile.name === active,
     portableMemory: profile.portableMemory,
     exclusiveCapabilities: profile.exclusiveCapabilities,
