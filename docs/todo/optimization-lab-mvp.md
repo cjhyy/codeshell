@@ -1,6 +1,6 @@
 # 优化实验室：个人先用技术方案
 
-日期：2026-09-22；2026-09-23 按评审修订（改为 CodeShell 内置能力包、P1 拆为最小实验 P1a 与界面 P1b、推理 Token 上限口径、小样本门槛定位、开发集过拟合提示、人工判分检查点与盲评模板、执行时间账本与授权到期时间、可恢复状态、P2 工作量）。状态：计划 A（地基）已实施，提交范围 `8be20e23..55fc29ff`（含起点）；[计划 B](../superpowers/plans/2026-09-26-optimization-lab-engine.md) 已写、待实施，P1a 实验引擎及授权页未完成。本文不代表已运行优化实验、获得效果或完成预算授权。
+日期：2026-09-22；2026-09-23 按评审修订；2026-10-08 更新实施状态。计划 A 地基、计划 B 的 P1a 文本实验引擎及 Desktop 最小授权/评分/报告页面已实现。无付费自动验收和限制见[交付记录](optimization-lab-acceptance-2026-10-08.md)。真实模型实验及作者收益评价尚未执行；P1b/P2 仍后续，本文不提供消费授权。
 
 关联：[优化 Agent 总体设计](agent-optimization-agent.md)、[通用评测契约](agent-evals-platforms-and-adapters.md)、[现有评测说明](../../evals/harness/README.md)、[AgentModule 组装设计](agent-module-resolved-composition-design.md)。本文收敛总体设计的首期范围；首期范围冲突时以本文为准。
 
