@@ -806,6 +806,12 @@ export {
 } from "./links/remote.js";
 
 export {
+  executeLocalOAuthLinkAction,
+  LocalOAuthLinkError,
+  type LocalOAuthLinkActionRequest,
+} from "./links/local-oauth.js";
+
+export {
   REMOTE_LINK_PROVIDER_ADAPTERS,
   LEGACY_GITHUB_ACTIONS,
   getRemoteLinkProviderAdapter,

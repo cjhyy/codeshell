@@ -88,14 +88,28 @@ function connectionStatus(credential: CredentialMetadata): LinkConnectionStatus 
         ? "Link authorization refresh is pending. Reconnect if the Host restarted during refresh."
         : "Remote Link authorization requires reconnection.";
   } else if (
+    meta?.linkAuthSource === "browser-oauth" &&
+    meta.linkOAuthState &&
+    meta.linkOAuthState !== "connected"
+  ) {
+    result.state = "unavailable";
+    result.reason =
+      meta.linkOAuthState === "refreshing"
+        ? "Local OAuth refresh is incomplete. Reconnect if the Host restarted."
+        : "Local OAuth authorization requires reconnection.";
+  } else if (
     credential.oauthStatus?.state === "expired" &&
-    !(meta?.linkExecutionBackend === "remote" && credential.oauthStatus.hasRefreshToken)
+    !(meta?.linkExecutionBackend === "remote" && credential.oauthStatus.hasRefreshToken) &&
+    !(meta?.linkAuthSource === "browser-oauth" && credential.oauthStatus.canRefresh)
   ) {
     result.state = "expired";
     result.reason = "Saved authorization has expired. Reconnect this Link.";
   } else if (credential.oauthStatus?.state === "invalid") {
     result.state = "invalid";
     result.reason = "Saved authorization is invalid. Reconnect this Link.";
+  } else if (meta?.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0) {
+    result.state = "unavailable";
+    result.reason = "Local OAuth authorization no longer permits these actions.";
   } else if (!result.runtime) {
     result.state = "unavailable";
     result.reason = "Saved Link has no execution runtime. Reconnect it to enable local LinkAction.";

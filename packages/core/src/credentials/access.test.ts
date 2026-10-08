@@ -136,3 +136,81 @@ describe("createIpcCredentialAccess", () => {
     unsubscribe?.();
   });
 });
+
+test("local OAuth worker seam returns only action data and propagates cancellation to Host", async () => {
+  const [main, worker] = createInProcessTransport();
+  const access = createIpcCredentialAccess(worker);
+  const seen: Array<{ method: string; params: unknown }> = [];
+  main.onMessage((message) => {
+    if (!("method" in message)) return;
+    seen.push({ method: message.method, params: message.params });
+  });
+  const controller = new AbortController();
+  const pending = access.executeLocalOAuthLinkAction!(
+    {
+      id: "selected-link",
+      scope: "full",
+      accountId: "42",
+      verifiedAt: "2026-10-09T10:00:00Z",
+      action: "get_issue",
+      params: { owner: "acme", repo: "demo", issue_number: 1 },
+    },
+    { signal: controller.signal },
+  );
+  controller.abort();
+  await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  expect(seen.map((item) => item.method)).toEqual([
+    "desktop/localOAuthLinkAction",
+    "desktop/localOAuthLinkActionCancel",
+  ]);
+  expect(seen[1]!.params).toEqual({ requestId: "cred-1" });
+  expect(JSON.stringify(seen)).not.toContain("refreshToken");
+});
+
+test("legacy local secret resolution denies browser OAuth Links and preserves ordinary MCP tokens", async () => {
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const { CredentialStore } = await import("./store.js");
+  const { localCredentialAccess } = await import("./access.js");
+  const directory = mkdtempSync(join(tmpdir(), "local-oauth-access-"));
+  try {
+    const store = new CredentialStore(directory);
+    store.save("project", {
+      id: "local-browser",
+      type: "link",
+      label: "OAuth Link",
+      secret: JSON.stringify({ accessToken: "private-access", refreshToken: "private-refresh" }),
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkAuthSource: "browser-oauth",
+      },
+    });
+    store.save("project", {
+      id: "ordinary-mcp",
+      type: "token",
+      label: "MCP bearer",
+      secret: "mcp-bearer",
+    });
+    for (const purpose of ["link", "use", "mcp"] as const)
+      await expect(
+        localCredentialAccess.resolveValue!({
+          cwd: directory,
+          id: "local-browser",
+          scope: "project",
+          purpose,
+        }),
+      ).rejects.toThrow("Host-owned actions");
+    expect(
+      await localCredentialAccess.resolveValue!({
+        cwd: directory,
+        id: "ordinary-mcp",
+        scope: "project",
+        purpose: "mcp",
+      }),
+    ).toBe("mcp-bearer");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

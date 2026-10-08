@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  summarizeOAuthCredentialSecret,
   isOAuthAccessTokenExpired,
   mergeOAuthTokenResponse,
   oauthCredentialStatus,
@@ -163,4 +164,23 @@ describe("OAuth credential secret schema", () => {
     ).toBe("login_required");
     expect(shouldRefreshOAuthCredential({ accessToken: "a" }, { now })).toBe("no");
   });
+});
+
+test("refresh availability respects rotating token expiry without refreshing on inspection", () => {
+  const stored = {
+    version: 1,
+    accessToken: "expired",
+    refreshToken: "refresh",
+    tokenEndpoint: "https://gitlab.com/oauth/token",
+    clientId: "public-client",
+    expiresAt: "2020-01-01T00:00:00Z",
+    refreshTokenExpiresAt: "2026-10-09T12:00:00Z",
+  };
+  const time = Date.parse("2026-10-09T12:00:00Z");
+  expect(summarizeOAuthCredentialSecret(JSON.stringify(stored), { now: time }).canRefresh).toBe(
+    false,
+  );
+  expect(summarizeOAuthCredentialSecret(JSON.stringify(stored), { now: time - 1 }).canRefresh).toBe(
+    true,
+  );
 });
