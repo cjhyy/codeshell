@@ -39,10 +39,16 @@ import {
   DIGITAL_HUMAN_PROFILE_LIMITS,
   hasDigitalHumanCatchAllSkillRequirement,
   normalizeDigitalHumanSkillRepo,
-  replaceDigitalHumanSkillSources,
   type DigitalHumanProfileEntry,
   type DigitalHumanSkillEntry,
 } from "./types";
+import { DigitalHumanRequirementsEditor } from "./DigitalHumanRequirementsEditor";
+import {
+  normalizeDigitalHumanRequirements,
+  replaceDigitalHumanSkillSourceDraft,
+  validateDigitalHumanRequirements,
+  type DigitalHumanRequirements,
+} from "./requirementsEditor";
 
 const DIGITAL_HUMAN_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 type EditorSection = "identity" | "prompt" | "skills" | "settings";
@@ -105,6 +111,10 @@ export function DigitalHumanEditorDialog({
   const [skillQuery, setSkillQuery] = React.useState("");
   const [skillFilter, setSkillFilter] = React.useState<SkillFilter>("all");
   const [skillInstallRepos, setSkillInstallRepos] = React.useState<Record<string, string>>({});
+  const [requires, setRequires] = React.useState<DigitalHumanRequirements>({
+    skills: [],
+    tools: [],
+  });
   const [section, setSection] = React.useState<EditorSection>("identity");
   const [installingRequirements, setInstallingRequirements] = React.useState(false);
   const editorGeneration = React.useRef(0);
@@ -140,6 +150,7 @@ export function DigitalHumanEditorDialog({
     setSkillQuery("");
     setSkillFilter("all");
     setSkillInstallRepos(digitalHumanSkillSourcesByName(profile?.requires));
+    setRequires(profile?.requires ?? { skills: [], tools: [] });
     setSection("identity");
     setInstallingRequirements(false);
     // A same-profile save may refresh the parent object while this dialog stays
@@ -155,7 +166,6 @@ export function DigitalHumanEditorDialog({
   // The whole Skill catalog is derived here, so it must not be recomputed on
   // every keystroke in the identity fields (label/id/instruction). These memos
   // depend only on the catalog inputs and the Skill selection.
-  const requires = profile?.requires;
   const {
     installedSkillsByName,
     missingSkillNameSet,
@@ -211,7 +221,6 @@ export function DigitalHumanEditorDialog({
 
   const {
     missingSkillSourceRows,
-    changedSkillInstallRepos,
     skillInstallSourcesValid,
     allMissingSkillsHaveSource,
     missingSkillsWithoutSource,
@@ -236,18 +245,12 @@ export function DigitalHumanEditorDialog({
         valid: normalizedValue.length === 0 || repo !== null,
       };
     });
-    const changed = Object.fromEntries(
-      rows
-        .map((row) => [row.name, row.value] as const)
-        .filter(([name, value]) => value.trim() !== (existingSkillSources[name] ?? "")),
-    );
     return {
       missingSkillSourceRows: rows,
-      changedSkillInstallRepos: changed,
       skillInstallSourcesValid: rows.every((row) => row.valid),
       allMissingSkillsHaveSource: rows.length > 0 && rows.every((row) => row.repo !== null),
       missingSkillsWithoutSource: rows.filter((row) => row.repo === null),
-      nextSkillRequirements: replaceDigitalHumanSkillSources(requires?.skills ?? [], changed),
+      nextSkillRequirements: requires.skills,
     };
   }, [
     hasCatchAllSkillRequirement,
@@ -259,11 +262,19 @@ export function DigitalHumanEditorDialog({
 
   const requirementLimitExceeded =
     nextSkillRequirements.length > DIGITAL_HUMAN_PROFILE_LIMITS.requirementCount;
+  const requirementValidation = validateDigitalHumanRequirements(requires);
+  const requirementsDirty =
+    JSON.stringify(requires) !== JSON.stringify(profile?.requires ?? { skills: [], tools: [] });
+  const changeRequirements = (next: DigitalHumanRequirements) => {
+    setRequires(next);
+    setSkillInstallRepos(digitalHumanSkillSourcesByName(next));
+  };
   const hasRepositoryTarget = !("noRepo" in configurationTarget);
   const canInstallMissingSkills = Boolean(
     profile &&
     hasRepositoryTarget &&
     hasCatchAllSkillRequirement &&
+    !requirementsDirty &&
     !busy &&
     !installing &&
     !installingRequirements,
@@ -274,6 +285,7 @@ export function DigitalHumanEditorDialog({
       !profile ||
       !hasRepositoryTarget ||
       !hasCatchAllSkillRequirement ||
+      requirementsDirty ||
       busy ||
       installing ||
       installingRequirements ||
@@ -387,10 +399,13 @@ export function DigitalHumanEditorDialog({
     textFieldsWithinLimits &&
     selectedSkillsWithinLimits &&
     skillInstallSourcesValid &&
-    !requirementLimitExceeded &&
+    requirementValidation.valid &&
     !operationBusy;
   const canSaveAndInstall = Boolean(
-    canSave && profile && hasRepositoryTarget && allMissingSkillsHaveSource,
+    canSave &&
+    profile &&
+    hasRepositoryTarget &&
+    (hasCatchAllSkillRequirement || allMissingSkillsHaveSource),
   );
   /**
    * Has the user typed anything not yet saved? Radix closes the dialog on a
@@ -404,7 +419,7 @@ export function DigitalHumanEditorDialog({
     mainInstruction !== (profile?.mainInstruction ?? "") ||
     portableMemory !== (profile?.portableMemory ?? true) ||
     exclusiveCapabilities !== (profile?.exclusiveCapabilities ?? false) ||
-    Object.keys(changedSkillInstallRepos).length > 0 ||
+    requirementsDirty ||
     selectedSkills.size !== (profile?.skills.length ?? 0) ||
     (profile?.skills ?? []).some((name) => !selectedSkills.has(name));
 
@@ -431,11 +446,7 @@ export function DigitalHumanEditorDialog({
 
   const submit = (installRequirements = false) => {
     if (!canSave) return;
-    const requirementTools = profile?.requires?.tools ?? [];
-    const nextRequirements =
-      nextSkillRequirements.length > 0 || requirementTools.length > 0
-        ? { skills: nextSkillRequirements, tools: requirementTools }
-        : undefined;
+    const nextRequirements = normalizeDigitalHumanRequirements(requires);
     onSave(
       {
         name: normalizedId,
@@ -449,8 +460,8 @@ export function DigitalHumanEditorDialog({
         skills: [...selectedSkills].sort(),
         mcp: profile?.mcp ?? [],
         agents: profile?.agents ?? [],
-        // Preserve authored multi-source/tool requirements. Older definitions
-        // can now add one trusted GitHub source per missing Skill.
+        // Authoring saves declarations only. Installation remains behind the
+        // existing saved-profile preview and explicit command review.
         ...(nextRequirements ? { requires: nextRequirements } : {}),
         ...(mainInstruction.trim() ? { mainInstruction: mainInstruction.trim() } : {}),
         portableMemory,
@@ -743,11 +754,13 @@ export function DigitalHumanEditorDialog({
                                 ? t("digitalHumans.editor.missingSkillsSaveFirst")
                                 : !hasRepositoryTarget
                                   ? t("digitalHumans.editor.missingSkillsPickProject")
-                                  : hasCatchAllSkillRequirement
-                                    ? t("digitalHumans.editor.catchAllRequirementDescription")
-                                    : missingSkillsWithoutSource.length > 0
-                                      ? t("digitalHumans.editor.missingSkillsNoSource")
-                                      : t("digitalHumans.editor.missingSkillsReady")}
+                                  : requirementsDirty
+                                    ? t("digitalHumans.editor.missingSkillsSaveFirst")
+                                    : hasCatchAllSkillRequirement
+                                      ? t("digitalHumans.editor.catchAllRequirementDescription")
+                                      : missingSkillsWithoutSource.length > 0
+                                        ? t("digitalHumans.editor.missingSkillsNoSource")
+                                        : t("digitalHumans.editor.missingSkillsReady")}
                             </p>
                           </div>
                         </div>
@@ -796,12 +809,21 @@ export function DigitalHumanEditorDialog({
                                       : `digital-human-skill-repo-${index}`
                                   }
                                   value={row.value}
-                                  onChange={(event) =>
+                                  onChange={(event) => {
+                                    const value = event.target.value;
                                     setSkillInstallRepos((current) => ({
                                       ...current,
-                                      [row.name]: event.target.value,
-                                    }))
-                                  }
+                                      [row.name]: value,
+                                    }));
+                                    setRequires((current) => ({
+                                      ...current,
+                                      skills: replaceDigitalHumanSkillSourceDraft(
+                                        current.skills,
+                                        row.name,
+                                        value,
+                                      ),
+                                    }));
+                                  }}
                                   placeholder={t("digitalHumans.editor.skillSourcePlaceholder")}
                                   className="bg-background font-mono text-xs"
                                   aria-label={t("digitalHumans.editor.skillSourceRowLabel", {
@@ -1094,39 +1116,24 @@ export function DigitalHumanEditorDialog({
                     />
                   </div>
 
-                  {profile?.requires &&
-                  (profile.requires.skills.length > 0 || profile.requires.tools.length > 0) ? (
-                    <div className="rounded-xl border border-border/70 bg-muted/15 p-4">
-                      <p className="text-xs font-medium text-foreground">
-                        {t("digitalHumans.editor.requiresTitle")}
-                      </p>
-                      <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">
-                        {t("digitalHumans.editor.requiresDescription")}
-                      </p>
-                      <ul className="mt-2 space-y-1">
-                        {profile.requires.skills.map((requirement, index) => (
-                          <li
-                            key={`${requirement.repo}:${index}`}
-                            className="font-mono text-[11px] text-foreground"
-                          >
-                            {requirement.repo}
-                            {requirement.skills?.length
-                              ? ` · ${t("digitalHumans.editor.requiresSkillCount", {
-                                  count: requirement.skills.length,
-                                })}`
-                              : ""}
-                          </li>
-                        ))}
-                        {profile.requires.tools.map((tool) => (
-                          <li
-                            key={tool.bin}
-                            className="font-mono text-[11px] text-muted-foreground"
-                          >
-                            {tool.bin}
-                            {tool.minVersion ? ` ≥ ${tool.minVersion}` : ""}
-                          </li>
-                        ))}
-                      </ul>
+                  <DigitalHumanRequirementsEditor
+                    value={requires}
+                    disabled={operationBusy}
+                    onChange={changeRequirements}
+                  />
+                  {profile && hasRepositoryTarget && requires.skills.length > 0 ? (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!canSave}
+                        data-testid="digital-human-requirements-save-install"
+                        onClick={() => submit(true)}
+                      >
+                        <Download className="size-3.5" aria-hidden="true" />
+                        {t("digitalHumans.editor.saveAndInstall")}
+                      </Button>
                     </div>
                   ) : null}
                 </section>

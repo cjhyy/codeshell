@@ -162,9 +162,8 @@ export interface DigitalHumanProfileEntry {
   exclusiveCapabilities: boolean;
   version?: string;
   /**
-   * Dependency declaration (skill sources + required binaries). The editor
-   * preserves authored requirements and can add a source for an older
-   * definition's unsourced missing Skills.
+   * Dependency declaration (GitHub Skill sources and required binaries).
+   * Editing declarations does not authorize installation or execute tool hints.
    */
   requires?: {
     skills: Array<{
