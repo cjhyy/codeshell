@@ -228,10 +228,29 @@ test("wrong repository, denied reads, missing grants and post-read revocation st
 test("legacy absent or empty grants never acquire new Star capabilities", async () => {
   for (const ids of [undefined, []]) {
     const f = fixture("oauth");
+    delete f.credential.meta!.linkAuthSource;
+    delete f.credential.oauthStatus;
     f.credential.meta!.linkCapabilityIds = ids;
     expect((await f.invoke()).kind).toBe("error");
     expect(f.calls).toEqual([]);
   }
+});
+
+test("account and grant changes cannot reuse a previous trusted Star intent", async () => {
+  for (const field of ["linkAccountId", "linkRemoteGrantId"] as const) {
+    const f = fixture();
+    expect((await f.invoke()).operation.state).toBe("verified");
+    f.credential.meta![field] = "other-binding";
+    expect((await f.invoke()).kind).toBe("error");
+    expect(f.calls).toHaveLength(4);
+  }
+});
+
+test("declining native write approval sends no validation or mutation request", async () => {
+  const f = fixture();
+  f.ctx.askUser = async () => "取消";
+  expect((await f.invoke()).kind).toBe("cancelled");
+  expect(f.calls).toEqual([]);
 });
 
 test("read hook target mutation fails closed; display hook leaves private verify receipt intact", async () => {
