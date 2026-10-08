@@ -1108,7 +1108,9 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       source: "builtin",
       permissionDefault: "allow",
       isReadOnly: false,
-      isConcurrencySafe: true,
+      // A shared discovery/read/write surface cannot advertise concurrent writes.
+      // Bound verification reads execute through the same executor, without requeueing.
+      isConcurrencySafe: false,
     },
     execute: linkActionTool,
     exposure: expose(GENERAL_TAGS, {

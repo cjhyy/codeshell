@@ -634,7 +634,7 @@ test("refreshable local OAuth uses Host execution without resolving any token an
         context(async () => "允许执行"),
       ),
     ).kind,
-  ).toBe("action_result");
-  expect(actions).toBe(2);
+  ).toBe("error"); // Standalone calls cannot bypass the owning verification pipeline.
+  expect(actions).toBe(1);
   expect(resolutions).toBe(0);
 });

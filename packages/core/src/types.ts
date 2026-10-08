@@ -566,6 +566,8 @@ export type TerminalReason =
   | "model_error"
   /** The input exists, but no durable result is available to replay safely. */
   | "replay_incomplete"
+  /** A claimed external write is pending, uncertain, or failed independent verification. */
+  | "unverified_write"
   | "aborted_streaming"
   | "aborted_tools"
   | "max_turns"
