@@ -344,6 +344,112 @@ describe("task inbox authoritative sources", () => {
     expect(waiting.capabilities).toContain("cancel");
   });
 
+  test("external transcript activity is displayed read-only without inventing idle completion", async () => {
+    let state: DesktopPetSession = live({
+      agentSessionId: "observed-cli",
+      external: { cli: "codex", cwd: "/cli-project" },
+      freshness: { source: "external-tail", observedAt: 100, workerState: "active" },
+    });
+    let interrupts = 0;
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [],
+        sessionProjection: () => projection([state]),
+        external: {
+          hasSession: () => false,
+          isSessionRunning: () => false,
+          interrupt: async () => {
+            interrupts++;
+          },
+        },
+      }),
+    );
+    const running = (await read(sources, "external-runtime"))[0]!;
+    expect(running).toMatchObject({
+      status: "running",
+      capabilities: ["open"],
+      workspacePath: "/cli-project",
+      externalCli: "codex",
+    });
+    expect((await adapter(sources, "external-runtime").act(running, "cancel")).status).toBe(
+      "unavailable",
+    );
+    expect(interrupts).toBe(0);
+    state = { ...state, runState: "idle" };
+    expect((await read(sources, "external-runtime"))[0]).toMatchObject({
+      status: "interrupted",
+      capabilities: ["open"],
+    });
+    state = {
+      ...state,
+      runState: "running",
+      freshness: { ...state.freshness, workerState: "reclaimed" },
+    };
+    expect((await read(sources, "external-runtime"))[0]).toMatchObject({
+      status: "interrupted",
+      capabilities: ["open"],
+    });
+  });
+
+  test("owned external controller state outranks stale transcript activity and grants only real controls", async () => {
+    let running = false;
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [],
+        sessionProjection: () =>
+          projection([
+            live({
+              external: { cli: "claude", cwd: "/project" },
+              freshness: { source: "external-tail", observedAt: 100, workerState: "active" },
+            }),
+          ]),
+        external: {
+          hasSession: () => true,
+          isSessionRunning: () => running,
+          interrupt: async () => {},
+        },
+      }),
+    );
+    expect((await read(sources, "external-runtime"))[0]).toMatchObject({
+      status: "interrupted",
+      capabilities: ["open"],
+    });
+    running = true;
+    expect((await read(sources, "external-runtime"))[0]).toMatchObject({
+      status: "running",
+      capabilities: ["open", "cancel"],
+    });
+  });
+
+  test("external transcript navigation uses observed CLI metadata and never infers a CLI from binding kind", async () => {
+    const observed = createTaskInboxSources(
+      base({
+        sessionProjection: () =>
+          projection([
+            live({
+              external: { cli: "claude", cwd: "/observed-project" },
+              freshness: { source: "external-tail", observedAt: 100, workerState: "active" },
+            }),
+          ]),
+      }),
+    );
+    expect((await read(observed, "external-runtime"))[0]).toMatchObject({
+      externalCli: "claude",
+      workspacePath: "/observed-project",
+    });
+    const owned = createTaskInboxSources(
+      base({
+        external: {
+          hasSession: () => true,
+          kind: () => "codex",
+          isSessionRunning: () => false,
+          interrupt: async () => {},
+        },
+      }),
+    );
+    expect((await read(owned, "external-runtime"))[0]?.externalCli).toBeUndefined();
+  });
+
   test("new normal terminal supersedes an older durable background yield", async () => {
     const sources = createTaskInboxSources(
       base({

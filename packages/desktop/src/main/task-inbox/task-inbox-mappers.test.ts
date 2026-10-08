@@ -71,6 +71,10 @@ describe("task inbox normalized model", () => {
       }),
     ).toThrow();
     expect(() => parseTaskInboxRecord({ ...task(), sourceRevision: "" })).toThrow();
+    expect(() =>
+      parseTaskInboxRecord({ ...task({ source: "external-runtime" }), externalCli: "other" }),
+    ).toThrow();
+    expect(() => parseTaskInboxRecord({ ...task(), externalCli: "codex" })).toThrow();
   });
   test("Mimi, automation execution and child associations each suppress their duplicate Session", () => {
     for (const source of [

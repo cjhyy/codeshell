@@ -102,6 +102,26 @@ describe("task inbox persistent projection", () => {
     expect(store.get("session:one:0")?.status).toBe("done");
     expect(store.get("session:one:1")?.status).toBe("running");
   });
+
+  test("external transcript navigation survives projection reload and observer disappearance", () => {
+    const { store, filePath } = setup();
+    store.upsert(
+      task("external-a", {
+        source: "external-runtime",
+        externalCli: "codex",
+        workspacePath: "/cli-project",
+      }),
+    );
+    const restored = createTaskInboxStore({ filePath });
+    restored.reconcile([{ source: "external-runtime", records: [] }]);
+    expect(restored.get("external-runtime:external-a")).toMatchObject({
+      externalCli: "codex",
+      workspacePath: "/cli-project",
+      status: "interrupted",
+      stale: true,
+      capabilities: ["open"],
+    });
+  });
   test("list filters and paginates a stable version; changed cursor restarts safely", () => {
     const { store } = setup();
     store.upsertMany([
