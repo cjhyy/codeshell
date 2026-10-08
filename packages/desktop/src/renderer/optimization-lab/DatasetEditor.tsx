@@ -154,7 +154,7 @@ function AssertionEditor({
             onChange={(event) => onChange({ ...value, value: event.target.value })}
           />
         </label>
-      ) : typeof value.value === "number" ? (
+      ) : value.kind === "json_field_equals" && typeof value.value === "number" ? (
         <label className="block space-y-1 text-sm">
           <span>{t("optimizationLab.editor.assertionValue")}</span>
           <input
@@ -169,7 +169,7 @@ function AssertionEditor({
             }}
           />
         </label>
-      ) : typeof value.value === "boolean" ? (
+      ) : value.kind === "json_field_equals" && typeof value.value === "boolean" ? (
         <label className="block space-y-1 text-sm">
           <span>{t("optimizationLab.editor.assertionValue")}</span>
           <select
