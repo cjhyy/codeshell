@@ -88,7 +88,8 @@ export function deduplicateTaskInboxRecords(records: TaskInboxRecordV1[]): TaskI
     if (!previous || shouldReplaceTaskRecord(previous, record)) latest.set(record.taskKey, record);
   }
   const representedSessions = new Set<string>();
-  const liveSessions = new Set<string>();
+  const representedRuns = new Set<string>();
+  const representedExecutions = new Set<string>();
   const currentAttempts = new Map<string, number>();
   for (const record of latest.values()) {
     if (record.attempt !== undefined) {
@@ -97,8 +98,12 @@ export function deduplicateTaskInboxRecords(records: TaskInboxRecordV1[]): TaskI
     }
   }
   for (const record of latest.values()) {
-    if (record.source !== "legacy-run" && record.source !== "automation" && record.sessionId)
-      liveSessions.add(record.sessionId);
+    if ((record.source === "session" || record.source === "external-runtime") && record.runId) {
+      representedRuns.add(record.runId);
+      representedExecutions.add(
+        JSON.stringify([record.sessionId ?? record.sourceId, record.runId]),
+      );
+    }
     if (
       ["mimi-delegation", "automation", "subagent", "external-runtime"].includes(record.source) &&
       record.sessionId &&
@@ -115,8 +120,14 @@ export function deduplicateTaskInboxRecords(records: TaskInboxRecordV1[]): TaskI
       return false;
     if (record.source === "session" && representedSessions.has(record.sessionId ?? record.sourceId))
       return false;
-    // Legacy Run and automation execution share a session with their stronger live card.
-    if (record.source === "legacy-run" && record.sessionId && liveSessions.has(record.sessionId))
+    // A Session may have many historical Runs. Only the explicitly represented
+    // execution is a duplicate; Session identity alone cannot hide its history.
+    if (
+      record.source === "legacy-run" &&
+      representedRuns.has(record.sourceId) &&
+      (!record.sessionId ||
+        representedExecutions.has(JSON.stringify([record.sessionId, record.sourceId])))
+    )
       return false;
     return true;
   });

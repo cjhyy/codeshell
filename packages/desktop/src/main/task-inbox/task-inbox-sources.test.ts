@@ -135,6 +135,18 @@ describe("task inbox authoritative sources", () => {
     observedAt = 200;
     expect((await read(sources, "session"))[0]!.sourceRevision).toBe(rows[0]!.sourceRevision);
   });
+  test("Session execution association prefers the live run ID and falls back to durable metadata", async () => {
+    let state = live({ runId: "live-run" });
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [disk({ runId: "disk-run" })],
+        sessionProjection: () => projection([state]),
+      }),
+    );
+    expect((await read(sources, "session"))[0]?.runId).toBe("live-run");
+    state = { ...state, runId: undefined };
+    expect((await read(sources, "session"))[0]?.runId).toBe("disk-run");
+  });
 
   test("a yielded background-wait Session does not advertise an unavailable native cancel", async () => {
     let cancels = 0;

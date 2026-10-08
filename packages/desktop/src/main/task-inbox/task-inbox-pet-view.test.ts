@@ -11,6 +11,7 @@ const record: TaskInboxRecordV1 = {
   title: "Build task",
   status: "waiting",
   sessionId: "work-a",
+  runId: "actual-run",
   summary: "Needs input",
   artifacts: [{ kind: "internal", label: "secret", uri: "file:///private/task.log" }],
   capabilities: ["open", "cancel"],
@@ -33,6 +34,7 @@ test("Mimi discloses the same task keys while omitting private controller fields
   expect(view.tasks[0]).not.toHaveProperty("artifacts");
   expect(view.tasks[0]).not.toHaveProperty("capabilities");
   expect(view.tasks[0]).not.toHaveProperty("sourceRevision");
+  expect(view.tasks[0]).not.toHaveProperty("runId");
   const bounded = taskInboxPetView({
     ...snapshot,
     records: Array.from({ length: 120 }, (_, i) => ({ ...record, taskKey: `session:s${i}` })),
