@@ -33,4 +33,6 @@ ReadSource 的许可与 LinkAction/grant 许可必须同时成立。所属 ToolE
 
 最终与 `61fa95bd` 主线组合后，Source/Link/Profile、完整 tool-system 与相关 Desktop 表单回归共 1,482 pass / 3 skip / 0 fail（158 个文件）；跳过的是既有真实 LLM 连续输入测试。12 个包类型检查、runtime build、Desktop main/preload/renderer/mobile build 和改动文件 ESLint 均通过。此前本分支 package release 门槛验证了 9 个 tarball、47 个带类型入口；随后主线组合补做上述相关检查。
 
+复查补强固定输入：hook 持有的 nested params 在凭证解析 await 期间不能改变真实请求目标。最终约束校验后从固定 JSON 建立独立 handler 快照，记录与执行使用同一快照；新增生产 GitHub fetch 回归修复前会请求错误仓库，修复后保持原 owner/repo。相关 Source/Link/executor 共 214 项回归、Core 类型与改动文件 lint 通过。
+
 降级必须保留匹配版本的数据备份。旧 binary 不认识 `sourceAccess`，会忽略此限制；旧目录编辑器不理解 `link` kind，也可能丢弃该定义。不能只回滚代码并继续使用这些新授权数据。降级前应先撤销或收窄项目 binding，并核验旧运行时的实际可读面；源目录、Profile 和连接备份要与恢复版本匹配，不能宣称旧版本保留本轮授权求交。

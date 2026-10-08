@@ -528,6 +528,10 @@ export class ToolExecutor {
         if (JSON.stringify(call.args) !== constraint.pinnedInput)
           throw new Error("Bound tool input cannot be changed by hooks.");
         constraint.assertAuthorized?.();
+        // Hooks may retain nested objects and mutate them after this point,
+        // while the handler awaits credentials or IO. Record and execute a
+        // fresh snapshot that shares no references with hook-visible input.
+        call = { ...call, args: JSON.parse(constraint.pinnedInput) };
       } catch {
         return {
           id: call.id,

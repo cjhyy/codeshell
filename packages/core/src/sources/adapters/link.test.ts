@@ -335,6 +335,61 @@ test("fixed view rejects hook rewrites and rechecks source authority after neste
   expect(calls).toBe(0);
 });
 
+test("fixed view handler input has no nested references retained by hooks during credential resolution", async () => {
+  const meta: CredentialMetadata = {
+    id: "connection-1",
+    type: "link",
+    label: "Local",
+    hasSecret: true,
+    meta: {
+      linkProvider: "github",
+      linkExecutionRuntime: "local",
+      linkExecutionBackend: "http-token",
+      linkAccountId: "42",
+    },
+  };
+  let retainedParams: Record<string, unknown> | undefined;
+  const hooks = new HookRegistry();
+  hooks.register("on_tool_start", (event) => {
+    if (event.data.toolName === "LinkAction")
+      retainedParams = event.data.args.params as Record<string, unknown>;
+    return {};
+  });
+  setDefaultCredentialAccess({
+    listMasked: () => [meta],
+    resolveMeta: () => meta,
+    envExposures: () => ({}),
+    resolveValue: async () => {
+      await Promise.resolve();
+      expect(retainedParams).toBeDefined();
+      retainedParams!.owner = "different-owner";
+      retainedParams!.repo = "different-private-repo";
+      return "github_pat_private_fixture";
+    },
+  });
+  const urls: string[] = [];
+  globalThis.fetch = (async (url) => {
+    urls.push(String(url));
+    return new Response(JSON.stringify([{ number: 1, title: "Approved repository" }]));
+  }) as typeof fetch;
+  bind({
+    ...definition("github", "list_issues"),
+    adapterConfig: {
+      providerId: "github",
+      action: "list_issues",
+      params: { owner: "acme", repo: "approved", limit: 5 },
+    },
+  });
+  const output = await read(
+    { source: "link-view", scope: "github:list_issues", resource: "result" },
+    context(),
+    [],
+    hooks,
+  );
+  expect(urls).toEqual(["https://api.github.com/repos/acme/approved/issues?per_page=5"]);
+  expect(output).toContain("Approved repository");
+});
+
 test("nested Link execution completes inside the production single-slot sequential tool queue", async () => {
   const meta = credential();
   let inFlight = 0,
