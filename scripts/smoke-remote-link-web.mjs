@@ -384,19 +384,24 @@ try {
           .selectOption({ label: "Link project A" });
         await page.getByRole("button", { name: "Link", exact: true }).click();
       } else await page.goto(hubOrigin + "/?view=links");
+      const beginGitHubAuthorization = async () => {
+        const provider = page.locator(".links-provider").filter({
+          has: page.getByRole("heading", { name: "GitHub", exact: true }),
+        });
+        await provider.getByRole("button", { name: "添加连接", exact: true }).click();
+      };
       console.log("Link verifier: opening authorization", mode);
-      await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
-      await page.getByRole("button", { name: "前往 Link 授权", exact: true }).waitFor();
-      await page.screenshot({ path: join(screenshots, `editor-${width}.png`), fullPage: true });
+      await page.locator(".links-provider").first().waitFor();
+      await page.screenshot({ path: join(screenshots, `catalog-${width}.png`), fullPage: true });
       let pendingJob;
       if (mode === "paired")
-        await page.route(/\/api\/v1\/links\/authorizations\/remote(?:\?|$)/, async (route) => {
+        await page.route(/\/api\/v1\/links\/authorizations(?:\/remote)?(?:\?|$)/, async (route) => {
           // Observe the genuine creation response before cross-origin navigation discards its body.
           const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
           pendingJob = await response.json();
           await route.fulfill({ response });
         });
-      await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
+      await beginGitHubAuthorization();
       console.log("Link verifier: waiting for public GitHub consent", mode);
       await page
         .getByRole("button", { name: "允许只读访问", exact: true })
@@ -499,15 +504,13 @@ try {
       assert.ok(linkState.grants.length > 0 && linkState.grants.every((grant) => grant.revoked));
       assert.equal(completes, 1);
       // Refusal returns to the same Host and cancels the private attempt without exchanging a code.
-      await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
-      await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
+      await beginGitHubAuthorization();
       await page.getByRole("button", { name: "取消", exact: true }).click();
       await page.getByText("授权已取消，没有新增连接。", { exact: true }).waitFor();
       assert.equal(completes, 1);
       if (mode === "paired") {
         await page.getByRole("link", { name: "返回原项目", exact: true }).click();
-        await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
-        await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
+        await beginGitHubAuthorization();
         await page.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
         const devices = await localWindow.evaluate(() =>
           window.codeshell.mobileRemote.listDevices(),
