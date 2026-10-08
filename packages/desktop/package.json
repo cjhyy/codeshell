@@ -57,7 +57,8 @@
     "smoke:cloud-workbench": "esbuild scripts/smoke-cloud-workbench.ts --bundle --platform=node --format=esm --outfile=out/smoke-cloud-workbench.mjs --external:electron && electron out/smoke-cloud-workbench.mjs",
     "test:e2e:device-relay": "node scripts/e2e-device-relay.mjs",
     "test:e2e:task-inbox": "node scripts/e2e-task-inbox.mjs",
-    "test:e2e:optimization-lab": "node scripts/e2e-optimization-lab.mjs"
+    "test:e2e:optimization-lab": "node scripts/e2e-optimization-lab.mjs",
+    "test:upload-asar": "node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-asar.mjs"
   },
   "build": {
     "appId": "com.cjhyy.codeshell",
@@ -82,7 +83,11 @@
       "node_modules/playwright-core/**/*"
     ],
     "asarUnpack": [
-      "node_modules/node-pty/**/*"
+      "node_modules/node-pty/**/*",
+      "node_modules/@cjhyy/code-shell-core/package.json",
+      "node_modules/@cjhyy/code-shell-core/dist/sources/documents/{parser-entry,parse,types}.js",
+      "node_modules/@cjhyy/code-shell-core/dist/sources/truncate-utf8.js",
+      "node_modules/@cjhyy/code-shell-core/node_modules/{yauzl,pend,saxes,xmlchars,pdfjs-dist,@napi-rs/canvas,@napi-rs/canvas-*}/**/*"
     ],
     "extraResources": [
       {

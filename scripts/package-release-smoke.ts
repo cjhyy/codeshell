@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createBunTestEnvironment } from "./bun-test-completion.mjs";
 
 import {
   AUDITED_RELEASE_PACKAGES,
@@ -446,19 +447,12 @@ for (const entry of entries) {
 }
 `,
   );
-  const home = join(consumerDirectory, "home");
-  mkdirSync(home);
   runCommand(
     `runtime imports (${runtimeEntries.length} entries)`,
     "node",
     [runtimeScript],
     consumerDirectory,
-    {
-      ...process.env,
-      CODE_SHELL_HOME: join(home, ".code-shell"),
-      HOME: home,
-      USERPROFILE: home,
-    },
+    createBunTestEnvironment(process.env, join(consumerDirectory, "runtime-environment")),
   );
 }
 
@@ -496,7 +490,34 @@ function assertOwnerAuthConsumer(consumerDirectory: string): void {
     "node",
     [join(outputDirectory, "owner-auth.js")],
     consumerDirectory,
-    { ...process.env, CODE_SHELL_HOME: join(consumerDirectory, "home/.code-shell") },
+    createBunTestEnvironment(process.env, join(consumerDirectory, "owner-auth-environment")),
+  );
+}
+
+function assertUploadedDocumentConsumer(consumerDirectory: string): void {
+  const script = readFileSync(join(REPO_ROOT, "scripts/smoke-upload-documents.mjs"), "utf8")
+    .replaceAll("../tests/fixtures/upload-documents.mjs", "./upload-documents.mjs")
+    .replaceAll(
+      "../packages/core/dist/sources/documents/runtime.js",
+      "@cjhyy/code-shell-core/internal",
+    )
+    .replaceAll("../packages/core/dist/index.internal.js", "@cjhyy/code-shell-core/internal")
+    .replace(
+      /\.\.\/packages\/core\/dist\/(?:tool-system\/(?:registry|executor|permission)|hooks\/registry)\.js/g,
+      "@cjhyy/code-shell-core",
+    );
+  const path = join(consumerDirectory, "uploaded-documents.mjs");
+  writeFileSync(path, script);
+  writeFileSync(
+    join(consumerDirectory, "upload-documents.mjs"),
+    readFileSync(join(REPO_ROOT, "tests/fixtures/upload-documents.mjs")),
+  );
+  runCommand(
+    "packed uploaded document parser, index and cold-cache authority (Node)",
+    "node",
+    [path],
+    consumerDirectory,
+    createBunTestEnvironment(process.env, join(consumerDirectory, "upload-environment")),
   );
 }
 
@@ -511,6 +532,7 @@ function runFullSmoke(records: readonly AuditedPackageRecord[]): void {
     assertStrictDeclarations(packedRecords, consumerDirectory);
     assertRuntimeImports(packedRecords, consumerDirectory);
     assertOwnerAuthConsumer(consumerDirectory);
+    assertUploadedDocumentConsumer(consumerDirectory);
     console.log(
       `\nPackage release smoke passed: ${packedRecords.length} tarballs, ${packedRecords.reduce(
         (count, record) => count + record.entries.filter((entry) => entry.typeImport).length,
