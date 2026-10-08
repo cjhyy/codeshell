@@ -1,7 +1,9 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs/promises";
 import { createHash } from "node:crypto";
 import {
   mkdtemp,
+  lstat,
   mkdir,
   readFile,
   readdir,
@@ -53,6 +55,23 @@ async function fixture() {
     await writeFile(path, data);
     return service.library.importFile(scope, path);
   };
+  const partials = async () => {
+    const toolFiles = (await readdir(tool))
+      .filter((name) => name.endsWith(".resource-partial"))
+      .map((name) => join(tool, name));
+    const staging = join(root, "store", "scopes", mediaScopeKey(scope), "materialize");
+    for (const entry of await readdir(staging).catch(() => [])) {
+      const path = join(staging, entry, "content");
+      if (
+        await lstat(path).then(
+          () => true,
+          () => false,
+        )
+      )
+        toolFiles.push(path);
+    }
+    return toolFiles;
+  };
   return {
     root,
     tool,
@@ -62,6 +81,7 @@ async function fixture() {
     asset,
     context,
     create,
+    partials,
     revoke() {
       authorized = false;
     },
@@ -142,7 +162,7 @@ test("materialize atomically hands exact bytes to an approved directory and capt
   let observedPartial = false;
   f.hook(async () => {
     const files = await readdir(f.tool);
-    if (files.some((name) => name.endsWith(".resource-partial"))) {
+    if ((await f.partials()).length) {
       observedPartial = true;
       if (files.includes("input.docx"))
         expect(await readFile(join(f.tool, "input.docx"))).toEqual(data);
@@ -182,6 +202,59 @@ test("materialize atomically hands exact bytes to an approved directory and capt
     [],
   );
 });
+
+test.skipIf(process.platform !== "darwin")(
+  "managed materialization uses the native clone and tool edits leave library bytes intact",
+  async () => {
+    const f = await fixture();
+    const data = Buffer.alloc(1024 * 1024, 47);
+    const asset = await f.asset(data);
+    f.service.openRead = async () => {
+      throw new Error("Native clone must not stream the source a second time");
+    };
+    expect(
+      await f.call("resources.materialize", {
+        assetId: asset.id,
+        directoryHandle: "approved-tool",
+        path: "cloned.pdf",
+      }),
+    ).toMatchObject({ bytes: data.length, sha256: digest(data) });
+    await writeFile(join(f.tool, "cloned.pdf"), "tool edits");
+    expect(await readFile(await f.service.library.resolvePath(f.scope, asset.id))).toEqual(data);
+    expect(
+      await readdir(join(f.root, "store", "scopes", mediaScopeKey(f.scope), "materialize")),
+    ).toEqual([]);
+  },
+);
+
+test.skipIf(process.platform !== "darwin")(
+  "clone publication across mount points retries the approved streaming path",
+  async () => {
+    const f = await fixture();
+    const data = Buffer.alloc(400000, 43);
+    const asset = await f.asset(data);
+    const nativeLink = fs.link;
+    let links = 0;
+    const linkMock = spyOn(fs, "link").mockImplementation(async (source, destination) => {
+      if (++links === 1) throw Object.assign(new Error("different mount point"), { code: "EXDEV" });
+      return nativeLink(source, destination);
+    });
+    try {
+      expect(
+        await f.call("resources.materialize", {
+          assetId: asset.id,
+          directoryHandle: "approved-tool",
+          path: "fallback.pdf",
+        }),
+      ).toMatchObject({ bytes: data.length, sha256: digest(data) });
+      expect(links).toBe(2);
+      expect(await readFile(join(f.tool, "fallback.pdf"))).toEqual(data);
+      expect(await f.partials()).toEqual([]);
+    } finally {
+      linkMock.mockRestore();
+    }
+  },
+);
 
 test("directory hand-offs reject symlinks, invalid paths, foreign grants and replaced roots without overwriting files", async () => {
   const f = await fixture(),
@@ -231,7 +304,7 @@ test("source revocation and directory replacement during copy never publish part
     data = Buffer.alloc(2 * 1024 * 1024, 19),
     asset = await f.asset(data);
   f.hook(async () => {
-    if ((await readdir(f.tool)).some((name) => name.endsWith(".resource-partial"))) f.revoke();
+    if ((await f.partials()).length) f.revoke();
   });
   await expect(
     f.call("resources.materialize", {
@@ -498,8 +571,7 @@ test("caller cancellation stops a transfer before publication and upload finaliz
   const asset = await f.asset(Buffer.alloc(700000, 5));
   const controller = new AbortController();
   f.hook(async () => {
-    const files = await readdir(f.tool);
-    if (files.some((name) => name.endsWith(".resource-partial"))) controller.abort();
+    if ((await f.partials()).length) controller.abort();
   });
   await expect(
     f.service.dispatch(
@@ -555,10 +627,10 @@ test("materialization detects destination-byte tampering and temporary grants re
   let changed = false;
   f.hook(async () => {
     if (changed) return;
-    const name = (await readdir(f.tool)).find((entry) => entry.endsWith(".resource-partial"));
-    if (name && (await readFile(join(f.tool, name))).length > 0) {
+    const path = (await f.partials())[0];
+    if (path && (await readFile(path)).length > 0) {
       changed = true;
-      await writeFile(join(f.tool, name), Buffer.alloc(400000, 12));
+      await writeFile(path, Buffer.alloc(400000, 12));
     }
   });
   await expect(
