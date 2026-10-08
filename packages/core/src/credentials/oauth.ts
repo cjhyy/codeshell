@@ -116,6 +116,7 @@ export function parseOAuthCredentialSecret(secret: string): OAuthCredentialSecre
             clientSecret: optionalString(
               (raw.clientRegistration as Record<string, unknown>).clientSecret,
             ),
+            issuer: optionalString((raw.clientRegistration as Record<string, unknown>).issuer),
             clientIdIssuedAt:
               typeof (raw.clientRegistration as Record<string, unknown>).clientIdIssuedAt ===
               "number"
