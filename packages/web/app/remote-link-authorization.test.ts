@@ -177,3 +177,26 @@ test("paired callback refuses a different workspace return or a root callback re
     });
   }
 });
+
+test("the shared redirect step retains provider identity without legacy redirect metadata", () => {
+  const f = fixture();
+  const { redirect, ...job } = f.job;
+  const stepJob = {
+    ...job,
+    providerId: "fixture-provider",
+    step: { id: "step-1", kind: "redirect" as const, ...redirect },
+  };
+  expect(
+    rememberRemoteLink(
+      stepJob,
+      issuer,
+      { workspace: "/original", projectId: null },
+      origin,
+      f.storage,
+    ),
+  ).toBe(redirect.authorizationUrl);
+  expect(JSON.parse(f.storage.getItem()!).providerId).toBe("fixture-provider");
+  expect(takeLinkCallback(f.location, f.history, f.storage)).toMatchObject({
+    pending: { providerId: "fixture-provider" },
+  });
+});

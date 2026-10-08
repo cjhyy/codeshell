@@ -1,4 +1,5 @@
 import type { LinkAuthorization } from "@cjhyy/code-shell-link";
+import { getLinkAuthorizationStep } from "../src/link-authorization.js";
 import { api } from "./auth.js";
 import { apiUrl, type ApiScope } from "./api-context.js";
 
@@ -12,6 +13,7 @@ interface PendingLink {
   redirectUri: string;
   returnUrl: string;
   expiresAt: number;
+  providerId?: string;
 }
 export type LinkCallback =
   | { callbackUrl: string; pending: PendingLink; denied: boolean }
@@ -49,11 +51,13 @@ export function rememberRemoteLink(
   origin = window.location.origin,
   storage: Pick<Storage, "setItem"> = window.sessionStorage,
 ): string {
-  if (!job.redirect || !new RegExp(`^${ID}$`).test(job.id)) throw new Error("授权请求无效。");
-  const authorization = remoteLinkAuthorizationUrl(job.redirect.authorizationUrl, issuer);
+  const step = getLinkAuthorizationStep(job);
+  if (step?.kind !== "redirect" || !new RegExp(`^${ID}$`).test(job.id))
+    throw new Error("授权请求无效。");
+  const authorization = remoteLinkAuthorizationUrl(step.authorizationUrl, issuer);
   const state = authorization.searchParams.get("state"),
     redirectUri = authorization.searchParams.get("redirect_uri");
-  const expiresAt = Date.parse(job.redirect.expiresAt);
+  const expiresAt = Date.parse(step.expiresAt);
   const home = redirectUri ? callbackHome(new URL(redirectUri, origin).pathname) : undefined;
   if (
     !state ||
@@ -81,6 +85,7 @@ export function rememberRemoteLink(
       redirectUri,
       returnUrl: `${home}?${params}`,
       expiresAt,
+      providerId: job.providerId,
     } satisfies PendingLink),
   );
   return authorization.href;
@@ -145,7 +150,7 @@ export async function completeLinkCallback(
 ): Promise<LinkAuthorization> {
   if (callback.denied) {
     await api(callback.pending.target, { method: "DELETE" });
-    return { id: "", providerId: "github", state: "cancelled" };
+    return { id: "", providerId: callback.pending.providerId ?? "", state: "cancelled" };
   }
   // Preserve the project's query on the callback endpoint. Never infer the target from the current view.
   const target = new URL(callback.pending.target, window.location.origin);

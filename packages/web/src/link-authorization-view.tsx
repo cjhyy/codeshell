@@ -107,10 +107,12 @@ export function LinkAuthorizationStepView(props: LinkAuthorizationStepViewProps)
   }, [props.authorization.id, step?.id]);
   React.useEffect(() => {
     setNow(Date.now());
-    const expires = Math.min(deadline, qrDeadline);
-    if (!Number.isFinite(expires)) return;
-    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, expires - Date.now()) + 1);
-    return () => clearTimeout(timer);
+    const timers = [deadline, qrDeadline]
+      .filter((expires) => Number.isFinite(expires) && expires > Date.now())
+      .map((expires) => setTimeout(() => setNow(Date.now()), expires - Date.now() + 1));
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+    };
   }, [deadline, qrDeadline]);
   React.useEffect(() => {
     let active = true;

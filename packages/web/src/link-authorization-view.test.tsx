@@ -146,3 +146,31 @@ test("unsafe redirect is inert and consent remains blocked until required resour
     },
   ]);
 });
+
+test("QR challenge expiry clears the code and the later task expiry removes refresh", async () => {
+  const view = await fixture(
+    authorization({
+      id: "qr-step",
+      expiresAt: new Date(Date.now() + 180).toISOString(),
+      kind: "qr-code",
+      phase: "awaiting-scan",
+      canRefresh: true,
+      qr: {
+        payload: "fixture-challenge",
+        challengeExpiresAt: new Date(Date.now() + 70).toISOString(),
+        instructions: [],
+      },
+    }),
+  );
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 90));
+  });
+  expect(text(view.tree)).toContain("二维码已过期");
+  expect(elements(view.tree).some((element) => element.type === "img")).toBe(false);
+  expect(elements(view.tree).some((element) => element.type === "button")).toBe(true);
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 110));
+  });
+  expect(text(view.tree)).toContain("授权已过期");
+  expect(elements(view.tree).some((element) => element.type === "button")).toBe(false);
+});

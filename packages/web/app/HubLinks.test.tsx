@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import {
   getLinkProviderManifest,
+  type LinkAuthorization,
   type LinkProviderView,
   type LinkSnapshot,
   type MaskedLinkConnection,
@@ -10,6 +11,7 @@ import {
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
 import { setApiWorkspace } from "./api-context.js";
 import { HubLinks } from "./HubLinks.js";
+import { LinkAuthorizationStepView } from "../src/link-authorization-view.js";
 
 // Mount the actual component and native element tree; invoke its rendered event
 // handlers because the minimal DOM intentionally has no browser event bubbling.
@@ -84,12 +86,45 @@ afterEach(async () => {
   setApiWorkspace(undefined);
 });
 
-async function fixture(connections: MaskedLinkConnection[]) {
+async function fixture(
+  connections: MaskedLinkConnection[],
+  options: { modern?: boolean; strict?: boolean; response?: LinkAuthorization } = {},
+) {
   ensureMiniDom();
   let snapshot: LinkSnapshot = {
-    providers: [provider],
+    providers: [
+      {
+        ...provider,
+        ...(options.modern
+          ? {
+              authModes: [
+                {
+                  id: "token",
+                  methodId,
+                  kind: "credential-input" as const,
+                  label: "输入 Token",
+                  available: true,
+                  preferred: true,
+                },
+                {
+                  id: "device",
+                  methodId,
+                  kind: "device-code" as const,
+                  label: "浏览器授权",
+                  available: true,
+                },
+              ],
+            }
+          : {}),
+      },
+    ],
     connections,
-    capabilities: { token: true, cliBinding: true, deviceAuth: true },
+    capabilities: {
+      token: true,
+      cliBinding: true,
+      deviceAuth: true,
+      ...(options.modern ? { authorizationSteps: 1 as const } : {}),
+    },
     revision: "snapshot-1",
   };
   const requests: Array<{ url: URL; method: string; body?: any }> = [];
@@ -98,6 +133,36 @@ async function fixture(connections: MaskedLinkConnection[]) {
     const method = init?.method ?? "GET";
     requests.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : undefined });
     if (url.pathname === "/api/v1/links" && method === "GET") return Response.json(snapshot);
+    if (url.pathname === "/api/v1/links/authorizations" && method === "POST")
+      return Response.json({
+        id: "modern-attempt",
+        providerId: "github",
+        methodId,
+        state: "pending",
+        step: {
+          id: "modern-step",
+          kind: "credential-input",
+          purpose: "credential",
+          fields: [{ id: "token", label: "Token", secret: true, required: true }],
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      });
+    if (
+      url.pathname === "/api/v1/links/authorizations/modern-attempt/responses" &&
+      method === "POST"
+    ) {
+      if (options.response) return Response.json(options.response);
+      snapshot = { ...snapshot, connections: [connection()] };
+      return Response.json({
+        id: "modern-attempt",
+        providerId: "github",
+        methodId,
+        state: "connected",
+        connection: connection(),
+      });
+    }
+    if (url.pathname === "/api/v1/links/authorizations/modern-attempt" && method === "DELETE")
+      return Response.json({ cancelled: true });
     if (url.pathname === "/api/v1/links/authorizations/device" && method === "POST")
       return Response.json({
         id: "pending-authorization",
@@ -145,7 +210,15 @@ async function fixture(connections: MaskedLinkConnection[]) {
   const root = createRoot(container);
   const render = () =>
     act(async () => {
-      root.render(<MountedLinks />);
+      root.render(
+        options.strict ? (
+          <React.StrictMode>
+            <MountedLinks />
+          </React.StrictMode>
+        ) : (
+          <MountedLinks />
+        ),
+      );
       await flushMicrotasks();
     });
   let alive = true;
@@ -268,4 +341,77 @@ test("a new draft does not adopt a different provider, method or connection ID",
     expect(text(view.tree)).not.toContain("载入最新版本，保留输入");
     expect(findButton(view.tree, "验证并保存").props.disabled).not.toBe(true);
   }
+});
+
+test("available Host mode starts directly under StrictMode and responses retain the originating workspace", async () => {
+  setApiWorkspace("/workspace/original");
+  const view = await fixture([], { modern: true, strict: true });
+  await click(findButton(view.tree, "添加连接"));
+  const begins = view.requests.filter(
+    (request) => request.url.pathname === "/api/v1/links/authorizations",
+  );
+  expect(begins).toHaveLength(1);
+  expect(begins[0].body).toMatchObject({
+    authModeId: "token",
+    providerId: "github",
+    methodId,
+    expectedRevision: null,
+  });
+  expect(view.dirty).toBe(true);
+  setApiWorkspace("/workspace/later");
+  await act(async () => {
+    elements(view.tree)
+      .find((element) => element.type === LinkAuthorizationStepView)!
+      .props.onRespond({
+        stepId: "modern-step",
+        operation: "submit",
+        input: { token: "synthetic-token" },
+      });
+    await flushMicrotasks();
+  });
+  const response = view.requests.find((request) => request.url.pathname.endsWith("/responses"))!;
+  expect(response.url.searchParams.get("workspace")).toBe("/workspace/original");
+  expect(response.body).toMatchObject({ stepId: "modern-step", operation: "submit" });
+  expect(text(view.tree)).toContain("授权完成，连接已保存");
+  expect(view.dirty).toBe(false);
+  expect(elements(view.tree).some((element) => element.type === LinkAuthorizationStepView)).toBe(
+    false,
+  );
+});
+
+test("closing a generic pending dialog cancels its original scope and never saves", async () => {
+  setApiWorkspace("/workspace/original");
+  const view = await fixture([], { modern: true });
+  await click(findButton(view.tree, "添加连接"));
+  setApiWorkspace("/workspace/later");
+  await click(findButton(view.tree, "关闭"));
+  const cancelled = view.requests.find((request) => request.method === "DELETE")!;
+  expect(cancelled.url.searchParams.get("workspace")).toBe("/workspace/original");
+  expect(cancelled.url.pathname).toBe("/api/v1/links/authorizations/modern-attempt");
+  expect(view.dirty).toBe(false);
+  expect(view.requests.some((request) => request.url.pathname.endsWith("/responses"))).toBe(false);
+  expect(elements(view.tree).some((element) => element.type === LinkAuthorizationStepView)).toBe(
+    false,
+  );
+});
+
+test("an unsupported successful response cannot close the dialog or announce a saved connection", async () => {
+  const view = await fixture([], {
+    modern: true,
+    response: { id: "modern-attempt", providerId: "github", state: "connected" },
+  });
+  await click(findButton(view.tree, "添加连接"));
+  await act(async () => {
+    elements(view.tree)
+      .find((element) => element.type === LinkAuthorizationStepView)!
+      .props.onRespond({
+        stepId: "modern-step",
+        operation: "submit",
+        input: { token: "synthetic-token" },
+      });
+    await flushMicrotasks();
+  });
+  expect(text(view.tree)).not.toContain("授权完成，连接已保存");
+  expect(text(view.tree)).toContain("服务尚未确认");
+  expect(view.dirty).toBe(true);
 });
