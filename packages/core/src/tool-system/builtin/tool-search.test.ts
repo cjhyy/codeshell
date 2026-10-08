@@ -331,6 +331,7 @@ describe("toolSearchTool — deferred run selection", () => {
     ]);
     const result = await toolSearchTool({ query: "select:Dynamic,Missing,Dynamic" }, context);
     expect(result).toContain("Selected tools for this run: Dynamic.");
+    expect(result).toContain("schemaRef: select:Dynamic");
     expect(result).toContain('Tool "Missing" is not available in the current Session context.');
     expect(result).toContain("Do not retry unless the Session context changes.");
     expect(result).not.toContain("target_id");
@@ -505,6 +506,21 @@ describe("toolSearchTool — deferred run selection", () => {
     const receipt = result.slice(result.indexOf('\n\nTool "') + 2);
     expect(receipt.length).toBeLessThan(5000);
     expect(context.runToolSurface!.snapshot().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+  });
+
+  it("bounds mixed selection references and preserves every unavailable receipt", async () => {
+    const selected = `mcp_${"x".repeat(1970)}`;
+    const context = deferredContext(registryWith({ name: selected, description: "fixture" }));
+    const missing = Array.from({ length: 19 }, (_, index) => `M${index}`);
+    context.mcpServerFailures = new Map([["fixture", "Initialization timed out. ".repeat(1000)]]);
+    const query = `select:${[selected, ...missing].join(",")}`;
+    expect(query.length).toBeLessThanOrEqual(2048);
+    const result = await toolSearchTool({ query }, context);
+    expect(result.length).toBeLessThanOrEqual(8192);
+    expect(context.runToolSurface!.isSelected(selected)).toBe(true);
+    for (const name of missing) expect(result).toContain(`Tool "${name}" is not available`);
+    if (result.includes("schemaRef:")) expect(result).toContain(`schemaRef: select:${selected}`);
+    else expect(result).toContain("Some matching tools were omitted");
   });
 
   it("counts MCP health diagnostics within the final keyword output budget", async () => {

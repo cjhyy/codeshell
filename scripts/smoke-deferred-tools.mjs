@@ -226,8 +226,8 @@ try {
     const attempts = events.filter((event) => event.type === "model_request_attempt");
     assert.equal(attempts.length, f.scenario.bodies.length);
     assert.deepEqual(
-      attempts.map((event) => event.data.toolCatalogDigest).sort(),
-      f.scenario.bodies.map((body) => digest(body.tools ?? [])).sort(),
+      attempts.map((event) => event.data.toolCatalogDigest),
+      f.scenario.bodies.map((body) => digest(body.tools ?? [])),
     );
   }
   {
@@ -251,6 +251,11 @@ try {
           return [{ name: "ToolSearch", args: { query: schemaRef } }];
         }
         const selected = body.tools.find((tool) => tool.function.name === dynamicName);
+        const receipt = body.messages.findLast((message) => message.role === "tool").content;
+        assert.equal(
+          receipt.match(/schemaRef: (select:DynamicFixture)/)?.[1],
+          `select:${dynamicName}`,
+        );
         assert.deepEqual(selected.function.parameters, expectedSchema);
         assert.match(JSON.stringify(body.messages), /Selected tools for this run: DynamicFixture/);
         assert.ok(!JSON.stringify(body.messages).includes("fixture-rewritten"));

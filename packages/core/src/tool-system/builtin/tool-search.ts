@@ -100,12 +100,18 @@ export async function toolSearchTool(
     }
     if (ctx.runToolSurface) {
       const { selected, unavailable } = ctx.runToolSurface.select(names);
-      return withHealth(
-        [
-          ...(selected.length ? [`Selected tools for this run: ${selected.join(", ")}.`] : []),
-          ...unavailable.map(unavailableTool),
-        ].join("\n"),
-      );
+      const unavailableText = unavailable.map(unavailableTool).join("\n");
+      const receiptBudget = resultBudget - (unavailableText ? unavailableText.length + 2 : 0);
+      const receipt = selected.length
+        ? formatBoundedMetadata(
+            [
+              `Selected tools for this run: ${selected.join(", ")}.\n` +
+                `schemaRef: select:${selected.join(",")}`,
+            ],
+            receiptBudget,
+          )
+        : "";
+      return withHealth([receipt, unavailableText].filter(Boolean).join("\n\n"));
     }
     // Legacy contexts can discover metadata, but have no per-run loading state to mutate.
     const byName = new Map(tools.map((tool) => [tool.name, tool]));
