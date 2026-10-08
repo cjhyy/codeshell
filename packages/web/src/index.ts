@@ -40,6 +40,8 @@ export * from "./lib/pairing.js";
 export * from "./lib/deviceCredential.js";
 export * from "./lib/mobileAttachments.js";
 export * from "./lib/uiLanguage.js";
+export * from "./link-authorization.js";
+export * from "./link-authorization-view.js";
 
 // ── i18n: mobile namespace dict + zh-fallback translate ─────────────────────
 export { mobile } from "./i18n/mobile.js";
