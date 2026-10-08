@@ -96,8 +96,14 @@ export async function runIsolatedInstruction(input: {
     return { ...result, receipt };
   } finally {
     input.signal?.removeEventListener("abort", abort);
-    await handle.close();
-    client.close();
-    await handle.engine.dispose();
+    try {
+      await handle.close();
+    } finally {
+      try {
+        client.close();
+      } finally {
+        await handle.engine.dispose();
+      }
+    }
   }
 }

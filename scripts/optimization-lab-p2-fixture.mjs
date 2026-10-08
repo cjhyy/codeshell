@@ -354,12 +354,53 @@ try {
   // This ordinary-Session fixture disables the unrelated background memory pipeline.
   // The isolated helper above exercises the production ephemeral no-memory lifecycle.
   handle.engine.runMemoryPipeline = async () => {};
+  let ownershipHandle;
+  let ownershipClient;
+  let ownershipBinding;
   try {
     await client.run("USER_ORIGINAL_TASK", { sessionId: "ordinary", behaviorMode: "fixture" });
     assert.ok(seen.at(-1).prompt.includes("ADOPTED_INSTRUCTION"));
     assert.ok(seen.at(-1).prompt.includes("SECOND_ADOPTED"));
     const initialReply = `DERIVED_RESPONSE_${seen.length}`;
     await client.run("USER_IDLE_TASK", { sessionId: "idle", behaviorMode: "fixture" });
+    await client.run("USER_FORMER_OWNER", { sessionId: "ownership", behaviorMode: "fixture" });
+    ownershipBinding = store.adopt({
+      scope: { ...binding.scope, sessionId: "ownership" },
+      name,
+      sourceRevision,
+      body: "SESSION_ADOPTED",
+      evidenceHash: "d".repeat(64),
+      receiptIds: [sessionTrial.receipt.id],
+    });
+    const [ownershipServerTransport, ownershipClientTransport] = createInProcessTransport();
+    ownershipHandle = createServer({
+      transport: ownershipServerTransport,
+      cwd,
+      llm,
+      engineOverrides: {
+        settingsScope: "isolated",
+        enabledBuiltinTools: [],
+        sessionStorageDir: join(root, "sessions"),
+        modules: [{ id: "fixture-bindings", engine: { instructionBindings: store.provider() } }],
+        behaviorProfiles: [
+          {
+            id: "fixture",
+            disableHooks: true,
+            disableSessionTitle: true,
+            disableMemoryContext: true,
+            disableMcp: true,
+          },
+        ],
+      },
+    });
+    ownershipClient = createClient({ transport: ownershipClientTransport });
+    ownershipHandle.engine.runMemoryPipeline = async () => {};
+    await ownershipClient.run("USER_NEW_OWNER", {
+      sessionId: "ownership",
+      behaviorMode: "fixture",
+    });
+    assert.ok(seen.at(-1).prompt.includes("SESSION_ADOPTED"));
+
     await client.run("USER_RESTRICTED", { sessionId: "ordinary", behaviorMode: "no-instructions" });
     assert.ok(!seen.at(-1).prompt.includes("ADOPTED_INSTRUCTION"));
     assert.ok(!seen.at(-1).prompt.includes("SECOND_ADOPTED"));
@@ -403,6 +444,15 @@ try {
     await started;
     store.revoke(cwd, binding.snapshot.bindingId, binding.snapshot.revision);
     assert.equal(lastSignal.aborted, false);
+    assert.ok(
+      ownershipHandle.engine
+        .getSessionManager()
+        .readSessionState("ownership")
+        .instructionSnapshots.some(
+          (snapshot) => snapshot.bindingId === ownershipBinding.snapshot.bindingId,
+        ),
+    );
+
     assert.deepEqual(
       handle.engine
         .getLoadedInstructionSnapshots()
@@ -466,6 +516,11 @@ try {
     await handle.close();
     client.close();
     await handle.engine.dispose();
+    if (ownershipHandle) {
+      await ownershipHandle.close();
+      ownershipClient.close();
+      await ownershipHandle.engine.dispose();
+    }
   }
   assert.equal(readFileSync(skillFile, "utf8"), source);
   console.log(
@@ -478,6 +533,7 @@ try {
       scopeVisibilityAndMultiTurnPreserved: true,
       sessionOverridePreservesOtherSkills: true,
       idleRevocationPreservesActiveSession: true,
+      staleOwnerCannotReplaceNewBinding: true,
       sourceRevisionCheckedOnResume: true,
       originalMessagesRetained: true,
       revokedRunSignalAborted: true,

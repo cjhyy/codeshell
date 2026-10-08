@@ -1436,6 +1436,11 @@ export class Engine {
       ),
     ),
   ): void {
+    const expectedRunId = this.runIds.get(session.state) ?? session.state.runId;
+    const latest = this.sessionManager.readSessionState(session.state.sessionId);
+    if (!latest) throw new Error("Could not read instruction context owner");
+    // A former Engine's idle watch must not clear a newer run's accepted configuration.
+    if (latest.runId !== expectedRunId) return;
     const events = session.transcript.getEvents();
     const start = events.findIndex(
       (event) => event.id === session.state.instructionContextStartEventId,
@@ -1483,23 +1488,27 @@ export class Engine {
     session.state.invokedSkills = [];
     session.state.contextUsageAnchor = undefined;
     if (
-      !this.sessionManager.saveStateOrUpdateFields(session.state, {
-        instructionSnapshots: retainedSnapshots,
-        instructionContextStartEventId: undefined,
-        instructionContextRevisions: [],
-        invokedSkills: [],
-        contextUsageAnchor: undefined,
-      })
+      !this.sessionManager.saveStateOrUpdateFields(
+        session.state,
+        {
+          instructionSnapshots: retainedSnapshots,
+          instructionContextStartEventId: undefined,
+          instructionContextRevisions: [],
+          invokedSkills: [],
+          contextUsageAnchor: undefined,
+        },
+        expectedRunId,
+      )
     )
       throw new Error("Could not persist cleared instruction context");
     this.compactedMessagesBySession.delete(session.state.sessionId);
+    if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
     if (
-      this.lastSessionId === session.state.sessionId ||
-      this.activeInstructionSessionId === session.state.sessionId
-    ) {
-      this.lastMessages = [];
+      this.activeInstructionSessionId === session.state.sessionId ||
+      (this.activeInstructionSessionId === undefined &&
+        this.lastSessionId === session.state.sessionId)
+    )
       this.loadedInstructionSnapshots = [];
-    }
   }
 
   /**
@@ -1820,11 +1829,15 @@ export class Engine {
       session.state.instructionContextStartEventId = runId;
     session.state.instructionContextRevisions = effectiveRevisions;
     if (
-      !this.sessionManager.saveStateOrUpdateFields(session.state, {
-        instructionSnapshots: session.state.instructionSnapshots,
-        instructionContextStartEventId: session.state.instructionContextStartEventId,
-        instructionContextRevisions: effectiveRevisions,
-      })
+      !this.sessionManager.saveStateOrUpdateFields(
+        session.state,
+        {
+          instructionSnapshots: session.state.instructionSnapshots,
+          instructionContextStartEventId: session.state.instructionContextStartEventId,
+          instructionContextRevisions: effectiveRevisions,
+        },
+        runId,
+      )
     )
       throw new Error("Could not persist fixed instruction context");
     toolCtx.instructionSnapshots = effectiveSnapshots;
