@@ -5,12 +5,13 @@ import { pathToFileURL } from "node:url";
 import { confinedWorkerEnvironment } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
 
 /** Test-only bootstrap: Electron may discard NODE_OPTIONS, including for its Node worker. */
-export async function prepareConfinedElectronFixture({ appDir, isolated, origin }) {
+export async function prepareConfinedElectronFixture({ appDir, isolated, origin, guardModule }) {
   isolated.home = await realpath(isolated.home);
   isolated.codeShellHome = join(isolated.home, ".code-shell");
   isolated.userDataDir = join(isolated.home, "electron-user-data");
-  const guardUrl = new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url)
-    .href;
+  const guardUrl =
+    guardModule ??
+    new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href;
   const receiptFile = join(isolated.home, "network-guard.jsonl");
   const spawnedWorkerFile = join(isolated.home, "spawned-workers.jsonl");
   const mainEntry = join(isolated.home, "guarded-main.mjs");

@@ -35,12 +35,16 @@ main、aux summary、tool summary、goal judge、title、context package、manua
 - 已编译纯 Node SDK、真实 stdio worker run→关闭→restart 冷读→replay（无新请求且 runId 相同）、TUI CLI 持久账本全部通过。实际 worker/TUI PID 的独立 HOME hash/origin/父 PID guard 收据均核验；本地服务收到 4 次请求，worker 2 receipt，TUI 2 receipt（含退出时尚未到服务的 pending title，费用 unknown）。
 - TUI Session 水合与已有外部 turn/TodoWrite/terminal footer：9 pass / 0 fail，55 assertions，覆盖跨 SID 晚到、同 SID 新旧查询竞争和失败后清空。
 - CI typecheck job 增加 guard 自检和三种已编译消费者 smoke，确保最终合入 head 持续验证。
+- 真实 macOS Electron 33.4.11 GUI：`bun run --cwd packages/desktop test:e2e:runtime-cost-history` 从现有设置 → 活动记录 → 运行记录进入，使用已编译公开 `UsageLedger` / `SessionManager` receipt 与 transcript writer 写入私有两 Session、六条请求。生产 Main IPC 冷读及页面同时显示 `$0.011100` 已知估价、三个未知成本、两次缺失 usage 和五个 provider/model 分组；选中 Session 的归属、Completed / Failed / Cancelled、刷新与 renderer reload 后不重复均通过。重复 external identity 在热账本与冷启动后都不新增 receipt，落盘仍为六条。
+- GUI 隔离证据：父进程和实际 Electron Main 在首次加载 Core 前安装 exact-origin HTTP guard，再拒绝包括该哨兵 origin 在内的全部 fetch / http / https request / get；每个实际进程执行七个否定探针，核验 PID、PPID 与 HOME / USERPROFILE / CODE_SHELL_HOME / CODE_SHELL_TEST_HOME 的不可逆 hash。此次自然未创建 worker，证据明确记录 `no worker created`；既有 bootstrap 仍为将来实际创建的 worker 注入 guard 并在收据核验前阻止其 stdin。环境移除 provider 凭据与代理，保留真实 OS keyring 配置，未使用 mock keychain / basic password store、真实模型、provider 或账号。截图及 JSON 收据保存在本次私有 fixture 的 `home/evidence` 下，并实际检查已知/未知、失败与取消页面截图。
+- 本次 GUI 专项另行复核：package release gate 九个 tarballs / 47 typed entries、workspace / Desktop 构建、Desktop main / renderer / mobile 类型检查通过；Main usage-history 与运行记录交互的受隔离单元测试 9 pass / 0 fail、78 assertions；三个变更脚本 lint / format 通过，隔离 guard 自检、engine-bypass 和 workflow test paths guard 通过。
 
-消费 smoke 使用合成任务和本地 HTTP fixture；在 Core 加载前安装网络 guard，向 worker 发送 agent/run 前校验实际 PID 的 origin/HOME 启动收据。失败时保留私有 fixture 以便诊断，成功才清理。尚未执行完整 Electron GUI 人工操作；React 运行记录页交互、TUI 实际 terminal render、Main 冷读和真实 stdio worker 是独立的自动验证证据。
+SDK / stdio / TUI 消费 smoke 使用合成任务和本地 HTTP fixture；在 Core 加载前安装网络 guard，向 worker 发送 agent/run 前校验实际 PID 的 origin/HOME 启动收据。GUI fixture 不启动 HTTP 服务或模型 run，只通过公开 Core writer 合成请求证据，再走真实 Main IPC 与现有 UI；成功保留私有截图和收据供检查，仅清理自己的 Electron user-data/cache，失败保留私有 fixture 诊断。自动 Electron 操作与截图检查不代表真实 provider 账单验收，也不代表 macOS Phase D 签名 / OS 级请求隔离验收。
 
 ## 明确限制
 
 - 金额是价格表估算，不是 provider 发票；unknown 不会被计为免费。
+- GUI 中取消 run 使用真实 transcript 的 `aborted_streaming` 状态，相关无 usage 请求按现有 receipt 契约记为 failed / unknown，不新增虚构的 cancelled receipt outcome。Session 的历史缺口使该 Session 标记 partial；store 只汇总实际读到的持久 receipt，因此同一次查询的 store 仍可以完整。两种覆盖语义分别验收。
 - 单次查询最多读取 10000 receipt，目录扫描最多 50000 entries；分页 cursor 和 partial 标记公开可用。Desktop 当前显示这一有界结果并明确覆盖不足，没有无界全盘扫描或跨页总额保证。
 - 账本当前用每请求文件存储，内存活跃记录随 Runtime 生命周期增长；未实现压缩/长期保留策略。
 - `pending` 的异步 title 在 CLI 立即退出时可能缺 usage，保留 unknown；不为获得费用而追加请求。
