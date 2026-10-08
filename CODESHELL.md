@@ -121,8 +121,8 @@ bun install            # bun workspaces (NOT npm/yarn/pnpm)
 bun run build          # filter order: link → core → pet → optimization-lab → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
-bun test               # bun test runner (NOT vitest/jest)
-bun test -- -t 'name'  # run tests matching a pattern
+bun run test           # guarded Bun test runner (NOT vitest/jest)
+node scripts/run-bun-test-shard.mjs --timeout 30000 tests/example.test.ts # targeted tests
 bun run typecheck      # builds dependency declarations, then checks all workspaces + Web SPA
 bun run lint           # eslint packages/
 bun run lint:engine-bypass  # guard: every internal `new Engine(` must be allowlisted
@@ -134,6 +134,14 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 Run it to completion before starting other checks that read `dist/`, including Desktop
 build, workspace typecheck, and SDK/Hub smoke tests; running those concurrently can
 observe deleted or partially emitted dependency files.
+
+Use the guarded runner for unit shards. It creates a fresh real HOME, application
+state and platform config directories, removes inherited provider credentials and
+Host configuration, and requires a complete zero-failure JUnit report. Do not run
+an ordinary unit suite against the operator's HOME or credentials. Individual
+network fixtures must still install their exact-origin guards before Core/worker
+imports: HOME isolation is not an OS sandbox or network confinement. Live paid
+evaluations use their separate, explicitly authorized workflow.
 
 ## Code Style
 
