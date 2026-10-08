@@ -284,6 +284,7 @@ if (process.argv[2] !== "--consume") {
     ...confinedWorkerEnvironment(process.env, home, origin, isolation),
     CODESHELL_COST_SMOKE_GUARD_LOG: join(root, "guard.jsonl"),
     CODE_SHELL_DATA_ROOT: join(root, "data"),
+    CODE_SHELL_HOME: join(home, ".code-shell"),
     AGENT_CWD: root,
     CODE_SHELL_CAPABILITY_MODULES: "",
     CODE_SHELL_DEV: "0",
