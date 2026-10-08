@@ -332,6 +332,8 @@ export interface SessionState {
   lastCompletionKind?: TurnCompletionKind;
   /** Current run's durable user-message identity; optional on historical state. */
   runId?: string;
+  /** Sticky recovery barrier after an output persistence/budget failure. */
+  outputRecoveryIncomplete?: boolean;
   clientMessageId?: string;
   /**
    * Monotonic prompt-cache counters for the whole session. These only increase
@@ -603,6 +605,11 @@ export type StreamEvent = {
   /** Transcript user-message event id that opened this run; scoped to the session. */
   runId?: string;
   clientMessageId?: string;
+  /** Opaque Session-owned output cursor, independent of Host transport epochs. */
+  outputCursor?: string;
+  /** Original child cursor when a parent journals a forwarded mirror. */
+  outputOriginCursor?: string;
+  outputRecovery?: "incomplete";
 } & StreamEventPayload;
 
 type StreamEventPayload =

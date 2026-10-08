@@ -9,6 +9,15 @@
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 
 export {
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+  SessionOutputJournal,
+  type OutputJournalPage,
+  type OutputJournalOptions,
+  type OutputJournalFrame,
+} from "./session/output-journal.js";
+
+export {
   getGraphemeSegmenter,
   firstGrapheme,
   lastGrapheme,

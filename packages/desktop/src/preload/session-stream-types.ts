@@ -26,6 +26,7 @@ export interface SessionSnapshot {
   nextSeq: number;
   /** Main-authoritative top-level run state. Missing on legacy snapshots. */
   topLevelRunning?: boolean;
+  outputCursor?: string;
 }
 
 /**

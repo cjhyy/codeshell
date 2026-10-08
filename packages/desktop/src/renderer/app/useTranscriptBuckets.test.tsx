@@ -8,6 +8,15 @@ import { transcriptsReducer, type TranscriptsMap } from "../transcriptsReducer";
 import { foldTranscript } from "../automation/foldTranscript";
 import { flushSessionPersistence } from "../sessionPersistence";
 import { INITIAL_CHAT_HISTORY_BYTES, useTranscriptBuckets } from "./useTranscriptBuckets";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { SessionManager } from "../../../../core/src/session/session-manager.js";
+import {
+  SessionOutputJournal,
+  readOutputJournal,
+} from "../../../../core/src/session/output-journal.js";
+import { SessionSnapshotStore } from "../../main/SessionSnapshotStore.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -128,6 +137,58 @@ describe("transcript history hydration after a background resume", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
     if (savedBridge) Object.defineProperty(window, "codeshell", savedBridge);
     else Reflect.deleteProperty(window, "codeshell");
+  });
+
+  test("existing hydration recovers a long prefix evicted from Main through the v2 journal", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-hydrate-journal-"));
+    const manager = new SessionManager(root);
+    const session = manager.create(root, "fixture", "fixture", "saved");
+    manager.startSessionRun(session.state, "run");
+    const writer = new SessionOutputJournal(
+      root,
+      "saved",
+      "run",
+      session.transcript.getEvents()[0].id,
+    );
+    const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
+    const publish = (event: StreamEvent) =>
+      snapshots.append("saved", { ...event, outputCursor: writer.append(event) });
+    try {
+      initial = {};
+      readDisk = async () => [];
+      publish({ type: "session_user_message", text: "question", clientMessageId: "client" });
+      publish({ type: "session_started", sessionId: "saved", runId: "run", promptTokens: 0 });
+      publish({ type: "stream_request_start", turnNumber: 1, messageId: "durable-reply" });
+      const parts = Array.from({ length: 12 }, (_, index) => `${index}汉🙂`);
+      for (const text of parts) publish({ type: "text_delta", text });
+      readSnapshot = async () => snapshots.get("saved") as SessionSnapshot;
+      window.codeshell.getSessionOutputJournal = async (_id, options) => ({
+        ...readOutputJournal(root, "saved", { ...options, maxFrames: 128 }),
+        legacyBaseComplete: true,
+        legacyBaseItems: [],
+      });
+      hook = await renderHook(useHarness);
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.state.messages).toContainEqual(
+        expect.objectContaining({
+          id: "durable-reply",
+          text: parts.join(""),
+          done: false,
+        }),
+      );
+      expect(hook.result.current.awaitingHydration).toBe(false);
+      expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
+      expect(hook.result.current.busyKeys.has(bucket)).toBe(true);
+      expect(
+        hook.result.current.state.messages.filter((message) => message.kind === "turn_end"),
+      ).toEqual([]);
+    } finally {
+      await hook?.unmount();
+      hook = undefined;
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("replays an older cache prefix before merging a completed steer reply from disk", async () => {

@@ -15,7 +15,14 @@ import {
   reduceStream,
   type ChatState,
 } from "../src/lib/streamReducer.js";
-import { chatFromSnapshot, isNewStreamEvent, sessionIdFromSearch, sessionTitle } from "./chat.js";
+import {
+  chatFromSnapshot,
+  chatFromOutputJournal,
+  isNewStreamEvent,
+  sessionIdFromSearch,
+  sessionTitle,
+} from "./chat.js";
+import { compareOutputCursors } from "../src/lib/outputJournalRecovery.js";
 import { ApiError, browserId, uploadFile, type AuthSession, type UploadedFile } from "./auth.js";
 import { reduceApprovals, type ApprovalState } from "./approvals.js";
 import { readConfiguration, type HubConfiguration } from "./configuration.js";
@@ -68,6 +75,7 @@ export function useHubController({
   const configurationRequest = React.useRef(0);
   const activeIdRef = React.useRef<string>(activeId);
   const activeStreamCursor = React.useRef<HubStreamCursor | null>(null);
+  const activeOutputCursor = React.useRef<string | null>(null);
   const submissions = React.useRef(
     new Map<
       string,
@@ -95,6 +103,9 @@ export function useHubController({
   const loadingTranscript = React.useRef<{
     sessionId: string;
     events: StreamEventPayload[];
+    bytes: number;
+    overflow?: boolean;
+    latestOutputCursor?: string;
     running?: boolean;
   } | null>(null);
 
@@ -217,27 +228,62 @@ export function useHubController({
     async (sessionId: string) => {
       const client = clientRef.current;
       if (!client) return;
-      const load: { sessionId: string; events: StreamEventPayload[]; running?: boolean } = {
+      const load: {
+        sessionId: string;
+        events: StreamEventPayload[];
+        bytes: number;
+        overflow?: boolean;
+        latestOutputCursor?: string;
+        running?: boolean;
+      } = {
         sessionId,
         events: [],
+        bytes: 0,
       };
       loadingTranscript.current = load;
       try {
-        const detail = await client.sessionDetail(sessionId);
+        const detail = await client.sessionDetail(sessionId, true);
         if (
           !mounted.current ||
           loadingTranscript.current !== load ||
           activeIdRef.current !== sessionId
         )
           return;
-        const latestRunning = load.running ?? detail.data.running;
+        let latestRunning = load.running ?? detail.data.running;
         if (latestRunning) liveRuns.current.add(sessionId);
         else if (latestRunning === false) liveRuns.current.delete(sessionId);
         const snapshot = chatFromSnapshot(detail.data, load.events);
-        const restored = snapshot.chat;
+        let restored = snapshot.chat;
+        let durableRecovered = false;
+        let durableFailed = false;
+        try {
+          const durable = await chatFromOutputJournal(
+            detail.data,
+            async (options) => (await client.outputJournal(sessionId, options)).data,
+            load.events,
+            () => load.latestOutputCursor,
+          );
+          if (durable) {
+            restored = durable.chat;
+            activeOutputCursor.current = durable.outputCursor;
+            durableRecovered = true;
+          } else activeOutputCursor.current = null;
+        } catch (cause) {
+          activeOutputCursor.current = null;
+          // Older peers do not implement the v2 query; their existing snapshot
+          // contract remains in force. Known v2 failures retain the notice.
+          durableFailed = !(cause instanceof ProtocolRequestError && cause.kind === "response");
+        }
+        if (
+          !mounted.current ||
+          loadingTranscript.current !== load ||
+          activeIdRef.current !== sessionId
+        )
+          return;
+        latestRunning = load.running ?? detail.data.running;
         activeStreamCursor.current = snapshot.cursor ?? null;
         setReplayNote(
-          snapshot.truncated
+          !durableRecovered && (snapshot.truncated || durableFailed || load.overflow)
             ? "这次运行的实时记录较长，已恢复已保存的内容；结束后重新打开可查看完整记录。"
             : null,
         );
@@ -314,8 +360,28 @@ export function useHubController({
         )
           submission.accepted = true;
         if (sessionId === activeIdRef.current) {
-          if (loadingTranscript.current?.sessionId === sessionId)
-            loadingTranscript.current.events.push(payload);
+          if (loadingTranscript.current?.sessionId === sessionId) {
+            const load = loadingTranscript.current;
+            if (typeof event.outputCursor === "string")
+              load.latestOutputCursor = event.outputCursor;
+            const bytes = new TextEncoder().encode(JSON.stringify(payload)).length;
+            load.events.push(payload);
+            load.bytes += bytes;
+            while (load.events.length > 2048 || load.bytes > 8 * 1024 * 1024) {
+              const removed = load.events.shift();
+              if (removed) load.bytes -= new TextEncoder().encode(JSON.stringify(removed)).length;
+              load.overflow = true;
+            }
+          }
+          if (typeof event.outputCursor === "string" && activeOutputCursor.current) {
+            const order = compareOutputCursors(event.outputCursor, activeOutputCursor.current);
+            if (order === undefined) {
+              void loadTranscript(sessionId);
+              return;
+            }
+            if (order <= 0) return;
+            activeOutputCursor.current = event.outputCursor;
+          }
           if (!isNewStreamEvent(payload, activeStreamCursor.current)) return;
           if (payload.hubEpoch && payload.hubSequence !== undefined)
             activeStreamCursor.current = { epoch: payload.hubEpoch, sequence: payload.hubSequence };
@@ -398,6 +464,7 @@ export function useHubController({
   const loadSelectedSession = async (sessionId: string): Promise<void> => {
     activeIdRef.current = sessionId;
     activeStreamCursor.current = null;
+    activeOutputCursor.current = null;
     setActiveId(sessionId);
     syncDraft(sessionId);
     setChat(initialChatState());
@@ -416,6 +483,7 @@ export function useHubController({
     const id = newSessionId();
     activeIdRef.current = id;
     activeStreamCursor.current = null;
+    activeOutputCursor.current = null;
     loadingTranscript.current = null;
     setActiveId(id);
     syncDraft(id);

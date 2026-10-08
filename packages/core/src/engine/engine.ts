@@ -14,7 +14,7 @@ import { createLLMClient } from "../llm/client-factory.js";
 import { OperationLedger } from "../operations/ledger.js";
 import { OperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
-import { buildWrappedOnStream } from "./run-stream.js";
+import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
@@ -1488,12 +1488,16 @@ export class Engine {
     const userOnStream = options?.onStream;
     const clientMessageId = options?.clientMessageId;
     const wrappedOnStream = buildWrappedOnStream({
-      userOnStream: (event) =>
-        userOnStream?.(
-          event.type === "session_started"
-            ? { ...event, runId, previousRunId, clientMessageId }
-            : event,
-        ),
+      outputJournal: createRunOutputJournalPolicy(
+        this.sessionManager,
+        () => session,
+        () => runId,
+      ),
+      userOnStream,
+      prepareEvent: (event) =>
+        event.type === "session_started"
+          ? { ...event, runId, previousRunId, clientMessageId }
+          : event,
       getSession: () => session,
       setLatestTodos: (todos) => {
         latestTodos = todos;

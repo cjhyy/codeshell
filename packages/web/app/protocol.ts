@@ -13,6 +13,8 @@ export interface SessionSummary {
   customTitle?: string;
   lastActiveAt?: number;
   running?: boolean;
+  outputJournal?: import("@cjhyy/code-shell-core/internal").OutputJournalPage;
+  legacyBaseComplete?: boolean;
   sessionId: string;
   cwd: string;
   startedAt: number;
@@ -251,11 +253,28 @@ export class ProtocolClient {
     return this.request("agent/query", { type: "sessions" });
   }
 
-  sessionDetail(sessionId: string): Promise<{
+  sessionDetail(
+    sessionId: string,
+    outputRecovery = false,
+  ): Promise<{
     type: string;
     data: SessionDetailData;
   }> {
-    return this.request("agent/query", { type: "session_detail", sessionId });
+    return this.request("agent/query", {
+      type: "session_detail",
+      sessionId,
+      ...(outputRecovery ? { outputRecovery: true } : {}),
+    });
+  }
+
+  outputJournal(
+    sessionId: string,
+    options: import("@cjhyy/code-shell-core/internal").OutputJournalOptions = {},
+  ): Promise<{
+    type: string;
+    data: import("@cjhyy/code-shell-core/internal").OutputJournalPage;
+  }> {
+    return this.request("agent/query", { type: "output_journal", sessionId, ...options });
   }
 
   approve(payload: ApprovalRequestPayload, approved: boolean, answer?: string): Promise<unknown> {

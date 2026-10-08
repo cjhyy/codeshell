@@ -22,7 +22,9 @@ import {
   hasTranscriptRecovery,
   hasBufferedTranscriptRecovery,
   transcriptRecoveryFailed,
+  latestRecoveryOutputCursor,
 } from "../transcriptHydration";
+import { recoverDesktopOutputJournal } from "./outputJournalRecovery";
 import type { SequencedStreamEvent } from "../streamCoalescer";
 
 export const INITIAL_CHAT_HISTORY_BYTES = 512 * 1024;
@@ -215,6 +217,7 @@ export function useTranscriptBuckets({
       let snapshotEpoch: string | undefined;
       let snapshotLoaded = !engineId;
       let page: SessionTranscriptPage | undefined;
+      let outputCursor: string | undefined;
       const [persistedResult, canonicalResult] = await Promise.allSettled([
         loadPersistedTranscript(activeProjectId, activeSessionId, INITIAL_CHAT_HISTORY_BYTES),
         engineId
@@ -250,39 +253,56 @@ export function useTranscriptBuckets({
       let state = base;
       if (engineId) {
         try {
-          const snapshot = await window.codeshell.subscribeSession(engineId, 0);
-          if (!canCommit()) return;
-          snapshotEpoch = snapshot.epoch;
-          snapshotLoaded = true;
-          if (
-            (snapshotEpoch && base.snapshotEpoch !== snapshotEpoch) ||
-            (base.sessionId && base.sessionId !== engineId)
-          ) {
-            base = state = {
-              ...base,
-              snapshotEpoch,
-              snapshotSeq: 0,
-              sessionId: engineId,
-              streamingAssistantId: null,
-              streamingThinkingId: null,
-              agentMessageIndex: {},
-              activeAgents: {},
-            };
-          }
-          const sinceSeq = base.snapshotSeq ?? 0;
-          replaySnapshot = snapshot.events.map((entry) => ({
-            ...entry,
-            event: entry.event as StreamEvent,
-            epoch: snapshotEpoch,
-          }));
-          snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(snapshot);
-          // A live bucket already receives this stream through the host
-          // coalescer. Replaying it here would duplicate its current turn.
-          const { events, cursor } = selectReplayEvents(snapshot, sinceSeq);
-          if (events.length > 0) {
-            let acc = base;
-            for (const event of events) acc = applyStreamEvent(acc, event as StreamEvent);
-            state = { ...acc, snapshotSeq: Math.max(acc.snapshotSeq, cursor) };
+          const durable = window.codeshell.getSessionOutputJournal
+            ? await recoverDesktopOutputJournal({
+                read: (options) => window.codeshell.getSessionOutputJournal!(engineId, options),
+                snapshot: () => window.codeshell.subscribeSession(engineId, 0),
+                canContinue: canCommit,
+                latestObservedCursor: () =>
+                  latestRecoveryOutputCursor(transcriptsRef.current, bucket, token),
+              })
+            : null;
+          if (durable) {
+            state = base = canonicalHistory = durable.state;
+            outputCursor = durable.outputCursor;
+            snapshotEpoch = durable.snapshot.epoch;
+            snapshotLoaded = true;
+            snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(durable.snapshot);
+          } else {
+            const snapshot = await window.codeshell.subscribeSession(engineId, 0);
+            if (!canCommit()) return;
+            snapshotEpoch = snapshot.epoch;
+            snapshotLoaded = true;
+            if (
+              (snapshotEpoch && base.snapshotEpoch !== snapshotEpoch) ||
+              (base.sessionId && base.sessionId !== engineId)
+            ) {
+              base = state = {
+                ...base,
+                snapshotEpoch,
+                snapshotSeq: 0,
+                sessionId: engineId,
+                streamingAssistantId: null,
+                streamingThinkingId: null,
+                agentMessageIndex: {},
+                activeAgents: {},
+              };
+            }
+            const sinceSeq = base.snapshotSeq ?? 0;
+            replaySnapshot = snapshot.events.map((entry) => ({
+              ...entry,
+              event: entry.event as StreamEvent,
+              epoch: snapshotEpoch,
+            }));
+            snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(snapshot);
+            // A live bucket already receives this stream through the host
+            // coalescer. Replaying it here would duplicate its current turn.
+            const { events, cursor } = selectReplayEvents(snapshot, sinceSeq);
+            if (events.length > 0) {
+              let acc = base;
+              for (const event of events) acc = applyStreamEvent(acc, event as StreamEvent);
+              state = { ...acc, snapshotSeq: Math.max(acc.snapshotSeq, cursor) };
+            }
           }
         } catch (error) {
           historyLoaded = false;
@@ -337,6 +357,7 @@ export function useTranscriptBuckets({
           snapshot: replaySnapshot,
           epoch: snapshotEpoch,
           sessionId: engineId,
+          outputCursor,
         });
         // Existing live buckets already get authoritative busy changes from the
         // host subscription, including a completion during the awaited reads.

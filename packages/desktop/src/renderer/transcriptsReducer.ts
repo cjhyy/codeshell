@@ -63,6 +63,8 @@ export type TranscriptsAction =
       snapshot?: SequencedStreamEvent[];
       epoch?: string;
       sessionId?: string;
+      /** Exact v2 prefix; its cursor also fences buffered live output. */
+      outputCursor?: string;
     }
   | { type: "evict"; bucket: string }
   | { type: "evict_if_unchanged"; bucket: string; state: MessagesReducerState }
@@ -212,6 +214,8 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
           if (action.maxSeq !== undefined && action.maxSeq > acc.snapshotSeq) {
             acc = { ...acc, snapshotSeq: action.maxSeq };
           }
+          const durableCursor = action.raw?.at(-1)?.event.outputCursor;
+          if (durableCursor) acc = { ...acc, outputCursor: durableCursor };
           return acc;
         },
         () => ({ events: action.events.length, msgs: current.messages.length }),

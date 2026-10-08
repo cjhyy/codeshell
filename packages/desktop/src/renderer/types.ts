@@ -369,6 +369,8 @@ export interface MessagesReducerState {
   snapshotSeq: number;
   /** Main-process lifetime that owns snapshotSeq; absent on legacy caches. */
   snapshotEpoch?: string;
+  /** A verified Session output prefix, separate from Main's transport lifetime. */
+  outputCursor?: string;
   /**
    * Monotonic counter incremented on each turn_complete. ToolCard /
    * ToolGroupCard subscribe via prop and force their open state back
