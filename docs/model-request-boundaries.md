@@ -101,3 +101,11 @@ The Linux CI job uses `scripts/run-electron-e2e-keyring.sh` inside a fresh D-Bus
 session with a private synthetic GNOME keyring, and checks SecretService before
 starting the real Electron suite. This changes CI infrastructure only; production
 cipher admission stays fail-closed.
+
+The shared Electron test harness removes Playwright's `password-store=basic`
+and `use-mock-keychain` defaults in an early preload, after Playwright's loader
+and before OS cryptography initializes. Linux explicitly selects the private
+`gnome-libsecret` service. The provider smoke checks both the effective switches
+and actual available backend before sending. Earlier macOS smoke runs that
+retained `use-mock-keychain` established only the SafeStorage API path, not real
+OS keychain custody, and are superseded by the corrected run.
