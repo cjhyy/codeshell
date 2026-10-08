@@ -561,7 +561,7 @@ export class SessionOutputJournal {
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
     try {
-      this.assertOwner();
+      this.location.state = this.assertOwner(true).state;
       try {
         fd = openRegular(
           this.location.file,
@@ -621,7 +621,7 @@ export class SessionOutputJournal {
       release();
     }
   }
-  private assertOwner(): void {
+  private assertOwner(allowUnpinned = false): ReturnType<typeof sessionLocation> {
     const current = sessionLocation(this.location.root, this.location.state.sessionId!);
     if (current.state.outputRecoveryIncomplete)
       throw new JournalError(
@@ -635,9 +635,16 @@ export class SessionOutputJournal {
       current.state.runId !== this.runId
     )
       invalid("Output owner was superseded or deleted");
+    if (
+      this.identityPin !== undefined &&
+      current.state.outputJournalIdentity !== this.identityPin &&
+      !(allowUnpinned && current.state.outputJournalIdentity === undefined)
+    )
+      invalid("Output journal identity pin was removed or replaced");
+    return current;
   }
   private persistPin(pin: string): void {
-    const current = sessionLocation(this.location.root, this.location.state.sessionId!);
+    const current = this.assertOwner(true);
     const temporary = join(this.location.directory, `.output-pin-${randomUUID()}.tmp`);
     let fd: number | undefined;
     try {

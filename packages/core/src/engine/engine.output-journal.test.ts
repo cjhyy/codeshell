@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, truncateSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
@@ -32,6 +32,73 @@ class JournalFailureClient extends LLMClientBase {
   }
 }
 registerProvider("output-journal-fault-fixture", JournalFailureClient);
+
+for (const mode of ["empty", "missing"] as const) {
+  test(`actual Engine restart refuses a previously published journal that became ${mode}`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-output-restart-"));
+    const model = `restart-${mode}-${Math.random()}`;
+    const file = join(root, "sessions", "published", "output-journal.jsonl");
+    let requests = 0;
+    scenarios.set(model, () => {
+      requests++;
+    });
+    const makeEngine = () => {
+      const engine = new Engine({
+        llm: { provider: "output-journal-fault-fixture", model, apiKey: "synthetic" } as never,
+        cwd: root,
+        sessionStorageDir: join(root, "sessions"),
+        settingsScope: "isolated",
+        headless: true,
+        maxTurns: 2,
+        behaviorProfiles: [
+          {
+            id: "fixture",
+            disableSessionTitle: true,
+            disableHooks: true,
+            disableInstructions: true,
+            disableMemoryContext: true,
+            disableCapabilityContext: true,
+            disableSourcesContext: true,
+            disableMcp: true,
+          },
+        ],
+      });
+      engine.getHookRegistry().clear();
+      return engine;
+    };
+    let engine = makeEngine();
+    try {
+      expect(
+        (await engine.run("publish once", { sessionId: "published", behaviorMode: "fixture" }))
+          .reason,
+      ).toBe("completed");
+      expect(requests).toBe(1);
+      await engine.dispose();
+      if (mode === "empty") truncateSync(file, 0);
+      else rmSync(file);
+      expect(readOutputJournal(join(root, "sessions"), "published").status).toBe("incomplete");
+      engine = makeEngine();
+      const events: StreamEvent[] = [];
+      const result = await engine.run("fresh intent after restart", {
+        sessionId: "published",
+        behaviorMode: "fixture",
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+      expect(result.reason).toBe("model_error");
+      expect(requests).toBe(1);
+      expect(
+        events.some((event) => event.type === "turn_complete" && event.reason === "completed"),
+      ).toBe(false);
+      expect(events.at(-1)?.outputRecovery).toBe("incomplete");
+    } finally {
+      scenarios.delete(model);
+      await engine.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test("actual Engine rejects a swallowed journal write failure and never reports completed", async () => {
   if (process.platform === "win32" || process.getuid?.() === 0) return;

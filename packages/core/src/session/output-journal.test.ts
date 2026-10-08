@@ -131,6 +131,18 @@ describe("Session output journal", () => {
       if (mode === "missing") expect(existsSync(f.file)).toBe(false);
     }
   });
+  test("a live writer cannot ignore a removed/replaced identity pin", () => {
+    for (const pin of [undefined, "a".repeat(64)]) {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "committed" });
+      const state = JSON.parse(readFileSync(join(f.root, f.id, "state.json"), "utf8"));
+      if (pin === undefined) delete state.outputJournalIdentity;
+      else state.outputJournalIdentity = pin;
+      writeFileSync(join(f.root, f.id, "state.json"), JSON.stringify(state));
+      expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow("pin");
+      expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+    }
+  });
   test("a truncated frozen upper bound is invalid and malformed complete records are incomplete", () => {
     const f = fixture();
     f.writer.append({ type: "text_delta", text: "one" });

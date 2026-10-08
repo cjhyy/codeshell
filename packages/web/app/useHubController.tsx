@@ -76,6 +76,7 @@ export function useHubController({
   const activeIdRef = React.useRef<string>(activeId);
   const activeStreamCursor = React.useRef<HubStreamCursor | null>(null);
   const activeOutputCursor = React.useRef<string | null>(null);
+  const outputRecoveryBlocked = React.useRef(false);
   const submissions = React.useRef(
     new Map<
       string,
@@ -272,7 +273,13 @@ export function useHubController({
           activeOutputCursor.current = null;
           // Older peers do not implement the v2 query; their existing snapshot
           // contract remains in force. Known v2 failures retain the notice.
-          durableFailed = !(cause instanceof ProtocolRequestError && cause.kind === "response");
+          durableFailed = !(
+            !detail.data.outputJournal &&
+            cause instanceof ProtocolRequestError &&
+            cause.kind === "response" &&
+            cause.code === -32602 &&
+            cause.message === "Unknown query type: output_journal"
+          );
         }
         if (
           !mounted.current ||
@@ -281,11 +288,14 @@ export function useHubController({
         )
           return;
         latestRunning = load.running ?? detail.data.running;
-        activeStreamCursor.current = snapshot.cursor ?? null;
+        outputRecoveryBlocked.current = durableFailed;
+        if (!durableFailed) activeStreamCursor.current = snapshot.cursor ?? null;
         setReplayNote(
-          !durableRecovered && (snapshot.truncated || durableFailed || load.overflow)
-            ? "这次运行的实时记录较长，已恢复已保存的内容；结束后重新打开可查看完整记录。"
-            : null,
+          durableFailed
+            ? "部分运行记录无法验证，已保留当前可见内容。请修复会话记录后重试。"
+            : !durableRecovered && (snapshot.truncated || load.overflow)
+              ? "这次运行的实时记录较长，已恢复已保存的内容；结束后重新打开可查看完整记录。"
+              : null,
         );
         if (latestRunning || runPending.current.has(sessionId)) restored.run = "running";
         else if (
@@ -293,7 +303,7 @@ export function useHubController({
           (restored.run === "running" || restored.run === "waiting")
         )
           restored.run = "idle";
-        setChat(restored);
+        setChat((current) => (durableFailed ? current : restored));
       } catch (cause) {
         if (activeIdRef.current === sessionId) reportError(cause);
       } finally {
@@ -373,6 +383,7 @@ export function useHubController({
               load.overflow = true;
             }
           }
+          if (outputRecoveryBlocked.current && event.type !== "session_title") return;
           if (typeof event.outputCursor === "string" && activeOutputCursor.current) {
             const order = compareOutputCursors(event.outputCursor, activeOutputCursor.current);
             if (order === undefined) {
@@ -465,6 +476,7 @@ export function useHubController({
     activeIdRef.current = sessionId;
     activeStreamCursor.current = null;
     activeOutputCursor.current = null;
+    outputRecoveryBlocked.current = false;
     setActiveId(sessionId);
     syncDraft(sessionId);
     setChat(initialChatState());
@@ -484,6 +496,7 @@ export function useHubController({
     activeIdRef.current = id;
     activeStreamCursor.current = null;
     activeOutputCursor.current = null;
+    outputRecoveryBlocked.current = false;
     loadingTranscript.current = null;
     setActiveId(id);
     syncDraft(id);

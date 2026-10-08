@@ -118,3 +118,15 @@ the reconstructed hashes and requires static near-budget pagination to read
 less than eight journal lengths, including metadata and sparse seek reads.
 Measured timings and final CI results must be recorded after the final source
 and package build; no real model/provider account or third-party write is used.
+
+Local Node/macOS measurement for checkpoint `91bbe970` (controlled fixture;
+not a cross-machine latency guarantee):
+
+| Journal | Cold first page | Cold read bytes | All pages | Total time | Total read bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 33,863,048 B / real 9,060,345 B model response | 70 ms | 35,093,098 | 35 | 926 ms | 98,588,786 |
+| 126,245,314 B / near 128 MiB budget | 160 ms | 127,425,705 | 131 | 4,111 ms | 344,240,041 |
+
+The near-budget result reads about 2.73 journal lengths, rather than one full
+journal per page. The cold verification still blocks its calling thread for the
+measured scan duration; active file changes can require additional full scans.
