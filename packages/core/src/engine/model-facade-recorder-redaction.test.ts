@@ -16,6 +16,7 @@ function childEnv(): Record<string, string> {
   delete env.NODE_ENV;
   env.CODE_SHELL_DEV = "1";
   env.CODE_SHELL_VERBOSE_LOG = "1";
+  env.CODE_SHELL_RECORD_MODEL_CONTENT = "1";
   env.CODE_SHELL_LOG = "0";
   return env;
 }
