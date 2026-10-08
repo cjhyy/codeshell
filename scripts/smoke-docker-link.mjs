@@ -115,13 +115,16 @@ try {
     provider: {
       async begin(state) {
         return {
-          url: `https://github.com/login/oauth/authorize?state=${state}`,
+          url: `https://github.com/login/oauth/authorize?client_id=fixture-client&state=${state}`,
           verifier: "fixture",
         };
       },
-      async exchange() {
+      async exchange(url) {
         return {
-          account: { id: "1", login: "alice" },
+          account:
+            url.searchParams.get("code") === "admin-fixture"
+              ? { id: "1", login: "administrator-only" }
+              : { id: "2", login: "alice" },
           credential: { access_token: "UPSTREAM-ONLY-IN-LINK" },
         };
       },
@@ -183,7 +186,7 @@ try {
   assert.equal(
     (
       await linkRequest(
-        `/oauth/upstream/github/callback?code=fixture&state=${state}`,
+        `/oauth/upstream/github/callback?code=admin-fixture&state=${state}`,
         "GET",
         undefined,
         { cookie: linkCookie },
@@ -257,6 +260,31 @@ try {
     ignoreHTTPSErrors: true,
     viewport: { width: 390, height: 844 },
   });
+  let githubAuthorizations = 0;
+  // Public connection is separate from fixture administration and proves its own GitHub account.
+  // Playwright routes match the initial request of a redirect chain. Intercept the
+  // issuer's response before it leaves for GitHub, retaining its public session cookie.
+  await context.route(
+    (url) =>
+      url.origin === issuer &&
+      ["/oauth/authorize", "/oauth/upstream/github/authorize"].includes(url.pathname),
+    async (route) => {
+      const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
+      const headers = response.headers();
+      const target = headers.location && new URL(headers.location, issuer);
+      if (response.status() === 303 && target?.origin === "https://github.com") {
+        assert.equal(target.pathname, "/login/oauth/authorize");
+        assert.ok(target.searchParams.get("state"));
+        githubAuthorizations++;
+        headers.location =
+          issuer +
+          "/oauth/upstream/github/callback?" +
+          new URLSearchParams({ code: "public-fixture", state: target.searchParams.get("state") });
+      }
+      await route.fulfill({ response, headers });
+    },
+  );
+  await context.route("https://github.com/**", (route) => route.abort());
   assert.equal(
     (
       await context.request.post(origin + "/api/v1/auth/login", {
@@ -278,8 +306,11 @@ try {
   await page.goto(`${origin}/?project=${a.id}&view=links`);
   await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
   await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
-  await page.locator('input[name="password"]').fill(password);
-  await page.getByRole("button", { name: "登录并继续", exact: true }).click();
+  await page.getByRole("heading", { name: "连接 GitHub", exact: true }).waitFor();
+  assert.equal(githubAuthorizations, 1);
+  assert.equal(await page.locator('input[name="password"]').count(), 0);
+  assert.equal(await page.getByText("administrator-only", { exact: true }).count(), 0);
+  await page.getByText("alice", { exact: true }).waitFor();
   assert.equal(
     (
       await context.request.post(
@@ -364,6 +395,8 @@ try {
     JSON.stringify({
       realDockerProjects: 2,
       independentLink: true,
+      noLinkLogin: true,
+      publicAccountIsolation: true,
       verifiedRuntimeTLS: true,
       width: 390,
       originalProjectCallback: true,

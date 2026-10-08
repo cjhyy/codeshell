@@ -47,7 +47,6 @@ await new Promise((done) => hubProbe.close(done));
 let hubOrigin = `http://127.0.0.1:${hubPort}`;
 const screenshots = await mkdtemp(join(tmpdir(), "codeshell-remote-link-web-ui-"));
 let calls = 0;
-let exchanges = 0;
 const app = await startLinkServer({
   port,
   publicOrigin: issuer,
@@ -61,13 +60,17 @@ const app = await startLinkServer({
         verifier: "fixture",
       };
     },
-    async exchange() {
-      exchanges++;
+    async exchange(url) {
+      const code = url.searchParams.get("code");
+      const accounts = {
+        "fixture-alice": { id: "1", login: "alice" },
+        "fixture-bob": { id: "2", login: "bob" },
+        "admin-one": { id: "101", login: "admin-private-one" },
+        "admin-two": { id: "102", login: "admin-private-two" },
+      };
+      assert.ok(accounts[code], "Unknown upstream fixture account");
       return {
-        account:
-          mode === "native" && exchanges === 2
-            ? { id: "2", login: "bob" }
-            : { id: "1", login: "alice" },
+        account: accounts[code],
         credential: { access_token: "UPSTREAM-ONLY-IN-LINK" },
       };
     },
@@ -116,7 +119,9 @@ try {
       303,
     );
   };
-  if (mode !== "native") await seedUpstream("one");
+  // Admin-managed connections must never appear in public GitHub consent.
+  await seedUpstream("admin-one");
+  await seedUpstream("admin-two");
   if (mode !== "web") {
     const desktopHome = join(root, "desktop-home");
     const localProjects = [join(desktopHome, "project-a"), join(desktopHome, "project-b")];
@@ -192,7 +197,6 @@ try {
       issuer,
       client,
       screenshots,
-      seedSecondAccount: () => seedUpstream("two"),
       readLinkState: async () => (await request("/api/v1/links", { headers: { cookie } })).json(),
     });
   } else {
@@ -242,16 +246,6 @@ try {
           },
         );
         assert.equal(auth.status(), 200);
-        const equal = cookie.indexOf("=");
-        await context.addCookies([
-          {
-            name: cookie.slice(0, equal),
-            value: cookie.slice(equal + 1),
-            url: issuer,
-            httpOnly: true,
-            sameSite: "Lax",
-          },
-        ]);
       } else if (mode === "electron") {
         assert.equal(await page.evaluate(() => typeof window.codeshell), "undefined");
         assert.equal(
@@ -272,6 +266,57 @@ try {
           ),
           200,
         );
+      }
+      if (mode === "electron") {
+        // This remote BrowserWindow also uses an isolated Electron Session.
+        await desktop.evaluate(
+          ({ BrowserWindow }, { hubOrigin, issuer }) => {
+            const window = BrowserWindow.getAllWindows().find((item) =>
+              item.webContents.getURL().startsWith(hubOrigin),
+            );
+            if (!window) throw new Error("Missing remote workbench window");
+            window.webContents.session.webRequest.onBeforeRequest(
+              { urls: ["https://github.com/*"] },
+              (details, done) => {
+                const target = new URL(details.url);
+                if (
+                  details.resourceType !== "mainFrame" ||
+                  target.pathname !== "/login/oauth/authorize"
+                )
+                  return done({ cancel: true });
+                const callback = new URL("/oauth/upstream/github/callback", issuer);
+                callback.search = new URLSearchParams({
+                  code: "fixture-alice",
+                  state: target.searchParams.get("state"),
+                }).toString();
+                done({ redirectURL: callback.href });
+              },
+            );
+          },
+          { hubOrigin, issuer },
+        );
+      } else {
+        // Playwright routes only the first URL in a server redirect chain.
+        // Replace the provider redirect at the issuer, preserving its browser cookie.
+        await context.route(issuer + "/oauth/authorize?**", async (route) => {
+          const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
+          const location = response.headers().location;
+          if (location && new URL(location, issuer).origin === "https://github.com") {
+            const target = new URL(location);
+            assert.equal(target.pathname, "/login/oauth/authorize");
+            const callback = new URL("/oauth/upstream/github/callback", issuer);
+            callback.search = new URLSearchParams({
+              code: "fixture-alice",
+              state: target.searchParams.get("state"),
+            }).toString();
+            return route.fulfill({
+              response,
+              headers: { ...response.headers(), location: callback.href },
+            });
+          }
+          return route.fulfill({ response });
+        });
+        await context.route("https://github.com/**", (route) => route.abort());
       }
       page.setDefaultTimeout(15000);
       const failures = [],
@@ -307,16 +352,30 @@ try {
           await route.fulfill({ response });
         });
       await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
-      console.log(
-        "Link verifier: waiting for Link login/consent",
-        mode,
-        new URL(page.url()).origin,
-      );
-      if (mode !== "web") {
-        await page.locator('input[name="password"]').fill("long-private-fixture-password");
-        await page.getByRole("button", { name: "登录并继续", exact: true }).click();
-      }
-      await page.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
+      console.log("Link verifier: waiting for public GitHub consent", mode);
+      await page
+        .getByRole("button", { name: "允许只读访问", exact: true })
+        .waitFor()
+        .catch(async (error) => {
+          await page.screenshot({
+            path: join(screenshots, `consent-failure-${width}.png`),
+            fullPage: true,
+          });
+          console.log(
+            "Public consent diagnostics",
+            JSON.stringify({
+              path: new URL(page.url()).pathname,
+              body: (await page.locator("body").innerText()).slice(0, 800),
+              screenshots,
+            }),
+          );
+          throw error;
+        });
+      assert.equal(await page.locator('input[name="password"]').count(), 0);
+      assert.equal(await page.locator(".account-name").innerText(), "alice");
+      assert.ok(!(await page.locator("body").innerText()).includes("admin-private"));
+      assert.equal(await page.locator('select[name="connectionId"]').count(), 0);
+      await page.screenshot({ path: join(screenshots, `consent-${width}.png`), fullPage: true });
       if (mode === "electron") {
         assert.equal(await page.evaluate(() => typeof window.codeshell), "undefined");
         assert.equal(
@@ -465,6 +524,8 @@ try {
         realDesktop: mode !== "web",
         realStandaloneLink: true,
         upstream: "controlled fixture",
+        noLinkLogin: true,
+        adminConnectionsHidden: true,
         callback: true,
         refusal: true,
         disconnect: true,

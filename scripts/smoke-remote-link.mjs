@@ -43,13 +43,16 @@ const app = await startLinkServer({
   provider: {
     async begin(state) {
       return {
-        url: `https://github.com/login/oauth/authorize?state=${state}`,
+        url: `https://github.com/login/oauth/authorize?client_id=fixture-client&state=${state}`,
         verifier: "fixture",
       };
     },
-    async exchange() {
+    async exchange(url) {
       return {
-        account: { id: "1", login: "alice" },
+        account:
+          url.searchParams.get("code") === "admin-fixture"
+            ? { id: "1", login: "administrator-only" }
+            : { id: "2", login: "alice" },
         credential: { access_token: "UPSTREAM-ONLY-IN-LINK" },
       };
     },
@@ -80,29 +83,34 @@ try {
     });
   const login = await form("/login", { password: "long-private-fixture-password" });
   assert.equal(login.status, 303);
-  const cookie = login.headers.get("set-cookie").split(";")[0];
-  const snapshot = await (await request("/api/v1/links", { headers: { cookie } })).json();
+  const adminCookie = login.headers.get("set-cookie").split(";")[0];
+  const snapshot = await (
+    await request("/api/v1/links", { headers: { cookie: adminCookie } })
+  ).json();
   const upstream = await form(
     "/api/v1/links/providers/github/authorize",
     { csrf: snapshot.csrf },
-    cookie,
+    adminCookie,
   );
   const state = new URL(upstream.headers.get("location")).searchParams.get("state");
   assert.equal(
     (
-      await request(`/oauth/upstream/github/callback?code=one&state=${state}`, {
-        headers: { cookie },
+      await request(`/oauth/upstream/github/callback?code=admin-fixture&state=${state}`, {
+        headers: { cookie: adminCookie },
       })
     ).status,
     303,
   );
-  const linked = await (await request("/api/v1/links", { headers: { cookie } })).json();
+  const linked = await (
+    await request("/api/v1/links", { headers: { cookie: adminCookie } })
+  ).json();
+  assert.equal(linked.connections[0].account.login, "administrator-only");
   const client = await (
     await request("/api/v1/links/clients", {
       method: "POST",
       headers: {
         origin: issuer,
-        cookie,
+        cookie: adminCookie,
         "x-csrf-token": snapshot.csrf,
         "content-type": "application/json",
       },
@@ -112,6 +120,66 @@ try {
       }),
     })
   ).json();
+  const browserCookies = new Map();
+  let githubAuthorizations = 0;
+  const browserRequest = async (url) => {
+    assert.equal(new URL(url, issuer).origin, issuer);
+    const response = await fetch(new URL(url, issuer), {
+      redirect: "manual",
+      headers: { cookie: [...browserCookies.values()].join("; ") },
+    });
+    for (const value of response.headers.getSetCookie()) {
+      const cookie = value.split(";")[0];
+      browserCookies.set(cookie.slice(0, cookie.indexOf("=")), cookie);
+    }
+    return response;
+  };
+  const approvePublicAuthorization = async (authorizationUrl) => {
+    let response = await browserRequest(authorizationUrl);
+    if (response.status === 303) {
+      const upstream = new URL(response.headers.get("location"));
+      assert.equal(upstream.origin, "https://github.com");
+      assert.equal(upstream.pathname, "/login/oauth/authorize");
+      assert.ok(upstream.searchParams.get("state"));
+      githubAuthorizations++;
+      response = await browserRequest(
+        `/oauth/upstream/github/callback?${new URLSearchParams({
+          code: "public-fixture",
+          state: upstream.searchParams.get("state"),
+        })}`,
+      );
+      assert.equal(response.status, 303);
+      response = await browserRequest(response.headers.get("location"));
+    }
+    assert.equal(response.status, 200);
+    const consent = await response.text();
+    assert.ok(consent.includes("alice"));
+    assert.ok(!consent.includes("administrator-only"));
+    assert.ok(!consent.includes('name="password"'));
+    const value = (name) => {
+      const match = consent.match(new RegExp(`name="${name}" value="([^"]+)"`));
+      assert.ok(match, `Missing public consent field ${name}`);
+      return match[1];
+    };
+    const browserCookie = [...browserCookies.values()].join("; ");
+    assert.equal(
+      (await request("/api/v1/links", { headers: { cookie: browserCookie } })).status,
+      401,
+    );
+    const approved = await form(
+      "/oauth/authorize",
+      {
+        csrf: value("csrf"),
+        intent: value("intent"),
+        decision: "allow",
+        connectionId: value("connectionId"),
+        repositories: "owner/repo",
+      },
+      browserCookie,
+    );
+    assert.equal(approved.status, 303);
+    return approved.headers.get("location");
+  };
   const store = new CredentialStore(join(root, "project"));
   const owner = { ownerId: "fixture-owner", authorize: () => true };
   host = createLinkService({
@@ -125,27 +193,8 @@ try {
     connectionId: "remote-github",
     expectedRevision: null,
   });
-  const consent = await (
-    await fetch(attempt.redirect.authorizationUrl, { headers: { cookie } })
-  ).text();
-  const intent = consent.match(/name="intent" value="([^"]+)"/)[1];
-  const approved = await form(
-    "/oauth/authorize",
-    {
-      csrf: snapshot.csrf,
-      intent,
-      decision: "allow",
-      connectionId: linked.connections[0].id,
-      repositories: "owner/repo",
-    },
-    cookie,
-  );
-  assert.equal(approved.status, 303);
-  const completed = await host.completeRemoteAuth(
-    owner,
-    attempt.id,
-    approved.headers.get("location"),
-  );
+  const callbackUrl = await approvePublicAuthorization(attempt.redirect.authorizationUrl);
+  const completed = await host.completeRemoteAuth(owner, attempt.id, callbackUrl);
   const credential = store.resolve(completed.connection.id);
   assert.ok(!JSON.stringify(credential).includes("UPSTREAM-ONLY-IN-LINK"));
   assert.equal(host.snapshot().connections[0].runtime, "server");
@@ -180,7 +229,7 @@ try {
     method: "DELETE",
     headers: {
       origin: issuer,
-      cookie,
+      cookie: adminCookie,
       "x-csrf-token": snapshot.csrf,
       "content-type": "application/json",
     },
@@ -210,27 +259,8 @@ try {
       connectionId: "remote-recovery",
       expectedRevision: null,
     });
-    const html = await (
-      await fetch(pending.redirect.authorizationUrl, { headers: { cookie } })
-    ).text();
-    const consentIntent = html.match(/name="intent" value="([^"]+)"/)[1];
-    const consentResponse = await form(
-      "/oauth/authorize",
-      {
-        csrf: snapshot.csrf,
-        intent: consentIntent,
-        decision: "allow",
-        connectionId: linked.connections[0].id,
-        repositories: "owner/repo",
-      },
-      cookie,
-    );
-    assert.equal(consentResponse.status, 303);
-    const saved = await host.completeRemoteAuth(
-      owner,
-      pending.id,
-      consentResponse.headers.get("location"),
-    );
+    const recoveryCallback = await approvePublicAuthorization(pending.redirect.authorizationUrl);
+    const saved = await host.completeRemoteAuth(owner, pending.id, recoveryCallback);
     const retired = store.resolve(saved.connection.id);
     host.close();
     store.stageRemoteLinkRetirement(retired, 0);
@@ -238,7 +268,7 @@ try {
     assert.equal(store.remoteLinkRetirementCount(), 1);
     const grantId = retired.meta.linkRemoteGrantId;
     const grants = async () =>
-      (await (await request("/api/v1/links", { headers: { cookie } })).json()).grants;
+      (await (await request("/api/v1/links", { headers: { cookie: adminCookie } })).json()).grants;
     assert.equal(Boolean((await grants()).find((g) => g.id === grantId).revoked), false);
     await mkdir(join(process.env.HOME, ".code-shell"), { recursive: true });
     await writeFile(
@@ -267,6 +297,9 @@ try {
       hostManagement: true,
       hostDisconnect: true,
       selectedAccount: true,
+      noLinkLogin: true,
+      publicAccountIsolation: true,
+      githubAuthorizations,
       tokenRotation: true,
       revocation: true,
       upstream: "controlled fixture",

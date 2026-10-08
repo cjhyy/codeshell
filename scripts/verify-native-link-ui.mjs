@@ -8,11 +8,9 @@ export async function verifyNativeLinkUI({
   issuer,
   client,
   readLinkState,
-  seedSecondAccount,
   screenshots,
 }) {
   const errors = [];
-  let loginCount = 0;
   win.on("pageerror", (error) => errors.push(error.message));
   win.setDefaultTimeout(15000);
   await desktop.evaluate((_electron, config) => Object.assign(process.env, config), {
@@ -20,6 +18,34 @@ export async function verifyNativeLinkUI({
     CODE_SHELL_REMOTE_LINK_CLIENT_ID: client.id,
     CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN: new URL(client.redirectUris[0]).origin,
   });
+  // Install before the native window loads: public OAuth immediately redirects to GitHub.
+  // Its isolated Session is outside Playwright's default browser context.
+  await desktop.evaluate(({ app }, issuer) => {
+    process.__codeshellFixtureGithubNavigations = 0;
+    process.__codeshellFixtureGithubCode = "fixture-alice";
+    process.__codeshellFixtureLinkLogins = 0;
+    app.on("browser-window-created", (_event, window) => {
+      window.webContents.session.webRequest.onBeforeRequest(
+        { urls: ["https://github.com/*", issuer + "/*"] },
+        (details, done) => {
+          const target = new URL(details.url);
+          if (target.origin === issuer) {
+            if (target.pathname === "/login") process.__codeshellFixtureLinkLogins++;
+            return done({});
+          }
+          if (details.resourceType !== "mainFrame" || target.pathname !== "/login/oauth/authorize")
+            return done({ cancel: true });
+          process.__codeshellFixtureGithubNavigations++;
+          const callback = new URL("/oauth/upstream/github/callback", issuer);
+          callback.search = new URLSearchParams({
+            code: process.__codeshellFixtureGithubCode,
+            state: target.searchParams.get("state"),
+          }).toString();
+          done({ redirectURL: callback.href });
+        },
+      );
+    });
+  }, issuer);
   await win.setViewportSize({ width: 1440, height: 1000 });
   const openLinks = async () => {
     await win.getByRole("button", { name: /^(凭证|Credentials)$/ }).click();
@@ -46,70 +72,25 @@ export async function verifyNativeLinkUI({
     const auth = await opened;
     auth.setDefaultTimeout(15000);
     auth.on("pageerror", (error) => errors.push(error.message));
-    await auth
-      .locator('input[name="password"], button[name="decision"][value="allow"]')
-      .first()
-      .waitFor();
+    await auth.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
+    assert.equal(await auth.locator('input[name="password"]').count(), 0);
     assert.equal(new URL(auth.url()).origin, issuer);
     assert.equal(await auth.evaluate(() => typeof window.codeshell), "undefined");
     return auth;
   }
   async function consent(auth, deny = false, account = "alice") {
-    if (await auth.locator('input[name="password"]').count()) {
-      loginCount++;
-      await auth.locator('input[name="password"]').fill("long-private-fixture-password");
-      await auth.getByRole("button", { name: "登录并继续", exact: true }).click();
-    }
     await auth.getByRole("heading", { name: "连接 GitHub", exact: true }).waitFor();
-    if (await auth.getByRole("button", { name: "继续前往 GitHub", exact: true }).count()) {
-      // The isolated Electron partition is outside Playwright's default context.
-      // Mock the authorization Session before it can contact the real provider.
-      await desktop.evaluate(({ BrowserWindow }, issuer) => {
-        const window = BrowserWindow.getAllWindows().find((item) =>
-          item.webContents.getURL().startsWith(issuer + "/"),
-        );
-        if (!window) throw new Error("Missing isolated authorization window");
-        process.__codeshellFixtureGithubNavigations = 0;
-        window.webContents.session.webRequest.onBeforeRequest(
-          { urls: ["https://github.com/*"] },
-          (details, done) => {
-            const target = new URL(details.url);
-            if (
-              details.resourceType !== "mainFrame" ||
-              target.pathname !== "/login/oauth/authorize"
-            )
-              return done({ cancel: true });
-            process.__codeshellFixtureGithubNavigations++;
-            const callback = new URL("/oauth/upstream/github/callback", issuer);
-            callback.search = new URLSearchParams({
-              code: "fixture",
-              state: target.searchParams.get("state"),
-            }).toString();
-            done({ redirectURL: callback.href });
-          },
-        );
-      }, issuer);
-      await auth.getByRole("button", { name: "继续前往 GitHub", exact: true }).click();
-      await auth
-        .getByRole("button", { name: "允许只读访问", exact: true })
-        .waitFor()
-        .catch(async (error) => {
-          await auth.screenshot({
-            path: join(screenshots, "native-upstream-failure.png"),
-            fullPage: true,
-          });
-          console.log(
-            "Native upstream diagnostics",
-            JSON.stringify({ page: new URL(auth.url()).pathname, screenshots }),
-          );
-          throw error;
-        });
+    assert.equal(await auth.locator('input[name="password"]').count(), 0);
+    assert.equal(await auth.locator('select[name="connectionId"]').count(), 0);
+    assert.ok(!(await auth.locator("body").innerText()).includes("admin-"));
+    if ((await auth.locator(".account-name").innerText()) !== account) {
+      await desktop.evaluate((_electron, code) => {
+        process.__codeshellFixtureGithubCode = code;
+      }, `fixture-${account}`);
+      await auth.getByRole("button", { name: "使用其他 GitHub 账号", exact: true }).click();
+      await auth.locator(".account-name").filter({ hasText: account }).waitFor();
     }
-    if (await auth.locator('select[name="connectionId"]').count()) {
-      await auth.getByText("切换 GitHub 账号", { exact: true }).click();
-      await auth.locator('select[name="connectionId"]').selectOption({ label: account });
-      await auth.getByRole("button", { name: "切换", exact: true }).click();
-    }
+    assert.equal(await auth.locator(".account-name").innerText(), account);
     await auth.locator('input[type="checkbox"][value="owner/repo"]').check();
     const cancelBox = await auth.getByRole("button", { name: "取消", exact: true }).boundingBox();
     const viewportHeight = await auth.evaluate(() => window.innerHeight);
@@ -117,7 +98,10 @@ export async function verifyNativeLinkUI({
       cancelBox && cancelBox.y + cancelBox.height <= viewportHeight,
       "normal consent actions should fit without scrolling",
     );
-    await auth.screenshot({ path: join(screenshots, "native-consent.png"), fullPage: true });
+    await auth.screenshot({
+      path: join(screenshots, `native-consent-${account}.png`),
+      fullPage: true,
+    });
     const closed = auth.waitForEvent("close");
     await auth.getByRole("button", { name: deny ? "取消" : "允许只读访问", exact: true }).click();
     await closed;
@@ -131,11 +115,14 @@ export async function verifyNativeLinkUI({
     1,
     "first connection should complete upstream GitHub authorization",
   );
-  await seedSecondAccount();
   await section.getByRole("button", { name: "管理", exact: true }).click();
   const add = management.getByRole("button", { name: "添加账号", exact: true });
   await consent(await start(add), false, "bob");
-  assert.equal(loginCount, 1, "the second connection should reuse this app's Link sign-in");
+  assert.equal(
+    await desktop.evaluate(() => process.__codeshellFixtureGithubNavigations),
+    2,
+    "another account requires its own GitHub proof",
+  );
   assert.equal(await management.locator("[data-remote-link]").count(), 2);
   const first = management.locator("[data-remote-link]").filter({ hasText: "alice" });
   const id = await first.getAttribute("data-remote-link");
@@ -221,6 +208,7 @@ export async function verifyNativeLinkUI({
   }
   await management.getByText("连接已断开，远端授权已撤销。", { exact: true }).waitFor();
   assert.ok((await readLinkState()).grants.every((grant) => grant.revoked));
+  assert.equal(await desktop.evaluate(() => process.__codeshellFixtureLinkLogins), 0);
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
@@ -230,7 +218,10 @@ export async function verifyNativeLinkUI({
       upstream: "controlled fixture",
       multipleAccounts: true,
       firstAccountAuthorization: true,
-      sessionReuse: true,
+      noLinkLogin: true,
+      adminConnectionsHidden: true,
+      explicitAccountSwitch: true,
+      githubSessionReuse: true,
       rename: true,
       reauthorize: true,
       denial: true,

@@ -5,7 +5,7 @@ import { createNativeLinkNavigationPolicy } from "./remote-link-navigation.js";
 
 const authorizationSessions = new Map<string, Session>();
 
-/** Remember the Link login for this app session without persisting cookies to disk. */
+/** Reuse GitHub authorization for this app session without persisting cookies to disk. */
 function authorizationSession(issuer: string): Session {
   const existing = authorizationSessions.get(issuer);
   if (existing) return existing;
@@ -17,7 +17,7 @@ function authorizationSession(issuer: string): Session {
   return browserSession;
 }
 
-/** The Link login has no local bridge. Intercept its registered callback before any network request. */
+/** Authorization has no local bridge. Intercept its registered callback before a network request. */
 export function openNativeLinkAuthorization(input: NativeLinkAuthorizationInput) {
   let callbackReceived = false;
   const issuer = new URL(input.authorizationUrl).origin;
