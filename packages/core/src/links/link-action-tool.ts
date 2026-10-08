@@ -297,7 +297,7 @@ export async function linkActionTool(
     }
     const allowLabel = "允许执行";
     const answer = await ctx.askUser(
-      `允许 CodeShell 通过本地 ${provider.displayName} 连接执行「${action.title}」吗？\n\n参数：${JSON.stringify(params).slice(0, 2_000)}`,
+      `允许 CodeShell 通过 ${provider.displayName} 连接执行「${action.title}」吗？\n\n参数：${JSON.stringify(params).slice(0, 2_000)}`,
       {
         header: "Link 写入",
         optionsOnly: true,
@@ -376,7 +376,13 @@ export async function linkActionTool(
         purpose: "link",
       });
       assertConnected();
-      data = await action.execute({ token, params, signal });
+      data = await action.execute({
+        token,
+        params,
+        signal,
+        authKind:
+          connection.credential.meta?.linkAuthSource === "browser-oauth" ? "oauth" : "token",
+      });
     }
     // Cancellation is advisory to transports. Recheck both the live binding
     // and task signal before publishing any result from the completed action.
