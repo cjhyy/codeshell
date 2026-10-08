@@ -73,11 +73,27 @@ describe("digital-human quick Skill source draft", () => {
     expect(changed).toEqual([
       { ...repository, skills: ["research"] },
       current[1],
-      { ...repository, repo: "invalid", skills: ["review"], fullDepth: false },
+      { ...repository, repo: "invalid", skills: ["review"] },
     ]);
     expect(validateDigitalHumanRequirements({ skills: changed, tools: [] }).valid).toBe(false);
     const cleared = replaceDigitalHumanSkillSourceDraft(changed, "review", "");
-    expect(cleared).toEqual(changed.slice(0, 2));
+    expect(cleared).toEqual([
+      ...changed.slice(0, 2),
+      { ...repository, repo: "", skills: ["review"] },
+    ]);
+    expect(validateDigitalHumanRequirements({ skills: cleared, tools: [] }).valid).toBe(false);
     expect(current[0]?.skills).toEqual(["research", "review"]);
+  });
+
+  test("changing a source and restoring it preserves its metadata", () => {
+    const current = [repository];
+    const changed = replaceDigitalHumanSkillSourceDraft(current, "research", "owner/temporary");
+    expect(changed[0]?.fullDepth).toBe(true);
+    expect(replaceDigitalHumanSkillSourceDraft(changed, "research", "owner/skills")).toEqual(
+      current,
+    );
+    expect(replaceDigitalHumanSkillSourceDraft(current, "research", " owner/skills ")).toEqual(
+      current,
+    );
   });
 });

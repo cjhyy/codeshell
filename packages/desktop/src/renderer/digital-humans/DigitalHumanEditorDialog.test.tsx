@@ -15,6 +15,9 @@ describe("digital-human dependency editor interactions", () => {
     "dependencies-validation",
     "dependencies-sync",
     "dependencies-discard",
+    "dependencies-source-metadata",
+    "dependencies-user-source-replace",
+    "dependencies-saved-normalization",
   ])("%s", (scenario) => {
     const result = Bun.spawnSync({
       cmd: [
