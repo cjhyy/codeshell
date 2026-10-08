@@ -94,6 +94,9 @@ import {
 } from "./engine-workspace-authority.js";
 import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
 import { logger, runWithSid } from "../logging/logger.js";
+import { UsageLedger } from "../cost-ledger/store.js";
+import { withUsageOwner, type UsageOwner } from "../cost-ledger/context.js";
+import type { UsagePurpose, UsageQuery, ExternalBilledUsage } from "../cost-ledger/types.js";
 import { recordSessionStart } from "../logging/session-recorder.js";
 import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
@@ -348,6 +351,7 @@ export class Engine {
 
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
+  readonly usageLedger: UsageLedger;
   private readonly runEnvironmentResolver: RunEnvironmentResolver;
   private readonly auxiliaryPipeline: AuxiliaryPipeline;
   private readonly permissionController: PermissionController;
@@ -591,6 +595,14 @@ export class Engine {
   constructor(private config: EngineConfig) {
     // Wire shared runtime (adapter pattern — null when self-constructing).
     this.runtime = config.runtime ?? null;
+    this.usageLedger =
+      config.usageLedger ??
+      this.runtime?.usageLedger ??
+      new UsageLedger({
+        storageDir: config.sessionStorageDir
+          ? join(config.sessionStorageDir, ".usage-ledger")
+          : undefined,
+      });
     const hostScope =
       config.lifetimeScope ?? this.runtime?.lifetime ?? new LifetimeScope("host", "standalone");
     this.lifetime = hostScope.child("engine", `engine-${Math.random().toString(36).slice(2)}`);
@@ -1221,9 +1233,15 @@ export class Engine {
       );
     }
     if (sourceSessionId && this.config.costStore) {
-      const persistedCost = this.sessionManager.resume(sourceSessionId).state.costState;
-      if (persistedCost) this.config.costStore.restore(persistedCost);
+      const persisted = this.sessionManager.readSessionState(sourceSessionId)?.costState;
+      const legacy = persisted?.kind === "usage-ledger" ? persisted.legacyStore : persisted;
+      if (legacy !== undefined) this.config.costStore.restore(legacy);
     }
+    const billingOwner = this.usageOwnerForSession(
+      sourceSessionId ?? "unattributed",
+      undefined,
+      "context_package",
+    );
     const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
     const resolvedAux = await this.auxiliaryPipeline.resolveAuxClientWithMetadata(
       primaryClient,
@@ -1288,26 +1306,29 @@ export class Engine {
         else pending.shift();
         break;
       }
-      const response = await client.createMessage({
-        systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: buildContextPackagePromptFromSerialized(conversation, summary),
-          },
-        ],
-        tools: [],
-        maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
-        billingEnabled: true,
-        requestVisible: false,
-        reasoning: { mode: "off" },
-        signal,
-      });
+      const response = await withUsageOwner(billingOwner, () =>
+        client.createMessage({
+          systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: buildContextPackagePromptFromSerialized(conversation, summary),
+            },
+          ],
+          tools: [],
+          maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+          billingEnabled: true,
+          requestVisible: false,
+          usagePurpose: "context_package",
+          reasoning: { mode: "off" },
+          signal,
+        }),
+      );
       if (response.usage && sourceSessionId) {
         this.sessionManager.recordAuxiliaryUsage(
           sourceSessionId,
           response.usage,
-          this.config.costStore?.serialize() as Record<string, unknown> | undefined,
+          this.usageCostState(sourceSessionId),
         );
       }
       summary = response.text.trim();
@@ -1656,169 +1677,183 @@ export class Engine {
       }
     }
     this.stampRunToolContext(toolCtx, session, options);
-    const sessionRun = runWithSid(session.state.sessionId, async () => {
-      const hookMessages = profile?.disableHooks
-        ? []
-        : await this.runSessionStartHooks({
-            session,
-            task,
-            cwd,
-            runPermissionMode,
-            resumedFromDisk,
-            options,
-            taskText,
-            messages,
-          });
-
-      const sid = session.state.sessionId;
-      const { contextManager, llmClientPromise, toolExecutor } = this.wireRunContextAndPermission({
-        session,
-        sid,
-        options,
-        cwd,
-        toolCtx,
-        runPermissionMode,
-        messages,
-        getLatestTodos: () => latestTodos,
-        setLatestTodos: (todos) => {
-          latestTodos = todos;
-        },
-      });
-
-      const { promptComposer, toolDefs, mcpFailureSummary } = await this.wireRunTooling({
-        options,
-        session,
-        cwd,
-        workspaceContext,
-        toolCtx,
-        profile,
-        profileParams,
-        runWorkspaceProfile,
-        profileMemoryDir,
-        sessionProfileOverrides,
-        runPlanMode,
-      });
-
-      const {
-        llmClient,
-        fullSystemPrompt,
-        dynamicContextMsg,
-        userContextMsg,
-        retainedContextMessages,
-      } = await this.assembleRunPrompts({
-        session,
-        messages,
-        hookMessages,
-        mcpFailureSummary,
-        promptComposer,
-        toolDefs,
-        llmClientPromise,
-        contextManager,
-        profile,
-        profileParams,
-      });
-
-      // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
-      //    condenses many rounds into the running summary that REPLACES the real
-      //    history; a dropped decision makes the conversation "forget" and poisons
-      //    every subsequent turn. It fires only near the compact ratio (~0.85), so
-      //    it's infrequent — quality far outweighs the occasional extra cost of a
-      //    primary-model call. (Manual /compact uses the primary for the same
-      //    reason; see forceCompact.)
-      //
-      // 2. Tool-use one-liner summaries (modelFacade.summarize below) → AUX model.
-      //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
-      //    that high-frequency, low-stakes chore is exactly what aux is for.
-      const auxSummaryClient = await this.resolveAuxClient(llmClient);
-      // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
-      // initialized its run-scoped Goal tracker. The closure is wired before
-      // construction but cannot execute until turnLoop.run() starts.
-      // Assigned after the callbacks that close over it are constructed; they
-      // cannot run until turnLoop.run(), so definite assignment is intentional.
-      const {
-        turnLoop,
-        applyGoalTermination,
-        goalHookHandler,
-        getRunUsage,
-        recordExternalBilledUsage,
-        accounting,
-        usageBaseline,
-      } = await this.wireRunLoop({
-        session,
-        sid,
-        task,
-        cwd,
-        options,
-        profileMaxTurns:
-          typeof profile?.maxTurns === "number" &&
-          Number.isSafeInteger(profile.maxTurns) &&
-          profile.maxTurns > 0
-            ? profile.maxTurns
-            : undefined,
-        toolCtx,
-        toolExecutor,
-        contextManager,
-        llmClient,
-        auxSummaryClient,
-        fullSystemPrompt,
-        toolDefs,
-        claimClientMessageId,
-        releaseClientMessageId,
-        freshImageMessage,
-        dynamicContextMsg,
-        retainedContextMessages,
-      });
-
-      let result: Awaited<ReturnType<typeof turnLoop.run>>;
-      let firstGoalTermination: GoalTerminationReason | undefined;
-      try {
-        ({ result, firstGoalTermination } = await this.runTurnLoopWithHeadlessDrain({
-          turnLoop,
-          messages,
-          applyGoalTermination,
-          session,
-          options,
-        }));
-      } finally {
-        // Run-scoped: drop the GoalStopHook so a later goal-less send on this
-        // long-lived engine doesn't keep blocking stops.
-        await this.activeRunScope?.dispose();
-        this.activeGoalRegistration = undefined;
-        if (this.activeGoalHook === goalHookHandler) {
-          this.activeGoalHook = null;
-          this.activeGoalHookAttached = false;
-          this.activeRuntimeGoal = null;
-          this.activePersistedRunGoal = null;
-        }
-        if (this.activeTurnLoop === turnLoop) {
-          this.activeTurnLoop = null;
-          this.activeProfileMaxTurns = undefined;
-        }
-        if (this.activeRunSession === session) this.activeRunSession = null;
-      }
-      const finalized = await this.finalizeRun({
-        session,
-        result,
-        firstGoalTermination,
-        turnCount: turnLoop.currentTurn,
-        getRunUsage,
-        usageBaseline,
-        userContextMsg,
-        dynamicContextMsg,
-        options,
-        cwd,
-        llmClient,
-        auxSummaryClient,
-        recordExternalBilledUsage,
-        accounting,
-        profile,
-        getProfileReportedResults: () => profileReportedResults,
-      });
-      if (options?.clientMessageId) {
-        this.appendClientRunReceipt(session, options.clientMessageId, finalized);
-      }
-      return finalized;
+    const billingOwner = this.usageOwnerForSession(
+      session.state.sessionId,
+      runId,
+      this.config.isSubAgent ? "subagent" : "main",
+    );
+    session.state.costState = this.usageCostState(session.state.sessionId);
+    session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
+      costState: session.state.costState,
     });
+    const sessionRun = withUsageOwner(billingOwner, () =>
+      runWithSid(session.state.sessionId, async () => {
+        const hookMessages = profile?.disableHooks
+          ? []
+          : await this.runSessionStartHooks({
+              session,
+              task,
+              cwd,
+              runPermissionMode,
+              resumedFromDisk,
+              options,
+              taskText,
+              messages,
+            });
+
+        const sid = session.state.sessionId;
+        const { contextManager, llmClientPromise, toolExecutor } = this.wireRunContextAndPermission(
+          {
+            session,
+            sid,
+            options,
+            cwd,
+            toolCtx,
+            runPermissionMode,
+            messages,
+            getLatestTodos: () => latestTodos,
+            setLatestTodos: (todos) => {
+              latestTodos = todos;
+            },
+          },
+        );
+
+        const { promptComposer, toolDefs, mcpFailureSummary } = await this.wireRunTooling({
+          options,
+          session,
+          cwd,
+          workspaceContext,
+          toolCtx,
+          profile,
+          profileParams,
+          runWorkspaceProfile,
+          profileMemoryDir,
+          sessionProfileOverrides,
+          runPlanMode,
+        });
+
+        const {
+          llmClient,
+          fullSystemPrompt,
+          dynamicContextMsg,
+          userContextMsg,
+          retainedContextMessages,
+        } = await this.assembleRunPrompts({
+          session,
+          messages,
+          hookMessages,
+          mcpFailureSummary,
+          promptComposer,
+          toolDefs,
+          llmClientPromise,
+          contextManager,
+          profile,
+          profileParams,
+        });
+
+        // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
+        //    condenses many rounds into the running summary that REPLACES the real
+        //    history; a dropped decision makes the conversation "forget" and poisons
+        //    every subsequent turn. It fires only near the compact ratio (~0.85), so
+        //    it's infrequent — quality far outweighs the occasional extra cost of a
+        //    primary-model call. (Manual /compact uses the primary for the same
+        //    reason; see forceCompact.)
+        //
+        // 2. Tool-use one-liner summaries (modelFacade.summarize below) → AUX model.
+        //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
+        //    that high-frequency, low-stakes chore is exactly what aux is for.
+        const auxSummaryClient = await this.resolveAuxClient(llmClient);
+        // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
+        // initialized its run-scoped Goal tracker. The closure is wired before
+        // construction but cannot execute until turnLoop.run() starts.
+        // Assigned after the callbacks that close over it are constructed; they
+        // cannot run until turnLoop.run(), so definite assignment is intentional.
+        const {
+          turnLoop,
+          applyGoalTermination,
+          goalHookHandler,
+          getRunUsage,
+          recordExternalBilledUsage,
+          accounting,
+          usageBaseline,
+        } = await this.wireRunLoop({
+          session,
+          sid,
+          task,
+          cwd,
+          options,
+          profileMaxTurns:
+            typeof profile?.maxTurns === "number" &&
+            Number.isSafeInteger(profile.maxTurns) &&
+            profile.maxTurns > 0
+              ? profile.maxTurns
+              : undefined,
+          toolCtx,
+          toolExecutor,
+          contextManager,
+          llmClient,
+          auxSummaryClient,
+          fullSystemPrompt,
+          toolDefs,
+          claimClientMessageId,
+          releaseClientMessageId,
+          freshImageMessage,
+          dynamicContextMsg,
+          retainedContextMessages,
+        });
+
+        let result: Awaited<ReturnType<typeof turnLoop.run>>;
+        let firstGoalTermination: GoalTerminationReason | undefined;
+        try {
+          ({ result, firstGoalTermination } = await this.runTurnLoopWithHeadlessDrain({
+            turnLoop,
+            messages,
+            applyGoalTermination,
+            session,
+            options,
+          }));
+        } finally {
+          // Run-scoped: drop the GoalStopHook so a later goal-less send on this
+          // long-lived engine doesn't keep blocking stops.
+          await this.activeRunScope?.dispose();
+          this.activeGoalRegistration = undefined;
+          if (this.activeGoalHook === goalHookHandler) {
+            this.activeGoalHook = null;
+            this.activeGoalHookAttached = false;
+            this.activeRuntimeGoal = null;
+            this.activePersistedRunGoal = null;
+          }
+          if (this.activeTurnLoop === turnLoop) {
+            this.activeTurnLoop = null;
+            this.activeProfileMaxTurns = undefined;
+          }
+          if (this.activeRunSession === session) this.activeRunSession = null;
+        }
+        const finalized = await this.finalizeRun({
+          session,
+          result,
+          firstGoalTermination,
+          turnCount: turnLoop.currentTurn,
+          getRunUsage,
+          usageBaseline,
+          userContextMsg,
+          dynamicContextMsg,
+          options,
+          cwd,
+          llmClient,
+          auxSummaryClient,
+          recordExternalBilledUsage,
+          accounting,
+          profile,
+          getProfileReportedResults: () => profileReportedResults,
+        });
+        finalized.runId = runId;
+        if (options?.clientMessageId) {
+          this.appendClientRunReceipt(session, options.clientMessageId, finalized);
+        }
+        return finalized;
+      }),
+    );
     return Promise.resolve(sessionRun).catch((err): EngineResult => {
       const failed = buildRunFailureResult({
         err,
@@ -1826,6 +1861,7 @@ export class Engine {
         options,
         persistFinalRunState: (state) => this.persistFinalRunState(state),
       });
+      failed.runId = runId;
       if (options?.clientMessageId) {
         this.appendClientRunReceipt(session, options.clientMessageId, failed);
       }
@@ -1917,9 +1953,7 @@ export class Engine {
       updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
       persistFinalRunState: (state) => this.persistFinalRunState(state),
       markRunAccountingFinalized: () => accounting.markRunAccountingFinalized(),
-      costStoreSerialize: this.config.costStore
-        ? () => this.config.costStore!.serialize() as Record<string, unknown>
-        : undefined,
+      costStoreSerialize: () => this.usageCostState(session.state.sessionId),
       profile,
       getProfileReportedResults,
     });
@@ -2302,10 +2336,11 @@ export class Engine {
     // tool call. Replaces the old module-level singleton setters used by
     // built-ins and product capabilities.
     const subAgentSpawner = createSubAgentSpawner({
-      parentConfig:
-        options?.allowBackgroundShells === false
-          ? { ...this.config, allowBackgroundShells: false }
-          : this.config,
+      parentConfig: {
+        ...this.config,
+        usageLedger: this.usageLedger,
+        ...(options?.allowBackgroundShells === false ? { allowBackgroundShells: false } : {}),
+      },
       getParentSessionId: () => getSession().state.sessionId,
       parentSandbox: sandboxConfig,
       presetName: this.preset.name,
@@ -2457,7 +2492,7 @@ export class Engine {
       sid,
       resumeState: (s) => this.sessionManager.resume(s).state,
       updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
-      costStore: this.config.costStore,
+      costState: () => this.usageCostState(sid),
       recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
     });
     const { recordCumulativeUsage, recordExternalBilledUsage } = accounting;
@@ -2596,6 +2631,14 @@ export class Engine {
       },
     });
     toolCtx.recordBilledUsage = recordExternalBilledUsage;
+    const billedOwner = this.usageOwnerForSession(
+      session.state.sessionId,
+      this.runIds.get(session.state),
+    );
+    toolCtx.recordExternalBilledUsage = (input) => {
+      const result = this.usageLedger.recordExternalWithStatus(billedOwner, input);
+      if (result.recorded && input.usage) recordExternalBilledUsage(input.usage);
+    };
 
     // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
     // a sub-agent's loop is its own concern and isn't user-extendable.
@@ -3161,9 +3204,7 @@ export class Engine {
             sessionCacheReadTokens: cumulative.cumulativeCacheReadTokens,
             sessionCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
           });
-          if (this.config.costStore) {
-            session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
-          }
+          session.state.costState = this.usageCostState(session.state.sessionId);
           this.persistRunProgress(session.state);
         },
       },
@@ -3182,8 +3223,13 @@ export class Engine {
   private buildSummarizeFn(
     auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
+    purpose: UsageOwner["purpose"] = "aux_summary",
   ): (prompt: string, signal?: AbortSignal) => Promise<string> {
-    return this.auxiliaryPipeline.buildSummarizeFn(auxSummaryClient, recordCumulativeUsage);
+    return this.auxiliaryPipeline.buildSummarizeFn(
+      auxSummaryClient,
+      recordCumulativeUsage,
+      purpose,
+    );
   }
 
   private async resolveAuxClient(
@@ -3360,6 +3406,54 @@ export class Engine {
     return this.sessionManager;
   }
 
+  getUsageSummary(query: UsageQuery = {}) {
+    if (query.sessionId) this.usageOwnerForSession(query.sessionId);
+    return this.usageLedger.summary(query, this.sessionManager.getStorageDir());
+  }
+
+  recordExternalUsage(sessionId: string, input: ExternalBilledUsage): void {
+    this.usageLedger.recordExternal(this.usageOwnerForSession(sessionId), input);
+  }
+
+  private usageCostState(sessionId: string): Record<string, unknown> {
+    return {
+      ...this.usageLedger.sessionState(sessionId, this.sessionManager.getStorageDir()),
+      ...(this.config.costStore ? { legacyStore: this.config.costStore.serialize() } : {}),
+    };
+  }
+
+  private usageOwnerForSession(
+    sessionId: string,
+    runId?: string,
+    purpose: UsagePurpose = "main",
+  ): UsageOwner {
+    const ancestors: string[] = [];
+    const visited = new Set<string>();
+    let current: string | null | undefined = sessionId;
+    while (current && !visited.has(current) && visited.size < 64) {
+      visited.add(current);
+      if (!this.sessionManager.exists(current)) break;
+      const state = this.sessionManager.readSessionState(current);
+      if (!state) break;
+      const adopted = this.usageLedger.adoptSession(
+        current,
+        state.costState,
+        this.sessionManager.getStorageDir(),
+      );
+      if (!adopted && (state.costState != null || (state.tokenUsage?.totalTokens ?? 0) > 0))
+        this.usageLedger.noteHistoricalGap(current, this.sessionManager.getStorageDir());
+      if (current !== sessionId) ancestors.push(current);
+      current = state.parentSessionId;
+    }
+    return this.usageLedger.owner(
+      sessionId,
+      runId,
+      ancestors,
+      purpose,
+      this.sessionManager.getStorageDir(),
+    );
+  }
+
   resolveSessionRunWorkspace(sessionId: string): SyntheticRunWorkspace {
     return resolveSyntheticRunWorkspace(
       this.sessionManager,
@@ -3436,6 +3530,7 @@ export class Engine {
   }
 
   private persistFinalRunState(state: SessionState): void {
+    state.costState = this.usageCostState(state.sessionId);
     const finalFields = {
       status: state.status,
       lastCompletionKind: state.lastCompletionKind,
@@ -3964,7 +4059,7 @@ export class Engine {
         this.sessionManager.recordAuxiliaryUsage(
           effectiveSessionId,
           usage,
-          this.config.costStore?.serialize() as Record<string, unknown> | undefined,
+          this.usageCostState(effectiveSessionId),
         );
         const latest = this.sessionManager.resume(effectiveSessionId).state;
         const next = normalizeCumulativeUsageCounters(latest, latest.tokenUsage);
@@ -3975,7 +4070,11 @@ export class Engine {
         });
         return next;
       };
-      contextManager.setSummarizeFn(this.buildSummarizeFn(primaryClient, recordCompactUsage));
+      const summarize = this.buildSummarizeFn(primaryClient, recordCompactUsage, "manual_compact");
+      const owner = this.usageOwnerForSession(effectiveSessionId, undefined, "manual_compact");
+      contextManager.setSummarizeFn((prompt, signal) =>
+        withUsageOwner(owner, () => summarize(prompt, signal)),
+      );
     } catch (err) {
       logger.warn(`engine.${op}_client_failed`, {
         error: (err as Error).message,

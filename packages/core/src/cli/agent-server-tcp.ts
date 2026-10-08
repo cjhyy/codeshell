@@ -117,6 +117,7 @@ const runtime = new EngineRuntime({
   settings: settingsManager,
   mcpPool,
   costTracker,
+  usageStorageDir: join(dataSessionsDir ?? sessionsRoot(), ".usage-ledger"),
 });
 
 const chatManager = new ChatSessionManager({

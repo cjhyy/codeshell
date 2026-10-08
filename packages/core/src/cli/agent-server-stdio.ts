@@ -246,9 +246,6 @@ const sharedSettings = settingsManager;
 const mcpPool = new MCPManager(toolRegistry);
 
 // CostTracker: shared across all sessions for aggregate tracking.
-// TODO(future) — shared across all sessions, but Engine doesn't yet read
-// runtime.costTracker. Future work: per-session cost accounting through
-// the shared runtime.
 const costTracker = new CostTracker();
 
 // ─── Step 3: build the shared EngineRuntime ───────────────────────
@@ -259,6 +256,7 @@ const runtime = new EngineRuntime({
   settings: sharedSettings,
   mcpPool,
   costTracker,
+  usageStorageDir: join(dataSessionsDir ?? sessionsRoot(), ".usage-ledger"),
 });
 
 // ─── Step 4: ChatSessionManager ──────────────────────────────────

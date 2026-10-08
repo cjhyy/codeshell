@@ -4,11 +4,10 @@
 
 import { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 import { findOpenRouterModel } from "./data/openrouter-models.js";
-import {
-  MODEL_PRICING,
-  DEFAULT_PRICING,
-  type ModelPricing,
-} from "./data/model-metadata.js";
+import type { UsageLedger } from "./cost-ledger/store.js";
+import { formatUsageCost } from "./cost-ledger/summary.js";
+import { currentUsageOwner } from "./cost-ledger/context.js";
+import { MODEL_PRICING, DEFAULT_PRICING, type ModelPricing } from "./data/model-metadata.js";
 
 // Pricing per 1M tokens (USD). The MODEL_PRICING table + DEFAULT_PRICING now
 // live in data/model-metadata.json (loaded by data/model-metadata.ts) so a
@@ -55,7 +54,8 @@ function lookupPricing(model: string): { pricing: ModelPricing; known: boolean }
   }
   // Also try OpenRouter for short names (e.g. "deepseek-v4-flash" → "deepseek/deepseek-v4-flash")
   // by matching on the model part after the slash
-  const orHit = findOpenRouterModel(`deepseek/${model}`) ??
+  const orHit =
+    findOpenRouterModel(`deepseek/${model}`) ??
     findOpenRouterModel(`openai/${model}`) ??
     findOpenRouterModel(`anthropic/${model}`);
   if (orHit && (orHit.inputPricePerMillion > 0 || orHit.outputPricePerMillion > 0)) {
@@ -88,6 +88,13 @@ function getCanonicalName(model: string): string {
 }
 
 export class CostTracker {
+  private ledger?: UsageLedger;
+  bindLedger(ledger: UsageLedger): void {
+    this.ledger = ledger;
+  }
+  getUsageSummary() {
+    return this.ledger?.summary();
+  }
   private records: UsageRecord[] = [];
   private sessionStart = Date.now();
   private _hasUnknownModel = false;
@@ -117,6 +124,14 @@ export class CostTracker {
   }
 
   getTotalTokens(): { prompt: number; completion: number; total: number } {
+    if (this.ledger) {
+      const summary = this.ledger.summary();
+      return {
+        prompt: summary.promptTokens,
+        completion: summary.completionTokens,
+        total: summary.totalTokens,
+      };
+    }
     let prompt = 0;
     let completion = 0;
     for (const r of this.records) {
@@ -127,6 +142,7 @@ export class CostTracker {
   }
 
   getEstimatedCost(): number {
+    if (this.ledger) return this.ledger.summary().knownEstimatedCostUsd;
     let totalCost = 0;
     for (const r of this.records) {
       const { pricing: p } = lookupPricing(r.model);
@@ -141,6 +157,7 @@ export class CostTracker {
   }
 
   getRequestCount(): number {
+    if (this.ledger) return this.ledger.summary().requests;
     return this.records.length;
   }
 
@@ -170,6 +187,10 @@ export class CostTracker {
    * Get total cache token counts.
    */
   getCacheTokens(): { cacheRead: number; cacheWrite: number } {
+    if (this.ledger) {
+      const summary = this.ledger.summary();
+      return { cacheRead: summary.cacheReadTokens, cacheWrite: summary.cacheCreationTokens };
+    }
     let cacheRead = 0;
     let cacheWrite = 0;
     for (const r of this.records) {
@@ -183,6 +204,23 @@ export class CostTracker {
    * Format a styled cost summary for terminal display.
    */
   formatSummary(c: Colorizer = NOOP_COLORIZER): string {
+    if (this.ledger) {
+      const s = this.ledger.summary();
+      return [
+        "  Cost Summary (Runtime)",
+        `    Requests: ${s.requests}`,
+        `    Input tokens: ${formatNumber(s.promptTokens)}`,
+        `    Output tokens: ${formatNumber(s.completionTokens)}`,
+        `    Estimated cost: ${formatUsageCost(s)}`,
+        ...s.byModel.map(
+          (m) =>
+            `      ${m.provider}/${m.model}: ${m.requests} requests, ${formatUsageCost({ ...m, partial: s.partial })}`,
+        ),
+        ...(s.unknownUsageRequests
+          ? [`    Usage unavailable for ${s.unknownUsageRequests} requests`]
+          : []),
+      ].join("\n");
+    }
     const tokens = this.getTotalTokens();
     const cache = this.getCacheTokens();
     const cost = this.getEstimatedCost();
@@ -203,11 +241,24 @@ export class CostTracker {
     lines.push(`    ${c.dim("Duration:")}      ${c.white(formatDuration(duration))}`);
 
     // Per-model breakdown (always show)
-    const modelMap = new Map<string, {
-      prompt: number; completion: number; cacheRead: number; cacheWrite: number; count: number;
-    }>();
+    const modelMap = new Map<
+      string,
+      {
+        prompt: number;
+        completion: number;
+        cacheRead: number;
+        cacheWrite: number;
+        count: number;
+      }
+    >();
     for (const r of this.records) {
-      const existing = modelMap.get(r.model) ?? { prompt: 0, completion: 0, cacheRead: 0, cacheWrite: 0, count: 0 };
+      const existing = modelMap.get(r.model) ?? {
+        prompt: 0,
+        completion: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        count: 0,
+      };
       existing.prompt += r.promptTokens;
       existing.completion += r.completionTokens;
       existing.cacheRead += r.cacheReadTokens;
@@ -227,7 +278,8 @@ export class CostTracker {
           (stats.completion / 1_000_000) * p.output +
           (stats.cacheRead / 1_000_000) * p.cacheRead +
           (stats.cacheWrite / 1_000_000) * p.cacheWrite;
-        const tokenDetail = `${formatNumber(stats.prompt)} in, ${formatNumber(stats.completion)} out` +
+        const tokenDetail =
+          `${formatNumber(stats.prompt)} in, ${formatNumber(stats.completion)} out` +
           (stats.cacheRead > 0 ? `, ${formatNumber(stats.cacheRead)} cache` : "");
         lines.push(
           `      ${c.dim(model)} — ${tokenDetail}, ${formatCost(modelCost)} (${stats.count} reqs)`,
@@ -247,11 +299,15 @@ export class CostTracker {
    * Format a compact one-line cost display for the prompt footer.
    */
   formatCompact(c: Colorizer = NOOP_COLORIZER): string {
+    if (this.ledger) {
+      const summary = this.ledger.summary();
+      return c.dim(
+        `tokens: ${formatNumber(summary.totalTokens)} | cost: ${formatUsageCost(summary)}`,
+      );
+    }
     const tokens = this.getTotalTokens();
     const cost = this.getEstimatedCost();
-    return c.dim(
-      `tokens: ${formatNumber(tokens.total)} | cost: ${formatCost(cost)}`,
-    );
+    return c.dim(`tokens: ${formatNumber(tokens.total)} | cost: ${formatCost(cost)}`);
   }
 
   reset(): void {
@@ -273,6 +329,7 @@ export class CostTracker {
 
   /** Restore cost state from a previous session. */
   restore(state: SessionCostState): void {
+    if (this.ledger) return; // Request identities, never mutable aggregate snapshots, own restored bills.
     this.records = state.records ?? [];
     this.sessionStart = state.sessionStart ?? Date.now();
   }
@@ -321,6 +378,7 @@ export const costTracker = new CostTracker();
 export async function installCostTracking(): Promise<void> {
   const { LLMClientBase } = await import("./llm/client-base.js");
   LLMClientBase.onUsage = (model, usage) => {
+    if (currentUsageOwner()) return;
     costTracker.record(
       model,
       usage.promptTokens,

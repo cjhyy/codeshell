@@ -344,6 +344,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         maxTurns: request.maxTurns,
         maxContextTokens: deps.parentConfig.maxContextTokens ?? 200_000,
         sessionStorageDir: deps.parentConfig.sessionStorageDir,
+        usageLedger: deps.parentConfig.usageLedger,
         headless: deps.parentConfig.headless,
         readOnlySession: deps.parentConfig.readOnlySession || request.readOnlySession,
         projectTrusted: deps.parentConfig.projectTrusted,

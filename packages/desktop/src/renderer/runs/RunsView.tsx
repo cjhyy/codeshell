@@ -1,5 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Activity, Clock3, Coins, FileClock, Loader2, RefreshCw, Wrench } from "lucide-react";
+import type { UsageSummary } from "@cjhyy/code-shell-core";
+import { UsageSummaryView } from "./UsageSummaryView";
 import type { RunSummary, RunDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,6 +130,8 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [revision, setRevision] = useState(0);
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
+  const [usageFailed, setUsageFailed] = useState(false);
   const [detailAttempt, setDetailAttempt] = useState(0);
 
   useEffect(() => {
@@ -144,6 +148,25 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
         if (!cancelled) setListLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, [revision]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setUsageFailed(false);
+    void window.codeshell
+      .getUsageSummary?.({ scope: "store" })
+      .then((summary) => {
+        if (!cancelled) setUsageSummary(summary);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUsageSummary(null);
+          setUsageFailed(true);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -239,6 +262,16 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           )}
           {t("auto.runs.refresh")}
         </Button>
+      </div>
+      <div className="mx-4 mb-3 @min-[760px]/runs:mx-6">
+        {usageSummary && (
+          <UsageSummaryView summary={usageSummary} title={t("auto.runs.hostUsage")} />
+        )}
+        {usageFailed && (
+          <p role="status" className="text-xs text-status-warn">
+            {t("auto.runs.usageUnavailable")}
+          </p>
+        )}
       </div>
       {error && (
         <div className="mx-4 mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/20 bg-status-err/5 p-3 @min-[760px]/runs:mx-6">
@@ -446,6 +479,21 @@ function TracePayload({ value }: { value: unknown }) {
 }
 
 function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; lang: string }) {
+  const [sessionUsage, setSessionUsage] = useState<UsageSummary | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setSessionUsage(null);
+    if (detail.sessionId)
+      void window.codeshell
+        .getUsageSummary?.({ scope: "session", sessionId: detail.sessionId, includeChildren: true })
+        .then((summary) => {
+          if (!cancelled) setSessionUsage(summary);
+        })
+        .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [detail]);
   const toolUses = detail.events.filter((event) => event.type === "tool_use");
   const toolResults = new Map(
     detail.events
@@ -507,6 +555,9 @@ function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; l
           value={String(toolUses.length)}
         />
       </div>
+      {sessionUsage && (
+        <UsageSummaryView summary={sessionUsage} title={t("auto.runs.sessionUsage")} />
+      )}
       {detail.error && (
         <div
           role="alert"

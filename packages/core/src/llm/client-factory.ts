@@ -39,7 +39,9 @@ export async function createLLMClient(
     );
   }
 
-  return new Cls(config, defaults);
+  const client = new Cls(config, defaults);
+  client.enableUsageAccounting();
+  return client;
 }
 
 export { PROVIDER_REGISTRY };
