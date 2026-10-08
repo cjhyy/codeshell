@@ -17,7 +17,7 @@ afterEach(() => {
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
 });
-function fixture(semantic = false, analysisOnly = false) {
+function fixture(semantic = false, analysisOnly = false, isolated = false) {
   const directory = mkdtempSync(join(tmpdir(), "lab-report-"));
   directories.push(directory);
   const frozen = freezeDataset(
@@ -43,6 +43,7 @@ function fixture(semantic = false, analysisOnly = false) {
   );
   if (!frozen.ok) throw new Error("invalid fixture");
   const content = planContent();
+  if (isolated) content.runnerVersion = "codeshell_isolated_v1";
   content.datasetHash = frozen.manifest.datasetHash;
   content.acceptance.criticalHardAssertionIds = [];
   content.acceptance.regressionCaseIds = ["case-1", "case-6"];
@@ -159,6 +160,19 @@ describe("immutable experiment reports", () => {
     expect(report.markdown).toContain("Optimization investment");
     expect(report.markdown).toContain("text_fragment");
     expect(report.json).toHaveProperty("adoptionEligible", false);
+  });
+  test("isolated adoption requires complete qualified effects and loading receipts", () => {
+    const { options } = fixture(false, false, true);
+    expect(buildReport(options).json.adoptionEligible).toBe(false);
+    options.trials = options.trials.map((trial) => ({
+      ...trial,
+      instructionReceiptId: "f8153db6-2b47-494a-838a-cad7e127986a",
+    }));
+    expect(buildReport(options).json.adoptionEligible).toBe(true);
+    expect(buildReport({ ...options, status: "interrupted" }).json.adoptionEligible).toBe(false);
+    expect(buildReport({ ...options, trials: options.trials.slice(1) }).json.adoptionEligible).toBe(
+      false,
+    );
   });
   test("content hash is independent of caller order or current clock", () => {
     const { options } = fixture();

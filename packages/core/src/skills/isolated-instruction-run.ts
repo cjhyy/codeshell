@@ -1,0 +1,132 @@
+/** Trusted Host entry; deliberately exposes neither an Engine nor arbitrary run overrides. */
+import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { join } from "node:path";
+import type { ClientDefaults, LLMConfig } from "../types.js";
+import { createServer, createClient } from "../protocol/factories.js";
+import { createInProcessTransport } from "../protocol/transport.js";
+import { createEphemeralModelRequestSigner } from "../model-request-boundary/access.js";
+import type { ModelRequestSigner } from "../model-request-boundary/types.js";
+import { runWithoutLogging } from "../logging/logger.js";
+import { writeFileAtomic } from "../utils/file-mutex.js";
+import {
+  InstructionBindingStore,
+  instructionHash,
+  type InstructionSnapshot,
+  type InstructionValidationReceipt,
+} from "./instruction-bindings.js";
+
+type IsolatedInstructionInput = {
+  cwd: string;
+  llm: LLMConfig;
+  clientDefaults: ClientDefaults;
+  name: string;
+  sourceRevision: string;
+  body: string;
+  task: string;
+  signal?: AbortSignal;
+  receiptRoot?: string;
+};
+
+export function runIsolatedInstruction(input: IsolatedInstructionInput) {
+  return runWithoutLogging(() => executeIsolatedInstruction(input));
+}
+
+async function executeIsolatedInstruction(input: IsolatedInstructionInput) {
+  const signal = input.signal;
+  if (signal?.aborted) throw new Error("Isolated run cancelled");
+  const snapshot: InstructionSnapshot = {
+    bindingId: randomUUID(),
+    cwd: realpathSync(input.cwd),
+    provider: input.llm.provider,
+    model: input.llm.model,
+    name: input.name,
+    sourceRevision: input.sourceRevision,
+    body: input.body,
+    bodyHash: instructionHash(input.body),
+    revision: instructionHash(input.sourceRevision + "\0" + input.body),
+  };
+  const [serverTransport, clientTransport] = createInProcessTransport();
+  let handle: ReturnType<typeof createServer> | undefined;
+  let client: ReturnType<typeof createClient> | undefined;
+  let signer: ModelRequestSigner | undefined;
+  const abort = () => {
+    runWithoutLogging(() => {
+      void client?.cancel().catch(() => {});
+    });
+  };
+  try {
+    signer = createEphemeralModelRequestSigner();
+    handle = createServer({
+      transport: serverTransport,
+      cwd: input.cwd,
+      llm: input.llm,
+      engineOverrides: {
+        modelRequestSigner: signer,
+        clientDefaults: input.clientDefaults,
+        settingsScope: "isolated",
+        isSubAgent: true,
+        maxTurns: 4,
+        enabledBuiltinTools: [],
+        allowBackgroundShells: false,
+        instructionSnapshots: [snapshot],
+        skillAllowlist: [],
+        headless: true,
+      },
+    });
+    client = createClient({ transport: clientTransport });
+    signal?.addEventListener("abort", abort, { once: true });
+    const runParams = {
+      sessionId: `isolated-${randomUUID()}`,
+      task: input.task,
+      cwd: input.cwd,
+      behaviorMode: "isolatedTask",
+      ephemeral: true,
+      toolAllowlist: [],
+      skillAllowlist: [],
+      allowBackgroundShells: false,
+      disableGoal: true,
+    };
+    if (signal?.aborted) throw new Error("Isolated run cancelled");
+    const result = await client.run(runParams);
+    const loaded = handle.engine.getLoadedInstructionSnapshots();
+    const completed =
+      result.reason === "completed" &&
+      !signal?.aborted &&
+      loaded.length === 1 &&
+      loaded[0]?.revision === snapshot.revision;
+    const receipt: InstructionValidationReceipt = {
+      id: randomUUID(),
+      cwd: realpathSync(input.cwd),
+      provider: input.llm.provider,
+      model: input.llm.model,
+      name: input.name,
+      sourceRevision: input.sourceRevision,
+      bodyHash: snapshot.bodyHash,
+      sessionId: result.sessionId,
+      completed,
+    };
+    const store = new InstructionBindingStore(input.receiptRoot);
+    writeFileAtomic(
+      join(store.root, "receipts", `${receipt.id}.json`),
+      JSON.stringify(receipt),
+      0o600,
+    );
+    return { ...result, receipt };
+  } finally {
+    signal?.removeEventListener("abort", abort);
+    try {
+      await handle?.close();
+    } finally {
+      try {
+        client?.close();
+      } finally {
+        try {
+          await handle?.engine.dispose();
+        } finally {
+          signer?.dispose?.();
+        }
+      }
+    }
+  }
+}

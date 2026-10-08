@@ -1,3 +1,4 @@
+import { githubRepositoryParameters, githubSetStarredParameters } from "./github-star.js";
 import {
   asArray,
   asRecord,
@@ -5,6 +6,7 @@ import {
   firstString,
   intParam,
   linkRequestJson,
+  linkRequestStatus,
   pathParam,
   pathSegmentParam,
   pick,
@@ -29,6 +31,7 @@ const githubHeaders = (token: string): Record<string, string> => ({
   ...bearer(token),
   Accept: "application/vnd.github+json",
   "X-GitHub-Api-Version": GITHUB_API_VERSION,
+  "User-Agent": "CodeShell-Link",
 });
 
 function action(
@@ -136,6 +139,58 @@ const github: LocalLinkProviderSpec = {
           ),
         };
       },
+    ),
+    action(
+      "get_repository",
+      "读取仓库",
+      "读取固定 GitHub 仓库身份；params: owner, repo。",
+      async (ctx) => {
+        const { owner, repo } = githubRepositoryParameters(ctx.params);
+        return pick(
+          await request(ctx, `https://api.github.com/repos/${owner}/${repo}`, {
+            headers: githubHeaders(ctx.token),
+          }),
+          ["id", "full_name", "private", "archived", "html_url"],
+        );
+      },
+    ),
+    action(
+      "get_starred",
+      "读取 Star 状态",
+      "读取当前连接账号是否 Star 固定仓库；params: owner, repo。",
+      async (ctx) => {
+        const { owner, repo } = githubRepositoryParameters(ctx.params);
+        const status = await linkRequestStatus(
+          {
+            url: new URL(`https://api.github.com/user/starred/${owner}/${repo}`),
+            headers: githubHeaders(ctx.token),
+            signal: ctx.signal,
+            fetchImpl: ctx.fetchImpl,
+          },
+          [204, 404],
+        );
+        return { starred: status === 204 };
+      },
+    ),
+    action(
+      "set_starred",
+      "设置 Star 状态",
+      "设置固定仓库的 Star 状态并独立验证；params: owner, repo, starred（布尔）。",
+      async (ctx) => {
+        const { owner, repo, starred } = githubSetStarredParameters(ctx.params);
+        await linkRequestStatus(
+          {
+            url: new URL(`https://api.github.com/user/starred/${owner}/${repo}`),
+            method: starred ? "PUT" : "DELETE",
+            headers: { ...githubHeaders(ctx.token), "Content-Length": "0" },
+            signal: ctx.signal,
+            fetchImpl: ctx.fetchImpl,
+          },
+          [204],
+        );
+        return { acknowledged: true };
+      },
+      "write",
     ),
     action(
       "get_readme",

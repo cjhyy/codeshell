@@ -107,6 +107,7 @@ export function wireRunModelFacade(args: {
   auxSummaryClient: LLMClientBase;
   transcript: Transcript;
   accounting: RunUsageAccounting;
+  assertInstructionsCurrent?: () => void;
   requestBinding?: ModelRequestBinding;
 }): {
   modelFacade: ModelFacade;
@@ -131,6 +132,7 @@ export function wireRunModelFacade(args: {
   };
   const callPrimaryModel = modelFacade.call.bind(modelFacade);
   modelFacade.call = async (...callArgs: Parameters<ModelFacade["call"]>) => {
+    args.assertInstructionsCurrent?.();
     // A primary-model summary may itself exhaust the Goal budget. Do not
     // issue the main turn request after that billed sub-call; return control
     // to TurnLoop, whose existing post-response guard emits and persists the
@@ -155,6 +157,7 @@ export function wireRunModelFacade(args: {
   // request out of the foreground tracker while billing and reporting it to
   // the owning session/Goal budget.
   modelFacade.summarize = async (sysPrompt: string, userMsg: string, signal?: AbortSignal) => {
+    args.assertInstructionsCurrent?.();
     const resp = await auxSummaryClient.createMessage({
       systemPrompt: sysPrompt,
       messages: [{ role: "user", content: userMsg }],

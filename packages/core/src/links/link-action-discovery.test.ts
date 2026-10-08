@@ -100,6 +100,28 @@ describe("LinkAction connection discovery", () => {
     expect(state.resolveCalls).toBe(0);
   });
 
+  test("saved CLI grants never advertise write actions", async () => {
+    const credential = githubCredential("cli", true);
+    credential.meta!.linkExecutionBackend = "cli";
+    credential.meta!.linkAccountId = "42";
+    credential.meta!.linkCapabilityIds = [
+      "github.get_repository",
+      "github.get_starred",
+      "github.create_issue",
+      "github.set_starred",
+    ];
+    const state = installAccess([credential]);
+    const result = JSON.parse(
+      await linkActionTool({ provider: "github" }, context(), unexpectedProbe),
+    );
+    expect(result.actions.map((action: { id: string }) => action.id)).toEqual([
+      "get_repository",
+      "get_starred",
+    ]);
+    expect(result.connections[0].actions).toEqual(result.actions);
+    expect(state.resolveCalls).toBe(0);
+  });
+
   test("keeps unreadable and expired or invalid saved Links visible without offering actions", async () => {
     const state = installAccess([
       githubCredential("unreadable", false),

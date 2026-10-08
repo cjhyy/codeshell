@@ -5,7 +5,7 @@
 可信 adapter。所有真实写操作继续经 ToolExecutor、权限、Hooks 和原生审批。
 
 首个生产消费者是现有 LinkAction 的 GitHub 写动作。它需要把当前“写请求返回成功”
-收紧为“单次写入回执 + 独立只读回查通过”；SDK、CLI 和 remote Link 使用相同状态语义。
+收紧为“单次写入回执 + 独立只读回查通过”；SDK 的 PAT/OAuth 和 remote Link 使用相同状态语义。
 权限或 provider 不支持回查时返回明确的未验证结果，关键写操作阻止 Run 以 completed 收尾。
 其他外部写工具逐个迁移，保持每项真实消费者的验收证据。
 
@@ -56,21 +56,29 @@ localhost fixture origin，重定向拒绝，并核验实际 child/worker 继承
 Core 已接通持久操作账本、单次原子 claim、独立验证、终态 fence、Run 粘性能力解析，
 首个真实消费者是 GitHub `create_issue`。目标先经现有 `list_issues` 精确仓库读取验证，
 创建成功后经同一 ToolExecutor 的固定 `get_issue` 回读比较 number/title/body/state。
-local OAuth、remote Link 和受管理 CLI 均使用这条控制路径。普通 token 连接保留原执行
-适配器；未经所属 Engine/Executor 的 standalone 写调用明确拒绝。其他 provider 的写动作
+local PAT、OAuth 和 remote Link 使用这条控制路径。未经所属 Engine/Executor 的 standalone
+写调用明确拒绝。CLI 的所有写动作现在明确拒绝，旧已保存写 grant 也不能发送；新连接和
+发现只提供读取。其他 provider 的写动作
 尚未逐个迁移，不能据此声称所有外部写都已具备后置验证。
 
 同一可信用户输入只有一个 create_issue slot；目标、正文、账号、连接或后置条件变化
 与已落盘计划冲突。不同 model tool-call ID 不产生新 slot。Session 中存在已发送但未验证
-的操作时，新意图也不能自动再写。批量创建的 Host 固定 slots、`update_issue`、star/飞书
-语义适配，以及显式人工 reconcile 界面仍需后续实现；没有 number 的未知结果不会用标题
+的操作时，新意图也不能自动再写。单目标 Star 已实现固定布尔 desired state、持久仓库 ID
+和独立 identity/state 回读，详见 [Star 交付边界](github-star-actions-delivery.md)。批量创建的
+Host 固定 slots、`update_issue`、飞书语义适配，以及显式人工 reconcile 界面仍需后续实现；没有 number 的未知结果不会用标题
 搜索冒充验收，也不支持直接修改账本来回滚。只有真实独立验证通过才允许完成。
 
 已支持已知静态读取权限的预检；预检只是预测，不授予后续执行权限。具体新 number 的
 权限、Hook 决策或授权在写后改变时，回查仍经完整授权链，失败留下未验证回执。
 展示用 Hook 附加文字不会参与验证证据，但所有 Hook、审计与实际授权仍会执行。
-相同操作最多进行两次失败回查；写请求没有自动重试。Resolver 已在当前 Link/CLI
+相同操作最多进行两次失败回查；写请求没有自动重试。Resolver 已在当前 Link
 消费者中使用，其通用 MCP/browser adapter 接口不代表这些语义服务已全部适配。
+
+早期受管理 CLI 的实际 child fixture 曾通过创建和独立读取测试；它验证的是受控 adapter、
+参数和进程隔离，不能证明真实 `gh` 的 HTTP 单次发送。后续对已安装 `gh 2.87.3` 的私有
+localhost 审计观察到 PUT/DELETE 跟随 307 再次发送；stdin POST 跟随 301/302/303 后 GET
+并报告成功（307/308 则仅发送一次 POST 后失败）。因此当前 CLI 写支持已关闭，不能继续
+引用旧 fixture 作为真实 CLI 写保证；须明确连接 PAT/OAuth/remote，不自动切换后端。
 
 账本位于 Session storage root 下独立 `.operations/ledger.json`，0700/0600，保留有界
 元数据与 keyed HMAC；默认沿用宿主 credential cipher。未提供加密 cipher 的 Node/worker

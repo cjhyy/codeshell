@@ -121,6 +121,12 @@ export { SessionManager, codeShellHome } from "./session/session-manager.js";
 // read-only Skill snapshots, shared cross-process persistence, and the existing
 // text-connection resolver. Skill editing remains on the host-only surface.
 export { readSkillSnapshot, type SkillSnapshot } from "./skills/snapshot.js";
+export { InstructionBindingStore, instructionHash } from "./skills/instruction-bindings.js";
+export type {
+  InstructionBinding,
+  InstructionSnapshot,
+  InstructionScope,
+} from "./skills/instruction-bindings.js";
 export { acquireLockOnPath, mutateJsonFile } from "./utils/file-mutex.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
 export { invalidateFileCache } from "./tool-system/builtin/file-cache.js";
@@ -155,3 +161,5 @@ export type { ToolVisibilityContext } from "./tool-system/context.js";
 export type { BuiltinToolExposure } from "./tool-system/builtin/index.js";
 export type { PermissionRule, PermissionMode } from "./types.js";
 export { ApprovalRouter } from "./tool-system/permission.js";
+
+export { runIsolatedInstruction } from "./skills/isolated-instruction-run.js";

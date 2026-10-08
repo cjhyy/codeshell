@@ -92,7 +92,7 @@ export const ExperimentPlanContentSchema = z
     connections: z
       .object({ target: ConnectionIdentitySchema, optimizer: ConnectionIdentitySchema })
       .strict(),
-    runnerVersion: z.literal(RUNNER_VERSION),
+    runnerVersion: z.enum([RUNNER_VERSION, "codeshell_isolated_v1"]),
     strategyVersion: z.enum([STRATEGY_VERSION, "fixed_candidate_trial_v1"]),
     fixedCandidate: z
       .object({

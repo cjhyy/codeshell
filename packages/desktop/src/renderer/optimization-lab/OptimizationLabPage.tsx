@@ -89,6 +89,13 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
     body: string;
     model: string;
   } | null>(null);
+  const [executionMode, setExecutionMode] = useState<"text_fragment" | "codeshell_isolated">(
+    "text_fragment",
+  );
+  const [bindings, setBindings] = useState<any[]>([]);
+  const [adoptionScope, setAdoptionScope] = useState<"project" | "session">("project");
+  const [adoptionSessionId, setAdoptionSessionId] = useState("");
+  const [rollbackMessage, setRollbackMessage] = useState("");
   const [objective, setObjective] = useState<"quality" | "cost">("quality");
   const [limits, setLimits] = useState({
     maxRequests: 32,
@@ -240,6 +247,21 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
       setReport(null);
       await loadList();
     });
+  useEffect(() => {
+    let current = true;
+    setBindings([]);
+    setRollbackMessage("");
+    if (target && enabled)
+      void window.codeshell.optimizationLab
+        .query<any[]>("bindings", { target })
+        .then((rows) => {
+          if (current) setBindings(Array.isArray(rows) ? rows : []);
+        })
+        .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [activeProjectId, enabled]);
   const inputClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
   const field = (key: keyof typeof limits, label: string) => (
     <label className="space-y-1 text-sm" key={key}>
@@ -320,9 +342,65 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
             ))}
           </select>
         </section>
+        <section
+          className="rounded-xl border p-4 space-y-3"
+          data-testid="optimization-lab-bindings"
+        >
+          <h2 className="font-medium">{t("optimizationLab.adoptedVersions")}</h2>
+          <p className="text-sm text-muted-foreground">{t("optimizationLab.adoptionHelp")}</p>
+          {rollbackMessage && <p role="status">{rollbackMessage}</p>}
+          {bindings
+            .filter((binding) => binding.revokedAt === null)
+            .map((binding) => (
+              <div
+                key={binding.snapshot.bindingId}
+                className="rounded-md border p-3 text-sm space-y-2"
+              >
+                <p>
+                  {binding.snapshot.name} · {binding.scope.provider} / {binding.scope.model} ·{" "}
+                  {binding.scope.sessionId ?? t("optimizationLab.projectScope")}
+                </p>
+                <p className="break-all text-xs">{binding.snapshot.revision}</p>
+                <Button
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() =>
+                    void run(async () => {
+                      const result = await query<any>("revoke_binding", {
+                        bindingId: binding.snapshot.bindingId,
+                        revision: binding.snapshot.revision,
+                      });
+                      setBindings(await query<any[]>("bindings", {}));
+                      setRollbackMessage(
+                        t(
+                          result.rollbackStatus === "source_changed"
+                            ? "optimizationLab.rollbackConflict"
+                            : "optimizationLab.rollbackDone",
+                        ),
+                      );
+                    })
+                  }
+                >
+                  {t("optimizationLab.revokeAdoption")}
+                </Button>
+              </div>
+            ))}
+        </section>
         {!snapshot && (
           <section className="rounded-xl border p-4 space-y-4">
             <h2 className="font-medium">{t("optimizationLab.materials")}</h2>
+            <label className="space-y-1 text-sm block">
+              <span>{t("optimizationLab.executionMode")}</span>
+              <select
+                data-testid="optimization-lab-execution-mode"
+                className={inputClass}
+                value={executionMode}
+                onChange={(event) => setExecutionMode(event.target.value as typeof executionMode)}
+              >
+                <option value="text_fragment">{t("optimizationLab.textMode")}</option>
+                <option value="codeshell_isolated">{t("optimizationLab.isolatedMode")}</option>
+              </select>
+            </label>
             {trialSource && (
               <div
                 className="rounded-md bg-muted p-3 text-sm space-y-2"
@@ -594,6 +672,7 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
                             optimizerConnectionId: optimizerId,
                           }),
                       objective,
+                      executionMode,
                       limits: { ...limits, repeats: 1 },
                     },
                   );
@@ -611,6 +690,57 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
             <section className="rounded-xl border p-4 space-y-3">
               <h2 className="font-medium">{t("optimizationLab.frozenPlan")}</h2>
               <OptimizationLabSummary snapshot={snapshot} />
+              <p className="text-sm">
+                {t(
+                  snapshot.plan.runnerVersion === "codeshell_isolated_v1"
+                    ? "optimizationLab.isolatedMode"
+                    : "optimizationLab.textMode",
+                )}
+              </p>
+              {(report?.json as any)?.adoptionEligible === true && (
+                <div className="space-y-2" data-testid="optimization-lab-adoption">
+                  <select
+                    data-testid="optimization-lab-adoption-scope"
+                    className={inputClass}
+                    value={adoptionScope}
+                    onChange={(event) =>
+                      setAdoptionScope(event.target.value as typeof adoptionScope)
+                    }
+                  >
+                    <option value="project">{t("optimizationLab.projectScope")}</option>
+                    <option value="session">{t("optimizationLab.sessionScope")}</option>
+                  </select>
+                  {adoptionScope === "session" && (
+                    <input
+                      data-testid="optimization-lab-adoption-session"
+                      className={inputClass}
+                      value={adoptionSessionId}
+                      placeholder={t("optimizationLab.sessionId")}
+                      onChange={(event) => setAdoptionSessionId(event.target.value)}
+                    />
+                  )}
+                  <Button
+                    data-testid="optimization-lab-adopt"
+                    disabled={pending || (adoptionScope === "session" && !adoptionSessionId.trim())}
+                    onClick={() =>
+                      void run(async () => {
+                        const result = await window.codeshell.optimizationLab.adopt({
+                          target,
+                          id: snapshot.id,
+                          reportHash: report!.hash,
+                          scope:
+                            adoptionScope === "session"
+                              ? { kind: "session", sessionId: adoptionSessionId.trim() }
+                              : { kind: "project" },
+                        });
+                        if (result) setBindings(await query<any[]>("bindings", {}));
+                      })
+                    }
+                  >
+                    {t("optimizationLab.adoptVersion")}
+                  </Button>
+                </div>
+              )}
               {!running && hasReport && snapshot.candidates?.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">

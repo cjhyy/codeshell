@@ -39,8 +39,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     displayName: "GitHub",
     category: "developer",
     description: text(
-      "读取仓库、文件、Issue 和 Pull Request。",
-      "Read repositories, files, issues, and pull requests.",
+      "读取仓库、文件、Issue 和 Pull Request；可审批创建 Issue、设置当前账号的 Star。",
+      "Read repositories, files, issues, and pull requests; approve issue creation and account Star changes.",
     ),
     brandText: "GH",
     icon: "github",
@@ -60,7 +60,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               "Best for selected repositories; the creation page pre-fills permissions required by the current Link Actions.",
             ),
             createCredentialUrl:
-              "https://github.com/settings/personal-access-tokens/new?name=CodeShell+Link&description=Local+GitHub+connection+for+CodeShell&expires_in=90&contents=read&issues=write&pull_requests=read&metadata=read",
+              "https://github.com/settings/personal-access-tokens/new?name=CodeShell+Link&description=Local+GitHub+connection+for+CodeShell&expires_in=90&contents=read&issues=write&pull_requests=read&metadata=read&starring=write",
             docsUrl:
               "https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
             permissions: [
@@ -68,6 +68,11 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               { id: "issues", label: "Issues: write", level: "required" },
               { id: "pull_requests", label: "Pull requests: read", level: "required" },
               { id: "metadata", label: "Metadata: read", level: "required" },
+              {
+                id: "starring",
+                label: "Starring: write (account; Star / Unstar)",
+                level: "required",
+              },
             ],
             steps: [
               text(
@@ -84,8 +89,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               ),
             ],
             note: text(
-              "Token 只显示一次；建议设置有效期并仅选择必要仓库。",
-              "The token is shown once; set an expiry and select only necessary repositories.",
+              "Star / Unstar 另需账号级 Starring: write；这是修改当前账号收藏的权限。已有连接需明确重新连接，刷新不会扩大权限。Token 只显示一次。",
+              "Star / Unstar needs account-level Starring: write, which modifies this account’s stars. Explicitly reconnect existing bindings; refreshing never expands grants. The token is shown once.",
             ),
           },
         ),
@@ -94,8 +99,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
           flow: "device-code",
           displayName: text("在浏览器登录 GitHub", "Sign in to GitHub in your browser"),
           summary: text(
-            "无需安装 gh。CodeShell 显示一次性验证码，你在 GitHub 完成授权后即可连接。",
-            "No gh installation required. CodeShell shows a one-time code and connects after you approve access on GitHub.",
+            "无需安装 gh。CodeShell 显示一次性验证码；Star 功能还需 GitHub App 的 Starring 用户写权限及明确重新连接。",
+            "No gh installation required. CodeShell shows a one-time code. Star actions additionally need GitHub App Starring user write permission and an explicit reconnect.",
           ),
           docsUrl:
             "https://docs.github.com/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app#using-the-device-flow-to-generate-a-user-access-token",
@@ -109,8 +114,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
           command: "gh",
           displayName: text("使用 GitHub CLI 登录", "Sign in with GitHub CLI"),
           summary: text(
-            "直接复用本机 GitHub CLI 会话，不复制或保存 GitHub Token。",
-            "Reuse the GitHub CLI session on this device without copying or storing its GitHub token.",
+            "复用本机 GitHub CLI 会话，不复制或保存 Token。CLI Actions 只读；创建 Issue 和设置 Star 请明确连接 PAT、浏览器 OAuth 或远程 Link。",
+            "Reuse this device’s GitHub CLI session without copying or storing its token. CLI Actions are read-only; explicitly connect PAT, browser OAuth or remote Link for issue creation and Star changes.",
           ),
           installUrl: "https://cli.github.com/",
           privacyNote: text(
@@ -123,6 +128,9 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     ],
     actionIds: [
       "list_repositories",
+      "get_repository",
+      "get_starred",
+      "set_starred",
       "get_readme",
       "get_file",
       "list_issues",
