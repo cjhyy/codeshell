@@ -42,6 +42,7 @@ export async function buildSessionTitle(
       tools: [],
       maxTokens: 64,
       requestVisible: false,
+      usagePurpose: "title",
       reasoning: { mode: "off" },
     });
     if (resp.usage) recordBilledUsage?.(resp.usage);

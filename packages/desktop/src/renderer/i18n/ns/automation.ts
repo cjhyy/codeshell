@@ -150,6 +150,13 @@ export const automation = {
       },
       // RunsView
       runs: {
+        hostUsage: "已记录的跨会话用量与费用估算",
+        sessionUsage: "当前会话用量（含子任务）",
+        estimatedCost: "已知估算 ~${amount} + {unknown} 项未知费用",
+        usageCoverage: "{requests} 次实际请求 · {missing} 次缺少用量",
+        unknownCost: "{count} 项未知费用",
+        partialUsage: "当前账目覆盖不完整；估算仅包含已记录且已读取的请求。",
+        usageUnavailable: "费用账目暂时不可用。",
         title: "运行记录",
         subtitle: "查看最近的会话执行结果与托管任务进展，最多显示 1,000 条。",
         count: "{count} 次运行",
@@ -483,6 +490,14 @@ export const automation = {
           "Agent received no completion event (the process may have restarted or been interrupted)",
       },
       runs: {
+        hostUsage: "Recorded cross-session usage and cost estimates",
+        sessionUsage: "Session usage (including children)",
+        estimatedCost: "Known estimate ~${amount} + {unknown} unknown costs",
+        usageCoverage: "{requests} physical requests · {missing} missing usage",
+        unknownCost: "{count} unknown costs",
+        partialUsage:
+          "Accounting coverage is incomplete; estimates include only recorded requests read in this result.",
+        usageUnavailable: "Cost accounting is temporarily unavailable.",
         title: "Run history",
         subtitle: "Review recent session results and managed task progress, up to 1,000 records.",
         count: "{count} runs",

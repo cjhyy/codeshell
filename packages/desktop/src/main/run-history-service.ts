@@ -198,6 +198,7 @@ function receipts(sessionId: string, state: Record<string, unknown>, events: Eve
       tags: [],
       metadata: {
         historySource: "session_receipt",
+        ...(typeof result.runId === "string" ? { accountingRunId: result.runId } : {}),
         clientMessageId,
         receiptEventId: event.id,
         terminalReason: result.reason,

@@ -51,6 +51,10 @@ jobs:
         # The root command first establishes package declaration boundaries, so
         # this also works on a clean checkout before the no-emit workspace pass.
         run: bun run typecheck
+      - name: Cost smoke network and nested worker confinement
+        run: node scripts/test-runtime-cost-smoke-isolation.mjs
+      - name: Compiled SDK, stdio restart/replay and TUI cost accounting
+        run: node scripts/smoke-runtime-cost-ledger.mjs
 
   # The suite is split across parallel shards rather than run as one job.
   #

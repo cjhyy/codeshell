@@ -29,6 +29,8 @@ export interface CreateMessageOptions {
    * @default true
    */
   requestVisible?: boolean;
+  /** Host-local attribution only; never sent as a provider wire parameter. */
+  usagePurpose?: import("../cost-ledger/types.js").UsagePurpose;
   /**
    * Reasoning/thinking setting for this call. Overrides LLMConfig.reasoning.
    * Rich shape ({mode:"off"|"on"} | {mode:"effort",effort} |
