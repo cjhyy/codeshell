@@ -38,11 +38,14 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
   let currentProfile: WorkspaceProfile | undefined;
   try {
     currentProfile = current?.active ? readWorkspaceProfile(current.active) : undefined;
+    if (currentProfile?.name !== current?.active) currentProfile = undefined;
   } catch {
     currentProfile = undefined;
   }
   const nextProfile = name === null ? undefined : readWorkspaceProfile(name);
   if (name && !nextProfile) throw new Error(`Digital human "${name}" not found`);
+  if (name && nextProfile?.name !== name)
+    throw new Error("Digital human definition identity does not match its selected directory");
   // Every review/commit refreshes discovery; a stale scanner cache cannot hide an install/removal.
   invalidateSkillCache();
   const snapshot = profileSwitchCapabilitySnapshot(target.cwd);

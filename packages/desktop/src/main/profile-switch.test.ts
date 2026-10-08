@@ -280,6 +280,19 @@ describe("reviewed Desktop Profile switch", () => {
     expect(() => previewProfileSwitch(target, "next")).toThrow();
   });
 
+  test("definition identity must match the selected directory; an invalid old identity can still be cleared", () => {
+    const profiles = join(process.env.CODE_SHELL_HOME!, "profiles");
+    writeFileSync(join(profiles, "next", "profile.json"), JSON.stringify(definition("elsewhere")));
+    const before = tree(root);
+    expect(() => previewProfileSwitch(target, "next")).toThrow("identity");
+    expect(tree(root)).toEqual(before);
+    writeFileSync(join(profiles, "old", "profile.json"), JSON.stringify(definition("elsewhere")));
+    const review = previewProfileSwitch(target, null);
+    expect(review.before?.available).toBe(false);
+    expect(review.sources.before).toEqual([]);
+    expect(adoptProfileSwitch(target, null, review.revision)).toEqual({ status: "adopted" });
+  });
+
   test("actual IPC resolves stable identities, rejects no-repo/forged paths, and gates busy/stale before write or reload", async () => {
     const handlers = new Map<string, (...args: any[]) => any>();
     const gate = new WebConfigurationGate();

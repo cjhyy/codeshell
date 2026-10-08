@@ -22,7 +22,11 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-digital-humans-e2e-");
-const screenshotDir = process.env.CODESHELL_DIGITAL_HUMANS_SCREENSHOT_DIR;
+const screenshotFlag = process.argv.indexOf("--screenshot-dir");
+const screenshotDir =
+  screenshotFlag >= 0
+    ? process.argv[screenshotFlag + 1]
+    : process.env.CODESHELL_DIGITAL_HUMANS_SCREENSHOT_DIR;
 const fixtureProjectPath = join(isolated.home, "digital-human-lab");
 let app;
 let win;
@@ -383,6 +387,7 @@ async function checkProjectConfiguration(projectButton) {
       .getByText(/未知（旧定义不可用）|Unknown \(old definition unavailable\)/)
       .first()
       .waitFor();
+    await screenshot(win, "digital-human-switch-preview-unavailable.png");
     await cancelSwitchReview();
     assert(
       (await projectSettingsBytes()) === damagedSettings,
@@ -1114,8 +1119,11 @@ require("node:module").syncBuiltinESMExports();
   await sessionProfileSwitch.getByText("Research Analyst", { exact: true }).waitFor({
     state: "visible",
   });
-  await fixtureProject.click();
   const projectSessionList = win.locator("aside");
+  const firstTeamSession = projectSessionList.getByRole("button", {
+    name: /Research & Review · Research Analyst/,
+  });
+  if (!(await firstTeamSession.isVisible())) await fixtureProject.click();
   await projectSessionList
     .getByRole("button", { name: /Research & Review · Research Analyst/ })
     .waitFor({ state: "visible" });
