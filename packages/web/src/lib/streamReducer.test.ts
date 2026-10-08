@@ -171,6 +171,10 @@ test("turn_complete replay_incomplete never reports a recovered run as completed
   expect(s.run).toBe("error");
 });
 
+test("turn_complete unverified_write cannot report the task completed", () => {
+  expect(feed([ev({ type: "turn_complete", reason: "unverified_write" })]).run).toBe("error");
+});
+
 test("turn_complete max_turns/goal_budget_exhausted → 正常完成,非 error", () => {
   // Regression: budget/turn limits are EXPECTED stops, not failures.
   expect(feed([ev({ type: "turn_complete", reason: "max_turns" })]).run).toBe("completed");

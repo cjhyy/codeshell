@@ -4,6 +4,7 @@ import { credentialAccessScope, getCredentialAccess } from "../credentials/acces
 import { getLocalLinkProvider } from "../links/providers.js";
 import { isRemoteLinkCredential } from "../links/remote.js";
 import { savedLinkConnectionStatus } from "../links/status.js";
+import { linkAuthoritySnapshot } from "../links/authority.js";
 import type { SourceAdapterContext } from "./adapter.js";
 import type { SourceDefinition } from "./types.js";
 
@@ -93,27 +94,5 @@ export function linkSourceAuthorityRevision(
       credentialAccessScope(context?.settingsScope),
     );
   if (!credential) return undefined;
-  const meta = credential.meta;
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        id: credential.id,
-        type: credential.type,
-        provider: meta?.linkProvider,
-        runtime: meta?.linkExecutionRuntime,
-        backend: meta?.linkExecutionBackend,
-        account: meta?.linkAccountId,
-        issuer: meta?.linkRemoteIssuer,
-        connection: meta?.linkRemoteConnectionId,
-        grant: meta?.linkRemoteGrantId,
-        capabilities: meta?.linkCapabilityIds,
-        resources: meta?.linkResourceGroups,
-        verifiedAt: meta?.linkLastVerifiedAt,
-        clientId: credential.oauthStatus?.clientId ?? meta?.clientId,
-        tokenEndpoint: credential.oauthStatus?.tokenEndpoint ?? meta?.tokenEndpoint,
-        oauthScope: credential.oauthStatus?.scope,
-        oauthScopes: credential.oauthStatus?.scopes,
-      }),
-    )
-    .digest("hex");
+  return createHash("sha256").update(linkAuthoritySnapshot(credential)).digest("hex");
 }

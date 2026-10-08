@@ -27,6 +27,7 @@ function formatSessionStatus(s: SessionStatus): string {
       return "ptl";
     case "model_error":
     case "image_error":
+    case "unverified_write":
       return "error";
     case "goal_budget_exhausted":
       return "budget";

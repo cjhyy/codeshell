@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ConnectorAdapter } from "../adapter.js";
 import { isLinkSourceAvailable, linkSourceView } from "../link-view.js";
 import { truncateUtf8Text } from "../truncate-utf8.js";
+import { boundToolResult } from "../../tool-system/bound-tool-result.js";
 
 /** Fixed views reuse Link's exact account, grant, resource and revocation gates. */
 export const linkSourceAdapter: ConnectorAdapter = {
@@ -29,7 +30,7 @@ export const linkSourceAdapter: ConnectorAdapter = {
     options.signal?.throwIfAborted();
     if (!options.executeBoundTool || !options.assertAuthorized)
       throw new Error("Link source reads require the owning tool authorization pipeline");
-    const execution = await options.executeBoundTool(
+    const boundExecution = await options.executeBoundTool(
       {
         id: `source-link-${randomUUID()}`,
         toolName: "LinkAction",
@@ -42,6 +43,7 @@ export const linkSourceAdapter: ConnectorAdapter = {
       },
       { signal: options.signal, assertAuthorized: options.assertAuthorized },
     );
+    const execution = boundToolResult(boundExecution);
     if (execution.isError || typeof execution.result !== "string")
       throw new Error("Link source action was denied or unavailable");
     const output = execution.result;

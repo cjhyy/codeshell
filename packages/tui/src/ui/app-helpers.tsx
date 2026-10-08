@@ -155,6 +155,8 @@ export function friendlyReason(reason: string): string {
       return "被 hook 拦截 — 检查 settings.json 中的 hook 配置";
     case "image_error":
       return "图片处理失败";
+    case "unverified_write":
+      return "外部写入尚未验证 — 先回读确认结果，避免重复执行";
     case "completed":
       return "";
     default:
