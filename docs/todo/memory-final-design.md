@@ -11,7 +11,7 @@
 - ✅ **2026-09-11 工作区精修**：extract description 类型校验与完整字段严格相同的同批去重已完成；去重先于数量/global cap，保留大小写、空白、否定与词序差异。解析、真实落盘、dream guard、scope routing 共 39 项专项通过，源码状态不等于已发布。
 - ✅ **2026-09-11 后续精修**：独立存储根现覆盖全部 project/global scope、global pending、promotion、TTL、session summary、dream 计数、driver 与实际 Memory 工具；注入 manager 的原始项目 key 保持一致，冲突配置拒绝。无显式根时保留原 HOME/env 默认，portable profile 仍独立且自动 dream 不写 profile。存储专项 46 项通过（含默认路径、profile 与并发计数）；此为工作区源码结果。
 - ✅ **保守写入回退**：auto/dream 的相似度不再改写为 UPDATE；仅 type/location/name/description/content 完全相同才由 fallback NOOP，其余 ADD。明确的模型 UPDATE 仍须目标存在且 ownership 通过；manual 相近主题保守守卫不变。方向、数值、正文差异及日期更新等 15 个新增 canonical 回归通过；包含相关旧用例的联合检查为 66 项。
-- 🟡 **遗留轻微改进**：同批不同表述候选的决策上下文刷新（后面的候选仍看不到刚 ADD 的），以及写决策 prompt 的有界旧正文对照。模型失败或返回无效决策时可能暂留日期/表述重复，这是避免误覆盖的保守代价；不能将上述修复写成任意语义去重已解决。
+- ✅ **2026-10-08 决策上下文与旧正文对照**：同批 ADD／UPDATE／DELETE（含 global gate 的项目证据）后，下一候选重新读取同一存储根。写决策 prompt 加入脱敏后的旧正文 JSON 对照，单条最多 1500 字符、合计 8000 字符，明确完整／截断／省略状态。证据不足时继续保守 ADD；manual ownership 与失败回退不变。模型失败或返回无效决策时仍可能暂留日期／表述重复，不能宣称任意语义去重已解决。
 
 以下保留分期设计与历史源码定位。写决策规则、相关验收和风险说明已按 2026-09-11 的保守策略更新；其他历史实现快照中的“当前”与旧行号不作为最新状态，具体进度以上文及夜间审计为准。
 

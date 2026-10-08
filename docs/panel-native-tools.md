@@ -29,7 +29,12 @@ images and audio/video; format interpretation belongs to the Panel.
 - `list({offset?,limit?})` returns `{assets,total}`; `get({id})` returns `{asset}`.
 - `read({assetId,offset,length})` returns bounded Base64 bytes and `eof`.
 - `materialize({assetId,directoryHandle,path})` copies an authorized immutable
-  resource into a relative tool-input path.
+  resource into a relative tool-input path. Same-volume managed assets prefer a
+  private copy-on-write clone (macOS system `cp -c`, Linux reflink), followed by
+  one full destination hash check before atomic publication. Unsupported filesystems,
+  cross-volume targets and cross-mount hard-link failures use the existing checked
+  streaming copy. Tool edits never modify the library inode; grants, cancellation,
+  no-overwrite rules and the returned resource shape are unchanged.
 - `capture({directoryHandle,path,name?,mimeType?,expectedBytes?,expectedSha256?})`
   validates a complete tool output and atomically returns `{asset}`.
 - Web-only `open({assetId})` asks the authenticated workbench to preview a resource
