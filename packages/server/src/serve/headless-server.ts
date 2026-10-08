@@ -25,6 +25,7 @@ import type { Duplex } from "node:stream";
 import { randomBytes, randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
+import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
 import { contentTypeFor } from "../static-files.js";
@@ -1373,7 +1374,7 @@ function replyToHostSessionQuery(
       result: { type: "sessions", data: sessions },
     });
   }
-  if (queryType !== "session_detail") return undefined;
+  if (queryType !== "session_detail" && queryType !== "output_journal") return undefined;
 
   const sessionId = message.params?.sessionId;
   if (typeof sessionId !== "string" || sessionId.length === 0) {
@@ -1387,7 +1388,34 @@ function replyToHostSessionQuery(
     if (resolve(state.cwd) !== workspaceCwd) {
       return hostQueryError(message.id, -32001, "Session not found in this workspace");
     }
-    const transcript = readHubTranscript(sessionManager.getStorageDir(), sessionId);
+    if (queryType === "output_journal") {
+      const data = readOutputJournal(sessionManager.getStorageDir(), sessionId, {
+        after: message.params?.after as string | undefined,
+        through: message.params?.through as string | undefined,
+        maxBytes: message.params?.maxBytes as number | undefined,
+        maxFrames: message.params?.maxFrames as number | undefined,
+      });
+      return JSON.stringify({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: { type: "output_journal", data },
+      });
+    }
+    const journal =
+      message.params?.outputRecovery === true
+        ? readOutputJournal(sessionManager.getStorageDir(), sessionId)
+        : undefined;
+    const legacy =
+      journal && journal.status !== "unavailable"
+        ? readOutputJournalLegacyBase(
+            sessionManager.getStorageDir(),
+            sessionId,
+            journal.legacyBaseThroughEventId,
+          )
+        : undefined;
+    const transcript = legacy
+      ? legacy.events
+      : readHubTranscript(sessionManager.getStorageDir(), sessionId);
     return JSON.stringify({
       jsonrpc: "2.0",
       id: message.id,
@@ -1395,6 +1423,7 @@ function replyToHostSessionQuery(
         type: "session_detail",
         data: {
           state,
+          ...(legacy ? { outputJournal: journal, legacyBaseComplete: legacy.complete } : {}),
           ...(runReplay ? runReplay.snapshot(sessionId, transcript) : { transcript }),
           running: isRunning(sessionId),
         },

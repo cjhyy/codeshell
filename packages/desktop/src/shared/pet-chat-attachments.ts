@@ -10,4 +10,5 @@ export interface PetChatAttachment {
   sessionId: string;
   mime?: string;
   originalName?: string;
+  size?: number;
 }

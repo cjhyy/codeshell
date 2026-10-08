@@ -1,6 +1,118 @@
 import { describe, expect, test } from "bun:test";
 import { initialChatState, reduceStream } from "../src/lib/streamReducer.js";
-import { chatFromSnapshot, chatFromTranscript, isNewStreamEvent, sessionTitle } from "./chat.js";
+import {
+  chatFromOutputJournal,
+  chatFromSnapshot,
+  chatFromTranscript,
+  isNewStreamEvent,
+  sessionTitle,
+} from "./chat.js";
+import {
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+} from "../../core/src/session/output-journal.js";
+import {
+  outputUserInputFixture,
+  outputForwardedInputFixture,
+} from "../../../tests/fixtures/output-journal-user-input.js";
+
+for (const mode of [
+  "normal",
+  "attachment-only",
+  "injected",
+  "agent",
+  "steer",
+  "steer-text",
+] as const) {
+  test(`Hub existing recovery preserves actual Engine ${mode} input display`, async () => {
+    const fixture = await outputUserInputFixture(mode);
+    const steering = mode === "steer" || mode === "steer-text";
+    try {
+      const read = (options = {}) =>
+        readOutputJournal(fixture.sessionRoot, "saved", { ...options, maxFrames: 2 });
+      const page = read();
+      const base = readOutputJournalLegacyBase(
+        fixture.sessionRoot,
+        "saved",
+        page.legacyBaseThroughEventId,
+      );
+      expect(base.complete).toBe(true);
+      const result = await chatFromOutputJournal(
+        { state: {}, transcript: base.events, outputJournal: page },
+        async (options) => read(options),
+        [],
+      );
+      expect(result).not.toBeNull();
+      if (steering) {
+        const live = fixture.events.reduce(reduceStream, initialChatState());
+        const display = (items: typeof live.items) =>
+          items
+            .filter(
+              (item) => item.kind === "user" && item.clientMessageId === "fixture-steer-client",
+            )
+            .map(({ id: _id, ...item }) => item);
+        expect(display(live.items)).toEqual(display(result!.chat.items));
+      }
+      const users = result!.chat.items.filter((item) => item.kind === "user");
+      expect(users).toEqual(
+        chatFromTranscript(fixture.transcript).items.filter((item) => item.kind === "user"),
+      );
+      if (mode === "injected" || mode === "agent") {
+        expect(users).toEqual([]);
+        expect(JSON.stringify(result!.chat)).not.toContain("PRIVATE_MACHINE_INPUT");
+      } else {
+        expect(users).toHaveLength(steering ? 2 : 1);
+        expect(users.at(-1)).toMatchObject({
+          text: fixture.prompt,
+          clientMessageId: steering ? "fixture-steer-client" : "fixture-input",
+          ...(mode === "steer-text"
+            ? {}
+            : {
+                attachments: fixture.attachments.map((attachment) => ({
+                  name: attachment.originalName,
+                  size: attachment.size,
+                  mime: attachment.mime,
+                  path: attachment.path,
+                })),
+              }),
+        });
+      }
+    } finally {
+      fixture.cleanup();
+    }
+  });
+}
+
+test("real child forwarding cannot promote a queued input into the parent user feed", () => {
+  const parent = reduceStream(initialChatState(), {
+    type: "session_user_message",
+    text: "parent question",
+    clientMessageId: "parent-submit",
+  });
+  const events = outputForwardedInputFixture();
+  expect(events[0]).toMatchObject({
+    agentId: "child-agent",
+    sessionId: "child-session",
+    id: "child-queue",
+    clientMessageId: "parent-submit",
+  });
+  expect(events[2]).toMatchObject({
+    type: "session_user_message",
+    agentId: "child-agent",
+    sessionId: "child-session",
+    clientMessageId: "child-submit",
+  });
+  expect(events[1]).toMatchObject({
+    type: "session_user_message",
+    agentId: "child-agent",
+    sessionId: "child-session",
+    clientMessageId: "parent-submit",
+  });
+  expect(reduceStream(initialChatState(), { ...events[1], agentId: undefined }).items).toHaveLength(
+    1,
+  );
+  expect(events.reduce(reduceStream, parent)).toBe(parent);
+});
 
 describe("SPA chat state", () => {
   test("tool_use_start + tool_result renders a completed tool item", () => {

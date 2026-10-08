@@ -3,6 +3,7 @@ import type { Message, MessagesReducerState, UserMessage } from "./types";
 import type { SequencedStreamEvent } from "./streamCoalescer";
 import { mergeHistoryIntoLive } from "./automation/hydrateOrder";
 import { mergeHistoryWindows } from "./app/mergeHistoryWindows";
+import { compareOutputCursors } from "@cjhyy/code-shell-web";
 
 type Reduce = (map: TranscriptsMap, action: TranscriptsAction) => TranscriptsMap;
 interface JournalEntry {
@@ -22,6 +23,8 @@ interface Recovery {
   count: number;
   bytes: number;
   failed?: boolean;
+  latestOutputCursor?: string;
+  unpairedOutput?: boolean;
 }
 
 // Recovery metadata belongs to immutable reducer snapshots. It is never
@@ -36,6 +39,14 @@ export function hasTranscriptRecovery(map: TranscriptsMap, bucket: string): bool
 
 export function transcriptRecoveryFailed(map: TranscriptsMap, bucket: string): boolean {
   return recoveries.get(map)?.get(bucket)?.failed === true;
+}
+export function latestRecoveryOutputCursor(
+  map: TranscriptsMap,
+  bucket: string,
+  token: number,
+): string | undefined {
+  const recovery = recoveries.get(map)?.get(bucket);
+  return recovery?.token === token ? recovery.latestOutputCursor : undefined;
 }
 
 export function hasBufferedTranscriptRecovery(
@@ -229,6 +240,105 @@ function replay(
   const journal: TranscriptsAction[] = [];
   for (let node = recovery.head; node; node = node.previous) journal.push(node.action);
   journal.reverse();
+  if (action.outputCursor) {
+    // A complete disk prefix can supersede an overflowed RAM window only when
+    // it covers the latest actual durable cursor observed during hydration.
+    if (
+      recovery.localsOverflow ||
+      recovery.unpairedOutput ||
+      (recovery.latestOutputCursor &&
+        (compareOutputCursors(recovery.latestOutputCursor, action.outputCursor) ?? 1) > 0)
+    )
+      return undefined;
+    let state: TranscriptsMap = { [bucket]: action.state };
+    const locals: TranscriptsAction[] = [];
+    for (let node = recovery.locals; node; node = node.previous) locals.push(node.action);
+    locals.reverse();
+    for (const local of locals) {
+      if (local.type === "user_message" && !local.clientMessageId && !local.steerId)
+        return undefined;
+      state = reduce(state, local);
+    }
+    // Queued drafts from before hydration have stable identities but may not
+    // have reached Core yet. Retain them without comparing reply contents.
+    for (const message of recovery.initial?.messages ?? []) {
+      if (
+        message.kind === "user" &&
+        message.pending &&
+        message.clientMessageId &&
+        !state[bucket]!.messages.some(
+          (item) => item.kind === "user" && item.clientMessageId === message.clientMessageId,
+        )
+      ) {
+        state = reduce(state, {
+          type: "user_message",
+          bucket,
+          text: message.text,
+          pending: true,
+          clientMessageId: message.clientMessageId,
+          steerId: message.steerId,
+          attachments: message.attachments,
+        });
+      }
+    }
+    // Approval answers are local UI records. Retain answered cards only in a
+    // uniquely identified durable user turn; never match assistant contents or
+    // resurrect an old unanswered approval from a cache.
+    let userKey: string | undefined;
+    const savedAnswers = new Map<string, Extract<Message, { kind: "ask_user" }>[]>();
+    for (const message of recovery.initial?.messages ?? []) {
+      if (message.kind === "user") userKey = message.clientMessageId ?? message.steerId;
+      else if (message.kind === "ask_user" && message.answer !== undefined && userKey)
+        savedAnswers.set(userKey, [...(savedAnswers.get(userKey) ?? []), message]);
+    }
+    if (savedAnswers.size) {
+      const restored = state[bucket]!;
+      const users = new Map<string, number>();
+      for (const message of restored.messages) {
+        if (message.kind !== "user") continue;
+        const key = message.clientMessageId ?? message.steerId;
+        if (key) users.set(key, (users.get(key) ?? 0) + 1);
+      }
+      const questions = new Set(
+        restored.messages.flatMap((message) =>
+          message.kind === "ask_user" ? [message.requestId] : [],
+        ),
+      );
+      const messages: Message[] = [];
+      const positions = new Map<number, number>();
+      let pending: Extract<Message, { kind: "ask_user" }>[] = [];
+      const flush = () => {
+        for (const message of pending) {
+          if (!questions.has(message.requestId)) {
+            messages.push(message);
+            questions.add(message.requestId);
+          }
+        }
+        pending = [];
+      };
+      for (const [index, message] of restored.messages.entries()) {
+        if (message.kind === "user") {
+          flush();
+          const key = message.clientMessageId ?? message.steerId;
+          if (key && users.get(key) === 1) pending = savedAnswers.get(key) ?? [];
+        }
+        positions.set(index, messages.length);
+        messages.push(message);
+      }
+      flush();
+      state[bucket] = {
+        ...restored,
+        messages,
+        agentMessageIndex: Object.fromEntries(
+          Object.entries(restored.agentMessageIndex).map(([id, index]) => [
+            id,
+            positions.get(index) ?? index,
+          ]),
+        ),
+      };
+    }
+    return state[bucket];
+  }
   const initial = recovery.initial;
   const prefix = action.replayBase ?? action.history;
   let baseline = initial ? mergeHistoryIntoLive(prefix, initial) : prefix;
@@ -441,7 +551,7 @@ export function reduceTranscriptHydration(
   }
   if (action.type === "hydrate_history" && action.token !== undefined) {
     if (!recovery || recovery.token !== action.token) return map;
-    if (recovery.failed) return map;
+    if (recovery.failed && !action.outputCursor) return map;
     const restored = replay(action.bucket, recovery, action, reduce);
     const next = restored ? { ...map, [action.bucket]: restored } : { ...map };
     const windows = new Map(previous);
@@ -457,6 +567,9 @@ export function reduceTranscriptHydration(
       action.epoch && action.epoch !== current?.snapshotEpoch ? 0 : (current?.snapshotSeq ?? 0);
     const fresh = action.raw.filter(
       (entry) =>
+        (!current?.outputCursor ||
+          !entry.event.outputCursor ||
+          (compareOutputCursors(entry.event.outputCursor, current.outputCursor) ?? 1) > 0) &&
         (!action.epoch || !entry.epoch || action.epoch === entry.epoch) &&
         (entry.seq === undefined || entry.seq > cursor),
     );
@@ -479,6 +592,29 @@ export function reduceTranscriptHydration(
     if (!next[action.bucket]) windows.delete(action.bucket);
   } else if (recovery && action.type !== "hydrate_history") {
     const raw = entries(action);
+    let latestOutputCursor = recovery.latestOutputCursor;
+    let unpairedOutput = recovery.unpairedOutput;
+    for (const entry of raw ?? []) {
+      if (entry.event.outputCursor) {
+        if (
+          latestOutputCursor &&
+          compareOutputCursors(entry.event.outputCursor, latestOutputCursor) === undefined
+        )
+          unpairedOutput = true;
+        latestOutputCursor = entry.event.outputCursor;
+      } else if (
+        [
+          "stream_request_start",
+          "text_delta",
+          "thinking_delta",
+          "tool_use_start",
+          "assistant_message",
+          "turn_complete",
+        ].includes(entry.event.type)
+      )
+        unpairedOutput = true;
+    }
+    windows.set(action.bucket, { ...recovery, latestOutputCursor, unpairedOutput });
     if (!recovery.failed || !raw) {
       const size = JSON.stringify(raw ?? action).length * 2;
       let updated = recovery;
@@ -503,7 +639,7 @@ export function reduceTranscriptHydration(
             ? { ...updated, count, bytes, head: undefined, failed: true }
             : { ...updated, count, bytes, head: { action, previous: recovery.head } };
       }
-      windows.set(action.bucket, updated);
+      windows.set(action.bucket, { ...updated, latestOutputCursor, unpairedOutput });
     }
     // Even an orphan delta that the visible reducer cannot apply must survive
     // until its missing stream_request_start is recovered.

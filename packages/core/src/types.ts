@@ -334,6 +334,10 @@ export interface SessionState {
   lastCompletionKind?: TurnCompletionKind;
   /** Current run's durable user-message identity; optional on historical state. */
   runId?: string;
+  /** Sticky recovery barrier after an output persistence/budget failure. */
+  outputRecoveryIncomplete?: boolean;
+  /** Immutable journal header pin, committed before any output cursor is published. */
+  outputJournalIdentity?: string;
   clientMessageId?: string;
   /**
    * Monotonic prompt-cache counters for the whole session. These only increase
@@ -609,7 +613,34 @@ export type StreamEvent = {
   /** Transcript user-message event id that opened this run; scoped to the session. */
   runId?: string;
   clientMessageId?: string;
+  /** Opaque Session-owned output cursor, independent of Host transport epochs. */
+  outputCursor?: string;
+  /** Original child cursor when a parent journals a forwarded mirror. */
+  outputOriginCursor?: string;
+  outputRecovery?: "incomplete";
 } & StreamEventPayload;
+
+type UserMessageDisplayPayload = {
+  /** Journal replay projection. Image bytes remain in the canonical input. */
+  transcriptMessage?: {
+    cwd?: string;
+    content:
+      | string
+      | (
+          | { type: "text"; text: string }
+          | { type: "image"; source: { media_type: string; byteLength: number } }
+        )[];
+    displayText?: string;
+  };
+  /** Browser-projected attachment display metadata, never file contents. */
+  attachments?: {
+    name: string;
+    size: number;
+    path?: string;
+    absPath?: string;
+    mime?: string;
+  }[];
+};
 
 type StreamEventPayload =
   // Emitted once per run() as soon as the Engine has resolved the session
@@ -627,7 +658,14 @@ type StreamEventPayload =
   // A host queued an ordinary user turn in this Session (for example through
   // SendMessageToSession). Engine persists the same text as a normal user
   // message; this event lets live clients render the bubble immediately.
-  | { type: "session_user_message"; text: string; clientMessageId?: string }
+  | ({
+      type: "session_user_message";
+      text: string;
+      clientMessageId?: string;
+      sessionId?: string;
+      injected?: boolean;
+      authority?: "user" | "agent" | "system" | "policy";
+    } & UserMessageDisplayPayload)
   // Emitted once, fire-and-forget, after the FIRST turn of a session
   // completes: an LLM-generated one-line title for the sidebar. Best-effort
   // — absent on failure / when aux model unavailable.
@@ -639,7 +677,13 @@ type StreamEventPayload =
   // queue-entry id so it can remove exactly that pending draft from its panel
   // (insert-time and bubble-display are decoupled — the panel item lives until
   // THIS event confirms the engine actually consumed it).
-  | { type: "steer_injected"; text: string; id?: string }
+  | ({
+      type: "steer_injected";
+      text: string;
+      id?: string;
+      /** New producers bind the queued input identity to this Session. */
+      sessionId?: string;
+    } & UserMessageDisplayPayload)
   | { type: "text_delta"; text: string; tokens?: number; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
   | {

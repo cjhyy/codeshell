@@ -4,6 +4,10 @@ import type { IpcRenderer } from "electron";
 export function createSessionTranscriptApi(ipc: Pick<IpcRenderer, "invoke">) {
   return {
     getSessionTranscript: (sessionId: string) => ipc.invoke("sessions:transcript", sessionId),
+    getSessionOutputJournal: (
+      sessionId: string,
+      options?: import("@cjhyy/code-shell-core/internal").OutputJournalOptions,
+    ) => ipc.invoke("sessions:outputJournal", sessionId, options),
     getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
       ipc.invoke("sessions:transcriptPage", sessionId, options),
     listDiskSessions: (opts?: { limit?: number; cursor?: string; parentSessionId?: string }) =>

@@ -1795,6 +1795,11 @@ export class SessionManager {
       if (persisted?.title !== undefined && !("title" in state)) {
         state.title = persisted.title;
       }
+      // These recovery invariants can be committed by the run's journal writer
+      // under this same lock while an older Session bundle remains live.
+      if (persisted?.outputJournalIdentity)
+        state.outputJournalIdentity = persisted.outputJournalIdentity;
+      if (persisted?.outputRecoveryIncomplete) state.outputRecoveryIncomplete = true;
 
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       this.writeStateAtomically(target, stateForPersistence(state));

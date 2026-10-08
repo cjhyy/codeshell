@@ -34,6 +34,8 @@ export interface Snapshot {
   nextSeq: number;
   /** Authoritative top-level run state, retained independently of event eviction. */
   topLevelRunning: boolean;
+  /** Latest Core cursor, retained even when a large event is evicted. */
+  outputCursor?: string;
 }
 
 interface SessionLog {
@@ -42,6 +44,8 @@ interface SessionLog {
   nextSeq: number;
   /** Current top-level run state from the complete worker event stream. */
   topLevelRunning: boolean;
+  bytes: number;
+  outputCursor?: string;
 }
 
 const DEFAULT_MAX_PER_SESSION = 2000;
@@ -50,19 +54,31 @@ export class SessionSnapshotStore {
   readonly epoch = randomUUID();
   private readonly logs = new Map<string, SessionLog>();
   private readonly maxPerSession: number;
+  private readonly maxBytesPerSession: number;
+  private readonly maxTotalBytes: number;
+  private totalBytes = 0;
+  private readonly sizes = new WeakMap<SnapshotEntry, number>();
 
-  constructor(opts?: { maxPerSession?: number }) {
+  constructor(opts?: {
+    maxPerSession?: number;
+    maxBytesPerSession?: number;
+    maxTotalBytes?: number;
+  }) {
     this.maxPerSession = opts?.maxPerSession ?? DEFAULT_MAX_PER_SESSION;
+    this.maxBytesPerSession = opts?.maxBytesPerSession ?? 8 * 1024 * 1024;
+    this.maxTotalBytes = opts?.maxTotalBytes ?? 64 * 1024 * 1024;
   }
 
   /** Record a forwarded event for a session, assigning it the next seq. */
   append(sessionId: string, event: unknown): SnapshotEntry {
     let log = this.logs.get(sessionId);
     if (!log) {
-      log = { events: [], nextSeq: 1, topLevelRunning: false };
+      log = { events: [], nextSeq: 1, topLevelRunning: false, bytes: 0 };
       this.logs.set(sessionId, log);
     }
-    const lifecycle = event as { type?: unknown; agentId?: unknown } | null;
+    const lifecycle = event as { type?: unknown; agentId?: unknown; outputCursor?: unknown } | null;
+    if (typeof lifecycle?.outputCursor === "string" && lifecycle.outputCursor.length <= 2048)
+      log.outputCursor = lifecycle.outputCursor;
     if (lifecycle && !lifecycle.agentId) {
       if (lifecycle.type === "session_started" || lifecycle.type === "stream_request_start") {
         log.topLevelRunning = true;
@@ -71,10 +87,26 @@ export class SessionSnapshotStore {
       }
     }
     const entry = { seq: log.nextSeq, event };
-    log.events.push(entry);
     log.nextSeq += 1;
-    if (log.events.length > this.maxPerSession) {
-      log.events.splice(0, log.events.length - this.maxPerSession);
+    const serialized = JSON.stringify(event) ?? "null";
+    const bytes = Buffer.byteLength(serialized);
+    if (bytes > Math.min(this.maxBytesPerSession, this.maxTotalBytes)) {
+      // Keep a contiguous retained suffix. A skipped large frame must never
+      // leave a misleading sequence-1 prefix followed by an internal hole.
+      while (log.events.length) this.evict(log);
+    } else {
+      const cached = { ...entry, event: JSON.parse(serialized) };
+      this.sizes.set(cached, bytes);
+      log.events.push(cached);
+      log.bytes += bytes;
+      this.totalBytes += bytes;
+      while (log.events.length > this.maxPerSession || log.bytes > this.maxBytesPerSession)
+        this.evict(log);
+      while (this.totalBytes > this.maxTotalBytes) {
+        const oldest = [...this.logs.values()].find((candidate) => candidate.events.length);
+        if (!oldest) break;
+        this.evict(oldest);
+      }
     }
     return entry;
   }
@@ -92,6 +124,7 @@ export class SessionSnapshotStore {
       events,
       nextSeq: log.nextSeq,
       topLevelRunning: log.topLevelRunning,
+      ...(log.outputCursor ? { outputCursor: log.outputCursor } : {}),
     };
   }
 
@@ -109,6 +142,15 @@ export class SessionSnapshotStore {
 
   /** Drop a single session's snapshot (e.g. when the session is deleted). */
   forget(sessionId: string): void {
+    this.totalBytes -= this.logs.get(sessionId)?.bytes ?? 0;
     this.logs.delete(sessionId);
+  }
+
+  private evict(log: SessionLog): void {
+    const entry = log.events.shift();
+    if (!entry) return;
+    const bytes = this.sizes.get(entry) ?? 0;
+    log.bytes -= bytes;
+    this.totalBytes -= bytes;
   }
 }

@@ -176,6 +176,7 @@ describe("Engine initialization lifecycle", () => {
     expect(events).toContainEqual({
       type: "error",
       error: "LLM client initialization failed",
+      outputCursor: expect.any(String),
     });
     expect((fixture.engine as any).runInProgress).toBe(false);
 
@@ -209,7 +210,11 @@ describe("Engine initialization lifecycle", () => {
     expect(readTranscript(fixture.dir, failed.sessionId)).toContain('"type":"error"');
     expect(readTranscript(fixture.dir, failed.sessionId)).toContain("MCP connection failed");
     expect(errors).toEqual([]);
-    expect(events).toContainEqual({ type: "error", error: "MCP connection failed" });
+    expect(events).toContainEqual({
+      type: "error",
+      error: "MCP connection failed",
+      outputCursor: expect.any(String),
+    });
     expect((fixture.engine as any).runInProgress).toBe(false);
     expect(fixture.mcpPool.syncCalls).toHaveLength(0);
 

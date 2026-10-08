@@ -93,6 +93,11 @@ const expectedRuntimeExportsByPartition = {
     "repairProjectSettings",
     "restoreProjectSettings",
   ],
+  sessionOutputRecovery: [
+    "SessionOutputJournal",
+    "readOutputJournal",
+    "readOutputJournalLegacyBase",
+  ],
   logging: ["rotateLogs", "recordUIEvent"],
   managedRuntimes: [
     "createManagedRuntimeProvider",

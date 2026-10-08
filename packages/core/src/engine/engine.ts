@@ -19,7 +19,7 @@ import { createLLMClient } from "../llm/client-factory.js";
 import { OperationLedger } from "../operations/ledger.js";
 import { OperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
-import { buildWrappedOnStream } from "./run-stream.js";
+import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
@@ -1494,7 +1494,7 @@ export class Engine {
   private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
     // Stream wrappers capture this run's identity. Keep them off the caller's
     // options so reusing an options object cannot nest a previous run's wrapper.
-    if (options) options = { ...options };
+    options = { ...options };
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
@@ -1542,18 +1542,22 @@ export class Engine {
     const userOnStream = options?.onStream;
     const clientMessageId = options?.clientMessageId;
     const wrappedOnStream = buildWrappedOnStream({
-      userOnStream: (event) =>
-        userOnStream?.(
-          event.type === "session_started"
-            ? { ...event, runId, previousRunId, clientMessageId }
-            : event,
-        ),
+      outputJournal: createRunOutputJournalPolicy(
+        this.sessionManager,
+        () => session,
+        () => runId,
+      ),
+      userOnStream,
+      prepareEvent: (event) =>
+        event.type === "session_started"
+          ? { ...event, runId, previousRunId, clientMessageId }
+          : event,
       getSession: () => session,
       setLatestTodos: (todos) => {
         latestTodos = todos;
       },
     });
-    if (options) options.onStream = wrappedOnStream;
+    options.onStream = wrappedOnStream;
 
     const imageInput = await prepareRunImageInput({
       task,
@@ -3252,6 +3256,7 @@ export class Engine {
         getTools: toolCtx.refreshRunTools,
         getEligibleTools: () => toolCtx.searchableToolDefinitions ?? toolDefs,
         sessionId: sid,
+        cwd,
         isSubAgent: this.config.isSubAgent === true,
         consumePendingCompactInfo: () => {
           const info = pendingCompactInfo;

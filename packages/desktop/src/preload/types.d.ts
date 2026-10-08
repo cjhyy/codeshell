@@ -1704,6 +1704,15 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
   listRuns(options?: { includeSessions?: boolean }): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
+  getSessionOutputJournal?(
+    sessionId: string,
+    options?: import("@cjhyy/code-shell-core/internal").OutputJournalOptions,
+  ): Promise<
+    import("@cjhyy/code-shell-core/internal").OutputJournalPage & {
+      legacyBaseComplete?: boolean;
+      legacyBaseItems?: FoldItem[];
+    }
+  >;
   getSessionTranscriptPage?(
     sessionId: string,
     options?: { maxBytes?: number },

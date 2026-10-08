@@ -16,6 +16,8 @@
  * by agentId so a subagent never clobbers the main list).
  */
 
+import { projectOutputUserEvent } from "./userMessageDisplay.js";
+
 /** Strip <system-reminder>…</system-reminder> blocks from tool output before
  *  rendering — they're context for the model, not status for the user. */
 function stripSystemReminders(s: string): string {
@@ -29,6 +31,7 @@ export interface UserAttachmentSummary {
   mime?: string;
   size: number;
   path?: string;
+  absPath?: string;
 }
 
 export type ChatItem =
@@ -167,7 +170,8 @@ function asStreamEvent(
 export function reduceStream(state: ChatState, raw: unknown): ChatState {
   const unwrapped = asStreamEvent(raw);
   if (!unwrapped) return state;
-  const { event, sessionId } = unwrapped;
+  const { sessionId } = unwrapped;
+  const event = projectOutputUserEvent(unwrapped.event);
   const type = event.type as string;
   let s = state;
   if (sessionId && sessionId !== s.sessionId) {
@@ -618,7 +622,16 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     }
 
     case "session_user_message":
+    case "steer_injected":
     case "user_message": {
+      if (event.agentId) return s;
+      if (
+        event.injected === true ||
+        event.authority === "agent" ||
+        event.authority === "system" ||
+        event.authority === "policy"
+      )
+        return s;
       // History replay surfaces past user turns as a synthetic event so the
       // same reducer rebuilds the full conversation (the live path uses
       // appendUserMessage instead, since the phone echoes locally).

@@ -6,6 +6,7 @@
  */
 
 import type { StreamEvent } from "@cjhyy/code-shell-core";
+import { projectOutputUserEvent } from "@cjhyy/code-shell-web";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
@@ -369,6 +370,8 @@ export interface MessagesReducerState {
   snapshotSeq: number;
   /** Main-process lifetime that owns snapshotSeq; absent on legacy caches. */
   snapshotEpoch?: string;
+  /** A verified Session output prefix, separate from Main's transport lifetime. */
+  outputCursor?: string;
   /**
    * Monotonic counter incremented on each turn_complete. ToolCard /
    * ToolGroupCard subscribe via prop and force their open state back
@@ -638,6 +641,13 @@ export function applyStreamEvent(
   now: MessageClock = Date.now,
 ): MessagesReducerState {
   if (
+    (event.type === "session_user_message" || event.type === "steer_injected") &&
+    "agentId" in event &&
+    event.agentId
+  )
+    return state;
+  event = projectOutputUserEvent(event);
+  if (
     ("agentId" in event && event.agentId !== undefined) ||
     event.type === "session_user_message" ||
     event.type === "steer_injected"
@@ -845,23 +855,56 @@ export function isCurrentStreamRunEvent(
   );
 }
 
+function outputUserAttachments(
+  state: MessagesReducerState,
+  event: Extract<StreamEvent, { type: "session_user_message" | "steer_injected" }>,
+): PetChatAttachment[] | undefined {
+  return event.attachments?.flatMap((attachment) =>
+    attachment.path
+      ? [
+          {
+            kind: attachment.mime?.startsWith("image/")
+              ? ("image" as const)
+              : attachment.name.endsWith("/")
+                ? ("directory" as const)
+                : ("file" as const),
+            path: attachment.path,
+            absPath: attachment.absPath ?? attachment.path,
+            sessionId: event.sessionId ?? state.sessionId ?? "",
+            originalName: attachment.name,
+            size: attachment.size,
+            ...(attachment.mime ? { mime: attachment.mime } : {}),
+          },
+        ]
+      : [],
+  );
+}
+
 function applyStreamEventToTurn(
   state: MessagesReducerState,
   event: StreamEvent,
   now: MessageClock,
 ): MessagesReducerState {
   switch (event.type) {
-    case "session_user_message":
+    case "session_user_message": {
+      const hidden =
+        event.injected === true ||
+        event.authority === "agent" ||
+        event.authority === "system" ||
+        event.authority === "policy";
+      if (hidden && !event.clientMessageId) return state;
       return appendUserMessage(
         state,
-        event.text,
+        hidden ? "" : event.text,
         now(),
         undefined,
-        undefined,
+        hidden || undefined,
         undefined,
         undefined,
         event.clientMessageId,
+        hidden ? undefined : outputUserAttachments(state, event),
       );
+    }
 
     case "session_started": {
       // Ignore event.promptTokens here: on resume, core reports the
@@ -903,12 +946,24 @@ function applyStreamEventToTurn(
     }
 
     case "steer_injected": {
+      const attachments = outputUserAttachments(state, event);
+      // Older Host envelopes can carry the parent run's clientMessageId.
+      // New producers bind the queued message to its own Session identity.
+      const clientMessageId =
+        event.sessionId && event.sessionId === state.sessionId ? event.clientMessageId : undefined;
       if (event.id) {
         let matched = false;
         const messages = state.messages.map((m) => {
           if (m.kind === "user" && (m.steerId === event.id || m.clientMessageId === event.id)) {
             matched = true;
-            return { ...m, pending: false, text: event.text, injected: true };
+            return {
+              ...m,
+              pending: false,
+              text: event.text,
+              injected: true,
+              clientMessageId: clientMessageId ?? m.clientMessageId,
+              attachments: attachments ?? m.attachments,
+            };
           }
           return m;
         });
@@ -925,7 +980,17 @@ function applyStreamEventToTurn(
       // lagging snapshot would wipe it (the s-mr8s3w5i loss bug) or a later
       // hydrate would duplicate it. Since queueInput no longer plants an
       // optimistic bubble, this append IS the bubble's first appearance.
-      return appendUserMessage(state, event.text, now(), false, true, event.id, false);
+      return appendUserMessage(
+        state,
+        event.text,
+        now(),
+        false,
+        true,
+        event.id,
+        false,
+        clientMessageId,
+        attachments,
+      );
     }
 
     case "text_delta": {

@@ -469,6 +469,11 @@ export interface QueryParams {
   until?: number;
   limit?: number;
   cursor?: string;
+  /** Session output recovery: exclusive durable cursor and frozen upper bound. */
+  after?: string;
+  through?: string;
+  maxBytes?: number;
+  maxFrames?: number;
   runId?: string;
   /** Built-in query name or a trusted CapabilityModule query contribution. */
   type: string;
