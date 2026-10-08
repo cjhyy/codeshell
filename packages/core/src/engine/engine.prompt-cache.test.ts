@@ -15,6 +15,8 @@ import type {
   PromptPrefixFingerprint,
 } from "./prompt-cache-diagnostics.js";
 import type { AgentModule } from "../composition/types.js";
+import { estimateStringTokens } from "../context/token-counter.js";
+import { invalidateSkillCache } from "../skills/scanner.js";
 
 const provider = "fake-engine-prompt-cache";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -148,6 +150,7 @@ describe("Engine prompt-cache hygiene", () => {
   });
 
   afterEach(() => {
+    invalidateSkillCache();
     if (prevHome === undefined) delete process.env.HOME;
     else process.env.HOME = prevHome;
     if (prevCodeShellHome === undefined) delete process.env.CODE_SHELL_HOME;
@@ -155,6 +158,56 @@ describe("Engine prompt-cache hygiene", () => {
     rmSync(repo, { recursive: true, force: true });
     rmSync(sessions, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });
+  });
+
+  it("uses the Engine context window to bound skill metadata in the actual request", async () => {
+    const model = `${provider}-skill-budget-${Date.now()}`;
+    for (let i = 0; i < 120; i++) {
+      const dir = join(repo, ".code-shell", "skills", `fixture-${i}`);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, "SKILL.md"),
+        `---\ndescription: ${"large metadata ".repeat(400)}\n---\nPRIVATE_SKILL_BODY`,
+      );
+    }
+    invalidateSkillCache();
+    scenarios.set(model, { primaryCalls: [], summaryCalls: [], responses: [stopResponse("done")] });
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test", maxContextTokens: 64_000 } as never,
+        cwd: repo,
+        sessionStorageDir: sessions,
+        enabledBuiltinTools: ["Skill"],
+        preset: "general",
+        modules: [],
+        headless: true,
+      });
+      await engine.run("Use an appropriate fixture skill", { cwd: repo });
+      const calls = scenarios.get(model)!.primaryCalls;
+      expect(calls).toHaveLength(1);
+      expect(calls[0]!.systemPrompt).not.toContain("Available Skills");
+      const context = calls[0]!.messages
+        .map((m) => (typeof m.content === "string" ? m.content : ""))
+        .join("\n");
+      const listing = context.match(/# Available Skills[\s\S]*?load instructions\./)?.[0];
+      expect(listing).toBeDefined();
+      expect(estimateStringTokens(listing!)).toBeLessThanOrEqual(640);
+      expect(context).not.toContain("PRIVATE_SKILL_BODY");
+      const noSkills = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: repo,
+        sessionStorageDir: sessions,
+        enabledBuiltinTools: [],
+        disabledBuiltinTools: ["Skill"],
+        preset: "general",
+        modules: [],
+        headless: true,
+      });
+      await noSkills.run("A task without the Skill tool", { cwd: repo });
+      expect(JSON.stringify(calls[1]!.messages)).not.toContain("Available Skills");
+    } finally {
+      scenarios.delete(model);
+    }
   });
 
   it("does not retain injected userContext or dynamicContext in the compacted history cache", async () => {
