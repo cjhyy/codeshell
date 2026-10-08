@@ -1,5 +1,5 @@
 import { dialog, ipcMain } from "electron";
-import { SettingsManager } from "@cjhyy/code-shell-core/internal";
+import { SettingsManager } from "@cjhyy/code-shell-core";
 import type { AgentBridge } from "./agent-bridge.js";
 import { registerOptimizationLabIpc } from "./optimization-lab-ipc.js";
 import { listSkills } from "./skills-service.js";
