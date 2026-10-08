@@ -1,6 +1,7 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, MessageBoxOptions } from "electron";
-import { constants } from "node:fs";
-import { lstat, open, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { constants, promises as fs } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve as resolvePath } from "node:path";
 import { LAB_QUERY_TYPES, type LabAuthorizationInput } from "../shared/optimization-lab.js";
 
 const MAX_JSON_BYTES = 16 * 1024 * 1024;
@@ -13,11 +14,158 @@ interface Deps {
   enabled(): boolean;
   resolveTarget(target: unknown): Promise<{ kind: string; cwd: string }>;
   trusted(cwd: string): Promise<boolean>;
+  artifactRoot(): string;
   query(type: string, params: Record<string, unknown>): Promise<any>;
   skills(cwd: string): unknown[];
   confirm(window: BrowserWindow, options: MessageBoxOptions): Promise<{ response: number }>;
   save(window: BrowserWindow, name: string): Promise<string | undefined>;
   choose(window: BrowserWindow): Promise<string | undefined>;
+}
+
+function datasetInput(input: unknown, exporting = false): Record<string, unknown> {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid dataset file input");
+  const value = input as Record<string, unknown>;
+  if (Object.keys(value).some((key) => key !== "target" && !(exporting && key === "text")))
+    throw new Error("Invalid dataset file input");
+  // Bound target metadata separately: JSON escaping must not reduce the 16 MiB text limit.
+  record({ target: value.target });
+  if (exporting) {
+    if (typeof value.text !== "string" || Buffer.byteLength(value.text, "utf8") > MAX_JSON_BYTES)
+      throw new Error("Dataset text must be bounded UTF-8");
+    if (
+      new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(Buffer.from(value.text)) !==
+      value.text
+    )
+      throw new Error("Dataset text must be valid UTF-8");
+  }
+  return value;
+}
+
+/** Open the selected inode without following links and detect replacement or mutation. */
+async function readBoundedUtf8File(source: string): Promise<string> {
+  if (!isAbsolute(source)) throw new Error("Lab JSON file path must be absolute");
+  const prior = await fs.lstat(source, { bigint: true });
+  if (!prior.isFile() || prior.isSymbolicLink() || prior.size > BigInt(MAX_JSON_BYTES))
+    throw new Error("Lab JSON file must be a bounded regular file");
+  const file = await fs.open(
+    source,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
+  try {
+    const info = await file.stat({ bigint: true });
+    const same = (other: typeof info) =>
+      other.isFile() &&
+      !other.isSymbolicLink() &&
+      other.dev === info.dev &&
+      other.ino === info.ino &&
+      other.size === info.size &&
+      other.mtimeNs === info.mtimeNs &&
+      other.ctimeNs === info.ctimeNs;
+    if (!same(prior) || info.size > BigInt(MAX_JSON_BYTES))
+      throw new Error("Lab JSON file changed or is too large");
+    const buffer = Buffer.alloc(Number(info.size) + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const { bytesRead } = await file.read(buffer, length, buffer.length - length, null);
+      if (!bytesRead) break;
+      length += bytesRead;
+    }
+    if (
+      BigInt(length) !== info.size ||
+      !same(await file.stat({ bigint: true })) ||
+      !same(await fs.lstat(source, { bigint: true }))
+    )
+      throw new Error("Lab JSON file changed or is too large");
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      buffer.subarray(0, length),
+    );
+  } finally {
+    await file.close();
+  }
+}
+
+async function optionalEntry(
+  path: string,
+): Promise<Awaited<ReturnType<typeof fs.lstat>> | undefined> {
+  try {
+    return await fs.lstat(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+function containsPath(root: string, path: string): boolean {
+  const child = relative(root, path);
+  return (
+    child === "" ||
+    (!child.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) &&
+      child !== ".." &&
+      !isAbsolute(child))
+  );
+}
+
+/** Replace only the selected regular file, never a symlink target or the immutable Lab store. */
+async function writeDatasetFile(
+  destination: string,
+  text: string,
+  artifactRoot: string,
+  revalidate: () => Promise<void>,
+): Promise<void> {
+  if (!isAbsolute(destination)) throw new Error("Dataset export path must be absolute");
+  const parent = await fs.realpath(dirname(destination));
+  const directory = await fs.lstat(parent);
+  if (!directory.isDirectory() || directory.isSymbolicLink())
+    throw new Error("Dataset export parent must be a regular directory");
+  const target = join(parent, basename(destination));
+  const protectedRoot = await fs.realpath(artifactRoot).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") return resolvePath(artifactRoot);
+    throw error;
+  });
+  if (containsPath(protectedRoot, target))
+    throw new Error("Cannot export into frozen Lab artifacts");
+  const existing = await optionalEntry(target);
+  if (existing && (!existing.isFile() || existing.isSymbolicLink()))
+    throw new Error("Dataset export destination must be a regular file");
+  const verifyPaths = async () => {
+    if ((await fs.realpath(dirname(destination))) !== parent)
+      throw new Error("Dataset export parent changed");
+    const currentDirectory = await fs.lstat(parent);
+    if (
+      !currentDirectory.isDirectory() ||
+      currentDirectory.isSymbolicLink() ||
+      currentDirectory.dev !== directory.dev ||
+      currentDirectory.ino !== directory.ino
+    )
+      throw new Error("Dataset export parent changed");
+    const current = await optionalEntry(target);
+    if (
+      existing
+        ? !current ||
+          !current.isFile() ||
+          current.isSymbolicLink() ||
+          current.dev !== existing.dev ||
+          current.ino !== existing.ino ||
+          current.size !== existing.size ||
+          current.mtimeMs !== existing.mtimeMs ||
+          current.ctimeMs !== existing.ctimeMs
+        : current !== undefined
+    )
+      throw new Error("Dataset export destination changed");
+  };
+  const temporary = join(parent, `.optimization-lab-${randomUUID()}.tmp`);
+  try {
+    await revalidate();
+    await verifyPaths();
+    await fs.writeFile(temporary, text, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await revalidate();
+    await verifyPaths();
+    // Rename replaces the directory entry itself; it never follows a destination symlink.
+    await fs.rename(temporary, target);
+  } finally {
+    await fs.rm(temporary, { force: true });
+  }
 }
 
 function record(input: unknown): Record<string, unknown> {
@@ -115,6 +263,28 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     channels.push(channel);
     deps.ipc.handle(channel, (event, ...args) => handler(owner(event), args));
   };
+  const fileRevalidation = (
+    window: BrowserWindow,
+    input: Record<string, unknown>,
+    cwd: string,
+  ): (() => Promise<void>) => {
+    const frame = window.webContents.mainFrame;
+    const available = () => {
+      if (
+        window.isDestroyed() ||
+        !deps.windows().includes(window) ||
+        window.webContents.mainFrame !== frame ||
+        !deps.enabled()
+      )
+        throw new Error("Lab file operation is no longer available");
+    };
+    return async () => {
+      available();
+      const current = await resolve(input);
+      available();
+      if (current.cwd !== cwd) throw new Error("Project primary changed during file operation");
+    };
+  };
   handle("optimizationLab:query", async (_window, args) => {
     if (args.length !== 2 || typeof args[0] !== "string" || !queryTypes.has(args[0]))
       throw new Error("Unsupported Lab query");
@@ -211,7 +381,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
       `optimization-${input.id}-${String(input.kind)}.${markdown ? "md" : "json"}`,
     );
     if (!destination) return false;
-    await writeFile(destination, content, { encoding: "utf8", mode: 0o600 });
+    await fs.writeFile(destination, content, { encoding: "utf8", mode: 0o600 });
     return true;
   });
   handle("optimizationLab:importGrading", async (window, args) => {
@@ -220,43 +390,41 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     identity(input);
     revision(input);
     const params = await resolve(input);
+    const revalidate = fileRevalidation(window, input, params.cwd);
     const source = await deps.choose(window);
     if (!source) return null;
-    const prior = await lstat(source);
-    if (!prior.isFile() || prior.isSymbolicLink() || prior.size > MAX_JSON_BYTES)
-      throw new Error("Grading file must be a bounded regular JSON file");
-    const file = await open(source, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    try {
-      const info = await file.stat();
-      if (
-        !info.isFile() ||
-        info.dev !== prior.dev ||
-        info.ino !== prior.ino ||
-        info.size > MAX_JSON_BYTES
-      )
-        throw new Error("Grading file must be a bounded regular JSON file");
-      const buffer = Buffer.alloc(Math.min(info.size + 1, MAX_JSON_BYTES + 1));
-      let length = 0;
-      while (length < buffer.length) {
-        const { bytesRead } = await file.read(buffer, length, buffer.length - length, null);
-        if (!bytesRead) break;
-        length += bytesRead;
-      }
-      if (length > info.size || length > MAX_JSON_BYTES)
-        throw new Error("Grading JSON changed or is too large");
-      const grading = JSON.parse(buffer.subarray(0, length).toString("utf8"));
-      if (!deps.enabled()) throw new Error("Optimization Lab is disabled");
-      const current = await resolve(input);
-      if (current.cwd !== params.cwd) throw new Error("Project primary changed during import");
-      return deps.query("optimization_lab_import_grading", {
-        cwd: params.cwd,
-        id: params.id,
-        expectedRevision: input.expectedRevision,
-        grading,
-      });
-    } finally {
-      await file.close();
-    }
+    await revalidate();
+    const grading = JSON.parse(await readBoundedUtf8File(source));
+    await revalidate();
+    return deps.query("optimization_lab_import_grading", {
+      cwd: params.cwd,
+      id: params.id,
+      expectedRevision: input.expectedRevision,
+      grading,
+    });
+  });
+  handle("optimizationLab:importDataset", async (window, args) => {
+    if (args.length !== 1) throw new Error("Invalid dataset import");
+    const input = datasetInput(args[0]);
+    const params = await resolve(input);
+    const revalidate = fileRevalidation(window, input, params.cwd);
+    const source = await deps.choose(window);
+    if (!source) return null;
+    await revalidate();
+    const text = await readBoundedUtf8File(source);
+    await revalidate();
+    return text;
+  });
+  handle("optimizationLab:exportDataset", async (window, args) => {
+    if (args.length !== 1) throw new Error("Invalid dataset export");
+    const input = datasetInput(args[0], true);
+    const params = await resolve(input);
+    const revalidate = fileRevalidation(window, input, params.cwd);
+    const destination = await deps.save(window, "optimization-dataset.json");
+    if (!destination) return false;
+    await revalidate();
+    await writeDatasetFile(destination, input.text as string, deps.artifactRoot(), revalidate);
+    return true;
   });
   return () => {
     for (const channel of channels) deps.ipc.removeHandler(channel);
