@@ -18,6 +18,7 @@ import { HookRegistry } from "../../hooks/registry.js";
 import type { PermissionRule } from "../../types.js";
 import { StreamingToolQueue } from "../../engine/streaming-tool-queue.js";
 import { BUILTIN_TOOLS } from "../../tool-system/builtin/index.js";
+import { isLinkSourceAvailable } from "../link-view.js";
 
 let home: string;
 let cwd: string;
@@ -390,31 +391,94 @@ test("nested Link execution completes inside the production single-slot sequenti
   expect(maxConcurrency).toBe(1);
 });
 
-test("replacing the saved account/grant under the same connection ID during approval cannot change the approved view", async () => {
-  const meta = credential();
-  let calls = 0;
+test.each(["grant", "client", "scope", "account"])(
+  "replacing saved %s under the same connection ID during approval cannot change the approved view",
+  async (changed) => {
+    const meta = credential();
+    let calls = 0;
+    setDefaultCredentialAccess({
+      listMasked: () => [meta],
+      resolveMeta: () => meta,
+      envExposures: () => ({}),
+      executeRemoteLinkAction: async () => {
+        calls++;
+        return {};
+      },
+    });
+    bind();
+    const output = await read(
+      { source: "link-view", scope: "github:list_repositories", resource: "result" },
+      context(),
+      [{ tool: "LinkAction", decision: "ask" }],
+      new HookRegistry(),
+      {
+        requestApproval: async () => {
+          if (changed === "grant") meta.meta!.linkRemoteGrantId = "different-grant";
+          else if (changed === "account") meta.meta!.linkAccountId = "different-account";
+          else if (changed === "client") meta.oauthStatus!.clientId = "different-client";
+          else meta.oauthStatus!.scope = "different:scope";
+          return { approved: true };
+        },
+      },
+    );
+    expect(output).toContain("denied");
+    expect(calls).toBe(0);
+  },
+);
+
+test("source readiness uses current OAuth metadata only and preserves legacy PAT/CLI compatibility", async () => {
+  const meta: CredentialMetadata = {
+    id: "connection-1",
+    type: "link",
+    label: "Local OAuth",
+    hasSecret: true,
+    meta: {
+      linkProvider: "github",
+      linkExecutionRuntime: "local",
+      linkAuthSource: "browser-oauth",
+      linkOAuthState: "connected",
+      linkCapabilityIds: ["github.list_repositories"],
+      linkAccountId: "42",
+    },
+    oauthStatus: { state: "valid", hasRefreshToken: true, canRefresh: true },
+  };
+  let io = 0;
   setDefaultCredentialAccess({
     listMasked: () => [meta],
     resolveMeta: () => meta,
     envExposures: () => ({}),
-    executeRemoteLinkAction: async () => {
-      calls++;
-      return {};
+    resolveValue: async () => {
+      io++;
+      throw new Error("Must not resolve metadata secret");
+    },
+    executeLocalOAuthLinkAction: async () => {
+      io++;
+      throw new Error("Must not refresh metadata");
     },
   });
   bind();
-  const output = await read(
-    { source: "link-view", scope: "github:list_repositories", resource: "result" },
-    context(),
-    [{ tool: "LinkAction", decision: "ask" }],
-    new HookRegistry(),
-    {
-      requestApproval: async () => {
-        meta.meta!.linkRemoteGrantId = "different-grant";
-        return { approved: true };
-      },
-    },
-  );
-  expect(output).toContain("denied");
-  expect(calls).toBe(0);
+  for (const state of ["reconnect", "refreshing"] as const) {
+    meta.meta!.linkOAuthState = state;
+    expect(isLinkSourceAvailable(definition(), context())).toBe(false);
+    expect(await listSourcesTool({}, context())).toContain("unavailable");
+  }
+  meta.meta!.linkOAuthState = "connected";
+  for (const state of ["missing", "invalid"] as const) {
+    meta.oauthStatus = { state, hasRefreshToken: true, canRefresh: true };
+    expect(isLinkSourceAvailable(definition(), context())).toBe(false);
+  }
+  meta.oauthStatus = { state: "expired", hasRefreshToken: true, canRefresh: false };
+  expect(isLinkSourceAvailable(definition(), context())).toBe(false);
+  meta.oauthStatus = { state: "expired", hasRefreshToken: true, canRefresh: true };
+  expect(isLinkSourceAvailable(definition(), context())).toBe(true);
+  meta.oauthStatus = { state: "valid", hasRefreshToken: false, canRefresh: false };
+  expect(isLinkSourceAvailable(definition(), context())).toBe(true);
+  delete meta.oauthStatus;
+  delete meta.meta!.linkAuthSource;
+  delete meta.meta!.linkOAuthState;
+  delete meta.meta!.linkCapabilityIds;
+  expect(isLinkSourceAvailable(definition(), context())).toBe(true);
+  meta.meta!.linkExecutionBackend = "cli";
+  expect(isLinkSourceAvailable(definition(), context())).toBe(true);
+  expect(io).toBe(0);
 });

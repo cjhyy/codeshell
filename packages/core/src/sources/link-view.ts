@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { credentialAccessScope, getCredentialAccess } from "../credentials/access.js";
 import { getLocalLinkProvider } from "../links/providers.js";
 import { isRemoteLinkCredential } from "../links/remote.js";
+import { savedLinkConnectionStatus } from "../links/status.js";
 import type { SourceAdapterContext } from "./adapter.js";
 import type { SourceDefinition } from "./types.js";
 
@@ -53,7 +54,22 @@ export function isLinkSourceAvailable(
     )
       return false;
     if (remote && credential.meta?.linkRemoteState !== "connected") return false;
-    if (credential.oauthStatus?.state === "expired" && !credential.oauthStatus.hasRefreshToken)
+    if (savedLinkConnectionStatus(credential).state !== "ready") return false;
+    if (
+      remote &&
+      credential.oauthStatus?.state !== "valid" &&
+      credential.oauthStatus?.state !== "expired"
+    )
+      return false;
+    if (
+      credential.meta?.linkAuthSource === "browser-oauth" &&
+      (!credential.meta.linkCapabilityIds?.length ||
+        !(
+          credential.oauthStatus?.state === "valid" ||
+          (credential.oauthStatus?.state === "expired" &&
+            credential.oauthStatus.canRefresh === true)
+        ))
+    )
       return false;
     const capabilities = credential.meta?.linkCapabilityIds;
     return remote
@@ -93,6 +109,10 @@ export function linkSourceAuthorityRevision(
         capabilities: meta?.linkCapabilityIds,
         resources: meta?.linkResourceGroups,
         verifiedAt: meta?.linkLastVerifiedAt,
+        clientId: credential.oauthStatus?.clientId ?? meta?.clientId,
+        tokenEndpoint: credential.oauthStatus?.tokenEndpoint ?? meta?.tokenEndpoint,
+        oauthScope: credential.oauthStatus?.scope,
+        oauthScopes: credential.oauthStatus?.scopes,
       }),
     )
     .digest("hex");

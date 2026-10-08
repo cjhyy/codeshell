@@ -25,6 +25,8 @@ Link 类型固定一个连接、一个已审查只读动作和参数：
 
 ReadSource 的许可与 LinkAction/grant 许可必须同时成立。所属 ToolExecutor 提供受约束嵌套调用，继续执行统一 permission/hooks/visibility/capability/allowedToolNames/审计，不伪造审批；固定参数禁止 hook 替换。无 executor seam 的直接 adapter 读取 fail-closed。在嵌套审批结束、真实 IO 前复查 source/binding/Profile 与账户/grant/resource revision。正常刷新仍使用原授权，连接撤销或结果返回时权限改变则不发布内容。
 
+本地 browser OAuth 的 reconnect/refreshing、invalid/missing、expired 且不可刷新均显示 unavailable；只读 metadata 检查不解析 token，不刷新。旧 PAT/CLI 连接保持兼容。账号/grant/resource revision 同时包含 masked OAuth 的公开 clientId/tokenEndpoint/scope，能拒绝审批期间的 client/config 替换；正常轮换 token 的值和到期时间不进入指纹。
+
 验证包括 Profile 求交/Session pin/库 revision、审批和 IO 期间撤销、同连接 ID 替换 grant、LinkAction 整体及 provider/action/connection deny、capability off/执行列表限制、hook 写入改参、顺序单槽队列嵌套，以及 256 KiB/secret redaction/untrusted 包裹既有回归。十家/25 动作测试注入 CredentialAccess 执行 seam；本地 GitHub 使用真实 provider HTTP adapter 加 fetch fixture。另一个 localhost 测试实际经过 OAuth callback、加密凭证接口、ReadSource 双重审批、remote refresh 和资源过滤的生产模块。
 
 上述 fixture 使用合成账号和上游响应，不是十家真实账号验收，不新增生产 provider 配置，不执行真实账号写操作。发布/部署与真实服务验收分别记录。
