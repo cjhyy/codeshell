@@ -306,6 +306,7 @@ export function freezeDataset(
     parse: (text) => (text === undefined ? undefined : readManifest(text, datasetHash, path)),
     serialize,
     maxBytes: MAX_DATASET_BYTES,
+    mode: 0o600,
     mutation: (current) => {
       if (current !== undefined) return { result: { created: false, manifest: current } };
       const frozenAt = manifestSchema.shape.frozenAt.parse(now().toISOString());

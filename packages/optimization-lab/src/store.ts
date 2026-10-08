@@ -8,7 +8,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
+  readSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -132,10 +132,17 @@ export function readBoundedFile(path: string, maxBytes = MAX_ARTIFACT_BYTES): st
       opened.ino !== info.ino
     )
       throw new Error("optimization_lab: file changed while opening");
-    const text = readFileSync(fd, "utf8");
-    if (Buffer.byteLength(text, "utf8") > maxBytes)
-      throw new Error("optimization_lab: file exceeds bound");
-    return text;
+    // Read at most the validated size + one sentinel byte. A concurrent grow
+    // cannot turn a bounded state read into an unbounded allocation/read.
+    const bytes = Buffer.allocUnsafe(opened.size + 1);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
+      if (count === 0) break;
+      offset += count;
+    }
+    if (offset > opened.size) throw new Error("optimization_lab: file grew while reading");
+    return bytes.subarray(0, offset).toString("utf8");
   } finally {
     closeSync(fd);
   }
@@ -256,6 +263,11 @@ export class ExperimentStore {
     try {
       writeAtomicFile(join(staging, "plan.json"), canonicalJson(plan));
       writeAtomicFile(join(staging, "state.json"), canonicalJson(state));
+      writeAtomicFile(join(staging, "ledger.jsonl"), "");
+      writeAtomicFile(
+        join(staging, "ledger-head.json"),
+        canonicalJson({ schemaVersion: 1, sequence: 0, hash: null }),
+      );
       renameSync(staging, directory);
     } finally {
       rmSync(staging, { recursive: true, force: true });
@@ -356,6 +368,8 @@ export class ExperimentStore {
       )
         throw new Error("optimization_lab: stale state revision");
       if (options.fence) this.assertFenceUnlocked(directory, options.fence, options.now);
+      else if (snapshot.lease && snapshot.lease.expiresAt > (options.now ?? Date.now()))
+        throw new Error("optimization_lab: active state mutation requires lease fence");
       const state = structuredClone(snapshot.state);
       const returned = fn(state, snapshot);
       if (returned && typeof (returned as unknown as { then?: unknown }).then === "function")
@@ -365,9 +379,12 @@ export class ExperimentStore {
         id,
         revision: snapshot.state.revision + 1,
       });
+      if (snapshot.state.startedAt !== null && next.startedAt !== snapshot.state.startedAt)
+        throw new Error("optimization_lab: start time is immutable");
       if (
         next.grantRevision !== snapshot.state.grantRevision ||
-        next.controlRevision !== snapshot.state.controlRevision
+        next.controlRevision !== snapshot.state.controlRevision ||
+        next.stopRequested !== snapshot.state.stopRequested
       )
         throw new Error("optimization_lab: control fields require control mutation");
       canonicalJson(next);

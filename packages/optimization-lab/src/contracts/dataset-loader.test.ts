@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { freezeDataset, readFrozenDataset, type DatasetManifest } from "./dataset.js";
@@ -37,6 +37,7 @@ function setup() {
 test("verified loader recomputes frozen content, summary and case hashes", () => {
   const f = setup();
   expect(readFrozenDataset(f.root, f.manifest.datasetHash)).toEqual(f.manifest);
+  if (process.platform !== "win32") expect(statSync(f.path).mode & 0o777).toBe(0o600);
   const mutations: ((manifest: DatasetManifest) => void)[] = [
     (manifest) => {
       manifest.cases[0].input = "Different input";

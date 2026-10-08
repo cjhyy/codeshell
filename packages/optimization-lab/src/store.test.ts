@@ -41,10 +41,35 @@ describe("bounded experiment storage", () => {
       f.store.mutate(f.id, { expectedRevision: snapshot.state.revision }, () => {}),
     ).toThrow("stale");
     expect(() =>
-      f.store.mutate(f.id, {}, (state) => {
+      f.store.mutate(f.id, { fence: f.fence }, (state) => {
         state.grantRevision = 0;
       }),
     ).toThrow("control fields");
+  });
+  test("active writers require fence and started/stop control cannot be rewritten", () => {
+    const f = setup();
+    expect(() => f.store.mutate(f.id, {}, () => {})).toThrow("requires lease fence");
+    const startedAt = new Date(f.now()).toISOString();
+    f.store.mutate(f.id, { fence: f.fence }, (state) => {
+      state.startedAt = startedAt;
+    });
+    expect(() =>
+      f.store.mutate(f.id, { fence: f.fence }, (state) => {
+        state.startedAt = null;
+      }),
+    ).toThrow("start time");
+    f.store.requestStop(f.id);
+    expect(() =>
+      f.store.mutate(f.id, { fence: f.fence }, (state) => {
+        state.stopRequested = false;
+      }),
+    ).toThrow("control fields");
+    f.lease.release(f.id, f.fence);
+    expect(
+      f.store.mutate(f.id, {}, (state) => {
+        state.data.localGrade = "allowed";
+      }).state.data.localGrade,
+    ).toBe("allowed");
   });
   test("stores immutable artifacts and detects corruption and symlinks", () => {
     const f = setup();

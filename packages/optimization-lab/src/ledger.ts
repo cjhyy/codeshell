@@ -171,6 +171,9 @@ const UnknownPayloadSchema = z
 const FinishPayloadSchema = z.object({ elapsedMs: integer }).strict();
 const empty = z.object({}).strict();
 const MAX_LEDGER_BYTES = 16 * 1024 * 1024;
+const LedgerHeadSchema = z
+  .object({ schemaVersion: z.literal(1), sequence: integer, hash: HashSchema.nullable() })
+  .strict();
 
 function checkedSum(...values: number[]): number {
   const result = values.reduce((a, b) => a + b, 0);
@@ -266,6 +269,11 @@ function summarize(events: LedgerEvent[], initialFinal: ResourceAllocation): Led
         operation.attemptIds.some((id) => ["reserved", "dispatched"].includes(attempts[id].status))
       )
         throw new Error("optimization_lab: operation has unsettled attempts");
+      // A final trial with no reserved HTTP attempt is still in the frozen
+      // denominator. Return its future window to the ring, while a crash's
+      // unknown window continues to count as spent separately.
+      if (operation.finalPhase && operation.attemptIds.length === 0)
+        finalAllocation.executionMs = checkedSum(finalAllocation.executionMs, operation.timeoutMs);
       if (event.kind === "operation_finish") {
         operation.elapsedMs = FinishPayloadSchema.parse(event.payload).elapsedMs;
         if (operation.elapsedMs > operation.timeoutMs) estimateInvalid = true;
@@ -392,7 +400,11 @@ export class ExperimentLedger {
   private readEvents(directory: string, planHash: string): LedgerEvent[] {
     const path = join(directory, "ledger.jsonl");
     const text = readBoundedFile(path, MAX_LEDGER_BYTES);
-    if (text === undefined) return [];
+    if (text === undefined) throw new Error("optimization_lab: durable ledger missing");
+    const headPath = join(directory, "ledger-head.json");
+    const headText = readBoundedFile(headPath, 4096);
+    if (headText === undefined) throw new Error("optimization_lab: durable ledger head missing");
+    const head = LedgerHeadSchema.parse(JSON.parse(headText));
     const lastNewline = text.lastIndexOf("\n");
     const prefix = text.endsWith("\n") ? text : text.slice(0, lastNewline + 1);
     const tail = text.endsWith("\n") ? "" : text.slice(lastNewline + 1);
@@ -418,8 +430,13 @@ export class ExperimentLedger {
       ids.add(event.eventId);
       events.push(event);
     }
+    if (
+      head.sequence > events.length ||
+      (head.sequence === 0 ? head.hash !== null : events[head.sequence - 1]?.hash !== head.hash)
+    )
+      throw new Error("optimization_lab: ledger rolled back past durable head");
     if (tail) {
-      // Preserve exact rejected bytes before replacing only the incomplete tail.
+      // Preserve rejected tail evidence before replacing only the incomplete tail.
       const repairDirectory = join(directory, "ledger-repairs");
       try {
         mkdirSync(repairDirectory, { mode: 0o700 });
@@ -442,6 +459,13 @@ export class ExperimentLedger {
       if (previous === undefined) writeAtomicFile(evidencePath, evidence);
       writeAtomicFile(path, prefix, MAX_LEDGER_BYTES);
     }
+    // Appending the event precedes updating this head. A crash in between may
+    // conservatively recover an ahead chain, never silently discard it.
+    if (head.sequence < events.length)
+      writeAtomicFile(
+        headPath,
+        canonicalJson({ schemaVersion: 1, sequence: events.length, hash: events.at(-1)!.hash }),
+      );
     return events;
   }
 
@@ -485,6 +509,10 @@ export class ExperimentLedger {
     } finally {
       closeSync(fd);
     }
+    writeAtomicFile(
+      join(directory, "ledger-head.json"),
+      canonicalJson({ schemaVersion: 1, sequence: event.sequence, hash: event.hash }),
+    );
     events.push(event);
     return event;
   }

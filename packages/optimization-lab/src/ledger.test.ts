@@ -429,6 +429,49 @@ describe("durable request budget ledger", () => {
     expect(summary.totals.unknownTokens).toBe(100);
     expect(summary.totals.reportedTokens).toBe(0);
   });
+  test("missing or rolled-back ledger cannot reset already spent budget", () => {
+    const f = setup();
+    begin(f);
+    reserve(f);
+    const directory = f.store.directory(f.id);
+    const path = join(directory, "ledger.jsonl");
+    const original = readFileSync(path, "utf8");
+    rmSync(path);
+    expect(() => f.ledger.summary(f.id)).toThrow("ledger missing");
+    writeFileSync(path, "");
+    expect(() => f.ledger.summary(f.id)).toThrow("durable head");
+    writeFileSync(path, original.split("\n")[0] + "\n");
+    expect(() => f.ledger.summary(f.id)).toThrow("durable head");
+    writeFileSync(path, original);
+    expect(f.ledger.summary(f.id).totals.requests).toBe(1);
+    rmSync(join(directory, "ledger-head.json"));
+    expect(() => f.ledger.summary(f.id)).toThrow("head missing");
+  });
+  test("crash after durable event before head update reconciles forward", () => {
+    const f = setup();
+    begin(f);
+    const directory = f.store.directory(f.id);
+    const headPath = join(directory, "ledger-head.json");
+    const previousHead = readFileSync(headPath, "utf8");
+    reserve(f);
+    writeFileSync(headPath, previousHead);
+    const summary = f.ledger.summary(f.id);
+    expect(summary.totals.requests).toBe(1);
+    expect(JSON.parse(readFileSync(headPath, "utf8"))).toMatchObject({
+      sequence: summary.sequence,
+      hash: summary.headHash,
+    });
+  });
+  test("unstarted final HTTP preserves its future window after failed admission", () => {
+    const f = setup();
+    begin(f, "final-before", "final");
+    expect(() => reserve(f, "bad-price", "final-before", 100, null)).toThrow("unknown cost");
+    f.ledger.finishOperation(f.id, f.fence, "final-before", 0);
+    expect(f.ledger.summary(f.id).finalAllocation).toEqual(f.plan.finalAllocation);
+    begin(f, "final-retry", "final");
+    reserve(f, "allowed", "final-retry");
+    expect(f.ledger.summary(f.id).totals.requests).toBe(1);
+  });
   test("repair path cannot be a symlink", () => {
     const f = setup();
     begin(f);
