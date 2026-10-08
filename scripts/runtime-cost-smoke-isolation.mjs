@@ -76,10 +76,18 @@ export function confinedWorkerEnvironment(base, fixtureUserHome, origin, preload
     NODE_OPTIONS: `--import ${preloadUrl}`,
     NODE_USE_ENV_PROXY: "0",
     CODESHELL_COST_SMOKE_ORIGIN: origin,
+    CODESHELL_COST_SMOKE_HOME_ID: createHash("sha256").update(fixtureUserHome).digest("hex"),
   };
 }
 
 if (process.env.CODESHELL_COST_SMOKE_ORIGIN) {
+  if (
+    process.env.CODESHELL_COST_SMOKE_HOME_ID !==
+    createHash("sha256")
+      .update(process.env.HOME ?? "")
+      .digest("hex")
+  )
+    throw new Error("Cost smoke refused an unexpected worker home");
   installLocalNetworkGuard(process.env.CODESHELL_COST_SMOKE_ORIGIN);
   if (process.env.CODESHELL_COST_SMOKE_GUARD_LOG)
     appendFileSync(
