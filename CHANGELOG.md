@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.26] - 2026-10-08
+
+### Added
+
+- Add a complete Optimization Lab dataset form with case creation, copying and
+  removal, rubric editing, all three hard assertion types and per-case validation.
+  Preserve optional fields, JSON scalar types, segmented paths and multiline text
+  when switching between the form and raw JSON.
+- Import and export local dataset JSON through native file dialogs, with bounded
+  UTF-8 reads, project/trust rechecks and protection for immutable Lab artifacts.
+  Keep drafts isolated per project for the current window; export to retain them
+  across application restarts. These operations make no model requests.
+
+### Fixed
+
+- Prevent Optimization Lab materials and late asynchronous replies from carrying
+  across projects. Invalidate old validation immediately when samples change.
+
 ## [0.9.25] - 2026-10-08
 
 Version 0.9.24 was tagged but not published because its Windows installer build

@@ -1,5 +1,6 @@
 import { dialog, ipcMain } from "electron";
-import { SettingsManager } from "@cjhyy/code-shell-core";
+import { SettingsManager, codeShellHome } from "@cjhyy/code-shell-core";
+import { join } from "node:path";
 import type { AgentBridge } from "./agent-bridge.js";
 import { registerOptimizationLabIpc } from "./optimization-lab-ipc.js";
 import { listSkills } from "./skills-service.js";
@@ -22,6 +23,7 @@ export function registerOptimizationLabHost(deps: {
         ?.optimization_lab === true,
     resolveTarget: deps.resolveTarget,
     trusted: async (cwd) => (await deps.trust(cwd)) === "trusted",
+    artifactRoot: () => join(codeShellHome(), "optimization-lab"),
     query: async (type, params) => {
       const bridge = deps.bridge();
       if (!bridge) throw new Error("Optimization Lab worker is unavailable");
@@ -39,7 +41,7 @@ export function registerOptimizationLabHost(deps: {
     choose: async (window) => {
       const result = await dialog.showOpenDialog(window, {
         properties: ["openFile"],
-        filters: [{ name: "Grading JSON", extensions: ["json"] }],
+        filters: [{ name: "Optimization Lab JSON", extensions: ["json"] }],
       });
       return result.canceled ? undefined : result.filePaths[0];
     },

@@ -37,6 +37,8 @@ let stage = "initialize";
 let blockRequests = false;
 let releaseRequest;
 const gradingFile = join(isolated.home, "grading.json");
+const datasetFile = join(isolated.home, "dataset.json");
+const exportedDataset = join(isolated.home, "dataset-export.json");
 
 const dataset = {
   schemaVersion: 1,
@@ -289,7 +291,10 @@ async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
 
 async function preparePage(cases) {
   await win.getByTestId("optimization-lab-saved").selectOption("");
-  await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(cases));
+  if (cases) {
+    await win.getByTestId("optimization-lab-dataset-json").click();
+    await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(cases));
+  }
   await win.getByTestId("optimization-lab-skill").selectOption(skillName);
   await win.getByTestId("optimization-lab-target-connection").selectOption("lab-connection");
   await win.getByTestId("optimization-lab-optimizer-connection").selectOption("lab-connection");
@@ -311,6 +316,130 @@ async function preparePage(cases) {
   );
   assert.ok(id, "Prepared experiment is selected by its durable ID");
   return query("get", { id });
+}
+async function editDatasetOffline() {
+  await json(datasetFile, dataset);
+  await app.evaluate(
+    (_electron, paths) => {
+      globalThis.__labDialogs.openPath = paths.source;
+      globalThis.__labDialogs.savePath = paths.destination;
+    },
+    { source: datasetFile, destination: exportedDataset },
+  );
+  await win.getByTestId("optimization-lab-import-dataset").click();
+  await until(
+    async () =>
+      (await win.getByTestId("optimization-lab-dataset-title").inputValue()) === dataset.title,
+    "Native dataset import did not populate the form",
+  );
+  const edited = structuredClone(dataset);
+  edited.title = "Form-reviewed citation experiment";
+  edited.taskFamily = "form-reviewed-sourcing";
+  edited.cases[0].input += " Reviewed through the form.";
+  edited.cases[0].expected = "EVALUATOR_ONLY_EXPECTED_FORM_REVIEW";
+  await win.getByTestId("optimization-lab-dataset-title").fill(edited.title);
+  await win.getByTestId("optimization-lab-dataset-task-family").fill(edited.taskFamily);
+  await win.getByTestId("optimization-lab-case-0-input").fill(edited.cases[0].input);
+  await win.getByTestId("optimization-lab-case-0-expected").fill(edited.cases[0].expected);
+  await win.getByTestId("optimization-lab-case-0-duplicate").click();
+  await win.getByTestId("optimization-lab-case-6-id").waitFor();
+  assert.notEqual(
+    await win.getByTestId("optimization-lab-case-6-id").inputValue(),
+    edited.cases[0].id,
+  );
+  assert.equal(
+    await win.getByTestId("optimization-lab-case-6-sourceGroupId").inputValue(),
+    edited.cases[0].sourceGroupId,
+  );
+  await win.getByTestId("optimization-lab-validate").click();
+  await until(
+    async () =>
+      (await win.getByTestId("optimization-lab-validation").innerText()).includes(
+        "duplicate_input",
+      ),
+    "Copied input was not rejected by authoritative validation",
+  );
+  await win.getByTestId("optimization-lab-case-6-remove").click();
+  assert.equal(
+    await win.getByTestId("optimization-lab-validation").count(),
+    0,
+    "Editing invalidates validation",
+  );
+  await win.getByTestId("optimization-lab-case-add").click();
+  await win.getByTestId("optimization-lab-case-6-fixtureRefs-add").click();
+  await win.getByTestId("optimization-lab-case-6-fixtureRefs-0").fill("reference line 1\nline 2");
+  await win.getByTestId("optimization-lab-case-6-missingEvidence-add").click();
+  await win.getByTestId("optimization-lab-case-6-missingEvidence-0").fill("missing line 1\nline 2");
+  await win.getByTestId("optimization-lab-case-6-assertion-add").click();
+  await win
+    .getByTestId("optimization-lab-case-6-assertion-0-kind")
+    .selectOption("json_field_equals");
+  await win.getByTestId("optimization-lab-case-6-assertion-0-path-0").fill("nested\nfield");
+  await win.getByTestId("optimization-lab-case-6-assertion-0-value-type").selectOption("number");
+  await win.getByTestId("optimization-lab-case-6-assertion-0-value").fill("1.25");
+  await win.getByTestId("optimization-lab-export-dataset").click();
+  await until(async () => {
+    try {
+      return JSON.parse(await readFile(exportedDataset, "utf8")).cases.length === 7;
+    } catch {
+      return false;
+    }
+  }, "Advanced form fields were not exported");
+  const advanced = JSON.parse(await readFile(exportedDataset, "utf8")).cases[6];
+  assert.deepEqual(advanced.fixtureRefs, ["reference line 1\nline 2"]);
+  assert.deepEqual(advanced.missingEvidence, ["missing line 1\nline 2"]);
+  assert.deepEqual(advanced.hardAssertions[0].path, ["nested\nfield"]);
+  assert.equal(advanced.hardAssertions[0].value, 1.25, "Numeric JSON assertion stays numeric");
+  await win.getByTestId("optimization-lab-case-6-remove").click();
+  await win.getByTestId("optimization-lab-export-dataset").click();
+  await until(async () => {
+    try {
+      const exported = JSON.parse(await readFile(exportedDataset, "utf8"));
+      return exported.title === edited.title && exported.cases.length === 6;
+    } catch {
+      return false;
+    }
+  }, "Native dataset export did not write reviewed material");
+  assert.deepEqual(
+    JSON.parse(await readFile(exportedDataset, "utf8")),
+    edited,
+    "Form and native export preserve all other fields",
+  );
+  await win.getByRole("button", { name: /^(Task center|任务中心)$/ }).click();
+  await openPage();
+  assert.equal(
+    await win.getByTestId("optimization-lab-dataset-title").inputValue(),
+    edited.title,
+    "Same-window draft survives leaving the page",
+  );
+  await win.getByTestId("optimization-lab-dataset-json").click();
+  await win.getByTestId("optimization-lab-dataset").fill("{invalid JSON");
+  await win.getByTestId("optimization-lab-dataset-form").click();
+  assert.equal(
+    await win.getByTestId("optimization-lab-dataset").inputValue(),
+    "{invalid JSON",
+    "Invalid JSON is preserved for repair",
+  );
+  await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(edited));
+  await win.getByTestId("optimization-lab-dataset-form").click();
+  await win.getByTestId("optimization-lab-validate").click();
+  await until(
+    async () =>
+      (await win.getByTestId("optimization-lab-validation").innerText()).includes('"frozen"'),
+    "Edited form did not freeze through the real worker",
+  );
+  const frozen = JSON.parse(await win.getByTestId("optimization-lab-validation").innerText());
+  assert.equal(frozen.frozen.manifest.title, edited.title);
+  assert.equal(requests.length, 0, "Editing, files, validation and freeze send no HTTP");
+  const screenshotDir = process.env.CODESHELL_LAB_SCREENSHOT_DIR;
+  if (screenshotDir) {
+    await mkdir(screenshotDir, { recursive: true });
+    await win.getByTestId("optimization-lab-page").evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await win.screenshot({ path: join(screenshotDir, "optimization-lab-editor.png") });
+  }
+  return edited;
 }
 async function authorizePage() {
   await win.getByTestId("optimization-lab-authorize").click();
@@ -386,8 +515,10 @@ try {
   await seed();
   await launch();
   await openPage();
+  stage = "visual dataset editor and native JSON files";
+  await editDatasetOffline();
   stage = "prepare through actual page and real worker";
-  const prepared = await preparePage(dataset);
+  const prepared = await preparePage();
   const id = prepared.id;
   assert.equal(requests.length, 0, "Prepare has no HTTP side effects");
   assert.equal(prepared.datasetSummary.dev, 3);

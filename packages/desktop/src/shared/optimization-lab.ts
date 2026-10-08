@@ -44,6 +44,10 @@ export interface OptimizationLabApi {
   importGrading(
     input: LabQueryInput & { id: string; expectedRevision: number },
   ): Promise<unknown | null>;
+  /** Import editable UTF-8 text; this does not validate, freeze or execute a dataset. */
+  importDataset(input: { target: LabTarget }): Promise<string | null>;
+  /** Save editable text through a native dialog without modifying frozen artifacts. */
+  exportDataset(input: { target: LabTarget; text: string }): Promise<boolean>;
 }
 
 /** Generic RPC callers cannot grant themselves the dedicated Main capability. */
