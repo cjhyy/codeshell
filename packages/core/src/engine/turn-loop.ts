@@ -2055,6 +2055,10 @@ export class TurnLoop {
         return { text: finalText, reason: "aborted_streaming", messages };
       }
       // If even summary fails, just return what we have
+      if (err instanceof ModelRequestBoundaryError) {
+        this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
+        return { text: finalText, reason: "model_error", messages };
+      }
       this.currentTurnLog.warn("turn.summary_failed", { cat: "turn" });
     }
 

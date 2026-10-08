@@ -13,14 +13,19 @@ export function setDefaultModelRequestSigner(signer: ModelRequestSigner): void {
 
 /** Node/TUI's explicit owner-only strategy. Desktop replaces this before any Engine run. */
 export function getDefaultModelRequestSigner(): ModelRequestSigner {
-  return (
-    hostSigner ??
-    new ModelRequestKeyStore({
+  return resolveModelRequestSigner().signer;
+}
+
+export function resolveModelRequestSigner(): { signer: ModelRequestSigner; owned: boolean } {
+  if (hostSigner) return { signer: hostSigner, owned: false };
+  return {
+    owned: true,
+    signer: new ModelRequestKeyStore({
       directory: join(userHome(), ".code-shell", "request-keys", "owner-only-plaintext"),
       cipher: new PlaintextCipher(),
       custodyMode: "owner-only-plaintext",
-    })
-  );
+    }),
+  };
 }
 
 /** Trusted isolated Run Hosts own and dispose this signer; durable subjects are refused. */

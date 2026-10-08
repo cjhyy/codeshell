@@ -55,6 +55,8 @@ jobs:
         run: node scripts/test-runtime-cost-smoke-isolation.mjs
       - name: Compiled SDK, stdio restart/replay and TUI cost accounting
         run: node scripts/smoke-runtime-cost-ledger.mjs
+      - name: Compiled SDK, stdio and TUI model request boundaries
+        run: node scripts/smoke-model-request-boundaries.mjs
 
   # The suite is split across parallel shards rather than run as one job.
   #

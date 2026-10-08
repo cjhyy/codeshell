@@ -16,6 +16,8 @@ function totals(): UsageTotals {
 
 function add(target: UsageTotals, receipt: UsageReceipt): void {
   target.requests++;
+  if (receipt.transmission === "not-sent")
+    target.notSentRequests = (target.notSentRequests ?? 0) + 1;
   const usage = receipt.usage;
   if (usage) {
     target.promptTokens += usage.promptTokens;

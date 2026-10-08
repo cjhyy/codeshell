@@ -172,6 +172,9 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
           )
             throw new Error("Request key changed during read");
           raw = readFileSync(fd, "utf8");
+          // Retry an earlier interrupted sync too; existence alone is not
+          // evidence that the first key publication reached stable storage.
+          fsyncSync(fd);
         } finally {
           closeSync(fd);
         }
@@ -179,6 +182,7 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
       if (raw !== undefined) {
+        syncDirectoryAncestors(this.options.directory);
         record = JSON.parse(raw) as KeyRecord;
         if (
           !record ||

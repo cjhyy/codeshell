@@ -49,3 +49,24 @@ versions. Rechecking private HMACs requires the authorized Host and the original
 projection (for example an explicitly enabled private diagnostic capture); digest
 values alone cannot reconstruct a request. Restoring a durable Session on the
 same custody authority preserves its key identity and permits that verification.
+
+Validation uses `bun test packages/core/src/model-request-boundary` and
+`bun test packages/desktop/src/main/model-request-signing-service.test.ts`. After
+`bun run test:package-release` completes, run
+`node scripts/smoke-model-request-boundaries.mjs` for compiled SDK, actual stdio
+worker, and TUI consumers. CI runs the same consumer script. Every model fixture
+uses a fresh HOME, an exact localhost origin guard installed before Core loads,
+and checks the actual child/worker bootstrap receipt. Redirects and inherited
+proxies are disabled.
+
+The consumer checks OpenAI transparent retry, Anthropic streaming, image
+conversion, a real read-only tool roundtrip, queued steering, runtime hook
+injection, tool visibility and composition changes, archived history and resumed
+Session keys, worker restart/client-message replay, and Host-encrypted worker
+signing. Independently recomputed keyed digests are compared with the JSON bodies
+received by the local server. Real production Transcript writer faults at both
+the logical boundary and physical attempt append, and a custody failure, produce
+zero server requests and no fallback. Not-sent accounting receipts carry known
+zero usage/cost rather than unknown billed usage. The Desktop service tests use a
+fixture encrypted cipher and explicitly exercise unavailable encryption; they do
+not claim a headless test exercised an OS keychain.

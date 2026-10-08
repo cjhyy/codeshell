@@ -127,23 +127,36 @@ export function requestBoundaryFetch(
         runId?: string;
       }
     | undefined,
+  onRejectedBeforeSend?: () => void,
 ): typeof globalThis.fetch {
+  const rejected = () => {
+    try {
+      onRejectedBeforeSend?.();
+    } catch {
+      /* Preserve the fatal proof failure. */
+    }
+  };
   return async (input, init) => {
     const projection = projections.getStore();
     if (!projection) {
       const bound = logicalCalls.getStore();
       if (!bound) return underlying(input, init);
+      rejected();
       bound.failure = new ModelRequestBoundaryError("projection");
       bound.controller.abort(bound.failure);
       throw bound.failure;
     }
     const call = projection.call;
     const fail = (reason: ModelRequestBoundaryError["reason"]): never => {
+      rejected();
       call.failure = new ModelRequestBoundaryError(reason);
       call.controller.abort(call.failure);
       throw call.failure;
     };
-    if (call.failure) throw call.failure;
+    if (call.failure) {
+      rejected();
+      throw call.failure;
+    }
     const attempt = currentAttempt();
     if (
       !attempt ||
@@ -219,8 +232,10 @@ export function requestBoundaryFetch(
       return fail("custody");
     }
     // Cancellation while awaiting the Host must never publish a send anchor.
-    if (init?.signal?.aborted || (input instanceof Request && input.signal.aborted))
+    if (init?.signal?.aborted || (input instanceof Request && input.signal.aborted)) {
+      rejected();
       throw new DOMException("Request cancelled", "AbortError");
+    }
     const metadata = {
       version: 1,
       logicalCallId: call.logicalCallId,
@@ -245,26 +260,30 @@ export function requestBoundaryFetch(
       sourceCoverage: "transcript-plus-runtime-projection",
       persistence: call.binding.transcript.isPersistent() ? "durable" : "memory-only",
     };
-    if (!call.boundaryEventId) {
-      const boundary = call.binding.transcript.appendModelRequestEvent(
-        "model_request_boundary",
-        metadata,
-      );
-      if (!boundary) return fail("transcript");
-      call.boundaryEventId = boundary.id;
+    try {
+      if (!call.boundaryEventId) {
+        const boundary = call.binding.transcript.appendModelRequestEvent(
+          "model_request_boundary",
+          metadata,
+        );
+        if (!boundary) return fail("transcript");
+        call.boundaryEventId = boundary.id;
+      }
+      const anchor = call.binding.transcript.appendModelRequestEvent("model_request_attempt", {
+        ...metadata,
+        boundaryEventId: call.boundaryEventId,
+        physicalAttemptId: attempt!.requestId,
+        accountingSessionId: attempt!.accountingSessionId,
+        ...(attempt!.runtimeId ? { runtimeId: attempt!.runtimeId } : {}),
+        ...(attempt!.runId ? { runId: attempt!.runId } : {}),
+        attemptNumber: ++call.attemptNumber,
+        // An anchor proves the validated handoff to fetch, not remote receipt/payment.
+        phase: "before-fetch",
+      });
+      if (!anchor) return fail("transcript");
+    } catch {
+      return fail("transcript");
     }
-    const anchor = call.binding.transcript.appendModelRequestEvent("model_request_attempt", {
-      ...metadata,
-      boundaryEventId: call.boundaryEventId,
-      physicalAttemptId: attempt!.requestId,
-      accountingSessionId: attempt!.accountingSessionId,
-      ...(attempt!.runtimeId ? { runtimeId: attempt!.runtimeId } : {}),
-      ...(attempt!.runId ? { runId: attempt!.runId } : {}),
-      attemptNumber: ++call.attemptNumber,
-      // An anchor proves the validated handoff to fetch, not remote receipt/payment.
-      phase: "before-fetch",
-    });
-    if (!anchor) return fail("transcript");
     // Keep exactly the validated bytes across the asynchronous Host-signing
     // roundtrip, even if a caller later mutates its original RequestInit.
     return underlying(input, { ...init, body: payload });
