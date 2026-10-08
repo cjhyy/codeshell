@@ -10,7 +10,10 @@ import { installGracefulShutdown } from "./graceful-shutdown.js";
 describe("installGracefulShutdown", () => {
   function makeProc() {
     // A stand-in for `process` — EventEmitter plus a recording exit().
-    const proc = new EventEmitter() as EventEmitter & { exit: (code?: number) => void; exitCalls: number[] };
+    const proc = new EventEmitter() as EventEmitter & {
+      exit: (code?: number) => void;
+      exitCalls: number[];
+    };
     proc.exitCalls = [];
     proc.exit = (code = 0) => {
       proc.exitCalls.push(code);
@@ -32,7 +35,10 @@ describe("installGracefulShutdown", () => {
   test("registers all requested signals", () => {
     let closed = 0;
     const proc = makeProc();
-    installGracefulShutdown({ close: () => closed++ }, { proc, signals: ["SIGTERM", "SIGINT", "SIGHUP"] });
+    installGracefulShutdown(
+      { close: () => closed++ },
+      { proc, signals: ["SIGTERM", "SIGINT", "SIGHUP"] },
+    );
 
     proc.emit("SIGINT");
     expect(closed).toBe(1);
@@ -55,5 +61,26 @@ describe("installGracefulShutdown", () => {
 
     expect(() => proc.emit("SIGTERM")).not.toThrow();
     expect(proc.exitCalls).toEqual([0]);
+  });
+
+  test("parent input EOF closes a busy worker exactly once with later signals", () => {
+    const proc = makeProc();
+    const parentInput = new EventEmitter();
+    const events: string[] = [];
+    proc.exit = () => {
+      events.push("exit");
+    };
+    installGracefulShutdown(
+      {
+        close: () => {
+          events.push("close");
+        },
+      },
+      { proc, parentInput },
+    );
+    parentInput.emit("end");
+    proc.emit("SIGTERM");
+    parentInput.emit("end");
+    expect(events).toEqual(["close", "exit"]);
   });
 });
