@@ -85,3 +85,19 @@ RPC，不保存正文/凭据，也不是针对同用户任意代码的防篡改�
 两份旧备份作为一个实时账本。未知状态会阻止 completed、成功记忆与标题生成。
 
 新增终态 `unverified_write` 已接入 Web reducer、终端提示和现有活动记录状态，不新增入口。
+Host 的纠正消息同时写入 Transcript 和下一回合缓存，恢复历史保留原模型输出及其后的
+未验证说明，不能仅依靠一次性的 error stream event 修正成功措辞。
+
+## 实际消费者验收
+
+`node scripts/smoke-verified-link-write.mjs` 使用编译后的公开 Node SDK Engine，固定的纯
+fixture provider 只返回工具调用/合成文本，Link Host 回调实际跨 localhost HTTP。测试覆盖
+创建一次后独立 `get_issue`、写响应丢失后的 `unverified_write`、磁盘终态/纠正消息，以及
+重启后新用户输入再次尝试写入时零重复请求。实际子进程在 Core 导入前安装网络 guard，
+父进程核验 PID/ppid、确切 origin 与私有 HOME 摘要后才允许开始。没有真实模型或三方写入。
+该消费者已接入 CI 的 core-engine shard；Windows 单独运行操作账本/解析器单测。
+
+`verified-write.test.ts` 另外覆盖 remote Link、本地 OAuth 和实际受管理 CLI 子进程的
+完整 ToolExecutor 链、读权限拒绝、Hook 参数/展示处理、授权变更、重放与验证不符。
+账本测试实际启动八个并发子进程竞争同一 claim。以上证明实现路径，不等于真实 GitHub
+账号验收、完整 Desktop GUI 或其他 provider 已完成迁移。

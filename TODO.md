@@ -2,7 +2,7 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-10-08。数字人依赖编辑、TUI 子 Agent 待办、记忆提取精修和资源 clone 已完成实现与本地回归，移出本表；实际账号、运行时加载和正式部署验收仍单独保留。历史来源、源码标记、设计文档和未勾验收判定见 [夜间 TODO 核查](docs/todo/2026-09-11-overnight-todo-audit.md)。源码实现不代表已经发布或部署。
+> 最近一次核对：2026-10-09。数字人依赖编辑、TUI 子 Agent 待办、记忆提取精修和资源 clone 已完成实现与本地回归，移出本表；实际账号、运行时加载和正式部署验收仍单独保留。历史来源、源码标记、设计文档和未勾验收判定见 [夜间 TODO 核查](docs/todo/2026-09-11-overnight-todo-audit.md)。源码实现不代表已经发布或部署。
 
 > Panel runtime 专项核对：2026-09-13。API 14 通用资源、包内工具、进程回执与 Desktop 后台任务已实现，视频处理业务已迁到面板；本次发布与最终 CI 仍见 [验收矩阵](docs/todo/panel-plugin-runtime-implementation.md)。旧 Host TTS 测试随业务迁至面板，不再作为 Host 功能待办。
 
