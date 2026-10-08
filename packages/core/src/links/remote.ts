@@ -1,11 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
-import { request as httpRequest } from "node:http";
-import { request as httpsRequest } from "node:https";
-import { Readable } from "node:stream";
 import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
 import { parseOAuthCredentialSecret } from "../credentials/oauth.js";
 import { asRecord, asArray } from "./http.js";
+import { requestOnce } from "./request-once.js";
 import {
   getRemoteLinkProviderAdapter,
   LEGACY_GITHUB_ACTIONS,
@@ -139,36 +137,6 @@ export function beginRemoteLinkAuthorization(
     expiresAt: now + 10 * 60_000,
     authorizationUrl: url.href,
   };
-}
-/** Node's request sends exactly once. Some fetch runtimes retry POST on a stale socket. */
-async function requestOnce(url: URL, init: RequestInit): Promise<Response> {
-  return new Promise((resolve, reject) => {
-    const operation = (url.protocol === "https:" ? httpsRequest : httpRequest)(
-      url,
-      {
-        method: init.method ?? "GET",
-        headers: Object.fromEntries(new Headers(init.headers)),
-        signal: init.signal ?? undefined,
-        // Do not reuse a stale socket for an authorization-code or refresh-token exchange.
-        agent: false,
-      },
-      (response) => {
-        try {
-          const status = response.statusCode ?? 503;
-          const body = [204, 205, 304].includes(status)
-            ? null
-            : (Readable.toWeb(response) as ReadableStream<Uint8Array>);
-          if (!body) response.resume();
-          resolve(new Response(body, { status, headers: { "Content-Type": "application/json" } }));
-        } catch (error) {
-          response.destroy();
-          reject(error);
-        }
-      },
-    );
-    operation.on("error", reject);
-    operation.end(init.body === undefined ? undefined : String(init.body));
-  });
 }
 
 async function request(
