@@ -151,6 +151,8 @@ describe("immutable experiment reports", () => {
     const report = buildReport(options);
     expect(report.json.effect.conclusion).toBe("improved");
     expect(report.json.effect.improved).toBe(2);
+    expect(report.json.effect.byCaseRole.target_failure.improved).toBe(2);
+    expect(report.json.effect.byCaseRole.regression.unchanged).toBe(1);
     expect(report.json.denominators.independentHoldoutGroups).toBe(3);
     expect(report.markdown).toContain("case-4");
     expect(report.markdown).toContain("case-1");
@@ -168,6 +170,19 @@ describe("immutable experiment reports", () => {
     const { options, trial } = fixture(true);
     const failed = trial("case-4", true, false);
     expect(trialVerdict(failed, options.dataset, [grade(failed)])).toBe(false);
+  });
+  test("explicit correction heads are order independent and competing grades stay unknown", () => {
+    const { options, trial } = fixture(true);
+    const passed = trial("case-4", true, true);
+    const first = grade(passed, false);
+    const { recordHash: _hash, ...content } = grade(passed, true);
+    const corrected = { ...content, supersedesRecordHash: first.recordHash };
+    const latest = { ...corrected, recordHash: sha256Hex(canonicalJson(corrected)) };
+    expect(trialVerdict(passed, options.dataset, [latest, first])).toBe(true);
+    expect(trialVerdict(passed, options.dataset, [first, latest])).toBe(true);
+    expect(trialVerdict(passed, options.dataset, [first, grade(passed, true)])).toBeNull();
+    // Feedback pinned before a correction keeps its original verdict.
+    expect(trialVerdict(passed, options.dataset, [first])).toBe(false);
   });
   test("missing human grades and analysis-only cases remain in the denominator", () => {
     const { options } = fixture(true);

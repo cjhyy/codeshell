@@ -305,8 +305,8 @@ export function buildReport(options: {
     ...new Set(
       sortedTrials
         .filter((trial) => trial.phase === "holdout")
-        .map((trial) => (trial as Trial & { grantRevision?: number }).grantRevision)
-        .filter((revision): revision is number => revision !== undefined),
+        .map((trial) => trial.grantRevision)
+        .filter((revision): revision is number => typeof revision === "number"),
     ),
   ].sort((a, b) => a - b);
   const report = {
@@ -344,6 +344,17 @@ export function buildReport(options: {
       regressed: count("regressed"),
       unchanged: count("unchanged"),
       unknown: count("unknown"),
+      byCaseRole: Object.fromEntries(
+        (["target_failure", "regression"] as const).map((role) => [
+          role,
+          Object.fromEntries(
+            ["improved", "regressed", "unchanged", "unknown"].map((change) => [
+              change,
+              pairs.filter((pair) => pair.caseRole === role && pair.change === change).length,
+            ]),
+          ),
+        ]),
+      ),
       criticalFailure,
       costComparable,
       costReductionRatio,
@@ -415,6 +426,13 @@ export function buildReport(options: {
     "## Effect",
     "",
     `Holdout: ${count("improved")} improved, ${count("regressed")} regressed, ${count("unchanged")} unchanged, ${count("unknown")} unknown.`,
+    "",
+    ...Object.entries(report.effect.byCaseRole).map(
+      ([role, counts]) =>
+        `${role}: ${Object.entries(counts)
+          .map(([change, total]) => `${total} ${change}`)
+          .join(", ")}.`,
+    ),
     "",
     "| Case | Role | Original | Candidate | Change | Original reported USD | Candidate reported USD |",
     "| --- | --- | --- | --- | --- | --- | --- |",
