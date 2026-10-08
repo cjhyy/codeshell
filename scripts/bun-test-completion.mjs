@@ -1,7 +1,49 @@
 import { spawn } from "node:child_process";
-import { lstatSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+/** Unit shards never inherit the operator's application state or credentials. */
+export function createBunTestEnvironment(base, directory) {
+  // An allowlist also excludes credentials with arbitrary, unknown variable
+  // names. Individual fixtures establish their own application environment.
+  const permitted =
+    /^(PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP|TMPDIR|LANG|LANGUAGE|LC_\w+|TZ|TERM|COLORTERM|NO_COLOR|FORCE_COLOR|SHELL|USER|USERNAME|LOGNAME|CI|GITHUB_ACTIONS|GITHUB_WORKSPACE|GITHUB_REPOSITORY|GITHUB_REF|GITHUB_SHA|RUNNER_OS|RUNNER_ARCH|RUNNER_TEMP|RUNNER_TOOL_CACHE|BUN_INSTALL|BUN_INSTALL_CACHE_DIR|BUN_RUNTIME_TRANSPILER_CACHE_PATH|DISPLAY|XAUTHORITY|CHROME_PATH|CODESHELL_TEST_CHROMIUM|PLAYWRIGHT_BROWSERS_PATH|PUPPETEER_EXECUTABLE_PATH)$/i;
+  const environment = Object.fromEntries(
+    Object.entries(base).filter(([key]) => permitted.test(key)),
+  );
+  const homePath = join(directory, "home");
+  mkdirSync(homePath, { recursive: true, mode: 0o700 });
+  const home = realpathSync(homePath);
+  const state = join(home, ".code-shell");
+  mkdirSync(state, { recursive: true, mode: 0o700 });
+  mkdirSync(join(home, ".run"), { recursive: true, mode: 0o700 });
+  writeFileSync(join(state, "settings.json"), "{}\n", { mode: 0o600 });
+  return {
+    ...environment,
+    HOME: home,
+    USERPROFILE: home,
+    CODE_SHELL_HOME: state,
+    CODE_SHELL_TEST_HOME: state,
+    XDG_CONFIG_HOME: join(home, ".config"),
+    XDG_DATA_HOME: join(home, ".local", "share"),
+    XDG_CACHE_HOME: join(home, ".cache"),
+    XDG_STATE_HOME: join(home, ".local", "state"),
+    XDG_RUNTIME_DIR: join(home, ".run"),
+    APPDATA: join(home, "AppData", "Roaming"),
+    LOCALAPPDATA: join(home, "AppData", "Local"),
+    NODE_USE_ENV_PROXY: "0",
+    NODE_ENV: "test",
+  };
+}
 
 /** Validate Bun's completed JUnit document, independently of its process exit code. */
 export function assertBunTestCompletion(file) {
@@ -83,7 +125,7 @@ export async function runBunTestShard(args, options = {}) {
       ["test", ...args, "--reporter", "junit", "--reporter-outfile", report],
       {
         cwd: options.cwd ?? process.cwd(),
-        env: options.env ?? process.env,
+        env: createBunTestEnvironment(options.env ?? process.env, directory),
         stdio: "inherit",
       },
     );
