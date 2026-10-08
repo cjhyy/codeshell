@@ -1,4 +1,10 @@
-import { shell, type IpcMain, type IpcMainInvokeEvent, type WebContents } from "electron";
+import {
+  BrowserWindow,
+  shell,
+  type IpcMain,
+  type IpcMainInvokeEvent,
+  type WebContents,
+} from "electron";
 import { randomUUID } from "node:crypto";
 import {
   createLinkService,
@@ -73,6 +79,15 @@ export function registerRemoteLinkIpc(deps: {
           allowCliLogin: true,
         }),
         open: openNativeLinkAuthorization,
+        onConnected: () => {
+          if (!allowed() || nativeLinkOwners.get(event.sender) !== owner) return;
+          const window = BrowserWindow.fromWebContents(event.sender);
+          if (window && !window.isDestroyed()) {
+            if (window.isMinimized()) window.restore();
+            window.show();
+            window.focus();
+          }
+        },
       });
       owner.managers.set(cwd, manager);
     }

@@ -6,7 +6,10 @@ import { join } from "node:path";
 import { CredentialStore, PlaintextCipher } from "@cjhyy/code-shell-core";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
 import { createNativeLinkAuthorizationManager } from "./link-authorization-manager.js";
-import type { NativeLinkAuthorizationInput } from "./remote-link-manager.js";
+import type {
+  NativeLinkAuthorizationInput,
+  NativeLinkAuthorizationWindow,
+} from "./remote-link-manager.js";
 
 const cleanups: Array<() => void> = [];
 afterEach(() => {
@@ -18,11 +21,21 @@ const input = {
   label: "Account",
   expectedRevision: null,
 };
-function fixture() {
+function fixture(
+  options: {
+    open?: (
+      input: NativeLinkAuthorizationInput,
+      handle: NativeLinkAuthorizationWindow,
+    ) => NativeLinkAuthorizationWindow | Promise<NativeLinkAuthorizationWindow>;
+    now?: () => number;
+    onConnected?: () => void | Promise<void>;
+  } = {},
+) {
   const directory = mkdtempSync(join(tmpdir(), "native-link-steps-"));
   const store = new CredentialStore(undefined, new PlaintextCipher(), directory);
   const service = createLinkService({
     store,
+    now: options.now,
     remoteLink: () => ({
       issuer: "https://link.example",
       clientId: "client",
@@ -42,9 +55,10 @@ function fixture() {
     allowed = true;
   const manager = createNativeLinkAuthorizationManager({
     service,
+    onConnected: options.onConnected,
     open: (value) => {
       opened = value;
-      return {
+      const handle = {
         close() {
           closes++;
           value.onCancel();
@@ -53,6 +67,7 @@ function fixture() {
           focuses++;
         },
       };
+      return options.open?.(value, handle) ?? handle;
     },
   });
   cleanups.push(() => {
@@ -94,6 +109,119 @@ test("native authorization returns pending immediately and status is authoritati
   expect((await f.manager.get(f.context, job.id)).state).toBe("cancelled");
   expect(f.closes).toBe(1);
   expect(f.store.list()).toEqual([]);
+});
+
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+};
+async function waitForOpen(f: ReturnType<typeof fixture>) {
+  for (let i = 0; i < 100 && !f.opened; i++) await Promise.resolve();
+  expect(f.opened).toBeDefined();
+}
+test("cancellation while binding or opening aborts and closes the late handle", async () => {
+  const release = deferred<void>();
+  const f = fixture({
+    open: async (_input, handle) => {
+      await release.promise;
+      return handle;
+    },
+  });
+  const requestId = randomUUID();
+  const pending = f.manager.start(f.context, requestId, input, "remote-link");
+  await waitForOpen(f);
+  await f.manager.cancel(f.context, requestId);
+  expect(f.opened.signal?.aborted).toBe(true);
+  release.resolve();
+  expect((await pending).state).toBe("cancelled");
+  expect(f.closes).toBe(1);
+  expect(f.store.list()).toEqual([]);
+});
+test("owner retirement during opening cannot leave pending authorization or reopen", async () => {
+  const release = deferred<void>();
+  const f = fixture({
+    open: async (_input, handle) => {
+      await release.promise;
+      return handle;
+    },
+  });
+  const pending = f.manager.start(f.context, randomUUID(), input, "remote-link");
+  await waitForOpen(f);
+  f.manager.close();
+  expect(f.opened.signal?.aborted).toBe(true);
+  release.resolve();
+  expect((await pending).state).toBe("cancelled");
+  expect(f.closes).toBe(1);
+});
+test("real expiry starts before asynchronous browser dispatch finishes", async () => {
+  const release = deferred<void>();
+  let now = Date.now() - 10 * 60_000 + 80;
+  const f = fixture({
+    now: () => now,
+    open: async (_input, handle) => {
+      await release.promise;
+      return handle;
+    },
+  });
+  const pending = f.manager.start(f.context, randomUUID(), input, "remote-link");
+  await waitForOpen(f);
+  const expiresAt = Date.parse(f.opened.expiresAt!);
+  now = expiresAt + 1;
+  await new Promise<void>((resolve) =>
+    f.opened.signal!.addEventListener("abort", () => resolve(), { once: true }),
+  );
+  release.resolve();
+  const result = await pending;
+  expect(result.state).toBe("failed");
+  expect(result.errorCode).toBe("authorization_expired");
+  expect(f.closes).toBe(1);
+});
+test("browser dispatch failure is visible and releases the current attempt", async () => {
+  let calls = 0;
+  const f = fixture({
+    open: async (_input, handle) => {
+      if (++calls === 1) throw new Error("browser unavailable");
+      return handle;
+    },
+  });
+  await expect(f.manager.start(f.context, randomUUID(), input, "remote-link")).rejects.toThrow(
+    "browser unavailable",
+  );
+  expect((await f.manager.start(f.context, randomUUID(), input, "remote-link")).state).toBe(
+    "pending",
+  );
+});
+test("focus notification failure never changes an authoritative connected callback", async () => {
+  const f = fixture({
+    onConnected: () => {
+      throw new Error("focus unavailable");
+    },
+  });
+  const job = await f.manager.start(f.context, randomUUID(), input, "remote-link");
+  f.service.completeRemoteAuth = async () => ({ ...job, state: "connected", step: undefined });
+  expect(await f.opened.onCallback("synthetic")).toBe(true);
+  expect(f.closes).toBe(1);
+});
+test("owner validation failure after confirmation skips focus and retains connected result", async () => {
+  let focused = false;
+  const f = fixture({
+    onConnected: () => {
+      focused = true;
+    },
+  });
+  const job = await f.manager.start(f.context, randomUUID(), input, "remote-link");
+  f.service.completeRemoteAuth = async () => {
+    f.context.authorize = () => {
+      throw new Error("owner gone");
+    };
+    return { ...job, state: "connected", step: undefined };
+  };
+  expect(await f.opened.onCallback("synthetic")).toBe(true);
+  expect(focused).toBe(false);
+  expect(f.closes).toBe(1);
 });
 test("request cancellation before admission prevents a later window", async () => {
   const f = fixture(),

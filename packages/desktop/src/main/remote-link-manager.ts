@@ -8,20 +8,25 @@ import { createNativeLinkAuthorizationManager } from "./link-authorization-manag
 
 export interface NativeLinkAuthorizationWindow {
   close(): void;
-  focus?(): void;
+  focus?(): void | Promise<void>;
 }
 export interface NativeLinkAuthorizationInput {
   providerName?: string;
   authorizationUrl: string;
   redirectUri: string;
-  onCallback: (url: string) => void;
+  expiresAt?: string;
+  signal?: AbortSignal;
+  onCallback: (url: string) => boolean | void | Promise<boolean | void>;
   onCancel: () => void;
 }
 
 /** One native owner can authorize at a time; only the shared service can exchange and save. */
 export function createNativeRemoteLinkManager(options: {
   service: LinkService;
-  open: (input: NativeLinkAuthorizationInput) => NativeLinkAuthorizationWindow;
+  open: (
+    input: NativeLinkAuthorizationInput,
+  ) => NativeLinkAuthorizationWindow | Promise<NativeLinkAuthorizationWindow>;
+  onConnected?: () => void | Promise<void>;
 }) {
   const flows = new Map<
     string,
@@ -59,10 +64,12 @@ export function createNativeRemoteLinkManager(options: {
         let job: LinkAuthorization | undefined;
         let window: NativeLinkAuthorizationWindow | undefined;
         let timer: ReturnType<typeof setTimeout> | undefined;
+        const abort = new AbortController();
         const cleanup = () => {
           settled = true;
           flows.delete(requestId);
           clearTimeout(timer);
+          abort.abort();
           window?.close();
         };
         const fail = (error: unknown) => {
@@ -92,19 +99,37 @@ export function createNativeRemoteLinkManager(options: {
           const authorization = new URL(job.redirect!.authorizationUrl);
           timer = setTimeout(cancel, Math.max(0, Date.parse(job.redirect!.expiresAt) - Date.now()));
           timer.unref?.();
-          window = options.open({
+          window = await options.open({
             authorizationUrl: authorization.href,
             redirectUri: authorization.searchParams.get("redirect_uri")!,
+            expiresAt: job.expiresAt ?? job.redirect!.expiresAt,
+            signal: abort.signal,
             onCancel: cancel,
             onCallback: (callbackUrl) => {
-              if (settled || completing) return;
-              if (new URL(callbackUrl).searchParams.has("error")) return cancel();
+              if (settled || completing) return false;
+              if (new URL(callbackUrl).searchParams.has("error")) {
+                cancel();
+                return false;
+              }
               completing = true;
-              void service.completeRemoteAuth(guarded, job!.id, callbackUrl).then((result) => {
-                if (settled) return;
-                cleanup();
-                resolve(result);
-              }, fail);
+              return service.completeRemoteAuth(guarded, job!.id, callbackUrl).then(
+                async (result) => {
+                  if (settled) return false;
+                  try {
+                    if (result.state === "connected" && (await guarded.authorize()))
+                      await options.onConnected?.();
+                  } catch {
+                    /* Focus failure cannot change an adopted connection. */
+                  }
+                  cleanup();
+                  resolve(result);
+                  return result.state === "connected";
+                },
+                (error) => {
+                  fail(error);
+                  return false;
+                },
+              );
             },
           });
           if (settled) window.close();

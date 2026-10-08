@@ -19,12 +19,16 @@ interface Flow {
   completing: boolean;
   window?: NativeLinkAuthorizationWindow;
   timer?: ReturnType<typeof setTimeout>;
+  abort: AbortController;
 }
 
 /** Native platform adapter. Authorization state and persistence remain in the shared Host service. */
 export function createNativeLinkAuthorizationManager(options: {
   service: LinkService;
-  open: (input: NativeLinkAuthorizationInput) => NativeLinkAuthorizationWindow;
+  open: (
+    input: NativeLinkAuthorizationInput,
+  ) => NativeLinkAuthorizationWindow | Promise<NativeLinkAuthorizationWindow>;
+  onConnected?: () => void | Promise<void>;
 }) {
   const service = options.service;
   const flows = new Map<string, Flow>();
@@ -38,6 +42,7 @@ export function createNativeLinkAuthorizationManager(options: {
     flow.finished = true;
     flows.delete(flow.requestId);
     clearTimeout(flow.timer);
+    flow.abort.abort();
     flow.window?.close();
   }
   function cancelFlow(context: LinkOperationContext, flow: Flow) {
@@ -75,6 +80,7 @@ export function createNativeLinkAuthorizationManager(options: {
         cancelled: false,
         finished: false,
         completing: false,
+        abort: new AbortController(),
       };
       flows.set(requestId, flow);
       const guarded = {
@@ -94,28 +100,6 @@ export function createNativeLinkAuthorizationManager(options: {
             redirect: undefined,
           };
         }
-        if (job.step?.kind === "redirect") {
-          const authorization = new URL(job.step.authorizationUrl);
-          flow.window = options.open({
-            authorizationUrl: authorization.href,
-            redirectUri: authorization.searchParams.get("redirect_uri")!,
-            providerName: service
-              .snapshot()
-              .providers.find((provider) => provider.id === job.providerId)?.displayName,
-            onCancel: () => {
-              if (!flow.finished) cancelFlow(context, flow);
-            },
-            onCallback: (url) => {
-              if (flow.finished || flow.completing) return;
-              flow.completing = true;
-              void service
-                .completeRemoteAuth(guarded, job.id, url)
-                .catch(() => {})
-                .finally(() => finish(flow));
-            },
-          });
-          if (flow.finished) flow.window.close();
-        }
         if (job.expiresAt) {
           flow.timer = setTimeout(
             () => {
@@ -128,9 +112,60 @@ export function createNativeLinkAuthorizationManager(options: {
           );
           flow.timer.unref?.();
         }
-        return job;
+        if (job.step?.kind === "redirect") {
+          const authorization = new URL(job.step.authorizationUrl);
+          flow.window = await options.open({
+            authorizationUrl: authorization.href,
+            redirectUri: authorization.searchParams.get("redirect_uri")!,
+            expiresAt: job.expiresAt ?? job.step.expiresAt,
+            signal: flow.abort.signal,
+            providerName: service
+              .snapshot()
+              .providers.find((provider) => provider.id === job.providerId)?.displayName,
+            onCancel: () => {
+              if (!flow.finished) cancelFlow(context, flow);
+            },
+            onCallback: async (url) => {
+              if (flow.finished || flow.completing) return false;
+              flow.completing = true;
+              try {
+                const result = await service.completeRemoteAuth(guarded, job.id, url);
+                try {
+                  if (result.state === "connected" && !flow.finished && (await guarded.authorize()))
+                    await options.onConnected?.();
+                } catch {
+                  /* Focus failure cannot change an adopted connection. */
+                }
+                return result.state === "connected";
+              } catch {
+                return false;
+              } finally {
+                finish(flow);
+              }
+            },
+          });
+          if (flow.finished) flow.window.close();
+        }
+        return flow.finished ? await service.authorization(context, job.id) : job;
       } catch (error) {
+        const interrupted = flow.finished || flow.cancelled || closed;
         cancelFlow(context, flow);
+        if (interrupted) {
+          if (flow.jobId) {
+            try {
+              return await service.authorization(context, flow.jobId);
+            } catch {
+              /* Owner closed. */
+            }
+          }
+          return {
+            id: flow.jobId ?? requestId,
+            providerId: input.providerId,
+            methodId: input.methodId,
+            authModeId,
+            state: "cancelled",
+          };
+        }
         throw error;
       }
     },
@@ -169,10 +204,11 @@ export function createNativeLinkAuthorizationManager(options: {
       await service.assertAuthorized(context);
       const flow = find(id);
       if (!flow || flow.ownerId !== context.ownerId || flow.finished || !flow.window) return false;
-      flow.window.focus?.();
+      await flow.window.focus?.();
       return true;
     },
     cancelOwner(ownerId: string) {
+      service.cancelOwner(ownerId);
       for (const flow of [...flows.values()])
         if (flow.ownerId === ownerId) {
           flow.cancelled = true;
@@ -183,6 +219,7 @@ export function createNativeLinkAuthorizationManager(options: {
       closed = true;
       cancelled.clear();
       for (const flow of [...flows.values()]) {
+        service.cancelOwner(flow.ownerId);
         flow.cancelled = true;
         finish(flow);
       }
