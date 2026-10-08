@@ -78,6 +78,7 @@ export type LinkAuthorizationStep = {
         account?: string;
         message?: string;
         canLogin?: boolean;
+        canInstall?: boolean;
       };
     }
   | {
