@@ -48,8 +48,9 @@ function resolveNames(options?: {
   });
 }
 
-function makeService(cwd: string): CapabilityService {
+function makeService(cwd: string, readOnly = false): CapabilityService {
   const settings = new SettingsManager(cwd, "full");
+  if (readOnly) settings.load(undefined, { persistMigrations: false });
   const preset = (settings.get() as { agent?: { preset?: string } }).agent?.preset;
   const registry = new ToolRegistry({
     builtinTools: resolveNames({ preset, host: "desktop" }),
@@ -78,6 +79,29 @@ export function listCapabilities(cwd: string): CapabilityDescriptor[] {
   } catch {
     return [];
   }
+}
+
+/** Unfolded switch baseline and inventory for a reviewed Profile configuration plan. */
+export function profileSwitchCapabilitySnapshot(cwd: string) {
+  const capabilities = makeService(cwd, true).list();
+  return {
+    capabilities: capabilities.map(({ kind, name, enabled }) => ({ kind, name, enabled })),
+    installed: {
+      skills: [...new Set(scanSkills(cwd).map((skill) => skill.name))].sort(),
+      plugins: capabilities
+        .filter((item) => item.kind === "plugin")
+        .map((item) => item.name)
+        .sort(),
+      mcp: capabilities
+        .filter((item) => item.kind === "mcp")
+        .map((item) => item.name)
+        .sort(),
+      agents: capabilities
+        .filter((item) => item.kind === "agent")
+        .map((item) => item.name)
+        .sort(),
+    },
+  };
 }
 
 export function setCapabilityEnabled(

@@ -6,6 +6,7 @@ import {
   rmSync,
   existsSync,
   readFileSync,
+  readdirSync,
   statSync,
   chmodSync,
   symlinkSync,
@@ -550,6 +551,40 @@ describe("SettingsManager config migration wiring", () => {
     expect(onDisk.imageGen.providers[0].catalogId).toBe("openai-images");
     expect(onDisk.configVersion).toBe(2);
     expect(existsSync(`${path}.bak`)).toBe(true);
+  });
+
+  test("read-only load chains version and model migrations without changing the disk tree", () => {
+    seed(home, {
+      imageGen: {
+        providers: [{ id: "openai", kind: "openai", baseUrl: "https://denied.invalid" }],
+      },
+      models: [
+        {
+          key: "fixture",
+          provider: "openai",
+          model: "fixture",
+          baseUrl: "https://denied.invalid",
+          apiKey: "fixture-never-use",
+        },
+      ],
+    });
+    const dir = join(home, ".code-shell");
+    const path = join(dir, "settings.json");
+    const before = readFileSync(path, "utf-8");
+    const readOnly = new SettingsManager(cwd, "full").load(undefined, {
+      persistMigrations: false,
+    });
+    expect(readOnly.imageGen?.providers[0]?.catalogId).toBe("openai-images");
+    expect(readOnly.models[0]?.providerKey).toBe("custom");
+    expect(readdirSync(dir)).toEqual(["settings.json"]);
+    expect(readFileSync(path, "utf-8")).toBe(before);
+
+    // The default path still persists both migrations and produces the same result.
+    expect(new SettingsManager(cwd, "full").load()).toEqual(readOnly);
+    expect(existsSync(`${path}.bak`)).toBe(true);
+    const written = JSON.parse(readFileSync(path, "utf-8"));
+    expect(written.imageGen.providers[0].catalogId).toBe("openai-images");
+    expect(written.models[0].providerKey).toBe("custom");
   });
 
   test("legacy project-file gen provider migrates too (project scope)", () => {

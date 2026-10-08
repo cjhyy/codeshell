@@ -2,6 +2,7 @@ import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { DeviceRelayStore } from "./device-relay-store.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
+import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
@@ -3737,6 +3738,14 @@ ipcMain.handle("sources:deleteProjectUpload", async (_e, projectId: string, name
     throw new Error("sources:deleteProjectUpload requires name");
   }
   deleteUpload(path, name);
+});
+registerProfileSwitchIpc({
+  ipcMain,
+  resolveTarget: resolveRendererConfigurationTarget,
+  withMutation: (cwd, write) => {
+    if (!bridge) throw new Error("桌面运行时尚未就绪，请稍后重试。");
+    return bridge.withWebConfigurationMutation(cwd, write);
+  },
 });
 ipcMain.handle("profiles:list", async (_e, target: RendererConfigurationTarget | null) =>
   listProfiles(target === null ? undefined : await rendererConfigurationCwd(target)),

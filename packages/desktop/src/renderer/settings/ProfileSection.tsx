@@ -2,9 +2,9 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
-import { ensureDigitalHumanRequirements } from "../digital-humans/profileRequirements";
-import { useConfirm } from "../ui/ConfirmDialog";
-import { useToast } from "../ui/ToastProvider";
+import { useProfileSwitch } from "../digital-humans/useProfileSwitch";
+import { ProfileSwitchDialog, ProfileSwitchRecovery } from "../digital-humans/ProfileSwitchDialog";
+import { useDigitalHumanContext } from "../digital-humans/useDigitalHumansLibrary";
 import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface ProfileEntry {
@@ -22,35 +22,32 @@ export function ProfileSection({
   configurationTarget: RendererConfigurationTarget;
 }) {
   const { t } = useT();
-  const confirm = useConfirm();
-  const toast = useToast();
+  const captureContext = useDigitalHumanContext(configurationTarget);
   const [profiles, setProfiles] = React.useState<ProfileEntry[]>([]);
-  const [busy, setBusy] = React.useState(false);
+  const targetKey = JSON.stringify(configurationTarget);
+  const [loadedTargetKey, setLoadedTargetKey] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const refresh = React.useCallback(async () => {
+    const isCurrent = captureContext();
     try {
-      setProfiles(await window.codeshell.listProfiles(configurationTarget));
+      const profiles = await window.codeshell.listProfiles(configurationTarget);
+      if (!isCurrent()) return;
+      setProfiles(profiles);
+      setLoadedTargetKey(targetKey);
       setError(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      if (isCurrent()) setError(caught instanceof Error ? caught.message : String(caught));
     }
-  }, [configurationTarget]);
+  }, [configurationTarget, captureContext, targetKey]);
+  const profileSwitch = useProfileSwitch(
+    configurationTarget,
+    refresh,
+    loadedTargetKey === targetKey && !error && !profiles.some((profile) => profile.active),
+  );
 
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  const act = async (operation: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await operation();
-      await refresh();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <section className="space-y-3 rounded-md border border-border bg-card p-4">
@@ -59,7 +56,8 @@ export function ProfileSection({
         <p className="text-xs text-muted-foreground">{t("settingsX.profiles.subtitle")}</p>
       </div>
       {error ? <p className="text-xs text-status-err">{error}</p> : null}
-      {profiles.length === 0 ? (
+      <ProfileSwitchRecovery controller={profileSwitch} />
+      {profiles.length === 0 || loadedTargetKey !== targetKey ? (
         <p className="text-xs text-muted-foreground">{t("settingsX.profiles.empty")}</p>
       ) : (
         <ul className="space-y-2">
@@ -86,31 +84,16 @@ export function ProfileSection({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    void act(() => window.codeshell.deactivateProfile(configurationTarget))
-                  }
+                  disabled={profileSwitch.busy}
+                  onClick={() => void profileSwitch.open(null)}
                 >
                   {t("settingsX.profiles.deactivate")}
                 </Button>
               ) : (
                 <Button
                   size="sm"
-                  disabled={busy}
-                  onClick={() =>
-                    void act(async () => {
-                      const ready = await ensureDigitalHumanRequirements({
-                        name: profile.name,
-                        configurationTarget,
-                        api: window.codeshell,
-                        confirm,
-                        toast,
-                        t,
-                      });
-                      if (!ready) return;
-                      await window.codeshell.activateProfile(configurationTarget, profile.name);
-                    })
-                  }
+                  disabled={profileSwitch.busy}
+                  onClick={() => void profileSwitch.open(profile.name)}
                 >
                   {t("settingsX.profiles.activate")}
                 </Button>
@@ -119,6 +102,7 @@ export function ProfileSection({
           ))}
         </ul>
       )}
+      <ProfileSwitchDialog controller={profileSwitch} />
     </section>
   );
 }
