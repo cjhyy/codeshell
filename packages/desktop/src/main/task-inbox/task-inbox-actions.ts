@@ -30,6 +30,7 @@ export interface TaskInboxActionsOptions {
 export class TaskInboxActions {
   private readonly adapters: Map<TaskSource, TaskInboxActionAdapter>;
   private readonly pending = new Map<string, Promise<TaskInboxActionResult>>();
+  private readonly inflight = new Map<string, Promise<TaskInboxActionResult>>();
   private readonly completed = new Map<string, TaskInboxActionResult>();
   constructor(private readonly options: TaskInboxActionsOptions) {
     this.adapters = new Map(options.adapters.map((adapter) => [adapter.source, adapter]));
@@ -48,6 +49,14 @@ export class TaskInboxActions {
     } catch {
       return Promise.resolve({ status: "rejected", message: "Invalid task action request" });
     }
+    const operationKey = JSON.stringify([
+      request.taskKey,
+      request.action,
+      request.expectedRevision,
+      context?.webContentsId,
+    ]);
+    const duplicate = this.inflight.get(operationKey);
+    if (duplicate) return duplicate;
     const previous =
       this.pending.get(request.taskKey) ??
       Promise.resolve({ status: "ok" } as TaskInboxActionResult);
@@ -55,9 +64,11 @@ export class TaskInboxActions {
       .catch(() => ({ status: "failed" }) as TaskInboxActionResult)
       .then(() => this.perform(request, context));
     this.pending.set(request.taskKey, work);
+    this.inflight.set(operationKey, work);
     void work
       .finally(() => {
         if (this.pending.get(request.taskKey) === work) this.pending.delete(request.taskKey);
+        if (this.inflight.get(operationKey) === work) this.inflight.delete(operationKey);
       })
       .catch(() => undefined);
     return work;
@@ -102,7 +113,11 @@ export class TaskInboxActions {
       ]);
       // Prevent queued double-clicks from issuing the same destructive operation
       // twice when a controller accepts work before updating its visible state.
-      if (request.action !== "open" && this.completed.has(operationKey))
+      if (
+        request.action !== "open" &&
+        request.action !== "retry" &&
+        this.completed.has(operationKey)
+      )
         return structuredClone(this.completed.get(operationKey)!);
       const result = await adapter.act(current, request.action, context);
       if (!["ok", "stale", "unavailable", "rejected", "failed"].includes(result.status))
@@ -118,7 +133,7 @@ export class TaskInboxActions {
           return { status: "failed", message: "Task controller returned a different task" };
         this.publish(record);
       }
-      if (request.action !== "open" && result.status === "ok") {
+      if (request.action !== "open" && request.action !== "retry" && result.status === "ok") {
         this.completed.set(operationKey, structuredClone(result));
         if (this.completed.size > 500) this.completed.delete(this.completed.keys().next().value!);
       }
