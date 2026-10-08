@@ -1843,6 +1843,15 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
   >;
   activateProfile(target: RendererConfigurationTarget, name: string): Promise<void>;
   deactivateProfile(target: RendererConfigurationTarget): Promise<void>;
+  previewProfileSwitch(
+    target: RendererConfigurationTarget,
+    name: string | null,
+  ): Promise<import("../shared/profile-switch").ProfileSwitchPreview>;
+  adoptProfileSwitch(
+    target: RendererConfigurationTarget,
+    name: string | null,
+    expectedRevision: string,
+  ): Promise<import("../shared/profile-switch").ProfileSwitchAdoptResult>;
   /** Rebind a project Session to another digital human. */
   setSessionWorkspaceProfile(
     sessionId: string,

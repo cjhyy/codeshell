@@ -18,7 +18,14 @@ export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-
   };
 }
 
-export async function launchCodeShellElectron({ appDir, home, userDataDir, env = {}, mainEntry }) {
+export async function launchCodeShellElectron({
+  appDir,
+  home,
+  userDataDir,
+  env = {},
+  mainEntry,
+  mainBootstrap,
+}) {
   // Playwright's Electron loader appends password-store=basic and
   // use-mock-keychain. Undo those test defaults after its loader, before
   // Electron initializes OS cryptography; a command-line argument alone loses
@@ -38,6 +45,7 @@ if (process.platform === "linux")
     args: [
       "--require",
       keyringBootstrap,
+      ...(mainBootstrap ? ["--require", mainBootstrap] : []),
       `--user-data-dir=${userDataDir ?? join(home, "electron-user-data")}`,
       mainEntry ?? appDir,
     ],

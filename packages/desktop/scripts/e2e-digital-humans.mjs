@@ -26,6 +26,24 @@ const screenshotDir = process.env.CODESHELL_DIGITAL_HUMANS_SCREENSHOT_DIR;
 const fixtureProjectPath = join(isolated.home, "digital-human-lab");
 let app;
 let win;
+let settingsSwitchPreviewText;
+
+const projectSettingsPath = join(fixtureProjectPath, ".code-shell", "settings.json");
+const projectSettingsBytes = () =>
+  readFile(projectSettingsPath, "utf8").catch((error) => {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  });
+const switchReview = () => win.getByTestId("profile-switch-preview");
+async function cancelSwitchReview() {
+  const review = switchReview();
+  await review.waitFor({ state: "visible" });
+  const text = await review.innerText();
+  assert(!text.includes(profiles[0].mainInstruction), "Impact review exposed instruction body");
+  await review.getByRole("button", { name: /^取消$|^Cancel$/i }).click();
+  await review.waitFor({ state: "hidden" });
+  return text;
+}
 
 const profiles = [
   {
@@ -346,6 +364,18 @@ async function checkProjectConfiguration(projectButton) {
       counts.reads === 6 && counts.opens === 0,
       `Only two read-only checks ran: ${JSON.stringify(counts)}`,
     );
+    await win
+      .getByRole("navigation", { name: /设置导航|Settings navigation/i })
+      .getByRole("button", { name: /^数字人$|^Digital humans$/i })
+      .click();
+    const researcherRow = win.locator("main li").filter({ hasText: "Research Analyst" });
+    const beforeSwitch = await projectSettingsBytes();
+    await researcherRow.getByRole("button", { name: /设为项目默认|Set project default/i }).click();
+    settingsSwitchPreviewText = await cancelSwitchReview();
+    assert(
+      (await projectSettingsBytes()) === beforeSwitch,
+      "Settings preview cancellation wrote project settings",
+    );
     await win.getByRole("button", { name: "返回应用", exact: true }).click();
     await projectButton.waitFor({ state: "visible" });
     console.log(
@@ -388,10 +418,27 @@ async function checkDigitalHumanLibraryLayouts() {
 
 try {
   await seedFixture();
+  // Install deny-all network guards before Main/Core imports, and inherit the
+  // same guard into any Node worker. This UI fixture never needs a remote origin.
+  const networkGuard = join(isolated.home, "deny-network.cjs");
+  await writeFile(
+    networkGuard,
+    `const deny = () => { throw new Error("Digital-human fixture forbids network"); };
+globalThis.fetch = async () => deny();
+for (const name of ["node:http", "node:https"]) {
+  const transport = require(name);
+  transport.request = deny;
+  transport.get = deny;
+}
+require("node:module").syncBuiltinESMExports();
+`,
+  );
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    mainBootstrap: networkGuard,
+    env: { NODE_OPTIONS: `--require ${networkGuard}` },
   });
   win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);
@@ -900,10 +947,47 @@ try {
   await win.getByRole("tab", { name: /我的数字人|My digital humans/i }).click();
   await openResearcherMenu();
   await win.getByRole("menuitem", { name: /设为项目默认|Set project default/i }).click();
+  const beforeSwitch = await projectSettingsBytes();
+  const studioReviewText = await cancelSwitchReview();
+  assert(
+    studioReviewText === settingsSwitchPreviewText,
+    "Existing Settings and Studio entry points showed different impact reviews",
+  );
+  assert(
+    (await projectSettingsBytes()) === beforeSwitch,
+    "Studio preview cancellation wrote project settings",
+  );
+  await openResearcherMenu();
+  await win.getByRole("menuitem", { name: /设为项目默认|Set project default/i }).click();
+  await switchReview().waitFor({ state: "visible" });
+  const profileFile = join(isolated.codeShellHome, "profiles", "researcher", "profile.json");
+  const changedProfile = JSON.parse(await readFile(profileFile, "utf8"));
+  changedProfile.mainInstruction += " Fresh definition for stale review.";
+  await writeFile(profileFile, JSON.stringify(changedProfile));
+  await switchReview()
+    .getByRole("button", { name: /确认采用|Apply reviewed change/i })
+    .click();
+  await switchReview()
+    .getByRole("alert")
+    .filter({ hasText: /已刷新影响|review has refreshed/i })
+    .waitFor();
+  assert((await projectSettingsBytes()) === beforeSwitch, "A stale review wrote project settings");
+  await screenshot(win, "digital-human-switch-preview-stale.png");
+  await switchReview()
+    .getByRole("button", { name: /确认采用|Apply reviewed change/i })
+    .click();
+  await switchReview().waitFor({ state: "hidden" });
   await researcherCard.getByText(/项目默认|Project default/i).waitFor({ state: "visible" });
   await screenshot(win, "digital-human-project-default.png");
   await openResearcherMenu();
   await win.getByRole("menuitem", { name: /取消项目默认|Clear project default/i }).click();
+  await switchReview()
+    .getByText(/无默认数字人|No default \(/i)
+    .waitFor();
+  await switchReview()
+    .getByRole("button", { name: /确认采用|Apply reviewed change/i })
+    .click();
+  await switchReview().waitFor({ state: "hidden" });
   await researcherCard.getByText(/项目默认|Project default/i).waitFor({ state: "hidden" });
 
   await researcherCard.getByRole("button", { name: /^开始使用$|^Start using$/i }).click();

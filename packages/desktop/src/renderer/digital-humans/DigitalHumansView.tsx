@@ -62,6 +62,8 @@ import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "./DigitalHumanEditorDialog";
 import { DigitalHumanMemoryDialog } from "./DigitalHumanMemoryDialog";
 import { ensureDigitalHumanRequirements } from "./profileRequirements";
+import { useProfileSwitch } from "./useProfileSwitch";
+import { ProfileSwitchDialog } from "./ProfileSwitchDialog";
 import type {
   DigitalHumanCatalogEntry,
   DigitalHumanProfileEntry,
@@ -140,6 +142,7 @@ export function DigitalHumansView({
   const { profiles, catalog, teams, availableSkills, status, error, refresh } =
     useDigitalHumansLibrary(configurationTarget);
   const operations = useDigitalHumanOperations(refresh);
+  const profileSwitch = useProfileSwitch(configurationTarget, refresh);
   const [query, setQuery] = React.useState("");
   const searchRef = React.useRef<HTMLInputElement>(null);
   const clearSearch = () => {
@@ -1042,6 +1045,7 @@ export function DigitalHumansView({
                           hasProject={hasRepositoryTarget}
                           busy={
                             selectionBusy ||
+                            profileSwitch.busy ||
                             operations.isBusy(`profile:${profile.name}`) ||
                             operations.isBusy(`delete-profile:${profile.name}`)
                           }
@@ -1054,24 +1058,7 @@ export function DigitalHumansView({
                           onDelete={() => void deleteProfileEntry(profile)}
                           onToggleDefault={() => {
                             if (!hasRepositoryTarget) return;
-                            const isCurrent = captureContext();
-                            void run(
-                              `profile:${profile.name}`,
-                              async () => {
-                                if (profile.active) {
-                                  return window.codeshell.deactivateProfile(configurationTarget);
-                                }
-                                // 补齐依赖后再启用，否则数字人声明的 skill 在这台
-                                // 机器上并不存在，启用了也是空壳。
-                                if (!(await ensureProfileRequirements(profile.name, isCurrent)))
-                                  return;
-                                return window.codeshell.activateProfile(
-                                  configurationTarget,
-                                  profile.name,
-                                );
-                              },
-                              { name: profile.label },
-                            );
+                            void profileSwitch.open(profile.active ? null : profile.name);
                           }}
                         />
                       ))}
@@ -1259,6 +1246,7 @@ export function DigitalHumansView({
         }}
       />
 
+      <ProfileSwitchDialog controller={profileSwitch} />
       <ProfileDefinitionImportDialog
         preview={importPreview}
         busy={importPreview ? operations.isBusy(`import-profile:${importPreview.name}`) : false}

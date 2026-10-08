@@ -90,11 +90,12 @@ describe("ProfileSection", () => {
     expect(text).toContain("取消项目默认");
   });
 
-  test("activates an inactive profile and refreshes the list", async () => {
+  test("requests an impact preview without automatically adopting or refreshing", async () => {
     ensureMiniDom();
     let activeName = "seedance";
     let listCalls = 0;
     const activations: Array<[{ projectId: string }, string]> = [];
+    const previews: Array<[{ projectId: string }, string]> = [];
     Object.assign(window, {
       codeshell: {
         listProfiles: async () => {
@@ -116,9 +117,30 @@ describe("ProfileSection", () => {
             },
           ];
         },
-        activateProfile: async (target: { projectId: string }, name: string) => {
+        previewProfileSwitch: async (target: { projectId: string }, name: string) => {
+          previews.push([target, name]);
+          return {
+            revision: "a".repeat(64),
+            target: { kind: "project", projectId: target.projectId },
+            before: { name: "seedance", label: "Seedance", available: true },
+            after: { name, label: "UI 设计师", available: true },
+            instruction: { changed: true, beforeLength: 4, afterLength: 8 },
+            memory: { before: null, after: null },
+            capabilities: [],
+            missingDeclarations: [],
+            sources: { before: [], after: [] },
+            exclusiveSkillsOnly: false,
+          };
+        },
+        adoptProfileSwitch: async (
+          target: { projectId: string },
+          name: string,
+          revision: string,
+        ) => {
+          expect(revision).toBe("a".repeat(64));
           activations.push([target, name]);
           activeName = name;
+          return { status: "adopted" };
         },
         previewProfileRequirements: async () => ({
           needsInstall: false,
@@ -152,7 +174,8 @@ describe("ProfileSection", () => {
       await flushMicrotasks();
     });
 
-    expect(activations).toEqual([[{ projectId: "project-repo" }, "ui-designer"]]);
-    expect(listCalls).toBe(2);
+    expect(activations).toEqual([]);
+    expect(previews).toEqual([[{ projectId: "project-repo" }, "ui-designer"]]);
+    expect(listCalls).toBe(1);
   });
 });

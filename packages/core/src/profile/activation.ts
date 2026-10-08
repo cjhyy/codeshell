@@ -80,7 +80,17 @@ export function activateWorkspaceProfile(
   if (!profile) {
     throw new Error(`Workspace profile "${name}" not found in the global library`);
   }
-  const subtree: WorkspaceProfileSubtree = {
+  const subtree = workspaceProfileActivationSubtree(profile, installed);
+  settings.saveProjectSetting("profile", subtree, cwd);
+  return profile;
+}
+
+/** Pure activation plan, shared by activation and reviewed host adoption. */
+export function workspaceProfileActivationSubtree(
+  profile: WorkspaceProfile,
+  installed?: InstalledCapabilityNames,
+): WorkspaceProfileSubtree {
+  return {
     active: profile.name,
     // A digital human contributes its role, capabilities, and memory. The
     // CodeShell runtime base is a host concern and must not vary with imported
@@ -88,8 +98,6 @@ export function activateWorkspaceProfile(
     preset: "general",
     overrides: profileOverridesFromDefinition(profile, installed),
   };
-  settings.saveProjectSetting("profile", subtree, cwd);
-  return profile;
 }
 
 export function deactivateWorkspaceProfile(settings: SettingsManager, cwd: string): void {
