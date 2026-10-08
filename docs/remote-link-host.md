@@ -26,7 +26,8 @@ provider、动作、额外 scope、含糊资源组或错误授权机制均不能
 不同授权方式已接入首版通用 UI，见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
 Desktop 与 Hub Web 共用授权 controller 和步骤视图，Host 提供统一任务及步骤提交 API；
 Token、CLI 会话、设备码和全部 10 个 provider 的远端网页授权已有适配器。扫码和追加验证码目前仅有
-公共视图，不作为生产连接能力发布。独立 Link 服务 `a9923817` 已于 2026-10-08 更新线上实例。
+公共视图，不作为生产连接能力发布。独立 Link 服务已于 2026-10-09 升级为 `82d0e4d`／schema 3，
+原 GitHub 连接续期和现有授权的只读调用通过；其余九家配置及真实账号仍待验收。
 
 ## 授权由 Host 持有
 
