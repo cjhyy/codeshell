@@ -200,3 +200,108 @@ test("target request cannot receive expected, rubric, sibling or holdout data", 
   expect(trial.semanticStatus).toBe("not_evaluated");
   expect(trial.assertions[0]?.passed).toBe(true);
 });
+
+test("connection identity pins effective temperature and redacts unsafe endpoints", () => {
+  const settings = {
+    modelConnections: [
+      { id: "lab", tag: "text", catalogId: "openai", model: "lab-model", credentialId: "key" },
+    ],
+    defaults: { text: "lab" },
+    credentials: [
+      { id: "key", catalogId: "openai", apiKey: "SECRET_KEY", baseUrl: "https://example.test/v1" },
+    ],
+    model: { temperature: 0.2 },
+  } as any;
+  const first = resolveSelectedConnection(settings, "lab");
+  expect(JSON.stringify(first.identity)).not.toContain("SECRET_KEY");
+  settings.model.temperature = 0.8;
+  expect(resolveSelectedConnection(settings, "lab").identity.configHash).not.toBe(
+    first.identity.configHash,
+  );
+  settings.credentials[0].apiKey = "ROTATED_KEY";
+  expect(resolveSelectedConnection(settings, "lab").identity.credentialRevision).toBeNull();
+  for (const endpoint of [
+    "https://user:SECRET@example.test/v1",
+    "https://example.test/v1?key=SECRET",
+  ]) {
+    settings.modelConnections[0].baseUrl = endpoint;
+    try {
+      resolveSelectedConnection(settings, "lab");
+      throw new Error("should reject endpoint");
+    } catch (error) {
+      expect(String(error)).not.toContain("SECRET");
+    }
+  }
+});
+
+test("Anthropic cache counters are included in normalized input exactly once", async () => {
+  const result = await executeText({
+    connection: connection("anthropic"),
+    systemPrompt: "frozen",
+    input: "input",
+    limits,
+    maxContextBytes: 10000,
+    accounting: accounting(),
+    upstream: (async () =>
+      new Response(
+        JSON.stringify({
+          id: "response",
+          type: "message",
+          role: "assistant",
+          model: "lab-fixture",
+          content: [{ type: "text", text: "good" }],
+          stop_reason: "end_turn",
+          usage: {
+            input_tokens: 10,
+            cache_read_input_tokens: 20,
+            cache_creation_input_tokens: 30,
+            output_tokens: 5,
+          },
+        }),
+        { headers: { "content-type": "application/json" } },
+      )) as typeof fetch,
+  });
+  expect(result.observations[0]?.usage).toMatchObject({
+    inputTokens: 60,
+    cacheReadTokens: 20,
+    cacheCreationTokens: 30,
+    outputTokens: 5,
+  });
+});
+
+test("wire gate rejects images, tools and request-model changes before upstream", async () => {
+  let calls = 0;
+  const a = accounting();
+  const transport = createMeteredFetch({
+    connection: connection("openai"),
+    limits,
+    maxContextBytes: 10000,
+    accounting: a,
+    upstream: (async () => {
+      calls++;
+      return new Response("{}");
+    }) as typeof fetch,
+  });
+  const base = {
+    model: "lab-fixture",
+    max_tokens: 100,
+    temperature: 0.3,
+    messages: [{ role: "user", content: "input" }],
+  };
+  for (const body of [
+    { ...base, model: "other" },
+    { ...base, tools: [] },
+    {
+      ...base,
+      messages: [{ role: "user", content: [{ type: "image_url", image_url: { url: "secret" } }] }],
+    },
+  ])
+    await expect(
+      transport.fetch("http://localhost:9001/chat/completions", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    ).rejects.toThrow();
+  expect(calls).toBe(0);
+  expect(a.count).toBe(0);
+});

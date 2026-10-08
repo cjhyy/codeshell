@@ -106,7 +106,16 @@ export function resolveSelectedConnection(
     }
     extra[key] = value;
   }
-  const temperature = extra.temperature ?? 0.3;
+  if (Object.keys(instance.paramValues ?? {}).some((key) => !Object.hasOwn(extra, key)))
+    throw new Error("selected catalog does not expose the requested sampling parameter");
+  const configuredDefault = (settings as unknown as { model?: { temperature?: number } }).model
+    ?.temperature;
+  if (
+    configuredDefault !== undefined &&
+    (!Number.isFinite(configuredDefault) || configuredDefault < 0 || configuredDefault > 2)
+  )
+    throw new Error("default sampling temperature is unsupported");
+  const temperature = extra.temperature ?? configuredDefault ?? 0.3;
   const endpoint = endpointFor(config);
   const wireParameters = { temperature, ...extra };
   const projection = {

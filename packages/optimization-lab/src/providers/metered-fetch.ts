@@ -151,9 +151,25 @@ export function createMeteredFetch(options: {
       if (canonicalJson(body[key]) !== canonicalJson(expected))
         throw new Error("provider compatibility retry changed a frozen request parameter");
     }
+    const isText = (value: unknown): boolean =>
+      typeof value === "string" ||
+      (Array.isArray(value) &&
+        value.every(
+          (block: any) =>
+            block &&
+            block.type === "text" &&
+            typeof block.text === "string" &&
+            Object.keys(block).every((key) => ["type", "text", "cache_control"].includes(key)),
+        ));
     if (
       !Array.isArray(body.messages) ||
-      body.messages.some((message: any) => !["system", "user", "assistant"].includes(message?.role))
+      body.messages.some(
+        (message: any) =>
+          !["system", "user"].includes(message?.role) ||
+          !isText(message.content) ||
+          Object.keys(message).some((key) => !["role", "content"].includes(key)),
+      ) ||
+      (body.system !== undefined && !isText(body.system))
     ) {
       throw new Error("provider request is not a text-only trial");
     }
