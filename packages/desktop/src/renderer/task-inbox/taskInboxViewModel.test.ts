@@ -145,6 +145,80 @@ describe("task inbox original detail routing", () => {
     expect(ids).toEqual(["hidden-engine"]);
     expect(calls).toEqual([]);
   });
+  test("external observer sessions use their persisted CLI locator instead of the native Session catalog", async () => {
+    const locators: unknown[] = [];
+    const { value, calls } = adapter({
+      openExternalSession: async (target) => {
+        locators.push(target);
+        return true;
+      },
+      listDiskSessions: async () => {
+        throw new Error("External CLI IDs are not native Session IDs");
+      },
+    });
+    for (const cli of ["codex", "claude"] as const) {
+      expect(
+        await openTaskInboxRecord(
+          record(`${cli}-observer`, {
+            source: "external-runtime",
+            externalCli: cli,
+            sessionId: `${cli}-external-id`,
+            workspacePath: "/external/project",
+          }),
+          value,
+        ),
+      ).toBe(true);
+    }
+    expect(locators).toEqual([
+      { cli: "codex", cwd: "/external/project", sessionId: "codex-external-id" },
+      { cli: "claude", cwd: "/external/project", sessionId: "claude-external-id" },
+    ]);
+    expect(calls).toEqual([]);
+  });
+  test("owned external runtimes without an external observer locator still open the native Session", async () => {
+    const { value, calls } = adapter({
+      sessionIndices: {
+        project: {
+          activeSessionId: null,
+          sessions: [
+            {
+              id: "ui-owned",
+              engineSessionId: "engine-owned",
+              title: "owned",
+              createdAt: 1,
+              updatedAt: 2,
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      await openTaskInboxRecord(
+        record("owned", { source: "external-runtime", sessionId: "engine-owned" }),
+        value,
+      ),
+    ).toBe(true);
+    expect(calls).toEqual([["session", "project", "ui-owned"]]);
+  });
+  test("missing linked Sessions fall back to retained Run or Mimi source details", async () => {
+    const { value, calls } = adapter({ openMimiSession: async () => false });
+    expect(
+      await openTaskInboxRecord(
+        record("retained-run", { source: "legacy-run", sessionId: "deleted-run-session" }),
+        value,
+      ),
+    ).toBe(true);
+    expect(
+      await openTaskInboxRecord(
+        record("retained-mimi", { source: "mimi-delegation", sessionId: "missing-hidden-session" }),
+        value,
+      ),
+    ).toBe(true);
+    expect(calls).toEqual([
+      ["run", "retained-run"],
+      ["mimi", "retained-mimi"],
+    ]);
+  });
   test("disk pagination finds and imports the original Session metadata", async () => {
     const seen: unknown[] = [];
     const disk = {

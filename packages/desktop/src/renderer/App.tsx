@@ -2343,6 +2343,13 @@ function App() {
                             snapshotVersion: petState.projection?.version ?? 0,
                             generation: petState.projection?.generation ?? 0,
                           }),
+                        openExternalSession: (external) =>
+                          handleOpenPetTarget({
+                            agentSessionId: external.sessionId,
+                            snapshotVersion: petState.projection?.version ?? 0,
+                            generation: petState.projection?.generation ?? 0,
+                            external,
+                          }),
                         openMimi: (taskId) => {
                           setPetInitialTaskId(taskId);
                           openPetPage();

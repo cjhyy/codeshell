@@ -1,4 +1,4 @@
-import type { TaskInboxRecordV1 } from "../../preload/types";
+import type { TaskInboxRecordV1, PetExternalSessionLocator } from "../../preload/types";
 import type { DiskSessionMeta } from "../automation/rebuildFromDisk";
 import { NO_REPO_KEY } from "../transcripts";
 import type { SessionIndex } from "../../shared/session-catalog";
@@ -14,8 +14,28 @@ export interface TaskInboxNavigationAdapter {
   openDiskSession(session: DiskSessionMeta): Promise<void>;
   openMimi(taskId: string): void;
   openMimiSession?(sessionId: string): Promise<boolean>;
+  openExternalSession?(target: PetExternalSessionLocator): Promise<boolean>;
   openAutomation(automationId: string): void;
   openRun(runId: string): void;
+}
+
+function openRetainedSourceDetails(
+  record: TaskInboxRecordV1,
+  adapter: TaskInboxNavigationAdapter,
+): boolean {
+  if (record.source === "mimi-delegation") {
+    adapter.openMimi(record.sourceId);
+    return true;
+  }
+  if (record.source === "legacy-run") {
+    adapter.openRun(record.sourceId);
+    return true;
+  }
+  if (record.source === "automation") {
+    adapter.openAutomation(record.automationId ?? record.sourceId);
+    return true;
+  }
+  return false;
 }
 
 /** Navigation uses original, authoritative metadata; it never creates a task. */
@@ -23,8 +43,17 @@ export async function openTaskInboxRecord(
   record: TaskInboxRecordV1,
   adapter: TaskInboxNavigationAdapter,
 ): Promise<boolean> {
+  if (record.source === "external-runtime" && record.externalCli && record.sessionId) {
+    if (!record.workspacePath || !adapter.openExternalSession) return false;
+    return adapter.openExternalSession({
+      cli: record.externalCli,
+      cwd: record.workspacePath,
+      sessionId: record.sessionId,
+    });
+  }
   if (record.source === "mimi-delegation" && record.sessionId && adapter.openMimiSession) {
-    return adapter.openMimiSession(record.sessionId);
+    if (await adapter.openMimiSession(record.sessionId)) return true;
+    return openRetainedSourceDetails(record, adapter);
   }
   const target = taskInboxOpenTarget(record);
   if (!target) return false;
@@ -66,5 +95,5 @@ export async function openTaskInboxRecord(
       cursors.add(cursor);
     }
   } while (cursor);
-  return false;
+  return openRetainedSourceDetails(record, adapter);
 }
