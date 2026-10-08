@@ -82,6 +82,7 @@ interface LoginSpec {
   clientId?: string;
   clientSecret?: string;
   clientRegistration?: OAuthCredentialSecret["clientRegistration"];
+  issuer?: string;
   authorizationEndpoint?: string;
   tokenEndpoint?: string;
   revocationEndpoint?: string;
@@ -153,6 +154,17 @@ export function validateOAuthEndpoint(raw: string, label: string): URL {
   }
   if (url.username || url.password) throw new Error(`${label} must not include URL credentials`);
   return url;
+}
+
+/** Match the SDK's binding key, including its single trailing-slash tolerance. */
+function sameOAuthIssuer(left: string, right: string): boolean {
+  const a = validateOAuthEndpoint(left, "OAuth issuer").href;
+  const b = validateOAuthEndpoint(right, "OAuth issuer").href;
+  return (
+    a === b ||
+    (a.endsWith("/") && a.slice(0, -1) === b) ||
+    (b.endsWith("/") && b.slice(0, -1) === a)
+  );
 }
 
 function normalizedErrorCode(err: unknown): OAuthErrorCode {
@@ -526,29 +538,46 @@ export class McpOAuthService {
     ) {
       return spec;
     }
+    let secret: OAuthCredentialSecret;
     try {
-      const secret = parseOAuthCredentialSecret(prior.secret);
-      const storedClientId = secret.clientRegistration?.clientId ?? secret.clientId;
-      const clientId = spec.clientId ?? storedClientId ?? prior.meta.clientId;
-      const sameRegistration = Boolean(clientId && storedClientId && clientId === storedClientId);
-      return {
-        ...spec,
-        clientId,
-        clientSecret: sameRegistration
-          ? (secret.clientSecret ?? secret.clientRegistration?.clientSecret)
-          : undefined,
-        clientRegistration: sameRegistration ? secret.clientRegistration : undefined,
-        authorizationEndpoint: spec.authorizationEndpoint ?? prior.meta.authUrl,
-        tokenEndpoint: spec.tokenEndpoint ?? secret.tokenEndpoint ?? prior.meta.tokenEndpoint,
-        revocationEndpoint:
-          spec.revocationEndpoint ?? secret.revocationEndpoint ?? prior.meta.revocationEndpoint,
-        scopes: spec.scopes?.length
-          ? spec.scopes
-          : (secret.scopes ?? prior.meta.scopes ?? undefined),
-      };
+      secret = parseOAuthCredentialSecret(prior.secret);
     } catch {
       return spec;
     }
+    const storedClientId = secret.clientRegistration?.clientId ?? secret.clientId;
+    const clientId = spec.clientId ?? storedClientId ?? prior.meta.clientId;
+    const sameRegistration = Boolean(clientId && storedClientId && clientId === storedClientId);
+    const clientSecret = secret.clientSecret ?? secret.clientRegistration?.clientSecret;
+    if (sameRegistration && clientSecret) {
+      for (const [requested, stored] of [
+        [spec.authorizationEndpoint, prior.meta.authUrl],
+        [spec.tokenEndpoint, secret.tokenEndpoint ?? prior.meta.tokenEndpoint],
+      ]) {
+        if (requested && (!stored || new URL(requested).href !== new URL(stored).href)) {
+          throw new McpOAuthServiceError(
+            "invalid_request",
+            "Saved OAuth registration is bound to other endpoints; use a new credential",
+            "validation",
+          );
+        }
+      }
+    }
+    return {
+      ...spec,
+      clientId,
+      clientSecret: sameRegistration ? clientSecret : undefined,
+      clientRegistration: sameRegistration ? secret.clientRegistration : undefined,
+      // Older issuer fields may be an unvalidated metadata echo. This fallback
+      // only stamps the public client_id below; stored secrets never enter SDK discovery.
+      issuer: sameRegistration
+        ? (secret.clientRegistration?.issuer ?? secret.issuer ?? prior.meta.issuer)
+        : undefined,
+      authorizationEndpoint: spec.authorizationEndpoint ?? prior.meta.authUrl,
+      tokenEndpoint: spec.tokenEndpoint ?? secret.tokenEndpoint ?? prior.meta.tokenEndpoint,
+      revocationEndpoint:
+        spec.revocationEndpoint ?? secret.revocationEndpoint ?? prior.meta.revocationEndpoint,
+      scopes: spec.scopes?.length ? spec.scopes : (secret.scopes ?? prior.meta.scopes ?? undefined),
+    };
   }
 
   private assertLoginCredentialOwnership(spec: LoginSpec): void {
@@ -597,12 +626,14 @@ export class McpOAuthService {
         clientId: spec.clientId,
         clientSecret: spec.clientSecret,
         clientRegistration: spec.clientRegistration,
+        issuer: spec.issuer,
         tokenEndpoint: spec.tokenEndpoint,
         revocationEndpoint: spec.revocationEndpoint,
         resource: spec.serverUrl,
         scopes: spec.scopes,
       }),
       meta: {
+        issuer: spec.issuer,
         authUrl: spec.authorizationEndpoint,
         tokenEndpoint: spec.tokenEndpoint,
         revocationEndpoint: spec.revocationEndpoint,
@@ -617,12 +648,21 @@ export class McpOAuthService {
     secret: OAuthCredentialSecret;
     meta: Partial<NonNullable<Credential["meta"]>>;
   }> {
+    if ((spec.clientSecret || spec.clientRegistration?.clientSecret) && !spec.issuer) {
+      // Legacy custom refresh remains pinned to its saved endpoint. Only the
+      // SDK discovery boundary must reject an unbound stored registration.
+      throw new McpOAuthServiceError(
+        "invalid_request",
+        "Saved OAuth registration has no issuer; use a new credential",
+        "discovery_registration",
+      );
+    }
     const state = randomBytes(16).toString("hex");
     const callback = await startLoopbackCallback(state);
     let tokens: SdkOAuthTokens | undefined;
     let verifier = "";
     let clientInformation: OAuthClientInformationMixed | undefined = spec.clientId
-      ? { client_id: spec.clientId }
+      ? { client_id: spec.clientId, issuer: spec.issuer }
       : undefined;
     let discovery: OAuthDiscoveryState | undefined;
     const clientMetadata: OAuthClientMetadata = {
@@ -695,6 +735,18 @@ export class McpOAuthService {
     if (!tokens) throw new Error("OAuth token exchange returned no tokens");
     const metadata = discovery?.authorizationServerMetadata;
     const registered = clientInformation as Record<string, unknown> | undefined;
+    // SDK 1.31 binds to the URL discovery actually used, not metadata.issuer
+    // (the SDK does not validate that document's self-declared issuer).
+    const issuer = discovery?.authorizationServerUrl;
+    if (
+      !issuer ||
+      !tokens.issuer ||
+      typeof registered?.issuer !== "string" ||
+      !sameOAuthIssuer(tokens.issuer, issuer) ||
+      !sameOAuthIssuer(registered.issuer, issuer)
+    ) {
+      throw new Error("OAuth credentials are not bound to the discovered authorization server");
+    }
     const clientId =
       typeof registered?.client_id === "string" ? registered.client_id : spec.clientId;
     if (!clientId) throw new Error("OAuth client registration returned no client id");
@@ -713,6 +765,7 @@ export class McpOAuthService {
     secret.clientRegistration = {
       clientId,
       clientSecret,
+      issuer: registered.issuer,
       clientIdIssuedAt:
         typeof registered?.client_id_issued_at === "number"
           ? registered.client_id_issued_at
@@ -722,7 +775,7 @@ export class McpOAuthService {
           ? registered.client_secret_expires_at
           : undefined,
     };
-    secret.issuer = metadata?.issuer ?? discovery?.authorizationServerUrl;
+    secret.issuer = tokens.issuer;
     secret.resource = discovery?.resourceMetadata?.resource ?? spec.serverUrl;
     secret.tokenEndpoint = metadata?.token_endpoint;
     secret.revocationEndpoint = (

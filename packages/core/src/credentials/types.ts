@@ -62,6 +62,8 @@ export interface OAuthCredentialSecret {
   clientRegistration?: {
     clientId: string;
     clientSecret?: string;
+    /** Authorization server stamped by the SDK on this registration. */
+    issuer?: string;
     clientIdIssuedAt?: number;
     clientSecretExpiresAt?: number;
   };

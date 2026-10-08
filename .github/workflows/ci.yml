@@ -53,6 +53,9 @@ jobs:
         # The root command first establishes package declaration boundaries, so
         # this also works on a clean checkout before the no-emit workspace pass.
         run: bun run typecheck
+      - name: Isolated actual SDK MCP OAuth issuer boundary
+        # A separate process installs the network guard before its first SDK/Core import.
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mcp-oauth-issuer.test.ts
       - name: Cost smoke network and nested worker confinement
         run: node scripts/test-runtime-cost-smoke-isolation.mjs
       - name: Compiled SDK, stdio restart/replay and TUI cost accounting
@@ -109,10 +112,12 @@ jobs:
             ignore: "--path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**"
           - shard: desktop
             paths: packages/desktop
+            # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
+              --path-ignore-patterns '**/src/main/mcp-oauth-issuer.test.ts'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
