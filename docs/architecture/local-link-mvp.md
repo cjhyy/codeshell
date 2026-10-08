@@ -150,7 +150,12 @@ GitHub App 与 GitLab 的本地设备授权保存结构化 token/expiry/client �
 仍逐次请求用户批准，发出后不自动刷新并重放。403、429 和网络错误不触发读重试。
 
 刷新前通过 CredentialStore CAS 持久写入 `linkOAuthState: refreshing`，释放文件锁后才发送
-固定 HTTPS token endpoint 请求。进程内相同轮换材料合并为一个 Promise；独立进程或重启后的
+固定 HTTPS token endpoint 请求。同一物理文件、层和凭证 ID 的轮换在进程内合并为一个 Promise；发现其他记录复制相同
+refresh token 时，CAS 持久标为 reconnect，既不并发轮换，也不把新 token 转交其他账号绑定。
+本进程保留最多 4096 个已消费 token 摘要收据，达到上限拒绝新轮换而不淘汰旧摘要，
+因此轮换完成后才出现的副本也不能在本进程重放。该收据不跨进程共享；不同 storage 的
+未知备份副本、独立进程及被外部恢复的旧文件不能由本地执行器证明全局唯一。已发现副本
+的 reconnect 状态与原记录的旋转标记会持久保留。独立进程或重启后的
 悬挂标记不重放旧 refresh token。网络中断、响应丢失、解析失败或账号漂移进入 `reconnect`。
 刷新成功也必须 CAS 匹配原记录才能保存，不能覆盖撤销、替换或权限变更。轮换期间的调用方取消
 允许共享的凭证更新完成，但阻止该调用继续发送 Action；Desktop 内部取消 RPC 传递相同边界。

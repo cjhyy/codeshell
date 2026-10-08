@@ -47,6 +47,8 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   if (!cred || !isCredentialSecretAvailable(cred.secret)) {
     throw new Error(`credential "${req.id}" is unavailable`);
   }
+  if (isBrowserOAuthLinkCredential(cred))
+    throw new Error("OAuth Link credentials only support Host-owned actions");
   if (req.purpose !== "link" && cred.meta?.agentExposable === false) {
     // Trust boundary lives here in the main process, not in the worker: a
     // credential marked agentExposable:false may only feed Link Action

@@ -362,8 +362,8 @@ export const localCredentialAccess: CredentialAccess = {
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
     }
-    if (isRemoteLinkCredential(cred))
-      throw new Error("Remote Link credentials only support Host-owned actions");
+    if (isRemoteLinkCredential(cred) || isBrowserOAuthLinkCredential(cred))
+      throw new Error("OAuth Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
       (cred.type !== "link" ||

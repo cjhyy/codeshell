@@ -59,7 +59,7 @@ function fixture(provider = "github", expired = true) {
     action: provider === "github" ? "get_issue" : "list_projects",
     params: provider === "github" ? { owner: "acme", repo: "demo", issue_number: 1 } : {},
   };
-  return { store, input, credential, tokenEndpoint };
+  return { store, input, credential, tokenEndpoint, directory };
 }
 function upstream(
   f: ReturnType<typeof fixture>,
@@ -231,6 +231,10 @@ test("lost response and a restarted Host never replay a consumed refresh token",
   expect(calls).toBe(1);
   f.store.save("user", {
     ...f.credential,
+    secret: JSON.stringify({
+      ...JSON.parse(f.credential.secret!),
+      refreshToken: "unique-unfinished-rotation",
+    }),
     meta: { ...f.credential.meta, linkOAuthState: "refreshing" },
   });
   await expect(
@@ -385,4 +389,86 @@ test("unknown expiry with no refresh token retains a valid long-lived device acc
   const u = upstream(f);
   await executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl: u.fetchImpl });
   expect(u.counts).toEqual({ action: 1, refresh: 0, account: 0 });
+});
+
+for (const placement of ["same-store", "different-store"]) {
+  for (const timing of ["concurrent", "sequential"])
+    test(`${placement} ${timing} duplicate rotating token is durably rejected`, async () => {
+      const first = fixture(),
+        second =
+          placement === "same-store"
+            ? { ...first, input: { ...first.input, id: "copied-record" } }
+            : fixture();
+      second.store.save("user", { ...first.credential, id: second.input.id });
+      let release!: () => void;
+      const wait = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const u = upstream(first, { onToken: timing === "concurrent" ? () => wait : undefined });
+      const original = executeLocalOAuthLinkAction(first.input, {
+        store: first.store,
+        now,
+        fetchImpl: u.fetchImpl,
+      });
+      if (timing === "concurrent") await new Promise((resolve) => setTimeout(resolve, 10));
+      else await original;
+      await expect(
+        executeLocalOAuthLinkAction(second.input, {
+          store: second.store,
+          now,
+          fetchImpl: u.fetchImpl,
+        }),
+      ).rejects.toMatchObject({ code: "reconnect" });
+      expect(second.store.resolve(second.input.id)?.meta?.linkOAuthState).toBe("reconnect");
+      expect(JSON.parse(second.store.resolve(second.input.id)!.secret!).accessToken).toBe(
+        "old-access",
+      );
+      release();
+      await original;
+      // Even a later call, after the first Promise has been removed, cannot replay.
+      await expect(
+        executeLocalOAuthLinkAction(second.input, {
+          store: second.store,
+          now,
+          fetchImpl: u.fetchImpl,
+        }),
+      ).rejects.toMatchObject({ code: "reconnect" });
+      expect(u.counts).toEqual({ refresh: 1, account: 1, action: 1 });
+    });
+}
+
+test("distinct Store instances for the same physical record share one rotation", async () => {
+  const first = fixture();
+  const store = new CredentialStore(first.directory, undefined, join(first.directory, "user"));
+  expect(store.recordIdentity("user", first.input.id)).toBe(
+    first.store.recordIdentity("user", first.input.id),
+  );
+  let release!: () => void;
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const u = upstream(first, { onToken: () => wait });
+  const original = executeLocalOAuthLinkAction(first.input, {
+    store: first.store,
+    now,
+    fetchImpl: u.fetchImpl,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const shared = executeLocalOAuthLinkAction(first.input, { store, now, fetchImpl: u.fetchImpl });
+  release();
+  await Promise.all([original, shared]);
+  expect(u.counts).toEqual({ refresh: 1, account: 1, action: 2 });
+  expect(store.resolve(first.input.id)?.meta?.linkOAuthState).toBe("connected");
+});
+
+test("restoring an old token into its original record cannot replay it in the running Host", async () => {
+  const f = fixture(),
+    u = upstream(f);
+  await executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl: u.fetchImpl });
+  f.store.save("user", f.credential);
+  await expect(
+    executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl: u.fetchImpl }),
+  ).rejects.toMatchObject({ code: "reconnect" });
+  expect(f.store.resolve(f.input.id)?.meta?.linkOAuthState).toBe("reconnect");
+  expect(u.counts).toEqual({ refresh: 1, account: 1, action: 1 });
 });

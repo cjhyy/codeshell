@@ -166,3 +166,51 @@ test("local OAuth worker seam returns only action data and propagates cancellati
   expect(seen[1]!.params).toEqual({ requestId: "cred-1" });
   expect(JSON.stringify(seen)).not.toContain("refreshToken");
 });
+
+test("legacy local secret resolution denies browser OAuth Links and preserves ordinary MCP tokens", async () => {
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const { CredentialStore } = await import("./store.js");
+  const { localCredentialAccess } = await import("./access.js");
+  const directory = mkdtempSync(join(tmpdir(), "local-oauth-access-"));
+  try {
+    const store = new CredentialStore(directory);
+    store.save("project", {
+      id: "local-browser",
+      type: "link",
+      label: "OAuth Link",
+      secret: JSON.stringify({ accessToken: "private-access", refreshToken: "private-refresh" }),
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkAuthSource: "browser-oauth",
+      },
+    });
+    store.save("project", {
+      id: "ordinary-mcp",
+      type: "token",
+      label: "MCP bearer",
+      secret: "mcp-bearer",
+    });
+    for (const purpose of ["link", "use", "mcp"] as const)
+      await expect(
+        localCredentialAccess.resolveValue!({
+          cwd: directory,
+          id: "local-browser",
+          scope: "project",
+          purpose,
+        }),
+      ).rejects.toThrow("Host-owned actions");
+    expect(
+      await localCredentialAccess.resolveValue!({
+        cwd: directory,
+        id: "ordinary-mcp",
+        scope: "project",
+        purpose: "mcp",
+      }),
+    ).toBe("mcp-bearer");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

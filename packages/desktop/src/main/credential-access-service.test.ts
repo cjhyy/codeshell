@@ -268,7 +268,7 @@ describe("desktop credential access service", () => {
     ).toThrow(/not a local Link credential/);
   });
 
-  test("LinkAction resolves a browser OAuth Link access token without returning refresh material", () => {
+  test("browser OAuth Link tokens never resolve through the legacy worker secret RPC", () => {
     new CredentialStore(cwd).save("user", {
       id: "link-github-github-app",
       type: "link",
@@ -287,14 +287,14 @@ describe("desktop credential access service", () => {
       },
     });
 
-    expect(
+    expect(() =>
       resolveCredentialValueForWorker({
         cwd,
         id: "link-github-github-app",
         scope: "full",
         purpose: "link",
       }),
-    ).toEqual({ value: "github-access" });
+    ).toThrow("Host-owned actions");
   });
 
   test("agent-facing purposes never resolve a credential marked agentExposable:false", () => {

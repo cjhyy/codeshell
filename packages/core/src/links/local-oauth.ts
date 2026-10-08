@@ -17,7 +17,10 @@ const ENDPOINTS: Record<string, { token: string; account: string }> = {
   },
   gitlab: { token: "https://gitlab.com/oauth/token", account: "https://gitlab.com/api/v4/user" },
 };
-const refreshes = new Map<string, Promise<void>>();
+// Keep consumed-token receipts for this Host process. Never evict one to admit
+// another rotation: old copied records must fail closed after the Promise settles.
+const MAX_TRACKED_ROTATIONS = 4096;
+const refreshes = new Map<string, { identity: string; pending?: Promise<void> }>();
 
 export interface LocalOAuthLinkActionRequest {
   cwd?: string;
@@ -207,10 +210,20 @@ export async function executeLocalOAuthLinkAction(
       });
       throw new LocalOAuthLinkError("reconnect");
     }
-    const key = createHash("sha256")
-      .update(`${providerId}\0${previous.clientId}\0${previous.refreshToken}`)
-      .digest("hex");
-    let pending = refreshes.get(key);
+    const key = createHash("sha256").update(previous.refreshToken).digest("hex");
+    const identity = store.recordIdentity(layer, input.id);
+    let receipt = refreshes.get(key);
+    if (
+      (receipt && (receipt.identity !== identity || !receipt.pending)) ||
+      (!receipt && refreshes.size >= MAX_TRACKED_ROTATIONS)
+    ) {
+      store.compareAndSwap(layer, input.id, original, {
+        ...original,
+        meta: { ...original.meta, linkOAuthState: "reconnect" },
+      });
+      throw new LocalOAuthLinkError("reconnect");
+    }
+    let pending = receipt?.pending;
     if (!pending) {
       if (original.meta?.linkOAuthState === "refreshing") throw new LocalOAuthLinkError("busy");
       pending = Promise.resolve()
@@ -323,8 +336,11 @@ export async function executeLocalOAuthLinkAction(
             throw new LocalOAuthLinkError("reconnect");
           }
         })
-        .finally(() => refreshes.delete(key));
-      refreshes.set(key, pending);
+        .finally(() => {
+          if (receipt) receipt.pending = undefined;
+        });
+      receipt = { identity, pending };
+      refreshes.set(key, receipt);
     }
     await pending;
     options.signal?.throwIfAborted();
