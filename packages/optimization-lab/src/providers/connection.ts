@@ -108,6 +108,10 @@ export function resolveSelectedConnection(
   }
   if (Object.keys(instance.paramValues ?? {}).some((key) => !Object.hasOwn(extra, key)))
     throw new Error("selected catalog does not expose the requested sampling parameter");
+  if (config.provider === "anthropic" && Object.hasOwn(extra, "top_p"))
+    throw new Error(
+      "Anthropic top_p is not forwarded by the current Core client; select temperature only",
+    );
   const configuredDefault = (settings as unknown as { model?: { temperature?: number } }).model
     ?.temperature;
   if (

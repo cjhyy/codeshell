@@ -9,7 +9,15 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-function setup(options: { human?: boolean; maxRequests?: number; upstream?: typeof fetch } = {}) {
+function setup(
+  options: {
+    human?: boolean;
+    maxRequests?: number;
+    upstream?: typeof fetch;
+    regression?: boolean;
+    semanticRegression?: boolean;
+  } = {},
+) {
   const cwd = mkdtempSync(join(tmpdir(), "lab-engine-"));
   roots.push(cwd);
   const skillDir = join(cwd, ".agents", "skills", "lab-test");
@@ -29,7 +37,9 @@ function setup(options: { human?: boolean; maxRequests?: number; upstream?: type
       caseRole: i === 0 ? "regression" : "target_failure",
       split: i < 3 ? "dev" : "holdout",
       input: `Summarize source ${i}.`,
-      hardAssertions: [{ id: "cites", kind: "contains", value: "[S1]" }],
+      hardAssertions: options.semanticRegression
+        ? []
+        : [{ id: "cites", kind: "contains", value: "[S1]" }],
       rubric: options.human
         ? [{ id: "clear", text: "Answer addresses the current source", requiresHumanGrading: true }]
         : [],
@@ -69,9 +79,13 @@ function setup(options: { human?: boolean; maxRequests?: number; upstream?: type
               },
             ],
           })
-        : system.includes("cite [S1]")
-          ? "Summary [S1]"
-          : "Summary without a citation";
+        : options.regression && JSON.stringify(payload.messages.at(-1)).includes("source 0")
+          ? system.includes("cite [S1]")
+            ? "Summary without a citation"
+            : "Summary [S1]"
+          : system.includes("cite [S1]")
+            ? "Summary [S1]"
+            : "Summary without a citation";
       return new Response(
         JSON.stringify({
           id: "response",
@@ -407,3 +421,153 @@ test("default Desktop controller reads user connections through full settings sc
     eligible: true,
   });
 });
+
+test("optimizer without any issued HTTP can resume under a new budget without reusing a closed operation", async () => {
+  const s = setup({ maxRequests: 9 });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  const exhausted = await wait(s.controller, s.prepared.id);
+  expect(exhausted.state.status).toBe("budget_exhausted");
+  expect(exhausted.ledger.totals.requests).toBe(3);
+  expect(s.payloads).toHaveLength(3);
+  const renewed = s.controller.grant(s.prepared.id, {
+    expectedRevision: exhausted.state.revision,
+    planHash: exhausted.plan.planHash,
+    operationId: "native-optimizer-renewal",
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    limits: { maxRequests: 30, maxExecutionMs: 60000 },
+  });
+  s.controller.start(s.prepared.id, renewed.state.revision, "resume-optimizer", true);
+  const done = await wait(s.controller, s.prepared.id);
+  expect(done.state.status).toBe("report_ready");
+  expect(done.ledger.totals.requests).toBe(13);
+  expect(
+    s.payloads.filter((payload) => JSON.stringify(payload).includes("reflect_once_v1")),
+  ).toHaveLength(1);
+  const operations = Object.values(done.ledger.operations).filter(
+    (operation) => operation.role === "optimizer",
+  );
+  expect(operations).toHaveLength(2);
+  expect(operations.filter((operation) => operation.attemptIds.length > 0)).toHaveLength(1);
+});
+
+test("known development regressions veto candidate selection before any holdout request", async () => {
+  const s = setup({ regression: true });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  const done = await wait(s.controller, s.prepared.id);
+  expect(done.state.status).toBe("report_ready");
+  expect(done.state.data.selectedBodyHash).toBeUndefined();
+  expect(s.payloads).toHaveLength(7);
+  expect(JSON.stringify(s.payloads)).not.toContain("Summarize source 3");
+  expect((s.controller.report(s.prepared.id).json as any).effect.conclusion).not.toBe("improved");
+});
+
+test("fully graded semantic regression is vetoed independently of hard assertions", async () => {
+  const s = setup({ human: true, semanticRegression: true });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  await wait(s.controller, s.prepared.id);
+  const baseline = grade(s.controller, s.prepared.id);
+  s.controller.start(s.prepared.id, baseline.state.revision, "semantic-propose", true);
+  await wait(s.controller, s.prepared.id);
+  const template = s.controller.exportGrading(s.prepared.id);
+  template.reviewer = "reviewer";
+  for (const item of template.items)
+    for (const result of item.grades) {
+      result.verdict = item.input.includes("source 0") ? "failed" : "passed";
+      result.evidence = "Evaluated the current source against the same rubric.";
+    }
+  const screening = s.controller.importGrading(
+    s.prepared.id,
+    template,
+    s.controller.get(s.prepared.id).state.revision,
+  );
+  s.controller.start(s.prepared.id, screening.state.revision, "semantic-select", true);
+  const done = await wait(s.controller, s.prepared.id);
+  expect(done.state.status).toBe("report_ready");
+  expect(done.state.data.selectedBodyHash).toBeUndefined();
+  expect(s.payloads).toHaveLength(7);
+});
+
+for (const knownCache of [true, false])
+  test(`candidate cost tie-break requires comparable complete usage (${knownCache ? "known" : "unknown"} cache)`, async () => {
+    const requests: any[] = [];
+    const s = setup({
+      upstream: (async (request) => {
+        const body = await (request as Request).json();
+        requests.push(body);
+        const system = JSON.stringify(body.system);
+        const optimizer = system.includes("reflect_once_v1");
+        const text = optimizer
+          ? JSON.stringify({
+              candidates: ["expensive", "cheap"].map((name) => ({
+                body: `Summarize and cite [S1]. ${name}`,
+                explanation: "Require a citation",
+                sourceCaseIds: ["dev-0", "dev-1", "dev-2"],
+              })),
+            })
+          : system.includes("cite [S1]")
+            ? "Summary [S1]"
+            : "Summary without citation";
+        return new Response(
+          JSON.stringify({
+            id: "response",
+            type: "message",
+            role: "assistant",
+            model: "lab-model",
+            content: [{ type: "text", text }],
+            stop_reason: "end_turn",
+            usage: {
+              input_tokens: 20,
+              output_tokens: 10,
+              cache_read_input_tokens: 0,
+              ...(knownCache ? { cache_creation_input_tokens: 0 } : {}),
+              cost: system.includes("cheap") ? 0.001 : 0.002,
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        );
+      }) as typeof fetch,
+    });
+    s.settings.credentials[0]!.catalogId = "anthropic";
+    s.settings.modelConnections[0]!.catalogId = "anthropic";
+    const { readFrozenDataset } = await import("./contracts/dataset.js");
+    const frozen = readFrozenDataset(s.controller.store.root, s.prepared.plan.datasetHash);
+    const prepared = s.controller.prepare({
+      cwd: s.cwd,
+      dataset: {
+        schemaVersion: 1,
+        title: frozen.title,
+        taskFamily: frozen.taskFamily,
+        cases: frozen.cases,
+      },
+      skillName: "lab-test",
+      targetConnectionId: "lab",
+      optimizerConnectionId: "lab",
+      objective: "quality",
+      limits: {
+        maxRequests: 30,
+        maxExecutionMs: 60000,
+        maxOutputTokens: 1000,
+        timeoutMs: 1000,
+        maxCandidates: 2,
+        repeats: 1,
+      },
+    });
+    const grant = s.controller.grant(prepared.id, {
+      expectedRevision: prepared.state.revision,
+      planHash: prepared.plan.planHash,
+      operationId: "two-candidate-grant",
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      limits: { maxRequests: 30, maxExecutionMs: 60000 },
+    });
+    s.controller.start(prepared.id, grant.state.revision, grant.grant!.startOperationId);
+    const done = await wait(s.controller, prepared.id);
+    expect(done.state.status).toBe("report_ready");
+    if (knownCache) {
+      expect(done.state.data.selectedBodyHash).toBeDefined();
+      expect((s.controller.report(prepared.id).json as any).change.bodyDiff).toContain("cheap");
+      expect(requests).toHaveLength(16);
+    } else {
+      expect(done.state.data.selectedBodyHash).toBeUndefined();
+      expect(requests).toHaveLength(10);
+    }
+  });

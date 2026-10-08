@@ -329,3 +329,21 @@ test("missing response model invalidates pairing while retaining known token usa
   expect(result.observations[0]?.outcome).toBe("settled");
   expect(result.observations[0]?.usage?.inputTokens).toBe(20);
 });
+
+test("Anthropic unsupported top_p fails local preflight", () => {
+  const settings = {
+    modelConnections: [
+      {
+        id: "lab",
+        tag: "text",
+        catalogId: "anthropic",
+        model: "claude-sonnet-4-20250514",
+        credentialId: "key",
+        paramValues: { top_p: 0.5 },
+      },
+    ],
+    defaults: { text: "lab" },
+    credentials: [{ id: "key", catalogId: "anthropic", apiKey: "fake-key" }],
+  } as any;
+  expect(() => resolveSelectedConnection(settings, "lab")).toThrow();
+});

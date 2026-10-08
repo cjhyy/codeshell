@@ -98,6 +98,7 @@ interface Progress {
   resumeStatus?: ExperimentStatus;
   pending?: PendingTrial;
   pendingOptimizer?: boolean;
+  pendingOptimizerOperationId?: string;
   optimizerRef?: string;
   reportRef?: string;
   reportMarkdownRef?: string;
@@ -426,6 +427,7 @@ export class OptimizationLabController {
     )
       this.store.mutate(id, { fence }, (state) => {
         delete (state.data as unknown as Progress).pendingOptimizer;
+        delete (state.data as unknown as Progress).pendingOptimizerOperationId;
       });
   }
 
@@ -840,12 +842,77 @@ export class OptimizationLabController {
           (trial) => trial.bodyHash === candidate.bodyHash && trial.phase === "screening",
         );
         const values = own.map((trial) => trialVerdict(trial, dataset, grades));
+        const criticalFailure = own.some((trial) =>
+          trial.assertions.some(
+            (assertion) =>
+              !assertion.passed &&
+              snapshot.plan.acceptance.criticalHardAssertionIds.includes(
+                `${trial.caseId}/${assertion.id}`,
+              ),
+          ),
+        );
+        const newRegression = own.some((trial, index) => {
+          if (values[index] !== false) return false;
+          const baseline = trials.find(
+            (entry) =>
+              entry.phase === "baseline" &&
+              entry.caseId === trial.caseId &&
+              entry.repeat === trial.repeat &&
+              entry.bodyHash === snapshot.plan.skill.bodyHash,
+          );
+          return baseline !== undefined && trialVerdict(baseline, dataset, grades) === true;
+        });
         const valid =
           own.length === dataset.summary.dev * snapshot.plan.bounds.repeats &&
-          !values.some((value, index) => value === null && own[index]!.status !== "skipped");
+          !values.some((value, index) => value === null && own[index]!.status !== "skipped") &&
+          !criticalFailure &&
+          !newRegression;
+        const completed = own
+          .filter((trial) => trial.status === "completed")
+          .sort((a, b) =>
+            a.caseId < b.caseId ? -1 : a.caseId > b.caseId ? 1 : a.repeat - b.repeat,
+          );
+        const costKnown =
+          completed.length > 0 &&
+          completed.every(
+            (trial) =>
+              trial.observations.length > 0 &&
+              trial.observations.every(
+                (observation) =>
+                  observation.outcome === "settled" &&
+                  observation.usage?.reportedCostUsd != null &&
+                  observation.usage.cacheReadTokens != null &&
+                  observation.usage.cacheCreationTokens != null,
+              ),
+          );
+        const cost = costKnown
+          ? completed.reduce(
+              (sum, trial) =>
+                sum +
+                trial.observations.reduce(
+                  (sum, observation) => sum + observation.usage!.reportedCostUsd!,
+                  0,
+                ),
+              0,
+            )
+          : null;
+        const cacheProfile = costKnown
+          ? canonicalJson(
+              completed.map((trial) => ({
+                caseId: trial.caseId,
+                repeat: trial.repeat,
+                requests: trial.observations.map((observation) => ({
+                  read: observation.usage!.cacheReadTokens,
+                  write: observation.usage!.cacheCreationTokens,
+                })),
+              })),
+            )
+          : null;
         return {
           candidate,
           valid,
+          cost,
+          cacheProfile,
           passed: values.filter((value) => value === true).length,
           hardFailures: own.reduce(
             (sum, trial) => sum + trial.assertions.filter((item) => !item.passed).length,
@@ -854,12 +921,25 @@ export class OptimizationLabController {
         };
       })
       .filter((entry) => entry.valid)
-      .sort((a, b) => a.hardFailures - b.hardFailures || b.passed - a.passed);
+      .sort(
+        (a, b) =>
+          a.hardFailures - b.hardFailures ||
+          b.passed - a.passed ||
+          (a.cost !== null && b.cost !== null && a.cacheProfile === b.cacheProfile
+            ? a.cost - b.cost
+            : 0),
+      );
     if (!ranked.length) return null;
     if (
       ranked.length > 1 &&
       ranked[0]!.hardFailures === ranked[1]!.hardFailures &&
-      ranked[0]!.passed === ranked[1]!.passed
+      ranked[0]!.passed === ranked[1]!.passed &&
+      !(
+        ranked[0]!.cost !== null &&
+        ranked[1]!.cost !== null &&
+        ranked[0]!.cacheProfile === ranked[1]!.cacheProfile &&
+        ranked[0]!.cost !== ranked[1]!.cost
+      )
     )
       return null;
     const selected = ranked[0]!.candidate.bodyHash;
@@ -923,7 +1003,7 @@ export class OptimizationLabController {
           if (data.pendingOptimizer)
             throw new Error("interrupted optimizer operation cannot be replayed");
           if (!data.optimizerRef) {
-            const operationId = `optimizer-${plan.planHash}`;
+            const operationId = `optimizer-${plan.planHash.slice(0, 40)}-${randomUUID()}`;
             const accounting = this.accounting(
               id,
               fence,
@@ -933,6 +1013,7 @@ export class OptimizationLabController {
             );
             this.store.mutate(id, { fence }, (state) => {
               (state.data as unknown as Progress).pendingOptimizer = true;
+              (state.data as unknown as Progress).pendingOptimizerOperationId = operationId;
             });
             const result = await reflectOnce({
               plan,
@@ -964,6 +1045,7 @@ export class OptimizationLabController {
               d.optimizerRef = optimizerRef;
               d.candidateRefs = candidateRefs;
               delete d.pendingOptimizer;
+              delete d.pendingOptimizerOperationId;
             });
             if (!result.candidates.length)
               throw new Error("no valid candidate returned by the single reflection operation");
