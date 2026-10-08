@@ -263,6 +263,20 @@ export interface ToolRunYieldController {
 }
 
 export interface ToolContext {
+  /** Host-owned durable write control; never populated from model arguments. */
+  operations?: {
+    controller: import("../operations/controller.js").OperationController;
+    resolver: import("../operations/resolver.js").CapabilityResolver;
+    sessionId: string;
+    runId: string;
+  };
+  /** Executor-stamped physical tool invocation, distinct from user-intent identity. */
+  toolCallId?: string;
+  /** Forecast only; actual dispatch must still pass executor hooks/approval/live guards. */
+  previewToolPermission?(
+    toolName: string,
+    args: Record<string, unknown>,
+  ): import("../types.js").PermissionDecision;
   /** Active working directory for this Engine. */
   cwd: string;
   /** Resolved strategy for the current session's model context. */

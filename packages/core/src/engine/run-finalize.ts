@@ -132,10 +132,11 @@ export async function finalizeRunSuccess(args: {
   costStoreSerialize: (() => Record<string, unknown>) | undefined;
   profile: RunBehaviorProfile | undefined;
   getProfileReportedResults: () => Record<string, unknown> | undefined;
+  hasUnverifiedWrites?: () => boolean;
 }): Promise<EngineResult> {
   const {
     session,
-    result,
+    result: originalResult,
     firstGoalTermination,
     turnCount,
     getRunUsage,
@@ -149,6 +150,38 @@ export async function finalizeRunSuccess(args: {
     recordExternalBilledUsage,
     profile,
   } = args;
+  let unverified = false;
+  // Seal pending operations for aborted/failed runs too; late callbacks must not
+  // mutate an already published terminal receipt into apparent success.
+  try {
+    unverified = args.hasUnverifiedWrites?.() === true;
+  } catch {
+    unverified = true;
+  }
+  const blockCompletion = originalResult.reason === "completed" && unverified;
+  const verificationNotice =
+    "外部写操作尚未通过独立回读验证，任务未标记完成。请先确认已发送操作的实际结果，避免重复写入。";
+  // Preserve the original model output as an audit record, followed by a Host
+  // correction that survives both the next turn's cache and a disk replay.
+  // An error stream event alone would leave the old success claim in history.
+  const messages = unverified
+    ? [...originalResult.messages, { role: "assistant" as const, content: verificationNotice }]
+    : originalResult.messages;
+  if (unverified) {
+    session.transcript.appendMessage("assistant", verificationNotice, { authority: "system" });
+  }
+  const result: TurnLoopRunResult = blockCompletion
+    ? {
+        ...originalResult,
+        reason: "unverified_write",
+        completionKind: undefined,
+        text: verificationNotice,
+        messages,
+      }
+    : unverified
+      ? { ...originalResult, messages }
+      : originalResult;
+  if (blockCompletion) options?.onStream?.({ type: "error", error: result.text });
   args.setLastMessages(result.messages);
   const cachedMessages = stripInjectedContextMessages(
     result.messages,
@@ -188,7 +221,7 @@ export async function finalizeRunSuccess(args: {
   // Ephemeral side chats must never leak into durable memory, even after
   // the user explicitly elevates tool permissions for a turn. Lifecycle
   // isolation is independent of the run-scoped behavior/permission mode.
-  if (!isEphemeralSessionState(session.state)) {
+  if (!unverified && !isEphemeralSessionState(session.state)) {
     // Fire-and-forget memory pipeline: extract durable memories from the
     // transcript, save a session summary, and conditionally trigger
     // auto-dream consolidation. Doesn't block the Engine result.
@@ -205,7 +238,7 @@ export async function finalizeRunSuccess(args: {
   // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
   // effort: failures never touch the run result. The renderer writes the
   // title into the sidebar on receipt of the session_title stream event.
-  if (profile?.disableSessionTitle !== true) {
+  if (!unverified && profile?.disableSessionTitle !== true) {
     const messageEvents = session.transcript.getEvents("message");
     const userMsgEvents = messageEvents.filter(
       (e) => (e.data as { role?: string }).role === "user",
