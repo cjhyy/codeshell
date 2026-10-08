@@ -38,7 +38,7 @@ Office ZIP 额外限制 2,000 项、32 MiB 声明/选中解压总量、每 XML 8
 }
 ```
 
-`query` 和 `chunk` 互斥；`limit` 只用于查询，范围 1..20；这些参数仅适用于项目上传源。原有不带查询参数的读取仍返回提取正文。分块 ID 绑定文件内容 SHA-256、资源和偏移，文件覆盖后旧引用明确失效。
+`query` 和 `chunk` 互斥；`limit` 只用于查询，范围 1..20；这些参数仅适用于项目上传源。原有不带查询参数的读取仍返回提取正文。分块 ID 绑定文件内容 SHA-256、资源和偏移，文件内容变更后旧引用明确失效。
 
 Profile、workspace binding、Session pin、`ReadSource` permission 和精确 resource deny 在读取前继续生效；索引命中也不省略这些检查。解析 await 后和结果返回前再次检查授权、workspace/state/uploads 目录与原文件的 dev/ino/真实路径身份、实际内容哈希。缓存不会让已删除、已撤权或已替换的文件继续可读。结果保留来源标记、脱敏与不可信内容包裹。
 
@@ -46,7 +46,7 @@ Profile、workspace binding、Session pin、`ReadSource` permission 和精确 re
 
 解析在独立、可终止的子进程内运行；不把 PDF/native 库载入 Host。子进程只收到已授权的有界字节和文件名，不收到原文件路径；只继承 PATH/Windows 系统目录和 Electron Node 模式所需变量，不继承第三方凭证环境变量。解析入口禁用 fetch，Office 不解析外部关系；这不是通用操作系统沙箱。
 
-单 Host 最多 2 个解析进程、16 个排队请求；队列满时返回忙碌提示。默认 15 秒超时，取消/超时杀掉子进程并等待 close 后释放槽。Node/Electron 子进程设置 192 MiB V8 堆上限；这不是整个进程 RSS 的操作系统硬上限。
+单 Host 最多 2 个解析进程、16 个排队请求；队列满时返回忙碌提示。运行时 resolver 的等待有独立 15 秒上限并可取消；解析进程默认 15 秒超时，取消/超时杀掉子进程并等待 close 后释放槽。Node/Electron 子进程设置 192 MiB V8 堆上限；这不是整个进程 RSS 的操作系统硬上限。
 
 派生索引存于项目 `.code-shell/source-index/`，新目录权限 0700、索引文件 0600，以临时文件原子发布。文件名是资源 ID 哈希，索引版本与实际原文件内容哈希绑定。磁盘缓存属于 workspace 可写数据，不能凭其自行声明的 hash/chunk ID 认证正文：冷启动始终从原件重新解析后替换它。当前进程只复用自己实际解析并冻结的索引，按原件哈希与 parser version 匹配；内存 LRU 最多 32 项/8 MiB。伪造合法形状的缓存不能进入结果。索引含提取的明文，请按项目资料保护该目录。
 

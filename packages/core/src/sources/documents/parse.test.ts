@@ -57,7 +57,7 @@ test("official PDF.js actually extracts text in a bounded parser process", async
   expect(result.parts[0].text).toContain("Actual PDF text fixture");
 }, 30_000);
 
-test("malformed/encrypted/non-document and excessive archive inputs fail without extracted files", async () => {
+test("malformed/non-document and excessive archive inputs fail without extracted files", async () => {
   await expect(parseDocumentIsolated(Buffer.from("not a ZIP"), "bad.docx")).rejects.toThrow();
   await expect(
     parseDocumentIsolated(
@@ -134,4 +134,29 @@ test("repeated large XLSX shared references are bounded before intermediate conc
   expect(result.truncated).toBe(true);
   expect(Buffer.byteLength(result.parts[0].text)).toBeLessThanOrEqual(MAX_DOCUMENT_TEXT_BYTES);
   expect(result.parts[0].text).toContain("[A0] 界");
+});
+
+test("a pending trusted PDF runtime resolver is cancellable and bounded before child launch", async () => {
+  const controller = new AbortController();
+  const resolverSignals: AbortSignal[] = [];
+  const pending = parseDocumentIsolated(textPdf(), "waiting.pdf", {
+    signal: controller.signal,
+    resolveExecutable: (signal) => {
+      resolverSignals.push(signal!);
+      return new Promise(() => {});
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.abort(new Error("resolver cancelled"));
+  await expect(pending).rejects.toThrow("resolver cancelled");
+  expect(resolverSignals[0].aborted).toBe(true);
+  await expect(
+    parseDocumentIsolated(textPdf(), "waiting.pdf", {
+      timeoutMs: 0,
+      resolveExecutable: () => new Promise(() => {}),
+    }),
+  ).rejects.toThrow("runtime resolution exceeded");
+  expect(
+    (await parseDocumentIsolated(Buffer.from("resolver slot recovered"), "next.txt")).parts[0].text,
+  ).toBe("resolver slot recovered");
 });

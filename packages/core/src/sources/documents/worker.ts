@@ -32,6 +32,49 @@ async function acquireParserSlot(signal?: AbortSignal): Promise<() => void> {
   };
 }
 
+async function resolveParserExecutable(
+  resolver: (signal?: AbortSignal) => Promise<string>,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): Promise<string> {
+  signal?.throwIfAborted();
+  const controller = new AbortController();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error: unknown, value?: string) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      if (error) {
+        controller.abort(error);
+        reject(error);
+      } else resolve(value!);
+    };
+    const abort = () => finish(signal?.reason ?? new Error("Document parsing was cancelled"));
+    const timer = setTimeout(
+      () =>
+        finish(
+          new Error(
+            "Document parser runtime resolution exceeded its time limit; reinstall the Host runtime or export UTF-8 text",
+          ),
+        ),
+      timeoutMs,
+    );
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
+    Promise.resolve()
+      .then(() => {
+        controller.signal.throwIfAborted();
+        return resolver(controller.signal);
+      })
+      .then(
+        (value) => finish(undefined, value),
+        (error) => finish(error),
+      );
+  });
+}
+
 /** A terminable child keeps parser CPU/native libraries outside the Host. */
 export async function parseDocumentIsolated(
   bytes: Uint8Array,
@@ -51,9 +94,14 @@ export async function parseDocumentIsolated(
     options.signal?.throwIfAborted();
     const extension = import.meta.url.endsWith(".ts") ? ".ts" : ".js";
     let entry = fileURLToPath(new URL(`./parser-entry${extension}`, import.meta.url));
-    const managedExecutable = /\.pdf$/i.test(filename)
-      ? await options.resolveExecutable?.(options.signal)
-      : undefined;
+    const managedExecutable =
+      /\.pdf$/i.test(filename) && options.resolveExecutable
+        ? await resolveParserExecutable(
+            options.resolveExecutable,
+            options.signal,
+            options.timeoutMs ?? DOCUMENT_PARSE_TIMEOUT_MS,
+          )
+        : undefined;
     options.signal?.throwIfAborted();
     if (
       managedExecutable !== undefined &&

@@ -1,5 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstatSync, mkdirSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { parseDocumentIsolated } from "./worker.js";
 import {
@@ -127,17 +138,43 @@ function buildIndex(resourceId: string, bytes: Uint8Array, parsed: ParsedDocumen
 
 function writeIndex(cwd: string, index: DocumentIndex): void {
   const directory = indexDirectory(cwd, true)!;
+  const before = lstatSync(directory);
+  const assertDirectory = () => {
+    const current = lstatSync(directory);
+    if (
+      current.dev !== before.dev ||
+      current.ino !== before.ino ||
+      indexDirectory(cwd, false) !== directory
+    )
+      throw new Error("Document index directory changed during publication");
+  };
   const name = indexName(index.resourceId);
   const temp = join(directory, `.${name}.${randomUUID()}.tmp`);
+  let fd: number | undefined;
   try {
     const data = JSON.stringify(index);
     if (Buffer.byteLength(data) > INDEX_MAX_BYTES)
       throw new Error("Document index exceeds its storage limit");
-    writeFileSync(temp, data, { flag: "wx", mode: 0o600 });
-    if (indexDirectory(cwd, false) !== directory)
-      throw new Error("Document index directory changed during publication");
+    fd = openSync(
+      temp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
+      0o600,
+    );
+    assertDirectory();
+    const descriptor = fstatSync(fd);
+    const target = lstatSync(temp);
+    if (
+      !descriptor.isFile() ||
+      target.isSymbolicLink() ||
+      target.ino !== descriptor.ino ||
+      target.dev !== descriptor.dev
+    )
+      throw new Error("Document index target changed before publication");
+    writeFileSync(fd, data);
+    assertDirectory();
     renameSync(temp, join(directory, name));
   } finally {
+    if (fd !== undefined) closeSync(fd);
     rmSync(temp, { force: true });
   }
 }
