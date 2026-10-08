@@ -60,14 +60,36 @@ if (process.argv[2] === "--worker") {
           typeof message.content === "string" &&
           message.content.startsWith("fixture "),
       );
-      const hasResult = request.messages
+      const results = request.messages
         .slice(latestIntent + 1)
-        .some(
-          (message) =>
-            message.role === "user" &&
-            Array.isArray(message.content) &&
-            message.content.some((block) => block.type === "tool_result"),
+        .flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content)
+            ? message.content.filter((block) => block.type === "tool_result")
+            : [],
         );
+      const hasResult = results.some((block) => block.tool_use_id === "fixture-create");
+      const tools = new Set((request.tools ?? []).map((tool) => tool.name));
+      if (!tools.has("LinkAction")) {
+        assert.ok(tools.has("ToolSearch"), "LinkAction must be discoverable before use");
+        assert.equal(hasResult, false);
+        return {
+          text: "Select the synthetic Link action",
+          stopReason: "tool_use",
+          usage,
+          toolCalls: [
+            {
+              id: "fixture-select-link",
+              toolName: "ToolSearch",
+              args: { query: "select:LinkAction" },
+            },
+          ],
+        };
+      }
+      assert.match(
+        JSON.stringify(results.find((block) => block.tool_use_id === "fixture-select-link")),
+        /schemaRef: select:LinkAction/,
+        "The next provider tool set must follow the actual ToolSearch selection receipt",
+      );
       const unknown = JSON.stringify(request.messages).includes("fixture unknown");
       return hasResult
         ? { text: "Model claims success", toolCalls: [], stopReason: "stop", usage }
@@ -104,7 +126,8 @@ if (process.argv[2] === "--worker") {
       sessionStorageDir: join(root, "sessions"),
       settingsScope: "isolated",
       enabledBuiltinTools: ["LinkAction"],
-      maxTurns: 3,
+      // One additional model step selects LinkAction before the original write/final flow.
+      maxTurns: 4,
       headless: true,
       isSubAgent: true,
       permissionMode: "bypassPermissions",
