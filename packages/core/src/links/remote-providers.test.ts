@@ -20,11 +20,81 @@ import {
   type RemoteLinkProviderId,
 } from "./remote-adapters.js";
 import { getLocalLinkProvider, validateLocalLinkToken } from "./providers.js";
+import { bindSource } from "../sources/binding.js";
+import { saveSourceDefinition } from "../sources/catalog.js";
+import { SettingsManager } from "../settings/manager.js";
+import { ToolRegistry } from "../tool-system/registry.js";
+import { ToolExecutor } from "../tool-system/executor.js";
+import { PermissionClassifier } from "../tool-system/permission.js";
+import { HookRegistry } from "../hooks/registry.js";
 
 const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
   setDefaultCredentialAccess(null);
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
+});
+
+test("Source read crosses production Link authorization/refresh/resource filters over actual HTTP", async () => {
+  const previousHome = process.env.CODE_SHELL_HOME;
+  const directory = mkdtempSync(join(tmpdir(), "source-remote-http-"));
+  process.env.CODE_SHELL_HOME = directory;
+  cleanups.push(() => {
+    if (previousHome === undefined) delete process.env.CODE_SHELL_HOME;
+    else process.env.CODE_SHELL_HOME = previousHome;
+    rmSync(directory, { recursive: true, force: true });
+  });
+  const f = await fixture("github", { scopes: ["github:list_repositories"] });
+  await f.connect();
+  setDefaultCredentialAccess({
+    listMasked: (_cwd, scope) => (scope === "full" ? f.store.listMasked() : []),
+    resolveMeta: (_cwd, id, scope) =>
+      scope === "full" ? f.store.listMasked().find((item) => item.id === id) : undefined,
+    envExposures: () => ({}),
+    executeRemoteLinkAction: (request) =>
+      executeRemoteLinkAction(request, { store: f.store, now: () => Date.now() + 1_000_000 }),
+  });
+  saveSourceDefinition({
+    id: "selected-repositories",
+    kind: "link",
+    label: "Selected repositories",
+    enabled: true,
+    credentialRef: "selected-link",
+    adapterConfig: { providerId: "github", action: "list_repositories", params: { limit: 10 } },
+  });
+  bindSource(new SettingsManager(directory, "full"), directory, {
+    sourceId: "selected-repositories",
+    scopes: ["github:list_repositories"],
+    readPolicy: "ask",
+  });
+  const registry = new ToolRegistry({ builtinTools: ["ReadSource", "LinkAction"] });
+  const approvals: string[] = [];
+  const executor = new ToolExecutor(
+    registry,
+    new PermissionClassifier([], "default", {
+      requestApproval: async (request) => {
+        approvals.push(request.toolName);
+        return { approved: true };
+      },
+    }),
+    new HookRegistry(),
+  );
+  executor.setContext({ cwd: directory, settingsScope: "full" } as ToolContext);
+  const output = await executor.executeSingle({
+    id: "source-http",
+    toolName: "ReadSource",
+    args: {
+      source: "selected-repositories",
+      scope: "github:list_repositories",
+      resource: "result",
+    },
+  });
+  expect(output.isError).toBe(false);
+  expect(output.result).toContain("owner/repo");
+  expect(output.result).not.toContain("other/private");
+  expect(output.result).not.toContain("PRIVATE");
+  expect(approvals).toEqual(["ReadSource", "LinkAction"]);
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(2);
+  expect(f.requests.at(-1)?.path).toEndWith("/actions/list_repositories");
 });
 const team = "12345678-1234-1234-1234-123456789abc";
 const page = "abcdef12abcdef12abcdef12abcdef12";

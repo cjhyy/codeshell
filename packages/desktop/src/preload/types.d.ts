@@ -610,6 +610,7 @@ export interface WorkspaceProfileSummary {
   agents: string[];
   mainInstruction: string | undefined;
   requires?: WorkspaceProfile["requires"];
+  sourceAccess?: WorkspaceProfile["sourceAccess"];
   active: boolean;
   portableMemory: boolean;
   exclusiveCapabilities: boolean;
@@ -1830,6 +1831,7 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
       agents: string[];
       mainInstruction: string | undefined;
       requires?: WorkspaceProfile["requires"];
+      sourceAccess?: WorkspaceProfile["sourceAccess"];
       active: boolean;
       portableMemory: boolean;
       exclusiveCapabilities: boolean;
@@ -1855,6 +1857,7 @@ export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionAp
       agents: string[];
       mainInstruction?: string;
       requires?: WorkspaceProfile["requires"];
+      sourceAccess?: WorkspaceProfile["sourceAccess"];
       portableMemory: boolean;
       exclusiveCapabilities: boolean;
       version?: string;

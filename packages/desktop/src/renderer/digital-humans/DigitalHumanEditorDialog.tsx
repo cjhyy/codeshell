@@ -43,6 +43,7 @@ import {
   type DigitalHumanSkillEntry,
 } from "./types";
 import { DigitalHumanRequirementsEditor } from "./DigitalHumanRequirementsEditor";
+import { parseSourceAccessDraft } from "./sourceAccessEditor";
 import {
   normalizeDigitalHumanRequirements,
   replaceDigitalHumanSkillSourceDraft,
@@ -107,6 +108,7 @@ export function DigitalHumanEditorDialog({
   const [mainInstruction, setMainInstruction] = React.useState("");
   const [portableMemory, setPortableMemory] = React.useState(true);
   const [exclusiveCapabilities, setExclusiveCapabilities] = React.useState(false);
+  const [sourceAccessText, setSourceAccessText] = React.useState("");
   const [selectedSkills, setSelectedSkills] = React.useState<Set<string>>(() => new Set());
   const [skillQuery, setSkillQuery] = React.useState("");
   const [skillFilter, setSkillFilter] = React.useState<SkillFilter>("all");
@@ -146,6 +148,9 @@ export function DigitalHumanEditorDialog({
     setMainInstruction(profile?.mainInstruction ?? "");
     setPortableMemory(profile?.portableMemory ?? true);
     setExclusiveCapabilities(profile?.exclusiveCapabilities ?? false);
+    setSourceAccessText(
+      profile?.sourceAccess === undefined ? "" : JSON.stringify(profile.sourceAccess, null, 2),
+    );
     setSelectedSkills(new Set(profile?.skills ?? []));
     setSkillQuery("");
     setSkillFilter("all");
@@ -398,6 +403,13 @@ export function DigitalHumanEditorDialog({
   const skillLimitExceeded = selectedSkills.size > DIGITAL_HUMAN_PROFILE_LIMITS.capabilityCount;
   const skillAdditionBlocked = selectedSkills.size >= DIGITAL_HUMAN_PROFILE_LIMITS.capabilityCount;
   const operationBusy = busy || installing || installingRequirements;
+  let sourceAccess: DigitalHumanProfileEntry["sourceAccess"];
+  let sourceAccessValid = true;
+  try {
+    sourceAccess = parseSourceAccessDraft(sourceAccessText);
+  } catch {
+    sourceAccessValid = false;
+  }
   const canSave =
     validId &&
     Boolean(label.trim()) &&
@@ -405,6 +417,7 @@ export function DigitalHumanEditorDialog({
     selectedSkillsWithinLimits &&
     skillInstallSourcesValid &&
     requirementValidation.valid &&
+    sourceAccessValid &&
     !operationBusy;
   const canSaveAndInstall = Boolean(
     canSave &&
@@ -424,6 +437,8 @@ export function DigitalHumanEditorDialog({
     mainInstruction !== (profile?.mainInstruction ?? "") ||
     portableMemory !== (profile?.portableMemory ?? true) ||
     exclusiveCapabilities !== (profile?.exclusiveCapabilities ?? false) ||
+    sourceAccessText !==
+      (profile?.sourceAccess === undefined ? "" : JSON.stringify(profile.sourceAccess, null, 2)) ||
     requirementsDirty ||
     selectedSkills.size !== (profile?.skills.length ?? 0) ||
     (profile?.skills ?? []).some((name) => !selectedSkills.has(name));
@@ -471,6 +486,7 @@ export function DigitalHumanEditorDialog({
         ...(mainInstruction.trim() ? { mainInstruction: mainInstruction.trim() } : {}),
         portableMemory,
         exclusiveCapabilities,
+        ...(sourceAccess !== undefined ? { sourceAccess } : {}),
         ...(profile?.version ? { version: profile.version } : {}),
       },
       { installRequirements },
@@ -1121,6 +1137,28 @@ export function DigitalHumanEditorDialog({
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="digital-human-source-access">
+                      {t("digitalHumans.editor.sourceAccess")}
+                    </Label>
+                    <Textarea
+                      id="digital-human-source-access"
+                      value={sourceAccessText}
+                      disabled={operationBusy}
+                      placeholder={
+                        '[{"sourceId":"team-docs","scopes":["github:list_issues"],"readPolicy":"ask"}]'
+                      }
+                      onChange={(event) => setSourceAccessText(event.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t("digitalHumans.editor.sourceAccessDescription")}
+                    </p>
+                    {!sourceAccessValid ? (
+                      <p role="alert" className="text-xs text-status-err">
+                        {t("digitalHumans.editor.sourceAccessInvalid")}
+                      </p>
+                    ) : null}
+                  </div>
                   <DigitalHumanRequirementsEditor
                     value={requires}
                     disabled={operationBusy}

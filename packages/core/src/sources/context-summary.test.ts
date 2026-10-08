@@ -6,6 +6,8 @@ import { SettingsManager } from "../settings/manager.js";
 import { bindSource } from "./binding.js";
 import { saveSourceDefinition } from "./catalog.js";
 import { buildSourcesContextSummary } from "./context-summary.js";
+import { saveWorkspaceProfile } from "../profile/store.js";
+import { activateWorkspaceProfile } from "../profile/activation.js";
 
 let home: string;
 let cwd: string;
@@ -26,6 +28,42 @@ afterEach(() => {
 });
 
 describe("buildSourcesContextSummary", () => {
+  test("dynamic summary uses Session pin and current Profile policy, and disappears when the live pin changes", () => {
+    const settings = new SettingsManager(cwd, "full");
+    saveSourceDefinition({
+      id: "docs",
+      kind: "mock",
+      label: "Docs",
+      adapterConfig: {},
+      enabled: true,
+    });
+    bindSource(settings, cwd, { sourceId: "docs", scopes: ["alpha", "beta"], readPolicy: "ask" });
+    saveWorkspaceProfile({
+      name: "blocked",
+      label: "Blocked",
+      basePreset: "general",
+      sourceAccess: [],
+    });
+    saveWorkspaceProfile({
+      name: "pinned",
+      label: "Pinned",
+      basePreset: "general",
+      sourceAccess: [{ sourceId: "docs", scopes: ["beta"], readPolicy: "ask" }],
+    });
+    activateWorkspaceProfile(settings, "blocked", cwd);
+    expect(buildSourcesContextSummary({ cwd, settings })).toBe("");
+    const input = { cwd, settings, workspaceProfileName: "pinned" };
+    expect(buildSourcesContextSummary(input)).toContain("beta");
+    expect(buildSourcesContextSummary(input)).not.toContain("alpha");
+    expect(buildSourcesContextSummary({ ...input, isSourceProfileCurrent: () => false })).toBe("");
+    saveWorkspaceProfile({
+      name: "pinned",
+      label: "Pinned",
+      basePreset: "general",
+      sourceAccess: [],
+    });
+    expect(buildSourcesContextSummary(input)).toBe("");
+  });
   test("returns an empty string when the workspace has no bound sources", () => {
     const settings = new SettingsManager(cwd, "full");
 

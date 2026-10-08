@@ -87,6 +87,100 @@ afterEach(async () => {
 });
 
 describe("DataSourceCatalogSection", () => {
+  test("creates a fixed Link read view from masked saved connections and excludes writes", async () => {
+    ensureMiniDom();
+    const saved: SourceDefinition[] = [];
+    Object.assign(window, {
+      codeshell: {
+        listSourceCatalog: async () => [],
+        saveSourceCatalog: async (definition: SourceDefinition) => void saved.push(definition),
+        deleteSourceCatalog: async () => undefined,
+        credentials: {
+          list: async () => [
+            {
+              id: "link-alice",
+              label: "Alice GitHub",
+              type: "oauth",
+              hasSecret: true,
+              meta: {
+                linkProvider: "github",
+                linkExecutionRuntime: "server",
+                linkCapabilityIds: ["github.list_issues", "github.create_issue"],
+              },
+            },
+          ],
+        },
+        links: {
+          listLocalProviders: async () => [
+            {
+              id: "github",
+              actions: [
+                {
+                  id: "list_issues",
+                  title: "Issues",
+                  description: "Read selected issues",
+                  risk: "read",
+                },
+                { id: "create_issue", title: "Write issue", risk: "write" },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    const container = await renderSection();
+    const input = (name: string) =>
+      findElements(container, "INPUT").find((element) => reactPropsOf(element).name === name);
+    await act(async () => {
+      reactPropsOf(input("source-id")).onChange({ target: { value: "team-issues" } });
+      reactPropsOf(input("source-label")).onChange({ target: { value: "Team issues" } });
+      reactPropsOf(findElements(container, "SELECT")[0]).onChange({ target: { value: "link" } });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElements(container, "SELECT")[1]).onChange({
+        target: { value: "link-alice" },
+      });
+      await flushMicrotasks();
+    });
+    const actionSelect = findElements(container, "SELECT")[2];
+    await act(async () => {
+      reactPropsOf(actionSelect).onChange({ target: { value: "create_issue" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(withDataAttribute(container, "BUTTON", "data-source-create")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(saved).toEqual([]);
+    await act(async () => {
+      reactPropsOf(actionSelect).onChange({ target: { value: "list_issues" } });
+      reactPropsOf(findElements(container, "TEXTAREA")[0]).onChange({
+        target: { value: '{"owner":"acme","repo":"docs","limit":10}' },
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(withDataAttribute(container, "BUTTON", "data-source-create")[0]).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(saved).toEqual([
+      {
+        id: "team-issues",
+        kind: "link",
+        label: "Team issues",
+        credentialRef: "link-alice",
+        enabled: true,
+        adapterConfig: {
+          providerId: "github",
+          action: "list_issues",
+          params: { owner: "acme", repo: "docs", limit: 10 },
+        },
+      },
+    ]);
+  });
   test("renders source id, kind, label, and enabled state", async () => {
     ensureMiniDom();
     Object.assign(window, {

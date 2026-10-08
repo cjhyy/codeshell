@@ -250,6 +250,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     // just rejected.
     ...options.contextOverrides,
     sessionId: options.businessSessionId,
+    settingsScope: options.settingsScope ?? "project",
     externalRuntime: true,
     // This bridge owns tool calls, not a native model loop that can apply a
     // context rollover. Never expose native working-memory controls here.
