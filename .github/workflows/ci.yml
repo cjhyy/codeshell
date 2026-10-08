@@ -171,7 +171,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          # Install unrelated monorepo native build tools with their supported
+          # current Node. The production parser below still runs on each exact
+          # minimum/runtime version; this does not raise Core's Node minimum.
+          node-version: "24"
           package-manager-cache: false
       - uses: oven-sh/setup-bun@v2
         with:
@@ -182,6 +185,10 @@ jobs:
         run: |
           bun run --filter '@cjhyy/code-shell-link' build
           bun run --filter '@cjhyy/code-shell-core' build
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
       - name: native Node document and authority smoke
         run: bun run test:upload-documents
 
