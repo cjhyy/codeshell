@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, session, systemPreferences } from "electron";
+import { app, BrowserWindow, dialog, session, shell, systemPreferences } from "electron";
 import { basename, join } from "node:path";
 import {
   cloudWorkbenchPartition,
+  cloudWorkbenchBrowserHandoffUrl,
   createCloudWorkbenchNavigation,
   isCloudWorkbenchOrigin,
   normalizeCloudWorkbenchAddress,
@@ -92,7 +93,20 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
     })().then(callback, () => callback(false));
   });
   win.on("page-title-updated", (event) => event.preventDefault());
-  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    const launch =
+      isCloudWorkbenchOrigin(address, win.webContents.getURL()) &&
+      cloudWorkbenchBrowserHandoffUrl(address, url);
+    if (launch)
+      void shell.openExternal(launch).catch(() => {
+        if (!win.isDestroyed())
+          void dialog.showMessageBox(win, {
+            type: "error",
+            message: "无法打开系统浏览器，请重试授权。",
+          });
+      });
+    return { action: "deny" };
+  });
   const navigation = createCloudWorkbenchNavigation(address);
   win.webContents.on("will-navigate", (event, target) => {
     if (!navigation.allows(win.webContents.getURL(), target)) event.preventDefault();

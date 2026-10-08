@@ -177,7 +177,7 @@ export async function verifyNativeLinkUI({
       auth.setDefaultTimeout(15000);
       auth.on("pageerror", onError);
       await auth.goto(url);
-      await auth.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
+      await auth.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).waitFor();
       assert.ok(new URL(auth.url()).origin === issuer);
       assert.equal(await auth.evaluate(() => typeof window.codeshell), "undefined");
       return auth;
@@ -206,7 +206,9 @@ export async function verifyNativeLinkUI({
         fullPage: true,
         animations: "disabled",
       });
-      await auth.getByRole("button", { name: deny ? "取消" : "允许只读访问", exact: true }).click();
+      await auth
+        .getByRole("button", { name: deny ? "取消" : "允许读取和创建 Issue", exact: true })
+        .click();
       if (deny) {
         await auth.getByText("授权响应已处理", { exact: true }).waitFor();
         assert.equal(await auth.getByText("连接已完成", { exact: true }).count(), 0);
@@ -319,7 +321,7 @@ export async function verifyNativeLinkUI({
       await prepareConsent(auth);
       heldCallback = undefined;
       holdCallback = true;
-      await auth.getByRole("button", { name: "允许只读访问", exact: true }).click();
+      await auth.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).click();
       const url = await until(
         () => Promise.resolve(heldCallback),
         Boolean,

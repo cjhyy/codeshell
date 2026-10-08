@@ -10,6 +10,7 @@ import { createProjectRuntimeProxy, type RuntimeTarget } from "./proxy.js";
 const PROJECT_A = "9f6ebd0c-5589-4cac-84db-bd6c54bf6c91";
 const PROJECT_B = "65902b21-b2d4-493e-a82c-3bcb44f39f66";
 const ORIGIN = "https://codeshell.example";
+const AUTHORIZATION_ID = "a47bc1fe-9667-42b1-a59b-9549cbdc848d";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const close of cleanups.splice(0).reverse()) await close();
@@ -61,6 +62,12 @@ async function fixture() {
   const connections = new Map<WebSocket, string>();
   const assetToken = randomBytes(32).toString("base64url");
   const instanceId = randomUUID();
+  const linkState = randomBytes(32).toString("base64url");
+  const linkUrl = new URL("https://link.example/oauth/authorize");
+  linkUrl.search = new URLSearchParams({
+    state: linkState,
+    redirect_uri: ORIGIN + "/link/callback",
+  }).toString();
   let nextPrepareExpiry = Date.now() + 30_000;
   let releaseLogin: (() => void) | undefined;
   let pauseLogin = false;
@@ -114,7 +121,21 @@ async function fixture() {
         body: (await body(req)).toString(),
       });
       res.setHeader("Set-Cookie", "runtime-secret=must-not-reach-browser; HttpOnly");
-      if (req.url === "/api/v1/panels/runtime/prepare") {
+      if (req.url === "/api/v1/links") {
+        json(res, { capabilities: { authorizationSteps: 1, remoteAuth: true }, connections: [] });
+      } else if (req.url === `/api/v1/links/authorizations/${AUTHORIZATION_ID}`) {
+        json(res, {
+          id: AUTHORIZATION_ID,
+          providerId: "figma",
+          state: "pending",
+          redirect: {
+            authorizationUrl: linkUrl.href,
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          },
+        });
+      } else if (req.url === `/api/v1/links/authorizations/${AUTHORIZATION_ID}/complete`) {
+        json(res, { id: AUTHORIZATION_ID, providerId: "figma", state: "connected" });
+      } else if (req.url === "/api/v1/panels/runtime/prepare") {
         json(res, {
           instanceId,
           src: `/api/v1/panel-assets/${assetToken}/index.html`,
@@ -229,6 +250,7 @@ async function fixture() {
   return {
     proxy,
     origin,
+    linkState,
     fetchProject,
     socket,
     requests,
@@ -269,6 +291,73 @@ async function fixture() {
     resolveWaiting: () => !!releaseResolve,
   };
 }
+
+test("external browser callback returns to its captured project and lease without browser cookies", async () => {
+  const f = await fixture();
+  const prepared = await f.fetchProject(
+    `/api/v1/links/authorizations/${AUTHORIZATION_ID}/browser`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    },
+  );
+  expect(prepared.status).toBe(200);
+  const launch = new URL((await prepared.json()).launchUrl);
+  expect(launch.origin).toBe(ORIGIN);
+  const opened = await fetch(f.origin + launch.pathname + launch.search, { redirect: "manual" });
+  expect(opened.status).toBe(303);
+  const completed = await fetch(
+    `${f.origin}/link/callback?state=${f.linkState}&code=private-code`,
+    { redirect: "manual" },
+  );
+  expect(completed.status).toBe(303);
+  expect(completed.headers.get("location")).toBe("/link/authorization-result");
+  expect(completed.headers.get("set-cookie")).toBeNull();
+  const exchange = f.requests.filter((request) => request.url.endsWith("/complete"));
+  expect(exchange).toHaveLength(1);
+  expect(exchange[0].headers.cookie).toBe(f.logins[0].token);
+  expect(JSON.parse(exchange[0].body).callbackUrl).toBe(
+    `${ORIGIN}/link/callback?state=${f.linkState}&code=private-code`,
+  );
+});
+
+test("the public project gateway adds browser handoff for a compatible older private runtime", async () => {
+  const f = await fixture();
+  const response = await f.fetchProject("/api/v1/links");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("set-cookie")).toBeNull();
+  expect((await response.json()).capabilities).toEqual({
+    authorizationSteps: 1,
+    remoteAuth: true,
+    browserHandoff: 1,
+  });
+});
+
+test("project restart or owner revocation invalidates an external browser callback", async () => {
+  for (const revoke of ["owner", "project", "generation"]) {
+    const f = await fixture();
+    const prepared = await f.fetchProject(
+      `/api/v1/links/authorizations/${AUTHORIZATION_ID}/browser`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      },
+    );
+    const launch = new URL((await prepared.json()).launchUrl);
+    await fetch(f.origin + launch.pathname + launch.search, { redirect: "manual" });
+    if (revoke === "owner") {
+      f.sessions.delete("owner-a");
+      await f.proxy.revokeOwner("owner-a");
+    } else if (revoke === "project") await f.proxy.revokeProject(PROJECT_A);
+    else f.setGeneration(2);
+    await fetch(`${f.origin}/link/callback?state=${f.linkState}&code=private-code`, {
+      redirect: "manual",
+    });
+    expect(f.requests.filter((request) => request.url.endsWith("/complete"))).toHaveLength(0);
+  }
+});
 
 test("isolates inner cookies by outer session, project and generation; strips browser credentials and workspace selectors", async () => {
   const f = await fixture();

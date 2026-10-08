@@ -79,6 +79,7 @@ export function HubLinks({
   const [authModeId, setAuthModeId] = React.useState<string>();
   const attemptTargets = React.useRef(new Map<string, { target: string; scope: ApiScope }>());
   const handoffs = React.useRef(new Set<string>());
+  const [browserLaunch, setBrowserLaunch] = React.useState<{ id: string; url: string }>();
   const controller = React.useMemo(
     () =>
       new LinkAuthorizationController({
@@ -379,6 +380,37 @@ export function HubLinks({
     );
     if (value?.state !== "pending" || getLinkAuthorizationStep(value)?.kind !== "redirect") return;
     try {
+      if (snapshot?.capabilities.browserHandoff === 1) {
+        const attempt = attemptTargets.current.get(value.id)!;
+        const target = new URL(attempt.target, window.location.origin);
+        target.pathname += "/browser";
+        const handoff = await api<{ launchUrl: string }>(
+          target.pathname + target.search,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          },
+          attempt.scope,
+        );
+        const launch = new URL(handoff.launchUrl);
+        if (
+          launch.origin !== window.location.origin ||
+          launch.pathname !== "/link/authorize" ||
+          launch.username ||
+          launch.password ||
+          launch.hash ||
+          launch.searchParams.size !== 1 ||
+          !/^[A-Za-z0-9_-]{43}$/.test(launch.searchParams.get("ticket") ?? "")
+        )
+          throw new Error("授权浏览器入口无效，请重新连接。");
+        if (
+          controller.getSnapshot().authorization?.id === value.id &&
+          controller.getSnapshot().authorization?.state === "pending"
+        )
+          setBrowserLaunch({ id: value.id, url: launch.href });
+        return;
+      }
       const issuer = snapshot?.remoteServer?.issuer;
       if (!issuer) throw new Error("当前 Host 尚未配置授权服务。");
       const url = rememberRemoteLink(value, issuer, scope);
@@ -659,12 +691,26 @@ export function HubLinks({
                 {flow.authorization ? (
                   <LinkAuthorizationStepView
                     authorization={flow.authorization}
-                    busy={flow.busy || !!conflict}
+                    busy={
+                      flow.busy ||
+                      !!conflict ||
+                      (snapshot?.capabilities.browserHandoff === 1 &&
+                        getLinkAuthorizationStep(flow.authorization)?.kind === "redirect" &&
+                        browserLaunch?.id !== flow.authorization.id)
+                    }
                     onRespond={(response) => {
                       void controller.respond(response);
                     }}
                     onOpenUrl={(url) => {
-                      window.open(url, "_blank", "noopener,noreferrer");
+                      const external =
+                        snapshot?.capabilities.browserHandoff === 1 &&
+                        getLinkAuthorizationStep(flow.authorization!)?.kind === "redirect";
+                      const target = external
+                        ? browserLaunch && browserLaunch.id === flow.authorization?.id
+                          ? browserLaunch.url
+                          : undefined
+                        : url;
+                      if (target) window.open(target, "_blank", "noopener,noreferrer");
                     }}
                     onCopy={(value) => {
                       void navigator.clipboard?.writeText(value).catch(report);
