@@ -14,7 +14,11 @@ import {
   completeRemoteLinkAuthorization,
   executeRemoteLinkAction,
 } from "./remote.js";
-import { REMOTE_LINK_PROVIDER_ADAPTERS, type RemoteLinkProviderId } from "./remote-adapters.js";
+import {
+  REMOTE_LINK_PROVIDER_ADAPTERS,
+  prepareRemoteLinkAction,
+  type RemoteLinkProviderId,
+} from "./remote-adapters.js";
 import { getLocalLinkProvider, validateLocalLinkToken } from "./providers.js";
 
 const cleanups: Array<() => void | Promise<void>> = [];
@@ -516,4 +520,33 @@ test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bea
     const provider = getLocalLinkProvider(providerId)!;
     expect(provider.actions.length).toBe(2);
   }
+});
+
+test("execution rechecks the stored token scope intersection before HTTP", async () => {
+  const f = await fixture("gitlab");
+  const credential = await f.connect();
+  const secret = JSON.parse(credential.secret!);
+  secret.scope = "gitlab:list_projects";
+  f.store.save("user", { ...credential, secret: JSON.stringify(secret) });
+  const before = f.requests.length;
+  await expect(f.execute("list_issues")).rejects.toMatchObject({ code: "reconnect" });
+  expect(f.requests).toHaveLength(before);
+});
+
+test("remote parameters retain reviewed provider limits and reject unsupported compound cursors", () => {
+  const group = (providerId: RemoteLinkProviderId) => [
+    {
+      id: REMOTE_LINK_PROVIDER_ADAPTERS.find((adapter) => adapter.id === providerId)!.group,
+      items: [{ id: resources[providerId], label: "Selected" }],
+    },
+  ];
+  expect(prepareRemoteLinkAction("slack", "list_channels", { limit: 200 }, group("slack"))).toEqual(
+    { limit: 200 },
+  );
+  expect(prepareRemoteLinkAction("linear", "list_issues", { limit: 100 }, group("linear"))).toEqual(
+    { limit: 50 },
+  );
+  expect(() =>
+    prepareRemoteLinkAction("todoist", "list_tasks", { cursor: "unbound" }, group("todoist")),
+  ).toThrow();
 });

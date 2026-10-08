@@ -536,6 +536,24 @@ export async function executeRemoteLinkAction(
       !value.expiresAt
     )
       throw new RemoteLinkError("reconnect");
+    const scopes = typeof value.scope === "string" ? value.scope.split(/\s+/) : [];
+    const capabilities = credential.meta?.linkCapabilityIds ?? [];
+    const adapter = getRemoteLinkProviderAdapter(providerId)!;
+    if (
+      !scopes.length ||
+      new Set(scopes).size !== scopes.length ||
+      scopes.some(
+        (scope) =>
+          !(adapter.actions as readonly string[]).some(
+            (action) => scope === `${providerId}:${action}`,
+          ),
+      ) ||
+      !capabilities.length ||
+      new Set(capabilities).size !== capabilities.length ||
+      capabilities.some((capability) => !scopes.includes(capability.replace(".", ":")))
+    )
+      throw new RemoteLinkError("reconnect");
+    if (!scopes.includes(`${providerId}:${input.action}`)) throw new RemoteLinkError("forbidden");
     return value as typeof value & {
       refreshToken: string;
       clientId: string;

@@ -289,7 +289,13 @@ export function prepareRemoteLinkAction(
       params,
       "limit",
       30,
-      providerId === "slack" && action === "get_channel_history" ? 15 : 100,
+      providerId === "slack"
+        ? action === "get_channel_history"
+          ? 15
+          : 200
+        : providerId === "linear"
+          ? 50
+          : 100,
     );
   if (providerId === "notion" && action === "search") {
     const query = stringParam(params, "query", { maxLength: 200 });
@@ -421,9 +427,10 @@ export function normalizeRemoteLinkActionResult(
   if (!record) throw new Error("Invalid remote Link result");
   if (providerId === "figma") {
     if (action === "get_file")
-      return pick(record, ["name", "lastModified", "version", "role", "pages"]);
+      return pick(record, ["name", "lastModified", "version", "role", "pages", "truncated"]);
     if (!Array.isArray(record.comments)) throw new Error("Invalid remote Link result");
     return {
+      ...(typeof record.truncated === "boolean" ? { truncated: record.truncated } : {}),
       comments: record.comments
         .slice(0, 100)
         .map((value) =>
@@ -481,7 +488,13 @@ export function normalizeRemoteLinkActionResult(
       intParam(
         params,
         "limit",
-        providerId === "slack" && action === "get_channel_history" ? 15 : 100,
+        providerId === "slack"
+          ? action === "get_channel_history"
+            ? 15
+            : 200
+          : providerId === "linear"
+            ? 50
+            : 100,
         200,
       ),
     ),
