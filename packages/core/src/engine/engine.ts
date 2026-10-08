@@ -1430,63 +1430,71 @@ export class Engine {
   /** Remove all context derived from a revoked instruction, retaining the audit transcript. */
   private clearInstructionContext(
     session: SessionBundle,
-    retainedSnapshots = (session.state.instructionSnapshots ?? []).filter((snapshot) =>
-      this.composition.engine.instructionBindings.some((provider) =>
-        provider.value.isCurrent(snapshot),
-      ),
-    ),
+    retainedSnapshots?: import("../skills/instruction-bindings.js").InstructionSnapshot[],
   ): void {
     const expectedRunId = this.runIds.get(session.state) ?? session.state.runId;
     const latest = this.sessionManager.readSessionState(session.state.sessionId);
     if (!latest) throw new Error("Could not read instruction context owner");
     // A former Engine's idle watch must not clear a newer run's accepted configuration.
     if (latest.runId !== expectedRunId) return;
-    const events = session.transcript.getEvents();
-    const start = events.findIndex(
-      (event) => event.id === session.state.instructionContextStartEventId,
+    retainedSnapshots ??= (session.state.instructionSnapshots ?? []).filter((snapshot) =>
+      this.composition.engine.instructionBindings.some((provider) =>
+        provider.value.isCurrent(snapshot),
+      ),
     );
-    const retainedEvents = events.filter(
-      (event, index) =>
-        (start >= 0 && index < start) ||
-        (event.type === "message" &&
-          event.data.role === "user" &&
-          event.data.injected !== true &&
-          event.data.authority !== "agent"),
-    );
-    const retained = Transcript.fromMemoryEvents(
-      "instruction-revocation",
-      retainedEvents,
-    ).toMessagesWithIndex();
-    const through = events.at(-1);
-    if (through) {
-      const note = session.transcript.appendContextNote(
-        "Instruction revision revoked; prior effective context cleared.",
-        through.id,
+    const hadInstructionContext = session.state.instructionContextStartEventId !== undefined;
+    // A frozen but currently disabled revision has no derived context to discard.
+    // Preserve the ordinary replies produced after its earlier context was cleared.
+    if (hadInstructionContext) {
+      const events = session.transcript.getEvents();
+      const start = events.findIndex(
+        (event) => event.id === session.state.instructionContextStartEventId,
       );
-      if (
-        !note ||
-        !session.transcript.appendContextCheckpoint({
-          version: 1,
-          noteId: note.id,
-          coveredThroughEventId: through.id,
-          messages: retained.messages.length
-            ? retained.messages
-            : [
-                {
-                  role: "user",
-                  content: "Instruction revision revoked; continue only from new user input.",
-                },
-              ],
-          clientMessageIds: [...retained.liveIndexByClientMessageId],
-        })
-      )
-        throw new Error("Could not clear revoked instruction context");
+      const retainedEvents = events.filter(
+        (event, index) =>
+          (start >= 0 && index < start) ||
+          (event.type === "message" &&
+            event.data.role === "user" &&
+            event.data.injected !== true &&
+            event.data.authority !== "agent"),
+      );
+      const retained = Transcript.fromMemoryEvents(
+        "instruction-revocation",
+        retainedEvents,
+      ).toMessagesWithIndex();
+      const through = events.at(-1);
+      if (through) {
+        const note = session.transcript.appendContextNote(
+          "Instruction revision revoked; prior effective context cleared.",
+          through.id,
+        );
+        if (
+          !note ||
+          !session.transcript.appendContextCheckpoint({
+            version: 1,
+            noteId: note.id,
+            coveredThroughEventId: through.id,
+            messages: retained.messages.length
+              ? retained.messages
+              : [
+                  {
+                    role: "user",
+                    content: "Instruction revision revoked; continue only from new user input.",
+                  },
+                ],
+            clientMessageIds: [...retained.liveIndexByClientMessageId],
+          })
+        )
+          throw new Error("Could not clear revoked instruction context");
+      }
     }
     session.state.instructionContextStartEventId = undefined;
     session.state.instructionContextRevisions = [];
     session.state.instructionSnapshots = retainedSnapshots;
-    session.state.invokedSkills = [];
-    session.state.contextUsageAnchor = undefined;
+    if (hadInstructionContext) {
+      session.state.invokedSkills = [];
+      session.state.contextUsageAnchor = undefined;
+    }
     if (
       !this.sessionManager.saveStateOrUpdateFields(
         session.state,
@@ -1494,13 +1502,13 @@ export class Engine {
           instructionSnapshots: retainedSnapshots,
           instructionContextStartEventId: undefined,
           instructionContextRevisions: [],
-          invokedSkills: [],
-          contextUsageAnchor: undefined,
+          ...(hadInstructionContext ? { invokedSkills: [], contextUsageAnchor: undefined } : {}),
         },
         expectedRunId,
       )
     )
       throw new Error("Could not persist cleared instruction context");
+    if (!hadInstructionContext) return;
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
     if (

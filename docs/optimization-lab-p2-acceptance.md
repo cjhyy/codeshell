@@ -16,6 +16,7 @@ Verified scenarios:
 - Project/model selection, exact receipt schema, source revision changes and revision-protected idempotent revocation.
 - Two fixed Skills across Profile/allowlist changes, continuous restricted runs retaining new normal replies, and a Session override preserving the other Skill.
 - Two Engines successively owning the same durable Session: revoking the former project binding preserves the newer Session override.
+- Revoking a frozen revision after disabling instructions preserves subsequent ordinary replies.
 - Idle project-binding revocation while another Session uses its own override; active override revocation aborting the current run and rejecting its late derived reply.
 - Original user messages and audit history retained; edited restored snapshot bodies rejected; edited source Skills preserved.
 - Dedicated native IPC adoption, cancellation/evidence-change revalidation, preload routing and explicit Session scope selection in the existing Lab page.

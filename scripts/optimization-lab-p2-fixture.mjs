@@ -362,6 +362,12 @@ try {
     assert.ok(seen.at(-1).prompt.includes("ADOPTED_INSTRUCTION"));
     assert.ok(seen.at(-1).prompt.includes("SECOND_ADOPTED"));
     const initialReply = `DERIVED_RESPONSE_${seen.length}`;
+    await client.run("USER_INACTIVE_BOUND", { sessionId: "inactive", behaviorMode: "fixture" });
+    await client.run("USER_INACTIVE_NORMAL", {
+      sessionId: "inactive",
+      behaviorMode: "no-instructions",
+    });
+    const inactiveReply = `DERIVED_RESPONSE_${seen.length}`;
     await client.run("USER_IDLE_TASK", { sessionId: "idle", behaviorMode: "fixture" });
     await client.run("USER_FORMER_OWNER", { sessionId: "ownership", behaviorMode: "fixture" });
     ownershipBinding = store.adopt({
@@ -481,6 +487,13 @@ try {
       session.state.instructionSnapshots.map((snapshot) => snapshot.name),
       [secondName],
     );
+    await client.run("USER_INACTIVE_AFTER_REVOKE", {
+      sessionId: "inactive",
+      behaviorMode: "no-instructions",
+    });
+    assert.ok(!seen.at(-1).prompt.includes("ADOPTED_INSTRUCTION"));
+    assert.ok(!seen.at(-1).prompt.includes("SECOND_ADOPTED"));
+    assert.ok(JSON.stringify(seen.at(-1).messages).includes(inactiveReply));
     await client.run("USER_AFTER_REVOKE", { sessionId: "ordinary", behaviorMode: "fixture" });
     assert.ok(!seen.at(-1).prompt.includes("ADOPTED_INSTRUCTION"));
     assert.ok(!seen.at(-1).prompt.includes("SESSION_ADOPTED"));
@@ -534,6 +547,7 @@ try {
       sessionOverridePreservesOtherSkills: true,
       idleRevocationPreservesActiveSession: true,
       staleOwnerCannotReplaceNewBinding: true,
+      inactiveRevocationPreservesNormalReplies: true,
       sourceRevisionCheckedOnResume: true,
       originalMessagesRetained: true,
       revokedRunSignalAborted: true,
