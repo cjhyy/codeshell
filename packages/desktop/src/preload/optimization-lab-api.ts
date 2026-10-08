@@ -8,5 +8,7 @@ export function createOptimizationLabApi(ipc: Pick<IpcRenderer, "invoke">): Opti
     authorize: (input) => ipc.invoke("optimizationLab:authorize", input),
     exportFile: (input) => ipc.invoke("optimizationLab:exportFile", input),
     importGrading: (input) => ipc.invoke("optimizationLab:importGrading", input),
+    importDataset: (input) => ipc.invoke("optimizationLab:importDataset", input),
+    exportDataset: (input) => ipc.invoke("optimizationLab:exportDataset", input),
   };
 }

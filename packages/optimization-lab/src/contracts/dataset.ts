@@ -55,11 +55,19 @@ export function validateDataset(raw: unknown): DatasetValidation {
   if (!parsed.success) {
     return {
       ok: false,
-      issues: parsed.error.issues.map((issue) => ({
-        level: "error" as const,
-        code: "schema",
-        message: `${issue.path.join(".") || "(root)"}: ${issue.message}`,
-      })),
+      issues: parsed.error.issues.map((issue) => {
+        const cases = (raw as { cases?: unknown } | null)?.cases;
+        const item =
+          issue.path[0] === "cases" && typeof issue.path[1] === "number" && Array.isArray(cases)
+            ? cases[issue.path[1]]
+            : undefined;
+        return {
+          level: "error" as const,
+          code: "schema",
+          message: `${issue.path.join(".") || "(root)"}: ${issue.message}`,
+          ...(typeof item?.id === "string" ? { caseId: item.id } : {}),
+        };
+      }),
     };
   }
   const dataset = parsed.data;

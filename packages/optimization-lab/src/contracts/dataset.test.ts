@@ -56,6 +56,14 @@ describe("validateDataset", () => {
     expect(result.ok).toBe(false);
     expect(result.issues.every((issue) => issue.code === "schema")).toBe(true);
     expect(result.issues[0]!.message).toContain("cases.0");
+    expect(result.issues.every((issue) => issue.caseId === "BAD ID")).toBe(true);
+  });
+
+  test("dataset-level schema issues remain visible without a case identity", () => {
+    const result = validateDataset({ ...healthy(), title: "" });
+    expect(result.issues[0]).toMatchObject({ code: "schema" });
+    expect(result.issues[0]?.caseId).toBeUndefined();
+    expect(validateDataset(null).ok).toBe(false);
   });
 
   test("rejects duplicate ids and duplicate inputs", () => {

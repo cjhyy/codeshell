@@ -22,11 +22,20 @@ test("lab preload has dedicated authorization and native file channels, no raw g
   });
   await api.exportFile({ target, id: "one", kind: "grading" });
   await api.importGrading({ target, id: "one", expectedRevision: 4 });
+  await api.importDataset({ target });
+  await api.exportDataset({ target, text: '{\n  "cases": []\n}\n' });
   expect(calls.map((call) => call[0])).toEqual([
     "optimizationLab:query",
     "optimizationLab:authorize",
     "optimizationLab:exportFile",
     "optimizationLab:importGrading",
+    "optimizationLab:importDataset",
+    "optimizationLab:exportDataset",
+  ]);
+  expect(calls[4]).toEqual(["optimizationLab:importDataset", { target }]);
+  expect(calls[5]).toEqual([
+    "optimizationLab:exportDataset",
+    { target, text: '{\n  "cases": []\n}\n' },
   ]);
   expect("grant" in api).toBe(false);
 });

@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { OptimizationLabPage, type LabSnapshot } from "./OptimizationLabPage";
+import { datasetDrafts } from "./dataset-drafts";
 
 function descendants(node: Element): Element[] {
   return [node, ...Array.from(node.children).flatMap(descendants)];
@@ -18,6 +19,10 @@ describe("Optimization Lab manual Desktop workflow", () => {
     accepted: boolean,
     enabled: boolean;
   let snapshot: LabSnapshot;
+  let imported: string | null;
+  let importPromise: Promise<string | null> | undefined;
+  let validationPromise: Promise<any> | undefined;
+  let exports: Array<{ target: { projectId: string }; text: string }>;
   const find = (id: string) =>
     descendants(container).find((node) => props(node)["data-testid"] === `optimization-lab-${id}`)!;
   const click = async (id: string) => {
@@ -28,6 +33,11 @@ describe("Optimization Lab manual Desktop workflow", () => {
   };
   beforeEach(async () => {
     ensureMiniDom();
+    datasetDrafts.clear();
+    imported = null;
+    importPromise = undefined;
+    validationPromise = undefined;
+    exports = [];
     calls = [];
     authorizations = [];
     accepted = false;
@@ -69,7 +79,8 @@ describe("Optimization Lab manual Desktop workflow", () => {
                 ],
               };
             if (type === "list") return [];
-            if (type === "validate_dataset") return { ok: true, summary: { dev: 3, holdout: 3 } };
+            if (type === "validate_dataset")
+              return validationPromise ?? { ok: true, issues: [], summary: { dev: 3, holdout: 3 } };
             if (type === "freeze_dataset") return { datasetHash: "b".repeat(64) };
             if (type === "start")
               snapshot = {
@@ -95,6 +106,11 @@ describe("Optimization Lab manual Desktop workflow", () => {
           },
           exportFile: async () => true,
           importGrading: async () => structuredClone(snapshot),
+          importDataset: async () => importPromise ?? imported,
+          exportDataset: async (input: any) => {
+            exports.push(input);
+            return true;
+          },
         },
       },
     });
@@ -168,5 +184,56 @@ describe("Optimization Lab manual Desktop workflow", () => {
     expect(calls.some((call) => call.type === "continue")).toBe(false);
     await click("continue");
     expect(calls.find((call) => call.type === "continue")?.input.expectedRevision).toBe(6);
+  });
+  test("imports retain raw drafts per project; export preserves invalid JSON without queries", async () => {
+    await mount("project-a");
+    imported = "{broken JSON for repair";
+    await click("import-dataset");
+    await click("export-dataset");
+    expect(exports.at(-1)).toEqual({ target: { projectId: "project-a" }, text: imported });
+    expect(datasetDrafts.get("project-a")).toBe(imported);
+    await mount("project-b");
+    await click("export-dataset");
+    expect(exports.at(-1)?.text).not.toBe(imported);
+    await mount("project-a");
+    await click("export-dataset");
+    expect(exports.at(-1)?.text).toBe(imported);
+    expect(calls.every((call) => ["discover", "list"].includes(call.type))).toBe(true);
+  });
+  test("cancelled import keeps the draft; late import cannot populate another project", async () => {
+    datasetDrafts.set("project-a", "original draft");
+    await mount("project-a");
+    await click("import-dataset");
+    expect(datasetDrafts.get("project-a")).toBe("original draft");
+    let finish!: (text: string) => void;
+    importPromise = new Promise((resolve) => {
+      finish = resolve;
+    });
+    await click("import-dataset");
+    await mount("project-b");
+    await act(async () => {
+      finish("late private A material");
+      await flushMicrotasks();
+    });
+    await click("export-dataset");
+    expect(exports.at(-1)?.target.projectId).toBe("project-b");
+    expect(exports.at(-1)?.text).not.toContain("private A");
+    expect(datasetDrafts.get("project-a")).toBe("original draft");
+    expect(datasetDrafts.has("project-b")).toBe(false);
+  });
+  test("project switch discards late dataset validation and never freezes into the new project", async () => {
+    let finish!: (value: any) => void;
+    validationPromise = new Promise((resolve) => {
+      finish = resolve;
+    });
+    await mount("project-a");
+    await click("validate");
+    await mount("project-b");
+    await act(async () => {
+      finish({ ok: true });
+      await flushMicrotasks();
+    });
+    expect(calls.some((call) => call.type === "freeze_dataset")).toBe(false);
+    expect(find("validation")).toBeUndefined();
   });
 });

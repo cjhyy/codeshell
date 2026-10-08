@@ -13,7 +13,10 @@ model judging and ordinary-chat adoption are deferred.
    this worker-wide module. TUI and server do not load it.
 2. Open **Optimization Lab** in the sidebar with a trusted local project selected.
    Choose a single-file Skill and eligible target/optimizer text connections.
-3. Edit/validate the sample JSON and prepare a frozen plan. Review external data,
+3. Edit the dataset form or raw JSON, or import a local JSON file. Add/copy cases,
+   edit rubric and hard assertions, then validate/freeze and prepare a plan.
+   Drafts stay isolated per project in the current window; export JSON to retain
+   them across restarts. Review external data,
    model endpoints, request/time limits, final-stage allocation and unknown bounds.
 4. Confirm the native authorization dialog, then explicitly start. Preparing,
    cancelling authorization and granting alone send no model requests.
@@ -50,7 +53,8 @@ conditions cannot establish improvement or cost savings. Small samples remain
 exploratory, and `text_fragment` does not validate Skill loading or an Agent run.
 
 No paid provider experiment or real-world benefit is claimed by the automated
-acceptance. P1b evidence import/editor/trial UX and P2 isolated execution,
+acceptance. The P1b dataset editor and JSON file exchange are implemented; run
+evidence import, in-lab trial UX and P2 isolated execution,
 scoped adoption and rollback remain separate work.
 
 ## Host queries and storage
@@ -86,6 +90,14 @@ groups and missing regression cases produce exploratory warnings.
 Freeze normalizes defaults and sorts cases by ID before hashing; reordering cases
 does not change the hash. Repeated freezes preserve timestamps/bytes. Existing
 manifests are verified against content, case hashes, summary and directory hash.
+
+The Desktop form covers all dataset fields and preserves JSON scalar assertion
+values, segmented paths and absent versus empty `expected`. Copying a case assigns
+a new ID while retaining its source group. Unsupported structure and invalid JSON
+remain editable as raw text without silently discarding fields. Backend validation
+is authoritative; editing invalidates old results and never changes frozen plans.
+Native JSON import/export is bounded to 16 MiB regular UTF-8 files and makes no
+model requests. See [editor delivery](../../docs/todo/optimization-lab-editor-2026-10-08.md).
 
 ## Development
 
