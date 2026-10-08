@@ -193,7 +193,10 @@ jobs:
           bun run build
           bun run --cwd packages/desktop build
       - name: real Electron E2E
-        run: xvfb-run -a bun run --cwd packages/desktop test:e2e
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
+          bash scripts/run-electron-e2e-keyring.sh
       - name: install browser for real Hub panel recovery
         working-directory: packages/desktop
         run: bunx playwright install --with-deps chromium

@@ -39,6 +39,13 @@ provider, refuses an unavailable or plaintext backend, and signs transient
 prehashes over private worker IPC. Renderer and model RPC surfaces cannot retrieve
 keys or use the signing service.
 
+If Desktop cannot use its OS key storage, the existing turn error projection
+explains the signing failure and stops that attempt before sending. On Linux,
+`basic_text` is rejected even when `isEncryptionAvailable()` is true: Electron
+documents that this backend uses a hardcoded plaintext password. The user needs
+an available SecretService or supported system keyring, rather than a fallback
+that merely labels a key encrypted. See [Electron's safeStorage documentation](https://www.electronjs.org/docs/latest/api/safe-storage).
+
 An explicitly supplied SDK signer is borrowed by the parent and ordinary Agent
 children. The caller owns its disposal; closing a child never disposes that Host
 authority. Desktop pins signing to Main even if the worker inherits a headless
@@ -78,3 +85,17 @@ zero server requests and no fallback. Not-sent accounting receipts carry known
 zero usage/cost rather than unknown billed usage. The Desktop service tests use a
 fixture encrypted cipher and explicitly exercise unavailable encryption; they do
 not claim a headless test exercised an OS keychain.
+
+`node packages/desktop/scripts/smoke-panels.mjs` also exercises the production
+Electron Main, worker and renderer with the actual OS keychain. Its test-only
+bootstrap clears inherited Host storage/configuration and provider-secret
+environment, pins private HOME/storage, and installs the exact-origin guard
+before Core loads. Each spawned worker's protocol input stays buffered until
+the parent has verified that worker's bootstrap receipt. HMACs are independently
+recomputed against actual fixture HTTP bodies inside Main; OS-decrypted keys
+never return to the parent runner or renderer. Temporarily disabling encryption
+in this test proves the visible error and zero additional provider requests.
+The Linux CI job uses `scripts/run-electron-e2e-keyring.sh` inside a fresh D-Bus
+session with a private synthetic GNOME keyring, and checks SecretService before
+starting the real Electron suite. This changes CI infrastructure only; production
+cipher admission stays fail-closed.
