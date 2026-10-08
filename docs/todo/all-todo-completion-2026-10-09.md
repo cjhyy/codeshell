@@ -9,20 +9,21 @@
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Link 统一授权前置批次 | PR60/64 已合入 main；系统浏览器 broker、一次性消费、取消／过期与云端交接已验证                                   | 真实 provider 应用与账号另验收；不以 fixture 代替已登录账号                                                                    |
 | 全部远程 Link         | Host PR61、services PR18/19、Host PR63 已合并；10 provider 的 26 个原动作及 GitHub 新增 3 动作已实现             | 固定可信 adapter、账号／作用域／资源过滤与续期；九家缺少应用配置和真实账号验证，不能公开为可连接                               |
-| Services 公开包兼容   | PR22/23/24 已合入 main，五个公开 Host 包仍为 0.9.27；SDK override 锁为 1.31.0，新双 Docker 候选与 staging 已验收 | 生产 Link 仍为 82d0e4d/schema 3，维护升级另行执行；Services 公开发行、Cloud/Hub 与真实业务验收仍须单独完成                     |
+| Services 公开包兼容   | PR22/23/24 已合入 main，五个公开 Host 包仍为 0.9.27；SDK override 锁为 1.31.0，新双 Docker 候选与 staging 已验收 | 生产 Link 已升级到 ba5363c/schema 3（PR25）；Services 公开发行、Cloud/Hub 与真实业务验收仍须单独完成                           |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                          | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证 |
 | 跨 Session 成本       | PR68 全部 9 项 CI 通过并合入 main；receipt ledger、恢复隔离、SDK/stdio/TUI 及现有活动记录入口已验证              | 完整 GUI 与真实账单对照另验收；unknown、估算及自定义 fetch 内部重试限制见专项交付记录                                          |
 | Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                     | fetch 锚点不证明远端收到／收费；macOS 真实 OS 钥匙串验收尚未完成                                                               |
 | Workspace / Link 只读 | PR65 已合入 main；Profile 求交、十家 provider 固定视图及原生 ToolExecutor 链已验证                               | 不扩大已有连接与 grant；跨文件／语义检索及 OCR 另行推进                                                                        |
 | 上传解析／索引        | PR70 已合入 main；有界 Office/PDF 解析、词法分块、冷缓存重验和逐文件权限通过 12 项 CI                            | Core PDF 需 Node 22.13+ 和可选 parser；Desktop 使用已验证 managed Node；不是 OCR 或语义索引                                    |
 | Skill 列表预算        | PR72 已合入 main；上下文 1%／最多 2,048 估算 token、排序、按权限搜索与分页通过 12 项 CI                          | 不把估算 token 当作精确 tokenizer 结果                                                                                         |
-| 非核心工具渐进发现    | PR81 已合入 main；按步冻结工具集、ToolSearch 选择、撤权重验、真实 MCP 与编译后写操作消费者通过完整组合验收       | 显式 allowlist/Profile 仍按原约束；未声明初始工具集的第三方 preset 保持兼容。该变更属于待发布的 0.9.28，不包含于公开 0.9.27    |
-| 发布可见性确认        | PR80 已合入 main；发布命令被接受后，统一有界等待公开 registry 精确版本与所请求 tag，35 项回归通过                | 不重复发布、不重写 tag；该变更属于待发布的 0.9.28，不包含于公开 0.9.27                                                         |
-| Durable 输出恢复      | PR79 最终组合 head cb71fdd3 已通过 12 项 CI、原生包与实际消费者验收并合入 main                                   | 0.9.28 待发布；128 MiB journal／16 MiB 单事件有界，任意长度、手机弱网、旧 peer、保留与修复仍未完成                             |
-| MCP OAuth 安全        | PR83 已合入 main；Core/Server/Desktop SDK floor 为 ^1.31.0，锁为 1.31.0，Desktop issuer 绑定通过实际 SDK 验收    | Host 新字节属于待发布的 0.9.28；旧凭据仅按保存端点续期兼容，不把修复等同于真实账号或新授权验收                                 |
+| 非核心工具渐进发现    | PR81 已合入 main；按步冻结工具集、ToolSearch 选择、撤权重验、真实 MCP 与编译后写操作消费者通过完整组合验收       | 显式 allowlist/Profile 仍按原约束；未声明初始工具集的第三方 preset 保持兼容。该变更已随 0.9.28 发布，不包含于公开 0.9.27       |
+| 发布可见性确认        | PR80 已合入 main；发布命令被接受后，统一有界等待公开 registry 精确版本与所请求 tag，35 项回归通过                | 不重复发布、不重写 tag；该变更已随 0.9.28 发布，不包含于公开 0.9.27                                                            |
+| Durable 输出恢复      | PR79 最终组合 head cb71fdd3 已通过 12 项 CI、原生包与实际消费者验收并合入 main                                   | 已随 0.9.28 发布；128 MiB journal／16 MiB 单事件有界，任意长度、手机弱网、旧 peer、保留与修复仍未完成                          |
+| MCP OAuth 安全        | PR83 已合入 main；Core/Server/Desktop SDK floor 为 ^1.31.0，锁为 1.31.0，Desktop issuer 绑定通过实际 SDK 验收    | Host 新字节已随 0.9.28 发布；旧凭据仅按保存端点续期兼容，不把修复等同于真实账号或新授权验收                                    |
+| Profile 切换预览      | PR85 最终 bcae68df 通过全部 12 项 CI，合并为 8da73fe9；两个既有 Desktop 入口共享只读预览与 CAS 确认              | 已合入 main，未纳入 v0.9.28；显式 Session 绑定保留，数字人经验提升、dream 与静态 plugin 导出另行推进                           |
 | 优化实验室 P1b/P2     | PR67/71 已合入 main；无工具 Agent、指令快照、原生范围化采用与撤销、11 条 signer 清理路径已验证                   | 默认关闭；不覆盖有工具任务或真实收益。临时执行不落盘，授权报告／预算／receipt 持久化                                           |
 | 写操作控制            | PR69 已合入 main；持久 operation ledger、单次 claim、GitHub create_issue 独立回读通过实际 SDK/HTTP               | CLI 写入已在 PR77 禁用；早期 fake CLI 证据只证明调用／隔离，不能证明真实 gh 的传输安全                                         |
-| GitHub 仓库／Star     | Host PR77 与 services PR21 已合并；单目标 desired state、独立身份／状态回读与 unknown/restart 不重发已验证       | services PR21 未部署；新动作必须显式授权。其他 provider 写语义、批量、人工 reconcile 和保留策略待推进                          |
+| GitHub 仓库／Star     | Host PR77 与 services PR21 已合并；单目标 desired state、独立身份／状态回读与 unknown/restart 不重发已验证       | services PR21 已随生产 ba5363c 部署；新动作必须显式授权和单独验收。其他 provider 写语义、批量、人工 reconcile 和保留策略待推进 |
 
 上一批组合按 PR73 → PR71 → PR77 顺序接纳。对应精确 head 为 `f8abbc05`、`adc42100`、
 `8817b208`，分别通过全部 12 项必需 CI；PR77 的合并树与当时验收 head 逐字节一致。
@@ -48,8 +49,22 @@ PR79 最终组合 head `cb71fdd3963930c42c20ac35c6a0f6bcde0647c6` 在
 [Actions 37855241831](https://github.com/cjhyy/codeshell/actions/runs/37855241831) 通过全部
 12 项 CI，并完成 fresh 9 tarball／47 类型入口／45 运行入口与实际原生消费者验收。
 合并结果 `49fded8ad1f0f198973226b08422a87924ad5d6e` 与该验收 head 逐字节一致。
-上述 PR79/80/81/83 的新增字节正在独立任务分支准备 0.9.28，尚未创建发行 tag 或发布，
-不等于已经发布的 0.9.27 字节；Profile 切换预览为独立工作，不纳入本次发行。
+上述 PR79/80/81/83 的新增字节已随
+[Host v0.9.28](https://github.com/cjhyy/codeshell/releases/tag/v0.9.28) 正式发布，tag 指向
+`06aa2c56420d783625c749dac6ea86bb85964a54`。
+[发行流水线 37857705007](https://github.com/cjhyy/codeshell/actions/runs/37857705007) 七项均成功；
+2026-10-08 23:24:54 UTC 独立公开读回确认九包 exact/latest 均为 0.9.28，14 份资产包括
+6 个安装包、5 个 blockmap 和 3 份版本及资产引用正确的更新清单。该读回核验公开元数据、
+资产存在与大小，没有再次下载全部安装包字节。原有 0.9.27 tag、发布资产和验收记录不改写。
+Profile 切换预览为独立后续，不纳入该 tag。其
+[PR85](https://github.com/cjhyy/codeshell/pull/85) 最终 head
+`bcae68df267973ff0bc569c95719711d3a3c2bd7` 在
+[Actions 37858908356](https://github.com/cjhyy/codeshell/actions/runs/37858908356) 通过全部
+12 项 CI，合并为 `8da73fe921b8fb2a66aca76157cb343de5002dfe`，两树完全一致。
+本地完整 guarded 四分片及真实隔离 Electron 双入口／缺失旧定义恢复验收通过；最后迁移
+兼容修正另通过 100 项 settings/Main 回归，最终 Desktop 完整分片 4,803 项／68 skip／零失败。
+该功能复用现有设置和数字人页，不新增导航；详细边界见
+[切换预览交付](workspace-profile-switch-preview.md)。
 
 Services [PR23](https://github.com/cjhyy/codeshell-services/pull/23) 记录了公开 0.9.27
 原锁的真实 Linux 双镜像构建、五包能力检查、禁网 CLI 启动与容器内健康检查。
@@ -59,17 +74,32 @@ Services [PR23](https://github.com/cjhyy/codeshell-services/pull/23) 记录了�
 Services [PR24](https://github.com/cjhyy/codeshell-services/pull/24) 已合并为
 `ba5363c929042a21600d76cb89b9a70eddb076fa`：保持五个公开 Host 包为 0.9.27，
 以 override 将 SDK 精确锁为 1.31.0，其他第三方 resolution 不变；修复源码、新双 Docker
-候选与 staging 已通过验收。Host PR83 的 SDK 与 Desktop issuer 修复已合并，待随
-0.9.28 发行。生产 Link 维护另行执行，不将候选／staging 结果记为生产升级完成。
+候选与 staging 已通过验收。Host PR83 的 SDK 与 Desktop issuer 修复已随 0.9.28 发行。
+生产 Link 随后完成单独维护，见下一段；Services 的五个公开 Host 依赖仍是 0.9.27，
+不把 Host 0.9.28 发布写成 Services 依赖或 Hub 已升级。
 
-当前服务器 Link 已升级为 services `82d0e4d`，健康检查返回 schema 3，HTTPS 证书验证通过。
+此前服务器 Link 在 services `82d0e4d` 上完成的验收保留为历史证据：健康检查返回
+schema 3，HTTPS 证书验证通过。
 原有 GitHub 连接在停机维护中完成一次自动续期、原账号校验、资源发现和现有 grant 下的
 只读调用；既有账号绑定、客户端和授权关系保持不变。在线／停机／升级后备份及新旧工具
 离线恢复通过，密钥另存 root 私有备份；不把离线恢复当成实际线上降级。完整证据见
 [目标 Link 验收](https://github.com/cjhyy/codeshell-services/blob/0469c4b87e14b4816c304bfbec4d314fd5c46781/docs/link-target-acceptance-2026-10-09.md)。VPN 路径问题通过
 单连接绑定物理网卡解决，不修改系统路由或关闭证书验证。生产私密配置只确认已配置
 GitHub OAuth；其余 provider 应用配置和真实账号验收仍待提供，不能以受控上游替代。
-继续保留现有密钥、数据与可恢复备份，遵守迁移和跨版本回滚限制。
+随后生产 Link 已由 `82d0e4d` 升级为 services
+`ba5363c929042a21600d76cb89b9a70eddb076fa`，完整记录见
+[Services PR25](https://github.com/cjhyy/codeshell-services/pull/25) 与
+[维护回执](https://github.com/cjhyy/codeshell-services/blob/b6333533af08b1ed87f203d7d2dc935c6dd9c74a/docs/link-production-sdk-upgrade-2026-10-09.md)。
+源码与进程路径、五个公开包 0.9.27、Core/Server SDK 1.31.0、schema 3、只读完整性、
+服务和文件权限、TLS 健康与 catalog 已核对；GitHub catalog 从 8 增为 11 个动作，
+其余九家继续隐藏。保留原 unit、Node 22.22.1、配置和生产数据库，本次维护未新增授权。
+本次维护没有实际 provider／账号调用，也没有逐行比较 grant；此前的真实账号验收
+不能冒充新版本验收。stop→start 为 17 秒，不等同于端到端停机实测。
+
+在线及停机 SQLite 备份、独立密钥备份继续由服务器 root 私有保管。实际回滚未执行；
+代码回滚先保留最新数据库、WAL 和已轮换令牌，再停止新进程、切换代码、启动旧版。
+不得恢复已经消费旧 refresh token 的快照；旧代码会重新引入 SDK 1.30.0 的已知问题，
+不称为安全修复通过。当前生产 Hub 仍运行公开 0.9.23，候选准备与上线另记。
 
 ## 后续工作包
 
@@ -78,12 +108,12 @@ GitHub OAuth；其余 provider 应用配置和真实账号验收仍待提供，�
 2. Workspace 跨文件／语义查询及 OCR；上传解析／索引、Profile 求交与现有 Link 只读视图已实现。
    写操作的其他 provider 语义、批量 slots、人工 reconcile 与账本保留策略仍待逐项接入。
 3. 更多真实工具的后置验证和错误预算适配，以及真实长程与按模型配对评测、通用评测
-   adapter。Skill 预算已发布；非核心工具渐进发现已合入 main，尚未纳入正式发行。
+   adapter。Skill 预算已发布；非核心工具渐进发现已合入 main，已随 0.9.28 正式发行。
 4. 优化实验室真实模型实验、报告价值评价和有工具的任务试验，须按原授权要求完成。
-5. 数字人经验提升流程、切换影响预览与 plugin 降级导出。
+5. 数字人经验提升流程与 plugin 降级导出；切换影响预览已合入 main，尚未发布。
    受约束 dream 先确定 ownership/审批，不自动写 portable profile memory。
 6. Durable 流式 journal、共同游标、分页恢复和重启代次映射已在
-   [PR79](https://github.com/cjhyy/codeshell/pull/79) 最终组合验收后合入 main，待随 0.9.28
+   [PR79](https://github.com/cjhyy/codeshell/pull/79) 最终组合验收后合入 main，并随 0.9.28
    发行。真实 SDK、Main/Hub/stdio、缓存身份配对与排队输入身份已有最终 head 证据；
    128 MiB journal、16 MiB 单事件及有界旧 transcript 恢复限制继续保留。
    任意长度日志、实体手机弱网／后台恢复、旧 peer、修复和保留策略仍未完成。
