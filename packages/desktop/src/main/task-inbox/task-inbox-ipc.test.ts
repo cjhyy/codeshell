@@ -22,13 +22,14 @@ function setup() {
   const event = { sender, senderFrame: sender.mainFrame } as unknown as IpcMainInvokeEvent;
   let listener: ((snapshot: TaskInboxSnapshot) => void) | undefined;
   let reconciles = 0;
+  let current: TaskInboxSnapshot = { version: 1, records: [], errors: [] };
   const actions: unknown[] = [];
   const service: TaskInboxIpcService = {
     list: () => ({ version: 1, records: [], errors: [] }),
     get: () => undefined,
     reconcile: async () => {
       reconciles++;
-      return { version: 1, records: [], errors: [] };
+      return structuredClone(current);
     },
     subscribe: (next) => {
       listener = next;
@@ -58,6 +59,9 @@ function setup() {
     },
     changed: () => listener?.({ version: 2, records: [], errors: [] }),
     subscribed: () => !!listener,
+    setSnapshot: (snapshot: TaskInboxSnapshot) => {
+      current = snapshot;
+    },
   };
 }
 
@@ -102,6 +106,38 @@ describe("task inbox private IPC", () => {
     }
     expect(state.actions).toHaveLength(1);
   });
+});
+
+test("cursor pages remain on one snapshot while authority updates continuously", async () => {
+  const state = setup();
+  const records = Array.from({ length: 405 }, (_, i) => ({
+    schemaVersion: 1 as const,
+    taskKey: `session:s${i}`,
+    source: "session" as const,
+    sourceId: `s${i}`,
+    title: `Task ${i}`,
+    status: "running" as const,
+    capabilities: ["open" as const],
+    artifacts: [],
+    createdAt: 1,
+    updatedAt: i + 1,
+    sourceRevision: `r${i}`,
+  }));
+  state.setSnapshot({ version: 1, records, errors: [] });
+  const list = state.handlers.get("taskInbox:list")!;
+  const first = await list(state.event, { limit: 200 });
+  state.setSnapshot({ version: 2, records: [], errors: [] });
+  const second = await list(state.event, { limit: 200, cursor: first.nextCursor });
+  state.setSnapshot({ version: 3, records: [], errors: [] });
+  const third = await list(state.event, { limit: 200, cursor: second.nextCursor });
+  expect([first.version, second.version, third.version]).toEqual([1, 1, 1]);
+  expect(
+    new Set([...first.records, ...second.records, ...third.records].map((record) => record.taskKey))
+      .size,
+  ).toBe(405);
+  expect(state.reconciles()).toBe(1);
+  expect(await list(state.event)).toEqual({ version: 3, records: [], errors: [] });
+  await expect(list(state.event, { cursor: first.nextCursor })).rejects.toThrow("expired");
 });
 
 test("query and action validation bound input and reject undeclared fields", () => {

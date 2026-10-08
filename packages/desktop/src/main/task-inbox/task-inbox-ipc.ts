@@ -1,4 +1,6 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
+import { randomUUID } from "node:crypto";
+import { compareTaskInboxRecords, deduplicateTaskInboxRecords } from "./task-inbox-mappers.js";
 import type {
   TaskInboxActionRequest,
   TaskInboxActionResult,
@@ -35,6 +37,27 @@ export function registerTaskInboxIpc(
   enabled: () => boolean = () => true,
 ): () => void {
   const channels: string[] = [];
+  const pages = new Map<
+    string,
+    { owner: number; expires: number; query: string; snapshot: TaskInboxSnapshot; bytes: number }
+  >();
+  const queryKey = (query: TaskInboxListQuery) =>
+    JSON.stringify([query.source, query.status, query.projectId, query.search]);
+  const prune = () => {
+    const owners = new Set(
+      windows()
+        .filter((window) => !window.isDestroyed())
+        .map((window) => window.webContents.id),
+    );
+    for (const [id, page] of pages)
+      if (page.expires < Date.now() || !owners.has(page.owner)) pages.delete(id);
+    let bytes = [...pages.values()].reduce((total, page) => total + page.bytes, 0);
+    while (pages.size > 8 || bytes > 96 * 1024 * 1024) {
+      const oldest = pages.keys().next().value!;
+      bytes -= pages.get(oldest)!.bytes;
+      pages.delete(oldest);
+    }
+  };
   const handle = (
     channel: string,
     action: (event: IpcMainInvokeEvent, input: unknown) => unknown,
@@ -52,10 +75,62 @@ export function registerTaskInboxIpc(
       return action(event, args[0]);
     });
   };
-  handle("taskInbox:list", async (_event, input) => {
+  handle("taskInbox:list", async (event, input) => {
     const query = parseTaskInboxListQuery(input);
-    await service.reconcile();
-    return service.list(query);
+    prune();
+    let offset = 0;
+    let token: string;
+    let snapshot: TaskInboxSnapshot;
+    if (query.cursor) {
+      const match = /^page:([a-f0-9-]{36}):(\d+)$/u.exec(query.cursor);
+      const cached = match ? pages.get(match[1]) : undefined;
+      if (
+        !match ||
+        !cached ||
+        cached.owner !== event.sender.id ||
+        cached.query !== queryKey(query) ||
+        !Number.isSafeInteger(Number(match[2]))
+      ) {
+        throw new Error("Task page expired; refresh the task list");
+      }
+      token = match[1];
+      offset = Number(match[2]);
+      snapshot = cached.snapshot;
+    } else {
+      const current = await service.reconcile();
+      // One immutable authority snapshot for the whole read. A cursor never
+      // scans sources again or mixes records from a later streaming update.
+      const search = query.search?.trim().toLocaleLowerCase();
+      snapshot = {
+        ...current,
+        records: deduplicateTaskInboxRecords(current.records)
+          .filter(
+            (record) =>
+              (!query.source || record.source === query.source) &&
+              (!query.status || record.status === query.status) &&
+              (!query.projectId || record.projectId === query.projectId) &&
+              (!search || record.title.toLocaleLowerCase().includes(search)),
+          )
+          .sort(compareTaskInboxRecords),
+      };
+      token = randomUUID();
+      pages.set(token, {
+        owner: event.sender.id,
+        expires: Date.now() + 60_000,
+        query: queryKey(query),
+        snapshot,
+        bytes: Buffer.byteLength(JSON.stringify(snapshot)),
+      });
+      prune();
+    }
+    const limit = query.limit ?? 200;
+    const more = offset + limit < snapshot.records.length;
+    if (!more) pages.delete(token);
+    return {
+      ...snapshot,
+      records: snapshot.records.slice(offset, offset + limit),
+      ...(more ? { nextCursor: `page:${token}:${offset + limit}` } : {}),
+    };
   });
   handle("taskInbox:get", (_event, input) => {
     const key = checkedTaskText(input, "key", 1100);
@@ -76,6 +151,7 @@ export function registerTaskInboxIpc(
     }
   });
   return () => {
+    pages.clear();
     unsubscribe();
     for (const channel of channels) ipc.removeHandler(channel);
   };
