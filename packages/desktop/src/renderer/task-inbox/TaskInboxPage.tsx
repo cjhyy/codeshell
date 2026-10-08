@@ -6,7 +6,7 @@ import type {
   TaskInboxAction,
   TaskSource,
   TaskStatus,
-} from "../../preload/types";
+} from "../../preload/task-inbox-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "../i18n/I18nProvider";

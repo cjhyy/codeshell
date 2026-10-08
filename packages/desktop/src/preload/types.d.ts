@@ -37,15 +37,6 @@ import type {
   QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { TaskInboxApi } from "./task-inbox-api";
-export type {
-  TaskInboxRecordV1,
-  TaskInboxQuery,
-  TaskInboxListResult,
-  TaskInboxAction,
-  TaskInboxActionResult,
-  TaskSource,
-  TaskStatus,
-} from "./task-inbox-api";
 import type { PetApi } from "./pet-api";
 import type {
   StreamEventEnvelope,

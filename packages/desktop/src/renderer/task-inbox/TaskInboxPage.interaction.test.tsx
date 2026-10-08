@@ -5,7 +5,7 @@ import type {
   TaskInboxListResult,
   TaskInboxActionResult,
   TaskInboxRecordV1,
-} from "../../preload/types";
+} from "../../preload/task-inbox-api";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 
 mock.module("@/components/ui/dialog", () => ({

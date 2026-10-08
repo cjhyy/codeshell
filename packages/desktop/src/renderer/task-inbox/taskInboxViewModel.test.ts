@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { TaskInboxRecordV1 } from "../../preload/types";
+import type { TaskInboxRecordV1 } from "../../preload/task-inbox-api";
 import {
   groupTaskInboxRecords,
   taskInboxOpenTarget,

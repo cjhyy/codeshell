@@ -1,4 +1,5 @@
-import type { TaskInboxRecordV1, PetExternalSessionLocator } from "../../preload/types";
+import type { TaskInboxRecordV1 } from "../../preload/task-inbox-api";
+import type { PetExternalSessionLocator } from "../../preload/types";
 import type { DiskSessionMeta } from "../automation/rebuildFromDisk";
 import { NO_REPO_KEY } from "../transcripts";
 import type { SessionIndex } from "../../shared/session-catalog";

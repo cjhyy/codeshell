@@ -1,4 +1,4 @@
-import type { TaskInboxRecordV1, TaskStatus } from "../../preload/types";
+import type { TaskInboxRecordV1, TaskStatus } from "../../preload/task-inbox-api";
 
 export const TASK_INBOX_GROUPS = ["waiting", "running", "failed", "done"] as const;
 export type TaskInboxGroup = (typeof TASK_INBOX_GROUPS)[number];

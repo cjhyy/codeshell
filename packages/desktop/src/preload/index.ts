@@ -20,6 +20,7 @@ import { deviceRelayApi } from "./device-relay-api.js";
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
 import { createTaskInboxApi } from "./task-inbox-api";
+import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
 import { createProjectPanelVersionApi } from "./project-panel-version-api";
@@ -970,11 +971,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("logs:tail", bucket, lines),
   listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
-  getSessionTranscript: (sessionId: string) => ipcRenderer.invoke("sessions:transcript", sessionId),
-  getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
-    ipcRenderer.invoke("sessions:transcriptPage", sessionId, options),
-  listDiskSessions: (opts?: { limit?: number; cursor?: string; parentSessionId?: string }) =>
-    ipcRenderer.invoke("sessions:listDisk", opts ?? {}),
+  ...createSessionTranscriptApi(ipcRenderer),
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can
@@ -982,13 +979,6 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   subscribeSession: (sessionId: string, sinceSeq?: number) =>
     ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq),
-  /**
-   * Long-disconnect fallback: read raw transcript events (with stable id/
-   * turnNumber/timestamp) from disk, optionally only those after `sinceId`.
-   * Used when the main snapshot window has evicted older events.
-   */
-  getSessionRawEvents: (sessionId: string, sinceId?: string) =>
-    ipcRenderer.invoke("sessions:rawEvents", sessionId, sinceId),
   deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),
