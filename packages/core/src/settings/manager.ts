@@ -328,10 +328,12 @@ export class SettingsManager {
     const userPath = join(this.userConfigDir(), "settings.json");
     if (readUser && resolveConfigPath(userPath) === userPath) {
       try {
-        // Version migrations may be in-memory only during a read-only load.
-        // Feed that same source into the models migration instead of rereading
-        // the older disk shape and discarding the preceding migration.
-        const userRaw = this.sources.find((source) => source.name === "user")?.data;
+        // Read-only loads must retain preceding in-memory version migrations.
+        // Ordinary loads preserve their existing disk reread before model migration.
+        const userRaw =
+          options?.persistMigrations === false
+            ? this.sources.find((source) => source.name === "user")?.data
+            : parseConfigFile(userPath);
         if (!userRaw) throw new Error("invalid user settings");
         const result = migrateModels({
           providers: (userRaw.providers as never) ?? [],
