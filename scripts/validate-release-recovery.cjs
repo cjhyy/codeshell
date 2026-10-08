@@ -54,7 +54,9 @@ async function validateReleaseRecovery({ github, context, tag, sourceRunId }) {
     const names =
       name === "package release smoke (nine tarballs)"
         ? [name, "package release smoke (ten tarballs)"]
-        : [name];
+        : name === "package (windows-latest)"
+          ? [name, "package (windows-2022)"]
+          : [name];
     const matches = jobs.filter((job) => names.includes(job.name));
     requireCondition(
       matches.length === 1 &&
