@@ -71,7 +71,9 @@ describe("architecture growth budgets", () => {
     // actual OS encryption availability and native Quick Chat ownership. Key
     // custody and worker-generation checks stay in model-request-signing-service.
     // Signing uses private worker messages, with no renderer IPC registration.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_168);
+    // +9 composition-only lines register reviewed Profile preview/CAS adoption.
+    // Target authority, planning and locking stay in the extracted registrar/service.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_177);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -99,6 +101,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
@@ -106,7 +109,8 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
-    ).toBeLessThanOrEqual(322);
+      // +2 metadata-only Profile preview and revision-checked adoption routes.
+    ).toBeLessThanOrEqual(324);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -124,7 +128,8 @@ describe("architecture growth budgets", () => {
     // Link challenge start/get/respond/cancel/open are typed invoke adapters;
     // challenge custody remains in the Host. Usage history adds one invoke to
     // the extracted read-only service. The actual combined root is 1_871 lines.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_871);
+    // +7 typed Profile review/adoption adapter lines, with no renderer file access.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_878);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -138,7 +143,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(315);
+    ).toBeLessThanOrEqual(317);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -154,7 +159,8 @@ describe("architecture growth budgets", () => {
     // and Profile sourceAccess transport fields add declarations only. Host
     // authorization and source-permission intersection remain outside preload.
     // +9 declaration lines for the optional bounded output-journal adapter.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_963);
+    // +9 typed Profile metadata preview and CAS adoption declarations.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_972);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -306,7 +312,9 @@ describe("architecture growth budgets", () => {
       // validation, private worker/default-signer adapters and their types.
       // None grants renderer or model RPC access to signing keys.
       // +1 Host-only journal reader/writer/type statement. No stable SDK growth.
-      "packages/core/src/index.internal.ts": 93,
+      // +2 Host-only statements expose the pure Profile switch planner and
+      // existing direct-override fold; stable SDK and extension exports are unchanged.
+      "packages/core/src/index.internal.ts": 95,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

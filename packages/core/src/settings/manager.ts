@@ -239,9 +239,13 @@ export class SettingsManager {
   }
 
   /**
-   * Load settings from all sources.
+   * Load settings from all sources. Read-only previews can retain the same
+   * in-memory migration semantics without backups or migration write-back.
    */
-  load(flagOverrides?: Record<string, unknown>): ValidatedSettings {
+  load(
+    flagOverrides?: Record<string, unknown>,
+    options?: { persistMigrations?: boolean },
+  ): ValidatedSettings {
     this.sources = [];
 
     // Scope gates which disk layers we read. 'full' reads the host user dir
@@ -287,11 +291,16 @@ export class SettingsManager {
     // dirtying the user's (or a repo-tracked project) file for; steps are
     // idempotent, so re-running on unstamped files each load is fine.
     if (readUser) {
-      this.applyConfigMigration(join(this.userConfigDir(), "settings.json"), "user");
+      this.applyConfigMigration(
+        join(this.userConfigDir(), "settings.json"),
+        "user",
+        options?.persistMigrations,
+      );
     }
     if (readProject) {
       const projectPath = this.tryProjectSettingsPath(this.cwd, "settings.json");
-      if (projectPath) this.applyConfigMigration(projectPath, "project");
+      if (projectPath)
+        this.applyConfigMigration(projectPath, "project", options?.persistMigrations);
     }
 
     // Workspace-trust gate: an untrusted project must not influence execution
@@ -319,14 +328,18 @@ export class SettingsManager {
     const userPath = join(this.userConfigDir(), "settings.json");
     if (readUser && resolveConfigPath(userPath) === userPath) {
       try {
-        const userRaw = parseConfigFile(userPath);
+        // Read-only loads must retain preceding in-memory version migrations.
+        // Ordinary loads preserve their existing disk reread before model migration.
+        const userRaw =
+          options?.persistMigrations === false
+            ? this.sources.find((source) => source.name === "user")?.data
+            : parseConfigFile(userPath);
         if (!userRaw) throw new Error("invalid user settings");
         const result = migrateModels({
           providers: (userRaw.providers as never) ?? [],
           models: (userRaw.models as never) ?? [],
         });
         if (result.changed) {
-          this.writeBackup(userPath);
           const migrated = {
             ...userRaw,
             providers: result.providers,
@@ -335,7 +348,10 @@ export class SettingsManager {
           const sanitized = sanitizeSettingsObject(migrated);
           // Atomic write (tmp+rename) — a concurrent load must not see a
           // half-written file. File exists here (existsSync guard above).
-          this.atomicWriteJson(userPath, sanitized);
+          if (options?.persistMigrations !== false) {
+            this.writeBackup(userPath);
+            this.atomicWriteJson(userPath, sanitized);
+          }
           // Re-deep-merge with the migrated user data so the validate
           // call sees the new shape rather than the legacy one.
           const userSource = this.sources.find((s) => s.name === "user");
@@ -362,7 +378,7 @@ export class SettingsManager {
    * justify touching the file. On write-back the in-memory source is updated
    * so this load() already sees the migrated shape.
    */
-  private applyConfigMigration(path: string, sourceName: SettingsSourceName): void {
+  private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {
     if (resolveConfigPath(path) !== path) return;
     try {
       const parsed = parseConfigFile(path) as unknown;
@@ -377,12 +393,14 @@ export class SettingsManager {
         return rest;
       };
       if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
-      this.writeBackup(path);
       // Atomic write (tmp+rename) so a concurrent load can't read a half-written
       // migrated file — matches the normal save path (atomicWriteJson). The file
       // exists here (existsSync guard above), so the recursive mkdir is a no-op.
       const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);
-      this.atomicWriteJson(path, sanitized);
+      if (persist) {
+        this.writeBackup(path);
+        this.atomicWriteJson(path, sanitized);
+      }
       const source = this.sources.find((s) => s.name === sourceName);
       if (source) source.data = sanitized;
     } catch {

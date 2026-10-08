@@ -2,6 +2,43 @@ export const digitalHumans = {
   zh: {
     digitalHumans: {
       title: "数字人",
+      switchPreview: {
+        unknown: "未知（旧定义不可用）",
+        unavailableDefault: "当前默认数字人「{name}」的定义不可用，可确认取消此默认配置。",
+        title: "确认默认数字人变更",
+        description: "检查当前配置根的影响，再确认采用。",
+        fallback: "无默认数字人（项目指令、既有设置与项目记忆继续适用）",
+        off: "关闭",
+        on: "开启",
+        projectRoot: "目标：此项目当前主目录的配置。",
+        sessionRoot: "目标：当前 Session 绑定的主目录配置，可能与项目当前主目录不同。",
+        scope:
+          "影响同一配置根下未显式绑定数字人的普通工作 Session，后续回合读取新默认。已有 Session 的显式数字人绑定不改写。",
+        instruction: "数字人主指令长度",
+        changed: "将变更",
+        unchanged: "不变",
+        capabilities: "能力配置开关差异",
+        configurationOnly:
+          "项目和本机直接设置优先。开关不代表安装、连接或授权；MCP 在此仅展示配置声明，不保证运行时连接。",
+        noChanges: "现有能力配置开关不变。",
+        exclusive: "此宿主的独占模式仅关闭未声明的已发现 Skills，不扩大到插件、MCP 或子 Agent。",
+        missing: "声明中仍未发现的能力／配置",
+        sources: "数据源访问范围",
+        sourcesHint:
+          "取已有项目绑定与数字人规则的交集。只展示元数据；仍需每次读取审批，不授予新权限。",
+        before: "变更前",
+        after: "变更后",
+        ask: "读取需审批",
+        deny: "禁止读取",
+        ok: "当前可用",
+        dangling: "定义缺失",
+        unavailable: "当前不可用",
+        admission:
+          "采用需等待桌面当前任务结束；保存与配置重载期间暂不接受新任务。此界面不冻结其他客户端或手工配置编辑。",
+        adopt: "确认采用",
+        stale: "定义、默认值或能力配置已变化，已刷新影响。请重新检查后确认。",
+        applied: "默认数字人配置已采用。",
+      },
       eyebrow: "Digital Human Studio",
       subtitle: "先下载和配置工作搭档，需要时再让它参与项目。",
       navigationLabel: "数字人工作室导航",
@@ -446,6 +483,48 @@ export const digitalHumans = {
   en: {
     digitalHumans: {
       title: "Digital Humans",
+      switchPreview: {
+        unknown: "Unknown (old definition unavailable)",
+        unavailableDefault:
+          "The current default digital human “{name}” is unavailable. Review clearing this default configuration.",
+        title: "Review default digital human change",
+        description: "Review the effect on this configuration root before applying.",
+        fallback:
+          "No default (project instructions, existing settings and project memory still apply)",
+        off: "Off",
+        on: "On",
+        projectRoot: "Target: the project's current primary root configuration.",
+        sessionRoot:
+          "Target: this Session's bound main-root configuration; it may differ from the project's current primary root.",
+        scope:
+          "Unpinned work Sessions using this configuration root read the new default on later turns. Existing explicit Session bindings are retained.",
+        instruction: "Digital human instruction length",
+        changed: "Changes",
+        unchanged: "Unchanged",
+        capabilities: "Capability configuration changes",
+        configurationOnly:
+          "Direct project and local settings win. Switches do not install, connect or authorize anything. MCP rows describe configuration declarations, without a runtime connection guarantee.",
+        noChanges: "Existing capability configuration switches are unchanged.",
+        exclusive:
+          "On this host, exclusivity disables only undeclared discovered Skills; it does not extend to plugins, MCP or agents.",
+        missing: "Declared capabilities or configuration still not found",
+        sources: "Data source access",
+        sourcesHint:
+          "Intersection of existing project bindings and Profile rules. Metadata only; reads still require approval and no access is granted.",
+        before: "Before",
+        after: "After",
+        ask: "Read approval required",
+        deny: "Reads denied",
+        ok: "Currently available",
+        dangling: "Definition missing",
+        unavailable: "Currently unavailable",
+        admission:
+          "Apply after current Desktop tasks finish. New tasks are held during persistence and configuration reload. This does not freeze other clients or manual edits.",
+        adopt: "Apply reviewed change",
+        stale:
+          "The definition, default or capability configuration changed. The review has refreshed; check it before confirming again.",
+        applied: "Default digital human configuration applied.",
+      },
       eyebrow: "Digital Human Studio",
       subtitle:
         "Download and configure collaborators first, then bring them into a project when needed.",
