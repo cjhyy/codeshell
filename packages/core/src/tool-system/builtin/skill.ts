@@ -9,13 +9,15 @@ import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { scanSkills } from "../../skills/scanner.js";
 import { formatMcpConnectionFailures } from "../mcp-health.js";
+import { searchSkillMetadata } from "./skill-prompt.js";
 
 export const skillToolDef: ToolDefinition = {
   name: "Skill",
   description:
     "Execute a skill within the main conversation. Skills provide specialized " +
     "capabilities and domain knowledge. Use this tool with the skill name and " +
-    "optional arguments.",
+    "optional arguments. Use query to search visible skill metadata without loading instructions; " +
+    "use an empty query and offset to page through the catalog.",
   inputSchema: {
     type: "object",
     properties: {
@@ -27,14 +29,54 @@ export const skillToolDef: ToolDefinition = {
         type: "string",
         description: "Optional arguments substituted into $ARGUMENTS / {args} placeholders",
       },
+      query: {
+        type: "string",
+        description: "Metadata search keywords; empty lists visible skills.",
+      },
+      offset: {
+        type: "integer",
+        minimum: 0,
+        description: "Catalog page offset (query mode only).",
+      },
+      limit: {
+        type: "integer",
+        minimum: 1,
+        maximum: 10,
+        description: "Catalog page size, default 10.",
+      },
     },
-    required: ["skill"],
+    anyOf: [{ required: ["skill"] }, { required: ["query"] }],
   },
 };
 
 export async function skillTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const skillName = args.skill as string;
   const skillArgs = (args.args as string) ?? "";
+
+  if (!skillName && typeof args.query === "string") {
+    const offset = args.offset ?? 0;
+    const limit = args.limit ?? 10;
+    if (
+      args.query.length > 1_024 ||
+      !Number.isSafeInteger(offset) ||
+      (offset as number) < 0 ||
+      !Number.isSafeInteger(limit) ||
+      (limit as number) < 1 ||
+      (limit as number) > 10
+    ) {
+      return "Error: query must be at most 1024 characters; offset must be a nonnegative integer and limit 1–10.";
+    }
+    return searchSkillMetadata(
+      scanSkills(ctx?.cwd ?? process.cwd(), {
+        disabledSkills: ctx?.disabledSkills,
+        disabledPlugins: ctx?.disabledPlugins,
+        skillAllowlist: ctx?.skillAllowlist,
+      }),
+      args.query,
+      offset as number,
+      limit as number,
+    );
+  }
 
   if (!skillName) {
     return "Error: skill name is required.";

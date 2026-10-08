@@ -39,6 +39,18 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
     expect(prompt).not.toContain("Available Skills");
   });
 
+  it("applies the configured metadata budget only to the trailing skill catalog", async () => {
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      skillListing: { maxTokens: 0 },
+    });
+    expect(await composer.buildSystemPrompt([])).not.toContain("Available Skills");
+    const msg = await composer.buildDynamicContextMessage();
+    expect(String(msg?.content ?? "")).not.toContain("Available Skills");
+    expect(String(msg?.content ?? "")).not.toContain("demo-skill");
+  });
+
   it("puts the skills listing INTO a trailing user-role <system-reminder> message", async () => {
     const composer = new PromptComposer({ cwd, model: "test-model" });
     const msg = await composer.buildDynamicContextMessage();

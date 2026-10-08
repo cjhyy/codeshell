@@ -235,7 +235,11 @@ describe("architecture growth budgets", () => {
     // abort/cache lifetimes. Snapshot selection, revision comparison and
     // checkpoint persistence are extracted to engine-instruction-context.ts.
     // The real no-tools Lab and ordinary Session consumers exercise this seam.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_818);
+    // Skill metadata adds 20 reviewed wiring lines: the current model window,
+    // task and up to 32 recent requests enter existing prompt composition, and
+    // registry/allowlist gates suppress unusable listings. Budgeting, ranking
+    // and discovery remain in builtin/skill-prompt.ts; no new Host API is added.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_838);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
