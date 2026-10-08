@@ -104,6 +104,11 @@ function main(): number {
         // coverage matrix, instead of measuring these imported helpers untested.
         "packages/core/src/panel-apps/package-snapshots.test.ts",
         "packages/core/src/tool-system/path-policy-panel-skill.test.ts",
+        // LinkAction's production write consumer now owns a durable operation
+        // claim and permission-gated readback. Exercise that real builtin path
+        // and its concurrent/restart states in the same coverage harness.
+        "packages/core/src/links/verified-write.test.ts",
+        "packages/core/src/operations",
         "--coverage",
         "--coverage-reporter=text",
         "--coverage-reporter=lcov",
