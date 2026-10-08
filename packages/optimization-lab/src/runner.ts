@@ -96,6 +96,7 @@ export async function executeText(options: {
       reason: valid ? null : "provider model or usage evidence is missing or differs from the plan",
     };
   } catch {
+    if (transport.admissionError) throw transport.admissionError;
     return {
       text: null,
       status: transport.observations.length ? "unknown" : "failed",

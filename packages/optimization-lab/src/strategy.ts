@@ -70,6 +70,10 @@ export async function reflectOnce(options: {
   try {
     const candidates = validateCandidates(execution.text, {
       parentBodyHash: options.plan.skill.bodyHash,
+      allowedReferences:
+        options.plan.skill.body.match(
+          /(?:https?:\/\/|file:\/\/)[^\s)<>]+|\]\(([^)]+)\)|`(?:\.\.?\/|\/)[^`]+`/gu,
+        ) ?? [],
       frontmatterOriginal: options.plan.skill.frontmatterOriginal,
       devCaseIds: options.devCases.map((item) => item.id),
       maxCandidates: options.plan.bounds.maxCandidates,

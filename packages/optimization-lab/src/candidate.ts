@@ -39,6 +39,7 @@ export function validateCandidates(
     maxCandidates: number;
     maxBodyBytes: number;
     maxContextBytes: number;
+    allowedReferences?: string[];
   },
 ): Candidate[] {
   const proposal = ProposalSchema.parse(JSON.parse(text));
@@ -48,6 +49,11 @@ export function validateCandidates(
   return proposal.candidates.map((item) => {
     if (item.body.startsWith("---") || /\u0000/.test(item.body))
       throw new Error("candidate must contain only a valid Skill body");
+    const refs =
+      item.body.match(/(?:https?:\/\/|file:\/\/)[^\s)<>]+|\]\(([^)]+)\)|`(?:\.\.?\/|\/)[^`]+`/gu) ??
+      [];
+    if (refs.some((reference) => !(options.allowedReferences ?? []).includes(reference)))
+      throw new Error("candidate introduces an unapproved file or URL reference");
     const bytes = Buffer.byteLength(item.body, "utf8");
     if (bytes > options.maxBodyBytes || bytes > options.maxContextBytes)
       throw new Error("candidate body exceeds frozen limits");

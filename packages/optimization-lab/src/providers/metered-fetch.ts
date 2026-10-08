@@ -28,6 +28,7 @@ export interface MeterAccounting {
 export interface MeteredTransport {
   fetch: typeof globalThis.fetch;
   observations: HttpObservation[];
+  admissionError: Error | null;
 }
 
 function count(value: unknown): number | null {
@@ -95,6 +96,7 @@ export function createMeteredFetch(options: {
   const { connection, limits, accounting } = options;
   const now = options.now ?? Date.now;
   const observations: HttpObservation[] = [];
+  let admissionError: Error | null = null;
   const transport = async (
     input: string | Request | URL,
     init?: RequestInit,
@@ -155,9 +157,15 @@ export function createMeteredFetch(options: {
     ) {
       throw new Error("provider request is not a text-only trial");
     }
-    accounting.check();
     const attemptId = randomUUID();
-    const admission = accounting.admit(attemptId);
+    let admission: { deadlineAt: number };
+    try {
+      accounting.check();
+      admission = accounting.admit(attemptId);
+    } catch (error) {
+      admissionError ??= error instanceof Error ? error : new Error("request admission denied");
+      throw admissionError;
+    }
     const started = now();
     if (admission.deadlineAt <= started) throw new Error("experiment operation deadline exceeded");
     const controller = new AbortController();
@@ -214,5 +222,11 @@ export function createMeteredFetch(options: {
       accounting.finish(observation);
     }
   };
-  return { fetch: transport as typeof globalThis.fetch, observations };
+  return {
+    fetch: transport as typeof globalThis.fetch,
+    observations,
+    get admissionError() {
+      return admissionError;
+    },
+  };
 }
