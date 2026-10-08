@@ -1,12 +1,30 @@
 import { describe, expect, test } from "bun:test";
 import {
   cloudWorkbenchPartition,
+  cloudWorkbenchBrowserHandoffUrl,
   createCloudWorkbenchNavigation,
   isCloudWorkbenchOrigin,
   normalizeCloudWorkbenchAddress,
 } from "./cloud-workbench-policy.js";
 
 describe("cloud workbench boundary", () => {
+  test("system browser handoffs require the configured origin and an exact opaque ticket", () => {
+    const ticket = "a".repeat(43);
+    const url = `https://cloud.example/link/authorize?ticket=${ticket}`;
+    expect(cloudWorkbenchBrowserHandoffUrl("https://cloud.example/", url)).toBe(url);
+    for (const target of [
+      url.replace("cloud.example", "evil.example"),
+      url.replace("https:", "http:"),
+      url + "#fragment",
+      url + "&ticket=" + ticket,
+      url + "&redirect=https://evil.example",
+      url.replace("/link/authorize", "/other"),
+      url.replace(ticket, "short"),
+      url.replace("https://", "https://user:secret@"),
+      "javascript:alert(1)",
+    ])
+      expect(cloudWorkbenchBrowserHandoffUrl("https://cloud.example/", target)).toBeUndefined();
+  });
   test("accepts HTTPS origins and loopback development entries", () => {
     expect(normalizeCloudWorkbenchAddress(" https://CLOUD.example:443/ ")).toBe(
       "https://cloud.example/",

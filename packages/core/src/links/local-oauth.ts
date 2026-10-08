@@ -9,6 +9,7 @@ import {
 } from "../credentials/oauth.js";
 import { getLocalLinkProvider } from "./providers.js";
 import { LinkProviderHttpError } from "./http.js";
+import { requestOnce } from "./request-once.js";
 
 const ENDPOINTS: Record<string, { token: string; account: string }> = {
   github: {
@@ -132,7 +133,7 @@ export async function executeLocalOAuthLinkAction(
     throw new LocalOAuthLinkError("invalid_request");
   const store = options.store ?? new CredentialStore(input.cwd);
   const now = options.now ?? Date.now;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const send = options.fetchImpl ?? requestOnce;
   const read = (): Credential => {
     const credential = store.resolve(input.id, input.scope);
     if (
@@ -238,7 +239,7 @@ export async function executeLocalOAuthLinkAction(
             // A rotating request has one bounded attempt. Caller cancellation does not
             // replay or abort another caller's shared rotation. Persist before sending.
             const token = await json(
-              await fetchImpl(endpoint.token, {
+              await send(endpoint.token, {
                 method: "POST",
                 redirect: "error",
                 signal: AbortSignal.timeout(20_000),
@@ -281,7 +282,7 @@ export async function executeLocalOAuthLinkAction(
             if (!isDeepStrictEqual(store.resolve(input.id, input.scope), marked))
               throw new LocalOAuthLinkError("changed");
             const account = await json(
-              await fetchImpl(endpoint.account, {
+              await send(endpoint.account, {
                 redirect: "error",
                 signal: AbortSignal.timeout(20_000),
                 headers: {
@@ -376,7 +377,7 @@ export async function executeLocalOAuthLinkAction(
       authKind: "oauth",
       params: input.params,
       signal: options.signal,
-      fetchImpl,
+      fetchImpl: options.fetchImpl,
     });
   let result: unknown;
   try {
