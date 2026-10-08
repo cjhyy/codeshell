@@ -60,7 +60,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               "Best for selected repositories; the creation page pre-fills permissions required by the current Link Actions.",
             ),
             createCredentialUrl:
-              "https://github.com/settings/personal-access-tokens/new?name=CodeShell+Link&description=Local+GitHub+connection+for+CodeShell&expires_in=90&contents=read&issues=write&pull_requests=read&metadata=read",
+              "https://github.com/settings/personal-access-tokens/new?name=CodeShell+Link&description=Local+GitHub+connection+for+CodeShell&expires_in=90&contents=read&issues=write&pull_requests=read&metadata=read&starring=write",
             docsUrl:
               "https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
             permissions: [
@@ -68,6 +68,11 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               { id: "issues", label: "Issues: write", level: "required" },
               { id: "pull_requests", label: "Pull requests: read", level: "required" },
               { id: "metadata", label: "Metadata: read", level: "required" },
+              {
+                id: "starring",
+                label: "Starring: write (account; Star / Unstar)",
+                level: "required",
+              },
             ],
             steps: [
               text(
@@ -84,8 +89,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               ),
             ],
             note: text(
-              "Token 只显示一次；建议设置有效期并仅选择必要仓库。",
-              "The token is shown once; set an expiry and select only necessary repositories.",
+              "Star / Unstar 另需账号级 Starring: write；这是修改当前账号收藏的权限。已有连接需明确重新连接，刷新不会扩大权限。Token 只显示一次。",
+              "Star / Unstar needs account-level Starring: write, which modifies this account’s stars. Explicitly reconnect existing bindings; refreshing never expands grants. The token is shown once.",
             ),
           },
         ),
@@ -123,6 +128,9 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     ],
     actionIds: [
       "list_repositories",
+      "get_repository",
+      "get_starred",
+      "set_starred",
       "get_readme",
       "get_file",
       "list_issues",

@@ -1,3 +1,4 @@
+import { githubStarActionIds } from "./github-star.js";
 import type { CredentialMetadata } from "../credentials/access.js";
 
 /** Public authority only. Rotating tokens/expiry are deliberately excluded. */
@@ -24,4 +25,19 @@ export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
     oauthScope: credential.oauthStatus?.scope,
     oauthScopes: credential.oauthStatus?.scopes,
   });
+}
+
+/** New actions require an explicit saved grant; legacy unscoped bindings never expand. */
+export function allowsLinkAction(
+  credential: CredentialMetadata,
+  provider: string,
+  action: string,
+): boolean {
+  const ids = credential.meta?.linkCapabilityIds;
+  if (
+    credential.meta?.linkExecutionRuntime === "server" ||
+    (provider === "github" && (githubStarActionIds as readonly string[]).includes(action))
+  )
+    return ids?.includes(`${provider}.${action}`) === true;
+  return !ids?.length || ids.includes(`${provider}.${action}`);
 }

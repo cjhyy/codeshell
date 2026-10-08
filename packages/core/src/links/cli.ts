@@ -1,3 +1,4 @@
+import { githubRepositoryParameters, githubSetStarredParameters } from "./github-star.js";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -497,6 +498,63 @@ async function executeGithubCliAction(
   const owner = pathSegmentParam(params, "owner", { required: true, maxLength: 100 })!;
   const repo = pathSegmentParam(params, "repo", { required: true, maxLength: 100 })!;
   const base = `repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  if (actionId === "get_repository") {
+    githubRepositoryParameters(params);
+    return pick(await api("github", base, options, run), [
+      "id",
+      "full_name",
+      "private",
+      "archived",
+      "html_url",
+    ]);
+  }
+  if (actionId === "get_starred" || actionId === "set_starred") {
+    const target =
+      actionId === "set_starred"
+        ? githubSetStarredParameters(params)
+        : githubRepositoryParameters(params);
+    const method = "starred" in target ? (target.starred ? "PUT" : "DELETE") : "GET";
+    const args = [
+      "api",
+      `user/starred/${target.owner}/${target.repo}`,
+      "--hostname",
+      CONFIG.github.hostname,
+      "--method",
+      method,
+      "--include",
+      "-H",
+      "Accept: application/vnd.github+json",
+      "-H",
+      "X-GitHub-Api-Version: 2022-11-28",
+    ];
+    if (method !== "GET") args.push("-H", "Content-Length: 0");
+    let result: CliLinkCommandResult;
+    try {
+      result = await run("github", CONFIG.github.command, args, { ...options, timeoutMs: 30_000 });
+    } catch (error) {
+      // gh exits nonzero for an HTTP 404 but includes the status with --include.
+      // Never infer a false state from stderr text or another process failure.
+      if (
+        method !== "GET" ||
+        !error ||
+        typeof error !== "object" ||
+        !("stdout" in error) ||
+        !("code" in error) ||
+        error.code !== 1 ||
+        ("signal" in error && Boolean(error.signal)) ||
+        ("killed" in error && Boolean(error.killed)) ||
+        !/^HTTP\/\S+ 404(?: |\r?$)/m.test(String(error.stdout))
+      )
+        throw new Error(safeMessage(error) || "GitHub CLI Star request failed", { cause: error });
+      result = { stdout: String(error.stdout), stderr: "" };
+    }
+    const statuses = [...result.stdout.matchAll(/^HTTP\/\S+ (\d{3})(?: |\r?$)/gm)];
+    if (statuses.length !== 1) throw new Error("GitHub CLI returned an invalid Star status");
+    const status = Number(statuses[0]![1]);
+    if (method === "GET" && [204, 404].includes(status)) return { starred: status === 204 };
+    if (method !== "GET" && status === 204) return { acknowledged: true };
+    throw new Error(`GitHub CLI Star request failed (HTTP ${status})`);
+  }
   if (actionId === "get_readme") {
     const result = githubFile(await api("github", `${base}/readme`, options, run), owner, repo);
     return { ...result, size: undefined };

@@ -1,3 +1,5 @@
+import { githubSetStarredParameters } from "./github-star.js";
+import { verifiedGithubSetStarred } from "./verified-star.js";
 import type { ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
 import {
@@ -14,7 +16,7 @@ import {
 } from "./cli.js";
 import { isRemoteLinkCredential } from "./remote.js";
 import { getLinkStatus } from "./status.js";
-import { linkAuthoritySnapshot } from "./authority.js";
+import { allowsLinkAction, linkAuthoritySnapshot } from "./authority.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
 import { githubCreateIssueParameters, verifiedGithubCreateIssue } from "./verified-write.js";
 
@@ -33,7 +35,10 @@ export const linkActionToolDef: ToolDefinition = {
     "user for approval inside the tool. GitHub create_issue also requires list_issues/get_issue " +
     "read access and independently verifies the created issue. An unknown result blocks further " +
     "writes in the Session; do not resend or alter parameters to work around it. One issue may " +
-    "be created per trusted user intent; a new batch needs separate Host-owned operation slots.",
+    "be created per trusted user intent; a new batch needs separate Host-owned operation slots. " +
+    "GitHub set_starred requires explicit get_repository/get_starred/set_starred grants, verifies " +
+    "the fixed repository and desired boolean state, and permits one target per trusted intent. " +
+    "A verified unchanged result means no write was sent.",
   inputSchema: {
     type: "object",
     properties: {
@@ -139,7 +144,6 @@ async function inspectConnections(
           ),
       );
       const connection = available.length === 1 ? available[0] : undefined;
-      const capabilities = connection?.credential.meta?.linkCapabilityIds;
       return {
         ...provider,
         connections: provider.connections.map((saved) => {
@@ -149,11 +153,7 @@ async function inspectConnections(
             actions: candidate
               ? getLocalLinkProvider(provider.id)!
                   .actions.filter((action) => {
-                    const capabilities = candidate.credential.meta?.linkCapabilityIds;
-                    return isRemoteLinkCredential(candidate.credential)
-                      ? capabilities?.includes(`${provider.id}.${action.id}`)
-                      : !capabilities?.length ||
-                          capabilities.includes(`${provider.id}.${action.id}`);
+                    return allowsLinkAction(candidate.credential, provider.id, action.id);
                   })
                   .map(({ id, title, description, risk }) => ({ id, title, description, risk }))
               : [],
@@ -164,9 +164,8 @@ async function inspectConnections(
         verifiedAt: connection?.credential.meta?.linkLastVerifiedAt,
         actions: connection
           ? getLocalLinkProvider(provider.id)!
-              .actions.filter(
-                (action) =>
-                  !capabilities?.length || capabilities.includes(`${provider.id}.${action.id}`),
+              .actions.filter((action) =>
+                allowsLinkAction(connection.credential, provider.id, action.id),
               )
               .map(({ id, title, description, risk }) => ({ id, title, description, risk }))
           : [],
@@ -283,11 +282,7 @@ export async function linkActionTool(
       error: `Unknown ${provider.displayName} Link Action: ${actionId}`,
     });
   }
-  const capabilityId = `${providerId}.${actionId}`;
-  if (
-    connection.credential.meta?.linkCapabilityIds?.length &&
-    !connection.credential.meta.linkCapabilityIds.includes(capabilityId)
-  ) {
+  if (!allowsLinkAction(connection.credential, providerId, actionId)) {
     return JSON.stringify({
       kind: "error",
       error: `${provider.displayName} connection does not allow Link Action ${actionId}.`,
@@ -299,6 +294,8 @@ export async function linkActionTool(
     params = JSON.parse(canonicalOperationValue(parseParams(args.params)));
     if (providerId === "github" && actionId === "create_issue")
       params = githubCreateIssueParameters(params);
+    if (providerId === "github" && actionId === "set_starred")
+      params = githubSetStarredParameters(params);
   } catch (error) {
     return JSON.stringify({ kind: "error", error: String(error) });
   }
@@ -343,7 +340,7 @@ export async function linkActionTool(
       live.meta?.linkProvider === providerId &&
       live.meta?.linkAccountId === connection.credential.meta?.linkAccountId &&
       live.meta?.linkOAuthState !== "reconnect" &&
-      (!live.meta?.linkCapabilityIds || live.meta.linkCapabilityIds.includes(capabilityId)) &&
+      allowsLinkAction(live, providerId, actionId) &&
       live.meta?.linkLastVerifiedAt === connection.credential.meta?.linkLastVerifiedAt,
     );
   };
@@ -429,6 +426,20 @@ export async function linkActionTool(
           "Verified writes require the owning Engine and tool authorization pipeline.",
         );
       const outcome = await verifiedGithubCreateIssue({
+        ctx,
+        connection: connection.credential,
+        params,
+        assertConnected,
+        execute,
+      });
+      operation = outcome.receipt;
+      data = outcome.data;
+    } else if (providerId === "github" && actionId === "set_starred") {
+      if (!ctx?.operations || !ctx.executeBoundTool)
+        throw new Error(
+          "Verified writes require the owning Engine and tool authorization pipeline.",
+        );
+      const outcome = await verifiedGithubSetStarred({
         ctx,
         connection: connection.credential,
         params,
