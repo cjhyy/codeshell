@@ -29,6 +29,10 @@ import {
   isRemoteLinkCredential,
   type RemoteLinkActionRequest,
 } from "../links/remote.js";
+import {
+  executeLocalOAuthLinkAction,
+  type LocalOAuthLinkActionRequest,
+} from "../links/local-oauth.js";
 import { refreshToken } from "../services/oauth.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage } from "../protocol/types.js";
@@ -51,6 +55,10 @@ export interface CredentialMetadata {
 }
 
 export interface CredentialAccess {
+  executeLocalOAuthLinkAction?(
+    request: LocalOAuthLinkActionRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<unknown>;
   executeRemoteLinkAction?(request: RemoteLinkActionRequest): Promise<unknown>;
   listMasked(cwd: string | undefined, scope: CredentialAccessScope): CredentialMetadata[];
   /** Optional read diagnostics. False means the list may be incomplete, not that it is empty. */
@@ -129,6 +137,7 @@ export function createIpcCredentialAccess(
       resolve: (value: unknown) => void;
       reject: (err: Error) => void;
       timer: ReturnType<typeof setTimeout>;
+      cleanup?: () => void;
     }
   >();
 
@@ -156,6 +165,7 @@ export function createIpcCredentialAccess(
     if (!waiter) return;
     pending.delete(id);
     clearTimeout(waiter.timer);
+    waiter.cleanup?.();
     if ("error" in msg && msg.error) {
       waiter.reject(new Error(msg.error.message));
     } else {
@@ -163,17 +173,47 @@ export function createIpcCredentialAccess(
     }
   });
 
-  const request = (method: string, params: Record<string, unknown>): Promise<unknown> => {
+  const request = (
+    method: string,
+    params: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<unknown> => {
+    signal?.throwIfAborted();
     const id = `cred-${nextId++}`;
     return new Promise((resolve, reject) => {
+      const cancel = () => {
+        if (!pending.has(id)) return;
+        pending.delete(id);
+        clearTimeout(timer);
+        cleanup();
+        transport.send({
+          jsonrpc: "2.0",
+          method: "desktop/localOAuthLinkActionCancel",
+          params: { requestId: id },
+        });
+        reject(new DOMException("Local Link action cancelled", "AbortError"));
+      };
+      const cleanup = () => signal?.removeEventListener("abort", cancel);
       const timer = setTimeout(
         () => {
           pending.delete(id);
+          cleanup();
+          if (method === "desktop/localOAuthLinkAction")
+            transport.send({
+              jsonrpc: "2.0",
+              method: "desktop/localOAuthLinkActionCancel",
+              params: { requestId: id },
+            });
           reject(new Error(`${method} timed out`));
         },
-        method === "desktop/remoteLinkAction" ? 45_000 : 30_000,
+        method === "desktop/localOAuthLinkAction"
+          ? 90_000
+          : method === "desktop/remoteLinkAction"
+            ? 45_000
+            : 30_000,
       );
-      pending.set(id, { resolve, reject, timer });
+      pending.set(id, { resolve, reject, timer, cleanup });
+      signal?.addEventListener("abort", cancel, { once: true });
       transport.send({ jsonrpc: "2.0", id, method, params });
     });
   };
@@ -184,6 +224,12 @@ export function createIpcCredentialAccess(
   };
 
   return {
+    executeLocalOAuthLinkAction: (input, options) =>
+      request(
+        "desktop/localOAuthLinkAction",
+        input as unknown as Record<string, unknown>,
+        options?.signal,
+      ),
     executeRemoteLinkAction: (input) =>
       request("desktop/remoteLinkAction", input as unknown as Record<string, unknown>),
     listMasked(cwd, scope) {
@@ -285,6 +331,7 @@ function storeFor(cwd: string | undefined): CredentialStore {
 }
 
 export const localCredentialAccess: CredentialAccess = {
+  executeLocalOAuthLinkAction,
   executeRemoteLinkAction,
   subscribe(listener, context) {
     return subscribeToLocalCredentialChanges(listener, context);
@@ -315,8 +362,8 @@ export const localCredentialAccess: CredentialAccess = {
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
     }
-    if (isRemoteLinkCredential(cred))
-      throw new Error("Remote Link credentials only support Host-owned actions");
+    if (isRemoteLinkCredential(cred) || isBrowserOAuthLinkCredential(cred))
+      throw new Error("OAuth Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
       (cred.type !== "link" ||
