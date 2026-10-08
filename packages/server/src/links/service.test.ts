@@ -61,11 +61,19 @@ function fixture(options: Partial<LinkServiceOptions> = {}) {
   services.push(service);
   return { cwd, userDirectory, store, service };
 }
-function brokerFactory(options: { start?: Promise<void>; complete?: Promise<void> } = {}) {
+function brokerFactory(
+  options: {
+    start?: Promise<void>;
+    complete?: Promise<void>;
+    token?: () => Promise<void>;
+    now?: () => number;
+  } = {},
+) {
   return () =>
     new LinkDeviceOAuthBroker({
       clientIds: { github: "public-fixture-client" },
       environment: {},
+      now: options.now,
       sleep: async () => {
         await options.complete;
       },
@@ -80,6 +88,7 @@ function brokerFactory(options: { start?: Promise<void>; complete?: Promise<void
             interval: 1,
           });
         }
+        await options.token?.();
         return Response.json({
           access_token: "synthetic-oauth-access",
           refresh_token: "synthetic-oauth-refresh",
@@ -450,3 +459,87 @@ describe("owner-bound Link device authorization", () => {
     await expect(service.connectToken(owner, input)).rejects.toMatchObject({ code: "unavailable" });
   });
 });
+
+for (const boundary of ["provider", "validation", "mutation"] as const) {
+  test(`device deadline after ${boundary} await fails without persisting`, async () => {
+    let clock = Date.now();
+    const entered = deferred();
+    const gate = deferred();
+    const { service, store } = fixture({
+      now: () => clock,
+      createDeviceBroker: brokerFactory({
+        now: () => clock,
+        token: async () => {
+          if (boundary === "provider") {
+            entered.resolve();
+            await gate.promise;
+          }
+        },
+      }),
+      validateToken: async () => {
+        if (boundary === "validation") {
+          entered.resolve();
+          await gate.promise;
+        }
+        return validation;
+      },
+      withMutation: async (write) => {
+        if (boundary === "mutation") {
+          entered.resolve();
+          await gate.promise;
+        }
+        return write();
+      },
+    });
+    const job = await service.startDeviceAuth(owner, input);
+    await entered.promise;
+    clock = Date.parse(job.prompt!.expiresAt) + 1;
+    gate.resolve();
+    // Give completion a chance to reject before querying (query itself also prunes expiry).
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(await service.authorization(owner, job.id)).toMatchObject({
+      state: "failed",
+      errorCode: "authorization_expired",
+    });
+    expect(store.list()).toEqual([]);
+  });
+}
+
+for (const interruption of ["cancel", "expiry", "notification-error"] as const) {
+  test(`device save stays connected when ${interruption} occurs during notification`, async () => {
+    let clock = Date.now();
+    const tokenGate = deferred();
+    const entered = deferred();
+    const gate = deferred();
+    const completed = deferred();
+    const { service, store } = fixture({
+      now: () => clock,
+      createDeviceBroker: brokerFactory({ now: () => clock, complete: tokenGate.promise }),
+      withMutation: async (write) => {
+        try {
+          return await write();
+        } finally {
+          completed.resolve();
+        }
+      },
+      onChanged: async () => {
+        entered.resolve();
+        await gate.promise;
+        if (interruption === "notification-error") throw new Error("notification failed");
+      },
+    });
+    const job = await service.startDeviceAuth(owner, input);
+    clock = Date.parse(job.prompt!.expiresAt) - 1_000;
+    tokenGate.resolve();
+    await entered.promise;
+    expect(store.list()).toHaveLength(1);
+    if (interruption === "cancel") await service.cancelAuthorization(owner, job.id);
+    else clock += 2_000;
+    expect(await service.authorization(owner, job.id)).toMatchObject({ state: "connected" });
+    gate.resolve();
+    await completed.promise;
+    const done = await service.authorization(owner, job.id);
+    expect(done.state).toBe("connected");
+    expect(store.resolve(done.connection!.id)?.secret).toContain("synthetic-oauth-access");
+  });
+}

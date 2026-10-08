@@ -279,3 +279,204 @@ test("remote capability discovery suppresses unconfigured providers without chan
     service.startAuthorization(owner, { ...input, methodId: "remote-link" }, "remote-link"),
   ).rejects.toMatchObject({ code: "invalid_request" });
 });
+
+test("CLI confirmation uses the verified stable identity and rotates when the account changes", async () => {
+  const calls: boolean[] = [];
+  let account = validation;
+  const { service, store } = fixture({
+    cliStatus: async () => ({
+      providerId: "github",
+      command: "gh",
+      installed: true,
+      authenticated: true,
+      account: "stale label",
+    }),
+    bindCli: async (_provider, options) => {
+      calls.push(options.loginIfNeeded);
+      return account;
+    },
+  });
+  const job = await service.startAuthorization(owner, input, "cli-session");
+  expect(job.step?.kind === "local-session" && job.step.session.account).toBe("fixture");
+  // Labels can be identical for different accounts; only the stable ID is authoritative.
+  account = {
+    ...validation,
+    identity: { ...validation.identity, externalAccountId: "different-account" },
+  };
+  const changed = await service.respondAuthorization(owner, job.id, {
+    stepId: job.step!.id,
+    operation: "bind-session",
+  });
+  expect(changed.state).toBe("pending");
+  expect(changed.step?.kind === "local-session" && changed.step.session.message).toContain("确认");
+  expect(changed.step!.id).not.toBe(job.step!.id);
+  expect(store.list()).toEqual([]);
+  await expect(
+    service.respondAuthorization(owner, job.id, {
+      stepId: job.step!.id,
+      operation: "bind-session",
+    }),
+  ).rejects.toMatchObject({ code: "conflict" });
+  const done = await service.respondAuthorization(owner, job.id, {
+    stepId: changed.step!.id,
+    operation: "bind-session",
+  });
+  expect(done.state).toBe("connected");
+  expect(done.connection?.account?.id).toBe("different-account");
+  expect(calls).toEqual([false, false, false]);
+});
+
+test("CLI detection verifies identity again and unauthenticated steps cannot bind", async () => {
+  let authenticated = false;
+  let calls = 0;
+  const { service, store } = fixture({
+    cliStatus: async () => ({
+      providerId: "github",
+      command: "gh",
+      installed: true,
+      authenticated,
+      account: "unverified",
+    }),
+    bindCli: async () => {
+      calls++;
+      return validation;
+    },
+  });
+  const job = await service.startAuthorization(owner, input, "cli-session");
+  await expect(
+    service.respondAuthorization(owner, job.id, {
+      stepId: job.step!.id,
+      operation: "bind-session",
+    }),
+  ).rejects.toMatchObject({ code: "invalid_request" });
+  expect(calls).toBe(0);
+  authenticated = true;
+  const detected = await service.respondAuthorization(owner, job.id, {
+    stepId: job.step!.id,
+    operation: "detect-session",
+  });
+  expect(detected.step?.kind === "local-session" && detected.step.session.account).toBe("fixture");
+  expect(calls).toBe(1);
+  expect(store.list()).toEqual([]);
+});
+
+test("CLI installation permission is native-only and does not imply an installed session", async () => {
+  const status = async () => ({
+    providerId: "github" as const,
+    command: "gh",
+    installed: false,
+    authenticated: false,
+  });
+  for (const allowCliLogin of [false, true]) {
+    const { service } = fixture({ cliStatus: status, allowCliLogin });
+    const job = await service.startAuthorization(owner, input, "cli-session");
+    expect(job.step?.kind === "local-session" && job.step.session.canInstall).toBe(allowCliLogin);
+    expect(job.step?.kind === "local-session" && job.step.session.canLogin).toBe(false);
+  }
+});
+
+test("remote authorization is ordered first while local method preference stays intact", () => {
+  const { service } = fixture({
+    remoteLink: () => ({
+      issuer: "https://link.example",
+      clientId: "client",
+      redirectUri: "http://127.0.0.1/link/callback",
+    }),
+  });
+  const modes = service
+    .snapshot()
+    .providers.find((provider) => provider.id === "github")!.authModes!;
+  expect(modes[0]).toMatchObject({ id: "remote-link", preferred: true });
+  expect(modes.find((mode) => mode.id === "token")).toMatchObject({ preferred: true });
+});
+
+for (const boundary of ["validation", "mutation"] as const) {
+  test(`interactive deadline after ${boundary} await fails without persisting`, async () => {
+    let clock = Date.now();
+    const entered = deferred<void>();
+    const gate = deferred<void>();
+    const { service, store } = fixture({
+      now: () => clock,
+      validateToken: async () => {
+        if (boundary === "validation") {
+          entered.resolve();
+          await gate.promise;
+        }
+        return validation;
+      },
+      withMutation: async (write) => {
+        if (boundary === "mutation") {
+          entered.resolve();
+          await gate.promise;
+        }
+        return write();
+      },
+    });
+    const job = await service.startAuthorization(owner, input, "token");
+    const pending = service.respondAuthorization(owner, job.id, {
+      stepId: job.step!.id,
+      operation: "submit",
+      input: { token: "late" },
+    });
+    await entered.promise;
+    clock = Date.parse(job.expiresAt!) + 1;
+    gate.resolve();
+    expect(await pending).toMatchObject({ state: "failed", errorCode: "authorization_expired" });
+    expect(store.list()).toEqual([]);
+  });
+}
+
+test("interactive cancellation before the mutation write never persists", async () => {
+  const entered = deferred<void>();
+  const gate = deferred<void>();
+  const { service, store } = fixture({
+    withMutation: async (write) => {
+      entered.resolve();
+      await gate.promise;
+      return write();
+    },
+  });
+  const job = await service.startAuthorization(owner, input, "token");
+  const pending = service.respondAuthorization(owner, job.id, {
+    stepId: job.step!.id,
+    operation: "submit",
+    input: { token: "cancelled" },
+  });
+  await entered.promise;
+  await service.cancelAuthorization(owner, job.id);
+  gate.resolve();
+  expect(await pending).toMatchObject({ state: "cancelled", errorCode: "cancelled" });
+  expect(store.list()).toEqual([]);
+});
+
+for (const interruption of ["cancel", "expiry", "notification-error"] as const) {
+  test(`interactive save stays connected when ${interruption} occurs during notification`, async () => {
+    let clock = Date.now();
+    const entered = deferred<void>();
+    const gate = deferred<void>();
+    const { service, store } = fixture({
+      now: () => clock,
+      onChanged: async () => {
+        entered.resolve();
+        await gate.promise;
+        if (interruption === "notification-error") throw new Error("notification failed");
+      },
+    });
+    const job = await service.startAuthorization(owner, input, "token");
+    clock = Date.parse(job.expiresAt!) - 1_000;
+    const pending = service.respondAuthorization(owner, job.id, {
+      stepId: job.step!.id,
+      operation: "submit",
+      input: { token: "saved" },
+    });
+    await entered.promise;
+    expect(store.list()).toHaveLength(1);
+    if (interruption === "cancel") await service.cancelAuthorization(owner, job.id);
+    else clock += 2_000;
+    expect(await service.authorization(owner, job.id)).toMatchObject({ state: "connected" });
+    gate.resolve();
+    const done = await pending;
+    expect(done.state).toBe("connected");
+    expect(store.resolve(done.connection!.id)?.secret).toBe("saved");
+  });
+}

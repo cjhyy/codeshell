@@ -130,6 +130,8 @@ interface InteractiveAuthorizationJob {
   expiresAt: number;
   timer?: ReturnType<typeof setTimeout>;
   busy: boolean;
+  /** Identity actually shown for this step; labels are not stable account identifiers. */
+  confirmedCliAccountId?: string;
 }
 type PreparedConnection = {
   input: LinkConnectionInput;
@@ -358,7 +360,6 @@ export function createLinkService(options: LinkServiceOptions = {}) {
               : []),
           ],
           authModes: [
-            ...authModes,
             ...(remote
               ? [
                   {
@@ -371,6 +372,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                   },
                 ]
               : []),
+            ...authModes,
           ],
           ...(deviceAuth ? { deviceAuth } : {}),
         };
@@ -511,6 +513,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     validation: LocalLinkValidationResult,
     secret: string,
     authSource: Exclude<MaskedLinkConnection["authSource"], "remote-link">,
+    lifecycle:
+      | {
+          beforeCommit: () => void;
+          onCommitted: (connection: MaskedLinkConnection) => void;
+        }
+      | undefined = undefined,
   ): Promise<MaskedLinkConnection> {
     const credential: Credential = {
       id: prepared.id,
@@ -538,8 +546,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       },
     };
     return change(context, () => {
+      lifecycle?.beforeCommit();
       swap(prepared, credential);
-      return masked(credential, "user");
+      const connection = masked(credential, "user");
+      lifecycle?.onCommitted(connection);
+      return connection;
     });
   }
   function tokenSecret(token: LocalBrowserAuthToken): string {
@@ -761,6 +772,66 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       else interactiveJobs.delete(id);
     }
   }
+  function assertInteractivePending(job: InteractiveAuthorizationJob): void {
+    if (job.public.state !== "pending" || job.operation.controller.signal.aborted)
+      throw new LinkServiceError(409, "cancelled");
+    if (job.expiresAt <= now()) throw new LinkServiceError(409, "authorization_expired");
+  }
+  function cliStep(
+    job: InteractiveAuthorizationJob,
+    expiresAt: string,
+    installed: boolean,
+    validation?: LocalLinkValidationResult,
+    message?: string,
+  ): LinkAuthorizationStep {
+    if (
+      validation &&
+      (validation.providerId !== job.prepared.input.providerId ||
+        typeof validation.identity.externalAccountId !== "string" ||
+        !validation.identity.externalAccountId)
+    )
+      throw new LinkServiceError(422, "provider_rejected");
+    job.confirmedCliAccountId = validation?.identity.externalAccountId;
+    return {
+      id: randomUUID(),
+      kind: "local-session",
+      expiresAt,
+      session: {
+        installed,
+        authenticated: !!validation,
+        canLogin: options.allowCliLogin === true && installed,
+        canInstall: options.allowCliLogin === true,
+        ...(validation ? { account: validation.identity.label } : {}),
+        ...(message ? { message } : {}),
+      },
+    };
+  }
+  async function detectCliSession(
+    job: InteractiveAuthorizationJob,
+  ): Promise<LinkAuthorizationStep> {
+    const providerId = job.prepared.input.providerId as Parameters<typeof cliStatus>[0];
+    const status = await cliStatus(providerId, {
+      cwd: options.cwd,
+      signal: job.operation.controller.signal,
+    });
+    await authorize(job.context);
+    assertInteractivePending(job);
+    let validation: LocalLinkValidationResult | undefined;
+    if (status.installed && status.authenticated) {
+      try {
+        validation = await bindCli(providerId, {
+          cwd: options.cwd,
+          signal: job.operation.controller.signal,
+          loginIfNeeded: false,
+        });
+      } catch {
+        // No identity has been confirmed; the user may log in or detect again.
+      }
+      await authorize(job.context);
+      assertInteractivePending(job);
+    }
+    return cliStep(job, job.public.expiresAt!, status.installed, validation);
+  }
   async function startAuthorization(
     context: LinkOperationContext,
     input: LinkConnectionInput,
@@ -808,7 +879,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
               },
             ],
           }
-        : { ...base, kind: "local-session", session: { installed: false, authenticated: false } };
+        : {
+            ...base,
+            kind: "local-session",
+            session: {
+              installed: false,
+              authenticated: false,
+              canInstall: options.allowCliLogin === true,
+            },
+          };
     const job: InteractiveAuthorizationJob = {
       context,
       prepared,
@@ -832,25 +911,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     );
     job.timer.unref?.();
     try {
-      if (step.kind === "local-session") {
-        const status = await cliStatus(
-          prepared.input.providerId as Parameters<typeof cliStatus>[0],
-          { cwd: options.cwd, signal: operation.controller.signal },
-        );
-        await authorize(context);
-        if (job.public.state !== "pending" || operation.controller.signal.aborted)
-          throw new LinkServiceError(409, "cancelled");
-        job.public.step = {
-          ...step,
-          session: {
-            installed: status.installed,
-            authenticated: status.authenticated,
-            canLogin: options.allowCliLogin === true && status.installed,
-            ...(status.account ? { account: status.account } : {}),
-          },
-        };
-      }
+      if (step.kind === "local-session") job.public.step = await detectCliSession(job);
       await authorize(context);
+      assertInteractivePending(job);
       return structuredClone(job.public);
     } catch (error) {
       endInteractive(job, error instanceof LinkServiceError ? error.code : "cli_unavailable");
@@ -896,41 +959,30 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(400, "invalid_request");
     if (response.operation === "login-session" && options.allowCliLogin !== true)
       throw new LinkServiceError(400, "invalid_request");
+    if (
+      response.operation === "bind-session" &&
+      (step.kind !== "local-session" || !step.session.authenticated || !job.confirmedCliAccountId)
+    )
+      throw new LinkServiceError(400, "invalid_request");
     job.busy = true;
     job.public = {
       ...job.public,
       errorCode: undefined,
       step: { id: randomUUID(), kind: "processing", expiresAt: step.expiresAt },
     };
+    let committed = false;
     const check = async () => {
       await authorize(context);
-      await authorize(job.context);
-      if (
-        job.operation.controller.signal.aborted ||
-        job.public.state !== "pending" ||
-        job.expiresAt <= now()
-      )
-        throw new LinkServiceError(409, "cancelled");
+      if (!committed) {
+        await authorize(job.context);
+        assertInteractivePending(job);
+      }
       return true;
     };
     try {
       if (response.operation === "detect-session") {
-        const status = await cliStatus(
-          job.prepared.input.providerId as Parameters<typeof cliStatus>[0],
-          { cwd: options.cwd, signal: job.operation.controller.signal },
-        );
+        job.public.step = await detectCliSession(job);
         await check();
-        job.public.step = {
-          id: randomUUID(),
-          kind: "local-session",
-          expiresAt: step.expiresAt,
-          session: {
-            installed: status.installed,
-            authenticated: status.authenticated,
-            canLogin: options.allowCliLogin === true && status.installed,
-            ...(status.account ? { account: status.account } : {}),
-          },
-        };
       } else if (response.operation === "login-session") {
         let validation: LocalLinkValidationResult;
         try {
@@ -943,17 +995,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           throw new LinkServiceError(422, "cli_unavailable");
         }
         await check();
-        job.public.step = {
-          id: randomUUID(),
-          kind: "local-session",
-          expiresAt: step.expiresAt,
-          session: {
-            installed: true,
-            authenticated: true,
-            canLogin: true,
-            account: validation.identity.label,
-          },
-        };
+        job.public.step = cliStep(job, step.expiresAt, true, validation);
       } else {
         let validation: LocalLinkValidationResult;
         try {
@@ -977,17 +1019,36 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         await check();
         if (validation.providerId !== job.prepared.input.providerId)
           throw new LinkServiceError(422, "provider_rejected");
-        const connection = await commit(
-          { ownerId: context.ownerId, authorize: check },
-          job.prepared,
-          validation,
-          token ?? `cli-binding:${randomBytes(24).toString("base64url")}`,
-          token !== undefined ? "manual-token" : "cli-session",
-        );
-        job.public = terminal(job.public, "connected", { connection });
-        clearTimeout(job.timer);
-        finish(job.operation);
-        job.expiresAt = now() + 5 * 60_000;
+        if (
+          token === undefined &&
+          validation.identity.externalAccountId !== job.confirmedCliAccountId
+        ) {
+          job.public.step = cliStep(
+            job,
+            step.expiresAt,
+            true,
+            validation,
+            "CLI 已切换账号，请确认当前账号后继续。",
+          );
+        } else {
+          await commit(
+            { ownerId: context.ownerId, authorize: check },
+            job.prepared,
+            validation,
+            token ?? `cli-binding:${randomBytes(24).toString("base64url")}`,
+            token !== undefined ? "manual-token" : "cli-session",
+            {
+              beforeCommit: () => assertInteractivePending(job),
+              onCommitted: (connection) => {
+                committed = true;
+                job.public = terminal(job.public, "connected", { connection });
+                clearTimeout(job.timer);
+                finish(job.operation);
+                job.expiresAt = now() + 5 * 60_000;
+              },
+            },
+          );
+        }
       }
       await authorize(context);
       return structuredClone(job.public);
@@ -1005,7 +1066,6 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       await authorize(context);
       return structuredClone(job.public);
     } finally {
-      token = undefined;
       job.busy = false;
     }
   }
@@ -1034,34 +1094,45 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     job: AuthorizationJob,
     prepared: PreparedConnection,
   ): Promise<void> {
+    let committed = false;
+    const assertPending = () => {
+      if (job.public.state !== "pending" || job.operation.controller.signal.aborted)
+        throw new LinkServiceError(409, "cancelled");
+      if (job.expiresAt <= now()) throw new LinkServiceError(409, "authorization_expired");
+    };
+    const check = async () => {
+      if (!committed) {
+        await authorize(job.context);
+        assertPending();
+      }
+      return true;
+    };
     try {
       const token = await job.broker.complete(job.brokerAttempt!);
-      await authorize(job.context);
-      if (job.operation.controller.signal.aborted || job.public.state !== "pending")
-        throw new LinkServiceError(409, "cancelled");
+      await check();
       if (token.providerId !== prepared.input.providerId)
         throw new LinkServiceError(422, "authorization_failed");
       const validation = await validateToken(token.providerId, token.accessToken, {
         signal: job.operation.controller.signal,
       });
-      await authorize(job.context);
-      if (job.operation.controller.signal.aborted || job.public.state !== "pending")
-        throw new LinkServiceError(409, "cancelled");
-      const connection = await commit(
-        {
-          ...job.context,
-          authorize: async () =>
-            (await job.context.authorize()) &&
-            !job.operation.controller.signal.aborted &&
-            job.public.state === "pending",
-        },
+      await check();
+      await commit(
+        { ownerId: job.context.ownerId, authorize: check },
         prepared,
         validation,
         tokenSecret(token),
         "browser-oauth",
+        {
+          beforeCommit: assertPending,
+          onCommitted: (connection) => {
+            committed = true;
+            job.public = terminal(job.public, "connected", { connection });
+            clearTimeout(job.timer);
+            finish(job.operation);
+            job.expiresAt = now() + 5 * 60_000;
+          },
+        },
       );
-      if (job.public.state === "pending")
-        job.public = terminal(job.public, "connected", { connection });
     } catch (error) {
       if (job.public.state === "pending")
         job.public = terminal(job.public, "failed", {
@@ -1217,22 +1288,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (job.completing || job.public.state !== "pending")
       throw new LinkServiceError(409, "conflict");
     const originalConfig = JSON.stringify(job.attempt.configuration);
-    const check = async () => {
-      await authorize(context);
-      await authorize(job.context);
-      if (
-        remoteJobs.get(id) !== job ||
-        job.attempt.expiresAt <= now() ||
-        job.public.state !== "pending"
-      )
+    let committed = false;
+    const assertPending = () => {
+      if (remoteJobs.get(id) !== job || job.public.state !== "pending")
         throw new LinkServiceError(409, "cancelled");
-      // Re-normalize exactly as at start; a changed client, callback, issuer or secret invalidates the attempt.
+      if (job.attempt.expiresAt <= now()) throw new LinkServiceError(409, "authorization_expired");
       const config = options.remoteLink?.();
       if (
         !config ||
         JSON.stringify(beginRemoteLinkAuthorization(config, now()).configuration) !== originalConfig
       )
         throw new LinkServiceError(409, "conflict");
+    };
+    const check = async () => {
+      if (!committed) {
+        await authorize(context);
+        await authorize(job.context);
+        assertPending();
+      }
     };
     job.completing = true;
     let credential: Credential | undefined;
@@ -1260,21 +1333,28 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           return true;
         },
       };
-      const connection = await change(guarded, () => {
+      await change(guarded, () => {
+        assertPending();
         swap(job.prepared, credential!, {
           retireExpected: !!job.prepared.expected,
           adopt: staged,
           now: now(),
         });
-        return masked(credential!, "user");
+        const connection = masked(credential!, "user");
+        committed = true;
+        job.public = terminal(job.public, "connected", { connection });
       });
-      job.public = terminal(job.public, "connected", { connection });
       // Replacing the active record and retaining its previous grant is one atomic write.
       await retryRemoteCleanup();
       if (store.remoteLinkRetirementCount()) job.public.previousGrantRevocationPending = true;
       await authorize(context);
       return structuredClone(job.public);
     } catch (error) {
+      if (committed) {
+        // Notification or post-write authorization failure cannot revoke an adopted grant.
+        await authorize(context);
+        return structuredClone(job.public);
+      }
       // If the callback minted a grant but its destination changed, do not leave it usable remotely.
       if (staged) {
         store.readyRemoteLinkRetirement(staged, now());
