@@ -20,6 +20,7 @@
 | 发布可见性确认        | PR80 已合入 main；发布命令被接受后，统一有界等待公开 registry 精确版本与所请求 tag，35 项回归通过                | 不重复发布、不重写 tag；该变更已随 0.9.28 发布，不包含于公开 0.9.27                                                            |
 | Durable 输出恢复      | PR79 最终组合 head cb71fdd3 已通过 12 项 CI、原生包与实际消费者验收并合入 main                                   | 已随 0.9.28 发布；128 MiB journal／16 MiB 单事件有界，任意长度、手机弱网、旧 peer、保留与修复仍未完成                          |
 | MCP OAuth 安全        | PR83 已合入 main；Core/Server/Desktop SDK floor 为 ^1.31.0，锁为 1.31.0，Desktop issuer 绑定通过实际 SDK 验收    | Host 新字节已随 0.9.28 发布；旧凭据仅按保存端点续期兼容，不把修复等同于真实账号或新授权验收                                    |
+| Profile 切换预览      | PR85 最终 bcae68df 通过全部 12 项 CI，合并为 8da73fe9；两个既有 Desktop 入口共享只读预览与 CAS 确认              | 已合入 main，未纳入 v0.9.28；显式 Session 绑定保留，数字人经验提升、dream 与静态 plugin 导出另行推进                           |
 | 优化实验室 P1b/P2     | PR67/71 已合入 main；无工具 Agent、指令快照、原生范围化采用与撤销、11 条 signer 清理路径已验证                   | 默认关闭；不覆盖有工具任务或真实收益。临时执行不落盘，授权报告／预算／receipt 持久化                                           |
 | 写操作控制            | PR69 已合入 main；持久 operation ledger、单次 claim、GitHub create_issue 独立回读通过实际 SDK/HTTP               | CLI 写入已在 PR77 禁用；早期 fake CLI 证据只证明调用／隔离，不能证明真实 gh 的传输安全                                         |
 | GitHub 仓库／Star     | Host PR77 与 services PR21 已合并；单目标 desired state、独立身份／状态回读与 unknown/restart 不重发已验证       | services PR21 已随生产 ba5363c 部署；新动作必须显式授权和单独验收。其他 provider 写语义、批量、人工 reconcile 和保留策略待推进 |
@@ -55,7 +56,15 @@ PR79 最终组合 head `cb71fdd3963930c42c20ac35c6a0f6bcde0647c6` 在
 2026-10-08 23:24:54 UTC 独立公开读回确认九包 exact/latest 均为 0.9.28，14 份资产包括
 6 个安装包、5 个 blockmap 和 3 份版本及资产引用正确的更新清单。该读回核验公开元数据、
 资产存在与大小，没有再次下载全部安装包字节。原有 0.9.27 tag、发布资产和验收记录不改写。
-Profile 切换预览为独立后续，不纳入该 tag。
+Profile 切换预览为独立后续，不纳入该 tag。其
+[PR85](https://github.com/cjhyy/codeshell/pull/85) 最终 head
+`bcae68df267973ff0bc569c95719711d3a3c2bd7` 在
+[Actions 37858908356](https://github.com/cjhyy/codeshell/actions/runs/37858908356) 通过全部
+12 项 CI，合并为 `8da73fe921b8fb2a66aca76157cb343de5002dfe`，两树完全一致。
+本地完整 guarded 四分片及真实隔离 Electron 双入口／缺失旧定义恢复验收通过；最后迁移
+兼容修正另通过 100 项 settings/Main 回归，最终 Desktop 完整分片 4,803 项／68 skip／零失败。
+该功能复用现有设置和数字人页，不新增导航；详细边界见
+[切换预览交付](workspace-profile-switch-preview.md)。
 
 Services [PR23](https://github.com/cjhyy/codeshell-services/pull/23) 记录了公开 0.9.27
 原锁的真实 Linux 双镜像构建、五包能力检查、禁网 CLI 启动与容器内健康检查。
@@ -101,7 +110,7 @@ GitHub OAuth；其余 provider 应用配置和真实账号验收仍待提供，�
 3. 更多真实工具的后置验证和错误预算适配，以及真实长程与按模型配对评测、通用评测
    adapter。Skill 预算已发布；非核心工具渐进发现已合入 main，已随 0.9.28 正式发行。
 4. 优化实验室真实模型实验、报告价值评价和有工具的任务试验，须按原授权要求完成。
-5. 数字人经验提升流程、切换影响预览与 plugin 降级导出。
+5. 数字人经验提升流程与 plugin 降级导出；切换影响预览已合入 main，尚未发布。
    受约束 dream 先确定 ownership/审批，不自动写 portable profile memory。
 6. Durable 流式 journal、共同游标、分页恢复和重启代次映射已在
    [PR79](https://github.com/cjhyy/codeshell/pull/79) 最终组合验收后合入 main，并随 0.9.28
