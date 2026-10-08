@@ -710,7 +710,6 @@ export class OpenAIClient extends LLMClientBase {
       );
 
       const choice = response.choices[0];
-      if (!choice) throw new LLMError("No response from OpenAI", "openai");
 
       const usage: TokenUsage = {
         promptTokens: response.usage?.prompt_tokens ?? 0,
@@ -720,7 +719,8 @@ export class OpenAIClient extends LLMClientBase {
         // cacheReadTokens field. Reading the wrong field made hit-rate invisible.
         ...cachedTokensOf(response.usage),
       };
-      this.recordUsage(usage, options);
+      this.recordUsage(usage, options, response.usage !== undefined && response.usage !== null);
+      if (!choice) throw new LLMError("No response from OpenAI", "openai");
 
       return this.processChoice(choice, usage, outputTokenLimitOf(requestBody));
     } catch (err) {
@@ -774,6 +774,16 @@ export class OpenAIClient extends LLMClientBase {
         // Capture usage from the final chunk
         if ((chunk as any).usage) {
           streamUsage = (chunk as any).usage;
+          // Preserve reported billing even if a later chunk/parser or consumer throws.
+          this.recordAttemptUsage(
+            {
+              promptTokens: streamUsage!.prompt_tokens ?? 0,
+              completionTokens: streamUsage!.completion_tokens ?? 0,
+              totalTokens: streamUsage!.total_tokens ?? 0,
+              ...cachedTokensOf(streamUsage),
+            },
+            options,
+          );
         }
 
         // Capture finish_reason BEFORE the no-delta early return below: the
@@ -916,7 +926,7 @@ export class OpenAIClient extends LLMClientBase {
         totalTokens: streamUsage?.total_tokens ?? 0,
         ...cachedTokensOf(streamUsage),
       };
-      this.recordUsage(usage, options);
+      this.recordUsage(usage, options, streamUsage !== undefined);
 
       const inferredToolArgumentTruncation = didHitToolArgumentOutputLimit({
         finishReason,

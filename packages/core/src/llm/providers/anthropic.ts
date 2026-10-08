@@ -299,6 +299,9 @@ export class AnthropicClient extends LLMClientBase {
 
       let currentToolName = "";
       let currentToolId = "";
+      stream.on("streamEvent", (_event, snapshot) => {
+        this.recordAttemptUsage(tokenUsageFromAnthropic(snapshot.usage), options);
+      });
 
       // Abort-guarded emit: once the turn is cancelled, stop forwarding chunks
       // to the UI. The SDK's event emitter can keep firing buffered text/

@@ -38,6 +38,7 @@ export interface GoalJudgeLLM {
     maxTokens?: number;
     billingEnabled?: boolean;
     requestVisible?: boolean;
+    usagePurpose?: "goal_judge";
     signal?: AbortSignal;
     /** Reasoning control — the judge always asks for it OFF (see call site). */
     reasoning?: import("../llm/reasoning-setting.js").ReasoningSetting;
@@ -615,6 +616,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     judgeRequestWindowCount++;
     try {
       resp = await llm.createMessage({
+        usagePurpose: "goal_judge",
         systemPrompt: JUDGE_SYSTEM,
         messages: [
           {

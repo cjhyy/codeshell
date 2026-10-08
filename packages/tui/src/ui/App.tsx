@@ -27,7 +27,8 @@ import {
 } from "./components/VirtualMessageList.js";
 import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mode.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
-import { costTracker } from "@cjhyy/code-shell-core";
+import { formatUsageCost } from "@cjhyy/code-shell-core";
+import { useSessionUsage } from "./hooks/useSessionUsage.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
 import type { ProviderManagerEntry } from "./components/ModelManager.js";
@@ -351,8 +352,13 @@ export function App({
       });
   }, [client, sessionId]);
   const [showBanner, setShowBanner] = useState(true);
-  const [totalTokens, setTotalTokens] = useState(0);
-  const [totalCost, setTotalCost] = useState(0);
+  const { summary: sessionUsage, refresh: refreshUsage } = useSessionUsage(
+    client,
+    sessionId,
+    sidRef,
+  );
+  const totalTokens = sessionUsage?.totalTokens ?? 0;
+  const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;
   const [contextTokens, setContextTokens] = useState(0);
   const [currentEffort, setCurrentEffort] = useState(effort);
   const [permMode, setPermMode] = useState<TuiPermissionMode>("normal");
@@ -1656,17 +1662,9 @@ export function App({
         }
 
         setSessionId(result.sessionId);
-        setTotalTokens(costTracker.getTotalTokens().total);
-        setTotalCost(costTracker.getEstimatedCost());
+        await refreshUsage(result.sessionId);
 
         const elapsed = Date.now() - runStartRef.current;
-        const turnCost = result.usage
-          ? costTracker.estimateForTokens(
-              model,
-              result.usage.promptTokens,
-              result.usage.completionTokens,
-            )
-          : 0;
         const parts: string[] = [formatDuration(elapsed)];
         if (result.usage && result.usage.totalTokens > 0) {
           parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);
@@ -1674,7 +1672,7 @@ export function App({
             parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);
           }
         }
-        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);
+
         chatStore.update((prev) => [
           ...prev,
           entry({ type: "system", subtype: "turn_duration", text: parts.join(" · ") }),
@@ -1734,7 +1732,15 @@ export function App({
       }
       return true;
     },
-    [client, sessionId, model, clearThinkingBuffer, finalizeStreamPresentation, setSessionId],
+    [
+      client,
+      sessionId,
+      model,
+      clearThinkingBuffer,
+      finalizeStreamPresentation,
+      setSessionId,
+      refreshUsage,
+    ],
   );
 
   // Background sub-agent completion → main-agent turn injection.

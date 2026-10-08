@@ -501,6 +501,7 @@ import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js
 import { resolveModelMeta } from "./model-meta-service.js";
 import { deleteRunDir } from "./runs-service.js";
 import { listRunsForUi, getRunHistory } from "./run-history-service.js";
+import { readUsageHistory } from "./usage-history-service.js";
 import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
@@ -6835,6 +6836,8 @@ ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
       : undefined;
   return tailLog(bucket, boundedLines);
 });
+
+ipcMain.handle("usage:summary", async (_e, query) => readUsageHistory(query));
 
 ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
   listRunsForUi(options),

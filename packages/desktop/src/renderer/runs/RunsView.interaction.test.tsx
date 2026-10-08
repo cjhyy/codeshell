@@ -261,4 +261,41 @@ describe("RunsView loading and selection", () => {
     expect(textOf(pane())).toContain("摘要 a");
     expect(lists).toHaveLength(1);
   });
+  test("renders known estimates with explicit unknown and partial coverage in the existing history page", async () => {
+    window.codeshell.getUsageSummary = async () => ({
+      version: 1,
+      scope: "store",
+      includesChildren: false,
+      requests: 2,
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+      knownEstimatedCostUsd: 0.00045,
+      unknownCostRequests: 1,
+      unknownUsageRequests: 1,
+      partial: true,
+      persistenceErrors: 0,
+      invalidReceipts: 1,
+      scannedReceipts: 2,
+      byModel: [],
+      bySession: [],
+      byPurpose: [],
+    });
+    await act(async () => {
+      root.render(<RunsView />);
+      await flushMicrotasks();
+    });
+    const content = textOf(container);
+    expect(content).toContain("0.000450");
+    expect(content).toContain("1");
+    expect(content).toMatch(/unknown|未知/);
+    expect(content).toMatch(/incomplete|不完整/);
+    expect(
+      descendants(container).some((node) =>
+        node.getAttribute("aria-label")?.match(/Cross-session|cross-session|跨会话/),
+      ),
+    ).toBe(true);
+  });
 });
