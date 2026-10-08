@@ -13,7 +13,7 @@ import {
 } from "../../core/src/session/output-journal.js";
 import {
   outputUserInputFixture,
-  outputForwardedSteerFixture,
+  outputForwardedInputFixture,
 } from "../../../tests/fixtures/output-journal-user-input.js";
 
 for (const mode of [
@@ -89,13 +89,28 @@ test("real child forwarding cannot promote a queued input into the parent user f
     text: "parent question",
     clientMessageId: "parent-submit",
   });
-  const events = outputForwardedSteerFixture();
+  const events = outputForwardedInputFixture();
   expect(events[0]).toMatchObject({
     agentId: "child-agent",
     sessionId: "child-session",
     id: "child-queue",
     clientMessageId: "parent-submit",
   });
+  expect(events[2]).toMatchObject({
+    type: "session_user_message",
+    agentId: "child-agent",
+    sessionId: "child-session",
+    clientMessageId: "child-submit",
+  });
+  expect(events[1]).toMatchObject({
+    type: "session_user_message",
+    agentId: "child-agent",
+    sessionId: "child-session",
+    clientMessageId: "parent-submit",
+  });
+  expect(reduceStream(initialChatState(), { ...events[1], agentId: undefined }).items).toHaveLength(
+    1,
+  );
   expect(events.reduce(reduceStream, parent)).toBe(parent);
 });
 

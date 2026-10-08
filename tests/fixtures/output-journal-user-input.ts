@@ -191,14 +191,27 @@ export async function outputUserInputFixture(
 }
 
 /** Real child forwarder keeps its input origin distinct from the parent feed. */
-export function outputForwardedSteerFixture() {
+export function outputForwardedInputFixture() {
   const events: StreamEvent[] = [];
-  wrapChildStream((event) => events.push(event), "child-agent")!({
+  const forward = wrapChildStream((event) => events.push(event), "child-agent")!;
+  forward({
     type: "steer_injected",
     text: "child guidance",
     id: "child-queue",
     sessionId: "child-session",
     clientMessageId: "parent-submit",
+  });
+  forward({
+    type: "session_user_message",
+    text: "initial child task",
+    sessionId: "child-session",
+    clientMessageId: "parent-submit",
+  });
+  forward({
+    type: "session_user_message",
+    text: "another initial child task",
+    sessionId: "child-session",
+    clientMessageId: "child-submit",
   });
   return events;
 }

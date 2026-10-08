@@ -640,6 +640,12 @@ export function applyStreamEvent(
   event: StreamEvent,
   now: MessageClock = Date.now,
 ): MessagesReducerState {
+  if (
+    (event.type === "session_user_message" || event.type === "steer_injected") &&
+    "agentId" in event &&
+    event.agentId
+  )
+    return state;
   event = projectOutputUserEvent(event);
   if (
     ("agentId" in event && event.agentId !== undefined) ||
@@ -940,7 +946,6 @@ function applyStreamEventToTurn(
     }
 
     case "steer_injected": {
-      if ("agentId" in event && event.agentId) return state;
       const attachments = outputUserAttachments(state, event);
       // Older Host envelopes can carry the parent run's clientMessageId.
       // New producers bind the queued message to its own Session identity.

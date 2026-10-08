@@ -22,7 +22,7 @@ import { SessionSnapshotStore } from "../../main/SessionSnapshotStore.js";
 import { transcriptToFoldItems } from "../../main/transcript-reader.js";
 import {
   outputUserInputFixture,
-  outputForwardedSteerFixture,
+  outputForwardedInputFixture,
 } from "../../../../../tests/fixtures/output-journal-user-input.js";
 
 function deferred<T>() {
@@ -298,13 +298,28 @@ describe("transcript history hydration after a background resume", () => {
       false,
       "parent-submit",
     );
-    const events = outputForwardedSteerFixture();
+    const events = outputForwardedInputFixture();
     expect(events[0]).toMatchObject({
       agentId: "child-agent",
       sessionId: "child-session",
       id: "child-queue",
       clientMessageId: "parent-submit",
     });
+    expect(events[2]).toMatchObject({
+      type: "session_user_message",
+      agentId: "child-agent",
+      sessionId: "child-session",
+      clientMessageId: "child-submit",
+    });
+    expect(events[1]).toMatchObject({
+      type: "session_user_message",
+      agentId: "child-agent",
+      sessionId: "child-session",
+      clientMessageId: "parent-submit",
+    });
+    expect(
+      applyStreamEvent(INITIAL_STATE, { ...events[1], agentId: undefined } as StreamEvent).messages,
+    ).toHaveLength(1);
     expect(events.reduce((state, event) => applyStreamEvent(state, event), parent)).toBe(parent);
   });
 
