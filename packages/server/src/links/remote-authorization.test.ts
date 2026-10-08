@@ -9,8 +9,8 @@ import {
   PlaintextCipher,
   type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
-import { createLinkHttp } from "./http.js";
-import { createLinkService, type LinkServiceOptions } from "./service.js";
+import { createLinkHttp, type LinkHttpOptions } from "./http.js";
+import { createLinkService } from "./service.js";
 import type { LinkAuthorization } from "./types.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -37,7 +37,7 @@ async function listen(server: Server) {
   });
   return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 }
-async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
+async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHandoff"> = {}) {
   const directory = mkdtempSync(join(tmpdir(), "host-remote-link-"));
   cleanups.push(async () => rmSync(directory, { recursive: true, force: true }));
   const store = new CredentialStore(undefined, new PlaintextCipher(), directory);
@@ -115,7 +115,8 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
   });
   cleanups.push(async () => http.close());
   const origin = await listen(
-    createServer((req, res) => {
+    createServer(async (req, res) => {
+      if (await http.handlePublic(req, res)) return;
       if (req.headers.origin !== origin) {
         res.writeHead(403).end();
         return;
@@ -152,6 +153,7 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
   const complete = (job: LinkAuthorization, owner = "one") =>
     api(`/authorizations/${job.id}/complete`, "POST", { callbackUrl: callback(job) }, owner);
   return {
+    origin,
     store,
     http,
     api,
@@ -187,6 +189,53 @@ async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
     },
   };
 }
+test("private runtimes retain legacy completion without advertising a public browser callback", async () => {
+  const f = await fixture({ browserHandoff: false });
+  const snapshot = await (await f.api("")).json();
+  expect(snapshot.capabilities.browserHandoff).toBeUndefined();
+  const job = await f.start();
+  expect((await f.complete(job)).status).toBe(200);
+  expect(f.store.list()).toHaveLength(1);
+});
+
+test("system browser handoff saves through the original Host without sharing its owner cookies", async () => {
+  const f = await fixture();
+  expect((await (await f.api("")).json()).capabilities.browserHandoff).toBe(1);
+  const job = await f.start();
+  const response = await f.api(`/authorizations/${job.id}/browser`, "POST", {});
+  expect(response.status).toBe(200);
+  const { launchUrl } = await response.json();
+  const launch = new URL(launchUrl);
+  const opened = await fetch(f.origin + launch.pathname + launch.search, { redirect: "manual" });
+  expect(opened.status).toBe(303);
+  expect(opened.headers.get("location")).toBe(job.redirect!.authorizationUrl);
+  const callback = new URL(f.callback(job));
+  const completed = await fetch(f.origin + callback.pathname + callback.search, {
+    redirect: "manual",
+  });
+  expect(completed.status).toBe(303);
+  expect(completed.headers.get("location")).toBe("/link/authorization-result");
+  const saved = await (await f.api(`/authorizations/${job.id}`)).json();
+  expect(saved.state).toBe("connected");
+  expect(saved.connection.providerId).toBe("github");
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(1);
+  await fetch(f.origin + callback.pathname + callback.search, { redirect: "manual" });
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(1);
+});
+
+test("revoking the original browser owner invalidates an already launched external handoff", async () => {
+  const f = await fixture();
+  const job = await f.start();
+  const { launchUrl } = await (await f.api(`/authorizations/${job.id}/browser`, "POST", {})).json();
+  const launch = new URL(launchUrl);
+  await fetch(f.origin + launch.pathname + launch.search, { redirect: "manual" });
+  f.deny("one");
+  const callback = new URL(f.callback(job));
+  await fetch(f.origin + callback.pathname + callback.search, { redirect: "manual" });
+  expect(f.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(0);
+  expect(f.store.list()).toHaveLength(0);
+});
+
 test("authenticated HTTP authorization saves only through Host and remote disconnect revokes the grant", async () => {
   const f = await fixture();
   const job = await f.start();

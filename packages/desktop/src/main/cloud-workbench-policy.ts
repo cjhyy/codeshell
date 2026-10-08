@@ -40,6 +40,27 @@ export function isCloudWorkbenchOrigin(address: string, target: string): boolean
   }
 }
 
+/** Only the configured workbench's opaque launch ticket may reach the system browser. */
+export function cloudWorkbenchBrowserHandoffUrl(
+  address: string,
+  target: string,
+): string | undefined {
+  try {
+    const url = new URL(target);
+    if (
+      isCloudWorkbenchOrigin(address, target) &&
+      url.pathname === "/link/authorize" &&
+      !url.hash &&
+      url.searchParams.size === 1 &&
+      /^[A-Za-z0-9_-]{43}$/.test(url.searchParams.get("ticket") ?? "")
+    )
+      return url.href;
+  } catch {
+    /* Malformed targets never acquire OS browser privileges. */
+  }
+  return undefined;
+}
+
 /** A cloud page may start one bounded Link flow. Link pages never acquire Desktop privileges. */
 export function createCloudWorkbenchNavigation(address: string, now = Date.now) {
   const origin = new URL(address).origin;

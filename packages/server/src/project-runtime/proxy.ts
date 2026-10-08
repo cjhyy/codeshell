@@ -4,6 +4,8 @@ import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { HUB_SESSION_COOKIE, type HubAuth } from "../hub/auth-http.js";
 import type { HubSession } from "../hub/auth-store.js";
 import type { ProjectRuntimeConnection } from "./types.js";
+import { createLinkBrowserHandoff } from "../links/browser-handoff.js";
+import type { LinkAuthorization } from "@cjhyy/code-shell-link";
 
 export type RuntimeTarget = ProjectRuntimeConnection;
 
@@ -95,6 +97,7 @@ interface AssetGrant {
 
 /** Private runtime credentials and cookies never cross this control-plane boundary. */
 export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
+  const linkBrowser = createLinkBrowserHandoff();
   const leases = new Map<string, Lease>();
   const assets = new Map<string, AssetGrant>();
   const revokedOwners = new Set<string>();
@@ -307,12 +310,13 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
     body: string,
     cookie?: string,
     timeout = 10_000,
+    method = "POST",
   ) {
     return await new Promise<{ response: IncomingMessage; bytes: Buffer }>((resolve, reject) => {
       const request = httpRequest(
         new URL(path, target.url),
         {
-          method: "POST",
+          method,
           headers: {
             origin: options.publicOrigin(),
             "content-type": "application/json",
@@ -416,12 +420,26 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
             req.method === "POST" &&
             incoming.statusCode === 200 &&
             /^\/api\/v1\/panels\/runtime\/([A-Za-z0-9_-]+)\/renew$/.exec(route.pathname);
-          const bytes =
-            prepare || renew ? await readBounded(incoming, MAX_PREPARE_BYTES) : undefined;
+          const linkCatalog =
+            req.method === "GET" &&
+            route.pathname === "/api/v1/links" &&
+            incoming.statusCode === 200;
+          let bytes =
+            prepare || renew || linkCatalog
+              ? await readBounded(incoming, MAX_PREPARE_BYTES)
+              : undefined;
           if (bytes) {
             await validate(lease);
             if (settled) return;
-            if (prepare) rememberPrepare(lease, bytes);
+            if (linkCatalog) {
+              const snapshot = JSON.parse(bytes.toString("utf8"));
+              if (
+                snapshot.capabilities?.authorizationSteps === 1 &&
+                snapshot.capabilities?.remoteAuth === true
+              )
+                snapshot.capabilities.browserHandoff = 1;
+              bytes = Buffer.from(JSON.stringify(snapshot));
+            } else if (prepare) rememberPrepare(lease, bytes);
             else if (renew) {
               const { expiresAt } = JSON.parse(bytes.toString("utf8"));
               if (!Number.isFinite(expiresAt) || expiresAt <= Date.now())
@@ -439,6 +457,7 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
           )
             forgetAssets(lease, route.pathname.split("/").at(-1));
           for (const name of RESPONSE_HEADERS) {
+            if (linkCatalog && name === "content-length") continue;
             const value = incoming.headers[name];
             if (value !== undefined) res.setHeader(name, value);
           }
@@ -463,6 +482,7 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
   }
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+    if (await linkBrowser.handle(req, res)) return true;
     if (!(req.url ?? "").startsWith("/p/")) return false;
     try {
       const route = parseRoute(req.url!);
@@ -471,6 +491,57 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
         ? await acquireAsset(req, route)
         : await acquire(req, route.projectId);
       if (req.aborted || res.destroyed) return true;
+      const handoff = /^\/api\/v1\/links\/authorizations\/([a-f0-9-]{36})\/browser$/.exec(
+        route.pathname,
+      );
+      if (handoff && req.method === "POST") {
+        const input = JSON.parse((await readBounded(req, 1024)).toString("utf8"));
+        if (
+          !input ||
+          Array.isArray(input) ||
+          typeof input !== "object" ||
+          Object.keys(input).length
+        )
+          throw new ProxyError(400, "Invalid browser authorization");
+        const target = `/api/v1/links/authorizations/${handoff[1]}`;
+        const readJob = async (): Promise<LinkAuthorization> => {
+          await validate(lease);
+          const result = await innerJson(lease.target, target, "", lease.cookie, 10_000, "GET");
+          await validate(lease);
+          const job = JSON.parse(result.bytes.toString("utf8")) as LinkAuthorization;
+          if (job.id !== handoff[1] || job.state !== "pending")
+            throw new ProxyError(409, "Authorization is no longer pending");
+          return job;
+        };
+        const launch = linkBrowser.create(
+          await readJob(),
+          {
+            check: async () => {
+              await readJob();
+            },
+            complete: async (callbackUrl) => {
+              await validate(lease);
+              const result = await innerJson(
+                lease.target,
+                target + "/complete",
+                JSON.stringify({ callbackUrl }),
+                lease.cookie,
+                30_000,
+              );
+              await validate(lease);
+              return JSON.parse(result.bytes.toString("utf8")) as LinkAuthorization;
+            },
+            cancel: async () => {
+              await validate(lease);
+              return innerJson(lease.target, target, "", lease.cookie, 10_000, "DELETE");
+            },
+          },
+          options.publicOrigin(),
+        );
+        res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(launch));
+        return true;
+      }
       await forwardHttp(req, res, route, lease);
     } catch (error) {
       httpError(res, error);
@@ -665,6 +736,7 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
     revokeProject,
     async close(): Promise<void> {
       closed = true;
+      linkBrowser.close();
       clearInterval(timer);
       for (const cancel of upgrades) cancel();
       const results = await Promise.allSettled([

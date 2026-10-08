@@ -192,6 +192,13 @@ test("only available Host modes are selected and external navigation rejects emb
   expect(safeLinkAuthorizationUrl("javascript:alert(1)")).toBeUndefined();
   expect(safeLinkAuthorizationUrl("https://user:secret@example.com")).toBeUndefined();
   expect(safeLinkAuthorizationUrl("http://example.com")).toBeUndefined();
+  expect(safeLinkAuthorizationUrl("http://localhost.evil.example/link/authorize")).toBeUndefined();
+  expect(safeLinkAuthorizationUrl("http://127.0.0.1:4310/link/authorize")).toBe(
+    "http://127.0.0.1:4310/link/authorize",
+  );
+  expect(safeLinkAuthorizationUrl("http://[::1]:4310/link/authorize")).toBe(
+    "http://[::1]:4310/link/authorize",
+  );
   expect(safeLinkAuthorizationUrl("https://github.com/login/device")).toBe(
     "https://github.com/login/device",
   );
