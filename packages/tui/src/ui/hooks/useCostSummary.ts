@@ -9,8 +9,8 @@ export function useCostSummary(): void {
   useEffect(() => {
     const onExit = () => {
       const tokens = costTracker.getTotalTokens();
-      if (tokens.total > 0) {
-        process.stdout.write("\n" + costTracker.formatSummary(CHALK_COLORIZER) + "\n");
+      if (tokens.total > 0 || (costTracker.getUsageSummary()?.requests ?? 0) > 0) {
+        process.stderr.write("\n" + costTracker.formatSummary(CHALK_COLORIZER) + "\n");
       }
     };
     process.on("exit", onExit);

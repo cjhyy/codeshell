@@ -553,6 +553,8 @@ export interface AgentServerOptions {
    * an invalid identity fails the request (fail closed).
    */
   resolveIdentity?: (ctx: { connectionId: string }) => string;
+  /** Trusted local host only: permit cross-Session usage summaries. Default false. */
+  allowUsageAggregation?: boolean;
   /**
    * Sessions dir for the server's lazy disk reader (background-wakeup
    * rehydrate). Defaults to the standard sessions root; a host that relocates
@@ -655,6 +657,7 @@ export class AgentServer {
   private diskSessionReader: SessionManager | null = null;
   /** Sessions dir for diskSessionReader; undefined → default sessions root. */
   private readonly sessionDiskRoot: string | undefined;
+  private readonly allowUsageAggregation: boolean;
   /**
    * Monotonic config-reload version, bumped per reloadSettings request so each
    * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
@@ -732,6 +735,7 @@ export class AgentServer {
     }
     this.baseChatManager = options.chatManager ?? null;
     this.resolveIdentity = options.resolveIdentity ?? null;
+    this.allowUsageAggregation = options.allowUsageAggregation === true && !options.resolveIdentity;
     this.sessionDiskRoot = options.sessionDiskRoot;
     this.legacyEngine = options.engine ?? null;
     this.settingsReader = options.settingsReader ?? null;
@@ -2069,6 +2073,7 @@ export class AgentServer {
           sessionId: result.sessionId ?? sid,
           turnCount: result.turnCount,
           usage: result.usage,
+          ...(result.runId ? { runId: result.runId } : {}),
           ...(result.extensions ? { extensions: result.extensions } : {}),
           petWorkDelegation: result.petWorkDelegation,
         };
@@ -2235,6 +2240,7 @@ export class AgentServer {
         sessionId: result.sessionId,
         turnCount: result.turnCount,
         usage: result.usage,
+        ...(result.runId ? { runId: result.runId } : {}),
         ...(result.extensions ? { extensions: result.extensions } : {}),
         petWorkDelegation: result.petWorkDelegation,
       };
@@ -3273,6 +3279,54 @@ export class AgentServer {
     const engine = this.legacyEngine ?? this.detachedQueryEngine();
 
     switch (params.type) {
+      case "usage": {
+        const scope = params.scope ?? (params.sessionId ? "session" : "runtime");
+        if (
+          !["runtime", "session", "store"].includes(scope) ||
+          (scope === "session" && !params.sessionId) ||
+          (scope !== "session" && !this.allowUsageAggregation)
+        ) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "Usage query requires an owned Session or trusted host aggregation",
+            ),
+          );
+          return;
+        }
+        const usageEngine = await this.resolveEngineForSessionQuery(
+          req,
+          params.sessionId,
+          engine,
+          "usage",
+        );
+        if (!usageEngine) return;
+        if (scope === "session" && !usageEngine.sessionExistsOnDisk(params.sessionId!)) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.SessionNotFound, "Session not found"),
+          );
+          return;
+        }
+        try {
+          const data = usageEngine.getUsageSummary({
+            scope,
+            sessionId: params.sessionId,
+            includeChildren: params.includeChildren,
+            since: params.since,
+            until: params.until,
+            limit: params.limit,
+            cursor: params.cursor,
+            runId: params.runId,
+          });
+          this.transport.send(createResponse(req.id, { type: "usage", data }));
+        } catch (error) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InvalidParams, (error as Error).message),
+          );
+        }
+        break;
+      }
       case "tools": {
         const toolsEngine = await this.resolveEngineForSessionQuery(
           req,

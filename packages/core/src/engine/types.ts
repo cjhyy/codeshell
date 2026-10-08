@@ -142,6 +142,8 @@ export interface EngineConfig {
    * Engine doesn't persist cost state — it's a UI concern.
    */
   costStore?: CostStateStore;
+  /** Request-based accounting owner; children inherit it without importing aggregate totals. */
+  usageLedger?: import("../cost-ledger/store.js").UsageLedger;
   /**
    * True when the Engine runs in a no-UI / one-shot context (e.g. the `run`
    * command). Currently controls InvestigationGuard soft-mode: in headless
@@ -232,6 +234,8 @@ export interface EngineHookConfig {
 }
 
 export interface EngineResult {
+  /** Physical request accounting identity of this execution; replay keeps it. */
+  runId?: string;
   text: string;
   reason: TerminalReason;
   completionKind?: TurnCompletionKind;

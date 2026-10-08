@@ -13,6 +13,7 @@ import {
 } from "../tool-system/sandbox/index.js";
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import { LifetimeScope, onceDispose, type Dispose } from "../composition/lifetime.js";
+import { UsageLedger } from "../cost-ledger/store.js";
 
 export interface EngineRuntimeOptions {
   modelPool: ModelPool;
@@ -20,6 +21,8 @@ export interface EngineRuntimeOptions {
   settings: SettingsManager;
   mcpPool: MCPManager;
   costTracker: CostTracker;
+  usageLedger?: UsageLedger;
+  usageStorageDir?: string;
 }
 
 /**
@@ -33,6 +36,7 @@ export class EngineRuntime {
   readonly settings: SettingsManager;
   readonly mcpPool: MCPManager;
   readonly costTracker: CostTracker;
+  readonly usageLedger: UsageLedger;
   private engines = new Set<() => Promise<void>>();
   private closing?: Promise<void>;
 
@@ -48,6 +52,12 @@ export class EngineRuntime {
     this.settings = opts.settings;
     this.mcpPool = opts.mcpPool;
     this.costTracker = opts.costTracker;
+    this.usageLedger =
+      opts.usageLedger ??
+      new UsageLedger({
+        storageDir: opts.usageStorageDir,
+      });
+    this.costTracker.bindLedger?.(this.usageLedger);
     this.lifetime.own(() => this.modelPool.clear());
     this.lifetime.own(() => this.toolRegistry.clear());
     this.lifetime.own(() => this.sandboxCache.clear());

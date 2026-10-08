@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { sessionsRoot } from "@cjhyy/code-shell-core";
 /**
  * Interactive REPL mode — uses Ink (React for CLI) for the terminal UI.
  *
@@ -16,7 +18,6 @@ import { createInProcessTransport } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import { personalizationFrom } from "@cjhyy/code-shell-core";
 import { MCPManager } from "@cjhyy/code-shell-core";
-import { CostTracker } from "@cjhyy/code-shell-core";
 import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { defaultSandboxConfig } from "@cjhyy/code-shell-core/internal";
@@ -172,7 +173,6 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     maxTurns,
     maxContextTokens,
     sessionStorageDir: settings.session.storageDir,
-    costStore: costTracker,
     mcpServers: mergePluginMcpServers(
       settings.mcpServers ?? {},
       (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
@@ -206,8 +206,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // TODO(future): aggregate MCP connections across sessions at the runtime level.
   const mcpPool = new MCPManager(toolRegistry);
   // CostTracker: fresh shared instance for this process.
-  // TODO(future): thread into Engine cost accounting once Engine reads runtime.costTracker.
-  const sessionCostTracker = new CostTracker();
+  const sessionCostTracker = costTracker;
 
   // 3. Build the shared EngineRuntime
   const runtime = new EngineRuntime({
@@ -216,6 +215,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     settings: settingsManager,
     mcpPool,
     costTracker: sessionCostTracker,
+    usageStorageDir: join(settings.session.storageDir ?? sessionsRoot(), ".usage-ledger"),
   });
 
   // 4. ChatSessionManager — single session "tui-main" (or resumed sid)
