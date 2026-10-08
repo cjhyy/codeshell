@@ -295,10 +295,10 @@ describe("LinkTab integrations", () => {
       { providerId: "github", methodId: "remote-link", label: "GitHub", expectedRevision: null },
       "remote-link",
     ]);
-    // A repeated open focuses the Host-controlled window and never starts another browser session.
+    // Reopening continues the Host-owned attempt instead of starting another authorization.
     expect(opened).toHaveLength(0);
     await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "打开授权页面 ↗")).onClick();
+      reactPropsOf(buttonWithLabel(container, "在系统浏览器中继续授权 ↗")).onClick();
       await flushMicrotasks();
     });
     expect(opened).toEqual([["/repo", "native-attempt"]]);
