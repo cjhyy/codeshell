@@ -108,6 +108,11 @@ export {
 } from "./tool-system/builtin/agent-notifications.js";
 export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
 export {
+  cancelBackgroundWorkForUI,
+  listBackgroundWorkForUI,
+  type BackgroundWorkEntry,
+} from "./tool-system/builtin/background-work.js";
+export {
   startAutomation,
   type StartAutomationDeps,
   type AutomationHandle,
