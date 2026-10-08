@@ -1,5 +1,9 @@
 export type {
   LinkAuthorization,
+  LinkAuthMode,
+  LinkAuthorizationInput,
+  LinkAuthorizationResponse,
+  LinkAuthorizationStep,
   LinkConnectionInput,
   LinkErrorCode,
   LinkSnapshot,

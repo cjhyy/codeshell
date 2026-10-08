@@ -5,12 +5,10 @@ import {
   Cable,
   ChevronDown,
   Cloud,
-  Globe2,
   ExternalLink,
   Figma,
   Github,
   HardDrive,
-  KeyRound,
   MessageCircleMore,
   MessageSquareText,
   MessagesSquare,
@@ -34,7 +32,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useToast } from "../ui/ToastProvider";
 import { useT, type TFunction } from "../i18n/I18nProvider";
@@ -47,6 +44,7 @@ import {
 } from "./link-catalog";
 import { RemoteLinkSection, useRemoteLinkSnapshot } from "./RemoteLinkSection";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
+import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
@@ -56,8 +54,6 @@ import type {
   ImGatewayStatus,
   ImGatewayUiEvent,
   CliLinkStatusView,
-  BrowserLinkAuthPromptView,
-  BrowserLinkAuthStatusView,
   LocalLinkProviderView,
   ManagedCliInstallStatusView,
 } from "../../preload/types";
@@ -348,75 +344,6 @@ export function CliQuickAuthPanel({
   );
 }
 
-function BrowserQuickAuthPanel({
-  providerName,
-  browserAuth,
-  status,
-  prompt,
-  busy,
-  onConnect,
-  onOpenDocs,
-}: {
-  providerName: string;
-  browserAuth: NonNullable<LinkConnectionMethod["browserAuth"]>;
-  status: BrowserLinkAuthStatusView | null;
-  prompt: BrowserLinkAuthPromptView | null;
-  busy: boolean;
-  onConnect: () => void;
-  onOpenDocs: (url: string) => void;
-}) {
-  const { t } = useT();
-  return (
-    <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.045] p-3.5">
-      <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/12 text-sky-600 dark:text-sky-400">
-          <Globe2 className="size-4.5" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{browserAuth.displayName}</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            {prompt
-              ? t("ext.link.browserAuthWaiting", { name: providerName })
-              : status?.configured === false
-                ? t("ext.link.browserAuthUnavailable")
-                : browserAuth.summary}
-          </p>
-        </div>
-      </div>
-      {prompt ? (
-        <div className="mt-3 rounded-lg border border-sky-500/20 bg-background/80 px-3 py-2.5 text-center">
-          <p className="text-[11px] text-muted-foreground">{t("ext.link.browserAuthCodeCopied")}</p>
-          <p className="mt-1 font-mono text-lg font-semibold tracking-[0.2em] text-foreground">
-            {prompt.userCode}
-          </p>
-        </div>
-      ) : null}
-      <Button
-        type="button"
-        className="mt-3 w-full"
-        variant="outline"
-        disabled={busy || status?.configured === false}
-        onClick={onConnect}
-      >
-        <Globe2 className="mr-2 size-4" aria-hidden />
-        {busy
-          ? t("ext.link.browserAuthWaiting", { name: providerName })
-          : t("ext.link.browserAuthLogin", { name: providerName })}
-      </Button>
-      <div className="mt-2 flex items-start justify-between gap-3 text-[11px] leading-4 text-muted-foreground">
-        <p>{browserAuth.privacyNote}</p>
-        <button
-          type="button"
-          className="shrink-0 font-medium text-primary hover:underline"
-          onClick={() => onOpenDocs(browserAuth.docsUrl)}
-        >
-          {t("ext.link.viewOfficialGuide")}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Link tab = 第三方应用连接。每个 provider 同时拥有 local/server 两条连接通道；
  * credential 状态互不覆盖；多个连接由调用方明确选择。
@@ -443,7 +370,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
     filter !== "planned" &&
     (filter !== "connected" ||
       remoteConnections.some((connection) => connection.status === "connected")) &&
-    `github ${t("ext.link.remoteDescription")} ${remoteConnections.map((connection) => `${connection.label} ${connection.account?.label ?? ""} ${connection.account?.resources.join(" ") ?? ""}`).join(" ")}`
+    `${
+      remote.snapshot?.providers
+        .filter((provider) => provider.authModes?.some((mode) => mode.id === "remote-link"))
+        .map((provider) => `${provider.displayName} ${provider.description[lang]}`)
+        .join(" ") ?? ""
+    } ${t("ext.link.remoteDescription")} ${remoteConnections.map((connection) => `${connection.label} ${connection.account?.label ?? ""} ${connection.account?.resources.join(" ") ?? ""}`).join(" ")}`
       .toLocaleLowerCase()
       .includes(query.trim().toLocaleLowerCase());
   const [localDialog, setLocalDialog] = useState<{
@@ -451,23 +383,8 @@ export function LinkTab({ cwd }: { cwd: string }) {
     method: LinkConnectionMethod;
     credential?: MaskedCredentialView;
   } | null>(null);
-  const [localLabel, setLocalLabel] = useState("");
-  const [localSecret, setLocalSecret] = useState("");
-  const [cliStatus, setCliStatus] = useState<CliLinkStatusView | null>(null);
-  const [cliInstallStatus, setCliInstallStatus] = useState<ManagedCliInstallStatusView | null>(
-    null,
-  );
-  const [cliChecking, setCliChecking] = useState(false);
   const [cliLiveness, setCliLiveness] = useState<Record<string, CliLiveness>>({});
   const [livenessNonce, setLivenessNonce] = useState(0);
-  const [cliInstalling, setCliInstalling] = useState(false);
-  const [browserAuthStatus, setBrowserAuthStatus] = useState<BrowserLinkAuthStatusView | null>(
-    null,
-  );
-  const [browserAuthPrompt, setBrowserAuthPrompt] = useState<BrowserLinkAuthPromptView | null>(
-    null,
-  );
-  const [browserAuthBusy, setBrowserAuthBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -566,93 +483,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
     };
   }, [cliCommands, cliConnections, cwd, livenessNonce]);
 
-  const localDialogProviderId = localDialog?.item.id;
-  const localDialogQuickAuth = localDialog?.method.quickAuth;
-  useEffect(() => {
-    if (!localDialogProviderId || localDialogQuickAuth?.kind !== "cli-session") {
-      setCliStatus(null);
-      setCliInstallStatus(null);
-      setCliChecking(false);
-      return;
-    }
-    const statusLoader = window.codeshell.links?.cliStatus;
-    if (!statusLoader) {
-      setCliStatus({
-        providerId: localDialogProviderId,
-        command: localDialogQuickAuth.command,
-        installed: false,
-        authenticated: false,
-      });
-      return;
-    }
-    let cancelled = false;
-    setCliChecking(true);
-    void statusLoader(localDialogProviderId, cwd)
-      .then((status) => {
-        if (!cancelled) setCliStatus(status);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setCliStatus({
-            providerId: localDialogProviderId,
-            command: localDialogQuickAuth.command,
-            installed: false,
-            authenticated: false,
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setCliChecking(false);
-      });
-    const installStatusLoader = window.codeshell.links?.cliInstallStatus;
-    if (installStatusLoader) {
-      void installStatusLoader(localDialogProviderId)
-        .then((status) => {
-          if (!cancelled) setCliInstallStatus(status);
-        })
-        .catch(() => {
-          if (!cancelled) setCliInstallStatus(null);
-        });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [cwd, localDialogProviderId, localDialogQuickAuth]);
-
-  const localDialogBrowserAuth = localDialog?.method.browserAuth;
-  useEffect(() => {
-    if (!localDialogProviderId || !localDialogBrowserAuth) {
-      setBrowserAuthStatus(null);
-      setBrowserAuthPrompt(null);
-      setBrowserAuthBusy(false);
-      return;
-    }
-    let cancelled = false;
-    void window.codeshell.links
-      .browserAuthStatus(localDialogProviderId)
-      .then((status) => {
-        if (!cancelled) setBrowserAuthStatus(status);
-      })
-      .catch(() => {
-        if (!cancelled) setBrowserAuthStatus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [localDialogBrowserAuth, localDialogProviderId]);
-
-  useEffect(() => {
-    const attemptId = browserAuthPrompt?.attemptId;
-    if (!attemptId) return;
-    return () => {
-      void window.codeshell.links.cancelBrowserAuth(attemptId);
-    };
-  }, [browserAuthPrompt?.attemptId]);
-
   const catalog = useMemo(
-    () => buildLinkCatalog(providerViews, lang === "zh" ? "zh" : "en"),
-    [lang, providerViews],
+    () =>
+      buildLinkCatalog(remote.snapshot?.providers ?? providerViews, lang === "zh" ? "zh" : "en"),
+    [lang, providerViews, remote.snapshot?.providers],
   );
   const byMethod = useMemo(() => {
     const map = new Map<string, MaskedCredentialView>();
@@ -676,6 +510,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
     for (const category of catalog) {
       for (const item of category.items) {
         for (const method of item.connectionMethods) {
+          if (
+            remote.snapshot?.providers
+              .find((provider) => provider.id === item.id)
+              ?.authModes?.some((mode) => mode.id === "remote-link" && mode.methodId === method.id)
+          )
+            continue;
           const credential =
             byMethod.get(linkMethodStateKey(item.id, method)) ??
             byMethod.get(`${item.id}:${method.executionRuntime}`);
@@ -706,7 +546,17 @@ export function LinkTab({ cwd }: { cwd: string }) {
       }
     }
     return result;
-  }, [byMethod, catalog, credentials, filter, query, t, hasRemote, remote.error]);
+  }, [
+    byMethod,
+    catalog,
+    credentials,
+    filter,
+    query,
+    t,
+    hasRemote,
+    remote.error,
+    remote.snapshot?.providers,
+  ]);
 
   /**
    * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
@@ -800,117 +650,6 @@ export function LinkTab({ cwd }: { cwd: string }) {
 
   const openLocalDialog = (entry: LinkMethodEntry) => {
     setLocalDialog({ item: entry.item, method: entry.method, credential: entry.credential });
-    setLocalLabel(entry.credential?.label ?? `${entry.item.name} · ${entry.method.displayName}`);
-    setLocalSecret("");
-  };
-
-  const saveLocalConnection = async () => {
-    if (!localDialog) return;
-    if (!localSecret.trim()) {
-      toast({ message: t("ext.link.localSecretRequired"), variant: "error" });
-      return;
-    }
-    const { item, method, credential } = localDialog;
-    const saved = await run(item, method, async () => {
-      const validation = await window.codeshell.links.connectLocal({
-        cwd,
-        providerId: item.id,
-        methodId: method.id,
-        label: localLabel,
-        token: localSecret,
-        existingId: credential?.id,
-      });
-      toast({
-        message: t("ext.link.localValidated", { account: validation.identity.label }),
-      });
-    });
-    if (saved) {
-      setLocalDialog(null);
-      setLocalSecret("");
-    }
-  };
-
-  const connectFromCli = async (forceLogin = false) => {
-    if (!localDialog?.method.quickAuth) return;
-    const { item, method, credential } = localDialog;
-    const saved = await run(item, method, async () => {
-      const validation = await window.codeshell.links.connectCli(
-        buildCliLinkConnectionRequest({
-          authenticated: forceLogin ? false : cliStatus?.authenticated === true,
-          cwd,
-          providerId: item.id,
-          methodId: method.id,
-          label: localLabel,
-          existingId: credential?.id,
-        }),
-      );
-      toast({ message: t("ext.link.localValidated", { account: validation.identity.label }) });
-    });
-    if (saved) {
-      setLocalDialog(null);
-      setLocalSecret("");
-    }
-  };
-
-  const installAndConnectCli = async () => {
-    if (!localDialog || !cliInstallStatus?.supported || cliInstalling) return;
-    setCliInstalling(true);
-    try {
-      const result = await window.codeshell.links.installCli(localDialog.item.id);
-      setCliStatus({
-        providerId: localDialog.item.id,
-        command: result.command,
-        installed: true,
-        authenticated: false,
-      });
-      toast({ message: t("ext.link.cliInstalled", { command: result.command }) });
-      await connectFromCli(true);
-    } catch (error) {
-      toast({ message: error instanceof Error ? error.message : String(error), variant: "error" });
-    } finally {
-      setCliInstalling(false);
-    }
-  };
-
-  const connectFromBrowser = async () => {
-    if (!localDialog?.method.browserAuth || browserAuthBusy) return;
-    const { item, method, credential } = localDialog;
-    setBrowserAuthBusy(true);
-    const saved = await run(item, method, async () => {
-      const prompt = await window.codeshell.links.startBrowserAuth(item.id);
-      setBrowserAuthPrompt(prompt);
-      const validation = await window.codeshell.links.completeBrowserAuth({
-        attemptId: prompt.attemptId,
-        cwd,
-        providerId: item.id,
-        methodId: method.id,
-        label: localLabel,
-        existingId: credential?.id,
-      });
-      toast({ message: t("ext.link.localValidated", { account: validation.identity.label }) });
-    });
-    setBrowserAuthBusy(false);
-    setBrowserAuthPrompt(null);
-    if (saved) {
-      setLocalDialog(null);
-      setLocalSecret("");
-    }
-  };
-
-  const closeLocalDialog = () => {
-    if (browserAuthPrompt) {
-      void window.codeshell.links.cancelBrowserAuth(browserAuthPrompt.attemptId);
-    }
-    setBrowserAuthPrompt(null);
-    setBrowserAuthBusy(false);
-    setLocalDialog(null);
-    setLocalSecret("");
-  };
-
-  const openExternalLink = (url: string) => {
-    void window.codeshell.openExternal(url).catch((error) => {
-      toast({ message: error instanceof Error ? error.message : String(error), variant: "error" });
-    });
   };
 
   const disconnectLocal = (entry: LinkMethodEntry) => {
@@ -1213,174 +952,36 @@ export function LinkTab({ cwd }: { cwd: string }) {
         </section>
       ) : null}
 
-      <Dialog
-        open={Boolean(localDialog)}
-        onOpenChange={(open) => {
-          if (!open) closeLocalDialog();
-        }}
-      >
-        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {t("ext.link.localDialogTitle", { name: localDialog?.item.name ?? "" })}
-            </DialogTitle>
-            <DialogDescription>{t("ext.link.localDialogDescription")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-1">
-            <div className="rounded-xl border border-status-ok/20 bg-status-ok/[0.045] p-3 text-xs leading-5 text-muted-foreground">
-              <div className="flex items-center gap-2 font-medium text-foreground">
-                <HardDrive className="size-4 text-status-ok" aria-hidden />
-                {localDialog?.method.displayName}
-              </div>
-              <p className="mt-1">{t("ext.link.localDialogStorageNote")}</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="link-local-label">{t("ext.link.localLabel")}</Label>
-              <Input
-                id="link-local-label"
-                value={localLabel}
-                onChange={(event) => setLocalLabel(event.target.value)}
-              />
-            </div>
-            {localDialog?.method.quickAuth ? (
-              <>
-                <CliQuickAuthPanel
-                  providerName={localDialog.item.name}
-                  quickAuth={localDialog.method.quickAuth}
-                  status={cliStatus}
-                  installStatus={cliInstallStatus}
-                  checking={cliChecking}
-                  installing={cliInstalling}
-                  busy={Boolean(busyId)}
-                  onConnect={() => void connectFromCli()}
-                  onInstall={openExternalLink}
-                  onManagedInstall={() => void installAndConnectCli()}
-                />
-              </>
-            ) : null}
-            {localDialog?.method.browserAuth ? (
-              <BrowserQuickAuthPanel
-                providerName={localDialog.item.name}
-                browserAuth={localDialog.method.browserAuth}
-                status={browserAuthStatus}
-                prompt={browserAuthPrompt}
-                busy={browserAuthBusy}
-                onConnect={() => void connectFromBrowser()}
-                onOpenDocs={openExternalLink}
-              />
-            ) : null}
-            {localDialog?.method.quickAuth || localDialog?.method.browserAuth ? (
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <div className="h-px flex-1 bg-border" />
-                {t("ext.link.manualCredentialDivider")}
-                <div className="h-px flex-1 bg-border" />
-              </div>
-            ) : null}
-            {localDialog?.method.authGuide ? (
-              <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {localDialog.method.authGuide.title}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {localDialog.method.authGuide.summary}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() =>
-                      openExternalLink(localDialog.method.authGuide!.createCredentialUrl)
-                    }
-                  >
-                    {t("ext.link.openCredentialPage")}
-                    <ExternalLink className="ml-1.5 size-3.5" aria-hidden />
-                  </Button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {localDialog.method.authGuide.permissions.map((permission) => (
-                    <span
-                      key={permission.id}
-                      title={permission.description}
-                      className={cn(
-                        "rounded-md border bg-background px-2 py-1 font-mono text-[10px]",
-                        permission.level === "required"
-                          ? "border-primary/25 text-foreground"
-                          : "border-border/70 text-muted-foreground",
-                      )}
-                    >
-                      {permission.label}
-                      {permission.level === "optional"
-                        ? ` · ${t("ext.link.permissionOptional")}`
-                        : ""}
-                    </span>
-                  ))}
-                </div>
-                <ol className="mt-3 list-decimal space-y-1 pl-4 text-[11px] leading-4 text-muted-foreground">
-                  {localDialog.method.authGuide.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-                {localDialog.method.authGuide.note ? (
-                  <p className="mt-3 rounded-lg bg-background/70 px-2.5 py-2 text-[11px] leading-4 text-muted-foreground">
-                    {localDialog.method.authGuide.note}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                  onClick={() => openExternalLink(localDialog.method.authGuide!.docsUrl)}
-                >
-                  {t("ext.link.viewOfficialGuide")}
-                  <ArrowUpRight className="size-3" aria-hidden />
-                </button>
-              </div>
-            ) : null}
-            <div className="space-y-1.5">
-              <Label htmlFor="link-local-secret">
-                {t("ext.link.credentialInputLabel", {
-                  token: localDialog?.method.tokenLabel ?? t("ext.link.localSecret"),
-                })}
-              </Label>
-              <div className="relative">
-                <KeyRound
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="link-local-secret"
-                  type="password"
-                  className="pl-9"
-                  value={localSecret}
-                  autoComplete="off"
-                  placeholder={
-                    localDialog?.method.tokenPlaceholder ?? t("ext.link.localSecretPlaceholder")
-                  }
-                  onChange={(event) => setLocalSecret(event.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeLocalDialog}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              disabled={!localSecret.trim() || Boolean(busyId)}
-              onClick={() => void saveLocalConnection()}
-            >
-              {busyId
-                ? t("ext.link.localValidating")
-                : localDialog?.credential
-                  ? t("ext.link.localReconnect")
-                  : t("ext.link.connectLocal")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {localDialog && (
+        <LinkConnectionDialog
+          key={`${cwd}:${localDialog.item.id}:${localDialog.method.id}:${localDialog.credential?.id ?? "new"}`}
+          cwd={cwd}
+          providerName={localDialog.item.name}
+          icon={INTEGRATION_ICONS[localDialog.item.icon]}
+          brandClass={localDialog.item.brandClass}
+          input={{
+            providerId: localDialog.item.id,
+            methodId: localDialog.method.id,
+            label: localDialog.credential?.label ?? localDialog.item.name,
+            ...(localDialog.credential ? { connectionId: localDialog.credential.id } : {}),
+            expectedRevision: localDialog.credential
+              ? (remote.snapshot?.connections.find((item) => item.id === localDialog.credential?.id)
+                  ?.revision ?? null)
+              : null,
+          }}
+          modes={
+            remote.snapshot?.providers
+              .find((item) => item.id === localDialog.item.id)
+              ?.authModes?.filter((mode) => mode.methodId === localDialog.method.id) ?? []
+          }
+          authGuide={localDialog.method.authGuide}
+          onClose={() => setLocalDialog(null)}
+          onConnected={() => {
+            void load().catch(() => undefined);
+            void remote.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

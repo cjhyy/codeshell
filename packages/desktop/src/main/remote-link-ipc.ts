@@ -1,9 +1,16 @@
-import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
+import {
+  BrowserWindow,
+  shell,
+  type IpcMain,
+  type IpcMainInvokeEvent,
+  type WebContents,
+} from "electron";
 import { randomUUID } from "node:crypto";
 import {
   createLinkService,
   remoteLinkFromEnvironment,
   type LinkConnectionInput,
+  type LinkAuthorizationResponse,
 } from "@cjhyy/code-shell-server/links";
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
@@ -69,8 +76,18 @@ export function registerRemoteLinkIpc(deps: {
               : undefined,
           withMutation: (write) => deps.withMutation(cwd, write),
           onChanged: deps.onChanged,
+          allowCliLogin: true,
         }),
         open: openNativeLinkAuthorization,
+        onConnected: () => {
+          if (!allowed() || nativeLinkOwners.get(event.sender) !== owner) return;
+          const window = BrowserWindow.fromWebContents(event.sender);
+          if (window && !window.isDestroyed()) {
+            if (window.isMinimized()) window.restore();
+            window.show();
+            window.focus();
+          }
+        },
       });
       owner.managers.set(cwd, manager);
     }
@@ -87,7 +104,46 @@ export function registerRemoteLinkIpc(deps: {
   ipcMain.handle("links:remoteSnapshot", async (event, cwd: string) => {
     const { manager, context } = await nativeLinkContext(event, cwd);
     await manager.service.assertAuthorized(context);
+    await manager.service.refreshRemoteCatalog(context);
     return manager.service.snapshot();
+  });
+  ipcMain.handle(
+    "links:authorizationStart",
+    async (
+      event,
+      cwd: string,
+      requestId: string,
+      input: LinkConnectionInput,
+      authModeId: string,
+    ) => {
+      const { manager, context } = await nativeLinkContext(event, cwd);
+      const result = await manager.authorization.start(context, requestId, input, authModeId);
+      if (result.step?.kind === "device-code") {
+        const url = new URL(result.step.verificationUriComplete ?? result.step.verificationUri);
+        if (url.protocol === "https:" && !url.username && !url.password)
+          void shell.openExternal(url.href).catch(() => {});
+      }
+      return result;
+    },
+  );
+  ipcMain.handle("links:authorizationGet", async (event, cwd: string, id: string) => {
+    const { manager, context } = await nativeLinkContext(event, cwd);
+    return manager.authorization.get(context, id);
+  });
+  ipcMain.handle(
+    "links:authorizationRespond",
+    async (event, cwd: string, id: string, response: LinkAuthorizationResponse) => {
+      const { manager, context } = await nativeLinkContext(event, cwd);
+      return manager.authorization.respond(context, id, response);
+    },
+  );
+  ipcMain.handle("links:authorizationCancel", async (event, cwd: string, id: string) => {
+    const { manager, context } = await nativeLinkContext(event, cwd);
+    return manager.authorization.cancel(context, id);
+  });
+  ipcMain.handle("links:authorizationOpen", async (event, cwd: string, id: string) => {
+    const { manager, context } = await nativeLinkContext(event, cwd);
+    return manager.authorization.open(context, id);
   });
   ipcMain.handle(
     "links:remoteStart",

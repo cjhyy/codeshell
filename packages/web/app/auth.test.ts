@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { api, ApiError, readAuthStatus, takeSetupToken, uploadFile } from "./auth.js";
+import { setApiProject, setApiWorkspace } from "./api-context.js";
 const nativeFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = nativeFetch;
+  setApiProject(null);
+  setApiWorkspace(undefined);
 });
 
 describe("Hub browser authentication", () => {
@@ -100,4 +103,30 @@ describe("Hub browser authentication", () => {
     });
     expect(uploaded.id).toBe("server-id");
   });
+});
+
+test("an explicit API scope cannot inherit a later project prefix or workspace headers", async () => {
+  setApiProject("22222222-2222-4222-8222-222222222222");
+  setApiWorkspace("/later");
+  let path = "",
+    headers: Headers;
+  globalThis.fetch = (async (value, init) => {
+    path = String(value);
+    headers = new Headers(init?.headers);
+    return Response.json({ ok: true });
+  }) as typeof fetch;
+  await api(
+    "/api/v1/links/authorizations/attempt",
+    { method: "DELETE" },
+    { projectId: null, workspace: "/original" },
+  );
+  expect(path).toBe("/api/v1/links/authorizations/attempt?workspace=%2Foriginal");
+  expect(headers!.get("X-CodeShell-Workspace")).toBe("%2Foriginal");
+  await api(
+    "/api/v1/links/authorizations/attempt",
+    { method: "DELETE" },
+    { projectId: null, workspace: "" },
+  );
+  expect(path).toBe("/api/v1/links/authorizations/attempt");
+  expect(headers!.get("X-CodeShell-Workspace")).toBeNull();
 });

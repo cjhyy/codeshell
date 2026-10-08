@@ -235,9 +235,11 @@
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-link": "workspace:*",
+        "@types/react": "^19.2.14",
+        "qrcode": "1.5.4",
       },
       "devDependencies": {
-        "@types/react": "^19.2.14",
+        "@types/qrcode": "1.5.6",
         "@types/react-dom": "^19.2.0",
         "@vitejs/plugin-react": "^5.0.0",
         "react": "19.2.6",

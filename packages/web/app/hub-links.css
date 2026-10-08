@@ -132,8 +132,24 @@
 .links-notice {
   color: var(--success);
 }
+.links-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgb(0 0 0 / 45%);
+}
 .links-editor {
-  margin: 24px 0;
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(540px, calc(100vw - 48px));
+  max-height: calc(100dvh - 64px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 24%);
 }
 .links-editor h2 {
   margin-top: 0;
@@ -179,6 +195,80 @@
 }
 .links-confirm button + button {
   margin-left: 8px;
+}
+.links-authorization {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.links-authorization > .links-actions {
+  margin: 20px 0 12px;
+}
+.link-authorization-step {
+  margin: 20px 0;
+}
+.link-authorization-actions,
+.links-methods {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.link-authorization-code {
+  display: block;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  text-align: center;
+  font-size: 28px;
+  letter-spacing: 4px;
+  user-select: all;
+}
+.link-authorization-expires,
+.links-other-methods {
+  color: var(--muted);
+  font-size: 12px;
+}
+.link-authorization-error {
+  color: var(--danger, #d04c4c);
+}
+.link-authorization-qr {
+  text-align: center;
+}
+.link-authorization-qr img {
+  display: block;
+  margin: 16px auto;
+  border-radius: 12px;
+  background: white;
+}
+.link-authorization-fields > button,
+.link-authorization-consent > button {
+  width: 100%;
+  padding: 11px 16px;
+  margin-top: 12px;
+  background: var(--accent);
+  color: white;
+}
+.link-authorization-consent label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.link-authorization-consent input[type="checkbox"] {
+  width: auto;
+  margin: 3px 0 0;
+}
+.link-authorization-consent small {
+  display: block;
+  flex-basis: 100%;
+  margin-left: 24px;
+}
+.link-authorization-consent fieldset {
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 @media (max-width: 640px) {
   .hub-links {

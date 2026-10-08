@@ -1,7 +1,11 @@
 import React from "react";
 import type { LinkAuthorization } from "@cjhyy/code-shell-link";
-import { api, ApiError } from "./auth.js";
-import { completeLinkCallback, type LinkCallback } from "./remote-link-authorization.js";
+import { ApiError } from "./auth.js";
+import {
+  completeLinkCallback,
+  queryLinkCallback,
+  type LinkCallback,
+} from "./remote-link-authorization.js";
 
 export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
   const operation = React.useRef<Promise<LinkAuthorization> | undefined>(undefined);
@@ -16,6 +20,14 @@ export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
           ? cause.message
           : "无法确认授权结果，请检查结果或返回项目重新连接。",
     );
+  const acceptResult = (value: LinkAuthorization) => {
+    if (value.state === "connected" && !value.connection) {
+      report(new Error("服务尚未确认连接已保存，请检查授权结果。"));
+      return;
+    }
+    setResult(value);
+    setError("");
+  };
   React.useEffect(() => {
     if ("error" in callback) return;
     let current = true;
@@ -23,7 +35,7 @@ export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
     operation.current ??= completeLinkCallback(callback);
     void operation.current.then(
       (value) => {
-        if (current) setResult(value);
+        if (current) acceptResult(value);
       },
       (cause) => {
         if (current) report(cause);
@@ -41,7 +53,8 @@ export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
         {pending && <p role="status">正在确认授权并保存到原项目…</p>}
         {result?.state === "connected" && (
           <p role="status">
-            已连接 {result.connection?.account?.label ?? "GitHub"}，授权已保存到原项目。
+            已连接 {result.connection?.account?.label ?? result.connection?.providerId}
+            ，授权已保存到原项目。
           </p>
         )}
         {result?.previousGrantRevocationPending && (
@@ -66,11 +79,8 @@ export function LinkCallbackPage({ callback }: { callback: LinkCallback }) {
             onClick={() => {
               if (checking) return;
               setChecking(true);
-              void api<LinkAuthorization>(callback.pending.target)
-                .then((value) => {
-                  setResult(value);
-                  setError("");
-                }, report)
+              void queryLinkCallback(callback)
+                .then(acceptResult, report)
                 .finally(() => setChecking(false));
             }}
           >

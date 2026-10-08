@@ -18,7 +18,13 @@ export type {
 
 export type {
   LinkProviderView,
+  LinkAuthMode,
   LinkAuthorization,
+  LinkAuthorizationInput,
+  LinkAuthorizationResponse,
+  LinkAuthorizationStep,
+  LinkCredentialFieldView,
+  LinkResourceGroupView,
   LinkConnectionInput,
   LinkErrorCode,
   LinkSnapshot,

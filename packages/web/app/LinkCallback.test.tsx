@@ -63,6 +63,11 @@ test("StrictMode sends one callback exchange and an uncertain outcome is only qu
     });
     expect(calls.map((call) => call.method)).toEqual(["POST", "GET"]);
     expect(calls[1].path).toBe(callback.pending.target);
+    expect(
+      elements(tree).find((item) => item.type === "p" && item.props.role === "alert")?.props
+        .children,
+    ).toContain("尚未确认");
+    expect(elements(tree).find((item) => item.type === "button")).toBeDefined();
   } finally {
     await act(async () => root.unmount());
     globalThis.fetch = originalFetch;

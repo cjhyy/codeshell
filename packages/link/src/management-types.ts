@@ -1,6 +1,8 @@
 import type { LinkProviderManifest } from "./types.js";
 
 export type LinkProviderView = LinkProviderManifest & {
+  /** Host-verified capabilities, distinct from short-lived authorization steps. */
+  authModes?: LinkAuthMode[];
   tokenLabel: string;
   tokenPlaceholder: string;
   actions: Array<{
@@ -16,6 +18,89 @@ export type LinkProviderView = LinkProviderManifest & {
     configurationCode?: "client_id_missing";
   };
 };
+
+export interface LinkAuthMode {
+  id: string;
+  methodId: string;
+  kind: "credential-input" | "local-session" | "device-code" | "redirect" | "qr-code";
+  label: string;
+  preferred?: boolean;
+  available: boolean;
+  unavailableReason?: string;
+}
+
+export interface LinkCredentialFieldView {
+  id: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+  placeholder?: string;
+  maxLength?: number;
+}
+
+export interface LinkResourceGroupView {
+  id: string;
+  label: string;
+  items: Array<{ id: string; label: string; description?: string }>;
+  minSelected?: number;
+  maxSelected?: number;
+  truncated?: boolean;
+}
+
+/** Only the current interaction is exposed; protocol credentials stay in their Host. */
+export type LinkAuthorizationStep = {
+  id: string;
+  expiresAt: string;
+} & (
+  | { kind: "redirect"; authorizationUrl: string }
+  | {
+      kind: "device-code";
+      userCode: string;
+      verificationUri: string;
+      verificationUriComplete?: string;
+    }
+  | {
+      kind: "qr-code";
+      qr?: { payload: string; challengeExpiresAt: string; instructions: string[] };
+      phase: "awaiting-scan" | "awaiting-confirmation" | "expired";
+      canRefresh: boolean;
+    }
+  | {
+      kind: "credential-input";
+      purpose: "credential" | "verification-code" | "second-factor";
+      fields: LinkCredentialFieldView[];
+    }
+  | {
+      kind: "local-session";
+      session: {
+        installed: boolean;
+        authenticated: boolean;
+        account?: string;
+        message?: string;
+        canLogin?: boolean;
+        canInstall?: boolean;
+      };
+    }
+  | {
+      kind: "consent";
+      account: { id?: string; label: string };
+      permissions: Array<{ id: string; label: string; description?: string; required?: boolean }>;
+      resourceGroups: LinkResourceGroupView[];
+    }
+  | { kind: "processing" }
+);
+
+export interface LinkAuthorizationResponse {
+  stepId: string;
+  operation:
+    | "submit"
+    | "detect-session"
+    | "login-session"
+    | "bind-session"
+    | "confirm"
+    | "refresh-qr";
+  input?: Record<string, string | string[] | boolean>;
+}
 
 export interface MaskedLinkConnection {
   id: string;
@@ -37,7 +122,13 @@ export interface MaskedLinkConnection {
 export interface LinkSnapshot {
   providers: LinkProviderView[];
   connections: MaskedLinkConnection[];
-  capabilities: { token: boolean; cliBinding: boolean; deviceAuth: boolean; remoteAuth?: boolean };
+  capabilities: {
+    token: boolean;
+    cliBinding: boolean;
+    deviceAuth: boolean;
+    remoteAuth?: boolean;
+    authorizationSteps?: 1;
+  };
   remoteServer?: { issuer: string };
   /** Count only; retired secrets never leave the Host. Retried after restart with backoff. */
   remoteCleanupPending?: number;
@@ -55,6 +146,10 @@ export interface LinkConnectionInput {
 
 export interface TokenConnectionInput extends LinkConnectionInput {
   token: string;
+}
+
+export interface LinkAuthorizationInput extends LinkConnectionInput {
+  authModeId: string;
 }
 
 export type LinkErrorCode =
@@ -75,6 +170,10 @@ export interface LinkAuthorization {
   id: string;
   providerId: string;
   state: "pending" | "connected" | "failed" | "cancelled";
+  methodId?: string;
+  authModeId?: string;
+  expiresAt?: string;
+  step?: LinkAuthorizationStep;
   prompt?: {
     userCode: string;
     verificationUri: string;

@@ -646,3 +646,158 @@
     background-clip: padding-box;
   }
 }
+
+@layer components {
+  .link-authorization-dialog .link-authorization-step {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 8px;
+    color: hsl(var(--cs-muted-foreground));
+    font-size: 12px;
+    line-height: 1.7;
+    text-align: center;
+  }
+
+  .link-authorization-dialog .link-authorization-status {
+    padding: 20px 0 6px;
+    color: hsl(var(--cs-muted-foreground));
+    font-size: 12px;
+    line-height: 1.7;
+    text-align: center;
+  }
+
+  .link-authorization-dialog .link-authorization-step > p {
+    margin: 0;
+  }
+
+  .link-authorization-dialog .link-authorization-expires {
+    color: hsl(var(--cs-muted-foreground) / 0.7);
+    font-size: 10px;
+  }
+
+  .link-authorization-dialog .link-authorization-code {
+    border: 1px solid hsl(var(--cs-border));
+    border-radius: 12px;
+    padding: 15px 12px;
+    background: hsl(var(--cs-muted) / 0.45);
+    color: hsl(var(--cs-foreground));
+    font-family: ui-monospace, monospace;
+    font-size: 25px;
+    letter-spacing: 0.15em;
+    line-height: 1.4;
+  }
+
+  .link-authorization-dialog .link-authorization-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .link-authorization-dialog .link-authorization-step button {
+    min-height: 36px;
+    flex: 1;
+    border: 1px solid hsl(var(--cs-border));
+    border-radius: 8px;
+    padding: 7px 12px;
+    background: hsl(var(--cs-background));
+    color: hsl(var(--cs-foreground));
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+
+  .link-authorization-dialog .link-authorization-step button:hover:not(:disabled) {
+    background: hsl(var(--cs-muted));
+  }
+
+  .link-authorization-dialog .link-authorization-step button:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .link-authorization-dialog .link-authorization-step button[type="submit"] {
+    border-color: hsl(var(--cs-primary) / 0.4);
+    background: transparent;
+    color: hsl(var(--cs-primary));
+  }
+
+  .link-authorization-dialog .link-authorization-step button[type="submit"]:hover:not(:disabled) {
+    background: hsl(var(--cs-primary) / 0.1);
+  }
+
+  .link-authorization-dialog .link-authorization-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: hsl(var(--cs-foreground));
+    text-align: left;
+  }
+
+  .link-authorization-dialog .link-authorization-fields input {
+    width: 100%;
+    min-height: 38px;
+    box-sizing: border-box;
+    border: 1px solid hsl(var(--cs-border));
+    border-radius: 8px;
+    padding: 8px 11px;
+    background: transparent;
+    color: hsl(var(--cs-foreground));
+    font-size: 12px;
+    outline: none;
+  }
+
+  .link-authorization-dialog .link-authorization-fields input:focus {
+    border-color: hsl(var(--cs-ring));
+    box-shadow: 0 0 0 2px hsl(var(--cs-ring) / 0.15);
+  }
+
+  .link-authorization-dialog .link-authorization-consent {
+    text-align: left;
+  }
+
+  .link-authorization-dialog .link-authorization-consent fieldset {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid hsl(var(--cs-border));
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+
+  .link-authorization-dialog .link-authorization-consent legend {
+    padding: 0 4px;
+    color: hsl(var(--cs-foreground));
+    font-weight: 500;
+  }
+
+  .link-authorization-dialog .link-authorization-consent label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .link-authorization-dialog .link-authorization-consent small {
+    width: 100%;
+    padding-left: 20px;
+    font-size: 10px;
+  }
+
+  .link-authorization-dialog .link-authorization-qr img {
+    align-self: center;
+    max-width: 100%;
+    border: 1px solid hsl(var(--cs-border));
+    border-radius: 12px;
+  }
+
+  .link-authorization-dialog .link-authorization-error {
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: hsl(var(--cs-status-err) / 0.08);
+    color: hsl(var(--cs-status-err));
+    font-size: 12px;
+    line-height: 1.7;
+  }
+}

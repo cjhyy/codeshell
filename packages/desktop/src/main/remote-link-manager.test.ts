@@ -8,12 +8,21 @@ import { createLinkService } from "@cjhyy/code-shell-server/links";
 import {
   createNativeRemoteLinkManager,
   type NativeLinkAuthorizationInput,
+  type NativeLinkAuthorizationWindow,
 } from "./remote-link-manager.js";
 const cleanups: Array<() => void> = [];
 afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
-function fixture() {
+function fixture(
+  options: {
+    open?: (
+      input: NativeLinkAuthorizationInput,
+      handle: NativeLinkAuthorizationWindow,
+    ) => NativeLinkAuthorizationWindow | Promise<NativeLinkAuthorizationWindow>;
+    onConnected?: () => void | Promise<void>;
+  } = {},
+) {
   const root = mkdtempSync(join(tmpdir(), "native-link-manager-"));
   const store = new CredentialStore(undefined, new PlaintextCipher(), root);
   let opened: NativeLinkAuthorizationInput | undefined,
@@ -29,14 +38,16 @@ function fixture() {
   });
   const manager = createNativeRemoteLinkManager({
     service,
+    onConnected: options.onConnected,
     open: (input) => {
       opened = input;
-      return {
+      const handle = {
         close() {
           closes++;
           input.onCancel();
         },
       };
+      return options.open?.(input, handle) ?? handle;
     },
   });
   cleanups.push(() => {
@@ -45,6 +56,7 @@ function fixture() {
   });
   return {
     manager,
+    service,
     store,
     context: { ownerId: "owner", authorize: () => allowed },
     get opened() {
@@ -82,6 +94,46 @@ test("native cancel belongs to its owner and closes the authorization once", asy
   expect((await pending).state).toBe("cancelled");
   expect(f.closes).toBe(1);
   expect(f.store.list()).toEqual([]);
+});
+
+test("legacy cancellation during asynchronous browser dispatch closes its late handle", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const f = fixture({
+    open: async (_input, handle) => {
+      await gate;
+      return handle;
+    },
+  });
+  const requestId = randomUUID();
+  const pending = f.manager.start(f.context, requestId, input);
+  const window = await opened(f);
+  f.manager.cancel(f.context, requestId);
+  expect(window.signal?.aborted).toBe(true);
+  expect((await pending).state).toBe("cancelled");
+  release();
+  for (let i = 0; i < 30 && !f.closes; i++) await Promise.resolve();
+  expect(f.closes).toBe(1);
+});
+
+test("legacy connected result settles even when the owner focus notification throws", async () => {
+  const f = fixture({
+    onConnected: () => {
+      throw new Error("focus unavailable");
+    },
+  });
+  const pending = f.manager.start(f.context, randomUUID(), input);
+  const window = await opened(f);
+  f.service.completeRemoteAuth = async () => ({
+    id: "synthetic",
+    providerId: "github",
+    state: "connected",
+  });
+  expect(await window.onCallback(`${window.redirectUri}?code=synthetic`)).toBe(true);
+  expect((await pending).state).toBe("connected");
+  expect(f.closes).toBe(1);
 });
 test("closing the login window cancels and permits a new attempt", async () => {
   const f = fixture();

@@ -1,3 +1,4 @@
+/* global window, document, sessionStorage */
 /** Real browser flow through the built Web app, Node Hub and independent Link.
  * GitHub responses are controlled; this does not claim a real provider login.
  */
@@ -9,23 +10,29 @@ import { join } from "node:path";
 import { createServer } from "node:net";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
 // The verifier takes a separately built/selected service entry. No product depends on sibling sources.
 if (!process.argv[2])
   throw new Error(
-    "Usage: node scripts/smoke-remote-link-web.mjs /absolute/path/to/link-server/http.mjs",
+    "Usage: node scripts/smoke-remote-link-web.mjs /absolute/path/to/link-server/http.mjs [web|electron|paired|native] [candidate.app]",
   );
 const { startLinkServer } = await import(pathToFileURL(resolve(process.argv[2])).href);
 import { startHeadlessServer } from "../packages/server/dist/serve/headless-server.js";
 import { resolveWorkerEntry } from "../packages/server/dist/serve/cli.js";
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../packages/desktop/package.json", import.meta.url));
-const { chromium } = require("playwright");
+const { chromium, _electron } = require("playwright");
 import {
   launchCodeShellElectron,
   findCodeShellWindow,
 } from "../packages/desktop/scripts/electron-harness.mjs";
 import { verifyNativeLinkUI } from "./verify-native-link-ui.mjs";
 const mode = process.argv[3] ?? "web";
+const packagedApplication = process.argv[4] ?? process.env.CODESHELL_LINK_SMOKE_APP;
+assert.ok(
+  !packagedApplication || mode === "native",
+  "Packaged application is supported in native mode",
+);
 const widths = mode === "web" ? [390, 1440] : mode === "electron" ? [1280] : [390];
 assert.ok(
   ["web", "electron", "paired", "native"].includes(mode),
@@ -46,7 +53,6 @@ const hubPort = hubProbe.address().port;
 await new Promise((done) => hubProbe.close(done));
 let hubOrigin = `http://127.0.0.1:${hubPort}`;
 const screenshots = await mkdtemp(join(tmpdir(), "codeshell-remote-link-web-ui-"));
-let calls = 0;
 const app = await startLinkServer({
   port,
   publicOrigin: issuer,
@@ -80,7 +86,6 @@ const app = await startLinkServer({
     async action(action, input, credential, resources) {
       assert.equal(credential.access_token, "UPSTREAM-ONLY-IN-LINK");
       assert.deepEqual(resources, ["owner/repo"]);
-      calls++;
       return action === "get_issue"
         ? { number: input.number, title: "real Link route" }
         : [{ id: 1, full_name: "owner/repo" }];
@@ -142,10 +147,50 @@ try {
         })),
       ),
     );
-    desktop = await launchCodeShellElectron({
-      appDir: resolve("packages/desktop"),
-      home: desktopHome,
-    });
+    if (packagedApplication) {
+      const application = resolve(packagedApplication);
+      const publicKeys = [
+        "CODE_SHELL_REMOTE_LINK_ISSUER",
+        "CODE_SHELL_REMOTE_LINK_CLIENT_ID",
+        "CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN",
+      ];
+      const publicConfig = Object.fromEntries(
+        publicKeys.map((key) => [
+          key,
+          execFileSync(
+            "/usr/libexec/PlistBuddy",
+            ["-c", `Print :LSEnvironment:${key}`, join(application, "Contents/Info.plist")],
+            { encoding: "utf8" },
+          ).trim(),
+        ]),
+      );
+      assert.ok(
+        publicKeys.every((key) => publicConfig[key]),
+        "Missing bundled public Link configuration",
+      );
+      desktop = await _electron.launch({
+        executablePath: join(application, "Contents/MacOS/code-shell"),
+        args: [`--user-data-dir=${join(desktopHome, "electron-user-data")}`],
+        cwd: localProjects[0],
+        timeout: 30000,
+        env: {
+          ...process.env,
+          HOME: desktopHome,
+          USERPROFILE: desktopHome,
+          CODE_SHELL_HOME: join(desktopHome, ".code-shell"),
+          CODE_SHELL_NO_DEVTOOLS: "1",
+          CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
+          DISABLE_AUTOUPDATER: "1",
+          ...publicConfig,
+        },
+      });
+      assert.equal(await desktop.evaluate(({ app }) => app.isPackaged), true);
+    } else {
+      desktop = await launchCodeShellElectron({
+        appDir: resolve("packages/desktop"),
+        home: desktopHome,
+      });
+    }
     localWindow = await findCodeShellWindow(desktop);
     const viewOnly = localWindow.getByRole("button", { name: /仅查看|View only/i });
     if (
@@ -339,19 +384,24 @@ try {
           .selectOption({ label: "Link project A" });
         await page.getByRole("button", { name: "Link", exact: true }).click();
       } else await page.goto(hubOrigin + "/?view=links");
+      const beginGitHubAuthorization = async () => {
+        const provider = page.locator(".links-provider").filter({
+          has: page.getByRole("heading", { name: "GitHub", exact: true }),
+        });
+        await provider.getByRole("button", { name: "添加连接", exact: true }).click();
+      };
       console.log("Link verifier: opening authorization", mode);
-      await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
-      await page.getByRole("button", { name: "前往 Link 授权", exact: true }).waitFor();
-      await page.screenshot({ path: join(screenshots, `editor-${width}.png`), fullPage: true });
+      await page.locator(".links-provider").first().waitFor();
+      await page.screenshot({ path: join(screenshots, `catalog-${width}.png`), fullPage: true });
       let pendingJob;
       if (mode === "paired")
-        await page.route(/\/api\/v1\/links\/authorizations\/remote(?:\?|$)/, async (route) => {
+        await page.route(/\/api\/v1\/links\/authorizations(?:\/remote)?(?:\?|$)/, async (route) => {
           // Observe the genuine creation response before cross-origin navigation discards its body.
           const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
           pendingJob = await response.json();
           await route.fulfill({ response });
         });
-      await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
+      await beginGitHubAuthorization();
       console.log("Link verifier: waiting for public GitHub consent", mode);
       await page
         .getByRole("button", { name: "允许只读访问", exact: true })
@@ -454,15 +504,13 @@ try {
       assert.ok(linkState.grants.length > 0 && linkState.grants.every((grant) => grant.revoked));
       assert.equal(completes, 1);
       // Refusal returns to the same Host and cancels the private attempt without exchanging a code.
-      await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
-      await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
+      await beginGitHubAuthorization();
       await page.getByRole("button", { name: "取消", exact: true }).click();
       await page.getByText("授权已取消，没有新增连接。", { exact: true }).waitFor();
       assert.equal(completes, 1);
       if (mode === "paired") {
         await page.getByRole("link", { name: "返回原项目", exact: true }).click();
-        await page.getByRole("button", { name: "通过 Link 添加账号", exact: true }).click();
-        await page.getByRole("button", { name: "前往 Link 授权", exact: true }).click();
+        await beginGitHubAuthorization();
         await page.getByRole("button", { name: "允许只读访问", exact: true }).waitFor();
         const devices = await localWindow.evaluate(() =>
           window.codeshell.mobileRemote.listDevices(),
@@ -534,13 +582,32 @@ try {
       }),
     );
   }
+} catch (error) {
+  console.error(
+    String(error instanceof Error ? error.message : error).replace(
+      /https?:\/\/[^\s"'<>]+/g,
+      "[redacted-url]",
+    ),
+  );
+  process.exitCode = 1;
 } finally {
   await browser?.close();
   if (desktop) {
-    await desktop.evaluate(({ app }) => app.exit(0)).catch(() => {});
-    await desktop.close().catch(() => {});
+    const child = desktop.process();
+    let timer;
+    await Promise.race([
+      desktop.close().catch(() => {}),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, 5000);
+      }),
+    ]);
+    clearTimeout(timer);
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGKILL");
+      await new Promise((resolve) => child.once("exit", resolve));
+    }
   }
   await hub?.close();
   await app.close();
-  await rm(root, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 }

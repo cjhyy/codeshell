@@ -10,7 +10,7 @@ import {
   type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
 import { createLinkHttp } from "./http.js";
-import { createLinkService } from "./service.js";
+import { createLinkService, type LinkServiceOptions } from "./service.js";
 import type { LinkAuthorization } from "./types.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -37,7 +37,7 @@ async function listen(server: Server) {
   });
   return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 }
-async function fixture() {
+async function fixture(options: Pick<LinkServiceOptions, "onChanged"> = {}) {
   const directory = mkdtempSync(join(tmpdir(), "host-remote-link-"));
   cleanups.push(async () => rmSync(directory, { recursive: true, force: true }));
   const store = new CredentialStore(undefined, new PlaintextCipher(), directory);
@@ -106,6 +106,7 @@ async function fixture() {
   let clock = Date.now();
   const denied = new Set<string>();
   const http = createLinkHttp({
+    ...options,
     store,
     remoteLink: () => config,
     now: () => clock,
@@ -373,3 +374,41 @@ test("minted grant with failed metadata is retained privately and revoked after 
   expect(f.store.remoteLinkRetirementCount()).toBe(0);
   expect(f.store.list()).toEqual([]);
 });
+
+test.each(["cancel", "expiry", "notification-failure"] as const)(
+  "remote CAS and connected are atomic during delayed notification: %s",
+  async (scenario) => {
+    const entered = deferred();
+    const release = deferred();
+    const f = await fixture({
+      onChanged: async () => {
+        entered.resolve();
+        await release.promise;
+        if (scenario === "notification-failure") throw new Error("fixture notification failed");
+      },
+    });
+    const start = await f.api("/authorizations", "POST", { ...input, authModeId: "remote-link" });
+    expect(start.status).toBe(200);
+    const job = (await start.json()) as LinkAuthorization;
+    const completing = f.complete(job);
+    try {
+      await entered.promise;
+      expect(f.store.list()).toHaveLength(1);
+      if (scenario === "cancel") {
+        const cancelled = await f.api(`/authorizations/${job.id}`, "DELETE");
+        expect(cancelled.status).toBe(200);
+      } else if (scenario === "expiry") f.advance();
+      const status = await f.api(`/authorizations/${job.id}`);
+      expect(status.status).toBe(200);
+      expect(await status.json()).toMatchObject({ state: "connected" });
+    } finally {
+      release.resolve();
+      const result = await completing;
+      expect(result.status).toBe(200);
+      expect(await result.json()).toMatchObject({ state: "connected" });
+    }
+    expect(f.store.list()).toHaveLength(1);
+    expect(f.store.remoteLinkRetirementCount()).toBe(0);
+    expect(f.requests.filter((request) => request.path === "/oauth/revoke")).toHaveLength(0);
+  },
+);

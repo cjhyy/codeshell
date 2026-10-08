@@ -18,6 +18,11 @@ import {
 } from "@cjhyy/code-shell-core";
 import { listDesktopLinkProviders } from "./catalog.js";
 import {
+  readRemoteProviderCatalog,
+  REMOTE_LINK_ADAPTERS,
+  type RemoteProviderId,
+} from "./remote-catalog.js";
+import {
   LinkDeviceOAuthBroker,
   isLocalBrowserLinkProvider,
   type LocalBrowserAuthPrompt,
@@ -25,6 +30,9 @@ import {
 } from "./device-oauth.js";
 import type {
   LinkAuthorization,
+  LinkAuthMode,
+  LinkAuthorizationResponse,
+  LinkAuthorizationStep,
   LinkConnectionInput,
   LinkErrorCode,
   LinkOperationContext,
@@ -81,6 +89,9 @@ export interface LinkServiceOptions {
   cliStatus?: typeof getCliLinkStatus;
   bindCli?: typeof connectCliLink;
   createDeviceBroker?: () => LinkDeviceOAuthBroker;
+  readRemoteCatalog?: typeof readRemoteProviderCatalog;
+  /** Native Host only; remote browser callers may bind existing Host sessions but cannot start login. */
+  allowCliLogin?: boolean;
 }
 
 /** Trusted host adapter input; deliberately absent from the HTTP API. */
@@ -109,6 +120,18 @@ interface RemoteAuthorizationJob {
   prepared: PreparedConnection;
   public: LinkAuthorization;
   completing: boolean;
+  retireAt?: number;
+}
+interface InteractiveAuthorizationJob {
+  context: LinkOperationContext;
+  prepared: PreparedConnection;
+  operation: ActiveOperation;
+  public: LinkAuthorization;
+  expiresAt: number;
+  timer?: ReturnType<typeof setTimeout>;
+  busy: boolean;
+  /** Identity actually shown for this step; labels are not stable account identifiers. */
+  confirmedCliAccountId?: string;
 }
 type PreparedConnection = {
   input: LinkConnectionInput;
@@ -129,6 +152,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   const operations = new Set<ActiveOperation>();
   const jobs = new Map<string, AuthorizationJob>();
   const remoteJobs = new Map<string, RemoteAuthorizationJob>();
+  const interactiveJobs = new Map<string, InteractiveAuthorizationJob>();
+  let remoteCatalog:
+    | { issuer: string; expiresAt: number; providers: RemoteProviderId[] }
+    | undefined;
+  let catalogPending: Promise<void> | undefined;
   const revokedOwners = new Set<string>();
   let closed = false;
   let snapshotSignature = "";
@@ -269,19 +297,98 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const ids = new Set(current.credentials.map((credential) => credential.id));
     for (const id of revisions.keys()) if (!ids.has(id)) revisions.delete(id);
     const remoteConfig = options.remoteLink?.();
+    const remoteProviders = remoteConfig
+      ? remoteCatalog?.issuer === remoteConfig.issuer
+        ? remoteCatalog.providers
+        : ["github"]
+      : [];
     const result = {
-      providers: providers.map((provider) => ({
-        ...provider,
-        ...(isLocalBrowserLinkProvider(provider.id)
-          ? { deviceAuth: createBroker().status(provider.id) }
-          : {}),
-      })),
+      providers: providers.map((provider) => {
+        const deviceAuth = isLocalBrowserLinkProvider(provider.id)
+          ? createBroker().status(provider.id)
+          : undefined;
+        const authModes: LinkAuthMode[] = [];
+        for (const method of provider.connectionMethods) {
+          if (method.executionRuntime !== "local" || method.availability !== "available") continue;
+          if (method.browserAuth?.flow === "device-code")
+            authModes.push({
+              id: "browser-oauth",
+              methodId: method.id,
+              kind: "device-code",
+              label: "网页授权",
+              available: !!deviceAuth?.configured,
+              preferred: !!deviceAuth?.configured,
+              ...(!deviceAuth?.configured
+                ? { unavailableReason: "当前 Host 未配置服务商授权。" }
+                : {}),
+            });
+          if (method.quickAuth)
+            authModes.push({
+              id: "cli-session",
+              methodId: method.id,
+              kind: "local-session",
+              label: "使用已有 CLI 登录",
+              available: true,
+            });
+          authModes.push({
+            id: "token",
+            methodId: method.id,
+            kind: "credential-input",
+            label: method.tokenLabel ?? provider.tokenLabel,
+            available: true,
+            preferred: !deviceAuth?.configured,
+          });
+        }
+        const remote = REMOTE_LINK_ADAPTERS.find(
+          (adapter) => adapter.id === provider.id && remoteProviders.includes(adapter.id),
+        );
+        return {
+          ...provider,
+          connectionMethods: [
+            ...provider.connectionMethods,
+            ...(remote
+              ? [
+                  {
+                    id: remote.methodId,
+                    displayName: { zh: "服务器授权", en: "Server authorization" },
+                    executionRuntime: "server" as const,
+                    secretLocation: "server" as const,
+                    authKind: "oauth" as const,
+                    availability: "available" as const,
+                  },
+                ]
+              : []),
+          ],
+          authModes: [
+            ...(remote
+              ? [
+                  {
+                    id: remote.authModeId,
+                    methodId: remote.methodId,
+                    kind: "redirect" as const,
+                    label: "网页授权",
+                    preferred: true,
+                    available: true,
+                  },
+                ]
+              : []),
+            ...authModes,
+          ],
+          ...(deviceAuth ? { deviceAuth } : {}),
+        };
+      }),
       connections: current.credentials
         .filter(isLink)
         .map((credential) =>
           masked(credential, current.projectIds.has(credential.id) ? "project" : "user"),
         ),
-      capabilities: { token: true, cliBinding: true, deviceAuth: true, remoteAuth: !!remoteConfig },
+      capabilities: {
+        token: true,
+        cliBinding: true,
+        deviceAuth: true,
+        remoteAuth: remoteProviders.length > 0,
+        authorizationSteps: 1 as const,
+      },
       ...(remoteConfig ? { remoteServer: { issuer: remoteConfig.issuer } } : {}),
       remoteCleanupPending: store.remoteLinkRetirementCount(),
     };
@@ -291,6 +398,34 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       snapshotRevision = randomUUID();
     }
     return { ...result, revision: snapshotRevision };
+  }
+  async function refreshRemoteCatalog(context: LinkOperationContext): Promise<void> {
+    await authorize(context);
+    const config = options.remoteLink?.();
+    if (!config || (remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now()))
+      return;
+    if (!catalogPending) {
+      catalogPending = (async () => {
+        let available: RemoteProviderId[];
+        try {
+          available = await (options.readRemoteCatalog ?? readRemoteProviderCatalog)(config);
+        } catch {
+          // Preserve the reviewed v1 behavior during temporary service/network failures.
+          available =
+            remoteCatalog?.issuer === config.issuer ? remoteCatalog.providers : ["github"];
+        }
+        if (!closed && options.remoteLink?.()?.issuer === config.issuer)
+          remoteCatalog = {
+            issuer: config.issuer,
+            expiresAt: now() + 60_000,
+            providers: available,
+          };
+      })().finally(() => {
+        catalogPending = undefined;
+      });
+    }
+    await catalogPending;
+    await authorize(context);
   }
   function string(value: unknown, max = 200): string {
     if (
@@ -378,6 +513,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     validation: LocalLinkValidationResult,
     secret: string,
     authSource: Exclude<MaskedLinkConnection["authSource"], "remote-link">,
+    lifecycle:
+      | {
+          beforeCommit: () => void;
+          onCommitted: (connection: MaskedLinkConnection) => void;
+        }
+      | undefined = undefined,
   ): Promise<MaskedLinkConnection> {
     const credential: Credential = {
       id: prepared.id,
@@ -405,8 +546,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       },
     };
     return change(context, () => {
+      lifecycle?.beforeCommit();
       swap(prepared, credential);
-      return masked(credential, "user");
+      const connection = masked(credential, "user");
+      lifecycle?.onCommitted(connection);
+      return connection;
     });
   }
   function tokenSecret(token: LocalBrowserAuthToken): string {
@@ -603,29 +747,341 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       true,
     );
   }
+  function terminal(
+    value: LinkAuthorization,
+    state: LinkAuthorization["state"],
+    extra: Partial<LinkAuthorization> = {},
+  ): LinkAuthorization {
+    const { step: _step, prompt: _prompt, redirect: _redirect, errorCode: _error, ...rest } = value;
+    return { ...rest, state, ...extra };
+  }
+  function endInteractive(job: InteractiveAuthorizationJob, code: LinkErrorCode): void {
+    if (job.public.state !== "pending") return;
+    job.operation.controller.abort();
+    clearTimeout(job.timer);
+    finish(job.operation);
+    job.public = terminal(job.public, code === "cancelled" ? "cancelled" : "failed", {
+      errorCode: code,
+    });
+    job.expiresAt = now() + 5 * 60_000;
+  }
+  function pruneInteractive(): void {
+    for (const [id, job] of interactiveJobs) {
+      if (job.expiresAt > now()) continue;
+      if (job.public.state === "pending") endInteractive(job, "authorization_expired");
+      else interactiveJobs.delete(id);
+    }
+  }
+  function assertInteractivePending(job: InteractiveAuthorizationJob): void {
+    if (job.public.state !== "pending" || job.operation.controller.signal.aborted)
+      throw new LinkServiceError(409, "cancelled");
+    if (job.expiresAt <= now()) throw new LinkServiceError(409, "authorization_expired");
+  }
+  function cliStep(
+    job: InteractiveAuthorizationJob,
+    expiresAt: string,
+    installed: boolean,
+    validation?: LocalLinkValidationResult,
+    message?: string,
+  ): LinkAuthorizationStep {
+    if (
+      validation &&
+      (validation.providerId !== job.prepared.input.providerId ||
+        typeof validation.identity.externalAccountId !== "string" ||
+        !validation.identity.externalAccountId)
+    )
+      throw new LinkServiceError(422, "provider_rejected");
+    job.confirmedCliAccountId = validation?.identity.externalAccountId;
+    return {
+      id: randomUUID(),
+      kind: "local-session",
+      expiresAt,
+      session: {
+        installed,
+        authenticated: !!validation,
+        canLogin: options.allowCliLogin === true && installed,
+        canInstall: options.allowCliLogin === true,
+        ...(validation ? { account: validation.identity.label } : {}),
+        ...(message ? { message } : {}),
+      },
+    };
+  }
+  async function detectCliSession(
+    job: InteractiveAuthorizationJob,
+  ): Promise<LinkAuthorizationStep> {
+    const providerId = job.prepared.input.providerId as Parameters<typeof cliStatus>[0];
+    const status = await cliStatus(providerId, {
+      cwd: options.cwd,
+      signal: job.operation.controller.signal,
+    });
+    await authorize(job.context);
+    assertInteractivePending(job);
+    let validation: LocalLinkValidationResult | undefined;
+    if (status.installed && status.authenticated) {
+      try {
+        validation = await bindCli(providerId, {
+          cwd: options.cwd,
+          signal: job.operation.controller.signal,
+          loginIfNeeded: false,
+        });
+      } catch {
+        // No identity has been confirmed; the user may log in or detect again.
+      }
+      await authorize(job.context);
+      assertInteractivePending(job);
+    }
+    return cliStep(job, job.public.expiresAt!, status.installed, validation);
+  }
+  async function startAuthorization(
+    context: LinkOperationContext,
+    input: LinkConnectionInput,
+    rawAuthModeId: unknown,
+  ): Promise<LinkAuthorization> {
+    await authorize(context);
+    const authModeId = string(rawAuthModeId, 80);
+    if (authModeId === "remote-link") await refreshRemoteCatalog(context);
+    const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
+    const mode = provider?.authModes?.find(
+      (candidate) =>
+        candidate.id === authModeId && candidate.methodId === input.methodId && candidate.available,
+    );
+    if (!mode) throw new LinkServiceError(400, "invalid_request");
+    if (mode.kind === "redirect") {
+      const result = await startRemoteAuth(context, input);
+      const job = remoteJobs.get(result.id)!;
+      job.public.methodId = input.methodId;
+      job.public.authModeId = authModeId;
+      job.public.expiresAt = result.redirect!.expiresAt;
+      job.public.step = { id: randomUUID(), kind: "redirect", ...result.redirect! };
+      return structuredClone(job.public);
+    }
+    if (mode.kind === "device-code") return startDeviceAuth(context, input);
+    pruneInteractive();
+    if (interactiveJobs.size >= 32) throw new LinkServiceError(409, "busy");
+    const prepared = prepare(input);
+    const operation = begin(context);
+    const expiresAt = now() + 10 * 60_000;
+    const base = { id: randomUUID(), expiresAt: new Date(expiresAt).toISOString() };
+    const step: LinkAuthorizationStep =
+      mode.kind === "credential-input"
+        ? {
+            ...base,
+            kind: "credential-input",
+            purpose: "credential",
+            fields: [
+              {
+                id: "token",
+                label: provider!.tokenLabel,
+                secret: true,
+                required: true,
+                placeholder: provider!.tokenPlaceholder,
+                maxLength: 16_384,
+              },
+            ],
+          }
+        : {
+            ...base,
+            kind: "local-session",
+            session: {
+              installed: false,
+              authenticated: false,
+              canInstall: options.allowCliLogin === true,
+            },
+          };
+    const job: InteractiveAuthorizationJob = {
+      context,
+      prepared,
+      operation,
+      expiresAt,
+      busy: false,
+      public: {
+        id: randomUUID(),
+        providerId: prepared.input.providerId,
+        methodId: input.methodId,
+        authModeId,
+        expiresAt: base.expiresAt,
+        state: "pending",
+        step,
+      },
+    };
+    interactiveJobs.set(job.public.id, job);
+    job.timer = setTimeout(
+      () => endInteractive(job, "authorization_expired"),
+      Math.max(1, expiresAt - now()),
+    );
+    job.timer.unref?.();
+    try {
+      if (step.kind === "local-session") job.public.step = await detectCliSession(job);
+      await authorize(context);
+      assertInteractivePending(job);
+      return structuredClone(job.public);
+    } catch (error) {
+      endInteractive(job, error instanceof LinkServiceError ? error.code : "cli_unavailable");
+      throw publicLinkError(error);
+    }
+  }
+  async function respondAuthorization(
+    context: LinkOperationContext,
+    id: string,
+    response: LinkAuthorizationResponse,
+  ): Promise<LinkAuthorization> {
+    await authorize(context);
+    pruneInteractive();
+    const job = interactiveJobs.get(safeId(id));
+    if (!job || job.context.ownerId !== context.ownerId)
+      throw new LinkServiceError(404, "not_found");
+    await authorize(job.context);
+    if (job.public.state !== "pending" || job.busy) throw new LinkServiceError(409, "conflict");
+    const step = job.public.step!;
+    if (!response || response.stepId !== step.id || Date.parse(step.expiresAt) <= now())
+      throw new LinkServiceError(409, "conflict");
+    if (Object.keys(response).some((key) => !["stepId", "operation", "input"].includes(key)))
+      throw new LinkServiceError(400, "invalid_request");
+    if (
+      response.input !== undefined &&
+      (!response.input || typeof response.input !== "object" || Array.isArray(response.input))
+    )
+      throw new LinkServiceError(400, "invalid_request");
+    let token: string | undefined;
+    if (step.kind === "credential-input") {
+      if (
+        response.operation !== "submit" ||
+        !response.input ||
+        Object.keys(response.input).some((key) => key !== "token")
+      )
+        throw new LinkServiceError(400, "invalid_request");
+      token = string(response.input.token, 16_384);
+    } else if (
+      step.kind !== "local-session" ||
+      !["detect-session", "login-session", "bind-session"].includes(response.operation) ||
+      Object.keys(response.input ?? {}).length
+    )
+      throw new LinkServiceError(400, "invalid_request");
+    if (response.operation === "login-session" && options.allowCliLogin !== true)
+      throw new LinkServiceError(400, "invalid_request");
+    if (
+      response.operation === "bind-session" &&
+      (step.kind !== "local-session" || !step.session.authenticated || !job.confirmedCliAccountId)
+    )
+      throw new LinkServiceError(400, "invalid_request");
+    job.busy = true;
+    job.public = {
+      ...job.public,
+      errorCode: undefined,
+      step: { id: randomUUID(), kind: "processing", expiresAt: step.expiresAt },
+    };
+    let committed = false;
+    const check = async () => {
+      await authorize(context);
+      if (!committed) {
+        await authorize(job.context);
+        assertInteractivePending(job);
+      }
+      return true;
+    };
+    try {
+      if (response.operation === "detect-session") {
+        job.public.step = await detectCliSession(job);
+        await check();
+      } else if (response.operation === "login-session") {
+        let validation: LocalLinkValidationResult;
+        try {
+          validation = await bindCli(
+            job.prepared.input.providerId as Parameters<typeof bindCli>[0],
+            { cwd: options.cwd, signal: job.operation.controller.signal, loginIfNeeded: true },
+          );
+        } catch {
+          await check();
+          throw new LinkServiceError(422, "cli_unavailable");
+        }
+        await check();
+        job.public.step = cliStep(job, step.expiresAt, true, validation);
+      } else {
+        let validation: LocalLinkValidationResult;
+        try {
+          validation =
+            token !== undefined
+              ? await validateToken(job.prepared.input.providerId, token, {
+                  signal: job.operation.controller.signal,
+                })
+              : await bindCli(job.prepared.input.providerId as Parameters<typeof bindCli>[0], {
+                  cwd: options.cwd,
+                  signal: job.operation.controller.signal,
+                  loginIfNeeded: false,
+                });
+        } catch {
+          await check();
+          throw new LinkServiceError(
+            422,
+            token !== undefined ? "provider_rejected" : "cli_unavailable",
+          );
+        }
+        await check();
+        if (validation.providerId !== job.prepared.input.providerId)
+          throw new LinkServiceError(422, "provider_rejected");
+        if (
+          token === undefined &&
+          validation.identity.externalAccountId !== job.confirmedCliAccountId
+        ) {
+          job.public.step = cliStep(
+            job,
+            step.expiresAt,
+            true,
+            validation,
+            "CLI 已切换账号，请确认当前账号后继续。",
+          );
+        } else {
+          await commit(
+            { ownerId: context.ownerId, authorize: check },
+            job.prepared,
+            validation,
+            token ?? `cli-binding:${randomBytes(24).toString("base64url")}`,
+            token !== undefined ? "manual-token" : "cli-session",
+            {
+              beforeCommit: () => assertInteractivePending(job),
+              onCommitted: (connection) => {
+                committed = true;
+                job.public = terminal(job.public, "connected", { connection });
+                clearTimeout(job.timer);
+                finish(job.operation);
+                job.expiresAt = now() + 5 * 60_000;
+              },
+            },
+          );
+        }
+      }
+      await authorize(context);
+      return structuredClone(job.public);
+    } catch (error) {
+      if (job.public.state === "pending") {
+        const code = error instanceof LinkServiceError ? error.code : "unavailable";
+        if (
+          ["provider_rejected", "cli_unavailable"].includes(code) &&
+          !job.operation.controller.signal.aborted &&
+          job.expiresAt > now()
+        )
+          job.public = { ...job.public, step: { ...step, id: randomUUID() }, errorCode: code };
+        else endInteractive(job, code);
+      }
+      await authorize(context);
+      return structuredClone(job.public);
+    } finally {
+      job.busy = false;
+    }
+  }
   function cancelJob(job: AuthorizationJob): void {
     job.operation.controller.abort();
     if (job.brokerAttempt) job.broker.cancel(job.brokerAttempt);
     if (job.timer) clearTimeout(job.timer);
     if (job.public.state === "pending")
-      job.public = {
-        id: job.public.id,
-        providerId: job.public.providerId,
-        state: "cancelled",
-        errorCode: "cancelled",
-      };
+      job.public = terminal(job.public, "cancelled", { errorCode: "cancelled" });
     finish(job.operation);
     job.expiresAt = now() + 5 * 60_000;
   }
   function expireJob(job: AuthorizationJob): void {
     if (job.public.state !== "pending") return;
     cancelJob(job);
-    job.public = {
-      id: job.public.id,
-      providerId: job.public.providerId,
-      state: "failed",
-      errorCode: "authorization_expired",
-    };
+    job.public = terminal(job.public, "failed", { errorCode: "authorization_expired" });
   }
   function pruneJobs(): void {
     for (const [id, job] of jobs)
@@ -638,47 +1094,50 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     job: AuthorizationJob,
     prepared: PreparedConnection,
   ): Promise<void> {
+    let committed = false;
+    const assertPending = () => {
+      if (job.public.state !== "pending" || job.operation.controller.signal.aborted)
+        throw new LinkServiceError(409, "cancelled");
+      if (job.expiresAt <= now()) throw new LinkServiceError(409, "authorization_expired");
+    };
+    const check = async () => {
+      if (!committed) {
+        await authorize(job.context);
+        assertPending();
+      }
+      return true;
+    };
     try {
       const token = await job.broker.complete(job.brokerAttempt!);
-      await authorize(job.context);
-      if (job.operation.controller.signal.aborted || job.public.state !== "pending")
-        throw new LinkServiceError(409, "cancelled");
+      await check();
       if (token.providerId !== prepared.input.providerId)
         throw new LinkServiceError(422, "authorization_failed");
       const validation = await validateToken(token.providerId, token.accessToken, {
         signal: job.operation.controller.signal,
       });
-      await authorize(job.context);
-      if (job.operation.controller.signal.aborted || job.public.state !== "pending")
-        throw new LinkServiceError(409, "cancelled");
-      const connection = await commit(
-        {
-          ...job.context,
-          authorize: async () =>
-            (await job.context.authorize()) &&
-            !job.operation.controller.signal.aborted &&
-            job.public.state === "pending",
-        },
+      await check();
+      await commit(
+        { ownerId: job.context.ownerId, authorize: check },
         prepared,
         validation,
         tokenSecret(token),
         "browser-oauth",
+        {
+          beforeCommit: assertPending,
+          onCommitted: (connection) => {
+            committed = true;
+            job.public = terminal(job.public, "connected", { connection });
+            clearTimeout(job.timer);
+            finish(job.operation);
+            job.expiresAt = now() + 5 * 60_000;
+          },
+        },
       );
-      if (job.public.state === "pending")
-        job.public = {
-          id: job.public.id,
-          providerId: job.public.providerId,
-          state: "connected",
-          connection,
-        };
     } catch (error) {
       if (job.public.state === "pending")
-        job.public = {
-          id: job.public.id,
-          providerId: job.public.providerId,
-          state: "failed",
+        job.public = terminal(job.public, "failed", {
           errorCode: error instanceof LinkServiceError ? error.code : "authorization_failed",
-        };
+        });
     } finally {
       if (job.timer) clearTimeout(job.timer);
       job.expiresAt = now() + 5 * 60_000;
@@ -707,7 +1166,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ownerId: context.ownerId,
         context,
         broker,
-        public: { id, providerId, state: "pending" },
+        public: {
+          id,
+          providerId,
+          methodId: input.methodId,
+          authModeId: "browser-oauth",
+          state: "pending",
+        },
         expiresAt: now() + 30 * 60_000,
         operation,
       };
@@ -726,6 +1191,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         verificationUriComplete: prompt.verificationUriComplete,
         expiresAt: prompt.expiresAt,
       };
+      job.public.expiresAt = prompt.expiresAt;
+      job.public.step = { id: randomUUID(), kind: "device-code", ...job.public.prompt };
       job.timer = setTimeout(
         () => expireJob(job!),
         Math.max(1, Math.min(30 * 60_000, job.expiresAt - now())),
@@ -744,7 +1211,17 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     }
   }
   function pruneRemoteJobs(): void {
-    for (const [id, job] of remoteJobs) if (job.attempt.expiresAt <= now()) remoteJobs.delete(id);
+    for (const [id, job] of remoteJobs) {
+      if (job.attempt.expiresAt > now() && !job.retireAt) continue;
+      if (!job.public.authModeId) {
+        remoteJobs.delete(id);
+        continue;
+      }
+      if (job.public.state === "pending")
+        job.public = terminal(job.public, "failed", { errorCode: "authorization_expired" });
+      job.retireAt ??= now() + 5 * 60_000;
+      if (job.retireAt <= now()) remoteJobs.delete(id);
+    }
   }
   async function startRemoteAuth(
     context: LinkOperationContext,
@@ -811,22 +1288,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (job.completing || job.public.state !== "pending")
       throw new LinkServiceError(409, "conflict");
     const originalConfig = JSON.stringify(job.attempt.configuration);
-    const check = async () => {
-      await authorize(context);
-      await authorize(job.context);
-      if (
-        remoteJobs.get(id) !== job ||
-        job.attempt.expiresAt <= now() ||
-        job.public.state !== "pending"
-      )
+    let committed = false;
+    const assertPending = () => {
+      if (remoteJobs.get(id) !== job || job.public.state !== "pending")
         throw new LinkServiceError(409, "cancelled");
-      // Re-normalize exactly as at start; a changed client, callback, issuer or secret invalidates the attempt.
+      if (job.attempt.expiresAt <= now()) throw new LinkServiceError(409, "authorization_expired");
       const config = options.remoteLink?.();
       if (
         !config ||
         JSON.stringify(beginRemoteLinkAuthorization(config, now()).configuration) !== originalConfig
       )
         throw new LinkServiceError(409, "conflict");
+    };
+    const check = async () => {
+      if (!committed) {
+        await authorize(context);
+        await authorize(job.context);
+        assertPending();
+      }
     };
     job.completing = true;
     let credential: Credential | undefined;
@@ -854,21 +1333,28 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           return true;
         },
       };
-      const connection = await change(guarded, () => {
+      await change(guarded, () => {
+        assertPending();
         swap(job.prepared, credential!, {
           retireExpected: !!job.prepared.expected,
           adopt: staged,
           now: now(),
         });
-        return masked(credential!, "user");
+        const connection = masked(credential!, "user");
+        committed = true;
+        job.public = terminal(job.public, "connected", { connection });
       });
-      job.public = { id, providerId: "github", state: "connected", connection };
       // Replacing the active record and retaining its previous grant is one atomic write.
       await retryRemoteCleanup();
       if (store.remoteLinkRetirementCount()) job.public.previousGrantRevocationPending = true;
       await authorize(context);
       return structuredClone(job.public);
     } catch (error) {
+      if (committed) {
+        // Notification or post-write authorization failure cannot revoke an adopted grant.
+        await authorize(context);
+        return structuredClone(job.public);
+      }
       // If the callback minted a grant but its destination changed, do not leave it usable remotely.
       if (staged) {
         store.readyRemoteLinkRetirement(staged, now());
@@ -881,12 +1367,10 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           /* Report failure below. */
         }
       }
-      job.public = {
-        id,
-        providerId: "github",
-        state: "failed",
-        errorCode: error instanceof LinkServiceError ? error.code : "authorization_failed",
-      };
+      if (job.public.state === "pending")
+        job.public = terminal(job.public, "failed", {
+          errorCode: error instanceof LinkServiceError ? error.code : "authorization_failed",
+        });
       if (error instanceof LinkServiceError) throw error;
       throw new LinkServiceError(422, "authorization_failed");
     }
@@ -898,6 +1382,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     await authorize(context);
     pruneJobs();
     pruneRemoteJobs();
+    pruneInteractive();
+    const interactive = interactiveJobs.get(safeId(id));
+    if (interactive) {
+      if (interactive.context.ownerId !== context.ownerId)
+        throw new LinkServiceError(404, "not_found");
+      if (interactive.public.state === "pending") await authorize(interactive.context);
+      return structuredClone(interactive.public);
+    }
     const remote = remoteJobs.get(safeId(id));
     if (remote) {
       if (remote.context.ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
@@ -908,14 +1400,31 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return structuredClone(job.public);
   }
   async function cancelAuthorization(context: LinkOperationContext, id: string): Promise<void> {
-    await authorization(context, id);
-    remoteJobs.delete(id);
+    await authorize(context);
+    safeId(id);
+    const ownerId =
+      remoteJobs.get(id)?.context.ownerId ??
+      interactiveJobs.get(id)?.context.ownerId ??
+      jobs.get(id)?.ownerId;
+    if (!ownerId || ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
+    const remote = remoteJobs.get(id);
+    if (remote?.public.state === "pending") {
+      remote.public = terminal(remote.public, "cancelled", { errorCode: "cancelled" });
+      remote.retireAt = now() + 5 * 60_000;
+    }
+    const interactive = interactiveJobs.get(id);
+    if (interactive) endInteractive(interactive, "cancelled");
     const job = jobs.get(id);
     if (job) cancelJob(job);
     await authorize(context);
   }
   function cancelOwner(ownerId: string): void {
     revokedOwners.add(ownerId);
+    for (const [id, job] of interactiveJobs)
+      if (job.context.ownerId === ownerId) {
+        endInteractive(job, "cancelled");
+        interactiveJobs.delete(id);
+      }
     for (const [id, job] of remoteJobs) if (job.context.ownerId === ownerId) remoteJobs.delete(id);
     for (const operation of operations)
       if (operation.ownerId === ownerId) {
@@ -933,6 +1442,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     clearInterval(cleanupTimer);
     clearTimeout(cleanupStartup);
     remoteJobs.clear();
+    for (const job of interactiveJobs.values()) endInteractive(job, "cancelled");
+    interactiveJobs.clear();
     for (const operation of operations) operation.controller.abort();
     operations.clear();
     for (const job of jobs.values()) cancelJob(job);
@@ -948,6 +1459,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     rename,
     disconnect,
     startDeviceAuth,
+    startAuthorization,
+    respondAuthorization,
+    refreshRemoteCatalog,
     startRemoteAuth,
     completeRemoteAuth,
     retryRemoteCleanup,

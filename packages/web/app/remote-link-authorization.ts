@@ -1,4 +1,5 @@
 import type { LinkAuthorization } from "@cjhyy/code-shell-link";
+import { getLinkAuthorizationStep } from "../src/link-authorization.js";
 import { api } from "./auth.js";
 import { apiUrl, type ApiScope } from "./api-context.js";
 
@@ -12,6 +13,7 @@ interface PendingLink {
   redirectUri: string;
   returnUrl: string;
   expiresAt: number;
+  providerId?: string;
 }
 export type LinkCallback =
   | { callbackUrl: string; pending: PendingLink; denied: boolean }
@@ -49,11 +51,13 @@ export function rememberRemoteLink(
   origin = window.location.origin,
   storage: Pick<Storage, "setItem"> = window.sessionStorage,
 ): string {
-  if (!job.redirect || !new RegExp(`^${ID}$`).test(job.id)) throw new Error("授权请求无效。");
-  const authorization = remoteLinkAuthorizationUrl(job.redirect.authorizationUrl, issuer);
+  const step = getLinkAuthorizationStep(job);
+  if (step?.kind !== "redirect" || !new RegExp(`^${ID}$`).test(job.id))
+    throw new Error("授权请求无效。");
+  const authorization = remoteLinkAuthorizationUrl(step.authorizationUrl, issuer);
   const state = authorization.searchParams.get("state"),
     redirectUri = authorization.searchParams.get("redirect_uri");
-  const expiresAt = Date.parse(job.redirect.expiresAt);
+  const expiresAt = Date.parse(step.expiresAt);
   const home = redirectUri ? callbackHome(new URL(redirectUri, origin).pathname) : undefined;
   if (
     !state ||
@@ -81,6 +85,7 @@ export function rememberRemoteLink(
       redirectUri,
       returnUrl: `${home}?${params}`,
       expiresAt,
+      providerId: job.providerId,
     } satisfies PendingLink),
   );
   return authorization.href;
@@ -143,18 +148,38 @@ export function takeLinkCallback(
 export async function completeLinkCallback(
   callback: Exclude<LinkCallback, { error: string }>,
 ): Promise<LinkAuthorization> {
+  const target = new URL(callback.pending.target, window.location.origin);
+  const scope = callbackScope(target);
   if (callback.denied) {
-    await api(callback.pending.target, { method: "DELETE" });
-    return { id: "", providerId: "github", state: "cancelled" };
+    await api(callback.pending.target, { method: "DELETE" }, scope);
+    return { id: "", providerId: callback.pending.providerId ?? "", state: "cancelled" };
   }
   // Preserve the project's query on the callback endpoint. Never infer the target from the current view.
-  const target = new URL(callback.pending.target, window.location.origin);
   target.pathname += "/complete";
-  return api(target.pathname + target.search, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callbackUrl: callback.callbackUrl }),
-  });
+  return api(
+    target.pathname + target.search,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callbackUrl: callback.callbackUrl }),
+    },
+    scope,
+  );
+}
+
+function callbackScope(target: URL): ApiScope {
+  return {
+    workspace: target.searchParams.get("workspace") ?? "",
+    projectId: /^\/p\/([a-f0-9-]{36})\//.exec(target.pathname)?.[1] ?? null,
+  };
+}
+
+/** Reconcile only the captured Host attempt; never exchange the one-time code again. */
+export function queryLinkCallback(
+  callback: Exclude<LinkCallback, { error: string }>,
+): Promise<LinkAuthorization> {
+  const target = new URL(callback.pending.target, window.location.origin);
+  return api(callback.pending.target, {}, callbackScope(target));
 }
 
 /** Ordinary workbench startup must not depend on browser storage availability. */
