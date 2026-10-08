@@ -1,3 +1,4 @@
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -48,6 +49,7 @@ function makeEngine(
   const engine = new Engine({
     llm: { provider, model: `${provider}-model`, apiKey: "test" } as never,
     cwd: dir,
+    modules: [initialToolsFixtureModule(["YieldTool"])],
     sessionStorageDir: join(dir, "sessions"),
     enabledBuiltinTools: [],
     maxTurns: 3,

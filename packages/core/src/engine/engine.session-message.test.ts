@@ -19,6 +19,9 @@ class SessionMessageClient extends LLMClientBase {
   protected initClient(): void {}
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    if (!options.tools?.length) {
+      return { text: "auxiliary", toolCalls: [], stopReason: "stop" };
+    }
     const call = callsByModel.get(this.model) ?? 0;
     callsByModel.set(this.model, call + 1);
     const definition = options.tools?.find((tool) => tool.name === "SendMessageToSession");
@@ -32,23 +35,36 @@ class SessionMessageClient extends LLMClientBase {
             text: "",
             toolCalls: [
               {
-                id: "send-ui-work",
-                toolName: "SendMessageToSession",
-                args: {
-                  target_session_id: "ui-session",
-                  message: "  Read docs/prd.md and design the UI.  ",
-                },
+                id: "load-session-messaging",
+                toolName: "ToolSearch",
+                args: { query: "select:SendMessageToSession" },
               },
             ],
             stopReason: "tool_use",
             usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
           }
-        : {
-            text: "sent",
-            toolCalls: [],
-            stopReason: "stop",
-            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-          };
+        : call === 1
+          ? {
+              text: "",
+              toolCalls: [
+                {
+                  id: "send-ui-work",
+                  toolName: "SendMessageToSession",
+                  args: {
+                    target_session_id: "ui-session",
+                    message: "  Read docs/prd.md and design the UI.  ",
+                  },
+                },
+              ],
+              stopReason: "tool_use",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            }
+          : {
+              text: "sent",
+              toolCalls: [],
+              stopReason: "stop",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            };
     this.recordUsage(response.usage!, options);
     return response;
   }

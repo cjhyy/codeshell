@@ -109,6 +109,7 @@ try {
     const model = `gpt-4o-fixture-${label}`;
     const scenario = { handle, bodies: [], steps: 0, failures: 0 };
     scenarios.set(model, scenario);
+    const streamEvents = [];
     const cwd = join(root, label);
     mkdirSync(cwd, { recursive: true });
     const engine = new core.Engine({
@@ -128,10 +129,12 @@ try {
       engine,
       scenario,
       cwd,
+      streamEvents,
       run: async (extra = {}) => {
         const result = await engine.run("Run the synthetic deferred tool fixture.", {
           sessionId: `s-${label}`,
           behaviorMode: "fixture",
+          onStream: (event) => streamEvents.push(event),
           ...extra,
         });
         if (fixtureFailure) throw fixtureFailure;
@@ -162,6 +165,10 @@ try {
       if (data.toolName === "DeferredAction") counters.hooks++;
       return {};
     });
+    engine.getHookRegistry().register("on_tool_start", async ({ data }) => {
+      if (data.toolName === "DeferredAction") counters.executionStarts++;
+      return {};
+    });
   }
   function approval(counters) {
     return {
@@ -172,7 +179,7 @@ try {
     };
   }
   for (const retry of [false, true]) {
-    const counters = { executions: 0, approvals: 0, hooks: 0 };
+    const counters = { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 };
     const f = create(
       `progressive-${retry}`,
       (body, step) => {
@@ -188,11 +195,17 @@ try {
         assert.ok(names(body).includes("DeferredAction"), JSON.stringify(body.messages.slice(-2)));
         assert.ok(JSON.stringify(body.tools).includes("SCHEMA_SENTINEL"));
         if (step === 2) {
-          assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0 });
+          assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 });
           assert.match(JSON.stringify(body.messages), /next model step/);
+          assert.ok(
+            f.streamEvents.some(
+              (event) =>
+                event.type === "tool_use_start" && event.toolCall?.toolName === "DeferredAction",
+            ),
+          );
           return [{ name: "DeferredAction", args: { selector: "SCHEMA_SENTINEL" } }];
         }
-        assert.deepEqual(counters, { executions: 1, approvals: 1, hooks: 1 });
+        assert.deepEqual(counters, { executions: 1, approvals: 1, hooks: 1, executionStarts: 1 });
         return [];
       },
       { approvalBackend: approval(counters) },
@@ -218,7 +231,77 @@ try {
     );
   }
   {
-    const counters = { executions: 0, approvals: 0, hooks: 0 };
+    const dynamicName = "DynamicFixture";
+    const expectedSchema = {
+      type: "object",
+      properties: { mode: { type: "string", enum: ["fixture-rewritten"] } },
+      required: ["mode"],
+    };
+    const f = create(
+      "dynamic-rewrite",
+      (body, step) => {
+        if (step < 3) {
+          assert.ok(!names(body).includes(dynamicName));
+          assert.ok(!JSON.stringify(body.messages).includes("fixture-rewritten"));
+          if (step === 1)
+            return [{ name: "ToolSearch", args: { query: "dynamic fixture capability" } }];
+          const metadata = body.messages.findLast((message) => message.role === "tool").content;
+          const schemaRef = metadata.match(/schemaRef: (select:DynamicFixture)/)?.[1];
+          assert.equal(schemaRef, `select:${dynamicName}`);
+          return [{ name: "ToolSearch", args: { query: schemaRef } }];
+        }
+        const selected = body.tools.find((tool) => tool.function.name === dynamicName);
+        assert.deepEqual(selected.function.parameters, expectedSchema);
+        assert.match(JSON.stringify(body.messages), /Selected tools for this run: DynamicFixture/);
+        assert.ok(!JSON.stringify(body.messages).includes("fixture-rewritten"));
+        return [];
+      },
+      {
+        modules: [
+          {
+            id: "dynamic-fixture",
+            engine: {
+              tools: [
+                {
+                  kind: "preset-tags",
+                  tool: {
+                    definition: {
+                      name: dynamicName,
+                      description: "Dynamic fixture capability",
+                      inputSchema: { type: "object", properties: { raw: { const: "RAW_SCHEMA" } } },
+                      source: "builtin",
+                      permissionDefault: "allow",
+                    },
+                    exposure: {
+                      presetTags: [],
+                      rewriteDefinition: (definition, visibility) => ({
+                        ...definition,
+                        inputSchema: {
+                          ...expectedSchema,
+                          properties: {
+                            mode: {
+                              type: "string",
+                              enum: [`${visibility.behaviorProfile}-rewritten`],
+                            },
+                          },
+                        },
+                      }),
+                    },
+                    execute: async () => "dynamic fixture done",
+                  },
+                },
+              ],
+              adjustToolSelection: (selected) => selected.add(dynamicName),
+            },
+          },
+        ],
+      },
+    );
+    assert.equal((await f.run()).reason, "completed");
+    assert.equal(f.scenario.steps, 3);
+  }
+  {
+    const counters = { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 };
     const f = create(
       "revoked",
       (body, step) => {
@@ -229,7 +312,7 @@ try {
           return [{ name: "DeferredAction" }];
         }
         assert.ok(!names(body).includes("DeferredAction"));
-        assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0 });
+        assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 });
         assert.match(JSON.stringify(body.messages), /not available/);
         return [];
       },
@@ -257,7 +340,7 @@ try {
     assert.equal((await f.run()).reason, "completed");
   }
   {
-    const counters = { executions: 0, approvals: 0, hooks: 0 };
+    const counters = { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 };
     const f = create("keyword", (body, step) => {
       if (step <= 2) {
         assert.ok(!names(body).includes("DeferredAction"));
@@ -274,7 +357,7 @@ try {
     });
     registerAction(f.engine, counters);
     assert.equal((await f.run()).reason, "completed");
-    assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0 });
+    assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 });
   }
   {
     const f = create(
@@ -291,7 +374,7 @@ try {
     assert.equal((await f.run()).reason, "completed");
   }
   {
-    const counters = { executions: 0, approvals: 0, hooks: 0 };
+    const counters = { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 };
     const f = create(
       "explicit",
       (body, step) => {

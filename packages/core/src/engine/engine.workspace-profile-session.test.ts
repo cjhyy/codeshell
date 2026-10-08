@@ -24,6 +24,25 @@ class ProfileSessionClient extends LLMClientBase {
       const call = memoryToolScenarios.get(this.model) ?? 0;
       memoryToolScenarios.set(this.model, call + 1);
       if (call === 0) {
+        expect(options.tools?.map((tool) => tool.name)).toContain("ToolSearch");
+        expect(options.tools?.map((tool) => tool.name)).not.toContain("MemorySave");
+        const response: LLMResponse = {
+          text: "",
+          toolCalls: [
+            {
+              id: "load-profile-memory",
+              toolName: "ToolSearch",
+              args: { query: "select:MemorySave" },
+            },
+          ],
+          stopReason: "tool_use",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+        this.recordUsage(response.usage!, options);
+        return response;
+      }
+      if (call === 1) {
+        expect(options.tools?.map((tool) => tool.name)).toContain("MemorySave");
         const response: LLMResponse = {
           text: "",
           toolCalls: [

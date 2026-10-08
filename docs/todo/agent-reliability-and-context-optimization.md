@@ -449,6 +449,7 @@ ToolSearch 搜索结果应返回紧凑的名称、用途和 schema 引用。只�
 - 每个 Run 的 `RunToolSurface` 保存 eligible catalog 与粘性的 selected names。选择只增加本 Run 的 schema；撤权立即隐藏并禁止执行，重新授权后恢复既有选择顺序。未声明 initial names、显式 Run allowlist、behavior profile allowlist，以及无 ToolSearch 的目录保留 eager 兼容。
 - ToolSearch keyword 只返回 name、最多 180 字用途、source、完整 `select:Name` 引用；搜索和选择回执合计最多 8,192 字符（含有界 MCP 健康提示），每次最多 20 个结果或选择名、query 最多 2,048 字符。超预算条目省略并提示，不把 schema 定义串写回结果。
 - 每个模型步骤从 Run state 生成冻结的 native tools 快照；该步骤的 SDK retry、stream fallback、截断 continuation 和 Phase D 正文摘要使用相同快照。ToolSearch 的选择从下一步骤生效，同批伪造 inactive 调用在 hook/approval/handler 前拒绝。
+- provider 的 `tool_use_start` 表示模型尝试与占位展示，inactive 尝试仍可展示并返回拒绝回执；实际执行边界是 Executor 的 `on_tool_start` hook 与 `tool.exec` span。inactive 验收断言零 hook、approval、handler 和实际执行，不宣称零工具展示。
 - 完整 eligible 名称仍进入能力指引与 Goal 敏感元数据。registry、CapabilityService、协议工具目录及 SessionToolHost 的完整 host catalog APIs 不收窄。执行器继续执行 allowlist、availability、MCP policy、path policy、permission 和 hooks；内部 ReadSource→LinkAction 仅免除模型 schema 加载门槛，保留授权与参数约束。
 - 复用现有 MCP manager、连接与项目 policy；真实 stdio 延迟连接可搜索、显式 select 后暴露 schema。已经注册到 Run registry 的插件/连接工具自动适用；不新增插件运行时、连接器协议、UI 或 sidebar。
 

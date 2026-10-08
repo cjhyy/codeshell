@@ -1,3 +1,4 @@
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -250,7 +251,11 @@ describe("child Engine direction safe point", () => {
         childRunner: {
           createChild(config) {
             runtimeCreations++;
-            const engine = new Engine(config);
+            const engine = new Engine({
+              ...config,
+              preset: "initial-tools-fixture",
+              modules: [initialToolsFixtureModule(["BlockingTool"])],
+            });
             (engine as any).hooks.clear();
             if (phase === "tool") {
               engine.registerCustomTool(
@@ -335,6 +340,7 @@ describe("child Engine direction safe point", () => {
     try {
       const engine = new Engine({
         llm: { provider: progressProvider, model: `${Date.now()}`, apiKey: "test" },
+        modules: [initialToolsFixtureModule(["ApprovalTool"])],
         cwd: dir,
         sessionStorageDir: join(dir, "sessions"),
         enabledBuiltinTools: [],

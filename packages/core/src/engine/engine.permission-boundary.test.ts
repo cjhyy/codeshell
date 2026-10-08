@@ -1,3 +1,4 @@
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -100,6 +101,7 @@ function makeEngine(initialMode: "default" | "bypassPermissions") {
   const engine = new Engine({
     llm: { provider, model, apiKey: "test" } as never,
     cwd,
+    modules: [initialToolsFixtureModule(["BoundaryMutation"])],
     sessionStorageDir: join(cwd, "sessions"),
     permissionMode: initialMode,
     approvalBackend: {
