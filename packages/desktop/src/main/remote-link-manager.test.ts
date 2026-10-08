@@ -30,6 +30,7 @@ function fixture(
     allowed = true;
   const service = createLinkService({
     store,
+    readRemoteCatalog: async () => ["github", "gitlab"],
     remoteLink: () => ({
       issuer: "https://link.example",
       clientId: "client",
@@ -52,6 +53,7 @@ function fixture(
   });
   cleanups.push(() => {
     manager.close();
+    service.close();
     rmSync(root, { force: true, recursive: true });
   });
   return {
@@ -185,4 +187,17 @@ test("revoked project access rejects the return before network exchange", async 
   );
   await expect(pending).rejects.toMatchObject({ code: "login_required" });
   expect(f.store.list()).toEqual([]);
+});
+
+test("a non-GitHub cancellation retains its requested provider identity", async () => {
+  const f = fixture();
+  const requestId = randomUUID();
+  f.manager.cancel(f.context, requestId);
+  expect(
+    await f.manager.start(f.context, requestId, { ...input, providerId: "gitlab" }),
+  ).toMatchObject({
+    providerId: "gitlab",
+    state: "cancelled",
+  });
+  expect(f.opened).toBeUndefined();
 });

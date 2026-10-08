@@ -375,14 +375,22 @@ test("CLI installation permission is native-only and does not imply an installed
   }
 });
 
-test("remote authorization is ordered first while local method preference stays intact", () => {
+test("remote authorization is ordered first while local method preference stays intact", async () => {
   const { service } = fixture({
+    readRemoteCatalog: async () => ["github"],
     remoteLink: () => ({
       issuer: "https://link.example",
       clientId: "client",
       redirectUri: "http://127.0.0.1/link/callback",
     }),
   });
+  expect(
+    service
+      .snapshot()
+      .providers.find((provider) => provider.id === "github")!
+      .authModes!.some((mode) => mode.id === "remote-link"),
+  ).toBe(false);
+  await service.refreshRemoteCatalog(owner);
   const modes = service
     .snapshot()
     .providers.find((provider) => provider.id === "github")!.authModes!;
@@ -480,3 +488,28 @@ for (const interruption of ["cancel", "expiry", "notification-error"] as const) 
     expect(store.resolve(done.connection!.id)?.secret).toBe("saved");
   });
 }
+
+test("concurrent remote starts recheck pending capacity after catalog discovery", async () => {
+  const catalog = deferred<Array<"github">>();
+  const { service } = fixture({
+    remoteLink: () => ({
+      issuer: "https://link.example",
+      clientId: "fixture",
+      redirectUri: "http://localhost:4900/callback",
+    }),
+    readRemoteCatalog: () => catalog.promise,
+  });
+  const starts = Array.from({ length: 3 }, (_, index) =>
+    service.startRemoteAuth(owner, {
+      ...input,
+      methodId: "remote-link",
+      connectionId: `concurrent-${index}`,
+    }),
+  );
+  catalog.resolve(["github"]);
+  const result = await Promise.allSettled(starts);
+  expect(result.filter((item) => item.status === "fulfilled")).toHaveLength(2);
+  expect(result.find((item) => item.status === "rejected")).toMatchObject({
+    reason: { code: "busy" },
+  });
+});

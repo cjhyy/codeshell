@@ -1,23 +1,42 @@
 import { beginRemoteLinkAuthorization, type RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 
-/** Reviewed Host adapters: remote presentation data cannot add executors or navigation authority. */
-export const REMOTE_LINK_ADAPTERS = [
+import {
+  REMOTE_LINK_PROVIDER_ADAPTERS,
+  LEGACY_GITHUB_ACTIONS,
+  type RemoteLinkProviderId,
+} from "@cjhyy/code-shell-core";
+
+/** The Host's compiled executors own authority, never remotely supplied presentation metadata. */
+export const REMOTE_LINK_ADAPTERS = REMOTE_LINK_PROVIDER_ADAPTERS.map((adapter) => ({
+  ...adapter,
+  methodId: "remote-link",
+  authModeId: "remote-link",
+  scopes: adapter.actions.map((action) => `${adapter.id}:${action}`),
+}));
+export type RemoteProviderId = RemoteLinkProviderId;
+export interface RemoteProviderCapabilities {
+  id: RemoteProviderId;
+  actions: string[];
+  scopes: string[];
+}
+export const LEGACY_REMOTE_PROVIDERS: RemoteProviderCapabilities[] = [
   {
     id: "github",
-    name: "GitHub",
-    methodId: "remote-link",
-    authModeId: "remote-link",
-    actions: ["list_repositories", "list_issues", "get_issue"],
-    scopes: ["github:list_repositories", "github:list_issues", "github:get_issue"],
+    actions: [...LEGACY_GITHUB_ACTIONS],
+    scopes: LEGACY_GITHUB_ACTIONS.map((action) => `github:${action}`),
   },
-] as const;
+];
 
-export type RemoteProviderId = (typeof REMOTE_LINK_ADAPTERS)[number]["id"];
-
-/** A legacy v1 service has no catalog. Its one already-reviewed adapter remains compatible. */
 export async function readRemoteProviderCatalog(
   configuration: RemoteLinkConfiguration,
 ): Promise<RemoteProviderId[]> {
+  return (await readRemoteProviderCapabilities(configuration)).map((provider) => provider.id);
+}
+
+/** A legacy v1 service has no catalog. Its one already-reviewed adapter remains compatible. */
+export async function readRemoteProviderCapabilities(
+  configuration: RemoteLinkConfiguration,
+): Promise<RemoteProviderCapabilities[]> {
   const issuer = beginRemoteLinkAuthorization(configuration).configuration.issuer;
   const response = await fetch(new URL("/api/v1/links/providers", issuer), {
     redirect: "error",
@@ -26,7 +45,7 @@ export async function readRemoteProviderCatalog(
   });
   if ([404, 501].includes(response.status)) {
     await response.body?.cancel();
-    return ["github"];
+    return structuredClone(LEGACY_REMOTE_PROVIDERS);
   }
   if (!response.ok || !response.body) {
     await response.body?.cancel();
@@ -57,19 +76,27 @@ export async function readRemoteProviderCatalog(
   }
   if (catalog?.version !== 1 || !Array.isArray(catalog.providers) || catalog.providers.length > 32)
     return [];
-  return REMOTE_LINK_ADAPTERS.filter((adapter) => {
+  return REMOTE_LINK_ADAPTERS.flatMap((adapter): RemoteProviderCapabilities[] => {
     const matches = catalog.providers.filter((item: any) => item?.id === adapter.id);
-    if (matches.length !== 1) return false;
+    if (matches.length !== 1) return [];
     const provider = matches[0];
-    return (
-      Array.isArray(provider.scopes) &&
-      provider.scopes.length === adapter.scopes.length &&
-      adapter.scopes.every((scope) => provider.scopes.includes(scope)) &&
-      Array.isArray(provider.actions) &&
-      provider.actions.length === adapter.actions.length &&
-      adapter.actions.every((action) => provider.actions.includes(action)) &&
-      Array.isArray(provider.methods) &&
-      provider.methods.some(
+    const actions = provider.actions;
+    const scopes = provider.scopes;
+    if (
+      !Array.isArray(actions) ||
+      !actions.length ||
+      actions.length > adapter.actions.length ||
+      new Set(actions).size !== actions.length ||
+      actions.some((action) => !(adapter.actions as readonly string[]).includes(action)) ||
+      !Array.isArray(scopes) ||
+      scopes.length !== actions.length ||
+      new Set(scopes).size !== scopes.length ||
+      actions.some((action) => !scopes.includes(`${adapter.id}:${action}`))
+    )
+      return [];
+    if (
+      !Array.isArray(provider.methods) ||
+      !provider.methods.some(
         (method: any) =>
           method?.id === adapter.methodId &&
           method.authKind === "oauth" &&
@@ -77,6 +104,8 @@ export async function readRemoteProviderCatalog(
           Array.isArray(method.authModes) &&
           method.authModes.some((mode: any) => mode?.id === "browser" && mode.kind === "redirect"),
       )
-    );
-  }).map((adapter) => adapter.id);
+    )
+      return [];
+    return [{ id: adapter.id, actions: [...actions], scopes: [...scopes] }];
+  });
 }

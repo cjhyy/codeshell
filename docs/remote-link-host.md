@@ -1,13 +1,31 @@
 # 远程 Link 的 Host 执行契约
 
-状态：执行链、共享 Host 授权管理，以及 Hub 浏览器的配置接入、授权跳转、回调和断开
-已实现。Electron 云端窗口和配对 Web 也已接通并通过实际程序／浏览器测试，上游仍为
-测试账号。原生 Desktop 和真实 Docker 项目授权已通过受控上游验收，真实服务商验收仍待完成。首批仅支持独立 Link API v1 的 GitHub
-`list_repositories`、`list_issues`、`get_issue` 只读动作。
+状态：Host 与独立 Link 已实现现有全部 10 个 provider、26 个动作的远程执行契约，
+包括授权、资源选择、下游令牌轮换、撤销与断开。Core／Server 和独立服务的 production
+模块已通过受控上游 HTTP 验证；Hub、配对 Web、Electron 云端窗口、原生 Desktop 和
+Docker 的既有 GitHub 授权流程已有实际程序验收。真实第三方账号、其他 provider 的
+生产应用配置和全部端到端登录仍待逐家验收，不能用 fixture 结果替代。
+
+| Provider | 现有远程动作                                                         | 必须明确选择的资源             |
+| -------- | -------------------------------------------------------------------- | ------------------------------ |
+| GitHub   | 仓库、README、文件、Issue 列表／详情、PR 列表／详情、创建 Issue（8） | 仓库                           |
+| GitLab   | 项目、分配给当前用户的 Issue（2）                                    | 项目                           |
+| Sentry   | 组织、组织中的项目（2）                                              | 组织                           |
+| Vercel   | 项目、部署（2）                                                      | 安装所属账号／团队中的项目     |
+| Slack    | 频道、最近消息（2）                                                  | 频道                           |
+| Notion   | 搜索、页面属性（2）                                                  | 页面／数据库                   |
+| Linear   | 分配给当前用户的 Issue、团队（2）                                    | 团队                           |
+| Todoist  | 项目、任务（2）                                                      | 项目                           |
+| Airtable | Base、表结构（2）                                                    | Base                           |
+| Figma    | 文件摘要、评论（2）                                                  | 用户输入并经上游验证的文件 key |
+
+服务仅发布已配置的 provider。Host 取远端 catalog 与编译内静态 adapter 的交集；未知
+provider、动作、额外 scope、含糊资源组或错误授权机制均不能扩大执行权限。旧 API v1
+的 GitHub 三个只读动作仍兼容，缺少 catalog 的 404／501 仅回退到这三个动作。
 
 不同授权方式已接入首版通用 UI，见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
 Desktop 与 Hub Web 共用授权 controller 和步骤视图，Host 提供统一任务及步骤提交 API；
-Token、CLI 会话、设备码和 GitHub 远端网页授权已有真实适配器。扫码和追加验证码目前仅有
+Token、CLI 会话、设备码和全部 10 个 provider 的远端网页授权已有适配器。扫码和追加验证码目前仅有
 公共视图，不作为生产连接能力发布。独立 Link 服务 `a9923817` 已于 2026-10-08 更新线上实例。
 
 ## 授权由 Host 持有
@@ -20,7 +38,7 @@ Host 只把 `authorizationUrl` 交给浏览器，不能把 attempt、verifier �
 Host 后续授权管理层须将 attempt 绑定发起 owner、目标凭据及配置 revision，并在回调
 前后复查登录和项目。`completeRemoteLinkAuthorization(attempt, callbackUrl, id, label)`
 验证 state、callback 位置和重复参数，单次消费 attempt，兑换后读取实际授权账号、连接、
-操作与仓库范围，返回待保存 Credential。它不自行保存：Host 必须通过 CredentialStore
+操作与资源组范围，返回待保存 Credential。它不自行保存：Host 必须通过 CredentialStore
 条件写入，防止授权期间另一设备删除或替换连接。共享 `createLinkService` 已提供此管理层，Hub／配对 Web 和原生桌面入口均已接入。
 
 保存的记录为 OAuth 类型，`linkExecutionBackend=remote`、`linkExecutionRuntime=server`、
@@ -41,8 +59,17 @@ Node Host 通过 CredentialAccess 在本进程执行远程动作；Desktop worke
 
 动作沿用本地参数／输出形状：仓库列表包装为 `repositories`；Issue 列表使用
 `owner/repo` 参数、排除 Pull Request、包装为 `issues`；单条 Issue 使用 `issue_number`。
-远程服务当前每页 50 项，列表 limit 最大 50；仓库列表最多 100。请求在 Host 和 Link
-两端检查操作与仓库范围，返回前再次检查本地连接是否仍有效。
+其他 provider 保留各自的 `projects`／`channels`／`results` 等包装，不冒用仓库字段。
+授权元数据包含 provider、账号、`actions`、`<provider>:<action>` scopes 及唯一的
+`resourceGroups: [{ id, items: [{ id, label }] }]`；GitHub 另保留旧 `repositories`。
+Host 每次执行前检查 token scope、保存的 capability 和静态动作交集，按 provider
+规范化资源 ID、验证参数，再次过滤列表；返回前复查账号、grant、资源组和连接状态。
+
+资源发现最多 10 页／1000 项，同意页最多选择 100 项。动作保留各自的有界 limit：
+Slack 最近消息最多 15 条、频道最多 200，Linear 最多 50，其他多数列表最多 100。
+截断结果返回 `truncated`／`has_more`；当前不提供跨多个已选资源的复合 cursor 续页，
+不能把上游某一个资源的 cursor 用到聚合列表。GitHub 保留 API v1 的 `page` 兼容。
+创建 GitHub Issue 同时要求独立写 scope 和每次操作的用户批准；写请求不会自动重试。
 
 ## 轮换、重启和撤销
 
@@ -105,7 +132,7 @@ safeStorage，Headless 的默认策略仍是权限为 0600 的明文存储，不
 HTTP 入口仍受 Host 原有身份与 Origin 校验约束：
 
 - `POST /api/v1/links/authorizations/remote`：创建授权，使用
-  `providerId=github`、`methodId=remote-link`、label、可选 connectionId 和 expectedRevision。
+  `providerId`（10 个静态 provider 之一）、`methodId=remote-link`、label、可选 connectionId 和 expectedRevision。
 - `POST /api/v1/links/authorizations/:id/complete`：提交 callbackUrl，由原 owner 完成。
 - 原授权查询／取消接口覆盖远程 attempt；原连接快照、改名和断开接口覆盖远程连接。
 
@@ -236,6 +263,17 @@ Core 测试覆盖 PKCE、真实本机 HTTP、并发轮换、丢失响应不重�
 ```sh
 node scripts/smoke-remote-link.mjs /path/to/codeshell-services/apps/link-server/http.mjs
 ```
+
+全部 provider 的跨仓验收使用：
+
+```bash
+node scripts/smoke-remote-link-providers.mjs /path/to/codeshell-services/apps/link-server/http.mjs
+```
+
+它调用构建后的 Core／Server、独立服务真实 HTTP／SQLite／OAuth 和 production provider
+模块，只有官方上游 HTTP 响应由合成 fixture 提供。覆盖 10 次逐家授权、全部 26 个动作、
+10 次下游轮换、资源选择、跨 provider 拒绝、撤销和 Host 断开；不读取真实凭据，也不
+宣称第三方账号验收完成。官方 OAuth 配置及账号验收必须另行记录。
 
 这是独立验收器的输入，不是产品的跨仓库源码依赖。它启动真实 Link HTTP／SQLite／
 OAuth 服务，完成上游测试账号连接、共享 Host 发起授权、下游 PKCE 同意、Host 条件保存、
