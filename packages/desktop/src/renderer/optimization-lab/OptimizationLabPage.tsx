@@ -233,6 +233,8 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
   const status = snapshot?.state.status ?? "draft";
   const running = activeStatuses.has(status);
   const waiting = status.startsWith("awaiting_");
+  const hasGrading = Boolean(snapshot?.state.data?.templateRef) || waiting;
+  const hasReport = Boolean(snapshot?.state.data?.reportRef);
   return (
     <div data-testid="optimization-lab-page" className="h-full overflow-y-auto p-6">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -583,7 +585,7 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
                 <Button
                   data-testid="optimization-lab-export-grading"
                   variant="outline"
-                  disabled={pending || running}
+                  disabled={pending || running || !hasGrading}
                   onClick={() =>
                     void run(async () => {
                       await window.codeshell.optimizationLab.exportFile({
@@ -599,7 +601,7 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
                 <Button
                   data-testid="optimization-lab-import-grading"
                   variant="outline"
-                  disabled={pending || running}
+                  disabled={pending || running || !hasGrading}
                   onClick={() =>
                     void run(async () => {
                       const current = epoch.current;
@@ -620,7 +622,7 @@ export function OptimizationLabPage({ activeProjectId }: { activeProjectId?: str
                 <Button
                   data-testid="optimization-lab-open-report"
                   variant="outline"
-                  disabled={pending || running}
+                  disabled={pending || running || !hasReport}
                   onClick={() =>
                     void run(async () => {
                       setReport(await query("report", { id: snapshot.id }));
