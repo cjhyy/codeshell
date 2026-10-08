@@ -10,6 +10,7 @@ import {
   existsSync,
   fchmodSync,
   fstatSync,
+  fsyncSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -22,6 +23,7 @@ import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
 import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
+import { syncDirectoryAncestors } from "../model-request-boundary/durability.js";
 
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
@@ -59,7 +61,7 @@ export interface TranscriptFlushFailure {
   code?: string;
   message: string;
   timestamp: number;
-  attempts: 2;
+  attempts: 1 | 2;
   recoverable: false;
   filePath: string;
 }
@@ -432,6 +434,49 @@ export class Transcript {
     };
     if (!readCheckpoint(candidate, this.events)) return undefined;
     return this.appendDurableContextEvent("context_checkpoint", data);
+  }
+
+  /** Before-send audit records must reach durable storage before becoming visible. */
+  appendModelRequestEvent(
+    type: "model_request_boundary" | "model_request_attempt",
+    data: Record<string, unknown>,
+  ): TranscriptEvent | undefined {
+    if (this.dirty) return undefined;
+    const event: TranscriptEvent = {
+      id: nanoid(12),
+      type,
+      timestamp: Date.now(),
+      turnNumber: this.currentTurn,
+      data,
+    };
+    if (!this.flush(event)) return undefined;
+    // The production writer uses append+close. Explicitly commit the file and
+    // its directory before a model request is allowed to leave this process.
+    // Injected writers own their durability contract (including failure tests).
+    if (this.persistent && this.writer === defaultTranscriptWriter) {
+      try {
+        const fd = openSync(this.filePath, "r");
+        try {
+          fsyncSync(fd);
+        } finally {
+          closeSync(fd);
+        }
+        syncDirectoryAncestors(dirname(this.filePath));
+      } catch (error) {
+        this.dirty = true;
+        this.lastFlushFailure = {
+          errno: this.errorErrno(error),
+          message: "Model request audit sync failed",
+          timestamp: Date.now(),
+          attempts: 1,
+          recoverable: false,
+          filePath: this.filePath,
+        };
+        return undefined;
+      }
+    }
+    this.events.push(event);
+    return event;
   }
 
   private appendDurableContextEvent(

@@ -6,6 +6,8 @@ import type { ClientDefaults, LLMConfig, LLMResponse, TokenUsage } from "../type
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
+import { requestBoundaryFetch } from "../model-request-boundary/context.js";
+import { currentUsageAttempt, markCurrentUsageAttemptNotSent } from "../cost-ledger/context.js";
 import {
   recordOwnedUsage,
   usageTrackingFetch,
@@ -69,7 +71,13 @@ export abstract class LLMClientBase {
     this.timeout = defaults?.timeout ?? 120_000;
     this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;
     this.imageDetail = defaults?.imageDetail;
-    this.fetch = usageTrackingFetch(defaults?.fetch ?? globalThis.fetch);
+    this.fetch = usageTrackingFetch(
+      requestBoundaryFetch(
+        defaults?.fetch ?? globalThis.fetch,
+        currentUsageAttempt,
+        markCurrentUsageAttemptNotSent,
+      ),
+    );
     this.initClient();
     this.enableUsageAccounting();
   }

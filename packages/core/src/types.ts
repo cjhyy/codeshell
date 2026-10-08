@@ -167,6 +167,8 @@ export interface RegisteredTool {
 // ─── Transcript Events ────────────────────────────────────────────
 
 export type TranscriptEventType =
+  | "model_request_boundary"
+  | "model_request_attempt"
   | "message"
   | "tool_use"
   | "tool_result"

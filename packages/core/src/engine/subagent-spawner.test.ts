@@ -243,8 +243,15 @@ describe("subagent spawner", () => {
   it("builds a child config through the injected runner and anchors cold spawns", async () => {
     const anchors: unknown[][] = [];
     const runs: Array<{ config: EngineConfig; task: string; sessionId?: string }> = [];
+    const parent = parentConfig();
+    const signer = {
+      sign: async () => {
+        throw new Error("unused fixture signer");
+      },
+    };
+    parent.modelRequestSigner = signer;
     const spawner = createSubAgentSpawner({
-      parentConfig: parentConfig(),
+      parentConfig: parent,
       parentSandbox: parentConfig().sandbox!,
       presetName: "general",
       cwd: "/repo",
@@ -278,6 +285,7 @@ describe("subagent spawner", () => {
 
     expect(anchors).toEqual([["child-1", undefined, "research"]]);
     expect(runs).toHaveLength(1);
+    expect(runs[0]!.config.modelRequestSigner).toBe(signer);
     expect(runs[0]).toMatchObject({ task: "inspect", sessionId: "child-1" });
     expect(runs[0]!.config).toMatchObject({
       llm: { model: "parent" },

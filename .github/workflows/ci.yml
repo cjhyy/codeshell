@@ -56,7 +56,9 @@ jobs:
       - name: Cost smoke network and nested worker confinement
         run: node scripts/test-runtime-cost-smoke-isolation.mjs
       - name: Compiled SDK, stdio restart/replay and TUI cost accounting
-        run: node scripts/smoke-runtime-cost-ledger.mjs
+        run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-runtime-cost-ledger.mjs
+      - name: Compiled SDK, stdio and TUI model request boundaries
+        run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-model-request-boundaries.mjs
 
   # The suite is split across parallel shards rather than run as one job.
   #
@@ -151,7 +153,7 @@ jobs:
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
       - name: compiled SDK verified Link write lifecycle
         if: matrix.shard == 'core-engine'
-        run: node scripts/smoke-verified-link-write.mjs
+        run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs
       # The large Desktop Bun process can stall real Chromium load callbacks.
       # Run each browser suite in its own process, keeping every assertion and
       # the same 30-second timeout as the rest of the shard.
@@ -231,7 +233,10 @@ jobs:
           bun run --cwd packages/desktop predist
           bun run --cwd packages/desktop test:upload-asar
       - name: real Electron E2E
-        run: xvfb-run -a bun run --cwd packages/desktop test:e2e
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
+          bash scripts/run-electron-e2e-keyring.sh
       - name: install browser for real Hub panel recovery
         working-directory: packages/desktop
         run: bunx playwright install --with-deps chromium

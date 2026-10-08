@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash, randomUUID } from "node:crypto";
 import type { TokenUsage } from "../types.js";
 import type { UsageLedger } from "./store.js";
 import type { UsageIdentity, UsagePurpose, UsageReceipt } from "./types.js";
@@ -19,7 +20,13 @@ const attempts = new AsyncLocalStorage<{
   identity: UsageIdentity;
   receipts: UsageReceipt[];
   latest?: UsageReceipt;
+  latestIdentity?: UsageAttemptIdentity;
 }>();
+
+type UsageAttemptIdentity = Pick<
+  UsageReceipt,
+  "requestId" | "runtimeId" | "sessionId" | "accountingSessionId" | "runId" | "purpose"
+>;
 
 function account<T>(owner: UsageOwner, operation: () => T): T | undefined {
   try {
@@ -45,7 +52,7 @@ export function currentUsageAttempt():
       "requestId" | "runtimeId" | "sessionId" | "accountingSessionId" | "runId" | "purpose"
     >
   | undefined {
-  const receipt = attempts.getStore()?.latest;
+  const receipt = attempts.getStore()?.latestIdentity ?? attempts.getStore()?.latest;
   if (!receipt) return undefined;
   const { requestId, runtimeId, sessionId, accountingSessionId, runId, purpose } = receipt;
   return Object.freeze({ requestId, runtimeId, sessionId, accountingSessionId, runId, purpose });
@@ -73,6 +80,7 @@ export async function withUsageAttempt<T>(
     identity,
     receipts: [] as UsageReceipt[],
     latest: undefined as UsageReceipt | undefined,
+    latestIdentity: undefined as UsageAttemptIdentity | undefined,
   };
   return attempts.run(call, async () => {
     try {
@@ -95,7 +103,12 @@ export function recordOwnedUsage(identity: UsageIdentity, usage: TokenUsage | nu
   if (attempt) {
     if (!attempt.latest) {
       attempt.latest = account(attempt.owner, () =>
-        attempt.owner.ledger.begin(attempt.owner, identity),
+        attempt.owner.ledger.begin(
+          attempt.owner,
+          identity,
+          undefined,
+          attempt.latestIdentity?.requestId,
+        ),
       );
       if (attempt.latest) attempt.receipts.push(attempt.latest);
     }
@@ -118,7 +131,21 @@ export function usageTrackingFetch(underlying: typeof globalThis.fetch): typeof 
   return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
     const call = attempts.getStore();
     if (!call) return underlying(input, init);
-    const receipt = account(call.owner, () => call.owner.ledger.begin(call.owner, call.identity));
+    const requestId = createHash("sha256")
+      .update(JSON.stringify([call.owner.ledger.namespace, "provider", randomUUID()]))
+      .digest("hex");
+    call.latestIdentity = Object.freeze({
+      requestId,
+      runtimeId: call.owner.ledger.runtimeId,
+      sessionId: call.owner.sessionId,
+      accountingSessionId: call.owner.accountingSessionId,
+      ...(call.owner.runId ? { runId: call.owner.runId } : {}),
+      purpose: call.owner.purpose,
+    });
+    call.latest = undefined;
+    const receipt = account(call.owner, () =>
+      call.owner.ledger.begin(call.owner, call.identity, undefined, requestId),
+    );
     if (!receipt) return underlying(input, init);
     call.receipts.push(receipt);
     call.latest = receipt;
@@ -131,4 +158,10 @@ export function usageTrackingFetch(underlying: typeof globalThis.fetch): typeof 
       throw error;
     }
   }) as typeof globalThis.fetch;
+}
+
+/** Called only before the underlying transport; accounting failures cannot mask preflight failures. */
+export function markCurrentUsageAttemptNotSent(): void {
+  const call = attempts.getStore();
+  if (call?.latest) account(call.owner, () => call.owner.ledger.markNotSent(call.latest!));
 }
