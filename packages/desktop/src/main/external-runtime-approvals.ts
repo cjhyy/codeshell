@@ -78,6 +78,10 @@ const APPROVAL_TIMEOUT_MS = 10 * 60_000;
 export class ExternalRuntimeApprovals {
   private readonly pending = new Map<string, Pending>();
 
+  hasPendingSession(sessionId: string): boolean {
+    return [...this.pending.values()].some((entry) => entry.sessionId === sessionId);
+  }
+
   constructor(
     private readonly deps: {
       /** Windows that may display a prompt. */

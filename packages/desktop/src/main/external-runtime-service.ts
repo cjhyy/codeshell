@@ -222,6 +222,14 @@ export class ExternalRuntimeService {
     return this.sessions.has(sessionId);
   }
 
+  /** Allocation alone is not live work; task projections need the authoritative turn state. */
+  isSessionRunning(sessionId: string): boolean {
+    const entry = this.sessions.get(sessionId);
+    return (
+      !!entry?.lifecycle.active && (entry.lifecycle.turnActive || entry.lifecycle.goalRunActive)
+    );
+  }
+
   canResumeGoal(sessionId: string, callerWebContentsId?: number): boolean {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);

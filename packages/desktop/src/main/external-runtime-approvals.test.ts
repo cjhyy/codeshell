@@ -55,6 +55,8 @@ describe("ExternalRuntimeApprovals", () => {
     const approvals = router([window]);
 
     const pending = approvals.request("sess-1", request);
+    expect(approvals.hasPendingSession("sess-1")).toBe(true);
+    expect(approvals.hasPendingSession("other-session")).toBe(false);
     expect(sent).toHaveLength(1);
     expect(sent[0]!.channel).toBe("externalRuntime:approvalRequest");
 
@@ -62,6 +64,7 @@ describe("ExternalRuntimeApprovals", () => {
     expect(payload.sessionId).toBe("sess-1");
     expect(approvals.settle(payload.requestId, { approved: true })).toBe(true);
     await expect(pending).resolves.toMatchObject({ approved: true });
+    expect(approvals.hasPendingSession("sess-1")).toBe(false);
     expect(sent[1]).toEqual({
       channel: "externalRuntime:approvalResolved",
       payload: { sessionId: "sess-1", requestId: payload.requestId, approved: true },

@@ -235,6 +235,7 @@ function automationSessionLinks(
 }
 
 export function AutomationView({
+  initialAutomationId,
   onCreateConversational,
   onOpenRunSession,
   onOpenDiskSession,
@@ -242,6 +243,7 @@ export function AutomationView({
   sessionIndices,
   projects,
 }: {
+  initialAutomationId?: string | null;
   onCreateConversational: () => void;
   onOpenRunSession: (run: RunSummary) => void;
   onOpenDiskSession: (session: DiskSessionMeta) => void;
@@ -257,7 +259,10 @@ export function AutomationView({
   const [diskCursor, setDiskCursor] = useState<string | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const conversationsLoadingRef = useRef(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialAutomationId ?? null);
+  useEffect(() => {
+    if (initialAutomationId) setSelected(initialAutomationId);
+  }, [initialAutomationId]);
   const [error, setError] = useState<string | null>(null);
   const [bindingError, setBindingError] = useState<string | null>(null);
   /** Per-action in-flight flags, keyed by "<action>:<jobId>". */
@@ -317,8 +322,12 @@ export function AutomationView({
 
   useEffect(() => {
     if (!jobs || jobs.length === 0) return;
+    if (initialAutomationId && !jobs.some((job) => job.id === initialAutomationId)) {
+      setError(t("taskInbox.openUnavailable"));
+      return;
+    }
     if (!selected || !jobs.some((j) => j.id === selected)) setSelected(jobs[0].id);
-  }, [jobs, selected]);
+  }, [jobs, selected, initialAutomationId, t]);
 
   // Per-action in-flight guard. Keyed by "<action>:<jobId>" so the same
   // button can't be re-fired while its request is pending (the bug that let

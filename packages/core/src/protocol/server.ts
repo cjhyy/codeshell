@@ -75,7 +75,7 @@ import {
 import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
-import { listBackgroundWorkForUI } from "../tool-system/builtin/background-work.js";
+import { handleBackgroundWork, handleBackgroundWorkCancel } from "./background-work-rpc.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import type { ChatSession } from "./chat-session.js";
@@ -1379,7 +1379,10 @@ export class AgentServer {
         this.handleBackgroundShells(req);
         break;
       case Methods.BackgroundWork:
-        this.handleBackgroundWork(req);
+        handleBackgroundWork(req, this.transport);
+        break;
+      case Methods.BackgroundWorkCancel:
+        await handleBackgroundWorkCancel(req, this.transport);
         break;
       case Methods.PluginCommandsList:
         this.handlePluginCommandsList(req);
@@ -2936,26 +2939,6 @@ export class AgentServer {
     this.transport.send(
       createErrorResponse(req.id, ErrorCodes.InvalidParams, `unknown action: ${action}`),
     );
-  }
-
-  /**
-   * BackgroundWork — unified, list-only view of a session's background work
-   * across all three registries (shells + sub-agents + jobs) for the desktop
-   * background panel. Per-shell output/kill still flow through BackgroundShells
-   * (by shellId); this just answers "what's running in the background right now".
-   */
-  private handleBackgroundWork(req: RpcRequest): void {
-    const params = (req.params ?? {}) as { sessionId?: string; scope?: "session" | "all" };
-    const sessionId = params.sessionId;
-    if (typeof sessionId !== "string" || !sessionId) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
-      );
-      return;
-    }
-    const scope = params.scope === "all" ? "all" : "session";
-    const items = listBackgroundWorkForUI(sessionId, { scope });
-    this.transport.send(createResponse(req.id, { items }));
   }
 
   // ─── CloseSession ───────────────────────────────────────────────

@@ -149,6 +149,32 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("task projections distinguish an allocated runtime from an executing turn", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    expect(svc.hasSession(request.sessionId)).toBe(true);
+    expect(svc.isSessionRunning(request.sessionId)).toBe(false);
+    let started!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async () => {
+      started();
+      await blocked;
+    };
+    const running = svc.send(request.sessionId, { text: "执行", disableGoal: true });
+    await entered;
+    expect(svc.isSessionRunning(request.sessionId)).toBe(true);
+    release();
+    await running;
+    expect(svc.isSessionRunning(request.sessionId)).toBe(false);
+    await svc.stopAll();
+    expect(svc.isSessionRunning(request.sessionId)).toBe(false);
+  });
   test("persists and continues a Goal on the same provider until an explicit host completion", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);

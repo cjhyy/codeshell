@@ -98,6 +98,7 @@ export function buildCommands(opts: {
   setViewMode: (v: ViewMode) => void;
   openPanel: (t: PanelTab) => void;
   gitReviewAvailable?: boolean;
+  taskInboxEnabled?: boolean;
   toggleSidebar: () => void;
   toggleInspector: () => void;
   clearTranscript: () => void;
@@ -155,6 +156,9 @@ export function buildCommands(opts: {
       run: () => setViewMode("approvals"),
     },
     { id: "go.runs", label: tt("panels.palette.openRuns"), run: () => setViewMode("runs") },
+    ...(opts.taskInboxEnabled !== false
+      ? [{ id: "go.taskInbox", label: tt("taskInbox.title"), run: () => setViewMode("task_inbox") }]
+      : []),
     // 扩展并入设置中心(双门收口)— palette 直达设置页,扩展在其左侧导航里。
     {
       id: "go.settings",

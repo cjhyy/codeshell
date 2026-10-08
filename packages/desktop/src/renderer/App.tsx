@@ -8,12 +8,11 @@ import { useResponsiveSidebar } from "./app/useResponsiveSidebar";
 import { PetPage } from "./pet/PetPage";
 import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
-import { openPetTarget } from "./pet/petNavigation";
+import { createPetTargetNavigator } from "./pet/createPetTargetNavigator";
 import { PetChatHost } from "./pet/PetChatHost";
 import { PetPersonalizationPage, PetSettingsPage } from "./pet/PetSettingsPage";
 import { PetMemoryCenterPage } from "./pet/PetMemoryCenterPage";
 import { PetPeekHost } from "./pet/PetPeekHost";
-import { nextOpenCliSessionNonce } from "./cc-room/openCliSession";
 import {
   PET_WIDGET_RECEIPTS_KEY,
   initialPetWidgetReceiptState,
@@ -64,7 +63,6 @@ import type {
   ApprovalRequestEnvelope,
   MobilePermissionMode,
   MobilePermissionModeSnapshotEntry,
-  PetOpenSessionRequest,
   PetPeek,
   SummaryForkSessionResult,
 } from "../preload/types";
@@ -80,6 +78,7 @@ import {
 import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
+import { useTaskInboxFeature } from "./task-inbox/useTaskInboxFeature";
 import { PAGE_REGISTRY } from "./pages/PageRegistry";
 import { replacePanelApps } from "./panels/PanelRegistry";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
@@ -964,51 +963,6 @@ function App() {
     [petLongTasks, petState.projection],
   );
 
-  const handleOpenPetTarget = async (request: PetOpenSessionRequest): Promise<void> => {
-    if (request.external) {
-      const { cli, cwd, sessionId } = request.external;
-      if ((cli !== "claude" && cli !== "codex") || !cwd.trim() || !sessionId.trim()) {
-        toast({ message: t("pet.navigation.externalUnavailable"), variant: "error" });
-        return;
-      }
-      const nonce = nextOpenCliSessionNonce();
-      updatePanelBucket(activeBucketRef.current, (state) => ({
-        ...state,
-        open: true,
-        openCliSession: {
-          nonce,
-          externalSessionId: sessionId,
-          cliKind: cli === "claude" ? "claude-code" : "codex",
-          cwd,
-        },
-        requestNonce: state.requestNonce + 1,
-        requestKind: "ccRoom",
-      }));
-      setView((current) => ({
-        ...current,
-        viewMode: "chat",
-        sidebarCollapsed: isNarrowWindow ? current.sidebarCollapsed : false,
-      }));
-      markViewedPetCompletions(request.agentSessionId);
-      return;
-    }
-    await openPetTarget(window.codeshell.pet, request, {
-      select: async (target) => {
-        await handleOpenAutomationDiskSession({
-          id: target.uiSessionId,
-          engineSessionId: target.engineSessionId,
-          cwd: target.projectPath ?? "",
-          title: target.title,
-          updatedAt: target.updatedAt,
-          origin: target.origin,
-        });
-        markViewedPetCompletions(request.agentSessionId);
-      },
-      onStale: () => toast({ message: t("pet.navigation.stale"), variant: "default" }),
-      onNotFound: () => toast({ message: t("pet.navigation.notFound"), variant: "error" }),
-    });
-  };
-
   const settlePetPeek = (peek: PetPeek, state: "seen" | "dismissed"): void => {
     removePeek(peek.id);
     void window.codeshell.pet?.markAttentionReceipt?.(peek.receiptKeys, state);
@@ -1358,6 +1312,30 @@ function App() {
     setView,
     setRunsInitialRunId,
   });
+
+  const handleOpenPetTarget = createPetTargetNavigator({
+    api: window.codeshell.pet,
+    activeBucketRef,
+    updatePanelBucket,
+    setView,
+    isNarrowWindow,
+    markViewedPetCompletions,
+    openDiskSession: handleOpenAutomationDiskSession,
+    toast,
+    t,
+  });
+  const { taskInboxEnabled, automationInitialId, petInitialTaskId, onOpenTaskInboxRecord } =
+    useTaskInboxFeature({
+      settingsRevision,
+      setView,
+      sessionIndices,
+      selectSession: handleSelectSession,
+      openDiskSession: handleOpenAutomationDiskSession,
+      openPetTarget: handleOpenPetTarget,
+      petSnapshot: petState.projection,
+      openPetPage,
+      setRunsInitialRunId,
+    });
 
   const { onSessionRenamed, onSessionDeleted } = useSessionHistorySync({
     untitledTitle: t("auto.sessions.untitled"),
@@ -2245,6 +2223,7 @@ function App() {
               onDeleteSession={handleDeleteSession}
               activeProjectPath={activeProject?.path ?? null}
               viewMode={view.viewMode}
+              taskInboxEnabled={taskInboxEnabled}
             />
           </ResponsiveSidebar>
 
@@ -2271,6 +2250,7 @@ function App() {
                     projection={petState.projection}
                     status={petState.status}
                     focusPending={petState.overviewFocus === "pending"}
+                    selectedLongTaskId={petInitialTaskId}
                     excludedSessionIds={archivedPetSessionIds}
                     onNavigate={(request) => void handleOpenPetTarget(request)}
                   />
@@ -2304,6 +2284,7 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({
                     runsInitialRunId,
+                    onOpenTaskInboxRecord,
                     activeProjectPath: activeProject?.path ?? null,
                     onNewSession: handleNewConversation,
                     onSessionRenamed,
@@ -2438,6 +2419,7 @@ function App() {
               ) : view.viewMode === "automation" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <AutomationView
+                    initialAutomationId={automationInitialId}
                     onCreateConversational={startConversationalAutomation}
                     onOpenRunSession={(run) => {
                       void handleOpenAutomationRunSession(run);
@@ -2673,6 +2655,7 @@ function App() {
             setViewMode,
             openPanel,
             gitReviewAvailable: reviewAvailability.available,
+            taskInboxEnabled,
             toggleSidebar,
             toggleInspector,
             clearTranscript,

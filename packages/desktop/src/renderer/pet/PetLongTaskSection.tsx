@@ -122,6 +122,7 @@ export function PetLongTaskCard({
   return (
     <article
       data-pet-long-task={task.id}
+      tabIndex={-1}
       className="rounded-2xl border border-border/60 bg-background/60 p-3 shadow-[0_1px_2px_hsl(var(--cs-foreground)/0.035)]"
     >
       <div className="flex min-w-0 items-start gap-3">
@@ -296,8 +297,10 @@ export function PetLongTaskCard({
 }
 
 export function PetLongTaskSection({
+  selectedTaskId,
   onOpenSession,
 }: {
+  selectedTaskId?: string | null;
   onOpenSession?: (sessionId: string) => void;
 }) {
   const { t } = useT();
@@ -315,13 +318,28 @@ export function PetLongTaskSection({
       task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled",
   ).length;
   const terminalCount = longTasks.tasks.filter(isLongTaskClearable).length;
-  const [open, setOpen] = React.useState(activeCount > 0);
+  const [open, setOpen] = React.useState(activeCount > 0 || Boolean(selectedTaskId));
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const focusedTaskRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (selectedTaskId) setOpen(true);
+  }, [selectedTaskId]);
+  React.useEffect(() => {
+    if (!open || !selectedTaskId || focusedTaskRef.current === selectedTaskId) return;
+    const card = Array.from(
+      sectionRef.current?.querySelectorAll<HTMLElement>("[data-pet-long-task]") ?? [],
+    ).find((node) => node.dataset.petLongTask === selectedTaskId);
+    card?.scrollIntoView?.({ block: "center" });
+    card?.focus({ preventScroll: true });
+    if (card) focusedTaskRef.current = selectedTaskId;
+  }, [open, selectedTaskId, longTasks]);
   React.useEffect(() => {
     if (activeCount > 0) setOpen(true);
   }, [activeCount]);
   if (longTasks.tasks.length === 0 && !longTaskError) return null;
   return (
     <section
+      ref={sectionRef}
       data-pet-long-tasks="durable"
       className="rounded-2xl border border-border/60 bg-background/45 p-1"
     >
@@ -369,16 +387,21 @@ export function PetLongTaskSection({
               {longTaskError}
             </p>
           )}
-          {longTasks.tasks.slice(0, 24).map((task) => (
-            <PetLongTaskCard
-              key={task.id}
-              task={task}
-              busy={longTaskBusyIds.has(task.id)}
-              onOpenSession={onOpenSession}
-              onControl={(taskId, action) => void controlLongTask(taskId, action)}
-              onClear={clearLongTask}
-            />
-          ))}
+          {[
+            ...longTasks.tasks.filter((task) => task.id === selectedTaskId),
+            ...longTasks.tasks.filter((task) => task.id !== selectedTaskId),
+          ]
+            .slice(0, 24)
+            .map((task) => (
+              <PetLongTaskCard
+                key={task.id}
+                task={task}
+                busy={longTaskBusyIds.has(task.id)}
+                onOpenSession={onOpenSession}
+                onControl={(taskId, action) => void controlLongTask(taskId, action)}
+                onClear={clearLongTask}
+              />
+            ))}
         </div>
       )}
     </section>

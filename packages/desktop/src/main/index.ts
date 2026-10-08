@@ -127,7 +127,10 @@ import {
   parseExternalGoalInput,
 } from "./external-runtime-goal-rpc.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
-import { removeExternalRuntimeBinding } from "./external-runtime-state.js";
+import {
+  removeExternalRuntimeBinding,
+  readExternalRuntimeBinding,
+} from "./external-runtime-state.js";
 import {
   ExternalRuntimeApprovals,
   parseExternalApprovalDecision,
@@ -384,6 +387,12 @@ import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
+import { SessionCatalogStore } from "./session-catalog-store.js";
+import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
+import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
+import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
+import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
+import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
@@ -490,6 +499,7 @@ import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js
 import { resolveModelMeta } from "./model-meta-service.js";
 import { deleteRunDir } from "./runs-service.js";
 import { listRunsForUi, getRunHistory } from "./run-history-service.js";
+import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
   checkForUpdate,
@@ -833,6 +843,8 @@ let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
+const taskInboxDisposers: Array<() => void> = [];
+const taskInboxAutomationSessions = new Map<string, string>();
 let petImDecisions: PetImDecisions | null = null;
 let unsubscribePetLongTaskStream: (() => void) | null = null;
 let unsubscribePetReportStream: (() => void) | null = null;
@@ -1540,6 +1552,27 @@ async function createWindow(): Promise<BrowserWindow> {
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
     const externalBridge = bridge;
+    taskInboxDisposers.push(
+      bridge.subscribeOutbound((_line, entry) => {
+        const event = entry?.event as { type?: string } | undefined;
+        if (
+          event?.type &&
+          [
+            "session_started",
+            "run_result",
+            "approval_request",
+            "approval_resolved",
+            "ask_user",
+            "agent_started",
+            "agent_completed",
+            "background_task_started",
+            "background_task_completed",
+          ].includes(event.type)
+        ) {
+          taskInboxService?.scheduleRefresh();
+        }
+      }),
+    );
     // Approvals reach the SAME renderer dialog the native path uses — the
     // renderer cannot tell which transport a prompt arrived over, so there is
     // only one approval UI to keep correct.
@@ -1573,9 +1606,12 @@ async function createWindow(): Promise<BrowserWindow> {
       emit: (sessionId, event) => {
         const ownerId = externalBridge.panelOwnerWebContentsId(sessionId);
         sendToOwnerWindow(ownerId, "externalRuntime:event", { sessionId, event });
+        taskInboxService?.scheduleRefresh();
       },
-      sessionStateChanged: (sessionId, active, ownerId) =>
-        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active }),
+      sessionStateChanged: (sessionId, active, ownerId) => {
+        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
+        taskInboxService?.scheduleRefresh();
+      },
       // The host seams the exposed tools need. `panels` points at the same
       // requestPanelHost the native protocol line reaches, so owner routing,
       // the timeout and invoke's fail-closed behaviour are shared rather than
@@ -1703,6 +1739,7 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petStateAggregator = aggregator;
+    taskInboxDisposers.push(aggregator.subscribe(() => taskInboxService?.scheduleRefresh()));
 
     // Toggle-driven external-CLI session adapters (Codex / Claude). The
     // controller folds each session cwd's capabilityOverrides.pet over the
@@ -1763,6 +1800,7 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
     petLongTaskStore = longTaskStore;
+    taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
     const petMemoryStoreInstance = new PetMemoryStore(
       resolve(app.getPath("userData"), "pet", "memories.json"),
     );
@@ -2055,6 +2093,10 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
+      taskInbox: async () => {
+        if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
+        return taskInboxPetView(await taskInboxService.reconcile());
+      },
       hostActionReceipts: petHostActionReceipts,
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
@@ -2690,9 +2732,9 @@ const PET_AUTO_ARCHIVE_IDLE_DAYS = 7;
  * `maxPages` is a runaway guard, not a cap: hitting it is logged rather than
  * silently truncating.
  */
-async function listAllDiskSessions(): Promise<
-  Awaited<ReturnType<typeof listDiskSessions>>["sessions"]
-> {
+async function listAllDiskSessions(
+  opts: { includeSubagents?: boolean } = {},
+): Promise<Awaited<ReturnType<typeof listDiskSessions>>["sessions"]> {
   const pageSize = 500;
   const maxPages = 200;
   const all: Awaited<ReturnType<typeof listDiskSessions>>["sessions"] = [];
@@ -2701,6 +2743,7 @@ async function listAllDiskSessions(): Promise<
     const result = await listDiskSessions({
       limit: pageSize,
       includeArchived: true,
+      ...(opts.includeSubagents ? { includeSubagents: true } : {}),
       ...(cursor ? { cursor } : {}),
     });
     all.push(...result.sessions);
@@ -3423,8 +3466,13 @@ app.whenReady().then(async () => {
     // snapshot + renderer stream, so automation sessions reconnect identically
     // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
     // before any window (and thus the bridge) exists.
-    const emitAutomationEvent = (sessionId: string, event: unknown) =>
+    const emitAutomationEvent = (sessionId: string, event: unknown) => {
       bridge?.ingestExternalEvent(sessionId, event, { browserVisibility: "hidden" });
+      if ((event as { type?: string })?.type === "run_result") {
+        taskInboxAutomationSessions.delete(sessionId);
+        taskInboxService?.scheduleRefresh();
+      }
+    };
     const announceAutomationSession = (meta: {
       sessionId: string;
       cwd: string;
@@ -3432,7 +3480,11 @@ app.whenReady().then(async () => {
       prompt: string;
       cronJobId: string;
       clientMessageId?: string;
-    }) => bridge?.broadcastAutomationSession(meta);
+    }) => {
+      taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
+      bridge?.broadcastAutomationSession(meta);
+      taskInboxService?.scheduleRefresh();
+    };
     // Each fired job runs as a one-shot read-only headless Engine, which
     // auto-writes a full transcript.jsonl (like interactive chat). The emit
     // callback streams events to a live snapshot for renderer reconnect; the
@@ -3496,6 +3548,12 @@ app.whenReady().then(async () => {
       store: new CronStore(defaultCronStorePath()),
       runner: automationRunner,
       onJobEvent: (event) => {
+        if (event.type !== "job_start") {
+          for (const [sessionId, jobId] of taskInboxAutomationSessions) {
+            if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);
+          }
+        }
+        taskInboxService?.scheduleRefresh();
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
@@ -3515,6 +3573,11 @@ app.whenReady().then(async () => {
     // Automation is non-critical to the GUI — never block startup on it.
     console.error("automation: failed to start", err);
   }
+
+  taskInboxDisposers.push(
+    agentNotificationBus.subscribe(() => taskInboxService?.scheduleRefresh()),
+  );
+  taskInboxService?.start();
 
   // Defer initial sweep so the renderer has a chance to push current
   // git prefs via `git:setPrefs` first. Subsequent sweeps run hourly.
@@ -6769,48 +6832,78 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   return getRunHistory(runId);
 });
 registerSessionTranscriptIpc(ipcMain);
-const sessionCatalogIpc = registerSessionCatalogIpc(ipcMain, () => [
-  ...mainWindows,
-  ...(petWidgetWindow ? [petWidgetWindow] : []),
-]);
-ipcMain.handle(
-  "sessions:listDisk",
-  async (
-    _e,
-    opts: {
-      limit?: number;
-      cursor?: string;
-      parentSessionId?: string;
-    },
-  ) => {
-    const limit =
-      typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
-        ? Math.min(opts.limit, 200)
-        : 30;
-    if (
-      opts?.cursor !== undefined &&
-      (typeof opts.cursor !== "string" || opts.cursor.length > 512 || opts.cursor.includes("\0"))
-    ) {
-      throw new Error("invalid session cursor");
-    }
-    if (opts?.parentSessionId !== undefined) assertDesktopSessionId(opts.parentSessionId);
-    return listDiskSessions({
-      limit,
-      cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
-      parentSessionId: opts?.parentSessionId,
-    });
-  },
+const sessionCatalogStore = new SessionCatalogStore();
+const sessionCatalogIpc = registerSessionCatalogIpc(
+  ipcMain,
+  () => [...mainWindows, ...(petWidgetWindow ? [petWidgetWindow] : [])],
+  sessionCatalogStore,
 );
-ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
-  assertDesktopSessionId(sessionId);
-  if (
-    sinceId !== undefined &&
-    (typeof sinceId !== "string" || sinceId.length > 512 || sinceId.includes("\0"))
-  ) {
-    throw new Error("invalid transcript cursor");
-  }
-  return getSessionEvents(sessionId, typeof sinceId === "string" ? sinceId : undefined);
+function taskInboxEnabled(): boolean {
+  const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
+  return settings.featureFlags?.taskInboxV1 !== false;
+}
+const taskInboxSources = createTaskInboxSources({
+  diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
+  sessionCatalog: () => sessionCatalogStore.load(),
+  sessionProjection: () => petStateAggregator?.getSnapshot(),
+  native: {
+    hasLiveWorker: () => !!bridge?.hasLiveWorker() || taskInboxAutomationSessions.size > 0,
+    isSessionRunning: (id) => taskInboxAutomationSessions.has(id) || !!bridge?.isSessionRunning(id),
+    cancel: async (id) => {
+      const jobId = taskInboxAutomationSessions.get(id);
+      if (jobId) return cancelAutomationRun(jobId);
+      if (!bridge?.hasLiveWorker() || !bridge.isSessionRunning(id)) return false;
+      const result = await bridge.requestWorker("agent/cancel", { sessionId: id }, 15_000, {
+        failFast: true,
+        settleOnExit: true,
+        meta: { origin: "host", producer: "task-inbox" },
+      });
+      if (!result.ok) throw new Error(result.message);
+      return true;
+    },
+  },
+  runs: { list: listRuns },
+  automations: {
+    list: listAutomations,
+    get: getAutomation,
+    pause: pauseAutomation,
+    resume: resumeAutomation,
+    runNow: runAutomationNow,
+  },
+  mimi: {
+    snapshot: () => {
+      if (!petLongTaskStore) throw new Error("Delegation ledger is not ready");
+      return petLongTaskStore.getSnapshot();
+    },
+    get: (id) => petLongTaskStore?.get(id),
+    control: async (request) => {
+      if (!petLongTaskCoordinator) throw new Error("Delegation controller is not ready");
+      return petLongTaskCoordinator.control(request);
+    },
+  },
+  external: {
+    hasSession: (id) => !!externalRuntimeService?.hasSession(id),
+    isSessionRunning: (id) => !!externalRuntimeService?.isSessionRunning(id),
+    hasPending: (id) => !!externalRuntimeApprovals?.hasPendingSession(id),
+    kind: (id) => readExternalRuntimeBinding(id)?.kind,
+    interrupt: async (id) => {
+      if (!externalRuntimeService?.hasSession(id))
+        throw new Error("External runtime is unavailable");
+      await externalRuntimeService.interrupt(id);
+    },
+  },
+  background: createTaskInboxBackgroundHost({ worker: () => bridge }),
 });
+const taskInboxService = createTaskInboxService({
+  filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
+  ...taskInboxSources,
+  enabled: taskInboxEnabled,
+  onError: (error) => dlog("main", "task-inbox.projection.failed", { error: String(error) }),
+});
+taskInboxDisposers.push(
+  registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
+  sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
+);
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   await deleteRunDir(runId);
@@ -6989,6 +7082,8 @@ app.on("before-quit", (event) => {
       return;
     }
     // Drain the last debounced rotations before the browser contexts are closed.
+    taskInboxService?.dispose();
+    for (const dispose of taskInboxDisposers.splice(0)) dispose();
     const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
     browserRuntime.closeAll();
     bridge?.kill();

@@ -206,9 +206,11 @@ export interface DiskSessionMeta {
   cwd: string;
   title: string;
   updatedAt: number;
-  /** Sub-agents are returned only by an explicit parentSessionId query. */
+  /** Durable creation time, when supplied by the engine's state schema. */
+  createdAt?: number;
+  /** Sub-agents require an explicit parent query or the host's includeSubagents scan. */
   origin: "desktop" | "automation" | "subagent";
-  /** Present only when listing the direct children of a session. */
+  /** Present for direct-child queries and the host's complete task scan. */
   parentSessionId?: string;
   /** Normalized durable status for Pet/display consumers. */
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
@@ -259,6 +261,8 @@ export async function listDiskSessions(
     limit: number;
     cursor?: string;
     includeArchived?: boolean;
+    /** Host read models may include children; ordinary sidebar queries stay top-level. */
+    includeSubagents?: boolean;
     parentSessionId?: string;
   },
   baseDir: string = sessionsRoot(),
@@ -341,7 +345,7 @@ export async function listDiskSessions(
     if (!("parentSessionId" in state)) continue; // legacy → skip
     if (parentSessionId !== undefined) {
       if (state.parentSessionId !== parentSessionId) continue;
-    } else if (state.parentSessionId) {
+    } else if (state.parentSessionId && !opts.includeSubagents) {
       continue;
     }
     // Only desktop + automation belong in the desktop sidebar. Targeted
@@ -351,7 +355,7 @@ export async function listDiskSessions(
     if (
       origin !== "desktop" &&
       origin !== "automation" &&
-      !(parentSessionId !== undefined && origin === "subagent")
+      !((parentSessionId !== undefined || opts.includeSubagents) && origin === "subagent")
     ) {
       continue;
     }
@@ -364,7 +368,26 @@ export async function listDiskSessions(
     const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
     // A child transcript remains useful after its temporary worktree is gone;
     // targeted reads do not rebuild projects in the sidebar.
-    if (parentSessionId === undefined && cwdStr && !(await pathExists(cwdStr))) continue;
+    const childParentId =
+      typeof state.parentSessionId === "string" && state.parentSessionId
+        ? state.parentSessionId
+        : undefined;
+    if (
+      childParentId &&
+      (!SAFE_ID.test(childParentId) ||
+        childParentId.length > 128 ||
+        childParentId.includes("..") ||
+        childParentId === ".")
+    )
+      continue;
+    if (state.parentSessionId && !childParentId) continue;
+    if (
+      parentSessionId === undefined &&
+      !(opts.includeSubagents && childParentId) &&
+      cwdStr &&
+      !(await pathExists(cwdStr))
+    )
+      continue;
     // Archived sessions are hidden from the default catalog. Filtering happens
     // before the push (like every other skip above), so the mtime cursor —
     // derived from the dirs[] position, not from how many rows we kept — keeps
@@ -391,8 +414,13 @@ export async function listDiskSessions(
         (typeof state.title === "string" && state.title ? state.title : undefined) ??
         (typeof state.summary === "string" && state.summary ? state.summary : id),
       updatedAt: mtime,
+      ...(typeof state.startedAt === "number" &&
+      Number.isFinite(state.startedAt) &&
+      state.startedAt >= 0
+        ? { createdAt: state.startedAt }
+        : {}),
       origin,
-      ...(parentSessionId !== undefined ? { parentSessionId } : {}),
+      ...(childParentId ? { parentSessionId: childParentId } : {}),
       status:
         state.status === "active" || state.status === "paused" || state.status === "completed"
           ? state.status

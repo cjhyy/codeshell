@@ -35,6 +35,7 @@ import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
+import type { TaskInboxPetView } from "../task-inbox/task-inbox-pet-view.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -197,6 +198,7 @@ export type PetDispatchResult =
       queuedCount: number;
       pendingCount: number;
       sessions: DesktopPetProjectionSnapshot["sessions"];
+      taskInbox?: TaskInboxPetView;
       chatInputs?: Array<{
         clientMessageId: string;
         message: string;
@@ -205,7 +207,12 @@ export type PetDispatchResult =
         pending: boolean;
       }>;
     }
-  | { ok: true; type: "pending_list"; pending: DesktopPetProjectionSnapshot["pending"] }
+  | {
+      ok: true;
+      type: "pending_list";
+      pending: DesktopPetProjectionSnapshot["pending"];
+      taskInbox?: TaskInboxPetView;
+    }
   | { ok: true; type: "chat_stopped"; stopped: boolean }
   | { ok: true; type: "open_session"; result: PetNavigationResult }
   | {
@@ -305,6 +312,8 @@ interface PetDispatchOptions {
   hostActionReceipts?: PetHostActionReceiptStore;
   /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
   worldContext?(): Promise<Record<string, unknown>> | Record<string, unknown>;
+  /** Same rebuilt local read model as the task center; absence/failure retains the ledger fallback. */
+  taskInbox?(): Promise<TaskInboxPetView> | TaskInboxPetView;
   /**
    * Topic-segment controller. beginTurn (before each chat turn) may return a
    * carryover brief to inject into the runtime context; onDelegationClosed
@@ -768,6 +777,14 @@ function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
 }
 
 export class PetDispatchService {
+  private async readTaskInbox(): Promise<TaskInboxPetView | undefined> {
+    try {
+      return await this.options.taskInbox?.();
+    } catch {
+      // The disposable projection must never make Mimi or her durable ledger unavailable.
+      return undefined;
+    }
+  }
   private readonly recentWorkContext;
   private activeChatTurn?: PetActiveChatTurn;
   private chatAdmissionTail: Promise<void> = Promise.resolve();
@@ -1714,6 +1731,7 @@ export class PetDispatchService {
     }
     switch (command.type) {
       case "get_global_status": {
+        const taskInbox = await this.readTaskInbox();
         const snapshot = this.options.aggregator.getSnapshot();
         const metadata = await this.options.metadata.ensure();
         const pending = snapshot.pending.filter((entry) => entry.status === "pending");
@@ -1730,6 +1748,7 @@ export class PetDispatchService {
           queuedCount: snapshot.sessions.filter((session) => session.runState === "queued").length,
           pendingCount: pending.length,
           sessions: snapshot.sessions.slice(0, 100),
+          ...(taskInbox ? { taskInbox } : {}),
           chatInputs: [...this.chatInputs.values()].map(({ command, createdAt }) => ({
             clientMessageId: command.clientMessageId!,
             message: command.message.trim(),
@@ -1752,7 +1771,8 @@ export class PetDispatchService {
           })),
         };
       }
-      case "list_pending":
+      case "list_pending": {
+        const taskInbox = await this.readTaskInbox();
         return {
           ok: true,
           type: "pending_list",
@@ -1760,7 +1780,18 @@ export class PetDispatchService {
             .getSnapshot()
             .pending.filter((pending) => pending.status === "pending")
             .slice(0, 100),
+          ...(taskInbox
+            ? {
+                taskInbox: {
+                  ...taskInbox,
+                  tasks: taskInbox.tasks.filter((task) =>
+                    ["waiting", "paused", "interrupted"].includes(task.status),
+                  ),
+                },
+              }
+            : {}),
         };
+      }
       case "open_session":
         return {
           ok: true,
@@ -1996,6 +2027,7 @@ export class PetDispatchService {
           ...Object.keys(projectionWorld),
           "carryoverBrief",
           "longTasks",
+          "taskInbox",
           "workspaces",
           "reusableSessions",
           "currentMessageSource",
@@ -2014,6 +2046,7 @@ export class PetDispatchService {
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
         const longTaskContext = this.options.longTasks?.context();
+        const taskInbox = await this.readTaskInbox();
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -2060,6 +2093,7 @@ export class PetDispatchService {
             ? { mobileRemote: worldExtras.mobileRemote }
             : {}),
           ...(longTaskContext ? { longTasks: longTaskContext } : {}),
+          ...(taskInbox ? { taskInbox } : {}),
           followUps: petFollowUps,
           outboundTargets: listedOutboundTargets.slice(0, 32),
           sessions: projectionWorld.sessions,
