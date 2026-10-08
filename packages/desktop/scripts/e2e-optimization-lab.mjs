@@ -2,7 +2,7 @@
  * The only upstream is this local deterministic server; no real model/account
  * or user Skill is used. Native dialogs are controlled by the test harness.
  */
-/* global localStorage, window */
+/* global document, localStorage, structuredClone, window */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
@@ -218,6 +218,75 @@ async function openPage() {
   await win.getByTestId("optimization-lab-page").waitFor();
 }
 
+async function crashOwnedWorker() {
+  // Inspect only this Electron instance's direct ChildProcess handles. This
+  // test harness never guesses a global PID or signals another app's worker.
+  return app.evaluate(() => {
+    const workers = process
+      ._getActiveHandles()
+      .filter((handle) =>
+        handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
+      );
+    if (workers.length !== 1) throw new Error(`Expected one owned worker, found ${workers.length}`);
+    const worker = workers[0];
+    if (!worker.kill("SIGKILL")) throw new Error("Could not crash the owned worker");
+    return worker.pid;
+  });
+}
+
+async function crashOwnedElectron() {
+  const child = app.process();
+  await new Promise((done, reject) => {
+    const timer = setTimeout(() => reject(new Error("Owned Electron did not exit")), 10000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      done();
+    });
+    if (!child.kill("SIGKILL")) {
+      clearTimeout(timer);
+      reject(new Error("Could not crash the owned Electron process"));
+    }
+  });
+  app = null;
+  win = null;
+}
+
+async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
+  const interrupted = await until(
+    async () => {
+      const value = await query("get", { id });
+      return value.state.status === "interrupted" ? value : null;
+    },
+    "Lost worker ownership did not recover to interrupted",
+    30000,
+  );
+  assert.equal(requests.length, requestCount, "Worker recovery never automatically sends HTTP");
+  assert.ok(interrupted.ledger.totals.unknownTokens > 0);
+  assert.equal(interrupted.ledger.totals.requests, 1);
+  await openPage();
+  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await win.getByTestId("optimization-lab-continue").waitFor();
+  await until(
+    async () => win.getByTestId("optimization-lab-continue").isEnabled(),
+    "Interrupted experiment did not offer explicit continue",
+  );
+  assert.equal(requests.length, requestCount, "Opening interrupted experiment does not resume it");
+  await win.getByTestId("optimization-lab-continue").click();
+  const recovered = await until(async () => {
+    const value = await query("get", { id });
+    return value.state.status === "failed" ? value : null;
+  }, "Incomplete baseline evidence should produce a failed report after explicit continuation");
+  assert.equal(requests.length, requestCount + 2, "Only the two untouched baseline cases run");
+  assert.ok(recovered.ledger.totals.unknownTokens > 0);
+  assert.ok(recovered.state.data.reportRef, "Unknown evidence has a durable report");
+  for (const request of requests.slice(requestCount))
+    assert.notEqual(
+      JSON.stringify(request.body.messages),
+      interruptedPayload,
+      "The uncertain model request is never replayed, even after explicit continue",
+    );
+}
+
 async function preparePage(cases) {
   await win.getByTestId("optimization-lab-saved").selectOption("");
   await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(cases));
@@ -236,7 +305,10 @@ async function preparePage(cases) {
         .querySelector('[data-testid="optimization-lab-state"]')
         ?.getAttribute("data-status") === "ready",
   );
-  const id = await win.getByTestId("optimization-lab-saved").inputValue();
+  const id = await until(
+    () => win.getByTestId("optimization-lab-saved").inputValue(),
+    "Prepared experiment was not selected after saved experiments refreshed",
+  );
   assert.ok(id, "Prepared experiment is selected by its durable ID");
   return query("get", { id });
 }
@@ -333,7 +405,15 @@ try {
   const authorized = await query("get", { id });
   assert.equal(authorized.state.status, "authorized");
   assert.equal(typeof authorized.grant.expiresAt, "string");
+  blockRequests = true;
   await win.getByTestId("optimization-lab-start").click();
+  await until(async () => requests.length === 1, "First model request did not start");
+  await win.getByRole("button", { name: /^(Task center|任务中心)$/ }).click();
+  await win.getByTestId("optimization-lab-page").waitFor({ state: "detached" });
+  assert.equal(await win.getByTestId("optimization-lab-page").count(), 0);
+  blockRequests = false;
+  releaseRequest?.();
+  releaseRequest = undefined;
   const final = await completed(id);
   assert.equal(requests.length, 13, "3 baseline + 1 proposal + 3 screening + 6 holdout requests");
   for (const { body, optimizing } of requests) {
@@ -372,6 +452,9 @@ try {
   const screenshotDir = process.env.CODESHELL_LAB_SCREENSHOT_DIR;
   if (screenshotDir) {
     await mkdir(screenshotDir, { recursive: true });
+    await win.getByTestId("optimization-lab-page").evaluate((element) => {
+      element.scrollTop = 0;
+    });
     await win.screenshot({ path: join(screenshotDir, "optimization-lab.png") });
   }
   stage = "human grading checkpoints through native files";
@@ -427,6 +510,63 @@ try {
     stopped.ledger.totals.unknownTokens > 0,
     "Interrupted HTTP remains conservatively unknown",
   );
+  stage = "worker crash, conservative recovery and explicit continue without replay";
+  const crashedWorker = await preparePage(dataset);
+  await authorizePage();
+  blockRequests = true;
+  await win.getByTestId("optimization-lab-start").click();
+  await until(async () => requests.length === 28, "Worker-crash request did not begin");
+  const workerPayload = JSON.stringify(requests.at(-1).body.messages);
+  const workerPid = await crashOwnedWorker();
+  await until(
+    async () =>
+      app.evaluate(
+        (_electron, pid) => !process._getActiveHandles().some((handle) => handle.pid === pid),
+        workerPid,
+      ),
+    "Owned crashed worker did not exit",
+    5000,
+  );
+  blockRequests = false;
+  releaseRequest?.();
+  releaseRequest = undefined;
+  await recoverWithoutReplay(crashedWorker.id, 28, workerPayload);
+  stage = "Electron crash closes worker stdin and restart never replays uncertain HTTP";
+  const crashedApp = await preparePage(dataset);
+  await authorizePage();
+  blockRequests = true;
+  await win.getByTestId("optimization-lab-start").click();
+  await until(async () => requests.length === 31, "Electron-crash request did not begin");
+  const appPayload = JSON.stringify(requests.at(-1).body.messages);
+  const orphanPid = await app.evaluate(
+    () =>
+      process
+        ._getActiveHandles()
+        .find((handle) =>
+          handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
+        )?.pid,
+  );
+  assert.ok(Number.isInteger(orphanPid), "Observe only this app's known direct worker");
+  await crashOwnedElectron();
+  await until(
+    async () => {
+      try {
+        process.kill(orphanPid, 0);
+        return false;
+      } catch (error) {
+        if (error.code === "ESRCH") return true;
+        throw error;
+      }
+    },
+    "The orphaned worker must exit promptly when its controlling stdin closes",
+    5000,
+  );
+  blockRequests = false;
+  releaseRequest?.();
+  releaseRequest = undefined;
+  await launch();
+  assert.equal(requests.length, 31, "App restart never starts a saved experiment");
+  await recoverWithoutReplay(crashedApp.id, 31, appPayload);
   assert.equal(
     await readFile(join(project, ".agents", "skills", skillName, "SKILL.md"), "utf8"),
     source,
@@ -434,7 +574,7 @@ try {
   assert.equal(rendererErrors.flat().length, 0);
   assert.deepEqual(upstreamErrors, []);
   console.log(
-    "PASS Optimization Lab: actual UI + worker, native authorization, 13-call paired experiment, durable report reopen, native grading files, revoke and in-flight stop",
+    "PASS Optimization Lab: actual UI + worker, native authorization, page-close keepalive, 13-call paired experiment, durable report reopen, native grading files, revoke, in-flight stop, worker/app crash recovery without automatic spending or uncertain replay",
   );
 } catch (error) {
   console.error(`Optimization Lab E2E failed at ${stage}:`, error);
