@@ -1123,6 +1123,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("profiles:activate", target, name),
   deactivateProfile: (target: RendererConfigurationTarget) =>
     ipcRenderer.invoke("profiles:deactivate", target),
+  previewProfileSwitch: (target: RendererConfigurationTarget, name: string | null) =>
+    ipcRenderer.invoke("profiles:previewSwitch", target, name),
+  adoptProfileSwitch: (
+    target: RendererConfigurationTarget,
+    name: string | null,
+    expectedRevision: string,
+  ) => ipcRenderer.invoke("profiles:adoptSwitch", target, name, expectedRevision),
   setSessionWorkspaceProfile: (sessionId: string, profileName: string) =>
     ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
   listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),

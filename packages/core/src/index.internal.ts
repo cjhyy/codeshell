@@ -294,7 +294,10 @@ export {
   activateWorkspaceProfile,
   deactivateWorkspaceProfile,
   profileOverridesFromDefinition,
+  workspaceProfileActivationSubtree,
 } from "./profile/activation.js";
+export { planWorkspaceProfileSwitch, type ProfileSwitchImpact } from "./profile/switch-plan.js";
+export { effectiveProjectOverrides } from "./capability-control/overlay.js";
 export { resolveActiveWorkspaceProfile, workspaceProfilePresetFor } from "./profile/resolve.js";
 export {
   addHumanRepo,
