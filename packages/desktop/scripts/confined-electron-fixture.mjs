@@ -32,6 +32,7 @@ export async function prepareConfinedElectronFixture({ appDir, isolated, origin 
     "TERM",
     "COLORTERM",
     "DISPLAY",
+    "XAUTHORITY",
     "WAYLAND_DISPLAY",
     "XDG_RUNTIME_DIR",
     "XDG_CURRENT_DESKTOP",
