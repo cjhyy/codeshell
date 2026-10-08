@@ -135,7 +135,13 @@ function statusForReason(reason: string): string {
   if (reason === "aborted_streaming" || reason === "aborted_tools") return "cancelled";
   if (["model_error", "prompt_too_long", "image_error"].includes(reason)) return "failed";
   if (
-    ["max_turns", "goal_budget_exhausted", "hook_stopped", "stop_hook_prevented"].includes(reason)
+    [
+      "max_turns",
+      "goal_budget_exhausted",
+      "hook_stopped",
+      "stop_hook_prevented",
+      "unverified_write",
+    ].includes(reason)
   ) {
     return "blocked";
   }
@@ -192,6 +198,7 @@ function receipts(sessionId: string, state: Record<string, unknown>, events: Eve
       tags: [],
       metadata: {
         historySource: "session_receipt",
+        ...(typeof result.runId === "string" ? { accountingRunId: result.runId } : {}),
         clientMessageId,
         receiptEventId: event.id,
         terminalReason: result.reason,

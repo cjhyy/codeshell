@@ -246,6 +246,7 @@ export interface RunParams {
 }
 
 export interface RunResult {
+  runId?: string;
   text: string;
   reason: TerminalReason;
   completionKind?: import("../types.js").TurnCompletionKind;
@@ -461,6 +462,14 @@ export interface ConfigureParams {
 
 /** Query server state. */
 export interface QueryParams {
+  /** Bounded usage query; Session ownership is resolved by the host. */
+  scope?: "runtime" | "session" | "store";
+  includeChildren?: boolean;
+  since?: number;
+  until?: number;
+  limit?: number;
+  cursor?: string;
+  runId?: string;
   /** Built-in query name or a trusted CapabilityModule query contribution. */
   type: string;
   sessionId?: string;

@@ -16,7 +16,6 @@ import type { Transcript } from "../session/transcript.js";
 import type { SessionBundle, SessionStateFieldPatch } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
 import type { TurnLoop } from "./turn-loop.js";
-import type { EngineConfig } from "./types.js";
 
 export interface RunUsageAccounting {
   recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
@@ -33,7 +32,7 @@ export function createRunUsageAccounting(args: {
   sid: string;
   resumeState: (sid: string) => SessionBundle["state"]; // this.sessionManager.resume(sid).state
   updatePersistedSessionState: (sid: string, patch: SessionStateFieldPatch) => void;
-  costStore: EngineConfig["costStore"];
+  costState?: () => Record<string, unknown>;
   /** engine 侧闭包 (usage) => turnLoop.recordGoalJudgeUsage(usage)(turnLoop 延迟赋值)。 */
   recordGoalJudgeUsage: (usage: TokenUsage) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
 }): RunUsageAccounting {
@@ -42,7 +41,7 @@ export function createRunUsageAccounting(args: {
     sid,
     resumeState,
     updatePersistedSessionState,
-    costStore,
+    costState,
     recordGoalJudgeUsage,
   } = args;
   let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
@@ -74,9 +73,9 @@ export function createRunUsageAccounting(args: {
         updatePersistedSessionState(sid, {
           tokenUsage: addTokenUsage(latest.tokenUsage, usage),
           ...lateCumulative,
-          ...(costStore
+          ...(costState
             ? {
-                costState: costStore.serialize() as Record<string, unknown>,
+                costState: costState(),
               }
             : {}),
         });
@@ -165,6 +164,7 @@ export function wireRunModelFacade(args: {
       signal,
       billingEnabled: true,
       requestVisible: false,
+      usagePurpose: "tool_summary",
       // Auxiliary call — see contextManager.setSummarizeFn above.
       reasoning: { mode: "off" },
     });

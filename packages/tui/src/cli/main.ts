@@ -27,6 +27,7 @@ function formatSessionStatus(s: SessionStatus): string {
       return "ptl";
     case "model_error":
     case "image_error":
+    case "unverified_write":
       return "error";
     case "goal_budget_exhausted":
       return "budget";
@@ -228,8 +229,8 @@ program.hook("preAction", async (thisCommand, actionCommand) => {
 // Print cost summary on exit
 process.on("exit", () => {
   const tokens = costTracker.getTotalTokens();
-  if (tokens.total > 0) {
-    process.stdout.write("\n" + costTracker.formatSummary(CHALK_COLORIZER) + "\n");
+  if (tokens.total > 0 || (costTracker.getUsageSummary()?.requests ?? 0) > 0) {
+    process.stderr.write("\n" + costTracker.formatSummary(CHALK_COLORIZER) + "\n");
   }
 });
 

@@ -108,7 +108,9 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     }
     // Restore cost state from previous session, if the caller injected a store
     if (session.state.costState && args.costStore) {
-      args.costStore.restore(session.state.costState);
+      const cost = session.state.costState;
+      const legacy = cost.kind === "usage-ledger" ? cost.legacyStore : cost;
+      if (legacy !== undefined) args.costStore.restore(legacy);
     }
     // Append new user message
     const userMsg: Message = { role: "user", content: args.userMessageContent };
