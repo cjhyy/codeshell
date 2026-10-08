@@ -227,7 +227,7 @@ jobs:
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare
-          ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/smoke-upload-documents.mjs --managed-runtime-root packages/desktop/out/managed-runtimes
+          ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs --managed-runtime-root packages/desktop/out/managed-runtimes
           bun run --cwd packages/desktop predist
           bun run --cwd packages/desktop test:upload-asar
       - name: real Electron E2E

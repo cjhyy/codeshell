@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createBunTestEnvironment } from "./bun-test-completion.mjs";
 
 import {
   AUDITED_RELEASE_PACKAGES,
@@ -446,19 +447,12 @@ for (const entry of entries) {
 }
 `,
   );
-  const home = join(consumerDirectory, "home");
-  mkdirSync(home);
   runCommand(
     `runtime imports (${runtimeEntries.length} entries)`,
     "node",
     [runtimeScript],
     consumerDirectory,
-    {
-      ...process.env,
-      CODE_SHELL_HOME: join(home, ".code-shell"),
-      HOME: home,
-      USERPROFILE: home,
-    },
+    createBunTestEnvironment(process.env, join(consumerDirectory, "runtime-environment")),
   );
 }
 
@@ -496,7 +490,7 @@ function assertOwnerAuthConsumer(consumerDirectory: string): void {
     "node",
     [join(outputDirectory, "owner-auth.js")],
     consumerDirectory,
-    { ...process.env, CODE_SHELL_HOME: join(consumerDirectory, "home/.code-shell") },
+    createBunTestEnvironment(process.env, join(consumerDirectory, "owner-auth-environment")),
   );
 }
 
@@ -523,7 +517,7 @@ function assertUploadedDocumentConsumer(consumerDirectory: string): void {
     "node",
     [path],
     consumerDirectory,
-    { ...process.env, CODE_SHELL_HOME: join(consumerDirectory, "home/.code-shell") },
+    createBunTestEnvironment(process.env, join(consumerDirectory, "upload-environment")),
   );
 }
 
