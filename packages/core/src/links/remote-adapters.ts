@@ -99,10 +99,10 @@ export function normalizeRemoteLinkResourceId(providerId: string, value: unknown
       valid = /^[a-z0-9][a-z0-9_-]{0,99}$/.test(value);
       break;
     case "slack":
-      valid = /^[CG][A-Z0-9]{1,79}$/.test(value);
+      valid = /^[CGD][A-Z0-9]{1,99}$/.test(value);
       break;
     case "airtable":
-      valid = /^app[A-Za-z0-9]{1,100}$/.test(value);
+      valid = /^app[A-Za-z0-9]{10,30}$/.test(value);
       break;
     case "vercel":
       valid = /^[A-Za-z0-9_-]{1,100}$/.test(value);

@@ -488,3 +488,28 @@ for (const interruption of ["cancel", "expiry", "notification-error"] as const) 
     expect(store.resolve(done.connection!.id)?.secret).toBe("saved");
   });
 }
+
+test("concurrent remote starts recheck pending capacity after catalog discovery", async () => {
+  const catalog = deferred<Array<"github">>();
+  const { service } = fixture({
+    remoteLink: () => ({
+      issuer: "https://link.example",
+      clientId: "fixture",
+      redirectUri: "http://localhost:4900/callback",
+    }),
+    readRemoteCatalog: () => catalog.promise,
+  });
+  const starts = Array.from({ length: 3 }, (_, index) =>
+    service.startRemoteAuth(owner, {
+      ...input,
+      methodId: "remote-link",
+      connectionId: `concurrent-${index}`,
+    }),
+  );
+  catalog.resolve(["github"]);
+  const result = await Promise.allSettled(starts);
+  expect(result.filter((item) => item.status === "fulfilled")).toHaveLength(2);
+  expect(result.find((item) => item.status === "rejected")).toMatchObject({
+    reason: { code: "busy" },
+  });
+});

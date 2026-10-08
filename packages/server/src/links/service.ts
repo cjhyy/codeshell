@@ -1238,14 +1238,17 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
     await authorize(context);
-    pruneRemoteJobs();
-    if (
-      remoteJobs.size >= 32 ||
-      [...remoteJobs.values()].filter(
-        (job) => job.context.ownerId === context.ownerId && job.public.state === "pending",
-      ).length >= 2
-    )
-      throw new LinkServiceError(409, "busy");
+    const checkCapacity = () => {
+      pruneRemoteJobs();
+      if (
+        remoteJobs.size >= 32 ||
+        [...remoteJobs.values()].filter(
+          (job) => job.context.ownerId === context.ownerId && job.public.state === "pending",
+        ).length >= 2
+      )
+        throw new LinkServiceError(409, "busy");
+    };
+    checkCapacity();
     if (
       !input ||
       input.methodId !== "remote-link" ||
@@ -1255,6 +1258,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const config = options.remoteLink?.();
     if (!config) throw new LinkServiceError(503, "unavailable");
     await refreshRemoteCatalog(context);
+    // Discovery awaits must not bypass owner revocation or the pending-job limit.
+    await authorize(context);
+    checkCapacity();
     const capabilities =
       remoteCatalog?.issuer === config.issuer
         ? remoteCatalog.providers.find((provider) => provider.id === input.providerId)
