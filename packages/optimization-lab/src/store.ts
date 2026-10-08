@@ -148,20 +148,35 @@ export function writeAtomicFile(path: string, text: string, maxBytes = MAX_ARTIF
   const current = readBoundedFile(path, maxBytes);
   void current;
   const temporary = join(dirname(path), `.${randomUUID()}.tmp`);
-  const fd = openSync(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
   try {
-    writeFileSync(fd, text, "utf8");
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
-  }
-  try {
-    renameSync(temporary, path);
-    const dirFd = openSync(dirname(path), constants.O_RDONLY);
+    const fd = openSync(
+      temporary,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
     try {
-      fsyncSync(dirFd);
+      writeFileSync(fd, text, "utf8");
+      fsyncSync(fd);
     } finally {
-      closeSync(dirFd);
+      closeSync(fd);
+    }
+    renameSync(temporary, path);
+    // Windows does not permit ordinary directory descriptors; other file sync
+    // failures remain fatal rather than being silently treated as durability.
+    let dirFd: number | undefined;
+    try {
+      dirFd = openSync(dirname(path), constants.O_RDONLY);
+      fsyncSync(dirFd);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const unsupported =
+        code === "EINVAL" ||
+        code === "ENOTSUP" ||
+        code === "EISDIR" ||
+        (process.platform === "win32" && (code === "EPERM" || code === "EACCES"));
+      if (!unsupported) throw error;
+    } finally {
+      if (dirFd !== undefined) closeSync(dirFd);
     }
   } finally {
     rmSync(temporary, { force: true });
@@ -222,8 +237,11 @@ export class ExperimentStore {
   create(raw: ExperimentPlan): ExperimentSnapshot {
     const plan = verifyExperimentPlan(raw);
     const id = `exp_${randomUUID()}`;
+    this.ensureDirectory(this.root);
+    this.ensureDirectory(join(this.root, "experiments"));
     const directory = join(this.root, "experiments", id);
-    mkdirSync(directory, { mode: 0o700 });
+    const staging = join(this.root, "experiments", `.pending_${randomUUID()}`);
+    mkdirSync(staging, { mode: 0o700 });
     const state: ExperimentState = {
       schemaVersion: 1,
       id,
@@ -235,8 +253,13 @@ export class ExperimentStore {
       stopRequested: false,
       data: {},
     };
-    writeAtomicFile(join(directory, "plan.json"), canonicalJson(plan));
-    writeAtomicFile(join(directory, "state.json"), canonicalJson(state));
+    try {
+      writeAtomicFile(join(staging, "plan.json"), canonicalJson(plan));
+      writeAtomicFile(join(staging, "state.json"), canonicalJson(state));
+      renameSync(staging, directory);
+    } finally {
+      rmSync(staging, { recursive: true, force: true });
+    }
     return { plan, state, grant: null, lease: null };
   }
 
@@ -253,17 +276,46 @@ export class ExperimentStore {
 
   readUnlocked(directory: string, id: string): ExperimentSnapshot {
     const plan = verifyExperimentPlan(readJson(join(directory, "plan.json")));
-    const state = StateSchema.parse(readJson(join(directory, "state.json"))) as ExperimentState;
+    let state = StateSchema.parse(readJson(join(directory, "state.json"))) as ExperimentState;
     if (state.id !== id) throw new Error("optimization_lab: state identity mismatch");
     let grant: BudgetGrant | null = null;
-    if (state.grantRevision > 0) {
-      this.ensureDirectory(join(directory, "grants"));
-      grant = verifyBudgetGrant(
-        readJson(join(directory, "grants", `${state.grantRevision}.json`)),
-        plan.planHash,
-      );
-      if (grant.revision !== state.grantRevision)
-        throw new Error("optimization_lab: grant revision mismatch");
+    const grantsDirectory = join(directory, "grants");
+    if (existsSync(grantsDirectory)) {
+      this.ensureDirectory(grantsDirectory);
+      const revisions = readdirSync(grantsDirectory)
+        .filter((name) => /^[1-9][0-9]*\.json$/.test(name))
+        .map((name) => Number(name.slice(0, -5)))
+        .sort((a, b) => a - b);
+      if (revisions.length > 10000)
+        throw new Error("optimization_lab: grant history exceeds bound");
+      for (let index = 0; index < revisions.length; index++) {
+        const revision = revisions[index];
+        if (revision !== index + 1) throw new Error("optimization_lab: grant history gap");
+        const next = verifyBudgetGrant(
+          readJson(join(grantsDirectory, `${revision}.json`)),
+          plan.planHash,
+        );
+        if (
+          next.revision !== revision ||
+          (grant && next.startOperationId !== grant.startOperationId)
+        )
+          throw new Error("optimization_lab: grant history identity mismatch");
+        grant = next;
+      }
+    }
+    const latestRevision = grant?.revision ?? 0;
+    if (state.grantRevision > latestRevision)
+      throw new Error("optimization_lab: referenced grant missing");
+    if (state.grantRevision < latestRevision) {
+      // Grant is durable before the mutable head. Recover a crash between the
+      // two writes toward the newest control intent, especially revocation.
+      state = {
+        ...state,
+        grantRevision: latestRevision,
+        revision: state.revision + 1,
+        controlRevision: state.controlRevision + 1,
+      };
+      writeAtomicFile(join(directory, "state.json"), canonicalJson(state));
     }
     const leaseRaw = readJson(join(directory, "lease.json"));
     const lease = leaseRaw === undefined ? null : LeaseRecordSchema.parse(leaseRaw);
@@ -329,9 +381,14 @@ export class ExperimentStore {
   appendGrant(id: string, raw: BudgetGrant, expectedRevision?: number): ExperimentSnapshot {
     return this.withLock(id, (directory) => {
       const snapshot = this.readUnlocked(directory, id);
+      const grant = verifyBudgetGrant(raw, snapshot.plan.planHash);
+      if (
+        snapshot.grant?.revision === grant.revision &&
+        canonicalJson(snapshot.grant) === canonicalJson(grant)
+      )
+        return snapshot;
       if (expectedRevision !== undefined && snapshot.state.revision !== expectedRevision)
         throw new Error("optimization_lab: stale state revision");
-      const grant = verifyBudgetGrant(raw, snapshot.plan.planHash);
       if (grant.revision !== snapshot.state.grantRevision + 1)
         throw new Error("optimization_lab: grant revisions must append");
       if (snapshot.grant && grant.startOperationId !== snapshot.grant.startOperationId)
