@@ -103,6 +103,14 @@ export class PermissionController {
     this.activeApprovalRouter = approvalRouter;
   }
 
+  detach(permission: PermissionClassifier): void {
+    if (this.activePermission !== permission) return;
+    this.activePermission = undefined;
+    this.activeApprovalRouter = undefined;
+    permission.setApprovalStateListener(undefined);
+    permission.setApprovalEventListener(undefined);
+  }
+
   build(
     mode: PermissionMode,
     cwd: string,

@@ -34,7 +34,7 @@ const fakeLLM: LLMConfig = {
 };
 
 describe("SDK smoke (B3)", () => {
-  it("createServer + createClient compose via createInProcessTransport", () => {
+  it("createServer + createClient compose via createInProcessTransport", async () => {
     const [serverT, clientT] = createInProcessTransport();
     const opts: CreateServerOptions = {
       transport: serverT,
@@ -56,19 +56,19 @@ describe("SDK smoke (B3)", () => {
     // Cleanup in the documented order (close server first so its final
     // shutdown notification reaches the client transport before it's
     // torn down).
-    handle.close();
+    await handle.close();
     client.close();
   });
 
-  it("close() is idempotent", () => {
+  it("close() is idempotent", async () => {
     const [serverT] = createInProcessTransport();
     const handle = createServer({ transport: serverT, llm: fakeLLM });
-    handle.close();
-    // Second call must not throw.
-    expect(() => handle.close()).not.toThrow();
+    const closing = handle.close();
+    expect(handle.close()).toBe(closing);
+    await closing;
   });
 
-  it("engineOverrides shallow-merges custom EngineConfig fields", () => {
+  it("engineOverrides shallow-merges custom EngineConfig fields", async () => {
     const [serverT] = createInProcessTransport();
     const handle = createServer({
       transport: serverT,
@@ -81,6 +81,6 @@ describe("SDK smoke (B3)", () => {
     // required `llm` field. Treat successful construction + non-null
     // engine reference as the assertion.
     expect(handle.engine).toBeDefined();
-    handle.close();
+    await handle.close();
   });
 });

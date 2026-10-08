@@ -195,6 +195,8 @@ export interface EngineConfig {
    * work unchanged — T11 will migrate them.
    */
   runtime?: EngineRuntime;
+  /** Optional explicit host owner for an Engine created without a shared Runtime. */
+  lifetimeScope?: import("../composition/lifetime.js").LifetimeScope;
   /**
    * Which disk config layers this Engine may read. Defaults to 'project' —
    * the safe default: a library/SDK embedding never silently inherits the

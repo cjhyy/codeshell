@@ -224,6 +224,7 @@ const toolRegistry = seedEngine.getRuntimeToolRegistry();
 // factory call re-reading settings.
 const resolvedLlmConfig = seedEngine.getConfig().llm;
 const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;
+await seedEngine.dispose();
 
 // Reuse the same SettingsManager instance for the runtime instead of constructing
 // a fresh one — avoids duplication and keeps the pattern cleaner.
@@ -455,8 +456,19 @@ const agentServer = new AgentServer({
 // Clean up on termination signals. Without this, SIGTERM (parent kill),
 // SIGINT (Ctrl+C), or SIGHUP would drop the process without closing sessions,
 // clearing the idle sweeper, or terminating child MCP/tool processes.
-// AgentServer.close() → chatManager.closeAll() also reaps background shells.
-installGracefulShutdown(agentServer, { parentInput: process.stdin });
+// AgentServer.close() awaits session teardown and background-shell reaping.
+installGracefulShutdown(
+  {
+    async close() {
+      try {
+        await agentServer.close();
+      } finally {
+        await runtime.close();
+      }
+    },
+  },
+  { parentInput: process.stdin },
+);
 
 // Reap orphaned background shells left by a previously-crashed worker
 // (design §难点1): a worker crash detaches its `npm run dev` children, which

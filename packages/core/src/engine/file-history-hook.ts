@@ -23,8 +23,7 @@ export function registerFileHistoryHook(
     const toolCallId = context.data?.toolCallId;
     const turnSeq = options.getTurnSeq();
     if ((toolName === "Write" || toolName === "Edit") && typeof args?.file_path === "string") {
-      const marker =
-        turnSeq === undefined ? null : history.prepareCreated(args.file_path, turnSeq);
+      const marker = turnSeq === undefined ? null : history.prepareCreated(args.file_path, turnSeq);
       if (marker && typeof toolCallId === "string") {
         pendingCreates.set(toolCallId, marker);
       } else {
@@ -46,8 +45,13 @@ export function registerFileHistoryHook(
     if (marker && context.data?.isError !== true) history.commitCreated(marker);
     return {};
   };
-  options.hooks.register("on_tool_start", startHandler, 100, "file_history_backup");
-  options.hooks.register("on_tool_end", endHandler, 100, "file_history_backup");
+  const removeStart = options.hooks.register(
+    "on_tool_start",
+    startHandler,
+    100,
+    "file_history_backup",
+  );
+  const removeEnd = options.hooks.register("on_tool_end", endHandler, 100, "file_history_backup");
 
   let disposed = false;
   return {
@@ -55,8 +59,8 @@ export function registerFileHistoryHook(
       if (disposed) return;
       disposed = true;
       pendingCreates.clear();
-      options.hooks.unregister("on_tool_start", startHandler);
-      options.hooks.unregister("on_tool_end", endHandler);
+      void removeEnd();
+      void removeStart();
     },
   };
 }

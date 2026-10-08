@@ -95,7 +95,19 @@ export type {
   AgentProtocolContributions,
   AgentModuleToolContribution,
   ResolvedComposition,
+  AgentModulePrivateServiceContribution,
+  EngineModuleActivationContext,
+  HostModuleActivationContext,
+  MaybeDisposable,
+  ModuleServiceHost,
 } from "./composition/types.js";
+export type {
+  LifetimeScope,
+  ModuleScopeKind,
+  Disposable,
+  DisposableLike,
+  Dispose,
+} from "./composition/lifetime.js";
 export { BUILTIN_AGENT_PRESETS } from "./preset/index.js";
 export type { AgentPreset } from "./preset/index.js";
 export { BUILTIN_TOOLS, derivePresetExposure } from "./tool-system/builtin/index.js";

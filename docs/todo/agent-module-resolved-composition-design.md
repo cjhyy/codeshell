@@ -1,16 +1,16 @@
 # AgentModule 与 ResolvedComposition 统一组合设计
 
-> 状态：**Phase A（Compiler+golden）与 Phase B（一次性 cutover）已落地 main**；Phase C（生命周期 disposer）与 Phase D（request boundary）待做。  
-> golden 基线：`tests/fixtures/composition-golden.json`（基线 commit 35e0f7c4，pre-cutover 旧路径生成，cutover 后由新工厂逐项复现）。  
-> 注意：cutover 是 breaking 变更，下一个 release 版本须升 0.9.0（`bun run scripts/release.ts 0.9.0`）。  
-> 日期：2026-08-14；落地 2026-08-15。  
+> 状态：**Phase A（Compiler+golden）、Phase B（一次性 cutover）和 Phase C（生命周期 disposer）已实现**；Phase D（request boundary）待做。
+> golden 基线：`tests/fixtures/composition-golden.json`（当前审阅基线以文件的 `baselineCommit` 为准；旧路径生成的拓扑在 cutover 后由新工厂逐项复现）。
+> 版本说明：cutover 的 0.9.0 发布迁移已完成；后续发布按当前版本与正常 release 流程递增，本设计不再要求回退到 0.9.0。
+> 日期：2026-08-14；落地 2026-08-15。
 > 范围：统一 `CapabilityModule` / `ExtensionModule`，建立可验证的组合编译结果与生命周期所有权，并补充轻量的模型请求证据。  
 > 核心决策：保留 CodeShell 的 **Core First** 与可信内核，不引入 Cordis，不把所有内部组件改造成动态插件。
 
 ## 0. 实施偏差记录（落地时的有意调整，语义不变）
 
 1. `AgentModuleToolContribution` 实现为判别联合 `{kind:"preset-tags", tool: BuiltinTool} | {kind:"always", tool: ExtensionTool}`（比 spec 的扁平 union 类型更安全）。
-2. `activateHost`/`activateEngine`/`privateService`/`LifetimeScope` 属 Phase C，未实现；`createToolService` 原名保留为 engine contribution 字段，Phase C 再改名。
+2. Phase C 已实现 `activateHost`/`activateEngine`/`privateService`/`LifetimeScope`，`privateService` 显式声明 `engine` 或 `session` owner，替代 `createToolService`；激活可异步，关闭等待资源释放。
 3. **catalog 注入推导规则**：旧 extensionModules.catalogTools 的"强制并入 active preset"语义改写为——preset-tags 工具中 owning module 未贡献任何 preset 的（pet 类）注入 active preset；贡献了 preset 的模块（core/coding）不注入。数据上与现状逐项一致（golden 证明）。
 4. **core preset 遮蔽规则**：host 模块可遮蔽 core 同名 preset（`core_preset_shadowed` diagnostic），复刻 `resolveAgentPreset` 的 contributed-first 优先级（coding 的扩展版 "general" 依赖此行为）；host 之间同名仍 fail loud。
 5. `defineProduct` 不再 `registerPreset()`，改为合成 `{id:"product"}` AgentModule 传入 runner。
@@ -702,7 +702,7 @@ Transcript 默认只记录 digest 和事件锚点，不复制完整 system promp
 完成标准：产品代码中不存在旧模块类型；不存在 Engine 和 AgentServer 分别解析模块数组的路径；新 host 可以
 在同一进程创建两份不同 composition，不发生跨实例污染。
 
-### Phase C：生命周期 disposer
+### Phase C：生命周期 disposer（已实现）
 
 1. 实现 `LifetimeScope`。
 2. 让 ToolRegistry、HookRegistry 和 protocol query 注册返回 disposer。
@@ -710,6 +710,8 @@ Transcript 默认只记录 digest 和事件锚点，不复制完整 system promp
 4. 为每类 registry 增加 dispose/reload/partial-failure 测试。
 
 完成标准：新模块资源只由 scope 所有，不再依赖 remove-by-prefix 或手工保存 handler identity。
+
+2026-10-09 实施与验收见 [Phase C delivery](agent-module-phase-c-delivery.md)。历史“现状/债务”章节保留设计前基线，当前 API 以代码和该验收记录为准。
 
 ### Phase D：Request boundary
 

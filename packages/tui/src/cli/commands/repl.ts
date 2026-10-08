@@ -199,6 +199,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   const modelPool = seedEngine.getModelPool();
   const toolRegistry = seedEngine.getRuntimeToolRegistry();
   const resolvedLlmConfig = seedEngine.getConfig().llm;
+  await seedEngine.dispose();
   // settingsManager was hoisted to the top of replCommand; reused here.
   // MCPManager: no-op holder satisfying EngineRuntime type; individual
   // session engines connect to mcpServers from their config.
@@ -258,7 +259,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   );
 
   // 6. Wire up AgentServer (wraps chatManager, handles protocol)
-  const _server = new AgentServer({
+  const server = new AgentServer({
     chatManager,
     composition,
     transport: serverTransport,
@@ -299,8 +300,12 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     });
     // Forward the scheduler's abort signal so CronScheduler.abort(jobId) can
     // actually cancel an in-flight REPL cron run (§5.6 #11).
-    const result = await cronEngine.run(req.prompt, { cwd, signal: req.signal });
-    return { text: result.text, reason: result.reason };
+    try {
+      const result = await cronEngine.run(req.prompt, { cwd, signal: req.signal });
+      return { text: result.text, reason: result.reason };
+    } finally {
+      await cronEngine.dispose();
+    }
   });
 
   // Fixed sessionId — every user message in this REPL session routes to the
@@ -323,6 +328,16 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     // orphan (core design §6). MUST run via onExit (awaited before
     // process.exit(0) inside startInkRepl): any code AFTER this await is
     // unreachable because the REPL exits the process itself.
-    onExit: () => chatManager.closeAllAsync(),
+    onExit: async () => {
+      try {
+        await server.close();
+      } finally {
+        try {
+          await runtime.close();
+        } finally {
+          client.close();
+        }
+      }
+    },
   });
 }

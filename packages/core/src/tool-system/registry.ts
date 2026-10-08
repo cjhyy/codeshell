@@ -18,6 +18,7 @@ import {
 } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
 import { validateToolMetadata } from "./validate-tool-metadata.js";
+import { onceDispose, type Dispose } from "../composition/lifetime.js";
 
 /**
  * Default execution timeout for any tool that does not declare its own
@@ -38,6 +39,8 @@ export class ToolRegistry {
   private tools = new Map<string, RegisteredTool>();
   private builtinExecutors = new Map<string, BuiltinToolFn>();
   private availabilityGuards = new Map<string, BuiltinToolGuard>();
+  private registrationIds = new Map<string, object>();
+  private moduleOwners = new Map<string, string>();
 
   constructor(options: ToolRegistryOptions = {}) {
     this.registerBuiltins(options.builtinTools, options.toolCatalog ?? BUILTIN_TOOLS);
@@ -77,14 +80,29 @@ export class ToolRegistry {
     }
   }
 
-  registerTool(tool: RegisteredTool, executor?: ToolImplementation): void {
+  registerTool(tool: RegisteredTool, executor?: ToolImplementation): Dispose {
     validateToolMetadata(tool);
-    this.tools.set(tool.name, tool);
+    const name = tool.name;
+    this.tools.set(name, tool);
+    const registration = {};
+    this.registrationIds.set(name, registration);
     if (executor) {
-      this.builtinExecutors.set(tool.name, async (args, ctx) =>
+      this.builtinExecutors.set(name, async (args, ctx) =>
         toToolExecutionResult(await executor(args, ctx)),
       );
     }
+    return onceDispose(() => {
+      if (this.registrationIds.get(name) === registration) this.unregisterTool(name);
+    });
+  }
+
+  /** Only the declaring module's private service is visible to its executors. */
+  setModuleOwner(name: string, moduleId: string): void {
+    this.moduleOwners.set(name, moduleId);
+  }
+
+  clear(): void {
+    for (const name of this.tools.keys()) this.unregisterTool(name);
   }
 
   /** Create an engine-local registry view without sharing mutable maps. */
@@ -97,6 +115,7 @@ export class ToolRegistry {
     // guards here lets a model invoke a tool that was correctly hidden from
     // its current turn (for example GatewayReply in a desktop Mimi chat).
     fork.availabilityGuards = new Map(this.availabilityGuards);
+    fork.moduleOwners = new Map(this.moduleOwners);
     return fork;
   }
 
@@ -104,6 +123,8 @@ export class ToolRegistry {
     this.tools.delete(name);
     this.builtinExecutors.delete(name);
     this.availabilityGuards.delete(name);
+    this.registrationIds.delete(name);
+    this.moduleOwners.delete(name);
   }
 
   getToolDefinitions(): ToolDefinition[] {
@@ -189,6 +210,12 @@ export class ToolRegistry {
     const ctx: ToolContext | undefined = options?.ctx
       ? { ...options.ctx, signal: childController.signal }
       : undefined;
+    const moduleId = this.moduleOwners.get(name);
+    if (ctx && moduleId && ctx.capabilityServices) {
+      ctx.capabilityServices = Object.freeze(
+        moduleId in ctx.capabilityServices ? { [moduleId]: ctx.capabilityServices[moduleId] } : {},
+      );
+    }
 
     let onChildAbort: (() => void) | undefined;
     const aborted = new Promise<never>((_, reject) => {

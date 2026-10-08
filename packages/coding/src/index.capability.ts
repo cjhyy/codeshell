@@ -272,7 +272,7 @@ export function createCodingModule(): AgentModule {
       promptSections: CODING_PROMPT_SECTIONS,
       dynamicContextProviders: [gitDynamicContextProvider],
       instructionBoundary: findCodingInstructionBoundary,
-      createToolService: createCodingToolService,
+      privateService: { scope: "engine", create: createCodingToolService },
       artifactDetectors: [codingArtifactDetector],
       fileHistory: CODING_FILE_HISTORY,
       sessionWorkspace: CODING_SESSION_WORKSPACE,

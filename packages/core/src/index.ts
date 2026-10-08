@@ -83,7 +83,19 @@ export type {
   AgentModuleToolContribution,
   ResolvedComposition,
   CompositionSnapshot,
+  AgentModulePrivateServiceContribution,
+  EngineModuleActivationContext,
+  HostModuleActivationContext,
+  MaybeDisposable,
+  ModuleServiceHost,
 } from "./composition/types.js";
+export { LifetimeScope } from "./composition/lifetime.js";
+export type {
+  ModuleScopeKind,
+  Disposable,
+  DisposableLike,
+  Dispose,
+} from "./composition/lifetime.js";
 
 // ─── Engine (primary API) ────────────────────────────────────────
 

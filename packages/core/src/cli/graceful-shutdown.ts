@@ -1,6 +1,6 @@
 /** Minimal surface we need from a server to shut it down cleanly. */
 interface Closable {
-  close(): void;
+  close(): void | Promise<void>;
 }
 
 /** Minimal surface we need from `process` (injectable for tests). */
@@ -40,7 +40,14 @@ export function installGracefulShutdown(
     if (shuttingDown) return;
     shuttingDown = true;
     try {
-      server.close();
+      const pending = server.close();
+      if (pending && typeof pending.then === "function") {
+        void pending.then(
+          () => proc.exit(0),
+          () => proc.exit(1),
+        );
+        return;
+      }
     } catch {
       // Best-effort cleanup — never block exit on a close() failure.
     }

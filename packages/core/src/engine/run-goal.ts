@@ -123,7 +123,7 @@ export function resolveRunGoal(args: {
 /** engine.ts:GoalStopHook 创建 + 注册 + 槽位登记。 */
 export function armRunGoalHook(args: {
   slots: GoalRunSlots;
-  hooks: HookRegistry;
+  hooks: Pick<HookRegistry, "register">;
   llmClient: LLMClientBase;
   isSubAgent: boolean;
   normalizedGoal: GoalConfig | undefined;

@@ -12,6 +12,7 @@ import {
   type SandboxConfig,
 } from "../tool-system/sandbox/index.js";
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
+import { LifetimeScope, onceDispose, type Dispose } from "../composition/lifetime.js";
 
 export interface EngineRuntimeOptions {
   modelPool: ModelPool;
@@ -26,11 +27,14 @@ export interface EngineRuntimeOptions {
  * Mutable per-session state stays on Engine itself.
  */
 export class EngineRuntime {
+  readonly lifetime = new LifetimeScope("host", "runtime");
   readonly modelPool: ModelPool;
   readonly toolRegistry: ToolRegistry;
   readonly settings: SettingsManager;
   readonly mcpPool: MCPManager;
   readonly costTracker: CostTracker;
+  private engines = new Set<() => Promise<void>>();
+  private closing?: Promise<void>;
 
   // A2: cached sandbox backends, keyed by (mode + cwd). The capability
   // probe (seatbelt availability, bwrap binary) and the per-turn
@@ -44,10 +48,23 @@ export class EngineRuntime {
     this.settings = opts.settings;
     this.mcpPool = opts.mcpPool;
     this.costTracker = opts.costTracker;
+    this.lifetime.own(() => this.modelPool.clear());
+    this.lifetime.own(() => this.toolRegistry.clear());
+    this.lifetime.own(() => this.sandboxCache.clear());
+    this.lifetime.own(() => this.mcpPool.disconnectAll());
   }
 
   clearModels(): void {
     this.modelPool.clear();
+  }
+
+  /** Quiesce active Engines before releasing their scopes and shared MCP resources. */
+  ownEngine(close: () => Promise<void>): Dispose {
+    if (this.closing || this.lifetime.disposed) throw new Error("EngineRuntime has been closed");
+    this.engines.add(close);
+    return onceDispose(() => {
+      this.engines.delete(close);
+    });
   }
 
   reloadModelsFromSettings(): void {
@@ -55,13 +72,18 @@ export class EngineRuntime {
     const connections = (settings as { modelConnections?: unknown[] }).modelConnections ?? [];
     const credentials = (settings as { credentials?: unknown[] }).credentials ?? [];
     const catalog = getMergedCatalog();
-    const entries = modelEntriesFromConnections(connections as never[], credentials as never[], catalog);
+    const entries = modelEntriesFromConnections(
+      connections as never[],
+      credentials as never[],
+      catalog,
+    );
     this.modelPool.clear();
     if (entries.length === 0) return;
     for (const entry of entries) this.modelPool.register(entry);
     if (entries.length > 0) {
       const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;
-      const key = defaultText && entries.some((e) => e.key === defaultText) ? defaultText : entries[0].key;
+      const key =
+        defaultText && entries.some((e) => e.key === defaultText) ? defaultText : entries[0].key;
       this.modelPool.switch(key);
       this.modelPool.setCacheDir(defaultCacheDir());
       this.modelPool.reloadCachedContextWindows();
@@ -106,8 +128,22 @@ export class EngineRuntime {
    * before exiting the process — otherwise MCP child processes may be
    * left running and bound ports may stay held until the OS cleans up.
    */
-  async close(): Promise<void> {
-    await this.mcpPool.disconnectAll();
-    this.sandboxCache.clear();
+  close(): Promise<void> {
+    if (this.closing) return this.closing;
+    this.closing = (async () => {
+      const results = await Promise.allSettled(
+        [...this.engines].reverse().map((close) => Promise.resolve().then(close)),
+      );
+      const errors = results.flatMap((result) =>
+        result.status === "rejected" ? [result.reason] : [],
+      );
+      try {
+        await this.lifetime.dispose();
+      } catch (error) {
+        errors.push(error);
+      }
+      if (errors.length) throw new AggregateError(errors, "EngineRuntime shutdown failed");
+    })();
+    return this.closing;
   }
 }

@@ -69,7 +69,11 @@ export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamRe
   const auxId = resolveAuxKey(settings);
   const llmConfig =
     resolveLLMConfigForTag(settings, "text", auxId) ??
-    resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
+    resolveLLMConfigForTag(
+      settings,
+      "text",
+      (settings as { defaults?: { text?: string } }).defaults?.text,
+    );
   if (!llmConfig) throw new Error("Dream:没有可用的文本模型连接。");
   const seedEngine = new Engine({
     llm: llmConfig,
@@ -86,9 +90,9 @@ export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamRe
 
   const toolRegistry = seedEngine.getToolRegistry();
   const resolved = seedEngine.getConfig();
-  const llmClient = await createLLMClient(resolved.llm, resolved.clientDefaults);
-
   try {
+    await seedEngine.ready();
+    const llmClient = await createLLMClient(resolved.llm, resolved.clientDefaults);
     const result = await runDreamConsolidation({
       llmClient,
       toolRegistry,
@@ -100,5 +104,7 @@ export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamRe
   } catch (err) {
     dlog("main", "error", { level, error: (err as Error).message });
     throw err;
+  } finally {
+    await seedEngine.dispose();
   }
 }

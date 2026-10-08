@@ -146,7 +146,10 @@ export class SessionWorkspaceRpcHandlers {
     let engine: Engine | null | undefined;
     let residentSession: ChatSession | undefined;
     if (manager) {
-      const ownership = manager.beginSessionMigration(params.sessionId, params.ownershipToken);
+      const ownership = await manager.beginSessionMigrationAfterClose(
+        params.sessionId,
+        params.ownershipToken,
+      );
       if (ownership.status === "not-resident") {
         this.deps.transport.send(
           createResponse(req.id, {

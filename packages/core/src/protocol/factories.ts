@@ -75,7 +75,7 @@ export interface ServerHandle {
    * Tear down the server (which aborts any active run + emits the final
    * shutdown notification). Safe to call multiple times.
    */
-  close(): void;
+  close(): Promise<void>;
 }
 
 /**
@@ -93,14 +93,11 @@ export function createServer(options: CreateServerOptions): ServerHandle {
   const engine = new Engine(config);
   const server = new AgentServer({ engine, transport: options.transport });
 
-  let closed = false;
   return {
     server,
     engine,
-    close(): void {
-      if (closed) return;
-      closed = true;
-      server.close();
+    close(): Promise<void> {
+      return server.close();
     },
   };
 }

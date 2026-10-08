@@ -278,8 +278,11 @@ export async function runCommand(options: RunOptions): Promise<void> {
   } finally {
     // Tear down in correct order: server first (aborts in-flight run, emits
     // shutdown notification through still-open transport), then client.
-    server.close();
-    client.close();
+    try {
+      await server.close();
+    } finally {
+      client.close();
+    }
   }
   process.exit(exitCode);
 }
