@@ -1,3 +1,4 @@
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -87,8 +88,12 @@ function config(root: string) {
     ],
   };
 }
-function engine(root: string, runtime?: EngineRuntime) {
-  const e = new Engine({ ...config(root), runtime });
+function engine(root: string, runtime?: EngineRuntime, initialTools?: readonly string[]) {
+  const e = new Engine({
+    ...config(root),
+    runtime,
+    ...(initialTools ? { modules: [initialToolsFixtureModule(initialTools)] } : {}),
+  });
   // Local receipt fixtures never execute installed user plugin hooks.
   e.getHookRegistry().clear();
   cleanups.push(() => e.dispose());
@@ -268,7 +273,7 @@ test("protocol usage defaults to owned Session and rejects aggregate escalation 
 
 test("identity-bearing external tool billing updates the owning budget counters once", async () => {
   const root = directory();
-  const e = engine(root);
+  const e = engine(root, undefined, ["CostChild"]);
   const input = {
     source: "external-tool",
     requestId: "physical-external-one",

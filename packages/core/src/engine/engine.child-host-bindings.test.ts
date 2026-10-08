@@ -1,3 +1,4 @@
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -49,6 +50,7 @@ describe("Engine child host session initialization", () => {
         const lifecycle: string[] = [];
         const engine = new Engine({
           llm: { provider, model, apiKey: "test" } as never,
+          modules: [initialToolsFixtureModule(["SpawnHostProbe"])],
           cwd,
           sessionStorageDir: join(cwd, "sessions"),
           settingsScope: "isolated",

@@ -171,6 +171,7 @@ import {
   buildRunPermissionPipeline,
   connectRunMcp,
   assembleRunToolDefs,
+  initializeRunToolSurface,
 } from "./run-tooling.js";
 import {
   createRunContextManager,
@@ -3123,27 +3124,34 @@ export class Engine {
     // the toolDefs the model sees when its credential isn't configured for this
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
-    const toolDefs = assembleRunToolDefs({
-      toolRegistry: this.toolRegistry,
+    const toolDefs = initializeRunToolSurface(
       toolCtx,
-      guardCwd: toolCtx.cwd,
-      hasRunnableGoal,
-      settingsScope: this.config.settingsScope ?? "project",
-      builtinToolHost: this.config.builtinToolHost,
-      isSubAgent: this.config.isSubAgent === true,
-      behaviorProfileId: profile?.id ?? options?.behaviorMode,
-      profileMeta: profile?.buildVisibilityMeta?.(profileParams),
-      builtinOverride: this.readBuiltinOverride(toolCtx.cwd, sessionProfileOverrides),
-      mcpServers: this.config.mcpServers ?? {},
-      mcpDisabled,
-      featureFlags: this.readFeatureFlags(),
-      toolGuards: this.toolGuards,
-      toolRewriters: this.toolRewriters,
-      toolFeatureFlags: TOOL_FEATURE_FLAGS,
-      applyBuiltinOverrideVisibility,
-      profileAllowedToolNames: runAllowedToolNames,
-      runPlanMode,
-    });
+      options?.toolAllowlist !== undefined || profile?.allowedToolNames
+        ? undefined
+        : this.preset.initialToolNames,
+      () =>
+        assembleRunToolDefs({
+          toolRegistry: this.toolRegistry,
+          toolCtx,
+          guardCwd: toolCtx.cwd,
+          hasRunnableGoal,
+          settingsScope: this.config.settingsScope ?? "project",
+          builtinToolHost: this.config.builtinToolHost,
+          isSubAgent: this.config.isSubAgent === true,
+          behaviorProfileId: profile?.id ?? options?.behaviorMode,
+          profileMeta: profile?.buildVisibilityMeta?.(profileParams),
+          builtinOverride: this.readBuiltinOverride(toolCtx.cwd, sessionProfileOverrides),
+          mcpServers: this.config.mcpServers ?? {},
+          mcpDisabled,
+          featureFlags: this.readFeatureFlags(),
+          toolGuards: this.toolGuards,
+          toolRewriters: this.toolRewriters,
+          toolFeatureFlags: TOOL_FEATURE_FLAGS,
+          applyBuiltinOverrideVisibility,
+          profileAllowedToolNames: runAllowedToolNames,
+          runPlanMode,
+        }),
+    );
 
     return {
       promptComposer,
@@ -3241,6 +3249,8 @@ export class Engine {
         transcript: session.transcript,
         systemPrompt: fullSystemPrompt,
         tools: toolDefs,
+        getTools: toolCtx.refreshRunTools,
+        getEligibleTools: () => toolCtx.searchableToolDefinitions ?? toolDefs,
         sessionId: sid,
         isSubAgent: this.config.isSubAgent === true,
         consumePendingCompactInfo: () => {

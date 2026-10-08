@@ -27,7 +27,7 @@ describe("PromptComposer tool listing", () => {
     const prompt = await composer.buildSystemPrompt(tools);
 
     expect(prompt).toContain(
-      "# Available Tools\n\nDescriptions and input schemas are provided in the tools field.\nRead",
+      "# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field.\nRead",
     );
     expect(prompt).not.toContain(tools[0]!.description);
     expect(prompt).not.toContain("Read a file from disk");
@@ -35,6 +35,19 @@ describe("PromptComposer tool listing", () => {
     expect(prompt).not.toContain("file_path");
     // The provider still receives the original, complete definitions.
     expect(tools).toEqual(originalDefinitions);
+  });
+
+  it("retains eligible names and explains explicit schema selection without serializing schemas", async () => {
+    const composer = new PromptComposer({ cwd: process.cwd(), model: "test-model" });
+    const prompt = await composer.buildSystemPrompt([
+      ...tools,
+      { name: "ToolSearch", description: "Discover", inputSchema: {} },
+    ]);
+    expect(prompt).toContain("\nRead, ToolSearch");
+    expect(prompt).toContain('"select:ToolName"');
+    expect(prompt).toContain("next model step");
+    expect(prompt).toContain("Selection does not grant permission.");
+    expect(prompt).not.toContain("file_path");
   });
 
   it("updates the name index and browser instructions when visible tools change", async () => {

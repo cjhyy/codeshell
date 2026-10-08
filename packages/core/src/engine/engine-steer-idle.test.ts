@@ -1,3 +1,4 @@
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -166,6 +167,7 @@ describe("Engine.enqueueSteer active-run gate", () => {
       ],
     });
     const engine = new Engine({
+      modules: [initialToolsFixtureModule(["CaptureSteerOrigin"])],
       llm: { provider: fakeProvider, model, apiKey: "test" } as never,
       cwd: dir,
       sessionStorageDir: join(dir, "sessions"),

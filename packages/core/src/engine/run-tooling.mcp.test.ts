@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildRunToolContext, connectRunMcp } from "./run-tooling.js";
+import { buildRunToolContext, connectRunMcp, initializeRunToolSurface } from "./run-tooling.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { toolSearchTool } from "../tool-system/builtin/tool-search.js";
@@ -139,11 +139,19 @@ describe("shared MCP pool supplies each run's local registry", () => {
     const pool = new MCPManager(shared);
     const run = runHost(pool, local, join(directory, "a"));
     try {
+      initializeRunToolSurface(run.context, ["ToolSearch"], () => local.getToolDefinitions());
+      const beforeConnection = run.context.refreshRunTools!();
       expect(local.hasTool("mcp_fixture_echo_a")).toBe(false);
       await run.connect();
+      expect(run.context.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch"]);
       expect(await toolSearchTool({ query: "select:mcp_fixture_echo_a" }, run.context)).toContain(
-        "### mcp_fixture_echo_a",
+        "mcp_fixture_echo_a",
       );
+      expect(run.context.refreshRunTools!().map((tool) => tool.name)).toEqual([
+        "ToolSearch",
+        "mcp_fixture_echo_a",
+      ]);
+      expect(beforeConnection.map((tool) => tool.name)).toEqual(["ToolSearch"]);
       const result = await local.executeTool("mcp_fixture_echo_a", {}, { ctx: run.context });
       expect(result.isError).toBe(false);
       expect(result.result).toContain('"tool":"echo_a"');

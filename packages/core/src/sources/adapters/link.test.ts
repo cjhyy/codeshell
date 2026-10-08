@@ -19,6 +19,7 @@ import type { PermissionRule } from "../../types.js";
 import { StreamingToolQueue } from "../../engine/streaming-tool-queue.js";
 import { BUILTIN_TOOLS } from "../../tool-system/builtin/index.js";
 import { isLinkSourceAvailable } from "../link-view.js";
+import { RunToolSurface } from "../../tool-system/run-tool-surface.js";
 
 let home: string;
 let cwd: string;
@@ -103,6 +104,42 @@ function bind(def = definition()) {
     readPolicy: "ask",
   });
 }
+
+test("ReadSource's bound LinkAction remains permission-gated without loading its model schema", async () => {
+  const meta = credential();
+  let reads = 0;
+  setDefaultCredentialAccess({
+    listMasked: () => [meta],
+    resolveMeta: () => meta,
+    envExposures: () => ({}),
+    executeRemoteLinkAction: async () => {
+      reads++;
+      return { value: "bound fixture" };
+    },
+  });
+  bind();
+  const registry = new ToolRegistry({ builtinTools: ["ReadSource", "LinkAction", "ToolSearch"] });
+  const surface = new RunToolSurface(["ReadSource"]);
+  surface.updateCatalog(registry.getToolDefinitions());
+  const ctx = { ...context(), runToolSurface: surface, modelToolNames: new Set(["ReadSource"]) };
+  const seen: string[] = [];
+  const hooks = new HookRegistry();
+  hooks.register("pre_tool_use", async (event) => {
+    seen.push(event.data.toolName as string);
+    return {};
+  });
+  const args = { source: "link-view", scope: "github:list_repositories", resource: "result" };
+  expect(await read(args, ctx, [], hooks)).toContain("bound fixture");
+  expect(surface.isSelected("LinkAction")).toBe(false);
+  expect(seen).toEqual(["ReadSource", "LinkAction"]);
+  expect(reads).toBe(1);
+  expect(await read(args, ctx, [{ tool: "LinkAction", decision: "deny" }])).toContain("denied");
+  expect(reads).toBe(1);
+  expect(await read(args, { ...ctx, allowedToolNames: new Set(["ReadSource"]) })).toContain(
+    "denied",
+  );
+  expect(reads).toBe(1);
+});
 
 test("all 10 providers/27 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
   let calls = 0;

@@ -19,6 +19,7 @@ import { notificationQueue } from "../tool-system/builtin/agent-notifications.js
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import type { AgentModule } from "../composition/types.js";
+import { BUILTIN_AGENT_PRESETS } from "../preset/index.js";
 import { Engine } from "./engine.js";
 import { goalConfigFromLifecycle } from "../goal/lifecycle.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
@@ -26,6 +27,19 @@ import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js
 const TEST_WORKSPACE_MODULE: AgentModule = {
   id: "test-workspace-switch",
   engine: {
+    // These revision tests intentionally call the fixture bridge immediately;
+    // its owning preset declares that initial schema, like any capability can.
+    defaultPreset: "test-workspace-switch",
+    presets: [
+      {
+        ...BUILTIN_AGENT_PRESETS["harness-min"]!,
+        name: "test-workspace-switch",
+        initialToolNames: [
+          ...BUILTIN_AGENT_PRESETS["harness-min"]!.initialToolNames!,
+          "SwitchSessionWorkspace",
+        ],
+      },
+    ],
     tools: [
       {
         kind: "preset-tags" as const,

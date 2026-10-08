@@ -31,6 +31,7 @@ import type { ApprovalRouter } from "./permission.js";
 import type { ChildWriterLease, LiveChildControl } from "./builtin/agent-registry.js";
 import type { McpToolPolicy } from "./mcp-tool-policy.js";
 import type { SessionContextNotes } from "../context/notes.js";
+import type { RunToolSurface } from "./run-tool-surface.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -330,12 +331,20 @@ export interface ToolContext {
   /** Tool registry (ToolSearch reads this to enumerate available tools). */
   toolRegistry: ToolRegistry;
   /**
-   * Final per-turn tool surface after availability guards, feature flags,
+   * Complete eligible catalog after availability guards, feature flags,
    * behavior-profile allowlists, plan-mode filtering, and definition rewrites.
    * ToolSearch must prefer this list over the worker-shared registry so it
    * cannot advertise a tool the current Session cannot actually call.
    */
   searchableToolDefinitions?: readonly ToolDefinition[];
+  /** Run-local discovery state; never narrows the registry or permission allowlist. */
+  runToolSurface?: RunToolSurface;
+  /** Refresh the eligible catalog and freeze the next model step's active definitions. */
+  refreshRunTools?(): ToolDefinition[];
+  /** Revalidate current capability eligibility without changing the model step's advertised tools. */
+  refreshRunToolEligibility?(): void;
+  /** Tools advertised for the current model step, fixed through retries and its tool batch. */
+  modelToolNames?: ReadonlySet<string>;
   /** Opaque services contributed by capability modules, keyed by capability id. */
   capabilityServices?: Readonly<Record<string, unknown>>;
   /**

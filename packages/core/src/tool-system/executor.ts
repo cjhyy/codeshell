@@ -174,6 +174,32 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    const surface = this.toolCtx?.runToolSurface;
+    this.toolCtx?.refreshRunToolEligibility?.();
+    if (surface && !surface.isEligible(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is not available in the current session context. Do NOT retry unless the relevant context changes.`,
+        isError: true,
+      };
+    }
+    // The model may only call schemas advertised for its completed step. A
+    // ToolSearch selection in the same batch takes effect at the NEXT step.
+    // Executor-owned bound calls are implementation details (ReadSource calls
+    // LinkAction); they retain every authority/permission/hook gate below.
+    if (
+      surface &&
+      !constraint &&
+      !(this.toolCtx?.modelToolNames?.has(call.toolName) ?? surface.isSelected(call.toolName))
+    ) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is available but not loaded for this model step. Use ToolSearch with query "select:${call.toolName}", then call it in the next model step.`,
+        isError: true,
+      };
+    }
     // 0. Capability override: a builtin the project marked `off` is HIDDEN from
     // the model's tool list (engine.ts applyBuiltinOverrideVisibility), but the
     // model can still NAME it (hallucination, or a remembered earlier turn). The
@@ -541,6 +567,18 @@ export class ToolExecutor {
           error: "Bound tool authority or input changed before execution.",
         };
       }
+    }
+
+    // Hooks and approvals may await while the host revokes a capability. This
+    // refresh changes eligibility only, never the completed model step's tools.
+    this.toolCtx?.refreshRunToolEligibility?.();
+    if (surface && !surface.isEligible(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is no longer available in the current session context. Do NOT retry unless the relevant context changes.`,
+        isError: true,
+      };
     }
 
     // 3. Execute. Use a span so begin/end share one cat and end carries

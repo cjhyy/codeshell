@@ -247,7 +247,10 @@ describe("architecture growth budgets", () => {
     // incarnation/storage scope, composition/config versions and borrowed or
     // owned Host signer enter the existing model facade. Provider projection,
     // validation, custody and durable event writes remain in dedicated modules.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_880);
+    // Progressive tools add exactly 10 wiring lines: a run-local surface wraps
+    // the existing catalog assembler and supplies active/eligible callbacks.
+    // Selection, immutable snapshots and execution gates stay in their owners.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_890);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

@@ -225,6 +225,10 @@ export const TERMINAL_CODING_PRESET: AgentPreset = {
   label: "Terminal Coding Assistant",
   description: "General orchestration plus coding-focused guidance and code-navigation tools.",
   promptSections: ["base", "orchestration", "coding", "browser", "tone"],
+  initialToolNames: [
+    ...(generalBase.initialToolNames ?? []).filter((name) => name !== "Write"),
+    "ApplyPatch",
+  ],
   builtinTools: [
     ...generalBase.builtinTools,
     ...productFullExposure.builtinTools,
