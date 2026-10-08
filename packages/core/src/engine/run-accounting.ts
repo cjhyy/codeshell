@@ -15,6 +15,7 @@ import type { LLMClientBase } from "../llm/client-base.js";
 import type { Transcript } from "../session/transcript.js";
 import type { SessionBundle, SessionStateFieldPatch } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
+import type { ModelRequestBinding } from "../model-request-boundary/context.js";
 import type { TurnLoop } from "./turn-loop.js";
 
 export interface RunUsageAccounting {
@@ -107,6 +108,7 @@ export function wireRunModelFacade(args: {
   transcript: Transcript;
   accounting: RunUsageAccounting;
   assertInstructionsCurrent?: () => void;
+  requestBinding?: ModelRequestBinding;
 }): {
   modelFacade: ModelFacade;
   getRunUsage: () => ReturnType<ModelFacade["getUsage"]>;
@@ -114,7 +116,7 @@ export function wireRunModelFacade(args: {
   const { llmClient, auxSummaryClient, transcript, accounting } = args;
 
   // Create components (requires resolved llmClient).
-  const modelFacade = new ModelFacade(llmClient, transcript);
+  const modelFacade = new ModelFacade(llmClient, transcript, args.requestBinding);
   const getRunUsage = () => {
     const visible = modelFacade.getUsage();
     const externalRunUsage = accounting.getExternalRunUsage();

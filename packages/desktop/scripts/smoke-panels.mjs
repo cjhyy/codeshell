@@ -20,12 +20,14 @@ import {
   makeIsolatedElectronHome,
 } from "./electron-harness.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
+import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-smoke-");
-const projectPath = join(isolated.home, "smoke-project");
 const mock = await startMockProviderServer();
+const confinement = await prepareConfinedElectronFixture({ appDir, isolated, origin: mock.origin });
+const projectPath = join(isolated.home, "smoke-project");
 let app;
 
 async function writeFixtureConfig() {
@@ -143,7 +145,7 @@ async function ensureConversation(win) {
   );
 }
 
-async function sendScenario(win, modelKey, prompt) {
+async function sendScenario(win, modelKey, prompt, { expectedError } = {}) {
   const modelButton = win.locator("button[data-active-model]");
   await modelButton.waitFor({ state: "visible", timeout: 20_000 });
   if ((await modelButton.getAttribute("data-active-model")) !== modelKey) {
@@ -159,6 +161,7 @@ async function sendScenario(win, modelKey, prompt) {
     );
   }
   const before = await win.locator('[data-message-kind="assistant"]').count();
+  const previousErrors = await win.getByText(/^Error: /).allTextContents();
   // A fresh isolated home has no project and no session, and the composer on
   // that welcome screen has nowhere to send: pressing Enter clears the textarea
   // and silently drops the input, so the run stalls waiting for a reply that
@@ -169,13 +172,31 @@ async function sendScenario(win, modelKey, prompt) {
   await composer.waitFor({ state: "visible", timeout: 10_000 });
   await composer.fill(prompt);
   await composer.press("Enter");
+  await confinement.assertWorker(app);
   await win.waitForFunction(
-    (count) =>
+    ({ count, previousErrors }) =>
       document.querySelectorAll('[data-message-kind="assistant"][data-message-state="done"]')
-        .length > count,
-    before,
+        .length > count ||
+      [...document.querySelectorAll("main div")].some(
+        (node) =>
+          node.children.length === 0 &&
+          node.textContent?.startsWith("Error: ") &&
+          !previousErrors.includes(node.textContent),
+      ),
+    { count: before, previousErrors },
     { timeout: 30_000 },
   );
+  const errors = (await win.getByText(/^Error: /).allTextContents()).filter(
+    (message) => !previousErrors.includes(message),
+  );
+  if (expectedError) {
+    assert(
+      errors.some((message) => message.includes(expectedError)),
+      "Expected visible Host signing error",
+    );
+  } else {
+    assert(errors.length === 0, `Provider scenario failed: ${errors.join("; ")}`);
+  }
 }
 
 async function openPanelDock(win) {
@@ -256,12 +277,19 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    mainEntry: confinement.mainEntry,
+    env: confinement.env,
   });
   const win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
   await dismissTrustDialog(win);
   await win.getByText(basename(projectPath), { exact: true }).click();
+  const storage = await app.evaluate(({ safeStorage }) => ({
+    available: safeStorage.isEncryptionAvailable(),
+    backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : "os-keychain",
+  }));
+  console.log(`Electron request custody: ${JSON.stringify(storage)}`);
 
   await win.waitForFunction(
     () =>
@@ -276,6 +304,27 @@ try {
     "L2 plain-text did not render a completed assistant block",
   );
   console.log("smoke L2: plain streaming assistant rendered");
+
+  const beforeUnavailable = mock.requests.length;
+  await app.evaluate(({ safeStorage }) => {
+    globalThis.__codeshellFixtureEncryptionAvailable = safeStorage.isEncryptionAvailable;
+    safeStorage.isEncryptionAvailable = () => false;
+  });
+  try {
+    await sendScenario(win, "mock-plain-text", "Check the synthetic unavailable-keyring case.", {
+      expectedError: "Host could not securely sign this Session",
+    });
+    assert(
+      mock.requests.length === beforeUnavailable,
+      "Unavailable custody sent a provider request",
+    );
+  } finally {
+    await app.evaluate(({ safeStorage }) => {
+      safeStorage.isEncryptionAvailable = globalThis.__codeshellFixtureEncryptionAvailable;
+      delete globalThis.__codeshellFixtureEncryptionAvailable;
+    });
+  }
+  console.log("smoke L2: unavailable keyring rendered a concrete error with zero provider sends");
 
   await sendScenario(win, "mock-tool-call", "Run the provider tool-call smoke scenario.");
   try {
@@ -318,6 +367,124 @@ try {
   );
   assert(retryRequests.length >= 2, "L2 retry scenario did not make a second provider request");
   console.log("smoke L2: provider retry recovered from scripted 429");
+
+  const proof = await app.evaluate(
+    ({ safeStorage }, { home, requests }) => {
+      // Recompute inside Main: the OS-decrypted key never leaves its Host.
+      const fs = process.getBuiltinModule("node:fs");
+      const path = process.getBuiltinModule("node:path");
+      const crypto = process.getBuiltinModule("node:crypto");
+      const ordered = (value) =>
+        Array.isArray(value)
+          ? value.map(ordered)
+          : value && typeof value === "object"
+            ? Object.fromEntries(
+                Object.keys(value)
+                  .sort()
+                  .map((key) => [key, ordered(value[key])]),
+              )
+            : value;
+      const digest = (value) =>
+        crypto
+          .createHash("sha256")
+          .update(JSON.stringify(ordered(JSON.parse(JSON.stringify(value)))))
+          .digest("hex");
+      const keysDirectory = path.join(home, "request-keys", "host-encrypted");
+      if (process.platform !== "win32" && fs.statSync(keysDirectory).mode & 0o077)
+        throw new Error("Request key directory is not owner-only");
+      const keys = new Map();
+      for (const file of fs.readdirSync(keysDirectory)) {
+        if (!file.endsWith(".json")) continue;
+        const filename = path.join(keysDirectory, file);
+        if (process.platform !== "win32" && fs.statSync(filename).mode & 0o077)
+          throw new Error("Request key file is not owner-only");
+        const record = JSON.parse(fs.readFileSync(filename, "utf8"));
+        if (
+          record.custodyMode !== "host-encrypted" ||
+          !record.protectedKey.startsWith("enc:safeStorage:")
+        )
+          throw new Error("Electron request key did not use actual safeStorage custody");
+        keys.set(
+          record.keyId,
+          Buffer.from(
+            safeStorage.decryptString(
+              Buffer.from(record.protectedKey.slice("enc:safeStorage:".length), "base64"),
+            ),
+            "base64",
+          ),
+        );
+      }
+      let boundaries = 0,
+        attempts = 0;
+      try {
+        for (const sessionId of fs.readdirSync(path.join(home, "sessions"))) {
+          if (sessionId.startsWith(".")) continue;
+          const transcript = path.join(home, "sessions", sessionId, "transcript.jsonl");
+          if (!fs.existsSync(transcript)) continue;
+          const events = fs
+            .readFileSync(transcript, "utf8")
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line));
+          const boundaryIds = new Set(
+            events
+              .filter((event) => event.type === "model_request_boundary")
+              .map((event) => event.id),
+          );
+          boundaries += boundaryIds.size;
+          for (const event of events.filter((event) => event.type === "model_request_attempt")) {
+            const metadata = event.data;
+            const key = keys.get(metadata.keyId);
+            if (
+              !key ||
+              !boundaryIds.has(metadata.boundaryEventId) ||
+              metadata.custodyMode !== "host-encrypted" ||
+              metadata.persistence !== "durable"
+            )
+              throw new Error("Desktop request attempt has no durable Host-owned boundary");
+            const sign = (domain, value) =>
+              crypto
+                .createHmac("sha256", key)
+                .update(`codeshell:model-request:v1:${domain}:`)
+                .update(digest(value))
+                .digest("hex");
+            if (
+              !requests.some(
+                (body) =>
+                  sign("wire", body) === metadata.wireDigest &&
+                  sign(
+                    "system",
+                    body.messages.filter((message) =>
+                      ["system", "developer"].includes(message.role),
+                    ),
+                  ) === metadata.systemPromptDigest &&
+                  sign(
+                    "messages",
+                    body.messages.filter(
+                      (message) => !["system", "developer"].includes(message.role),
+                    ),
+                  ) === metadata.messageDigest,
+              )
+            )
+              throw new Error("Desktop proof does not match an actual fixture provider payload");
+            attempts++;
+          }
+        }
+        return { boundaries, attempts, encryptedKeys: keys.size };
+      } finally {
+        for (const key of keys.values()) key.fill(0);
+      }
+    },
+    { home: isolated.codeShellHome, requests: mock.requests.map((request) => request.body) },
+  );
+  assert(
+    proof.boundaries >= 5 && proof.attempts >= 6 && proof.encryptedKeys >= 1,
+    "Desktop model proof coverage is incomplete",
+  );
+  console.log(
+    `smoke L2: real OS custody and provider-wire HMACs verified ${JSON.stringify(proof)}`,
+  );
 
   await mountCorePanels(win);
   await openSettings(win);

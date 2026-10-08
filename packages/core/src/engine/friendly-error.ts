@@ -23,6 +23,19 @@ interface Rule {
 
 const RULES: Rule[] = [
   {
+    test: /^Model request boundary validation failed \(custody\)$/,
+    message: () =>
+      "The Host could not securely sign this Session. This attempt was stopped before sending.",
+    suggestion:
+      "Check the Host's system keyring or secure key storage and Session ownership, then retry.",
+  },
+  {
+    test: /^Model request boundary validation failed \(transcript\)$/,
+    message: () =>
+      "The model request could not be recorded durably. This attempt was stopped before sending.",
+    suggestion: "Check that this Session's storage is writable and has free space, then retry.",
+  },
+  {
     test: /\b(401|403|invalid api key|unauthorized|authentication)\b/i,
     message: () => "Authentication failed — the API key was rejected.",
     suggestion:
@@ -59,14 +72,12 @@ const RULES: Rule[] = [
   {
     test: /\b(500|502|503|504|overloaded|server error|service unavailable)\b/i,
     message: () => "The provider had a server-side error.",
-    suggestion:
-      "This is usually transient — retry shortly, or switch models if it persists.",
+    suggestion: "This is usually transient — retry shortly, or switch models if it persists.",
   },
 ];
 
 export function friendlyError(err: unknown): FriendlyError {
-  const raw =
-    err instanceof Error ? err.message : typeof err === "string" ? err : String(err);
+  const raw = err instanceof Error ? err.message : typeof err === "string" ? err : String(err);
   for (const rule of RULES) {
     if (rule.test.test(raw)) {
       return {

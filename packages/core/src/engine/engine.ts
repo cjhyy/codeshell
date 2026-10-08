@@ -10,6 +10,11 @@ import type {
   TaskInfo,
   TokenUsage,
 } from "../types.js";
+import { createHash } from "node:crypto";
+import { currentUsageOwner } from "../cost-ledger/context.js";
+import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
+import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
+import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { OperationLedger } from "../operations/ledger.js";
 import { OperationController } from "../operations/controller.js";
@@ -326,6 +331,7 @@ export class Engine {
   private readonly capabilityDynamicContextProviders: readonly CapabilityDynamicContextProvider[];
   private hooks: HookRegistry;
   private sessionManager: SessionManager;
+  private requestSigner?: ModelRequestSigner;
   private sessionMessageRouter: SessionMessageRouter | undefined;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
@@ -2635,6 +2641,17 @@ export class Engine {
     });
     const { recordCumulativeUsage, recordExternalBilledUsage } = accounting;
     contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordExternalBilledUsage));
+    const requestOwner = currentUsageOwner();
+    if (!requestOwner || requestOwner.sessionId !== sid)
+      throw new Error("Main request has no matching Session owner");
+    const requestSubject: ModelRequestSubject = {
+      sessionId: sid,
+      storageScopeId: createHash("sha256")
+        .update(this.sessionManager.getStorageDir())
+        .digest("hex"),
+      sessionInstanceId: requestOwner.accountingSessionId,
+      ...(isEphemeralSessionState(session.state) ? { ephemeral: true } : {}),
+    };
     const { modelFacade, getRunUsage } = wireRunModelFacade({
       llmClient,
       auxSummaryClient,
@@ -2654,6 +2671,21 @@ export class Engine {
           this.runAbort?.abort(new Error("Instruction revision is no longer current"));
           throw new Error("Instruction revision is no longer current");
         }
+      },
+      requestBinding: {
+        subject: requestSubject,
+        signer: this.getModelRequestSigner(),
+        transcript: session.transcript,
+        compositionDigest: this.composition.digest,
+        configVersion: this.lastAppliedConfigVersion,
+        provider: llmClient.provider,
+        model: llmClient.model,
+        ...(session.transcript.isPersistent()
+          ? {
+              ensureDurableOwner: () =>
+                assertDurableRequestOwner(requestSubject, this.sessionManager.getStorageDir()),
+            }
+          : {}),
       },
     });
 
@@ -3592,6 +3624,16 @@ export class Engine {
       ...this.usageLedger.sessionState(sessionId, this.sessionManager.getStorageDir()),
       ...(this.config.costStore ? { legacyStore: this.config.costStore.serialize() } : {}),
     };
+  }
+
+  private getModelRequestSigner(): ModelRequestSigner {
+    if (this.config.modelRequestSigner) return this.config.modelRequestSigner;
+    if (!this.requestSigner) {
+      const { signer, owned } = resolveModelRequestSigner();
+      this.requestSigner = signer;
+      if (owned) this.lifetime.own(() => signer.dispose?.());
+    }
+    return this.requestSigner;
   }
 
   private usageOwnerForSession(

@@ -57,6 +57,10 @@ import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
+import {
+  createIpcModelRequestSigner,
+  setDefaultModelRequestSigner,
+} from "../model-request-boundary/access.js";
 import { createDesktopAutomationAuthorityClient } from "../automation/desktop-authority-client.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
@@ -372,6 +376,14 @@ const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 if (process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local") {
   setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
 }
+// Desktop pins Host custody even if a shell inherited the headless credential
+// override. Local credential selection must never downgrade request key custody.
+const requestSigner =
+  process.env.CODE_SHELL_MODEL_REQUEST_SIGNING === "host" ||
+  process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local"
+    ? createIpcModelRequestSigner(stdioTransport)
+    : undefined;
+if (requestSigner) setDefaultModelRequestSigner(requestSigner);
 setCronCreateAuthority(createDesktopAutomationAuthorityClient(stdioTransport));
 
 // Cron jobs are persisted by this worker but only main arms/executes their
@@ -435,6 +447,8 @@ const agentServer = new AgentServer({
 installGracefulShutdown(
   {
     async close() {
+      // Release outstanding Main roundtrips before awaiting active Engine runs.
+      requestSigner?.dispose?.();
       try {
         await agentServer.close();
       } finally {
