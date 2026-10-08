@@ -472,3 +472,21 @@ test("restoring an old token into its original record cannot replay it in the ru
   expect(f.store.resolve(f.input.id)?.meta?.linkOAuthState).toBe("reconnect");
   expect(u.counts).toEqual({ refresh: 1, account: 1, action: 1 });
 });
+
+for (const change of ["scope", "client"])
+  test(`in-flight ${change} changes cannot publish old authority results`, async () => {
+    const f = fixture("gitlab", false),
+      u = upstream(f, {
+        onAction: async () => {
+          const current = f.store.resolve(f.input.id)!;
+          current.secret = JSON.stringify({
+            ...JSON.parse(current.secret!),
+            ...(change === "scope" ? { scope: "read_user" } : { clientId: "other-public-client" }),
+          });
+          f.store.save("user", current);
+        },
+      });
+    await expect(
+      executeLocalOAuthLinkAction(f.input, { store: f.store, now, fetchImpl: u.fetchImpl }),
+    ).rejects.toMatchObject({ code: change === "scope" ? "forbidden" : "changed" });
+  });

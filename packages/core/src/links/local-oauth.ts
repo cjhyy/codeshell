@@ -366,6 +366,8 @@ export async function executeLocalOAuthLinkAction(
       credential.meta?.linkLastVerifiedAt,
       credential.meta?.linkCapabilityIds,
       credential.meta?.linkResourceGroups,
+      parse(credential).clientId,
+      parse(credential).scope,
     ]);
   let originalAuthority = authority(current);
   const execute = () =>
