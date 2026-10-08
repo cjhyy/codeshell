@@ -229,4 +229,31 @@ describe("task inbox authority-checked actions", () => {
         .status,
     ).toBe("ok");
   });
+  test("run-now dedupes simultaneous clicks but permits a later run of an unchanged schedule", async () => {
+    const record = task({
+      source: "automation",
+      status: "queued",
+      capabilities: ["open", "retry"],
+    });
+    let calls = 0;
+    const actions = createTaskInboxActions({
+      projector: { get: () => record, ingest: () => ({ version: 1, records: [], errors: [] }) },
+      adapters: [
+        {
+          source: "automation",
+          reread: () => record,
+          act: async () => {
+            calls++;
+            await Promise.resolve();
+            return { status: "ok" };
+          },
+        },
+      ],
+    });
+    const runNow = { taskKey: record.taskKey, action: "retry" as const, expectedRevision: "1" };
+    await Promise.all([actions.act(runNow), actions.act(runNow)]);
+    expect(calls).toBe(1);
+    await actions.act(runNow);
+    expect(calls).toBe(2);
+  });
 });
