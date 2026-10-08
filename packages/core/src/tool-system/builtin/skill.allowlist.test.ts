@@ -100,6 +100,11 @@ describe("skillTool honors ctx.skillAllowlist", () => {
     expect(out).toContain("Initialization timed out");
     expect(out).toContain("Use the remote read tool.");
     expect(out).not.toContain("unrelated:secret");
+    expect(JSON.parse(await skillTool({ query: "reader" }, ctx)).total).toBe(0);
+    expect(JSON.parse(await skillTool({ query: "MCP" }, ctx)).results[0].name).toBe("fixture:read");
+    ctx.disabledPlugins = ["fixture"];
+    expect(JSON.parse(await skillTool({ query: "MCP" }, ctx)).total).toBe(0);
+    ctx.disabledPlugins = [];
     ctx.allowedMcpServers = new Set();
     expect(await skillTool({ skill: "fixture:read" }, ctx)).not.toContain(
       "Initialization timed out",

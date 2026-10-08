@@ -21,13 +21,17 @@ export function skillMetadataText(text: string, maxLength = 2_048): string {
 
 function terms(text: string): string[] {
   const normalized = text.slice(0, 8_192).toLowerCase();
-  const words =
-    normalized.match(/[a-z0-9_-]{2,}|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+/gu) ??
-    [];
+  const words = normalized.match(/[\p{L}\p{N}_+#.-]+/gu) ?? [];
   return [
     ...new Set(
       words.flatMap((word) => {
-        if (/^[a-z0-9_-]/.test(word) || word.length < 2) return [word];
+        if (
+          !/^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+$/u.test(
+            word,
+          ) ||
+          word.length < 2
+        )
+          return [word];
         return Array.from({ length: word.length - 1 }, (_, i) => word.slice(i, i + 2));
       }),
     ),
@@ -107,7 +111,7 @@ export function buildSkillListing(
     return [
       "# Available Skills",
       ...sections,
-      `${omitted ? `${omitted} more skills omitted. ` : ""}Use Skill({query: \"keywords\"}) to search metadata, then Skill({skill: \"exact-name\"}) to load instructions.`,
+      `${omitted ? `${omitted} more skills omitted. ` : ""}Use Skill({query: "keywords"}) to search metadata, then Skill({skill: "exact-name"}) to load instructions.`,
     ].join("\n\n");
   };
   if (estimateStringTokens(render()) > budget) return "";
@@ -137,9 +141,15 @@ export function searchSkillMetadata(
   limit = 10,
 ): string {
   const queryTerms = terms(query);
+  const normalizedQuery = skillMetadataText(query, 1_024).toLowerCase();
   const matching = skills.filter((skill) => {
     const metadata = `${skill.name} ${skillMetadataText(skill.description)}`.toLowerCase();
-    return queryTerms.length === 0 || queryTerms.some((term) => metadata.includes(term));
+    return (
+      normalizedQuery.length === 0 ||
+      (queryTerms.length > 0
+        ? queryTerms.some((term) => metadata.includes(term))
+        : metadata.includes(normalizedQuery))
+    );
   });
   const ranked = rankSkillsForDiscovery(matching, { task: query });
   const results: { name: string; description: string; source: SkillDefinition["source"] }[] = [];

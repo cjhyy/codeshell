@@ -193,6 +193,18 @@ describe("Engine prompt-cache hygiene", () => {
       expect(listing).toBeDefined();
       expect(estimateStringTokens(listing!)).toBeLessThanOrEqual(640);
       expect(context).not.toContain("PRIVATE_SKILL_BODY");
+      const noSkills = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: repo,
+        sessionStorageDir: sessions,
+        enabledBuiltinTools: [],
+        disabledBuiltinTools: ["Skill"],
+        preset: "general",
+        modules: [],
+        headless: true,
+      });
+      await noSkills.run("A task without the Skill tool", { cwd: repo });
+      expect(JSON.stringify(calls[1]!.messages)).not.toContain("Available Skills");
     } finally {
       scenarios.delete(model);
     }

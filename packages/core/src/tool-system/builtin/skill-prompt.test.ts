@@ -91,6 +91,29 @@ describe("bounded skill discovery", () => {
     expect(skillListingBudget({ maxContextTokens: 1_000_000 })).toBe(2_048);
   });
 
+  test("nonempty multilingual and punctuation queries never silently list the entire catalog", () => {
+    const skills = [
+      skill("cpp", "C++ development"),
+      skill("korean", "한국어 문서"),
+      skill("oil", "Öl Analyse"),
+      skill("emoji", "🪴"),
+      skill("unrelated", "Spreadsheet"),
+    ];
+    for (const [query, expected] of [
+      ["C++", "cpp"],
+      ["한국어", "korean"],
+      ["Öl", "oil"],
+      ["🪴", "emoji"],
+      ["한", "korean"],
+    ]) {
+      expect(JSON.parse(searchSkillMetadata(skills, query)).results.map((s) => s.name)).toEqual([
+        expected,
+      ]);
+    }
+    expect(JSON.parse(searchSkillMetadata(skills, "🚀")).results).toEqual([]);
+    expect(JSON.parse(searchSkillMetadata(skills, "")).total).toBe(5);
+  });
+
   test("metadata search pages exact names, matches Chinese, and never loads bodies", () => {
     const skills = Array.from({ length: 25 }, (_, i) =>
       skill(`docs:skill-${i.toString().padStart(2, "0")}`, `处理文档 ${"x".repeat(10_000)}`),

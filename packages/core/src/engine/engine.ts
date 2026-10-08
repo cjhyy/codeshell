@@ -2852,7 +2852,9 @@ export class Engine {
     // a skill, so the full skills listing would be dead context for every one
     // of its turns (e.g. the Pet manager) — inject none via an empty allowlist.
     const runAllowedToolNames = toolCtx.allowedToolNames;
-    const profileCanUseSkills = !runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name);
+    const profileCanUseSkills =
+      Boolean(this.toolRegistry.getTool(skillToolDef.name)) &&
+      (!runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name));
     const promptComposer = new PromptComposer(
       buildPromptComposerConfig({
         cwd,
