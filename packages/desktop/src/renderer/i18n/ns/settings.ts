@@ -197,6 +197,25 @@ export const settingsNs = {
         edit: "编辑",
         empty: "还没有数字人，点击「新建」或从市场安装。",
         advancedExportTitle: "高级导出",
+        pluginExport: {
+          action: "导出静态插件…",
+          projectRequired: "静态插件导出需要选中已有项目或会话，以确定组件来源。",
+          title: "导出静态插件 · {name}",
+          description:
+            "选择并审阅静态 Skill / Agent，另存为新的 CodeShell / CC 目录包。不会安装或激活；不保证与数字人权限、记忆、常驻指令或 Codex 等价。",
+          working: "正在准备或保存已审阅内容…",
+          components: "明确选择要导出的组件",
+          empty: "没有可导出的 Skill / Agent。可继续使用原有 JSON 定义导出。",
+          support: "可选附属文本（未勾选的不读取、不复制）：",
+          instruction: "附带主指令作为 docs 参考文档（默认不含，不自动注入）",
+          losses: "依赖与降级损失",
+          files: "完整文件审阅 · {count} 个文件 / {bytes} 字节",
+          accept: "我已审阅所有选中文本与名称映射，检查秘密及私人路径，并接受上述依赖和权限损失。",
+          cancel: "取消",
+          refresh: "重新读取并审阅",
+          save: "选择新目录并导出",
+          done: "已创建静态插件目录：{directory}（未安装）",
+        },
         advancedExportDescription:
           "仅用于备份、迁移或发布数字人定义，日常使用无需操作。导出内容不包含长期记忆。",
         skillsLoadFailed: "技能列表加载失败：{message}",
@@ -1140,6 +1159,29 @@ export const settingsNs = {
         edit: "Edit",
         empty: "No digital humans yet — create one or install from the market.",
         advancedExportTitle: "Advanced export",
+        pluginExport: {
+          action: "Export static plugin…",
+          projectRequired:
+            "Select an existing project or session to resolve static plugin component sources.",
+          title: "Export static plugin · {name}",
+          description:
+            "Select and review static Skills / Agents, then save a new CodeShell / CC directory package. Nothing is installed or activated; Profile permissions, memory, always-on instructions and Codex compatibility are not promised.",
+          working: "Preparing or saving reviewed content…",
+          components: "Explicitly select components",
+          empty:
+            "No exportable Skill / Agent. The existing JSON definition export remains available.",
+          support: "Optional supporting text (unselected files are not read or copied):",
+          instruction:
+            "Include main instruction as docs reference only (off by default; never injected)",
+          losses: "Dependencies and downgrade losses",
+          files: "Complete file review · {count} files / {bytes} bytes",
+          accept:
+            "I reviewed all selected text and mappings, checked for secrets/private paths, and accept the dependency and permission losses above.",
+          cancel: "Cancel",
+          refresh: "Read again and review",
+          save: "Choose new directory and export",
+          done: "Created static plugin directory: {directory} (not installed)",
+        },
         advancedExportDescription:
           "For backing up, migrating, or publishing digital-human definitions. Daily use does not require this, and exports never include long-term memory.",
         skillsLoadFailed: "Failed to load skills: {message}",
