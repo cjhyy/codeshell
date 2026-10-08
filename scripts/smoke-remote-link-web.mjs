@@ -9,23 +9,29 @@ import { join } from "node:path";
 import { createServer } from "node:net";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
 // The verifier takes a separately built/selected service entry. No product depends on sibling sources.
 if (!process.argv[2])
   throw new Error(
-    "Usage: node scripts/smoke-remote-link-web.mjs /absolute/path/to/link-server/http.mjs",
+    "Usage: node scripts/smoke-remote-link-web.mjs /absolute/path/to/link-server/http.mjs [web|electron|paired|native] [candidate.app]",
   );
 const { startLinkServer } = await import(pathToFileURL(resolve(process.argv[2])).href);
 import { startHeadlessServer } from "../packages/server/dist/serve/headless-server.js";
 import { resolveWorkerEntry } from "../packages/server/dist/serve/cli.js";
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../packages/desktop/package.json", import.meta.url));
-const { chromium } = require("playwright");
+const { chromium, _electron } = require("playwright");
 import {
   launchCodeShellElectron,
   findCodeShellWindow,
 } from "../packages/desktop/scripts/electron-harness.mjs";
 import { verifyNativeLinkUI } from "./verify-native-link-ui.mjs";
 const mode = process.argv[3] ?? "web";
+const packagedApplication = process.argv[4] ?? process.env.CODESHELL_LINK_SMOKE_APP;
+assert.ok(
+  !packagedApplication || mode === "native",
+  "Packaged application is supported in native mode",
+);
 const widths = mode === "web" ? [390, 1440] : mode === "electron" ? [1280] : [390];
 assert.ok(
   ["web", "electron", "paired", "native"].includes(mode),
@@ -142,10 +148,50 @@ try {
         })),
       ),
     );
-    desktop = await launchCodeShellElectron({
-      appDir: resolve("packages/desktop"),
-      home: desktopHome,
-    });
+    if (packagedApplication) {
+      const application = resolve(packagedApplication);
+      const publicKeys = [
+        "CODE_SHELL_REMOTE_LINK_ISSUER",
+        "CODE_SHELL_REMOTE_LINK_CLIENT_ID",
+        "CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN",
+      ];
+      const publicConfig = Object.fromEntries(
+        publicKeys.map((key) => [
+          key,
+          execFileSync(
+            "/usr/libexec/PlistBuddy",
+            ["-c", `Print :LSEnvironment:${key}`, join(application, "Contents/Info.plist")],
+            { encoding: "utf8" },
+          ).trim(),
+        ]),
+      );
+      assert.ok(
+        publicKeys.every((key) => publicConfig[key]),
+        "Missing bundled public Link configuration",
+      );
+      desktop = await _electron.launch({
+        executablePath: join(application, "Contents/MacOS/code-shell"),
+        args: [`--user-data-dir=${join(desktopHome, "electron-user-data")}`],
+        cwd: localProjects[0],
+        timeout: 30000,
+        env: {
+          ...process.env,
+          HOME: desktopHome,
+          USERPROFILE: desktopHome,
+          CODE_SHELL_HOME: join(desktopHome, ".code-shell"),
+          CODE_SHELL_NO_DEVTOOLS: "1",
+          CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
+          DISABLE_AUTOUPDATER: "1",
+          ...publicConfig,
+        },
+      });
+      assert.equal(await desktop.evaluate(({ app }) => app.isPackaged), true);
+    } else {
+      desktop = await launchCodeShellElectron({
+        appDir: resolve("packages/desktop"),
+        home: desktopHome,
+      });
+    }
     localWindow = await findCodeShellWindow(desktop);
     const viewOnly = localWindow.getByRole("button", { name: /仅查看|View only/i });
     if (
@@ -537,10 +583,21 @@ try {
 } finally {
   await browser?.close();
   if (desktop) {
-    await desktop.evaluate(({ app }) => app.exit(0)).catch(() => {});
-    await desktop.close().catch(() => {});
+    let timer;
+    await Promise.race([
+      desktop.close().catch(() => {}),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, 5000);
+      }),
+    ]);
+    clearTimeout(timer);
+    const child = desktop.process();
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGKILL");
+      await new Promise((resolve) => child.once("exit", resolve));
+    }
   }
   await hub?.close();
   await app.close();
-  await rm(root, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 }
