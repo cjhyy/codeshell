@@ -340,6 +340,8 @@ export async function linkActionTool(
       live.meta?.linkProvider === providerId &&
       live.meta?.linkAccountId === connection.credential.meta?.linkAccountId &&
       live.meta?.linkOAuthState !== "reconnect" &&
+      (!live.meta?.linkCapabilityIds ||
+        live.meta.linkCapabilityIds.includes(`${providerId}.${actionId}`)) &&
       allowsLinkAction(live, providerId, actionId) &&
       live.meta?.linkLastVerifiedAt === connection.credential.meta?.linkLastVerifiedAt,
     );

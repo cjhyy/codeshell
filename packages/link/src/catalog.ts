@@ -39,8 +39,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     displayName: "GitHub",
     category: "developer",
     description: text(
-      "读取仓库、文件、Issue 和 Pull Request。",
-      "Read repositories, files, issues, and pull requests.",
+      "读取仓库、文件、Issue 和 Pull Request；可审批创建 Issue、设置当前账号的 Star。",
+      "Read repositories, files, issues, and pull requests; approve issue creation and account Star changes.",
     ),
     brandText: "GH",
     icon: "github",
@@ -99,8 +99,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
           flow: "device-code",
           displayName: text("在浏览器登录 GitHub", "Sign in to GitHub in your browser"),
           summary: text(
-            "无需安装 gh。CodeShell 显示一次性验证码，你在 GitHub 完成授权后即可连接。",
-            "No gh installation required. CodeShell shows a one-time code and connects after you approve access on GitHub.",
+            "无需安装 gh。CodeShell 显示一次性验证码；Star 功能还需 GitHub App 的 Starring 用户写权限及明确重新连接。",
+            "No gh installation required. CodeShell shows a one-time code. Star actions additionally need GitHub App Starring user write permission and an explicit reconnect.",
           ),
           docsUrl:
             "https://docs.github.com/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app#using-the-device-flow-to-generate-a-user-access-token",
@@ -114,8 +114,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
           command: "gh",
           displayName: text("使用 GitHub CLI 登录", "Sign in with GitHub CLI"),
           summary: text(
-            "直接复用本机 GitHub CLI 会话，不复制或保存 GitHub Token。",
-            "Reuse the GitHub CLI session on this device without copying or storing its GitHub token.",
+            "复用本机 GitHub CLI 会话；明确连接后可审批创建 Issue、设置当前账号的 Star，不复制或保存 Token。",
+            "Explicitly connect this device’s GitHub CLI session to approve issue creation and account Star changes, without copying or storing its token.",
           ),
           installUrl: "https://cli.github.com/",
           privacyNote: text(

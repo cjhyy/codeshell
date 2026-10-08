@@ -314,7 +314,12 @@ request.on("error", () => { process.exitCode = 1; }); request.end(JSON.stringify
         ["get_repository", "get_starred", "set_starred", "get_starred"],
       );
       const allReceipts = readFileSync(receipts, "utf8").trim().split("\n").map(JSON.parse);
-      assert.ok(allReceipts.length > 1, "Managed CLI must emit guarded child receipts");
+      assert.equal(
+        allReceipts.length,
+        9,
+        "Every managed CLI account check and action must emit a guarded receipt",
+      );
+      assert.equal(new Set(allReceipts.map((receipt) => receipt.pid)).size, 9);
       for (const receipt of allReceipts.slice(1)) {
         assert.equal(receipt.ppid, child.pid);
         assert.equal(receipt.origin, origin);
