@@ -262,7 +262,7 @@ export class EngineRunner implements RunExecutor {
       if (context.signal) {
         context.signal.removeEventListener("abort", onAbort);
       }
-      close();
+      await close();
     }
   }
 }

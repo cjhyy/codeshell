@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "07f6eb195c96e12fc916067b75be609a85e68ccb",
+  "baselineCommit": "28f69b8ed7040f9898e45ec2128e9e43c1467e27",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -785,7 +785,12 @@
         "moduleId": "pet"
       }
     ],
-    "queries": [],
+    "queries": [
+      {
+        "type": "agent/getPetProjectionSnapshot",
+        "moduleId": "pet"
+      }
+    ],
     "observers": [
       "pet"
     ],
@@ -797,6 +802,16 @@
         "kind": "pet",
         "moduleId": "pet"
       }
-    ]
+    ],
+    "lifetimes": {
+      "host": [],
+      "engine": [],
+      "services": [
+        {
+          "moduleId": "coding",
+          "scope": "engine"
+        }
+      ]
+    }
   }
 }

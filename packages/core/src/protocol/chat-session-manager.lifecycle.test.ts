@@ -31,6 +31,38 @@ afterEach(() => {
 });
 
 describe("ChatSessionManager serialized lifecycle", () => {
+  it("shutdown awaits an already evicted Engine and rejects new Session acquisition", async () => {
+    const release = deferred();
+    let disposed = false;
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          isHeadless: () => false,
+          async dispose() {
+            await release.promise;
+            disposed = true;
+          },
+        }) as unknown as Engine,
+    });
+    await manager.getOrCreate("evicted", {});
+    const individual = manager.close("evicted");
+    expect(manager.get("evicted")).toBeUndefined();
+    let closed = false;
+    const shutdown = manager.closeAllAsync();
+    expect(manager.closeAllAsync()).toBe(shutdown);
+    void shutdown.then(() => {
+      closed = true;
+    });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    await expect(manager.getOrCreate("late", {})).rejects.toThrow("closed");
+    release.resolve();
+    await Promise.all([individual, shutdown]);
+    expect(disposed).toBe(true);
+    expect(closed).toBe(true);
+  });
+
   it("keeps process-local Quick Chat alive until its owner explicitly closes it", async () => {
     let engines = 0;
     const manager = new ChatSessionManager({

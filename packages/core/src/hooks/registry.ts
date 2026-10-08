@@ -4,6 +4,7 @@
 
 import type { HookEventName, HookContext, HookResult } from "./events.js";
 import type { PermissionDecision } from "../types.js";
+import { onceDispose, type Dispose } from "../composition/lifetime.js";
 
 export type HookHandler = (ctx: HookContext) => HookResult | Promise<HookResult>;
 
@@ -34,13 +35,23 @@ interface RegisteredHook {
 export class HookRegistry {
   private hooks = new Map<HookEventName, RegisteredHook[]>();
 
-  register(eventName: HookEventName, handler: HookHandler, priority = 0, name?: string): void {
+  register(eventName: HookEventName, handler: HookHandler, priority = 0, name?: string): Dispose {
     if (!this.hooks.has(eventName)) {
       this.hooks.set(eventName, []);
     }
-    this.hooks.get(eventName)!.push({ handler, priority, name });
+    const registration = { handler, priority, name };
+    this.hooks.get(eventName)!.push(registration);
     // Sort by priority descending (highest first)
     this.hooks.get(eventName)!.sort((a, b) => b.priority - a.priority);
+    return onceDispose(() => this.remove(eventName, (item) => item === registration));
+  }
+
+  private remove(eventName: HookEventName, match: (hook: RegisteredHook) => boolean): void {
+    const list = this.hooks.get(eventName);
+    if (!list) return;
+    const next = list.filter((hook) => !match(hook));
+    if (next.length) this.hooks.set(eventName, next);
+    else this.hooks.delete(eventName);
   }
 
   /**
@@ -50,11 +61,7 @@ export class HookRegistry {
    * the handler isn't registered for that event.
    */
   unregister(eventName: HookEventName, handler: HookHandler): void {
-    const list = this.hooks.get(eventName);
-    if (!list) return;
-    const next = list.filter((h) => h.handler !== handler);
-    if (next.length === 0) this.hooks.delete(eventName);
-    else this.hooks.set(eventName, next);
+    this.remove(eventName, (hook) => hook.handler === handler);
   }
 
   /**

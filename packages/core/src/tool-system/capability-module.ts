@@ -1,6 +1,7 @@
 import type { RegisteredTool, StreamEvent } from "../types.js";
 import type { ToolContext } from "./context.js";
 import type { PendingApprovalMetadata } from "../protocol/types.js";
+import type { Dispose } from "../composition/lifetime.js";
 
 export interface ExtensionTool {
   definition: RegisteredTool;
@@ -62,5 +63,5 @@ export interface ProtocolObserverHost {
   /** Server → client notification. */
   notify: (method: string, params: Record<string, unknown>) => void;
   /** Register a protocol-method/query alias handled by this extension. */
-  registerQuery: (type: string, handler: ExtensionQueryHandler) => void;
+  registerQuery: (type: string, handler: ExtensionQueryHandler) => Dispose;
 }

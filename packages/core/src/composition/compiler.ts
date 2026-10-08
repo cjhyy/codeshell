@@ -1,6 +1,7 @@
 import { CompositionError } from "../exceptions.js";
 import { DEFAULT_AGENT_PRESET, type AgentPreset } from "../preset/index.js";
 import { CORE_AGENT_MODULE } from "./core-module.js";
+import { freezeDeclarations } from "./freeze.js";
 import { computeCompositionDigest, toCompositionSnapshot } from "./snapshot.js";
 import type {
   AgentModule,
@@ -62,8 +63,8 @@ function moduleDiagnostics(registered: RegisteredModule[]): CompositionDiagnosti
   const diagnostics: CompositionDiagnostic[] = [];
   for (const { module, resolved } of registered) {
     if (resolved.source === "core") continue;
-    const hasEngine = module.engine !== undefined;
-    const hasProtocol = module.protocol !== undefined;
+    const hasEngine = module.engine !== undefined || module.activateEngine !== undefined;
+    const hasProtocol = module.protocol !== undefined || module.activateHost !== undefined;
     if (!hasEngine && !hasProtocol) {
       diagnostics.push({
         code: "empty_module",
@@ -254,6 +255,20 @@ function collectEngine(
     })),
   );
 
+  for (const { module } of registered) {
+    const service = module.engine?.privateService;
+    if (service && service.scope !== "engine" && service.scope !== "session") {
+      throw new CompositionError(
+        `Invalid private service scope for module "${module.id}": ${service.scope}`,
+        {
+          code: "invalid_service_scope",
+          key: String(service.scope),
+          firstModuleId: module.id,
+        },
+      );
+    }
+  }
+
   return {
     tools,
     presets,
@@ -267,7 +282,7 @@ function collectEngine(
     hooks,
     behaviorProfiles,
     toolSelectionAdjusters: collectSingle(registered, (m) => m.engine?.adjustToolSelection),
-    toolServices: collectSingle(registered, (m) => m.engine?.createToolService),
+    toolServices: collectSingle(registered, (m) => m.engine?.privateService),
   };
 }
 
@@ -298,11 +313,13 @@ export function compileComposition(options: CompileCompositionOptions = {}): Res
   const protocol = collectProtocol(registered);
   const draft = {
     version: 1 as const,
-    modules: Object.freeze(registered.map((r) => r.resolved)),
+    modules: registered.map((r) => r.resolved),
     engine,
     protocol,
-    diagnostics: Object.freeze(diagnostics),
+    diagnostics,
+    hostActivators: collectSingle(registered, (m) => m.activateHost),
+    engineActivators: collectSingle(registered, (m) => m.activateEngine),
   };
   const digest = computeCompositionDigest(toCompositionSnapshot(draft));
-  return Object.freeze({ ...draft, digest });
+  return freezeDeclarations({ ...draft, digest });
 }

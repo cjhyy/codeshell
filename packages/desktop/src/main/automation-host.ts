@@ -292,8 +292,9 @@ export function buildDesktopAutomationRunner(
       backendPreference: "dedicated-playwright",
       title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
+    let engine: Engine | undefined;
     try {
-      const engine = new Engine({
+      engine = new Engine({
         llm,
         cwd: jobCwd,
         workspaceContext: workspace.workspaceContext,
@@ -392,7 +393,11 @@ export function buildDesktopAutomationRunner(
         throw err;
       }
     } finally {
-      browserLease.release();
+      try {
+        await engine?.dispose();
+      } finally {
+        browserLease.release();
+      }
     }
   };
 }

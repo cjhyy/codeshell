@@ -70,7 +70,7 @@ import {
 } from "./host-actions.js";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
 import { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
-import { PET_REPORT_TO_MIMI_METHOD } from "./protocol.js";
+import { PET_REPORT_TO_MIMI_METHOD, GET_PET_PROJECTION_SNAPSHOT_METHOD } from "./protocol.js";
 import {
   requestMimiDeliveryAvailability,
   requestMimiDeliveryTool,
@@ -96,7 +96,12 @@ export function createPetModule(): AgentModule {
       behaviorProfiles: legacy.behaviorProfiles,
     },
     protocol: {
-      queries: legacy.queries,
+      queries: {
+        ...legacy.queries,
+        [GET_PET_PROJECTION_SNAPSHOT_METHOD]: () => {
+          throw new Error("Pet projection observer is unavailable");
+        },
+      },
       createObserver: legacy.createProtocolObserver,
       validateRunParams: legacy.validateRunParams,
       hiddenSessionKinds: legacy.hiddenSessionKinds,

@@ -1,8 +1,8 @@
 /**
  * AgentModule — the single trusted product-module interface that unifies
  * CapabilityModule and ExtensionModule (design:
- * docs/todo/agent-module-resolved-composition-design.md). Phase A only adds
- * the types and the pure compiler; no production path consumes them yet.
+ * docs/todo/agent-module-resolved-composition-design.md). Hosts and Engines
+ * consume frozen declarations and own activated resources through lifetime scopes.
  */
 import type {
   CapabilityArtifactDetector,
@@ -24,6 +24,31 @@ import type {
 } from "../tool-system/capability-module.js";
 import type { RunBehaviorProfile } from "../engine/run-types.js";
 import type { HookEventName } from "../hooks/events.js";
+import type { DisposableLike, LifetimeScope } from "./lifetime.js";
+
+export type MaybeDisposable = DisposableLike | Promise<DisposableLike>;
+export interface ModuleActivationContext<THost> {
+  readonly moduleId: string;
+  readonly scope: LifetimeScope;
+  readonly resolved: ResolvedModule;
+  readonly host: THost;
+  own(resource: DisposableLike): void;
+}
+/** No registry or Engine escapes this boundary: activators cannot add declarations. */
+export type HostModuleActivationContext = ModuleActivationContext<
+  Readonly<Omit<ProtocolObserverHost, "registerQuery">>
+>;
+export type EngineModuleActivationContext = ModuleActivationContext<
+  Readonly<CapabilityToolServiceHost>
+>;
+export interface ModuleServiceHost extends CapabilityToolServiceHost {
+  readonly sessionId?: string;
+}
+export interface AgentModulePrivateServiceContribution {
+  readonly scope: "engine" | "session";
+  create(host: ModuleServiceHost): unknown | Promise<unknown>;
+  dispose?(value: unknown): void | Promise<void>;
+}
 
 /**
  * One tool contribution with explicit exposure:
@@ -51,8 +76,7 @@ export interface AgentEngineContributions {
     names: Set<string>,
     context: CapabilityToolSelectionContext,
   ) => void;
-  /** Phase C renames this to privateService with owned lifetime. */
-  readonly createToolService?: (host: CapabilityToolServiceHost) => unknown;
+  readonly privateService?: AgentModulePrivateServiceContribution;
 }
 
 export interface AgentProtocolContributions {
@@ -67,6 +91,8 @@ export interface AgentModule {
   readonly id: string;
   readonly engine?: AgentEngineContributions;
   readonly protocol?: AgentProtocolContributions;
+  activateHost?(context: HostModuleActivationContext): MaybeDisposable;
+  activateEngine?(context: EngineModuleActivationContext): MaybeDisposable;
 }
 
 // ─── Resolved composition ────────────────────────────────────────
@@ -115,9 +141,7 @@ export interface ResolvedEngineComposition {
   readonly toolSelectionAdjusters: readonly ResolvedContribution<
     NonNullable<AgentEngineContributions["adjustToolSelection"]>
   >[];
-  readonly toolServices: readonly ResolvedContribution<
-    NonNullable<AgentEngineContributions["createToolService"]>
-  >[];
+  readonly toolServices: readonly ResolvedContribution<AgentModulePrivateServiceContribution>[];
 }
 
 export interface ResolvedProtocolComposition {
@@ -148,6 +172,12 @@ export interface ResolvedComposition {
   readonly engine: ResolvedEngineComposition;
   readonly protocol: ResolvedProtocolComposition;
   readonly diagnostics: readonly CompositionDiagnostic[];
+  readonly hostActivators: readonly ResolvedContribution<
+    NonNullable<AgentModule["activateHost"]>
+  >[];
+  readonly engineActivators: readonly ResolvedContribution<
+    NonNullable<AgentModule["activateEngine"]>
+  >[];
 }
 
 export interface CompileCompositionOptions {
@@ -178,4 +208,9 @@ export interface CompositionSnapshot {
   observers: string[];
   runValidators: string[];
   hiddenSessionKinds: Array<{ kind: string; moduleId: string }>;
+  lifetimes?: {
+    host: string[];
+    engine: string[];
+    services: Array<{ moduleId: string; scope: "engine" | "session" }>;
+  };
 }

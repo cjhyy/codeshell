@@ -8,7 +8,8 @@ import type { CompositionSnapshot, ResolvedComposition } from "./types.js";
  * Unkeyed by design: the snapshot carries no secrets (design §11.2).
  */
 export function toCompositionSnapshot(
-  composition: Pick<ResolvedComposition, "modules" | "engine" | "protocol">,
+  composition: Pick<ResolvedComposition, "modules" | "engine" | "protocol"> &
+    Partial<Pick<ResolvedComposition, "hostActivators" | "engineActivators">>,
 ): CompositionSnapshot {
   return {
     version: 1,
@@ -45,6 +46,20 @@ export function toCompositionSnapshot(
       kind: k.key,
       moduleId: k.moduleId,
     })),
+    ...(composition.hostActivators?.length ||
+    composition.engineActivators?.length ||
+    composition.engine.toolServices.length
+      ? {
+          lifetimes: {
+            host: composition.hostActivators?.map((c) => c.moduleId) ?? [],
+            engine: composition.engineActivators?.map((c) => c.moduleId) ?? [],
+            services: composition.engine.toolServices.map((c) => ({
+              moduleId: c.moduleId,
+              scope: c.value.scope,
+            })),
+          },
+        }
+      : {}),
   };
 }
 

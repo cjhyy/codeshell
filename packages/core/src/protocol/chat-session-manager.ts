@@ -173,6 +173,8 @@ export class ChatSessionManager {
   /** Construction options retained so forIdentity() can derive siblings. */
   private readonly baseOptions: ChatSessionManagerOptions;
   private sweeper: ReturnType<typeof setInterval> | null = null;
+  private shuttingDown = false;
+  private shutdown?: Promise<void>;
 
   constructor(opts: ChatSessionManagerOptions) {
     this.runtime = opts.runtime;
@@ -218,6 +220,7 @@ export class ChatSessionManager {
     options: GetOrCreateSessionOptions = {},
   ): Promise<ChatSession> {
     const assertAccess = () => {
+      if (this.shuttingDown) throw new Error("ChatSessionManager has been closed");
       options.signal?.throwIfAborted();
       if (options.allowReopen === false && this.isUnavailable(sessionId)) {
         throw new Error(`target Session is closing or closed: ${sessionId}`);
@@ -256,6 +259,7 @@ export class ChatSessionManager {
    * Session so Main can perform one durable migration without a re-resume race.
    */
   beginSessionMigration(sessionId: string, ownershipToken: string): SessionMigrationOwnership {
+    if (this.shuttingDown) return { status: "failed", error: "ChatSessionManager has been closed" };
     if (this.residentMigrations.has(sessionId)) {
       return { status: "failed", error: `Session ${sessionId} migration is already in progress` };
     }
@@ -274,6 +278,15 @@ export class ChatSessionManager {
     });
     this.migrationClaims.set(sessionId, { ownershipToken, released, release });
     return { status: "not-resident", ownershipToken };
+  }
+
+  /** Idle eviction releases asynchronous module resources before Main acquires migration ownership. */
+  async beginSessionMigrationAfterClose(
+    sessionId: string,
+    ownershipToken: string,
+  ): Promise<SessionMigrationOwnership> {
+    while (this.closingSessions.has(sessionId)) await this.closingSessions.get(sessionId);
+    return this.beginSessionMigration(sessionId, ownershipToken);
   }
 
   /** Release only the exact claim minted for this Session. */
@@ -371,9 +384,15 @@ export class ChatSessionManager {
   ): Promise<ChatSession | null> {
     const existing = this.sessions.get(sessionId);
     if (existing) return existing;
+    if (this.shuttingDown) throw new Error("ChatSessionManager has been closed");
     const probe = this.factory(slice as EngineConfigSlice);
-    if (!probe.sessionExistsOnDisk(sessionId)) return null;
-    const cwd = probe.getSessionManager().readSessionMainRoot(sessionId);
+    let cwd: string | undefined;
+    try {
+      if (!probe.sessionExistsOnDisk(sessionId)) return null;
+      cwd = probe.getSessionManager().readSessionMainRoot(sessionId);
+    } finally {
+      await this.disposeEngine(probe, sessionId);
+    }
     if (!cwd) return null;
     const session = await this.getOrCreate(sessionId, {
       ...slice,
@@ -507,13 +526,15 @@ export class ChatSessionManager {
     const s = this.sessions.get(sessionId);
     if (!s) {
       if (sessionId.startsWith("qchat-")) {
+        let temporary: Engine | undefined;
         try {
-          this.engineSessionManager(
-            this.factory({} as EngineConfigSlice),
-          )?.forgetEphemeralSession?.(sessionId);
+          temporary = this.factory({} as EngineConfigSlice);
+          this.engineSessionManager(temporary)?.forgetEphemeralSession?.(sessionId);
         } catch {
           // Closing an already-expired process-local chat is idempotent.
         }
+        if (markClosed) this.rememberClosedSession(sessionId);
+        return temporary ? this.disposeEngine(temporary, sessionId) : Promise.resolve();
       }
       if (markClosed) this.rememberClosedSession(sessionId);
       return Promise.resolve();
@@ -530,21 +551,22 @@ export class ChatSessionManager {
     clearInjectCredentialSessionAllow(sessionId);
     const finishClose = () => {
       sessionManager?.forgetEphemeralSession?.(sessionId);
-      this.unregisterMcpOwner(s);
       if (this.sessions.get(sessionId) === s) this.sessions.delete(sessionId);
       if (markClosed) this.rememberClosedSession(sessionId);
       else this.closedSessions.delete(sessionId);
       this.sessionGeneration.delete(sessionId);
       this.sessionSlices.delete(sessionId);
+      return this.disposeEngine(s.engine, sessionId);
     };
     if (!s.isBusy()) {
-      finishClose();
-      return Promise.resolve();
+      const closing = finishClose().finally(() => this.closingSessions.delete(sessionId));
+      this.closingSessions.set(sessionId, closing);
+      return closing;
     }
     const closing = (async () => {
       try {
         await s.settled;
-        finishClose();
+        await finishClose();
       } finally {
         this.closingSessions.delete(sessionId);
       }
@@ -577,21 +599,36 @@ export class ChatSessionManager {
    * shell, *waiting* for the kill grace so a caller that exits the process
    * immediately afterward (the TUI REPL) doesn't orphan detached dev servers.
    */
-  async closeAllAsync(): Promise<void> {
+  closeAllAsync(): Promise<void> {
+    if (this.shutdown) return this.shutdown;
+    this.shuttingDown = true;
+    this.stopIdleSweeper();
+    this.shutdown = this.finishShutdown();
+    return this.shutdown;
+  }
+
+  private async finishShutdown(): Promise<void> {
     for (const [sessionId, claim] of [...this.migrationClaims]) {
       this.completeSessionMigration(sessionId, claim.ownershipToken);
     }
-    await Promise.all([...this.sessions.keys()].map((id) => this.close(id)));
+    const currentClosures = [...this.sessions.keys()].map((id) => this.close(id));
+    const results = await Promise.allSettled(
+      new Set([...currentClosures, ...this.closingSessions.values()]),
+    );
     // App/worker shutdown — reap every background shell so a detached
     // `npm run dev` doesn't outlive the process as an orphan holding a port
     // (design §6 / §难点1). NOTE: deliberately NOT in close()/sweepIdle() —
     // an idle chat tab must keep its dev server alive (§6 "切走再回来 server 还在").
-    await backgroundShellManager.killAll();
+    results.push(...(await Promise.allSettled([backgroundShellManager.killAll()])));
     // Background-agent output files are a debugging convenience, not durable
     // state — wipe them on shutdown so ~/.code-shell/agents doesn't grow
     // unbounded across runs. (notificationQueue, the real result path, is
     // in-memory and already gone.)
-    await clearAgentOutputFiles();
+    results.push(...(await Promise.allSettled([clearAgentOutputFiles()])));
+    const errors = results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+    if (errors.length) throw new AggregateError(errors, "ChatSessionManager shutdown failed");
   }
 
   sessionCount(): number {
@@ -625,22 +662,6 @@ export class ChatSessionManager {
   stopIdleSweeper(): void {
     if (this.sweeper) clearInterval(this.sweeper);
     this.sweeper = null;
-  }
-
-  private unregisterMcpOwner(session: ChatSession): void {
-    const mcpPool = (
-      this.runtime as {
-        mcpPool?: { unregisterOwner?: (owner: unknown) => Promise<void> };
-      }
-    ).mcpPool;
-    if (typeof mcpPool?.unregisterOwner !== "function") return;
-    void mcpPool.unregisterOwner(session.engine).catch((err) => {
-      logger.warn("chat_session.mcp_owner_unregister_failed", {
-        sessionId: session.id,
-        identity: this.identity,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
   }
 
   private async disposeEngine(engine: Engine, sessionId: string): Promise<void> {
