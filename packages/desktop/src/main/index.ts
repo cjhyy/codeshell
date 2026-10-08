@@ -843,7 +843,6 @@ let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
-let taskInboxService: ReturnType<typeof createTaskInboxService> | undefined;
 const taskInboxDisposers: Array<() => void> = [];
 const taskInboxAutomationSessions = new Map<string, string>();
 let petImDecisions: PetImDecisions | null = null;
@@ -2733,9 +2732,9 @@ const PET_AUTO_ARCHIVE_IDLE_DAYS = 7;
  * `maxPages` is a runaway guard, not a cap: hitting it is logged rather than
  * silently truncating.
  */
-async function listAllDiskSessions(): Promise<
-  Awaited<ReturnType<typeof listDiskSessions>>["sessions"]
-> {
+async function listAllDiskSessions(
+  opts: { includeSubagents?: boolean } = {},
+): Promise<Awaited<ReturnType<typeof listDiskSessions>>["sessions"]> {
   const pageSize = 500;
   const maxPages = 200;
   const all: Awaited<ReturnType<typeof listDiskSessions>>["sessions"] = [];
@@ -2744,6 +2743,7 @@ async function listAllDiskSessions(): Promise<
     const result = await listDiskSessions({
       limit: pageSize,
       includeArchived: true,
+      ...(opts.includeSubagents ? { includeSubagents: true } : {}),
       ...(cursor ? { cursor } : {}),
     });
     all.push(...result.sessions);
@@ -6843,7 +6843,7 @@ function taskInboxEnabled(): boolean {
   return settings.featureFlags?.taskInboxV1 !== false;
 }
 const taskInboxSources = createTaskInboxSources({
-  diskSessions: listAllDiskSessions,
+  diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
   sessionCatalog: () => sessionCatalogStore.load(),
   sessionProjection: () => petStateAggregator?.getSnapshot(),
   native: {
@@ -6894,7 +6894,7 @@ const taskInboxSources = createTaskInboxSources({
   },
   background: createTaskInboxBackgroundHost({ worker: () => bridge }),
 });
-taskInboxService = createTaskInboxService({
+const taskInboxService = createTaskInboxService({
   filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
   ...taskInboxSources,
   enabled: taskInboxEnabled,
