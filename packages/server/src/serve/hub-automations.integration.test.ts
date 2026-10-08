@@ -30,6 +30,72 @@ async function until<T>(read: () => Promise<T>, predicate: (value: T) => boolean
   }
 }
 
+async function callAutomation(
+  method: string,
+  request: () => Promise<Response>,
+  pollingRead = false,
+) {
+  const response = await request();
+  const body = (await response.json()) as any;
+  // The live Worker atomically replaces state.json. The Host's inode check
+  // intentionally rejects a changing authorization snapshot; only this bounded
+  // list poll treats that exact response as not ready. Never retry a mutation.
+  if (
+    pollingRead &&
+    method === "list" &&
+    response.status === 400 &&
+    body?.code === "OPERATION_FAILED" &&
+    body?.error === "会话存储正在变化，请重试。"
+  )
+    return undefined;
+  expect(response.status, JSON.stringify(body)).toBe(200);
+  return body;
+}
+
+test("automation list polling only waits for the exact changing-storage read rejection", async () => {
+  const pending = { code: "OPERATION_FAILED", error: "会话存储正在变化，请重试。" };
+  let reads = 0;
+  const ready = { automations: [{ lastExecution: { status: "completed" } }] };
+  const result = await until(
+    () =>
+      callAutomation(
+        "list",
+        async () => {
+          reads++;
+          return Response.json(reads === 1 ? pending : ready, { status: reads === 1 ? 400 : 200 });
+        },
+        true,
+      ),
+    (value) => value?.automations[0].lastExecution.status === "completed",
+  );
+  expect(result).toEqual(ready);
+  expect(reads).toBe(2);
+  for (const [method, status, body, pollingRead] of [
+    ["list", 400, pending, false],
+    ["list", 400, { ...pending, error: "different failure" }, true],
+    ["list", 400, { ...pending, code: "PERMISSION_DENIED" }, true],
+    ["list", 401, pending, true],
+    ["list", 403, pending, true],
+    ["runNow", 400, pending, true],
+    ["createUnique", 400, pending, true],
+    ["updateIfRevision", 400, pending, true],
+    ["deleteIfRevision", 400, pending, true],
+  ] as const) {
+    let calls = 0;
+    await expect(
+      callAutomation(
+        method,
+        async () => {
+          calls++;
+          return Response.json(body, { status });
+        },
+        pollingRead,
+      ),
+    ).rejects.toThrow();
+    expect(calls).toBe(1);
+  }
+});
+
 test("Hub HTTP automation owns a real shared Worker Session across logout, competing runs and restart", async () => {
   const root = mkdtempSync(join(tmpdir(), "hub-automation-real-"));
   const priorHome = process.env.HOME;
@@ -192,12 +258,10 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
       return `/api/v1/panels/runtime/${body.instanceId}/call`;
     };
     let endpoint = await prepare();
-    const call = async (method: string, params?: unknown) => {
-      const response = await api(endpoint, "POST", { method: `automations.${method}`, params });
-      const body = (await response.json()) as any;
-      expect(response.status, JSON.stringify(body)).toBe(200);
-      return body;
-    };
+    const call = (method: string, params?: unknown) =>
+      callAutomation(method, () =>
+        api(endpoint, "POST", { method: `automations.${method}`, params }),
+      );
     const definition = {
       name: "Cloud check",
       prompt: "Write the proof file.",
@@ -279,10 +343,14 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
     gate.resolve();
     const completed = await until(
       async () => {
-        const value = await call("list");
-        return (value.result ?? value).automations[0];
+        const value = await callAutomation(
+          "list",
+          () => api(endpoint, "POST", { method: "automations.list" }),
+          true,
+        );
+        return value === undefined ? undefined : (value.result ?? value).automations[0];
       },
-      (value) => value.lastExecution?.status === "completed",
+      (value) => value?.lastExecution?.status === "completed",
     );
     expect(readFileSync(proof, "utf8")).toBe("cloud automation completed\n");
     expect(completed.id).toBe(job.id);
