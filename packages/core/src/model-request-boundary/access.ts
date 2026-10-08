@@ -37,6 +37,7 @@ export function createEphemeralModelRequestSigner(): ModelRequestSigner {
 export function createIpcModelRequestSigner(
   transport: Pick<Transport, "send" | "onMessage">,
 ): ModelRequestSigner {
+  let disposed = false;
   const pending = new Map<
     string,
     {
@@ -46,6 +47,7 @@ export function createIpcModelRequestSigner(
     }
   >();
   transport.onMessage((message) => {
+    if (disposed) return;
     if (!("id" in message) || "method" in message) return;
     const waiter = pending.get(String(message.id));
     if (!waiter) return;
@@ -58,6 +60,10 @@ export function createIpcModelRequestSigner(
   return {
     sign: (input) =>
       new Promise((resolve, reject) => {
+        if (disposed) {
+          reject(new Error("Host request signing closed"));
+          return;
+        }
         const id = `request-proof-${randomUUID()}`;
         const timer = setTimeout(() => {
           pending.delete(id);
@@ -77,5 +83,14 @@ export function createIpcModelRequestSigner(
           reject(new Error("Host request signing unavailable"));
         }
       }),
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      for (const waiter of pending.values()) {
+        clearTimeout(waiter.timer);
+        waiter.reject(new Error("Host request signing closed"));
+      }
+      pending.clear();
+    },
   };
 }

@@ -401,12 +401,12 @@ if (process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local") {
 }
 // Desktop pins Host custody even if a shell inherited the headless credential
 // override. Local credential selection must never downgrade request key custody.
-if (
+const requestSigner =
   process.env.CODE_SHELL_MODEL_REQUEST_SIGNING === "host" ||
   process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local"
-) {
-  setDefaultModelRequestSigner(createIpcModelRequestSigner(stdioTransport));
-}
+    ? createIpcModelRequestSigner(stdioTransport)
+    : undefined;
+if (requestSigner) setDefaultModelRequestSigner(requestSigner);
 setCronCreateAuthority(createDesktopAutomationAuthorityClient(stdioTransport));
 
 // Cron jobs are persisted by this worker but only main arms/executes their
@@ -470,6 +470,8 @@ const agentServer = new AgentServer({
 installGracefulShutdown(
   {
     async close() {
+      // Release outstanding Main roundtrips before awaiting active Engine runs.
+      requestSigner?.dispose?.();
       try {
         await agentServer.close();
       } finally {

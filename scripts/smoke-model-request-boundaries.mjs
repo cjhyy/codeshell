@@ -635,7 +635,7 @@ if (process.argv[2] !== "--consume") {
     custodyMode: "host-encrypted",
   });
   const workerStorage = join(root, "data", "sessions");
-  function worker() {
+  function worker({ pauseSigning = false } = {}) {
     const childEnv = {
       ...env,
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
@@ -651,6 +651,8 @@ if (process.argv[2] !== "--consume") {
       buffer = "",
       errors = "";
     const pending = new Map();
+    let observePausedSigning;
+    const pausedSigning = new Promise((done) => (observePausedSigning = done));
     child.stderr.on("data", (part) => (errors += part));
     child.stdout.on("data", (part) => {
       buffer += part;
@@ -661,6 +663,10 @@ if (process.argv[2] !== "--consume") {
         if (!line.trim()) continue;
         const message = JSON.parse(line);
         if (message.method === "desktop/modelRequestSign") {
+          if (pauseSigning) {
+            observePausedSigning();
+            continue;
+          }
           void (async () => {
             try {
               host.assertDurableRequestOwner(message.params.subject, workerStorage);
@@ -693,6 +699,7 @@ if (process.argv[2] !== "--consume") {
       }
     });
     return {
+      pausedSigning,
       async request(method, params) {
         await guardReceipt(child, env, origin);
         const id = ++serial;
@@ -753,6 +760,24 @@ if (process.argv[2] !== "--consume") {
     );
     assert.equal(afterRestart.boundaries.at(-1).data.keyId, beforeRestart.boundaries[0].data.keyId);
     assert.equal(afterRestart.boundaries.at(-1).data.custodyMode, "host-encrypted");
+    // EOF while Main has not replied must cancel IPC before session shutdown,
+    // without waiting for the signer's normal 15-second timeout or sending.
+    const beforeClose = readLines(join(root, "requests.jsonl")).length;
+    current = worker({ pauseSigning: true });
+    const closingRun = current
+      .request("agent/run", {
+        sessionId: "proof-worker-close",
+        clientMessageId: "worker-close",
+        task: "proof-worker-close: pending Host signer",
+        cwd: root,
+      })
+      .catch(() => undefined);
+    await current.pausedSigning;
+    const closingAt = performance.now();
+    await current.close();
+    assert.ok(performance.now() - closingAt < 4_000, "worker retained pending signing timer");
+    await closingRun;
+    assert.equal(readLines(join(root, "requests.jsonl")).length, beforeClose);
     const tuiEnv = { ...env, CODE_SHELL_CREDENTIAL_ACCESS: "local" };
     const tui = spawn(
       process.execPath,
