@@ -570,3 +570,71 @@ describe("LinkAction tool", () => {
     }
   });
 });
+
+test("refreshable local OAuth uses Host execution without resolving any token and retains write approval", async () => {
+  const base = githubAccess({ connected: true, resolveCalls: 0 });
+  const credential = {
+    ...base.listMasked(cwd, "full")[0]!,
+    meta: {
+      ...base.listMasked(cwd, "full")[0]!.meta,
+      linkAuthSource: "browser-oauth" as const,
+      linkOAuthState: "connected" as const,
+      linkCapabilityIds: ["github.get_issue", "github.create_issue"],
+    },
+    oauthStatus: { state: "expired" as const, hasRefreshToken: true, canRefresh: true },
+  };
+  let actions = 0,
+    resolutions = 0;
+  setDefaultCredentialAccess({
+    ...base,
+    listMasked: () => [credential],
+    resolveMeta: () => credential,
+    resolveValue: async () => {
+      resolutions++;
+      throw new Error("must stay Host-owned");
+    },
+    executeLocalOAuthLinkAction: async (input, options) => {
+      actions++;
+      expect(input.accountId).toBe("42");
+      expect(input.verifiedAt).toBe(credential.meta.linkLastVerifiedAt!);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+      return { number: 1, title: "Issue" };
+    },
+  });
+  const read = JSON.parse(
+    await linkActionTool(
+      {
+        provider: "github",
+        action: "get_issue",
+        params: { owner: "acme", repo: "demo", issue_number: 1 },
+      },
+      context(),
+    ),
+  );
+  expect(read.kind).toBe("action_result");
+  const write = {
+    provider: "github",
+    action: "create_issue",
+    params: { owner: "acme", repo: "demo", title: "Approved" },
+  };
+  expect(JSON.parse(await linkActionTool(write, context())).kind).toBe("error");
+  expect(
+    JSON.parse(
+      await linkActionTool(
+        write,
+        context(async () => "取消"),
+      ),
+    ).kind,
+  ).toBe("cancelled");
+  expect(actions).toBe(1);
+  expect(
+    JSON.parse(
+      await linkActionTool(
+        write,
+        context(async () => "允许执行"),
+      ),
+    ).kind,
+  ).toBe("action_result");
+  expect(actions).toBe(2);
+  expect(resolutions).toBe(0);
+});

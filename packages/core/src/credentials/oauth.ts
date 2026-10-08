@@ -238,6 +238,12 @@ export function summarizeOAuthCredentialSecret(
     return {
       ...status,
       hasRefreshToken: Boolean(parsed.refreshToken),
+      canRefresh: Boolean(
+        parsed.refreshToken &&
+        parsed.tokenEndpoint &&
+        parsed.clientId &&
+        (!parsed.refreshTokenExpiresAt || Date.parse(parsed.refreshTokenExpiresAt) > nowMs(opts)),
+      ),
       tokenEndpoint: parsed.tokenEndpoint,
       clientId: parsed.clientId,
       scope: parsed.scope,

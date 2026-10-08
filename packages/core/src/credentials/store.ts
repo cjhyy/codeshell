@@ -6,8 +6,10 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import {
   credentialAllowsEnvExposure,
@@ -175,6 +177,19 @@ export class CredentialStore {
     }
     if (!this.cwd) return undefined;
     return join(this.cwd, ".code-shell", "credentials.json");
+  }
+
+  /** Opaque identity for an existing persistent record, shared by Store instances. */
+  recordIdentity(scope: CredentialScope, id: string): string {
+    const path = this.pathFor(scope);
+    if (!path) throw new Error("credential store scope is unavailable");
+    return createHash("sha256")
+      .update(realpathSync(path))
+      .update("\0")
+      .update(scope)
+      .update("\0")
+      .update(id)
+      .digest("hex");
   }
 
   /**

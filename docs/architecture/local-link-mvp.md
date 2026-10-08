@@ -137,3 +137,39 @@ Open Connector 当前公开仓库仍以产品说明为主，源码未公开，�
 4. 新增 `ServerLinkExecutor`；路由按 Action capability 选择具体 `connectionId`，不只选择 runtime。
 5. GitHub App 作为第二个 `connectionMethod` 接入；Actions 和桌面卡片保持不变。
 6. 支持同一 Provider 同一 runtime 多账号，并在聊天或项目 binding 中明确选择账号。
+
+## 本地设备 OAuth 刷新（2026-10-09）
+
+GitHub App 与 GitLab 的本地设备授权保存结构化 token/expiry/client 信息，Core 的
+`executeLocalOAuthLinkAction` 在凭证所属 Host 执行刷新与 Action。Desktop worker 只发送连接 ID、
+已验证账号 ID、验证代次、action 和参数；不会得到 access/refresh token。TUI 与纯 Node Host
+通过同一 Core 执行器调用。有效且无需轮换的长效 access token 继续直接使用。
+
+访问 token 在 60 秒内过期时，实际 Action 先完成一次串行刷新；状态查询和卡片快照只读元数据，
+不连接、登录或轮换。明确的 HTTP 401 只允许 read/discovery 在刷新后重试一次；写入 Action
+仍逐次请求用户批准，发出后不自动刷新并重放。403、429 和网络错误不触发读重试。
+
+刷新前通过 CredentialStore CAS 持久写入 `linkOAuthState: refreshing`，释放文件锁后才发送
+固定 HTTPS token endpoint 请求。同一物理文件、层和凭证 ID 的轮换在进程内合并为一个 Promise；发现其他记录复制相同
+refresh token 时，CAS 持久标为 reconnect，既不并发轮换，也不把新 token 转交其他账号绑定。
+本进程保留最多 4096 个已消费 token 摘要收据，达到上限拒绝新轮换而不淘汰旧摘要，
+因此轮换完成后才出现的副本也不能在本进程重放。该收据不跨进程共享；不同 storage 的
+未知备份副本、独立进程及被外部恢复的旧文件不能由本地执行器证明全局唯一。已发现副本
+的 reconnect 状态与原记录的旋转标记会持久保留。独立进程或重启后的
+悬挂标记不重放旧 refresh token。网络中断、响应丢失、解析失败或账号漂移进入 `reconnect`。
+刷新成功也必须 CAS 匹配原记录才能保存，不能覆盖撤销、替换或权限变更。轮换期间的调用方取消
+允许共享的凭证更新完成，但阻止该调用继续发送 Action；Desktop 内部取消 RPC 传递相同边界。
+
+旋转后请求固定 `/user` 核对原 account ID，scope 必须是原 scope 的子集；GitLab 丢失
+`read_api`/`api` 时移除本地能力，不能继续执行。GitHub App 使用 App 权限而非普通 OAuth scope，
+空 scope 不被解释为任意扩权。返回 Action 结果前再次核对账号、验证代次与能力。
+
+协议依据：[GitHub 设备授权 token 刷新](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens)
+允许省略 device flow 的 client_secret，并轮换两个 token；[GitLab OAuth 2.0](https://docs.gitlab.com/api/oauth2/)
+公开客户端不保存 client_secret，refresh grant 轮换原 token。GitLab 刷新显式携带当前 scope，
+避免服务器按原始 refresh grant 恢复已经缩小的权限；实现依据
+[GitLab 的 Doorkeeper 配置](https://gitlab.com/gitlab-org/gitlab/-/raw/master/config/initializers/doorkeeper.rb)
+与 [Doorkeeper refresh grant](https://github.com/doorkeeper-gem/doorkeeper/blob/main/lib/doorkeeper/oauth/refresh_token_request.rb)，
+设备授权没有初始 redirect_uri。没有 refresh token、刷新 token 已到期
+或 Host 遗留未知轮换状态时，需要重新进行设备授权。HTTP fixtures 使用合成账号和 token，
+实际账号可用性仍以真实 provider 授权验收为准。

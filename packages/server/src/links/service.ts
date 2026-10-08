@@ -256,11 +256,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         : undefined;
     const remote = isRemoteLinkCredential(credential);
     const status =
-      remote && meta.linkRemoteState !== "connected"
+      (remote && meta.linkRemoteState !== "connected") ||
+      (meta.linkAuthSource === "browser-oauth" &&
+        meta.linkOAuthState &&
+        meta.linkOAuthState !== "connected") ||
+      (meta.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0)
         ? "unavailable"
         : !isCredentialSecretAvailable(credential.secret)
           ? "unavailable"
-          : oauth?.state === "expired"
+          : oauth?.state === "expired" && !oauth.canRefresh
             ? "expired"
             : oauth?.state === "invalid" || oauth?.state === "missing"
               ? "invalid"
