@@ -12,8 +12,16 @@ export function createTaskInboxService(options: {
   onError?: (error: unknown) => void;
 }) {
   const store = createTaskInboxStore({ filePath: options.filePath });
-  const projector = createTaskInboxProjector({ store, readers: options.readers });
-  const actions = createTaskInboxActions({ projector, adapters: options.adapters });
+  const projector = createTaskInboxProjector({
+    store,
+    readers: options.readers,
+    onError: (_source, error) => options.onError?.(error),
+  });
+  const actions = createTaskInboxActions({
+    projector,
+    adapters: options.adapters,
+    onProjectionError: options.onError,
+  });
   let closed = false;
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let sweepTimer: ReturnType<typeof setInterval> | undefined;
@@ -54,6 +62,7 @@ export function createTaskInboxService(options: {
       if (sweepTimer) clearInterval(sweepTimer);
       refreshTimer = undefined;
       sweepTimer = undefined;
+      projector.dispose();
     },
   };
 }

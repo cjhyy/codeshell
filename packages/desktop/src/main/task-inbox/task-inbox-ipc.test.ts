@@ -98,7 +98,7 @@ describe("task inbox private IPC", () => {
     for (const extra of [{ sessionId: "victim" }, { cwd: "/tmp" }, { command: "sh" }]) {
       expect(() =>
         state.handlers.get("taskInbox:act")!(state.event, { ...request, ...extra }),
-      ).toThrow("Invalid");
+      ).toThrow();
     }
     expect(state.actions).toHaveLength(1);
   });

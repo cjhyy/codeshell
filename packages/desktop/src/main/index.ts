@@ -388,11 +388,9 @@ import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
-import {
-  createTaskInboxSources,
-  type TaskInboxBackgroundEntry,
-} from "./task-inbox/task-inbox-sources.js";
+import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
+import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
 import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
@@ -6894,50 +6892,7 @@ const taskInboxSources = createTaskInboxSources({
       await externalRuntimeService.interrupt(id);
     },
   },
-  background: {
-    available: () => !!bridge?.hasLiveWorker(),
-    list: async () => {
-      if (!bridge?.hasLiveWorker()) throw new Error("Background worker is unavailable");
-      const result = await bridge.requestWorker(
-        "agent/backgroundWork",
-        { sessionId: "task-inbox", scope: "all" },
-        5_000,
-        {
-          failFast: true,
-          settleOnExit: true,
-          meta: { origin: "host", producer: "task-inbox" },
-        },
-      );
-      if (!result.ok) throw new Error(result.message);
-      const value = result.result as { items?: TaskInboxBackgroundEntry[] };
-      if (!Array.isArray(value?.items)) throw new Error("Invalid background task snapshot");
-      return value.items;
-    },
-    cancel: async (entry) => {
-      if (!bridge?.hasLiveWorker()) return false;
-      const result = await bridge.requestWorker(
-        "agent/backgroundWorkCancel",
-        {
-          sessionId: entry.sourceSession.sessionId,
-          kind: entry.kind,
-          workId:
-            entry.kind === "shell"
-              ? entry.shell.shellId
-              : entry.kind === "subagent"
-                ? entry.agentId
-                : entry.jobId,
-          expectedStartedAt: entry.kind === "shell" ? entry.shell.startedAt : entry.startedAt,
-          ...(entry.kind === "subagent"
-            ? { expectedRuntimeGeneration: entry.runtimeGeneration }
-            : {}),
-        },
-        15_000,
-        { failFast: true, settleOnExit: true, meta: { origin: "host", producer: "task-inbox" } },
-      );
-      if (!result.ok) throw new Error(result.message);
-      return (result.result as { cancelled?: boolean })?.cancelled === true;
-    },
-  },
+  background: createTaskInboxBackgroundHost({ worker: () => bridge }),
 });
 taskInboxService = createTaskInboxService({
   filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
