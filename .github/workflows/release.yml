@@ -145,7 +145,10 @@ jobs:
             artifact: linux
           - os: macos-latest
             artifact: mac
-          - os: windows-latest
+          # windows-latest now ships VS 2026. The locked electron-builder chain
+          # uses node-gyp 9, which recognizes VS 2022 but not VS 2026; retain the
+          # supported native compiler until that toolchain is upgraded together.
+          - os: windows-2022
             artifact: windows
     runs-on: ${{ matrix.os }}
     steps:

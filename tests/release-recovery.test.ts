@@ -86,6 +86,20 @@ describe("release recovery source gate", () => {
     });
     await expect(fixture.validate()).rejects.toThrow("Source prerequisite did not succeed");
   });
+  test("accepts the pinned Windows runner but rejects duplicate or failed Windows builds", async () => {
+    const fixture = sourceFixture();
+    fixture.jobs[4]!.name = "package (windows-2022)";
+    expect(await fixture.validate()).toEqual({ sha, artifactIds: "1,2,3" });
+    fixture.jobs[4]!.conclusion = "failure";
+    await expect(fixture.validate()).rejects.toThrow("Source prerequisite did not succeed");
+    fixture.jobs[4]!.conclusion = "success";
+    fixture.jobs.push({
+      name: "package (windows-latest)",
+      status: "completed",
+      conclusion: "success",
+    });
+    await expect(fixture.validate()).rejects.toThrow("Source prerequisite did not succeed");
+  });
   test("rejects moved tags and runs from another event or repository", async () => {
     for (const mutate of [
       (f: ReturnType<typeof sourceFixture>) => {
