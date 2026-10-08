@@ -132,14 +132,12 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "task_inbox",
     title: { kind: "i18n", key: "sidebar.taskInbox" },
     icon: ListTodo,
-    nav: { order: 5, target: "task_inbox", isActive: (mode) => mode === "task_inbox" },
     render: ({ onOpenTaskInboxRecord }) => createElement(TaskInboxPage, { onOpenTaskInboxRecord }),
   }),
   builtin({
     key: "optimization_lab",
     title: { kind: "i18n", key: "sidebar.optimizationLab" },
     icon: FlaskConical,
-    nav: { order: 7, target: "optimization_lab", isActive: (mode) => mode === "optimization_lab" },
     render: ({ activeProjectId }) => createElement(OptimizationLabPage, { activeProjectId }),
   }),
   builtin({
@@ -158,7 +156,6 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "credentials",
     title: { kind: "i18n", key: "sidebar.credentials" },
     icon: KeyRound,
-    nav: { order: 20, target: "credentials", isActive: (mode) => mode === "credentials" },
     render: null,
   }),
   builtin({

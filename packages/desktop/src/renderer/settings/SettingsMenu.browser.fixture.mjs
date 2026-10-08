@@ -21,11 +21,12 @@ const source = `
   import {saveUILanguage} from './uiLanguage';
   const root=createRoot(document.getElementById('root'));
   window.actions=[];
-  window.renderFixture=lang=>{
+  window.renderFixture=(lang, features={})=>{
     saveUILanguage(lang);
     root.render(<div style={{position:'fixed',left:12,bottom:12,width:240}}>
       <SettingsMenu key={lang} petWidgetVisible={false} onTogglePetWidget={()=>window.actions.push('pet')}
-        onNavigate={page=>window.actions.push(page)} onOpenSettingsPage={()=>window.actions.push('settings')}/>
+        onNavigate={page=>window.actions.push(page)} onOpenSettingsPage={()=>window.actions.push('settings')}
+        onOpenCloudWorkbench={()=>window.actions.push('cloud')} {...features}/>
     </div>);
   };
 `;
@@ -74,6 +75,10 @@ try {
               language: "切换语言",
               pet: "显示 Mimi",
               logs: "日志",
+              taskInbox: "任务中心",
+              credentials: "凭证",
+              cloud: "云端工作台",
+              lab: "优化实验室",
             }
           : {
               settings: "Settings",
@@ -81,6 +86,10 @@ try {
               language: "Switch language",
               pet: "Show Mimi",
               logs: "Logs",
+              taskInbox: "Task center",
+              credentials: "Credentials",
+              cloud: "Cloud workbench",
+              lab: "Optimization Lab",
             };
       const opener = page.getByRole("button", { name: labels.settings, exact: true });
       const menu = page.getByRole("menu", { name: labels.settings, exact: true });
@@ -146,6 +155,47 @@ try {
       await menu.waitFor({ state: "hidden" });
       await activityMenu.waitFor({ state: "hidden" });
       assert.deepEqual(await page.evaluate(() => window.actions), ["logs"]);
+      for (const [label, target] of [
+        [labels.credentials, "credentials"],
+        [labels.cloud, "cloud"],
+      ]) {
+        await opener.click();
+        assert.equal(
+          await menu.getByRole("menuitem", { name: labels.lab, exact: true }).count(),
+          0,
+        );
+        await menu.getByRole("menuitem", { name: label, exact: true }).click();
+        await menu.waitFor({ state: "hidden" });
+        assert.equal(await page.evaluate(() => window.actions.at(-1)), target);
+        assert.ok(await opener.evaluate((node) => node === document.activeElement));
+      }
+      await opener.click();
+      await activity.click();
+      await activityMenu.getByRole("menuitem", { name: labels.taskInbox, exact: true }).click();
+      await menu.waitFor({ state: "hidden" });
+      assert.equal(await page.evaluate(() => window.actions.at(-1)), "task_inbox");
+      await page.evaluate(
+        (value) =>
+          window.renderFixture(value, {
+            taskInboxEnabled: false,
+            optimizationLabEnabled: true,
+          }),
+        lang,
+      );
+      await opener.click();
+      await menu.getByRole("menuitem", { name: labels.lab, exact: true }).click();
+      await menu.waitFor({ state: "hidden" });
+      assert.equal(await page.evaluate(() => window.actions.at(-1)), "optimization_lab");
+      await opener.click();
+      await activity.click();
+      await activityMenu.waitFor();
+      assert.equal(
+        await activityMenu.getByRole("menuitem", { name: labels.taskInbox, exact: true }).count(),
+        0,
+      );
+      assert.ok(await logs.isVisible(), "Disabling tasks leaves history available");
+      await page.mouse.click(width - 20, 20);
+      await menu.waitFor({ state: "hidden" });
       assert.deepEqual(errors, []);
       await page.close();
     }

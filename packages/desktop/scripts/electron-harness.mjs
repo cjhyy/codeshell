@@ -1,4 +1,4 @@
-/* global window */
+/* global document, window */
 import { _electron as electron } from "playwright";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -69,6 +69,41 @@ export function captureRendererErrors(win) {
     console.error("renderer pageerror:", error.message);
   });
   return errors;
+}
+
+/** Open the production settings menu, including the narrow-window drawer. */
+export async function openSettingsMenu(win) {
+  const menu = win.getByRole("menu", { name: /^(设置|Settings)$/ });
+  if (await menu.isVisible()) return menu;
+  const toggle = win.locator('[data-sidebar-action="toggle"]');
+  await toggle.waitFor({ state: "visible" });
+  // Resize dispatch can lag setViewportSize. Wait for useResponsiveSidebar's
+  // 640px breakpoint to reach the topbar before toggling either surface.
+  await win.waitForFunction(() => {
+    const toggle = document.querySelector('[data-sidebar-action="toggle"]');
+    return (
+      toggle && (toggle.getAttribute("aria-haspopup") === "dialog") === window.innerWidth < 640
+    );
+  });
+  const trigger = win.getByRole("button", { name: /^(设置|Settings)$/ });
+  if (!(await trigger.isVisible())) await toggle.click();
+  await trigger.click();
+  await menu.waitFor({ state: "visible" });
+  return menu;
+}
+
+/** Navigate through real menu items rather than setting persisted route state. */
+export async function navigateSettingsMenu(win, label, { activity = false } = {}) {
+  const settings = await openSettingsMenu(win);
+  let menu = settings;
+  if (activity) {
+    await settings.getByRole("menuitem", { name: /^(活动记录|Activity)$/ }).click();
+    menu = win.getByRole("menu", { name: /^(活动记录|Activity)$/ });
+    await menu.waitFor({ state: "visible" });
+  }
+  await menu.getByRole("menuitem", { name: label, exact: true }).click();
+  // Navigation runs after Radix releases its pointer and focus locks.
+  await settings.waitFor({ state: "hidden" });
 }
 
 /** Seed synthetic sidebar metadata through the same durable API used by the UI.

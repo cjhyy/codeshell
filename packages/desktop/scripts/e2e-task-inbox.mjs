@@ -2,7 +2,7 @@
  * Task center renderer/bridge acceptance in real Electron. Synthetic IPC sources
  * run under an isolated profile; no model, real task, or user data is changed.
  */
-/* global document */
+/* global document, localStorage, window */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -149,7 +150,7 @@ try {
       };
     });
   });
-  await win.getByRole("button", { name: "任务中心", exact: true }).click();
+  await navigateSettingsMenu(win, "任务中心", { activity: true });
   await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
   await win.getByText("2050 项", { exact: true }).waitFor();
   assert(
@@ -213,7 +214,7 @@ try {
   await win.getByRole("heading", { name: "运行记录", exact: true, level: 1 }).waitFor();
   await win.getByText("已选中准确的原始运行", { exact: true }).waitFor();
   console.log("PASS: original Run detail navigation");
-  await win.getByRole("button", { name: "任务中心", exact: true }).click();
+  await navigateSettingsMenu(win, "任务中心", { activity: true });
   await win.getByText("2050 项", { exact: true }).waitFor();
   await app.evaluate(({ BrowserWindow }) => {
     const fixture = globalThis.__taskInboxFixture;
@@ -231,16 +232,37 @@ try {
   await win.getByRole("heading", { name: "事件更新后的任务", exact: true, level: 3 }).waitFor();
   for (const width of [1280, 820, 390]) {
     await win.setViewportSize({ width, height: 760 });
-    await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
-    const sizes = await win.evaluate(() => ({
-      content: document.documentElement.scrollWidth,
-      viewport: document.documentElement.clientWidth,
-    }));
-    assert(sizes.content <= sizes.viewport + 1, `Task center fits ${width}px`);
+    for (const lang of ["zh", "en"]) {
+      await win.evaluate((value) => {
+        localStorage.setItem("codeshell.uiLanguage", value);
+        window.dispatchEvent(new window.Event("codeshell:language-changed"));
+      }, lang);
+      await navigateSettingsMenu(win, /^(任务中心|Task center)$/, { activity: true });
+      await win.getByRole("heading", { name: /^(任务中心|Task center)/, level: 1 }).waitFor();
+      const sizes = await win.evaluate(() => ({
+        content: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      }));
+      assert(sizes.content <= sizes.viewport + 1, `Task center fits ${width}px (${lang})`);
+      if (width === 390) {
+        await win.locator('[data-sidebar-action="toggle"][aria-expanded="false"]').waitFor();
+        assert(
+          !(await win.getByRole("dialog", { name: /^(导航|Navigation)$/ }).isVisible()),
+          `Task center navigation closes the narrow sidebar (${lang})`,
+        );
+      }
+      const search = win.getByRole("textbox", { name: /^(搜索任务标题|Search task titles)$/ });
+      await search.fill("事件更新后的任务");
+      assert(
+        (await win.locator("article[data-task-key]").count()) === 1,
+        `Task controls remain usable after menu navigation at ${width}px (${lang})`,
+      );
+      await search.fill("");
+    }
   }
   assert(errors.length === 0, `No renderer errors: ${errors.join("; ")}`);
   console.log(
-    "PASS: task inbox 2050-record projection, four groups, source/search, stale/partial errors, keyboard confirmation and live refresh",
+    "PASS: task inbox 2050-record projection, four groups, source/search, stale/partial errors, keyboard confirmation, live refresh and settings activity navigation in Chinese/English at 1280, 820 and 390px",
   );
 } catch (error) {
   if (win)
