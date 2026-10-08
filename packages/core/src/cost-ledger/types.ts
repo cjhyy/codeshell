@@ -32,6 +32,8 @@ export interface UsageReceipt extends UsageIdentity {
   startedAt: number;
   settledAt?: number;
   outcome: "pending" | "completed" | "failed";
+  /** A preflight rejection proves no handoff to fetch; legacy receipts leave this absent. */
+  transmission?: "not-sent";
   usage: TokenUsage | null;
   estimatedCostUsd: number | null;
   pricing: {
@@ -45,6 +47,7 @@ export interface UsageReceipt extends UsageIdentity {
 }
 
 export interface UsageTotals {
+  notSentRequests?: number;
   requests: number;
   promptTokens: number;
   completionTokens: number;

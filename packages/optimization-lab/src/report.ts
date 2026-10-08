@@ -351,10 +351,17 @@ export function buildReport(options: {
     reportVersion: "text_fragment_report_v1",
     planHash: plan.planHash,
     datasetHash: dataset.datasetHash,
-    mode: "text_fragment",
+    mode: plan.runnerVersion === "codeshell_isolated_v1" ? "codeshell_isolated" : "text_fragment",
     status: options.status,
     partial: options.status !== "report_ready" || !complete,
-    adoptionEligible: false,
+    adoptionEligible:
+      plan.runnerVersion === "codeshell_isolated_v1" &&
+      options.status === "report_ready" &&
+      complete &&
+      conclusion === "improved" &&
+      sortedTrials
+        .filter((trial) => trial.status !== "skipped")
+        .every((trial) => trial.status === "completed" && Boolean(trial.instructionReceiptId)),
     ...(plan.fixedCandidate
       ? {
           fixedCandidateTrial: {
@@ -446,12 +453,14 @@ export function buildReport(options: {
             "The candidate was explicitly frozen from an earlier report; this trial makes no optimization calls. Earlier search costs remain in that source report and are not included in this trial ledger. Previously revealed cases are not fresh independent holdout evidence.",
           ]
         : []),
-      "Standalone text_fragment evaluates instructions, not Skill loading, tools or an Agent workflow.",
+      plan.runnerVersion === "codeshell_isolated_v1"
+        ? "Isolated Engine validates a frozen single-file Skill with no tools; tool-based Agent workflows remain unvalidated."
+        : "Standalone text_fragment evaluates instructions, not Skill loading, tools or an Agent workflow.",
       "Model aliases and upstream environment are not pinned implementation identities.",
       "Blind grading hides candidate identity in metadata; output content may still reveal it.",
       "Development improvements are not holdout validation; fixed repeats are not independent source groups.",
       "Missing model/usage/reasoning/cost evidence remains unknown; reserved estimates are stop thresholds, not billing guarantees.",
-      "No candidate was adopted into ordinary Skills, Memory or dream.",
+      "This report does not itself adopt a candidate. Adoption requires a separate native confirmation with explicit project or Session scope.",
       "Overfit hints inspect bounded text fragments and are advisory, not a safety or generalization proof.",
       ...(plan.bounds.repeats === 1 ? ["Each case has a single paired observation."] : []),
       ...(finalGrantRevisions.length > 1

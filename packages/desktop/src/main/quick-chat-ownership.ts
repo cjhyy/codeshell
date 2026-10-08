@@ -120,7 +120,8 @@ export class QuickChatOwnershipRegistry {
     }
   }
 
-  private hasActiveOwner(sessionId: string): boolean {
+  /** Main-only authority for worker services; a qchat-looking id is not an ownership claim. */
+  hasActiveOwner(sessionId: string): boolean {
     const claims = this.claimsBySession.get(sessionId);
     return Boolean(claims && [...claims.values()].some((claim) => !claim.tombstoned));
   }

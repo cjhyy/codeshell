@@ -41,6 +41,9 @@ export function toCompositionSnapshot(
     })),
     queries: composition.protocol.queries.map((q) => ({ type: q.key, moduleId: q.moduleId })),
     observers: composition.protocol.observerFactories.map((o) => o.moduleId),
+    ...(composition.engine.instructionBindings.length
+      ? { instructionBindings: composition.engine.instructionBindings.map((v) => v.moduleId) }
+      : {}),
     runValidators: composition.protocol.runValidators.map((v) => v.moduleId),
     hiddenSessionKinds: composition.protocol.hiddenSessionKinds.map((k) => ({
       kind: k.key,

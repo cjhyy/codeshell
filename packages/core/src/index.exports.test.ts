@@ -21,6 +21,12 @@ import * as publicApi from "./index.js";
 // index.internal.ts. Host-assembly surfaces (installer/marketplace/onboarding/
 // updater) moved here in 0.8.
 const expectedRuntimeExportsByPartition = {
+  "model-request-boundary": [
+    "ModelRequestKeyStore",
+    "assertDurableRequestOwner",
+    "createIpcModelRequestSigner",
+    "setDefaultModelRequestSigner",
+  ],
   utils: [
     "getGraphemeSegmenter",
     "firstGrapheme",
@@ -262,6 +268,13 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "ModelRequestKeyStore",
+  "assertDurableRequestOwner",
+  "createIpcModelRequestSigner",
+  "setDefaultModelRequestSigner",
+  "createEphemeralModelRequestSigner",
+  "currentModelRequestCall",
+  "currentUsageAttempt",
   "inspectProjectSettingsRecovery",
   "repairProjectSettings",
   "restoreProjectSettings",
@@ -315,6 +328,9 @@ const hostOnlySamples = [
 
 // Runtime members of the /extension capability contract (coding/arena imports).
 const extensionRuntimeContract = [
+  "createEphemeralModelRequestSigner",
+  "currentModelRequestCall",
+  "currentUsageAttempt",
   "SessionManager",
   "SettingsManager",
   "codeShellHome",
@@ -330,6 +346,9 @@ const extensionRuntimeContract = [
   "derivePresetExposure",
   "logger",
   "readSkillSnapshot",
+  "InstructionBindingStore",
+  "instructionHash",
+  "runIsolatedInstruction",
   "acquireLockOnPath",
   "mutateJsonFile",
   "resolveLLMConfigForTag",
@@ -410,6 +429,16 @@ describe("core public/internal export contract", () => {
     // The extension entry stays narrow: no Engine, no host UI utilities.
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
+    for (const name of [
+      "InstructionBindingStore",
+      "InstructionSnapshotSchema",
+      "instructionHash",
+      "runIsolatedInstruction",
+    ]) {
+      expect(publicApi, `${name} belongs to the trusted capability contract`).not.toHaveProperty(
+        name,
+      );
+    }
     for (const name of [
       "canonicalKey",
       "canonicalPath",

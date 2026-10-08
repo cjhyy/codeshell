@@ -67,6 +67,7 @@ export interface AgentEngineContributions {
   readonly promptSections?: Readonly<Record<string, string>>;
   readonly dynamicContextProviders?: readonly CapabilityDynamicContextProvider[];
   readonly instructionBoundary?: CapabilityInstructionBoundaryFinder;
+  readonly instructionBindings?: import("../skills/instruction-bindings.js").InstructionBindingProvider;
   readonly artifactDetectors?: readonly CapabilityArtifactDetector[];
   readonly fileHistory?: readonly CapabilityFileHistoryContribution[];
   readonly sessionWorkspace?: SessionWorkspaceCapability;
@@ -133,6 +134,9 @@ export interface ResolvedEngineComposition {
   readonly promptSections: readonly ResolvedContribution<string>[];
   readonly dynamicContextProviders: readonly ResolvedContribution<CapabilityDynamicContextProvider>[];
   readonly instructionBoundaries: readonly ResolvedContribution<CapabilityInstructionBoundaryFinder>[];
+  readonly instructionBindings: readonly ResolvedContribution<
+    import("../skills/instruction-bindings.js").InstructionBindingProvider
+  >[];
   readonly artifactDetectors: readonly ResolvedContribution<CapabilityArtifactDetector>[];
   readonly fileHistory: readonly ResolvedContribution<CapabilityFileHistoryContribution>[];
   readonly sessionWorkspaces: readonly ResolvedContribution<SessionWorkspaceCapability>[];
@@ -206,6 +210,7 @@ export interface CompositionSnapshot {
   behaviorProfiles: Array<{ id: string; moduleId: string }>;
   queries: Array<{ type: string; moduleId: string }>;
   observers: string[];
+  instructionBindings?: string[];
   runValidators: string[];
   hiddenSessionKinds: Array<{ kind: string; moduleId: string }>;
   lifetimes?: {

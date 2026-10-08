@@ -94,6 +94,8 @@ export interface EngineConfig {
    * dev server. Defaults to true (interactive sessions allow it).
    */
   allowBackgroundShells?: boolean;
+  /** Trusted host snapshots for an isolated, fresh Engine. Never accepted from model/RPC input. */
+  instructionSnapshots?: readonly import("../skills/instruction-bindings.js").InstructionSnapshot[];
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
   responseLanguage?: string;
@@ -111,6 +113,8 @@ export interface EngineConfig {
    */
   goal?: string | GoalConfig;
   sessionStorageDir?: string;
+  /** Borrowed Host custody, inherited by children; caller owns disposal. Node defaults to 0600 keys. */
+  modelRequestSigner?: import("../model-request-boundary/types.js").ModelRequestSigner;
   maxContextTokens?: number;
   /** Override settings.context.strategy and the active behavior profile's default. */
   contextStrategy?: "summary" | "notes";

@@ -1,6 +1,6 @@
 /* global document, window */
 import { _electron as electron } from "playwright";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -19,8 +19,25 @@ export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-
 }
 
 export async function launchCodeShellElectron({ appDir, home, userDataDir, env = {}, mainEntry }) {
+  // Playwright's Electron loader appends password-store=basic and
+  // use-mock-keychain. Undo those test defaults after its loader, before
+  // Electron initializes OS cryptography; a command-line argument alone loses
+  // to that loader. Every caller already owns a temporary home.
+  const keyringBootstrap = join(home, "real-keyring.cjs");
+  await writeFile(
+    keyringBootstrap,
+    `const { app } = require("electron");
+app.commandLine.removeSwitch("password-store");
+app.commandLine.removeSwitch("use-mock-keychain");
+if (process.platform === "linux")
+  app.commandLine.appendSwitch("password-store", "gnome-libsecret");
+`,
+    { mode: 0o600 },
+  );
   return electron.launch({
     args: [
+      "--require",
+      keyringBootstrap,
       `--user-data-dir=${userDataDir ?? join(home, "electron-user-data")}`,
       mainEntry ?? appDir,
     ],

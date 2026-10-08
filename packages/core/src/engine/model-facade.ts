@@ -3,6 +3,11 @@
  */
 
 import type { LLMClientBase } from "../llm/client-base.js";
+import { randomUUID } from "node:crypto";
+import {
+  withModelRequestBoundary,
+  type ModelRequestBinding,
+} from "../model-request-boundary/context.js";
 import type { PromptCacheRequestContext } from "../llm/prompt-cache.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
@@ -20,15 +25,14 @@ import {
 } from "./prompt-cache-diagnostics.js";
 
 export interface ModelCallRecordingOptions {
+  requestBoundary?: { step: number; assistantMessageId: string };
   sensitiveToolResultRedactions?: ReadonlyMap<string, string>;
   /** Cache boundary metadata; scopeId is filled from the active session. */
   promptCache?: Omit<PromptCacheRequestContext, "scopeId">;
 }
 
-let _reqSeq = 0;
 function nextReqId(): string {
-  _reqSeq += 1;
-  return `r${_reqSeq.toString(36)}`;
+  return randomUUID();
 }
 
 /**
@@ -48,6 +52,7 @@ export class ModelFacade {
   constructor(
     private readonly client: LLMClientBase,
     private readonly transcript: Transcript,
+    private readonly requestBinding?: ModelRequestBinding,
   ) {}
 
   getPromptPrefixFingerprint(
@@ -102,39 +107,46 @@ export class ModelFacade {
 
     let response: LLMResponse;
     try {
-      response = await this.client.createMessage({
-        systemPrompt,
-        messages,
-        tools,
-        stream: true,
-        onChunk: (chunk) => {
-          if (!onStream) return;
-          if (chunk.type === "text" && chunk.text) {
-            onStream({ type: "text_delta", text: chunk.text, tokens: chunk.tokens });
-          } else if (chunk.type === "thinking" && chunk.text) {
-            onStream({ type: "thinking_delta", text: chunk.text });
-          } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
-            // Forward tool_use_start immediately so the UI can show progress
-            // while JSON args are still streaming
-            onStream({
-              type: "tool_use_start",
-              toolCall: {
-                id: chunk.toolCall.id ?? "",
-                toolName: chunk.toolCall.toolName ?? "",
-                args: chunk.toolCall.args ?? {},
-              },
-            });
-          } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
-            onStream({
-              type: "tool_use_args_delta",
-              toolCallId: chunk.toolCall.id,
-              args: chunk.toolCall.args ?? {},
-            });
-          }
-        },
+      response = await withModelRequestBoundary(
+        this.requestBinding,
+        { ...recordingOptions?.requestBoundary, logicalCallId: reqId },
         signal,
-        promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
-      });
+        (requestSignal) =>
+          this.client.createMessage({
+            requestBoundaryId: reqId,
+            systemPrompt,
+            messages,
+            tools,
+            stream: true,
+            onChunk: (chunk) => {
+              if (!onStream) return;
+              if (chunk.type === "text" && chunk.text) {
+                onStream({ type: "text_delta", text: chunk.text, tokens: chunk.tokens });
+              } else if (chunk.type === "thinking" && chunk.text) {
+                onStream({ type: "thinking_delta", text: chunk.text });
+              } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
+                // Forward tool_use_start immediately so the UI can show progress
+                // while JSON args are still streaming
+                onStream({
+                  type: "tool_use_start",
+                  toolCall: {
+                    id: chunk.toolCall.id ?? "",
+                    toolName: chunk.toolCall.toolName ?? "",
+                    args: chunk.toolCall.args ?? {},
+                  },
+                });
+              } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
+                onStream({
+                  type: "tool_use_args_delta",
+                  toolCallId: chunk.toolCall.id,
+                  args: chunk.toolCall.args ?? {},
+                });
+              }
+            },
+            signal: requestSignal,
+            promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
+          }),
+      );
     } catch (err) {
       recordLLMError(sid, reqId, err, Date.now() - startMs);
       throw err;
@@ -201,14 +213,21 @@ export class ModelFacade {
 
     let response: LLMResponse;
     try {
-      response = await this.client.createMessage({
-        systemPrompt,
-        messages,
-        tools,
-        stream: false,
+      response = await withModelRequestBoundary(
+        this.requestBinding,
+        { ...recordingOptions?.requestBoundary, logicalCallId: reqId },
         signal,
-        promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
-      });
+        (requestSignal) =>
+          this.client.createMessage({
+            requestBoundaryId: reqId,
+            systemPrompt,
+            messages,
+            tools,
+            stream: false,
+            signal: requestSignal,
+            promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
+          }),
+      );
     } catch (err) {
       recordLLMError(sid, reqId, err, Date.now() - startMs);
       throw err;

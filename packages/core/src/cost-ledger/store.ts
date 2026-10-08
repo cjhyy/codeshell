@@ -100,12 +100,19 @@ function validReceipt(value: unknown, namespace: string): value is UsageReceipt 
     r.startedAt >= 0 &&
     (r.settledAt === undefined || (Number.isFinite(r.settledAt) && r.settledAt >= r.startedAt)) &&
     ["pending", "completed", "failed"].includes(r.outcome) &&
+    (r.transmission === undefined || r.transmission === "not-sent") &&
     (r.usage === null || normalizeUsage(r.usage) !== null) &&
     (r.estimatedCostUsd === null ||
       (typeof r.estimatedCostUsd === "number" &&
         Number.isFinite(r.estimatedCostUsd) &&
         r.estimatedCostUsd >= 0)) &&
-    (r.estimatedCostUsd === null || r.usage !== null)
+    (r.estimatedCostUsd === null || r.usage !== null) &&
+    (r.transmission !== "not-sent" ||
+      (r.outcome === "failed" &&
+        r.estimatedCostUsd === 0 &&
+        r.usage?.totalTokens === 0 &&
+        r.usage.promptTokens === 0 &&
+        r.usage.completionTokens === 0))
   );
 }
 
@@ -183,22 +190,27 @@ export class UsageLedger {
     owner: UsageOwner,
     identity: UsageIdentity,
     external?: { source: string; requestId: string; usage?: TokenUsage },
+    physicalRequestId?: string,
   ): UsageReceipt {
     if (
       owner.ledger !== this ||
       ![identity.provider, identity.model].every(textId) ||
-      (identity.providerKind !== undefined && !textId(identity.providerKind))
+      (identity.providerKind !== undefined && !textId(identity.providerKind)) ||
+      (physicalRequestId !== undefined && !/^[a-f0-9]{64}$/.test(physicalRequestId)) ||
+      (external !== undefined && physicalRequestId !== undefined)
     )
       throw new Error("Invalid usage identity");
-    const requestId = createHash("sha256")
-      .update(
-        JSON.stringify([
-          this.namespace,
-          external?.source ?? "provider",
-          external?.requestId ?? randomUUID(),
-        ]),
-      )
-      .digest("hex");
+    const requestId =
+      physicalRequestId ??
+      createHash("sha256")
+        .update(
+          JSON.stringify([
+            this.namespace,
+            external?.source ?? "provider",
+            external?.requestId ?? randomUUID(),
+          ]),
+        )
+        .digest("hex");
     const receipt: UsageReceipt = {
       version: 1,
       requestId,
@@ -234,6 +246,7 @@ export class UsageLedger {
   }
 
   settle(receipt: UsageReceipt, value: TokenUsage | null): void {
+    if (receipt.transmission === "not-sent") return;
     const usage = normalizeUsage(value);
     if (usage) {
       receipt.usage = usage;
@@ -245,6 +258,15 @@ export class UsageLedger {
 
   finish(receipt: UsageReceipt, outcome: "completed" | "failed"): void {
     receipt.outcome = outcome;
+    receipt.settledAt = this.now();
+    this.persist(receipt);
+  }
+
+  markNotSent(receipt: UsageReceipt): void {
+    receipt.transmission = "not-sent";
+    receipt.outcome = "failed";
+    receipt.usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    receipt.estimatedCostUsd = 0;
     receipt.settledAt = this.now();
     this.persist(receipt);
   }

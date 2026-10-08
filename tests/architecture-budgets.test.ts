@@ -67,7 +67,11 @@ describe("architecture growth budgets", () => {
     // in usage-history-service.ts and core/cost-ledger. The formatted Lab host
     // registration accounts for the remaining two lines over the extracted
     // 7_152-line root. Pin this reviewed composition-only result exactly.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_157);
+    // Request evidence adds eleven composition lines for the Host signer,
+    // actual OS encryption availability and native Quick Chat ownership. Key
+    // custody and worker-generation checks stay in model-request-signing-service.
+    // Signing uses private worker messages, with no renderer IPC registration.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_168);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -96,11 +100,11 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
-        // Eight local-only Lab routes: the original four plus evidence preview/
-        // import and native dataset import/export. Their selected-file checks
-        // remain in this extracted, owner-scoped registrar.
+        // Nine local-only Lab routes: eight existing operations plus P2 native
+        // adoption. Exact body/scope review and post-dialog revalidation remain
+        // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
         matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
-    ).toBeLessThanOrEqual(320);
+    ).toBeLessThanOrEqual(321);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -119,7 +123,7 @@ describe("architecture growth budgets", () => {
     // challenge custody remains in the Host. Usage history adds one invoke to
     // the extracted read-only service. The actual combined root is 1_871 lines.
     expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_871);
-    // Include all eight extracted Lab invokes and the five generic Link
+    // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
     expect(
@@ -132,7 +136,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(313);
+    ).toBeLessThanOrEqual(314);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -231,11 +235,19 @@ describe("architecture growth budgets", () => {
     // controller binding and finalization fences delegate to operations/{ledger,
     // controller,resolver}. Keep these private owner boundaries together and
     // pin the actual combined Engine size, with no future-feature allowance.
+    // P2 adds 131 lines binding frozen instructions to Engine-owned run/watch/
+    // abort/cache lifetimes. Snapshot selection, revision comparison and
+    // checkpoint persistence are extracted to engine-instruction-context.ts.
+    // The real no-tools Lab and ordinary Session consumers exercise this seam.
     // Skill metadata adds 20 reviewed wiring lines: the current model window,
     // task and up to 32 recent requests enter existing prompt composition, and
     // registry/allowlist gates suppress unusable listings. Budgeting, ranking
     // and discovery remain in builtin/skill-prompt.ts; no new Host API is added.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_707);
+    // Request evidence adds 42 owner-binding lines: the current Session
+    // incarnation/storage scope, composition/config versions and borrowed or
+    // owned Host signer enter the existing model facade. Provider projection,
+    // validation, custody and durable event writes remain in dedicated modules.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_880);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -249,12 +261,19 @@ describe("architecture growth budgets", () => {
       // Hosts; +2 UsageLedger runtime/type statements for durable SDK accounting.
       // Profile sourceAccess extends the existing source export statement.
       // Parser executables and cache invalidation remain Host-only below.
-      "packages/core/src/index.ts": 130,
+      // +1 type-only signer contract lets an SDK Host supply custody without
+      // exposing the key store, worker IPC or mutable default signer authority.
+      "packages/core/src/index.ts": 131,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
       // declare owned resources without exposing Host parser/runtime authority.
-      "packages/core/src/index.extension.ts": 50,
+      // +3 P2 declarations: Host binding/hash/types and the isolated instruction
+      // runner, consumed by optimization-lab. The stable SDK stays unchanged.
+      // +4 reviewed extension statements: memory-only ephemeral signer factory,
+      // read-only current logical/physical attempt identities, and signer type.
+      // Isolated capability Hosts own the ephemeral signer's disposal.
+      "packages/core/src/index.extension.ts": 57,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by
@@ -272,7 +291,10 @@ describe("architecture growth budgets", () => {
       // +2 reviewed upload Host seams: exact-file index invalidation for the
       // upload lifecycle, and a verified managed parser executable resolver for
       // Desktop/stdio. Neither is exported by the public/extension entries.
-      "packages/core/src/index.internal.ts": 88,
+      // +4 Host-only statements provide durable key custody, persisted owner
+      // validation, private worker/default-signer adapters and their types.
+      // None grants renderer or model RPC access to signing keys.
+      "packages/core/src/index.internal.ts": 92,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
