@@ -31,7 +31,7 @@ export interface InProcessClientHandle {
    * Tear down server + client + transports. Call from a `finally` block.
    * Safe to call multiple times; subsequent calls are no-ops.
    */
-  close(): void;
+  close(): Promise<void>;
 }
 
 export interface CreateInProcessClientOptions {
@@ -42,8 +42,8 @@ export interface CreateInProcessClientOptions {
 /**
  * Wrap an Engine in an in-process AgentServer and return a client handle.
  * The handle's `close()` tears the whole pair down in the correct order:
- * client first (so its pending requests reject cleanly), then server (which
- * aborts any active run and clears approval timers).
+ * server first (which aborts any active run and emits shutdown), then client.
+ * Await close() before exiting so asynchronous module disposers finish.
  */
 export function createInProcessClient(
   engine: Engine,
@@ -58,12 +58,11 @@ export function createInProcessClient(
     client.onStreamEvent((envelope) => cb(envelope.event));
   }
 
-  let closed = false;
+  let closing: Promise<void> | undefined;
   return {
     client,
-    close(): void {
-      if (closed) return;
-      closed = true;
+    close(): Promise<void> {
+      if (closing) return closing;
       // Order matters: server.close() aborts the in-flight run AND emits
       // a final "shutdown" status notification through the still-open
       // transport pair. Then client.close() drains/rejects any pending
@@ -71,8 +70,9 @@ export function createInProcessClient(
       // would silently drop the "shutdown" notification because the
       // client's transport would already be closed when server.notify
       // tries to send.
-      server.close();
+      closing = server.close();
       client.close();
+      return closing;
     },
   };
 }

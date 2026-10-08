@@ -118,6 +118,8 @@ import type { ToolContext } from "../tool-system/context.js";
 import { resolveToolNamesForPreset, type AgentPreset } from "../preset/index.js";
 import { type CapabilityDynamicContextProvider } from "../capabilities/index.js";
 import { compileComposition } from "../composition/compiler.js";
+import { LifetimeScope, type Dispose } from "../composition/lifetime.js";
+import { activateEngineModules, createPrivateServices } from "../composition/activation.js";
 import { ConfigError } from "../exceptions.js";
 import {
   compositionPromptSections,
@@ -317,13 +319,22 @@ export class Engine {
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
   /**
-   * Handles for the settings-sourced hook handlers registered by
-   * registerSettingsHooks(), so reloadHooks() can unregister exactly those
-   * (and nothing else — plugin hooks, goal/builtin hooks are untouched) before
-   * re-registering from fresh settings. Without this, a reload would
-   * accumulate duplicate settings-hook handlers that all fire per event.
+   * Reloadable hook owners release only their exact registrations before
+   * loading fresh settings/plugins. Module hooks and run hooks keep their owners.
    */
-  private settingsHookHandles: Array<{ event: HookEventName; handler: HookHandler }> = [];
+  private settingsHookScope!: LifetimeScope;
+  private pluginHookScope!: LifetimeScope;
+  private readonly lifetime: LifetimeScope;
+  private readonly engineServices: Record<string, unknown> = {};
+  private readonly sessionLifetimes = new Map<
+    string,
+    { scope: LifetimeScope; services: Record<string, unknown> }
+  >();
+  private activeRunScope: LifetimeScope | undefined;
+  private activeGoalRegistration: Dispose | undefined;
+  private moduleReady!: Promise<void>;
+  private moduleActivationPending = true;
+  private disposal?: Promise<void>;
   /**
    * Highest config-reload version applied so far. refreshRuntimeConfig drops
    * any payload whose version is <= this, so out-of-order reload deliveries
@@ -418,6 +429,8 @@ export class Engine {
    * writers are additionally fenced by SessionManager's persisted revision CAS.
    */
   private runInProgress = false;
+  private runAbort?: AbortController;
+  private runSettled?: Promise<void>;
   private disposed = false;
   private agentControlStateListener?: (state: LiveChildState) => void;
   private agentDirectionsDeliveredListener?: (envelopeIds: string[]) => void;
@@ -521,20 +534,22 @@ export class Engine {
         if (!shellHookMatches(entry, ctx)) return {};
         return runShellHook(entry, ctx);
       };
-      this.hooks.register(event, handler, 50, `shell:${entry.event}:${entry.command.slice(0, 32)}`);
-      // Track the (event, handler) so reloadHooks() can unregister exactly
-      // these settings-sourced handlers without touching plugin/goal/code hooks.
-      this.settingsHookHandles.push({ event, handler });
+      this.settingsHookScope.own(
+        this.hooks.register(
+          event,
+          handler,
+          50,
+          `shell:${entry.event}:${entry.command.slice(0, 32)}`,
+        ),
+      );
     }
   }
 
   /**
    * Re-apply settings.hooks onto the live HookRegistry after a settings
    * change (config hot-reload layer 2). Surgical: removes ONLY the
-   * settings-sourced handlers this Engine previously registered (tracked in
-   * settingsHookHandles by identity) and re-runs registerSettingsHooks() from
-   * fresh disk settings. Plugin hooks (registered once at construction at
-   * priority 80) and goal/builtin/SDK-config hooks are never touched.
+   * registrations held by the settings/plugin scopes, then recreates them from
+   * fresh disk settings. Module and run scopes retain their registrations.
    *
    * The SettingsManager cache is invalidated first so the re-read reflects the
    * latest settings.json on disk (mirrors freshSettings()'s load() semantics).
@@ -542,20 +557,23 @@ export class Engine {
    */
   reloadHooks(): void {
     if (this.config.isSubAgent === true) return;
-    // Drop the previously-registered settings handlers by identity.
-    for (const { event, handler } of this.settingsHookHandles) {
-      this.hooks.unregister(event, handler);
-    }
-    this.settingsHookHandles = [];
+    if (this.disposed) throw new Error("Engine has been disposed");
+    void this.settingsHookScope
+      .dispose()
+      .catch((error) => logger.warn("engine.hook_dispose_failed", { error: String(error) }));
+    void this.pluginHookScope
+      .dispose()
+      .catch((error) => logger.warn("engine.hook_dispose_failed", { error: String(error) }));
+    this.settingsHookScope = this.lifetime.child("engine", "settings-hooks");
+    this.pluginHookScope = this.lifetime.child("engine", "plugin-hooks");
     // Also drop & re-load plugin hooks. Plugin hooks are registered under
     // `plugin:<name>:<event>` names; without this, disabling a plugin
     // mid-session left its hooks firing until the next new session (asymmetric
     // with settings-hook hot-reload). Re-reading readDisabledLists means a
     // now-disabled plugin's hooks are simply not re-registered.
-    this.hooks.removeByNamePrefix("plugin:");
     try {
       const { disabledPlugins, disabledPluginHooks } = this.readDisabledLists();
-      loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks);
+      loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks, this.pluginHookScope);
     } catch {
       // best-effort — a plugin-load failure must not break settings reload below
     }
@@ -572,158 +590,240 @@ export class Engine {
   constructor(private config: EngineConfig) {
     // Wire shared runtime (adapter pattern — null when self-constructing).
     this.runtime = config.runtime ?? null;
-    this.runEnvironmentResolver = new RunEnvironmentResolver({
-      config: () => this.config,
-      settings: () => this.getSettingsManager(),
-      credentialAccess: {
-        envExposures: (cwd, scope) => getCredentialAccess().envExposures(cwd, scope),
-      },
-      ...(this.runtime ? { runtime: this.runtime } : {}),
-    });
+    const hostScope =
+      config.lifetimeScope ?? this.runtime?.lifetime ?? new LifetimeScope("host", "standalone");
+    this.lifetime = hostScope.child("engine", `engine-${Math.random().toString(36).slice(2)}`);
+    try {
+      this.runEnvironmentResolver = new RunEnvironmentResolver({
+        config: () => this.config,
+        settings: () => this.getSettingsManager(),
+        credentialAccess: {
+          envExposures: (cwd, scope) => getCredentialAccess().envExposures(cwd, scope),
+        },
+        ...(this.runtime ? { runtime: this.runtime } : {}),
+      });
 
-    if (config.composition && config.modules) {
-      throw new ConfigError("EngineConfig.composition is mutually exclusive with modules");
-    }
-    // Single composition fact source for every module contribution.
-    this.composition = config.composition ?? compileComposition({ modules: config.modules ?? [] });
-    this.toolCatalog = compositionToolCatalog(this.composition);
-    this.toolGuards = new Map(
-      this.toolCatalog.flatMap((tool) =>
-        tool.exposure.availability
-          ? ([[tool.definition.name, tool.exposure.availability]] as const)
-          : [],
-      ),
-    );
-    this.toolRewriters = new Map(
-      this.toolCatalog.flatMap((tool) =>
-        tool.exposure.rewriteDefinition
-          ? ([[tool.definition.name, tool.exposure.rewriteDefinition]] as const)
-          : [],
-      ),
-    );
-    // Behavior profile registry: core defaults first, then host config, then
-    // module contributions — later registrations override earlier ones by id.
-    const moduleProfiles = this.composition.engine.behaviorProfiles;
-    this.behaviorProfiles = new Map(
-      [
-        ...moduleProfiles.filter((p) => p.moduleId === "core").map((p) => p.value),
-        ...(config.behaviorProfiles ?? []),
-        ...moduleProfiles.filter((p) => p.moduleId !== "core").map((p) => p.value),
-      ].map((profile) => [profile.id, profile] as const),
-    );
-    this.capabilityPromptSections = compositionPromptSections(this.composition);
-    this.capabilityDynamicContextProviders = this.composition.engine.dynamicContextProviders.map(
-      (c) => c.value,
-    );
-    this.preset = resolvePresetFromComposition(this.composition, config.preset);
-    // Catalog tools owned by modules that contribute no presets join the
-    // active preset regardless of its name: presets snapshot their tool lists
-    // from catalogs known at module authoring time, which can never include
-    // such packages. Visibility stays gated by exposure.availability.
-    const injectedTools = presetInjectedTools(this.composition);
-    if (injectedTools.length > 0) {
-      this.preset = {
-        ...this.preset,
-        builtinTools: [
-          ...this.preset.builtinTools,
-          ...injectedTools.map((tool) => tool.definition.name),
-        ],
-        defaultPermissionRules: [
-          ...this.preset.defaultPermissionRules,
-          ...injectedTools.flatMap((tool) => [...(tool.exposure.defaultPermissionRules ?? [])]),
-        ],
-      };
-    }
-    this.permissionController = new PermissionController({
-      config: () => this.config,
-      updateConfig: (next) => {
-        this.config = next;
-      },
-      presetRules: () => [...this.preset.defaultPermissionRules],
-      runInProgress: () => this.runInProgress,
-    });
-    // Fold the project's capabilityOverrides.builtin overlay over the global
-    // enabled/disabled builtin lists so a project can force-enable a
-    // globally-disabled builtin tool or force-disable a globally-enabled one
-    // (tri-state). Mirrors readDisabledLists for skills/plugins/agents; no cwd
-    // / no overlay → the config lists pass through unchanged (zero regression).
-    //
-    // #7: this builds the ctor-FROZEN builtin tool SET in the registry — a
-    // mid-session project override can't rebuild it. To make a builtin `off`
-    // toggle apply mid-session, run()'s per-turn tool-list assembly re-reads
-    // readBuiltinOverride(cwd) and HIDES `off` builtins from the turn's tool
-    // list (see the allToolDefs filter). `on` here can force-enable a
-    // globally-disabled builtin INTO the frozen set at construction; the
-    // per-turn path can only hide, not add, so a freshly-`on`'d builtin not in
-    // the set needs a session restart to appear.
-    const builtinLists = effectiveBuiltinLists(
-      config.enabledBuiltinTools ?? [],
-      config.disabledBuiltinTools ?? [],
-      this.readBuiltinOverride(config.cwd),
-    );
-    this.runtimeToolRegistry =
-      config.runtime?.toolRegistry ??
-      new ToolRegistry({
-        builtinTools: resolveToolNamesForPreset({
-          preset: this.preset,
-          host: config.builtinToolHost,
-          enabledBuiltinTools: [
-            ...builtinLists.enabledBuiltinTools,
-            // Injected catalog tools are preset-agnostic (see preset merge
-            // above); their availability guards gate actual visibility.
+      if (config.composition && config.modules) {
+        throw new ConfigError("EngineConfig.composition is mutually exclusive with modules");
+      }
+      // Single composition fact source for every module contribution.
+      this.composition =
+        config.composition ?? compileComposition({ modules: config.modules ?? [] });
+      this.toolCatalog = compositionToolCatalog(this.composition);
+      this.toolGuards = new Map(
+        this.toolCatalog.flatMap((tool) =>
+          tool.exposure.availability
+            ? ([[tool.definition.name, tool.exposure.availability]] as const)
+            : [],
+        ),
+      );
+      this.toolRewriters = new Map(
+        this.toolCatalog.flatMap((tool) =>
+          tool.exposure.rewriteDefinition
+            ? ([[tool.definition.name, tool.exposure.rewriteDefinition]] as const)
+            : [],
+        ),
+      );
+      // Behavior profile registry: core defaults first, then host config, then
+      // module contributions — later registrations override earlier ones by id.
+      const moduleProfiles = this.composition.engine.behaviorProfiles;
+      this.behaviorProfiles = new Map(
+        [
+          ...moduleProfiles.filter((p) => p.moduleId === "core").map((p) => p.value),
+          ...(config.behaviorProfiles ?? []),
+          ...moduleProfiles.filter((p) => p.moduleId !== "core").map((p) => p.value),
+        ].map((profile) => [profile.id, profile] as const),
+      );
+      this.capabilityPromptSections = compositionPromptSections(this.composition);
+      this.capabilityDynamicContextProviders = this.composition.engine.dynamicContextProviders.map(
+        (c) => c.value,
+      );
+      this.preset = resolvePresetFromComposition(this.composition, config.preset);
+      // Catalog tools owned by modules that contribute no presets join the
+      // active preset regardless of its name: presets snapshot their tool lists
+      // from catalogs known at module authoring time, which can never include
+      // such packages. Visibility stays gated by exposure.availability.
+      const injectedTools = presetInjectedTools(this.composition);
+      if (injectedTools.length > 0) {
+        this.preset = {
+          ...this.preset,
+          builtinTools: [
+            ...this.preset.builtinTools,
             ...injectedTools.map((tool) => tool.definition.name),
           ],
-          disabledBuiltinTools: builtinLists.disabledBuiltinTools,
-          adjusters: this.composition.engine.toolSelectionAdjusters.map((a) => a.value),
-        }),
-        toolCatalog: this.toolCatalog,
+          defaultPermissionRules: [
+            ...this.preset.defaultPermissionRules,
+            ...injectedTools.flatMap((tool) => [...(tool.exposure.defaultPermissionRules ?? [])]),
+          ],
+        };
+      }
+      this.permissionController = new PermissionController({
+        config: () => this.config,
+        updateConfig: (next) => {
+          this.config = next;
+        },
+        presetRules: () => [...this.preset.defaultPermissionRules],
+        runInProgress: () => this.runInProgress,
       });
-    this.toolRegistry = this.runtimeToolRegistry.fork();
-    registerAlwaysTools(this.composition, this.toolRegistry);
-    this.hooks = new HookRegistry();
-    // Installed-plugin hooks — declared in each plugin's hooks/hooks.json.
-    // Registered first (priority 80) so user-authored hooks at lower
-    // priorities (settings: 50, SDK config: default 0) can post-process
-    // or stop a plugin's contribution. Sub-agents skip plugin hooks for
-    // the same reason they skip settings hooks: per-emit child-process
-    // overhead multiplied across sub-agents outweighs the value, and
-    // dispatched tasks should run with minimal surface area.
-    if (config.isSubAgent !== true) {
-      // disabledPlugins suppresses a plugin's hooks too (not just its
-      // Skill-tool entries) — see loadPluginHooks. readDisabledLists reads
-      // the same settings the prompt composer / tool context use.
-      // disabledPluginHooks is the per-hook overlay
-      // (capabilityOverrides.pluginHooks); applied at construction, so a
-      // toggle takes effect for NEW sessions (same semantics as
-      // disabledPlugins itself).
-      const { disabledPlugins, disabledPluginHooks } = this.readDisabledLists();
-      loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks);
+      // Fold the project's capabilityOverrides.builtin overlay over the global
+      // enabled/disabled builtin lists so a project can force-enable a
+      // globally-disabled builtin tool or force-disable a globally-enabled one
+      // (tri-state). Mirrors readDisabledLists for skills/plugins/agents; no cwd
+      // / no overlay → the config lists pass through unchanged (zero regression).
+      //
+      // #7: this builds the ctor-FROZEN builtin tool SET in the registry — a
+      // mid-session project override can't rebuild it. To make a builtin `off`
+      // toggle apply mid-session, run()'s per-turn tool-list assembly re-reads
+      // readBuiltinOverride(cwd) and HIDES `off` builtins from the turn's tool
+      // list (see the allToolDefs filter). `on` here can force-enable a
+      // globally-disabled builtin INTO the frozen set at construction; the
+      // per-turn path can only hide, not add, so a freshly-`on`'d builtin not in
+      // the set needs a session restart to appear.
+      const builtinLists = effectiveBuiltinLists(
+        config.enabledBuiltinTools ?? [],
+        config.disabledBuiltinTools ?? [],
+        this.readBuiltinOverride(config.cwd),
+      );
+      this.runtimeToolRegistry =
+        config.runtime?.toolRegistry ??
+        new ToolRegistry({
+          builtinTools: resolveToolNamesForPreset({
+            preset: this.preset,
+            host: config.builtinToolHost,
+            enabledBuiltinTools: [
+              ...builtinLists.enabledBuiltinTools,
+              // Injected catalog tools are preset-agnostic (see preset merge
+              // above); their availability guards gate actual visibility.
+              ...injectedTools.map((tool) => tool.definition.name),
+            ],
+            disabledBuiltinTools: builtinLists.disabledBuiltinTools,
+            adjusters: this.composition.engine.toolSelectionAdjusters.map((a) => a.value),
+          }),
+          toolCatalog: this.toolCatalog,
+        });
+      this.toolRegistry = this.runtimeToolRegistry.fork();
+      this.lifetime.own(() => this.toolRegistry.clear());
+      this.lifetime.own(registerAlwaysTools(this.composition, this.toolRegistry));
+      for (const contribution of this.composition.engine.tools) {
+        this.toolRegistry.setModuleOwner(contribution.tool.definition.name, contribution.moduleId);
+      }
+      this.hooks = new HookRegistry();
+      this.lifetime.own(() => this.hooks.clear());
+      this.settingsHookScope = this.lifetime.child("engine", "settings-hooks");
+      this.pluginHookScope = this.lifetime.child("engine", "plugin-hooks");
+      // Installed-plugin hooks — declared in each plugin's hooks/hooks.json.
+      // Registered first (priority 80) so user-authored hooks at lower
+      // priorities (settings: 50, SDK config: default 0) can post-process
+      // or stop a plugin's contribution. Sub-agents skip plugin hooks for
+      // the same reason they skip settings hooks: per-emit child-process
+      // overhead multiplied across sub-agents outweighs the value, and
+      // dispatched tasks should run with minimal surface area.
+      if (config.isSubAgent !== true) {
+        // disabledPlugins suppresses a plugin's hooks too (not just its
+        // Skill-tool entries) — see loadPluginHooks. readDisabledLists reads
+        // the same settings the prompt composer / tool context use.
+        // disabledPluginHooks is the per-hook overlay
+        // (capabilityOverrides.pluginHooks); applied at construction, so a
+        // toggle takes effect for NEW sessions (same semantics as
+        // disabledPlugins itself).
+        const { disabledPlugins, disabledPluginHooks } = this.readDisabledLists();
+        loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks, this.pluginHookScope);
+      }
+      // settings.hooks → shell-command wrappers. Chain order:
+      // plugin (80) → shell (50) → capability (20) → SDK code (default 0).
+      this.registerSettingsHooks();
+      for (const hook of this.composition.engine.hooks) {
+        this.lifetime.own(this.hooks.register(hook.event, hook.handler, hook.priority, hook.name));
+      }
+      for (const hook of config.hooks ?? []) {
+        this.lifetime.own(this.hooks.register(hook.event, hook.handler, hook.priority, hook.name));
+      }
+      this.sessionManager = new SessionManager(
+        config.sessionStorageDir,
+        this.composition.engine.sessionWorkspaces[0]?.value,
+      );
+      // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
+      this.modelPool = config.runtime?.modelPool ?? new ModelPool();
+      this.auxiliaryPipeline = new AuxiliaryPipeline({
+        config: () => this.config,
+        settings: () => this.getSettingsManager(),
+        modelPool: () => this.modelPool,
+        toolRegistry: () => this.toolRegistry,
+        toolContext: () => this.buildToolContext(),
+      });
+      if (!config.runtime) {
+        this.populateModelPoolFromSettings();
+      }
+      this.lifetime.own(() => (this.runtime?.mcpPool ?? this.mcpManager)?.unregisterOwner(this));
+      const serviceHost = this.moduleServiceHost();
+      this.moduleReady = createPrivateServices(
+        this.composition.engine.toolServices,
+        "engine",
+        this.lifetime,
+        serviceHost,
+        this.engineServices,
+      )
+        .then(() => activateEngineModules(this.composition, this.lifetime, serviceHost))
+        .finally(() => {
+          this.moduleActivationPending = false;
+        });
+      if (this.runtime) this.lifetime.own(this.runtime.ownEngine(() => this.dispose()));
+      // Constructors remain synchronous. run()/ready()/dispose() observe the same failure.
+      void this.moduleReady.catch(() => {});
+    } catch (error) {
+      void this.lifetime
+        .dispose()
+        .catch((cleanup) =>
+          logger.warn("engine.constructor_rollback_failed", { error: String(cleanup) }),
+        );
+      throw error;
     }
-    // settings.hooks → shell-command wrappers. Chain order:
-    // plugin (80) → shell (50) → capability (20) → SDK code (default 0).
-    this.registerSettingsHooks();
-    for (const hook of this.composition.engine.hooks) {
-      this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
-    }
-    for (const hook of config.hooks ?? []) {
-      this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
-    }
-    this.sessionManager = new SessionManager(
-      config.sessionStorageDir,
-      this.composition.engine.sessionWorkspaces[0]?.value,
-    );
-    // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
-    this.modelPool = config.runtime?.modelPool ?? new ModelPool();
-    this.auxiliaryPipeline = new AuxiliaryPipeline({
-      config: () => this.config,
-      settings: () => this.getSettingsManager(),
-      modelPool: () => this.modelPool,
-      toolRegistry: () => this.toolRegistry,
-      toolContext: () => this.buildToolContext(),
+  }
+
+  ready(): Promise<void> {
+    return this.moduleReady;
+  }
+
+  private moduleServiceHost(sessionId?: string) {
+    return Object.freeze({
+      ...(sessionId ? { sessionId } : {}),
+      isSubAgent: this.config.isSubAgent === true,
+      settings: this.getSettingsManager(),
+      resolveSandbox: (cwd: string) =>
+        this.runEnvironmentResolver.resolveSandbox({
+          cwd,
+          workspaceContext: legacySingleRootWorkspace(cwd),
+        }),
+      readShellEnv: (cwd: string) => this.runEnvironmentResolver.readShellEnv(cwd),
+      getSessionManager: () => this.sessionManager,
     });
-    if (!config.runtime) {
-      this.populateModelPoolFromSettings();
-    }
+  }
+
+  private async openSessionLifetime(
+    sessionId: string,
+  ): Promise<{ scope: LifetimeScope; services: Record<string, unknown> }> {
+    const current = this.sessionLifetimes.get(sessionId);
+    if (current) return current;
+    const record = { scope: this.lifetime.child("session", sessionId), services: {} };
+    this.sessionLifetimes.set(sessionId, record);
+    record.scope.own(() => {
+      this.sessionLifetimes.delete(sessionId);
+    });
+    await createPrivateServices(
+      this.composition.engine.toolServices,
+      "session",
+      record.scope,
+      this.moduleServiceHost(sessionId),
+      record.services,
+    );
+    return record;
+  }
+
+  private registerGoalHook(handler: HookHandler): Dispose {
+    const dispose = this.hooks.register("on_stop", handler, 0, "goal-stop");
+    this.activeGoalRegistration = dispose;
+    this.activeRunScope!.own(dispose);
+    return dispose;
   }
 
   /**
@@ -1246,13 +1346,31 @@ export class Engine {
       throw new Error("Engine.run() cannot start while another run is in progress");
     }
     this.runInProgress = true;
+    const abort = (this.runAbort = new AbortController());
+    let settle!: () => void;
+    this.runSettled = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    options = {
+      ...options,
+      signal: options?.signal ? AbortSignal.any([options.signal, abort.signal]) : abort.signal,
+    };
     try {
+      await this.ready();
+      if (this.disposed) throw new Error("Engine has been disposed");
       return await this.runExclusive(task, options);
     } finally {
       try {
-        this.permissionController.applyPending();
+        await this.activeRunScope?.dispose();
       } finally {
-        this.runInProgress = false;
+        this.activeRunScope = undefined;
+        try {
+          this.permissionController.applyPending();
+        } finally {
+          this.runInProgress = false;
+          this.runAbort = undefined;
+          settle();
+        }
       }
     }
   }
@@ -1461,6 +1579,12 @@ export class Engine {
       releaseClientMessageId,
     } = openedResult.opened;
     const session = openedResult.opened.session;
+    const sessionLifetime = await this.openSessionLifetime(session.state.sessionId);
+    this.activeRunScope = sessionLifetime.scope.child("run", runId);
+    toolCtx.capabilityServices = Object.freeze({
+      ...this.engineServices,
+      ...sessionLifetime.services,
+    });
     this.runIds.set(session.state, runId);
     let messages = openedMessages;
     toolCtx.contextStrategy = this.resolveContextStrategy(profile);
@@ -1613,7 +1737,6 @@ export class Engine {
         turnLoop,
         applyGoalTermination,
         goalHookHandler,
-        fileHistoryHook,
         getRunUsage,
         recordExternalBilledUsage,
         accounting,
@@ -1657,7 +1780,8 @@ export class Engine {
       } finally {
         // Run-scoped: drop the GoalStopHook so a later goal-less send on this
         // long-lived engine doesn't keep blocking stops.
-        if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
+        await this.activeRunScope?.dispose();
+        this.activeGoalRegistration = undefined;
         if (this.activeGoalHook === goalHookHandler) {
           this.activeGoalHook = null;
           this.activeGoalHookAttached = false;
@@ -1669,9 +1793,6 @@ export class Engine {
           this.activeProfileMaxTurns = undefined;
         }
         if (this.activeRunSession === session) this.activeRunSession = null;
-        // Run-scoped too: this handler is re-registered every run(), so it must be
-        // dropped here or it stacks duplicates that re-snapshot on every tool.
-        fileHistoryHook.dispose();
       }
       const finalized = await this.finalizeRun({
         session,
@@ -2104,7 +2225,7 @@ export class Engine {
     void llmClientPromise.catch(() => {});
 
     const mode = runPermissionMode;
-    const { toolExecutor } = buildRunPermissionPipeline({
+    const { permission, toolExecutor } = buildRunPermissionPipeline({
       permissionController: this.permissionController,
       mode,
       cwd,
@@ -2128,6 +2249,7 @@ export class Engine {
         void this.emitHook("notification", payload);
       },
     });
+    this.activeRunScope!.own(() => this.permissionController.detach(permission));
 
     return { contextManager, llmClientPromise, toolExecutor };
   }
@@ -2356,6 +2478,7 @@ export class Engine {
           getTurnSeq: () => session.state.turnSeq,
           contributions: this.composition.engine.fileHistory.map((c) => c.value),
         });
+    this.activeRunScope!.own(fileHistoryHook);
 
     // Hook: agent start
     await this.emitHook(
@@ -2421,7 +2544,7 @@ export class Engine {
     let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
     const goalHookHandler = armRunGoalHook({
       slots: goalSlots,
-      hooks: this.hooks,
+      hooks: { register: (_event, handler) => this.registerGoalHook(handler) },
       llmClient,
       isSubAgent: this.config.isSubAgent === true,
       normalizedGoal,
@@ -2941,7 +3064,8 @@ export class Engine {
             return false;
           }
           if (goalHookHandler) {
-            this.hooks.unregister("on_stop", goalHookHandler);
+            void this.activeGoalRegistration?.();
+            this.activeGoalRegistration = undefined;
             if (this.activeGoalHook === goalHookHandler) {
               this.activeGoalHook = null;
               this.activeGoalHookAttached = false;
@@ -3341,23 +3465,36 @@ export class Engine {
     return this.config;
   }
 
-  /** Release Engine-local registrations after its owning ChatSession is replaced. */
-  async dispose(): Promise<void> {
-    if (this.disposed) return;
-    if (this.runInProgress) throw new Error("Engine cannot be disposed while a run is in progress");
+  /** Shared frozen topology for host activation; never exposes mutable module inputs. */
+  getComposition(): ResolvedComposition {
+    return this.composition;
+  }
+
+  /** Cancel and settle any active run before releasing Engine-local resources. */
+  dispose(): Promise<void> {
+    if (this.disposal) return this.disposal;
     this.disposed = true;
-    try {
-      const mcp = this.runtime?.mcpPool ?? this.mcpManager;
-      await mcp?.unregisterOwner(this);
-    } finally {
-      this.hooks.clear();
-      this.settingsHookHandles = [];
-      this.workspaceAuthorities.clear();
-      this.steerQueueBySid.clear();
-      this.compactedMessagesBySession.clear();
-      this.agentDefsCache = undefined;
-      this.lastContextManager = undefined;
-    }
+    this.runAbort?.abort("Engine disposed");
+    // An initializing module may await work cancelled by one of its owned disposers.
+    // A run cannot enter before ready(), so unwind initialization before waiting.
+    if (this.moduleActivationPending) void this.lifetime.dispose().catch(() => {});
+    this.disposal = (async () => {
+      try {
+        await this.runSettled;
+        await this.moduleReady;
+      } finally {
+        try {
+          await this.lifetime.dispose();
+        } finally {
+          this.workspaceAuthorities.clear();
+          this.steerQueueBySid.clear();
+          this.compactedMessagesBySession.clear();
+          this.agentDefsCache = undefined;
+          this.lastContextManager = undefined;
+        }
+      }
+    })();
+    return this.disposal;
   }
 
   /**
@@ -3554,7 +3691,8 @@ export class Engine {
 
       if (next.paused === true) {
         if (this.activeGoalHook && this.activeGoalHookAttached) {
-          this.hooks.unregister("on_stop", this.activeGoalHook);
+          void this.activeGoalRegistration?.();
+          this.activeGoalRegistration = undefined;
           this.activeGoalHookAttached = false;
         }
         this.activeTurnLoop!.updateGoal(undefined);
@@ -3574,7 +3712,7 @@ export class Engine {
           },
         );
         if (this.activeGoalHook && !this.activeGoalHookAttached) {
-          this.hooks.register("on_stop", this.activeGoalHook, 0, "goal-stop");
+          this.registerGoalHook(this.activeGoalHook);
           this.activeGoalHookAttached = true;
         }
       }
@@ -3642,7 +3780,8 @@ export class Engine {
       this.lastSessionId === sessionId &&
       (controlsThisRun || this.activeRuntimeGoal === null)
     ) {
-      if (this.activeGoalHookAttached) this.hooks.unregister("on_stop", this.activeGoalHook);
+      if (this.activeGoalHookAttached) void this.activeGoalRegistration?.();
+      this.activeGoalRegistration = undefined;
       this.activeGoalHook = null;
       this.activeGoalHookAttached = false;
       this.activeRuntimeGoal = null;
@@ -4278,26 +4417,12 @@ export class Engine {
     explicitProfileOverrides?: CapabilityOverrides,
     profileMemoryDir?: string,
   ): ToolContext {
+    if (this.disposed || this.lifetime.disposed) throw new Error("Engine has been disposed");
     const { disabledSkills, disabledPlugins } = this.readDisabledLists(
       cwd,
       explicitProfileOverrides,
     );
-    const capabilityServices = Object.fromEntries(
-      this.composition.engine.toolServices.map(({ moduleId, value }) => {
-        const service = value({
-          isSubAgent: this.config.isSubAgent === true,
-          settings: this.getSettingsManager(),
-          resolveSandbox: (cwd) =>
-            this.runEnvironmentResolver.resolveSandbox({
-              cwd,
-              workspaceContext: legacySingleRootWorkspace(cwd),
-            }),
-          readShellEnv: (cwd) => this.runEnvironmentResolver.readShellEnv(cwd),
-          getSessionManager: () => this.sessionManager,
-        });
-        return [moduleId, service] as const;
-      }),
-    );
+    const capabilityServices = Object.freeze({ ...this.engineServices });
     const ctx: ToolContext = {
       shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
       cwd,

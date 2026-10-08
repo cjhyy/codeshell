@@ -107,6 +107,7 @@ const modelPool = seedEngine.getModelPool();
 const toolRegistry = seedEngine.getRuntimeToolRegistry();
 const resolvedLlmConfig = seedEngine.getConfig().llm;
 const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;
+await seedEngine.dispose();
 const mcpPool = new MCPManager(toolRegistry);
 const costTracker = new CostTracker();
 
@@ -225,11 +226,23 @@ listenTcp({ port, host }, (transport, socket) => {
   .then((listener) => {
     process.stderr.write(`[code-shell] automation server listening on ${host}:${listener.port}\n`);
 
+    let shuttingDown = false;
     const shutdown = () => {
+      if (shuttingDown) return;
+      shuttingDown = true;
       automation.stop();
-      for (const s of servers) s.close();
-      backgroundWakeServer.close();
-      void listener.close().then(() => process.exit(0));
+      void (async () => {
+        const results = await Promise.allSettled([
+          ...[...servers].map((s) => s.close()),
+          backgroundWakeServer.close(),
+          listener.close(),
+        ]);
+        try {
+          await runtime.close();
+        } finally {
+          process.exit(results.some((result) => result.status === "rejected") ? 1 : 0);
+        }
+      })();
     };
     process.on("SIGTERM", shutdown);
     process.on("SIGINT", shutdown);

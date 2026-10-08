@@ -1,7 +1,29 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, afterEach } from "bun:test";
 import { Engine } from "../engine.js";
 import { createLLMClient } from "../../llm/client-factory.js";
 import { ModelPool } from "../../llm/model-pool.js";
+import { EngineRuntime } from "../runtime.js";
+import { ToolRegistry } from "../../tool-system/registry.js";
+import { MCPManager } from "../../tool-system/mcp-manager.js";
+import { SettingsManager } from "../../settings/manager.js";
+import { CostTracker } from "../../cost-tracker.js";
+
+const runtimes: EngineRuntime[] = [];
+afterEach(async () => {
+  await Promise.all(runtimes.splice(0).map((runtime) => runtime.close()));
+});
+function sharedRuntime(modelPool: ModelPool): EngineRuntime {
+  const toolRegistry = new ToolRegistry();
+  const runtime = new EngineRuntime({
+    modelPool,
+    toolRegistry,
+    mcpPool: new MCPManager(toolRegistry),
+    settings: new SettingsManager(process.cwd(), "isolated"),
+    costTracker: new CostTracker(),
+  });
+  runtimes.push(runtime);
+  return runtime;
+}
 
 /**
  * resolveAuxClient must decide "is the aux model the same as MY active model?"
@@ -22,14 +44,25 @@ function buildWorkerEngine(activeModel: string): { engine: Engine; pool: ModelPo
   // Shared pool — register two models. Engines built WITH a runtime adopt this
   // pool and (critically) skip populateModelPoolFromSettings + never switchModel.
   const pool = new ModelPool();
-  pool.register({ key: "A-key", provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" });
-  pool.register({ key: "B-key", provider: "openai", model: "model-b", apiKey: "x", baseUrl: "http://localhost" });
+  pool.register({
+    key: "A-key",
+    provider: "openai",
+    model: "model-a",
+    apiKey: "x",
+    baseUrl: "http://localhost",
+  });
+  pool.register({
+    key: "B-key",
+    provider: "openai",
+    model: "model-b",
+    apiKey: "x",
+    baseUrl: "http://localhost",
+  });
 
   const engine = new Engine({
     llm: { provider: "openai", model: activeModel, apiKey: "x", baseUrl: "http://localhost" },
     cwd: process.cwd(),
-    // Minimal shared runtime: only modelPool is read by the paths under test.
-    runtime: { modelPool: pool } as any,
+    runtime: sharedRuntime(pool),
   } as any);
   return { engine, pool };
 }
@@ -50,9 +83,12 @@ describe("resolveAuxClient de-dups against config.llm.model (runtime/worker path
     // switchModel'd. auxModelKey="A-key" whose entry.model === "model-a".
     const { engine } = buildWorkerEngine("model-a");
     stubAuxKey(engine, "A-key");
-    const fallback = await createLLMClient(
-      { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
-    );
+    const fallback = await createLLMClient({
+      provider: "openai",
+      model: "model-a",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+    });
     const result = await (engine as any).resolveAuxClient(fallback);
     // de-dup must work even though no explicit switchModel ever happened.
     expect(result).toBe(fallback);
@@ -61,9 +97,12 @@ describe("resolveAuxClient de-dups against config.llm.model (runtime/worker path
   it("builds a separate client when aux model's entry differs from the active model", async () => {
     const { engine } = buildWorkerEngine("model-a");
     stubAuxKey(engine, "B-key"); // entry.model === "model-b" ≠ "model-a"
-    const fallback = await createLLMClient(
-      { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
-    );
+    const fallback = await createLLMClient({
+      provider: "openai",
+      model: "model-a",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+    });
     const result = await (engine as any).resolveAuxClient(fallback);
     expect(result).not.toBe(fallback);
   });
@@ -78,9 +117,12 @@ describe("resolveAuxClient de-dups against config.llm.model (runtime/worker path
     expect(pool.getActiveKey()).toBe("B-key");
 
     stubAuxKey(engine, "A-key");
-    const fallback = await createLLMClient(
-      { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
-    );
+    const fallback = await createLLMClient({
+      provider: "openai",
+      model: "model-a",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+    });
     const result = await (engine as any).resolveAuxClient(fallback);
     // Engine's OWN active model (config.llm.model) is still "model-a" → aux ==
     // active → fallback.
@@ -99,7 +141,7 @@ describe("resolveAuxClient de-dups on full LLM identity, not just model name", (
     return new Engine({
       llm: activeLlm,
       cwd: process.cwd(),
-      runtime: { modelPool: pool } as any,
+      runtime: sharedRuntime(pool),
     } as any);
   }
 
@@ -107,17 +149,41 @@ describe("resolveAuxClient de-dups on full LLM identity, not just model name", (
     const pool = new ModelPool();
     // Active key: model "shared", default tokens. Aux key: SAME model name,
     // different maxOutputTokens → distinct identity.
-    pool.register({ key: "active", provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxOutputTokens: 1000 });
-    pool.register({ key: "aux", provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxOutputTokens: 4000 });
+    pool.register({
+      key: "active",
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+      maxOutputTokens: 1000,
+    });
+    pool.register({
+      key: "aux",
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+      maxOutputTokens: 4000,
+    });
 
     const engine = buildEngineWith(
-      { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 1000 },
+      {
+        provider: "openai",
+        model: "shared",
+        apiKey: "x",
+        baseUrl: "http://localhost",
+        maxTokens: 1000,
+      },
       pool,
     );
     stubAuxKey(engine, "aux");
-    const fallback = await createLLMClient(
-      { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 1000 },
-    );
+    const fallback = await createLLMClient({
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+      maxTokens: 1000,
+    });
     const result = await (engine as any).resolveAuxClient(fallback);
     // model NAMEs match but identities differ → must NOT short-circuit.
     expect(result).not.toBe(fallback);
@@ -125,35 +191,74 @@ describe("resolveAuxClient de-dups on full LLM identity, not just model name", (
 
   it("builds a separate aux client when keys share a model name but differ in baseUrl", async () => {
     const pool = new ModelPool();
-    pool.register({ key: "active", provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://primary" });
-    pool.register({ key: "aux", provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://aux" });
+    pool.register({
+      key: "active",
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://primary",
+    });
+    pool.register({
+      key: "aux",
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://aux",
+    });
 
     const engine = buildEngineWith(
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://primary" },
       pool,
     );
     stubAuxKey(engine, "aux");
-    const fallback = await createLLMClient(
-      { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://primary" },
-    );
+    const fallback = await createLLMClient({
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://primary",
+    });
     const result = await (engine as any).resolveAuxClient(fallback);
     expect(result).not.toBe(fallback);
   });
 
   it("returns the fallback when the aux key resolves to an IDENTICAL config", async () => {
     const pool = new ModelPool();
-    pool.register({ key: "active", provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxOutputTokens: 2000 });
+    pool.register({
+      key: "active",
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+      maxOutputTokens: 2000,
+    });
     // Distinct KEY but every identity-bearing field matches the active llm.
-    pool.register({ key: "aux", provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxOutputTokens: 2000 });
+    pool.register({
+      key: "aux",
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+      maxOutputTokens: 2000,
+    });
 
     const engine = buildEngineWith(
-      { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 2000 },
+      {
+        provider: "openai",
+        model: "shared",
+        apiKey: "x",
+        baseUrl: "http://localhost",
+        maxTokens: 2000,
+      },
       pool,
     );
     stubAuxKey(engine, "aux");
-    const fallback = await createLLMClient(
-      { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 2000 },
-    );
+    const fallback = await createLLMClient({
+      provider: "openai",
+      model: "shared",
+      apiKey: "x",
+      baseUrl: "http://localhost",
+      maxTokens: 2000,
+    });
     const result = await (engine as any).resolveAuxClient(fallback);
     // identical identity → genuinely the same client → fallback.
     expect(result).toBe(fallback);

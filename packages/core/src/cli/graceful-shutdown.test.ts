@@ -83,4 +83,43 @@ describe("installGracefulShutdown", () => {
     parentInput.emit("end");
     expect(events).toEqual(["close", "exit"]);
   });
+
+  test("waits for asynchronous module cleanup before exit and ignores later signals", async () => {
+    const proc = makeProc();
+    let finish!: () => void;
+    let closed = 0;
+    installGracefulShutdown(
+      {
+        close() {
+          closed++;
+          return new Promise<void>((resolve) => {
+            finish = resolve;
+          });
+        },
+      },
+      { proc },
+    );
+    proc.emit("SIGTERM");
+    proc.emit("SIGINT");
+    expect(closed).toBe(1);
+    expect(proc.exitCalls).toEqual([]);
+    finish();
+    await Promise.resolve();
+    expect(proc.exitCalls).toEqual([0]);
+  });
+
+  test("asynchronous cleanup failure exits with a failure status", async () => {
+    const proc = makeProc();
+    installGracefulShutdown(
+      {
+        async close() {
+          throw new AggregateError([new Error("failed")]);
+        },
+      },
+      { proc },
+    );
+    proc.emit("SIGTERM");
+    await Promise.resolve();
+    expect(proc.exitCalls).toEqual([1]);
+  });
 });

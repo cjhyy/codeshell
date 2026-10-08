@@ -10,6 +10,10 @@ import { CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS, estimateTokens } from "../context/co
 import { ModelPool } from "../llm/model-pool.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { Engine } from "./engine.js";
+import { EngineRuntime } from "./runtime.js";
+import { MCPManager } from "../tool-system/mcp-manager.js";
+import { SettingsManager } from "../settings/manager.js";
+import { CostTracker } from "../cost-tracker.js";
 
 const provider = "fake-context-package";
 const calls: Array<{ model: string; options: CreateMessageOptions }> = [];
@@ -107,7 +111,7 @@ describe("Engine.summarizeContextPackage", () => {
     });
   });
 
-  it("restores a cold source model without changing the shared pool or another Engine", () => {
+  it("restores a cold source model without changing the shared pool or another Engine", async () => {
     const dir = mkdtempSync(join(tmpdir(), "context-package-shared-model-"));
     dirs.push(dir);
     const modelPool = new ModelPool(
@@ -129,10 +133,14 @@ describe("Engine.summarizeContextPackage", () => {
       ],
       "global-key",
     );
-    const runtime = {
+    const toolRegistry = new ToolRegistry({ builtinTools: [] });
+    const runtime = new EngineRuntime({
       modelPool,
-      toolRegistry: new ToolRegistry({ builtinTools: [] }),
-    } as never;
+      toolRegistry,
+      mcpPool: new MCPManager(toolRegistry),
+      settings: new SettingsManager(dir, "isolated"),
+      costTracker: new CostTracker(),
+    });
     const sourceEngine = new Engine({
       llm: modelPool.toLLMConfig(modelPool.get("global-key")!),
       cwd: dir,
@@ -154,6 +162,7 @@ describe("Engine.summarizeContextPackage", () => {
     expect(modelPool.getActiveKey()).toBe("global-key");
     expect(otherEngine.getConfig().llm.model).toBe("global-model");
     expect(otherEngine.maxContextTokens).toBe(128_000);
+    await runtime.close();
   });
 
   it("maps complete rounds and rolling-merges an oversized selection without dropping the tail", async () => {

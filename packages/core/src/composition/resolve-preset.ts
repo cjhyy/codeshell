@@ -8,6 +8,7 @@ import type { BuiltinTool } from "../tool-system/builtin/index.js";
 import type { ExtensionTool } from "../tool-system/capability-module.js";
 import type { ResolvedComposition } from "./types.js";
 import { ConfigError } from "../exceptions.js";
+import { LifetimeScope, type DisposableLike, type Dispose } from "./lifetime.js";
 
 /** Resolve a preset by name (or the composition default), failing loud. */
 export function resolvePresetFromComposition(
@@ -57,20 +58,30 @@ export function registerAlwaysTools(
   composition: ResolvedComposition,
   registry: {
     hasTool(name: string): boolean;
-    registerTool(definition: ExtensionTool["definition"], execute: ExtensionTool["execute"]): void;
+    registerTool(
+      definition: ExtensionTool["definition"],
+      execute: ExtensionTool["execute"],
+    ): DisposableLike;
   },
-): void {
-  for (const contribution of composition.engine.tools) {
-    if (contribution.kind !== "always") continue;
-    const name = contribution.tool.definition.name;
-    if (registry.hasTool(name)) {
-      throw new ConfigError(`Capability tool conflicts with registered tool: ${name}`, {
-        duplicateCapabilityTool: name,
-        capabilityId: contribution.moduleId,
-      });
+): Dispose {
+  const owner = new LifetimeScope("engine", "always-tools");
+  try {
+    for (const contribution of composition.engine.tools) {
+      if (contribution.kind !== "always") continue;
+      const name = contribution.tool.definition.name;
+      if (registry.hasTool(name)) {
+        throw new ConfigError(`Capability tool conflicts with registered tool: ${name}`, {
+          duplicateCapabilityTool: name,
+          capabilityId: contribution.moduleId,
+        });
+      }
+      owner.own(registry.registerTool(contribution.tool.definition, contribution.tool.execute));
     }
-    registry.registerTool(contribution.tool.definition, contribution.tool.execute);
+  } catch (error) {
+    void owner.dispose().catch(() => {});
+    throw error;
   }
+  return () => owner.dispose();
 }
 
 /** First non-null module instruction boundary, in module order. */

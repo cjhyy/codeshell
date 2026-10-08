@@ -48,6 +48,7 @@
 
 import type { HookContext, HookEventName, HookResult } from "../hooks/events.js";
 import type { HookRegistry } from "../hooks/registry.js";
+import type { LifetimeScope } from "../composition/lifetime.js";
 import { readInstalledPlugins } from "./installedPlugins.js";
 import { runPluginCommandHook } from "./pluginCommandHook.js";
 import {
@@ -189,6 +190,7 @@ export function loadPluginHooks(
   registry: HookRegistry,
   disabledPlugins: string[] = [],
   disabledPluginHooks: string[] = [],
+  owner?: Pick<LifetimeScope, "own">,
 ): void {
   const data = readInstalledPlugins();
   const disabledSet = new Set(disabledPlugins);
@@ -237,12 +239,13 @@ export function loadPluginHooks(
             ctx,
           );
         };
-        registry.register(
+        const dispose = registry.register(
           hook.event,
           handler,
           PLUGIN_HOOK_PRIORITY,
           `plugin:${pluginNameFromKey(key)}:${hook.rawEvent}`,
         );
+        owner?.own(dispose);
       }
     }
   }

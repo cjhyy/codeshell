@@ -91,6 +91,7 @@ import type {
 } from "../tool-system/capability-module.js";
 import { compileComposition } from "../composition/compiler.js";
 import { attachProtocolContributions } from "../composition/protocol-attach.js";
+import { LifetimeScope } from "../composition/lifetime.js";
 import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { SessionWorkspaceRpcHandlers } from "./session-workspace-rpc.js";
@@ -624,6 +625,12 @@ export class AgentServer {
   private readonly approvalRouter: ApprovalRouter;
   private approvalConnectionUnregister: (() => void) | null = null;
   private disconnected = false;
+  private readonly moduleScope: LifetimeScope;
+  private readonly moduleReady: Promise<void>;
+  private readonly hasHostActivators: boolean;
+  private hostActivationPending = false;
+  private readonly closedObservers = new WeakSet<ProtocolObserver>();
+  private closing?: Promise<void>;
   private readonly runStarts = new Set<AbortController>();
   private readonly pendingApprovalTargets = new Map<
     string,
@@ -759,10 +766,17 @@ export class AgentServer {
     // Protocol surface from the compiled composition. Each contributing
     // module may attach one observer; the server calls them at every
     // lifecycle hook point and isolates per-observer failures.
-    const protocol = options.composition?.protocol ?? compileComposition({}).protocol;
+    const composition =
+      options.composition ?? this.legacyEngine?.getComposition?.() ?? compileComposition({});
+    const protocol = composition.protocol;
+    this.hasHostActivators = composition.hostActivators.length > 0;
+    this.hostActivationPending = this.hasHostActivators;
+    this.moduleScope = (
+      this.baseChatManager?.runtime?.lifetime ?? new LifetimeScope("host", "protocol")
+    ).child("host", this.connectionId);
     this.runValidators = protocol.runValidators;
     this.hiddenSessionKinds = protocol.hiddenSessionKinds.map((k) => k.key);
-    const observerHost: ProtocolObserverHost = {
+    const observerHost: Omit<ProtocolObserverHost, "registerQuery"> = {
       getLiveSessionSnapshot: () => this.chatManager?.getLiveSessionSnapshot().sessions ?? [],
       projectionGeneration: () => this.workerGeneration(),
       getSessionKind: (sessionId) => {
@@ -778,17 +792,19 @@ export class AgentServer {
       },
       isTransportDisconnected: () => this.disconnected,
       notify: (method, params) => this.notify(method, params),
-      registerQuery: (type, handler) => {
-        this.protocolQueryHandlers.set(type, handler);
-      },
     };
-    attachProtocolContributions({
-      protocol,
+    this.moduleReady = attachProtocolContributions({
+      composition,
+      scope: this.moduleScope,
       host: observerHost,
       observers: this.protocolObservers,
       queryHandlers: this.protocolQueryHandlers,
+      closeObserver: (observer) => this.closeObserver(observer),
       warn: (message) => logger.warn(message),
+    }).finally(() => {
+      this.hostActivationPending = false;
     });
+    void this.moduleReady.catch(() => {});
 
     // Wire up incoming messages
     this.transport.onMessage((msg) => {
@@ -1317,6 +1333,9 @@ export class AgentServer {
   // ─── Request Dispatch ───────────────────────────────────────────
 
   private async handleRequest(req: RpcRequest): Promise<void> {
+    // Preserve synchronous protocol controls when there is no asynchronous activation.
+    if (this.hasHostActivators) await this.moduleReady;
+    if (this.disconnected) throw new Error("AgentServer transport is disconnected");
     switch (req.method) {
       case Methods.Run:
         await this.handleRun(req);
@@ -1390,15 +1409,8 @@ export class AgentServer {
       case Methods.PluginCommandExpand:
         this.handlePluginCommandExpand(req);
         break;
-      // Compat channel: the wire method name is retained, but the handler is
-      // whatever extension registered it (the pet extension by default).
-      case Methods.GetPetProjectionSnapshot:
-        await this.handleExtensionProtocolMethod(req);
-        break;
       default:
-        this.transport.send(
-          createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
-        );
+        await this.handleExtensionProtocolMethod(req);
     }
   }
 
@@ -1575,7 +1587,13 @@ export class AgentServer {
   }
 
   private observeServerClose(): void {
-    this.forEachObserver("onServerClose", (observer) => observer.onServerClose?.());
+    this.forEachObserver("onServerClose", (observer) => this.closeObserver(observer));
+  }
+
+  private closeObserver(observer: ProtocolObserver): void {
+    if (this.closedObservers.has(observer)) return;
+    this.closedObservers.add(observer);
+    observer.onServerClose?.();
   }
 
   /** Generic run-param shape checks plus each module's domain validation. */
@@ -4742,9 +4760,17 @@ export class AgentServer {
 
   // ─── Lifecycle ──────────────────────────────────────────────────
 
-  close(): void {
+  close(): Promise<void> {
+    if (this.closing) return this.closing;
+    let resolveClose!: () => void;
+    let rejectClose!: (error: unknown) => void;
+    this.closing = new Promise<void>((resolve, reject) => {
+      resolveClose = resolve;
+      rejectClose = reject;
+    });
     this.observeServerClose();
-    this.disconnect("server closing");
+    this.disconnectTransport("server closing", false);
+    if (this.hostActivationPending) void this.moduleScope.dispose().catch(() => {});
     // Detach the bg-agent bus subscription first so a final flurry of
     // completions during shutdown can't race the `shutdown` status
     // notify below. Safe to call repeatedly — the unsubscribe is a
@@ -4767,7 +4793,7 @@ export class AgentServer {
         manager.forEachSession((session) => {
           this.cancelSessionApprovals(session, "server closing", "cancelled", "session_closed");
         });
-        manager.closeAll();
+        // Awaited below after synchronous cancellation/transport teardown.
       }
     }
 
@@ -4786,15 +4812,67 @@ export class AgentServer {
     this.pendingApprovals.clear();
     this.clearAllApprovalTimers();
 
-    this.notify(Methods.Status, { status: "shutdown" });
-    this.transport.close();
+    const transportErrors: unknown[] = [];
+    try {
+      this.notify(Methods.Status, { status: "shutdown" });
+    } catch (error) {
+      transportErrors.push(error);
+    }
+    try {
+      this.transport.close();
+    } catch (error) {
+      transportErrors.push(error);
+    }
+    void (async () => {
+      const results = await Promise.allSettled([
+        ...(this.baseChatManager
+          ? [this.baseChatManager, ...this.identityManagers.values()].map((manager) =>
+              manager.closeAllAsync(),
+            )
+          : []),
+        this.moduleReady,
+        ...(typeof this.legacyEngine?.dispose === "function" ? [this.legacyEngine.dispose()] : []),
+        ...(typeof this.globalQueryEngine?.dispose === "function"
+          ? [this.globalQueryEngine.dispose()]
+          : []),
+      ]);
+      const errors = [
+        ...transportErrors,
+        ...results.flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+      ];
+      try {
+        await this.moduleScope.dispose();
+      } catch (error) {
+        errors.push(error);
+      }
+      if (errors.length) throw new AggregateError(errors, "AgentServer shutdown failed");
+    })().then(resolveClose, rejectClose);
+    void this.closing.catch((error) =>
+      logger.warn("agent_server.close_failed", { error: String(error) }),
+    );
+    return this.closing;
   }
 
   /** Release only this transport's approval ownership. Safe on socket close
    * even when the ChatSessionManager is shared by other TCP connections. */
   disconnect(reason = "approval connection disconnected"): void {
+    this.disconnectTransport(reason, true);
+  }
+
+  private disconnectTransport(reason: string, releaseModules: boolean): void {
     if (this.disconnected) return;
     this.disconnected = true;
+    this.observeServerClose();
+    if (this.bgAgentBusUnsubscribe) {
+      this.bgAgentBusUnsubscribe();
+      this.bgAgentBusUnsubscribe = null;
+    }
+    if (releaseModules)
+      void this.moduleScope
+        .dispose()
+        .catch((error) =>
+          logger.warn("agent_server.module_dispose_failed", { error: String(error) }),
+        );
     for (const start of this.runStarts) start.abort();
     const unregister = this.approvalConnectionUnregister;
     this.approvalConnectionUnregister = null;
