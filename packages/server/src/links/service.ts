@@ -19,8 +19,9 @@ import {
 import { listDesktopLinkProviders } from "./catalog.js";
 import {
   readRemoteProviderCatalog,
+  readRemoteProviderCapabilities,
   REMOTE_LINK_ADAPTERS,
-  type RemoteProviderId,
+  type RemoteProviderCapabilities,
 } from "./remote-catalog.js";
 import {
   LinkDeviceOAuthBroker,
@@ -154,7 +155,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   const remoteJobs = new Map<string, RemoteAuthorizationJob>();
   const interactiveJobs = new Map<string, InteractiveAuthorizationJob>();
   let remoteCatalog:
-    | { issuer: string; expiresAt: number; providers: RemoteProviderId[] }
+    | { issuer: string; expiresAt: number; providers: RemoteProviderCapabilities[] }
     | undefined;
   let catalogPending: Promise<void> | undefined;
   const revokedOwners = new Set<string>();
@@ -300,7 +301,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const remoteProviders = remoteConfig
       ? remoteCatalog?.issuer === remoteConfig.issuer
         ? remoteCatalog.providers
-        : ["github"]
+        : []
       : [];
     const result = {
       providers: providers.map((provider) => {
@@ -340,7 +341,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           });
         }
         const remote = REMOTE_LINK_ADAPTERS.find(
-          (adapter) => adapter.id === provider.id && remoteProviders.includes(adapter.id),
+          (adapter) =>
+            adapter.id === provider.id &&
+            remoteProviders.some((remote) => remote.id === adapter.id),
         );
         return {
           ...provider,
@@ -406,13 +409,19 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       return;
     if (!catalogPending) {
       catalogPending = (async () => {
-        let available: RemoteProviderId[];
+        let available: RemoteProviderCapabilities[];
         try {
-          available = await (options.readRemoteCatalog ?? readRemoteProviderCatalog)(config);
+          available = options.readRemoteCatalog
+            ? (await options.readRemoteCatalog(config)).flatMap((id) => {
+                const adapter = REMOTE_LINK_ADAPTERS.find((item) => item.id === id);
+                return adapter
+                  ? [{ id, actions: [...adapter.actions], scopes: [...adapter.scopes] }]
+                  : [];
+              })
+            : await readRemoteProviderCapabilities(config);
         } catch {
           // Preserve the reviewed v1 behavior during temporary service/network failures.
-          available =
-            remoteCatalog?.issuer === config.issuer ? remoteCatalog.providers : ["github"];
+          available = remoteCatalog?.issuer === config.issuer ? remoteCatalog.providers : [];
         }
         if (!closed && options.remoteLink?.()?.issuer === config.issuer)
           remoteCatalog = {
@@ -1114,6 +1123,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         throw new LinkServiceError(422, "authorization_failed");
       const validation = await validateToken(token.providerId, token.accessToken, {
         signal: job.operation.controller.signal,
+        authKind: "oauth",
       });
       await check();
       await commit(
@@ -1236,10 +1246,20 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       ).length >= 2
     )
       throw new LinkServiceError(409, "busy");
-    if (!input || input.providerId !== "github" || input.methodId !== "remote-link")
+    if (
+      !input ||
+      input.methodId !== "remote-link" ||
+      !REMOTE_LINK_ADAPTERS.some((adapter) => adapter.id === input.providerId)
+    )
       throw new LinkServiceError(400, "invalid_request");
     const config = options.remoteLink?.();
     if (!config) throw new LinkServiceError(503, "unavailable");
+    await refreshRemoteCatalog(context);
+    const capabilities =
+      remoteCatalog?.issuer === config.issuer
+        ? remoteCatalog.providers.find((provider) => provider.id === input.providerId)
+        : undefined;
+    if (!capabilities) throw new LinkServiceError(503, "unavailable");
     const id =
       input.connectionId === undefined ? `link-remote-${randomUUID()}` : safeId(input.connectionId);
     let expected: Credential | null = null;
@@ -1248,18 +1268,22 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         throw new LinkServiceError(409, "conflict");
     } else {
       expected = reviewed(id, input.expectedRevision);
-      if (!isRemoteLinkCredential(expected)) throw new LinkServiceError(409, "conflict");
+      if (!isRemoteLinkCredential(expected) || expected.meta?.linkProvider !== input.providerId)
+        throw new LinkServiceError(409, "conflict");
     }
     const prepared = { id, expected, input: { ...input, label: string(input.label) } };
     let attempt: RemoteLinkAttempt;
     try {
-      attempt = beginRemoteLinkAuthorization(config, now());
+      attempt = beginRemoteLinkAuthorization(config, now(), {
+        providerId: input.providerId,
+        actions: capabilities.actions,
+      });
     } catch {
       throw new LinkServiceError(400, "invalid_request");
     }
     const publicJob: LinkAuthorization = {
       id: randomUUID(),
-      providerId: "github",
+      providerId: input.providerId,
       state: "pending",
       redirect: {
         authorizationUrl: attempt.authorizationUrl,

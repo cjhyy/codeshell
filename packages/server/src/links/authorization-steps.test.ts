@@ -375,14 +375,22 @@ test("CLI installation permission is native-only and does not imply an installed
   }
 });
 
-test("remote authorization is ordered first while local method preference stays intact", () => {
+test("remote authorization is ordered first while local method preference stays intact", async () => {
   const { service } = fixture({
+    readRemoteCatalog: async () => ["github"],
     remoteLink: () => ({
       issuer: "https://link.example",
       clientId: "client",
       redirectUri: "http://127.0.0.1/link/callback",
     }),
   });
+  expect(
+    service
+      .snapshot()
+      .providers.find((provider) => provider.id === "github")!
+      .authModes!.some((mode) => mode.id === "remote-link"),
+  ).toBe(false);
+  await service.refreshRemoteCatalog(owner);
   const modes = service
     .snapshot()
     .providers.find((provider) => provider.id === "github")!.authModes!;

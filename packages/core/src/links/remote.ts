@@ -5,10 +5,18 @@ import { Readable } from "node:stream";
 import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
 import { parseOAuthCredentialSecret } from "../credentials/oauth.js";
-import { asRecord, asArray, intParam, pathSegmentParam, pick } from "./http.js";
+import { asRecord, asArray } from "./http.js";
+import {
+  getRemoteLinkProviderAdapter,
+  LEGACY_GITHUB_ACTIONS,
+  normalizeRemoteLinkActionResult,
+  parseRemoteLinkResourceGroups,
+  prepareRemoteLinkAction,
+  reviewedRemoteLinkActions,
+  type RemoteLinkProviderId,
+} from "./remote-adapters.js";
 
-const ACTIONS = ["list_repositories", "list_issues", "get_issue"] as const;
-const SCOPES = ACTIONS.map((id) => `github:${id}`);
+const SCOPES = LEGACY_GITHUB_ACTIONS.map((id) => `github:${id}`);
 const pendingRefreshes = new Map<string, Promise<void>>();
 const consumedAttempts = new WeakSet<RemoteLinkAttempt>();
 export class RemoteLinkError extends Error {
@@ -27,7 +35,7 @@ export class RemoteLinkError extends Error {
         unavailable: "无法连接 Link 服务，请稍后重试。",
         reconnect: "Link 授权失效或刷新结果不明，请重新连接。",
         changed: "Link 连接已改变，请重新选择。",
-        forbidden: "这个 Link 授权不允许该操作或仓库。",
+        forbidden: "这个 Link 授权不允许该操作或资源。",
         busy: "Link 正在刷新授权；若重启后仍未完成，请重新连接。",
       }[code],
     );
@@ -46,6 +54,8 @@ export interface RemoteLinkAttempt {
   verifier: string;
   expiresAt: number;
   authorizationUrl: string;
+  providerId?: RemoteLinkProviderId;
+  actions?: string[];
 }
 function string(value: unknown, max = 4096): string {
   if (typeof value !== "string" || !value || value.length > max || /[\x00-\x20\x7f]/.test(value))
@@ -74,7 +84,19 @@ function origin(value: string): string {
 export function beginRemoteLinkAuthorization(
   configuration: RemoteLinkConfiguration,
   now = Date.now(),
+  capabilities: { providerId: string; actions?: readonly string[] } = {
+    providerId: "github",
+    actions: LEGACY_GITHUB_ACTIONS,
+  },
 ): RemoteLinkAttempt {
+  const adapter = getRemoteLinkProviderAdapter(capabilities.providerId);
+  if (!adapter) throw new RemoteLinkError("invalid_request");
+  let actions: string[];
+  try {
+    actions = reviewedRemoteLinkActions(adapter.id, capabilities.actions ?? adapter.actions);
+  } catch {
+    throw new RemoteLinkError("invalid_request");
+  }
   const config = {
     ...configuration,
     issuer: origin(configuration.issuer),
@@ -104,11 +126,14 @@ export function beginRemoteLinkAuthorization(
     state,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
     code_challenge_method: "S256",
-    scope: SCOPES.join(" "),
+    provider_id: adapter.id,
+    scope: actions.map((action) => `${adapter.id}:${action}`).join(" "),
   }))
     url.searchParams.set(key, value);
   return {
     configuration: config,
+    providerId: adapter.id,
+    actions,
     state,
     verifier,
     expiresAt: now + 10 * 60_000,
@@ -218,6 +243,7 @@ function tokens(raw: Record<string, unknown>, now: number, allowed = SCOPES) {
     raw.expires_in <= 0 ||
     raw.expires_in > 86400 ||
     !scope.length ||
+    new Set(scope).size !== scope.length ||
     scope.some((item) => !allowed.includes(item))
   )
     throw new RemoteLinkError("reconnect");
@@ -263,6 +289,16 @@ export async function completeRemoteLinkAuthorization(
   if (consumedAttempts.has(attempt)) throw new RemoteLinkError("reconnect");
   consumedAttempts.add(attempt);
   const config = attempt.configuration;
+  const providerId = attempt.providerId ?? "github";
+  let allowedScopes: string[];
+  try {
+    allowedScopes = reviewedRemoteLinkActions(
+      providerId,
+      attempt.actions ?? LEGACY_GITHUB_ACTIONS,
+    ).map((action) => `${providerId}:${action}`);
+  } catch {
+    throw new RemoteLinkError("reconnect");
+  }
   const secret = {
     ...tokens(
       await request(
@@ -276,6 +312,7 @@ export async function completeRemoteLinkAuthorization(
         }),
       ),
       now,
+      allowedScopes,
     ),
     issuer: config.issuer,
     clientId: config.clientId,
@@ -301,20 +338,39 @@ export async function completeRemoteLinkAuthorization(
   });
   const account = asRecord(authorization.account);
   const scopes = asArray(authorization.scopes);
-  const repositories = asArray(authorization.repositories);
+  let resourceGroups;
+  try {
+    resourceGroups = parseRemoteLinkResourceGroups(providerId, authorization);
+  } catch {
+    throw new RemoteLinkError("reconnect");
+  }
+  const authorizedActions = scopes.map((scope) => String(scope).slice(providerId.length + 1));
+  const declaredActions = authorization.actions;
   if (
     authorization.version !== 1 ||
-    authorization.providerId !== "github" ||
+    authorization.providerId !== providerId ||
     !account ||
     !["number", "string"].includes(typeof account.id) ||
+    (typeof account.id === "number" && (!Number.isSafeInteger(account.id) || account.id <= 0)) ||
+    /[\x00-\x1f\x7f]/.test(String(account.id)) ||
+    !String(account.id) ||
+    String(account.id).length > 300 ||
     typeof account.login !== "string" ||
+    !account.login ||
     account.login.length > 200 ||
+    /[\x00-\x1f\x7f]/.test(account.login) ||
     !scopes.length ||
     scopes.some((scope) => typeof scope !== "string" || !secret.scope.split(" ").includes(scope)) ||
-    repositories.length > 100 ||
-    repositories.some(
-      (repo) => typeof repo !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo),
-    )
+    new Set(scopes).size !== scopes.length ||
+    scopes.some((scope) => !allowedScopes.includes(String(scope))) ||
+    (declaredActions === undefined
+      ? providerId !== "github"
+      : !Array.isArray(declaredActions) ||
+        declaredActions.length !== scopes.length ||
+        new Set(declaredActions).size !== declaredActions.length ||
+        declaredActions.some(
+          (action) => typeof action !== "string" || !authorizedActions.includes(action),
+        ))
   )
     throw new RemoteLinkError("reconnect");
   const connectionId = string(authorization.connectionId, 36),
@@ -328,7 +384,7 @@ export async function completeRemoteLinkAuthorization(
     secret: JSON.stringify(secret),
     autoUseByAI: false,
     meta: {
-      linkProvider: "github",
+      linkProvider: providerId,
       linkConnectionMethod: "remote-link",
       linkExecutionRuntime: "server",
       linkExecutionBackend: "remote",
@@ -338,8 +394,15 @@ export async function completeRemoteLinkAuthorization(
       linkRemoteGrantId: grantId,
       linkRemoteState: "connected",
       linkAccountId: String(account.id),
-      linkAccountLabel: account.login,
-      linkResourceLabels: repositories as string[],
+      linkAccountLabel:
+        typeof account.label === "string" &&
+        account.label &&
+        account.label.length <= 300 &&
+        !/[\x00-\x1f\x7f]/.test(account.label)
+          ? account.label
+          : account.login,
+      linkResourceLabels: resourceGroups[0]!.items.map((item) => item.id),
+      linkResourceGroups: resourceGroups,
       linkCapabilityIds: scopes.map((scope) => String(scope).replace(":", ".")),
       linkLastVerifiedAt: new Date(now).toISOString(),
     },
@@ -424,11 +487,39 @@ export async function executeRemoteLinkAction(
     return current;
   };
   let current = read();
-  if (
-    !ACTIONS.includes(input.action as (typeof ACTIONS)[number]) ||
-    !current.meta?.linkCapabilityIds?.includes(`github.${input.action}`)
-  )
-    throw new RemoteLinkError("forbidden");
+  const providerId = current.meta!.linkProvider ?? "";
+  const assertAction = (credential: Credential) => {
+    const adapter = getRemoteLinkProviderAdapter(providerId);
+    if (
+      !adapter ||
+      credential.meta?.linkProvider !== providerId ||
+      !(adapter.actions as readonly string[]).includes(input.action) ||
+      !credential.meta?.linkCapabilityIds?.includes(`${providerId}.${input.action}`)
+    )
+      throw new RemoteLinkError("forbidden");
+  };
+  const resources = (credential: Credential) => {
+    try {
+      return parseRemoteLinkResourceGroups(
+        providerId,
+        credential.meta?.linkResourceGroups
+          ? { resourceGroups: credential.meta.linkResourceGroups }
+          : { repositories: credential.meta?.linkResourceLabels },
+      );
+    } catch {
+      throw new RemoteLinkError("reconnect");
+    }
+  };
+  const prepare = (credential: Credential) => {
+    assertAction(credential);
+    try {
+      return prepareRemoteLinkAction(providerId, input.action, input.params, resources(credential));
+    } catch (error) {
+      if (error instanceof RemoteLinkError) throw error;
+      throw new RemoteLinkError("forbidden");
+    }
+  };
+  prepare(current);
   const layer = store.list("project").some((item) => item.id === input.id) ? "project" : "user";
   const parse = (credential: Credential) => {
     let value;
@@ -515,26 +606,20 @@ export async function executeRemoteLinkAction(
     if (current.meta?.linkRemoteState !== "connected" || Date.parse(secret.expiresAt) <= now())
       throw new RemoteLinkError("reconnect");
   }
-  if (
-    current.meta?.linkProvider !== "github" ||
-    !ACTIONS.includes(input.action as (typeof ACTIONS)[number]) ||
-    !current.meta.linkCapabilityIds?.includes(`github.${input.action}`)
-  )
-    throw new RemoteLinkError("forbidden");
-  const params = input.params;
-  let body: Record<string, unknown> = {};
-  if (input.action !== "list_repositories") {
-    const owner = pathSegmentParam(params, "owner", { required: true, maxLength: 100 })!,
-      repo = pathSegmentParam(params, "repo", { required: true, maxLength: 100 })!;
-    const repository = `${owner}/${repo}`.toLowerCase();
-    if (!current.meta.linkResourceLabels?.includes(repository))
-      throw new RemoteLinkError("forbidden");
-    body =
-      input.action === "get_issue"
-        ? { repository, number: intParam(params, "issue_number", 0, Number.MAX_SAFE_INTEGER) }
-        : { repository, state: "open", page: 1 };
-  }
-  const connection = string(current.meta.linkRemoteConnectionId, 36);
+  const body = prepare(current);
+  const authority = (credential: Credential) =>
+    JSON.stringify({
+      provider: credential.meta?.linkProvider,
+      issuer: credential.meta?.linkRemoteIssuer,
+      connection: credential.meta?.linkRemoteConnectionId,
+      grant: credential.meta?.linkRemoteGrantId,
+      account: credential.meta?.linkAccountId,
+      resources: resources(credential),
+      capabilities: credential.meta?.linkCapabilityIds,
+      verifiedAt: credential.meta?.linkLastVerifiedAt,
+    });
+  const originalAuthority = authority(current);
+  const connection = string(current.meta?.linkRemoteConnectionId, 36);
   if (!/^[a-f0-9-]{36}$/.test(connection)) throw new RemoteLinkError("reconnect");
   options.signal?.throwIfAborted();
   let response: Record<string, unknown>;
@@ -566,61 +651,20 @@ export async function executeRemoteLinkAction(
     latest.meta?.linkRemoteState !== "connected" ||
     latest.meta.linkRemoteConnectionId !== connection ||
     latest.meta.linkRemoteIssuer !== secret.issuer ||
-    !latest.meta.linkCapabilityIds?.includes(`github.${input.action}`)
+    !latest.meta.linkCapabilityIds?.includes(`${providerId}.${input.action}`) ||
+    authority(latest) !== originalAuthority
   )
     throw new RemoteLinkError("changed");
   options.signal?.throwIfAborted();
-  if (input.action === "get_issue" ? !asRecord(response.result) : !Array.isArray(response.result))
+  try {
+    return normalizeRemoteLinkActionResult(
+      providerId,
+      input.action,
+      response.result,
+      input.params,
+      resources(latest),
+    );
+  } catch {
     throw new RemoteLinkError("unavailable");
-  if (input.action === "list_repositories")
-    return {
-      repositories: asArray(response.result)
-        .slice(0, intParam(params, "limit", 30, 100))
-        .map((item) =>
-          pick(item, [
-            "id",
-            "full_name",
-            "description",
-            "private",
-            "archived",
-            "default_branch",
-            "html_url",
-            "updated_at",
-          ]),
-        ),
-    };
-  if (input.action === "list_issues")
-    return {
-      issues: asArray(response.result)
-        .filter((item) => !asRecord(item)?.pull_request)
-        .slice(0, intParam(params, "limit", 30, 50))
-        .map((item) =>
-          pick(item, [
-            "number",
-            "title",
-            "state",
-            "html_url",
-            "created_at",
-            "updated_at",
-            "user",
-            "labels",
-          ]),
-        ),
-    };
-  return pick(response.result, [
-    "number",
-    "title",
-    "body",
-    "state",
-    "state_reason",
-    "html_url",
-    "created_at",
-    "updated_at",
-    "closed_at",
-    "user",
-    "assignees",
-    "labels",
-    "milestone",
-    "comments",
-  ]);
+  }
 }

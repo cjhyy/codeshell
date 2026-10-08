@@ -32,6 +32,8 @@ export interface LocalLinkProviderSummary {
 
 export interface LocalLinkActionContext {
   token: string;
+  /** Provider OAuth access tokens can use different headers from personal tokens. */
+  authKind?: "token" | "oauth";
   params: Record<string, unknown>;
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;

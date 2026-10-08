@@ -19,6 +19,10 @@ import type {
 } from "./types.js";
 
 const bearer = (token: string): Record<string, string> => ({ Authorization: `Bearer ${token}` });
+const gitlabHeaders = (ctx: { token: string; authKind?: "token" | "oauth" }) =>
+  ctx.authKind === "oauth" ? bearer(ctx.token) : { "PRIVATE-TOKEN": ctx.token };
+const figmaHeaders = (ctx: { token: string; authKind?: "token" | "oauth" }) =>
+  ctx.authKind === "oauth" ? bearer(ctx.token) : { "X-Figma-Token": ctx.token };
 const GITHUB_API_VERSION = "2022-11-28";
 const NOTION_API_VERSION = "2022-06-28";
 const githubHeaders = (token: string): Record<string, string> => ({
@@ -370,7 +374,7 @@ const gitlab: LocalLinkProviderSpec = {
   tokenPlaceholder: "glpat-…",
   async validate(context) {
     const data = await request(context, "https://gitlab.com/api/v4/user", {
-      headers: { "PRIVATE-TOKEN": context.token },
+      headers: gitlabHeaders(context),
     });
     return identity(data, ["id"], ["username", "name"], ["name", "email"]);
   },
@@ -380,7 +384,7 @@ const gitlab: LocalLinkProviderSpec = {
       url.searchParams.set("membership", "true");
       url.searchParams.set("simple", "true");
       url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
-      const data = await request(ctx, url, { headers: { "PRIVATE-TOKEN": ctx.token } });
+      const data = await request(ctx, url, { headers: gitlabHeaders(ctx) });
       return {
         projects: compactList(
           data,
@@ -402,7 +406,7 @@ const gitlab: LocalLinkProviderSpec = {
       const url = new URL("https://gitlab.com/api/v4/issues");
       url.searchParams.set("scope", "assigned_to_me");
       url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
-      const data = await request(ctx, url, { headers: { "PRIVATE-TOKEN": ctx.token } });
+      const data = await request(ctx, url, { headers: gitlabHeaders(ctx) });
       return {
         issues: compactList(
           data,
@@ -431,7 +435,7 @@ const figma: LocalLinkProviderSpec = {
   tokenPlaceholder: "figd_…",
   async validate(context) {
     const data = await request(context, "https://api.figma.com/v1/me", {
-      headers: { "X-Figma-Token": context.token },
+      headers: figmaHeaders(context),
     });
     return identity(data, ["id"], ["handle", "email"], ["email"]);
   },
@@ -444,8 +448,7 @@ const figma: LocalLinkProviderSpec = {
         const fileKey = figmaFileKey(ctx.params);
         const url = new URL(`https://api.figma.com/v1/files/${encodeURIComponent(fileKey)}`);
         url.searchParams.set("depth", "1");
-        const data =
-          asRecord(await request(ctx, url, { headers: { "X-Figma-Token": ctx.token } })) ?? {};
+        const data = asRecord(await request(ctx, url, { headers: figmaHeaders(ctx) })) ?? {};
         const document = asRecord(data.document);
         return {
           name: data.name,
@@ -463,7 +466,7 @@ const figma: LocalLinkProviderSpec = {
           await request(
             ctx,
             `https://api.figma.com/v1/files/${encodeURIComponent(fileKey)}/comments`,
-            { headers: { "X-Figma-Token": ctx.token } },
+            { headers: figmaHeaders(ctx) },
           ),
         ) ?? {};
       return {
@@ -587,7 +590,8 @@ async function linearGraphql(
     asRecord(
       await request(context, "https://api.linear.app/graphql", {
         method: "POST",
-        headers: { Authorization: context.token },
+        headers:
+          context.authKind === "oauth" ? bearer(context.token) : { Authorization: context.token },
         body: { query, variables },
       }),
     ) ?? {};
@@ -613,7 +617,7 @@ const linear: LocalLinkProviderSpec = {
       const first = intParam(ctx.params, "limit", 30, 50);
       const data = await linearGraphql(
         ctx,
-        "query Issues($first: Int!) { viewer { assignedIssues(first: $first) { nodes { id identifier title description priority url createdAt updatedAt state { name type } team { key name } } } } }",
+        "query Issues($first: Int!) { viewer { assignedIssues(first: $first) { nodes { id identifier title description priority url createdAt updatedAt state { name type } team { id key name } } } } }",
         { first },
       );
       const viewer = asRecord(data.viewer);
@@ -916,7 +920,7 @@ export function listLocalLinkProviders(): LocalLinkProviderSummary[] {
 export async function validateLocalLinkToken(
   providerId: string,
   token: string,
-  options: { signal?: AbortSignal; fetchImpl?: typeof fetch } = {},
+  options: { signal?: AbortSignal; fetchImpl?: typeof fetch; authKind?: "token" | "oauth" } = {},
 ): Promise<import("./types.js").LocalLinkValidationResult> {
   const provider = getLocalLinkProvider(providerId);
   if (!provider) throw new Error(`Unknown local Link provider: ${providerId}`);

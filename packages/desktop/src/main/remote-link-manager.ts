@@ -51,7 +51,7 @@ export function createNativeRemoteLinkManager(options: {
       for (const [id, request] of cancelledRequests)
         if (request.expiresAt <= Date.now()) cancelledRequests.delete(id);
       if (cancelledRequests.get(requestId)?.ownerId === context.ownerId)
-        return { id: "", providerId: "github", state: "cancelled" };
+        return { id: "", providerId: input.providerId, state: "cancelled" };
       if (
         flows.has(requestId) ||
         [...flows.values()].some((flow) => flow.ownerId === context.ownerId)
@@ -83,7 +83,7 @@ export function createNativeRemoteLinkManager(options: {
           cancelled = true;
           if (job) void service.cancelAuthorization(context, job.id).catch(() => {});
           cleanup();
-          resolve({ id: job?.id ?? "", providerId: "github", state: "cancelled" });
+          resolve({ id: job?.id ?? "", providerId: input.providerId, state: "cancelled" });
         };
         flows.set(requestId, { ownerId: context.ownerId, cancel });
         const guarded = {

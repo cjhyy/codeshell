@@ -228,7 +228,9 @@ test("another login cannot inspect, complete or cancel an authorization, and log
   expect((await f.api(`/authorizations/${job.id}`, "DELETE", undefined, "two")).status).toBe(404);
   f.deny("one");
   expect((await f.complete(job)).status).toBe(401);
-  expect(f.requests).toHaveLength(0);
+  expect(f.requests.filter((request) => request.path !== "/api/v1/links/providers")).toHaveLength(
+    0,
+  );
 });
 test("a changed reviewed connection cannot be overwritten by an in-flight callback", async () => {
   const f = await fixture();
@@ -283,7 +285,9 @@ test("changed trusted configuration, expiry and restart invalidate private attem
   expect((await f.complete(expired)).status).toBe(404);
   f.http.close();
   expect((await f.complete(expired)).status).toBe(503);
-  expect(f.requests).toHaveLength(0);
+  expect(f.requests.filter((request) => request.path !== "/api/v1/links/providers")).toHaveLength(
+    0,
+  );
 });
 test("failed remote revocation disables local use and can be retried without erasing the grant", async () => {
   const f = await fixture(),
@@ -320,7 +324,9 @@ test("untrusted configuration fields and foreign callbacks never reach the issue
       })
     ).status,
   ).toBe(422);
-  expect(f.requests).toHaveLength(0);
+  expect(f.requests.filter((request) => request.path !== "/api/v1/links/providers")).toHaveLength(
+    0,
+  );
   f.disable();
   expect((await f.api("/authorizations/remote", "POST", input)).status).toBe(503);
 });
