@@ -63,10 +63,12 @@ projection (for example an explicitly enabled private diagnostic capture); diges
 values alone cannot reconstruct a request. Restoring a durable Session on the
 same custody authority preserves its key identity and permits that verification.
 
-Validation uses `bun test packages/core/src/model-request-boundary` and
-`bun test packages/desktop/src/main/model-request-signing-service.test.ts`. After
+Validation uses `node scripts/run-bun-test-shard.mjs packages/core/src/model-request-boundary`
+and the same guarded runner for
+`packages/desktop/src/main/model-request-signing-service.test.ts`. After
 `bun run test:package-release` completes, run
-`node scripts/smoke-model-request-boundaries.mjs` for compiled SDK, actual stdio
+`node scripts/run-isolated-node-smoke.mjs scripts/smoke-model-request-boundaries.mjs`
+for compiled SDK, actual stdio
 worker, and TUI consumers. CI runs the same consumer script. Every model fixture
 uses a fresh HOME, an exact localhost origin guard installed before Core loads,
 and checks the actual child/worker bootstrap receipt. Redirects and inherited

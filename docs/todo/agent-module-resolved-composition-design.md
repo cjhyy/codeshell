@@ -1,6 +1,6 @@
 # AgentModule 与 ResolvedComposition 统一组合设计
 
-> 状态：**Phase A（Compiler+golden）、Phase B（一次性 cutover）和 Phase C（生命周期 disposer）已实现**；Phase D（request boundary）待做。
+> 状态：**Phase A（Compiler+golden）、Phase B（一次性 cutover）、Phase C（生命周期 disposer）和 Phase D（request boundary）已实现**；Phase D 的最终组合 CI／Linux 真实密钥库验收仍待完成，具体边界见[请求证据交付](../model-request-boundaries.md)。
 > golden 基线：`tests/fixtures/composition-golden.json`（当前审阅基线以文件的 `baselineCommit` 为准；旧路径生成的拓扑在 cutover 后由新工厂逐项复现）。
 > 版本说明：cutover 的 0.9.0 发布迁移已完成；后续发布按当前版本与正常 release 流程递增，本设计不再要求回退到 0.9.0。
 > 日期：2026-08-14；落地 2026-08-15。
