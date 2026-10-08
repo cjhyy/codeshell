@@ -9,12 +9,16 @@ export interface DesktopManagedRuntimeOptions {
   arch?: string;
 }
 
+export function desktopManagedRuntimeRoot(options: DesktopManagedRuntimeOptions): string {
+  return options.isPackaged
+    ? join(options.resourcesPath, "runtimes")
+    : join(options.appPath, "out", "managed-runtimes");
+}
+
 /** Locate application-owned runtimes without selecting one for any consumer. */
 export function createDesktopManagedRuntimeProvider(options: DesktopManagedRuntimeOptions) {
   return createManagedRuntimeProvider({
-    root: options.isPackaged
-      ? join(options.resourcesPath, "runtimes")
-      : join(options.appPath, "out", "managed-runtimes"),
+    root: desktopManagedRuntimeRoot(options),
     platform: options.platform,
     arch: options.arch,
   });

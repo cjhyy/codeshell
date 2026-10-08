@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { officeZip, textPdf, wordXml } from "../../../../../tests/fixtures/upload-documents.js";
+import { officeZip, textPdf, wordXml } from "../../../../../tests/fixtures/upload-documents.mjs";
 import { parseDocument } from "./parse.js";
 import { parseDocumentIsolated } from "./worker.js";
 import { MAX_DOCUMENT_TEXT_BYTES } from "./types.js";
@@ -50,7 +50,7 @@ test("XLSX resolves shared/rich/inline strings, numeric values and cached formul
   ]);
 });
 
-test("official PDF.js actually extracts text in a bounded worker", async () => {
+test("official PDF.js actually extracts text in a bounded parser process", async () => {
   const result = await parseDocumentIsolated(textPdf(), "sample.pdf");
   expect(result.format).toBe("pdf");
   expect(result.parts[0].label).toBe("page 1");
@@ -103,4 +103,35 @@ test("UTF-8 extraction reports its text bound and parsing cancellation/timeout t
   expect(
     (await parseDocumentIsolated(Buffer.from("still available"), "next.txt")).parts[0].text,
   ).toBe("still available");
+});
+
+test("active parsing cancellation and a full bounded queue release every process slot", async () => {
+  const controllers = Array.from({ length: 20 }, () => new AbortController());
+  const reads = controllers.map((controller) =>
+    parseDocumentIsolated(new TextEncoder().encode("queued document"), "queue.txt", {
+      signal: controller.signal,
+    }).then(
+      () => "completed",
+      (error) => String(error),
+    ),
+  );
+  // Let each acquire continuation spawn/queue, then cancel before a child result.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controllers.forEach((controller) => controller.abort(new Error("fixture cancelled")));
+  const outcomes = await Promise.all(reads);
+  expect(outcomes.filter((value) => value.includes("busy"))).toHaveLength(2);
+  expect(outcomes.filter((value) => value.includes("fixture cancelled"))).toHaveLength(18);
+  const result = await parseDocumentIsolated(new TextEncoder().encode("next request"), "next.txt");
+  expect(result.parts[0].text).toBe("next request");
+});
+
+test("repeated large XLSX shared references are bounded before intermediate concatenation", async () => {
+  const bytes = officeZip({
+    "xl/sharedStrings.xml": `<sst><si><t>${"界".repeat(500_000)}</t></si></sst>`,
+    "xl/worksheets/sheet1.xml": `<worksheet><sheetData><row>${Array.from({ length: 1_000 }, (_, i) => `<c r="A${i}" t="s"><v>0</v></c>`).join("")}</row></sheetData></worksheet>`,
+  });
+  const result = await parseDocumentIsolated(bytes, "repeated.xlsx");
+  expect(result.truncated).toBe(true);
+  expect(Buffer.byteLength(result.parts[0].text)).toBeLessThanOrEqual(MAX_DOCUMENT_TEXT_BYTES);
+  expect(result.parts[0].text).toContain("[A0] 界");
 });

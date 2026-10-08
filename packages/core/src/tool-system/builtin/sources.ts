@@ -132,13 +132,32 @@ export async function listSourcesTool(
 export const readSourceToolDef: ToolDefinition = {
   name: "ReadSource",
   description:
-    "Read the content of one resource from a bound data source. Requires approval. Args must exactly match a bound source/scope and a listed resource id.",
+    "Read one exact resource from a bound data source (requires approval). Uploaded UTF-8 text, DOCX/PPTX/XLSX and PDF documents are parsed locally; PDF requires Node.js 22.13+. For an uploaded document, optional query searches its local chunk index (limit 1–20); optional chunk reads a returned chunk id. Query and chunk cannot be combined. Source/scope/resource must always match an explicitly listed resource.",
   inputSchema: {
     type: "object",
     properties: {
       source: { type: "string", description: "Bound source id (from ListSources)" },
       scope: { type: "string", description: "Bound scope id" },
       resource: { type: "string", description: "Resource id within that scope" },
+      query: {
+        type: "string",
+        minLength: 1,
+        maxLength: 512,
+        description:
+          "Uploaded document only: local lexical search terms within this exact resource",
+      },
+      limit: {
+        type: "integer",
+        minimum: 1,
+        maximum: 20,
+        description: "Maximum query matches, default 5",
+      },
+      chunk: {
+        type: "string",
+        pattern: "^c_[a-f0-9]{24}$",
+        description:
+          "Uploaded document only: exact chunk id from a prior query of the current file version",
+      },
     },
     required: ["source", "scope", "resource"],
   },
@@ -170,6 +189,32 @@ export async function readSourceTool(
   const adapter = connectorAdapterFor(access.kind);
   if (!adapter) return `Error: no adapter for kind "${access.kind}".`;
 
+  const query = args.query;
+  const chunk = args.chunk;
+  const limit = args.limit;
+  if (query !== undefined || chunk !== undefined || limit !== undefined) {
+    if (access.kind !== "local-files")
+      return "Error: document queries and chunks are available only for uploaded files.";
+    if (
+      query !== undefined &&
+      (typeof query !== "string" || !query.trim() || query.length > 512 || query.includes("\0"))
+    )
+      return "Error: document query must contain 1–512 characters.";
+    if (chunk !== undefined && (typeof chunk !== "string" || !/^c_[a-f0-9]{24}$/.test(chunk)))
+      return "Error: invalid document chunk id.";
+    if (query !== undefined && chunk !== undefined)
+      return "Error: choose either a document query or an exact chunk.";
+    if (
+      limit !== undefined &&
+      (query === undefined ||
+        typeof limit !== "number" ||
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        limit > 20)
+    )
+      return "Error: document query limit must be an integer from 1 to 20.";
+  }
+
   try {
     // Validate resource ownership from the selected scope's metadata before
     // any content read. This prevents a valid id from another scope being used
@@ -191,6 +236,9 @@ export async function readSourceTool(
       cwd,
       settingsScope: ctx?.settingsScope ?? "project",
       executeBoundTool: ctx?.executeBoundTool,
+      documentParserExecutable: ctx?.documentParserExecutable,
+      ...(typeof query === "string" ? { query, limit: typeof limit === "number" ? limit : 5 } : {}),
+      ...(typeof chunk === "string" ? { chunk } : {}),
       assertAuthorized: () => {
         if (!authorityIsCurrent(access, cwd, ctx)) throw new Error("Source authorization changed");
       },

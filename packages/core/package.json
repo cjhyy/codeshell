@@ -56,7 +56,6 @@
     "gpt-tokenizer": "^3.4.0",
     "nanoid": "^5.1.2",
     "openai": "^4.82.0",
-    "pdfjs-dist": "6.4.299",
     "proper-lockfile": "^4.1.2",
     "saxes": "6.0.0",
     "semver": "^7.7.4",
@@ -100,5 +99,8 @@
   },
   "devDependencies": {
     "@types/yauzl": "^3.4.0"
+  },
+  "optionalDependencies": {
+    "pdfjs-dist": "6.4.299"
   }
 }

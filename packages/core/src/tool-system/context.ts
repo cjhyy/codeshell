@@ -263,6 +263,8 @@ export interface ToolRunYieldController {
 }
 
 export interface ToolContext {
+  /** Trusted Host resolver for an isolated PDF Node process; never model/settings input. */
+  documentParserExecutable?: (signal?: AbortSignal) => Promise<string>;
   /** Active working directory for this Engine. */
   cwd: string;
   /** Resolved strategy for the current session's model context. */

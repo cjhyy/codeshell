@@ -47,7 +47,8 @@
     "lint:engine-bypass": "bash scripts/check-no-engine-bypass.sh",
     "lint:workflow-test-paths": "node scripts/check-workflow-test-paths.mjs",
     "lint:baseline": "node scripts/check-lint-baseline.mjs",
-    "format": "prettier --write 'packages/**/*.ts'"
+    "format": "prettier --write 'packages/**/*.ts'",
+    "test:upload-documents": "node scripts/smoke-upload-documents.mjs"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

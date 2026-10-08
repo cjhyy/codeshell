@@ -332,6 +332,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         composition: deps.parentConfig.composition,
         modules: deps.parentConfig.modules,
         builtinToolHost: deps.parentConfig.builtinToolHost,
+        documentParserExecutable: deps.parentConfig.documentParserExecutable,
         customSystemPrompt: deps.parentConfig.customSystemPrompt,
         appendSystemPrompt:
           [deps.parentConfig.appendSystemPrompt, request.appendSystemPrompt]

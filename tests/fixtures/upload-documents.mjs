@@ -1,6 +1,6 @@
 import { deflateRawSync } from "node:zlib";
 
-function crc32(bytes: Buffer): number {
+function crc32(bytes) {
   let value = 0xffffffff;
   for (const byte of bytes) {
     value ^= byte;
@@ -10,9 +10,9 @@ function crc32(bytes: Buffer): number {
 }
 
 /** Real ZIP container with independently controllable entries for parser tests. */
-export function officeZip(entries: Record<string, string | Buffer>): Buffer {
-  const local: Buffer[] = [];
-  const central: Buffer[] = [];
+export function officeZip(entries) {
+  const local = [];
+  const central = [];
   let offset = 0;
   for (const [name, content] of Object.entries(entries)) {
     const filename = Buffer.from(name);
@@ -51,7 +51,7 @@ export function officeZip(entries: Record<string, string | Buffer>): Buffer {
   return Buffer.concat([...local, directory, end]);
 }
 
-export function textPdf(text = "Actual PDF text fixture"): Buffer {
+export function textPdf(text = "Actual PDF text fixture") {
   const stream = `BT /F1 12 Tf 50 750 Td (${text.replace(/[()\\]/g, "\\$&")}) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -73,5 +73,5 @@ export function textPdf(text = "Actual PDF text fixture"): Buffer {
   return Buffer.from(body);
 }
 
-export const wordXml = (text: string) =>
+export const wordXml = (text) =>
   `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${text}</w:t></w:r></w:p></w:body></w:document>`;

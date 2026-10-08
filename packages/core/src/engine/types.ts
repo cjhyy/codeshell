@@ -126,6 +126,8 @@ export interface EngineConfig {
   /** Browser automation bridge (browser_* tools). Wired by the host (desktop)
    *  after construction via setBrowserBridge. Undefined → tools degrade. */
   browserBridge?: import("../tool-system/browser-bridge.js").BrowserBridge;
+  /** Trusted Host PDF parser Node resolver; cannot be set through protocol settings. */
+  documentParserExecutable?: import("../tool-system/context.js").ToolContext["documentParserExecutable"];
   /** Host-backed workspace switch bridge (desktop only). */
   workspaceBridge?: import("../tool-system/workspace-bridge.js").WorkspaceBridge;
   /** Host-backed panel discovery/focus bridge (interactive Desktop only). */

@@ -33,7 +33,7 @@ class TextBudget {
     this.truncated ||= value.truncated;
     if (!value.text) return;
     this.bytes += Buffer.byteLength(value.text, "utf8");
-    this.parts.push({ label, text: value.text });
+    this.parts.push({ label: label.slice(0, 512), text: value.text });
   }
 }
 
@@ -225,8 +225,24 @@ function sharedStrings(xml: string | undefined): string[] {
   return strings;
 }
 
-function sheetText(xml: string, strings: string[]): string {
+function sheetText(xml: string, strings: string[], maxBytes: number) {
   const cells: string[] = [];
+  let cellCount = 0;
+  let bytes = 0;
+  let truncated = false;
+  const add = (text: string) => {
+    const remaining = Math.max(0, maxBytes - bytes);
+    if (!remaining) {
+      truncated ||= Boolean(text);
+      return;
+    }
+    // Bound before Buffer allocation and before concatenating shared references.
+    const prefix = text.slice(0, remaining);
+    const value = truncateUtf8Text(prefix, remaining);
+    truncated ||= prefix.length < text.length || value.truncated;
+    if (value.text) cells.push(value.text);
+    bytes += Buffer.byteLength(value.text);
+  };
   let cell: { ref: string; type: string; text: string } | undefined;
   let inValue = false;
   parseXml(xml, {
@@ -237,7 +253,7 @@ function sheetText(xml: string, strings: string[]): string {
     close: (name) => {
       if (name === "v" || name === "t") inValue = false;
       if (name === "c" && cell) {
-        if (cells.length >= 100_000) throw new Error("Spreadsheet exceeds cell limits");
+        if (++cellCount > 100_000) throw new Error("Spreadsheet exceeds cell limits");
         let text = cell.text;
         if (cell.type === "s") {
           if (
@@ -248,7 +264,11 @@ function sheetText(xml: string, strings: string[]): string {
             throw new Error("Spreadsheet shared string reference is invalid");
           text = strings[Number(text)];
         } else if (cell.type === "b") text = text === "1" ? "true" : "false";
-        if (text) cells.push(`[${cell.ref}] ${text}`);
+        if (text) {
+          if (cells.length) add("\n");
+          add(`[${cell.ref}] `);
+          add(text);
+        }
         cell = undefined;
       }
     },
@@ -256,7 +276,7 @@ function sheetText(xml: string, strings: string[]): string {
       if (cell && inValue) cell.text += value;
     },
   });
-  return cells.join("\n");
+  return { text: cells.join(""), truncated };
 }
 
 function orderedParts(entries: Map<string, string>, format: "xlsx" | "pptx") {
@@ -309,13 +329,17 @@ export async function parseDocument(bytes: Uint8Array, filename: string): Promis
       if (!parts.length) throw new Error("Office document contains no readable slide or worksheet");
       const strings =
         extension === "xlsx" ? sharedStrings(entries.get("xl/sharedStrings.xml")) : [];
-      for (const part of parts)
-        budget.add(
-          part.label,
-          extension === "xlsx"
-            ? sheetText(entries.get(part.path)!, strings)
-            : officeText(entries.get(part.path)!),
-        );
+      for (const part of parts) {
+        if (extension === "xlsx") {
+          const sheet = sheetText(
+            entries.get(part.path)!,
+            strings,
+            MAX_DOCUMENT_TEXT_BYTES - budget.bytes,
+          );
+          budget.add(part.label, sheet.text);
+          budget.truncated ||= sheet.truncated;
+        } else budget.add(part.label, officeText(entries.get(part.path)!));
+      }
     }
     return { format: extension, parts: budget.parts, truncated: budget.truncated };
   }
@@ -325,7 +349,15 @@ export async function parseDocument(bytes: Uint8Array, filename: string): Promis
       throw new Error(
         "PDF text extraction requires Node.js 22.13 or newer; upgrade this Host or export the document as UTF-8 text. Other uploaded text and Office formats remain available.",
       );
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    let pdfjs: typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+    try {
+      pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    } catch {
+      throw new Error(
+        "The optional PDF parser is unavailable; use Node.js 22.13+ and reinstall CodeShell with optional dependencies, or export this document as UTF-8 text.",
+      );
+    }
+    const { getDocument } = pdfjs;
     const task = getDocument({
       data: new Uint8Array(bytes),
       useSystemFonts: false,

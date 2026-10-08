@@ -500,6 +500,33 @@ function assertOwnerAuthConsumer(consumerDirectory: string): void {
   );
 }
 
+function assertUploadedDocumentConsumer(consumerDirectory: string): void {
+  const script = readFileSync(join(REPO_ROOT, "scripts/smoke-upload-documents.mjs"), "utf8")
+    .replaceAll("../tests/fixtures/upload-documents.mjs", "./upload-documents.mjs")
+    .replaceAll(
+      "../packages/core/dist/sources/documents/runtime.js",
+      "@cjhyy/code-shell-core/internal",
+    )
+    .replaceAll("../packages/core/dist/index.internal.js", "@cjhyy/code-shell-core/internal")
+    .replace(
+      /\.\.\/packages\/core\/dist\/(?:tool-system\/(?:registry|executor|permission)|hooks\/registry)\.js/g,
+      "@cjhyy/code-shell-core",
+    );
+  const path = join(consumerDirectory, "uploaded-documents.mjs");
+  writeFileSync(path, script);
+  writeFileSync(
+    join(consumerDirectory, "upload-documents.mjs"),
+    readFileSync(join(REPO_ROOT, "tests/fixtures/upload-documents.mjs")),
+  );
+  runCommand(
+    "packed uploaded document parser, index and cold-cache authority (Node)",
+    "node",
+    [path],
+    consumerDirectory,
+    { ...process.env, CODE_SHELL_HOME: join(consumerDirectory, "home/.code-shell") },
+  );
+}
+
 function runFullSmoke(records: readonly AuditedPackageRecord[]): void {
   const temporaryRoot = mkdtempSync(join(tmpdir(), "codeshell-package-release-"));
   try {
@@ -511,6 +538,7 @@ function runFullSmoke(records: readonly AuditedPackageRecord[]): void {
     assertStrictDeclarations(packedRecords, consumerDirectory);
     assertRuntimeImports(packedRecords, consumerDirectory);
     assertOwnerAuthConsumer(consumerDirectory);
+    assertUploadedDocumentConsumer(consumerDirectory);
     console.log(
       `\nPackage release smoke passed: ${packedRecords.length} tarballs, ${packedRecords.reduce(
         (count, record) => count + record.entries.filter((entry) => entry.typeImport).length,

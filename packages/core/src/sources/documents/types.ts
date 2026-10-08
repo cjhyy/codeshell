@@ -19,6 +19,7 @@ export interface ParsedDocument {
 export interface DocumentChunk {
   id: string;
   part: string;
+  partIndex: number;
   start: number;
   end: number;
   text: string;

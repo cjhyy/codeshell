@@ -31,6 +31,7 @@
  */
 
 import { join } from "node:path";
+import { createManagedDocumentParserResolver } from "../sources/documents/runtime.js";
 import { existsSync, readdirSync } from "node:fs";
 import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
@@ -122,6 +123,11 @@ export function resolveSessionCwd(slice: EngineConfigSlice): string {
 // ─── Read base config from environment / settings ─────────────────
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
+// Capture only the parent Host distribution root, before project settings/env are read.
+const documentRuntimeRoot = process.env.CODE_SHELL_DOCUMENT_RUNTIME_ROOT;
+const documentParserExecutable = documentRuntimeRoot
+  ? createManagedDocumentParserResolver(documentRuntimeRoot)
+  : undefined;
 // Compile ONCE at the host root; seed engine, per-session engines and the
 // AgentServer all consume this same composition (design §9.3).
 const composition = compileComposition({ modules: await loadConfiguredAgentModules() });
@@ -325,6 +331,7 @@ const chatManager = new ChatSessionManager({
       // session it creates is a desktop-origin session.
       origin: "desktop",
       builtinToolHost: "desktop",
+      documentParserExecutable,
       composition,
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DOCUMENT_PARSE_TIMEOUT_MS, MAX_DOCUMENT_BYTES, type ParsedDocument } from "./types.js";
 
@@ -35,7 +36,12 @@ async function acquireParserSlot(signal?: AbortSignal): Promise<() => void> {
 export async function parseDocumentIsolated(
   bytes: Uint8Array,
   filename: string,
-  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+  options: {
+    signal?: AbortSignal;
+    timeoutMs?: number;
+    /** Trusted Host only; used for PDF, never sourced from tool arguments/settings. */
+    resolveExecutable?: (signal?: AbortSignal) => Promise<string>;
+  } = {},
 ): Promise<ParsedDocument> {
   options.signal?.throwIfAborted();
   if (bytes.byteLength > MAX_DOCUMENT_BYTES)
@@ -44,16 +50,32 @@ export async function parseDocumentIsolated(
   try {
     options.signal?.throwIfAborted();
     const extension = import.meta.url.endsWith(".ts") ? ".ts" : ".js";
-    const entry = fileURLToPath(new URL(`./parser-entry${extension}`, import.meta.url));
-    const args = process.versions.bun ? ["--smol", entry] : ["--max-old-space-size=192", entry];
-    const child = spawn(process.execPath, args, {
+    let entry = fileURLToPath(new URL(`./parser-entry${extension}`, import.meta.url));
+    const managedExecutable = /\.pdf$/i.test(filename)
+      ? await options.resolveExecutable?.(options.signal)
+      : undefined;
+    options.signal?.throwIfAborted();
+    if (
+      managedExecutable !== undefined &&
+      (!isAbsolute(managedExecutable) || managedExecutable.includes("\0"))
+    )
+      throw new Error("The trusted document parser executable must be an absolute path");
+    // External Node has no Electron ASAR filesystem. Only the reviewed parser
+    // entry/dependency closure is unpacked alongside the application archive.
+    if (managedExecutable)
+      entry = entry.replace(/([\\/])app\.asar([\\/])/, "$1app.asar.unpacked$2");
+    const args =
+      !managedExecutable && process.versions.bun
+        ? ["--smol", entry]
+        : ["--max-old-space-size=192", entry];
+    const child = spawn(managedExecutable ?? process.execPath, args, {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       shell: false,
       env: {
         PATH: process.env.PATH,
         SystemRoot: process.env.SystemRoot,
-        ...(process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
+        ...(!managedExecutable && process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
       },
     });
     const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
