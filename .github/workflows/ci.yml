@@ -152,8 +152,8 @@ jobs:
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |
-          bun scripts/optimization-lab-p2-cleanup-fixture.mjs
-          node scripts/optimization-lab-p2-fixture.mjs
+          bun scripts/run-isolated-node-smoke.mjs scripts/optimization-lab-p2-cleanup-fixture.mjs
+          node scripts/run-isolated-node-smoke.mjs scripts/optimization-lab-p2-fixture.mjs
       - name: compiled SDK verified Link write lifecycle
         if: matrix.shard == 'core-engine'
         run: node scripts/smoke-verified-link-write.mjs
