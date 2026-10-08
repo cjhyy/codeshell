@@ -29,3 +29,31 @@ describe("command palette workspace availability", () => {
     expect(opened).toEqual(["review"]);
   });
 });
+
+test("task inbox command follows its shared user feature flag", () => {
+  ensureMiniDom();
+  const options = {
+    setViewMode: () => {},
+    openPanel: () => {},
+    toggleSidebar: () => {},
+    toggleInspector: () => {},
+    clearTranscript: () => {},
+    openSearch: () => {},
+  };
+  expect(
+    buildCommands({ ...options, taskInboxEnabled: false }).some(
+      (command) => command.id === "go.taskInbox",
+    ),
+  ).toBe(false);
+  let target: string | undefined;
+  buildCommands({
+    ...options,
+    taskInboxEnabled: true,
+    setViewMode: (mode) => {
+      target = mode;
+    },
+  })
+    .find((command) => command.id === "go.taskInbox")!
+    .run();
+  expect(target).toBe("task_inbox");
+});

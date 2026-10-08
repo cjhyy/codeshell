@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   KeyRound,
+  ListTodo,
   MessageSquare,
   PlayCircle,
   Puzzle,
@@ -16,6 +17,7 @@ import {
   Workflow,
   type LucideIcon,
 } from "lucide-react";
+import type { TaskInboxPageProps } from "../task-inbox/TaskInboxPage";
 import type { ViewMode } from "../view";
 
 /**
@@ -46,6 +48,7 @@ export interface PageNav {
 export interface PageRenderContext {
   /** Deep-link into the runs view (set by the automation view). */
   runsInitialRunId: string | null;
+  onOpenTaskInboxRecord?: TaskInboxPageProps["onOpenTaskInboxRecord"];
   /** Active repository, used by project-aware standalone pages. */
   activeProjectPath: string | null;
   /** Start a conversation from a standalone page through the host's normal flow. */
@@ -98,6 +101,10 @@ const ExtensionsPage: LazyExoticComponent<
   })),
 );
 
+const TaskInboxPage: LazyExoticComponent<ComponentType<TaskInboxPageProps>> = lazy(() =>
+  import("../task-inbox/TaskInboxPage").then((module) => ({ default: module.TaskInboxPage })),
+);
+
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
   builtin({
     key: "extensions",
@@ -113,6 +120,13 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     icon: UsersRound,
     nav: { order: 0, target: "digital_humans", isActive: (mode) => mode === "digital_humans" },
     render: null,
+  }),
+  builtin({
+    key: "task_inbox",
+    title: { kind: "i18n", key: "sidebar.taskInbox" },
+    icon: ListTodo,
+    nav: { order: 5, target: "task_inbox", isActive: (mode) => mode === "task_inbox" },
+    render: ({ onOpenTaskInboxRecord }) => createElement(TaskInboxPage, { onOpenTaskInboxRecord }),
   }),
   builtin({
     key: "automation",

@@ -14,6 +14,7 @@ describe("PageRegistry", () => {
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
       "extensions",
       "digital_humans",
+      "task_inbox",
       "automation",
       "credentials",
     ]);
@@ -24,6 +25,7 @@ describe("PageRegistry", () => {
     expect(titles).toEqual([
       { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
+      { kind: "i18n", key: "sidebar.taskInbox" },
       { kind: "i18n", key: "sidebar.automation" },
       { kind: "i18n", key: "sidebar.credentials" },
     ]);
@@ -123,6 +125,7 @@ describe("migrated builtin pages", () => {
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
       "extensions",
       "digital_humans",
+      "task_inbox",
       "automation",
       "credentials",
     ]);

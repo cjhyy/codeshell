@@ -100,6 +100,7 @@ interface SidebarProps {
 
   activeProjectPath: string | null;
   viewMode: ViewMode;
+  taskInboxEnabled?: boolean;
 }
 
 const COMPACT_SESSION_LIMIT = 5;
@@ -127,6 +128,7 @@ export function shouldPromptForPrimaryTrust(level: "trusted" | "untrusted" | "un
 }
 
 export function Sidebar({
+  taskInboxEnabled = true,
   projects,
   sessions,
   activeProjectId,
@@ -207,7 +209,9 @@ export function Sidebar({
 
   // Re-render when pages register/unregister (same idiom as panels/PanelArea.tsx:158).
   useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);
-  const navPages = PAGE_REGISTRY.navEntries();
+  const navPages = PAGE_REGISTRY.navEntries().filter(
+    (page) => page.key !== "task_inbox" || taskInboxEnabled,
+  );
 
   // Pin sort (sortProjects: pinned first, then by addedAt asc).
   const orderedProjects = useMemo(() => sortProjects(projects), [projects]);

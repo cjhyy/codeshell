@@ -37,6 +37,7 @@ export function PetWorldPane({
   now = Date.now(),
   onNavigate,
   focusPending = false,
+  selectedLongTaskId,
   excludedSessionIds,
 }: {
   projection: PetProjectionSnapshot | null;
@@ -44,6 +45,7 @@ export function PetWorldPane({
   now?: number;
   onNavigate?: (request: PetOpenSessionRequest) => void;
   focusPending?: boolean;
+  selectedLongTaskId?: string | null;
   excludedSessionIds?: ReadonlySet<string>;
 }) {
   const selected = selectPetOverview(projection, status, now);
@@ -165,6 +167,7 @@ export function PetWorldPane({
       <div className="min-h-0 flex-1 overflow-visible p-3.5 @min-[1100px]/pet-page:overflow-y-auto">
         <div ref={pendingRef} tabIndex={-1} className="space-y-3 outline-none">
           <PetLongTaskSection
+            selectedTaskId={selectedLongTaskId}
             onOpenSession={(sessionId) => {
               if (!projection) return;
               onNavigate?.({
