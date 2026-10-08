@@ -440,7 +440,7 @@ export async function connectCliLink(
     providerId,
     identity: await liveIdentity(providerId, options, run),
     capabilityIds: provider.actions
-      .filter((action) => !(providerId === "github" && action.id === "set_starred"))
+      .filter((action) => action.risk !== "write")
       .map((action) => `${providerId}.${action.id}`),
     verifiedAt: new Date().toISOString(),
   };
@@ -479,10 +479,6 @@ async function executeGithubCliAction(
   options: { cwd?: string; signal?: AbortSignal },
   run: CliLinkCommandRunner,
 ): Promise<unknown> {
-  if (actionId === "set_starred")
-    throw new Error(
-      "GitHub CLI Star writes are unavailable because gh may follow mutation redirects; explicitly connect PAT/OAuth for this action",
-    );
   if (actionId === "list_repositories") {
     const limit = intParam(params, "limit", 30, 100);
     const data = await api("github", `user/repos?per_page=${limit}&sort=updated`, options, run);
@@ -649,17 +645,6 @@ async function executeGithubCliAction(
       "deletions",
       "changed_files",
     ]);
-  }
-  if (actionId === "create_issue") {
-    const title = stringParam(params, "title", { required: true, maxLength: 256 })!;
-    const body = stringParam(params, "body", { maxLength: 20_000 });
-    const data = await api(
-      "github",
-      `${base}/issues`,
-      { ...options, method: "POST", input: { title, ...(body ? { body } : {}) } },
-      run,
-    );
-    return pick(data, ["number", "title", "state", "html_url", "created_at"]);
   }
   throw new Error(`Unknown GitHub CLI Link Action: ${actionId}`);
 }
@@ -889,6 +874,13 @@ export async function executeCliLinkAction(
   options: { cwd?: string; signal?: AbortSignal } = {},
   run: CliLinkCommandRunner = runCliLinkCommand,
 ): Promise<unknown> {
+  if (
+    getLocalLinkProvider(providerId)?.actions.find((action) => action.id === actionId)?.risk ===
+    "write"
+  )
+    throw new Error(
+      "CLI write actions are unavailable because the backend may follow redirects; explicitly connect PAT/OAuth or remote Link",
+    );
   if (providerId === "github") return executeGithubCliAction(actionId, params, options, run);
   if (providerId === "gitlab") return executeGitlabCliAction(actionId, params, options, run);
   if (providerId === "notion") return executeNotionCliAction(actionId, params, options, run);

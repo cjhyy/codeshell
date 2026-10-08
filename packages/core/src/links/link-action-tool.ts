@@ -38,7 +38,8 @@ export const linkActionToolDef: ToolDefinition = {
     "be created per trusted user intent; a new batch needs separate Host-owned operation slots. " +
     "GitHub set_starred requires explicit get_repository/get_starred/set_starred grants, verifies " +
     "the fixed repository and desired boolean state, and permits one target per trusted intent. " +
-    "A verified unchanged result means no write was sent.",
+    "A verified unchanged result means no write was sent. CLI bindings expose read actions only; " +
+    "explicitly connect PAT/OAuth or remote Link for writes.",
   inputSchema: {
     type: "object",
     properties: {
@@ -291,6 +292,14 @@ export async function linkActionTool(
       action: actionId,
       error: "Unsupported verified write adapter. A reviewed persistent controller is required.",
     });
+  if (action.risk === "write" && connection.credential.meta?.linkExecutionBackend === "cli")
+    return JSON.stringify({
+      kind: "error",
+      provider: providerId,
+      action: actionId,
+      error:
+        "CLI write actions cannot enforce one physical request without redirects. Explicitly connect PAT, browser OAuth, or remote Link; no backend fallback occurs.",
+    });
   if (!allowsLinkAction(connection.credential, providerId, actionId)) {
     return JSON.stringify({
       kind: "error",
@@ -459,7 +468,8 @@ export async function linkActionTool(
       });
       operation = outcome.receipt;
       data = outcome.data;
-    } else data = await execute();
+    } else if (action.risk === "read" || action.risk === "discovery") data = await execute();
+    else throw new Error("Unsupported verified write adapter");
     // Cancellation is advisory to transports. Recheck both the live binding
     // and task signal before publishing any result from the completed action.
     assertConnected();

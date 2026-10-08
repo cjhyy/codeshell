@@ -104,7 +104,7 @@ function bind(def = definition()) {
   });
 }
 
-test("all 10 providers/25 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
+test("all 10 providers/27 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
   let calls = 0;
   for (const provider of LOCAL_LINK_PROVIDERS)
     for (const action of provider.actions.filter((item) => item.risk !== "write")) {
@@ -142,7 +142,7 @@ test("all 10 providers/25 read actions reuse exact saved grant and caller creden
       expect(output).toContain(`fixture ${provider.id}/${action.id}`);
       expect(output).toContain("untrusted");
     }
-  expect(calls).toBe(25);
+  expect(calls).toBe(27);
 }, 30_000);
 
 test("local GitHub view uses production LinkAction HTTP path and original link-purpose credential access", async () => {

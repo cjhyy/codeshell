@@ -14,7 +14,8 @@ const calls = [];
 const server = createServer((request, response) => {
   calls.push({ method: request.method, path: request.url });
   request.resume();
-  if (request.url === "/redirect") response.writeHead(307, { location: "/destination" }).end();
+  if (request.url?.startsWith("/redirect/"))
+    response.writeHead(Number(request.url.split("/").at(-1)), { location: "/destination" }).end();
   else if (request.url === "/lost") request.socket.destroy();
   else response.writeHead(204).end();
 });
@@ -27,8 +28,17 @@ try {
     GH_NO_UPDATE_NOTIFIER: "1",
     GH_PROMPT_DISABLED: "1",
   };
-  for (const method of ["PUT", "DELETE"]) {
-    for (const path of ["/redirect", "/lost"]) {
+  const expected = [];
+  for (const method of ["PUT", "DELETE", "POST"]) {
+    const paths =
+      method === "POST"
+        ? [301, 302, 303, 307, 308].map((status) => `/redirect/${status}`)
+        : ["/redirect/307", "/lost"];
+    for (const path of paths) {
+      const follows = method !== "POST" ? path !== "/lost" : /30[123]$/.test(path);
+      expected.push({ method, path });
+      if (follows)
+        expected.push({ method: method === "POST" ? "GET" : method, path: "/destination" });
       const child = spawn(
         process.argv[2] ?? "gh",
         [
@@ -39,11 +49,13 @@ try {
           "--method",
           method,
           "--include",
-          "-H",
-          "Content-Length: 0",
+          ...(method === "POST" ? ["--input", "-"] : ["-H", "Content-Length: 0"]),
         ],
-        { env, stdio: ["ignore", "pipe", "pipe"] },
+        { env, stdio: [method === "POST" ? "pipe" : "ignore", "pipe", "pipe"] },
       );
+      // Match the production issue adapter's non-replayable stdin body.
+      if (method === "POST")
+        child.stdin.end(JSON.stringify({ title: "Synthetic localhost audit" }));
       // Drain diagnostics, but never print credentials/headers returned by a CLI.
       child.stdout.resume();
       child.stderr.resume();
@@ -54,22 +66,15 @@ try {
           child.once("close", (code, signal) => resolve({ code, signal }));
         });
         assert.equal(result.signal, null);
-        assert.equal(result.code, path === "/redirect" ? 0 : 1);
+        assert.equal(result.code, follows ? 0 : 1);
       } finally {
         clearTimeout(timeout);
       }
     }
   }
-  assert.deepEqual(calls, [
-    { method: "PUT", path: "/redirect" },
-    { method: "PUT", path: "/destination" },
-    { method: "PUT", path: "/lost" },
-    { method: "DELETE", path: "/redirect" },
-    { method: "DELETE", path: "/destination" },
-    { method: "DELETE", path: "/lost" },
-  ]);
+  assert.deepEqual(calls, expected);
   console.log(
-    "Installed gh audit confirmed: PUT/DELETE each followed a 307 with a second mutation send; fresh lost-response commands sent once. CLI Star writes remain disabled.",
+    "Installed gh audit confirmed: PUT/DELETE follow 307 with a second mutation; stdin POST follows 301/302/303 with GET and exits successfully, but rejects 307/308 after one POST. Fresh PUT/DELETE EOF commands sent once. All CLI write capabilities remain disabled.",
   );
 } finally {
   await new Promise((resolve) => {

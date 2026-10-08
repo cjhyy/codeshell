@@ -44,12 +44,14 @@ The fixed provider endpoints are:
 
 Status endpoints accept legal empty and plain-text responses without JSON parsing.
 All other statuses fail closed. HTTP mutations use the existing single physical
-send transport. CLI **Star writes are disabled**, even for manually edited saved
-grants, because real gh automatically follows a 307 with another mutation.
+send transport. CLI **all write actions are disabled**, including `create_issue` and manually
+edited or previously saved write grants. Real gh follows a 307 with another
+PUT/DELETE; stdin POST follows 301/302/303 with a GET and reports success.
 Managed `gh api --include` supports only the new read actions: it parses one exact
 HTTP status, accepts its HTTP-404 exit only for reads, and rejects killed/error
-processes. New CLI connections never include the Star write capability. Explicitly
-connect PAT or browser OAuth for Star writes; no automatic backend fallback occurs.
+processes. New CLI connections advertise only non-write actions. Write dispatch is rejected
+before native approval, process launch, or transport, including direct adapter
+calls. Explicitly connect PAT, browser OAuth, or remote Link for writes; no automatic backend fallback occurs.
 Remote resources remain restricted to repositories explicitly selected in the
 grant. The companion services PR adds the reviewed adapter whitelist and consent
 labels, preserves old grants, and disables its refresh/retry path for Star writes.
@@ -69,13 +71,16 @@ Official contracts checked:
 - [Get a repository](https://docs.github.com/en/rest/repos/repos#get-a-repository)
 - [Fine-grained PAT URL permissions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#pre-filling-fine-grained-personal-access-token-details-using-url-parameters)
 
-Real upstream write acceptance, other verified write consumers, batch slots,
+Real upstream write acceptance, additional verified action families, batch slots,
 manual reconciliation, and retaining/compacting operation history remain open.
 
 The optional `node scripts/audit-github-cli-star.mjs` diagnostic separately ran
 installed **gh 2.87.3** against a controlled localhost server with a private HOME
 and synthetic GH_TOKEN. PUT and DELETE each followed HTTP 307 to `/destination`,
-producing a second physical mutation; fresh EOF cases each sent once. The native
+producing a second physical mutation; fresh EOF cases each sent once. A
+production-shaped POST with `--input -` followed 301/302/303 with GET and exited
+successfully, while 307/308 each failed after one POST without forwarding the
+stdin body. The audit does not claim duplicate POSTs. The native
 Go binary is not confined by the Node HTTP guard. Its only destination and every
 redirect in this diagnostic are controlled localhost URLs, with update checks
 disabled. This is a diagnostic for that installed version, not an assurance about
@@ -83,8 +88,10 @@ all gh versions or failure modes.
 
 Source audit: [gh 2.87.3 HTTP client](https://github.com/cli/cli/blob/v2.87.3/api/http_client.go)
 uses [go-gh 2.13.0](https://github.com/cli/go-gh/blob/v2.13.0/pkg/api/http_client.go),
-whose client keeps Go's default redirect behavior. A future CLI Star writer needs
-a reviewed, enforceable single-send mode before its capability can be advertised.
+whose client keeps Go's default redirect behavior. A future CLI writer needs a
+reviewed, enforceable fixed-endpoint single-send mode before any write capability
+can be advertised. The fake managed CLI child in the SDK smoke is only read and
+process-isolation evidence; verified issue/Star writes use safe HTTP adapters.
 
 Unregistered `risk: write` Link actions now fail before native approval or
 transport: only reviewed fixed adapters may enter the persistent controller.

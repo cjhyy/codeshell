@@ -1,4 +1,5 @@
 import { githubStarActionIds } from "./github-star.js";
+import { getLocalLinkProvider } from "./providers.js";
 import type { CredentialMetadata } from "../credentials/access.js";
 
 /** Public authority only. Rotating tokens/expiry are deliberately excluded. */
@@ -34,9 +35,9 @@ export function allowsLinkAction(
   action: string,
 ): boolean {
   if (
-    provider === "github" &&
-    action === "set_starred" &&
-    credential.meta?.linkExecutionBackend === "cli"
+    credential.meta?.linkExecutionBackend === "cli" &&
+    getLocalLinkProvider(provider)?.actions.find((candidate) => candidate.id === action)?.risk ===
+      "write"
   )
     return false;
   const ids = credential.meta?.linkCapabilityIds;
