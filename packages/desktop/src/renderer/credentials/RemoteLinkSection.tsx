@@ -1,6 +1,6 @@
 import React from "react";
-import { Check, Github, Loader2, Settings2 } from "lucide-react";
-import type { LinkSnapshot, MaskedLinkConnection } from "@cjhyy/code-shell-link";
+import { Cable, Check, Figma, Github, Settings2 } from "lucide-react";
+import type { LinkProviderView, LinkSnapshot, MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useT } from "../i18n/I18nProvider";
+import { LinkConnectionDialog } from "./LinkConnectionDialog";
 
 /** Keep the snapshot above filters so connected accounts can always be discovered. */
 export function useRemoteLinkSnapshot(cwd: string) {
@@ -60,14 +61,8 @@ function linkError(cause: unknown): string {
     : String(cause);
 }
 
-/** Native owner-bound IPC; private credentials never enter this component. */
-export function RemoteLinkSection({
-  cwd,
-  snapshot,
-  loadError,
-  reload,
-  onChanged,
-}: {
+/** Only Host-advertised remote providers are shown; saved accounts stay manageable offline. */
+export function RemoteLinkSection(props: {
   cwd: string;
   snapshot?: LinkSnapshot;
   loadError: string;
@@ -75,6 +70,60 @@ export function RemoteLinkSection({
   onChanged: () => void;
 }) {
   const { t } = useT();
+  const providers = new Map<string, LinkProviderView | undefined>();
+  for (const provider of props.snapshot?.providers ?? []) {
+    if (provider.authModes?.some((mode) => mode.id === "remote-link"))
+      providers.set(provider.id, provider);
+  }
+  for (const connection of props.snapshot?.connections ?? []) {
+    if (connection.authSource === "remote-link" && !providers.has(connection.providerId))
+      providers.set(connection.providerId, undefined);
+  }
+  if (!providers.size && props.loadError)
+    return (
+      <div
+        role="alert"
+        className="flex items-center justify-between gap-3 rounded-xl border border-status-err/20 p-3 text-xs text-status-err"
+      >
+        <p className="min-w-0 break-words">{props.loadError}</p>
+        <Button variant="outline" size="sm" onClick={() => void props.reload()}>
+          {t("ext.link.retry")}
+        </Button>
+      </div>
+    );
+  return (
+    <div data-remote-links className="space-y-3">
+      {[...providers].map(([providerId, provider]) => (
+        <RemoteProviderSection
+          key={providerId}
+          {...props}
+          providerId={providerId}
+          provider={provider}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Native owner-bound IPC; private credentials never enter this component. */
+function RemoteProviderSection({
+  cwd,
+  snapshot,
+  loadError,
+  reload,
+  onChanged,
+  providerId,
+  provider,
+}: {
+  cwd: string;
+  snapshot?: LinkSnapshot;
+  loadError: string;
+  reload: () => Promise<void>;
+  onChanged: () => void;
+  providerId: string;
+  provider?: LinkProviderView;
+}) {
+  const { t, lang } = useT();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
@@ -82,19 +131,21 @@ export function RemoteLinkSection({
   const [rename, setRename] = React.useState<string>();
   const [newName, setNewName] = React.useState("");
   const [disconnect, setDisconnect] = React.useState<string>();
-  const request = React.useRef<string | undefined>(undefined);
+  const [authorization, setAuthorization] = React.useState<{ connection?: MaskedLinkConnection }>();
+  const providerName = provider?.displayName ?? providerId;
+  const Icon = provider?.icon === "github" ? Github : provider?.icon === "figma" ? Figma : Cable;
+  const modes = provider?.authModes?.filter((mode) => mode.id === "remote-link") ?? [];
   const alive = React.useRef(false);
   const api = window.codeshell.links;
   React.useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
-      if (request.current) void api.remoteCancel(cwd, request.current).catch(() => {});
     };
   }, [cwd, api]);
 
   const operation = async (run: () => Promise<void>) => {
-    if (busy || request.current) return;
+    if (busy || authorization) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -112,34 +163,16 @@ export function RemoteLinkSection({
       }
     }
   };
-  const start = (connection?: MaskedLinkConnection) =>
-    void operation(async () => {
-      const id = crypto.randomUUID();
-      request.current = id;
-      try {
-        const result = await api.remoteStart(cwd, id, {
-          providerId: "github",
-          methodId: "remote-link",
-          label: connection?.label ?? "GitHub",
-          ...(connection ? { connectionId: connection.id } : {}),
-          expectedRevision: connection?.revision ?? null,
-        });
-        if (alive.current)
-          setNotice(
-            t(
-              result.state === "connected"
-                ? "ext.link.remoteConnected"
-                : "ext.link.remoteCancelled",
-            ),
-          );
-      } finally {
-        if (request.current === id) request.current = undefined;
-      }
-    });
+  const start = (connection?: MaskedLinkConnection) => {
+    setManaging(false);
+    setAuthorization({ connection });
+  };
   const connections =
-    snapshot?.connections.filter((item) => item.authSource === "remote-link") ?? [];
+    snapshot?.connections.filter(
+      (item) => item.authSource === "remote-link" && item.providerId === providerId,
+    ) ?? [];
   const connected = connections.filter((item) => item.status === "connected");
-  const available = Boolean(snapshot?.capabilities.remoteAuth);
+  const available = modes.some((mode) => mode.available);
   const failed = error || loadError;
   const feedback = (
     <>
@@ -161,21 +194,23 @@ export function RemoteLinkSection({
     </>
   );
   return (
-    <div data-remote-links className="space-y-3">
+    <div className="space-y-3">
       <article
-        data-link-integration="github"
+        data-link-integration={providerId}
         data-link-runtime="server"
         className="rounded-xl border border-border/70 bg-card p-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-foreground text-background">
-              <Github className="size-5" aria-hidden />
+              <Icon className="size-5" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h5 className="text-sm font-semibold">GitHub</h5>
+              <h5 className="text-sm font-semibold">{providerName}</h5>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {t("ext.link.remoteDescription")}
+                {providerId === "github"
+                  ? t("ext.link.remoteDescription")
+                  : provider?.description[lang]}
               </p>
             </div>
           </div>
@@ -201,7 +236,6 @@ export function RemoteLinkSection({
                 disabled={busy || (!available && !loadError)}
                 onClick={() => (loadError ? void reload() : start())}
               >
-                {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
                 {t(
                   loadError
                     ? "ext.link.retry"
@@ -218,26 +252,6 @@ export function RemoteLinkSection({
             {connected.map((item) => item.account?.label ?? item.label).join(" · ")}
           </p>
         )}
-        {busy && request.current && (
-          <div
-            role="status"
-            className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground"
-          >
-            {t("ext.link.remoteWaiting")}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                if (request.current)
-                  void api
-                    .remoteCancel(cwd, request.current)
-                    .catch((cause) => setError(linkError(cause)));
-              }}
-            >
-              {t("ext.link.remoteCancel")}
-            </Button>
-          </div>
-        )}
         {!available && connections.length > 0 && (
           <p className="mt-3 text-xs text-muted-foreground">{t("ext.link.remoteUnconfigured")}</p>
         )}
@@ -246,8 +260,14 @@ export function RemoteLinkSection({
       <Dialog open={managing} onOpenChange={setManaging}>
         <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{t("ext.link.remoteManageTitle")}</DialogTitle>
-            <DialogDescription>{t("ext.link.remoteDescription")}</DialogDescription>
+            <DialogTitle>
+              {t("ext.link.authorizationManageTitle", { name: providerName })}
+            </DialogTitle>
+            <DialogDescription>
+              {providerId === "github"
+                ? t("ext.link.remoteDescription")
+                : provider?.description[lang]}
+            </DialogDescription>
           </DialogHeader>
           {feedback}
           {connections.map((connection) => (
@@ -260,7 +280,7 @@ export function RemoteLinkSection({
                 <div className="min-w-0">
                   <strong className="block truncate text-sm">{connection.label}</strong>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {connection.account?.label ?? "GitHub"}
+                    {connection.account?.label ?? providerName}
                   </p>
                 </div>
                 <span className="text-xs text-muted-foreground">
@@ -380,6 +400,27 @@ export function RemoteLinkSection({
           )}
         </DialogContent>
       </Dialog>
+      {authorization && (
+        <LinkConnectionDialog
+          key={`${cwd}:${providerId}:${authorization.connection?.id ?? "new"}`}
+          cwd={cwd}
+          providerName={providerName}
+          icon={Icon}
+          input={{
+            providerId,
+            methodId: modes[0]?.methodId ?? "remote-link",
+            label: authorization.connection?.label ?? providerName,
+            ...(authorization.connection ? { connectionId: authorization.connection.id } : {}),
+            expectedRevision: authorization.connection?.revision ?? null,
+          }}
+          modes={modes}
+          onClose={() => setAuthorization(undefined)}
+          onConnected={() => {
+            void reload();
+            onChanged();
+          }}
+        />
+      )}
     </div>
   );
 }

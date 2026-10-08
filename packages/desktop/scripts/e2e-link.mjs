@@ -92,7 +92,7 @@ async function assertReadableHero(selector, label) {
   assert(box && box.width >= 160, `${label} hero heading collapsed to ${box?.width ?? 0}px`);
 }
 
-async function openCliDialog(providerId, providerName, quickAuthPattern) {
+async function openCliDialog(providerId, providerName) {
   const card = win.locator(
     `article[data-link-integration="${providerId}"][data-link-runtime="local"]`,
   );
@@ -101,9 +101,12 @@ async function openCliDialog(providerId, providerName, quickAuthPattern) {
   await dialog
     .getByRole("heading", { name: new RegExp(`连接 ${providerName}|Connect ${providerName}`, "i") })
     .waitFor({ state: "visible", timeout: 15_000 });
-  await dialog.getByText(quickAuthPattern).first().waitFor({ state: "visible", timeout: 15_000 });
+  await dialog.locator('[data-link-auth-mode="cli-session"]').click();
   await dialog
-    .getByRole("button", { name: /打开创建页面|Open credential page/i })
+    .locator('[data-link-authorization-step="local-session"]')
+    .waitFor({ state: "visible" });
+  await dialog
+    .getByRole("button", { name: /检查登录状态|Check sign-in status/i })
     .waitFor({ state: "visible" });
   return dialog;
 }
@@ -114,6 +117,7 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    env: { CODESHELL_GITHUB_APP_CLIENT_ID: "", CODESHELL_GITLAB_OAUTH_CLIENT_ID: "" },
   });
   win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);
@@ -170,12 +174,15 @@ try {
     ["todoist", "Todoist", /使用 Todoist CLI 登录|Sign in with Todoist CLI/i],
     ["vercel", "Vercel", /使用 Vercel CLI 登录|Sign in with Vercel CLI/i],
   ];
-  for (const [providerId, providerName, pattern] of quickAuthProviders) {
-    const dialog = await openCliDialog(providerId, providerName, pattern);
+  for (const [providerId, providerName] of quickAuthProviders) {
+    const dialog = await openCliDialog(providerId, providerName);
     if (providerId === "github") {
       await win.waitForTimeout(350);
       await screenshot("link-github-connect.png");
     }
+    await dialog.locator('[data-link-auth-mode="token"]').click();
+    await dialog.locator('input[name="token"][type="password"]').waitFor({ state: "visible" });
+    if (providerId === "github") await screenshot("link-github-token.png");
     await dialog.getByRole("button", { name: "Close" }).click();
     await dialog.waitFor({ state: "hidden" });
   }

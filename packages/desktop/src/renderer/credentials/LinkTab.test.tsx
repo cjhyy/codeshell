@@ -190,43 +190,76 @@ afterEach(async () => {
 });
 
 describe("LinkTab integrations", () => {
-  test("integrates remote GitHub into server connections and starts consent without a name form", async () => {
+  test("starts remote authorization directly and confirms the saved connection through status", async () => {
     ensureMiniDom();
     const calls: unknown[] = [];
-    let complete: (value: { state: string }) => void;
     let cancellations = 0;
+    const opened: unknown[][] = [];
     let connected = false;
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const connection = {
+      id: "remote-github",
+      providerId: "github",
+      methodId: "remote-link",
+      runtime: "server",
+      authSource: "remote-link",
+      label: "GitHub",
+      account: { label: "alice", resources: ["owner/repo"] },
+      capabilityIds: [],
+      scope: "user",
+      status: "connected",
+      editable: true,
+      revision: "one",
+    };
+    const pending = {
+      id: "native-attempt",
+      providerId: "github",
+      methodId: "remote-link",
+      state: "pending",
+      expiresAt,
+      step: {
+        id: "redirect-one",
+        kind: "redirect",
+        authorizationUrl: "https://private-link.example/oauth/authorize",
+        expiresAt,
+      },
+    };
     Object.assign(window, {
       codeshell: {
         credentials: { list: async () => [] },
         links: {
           listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
           remoteSnapshot: async () => ({
-            capabilities: { remoteAuth: true },
-            remoteServer: { issuer: "https://private-link.example" },
-            connections: connected
-              ? [
+            providers: [
+              {
+                ...LINK_PROVIDER_FIXTURES[0],
+                authModes: [
                   {
-                    id: "remote-github",
-                    providerId: "github",
-                    authSource: "remote-link",
-                    label: "GitHub",
-                    account: { label: "alice", resources: ["owner/repo"] },
-                    status: "connected",
-                    editable: true,
-                    revision: "one",
+                    id: "remote-link",
+                    methodId: "remote-link",
+                    kind: "redirect",
+                    label: "GitHub 授权",
+                    preferred: true,
+                    available: true,
                   },
-                ]
-              : [],
+                ],
+              },
+            ],
+            capabilities: { remoteAuth: true, authorizationSteps: 1 },
+            remoteServer: { issuer: "https://private-link.example" },
+            connections: connected ? [connection] : [],
           }),
-          remoteStart: (...args: unknown[]) => {
+          authorizationStart: async (...args: unknown[]) => {
             calls.push(args);
-            return new Promise((resolve) => {
-              complete = resolve;
-            });
+            return pending;
           },
-          remoteCancel: async () => {
+          authorizationGet: async () =>
+            connected ? { ...pending, state: "connected", step: undefined, connection } : pending,
+          authorizationCancel: async () => {
             cancellations++;
+          },
+          authorizationOpen: async (...args: unknown[]) => {
+            opened.push(args);
           },
         },
       },
@@ -234,7 +267,11 @@ describe("LinkTab integrations", () => {
     const container = document.createElement("div") as unknown as HTMLElement;
     root = createRoot(container);
     await act(async () => {
-      root?.render(<LinkTab cwd="/repo" />);
+      root?.render(
+        <React.StrictMode>
+          <LinkTab cwd="/repo" />
+        </React.StrictMode>,
+      );
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -245,7 +282,6 @@ describe("LinkTab integrations", () => {
       (node) => reactPropsOf(node)["data-link-integration"] === "github",
     );
     expect(github).toHaveLength(1);
-    expect(buttonWithLabel(github[0], "连接")).toBeDefined();
     expect(findElements(github[0], "INPUT")).toHaveLength(0);
     expect(reactChildText(reactPropsOf(github[0]).children)).not.toContain("private-link.example");
     await act(async () => {
@@ -253,12 +289,17 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
     expect(calls).toHaveLength(1);
-    expect((calls[0] as unknown[])[2]).toEqual({
-      providerId: "github",
-      methodId: "remote-link",
-      label: "GitHub",
-      expectedRevision: null,
+    expect((calls[0] as unknown[]).slice(2)).toEqual([
+      { providerId: "github", methodId: "remote-link", label: "GitHub", expectedRevision: null },
+      "remote-link",
+    ]);
+    // A repeated open focuses the Host-controlled window and never starts another browser session.
+    expect(opened).toHaveLength(0);
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "打开授权页面 ↗")).onClick();
+      await flushMicrotasks();
     });
+    expect(opened).toEqual([["/repo", "native-attempt"]]);
     await act(async () => {
       reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
       await flushMicrotasks();
@@ -266,8 +307,12 @@ describe("LinkTab integrations", () => {
     expect(cancellations).toBe(0);
     await act(async () => {
       connected = true;
-      complete!({ state: "connected" });
+      await new Promise((resolve) => setTimeout(resolve, 2_100));
       await flushMicrotasks();
+    });
+    expect(buttonWithLabel(container, "完成")).toBeDefined();
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "完成")).onClick();
       await flushMicrotasks();
     });
     expect(buttonWithLabel(container, "管理")).toBeDefined();
@@ -666,98 +711,198 @@ describe("LinkTab integrations", () => {
     ).toBe(false);
   });
 
-  test("connects a local method through links.connectLocal with the pasted secret", async () => {
+  test("submits a local credential only through the current authorization step", async () => {
     ensureMiniDom();
-    const connectRequests: unknown[] = [];
-    let cliStatusCalls = 0;
+    const starts: unknown[][] = [];
+    const responses: unknown[][] = [];
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const pending = {
+      id: "token-attempt",
+      providerId: "github",
+      methodId: "fine-grained-pat",
+      state: "pending",
+      expiresAt,
+      step: {
+        id: "token-one",
+        kind: "credential-input",
+        purpose: "credential",
+        expiresAt,
+        fields: [{ id: "token", label: "Fine-grained PAT", secret: true, required: true }],
+      },
+    };
     Object.assign(window, {
       codeshell: {
-        openExternal: async () => undefined,
         credentials: { list: async () => [] },
         links: {
           listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
-          cliStatus: async () => {
-            cliStatusCalls += 1;
+          remoteSnapshot: async () => ({
+            providers: [
+              {
+                ...LINK_PROVIDER_FIXTURES[0],
+                authModes: [
+                  {
+                    id: "token",
+                    methodId: "fine-grained-pat",
+                    kind: "credential-input",
+                    label: "Token",
+                    preferred: true,
+                    available: true,
+                  },
+                ],
+              },
+            ],
+            connections: [],
+            capabilities: { authorizationSteps: 1 },
+          }),
+          authorizationStart: async (...args: unknown[]) => {
+            starts.push(args);
+            return pending;
+          },
+          authorizationGet: async () => pending,
+          authorizationCancel: async () => undefined,
+          authorizationRespond: async (...args: unknown[]) => {
+            responses.push(args);
             return {
-              providerId: "github",
-              command: "gh",
-              installed: false,
-              authenticated: false,
+              ...pending,
+              state: "connected",
+              step: undefined,
+              connection: {
+                id: "local-github",
+                label: "GitHub",
+                account: { label: "octocat", resources: [] },
+              },
             };
           },
-          connectCli: async () => undefined,
-          connectLocal: async (request: unknown) => {
-            connectRequests.push(request);
-            return { identity: { label: "octocat" } };
-          },
-        },
-        mcpOAuth: {
-          refresh: async () => undefined,
-          login: async () => undefined,
-          logout: async () => ({ removed: true, remoteRevoked: true }),
         },
       },
     });
-
     const container = document.createElement("div") as unknown as HTMLElement;
     root = createRoot(container);
     await act(async () => {
-      root?.render(
-        <DialogProvider>
-          <LinkTab cwd="/repo" />
-        </DialogProvider>,
-      );
+      root?.render(<LinkTab cwd="/repo" />);
       await flushMicrotasks();
       await flushMicrotasks();
     });
-
-    const githubLocalCard = findElements(container, "ARTICLE").find(
-      (article) =>
-        reactPropsOf(article)["data-link-integration"] === "github" &&
-        reactPropsOf(article)["data-link-runtime"] === "local",
+    const github = findElements(container, "ARTICLE").find(
+      (card) =>
+        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-runtime"] === "local",
     );
-    if (!githubLocalCard) throw new Error("missing GitHub local card");
-    const connect = buttonWithLabel(githubLocalCard, "连接本地");
-    expect(connect).toBeDefined();
     await act(async () => {
-      reactPropsOf(connect).onClick();
-      await flushMicrotasks();
+      reactPropsOf(buttonWithLabel(github, "连接本地")).onClick();
       await flushMicrotasks();
     });
-
-    expect(cliStatusCalls).toBe(1);
+    expect(starts[0]?.slice(2)).toEqual([
+      {
+        providerId: "github",
+        methodId: "fine-grained-pat",
+        label: "GitHub",
+        expectedRevision: null,
+      },
+      "token",
+    ]);
     const secretInput = findElements(container, "INPUT").find(
-      (input) => reactPropsOf(input).id === "link-local-secret",
+      (input) => reactPropsOf(input).name === "token",
     );
-    expect(secretInput).toBeDefined();
+    expect(reactPropsOf(secretInput).type).toBe("password");
     await act(async () => {
       reactPropsOf(secretInput).onChange({ target: { value: "github_pat_local" } });
       await flushMicrotasks();
     });
-
-    // The card trigger and the dialog submit share the "连接本地" label; the
-    // dialog renders after the sections, so the submit is the last match.
-    const saveButtons = findElements(container, "BUTTON").filter(
-      (button) => reactChildText(reactPropsOf(button).children) === "连接本地",
+    expect(reactPropsOf(buttonWithLabel(container, "验证并连接")).disabled).toBe(false);
+    const form = findElements(container, "FORM").find((node) =>
+      reactPropsOf(node).className?.includes("link-authorization-fields"),
     );
-    const save = saveButtons[saveButtons.length - 1];
-    expect(reactPropsOf(save).disabled).toBe(false);
     await act(async () => {
-      reactPropsOf(save).onClick();
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      reactPropsOf(form).onSubmit({ preventDefault() {} });
       await flushMicrotasks();
     });
-
-    expect(connectRequests).toEqual([
-      {
-        cwd: "/repo",
-        providerId: "github",
-        methodId: "fine-grained-pat",
-        label: "GitHub · GitHub 登录 / PAT",
-        token: "github_pat_local",
-        existingId: undefined,
-      },
+    expect(responses).toEqual([
+      [
+        "/repo",
+        "token-attempt",
+        { stepId: "token-one", operation: "submit", input: { token: "github_pat_local" } },
+      ],
     ]);
+    expect(
+      findElements(container, "INPUT").some((input) => reactPropsOf(input).name === "token"),
+    ).toBe(false);
+    expect(buttonWithLabel(container, "完成")).toBeDefined();
+  });
+
+  test("cancels startup by request ID and ignores an authorization arriving after closing", async () => {
+    ensureMiniDom();
+    const cancellations: string[] = [];
+    let resolveStart: (value: unknown) => void = () => {};
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    Object.assign(window, {
+      codeshell: {
+        credentials: { list: async () => [] },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          remoteSnapshot: async () => ({
+            providers: [
+              {
+                ...LINK_PROVIDER_FIXTURES[0],
+                authModes: [
+                  {
+                    id: "token",
+                    methodId: "fine-grained-pat",
+                    kind: "credential-input",
+                    label: "Token",
+                    available: true,
+                  },
+                ],
+              },
+            ],
+            connections: [],
+            capabilities: { authorizationSteps: 1 },
+          }),
+          authorizationStart: () =>
+            new Promise((resolve) => {
+              resolveStart = resolve;
+            }),
+          authorizationCancel: async (_cwd: string, id: string) => {
+            cancellations.push(id);
+          },
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<LinkTab cwd="/repo" />);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    const github = findElements(container, "ARTICLE").find(
+      (card) =>
+        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-runtime"] === "local",
+    );
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(github, "连接本地")).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "取消")).onClick();
+      await flushMicrotasks();
+    });
+    expect(cancellations).toHaveLength(1);
+    await act(async () => {
+      resolveStart({
+        id: "late-attempt",
+        providerId: "github",
+        state: "pending",
+        step: { id: "late-step", kind: "processing", expiresAt },
+      });
+      await flushMicrotasks();
+    });
+    expect(cancellations).toContain("late-attempt");
+    expect(buttonWithLabel(container, "完成")).toBeUndefined();
+    expect(
+      findElements(container, "INPUT").some((input) => reactPropsOf(input).name === "token"),
+    ).toBe(false);
   });
 
   test("offers a zero-copy CLI session before the manual token fallback", async () => {
