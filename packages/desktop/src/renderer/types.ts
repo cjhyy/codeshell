@@ -940,10 +940,12 @@ function applyStreamEventToTurn(
     }
 
     case "steer_injected": {
+      if ("agentId" in event && event.agentId) return state;
       const attachments = outputUserAttachments(state, event);
       // Older Host envelopes can carry the parent run's clientMessageId.
       // New producers bind the queued message to its own Session identity.
-      const clientMessageId = event.sessionId ? event.clientMessageId : undefined;
+      const clientMessageId =
+        event.sessionId && event.sessionId === state.sessionId ? event.clientMessageId : undefined;
       if (event.id) {
         let matched = false;
         const messages = state.messages.map((m) => {

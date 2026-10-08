@@ -624,6 +624,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     case "session_user_message":
     case "steer_injected":
     case "user_message": {
+      if (type === "steer_injected" && event.agentId) return s;
       if (
         event.injected === true ||
         event.authority === "agent" ||

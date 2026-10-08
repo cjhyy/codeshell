@@ -11,7 +11,10 @@ import {
   readOutputJournal,
   readOutputJournalLegacyBase,
 } from "../../core/src/session/output-journal.js";
-import { outputUserInputFixture } from "../../../tests/fixtures/output-journal-user-input.js";
+import {
+  outputUserInputFixture,
+  outputForwardedSteerFixture,
+} from "../../../tests/fixtures/output-journal-user-input.js";
 
 for (const mode of [
   "normal",
@@ -79,6 +82,22 @@ for (const mode of [
     }
   });
 }
+
+test("real child forwarding cannot promote a queued input into the parent user feed", () => {
+  const parent = reduceStream(initialChatState(), {
+    type: "session_user_message",
+    text: "parent question",
+    clientMessageId: "parent-submit",
+  });
+  const events = outputForwardedSteerFixture();
+  expect(events[0]).toMatchObject({
+    agentId: "child-agent",
+    sessionId: "child-session",
+    id: "child-queue",
+    clientMessageId: "parent-submit",
+  });
+  expect(events.reduce(reduceStream, parent)).toBe(parent);
+});
 
 describe("SPA chat state", () => {
   test("tool_use_start + tool_result renders a completed tool item", () => {

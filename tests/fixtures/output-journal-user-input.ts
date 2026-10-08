@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "../../packages/core/src/engine/engine.js";
+import { wrapChildStream } from "../../packages/core/src/engine/subagent-spawner.js";
 import { ChatSession } from "../../packages/core/src/protocol/chat-session.js";
 import { LLMClientBase } from "../../packages/core/src/llm/client-base.js";
 import { registerProvider } from "../../packages/core/src/llm/client-factory.js";
@@ -187,4 +188,17 @@ export async function outputUserInputFixture(
     modelRequests.delete(apiKey);
     await engine.dispose();
   }
+}
+
+/** Real child forwarder keeps its input origin distinct from the parent feed. */
+export function outputForwardedSteerFixture() {
+  const events: StreamEvent[] = [];
+  wrapChildStream((event) => events.push(event), "child-agent")!({
+    type: "steer_injected",
+    text: "child guidance",
+    id: "child-queue",
+    sessionId: "child-session",
+    clientMessageId: "parent-submit",
+  });
+  return events;
 }

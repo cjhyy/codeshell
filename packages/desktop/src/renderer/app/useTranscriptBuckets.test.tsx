@@ -4,7 +4,7 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { FoldItem, SessionSnapshot, SessionTranscriptPage } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { bucketKey, loadTranscript, saveTranscript, type SessionIndex } from "../transcripts";
-import { applyStreamEvent, INITIAL_STATE } from "../types";
+import { applyStreamEvent, appendUserMessage, INITIAL_STATE } from "../types";
 import { transcriptsReducer, type TranscriptsMap } from "../transcriptsReducer";
 import { foldTranscript } from "../automation/foldTranscript";
 import { flushSessionPersistence } from "../sessionPersistence";
@@ -20,7 +20,10 @@ import {
 } from "../../../../core/src/session/output-journal.js";
 import { SessionSnapshotStore } from "../../main/SessionSnapshotStore.js";
 import { transcriptToFoldItems } from "../../main/transcript-reader.js";
-import { outputUserInputFixture } from "../../../../../tests/fixtures/output-journal-user-input.js";
+import {
+  outputUserInputFixture,
+  outputForwardedSteerFixture,
+} from "../../../../../tests/fixtures/output-journal-user-input.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -283,6 +286,27 @@ describe("transcript history hydration after a background resume", () => {
       }
     });
   }
+
+  test("real child forwarding preserves input origin without changing the parent user feed", () => {
+    const parent = appendUserMessage(
+      { ...INITIAL_STATE, sessionId: "saved" },
+      "parent question",
+      1,
+      false,
+      false,
+      undefined,
+      false,
+      "parent-submit",
+    );
+    const events = outputForwardedSteerFixture();
+    expect(events[0]).toMatchObject({
+      agentId: "child-agent",
+      sessionId: "child-session",
+      id: "child-queue",
+      clientMessageId: "parent-submit",
+    });
+    expect(events.reduce((state, event) => applyStreamEvent(state, event), parent)).toBe(parent);
+  });
 
   test("replays an older cache prefix before merging a completed steer reply from disk", async () => {
     const epoch = "main";
