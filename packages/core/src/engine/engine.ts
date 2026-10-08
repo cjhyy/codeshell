@@ -1,4 +1,3 @@
-import { Transcript } from "../session/transcript.js";
 /**
  * Engine — the main facade that wires all components together.
  */
@@ -157,6 +156,10 @@ import { buildPromptComposerConfig } from "./run-setup.js";
 import { resolveActiveWorkspaceProfileSelection } from "../profile/resolve.js";
 import { resolveRunWorkspace } from "./run-workspace.js";
 import { openRunSession } from "./run-session-open.js";
+import {
+  clearSessionInstructionContext,
+  prepareInstructionContext,
+} from "./engine-instruction-context.js";
 import { formatMcpConnectionFailures } from "../tool-system/mcp-health.js";
 import {
   buildRunToolContext,
@@ -181,15 +184,7 @@ import {
   buildRunFailureResult,
 } from "./run-finalize.js";
 import { join } from "node:path";
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
 
 /**
@@ -1427,88 +1422,21 @@ export class Engine {
     }
   }
 
-  /** Remove all context derived from a revoked instruction, retaining the audit transcript. */
+  /** Clear revision-derived context while retaining Engine-owned run/cache state. */
   private clearInstructionContext(
     session: SessionBundle,
     retainedSnapshots?: import("../skills/instruction-bindings.js").InstructionSnapshot[],
   ): void {
-    const expectedRunId = this.runIds.get(session.state) ?? session.state.runId;
-    const latest = this.sessionManager.readSessionState(session.state.sessionId);
-    if (!latest) throw new Error("Could not read instruction context owner");
-    // A former Engine's idle watch must not clear a newer run's accepted configuration.
-    if (latest.runId !== expectedRunId) return;
-    retainedSnapshots ??= (session.state.instructionSnapshots ?? []).filter((snapshot) =>
-      this.composition.engine.instructionBindings.some((provider) =>
-        provider.value.isCurrent(snapshot),
-      ),
-    );
-    const hadInstructionContext = session.state.instructionContextStartEventId !== undefined;
-    // A frozen but currently disabled revision has no derived context to discard.
-    // Preserve the ordinary replies produced after its earlier context was cleared.
-    if (hadInstructionContext) {
-      const events = session.transcript.getEvents();
-      const start = events.findIndex(
-        (event) => event.id === session.state.instructionContextStartEventId,
-      );
-      const retainedEvents = events.filter(
-        (event, index) =>
-          (start >= 0 && index < start) ||
-          (event.type === "message" &&
-            event.data.role === "user" &&
-            event.data.injected !== true &&
-            event.data.authority !== "agent"),
-      );
-      const retained = Transcript.fromMemoryEvents(
-        "instruction-revocation",
-        retainedEvents,
-      ).toMessagesWithIndex();
-      const through = events.at(-1);
-      if (through) {
-        const note = session.transcript.appendContextNote(
-          "Instruction revision revoked; prior effective context cleared.",
-          through.id,
-        );
-        if (
-          !note ||
-          !session.transcript.appendContextCheckpoint({
-            version: 1,
-            noteId: note.id,
-            coveredThroughEventId: through.id,
-            messages: retained.messages.length
-              ? retained.messages
-              : [
-                  {
-                    role: "user",
-                    content: "Instruction revision revoked; continue only from new user input.",
-                  },
-                ],
-            clientMessageIds: [...retained.liveIndexByClientMessageId],
-          })
-        )
-          throw new Error("Could not clear revoked instruction context");
-      }
-    }
-    session.state.instructionContextStartEventId = undefined;
-    session.state.instructionContextRevisions = [];
-    session.state.instructionSnapshots = retainedSnapshots;
-    if (hadInstructionContext) {
-      session.state.invokedSkills = [];
-      session.state.contextUsageAnchor = undefined;
-    }
     if (
-      !this.sessionManager.saveStateOrUpdateFields(
-        session.state,
-        {
-          instructionSnapshots: retainedSnapshots,
-          instructionContextStartEventId: undefined,
-          instructionContextRevisions: [],
-          ...(hadInstructionContext ? { invokedSkills: [], contextUsageAnchor: undefined } : {}),
-        },
-        expectedRunId,
-      )
+      !clearSessionInstructionContext({
+        session,
+        sessionManager: this.sessionManager,
+        expectedRunId: this.runIds.get(session.state) ?? session.state.runId,
+        bindings: this.composition.engine.instructionBindings.map((provider) => provider.value),
+        retainedSnapshots,
+      })
     )
-      throw new Error("Could not persist cleared instruction context");
-    if (!hadInstructionContext) return;
+      return;
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
     if (
@@ -1739,115 +1667,23 @@ export class Engine {
     };
     let messages = openedMessages;
     const instructionProviders = this.composition.engine.instructionBindings;
-    const isInstructionCurrent = (
-      snapshot: import("../skills/instruction-bindings.js").InstructionSnapshot,
-    ) =>
-      snapshot.cwd === realpathSync(cwd) &&
-      (!snapshot.sessionId || snapshot.sessionId === session.state.sessionId) &&
-      instructionProviders.some((provider) => provider.value.isCurrent(snapshot));
-    if (
-      session.state.instructionSnapshots?.some((snapshot) => !isInstructionCurrent(snapshot)) &&
-      !this.config.instructionSnapshots
-    ) {
-      this.clearInstructionContext(
-        session,
-        session.state.instructionSnapshots.filter(isInstructionCurrent),
-      );
-      messages = session.transcript.toMessages();
-    }
-    if (session.state.instructionSnapshots === undefined) {
-      session.state.instructionSnapshots = this.config.instructionSnapshots
-        ? structuredClone([...this.config.instructionSnapshots])
-        : !resumedFromDisk && !profile?.disableInstructions
-          ? instructionProviders.flatMap((provider) =>
-              provider.value.resolve({
-                cwd,
-                provider: this.config.llm.provider,
-                model: this.config.llm.model,
-                sessionId: session.state.sessionId,
-              }),
-            )
-          : [];
-    }
-    if (!profile?.disableInstructions && resumedFromDisk) {
-      const targeted = instructionProviders.flatMap((provider) =>
-        provider.value.resolve(
-          {
-            cwd,
-            provider: this.config.llm.provider,
-            model: this.config.llm.model,
-            sessionId: session.state.sessionId,
-          },
-          true,
-        ),
-      );
-      if (
-        targeted.some(
-          (snapshot) =>
-            !session.state.instructionSnapshots?.some(
-              (old) => old.bindingId === snapshot.bindingId,
-            ),
-        )
-      ) {
-        const previous = session.state.instructionSnapshots;
-        if (previous.length) {
-          this.clearInstructionContext(session);
-          messages = session.transcript.toMessages();
-        }
-        session.state.instructionSnapshots = [
-          ...previous.filter((old) => !targeted.some((snapshot) => snapshot.name === old.name)),
-          ...targeted,
-        ];
-      }
-    }
-    const effectiveSnapshots = session.state.instructionSnapshots.filter((snapshot) => {
-      if (
-        snapshot.provider !== this.config.llm.provider ||
-        snapshot.model !== this.config.llm.model
-      )
-        return false;
-      // Only the trusted isolated Host config overrides the ordinary Skill visibility rules.
-      if (this.config.instructionSnapshots) return true;
-      const pluginName = snapshot.name.includes(":")
-        ? snapshot.name.slice(0, snapshot.name.indexOf(":"))
-        : undefined;
-      return (
-        !profile?.disableInstructions &&
-        !toolCtx.disabledSkills?.includes(snapshot.name) &&
-        !(pluginName && toolCtx.disabledPlugins?.includes(pluginName)) &&
-        (toolCtx.skillAllowlist === undefined || toolCtx.skillAllowlist.includes(snapshot.name))
-      );
+    const { snapshots: effectiveSnapshots, contextCleared } = prepareInstructionContext({
+      session,
+      sessionManager: this.sessionManager,
+      runId,
+      cwd,
+      provider: this.config.llm.provider,
+      model: this.config.llm.model,
+      bindings: instructionProviders.map((provider) => provider.value),
+      trustedSnapshots: this.config.instructionSnapshots,
+      resumedFromDisk,
+      disableInstructions: profile?.disableInstructions,
+      disabledSkills: toolCtx.disabledSkills,
+      disabledPlugins: toolCtx.disabledPlugins,
+      skillAllowlist: toolCtx.skillAllowlist,
+      clearContext: (retained) => this.clearInstructionContext(session, retained),
     });
-    const effectiveRevisions = effectiveSnapshots
-      .map((snapshot) => `${snapshot.bindingId}:${snapshot.revision}`)
-      .sort();
-    const priorRevisions =
-      session.state.instructionContextRevisions ??
-      session.state.instructionSnapshots
-        .map((snapshot) => `${snapshot.bindingId}:${snapshot.revision}`)
-        .sort();
-    if (
-      JSON.stringify(effectiveRevisions) !== JSON.stringify(priorRevisions) &&
-      session.state.instructionContextStartEventId
-    ) {
-      this.clearInstructionContext(session, session.state.instructionSnapshots);
-      messages = session.transcript.toMessages();
-    }
-    if (effectiveSnapshots.length && !session.state.instructionContextStartEventId)
-      session.state.instructionContextStartEventId = runId;
-    session.state.instructionContextRevisions = effectiveRevisions;
-    if (
-      !this.sessionManager.saveStateOrUpdateFields(
-        session.state,
-        {
-          instructionSnapshots: session.state.instructionSnapshots,
-          instructionContextStartEventId: session.state.instructionContextStartEventId,
-          instructionContextRevisions: effectiveRevisions,
-        },
-        runId,
-      )
-    )
-      throw new Error("Could not persist fixed instruction context");
+    if (contextCleared) messages = session.transcript.toMessages();
     toolCtx.instructionSnapshots = effectiveSnapshots;
     this.activeInstructionSessionId = session.state.sessionId;
     const hadInstructionWatch = this.instructionWatches.has(session.state.sessionId);
