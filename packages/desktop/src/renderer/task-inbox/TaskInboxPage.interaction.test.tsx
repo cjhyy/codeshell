@@ -346,6 +346,43 @@ describe("TaskInboxPage", () => {
     expect(textOf(container)).toContain("任务状态已变化");
     expect(requests).toHaveLength(3);
   });
+  test("a durable child opens its exact transcript without a live observer or ordinary Session import", async () => {
+    const reads: string[] = [];
+    const queries: unknown[] = [];
+    Object.assign(window.codeshell, {
+      getSessionTranscript: async (id: string) => {
+        reads.push(id);
+        return [{ kind: "user", text: "持久子任务原始对话" }];
+      },
+      listDiskSessions: async (query: unknown) => {
+        queries.push(query);
+        return { sessions: [], nextCursor: null };
+      },
+    });
+    await render();
+    await settle(() =>
+      requests[0].request.resolve(
+        snapshot([
+          row("child", {
+            source: "subagent",
+            sourceId: "child-engine",
+            sessionId: "child-engine",
+            parentSessionId: "parent-engine",
+            status: "done",
+          }),
+        ]),
+      ),
+    );
+    await click(button("打开来源"));
+    await act(async () => {
+      await import("../subagents/SubagentSessionDetail");
+      await flushMicrotasks();
+    });
+    expect(reads).toEqual(["child-engine"]);
+    expect(queries).toEqual([{ parentSessionId: "parent-engine", limit: 100, cursor: undefined }]);
+    expect(textOf(container)).toContain("持久子任务原始对话");
+    expect(opened).toEqual([]);
+  });
   test("cancel and retry require explicit confirmation and denied confirmation sends nothing", async () => {
     await render();
     await settle(() =>
