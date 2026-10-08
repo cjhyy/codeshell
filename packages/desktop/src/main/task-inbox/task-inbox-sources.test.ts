@@ -126,10 +126,176 @@ describe("task inbox authoritative sources", () => {
         },
       }),
     );
-    const [rows] = await Promise.all([read(sources, "session"), read(sources, "external-runtime")]);
+    const [rows] = await Promise.all([
+      read(sources, "session"),
+      read(sources, "external-runtime"),
+      read(sources, "subagent"),
+    ]);
     expect(reads).toBe(1);
     observedAt = 200;
     expect((await read(sources, "session"))[0]!.sourceRevision).toBe(rows[0]!.sourceRevision);
+  });
+
+  test("a yielded background-wait Session does not advertise an unavailable native cancel", async () => {
+    let cancels = 0;
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [
+          disk({ status: "completed", completionKind: "background_wait" }),
+        ],
+        sessionProjection: () =>
+          projection([live({ runState: "idle", completionKind: "background_wait" })]),
+        native: {
+          hasLiveWorker: () => true,
+          isSessionRunning: () => false,
+          cancel: async () => {
+            cancels++;
+            return false;
+          },
+        },
+      }),
+    );
+    const row = (await read(sources, "session"))[0]!;
+    expect(row.status).toBe("waiting");
+    expect(row.capabilities).toEqual(["open"]);
+    expect((await adapter(sources, "session").act(row, "cancel")).status).toBe("unavailable");
+    expect(cancels).toBe(0);
+  });
+
+  test("durable child tasks rebuild without their parents or live worker and never duplicate as Sessions", async () => {
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [
+          disk({
+            id: "child-done",
+            engineSessionId: "child-done",
+            parentSessionId: "missing-parent",
+            origin: "subagent",
+            status: "completed",
+            cwd: "/removed-worktree",
+          }),
+          disk({
+            id: "child-active",
+            engineSessionId: "child-active",
+            parentSessionId: "missing-parent",
+            origin: "subagent",
+            status: "active",
+          }),
+        ],
+        sessionProjection: () => projection([live({ agentSessionId: "child-done" })]),
+      }),
+    );
+    expect(await read(sources, "session")).toEqual([]);
+    const rows = await read(sources, "subagent");
+    expect(rows.map((row) => [row.taskKey, row.status, row.capabilities])).toEqual([
+      ["subagent:child-done", "done", ["open"]],
+      ["subagent:child-active", "interrupted", ["open"]],
+    ]);
+    expect(rows[0]).toMatchObject({
+      sessionId: "child-done",
+      parentSessionId: "missing-parent",
+      workspacePath: "/removed-worktree",
+    });
+  });
+
+  test("live and durable child identity converges after worker loss; durable terminal beats a delayed live row", async () => {
+    let child = disk({
+      id: "child-a",
+      engineSessionId: "child-a",
+      parentSessionId: "session-a",
+      origin: "subagent",
+      updatedAt: 100,
+    });
+    let available = true;
+    const entry: TaskInboxBackgroundEntry = {
+      kind: "subagent",
+      agentId: "agent-a",
+      childSessionId: "child-a",
+      runtimeGeneration: 2,
+      description: "Research",
+      status: "running",
+      startedAt: 40,
+      canCancel: true,
+      sourceSession: { sessionId: "session-a" },
+    };
+    let cancels = 0;
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [child],
+        background: {
+          available: () => available,
+          list: async () => [entry],
+          cancel: async () => {
+            cancels++;
+            return true;
+          },
+        },
+      }),
+    );
+    const running = (await read(sources, "subagent"))[0]!;
+    expect(running).toMatchObject({
+      taskKey: "subagent:child-a",
+      status: "running",
+      updatedAt: 100,
+      capabilities: ["open", "cancel"],
+    });
+    expect((await adapter(sources, "subagent").act(running, "cancel")).status).toBe("ok");
+    expect(cancels).toBe(1);
+    child = { ...child, status: "completed", updatedAt: 200 };
+    expect((await read(sources, "subagent"))[0]).toMatchObject({
+      taskKey: running.taskKey,
+      status: "done",
+      capabilities: ["open"],
+    });
+    available = false;
+    expect((await read(sources, "subagent"))[0]).toMatchObject({
+      taskKey: running.taskKey,
+      status: "done",
+      updatedAt: 200,
+    });
+    expect(await read(sources, "session")).toEqual([]);
+  });
+
+  test("a newer resumed child run supersedes its durable prior terminal without carrying terminal metadata", async () => {
+    const sources = createTaskInboxSources(
+      base({
+        diskSessions: async () => [
+          disk({
+            id: "child-a",
+            engineSessionId: "child-a",
+            parentSessionId: "session-a",
+            origin: "subagent",
+            status: "completed",
+            updatedAt: 100,
+          }),
+        ],
+        background: {
+          available: () => true,
+          list: async () => [
+            {
+              kind: "subagent",
+              agentId: "agent-a",
+              childSessionId: "child-a",
+              runtimeGeneration: 3,
+              description: "Continued research",
+              status: "running",
+              startedAt: 200,
+              canCancel: true,
+              sourceSession: { sessionId: "session-a" },
+            },
+          ],
+          cancel: async () => true,
+        },
+      }),
+    );
+    const row = (await read(sources, "subagent"))[0]!;
+    expect(row).toMatchObject({
+      taskKey: "subagent:child-a",
+      status: "running",
+      updatedAt: 200,
+      capabilities: ["open", "cancel"],
+    });
+    expect(row.terminalAt).toBeUndefined();
   });
 
   test("external allocation without active turn is not shown running; interrupt keeps caller ownership", async () => {
