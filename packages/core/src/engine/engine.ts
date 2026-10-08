@@ -4588,6 +4588,7 @@ export class Engine {
       askUserAsync: this.config.askUserAsync,
       browser: this.config.browserBridge,
       workspaceBridge: this.config.workspaceBridge,
+      documentParserExecutable: this.config.documentParserExecutable,
       panels: this.config.panelBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,

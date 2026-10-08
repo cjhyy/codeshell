@@ -21,6 +21,7 @@ import {
   listBindings,
   listLocalFiles,
   listSourceDefinitions,
+  invalidateUploadedDocumentIndex,
   readSourceDefinition,
   resolveEffectiveSourceAccess,
   resolveUploadTarget,
@@ -151,6 +152,7 @@ export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
       copyFileSync(file.path, temporary, constants.COPYFILE_EXCL);
       if (process.platform !== "win32") chmodSync(temporary, 0o600);
       renameSync(temporary, file.target);
+      invalidateUploadedDocumentIndex(cwd, file.name);
     } finally {
       rmSync(temporary, { force: true });
     }
@@ -171,4 +173,5 @@ export function deleteUpload(cwd: string, name: string): void {
     }
   }
   rmSync(target, { force: true });
+  invalidateUploadedDocumentIndex(cwd, name);
 }
