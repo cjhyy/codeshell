@@ -187,6 +187,13 @@ export function App({
     chatStore.getEntries.bind(chatStore),
   );
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
+  // TodoWrite replaces a complete snapshot. Keep child snapshots local to
+  // this App/session, independently of the main list and its hide timer.
+  const [agentTasks, setAgentTasks] = useState<Map<string, TaskInfo[]>>(() => new Map());
+  const clearTaskSnapshots = useCallback(() => {
+    setTasks([]);
+    setAgentTasks(new Map());
+  }, []);
   const tasksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -260,15 +267,27 @@ export function App({
     if (dockFocusIdx > maxIdx) setDockFocusIdx(maxIdx);
   }, [agentsSnapshot, dockFocusIdx]);
 
-  const [sessionId, setSessionId] = useState(initialSessionId);
+  const [sessionId, setSessionIdState] = useState(initialSessionId);
   // Mirror of sessionId for synchronous reads inside event handlers.
   // recordUIEvent needs the current sid every time it fires, but
   // handleStreamEvent is memoized without sessionId in its deps; reading from
   // a ref avoids re-creating the handler on every session change.
   const sidRef = useRef<string | undefined>(initialSessionId);
-  useEffect(() => {
-    sidRef.current = sessionId;
-  }, [sessionId]);
+  const setSessionId = useCallback(
+    (next: string) => {
+      // The first authoritative id belongs to the already-rendered run.
+      // Actual session switches discard every old todo snapshot before new
+      // stream envelopes can arrive, including those using the same agent id.
+      if (sidRef.current !== undefined && sidRef.current !== next) {
+        clearTaskSnapshots();
+        setViewMode({ kind: "main" });
+        setDockFocusIdx(null);
+      }
+      sidRef.current = next;
+      setSessionIdState(next);
+    },
+    [clearTaskSnapshots],
+  );
   const [model, setModel] = useState(initialModel);
   const [activeMaxContextTokens, setActiveMaxContextTokens] = useState(maxContextTokens);
   const pendingContextRef = useRef<string | null>(null);
@@ -663,7 +682,6 @@ export function App({
           // mid-turn. setSessionId at run-completion (line ~672) still runs
           // but is now redundant for the first run; resumed runs already
           // had the sid from initialSessionId.
-          sidRef.current = event.sessionId;
           setSessionId(event.sessionId);
           // Goal Resume and background wakeups are server-driven turns rather
           // than client.run promises. Reflect them in the same guard so input,
@@ -922,13 +940,19 @@ export function App({
         }
 
         case "task_update": {
-          const taskEvent = event as any;
-          // Sub-agent task_updates carry agentId (injected by the engine's
-          // childStream). Their todos belong to the sub-agent, not the main
-          // session — drop them so they don't clobber the main task view
-          // (mirrors the desktop renderer's isolation).
-          if (taskEvent.agentId) break;
-          if (taskEvent.tasks) setTasks(taskEvent.tasks);
+          const taskAgentId = event.agentId;
+          if (taskAgentId !== undefined) {
+            setAgentTasks((prev) => {
+              const next = new Map(prev);
+              // Empty snapshots clear only this child (TodoWrite also emits
+              // an empty list when every item has completed).
+              if (event.tasks.length === 0) next.delete(taskAgentId);
+              else next.set(taskAgentId, event.tasks);
+              return next;
+            });
+          } else {
+            setTasks(event.tasks);
+          }
           break;
         }
 
@@ -1077,7 +1101,7 @@ export function App({
         }
       }
     },
-    [clearThinkingBuffer, finalizeStreamPresentation, flushTextBuffer, queryGuard],
+    [clearThinkingBuffer, finalizeStreamPresentation, flushTextBuffer, queryGuard, setSessionId],
   );
 
   // Wire stream events from client
@@ -1710,7 +1734,7 @@ export function App({
       }
       return true;
     },
-    [client, sessionId, model, clearThinkingBuffer, finalizeStreamPresentation],
+    [client, sessionId, model, clearThinkingBuffer, finalizeStreamPresentation, setSessionId],
   );
 
   // Background sub-agent completion → main-agent turn injection.
@@ -1873,7 +1897,7 @@ export function App({
         tasks,
         clearChat: () => {
           chatStore.clear();
-          setTasks([]);
+          clearTaskSnapshots();
           setShowBanner(true);
         },
         chatLog,
@@ -1913,7 +1937,7 @@ export function App({
             })
             .filter((e) => !(e.type === "status" && (e as any).reason === ""));
           chatStore.setEntries(chatEntries);
-          setTasks([]);
+          clearTaskSnapshots();
         },
         pendingImages: {
           add: (block) => {
@@ -2044,8 +2068,10 @@ export function App({
       model,
       setModel,
       sessionId,
+      setSessionId,
       currentEffort,
       tasks,
+      clearTaskSnapshots,
       chatLog,
       exit,
       startOnboarding,
@@ -2113,6 +2139,7 @@ export function App({
     const agent = agentsSnapshot.find((a) => a.agentId === viewMode.agentId);
     return (agent?.transcript ?? []) as typeof chatLog;
   })();
+  const renderedTasks = viewMode.kind === "main" ? tasks : (agentTasks.get(viewMode.agentId) ?? []);
 
   const scrollableContent = (
     <>
@@ -2153,11 +2180,7 @@ export function App({
         />
       )}
 
-      {/* This list holds the main session's TodoWrite snapshot. The task_update
-          handler above filters events tagged with a sub-agent id, so hide it
-          in sub-agent detail view. Showing a child's own list would require
-          keeping that child's task snapshot alongside its transcript. */}
-      {tasks.length > 0 && viewMode.kind === "main" && <TaskList tasks={tasks} />}
+      {renderedTasks.length > 0 && <TaskList tasks={renderedTasks} />}
     </>
   );
 
