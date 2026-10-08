@@ -242,7 +242,9 @@ export function DigitalHumanEditorDialog({
         name,
         value,
         repo,
-        valid: normalizedValue.length === 0 || repo !== null,
+        valid:
+          repo !== null ||
+          (normalizedValue.length === 0 && !Object.hasOwn(existingSkillSources, name)),
       };
     });
     return {
@@ -264,7 +266,10 @@ export function DigitalHumanEditorDialog({
     nextSkillRequirements.length > DIGITAL_HUMAN_PROFILE_LIMITS.requirementCount;
   const requirementValidation = validateDigitalHumanRequirements(requires);
   const requirementsDirty =
-    JSON.stringify(requires) !== JSON.stringify(profile?.requires ?? { skills: [], tools: [] });
+    JSON.stringify(normalizeDigitalHumanRequirements(requires)) !==
+    JSON.stringify(
+      normalizeDigitalHumanRequirements(profile?.requires ?? { skills: [], tools: [] }),
+    );
   const changeRequirements = (next: DigitalHumanRequirements) => {
     setRequires(next);
     setSkillInstallRepos(digitalHumanSkillSourcesByName(next));

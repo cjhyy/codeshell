@@ -53,15 +53,34 @@ export function replaceDigitalHumanSkillSourceDraft(
   name: string,
   value: string,
 ): DigitalHumanRequirements["skills"] {
+  const original = current.find((requirement) => requirement.skills?.includes(name));
+  const repo = normalizeDigitalHumanSkillRepo(value) ?? value;
+  if (original?.repo === repo) return current;
   const next = current.flatMap((requirement) => {
     if (!requirement.skills?.includes(name)) return [requirement];
     const skills = requirement.skills.filter((skill) => skill !== name);
     return skills.length ? [{ ...requirement, skills }] : [];
   });
-  if (!value.trim()) return next;
-  const repo = normalizeDigitalHumanSkillRepo(value) ?? value;
+  // Empty input is an intermediate edit for an existing project requirement.
+  // Keep its named selector so an installed user/plugin copy cannot make the
+  // editor row disappear. The explicit remove controls delete dependencies.
+  if (!value.trim() && !original) return next;
+  const replacement = original
+    ? { ...original, repo, skills: [name] }
+    : {
+        source: "github" as const,
+        repo,
+        skills: [name],
+        scope: "project" as const,
+        fullDepth: false,
+      };
   const index = next.findIndex(
-    (requirement) => requirement.repo === repo && !requirement.fullDepth && requirement.skills,
+    (requirement) =>
+      requirement.repo === repo &&
+      requirement.fullDepth === replacement.fullDepth &&
+      requirement.scope === replacement.scope &&
+      requirement.source === replacement.source &&
+      requirement.skills !== undefined,
   );
   if (index >= 0) {
     next[index] = {
@@ -71,7 +90,7 @@ export function replaceDigitalHumanSkillSourceDraft(
       ),
     };
   } else {
-    next.push({ source: "github", repo, skills: [name], scope: "project", fullDepth: false });
+    next.push(replacement);
   }
   return next;
 }

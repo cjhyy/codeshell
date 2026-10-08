@@ -80,7 +80,14 @@ if (scenario.startsWith("dependencies-")) {
   profile.mcp = ["sources"];
   profile.agents = ["reviewer"];
   profile.version = "1.2.3";
-  if (scenario === "dependencies-sync") profile.requires.skills.pop();
+  if (
+    [
+      "dependencies-sync",
+      "dependencies-source-metadata",
+      "dependencies-user-source-replace",
+    ].includes(scenario)
+  )
+    profile.requires.skills.pop();
 }
 const preview = {
   needsInstall: true,
@@ -144,7 +151,10 @@ let editorProps: React.ComponentProps<typeof DigitalHumanEditorDialog> = {
   open: true,
   profile,
   existingIds: [profile.name],
-  skills: [],
+  skills:
+    scenario === "dependencies-user-source-replace"
+      ? [{ name: "research", description: "Installed user copy", source: "user" }]
+      : [],
   configurationTarget: { projectId: "project-a" },
   busy: false,
   installing: scenario === "parent-installing",
@@ -395,13 +405,7 @@ try {
     await settingsTab();
     assert.equal(props(control("requirement-repository-0")).value, "owner/changed");
     await change("requirement-repository-0", "owner/second");
-    await update(() =>
-      props(control("requirement-repository-0-depth")).onClick({
-        defaultPrevented: false,
-        isPropagationStopped: () => false,
-        stopPropagation() {},
-      }),
-    );
+    assert.equal(props(control("requirement-repository-0-depth"))["aria-checked"], true);
     await skillsTab();
     assert.equal(props(control("digital-human-skill-repo")).value, "owner/second");
     await submit();
@@ -412,6 +416,72 @@ try {
     assert.equal(props(control("digital-human-skill-repo")).value, "");
     await submit();
     assert.deepEqual(saved[1]?.requires?.skills, []);
+  } else if (scenario === "dependencies-source-metadata") {
+    await skillsTab();
+    await change("digital-human-skill-repo", "owner/temporary");
+    await submit();
+    assert.equal(saved[0]?.requires?.skills[0]?.fullDepth, true);
+    await change("digital-human-skill-repo", "owner/skills");
+    await submit();
+    assert.deepEqual(saved[1]?.requires, profile.requires);
+    await change("digital-human-skill-repo", " owner/skills ");
+    await submit();
+    assert.deepEqual(saved[2]?.requires, profile.requires);
+  } else if (scenario === "dependencies-user-source-replace") {
+    await skillsTab();
+    assert.equal(props(control("digital-human-skill-repo")).value, "owner/skills");
+    await change("digital-human-skill-repo", "");
+    assert.equal(
+      props(control("digital-human-skill-repo")).value,
+      "",
+      "Clearing a source must keep the active project requirement editor visible",
+    );
+    assert.equal(
+      props(saveButton()).disabled,
+      true,
+      "An incomplete source must not silently remove a project dependency",
+    );
+    await submit();
+    assert.equal(saved.length, 0);
+    await change("digital-human-skill-repo", "owner/replacement");
+    assert.equal(props(saveButton()).disabled, false);
+    await submit();
+    assert.deepEqual(saved[0]?.requires?.skills, [
+      { ...profile.requires!.skills[0], repo: "owner/replacement" },
+    ]);
+    await settingsTab();
+    await click("requirement-remove-repository-0");
+    await skillsTab();
+    assert.equal(
+      nodes(container).some((node) => props(node).id === "digital-human-skill-repo"),
+      false,
+      "An explicit removal may use the installed user copy",
+    );
+    await submit();
+    assert.deepEqual(saved[1]?.requires?.skills, []);
+  } else if (scenario === "dependencies-saved-normalization") {
+    await settingsTab();
+    await change("requirement-repository-1", " owner/all ");
+    await click("digital-human-requirements-save-install");
+    assert.equal(saved[0]?.requires?.skills[1]?.repo, "owner/all");
+    // Simulate the same-name parent refresh after persistence, while the
+    // subsequent install review was cancelled and keeps the editor open.
+    editorProps = { ...editorProps, profile: { ...saved[0]!, active: false } };
+    await render();
+    assert.equal(
+      props(control("requirement-repository-1")).value,
+      " owner/all ",
+      "A saved refresh must not jump tabs or overwrite the live draft",
+    );
+    await skillsTab();
+    assert.equal(
+      props(installButton()).disabled,
+      false,
+      "A normalized saved draft must restore the saved dependency check action",
+    );
+    await update(() => requestClose(false));
+    assert.equal(confirmCount, 0, "Normalized saved sources must not report unsaved changes");
+    assert.deepEqual(openChanges, [false]);
   } else if (scenario === "dependencies-discard") {
     await settingsTab();
     await change("requirement-tool-hint-0", "Install another version");
