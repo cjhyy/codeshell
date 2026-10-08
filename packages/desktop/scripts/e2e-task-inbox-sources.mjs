@@ -2,7 +2,7 @@
  * No IPC replacement, provider credentials, model turns or automation run-now.
  * CODESHELL_TASK_INBOX_APP_DIR can select a separately built integration checkout.
  * CODESHELL_TASK_INBOX_SOURCES_SCREENSHOT_DIR preserves the real-data page view. */
-/* global window */
+/* global document, localStorage, window */
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
@@ -167,6 +167,23 @@ async function launch() {
   win = await findCodeShellWindow(app);
   rendererErrorLists.push(captureRendererErrors(win));
   await win.waitForFunction(() => !!window.codeshell?.taskInbox);
+  // Match the real-file activity history E2E: the preload API exists before
+  // the renderer finishes startup, and its async workspace trust dialog can
+  // otherwise hide a route immediately after the command palette selects it.
+  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
+  const trustOpened = await viewOnly
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (trustOpened) {
+    await viewOnly.click();
+    await viewOnly.waitFor({ state: "hidden" });
+  }
+  await win.getByRole("button", { name: /^(任务中心|Task center)$/ }).waitFor();
+  await win.evaluate(() => {
+    localStorage.setItem("codeshell.uiLanguage", "zh");
+    window.dispatchEvent(new window.Event("codeshell:language-changed"));
+  });
 }
 async function list() {
   return win.evaluate(() => window.codeshell.taskInbox.list({ limit: 200 }));
@@ -222,8 +239,10 @@ async function coreRegistry(operation, input) {
 async function openTaskCenter() {
   await win.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
   const palette = win.getByRole("dialog", { name: "命令面板", exact: true });
+  await palette.waitFor({ state: "visible" });
   await palette.getByRole("combobox").fill("任务中心");
   await palette.getByRole("option", { name: "任务中心", exact: true }).click();
+  await palette.waitFor({ state: "hidden" });
   await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
 }
 async function reopenChild() {
@@ -489,6 +508,25 @@ try {
   const rendererErrors = rendererErrorLists.flat();
   assert.equal(rendererErrors.length, 0, rendererErrors.map((error) => error.message).join("\n"));
 } catch (error) {
+  if (win && !win.isClosed()) {
+    const rendererState = await win
+      .evaluate(() => ({
+        readyState: document.readyState,
+        view: localStorage.getItem("codeshell.view"),
+        focused: document.activeElement?.outerHTML.slice(0, 1_000),
+        surfaces: Array.from(document.querySelectorAll('h1,h2,[role="dialog"],[role="alert"]')).map(
+          (element) => ({
+            tag: element.tagName,
+            role: element.getAttribute("role"),
+            hiddenByModal: !!element.closest('[aria-hidden="true"]'),
+            text: element.textContent?.slice(0, 3_000),
+          }),
+        ),
+        body: document.body.innerText.slice(0, 10_000),
+      }))
+      .catch((cause) => ({ diagnosticError: String(cause) }));
+    console.error("Task inbox renderer state:", JSON.stringify(rendererState, null, 2));
+  }
   console.error(processLog.slice(-16000));
   console.error("Task inbox source E2E home:", isolated.home);
   throw error;
