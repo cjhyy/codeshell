@@ -11,6 +11,9 @@ import type {
   TokenUsage,
 } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
+import { OperationLedger } from "../operations/ledger.js";
+import { OperationController } from "../operations/controller.js";
+import { CapabilityResolver } from "../operations/resolver.js";
 import { buildWrappedOnStream } from "./run-stream.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
@@ -1609,6 +1612,12 @@ export class Engine {
       ...sessionLifetime.services,
     });
     this.runIds.set(session.state, runId);
+    toolCtx.operations = {
+      controller: new OperationController(new OperationLedger(this.sessionManager.getStorageDir())),
+      resolver: new CapabilityResolver(),
+      sessionId: session.state.sessionId,
+      runId,
+    };
     let messages = openedMessages;
     toolCtx.contextStrategy = this.resolveContextStrategy(profile);
     const contextNotes =
@@ -1847,6 +1856,8 @@ export class Engine {
           accounting,
           profile,
           getProfileReportedResults: () => profileReportedResults,
+          hasUnverifiedWrites: () =>
+            toolCtx.operations!.controller.ledger.sealForFinalization(session.state.sessionId),
         });
         finalized.runId = runId;
         if (options?.clientMessageId) {
@@ -1856,6 +1867,13 @@ export class Engine {
       }),
     );
     return Promise.resolve(sessionRun).catch((err): EngineResult => {
+      // Unexpected hook/checkpoint failures also publish a terminal result.
+      // Fence owned writes before any late transport callback can settle them.
+      try {
+        toolCtx.operations?.controller.ledger.sealForFinalization(session.state.sessionId);
+      } catch {
+        /* Failure remains non-completed; in-memory fences were installed first. */
+      }
       const failed = buildRunFailureResult({
         err,
         session,
@@ -1911,6 +1929,7 @@ export class Engine {
     accounting: ReturnType<typeof createRunUsageAccounting>;
     profile: RunBehaviorProfile | undefined;
     getProfileReportedResults: () => Record<string, unknown> | undefined;
+    hasUnverifiedWrites: () => boolean;
   }): Promise<EngineResult> {
     const {
       session,
@@ -1929,6 +1948,7 @@ export class Engine {
       accounting,
       profile,
       getProfileReportedResults,
+      hasUnverifiedWrites,
     } = args;
     return finalizeRunSuccess({
       session,
@@ -1957,6 +1977,7 @@ export class Engine {
       costStoreSerialize: () => this.usageCostState(session.state.sessionId),
       profile,
       getProfileReportedResults,
+      hasUnverifiedWrites,
     });
   }
 

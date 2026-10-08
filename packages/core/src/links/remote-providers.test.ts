@@ -506,7 +506,7 @@ test("request cancellation and provider errors cannot return success or credenti
   expect(f.requests).toHaveLength(before);
 });
 
-test("remote GitHub write uses the existing one-operation approval before any remote request", async () => {
+test("remote GitHub write requires approval and the owning authorization pipeline before any request", async () => {
   const f = await fixture("github");
   const credential = await f.connect();
   const masked = {
@@ -547,12 +547,12 @@ test("remote GitHub write uses the existing one-operation approval before any re
     } as unknown as ToolContext),
   );
   expect(approved).toMatchObject({
-    kind: "action_result",
+    kind: "error",
     provider: "github",
     action: "create_issue",
-    runtime: "server",
+    error: "Verified writes require the owning Engine and tool authorization pipeline.",
   });
-  expect(f.requests).toHaveLength(before + 1);
+  expect(f.requests).toHaveLength(before);
 });
 
 test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bearer headers", async () => {

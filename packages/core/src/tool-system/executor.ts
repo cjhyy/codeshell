@@ -21,6 +21,7 @@ import { logger as rootLogger, getCurrentSid } from "../logging/logger.js";
 import { recordToolCall, recordToolResult } from "../logging/session-recorder.js";
 import { validateToolArgs } from "./validation.js";
 import type { ToolContext } from "./context.js";
+import { rememberBoundToolResult } from "./bound-tool-result.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
 import type { TaskGuard } from "./task-guard.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
@@ -563,6 +564,12 @@ export class ToolExecutor {
         ctx: this.toolCtx
           ? {
               ...this.toolCtx,
+              toolCallId: call.id,
+              previewToolPermission: (name, args) => {
+                if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(name))
+                  return "deny";
+                return this.permission.classify(name, args);
+              },
               executeBoundTool: async (nestedCall, options) => {
                 // A distinct wrapper preserves the per-call cancellation signal
                 // without racing another call's executor state. Authority, rules,
@@ -609,6 +616,15 @@ export class ToolExecutor {
       throw err;
     }
     result.id = call.id;
+    const executedOutput = constraint
+      ? Object.freeze({
+          id: result.id,
+          toolName: result.toolName,
+          isError: result.isError,
+          result: toolResultDisplayText(result),
+          error: result.error,
+        })
+      : undefined;
     // Prepend any non-blocking guard reminder onto a successful result so the
     // model sees it on its next turn alongside the content it just fetched.
     if (guardDecision?.prepend && !result.isError && result.result) {
@@ -678,6 +694,7 @@ export class ToolExecutor {
       });
     }
 
+    if (executedOutput) rememberBoundToolResult(result, executedOutput);
     return result;
   }
 

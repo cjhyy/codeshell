@@ -147,6 +147,9 @@ jobs:
         run: bun run build
       - name: test shard
         run: bun test --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
+      - name: compiled SDK verified Link write lifecycle
+        if: matrix.shard == 'core-engine'
+        run: node scripts/smoke-verified-link-write.mjs
       # The large Desktop Bun process can stall real Chromium load callbacks.
       # Run each browser suite in its own process, keeping every assertion and
       # the same 30-second timeout as the rest of the shard.
@@ -231,4 +234,6 @@ jobs:
             packages/core/src/tool-system/builtin/crlf.test.ts `
             packages/core/src/tool-system/sandbox/sandbox-win32.test.ts `
             packages/core/src/utils/exec.test.ts `
+            packages/core/src/operations/controller.test.ts `
+            packages/core/src/operations/resolver.test.ts `
             packages/server/src/mobile-remote/cloudflared-binary.test.ts

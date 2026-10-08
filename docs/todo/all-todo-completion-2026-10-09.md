@@ -7,11 +7,14 @@
 
 | 工作包                | 当前状态                                                                                                                             | 完成条件                                                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Link 统一授权前置批次 | 已合入 main（PR60）；系统浏览器 broker 完成本地 Web／Electron 验证，独立提交集成中                                                   | Desktop/Web/Host 授权、取消/过期/重试、CLI 安装与登录、系统浏览器回调、发布声明和 CI 均通过后合入远端 main                     |
+| Link 统一授权前置批次 | 已合入 main（PR60）；系统浏览器 broker、一次性消费与云端交接已合入 PR64                                                              | Desktop/Web/Host 授权、取消/过期/重试、CLI 安装与登录、系统浏览器回调、发布声明和 CI 均通过后合入远端 main                     |
 | 全部远程 Link         | Host PR61 和 services PR18 已合入各自 main，10 provider／26 action 跨仓验证通过；services PR19 凭据托管及 Host PR63 本地续期也已合入 | 固定可信 adapter、账号/作用域/资源过滤、逐家协议与刷新、全部 action、错误/越权/取消/分页验证；未配置的 provider 不公开为可连接 |
 | Services 公开包兼容   | PR17 已合入 main，固定五个公开包为 0.9.26；目标 Link 已升级 82d0e4d/schema 3 并完成 GitHub 真实只读及离线恢复                        | 同版本五包、完整能力/资产检查、Node 22 服务测试、浏览器授权、容器及恢复验收；记录准确包集与部署版本                            |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                                              | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证 |
-| 跨 Session 成本       | 已完成独立 receipt ledger 设计，实施中；沿用现有活动记录／用量入口                                                                   | 请求身份、真实 usage、unknown、子 Agent 去重、恢复隔离、查询权限和公开包验收                                                   |
+| 跨 Session 成本       | PR68 全部 9 项 CI 通过并合入 main；receipt ledger、恢复隔离、SDK/stdio/TUI 及现有活动记录入口已验证                                  | 完整 GUI 与真实账单对照另验收；unknown、估算及自定义 fetch 内部重试限制见专项交付记录                                          |
+| Workspace / Link 只读 | PR65 已合入 main；Profile 求交、十家 provider 的固定视图及原生 ToolExecutor 链已验证                                                 | 上传解析/索引继续独立交付；不扩大已有连接与 grant 授权                                                                         |
+| 优化实验室 P1b        | PR67 已合入 main；运行证据导入与固定候选试用通过原生 Electron/worker 验证                                                            | P2 隔离 Agent、指令快照、采用/回滚与真实实验仍单独验收                                                                         |
+| 写操作控制            | 已实现持久 operation ledger、能力解析、单次 claim 和 GitHub create_issue 独立回读；Node SDK/HTTP/CLI fixtures 已验证                 | 其他 provider 写语义、批量 slots、人工 reconcile、保留策略及真实账号按专项边界推进                                             |
 
 当前服务器 Link 已升级为 services `82d0e4d`，健康检查返回 schema 3，HTTPS 证书验证通过。
 原有 GitHub 连接在停机维护中完成一次自动续期、原账号校验、资源发现和现有 grant 下的
@@ -24,13 +27,13 @@ GitHub OAuth；其余 provider 应用配置和真实账号验收仍待提供，�
 
 ## 后续工作包
 
-1. Runtime Phase D 的请求边界与持久证据；跨 Session 用量归集、恢复去重与成本查询。
+1. Runtime Phase D 的请求边界与持久证据；跨 Session 成本的完整 GUI/真实账单验收。
    Runtime MCP pool 已有实现，补核多 Session/项目隔离、释放和汇总展示，避免重复重建。
-2. Workspace 数据源的 Profile 权限求交、真实 Link adapter、上传解析/索引。
-   写操作依赖统一操作账本、明确审批、执行时复查、幂等与独立回读验证。
-3. Capability/Operation Controller、VerifiedWriteResult、错误分类/熔断、Skill 预算、
+2. Workspace 数据源的上传解析/索引及更多查询模型；Profile 求交与现有 Link 只读视图已实现。
+   写操作的其他 provider 语义、批量 slots、人工 reconcile 与账本保留策略仍待逐项接入。
+3. 更多真实工具的后置验证和错误预算适配、Skill 预算、
    非核心工具渐进发现，以及真实长程与按模型配对评测、通用评测 adapter。
-4. 优化实验室 P1b 运行证据导入与固定候选试用；P2 隔离 Agent、指令快照、
+4. 优化实验室 P2 隔离 Agent、指令快照、
    范围化采用和回滚。真实付费模型实验及报告价值评价须按原授权要求完成。
 5. 数字人经验提升流程、切换影响预览与 plugin 降级导出。
    受约束 dream 先确定 ownership/审批，不自动写 portable profile memory。
