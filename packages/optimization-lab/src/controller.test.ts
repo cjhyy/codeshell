@@ -242,3 +242,125 @@ test("final allocation prevents search consuming its reserved requests", async (
   expect(s.payloads).toHaveLength(0);
   expect(snapshot.ledger.finalAllocation.requests).toBe(6);
 });
+
+test("native budget renewal retains consumption and can continue an unissued step", async () => {
+  const s = setup({ maxRequests: 6 });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  const exhausted = await wait(s.controller, s.prepared.id);
+  expect(exhausted.state.status).toBe("budget_exhausted");
+  const renewed = s.controller.grant(s.prepared.id, {
+    expectedRevision: exhausted.state.revision,
+    planHash: exhausted.plan.planHash,
+    operationId: "native-renewal",
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    limits: { maxRequests: 30, maxExecutionMs: 60000 },
+  });
+  expect(renewed.ledger.sequence).toBeGreaterThan(0);
+  s.controller.start(s.prepared.id, renewed.state.revision, "explicit-resume", true);
+  const done = await wait(s.controller, s.prepared.id);
+  expect(done.state.status).toBe("report_ready");
+  expect(done.ledger.totals.requests).toBe(13);
+  expect(s.payloads).toHaveLength(13);
+});
+
+test("revoke interrupts a real in-flight fake HTTP request and preserves unknown usage", async () => {
+  let entered = false;
+  let receivedSignal: AbortSignal | undefined;
+  const s = setup({
+    upstream: (async (_request, init) => {
+      entered = true;
+      receivedSignal = init?.signal ?? undefined;
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("stopped", "AbortError")),
+          { once: true },
+        );
+      });
+    }) as typeof fetch,
+  });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  for (let i = 0; !entered && i < 30; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(entered).toBe(true);
+  s.controller.revoke(s.prepared.id, s.controller.get(s.prepared.id).state.revision);
+  const done = await wait(s.controller, s.prepared.id);
+  expect(receivedSignal?.aborted).toBe(true);
+  expect(done.state.status).toBe("cancelled");
+  expect(done.ledger.totals.unknownTokens).toBeGreaterThan(0);
+  expect(done.ledger.totals.requests).toBe(1);
+});
+
+test("inconclusive human feedback blocks optimizer until an explicit correction", async () => {
+  const s = setup({ human: true });
+  s.controller.start(s.prepared.id, s.grant.state.revision, s.grant.grant!.startOperationId);
+  await wait(s.controller, s.prepared.id);
+  const template = s.controller.exportGrading(s.prepared.id);
+  template.reviewer = "reviewer";
+  for (const item of template.items)
+    for (const grade of item.grades) {
+      grade.verdict = "inconclusive";
+      grade.evidence = "Need source review";
+    }
+  const first = s.controller.importGrading(
+    s.prepared.id,
+    template,
+    s.controller.get(s.prepared.id).state.revision,
+  );
+  expect(() => s.controller.start(s.prepared.id, first.state.revision, "not-yet", true)).toThrow(
+    "grading",
+  );
+  const corrected = grade(s.controller, s.prepared.id);
+  expect((corrected.state.data.gradingRefs as string[]).length).toBe(6);
+  s.controller.start(s.prepared.id, corrected.state.revision, "after-correction", true);
+  expect((await wait(s.controller, s.prepared.id)).state.status).toBe("awaiting_screening_grading");
+});
+
+test("new worker recovers dispatched steps as unknown and never replays them", async () => {
+  const s = setup();
+  const id = s.prepared.id;
+  const plan = s.prepared.plan;
+  const fence = s.controller.lease.acquire(id);
+  const { canonicalJson, sha256Hex } = await import("./contracts/canonical-json.js");
+  const identity = {
+    planHash: plan.planHash,
+    caseId: "dev-0",
+    bodyHash: plan.skill.bodyHash,
+    phase: "baseline",
+    repeat: 0,
+  };
+  const trialId = sha256Hex(canonicalJson(identity));
+  const operationId = "crash-trial";
+  s.controller.store.mutate(id, { fence }, (state) => {
+    state.status = "baselining";
+    state.startedAt = new Date().toISOString();
+    state.data.pending = { ...identity, trialId, operationId, body: plan.skill.body };
+  });
+  s.controller.ledger.beginOperation(id, fence, {
+    operationId,
+    role: "baseline",
+    timeoutMs: plan.bounds.trial.timeoutMs,
+    maxRequests: plan.bounds.trial.maxRequests,
+    maxOutputTokens: plan.bounds.trial.maxOutputTokens,
+  });
+  const attempt = s.controller.ledger.reserveAttempt(id, fence, {
+    operationId,
+    estimatedTokens: 100,
+    estimatedCostUsd: null,
+  });
+  s.controller.ledger.dispatch(id, fence, attempt.attemptId);
+  s.controller.lease.release(id, fence);
+  const recovered = new OptimizationLabController(s.cwd, s.controller.options);
+  const interrupted = recovered.get(id);
+  expect(interrupted.state.status).toBe("interrupted");
+  expect(interrupted.ledger.totals.unknownTokens).toBe(100);
+  expect(s.payloads).toHaveLength(0);
+  const report = recovered.report(id);
+  expect((report.json as any).trials[0].requestIds).toEqual([attempt.attemptId]);
+  recovered.start(id, interrupted.state.revision, "explicit-recovery", true);
+  const finished = await wait(recovered, id);
+  expect(finished.state.status).toBe("failed");
+  expect(s.payloads).toHaveLength(2);
+  expect(JSON.stringify(s.payloads)).not.toContain("Summarize source 0");
+  expect(JSON.stringify(s.payloads)).not.toContain("reflect_once_v1");
+  expect(finished.ledger.totals.requests).toBe(3);
+});

@@ -74,3 +74,37 @@ test("all not-applicable grades never create a semantic pass", () => {
   );
   expect(record[0]?.semanticPassed).toBeNull();
 });
+
+test("explicit corrections append evidence and inconclusive scores do not unlock a phase", () => {
+  const { template, mapping } = createGradingTemplate("experiment", "baseline", dataset, [trial]);
+  const item = template.items[0]!;
+  const raw = {
+    schemaVersion: 1,
+    templateId: template.templateId,
+    reviewer: "human",
+    items: [
+      {
+        gradingItemId: item.gradingItemId,
+        grades: [{ id: "quality", verdict: "inconclusive", evidence: "Not enough evidence yet" }],
+      },
+    ],
+  };
+  const initial = importGrading(raw, mapping, []);
+  const corrected = importGrading(
+    {
+      ...raw,
+      items: [
+        {
+          ...raw.items[0],
+          supersedesRecordHash: initial[0]!.recordHash,
+          grades: [{ id: "quality", verdict: "passed", evidence: "Reviewed against the source" }],
+        },
+      ],
+    },
+    mapping,
+    initial,
+  );
+  expect(corrected[0]?.semanticPassed).toBe(true);
+  expect(corrected[0]?.supersedesRecordHash).toBe(initial[0]!.recordHash);
+  expect(corrected[0]?.recordHash).not.toBe(initial[0]?.recordHash);
+});

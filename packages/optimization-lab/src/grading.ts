@@ -19,6 +19,7 @@ export interface GradingTemplate {
   reviewer: string;
   items: {
     gradingItemId: string;
+    supersedesRecordHash?: string;
     input: string;
     output: string;
     rubric: { id: string; text: string }[];
@@ -49,6 +50,7 @@ export interface GradingRecord {
   recordedAt: string;
   grades: Grade[];
   semanticPassed: boolean | null;
+  supersedesRecordHash: string | null;
   recordHash: string;
 }
 const GradeSchema = z
@@ -71,6 +73,10 @@ const ImportSchema = z
           .object({
             gradingItemId: z.string().min(1).max(128),
             grades: z.array(GradeSchema).min(1).max(16),
+            supersedesRecordHash: z
+              .string()
+              .regex(/^[a-f0-9]{64}$/)
+              .optional(),
             input: z.string().optional(),
             output: z.string().optional(),
             rubric: z.array(z.object({ id: z.string(), text: z.string() }).strict()).optional(),
@@ -174,18 +180,24 @@ export function importGrading(
     const grades = [...item.grades].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (canonicalJson(grades.map(({ id }) => id)) !== canonicalJson(link.criterionIds))
       throw new Error("grading rules are missing, duplicated or changed");
-    const prior = existing.find(
-      (entry) =>
-        entry.templateId === input.templateId && entry.gradingItemId === item.gradingItemId,
-    );
+    const prior = [...existing]
+      .reverse()
+      .find(
+        (entry) =>
+          entry.templateId === input.templateId && entry.gradingItemId === item.gradingItemId,
+      );
     if (prior) {
       if (
-        prior.reviewer !== input.reviewer ||
-        canonicalJson(prior.grades) !== canonicalJson(grades)
+        prior.reviewer === input.reviewer &&
+        canonicalJson(prior.grades) === canonicalJson(grades)
       )
-        throw new Error("conflicting immutable grading record");
-      return prior;
-    }
+        return prior;
+      if (item.supersedesRecordHash !== prior.recordHash)
+        throw new Error(
+          "conflicting immutable grading record; export current template to append a correction",
+        );
+    } else if (item.supersedesRecordHash !== undefined)
+      throw new Error("unknown grading correction predecessor");
     const applicable = grades.filter((grade) => grade.verdict !== "not-applicable");
     const semanticPassed = grades.some((grade) => grade.verdict === "failed")
       ? false
@@ -201,6 +213,7 @@ export function importGrading(
       recordedAt: now(),
       grades,
       semanticPassed,
+      supersedesRecordHash: prior?.recordHash ?? null,
     };
     return { ...content, recordHash: sha256Hex(canonicalJson(content)) };
   });
@@ -221,6 +234,7 @@ export function fullyGraded(
     (trial) =>
       trial.status !== "completed" ||
       !dataset.cases.find((item) => item.id === trial.caseId)?.rubric.length ||
-      records.some((record) => record.trialId === trial.trialId),
+      [...records].reverse().find((record) => record.trialId === trial.trialId)?.semanticPassed !=
+        null,
   );
 }

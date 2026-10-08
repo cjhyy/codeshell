@@ -146,16 +146,14 @@ export class OptimizationLabController {
     };
   }
   list() {
-    return this.store
-      .list()
-      .map((snapshot) => ({
-        id: snapshot.state.id,
-        revision: snapshot.state.revision,
-        status: snapshot.state.status,
-        planHash: snapshot.plan.planHash,
-        title: snapshot.plan.skill.name,
-        startedAt: snapshot.state.startedAt,
-      }));
+    return this.store.list().map((snapshot) => ({
+      id: snapshot.state.id,
+      revision: snapshot.state.revision,
+      status: snapshot.state.status,
+      planHash: snapshot.plan.planHash,
+      title: snapshot.plan.skill.name,
+      startedAt: snapshot.state.startedAt,
+    }));
   }
 
   prepare(raw: unknown) {
@@ -358,6 +356,78 @@ export class OptimizationLabController {
     };
   }
 
+  private recoverPending(id: string, fence: LeaseFence) {
+    const snapshot = this.store.read(id);
+    const progress = this.data(snapshot);
+    this.ledger.recoverUnknown(id, fence);
+    const summary = this.ledger.summary(id);
+    if (progress.pending) {
+      const p = progress.pending;
+      const operation = summary.operations[p.operationId];
+      if (operation?.attemptIds.length) {
+        const dataset = readFrozenDataset(this.store.root, snapshot.plan.datasetHash);
+        const item = dataset.cases.find((item) => item.id === p.caseId)!;
+        const observations = operation.attemptIds.map((attemptId) => {
+          const attempt = summary.attempts[attemptId]!;
+          return {
+            attemptId,
+            responseModel: attempt.responseModel,
+            status: null,
+            elapsedMs: 0,
+            outcome: attempt.status === "settled" ? ("settled" as const) : ("unknown" as const),
+            usage:
+              attempt.usage?.inputTokens != null && attempt.usage.outputTokens != null
+                ? {
+                    inputTokens: attempt.usage.inputTokens,
+                    outputTokens: attempt.usage.outputTokens,
+                    cacheReadTokens: attempt.usage.cacheReadTokens,
+                    cacheCreationTokens: attempt.usage.cacheWriteTokens,
+                    reasoningTokens: attempt.usage.reasoningTokens,
+                    reportedCostUsd: attempt.actualCostUsd,
+                  }
+                : null,
+          };
+        });
+        const trial: Trial = {
+          schemaVersion: 1,
+          trialId: p.trialId,
+          planHash: snapshot.plan.planHash,
+          caseId: p.caseId,
+          caseHash: dataset.caseHashes[p.caseId]!,
+          bodyHash: p.bodyHash,
+          phase: p.phase,
+          repeat: p.repeat,
+          requestModel: snapshot.plan.connections.target.modelId,
+          responseModel: observations.at(-1)?.responseModel ?? null,
+          status: "unknown",
+          output: null,
+          assertions: [],
+          semanticStatus: item.rubric.length ? "not_evaluated" : "not_applicable",
+          requestIds: operation.attemptIds,
+          observations,
+          elapsedMs: operation.timeoutMs,
+          reason: "worker interrupted; uncertain request is never replayed",
+        };
+        if (!this.trials(id, progress).some((item) => item.trialId === trial.trialId)) {
+          const ref = this.store.putJson(id, "trials", trial, fence);
+          this.store.mutate(id, { fence }, (state) => {
+            (state.data as unknown as Progress).trialRefs.push(ref.hash);
+          });
+        }
+      }
+      this.store.mutate(id, { fence }, (state) => {
+        delete (state.data as unknown as Progress).pending;
+      });
+    }
+    if (
+      progress.pendingOptimizer &&
+      !Object.values(summary.attempts).some((attempt) => attempt.role === "optimizer")
+    )
+      this.store.mutate(id, { fence }, (state) => {
+        delete (state.data as unknown as Progress).pendingOptimizer;
+      });
+  }
+
   get(id: string) {
     const snapshot = this.store.read(id);
     if (
@@ -367,39 +437,7 @@ export class OptimizationLabController {
     ) {
       const fence = this.lease.acquire(id);
       try {
-        this.ledger.recoverUnknown(id, fence);
-        const progress = this.data(snapshot);
-        if (progress.pending) {
-          const p = progress.pending;
-          const dataset = readFrozenDataset(this.store.root, snapshot.plan.datasetHash);
-          const item = dataset.cases.find((item) => item.id === p.caseId)!;
-          const trial: Trial = {
-            schemaVersion: 1,
-            trialId: p.trialId,
-            planHash: snapshot.plan.planHash,
-            caseId: p.caseId,
-            caseHash: dataset.caseHashes[p.caseId]!,
-            bodyHash: p.bodyHash,
-            phase: p.phase,
-            repeat: p.repeat,
-            requestModel: snapshot.plan.connections.target.modelId,
-            responseModel: null,
-            status: "unknown",
-            output: null,
-            assertions: [],
-            semanticStatus: item.rubric.length ? "not_evaluated" : "not_applicable",
-            requestIds: [],
-            observations: [],
-            elapsedMs: snapshot.plan.bounds.trial.timeoutMs,
-            reason: "worker interrupted; uncertain request is never replayed",
-          };
-          const ref = this.store.putJson(id, "trials", trial, fence);
-          this.store.mutate(id, { fence }, (state) => {
-            const d = state.data as unknown as Progress;
-            d.trialRefs.push(ref.hash);
-            delete d.pending;
-          });
-        }
+        this.recoverPending(id, fence);
         this.store.mutate(id, { fence }, (state) => {
           const d = state.data as unknown as Progress;
           d.resumeStatus = snapshot.state.status;
@@ -519,6 +557,7 @@ export class OptimizationLabController {
           state.status = d.resumeStatus ?? "baselining";
         else state.status = "baselining";
       });
+      if (resume) this.recoverPending(id, fence);
       const abort = new AbortController();
       this.running.set(id, abort);
       void this.run(id, fence, abort)
@@ -564,7 +603,23 @@ export class OptimizationLabController {
     const snapshot = this.get(id);
     const data = this.data(snapshot);
     if (!data.templateRef) throw new Error("no human grading checkpoint is available");
-    return this.store.getJson<GradingTemplate>(id, "templates", data.templateRef);
+    const template = this.store.getJson<GradingTemplate>(id, "templates", data.templateRef);
+    const grades = this.grades(id, data);
+    for (const item of template.items) {
+      const record = [...grades]
+        .reverse()
+        .find(
+          (record) =>
+            record.templateId === template.templateId &&
+            record.gradingItemId === item.gradingItemId,
+        );
+      if (record) {
+        item.grades = record.grades;
+        item.supersedesRecordHash = record.recordHash;
+        template.reviewer = record.reviewer;
+      }
+    }
+    return template;
   }
   importGrading(id: string, raw: unknown, expectedRevision: number) {
     const snapshot = this.store.read(id);
@@ -807,6 +862,18 @@ export class OptimizationLabController {
     )
       return null;
     const selected = ranked[0]!.candidate.bodyHash;
+    const candidate = ranked[0]!.candidate;
+    if (
+      dataset.cases.some(
+        (item) =>
+          item.split === "holdout" &&
+          item.readiness === "runnable" &&
+          Buffer.byteLength(candidate.body + item.input, "utf8") + 512 >
+            snapshot.plan.bounds.maxContextBytes,
+      )
+    )
+      throw new Error("selected candidate exceeds frozen holdout context limits");
+    this.ledger.setFinalAllocation(id, fence, snapshot.plan.finalAllocation);
     this.store.mutate(id, { fence }, (state) => {
       (state.data as unknown as Progress).selectedBodyHash = selected;
     });
@@ -961,7 +1028,8 @@ export class OptimizationLabController {
         if (snapshot.state.stopRequested || snapshot.grant?.revokedAt || !this.enabled())
           status = "cancelled";
         else if (
-          /budget|resources|allocation|exhaust|grant expired|deadline/iu.test(message) ||
+          /budget|resources|allocation|exhaust|expired|expiry|deadline/iu.test(message) ||
+          (snapshot.grant !== null && Date.now() >= Date.parse(snapshot.grant.expiresAt)) ||
           summary.estimateInvalid
         )
           status = "budget_exhausted";
