@@ -3,6 +3,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { withProviderRequestProjection } from "../../model-request-boundary/context.js";
 import type {
   ClientDefaults,
   LLMConfig,
@@ -239,22 +240,22 @@ export class AnthropicClient extends LLMClientBase {
       const reasoning = options.reasoning ?? this.config.reasoning;
       const maxTokens = options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS;
       const thinking = this.buildThinking(reasoning, maxTokens);
-      const response = await this.client.messages.create(
-        {
-          model: this.model,
-          max_tokens: maxTokens,
-          system: this.buildSystem(
-            options.systemPrompt,
-            this.promptCachePolicy(options.promptCache),
-          ),
-          messages,
-          ...(tools?.length ? { tools } : {}),
-          ...(thinking ? { thinking } : {}),
-          ...(options.temperature !== undefined
-            ? { temperature: options.temperature }
-            : { temperature: this.temperature }),
-        },
-        { signal: requestSignal ?? options.signal },
+      const requestBody = {
+        model: this.model,
+        max_tokens: maxTokens,
+        system: this.buildSystem(options.systemPrompt, this.promptCachePolicy(options.promptCache)),
+        messages,
+        ...(tools?.length ? { tools } : {}),
+        ...(thinking ? { thinking } : {}),
+        ...(options.temperature !== undefined
+          ? { temperature: options.temperature }
+          : { temperature: this.temperature }),
+      };
+      const response = await withProviderRequestProjection(
+        "anthropic-messages",
+        requestBody,
+        () => this.client.messages.create(requestBody, { signal: requestSignal ?? options.signal }),
+        { logicalCallId: options.requestBoundaryId },
       );
 
       const usage = tokenUsageFromAnthropic(response.usage);
@@ -277,22 +278,23 @@ export class AnthropicClient extends LLMClientBase {
       const reasoning = options.reasoning ?? this.config.reasoning;
       const maxTokens = options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS;
       const thinking = this.buildThinking(reasoning, maxTokens);
-      const stream = this.client.messages.stream(
-        {
-          model: this.model,
-          max_tokens: maxTokens,
-          system: this.buildSystem(
-            options.systemPrompt,
-            this.promptCachePolicy(options.promptCache),
-          ),
-          messages,
-          ...(tools?.length ? { tools } : {}),
-          ...(thinking ? { thinking } : {}),
-          ...(options.temperature !== undefined
-            ? { temperature: options.temperature }
-            : { temperature: this.temperature }),
-        },
-        { signal: requestSignal ?? options.signal },
+      const requestBody = {
+        model: this.model,
+        max_tokens: maxTokens,
+        system: this.buildSystem(options.systemPrompt, this.promptCachePolicy(options.promptCache)),
+        messages,
+        ...(tools?.length ? { tools } : {}),
+        ...(thinking ? { thinking } : {}),
+        ...(options.temperature !== undefined
+          ? { temperature: options.temperature }
+          : { temperature: this.temperature }),
+        stream: true as const,
+      };
+      const stream = withProviderRequestProjection(
+        "anthropic-messages",
+        requestBody,
+        () => this.client.messages.stream(requestBody, { signal: requestSignal ?? options.signal }),
+        { logicalCallId: options.requestBoundaryId },
       );
 
       let currentToolName = "";

@@ -623,6 +623,12 @@ export { logger } from "./logging/logger.js";
 // ─── Settings ────────────────────────────────────────────────────
 
 export { SettingsManager, userHome, type SettingsScope } from "./settings/manager.js";
+export type {
+  ModelRequestSigner,
+  ModelRequestSignInput,
+  ModelRequestSignatures,
+  ModelRequestSubject,
+} from "./model-request-boundary/types.js";
 export {
   migrateConfig,
   configVersionOf,

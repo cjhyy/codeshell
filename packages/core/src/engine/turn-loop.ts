@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { ModelRequestBoundaryError } from "../model-request-boundary/context.js";
 import type {
   Message,
   StreamCallback,
@@ -729,11 +730,15 @@ export class TurnLoop {
     return redacted;
   }
 
-  private modelCallRecordingOptions(messages: Message[]): ModelCallRecordingOptions {
+  private modelCallRecordingOptions(
+    messages: Message[],
+    assistantMessageId: string = randomUUID(),
+  ): ModelCallRecordingOptions {
     const volatileIndex = messages.findIndex((message) =>
       this.volatileContextMessages.has(message),
     );
     return {
+      requestBoundary: { step: this.turnCount, assistantMessageId },
       ...(this.sensitiveToolResultRedactions.size > 0
         ? { sensitiveToolResultRedactions: new Map(this.sensitiveToolResultRedactions) }
         : {}),
@@ -2122,11 +2127,12 @@ export class TurnLoop {
         this.deps.tools,
         wrappedStream,
         this.config.signal,
-        this.modelCallRecordingOptions(messages),
+        this.modelCallRecordingOptions(messages, assistantMessageId),
       );
     } catch (err) {
       // If it's a context or rate limit error, don't fallback — propagate
       if (err instanceof ContextLimitError) throw err;
+      if (err instanceof ModelRequestBoundaryError) throw err;
 
       // User cancelled (ESC / Stop / run signal). Falling back to a
       // non-streaming call here re-sends the whole request the user just
@@ -2176,7 +2182,7 @@ export class TurnLoop {
         messages,
         this.deps.tools,
         this.config.signal,
-        this.modelCallRecordingOptions(messages),
+        this.modelCallRecordingOptions(messages, assistantMessageId),
       );
       // A failed stream's slot was revoked above. Reopen it for the successful
       // replacement so delta-based clients receive the same text/reasoning as

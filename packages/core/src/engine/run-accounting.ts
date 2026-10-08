@@ -15,6 +15,7 @@ import type { LLMClientBase } from "../llm/client-base.js";
 import type { Transcript } from "../session/transcript.js";
 import type { SessionBundle, SessionStateFieldPatch } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
+import type { ModelRequestBinding } from "../model-request-boundary/context.js";
 import type { TurnLoop } from "./turn-loop.js";
 import type { EngineConfig } from "./types.js";
 
@@ -35,12 +36,16 @@ export function createRunUsageAccounting(args: {
   updatePersistedSessionState: (sid: string, patch: SessionStateFieldPatch) => void;
   costStore: EngineConfig["costStore"];
   /** engine 侧闭包 (usage) => turnLoop.recordGoalJudgeUsage(usage)(turnLoop 延迟赋值)。 */
-  recordGoalJudgeUsage: (
-    usage: TokenUsage,
-  ) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
+  recordGoalJudgeUsage: (usage: TokenUsage) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
 }): RunUsageAccounting {
-  const { session, sid, resumeState, updatePersistedSessionState, costStore, recordGoalJudgeUsage } =
-    args;
+  const {
+    session,
+    sid,
+    resumeState,
+    updatePersistedSessionState,
+    costStore,
+    recordGoalJudgeUsage,
+  } = args;
   let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
   let externalRunUsage: TokenUsage = {
     promptTokens: 0,
@@ -103,6 +108,7 @@ export function wireRunModelFacade(args: {
   auxSummaryClient: LLMClientBase;
   transcript: Transcript;
   accounting: RunUsageAccounting;
+  requestBinding?: ModelRequestBinding;
 }): {
   modelFacade: ModelFacade;
   getRunUsage: () => ReturnType<ModelFacade["getUsage"]>;
@@ -110,7 +116,7 @@ export function wireRunModelFacade(args: {
   const { llmClient, auxSummaryClient, transcript, accounting } = args;
 
   // Create components (requires resolved llmClient).
-  const modelFacade = new ModelFacade(llmClient, transcript);
+  const modelFacade = new ModelFacade(llmClient, transcript, args.requestBinding);
   const getRunUsage = () => {
     const visible = modelFacade.getUsage();
     const externalRunUsage = accounting.getExternalRunUsage();
@@ -119,8 +125,7 @@ export function wireRunModelFacade(args: {
       totalPromptTokens: visible.totalPromptTokens + externalRunUsage.promptTokens,
       totalCompletionTokens: visible.totalCompletionTokens + externalRunUsage.completionTokens,
       totalTokens: visible.totalTokens + externalRunUsage.totalTokens,
-      totalCacheReadTokens:
-        visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
+      totalCacheReadTokens: visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
       totalCacheCreationTokens:
         visible.totalCacheCreationTokens + (externalRunUsage.cacheCreationTokens ?? 0),
     };

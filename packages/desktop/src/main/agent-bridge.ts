@@ -65,7 +65,11 @@ import {
   type SessionProjectBinding,
   type SessionWorkspace,
 } from "@cjhyy/code-shell-core";
-import type { WorkspaceContext } from "@cjhyy/code-shell-core/internal";
+import type {
+  WorkspaceContext,
+  ModelRequestSigner,
+  ModelRequestSignInput,
+} from "@cjhyy/code-shell-core/internal";
 import {
   PET_REPORT_TO_MIMI_METHOD,
   type PetProjectionDelta,
@@ -325,6 +329,7 @@ export class AgentBridge implements PetStateBridge {
     }) => Promise<{ accessToken: string; expiresAt?: string }>,
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
     private readonly workerAutomationCreate?: WorkerAutomationCreate,
+    private readonly modelRequestSigner?: ModelRequestSigner,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
@@ -1065,6 +1070,7 @@ export class AgentBridge implements PetStateBridge {
 
   private abortLocalOAuthLinkActions(): void {
     this.localOAuthLinkEpoch++;
+    this.modelRequestSigner?.dispose?.();
     for (const controller of this.localOAuthLinkActions.values()) controller.abort();
     this.localOAuthLinkActions.clear();
   }
@@ -1086,6 +1092,7 @@ export class AgentBridge implements PetStateBridge {
       parsed.method !== "desktop/oauthAccessResolve" &&
       parsed.method !== "desktop/remoteLinkAction" &&
       parsed.method !== "desktop/localOAuthLinkAction" &&
+      parsed.method !== "desktop/modelRequestSign" &&
       parsed.method !== "desktop/localOAuthLinkActionCancel"
     ) {
       return false;
@@ -1102,7 +1109,20 @@ export class AgentBridge implements PetStateBridge {
     void (async () => {
       let reply: Record<string, unknown>;
       try {
-        if (parsed.method === "desktop/credentialResolve") {
+        if (parsed.method === "desktop/modelRequestSign") {
+          if (!this.modelRequestSigner) throw new Error("Host request signing unavailable");
+          try {
+            reply = {
+              jsonrpc: "2.0",
+              id,
+              result: await this.modelRequestSigner.sign(
+                parsed.params as unknown as ModelRequestSignInput,
+              ),
+            };
+          } catch {
+            throw new Error("Host request signing unavailable");
+          }
+        } else if (parsed.method === "desktop/credentialResolve") {
           reply = {
             jsonrpc: "2.0",
             id,
@@ -1166,7 +1186,8 @@ export class AgentBridge implements PetStateBridge {
         };
       }
       if (
-        parsed.method === "desktop/localOAuthLinkAction" &&
+        (parsed.method === "desktop/localOAuthLinkAction" ||
+          parsed.method === "desktop/modelRequestSign") &&
         workerEpoch !== this.localOAuthLinkEpoch
       )
         return;
@@ -2225,6 +2246,7 @@ export class AgentBridge implements PetStateBridge {
   }
 
   kill(): void {
+    this.modelRequestSigner?.dispose?.();
     this.core.kill();
   }
 }

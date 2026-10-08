@@ -6,6 +6,8 @@ import type { Message, ToolDefinition, LLMResponse, LLMStreamChunk, TokenUsage }
 import type { PromptCacheRequestContext } from "./prompt-cache.js";
 
 export interface CreateMessageOptions {
+  /** Main-facade invocation token; auxiliary providers deliberately omit it. */
+  requestBoundaryId?: string;
   systemPrompt: string;
   messages: Message[];
   tools?: ToolDefinition[];

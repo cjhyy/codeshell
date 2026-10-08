@@ -9,6 +9,7 @@
  */
 
 import OpenAI from "openai";
+import { withProviderRequestProjection } from "../../model-request-boundary/context.js";
 import type {
   ClientDefaults,
   LLMConfig,
@@ -645,6 +646,10 @@ export class OpenAIClient extends LLMClientBase {
     const rejected = cap.rejectedParams as ReadonlySet<string>;
     for (const [k, v] of Object.entries(this.config.extraBody ?? {})) {
       if (rejected.has(k)) continue;
+      // These fields belong to the resolved request, never arbitrary catalog
+      // passthrough. Otherwise extraBody can replace the audited conversation
+      // or reintroduce tools which the active run deliberately hid.
+      if (["model", "messages", "tools", "stream", "stream_options"].includes(k)) continue;
       extra[k] = v;
     }
 
@@ -693,9 +698,15 @@ export class OpenAIClient extends LLMClientBase {
   ): Promise<LLMResponse> {
     try {
       const requestBody = this.buildRequestBody(options, messages, tools, reasoning, false);
-      const response = await this.client.chat.completions.create(
-        requestBody as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
-        { signal: requestSignal ?? options.signal },
+      const response = await withProviderRequestProjection(
+        "openai-chat",
+        requestBody,
+        () =>
+          this.client.chat.completions.create(
+            requestBody as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
+            { signal: requestSignal ?? options.signal },
+          ),
+        { logicalCallId: options.requestBoundaryId },
       );
 
       const choice = response.choices[0];
@@ -728,9 +739,15 @@ export class OpenAIClient extends LLMClientBase {
     const sdkSignal = requestSignal ?? options.signal;
     try {
       const requestBody = this.buildRequestBody(options, messages, tools, reasoning, true);
-      const stream = await this.client.chat.completions.create(
-        requestBody as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
-        { signal: sdkSignal },
+      const stream = await withProviderRequestProjection(
+        "openai-chat",
+        requestBody,
+        () =>
+          this.client.chat.completions.create(
+            requestBody as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
+            { signal: sdkSignal },
+          ),
+        { logicalCallId: options.requestBoundaryId },
       );
       const outputTokenLimit = outputTokenLimitOf(requestBody);
 

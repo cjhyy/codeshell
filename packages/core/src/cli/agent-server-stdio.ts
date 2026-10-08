@@ -57,6 +57,10 @@ import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
+import {
+  createIpcModelRequestSigner,
+  setDefaultModelRequestSigner,
+} from "../model-request-boundary/access.js";
 import { createDesktopAutomationAuthorityClient } from "../automation/desktop-authority-client.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
@@ -396,6 +400,7 @@ const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 // and keeps credential resolution in its safeStorage-owning main process.
 if (process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local") {
   setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
+  setDefaultModelRequestSigner(createIpcModelRequestSigner(stdioTransport));
 }
 setCronCreateAuthority(createDesktopAutomationAuthorityClient(stdioTransport));
 
