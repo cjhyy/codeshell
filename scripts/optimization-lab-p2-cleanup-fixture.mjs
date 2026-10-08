@@ -1,6 +1,6 @@
 /** Isolated Bun process: construction/cleanup fault injection never alters other test modules. */
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,11 +22,27 @@ globalThis.fetch = async () => {
 let phase;
 let counts;
 let controller;
+let ownedSigner;
+let loadedSnapshots;
+let finishRun;
+let fixtureLogger;
+mock.module(
+  fileURLToPath(new URL("../packages/core/dist/model-request-boundary/access.js", import.meta.url)),
+  () => ({
+    createEphemeralModelRequestSigner() {
+      counts.signer++;
+      ownedSigner = { dispose: () => counts.signerDispose++ };
+      return ownedSigner;
+    },
+  }),
+);
 mock.module(
   fileURLToPath(new URL("../packages/core/dist/protocol/factories.js", import.meta.url)),
   () => ({
-    createServer() {
+    createServer(options) {
       counts.server++;
+      assert.equal(options.engineOverrides.modelRequestSigner, ownedSigner);
+      loadedSnapshots = options.engineOverrides.instructionSnapshots;
       if (phase === "server") throw new Error("fixture server construction failure");
       return {
         async close() {
@@ -34,6 +50,7 @@ mock.module(
           if (phase === "server_close") throw new Error("fixture server close failure");
         },
         engine: {
+          getLoadedInstructionSnapshots: () => loadedSnapshots,
           async dispose() {
             counts.engineDispose++;
             if (phase === "engine_dispose") throw new Error("fixture engine dispose failure");
@@ -48,11 +65,18 @@ mock.module(
       return {
         async run() {
           counts.run++;
+          if (phase === "success") return { reason: "completed", sessionId: "fixture" };
+          if (phase === "external_abort")
+            return new Promise((resolve) => {
+              finishRun = () => resolve({ reason: "aborted_streaming", sessionId: "fixture" });
+            });
           if (phase === "run_abort") controller.abort();
           throw new Error("fixture run failure");
         },
         async cancel() {
           counts.cancel++;
+          fixtureLogger.error(new Error("Isolated cancellation stays outside owned diagnostics"));
+          finishRun?.();
         },
         close() {
           counts.clientClose++;
@@ -64,6 +88,11 @@ mock.module(
 );
 
 try {
+  const { logger, setLogsDir, getInMemoryErrors } =
+    await import("../packages/core/dist/logging/logger.js");
+  fixtureLogger = logger;
+  const ownedLogs = join(root, "owned-logs");
+  setLogsDir(ownedLogs);
   const { runIsolatedInstruction } =
     await import("../packages/core/dist/skills/isolated-instruction-run.js");
   const phases = [
@@ -73,12 +102,16 @@ try {
     "construction_abort",
     "run",
     "run_abort",
+    "external_abort",
     "server_close",
     "client_close",
     "engine_dispose",
+    "success",
   ];
   for (phase of phases) {
     counts = {
+      signer: 0,
+      signerDispose: 0,
       server: 0,
       client: 0,
       run: 0,
@@ -88,35 +121,49 @@ try {
       engineDispose: 0,
     };
     controller = new AbortController();
+    finishRun = undefined;
     if (phase === "pre_abort") controller.abort();
-    await assert.rejects(
-      runIsolatedInstruction({
-        cwd,
-        llm: { provider: "openai", model: "fixture", apiKey: "fixture" },
-        clientDefaults: {},
-        name: "fixture",
-        sourceRevision: "a".repeat(64),
-        body: "fixed fixture body",
-        task: "fixture task",
-        signal: controller.signal,
-        receiptRoot: join(root, "receipts"),
-      }),
-    );
+    if (phase === "external_abort") setTimeout(() => controller.abort(), 0);
+    const run = runIsolatedInstruction({
+      cwd,
+      llm: { provider: "openai", model: "fixture", apiKey: "fixture" },
+      clientDefaults: {},
+      name: "fixture",
+      sourceRevision: "a".repeat(64),
+      body: "fixed fixture body",
+      task: "fixture task",
+      signal: controller.signal,
+      receiptRoot: join(root, "receipts"),
+    });
+    if (phase === "success") assert.equal((await run).receipt.completed, true);
+    else if (phase === "external_abort") assert.equal((await run).receipt.completed, false);
+    else await assert.rejects(run);
     assert.deepEqual(
       counts,
       {
+        signer: phase === "pre_abort" ? 0 : 1,
+        signerDispose: phase === "pre_abort" ? 0 : 1,
         server: phase === "pre_abort" ? 0 : 1,
         client: ["pre_abort", "server"].includes(phase) ? 0 : 1,
         run: ["pre_abort", "server", "client", "construction_abort"].includes(phase) ? 0 : 1,
-        cancel: phase === "run_abort" ? 1 : 0,
+        cancel: ["run_abort", "external_abort"].includes(phase) ? 1 : 0,
         serverClose: ["pre_abort", "server"].includes(phase) ? 0 : 1,
         clientClose: ["pre_abort", "server", "client"].includes(phase) ? 0 : 1,
         engineDispose: ["pre_abort", "server"].includes(phase) ? 0 : 1,
       },
       phase,
     );
+    assert.equal(existsSync(ownedLogs), false, phase);
+    assert.equal(getInMemoryErrors().length, 0, phase);
   }
-  console.log(JSON.stringify({ ok: true, cleanupCases: phases.length, noNetwork: true }));
+  console.log(
+    JSON.stringify({
+      ok: true,
+      cleanupCases: phases.length,
+      signerDisposed: true,
+      noNetwork: true,
+    }),
+  );
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

@@ -5,6 +5,9 @@ import { join } from "node:path";
 import type { ClientDefaults, LLMConfig } from "../types.js";
 import { createServer, createClient } from "../protocol/factories.js";
 import { createInProcessTransport } from "../protocol/transport.js";
+import { createEphemeralModelRequestSigner } from "../model-request-boundary/access.js";
+import type { ModelRequestSigner } from "../model-request-boundary/types.js";
+import { runWithoutLogging } from "../logging/logger.js";
 import { writeFileAtomic } from "../utils/file-mutex.js";
 import {
   InstructionBindingStore,
@@ -13,7 +16,7 @@ import {
   type InstructionValidationReceipt,
 } from "./instruction-bindings.js";
 
-export async function runIsolatedInstruction(input: {
+type IsolatedInstructionInput = {
   cwd: string;
   llm: LLMConfig;
   clientDefaults: ClientDefaults;
@@ -23,7 +26,13 @@ export async function runIsolatedInstruction(input: {
   task: string;
   signal?: AbortSignal;
   receiptRoot?: string;
-}) {
+};
+
+export function runIsolatedInstruction(input: IsolatedInstructionInput) {
+  return runWithoutLogging(() => executeIsolatedInstruction(input));
+}
+
+async function executeIsolatedInstruction(input: IsolatedInstructionInput) {
   const signal = input.signal;
   if (signal?.aborted) throw new Error("Isolated run cancelled");
   const snapshot: InstructionSnapshot = {
@@ -40,15 +49,20 @@ export async function runIsolatedInstruction(input: {
   const [serverTransport, clientTransport] = createInProcessTransport();
   let handle: ReturnType<typeof createServer> | undefined;
   let client: ReturnType<typeof createClient> | undefined;
+  let signer: ModelRequestSigner | undefined;
   const abort = () => {
-    void client?.cancel().catch(() => {});
+    runWithoutLogging(() => {
+      void client?.cancel().catch(() => {});
+    });
   };
   try {
+    signer = createEphemeralModelRequestSigner();
     handle = createServer({
       transport: serverTransport,
       cwd: input.cwd,
       llm: input.llm,
       engineOverrides: {
+        modelRequestSigner: signer,
         clientDefaults: input.clientDefaults,
         settingsScope: "isolated",
         isSubAgent: true,
@@ -107,7 +121,11 @@ export async function runIsolatedInstruction(input: {
       try {
         client?.close();
       } finally {
-        await handle?.engine.dispose();
+        try {
+          await handle?.engine.dispose();
+        } finally {
+          signer?.dispose?.();
+        }
       }
     }
   }

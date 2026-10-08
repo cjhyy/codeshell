@@ -1,8 +1,18 @@
 /** Pure local compiled-consumer acceptance. No sockets, accounts or model service. */
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  readdirSync,
+  existsSync,
+  rmSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
 const root = mkdtempSync(join(tmpdir(), "codeshell-lab-p2-"));
 const home = join(root, "home");
 const cwd = join(root, "project");
@@ -13,11 +23,35 @@ process.env.USERPROFILE = home;
 process.env.AGENT_CWD = cwd;
 process.env.CODE_SHELL_HOME = join(home, ".code-shell");
 process.env.CODE_SHELL_TEST_HOME = process.env.CODE_SHELL_HOME;
+process.env.CODE_SHELL_LOG_LEVEL = "debug";
+const fixtureOrigin = "http://127.0.0.1:9";
+installLocalNetworkGuard(fixtureOrigin);
+const fixtureGuard = {
+  pid: process.pid,
+  ppid: process.ppid,
+  origin: fixtureOrigin,
+  homeId: createHash("sha256").update(process.env.HOME).digest("hex"),
+  transport: "in-process-sdk/no-sockets",
+};
 globalThis.fetch = async () => {
   throw new Error("Pure fixture refuses network access");
 };
 try {
   const core = await import("../packages/core/dist/index.extension.js");
+  assert.equal(core.userHome(), home);
+  const { setDefaultModelRequestSigner } =
+    await import("../packages/core/dist/model-request-boundary/access.js");
+  let defaultSignerCalls = 0;
+  setDefaultModelRequestSigner({
+    async sign() {
+      defaultSignerCalls++;
+      throw new Error("Fixture Desktop default signer refuses non-Quick-Chat ephemeral runs");
+    },
+  });
+  const { setLogsDir, getInMemoryErrors } = await import("../packages/core/dist/logging/logger.js");
+  const isolatedLogs = join(root, "codeshell-owned-logs");
+  setLogsDir(isolatedLogs);
+  let siblingLog;
   const { createServer, createClient } =
     await import("../packages/core/dist/protocol/factories.js");
   const { createInProcessTransport } = await import("../packages/core/dist/protocol/transport.js");
@@ -33,12 +67,17 @@ try {
   const observations = [];
   const upstream = async (input, init) => {
     const request = new Request(input, init);
+    assert.equal(new URL(request.url).origin, fixtureOrigin);
     const body = await request.json();
     observations.push(body);
     assert.equal(body.stream, true);
     assert.equal(body.model, "fixture-model");
     assert.equal(body.max_tokens ?? body.max_completion_tokens, 128);
     assert.ok(!body.tools?.length);
+    if (JSON.stringify(body).includes("CONCURRENT_PRIVATE_INSTRUCTION")) {
+      core.logger.error(new Error("CONCURRENT_PRIVATE_INSTRUCTION must not enter diagnostics"));
+      await siblingLog;
+    }
     return new Response(
       `data: ${JSON.stringify({ id: "fixture", object: "chat.completion.chunk", created: 0, model: "fixture-model", choices: [{ index: 0, delta: { role: "assistant", content: "fixture answer [S1]" }, finish_reason: null }] })}\n\ndata: ${JSON.stringify({ id: "fixture", object: "chat.completion.chunk", created: 0, model: "fixture-model", choices: [{ index: 0, delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 40, completion_tokens: 5, total_tokens: 45 } })}\n\ndata: [DONE]\n\n`,
       { headers: { "content-type": "text/event-stream" } },
@@ -48,7 +87,7 @@ try {
     provider: "openai",
     model: "fixture-model",
     apiKey: "fixture",
-    baseUrl: "http://127.0.0.1:9/v1",
+    baseUrl: `${fixtureOrigin}/v1`,
     maxTokens: 128,
   };
   const isolated = await core.runIsolatedInstruction({
@@ -71,6 +110,32 @@ try {
   assert.equal(readFileSync(skillFile, "utf8"), source);
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "memory")), false);
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "dream")), false);
+  assert.equal(existsSync(isolatedLogs), false);
+  siblingLog = new Promise((resolve) => {
+    setTimeout(() => {
+      core.logger.info("ordinary concurrent fixture log");
+      resolve();
+    }, 0);
+  });
+  const concurrentIsolated = await core.runIsolatedInstruction({
+    cwd,
+    llm,
+    clientDefaults: { retryMaxAttempts: 1, fetch: upstream },
+    name,
+    sourceRevision,
+    body: "CONCURRENT_PRIVATE_INSTRUCTION",
+    task: "Concurrent isolated fixture response",
+    receiptRoot: bindingRoot,
+  });
+  assert.equal(concurrentIsolated.receipt.completed, true);
+  await siblingLog;
+  const ownedLogs = readdirSync(isolatedLogs)
+    .map((file) => readFileSync(join(isolatedLogs, file), "utf8"))
+    .join("");
+  assert.ok(ownedLogs.includes("ordinary concurrent fixture log"));
+  assert.ok(!ownedLogs.includes("CONCURRENT_PRIVATE_INSTRUCTION"));
+  assert.ok(!ownedLogs.includes("engine.run"));
+  assert.ok(!JSON.stringify(getInMemoryErrors()).includes("CONCURRENT_PRIVATE_INSTRUCTION"));
   const constructionAbort = new AbortController();
   const requestsBeforeAbort = observations.length;
   await assert.rejects(
@@ -176,7 +241,7 @@ try {
   assert.equal(settled[0].outcome, "settled");
   assert.equal(settled[0].usage.inputTokens, 40);
   assert.ok(trial.instructionReceiptId);
-  const anthropicLlm = { ...llm, provider: "anthropic", baseUrl: "http://127.0.0.1:9" };
+  const anthropicLlm = { ...llm, provider: "anthropic", baseUrl: fixtureOrigin };
   const anthropicContent = structuredClone(content);
   anthropicContent.connections.target = {
     ...anthropicContent.connections.target,
@@ -217,7 +282,9 @@ try {
       },
     },
     upstream: async (input, init) => {
-      const body = await new Request(input, init).json();
+      const request = new Request(input, init);
+      assert.equal(new URL(request.url).origin, fixtureOrigin);
+      const body = await request.json();
       assert.equal(body.stream, true);
       assert.ok(!body.tools?.length);
       assert.ok(JSON.stringify(body.system).includes("ADOPTED_INSTRUCTION"));
@@ -260,6 +327,10 @@ try {
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "memory")), false);
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "dream")), false);
   assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "sessions", ".operations")), false);
+  assert.equal(existsSync(join(home, ".code-shell", "request-keys")), false);
+  assert.equal(existsSync(join(process.env.CODE_SHELL_HOME, "sessions", ".usage-ledger")), false);
+  assert.equal(defaultSignerCalls, 0);
+  setDefaultModelRequestSigner(undefined);
   const binding = store.adopt({
     scope: { cwd, provider: "openai", model: "fixture-model" },
     name,
@@ -592,6 +663,11 @@ try {
       originalMessagesRetained: true,
       revokedRunSignalAborted: true,
       noNetwork: true,
+      fixtureGuard,
+      explicitEphemeralSigner: true,
+      isolatedOwnedLogsSuppressed: true,
+      ordinaryConcurrentLoggingPreserved: true,
+      noDurableEphemeralKeysOrUsage: true,
     }),
   );
 } finally {
