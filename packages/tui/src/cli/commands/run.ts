@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { sessionsRoot } from "@cjhyy/code-shell-core";
 /**
  * `run` command — headless single-prompt execution.
  *
@@ -15,7 +17,6 @@ import { AgentServer } from "@cjhyy/code-shell-core";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { createInProcessTransport } from "@cjhyy/code-shell-core";
 import { MCPManager } from "@cjhyy/code-shell-core";
-import { CostTracker } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import { personalizationFrom } from "@cjhyy/code-shell-core";
 import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
@@ -136,7 +137,6 @@ export async function runCommand(options: RunOptions): Promise<void> {
     maxTurns: options.maxTurns ?? 30,
     maxContextTokens,
     sessionStorageDir: settings.session.storageDir,
-    costStore: costTracker,
     mcpServers: mergePluginMcpServers(
       settings.mcpServers ?? {},
       (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
@@ -173,8 +173,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // TODO(future): aggregate MCP connections at the runtime level.
   const mcpPool = new MCPManager(toolRegistry);
   // CostTracker: fresh instance for this invocation.
-  // TODO(future): thread into Engine cost accounting via runtime.costTracker.
-  const runCostTracker = new CostTracker();
+  const runCostTracker = costTracker;
 
   // 3. Build the shared EngineRuntime (reuse settingsManager from above)
   const runtime = new EngineRuntime({
@@ -183,6 +182,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     settings: settingsManager,
     mcpPool,
     costTracker: runCostTracker,
+    usageStorageDir: join(settings.session.storageDir ?? sessionsRoot(), ".usage-ledger"),
   });
 
   // 4. ChatSessionManager — one session per `run` invocation (UUID)

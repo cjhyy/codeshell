@@ -720,6 +720,19 @@ export {
 // ─── Cost Tracker ────────────────────────────────────────────────
 
 export { CostTracker, costTracker, installCostTracking } from "./cost-tracker.js";
+export {
+  UsageLedger,
+  withUsageOwner,
+  withUsagePurpose,
+  formatUsageCost,
+} from "./cost-ledger/index.js";
+export type {
+  UsageOwner,
+  UsageSummary,
+  UsageQuery,
+  UsageReceipt,
+  ExternalBilledUsage,
+} from "./cost-ledger/index.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 
 // ─── Plugins ─────────────────────────────────────────────────────

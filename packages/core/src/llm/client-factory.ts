@@ -39,7 +39,11 @@ export async function createLLMClient(
     );
   }
 
-  return new Cls(config, defaults);
+  const client = new Cls(config, defaults);
+  const createMessage = client.createMessage.bind(client);
+  client.createMessage = (options) =>
+    client.withUsageAccounting(options, () => createMessage(options));
+  return client;
 }
 
 export { PROVIDER_REGISTRY };

@@ -18,7 +18,7 @@ interface StatusLineProps {
   model: string;
   effort: string;
   tokens: number;
-  cost: number;
+  cost?: string;
   sessionId?: string;
   /**
    * Authoritative live context size. The engine emits `usage_update` at every
@@ -133,8 +133,7 @@ export function StatusLine({
       ageOfRunStart_ms: runStartRef ? Date.now() - runStartRef.current : 0,
     });
   }
-  const streamingTokens =
-    isRunning && streamingTokensRef ? streamingTokensRef.current : 0;
+  const streamingTokens = isRunning && streamingTokensRef ? streamingTokensRef.current : 0;
   void streamingTokens;
 
   // ctx bar reflects what the engine has actually built: usage_update events
@@ -184,10 +183,10 @@ export function StatusLine({
       <Text dim> {ctxPct.toFixed(0)}% ctx</Text>
 
       {/* Cost */}
-      {cost > 0 && (
+      {cost && (
         <>
           <Text dim> │ </Text>
-          <Text color="ansi:green">${cost.toFixed(2)}</Text>
+          <Text color="ansi:green">{cost}</Text>
         </>
       )}
 

@@ -358,6 +358,10 @@ export interface ToolContext {
    * billing hook again; the originating provider client already did that.
    */
   recordBilledUsage?: (usage: TokenUsage) => void;
+  /** Unique external request billing; Host supplies Session/Runtime ownership. */
+  recordExternalBilledUsage?: (
+    input: import("../cost-ledger/types.js").ExternalBilledUsage,
+  ) => void;
   /** Connection-scoped approval owner router supplied by the protocol host. */
   approvalRouter?: ApprovalRouter;
   /** Whether the owning Engine is currently in plan mode. Replaces the

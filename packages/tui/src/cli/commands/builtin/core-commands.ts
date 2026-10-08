@@ -3,7 +3,7 @@
  */
 
 import type { SlashCommand } from "../registry.js";
-import { costTracker } from "@cjhyy/code-shell-core";
+import { costTracker, formatUsageCost } from "@cjhyy/code-shell-core";
 import { CHALK_COLORIZER } from "../../../utils/colorizer.js";
 import { execSync } from "node:child_process";
 import { gitDiff, gitDiffStat } from "./git-diff.js";
@@ -91,6 +91,10 @@ export const coreCommands: SlashCommand[] = [
     description: "Show token usage and cost (/cost stats for summary, /cost detail for breakdown)",
     usage: "/cost [stats|detail]",
     execute: (arg, ctx) => {
+      if (costTracker.getUsageSummary()) {
+        ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));
+        return;
+      }
       if (costTracker.getRequestCount() === 0) {
         ctx.addStatus("No API requests yet.");
         return;
@@ -687,7 +691,8 @@ export const coreCommands: SlashCommand[] = [
           const t = costTracker.getTotalTokens();
           if (t.total > 0) {
             lines.push(`Tokens:      ${t.total} (in: ${t.prompt}, out: ${t.completion})`);
-            lines.push(`Cost:        ${costTracker.getEstimatedCost().toFixed(4)}`);
+            const summary = costTracker.getUsageSummary();
+            lines.push(`Cost:        ${summary ? formatUsageCost(summary) : "unknown"}`);
           }
           ctx.addStatus(lines.join("\n"));
         } catch (err) {

@@ -6,6 +6,12 @@ import type { ClientDefaults, LLMConfig, LLMResponse, TokenUsage } from "../type
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
+import {
+  recordOwnedUsage,
+  usageTrackingFetch,
+  withUsageAttempt,
+  withUsagePurpose,
+} from "../cost-ledger/context.js";
 
 function emptyUsageTracker(): LLMUsageTracker {
   return {
@@ -61,7 +67,7 @@ export abstract class LLMClientBase {
     this.timeout = defaults?.timeout ?? 120_000;
     this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;
     this.imageDetail = defaults?.imageDetail;
-    this.fetch = defaults?.fetch;
+    this.fetch = usageTrackingFetch(defaults?.fetch ?? globalThis.fetch);
     this.initClient();
   }
 
@@ -69,7 +75,7 @@ export abstract class LLMClientBase {
 
   abstract createMessage(options: CreateMessageOptions): Promise<LLMResponse>;
 
-  protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions): void {
+  protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions, reported = true): void {
     if (options?.requestVisible !== false) {
       this.usage.records.push(usage);
       this.usage.totalPromptTokens += usage.promptTokens;
@@ -80,8 +86,30 @@ export abstract class LLMClientBase {
       this.usage.requestCount++;
     }
     if (options?.billingEnabled !== false) {
-      LLMClientBase.onUsage?.(this.model, usage);
+      recordOwnedUsage(this.usageIdentity(), reported ? usage : null);
+      try {
+        LLMClientBase.onUsage?.(this.model, usage);
+      } catch {
+        // An observer failure must never retry an already billed provider request.
+        logger.warn("llm.usage_observer_failed");
+      }
     }
+  }
+
+  private usageIdentity() {
+    return { provider: this.provider, model: this.model, providerKind: this.config.providerKind };
+  }
+
+  /** A streamed usage snapshot updates its receipt without incrementing foreground totals. */
+  protected recordAttemptUsage(usage: TokenUsage, options?: CreateMessageOptions): void {
+    if (options?.billingEnabled !== false) recordOwnedUsage(this.usageIdentity(), usage);
+  }
+
+  /** Host accounting wrapper; provider wire parameters are unchanged. */
+  withUsageAccounting<T>(options: CreateMessageOptions, operation: () => Promise<T>): Promise<T> {
+    const track = () =>
+      withUsageAttempt(this.usageIdentity(), options.billingEnabled !== false, operation);
+    return options.usagePurpose ? withUsagePurpose(options.usagePurpose, track) : track();
   }
 
   getUsage(): LLMUsageTracker {

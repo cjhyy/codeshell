@@ -27,7 +27,7 @@ import {
 } from "./components/VirtualMessageList.js";
 import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mode.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
-import { costTracker } from "@cjhyy/code-shell-core";
+import { costTracker, formatUsageCost, type UsageSummary } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
 import type { ProviderManagerEntry } from "./components/ModelManager.js";
@@ -352,7 +352,7 @@ export function App({
   }, [client, sessionId]);
   const [showBanner, setShowBanner] = useState(true);
   const [totalTokens, setTotalTokens] = useState(0);
-  const [totalCost, setTotalCost] = useState(0);
+  const [totalCost, setTotalCost] = useState<string | undefined>();
   const [contextTokens, setContextTokens] = useState(0);
   const [currentEffort, setCurrentEffort] = useState(effort);
   const [permMode, setPermMode] = useState<TuiPermissionMode>("normal");
@@ -1656,17 +1656,22 @@ export function App({
         }
 
         setSessionId(result.sessionId);
-        setTotalTokens(costTracker.getTotalTokens().total);
-        setTotalCost(costTracker.getEstimatedCost());
+        let sessionUsage: UsageSummary | undefined;
+        try {
+          sessionUsage = (
+            await client.query("usage", {
+              sessionId: result.sessionId,
+              scope: "session",
+              includeChildren: true,
+            })
+          ).data as UsageSummary;
+          setTotalTokens(sessionUsage.totalTokens);
+          setTotalCost(formatUsageCost(sessionUsage));
+        } catch {
+          /* Older protocol hosts may not expose receipt accounting. */
+        }
 
         const elapsed = Date.now() - runStartRef.current;
-        const turnCost = result.usage
-          ? costTracker.estimateForTokens(
-              model,
-              result.usage.promptTokens,
-              result.usage.completionTokens,
-            )
-          : 0;
         const parts: string[] = [formatDuration(elapsed)];
         if (result.usage && result.usage.totalTokens > 0) {
           parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);
@@ -1674,7 +1679,7 @@ export function App({
             parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);
           }
         }
-        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);
+
         chatStore.update((prev) => [
           ...prev,
           entry({ type: "system", subtype: "turn_duration", text: parts.join(" · ") }),

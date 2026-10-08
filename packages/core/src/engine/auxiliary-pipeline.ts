@@ -12,6 +12,7 @@ import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { resolveAuxKey } from "./aux-key.js";
 import type { CumulativeUsageCounters } from "../session/usage.js";
 import type { EngineConfig } from "./types.js";
+import type { UsagePurpose } from "../cost-ledger/types.js";
 
 export type EngineLlmClient = Awaited<ReturnType<typeof createLLMClient>>;
 
@@ -41,6 +42,7 @@ export function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
 export function buildSummarizeFn(
   client: EngineLlmClient,
   recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
+  purpose: UsagePurpose = "aux_summary",
 ): (prompt: string, signal?: AbortSignal) => Promise<string> {
   return async (prompt, signal) => {
     const response = await client.createMessage({
@@ -50,6 +52,7 @@ export function buildSummarizeFn(
       maxTokens: 1024,
       billingEnabled: true,
       requestVisible: false,
+      usagePurpose: purpose,
       reasoning: { mode: "off" },
       signal,
     });
@@ -74,8 +77,9 @@ export class AuxiliaryPipeline {
   buildSummarizeFn(
     client: EngineLlmClient,
     recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
+    purpose: UsagePurpose = "aux_summary",
   ): (prompt: string, signal?: AbortSignal) => Promise<string> {
-    return buildSummarizeFn(client, recordCumulativeUsage);
+    return buildSummarizeFn(client, recordCumulativeUsage, purpose);
   }
 
   readMemoriesConfig(): MemoriesConfig | undefined {
@@ -172,6 +176,7 @@ export class AuxiliaryPipeline {
             maxTokens: 1024,
             billingEnabled: true,
             requestVisible: false,
+            usagePurpose: "aux_summary",
             reasoning: { mode: "off" },
           });
           if (response.usage) recordBilledUsage?.(response.usage);
