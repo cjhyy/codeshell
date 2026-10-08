@@ -5,6 +5,7 @@ import { logger } from "../logging/logger.js";
 import { codeShellHome } from "../session/session-manager.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
 import { SourceDefinitionSchema, type SourceDefinition } from "./types.js";
+import { linkSourceView } from "./link-view.js";
 
 const MAX_CATALOG_BYTES = 4 * 1024 * 1024;
 const MAX_CATALOG_SOURCES = 1_000;
@@ -28,6 +29,11 @@ function parseCatalog(rawText: string | undefined): SourceDefinition[] {
     for (const entry of raw.sources.slice(0, MAX_CATALOG_SOURCES)) {
       const parsed = SourceDefinitionSchema.safeParse(entry);
       if (parsed.success) {
+        try {
+          if (parsed.data.kind === "link") linkSourceView(parsed.data);
+        } catch {
+          continue;
+        }
         let encoded: string;
         try {
           encoded = JSON.stringify(parsed.data);
@@ -89,6 +95,7 @@ export function readSourceDefinition(id: string): SourceDefinition | undefined {
 
 export function saveSourceDefinition(definition: SourceDefinition): void {
   const parsed = SourceDefinitionSchema.parse(definition);
+  if (parsed.kind === "link") linkSourceView(parsed);
   let encoded: string;
   try {
     encoded = JSON.stringify(parsed);

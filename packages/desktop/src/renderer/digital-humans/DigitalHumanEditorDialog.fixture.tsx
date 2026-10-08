@@ -80,6 +80,9 @@ if (scenario.startsWith("dependencies-")) {
   profile.mcp = ["sources"];
   profile.agents = ["reviewer"];
   profile.version = "1.2.3";
+  profile.sourceAccess = [
+    { sourceId: "team-docs", scopes: ["github:list_issues"], readPolicy: "deny" },
+  ];
   if (
     [
       "dependencies-sync",
@@ -311,6 +314,7 @@ try {
     assert.deepEqual(saved[0]?.mcp, profile.mcp);
     assert.deepEqual(saved[0]?.agents, profile.agents);
     assert.equal(saved[0]?.version, profile.version);
+    assert.deepEqual(saved[0]?.sourceAccess, profile.sourceAccess);
     assert.equal(
       previewCalls.length,
       0,

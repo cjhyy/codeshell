@@ -7,6 +7,7 @@ describe("optimization-lab package entry contracts", () => {
     expect(Object.keys(rootApi).sort()).toEqual([
       "VERDICT_POLICY",
       "VERDICT_POLICY_SUITE_VERSION",
+      "buildEvidenceBundle",
       "createOptimizationLabModule",
       "freezeDataset",
       "validateDataset",

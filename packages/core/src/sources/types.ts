@@ -7,18 +7,31 @@ import { z } from "zod";
 
 export const SOURCE_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
-export const SOURCE_KINDS = ["mock", "mcp-resource", "local-files"] as const;
+export const SOURCE_KINDS = ["mock", "mcp-resource", "local-files", "link"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
 
 export const SourceDefinitionSchema = z.object({
   id: z.string().regex(SOURCE_ID_RE),
   kind: z.enum(SOURCE_KINDS),
-  label: z.string().min(1).max(512).refine((value) => !value.includes("\0")),
-  description: z.string().max(4_096).refine((value) => !value.includes("\0")).optional(),
+  label: z
+    .string()
+    .min(1)
+    .max(512)
+    .refine((value) => !value.includes("\0")),
+  description: z
+    .string()
+    .max(4_096)
+    .refine((value) => !value.includes("\0"))
+    .optional(),
   /** 按 kind 的 adapter 配置（如 mcp-resource: { server }）。 */
   adapterConfig: z.record(z.unknown()).default({}),
   /** 指向全局 CredentialStore 的 id；local-files/mock 不需要。 */
-  credentialRef: z.string().min(1).max(128).regex(/^[A-Za-z0-9_.-]+$/).optional(),
+  credentialRef: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Za-z0-9_.-]+$/)
+    .optional(),
   enabled: z.boolean().default(true),
 });
 export type SourceDefinition = z.infer<typeof SourceDefinitionSchema>;
@@ -27,13 +40,28 @@ export const WorkspaceSourceBindingSchema = z.object({
   sourceId: z.string().regex(SOURCE_ID_RE),
   /** 显式勾选的 scope id；空数组 = 什么都不可见（不是"全部"）。 */
   scopes: z
-    .array(z.string().min(1).max(512).refine((value) => !value.includes("\0")))
+    .array(
+      z
+        .string()
+        .min(1)
+        .max(512)
+        .refine((value) => !value.includes("\0")),
+    )
     .max(1_000)
     .refine((scopes) => new Set(scopes).size === scopes.length, "source scopes must be unique"),
   /** ask（默认，ReadSource 每次审批）| deny（只许 list metadata，禁读内容）。无 allow 档（ADR §1.2）。 */
   readPolicy: z.enum(["ask", "deny"]).default("ask"),
 });
 export type WorkspaceSourceBinding = z.infer<typeof WorkspaceSourceBindingSchema>;
+
+/** Optional Profile allowlist: omission preserves bindings; [] denies every source. */
+export const ProfileSourceAccessSchema = z
+  .array(WorkspaceSourceBindingSchema)
+  .max(1_000)
+  .refine((items) => new Set(items.map((item) => item.sourceId)).size === items.length, {
+    message: "profile source ids must be unique",
+  });
+export type ProfileSourceAccess = z.infer<typeof ProfileSourceAccessSchema>;
 
 /** adapter 返回的 scope/resource/content 形状（运行时对象，不落盘）。 */
 export interface SourceScope {

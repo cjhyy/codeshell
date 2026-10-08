@@ -28,8 +28,16 @@ function readSubtree(settings: SettingsManager, cwd: string): WorkspaceProfileSu
 export function resolveActiveWorkspaceProfile(
   input: ResolveActiveWorkspaceProfileInput,
 ): WorkspaceProfile | undefined {
+  return resolveActiveWorkspaceProfileSelection(input).profile;
+}
+
+/** Retains an unavailable selected identity so authorization callers can fail closed. */
+export function resolveActiveWorkspaceProfileSelection(input: ResolveActiveWorkspaceProfileInput): {
+  name?: string;
+  profile?: WorkspaceProfile;
+} {
   const name = input.sessionProfile ?? readSubtree(input.settings, input.cwd)?.active;
-  if (!name) return undefined;
+  if (!name) return {};
   let workspaceProfile: WorkspaceProfile | undefined;
   try {
     workspaceProfile = readWorkspaceProfile(name);
@@ -39,12 +47,12 @@ export function resolveActiveWorkspaceProfile(
       name,
       error: error instanceof Error ? error.message : String(error),
     });
-    return undefined;
+    return { name };
   }
   if (!workspaceProfile) {
     logger.warn("profile.active_missing_from_library", { cat: "profile", name });
   }
-  return workspaceProfile;
+  return { name, ...(workspaceProfile ? { profile: workspaceProfile } : {}) };
 }
 
 /** preset 解析用的快照读取（优先级：agent.preset > 本值 > capability 默认）。 */

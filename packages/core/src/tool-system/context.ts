@@ -12,7 +12,14 @@
  * Tools that don't need any context (Read/Write/Bash/...) just ignore
  * the second argument; the type is purely additive.
  */
-import type { LLMConfig, StreamCallback, TokenUsage, ToolDefinition } from "../types.js";
+import type {
+  LLMConfig,
+  StreamCallback,
+  TokenUsage,
+  ToolDefinition,
+  ToolCall,
+  ToolResult,
+} from "../types.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
@@ -281,6 +288,18 @@ export interface ToolContext {
    * path as trusted run metadata, not as model-supplied input.
    */
   profileMemoryDir?: string;
+  /** Trusted run Profile identity, never accepted from tool arguments. */
+  workspaceProfileName?: string;
+  /** Revalidate the live Session pin/project selection before returning source data. */
+  isSourceProfileCurrent?(): boolean;
+  /** Executor-owned nested call: preserves permission/hooks/audit and pins input. */
+  executeBoundTool?(
+    call: ToolCall,
+    options?: {
+      signal?: AbortSignal;
+      assertAuthorized?: () => void;
+    },
+  ): Promise<ToolResult>;
   /** Explicit root for project/global memory; portable profile storage stays separate. */
   memoryBaseDir?: string;
   /** Mutate the owning live context cwd. Worktree switching intentionally does not use this. */

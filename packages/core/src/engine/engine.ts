@@ -150,6 +150,7 @@ import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
 import { buildPromptComposerConfig } from "./run-setup.js";
+import { resolveActiveWorkspaceProfileSelection } from "../profile/resolve.js";
 import { resolveRunWorkspace } from "./run-workspace.js";
 import { openRunSession } from "./run-session-open.js";
 import { formatMcpConnectionFailures } from "../tool-system/mcp-health.js";
@@ -1535,6 +1536,7 @@ export class Engine {
       sessionProfileOverrides,
       profileMemoryDir,
       getSession: () => session,
+      workspaceProfileName: runWorkspaceProfile?.name,
       reportResult: (key, value) => {
         (profileReportedResults ??= {})[key] = value;
       },
@@ -2305,6 +2307,7 @@ export class Engine {
     profileParams: Readonly<Record<string, unknown>>;
     sessionProfileOverrides: import("./run-setup.js").RunProfileState["sessionProfileOverrides"];
     profileMemoryDir: string | undefined;
+    workspaceProfileName: string | undefined;
     getSession: () => SessionBundle;
     reportResult: (key: string, value: unknown) => void;
   }): Promise<ToolContext> {
@@ -2407,6 +2410,14 @@ export class Engine {
       profileParams,
       reportResult,
     });
+
+    toolCtx.workspaceProfileName = args.workspaceProfileName;
+    toolCtx.isSourceProfileCurrent = () =>
+      resolveActiveWorkspaceProfileSelection({
+        cwd,
+        settings: new SettingsManager(cwd, this.config.settingsScope ?? "project"),
+        sessionProfile: getSession().state.workspaceProfile,
+      }).name === args.workspaceProfileName;
 
     return toolCtx;
   }
@@ -2837,6 +2848,8 @@ export class Engine {
         responseLanguage: this.config.responseLanguage,
         userProfile: profile?.disableInstructions ? undefined : this.config.userProfile,
         workspaceProfile: runWorkspaceProfile,
+        sourceSettingsScope: toolCtx.settingsScope,
+        isSourceProfileCurrent: toolCtx.isSourceProfileCurrent,
         // Read from the Session's own persisted state, so every turn — not just
         // the first — carries the standing brief.
         sessionBrief: session.state.sessionBrief,

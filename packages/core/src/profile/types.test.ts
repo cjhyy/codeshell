@@ -2,6 +2,19 @@ import { describe, expect, test } from "bun:test";
 import { WORKSPACE_PROFILE_LIMITS, WorkspaceProfileSchema } from "./types.js";
 
 describe("WorkspaceProfile schema", () => {
+  test("source policy preserves omitted versus deny-all and rejects duplicate sources/scopes or allow", () => {
+    const minimal = { name: "researcher", label: "Researcher", basePreset: "general" };
+    expect(WorkspaceProfileSchema.parse(minimal).sourceAccess).toBeUndefined();
+    expect(WorkspaceProfileSchema.parse({ ...minimal, sourceAccess: [] }).sourceAccess).toEqual([]);
+    const rule = { sourceId: "docs", scopes: ["alpha"], readPolicy: "ask" };
+    for (const sourceAccess of [
+      [rule, rule],
+      [{ ...rule, scopes: ["alpha", "alpha"] }],
+      [{ ...rule, readPolicy: "allow" }],
+    ]) {
+      expect(() => WorkspaceProfileSchema.parse({ ...minimal, sourceAccess })).toThrow();
+    }
+  });
   test("accepts a minimal valid profile and fills defaults", () => {
     const p = WorkspaceProfileSchema.parse({
       name: "ui-designer",

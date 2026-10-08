@@ -133,7 +133,10 @@ export class ToolExecutor {
     return tool?.isConcurrencySafe ?? false;
   }
 
-  async executeSingle(callIn: ToolCall): Promise<ToolResult> {
+  async executeSingle(
+    callIn: ToolCall,
+    constraint?: { pinnedInput: string; assertAuthorized?: () => void },
+  ): Promise<ToolResult> {
     // Local `call` so we can rewrite args via pre_tool_use updatedInput
     // without mutating the caller's object.
     let call: ToolCall = callIn;
@@ -368,6 +371,14 @@ export class ToolExecutor {
         toolCallId: call.id,
       });
     }
+    if (constraint && JSON.stringify(call.args) !== constraint.pinnedInput) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        isError: true,
+        error: "Bound tool input cannot be changed by hooks.",
+      };
+    }
 
     // 0.65. Centralized file path policy. Tool handlers declare their file
     // path surface on RegisteredTool.pathPolicy; the executor enforces it
@@ -512,6 +523,25 @@ export class ToolExecutor {
       signal: this.signal ?? this.toolCtx?.signal,
     });
 
+    if (constraint) {
+      try {
+        if (JSON.stringify(call.args) !== constraint.pinnedInput)
+          throw new Error("Bound tool input cannot be changed by hooks.");
+        constraint.assertAuthorized?.();
+        // Hooks may retain nested objects and mutate them after this point,
+        // while the handler awaits credentials or IO. Record and execute a
+        // fresh snapshot that shares no references with hook-visible input.
+        call = { ...call, args: JSON.parse(constraint.pinnedInput) };
+      } catch {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          isError: true,
+          error: "Bound tool authority or input changed before execution.",
+        };
+      }
+    }
+
     // 3. Execute. Use a span so begin/end share one cat and end carries
     // duration_ms; widen args truncation from 200→2000 so Edit/Write payloads
     // (file_path + a chunk of code) actually show what was changed instead of
@@ -530,7 +560,30 @@ export class ToolExecutor {
     try {
       result = await this.registry.executeTool(call.toolName, call.args, {
         signal: this.signal,
-        ctx: this.toolCtx,
+        ctx: this.toolCtx
+          ? {
+              ...this.toolCtx,
+              executeBoundTool: async (nestedCall, options) => {
+                // A distinct wrapper preserves the per-call cancellation signal
+                // without racing another call's executor state. Authority, rules,
+                // hooks, guards and recording remain the same as the parent call.
+                const nested = new ToolExecutor(this.registry, this.permission, this.hooks);
+                nested.setContext(this.toolCtx);
+                nested.setInvestigationGuard(this.guard);
+                nested.setTaskGuard(this.taskGuard);
+                nested.setLogger(this.log);
+                const signals = [this.signal, options?.signal].filter(
+                  (item): item is AbortSignal => !!item,
+                );
+                nested.setSignal(signals.length ? AbortSignal.any(signals) : undefined);
+                const pinnedInput = JSON.stringify(nestedCall.args);
+                return nested.executeSingle(
+                  { ...nestedCall, args: JSON.parse(pinnedInput) },
+                  { pinnedInput, assertAuthorized: options?.assertAuthorized },
+                );
+              },
+            }
+          : undefined,
       });
     } catch (err) {
       span.fail(err);

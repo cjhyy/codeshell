@@ -49,6 +49,8 @@ export interface RunPromptComposerConfigInput {
   responseLanguage: ComposerOptions["responseLanguage"];
   userProfile: ComposerOptions["userProfile"];
   workspaceProfile: WorkspaceProfile | undefined;
+  sourceSettingsScope?: import("../settings/manager.js").SettingsScope;
+  isSourceProfileCurrent?(): boolean;
   profileMemoryDir: ComposerOptions["profileMemoryDir"];
   instructionCompatFileNames: NonNullable<
     NonNullable<ComposerOptions["instructionOptions"]>["compatFileNames"]
@@ -139,7 +141,13 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     capabilityPromptSections,
     dynamicContextProviders,
     sourcesContextProvider: () =>
-      buildSourcesContextSummary({ cwd, settings: getSettingsManager() }),
+      buildSourcesContextSummary({
+        cwd,
+        settings: getSettingsManager(),
+        settingsScope: args.sourceSettingsScope,
+        workspaceProfileName: workspaceProfile?.name,
+        isSourceProfileCurrent: args.isSourceProfileCurrent,
+      }),
     toolCatalog,
   };
 }

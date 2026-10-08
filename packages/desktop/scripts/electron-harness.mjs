@@ -18,9 +18,12 @@ export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-
   };
 }
 
-export async function launchCodeShellElectron({ appDir, home, userDataDir, env = {} }) {
+export async function launchCodeShellElectron({ appDir, home, userDataDir, env = {}, mainEntry }) {
   return electron.launch({
-    args: [`--user-data-dir=${userDataDir ?? join(home, "electron-user-data")}`, appDir],
+    args: [
+      `--user-data-dir=${userDataDir ?? join(home, "electron-user-data")}`,
+      mainEntry ?? appDir,
+    ],
     cwd: appDir,
     env: {
       ...process.env,

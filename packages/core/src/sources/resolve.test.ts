@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SettingsManager } from "../settings/manager.js";
+import { activateWorkspaceProfile } from "../profile/activation.js";
+import { saveWorkspaceProfile } from "../profile/store.js";
 import { uploadsDir } from "./adapters/local-files.js";
 import { bindSource, listBindings, unbindSource } from "./binding.js";
 import { saveSourceDefinition } from "./catalog.js";
@@ -44,6 +46,78 @@ afterEach(() => {
 const okCred = () => "ok" as const;
 
 describe("effective source access", () => {
+  test("Profile intersects scopes and deny, cannot add sources or scopes, and hides implicit uploads", () => {
+    const settings = new SettingsManager(cwd, "full");
+    bindSource(settings, cwd, { sourceId: "m1", scopes: ["alpha", "beta"], readPolicy: "deny" });
+    bindSource(settings, cwd, { sourceId: "m2", scopes: ["alpha"], readPolicy: "ask" });
+    const access = resolveEffectiveSourceAccess({
+      cwd,
+      settings,
+      credentialStatus: okCred,
+      profile: {
+        name: "limited",
+        sourceAccess: [
+          { sourceId: "m1", scopes: ["beta", "unbound"], readPolicy: "ask" },
+          { sourceId: "ghost", scopes: ["x"], readPolicy: "ask" },
+        ],
+      },
+    });
+    expect(access).toHaveLength(1);
+    expect(access[0]).toMatchObject({ sourceId: "m1", scopes: ["beta"], readPolicy: "deny" });
+    expect(access[0]?.profileRevision).toHaveLength(64);
+    expect(
+      resolveEffectiveSourceAccess({
+        cwd,
+        settings,
+        credentialStatus: okCred,
+        profile: { name: "empty", sourceAccess: [] },
+      }),
+    ).toEqual([]);
+  });
+
+  test("Session pin wins project Profile; library changes update revision and missing selection fails closed", () => {
+    const settings = new SettingsManager(cwd, "full");
+    bindSource(settings, cwd, { sourceId: "m1", scopes: ["alpha", "beta"], readPolicy: "ask" });
+    saveWorkspaceProfile({
+      name: "blocked",
+      label: "Blocked",
+      basePreset: "general",
+      sourceAccess: [],
+    });
+    saveWorkspaceProfile({
+      name: "pinned",
+      label: "Pinned",
+      basePreset: "general",
+      sourceAccess: [{ sourceId: "m1", scopes: ["alpha"], readPolicy: "ask" }],
+    });
+    activateWorkspaceProfile(settings, "blocked", cwd);
+    expect(resolveEffectiveSourceAccess({ cwd, settings, credentialStatus: okCred })).toEqual([]);
+    const pinned = () =>
+      resolveEffectiveSourceAccess({
+        cwd,
+        settings,
+        credentialStatus: okCred,
+        workspaceProfileName: "pinned",
+      });
+    const first = pinned();
+    expect(first[0]?.scopes).toEqual(["alpha"]);
+    saveWorkspaceProfile({
+      name: "pinned",
+      label: "Pinned",
+      basePreset: "general",
+      sourceAccess: [{ sourceId: "m1", scopes: ["beta"], readPolicy: "ask" }],
+    });
+    expect(pinned()[0]?.scopes).toEqual(["beta"]);
+    expect(pinned()[0]?.profileRevision).not.toBe(first[0]?.profileRevision);
+    expect(
+      resolveEffectiveSourceAccess({
+        cwd,
+        settings,
+        credentialStatus: okCred,
+        workspaceProfileName: "missing",
+      }),
+    ).toEqual([]);
+  });
   test("default deny: unbound sources are invisible without uploads", () => {
     const sm = new SettingsManager(cwd, "full");
 
