@@ -57,11 +57,18 @@ function byteSize(value: unknown): number {
 }
 
 /** Hide engine attachment plumbing while retaining attachment-only messages. */
-export function transcriptUserDisplay(data: ObjectValue): {
+export function transcriptUserDisplay(
+  data: ObjectValue,
+  options: { includeAbsolutePaths?: boolean; cwd?: string } = {},
+): {
   text: string;
   attachments: UserAttachmentSummary[];
 } {
   const attachments: UserAttachmentSummary[] = [];
+  const absolutePath = (path: string): string =>
+    /^(?:[a-zA-Z]:[\\/]|[\\/])/.test(path) || !options.cwd
+      ? path
+      : `${options.cwd.replace(/[\\/]$/, "")}/${path}`;
   const imagePaths: string[] = [];
   let raw = textContent(data.content);
   raw = raw.replace(
@@ -74,6 +81,9 @@ export function transcriptUserDisplay(data: ObjectValue): {
       attachments.push({
         name: attachmentName(unescapeAttribute(path)),
         path: unescapeAttribute(path),
+        ...(options.includeAbsolutePaths
+          ? { absPath: metadata.match(/^absolutePath:\s*(.+)$/m)![1]!.trim() }
+          : {}),
         size: byteSize(metadata.match(/^size:\s*(\d+)\s*$/m)?.[1]),
         ...(mime ? { mime } : {}),
       });
@@ -86,6 +96,7 @@ export function transcriptUserDisplay(data: ObjectValue): {
       attachments.push({
         name: `${attachmentName(unescapeAttribute(path))}/`,
         path: unescapeAttribute(path),
+        ...(options.includeAbsolutePaths ? { absPath: absolutePath(unescapeAttribute(path)) } : {}),
         size: 0,
       });
       return "";
@@ -110,12 +121,15 @@ export function transcriptUserDisplay(data: ObjectValue): {
     attachments.push({
       name: imagePaths[index] ? attachmentName(imagePaths[index]) : `图片 ${index + 1}`,
       ...(imagePaths[index] ? { path: imagePaths[index] } : {}),
+      ...(options.includeAbsolutePaths && imagePaths[index]
+        ? { absPath: absolutePath(imagePaths[index]) }
+        : {}),
       size: encoded
         ? Math.max(
             0,
             Math.floor((encoded.length * 3) / 4) - (encoded.match(/=+$/)?.[0].length ?? 0),
           )
-        : 0,
+        : byteSize(source?.byteLength),
       ...(typeof source?.media_type === "string" ? { mime: source.media_type } : {}),
     });
   }

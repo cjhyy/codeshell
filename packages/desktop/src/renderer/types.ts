@@ -853,17 +853,45 @@ function applyStreamEventToTurn(
   now: MessageClock,
 ): MessagesReducerState {
   switch (event.type) {
-    case "session_user_message":
+    case "session_user_message": {
+      const hidden =
+        event.injected === true ||
+        event.authority === "agent" ||
+        event.authority === "system" ||
+        event.authority === "policy";
+      if (hidden && !event.clientMessageId) return state;
       return appendUserMessage(
         state,
-        event.text,
+        hidden ? "" : event.text,
         now(),
         undefined,
-        undefined,
+        hidden || undefined,
         undefined,
         undefined,
         event.clientMessageId,
+        hidden
+          ? undefined
+          : event.attachments?.flatMap((attachment) =>
+              attachment.path
+                ? [
+                    {
+                      kind: attachment.mime?.startsWith("image/")
+                        ? ("image" as const)
+                        : attachment.name.endsWith("/")
+                          ? ("directory" as const)
+                          : ("file" as const),
+                      path: attachment.path,
+                      absPath: attachment.absPath ?? attachment.path,
+                      sessionId: event.sessionId ?? state.sessionId ?? "",
+                      originalName: attachment.name,
+                      size: attachment.size,
+                      ...(attachment.mime ? { mime: attachment.mime } : {}),
+                    },
+                  ]
+                : [],
+            ),
       );
+    }
 
     case "session_started": {
       // Ignore event.promptTokens here: on resume, core reports the

@@ -2,6 +2,7 @@
 import type { SessionBundle, SessionManager } from "../session/session-manager.js";
 import type { StreamCallback, StreamEvent, TaskInfo } from "../types.js";
 import { SessionOutputJournal } from "../session/output-journal.js";
+import { outputUserMessage } from "./run-output-user-message.js";
 
 export function createRunOutputJournalPolicy(
   manager: SessionManager,
@@ -81,27 +82,11 @@ export function buildWrappedOnStream(args: {
             index > 0 ? events[index - 1].id : undefined,
           );
           session.state.outputJournalIdentity = journal.identityPin;
-          const message = events[index].data;
-          const content = message.content;
-          const text =
-            typeof message.displayText === "string"
-              ? message.displayText
-              : typeof content === "string"
-                ? content
-                : Array.isArray(content)
-                  ? content
-                      .map((block) => (block.type === "text" ? block.text : "[attachment]"))
-                      .join("\n")
-                  : "";
           // Hosts already publish the submitted bubble. The journal owns one
           // synthetic copy for replay after the frozen legacy transcript base.
           journal.append({
-            type: "session_user_message",
-            text,
+            ...outputUserMessage(events[index].data, session.state.sessionId, session.state.cwd),
             runId,
-            ...(typeof message.clientMessageId === "string"
-              ? { clientMessageId: message.clientMessageId }
-              : {}),
           });
         }
         event = { ...event, outputCursor: journal.append(event) };

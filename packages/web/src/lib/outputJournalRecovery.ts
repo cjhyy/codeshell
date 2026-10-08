@@ -1,5 +1,6 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { OutputJournalPage } from "@cjhyy/code-shell-core/internal";
+import { transcriptUserDisplay } from "./transcriptReplay.js";
 
 /** Per-recovery state; keep it separate from Main/Hub transport sequence state. */
 export interface OutputJournalRecovery {
@@ -143,7 +144,16 @@ export function applyOutputJournalPage(
           event.outputRecovery === "incomplete"
         )
           throw new Error("Invalid output event");
-        events.push({ ...event, outputCursor: frame.cursor });
+        events.push({
+          ...event,
+          ...(event.type === "session_user_message" && event.transcriptMessage
+            ? transcriptUserDisplay(event.transcriptMessage, {
+                includeAbsolutePaths: true,
+                cwd: event.transcriptMessage.cwd,
+              })
+            : {}),
+          outputCursor: frame.cursor,
+        });
         appliedCursor = frame.cursor;
       }
       previous = next;

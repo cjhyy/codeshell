@@ -29,6 +29,7 @@ export interface UserAttachmentSummary {
   mime?: string;
   size: number;
   path?: string;
+  absPath?: string;
 }
 
 export type ChatItem =
@@ -619,6 +620,13 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
 
     case "session_user_message":
     case "user_message": {
+      if (
+        event.injected === true ||
+        event.authority === "agent" ||
+        event.authority === "system" ||
+        event.authority === "policy"
+      )
+        return s;
       // History replay surfaces past user turns as a synthetic event so the
       // same reducer rebuilds the full conversation (the live path uses
       // appendUserMessage instead, since the phone echoes locally).

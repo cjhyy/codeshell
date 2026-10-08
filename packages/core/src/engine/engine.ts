@@ -1493,7 +1493,7 @@ export class Engine {
   private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
     // Stream wrappers capture this run's identity. Keep them off the caller's
     // options so reusing an options object cannot nest a previous run's wrapper.
-    if (options) options = { ...options };
+    options = { ...options };
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
@@ -1556,7 +1556,7 @@ export class Engine {
         latestTodos = todos;
       },
     });
-    if (options) options.onStream = wrappedOnStream;
+    options.onStream = wrappedOnStream;
 
     const imageInput = await prepareRunImageInput({
       task,

@@ -80,6 +80,15 @@ of sending the huge latest assistant reply in one RPC response. The existing
 Web controller then uses `chatFromOutputJournal` and the shared whole-event page
 validator.
 
+The replay-only user anchor retains canonical input display metadata and stable
+submission identity. The shared browser projection reuses `transcriptUserDisplay`
+for files, directories and images; image records retain MIME/decoded size and
+paths, never a second base64 payload. Injected or agent/system/policy input keeps
+its hidden origin and an empty identity marker rather than exposing a machine
+prompt as a user bubble. Actual Engine input fixtures verify text with file and
+image attachments, attachment-only turns, and hidden injected/agent turns through
+Desktop's existing hydration hook after RAM eviction and Hub's existing adapter.
+
 Recovery freezes `(from, through]`, verifies consecutive positions, and joins to
 actual live durable pointers before releasing the current hydration barrier.
 New append heads do not change an older page's upper bound. Renderer-local
@@ -102,6 +111,17 @@ same-file prefix corruption after a cached read, header pin loss/truncation,
 copy/replacement domains, run-owner supersession, delete/reuse, archive,
 ephemeral output, UTF-8 fragments, unfinished tails, byte/frame/event/storage
 bounds, and actual Engine failure despite a swallowed callback error.
+The ordinary `Engine.run(task)` overload without options or an external stream
+observer also has actual success/persisted-terminal and swallowed-write-failure
+regressions; its internal wrapper is independent of user observers.
+
+An actual Engine regression invokes a custom tool returning `sensitive: true`,
+a raw sentinel in both its result and content blocks, and explicit display and
+transcript placeholders. The next model round consumes the raw sentinel, while
+the live tool-result event, saved transcript, journal bytes and every recovery
+page contain only the placeholder. This verifies the existing sensitive-result
+boundary at the new persistence sink; it does not classify arbitrary model text
+or expand unrelated tool metadata semantics.
 
 `bun run test:output-journal` runs the compiled Core through the actual OpenAI
 SDK against one exact `127.0.0.1` fixture origin. It restores 9,060,345 UTF-8
@@ -111,6 +131,10 @@ frozen multipage coverage, fresh Main snapshot epochs, two restarted stdio
 processes with actual PID/private-HOME/origin receipts, and a restarted Hub with
 a stable durable cursor and changed Hub epoch. These are controlled adapter
 fixtures, not a claim of a physical Electron renderer/relaunch or mobile test.
+The fixture makes one healthy SDK request and one separate physical write-denial
+request on supported non-root POSIX hosts. That second actual Engine run fails
+instead of publishing a completed terminal, and a later intent makes no further
+HTTP request while the sticky recovery barrier remains set.
 
 The native fixture also prints cold first-page time/read bytes and full pagination
 time/read bytes for the real model journal and a journal above 120 MiB. It checks
@@ -119,13 +143,13 @@ less than eight journal lengths, including metadata and sparse seek reads.
 Measured timings and final CI results must be recorded after the final source
 and package build; no real model/provider account or third-party write is used.
 
-Local Node/macOS measurement for checkpoint `91bbe970` (controlled fixture;
+Local Node/macOS measurement for checkpoint `09dceb2f` (controlled fixture;
 not a cross-machine latency guarantee):
 
 | Journal | Cold first page | Cold read bytes | All pages | Total time | Total read bytes |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 33,863,048 B / real 9,060,345 B model response | 70 ms | 35,093,098 | 35 | 926 ms | 98,588,786 |
-| 126,245,314 B / near 128 MiB budget | 160 ms | 127,425,705 | 131 | 4,111 ms | 344,240,041 |
+| 33,863,048 B / real 9,060,345 B model response | 73 ms | 35,093,098 | 35 | 979 ms | 98,588,786 |
+| 126,245,314 B / near 128 MiB budget | 173 ms | 127,425,705 | 131 | 4,030 ms | 344,240,041 |
 
 The near-budget result reads about 2.73 journal lengths, rather than one full
 journal per page. The cold verification still blocks its calling thread for the

@@ -666,8 +666,9 @@ export class SessionOutputJournal {
       if (fd !== undefined) closeSync(fd);
       try {
         unlinkSync(temporary);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      } catch {
+        // Preserve the primary pin/flush failure. Any leftover bounded private
+        // temporary file remains inside this Session's deletion boundary.
       }
     }
   }

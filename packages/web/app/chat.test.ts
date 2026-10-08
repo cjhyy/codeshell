@@ -1,6 +1,62 @@
 import { describe, expect, test } from "bun:test";
 import { initialChatState, reduceStream } from "../src/lib/streamReducer.js";
-import { chatFromSnapshot, chatFromTranscript, isNewStreamEvent, sessionTitle } from "./chat.js";
+import {
+  chatFromOutputJournal,
+  chatFromSnapshot,
+  chatFromTranscript,
+  isNewStreamEvent,
+  sessionTitle,
+} from "./chat.js";
+import {
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+} from "../../core/src/session/output-journal.js";
+import { outputUserInputFixture } from "../../../tests/fixtures/output-journal-user-input.js";
+
+for (const mode of ["normal", "attachment-only", "injected", "agent"] as const) {
+  test(`Hub existing recovery preserves actual Engine ${mode} input display`, async () => {
+    const fixture = await outputUserInputFixture(mode);
+    try {
+      const read = (options = {}) =>
+        readOutputJournal(fixture.sessionRoot, "saved", { ...options, maxFrames: 2 });
+      const page = read();
+      const base = readOutputJournalLegacyBase(
+        fixture.sessionRoot,
+        "saved",
+        page.legacyBaseThroughEventId,
+      );
+      expect(base.complete).toBe(true);
+      const result = await chatFromOutputJournal(
+        { state: {}, transcript: base.events, outputJournal: page },
+        async (options) => read(options),
+        [],
+      );
+      expect(result).not.toBeNull();
+      const users = result!.chat.items.filter((item) => item.kind === "user");
+      expect(users).toEqual(
+        chatFromTranscript(fixture.transcript).items.filter((item) => item.kind === "user"),
+      );
+      if (mode === "injected" || mode === "agent") {
+        expect(users).toEqual([]);
+        expect(JSON.stringify(result!.chat)).not.toContain("PRIVATE_MACHINE_INPUT");
+      } else {
+        expect(users).toHaveLength(1);
+        expect(users[0]).toMatchObject({
+          text: fixture.prompt,
+          clientMessageId: "fixture-input",
+          attachments: fixture.attachments.map((attachment) => ({
+            name: attachment.originalName,
+            size: attachment.size,
+            mime: attachment.mime,
+            path: attachment.path,
+          })),
+        });
+      }
+    } finally {
+      fixture.cleanup();
+    }
+  });
+}
 
 describe("SPA chat state", () => {
   test("tool_use_start + tool_result renders a completed tool item", () => {

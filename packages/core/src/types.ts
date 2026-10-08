@@ -636,7 +636,33 @@ type StreamEventPayload =
   // A host queued an ordinary user turn in this Session (for example through
   // SendMessageToSession). Engine persists the same text as a normal user
   // message; this event lets live clients render the bubble immediately.
-  | { type: "session_user_message"; text: string; clientMessageId?: string }
+  | {
+      type: "session_user_message";
+      text: string;
+      clientMessageId?: string;
+      sessionId?: string;
+      injected?: boolean;
+      authority?: "user" | "agent" | "system" | "policy";
+      /** Journal replay projection. Image bytes remain in the canonical input. */
+      transcriptMessage?: {
+        cwd?: string;
+        content:
+          | string
+          | (
+              | { type: "text"; text: string }
+              | { type: "image"; source: { media_type: string; byteLength: number } }
+            )[];
+        displayText?: string;
+      };
+      /** Browser-projected attachment display metadata, never file contents. */
+      attachments?: {
+        name: string;
+        size: number;
+        path?: string;
+        absPath?: string;
+        mime?: string;
+      }[];
+    }
   // Emitted once, fire-and-forget, after the FIRST turn of a session
   // completes: an LLM-generated one-line title for the sidebar. Best-effort
   // — absent on failure / when aux model unavailable.

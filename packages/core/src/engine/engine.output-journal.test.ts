@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, truncateSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, truncateSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
@@ -32,6 +32,174 @@ class JournalFailureClient extends LLMClientBase {
   }
 }
 registerProvider("output-journal-fault-fixture", JournalFailureClient);
+
+for (const fault of [false, true]) {
+  test(`actual Engine.run without options ${fault ? "fences a swallowed write failure" : "persists complete output"}`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-output-no-options-"));
+    const model = `no-options-${fault}-${Math.random()}`;
+    const sessionRoot = join(root, "sessions");
+    const engine = new Engine({
+      llm: { provider: "output-journal-fault-fixture", model, apiKey: "synthetic" } as never,
+      cwd: root,
+      sessionStorageDir: sessionRoot,
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 2,
+      enabledBuiltinTools: [],
+      behaviorProfiles: [
+        {
+          id: "fixture",
+          activateForSessionKinds: ["work"],
+          disableSessionTitle: true,
+          disableHooks: true,
+          disableInstructions: true,
+          disableMemoryContext: true,
+          disableCapabilityContext: true,
+          disableSourcesContext: true,
+          disableMcp: true,
+        },
+      ],
+    });
+    engine.getHookRegistry().clear();
+    let calls = 0;
+    scenarios.set(model, () => {
+      calls++;
+      if (fault)
+        truncateSync(join(sessionRoot, readdirSync(sessionRoot)[0], "output-journal.jsonl"), 0);
+    });
+    try {
+      const result = await engine.run("Use the standard SDK overload");
+      expect(calls).toBe(1);
+      if (fault) {
+        expect(result.reason).toBe("model_error");
+        expect(
+          engine.getSessionManager().readSessionState(result.sessionId)?.outputRecoveryIncomplete,
+        ).toBe(true);
+        expect(readOutputJournal(sessionRoot, result.sessionId).status).toBe("incomplete");
+      } else {
+        expect(result.reason).toBe("completed");
+        const page = readOutputJournal(sessionRoot, result.sessionId);
+        expect(page.status).toBe("ok");
+        expect(page.complete).toBe(true);
+        expect(page.frames.some((frame) => frame.event?.type === "text_delta")).toBe(true);
+        expect(page.frames.at(-1)?.event).toMatchObject({
+          type: "turn_complete",
+          reason: "completed",
+        });
+      }
+    } finally {
+      scenarios.delete(model);
+      await engine.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
+const privateScenarios = new Map<string, { sentinel: string; consumed: boolean }>();
+class PrivateResultClient extends LLMClientBase {
+  protected initClient(): void {}
+  async createMessage(options: CreateMessageOptions) {
+    const scenario = privateScenarios.get(this.model)!;
+    const raw = JSON.stringify(options.messages);
+    if (raw.includes(scenario.sentinel)) scenario.consumed = true;
+    const call = options.stream && !raw.includes('"tool_use_id":"private-call"');
+    return {
+      text: call ? "" : "Private result consumed",
+      toolCalls: call ? [{ id: "private-call", toolName: "PrivateFixture", args: {} }] : [],
+      stopReason: call ? "tool_use" : "stop",
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+    };
+  }
+}
+registerProvider("output-journal-private-fixture", PrivateResultClient);
+
+test("actual Engine keeps sensitive raw tool results out of output journal, recovery and transcript", async () => {
+  const root = mkdtempSync(join(tmpdir(), "codeshell-output-private-"));
+  const model = `private-${Math.random()}`,
+    sentinel = `RAW_PRIVATE_SENTINEL_${Math.random()}`;
+  const scenario = { sentinel, consumed: false };
+  privateScenarios.set(model, scenario);
+  const placeholder = "[private tool result withheld]";
+  const engine = new Engine({
+    llm: { provider: "output-journal-private-fixture", model, apiKey: "synthetic" } as never,
+    cwd: root,
+    sessionStorageDir: join(root, "sessions"),
+    settingsScope: "isolated",
+    headless: true,
+    permissionMode: "bypassPermissions",
+    maxTurns: 4,
+    enabledBuiltinTools: [],
+    behaviorProfiles: [
+      {
+        id: "fixture",
+        disableSessionTitle: true,
+        disableHooks: true,
+        disableInstructions: true,
+        disableMemoryContext: true,
+        disableCapabilityContext: true,
+        disableSourcesContext: true,
+        disableMcp: true,
+      },
+    ],
+  });
+  engine.getHookRegistry().clear();
+  engine.registerCustomTool(
+    {
+      name: "PrivateFixture",
+      description: "Returns a private fixture value",
+      inputSchema: { type: "object", properties: {} },
+      source: "builtin",
+      permissionDefault: "allow",
+    },
+    () => ({
+      id: "private-call",
+      toolName: "PrivateFixture",
+      sensitive: true,
+      result: sentinel,
+      displayResult: placeholder,
+      transcriptResult: placeholder,
+      contentBlocks: [{ type: "text", text: sentinel }],
+    }),
+  );
+  const events: StreamEvent[] = [];
+  try {
+    const result = await engine.run("Consume the private fixture without echoing it", {
+      sessionId: "private-result",
+      behaviorMode: "fixture",
+      onStream: (event) => {
+        events.push(event);
+      },
+    });
+    expect(result.reason).toBe("completed");
+    expect(scenario.consumed).toBe(true);
+    for (const filename of ["output-journal.jsonl", "transcript.jsonl"]) {
+      const saved = readFileSync(join(root, "sessions", "private-result", filename), "utf8");
+      expect(saved).not.toContain(sentinel);
+      expect(saved).toContain(placeholder);
+    }
+    expect(JSON.stringify(events)).not.toContain(sentinel);
+    let page = readOutputJournal(join(root, "sessions"), "private-result", { maxFrames: 2 });
+    const through = page.through;
+    for (let pageNumber = 0; pageNumber < 64; pageNumber++) {
+      expect(page.status).toBe("ok");
+      expect(JSON.stringify(page)).not.toContain(sentinel);
+      if (page.complete) break;
+      page = readOutputJournal(join(root, "sessions"), "private-result", {
+        after: page.next,
+        through,
+        maxFrames: 2,
+      });
+    }
+    expect(page.complete).toBe(true);
+    expect(events.filter((event) => event.type === "tool_result")).toMatchObject([
+      { type: "tool_result", result: { result: placeholder, sensitive: true } },
+    ]);
+  } finally {
+    privateScenarios.delete(model);
+    await engine.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 for (const mode of ["empty", "missing"] as const) {
   test(`actual Engine restart refuses a previously published journal that became ${mode}`, async () => {

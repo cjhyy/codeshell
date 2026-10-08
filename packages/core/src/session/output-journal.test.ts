@@ -156,6 +156,25 @@ describe("Session output journal", () => {
       readOutputJournal(f.root, f.id, { after: first.next, through: first.through }).status,
     ).toBe("incomplete");
   });
+  test("child forwarding retains origin while the parent commits its own distinct scope", () => {
+    const parent = fixture(),
+      child = fixture("child-session");
+    const origin = child.writer.append({ type: "text_delta", text: "child output" });
+    const output: StreamEvent[] = [];
+    const wrapped = buildWrappedOnStream({
+      getSession: () => parent.session,
+      setLatestTodos: () => {},
+      userOnStream: (event) => {
+        output.push(event);
+      },
+      outputJournal: { root: parent.root, getRunId: () => parent.runId, onFailure: () => {} },
+    });
+    wrapped({ type: "text_delta", text: "child output", agentId: "child", outputCursor: origin });
+    expect(output[0].outputOriginCursor).toBe(origin);
+    expect(output[0].outputCursor).not.toBe(origin);
+    expect(readOutputJournal(parent.root, parent.id).through).toBe(output[0].outputCursor);
+    expect(readOutputJournal(child.root, child.id).through).toBe(origin);
+  });
   test("a truncated frozen upper bound is invalid and malformed complete records are incomplete", () => {
     const f = fixture();
     f.writer.append({ type: "text_delta", text: "one" });

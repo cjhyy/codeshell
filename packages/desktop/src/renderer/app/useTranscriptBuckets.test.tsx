@@ -15,8 +15,11 @@ import { SessionManager } from "../../../../core/src/session/session-manager.js"
 import {
   SessionOutputJournal,
   readOutputJournal,
+  readOutputJournalLegacyBase,
 } from "../../../../core/src/session/output-journal.js";
 import { SessionSnapshotStore } from "../../main/SessionSnapshotStore.js";
+import { transcriptToFoldItems } from "../../main/transcript-reader.js";
+import { outputUserInputFixture } from "../../../../../tests/fixtures/output-journal-user-input.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -190,6 +193,71 @@ describe("transcript history hydration after a background resume", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  for (const mode of ["normal", "attachment-only", "injected", "agent"] as const) {
+    test(`existing hydration preserves actual Engine ${mode} input display after RAM eviction`, async () => {
+      const fixture = await outputUserInputFixture(mode);
+      const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
+      for (const event of fixture.events) snapshots.append("saved", event);
+      try {
+        initial = {};
+        readDisk = async () => [];
+        readSnapshot = async () => snapshots.get("saved") as SessionSnapshot;
+        window.codeshell.getSessionOutputJournal = async (_id, options) => {
+          const page = readOutputJournal(fixture.sessionRoot, "saved", {
+            ...options,
+            maxFrames: 2,
+          });
+          const base = readOutputJournalLegacyBase(
+            fixture.sessionRoot,
+            "saved",
+            page.legacyBaseThroughEventId,
+          );
+          return {
+            ...page,
+            legacyBaseComplete: base.complete,
+            legacyBaseItems: transcriptToFoldItems(
+              base.events.map((event) => JSON.stringify(event)).join("\n"),
+            ),
+          };
+        };
+        hook = await renderHook(useHarness);
+        await act(async () => {
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.awaitingHydration).toBe(false);
+        const users = hook.result.current.state.messages.filter(
+          (message) => message.kind === "user",
+        );
+        if (mode === "injected" || mode === "agent") {
+          expect(users).toEqual([
+            expect.objectContaining({ text: "", injected: true, clientMessageId: "fixture-input" }),
+          ]);
+          expect(JSON.stringify(hook.result.current.state)).not.toContain("PRIVATE_MACHINE_INPUT");
+        } else {
+          expect(users).toHaveLength(1);
+          expect(users[0]).toMatchObject({
+            text: fixture.prompt,
+            clientMessageId: "fixture-input",
+            attachments: fixture.attachments.map((attachment) => ({
+              kind: attachment.kind,
+              path: attachment.path,
+              absPath: attachment.absPath,
+              sessionId: "saved",
+              originalName: attachment.originalName,
+              size: attachment.size,
+              mime: attachment.mime,
+            })),
+          });
+        }
+        expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
+      } finally {
+        await hook?.unmount();
+        hook = undefined;
+        fixture.cleanup();
+      }
+    });
+  }
 
   test("replays an older cache prefix before merging a completed steer reply from disk", async () => {
     const epoch = "main";
