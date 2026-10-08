@@ -33,7 +33,14 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
   const settings = new SettingsManager(target.cwd, "full");
   const scoped = validateSettings(project);
   const current = scoped.profile;
-  const currentProfile = current?.active ? readWorkspaceProfile(current.active) : undefined;
+  // An unreadable old default must not prevent exiting it. Preserve its
+  // identity as unavailable and deny its source access; candidates stay strict.
+  let currentProfile: WorkspaceProfile | undefined;
+  try {
+    currentProfile = current?.active ? readWorkspaceProfile(current.active) : undefined;
+  } catch {
+    currentProfile = undefined;
+  }
   const nextProfile = name === null ? undefined : readWorkspaceProfile(name);
   if (name && !nextProfile) throw new Error(`Digital human "${name}" not found`);
   // Every review/commit refreshes discovery; a stale scanner cache cannot hide an install/removal.

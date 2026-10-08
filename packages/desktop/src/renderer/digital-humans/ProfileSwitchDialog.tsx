@@ -11,6 +11,36 @@ import type { ProfileSwitchSourceSummary } from "../../shared/profile-switch";
 import { useT } from "../i18n/I18nProvider";
 import type { useProfileSwitch } from "./useProfileSwitch";
 
+/** Recovery stays inside the two existing Profile sections, even with an empty library. */
+export function ProfileSwitchRecovery({
+  controller,
+}: {
+  controller: ReturnType<typeof useProfileSwitch>;
+}) {
+  const { t } = useT();
+  if (!controller.unavailableDefault) return null;
+  return (
+    <div
+      className="space-y-2 rounded-md border border-border p-3"
+      data-testid="profile-switch-recovery"
+    >
+      <p className="text-sm">
+        {t("digitalHumans.switchPreview.unavailableDefault", {
+          name: controller.unavailableDefault.name,
+        })}
+      </p>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={controller.busy}
+        onClick={() => void controller.open(null)}
+      >
+        {t("settingsX.profiles.deactivate")}
+      </Button>
+    </div>
+  );
+}
+
 /** Both existing project-default entry points render this same review. */
 export function ProfileSwitchDialog({
   controller,
@@ -23,6 +53,7 @@ export function ProfileSwitchDialog({
   const fallback = t("digitalHumans.switchPreview.fallback");
   const off = t("digitalHumans.switchPreview.off");
   const on = t("digitalHumans.switchPreview.on");
+  const unknown = t("digitalHumans.switchPreview.unknown");
   const sourceText = (source: ProfileSwitchSourceSummary) =>
     `${source.label}: ${source.scopes.join(", ") || "—"} · ${t(`digitalHumans.switchPreview.${source.readPolicy}`)} · ${t(`digitalHumans.switchPreview.${source.status}`)}`;
   return (
@@ -56,18 +87,21 @@ export function ProfileSwitchDialog({
             <div>
               <dt className="font-medium">{t("digitalHumans.switchPreview.instruction")}</dt>
               <dd>
-                {t(
-                  preview.instruction.changed
-                    ? "digitalHumans.switchPreview.changed"
-                    : "digitalHumans.switchPreview.unchanged",
-                )}{" "}
-                · {preview.instruction.beforeLength} → {preview.instruction.afterLength}
+                {preview.instruction.changed === null
+                  ? unknown
+                  : t(
+                      preview.instruction.changed
+                        ? "digitalHumans.switchPreview.changed"
+                        : "digitalHumans.switchPreview.unchanged",
+                    )}{" "}
+                · {preview.instruction.beforeLength ?? unknown} → {preview.instruction.afterLength}
               </dd>
             </div>
             <div>
               <dt className="font-medium">{t("digitalHumans.portableMemory")}</dt>
               <dd>
-                {preview.memory.before ?? off} → {preview.memory.after ?? off}
+                {preview.before?.available === false ? unknown : (preview.memory.before ?? off)} →{" "}
+                {preview.memory.after ?? off}
               </dd>
             </div>
           </dl>

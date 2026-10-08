@@ -63,7 +63,7 @@ import { DigitalHumanEditorDialog } from "./DigitalHumanEditorDialog";
 import { DigitalHumanMemoryDialog } from "./DigitalHumanMemoryDialog";
 import { ensureDigitalHumanRequirements } from "./profileRequirements";
 import { useProfileSwitch } from "./useProfileSwitch";
-import { ProfileSwitchDialog } from "./ProfileSwitchDialog";
+import { ProfileSwitchDialog, ProfileSwitchRecovery } from "./ProfileSwitchDialog";
 import type {
   DigitalHumanCatalogEntry,
   DigitalHumanProfileEntry,
@@ -142,7 +142,11 @@ export function DigitalHumansView({
   const { profiles, catalog, teams, availableSkills, status, error, refresh } =
     useDigitalHumansLibrary(configurationTarget);
   const operations = useDigitalHumanOperations(refresh);
-  const profileSwitch = useProfileSwitch(configurationTarget, refresh);
+  const profileSwitch = useProfileSwitch(
+    configurationTarget,
+    refresh,
+    status === "ready" && !error && !profiles.some((profile) => profile.active),
+  );
   const [query, setQuery] = React.useState("");
   const searchRef = React.useRef<HTMLInputElement>(null);
   const clearSearch = () => {
@@ -742,6 +746,7 @@ export function DigitalHumansView({
             </div>
           </header>
 
+          <ProfileSwitchRecovery controller={profileSwitch} />
           {status === "loading" ? (
             <div className="mt-5 rounded-xl border border-border/70 bg-card/80">
               <EmptyState

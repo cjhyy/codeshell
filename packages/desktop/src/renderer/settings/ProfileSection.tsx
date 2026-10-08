@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { useProfileSwitch } from "../digital-humans/useProfileSwitch";
-import { ProfileSwitchDialog } from "../digital-humans/ProfileSwitchDialog";
+import { ProfileSwitchDialog, ProfileSwitchRecovery } from "../digital-humans/ProfileSwitchDialog";
 import { useDigitalHumanContext } from "../digital-humans/useDigitalHumansLibrary";
 import type { RendererConfigurationTarget } from "../../preload/types";
 
@@ -39,7 +39,11 @@ export function ProfileSection({
       if (isCurrent()) setError(caught instanceof Error ? caught.message : String(caught));
     }
   }, [configurationTarget, captureContext, targetKey]);
-  const profileSwitch = useProfileSwitch(configurationTarget, refresh);
+  const profileSwitch = useProfileSwitch(
+    configurationTarget,
+    refresh,
+    loadedTargetKey === targetKey && !error && !profiles.some((profile) => profile.active),
+  );
 
   React.useEffect(() => {
     void refresh();
@@ -52,6 +56,7 @@ export function ProfileSection({
         <p className="text-xs text-muted-foreground">{t("settingsX.profiles.subtitle")}</p>
       </div>
       {error ? <p className="text-xs text-status-err">{error}</p> : null}
+      <ProfileSwitchRecovery controller={profileSwitch} />
       {profiles.length === 0 || loadedTargetKey !== targetKey ? (
         <p className="text-xs text-muted-foreground">{t("settingsX.profiles.empty")}</p>
       ) : (

@@ -3,6 +3,8 @@ export const digitalHumans = {
     digitalHumans: {
       title: "数字人",
       switchPreview: {
+        unknown: "未知（旧定义不可用）",
+        unavailableDefault: "当前默认数字人「{name}」的定义不可用，可确认取消此默认配置。",
         title: "确认默认数字人变更",
         description: "检查当前配置根的影响，再确认采用。",
         fallback: "无默认数字人（项目指令、既有设置与项目记忆继续适用）",
@@ -482,6 +484,9 @@ export const digitalHumans = {
     digitalHumans: {
       title: "Digital Humans",
       switchPreview: {
+        unknown: "Unknown (old definition unavailable)",
+        unavailableDefault:
+          "The current default digital human “{name}” is unavailable. Review clearing this default configuration.",
         title: "Review default digital human change",
         description: "Review the effect on this configuration root before applying.",
         fallback:

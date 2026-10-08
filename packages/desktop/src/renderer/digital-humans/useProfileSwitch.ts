@@ -11,6 +11,7 @@ import { useDigitalHumanContext } from "./useDigitalHumansLibrary";
 export function useProfileSwitch(
   target: RendererConfigurationTarget,
   onAdopted: () => Promise<unknown>,
+  recoveryCheckReady = false,
 ) {
   const { t } = useT();
   const confirm = useConfirm();
@@ -21,6 +22,8 @@ export function useProfileSwitch(
   const [loading, setLoading] = React.useState(false);
   const [adopting, setAdopting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [unavailableDefault, setUnavailableDefault] =
+    React.useState<ProfileSwitchPreview["before"]>(null);
   const [pending, setPending] = React.useState<{
     key: string;
     target: RendererConfigurationTarget;
@@ -34,7 +37,29 @@ export function useProfileSwitch(
     setError(null);
     setLoading(false);
     setAdopting(false);
+    setUnavailableDefault(null);
   }, [key]);
+
+  React.useEffect(() => {
+    if (!recoveryCheckReady) {
+      setUnavailableDefault(null);
+      return;
+    }
+    const isCurrent = captureContext();
+    let cancelled = false;
+    void window.codeshell
+      .previewProfileSwitch(target, null)
+      .then((preview) => {
+        if (!cancelled && isCurrent())
+          setUnavailableDefault(preview.before?.available === false ? preview.before : null);
+      })
+      .catch(() => {
+        /* The main library already owns configuration load errors. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [key, recoveryCheckReady, captureContext]);
 
   const open = async (name: string | null) => {
     if (lock.current) return;
@@ -102,6 +127,7 @@ export function useProfileSwitch(
         return;
       }
       setPending(null);
+      setUnavailableDefault(null);
       // Main's existing configuration gate has already reloaded/notified once.
       // Dispatching settings-changed here would cause a second, unguarded reload.
       await onAdopted();
@@ -123,5 +149,6 @@ export function useProfileSwitch(
     error,
     adopting,
     busy: loading || adopting || Boolean(pending?.key === key),
+    unavailableDefault,
   };
 }

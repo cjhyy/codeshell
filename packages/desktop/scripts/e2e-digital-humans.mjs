@@ -364,10 +364,36 @@ async function checkProjectConfiguration(projectButton) {
       counts.reads === 6 && counts.opens === 0,
       `Only two read-only checks ran: ${JSON.stringify(counts)}`,
     );
+    const brokenDirectory = join(isolated.codeShellHome, "profiles", "broken-default");
+    await mkdir(brokenDirectory, { recursive: true });
+    await writeFile(join(brokenDirectory, "profile.json"), "{ broken-fixture-definition");
+    await mkdir(dirname(projectSettingsPath), { recursive: true });
+    const currentSettings = JSON.parse((await projectSettingsBytes()) ?? "{}");
+    currentSettings.profile = { active: "broken-default", preset: "general", overrides: {} };
+    await writeFile(projectSettingsPath, JSON.stringify(currentSettings));
     await win
       .getByRole("navigation", { name: /设置导航|Settings navigation/i })
       .getByRole("button", { name: /^数字人$|^Digital humans$/i })
       .click();
+    const recovery = win.getByTestId("profile-switch-recovery");
+    await recovery.waitFor({ state: "visible" });
+    const damagedSettings = await projectSettingsBytes();
+    await recovery.getByRole("button", { name: /取消项目默认|Clear project default/i }).click();
+    await switchReview()
+      .getByText(/未知（旧定义不可用）|Unknown \(old definition unavailable\)/)
+      .first()
+      .waitFor();
+    await cancelSwitchReview();
+    assert(
+      (await projectSettingsBytes()) === damagedSettings,
+      "Damaged-default recovery cancellation wrote settings",
+    );
+    await recovery.getByRole("button", { name: /取消项目默认|Clear project default/i }).click();
+    await switchReview()
+      .getByRole("button", { name: /确认采用|Apply reviewed change/i })
+      .click();
+    await switchReview().waitFor({ state: "hidden" });
+    await recovery.waitFor({ state: "hidden" });
     const researcherRow = win.locator("main li").filter({ hasText: "Research Analyst" });
     const beforeSwitch = await projectSettingsBytes();
     await researcherRow.getByRole("button", { name: /设为项目默认|Set project default/i }).click();
@@ -989,6 +1015,55 @@ require("node:module").syncBuiltinESMExports();
     .click();
   await switchReview().waitFor({ state: "hidden" });
   await researcherCard.getByText(/项目默认|Project default/i).waitFor({ state: "hidden" });
+
+  // The old default can be the only library entry, and an invalid entry is
+  // omitted by discovery. Recovery must remain reachable from the empty Studio.
+  const savedDefinitions = await Promise.all(
+    profiles.map((profile) =>
+      readFile(join(isolated.codeShellHome, "profiles", profile.name, "profile.json"), "utf8"),
+    ),
+  );
+  for (const profile of profiles)
+    await writeFile(
+      join(isolated.codeShellHome, "profiles", profile.name, "profile.json"),
+      "{ unavailable-fixture",
+    );
+  const emptySettings = JSON.parse((await projectSettingsBytes()) ?? "{}");
+  emptySettings.profile = { active: "broken-default", preset: "general", overrides: {} };
+  await writeFile(projectSettingsPath, JSON.stringify(emptySettings));
+  // Disk edits are not an automatic library refresh. Reload the real renderer
+  // so this fixture enters the empty-library state through normal discovery.
+  await win.reload();
+  await win.locator("#root").waitFor({ state: "visible" });
+  await navButton.click();
+  const emptyRecovery = win.getByTestId("profile-switch-recovery");
+  await emptyRecovery.waitFor({ state: "visible" });
+  assert(
+    (await win.locator("[data-digital-human-card]").count()) === 0,
+    "Recovery fixture library was not empty",
+  );
+  const emptyBefore = await projectSettingsBytes();
+  await emptyRecovery.getByRole("button", { name: /取消项目默认|Clear project default/i }).click();
+  await cancelSwitchReview();
+  assert(
+    (await projectSettingsBytes()) === emptyBefore,
+    "Empty-library recovery cancellation wrote settings",
+  );
+  await emptyRecovery.getByRole("button", { name: /取消项目默认|Clear project default/i }).click();
+  await switchReview()
+    .getByRole("button", { name: /确认采用|Apply reviewed change/i })
+    .click();
+  await switchReview().waitFor({ state: "hidden" });
+  await emptyRecovery.waitFor({ state: "hidden" });
+  for (let index = 0; index < profiles.length; index++)
+    await writeFile(
+      join(isolated.codeShellHome, "profiles", profiles[index].name, "profile.json"),
+      savedDefinitions[index],
+    );
+  await win.reload();
+  await win.locator("#root").waitFor({ state: "visible" });
+  await navButton.click();
+  await researcherCard.waitFor({ state: "visible" });
 
   await researcherCard.getByRole("button", { name: /^开始使用$|^Start using$/i }).click();
   const sessionProfileSwitch = win.getByRole("combobox", {

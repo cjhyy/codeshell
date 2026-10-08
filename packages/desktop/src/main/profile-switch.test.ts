@@ -11,7 +11,7 @@ const fetchGuard = spyOn(globalThis, "fetch").mockImplementation(async () => {
 const spawnGuard = spyOn(childProcess, "spawnSync").mockImplementation(() => {
   throw new Error("Profile switch preview must not probe or install binaries");
 });
-const { SettingsManager } = await import("@cjhyy/code-shell-core");
+const { SettingsManager, setDefaultCredentialAccess } = await import("@cjhyy/code-shell-core");
 const { saveWorkspaceProfile, saveSourceDefinition, bindSource } =
   await import("@cjhyy/code-shell-core/internal");
 const { previewProfileSwitch, adoptProfileSwitch } = await import("./profile-switch-service.js");
@@ -84,6 +84,7 @@ beforeEach(() => {
   seedSkill("next-skill");
 });
 afterEach(() => {
+  setDefaultCredentialAccess(null);
   process.env.CODE_SHELL_HOME = oldHome;
   process.env.HOME = oldUserHome;
   rmSync(root, { recursive: true, force: true });
@@ -196,12 +197,27 @@ describe("reviewed Desktop Profile switch", () => {
   );
 
   test("source access preview uses the existing binding intersection without leaking definitions or credentials", () => {
+    let metadataReads = 0;
+    const forbid = () => {
+      throw new Error("Preview must not resolve credentials or expose environment");
+    };
+    setDefaultCredentialAccess({
+      listMasked: forbid,
+      envExposures: forbid,
+      resolveValue: async () => forbid(),
+      resolveOAuthAccess: async () => forbid(),
+      resolveMeta: () => {
+        metadataReads++;
+        return { id: "private-reference", type: "token", label: "Private", hasSecret: true };
+      },
+    });
     saveSourceDefinition({
       id: "reports",
       label: "Reports",
       kind: "mock",
       enabled: true,
       adapterConfig: { secretSentinel: "never-expose" },
+      credentialRef: "private-reference",
     });
     bindSource(new SettingsManager(target.cwd, "full"), target.cwd, {
       sourceId: "reports",
@@ -219,6 +235,49 @@ describe("reviewed Desktop Profile switch", () => {
     ]);
     expect(JSON.stringify(review)).not.toContain("never-expose");
     expect(JSON.stringify(review)).not.toContain("definition");
+    expect(JSON.stringify(review)).not.toContain("private-reference");
+    expect(metadataReads).toBeGreaterThan(0);
+  });
+
+  test.each([
+    ["missing", null],
+    ["missing", "next"],
+    ["corrupt", null],
+    ["corrupt", "next"],
+  ] as const)("%s old definition permits reviewed replacement with %s", (damage, name) => {
+    const path = join(process.env.CODE_SHELL_HOME!, "profiles", "old", "profile.json");
+    if (damage === "missing") rmSync(path);
+    else writeFileSync(path, "{ corrupt-secret-body");
+    saveSourceDefinition({ id: "bound", label: "Bound", kind: "mock", enabled: true });
+    bindSource(new SettingsManager(target.cwd, "full"), target.cwd, {
+      sourceId: "bound",
+      scopes: ["read"],
+      readPolicy: "ask",
+    });
+    const before = tree(root);
+    const review = previewProfileSwitch(target, name);
+    expect(review.before).toEqual({ name: "old", label: "old", available: false });
+    expect(review.instruction.beforeLength).toBeNull();
+    expect(review.instruction.changed).toBeNull();
+    expect(review.sources.before).toEqual([]);
+    expect(JSON.stringify(review)).not.toContain("corrupt-secret-body");
+    expect(tree(root)).toEqual(before);
+    expect(adoptProfileSwitch(target, name, review.revision)).toEqual({ status: "adopted" });
+  });
+
+  test("repairing an unavailable old definition stales the review; a corrupt candidate stays strict", () => {
+    const oldPath = join(process.env.CODE_SHELL_HOME!, "profiles", "old", "profile.json");
+    writeFileSync(oldPath, "{ damaged");
+    const review = previewProfileSwitch(target, null);
+    saveWorkspaceProfile(definition("old", { mainInstruction: "repaired", portableMemory: true }));
+    const before = tree(root);
+    expect(adoptProfileSwitch(target, null, review.revision)).toEqual({ status: "stale" });
+    expect(tree(root)).toEqual(before);
+    writeFileSync(
+      join(process.env.CODE_SHELL_HOME!, "profiles", "next", "profile.json"),
+      "{ invalid-candidate",
+    );
+    expect(() => previewProfileSwitch(target, "next")).toThrow();
   });
 
   test("actual IPC resolves stable identities, rejects no-repo/forged paths, and gates busy/stale before write or reload", async () => {

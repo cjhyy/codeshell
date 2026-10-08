@@ -16,7 +16,7 @@ export type ProfileCapabilityKind = "skill" | "plugin" | "mcp" | "agent";
 export interface ProfileSwitchImpact {
   before: { name: string; label: string; available: boolean } | null;
   after: { name: string; label: string; available: boolean } | null;
-  instruction: { changed: boolean; beforeLength: number; afterLength: number };
+  instruction: { changed: boolean | null; beforeLength: number | null; afterLength: number };
   memory: { before: string | null; after: string | null };
   capabilities: Array<{
     kind: ProfileCapabilityKind;
@@ -46,6 +46,7 @@ export function planWorkspaceProfileSwitch(input: {
   const identity = (name: string | undefined, profile: WorkspaceProfile | undefined) =>
     name ? { name, label: profile?.label ?? name, available: Boolean(profile) } : null;
   const oldInstruction = input.currentProfile?.mainInstruction ?? "";
+  const oldUnavailable = Boolean(input.current?.active && !input.currentProfile);
   const newInstruction = next?.mainInstruction ?? "";
   const capabilities: ProfileSwitchImpact["capabilities"] = [];
   for (const capability of input.capabilities) {
@@ -77,8 +78,8 @@ export function planWorkspaceProfileSwitch(input: {
       before: identity(input.current?.active, input.currentProfile),
       after: identity(next?.name, next),
       instruction: {
-        changed: oldInstruction !== newInstruction,
-        beforeLength: oldInstruction.length,
+        changed: oldUnavailable ? null : oldInstruction !== newInstruction,
+        beforeLength: oldUnavailable ? null : oldInstruction.length,
         afterLength: newInstruction.length,
       },
       memory: {

@@ -45,6 +45,101 @@ afterEach(async () => {
 });
 
 describe("ProfileSection", () => {
+  test.each([false, true])(
+    "unavailable default recovery is reachable with a valid candidate present=%s",
+    async (hasCandidate) => {
+      ensureMiniDom();
+      const previews: Array<string | null> = [];
+      let adopted = 0;
+      Object.assign(window, {
+        codeshell: {
+          listProfiles: async () =>
+            hasCandidate
+              ? [{ name: "next", label: "Next", active: false, portableMemory: false }]
+              : [],
+          previewProfileSwitch: async (_target: unknown, name: string | null) => {
+            previews.push(name);
+            return {
+              revision: "a".repeat(64),
+              target: { kind: "project", projectId: "project-repo" },
+              before: { name: "broken", label: "broken", available: false },
+              after: null,
+              instruction: { changed: null, beforeLength: null, afterLength: 0 },
+              memory: { before: null, after: null },
+              capabilities: [],
+              missingDeclarations: [],
+              sources: { before: [], after: [] },
+              exclusiveSkillsOnly: false,
+            };
+          },
+          adoptProfileSwitch: async () => {
+            adopted++;
+            return { status: "adopted" };
+          },
+        },
+      });
+      const container = document.createElement("div") as unknown as HTMLElement;
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(
+          <DialogProvider>
+            <ProfileSection configurationTarget={{ projectId: "project-repo" }} />
+          </DialogProvider>,
+        );
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      expect(textOf(container)).toContain("broken");
+      const recovery = findElements(container, "BUTTON").find(
+        (button) => textOf(button) === "取消项目默认",
+      );
+      expect(recovery).toBeDefined();
+      expect(previews).toEqual([null]);
+      await act(async () => {
+        reactPropsOf(recovery).onClick();
+        await flushMicrotasks();
+      });
+      // Opening recovery always takes a fresh review; neither query adopts.
+      expect(previews).toEqual([null, null]);
+      expect(adopted).toBe(0);
+    },
+  );
+
+  test("discards a previous target's delayed unavailable-default query", async () => {
+    ensureMiniDom();
+    let resolveOld!: (value: unknown) => void;
+    const delayed = new Promise((resolve) => {
+      resolveOld = resolve;
+    });
+    Object.assign(window, {
+      codeshell: {
+        listProfiles: async () => [],
+        previewProfileSwitch: async (target: { projectId: string }) =>
+          target.projectId === "old" ? delayed : { before: null },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    const render = async (projectId: string) =>
+      act(async () => {
+        root?.render(
+          <DialogProvider>
+            <ProfileSection configurationTarget={{ projectId }} />
+          </DialogProvider>,
+        );
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    await render("old");
+    await render("new");
+    await act(async () => {
+      resolveOld({ before: { name: "old-private-identity", label: "Old", available: false } });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain("old-private-identity");
+    expect(findElements(container, "BUTTON")).toHaveLength(0);
+  });
+
   test("renders two profiles and marks the active one", async () => {
     ensureMiniDom();
     Object.assign(window, {
