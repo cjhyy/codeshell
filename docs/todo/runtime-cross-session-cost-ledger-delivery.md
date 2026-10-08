@@ -30,7 +30,7 @@ main、aux summary、tool summary、goal judge、title、context package、manua
 - 本地隔离 guard 自测：非白名单本地服务收到 0 次请求；允许服务收到 7 次。fetch 固定 exact HTTP 127.0.0.1:port 并 `redirect:error`；http/https request/get（含 ESM named import）同样校验；移除代理环境；stdio child/grandchild 都验证独立 HOME、preload guard 和父子 PID 收据。HOME hash 不匹配在加载 Core 前拒绝。
 - 发布包检查：9 tarballs、47 typed entries、45 runtime imports，packed Node owner HTTP 生命周期通过。
 - `bun run typecheck`：完整构建、12 workspaces 类型与 Web SPA 通过；Desktop main/preload/renderer/mobile/Chrome extension 构建通过。
-- Desktop Main 冷读、运行记录交互、TUI terminal render/命令/JSON renderer：26 pass / 0 fail，143 assertions。组合后的核心定向 32 pass / 0 fail。
+- Desktop Main 冷读、运行记录交互、TUI terminal render/命令/JSON renderer：34 pass / 0 fail，195 assertions。组合后的核心定向 32 pass / 0 fail。
 - Lint：0 errors、105 个既有 warnings；engine-bypass 与 workflow test paths guard 通过。
 - 已编译纯 Node SDK、真实 stdio worker run→关闭→restart 冷读→replay（无新请求且 runId 相同）、TUI CLI 持久账本全部通过。实际 worker/TUI PID 的独立 HOME hash/origin/父 PID guard 收据均核验；本地服务收到 4 次请求，worker 2 receipt，TUI 2 receipt（含退出时尚未到服务的 pending title，费用 unknown）。
 - TUI Session 水合与已有外部 turn/TodoWrite/terminal footer：9 pass / 0 fail，55 assertions，覆盖跨 SID 晚到、同 SID 新旧查询竞争和失败后清空。
