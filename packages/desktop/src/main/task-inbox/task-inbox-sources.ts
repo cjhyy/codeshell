@@ -208,15 +208,27 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
             : live?.runState === "running");
         const externalWaiting =
           isExternal && !!deps.external?.hasSession(id) && !!deps.external.hasPending?.(id);
-        const running = nativeRunning || externalRunning;
+        // Transcript observers can truthfully report activity without owning a
+        // runtime controller. Their quiet-time decay remains authoritative for
+        // display, while cancellation stays restricted to an owned live turn.
+        const observedExternalFresh =
+          isExternal &&
+          !deps.external?.hasSession(id) &&
+          !!live?.external &&
+          live.freshness.source === "external-tail" &&
+          live.freshness.workerState === "active";
+        const observedExternalRunning = observedExternalFresh && live?.runState === "running";
+        const running = nativeRunning || externalRunning || observedExternalRunning;
         const liveFresh =
           live?.freshness.workerState === "active" &&
-          (isExternal ? !!deps.external?.hasSession(id) : deps.native.hasLiveWorker());
+          (isExternal
+            ? !!deps.external?.hasSession(id) || observedExternalFresh
+            : deps.native.hasLiveWorker());
         let status = externalWaiting
           ? ("waiting" as const)
           : sessionStatus(durable, live, running, liveFresh);
         const capabilities: TaskAction[] = ["open"];
-        if (running || externalWaiting) capabilities.push("cancel");
+        if (nativeRunning || externalRunning || externalWaiting) capabilities.push("cancel");
         // Runtime allocation is not proof that a turn is active.
         if (
           isExternal &&
