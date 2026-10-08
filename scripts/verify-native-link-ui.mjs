@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { createConnection } from "node:net";
+import { navigateSettingsMenu } from "../packages/desktop/scripts/electron-harness.mjs";
 const require = createRequire(new URL("../packages/desktop/package.json", import.meta.url));
 const { chromium } = require("playwright");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -130,7 +131,7 @@ export async function verifyNativeLinkUI({
     });
     await win.setViewportSize({ width: 1440, height: 1000 });
     const openLinks = async () => {
-      await win.getByRole("button", { name: /^(凭证|Credentials)$/ }).click();
+      await navigateSettingsMenu(win, /^(凭证|Credentials)$/);
       await win.getByRole("tab", { name: /^Link(?:\s|$)/ }).click();
       await win.locator('[data-link-integration="github"][data-link-runtime="server"]').waitFor();
     };
