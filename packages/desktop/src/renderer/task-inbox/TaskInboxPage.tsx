@@ -79,6 +79,9 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
   const pendingRef = useRef(new Set<string>());
   const currentVersionRef = useRef(-1);
   const notifiedVersionRef = useRef(-1);
+  // Notifications queue behind the immutable paginated snapshot being read.
+  // Cancelling that read on every source update could prevent the first render.
+  const loadInFlightRef = useRef(true);
   const refreshRef = useRef<HTMLButtonElement>(null);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -87,7 +90,10 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
       window.codeshell.taskInbox.onChanged((version) => {
         if (version > Math.max(currentVersionRef.current, notifiedVersionRef.current)) {
           notifiedVersionRef.current = version;
-          refresh();
+          if (!loadInFlightRef.current) {
+            loadInFlightRef.current = true;
+            refresh();
+          }
         }
       }),
     [refresh],
@@ -95,12 +101,14 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
 
   useEffect(() => {
     let cancelled = false;
+    let published = false;
+    loadInFlightRef.current = true;
     setLoading(true);
     setError(null);
     void (async () => {
       try {
         // Read all bounded pages once, then filter locally without losing options
-        // from other pages. A refresh invalidates the whole request generation.
+        // from other pages. An explicit refresh invalidates the request generation.
         const records = new Map<string, TaskInboxRecordV1>();
         let first: TaskInboxListResult | null = null;
         let cursor: string | undefined;
@@ -113,8 +121,8 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           if (cancelled) return;
           if (!first) first = page;
           if (page.version !== first.version) {
-            // A change during pagination makes offsets unsafe. Start over rather
-            // than displaying an incomplete snapshot as current.
+            // Mixed versions violate the immutable pagination contract. Start
+            // a new snapshot rather than displaying inconsistent pages.
             refresh();
             return;
           }
@@ -128,11 +136,21 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
         if (!cancelled && first) {
           currentVersionRef.current = first.version;
           setSnapshot({ ...first, records: [...records.values()], nextCursor: undefined });
+          published = true;
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          loadInFlightRef.current = false;
+          setLoading(false);
+          // Publish this complete snapshot before following the newest queued
+          // notification. A burst schedules only one subsequent load.
+          if (published && notifiedVersionRef.current > currentVersionRef.current) {
+            loadInFlightRef.current = true;
+            refresh();
+          }
+        }
       }
     })();
     return () => {

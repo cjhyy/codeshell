@@ -230,22 +230,78 @@ describe("TaskInboxPage", () => {
     expect(textOf(container)).toContain("任务 completed");
     expect(cards()).toHaveLength(1);
   });
-  test("newer live snapshots ignore late older responses and duplicate notifications", async () => {
+  test("continuous updates finish and publish an immutable paginated snapshot before following the newest version", async () => {
     await render();
-    await settle(() => changed(3));
-    expect(requests).toHaveLength(2);
-    await settle(() => changed(3));
+    await settle(() => {
+      changed(3);
+      changed(3);
+    });
+    expect(requests).toHaveLength(1);
+    await settle(() =>
+      requests[0].request.resolve({
+        ...snapshot([row("first-page")], 1),
+        nextCursor: "snapshot-one:p2",
+      }),
+    );
+    expect(requests[1].query).toEqual({ limit: 200, cursor: "snapshot-one:p2" });
+    await settle(() => {
+      changed(7);
+      changed(5);
+      changed(8);
+    });
     expect(requests).toHaveLength(2);
     await settle(() =>
-      requests[1].request.resolve(snapshot([row("newest", { status: "done" })], 3)),
+      requests[1].request.resolve({
+        ...snapshot([row("second-page")], 1),
+        nextCursor: "snapshot-one:p3",
+      }),
     );
-    await settle(() => requests[0].request.resolve(snapshot([row("old-running")], 1)));
-    expect(textOf(container)).toContain("任务 newest");
-    expect(textOf(container)).not.toContain("任务 old-running");
+    await settle(() => {
+      changed(8);
+      changed(9);
+    });
+    expect(requests).toHaveLength(3);
+    await settle(() => requests[2].request.resolve(snapshot([row("third-page")], 1)));
+    // All three pages are visible even though the latest refresh has begun.
+    expect(cards()).toHaveLength(3);
+    expect(textOf(container)).toContain("任务 first-page");
+    expect(textOf(container)).toContain("任务 second-page");
+    expect(textOf(container)).toContain("任务 third-page");
+    expect(requests).toHaveLength(4);
+    expect(requests[3].query).toEqual({ limit: 200 });
+    await settle(() => {
+      changed(10);
+      changed(10);
+    });
+    expect(requests).toHaveLength(4);
+    await settle(() =>
+      requests[3].request.resolve({
+        ...snapshot([row("newest-first")], 10),
+        nextCursor: "snapshot-ten:p2",
+      }),
+    );
+    await settle(() => changed(9));
+    await settle(() => requests[4].request.resolve(snapshot([row("newest-last")], 10)));
+    expect(cards()).toHaveLength(2);
+    expect(textOf(container)).toContain("任务 newest-first");
+    expect(textOf(container)).toContain("任务 newest-last");
+    expect(textOf(container)).not.toContain("任务 first-page");
+    expect(requests).toHaveLength(5);
     // A missed event still converges through an explicit refresh.
     await click(button("刷新"));
-    await settle(() => requests[2].request.resolve(snapshot([row("after-missed-event")], 4)));
+    await settle(() => requests[5].request.resolve(snapshot([row("after-missed-event")], 11)));
     expect(textOf(container)).toContain("任务 after-missed-event");
+  });
+  test("an explicit action refresh invalidates an older in-flight generation", async () => {
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("a")], 1)));
+    await settle(() => changed(2));
+    await click(button("打开来源"));
+    expect(requests).toHaveLength(3);
+    await settle(() => requests[2].request.resolve(snapshot([row("newest")], 3)));
+    await settle(() => requests[1].request.resolve(snapshot([row("late-old")], 2)));
+    expect(textOf(container)).toContain("任务 newest");
+    expect(textOf(container)).not.toContain("任务 late-old");
   });
   test("a change during pagination restarts rather than presenting mixed versions", async () => {
     await render();
