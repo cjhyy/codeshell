@@ -8,6 +8,29 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.28] - 2026-10-09
+
+### Added
+
+- Discover eligible tools progressively: select tools before exposing their full
+  definitions to subsequent model requests, and recheck permissions before use.
+- Recover committed long output for persistent Desktop/Web sessions through a
+  Session-owned journal, durable cursors and bounded pages across disconnects and
+  worker/Main restarts. The journal is capped at 128 MiB per Session and 16 MiB per
+  logical event; old peers, mobile, retention and repair retain separate limits.
+
+### Fixed
+
+- Raise the Core/Server/Desktop MCP SDK floor to 1.31.0 and preserve OAuth issuer
+  binding in Desktop. Existing client secrets cannot follow replacement endpoints;
+  legacy credentials can still refresh at their saved endpoint.
+- Preserve normal message, attachment and queued steering identities during live
+  delivery and output recovery. Child Agent input no longer creates or overwrites
+  a parent user message; machine-injected inputs remain hidden.
+- Confirm accepted npm submissions against public exact-version and requested-tag
+  metadata under one bounded batch budget. Delayed visibility never triggers
+  another publish command or a dist-tag write.
+
 ## [0.9.27] - 2026-10-09
 
 ### Added
