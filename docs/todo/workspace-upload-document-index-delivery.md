@@ -63,3 +63,4 @@ Desktop 覆盖/删除上传时清除对应索引；外部编辑在下次读取�
 - 发布包门槛通过 9 个 tarball / 47 个声明入口，另在实际打包后的 SDK consumer 执行解析/查询/覆盖/删除及伪造冷缓存拒绝；不使用付费模型或第三方账号，不把 fixture 当成真实用户资料覆盖率。
 - 合并成本账本与 Operation Controller main 后的最终组合检查：1,456 项 Source/完整 ToolSystem/Link/Operation/Engine/账本/Desktop 测试通过，3 项真实模型测试跳过；12 包类型与变更生产代码 ESLint 通过。真实 SDK 写操作独立回读/重启不重复发送烟测及最新 Desktop production/managed PDF/ASAR 均通过；既有 Workspace 页面 Electron 验收通过。
 - CI 测试分片与覆盖率门槛同时要求子进程成功退出和完整、数量一致、零失败的 JUnit 报告；提前退出、空运行、截断或不一致报告明确失败。配置单测改用无启动副作用的 stdio helper，真实 worker 的 parent-EOF 清理保持不变。完整 Core rest 分片实际执行 2,897 项测试/407 个文件，零失败并生成完整报告；架构预算按当前实际接线、IPC 与导出数量逐项说明，不预留未来功能增长。
+- 默认 Bun 分片、原生 Node/Electron 上传烟测、ASAR 内层 Electron 与打包 SDK 的运行 consumer 共用私有环境 helper：在载入 Core 前设置 canonical 私有 HOME/USERPROFILE/CodeShell/XDG/AppData 目录，并只保留明确的工具链、浏览器与 CI 变量；不继承操作人的 Host 配置、任意认证变量或代理。正常完成或失败后仅清理调用方持有的临时目录。真实模型 SDK 的 localhost fixtures 另保留各自精确端点约束。

@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 
 const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(desktop, "../..");
@@ -107,7 +108,10 @@ try {
   `,
   );
   const result = spawnSync(electron, [parent], {
-    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, ELECTRON_RUN_AS_NODE: "1" },
+    env: {
+      ...createBunTestEnvironment(process.env, join(temporary, "electron-environment")),
+      ELECTRON_RUN_AS_NODE: "1",
+    },
     encoding: "utf8",
     timeout: 30_000,
   });

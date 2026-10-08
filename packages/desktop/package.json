@@ -58,7 +58,7 @@
     "test:e2e:device-relay": "node scripts/e2e-device-relay.mjs",
     "test:e2e:task-inbox": "node scripts/e2e-task-inbox.mjs",
     "test:e2e:optimization-lab": "node scripts/e2e-optimization-lab.mjs",
-    "test:upload-asar": "node scripts/smoke-upload-asar.mjs"
+    "test:upload-asar": "node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-asar.mjs"
   },
   "build": {
     "appId": "com.cjhyy.codeshell",
