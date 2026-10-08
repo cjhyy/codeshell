@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createNativeLinkNavigationPolicy } from "./remote-link-navigation.js";
 
 /** A saved cloud entry is an origin, never a setup/login URL or a local path. */
 export function normalizeCloudWorkbenchAddress(value: unknown): string {
@@ -42,7 +43,13 @@ export function isCloudWorkbenchOrigin(address: string, target: string): boolean
 /** A cloud page may start one bounded Link flow. Link pages never acquire Desktop privileges. */
 export function createCloudWorkbenchNavigation(address: string, now = Date.now) {
   const origin = new URL(address).origin;
-  let flow: { issuer: string; state: string; expiresAt: number } | undefined;
+  let flow:
+    | {
+        state: string;
+        expiresAt: number;
+        navigation: ReturnType<typeof createNativeLinkNavigationPolicy>;
+      }
+    | undefined;
   const reset = () => {
     flow = undefined;
   };
@@ -61,12 +68,13 @@ export function createCloudWorkbenchNavigation(address: string, now = Date.now) 
             return (
               !url.hash &&
               url.searchParams.getAll("state").length === 1 &&
-              url.searchParams.get("state") === flow.state
+              url.searchParams.get("state") === flow.state &&
+              flow.navigation(target, true) === "callback"
             );
           return true;
         }
         if (!mainFrame) return false;
-        if (flow) return url.origin === flow.issuer;
+        if (flow) return flow.navigation(target, true) === "allow";
         if (!isCloudWorkbenchOrigin(address, current)) return false;
         if (
           url.protocol !== "https:" &&
@@ -94,7 +102,11 @@ export function createCloudWorkbenchNavigation(address: string, now = Date.now) 
           !/^[A-Za-z0-9_-]{32,128}$/.test(params.get("state") ?? "")
         )
           return false;
-        flow = { issuer: url.origin, state: params.get("state")!, expiresAt: now() + 600_000 };
+        flow = {
+          state: params.get("state")!,
+          expiresAt: now() + 600_000,
+          navigation: createNativeLinkNavigationPolicy(target, `${origin}/link/callback`),
+        };
         return true;
       } catch {
         return false;

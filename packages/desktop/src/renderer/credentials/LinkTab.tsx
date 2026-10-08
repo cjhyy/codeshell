@@ -45,7 +45,7 @@ import {
   type LinkExecutionRuntime,
   type LinkIntegration,
 } from "./link-catalog";
-import { RemoteLinkSection } from "./RemoteLinkSection";
+import { RemoteLinkSection, useRemoteLinkSnapshot } from "./RemoteLinkSection";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
@@ -433,6 +433,19 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<IntegrationFilter>("all");
+  const remote = useRemoteLinkSnapshot(cwd);
+  const remoteConnections =
+    remote.snapshot?.connections.filter((connection) => connection.authSource === "remote-link") ??
+    [];
+  const hasRemote = Boolean(remote.snapshot?.capabilities.remoteAuth || remoteConnections.length);
+  const remoteMatches =
+    (hasRemote || Boolean(remote.error)) &&
+    filter !== "planned" &&
+    (filter !== "connected" ||
+      remoteConnections.some((connection) => connection.status === "connected")) &&
+    `github ${t("ext.link.remoteDescription")} ${remoteConnections.map((connection) => `${connection.label} ${connection.account?.label ?? ""} ${connection.account?.resources.join(" ") ?? ""}`).join(" ")}`
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase());
   const [localDialog, setLocalDialog] = useState<{
     item: LinkIntegration;
     method: LinkConnectionMethod;
@@ -666,6 +679,14 @@ export function LinkTab({ cwd }: { cwd: string }) {
           const credential =
             byMethod.get(linkMethodStateKey(item.id, method)) ??
             byMethod.get(`${item.id}:${method.executionRuntime}`);
+          if (
+            (hasRemote || remote.error) &&
+            item.id === "github" &&
+            method.executionRuntime === "server" &&
+            method.availability === "coming-soon" &&
+            !credential
+          )
+            continue;
           const available =
             method.availability === "available" &&
             (method.authKind === "token" || Boolean(method.oauthProfileId));
@@ -685,7 +706,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
       }
     }
     return result;
-  }, [byMethod, catalog, credentials, filter, query, t]);
+  }, [byMethod, catalog, credentials, filter, query, t, hasRemote, remote.error]);
 
   /**
    * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
@@ -914,7 +935,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
     }
   };
 
-  const noMatches = entries.local.length === 0 && entries.server.length === 0;
+  const noMatches = entries.local.length === 0 && entries.server.length === 0 && !remoteMatches;
 
   return (
     <div className="space-y-5" data-link-page>
@@ -978,13 +999,6 @@ export function LinkTab({ cwd }: { cwd: string }) {
         </div>
       </section>
 
-      <RemoteLinkSection
-        key={cwd}
-        cwd={cwd}
-        onChanged={() => {
-          void load().catch(() => undefined);
-        }}
-      />
       <section className="space-y-4" aria-labelledby="link-apps-title">
         <div>
           <div className="flex items-center gap-2">
@@ -1105,34 +1119,49 @@ export function LinkTab({ cwd }: { cwd: string }) {
               {t("ext.link.resetFilters")}
             </Button>
           </div>
-        ) : (
-          <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-            <RuntimeLinkSection
-              runtime="local"
-              cliLiveness={cliLiveness}
-              entries={entries.local}
-              busyId={busyId}
-              errors={errors}
-              onLocalConnect={openLocalDialog}
-              onLocalDisconnect={disconnectLocal}
-              onServerLogin={onServerLogin}
-              onServerRefresh={onServerRefresh}
-              onServerLogout={onServerLogout}
-            />
-            <RuntimeLinkSection
-              runtime="server"
-              cliLiveness={cliLiveness}
-              entries={entries.server}
-              busyId={busyId}
-              errors={errors}
-              onLocalConnect={openLocalDialog}
-              onLocalDisconnect={disconnectLocal}
-              onServerLogin={onServerLogin}
-              onServerRefresh={onServerRefresh}
-              onServerLogout={onServerLogout}
-            />
-          </div>
-        )}
+        ) : null}
+        <div hidden={noMatches} className="grid gap-4 xl:grid-cols-2 xl:items-start">
+          <RuntimeLinkSection
+            runtime="local"
+            cliLiveness={cliLiveness}
+            entries={entries.local}
+            busyId={busyId}
+            errors={errors}
+            onLocalConnect={openLocalDialog}
+            onLocalDisconnect={disconnectLocal}
+            onServerLogin={onServerLogin}
+            onServerRefresh={onServerRefresh}
+            onServerLogout={onServerLogout}
+          />
+          <RuntimeLinkSection
+            runtime="server"
+            cliLiveness={cliLiveness}
+            entries={entries.server}
+            busyId={busyId}
+            errors={errors}
+            onLocalConnect={openLocalDialog}
+            onLocalDisconnect={disconnectLocal}
+            onServerLogin={onServerLogin}
+            onServerRefresh={onServerRefresh}
+            onServerLogout={onServerLogout}
+            extraCount={remoteMatches ? 1 : 0}
+          >
+            <div hidden={!remoteMatches}>
+              {hasRemote || remote.error ? (
+                <RemoteLinkSection
+                  key={cwd}
+                  cwd={cwd}
+                  snapshot={remote.snapshot}
+                  loadError={remote.error}
+                  reload={remote.reload}
+                  onChanged={() => {
+                    void load().catch(() => undefined);
+                  }}
+                />
+              ) : null}
+            </div>
+          </RuntimeLinkSection>
+        </div>
       </section>
 
       {legacyCredentials.length > 0 ? (
@@ -2014,6 +2043,8 @@ function LinkStat({ value, label }: { value: number; label: string }) {
 }
 
 interface RuntimeLinkSectionProps {
+  children?: React.ReactNode;
+  extraCount?: number;
   cliLiveness: Record<string, CliLiveness>;
   runtime: LinkExecutionRuntime;
   entries: LinkMethodEntry[];
@@ -2085,10 +2116,13 @@ function RuntimeLinkSection(props: RuntimeLinkSectionProps) {
             </p>
           </div>
         </div>
-        <span className="text-xs tabular-nums text-muted-foreground">{props.entries.length}</span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {props.entries.length + (props.extraCount ?? 0)}
+        </span>
       </div>
 
-      {props.entries.length === 0 ? (
+      {props.children}
+      {props.entries.length === 0 && !props.extraCount ? (
         <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-8 text-center text-xs text-muted-foreground">
           {t("ext.link.runtimeEmpty")}
         </div>

@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.9.24] - 2026-10-08
+
+### Added
+
+- Add a local task center for sessions, automation runs, sub-agents, Mimi work,
+  background jobs and observed external runtime activity. Reopen original task
+  details and expose controls supported by each authoritative task source.
+- Add an experimental Desktop optimization lab for authorized single-Skill text
+  experiments, with request and time budgets, original/candidate comparisons,
+  blind human grading, durable recovery and effect/cost reports. It defaults off
+  behind `featureFlags.optimization_lab`; adopting or rolling back candidates is
+  not yet available.
+- Edit Digital Human dependency declarations and display isolated sub-agent
+  TODO snapshots in the terminal UI.
+
+### Fixed
+
+- Simplify Link connection and authorization. Support GitHub authorization without
+  an administrator login with compatible Link services, enforcing bounded
+  navigation and callback validation in the isolated native authorization window.
+- Refresh memory write context, compare bounded previous content, and use
+  verified resource cloning for managed file handoffs where supported.
+- Stop stdio workers when their controlling parent closes, and preserve task
+  history, cancellation authority and recovery across restarts.
+
+### Changed
+
+- Stop loading Arena in application hosts and retain its source as an unpublished
+  private workspace.
+
 ## [0.9.23] - 2026-09-28
 
 ### Added

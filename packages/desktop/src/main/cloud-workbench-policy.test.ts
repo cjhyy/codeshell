@@ -99,6 +99,44 @@ describe("bounded Link navigation", () => {
       expect(policy.allows(cloud, value)).toBe(false);
     expect(policy.allows(cloud, issuer + "/login")).toBe(false);
   });
+  test("GitHub login returns through the fixed upstream callback before the Host callback", () => {
+    const policy = createCloudWorkbenchNavigation(cloud);
+    const github = "https://github.com";
+    const upstream = github + "/login/oauth/authorize?client_id=github-client&state=upstream-state";
+    const callback = cloud + `link/callback?state=${state}&code=code`;
+    expect(policy.allows(cloud, upstream)).toBe(false);
+    expect(policy.allows(cloud, authorization())).toBe(true);
+    expect(policy.allows(issuer, github + "/login")).toBe(false);
+    expect(policy.allows(issuer, upstream, false)).toBe(false);
+    expect(policy.allows(issuer, github + "/login/oauth/authorize?client_id=client")).toBe(false);
+    expect(policy.allows(issuer, upstream + "&state=duplicate")).toBe(false);
+    expect(policy.allows(issuer, upstream)).toBe(true);
+    expect(policy.allows(upstream, github + "/login/two-factor")).toBe(true);
+    expect(policy.allows(upstream, "https://elsewhere.example/")).toBe(false);
+    expect(policy.allows(upstream, "http://github.com/login")).toBe(false);
+    expect(policy.allows(upstream, issuer + "/login")).toBe(false);
+    expect(policy.allows(upstream, callback)).toBe(false);
+    expect(policy.allows(upstream, issuer + "/oauth/upstream/github/callback?code=fixture")).toBe(
+      true,
+    );
+    expect(policy.allows(issuer, authorization())).toBe(true);
+    expect(policy.allows(issuer, callback + "&state=duplicate")).toBe(false);
+    expect(policy.allows(issuer, callback + "#fragment")).toBe(false);
+    expect(policy.allows(issuer, callback)).toBe(true);
+    policy.committed(callback);
+    expect(policy.allows(callback, github + "/login")).toBe(false);
+  });
+  test("GitHub navigation cannot extend the authorization deadline", () => {
+    let time = 0;
+    const policy = createCloudWorkbenchNavigation(cloud, () => time);
+    const upstream = "https://github.com/login/oauth/authorize?client_id=client&state=upstream";
+    expect(policy.allows(cloud, authorization())).toBe(true);
+    time = 599_999;
+    expect(policy.allows(issuer, upstream)).toBe(true);
+    time = 600_000;
+    expect(policy.allows(upstream, "https://github.com/login/two-factor")).toBe(false);
+    expect(policy.allows(upstream, issuer + "/oauth/upstream/github/callback")).toBe(false);
+  });
   test("flow expires without extending on same-origin navigation and can be cancelled", () => {
     let time = 0;
     const policy = createCloudWorkbenchNavigation(cloud, () => time);

@@ -128,10 +128,16 @@ code-shell-serve --auth hub --public-url https://hub.example --cwd /workspace
 工作台回调地址，浏览器另行保存准确项目路由，不需要为每个项目注册一个回调 URL。
 可选客户端密钥从普通 Agent worker 和 Panel Agent worker 环境中剔除。
 
-浏览器在 Link 页选择“通过 Link 添加账号”，填写名称后进入 Link，选择账号、仓库并
-允许只读访问。回调页立即清除地址栏中的授权码，通过原登录完成授权；返回时仍打开
+浏览器在 Link 页选择“通过 Link 添加账号”，填写名称后前往授权。首次连接直接进入
+GitHub 登录和授权，随后选择仓库并允许只读访问，不需要注册或登录 Link，也不需要
+管理员密码。回调页立即清除地址栏中的授权码，通过原工作台登录完成授权；返回时仍打开
 原项目的 Link 页。多个远程账号和本地连接可同时存在，远程连接支持改名、重新授权和断开。
 拒绝授权会取消原私有 attempt。回调请求结果不明时仅提供查询，不重复提交授权码。
+
+Link 的用户授权会话与管理后台会话独立，用户只能授权本会话经 GitHub 验证的账号。
+服务端已有连接及管理员登录不会赋予用户访问其他账号的权限。用户会话最长 30 分钟，
+有效期内可复用已验证账号；“使用其他 GitHub 账号”会重新进入 GitHub 验证。
+管理员密码仅用于服务部署后的客户端登记、连接管理和撤销，不出现在普通连接流程中。
 
 浏览器 sessionStorage 只存授权 ID、state、到期时间和 Host／项目路由，不存令牌或 PKCE
 verifier；读取后移除。普通工作台启动不依赖 sessionStorage，可用性受限的浏览器会在
@@ -140,11 +146,12 @@ verifier；读取后移除。普通工作台启动不依赖 sessionStorage，可
 ## 桌面云端窗口和配对 Web
 
 Electron 云端窗口允许从工作台发起符合 PKCE 格式的 `/oauth/authorize` 导航。
-授权只允许在该 Link origin 内登录／同意，最长十分钟；返回地址必须为原工作台
-`/link/callback`，state 必须匹配。回到工作台、关闭窗口或超时后撤销临时导航资格。
+授权允许该 Link origin 的仓库确认，以及由它发起的固定 GitHub HTTPS OAuth 入口。
+GitHub 登录和二次验证限定在 GitHub 同域，并必须经 Link 的
+`/oauth/upstream/github/callback` 返回，才能进入原工作台的 `/link/callback`。
+流程最长十分钟，Host 回调的 state 必须匹配。回到工作台、关闭窗口或超时后撤销临时导航资格。
 子框架不能开启授权流程，其他外部导航、弹窗、webview 仍被拦截。Link 页面显示其
 实际域名标题，没有 Desktop preload，也不获得云端工作台的录音、通知和下载权限。
-这仅支持当前独立 Link 的同域登录，不承诺任意第三方跨域登录链。
 
 配对 Web 使用不同的注册回调：`https://你的电脑远程域名/mobile/link/callback`。
 在 Desktop 主进程启动环境设置：
@@ -172,7 +179,10 @@ CODE_SHELL_REMOTE_LINK_CLIENT_ID=registered-desktop-web-client
 
 ## 原生桌面 Link 管理
 
-原生凭证页的 Link 标签提供独立服务连接：添加多个账号、改名、重新授权和断开。
+原生凭证页的 Link 标签将独立服务连接统一放在“服务器连接”中。GitHub 卡片点击
+“连接”即进入 GitHub 网页授权，无需预先填写连接名称或登录 Link；随后选择允许访问的
+仓库，授权完成后自动保存并显示账号。
+“管理”弹窗提供添加账号、改名、重新授权和断开，服务地址收在“服务详情”中。
 本地 CLI／Token 连接继续可用；保存多个连接时必须明确选择，失效后不自动换账号。
 GitHub 原始凭据留在 Link，原生页面只收到脱敏快照及授权结果。
 
@@ -193,9 +203,13 @@ HTTP 监听，也不要求该端口运行服务器**。回调 origin 由受信�
 `CLIENT_ID`；同时启用时，在同一个公开 PKCE 客户端中登记两个准确回调。若分开部署，
 可各自使用单独客户端。不要把单一回调的原生客户端直接当作配对 Web 客户端使用。
 
-授权窗口仅访问配置的 Link origin，使用临时存储，没有本地 preload；拒绝设备权限、
-下载、弹窗和 webview。仅顶层精确回调交给共享服务验证 state 并交换授权，支持当前
-Link 的同域登录／同意，不支持任意第三方跨域登录链。
+同一 Link origin 的授权窗口在本次应用运行中复用内存浏览器会话，关闭单个授权窗口
+不会清除会话；不写入持久浏览器分区，退出应用后失效。Link 用户会话过期后重新通过
+GitHub 验证，不要求 Link 账号或管理员密码。
+授权窗口没有本地 preload；拒绝设备权限、
+下载、弹窗和 webview。首次连接允许从 Link 进入固定的 GitHub HTTPS OAuth 入口，
+登录和二次验证限定在 GitHub 同域，并仅从 `/oauth/upstream/github/callback` 返回 Link；
+其他外部导航和子框架导航被拒绝。仅顶层精确 Host 回调交给共享服务验证 state 并交换授权。
 
 授权绑定发起窗口和已授权工作区；取消、关闭授权窗口、刷新或关闭主窗口会取消流程。
 请求在准入前被取消也不会迟到打开窗口。改名和断开使用版本校验；重新授权替换旧
@@ -224,14 +238,14 @@ LinkAction、刷新、服务端撤销及 Host 断开。GitHub 响应是受控夹
 `node scripts/smoke-remote-link-web.mjs /path/to/codeshell-services/apps/link-server/http.mjs`
 使用已构建 Web、真实 Node Hub 和独立 Link，在 390／1440px Chromium 完成授权、回调、
 返回连接列表、断开以及拒绝授权，并核对服务端 grant 撤销。
-可追加 `electron` 验证实际桌面的隔离云端窗口（包括 Link 登录、域名标题、无本地 preload、
+可追加 `electron` 验证实际桌面的隔离云端窗口（包括 GitHub 授权、域名标题、无本地 preload、
 外部导航拦截），追加 `paired` 验证实际 Desktop 的配对 Web（390px、原工作区返回、错误
 项目回调和设备撤销拒绝）。配对测试将隔离测试进程的网络接口枚举置空以采用已有回环
 回退，不打开 LAN 监听，也不修改用户真实项目或网络设置。它不代替真实公网隧道、物理
 手机、真实服务商或实际 Docker 项目授权验收。
 
 追加 `native` 验证生产 Electron 的原生凭证页、隔离授权窗口和真实独立 Link。
-测试两个不同的受控账号、改名、重新授权、拒绝、取消、主窗口刷新、通用凭据及旧
+测试无需 Link 登录、管理账号隔离、两个不同的受控账号、改名、重新授权、拒绝、取消、主窗口刷新、通用凭据及旧
 OAuth 入口拒绝绕过、断开后远端全部授权撤销。上游账号仍为夹具，不代表真实 GitHub。
 
 为 `smoke-remote-link.mjs` 追加 `desktop-retirement`，可验证真实独立 Link 授权留下

@@ -637,12 +637,16 @@ export const extensions = {
         intro:
           "连接 GitHub、Figma 等第三方服务，让 AI 在清晰的权限边界内读取信息和执行操作。可本地完成的连接不依赖 CodeShell Server。",
         remoteTitle: "独立 Link 服务",
-        remoteDescription:
-          "通过 Link 连接 GitHub，只读取所选仓库。GitHub 凭据留在服务端，每个连接可以独立管理。",
+        remoteDescription: "连接账号，读取你授权的仓库和 Issue。",
+        remoteConnect: "连接",
+        remoteConnecting: "连接中…",
+        remoteManage: "管理",
+        remoteManageTitle: "GitHub 连接",
+        remoteServiceDetails: "服务详情",
         remoteUnconfigured: "尚未配置桌面 Link 服务。已有连接仍可查看和断开。",
         remoteName: "远程连接名称",
-        remoteAdd: "通过 Link 添加账号",
-        remoteWaiting: "请在授权窗口完成登录和确认。",
+        remoteAdd: "添加账号",
+        remoteWaiting: "在网页完成授权后，将自动连接。",
         remoteCancel: "取消",
         remoteConnected: "连接已保存。",
         remoteCancelled: "授权已取消，没有新增连接。",
@@ -692,8 +696,7 @@ export const extensions = {
         localSectionDescription:
           "本地 Token 或 CLI 登录态留在当前设备，使用该连接的操作在本机执行。",
         serverSection: "服务器连接",
-        serverSectionDescription:
-          "通过 OAuth 或 Link Server 托管授权，用于回调、同步和跨设备能力。",
+        serverSectionDescription: "在网页确认授权后自动连接，凭据由服务端保管。",
         defaultPreferred: "本机执行",
         managedRuntime: "托管连接",
         runtimeEmpty: "当前筛选下没有连接方式",
@@ -1679,13 +1682,17 @@ export const extensions = {
         intro:
           "Connect GitHub, Figma, and other services so AI can read information and take actions within clear permission boundaries. Connections that work locally never require CodeShell Server.",
         remoteTitle: "Independent Link service",
-        remoteDescription:
-          "Connect GitHub through Link for read-only access to selected repositories. GitHub credentials stay in Link; manage each connection independently.",
+        remoteDescription: "Connect your account to read authorized repositories and issues.",
+        remoteConnect: "Connect",
+        remoteConnecting: "Connecting…",
+        remoteManage: "Manage",
+        remoteManageTitle: "GitHub connections",
+        remoteServiceDetails: "Service details",
         remoteUnconfigured:
           "Desktop Link service is not configured. Existing connections can still be viewed and disconnected.",
         remoteName: "Remote connection name",
-        remoteAdd: "Add account through Link",
-        remoteWaiting: "Complete sign-in and consent in the authorization window.",
+        remoteAdd: "Add account",
+        remoteWaiting: "Finish authorization on the web to connect automatically.",
         remoteCancel: "Cancel",
         remoteConnected: "Connection saved.",
         remoteCancelled: "Authorization cancelled. No connection was added.",
@@ -1737,7 +1744,7 @@ export const extensions = {
           "Local tokens or CLI sessions stay on this device. Actions using that connection run locally.",
         serverSection: "Server connections",
         serverSectionDescription:
-          "OAuth or Link Server manages authorization for callbacks, sync, and cross-device capabilities.",
+          "Approve access on the web to connect automatically. Credentials are held by the service.",
         defaultPreferred: "Runs locally",
         managedRuntime: "Managed",
         runtimeEmpty: "No connection methods match this filter",

@@ -190,6 +190,95 @@ afterEach(async () => {
 });
 
 describe("LinkTab integrations", () => {
+  test("integrates remote GitHub into server connections and starts consent without a name form", async () => {
+    ensureMiniDom();
+    const calls: unknown[] = [];
+    let complete: (value: { state: string }) => void;
+    let cancellations = 0;
+    let connected = false;
+    Object.assign(window, {
+      codeshell: {
+        credentials: { list: async () => [] },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          remoteSnapshot: async () => ({
+            capabilities: { remoteAuth: true },
+            remoteServer: { issuer: "https://private-link.example" },
+            connections: connected
+              ? [
+                  {
+                    id: "remote-github",
+                    providerId: "github",
+                    authSource: "remote-link",
+                    label: "GitHub",
+                    account: { label: "alice", resources: ["owner/repo"] },
+                    status: "connected",
+                    editable: true,
+                    revision: "one",
+                  },
+                ]
+              : [],
+          }),
+          remoteStart: (...args: unknown[]) => {
+            calls.push(args);
+            return new Promise((resolve) => {
+              complete = resolve;
+            });
+          },
+          remoteCancel: async () => {
+            cancellations++;
+          },
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<LinkTab cwd="/repo" />);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    const server = findElements(container, "SECTION").find(
+      (node) => reactPropsOf(node)["data-link-runtime-section"] === "server",
+    );
+    const github = findElements(server, "ARTICLE").filter(
+      (node) => reactPropsOf(node)["data-link-integration"] === "github",
+    );
+    expect(github).toHaveLength(1);
+    expect(buttonWithLabel(github[0], "连接")).toBeDefined();
+    expect(findElements(github[0], "INPUT")).toHaveLength(0);
+    expect(reactChildText(reactPropsOf(github[0]).children)).not.toContain("private-link.example");
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(github[0], "连接")).onClick();
+      await flushMicrotasks();
+    });
+    expect(calls).toHaveLength(1);
+    expect((calls[0] as unknown[])[2]).toEqual({
+      providerId: "github",
+      methodId: "remote-link",
+      label: "GitHub",
+      expectedRevision: null,
+    });
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
+      await flushMicrotasks();
+    });
+    expect(cancellations).toBe(0);
+    await act(async () => {
+      connected = true;
+      complete!({ state: "connected" });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(buttonWithLabel(container, "管理")).toBeDefined();
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "管理")).onClick();
+      await flushMicrotasks();
+    });
+    expect(buttonWithLabel(container, "添加账号")).toBeDefined();
+    expect(buttonWithLabel(container, "改名")).toBeDefined();
+  });
+
   test("distinguishes proactive delivery from direct send while Gateway is stopped", () => {
     const labels = gatewayCapabilityLabels(
       {
