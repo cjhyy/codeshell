@@ -131,6 +131,7 @@ export type {
   ConstrainedReadableResource,
   ConstrainedProcessReceipt,
   ConstrainedProcessOutput,
+  ConstrainedProcessLaunch,
 } from "./runtime/constrained-process/types.js";
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";

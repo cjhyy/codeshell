@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import type { ConstrainedReadableResource } from "./types.js";
+import { validateResourceLayout } from "./layout.js";
 
 const MAX_FILES = 256;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
@@ -34,12 +35,31 @@ export interface ResourceSnapshot {
 }
 
 /** Capture only actual positive Host grants. No directory scan or inferred grants. */
-export function captureResources(grants: readonly ConstrainedReadableResource[]) {
+export function captureResources(
+  grants: readonly ConstrainedReadableResource[],
+  layout?: { directories: readonly string[] },
+) {
   if (grants.length > MAX_FILES) throw new Error("Too many constrained process resources");
+  const directories = validateResourceLayout(
+    grants.map((grant) => grant.name),
+    layout?.directories,
+  );
+  for (const grant of grants) {
+    if (
+      (grant.expectedBytes !== undefined &&
+        (!Number.isSafeInteger(grant.expectedBytes) ||
+          grant.expectedBytes < 0 ||
+          grant.expectedBytes > MAX_FILE_BYTES)) ||
+      (grant.expectedSha256 !== undefined &&
+        (typeof grant.expectedSha256 !== "string" || !/^[a-f0-9]{64}$/.test(grant.expectedSha256)))
+    )
+      throw new Error("Invalid constrained resource content pin");
+  }
   let total = 0;
   const names = new Set<string>();
   const resources: ResourceSnapshot[] = [];
-  for (const grant of grants) {
+  for (const originalGrant of grants) {
+    const grant = { ...originalGrant };
     if (
       !isAbsolute(grant.path) ||
       grant.path.includes("\0") ||
@@ -115,19 +135,32 @@ export function captureResources(grants: readonly ConstrainedReadableResource[])
     };
     const bytes = read();
     const digest = sha256(bytes);
+    if (
+      (grant.expectedBytes !== undefined && bytes.length !== grant.expectedBytes) ||
+      (grant.expectedSha256 !== undefined && digest !== grant.expectedSha256)
+    )
+      throw new Error("Constrained resource content pin mismatch");
     total += bytes.length;
+    let invalid = false;
     resources.push({
       name: grant.name,
       bytes,
       sha256: digest,
       assertCurrent() {
-        if (sha256(read()) !== digest) throw new Error("Constrained resource changed");
+        if (invalid) throw new Error("Constrained resource is invalid");
+        try {
+          if (sha256(read()) !== digest) throw new Error("Constrained resource changed");
+        } catch (error) {
+          invalid = true;
+          throw error;
+        }
       },
     });
   }
   resources.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   return {
     resources,
+    directories,
     sha256: sha256(JSON.stringify(resources.map(({ name, sha256 }) => [name, sha256]))),
     assertCurrent() {
       for (const resource of resources) resource.assertCurrent();
