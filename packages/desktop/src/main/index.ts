@@ -833,6 +833,10 @@ const panelAppBridge = new PanelAppBridge({
 });
 panelAppBridge.registerIpc();
 const imGatewayService = new ImGatewayService({
+  ensureDesktopControl: async () => {
+    if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
+    await gatewayControlServer.start();
+  },
   emit: (event) => {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
@@ -3402,6 +3406,7 @@ app.whenReady().then(async () => {
 
   gatewayControlServer = new GatewayControlServer({
     descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
+    legacyDesktopGatewayLockPath: imGatewayService.configuredGatewayLockPath(),
     open: () => startMobileRemote({ mode: "tunnel" }),
     close: () => stopMobileRemote(),
     status: () => getMobileRemoteGatewayStatus(),
