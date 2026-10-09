@@ -31,6 +31,13 @@ const docker = (...args) => {
 // daemon. It holds create before forwarding to exercise real Docker CLI timeout;
 // it cannot route to a provider, account or Internet endpoint.
 const nativeRequest = http.request;
+const nativeConnect = net.createConnection;
+const daemonSocket = config.endpoint.slice("unix://".length);
+assert.ok(config.endpoint.startsWith("unix://") && daemonSocket.startsWith("/"));
+const daemonAgent = new http.Agent();
+// http.request otherwise resolves the patched net.createConnection at request time.
+// This private agent retains only the one explicit local daemon transport.
+daemonAgent.createConnection = () => nativeConnect({ path: daemonSocket });
 const deny = () => {
   throw new Error("Cleanup fixture refused network");
 };
@@ -146,9 +153,9 @@ try {
   });
   assert.equal(lost.lifecycle.length, 1);
   results.push({ name: "fixture-owned-container-removal", ...removed });
-  const requests = [],
-    daemonSocket = config.endpoint.slice("unix://".length);
-  const socket = join(home, "explicit-docker-fault-proxy.sock");
+  const requests = [];
+  // macOS sun_path is only 104 bytes; the isolated HOME already has a long prefix.
+  const socket = join(home, "p.sock");
   proxy = http.createServer(async (request, response) => {
     const chunks = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
@@ -167,6 +174,7 @@ try {
     const upstream = nativeRequest(
       {
         socketPath: daemonSocket,
+        agent: daemonAgent,
         path: request.url,
         method: request.method,
         headers: request.headers,
@@ -183,7 +191,10 @@ try {
     sockets.add(client);
     client.once("close", () => sockets.delete(client));
   });
-  await new Promise((done) => proxy.listen(socket, done));
+  await new Promise((done, reject) => {
+    proxy.once("error", reject);
+    proxy.listen(socket, done);
+  });
   const uncertain = await failedCase("create-timeout-absence-not-cleanup", {
     runtime: { ...config, endpoint: `unix://${socket}` },
     expectUnproven: true,
@@ -216,6 +227,7 @@ try {
   console.log(`Constrained Hook cleanup negatives passed: ${evidence}`);
 } finally {
   process.env.TMPDIR = previousTmp;
+  daemonAgent.destroy();
   for (const socket of sockets) socket.destroy();
   if (proxy) await new Promise((done) => proxy.close(done));
 }
