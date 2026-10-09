@@ -5,7 +5,13 @@ import { pathToFileURL } from "node:url";
 import { confinedWorkerEnvironment } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
 
 /** Test-only bootstrap: Electron may discard NODE_OPTIONS, including for its Node worker. */
-export async function prepareConfinedElectronFixture({ appDir, isolated, origin, guardModule }) {
+export async function prepareConfinedElectronFixture({
+  appDir,
+  isolated,
+  origin,
+  guardModule,
+  guardReceiptReady = () => true,
+}) {
   isolated.home = await realpath(isolated.home);
   isolated.codeShellHome = join(isolated.home, ".code-shell");
   isolated.userDataDir = join(isolated.home, "electron-user-data");
@@ -142,10 +148,13 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
         if (receipts.some((receipt) => receipt.origin !== origin || receipt.homeId !== homeId))
           throw new Error("Electron fixture received a mismatched network/home receipt");
         if (
-          receipts.some((receipt) => receipt.pid === pid) &&
+          receipts.some((receipt) => receipt.pid === pid && guardReceiptReady(receipt)) &&
           spawned.length > 0 &&
           spawned.every((worker) =>
-            receipts.some((receipt) => receipt.pid === worker.pid && receipt.ppid === pid),
+            receipts.some(
+              (receipt) =>
+                receipt.pid === worker.pid && receipt.ppid === pid && guardReceiptReady(receipt),
+            ),
           )
         ) {
           for (const worker of spawned)
@@ -155,7 +164,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
           console.log(
             "Electron fixture: Main and actual spawned worker network/home confinement verified",
           );
-          return;
+          return { mainPid: pid, homeId, receipts, spawned };
         }
         await new Promise((done) => setTimeout(done, 100));
       } while (Date.now() < deadline);
