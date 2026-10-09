@@ -19,7 +19,13 @@ export function operationDirectory(path: string, create = false): Stats {
     }
   }
   const info = lstatSync(path);
-  if (!info.isDirectory() || info.isSymbolicLink() || (info.mode & 0o077) !== 0)
+  // Windows mode bits are synthesized and do not express per-user ACLs. Keep
+  // the existing private-profile custody there; POSIX hosts enforce 0700/0600.
+  if (
+    !info.isDirectory() ||
+    info.isSymbolicLink() ||
+    (process.platform !== "win32" && (info.mode & 0o077) !== 0)
+  )
     throw new Error("Invalid private operation directory");
   return info;
 }
@@ -31,7 +37,7 @@ export function operationFile(path: string, maxBytes: number): Stats {
     info.isSymbolicLink() ||
     info.nlink !== 1 ||
     info.size > maxBytes ||
-    (info.mode & 0o077) !== 0
+    (process.platform !== "win32" && (info.mode & 0o077) !== 0)
   )
     throw new Error("Invalid private operation file or bounds exceeded");
   return info;

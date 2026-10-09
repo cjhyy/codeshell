@@ -3,6 +3,8 @@
 本增量让已封存回执退出 16 MiB／10,000 条 active 文件，旧 intent 仍不可重放。
 实现、受控验收、合并与正式发行分别记录；没有操作真实用户账本、provider 账号或生产服务。
 它不新增 UI、清空历史、轮换幂等 key，或把 unknown 改成成功。
+POSIX 主机校验私有目录／文件 mode；Windows 的合成 mode 不是 ACL 证据，保留原私有用户
+profile custody，以及 regular／no-symlink／单 link／有界读取与 HMAC，不声称已经审计 Windows ACL。
 
 ## 数据与容量
 
