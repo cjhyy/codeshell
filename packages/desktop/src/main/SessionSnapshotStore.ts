@@ -19,6 +19,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { OutputCoverage } from "./output-coverage.js";
 
 /** One snapshot entry: the forwarded event plus its assigned sequence. */
 export interface SnapshotEntry {
@@ -36,6 +37,8 @@ export interface Snapshot {
   topLevelRunning: boolean;
   /** Latest Core cursor, retained even when a large event is evicted. */
   outputCursor?: string;
+  outputUnpaired?: boolean;
+  outputInputIds?: string[];
 }
 
 interface SessionLog {
@@ -46,6 +49,7 @@ interface SessionLog {
   topLevelRunning: boolean;
   bytes: number;
   outputCursor?: string;
+  coverage: OutputCoverage;
 }
 
 const DEFAULT_MAX_PER_SESSION = 2000;
@@ -57,6 +61,7 @@ export class SessionSnapshotStore {
   private readonly maxBytesPerSession: number;
   private readonly maxTotalBytes: number;
   private totalBytes = 0;
+  private coverageBytes = 0;
   private readonly sizes = new WeakMap<SnapshotEntry, number>();
 
   constructor(opts?: {
@@ -73,9 +78,20 @@ export class SessionSnapshotStore {
   append(sessionId: string, event: unknown): SnapshotEntry {
     let log = this.logs.get(sessionId);
     if (!log) {
-      log = { events: [], nextSeq: 1, topLevelRunning: false, bytes: 0 };
+      log = {
+        events: [],
+        nextSeq: 1,
+        topLevelRunning: false,
+        bytes: 0,
+        coverage: new OutputCoverage(),
+      };
       this.logs.set(sessionId, log);
     }
+    this.coverageBytes -= log.coverage.memoryBytes;
+    log.coverage.observe(event);
+    if (this.coverageBytes + log.coverage.memoryBytes > 4 * 1024 * 1024)
+      log.coverage.discardProof();
+    this.coverageBytes += log.coverage.memoryBytes;
     const lifecycle = event as { type?: unknown; agentId?: unknown; outputCursor?: unknown } | null;
     if (typeof lifecycle?.outputCursor === "string" && lifecycle.outputCursor.length <= 2048)
       log.outputCursor = lifecycle.outputCursor;
@@ -125,6 +141,8 @@ export class SessionSnapshotStore {
       nextSeq: log.nextSeq,
       topLevelRunning: log.topLevelRunning,
       ...(log.outputCursor ? { outputCursor: log.outputCursor } : {}),
+      ...(log.coverage.incomplete ? { outputUnpaired: true } : {}),
+      ...(log.coverage.inputIds.length ? { outputInputIds: log.coverage.inputIds } : {}),
     };
   }
 
@@ -143,6 +161,7 @@ export class SessionSnapshotStore {
   /** Drop a single session's snapshot (e.g. when the session is deleted). */
   forget(sessionId: string): void {
     this.totalBytes -= this.logs.get(sessionId)?.bytes ?? 0;
+    this.coverageBytes -= this.logs.get(sessionId)?.coverage.memoryBytes ?? 0;
     this.logs.delete(sessionId);
   }
 

@@ -68,6 +68,11 @@ jobs:
         run: node scripts/run-external-output-journal-smoke.mjs
       - name: Compiled SDK progressive tool discovery and bound source consumer
         run: bun run test:deferred-tools
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.16.0"
+      - name: Native Core output journal through authenticated Mobile WS and actual hook
+        run: bun run test:mobile-output-journal
 
   # The suite is split across parallel shards rather than run as one job.
   #

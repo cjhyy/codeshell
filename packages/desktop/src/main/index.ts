@@ -940,6 +940,7 @@ const mobileUploads = new MobileUploadService({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "uploads"),
 });
 const mobileRemote = new RemoteHostManager({
+  outputJournal: true,
   devices: mobileDevices,
   uploads: mobileUploads,
   webApi: createDesktopWebService({
@@ -1194,6 +1195,7 @@ const mobileOrchestrator = new MobileRemoteOrchestrator({
 // exact socket/viewer without disturbing another tab authenticated as the same
 // device.
 mobileRemote.on("viewer-offline", ({ viewerId }: MobileViewerIdentity) => {
+  mobileOrchestrator.releaseViewer(viewerId);
   transcriptSubscriptions?.unsubscribeSubscriber(mobileTranscriptSubscriberId(viewerId));
 });
 

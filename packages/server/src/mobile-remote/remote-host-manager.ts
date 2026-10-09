@@ -66,6 +66,7 @@ export interface RemoteHostStarted {
 
 export interface RemoteHostManagerOptions {
   devices: TrustedDeviceStore;
+  outputJournal?: boolean;
   onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
   /**
    * Absolute path to the built mobile app (out/mobile). Defaults to the
@@ -456,7 +457,11 @@ export class RemoteHostManager extends EventEmitter {
       if (!device) {
         return { type: "pair.failed", message: "Pairing token expired or invalid" };
       }
-      return { type: "pair.ok", device };
+      return {
+        type: "pair.ok",
+        device,
+        ...(this.opts.outputJournal ? { capabilities: { outputJournal: 1 as const } } : {}),
+      };
     }
     if (event.type === "auth.device") {
       let device;
@@ -466,7 +471,11 @@ export class RemoteHostManager extends EventEmitter {
         return { type: "auth.failed", message: "Trusted device store is unavailable" };
       }
       if (!device) return { type: "auth.failed", message: "Device is not trusted" };
-      return { type: "auth.ok", device };
+      return {
+        type: "auth.ok",
+        device,
+        ...(this.opts.outputJournal ? { capabilities: { outputJournal: 1 as const } } : {}),
+      };
     }
     return undefined;
   }
@@ -484,6 +493,27 @@ export class RemoteHostManager extends EventEmitter {
     const payload = JSON.stringify(event);
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
+        client.send(payload);
+      }
+    }
+  }
+
+  /** Reply only to the currently authenticated tab; retired/revoked viewers receive nothing. */
+  sendToViewer(viewerId: string, event: MobileServerEvent): void {
+    const payload = JSON.stringify(event);
+    for (const client of this.wss?.clients ?? []) {
+      if (
+        client.readyState === client.OPEN &&
+        this.authed.has(client) &&
+        this.viewers.get(client) === viewerId
+      ) {
+        // A selected viewer cannot accumulate an unbounded outbound page queue
+        // by issuing new reads while refusing to consume prior replies.
+        if (client.bufferedAmount + Buffer.byteLength(payload) > 4 * 1024 * 1024) {
+          this.releaseSocket(client);
+          client.terminate();
+          return;
+        }
         client.send(payload);
       }
     }

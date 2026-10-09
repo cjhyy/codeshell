@@ -74,7 +74,8 @@ describe("architecture growth budgets", () => {
     // +9 composition-only lines register reviewed Profile preview/CAS adoption.
     // Target authority, planning and locking stay in the extracted registrar/service.
     // +9 composition lines for the extracted, owner-scoped static export registrar.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_186);
+    // +2 composition lines advertise native Mobile recovery and revoke retired viewers.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_188);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
