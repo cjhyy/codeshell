@@ -211,6 +211,39 @@ launch-to-ready wall time, not the entire cold startup. CPU profiles are sampled
 diagnostics, not precise per-function elapsed-time guarantees. All measurements
 retain the existing deadlines, lifecycle proof and current authority checks.
 
+The 2026-10-09 synthetic acceptance used the existing Linux arm64 Docker image
+with Node 22.23.2. Compiled Core ran on Host Node 25.8.1; actual Electron 33.4.11
+Main ran on its embedded Node 20.18.3. These are distinct runtime observations,
+not a claim about an untested Node minimum or a packaged installer. The actual
+Main consumer used startup environment configuration and the existing Activity
+IPC, including cold restart and sticky late native state-root rejection.
+
+One plan declared 64 files totaling 33,550,345 bytes, with a 4,190,441-byte shared
+Settings source. The measured positive intervals had no synchronous fixture
+Docker observer:
+
+| Measured interval                        | Core reader, one GET | Main Activity, two GETs |
+| ---------------------------------------- | -------------------: | ----------------------: |
+| Elapsed                                  |               5.73 s |                 14.75 s |
+| Settings descriptor bytes read           |             176.0 MB |                389.7 MB |
+| Resource descriptor bytes read           |              1.14 GB |                 2.65 GB |
+| Longest 10 ms timer gap                  |               1.33 s |                  1.60 s |
+| Cumulative Host peak RSS at interval end |          609,968 KiB |             577,376 KiB |
+
+The Core reader's longest measured capture was 415 ms; reader construction took
+728 ms and the immediately following synchronous read prefix took 570 ms. Main
+performed 92 fresh Settings loads, totaling 2.23 s with a 58 ms maximum. Its
+resource costs are CPU-profile samples rather than exact per-call slices. The
+Main timer starts after readiness; startup-to-ready separately measured 1.88 s.
+Host RSS values are cumulative process high-water marks, not interval growth or
+container bounds. Forwarding instrumentation and CPU profiling add overhead.
+The same near-limit Core fixture cancelled an actually running typed Hook and
+confirmed cleanup in 221 ms after cancellation, without an additional GET;
+that separate cancellation interval includes the fixture's synchronous Docker
+inspection. These samples expose substantial Host costs and do not guarantee
+maximum-size responsiveness. Shared-pass verification and other-platform
+backends remain future work; the opt-in bounds and existing deadlines stay fixed.
+
 The bundled seccomp asset is adapted from
 [Moby profiles at its pinned source commit](https://github.com/moby/profiles/blob/6fe7deb1b9fb7c0397a4593480d7d22b9ee8caef/seccomp/default.json).
 Its adjacent NOTICE and Apache 2.0 license are copied into the published Core
