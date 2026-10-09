@@ -39,7 +39,14 @@ const docker = (...args) => {
 // daemon. It holds create before forwarding to exercise real Docker CLI timeout;
 // it cannot route to a provider, account or Internet endpoint.
 const nativeRequest = http.request;
-const nativeUnixConnect = net.createConnection;
+const nativeConnect = net.createConnection;
+const daemonSocket = config.endpoint.slice("unix://".length);
+assert.ok(config.endpoint.startsWith("unix://") && daemonSocket.startsWith("/"));
+const daemonAgent = new http.Agent({ keepAlive: false });
+// http.request otherwise resolves the patched net.createConnection at request time.
+// This private agent retains only the one explicit local daemon transport.
+daemonAgent.createConnection = () => nativeConnect({ path: daemonSocket });
+
 const deny = () => {
   throw new Error("Cleanup fixture refused network");
 };
@@ -155,12 +162,11 @@ try {
   });
   assert.equal(lost.lifecycle.length, 1);
   results.push({ name: "fixture-owned-container-removal", ...removed });
-  const requests = [],
-    daemonSocket = config.endpoint.slice("unix://".length);
-  const daemonAgent = new http.Agent({ keepAlive: false });
-  daemonAgent.createConnection = () => nativeUnixConnect({ path: daemonSocket });
+  const requests = [];
+  // Keep the owned Unix socket below macOS sun_path limits regardless of HOME depth.
   proxyRoot = realpathSync(mkdtempSync("/tmp/codeshell-hook-proxy-"));
   const socket = join(proxyRoot, "daemon.sock");
+
   proxy = http.createServer(async (request, response) => {
     const chunks = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
@@ -233,6 +239,8 @@ try {
 } finally {
   if (previousTmp === undefined) delete process.env.TMPDIR;
   else process.env.TMPDIR = previousTmp;
+  daemonAgent.destroy();
+
   for (const socket of sockets) socket.destroy();
   if (proxy) await new Promise((done) => proxy.close(done));
   if (proxyRoot) rmSync(proxyRoot, { recursive: true, force: true });

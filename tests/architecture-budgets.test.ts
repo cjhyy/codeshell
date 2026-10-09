@@ -80,10 +80,9 @@ describe("architecture growth budgets", () => {
     // +5 composition lines supply the existing external Runtime lazily and subscribe
     // its owned stream to Mobile. Command authority and the bounded recovery pump
     // stay in mobile-remote modules; no IPC route or public export is added here.
-    // +5 composition-only lines await the extracted operation Hook Host disposer
-    // before quitting. Process custody, cleanup and IPC retirement remain in
-    // operation-resolution-host and Core; no new renderer route is introduced.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_206);
+    // Awaited constrained Hook cleanup uses the extracted desktop-shutdown quit
+    // coordinator. Its failure/retry gate reduces Main without raising this limit.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_201);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -362,9 +361,9 @@ describe("architecture growth budgets", () => {
       // It adds no stable public SDK or extension surface or execution authority.
       // +1 native activity review store for masked receipts and CAS operator decisions.
       // Desktop Main is its sole consumer; no worker/model/public SDK resolution authority.
-      // +3 Host-only declarations expose the constrained process factory,
-      // native operation Hook adapter and opaque permit/resource types.
-      // Stable SDK/extension exports and renderer/model authority are unchanged.
+      // +3 reviewed Host-only contracts: native operation Hook host, constrained
+      // process host, and its opaque permit/resource/runtime types. Published
+      // public/extension contracts remain unchanged; allow no future exports.
       "packages/core/src/index.internal.ts": 101,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
