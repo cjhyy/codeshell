@@ -24,7 +24,12 @@ and the native acceptance were rerun. The final normal main merge includes the
 Session operation-controller binding and Desktop operation-review registration;
 the package, workspace/Desktop builds, twelve typechecks, 93 focused tests and
 actual Mac acceptance were repeated against this combination.
-Subsequent delivery edits are documentation/evidence only. No production
+The documentation head `6b8bf1d6` passed all twelve required jobs in
+[CI 37886572303](https://github.com/cjhyy/codeshell/actions/runs/37886572303).
+The later normal merge of main `f08bbb9c` carries only TODO and delivery-document
+updates. Its runtime, fixture, workflow and dependency blobs remain identical to
+the exercised `1d961632` source; the native evidence keeps its original source
+identity. Subsequent delivery edits are documentation/evidence only. No production
 signing, cipher, transport, or user interface was changed.
 
 ## What the native run proves
