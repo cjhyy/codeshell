@@ -2173,6 +2173,73 @@ test("browser audio chooser requires resources, bounded options and a current gr
   ).toBe(410);
 });
 
+test("browser video chooser advertises resources-gated capabilities and validates capture options without granting iframe devices", async () => {
+  const f = await fixture({ permissions: ["resources"] });
+  const grant = await f.prepare();
+  expect(grant.context.availableMethods).toContain("resources.recordVideo");
+  expect(grant.context.availableMethods).toContain("resources.recordVideo.capabilities");
+  expect(grant.context.capabilities.methodLimits["resources.recordVideo"].timeoutMs).toBe(
+    30 * 60_000,
+  );
+  const invoke = (method: string, params?: unknown) =>
+    f.api(`${grant.instanceId}/call`, "POST", { method, params });
+  const response = await invoke("resources.recordVideo", {
+    source: "screen",
+    microphone: true,
+    systemAudio: true,
+    maxDurationSeconds: 90,
+    maxBytes: 2048,
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    effect: "resources.recordVideo",
+    source: "screen",
+    microphone: true,
+    systemAudio: true,
+    maxDurationSeconds: 90,
+    maxBytes: 2048,
+  });
+  expect(await (await invoke("resources.recordVideo.capabilities", {})).json()).toEqual({
+    effect: "resources.recordVideo.capabilities",
+    maxDurationSeconds: 1200,
+    maxBytes: 200 * 1024 * 1024,
+  });
+  for (const params of [
+    {},
+    { source: "microphone" },
+    { source: ["camera"] },
+    { source: "camera", systemAudio: true },
+    { source: "camera", microphone: 1 },
+    { source: "screen", maxDurationSeconds: 1201 },
+    { source: "screen", maxBytes: 0 },
+    { source: "screen", maxBytes: 201 * 1024 * 1024 },
+    { source: "screen", autoStart: true },
+    [],
+  ])
+    expect((await invoke("resources.recordVideo", params)).status).toBe(400);
+  expect((await invoke("resources.recordVideo.capabilities", { autoStart: true })).status).toBe(
+    400,
+  );
+  const frame = await fetch(f.url + grant.src);
+  expect(frame.headers.get("permissions-policy")).toContain("camera=()");
+  expect(frame.headers.get("permissions-policy")).toContain("display-capture=()");
+  const denied = await fixture({ permissions: [] });
+  const deniedGrant = await denied.prepare();
+  for (const method of ["resources.recordVideo", "resources.recordVideo.capabilities"]) {
+    expect(deniedGrant.context.availableMethods).not.toContain(method);
+    expect(
+      (
+        await denied.api(`${deniedGrant.instanceId}/call`, "POST", {
+          method,
+          params: { source: "camera" },
+        })
+      ).status,
+    ).toBe(403);
+  }
+  f.state.enabled = false;
+  expect((await invoke("resources.recordVideo", { source: "camera" })).status).toBe(410);
+});
+
 test("resource preview streams scoped bytes with seeking, HEAD, and explicit download", async () => {
   const f = await previewFixture();
   expect(f.grant.context.availableMethods).toContain("resources.open");

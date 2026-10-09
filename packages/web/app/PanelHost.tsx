@@ -4,6 +4,9 @@ import { api, ApiError } from "./auth.js";
 import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import { connectPanelRuntime, type PanelRuntimeEvent } from "./panel-runtime-connection.js";
 import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
+import { PanelVideoDialog, type PanelVideoRequest } from "./PanelVideoDialog.js";
+import { panelVideoCapabilities } from "./panel-video-capture.js";
+import { panelVideoOptions } from "../../server/src/panels/browser-capture.js";
 import "./panel-host.css";
 
 const ROOT = "/api/v1/panels/runtime";
@@ -161,7 +164,8 @@ export function PanelHost({
   const [confirmationError, setConfirmationError] = React.useState("");
   const [confirmation, setConfirmation] = React.useState<Confirmation>();
   const [audioRequest, setAudioRequest] = React.useState<PanelAudioRequest>();
-  const activeAudio = React.useRef<PanelAudioRequest | undefined>(undefined);
+  const activeAudio = React.useRef<PanelAudioRequest | PanelVideoRequest | undefined>(undefined);
+  const [videoRequest, setVideoRequest] = React.useState<PanelVideoRequest>();
   const [confirming, setConfirming] = React.useState(false);
   const [reload, setReload] = React.useState(0);
   const callbacks = React.useRef({ onClose, onAuthLost, onDirtyChange, onSubmitPrompt, busy });
@@ -172,12 +176,14 @@ export function PanelHost({
   const confirmationElement = React.useRef<HTMLElement>(null);
 
   React.useEffect(() => {
-    callbacks.current.onDirtyChange?.(!!confirmation || confirming || !!audioRequest);
+    callbacks.current.onDirtyChange?.(
+      !!confirmation || confirming || !!audioRequest || !!videoRequest,
+    );
     if (confirmation) {
       confirmationElement.current?.focus();
       confirmationElement.current?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [confirmation, confirming, audioRequest]);
+  }, [confirmation, confirming, audioRequest, videoRequest]);
 
   React.useEffect(() => {
     const workspace = getApiWorkspace() ?? "";
@@ -244,6 +250,7 @@ export function PanelHost({
     setConfirmation(undefined);
     setConfirming(false);
     setAudioRequest(undefined);
+    setVideoRequest(undefined);
 
     const closeGrant = (grant: PreparedPanel) => {
       if (closeRequested) return;
@@ -280,10 +287,20 @@ export function PanelHost({
       setConnectionStatus("");
       report(cause);
     };
-    const contextual = (context: Record<string, unknown>) => ({
-      ...context,
-      ...(typeof context.sessionId === "string" ? { busy: callbacks.current.busy } : {}),
-    });
+    const contextual = (context: Record<string, unknown>) => {
+      const capture = panelVideoCapabilities();
+      return {
+        ...context,
+        ...(Array.isArray(context.availableMethods)
+          ? {
+              availableMethods: context.availableMethods.filter(
+                (method) => method !== "resources.recordVideo" || capture.camera || capture.screen,
+              ),
+            }
+          : {}),
+        ...(typeof context.sessionId === "string" ? { busy: callbacks.current.busy } : {}),
+      };
+    };
     const reply = (
       source: WindowProxy,
       requestId: string,
@@ -592,20 +609,43 @@ export function PanelHost({
           if (disposed || controller.signal.aborted) return;
           setNotice("面板任务已提交到当前对话，可切换到对话查看进度。");
           reply(child, requestId, accepted);
-        } else if (data.method === "resources.recordAudio") {
+        } else if (data.method === "resources.recordVideo.capabilities") {
+          if (!isRecord(result) || result.effect !== data.method)
+            throw new Error("视频录制能力响应无效。");
+          reply(child, requestId, panelVideoCapabilities());
+        } else if (
+          data.method === "resources.recordAudio" ||
+          data.method === "resources.recordVideo"
+        ) {
+          const video = data.method === "resources.recordVideo";
+          if (!isRecord(result) || result.effect !== data.method) throw new Error("录制请求无效。");
+          const videoOptions = video
+            ? panelVideoOptions(
+                Object.fromEntries(Object.entries(result).filter(([key]) => key !== "effect")),
+              )
+            : undefined;
+          if (videoOptions) {
+            const available = panelVideoCapabilities();
+            if (
+              !available[videoOptions.source] ||
+              (videoOptions.microphone && !available.microphone)
+            )
+              throw new Error("当前浏览器不支持所选视频录制方式，请检查安全连接和设备支持。");
+          }
           if (
-            !isRecord(result) ||
-            result.effect !== data.method ||
-            !Number.isInteger(result.maxDurationSeconds) ||
-            Number(result.maxDurationSeconds) < 1 ||
-            Number(result.maxDurationSeconds) > 600 ||
-            !Number.isInteger(result.maxBytes) ||
-            Number(result.maxBytes) < 1 ||
-            Number(result.maxBytes) > 25 * 1024 * 1024
+            !video &&
+            (!isRecord(result) ||
+              result.effect !== data.method ||
+              !Number.isInteger(result.maxDurationSeconds) ||
+              Number(result.maxDurationSeconds) < 1 ||
+              Number(result.maxDurationSeconds) > 600 ||
+              !Number.isInteger(result.maxBytes) ||
+              Number(result.maxBytes) < 1 ||
+              Number(result.maxBytes) > 25 * 1024 * 1024)
           )
             throw new Error("录音请求无效。");
           if (activeAudio.current || activeConfirmation.current || submissionActive)
-            throw new Error("请先完成当前的录音或确认操作。");
+            throw new Error("请先完成当前的录制或确认操作。");
           const captured = await new Promise<unknown>((resolve, reject) => {
             let settled = false;
             const finish = (value: unknown, failure?: Error) => {
@@ -615,21 +655,35 @@ export function PanelHost({
               controller.signal.removeEventListener("abort", abort);
               if (activeAudio.current === pending) {
                 activeAudio.current = undefined;
-                if (!disposed) setAudioRequest(undefined);
+                if (!disposed) {
+                  setAudioRequest(undefined);
+                  setVideoRequest(undefined);
+                }
               }
               if (failure) reject(failure);
               else resolve(value);
               showNextHostConfirmation();
             };
-            const abort = () => finish(undefined, new Error("录音已关闭或授权已结束。"));
+            const abort = () => finish(undefined, new Error("录制已关闭或授权已结束。"));
             const timer = setTimeout(
-              () => finish(undefined, new Error("录音操作已超时，请重新打开。")),
+              () => finish(undefined, new Error("录制操作已超时，请重新打开。")),
               25 * 60_000,
             );
-            const pending: PanelAudioRequest = {
+            const pending: PanelAudioRequest | PanelVideoRequest = {
               signal: controller.signal,
               maxDurationSeconds: Number(result.maxDurationSeconds),
               maxBytes: Number(result.maxBytes),
+              ...(videoOptions
+                ? {
+                    ...videoOptions,
+                    transferBudget:
+                      isRecord(grant.context.capabilities) &&
+                      isRecord(grant.context.capabilities.bridge)
+                        ? (grant.context.capabilities
+                            .bridge as unknown as PanelVideoRequest["transferBudget"])
+                        : undefined,
+                  }
+                : {}),
               call: async (method, params, operationSignal) => {
                 const signal = operationSignal
                   ? AbortSignal.any([controller.signal, operationSignal])
@@ -659,7 +713,8 @@ export function PanelHost({
             };
             activeAudio.current = pending;
             controller.signal.addEventListener("abort", abort, { once: true });
-            setAudioRequest(pending);
+            if (video) setVideoRequest(pending as PanelVideoRequest);
+            else setAudioRequest(pending);
           });
           reply(child, requestId, captured);
         } else if (data.method === "resources.open") {
@@ -766,7 +821,11 @@ export function PanelHost({
           throw new Error("面板授权已过期，请重新打开。");
         }
         scope.grant = value;
-        setPrepared({ ...value, src: apiUrl(value.src, workspace, projectId) });
+        setPrepared({
+          ...value,
+          context: contextual(value.context),
+          src: apiUrl(value.src, workspace, projectId),
+        });
         handshakeTimeout = setTimeout(() => {
           terminate(
             new Error(
@@ -925,6 +984,7 @@ export function PanelHost({
         </p>
       )}
       {audioRequest && <PanelAudioDialog request={audioRequest} />}
+      {videoRequest && <PanelVideoDialog request={videoRequest} />}
       {confirmation && (
         <section
           className="panel-host-confirm"
@@ -995,7 +1055,7 @@ export function PanelHost({
           title={`${panel.title["zh-CN"] || panel.title.default}面板`}
           sandbox="allow-scripts allow-downloads"
           referrerPolicy="no-referrer"
-          inert={!!confirmation || confirming || !!audioRequest}
+          inert={!!confirmation || confirming || !!audioRequest || !!videoRequest}
           onLoad={() => frameLifecycle.current?.loaded()}
           allow="camera 'none'; microphone 'none'; geolocation 'none'; display-capture 'none'; clipboard-read 'none'; clipboard-write 'none'"
           className="panel-host-frame"
