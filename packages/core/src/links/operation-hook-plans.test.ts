@@ -14,9 +14,48 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import http from "node:http";
+import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
 import { installLocalNetworkGuard } from "../../../../scripts/runtime-cost-smoke-isolation.mjs";
 
-installLocalNetworkGuard("http://127.0.0.1:9");
+const guardOrigin = "http://127.0.0.1:9";
+const guardMarker = Symbol.for("codeshell.cost-smoke.network-guard");
+const priorMarker = Object.getOwnPropertyDescriptor(globalThis, guardMarker);
+const networkSurfaces = [
+  [globalThis, "fetch"],
+  [http, "request"],
+  [http, "get"],
+  [https, "request"],
+  [https, "get"],
+] as const;
+const priorNetwork = networkSurfaces.map(([target, key]) => ({
+  target: target as unknown as Record<string, unknown>,
+  key,
+  descriptor: Object.getOwnPropertyDescriptor(target, key),
+}));
+installLocalNetworkGuard(guardOrigin);
+const ownedNetwork = priorNetwork.map((surface) => surface.target[surface.key]);
+// Bun runs other files in this process. Restore exactly the wrappers/descriptors
+// present before this suite, including an outer guard, before another file runs.
+afterAll(() => {
+  try {
+    for (const [index, surface] of priorNetwork.entries())
+      if (surface.target[surface.key] !== ownedNetwork[index])
+        throw new Error("Another fixture changed this suite's active network guard");
+    if (Reflect.get(globalThis, guardMarker) !== guardOrigin)
+      throw new Error("Another fixture changed this suite's active guard marker");
+    for (const surface of priorNetwork) {
+      if (surface.descriptor)
+        Object.defineProperty(surface.target, surface.key, surface.descriptor);
+      else Reflect.deleteProperty(surface.target, surface.key);
+    }
+    if (priorMarker) Object.defineProperty(globalThis, guardMarker, priorMarker);
+    else Reflect.deleteProperty(globalThis, guardMarker);
+  } finally {
+    syncBuiltinESMExports();
+  }
+});
 expect(() => fetch("https://example.invalid")).toThrow();
 const { parseOperationHookHost } = await import("./operation-hook-plans.js");
 const { assertHookResourceNotCredential, createHookCredentialPolicy } =
