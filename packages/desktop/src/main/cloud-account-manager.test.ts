@@ -35,10 +35,12 @@ function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
   const launched: string[] = [];
   let unavailable = false;
   let retireFailure = false;
+  let saveFailure = false;
   const store = {
     load: () => stored,
     save: (value) => {
       writes++;
+      if (saveFailure) throw new Error("account store cannot save");
       stored = value;
     },
     preflight: () => {
@@ -78,6 +80,9 @@ function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
     },
     failRetire: () => {
       retireFailure = true;
+    },
+    failSave: () => {
+      saveFailure = true;
     },
   };
 }
@@ -303,4 +308,20 @@ test("relay cleanup failure cannot skip root-session revocation or leave sign-in
   ).rejects.toThrow("relay store");
   expect(login.manager.status().state).toBe("signed-in");
   expect(login.requests).toHaveLength(0);
+});
+
+test("refresh persistence and relay cleanup failures still revoke the rotated root grant", async () => {
+  const old = grant({ accessTokenExpiresAt: Date.now() + 1000 });
+  const next = grant({ account: old.account, sessionId: old.sessionId });
+  const ctx = setup(old, async (req) => (req.path.endsWith("refresh") ? next : {}));
+  ctx.failSave();
+  ctx.failRetire();
+  await expect(ctx.manager.getCredential(origin)).rejects.toThrow("relay store");
+  expect(ctx.manager.status().state).toBe("storage-error");
+  expect(ctx.writes()).toBe(1);
+  expect(ctx.retired).toEqual([{ origin, accountId: old.account.id }]);
+  expect(ctx.requests.filter((req) => req.path.endsWith("logout")).map((req) => req.token)).toEqual([
+    next.accessToken,
+  ]);
+  await expect(ctx.manager.getCredential(origin)).rejects.toThrow("登录");
 });
