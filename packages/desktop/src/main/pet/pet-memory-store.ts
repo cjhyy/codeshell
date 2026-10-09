@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { PetContextOriginRef } from "@cjhyy/code-shell-pet";
 
 const MAX_MEMORY_TEXT_LENGTH = 2_000;
 const DEFAULT_MAX_ENTRIES = 200;
@@ -15,6 +16,10 @@ export interface PetMemoryEntry {
   updatedAt: number;
   /** Present iff auto-extracted: the topic segment the fact was distilled from. */
   segmentId?: string;
+  /** Host-issued single-owner source association; never a permission scope. */
+  originRef?: PetContextOriginRef;
+  /** Existing host task identities this fact was observed alongside. */
+  taskIds?: string[];
 }
 
 interface PetMemoryStoreOptions {
@@ -103,8 +108,13 @@ export class PetMemoryStore {
   remember(
     text: string,
     source: PetMemorySource,
-    options: { segmentId?: string } = {},
+    options: {
+      segmentId?: string;
+      originRef?: PetContextOriginRef;
+      taskIds?: readonly string[];
+    } = {},
   ): Promise<PetMemoryEntry> {
+    const association = memoryAssociation(options);
     return this.mutate((entries) => {
       const normalized = normalizeText(text);
       const at = nextMutationTime(entries, this.now());
@@ -142,6 +152,7 @@ export class PetMemoryStore {
         createdAt: at,
         updatedAt: at,
         ...(source === "auto" && options.segmentId ? { segmentId: options.segmentId } : {}),
+        ...association,
       };
       entries.set(entry.id, entry);
       return entry;
@@ -379,5 +390,32 @@ function parseEntry(value: unknown): PetMemoryEntry | null {
     ...(record.source === "auto" && typeof record.segmentId === "string" && record.segmentId
       ? { segmentId: record.segmentId }
       : {}),
+    ...memoryAssociation(record),
   };
+}
+
+function memoryAssociation(options: { originRef?: unknown; taskIds?: unknown }): {
+  originRef?: PetContextOriginRef;
+  taskIds?: string[];
+} {
+  const origin = options.originRef as Partial<PetContextOriginRef> | undefined;
+  const originRef =
+    origin &&
+    typeof origin.id === "string" &&
+    /^origin-[A-Za-z0-9_-]{1,80}$/u.test(origin.id) &&
+    (origin.kind === "desktop" || origin.kind === "im-gateway" || origin.kind === "unknown") &&
+    typeof origin.channel === "string" &&
+    /^[A-Za-z0-9_-]{1,32}$/u.test(origin.channel)
+      ? { id: origin.id, kind: origin.kind, channel: origin.channel }
+      : undefined;
+  const taskIds = Array.isArray(options.taskIds)
+    ? [
+        ...new Set(
+          options.taskIds.filter(
+            (id): id is string => typeof id === "string" && /^[A-Za-z0-9:_-]{1,128}$/u.test(id),
+          ),
+        ),
+      ].slice(0, 4)
+    : [];
+  return { ...(originRef ? { originRef } : {}), ...(taskIds.length ? { taskIds } : {}) };
 }
