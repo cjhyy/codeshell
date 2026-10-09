@@ -11,6 +11,7 @@
 
 | 文档                                                                                                                                         | 当前状态与剩余范围                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [电脑 Web 手机与云端统一工作台](unified-desktop-web-mobile-workbench-plan.md) | 2026-10-09 整体规划；统一目录、选择性共享、三端操作与云端委派电脑尚待分期实施，复用已实现的本地 task-inbox 与设备中继 |
 | [独立 Link Server](link-server-oauth-architecture.md)                                                                                        | 独立服务与双向 OAuth 已实现并通过受控上游验证；真实账号、正式发布与生产部署仍待验收                                                       |
 | [Hub 迭代](codeshell-hub-iteration-design.md) / [远程服务架构](codeshell-hub-remote-service-architecture.md)                                 | 原生云端窗口、设备目录／中继及 Linux 候选已验证；正式部署、实体手机、完整 Panel 适配与多用户边界另列                      |
 | [AgentModule / ResolvedComposition](agent-module-resolved-composition-design.md)                                                             | Phase A/B 已实现；Phase C lifetime/disposer 与 Phase D 请求边界仍待做                                                     |
