@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -73,7 +73,11 @@ const projectRoot = join(isolated.home, "synthetic-project");
 const sessionId = "operation-read-session";
 const evidenceDir = join(isolated.home, "evidence");
 const helperUrl = new URL("./operation-read-fixture.mjs", import.meta.url).href;
-const coreUrl = pathToFileURL(resolve(appDir, "../core/dist/index.js")).href;
+// Resolve as Desktop does: predist materializes its dependency and no longer
+// shares the workspace Core singleton. Installing custody into the workspace
+// copy would leave production Main's actual Core without the synthetic grant.
+const coreUrl = import.meta.resolve("@cjhyy/code-shell-core");
+const internalCoreUrl = import.meta.resolve("@cjhyy/code-shell-core/internal");
 const repository = resolve(appDir, "../..");
 const sourcePaths = [
   "packages/core/src/operations/ledger.ts",
@@ -146,6 +150,32 @@ const artifacts = Object.fromEntries(
     ]),
   ),
 );
+const hostCore = {
+  entry: await realpath(fileURLToPath(coreUrl)),
+  internal: await realpath(fileURLToPath(internalCoreUrl)),
+  artifacts: Object.fromEntries(
+    await Promise.all(
+      [
+        ...artifactPaths.filter((path) => path.startsWith("packages/core/dist/")),
+        "packages/core/dist/index.internal.js",
+        "packages/core/dist/credentials/access.js",
+      ].map(async (path) => {
+        const relative = path.slice("packages/core/dist/".length);
+        const actual = createHash("sha256")
+          .update(await readFile(new URL(relative, coreUrl)))
+          .digest("hex");
+        const workspace =
+          artifacts[path] ??
+          createHash("sha256")
+            .update(await readFile(resolve(repository, path)))
+            .digest("hex");
+        assert.equal(actual, workspace, `Actual Desktop Core differs: ${relative}`);
+        return [relative, actual];
+      }),
+    ),
+  ),
+};
+assert.equal(dirname(hostCore.entry), dirname(hostCore.internal));
 const sourceEvidence = {
   commit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: repository, encoding: "utf8" }).trim(),
   tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], {
@@ -159,8 +189,9 @@ const sourceEvidence = {
   files: sourceFiles,
   harnessFiles,
   artifacts,
+  hostCore,
   fingerprint: createHash("sha256")
-    .update(JSON.stringify({ sourceFiles, harnessFiles, artifacts }))
+    .update(JSON.stringify({ sourceFiles, harnessFiles, artifacts, hostCore }))
     .digest("hex"),
 };
 let app,
