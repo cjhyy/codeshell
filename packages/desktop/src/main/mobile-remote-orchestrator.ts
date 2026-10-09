@@ -18,10 +18,12 @@ import {
   mobileOutputRecoveryAuthority,
   mobileSessionCommandAuthority,
 } from "./mobile-remote/output-recovery-authority.js";
-import { MobileExternalRuntimeCommands } from "./mobile-remote/external-runtime-commands.js";
+import {
+  MobileExternalRuntimeCommands,
+  isPersistedExternalRuntime,
+} from "./mobile-remote/external-runtime-commands.js";
 import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { SessionManager } from "@cjhyy/code-shell-core";
-import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
 import type { OwnedExternalStreamEntry } from "./owned-external-stream.js";
 import {
@@ -109,7 +111,7 @@ export class MobileRemoteOrchestrator {
       service: () => deps.getExternalRuntimeService?.() ?? null,
       isExternal: (id) =>
         !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
-        !!parseExternalRuntimeModelKey(new SessionManager().readSessionState(id)?.model),
+        isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
       exists: (id) => !!new SessionManager().readSessionState(id),
       attachmentPath: requireRendererProjectEntryPath,
     });

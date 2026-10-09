@@ -1,9 +1,21 @@
+import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
 import type { ExternalRuntimeService } from "../external-runtime-service.js";
 import type {
   DispatchMobileChatTurnInput,
   MobileClientEvent,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
+
+/** Persisted provider identity survives a missing/invalid model key. */
+export function isPersistedExternalRuntime(
+  state: { provider?: string; model?: string } | undefined,
+): boolean {
+  return (
+    state?.provider === "codex" ||
+    state?.provider === "claude-code" ||
+    !!parseExternalRuntimeModelKey(state?.model)
+  );
+}
 
 type Authority = { stamp: string; cwd: string; projectId?: string | null; rootId?: string | null };
 type Selection = { sessionId: string; deviceId: string; authority?: Authority; owner?: number };

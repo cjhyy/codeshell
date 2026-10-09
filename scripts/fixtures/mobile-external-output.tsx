@@ -12,7 +12,10 @@ import { ExternalRuntimeService } from "../../packages/desktop/src/main/external
 import { SessionSnapshotStore } from "../../packages/desktop/src/main/SessionSnapshotStore.js";
 import { publishOwnedExternalStream } from "../../packages/desktop/src/main/owned-external-stream.js";
 import { MobileOutputRecovery } from "../../packages/desktop/src/main/mobile-remote/output-recovery.js";
-import { MobileExternalRuntimeCommands } from "../../packages/desktop/src/main/mobile-remote/external-runtime-commands.js";
+import {
+  MobileExternalRuntimeCommands,
+  isPersistedExternalRuntime,
+} from "../../packages/desktop/src/main/mobile-remote/external-runtime-commands.js";
 import {
   mobileOutputRecoveryAuthority,
   mobileSessionCommandAuthority,
@@ -136,7 +139,8 @@ export async function run(root: string, port: number) {
     owner: (id) => owners.get(id),
     service: () => service,
     isExternal: (id) =>
-      service.hasSession(id) || new SessionManager().readSessionState(id)?.provider === "codex",
+      service.hasSession(id) ||
+      isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
     exists: (id) => !!new SessionManager().readSessionState(id),
     attachmentPath: requireRendererProjectEntryPath,
   });
@@ -289,14 +293,12 @@ export async function run(root: string, port: number) {
             bytes: Buffer.byteLength(text()),
             authorityChanges,
             authFailures,
-            replies: viewerReplies
-              .slice(-5)
-              .map(({ event }) => ({
-                type: (event as any).type,
-                seq: (event as any).seq,
-                nextSeq: (event as any).nextSeq,
-                ok: (event as any).ok,
-              })),
+            replies: viewerReplies.slice(-5).map(({ event }) => ({
+              type: (event as any).type,
+              seq: (event as any).seq,
+              nextSeq: (event as any).nextSeq,
+              ok: (event as any).ok,
+            })),
             mirrorCounts: viewerReplies.reduce((counts: Record<string, number>, row) => {
               const key = (row.event as any).type;
               counts[key] = (counts[key] ?? 0) + 1;

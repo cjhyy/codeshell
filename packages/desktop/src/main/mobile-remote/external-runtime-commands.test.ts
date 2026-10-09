@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
+import {
+  MobileExternalRuntimeCommands,
+  isPersistedExternalRuntime,
+} from "./external-runtime-commands.js";
 import type { ExternalRuntimeService } from "../external-runtime-service.js";
 
 function harness() {
@@ -174,4 +177,11 @@ test("retired external selection never falls back to Core after missing state or
   f.disappear();
   expect(f.commands.isExternal("unknown-explicit-session", "tab")).toBe(true);
   expect(f.commands.isExternal("new-mobile-session", "tab", true)).toBe(false);
+});
+
+test("persisted external provider cannot become native merely because its model field is missing or invalid", () => {
+  expect(isPersistedExternalRuntime({ provider: "codex" })).toBe(true);
+  expect(isPersistedExternalRuntime({ provider: "claude-code", model: "malformed" })).toBe(true);
+  expect(isPersistedExternalRuntime({ provider: "other", model: "codex/synthetic" })).toBe(true);
+  expect(isPersistedExternalRuntime({ provider: "openai", model: "gpt-4o" })).toBe(false);
 });
