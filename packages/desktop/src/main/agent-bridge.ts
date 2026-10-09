@@ -20,6 +20,7 @@
  *     will trigger a fresh spawn anyway.
  */
 
+import { publishOwnedExternalStream } from "./owned-external-stream.js";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
@@ -2208,6 +2209,17 @@ export class AgentBridge implements PetStateBridge {
       seq: entry.seq,
       epoch: this.snapshots.epoch,
     });
+  }
+
+  /** External interactive streams retain their exact owning window. */
+  ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
+    publishOwnedExternalStream(
+      this.snapshots,
+      this.windows,
+      this.panelOwnerWebContentsId(sessionId),
+      sessionId,
+      annotateBrowserRuntimeStreamEvent(event, "full"),
+    );
   }
 
   /**

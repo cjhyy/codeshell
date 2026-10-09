@@ -97,6 +97,7 @@ const expectedRuntimeExportsByPartition = {
     "SessionOutputJournal",
     "readOutputJournal",
     "readOutputJournalLegacyBase",
+    "outputUserMessage",
   ],
   logging: ["rotateLogs", "recordUIEvent"],
   managedRuntimes: [

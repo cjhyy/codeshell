@@ -417,6 +417,32 @@ export class Transcript {
     return event;
   }
 
+  /** Commit already-appended input/history before a host starts external work. */
+  sync(): void {
+    if (this.dirty) throw new Error("Transcript persistence is incomplete");
+    if (!this.persistent || this.writer !== defaultTranscriptWriter) return;
+    try {
+      const fd = openSync(this.filePath, "r");
+      try {
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
+      syncDirectoryAncestors(dirname(this.filePath));
+    } catch (error) {
+      this.dirty = true;
+      this.lastFlushFailure = {
+        errno: this.errorErrno(error),
+        message: "Transcript sync failed",
+        timestamp: Date.now(),
+        attempts: 1,
+        recoverable: false,
+        filePath: this.filePath,
+      };
+      throw new Error("Transcript persistence is incomplete", { cause: error });
+    }
+  }
+
   /** Failed note/checkpoint writes must never change the active replay. */
   appendContextNote(text: string, coveredThroughEventId: string): TranscriptEvent | undefined {
     return this.appendDurableContextEvent("context_note", { text, coveredThroughEventId });

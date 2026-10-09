@@ -1,0 +1,479 @@
+{
+  "formatVersion": 1,
+  "createdAt": "2026-10-09T03:47:51.071093+00:00",
+  "sourceCheckpoint": {
+    "sourceCommit": "17df6446d8015824321624ada5f42ac434e3b832",
+    "sourceTree": "3d6dfb70a8d48fae290e5c0776c270fc9fcdb865",
+    "baseCommit": "8dd491d0c57200f1b7382c2c80462c49f67aeca2",
+    "packageLockSha256": "f383097a01585941216c3a1e82ee0bf994f4ed29aa1fb406c25ded503f79bbcb",
+    "lockEqualBase": true,
+    "sourceSha256": {
+      ".github/workflows/ci.yml": "781bed1418924b85fab2be409c0450e9eb4dc0516fae1a1ea04f6632d9fbf473",
+      "TODO.md": "7ef17371b4191739a6720e61ae3f516ed24c35501397471b15a2769091ce692a",
+      "docs/todo/durable-output-journal-delivery.md": "2adca92728572362a97a8bb697114f812d0f5e9c2291c44a957b495830c8fe77",
+      "docs/todo/external-runtime-output-journal-delivery.md": "15ed967d30bdbc20e7d00eacea8689bca2022ac8321687987c894deba9c668fc",
+      "packages/coding/src/external-runtimes/claude-code/runtime.ts": "9d337b335808c23945baa2c8e792eabe77a88000f10d1232131d7a8d9c7d8ab4",
+      "packages/coding/src/external-runtimes/codex/runtime.ts": "a57dc365ca20cce3b2e2f8b0881c3531c1d776b9b59a31c85c1c8afa60450abc",
+      "packages/coding/src/external-runtimes/session-factory.ts": "f661930858ff51f7b892f5433c4b233c2728ee68406b34f5c3af5a85ab9a2b30",
+      "packages/core/src/index.exports.test.ts": "5fa68f6c516390272c23f554a18605b7c4ba28ce79529801027e84fd632dc123",
+      "packages/core/src/index.internal.ts": "e1f4820e21556edba7e9b2a0055a863132265ddbf7a8592addd43914fa48dd0c",
+      "packages/core/src/session/session-manager.ts": "137282dd8476ca7b6a1ec54146b03a125c030c5cd42a60baab4b95efcd5d46c9",
+      "packages/core/src/session/transcript.ts": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "packages/core/src/tool-system/session-tool-host.test.ts": "d7d68a6249bbed7f5227b609c695a08b601d39c52c55beb2990013e6272bc674",
+      "packages/core/src/tool-system/session-tool-host.ts": "803f0bb7181218c8c87795ca64a097e540c6a48b27ea5d290d8a05c60eb06f86",
+      "packages/desktop/src/main/agent-bridge.ts": "8bd5aa6e721007eb00a9ad11cd940b0f9445fe61ff064684d2712223981bc8c1",
+      "packages/desktop/src/main/external-runtime-service.test.ts": "9e6c490cb6c231a96bfdeb691a27fbc6ce0cea3d439396a9c96056eeaf7ffb62",
+      "packages/desktop/src/main/external-runtime-service.ts": "94c7ad02a7c739f2bebfae2376621f635b94dd32e8f06448c7dfca6cbd0866d6",
+      "packages/desktop/src/main/external-runtime-state.test.ts": "4122a1f15ae8b4e69f98b10ab470334f601542dbcc723ec45e6cdb993038cac0",
+      "packages/desktop/src/main/external-runtime-state.ts": "5ad70b3d8493c3a4bd72b8a09d0aeb3cc08d7b1fff82f2386ac772c1e3a5776a",
+      "packages/desktop/src/main/index.ts": "c86627c491b084fa4515a32498fb6ed1ecbad286ed969e89963a96adec00d855",
+      "packages/desktop/src/main/owned-external-stream.test.ts": "9451604c37891902bc2250f9fff3c5442f8e1051caf580a8647c3845c65a20e3",
+      "packages/desktop/src/main/owned-external-stream.ts": "93cb40232b234ebfd2158bb417a3de4b1e8c26cde131dba50e352fd76a1aa86c",
+      "packages/desktop/tests/panel-app-main.test.ts": "402740ab170054881048f8c3074b4dab9a7d31fe248e0898fc95bfe42bc7419d",
+      "scripts/external-output-smoke-isolation.mjs": "ea53f758df04f7fb8caad1a98a78004cb9fbf9c5d9ab4feb79a86b1bb26df1ae",
+      "scripts/fixtures/external-output-adapters.ts": "91035e383f01a3796998343ff066bd5c71e3c62107ccc4aacb99a1e96737ac14",
+      "scripts/fixtures/external-output-cli.mjs": "2342f09d486ed399febbdd03cd9f817012cd2e6552a1af149de9e99b321bba40",
+      "scripts/run-external-output-journal-smoke.mjs": "c0349ff0909353eaefdaf45edfd09f175da23d14b9d4add8c55914dcbc2c2c5d",
+      "scripts/smoke-external-output-journal.mjs": "84bbbf16d4b4c1ca952cdfa3f6fbc94b583660308cb01113c21e9b7a1fa732c5",
+      "tests/architecture-budgets.test.ts": "465744518416b68010fecd5983b5e6b07243402c504d965ac01032375f98ece4"
+    },
+    "nodeBinarySha256": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+  },
+  "baseContainsMobilePR98": true,
+  "draftPR": "https://github.com/cjhyy/codeshell/pull/99",
+  "checks": {
+    "install": {
+      "frozen": true,
+      "freshPrivateHOME": true,
+      "ignoredScripts": true,
+      "initialElectronPostinstallDownloadFailed": true,
+      "lockUnchanged": true
+    },
+    "packageRelease": {
+      "exitCode": 0,
+      "tarballs": 9,
+      "typedEntries": 47,
+      "runtimeImports": 45,
+      "log": "logs/package-final.log"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "workspaces": 12,
+      "includesWebSPA": true,
+      "log": "logs/typecheck-final.log"
+    },
+    "focused": {
+      "pass": 163,
+      "fail": 0,
+      "skip": 0,
+      "files": 11,
+      "log": "logs/focused-final.log"
+    },
+    "priorCodingCoreFocused": {
+      "pass": 190,
+      "fail": 0,
+      "scope": "pre-Mobile coding adapters/session generations/transcript failure; not the final combined acceptance",
+      "log": "logs/focused-coding-core.log"
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 105,
+      "baselinePassed": true,
+      "logs": ["logs/lint-combined.log", "logs/lint-baseline-final.log"]
+    },
+    "format": {
+      "taskOwnedFilesPassed": true,
+      "globalExistingWarnings": 416,
+      "allWarnedFilesByteIdenticalToOriginMain": true,
+      "noUnrelatedFormattingApplied": true,
+      "logs": ["logs/format-combined.log", "logs/format-owned-combined.log"],
+      "scopeReceipt": "format-scope.json"
+    },
+    "externalNative": {
+      "exitCode": 0,
+      "cases": 18,
+      "receipt": "native/native-receipt.json",
+      "log": "logs/native-final.log",
+      "pid": 90407,
+      "ppid": 90395,
+      "uid": 501,
+      "homeHash": "60fd79f8da90cd79593939bf7bcf68c5e598e8f2e43db1d44dddbf8730aa9010",
+      "nodeVersion": "22.16.0",
+      "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
+      "recordedNodePreCorePids": 23,
+      "requestAndColdObservedPids": 22,
+      "preCoreNegativeProbesPerNode": 4,
+      "guardEvents": {
+        "blocked": 92,
+        "pre-core": 23,
+        "owned-listener": 19,
+        "allowed-spawn": 22,
+        "allowed-loopback": 1
+      },
+      "healthyCursorProgressionAndSharedCoverageChecked": true,
+      "largeProviderBytes": [9439680, 9439680],
+      "otherOwnerFrames": 0
+    },
+    "mobileNativeCoreCombined": {
+      "exitCode": 0,
+      "log": "logs/mobile-native-final.log",
+      "result": {
+        "mobileNativeRecovery": true,
+        "elapsedMs": 67979,
+        "actualPid": 90501,
+        "ppid": 90500,
+        "homeHash": "47e57004fee24b7ab394e7c4b413768517b35f1247c983725f6dacf057272890",
+        "modelRequests": 2,
+        "frames": 2223,
+        "recoveredBytes": 9059235,
+        "journalBytes": 33859020,
+        "pageRequests": 177,
+        "maximumPageBytes": 1049467,
+        "stableSubmit": true,
+        "actualAgentServerPreliminaryInput": true,
+        "actualFollowUpInput": true,
+        "actualIdempotentRetry": true,
+        "newMainEpoch": true,
+        "authenticatedWsReconnect": true,
+        "frozenAppendJoined": true,
+        "sameEpochGap": true,
+        "unfinishedNotCompleted": true,
+        "corruptionBarrier": true,
+        "projectRevoked": true,
+        "deviceRevoked": true,
+        "visibleBeforeDamageHash": "8d72bd1c403f843c3df4b73ed9d39aa8a615ef229698003c221947766cf43ce2"
+      },
+      "doesNotProveExternalCliMobileAdapter": true
+    },
+    "finalExactHeadCI": "Separate PR99 checks must pass on the final docs/evidence head; not inferred from local gates or old failed checkpoints"
+  },
+  "checkpointFailures": {
+    "head": "4cedea981e5b0ba79745a1278dec83b3b5df5f52",
+    "workflowRun": 37879891928,
+    "manifest": "ci-checkpoint/failures.json",
+    "fixCommit": "17df6446d8015824321624ada5f42ac434e3b832",
+    "fixes": [
+      "typeof string narrows accounting identity",
+      "exact internal contract registers existing outputUserMessage projection",
+      "internal export budget 96→97 with explicit Core/Desktop consumer rationale"
+    ],
+    "targetedRegression": {
+      "pass": 26,
+      "fail": 0,
+      "skip": 0,
+      "log": "logs/ci-failure-regressions.log"
+    }
+  },
+  "retainedHarnessFailures": {
+    "allTaskLogsIncluded": true,
+    "note": "Earlier failing install/type/test/fixture/format phases remain separate raw logs; only named final gates constitute final acceptance."
+  },
+  "isolation": {
+    "freshRealPrivateHOME": true,
+    "nodePreloadBeforeCoreHostImport": true,
+    "childInheritedNodeAndHOMEProven": true,
+    "exactOwnedLoopbackOnly": true,
+    "hashPinnedSyntheticCliAndColdMainOnly": true,
+    "subprocessNegativeProbe": true,
+    "nodeInterpreterPinnedToParent": true,
+    "buildTimeoutMs": 60000,
+    "fixtureTotalDeadlineMs": 180000,
+    "cleanupOnlyOwnedDetachedProcessGroup": true,
+    "javascriptGuardNotOSSandbox": true,
+    "notSystemWideExternalIOObservation": true,
+    "noRealProviderAccountModelOrProductionRequest": true,
+    "rawContainsNoHOMEDataOrTranscriptCopies": true
+  },
+  "boundaries": [
+    "Desktop owned ExternalRuntimeService.send and existing Panel agent.submitPrompt; Main journal recovery and exact owner-window live delivery",
+    "Existing local history read policy unchanged",
+    "Paired Mobile external CLI live mirror/recovery remains unimplemented by this slice",
+    "Independent Goal control/background/no-run output, CCRoom and other unadapted producers remain outside the journal",
+    "Native ephemeral agent.task.start remains unchanged",
+    "No arbitrary history import, automatic retention/rotation, administrative repair, physical GUI/device/weak-network, real logged-in CLI or billing acceptance",
+    "No UI/sidebar, dependency update, deployment or release"
+  ],
+  "rawEvidence": {
+    "directory": "/Users/admin/.codex/worktrees/external-output-journal/codeshell/artifacts/external-output-journal/raw",
+    "archive": "/Users/admin/.codex/worktrees/external-output-journal/codeshell/artifacts/external-output-journal/raw-evidence.tar.gz",
+    "archiveSha256": "dcbb76ec01c071381c020e5b6e0d648612f50bd0518d61e5ee165386e6f14ba2",
+    "regularFiles": 68,
+    "fileMode": "0600",
+    "directoryMode": "0700",
+    "archiveVerifiedWithoutExtraction": true,
+    "files": {
+      "logs/ci-failure-regressions.log": {
+        "bytes": 3188,
+        "sha256": "b4c39c1118e3eeca8017ca51523bb2035904c1c6d9a89ac09ba56fe6f5ce1d04"
+      },
+      "logs/focused-accounting.log": {
+        "bytes": 11418,
+        "sha256": "76b39cc13f4e9da3525de3e3a856b6d0934ac2f550589567a5b492d3699e943f"
+      },
+      "logs/focused-coding-core.log": {
+        "bytes": 19916,
+        "sha256": "9eb1816c24ca0d2881e71171dd64935374c79e6c3acebc6ac8fa5f8ecccad0b4"
+      },
+      "logs/focused-combined.log": {
+        "bytes": 17259,
+        "sha256": "464e0d17f66febaea852ce50e59adc7c54227ed7446cfd14d14759c2294083fd"
+      },
+      "logs/focused-fifth.log": {
+        "bytes": 14210,
+        "sha256": "e628b0f27622888112617f935a812755f63ecf508ec06520c04ee71f11bb4190"
+      },
+      "logs/focused-final.log": {
+        "bytes": 18063,
+        "sha256": "29a694ec162622324fbfe0f4c96c58f52f72d1d0a7fcddace3cf5fad23605a08"
+      },
+      "logs/focused-finally.log": {
+        "bytes": 7113,
+        "sha256": "0d287fec177a73fba5ae2df001eeb0617b5577c1c5e933c05daccd2439c56f32"
+      },
+      "logs/focused-fourth.log": {
+        "bytes": 11386,
+        "sha256": "27ba061b61dbf474862370e8155f9fc70feb57b084c3b5d37fabdec15256f07c"
+      },
+      "logs/focused-gap-accounting.log": {
+        "bytes": 9646,
+        "sha256": "ac874e794ec2080103b19f726e382adfb87af30d8b6fd1bdfa0f68d2dc87ff75"
+      },
+      "logs/focused-goal-finalization.log": {
+        "bytes": 7218,
+        "sha256": "25160fe402030c1d798e68917b8ac3947f9f49cef448c3a6a8e59427d1794c3c"
+      },
+      "logs/focused-initial.log": {
+        "bytes": 14107,
+        "sha256": "266e631102289ce7d14300d9939e79e1d826144349ce61a1091b8f49bd7c69fe"
+      },
+      "logs/focused-precheckpoint-2.log": {
+        "bytes": 14711,
+        "sha256": "79c8cc0b495ed0b80c86bfed904795db261534146a5936944f47eaee4803471e"
+      },
+      "logs/focused-second.log": {
+        "bytes": 10997,
+        "sha256": "a94385c450bc1120601c1bad84656e9f582ec6fa91c46264a252096e3a2673b7"
+      },
+      "logs/focused-third.log": {
+        "bytes": 12462,
+        "sha256": "27028de9a25378b0a28b25680ca38e573cab1b29ffc389f30cdba2edd1e289ed"
+      },
+      "logs/format-accounting.log": {
+        "bytes": 165,
+        "sha256": "be33460c9e851f81e9de848b25f1f295a1145028b64ecdff0fc8fcc064e3b657"
+      },
+      "logs/format-bridge.log": {
+        "bytes": 48,
+        "sha256": "a39504093c8cd0f80754977ed9b7905c191d80406a7e00da6858e42e74950bbd"
+      },
+      "logs/format-checkpoint-2.log": {
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      "logs/format-combined.log": {
+        "bytes": 22613,
+        "sha256": "9c1339c3a7581e5cb7193875e24d0992632e8d34f8b5fb77030a0f4581a85775"
+      },
+      "logs/format-gap-interrupt.log": {
+        "bytes": 207,
+        "sha256": "6b3d8de6dbcd7a90774a7bda24d69da9795f8b3a09e0041be242b630e884f449"
+      },
+      "logs/format-gap.log": {
+        "bytes": 383,
+        "sha256": "69d35ce3ab69359bf7e88bd15993f4f2239c3a7778012ed3277982f12d0c83f9"
+      },
+      "logs/format-goal-finalization.log": {
+        "bytes": 180,
+        "sha256": "a690787fb5444eea9b1cce146b5d04b3d6f314fda24e18de146466e9a1a6e0d3"
+      },
+      "logs/format-native-accounting.log": {
+        "bytes": 47,
+        "sha256": "eaac8528671c242ec9cb8c8368750c97b91d9362f8ca58a6ce6683ccd78dc376"
+      },
+      "logs/format-owned-combined.log": {
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      "logs/format-partial.log": {
+        "bytes": 162,
+        "sha256": "5ccdc52f1615665c409de0479b96306597b69961d55357d8a1880986faec6f32"
+      },
+      "logs/format-progress-2.log": {
+        "bytes": 1030,
+        "sha256": "9328254ba5e3cfdec3fda89fbfb79db4fe8d8653bef31c1a183ad3023eac5776"
+      },
+      "logs/format-progress-3.log": {
+        "bytes": 147,
+        "sha256": "ea2a413ba34c93a22f5c424967c898db9430175e4b8416c2da4ef2a449010ffb"
+      },
+      "logs/format-progress.log": {
+        "bytes": 303,
+        "sha256": "dadc9d5dd3de52027ea0f208402896e8f159c0817216b4d6b51afa56fc01d216"
+      },
+      "logs/format-service-finally.log": {
+        "bytes": 60,
+        "sha256": "861745970ef9704cf8491915a291afb331b09b69e557e5c67c0d68182b8e32e2"
+      },
+      "logs/format-source.log": {
+        "bytes": 156,
+        "sha256": "4b7dbab6b1bfac0de2a09b26e705c072d5dd893bc63cf36e43078b68d1c213fb"
+      },
+      "logs/install-ignored-scripts.log": {
+        "bytes": 163,
+        "sha256": "2e3863d7fd162e7f0a3289d36ebf5ecaee51d8ad37ab5e7de3f917c0b1af7ecf"
+      },
+      "logs/install.log": {
+        "bytes": 981,
+        "sha256": "a5a3aa8f0fab2545aaf38c465c9dc6061565dc62e7ceeebc01e0279d15201343"
+      },
+      "logs/lint-baseline-checkpoint-2.log": {
+        "bytes": 88,
+        "sha256": "df16628e9a7c4c7968bcde20c1748af068c76addc2c1bfe182f2bd9d3dcff321"
+      },
+      "logs/lint-baseline-final.log": {
+        "bytes": 88,
+        "sha256": "df16628e9a7c4c7968bcde20c1748af068c76addc2c1bfe182f2bd9d3dcff321"
+      },
+      "logs/lint-checkpoint-2.log": {
+        "bytes": 21016,
+        "sha256": "9c6c6068aaea6bda09ccc0f8a000f181e73cbc1025e22bd70a234731a9d4051e"
+      },
+      "logs/lint-combined.log": {
+        "bytes": 21016,
+        "sha256": "9c6c6068aaea6bda09ccc0f8a000f181e73cbc1025e22bd70a234731a9d4051e"
+      },
+      "logs/lint-progress.log": {
+        "bytes": 21243,
+        "sha256": "571f50b87d26797afffc456d2be45483341090ad405226133258e75b5beaba06"
+      },
+      "logs/mobile-native-final.log": {
+        "bytes": 1111,
+        "sha256": "019b5a4fe13d6b689a8e0461da3307cbb1efee4b2027fa727385614771750685"
+      },
+      "logs/native-accounting.log": {
+        "bytes": 912,
+        "sha256": "562f800af7e84ca5c080654dee63a1b6b9d5e9c281733a31fa4a9561af5285ec"
+      },
+      "logs/native-fifth.log": {
+        "bytes": 255,
+        "sha256": "b242287875b0173e424a97a179b8e177015084a31689ad9e005dec110e62096b"
+      },
+      "logs/native-final.log": {
+        "bytes": 464,
+        "sha256": "aa482f2c210457feab009166a37ac120530605ff58b875f7083594a0245d15a7"
+      },
+      "logs/native-fourth.log": {
+        "bytes": 255,
+        "sha256": "86a38677158b203b6d02a9e542c651c34e160d25bb2e21e30ac2b07708ec4b5f"
+      },
+      "logs/native-gap-accounting.log": {
+        "bytes": 464,
+        "sha256": "d5565d2190c2d8248c3d2f1533c5170d5f2baccbec5888428ebc4741247a92c2"
+      },
+      "logs/native-initial.log": {
+        "bytes": 863,
+        "sha256": "afd710f050a8401b0b88fa30536037305a371ee2542eb511dd253b8f6da2c27c"
+      },
+      "logs/native-precheckpoint-2.log": {
+        "bytes": 464,
+        "sha256": "97367e30811cdb922a22edfee90715ef41be2b968734c77d758df98f6555c347"
+      },
+      "logs/native-second.log": {
+        "bytes": 1277,
+        "sha256": "cd1b940d27a09dd4fba24afd1f9fa95fc401cd0a6b8256a7ca86e27c0e44f727"
+      },
+      "logs/native-sixth.log": {
+        "bytes": 464,
+        "sha256": "8c022ed6bd9a36ff62155854d90bcd16249c7ec65c1945217d49a9ec8c8b5854"
+      },
+      "logs/native-third.log": {
+        "bytes": 646,
+        "sha256": "4680e34a9ad6275b5fd55223f082a2aeeb82a2f4414eb63afae397ff31315bc1"
+      },
+      "logs/package-checkpoint.log": {
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      "logs/package-combined.log": {
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      "logs/package-final.log": {
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      "logs/package-gate-initial.log": {
+        "bytes": 1505,
+        "sha256": "3bb6a74a34040cf8a828adcc5a6e5931b09d1131547aabb9bc7cd200188ee173"
+      },
+      "logs/package-gate-second.log": {
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      "logs/package-gate-third.log": {
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      "logs/typecheck-combined.log": {
+        "bytes": 4694,
+        "sha256": "deb07e88919bacbaf30a0c155d01216585d484c07ce7f2aa0584a1a66f7ecaf2"
+      },
+      "logs/typecheck-final.log": {
+        "bytes": 4537,
+        "sha256": "ab1bda73fd6fb4ba1643bfb577f6a6a4731d7b010a2a1e580e5883d8d56a602c"
+      },
+      "logs/typecheck-initial.log": {
+        "bytes": 4537,
+        "sha256": "871bacb3e7726933f6a61d5f80392ca8272a401cfad0cae1a0475f9d4896ec28"
+      },
+      "logs/typecheck-progress.log": {
+        "bytes": 4537,
+        "sha256": "850e249aa57de7721c77f11033fa422f3b10f1bcbb65418d4e1d78357326ea32"
+      },
+      "run-clean.sh": {
+        "bytes": 582,
+        "sha256": "c156d514a929cdde539a1845000c4a9191651c535d36d9c8ae960308d39635da"
+      },
+      "node-verification.json": {
+        "bytes": 168,
+        "sha256": "2e1c7dca1546b391c2e227ada566ab9ff04b3e1e8a31c546363eccbd7d1dc7a1"
+      },
+      "source-final.json": {
+        "bytes": 3793,
+        "sha256": "b94f1ff58ef8074a527eaf46ce56b9eb1bd176c10c66969fbfe6b86b10cb3625"
+      },
+      "format-scope.json": {
+        "bytes": 163,
+        "sha256": "39b48214b05353e335de076c146ef07c63f97a07976b05d2588844dd2c7b5b21"
+      },
+      "native/native-receipt.json": {
+        "bytes": 10408,
+        "sha256": "ff87c583cc3e2df25a746c935400b33e011967dbb53e879cc336735d67162284"
+      },
+      "native/guard.jsonl": {
+        "bytes": 27425,
+        "sha256": "afc19e94cbaff3ddbbc0c09e02e3daef657ce14dbb9ceedf3c558a21634395cc"
+      },
+      "native/requests.jsonl": {
+        "bytes": 3673,
+        "sha256": "5ff7671f41dc4ee8f02123e291b70fa07942b3b5a27e5dd44057c143fb22a4fc"
+      },
+      "ci-checkpoint/failures.json": {
+        "bytes": 1424,
+        "sha256": "ad63d7082d8320231912067879a5611ccaa38c6a0512692c6e22c2db7f3a951a"
+      },
+      "ci-checkpoint/typecheck.log": {
+        "bytes": 23592,
+        "sha256": "ee0da86a52dd20ac8dfeaf539b37d03088e2aa808d2ecd1ad2c00f26dfb6affb"
+      },
+      "ci-checkpoint/core-rest.log": {
+        "bytes": 505026,
+        "sha256": "8821ed19185c623ccf2040c2d7c05d666e82c19e890eae5b466f696d6a8560a5"
+      },
+      "ci-checkpoint/rest.log": {
+        "bytes": 844551,
+        "sha256": "30966bcb7725579a88dbcdd09b06d0ecda5814461384b2a4c26abc842fe91fe1"
+      }
+    }
+  }
+}

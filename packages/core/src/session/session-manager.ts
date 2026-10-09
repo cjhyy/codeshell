@@ -600,6 +600,16 @@ export class SessionManager {
     return generation;
   }
 
+  /** A registered writer must stop ordinary writes after its Session closes. */
+  isSessionGenerationCurrent(sessionId: string): boolean {
+    assertSafeSessionId(sessionId);
+    const generation = this.registeredCloseEpochs.get(sessionId);
+    return (
+      generation !== undefined &&
+      generation === (currentSessionCloseEpochs.get(this.generationKey(sessionId)) ?? 0)
+    );
+  }
+
   /** Advance the close epoch once before close waits for the old run to settle. */
   incrementSessionGeneration(sessionId: string): number {
     assertSafeSessionId(sessionId);
@@ -1533,6 +1543,23 @@ export class SessionManager {
     partial: SessionStateFieldPatch,
     expectedRunId?: string,
   ): number {
+    return this.mergeSessionState(sessionId, () => partial, expectedRunId);
+  }
+
+  /** Compute an owned run's patch from the latest state on every CAS attempt. */
+  updateSessionRunState(
+    sessionId: string,
+    expectedRunId: string,
+    update: (current: Readonly<SessionState>) => SessionStateFieldPatch,
+  ): number {
+    return this.mergeSessionState(sessionId, update, expectedRunId);
+  }
+
+  private mergeSessionState(
+    sessionId: string,
+    update: (current: Readonly<SessionState>) => SessionStateFieldPatch,
+    expectedRunId?: string,
+  ): number {
     assertSafeSessionId(sessionId);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
@@ -1541,6 +1568,7 @@ export class SessionManager {
       if (expectedRunId !== undefined && state.runId !== expectedRunId) {
         throw new SessionError(`Session run identity conflict for ${sessionId}`);
       }
+      const partial = update(structuredClone(state));
       if (
         partial.kind !== undefined &&
         normalizedSessionKind(partial.kind) !== normalizedSessionKind(state.kind)
