@@ -22,6 +22,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { nanoid } from "nanoid";
 import type {
   SessionForkLineage,
@@ -59,6 +60,7 @@ import type { SessionWorkspaceCapability } from "../capabilities/index.js";
 // Engines bind the same epoch; only close advances it. This intentionally does
 // not claim cross-process/Worker protection.
 const currentSessionCloseEpochs = new Map<string, number>();
+const issuedClosingRunFinalizers = new Map<string, number>();
 
 const SESSION_STATE_LOCK_STALE_MS = 10_000;
 const SESSION_STATE_LOCK_RETRY_DELAYS_MS = [5, 10, 20, 40] as const;
@@ -85,6 +87,37 @@ export type SessionStateFieldPatch = Readonly<
     >
   >
 >;
+
+const RUN_FINAL_STATE_FIELDS = [
+  "status",
+  "lastCompletionKind",
+  "turnCount",
+  "turnSeq",
+  "tokenUsage",
+  "cumulativePromptTokens",
+  "cumulativeCacheReadTokens",
+  "cumulativeCacheCreationTokens",
+  "contextUsageAnchor",
+  "costState",
+  "completedSnapshotVersion",
+  "completedThroughEventId",
+] as const satisfies readonly (keyof SessionState)[];
+
+/** Closing owners can publish final run fields, never detached domain metadata. */
+export type SessionRunFinalStatePatch = Readonly<
+  Pick<SessionState, (typeof RUN_FINAL_STATE_FIELDS)[number]>
+>;
+
+export interface SessionClosingRunFinalizer {
+  readonly runId: string;
+  commit: (
+    readFinal: () => {
+      fields: SessionRunFinalStatePatch;
+      usageDelta: TokenUsage;
+      previousContextUsageAnchor: SessionState["contextUsageAnchor"];
+    },
+  ) => boolean;
+}
 
 export type GoalTerminalSaveOutcome = "persisted" | "obsolete" | "failed";
 
@@ -573,7 +606,82 @@ export class SessionManager {
     const key = this.generationKey(sessionId);
     const next = (currentSessionCloseEpochs.get(key) ?? 0) + 1;
     currentSessionCloseEpochs.set(key, next);
+    issuedClosingRunFinalizers.delete(key);
     return next;
+  }
+
+  /**
+   * Give the closing owner one final merge after the revoked run has settled.
+   * This does not rebind this manager: all its ordinary writers remain fenced.
+   * The lease expires on another close or a durable run-identity replacement.
+   */
+  createClosingRunFinalizer(
+    sessionId: string,
+    closingEpoch: number,
+    expectedRunId: string,
+  ): SessionClosingRunFinalizer | undefined {
+    assertSafeSessionId(sessionId);
+    const key = this.generationKey(sessionId);
+    if (
+      this.registeredCloseEpochs.get(sessionId) !== closingEpoch - 1 ||
+      currentSessionCloseEpochs.get(key) !== closingEpoch
+    ) {
+      return undefined;
+    }
+    const initial = this.readSessionState(sessionId);
+    if (!expectedRunId || initial?.runId !== expectedRunId) return undefined;
+    if (issuedClosingRunFinalizers.get(key) === closingEpoch) return undefined;
+    issuedClosingRunFinalizers.set(key, closingEpoch);
+    const runId = expectedRunId;
+    let consumed = false;
+    return {
+      runId,
+      commit: (readFinal) => {
+        if (consumed) return false;
+        consumed = true;
+        try {
+          for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+            if (currentSessionCloseEpochs.get(key) !== closingEpoch) return false;
+            const latest = this.readPersistedState(sessionId);
+            if (latest.runId !== runId) return false;
+            // Read after settlement and on every CAS retry, including a fresh
+            // ledger serialization. Do not freeze usage/cost before end hooks.
+            const { fields: partial, usageDelta, previousContextUsageAnchor } = readFinal();
+            if (typeof partial.status !== "string" || partial.status === "active") return false;
+            // Project at runtime too: a cast/JavaScript caller cannot smuggle
+            // domain metadata or a new run identity through the narrow lease.
+            const fields = Object.fromEntries(
+              RUN_FINAL_STATE_FIELDS.map((field) => [field, structuredClone(partial[field])]),
+            );
+            if (Object.values(usageDelta).some((n) => !Number.isFinite(n) || n < 0)) return false;
+            // This delta belongs only to the revoked run's uncommitted usage.
+            // Other owners' pre/post-close auxiliary usage stays in latest.
+            fields.tokenUsage = addTokenUsage(latest.tokenUsage, usageDelta);
+            Object.assign(
+              fields,
+              addCumulativeUsage(
+                normalizeCumulativeUsageCounters(latest, latest.tokenUsage),
+                usageDelta,
+              ),
+            );
+            // An independent owner may have advanced context before close too.
+            // Only replace the exact anchor our Engine last successfully wrote.
+            if (!isDeepStrictEqual(latest.contextUsageAnchor, previousContextUsageAnchor)) {
+              delete fields.contextUsageAnchor;
+            }
+            Object.assign(latest, fields);
+            const result = this.saveStateAttempt(latest, closingEpoch);
+            if (result.ok) return true;
+            if (result.reason !== "revision_conflict") return false;
+            // A domain writer won the CAS. Re-read it and recheck run identity;
+            // never restore a stale snapshot merely to publish terminal fields.
+          }
+        } catch {
+          return false;
+        }
+        return false;
+      },
+    };
   }
 
   /**
