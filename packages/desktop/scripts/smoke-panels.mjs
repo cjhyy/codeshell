@@ -34,6 +34,21 @@ const mock = await startMockProviderServer();
 const guardModule = macosAcceptance
   ? new URL("./macos-keychain-guard.mjs", import.meta.url).href
   : undefined;
+const confinement = await prepareConfinedElectronFixture({
+  appDir,
+  isolated,
+  origin: mock.origin,
+  guardModule,
+  ...(macosAcceptance ? { guardReceiptReady: (receipt) => receipt.negativeProbes === 7 } : {}),
+});
+const ownedControl = macosAcceptance
+  ? (await import("./owned-electron-control.mjs")).prepareOwnedElectronControl({
+      appDir,
+      mainEntry: confinement.mainEntry,
+      home: isolated.home,
+      receiptFile: join(isolated.home, "owned-control.jsonl"),
+    })
+  : undefined;
 const parentGuard = macosAcceptance
   ? await (
       await import(guardModule)
@@ -43,13 +58,7 @@ const parentGuard = macosAcceptance
       "parent",
     )
   : undefined;
-const confinement = await prepareConfinedElectronFixture({
-  appDir,
-  isolated,
-  origin: mock.origin,
-  guardModule,
-  ...(macosAcceptance ? { guardReceiptReady: (receipt) => receipt.negativeProbes === 7 } : {}),
-});
+ownedControl?.activate();
 const launchEnvironment = {
   ...confinement.env,
   ...(macosAcceptance
@@ -102,6 +111,8 @@ async function saveAcceptanceEvidence(phase, details = {}) {
     "network-guard.jsonl",
     "spawned-workers.jsonl",
     "real-keyring-bootstrap.jsonl",
+    "parent-network-guard.jsonl",
+    "owned-control.jsonl",
   ])
     await writeFile(
       join(acceptanceEvidence, `${phase}-${name}`),
@@ -692,6 +703,8 @@ try {
       console.error(`Could not preserve failure evidence: ${error.message}`),
     );
   await app?.close().catch(() => undefined);
+  if (macosAcceptance)
+    await saveAcceptanceEvidence("closed", { keychainResult: acceptanceResult, smokePassed });
   await mock.close().catch(() => undefined);
   await isolated.cleanup();
 }
