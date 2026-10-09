@@ -44,6 +44,10 @@ if (kind === "claude-code") {
     result: "",
     usage: { input_tokens: 10, output_tokens: 2 },
   });
+  if (process.env.CODESHELL_OUTPUT_DELAYED_EXIT) {
+    record("result-before-exit");
+    await new Promise((done) => setTimeout(done, 1000));
+  }
 } else {
   let turns = 0;
   const input = createInterface({ input: process.stdin });
@@ -142,6 +146,33 @@ if (kind === "claude-code") {
         method: "item/agentMessage/delta",
         params: { threadId: "fixture-thread", turnId, itemId: "message", delta: part(index) },
       });
+    if (process.env.CODESHELL_OUTPUT_PARTIAL_USAGE) {
+      for (let repeat = 0; repeat < 2; repeat++)
+        await send({
+          method: "thread/tokenUsage/updated",
+          params: {
+            threadId: "fixture-thread",
+            turnId,
+            tokenUsage: { last: { inputTokens: 10, outputTokens: 2 } },
+          },
+        });
+    } else {
+      await send({
+        method: "thread/tokenUsage/updated",
+        params: {
+          threadId: "fixture-thread",
+          turnId,
+          tokenUsage: {
+            last: { inputTokens: 20, outputTokens: 2, cachedInputTokens: 4 },
+            total: {
+              inputTokens: 100 + number * 20,
+              outputTokens: 10 + number * 2,
+              cachedInputTokens: 20 + number * 4,
+            },
+          },
+        },
+      });
+    }
     if (process.env.CODESHELL_OUTPUT_HOLD) return;
     await send({
       method: "turn/completed",

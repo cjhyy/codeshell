@@ -1494,3 +1494,40 @@ test("Goal finalization disk failure overrides an already computed successful pr
   });
   await svc.stopAll();
 });
+
+for (const mode of ["interrupt", "stop", "replace"] as const) {
+  test(`Goal ${mode} after provider terminal but before done writes one aborted logical terminal`, async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    let entered!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((done) => {
+      entered = done;
+    });
+    const blocked = new Promise<void>((done) => {
+      release = done;
+    });
+    providerSend = async (args) => {
+      const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+      emit({ type: "text_delta", text: "provider result" });
+      emit({ type: "turn_complete", reason: "completed" });
+      entered();
+      await blocked;
+    };
+    const pending = svc.send(request.sessionId, {
+      text: "Goal",
+      goal: { objective: "unfinished", maxTurns: 2 },
+    });
+    await ready;
+    if (mode === "interrupt") await svc.interrupt(request.sessionId);
+    else if (mode === "stop") await svc.stop(request.sessionId);
+    else await svc.start(request);
+    release();
+    expect(await pending).toMatchObject({ ok: false, reason: "aborted_streaming" });
+    expect(streamEvents.filter((event) => event.type === "turn_complete")).toHaveLength(1);
+    expect(new SessionManager().readSessionState(request.sessionId)?.status).toBe(
+      "aborted_streaming",
+    );
+    await svc.stopAll();
+  });
+}

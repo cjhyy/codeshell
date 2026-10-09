@@ -1119,6 +1119,9 @@ export class ExternalRuntimeService {
               const physicalTurn = Symbol("provider-turn");
               entry.providerTurn = physicalTurn;
               const runId = entry.recorder.outputRunId;
+              // Match the journal order. A Panel input already has cursor N;
+              // publishing start N+1 first would invalidate shared coverage.
+              if (nextInput.displayText && !nextInput.injected) this.emitSafely(sessionId, user);
               if (providerRound === 0) {
                 logicalRunId = runId;
                 this.emitSafely(sessionId, entry.recorder.startEvent());
@@ -1135,7 +1138,6 @@ export class ExternalRuntimeService {
                   return;
                 entry.forwardEvent(event);
               };
-              if (nextInput.displayText && !nextInput.injected) this.emitSafely(sessionId, user);
               const turn = await entry.session.send(nextInput, onEvent);
               await turn.done;
             } catch (error) {
@@ -1240,6 +1242,20 @@ export class ExternalRuntimeService {
     const run = this.goals.running(sessionId);
     if (run && this.goals.isCurrent(run)) this.goals.pause(run, "用户已停止本轮执行");
     this.goals.stop(sessionId);
+    // A CLI result can settle its provider turn before process exit resolves
+    // done. User Stop still aborts the open logical Goal in that narrow gap.
+    if (
+      entry?.lifecycle.goalRunActive &&
+      entry.recorder.isTurnFinished &&
+      entry.recorder.hasOpenRun
+    ) {
+      try {
+        const terminal = entry.recorder.completeRun("aborted_streaming");
+        if (terminal) this.emitSafely(sessionId, terminal);
+      } catch {
+        entry.outputFailure();
+      }
+    }
     await this.interruptGoalTurn(sessionId, run);
   }
 
@@ -1277,7 +1293,10 @@ export class ExternalRuntimeService {
     if (!entry) return;
     entry.lifecycle.interruptGeneration++;
     this.goals.stop(sessionId);
-    if (entry.lifecycle.turnActive) {
+    if (
+      entry.lifecycle.turnActive ||
+      (entry.lifecycle.goalRunActive && entry.recorder.hasOpenRun)
+    ) {
       // Persist and stream an explicit terminal boundary before invalidating the
       // provider callbacks. Otherwise app shutdown / deletion can leave Session
       // state "active" forever and the next launch restores a phantom busy turn.

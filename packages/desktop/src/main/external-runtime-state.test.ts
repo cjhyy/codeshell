@@ -96,7 +96,7 @@ describe("external runtime durable state", () => {
       turnCount: 1,
       turnSeq: 1,
       completedSnapshotVersion: 1,
-      tokenUsage: { promptTokens: 10, completionTokens: 4, totalTokens: 14 },
+      tokenUsage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 },
     });
   });
 
@@ -577,4 +577,71 @@ test("first input refuses a replaced state incarnation before canonical append",
   recorder.failOutput();
   expect(readFileSync(join(directory, "transcript.jsonl")).equals(transcript)).toBe(true);
   expect(readFileSync(statePath).equals(state)).toBe(true);
+});
+
+test("cold provider cumulative history never subtracts or recounts auxiliary Session usage", () => {
+  const first = new ExternalRuntimeSessionRecorder(
+    "cold-provider-usage",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  first.beginTurn({ text: "first" });
+  first.onEvent({
+    type: "usage_update",
+    promptTokens: 100,
+    completionTokens: 10,
+    cumulativePromptTokens: 100,
+    cumulativeCompletionTokens: 10,
+  });
+  first.onEvent({ type: "turn_complete", reason: "completed" });
+  const manager = new SessionManager();
+  manager.recordAuxiliaryUsage("cold-provider-usage", {
+    promptTokens: 30,
+    completionTokens: 3,
+    totalTokens: 33,
+  });
+  const resumed = new ExternalRuntimeSessionRecorder(
+    "cold-provider-usage",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  resumed.beginTurn({ text: "resumed" });
+  for (const [
+    promptTokens,
+    cumulativePromptTokens,
+    completionTokens,
+    cumulativeCompletionTokens,
+  ] of [
+    [20, 120, 2, 12],
+    [20, 120, 2, 12],
+    [10, 110, 1, 11],
+  ]) {
+    resumed.onEvent({
+      type: "usage_update",
+      promptTokens,
+      completionTokens,
+      cumulativePromptTokens,
+      cumulativeCompletionTokens,
+    });
+  }
+  resumed.onEvent({ type: "turn_complete", reason: "completed" });
+  expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
+    tokenUsage: { promptTokens: 150, completionTokens: 15, totalTokens: 165 },
+    cumulativePromptTokens: 150,
+  });
+  resumed.beginTurn({ text: "live next" });
+  resumed.onEvent({
+    type: "usage_update",
+    promptTokens: 5,
+    completionTokens: 1,
+    cumulativePromptTokens: 125,
+    cumulativeCompletionTokens: 13,
+  });
+  resumed.onEvent({ type: "turn_complete", reason: "completed" });
+  expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
+    tokenUsage: { promptTokens: 155, completionTokens: 16, totalTokens: 171 },
+    cumulativePromptTokens: 155,
+  });
 });

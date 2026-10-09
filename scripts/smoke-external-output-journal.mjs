@@ -30,6 +30,9 @@ const core = await import("@cjhyy/code-shell-core");
 const coding = await import(
   pathToFileURL(join(repo, "packages/coding/dist/external-runtimes/index.js"))
 );
+const { compareOutputCursors } = await import(
+  pathToFileURL(join(repo, "packages/web/dist/index.js"))
+);
 const { listDiskSessions } = await import(
   pathToFileURL(join(repo, "packages/server/dist/index.storage.js"))
 );
@@ -180,6 +183,12 @@ for (const kind of ["codex", "claude-code"]) {
           frame.epoch === snapshots.epoch,
       ),
     );
+    for (let index = 1; index < live.length; index++)
+      assert.equal(
+        compareOutputCursors(live[index].event.outputCursor, live[index - 1].event.outputCursor),
+        1,
+      );
+    assert.notEqual(snapshots.get(id).outputUnpaired, true);
     assert(snapshots.get(id).events[0].seq > 1);
     const recovered = await recover(id, snapshots);
     assert.equal(hash(assistantText(recovered)), hash(expected));
@@ -227,6 +236,83 @@ for (const kind of ["codex", "claude-code"]) {
 }
 
 process.env.CODESHELL_OUTPUT_PARTS = "1";
+// A cold recorder sees aggregate main+aux usage, while Codex reports only its
+// own thread total. Those domains must never become each other's baseline.
+{
+  const id = "cold-aux-accounting";
+  const manager = new core.SessionManager();
+  manager.create(workspace, "codex/synthetic", "codex", id);
+  manager.updateSessionState(id, {
+    tokenUsage: { promptTokens: 100, completionTokens: 10, totalTokens: 110 },
+    cumulativePromptTokens: 100,
+    title: "retained title",
+    workspaceProfile: "fixture-profile",
+  });
+  manager.recordAuxiliaryUsage(
+    id,
+    { promptTokens: 30, completionTokens: 3, totalTokens: 33 },
+    { marker: "preserved" },
+  );
+  const { service } = createService();
+  try {
+    await start(service, id);
+    assert.equal(
+      (await service.send(id, { text: "cold accounting", clientMessageId: "cold-accounting" }, 77))
+        .ok,
+      true,
+    );
+    const state = manager.readSessionState(id);
+    assert.deepEqual(
+      {
+        prompt: state.tokenUsage.promptTokens,
+        completion: state.tokenUsage.completionTokens,
+        total: state.tokenUsage.totalTokens,
+        cumulative: state.cumulativePromptTokens,
+      },
+      { prompt: 150, completion: 15, total: 165, cumulative: 150 },
+    );
+    assert.equal(state.title, "retained title");
+    assert.equal(state.workspaceProfile, "fixture-profile");
+    assert.equal(state.costState.marker, "preserved");
+    output.cases.push({
+      case: "cold-aux-provider-accounting",
+      prompt: 150,
+      completion: 15,
+      total: 165,
+      metadataRetained: true,
+    });
+  } finally {
+    await service.stopAll();
+  }
+}
+// Repeated actual translator partial reports have no request identity.
+{
+  process.env.CODESHELL_OUTPUT_PARTIAL_USAGE = "1";
+  const { service } = createService();
+  const id = "partial-usage";
+  try {
+    await start(service, id);
+    assert.equal((await service.send(id, "synthetic partial usage", 77)).ok, true);
+    const state = new core.SessionManager().readSessionState(id);
+    assert.deepEqual(
+      {
+        prompt: state.tokenUsage.promptTokens,
+        completion: state.tokenUsage.completionTokens,
+        total: state.tokenUsage.totalTokens,
+      },
+      { prompt: 10, completion: 2, total: 12 },
+    );
+    output.cases.push({
+      case: "actual-repeated-partial-usage",
+      prompt: 10,
+      completion: 2,
+      total: 12,
+    });
+  } finally {
+    delete process.env.CODESHELL_OUTPUT_PARTIAL_USAGE;
+    await service.stopAll();
+  }
+}
 // Finalization happens after a provider succeeded. A failed logical terminal
 // must override that success, including the result returned to Panel submit.
 {
@@ -467,6 +553,48 @@ for (const mode of ["stop", "replace"]) {
       recoverable: true,
     });
   } finally {
+    await service.stopAll();
+  }
+}
+
+// Claude can print its provider result before the process exits. Goal Stop
+// in that gap still owns an open logical run and must abort it exactly once.
+for (const mode of ["interrupt", "stop", "replace"]) {
+  process.env.CODESHELL_OUTPUT_DELAYED_EXIT = "1";
+  const { service, live } = createService();
+  const id = `goal-result-gap-${mode}`;
+  try {
+    await start(service, id, "claude-code");
+    const pending = service.send(
+      id,
+      { text: "Goal gap", goal: { objective: "synthetic unfinished", maxTurns: 2 } },
+      77,
+    );
+    await waitUntil(() => new core.SessionManager().readSessionState(id)?.turnCount === 1);
+    assert.equal(live.filter(({ event }) => event.type === "turn_complete").length, 0);
+    if (mode === "interrupt") await service.interrupt(id, 77);
+    else if (mode === "stop") await service.stop(id, 77);
+    else {
+      delete process.env.CODESHELL_OUTPUT_DELAYED_EXIT;
+      await start(service, id, "claude-code");
+    }
+    const outcome = await pending;
+    assert.equal(outcome.ok, false);
+    assert.equal(outcome.reason, "aborted_streaming");
+    assert.equal(live.filter(({ event }) => event.type === "turn_complete").length, 1);
+    assert.equal(new core.SessionManager().readSessionState(id).status, "aborted_streaming");
+    if (mode === "replace")
+      assert.equal(
+        (await service.send(id, { text: "next after Goal abort", disableGoal: true }, 77)).ok,
+        true,
+      );
+    output.cases.push({
+      case: `actual-claude-goal-result-gap-${mode}`,
+      logicalTerminal: "aborted_streaming",
+      falseSuccess: false,
+    });
+  } finally {
+    delete process.env.CODESHELL_OUTPUT_DELAYED_EXIT;
     await service.stopAll();
   }
 }

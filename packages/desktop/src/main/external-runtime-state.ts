@@ -228,6 +228,8 @@ export class ExternalRuntimeSessionRecorder {
     cacheCreationTokens: 0,
   };
   private usageAtTurnStart: UsageSnapshot = { ...this.usage };
+  private providerCumulative: Partial<UsageSnapshot> = {};
+  private providerBaseline: Partial<UsageSnapshot> = {};
   private contextAnchorPromptTokens = 0;
   private lastError: string | undefined;
   private outcome: ExternalRuntimeTurnOutcome | undefined;
@@ -272,15 +274,6 @@ export class ExternalRuntimeSessionRecorder {
     const directory = lstatSync(join(this.manager.getStorageDir(), sessionId));
     this.directoryIdentity = { dev: directory.dev, ino: directory.ino };
     const sameModel = bundle.state.model === model && bundle.state.provider === provider;
-    this.usage = sameModel
-      ? {
-          promptTokens: bundle.state.tokenUsage.promptTokens ?? 0,
-          completionTokens: bundle.state.tokenUsage.completionTokens ?? 0,
-          cacheReadTokens: bundle.state.tokenUsage.cacheReadTokens ?? 0,
-          cacheCreationTokens: bundle.state.tokenUsage.cacheCreationTokens ?? 0,
-        }
-      : { promptTokens: 0, completionTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0 };
-    this.usageAtTurnStart = { ...this.usage };
     if (!sameModel) {
       this.manager.updateSessionState(this.sessionId, {
         model,
@@ -311,6 +304,7 @@ export class ExternalRuntimeSessionRecorder {
     this.pendingToolBlocks = [];
     this.unresolvedTools.clear();
     this.usageAtTurnStart = { ...this.usage };
+    this.providerBaseline = { ...this.providerCumulative };
     this.contextAnchorPromptTokens = 0;
     this.lastError = undefined;
     this.outcome = undefined;
@@ -375,6 +369,10 @@ export class ExternalRuntimeSessionRecorder {
   }
   get outputRunId(): string | undefined {
     return this.runId;
+  }
+
+  get hasOpenRun(): boolean {
+    return !!this.runId && !this.runClosed && this.isCurrentOutputOwner;
   }
 
   /** Sticky even when a CLI adapter catches its consumer's callback exception. */
@@ -451,6 +449,7 @@ export class ExternalRuntimeSessionRecorder {
     );
     const event = this.appendOutput({ type: "turn_complete", reason });
     this.runClosed = true;
+    this.outcome = { ...this.outcome, ok: reason === "completed", reason, streamed: true };
     return event;
   }
 
@@ -514,46 +513,70 @@ export class ExternalRuntimeSessionRecorder {
         );
         this.unresolvedTools.delete(event.result.id);
         break;
-      case "usage_update":
-        if (
-          event.cumulativePromptTokens !== undefined &&
-          event.cumulativePromptTokens < this.usageAtTurnStart.promptTokens
-        ) {
-          this.usageAtTurnStart.promptTokens = 0;
-        }
-        if (
-          event.cumulativeCompletionTokens !== undefined &&
-          event.cumulativeCompletionTokens < this.usageAtTurnStart.completionTokens
-        ) {
-          this.usageAtTurnStart.completionTokens = 0;
-        }
-        if (
-          event.cumulativeCacheReadTokens !== undefined &&
-          event.cumulativeCacheReadTokens < this.usageAtTurnStart.cacheReadTokens
-        ) {
-          this.usageAtTurnStart.cacheReadTokens = 0;
-        }
-        if (
-          event.cumulativeCacheCreationTokens !== undefined &&
-          event.cumulativeCacheCreationTokens < this.usageAtTurnStart.cacheCreationTokens
-        ) {
-          this.usageAtTurnStart.cacheCreationTokens = 0;
-        }
-        this.usage = {
-          promptTokens:
-            event.cumulativePromptTokens ?? this.usage.promptTokens + event.promptTokens,
-          completionTokens:
-            event.cumulativeCompletionTokens ??
-            this.usage.completionTokens + (event.completionTokens ?? 0),
-          cacheReadTokens:
-            event.cumulativeCacheReadTokens ??
-            this.usage.cacheReadTokens + (event.cacheReadTokens ?? 0),
-          cacheCreationTokens:
-            event.cumulativeCacheCreationTokens ??
-            this.usage.cacheCreationTokens + (event.cacheCreationTokens ?? 0),
+      case "usage_update": {
+        // Provider totals belong to its thread, not Session aggregate accounting
+        // (which can include another producer or auxiliary requests). A cold
+        // resume's first total-last establishes only that provider's old history.
+        const count = (value: number | undefined) =>
+          value !== undefined && Number.isFinite(value) && value >= 0 ? value : undefined;
+        const update = (key: keyof UsageSnapshot, last?: number, total?: number, turn?: number) => {
+          last = count(last);
+          total = count(total);
+          turn = count(turn);
+          let own: number;
+          if (turn !== undefined) {
+            own = this.usageAtTurnStart[key] + turn;
+          } else if (total !== undefined) {
+            const first = this.usage[key] === this.usageAtTurnStart[key];
+            if (
+              first &&
+              this.providerBaseline[key] !== undefined &&
+              total < this.providerBaseline[key]!
+            ) {
+              this.providerBaseline[key] = 0;
+              this.providerCumulative[key] = 0;
+            }
+            this.providerBaseline[key] ??= Math.max(0, total - (last ?? 0));
+            own = this.usageAtTurnStart[key] + Math.max(0, total - this.providerBaseline[key]!);
+          } else {
+            own = this.usage[key] + (last ?? 0);
+          }
+          this.usage[key] = Math.max(this.usage[key], own);
+          if (total !== undefined)
+            this.providerCumulative[key] = Math.max(this.providerCumulative[key] ?? 0, total);
         };
+        update(
+          "promptTokens",
+          event.promptTokens,
+          event.cumulativePromptTokens,
+          event.singleTurnPromptTokens,
+        );
+        update(
+          "completionTokens",
+          event.completionTokens,
+          event.cumulativeCompletionTokens,
+          // A partial provider notification with a per-turn prompt snapshot
+          // also has only a completion snapshot, not a new request identity.
+          event.cumulativeCompletionTokens === undefined &&
+            event.singleTurnPromptTokens !== undefined
+            ? event.completionTokens
+            : undefined,
+        );
+        update(
+          "cacheReadTokens",
+          event.cacheReadTokens,
+          event.cumulativeCacheReadTokens,
+          event.singleTurnCacheReadTokens,
+        );
+        update(
+          "cacheCreationTokens",
+          event.cacheCreationTokens,
+          event.cumulativeCacheCreationTokens,
+          event.singleTurnCacheCreationTokens,
+        );
         this.contextAnchorPromptTokens = event.promptTokens;
         break;
+      }
       case "error":
         this.lastError = event.error;
         this.transcript.appendError(event.error, { source: "external-runtime" });

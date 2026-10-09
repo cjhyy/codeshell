@@ -41,6 +41,11 @@ must replace it before another submission.
 Accounting updates recompute this provider turn's delta against the latest
 Session state on each CAS attempt. They preserve auxiliary usage and domain
 metadata, including title, workspace, Profile, Goal and cost ledger state. The
+provider's own cumulative baseline is separate from Session aggregate usage;
+a cold resumed thread's first `total - last` identifies its pre-existing history.
+Repeated/out-of-order snapshots do not add the same reported usage twice. Partial
+notifications without request identity retain conservative per-turn snapshots.
+The
 change does not create native model-request or provider-billing receipts for CLI
 traffic, and reported CLI usage remains subject to the existing upstream limits.
 
@@ -67,7 +72,10 @@ coverage must keep such unpaired visible output behind its recovery barrier.
 
 `agent.task.start` remains an ephemeral native worker path. CCRoom's raw CLI
 observer, arbitrary transcript imports and other hosts/producers are not adapted
-by this change. Physical Electron GUI/relaunch, real logged-in CLIs, provider
+by this change. In particular, paired Mobile's worker-outbound mirror does not
+subscribe to this Desktop owner-window ingress; external CLI real-time delivery
+and its corresponding Mobile recovery remain a separate adapter gap. Physical
+Electron GUI/relaunch, real logged-in CLIs, provider
 accounts, billing and weak-network/device acceptance are separate gates. Existing
 journal limits, bounded legacy cutover, retention/rotation and repair TODOs remain.
 
@@ -87,6 +95,10 @@ recovers the exact hash through the actual IPC/reducer after RAM eviction. Other
 cases cover the three physical disk failure stages, queued rejection, failed
 provider-start replacement, live stop/replacement, two-round Goal output, and a
 real loopback MCP tool that starts without a turn and returns during a new turn.
+An actual Claude result-before-process-exit fixture separately verifies interrupt,
+stop and replacement of the still-open logical Goal: exactly one aborted terminal,
+failed submission outcome, and no cold phantom active run. A final Goal journal
+write failure overrides a previously successful provider outcome.
 
 The preload runs before Core/host imports and inherits into every actual Node
 child. Four negative probes cover HTTPS, wrong loopback HTTP, a raw wrong-port
