@@ -16,8 +16,7 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
-import { OperationLedger } from "../operations/ledger.js";
-import { OperationController } from "../operations/controller.js";
+import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
 import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream.js";
 import { ToolRegistry } from "../tool-system/registry.js";
@@ -1701,7 +1700,11 @@ export class Engine {
       ...sessionLifetime.services,
     });
     toolCtx.operations = {
-      controller: new OperationController(new OperationLedger(this.sessionManager.getStorageDir())),
+      controller: createSessionOperationController(
+        this.sessionManager.getStorageDir(),
+        session.state.sessionId,
+        isEphemeralSessionState(session.state) ? undefined : this.usageLedger,
+      ),
       resolver: new CapabilityResolver(),
       sessionId: session.state.sessionId,
       runId,
