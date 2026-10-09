@@ -30,6 +30,7 @@ Object.assign(environment, {
   CODESHELL_MACOS_KEYCHAIN_ACCEPTANCE: "1",
   CODESHELL_MACOS_ACCEPTANCE_ROOT: directory,
   CODESHELL_MACOS_ACCEPTANCE_EVIDENCE: evidence,
+  DEBUG: "pw:browser",
 });
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const owned = new Map();
