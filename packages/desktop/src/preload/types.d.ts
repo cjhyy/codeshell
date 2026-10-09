@@ -1044,6 +1044,9 @@ export interface CodeshellApi
   /** Read-only bounded Pet projection. */
   pet: PetApi;
   taskInbox: TaskInboxApi;
+  operationResolution: ReturnType<
+    typeof import("./operation-resolution-api").createOperationResolutionApi
+  >;
   optimizationLab: OptimizationLabApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;

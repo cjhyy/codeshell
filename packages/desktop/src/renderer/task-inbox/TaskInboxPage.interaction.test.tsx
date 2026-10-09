@@ -166,6 +166,87 @@ describe("TaskInboxPage", () => {
   const click = async (node: Element) => settle(() => props(node).onClick());
   const cards = () => nodes().filter((node) => node.tagName === "ARTICLE");
 
+  test("existing activity Session detail loads masked writes on demand and delegates resolution to native confirmation", async () => {
+    const calls: unknown[] = [];
+    let resolved = false;
+    (window.codeshell as any).operationResolution = {
+      review: async (sessionId: string) => {
+        calls.push(["review", sessionId]);
+        return {
+          reviewToken: "native-token",
+          truncated: false,
+          records: [
+            {
+              id: "operation",
+              revision: "receipt-cas",
+              service: "github",
+              action: "create_issue",
+              createdAt: 1,
+              state: "unknown",
+              hasReference: false,
+              canResolve: !resolved,
+              ...(resolved ? { resolvedAt: 2 } : {}),
+            },
+          ],
+        };
+      },
+      resolve: async (input: unknown) => {
+        calls.push(["native", input]);
+        resolved = true;
+        return { status: "resolved", result: "unknown" };
+      },
+    };
+    await render();
+    await settle(() =>
+      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+    );
+    expect(calls).toEqual([]);
+    await click(button("外部写入人工处理"));
+    expect(calls).toEqual([["review", "uncertain"]]);
+    expect(textOf(container)).toContain("缺少原始引用");
+    await click(button("人工核查后处理…"));
+    expect(calls[1]).toEqual([
+      "native",
+      { reviewToken: "native-token", operationId: "operation", revision: "receipt-cas" },
+    ]);
+    expect(textOf(container)).toContain("已人工接受未知结果；结果仍未知");
+    expect(cards()).toHaveLength(1);
+    expect(textOf(container)).not.toContain("PRIVATE_BODY");
+  });
+
+  test("a committed native decision followed by refresh failure is reported as accepted, never as a retained barrier", async () => {
+    let reads = 0;
+    (window.codeshell as any).operationResolution = {
+      review: async () => {
+        if (++reads > 1) throw new Error("refresh unavailable");
+        return {
+          reviewToken: "token",
+          truncated: false,
+          records: [
+            {
+              id: "op",
+              revision: "cas",
+              service: "github",
+              action: "create_issue",
+              createdAt: 1,
+              canResolve: true,
+            },
+          ],
+        };
+      },
+      resolve: async () => ({ status: "resolved", result: "unknown" }),
+    };
+    await render();
+    await settle(() =>
+      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+    );
+    await click(button("外部写入人工处理"));
+    await click(button("人工核查后处理…"));
+    expect(textOf(container)).toContain("已人工接受未知结果；结果仍未知。刷新失败");
+    expect(textOf(container)).not.toContain("阻断仍保留");
+    expect(button("刷新记录")).toBeDefined();
+  });
+
   test("groups waiting first, labels filters and exposes only real capabilities", async () => {
     await render();
     await settle(() =>

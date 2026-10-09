@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "../i18n/I18nProvider";
 import { useOptionalConfirm } from "../ui/DialogProvider";
+import { OperationResolutionReview } from "./OperationResolutionReview";
 import {
   TASK_INBOX_GROUPS,
   groupTaskInboxRecords,
@@ -437,6 +438,10 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
                                 {t("taskInbox.stale")}
                               </p>
                             )}
+                            {record.sessionId &&
+                              ["session", "legacy-run", "subagent"].includes(record.source) && (
+                                <OperationResolutionReview sessionId={record.sessionId} />
+                              )}
                             <div className="mt-auto flex flex-wrap items-center gap-2">
                               {record.capabilities.map((action) => (
                                 <Button

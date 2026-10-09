@@ -318,5 +318,7 @@ jobs:
             packages/core/src/tool-system/sandbox/sandbox-win32.test.ts `
             packages/core/src/utils/exec.test.ts `
             packages/core/src/operations/controller.test.ts `
+            packages/core/src/operations/review-store.test.ts `
             packages/core/src/operations/resolver.test.ts `
+            packages/desktop/src/main/operation-resolution-ipc.test.ts `
             packages/server/src/mobile-remote/cloudflared-binary.test.ts
