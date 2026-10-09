@@ -15,6 +15,13 @@ export class MobilePendingInput extends Error {
   }
 }
 
+/** No journal has ever been published by this explicitly journal-owned producer. */
+export class MobileAwaitingJournal extends Error {
+  constructor() {
+    super("Awaiting the first durable output cursor");
+  }
+}
+
 /** Verified pages progressed, but the observed live head kept moving within the bound. */
 export class MobileOutputCatchupPending extends Error {
   constructor(
@@ -36,10 +43,31 @@ export async function recoverMobileOutput(args: {
   read: (options: OutputJournalOptions) => Promise<Reply>;
   canContinue: () => boolean;
   latestCursor: () => string | undefined;
+  requireJournal?: boolean;
 }) {
   let reply = await args.read({});
   if (!args.canContinue()) throw new Error("Recovery cancelled");
+  if (reply.page.status === "unavailable" && args.requireJournal) {
+    const snapshot = reply.snapshot;
+    if (
+      !snapshot ||
+      snapshot.unpaired ||
+      !snapshot.epoch ||
+      !Number.isSafeInteger(snapshot.nextSeq) ||
+      snapshot.nextSeq < 1
+    )
+      throw new Error("Required output journal is unavailable");
+    if (snapshot.outputCursor || args.latestCursor()) {
+      // The first canonical commit may happen after Main's unavailable read
+      // but before its snapshot/live reply. Re-read once, requiring real proof.
+      reply = await args.read({});
+      if (!args.canContinue()) throw new Error("Recovery cancelled");
+      if (reply.page.status === "unavailable")
+        throw new Error("Required output journal is unavailable");
+    } else throw new MobileAwaitingJournal();
+  }
   if (reply.page.status === "unavailable") return null;
+
   if (
     reply.page.status !== "ok" ||
     !reply.legacyBaseComplete ||

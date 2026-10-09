@@ -97,6 +97,9 @@ export async function run(root: string, port: number) {
     authFailures = 0;
   const recovery = new MobileOutputRecovery({
     root: sessionsRoot,
+    journalRequired: (id) =>
+      service.hasSession(id) ||
+      isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
     authority: async (id) => {
       const stamp = await mobileOutputRecoveryAuthority(id);
       if (stamps.has(id) && stamps.get(id) !== stamp) authorityChanges++;
@@ -523,6 +526,43 @@ export async function run(root: string, port: number) {
     assert.equal(turns(), beforeColdSend);
     assert.equal(nativeStarts, 0);
     cases.push("cold no-live-instance send rejected with no native fallback");
+    process.env.CODESHELL_OUTPUT_PARTS = "1";
+    await service.start({
+      sessionId: "external-first-mobile",
+      kind: "codex",
+      cwd,
+      model: "synthetic",
+      ownerWindow: owner as never,
+    });
+    const beforeFirstInput = turns();
+    phase = "first input into live journal-less Runtime";
+    await act(async () => {
+      hook.result.current.selectSession("external-first-mobile");
+    });
+    await until(() =>
+      viewerReplies.some(
+        ({ event }) =>
+          (event as any).type === "session.outputJournal" &&
+          (event as any).sessionId === "external-first-mobile" &&
+          (event as any).page.status === "unavailable",
+      ),
+    );
+    assert.equal(turns(), beforeFirstInput);
+    let firstMobileAccepted = false;
+    await act(async () => {
+      firstMobileAccepted = await hook.result.current.sendChat({
+        text: "first mobile input",
+        attachments: [],
+      });
+    });
+    assert(firstMobileAccepted);
+    await until(() => text() === part(0) && hook.result.current.chat.run === "completed");
+    assert.equal(turns(), beforeFirstInput + 1);
+    assert.equal(nativeStarts, 0);
+    cases.push(
+      "first Mobile input into an already live journal-less Runtime waits for its true initial cursor without fallback",
+    );
+    await service.stop("external-first-mobile", 77);
     // A separate actual held protocol turn tests Mobile cancel without relying
     // on provider completion timing or issuing a second model request.
     process.env.CODESHELL_OUTPUT_PARTS = "1";

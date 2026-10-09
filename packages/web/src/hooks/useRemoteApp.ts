@@ -540,6 +540,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       sessionCursor(sessionId).historyUnpaired = true;
       sendRef.current?.({ type: "session.history", sessionId });
     },
+    awaitingJournal: () => {
+      // A selected live producer has no prior output. No read/request remains
+      // pending while the user composes its first input.
+      setLoadingKey("sessionHistory", false);
+    },
     failed: (sessionId) => {
       sessionCursor(sessionId).awaitingSnapshot = true;
       dispatchChat({ kind: "stream_epoch_changed" });

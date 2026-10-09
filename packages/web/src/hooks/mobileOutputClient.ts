@@ -3,6 +3,7 @@ import {
   recoverMobileOutput,
   MobilePendingInput,
   MobileOutputCatchupPending,
+  MobileAwaitingJournal,
 } from "../lib/mobileOutputRecovery.js";
 import { compareOutputCursors } from "../lib/outputJournalRecovery.js";
 
@@ -16,6 +17,8 @@ interface Selection {
   recovering: boolean;
   failed: boolean;
   started?: boolean;
+  journalRequired?: boolean;
+  awaitingJournal?: boolean;
   latest?: string;
   applied?: string;
   pendingInputIds?: Set<string>;
@@ -45,6 +48,7 @@ export class MobileOutputClient {
       commit: (sessionId: string, result: Result) => void;
       legacy: (sessionId: string) => void;
       failed: (sessionId: string) => void;
+      awaitingJournal?: (sessionId: string) => void;
     },
   ) {}
 
@@ -134,6 +138,7 @@ export class MobileOutputClient {
       }
       if (selection.started || selection.failed) return true;
       selection.started = true;
+      selection.journalRequired = event.journalRequired === true;
       if (selection.readyTimer) clearTimeout(selection.readyTimer);
       selection.readyTimer = undefined;
       if (!event.ok) this.fail(selection);
@@ -152,6 +157,7 @@ export class MobileOutputClient {
       const result = await (resume
         ? resume()
         : recoverMobileOutput({
+            requireJournal: selection.journalRequired,
             canContinue: () => this.current(selection) && !selection.failed,
             latestCursor: () => selection.latest,
             read: (options) =>
@@ -210,6 +216,15 @@ export class MobileOutputClient {
       selection.latest = result.outputCursor;
       this.deps.commit(selection.sessionId, result);
     } catch (error) {
+      if (error instanceof MobileAwaitingJournal) {
+        if (!this.current(selection) || selection.failed) return;
+        selection.recovering = false;
+        selection.awaitingJournal = true;
+        // No prefix exists yet. Retain the selected producer without polling,
+        // publishing an empty success, or retiring its independent command selection.
+        this.deps.awaitingJournal?.(selection.sessionId);
+        return;
+      }
       if (error instanceof MobileOutputCatchupPending) {
         if (!this.current(selection) || selection.failed) return;
         if (
@@ -269,6 +284,14 @@ export class MobileOutputClient {
       else if (order > 0) selection.latest = event.outputCursor;
     }
     if (selection.failed) return "pending";
+    if (selection.awaitingJournal && typeof event?.outputCursor === "string") {
+      selection.awaitingJournal = false;
+      if (selection.readyTimer) clearTimeout(selection.readyTimer);
+      selection.readyTimer = undefined;
+      selection.recovering = true;
+      void this.recover(selection);
+      return "pending";
+    }
     if (
       event?.type === "session_user_message" &&
       !event.outputCursor &&
@@ -359,7 +382,13 @@ export class MobileOutputClient {
     }
     if (order <= 0) return;
     selection.latest = outputCursor;
-    if (!selection.recovering && !selection.capacityPending) {
+    if (selection.awaitingJournal) {
+      selection.awaitingJournal = false;
+      if (selection.readyTimer) clearTimeout(selection.readyTimer);
+      selection.readyTimer = undefined;
+      selection.recovering = true;
+      void this.recover(selection);
+    } else if (!selection.recovering && !selection.capacityPending) {
       this.begin(sessionId);
       if (this.selection) this.selection.latest = outputCursor;
     }

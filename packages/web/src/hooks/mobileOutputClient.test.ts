@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "../../../core/src/session/session-manager.js";
@@ -15,7 +15,7 @@ const cleanup: Array<() => void> = [];
 afterEach(() => {
   for (const fn of cleanup.splice(0)) fn();
 });
-function fixture(id = "external") {
+function fixture(id = "external", pendingJournal = false) {
   const root = mkdtempSync(join(tmpdir(), "mobile-pointer-"));
   cleanup.push(() => rmSync(root, { recursive: true, force: true }));
   const manager = new SessionManager(root);
@@ -23,9 +23,14 @@ function fixture(id = "external") {
   manager.startSessionRun(session.state, "run");
   const baseId = session.transcript.getEvents().at(-1)!.id;
   const legacyEvents = transcriptToStreamEvents(session.transcript.getEvents());
-  const writer = new SessionOutputJournal(root, id, "run", baseId);
-  let cursor = writer.append({ type: "stream_request_start", turnNumber: 1 });
-  cursor = writer.append({ type: "text_delta", text: "first" });
+  let writer: SessionOutputJournal;
+  let cursor: string;
+  const openJournal = () => {
+    writer = new SessionOutputJournal(root, id, "run", baseId);
+    cursor = writer.append({ type: "stream_request_start", turnNumber: 1 });
+    cursor = writer.append({ type: "text_delta", text: "first" });
+  };
+  if (!pendingJournal) openJournal();
   const sent: MobileClientEvent[] = [],
     commits: string[] = [];
   let failures = 0,
@@ -42,6 +47,7 @@ function fixture(id = "external") {
             sessionId: id,
             recoveryId: event.recoveryId,
             ok: true,
+            ...(pendingJournal ? { journalRequired: true } : {}),
           });
         if (event.type === "session.outputJournal") {
           const page = readOutputJournal(root, id, { after: event.after, through: event.through });
@@ -82,6 +88,8 @@ function fixture(id = "external") {
   } as MobileServerEvent);
   return {
     client,
+    openJournal,
+    removeJournal: () => unlinkSync(join(root, id, "output-journal.jsonl")),
     commits,
     sent,
     failures: () => failures,
@@ -241,4 +249,55 @@ test("revocation during the capacity backoff remains sticky and cancels its pend
   expect(f.sent.length).toBe(pages);
   expect(f.commits).toEqual([]);
   expect(f.failures()).toBe(2);
+});
+
+test("an explicitly journal-owned producer waits for its first real cursor instead of revoking the initial command selection", async () => {
+  const f = fixture("external", true);
+  f.client.begin("external");
+  await settled(() => f.sent.some((event) => event.type === "session.outputJournal"));
+  await settled(() => f.client.owns("external"));
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+  expect(f.commits).toEqual([]);
+  expect(f.failures()).toBe(0);
+  expect(f.sent.some((event) => event.type === "session.recovery.cancel")).toBe(false);
+  f.openJournal();
+  f.client.hold("external", {
+    type: "text_delta",
+    text: "suffix",
+    outputCursor: f.append("suffix"),
+  });
+  await settled(() => f.commits.length === 1);
+  expect(f.commits).toEqual(["firstsuffix"]);
+  expect(f.sent.filter((event) => event.type === "session.select")).toHaveLength(1);
+  expect(f.sent.some((event) => event.type === "chat.send")).toBe(false);
+});
+
+test("first commit racing an unavailable read rechecks actual pages rather than losing the selected producer", async () => {
+  const f = fixture("external", true);
+  f.beforePageReply((count) => {
+    if (count === 1) {
+      f.openJournal();
+      f.client.hold("external", {
+        type: "text_delta",
+        text: "suffix",
+        outputCursor: f.append("suffix"),
+      });
+    }
+  });
+  f.client.begin("external");
+  await settled(() => f.commits.length === 1);
+  expect(f.commits).toEqual(["firstsuffix"]);
+  expect(f.failures()).toBe(0);
+  expect(f.sent.filter((event) => event.type === "session.outputJournal")).toHaveLength(2);
+});
+
+test("published journal loss never uses the initial passive wait exception", async () => {
+  const f = fixture("external", true);
+  f.openJournal();
+  f.removeJournal();
+  f.client.begin("external");
+  await settled(() => f.failures() === 1);
+  expect(f.commits).toEqual([]);
+  f.client.advanceSnapshot("external", f.cursor());
+  expect(f.failures()).toBe(1);
 });

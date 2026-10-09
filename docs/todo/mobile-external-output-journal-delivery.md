@@ -39,7 +39,14 @@ live Desktop owner, and find the exact existing Runtime object and cwd. Mobile
 does not call `ensure`, allocate a replacement CLI, or inject a native worker for
 an external Session. An external selection remains classified as external when
 its state disappears or its ID is reused; it cannot silently switch producers.
-Missing state or a cold Main without a live instance rejects input. A new native
+Missing state or a cold Main without a live instance rejects input. A live
+Runtime with no journal yet remains selected via the optional generic
+`journalRequired` readiness flag. Its genuinely unavailable initial journal
+ends loading and waits passively for a real first cursor, without publishing an
+empty success, polling, or treating user idle time as storage damage. The first
+Mobile input then follows the same independent command/commit path. A required
+journal that was already published, has unpaired output, or has a known cursor
+cannot use this initial-wait exception. A new native
 Mobile Session still follows its existing producer route.
 
 Input uses the existing server attachment transaction: resolve authorized cwd,

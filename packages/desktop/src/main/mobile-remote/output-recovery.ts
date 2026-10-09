@@ -35,6 +35,7 @@ export class MobileOutputRecovery {
       reply: (viewerId: string, event: MobileServerEvent) => void;
       owner?: (sessionId: string) => number | undefined;
       authenticated?: (viewerId: string, deviceId: string) => boolean;
+      journalRequired?: (sessionId: string) => boolean;
     },
   ) {}
 
@@ -175,6 +176,7 @@ export class MobileOutputRecovery {
           sessionId: event.sessionId,
           recoveryId: event.recoveryId,
           ok: true,
+          ...(this.deps.journalRequired?.(event.sessionId) ? { journalRequired: true } : {}),
         });
         if (binding.pending) {
           this.pendingMirrors.add(binding);

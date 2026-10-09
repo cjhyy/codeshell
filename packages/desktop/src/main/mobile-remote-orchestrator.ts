@@ -117,6 +117,9 @@ export class MobileRemoteOrchestrator {
     });
     this.outputRecovery = new MobileOutputRecovery({
       root: sessionsRoot,
+      journalRequired: (id) =>
+        !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
+        isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
       authority: mobileOutputRecoveryAuthority,
       snapshot: (id, sinceSeq = 0) => this.deps.getBridge()?.getSnapshot(id, sinceSeq),
       reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),
