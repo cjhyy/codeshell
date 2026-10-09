@@ -40,6 +40,29 @@ function textOf(node: unknown): string {
 }
 
 describe("PetWorldPane", () => {
+  test("header count follows registered status instead of legacy dismissal ids", () => {
+    expect(
+      countVisibleFollowUps(
+        [
+          {
+            followUpId: "open",
+            kind: "registered",
+            title: "open",
+            text: "pending",
+            status: "open",
+          },
+          {
+            followUpId: "closed",
+            kind: "registered",
+            title: "closed",
+            text: "handled",
+            status: "cancelled",
+          },
+        ],
+        new Set(["follow-up:open"]),
+      ),
+    ).toBe(1);
+  });
   test("counts only the canonical Needs follow-up rows that remain visible", () => {
     expect(
       countVisibleFollowUps(

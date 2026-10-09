@@ -2315,7 +2315,7 @@ describe("PetDispatchService", () => {
       });
 
     await makeService(true).dispatch({ type: "chat", message: "desktop" });
-    expect((params?.profileParams as Record<string, unknown>).hostActions).toBeUndefined();
+    expect((params?.profileParams as Record<string, unknown>).hostActions).toEqual(["memory"]);
 
     await makeService(true).dispatch({
       type: "chat",
@@ -2752,7 +2752,14 @@ describe("PetDispatchService", () => {
     expect(refreshes).toBe(1);
     expect(executionContext).toEqual({
       originClientMessageId: "im-message-one",
+      actionIndex: 0,
       requestedAt: expect.any(Number),
+      originRef: {
+        id: expect.stringMatching(/^origin-[a-f0-9]{32}$/),
+        kind: "unknown",
+        channel: "wechat",
+      },
+      groundedTasks: [],
       // A legacy route without adapter metadata is not assumed private.
       isDirectMessage: false,
       completionTarget: {

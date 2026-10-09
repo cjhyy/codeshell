@@ -260,11 +260,20 @@ function renderFollowUpMutationLine(execution: PetHostActionExecution): string {
       ? execution.result.title.replace(/\s+/gu, " ").trim().slice(0, 120)
       : "";
   const labels: Record<string, string> = {
+    register: "跟进项已登记",
+    reschedule: "跟进项已改期",
+    cancel: "跟进项已取消",
     complete: "跟进项已标记为已处理",
     dismiss: "跟进项已忽略",
   };
   const label = labels[action] ?? "跟进项已更新";
-  return title ? `${label}：「${title}」。` : `${label}。`;
+  const wakeAt = execution.result?.wakeAt;
+  const timezone = execution.result?.timezone;
+  const timing =
+    typeof wakeAt === "number" && typeof timezone === "string"
+      ? `时间：${new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(wakeAt)}（${timezone}）。`
+      : "";
+  return (title ? `${label}：「${title}」。` : `${label}。`) + timing;
 }
 
 function renderSessionArchiveLine(execution: PetHostActionExecution): string {

@@ -21,6 +21,7 @@ import {
   type AutomationAuthorityDeps,
 } from "./automation-authority.js";
 import { assertDesktopSessionId } from "./session-validation.js";
+import { isPetFollowUpWakeJob } from "./pet/pet-follow-up-wake-coordinator.js";
 
 export interface AutomationSummary {
   id: string;
@@ -137,7 +138,10 @@ export function reloadAutomations(): void {
 export function listAutomations(): AutomationSummary[] {
   if (!scheduler) return [];
   syncFromStore();
-  return scheduler.list().map(automationSummary);
+  return scheduler
+    .list()
+    .filter((job) => !isPetFollowUpWakeJob(job))
+    .map(automationSummary);
 }
 
 export function getAutomation(id: string): AutomationSummary | null {

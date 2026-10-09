@@ -6,11 +6,11 @@ import type {
   PetWorkInboxUpdate,
 } from "../../preload/types";
 import React from "react";
-import { isPetFollowUpStateId, petFollowUpStateId } from "../../shared/pet-work-item-id";
+import { isPetFollowUpStateId } from "../../shared/pet-work-item-id";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
-import { PetFollowUpSection } from "./PetFollowUpSection";
+import { PetFollowUpSection, isVisiblePetFollowUp } from "./PetFollowUpSection";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -25,10 +25,7 @@ export function countVisibleFollowUps(
   rows: readonly PetSessionSummaryRow[],
   dismissedIds: ReadonlySet<string>,
 ): number {
-  return Math.min(
-    rows.filter((row) => !dismissedIds.has(petFollowUpStateId(row.followUpId))).length,
-    20,
-  );
+  return Math.min(rows.filter((row) => isVisiblePetFollowUp(row, dismissedIds)).length, 20);
 }
 
 export function PetWorldPane({

@@ -96,7 +96,10 @@ export {
   manageFollowUpTool,
   manageFollowUpAvailability,
   type PetFollowUpItem,
+  type PetDerivedFollowUpItem,
+  type PetRegisteredFollowUpItem,
 } from "./follow-ups.js";
+export * from "./registered-follow-ups.js";
 export {
   SEND_MESSAGE_TOOL_NAME,
   sendMessageToolDef,
@@ -134,3 +137,4 @@ export * from "./segment-closure.js";
 export * from "./long-task.js";
 export * from "./conversation-session.js";
 export * from "./migration-summary.js";
+export * from "./context-recall.js";
