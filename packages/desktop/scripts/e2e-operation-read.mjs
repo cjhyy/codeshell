@@ -625,12 +625,13 @@ try {
       .map((observation) => ({
         result: observation.result,
         actions: observation.actions,
-        reason: observation.evidence?.reason,
+        evidenceDigest: observation.evidence,
       })),
     dialogs: await app
       ?.evaluate(() => ({
         answers: globalThis.__readDialogs?.answers,
         titles: globalThis.__readDialogs?.prompts.map((prompt) => prompt.title),
+        custodyEvents: globalThis.__readCustody?.events,
       }))
       .catch(() => null),
     activityText: await win
