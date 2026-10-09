@@ -61,6 +61,20 @@ function linkError(cause: unknown): string {
     : String(cause);
 }
 
+/** One card per advertised provider, including saved accounts that are currently offline. */
+export function remoteLinkProviders(snapshot?: LinkSnapshot) {
+  const providers = new Map<string, LinkProviderView | undefined>();
+  for (const provider of snapshot?.providers ?? []) {
+    if (provider.authModes?.some((mode) => mode.id === "remote-link"))
+      providers.set(provider.id, provider);
+  }
+  for (const connection of snapshot?.connections ?? []) {
+    if (connection.authSource === "remote-link" && !providers.has(connection.providerId))
+      providers.set(connection.providerId, undefined);
+  }
+  return providers;
+}
+
 /** Only Host-advertised remote providers are shown; saved accounts stay manageable offline. */
 export function RemoteLinkSection(props: {
   cwd: string;
@@ -70,15 +84,7 @@ export function RemoteLinkSection(props: {
   onChanged: () => void;
 }) {
   const { t } = useT();
-  const providers = new Map<string, LinkProviderView | undefined>();
-  for (const provider of props.snapshot?.providers ?? []) {
-    if (provider.authModes?.some((mode) => mode.id === "remote-link"))
-      providers.set(provider.id, provider);
-  }
-  for (const connection of props.snapshot?.connections ?? []) {
-    if (connection.authSource === "remote-link" && !providers.has(connection.providerId))
-      providers.set(connection.providerId, undefined);
-  }
+  const providers = remoteLinkProviders(props.snapshot);
   if (!providers.size && props.loadError)
     return (
       <div

@@ -42,7 +42,7 @@ import {
   type LinkExecutionRuntime,
   type LinkIntegration,
 } from "./link-catalog";
-import { RemoteLinkSection, useRemoteLinkSnapshot } from "./RemoteLinkSection";
+import { RemoteLinkSection, remoteLinkProviders, useRemoteLinkSnapshot } from "./RemoteLinkSection";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import type { MaskedCredentialView } from "./types";
@@ -509,24 +509,42 @@ export function LinkTab({ cwd }: { cwd: string }) {
     const result: Record<LinkExecutionRuntime, LinkMethodEntry[]> = { local: [], server: [] };
     for (const category of catalog) {
       for (const item of category.items) {
+        const remoteProvider = remote.snapshot?.providers.find(
+          (provider) => provider.id === item.id,
+        );
+        const hasAvailableRemoteOAuth = remoteProvider?.authModes?.some(
+          (mode) =>
+            mode.id === "remote-link" &&
+            mode.available &&
+            remoteProvider.connectionMethods.some(
+              (method) =>
+                method.id === mode.methodId &&
+                method.executionRuntime === "server" &&
+                method.secretLocation === "server" &&
+                method.authKind === "oauth",
+            ),
+        );
         for (const method of item.connectionMethods) {
           if (
-            remote.snapshot?.providers
-              .find((provider) => provider.id === item.id)
-              ?.authModes?.some((mode) => mode.id === "remote-link" && mode.methodId === method.id)
+            remoteProvider?.authModes?.some(
+              (mode) => mode.id === "remote-link" && mode.methodId === method.id,
+            )
           )
             continue;
           const credential =
             byMethod.get(linkMethodStateKey(item.id, method)) ??
             byMethod.get(`${item.id}:${method.executionRuntime}`);
-          if (
-            (hasRemote || remote.error) &&
-            item.id === "github" &&
+          const isRemoteOAuthPlaceholder =
+            hasAvailableRemoteOAuth &&
             method.executionRuntime === "server" &&
+            method.secretLocation === "server" &&
+            method.authKind === "oauth" &&
             method.availability === "coming-soon" &&
-            !credential
-          )
-            continue;
+            !method.oauthProfileId &&
+            !method.browserAuth &&
+            !method.quickAuth &&
+            !credential;
+          if (isRemoteOAuthPlaceholder) continue;
           const available =
             method.availability === "available" &&
             (method.authKind === "token" || Boolean(method.oauthProfileId));
@@ -546,17 +564,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
       }
     }
     return result;
-  }, [
-    byMethod,
-    catalog,
-    credentials,
-    filter,
-    query,
-    t,
-    hasRemote,
-    remote.error,
-    remote.snapshot?.providers,
-  ]);
+  }, [byMethod, catalog, credentials, filter, query, t, remote.snapshot?.providers]);
 
   /**
    * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
@@ -883,7 +891,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
             onServerLogin={onServerLogin}
             onServerRefresh={onServerRefresh}
             onServerLogout={onServerLogout}
-            extraCount={remoteMatches ? 1 : 0}
+            extraCount={remoteMatches ? remoteLinkProviders(remote.snapshot).size : 0}
           >
             <div hidden={!remoteMatches}>
               {hasRemote || remote.error ? (
