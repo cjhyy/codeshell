@@ -132,7 +132,16 @@ describe("useRemoteApp Main process epochs", () => {
               ],
             ] as const)
           : []),
-        [100, { type: "session_title", title: "existing history" }],
+        // The old Main domain has a contiguous prefix; a real missing sequence
+        // now deliberately leaves the transport behind its recovery barrier.
+        ...Array.from(
+          { length: seedTool ? 97 : 98 },
+          (_, index) =>
+            [
+              index + (seedTool ? 4 : 3),
+              { type: "session_title", title: "existing history" },
+            ] as const,
+        ),
       ] as const) {
         firstSocket.message({
           type: "session.stream",
@@ -1263,6 +1272,51 @@ describe("useRemoteApp cc transcript streaming", () => {
     await hook.unmount();
   });
 
+  test("opening a second CC room unsubscribes the previous transcript before replacing its ref", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectProject("/repo");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: "room-A",
+          sessionId: "thread-A",
+          status: "running",
+        });
+        await flushMicrotasks();
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: "room-B",
+          sessionId: "thread-B",
+          status: "running",
+        });
+        await flushMicrotasks();
+      });
+      const events = ws.sent.map((payload) => JSON.parse(payload));
+      const unsubscribe = events.findIndex(
+        (event) => event.type === "ccRoom.unsubscribeTranscript" && event.roomId === "room-A",
+      );
+      const subscribe = events.findIndex(
+        (event) => event.type === "ccRoom.subscribeTranscript" && event.roomId === "room-B",
+      );
+      expect(unsubscribe).toBeGreaterThanOrEqual(0);
+      expect(subscribe).toBeGreaterThan(unsubscribe);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("re-subscribes the active transcript after the phone socket reconnects", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());
@@ -1627,4 +1681,391 @@ test("the actual Desktop hook/controller pair keeps drafts through create and se
   expect(FakeWebSocket.instances).toHaveLength(1);
   await hook.unmount();
   restoreFetch();
+});
+
+describe("useRemoteApp native output journal", () => {
+  async function connectedJournal() {
+    const { SessionManager } = await import("@cjhyy/code-shell-core");
+    const { SessionOutputJournal } = await import("@cjhyy/code-shell-core/internal");
+    const { SessionSnapshotStore } =
+      await import("../../../desktop/src/main/SessionSnapshotStore.js");
+    const { MobileOutputRecovery } =
+      await import("../../../desktop/src/main/mobile-remote/output-recovery.js");
+    const { mkdtempSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const root = mkdtempSync(join(tmpdir(), "mobile-hook-journal-"));
+    const manager = new SessionManager(root);
+    const session = manager.create(root, "fixture", "fixture", "native");
+    manager.startSessionRun(session.state, "run");
+    let writer = new SessionOutputJournal(
+      root,
+      "native",
+      "run",
+      session.transcript.getEvents()[0].id,
+    );
+    let snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+    const publish = (event: import("@cjhyy/code-shell-core").StreamEvent) => {
+      const raw = { ...event, outputCursor: writer.append(event) };
+      return {
+        type: "session.stream" as const,
+        sessionId: "native",
+        epoch: snapshots.epoch,
+        ...snapshots.append("native", raw),
+      };
+    };
+    publish({ type: "session_user_message", text: "question", clientMessageId: "stable-submit" });
+    publish({ type: "stream_request_start", turnNumber: 1, messageId: "reply" });
+    for (let index = 0; index < 30; index++)
+      publish({ type: "text_delta", text: "汉🙂".repeat(12000) });
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    let revoked = false;
+    const replies: unknown[] = [];
+    let beforeWire:
+      | ((event: import("@cjhyy/code-shell-core").MobileServerEvent) => void)
+      | undefined;
+    const service = new MobileOutputRecovery({
+      root: () => root,
+      authority: async () => {
+        if (revoked) throw new Error("project no longer mounted");
+        return "project-root-incarnation";
+      },
+      snapshot: () => snapshots.get("native"),
+      reply: (_viewer, event) => {
+        replies.push(event);
+        beforeWire?.(event);
+        ws.message(event);
+      },
+    });
+    await act(async () => {
+      ws.open();
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        capabilities: { outputJournal: 1 },
+      });
+      await flushMicrotasks();
+      hook.result.current.selectSession("native");
+      await flushMicrotasks();
+    });
+    let readIndex = 0;
+    const pump = async (
+      beforeReply?: (event: import("@cjhyy/code-shell-core").MobileClientEvent) => void,
+    ) => {
+      for (let round = 0; round < 100; round++) {
+        const pending = ws.sent.slice(readIndex);
+        readIndex = ws.sent.length;
+        if (!pending.length) break;
+        await act(async () => {
+          for (const line of pending) {
+            const event = JSON.parse(line);
+            if (
+              [
+                "session.select",
+                "session.outputJournal",
+                "session.recovery.cancel",
+                "ccRoom.openSession",
+              ].includes(event.type)
+            ) {
+              beforeReply?.(event);
+              await service.handle({ ...event, viewerId: "tab", deviceId: "device-1" });
+            }
+          }
+          await flushMicrotasks();
+        });
+      }
+    };
+    return {
+      hook,
+      ws,
+      pump,
+      publish,
+      observe: (raw: Record<string, unknown>) => ({
+        type: "session.stream",
+        sessionId: "native",
+        epoch: snapshots.epoch,
+        ...snapshots.append("native", raw),
+      }),
+      startNextRun: (id: string) => {
+        manager.startSessionRun(manager.readSessionState("native")!, id);
+        writer = new SessionOutputJournal(root, "native", id);
+      },
+      replies,
+      beforeWire: (callback: typeof beforeWire) => {
+        beforeWire = callback;
+      },
+      root,
+      service,
+      restart: () => {
+        snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+      },
+      revoke: () => {
+        revoked = true;
+      },
+      cleanup: async () => {
+        await hook.unmount();
+        rmSync(root, { recursive: true, force: true });
+      },
+    };
+  }
+  const text = (chat: ReturnType<typeof useRemoteApp>["chat"]) =>
+    chat.items
+      .filter((item) => item.kind === "assistant")
+      .map((item) => item.text)
+      .join("");
+
+  test("actual hook hydrates evicted multi-page native output then repairs a same-epoch gap without showing suffix", async () => {
+    const f = await connectedJournal();
+    try {
+      await f.pump();
+      expect(text(f.hook.result.current.chat)).toBe("汉🙂".repeat(12000 * 30));
+      expect(f.hook.result.current.chat.items.find((item) => item.kind === "user")).toMatchObject({
+        clientMessageId: "stable-submit",
+      });
+      f.publish({ type: "text_delta", text: "missed-" });
+      const suffix = f.publish({ type: "text_delta", text: "suffix" });
+      await act(async () => {
+        f.ws.message(suffix);
+        await flushMicrotasks();
+      });
+      expect(text(f.hook.result.current.chat)).not.toContain("suffix");
+      await f.pump();
+      expect(text(f.hook.result.current.chat)).toBe("汉🙂".repeat(12000 * 30) + "missed-suffix");
+      expect(f.hook.result.current.chat.run).toBe("running");
+      f.restart();
+      const terminal = f.publish({ type: "turn_complete", reason: "completed" });
+      await act(async () => {
+        f.ws.message(terminal);
+        await flushMicrotasks();
+      });
+      await f.pump();
+      expect(text(f.hook.result.current.chat)).toBe("汉🙂".repeat(12000 * 30) + "missed-suffix");
+      expect(f.hook.result.current.chat.run).toBe("completed");
+    } finally {
+      await f.cleanup();
+    }
+  });
+
+  test("stable preliminary input for a subsequent real Run waits then joins its recorded boundary", async () => {
+    const f = await connectedJournal();
+    try {
+      await f.pump();
+      const before = text(f.hook.result.current.chat);
+      await act(async () => {
+        f.ws.message(
+          f.observe({
+            type: "session_user_message",
+            text: "follow up",
+            clientMessageId: "follow-submit",
+          }),
+        );
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.notice).toBeUndefined();
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      f.startNextRun("follow-run");
+      // Engine's replay anchor is committed before its published start boundary.
+      f.publish({
+        type: "session_user_message",
+        text: "follow up",
+        clientMessageId: "follow-submit",
+      });
+      await act(async () => {
+        f.ws.message(
+          f.publish({
+            type: "session_started",
+            sessionId: "native",
+            runId: "follow-run",
+            clientMessageId: "follow-submit",
+          }),
+        );
+        f.ws.message(
+          f.publish({ type: "stream_request_start", turnNumber: 1, messageId: "follow-reply" }),
+        );
+        f.ws.message(f.publish({ type: "text_delta", text: "follow-answer" }));
+        f.ws.message(f.publish({ type: "turn_complete", reason: "completed" }));
+        await flushMicrotasks();
+      });
+      await f.pump();
+      expect(text(f.hook.result.current.chat)).toBe(before + "follow-answer");
+      expect(
+        f.hook.result.current.chat.items.filter(
+          (item) => item.kind === "user" && item.clientMessageId === "follow-submit",
+        ),
+      ).toHaveLength(1);
+      expect(f.hook.result.current.chat.run).toBe("completed");
+      expect(f.hook.result.current.notice).toBeUndefined();
+    } finally {
+      await f.cleanup();
+    }
+  });
+
+  test("pending preliminary input cannot be bypassed by another start or ordinary suffix/terminal", async () => {
+    const f = await connectedJournal();
+    try {
+      await f.pump();
+      const before = text(f.hook.result.current.chat);
+      f.startNextRun("other-run");
+      await act(async () => {
+        f.ws.message(
+          f.observe({
+            type: "session_user_message",
+            text: "pending",
+            clientMessageId: "pending-submit",
+          }),
+        );
+        f.ws.message(
+          f.publish({
+            type: "session_started",
+            sessionId: "native",
+            runId: "other-run",
+            clientMessageId: "other-submit",
+          }),
+        );
+        f.ws.message(f.publish({ type: "text_delta", text: "must-wait" }));
+        f.ws.message(f.publish({ type: "turn_complete", reason: "completed" }));
+        await flushMicrotasks();
+      });
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      expect(f.hook.result.current.chat.run).not.toBe("completed");
+      expect(f.hook.result.current.notice).toBeUndefined();
+    } finally {
+      await f.cleanup();
+    }
+  });
+
+  test("an input arriving after a frozen reply capture retains display and has a bounded wait", async () => {
+    const f = await connectedJournal();
+    try {
+      await f.pump();
+      const before = text(f.hook.result.current.chat);
+      f.beforeWire((event) => {
+        if (event.type !== "session.outputJournal" || !event.page.complete) return;
+        f.beforeWire(undefined);
+        f.ws.message(
+          f.observe({
+            type: "session_user_message",
+            text: "after capture",
+            clientMessageId: "late-submit",
+          }),
+        );
+      });
+      f.publish({ type: "text_delta", text: "missing" });
+      await act(async () => {
+        f.ws.message(f.publish({ type: "text_delta", text: "suffix" }));
+        await flushMicrotasks();
+      });
+      await f.pump();
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      expect(f.hook.result.current.notice).toBeUndefined();
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10_050));
+        await flushMicrotasks();
+      });
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      expect(f.hook.result.current.notice).toBeTruthy();
+      f.startNextRun("late-run");
+      await act(async () => {
+        f.ws.message(
+          f.publish({
+            type: "session_started",
+            sessionId: "native",
+            runId: "late-run",
+            clientMessageId: "late-submit",
+          }),
+        );
+        f.ws.message(f.publish({ type: "turn_complete", reason: "completed" }));
+        await flushMicrotasks();
+      });
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      expect(f.hook.result.current.chat.run).not.toBe("completed");
+    } finally {
+      await f.cleanup();
+    }
+  });
+
+  for (const fault of ["revoke", "corrupt", "room"] as const) {
+    test(`actual hook retains visible content behind ${fault} recovery barrier`, async () => {
+      const f = await connectedJournal();
+      try {
+        await f.pump();
+        const before = text(f.hook.result.current.chat);
+        f.publish({ type: "text_delta", text: "lost" });
+        const suffix = f.publish({ type: "text_delta", text: "must-not-display" });
+        await act(async () => {
+          f.ws.message(suffix);
+          await flushMicrotasks();
+        });
+        if (fault === "revoke") f.revoke();
+        else if (fault === "corrupt") {
+          const { truncateSync } = await import("node:fs");
+          truncateSync(`${f.root}/native/output-journal.jsonl`, 0);
+        } else {
+          await act(async () => {
+            f.hook.result.current.openCcSession("cc-session", "/fixture", "default");
+            await flushMicrotasks();
+          });
+        }
+        await f.pump();
+        expect(text(f.hook.result.current.chat)).toBe(before);
+        if (fault !== "room") expect(f.hook.result.current.notice).toBeTruthy();
+        expect(f.hook.result.current.chat.run).not.toBe("completed");
+      } finally {
+        await f.cleanup();
+      }
+    });
+  }
+
+  test("an unsequenced raw stream cannot bypass negotiated journal coverage", async () => {
+    const f = await connectedJournal();
+    try {
+      await f.pump();
+      const before = text(f.hook.result.current.chat);
+      await act(async () => {
+        f.ws.message({
+          method: "agent/streamEvent",
+          params: { sessionId: "native", event: { type: "text_delta", text: "raw-bypass" } },
+        });
+        f.ws.message({
+          method: "agent/streamEvent",
+          params: { sessionId: "native", event: { type: "turn_complete", reason: "completed" } },
+        });
+        await flushMicrotasks();
+      });
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      expect(f.hook.result.current.chat.run).not.toBe("completed");
+      expect(f.hook.result.current.notice).toBeTruthy();
+    } finally {
+      await f.cleanup();
+    }
+  });
+
+  test("legacy peer same-epoch missing frame cannot advance visible output or claim completion", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+        hook.result.current.selectSession("legacy");
+        for (const [seq, event] of [
+          [1, { type: "stream_request_start", turnNumber: 1 }],
+          [2, { type: "text_delta", text: "visible" }],
+          [4, { type: "text_delta", text: "missing-prefix-suffix" }],
+          [5, { type: "turn_complete", reason: "completed" }],
+        ] as const)
+          ws.message({ type: "session.stream", sessionId: "legacy", epoch: "same", seq, event });
+        await flushMicrotasks();
+      });
+      expect(text(hook.result.current.chat)).toBe("visible");
+      expect(hook.result.current.chat.run).toBe("running");
+      expect(hook.result.current.notice).toBeTruthy();
+    } finally {
+      await hook.unmount();
+    }
+  });
 });

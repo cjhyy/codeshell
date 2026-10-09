@@ -108,7 +108,9 @@ or invented Transcript-ID-to-transport-sequence mapping is used.
 
 Old peers and old in-flight producers without durable cursors retain the legacy
 conservative recovery path. A missing/oversized legacy cutover base keeps the
-barrier closed. This change does not adapt the frozen mobile/paired Panel flows,
+barrier closed. Native Core Mobile transport now has a separate
+[authenticated recovery increment](mobile-output-journal-delivery.md); it adds no
+Mobile UI. This change does not adapt paired Panel flows, CC Room transcripts,
 external-runtime output producers, arbitrary historical imports, unlimited
 history, automatic journal retention/rotation, or a damaged-journal repair UI.
 Those limits remain TODOs; the complete long-stream recovery item is not marked

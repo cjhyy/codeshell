@@ -111,7 +111,16 @@ export type MobileClientEvent =
       mime: string;
       size: number;
     }
-  | { type: "session.select"; sessionId: string }
+  | { type: "session.select"; sessionId: string; recoveryId?: string }
+  | { type: "session.recovery.cancel" }
+  | {
+      type: "session.outputJournal";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      after?: string;
+      through?: string;
+    }
   | {
       type: "session.create";
       /** Optional browser request correlation; echoed with the creation acknowledgement. */
@@ -215,9 +224,9 @@ export type MobileClientEvent =
     };
 
 export type MobileServerEvent =
-  | { type: "auth.ok"; device: TrustedDevicePublic }
+  | { type: "auth.ok"; device: TrustedDevicePublic; capabilities?: { outputJournal?: 1 } }
   | { type: "auth.failed"; message: string }
-  | { type: "pair.ok"; device: TrustedDevicePublic }
+  | { type: "pair.ok"; device: TrustedDevicePublic; capabilities?: { outputJournal?: 1 } }
   | { type: "pair.failed"; message: string }
   | {
       type: "chat.accepted";
@@ -253,6 +262,24 @@ export type MobileServerEvent =
       answer?: string;
     }
   | { type: "error"; message: string; clientMessageId?: string; approvalId?: string }
+  | { type: "session.recovery.ready"; sessionId: string; recoveryId: string; ok: boolean }
+  | {
+      type: "session.outputJournal";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      page: import("../session/output-journal.js").OutputJournalPage;
+      /** Main's display-only projection after validating the exact raw cutover anchor. */
+      legacyBase?: { throughEventId: string; events: Record<string, unknown>[] };
+      legacyBaseComplete?: boolean;
+      snapshot?: {
+        epoch: string;
+        nextSeq: number;
+        outputCursor?: string;
+        unpaired: boolean;
+        inputIds?: string[];
+      };
+    }
   // ── Sessions ──────────────────────────────────────────────────────────
   | { type: "session.list.ok"; sessions: MobileSessionMeta[]; activeSessionId?: string }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }
@@ -261,6 +288,7 @@ export type MobileServerEvent =
       sessionId: string;
       entries: Array<{ seq: number; event: unknown }>;
       nextSeq: number;
+      outputCursor?: string;
       /** Main lifetime in which these sequence numbers are valid. */
       epoch?: string;
     }
