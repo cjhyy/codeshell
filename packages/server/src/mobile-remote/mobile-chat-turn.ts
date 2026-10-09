@@ -1,7 +1,12 @@
 import { markAttachmentsSent, type InputAttachmentMeta } from "../attachment-service.js";
 import { stablePromptHash } from "../client-message-id.js";
 import { materializeMobileAttachments } from "./mobile-attachments.js";
-import { injectMobileRunAndAwaitAcceptance, type MobileRunBridge } from "./mobile-run-dispatch.js";
+import {
+  injectMobileRunAndAwaitAcceptance,
+  type MobileRunBridge,
+  type MobileRunAcceptance,
+  type MobileRunRequest,
+} from "./mobile-run-dispatch.js";
 import type { ClaimedMobileUpload, MobileUploadService } from "./mobile-upload-service.js";
 import type { MobileAttachmentSummary, MobileImageAttachment, PermissionMode } from "./types.js";
 import type { WorkerFrameMeta } from "../worker-bridge-core.js";
@@ -24,6 +29,8 @@ export interface DispatchMobileChatTurnInput {
   uploads: ChatTurnUploads;
   resolveWorkspace: (sessionId: string, fallbackCwd: string) => Promise<string>;
   markSent?: typeof markAttachmentsSent;
+  /** Host-owned alternative producer; receives the same materialized input and ack boundary. */
+  submit?: (request: MobileRunRequest) => Promise<MobileRunAcceptance>;
 }
 
 export type DispatchMobileChatTurnResult =
@@ -85,23 +92,27 @@ export async function dispatchMobileChatTurn(
   const clientMessageId =
     suppliedClientMessageId ||
     `mobile:${input.sessionId}:${input.runId}:${stablePromptHash(`${text}\0${attachmentHash}`)}`;
-  const acceptance = await injectMobileRunAndAwaitAcceptance(
-    input.bridge,
-    {
-      id: input.runId,
-      params: {
-        task: text,
-        cwd,
-        sessionId: input.sessionId,
-        ...(input.projectId ? { projectId: input.projectId } : {}),
-        ...(input.rootId ? { rootId: input.rootId } : {}),
-        clientMessageId,
-        attachments: materialized.metas,
-        ...(input.permissionMode ? { permissionMode: input.permissionMode } : {}),
-      },
+  const request: MobileRunRequest = {
+    id: input.runId,
+    params: {
+      task: text,
+      cwd,
+      sessionId: input.sessionId,
+      ...(input.projectId ? { projectId: input.projectId } : {}),
+      ...(input.rootId ? { rootId: input.rootId } : {}),
+      clientMessageId,
+      attachments: materialized.metas,
+      ...(input.permissionMode ? { permissionMode: input.permissionMode } : {}),
     },
-    input.meta,
-  );
+  };
+  let acceptance: MobileRunAcceptance;
+  try {
+    acceptance = input.submit
+      ? await input.submit(request)
+      : await injectMobileRunAndAwaitAcceptance(input.bridge, request, input.meta);
+  } catch {
+    acceptance = { ok: false, message: "The selected runtime rejected the submission" };
+  }
   if (!acceptance.ok) {
     await settleClaims(input.uploads, input.deviceId, materialized.claims, "release");
     return { ok: false, message: acceptance.message };

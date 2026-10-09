@@ -134,3 +134,12 @@ export-budget failure are retained in the raw evidence. Their explicit fixes and
 harness failures also remain separately labelled. Final CI is evaluated on the
 exact final [PR99](https://github.com/cjhyy/codeshell/pull/99) head, separately
 from this local source receipt; no old failed head is treated as acceptance.
+
+## Follow-up Mobile consumer
+
+The later [paired Mobile increment](mobile-external-output-journal-delivery.md)
+connects this same owned ingress/journal to individually selected authenticated
+viewers, and routes Mobile input/cancel to an existing live Runtime. The PR99
+source, receipt and native acceptance above remain their historical boundary;
+its separate Native Core Mobile regression is not reused as evidence for this
+new external consumer.

@@ -1,0 +1,1031 @@
+{
+  "formatVersion": 1,
+  "createdAt": "2026-10-09T05:28:47.251488+00:00",
+  "sourceCheckpoint": {
+    "commit": "d460734c18cd1f6811069edfa475927d87f9bde1",
+    "tree": "4f02f82bc722acb362d95963553755ef2882cc79",
+    "baseCommit": "c9a55b12251beb0b89445be3f258b164c8f78c4c",
+    "initialBaseCommit": "a1fd082c109f739828ca4002e6e62aca3361cb66",
+    "containsPR100": true,
+    "containsPR102": true,
+    "containsPR101": true,
+    "runtimeCheckedBeforeMerge": "9ff7168dd53ca990648ad6dd31b9558036746989",
+    "bunLockSha256": "f383097a01585941216c3a1e82ee0bf994f4ed29aa1fb406c25ded503f79bbcb",
+    "lockEqualBase": true,
+    "sourceSha256": {
+      ".github/workflows/ci.yml": "b3637d7897edf9545255b41269b96cb5db8231d138bbc3fa8f5588f75522a015",
+      "TODO.md": "f17d951317dcd4ea3c6b3c6568e92071a668c419002ad87056f852eda4a8760c",
+      "docs/todo/external-runtime-output-journal-delivery.md": "5ca35ca0713d564b1a8cc0ca4ecbc7e72173a9356fd92b5190067ea39f448f4a",
+      "docs/todo/mobile-external-output-journal-delivery.md": "38dd6ef73a1c89d66daef5362df67f828ddd1188a65583f5ef366ee82a271802",
+      "docs/todo/mobile-output-journal-delivery.md": "4b8a4806f2c6819d8284cf594a1a0a8bc03f14ba2cdac10fd6456bb1e07aac1a",
+      "package.json": "0d48e5edd2068fbbfc65d2848547b47a983507c4a156d63c31958f0ffa006be7",
+      "packages/core/src/protocol/mobile-remote-types.ts": "4aabf9025d2e0845327813466bc033503869381e3f418916ef581297e8413965",
+      "packages/desktop/src/main/agent-bridge.ts": "51fefc88347450f198e628e02e68b626086943dc6906844bf7085e6b90cf8cb2",
+      "packages/desktop/src/main/external-runtime-service.test.ts": "bbf3d059f9f7ecc73f106337d099e469d23377b442bbcba38d6ba9013eb0e6ec",
+      "packages/desktop/src/main/external-runtime-service.ts": "9819dbaf8b9b0ebf1859cb7dec6569883a60b7de374782387314779687ce996d",
+      "packages/desktop/src/main/external-runtime-state.test.ts": "4db557feb5c7ae1dc5745dafded36ec2436559dbe433f4fc9b396ad70000464a",
+      "packages/desktop/src/main/external-runtime-state.ts": "0c23df0e3b49872860a569f513cc48939ba27deb9ae6bb7f252d59048ecea1f4",
+      "packages/desktop/src/main/index.ts": "9dad9d3e8b3d9884a1459be0c61d4eaee655841eb8acfaa3260f73118a6105c0",
+      "packages/desktop/src/main/mobile-remote-orchestrator.ts": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "packages/desktop/src/main/mobile-remote/external-runtime-commands.test.ts": "b5031f2cf22dd56748b1fac42cb9d4f05c14e73b27f2c3dc8ebf8435ee0e8b43",
+      "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts": "298bbc8ccecc4a87ca09207327e83ba4874ad5858d9b58d79747a8ed0884333c",
+      "packages/desktop/src/main/mobile-remote/handle-client-event.test.ts": "fdaf62a7e6376a34505e659d2e9fd6bea491b171e5fda1c61717a1317de87012",
+      "packages/desktop/src/main/mobile-remote/handle-client-event.ts": "5fd90faedba3f35989345e63570619758f6b5e47c0d6e87a1db8a12af5d6552f",
+      "packages/desktop/src/main/mobile-remote/output-recovery-authority.ts": "9e0af19016596a3a43390aa07a16e77daca1b301fb7e6c8892e60ee3d2fb86ce",
+      "packages/desktop/src/main/mobile-remote/output-recovery.test.ts": "344f204f95c53b07194dddb70297776579523bc7eafdebf70b2198ab60861580",
+      "packages/desktop/src/main/mobile-remote/output-recovery.ts": "887e24aae4775c6806f2eb8ff5aa62a5901567e41cff56fbd4c6e60088483c4e",
+      "packages/desktop/src/main/owned-external-stream.ts": "075d5ce46e1f651ca6f920379fef367aeb486121db33c509b479c782c8f66c13",
+      "packages/server/src/mobile-remote/mobile-chat-turn.test.ts": "7b38e59928752b9e501c41d6df763a457d3b2a3667fc7bf02ed22aed829448e6",
+      "packages/server/src/mobile-remote/mobile-chat-turn.ts": "8b2529743a7a591578e56c41722e293f82f0bc37c105484daa28fb1e74ed8978",
+      "packages/server/src/mobile-remote/remote-host-manager.ts": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "packages/web/src/hooks/mobileOutputClient.test.ts": "79355fe183e853315671b838e40b48bc48b3cbca1ea84156d3b7ae30cbf701dd",
+      "packages/web/src/hooks/mobileOutputClient.ts": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "packages/web/src/hooks/useRemoteApp.ts": "de5abf9e0c5c2a5ee58dda1fee80f68baa7938211043c7e3a2165e2dd9f66e57",
+      "packages/web/src/lib/mobileOutputRecovery.ts": "649ee8e116be0103f862a320a42f2fc31c4106107e137bafbc05109225f8efc7",
+      "scripts/fixtures/mobile-external-cli.mjs": "e04cda530dc2b51535762821655e1b337644bb2b3a45a2bb8ef2968f7818262e",
+      "scripts/fixtures/mobile-external-output.tsx": "770ca48943e24db2460a5c030b13bf5552692a92adafd963d4e6c4fa0778e914",
+      "scripts/mobile-external-output-smoke-isolation.mjs": "21239bd151cde252f73f2781bace825bf35ffda0edc57102b8df1aadfa9c8150",
+      "scripts/run-mobile-external-output-smoke.mjs": "63e4fcce11568b9497b6204240eb7efe4eff2b2d36648f7e3e50605da648e38d",
+      "scripts/smoke-mobile-external-output.mjs": "c854d742f8de6e72d5c3543eb8c17cfcbe59527be5210b3e0497d5e20b1008e6",
+      "tests/architecture-budgets.test.ts": "74540b64ffb677eedc9e9eda80142b78c93b039303a12f5eb812e14e19eb2a54"
+    }
+  },
+  "checks": {
+    "install": {
+      "freshRealPrivateHOME": true,
+      "frozen": true,
+      "ignoreScripts": true,
+      "packages": 2133,
+      "publicRegistry": true,
+      "log": "install.log"
+    },
+    "packageRelease": {
+      "sourceCheckpoint": "cc7f41fa4eccc797599f6356790798af38dfa1cf",
+      "finalPublicPackageInputsByteIdentical": true,
+      "exitCode": 0,
+      "tarballs": 9,
+      "typedEntries": 47,
+      "runtimeImports": 45,
+      "log": "package-workspace-final.log"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "workspaces": 12,
+      "includesWebSPA": true,
+      "dependencyCleanBuildAndFullCheckSource": "369342409a1430e6bba8d3627d4f2d042477d91d",
+      "dependencyCleanBuildAndFullCheckLog": "typecheck-composed-final.log",
+      "finalNoEmitSource": "d460734c18cd1f6811069edfa475927d87f9bde1",
+      "finalNoEmitLog": "typecheck-contract-final.log",
+      "log": "typecheck-contract-final.log"
+    },
+    "focused": {
+      "exitCode": 0,
+      "pass": 202,
+      "fail": 0,
+      "skip": 0,
+      "files": 9,
+      "log": "focused-contract-final.log"
+    },
+    "lint": {
+      "sourceCheckpoint": "87a724e2e83be8a7798602f21706079905c730b3",
+      "runtimeAndAllPackageSourcesByteIdenticalFinal": true,
+      "exitCode": 0,
+      "errors": 0,
+      "baselineWarnings": 105,
+      "log": "lint-merged-final.log"
+    },
+    "format": {
+      "exitCode": 0,
+      "scope": "all task changed files",
+      "log": "format-contract-final.log"
+    },
+    "mobileExternalNative": {
+      "sourceCheckpoint": "87a724e2e83be8a7798602f21706079905c730b3",
+      "runtimeAndFixtureBlobsByteIdenticalFinal": true,
+      "exitCode": 0,
+      "log": "native-merged-final.log",
+      "cases": [
+        "initial authenticated >8MiB evicted journal recovery without second execution",
+        "owned live stream/cursor gap joins the same durable run once",
+        "actual Mobile send commits to same existing external producer exactly once",
+        "same/conflicting duplicate ID rejects zero execution without poisoning healthy journal",
+        "authenticated reconnect joins cold Main RAM epoch without another CLI request",
+        "actual attachment-only Mobile hook input stages trusted image and canonical recovery projection once",
+        "second actual Node Main with empty RAM recovers authenticated pages without CLI construction",
+        "cold no-live-instance send rejected with no native fallback",
+        "first Mobile input into an already live journal-less Runtime waits for its true initial cursor without fallback",
+        "actual Mobile cancel targets only the captured existing external run with one aborted journal terminal",
+        "129 actual authenticated viewers preserve old external source at capacity and deny same-ID native fallback with zero input/execution",
+        "project/device revocation and non-owner window isolation"
+      ],
+      "actualPid": 49942,
+      "ppid": 49883,
+      "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+      "nodeVersion": "22.16.0",
+      "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+      "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
+      "syntheticCliOnly": true,
+      "actualMobileHook": true,
+      "coldMain": {
+        "pid": 51009,
+        "ppid": 49942,
+        "nodeVersion": "22.16.0",
+        "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+        "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+        "pages": 28,
+        "textHash": "012ccf11251bb7d4a0723455cd92e1d624cbce603e97f06d1fe49835d7236b64",
+        "run": "completed",
+        "epoch": "0bf9c7c7-2f76-49af-be7f-84c61daafa49",
+        "emptyInitialRam": true,
+        "runtimeConstructed": false
+      },
+      "authenticatedCapacityViewers": 129,
+      "pages": 193,
+      "maxPageBytes": 1042932,
+      "physicalTurns": 6,
+      "nativeStarts": 0,
+      "recoveredBytes": 9439680,
+      "journalBytes": 28512100,
+      "textHash": "1fa40b6acca32505ea17db5d8e927649b97bd09edda6f58ff67b5ad0197b62f3",
+      "desktopOwnerOnly": true
+    },
+    "existingExternalProducerRegression": {
+      "sourceCheckpoint": "369342409a1430e6bba8d3627d4f2d042477d91d",
+      "producerAndCoreRuntimeBlobsEqualFinal": true,
+      "exitCode": 0,
+      "log": "native-external-pr99-final.log",
+      "passed": true,
+      "cases": 18,
+      "pid": 38348,
+      "ppid": 38326,
+      "uid": 501,
+      "homeHash": "660e4a7c9527e9710931e64072c59eae394555664c6a55d8bfa7b2e97a925f5b",
+      "nodeVersion": "22.16.0",
+      "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+      "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+    },
+    "existingNativeCoreMobileRegression": {
+      "sourceCheckpoint": "369342409a1430e6bba8d3627d4f2d042477d91d",
+      "compiledFixtureByteIdenticalFinal": {
+        "actualCoreRegressionSource": "369342409a1430e6bba8d3627d4f2d042477d91d",
+        "finalSource": "d460734c18cd1f6811069edfa475927d87f9bde1",
+        "previousActualFixtureSha256": "b1f8c1a3c6dd86b3e1b81253802957a61685313818334065a1465a85dc112125",
+        "finalCompiledFixtureSha256": "b1f8c1a3c6dd86b3e1b81253802957a61685313818334065a1465a85dc112125",
+        "byteIdentical": true,
+        "scope": "Bun source compilation only; no Core/module execution or dist cleaning. Existing Core native fixture does not instantiate external command router; separate final external native exercises that real router.",
+        "compiledAtSource": "87a724e2e83be8a7798602f21706079905c730b3",
+        "compiledConsumerSourcesByteIdenticalToFinal": true
+      },
+      "exitCode": 0,
+      "log": "native-core-mobile-pr98-final.log",
+      "mobileNativeRecovery": true,
+      "elapsedMs": 64961,
+      "actualPid": 38347,
+      "ppid": 38343,
+      "homeHash": "2a590ff9115dc3abe7c767610f5e1f4510ee6f51c80ea6dcf1d172de4659c50e",
+      "modelRequests": 2,
+      "frames": 2223,
+      "recoveredBytes": 9059235,
+      "journalBytes": 33859020,
+      "pageRequests": 177,
+      "maximumPageBytes": 1049467,
+      "stableSubmit": true,
+      "actualAgentServerPreliminaryInput": true,
+      "actualFollowUpInput": true,
+      "actualIdempotentRetry": true,
+      "newMainEpoch": true,
+      "authenticatedWsReconnect": true,
+      "frozenAppendJoined": true,
+      "sameEpochGap": true,
+      "unfinishedNotCompleted": true,
+      "corruptionBarrier": true,
+      "projectRevoked": true,
+      "deviceRevoked": true,
+      "visibleBeforeDamageHash": "8d72bd1c403f843c3df4b73ed9d39aa8a615ef229698003c221947766cf43ce2"
+    }
+  },
+  "isolation": {
+    "nodeBinarySha256": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
+    "nodeVersion": "22.16.0",
+    "preCoreProcesses": [
+      {
+        "event": "pre-core",
+        "pid": 49942,
+        "ppid": 49883,
+        "uid": 501,
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+        "negativeProbes": 4,
+        "nodeVersion": "22.16.0",
+        "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+        "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+      },
+      {
+        "event": "pre-core",
+        "pid": 49946,
+        "ppid": 49942,
+        "uid": 501,
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+        "negativeProbes": 4,
+        "nodeVersion": "22.16.0",
+        "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+        "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+      },
+      {
+        "event": "pre-core",
+        "pid": 51009,
+        "ppid": 49942,
+        "uid": 501,
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+        "negativeProbes": 4,
+        "nodeVersion": "22.16.0",
+        "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+        "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+      },
+      {
+        "event": "pre-core",
+        "pid": 51067,
+        "ppid": 49942,
+        "uid": 501,
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+        "negativeProbes": 4,
+        "nodeVersion": "22.16.0",
+        "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+        "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+      },
+      {
+        "event": "pre-core",
+        "pid": 51083,
+        "ppid": 49942,
+        "uid": 501,
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
+        "negativeProbes": 4,
+        "nodeVersion": "22.16.0",
+        "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+        "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019"
+      }
+    ],
+    "guardCounts": {
+      "blocked": 20,
+      "pre-core": 5,
+      "owned-listener": 9,
+      "allowed-git-metadata": 940,
+      "allowed-spawn": 4,
+      "allowed-loopback": 133
+    },
+    "fourNegativeProbesPerNode": true,
+    "raw": "mobile-external-guard.jsonl",
+    "scope": "pre-Core JavaScript exact owned-loopback and hash-pinned child-process guard; three read-only Git metadata commands in the owned workspace; real private HOME inherited by actual children. Not an OS sandbox or global I/O observation. Existing Core regression uses its separate exact-origin JS guard.",
+    "noVendorCLIOrProviderAccounts": true
+  },
+  "earlierAttempts": [
+    {
+      "logs": ["ci-checkpoint-d189-rest.log"],
+      "result": "old PR103 head d189a772 CI 37888025354 rest shard failed",
+      "counts": {
+        "pass": 4392,
+        "skip": 81,
+        "fail": 1
+      },
+      "cause": "architecture-budgets expected index.ts at most 7196 lines, actual 7201. The five new composition-only lines supply the lazy existing Runtime and subscribe its owned stream; command authority and bounded pump remain extracted, with no new IPC or public exports. Exact baseline 7201 and rationale registered in tests; no future allowance added.",
+      "fixedBy": "d460734c18cd1f6811069edfa475927d87f9bde1",
+      "fixedCheck": "architecture-composition-final.log"
+    },
+    {
+      "logs": [
+        "native-merged-final.log",
+        "focused-merged-final.log",
+        "typecheck-merged-final.log",
+        "lint-merged-final.log",
+        "format-merged-final.log"
+      ],
+      "result": "all passed combined source 87a724e2 before test-contract-only correction",
+      "scope": "native 12 cases, 129 actual authenticated sockets, six physical synthetic CLI turns and zero native worker starts; all package/runtime/fixture source bytes identical in final. Previous immutable 112-raw archive retained, SHA256 47f7d70f6fa934883dd8533eb2a51c69a56533f7ac2dcb7fd2ab6e66abf97027"
+    },
+    {
+      "logs": ["evidence-collector-incomplete.log"],
+      "result": "evidence collector assertion failed before writing receipt",
+      "cause": "comparison scoped all Desktop main files and included the known PR101 link-system-browser.test.ts update; corrected assertion pins exactly that test-only difference. No production or test gate failure; incomplete task-owned archive retained separately and not used as final receipt."
+    },
+    {
+      "logs": [
+        "native-frozen-final.log",
+        "focused-frozen-final.log",
+        "typecheck-frozen-final.log",
+        "lint-frozen-final.log",
+        "format-frozen-final.log"
+      ],
+      "result": "passed earlier 9ff7168d checkpoint",
+      "scope": "final freshness correction restricts the native first-input exception to this device minted ID with durable state genuinely absent; existing device-minted state still requires current selection. Latest main PR101 merged cleanly and final combined checks run again."
+    },
+    {
+      "logs": [
+        "native-route-final.log",
+        "focused-route-final.log",
+        "typecheck-route-complete-final.log",
+        "lint-route-final.log",
+        "format-route-final.log"
+      ],
+      "result": "passed earlier e370 checkpoint",
+      "scope": "before final fresh-device existing-state guard; original immutable 99-file evidence archive retained separately as history, SHA256 893537b9b759b6fdf9de80e7763d31de16e73cba174e4a6f8961fe1464c3f92d"
+    },
+    {
+      "logs": ["capacity-route-before.log", "capacity-route-after.log"],
+      "result": "controlled red/green",
+      "cause": "old bounded maps evicted the earliest source binding after 129 viewers, allowing a reused ID to fall through to Core; final maps refuse new bindings and require current viewer selection for explicit existing Sessions"
+    },
+    {
+      "logs": ["native-composed-final.log", "focused-composed-final.log"],
+      "result": "passed earlier 369 checkpoint",
+      "scope": "does not prove final actual 129-socket capacity routing"
+    },
+    {
+      "logs": ["await-authority-before.log", "await-authority-after.log"],
+      "result": "controlled red/green",
+      "cause": "cc7 permitted a persisted project binding replacement during its actual async ProjectStore probe; final helper rejects initial-to-post-await cwd/project/raw-workspace changes"
+    },
+    {
+      "logs": ["native-workspace-final.log", "focused-workspace-final.log"],
+      "result": "passed earlier cc7 checkpoint",
+      "scope": "actual workspace inode fence passed; does not prove final async metadata fence"
+    },
+    {
+      "logs": ["native-initial.log", "native-second.log", "native-third.log"],
+      "result": "failed",
+      "cause": "existing project authority requires three read-only Git metadata probes; initial subprocess allowlist rejected them; narrowed exact owned-workspace allowlist added"
+    },
+    {
+      "logs": [
+        "native-fourth.log",
+        "native-fifth.log",
+        "native-sixth.log",
+        "native-seventh.log",
+        "native-eighth.log",
+        "native-ninth.log"
+      ],
+      "result": "failed",
+      "cause": "actual fast moving head exhausted the old eight-round catch-up; same candidate now resumes bounded batches with one total page budget and terminal dirty wake"
+    },
+    {
+      "logs": ["native-tenth.log", "native-eleventh.log"],
+      "result": "failed",
+      "cause": "minimal DOM lacked window.fetch; fixture now uses actual guarded Node fetch, without replacing Mobile client methods"
+    },
+    {
+      "logs": ["native-thirteenth.log"],
+      "result": "failed",
+      "cause": "fixture expected nonexistent aborted run enum; actual state is idle with topLevelRunning false and aborted_streaming journal outcome"
+    },
+    {
+      "logs": ["native-final.log"],
+      "result": "failed",
+      "cause": "harness launched native while full typecheck cleaned Core dist; subsequent package/type/native gates strictly serialized"
+    },
+    {
+      "logs": ["sync-authority-actual.log", "sync-authority-actual-second.log"],
+      "result": "failed",
+      "cause": "test cleanup guessed nonexistent SessionManager delete methods; replaced with rmSync of only own synthetic Session directory"
+    },
+    {
+      "logs": [
+        "native-combined-final.log",
+        "native-external-pr99-combined.log",
+        "focused-combined-final.log",
+        "typecheck-combined-final.log",
+        "package-combined-final.log"
+      ],
+      "result": "passed earlier checkpoint d5d1c218",
+      "scope": "does not prove final actual-workspace identity fence"
+    },
+    {
+      "logs": ["native-core-mobile-pr98-combined.log"],
+      "result": "failed checkpoint d5d1c218",
+      "cause": "sync authority compared legacy null persisted project IDs to registered IDs; final helper pins actual registered identity independently without inventing a persisted binding"
+    },
+    {
+      "logs": ["worktree-fence.log"],
+      "result": "failed development test",
+      "cause": "first test tried unsupported external Runtime worktree startup and compared macOS main path aliases by text; final test exercises actual service pre-input fence, and main roots compare directory identity"
+    }
+  ],
+  "boundaries": [
+    "No UI/sidebar changes, production deployment, publication, real provider/model account, or installed vendor CLI acceptance.",
+    "Actual production external producer/Main/paired WS/hooks exercised with synthetic stdio CLI and minimal React DOM; physical phone/browser GUI/weak-network acceptance remains separate.",
+    "External Mobile approval/permission/model/Goal editing remains Desktop-owner-only. Cold Main with no live external instance can recover but cannot ensure/start a replacement CLI or use native fallback.",
+    "Existing external Runtime cwd/start restrictions remain; worktree identity fencing does not add external worktree startup support.",
+    "Out-of-run/background/CCRoom producers, arbitrary history imports, retention/rotation/repair and multi-user CLI HOME isolation remain separate."
+  ],
+  "evidence": {
+    "directory": "/tmp/codeshell-mobile-external-output.856i06hv/evidence-complete/raw",
+    "archive": "/tmp/codeshell-mobile-external-output.856i06hv/mobile-external-output-evidence-complete.tar.gz",
+    "archiveSha256": "e4876d22b9fa101074b691213af3fba8d0657cf3ec4b367bc3e8ad526b4dda3c",
+    "archiveBytes": 457551,
+    "regularFiles": 120,
+    "rawFiles": [
+      {
+        "path": "architecture-composition-final.log",
+        "bytes": 416,
+        "sha256": "6b0a16e9a73517ea686ef45c172e22651bee87be88c5ecae60e45851d503a2d9"
+      },
+      {
+        "path": "await-authority-after.log",
+        "bytes": 1961,
+        "sha256": "c60100e9761e56c8d3a0824bf35d1794a3f93dc1502cdb29a18509a4d9314958"
+      },
+      {
+        "path": "await-authority-before.log",
+        "bytes": 2543,
+        "sha256": "329fe6f585002c21ed35867458869d25d0f3da32d16618216324069c13e0fdee"
+      },
+      {
+        "path": "capacity-route-after.log",
+        "bytes": 2211,
+        "sha256": "569e1d6123aae080b6c45cb64f4ce38eaeb4b0ccb393604aa4a9314d2253fbf1"
+      },
+      {
+        "path": "capacity-route-before.log",
+        "bytes": 3367,
+        "sha256": "fbfed99b751e639d0552171b00e694798f64babe327d0669404aaf9b746a7941"
+      },
+      {
+        "path": "ci-checkpoint-d189-rest.log",
+        "bytes": 1070012,
+        "sha256": "d0b1e6b10f68c53dc02ac4641faaafd972eadb4b7347c35de6035496709cd53e"
+      },
+      {
+        "path": "ci-checkpoint-d189.json",
+        "bytes": 1325,
+        "sha256": "0985cb410f056e35b00ab6ed07561b6701012da8be3d4e08bd3d511483dc2b4b"
+      },
+      {
+        "path": "client-third.log",
+        "bytes": 549,
+        "sha256": "47530b718a79409badff697bcaff874eacc5ba6e73db70ce0a6aa4f44c2f28ad"
+      },
+      {
+        "path": "collect-evidence-complete.py",
+        "bytes": 15708,
+        "sha256": "019849d140c6fdf3220a46945e27760fdb243d17b9b79a9f0928827ea20436d0"
+      },
+      {
+        "path": "commands-claims-client.log",
+        "bytes": 2392,
+        "sha256": "9023792e347b2120229ebc99f10649aab1ec10ab9c83f6393adb7c2f1c420870"
+      },
+      {
+        "path": "consumer-fifth.log",
+        "bytes": 3237,
+        "sha256": "7c4ae0952d88b37d5e8939b016cd92d1e91d2c2e49b976d4c1e2f839952a8572"
+      },
+      {
+        "path": "consumer-service-fourth.log",
+        "bytes": 15635,
+        "sha256": "6ac35c8de58fb52b42e171ca6b3d85071ef7d4b17e9633671a03e55dd2c7f6d3"
+      },
+      {
+        "path": "consumer-sixth.log",
+        "bytes": 789,
+        "sha256": "459d11ee2ce64fec05c3a389bcd5d56229b0a44a3a1a1265cb5b7d6681326616"
+      },
+      {
+        "path": "core-byte-merged-final.log",
+        "bytes": 84,
+        "sha256": "b3611216f1e706a54ba1b7dca87212c8c8cceb2057fe22c4ed46b95796622bcc"
+      },
+      {
+        "path": "core-runtime-byte-proof-complete.json",
+        "bytes": 707,
+        "sha256": "3bcc58bec37e74bd3a2737a13f3ab0824c5d5fcdbe61862ae242332aa7184bf3"
+      },
+      {
+        "path": "core-runtime-byte-proof.log",
+        "bytes": 87,
+        "sha256": "72c89c3b330ae781fd4d2e109c379bdb1e398a91ebf98669b04471319f376615"
+      },
+      {
+        "path": "evidence-collector-incomplete.log",
+        "bytes": 435,
+        "sha256": "cb4f701f02f29b89cddfd23bed51d7e879c28c2582d1c915ea83ca1889b61bf4"
+      },
+      {
+        "path": "external-pr99-guard.jsonl",
+        "bytes": 27425,
+        "sha256": "bfe3f53f29ace6a509b6c48c642e1ec97d7460bc7e9da65fec251f35b2857c2d"
+      },
+      {
+        "path": "external-pr99-requests.jsonl",
+        "bytes": 3673,
+        "sha256": "c704fdcf464a108690251347fc3c5e6809caa9fe07ccdc4b0ce9bbcef4c5745c"
+      },
+      {
+        "path": "first-journal-client.log",
+        "bytes": 1152,
+        "sha256": "158631c4a5228bd0117f7d00e706251d57a47ac971da36f4ec4db0487cec66b9"
+      },
+      {
+        "path": "first-journal-races.log",
+        "bytes": 1362,
+        "sha256": "d525b10b1cf96a1d34286ab19e50c202ef420361908fe4df6da5b24ef903e931"
+      },
+      {
+        "path": "focused-combined-final.log",
+        "bytes": 20835,
+        "sha256": "a0f8f168a7aa18f1272e15eda1721208ab81eecf99db621265fb279cc212780f"
+      },
+      {
+        "path": "focused-composed-final.log",
+        "bytes": 21889,
+        "sha256": "d867833f9e1c4e004e4b6f9314ec9db30ba7248154daa91bd2cb0e38d6158713"
+      },
+      {
+        "path": "focused-contract-final.log",
+        "bytes": 22517,
+        "sha256": "7d0942ccf20c569c722a56e338586b6ea1eaa3446ed184e5e51b19dfd71c60d0"
+      },
+      {
+        "path": "focused-final.log",
+        "bytes": 20151,
+        "sha256": "f49c334d88ca1c217982dc942f23be19095131c542d64c7774927274947f72b4"
+      },
+      {
+        "path": "focused-frozen-final.log",
+        "bytes": 22304,
+        "sha256": "f9e12286f5de4b2e39cfa38170b7b8567ddebd56a3695823f02df3894533d818"
+      },
+      {
+        "path": "focused-initial.log",
+        "bytes": 5397,
+        "sha256": "0943d997a35e70ff67268cbec3bbc1f2c04a8413e41571226af2987aebf93aaa"
+      },
+      {
+        "path": "focused-merged-final.log",
+        "bytes": 22282,
+        "sha256": "b6a8138b648600111e28d9bb5e56498ba0c8cb2e9ed3acf8a081d42af44a56ed"
+      },
+      {
+        "path": "focused-route-final.log",
+        "bytes": 22284,
+        "sha256": "38c2a189e4631176224725e56271af2629246f6464c014bbd4e2a0b95cbe9ec5"
+      },
+      {
+        "path": "focused-second.log",
+        "bytes": 5788,
+        "sha256": "7997641f1dfed06e274517c85d56ffdb67d53ad2f2dcf685a9a1bf116a91e0f9"
+      },
+      {
+        "path": "focused-workspace-final.log",
+        "bytes": 21698,
+        "sha256": "9e45c484a8d92d1f7fb14eaeb28cfdfceb93bd20dc344e97ee3a46136c59f385"
+      },
+      {
+        "path": "format-await-fence.log",
+        "bytes": 165,
+        "sha256": "4581dbcfbcabdeaeb677d34704e618fc7ad43908675fe818675e4fa517d0142c"
+      },
+      {
+        "path": "format-capacity-final.log",
+        "bytes": 223,
+        "sha256": "5d30b7595ee335b74afb2446437c713ba592d89ae2722af04b44118611be0223"
+      },
+      {
+        "path": "format-capacity.log",
+        "bytes": 248,
+        "sha256": "8b3e4c61570fce3d6f8bf258ef5a5f6af6670fcc2616c559e22470e76273b27b"
+      },
+      {
+        "path": "format-combined-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-composed-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-composition-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-contract-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-first-journal.log",
+        "bytes": 395,
+        "sha256": "c42c1d5613aad27c7087fecc85dce518716b00c59c9756100c3d9835b1dda60f"
+      },
+      {
+        "path": "format-frozen-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-initial-journal-final.log",
+        "bytes": 569,
+        "sha256": "e7e25a35218565b004f02df4f8377e897b1ae5ec554b41c9ab40562ab90f63cf"
+      },
+      {
+        "path": "format-merged-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-native-capacity.log",
+        "bytes": 49,
+        "sha256": "91582a50712cc1696687c67b2906fb51a45099330eb805936011f83ed2ab0cc9"
+      },
+      {
+        "path": "format-native-route-consumer.log",
+        "bytes": 73,
+        "sha256": "e728a124c521b49375a272cb51176b67ac6c770f1ac63048ce29f27444a8cd55"
+      },
+      {
+        "path": "format-owned.log",
+        "bytes": 1995,
+        "sha256": "3483804bf7423da928453ee50254ac8717cb407477ed9aad063c8e210db86618"
+      },
+      {
+        "path": "format-passive-wait.log",
+        "bytes": 188,
+        "sha256": "e02f28378c108b168ecf8e8963f647509a55fe7b79c349dcfc4f07ff4c0832fc"
+      },
+      {
+        "path": "format-provider-fence.log",
+        "bytes": 263,
+        "sha256": "7e5dd79168288c4ff6b5794730339a980524e313f9d539bbd0638b0b09c0810c"
+      },
+      {
+        "path": "format-route-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-sync-fence.log",
+        "bytes": 296,
+        "sha256": "64d68a8ee46c9e9f88de40b8b6d3ff5c68045119a6eab2361894e41276f6a93a"
+      },
+      {
+        "path": "format-workspace-complete-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-worktree-fence-second.log",
+        "bytes": 151,
+        "sha256": "c4d512f938e94a491ccb10ae691b612003c3985029e1ef2915d72c48843dc20d"
+      },
+      {
+        "path": "format-worktree-fence-third.log",
+        "bytes": 165,
+        "sha256": "d183b044cc694fa074d8e8a5b3e2da4309d9c3bf3652ed8c573145a556024cfc"
+      },
+      {
+        "path": "format-worktree-fence.log",
+        "bytes": 151,
+        "sha256": "bae3fe8eab1c50414d72cfac28aa42d36481b7d55149960229af9ebae903a688"
+      },
+      {
+        "path": "format-worktree-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "fresh-native-route-final.log",
+        "bytes": 2210,
+        "sha256": "dbe72ad4dc3df6e59c0aaa591db5bead47a0197fa4d1672634a384575b3e4e9e"
+      },
+      {
+        "path": "install.log",
+        "bytes": 468,
+        "sha256": "e266a13c86a1dcee2be487c8accc081cdb37d3e551a85a337a69a09d0c5a4600"
+      },
+      {
+        "path": "lint-combined-final.log",
+        "bytes": 20939,
+        "sha256": "4bdd6b1a562afbb51ba8e54f6eaa4dde077a6c545bb3e21e30b675b12061f07f"
+      },
+      {
+        "path": "lint-composed-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
+        "path": "lint-final.log",
+        "bytes": 20939,
+        "sha256": "4bdd6b1a562afbb51ba8e54f6eaa4dde077a6c545bb3e21e30b675b12061f07f"
+      },
+      {
+        "path": "lint-frozen-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
+        "path": "lint-merged-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
+        "path": "lint-route-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
+        "path": "lint-workspace-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
+        "path": "mirror-bounds.log",
+        "bytes": 2722,
+        "sha256": "f77740e107cf53aa7c2d6b97bce0ba2ebd40f4ba48002142530542a75d9c3b08"
+      },
+      {
+        "path": "mobile-external-guard.jsonl",
+        "bytes": 176386,
+        "sha256": "e59ac8d61916c4128404a3a23e9263d918340a24d180c85e7a2f53fccbd5866e"
+      },
+      {
+        "path": "mobile-external-requests.jsonl",
+        "bytes": 864,
+        "sha256": "1ce1adaf8964aa970d5afef6bc392963b4efd063a88ed9046114fb258ed2040d"
+      },
+      {
+        "path": "native-combined-final.log",
+        "bytes": 3915,
+        "sha256": "0849c4c70f0d808a5c3c40122dcce590963f7adc32c1ac630d2e27336e205462"
+      },
+      {
+        "path": "native-composed-final.log",
+        "bytes": 3915,
+        "sha256": "32567418f7966dd51e31496d6805b7814627958a27bc51d6277e81c6bef2aaa0"
+      },
+      {
+        "path": "native-core-mobile-pr98-combined.log",
+        "bytes": 1418,
+        "sha256": "0226080ffaca37765329a8f7dd14924a0b27ae4cdeddc01667b02044a477a372"
+      },
+      {
+        "path": "native-core-mobile-pr98-final.log",
+        "bytes": 1111,
+        "sha256": "935ba955adfb70992d1698fa3d9b99735247854373a2a9a22b71a1b3d01b0334"
+      },
+      {
+        "path": "native-eighth.log",
+        "bytes": 3582,
+        "sha256": "e4b7ff1333aec0282ef1444b717361434e03725194c68734c1690ca060e9bbc6"
+      },
+      {
+        "path": "native-eleventh.log",
+        "bytes": 451334,
+        "sha256": "a6702a81215a75f30cf1cb42a5cc3d3d7932e8ba0160ac10b7ab042fe048aa46"
+      },
+      {
+        "path": "native-external-pr99-combined.log",
+        "bytes": 471,
+        "sha256": "ee88fa3bd9f459d181c7e5a70ee72bcf10da68baca8a036e8302a94e8fe1b042"
+      },
+      {
+        "path": "native-external-pr99-final.log",
+        "bytes": 471,
+        "sha256": "cc3f8b01129c6642afded537a519a759b10dbf7fd72d3001f35c0b8ced478fe0"
+      },
+      {
+        "path": "native-fifth.log",
+        "bytes": 1940,
+        "sha256": "276287e830de4700714abb700703f57542fd04951cc313aa510e39a8abfba0d3"
+      },
+      {
+        "path": "native-final-second.log",
+        "bytes": 3801,
+        "sha256": "6d309a4fa2d49c48bd7969aacbb15c289f26824fd70e5da1fc987b94c2301a5f"
+      },
+      {
+        "path": "native-final.log",
+        "bytes": 1565,
+        "sha256": "499ebe0bdd0b4b2c7f1b401441d7a91be6fd4f4718c8122bbb75956d688f81b0"
+      },
+      {
+        "path": "native-fourth.log",
+        "bytes": 1617,
+        "sha256": "291a0ed58063dab29d6e5d86a920bbd9855d175694bc15795fb01e770cb348e7"
+      },
+      {
+        "path": "native-frozen-final.log",
+        "bytes": 4452,
+        "sha256": "4a26ed01008cbe7ea1d5a8f1d7dc84b348e8912b4a4047350dbec37fe06b4a88"
+      },
+      {
+        "path": "native-initial.log",
+        "bytes": 1196,
+        "sha256": "b683c020004b98e9421362288323b67e81e91196c96f2ca530ed6331049a44f3"
+      },
+      {
+        "path": "native-merged-final.log",
+        "bytes": 4452,
+        "sha256": "29a8dd2d68b42d5de915d61914d9773e5cfcacb271f3cd01f2bc4450654d2970"
+      },
+      {
+        "path": "native-ninth.log",
+        "bytes": 3582,
+        "sha256": "9943d472f32f7a95f8c09829065f1ed774364622bc5fb11d9e017e0dec129654"
+      },
+      {
+        "path": "native-route-consumer.log",
+        "bytes": 4100,
+        "sha256": "f72a0a65238cd43970e4cfcf3ce534756a0b28c9baf27e6188abc2ec443102af"
+      },
+      {
+        "path": "native-route-final.log",
+        "bytes": 4452,
+        "sha256": "f1b2f5ad686ee5b7e494f1f89b91a0b6b326b4f530b70d9a7f0ec104b50f5f89"
+      },
+      {
+        "path": "native-second.log",
+        "bytes": 1326,
+        "sha256": "e23855d086ff5ced47574c6fd52c701ac93ea2ee532e6733862e7f636aac224a"
+      },
+      {
+        "path": "native-seventh.log",
+        "bytes": 2770,
+        "sha256": "8e994cd2a3fd79c83dada2d215ad87d67b5d29215d5421e0da66c807981e5ec0"
+      },
+      {
+        "path": "native-sixth.log",
+        "bytes": 1945,
+        "sha256": "a2cdc2c09cbe040fc5d49561a2f5f5df1abbfc2b2c819f99f45e37d2b0c00bd0"
+      },
+      {
+        "path": "native-tenth.log",
+        "bytes": 1038,
+        "sha256": "df2e199491ff6c1da40bdc29350fdfa21b75ea312955a4c011578ecf320d1e1c"
+      },
+      {
+        "path": "native-third.log",
+        "bytes": 2145,
+        "sha256": "dee0f871426deb02c891310db3f92dad15a55711e2bda870709ee427830bccb9"
+      },
+      {
+        "path": "native-thirteenth.log",
+        "bytes": 3385,
+        "sha256": "147008591804d7480e5d587504d31b368379f95a2d9aa8d9289d35d69f6a0c28"
+      },
+      {
+        "path": "native-twelfth.log",
+        "bytes": 2235,
+        "sha256": "cde09a2f807cce4ba298836ea173d050476519ba4b4618a3eee5c528e9e7c2c3"
+      },
+      {
+        "path": "native-workspace-final.log",
+        "bytes": 3915,
+        "sha256": "0a5712d37ca1b1ba1d899f281093f464eb335fb8bb1b2577ebefbe6646679a66"
+      },
+      {
+        "path": "node-identity.json",
+        "bytes": 278,
+        "sha256": "96d98a2cfbfa6f1096f0e3e159a80fb82b4589f72bfa496d2785fd255690e520"
+      },
+      {
+        "path": "package-combined-final.log",
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      {
+        "path": "package-final.log",
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      {
+        "path": "package-release.log",
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      {
+        "path": "package-second-final.log",
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      {
+        "path": "package-workspace-final.log",
+        "bytes": 4092,
+        "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
+      },
+      {
+        "path": "root-ci-d189-rest-113682325991.log",
+        "bytes": 1070012,
+        "sha256": "d0b1e6b10f68c53dc02ac4641faaafd972eadb4b7347c35de6035496709cd53e"
+      },
+      {
+        "path": "run-clean.sh",
+        "bytes": 589,
+        "sha256": "cd21b841e43aea25e106107df73fd4d7c579b30b765b6b9bdd0e817a36f7da37"
+      },
+      {
+        "path": "sync-authority-actual-second.log",
+        "bytes": 2097,
+        "sha256": "1ecf4ce8fba8d76bb30a9cf988a84b1ff716d0d0f45d830efffc1a9426e71586"
+      },
+      {
+        "path": "sync-authority-actual-third.log",
+        "bytes": 1405,
+        "sha256": "9e301c342703c5231560bfa5c6fcf465d41b0065812350f945ea676aa0fc2da5"
+      },
+      {
+        "path": "sync-authority-actual.log",
+        "bytes": 2069,
+        "sha256": "11071a4ce15a80d51618f3cd8d93dd9b829ec63c4bd4e6daca1377090088aae0"
+      },
+      {
+        "path": "sync-authority-fence.log",
+        "bytes": 3763,
+        "sha256": "8f5149be15110bb7ea2dd72513bbfc37eaa54fb2c1200ca9f2ddf3131b60eb50"
+      },
+      {
+        "path": "typecheck-combined-final.log",
+        "bytes": 4537,
+        "sha256": "e581667bc14e571418a25bf14d12441d09899636ff4d1c01c00162f6129865f7"
+      },
+      {
+        "path": "typecheck-composed-final.log",
+        "bytes": 4537,
+        "sha256": "e581667bc14e571418a25bf14d12441d09899636ff4d1c01c00162f6129865f7"
+      },
+      {
+        "path": "typecheck-contract-final.log",
+        "bytes": 725,
+        "sha256": "55ab2c8e7017cdcb4e38f30dbc29af061bdbaf46cf8bb913c6335b226e9e8585"
+      },
+      {
+        "path": "typecheck-final.log",
+        "bytes": 4537,
+        "sha256": "7c689f038a0c047309484553e0b14df8d9243b5516cb47d6501c9e12c2fc78e7"
+      },
+      {
+        "path": "typecheck-fourth.log",
+        "bytes": 725,
+        "sha256": "970d9f58c16503fbdf76ecef6f5e22cb687da4a6c12fffe33a8f677d133403ed"
+      },
+      {
+        "path": "typecheck-frozen-final.log",
+        "bytes": 725,
+        "sha256": "d188c9a5434930950a63f2f0011c8b497411bd062a578fc257cbbf736ef332b5"
+      },
+      {
+        "path": "typecheck-full.log",
+        "bytes": 5487,
+        "sha256": "202e969ac04bed6011bbcddc565fecaab0d13d4a5f91f29a65a4cfda8c693994"
+      },
+      {
+        "path": "typecheck-initial.log",
+        "bytes": 3881,
+        "sha256": "aebb68360c461a59c9554d6bff79e48970dd4856c37913fd6cb9ba9c5328ec83"
+      },
+      {
+        "path": "typecheck-merged-final.log",
+        "bytes": 725,
+        "sha256": "d188c9a5434930950a63f2f0011c8b497411bd062a578fc257cbbf736ef332b5"
+      },
+      {
+        "path": "typecheck-route-complete-final.log",
+        "bytes": 725,
+        "sha256": "55ab2c8e7017cdcb4e38f30dbc29af061bdbaf46cf8bb913c6335b226e9e8585"
+      },
+      {
+        "path": "typecheck-route-final.log",
+        "bytes": 725,
+        "sha256": "d188c9a5434930950a63f2f0011c8b497411bd062a578fc257cbbf736ef332b5"
+      },
+      {
+        "path": "typecheck-third.log",
+        "bytes": 725,
+        "sha256": "d188c9a5434930950a63f2f0011c8b497411bd062a578fc257cbbf736ef332b5"
+      },
+      {
+        "path": "typecheck-workspace-final.log",
+        "bytes": 4537,
+        "sha256": "b830061524cd44fe1a8ca1b28605b7188929ee201fc43ab68a1e786a7b9377ee"
+      },
+      {
+        "path": "worktree-fence-second.log",
+        "bytes": 9559,
+        "sha256": "50da6ac5b5647ac47d8784e2a0994115e2a77ffb42c86c1e99abcd4f2d5afa71"
+      },
+      {
+        "path": "worktree-fence-third.log",
+        "bytes": 9915,
+        "sha256": "7b595f22cc60a573fe598f5cab88e2a2ee0661f9891f1916370e9c4e8117f7a2"
+      },
+      {
+        "path": "worktree-fence.log",
+        "bytes": 12994,
+        "sha256": "ab4456c3713b4bc66d74299f239a0f1a41dad8c2c0f56084d61e6ab8cec55624"
+      }
+    ],
+    "earlierRawLogsPreserved": true
+  },
+  "ci": {
+    "status": "pending exact final documentation/receipt commit; kept in external sidecar after CI, not relabelled as this local source checkpoint"
+  }
+}

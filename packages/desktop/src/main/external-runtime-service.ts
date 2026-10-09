@@ -57,6 +57,8 @@ import {
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
   disableGoal?: boolean;
+  /** Trusted host projection of materialized attachments; never vendor input. */
+  transcriptContent?: string;
 };
 
 function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
@@ -68,6 +70,15 @@ function askUserApprovalRequest(question: string, options?: Record<string, unkno
     description: question,
     riskLevel: "low" as const,
   };
+}
+
+export interface ExternalRuntimeSubmissionHooks {
+  /** Revalidate host authority inside the actual queue, before any input/Goal mutation. */
+  beforeInput: () => Promise<void>;
+  /** Synchronous final socket/selection fence after the asynchronous checks. */
+  assertInputOwner?: () => void;
+  /** Observational ack only after the canonical user and journal have committed. */
+  accepted: () => void;
 }
 
 export interface ExternalRuntimeStartRequest {
@@ -998,6 +1009,7 @@ export class ExternalRuntimeService {
     input: DesktopExternalRuntimeTurnInput | string,
     callerWebContentsId?: number,
     expectedGoal?: { goalId: string; revision: number },
+    hooks?: ExternalRuntimeSubmissionHooks,
   ): Promise<ExternalRuntimeTurnOutcome> {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
@@ -1034,6 +1046,17 @@ export class ExternalRuntimeService {
           streamed: true,
           text: "External runtime failed; start a replacement before sending again.",
         };
+      if (hooks) {
+        await hooks.beforeInput();
+        hooks.assertInputOwner?.();
+        this.assertOwner(sessionId, callerWebContentsId);
+        if (
+          this.sessions.get(sessionId) !== entry ||
+          !entry.lifecycle.active ||
+          acceptedGeneration !== entry.lifecycle.interruptGeneration
+        )
+          throw new Error("External submission owner changed before input");
+      }
       const inheritedGoal = this.goals.read(sessionId);
       if (
         !turnInput.disableGoal &&
@@ -1127,6 +1150,13 @@ export class ExternalRuntimeService {
                 this.emitSafely(sessionId, entry.recorder.startEvent());
                 for (const event of initialGoalEvents) publishGoalOutput(event);
                 if (entry.recorder.outputFailed) return entry.recorder.finishIfMissing();
+                // Ack observes durable acceptance, never provider completion. Observer
+                // errors cannot relabel a committed journal as a storage failure.
+                try {
+                  hooks?.accepted();
+                } catch {
+                  /* disconnected caller */
+                }
               }
               const onEvent = (event: StreamEvent) => {
                 if (
@@ -1235,9 +1265,28 @@ export class ExternalRuntimeService {
     return outcome;
   }
 
-  async interrupt(sessionId: string, callerWebContentsId?: number): Promise<void> {
+  captureActiveRun(sessionId: string, callerWebContentsId: number) {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
+    return entry?.lifecycle.active && entry.recorder.hasOpenRun && entry.recorder.outputRunId
+      ? { session: entry.session, runId: entry.recorder.outputRunId }
+      : undefined;
+  }
+
+  async interrupt(
+    sessionId: string,
+    callerWebContentsId?: number,
+    expected?: { session: ExternalRuntimeSession; runId: string },
+  ): Promise<void> {
+    this.assertOwner(sessionId, callerWebContentsId);
+    const entry = this.sessions.get(sessionId);
+    if (
+      expected &&
+      (entry?.session !== expected.session ||
+        entry.recorder.outputRunId !== expected.runId ||
+        !entry.recorder.hasOpenRun)
+    )
+      throw new Error("External run changed before cancellation");
     if (entry) entry.lifecycle.interruptGeneration++;
     const run = this.goals.running(sessionId);
     if (run && this.goals.isCurrent(run)) this.goals.pause(run, "用户已停止本轮执行");

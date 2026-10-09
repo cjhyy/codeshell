@@ -4,6 +4,7 @@ import type { AgentBridge } from "../agent-bridge.js";
 import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import type { SessionCwdIndexEntry } from "../session-cwd-index.js";
+import { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
 import {
   agentRunTimeoutMs,
   handleClientEvent,
@@ -104,6 +105,49 @@ async function sendChat(ctx: OrchestratorCtx): Promise<void> {
     text: "continue",
   });
 }
+
+test("actual Mobile dispatcher preserves the selected native producer and rejects an unselected explicit Session", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => ({
+      sessionId: "session-1",
+      cwd: "/primary",
+      workspaceRoot: "/worktree",
+      status: "confirmed",
+    }),
+  });
+  harness.ctx.externalCommands = new MobileExternalRuntimeCommands({
+    authenticated: (viewer, device) => viewer === "tab" && device === "phone-1",
+    authority: async () => ({ stamp: "native-incarnation", cwd: "/worktree", assertCurrent() {} }),
+    owner: () => undefined,
+    service: () => null,
+    isExternal: () => false,
+    exists: () => true,
+    attachmentPath: async (path) => path,
+  });
+  (harness.ctx.remote as any).sendToViewer = (_viewer: string, event: Record<string, unknown>) =>
+    harness.replies.push(event);
+  const event = {
+    type: "chat.send" as const,
+    viewerId: "tab",
+    deviceId: "phone-1",
+    sessionId: "session-1",
+    text: "continue",
+  };
+  await handleClientEvent(harness.ctx, event);
+  expect(harness.preparedRuns).toHaveLength(0);
+  expect(harness.replies.some((item) => item.type === "error")).toBe(true);
+  await handleClientEvent(harness.ctx, {
+    type: "session.select",
+    viewerId: "tab",
+    deviceId: "phone-1",
+    sessionId: "session-1",
+  });
+  await handleClientEvent(harness.ctx, event);
+  expect(harness.preparedRuns).toHaveLength(1);
+  expect(harness.preparedRuns[0]?.cwd).toBe("/worktree");
+  expect(harness.replies.some((item) => item.type === "chat.accepted")).toBe(true);
+});
 
 describe("mobile existing-session workspace authorization", () => {
   test("continues a worktree Session using its resolved workspace root", async () => {
@@ -216,9 +260,13 @@ describe("injectAndAwaitResult timeouts", () => {
     const bridge = {
       subscribeOutbound: () => {
         listening = true;
-        return () => { listening = false; };
+        return () => {
+          listening = false;
+        };
       },
-      injectWorkerMessage: () => { throw new Error("Worker disconnected"); },
+      injectWorkerMessage: () => {
+        throw new Error("Worker disconnected");
+      },
     } as unknown as AgentBridge;
     const result = await injectAndAwaitResult(bridge, "agent/approve", {}, meta);
     expect(result).toEqual({ ok: false, message: "Worker disconnected" });

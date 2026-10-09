@@ -1,4 +1,10 @@
-import type { SessionSnapshotStore } from "./SessionSnapshotStore.js";
+import type { SessionSnapshotStore, SnapshotEntry } from "./SessionSnapshotStore.js";
+
+export interface OwnedExternalStreamEntry extends SnapshotEntry {
+  sessionId: string;
+  epoch: string;
+  ownerWebContentsId: number;
+}
 
 interface StreamWindow {
   isDestroyed(): boolean;
@@ -12,7 +18,7 @@ export function publishOwnedExternalStream(
   ownerId: number | undefined,
   sessionId: string,
   event: unknown,
-): void {
+): OwnedExternalStreamEntry | undefined {
   const entry = snapshots.append(sessionId, event);
   const owner = [...windows].find(
     (window) => !window.isDestroyed() && window.webContents.id === ownerId,
@@ -27,4 +33,7 @@ export function publishOwnedExternalStream(
   } catch {
     /* Committed output remains recoverable if its owner remounts. */
   }
+  return owner && ownerId !== undefined
+    ? { ...entry, sessionId, epoch: snapshots.epoch, ownerWebContentsId: ownerId }
+    : undefined;
 }
