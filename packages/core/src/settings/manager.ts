@@ -22,6 +22,12 @@ import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
 import { migrateConfig, CONFIG_VERSION_KEY } from "./migrate-config.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
+import {
+  readSettingsHookSnapshot,
+  settingsHookDefinitionSha256,
+  type SettingsHookOrigin,
+  type SettingsHookSourceSnapshot,
+} from "./hook-provenance.js";
 
 /**
  * Resolve the user's home directory. Prefers `process.env.HOME` so that
@@ -197,14 +203,22 @@ export const DANGEROUS_PROJECT_FIELDS = [
 export type SettingsScope = "isolated" | "project" | "full";
 
 interface SettingsSource {
-  name: SettingsSourceName;
-  priority: number;
-  data: Record<string, unknown>;
+  readonly name: SettingsSourceName;
+  readonly priority: number;
+  readonly data: Record<string, unknown>;
+  /** Paired only with data parsed from this snapshot or its in-memory migration. */
+  readonly origin?: SettingsHookSourceSnapshot;
 }
 
 export class SettingsManager {
   private sources: SettingsSource[] = [];
   private merged: ValidatedSettings | null = null;
+  private hookOriginsEnabled = false;
+  private hookOrigins: readonly (SettingsHookOrigin | undefined)[] = Object.freeze([]);
+  private mergedHookSources: readonly (
+    | { source: SettingsSource; sourceLayerIndex: number }
+    | undefined
+  )[] = [];
 
   constructor(
     private readonly cwd: string = process.cwd(),
@@ -244,9 +258,13 @@ export class SettingsManager {
    */
   load(
     flagOverrides?: Record<string, unknown>,
-    options?: { persistMigrations?: boolean },
+    options?: { persistMigrations?: boolean; hookOrigins?: boolean },
   ): ValidatedSettings {
     this.sources = [];
+    this.merged = null;
+    this.hookOrigins = Object.freeze([]);
+    this.mergedHookSources = [];
+    this.hookOriginsEnabled = options?.hookOrigins === true;
 
     // Scope gates which disk layers we read. 'full' reads the host user dir
     // (~/.code-shell); 'project' and 'isolated' never do. See SettingsScope.
@@ -309,11 +327,13 @@ export class SettingsManager {
     // files, so we filter the final data) before merge. See
     // DANGEROUS_PROJECT_FIELDS and the `projectTrusted` ctor arg.
     if (!this.projectTrusted) {
-      for (const source of this.sources) {
+      for (const [index, source] of this.sources.entries()) {
         if (source.name !== "project" && source.name !== "local") continue;
+        const data = { ...source.data };
         for (const field of DANGEROUS_PROJECT_FIELDS) {
-          if (field in source.data) delete source.data[field];
+          if (field in data) delete data[field];
         }
+        this.sources[index] = Object.freeze({ ...source, data });
       }
     }
 
@@ -330,10 +350,10 @@ export class SettingsManager {
       try {
         // Read-only loads must retain preceding in-memory version migrations.
         // Ordinary loads preserve their existing disk reread before model migration.
+        if (options?.persistMigrations !== false) this.clearSourceOrigin("user");
+        const userSource = this.sources.find((source) => source.name === "user");
         const userRaw =
-          options?.persistMigrations === false
-            ? this.sources.find((source) => source.name === "user")?.data
-            : parseConfigFile(userPath);
+          options?.persistMigrations === false ? userSource?.data : parseConfigFile(userPath);
         if (!userRaw) throw new Error("invalid user settings");
         const result = migrateModels({
           providers: (userRaw.providers as never) ?? [],
@@ -354,19 +374,16 @@ export class SettingsManager {
           }
           // Re-deep-merge with the migrated user data so the validate
           // call sees the new shape rather than the legacy one.
-          const userSource = this.sources.find((s) => s.name === "user");
-          if (userSource) userSource.data = sanitized;
+          this.replaceSource("user", sanitized, userSource?.origin);
           const remerged = this.deepMerge();
-          this.merged = validateSettings(remerged);
-          return this.merged;
+          return this.validateMerged(remerged);
         }
       } catch {
         // Migration is best-effort — fall through to normal validate.
       }
     }
 
-    this.merged = validateSettings(raw);
-    return this.merged;
+    return this.validateMerged(raw);
   }
 
   /**
@@ -381,7 +398,12 @@ export class SettingsManager {
   private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {
     if (resolveConfigPath(path) !== path) return;
     try {
-      const parsed = parseConfigFile(path) as unknown;
+      const source = this.sources.find((s) => s.name === sourceName);
+      // The opt-in read-only path migrates its actual same-buffer load. Ordinary
+      // loads retain their historical reread, but cannot retain the old origin.
+      const paired = !persist && source?.origin !== undefined;
+      if (!paired) this.clearSourceOrigin(sourceName);
+      const parsed = paired ? source.data : parseConfigFile(path);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
       const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);
       const result = migrateConfig(raw);
@@ -401,8 +423,7 @@ export class SettingsManager {
         this.writeBackup(path);
         this.atomicWriteJson(path, sanitized);
       }
-      const source = this.sources.find((s) => s.name === sourceName);
-      if (source) source.data = sanitized;
+      this.replaceSource(sourceName, sanitized, paired ? source.origin : undefined);
     } catch {
       // Best-effort — fall through to normal merge/validate.
     }
@@ -420,7 +441,80 @@ export class SettingsManager {
    * Invalidate cached merge.
    */
   invalidate(): void {
+    this.clearHookOrigins();
     this.merged = null;
+  }
+
+  /**
+   * Host-only parallel view of validated get().hooks. No Settings values are
+   * exported, and invalidation never silently reloads an executable origin.
+   */
+  getHookOrigins(): readonly (SettingsHookOrigin | undefined)[] {
+    if (!this.merged) return Object.freeze([]);
+    const hooks = this.merged.hooks ?? [];
+    return Object.freeze(
+      hooks.map((hook, index) => {
+        const origin = this.hookOrigins[index];
+        return hooks.length === this.hookOrigins.length &&
+          origin?.definitionSha256 === settingsHookDefinitionSha256(hook)
+          ? origin
+          : undefined;
+      }),
+    );
+  }
+
+  private clearHookOrigins(): void {
+    this.sources = this.sources.map(({ origin: _origin, ...source }) => Object.freeze(source));
+    this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));
+    this.mergedHookSources = [];
+  }
+
+  private clearSourceOrigin(name: SettingsSourceName): void {
+    this.sources = this.sources.map((source) => {
+      if (source.name !== name) return source;
+      const { origin: _origin, ...unpaired } = source;
+      return Object.freeze(unpaired);
+    });
+    this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));
+    this.mergedHookSources = [];
+  }
+
+  private replaceSource(
+    name: SettingsSourceName,
+    data: Record<string, unknown>,
+    origin?: SettingsHookSourceSnapshot,
+  ): void {
+    this.sources = this.sources.map((source) =>
+      source.name === name
+        ? Object.freeze({ name, priority: source.priority, data, origin })
+        : source,
+    );
+  }
+
+  private validateMerged(raw: Record<string, unknown>): ValidatedSettings {
+    const validated = validateSettings(raw);
+    const hooks = validated.hooks ?? [];
+    this.hookOrigins = Object.freeze(
+      hooks.map((hook, index) => {
+        const selected = this.mergedHookSources[index];
+        if (
+          !this.hookOriginsEnabled ||
+          !selected?.source.origin ||
+          selected.source.name === "flag" ||
+          hooks.length !== this.mergedHookSources.length
+        )
+          return undefined;
+        return Object.freeze({
+          ...selected.source.origin,
+          kind: "settings" as const,
+          layer: selected.source.name,
+          sourceLayerIndex: selected.sourceLayerIndex,
+          definitionSha256: settingsHookDefinitionSha256(hook),
+        });
+      }),
+    );
+    this.merged = validated;
+    return validated;
   }
 
   /**
@@ -432,6 +526,7 @@ export class SettingsManager {
    * The merged cache is invalidated so the next get() picks up the change.
    */
   saveUserSetting(key: string, value: unknown): void {
+    this.clearHookOrigins();
     const path = join(this.userConfigDir(), "settings.json");
     assertSafeSettingsWriteTarget(path);
     // Lock spans read → modify → write; see mutateSettingsFile for why the
@@ -467,6 +562,7 @@ export class SettingsManager {
    * cache invalidation mirror saveUserSetting.
    */
   saveProjectSetting(key: string, value: unknown, cwd: string): void {
+    this.clearHookOrigins();
     this.validateProjectCwd(cwd, "project");
     // Don't resurrect a deleted project root: atomicWriteJson's recursive mkdir
     // of <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
@@ -488,6 +584,7 @@ export class SettingsManager {
    * be shared with collaborators.
    */
   saveLocalSetting(key: string, value: unknown, cwd: string): void {
+    this.clearHookOrigins();
     this.validateProjectCwd(cwd, "local");
     if (!existsSync(cwd)) return;
     const path = this.localSettingsPath(cwd);
@@ -513,6 +610,7 @@ export class SettingsManager {
     cwd: string,
     mutate: (current: Record<string, unknown>) => boolean | void,
   ): void {
+    this.clearHookOrigins();
     const path =
       scope === "user"
         ? join(this.userConfigDir(), "settings.json")
@@ -559,6 +657,7 @@ export class SettingsManager {
   }
 
   private deleteSettingFromFile(path: string, key: string): void {
+    this.clearHookOrigins();
     // Must be YAML-aware, symmetric with saveProjectSetting: a project with only
     // settings.yaml has no .json, so the old `existsSync(path)` guard returned
     // here and the override survived (read/merge ARE yaml-aware → UI shows
@@ -723,6 +822,7 @@ export class SettingsManager {
   }
 
   private atomicWriteJson(path: string, data: Record<string, unknown>): void {
+    this.clearHookOrigins();
     assertSafeSettingsWriteTarget(path);
     const serialized = JSON.stringify(data, null, 2);
     if (Buffer.byteLength(serialized, "utf8") > MAX_SETTINGS_FILE_BYTES) {
@@ -734,6 +834,7 @@ export class SettingsManager {
   }
 
   private writeBackup(path: string): void {
+    this.clearHookOrigins();
     const content = readBoundedRegularFile(path);
     if (content === null) throw new Error("settings backup source is unsafe");
     const backupPath = `${path}.bak`;
@@ -762,6 +863,7 @@ export class SettingsManager {
     path: string,
     mutate: (current: Record<string, unknown>) => boolean | void,
   ): void {
+    this.clearHookOrigins();
     assertSafeSettingsWriteTarget(path);
     const release = acquireFileLock(path);
     try {
@@ -779,6 +881,19 @@ export class SettingsManager {
   }
 
   private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
+    if (this.hookOriginsEnabled) {
+      try {
+        const snapshot = readSettingsHookSnapshot(path);
+        const data = parseConfigContent(snapshot.source.path, snapshot.content);
+        if (data) {
+          this.sources.push(Object.freeze({ name, priority, data, origin: snapshot.source }));
+          return;
+        }
+      } catch {
+        // Only executable provenance becomes unavailable. Ordinary loading
+        // keeps the legacy corrupt-file/UTF-8/selection behavior below.
+      }
+    }
     // `path` is the canonical .json path for this layer. When it's absent but
     // a sibling settings.yaml/.yml exists, read the YAML instead (JSON wins
     // when both exist — JSON is the write-back format, YAML is hand-written).
@@ -801,15 +916,21 @@ export class SettingsManager {
     // resets everything below it (the escape hatch merge() already gives
     // every other key); per-entry opt-out is the `disabled` field.
     let hooks: unknown[] | undefined;
+    let hookSources: typeof this.mergedHookSources = [];
     let sawHooks = false;
     for (const source of this.sources) {
       if (!("hooks" in source.data)) continue;
       const v = source.data.hooks;
       if (v === null) {
         hooks = undefined;
+        hookSources = [];
         sawHooks = true;
       } else if (Array.isArray(v)) {
         hooks = [...(hooks ?? []), ...v];
+        hookSources = [
+          ...hookSources,
+          ...v.map((_hook, sourceLayerIndex) => ({ source, sourceLayerIndex })),
+        ];
         sawHooks = true;
       }
       // Non-array garbage is left to merge()'s wholesale result so
@@ -819,6 +940,7 @@ export class SettingsManager {
       if (hooks !== undefined) result.hooks = hooks;
       else delete result.hooks;
     }
+    this.mergedHookSources = hookSources;
     return result;
   }
 }
@@ -834,13 +956,23 @@ function parseConfigFile(path: string): Record<string, unknown> | null {
   try {
     const content = readBoundedRegularFile(path);
     if (content === null) return null;
+    return parseConfigContent(path, content);
+  } catch {
+    // Corrupt file — skip rather than crash.
+  }
+  return null;
+}
+
+/** The stable path supplies content decoded from its actual captured bytes. */
+function parseConfigContent(path: string, content: string): Record<string, unknown> | null {
+  try {
     const ext = extname(path).toLowerCase();
     const parsed = ext === ".yaml" || ext === ".yml" ? parseYaml(content) : JSON.parse(content);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       return sanitizeSettingsObject(parsed as Record<string, unknown>);
     }
   } catch {
-    // Corrupt file — skip rather than crash.
+    // Preserve the ordinary loader's corrupt-file contract.
   }
   return null;
 }
