@@ -495,11 +495,53 @@ test("SIGKILL after dispatch retains unknown expenditure on replacement process"
     stderr: "pipe",
   });
   const reader = child.stdout.getReader();
-  const first = await reader.read();
-  expect(new TextDecoder().decode(first.value)).toContain("dispatched");
-  child.kill("SIGKILL");
-  await child.exited;
-  reader.releaseLock();
+  const startedAt = Date.now();
+  const stderrReader = child.stderr.getReader();
+  let stderr = "";
+  const stderrDone = (async () => {
+    try {
+      for (;;) {
+        const chunk = await stderrReader.read();
+        if (chunk.done) return;
+        stderr += new TextDecoder().decode(chunk.value);
+        if (stderr.length > 32_768) {
+          stderr = `${stderr.slice(0, 32_768)} [truncated]`;
+          await stderrReader.cancel();
+          return;
+        }
+      }
+    } finally {
+      stderrReader.releaseLock();
+    }
+  })();
+  try {
+    const first = await reader.read();
+    const stdout = new TextDecoder().decode(first.value);
+    if (!stdout.includes("dispatched")) {
+      if (child.exitCode === null) child.kill("SIGKILL");
+      const exitCode = await child.exited;
+      await stderrDone;
+      throw new Error(
+        `Dispatch child exited before its receipt: ${JSON.stringify({
+          executable: process.execPath,
+          pid: child.pid,
+          elapsedMs: Date.now() - startedAt,
+          done: first.done,
+          exitCode,
+          stdout,
+          stderr,
+        })}`,
+      );
+    }
+    expect(stdout).toContain("dispatched");
+    child.kill("SIGKILL");
+    await child.exited;
+  } finally {
+    if (child.exitCode === null) child.kill("SIGKILL");
+    await child.exited;
+    reader.releaseLock();
+    await stderrDone;
+  }
   const snapshot = f.store.read(f.id);
   f.advance(snapshot.lease!.expiresAt - f.now() + 1);
   const replacement = new ExperimentLease(f.store, { owner: "replacement", now: f.now });
