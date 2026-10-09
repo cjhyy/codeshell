@@ -11,6 +11,7 @@
 /* global document, localStorage, window */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -81,6 +82,18 @@ let win;
 let acceptanceResult;
 let smokePassed = false;
 let restartedRendererErrors = [];
+let unavailableCustodyAudit;
+
+const unavailablePrompt = "Check the synthetic unavailable-keyring case.";
+function fixtureRequestReceipts() {
+  return mock.requests.map(({ protocol, scenario, body, at }) => ({
+    protocol,
+    scenario,
+    receivedAt: at,
+    bodyHash: createHash("sha256").update(JSON.stringify(body)).digest("hex"),
+    containsUnavailableInput: JSON.stringify(body).includes(unavailablePrompt),
+  }));
+}
 
 async function acceptancePhase(phase) {
   if (!macosAcceptance) return;
@@ -171,7 +184,7 @@ async function saveAcceptanceEvidence(phase, details = {}) {
     );
   await writeFile(
     join(acceptanceEvidence, `${phase}.json`),
-    `${JSON.stringify({ parentGuard, ...details }, null, 2)}\n`,
+    `${JSON.stringify({ parentGuard, unavailableCustodyAudit, ...details }, null, 2)}\n`,
     { mode: 0o600, flag: "wx" },
   );
   if (win) await win.screenshot({ path: join(acceptanceEvidence, `${phase}.png`) }).catch(() => {});
@@ -500,12 +513,23 @@ try {
   console.log("smoke L2: plain streaming assistant rendered");
 
   const beforeUnavailable = mock.requests.length;
+  const beforeUnavailableRequests = fixtureRequestReceipts();
   await app.evaluate(({ safeStorage }) => {
     globalThis.__codeshellFixtureEncryptionAvailable = safeStorage.isEncryptionAvailable;
-    safeStorage.isEncryptionAvailable = () => false;
+    globalThis.__codeshellFixtureUnavailableCalls = {
+      injectedAt: Date.now(),
+      calls: 0,
+      pid: process.pid,
+      ppid: process.ppid,
+    };
+    safeStorage.isEncryptionAvailable = () => {
+      globalThis.__codeshellFixtureUnavailableCalls.calls++;
+      globalThis.__codeshellFixtureUnavailableCalls.lastCalledAt = Date.now();
+      return false;
+    };
   });
   try {
-    await sendScenario(win, "mock-plain-text", "Check the synthetic unavailable-keyring case.", {
+    await sendScenario(win, "mock-plain-text", unavailablePrompt, {
       expectedError: "Host could not securely sign this Session",
     });
     assert(
@@ -513,10 +537,25 @@ try {
       "Unavailable custody sent a provider request",
     );
   } finally {
-    await app.evaluate(({ safeStorage }) => {
+    const nativeCalls = await app.evaluate(({ safeStorage }) => {
+      const calls = globalThis.__codeshellFixtureUnavailableCalls;
       safeStorage.isEncryptionAvailable = globalThis.__codeshellFixtureEncryptionAvailable;
       delete globalThis.__codeshellFixtureEncryptionAvailable;
+      delete globalThis.__codeshellFixtureUnavailableCalls;
+      return calls;
     });
+    unavailableCustodyAudit = {
+      nativeCalls,
+      before: beforeUnavailableRequests,
+      after: fixtureRequestReceipts(),
+      zeroSends: mock.requests.length === beforeUnavailable,
+    };
+    if (macosAcceptance)
+      await writeFile(
+        join(acceptanceEvidence, "unavailable-custody.json"),
+        `${JSON.stringify(unavailableCustodyAudit, null, 2)}\n`,
+        { mode: 0o600, flag: "wx" },
+      );
   }
   console.log("smoke L2: unavailable keyring rendered a concrete error with zero provider sends");
 
