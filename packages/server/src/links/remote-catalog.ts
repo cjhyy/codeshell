@@ -38,10 +38,14 @@ export async function readRemoteProviderCapabilities(
   configuration: RemoteLinkConfiguration,
 ): Promise<RemoteProviderCapabilities[]> {
   const issuer = beginRemoteLinkAuthorization(configuration).configuration.issuer;
+  const scopes = REMOTE_LINK_ADAPTERS.flatMap((adapter) => adapter.scopes);
+  const capabilities = JSON.stringify({ version: 1, scopes });
+  if (scopes.length > 128 || Buffer.byteLength(capabilities) > 4_096)
+    throw new Error("Host Link capabilities exceed catalog negotiation limits");
   const response = await fetch(new URL("/api/v1/links/providers", issuer), {
     redirect: "error",
     signal: AbortSignal.timeout(5_000),
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "X-CodeShell-Link-Capabilities": capabilities },
   });
   if ([404, 501].includes(response.status)) {
     await response.body?.cancel();

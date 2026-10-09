@@ -25,8 +25,10 @@ function github() {
 
 async function catalog(body: unknown, status = 200, capabilities = false) {
   const requests: string[] = [];
+  const accepted: unknown[] = [];
   const server = createServer((request, response) => {
     requests.push(request.url ?? "");
+    accepted.push(JSON.parse(String(request.headers["x-codeshell-link-capabilities"])));
     response.writeHead(status, {
       "Content-Type": "application/json",
       ...(status === 302 ? { Location: "https://example.invalid/untrusted" } : {}),
@@ -48,6 +50,9 @@ async function catalog(body: unknown, status = 200, capabilities = false) {
       server.closeAllConnections();
     });
     expect(requests).toEqual(["/api/v1/links/providers"]);
+    expect(accepted).toEqual([
+      { version: 1, scopes: REMOTE_LINK_ADAPTERS.flatMap((adapter) => adapter.scopes) },
+    ]);
   }
 }
 
@@ -77,6 +82,7 @@ test("ambiguous and malformed remote catalogs fail closed", async () => {
 test("only legacy missing-catalog responses use the reviewed GitHub fallback", async () => {
   expect(await catalog({}, 404)).toEqual(["github"]);
   expect(await catalog({}, 501)).toEqual(["github"]);
+  await expect(catalog({}, 400)).rejects.toThrow("Link catalog unavailable");
   await expect(catalog({}, 500)).rejects.toThrow("Link catalog unavailable");
 });
 
