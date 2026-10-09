@@ -18,6 +18,7 @@ import type { ApprovalBridge } from "../cc-room/approval-bridge.js";
 import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscriptions.js";
 import { getSessionTranscript } from "../transcript-reader.js";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
+import type { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
 import type { MobileOutputRecovery } from "./output-recovery.js";
 import { handleRoomEvent } from "./handle-room-event.js";
 
@@ -57,6 +58,7 @@ export interface MobileDeviceState {
 /** Narrow facade over the orchestrator state used by the three domain handlers. */
 export interface OrchestratorCtx {
   outputRecovery?: MobileOutputRecovery;
+  externalCommands?: MobileExternalRuntimeCommands;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   roomManager: RoomManager;
@@ -235,6 +237,7 @@ export async function handleClientEvent(
   ctx: OrchestratorCtx,
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
+  const commandSelection = ctx.externalCommands?.observe(event);
   if (ctx.outputRecovery) {
     const recovery = ctx.outputRecovery.handle(event);
     if (event.type === "session.select" && event.recoveryId) {
@@ -294,6 +297,7 @@ export async function handleClientEvent(
   const resolveSessionId = (explicit?: string): string =>
     explicit ?? st.selectedSessionId ?? runContext.sessionId ?? ctx.ensureMobileSessionId(st);
   if (event.type === "session.select") {
+    await commandSelection;
     st.selectedSessionId = event.sessionId;
     st.selectedProjectId = undefined;
     st.selectedRootId = undefined;
@@ -349,7 +353,25 @@ export async function handleClientEvent(
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
-    const fallbackCwd = ctx.effectiveMobileRunCwd(st);
+    const external =
+      ctx.externalCommands?.isExternal(sessionId, event.viewerId, sessionId === st.sessionId) ??
+      false;
+    let externalTarget: Awaited<ReturnType<MobileExternalRuntimeCommands["prepare"]>> | undefined;
+    if (external) {
+      try {
+        externalTarget = await ctx.externalCommands!.prepare(event.viewerId, deviceId, sessionId);
+      } catch {
+        if (event.viewerId)
+          ctx.remote.sendToViewer(event.viewerId, {
+            type: "error",
+            message:
+              "External runtime command unavailable; select its live Desktop-owned session again",
+            ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
+          });
+        return;
+      }
+    }
+    const fallbackCwd = externalTarget?.cwd ?? ctx.effectiveMobileRunCwd(st);
     if (st.permissionMode && !ctx.mobilePermissionModes.has(sessionId)) {
       ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
     }
@@ -370,10 +392,17 @@ export async function handleClientEvent(
       bridge,
       meta: { origin: "mobile", producer: "mobile-chat" },
       uploads: ctx.uploads,
-      resolveWorkspace: ctx.resolveSessionWorkspaceRoot,
+      resolveWorkspace: externalTarget
+        ? async () => externalTarget!.cwd
+        : ctx.resolveSessionWorkspaceRoot,
+      ...(externalTarget ? { submit: externalTarget.submit } : {}),
     });
+    const chatReply =
+      external && event.viewerId
+        ? (e: MobileServerEvent) => ctx.remote.sendToViewer(event.viewerId!, e)
+        : reply;
     if (!dispatched.ok) {
-      reply({
+      chatReply({
         type: "error",
         message: dispatched.message,
         ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
@@ -382,21 +411,38 @@ export async function handleClientEvent(
     }
     ctx.mobileSessionCwds.set(sessionId, dispatched.cwd);
     const title = text || `图片 ${dispatched.metas.length} 张`;
-    ctx.broadcastMobileSession({
-      sessionId,
-      cwd: dispatched.cwd,
-      title,
-      prompt: text,
-      clientMessageId: dispatched.clientMessageId,
-    });
-    // Tell THIS device which session its turn landed in.
-    reply({
+    if (!external)
+      ctx.broadcastMobileSession({
+        sessionId,
+        cwd: dispatched.cwd,
+        title,
+        prompt: text,
+        clientMessageId: dispatched.clientMessageId,
+      });
+    // External acceptance belongs only to the authenticated submitting tab.
+    chatReply({
       type: "chat.accepted",
       sessionId,
       cwd: dispatched.cwd,
       clientMessageId: dispatched.clientMessageId,
       attachments: dispatched.summaries,
     });
+    return;
+  }
+  if (
+    ["approval.respond", "model.set", "goal.extend", "goal.clear", "permission.setMode"].includes(
+      event.type,
+    ) &&
+    ctx.externalCommands?.isExternal(
+      resolveSessionId("sessionId" in event ? event.sessionId : undefined),
+      event.viewerId,
+    )
+  ) {
+    if (event.viewerId)
+      ctx.remote.sendToViewer(event.viewerId, {
+        type: "error",
+        message: "External approval/model/Goal controls require the Desktop owner",
+      });
     return;
   }
   if (event.type === "approval.respond") {
@@ -439,6 +485,19 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "run.stop") {
+    const sessionId = resolveSessionId(event.sessionId);
+    if (ctx.externalCommands?.isExternal(sessionId, event.viewerId)) {
+      try {
+        await ctx.externalCommands.stop(event.viewerId, deviceId, sessionId);
+      } catch {
+        if (event.viewerId)
+          ctx.remote.sendToViewer(event.viewerId, {
+            type: "error",
+            message: "External cancel authority unavailable",
+          });
+      }
+      return;
+    }
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
@@ -485,6 +544,14 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "session.history") {
+    if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) {
+      if (event.viewerId)
+        ctx.remote.sendToViewer(event.viewerId, {
+          type: "error",
+          message: "External history requires the selected paged output recovery",
+        });
+      return;
+    }
     try {
       const events = await buildSessionHistory(event.sessionId, getSessionTranscript);
       reply({ type: "session.history.ok", sessionId: event.sessionId, events });
@@ -497,6 +564,9 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "session.sync") {
+    // External output is sent only through the selected per-socket authority;
+    // negotiated peers already receive its head on their bounded journal pages.
+    if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;
     let snapshot = bridge.getSnapshot(
       event.sessionId,
       typeof event.sinceSeq === "number" ? event.sinceSeq : 0,

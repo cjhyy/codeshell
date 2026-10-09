@@ -27,7 +27,10 @@ import {
   type ExternalRuntimeTurnInput,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 
-type RecordedExternalRuntimeTurnInput = ExternalRuntimeTurnInput & { displayText?: string };
+type RecordedExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
+  /** Main-owned display projection, without copying image bytes into the journal. */
+  transcriptContent?: string;
+};
 
 const BINDING_FILE = "external-runtime.json";
 const MAX_BINDING_BYTES = 64 * 1024;
@@ -310,7 +313,7 @@ export class ExternalRuntimeSessionRecorder {
     this.contextAnchorPromptTokens = 0;
     this.lastError = undefined;
     this.outcome = undefined;
-    const persistedText = textWithAttachmentReferences(input);
+    const persistedText = input.transcriptContent ?? textWithAttachmentReferences(input);
     const user = this.transcript.appendMessage("user", persistedText, {
       ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
       ...(input.displayText ? { displayText: input.displayText } : {}),

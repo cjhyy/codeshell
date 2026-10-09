@@ -499,6 +499,18 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   /** Reply only to the currently authenticated tab; retired/revoked viewers receive nothing. */
+  hasAuthenticatedViewer(viewerId: string, deviceId: string): boolean {
+    for (const client of this.wss?.clients ?? []) {
+      if (
+        client.readyState === client.OPEN &&
+        this.authed.get(client) === deviceId &&
+        this.viewers.get(client) === viewerId
+      )
+        return true;
+    }
+    return false;
+  }
+
   sendToViewer(viewerId: string, event: MobileServerEvent): void {
     const payload = JSON.stringify(event);
     for (const client of this.wss?.clients ?? []) {

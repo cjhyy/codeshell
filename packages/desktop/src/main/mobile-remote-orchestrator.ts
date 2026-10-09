@@ -14,7 +14,18 @@
 
 import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
 import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
-import { mobileOutputRecoveryAuthority } from "./mobile-remote/output-recovery-authority.js";
+import {
+  mobileOutputRecoveryAuthority,
+  mobileSessionCommandAuthority,
+} from "./mobile-remote/output-recovery-authority.js";
+import {
+  MobileExternalRuntimeCommands,
+  isPersistedExternalRuntime,
+} from "./mobile-remote/external-runtime-commands.js";
+import type { ExternalRuntimeService } from "./external-runtime-service.js";
+import { SessionManager } from "@cjhyy/code-shell-core";
+import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
+import type { OwnedExternalStreamEntry } from "./owned-external-stream.js";
 import {
   type ClaimedMobileUpload,
   type MobilePermissionModeSnapshotEntry,
@@ -80,6 +91,7 @@ export interface MobileRemoteOrchestratorDeps {
   transcriptSubscriptions: TranscriptSubscriptionManager;
   /** The agent worker bridge; null until the first window creates it. */
   getBridge: () => AgentBridge | null;
+  getExternalRuntimeService?: () => ExternalRuntimeService | null;
   /** Send an IPC payload to every live desktop window. */
   broadcastToWindows: (channel: string, payload: unknown) => void;
 }
@@ -90,17 +102,39 @@ export class MobileRemoteOrchestrator {
   private readonly mobilePermissionModes = new Map<string, PermissionMode>();
 
   private readonly outputRecovery: MobileOutputRecovery;
+  private readonly externalCommands: MobileExternalRuntimeCommands;
   constructor(private readonly deps: MobileRemoteOrchestratorDeps) {
+    this.externalCommands = new MobileExternalRuntimeCommands({
+      authenticated: (viewer, device) => deps.remote.hasAuthenticatedViewer(viewer, device),
+      authority: mobileSessionCommandAuthority,
+      owner: (id) => deps.getBridge()?.panelOwnerWebContentsId(id),
+      service: () => deps.getExternalRuntimeService?.() ?? null,
+      isExternal: (id) =>
+        !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
+        isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
+      exists: (id) => !!new SessionManager().readSessionState(id),
+      attachmentPath: requireRendererProjectEntryPath,
+    });
     this.outputRecovery = new MobileOutputRecovery({
       root: sessionsRoot,
+      journalRequired: (id) =>
+        !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
+        isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
       authority: mobileOutputRecoveryAuthority,
-      snapshot: (id) => this.deps.getBridge()?.getSnapshot(id, 0),
+      snapshot: (id, sinceSeq = 0) => this.deps.getBridge()?.getSnapshot(id, sinceSeq),
       reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),
+      owner: (id) => this.deps.getBridge()?.panelOwnerWebContentsId(id),
+      authenticated: (viewer, device) => this.deps.remote.hasAuthenticatedViewer(viewer, device),
     });
   }
 
   releaseViewer(viewerId: string): void {
     this.outputRecovery.revoke(viewerId);
+    this.externalCommands.revoke(viewerId, true);
+  }
+
+  mirrorOwnedExternalStream(entry: OwnedExternalStreamEntry): void {
+    this.outputRecovery.mirrorOwned(entry);
   }
 
   // ── Projects ───────────────────────────────────────────────────────────────
@@ -299,6 +333,7 @@ export class MobileRemoteOrchestrator {
     return {
       remote: this.deps.remote,
       outputRecovery: this.outputRecovery,
+      externalCommands: this.externalCommands,
       uploads: this.deps.uploads,
       roomManager: this.deps.roomManager,
       approvalBridge: this.deps.approvalBridge,

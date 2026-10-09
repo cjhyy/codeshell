@@ -473,3 +473,187 @@ test("reselecting the same viewer cannot overlap its retired page read", async (
   f.blockAuthority(async () => "mounted-project-root-incarnation");
   expect((await f.read()).page.status).toBe("ok");
 });
+
+function mirrorFixture() {
+  const snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+  const replies: Array<{ viewer: string; event: MobileServerEvent }> = [];
+  let owner: number | undefined = 77;
+  let authorized = true;
+  let authority = "original-incarnation";
+  let pending: (() => Promise<string>) | undefined;
+  const service = new MobileOutputRecovery({
+    root: () => "unused-by-live-mirror",
+    authority: async () => (pending ? pending() : authority),
+    snapshot: (id, since) => snapshots.get(id, since),
+    reply: (viewer, event) => replies.push({ viewer, event }),
+    owner: () => owner,
+    authenticated: (viewer, device) => authorized && device === "phone" && viewer !== "revoked",
+  });
+  const select = (viewer = "tab", sessionId = "external") =>
+    service.handle({
+      type: "session.select",
+      sessionId,
+      recoveryId: `selection-${viewer}`,
+      viewerId: viewer,
+      deviceId: "phone",
+    });
+  const publish = (event: StreamEvent) => {
+    const entry = snapshots.append("external", event);
+    service.mirrorOwned({
+      ...entry,
+      sessionId: "external",
+      epoch: snapshots.epoch,
+      ownerWebContentsId: 77,
+    });
+    return entry;
+  };
+  return {
+    service,
+    snapshots,
+    replies,
+    select,
+    publish,
+    revoke: () => {
+      authorized = false;
+    },
+    ownerChange: () => {
+      owner = 88;
+    },
+    incarnationChange: () => {
+      authority = "replacement";
+    },
+    block: (fn: () => Promise<string>) => {
+      pending = fn;
+    },
+  };
+}
+const flushMirror = async () => {
+  for (let i = 0; i < 12; i++) await Promise.resolve();
+};
+
+test("owned mirror targets exact selected viewers, preserving Main seq/epoch and never repeating native frames", async () => {
+  const f = mirrorFixture();
+  await f.select();
+  await f.select("second-tab");
+  await f.select("other-project", "other");
+  f.replies.length = 0;
+  const first = f.publish({ type: "text_delta", text: "owned" });
+  f.snapshots.append("external", { type: "text_delta", text: "native-already-mirrored" });
+  await flushMirror();
+  const streams = f.replies.filter((row) => row.event.type === "session.stream");
+  expect(streams.map((row) => row.viewer)).toEqual(["tab", "second-tab"]);
+  for (const row of streams)
+    expect(row.event).toMatchObject({
+      seq: first.seq,
+      epoch: f.snapshots.epoch,
+      event: { text: "owned" },
+    });
+});
+
+for (const change of ["revoke", "ownerChange", "incarnationChange"] as const) {
+  test(`owned mirror drops captured output after ${change} during asynchronous authority`, async () => {
+    const f = mirrorFixture();
+    await f.select();
+    f.replies.length = 0;
+    let release!: (value: string) => void;
+    f.block(
+      () =>
+        new Promise((done) => {
+          release = done;
+        }),
+    );
+    f.publish({ type: "text_delta", text: "private" });
+    f[change]();
+    // Only the first authority read is delayed; the post-read check sees the
+    // actual changed incarnation rather than blocking on a second promise.
+    f.block(async () => (change === "incarnationChange" ? "replacement" : "original-incarnation"));
+    release("original-incarnation");
+    await flushMirror();
+    expect(f.replies).toEqual(
+      change === "revoke"
+        ? []
+        : [
+            {
+              viewer: "tab",
+              event: {
+                type: "session.recovery.ready",
+                sessionId: "external",
+                recoveryId: "selection-tab",
+                ok: false,
+              },
+            },
+          ],
+    );
+  });
+}
+
+test("large or evicted owned frame advertises only its true committed cursor for bounded page recovery", async () => {
+  const f = mirrorFixture();
+  await f.select();
+  f.replies.length = 0;
+  const root = mkdtempSync(join(tmpdir(), "mobile-mirror-journal-"));
+  roots.push(root);
+  const manager = new SessionManager(root);
+  const session = manager.create(root, "fixture", "fixture", "external");
+  manager.startSessionRun(session.state, "run");
+  const writer = new SessionOutputJournal(root, "external", "run");
+  const raw: StreamEvent = { type: "text_delta", text: "界".repeat(190000) };
+  const cursor = writer.append(raw);
+  f.publish({ ...raw, outputCursor: cursor });
+  await flushMirror();
+  expect(f.replies).toEqual([
+    {
+      viewer: "tab",
+      event: {
+        type: "session.snapshot",
+        sessionId: "external",
+        epoch: f.snapshots.epoch,
+        nextSeq: 2,
+        entries: [],
+        outputCursor: cursor,
+      },
+    },
+  ]);
+  // A coalesced control is not an invented visible output event.
+  expect(f.replies.some(({ event }) => event.type === "session.stream")).toBe(false);
+});
+
+test("owned mirror has eight active authority reads and only one coalesced header per selected viewer", async () => {
+  const f = mirrorFixture();
+  for (let i = 0; i < 20; i++) await f.select(`tab-${i}`);
+  f.replies.length = 0;
+  const releases: Array<() => void> = [];
+  let active = 0,
+    maximum = 0;
+  f.block(
+    () =>
+      new Promise((done) => {
+        active++;
+        maximum = Math.max(maximum, active);
+        releases.push(() => {
+          active--;
+          done("original-incarnation");
+        });
+      }),
+  );
+  f.publish({ type: "text_delta", text: "first" });
+  expect(active).toBe(8);
+  for (let i = 0; i < 30; i++) f.publish({ type: "text_delta", text: `tail-${i}` });
+  expect(active).toBe(8);
+  // Resolve the captured first reads, then leave later reads unblocked.
+  f.block(async () => "original-incarnation");
+  for (const release of releases.splice(0)) release();
+  for (let i = 0; i < 100; i++) await Promise.resolve();
+  expect(maximum).toBe(8);
+  const streams = f.replies.filter((row) => row.event.type === "session.stream");
+  expect(streams.length).toBe(12);
+  expect(new Set(streams.map((row) => row.viewer)).size).toBe(12);
+  expect(
+    streams.every((row) => (row.event as { event: { text: string } }).event.text === "tail-29"),
+  ).toBe(true);
+  // The first eight evicted frames had no durable cursor; they revoke instead
+  // of inventing a recovered prefix or retaining an unbounded event queue.
+  expect(
+    f.replies.filter((row) => row.event.type === "session.recovery.ready" && !row.event.ok),
+  ).toHaveLength(8);
+});

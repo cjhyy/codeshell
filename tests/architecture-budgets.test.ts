@@ -77,7 +77,10 @@ describe("architecture growth budgets", () => {
     // +2 composition lines advertise native Mobile recovery and revoke retired viewers.
     // +8 composition lines register the extracted native operation-resolution host.
     // Receipt review, confirmation authority and locking live outside this root.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_196);
+    // +5 composition lines supply the existing external Runtime lazily and subscribe
+    // its owned stream to Mobile. Command authority and the bounded recovery pump
+    // stay in mobile-remote modules; no IPC route or public export is added here.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_201);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider

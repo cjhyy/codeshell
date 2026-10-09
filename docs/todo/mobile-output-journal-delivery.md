@@ -43,9 +43,13 @@ deduplication or invented mapping from old Transcript IDs to Main sequences.
 The Core frame budget stays 1 MiB / 512 frames per page, plus bounded cursor
 metadata; individual decoded fragments stay at 64 KiB, assembled events at
 16 MiB, and one journal at 128 MiB. The raw legacy prefix and its display
-projection are each bounded at 1 MiB. Client recovery stops after 2048 pages or
-eight catch-up rounds, with one outstanding request and a 10-second request
-watchdog. No auxiliary unbounded live-output queue is kept.
+projection are each bounded at 1 MiB. Client recovery stops after 2048 pages, with one outstanding request and a
+10-second request watchdog. Each eight-round catch-up batch now yields behind
+the display barrier and retains its verified private candidate; strictly
+advancing cursors allow a 25-ms delayed continuation within that same total
+page budget. An already observed terminal also wakes this continuation. Missing
+progress, corruption or revoked authority cannot become a successful join. See
+the [external producer increment](mobile-external-output-journal-delivery.md). No auxiliary unbounded live-output queue is kept.
 
 Main also retains a bounded coverage proof independently of its evictable RAM
 suffix: at most 128 cumulative preliminary input IDs / 32 KiB of UTF-8 ID payload
@@ -114,7 +118,9 @@ is covered by existing Core privacy tests and is not claimed as a native tool
 end-to-end result here. No paid model, real account, physical
 phone, or provider credentials are used.
 
-External Runtime producers, CC Room transcripts, paired Panel business flows,
+The paired ExternalRuntimeService producer has a separate
+[owned live/input/recovery increment](mobile-external-output-journal-delivery.md).
+CC Room transcripts, paired Panel business flows,
 arbitrary historical imports, retention/rotation, repair UI, full physical Mobile
 GUI and weak-network acceptance remain separate TODOs. This transport increment
 does not mark the whole long-stream recovery TODO complete.

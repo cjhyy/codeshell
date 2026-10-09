@@ -6,7 +6,7 @@
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type StreamEvent, type ToolRegistry } from "@cjhyy/code-shell-core";
@@ -14,6 +14,8 @@ import { FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
 import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
+import { getProjectStore } from "./project-store.js";
+import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
@@ -1529,5 +1531,160 @@ for (const mode of ["interrupt", "stop", "replace"] as const) {
       "aborted_streaming",
     );
     await svc.stopAll();
+  });
+}
+
+test("Mobile final synchronous authority fence runs after async validation and before canonical input/Goal/CLI", async () => {
+  const s = service({ external_agent_runtime: true, external_host_tools: true });
+  await s.start(request);
+  const before = new SessionManager().resume("sess-1").transcript.getEvents().length;
+  let allowed = true,
+    ack = 0;
+  await expect(
+    s.send(
+      "sess-1",
+      { text: "revoked", clientMessageId: "revoked-id", goal: "must not start" },
+      77,
+      undefined,
+      {
+        beforeInput: async () => {
+          await Promise.resolve();
+          allowed = false;
+        },
+        assertInputOwner: () => {
+          if (!allowed) throw new Error("revoked socket");
+        },
+        accepted: () => {
+          ack++;
+        },
+      },
+    ),
+  ).rejects.toThrow("revoked socket");
+  expect(providerInputs).toEqual([]);
+  expect(ack).toBe(0);
+  expect(new SessionManager().resume("sess-1").transcript.getEvents().length).toBe(before);
+  expect(s.getGoal("sess-1", 77).goal).toBeNull();
+  expect(new SessionManager().readSessionState("sess-1")?.outputRecoveryIncomplete).toBeUndefined();
+  const outcome = await s.send("sess-1", { text: "healthy", clientMessageId: "next-id" }, 77);
+  expect(outcome.reason).toBe("completed");
+  expect(providerInputs.length).toBe(1);
+  await s.stopAll();
+});
+
+test("external acceptance observes actual durable input and start before the provider is called", async () => {
+  const s = service({ external_agent_runtime: true });
+  await s.start(request);
+  let acknowledged = false;
+  providerSend = async () => {
+    expect(acknowledged).toBe(true);
+  };
+  await s.send("sess-1", { text: "accepted", clientMessageId: "stable-mobile" }, 77, undefined, {
+    beforeInput: async () => {},
+    assertInputOwner: () => {},
+    accepted: () => {
+      const sm = new SessionManager();
+      expect(sm.readSessionState("sess-1")?.status).toBe("active");
+      expect(sm.resume("sess-1").transcript.hasClientMessageId("stable-mobile")).toBe(true);
+      expect(
+        streamEvents.some((event) => event.type === "session_started" && !!event.outputCursor),
+      ).toBe(true);
+      expect(providerInputs.length).toBe(0);
+      acknowledged = true;
+    },
+  });
+  expect(acknowledged).toBe(true);
+  await s.stopAll();
+});
+
+test("expected external run cancellation cannot borrow the same runtime's later run", async () => {
+  const s = service({ external_agent_runtime: true });
+  await s.start(request);
+  let release!: () => void;
+  providerSend = async () =>
+    new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  const first = s.send("sess-1", { text: "first", clientMessageId: "first-cancel" }, 77);
+  while (!release) await Promise.resolve();
+  const captured = s.captureActiveRun("sess-1", 77)!;
+  release();
+  await first;
+  release = undefined as never;
+  const second = s.send("sess-1", { text: "second", clientMessageId: "second-cancel" }, 77);
+  while (!release) await Promise.resolve();
+  let cancelled = 0;
+  providerInterrupt = async () => {
+    cancelled++;
+  };
+  await expect(s.interrupt("sess-1", 77, captured)).rejects.toThrow("changed before cancellation");
+  expect(cancelled).toBe(0);
+  release();
+  await second;
+  await s.stopAll();
+});
+
+for (const change of ["delete", "recreate", "symlink"] as const) {
+  test(`actual worktree ${change} after authority awaits blocks canonical input, Goal and CLI`, async () => {
+    const main = join(testHome, "main");
+    const cwd = join(testHome, "worktree");
+    const retired = join(testHome, "retired-worktree");
+    mkdirSync(main);
+    mkdirSync(cwd);
+    const project = await getProjectStore().createFromPath(main);
+    const manager = new SessionManager();
+    const bundle = manager.create(main, "codex/synthetic", "codex");
+    const sessionId = bundle.state.sessionId;
+    manager.migrateSessionMainRoot(
+      sessionId,
+      { projectId: project.id, mainRootId: project.roots[0]!.id },
+      main,
+    );
+    const s = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      resolveProjectBinding: () => ({ projectId: project.id, mainRootId: project.roots[0]!.id }),
+    });
+    await s.start({ ...request, sessionId, cwd: main });
+    manager.setSessionWorkspace(sessionId, {
+      kind: "worktree",
+      root: cwd,
+      worktree: { path: cwd, branch: "fixture", baseRef: "main", createdBy: "codeshell" },
+    });
+    const authority = await mobileSessionCommandAuthority(sessionId);
+    const before = manager.resume(sessionId).transcript.getEvents().length;
+    let accepted = 0;
+    try {
+      await expect(
+        s.send(
+          sessionId,
+          { text: "must not run", clientMessageId: "revoked-worktree", goal: "must not start" },
+          77,
+          undefined,
+          {
+            beforeInput: async () => {
+              await Promise.resolve();
+              if (change === "delete") rmSync(cwd, { recursive: true });
+              else {
+                renameSync(cwd, retired);
+                if (change === "recreate") mkdirSync(cwd);
+                else symlinkSync(retired, cwd, "dir");
+              }
+            },
+            assertInputOwner: authority.assertCurrent,
+            accepted: () => {
+              accepted++;
+            },
+          },
+        ),
+      ).rejects.toThrow();
+      expect(providerInputs).toHaveLength(0);
+      expect(accepted).toBe(0);
+      expect(manager.resume(sessionId).transcript.getEvents().length).toBe(before);
+      expect(s.getGoal(sessionId, 77).goal).toBeNull();
+      if (change === "recreate")
+        expect((await mobileSessionCommandAuthority(sessionId)).stamp).not.toBe(authority.stamp);
+      else await expect(mobileSessionCommandAuthority(sessionId)).rejects.toThrow();
+    } finally {
+      await s.stopAll();
+      await getProjectStore().remove(project.id);
+    }
   });
 }

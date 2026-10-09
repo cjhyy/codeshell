@@ -262,7 +262,13 @@ export type MobileServerEvent =
       answer?: string;
     }
   | { type: "error"; message: string; clientMessageId?: string; approvalId?: string }
-  | { type: "session.recovery.ready"; sessionId: string; recoveryId: string; ok: boolean }
+  | {
+      type: "session.recovery.ready";
+      sessionId: string;
+      recoveryId: string;
+      ok: boolean;
+      /** This producer requires its actual journal; unavailable is pending, never legacy success. */ journalRequired?: boolean;
+    }
   | {
       type: "session.outputJournal";
       sessionId: string;
