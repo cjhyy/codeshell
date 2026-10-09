@@ -46,6 +46,21 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         event.size <= MAX_MOBILE_IMAGE_BYTES;
       break;
     case "session.select":
+      valid =
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        optionalBoundedString(event.recoveryId, 128);
+      break;
+    case "session.recovery.cancel":
+      valid = true;
+      break;
+    case "session.outputJournal":
+      valid =
+        boundedString(event.sessionId, 128) &&
+        boundedString(event.recoveryId, 128) &&
+        boundedString(event.requestId, 128) &&
+        optionalBoundedString(event.after, 2048) &&
+        optionalBoundedString(event.through, 2048);
+      break;
     case "session.history":
       valid = boundedString(event.sessionId, MAX_ID_LENGTH);
       break;

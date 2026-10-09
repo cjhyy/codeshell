@@ -18,6 +18,7 @@ import type { ApprovalBridge } from "../cc-room/approval-bridge.js";
 import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscriptions.js";
 import { getSessionTranscript } from "../transcript-reader.js";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
+import type { MobileOutputRecovery } from "./output-recovery.js";
 import { handleRoomEvent } from "./handle-room-event.js";
 
 /**
@@ -55,6 +56,7 @@ export interface MobileDeviceState {
 
 /** Narrow facade over the orchestrator state used by the three domain handlers. */
 export interface OrchestratorCtx {
+  outputRecovery?: MobileOutputRecovery;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   roomManager: RoomManager;
@@ -233,6 +235,16 @@ export async function handleClientEvent(
   ctx: OrchestratorCtx,
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
+  if (ctx.outputRecovery) {
+    const recovery = ctx.outputRecovery.handle(event);
+    if (event.type === "session.select" && event.recoveryId) {
+      // A later selection/create/room transition can revoke this grant while
+      // authority awaits. It must not write the retired device selection back.
+      if (!(await recovery)) return;
+    } else if (event.type === "session.outputJournal") await recovery;
+    else void recovery;
+  }
+  if (event.type === "session.outputJournal" || event.type === "session.recovery.cancel") return;
   if (event.type === "attachment.upload.begin") {
     const deviceId = event.deviceId;
     if (!deviceId) return;
@@ -420,7 +432,9 @@ export async function handleClientEvent(
       requestId: event.approvalId,
       sessionId,
       approved: event.decision === "approve",
-      ...(event.decision === "approve" && event.answer !== undefined ? { answer: event.answer } : {}),
+      ...(event.decision === "approve" && event.answer !== undefined
+        ? { answer: event.answer }
+        : {}),
     });
     return;
   }
@@ -497,6 +511,7 @@ export async function handleClientEvent(
       sessionId: event.sessionId,
       entries: snapshot.events,
       nextSeq: snapshot.nextSeq,
+      ...(snapshot.outputCursor ? { outputCursor: snapshot.outputCursor } : {}),
       ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),
     });
     ctx.replayPendingMobileApprovals(event.sessionId, deviceId);

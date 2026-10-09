@@ -182,3 +182,31 @@ test("session sync accepts optional bounded epochs and rejects malformed lifetim
     expect(parseMobileClientEvent({ ...legacy, epoch })).toBeUndefined();
   }
 });
+
+test("journal negotiation and pages bound opaque selection/request/cursor fields", () => {
+  const selected = { type: "session.select", sessionId: "native", recoveryId: "selection" };
+  const page = {
+    type: "session.outputJournal",
+    sessionId: "native",
+    recoveryId: "selection",
+    requestId: "page",
+    after: "opaque",
+    through: "frozen",
+  };
+  expect(parseMobileClientEvent(selected)).toEqual(selected);
+  expect(parseMobileClientEvent(page)).toEqual(page);
+  expect(parseMobileClientEvent({ type: "session.recovery.cancel" })).toEqual({
+    type: "session.recovery.cancel",
+  });
+  for (const field of ["recoveryId", "requestId"])
+    for (const value of ["", "x".repeat(129), null, 1])
+      expect(parseMobileClientEvent({ ...page, [field]: value })).toBeUndefined();
+  for (const field of ["after", "through"])
+    for (const value of ["", "x".repeat(2049), null, 1])
+      expect(parseMobileClientEvent({ ...page, [field]: value })).toBeUndefined();
+  expect(parseMobileClientEvent({ ...selected, recoveryId: "x".repeat(129) })).toBeUndefined();
+  expect(parseMobileClientEvent({ type: "session.select", sessionId: "native" })).toEqual({
+    type: "session.select",
+    sessionId: "native",
+  });
+});

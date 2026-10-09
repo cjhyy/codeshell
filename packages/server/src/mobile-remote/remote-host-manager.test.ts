@@ -588,6 +588,7 @@ describe("RemoteHostManager", () => {
     });
     const host = new RemoteHostManager({
       devices: store,
+      outputJournal: true,
       onClientEvent: (event) => {
         clientEvents.push(event as { deviceId?: string; viewerId?: string; roomId?: string });
         if (clientEvents.length === 2) resolveClientEvents();
@@ -603,7 +604,11 @@ describe("RemoteHostManager", () => {
       new Promise<import("ws").WebSocket>((resolve) => {
         const socket = new WS(wsUrl);
         socket.on("message", (raw) => {
-          if (JSON.parse(String(raw)).type === "auth.ok") resolve(socket);
+          const event = JSON.parse(String(raw));
+          if (event.type === "auth.ok") {
+            expect(event.capabilities).toEqual({ outputJournal: 1 });
+            resolve(socket);
+          }
         });
         socket.on("open", () =>
           socket.send(
@@ -629,13 +634,35 @@ describe("RemoteHostManager", () => {
       expect(typeof firstViewerId).toBe("string");
       expect(typeof secondViewerId).toBe("string");
       expect(firstViewerId).not.toBe(secondViewerId);
+      const received: unknown[][] = [[], []];
+      first.on("message", (raw) => received[0]!.push(JSON.parse(String(raw))));
+      second.on("message", (raw) => received[1]!.push(JSON.parse(String(raw))));
+      const selectedReply = {
+        type: "session.recovery.ready" as const,
+        sessionId: "native",
+        recoveryId: "first-selection",
+        ok: true,
+      };
+      host.sendToViewer(firstViewerId!, selectedReply);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(received).toEqual([[selectedReply], []]);
 
       first.close();
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(viewerOffline).toEqual([{ deviceId: device.id, viewerId: firstViewerId! }]);
       expect(host.onlineDeviceIds()).toEqual([device.id]);
+      host.sendToViewer(firstViewerId!, selectedReply);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(received).toEqual([[selectedReply], []]);
 
-      second.close();
+      const slowClient = [
+        ...(host as unknown as { wss: import("ws").WebSocketServer }).wss.clients,
+      ][0]!;
+      Object.defineProperty(slowClient, "bufferedAmount", {
+        configurable: true,
+        get: () => 4 * 1024 * 1024,
+      });
+      host.sendToViewer(secondViewerId!, selectedReply);
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(viewerOffline).toEqual([
         { deviceId: device.id, viewerId: firstViewerId! },
@@ -854,4 +881,35 @@ describe("RemoteHostManager", () => {
     expect(res.status).not.toBe(200);
     await host.stop();
   });
+});
+
+test("output journal is explicitly negotiated on first pairing and subsequent auth only by enabled hosts", async () => {
+  dir = mkdtempSync(join(tmpdir(), "mobile-recovery-capability-"));
+  for (const enabled of [false, true]) {
+    const devices = new TrustedDeviceStore(join(dir, `devices-${enabled}.json`));
+    const host = new RemoteHostManager({ devices, outputJournal: enabled, onClientEvent() {} });
+    await host.start({ host: "127.0.0.1", port: 0 });
+    try {
+      const pairing = host.createPairingUrl();
+      const paired = host.handleClientEvent({
+        type: "pair.complete",
+        token: pairing.token,
+        name: "Phone",
+        secretHash: "synthetic",
+      });
+      expect(paired?.type).toBe("pair.ok");
+      if (paired?.type !== "pair.ok") throw new Error("pairing failed");
+      const authenticated = host.handleClientEvent({
+        type: "auth.device",
+        deviceId: paired.device.id,
+        secretHash: "synthetic",
+      });
+      expect(authenticated?.type).toBe("auth.ok");
+      if (authenticated?.type !== "auth.ok") throw new Error("auth failed");
+      expect(paired.capabilities).toEqual(enabled ? { outputJournal: 1 } : undefined);
+      expect(authenticated.capabilities).toEqual(paired.capabilities);
+    } finally {
+      await host.stop();
+    }
+  }
 });

@@ -12,7 +12,9 @@
  * IPC broadcast, and desktop services (settings, workspaces, transcripts).
  */
 
-import { Methods } from "@cjhyy/code-shell-core";
+import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
+import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
+import { mobileOutputRecoveryAuthority } from "./mobile-remote/output-recovery-authority.js";
 import {
   type ClaimedMobileUpload,
   type MobilePermissionModeSnapshotEntry,
@@ -87,7 +89,19 @@ export class MobileRemoteOrchestrator {
   private readonly mobileSessionCwds = new Map<string, string | null>();
   private readonly mobilePermissionModes = new Map<string, PermissionMode>();
 
-  constructor(private readonly deps: MobileRemoteOrchestratorDeps) {}
+  private readonly outputRecovery: MobileOutputRecovery;
+  constructor(private readonly deps: MobileRemoteOrchestratorDeps) {
+    this.outputRecovery = new MobileOutputRecovery({
+      root: sessionsRoot,
+      authority: mobileOutputRecoveryAuthority,
+      snapshot: (id) => this.deps.getBridge()?.getSnapshot(id, 0),
+      reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),
+    });
+  }
+
+  releaseViewer(viewerId: string): void {
+    this.outputRecovery.revoke(viewerId);
+  }
 
   // ── Projects ───────────────────────────────────────────────────────────────
 
@@ -284,6 +298,7 @@ export class MobileRemoteOrchestrator {
   private ctx(): OrchestratorCtx {
     return {
       remote: this.deps.remote,
+      outputRecovery: this.outputRecovery,
       uploads: this.deps.uploads,
       roomManager: this.deps.roomManager,
       approvalBridge: this.deps.approvalBridge,
