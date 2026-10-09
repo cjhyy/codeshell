@@ -177,6 +177,8 @@ interface ImGatewayCredentialStore {
 
 export interface ImGatewayServiceOptions {
   configPath?: string;
+  /** The owning Desktop must publish its local control plane before consuming messages. */
+  ensureDesktopControl?: () => Promise<void>;
   emit?: (event: ImGatewayUiEvent) => void;
   credentialStore?: ImGatewayCredentialStore;
   createDingTalkAdapter?: (config: {
@@ -311,6 +313,18 @@ export class ImGatewayService {
     );
   }
 
+  /** Read only the optional lease override, without requiring valid channel credentials. */
+  configuredGatewayLockPath(): string | undefined {
+    try {
+      const raw = readGatewayConfigRecord(this.configPath);
+      return readOptionalString(readRecord(raw.runtime).lockPath);
+    } catch {
+      // Invalid channel configuration is reported by status()/start(); it must
+      // not prevent the Desktop control plane and main window from opening.
+      return undefined;
+    }
+  }
+
   status(): ImGatewayStatus {
     let channels: ImGatewayChannel[] = this.active?.channels ?? [];
     let configError: string | undefined;
@@ -428,6 +442,13 @@ export class ImGatewayService {
       this.options.createChannelAdapter ??
       (await import("@cjhyy/code-shell-chat/factory")).createChannelAdapterAsync;
     const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    try {
+      await this.options.ensureDesktopControl?.();
+    } catch (error) {
+      this.lastError = `Desktop 消息桥接未就绪：${error instanceof Error ? error.message : String(error)}`;
+      this.emitStatus();
+      throw error;
+    }
     // A previous stop() may still be releasing its cross-process lease while
     // its adapters wind down. Wait for that to finish before re-acquiring so a
     // fast stop→start in the same process does not race the lock.

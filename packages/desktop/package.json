@@ -144,7 +144,8 @@
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Code Shell 使用麦克风进行语音输入(把你的话转写成文字填进输入框)。"
+        "NSMicrophoneUsageDescription": "Code Shell 使用麦克风进行语音输入，以及在你明确开始录制时采集音频。",
+        "NSCameraUsageDescription": "Code Shell 在你明确开始录制时使用摄像头采集视频。"
       }
     },
     "win": {

@@ -19,7 +19,7 @@ export interface RelayLocalStream {
 
 /** One fixed loopback connection. Never accept a target, URL, or port from control messages. */
 export function openRelayStream(
-  config: DeviceRelayConnectorOptions,
+  config: DeviceRelayConnectorOptions & { credential: string },
   message: Extract<RelayControlMessage, { type: "open" }>,
   failed: () => void,
 ): RelayLocalStream {
