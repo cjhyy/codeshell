@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawn } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,6 +18,7 @@ import { join } from "node:path";
 import {
   GatewayControlServer,
   type DesktopControlDescriptor,
+  type GatewayControlServerOptions,
 } from "./im-gateway-control-server.js";
 
 const roots: string[] = [];
@@ -23,6 +28,345 @@ afterEach(() => {
 });
 
 describe("GatewayControlServer", () => {
+  test("returns retryable startup responses before routing or creating Mimi tickets", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-chat-readiness-"));
+    roots.push(root);
+    let petReady = false;
+    let routesReady = false;
+    let petCalls = 0;
+    let routeCalls = 0;
+    const server = makeServer(join(root, "desktop-control.json"), {
+      isPetChatReady: () => petReady,
+      isSessionRouteReady: () => routesReady,
+      petChat: async () => {
+        petCalls++;
+        return { text: "ready", petSessionId: "pet-ready" };
+      },
+      routeSession: async () => {
+        routeCalls++;
+        return { kind: "not-bound" };
+      },
+    });
+    try {
+      const descriptor = await server.start();
+      const post = (path: string, body: unknown) =>
+        fetch(`${descriptor.baseUrl}${path}`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${descriptor.token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+      for (const path of ["/v1/pet/chat/start", "/v1/pet/chat"]) {
+        const blocked = await post(path, { message: "retained startup message" });
+        expect(blocked.status).toBe(503);
+        expect(await blocked.json()).toMatchObject({ error: "operation_failed" });
+      }
+      const route = {
+        channel: "wechat",
+        target: "owner",
+        senderId: "owner",
+        messageId: "startup-message",
+        text: "retained startup message",
+        isDirectMessage: true,
+      };
+      expect((await post("/v1/session/route", route)).status).toBe(503);
+      expect(petCalls).toBe(0);
+      expect(routeCalls).toBe(0);
+      expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
+
+      routesReady = true;
+      expect((await post("/v1/session/route", route)).status).toBe(200);
+      expect(routeCalls).toBe(1);
+      expect((await post("/v1/pet/chat/start", { message: route.text })).status).toBe(503);
+      petReady = true;
+      const started = await post("/v1/pet/chat/start", { message: route.text });
+      expect(started.status).toBe(202);
+      const ticket = (await started.json()) as { requestId: string };
+      const result = await call(
+        descriptor,
+        "GET",
+        `/v1/pet/chat/result/${ticket.requestId}?waitMs=1000`,
+      );
+      expect(await result.json()).toMatchObject({ text: "ready", petSessionId: "pet-ready" });
+      expect((await post("/v1/pet/chat", { message: route.text })).status).toBe(200);
+      expect(petCalls).toBe(2);
+    } finally {
+      await server.stop();
+    }
+  });
+
+  test("repairs a lost live descriptor with the same credential and stops recovery on shutdown", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-recovery-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const server = makeServer(path, { descriptorHealthCheckIntervalMs: 10 });
+    try {
+      const starting = server.start();
+      expect(server.start()).toBe(starting);
+      const descriptor = await starting;
+      const context = server.eventContext();
+      rmSync(path);
+      await waitUntil(() => existsSync(path));
+      expect(readDescriptor(path)).toEqual(descriptor);
+      expect(server.eventContext()).toEqual(context);
+      expect((await call(readDescriptor(path), "GET", "/v1/status")).status).toBe(200);
+
+      writeFileSync(path, '{"version":', { mode: 0o600 });
+      await waitUntil(() => {
+        try {
+          return readDescriptor(path).token === descriptor.token;
+        } catch {
+          return false;
+        }
+      });
+      expect(await server.start()).toEqual(descriptor);
+    } finally {
+      await server.stop();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(existsSync(path)).toBe(false);
+    expect(existsSync(`${path}.lock`)).toBe(false);
+  });
+
+  test("a second desktop profile cannot alter a shared live descriptor or outbox", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-shared-home-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const first = makeServer(path);
+    const second = makeServer(path);
+    try {
+      const descriptor = await first.start();
+      await first.publish({ type: "automation.completed", text: "owned event" });
+      const outbox = readFileSync(`${path}.events`, "utf-8");
+      await expect(second.start()).rejects.toThrow("Chat Gateway 已由");
+      expect(second.eventContext()).toBeUndefined();
+      await expect(
+        second.publish({ type: "automation.completed", text: "unowned" }),
+      ).rejects.toThrow("not started");
+      await second.stop();
+      expect(readDescriptor(path)).toEqual(descriptor);
+      expect(readFileSync(`${path}.events`, "utf-8")).toBe(outbox);
+      expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
+      await expect(second.start()).rejects.toThrow("Chat Gateway 已由");
+      await first.stop();
+      const replacement = await second.start();
+      expect(replacement.token).not.toBe(descriptor.token);
+      const events = await call(replacement, "GET", "/v1/events?after=0&waitMs=0");
+      expect(await events.json()).toMatchObject({ events: [{ text: "owned event" }] });
+    } finally {
+      await second.stop();
+      await first.stop();
+    }
+  });
+
+  test("preserves a live legacy descriptor even when its desktop has no shared lease", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-legacy-owner-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const first = makeServer(path);
+    const second = makeServer(path);
+    try {
+      const descriptor = await first.start();
+      const outbox = readFileSync(`${path}.events`, "utf-8");
+      rmSync(`${path}.lock`);
+      await expect(second.start()).rejects.toThrow("belongs to a running desktop");
+      expect(existsSync(`${path}.lock`)).toBe(false);
+      await second.stop();
+      expect(readDescriptor(path)).toEqual(descriptor);
+      expect(readFileSync(`${path}.events`, "utf-8")).toBe(outbox);
+      expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
+    } finally {
+      await second.stop();
+      await first.stop();
+    }
+  });
+
+  test("a live legacy desktop gateway prevents replacing its missing control endpoint", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-legacy-gateway-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const gatewayLockPath = join(root, "gateway.lock");
+    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+      stdio: "ignore",
+    });
+    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    const server = makeServer(path);
+    try {
+      expect(child.pid).toBeDefined();
+      const lease = legacyGatewayLease(child.pid!, "CodeShell Desktop");
+      writeFileSync(gatewayLockPath, lease, { mode: 0o600 });
+      // This is the migration failure: the old owner is alive, its descriptor
+      // is absent, and its retained outbox must remain wholly untouched.
+      const retained = "retained old desktop outbox";
+      writeFileSync(`${path}.events`, retained, { mode: 0o600 });
+      await expect(server.start()).rejects.toThrow("owned by a running legacy desktop");
+      await server.stop();
+      expect(existsSync(path)).toBe(false);
+      expect(existsSync(`${path}.lock`)).toBe(false);
+      expect(readFileSync(`${path}.events`, "utf-8")).toBe(retained);
+      expect(readFileSync(gatewayLockPath, "utf-8")).toBe(lease);
+      expect(readdirSync(root).some((name) => name.includes(".corrupt-"))).toBe(false);
+    } finally {
+      await server.stop();
+      child.kill();
+      await exited;
+    }
+  });
+
+  test("permits a live CLI gateway to launch desktop control and supports a configured lock path", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-cli-gateway-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const gatewayLockPath = join(root, "custom-runtime.lock");
+    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+      stdio: "ignore",
+    });
+    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    const server = makeServer(path, { legacyDesktopGatewayLockPath: gatewayLockPath });
+    try {
+      expect(child.pid).toBeDefined();
+      const desktopLease = legacyGatewayLease(child.pid!, "CodeShell Desktop");
+      writeFileSync(gatewayLockPath, desktopLease, { mode: 0o600 });
+      await expect(server.start()).rejects.toThrow("owned by a running legacy desktop");
+      const cliLease = legacyGatewayLease(child.pid!, "code-shell-chat CLI");
+      writeFileSync(gatewayLockPath, cliLease, { mode: 0o600 });
+      const descriptor = await server.start();
+      expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
+      await server.stop();
+      expect(readFileSync(gatewayLockPath, "utf-8")).toBe(cliLease);
+    } finally {
+      await server.stop();
+      child.kill();
+      await exited;
+    }
+  });
+
+  test("fails closed on malformed, oversized or symlinked legacy gateway locks", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-unsafe-gateway-lock-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const lockPath = join(root, "gateway.lock");
+    const server = makeServer(path);
+    writeFileSync(lockPath, "{", { mode: 0o600 });
+    await expect(server.start()).rejects.toThrow("legacy instance lock is invalid");
+    writeFileSync(lockPath, "x".repeat(64 * 1024 + 1), { mode: 0o600 });
+    await expect(server.start()).rejects.toThrow("exceeds its size limit");
+    rmSync(lockPath);
+    const target = join(root, "target.lock");
+    const lease = legacyGatewayLease(process.pid, "code-shell-chat CLI");
+    writeFileSync(target, lease, { mode: 0o600 });
+    symlinkSync(target, lockPath);
+    await expect(server.start()).rejects.toThrow("not a regular file");
+    await server.stop();
+    expect(lstatSync(lockPath).isSymbolicLink()).toBe(true);
+    expect(readFileSync(target, "utf-8")).toBe(lease);
+    expect(existsSync(path)).toBe(false);
+    expect(existsSync(`${path}.events`)).toBe(false);
+    expect(existsSync(`${path}.lock`)).toBe(false);
+  });
+
+  test("reclaims a descriptor and lease whose desktop process is gone", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-stale-owner-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const deadPid = 2_147_483_647;
+    expect(() => process.kill(deadPid, 0)).toThrow();
+    const stale = {
+      version: 1,
+      pid: deadPid,
+      baseUrl: "http://127.0.0.1:1",
+      token: "a".repeat(64),
+      startedAt: 1,
+    };
+    writeFileSync(path, JSON.stringify(stale), { mode: 0o600 });
+    writeFileSync(
+      `${path}.lock`,
+      JSON.stringify({
+        version: 1,
+        pid: deadPid,
+        owner: "stale desktop",
+        token: "11111111-1111-4111-8111-111111111111",
+        startedAt: 1,
+      }),
+      { mode: 0o600 },
+    );
+    const server = makeServer(path);
+    try {
+      const descriptor = await server.start();
+      expect(descriptor.token).not.toBe(stale.token);
+      expect(readDescriptor(path)).toEqual(descriptor);
+    } finally {
+      await server.stop();
+    }
+  });
+
+  test("periodic recovery and repeated start preserve a competing live descriptor", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-competing-owner-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const server = makeServer(path, { descriptorHealthCheckIntervalMs: 10 });
+    const descriptor = await server.start();
+    const competing = { ...descriptor, token: "b".repeat(64) };
+    writeFileSync(path, JSON.stringify(competing), { mode: 0o600 });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      expect(readDescriptor(path)).toEqual(competing);
+      await expect(server.start()).rejects.toThrow("belongs to a running desktop");
+      expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
+    } finally {
+      await server.stop();
+    }
+    expect(readDescriptor(path)).toEqual(competing);
+  });
+
+  test("never replaces a descriptor symlink during startup, recovery or cleanup", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-symlink-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const target = join(root, "target.json");
+    const server = makeServer(path, { descriptorHealthCheckIntervalMs: 10 });
+    const descriptor = await server.start();
+    writeFileSync(target, JSON.stringify(descriptor), { mode: 0o600 });
+    rmSync(path);
+    symlinkSync(target, path);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      expect(lstatSync(path).isSymbolicLink()).toBe(true);
+      await expect(server.start()).rejects.toThrow("not a regular file");
+    } finally {
+      await server.stop();
+    }
+    expect(lstatSync(path).isSymbolicLink()).toBe(true);
+    expect(readDescriptor(target)).toEqual(descriptor);
+    const restarted = makeServer(path);
+    await expect(restarted.start()).rejects.toThrow("not a regular file");
+    expect(existsSync(`${path}.lock`)).toBe(false);
+    expect(readDescriptor(target)).toEqual(descriptor);
+    await restarted.stop();
+  });
+
+  test("stop during startup closes the eventual listener and releases shared ownership", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-start-stop-"));
+    roots.push(root);
+    const path = join(root, "desktop-control.json");
+    const first = makeServer(path, { descriptorHealthCheckIntervalMs: 10 });
+    const starting = first.start();
+    const stopping = first.stop();
+    const descriptor = await starting;
+    await stopping;
+    expect(existsSync(path)).toBe(false);
+    expect(existsSync(`${path}.lock`)).toBe(false);
+    await expect(call(descriptor, "GET", "/v1/status")).rejects.toThrow();
+    const second = makeServer(path);
+    try {
+      await second.start();
+    } finally {
+      await second.stop();
+    }
+  });
+
   test("writes an owner-only descriptor and requires its bearer token", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-control-"));
     roots.push(root);
@@ -380,6 +724,9 @@ describe("GatewayControlServer", () => {
       text: "persist before shutdown",
     });
     const stopping = server.stop();
+    await expect(
+      server.publish({ type: "automation.completed", text: "arrived during shutdown" }),
+    ).rejects.toThrow("not started");
 
     await expect(publication).resolves.toMatchObject({ id: 1 });
     await stopping;
@@ -467,7 +814,7 @@ describe("GatewayControlServer", () => {
     await server.stop();
   });
 
-  test("keeps the durable event publisher available when the HTTP control plane fails", async () => {
+  test("releases ownership after a startup failure and rejects unowned event publication", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-control-failure-"));
     roots.push(root);
     const descriptorPath = join(root, "desktop-control.json");
@@ -475,14 +822,15 @@ describe("GatewayControlServer", () => {
     const server = makeServer(descriptorPath);
 
     await expect(server.start()).rejects.toThrow();
-    expect(server.eventContext()?.streamId).toMatch(/^[a-f0-9]{32}$/);
-    expect(
-      (await server.publish({ type: "automation.completed", text: "Persist without HTTP" })).id,
-    ).toBe(1);
-    expect(JSON.parse(readFileSync(`${descriptorPath}.events`, "utf-8"))).toMatchObject({
-      nextEventId: 2,
-      events: [{ id: 1, text: "Persist without HTTP" }],
-    });
+    expect(server.eventContext()).toBeUndefined();
+    expect(existsSync(`${descriptorPath}.lock`)).toBe(false);
+    expect(existsSync(`${descriptorPath}.events`)).toBe(false);
+    await expect(
+      server.publish({ type: "automation.completed", text: "Persist without ownership" }),
+    ).rejects.toThrow("not started");
+    rmSync(descriptorPath, { recursive: true });
+    const descriptor = await server.start();
+    expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
     await server.stop();
     expect(server.eventContext()).toBeUndefined();
   });
@@ -611,7 +959,10 @@ describe("GatewayControlServer", () => {
   });
 });
 
-function makeServer(descriptorPath: string): GatewayControlServer {
+function makeServer(
+  descriptorPath: string,
+  options: Partial<GatewayControlServerOptions> = {},
+): GatewayControlServer {
   return new GatewayControlServer({
     descriptorPath,
     open: async () => ({
@@ -629,6 +980,25 @@ function makeServer(descriptorPath: string): GatewayControlServer {
       onlineDeviceCount: 0,
     }),
     pairingUrl: async () => ({ pairingUrl: "https://example.test/mobile", expiresAt: 456 }),
+    ...options,
+  });
+}
+
+async function waitUntil(predicate: () => boolean): Promise<void> {
+  const deadline = Date.now() + 1_000;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error("Timed out waiting for descriptor recovery");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+function legacyGatewayLease(pid: number, owner: string): string {
+  return JSON.stringify({
+    version: 1,
+    pid,
+    owner,
+    token: "11111111-1111-4111-8111-111111111111",
+    startedAt: 1,
   });
 }
 

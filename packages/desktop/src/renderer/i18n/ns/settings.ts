@@ -2,6 +2,24 @@
 export const settingsNs = {
   zh: {
     settingsX: {
+      cloudAccount: {
+        title: "CodeShell 云账号（可选）",
+        optional: "不登录也可使用本地项目、模型和 MCP。登录仅用于云服务，不会自动共享电脑或项目。",
+        origin: "云服务地址",
+        username: "账号名称",
+        password: "密码（至少 12 位）",
+        login: "登录",
+        register: "注册",
+        github: "使用 GitHub 登录",
+        linkGitHub: "关联 GitHub",
+        logout: "退出云账号",
+        cancel: "取消登录",
+        failed: "云账号操作未完成。",
+        "state_signed-out": "本地使用中，尚未登录云账号",
+        "state_signed-in": "云账号已登录；电脑与项目仍由你单独授权",
+        "state_signing-in": "正在登录，请在浏览器完成授权…",
+        "state_storage-error": "账号安全存储不可用；本地使用不受影响",
+      },
       appearance: {
         title: "主题",
         desc: "选择应用界面的显示模式。",
@@ -884,7 +902,9 @@ export const settingsNs = {
         relayTicket: "一次性登记票据",
         relayTicketHint:
           "在目录页面登录后生成票据。重新登记会替换旧连接；登记不会自动启动，退出应用后也不会自动重连。",
-        relayEnroll: "登记电脑",
+        relayEnroll: "使用票据登记电脑",
+        relayAccountEnroll: "通过当前账号登记电脑",
+        relayAccountHint: "登记到 {origin} 的当前账号；登记不会自动启动连接。",
         relayState_unregistered: "尚未登记",
         relayState_stopped: "已登记，连接已停止",
         relayState_connecting: "正在连接目录…",
@@ -953,6 +973,26 @@ export const settingsNs = {
   },
   en: {
     settingsX: {
+      cloudAccount: {
+        title: "CodeShell cloud account (optional)",
+        optional:
+          "Local projects, models and MCP work without signing in. Signing in enables cloud services and does not share this computer or its projects.",
+        origin: "Cloud service address",
+        username: "Username",
+        password: "Password (at least 12 characters)",
+        login: "Sign in",
+        register: "Register",
+        github: "Sign in with GitHub",
+        linkGitHub: "Link GitHub",
+        logout: "Sign out",
+        cancel: "Cancel sign-in",
+        failed: "Cloud account operation failed.",
+        "state_signed-out": "Using locally, not signed in",
+        "state_signed-in":
+          "Signed in; computer and project access still require separate authorization",
+        "state_signing-in": "Signing in; complete authorization in your browser…",
+        "state_storage-error": "Secure account storage is unavailable; local use still works",
+      },
       appearance: {
         title: "Theme",
         desc: "Choose how the app interface is displayed.",
@@ -1905,7 +1945,10 @@ export const settingsNs = {
         relayTicket: "One-time enrollment ticket",
         relayTicketHint:
           "Sign in to the directory to create a ticket. Re-enrollment replaces the previous connection. Registration does not start a connection or enable automatic startup.",
-        relayEnroll: "Register computer",
+        relayEnroll: "Register with ticket",
+        relayAccountEnroll: "Register with current account",
+        relayAccountHint:
+          "Register with the current account at {origin}. Registration does not start the connection.",
         relayState_unregistered: "Not registered",
         relayState_stopped: "Registered, connection stopped",
         relayState_connecting: "Connecting to directory…",
