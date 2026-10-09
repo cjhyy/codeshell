@@ -312,7 +312,12 @@ export async function linkActionTool(
   let params: Record<string, unknown>;
   try {
     // Closed-set approval must describe the exact detached values later sent.
-    params = JSON.parse(canonicalOperationValue(parseParams(args.params)));
+    params = JSON.parse(
+      canonicalOperationValue(
+        parseParams(args.params),
+        providerId === "github" && actionId === "create_issue" ? 256 * 1024 : 64 * 1024,
+      ),
+    );
     if (providerId === "github" && actionId === "create_issue")
       params = githubCreateIssueParameters(params);
     if (providerId === "github" && actionId === "set_starred")

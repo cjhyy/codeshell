@@ -31,6 +31,9 @@ function fixture() {
     project = "project-1";
   let confirmations = 0,
     resolutions = 0;
+  let reads = 0;
+  let readStage: () => Promise<void> = async () => {};
+  let needsReadApproval = false;
   let confirm: () => Promise<{ response: number }> = async () => ({ response: 1 });
   let beforeCas = () => {};
   let persist = () => {};
@@ -55,6 +58,22 @@ function fixture() {
         persist();
         resolutions++;
       },
+      reconcile: async (_sessionId, _owner, _id, _revision, options) => {
+        beforeCas();
+        options.assertCurrent();
+        if (needsReadApproval && !(await options.approveRead("get_issue", "acme/repo#7")))
+          throw new Error("read denied");
+        await readStage();
+        options.assertCurrent();
+        persist();
+        reads++;
+        return {
+          id: "observation",
+          at: 1,
+          result: "matches_current",
+          actions: ["github.get_issue"],
+        };
+      },
     },
     resolveTarget: async (input) => {
       expect(input).toEqual({ sessionId: "session" });
@@ -74,8 +93,10 @@ function fixture() {
       confirmations++;
       expect(options.defaultId).toBe(0);
       expect(options.cancelId).toBe(0);
-      expect(options.detail).toContain("结果仍未知");
-      expect(options.detail).toContain("永远不会重发");
+      if (options.title?.includes("uncertain")) {
+        expect(options.detail).toContain("结果仍未知");
+        expect(options.detail).toContain("永远不会重发");
+      } else expect(options.detail).toMatch(/独立 Host 只读核查|仅允许本次固定读取/);
       return confirm();
     },
   });
@@ -92,12 +113,29 @@ function fixture() {
     invoke,
     review,
     resolve,
+    reconcile: (snapshot: any, sender = event) =>
+      invoke(
+        "reconcile",
+        {
+          reviewToken: snapshot.reviewToken,
+          operationId: record.id,
+          revision: record.revision,
+        },
+        sender,
+      ),
     record,
     event,
     window,
     other,
     dispose,
     counts: () => ({ confirmations, resolutions }),
+    readCount: () => reads,
+    readStage: (next: typeof readStage) => {
+      readStage = next;
+    },
+    requireReadApproval: () => {
+      needsReadApproval = true;
+    },
     confirm: (next: typeof confirm) => {
       confirm = next;
     },
@@ -211,4 +249,66 @@ test("concurrent resolves cannot create a second dialog and storage failure is n
   finish({ response: 1 });
   await expect(first).rejects.toThrow("disk failure");
   expect(f.counts()).toEqual({ confirmations: 1, resolutions: 0 });
+});
+
+test("native read cancellation sends nothing; accepting reads records only a masked independent observation", async () => {
+  const f = fixture();
+  f.confirm(async () => ({ response: 0 }));
+  expect(await f.reconcile(await f.review())).toEqual({ status: "cancelled" });
+  expect(f.readCount()).toBe(0);
+  f.confirm(async () => ({ response: 1 }));
+  const snapshot = await f.review();
+  const result = await f.reconcile(snapshot);
+  expect(result).toEqual({
+    status: "observed",
+    observation: {
+      id: "observation",
+      at: 1,
+      result: "matches_current",
+      actions: ["github.get_issue"],
+    },
+  });
+  expect(f.readCount()).toBe(1);
+  expect(f.counts().resolutions).toBe(0);
+  await expect(f.reconcile(snapshot)).rejects.toThrow("expired");
+});
+
+test("read native capability cannot cross windows and rejects stale project during confirmation", async () => {
+  const f = fixture();
+  const snapshot = await f.review();
+  await expect(
+    f.reconcile(snapshot, {
+      sender: f.other.webContents,
+      senderFrame: f.other.webContents.mainFrame,
+    }),
+  ).rejects.toThrow("expired");
+  f.confirm(async () => {
+    f.change("project");
+    return { response: 1 };
+  });
+  await expect(f.reconcile(snapshot)).rejects.toThrow();
+  expect(f.readCount()).toBe(0);
+});
+
+test.each(["running", "untrust", "registry", "frame", "disabled"])(
+  "read review rejects %s during awaited provider work",
+  async (change) => {
+    const f = fixture();
+    f.readStage(async () => {
+      f.change(change);
+    });
+    await expect(f.reconcile(await f.review())).rejects.toThrow();
+    expect(f.readCount()).toBe(0);
+    expect(f.counts().resolutions).toBe(0);
+  },
+);
+
+test("an ask rule uses another native default-deny confirmation; cancellation cannot persist an observation", async () => {
+  const f = fixture();
+  f.requireReadApproval();
+  let prompts = 0;
+  f.confirm(async () => ({ response: ++prompts === 1 ? 1 : 0 }));
+  await expect(f.reconcile(await f.review())).rejects.toThrow("read denied");
+  expect(prompts).toBe(2);
+  expect(f.readCount()).toBe(0);
 });

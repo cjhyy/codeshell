@@ -9,6 +9,20 @@ export interface OperationResolutionRecord {
   hasReference: boolean;
   canResolve: boolean;
   resolvedAt?: number;
+  observation?: OperationReadObservation;
+}
+
+export interface OperationReadObservation {
+  id: string;
+  at: number;
+  result:
+    | "matches_current"
+    | "differs_current"
+    | "identity_changed"
+    | "unavailable"
+    | "permission_denied"
+    | "hooks_unavailable";
+  actions: string[];
 }
 
 export interface OperationResolutionReview {
@@ -24,3 +38,6 @@ export interface OperationResolutionInput {
 }
 
 export type OperationResolutionResult = { status: "cancelled" | "resolved"; result: "unknown" };
+export type OperationReadResult =
+  | { status: "cancelled" }
+  | { status: "observed"; observation: OperationReadObservation };

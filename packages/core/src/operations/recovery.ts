@@ -12,7 +12,12 @@ import {
 import { join } from "node:path";
 import { writeFileAtomic } from "../utils/file-mutex.js";
 
-const MAX_BYTES = 128 * 1024;
+// A legal create_issue plan repeats its 20,000-character body in parameters
+// and postcondition. JSON escaping may use six bytes per UTF-16 code unit.
+// Reserve 512 KiB for that bounded plan plus its authority snapshot, and a
+// separately bounded envelope that includes base64 expansion and metadata.
+const MAX_PLAINTEXT_BYTES = 512 * 1024;
+const MAX_BYTES = 704 * 1024;
 const hexDigest = /^[a-f0-9]{64}$/;
 
 /**
@@ -58,7 +63,8 @@ export class OperationRecoveryFiles {
   }
 
   save(rootKey: Buffer, id: string, plaintext: string): string {
-    if (Buffer.byteLength(plaintext) > 64 * 1024) throw new Error("Recovery input exceeds bounds");
+    if (Buffer.byteLength(plaintext) > MAX_PLAINTEXT_BYTES)
+      throw new Error("Recovery input exceeds bounds");
     const digest = this.digest(rootKey, id, plaintext);
     const directory = this.directory(id, true);
     const file = join(directory, `${digest}.json`);
@@ -119,7 +125,7 @@ export class OperationRecoveryFiles {
         decipher.final(),
       ]).toString("utf8");
       if (
-        Buffer.byteLength(plaintext) > 64 * 1024 ||
+        Buffer.byteLength(plaintext) > MAX_PLAINTEXT_BYTES ||
         this.digest(rootKey, id, plaintext) !== digest
       )
         throw new Error("Recovery input authentication failed");

@@ -69,7 +69,7 @@ describe("private immutable operation recovery inputs", () => {
     files.save(key, id, '{"phase":"identity"}');
     expect(() => files.save(key, id, '{"phase":"replacement"}')).toThrow("slots are full");
     expect(() => files.save(key, "../escape", "{}")).toThrow("identity");
-    expect(() => files.save(key, "c".repeat(64), "x".repeat(65537))).toThrow("bounds");
+    expect(() => files.save(key, "c".repeat(64), "x".repeat(512 * 1024 + 1))).toThrow("bounds");
     expect(readdirSync(join(root, "recovery", id))).toHaveLength(2);
     const outside = join(root, "outside");
     mkdirSync(outside);
@@ -84,7 +84,7 @@ describe("private immutable operation recovery inputs", () => {
     expect(readdirSync(root)).toHaveLength(0);
     const digest = files.save(key, id, "{}");
     const file = join(root, "recovery", id, `${digest}.json`);
-    writeFileSync(file, "x".repeat(128 * 1024 + 1));
+    writeFileSync(file, "x".repeat(704 * 1024 + 1));
     expect(() => files.read(key, id, digest)).toThrow("bounds");
     rmSync(file);
     const outside = join(root, "outside.json");

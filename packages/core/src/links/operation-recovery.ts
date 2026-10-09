@@ -57,7 +57,7 @@ export function githubRecoveryInput(
     authority: linkAuthoritySnapshot(connection),
     policy: {
       workspaceProfileName: ctx.workspaceProfileName ?? null,
-      settingsScope: ctx.settingsScope ?? "project",
+      settingsScope: ctx.settingsScope ?? "full",
       permissionMode: ctx.permissionMode ?? "default",
       planMode: ctx.planMode ?? false,
       linkActionEnabled: !ctx.disabledBuiltins?.has("LinkAction"),

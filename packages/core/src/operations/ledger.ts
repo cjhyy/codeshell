@@ -63,6 +63,25 @@ const recordSchema = z
   .strict();
 export type OperationReceipt = z.infer<typeof recordSchema>;
 export type OperationReference = z.infer<typeof reference>;
+const observationSchema = z
+  .object({
+    id: z.string().uuid(),
+    at: z.number().int().nonnegative(),
+    reviewedRevision: digest,
+    ownerIncarnation: digest,
+    result: z.enum([
+      "matches_current",
+      "differs_current",
+      "identity_changed",
+      "unavailable",
+      "permission_denied",
+      "hooks_unavailable",
+    ]),
+    actions: z.array(label).max(2),
+    evidence: digest,
+  })
+  .strict();
+export type OperationObservation = z.infer<typeof observationSchema>;
 export interface OperationReview {
   id: string;
   revision: string;
@@ -73,12 +92,14 @@ export interface OperationReview {
   hasReference: boolean;
   canResolve: boolean;
   resolvedAt?: number;
+  observation?: Pick<OperationObservation, "id" | "at" | "result" | "actions">;
 }
 const stateSchema = z
   .object({
     schema: z.literal(1),
     key: z.string().min(1).max(4096),
     records: z.record(z.string(), recordSchema),
+    observations: z.record(z.string(), z.array(observationSchema).max(20)).optional(),
   })
   .strict();
 type LedgerState = z.infer<typeof stateSchema>;
@@ -107,7 +128,9 @@ export interface OperationRecoveryInput {
 }
 
 /** Reject non-JSON, cycles, oversized/deep values, and ambiguous key ordering. */
-export function canonicalOperationValue(value: unknown): string {
+export function canonicalOperationValue(value: unknown, maxBytes = 64 * 1024): string {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 512 * 1024)
+    throw new Error("Invalid operation input bound");
   const seen = new Set<object>();
   let nodes = 0;
   const visit = (input: unknown, depth: number): unknown => {
@@ -137,7 +160,7 @@ export function canonicalOperationValue(value: unknown): string {
     }
   };
   const serialized = JSON.stringify(visit(value, 0));
-  if (Buffer.byteLength(serialized) > 64 * 1024) throw new Error("Operation input exceeds bounds");
+  if (Buffer.byteLength(serialized) > maxBytes) throw new Error("Operation input exceeds bounds");
   return serialized;
 }
 
@@ -210,6 +233,8 @@ export class OperationLedger {
             throw new Error("Operation ledger exceeds bounds");
           for (const [id, record] of Object.entries(state.records))
             if (id !== record.id) throw new Error("Operation ledger identity mismatch");
+          for (const id of Object.keys(state.observations ?? {}))
+            if (!state.records[id]) throw new Error("Operation observation identity mismatch");
           return state;
         },
         serialize: (state) => JSON.stringify(state),
@@ -238,7 +263,9 @@ export class OperationLedger {
       createHmac("sha256", key)
         // The persisted random key is the namespace. Restoring/moving the same
         // ledger must preserve its pending identities rather than erase them.
-        .update(canonicalOperationValue([purpose, value]))
+        .update(
+          canonicalOperationValue([purpose, value], purpose === "plan" ? 512 * 1024 : 64 * 1024),
+        )
         .digest("hex")
     );
   }
@@ -246,6 +273,8 @@ export class OperationLedger {
   private matchesPlan(key: Buffer, receipt: OperationReceipt, plan: OperationPlan): boolean {
     return (
       receipt.owner === this.hash(key, "owner", plan.sessionId) &&
+      (receipt.ownerIncarnation === undefined ||
+        receipt.ownerIncarnation === this.incarnation(key, plan.sessionId)) &&
       receipt.id ===
         this.hash(key, "intent", [plan.sessionId, plan.intentId, plan.intentVariant ?? null]) &&
       receipt.fingerprint ===
@@ -283,7 +312,7 @@ export class OperationLedger {
       const stored = new OperationRecoveryFiles(this.directory).save(
         key,
         id,
-        canonicalOperationValue(input),
+        canonicalOperationValue(input, 512 * 1024),
       );
       if (phase === "prepared") {
         if (receipt.recovery && receipt.recovery.prepared !== stored)
@@ -311,6 +340,103 @@ export class OperationLedger {
           this.matchesPlan(key, current, plan),
       };
     });
+  }
+
+  private reviewedReceipt(
+    state: LedgerState,
+    key: Buffer,
+    sessionId: string,
+    id: string,
+    revision: string,
+    legacyEvidence: ReadonlyMap<string, string>,
+  ): { receipt: OperationReceipt; incarnation: string } {
+    const incarnation = this.incarnation(key, sessionId);
+    const owner = this.hash(key, "owner", sessionId);
+    const receipt = state.records[digest.parse(id)];
+    if (
+      !incarnation ||
+      !receipt ||
+      !this.matchesOwner(receipt, owner, incarnation) ||
+      receipt.state !== "unknown" ||
+      !receipt.attemptId ||
+      this.hash(key, "review", receipt) !== digest.parse(revision) ||
+      (!receipt.ownerIncarnation &&
+        legacyEvidence.get(id) !==
+          JSON.stringify([receipt.owner, receipt.fingerprint, receipt.attemptId]))
+    )
+      throw new Error("Operation read review is stale or unproven");
+    if (
+      Object.values(state.records).some(
+        (entry) => this.matchesOwner(entry, owner, incarnation) && entry.state === "running",
+      )
+    )
+      throw new Error("Operation Session is running");
+    return { receipt, incarnation };
+  }
+
+  /** Private Host adapter input. Never returned by a model tool or renderer API. */
+  readReviewRecovery(
+    sessionId: string,
+    id: string,
+    revision: string,
+    legacyEvidence: ReadonlyMap<string, string>,
+    guard: () => () => void,
+  ): { receipt: OperationReceipt; input?: OperationRecoveryInput } {
+    return this.transact((state, key) => {
+      const { receipt } = this.reviewedReceipt(state, key, sessionId, id, revision, legacyEvidence);
+      if ((state.observations?.[id]?.length ?? 0) >= 20)
+        throw new Error("Operation observation history is full");
+      let input: OperationRecoveryInput | undefined;
+      if (receipt.recovery) {
+        input = JSON.parse(
+          new OperationRecoveryFiles(this.directory).read(
+            key,
+            id,
+            receipt.recovery.identity ?? receipt.recovery.prepared,
+          ),
+        );
+        if (!input || input.schema !== 1 || !this.matchesPlan(key, receipt, input.plan))
+          throw new Error("Original recovery plan is unproven");
+      }
+      return { result: { receipt, ...(input ? { input } : {}) } };
+    }, guard);
+  }
+
+  /** Append an independent present-state observation. The original receipt never changes. */
+  observeReview(
+    sessionId: string,
+    id: string,
+    revision: string,
+    legacyEvidence: ReadonlyMap<string, string>,
+    result: OperationObservation["result"],
+    actions: string[],
+    evidence: unknown,
+    guard: () => () => void,
+  ): OperationObservation {
+    return this.transact((state, key) => {
+      const { incarnation } = this.reviewedReceipt(
+        state,
+        key,
+        sessionId,
+        id,
+        revision,
+        legacyEvidence,
+      );
+      const history = state.observations?.[id] ?? [];
+      if (history.length >= 20) throw new Error("Operation observation history is full");
+      const observation = observationSchema.parse({
+        id: randomUUID(),
+        at: Date.now(),
+        reviewedRevision: revision,
+        ownerIncarnation: incarnation,
+        result,
+        actions,
+        evidence: this.hash(key, "observation-evidence", evidence),
+      });
+      state.observations ??= {};
+      state.observations[id] = [...history, observation];
+      return { value: state, result: observation };
+    }, guard);
   }
 
   private incarnation(key: Buffer, sessionId: string): string | undefined {
@@ -383,6 +509,23 @@ export class OperationLedger {
                 legacyEvidence.get(entry.id) ===
                   JSON.stringify([entry.owner, entry.fingerprint, entry.attemptId])),
             ...(entry.operatorResolution ? { resolvedAt: entry.operatorResolution.at } : {}),
+            ...(() => {
+              const history = state.observations?.[entry.id];
+              const latest = history
+                ?.slice()
+                .reverse()
+                .find((item) => item.ownerIncarnation === incarnation);
+              return latest
+                ? {
+                    observation: {
+                      id: latest.id,
+                      at: latest.at,
+                      result: latest.result,
+                      actions: latest.actions,
+                    },
+                  }
+                : {};
+            })(),
           })),
           truncated: selected.length > 50,
         },
