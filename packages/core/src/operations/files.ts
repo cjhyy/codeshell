@@ -19,8 +19,9 @@ export function operationDirectory(path: string, create = false): Stats {
     }
   }
   const info = lstatSync(path);
-  // Windows mode bits are synthesized and do not express per-user ACLs. Keep
-  // the existing private-profile custody there; POSIX hosts enforce 0700/0600.
+  // Windows mode bits do not describe owner/group/other ACL permissions. As for
+  // the existing ledger/credential store, Windows relies on Host storage ACLs;
+  // these helpers neither validate nor repair that ACL boundary.
   if (
     !info.isDirectory() ||
     info.isSymbolicLink() ||

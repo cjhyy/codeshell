@@ -186,7 +186,7 @@ export async function runRetentionCapacity({
     .slice(0, 2);
   const savedDirectory = join(full.root, "capacity-original-buckets");
   fs.mkdirSync(savedDirectory, { mode: 0o700 });
-  const byteFull = structuredClone(state);
+  const byteFull = globalThis.structuredClone(state);
   let affectedId;
   for (const [prefix, entry] of Object.entries(buckets)) {
     if (prefix === targetPrefix) continue;

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createServer } from "node:http";
 import { createRequire, syncBuiltinESMExports } from "node:module";
+import { performance } from "node:perf_hooks";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createBunTestEnvironment } from "./bun-test-completion.mjs";
@@ -112,13 +113,18 @@ if (childMode) {
     };
     const rename = fs.renameSync;
     fs.renameSync = (from, to) => {
-      if (mode === "crash-before-manifest" && to === file) process.kill(process.pid, "SIGKILL");
-      if (mode === "crash-final-verification" && publishedArchive && to === file)
+      if (
+        (["crash-before-manifest", "crash-settle-before-manifest"].includes(mode) && to === file) ||
+        (mode === "crash-final-verification" && publishedArchive && to === file) ||
+        (mode === "crash-recovery-before-rename" && String(to).includes("/recovery/"))
+      )
         process.kill(process.pid, "SIGKILL");
       const value = rename(from, to);
       if (String(from).includes("/.stage-")) publishedArchive = true;
       if (
-        (mode === "crash-after-blob" && String(from).includes("/.stage-")) ||
+        (["crash-after-blob", "crash-settle-after-blob"].includes(mode) &&
+          String(from).includes("/.stage-")) ||
+        (mode === "crash-recovery-after-rename" && String(to).includes("/recovery/")) ||
         (mode === "crash-after-manifest" && to === file)
       )
         process.kill(process.pid, "SIGKILL");
@@ -154,7 +160,15 @@ if (childMode) {
     );
     assert.fail("Expected abrupt final verification death");
   } else if (mode.startsWith("crash-")) {
-    ledger.prepare(retentionPlan(`crash-${mode}`));
+    if (mode.startsWith("crash-settle-") || mode.startsWith("crash-recovery-")) {
+      const original = JSON.parse(fs.readFileSync(join(root, "fixture-receipt.json"), "utf8"));
+      if (mode.startsWith("crash-settle-"))
+        ledger.settle(original.id, original.attemptId, "verified");
+      else {
+        ledger.prepare(retentionPlan());
+        ledger.captureRecovery(retentionPlan(), original.id, "identity", { id: "original/read" });
+      }
+    } else ledger.prepare(retentionPlan(`crash-${mode}`));
     assert.fail("Expected abrupt process death");
   } else if (mode === "claim") {
     const receipt = ledger.prepare(retentionPlan("race"));
@@ -383,6 +397,84 @@ if (childMode) {
         originalUnchanged: true,
       });
     }
+    const atomicRecovery = [];
+    const noHttpBefore = calls.length;
+    for (const mode of [
+      "crash-settle-after-blob",
+      "crash-settle-before-manifest",
+      "crash-recovery-before-rename",
+      "crash-recovery-after-rename",
+    ]) {
+      // Capacity metadata only; the existing controller/race cases above prove real HTTP.
+      const crashRoot = fs.mkdtempSync(join(process.env.HOME, "atomic-recovery-"));
+      const file = join(crashRoot, ".operations", "ledger.json");
+      const value = new OperationLedger(crashRoot, cipher);
+      const planned = value.prepare(retentionPlan());
+      value.captureRecovery(retentionPlan(), planned.id, "prepared", { authority: "synthetic" });
+      const attemptId = value.claim(planned.id).receipt.attemptId;
+      const original = value.settle(planned.id, attemptId, "succeeded", {
+        reference: { id: "original/reference" },
+      });
+      value.settle(planned.id, attemptId, "verified");
+      const seeded = seedRetentionMetadata(crashRoot, 9000, {
+        decrypt: (key) => cipher.decrypt(key),
+      });
+      // Restore the actual pre-verification receipt; fake capacity records stay labelled metadata.
+      seeded.state.records[original.id] = original;
+      fs.writeFileSync(file, JSON.stringify(seeded.state), { mode: 0o600 });
+      fs.writeFileSync(join(crashRoot, "fixture-receipt.json"), JSON.stringify(original), {
+        mode: 0o600,
+      });
+      const result = await launch(mode, crashRoot, origin, "SIGKILL");
+      const recovered = new OperationLedger(crashRoot, cipher);
+      assert.deepEqual(recovered.prepare(retentionPlan()), original);
+      assert.equal(recovered.claim(original.id).claimed, false);
+      if (mode.startsWith("crash-settle-")) {
+        // The orphan's proof never upgrades the durable succeeded receipt. A genuine
+        // finalization must retain uncertainty and clear only provably redundant staging.
+        assert.equal(recovered.sealForFinalization(retentionPlan().sessionId), true);
+        const current = new OperationLedger(crashRoot, cipher).prepare(retentionPlan());
+        assert.equal(current.state, "unknown");
+        assert.equal(current.attemptId, original.attemptId);
+        assert.deepEqual(current.reference, original.reference);
+        assert.deepEqual(current.recovery, original.recovery);
+        assert.equal(recovered.hasUnverifiedWrites(retentionPlan().sessionId), true);
+        const other = new OperationLedger(crashRoot, cipher);
+        const next = other.prepare(retentionPlan("blocked-by-original"));
+        assert.equal(other.claim(next.id).claimed, false);
+        assert.equal(other.prepare(retentionPlan()).state, "unknown");
+      } else {
+        // A new explicit verification may archive the original receipt, but never
+        // adopts an unreferenced completed identity snapshot left by the dead process.
+        const verified = recovered.settle(original.id, original.attemptId, "verified");
+        assert.deepEqual(verified.recovery, original.recovery);
+        const cold = new OperationLedger(crashRoot, cipher).prepare(retentionPlan());
+        assert.deepEqual(cold, verified);
+        const recoveryDirectory = join(crashRoot, ".operations", "recovery", original.id);
+        const files = fs.readdirSync(recoveryDirectory);
+        assert.equal(
+          files.some((name) => name.endsWith(".tmp")),
+          false,
+        );
+        assert.equal(files.length, mode.endsWith("after-rename") ? 2 : 1);
+        const retained = JSON.parse(fs.readFileSync(file, "utf8"));
+        assert.equal(retained.records[original.id], undefined);
+        assert.ok(retained.archives.buckets[original.id.slice(0, 2)].recoveryBytes > 0);
+      }
+      const after = JSON.parse(fs.readFileSync(file, "utf8"));
+      assert.equal(after.key, seeded.state.key);
+      atomicRecovery.push({
+        mode,
+        pid: result.pid,
+        signal: result.signal,
+        originalIdentityPreserved: true,
+      });
+    }
+    assert.equal(
+      calls.length,
+      noHttpBefore,
+      "atomic metadata recovery never replays a provider write",
+    );
     const failedCommitRoot = fs.mkdtempSync(join(process.env.HOME, "retention-verified-commit-"));
     const failedCommitLedger = new OperationLedger(failedCommitRoot, cipher);
     const seedPlan = retentionPlan();
@@ -414,29 +506,28 @@ if (childMode) {
     assert.equal(coldFailedCommitReceipt.state, "succeeded");
     assert.equal(failedCommitCold.claim(coldFailedCommitReceipt.id).claimed, false);
     assert.equal(failedCommitCold.hasUnverifiedWrites(verificationPlan.sessionId), true);
-    const failedCommitHash = hash(failedCommitSeed.file);
-    const failedCommitArchives = join(failedCommitRoot, ".operations", "archives");
-    const failedCommitEvidence = fs
-      .readdirSync(failedCommitArchives)
-      .map((name) => [name, hash(join(failedCommitArchives, name))]);
-    await assert.rejects(
-      new OperationController(failedCommitCold).run(
-        retentionPlan("repair-required", "new-verification-session"),
-        adapter,
-      ),
-      /not covered/,
+    // A real finalization discards only the unpublished verified copy. The durable
+    // provider attempt stays unknown; neither the original nor a new same-session
+    // intent may replay the already sent request.
+    assert.equal(failedCommitCold.sealForFinalization(verificationPlan.sessionId), true);
+    const finalized = new OperationLedger(failedCommitRoot, cipher).prepare(verificationPlan);
+    assert.equal(finalized.state, "unknown");
+    for (const field of ["id", "attemptId", "reference", "recovery", "createdAt", "fingerprint"])
+      assert.deepEqual(finalized[field], coldFailedCommitReceipt[field]);
+    assert.equal(finalized.verifiedAt, undefined);
+    assert.equal(failedCommitCold.hasUnverifiedWrites(verificationPlan.sessionId), true);
+    const controller = new OperationController(new OperationLedger(failedCommitRoot, cipher));
+    assert.equal((await controller.run(verificationPlan, adapter)).state, "unknown");
+    const blocked = await controller.run(
+      retentionPlan("same-session-after-death", verificationPlan.sessionId),
+      adapter,
     );
+    assert.equal(blocked.state, "blocked");
+    assert.equal(blocked.attemptId, undefined);
     assert.equal(
       calls.length,
       httpBeforeFailedCommit + 2,
-      "uncovered new verified evidence cannot send or be collected",
-    );
-    assert.equal(hash(failedCommitSeed.file), failedCommitHash);
-    assert.deepEqual(
-      fs
-        .readdirSync(failedCommitArchives)
-        .map((name) => [name, hash(join(failedCommitArchives, name))]),
-      failedCommitEvidence,
+      "unpublished verified proof cannot upgrade or replay the original provider attempt",
     );
     assert.equal(
       JSON.parse(fs.readFileSync(failedCommitSeed.file, "utf8")).key,
@@ -475,14 +566,16 @@ if (childMode) {
       capacity,
       racePids: race.map((item) => item.pid),
       crashes,
+      atomicRecovery,
       rollbacks,
       failedVerificationCommit: {
         pid: failedCommitProcess.pid,
-        durableState: "succeeded",
+        durableState: "unknown",
         barrier: true,
-        evidencePreserved: true,
+        originalIdentityPreserved: true,
+        unpublishedProofAdopted: false,
         additionalHttp: 0,
-        repairRequired: true,
+        repairRequired: false,
       },
       maxCriticalMs: Math.max(...allMetrics),
       lockStaleMs: 10_000,
