@@ -102,6 +102,7 @@ if (childMode) {
   const origin = process.env.CODESHELL_RETENTION_ORIGIN;
   const file = join(root, ".operations", "ledger.json");
   if (mode.startsWith("crash-")) {
+    let publishedArchive = false;
     const write = fs.writeFileSync;
     fs.writeFileSync = (path, ...args) => {
       const value = write(path, ...args);
@@ -112,7 +113,10 @@ if (childMode) {
     const rename = fs.renameSync;
     fs.renameSync = (from, to) => {
       if (mode === "crash-before-manifest" && to === file) process.kill(process.pid, "SIGKILL");
+      if (mode === "crash-final-verification" && publishedArchive && to === file)
+        process.kill(process.pid, "SIGKILL");
       const value = rename(from, to);
+      if (String(from).includes("/.stage-")) publishedArchive = true;
       if (
         (mode === "crash-after-blob" && String(from).includes("/.stage-")) ||
         (mode === "crash-after-manifest" && to === file)
@@ -125,7 +129,31 @@ if (childMode) {
   const { OperationLedger } = await import("../packages/core/dist/operations/ledger.js");
   const { PlaintextCipher } = await import("../packages/core/dist/credentials/cipher.js");
   const ledger = new OperationLedger(root, new PlaintextCipher());
-  if (mode.startsWith("crash-")) {
+  if (mode === "crash-final-verification") {
+    const { OperationController } = await import("../packages/core/dist/operations/controller.js");
+    await new OperationController(ledger).run(
+      retentionPlan("verification", "crash-verification-session"),
+      {
+        assertAuthorized() {},
+        async preflight() {},
+        async validate() {},
+        async authorize() {
+          return true;
+        },
+        async execute() {
+          const response = await fetch(`${origin}/send`, {
+            method: "POST",
+            body: "verification-crash",
+          });
+          return response.json();
+        },
+        async verify() {
+          return (await fetch(`${origin}/read`)).status === 200;
+        },
+      },
+    );
+    assert.fail("Expected abrupt final verification death");
+  } else if (mode.startsWith("crash-")) {
     ledger.prepare(retentionPlan(`crash-${mode}`));
     assert.fail("Expected abrupt process death");
   } else if (mode === "claim") {
@@ -355,12 +383,72 @@ if (childMode) {
         originalUnchanged: true,
       });
     }
+    const failedCommitRoot = fs.mkdtempSync(join(process.env.HOME, "retention-verified-commit-"));
+    const failedCommitLedger = new OperationLedger(failedCommitRoot, cipher);
+    const seedPlan = retentionPlan();
+    const seed = failedCommitLedger.prepare(seedPlan);
+    const seedAttempt = failedCommitLedger.claim(seed.id).receipt.attemptId;
+    failedCommitLedger.settle(seed.id, seedAttempt, "succeeded", {
+      reference: { id: "seed/reference" },
+    });
+    failedCommitLedger.settle(seed.id, seedAttempt, "verified");
+    const failedCommitSeed = seedRetentionMetadata(failedCommitRoot, 9000, {
+      decrypt: (value) => cipher.decrypt(value),
+      unknown: true,
+    });
+    const verificationPlan = retentionPlan("verification", "crash-verification-session");
+    const httpBeforeFailedCommit = calls.length;
+    const failedCommitProcess = await launch(
+      "crash-final-verification",
+      failedCommitRoot,
+      origin,
+      "SIGKILL",
+    );
+    assert.equal(
+      calls.length,
+      httpBeforeFailedCommit + 2,
+      "one send and read before abrupt commit death",
+    );
+    const failedCommitCold = new OperationLedger(failedCommitRoot, cipher);
+    const coldFailedCommitReceipt = failedCommitCold.prepare(verificationPlan);
+    assert.equal(coldFailedCommitReceipt.state, "succeeded");
+    assert.equal(failedCommitCold.claim(coldFailedCommitReceipt.id).claimed, false);
+    assert.equal(failedCommitCold.hasUnverifiedWrites(verificationPlan.sessionId), true);
+    const failedCommitHash = hash(failedCommitSeed.file);
+    const failedCommitArchives = join(failedCommitRoot, ".operations", "archives");
+    const failedCommitEvidence = fs
+      .readdirSync(failedCommitArchives)
+      .map((name) => [name, hash(join(failedCommitArchives, name))]);
+    await assert.rejects(
+      new OperationController(failedCommitCold).run(
+        retentionPlan("repair-required", "new-verification-session"),
+        adapter,
+      ),
+      /not covered/,
+    );
+    assert.equal(
+      calls.length,
+      httpBeforeFailedCommit + 2,
+      "uncovered new verified evidence cannot send or be collected",
+    );
+    assert.equal(hash(failedCommitSeed.file), failedCommitHash);
+    assert.deepEqual(
+      fs
+        .readdirSync(failedCommitArchives)
+        .map((name) => [name, hash(join(failedCommitArchives, name))]),
+      failedCommitEvidence,
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(failedCommitSeed.file, "utf8")).key,
+      failedCommitSeed.state.key,
+    );
     const capacity = await runRetentionCapacity({
       home: process.env.HOME,
       cipher,
       OperationLedger,
       launch,
       origin,
+      criticalMetrics: metrics,
     });
     const receipts = fs.readFileSync(guards, "utf8").trim().split("\n").map(JSON.parse);
     assert.ok(receipts.length >= 14);
@@ -388,6 +476,14 @@ if (childMode) {
       racePids: race.map((item) => item.pid),
       crashes,
       rollbacks,
+      failedVerificationCommit: {
+        pid: failedCommitProcess.pid,
+        durableState: "succeeded",
+        barrier: true,
+        evidencePreserved: true,
+        additionalHttp: 0,
+        repairRequired: true,
+      },
       maxCriticalMs: Math.max(...allMetrics),
       lockStaleMs: 10_000,
       guards: receipts,

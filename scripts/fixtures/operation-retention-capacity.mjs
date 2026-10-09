@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { join } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
@@ -33,7 +33,14 @@ function writeBucket(directory, key, prefix, records, recovery) {
 }
 
 /** Metadata capacity fixtures are explicitly not hundreds of thousands of provider writes. */
-export async function runRetentionCapacity({ home, cipher, OperationLedger, launch, origin }) {
+export async function runRetentionCapacity({
+  home,
+  cipher,
+  OperationLedger,
+  launch,
+  origin,
+  criticalMetrics,
+}) {
   const { recordSchema } = await import("../../packages/core/dist/operations/schema.js");
   const { OperationArchives, ledgerStateSchema, OPERATION_ARCHIVE_RECOVERY_MAX_BYTES } =
     await import("../../packages/core/dist/operations/archive.js");
@@ -95,17 +102,56 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     schema: 2,
     archives: { buckets, authentication: authenticate(key, buckets) },
   };
+  state.records = Object.fromEntries(
+    Object.keys(state.records).map((id) => [id, { ...template, id }]),
+  );
+  state.observations = {};
+  const activeLimit = 16 * 1024 * 1024 - 512;
+  let activeBytes = Buffer.byteLength(JSON.stringify(state));
+  let observationEntries = 0;
+  for (const id of Object.keys(state.records)) {
+    const history = [];
+    for (let offset = 0; offset < 20; offset++) {
+      const next = {
+        id: randomUUID(),
+        at: Number.MAX_SAFE_INTEGER,
+        reviewedRevision: "a".repeat(64),
+        ownerIncarnation: "b".repeat(64),
+        result: "matches_current",
+        actions: ["a".repeat(100), "b".repeat(100)],
+        evidence: "c".repeat(64),
+      };
+      const candidate = [...history, next];
+      const increment = history.length
+        ? Buffer.byteLength(JSON.stringify(candidate)) - Buffer.byteLength(JSON.stringify(history))
+        : Buffer.byteLength(JSON.stringify(id)) +
+          1 +
+          Buffer.byteLength(JSON.stringify(candidate)) +
+          (observationEntries ? 1 : 0);
+      if (activeBytes + increment > activeLimit) break;
+      activeBytes += increment;
+      history.push(next);
+      if (history.length === 1) observationEntries++;
+      state.observations[id] = history;
+    }
+    if (history.length < 20) break;
+  }
   const canonical = JSON.stringify(state);
-  const padded = canonical + " ".repeat(16 * 1024 * 1024 - 512 - Buffer.byteLength(canonical));
+  assert.ok(activeLimit - Buffer.byteLength(canonical) < 1024);
+  const padded = canonical + " ".repeat(activeLimit - Buffer.byteLength(canonical));
   fs.writeFileSync(full.file, padded, { mode: 0o600 });
   const originalHash = createHmac("sha256", key).update(fs.readFileSync(full.file)).digest("hex");
   const reads = [];
+  const readBytes = [];
   const open = fs.openSync;
-  fs.openSync = (path, ...args) => {
-    if (String(path).startsWith(archiveDirectory) && String(path).endsWith(".json"))
+  const observedOpen = (path, ...args) => {
+    if (String(path).startsWith(archiveDirectory) && String(path).endsWith(".json")) {
       reads.push(String(path));
+      readBytes.push(fs.statSync(path).size);
+    }
     return open(path, ...args);
   };
+  fs.openSync = observedOpen;
   syncBuiltinESMExports();
   try {
     assert.throws(
@@ -121,6 +167,7 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     fs.openSync = open;
     syncBuiltinESMExports();
   }
+  const fullCountCriticalMs = criticalMetrics.at(-1);
   assert.equal(
     createHmac("sha256", key).update(fs.readFileSync(full.file)).digest("hex"),
     originalHash,
@@ -166,11 +213,8 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     { mode: 0o600 },
   );
   const byteFullBeforeReads = reads.length;
-  fs.openSync = (path, ...args) => {
-    if (String(path).startsWith(archiveDirectory) && String(path).endsWith(".json"))
-      reads.push(String(path));
-    return open(path, ...args);
-  };
+  let byteFullCriticalMs;
+  fs.openSync = observedOpen;
   syncBuiltinESMExports();
   try {
     assert.throws(
@@ -178,6 +222,7 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
       /ledger is full/,
     );
     assert.equal(reads.length - byteFullBeforeReads, 1);
+    byteFullCriticalMs = criticalMetrics.at(-1);
     assert.throws(
       () => new OperationLedger(full.root, cipher).claim(affectedId),
       /identity mismatch/,
@@ -196,9 +241,9 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
   }
 
   // One different prefix can still make progress; target lookup and retain can read two buckets.
-  const first = Object.values(state.records).sort(
-    (a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id),
-  )[0];
+  const first = Object.values(state.records)
+    .filter((record) => state.observations?.[record.id] === undefined)
+    .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))[0];
   const candidatePrefix = first.id.slice(0, 2);
   const oldEntry = buckets[candidatePrefix];
   const candidateFile = join(archiveDirectory, `${candidatePrefix}-${oldEntry.digest}.json`);
@@ -217,7 +262,12 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
   // must be preserved and fail closed (covered by the rollback acceptance case).
   fs.rmSync(candidateFile);
   state.archives.authentication = authenticate(key, buckets);
-  fs.writeFileSync(full.file, JSON.stringify(state), { mode: 0o600 });
+  const progressContents = JSON.stringify(state);
+  fs.writeFileSync(
+    full.file,
+    progressContents + " ".repeat(activeLimit - Buffer.byteLength(progressContents)),
+    { mode: 0o600 },
+  );
   let intent = "two-prefix-compaction";
   while (
     createHmac("sha256", key)
@@ -249,11 +299,7 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     );
   }
   const beforeReadCount = reads.length;
-  fs.openSync = (path, ...args) => {
-    if (String(path).startsWith(archiveDirectory) && String(path).endsWith(".json"))
-      reads.push(String(path));
-    return open(path, ...args);
-  };
+  fs.openSync = observedOpen;
   syncBuiltinESMExports();
   try {
     const prepared = new OperationLedger(full.root, cipher).prepare(retentionPlan(intent));
@@ -263,6 +309,10 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     fs.openSync = open;
     syncBuiltinESMExports();
   }
+  const gcLookupRetainReadbackCriticalMs = criticalMetrics.at(-1);
+  const gcLookupRetainReadbackContentBytes = readBytes
+    .slice(beforeReadCount)
+    .reduce((sum, bytes) => sum + bytes, 0);
 
   // Real encrypted physical files, not sparse sizes or invented quota counters.
   const recoveryFixture = seedRoot();
@@ -371,6 +421,7 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     fullBuckets: 256,
     archivedMetadataRecords: 256 * 1024,
     activeBytes: Buffer.byteLength(padded),
+    activeCanonicalBytes: Buffer.byteLength(canonical),
     maxCanonicalBucketBytes: maxBucketBytes,
     fullRetainBucketReads: 0,
     prepareTargetReads: 1,
@@ -383,6 +434,12 @@ export async function runRetentionCapacity({ home, cipher, OperationLedger, laun
     orphanCoverageCurrentPrefixReads: 2,
     immutableReadbackReads: 1,
     gcLookupRetainReadbackTotalReads: 7,
+    gcLookupRetainReadbackContentBytes,
+    matrixCriticalMs: {
+      fullCount: fullCountCriticalMs,
+      byteFullMetadata: byteFullCriticalMs,
+      gcLookupRetainReadback: gcLookupRetainReadbackCriticalMs,
+    },
     contentionPids: contention.map((result) => result.pid),
     recovery: {
       physicalBytes,
