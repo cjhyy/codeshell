@@ -11,7 +11,7 @@
 | 全部远程 Link         | Host PR61、services PR18/19、Host PR63 已合并；10 provider 的 26 个原动作及 GitHub 新增 3 动作已实现             | 固定可信 adapter、账号／作用域／资源过滤与续期；九家缺少应用配置和真实账号验证，不能公开为可连接                               |
 | Services 公开包兼容   | PR22/23/24 已合入 main，五个公开 Host 包仍为 0.9.27；SDK override 锁为 1.31.0，新双 Docker 候选与 staging 已验收 | 生产 Link 已升级到 ba5363c/schema 3（PR25）；Services 公开发行、Cloud/Hub 与真实业务验收仍须单独完成                           |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                          | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证 |
-| 跨 Session 成本       | PR68 全部 9 项 CI 通过并合入 main；receipt ledger、恢复隔离、SDK/stdio/TUI 及现有活动记录入口已验证              | 完整 GUI 与真实账单对照另验收；unknown、估算及自定义 fetch 内部重试限制见专项交付记录                                          |
+| 跨 Session 成本 | PR68 账本已合入；PR88 最终 602f538c 通过全部 12 CI 并合为 b6bfe763，受控实际 Electron 两 Session／known+unknown／partial／取消／刷新已验收 | 真实 provider 账单仍待对照；unknown、估算与自定义 fetch 内部重试限制保留，不代表 macOS OS 钥匙串验收 |
 | Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                     | fetch 锚点不证明远端收到／收费；macOS 真实 OS 钥匙串验收尚未完成                                                               |
 | Workspace / Link 只读 | PR65 已合入 main；Profile 求交、十家 provider 固定视图及原生 ToolExecutor 链已验证                               | 不扩大已有连接与 grant；跨文件／语义检索及 OCR 另行推进                                                                        |
 | 上传解析／索引        | PR70 已合入 main；有界 Office/PDF 解析、词法分块、冷缓存重验和逐文件权限通过 12 项 CI                            | Core PDF 需 Node 22.13+ 和可选 parser；Desktop 使用已验证 managed Node；不是 OCR 或语义索引                                    |
@@ -20,7 +20,8 @@
 | 发布可见性确认        | PR80 已合入 main；发布命令被接受后，统一有界等待公开 registry 精确版本与所请求 tag，35 项回归通过                | 不重复发布、不重写 tag；该变更已随 0.9.28 发布，不包含于公开 0.9.27                                                            |
 | Durable 输出恢复      | PR79 最终组合 head cb71fdd3 已通过 12 项 CI、原生包与实际消费者验收并合入 main                                   | 已随 0.9.28 发布；128 MiB journal／16 MiB 单事件有界，任意长度、手机弱网、旧 peer、保留与修复仍未完成                          |
 | MCP OAuth 安全        | PR83 已合入 main；Core/Server/Desktop SDK floor 为 ^1.31.0，锁为 1.31.0，Desktop issuer 绑定通过实际 SDK 验收    | Host 新字节已随 0.9.28 发布；旧凭据仅按保存端点续期兼容，不把修复等同于真实账号或新授权验收                                    |
-| Profile 切换预览      | PR85 最终 bcae68df 通过全部 12 项 CI，合并为 8da73fe9；两个既有 Desktop 入口共享只读预览与 CAS 确认              | 已合入 main，未纳入 v0.9.28；显式 Session 绑定保留，数字人经验提升、dream 与静态 plugin 导出另行推进                           |
+| Profile 切换预览      | PR85 最终 bcae68df 通过全部 12 项 CI，合并为 8da73fe9；两个既有 Desktop 入口共享只读预览与 CAS 确认              | 已合入 main，未纳入 v0.9.28；显式 Session 绑定保留，数字人经验提升与 dream 另行推进；静态插件导出见下行                           |
+| Profile 静态插件导出 | PR89 完成 Core 快照／Main 审阅写入／设置高级入口；原 installer／Skill+Agent loader／spawn namespace 与实际 Electron 审阅已验收 | CodeShell 静态插件，CC 仅目录格式；未纳入 v0.9.28，不保证其他宿主权限等价，不安装或激活；最终组合 CI／合并见 PR89 |
 | 优化实验室 P1b/P2     | PR67/71 已合入 main；无工具 Agent、指令快照、原生范围化采用与撤销、11 条 signer 清理路径已验证                   | 默认关闭；不覆盖有工具任务或真实收益。临时执行不落盘，授权报告／预算／receipt 持久化                                           |
 | 写操作控制            | PR69 已合入 main；持久 operation ledger、单次 claim、GitHub create_issue 独立回读通过实际 SDK/HTTP               | CLI 写入已在 PR77 禁用；早期 fake CLI 证据只证明调用／隔离，不能证明真实 gh 的传输安全                                         |
 | GitHub 仓库／Star     | Host PR77 与 services PR21 已合并；单目标 desired state、独立身份／状态回读与 unknown/restart 不重发已验证       | services PR21 已随生产 ba5363c 部署；新动作必须显式授权和单独验收。其他 provider 写语义、批量、人工 reconcile 和保留策略待推进 |
@@ -66,6 +67,22 @@ Profile 切换预览为独立后续，不纳入该 tag。其
 该功能复用现有设置和数字人页，不新增导航；详细边界见
 [切换预览交付](workspace-profile-switch-preview.md)。
 
+跨 Session 成本的受控实际 Electron 验收随后在
+[PR88](https://github.com/cjhyy/codeshell/pull/88) 完成：最终 head
+`602f538c6b7864d13fbebc84840a2fccfe0fb359` 在
+[Actions 37861580874](https://github.com/cjhyy/codeshell/actions/runs/37861580874) 通过全部
+12 项 CI，正常合并为 `b6bfe7637a069507d9698822d9af886563c87acf`，合并树与验收 head 一致。
+使用公开 Core writer 的合成两 Session 请求证据，验收 known/unknown、partial、取消、
+刷新和生产 Main IPC 冷读；没有真实模型或 provider 账单对照，也不补足 macOS 真实
+OS 钥匙串验收。细节见[成本交付](runtime-cross-session-cost-ledger-delivery.md)。
+
+[PR89](https://github.com/cjhyy/codeshell/pull/89) 完成 Profile 静态插件导出的源码与本地组合验收：
+仅在 Settings → 数字人 → 高级导出选择、完整审阅并接受损失，再写入新目录；原 JSON 导出保留。
+真实原 installer／Skill+Agent loader／spawn namespace 与 Electron 的全文、损失、接受门槛
+及取消路径已验收；OS picker 仅 stub 取消结果，不代表物理 sheet 点击。只验 CodeShell
+静态插件，CC 为目录布局，不保证 CC 执行／Codex 兼容／其他宿主权限等价。该变更未纳入
+v0.9.28；最终组合 CI 与合并记录以 PR89 为准，详细边界见[静态插件交付](workspace-profile-static-plugin-export.md)。
+
 Services [PR23](https://github.com/cjhyy/codeshell-services/pull/23) 记录了公开 0.9.27
 原锁的真实 Linux 双镜像构建、五包能力检查、禁网 CLI 启动与容器内健康检查。
 同一构建发现 SDK 1.30.0 的
@@ -103,14 +120,15 @@ GitHub OAuth；其余 provider 应用配置和真实账号验收仍待提供，�
 
 ## 后续工作包
 
-1. 跨 Session 成本的完整 GUI／真实账单验收，以及 macOS 真实 OS 钥匙串验收。
+1. 跨 Session 成本的真实 provider 账单对照，以及 macOS 真实 OS 钥匙串验收。
+   受控 Electron GUI 两 Session／known+unknown／partial／取消／刷新已由 PR88 完成，不能代替真实账单。
    Runtime MCP pool 已有实现，补核多 Session/项目隔离、释放和汇总展示，避免重复重建。
 2. Workspace 跨文件／语义查询及 OCR；上传解析／索引、Profile 求交与现有 Link 只读视图已实现。
    写操作的其他 provider 语义、批量 slots、人工 reconcile 与账本保留策略仍待逐项接入。
 3. 更多真实工具的后置验证和错误预算适配，以及真实长程与按模型配对评测、通用评测
    adapter。Skill 预算已发布；非核心工具渐进发现已合入 main，已随 0.9.28 正式发行。
 4. 优化实验室真实模型实验、报告价值评价和有工具的任务试验，须按原授权要求完成。
-5. 数字人经验提升流程与 plugin 降级导出；切换影响预览已合入 main，尚未发布。
+5. 数字人经验提升流程；切换影响预览已合入 main，PR89 静态插件导出源码与有界验收已完成，均未纳入 v0.9.28。
    受约束 dream 先确定 ownership/审批，不自动写 portable profile memory。
 6. Durable 流式 journal、共同游标、分页恢复和重启代次映射已在
    [PR79](https://github.com/cjhyy/codeshell/pull/79) 最终组合验收后合入 main，并随 0.9.28

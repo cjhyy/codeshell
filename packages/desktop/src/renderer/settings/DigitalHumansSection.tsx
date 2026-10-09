@@ -14,6 +14,7 @@ import { useDigitalHumanContext } from "../digital-humans/useDigitalHumansLibrar
 import { normalizeDigitalHumanSkillRepo } from "../digital-humans/types";
 import type { DigitalHumanProfileEntry, DigitalHumanSkillEntry } from "../digital-humans/types";
 import { ProfileSection } from "./ProfileSection";
+import { ProfilePluginExportDialog } from "./ProfilePluginExportDialog";
 import { writeSettings } from "../settingsBus";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { RendererConfigurationTarget } from "../../preload/types";
@@ -55,6 +56,7 @@ export function DigitalHumansSection({
   const [skills, setSkills] = React.useState<DigitalHumanSkillEntry[]>([]);
   const [editing, setEditing] = React.useState<DigitalHumanProfileEntry | undefined>();
   const [editorOpen, setEditorOpen] = React.useState(false);
+  const [pluginExportName, setPluginExportName] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [installingRequirements, setInstallingRequirements] = React.useState(false);
   const saveLock = React.useRef(false);
@@ -336,6 +338,19 @@ export function DigitalHumansSection({
                       <Button
                         size="sm"
                         variant="ghost"
+                        disabled={transferBusy !== null || "noRepo" in configurationTarget}
+                        title={
+                          "noRepo" in configurationTarget
+                            ? t("settingsX.digitalHumans.pluginExport.projectRequired")
+                            : undefined
+                        }
+                        onClick={() => setPluginExportName(profile.name)}
+                      >
+                        {t("settingsX.digitalHumans.pluginExport.action")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         disabled={transferBusy !== null}
                         onClick={() => void exportDefinition(profile)}
                       >
@@ -352,9 +367,26 @@ export function DigitalHumansSection({
               </ul>
             ) : null}
           </div>
+          {"noRepo" in configurationTarget ? (
+            <p className="text-xs text-muted-foreground">
+              {t("settingsX.digitalHumans.pluginExport.projectRequired")}
+            </p>
+          ) : null}
         </details>
       </section>
       <PetExternalSessionsToggles scope="user" />
+      {pluginExportName ? (
+        <ProfilePluginExportDialog
+          name={pluginExportName}
+          target={configurationTarget}
+          onClose={() => setPluginExportName(null)}
+          onExported={(directoryName) =>
+            toast({
+              message: t("settingsX.digitalHumans.pluginExport.done", { directory: directoryName }),
+            })
+          }
+        />
+      ) : null}
     </div>
   );
 }

@@ -240,6 +240,13 @@ describe("DigitalHumansView contract", () => {
     expect(dhSection).toContain("window.codeshell.exportProfileDefinition");
     expect(dhSection).toContain("settingsX.digitalHumans.advancedExportTitle");
     expect(dhSection).toContain("<details");
+    const advanced = dhSection.slice(
+      dhSection.indexOf("<details"),
+      dhSection.indexOf("</details>"),
+    );
+    expect(advanced).toContain("settingsX.digitalHumans.pluginExport.action");
+    expect(dhSection).toContain("<ProfilePluginExportDialog");
+    expect(source).not.toContain("ProfilePluginExportDialog");
     expect(source).toContain("operations.run(`import-profile:${preview.name}`");
   });
 

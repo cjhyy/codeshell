@@ -37,6 +37,7 @@ import type {
   QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { TaskInboxApi } from "./task-inbox-api";
+import type { ProfilePluginExportApi } from "../shared/profile-plugin-export";
 import type { OptimizationLabApi } from "./optimization-lab-api";
 import type { PetApi } from "./pet-api";
 import type {
@@ -1036,7 +1037,8 @@ export type ImGatewayUiEvent =
       conversation: DingTalkDiscoveredConversation;
     };
 
-export interface CodeshellApi extends ProjectAuthorityApi, ProjectPanelVersionApi {
+export interface CodeshellApi
+  extends ProjectAuthorityApi, ProjectPanelVersionApi, ProfilePluginExportApi {
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
   sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */

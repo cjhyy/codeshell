@@ -22,6 +22,7 @@ import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "ele
 import { createTaskInboxApi } from "./task-inbox-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
+import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
 import { createProjectPanelVersionApi } from "./project-panel-version-api";
@@ -495,6 +496,7 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
 });
 
 contextBridge.exposeInMainWorld("codeshell", {
+  ...createProfilePluginExportApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
   sessionCatalog: createSessionCatalogApi(ipcRenderer),

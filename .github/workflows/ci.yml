@@ -165,6 +165,9 @@ jobs:
         run: |
           bun scripts/run-isolated-node-smoke.mjs scripts/optimization-lab-p2-cleanup-fixture.mjs
           node scripts/run-isolated-node-smoke.mjs scripts/optimization-lab-p2-fixture.mjs
+      - name: Compiled reviewed Profile static plugin export
+        if: matrix.shard == 'rest'
+        run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-profile-plugin-export.mjs
       - name: compiled SDK verified Link write lifecycle
         if: matrix.shard == 'core-engine'
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs

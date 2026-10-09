@@ -42,7 +42,12 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
   } catch {
     currentProfile = undefined;
   }
-  const nextProfile = name === null ? undefined : readWorkspaceProfile(name);
+  let nextProfile: WorkspaceProfile | undefined;
+  try {
+    nextProfile = name === null ? undefined : readWorkspaceProfile(name);
+  } catch {
+    throw new Error("Selected digital-human definition is invalid or unavailable");
+  }
   if (name && !nextProfile) throw new Error(`Digital human "${name}" not found`);
   if (name && nextProfile?.name !== name)
     throw new Error("Digital human definition identity does not match its selected directory");

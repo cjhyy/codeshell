@@ -404,6 +404,14 @@ export {
 } from "./updater.js";
 
 export { resolveInstance, type ResolvedInstance } from "./model-catalog/resolve.js";
+export {
+  previewProfilePluginExport,
+  validateProfilePluginExportSelection,
+  safeExportRelativePath,
+  PROFILE_PLUGIN_EXPORT_LIMITS,
+  type ProfilePluginExportSelection,
+  type ProfilePluginExportSnapshot,
+} from "./profile/plugin-export.js";
 
 // Trusted administrator recovery; deliberately absent from protocol config setters.
 export {
