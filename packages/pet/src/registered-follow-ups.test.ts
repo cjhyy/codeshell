@@ -45,7 +45,11 @@ describe("registered follow-up capability boundary", () => {
       wakeDetail: "上次递送结果不确定",
     };
     expect(
-      validatePetRunParams({ behaviorMode: "pet", kind: "pet", profileParams: { followUps: [row] } }),
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { followUps: [row] },
+      }),
     ).toBeNull();
     expect(petRunOptionsFrom({ followUps: [row] }).followUps).toEqual([row]);
     expect(

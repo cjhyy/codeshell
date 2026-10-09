@@ -185,6 +185,13 @@ import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
+import { createPetFollowUpHost } from "./pet/pet-follow-up-host.js";
+import { PetRegisteredFollowUpStore } from "./pet/pet-registered-follow-up-store.js";
+import {
+  PetFollowUpWakeCoordinator,
+  isPetFollowUpWakeJob,
+} from "./pet/pet-follow-up-wake-coordinator.js";
+import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
@@ -198,7 +205,11 @@ import {
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
+import {
+  DEFAULT_SEGMENT_IDLE_MS,
+  buildMigrationSummary,
+  selectPetMemories,
+} from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
@@ -847,6 +858,7 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
+let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
@@ -2057,12 +2069,90 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
+    const registeredFollowUps = new PetRegisteredFollowUpStore(
+      resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+    );
     const petFollowUps = createPetFollowUpService({
       listSessions: () => aggregator.getSnapshot().sessions,
       summaryStore: petSummaryStore,
       summaryService: petSummaryService,
       inbox: petWorkInbox,
+      registered: registeredFollowUps,
     });
+    const followUpHost = createPetFollowUpHost({
+      store: registeredFollowUps,
+      service: petFollowUps,
+      tasks: longTaskStore,
+      sessions: () => aggregator.getSnapshot().sessions,
+    });
+    petFollowUpWakeCoordinator = new PetFollowUpWakeCoordinator({
+      store: registeredFollowUps,
+      scheduler: () => {
+        if (!automationHandle) throw new Error("follow-up scheduler is not initialized");
+        return automationHandle.scheduler;
+      },
+      notify: async (item, text, key) => {
+        const deliveryKey = createHash("sha256").update(key).digest("hex");
+        if (item.completionTarget) {
+          await publishGatewayControlEvent({
+            deliveryKey,
+            type: "pet.task.reported",
+            title: item.title,
+            text,
+            target: {
+              channel: item.completionTarget.channel,
+              target: item.completionTarget.target,
+            },
+          });
+        }
+        const outcome = await desktopNotifier?.notify({
+          key: deliveryKey,
+          title: item.title,
+          body: text,
+        });
+        if (!item.completionTarget && outcome === "failed")
+          throw new Error("桌面提醒未能显示，请在需要跟进中查看");
+      },
+      resume: async (item) => {
+        const source = aggregator
+          .getSnapshot()
+          .sessions.find((row) => row.agentSessionId === item.sourceSessionId);
+        if (!source || source.external)
+          return {
+            launched: false,
+            text: "原任务已不存在或不受当前 Host 支持，未启动新的任务。请重新选择。",
+          };
+        if (source.pendingDecisionCount > 0)
+          return { launched: false, text: "原任务正在等待你的决定，已保留跟进，未绕过审批。" };
+        if (source.runState === "running" || source.runState === "queued")
+          return { launched: false, text: "原任务已在运行，未重复启动。" };
+        if (item.taskId) {
+          const task = longTaskStore.get(item.taskId);
+          if (!task || task.sessionId !== item.sourceSessionId)
+            return { launched: false, text: "跟进关联的原任务已变化，请核对后再续办。" };
+          if (task.status === "paused" || task.status === "interrupted") {
+            const result = await longTaskCoordinator.control({ action: "resume", taskId: task.id });
+            if (!result.ok) return { launched: false, text: `未能续办原任务：${result.message}` };
+            return {
+              launched: true,
+              text: "已续办原任务，完成后会报告实际结果。",
+              taskId: task.id,
+            };
+          }
+          if (task.status === "waiting")
+            return {
+              launched: false,
+              text: task.waitingFor ?? "原任务仍在等待外部结果或你的决定，未重复启动。",
+            };
+          if (task.status === "cancelled")
+            return { launched: false, text: "原任务已取消，未自动重启。" };
+        }
+        if (!petDispatchService) throw new Error("Mimi dispatch service is unavailable");
+        return petDispatchService.wakeFollowUp(item);
+      },
+      onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
+    });
+    await petFollowUpWakeCoordinator.prepare();
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2114,11 +2204,33 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
+      validateFollowUpContinuation: (item) => {
+        const current = registeredFollowUps.get(item.id);
+        if (
+          !current ||
+          current.revision !== item.revision ||
+          current.status !== "open" ||
+          current.wake.status !== "claimed"
+        )
+          throw new Error("跟进授权已变化，未自动续办");
+        if (item.taskId) {
+          const task = longTaskStore.get(item.taskId);
+          if (
+            !task ||
+            task.sessionId !== item.sourceSessionId ||
+            ["cancelled", "waiting", "running", "queued"].includes(task.status)
+          )
+            throw new Error("原任务已取消、正在运行或等待决定，未自动续办");
+        }
+      },
       taskInbox: async () => {
         if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
         return taskInboxPetView(await taskInboxService.reconcile());
       },
       hostActionReceipts: petHostActionReceipts,
+      contextLinks: new PetContextLinkStore(
+        resolve(app.getPath("userData"), "pet", "context-links.json"),
+      ),
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
@@ -2198,7 +2310,7 @@ async function createWindow(): Promise<BrowserWindow> {
             status: watched.task.status,
           };
         },
-        memory: async (payload) => {
+        memory: async (payload, context) => {
           const action = payload.action;
           const text = typeof payload.text === "string" ? payload.text : "";
           const memoryId = typeof payload.memoryId === "string" ? payload.memoryId : "";
@@ -2206,7 +2318,10 @@ async function createWindow(): Promise<BrowserWindow> {
             const before = new Map(
               petMemoryStoreInstance.list().map((entry) => [entry.id, entry] as const),
             );
-            const entry = await petMemoryStoreInstance.remember(text, "mimi");
+            const entry = await petMemoryStoreInstance.remember(text, "mimi", {
+              originRef: context?.originRef,
+              taskIds: context?.groundedTasks?.map((task) => task.taskId),
+            });
             const previous = before.get(entry.id);
             const unchanged =
               previous !== undefined &&
@@ -2225,14 +2340,7 @@ async function createWindow(): Promise<BrowserWindow> {
           }
           throw new Error("invalid memory action");
         },
-        followUpMutation: async (payload) => {
-          const action = payload.action;
-          const followUpId = typeof payload.followUpId === "string" ? payload.followUpId : "";
-          if ((action !== "complete" && action !== "dismiss") || !followUpId) {
-            throw new Error("invalid follow-up mutation request");
-          }
-          return petFollowUps.mutate({ action, followUpId });
-        },
+        followUpMutation: followUpHost,
         sessionBind: async (payload, context) =>
           sessionBridge
             ? sessionBridge.sessionBindExecutor(payload, context)
@@ -2307,23 +2415,17 @@ async function createWindow(): Promise<BrowserWindow> {
           };
         },
       },
-      worldContext: async () => {
+      worldContext: async (input) => {
         await petMemoryStoreInstance.load();
         const remote = getMobileRemoteGatewayStatus();
-        const allMemories = petMemoryStoreInstance.list();
-        const visibleMemories = allMemories.slice(0, 24);
+        const recalled = selectPetMemories(petMemoryStoreInstance.list(), {
+          message: input.message,
+          originRef: input.originRef,
+          groundedObjectives: input.groundedTasks.map((task) => task.objective),
+          taskIds: input.groundedTasks.map((task) => task.taskId),
+        });
         return {
-          memories: visibleMemories.map(({ id, text, source, updatedAt }) => ({
-            id,
-            text,
-            source,
-            updatedAt,
-          })),
-          memoryWindow: {
-            visibleCount: visibleMemories.length,
-            totalCount: allMemories.length,
-            truncated: visibleMemories.length < allMemories.length,
-          },
+          ...recalled,
           mobileRemote: {
             running: remote.running,
             tunnelConnected: remote.tunnelConnected,
@@ -2681,6 +2783,8 @@ async function createWindow(): Promise<BrowserWindow> {
       latestResult: createLatestResultCache(petSessionsRootDir),
       summaries: {
         collect: () => petFollowUps.collect(),
+        control: (request) => followUpHost({ ...request }),
+        subscribe: (listener) => registeredFollowUps.subscribe(listener),
       },
       journal: {
         list: async () => {
@@ -3572,8 +3676,28 @@ app.whenReady().then(async () => {
     );
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
-      runner: automationRunner,
+      runner: async (request) => {
+        if (!isPetFollowUpWakeJob(request.job)) return automationRunner(request);
+        if (!petFollowUpWakeCoordinator)
+          return {
+            text: "Mimi 跟进服务不可用",
+            reason: "unavailable",
+            stop: { reason: "Mimi 跟进服务不可用" },
+          };
+        await petFollowUpWakeCoordinator.wake(request.job);
+        return { text: "Registered follow-up wake handled", reason: "done" };
+      },
       onJobEvent: (event) => {
+        if (isPetFollowUpWakeJob(event.job)) {
+          if (event.type === "job_missed")
+            void petFollowUpWakeCoordinator
+              ?.missed(event.job)
+              .catch((error) =>
+                dlog("main", "pet.followUp.missed.failed", { error: String(error) }),
+              );
+          if (event.type === "job_error") petFollowUpWakeCoordinator?.repairSoon();
+          return;
+        }
         if (event.type !== "job_start") {
           for (const [sessionId, jobId] of taskInboxAutomationSessions) {
             if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);
@@ -3588,6 +3712,7 @@ app.whenReady().then(async () => {
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
+    await petFollowUpWakeCoordinator?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
@@ -7141,6 +7266,8 @@ app.on(
       petExternalVisibilityController = null;
       reconcileExternalAdapters = null;
       petDispatchService = null;
+      petFollowUpWakeCoordinator?.stop();
+      petFollowUpWakeCoordinator = null;
       petHostActionReceiptService = null;
       petImDecisions?.stop();
       petImDecisions = null;
