@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import http from "node:http";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
@@ -46,6 +47,34 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 installLocalNetworkGuard(origin);
 assert.throws(() => fetch("https://example.invalid"), /Cost smoke refused/);
 assert.throws(() => http.request("http://127.0.0.1:1"), /Cost smoke refused/);
+const guardReceipt = {
+  stage: "both negative probes passed before any Core import",
+  pid: process.pid,
+  ppid: process.ppid,
+  node: process.version,
+  executable: process.execPath,
+  origin,
+  home,
+  homedir: homedir(),
+  userProfile: process.env.USERPROFILE,
+  codeShellHome: process.env.CODE_SHELL_HOME,
+  homeId: createHash("sha256").update(home).digest("hex"),
+  negativeProbes: ["fetch non-fixture HTTPS", "HTTP request wrong loopback port"],
+  sourceSha256: Object.fromEntries(
+    [
+      new URL(import.meta.url),
+      new URL("./runtime-cost-smoke-isolation.mjs", import.meta.url),
+      new URL("./run-isolated-node-smoke.mjs", import.meta.url),
+      new URL("./bun-test-completion.mjs", import.meta.url),
+    ].map((url) => [url.pathname, createHash("sha256").update(readFileSync(url)).digest("hex")]),
+  ),
+};
+assert.equal(guardReceipt.homedir, home);
+assert.equal(guardReceipt.userProfile, home);
+assert.equal(guardReceipt.codeShellHome, join(home, ".code-shell"));
+writeFileSync(join(evidence, "preimport-guard.json"), JSON.stringify(guardReceipt, null, 2), {
+  mode: 0o600,
+});
 // Exact guards precede every Core import, including installer and file readers.
 const coreUrl = pathToFileURL(join(process.cwd(), "packages/core/dist/index.js")).href;
 const { createOperationHookHost } =
@@ -136,6 +165,7 @@ const writeReceipt = () =>
         node: { version: process.version, executable: process.execPath },
         runtime,
         origin,
+        guardReceipt,
         results,
         dockerEvents,
         eventErrors,
@@ -536,6 +566,7 @@ try {
         runtime,
         guards:
           "exact fixture HTTP origin before Core imports; real Docker backend enforces OS boundary",
+        guardReceipt,
         installed: {
           installPath: installed.installPath,
           approval: installed.approval,

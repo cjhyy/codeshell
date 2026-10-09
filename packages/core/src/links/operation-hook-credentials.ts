@@ -24,12 +24,13 @@ function canonicalKnownRoot(path: string): string {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       try {
         lstatSync(current);
-        throw new Error("Known credential root is unsafe");
+        throw new Error("Known credential root is unsafe", { cause: error });
       } catch (missing) {
         if ((missing as NodeJS.ErrnoException).code !== "ENOENT") throw missing;
       }
       const parent = dirname(current);
-      if (parent === current) throw new Error("Known credential root is unavailable");
+      if (parent === current)
+        throw new Error("Known credential root is unavailable", { cause: error });
       suffix.unshift(basename(current));
       current = parent;
     }
