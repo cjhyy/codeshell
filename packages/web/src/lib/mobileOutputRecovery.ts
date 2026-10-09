@@ -8,6 +8,12 @@ import {
 import { initialChatState, reduceStream } from "./streamReducer.js";
 
 type Reply = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
+/** Valid identities may arrive before their new Core Run acquires a durable anchor. */
+export class MobilePendingInput extends Error {
+  constructor(readonly ids: string[]) {
+    super("Recovery input has no recorded anchor");
+  }
+}
 
 /** Build a private candidate, then join its frozen prefix to an actual Main snapshot. */
 export async function recoverMobileOutput(args: {
@@ -68,15 +74,13 @@ export async function recoverMobileOutput(args: {
         (!Array.isArray(ids) ||
           ids.length > 128 ||
           new Set(ids).size !== ids.length ||
-          ids.some(
-            (id) =>
-              typeof id !== "string" ||
-              !id.trim() ||
-              id.length > 512 ||
-              !chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
-          ))
+          ids.some((id) => typeof id !== "string" || !id.trim() || id.length > 512))
       )
         throw new Error("Recovery input identity is unpaired");
+      const missing = ids?.filter(
+        (id) => !chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+      );
+      if (missing?.length) throw new MobilePendingInput(missing);
       return { chat, outputCursor: recovery.cursor!, snapshot };
     }
     recovery = { incomplete: false, cursor: recovery.appliedCursor };

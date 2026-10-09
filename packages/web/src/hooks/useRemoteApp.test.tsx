@@ -1902,6 +1902,37 @@ describe("useRemoteApp native output journal", () => {
     }
   });
 
+  test("an already recorded submit retry rejoins without a new start or duplicate user bubble", async () => {
+    const f = await connectedJournal();
+    try {
+      await f.pump();
+      const before = text(f.hook.result.current.chat);
+      await act(async () => {
+        f.ws.message(
+          f.observe({
+            type: "session_user_message",
+            text: "retry text is not a new task",
+            clientMessageId: "stable-submit",
+          }),
+        );
+        await flushMicrotasks();
+      });
+      await f.pump();
+      await act(async () => {
+        f.ws.message(f.observe({ type: "session_title", title: "retry joined" }));
+        await flushMicrotasks();
+      });
+      expect(text(f.hook.result.current.chat)).toBe(before);
+      expect(f.hook.result.current.chat.items.filter((item) => item.kind === "user")).toMatchObject(
+        [{ text: "question", clientMessageId: "stable-submit" }],
+      );
+      expect(f.hook.result.current.chat.title).toBe("retry joined");
+      expect(f.hook.result.current.notice).toBeUndefined();
+    } finally {
+      await f.cleanup();
+    }
+  });
+
   test("pending preliminary input cannot be bypassed by another start or ordinary suffix/terminal", async () => {
     const f = await connectedJournal();
     try {

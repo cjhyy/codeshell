@@ -41,7 +41,8 @@ export async function run(origin: string, root: string, port: number) {
   assert.ok(Buffer.byteLength(expected) > 8 * 1024 * 1024);
   let modelRequests = 0,
     pageRequests = 0,
-    maximumPageBytes = 0;
+    maximumPageBytes = 0,
+    completedPages = 0;
   let snapshots = new SessionSnapshotStore();
   let appendDuringReply: (() => void) | undefined;
   let frozenAppendThrough: string | undefined;
@@ -105,6 +106,7 @@ export async function run(origin: string, root: string, port: number) {
     snapshot: (sessionId) => snapshots.get(sessionId),
     reply: (viewer, event) => {
       if (event.type === "session.outputJournal") {
+        if (event.page.complete) completedPages++;
         maximumPageBytes = Math.max(
           maximumPageBytes,
           Buffer.byteLength(JSON.stringify(event.page)),
@@ -357,6 +359,57 @@ export async function run(origin: string, root: string, port: number) {
       ).length,
       1,
     );
+    const beforeRetryRequests = modelRequests,
+      beforeRetryFrames = frames,
+      beforeRetryPages = completedPages;
+    activeRequestId = 79;
+    const retryResult = new Promise<{ reason: string; text: string }>((resolve, reject) => {
+      resolveRun = resolve;
+      rejectRun = reject;
+    });
+    await act(async () => {
+      deliver({
+        jsonrpc: "2.0",
+        id: 79,
+        method: "agent/run",
+        params: {
+          task: "Return local fixture output",
+          displayText: "Return local fixture output",
+          sessionId: "native-mobile",
+          clientMessageId: "stable-native-submit",
+          behaviorMode: "mobile-fixture",
+          cwd,
+        },
+      });
+      const replayed = await retryResult;
+      assert.equal(replayed.reason, "completed");
+      assert.equal(hash(replayed.text), hash(expected));
+    });
+    assert.equal(modelRequests, beforeRetryRequests, "Idempotent retry must not call the model");
+    assert.equal(
+      frames,
+      beforeRetryFrames + 1,
+      "Retry only produces its preliminary input, no new start",
+    );
+    await until(() => completedPages > beforeRetryPages);
+    await act(async () => {
+      await sleep(20);
+      await flushMicrotasks();
+    });
+    const title = {
+      type: "session_title" as const,
+      sessionId: "native-mobile",
+      title: "Retry joined",
+    };
+    remote.broadcast({
+      type: "session.stream",
+      sessionId: "native-mobile",
+      epoch: snapshots.epoch,
+      ...snapshots.append("native-mobile", title),
+    });
+    await until(() => hook.result.current.chat.title === "Retry joined");
+    assert.equal(text(), displayExpected);
+    assert.equal(hook.result.current.notice, undefined);
     const oldEpoch = snapshots.epoch,
       oldCursor = snapshots.get("native-mobile").outputCursor;
     const oldPages = pageRequests;
@@ -432,6 +485,7 @@ export async function run(origin: string, root: string, port: number) {
         stableSubmit: true,
         actualAgentServerPreliminaryInput: true,
         actualFollowUpInput: true,
+        actualIdempotentRetry: true,
         newMainEpoch: true,
         authenticatedWsReconnect: true,
         frozenAppendJoined: true,

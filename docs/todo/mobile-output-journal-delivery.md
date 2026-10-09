@@ -51,7 +51,7 @@ Main also retains a bounded coverage proof independently of its evictable RAM
 suffix: at most 128 cumulative preliminary input IDs / 32 KiB of UTF-8 ID payload
 per Session snapshot lifetime in this Main process (not just concurrently pending inputs),
 with a 4 MiB global ID payload budget. A preliminary user input must match an
-actual candidate user record's stable submission ID. Missing, conflicting or
+actual candidate user record's stable submission ID. Missing, malformed or
 unmatched IDs, invalid/non-advancing cursors, and uncovered visible events such
 as wrapper-external errors or Goal updates fail closed even after RAM eviction.
 Overflow discards the proof and keeps its barrier closed, rather than silently
@@ -61,9 +61,15 @@ or a new Main snapshot domain starts a fresh proof; it does not retroactively ma
 outside-wrapper history durable. A new Run does not clear uncovered historical errors or Goal
 state. Durable publication for those outside-wrapper/no-run producers remains a
 separate TODO; this increment does not claim their history is recoverable.
+A repeated submit ID is idempotent, as in the existing Core run-result contract:
+it pairs to the original recorded user/result even if caller text differs. It
+never becomes a new instruction by comparing text. The client immediately joins
+the journal to prove a repeat without expecting a new start or model request;
+unrecorded IDs remain temporary only if this selection observed them, and an
+unknown missing ID fails closed.
 The client holds a stable-ID preliminary input for at most 10 seconds, with
 128 / 32 KiB bounded pending IDs; only a strictly advancing, recorded top-level
-start with the same ID starts a new candidate join. Ordinary suffixes and terminal
+start with the same ID resumes a waiting new-input candidate join. Ordinary suffixes and terminal
 events cannot bypass that wait, and a start cannot clear a failed selection.
 Session title is existing metadata rather than coverage: a late title arriving
 during recovery may require the subsequent metadata refresh.
@@ -88,7 +94,7 @@ single-flight/global read limits.
 `bun run test:mobile-output-journal` uses the isolated native launcher. Before
 its first Core/Host import it installs the existing exact HTTP fixture-origin
 guard and checks a rejected off-origin request. It then uses the compiled Engine
-and real SDK via the actual AgentServer/ChatSessionManager input producer with synthetic local responses (>2000 frames and >8 MiB, followed by a small second request), the
+and real SDK via the actual AgentServer/ChatSessionManager input producer with synthetic local responses (>2000 frames and >8 MiB, followed by a small second request and an idempotent retry without a third model call), the
 actual RemoteHostManager authenticated WS, production Main handler and mounted
 root authorization, and the actual React hook. Its native WebSocket constructor
 is locked to the same exact fixture `/ws` URL and has a negative probe; the HTTP

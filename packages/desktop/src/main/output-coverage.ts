@@ -89,8 +89,7 @@ export class OutputCoverage {
       return;
     if (event.type === "session_user_message") {
       const id = event.clientMessageId;
-      if (typeof id !== "string" || !id.trim() || id.length > 512 || this.inputs.has(id))
-        this.blocked = true;
+      if (typeof id !== "string" || !id.trim() || id.length > 512) this.blocked = true;
       else this.inputs.add(id);
       if (this.inputIds.length > 128 || this.memoryBytes > 32 * 1024) this.discardProof();
     } else this.blocked = true;

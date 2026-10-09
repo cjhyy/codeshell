@@ -414,22 +414,39 @@ test("stable preliminary input is covered by the candidate's same submit identit
   expect(result?.chat.items.filter((item) => item.kind === "user")).toHaveLength(1);
 });
 
-for (const preliminary of [
-  [{ type: "session_user_message", text: "no identity" }],
-  [{ type: "session_user_message", clientMessageId: "different-submit" }],
-  [
-    { type: "session_user_message", clientMessageId: "submit-1" },
-    { type: "session_user_message", clientMessageId: "submit-1" },
-  ],
-]) {
-  test("unidentified, unmatched or conflicting preliminary input stays behind the barrier", async () => {
-    const f = fixture([], preliminary);
+for (const [preliminary, message] of [
+  [[{ type: "session_user_message", text: "no identity" }], "unpaired"],
+  [[{ type: "session_user_message", clientMessageId: "different-submit" }], "recorded anchor"],
+] as const) {
+  test("unidentified or unmatched preliminary input stays behind the barrier", async () => {
+    const f = fixture([], [...preliminary]);
     await f.select();
     await expect(
       recoverMobileOutput({ read: f.read, canContinue: () => true, latestCursor: () => undefined }),
-    ).rejects.toThrow("unpaired");
+    ).rejects.toThrow(message);
   });
 }
+
+test("repeat submit identity is paired to its original recorded input, not caller text", async () => {
+  const f = fixture(
+    [],
+    [
+      { type: "session_user_message", text: "question", clientMessageId: "submit-1" },
+      { type: "session_user_message", text: "not a new task", clientMessageId: "submit-1" },
+    ],
+  );
+  await f.select();
+  const result = await recoverMobileOutput({
+    read: f.read,
+    canContinue: () => true,
+    latestCursor: () => undefined,
+  });
+  expect(result?.snapshot.inputIds).toEqual(["submit-1"]);
+  expect(result?.chat.items.filter((item) => item.kind === "user")).toMatchObject([
+    { text: "question", clientMessageId: "submit-1" },
+  ]);
+  expect(JSON.stringify(result?.chat)).not.toContain("not a new task");
+});
 
 test("a recorded new run cannot silently erase older no-run Goal metadata", async () => {
   const f = fixture([], [{ type: "goal_updated", goal: { objective: "old no-run state" } }]);
@@ -437,4 +454,22 @@ test("a recorded new run cannot silently erase older no-run Goal metadata", asyn
   await expect(
     recoverMobileOutput({ read: f.read, canContinue: () => true, latestCursor: () => undefined }),
   ).rejects.toThrow("unpaired");
+});
+
+test("reselecting the same viewer cannot overlap its retired page read", async () => {
+  const f = fixture();
+  await f.select();
+  const releases: Array<(value: string) => void> = [];
+  f.blockAuthority(() => new Promise((resolve) => releases.push(resolve)));
+  const oldRead = f.read();
+  const newSelection = f.select();
+  releases[1]("mounted-project-root-incarnation");
+  await newSelection;
+  const busy = await f.read();
+  expect(busy.page.status).toBe("incomplete");
+  expect(releases).toHaveLength(2);
+  releases[0]("mounted-project-root-incarnation");
+  await oldRead;
+  f.blockAuthority(async () => "mounted-project-root-incarnation");
+  expect((await f.read()).page.status).toBe("ok");
 });

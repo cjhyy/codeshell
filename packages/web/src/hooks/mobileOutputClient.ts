@@ -1,5 +1,5 @@
 import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-core";
-import { recoverMobileOutput } from "../lib/mobileOutputRecovery.js";
+import { recoverMobileOutput, MobilePendingInput } from "../lib/mobileOutputRecovery.js";
 import { compareOutputCursors } from "../lib/outputJournalRecovery.js";
 
 type Page = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
@@ -190,7 +190,16 @@ export class MobileOutputClient {
       selection.applied = result.outputCursor;
       selection.latest = result.outputCursor;
       this.deps.commit(selection.sessionId, result);
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof MobilePendingInput &&
+        error.ids.every((id) => selection.pendingInputIds?.has(id))
+      ) {
+        if (!this.current(selection) || selection.failed) return;
+        if (!selection.readyTimer)
+          selection.readyTimer = setTimeout(() => this.fail(selection), 10_000);
+        return;
+      }
       this.fail(selection);
     }
   }
@@ -227,16 +236,27 @@ export class MobileOutputClient {
       if (
         typeof event.clientMessageId !== "string" ||
         !event.clientMessageId.trim() ||
-        event.clientMessageId.length > 512 ||
-        ids.has(event.clientMessageId)
+        event.clientMessageId.length > 512
       )
         this.fail(selection);
       else {
-        ids.add(event.clientMessageId);
-        selection.pendingInputBytes =
-          (selection.pendingInputBytes ?? 0) +
-          new TextEncoder().encode(event.clientMessageId).length;
-        if (ids.size > 128 || selection.pendingInputBytes > 32 * 1024) this.fail(selection);
+        if (!ids.has(event.clientMessageId)) {
+          ids.add(event.clientMessageId);
+          selection.pendingInputBytes =
+            (selection.pendingInputBytes ?? 0) +
+            new TextEncoder().encode(event.clientMessageId).length;
+        }
+        if (ids.size > 128 || (selection.pendingInputBytes ?? 0) > 32 * 1024) this.fail(selection);
+        if (!selection.failed && !selection.recovering) {
+          const latest = selection.latest;
+          this.begin(sessionId);
+          if (this.selection) {
+            this.selection.pendingInputIds = ids;
+            this.selection.pendingInputBytes = selection.pendingInputBytes;
+            this.selection.latest = latest;
+          }
+          return "pending";
+        }
         if (!selection.readyTimer)
           selection.readyTimer = setTimeout(() => this.fail(selection), 10_000);
       }

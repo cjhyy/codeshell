@@ -8,13 +8,13 @@ interface Binding {
   sessionId: string;
   recoveryId: string;
   authority?: string;
-  reading?: boolean;
 }
 
 /** A selected tab owns a read grant, never a caller supplied storage root or an arbitrary Session. */
 export class MobileOutputRecovery {
   private readonly bindings = new Map<string, Binding>();
   private activeReads = 0;
+  private readonly readingViewers = new Set<string>();
   constructor(
     private readonly deps: {
       root: () => string;
@@ -92,11 +92,11 @@ export class MobileOutputRecovery {
       });
     // No pending-page queue: one read per viewer and eight globally bound the
     // raw page + raw cutover prefix held over an asynchronous authority check.
-    if (!valid() || binding!.reading || this.activeReads >= 8) {
+    if (!valid() || this.readingViewers.has(viewer) || this.activeReads >= 8) {
       reply({});
       return false;
     }
-    binding!.reading = true;
+    this.readingViewers.add(viewer);
     this.activeReads++;
     try {
       if (
@@ -141,7 +141,7 @@ export class MobileOutputRecovery {
       // Fixed path-free failure; a once negotiated missing grant cannot become legacy success.
       reply({});
     } finally {
-      binding!.reading = false;
+      this.readingViewers.delete(viewer);
       this.activeReads--;
     }
     return false;
