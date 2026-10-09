@@ -1,4 +1,4 @@
-# 上传文档解析与逐文件索引交付边界
+# 上传文档解析与词法索引交付边界
 
 2026-10-09。复用项目配置中的上传入口与 `ReadSource`；不新增侧栏或工具，不改变逐资源授权。此文记录源码和本地真实解析验收，发布以合并版本为准。
 
@@ -7,7 +7,7 @@
 - UTF-8 文本（含 Markdown、CSV、JSON 等）、DOCX、PPTX、XLSX 文本提取。Office 使用真实 ZIP/XML 解析，保留段落、页/工作表标签及工作簿/演示文稿关系顺序；公式只读已有缓存值，不执行公式、宏、外部关系或脚本。
 - PDF 使用官方 `pdfjs-dist@6.4.299` 的文本接口，是 **Node.js 22.13+ 且已安装可选依赖**时的能力。Core 的 Node >=20.10 最低要求保持不变；旧 Node 或缺少可选依赖时给出升级/重新安装/导出 UTF-8 文本的说明。
 - Desktop 复用已经随安装包供应的 managed Node（当前锁定 24.21.0），PDF 解析在该独立 Node 子进程运行；Electron 33 内置 Node 20.18.3 不需要升级。运行前复用现有 runtime manifest/平台/哈希验证。开发环境需运行 `bun run --cwd packages/desktop runtime:prepare` 准备同一受校验运行时；缺失时明确提示重新安装/准备或导出文本。普通 Core Host 可注入可信 `documentParserExecutable` resolver，工具参数、项目设置和协议不接受可执行路径。Desktop 将仅解析入口/UTF-8 辅助与真实解析依赖闭包置于 `app.asar.unpacked`，外部 Node 使用此物理入口；不展开全部 Core/LLM 依赖。
-- 不支持旧二进制 DOC/XLS/PPT、加密文档、扫描件 OCR、版式还原、向量化或跨文件检索。空文本 PDF 提示 OCR/文本导出；当前 PDF 验收为真实英文文本 PDF，不声明所有字体/复杂表格均可完整提取。
+- 不支持旧二进制 DOC/XLS/PPT、加密文档、扫描件 OCR、版式还原或向量化。空文本 PDF 提示 OCR/文本导出；当前 PDF 验收为真实英文文本 PDF，不声明所有字体/复杂表格均可完整提取。显式选择的上传文件跨文件词法查询见[跨文件交付边界](workspace-crossfile-query-delivery.md)，不扩大本节的解析格式或逐资源授权。
 
 读取输入最多 20 MiB（上传入口保留既有上传大小限制；更大的文件可存放，但读取时需拆分）。提取文本最多 1 MiB、500 个文档部分、200 个 PDF 页面、512 个分块；达到上限会报告截断。每块最多 3,000 个 UTF-16 字符，重叠 200 字符且不拆开代理对。工具结果仍受 256 KiB 与秘密脱敏限制。
 
@@ -44,7 +44,7 @@ Profile、workspace binding、Session pin、`ReadSource` permission 和精确 re
 
 ## 执行与索引存储
 
-解析在独立、可终止的子进程内运行；不把 PDF/native 库载入 Host。子进程只收到已授权的有界字节和文件名，不收到原文件路径；只继承 PATH/Windows 系统目录和 Electron Node 模式所需变量，不继承第三方凭证环境变量。解析入口禁用 fetch，Office 不解析外部关系；这不是通用操作系统沙箱。
+解析在独立、可终止的子进程内运行；不把 PDF/native 库载入 Host。子进程只收到已授权的有界字节和文件名，不收到原文件路径；只继承 PATH/Windows 系统目录和 Electron Node 模式所需变量，另由 worker 为每次实际解析创建独立、0700 的 HOME/config/state/AppData/tmp/cwd，不继承第三方凭证或 Host 配置。入口在动态载入 parser 依赖前安装并验证 fetch、HTTP(S) 默认/命名入口、TCP/TLS 的 17 项 JS API 负向探针，Office 不解析外部关系。Host 核验私有协议内真实 child PID/PPID、执行路径、环境、目录权限和探针数，close 后仅移除自己的临时目录；这些私有回执不进入 SourceContent/ToolResult。这不是通用操作系统沙箱或任意 native 库的网络限制。修复与实际子进程验收见[跨文件查询交付](workspace-crossfile-query-delivery.md)。
 
 单 Host 最多 2 个解析进程、16 个排队请求；队列满时返回忙碌提示。运行时 resolver 的等待有独立 15 秒上限并可取消；解析进程默认 15 秒超时，取消/超时杀掉子进程并等待 close 后释放槽。Node/Electron 子进程设置 192 MiB V8 堆上限；这不是整个进程 RSS 的操作系统硬上限。
 
@@ -70,4 +70,4 @@ Desktop 覆盖/删除上传时只失效对应 canonical workspace/resource 的�
 - 合并成本账本与 Operation Controller main 后的最终组合检查：1,456 项 Source/完整 ToolSystem/Link/Operation/Engine/账本/Desktop 测试通过，3 项真实模型测试跳过；12 包类型与变更生产代码 ESLint 通过。真实 SDK 写操作独立回读/重启不重复发送烟测及最新 Desktop production/managed PDF/ASAR 均通过；既有 Workspace 页面 Electron 验收通过。
 - CI 测试分片与覆盖率门槛同时要求子进程成功退出和完整、数量一致、零失败的 JUnit 报告；提前退出、空运行、截断或不一致报告明确失败。配置单测改用无启动副作用的 stdio helper，真实 worker 的 parent-EOF 清理保持不变。完整 Core rest 分片实际执行 2,897 项测试/407 个文件，零失败并生成完整报告；架构预算按当前实际接线、IPC 与导出数量逐项说明，不预留未来功能增长。
 - 默认 Bun 分片、原生 Node/Electron 上传烟测、ASAR 内层 Electron 与打包 SDK 的运行 consumer 共用私有环境 helper：在载入 Core 前设置 canonical 私有 HOME/USERPROFILE/CodeShell/XDG/AppData 目录，并只保留明确的工具链、浏览器与 CI 变量；不继承操作人的 Host 配置、任意认证变量或代理。正常完成或失败后仅清理调用方持有的临时目录。真实模型 SDK 的 localhost fixtures 另保留各自精确端点约束。
-- 上述原生上传与 packed SDK fixture 的 Host/cold consumer、ASAR 内层在动态载入 Core 前禁止 fetch、HTTP(S) 与原始 TCP/TLS 连接，并使用合成的进程内 LLM 响应；这是测试进程内防护，不是操作系统网络沙箱。解析子进程仍按生产规则仅继承 PATH/必要系统变量和 Electron Node 模式，不传 HOME 或 Host 配置，不实例化 Core/自动化；不能把 Host 私有 HOME 的证据外推为所有解析子进程均继承 HOME。
+- 上述历史原生上传与 packed SDK fixture 的 Host/cold consumer、ASAR 内层在动态载入 Core 前禁止 fetch、HTTP(S) 与原始 TCP/TLS 连接，并使用合成的进程内 LLM 响应；这是测试进程内防护，不是操作系统网络沙箱。当时解析子进程只继承 PATH/必要系统变量和 Electron Node 模式，未传 HOME，因此这些历史 Host/cold 证据不能外推到解析子进程 HOME。2026-10-09 跨文件查询增量另行修复这一边界，并通过真实 child 回执验证，范围见上文和对应交付记录。

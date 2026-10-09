@@ -163,11 +163,10 @@ function terms(text: string): string[] {
   return [...result];
 }
 
-/** Local lexical postings, with CJK bigrams; no model or embedding requests. */
-export function searchDocumentIndex(index: DocumentIndex, query: string, limit: number) {
+function rankChunks(chunks: readonly DocumentChunk[], query: string) {
   const requested = terms(query).slice(0, 64);
   const postings = new Map<string, number[]>();
-  index.chunks.forEach((chunk, number) => {
+  chunks.forEach((chunk, number) => {
     for (const term of terms(chunk.text)) {
       const list = postings.get(term) ?? [];
       list.push(number);
@@ -177,12 +176,17 @@ export function searchDocumentIndex(index: DocumentIndex, query: string, limit: 
   const scores = new Map<number, number>();
   for (const term of requested) {
     const matches = postings.get(term) ?? [];
-    const weight = 1 + Math.log(1 + index.chunks.length / (1 + matches.length));
+    const weight = 1 + Math.log(1 + chunks.length / (1 + matches.length));
     for (const number of matches) scores.set(number, (scores.get(number) ?? 0) + weight);
   }
-  const ranked = [...scores]
+  return [...scores]
     .map(([number, score]) => ({ number, score }))
     .sort((a, b) => b.score - a.score || a.number - b.number);
+}
+
+/** Local lexical postings, with CJK bigrams; no model or embedding requests. */
+export function searchDocumentIndex(index: DocumentIndex, query: string, limit: number) {
+  const ranked = rankChunks(index.chunks, query);
   return {
     format: index.format,
     parserVersion: index.version,
@@ -195,5 +199,47 @@ export function searchDocumentIndex(index: DocumentIndex, query: string, limit: 
     matches: ranked
       .slice(0, limit)
       .map(({ number, score }) => ({ ...index.chunks[number], score })),
+  };
+}
+
+/** One corpus and comparable lexical weights, with a locale-independent stable tie order. */
+export function searchDocumentIndexes(
+  indexes: readonly DocumentIndex[],
+  query: string,
+  limit: number,
+) {
+  const ordered = [...indexes].sort((left, right) =>
+    left.resourceId < right.resourceId ? -1 : left.resourceId > right.resourceId ? 1 : 0,
+  );
+  const chunks = ordered.flatMap((index) => index.chunks.map((chunk) => ({ index, chunk })));
+  const ranked = rankChunks(
+    chunks.map(({ chunk }) => chunk),
+    query,
+  );
+  return {
+    search: "lexical" as const,
+    resources: ordered.map((index) => ({
+      resourceId: index.resourceId,
+      sourceHash: index.sourceHash,
+      format: index.format,
+      parserVersion: index.version,
+      inputBytes: index.inputBytes,
+      extractionTruncated: index.truncated,
+    })),
+    extractionTruncated: ordered.some((index) => index.truncated),
+    totalMatches: ranked.length,
+    hasMore: ranked.length > limit,
+    outputTruncated: false,
+    matches: ranked.slice(0, limit).map(({ number, score }) => {
+      const { index, chunk } = chunks[number];
+      return {
+        resourceId: index.resourceId,
+        sourceHash: index.sourceHash,
+        format: index.format,
+        parserVersion: index.version,
+        ...chunk,
+        score,
+      };
+    }),
   };
 }

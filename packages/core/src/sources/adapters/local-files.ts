@@ -16,7 +16,7 @@ import {
   statSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
-import type { ConnectorAdapter } from "../adapter.js";
+import type { ConnectorAdapter, SourceAdapterContext } from "../adapter.js";
 import { truncateUtf8Text } from "../truncate-utf8.js";
 import {
   documentIndexText,
@@ -24,7 +24,7 @@ import {
   searchDocumentIndex,
   uploadedDocumentHash,
 } from "../documents/index-store.js";
-import { MAX_DOCUMENT_BYTES } from "../documents/types.js";
+import { MAX_DOCUMENT_BYTES, type DocumentIndex } from "../documents/types.js";
 import type { SourceDefinition, SourceResourceMeta } from "../types.js";
 
 export const LOCAL_FILES_SOURCE_ID = "project-uploads";
@@ -172,7 +172,11 @@ function resolveInsideUploads(
   };
 }
 
-function readSnapshot(cwd: string, resourceId: string) {
+function readSnapshot(
+  cwd: string,
+  resourceId: string,
+  reserveInputBytes?: (bytes: number) => void,
+) {
   const resolved = resolveInsideUploads(cwd, resourceId);
   const before = lstatSync(resolved.path);
   if (!before.isFile() || before.isSymbolicLink())
@@ -189,6 +193,9 @@ function readSnapshot(cwd: string, resourceId: string) {
       throw new Error(
         "Uploaded document exceeds the 20 MiB parsing limit; split it or export a smaller UTF-8 text file",
       );
+    // Trusted collection callers reserve the actual size before allocation or
+    // parsing. Revalidation reads do not reserve the same input a second time.
+    reserveInputBytes?.(info.size);
     const bytes = Buffer.alloc(info.size + 1);
     let length = 0;
     while (length < bytes.length) {
@@ -218,6 +225,80 @@ function readSnapshot(cwd: string, resourceId: string) {
   }
 }
 
+/** Metadata-only owner fence for a collection, before any original bytes are read. */
+export function uploadedDocumentDirectoryIdentity(cwd: string, resourceId: string): string {
+  return resolveInsideUploads(cwd, resourceId).directoryIdentity;
+}
+
+/** Host-only typed receipt from the same authorized physical read. Never serialized. */
+export interface UploadedDocumentRead {
+  content: import("../types.js").SourceContent;
+  index: DocumentIndex;
+  assertCurrent: () => void;
+}
+
+export async function readUploadedDocument(
+  resourceId: string,
+  options: SourceAdapterContext & {
+    maxBytes: number;
+    query?: string;
+    limit?: number;
+    chunk?: string;
+    reserveInputBytes?: (bytes: number) => void;
+  },
+): Promise<UploadedDocumentRead> {
+  if (!options.cwd) {
+    throw new Error("local-files read requires cwd");
+  }
+
+  options.signal?.throwIfAborted();
+  options.assertAuthorized?.();
+  const snapshot = readSnapshot(options.cwd, resourceId, options.reserveInputBytes);
+  const sourceHash = uploadedDocumentHash(snapshot.bytes);
+  const assertCurrent = () => {
+    options.signal?.throwIfAborted();
+    options.assertAuthorized?.();
+    const current = readSnapshot(options.cwd!, resourceId);
+    if (
+      current.identity !== snapshot.identity ||
+      uploadedDocumentHash(current.bytes) !== sourceHash
+    )
+      throw new Error("Uploaded document changed during parsing; read its current version again");
+  };
+  const index = await loadUploadedDocumentIndex(options.cwd, snapshot.resourceId, snapshot.bytes, {
+    signal: options.signal,
+    assertCurrent,
+    resolveExecutable: options.documentParserExecutable,
+  });
+  let text: string;
+  if (options.query !== undefined) {
+    text = JSON.stringify(searchDocumentIndex(index, options.query, options.limit ?? 5));
+  } else if (options.chunk !== undefined) {
+    const chunk = index.chunks.find((candidate) => candidate.id === options.chunk);
+    if (!chunk)
+      throw new Error(
+        "Document chunk does not exist in the current file version; query the current document again",
+      );
+    text = JSON.stringify({ resourceId, sourceHash, ...chunk });
+  } else {
+    text =
+      documentIndexText(index) ||
+      "This document contains no extractable text; scanned images require OCR or a UTF-8 text export.";
+  }
+  assertCurrent();
+  const truncated = truncateUtf8Text(text, options.maxBytes);
+
+  return {
+    index,
+    assertCurrent,
+    content: {
+      resourceId: snapshot.resourceId,
+      ...truncated,
+      truncated: truncated.truncated || index.truncated,
+    },
+  };
+}
+
 export const localFilesAdapter: ConnectorAdapter = {
   kind: "local-files",
 
@@ -230,57 +311,7 @@ export const localFilesAdapter: ConnectorAdapter = {
   },
 
   async read(_definition, resourceId, options) {
-    if (!options.cwd) {
-      throw new Error("local-files read requires cwd");
-    }
-
-    options.signal?.throwIfAborted();
-    options.assertAuthorized?.();
-    const snapshot = readSnapshot(options.cwd, resourceId);
-    const sourceHash = uploadedDocumentHash(snapshot.bytes);
-    const assertCurrent = () => {
-      options.signal?.throwIfAborted();
-      options.assertAuthorized?.();
-      const current = readSnapshot(options.cwd!, resourceId);
-      if (
-        current.identity !== snapshot.identity ||
-        uploadedDocumentHash(current.bytes) !== sourceHash
-      )
-        throw new Error("Uploaded document changed during parsing; read its current version again");
-    };
-    const index = await loadUploadedDocumentIndex(
-      options.cwd,
-      snapshot.resourceId,
-      snapshot.bytes,
-      {
-        signal: options.signal,
-        assertCurrent,
-        resolveExecutable: options.documentParserExecutable,
-      },
-    );
-    let text: string;
-    if (options.query !== undefined) {
-      text = JSON.stringify(searchDocumentIndex(index, options.query, options.limit ?? 5));
-    } else if (options.chunk !== undefined) {
-      const chunk = index.chunks.find((candidate) => candidate.id === options.chunk);
-      if (!chunk)
-        throw new Error(
-          "Document chunk does not exist in the current file version; query the current document again",
-        );
-      text = JSON.stringify({ resourceId, sourceHash, ...chunk });
-    } else {
-      text =
-        documentIndexText(index) ||
-        "This document contains no extractable text; scanned images require OCR or a UTF-8 text export.";
-    }
-    assertCurrent();
-    const truncated = truncateUtf8Text(text, options.maxBytes);
-
-    return {
-      resourceId: snapshot.resourceId,
-      ...truncated,
-      truncated: truncated.truncated || index.truncated,
-    };
+    return (await readUploadedDocument(resourceId, options)).content;
   },
 };
 

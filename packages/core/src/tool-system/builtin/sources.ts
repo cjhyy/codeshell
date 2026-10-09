@@ -5,12 +5,18 @@
  * provenance + maxBytes 截断 + secret redaction + untrusted input 包裹。
  */
 import { SettingsManager } from "../../settings/manager.js";
+import { randomUUID } from "node:crypto";
 import { connectorAdapterFor, registerConnectorAdapter } from "../../sources/adapter.js";
 import {
   LOCAL_FILES_SOURCE_ID,
   listLocalFiles,
   localFilesAdapter,
+  readUploadedDocument,
+  uploadedDocumentDirectoryIdentity,
+  type UploadedDocumentRead,
 } from "../../sources/adapters/local-files.js";
+import { searchDocumentIndexes } from "../../sources/documents/index-store.js";
+import { MAX_DOCUMENT_BYTES } from "../../sources/documents/types.js";
 import { defaultMcpResourceAdapter } from "../../sources/adapters/mcp-resource.js";
 import { linkSourceAdapter } from "../../sources/adapters/link.js";
 import { mockAdapter } from "../../sources/adapters/mock.js";
@@ -19,11 +25,27 @@ import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../
 import { truncateUtf8Text } from "../../sources/truncate-utf8.js";
 import type { SourceResourceMeta } from "../../sources/types.js";
 import type { ToolDefinition } from "../../types.js";
-import { scrubSecrets } from "../../utils/secret-scrubber.js";
+import { scrubSecrets, scrubSecretValue } from "../../utils/secret-scrubber.js";
 import { wrapUntrustedInput } from "../../automation/write-policy.js";
 import type { ToolContext } from "../context.js";
+import { boundToolResult } from "../bound-tool-result.js";
 
 const DEFAULT_MAX_BYTES = 262_144;
+const MAX_COLLECTION_FILES = 8;
+const MAX_COLLECTION_INPUT_BYTES = 40 * 1024 * 1024;
+const MAX_COLLECTION_INDEX_BYTES = 4 * 1024 * 1024;
+const COLLECTION_TIMEOUT_MS = 30_000;
+// Symbol identity stays in this module. No model JSON, hook args or result
+// prose can create a receipt sink; the executor passes it only to this call.
+const documentQueryService = Symbol("uploaded-document-query");
+interface DocumentQueryService {
+  source: string;
+  scope: string;
+  resource: string;
+  query: string;
+  reserveInputBytes(bytes: number): void;
+  capture(receipt: UploadedDocumentRead): void;
+}
 const mcpResourceAdapter = defaultMcpResourceAdapter();
 
 /** Registering the same adapter objects is safe to repeat across test/host imports. */
@@ -132,19 +154,28 @@ export async function listSourcesTool(
 export const readSourceToolDef: ToolDefinition = {
   name: "ReadSource",
   description:
-    "Read one exact resource from a bound data source (requires approval). Uploaded UTF-8 text, DOCX/PPTX/XLSX and PDF documents are parsed locally; PDF requires Node.js 22.13+. For an uploaded document, optional query searches its local chunk index (limit 1–20); optional chunk reads a returned chunk id. Query and chunk cannot be combined. Source/scope/resource must always match an explicitly listed resource.",
+    "Read one exact resource from a bound data source (requires approval). Uploaded UTF-8 text, DOCX/PPTX/XLSX and PDF documents are parsed locally; PDF requires Node.js 22.13+. Optional query performs local lexical search (limit 1–20); optional chunk reads a returned chunk id. For cross-file search, use resources instead of resource: explicitly select 1–8 uploaded files in the same source/scope and supply query. Each file retains its own approval; any failure returns no collection results. No implicit whole-project scan. Query and chunk cannot be combined.",
   inputSchema: {
     type: "object",
     properties: {
       source: { type: "string", description: "Bound source id (from ListSources)" },
       scope: { type: "string", description: "Bound scope id" },
       resource: { type: "string", description: "Resource id within that scope" },
+      resources: {
+        type: "array",
+        minItems: 1,
+        maxItems: MAX_COLLECTION_FILES,
+        uniqueItems: true,
+        items: { type: "string", minLength: 1, maxLength: 512 },
+        description:
+          "Cross-file query only: explicit uploaded resource ids in this same source/scope; excludes resource and chunk",
+      },
       query: {
         type: "string",
         minLength: 1,
         maxLength: 512,
         description:
-          "Uploaded document only: local lexical search terms within this exact resource",
+          "Uploaded documents only: local lexical search terms within the exact selected resources",
       },
       limit: {
         type: "integer",
@@ -159,9 +190,208 @@ export const readSourceToolDef: ToolDefinition = {
           "Uploaded document only: exact chunk id from a prior query of the current file version",
       },
     },
-    required: ["source", "scope", "resource"],
+    required: ["source", "scope"],
+    oneOf: [
+      { required: ["resource"], not: { required: ["resources"] } },
+      {
+        required: ["resources", "query"],
+        not: { anyOf: [{ required: ["resource"] }, { required: ["chunk"] }] },
+      },
+    ],
   },
 };
+
+async function querySourceCollection(
+  args: Record<string, unknown>,
+  access: EffectiveSourceAccess,
+  scope: string,
+  query: string,
+  limit: number,
+  cwd: string,
+  ctx: ToolContext | undefined,
+  signal?: AbortSignal,
+): Promise<string> {
+  // Monotonic checks cover synchronous metadata/ranking/hash work too; a
+  // delayed timer callback alone cannot enforce a computation deadline.
+  let remainingMs = COLLECTION_TIMEOUT_MS;
+  let activeSince = performance.now();
+  let budgetActive = true;
+  if (
+    args.resource !== undefined ||
+    args.chunk !== undefined ||
+    !Array.isArray(args.resources) ||
+    args.resources.length < 1 ||
+    args.resources.length > MAX_COLLECTION_FILES ||
+    args.resources.some(
+      (item) => typeof item !== "string" || !item || item.length > 512 || item.includes("\0"),
+    ) ||
+    new Set(args.resources).size !== args.resources.length
+  )
+    return "Error: collection query requires 1–8 unique resource ids and excludes resource/chunk.";
+  if (!ctx?.executeBoundTool || !ctx.previewToolPermission)
+    return "Error: collection queries require the owning tool authorization pipeline.";
+  const resources = [...(args.resources as string[])].sort();
+  const receipts: UploadedDocumentRead[] = [];
+  const deadline = new AbortController();
+  const combined = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expire = () =>
+    deadline.abort(new Error("Collection query exceeded its 30 second computation deadline"));
+  const armTimer = () => {
+    clearTimeout(timer);
+    timer = setTimeout(expire, Math.max(0, remainingMs));
+  };
+  const pauseAuthorization = () => {
+    if (!budgetActive) return;
+    remainingMs -= performance.now() - activeSince;
+    budgetActive = false;
+    clearTimeout(timer);
+  };
+  const resumeComputation = () => {
+    if (budgetActive) return;
+    budgetActive = true;
+    activeSince = performance.now();
+    armTimer();
+  };
+  let directoryIdentity: string | undefined;
+  const callArgs = (resource: string) => ({
+    source: access.sourceId,
+    scope,
+    resource,
+    query,
+    limit: 1,
+  });
+  const assertAuthorized = () => {
+    if (budgetActive && performance.now() - activeSince >= remainingMs) expire();
+    combined.throwIfAborted();
+    if (
+      !authorityIsCurrent(access, cwd, ctx) ||
+      ctx.disabledBuiltins?.has("ReadSource") ||
+      (ctx.allowedToolNames && !ctx.allowedToolNames.has("ReadSource")) ||
+      resources.some(
+        (resource) => ctx.previewToolPermission!("ReadSource", callArgs(resource)) === "deny",
+      )
+    )
+      throw new Error("Source authorization changed or a selected resource is denied");
+    if (
+      directoryIdentity !== undefined &&
+      uploadedDocumentDirectoryIdentity(cwd, resources[0]) !== directoryIdentity
+    )
+      throw new Error("Uploaded document workspace or directory changed during collection query");
+  };
+  try {
+    armTimer();
+    // All known deny/metadata/size checks precede the first content read. A
+    // forecast never grants a read: each child still runs real approval/hooks.
+    assertAuthorized();
+    const metadata = await resourcesFor(access, scope, cwd, ctx);
+    assertAuthorized();
+    let advertisedBytes = 0;
+    for (const resource of resources) {
+      const item = metadata.find(
+        (candidate) => candidate.id === resource && candidate.scopeId === scope,
+      );
+      if (!item) throw new Error(`Selected resource "${resource}" is not listed in this scope`);
+      if (
+        !Number.isSafeInteger(item.sizeBytes) ||
+        item.sizeBytes! < 0 ||
+        item.sizeBytes! > MAX_DOCUMENT_BYTES
+      )
+        throw new Error(
+          "Selected document exceeds the 20 MiB parsing limit or has no bounded size",
+        );
+      advertisedBytes += item.sizeBytes!;
+    }
+    if (advertisedBytes > MAX_COLLECTION_INPUT_BYTES)
+      throw new Error("Collection query exceeds the 40 MiB total input limit; select fewer files");
+    directoryIdentity = uploadedDocumentDirectoryIdentity(cwd, resources[0]);
+    let inputBytes = 0;
+    let indexBytes = 0;
+    for (const resource of resources) {
+      assertAuthorized();
+      let receipt: UploadedDocumentRead | undefined;
+      const service: DocumentQueryService = Object.freeze({
+        source: access.sourceId,
+        scope,
+        resource,
+        query,
+        reserveInputBytes(bytes: number) {
+          // Child permission / pre-start Hook waiting is not parser compute.
+          // The existing outer registry timeout still bounds the whole call.
+          resumeComputation();
+          assertAuthorized();
+          if (inputBytes + bytes > MAX_COLLECTION_INPUT_BYTES)
+            throw new Error("Collection query exceeds the 40 MiB actual input limit");
+          inputBytes += bytes;
+        },
+        capture(value: UploadedDocumentRead) {
+          assertAuthorized();
+          if (receipt || value.index.resourceId !== resource || !Object.isFrozen(value.index))
+            throw new Error("Invalid uploaded document query receipt");
+          const bytes = Buffer.byteLength(JSON.stringify(value.index));
+          if (indexBytes + bytes > MAX_COLLECTION_INDEX_BYTES)
+            throw new Error("Collection query exceeds the 4 MiB index limit; select fewer files");
+          indexBytes += bytes;
+          receipt = value;
+        },
+      });
+      pauseAuthorization();
+      const result = boundToolResult(
+        await ctx.executeBoundTool(
+          {
+            id: `source-query-${randomUUID()}`,
+            toolName: "ReadSource",
+            args: callArgs(resource),
+          },
+          {
+            signal: combined,
+            assertAuthorized,
+            privateServices: new Map([[documentQueryService, service]]),
+          },
+        ),
+      );
+      resumeComputation();
+      assertAuthorized();
+      if (result.isError || !receipt)
+        throw new Error(
+          "A selected document read was denied, failed or produced no trusted receipt",
+        );
+      receipts.push(receipt);
+      // Includes earlier files while a later approval/parse was awaiting.
+      for (const original of receipts) original.assertCurrent();
+    }
+    const result = {
+      source: access.sourceId,
+      scope,
+      ...searchDocumentIndexes(
+        receipts.map((item) => item.index),
+        query,
+        limit,
+      ),
+    };
+    let output = JSON.stringify(scrubSecretValue(result));
+    while (Buffer.byteLength(output) > DEFAULT_MAX_BYTES && result.matches.length) {
+      result.matches.pop();
+      result.hasMore = true;
+      result.outputTruncated = true;
+      output = JSON.stringify(scrubSecretValue(result));
+    }
+    if (Buffer.byteLength(output) > DEFAULT_MAX_BYTES)
+      throw new Error("Collection metadata exceeds the output limit");
+    // No await between all original identity/hash checks and the final result.
+    assertAuthorized();
+    for (const original of receipts) original.assertCurrent();
+    assertAuthorized();
+    return wrapUntrustedInput(
+      output,
+      `source=${access.sourceId} scope=${scope} resources=${JSON.stringify(resources)}`,
+    );
+  } catch (error) {
+    return `Error: collection query failed: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function readSourceTool(
   args: Record<string, unknown>,
@@ -215,6 +445,27 @@ export async function readSourceTool(
       return "Error: document query limit must be an integer from 1 to 20.";
   }
 
+  if (args.resources !== undefined) {
+    if (
+      access.kind !== "local-files" ||
+      source !== LOCAL_FILES_SOURCE_ID ||
+      typeof query !== "string"
+    )
+      return "Error: collection queries require query and the uploaded files source.";
+    return querySourceCollection(
+      args,
+      access,
+      scope,
+      query,
+      typeof limit === "number" ? limit : 5,
+      cwd,
+      ctx,
+      signal,
+    );
+  }
+  if (typeof args.resource !== "string" || !resource)
+    return "Error: choose one exact resource or an explicit uploaded resources query.";
+
   try {
     // Validate resource ownership from the selected scope's metadata before
     // any content read. This prevents a valid id from another scope being used
@@ -230,7 +481,18 @@ export async function readSourceTool(
       return `Error: resource "${resource}" is not listed in scope "${scope}" for source "${source}".`;
     }
 
-    const content = await adapter.read(access.definition, resource, {
+    const service = ctx?.boundToolServices?.get(documentQueryService) as
+      | DocumentQueryService
+      | undefined;
+    if (
+      service &&
+      (service.source !== source ||
+        service.scope !== scope ||
+        service.resource !== resource ||
+        service.query !== query)
+    )
+      throw new Error("Uploaded document query service does not match this exact read");
+    const options = {
       maxBytes: DEFAULT_MAX_BYTES,
       signal,
       cwd,
@@ -242,13 +504,22 @@ export async function readSourceTool(
       assertAuthorized: () => {
         if (!authorityIsCurrent(access, cwd, ctx)) throw new Error("Source authorization changed");
       },
-    });
+    };
+    const receipt =
+      service && adapter === localFilesAdapter
+        ? await readUploadedDocument(resource, {
+            ...options,
+            reserveInputBytes: service.reserveInputBytes,
+          })
+        : undefined;
+    const content = receipt?.content ?? (await adapter.read(access.definition, resource, options));
     signal?.throwIfAborted();
     if (!authorityIsCurrent(access, cwd, ctx))
       return "Error: source authorization changed during the read.";
     if (content.resourceId !== resource) {
       return `Error: source "${source}" returned a different resource id.`;
     }
+    if (receipt) service!.capture(receipt);
 
     // Adapters enforce maxBytes too; keep this boundary-level cap so a future
     // or injected adapter cannot bypass the 256 KiB context limit.

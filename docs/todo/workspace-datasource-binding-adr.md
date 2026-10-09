@@ -149,7 +149,8 @@ MVP 先落**页面框架 + 数据源区块**，数字人/能力区块直接挂�
 - ✅ Profile allowlist/scopes/deny 求交及运行时接线
 - ❌ 跨 workspace 共享 binding / 源内容索引与 RAG
 - ✅ 2026-10-09：上传文件有界 UTF-8 / DOCX / PPTX / XLSX / PDF 文本解析和逐文件词法分块索引，复用 ReadSource；PDF 是 Node 22.13+ 的可选能力。实现与限制见[上传交付边界](workspace-upload-document-index-delivery.md)。
-- ❌ 向量化、跨资源检索、OCR、版式还原。
+- ✅ 明确选择的同源/同 scope 上传文件跨文件词法查询，逐文件审批与最终原件重验保留，见[跨文件交付边界](workspace-crossfile-query-delivery.md)。
+- ❌ 向量化、语义查询、上传文件以外的跨资源检索、OCR、版式还原。
 
 ## 10. 决策记录
 
