@@ -398,10 +398,11 @@ test("an explicit existing native Session needs the current viewer selection, wh
     owner: () => undefined,
     service: () => null,
     isExternal: () => false,
-    exists: () => true,
+    exists: (id) => id !== "fresh-device-native",
     attachmentPath: async (path) => path,
   });
   expect(commands.isExternal("native", "tab")).toBe(true);
+  expect(commands.isExternal("native", "tab", true)).toBe(true);
   expect(commands.isExternal("fresh-device-native", "tab", true)).toBe(false);
   await commands.observe({
     type: "session.select",

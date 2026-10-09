@@ -55,14 +55,16 @@ export class MobileExternalRuntimeCommands {
   }
   isExternal(sessionId: string, viewer?: string, newlyMintedNative = false): boolean {
     const selection = viewer ? this.selections.get(viewer) : undefined;
+    const exists = this.deps.exists(sessionId);
+    const freshNative = newlyMintedNative && !exists;
     return (
-      (!newlyMintedNative && !this.deps.exists(sessionId)) ||
+      (!freshNative && !exists) ||
       this.deps.isExternal(sessionId) ||
       (!!viewer && this.externalRoutes.get(viewer) === sessionId) ||
       // An evicted/refused/unselected viewer has no proof that an explicit
       // Session still uses its native producer. Never fall through to Core.
       (!!viewer &&
-        !newlyMintedNative &&
+        !freshNative &&
         (!selection || selection.sessionId !== sessionId || selection.external))
     );
   }
