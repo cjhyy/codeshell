@@ -45,8 +45,7 @@ provider's own cumulative baseline is separate from Session aggregate usage;
 a cold resumed thread's first `total - last` identifies its pre-existing history.
 Repeated/out-of-order snapshots do not add the same reported usage twice. Partial
 notifications without request identity retain conservative per-turn snapshots.
-The
-change does not create native model-request or provider-billing receipts for CLI
+The change does not create native model-request or provider-billing receipts for CLI
 traffic, and reported CLI usage remains subject to the existing upstream limits.
 
 ## Actual producer and consumer paths
@@ -75,8 +74,7 @@ observer, arbitrary transcript imports and other hosts/producers are not adapted
 by this change. In particular, paired Mobile's worker-outbound mirror does not
 subscribe to this Desktop owner-window ingress; external CLI real-time delivery
 and its corresponding Mobile recovery remain a separate adapter gap. Physical
-Electron GUI/relaunch, real logged-in CLIs, provider
-accounts, billing and weak-network/device acceptance are separate gates. Existing
+Electron GUI/relaunch, real logged-in CLIs, provider accounts, billing and weak-network/device acceptance are separate gates. Existing
 journal limits, bounded legacy cutover, retention/rotation and repair TODOs remain.
 
 ## Verification
