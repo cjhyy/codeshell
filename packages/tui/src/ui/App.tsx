@@ -1075,7 +1075,9 @@ export function App({
           recordUIEvent(sidRef.current, "ui.ctx.usage_update", {
             promptTokens: event.promptTokens,
           });
-          if (event.promptTokens > 0) setContextTokens(event.promptTokens);
+          if (event.promptTokens > 0 && event.promptTokensSource !== "session_cumulative") {
+            setContextTokens(event.promptTokens);
+          }
           break;
         }
 

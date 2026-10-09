@@ -24,6 +24,7 @@ import type { HookEventName, HookResult } from "../hooks/events.js";
 import { buildSessionTitle } from "./session-title.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
+import { sessionCumulativeUsageUpdate } from "./run-state-persistence.js";
 import type { TurnLoop } from "./turn-loop.js";
 import type { EngineResult } from "./types.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
@@ -127,7 +128,7 @@ export async function finalizeRunSuccess(args: {
     recordExternalBilledUsage: (usage: TokenUsage) => CumulativeUsageCounters,
   ) => Promise<void> | void;
   updatePersistedSessionState: (sid: string, patch: SessionStateFieldPatch) => void;
-  persistFinalRunState: (state: SessionBundle["state"]) => void;
+  persistFinalRunState: (state: SessionBundle["state"]) => boolean;
   markRunAccountingFinalized: () => void;
   costStoreSerialize: (() => Record<string, unknown>) | undefined;
   profile: RunBehaviorProfile | undefined;
@@ -310,8 +311,11 @@ export async function finalizeRunSuccess(args: {
   if (args.costStoreSerialize) {
     session.state.costState = args.costStoreSerialize();
   }
-  args.persistFinalRunState(session.state);
+  const finalStatePersisted = args.persistFinalRunState(session.state);
   args.markRunAccountingFinalized();
+  if (finalStatePersisted) {
+    options?.onStream?.(sessionCumulativeUsageUpdate(session.state));
+  }
 
   // Hook: agent end
   await args.emitHook(

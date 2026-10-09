@@ -46,7 +46,7 @@ test("actual Engine active-close persistence acceptance in a private guarded pro
       }),
     ]);
     expect(result).toEqual({ code: 0, signal: null });
-    expect(output).toContain("Completed Bun shard: 14 tests, 0 skipped; 0 failures.");
+    expect(output).toContain("Completed Bun shard: 21 tests, 0 skipped; 0 failures.");
   } finally {
     clearTimeout(deadline);
     if (!finished && child.pid) {

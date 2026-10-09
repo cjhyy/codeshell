@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { AgentClient, StreamEvent } from "@cjhyy/code-shell-core";
 import React from "react";
-import { flush, mount } from "../../../../tests/render-fixtures.js";
+import { flush, mount, plainText } from "../../../../tests/render-fixtures.js";
+import { forceRedraw } from "../render/index.js";
 import { App } from "./App.js";
 import { QueryGuard } from "./query-guard.js";
 import { chatStore, createEntry } from "./store.js";
@@ -90,6 +91,48 @@ class FakeAgentClient {
 
 describe("App server-driven turn lifecycle", () => {
   afterEach(() => chatStore.clear());
+
+  test("session cumulative usage never replaces provider, estimate or legacy context readings", async () => {
+    const client = new FakeAgentClient();
+    const harness = mount(
+      <App
+        client={client as unknown as AgentClient}
+        model="test-model"
+        effort="medium"
+        maxTurns={4}
+        cwd="/tmp"
+        maxContextTokens={16_000}
+        sessionId="usage-context"
+        queryGuard={new QueryGuard()}
+      />,
+    );
+    try {
+      await flush();
+      for (const event of [
+        { type: "usage_update", promptTokens: 1600, promptTokensSource: "provider_usage" },
+        {
+          type: "usage_update",
+          promptTokens: 15000,
+          promptTokensSource: "session_cumulative",
+          cumulativePromptTokens: 15000,
+        },
+        { type: "usage_update", promptTokens: 4800 },
+        { type: "usage_update", promptTokens: 3200, promptTokensSource: "heuristic_estimate" },
+      ] as StreamEvent[]) {
+        client.emit("usage-context", event);
+        await flush();
+        forceRedraw({ stdout: harness.stdout as NodeJS.WriteStream });
+        await flush();
+      }
+      const text = plainText(harness);
+      expect(text).toContain("10% ctx");
+      expect(text).toContain("30% ctx");
+      expect(text).toContain("20% ctx");
+      expect(text).not.toContain("94% ctx");
+    } finally {
+      harness.unmount();
+    }
+  });
 
   test("finalizes buffered text and releases only the external query owner", async () => {
     const client = new FakeAgentClient();

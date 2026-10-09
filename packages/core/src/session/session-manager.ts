@@ -1637,17 +1637,37 @@ export class SessionManager {
   recordAuxiliaryUsage(
     sessionId: string,
     usage: TokenUsage,
-    costState?: Record<string, unknown>,
-  ): void {
+    costState?: Record<string, unknown> | (() => Record<string, unknown>),
+  ): Pick<
+    SessionState,
+    | "tokenUsage"
+    | "cumulativePromptTokens"
+    | "cumulativeCacheReadTokens"
+    | "cumulativeCacheCreationTokens"
+    | "costState"
+    | "stateRevision"
+  > {
     assertSafeSessionId(sessionId);
+    const capturedUsage = structuredClone(usage);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
       Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
-      Object.assign(state, addCumulativeUsage(state, usage));
-      state.tokenUsage = addTokenUsage(state.tokenUsage, usage);
-      if (costState !== undefined) state.costState = costState;
+      Object.assign(state, addCumulativeUsage(state, capturedUsage));
+      state.tokenUsage = addTokenUsage(state.tokenUsage, capturedUsage);
+      if (costState !== undefined) {
+        state.costState = typeof costState === "function" ? costState() : costState;
+      }
       const result = this.saveStateAttempt(state);
-      if (result.ok) return;
+      if (result.ok) {
+        return {
+          tokenUsage: state.tokenUsage,
+          cumulativePromptTokens: state.cumulativePromptTokens,
+          cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
+          cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
+          costState: state.costState,
+          stateRevision: state.stateRevision,
+        };
+      }
       if (result.reason === "generation_conflict") {
         throw new SessionError(`Session generation conflict for ${sessionId}`);
       }

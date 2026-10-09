@@ -13,7 +13,7 @@ import {
 import { logger } from "../logging/logger.js";
 import type { LLMClientBase } from "../llm/client-base.js";
 import type { Transcript } from "../session/transcript.js";
-import type { SessionBundle, SessionStateFieldPatch } from "../session/session-manager.js";
+import type { SessionBundle } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
 import type { ModelRequestBinding } from "../model-request-boundary/context.js";
 import type { TurnLoop } from "./turn-loop.js";
@@ -31,20 +31,11 @@ export interface RunUsageAccounting {
 export function createRunUsageAccounting(args: {
   session: SessionBundle;
   sid: string;
-  resumeState: (sid: string) => SessionBundle["state"]; // this.sessionManager.resume(sid).state
-  updatePersistedSessionState: (sid: string, patch: SessionStateFieldPatch) => void;
-  costState?: () => Record<string, unknown>;
+  persistExternalBilledUsage: (usage: TokenUsage) => void;
   /** engine 侧闭包 (usage) => turnLoop.recordGoalJudgeUsage(usage)(turnLoop 延迟赋值)。 */
   recordGoalJudgeUsage: (usage: TokenUsage) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
 }): RunUsageAccounting {
-  const {
-    session,
-    sid,
-    resumeState,
-    updatePersistedSessionState,
-    costState,
-    recordGoalJudgeUsage,
-  } = args;
+  const { session, sid, persistExternalBilledUsage, recordGoalJudgeUsage } = args;
   let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
   let externalRunUsage: TokenUsage = {
     promptTokens: 0,
@@ -69,17 +60,7 @@ export function createRunUsageAccounting(args: {
     autoCompactionGoalTermination = recordGoalJudgeUsage(usage);
     if (runAccountingFinalized) {
       try {
-        const latest = resumeState(sid);
-        const lateCumulative = addCumulativeUsage(latest, usage);
-        updatePersistedSessionState(sid, {
-          tokenUsage: addTokenUsage(latest.tokenUsage, usage),
-          ...lateCumulative,
-          ...(costState
-            ? {
-                costState: costState(),
-              }
-            : {}),
-        });
+        persistExternalBilledUsage(usage);
       } catch (err) {
         logger.warn("engine.late_usage_persist_failed", {
           sessionId: sid,
