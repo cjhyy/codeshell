@@ -8,6 +8,7 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import http from "node:http";
@@ -116,6 +117,7 @@ const eventChild = spawn(
   ],
   { env: dockerEnvironment, stdio: ["ignore", "pipe", "pipe"] },
 );
+const eventClosed = new Promise((done) => eventChild.once("close", done));
 let pendingEvents = "";
 eventChild.stdout.on("data", (bytes) => {
   pendingEvents += bytes.toString();
@@ -143,9 +145,10 @@ const writeReceipt = () =>
     ),
     { mode: 0o600 },
   );
-const startup = (plans = installed.plans, overrides = {}) =>
+const startup = (plans = installed.plans, overrides = {}, nativeOptions = {}) =>
   createOperationHookHost(
     JSON.stringify({ runtime, inlineCommandSha256: [], resourcePlans: plans, ...overrides }),
+    nativeOptions,
   );
 function traced(host) {
   const trace = [],
@@ -197,6 +200,7 @@ async function review(
   {
     controller = new AbortController(),
     assertOwner = () => {},
+    beforeRead = () => {},
     expectedReads = 1,
     reject = false,
   } = {},
@@ -213,6 +217,7 @@ async function review(
       approveRead: async () => true,
       hookProcesses: host.hookProcesses,
     });
+    await beforeRead();
     value = await reader.read("get_repository", "synthetic", { owner: "fixture", repo: "repo" });
   } catch (caught) {
     error = String(caught);
@@ -369,10 +374,91 @@ try {
   await active.dispose();
   active = undefined;
 
+  const { beginFiniteHookMetrics, endFiniteHookMetrics } =
+    await import("./fixtures/finite-hook-metrics.mjs");
+  const nativeState = join(home, "native-custom-state"),
+    realTemp = join(home, "native-real-tmp"),
+    realNativeHome = join(home, "native-real-home"),
+    realSensitive = join(home, "native-real-user-data");
+  for (const path of [nativeState, realTemp, realNativeHome, realSensitive]) mkdirSync(path);
+  const tempAlias = join(home, "native-tmp-alias"),
+    homeAlias = join(home, "native-home-alias"),
+    stateAlias = join(home, "native-state-alias"),
+    sensitiveAlias = join(home, "native-sensitive-alias");
+  for (const [actual, alias] of [
+    [realTemp, tempAlias],
+    [realNativeHome, homeAlias],
+    [nativeState, stateAlias],
+    [realSensitive, sensitiveAlias],
+  ])
+    symlinkSync(actual, alias);
+  const priorTmp = process.env.TMPDIR;
+  try {
+    process.env.TMPDIR = tempAlias;
+    for (const [name, path, nativeOptions] of [
+      [
+        "actual-state-override-runtime-secret-before-open",
+        join(nativeState, "serve/project-runtime-secrets/fixture/runtime.json"),
+        { stateRoot: stateAlias },
+      ],
+      [
+        "actual-state-override-registry-before-open",
+        join(nativeState, "serve/project-control/registry.json"),
+        { stateRoot: stateAlias },
+      ],
+      [
+        "canonical-native-temp-cookie-lease-before-open",
+        join(realTemp, "codeshell-cookie-leases/fixture/cookies.json"),
+        {},
+      ],
+      [
+        "canonical-native-home-credential-before-open",
+        join(realNativeHome, ".aws/fixture-data"),
+        { nativeHome: homeAlias },
+      ],
+      [
+        "canonical-native-user-data-before-open",
+        join(realSensitive, "fixture-data"),
+        { sensitiveRoots: [sensitiveAlias] },
+      ],
+    ]) {
+      mkdirSync(join(path, ".."), { recursive: true });
+      const bytes = Buffer.from("synthetic credential-container exclusion fixture");
+      writeFileSync(path, bytes);
+      const plans = structuredClone(installed.plans),
+        selected = plans.find(
+          (plan) => plan.source.kind === "settings" && plan.event === "pre_tool_use",
+        );
+      selected.files[0] = {
+        ...selected.files[0],
+        source: realpathSync(path),
+        bytes: bytes.length,
+        sha256: hash(bytes),
+      };
+      active = startup(plans, {}, nativeOptions);
+      const trace = traced(active);
+      beginFiniteHookMetrics({ sourcePath: realpathSync(path), resourceRoot: join(path, "..") });
+      await review(name, active, { reject: true, expectedReads: 0 });
+      const metrics = endFiniteHookMetrics();
+      assert.equal(metrics.sourceOpenCalls, 0);
+      assert.equal(metrics.sourceReadBytes, 0);
+      assert.equal(trace.captures(), 0);
+      results.at(-1).beforeOpen = { metrics, captures: trace.captures() };
+      await active.dispose();
+      active = undefined;
+    }
+  } finally {
+    if (priorTmp === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = priorTmp;
+  }
+
   active = startup();
   await review("plugin-approval-control", active);
-  revokePluginHooks(installed.pluginKey);
-  await review("plugin-approval-revoked", active, { reject: true, expectedReads: 0 });
+  await review("plugin-approval-revoked-within-current-review", active, {
+    beforeRead: () => revokePluginHooks(installed.pluginKey),
+    reject: true,
+    expectedReads: 0,
+  });
   await active.dispose();
   active = undefined;
 
@@ -471,8 +557,11 @@ try {
   writeReceipt();
   throw error;
 } finally {
-  await active?.dispose();
-  eventChild.kill("SIGTERM");
-  await new Promise((done) => eventChild.once("close", done));
-  await new Promise((done) => server.close(done));
+  try {
+    await active?.dispose();
+  } finally {
+    eventChild.kill("SIGTERM");
+    await eventClosed;
+    await new Promise((done) => server.close(done));
+  }
 }

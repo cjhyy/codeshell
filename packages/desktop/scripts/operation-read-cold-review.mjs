@@ -2,7 +2,7 @@
 /* global Event, localStorage, window */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -15,6 +15,8 @@ import {
 const home = await realpath(process.argv[2]);
 assert.equal(home, process.env.HOME);
 const config = JSON.parse(await readFile(join(home, "read-fixture.json"), "utf8"));
+const lateRoot = process.argv[3] === "--late-root";
+assert.ok(!lateRoot || config.finiteResources);
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = {
   home,
@@ -29,6 +31,12 @@ const fixture = await prepareConfinedElectronFixture({
 });
 let app;
 try {
+  if (lateRoot)
+    await writeFile(
+      fixture.mainEntry,
+      (await readFile(fixture.mainEntry, "utf8")) +
+        `\nglobalThis.__readCustody = (await import(${JSON.stringify(config.helperUrl)})).installOperationReadFixture(await import(${JSON.stringify(config.coreUrl)}), ${JSON.stringify(config.origin)}, "review");\n`,
+    );
   app = await launchCodeShellElectron({
     appDir,
     ...isolated,
@@ -100,8 +108,72 @@ try {
   );
   assert.equal(errors.length, 0);
   assert.doesNotMatch(await card.innerText(), /synthetic-account|synthetic-grant/);
+  if (lateRoot) {
+    const ledgerPath = join(isolated.codeShellHome, "sessions/.operations/ledger.json");
+    const before = JSON.parse(await readFile(ledgerPath, "utf8"));
+    const originalCount = Object.values(before.observations ?? {}).flat().length;
+    const changedRoot = join(home, "late-native-state-root");
+    await mkdir(join(changedRoot, "serve/project-runtime-secrets/fixture"), { recursive: true });
+    await writeFile(
+      join(changedRoot, "serve/project-runtime-secrets/fixture/runtime.json"),
+      '{"synthetic":"credential-container"}',
+    );
+    await app.evaluate(({ dialog }, changedRoot) => {
+      dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
+      // A trusted native-process environment change after startup reproduces
+      // late login-shell state-root adoption. This does not claim the shell ran.
+      process.env.CODE_SHELL_HOME = changedRoot;
+    }, changedRoot);
+    await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
+    let observed;
+    for (let attempt = 0; ; attempt++) {
+      const after = JSON.parse(await readFile(ledgerPath, "utf8"));
+      const rows = Object.values(after.observations ?? {}).flat();
+      if (
+        rows.length === originalCount + 1 &&
+        (await card.getByRole("button", { name: "Read-only review…", exact: true }).isEnabled())
+      ) {
+        observed = rows.at(-1);
+        assert.equal(observed.result, "hooks_unavailable");
+        assert.deepEqual(after.records, before.records);
+        break;
+      }
+      if (attempt > 150) throw new Error("Cold native writer-root drift observation missing");
+      await new Promise((done) => setTimeout(done, 100));
+    }
+    // Restoring the ambient value cannot repair this lifetime's native custody.
+    await app.evaluate((_electron, stateRoot) => {
+      process.env.CODE_SHELL_HOME = stateRoot;
+    }, isolated.codeShellHome);
+    await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
+    for (let attempt = 0; ; attempt++) {
+      const after = JSON.parse(await readFile(ledgerPath, "utf8"));
+      const rows = Object.values(after.observations ?? {}).flat();
+      if (
+        rows.length === originalCount + 2 &&
+        (await card.getByRole("button", { name: "Read-only review…", exact: true }).isEnabled())
+      ) {
+        assert.equal(rows.at(-1).result, "hooks_unavailable");
+        assert.deepEqual(after.records, before.records);
+        break;
+      }
+      if (attempt > 150) throw new Error("Cold native writer-root sticky rejection missing");
+      await new Promise((done) => setTimeout(done, 100));
+    }
+    receipt.lateRoot = {
+      initial: isolated.codeShellHome,
+      changed: changedRoot,
+      unavailable: observed.result,
+      restoredStillUnavailable: true,
+      mechanism:
+        "Actual native process.env change after cold Main startup, matching the checked late-writer-root condition; no claim that a login shell executed.",
+    };
+  }
   await win.screenshot({ path: join(home, "evidence/cold-restart.png") });
-  await writeFile(join(home, "evidence/cold-main.json"), JSON.stringify(receipt, null, 2));
+  await writeFile(
+    join(home, lateRoot ? "evidence/cold-main-late-root.json" : "evidence/cold-main.json"),
+    JSON.stringify(receipt, null, 2),
+  );
 } finally {
   await app?.close();
 }

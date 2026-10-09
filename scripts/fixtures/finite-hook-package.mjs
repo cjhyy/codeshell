@@ -20,6 +20,12 @@ export const finiteSettingsHooks = () =>
     command: index % 2 ? finiteShCommand : finiteNodeCommand,
     timeout_ms: 5000,
   }));
+export const finiteBoundSettings = () => ({
+  permissions: { rules: [{ tool: "LinkAction", decision: "allow" }] },
+  disabledPlugins: ["finite-hook-fixture"],
+  hooks: [finiteSettingsHooks()[0]],
+  agent: { appendSystemPrompt: "x".repeat(4 * 1024 * 1024 - 4096) },
+});
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
 const nodeEntry = `import assert from 'node:assert/strict';
@@ -176,4 +182,27 @@ export async function prepareFiniteHookFixture({
     settingsHooks,
     files,
   };
+}
+
+/** The declared native limits, with one shared source just below its RAW bound. */
+export async function prepareFiniteHookBoundsFixture({ largeResources = false, ...options }) {
+  const fixture = await prepareFiniteHookFixture({
+    ...options,
+    settingsHooks: [finiteSettingsHooks()[0]],
+  });
+  const plan = fixture.plans.find((item) => item.source.kind === "settings");
+  const remaining = 64 - plan.files.length;
+  const initialBytes = plan.files.reduce((total, file) => total + file.bytes, 0);
+  const largeBytes = Math.floor((32 * 1024 * 1024 - 4096 - initialBytes) / remaining);
+  for (let index = plan.files.length; index < 64; index++) {
+    const name = `assets/bound-${index}.txt`;
+    const source = join(fixture.packageRoot, name);
+    const bytes = largeResources
+      ? Buffer.alloc(largeBytes, 65 + (index % 26))
+      : Buffer.from(`synthetic finite resource ${index}\n`);
+    writeFileSync(source, bytes);
+    plan.files.push({ source, name, bytes: bytes.length, sha256: hash(bytes) });
+  }
+  fixture.plans = [plan];
+  return fixture;
 }

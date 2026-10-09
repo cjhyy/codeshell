@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import {
   finiteSettingsHooks,
+  finiteBoundSettings,
   prepareFiniteHookFixture,
+  prepareFiniteHookBoundsFixture,
 } from "../../../scripts/fixtures/finite-hook-package.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,7 +23,8 @@ const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const hookRuntime = process.argv[2]
   ? JSON.parse(await readFile(process.argv[2], "utf8"))
   : undefined;
-const finiteResources = process.argv[3] === "--resources";
+const finiteBounds = process.argv[3] === "--resource-bounds";
+const finiteResources = finiteBounds || process.argv[3] === "--resources";
 assert.ok(!finiteResources || hookRuntime, "finite resources require the explicit trusted runtime");
 const literalHook = (value) => `printf '%s' '${JSON.stringify(value)}'`;
 const allowHook = literalHook({ decision: "allow" });
@@ -161,6 +164,7 @@ const harnessPaths = [
   "packages/desktop/scripts/operation-read-fixture.mjs",
   "packages/desktop/scripts/operation-read-guard.mjs",
   "scripts/fixtures/finite-hook-package.mjs",
+  "scripts/fixtures/finite-hook-metrics.mjs",
 ];
 const harnessFiles = Object.fromEntries(
   harnessPaths.map((path) => [
@@ -253,6 +257,7 @@ let app,
   success = false,
   physicalRequests = 0;
 let finiteFixture;
+let mainPerformance;
 const observations = [];
 const mainStderr = [];
 let rendererErrors = [];
@@ -326,6 +331,7 @@ try {
     },
   ];
   const positiveSettingsBytes = JSON.stringify({
+    ...(finiteBounds ? finiteBoundSettings() : {}),
     permissions: {
       rules: [
         { tool: "LinkAction", argsPattern: { action: "^get_starred$" }, decision: "ask" },
@@ -335,7 +341,9 @@ try {
     ...(hookRuntime
       ? {
           hooks: finiteResources
-            ? finiteSettingsHooks()
+            ? finiteBounds
+              ? [finiteSettingsHooks()[0]]
+              : finiteSettingsHooks()
             : toolEvents.map((event) => ({ event, command: allowHook })),
         }
       : {}),
@@ -410,8 +418,16 @@ try {
   );
   await writeFile(
     join(isolated.home, "read-fixture.json"),
-    JSON.stringify({ origin, helperUrl, coreUrl, sessionId, hookNegative: Boolean(hookRuntime) }),
+    JSON.stringify({
+      origin,
+      helperUrl,
+      coreUrl,
+      sessionId,
+      hookNegative: Boolean(hookRuntime),
+      finiteResources,
+    }),
   );
+  await writeFile(join(isolated.home, "positive-settings.json"), positiveSettingsBytes);
   await writeFile(
     join(isolated.home, "operation-read-source.json"),
     JSON.stringify(sourceEvidence),
@@ -424,12 +440,15 @@ try {
       Object.fromEntries(Object.entries(fixture.env).filter(([, value]) => value !== undefined)),
     );
     await import("./operation-read-guard.mjs");
-    finiteFixture = await prepareFiniteHookFixture({
+    finiteFixture = await (
+      finiteBounds ? prepareFiniteHookBoundsFixture : prepareFiniteHookFixture
+    )({
       coreUrl,
       home: isolated.home,
       cwd: projectRoot,
       settingsScope: "full",
       settingsBytes: positiveSettingsBytes,
+      largeResources: finiteBounds,
     });
     fixture.env.CODESHELL_OPERATION_HOOK_HOST = JSON.stringify({
       runtime: hookRuntime,
@@ -447,6 +466,9 @@ try {
   await writeFile(
     fixture.mainEntry,
     (await readFile(fixture.mainEntry, "utf8")) +
+      (finiteBounds
+        ? `\nglobalThis.__finiteHookMetrics = await import(${JSON.stringify(new URL("../../../scripts/fixtures/finite-hook-metrics.mjs", import.meta.url).href)}); await globalThis.__finiteHookMetrics.instrumentFiniteSettings(${JSON.stringify(coreUrl)});\n`
+        : "") +
       `\nglobalThis.__readCustody = (await import(${JSON.stringify(helperUrl)})).installOperationReadFixture(await import(${JSON.stringify(coreUrl)}), ${JSON.stringify(origin)}, "review");\n`,
   );
   stage = "launch guarded production Main";
@@ -646,10 +668,30 @@ try {
   await app.evaluate(() => {
     globalThis.__readDialogs.accept = true;
   });
+  if (finiteBounds)
+    await app.evaluate(
+      (_electron, paths) => {
+        globalThis.__finiteHookMetrics.beginFiniteHookMetrics(paths);
+        globalThis.__finiteHookMetrics.startFiniteHookProfile();
+      },
+      { sourcePath: settingsPath, resourceRoot: finiteFixture.packageRoot },
+    );
   await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
   await card
     .getByText(/Current state matches; this does not prove the original write succeeded/)
     .waitFor();
+  if (finiteBounds) {
+    mainPerformance = await app.evaluate(async () => ({
+      metrics: globalThis.__finiteHookMetrics.endFiniteHookMetrics(),
+      profile: await globalThis.__finiteHookMetrics.finishFiniteHookProfile(),
+      node: process.versions.node,
+      executable: process.execPath,
+    }));
+    await writeFile(
+      join(evidenceDir, "main-performance.json"),
+      JSON.stringify(mainPerformance, null, 2),
+    );
+  }
   assert.deepEqual(
     calls.slice(beforeReview).map((row) => [row.method, row.action, row.params]),
     [
@@ -758,6 +800,34 @@ try {
     beforeReview + 2,
     "cold viewing observation sends no provider request",
   );
+  let coldLateRoot;
+  if (finiteResources) {
+    await writeFile(settingsPath, positiveSettingsBytes);
+    await new Promise((done, reject) => {
+      const child = spawn(
+        process.execPath,
+        [
+          fileURLToPath(new URL("./operation-read-cold-review.mjs", import.meta.url)),
+          isolated.home,
+          "--late-root",
+        ],
+        { env: controllerEnv, stdio: "inherit" },
+      );
+      child.once("error", reject);
+      child.once("exit", (code) =>
+        code === 0 ? done() : reject(new Error(`Cold late-root controller failed (${code})`)),
+      );
+    });
+    coldLateRoot = JSON.parse(
+      await readFile(join(evidenceDir, "cold-main-late-root.json"), "utf8"),
+    );
+    assert.equal(
+      calls.length,
+      beforeReview + 2,
+      "cold native writer-root drift sends no provider request",
+    );
+    await writeFile(settingsPath, JSON.stringify({ permissions: { rules: readRules } }));
+  }
   stage = "cold actual Engine original replay and new intent remain blocked";
   engine = createEngine();
   assert.equal((await run("original-intent")).reason, "unverified_write");
@@ -785,7 +855,7 @@ try {
       {
         success,
         stage,
-        processes: { ...processes, cold },
+        processes: { ...processes, cold, coldLateRoot },
         source: sourceEvidence,
         calls,
         physicalRequests,
@@ -793,6 +863,7 @@ try {
         constrainedHookRuntime: hookRuntime ?? null,
         finiteResourcePlans: finiteFixture?.plans ?? null,
         actualPluginApproval: finiteFixture?.approval ?? null,
+        mainPerformance,
         checks: [
           "actual compiled Engine unknown",
           "actual synthetic HTTP fixed GETs only",
