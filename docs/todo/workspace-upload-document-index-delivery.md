@@ -48,19 +48,26 @@ Profile、workspace binding、Session pin、`ReadSource` permission 和精确 re
 
 单 Host 最多 2 个解析进程、16 个排队请求；队列满时返回忙碌提示。运行时 resolver 的等待有独立 15 秒上限并可取消；解析进程默认 15 秒超时，取消/超时杀掉子进程并等待 close 后释放槽。Node/Electron 子进程设置 192 MiB V8 堆上限；这不是整个进程 RSS 的操作系统硬上限。
 
-派生索引存于项目 `.code-shell/source-index/`，新目录权限 0700、索引文件 0600，以临时文件原子发布。文件名是资源 ID 哈希，索引版本与实际原文件内容哈希绑定。磁盘缓存属于 workspace 可写数据，不能凭其自行声明的 hash/chunk ID 认证正文：冷启动始终从原件重新解析后替换它。当前进程只复用自己实际解析并冻结的索引，按原件哈希与 parser version 匹配；内存 LRU 最多 32 项/8 MiB。伪造合法形状的缓存不能进入结果。索引含提取的明文，请按项目资料保护该目录。
+派生索引只保存在当前 Host 的 trusted 内存中，不新建派生磁盘文件。只有本进程从原件实际解析并冻结的索引可以复用；key 绑定 canonical workspace、资源 ID、实际内容 SHA-256 和 parser version。LRU 最多 32 项，且序列化后的索引合计最多 8 MiB；这不是 Host RSS 的硬上限。超出任一预算即逐出最久未使用项，下一次读取重新解析原件；冷启动同样重新解析原件。
 
-Desktop 覆盖/删除上传时清除对应索引；外部编辑在下次读取时靠实际内容哈希失效，即使恢复原大小/mtime 也不能命中旧版本。外部删除原文件后派生文件可能留在磁盘，不能单独提供内容；当前无全项目索引容量管理或孤儿清理。删除整个 `source-index` 可以重建缓存。
+Desktop 覆盖/删除上传时只失效对应 canonical workspace/resource 的进程内缓存；外部编辑在下次读取时靠实际内容哈希失效，即使恢复原大小/mtime 也不能命中旧版本。外部删除原件后缓存不能单独提供内容，保留的内存仍受上述预算约束。
+
+旧版 `.code-shell/source-index/` 不再读取、遍历、迁移、覆盖或自动删除；其中损坏、不可写的文件/目录及链接都不参与原件读取。旧文件可能含提取明文，仍应按项目资料保护；本次没有声称已经回收它们。原上传文件及其既有权限/生命周期保持不变。本次只停止无生产读者的派生落盘，不提供原上传、旧遗留文件或全项目磁盘配额，也不根据名字/JSON 形状猜测未知文件的归属并删除。
 
 ## 验证证据
 
+本次内存生命周期跟进使用 fresh frozen install、私有 HOME 和编译后的真实解析路径：Source/ReadSource/Desktop 上传组合 122 项全部通过、零跳过；真实 Node 22.16.0 和 Electron 20.18.3 → verified managed Node 24.21.0 均完成 Office/PDF、替换/删除和独立冷进程验收。Host 与冷 consumer 的实际 PID/PPID、Node 版本和相同 HOME hash 有运行输出；legacy 中原件硬链接在原件原子替换/删除后仍保留原字节。以下解析、打包和较广集成的原始交付记录保留其验收范围，不代表本次重新执行了全部历史套件或已发布新版本。
+
+本次另完成 9 tarball / 47 声明入口 / 45 运行入口的发布包门槛、12 包类型检查及真实 Desktop `predist` / ASAR Office+PDF 验收。当前 macOS arm64 fixture 的归档为 179,525 字节，unpacked 解析闭包为 63,385,807 字节，完整 Core production 闭包为 154,305,667 字节；这些是本地运行文件体积，不是安装器或其它平台发布证明。
+
 - 真实 ZIP/XML DOCX/PPTX/XLSX 与真实 PDF fixtures：文本、关系顺序、缓存公式、Unicode、XXE/压缩量界限、重复大 shared string 的增量预算、非法二进制、截断、活动取消/超时与满队列恢复。
-- 真实 `ReadSource` / `ToolExecutor`：中文查询、缓存复用、精确文件 deny、Profile deny、解析时撤权/覆盖、损坏缓存/符号链接、同字节目录替换、伪造正文磁盘 cache 的 warm/cold 拒绝、脱敏和来源包裹。
-- Desktop 上传服务：覆盖与删除清除已有实际派生索引。
+- 真实 `ReadSource` / `ToolExecutor`：中文查询、精确文件 deny、Profile deny、解析时撤权/覆盖、同字节目录和原件替换、cold/warm 取消、脱敏和来源包裹。真实解析的对象身份验证 32 项与 8 MiB LRU 淘汰、冻结、canonical workspace/resource 缓存隔离。
+- 读取、覆盖与删除不产生新派生磁盘文件；损坏/大体积/不可写 legacy 文件、路径处的普通文件、符号链接目录和硬链接内容均保持字节不变。Desktop 上传服务只替换/删除原件并失效对应内存，不接管 legacy 文件。
 - 官方 SHA-256 验证的 Node 20.10.0 / 22.13.0 / 22.16.0 跑编译后的生产 Core/ToolExecutor/解析子进程；前者验证 Office 与 PDF 版本门禁，后两者验证真实 PDF。另实际暂时移除可选 PDF 包验证缺依赖说明；已还原。
 - Electron RunAsNode 跑相同生产路径，验证实际 Node 20.18.3 → manifest/hash 验证的 managed Node 24.21.0 → 真 PDF 子进程。CI 增加三个原生 Node 版本烟测及 Electron managed PDF 烟测。
 - 实际执行 Desktop `predist`，可选 PDF 包及 native canvas 闭包保留。用真实 ASAR 归档与相同 unpack 规则验收：Electron 从归档载入生产 worker，Office 走 Electron 子进程，PDF 走物理 unpacked 入口/依赖 + verified managed Node，均读取真实文本。macOS arm64 fixture 的归档为 182,518 字节、unpacked 解析闭包为 63,385,807 字节（约 60.45 MiB）；完整 Core production 闭包约 154.08 MB，没有全部展开。此数据为运行文件体积，不能等同完整安装器压缩体积；其它平台/架构的 native canvas 需各自打包 runner 验收。
-- 发布包门槛通过 9 个 tarball / 47 个声明入口，另在实际打包后的 SDK consumer 执行解析/查询/覆盖/删除及伪造冷缓存拒绝；不使用付费模型或第三方账号，不把 fixture 当成真实用户资料覆盖率。
+- 发布包门槛覆盖 9 个 tarball / 47 个声明入口，实际打包后的 SDK consumer 执行解析/查询/覆盖/删除，确认派生落盘为零、warm/cold 真实原件解析和 legacy 字节保留；不使用付费模型或第三方账号，不把 fixture 当成真实用户资料覆盖率。
 - 合并成本账本与 Operation Controller main 后的最终组合检查：1,456 项 Source/完整 ToolSystem/Link/Operation/Engine/账本/Desktop 测试通过，3 项真实模型测试跳过；12 包类型与变更生产代码 ESLint 通过。真实 SDK 写操作独立回读/重启不重复发送烟测及最新 Desktop production/managed PDF/ASAR 均通过；既有 Workspace 页面 Electron 验收通过。
 - CI 测试分片与覆盖率门槛同时要求子进程成功退出和完整、数量一致、零失败的 JUnit 报告；提前退出、空运行、截断或不一致报告明确失败。配置单测改用无启动副作用的 stdio helper，真实 worker 的 parent-EOF 清理保持不变。完整 Core rest 分片实际执行 2,897 项测试/407 个文件，零失败并生成完整报告；架构预算按当前实际接线、IPC 与导出数量逐项说明，不预留未来功能增长。
 - 默认 Bun 分片、原生 Node/Electron 上传烟测、ASAR 内层 Electron 与打包 SDK 的运行 consumer 共用私有环境 helper：在载入 Core 前设置 canonical 私有 HOME/USERPROFILE/CodeShell/XDG/AppData 目录，并只保留明确的工具链、浏览器与 CI 变量；不继承操作人的 Host 配置、任意认证变量或代理。正常完成或失败后仅清理调用方持有的临时目录。真实模型 SDK 的 localhost fixtures 另保留各自精确端点约束。
+- 上述原生上传与 packed SDK fixture 的 Host/cold consumer、ASAR 内层在动态载入 Core 前禁止 fetch、HTTP(S) 与原始 TCP/TLS 连接，并使用合成的进程内 LLM 响应；这是测试进程内防护，不是操作系统网络沙箱。解析子进程仍按生产规则仅继承 PATH/必要系统变量和 Electron Node 模式，不传 HOME 或 Host 配置，不实例化 Core/自动化；不能把 Host 私有 HOME 的证据外推为所有解析子进程均继承 HOME。

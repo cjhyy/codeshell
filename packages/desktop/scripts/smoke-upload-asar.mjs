@@ -96,15 +96,21 @@ try {
     parent,
     `
     import assert from "node:assert/strict";
-    import { parseDocumentIsolated } from ${JSON.stringify(pathToFileURL(join(archive, "node_modules/@cjhyy/code-shell-core/dist/sources/documents/worker.js")).href)};
-    import { createManagedDocumentParserResolver } from ${JSON.stringify(pathToFileURL(join(repo, "packages/core/dist/sources/documents/runtime.js")).href)};
+    import { createHash } from "node:crypto";
+    import { denyDocumentSmokeNetwork } from ${JSON.stringify(pathToFileURL(join(repo, "scripts/upload-document-smoke-isolation.mjs")).href)};
+    denyDocumentSmokeNetwork();
+    const { parseDocumentIsolated } = await import(${JSON.stringify(pathToFileURL(join(archive, "node_modules/@cjhyy/code-shell-core/dist/sources/documents/worker.js")).href)});
+    const { createManagedDocumentParserResolver } = await import(${JSON.stringify(pathToFileURL(join(repo, "packages/core/dist/sources/documents/runtime.js")).href)});
     import { officeZip, wordXml, textPdf } from ${JSON.stringify(pathToFileURL(join(repo, "tests/fixtures/upload-documents.mjs")).href)};
     const resolveExecutable = createManagedDocumentParserResolver(${JSON.stringify(join(desktop, "out/managed-runtimes"))});
     const pdf = await parseDocumentIsolated(textPdf("ASAR native PDF text"), "file.pdf", { resolveExecutable });
     assert.ok(pdf.parts[0].text.includes("ASAR native PDF text"));
     const office = await parseDocumentIsolated(officeZip({"word/document.xml":wordXml("ASAR Office 文本")}), "brief.docx");
     assert.ok(office.parts[0].text.includes("ASAR Office 文本"));
-    console.log(JSON.stringify({ hostNode: process.versions.node, pdf: "asar-to-unpacked-managed-node", office: "asar-electron-child" }));
+    assert.equal(process.env.USERPROFILE, process.env.HOME);
+    console.log(JSON.stringify({ hostNode: process.versions.node, pid:process.pid, ppid:process.ppid,
+      homeSha256:createHash("sha256").update(process.env.HOME).digest("hex"),
+      pdf: "asar-to-unpacked-managed-node", office: "asar-electron-child" }));
   `,
   );
   const result = spawnSync(electron, [parent], {
