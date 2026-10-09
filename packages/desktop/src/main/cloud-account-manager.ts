@@ -399,8 +399,11 @@ export class CloudAccountManager {
           } catch (error) {
             this.saved = undefined;
             this.publish("storage-error");
-            await this.retire(saved);
-            void this.revoke(next);
+            try {
+              await this.retire(saved);
+            } finally {
+              void this.revoke(next);
+            }
             throw error;
           }
           this.saved = next;
