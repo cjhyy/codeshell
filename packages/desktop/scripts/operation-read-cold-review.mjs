@@ -88,7 +88,11 @@ try {
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
   await card
-    .getByText(/Current state matches; this does not prove the original write succeeded/)
+    .getByText(
+      config.hookNegative
+        ? /Configured tool hooks/
+        : /Current state matches; this does not prove the original write succeeded/,
+    )
     .waitFor();
   assert.equal(
     await card.getByRole("button", { name: "Accept after manual review…", exact: true }).count(),

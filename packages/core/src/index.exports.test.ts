@@ -101,11 +101,13 @@ const expectedRuntimeExportsByPartition = {
   ],
   logging: ["rotateLogs", "recordUIEvent"],
   managedRuntimes: [
+    "createConstrainedDockerProcessHost",
     "createManagedRuntimeProvider",
     "ManagedRuntimeError",
     "createManagedDocumentParserResolver",
   ],
   toolSystemAndHostServices: [
+    "createOperationHookHost",
     "createLinkOperationReviewStore",
     "getInteractiveApprovalBackend",
     "defaultSandboxConfig",
@@ -282,6 +284,8 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "createConstrainedDockerProcessHost",
+  "createOperationHookHost",
   "ModelRequestKeyStore",
   "assertDurableRequestOwner",
   "createIpcModelRequestSigner",

@@ -3,15 +3,14 @@ import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 import { resolveRunProfileState } from "../engine/run-setup.js";
 import { composePermissionRules } from "../engine/permission-controller.js";
 import { buildToolVisibility } from "../engine/run-tooling.js";
-import { effectiveProjectOverrides } from "../capability-control/overlay.js";
+import { effectiveBuiltinLists, effectiveProjectOverrides } from "../capability-control/overlay.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
-import { listPluginHooks, matcherAccepts } from "../plugins/loadPluginHooks.js";
-import { shellHookMatches } from "../hooks/shell-runner.js";
+import { prepareConfiguredToolHooks } from "../hooks/configured-tool-hooks.js";
+import { createOperationHookRegistry, type OperationHookProcesses } from "./operation-hooks.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { PermissionClassifier } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
-import type { HookEventName } from "../hooks/events.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { asRecord } from "./http.js";
@@ -40,57 +39,39 @@ export function createGithubOperationReader(options: {
   approveRead(action: GithubReconcileRead, target: string): Promise<boolean>;
   signal: AbortSignal;
   hooks?: HookRegistry;
+  /** Trusted native Host custody only; never supplied by model/renderer input. */
+  hookProcesses?: OperationHookProcesses;
 }) {
-  const readHookEvents = new Set([
-    "pre_tool_use",
-    "on_permission_check",
-    "on_tool_start",
-    "on_tool_end",
-    "post_tool_use",
-  ]);
   const policy = () => {
     const settings = new SettingsManager(options.cwd, options.settingsScope, true);
+    settings.load(undefined, { persistMigrations: false });
     const profile = resolveRunProfileState({
       sessionWorkspaceProfile: options.sessionProfile,
       cwd: options.cwd,
       settings,
     });
-    const disabled =
-      effectiveProjectOverrides(settings, options.cwd, profile.sessionProfileOverrides)?.builtin
-        ?.LinkAction === "off";
+    const builtinLists = effectiveBuiltinLists(
+      settings.get().agent.enabledBuiltinTools ?? [],
+      settings.get().agent.disabledBuiltinTools ?? [],
+      effectiveProjectOverrides(settings, options.cwd, profile.sessionProfileOverrides)?.builtin,
+    );
+    const disabled = builtinLists.disabledBuiltinTools.includes("LinkAction");
     const disabledLists = computeEffectiveDisabledLists(
       settings,
       options.cwd,
       profile.sessionProfileOverrides,
     );
-    // This independent Host owns no resident Engine hook registry. Never run
-    // shell/plugin code merely to reconstruct one, or silently skip configured
-    // executable policy. Disabled and not-yet-approved plugin hooks do not run
-    // in Engine either. The caller may still use manual uncertainty acceptance.
-    const configuredHooks = [
-      ...(settings.get().hooks ?? []).filter(
-        (hook) =>
-          !hook.disabled &&
-          readHookEvents.has(hook.event) &&
-          shellHookMatches(hook, {
-            eventName: hook.event as HookEventName,
-            data: { toolName: "LinkAction" },
-          }),
-      ),
-      ...listPluginHooks(disabledLists.disabledPlugins).filter(
-        (hook) =>
-          !hook.disabled &&
-          !disabledLists.disabledPluginHooks.includes(hook.key) &&
-          ["approved", "legacy"].includes(hook.approval) &&
-          readHookEvents.has(hook.event) &&
-          matcherAccepts(hook.event, hook.matcher, {
-            eventName: hook.event,
-            data: { toolName: "LinkAction" },
-          }),
-      ),
-    ];
-    if (configuredHooks.length) throw new OperationReadFailure("hooks_unavailable");
+    const configuredHooks = prepareConfiguredToolHooks({
+      settings,
+      cwd: options.cwd,
+      settingsScope: options.settingsScope,
+      disabledPlugins: disabledLists.disabledPlugins,
+      disabledPluginHooks: disabledLists.disabledPluginHooks,
+      toolName: "LinkAction",
+    });
     return {
+      settings,
+      configuredHooks,
       profileName: profile.workspaceProfile?.name ?? null,
       disabled,
       revision: createHash("sha256")
@@ -99,17 +80,35 @@ export function createGithubOperationReader(options: {
             settings.get().permissions ?? null,
             profile.workspaceProfile ?? null,
             disabled,
+            builtinLists,
+            configuredHooks.revision,
           ]),
         )
         .digest("hex"),
     };
   };
   const original = policy();
+  if (original.configuredHooks.descriptors.length && !options.hookProcesses)
+    throw new OperationReadFailure("hooks_unavailable");
+  let configured: ReturnType<typeof createOperationHookRegistry> | undefined;
   const assertAuthorized = () => {
     options.assertAuthorized();
-    if (options.signal.aborted || policy().revision !== original.revision)
-      throw new Error("Operation read policy changed");
+    configured?.assertResourcesCurrent();
+    if (options.signal.aborted) throw new Error("Operation read cancelled");
+    if (policy().revision !== original.revision) throw new Error("Operation read policy changed");
   };
+  if (original.configuredHooks.descriptors.length) {
+    try {
+      configured = createOperationHookRegistry({
+        descriptors: original.configuredHooks.descriptors,
+        processes: options.hookProcesses!,
+        signal: options.signal,
+        assertAuthorized,
+      });
+    } catch {
+      throw new OperationReadFailure("hooks_unavailable");
+    }
+  }
   const registry = new ToolRegistry({ builtinTools: ["LinkAction"] });
   let pending: { action: GithubReconcileRead; target: string } | undefined;
   const permission = new PermissionClassifier(
@@ -118,6 +117,7 @@ export function createGithubOperationReader(options: {
       cwd: options.cwd,
       settingsScope: options.settingsScope,
       projectTrusted: true,
+      settings: original.settings,
       presetRules: [{ tool: "LinkAction", decision: "allow" }],
     }),
     "default",
@@ -131,7 +131,13 @@ export function createGithubOperationReader(options: {
       },
     },
   );
-  const executor = new ToolExecutor(registry, permission, options.hooks ?? new HookRegistry());
+  // Configured executable policy owns its fresh registry; resident Engine or
+  // injected test handlers cannot replace or erase its failure latch.
+  const executor = new ToolExecutor(
+    registry,
+    permission,
+    configured?.registry ?? options.hooks ?? new HookRegistry(),
+  );
   executor.setSignal(options.signal);
   executor.setContext({
     cwd: options.cwd,
@@ -155,26 +161,42 @@ export function createGithubOperationReader(options: {
   return {
     profileName: original.profileName,
     assertAuthorized,
+    close: async () => {
+      await configured?.close();
+    },
     async read(action: GithubReconcileRead, connectionId: string, params: Record<string, unknown>) {
       if (!["get_repository", "get_starred", "get_issue"].includes(action))
         throw new Error("Unsupported operation read");
       assertAuthorized();
       const args = JSON.parse(JSON.stringify({ provider: "github", action, connectionId, params }));
       const pinnedInput = JSON.stringify(args);
+      configured?.bind(pinnedInput);
       pending = {
         action,
         target: `${params.owner}/${params.repo}${params.issue_number ? `#${params.issue_number}` : ""}`,
       };
-      const execution = await executor.executeSingle(
-        {
-          id: `operation-read-${randomUUID()}`,
-          toolName: "LinkAction",
-          args,
-        },
-        { pinnedInput, assertAuthorized },
-      );
-      pending = undefined;
+      let execution;
+      try {
+        execution = await executor.executeSingle(
+          {
+            id: `operation-read-${randomUUID()}`,
+            toolName: "LinkAction",
+            args,
+          },
+          {
+            pinnedInput,
+            assertAuthorized: () => {
+              assertAuthorized();
+              configured?.assertBeforeProvider();
+            },
+          },
+        );
+      } finally {
+        pending = undefined;
+      }
       assertAuthorized();
+      const hookFailure = configured?.result();
+      if (hookFailure) throw new OperationReadFailure(hookFailure);
       const result = boundToolResult(execution);
       if (result.isError || typeof result.result !== "string")
         throw new OperationReadFailure("permission_denied");

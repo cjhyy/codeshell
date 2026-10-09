@@ -19,9 +19,13 @@ import {
 } from "./operation-reader.js";
 import { observeGithubOperation } from "./operation-reconcile.js";
 import { readOperationSessionOwner } from "../operations/session-owner.js";
+import type { OperationHookProcesses } from "./operation-hooks.js";
 
 /** Host-only Link adapter for existing activity review; provider semantics stay outside generic operations. */
-export function createLinkOperationReviewStore(root: string) {
+export function createLinkOperationReviewStore(
+  root: string,
+  host?: { hookProcesses?: OperationHookProcesses },
+) {
   const store = new OperationReviewStore(root, legacyLinkOperationEvidence);
   return {
     review: store.review.bind(store),
@@ -173,6 +177,7 @@ export function createLinkOperationReviewStore(root: string) {
             assertAuthorized: assertCurrent,
             approveRead: options.approveRead,
             signal: AbortSignal.any([invalidated.signal, AbortSignal.timeout(30_000)]),
+            hookProcesses: host?.hookProcesses,
           });
         } catch (error) {
           if (!(error instanceof OperationReadFailure) || error.result !== "hooks_unavailable")
@@ -190,48 +195,56 @@ export function createLinkOperationReviewStore(root: string) {
             ),
           );
         }
-        if (policy && policy.workspaceProfileName !== reader.profileName) return unavailable();
-        const attempted: string[] = [];
-        let result: Awaited<ReturnType<typeof observeGithubOperation>>;
         try {
-          result = await observeGithubOperation({
-            plan,
-            receipt: original.receipt,
-            identity: asRecord(payload?.identity),
-            assertAuthorized: assertCurrent,
-            read: (action, params) => {
-              assertCurrent();
-              attempted.push(`github.${action}`);
-              if (!allowsLinkAction(connection!, "github", action))
-                throw new OperationReadFailure("permission_denied");
-              return reader.read(action, connection!.id, params);
-            },
-          });
-        } catch (error) {
+          if (policy && policy.workspaceProfileName !== reader.profileName) return unavailable();
+          const attempted: string[] = [];
+          let result: Awaited<ReturnType<typeof observeGithubOperation>>;
+          try {
+            result = await observeGithubOperation({
+              plan,
+              receipt: original.receipt,
+              identity: asRecord(payload?.identity),
+              assertAuthorized: assertCurrent,
+              read: (action, params) => {
+                assertCurrent();
+                attempted.push(`github.${action}`);
+                if (!allowsLinkAction(connection!, "github", action))
+                  throw new OperationReadFailure("permission_denied");
+                return reader.read(action, connection!.id, params);
+              },
+            });
+          } catch (error) {
+            reader.assertAuthorized();
+            result = {
+              result: error instanceof OperationReadFailure ? error.result : "unavailable",
+              actions: attempted,
+              evidence: { reason: "fixed_read_unavailable" },
+            };
+          }
           reader.assertAuthorized();
-          result = {
-            result: error instanceof OperationReadFailure ? error.result : "unavailable",
-            actions: attempted,
-            evidence: { reason: "fixed_read_unavailable" },
+          // Publish only after all actual Hook containers/descendants have been
+          // proven stopped and removed, including normal completion.
+          await reader.close();
+          reader.assertAuthorized();
+          const observation = store.observe(
+            sessionId,
+            owner,
+            id,
+            revision,
+            result.result,
+            result.actions,
+            JSON.parse(canonicalOperationValue(result.evidence)),
+            reader.assertAuthorized,
+          );
+          return {
+            id: observation.id,
+            at: observation.at,
+            result: observation.result,
+            actions: observation.actions,
           };
+        } finally {
+          await reader.close();
         }
-        reader.assertAuthorized();
-        const observation = store.observe(
-          sessionId,
-          owner,
-          id,
-          revision,
-          result.result,
-          result.actions,
-          JSON.parse(canonicalOperationValue(result.evidence)),
-          reader.assertAuthorized,
-        );
-        return {
-          id: observation.id,
-          at: observation.at,
-          result: observation.result,
-          actions: observation.actions,
-        };
       } finally {
         unsubscribe?.();
         invalidated.abort();

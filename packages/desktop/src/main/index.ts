@@ -1,4 +1,5 @@
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
+import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
@@ -6948,16 +6949,16 @@ const taskInboxService = createTaskInboxService({
 });
 taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
-  registerOperationResolutionHost({
-    windows: () => [...mainWindows],
-    enabled: taskInboxEnabled,
-    isSessionRunning: (id) =>
-      taskInboxAutomationSessions.has(id) ||
-      !!bridge?.isSessionRunning(id) ||
-      !!externalRuntimeService?.isSessionRunning(id),
-  }),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+const disposeOperationResolutionHost = registerOperationResolutionHost({
+  windows: () => [...mainWindows],
+  enabled: taskInboxEnabled,
+  isSessionRunning: (id) =>
+    taskInboxAutomationSessions.has(id) ||
+    !!bridge?.isSessionRunning(id) ||
+    !!externalRuntimeService?.isSessionRunning(id),
+});
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   await deleteRunDir(runId);
@@ -7120,79 +7121,71 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-let quitCleanupPromise: Promise<void> | undefined;
-let quitCleanupDone = false;
-app.on("before-quit", (event) => {
-  if (!ownsDesktopInstance) return;
-  if (quitCleanupDone) return;
-  event.preventDefault();
-  if (quitCleanupPromise) return;
-  quitCleanupPromise = (async () => {
-    try {
-      await sessionCatalogIpc.flushRenderers();
-    } catch (error) {
-      dlog("main", "session.quit_save_failed", { error: String(error) });
-      quitCleanupPromise = undefined;
-      return;
-    }
-    // Drain the last debounced rotations before the browser contexts are closed.
-    taskInboxService?.dispose();
-    for (const dispose of taskInboxDisposers.splice(0)) dispose();
-    const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
-    petRuntimeReady = false;
-    browserRuntime.closeAll();
-    bridge?.kill();
-    petStateAggregator?.stop();
-    petStateAggregator = null;
-    petExternalVisibilityController?.shutdown();
-    petExternalVisibilityController = null;
-    reconcileExternalAdapters = null;
-    petDispatchService = null;
-    petHostActionReceiptService = null;
-    petImDecisions?.stop();
-    petImDecisions = null;
-    petLongTaskCoordinator?.stop();
-    petLongTaskCoordinator = null;
-    unsubscribePetLongTaskStream?.();
-    unsubscribePetLongTaskStream = null;
-    unsubscribePetReportStream?.();
-    unsubscribePetReportStream = null;
-    petAttentionPolicy?.stop();
-    petAttentionPolicy = null;
-    const petWorkInboxFlush = petWorkInboxStore?.flush();
-    petWorkInboxStore = null;
-    const petLongTaskFlush = petLongTaskStore?.flush();
-    petLongTaskStore = null;
-    disposePetIpc?.();
-    disposePetIpc = null;
-    automationHandle?.stop();
-    automationHandle = null;
-    ptyKillAll();
-    transcriptSubscriptions?.closeAll();
-    roomManager.closeAll();
-    // Each external-runtime session holds a child process and a listening port,
-    // and neither dies with the parent on Windows. Captured before the async
-    // block so a later reassignment cannot make this a no-op.
-    const externalRuntimeShutdown = externalRuntimeService?.stopAll();
-    externalRuntimeService = null;
-    await Promise.allSettled([
-      imGatewayService.dispose(),
-      mobileRemoteController.dispose(),
-      gatewayControlServer?.stop(),
-      petWorkInboxFlush,
-      petLongTaskFlush,
-      externalRuntimeShutdown,
-      cookieRefreshShutdown,
-      sessionCatalogIpc.flush(),
-      panelAppBridge.shutdownMedia(),
-      chromeExtensionRuntimeService.stop(),
-    ]);
-    gatewayControlServer = undefined;
-    await mobileUploads.dispose();
-    quitCleanupDone = true;
-    app.quit();
-  })();
-});
+app.on(
+  "before-quit",
+  createDesktopShutdownHandler({
+    ownsInstance: () => ownsDesktopInstance,
+    flushRenderers: () => sessionCatalogIpc.flushRenderers(),
+    disposeOperationResolution: disposeOperationResolutionHost,
+    onError: (phase, error) => dlog("main", phase, { error: String(error) }),
+    cleanup: async () => {
+      taskInboxService?.dispose();
+      for (const dispose of taskInboxDisposers.splice(0)) dispose();
+      const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+      petRuntimeReady = false;
+      browserRuntime.closeAll();
+      bridge?.kill();
+      petStateAggregator?.stop();
+      petStateAggregator = null;
+      petExternalVisibilityController?.shutdown();
+      petExternalVisibilityController = null;
+      reconcileExternalAdapters = null;
+      petDispatchService = null;
+      petHostActionReceiptService = null;
+      petImDecisions?.stop();
+      petImDecisions = null;
+      petLongTaskCoordinator?.stop();
+      petLongTaskCoordinator = null;
+      unsubscribePetLongTaskStream?.();
+      unsubscribePetLongTaskStream = null;
+      unsubscribePetReportStream?.();
+      unsubscribePetReportStream = null;
+      petAttentionPolicy?.stop();
+      petAttentionPolicy = null;
+      const petWorkInboxFlush = petWorkInboxStore?.flush();
+      petWorkInboxStore = null;
+      const petLongTaskFlush = petLongTaskStore?.flush();
+      petLongTaskStore = null;
+      disposePetIpc?.();
+      disposePetIpc = null;
+      automationHandle?.stop();
+      automationHandle = null;
+      ptyKillAll();
+      transcriptSubscriptions?.closeAll();
+      roomManager.closeAll();
+      // Each external-runtime session holds a child process and a listening port,
+      // and neither dies with the parent on Windows. Captured before the async
+      // block so a later reassignment cannot make this a no-op.
+      const externalRuntimeShutdown = externalRuntimeService?.stopAll();
+      externalRuntimeService = null;
+      await Promise.allSettled([
+        imGatewayService.dispose(),
+        mobileRemoteController.dispose(),
+        gatewayControlServer?.stop(),
+        petWorkInboxFlush,
+        petLongTaskFlush,
+        externalRuntimeShutdown,
+        cookieRefreshShutdown,
+        sessionCatalogIpc.flush(),
+        panelAppBridge.shutdownMedia(),
+        chromeExtensionRuntimeService.stop(),
+      ]);
+      gatewayControlServer = undefined;
+      await mobileUploads.dispose();
+    },
+    quit: () => app.quit(),
+  }),
+);
 
 app.on("activate", () => {
   if (ownsDesktopInstance && !preferredMainWindow()) void createWindow();

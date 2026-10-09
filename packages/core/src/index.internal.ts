@@ -120,6 +120,18 @@ export type {
 // ─── Tool system and host services ───────────────────────────────
 
 export { createLinkOperationReviewStore } from "./links/operation-review.js";
+export { createOperationHookHost } from "./links/operation-hook-host.js";
+export { createConstrainedDockerProcessHost } from "./runtime/constrained-process/docker.js";
+export type {
+  ConstrainedDockerRuntime,
+  ConstrainedProcessHost,
+  ConstrainedProcessPermit,
+  ConstrainedProcessResources,
+  ConstrainedProcessScope,
+  ConstrainedReadableResource,
+  ConstrainedProcessReceipt,
+  ConstrainedProcessOutput,
+} from "./runtime/constrained-process/types.js";
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
 export { defaultSandboxConfig, type SandboxConfig } from "./tool-system/sandbox/index.js";
