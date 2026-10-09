@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { officeZip, wordXml } from "../../../../../tests/fixtures/upload-documents.mjs";
 import { parseDocumentIsolated, type ParserProcessReceipt } from "./worker.js";
@@ -63,18 +64,25 @@ test("parser errors and actual spawn failure clean only their own private direct
       onProcessExit: (receipt) => receipts.push(receipt),
     }),
   ).rejects.toThrow();
-  const absentExecutable = join(process.env.HOME!, "absent-parser-executable");
-  await expect(
-    parseDocumentIsolated(Buffer.from("unused"), "absent.pdf", {
-      resolveExecutable: async () => absentExecutable,
-      onProcessExit: (receipt) => receipts.push(receipt),
-    }),
-  ).rejects.toThrow();
-  expect(receipts.map((receipt) => receipt.outcome)).toEqual(["failed", "spawn-error"]);
-  expect(receipts[0].runtime?.networkProbesBeforeImport).toBe(17);
-  expect(receipts[1].runtime).toBe(undefined);
-  expect(receipts.every((receipt) => receipt.cleanedUp && !existsSync(receipt.home))).toBe(true);
-  expect(existsSync(process.env.HOME!)).toBe(true);
+  // Other suites exercise HOME removal. Own the unrelated sentinel directory
+  // rather than relying on a mutable global environment for this spawn fixture.
+  const owner = mkdtempSync(join(tmpdir(), "codeshell-parser-owner-test-"));
+  try {
+    const absentExecutable = join(owner, "absent-parser-executable");
+    await expect(
+      parseDocumentIsolated(Buffer.from("unused"), "absent.pdf", {
+        resolveExecutable: async () => absentExecutable,
+        onProcessExit: (receipt) => receipts.push(receipt),
+      }),
+    ).rejects.toThrow();
+    expect(receipts.map((receipt) => receipt.outcome)).toEqual(["failed", "spawn-error"]);
+    expect(receipts[0].runtime?.networkProbesBeforeImport).toBe(17);
+    expect(receipts[1].runtime).toBe(undefined);
+    expect(receipts.every((receipt) => receipt.cleanedUp && !existsSync(receipt.home))).toBe(true);
+    expect(existsSync(owner)).toBe(true);
+  } finally {
+    rmSync(owner, { recursive: true, force: true });
+  }
 });
 
 test("actual timeout and cancellation close children before removing their private HOME", async () => {
