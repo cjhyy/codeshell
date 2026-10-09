@@ -78,6 +78,35 @@ export function isArchivable(record: OperationReceipt): boolean {
   );
 }
 
+/** Discard unpublished proof only when the durable receipt still fences the same attempt. */
+function coversUnpublishedReceipt(durable: OperationReceipt, orphan: OperationReceipt): boolean {
+  const current = recordSchema.parse(durable);
+  if (JSON.stringify(current) === JSON.stringify(orphan)) return true;
+  // A planned -> blocked orphan is also consistent with rollback of a committed
+  // blocked decision. Keep that ambiguous terminal evidence rather than reopen it.
+  if (
+    current.operatorResolution ||
+    current.verifiedAt !== undefined ||
+    current.state !== "succeeded" ||
+    orphan.state !== "verified" ||
+    orphan.verifiedAt !== orphan.updatedAt
+  )
+    return false;
+  // Date.now() can move backwards. These unpublished times/error are not adopted;
+  // the original creation time and every identity/authority field must still match.
+  const identity = (receipt: OperationReceipt): string => {
+    const {
+      state: _state,
+      error: _error,
+      updatedAt: _updatedAt,
+      verifiedAt: _verifiedAt,
+      ...immutable
+    } = receipt;
+    return JSON.stringify(immutable);
+  };
+  return identity(current) === identity(orphan);
+}
+
 /** A missing manifest must never silently mint a new intent namespace over cold artifacts. */
 export function assertNoOperationArtifacts(directory: string): void {
   const entries = opendirSync(directory);
@@ -96,6 +125,7 @@ export function assertNoOperationArtifacts(directory: string): void {
  */
 export class OperationArchives {
   private readonly directory: string;
+  private readonly durableRecords: LedgerState["records"];
   private readonly buckets = new Map<string, Bucket>();
   private collected = false;
   private retained = false;
@@ -106,6 +136,9 @@ export class OperationArchives {
     private readonly state: LedgerState,
   ) {
     this.directory = join(ledgerDirectory, "archives");
+    // collect() follows the caller's mutation. Its proof must use the state loaded
+    // under the lock, even if that mutation has already blocked/sealed an operation.
+    this.durableRecords = structuredClone(state.records);
     if (state.schema === 1) return;
     const manifest = state.archives;
     if (manifest.authentication !== this.authenticate(manifest.buckets))
@@ -289,10 +322,15 @@ export class OperationArchives {
       );
       const current = new Map(this.read(prefix)?.records.map((record) => [record.id, record]));
       for (const record of orphan.records) {
-        if (current.has(record.id) && this.state.records[record.id])
+        if (current.has(record.id) && this.durableRecords[record.id])
           throw new Error("Duplicate operation archive identity");
-        const covered = this.state.records[record.id] ?? current.get(record.id);
-        if (!covered || JSON.stringify(recordSchema.parse(covered)) !== JSON.stringify(record))
+        const active = this.durableRecords[record.id];
+        const covered = current.get(record.id);
+        if (
+          active
+            ? !coversUnpublishedReceipt(active, record)
+            : !covered || JSON.stringify(recordSchema.parse(covered)) !== JSON.stringify(record)
+        )
           throw new Error("Unreferenced operation archive is not covered by the current manifest");
       }
     }
@@ -351,6 +389,7 @@ export class OperationArchives {
         if (moved.length >= 32 || bucket.records.length >= OPERATION_ARCHIVE_MAX_RECORDS) break;
         if (bucket.records.some((item) => item.id === record.id))
           throw new Error("Duplicate operation archive identity");
+        recovery.collect(record.id);
         const summary = recovery.inspect(
           this.key,
           record.id,

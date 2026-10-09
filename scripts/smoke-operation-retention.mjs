@@ -111,10 +111,16 @@ if (childMode) {
     };
     const rename = fs.renameSync;
     fs.renameSync = (from, to) => {
-      if (mode === "crash-before-manifest" && to === file) process.kill(process.pid, "SIGKILL");
+      if (
+        (["crash-before-manifest", "crash-settle-before-manifest"].includes(mode) && to === file) ||
+        (mode === "crash-recovery-before-rename" && String(to).includes("/recovery/"))
+      )
+        process.kill(process.pid, "SIGKILL");
       const value = rename(from, to);
       if (
-        (mode === "crash-after-blob" && String(from).includes("/.stage-")) ||
+        (["crash-after-blob", "crash-settle-after-blob"].includes(mode) &&
+          String(from).includes("/.stage-")) ||
+        (mode === "crash-recovery-after-rename" && String(to).includes("/recovery/")) ||
         (mode === "crash-after-manifest" && to === file)
       )
         process.kill(process.pid, "SIGKILL");
@@ -126,7 +132,15 @@ if (childMode) {
   const { PlaintextCipher } = await import("../packages/core/dist/credentials/cipher.js");
   const ledger = new OperationLedger(root, new PlaintextCipher());
   if (mode.startsWith("crash-")) {
-    ledger.prepare(retentionPlan(`crash-${mode}`));
+    if (mode.startsWith("crash-settle-") || mode.startsWith("crash-recovery-")) {
+      const original = JSON.parse(fs.readFileSync(join(root, "fixture-receipt.json"), "utf8"));
+      if (mode.startsWith("crash-settle-"))
+        ledger.settle(original.id, original.attemptId, "verified");
+      else {
+        ledger.prepare(retentionPlan());
+        ledger.captureRecovery(retentionPlan(), original.id, "identity", { id: "original/read" });
+      }
+    } else ledger.prepare(retentionPlan(`crash-${mode}`));
     assert.fail("Expected abrupt process death");
   } else if (mode === "claim") {
     const receipt = ledger.prepare(retentionPlan("race"));
@@ -355,6 +369,84 @@ if (childMode) {
         originalUnchanged: true,
       });
     }
+    const atomicRecovery = [];
+    const noHttpBefore = calls.length;
+    for (const mode of [
+      "crash-settle-after-blob",
+      "crash-settle-before-manifest",
+      "crash-recovery-before-rename",
+      "crash-recovery-after-rename",
+    ]) {
+      // Capacity metadata only; the existing controller/race cases above prove real HTTP.
+      const crashRoot = fs.mkdtempSync(join(process.env.HOME, "atomic-recovery-"));
+      const file = join(crashRoot, ".operations", "ledger.json");
+      const value = new OperationLedger(crashRoot, cipher);
+      const planned = value.prepare(retentionPlan());
+      value.captureRecovery(retentionPlan(), planned.id, "prepared", { authority: "synthetic" });
+      const attemptId = value.claim(planned.id).receipt.attemptId;
+      const original = value.settle(planned.id, attemptId, "succeeded", {
+        reference: { id: "original/reference" },
+      });
+      value.settle(planned.id, attemptId, "verified");
+      const seeded = seedRetentionMetadata(crashRoot, 9000, {
+        decrypt: (key) => cipher.decrypt(key),
+      });
+      // Restore the actual pre-verification receipt; fake capacity records stay labelled metadata.
+      seeded.state.records[original.id] = original;
+      fs.writeFileSync(file, JSON.stringify(seeded.state), { mode: 0o600 });
+      fs.writeFileSync(join(crashRoot, "fixture-receipt.json"), JSON.stringify(original), {
+        mode: 0o600,
+      });
+      const result = await launch(mode, crashRoot, origin, "SIGKILL");
+      const recovered = new OperationLedger(crashRoot, cipher);
+      assert.deepEqual(recovered.prepare(retentionPlan()), original);
+      assert.equal(recovered.claim(original.id).claimed, false);
+      if (mode.startsWith("crash-settle-")) {
+        // The orphan's proof never upgrades the durable succeeded receipt. A genuine
+        // finalization must retain uncertainty and clear only provably redundant staging.
+        assert.equal(recovered.sealForFinalization(retentionPlan().sessionId), true);
+        const current = new OperationLedger(crashRoot, cipher).prepare(retentionPlan());
+        assert.equal(current.state, "unknown");
+        assert.equal(current.attemptId, original.attemptId);
+        assert.deepEqual(current.reference, original.reference);
+        assert.deepEqual(current.recovery, original.recovery);
+        assert.equal(recovered.hasUnverifiedWrites(retentionPlan().sessionId), true);
+        const other = new OperationLedger(crashRoot, cipher);
+        const next = other.prepare(retentionPlan("blocked-by-original"));
+        assert.equal(other.claim(next.id).claimed, false);
+        assert.equal(other.prepare(retentionPlan()).state, "unknown");
+      } else {
+        // A new explicit verification may archive the original receipt, but never
+        // adopts an unreferenced completed identity snapshot left by the dead process.
+        const verified = recovered.settle(original.id, original.attemptId, "verified");
+        assert.deepEqual(verified.recovery, original.recovery);
+        const cold = new OperationLedger(crashRoot, cipher).prepare(retentionPlan());
+        assert.deepEqual(cold, verified);
+        const recoveryDirectory = join(crashRoot, ".operations", "recovery", original.id);
+        const files = fs.readdirSync(recoveryDirectory);
+        assert.equal(
+          files.some((name) => name.endsWith(".tmp")),
+          false,
+        );
+        assert.equal(files.length, mode.endsWith("after-rename") ? 2 : 1);
+        const retained = JSON.parse(fs.readFileSync(file, "utf8"));
+        assert.equal(retained.records[original.id], undefined);
+        assert.ok(retained.archives.buckets[original.id.slice(0, 2)].recoveryBytes > 0);
+      }
+      const after = JSON.parse(fs.readFileSync(file, "utf8"));
+      assert.equal(after.key, seeded.state.key);
+      atomicRecovery.push({
+        mode,
+        pid: result.pid,
+        signal: result.signal,
+        originalIdentityPreserved: true,
+      });
+    }
+    assert.equal(
+      calls.length,
+      noHttpBefore,
+      "atomic metadata recovery never replays a provider write",
+    );
     const capacity = await runRetentionCapacity({
       home: process.env.HOME,
       cipher,
@@ -387,6 +479,7 @@ if (childMode) {
       capacity,
       racePids: race.map((item) => item.pid),
       crashes,
+      atomicRecovery,
       rollbacks,
       maxCriticalMs: Math.max(...allMetrics),
       lockStaleMs: 10_000,

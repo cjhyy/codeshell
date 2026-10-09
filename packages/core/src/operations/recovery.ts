@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
-import { lstatSync, opendirSync, readdirSync } from "node:fs";
+import { lstatSync, opendirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { writeFileAtomic } from "../utils/file-mutex.js";
 import { operationDirectory, operationFile, readOperationFile } from "./files.js";
@@ -38,6 +38,63 @@ export class OperationRecoveryFiles {
       operationDirectory(path, create);
     }
     return directory;
+  }
+
+  /** Real writes under the ledger lock may discard only unpublished atomic staging files. */
+  collect(id: string): void {
+    let directory: string;
+    try {
+      directory = this.directory(id);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      return;
+    }
+    const identity = operationDirectory(directory);
+    const garbage: { path: string; info: ReturnType<typeof operationFile> }[] = [];
+    let slots = 0;
+    const entries = opendirSync(directory);
+    try {
+      for (;;) {
+        const entry = entries.readSync();
+        if (!entry) break;
+        const path = join(directory, entry.name);
+        const info = operationFile(path, OPERATION_RECOVERY_MAX_BYTES);
+        if (/^[a-f0-9]{64}\.json$/.test(entry.name)) {
+          if (++slots > 2) throw new Error("Invalid operation recovery slots");
+        } else if (
+          /^[a-f0-9]{64}\.json\.[1-9]\d{0,19}\.[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.tmp$/.test(
+            entry.name,
+          )
+        ) {
+          if (garbage.length >= 2) throw new Error("Operation recovery staging exceeds bounds");
+          garbage.push({ path, info });
+        } else throw new Error("Invalid operation recovery staging entry");
+      }
+    } finally {
+      entries.closeSync();
+    }
+    const after = operationDirectory(directory);
+    if (
+      identity.dev !== after.dev ||
+      identity.ino !== after.ino ||
+      identity.mtimeMs !== after.mtimeMs ||
+      identity.ctimeMs !== after.ctimeMs
+    )
+      throw new Error("Operation recovery directory changed while collecting");
+    // Validate every entry before removing anything. Canonical encrypted inputs,
+    // including unreferenced completed slots, are never removed or promoted.
+    for (const { path, info } of garbage) {
+      const current = operationFile(path, OPERATION_RECOVERY_MAX_BYTES);
+      if (
+        current.dev !== info.dev ||
+        current.ino !== info.ino ||
+        current.size !== info.size ||
+        current.mtimeMs !== info.mtimeMs ||
+        current.ctimeMs !== info.ctimeMs
+      )
+        throw new Error("Operation recovery staging changed while collecting");
+    }
+    for (const { path } of garbage) rmSync(path);
   }
 
   /** Includes both legal physical slots, even an unreferenced failed-checkpoint orphan. */
@@ -106,6 +163,7 @@ export class OperationRecoveryFiles {
       throw new Error("Recovery input exceeds bounds");
     const digest = this.digest(rootKey, id, plaintext);
     const directory = this.directory(id, true);
+    this.collect(id);
     const file = join(directory, `${digest}.json`);
     try {
       if (lstatSync(file)) {
