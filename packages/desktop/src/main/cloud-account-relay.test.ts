@@ -7,6 +7,83 @@ import { MobileRemoteController } from "./mobile-remote-controller.js";
 import type { RelayRegistration } from "./device-relay-store.js";
 
 const token = () => randomBytes(32).toString("base64url");
+
+for (const unreadable of [false, true]) {
+  test(
+    unreadable
+      ? "cold first forget clears unreadable local registration without guessing remote authority"
+      : "cold first forget loads and revokes the saved account device grant",
+    async () => {
+      const registration: RelayRegistration = {
+        relayOrigin: "https://account.example",
+        publicOrigin: "https://computer.devices.example",
+        hostId: randomUUID(),
+        environmentId: randomUUID(),
+        accountId: randomUUID(),
+        credential: token(),
+        refreshToken: token(),
+        credentialExpiresAt: Date.now() + 600_000,
+        credentialEpoch: 1,
+        protocolVersion: 1,
+        name: "Computer",
+      };
+      let loads = 0;
+      let deleted = false;
+      let stops = 0;
+      const requests: any[] = [];
+      const controller = new MobileRemoteController({
+        host: {
+          status: () => undefined,
+          stop: async () => {
+            stops++;
+          },
+          onlineDeviceIds: () => [],
+        } as any,
+        tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
+        binary: {} as any,
+        passcode: { isSet: () => false } as any,
+        store: {
+          load: () => {
+            loads++;
+            if (unreadable) throw new Error("encrypted registration cannot be read");
+            return registration;
+          },
+          forget: () => {
+            deleted = true;
+          },
+        } as any,
+        environmentDir: "/unused-for-forget",
+        accountRequest: async (input) => {
+          requests.push(input);
+          return {};
+        },
+        changed: () => {},
+      });
+      expect(loads).toBe(0);
+      await controller.forget();
+      expect(loads).toBe(1);
+      expect(deleted).toBe(true);
+      expect(stops).toBe(1);
+      expect(requests).toEqual(
+        unreadable
+          ? []
+          : [
+              {
+                origin: registration.relayOrigin,
+                path: "/api/v1/account/logout",
+                token: registration.credential,
+                body: {},
+              },
+            ],
+      );
+      for (let attempt = 0; attempt < 3; attempt++)
+        expect(controller.relayStatus()).toEqual({ state: "unregistered", registered: false });
+      expect(loads).toBe(1);
+      await controller.dispose();
+    },
+  );
+}
+
 test("account enrollment uses only the signed-in origin, does not start sharing, and logout preserves an active LAN Host", async () => {
   const root = mkdtempSync(join(tmpdir(), "cloud-account-relay-"));
   const origin = "https://account.example",

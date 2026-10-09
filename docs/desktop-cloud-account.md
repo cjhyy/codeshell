@@ -35,6 +35,12 @@ late responses cannot restore a logged-out or replaced identity. If the server
 cannot confirm revocation, the UI reports that local logout succeeded and asks
 the user to revoke the device in account session management when online.
 
+Removing a saved computer registration also loads its device grant on a fresh
+process so the grant can be revoked. If encrypted registration cannot be read,
+removal still clears the local file and stops its transports; no unknown device
+credential is guessed or sent. Remote revocation cannot be confirmed in that
+case and remains available through the account service's session management.
+
 Construction and status reads perform no network requests. Stored sign-in state
 is checked/refreshed only when cloud functionality is used, and never blocks local
 startup. No remote connection is started automatically after application restart.

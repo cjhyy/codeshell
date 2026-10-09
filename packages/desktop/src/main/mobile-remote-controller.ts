@@ -181,6 +181,9 @@ export class MobileRemoteController {
     });
   }
   forget(): Promise<void> {
+    // A cold process still owns a persisted device grant. Unreadable storage
+    // leaves no credential to revoke, but must not prevent deleting local state.
+    this.load();
     const previous = this.registration;
     const refresh = this.deviceRefreshResponse;
     this.deviceAuthority++;
