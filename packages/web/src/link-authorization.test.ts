@@ -14,15 +14,16 @@ const input: LinkConnectionInput = {
   expectedRevision: null,
 };
 function pending(kind: "processing" | "credential-input" = "processing"): LinkAuthorization {
+  const expiresAt = new Date(Date.now() + 60_000).toISOString();
   return {
     id: "attempt-1",
     providerId: "fixture",
     methodId: "local-token",
     state: "pending",
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    expiresAt,
     step: {
       id: "step-1",
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      expiresAt,
       ...(kind === "credential-input"
         ? {
             kind,
