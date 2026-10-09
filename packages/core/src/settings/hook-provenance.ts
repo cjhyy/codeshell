@@ -203,6 +203,23 @@ export function assertSettingsHookOriginCurrent(origin: SettingsHookOrigin): voi
   }
 }
 
+/**
+ * A previously byte-verified immutable source keeps its full file identity.
+ * Recheck all custody facts without rehashing the same Settings for every
+ * mapped resource. Current-review policy loads still read/hash fresh RAW bytes.
+ */
+export function assertSettingsHookOriginMetadataCurrent(origin: SettingsHookOrigin): void {
+  const current = lstatSync(origin.path, { bigint: true });
+  assertRegular(current);
+  if (
+    !equal(identity(current), origin.custody.file) ||
+    !equal(parents(origin.path), origin.custody.parents) ||
+    origin.custody.precedingCandidates.some((candidate) => !absent(candidate)) ||
+    realpathSync(origin.path) !== origin.path
+  )
+    throw new Error("Settings Hook origin custody changed");
+}
+
 /** Stable digest of a validated Hook definition, independent of JSON key order. */
 export function settingsHookDefinitionSha256(hook: unknown): string {
   function ordered(value: unknown): unknown {

@@ -175,6 +175,38 @@ describe("Settings executable Hook RAW provenance", () => {
     ]);
   });
 
+  test("present unproven higher layers block lower resource origins without changing ordinary Hook selection", () => {
+    seed(home, "settings.json", { hooks: [hook("user-hook")] });
+    const projectPath = seed(cwd, "settings.json", "{invalid");
+    const ordinary = new SettingsManager(cwd, "full", true);
+    ordinary.load(undefined, { persistMigrations: false });
+    let opted = load();
+    expect(opted.get()).toEqual(ordinary.get());
+    expect(opted.get().hooks?.map((entry) => entry.command)).toEqual(["user-hook"]);
+    expect(opted.getHookOrigins()).toEqual([undefined]);
+    writeFileSync(
+      projectPath,
+      Buffer.concat([Buffer.from('{"description":"'), Buffer.from([255]), Buffer.from('"}')]),
+    );
+    opted = load();
+    expect(opted.get().hooks?.map((entry) => entry.command)).toEqual(["user-hook"]);
+    expect(opted.getHookOrigins()).toEqual([undefined]);
+    seed(cwd, "settings.local.json", { hooks: [hook("local-hook")] });
+    opted = load();
+    expect(opted.getHookOrigins()[0]).toBeUndefined();
+    expect(opted.getHookOrigins()[1]).toMatchObject({ layer: "local", sourceLayerIndex: 0 });
+    rmSync(projectPath);
+    const target = join(directory, "linked-project.json");
+    writeFileSync(target, "{}");
+    symlinkSync(target, projectPath);
+    opted = load();
+    expect(opted.getHookOrigins()[0]).toBeUndefined();
+    expect(opted.getHookOrigins()[1]).toMatchObject({ layer: "local", sourceLayerIndex: 0 });
+    rmSync(projectPath);
+    rmSync(join(cwd, ".code-shell/settings.local.json"));
+    expect(first(load()).layer).toBe("user");
+  });
+
   test("untrusted filtering and disabled entries retain their exact association", () => {
     seed(home, "settings.json", { hooks: [{ ...hook("user"), disabled: true }] });
     seed(cwd, "settings.json", { hooks: [hook("project")] });

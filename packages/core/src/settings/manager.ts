@@ -214,6 +214,8 @@ export class SettingsManager {
   private sources: SettingsSource[] = [];
   private merged: ValidatedSettings | null = null;
   private hookOriginsEnabled = false;
+  /** Present but unproven layers cannot activate lower-layer resource authority. */
+  private unavailableHookPriority = -1;
   private hookOrigins: readonly (SettingsHookOrigin | undefined)[] = Object.freeze([]);
   private mergedHookSources: readonly (
     | { source: SettingsSource; sourceLayerIndex: number }
@@ -265,6 +267,7 @@ export class SettingsManager {
     this.hookOrigins = Object.freeze([]);
     this.mergedHookSources = [];
     this.hookOriginsEnabled = options?.hookOrigins === true;
+    this.unavailableHookPriority = -1;
 
     // Scope gates which disk layers we read. 'full' reads the host user dir
     // (~/.code-shell); 'project' and 'isolated' never do. See SettingsScope.
@@ -288,10 +291,14 @@ export class SettingsManager {
       // 3. Project
       const projectPath = this.tryProjectSettingsPath(this.cwd, "settings.json");
       if (projectPath) this.loadJsonFile(projectPath, "project", 2);
+      else if (this.hookOriginsEnabled)
+        this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 2);
 
       // 4. Local
       const localPath = this.tryProjectSettingsPath(this.cwd, "settings.local.json");
       if (localPath) this.loadJsonFile(localPath, "local", 3);
+      else if (this.hookOriginsEnabled)
+        this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 3);
     }
 
     // 5. CLI flags (highest priority)
@@ -500,6 +507,7 @@ export class SettingsManager {
         if (
           !this.hookOriginsEnabled ||
           !selected?.source.origin ||
+          selected.source.priority <= this.unavailableHookPriority ||
           selected.source.name === "flag" ||
           hooks.length !== this.mergedHookSources.length
         )
@@ -892,6 +900,20 @@ export class SettingsManager {
       } catch {
         // Only executable provenance becomes unavailable. Ordinary loading
         // keeps the legacy corrupt-file/UTF-8/selection behavior below.
+      }
+      // Keep ordinary tolerant data below, while preserving the fact that an
+      // existing layer (including an unsafe candidate) was not proven absent.
+      for (const candidate of settingsCandidatePaths(path)) {
+        try {
+          lstatSync(candidate);
+          this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);
+          break;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+            this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);
+            break;
+          }
+        }
       }
     }
     // `path` is the canonical .json path for this layer. When it's absent but
