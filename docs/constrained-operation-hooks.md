@@ -90,6 +90,12 @@ cancellation, timeout and Main disposal all require actual container kill when
 needed, wait, `Running=false`, PID zero, no running descendants, removal and
 confirmed absence. No observation is accepted before cleanup completes. An
 unproven cleanup remains unavailable and blocks Main's graceful quit completion.
+One narrow pre-create failure is distinguishable: the pinned CLI rejects an
+invalid `--mount` CSV field in its client-side parser, before issuing a create
+request. When the exact owned name is also confirmed absent and no container ID
+was ever obtained, the scope can release its scratch. Other CLI errors,
+transport uncertainty, timeout, or losing an already obtained ID remain
+unproven even if a subsequent inspect currently reports absence.
 
 A pre-Hook rejection sends no provider GET. A failure after the provider read
 rejects that result and does not send a replacement GET. Hook prose never
@@ -107,9 +113,24 @@ It exercises the compiled Node reader and actual owned Docker containers with
 synthetic files, account metadata and exact-origin HTTP only. The kernel probe
 contains no JavaScript network mocks. The normal guarded suite covers policy,
 input and migration semantics separately and is not OS isolation evidence.
+`scripts/smoke-constrained-hook-cleanup.mjs` separately exercises actual CLI
+parser rejection, pre-create resource/image failures, lost container identity
+and a private Unix fault proxy holding one create request until the real CLI
+times out. The proxy's only forwarding destination is the explicitly configured
+local daemon; it does not expose an Internet or provider transport.
 
 `packages/desktop/scripts/e2e-operation-read.mjs` accepts the same optional
 runtime JSON path. It sets the native startup variable before production Main
 loads, then uses the existing activity UI/IPC and a real compiled original
 uncertain operation. Controlled native approval answers and synthetic provider
 custody are fixture inputs; no real account, provider or paid model is used.
+The fixture pre-seeds offline first-run plugin markers and denies external
+Git/provider/shell launches. Its one allowed Git invocation is Main's exact
+local `rev-parse --path-format=absolute --git-common-dir` owner query using the
+system Git and private non-interactive config. These Host test guards are not
+an OS sandbox for arbitrary Host child processes.
+
+The bundled seccomp asset is adapted from
+[Moby profiles at its pinned source commit](https://github.com/moby/profiles/blob/6fe7deb1b9fb7c0397a4593480d7d22b9ee8caef/seccomp/default.json).
+Its adjacent NOTICE and Apache 2.0 license are copied into the published Core
+data assets with the policy.
