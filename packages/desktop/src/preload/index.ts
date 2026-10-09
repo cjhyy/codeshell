@@ -1,3 +1,4 @@
+import { cloudAccountApi } from "./cloud-account-api.js";
 import { deviceRelayApi } from "./device-relay-api.js";
 /**
  * Preload — bridges the renderer (browser context) to Electron main's
@@ -886,6 +887,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktrees: boolean;
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
+  cloudAccount: cloudAccountApi,
   openCloudWorkbench: (address: string) => ipcRenderer.invoke("cloud:open-workbench", address),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>

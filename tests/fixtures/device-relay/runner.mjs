@@ -1,3 +1,4 @@
+import { credentialRotationAcceptance } from "./credential-rotation.mjs";
 import { authRefusalAcceptance } from "./auth-refusal.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -39,6 +40,7 @@ execFileSync(
 );
 const cert = await readFile(join(root, "cert.pem"));
 await authRefusalAcceptance(api, { cert, key: await readFile(join(root, "key.pem")) });
+await credentialRotationAcceptance(api, { cert, key: await readFile(join(root, "key.pem")) }, root);
 const relay = await relayFixture(root, { cert, key: await readFile(join(root, "key.pem")) }, api);
 const externalHost = new URL(relay.publicOrigin).host;
 const config = {
