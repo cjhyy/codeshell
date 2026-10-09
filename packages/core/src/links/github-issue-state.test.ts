@@ -14,6 +14,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import { getLocalLinkProvider } from "./providers.js";
 import { executeCliLinkAction } from "./cli.js";
 import { prepareRemoteLinkAction, normalizeRemoteLinkActionResult } from "./remote-adapters.js";
+import { linkSourceView } from "../sources/link-view.js";
 import { linkActionTool } from "./link-action-tool.js";
 import { allowsLinkAction } from "./authority.js";
 import { githubIssueStateParameters } from "./github-issue-state.js";
@@ -423,4 +424,18 @@ test("display-only hook does not replace private verification evidence", async (
   });
   expect((await f.invoke(undefined, { hooks })).operation.state).toBe("verified");
   expect(observed).toBe(5);
+});
+
+test("a bound Source cannot acquire the new Issue write action", () => {
+  expect(() =>
+    linkSourceView({
+      kind: "link",
+      credentialRef: "connection",
+      adapterConfig: {
+        providerId: "github",
+        action: "update_issue",
+        params: { owner: "acme", repo: "repo", issue_number: 7, state: "closed" },
+      },
+    } as Parameters<typeof linkSourceView>[0]),
+  ).toThrow("read-only");
 });

@@ -3,7 +3,9 @@
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -14,7 +16,17 @@ import { createBunTestEnvironment } from "./bun-test-completion.mjs";
 import { confinedWorkerEnvironment } from "./runtime-cost-smoke-isolation.mjs";
 
 const actions = ["get_repository", "get_issue", "update_issue"];
-const cases = ["close", "reopen", "noop", "repository", "issue", "pr", "unknown"];
+const cases = [
+  "close",
+  "reopen",
+  "noop",
+  "repository",
+  "issue",
+  "pr",
+  "unknown",
+  "local",
+  "local-unknown",
+];
 const connectionId = "11111111-1111-4111-8111-111111111111";
 const grantId = "22222222-2222-4222-8222-222222222222";
 if (process.argv[2] === "--worker") {
@@ -27,6 +39,35 @@ if (process.argv[2] === "--worker") {
     async () => fetch("https://issue-state-denied.invalid/probe"),
     /non-fixture request/,
   );
+  // Route only the two reviewed synthetic PAT repository endpoints to the owned
+  // HTTP server. Keep provider URLs, headers, requestOnce and physical methods real.
+  const guardedFetch = globalThis.fetch;
+  const localPath = (input) => {
+    const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+    if (
+      url.origin !== "https://api.github.com" ||
+      url.search ||
+      url.hash ||
+      !/^\/repos\/fixture\/local(?:-unknown)?(?:\/issues\/7)?$/.test(url.pathname)
+    )
+      return undefined;
+    return url.pathname;
+  };
+  globalThis.fetch = (input, init) => {
+    const path = localPath(input);
+    if (!path) return guardedFetch(input, init);
+    assert.equal(init.method, "GET");
+    assert.equal(init.redirect, "error");
+    return guardedFetch(`${origin}/upstream${path}`, init);
+  };
+  https.request = (input, options, callback) => {
+    const path = localPath(input);
+    assert.ok(path?.endsWith("/issues/7"), "unexpected default mutation target");
+    assert.equal(options.method, "PATCH");
+    assert.equal(options.agent, false);
+    return httpRequest(`${origin}/upstream${path}`, options, callback);
+  };
+  syncBuiltinESMExports();
   // This import happens only after the parent has verified the preload receipt.
   const core = await import("@cjhyy/code-shell-core");
   const store = new core.CredentialStore(root, new core.PlaintextCipher(), join(root, "custody"));
@@ -43,13 +84,28 @@ if (process.argv[2] === "--worker") {
       "Synthetic",
     );
     store.save("project", credential);
+    store.save("project", {
+      id: "fixture-pat",
+      type: "link",
+      label: "Synthetic PAT",
+      secret: "synthetic-pat",
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkExecutionBackend: "http-token",
+        linkAccountId: "fixture-account",
+        linkLastVerifiedAt: "2026-10-09T00:00:00Z",
+        linkCapabilityIds: actions.map((action) => `github.${action}`),
+      },
+    });
   }
   core.setDefaultCredentialAccess({
     listMasked: () => store.listMasked(),
     resolveMeta: (_cwd, id) => store.listMasked().find((item) => item.id === id),
     envExposures: () => ({}),
-    resolveValue: async () => {
-      throw new Error("No upstream credential is available to this Host");
+    resolveValue: async (input) => {
+      assert.equal(input.id, "fixture-pat");
+      return store.resolve(input.id, input.scope).secret;
     },
     executeRemoteLinkAction: (input) => core.executeRemoteLinkAction(input, { store }),
   });
@@ -101,7 +157,7 @@ if (process.argv[2] === "--worker") {
                 args: {
                   provider: "github",
                   action: "update_issue",
-                  connectionId: "fixture-link",
+                  connectionId: mode.startsWith("local") ? "fixture-pat" : "fixture-link",
                   params: {
                     owner: "fixture",
                     repo: mode,
@@ -142,7 +198,7 @@ if (process.argv[2] === "--worker") {
   engine.getHookRegistry().clear();
   try {
     for (const mode of process.argv[3] === "--resume"
-      ? ["unknown", "repository", "issue"]
+      ? ["unknown", "repository", "issue", "local-unknown"]
       : cases) {
       const events = [];
       const output = await engine.run(`fixture ${mode}`, {
@@ -151,7 +207,7 @@ if (process.argv[2] === "--worker") {
         behaviorMode: "fixture",
         onStream: (event) => events.push(event),
       });
-      const unverified = ["unknown", "repository", "issue"].includes(mode);
+      const unverified = ["unknown", "repository", "issue", "local-unknown"].includes(mode);
       assert.equal(output.reason, unverified ? "unverified_write" : "completed", mode);
       if (unverified) {
         assert.ok(output.text.includes("尚未通过独立回读验证"));
@@ -169,7 +225,7 @@ if (process.argv[2] === "--worker") {
         join(root, `sessions/${mode}-session/transcript.jsonl`),
         "utf8",
       );
-      if (["close", "reopen", "noop"].includes(mode)) {
+      if (["close", "reopen", "noop", "local"].includes(mode)) {
         assert.ok(transcript.includes("verified"));
         assert.ok(
           transcript.includes(
@@ -197,6 +253,43 @@ if (process.argv[2] === "--worker") {
       ? Object.fromEntries(new URLSearchParams(raw))
       : JSON.parse(raw || "{}");
     response.setHeader("content-type", "application/json");
+    if (request.url.startsWith("/upstream/")) {
+      const path = request.url.slice("/upstream".length),
+        mode = path.split("/")[3];
+      assert.ok(["local", "local-unknown"].includes(mode));
+      assert.equal(request.headers.authorization, "Bearer synthetic-pat");
+      const action =
+        request.method === "PATCH"
+          ? "update_issue"
+          : path.endsWith("/issues/7")
+            ? "get_issue"
+            : "get_repository";
+      calls.push({ action, mode, body });
+      if (action === "update_issue") {
+        assert.deepEqual(body, { state: "closed" });
+        assert.ok(!mutations.has(mode));
+        mutations.add(mode);
+        if (mode === "local-unknown") {
+          request.socket.destroy();
+          return;
+        }
+      } else assert.equal(request.method, "GET");
+      response.end(
+        JSON.stringify(
+          action === "get_repository"
+            ? { id: 123, full_name: `fixture/${mode}` }
+            : {
+                id: 456,
+                number: 7,
+                url: `https://api.github.com/repos/fixture/${mode}/issues/7`,
+                repository_url: `https://api.github.com/repos/fixture/${mode}`,
+                state: mutations.has(mode) ? "closed" : "open",
+              },
+        ),
+      );
+      return;
+    }
+
     if (request.url === "/oauth/token") {
       assert.equal(body.grant_type, "authorization_code");
       response.end(
@@ -339,7 +432,7 @@ if (process.argv[2] === "--worker") {
         }
       }
     }
-    for (const mode of ["close", "reopen", "issue"])
+    for (const mode of ["close", "reopen", "issue", "local"])
       assert.deepEqual(
         calls.filter((call) => call.mode === mode).map((call) => call.action),
         ["get_repository", "get_issue", "update_issue", "get_repository", "get_issue"],
@@ -356,12 +449,13 @@ if (process.argv[2] === "--worker") {
       calls.filter((call) => call.mode === "pr").map((call) => call.action),
       ["get_repository", "get_issue"],
     );
-    assert.deepEqual(
-      calls.filter((call) => call.mode === "unknown").map((call) => call.action),
-      ["get_repository", "get_issue", "update_issue"],
-    );
+    for (const mode of ["unknown", "local-unknown"])
+      assert.deepEqual(
+        calls.filter((call) => call.mode === mode).map((call) => call.action),
+        ["get_repository", "get_issue", "update_issue"],
+      );
     process.stdout.write(
-      "GitHub issue state smoke passed: compiled Engine/ToolSearch, production remote adapter, independent IDs/state, PR/no-op, real process restart and zero duplicate sends.\n",
+      "GitHub issue state smoke passed: compiled Engine/ToolSearch, production remote adapter and default PAT PATCH, independent IDs/state, PR/no-op, real process restart and zero duplicate sends.\n",
     );
   } finally {
     await new Promise((resolve) => {

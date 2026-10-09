@@ -58,9 +58,11 @@ The guarded unit suite covers desired-state/no-op behavior, strict parameters,
 PR/identity rejection, changed IDs, denied reads, hooks, capability/account/grant
 changes, cancellation, CLI rejection and persistent unknown barriers. The compiled
 SDK smoke selects LinkAction through ToolSearch, then crosses the production
-remote adapter and a real owned HTTP fixture, checks durable Session/transcript
-terminal behavior, and starts a second guarded Node process to prove no resend
-on restart. Its preload receipt binds actual PID/PPID, private HOME hash and exact
+remote adapter and a real owned HTTP fixture, then also exercises the default
+local PAT transport with fixed GitHub endpoints routed only to that fixture.
+It checks actual PATCH bodies, lost-response single sends and durable
+Session/transcript terminal behavior, and starts a second guarded Node process
+to prove no resend on restart. Its preload receipt binds actual PID/PPID, private HOME hash and exact
 fixture origin before Core import. These controlled fixtures do not constitute
 real GitHub account or deployed Services acceptance. No real account, OAuth,
 paid model, production deployment or 0.9.29 publication is part of this change.
