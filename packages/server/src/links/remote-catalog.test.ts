@@ -95,7 +95,7 @@ function allProviders() {
 
 test("all ten reviewed providers retain their own declared action/scope intersection", async () => {
   const providers = allProviders();
-  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(29);
+  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(30);
   expect(await catalog({ version: 1, providers }, 200, true)).toEqual(
     REMOTE_LINK_ADAPTERS.map(({ id, actions, scopes }) => ({ id, actions: [...actions], scopes })),
   );
@@ -105,6 +105,29 @@ test("all ten reviewed providers retain their own declared action/scope intersec
   expect(await catalog({ version: 1, providers: [selected] }, 200, true)).toEqual([
     { id: "gitlab", actions: ["list_projects"], scopes: ["gitlab:list_projects"] },
   ]);
+});
+
+test("issue state capabilities require their matching explicit catalog scopes", async () => {
+  const provider = {
+    ...github(),
+    actions: ["get_repository", "get_issue", "update_issue"],
+    scopes: ["github:get_repository", "github:get_issue", "github:update_issue"],
+  };
+  expect(await catalog({ version: 1, providers: [provider] }, 200, true)).toEqual([
+    {
+      id: "github",
+      actions: ["get_repository", "get_issue", "update_issue"],
+      scopes: ["github:get_repository", "github:get_issue", "github:update_issue"],
+    },
+  ]);
+  for (const scopes of [
+    ["github:get_repository", "github:get_issue"],
+    ["github:get_repository", "github:get_issue", "github:create_issue"],
+  ]) {
+    expect(await catalog({ version: 1, providers: [{ ...provider, scopes }] }, 200, true)).toEqual(
+      [],
+    );
+  }
 });
 
 test("provider catalogs cannot borrow another provider's action scopes or hide extra authority", async () => {
