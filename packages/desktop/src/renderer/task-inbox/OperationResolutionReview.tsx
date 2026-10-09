@@ -112,8 +112,8 @@ export function OperationResolutionReview({ sessionId }: { sessionId: string }) 
       ],
       permission_denied: ["只读核查被当前权限拒绝", "Current permissions denied the read review"],
       hooks_unavailable: [
-        "配置的工具 Hook 暂不支持独立核查；未发送读取，请人工核查",
-        "Configured tool hooks cannot run in an independent review yet. No read was sent; review manually.",
+        "配置的工具 Hook 未能通过核查；未采纳读取结果，请人工核查",
+        "Configured tool hooks could not be verified. No read result was accepted; review manually.",
       ],
     };
     return (

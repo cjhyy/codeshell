@@ -12,6 +12,22 @@ import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// Optional actual constrained Hook backend, selected before native Main starts.
+// Default acceptance remains independent of Docker availability.
+const hookRuntime = process.argv[2]
+  ? JSON.parse(await readFile(process.argv[2], "utf8"))
+  : undefined;
+const literalHook = (value) => `printf '%s' '${JSON.stringify(value)}'`;
+const allowHook = literalHook({ decision: "allow" });
+const denyHook = literalHook({ decision: "deny" });
+const fixedInputHook = literalHook({ data: { args: null } });
+const toolEvents = [
+  "pre_tool_use",
+  "on_permission_check",
+  "on_tool_start",
+  "on_tool_end",
+  "post_tool_use",
+];
 const root = await mkdtemp(join(tmpdir(), "codeshell-operation-read-"));
 const keyringKeys = [
   "DBUS_SESSION_BUS_ADDRESS",
@@ -69,6 +85,13 @@ const fixture = await prepareConfinedElectronFixture({
   origin,
   guardModule: new URL("./operation-read-guard.mjs", import.meta.url).href,
 });
+if (hookRuntime)
+  fixture.env.CODESHELL_OPERATION_HOOK_HOST = JSON.stringify({
+    runtime: hookRuntime,
+    inlineCommandSha256: [allowHook, denyHook, fixedInputHook].map((command) =>
+      createHash("sha256").update(command).digest("hex"),
+    ),
+  });
 const projectRoot = join(isolated.home, "synthetic-project");
 const sessionId = "operation-read-session";
 const evidenceDir = join(isolated.home, "evidence");
@@ -86,6 +109,11 @@ const sourcePaths = [
   "packages/core/src/operations/controller.ts",
   "packages/core/src/operations/session-owner.ts",
   "packages/core/src/links/operation-reader.ts",
+  "packages/core/src/links/operation-hook-host.ts",
+  "packages/core/src/links/operation-hooks.ts",
+  "packages/core/src/runtime/constrained-process/docker.ts",
+  "packages/core/src/runtime/constrained-process/resources.ts",
+  "packages/core/src/hooks/configured-tool-hooks.ts",
   "packages/core/src/links/operation-recovery.ts",
   "packages/core/src/links/operation-reconcile.ts",
   "packages/core/src/links/operation-review.ts",
@@ -96,6 +124,8 @@ const sourcePaths = [
   "packages/core/src/links/github-star.ts",
   "packages/core/src/links/github-issue-state.ts",
   "packages/desktop/src/main/operation-resolution-ipc.ts",
+  "packages/desktop/src/main/operation-resolution-host.ts",
+  "packages/desktop/src/main/index.ts",
   "packages/desktop/src/shared/operation-resolution.ts",
   "packages/desktop/src/preload/operation-resolution-api.ts",
   "packages/desktop/src/renderer/task-inbox/OperationResolutionReview.tsx",
@@ -123,6 +153,9 @@ const harnessFiles = Object.fromEntries(
 const artifactPaths = [
   "packages/core/dist/index.js",
   "packages/core/dist/links/operation-reader.js",
+  "packages/core/dist/links/operation-hook-host.js",
+  "packages/core/dist/links/operation-hooks.js",
+  "packages/core/dist/runtime/constrained-process/docker.js",
   "packages/core/dist/links/operation-review.js",
   "packages/core/dist/links/operation-recovery.js",
   "packages/core/dist/links/operation-reconcile.js",
@@ -276,6 +309,37 @@ try {
     join(isolated.codeShellHome, "settings.json"),
     JSON.stringify({ autoUpdates: false, language: "en" }),
   );
+  // Freeze first-run plugin bootstrap through its existing persisted seam.
+  // No public marketplace clone/download is part of this synthetic fixture,
+  // and the real installed registry remains stable during a Hook await.
+  const pluginsDir = join(isolated.codeShellHome, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+  await writeFile(
+    join(pluginsDir, "installed_plugins.json"),
+    JSON.stringify({ version: 2, plugins: {} }),
+  );
+  await writeFile(
+    join(pluginsDir, "core_plugins_installed.json"),
+    JSON.stringify({
+      "skill-creator@mimi-plugins": "synthetic-offline-fixture",
+      "model-fact-finder@mimi-plugins": "synthetic-offline-fixture",
+    }),
+  );
+  await writeFile(
+    join(pluginsDir, "known_marketplaces.json"),
+    JSON.stringify(
+      Object.fromEntries(
+        ["official", "mimi-plugins"].map((name) => [
+          name,
+          {
+            source: { source: "github", repo: "synthetic/offline" },
+            installLocation: join(pluginsDir, "offline", name),
+            lastUpdated: "2026-10-09T00:00:00Z",
+          },
+        ]),
+      ),
+    ),
+  );
   await writeFile(
     join(isolated.codeShellHome, "desktop/projects.json"),
     JSON.stringify({
@@ -308,7 +372,7 @@ try {
   );
   await writeFile(
     join(isolated.home, "read-fixture.json"),
-    JSON.stringify({ origin, helperUrl, coreUrl, sessionId }),
+    JSON.stringify({ origin, helperUrl, coreUrl, sessionId, hookNegative: Boolean(hookRuntime) }),
   );
   await writeFile(
     join(isolated.home, "operation-read-source.json"),
@@ -524,6 +588,7 @@ try {
           ...readRules,
         ],
       },
+      ...(hookRuntime ? { hooks: toolEvents.map((event) => ({ event, command: allowHook })) } : {}),
     }),
   );
   await app.evaluate(() => {
@@ -541,6 +606,10 @@ try {
     ],
   );
   assert.deepEqual(JSON.parse(await readFile(ledgerPath, "utf8")).records, originalLedger.records);
+  assert.deepEqual(JSON.parse(await readFile(join(pluginsDir, "installed_plugins.json"), "utf8")), {
+    version: 2,
+    plugins: {},
+  });
   assert.equal(await readFile(join(sessionPath, "state.json"), "utf8"), originalState);
   assert.equal(await readFile(join(sessionPath, "transcript.jsonl"), "utf8"), originalTranscript);
   assert.equal(
@@ -557,6 +626,59 @@ try {
     prompts: prompts.length,
     providerReads: calls.length - beforeReview,
   });
+  if (hookRuntime) {
+    const beforeHookNegative = calls.length;
+    for (const [name, command, expected] of [
+      ["native-configured-deny", denyHook, "permission_denied"],
+      ["native-fixed-input", fixedInputHook, "permission_denied"],
+      ["native-missing-resource-authority", "node ./unapproved-script.mjs", "hooks_unavailable"],
+    ]) {
+      stage = name;
+      await writeFile(
+        settingsPath,
+        JSON.stringify({
+          permissions: { rules: readRules },
+          hooks: [{ event: "pre_tool_use", command }],
+        }),
+      );
+      const prior = Object.values(
+        JSON.parse(await readFile(ledgerPath, "utf8")).observations ?? {},
+      ).flat().length;
+      await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
+      for (let attempt = 0; ; attempt++) {
+        const rows = Object.values(
+          JSON.parse(await readFile(ledgerPath, "utf8")).observations ?? {},
+        ).flat();
+        if (
+          rows.length === prior + 1 &&
+          (await card.getByRole("button", { name: "Read-only review…", exact: true }).isEnabled())
+        ) {
+          assert.equal(rows.at(-1).result, expected);
+          break;
+        }
+        if (attempt >= 200) throw new Error(`Actual native Hook observation missing: ${name}`);
+        await new Promise((done) => setTimeout(done, 100));
+      }
+      assert.equal(
+        calls.length,
+        beforeHookNegative,
+        "native pre-Hook rejection sends zero provider GET",
+      );
+      assert.deepEqual(
+        JSON.parse(await readFile(ledgerPath, "utf8")).records,
+        originalLedger.records,
+      );
+      assert.equal(await readFile(join(sessionPath, "state.json"), "utf8"), originalState);
+      assert.equal(
+        await readFile(join(sessionPath, "transcript.jsonl"), "utf8"),
+        originalTranscript,
+      );
+      observations.push({ phase: name, result: expected, providerReads: 0 });
+    }
+    // Restore current settings without replaying any original operation. Cold
+    // viewing finds the retained match among the independent observations.
+    await writeFile(settingsPath, JSON.stringify({ permissions: { rules: readRules } }));
+  }
   stage = "cold production Main retains observation";
   await app.close();
   app = undefined;
@@ -613,6 +735,7 @@ try {
         calls,
         physicalRequests,
         observations,
+        constrainedHookRuntime: hookRuntime ?? null,
         checks: [
           "actual compiled Engine unknown",
           "actual synthetic HTTP fixed GETs only",

@@ -35,6 +35,8 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "createConstrainedDockerProcessHost",
+  "createOperationHookHost",
   "inspectProjectSettingsRecovery",
   "repairProjectSettings",
   "restoreProjectSettings",
@@ -122,6 +124,14 @@ assert.equal("Arena" in internalApi, false);
 // Includes the reviewed host-only managed-runtime and model-instance types;
 // neither surface is added to the stable public root.
 const expectedInternalTypeExports = [
+  "ConstrainedDockerRuntime",
+  "ConstrainedProcessHost",
+  "ConstrainedProcessPermit",
+  "ConstrainedProcessResources",
+  "ConstrainedProcessScope",
+  "ConstrainedReadableResource",
+  "ConstrainedProcessReceipt",
+  "ConstrainedProcessOutput",
   "RecoveryScope",
   "SettingsRecoveryInspection",
   "SettingsRecoveryResult",

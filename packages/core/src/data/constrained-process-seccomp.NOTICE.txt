@@ -1,0 +1,17 @@
+constrained-process-seccomp.json is modified from Moby profiles seccomp/default.json.
+
+Original project: https://github.com/moby/profiles
+Source commit: 6fe7deb1b9fb7c0397a4593480d7d22b9ee8caef
+Source SHA-256: 6416b47770785a41ac59073cdc77d9fe98517df2799dc83ef207e622de3053f6
+License: Apache License 2.0 (see constrained-process-seccomp.LICENSE.txt).
+
+CodeShell modifications: remove all allow entries for socket/socketcall,
+io_uring and process-inspection families. The original default ERRNO action
+and other restrictions are retained. Removed previously allowed names:
+accept, accept4, bind, connect, getpeername, getsockname, getsockopt, kcmp,
+listen, pidfd_getfd, process_vm_readv, process_vm_writev, ptrace, recv,
+recvfrom, recvmmsg, recvmmsg_time64, recvmsg, send, sendmmsg, sendmsg, sendto,
+setsockopt, shutdown, socket, socketcall, socketpair.
+
+Modified policy SHA-256:
+3876dafd126ec750b38c5c9793884c9d7868d52e0fc2383f939a92c826c77e83

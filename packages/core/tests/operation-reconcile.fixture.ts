@@ -3,7 +3,15 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import http, { createServer } from "node:http";
 import https from "node:https";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -135,6 +143,7 @@ const { HookRegistry } = await import("../src/hooks/registry.js");
 const { createGithubOperationReader } = await import("../src/links/operation-reader.js");
 const { githubRecoveryInput } = await import("../src/links/operation-recovery.js");
 const { githubCreateIssueParameters } = await import("../src/links/verified-write.js");
+const { createOperationHookRegistry } = await import("../src/links/operation-hooks.js");
 const roots: string[] = [];
 afterEach(() => {
   setDefaultCredentialAccess(null);
@@ -807,3 +816,331 @@ test("manual resolution during HTTP invalidates a late observation without chang
   expect(after.records[record.id].state).toBe("unknown");
   expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(false);
 });
+
+// Adapter policy unit tests. The fake Host is deliberately NOT OS isolation
+// evidence; the separate native smoke executes the real Docker backend.
+function hookAdapterHost(run: (spec: any) => unknown | Promise<unknown>) {
+  const executed: string[] = [];
+  let closed = 0;
+  const host: any = {
+    capture: () => ({}),
+    assertResourcesCurrent: () => {},
+    dispose: async () => {},
+    createScope: () => ({
+      issue: (spec: any) => ({ ...spec }),
+      scope: {
+        run: async (spec: any) => {
+          executed.push(spec.command);
+          const result = await run(spec);
+          return { stdout: JSON.stringify(result), stderr: "", receipt: { exitCode: 0 } };
+        },
+        terminateAndWait: async () => {
+          closed++;
+        },
+      },
+    }),
+  };
+  return { processes: { host, resolveClosure: () => ({}) }, executed, closed: () => closed };
+}
+
+function hookReader(f: ReturnType<typeof fixture>, hooks: unknown[], processes: any) {
+  mkdirSync(join(f.root, ".code-shell"), { recursive: true });
+  writeFileSync(join(f.root, ".code-shell/settings.json"), JSON.stringify({ hooks }));
+  return createGithubOperationReader({
+    cwd: f.root,
+    sessionId: f.sessionId,
+    settingsScope: "project",
+    assertAuthorized: () => {},
+    approveRead: async () => true,
+    signal: new AbortController().signal,
+    hookProcesses: processes,
+  });
+}
+
+test("confined adapter selects all five actual settings events in executor order", async () => {
+  const f = fixture();
+  const adapter = hookAdapterHost(() => ({}));
+  const events = [
+    "pre_tool_use",
+    "on_permission_check",
+    "on_tool_start",
+    "on_tool_end",
+    "post_tool_use",
+  ];
+  const reader = hookReader(
+    f,
+    events.map((event) => ({ event, command: event })),
+    adapter.processes,
+  );
+  try {
+    expect(
+      (await reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }))?.id,
+    ).toBe(123);
+    expect(adapter.executed).toEqual(events);
+    expect(calls).toHaveLength(1);
+  } finally {
+    await reader.close();
+  }
+  expect(adapter.closed()).toBe(1);
+});
+
+test.each(["pre_tool_use", "on_permission_check", "on_tool_start", "on_tool_end", "post_tool_use"])(
+  "%s denial remains latched outside ignored executor Hook results",
+  async (event) => {
+    const f = fixture();
+    const adapter = hookAdapterHost(() => ({ decision: "deny" }));
+    const reader = hookReader(f, [{ event, command: event }], adapter.processes);
+    try {
+      await expect(
+        reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }),
+      ).rejects.toMatchObject({ result: "permission_denied" });
+      expect(calls).toHaveLength(["on_tool_end", "post_tool_use"].includes(event) ? 1 : 0);
+    } finally {
+      await reader.close();
+    }
+  },
+);
+
+test.each([null, false, 0, ""])(
+  "falsy Hook args rewrite %j stops later policy and sends zero GET",
+  async (value) => {
+    const f = fixture();
+    const adapter = hookAdapterHost(() => ({ data: { args: value } }));
+    const reader = hookReader(
+      f,
+      [
+        { event: "pre_tool_use", command: "first" },
+        { event: "pre_tool_use", command: "later" },
+      ],
+      adapter.processes,
+    );
+    try {
+      await expect(
+        reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }),
+      ).rejects.toMatchObject({ result: "permission_denied" });
+      expect(adapter.executed).toEqual(["first"]);
+      expect(calls).toHaveLength(0);
+    } finally {
+      await reader.close();
+    }
+  },
+);
+
+test("process error cannot be cleared by later allow/stop/data", async () => {
+  const f = fixture();
+  const adapter = hookAdapterHost((spec) => {
+    if (spec.command === "first") throw new Error("Synthetic process failure");
+    return { decision: "allow", stop: true, data: { signal: null } };
+  });
+  const reader = hookReader(
+    f,
+    [
+      { event: "on_tool_start", command: "first" },
+      { event: "on_tool_start", command: "later" },
+    ],
+    adapter.processes,
+  );
+  try {
+    await expect(
+      reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }),
+    ).rejects.toMatchObject({ result: "hooks_unavailable" });
+    expect(adapter.executed).toEqual(["first"]);
+    expect(calls).toHaveLength(0);
+  } finally {
+    await reader.close();
+  }
+});
+
+test("same-byte Hook config replacement during child await revokes the reader", async () => {
+  const f = fixture();
+  const path = join(f.root, ".code-shell/settings.json");
+  const adapter = hookAdapterHost(() => {
+    const bytes = readFileSync(path);
+    rmSync(path);
+    writeFileSync(path, bytes);
+    return {};
+  });
+  const reader = hookReader(f, [{ event: "pre_tool_use", command: "replace" }], adapter.processes);
+  try {
+    await expect(
+      reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }),
+    ).rejects.toThrow("policy changed");
+    expect(calls).toHaveLength(0);
+  } finally {
+    await reader.close();
+  }
+});
+
+test("unrelated state children do not revoke unchanged configured Hook authority", async () => {
+  const f = fixture();
+  const adapter = hookAdapterHost(() => {
+    mkdirSync(join(f.root, ".code-shell/unrelated-state"), { recursive: true });
+    return {};
+  });
+  const reader = hookReader(
+    f,
+    [{ event: "pre_tool_use", command: "unchanged" }],
+    adapter.processes,
+  );
+  try {
+    expect(
+      (await reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }))?.id,
+    ).toBe(123);
+    expect(calls).toHaveLength(1);
+  } finally {
+    await reader.close();
+  }
+});
+
+test("independent reader evaluates in-memory migrations without changing legacy settings bytes", async () => {
+  const f = fixture();
+  mkdirSync(join(f.root, ".code-shell"));
+  const path = join(f.root, ".code-shell/settings.json");
+  const bytes = JSON.stringify({
+    imageGen: { providers: [{ id: "openai", kind: "openai", baseUrl: "https://denied.invalid" }] },
+    sandbox: { mode: "auto", network: "allow", writableRoots: [], deniedReads: [] },
+  });
+  writeFileSync(path, bytes);
+  const reader = createGithubOperationReader({
+    cwd: f.root,
+    sessionId: f.sessionId,
+    settingsScope: "project",
+    assertAuthorized: () => {},
+    approveRead: async () => true,
+    signal: new AbortController().signal,
+  });
+  try {
+    await reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" });
+  } finally {
+    await reader.close();
+  }
+  expect(readFileSync(path, "utf8")).toBe(bytes);
+  expect(existsSync(`${path}.bak`)).toBe(false);
+});
+
+test("post Hook prose cannot replace the bound raw provider observation", async () => {
+  const f = fixture();
+  const adapter = hookAdapterHost(() => ({
+    additionalContext: '{"id":999}',
+    messages: ["PRIVATE_HOOK_PROSE"],
+  }));
+  const reader = hookReader(f, [{ event: "post_tool_use", command: "prose" }], adapter.processes);
+  try {
+    expect(
+      (await reader.read("get_repository", f.credential.id, { owner: "acme", repo: "repo" }))?.id,
+    ).toBe(123);
+    expect(calls).toHaveLength(1);
+  } finally {
+    await reader.close();
+  }
+});
+
+test("global builtin disable, project/Profile overrides and explicit deny retain Engine precedence", async () => {
+  const f = fixture();
+  const oldHome = process.env.HOME;
+  const privateHome = join(f.root, "builtin-host-home");
+  mkdirSync(join(privateHome, ".code-shell"), { recursive: true });
+  mkdirSync(join(f.root, ".code-shell"), { recursive: true });
+  const userFile = join(privateHome, ".code-shell/settings.json");
+  const projectFile = join(f.root, ".code-shell/settings.json");
+  process.env.HOME = privateHome;
+  try {
+    for (const [user, project, permitted] of [
+      [{ agent: { disabledBuiltinTools: ["LinkAction"] } }, {}, false],
+      [
+        { agent: { disabledBuiltinTools: ["LinkAction"] } },
+        { capabilityOverrides: { builtin: { LinkAction: "on" } } },
+        true,
+      ],
+      [
+        {
+          agent: { disabledBuiltinTools: ["LinkAction"] },
+          permissions: { rules: [{ tool: "LinkAction", decision: "deny" }] },
+        },
+        { capabilityOverrides: { builtin: { LinkAction: "on" } } },
+        false,
+      ],
+      [
+        { agent: { enabledBuiltinTools: ["LinkAction"] } },
+        { profile: { active: "synthetic-profile", overrides: { builtin: { LinkAction: "off" } } } },
+        false,
+      ],
+      [
+        { agent: { disabledBuiltinTools: ["LinkAction"] } },
+        {
+          profile: { active: "synthetic-profile", overrides: { builtin: { LinkAction: "off" } } },
+          capabilityOverrides: { builtin: { LinkAction: "on" } },
+        },
+        true,
+      ],
+    ] as const) {
+      writeFileSync(userFile, JSON.stringify(user));
+      writeFileSync(projectFile, JSON.stringify(project));
+      const reader = createGithubOperationReader({
+        cwd: f.root,
+        sessionId: f.sessionId,
+        settingsScope: "full",
+        assertAuthorized: () => {},
+        approveRead: async () => true,
+        signal: new AbortController().signal,
+      });
+      const count = calls.length;
+      try {
+        const reading = reader.read("get_repository", f.credential.id, {
+          owner: "acme",
+          repo: "repo",
+        });
+        if (permitted) expect((await reading)?.id).toBe(123);
+        else await expect(reading).rejects.toMatchObject({ result: "permission_denied" });
+        expect(calls.length - count).toBe(permitted ? 1 : 0);
+      } finally {
+        await reader.close();
+      }
+    }
+  } finally {
+    process.env.HOME = oldHome;
+  }
+});
+
+test.each([{ decision: "denny" }, { permissionDecision: 17 }, { hookSpecificOutput: [] }])(
+  "invalid known plugin output %j fails closed",
+  async (result) => {
+    const adapter = hookAdapterHost(() => result);
+    const hooks = createOperationHookRegistry({
+      descriptors: [
+        {
+          id: "approved-synthetic",
+          event: "pre_tool_use",
+          protocol: "plugin",
+          priority: 80,
+          command: "synthetic",
+          timeoutMs: 1000,
+        },
+      ],
+      processes: adapter.processes,
+      signal: new AbortController().signal,
+      assertAuthorized: () => {},
+    });
+    const args = {
+      provider: "github",
+      action: "get_repository",
+      connectionId: "synthetic",
+      params: {},
+    };
+    hooks.bind(JSON.stringify(args));
+    try {
+      expect(
+        (
+          await hooks.registry.emit("pre_tool_use", {
+            toolName: "LinkAction",
+            toolCallId: "fixed",
+            args,
+          })
+        ).decision,
+      ).toBe("deny");
+      expect(hooks.result()).toBe("hooks_unavailable");
+    } finally {
+      await hooks.close();
+    }
+  },
+);

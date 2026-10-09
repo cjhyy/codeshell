@@ -6948,16 +6948,16 @@ const taskInboxService = createTaskInboxService({
 });
 taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
-  registerOperationResolutionHost({
-    windows: () => [...mainWindows],
-    enabled: taskInboxEnabled,
-    isSessionRunning: (id) =>
-      taskInboxAutomationSessions.has(id) ||
-      !!bridge?.isSessionRunning(id) ||
-      !!externalRuntimeService?.isSessionRunning(id),
-  }),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+const disposeOperationResolutionHost = registerOperationResolutionHost({
+  windows: () => [...mainWindows],
+  enabled: taskInboxEnabled,
+  isSessionRunning: (id) =>
+    taskInboxAutomationSessions.has(id) ||
+    !!bridge?.isSessionRunning(id) ||
+    !!externalRuntimeService?.isSessionRunning(id),
+});
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   await deleteRunDir(runId);
@@ -7136,6 +7136,13 @@ app.on("before-quit", (event) => {
       return;
     }
     // Drain the last debounced rotations before the browser contexts are closed.
+    try {
+      await disposeOperationResolutionHost();
+    } catch (error) {
+      dlog("main", "operation_review.shutdown_unproven", { error: String(error) });
+      quitCleanupPromise = undefined;
+      return;
+    }
     taskInboxService?.dispose();
     for (const dispose of taskInboxDisposers.splice(0)) dispose();
     const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
