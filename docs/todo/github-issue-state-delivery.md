@@ -3,8 +3,8 @@
 This source change adds `LinkAction github.update_issue` for **one existing Issue
 and one desired `open` or `closed` state**. It belongs to the next release after
 the frozen 0.9.29 source. It adds no sidebar or management screen. It does not
-change titles, bodies, assignees, labels, milestones or `state_reason`, and it
-cannot operate on pull requests.
+accept updates to titles, bodies, assignees, labels or milestones, and it does
+not explicitly set `state_reason`. It cannot operate on pull requests.
 
 ## Authority and execution
 
