@@ -12,7 +12,7 @@
 | Services 公开包兼容   | PR27 已通过 6 项 CI 并合入 main，源码五个公开 Host 包已升至 0.9.28，SDK override 仍锁为 1.31.0；本地 263 项、6 条依赖链、21 项浏览器及 3 项 CLI 验收通过        | 生产 Link 已由 PR30 升级至 e7c08a4/0.9.28/schema 3；Hub 仍为 0.9.23。Link 严格 TLS 与目录兼容已验，九家配置、真实账号、Hub 部署及业务另验 |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                                                                         | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证            |
 | 跨 Session 成本       | PR68 账本已合入；PR88 最终 602f538c 通过全部 12 CI 并合为 b6bfe763，受控实际 Electron 两 Session／known+unknown／partial／取消／刷新已验收                      | 真实 provider 账单仍待对照；unknown、估算与自定义 fetch 内部重试限制保留，不代表 macOS OS 钥匙串验收                                      |
-| Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                                                                    | fetch 锚点不证明远端收到／收费；macOS 真实 OS 钥匙串验收尚未完成                                                                          |
+| Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                                                                    | fetch 锚点不证明远端收到／收费；macOS 原生 API/HMAC/冷重启本机验收已通过，不等同于正式发行或独立 OS attestation                           |
 | Workspace / Link 只读 | PR65 已合入 main；Profile 求交、十家 provider 固定视图及原生 ToolExecutor 链已验证                                                                              | 不扩大已有连接与 grant；跨文件／语义检索及 OCR 另行推进                                                                                   |
 | 上传解析／索引        | PR70/95 已合入 main；有界 Office/PDF 解析、词法分块、原件重验与逐文件权限通过 12 项 CI；派生索引改为仅内存 32 项/8 MiB，不再写入无读者的磁盘副本                | Core PDF 需 Node 22.13+ 和可选 parser；Desktop 使用已验证 managed Node；不是 OCR 或语义索引                                               |
 | Skill 列表预算        | PR72 已合入 main；上下文 1%／最多 2,048 估算 token、排序、按权限搜索与分页通过 12 项 CI                                                                         | 不把估算 token 当作精确 tokenizer 结果                                                                                                    |
@@ -38,8 +38,11 @@ Windows 75 均有完整零失败报告，三个浏览器 driver 独立分片也�
 
 Linux Electron 使用私有 GNOME SecretService、移除 Playwright 的明文／模拟钥匙串开关，
 独立核验 5 logical／6 physical 请求与 1 个加密密钥；强制不可用时新增 provider 请求为零。
-早期 macOS mock-keychain 结果不计为真实 OS 托管证据；修正后真实 SafeStorage 调用未完成，
-已结束自有测试进程，保留待验收状态。完整 CI 见
+早期 macOS mock-keychain 结果不计为真实 OS 托管证据。新的受控本机验收已通过真实
+SafeStorage、Main 内 wire HMAC 和冷 Electron 重启；保留原失败及私有 HOME 元数据修正，
+见[本机钥匙串验收](macos-keychain-acceptance.md)。正常合入 PR100 后的源码 `1d961632`
+再次完成实际 Main／worker／冷 Main 验收；后续文档 head `6b8bf1d6` 通过全部 12 项 CI。
+源码验收不宣称独立 OS attestation 或已发布。历史完整 CI 见
 [PR73](https://github.com/cjhyy/codeshell/pull/73)、
 [PR71](https://github.com/cjhyy/codeshell/pull/71)及
 [PR77](https://github.com/cjhyy/codeshell/pull/77)。
@@ -164,7 +167,7 @@ Services PR28 已合入 `4bec9daa`，五个公开 Host 包仍为 0.9.28、SDK ov
 该 adapter 已随最新 e7c08a4 维护部署。未声明新能力的客户端仍只见 GitHub 原 11 动作，
 其他九家未配置；Host 的 Issue 增量仍未纳入 0.9.29。
 
-1. 跨 Session 成本的真实 provider 账单对照，以及 macOS 真实 OS 钥匙串验收。
+1. 跨 Session 成本的真实 provider 账单对照；macOS 本机原生钥匙串/HMAC/冷重启验收已完成，独立 OS attestation 不在本批承诺。
    受控 Electron GUI 两 Session／known+unknown／partial／取消／刷新已由 PR88 完成，不能代替真实账单。
    Runtime MCP pool 已有实现，补核多 Session/项目隔离、释放和汇总展示，避免重复重建。
 2. Workspace 跨文件／语义查询及 OCR；上传解析／索引、Profile 求交与现有 Link 只读视图已实现。

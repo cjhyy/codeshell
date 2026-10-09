@@ -34,10 +34,23 @@ export async function launchCodeShellElectron({
   await writeFile(
     keyringBootstrap,
     `const { app } = require("electron");
+const { appendFileSync } = require("node:fs");
+// Electron 33 fixes the macOS Keychain service/account from the app name
+// after the awaited application entry loads. Pin the production name in this
+// synchronous preload, before that native phase or any safeStorage call.
+app.setName("code-shell");
 app.commandLine.removeSwitch("password-store");
 app.commandLine.removeSwitch("use-mock-keychain");
 if (process.platform === "linux")
   app.commandLine.appendSwitch("password-store", "gnome-libsecret");
+appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JSON.stringify({
+  pid: process.pid,
+  ppid: process.ppid,
+  appName: app.getName(),
+  mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+  passwordStore: app.commandLine.getSwitchValue("password-store"),
+  electron: process.versions.electron,
+}) + "\\n", { mode: 0o600 });
 `,
     { mode: 0o600 },
   );
