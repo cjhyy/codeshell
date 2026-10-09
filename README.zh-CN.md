@@ -122,9 +122,12 @@ Preset 决定 system prompt、内置工具集和权限默认值。可通过 SDK�
 - **Credentials**：API keys、浏览器 cookie 登录、多账号 cookie 凭证和权限 token/link gates；
 - **Extensions**：plugin/skill/MCP 管理、marketplace、capability overview 和 sub-agent role 管理；
 - **Automation**：cron/scheduled tasks、每个任务的 transcript/memory，以及长任务 runs 视图；
+- **Mimi 跟进**：直接登记定时提醒或原任务续办，在同一个“需要跟进”列表查看时间、改期、取消；记忆按当前问题与实际任务目标召回；
 - **Persistent goals**、memory 管理、hooks 配置和中英文 i18n；
 - **Phone remote**：通过本地 WebSocket 从手机控制桌面 session；
 - onboarding、trust gate、app updater、command palette (`⌘K`)、跨项目 session 搜索 (`⌘P`) 和 transcript 搜索 (`⌘F`)。
+
+例如告诉 Mimi“明天上午十点提醒我提交材料”，即可登记提醒，无需建立工作会话。只有明确授权续办才会执行原任务。定时唤醒由打开的桌面应用负责；重启后默认在约定时间的 24 小时内补一次，超期保留失败原因，结果不确定的发送或启动不会自动重试。
 
 ### 内置工具
 

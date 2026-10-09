@@ -1,5 +1,5 @@
 /**
- * Cron scheduler — schedule and manage recurring agent tasks.
+ * Cron scheduler — schedule and manage recurring or one-shot agent tasks.
  *
  * Supports simple cron-like intervals. Each job runs the Engine
  * with a predefined prompt on schedule.
@@ -48,6 +48,9 @@ export function isCronMisfire(scheduledFor: number, now: number): boolean {
 /** Permission tier a scheduled job runs under (Phase 5 enforces write tiers). */
 export type CronPermissionLevel = "read-only" | "workspace-write" | "full";
 
+/** Recovery policy for a missed absolute one-shot occurrence. */
+export type CronMissedPolicy = "skip" | "fire-once";
+
 /** Non-executable provenance for a job explicitly created from a plugin template. */
 export interface CronTemplateSource {
   installKey: string;
@@ -59,7 +62,13 @@ export interface CronTemplateSource {
 export interface CronJob {
   id: string;
   name: string;
-  schedule: string; // cron expression ("0 9 * * 1-5") or interval ("5m", "1h", "1500")
+  schedule: string; // cron expression, interval, or "once" when runAt is supplied
+  /** Absolute epoch milliseconds. Requires once:true and schedule:"once". */
+  runAt?: number;
+  /** Missed absolute occurrences default to skip; recurring schedules are unaffected. */
+  missedPolicy?: CronMissedPolicy;
+  /** Inclusive epoch-ms cutoff required by fire-once; never earlier than runAt. */
+  catchUpUntil?: number;
   prompt: string; // task prompt to run
   enabled: boolean;
   lastRun?: number;
@@ -136,6 +145,9 @@ export interface CronExecutionOutcome {
 
 /** Optional metadata accepted by create(). */
 export interface CreateJobOptions {
+  runAt?: number;
+  missedPolicy?: CronMissedPolicy;
+  catchUpUntil?: number;
   cwd?: string;
   projectId?: string;
   rootId?: string;
@@ -151,6 +163,9 @@ export interface CreateJobOptions {
 
 /** Fields editable via update(). Any omitted field is left unchanged. */
 export interface UpdateJobPatch {
+  runAt?: number;
+  missedPolicy?: CronMissedPolicy;
+  catchUpUntil?: number;
   name?: string;
   prompt?: string;
   schedule?: string;
@@ -347,10 +362,9 @@ export class CronScheduler {
 
   /**
    * Restore persisted jobs and rebuild their timers. Call once at startup
-   * after `setStore`. nextRun is recomputed forward from now — we do NOT
-   * catch up on runs missed while the process was down (avoids a restart
-   * thundering-herd; aligns with Codex's stateless philosophy). Disabled
-   * jobs are restored without a timer.
+   * after `setStore`. Recurring nextRun is recomputed forward from now.
+   * Absolute one-shots retain runAt and apply their explicit missed policy.
+   * Disabled jobs are restored without a timer.
    */
   /**
    * Reconcile in-memory jobs against the on-disk store (the store is the source
@@ -396,6 +410,7 @@ export class CronScheduler {
           arm &&
           this.executionEnabled &&
           job.enabled &&
+          job.runAt === undefined &&
           typeof job.nextRun === "number" &&
           isCronMisfire(job.nextRun, observedAt)
             ? job.nextRun
@@ -448,7 +463,10 @@ export class CronScheduler {
     return (
       prev.schedule !== next.schedule ||
       prev.enabled !== next.enabled ||
-      prev.timezone !== next.timezone
+      prev.timezone !== next.timezone ||
+      prev.runAt !== next.runAt ||
+      prev.missedPolicy !== next.missedPolicy ||
+      prev.catchUpUntil !== next.catchUpUntil
     );
   }
 
@@ -482,6 +500,10 @@ export class CronScheduler {
 
   /** Recompute nextRun without arming a timer (for display in disabled/no-arm hosts). */
   private refreshNextRunForDisplay(job: CronJob): void {
+    if (job.runAt !== undefined) {
+      job.nextRun = job.enabled ? job.runAt : undefined;
+      return;
+    }
     if (isCronExpression(job.schedule)) {
       const next = nextCronTime(
         parseCronExpression(job.schedule),
@@ -534,7 +556,7 @@ export class CronScheduler {
     validateJobFields({ name, schedule, prompt, ...opts });
     // Validate the schedule up front (interval or cron expr) so a bad string
     // surfaces at create time, not silently at the first missed tick.
-    validateSchedule(schedule, opts?.timezone);
+    validateJobTiming({ ...opts, schedule });
     if (
       opts?.panelSource !== undefined &&
       (!opts.panelSource ||
@@ -562,6 +584,9 @@ export class CronScheduler {
         JSON.stringify([
           job.name,
           job.schedule,
+          job.runAt ?? null,
+          job.missedPolicy ?? "skip",
+          job.catchUpUntil ?? null,
           job.prompt,
           job.cwd ?? null,
           job.projectId ?? null,
@@ -594,6 +619,9 @@ export class CronScheduler {
           id,
           name,
           schedule,
+          ...(opts?.runAt !== undefined ? { runAt: opts.runAt } : {}),
+          ...(opts?.missedPolicy !== undefined ? { missedPolicy: opts.missedPolicy } : {}),
+          ...(opts?.catchUpUntil !== undefined ? { catchUpUntil: opts.catchUpUntil } : {}),
           prompt,
           enabled: true,
           runCount: 0,
@@ -623,6 +651,9 @@ export class CronScheduler {
       id,
       name,
       schedule,
+      ...(opts?.runAt !== undefined ? { runAt: opts.runAt } : {}),
+      ...(opts?.missedPolicy !== undefined ? { missedPolicy: opts.missedPolicy } : {}),
+      ...(opts?.catchUpUntil !== undefined ? { catchUpUntil: opts.catchUpUntil } : {}),
       prompt,
       enabled: true,
       runCount: 0,
@@ -778,6 +809,9 @@ export class CronScheduler {
       throw new Error("automation update patch must be an object");
     }
     validateJobFields(patch);
+    // Optional fields explicitly set to undefined have the same meaning as
+    // omitted fields, including when validating the resulting definition.
+    patch = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
         let updated: CronJob | null = null;
@@ -787,19 +821,15 @@ export class CronScheduler {
           const job = { ...j };
           this.assertBindingEditable(job, patch);
 
-          const nextSchedule = patch.schedule ?? job.schedule;
-          const nextTimezone = patch.timezone ?? job.timezone;
-          if (patch.schedule !== undefined || patch.timezone !== undefined) {
-            validateSchedule(nextSchedule, nextTimezone);
-          }
-
-          const scheduleChanged =
-            (patch.schedule !== undefined && patch.schedule !== job.schedule) ||
-            (patch.timezone !== undefined && patch.timezone !== job.timezone);
+          validateJobTiming({ ...job, ...patch });
+          const scheduleChanged = this.jobDefinitionChanged(job, { ...job, ...patch } as CronJob);
 
           if (patch.name !== undefined) job.name = patch.name;
           if (patch.prompt !== undefined) job.prompt = patch.prompt;
           if (patch.schedule !== undefined) job.schedule = patch.schedule;
+          if (patch.runAt !== undefined) job.runAt = patch.runAt;
+          if (patch.missedPolicy !== undefined) job.missedPolicy = patch.missedPolicy;
+          if (patch.catchUpUntil !== undefined) job.catchUpUntil = patch.catchUpUntil;
           if (patch.timezone !== undefined) job.timezone = patch.timezone;
           if (patch.cwd !== undefined) job.cwd = patch.cwd;
           if (patch.projectId === null) delete job.projectId;
@@ -825,19 +855,15 @@ export class CronScheduler {
     this.assertBindingEditable(job, patch);
 
     // Validate a new schedule/timezone BEFORE mutating anything.
-    const nextSchedule = patch.schedule ?? job.schedule;
-    const nextTimezone = patch.timezone ?? job.timezone;
-    if (patch.schedule !== undefined || patch.timezone !== undefined) {
-      validateSchedule(nextSchedule, nextTimezone);
-    }
-
-    const scheduleChanged =
-      (patch.schedule !== undefined && patch.schedule !== job.schedule) ||
-      (patch.timezone !== undefined && patch.timezone !== job.timezone);
+    validateJobTiming({ ...job, ...patch });
+    const scheduleChanged = this.jobDefinitionChanged(job, { ...job, ...patch } as CronJob);
 
     if (patch.name !== undefined) job.name = patch.name;
     if (patch.prompt !== undefined) job.prompt = patch.prompt;
     if (patch.schedule !== undefined) job.schedule = patch.schedule;
+    if (patch.runAt !== undefined) job.runAt = patch.runAt;
+    if (patch.missedPolicy !== undefined) job.missedPolicy = patch.missedPolicy;
+    if (patch.catchUpUntil !== undefined) job.catchUpUntil = patch.catchUpUntil;
     if (patch.timezone !== undefined) job.timezone = patch.timezone;
     if (patch.cwd !== undefined) job.cwd = patch.cwd;
     if (patch.projectId === null) delete job.projectId;
@@ -907,6 +933,10 @@ export class CronScheduler {
    */
   private arm(job: CronJob): void {
     this.clearTimer(job.id);
+    if (job.runAt !== undefined) {
+      this.armAbsoluteOnce(job);
+      return;
+    }
     if (isCronExpression(job.schedule)) {
       // Compute nextRun for display even when execution is disabled.
       const cron = parseCronExpression(job.schedule);
@@ -920,6 +950,54 @@ export class CronScheduler {
       job.nextRun = nextRun;
       if (!this.executionEnabled) return;
       this.armInterval(job, intervalMs, nextRun);
+    }
+  }
+
+  /** Absolute one-shots never derive their target from startup or resume time. */
+  private armAbsoluteOnce(job: CronJob): void {
+    const scheduledFor = job.runAt!;
+    job.nextRun = scheduledFor;
+    if (!this.executionEnabled || this.running.has(job.id)) return;
+    // A cold restore/resume is a missed occurrence even inside the timer jitter
+    // grace window. A live timer retains the normal on-time grace below.
+    const now = Date.now();
+    const missedOnArm = scheduledFor < now;
+    const onDue = () => {
+      if (!this.executionEnabled || !job.enabled || !this.jobs.has(job.id)) return;
+      const observedAt = Date.now();
+      if (observedAt < scheduledFor) {
+        this.armAbsoluteOnce(job);
+        return;
+      }
+      const missed = missedOnArm || isCronMisfire(scheduledFor, observedAt);
+      const expired = job.catchUpUntil !== undefined && observedAt > job.catchUpUntil;
+      if (expired || (missed && job.missedPolicy !== "fire-once")) {
+        job.nextRun = undefined;
+        this.disableWithReason(
+          job.id,
+          expired ? "absolute occurrence expired" : "absolute occurrence missed",
+        );
+        this.emitJobEvent({ type: "job_missed", job, scheduledFor, observedAt });
+        return;
+      }
+      // Reuse the existing once lifecycle: persist stats, execute, then delete.
+      // A crash may replay within the catch-up window; Hosts own effect idempotency.
+      void this.fire(job, () => {
+        job.nextRun = undefined;
+      });
+    };
+    if (scheduledFor <= now) {
+      // Defer recovery until reconciliation/create has finished installing all
+      // records, so callbacks cannot recursively change its source snapshot.
+      this.timers.set(
+        job.id,
+        setTimeout(() => {
+          this.timers.delete(job.id);
+          onDue();
+        }, 0),
+      );
+    } else {
+      this.armAt(job.id, scheduledFor, onDue);
     }
   }
 
@@ -1102,6 +1180,50 @@ export class CronScheduler {
       resolveDone();
     }
     return true;
+  }
+}
+
+/** Validate the complete persisted scheduling definition before accepting it. */
+export function validateJobTiming(input: {
+  schedule: string;
+  timezone?: string;
+  once?: unknown;
+  runAt?: unknown;
+  missedPolicy?: unknown;
+  catchUpUntil?: unknown;
+}): void {
+  if (input.runAt === undefined) {
+    if (input.missedPolicy !== undefined || input.catchUpUntil !== undefined) {
+      throw new Error("automation missedPolicy and catchUpUntil require runAt");
+    }
+    validateSchedule(input.schedule, input.timezone);
+    return;
+  }
+  const validInstant = (value: unknown): value is number =>
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= 8_640_000_000_000_000;
+  if (!validInstant(input.runAt)) throw new Error("automation runAt must be epoch milliseconds");
+  if (input.once !== true || input.schedule !== "once") {
+    throw new Error('automation runAt requires once:true and schedule:"once"');
+  }
+  if (input.timezone !== undefined) new Intl.DateTimeFormat("en-US", { timeZone: input.timezone });
+  if (
+    input.missedPolicy !== undefined &&
+    input.missedPolicy !== "skip" &&
+    input.missedPolicy !== "fire-once"
+  ) {
+    throw new Error("invalid automation missedPolicy");
+  }
+  if (
+    input.catchUpUntil !== undefined &&
+    (!validInstant(input.catchUpUntil) || input.catchUpUntil < input.runAt)
+  ) {
+    throw new Error("automation catchUpUntil must be epoch milliseconds at or after runAt");
+  }
+  if (input.missedPolicy === "fire-once" && input.catchUpUntil === undefined) {
+    throw new Error("automation fire-once requires catchUpUntil");
   }
 }
 

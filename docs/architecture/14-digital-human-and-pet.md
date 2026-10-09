@@ -79,11 +79,20 @@ IPC and `PetMemorySection` expose the same store for listing, adding, editing,
 and removing entries; Mimi's `Memory` host action uses it for `remember`,
 `update`, and `forget`.
 
-Before every ordinary Mimi manager turn, Desktop reads the store and puts the
-newest bounded subset into the trusted `runtimeContext`. The tool therefore
+Before manager turns, task-result reports and scheduled continuation decisions,
+Desktop ranks the whole retained store against the current message and host-resolved
+task objectives. Deterministic lexical matching (including Chinese bigrams) and
+source/task associations select at most 24 entries and 10,000 text characters,
+with a small recent fallback. `memoryWindow` exposes selection coverage. The tool therefore
 sees the same entry IDs and text that the user can manage in the Pet UI. A
 Memory-tool mutation is persisted by Desktop only after Mimi's turn; it is not
 a profile-memory write and does not attach a digital human to the Pet Session.
+
+`userData/pet/context-links.json` indexes host-issued source labels and real task
+references without copying message bodies. New remembered entries can retain
+those associations. They organize one owner's shared Mimi Session and notes;
+they are neither routing authority nor a privacy boundary. Similarity orders
+memories without merging or rewriting them.
 
 ## Cross-Session messages
 
@@ -308,19 +317,47 @@ worthwhile takeaway. The Cmd-K switcher adds a `>`-prefixed
 content-search mode over the same grep. No push channel or new Mimi wakeup
 trigger is introduced — updates arrive on the next read.
 
-The closure summary's actionable remainder is also the only user-visible
-"Needs follow-up" source. Desktop's workbench and Mimi's read-only `FollowUps`
-tool call the same `PetFollowUpService`; `ManageFollowUp` and the renderer
-buttons write the same `follow-up:<opaque-id>` state through one durable queue.
-There is no separate personal Todo store, tool, or renderer section. The
+The "Needs follow-up" feed is a tagged union of `derived-session` closure
+remainders and `registered` future obligations. Desktop and the read-only
+`FollowUps` tool consume the same `PetFollowUpService`. Derived items retain the
+durable `follow-up:<opaque-id>` handled-state namespace. Registered reminders
+need no source Session; `ManageFollowUp` supports register, reschedule, cancel,
+complete and dismiss using exact IDs and expected revisions. There is no separate
+Todo product or renderer section. The
 source Session's completed-history id is independent, so handling a follow-up
 does not hide the work that produced it. Summary title/text/workspace fields are
 untrusted descriptive data; only host-issued selectors and follow-up ids are
 accepted as control values. An off-list open follow-up receives an exact
 selector lookup and is prioritized into the bounded reusable-Session set, so
 older items retain their trusted Workspace binding. If one Mimi turn starts a
-Work Session and also requests `ManageFollowUp`, the host rejects the mutation:
-launch acceptance is not proof that the follow-up has been handled.
+Work Session and also asks to complete/dismiss a follow-up, the host rejects that
+mutation: launch acceptance is not proof that the follow-up has been handled.
+Registering a future reminder or editing its schedule does not claim completion.
+
+Registered obligations are canonical in `userData/pet/follow-ups.json`. The host
+derives each operation key from the authenticated turn and action slot, commits
+the record atomically, then projects an absolute one-shot Cron job. Revisions
+fence stale callbacks after edits. Startup and bounded repair rebuild missing or
+edited projections. The generic scheduler retains `runAt`, `missedPolicy` and
+`catchUpUntil` across reloads; Mimi defaults to one catch-up within 24 hours.
+Expired or explicitly skipped wakes remain visible with a failure reason.
+
+A durable claim precedes reminder delivery or continuation. Surviving claims
+become `unknown` after restart and are never blindly replayed. Internal registration
+claims can reconcile through the canonical operation key. Claimed records cannot
+be edited mid-effect. Reminder wakes perform no model run or work delegation.
+IM reminders use the host-owned original route and durable gateway outbox;
+outbox acceptance does not prove downstream delivery.
+
+Explicitly authorized continuation re-checks live state. Paused/interrupted
+long tasks use their existing control path; pending decisions are preserved.
+Other continuation decisions rebuild PetWorld in an isolated manager turn, expose
+only the exact original reusable Session, and allow at most one launch. Host
+validation runs again immediately before launch to reject cancellation or changed
+authority. Completed/failed source tasks require a new manager decision rather
+than automatic retry. The UI distinguishes scheduled, claimed, notified,
+launched, failed and unknown; launch is never task completion. Wakes remain tied
+to the desktop lifecycle; headless and cloud execution are deferred.
 
 ## Package ownership
 

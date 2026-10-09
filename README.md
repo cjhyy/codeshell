@@ -122,9 +122,12 @@ Presets select the system prompt, the built-in tool set, and permission defaults
 - **Credentials**: API keys, browser-cookie login (with a dedicated login window for sites the embedded webview can't handle), multi-account cookie credentials, and permission token/link gates
 - **Extensions**: plugin/skill/MCP management + a marketplace (installs CC- and Codex-format plugins, including from uploaded archives), a capability overview, and sub-agent (Agent role) management
 - **Automation**: cron/scheduled tasks with read-only contract enforcement, per-task transcripts and memory, and a runs view for long tasks
+- **Mimi follow-ups**: register reminders or explicitly authorized continuation of the original task, inspect the next time, reschedule, and cancel in one Needs follow-up list; recall memories by the current question and actual task objectives
 - **Persistent goals**, **memory management** (pin/edit/clear, manual Dream), **hooks** configuration, and full **i18n** (Chinese / English)
 - **Phone remote**: control a desktop session from a mobile web app over a local WebSocket
 - Onboarding wizard, trust gate, app updater, command palette (⌘K), cross-project session search (⌘P), and in-transcript search (⌘F)
+
+For example, ask Mimi to remind you tomorrow at 10 AM without creating a work Session. Continuing work requires explicit authorization. Wakes run while the desktop app is open; after restart, the default catch-up window is 24 hours after the scheduled time. Expired items retain their failure reason, and uncertain sends or launches are never replayed automatically.
 
 ### Built-in tools
 

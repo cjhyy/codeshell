@@ -14,6 +14,23 @@ async function withStore(run: (path: string) => Promise<void>): Promise<void> {
 }
 
 describe("PetMemoryStore", () => {
+  test("persists host-issued origin/task references separately from memory authorship", async () => {
+    await withStore(async (path) => {
+      const originRef = { id: "origin-owner", kind: "im-gateway" as const, channel: "wechat" };
+      const store = new PetMemoryStore(path);
+      const entry = await store.remember("Preserve original invoice checksums", "mimi", {
+        originRef,
+        taskIds: ["task-1"],
+      });
+      const restarted = new PetMemoryStore(path);
+      await restarted.load();
+      expect(restarted.list()[0]).toEqual(entry);
+      expect(entry).toMatchObject({ source: "mimi", originRef, taskIds: ["task-1"] });
+      expect(
+        await restarted.update(entry.id, "Preserve original checksums and source dates"),
+      ).toMatchObject({ originRef, taskIds: ["task-1"] });
+    });
+  });
   test("remembers, updates, forgets, and lists newest-first", async () => {
     await withStore(async (path) => {
       const store = new PetMemoryStore(path, {
