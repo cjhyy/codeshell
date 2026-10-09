@@ -371,7 +371,14 @@ describe("architecture growth budgets", () => {
       // behind entering a Work Session from a chat (route record, IM list,
       // visit receipt, deterministic commands). They are one feature and are
       // consumed together, so the barrel gains a single line rather than four.
-      "packages/pet/src/index.ts": 25,
+      // +2 reviewed Pet-owned contracts: registered-follow-ups provides the
+      // versioned obligation/mutation types and validators; context-recall
+      // provides bounded memory selection and source/task relevance types.
+      // Desktop Main consumes both through this entry. Persistence, scheduling,
+      // delivery and authorization remain Host-owned, with no Core SDK growth.
+      // Preserve the existing exports/subpaths and pin the actual 27 statements;
+      // this adds no allowance for future compatibility-surface growth.
+      "packages/pet/src/index.ts": 27,
       // Desktop and Hub share the extracted desktop-web, links and panels
       // entry points (+3); their HTTP/service implementations remain in server
       // so Desktop adapters no longer own separate copies of those services.
