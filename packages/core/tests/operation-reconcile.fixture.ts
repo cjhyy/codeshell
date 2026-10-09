@@ -1,8 +1,12 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
-import { createServer } from "node:http";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { afterAll, afterEach, expect, mock, test } from "bun:test";
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import http, { createServer } from "node:http";
+import https from "node:https";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Install confinement before loading Core. Only this synthetic HTTP origin can
 // receive requests; no operator HOME, token, account, model or provider is used.
@@ -23,7 +27,100 @@ await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
 const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 const { installLocalNetworkGuard } =
   await import("../../../scripts/runtime-cost-smoke-isolation.mjs");
+const originalHttpExports = { ...(await import("node:http")) };
+const originalHttpsExports = { ...(await import("node:https")) };
 installLocalNetworkGuard(origin);
+// Bun 1.3.11 does not synchronize already loaded builtin ESM named exports
+// when default.request/get are patched. Bind those exits to the SAME guarded
+// real transports before Core loads; allowed-origin HTTP is still physical.
+mock.module("node:http", () => ({
+  ...originalHttpExports,
+  default: http,
+  request: http.request,
+  get: http.get,
+}));
+mock.module("node:https", () => ({
+  ...originalHttpsExports,
+  default: https,
+  request: https.request,
+  get: https.get,
+}));
+// These are actual dynamic named imports, using the same module resolution as
+// the subsequent Core imports. Every other builtin export remains unchanged.
+const controlledHttp = await import("node:http");
+const controlledHttps = await import("node:https");
+for (const [original, controlled, transport] of [
+  [originalHttpExports, controlledHttp, http],
+  [originalHttpsExports, controlledHttps, https],
+] as const) {
+  assert.deepEqual(Object.keys(controlled).sort(), Object.keys(original).sort());
+  for (const name of Object.keys(original))
+    if (!["default", "request", "get"].includes(name))
+      assert.equal(controlled[name], original[name], name);
+  assert.equal(controlled.default, transport);
+  assert.equal(controlled.request, transport.request);
+  assert.equal(controlled.get, transport.get);
+}
+const home = process.env.HOME!;
+assert.equal(realpathSync(home), home);
+assert.equal(homedir(), home);
+assert.equal(process.env.USERPROFILE, home);
+assert.equal(process.env.CODE_SHELL_HOME, join(home, ".code-shell"));
+assert.equal(process.env.CODE_SHELL_TEST_HOME, process.env.CODE_SHELL_HOME);
+assert.equal(process.env.CODE_SHELL_DATA_ROOT, undefined);
+assert.ok(process.env.CODESHELL_OPERATION_READ_RECEIPT);
+const negativeProbeNames: string[] = [];
+for (const [name, probe] of [
+  ["fetch", () => fetch("https://example.invalid/blocked")],
+  ["dispatcher", () => fetch(origin, { dispatcher: {} } as any)],
+  ["http.request", () => http.request("http://127.0.0.1:1")],
+  ["http.named.request", () => controlledHttp.request("http://127.0.0.1:1")],
+  ["http.named.get", () => controlledHttp.get("http://127.0.0.1:1")],
+  ["https.named.request", () => controlledHttps.request("https://example.invalid/blocked")],
+  ["https.named.get", () => controlledHttps.get("https://example.invalid/blocked")],
+  ["socketPath", () => http.request(origin, { socketPath: "/unavailable" })],
+] as const) {
+  assert.throws(probe, /Cost smoke refused/, name);
+  negativeProbeNames.push(name);
+}
+const allowedResponse = await new Promise<string>((resolve, reject) => {
+  controlledHttp
+    .get(`${origin}/_transport_probe`, (response) => {
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      response.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      response.on("error", reject);
+    })
+    .on("error", reject);
+});
+assert.equal(allowedResponse, "{}");
+assert.deepEqual(calls, [{ method: "GET", action: "_transport_probe", params: {} }]);
+calls.length = 0;
+writeFileSync(
+  process.env.CODESHELL_OPERATION_READ_RECEIPT!,
+  JSON.stringify({
+    pid: process.pid,
+    ppid: process.ppid,
+    version: process.version,
+    bun: process.versions.bun,
+    executable: realpathSync(process.execPath),
+    executableSha256: createHash("sha256")
+      .update(readFileSync(realpathSync(process.execPath)))
+      .digest("hex"),
+    home,
+    origin,
+    negativeProbes: negativeProbeNames.length,
+    negativeProbeNames,
+    confinement: "Bun JavaScript fetch/http/https exits; not an OS or native network sandbox",
+    preservesBuiltinExports: true,
+    allowedHttpProbe: true,
+    beforeCoreImport: true,
+    fixtureSha256: createHash("sha256")
+      .update(readFileSync(fileURLToPath(import.meta.url)))
+      .digest("hex"),
+  }),
+  { mode: 0o600 },
+);
 const { OperationLedger } = await import("../src/operations/ledger.js");
 const { OperationController } = await import("../src/operations/controller.js");
 const { CapabilityResolver } = await import("../src/operations/resolver.js");

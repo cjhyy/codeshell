@@ -102,6 +102,20 @@ const sourceFiles = Object.fromEntries(
     execFileSync("git", ["hash-object", path], { cwd: repository, encoding: "utf8" }).trim(),
   ]),
 );
+const harnessPaths = [
+  "packages/desktop/scripts/electron-harness.mjs",
+  "packages/desktop/scripts/confined-electron-fixture.mjs",
+  "packages/desktop/scripts/e2e-operation-read.mjs",
+  "packages/desktop/scripts/operation-read-cold-review.mjs",
+  "packages/desktop/scripts/operation-read-fixture.mjs",
+  "packages/desktop/scripts/operation-read-guard.mjs",
+];
+const harnessFiles = Object.fromEntries(
+  harnessPaths.map((path) => [
+    path,
+    execFileSync("git", ["hash-object", path], { cwd: repository, encoding: "utf8" }).trim(),
+  ]),
+);
 const artifactPaths = [
   "packages/core/dist/index.js",
   "packages/core/dist/links/operation-reader.js",
@@ -143,9 +157,10 @@ const sourceEvidence = {
     encoding: "utf8",
   }).trim(),
   files: sourceFiles,
+  harnessFiles,
   artifacts,
   fingerprint: createHash("sha256")
-    .update(JSON.stringify({ sourceFiles, artifacts }))
+    .update(JSON.stringify({ sourceFiles, harnessFiles, artifacts }))
     .digest("hex"),
 };
 let app,
@@ -185,11 +200,18 @@ async function guardedProcesses() {
     ) {
       for (const worker of spawned)
         await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified");
+      const keyring = (await readFile(join(isolated.home, "real-keyring-bootstrap.jsonl"), "utf8"))
+        .trim()
+        .split("\n")
+        .map(JSON.parse)
+        .find((row) => row.pid === mainPid);
+      assert.ok(keyring && keyring.appName === "code-shell" && keyring.mockKeychain === false);
       return {
         mainPid,
         parentPid: process.pid,
         workerPids: spawned.map((row) => row.pid),
         receipts,
+        keyring,
       };
     }
     if (attempt >= 150) throw new Error("Actual Main/parent confinement receipt missing");

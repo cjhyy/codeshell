@@ -59,9 +59,16 @@ try {
     if (receipts.some((row) => row.pid === mainPid)) {
       for (const worker of workers)
         await writeFile(join(home, `worker-${worker.pid}.permit`), "verified");
+      const keyring = (await readFile(join(home, "real-keyring-bootstrap.jsonl"), "utf8"))
+        .trim()
+        .split("\n")
+        .map(JSON.parse)
+        .find((row) => row.pid === mainPid);
+      assert.ok(keyring && keyring.appName === "code-shell" && keyring.mockKeychain === false);
       receipt = {
         mainPid,
         workers,
+        keyring,
         receipts: receipts.filter((row) => row.pid === mainPid || row.ppid === mainPid),
       };
       break;
