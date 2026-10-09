@@ -12,6 +12,7 @@ import type {
   ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
 import { isAbsolute } from "node:path";
+import { isPetFollowUpMutationPayload } from "./registered-follow-ups.js";
 
 export const PET_HOST_ACTION_KINDS = [
   "mobileRemote",
@@ -168,11 +169,7 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
   }
   if (value.kind === "gatewayReply") return isGatewayReplyPayload(payload);
   if (value.kind === "followUpMutation") {
-    return (
-      hasExactKeys(payload, ["action", "followUpId"]) &&
-      (payload.action === "complete" || payload.action === "dismiss") &&
-      isOpaqueId(payload.followUpId)
-    );
+    return isPetFollowUpMutationPayload(payload);
   }
   if (value.kind === "sessionWatch") {
     return hasExactKeys(payload, ["sessionId"]) && isOpaqueId(payload.sessionId);

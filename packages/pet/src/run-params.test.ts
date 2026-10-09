@@ -236,6 +236,7 @@ describe("validatePetRunParams", () => {
       title: "发布准备",
       text: "整理发布说明",
       workspace: "codeshell",
+      kind: "derived-session",
       terminalAt: 2,
       sessionSelector: "session-one",
       workspaceId: "workspace-one",

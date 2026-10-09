@@ -96,7 +96,10 @@ export {
   manageFollowUpTool,
   manageFollowUpAvailability,
   type PetFollowUpItem,
+  type PetDerivedFollowUpItem,
+  type PetRegisteredFollowUpItem,
 } from "./follow-ups.js";
+export * from "./registered-follow-ups.js";
 export {
   SEND_MESSAGE_TOOL_NAME,
   sendMessageToolDef,

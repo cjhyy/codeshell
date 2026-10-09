@@ -6,6 +6,11 @@ import {
 } from "./host-actions.js";
 import { parsePetGatewayCatalog, type PetGatewayCatalog } from "./gateway.js";
 import type { PetFollowUpItem } from "./follow-ups.js";
+import {
+  isFollowUpRevision,
+  isFollowUpTimestamp,
+  isPetFollowUpMutationPayload,
+} from "./registered-follow-ups.js";
 import type { PetOutboundTargetOption } from "./outbound-message.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
@@ -142,22 +147,91 @@ function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
       !isRecord(entry) ||
       !validOpaqueId(entry.id) ||
       ids.has(entry.id) ||
-      !validOpaqueId(entry.sessionSelector) ||
+      (entry.kind !== undefined &&
+        entry.kind !== "derived-session" &&
+        entry.kind !== "registered") ||
       (entry.workspaceId !== undefined && !validOpaqueId(entry.workspaceId)) ||
       typeof entry.title !== "string" ||
       !entry.title.trim() ||
-      entry.title.length > 256 ||
+      entry.title.length > (entry.kind === "registered" ? 512 : 256) ||
       typeof entry.text !== "string" ||
       !entry.text.trim() ||
-      entry.text.length > 2_000 ||
-      !Number.isFinite(entry.terminalAt) ||
+      entry.text.length > (entry.kind === "registered" ? 8_000 : 2_000) ||
       (entry.workspace !== undefined &&
         (typeof entry.workspace !== "string" || entry.workspace.length > 256))
     ) {
       return undefined;
     }
     ids.add(entry.id);
+    if (entry.kind === "registered") {
+      if (
+        !isPetFollowUpMutationPayload({
+          action: "register",
+          title: entry.title,
+          text: entry.text,
+          wakeAt: entry.wakeAt,
+          timezone: entry.timezone,
+          intent: entry.intent,
+          missedPolicy: entry.missedPolicy,
+          catchUpUntil: entry.catchUpUntil,
+          ...(entry.sourceSessionId !== undefined
+            ? { sourceSessionId: entry.sourceSessionId }
+            : {}),
+          ...(entry.taskId !== undefined && entry.intent === "resume"
+            ? { taskId: entry.taskId }
+            : {}),
+        }) ||
+        !isFollowUpRevision(entry.revision) ||
+        !isFollowUpTimestamp(entry.createdAt) ||
+        (entry.missedPolicy !== "skip" && entry.missedPolicy !== "fire-once") ||
+        !isFollowUpTimestamp(entry.catchUpUntil) ||
+        !["open", "completed", "dismissed", "cancelled"].includes(String(entry.status)) ||
+        !["scheduled", "claimed", "notified", "launched", "failed", "unknown"].includes(
+          String(entry.wakeState),
+        ) ||
+        (entry.sessionSelector !== undefined && !validOpaqueId(entry.sessionSelector)) ||
+        (entry.taskId !== undefined && !validOpaqueId(entry.taskId)) ||
+        (entry.wakeDetail !== undefined &&
+          (typeof entry.wakeDetail !== "string" || entry.wakeDetail.length > 8_000))
+      )
+        return undefined;
+      result.push({
+        kind: "registered",
+        id: entry.id,
+        title: entry.title,
+        text: entry.text,
+        revision: entry.revision,
+        wakeAt: Number(entry.wakeAt),
+        timezone: String(entry.timezone),
+        intent: entry.intent as "remind" | "resume",
+        missedPolicy: entry.missedPolicy,
+        catchUpUntil: entry.catchUpUntil,
+        createdAt: entry.createdAt,
+        status: entry.status as "open" | "completed" | "dismissed" | "cancelled",
+        wakeState: entry.wakeState as
+          | "scheduled"
+          | "claimed"
+          | "notified"
+          | "launched"
+          | "failed"
+          | "unknown",
+        ...(typeof entry.sourceSessionId === "string"
+          ? { sourceSessionId: entry.sourceSessionId }
+          : {}),
+        ...(typeof entry.sessionSelector === "string"
+          ? { sessionSelector: entry.sessionSelector }
+          : {}),
+        ...(typeof entry.workspaceId === "string" ? { workspaceId: entry.workspaceId } : {}),
+        ...(typeof entry.workspace === "string" ? { workspace: entry.workspace } : {}),
+        ...(typeof entry.taskId === "string" ? { taskId: entry.taskId } : {}),
+        ...(typeof entry.wakeDetail === "string" ? { wakeDetail: entry.wakeDetail } : {}),
+      });
+      continue;
+    }
+    if (!validOpaqueId(entry.sessionSelector) || !Number.isFinite(entry.terminalAt))
+      return undefined;
     result.push({
+      kind: "derived-session",
       id: entry.id,
       sessionSelector: entry.sessionSelector,
       ...(typeof entry.workspaceId === "string" ? { workspaceId: entry.workspaceId } : {}),
