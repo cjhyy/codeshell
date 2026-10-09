@@ -1,18 +1,20 @@
 {
   "formatVersion": 1,
-  "createdAt": "2026-10-09T05:18:25.503711+00:00",
+  "createdAt": "2026-10-09T05:26:02.191496+00:00",
   "sourceCheckpoint": {
-    "commit": "e370b2b70270b536044c0e6a60549235c62ef8cb",
-    "tree": "a4e0e90cc45c8a9c7471a5e5ddc26fb4ceaf5e74",
-    "baseCommit": "f08bbb9ca7c49cbdab53fc0752286bac9c36452d",
+    "commit": "87a724e2e83be8a7798602f21706079905c730b3",
+    "tree": "c070b748dc27785779a59212419b43d13b488291",
+    "baseCommit": "c9a55b12251beb0b89445be3f258b164c8f78c4c",
     "initialBaseCommit": "a1fd082c109f739828ca4002e6e62aca3361cb66",
     "containsPR100": true,
     "containsPR102": true,
+    "containsPR101": true,
+    "runtimeCheckedBeforeMerge": "9ff7168dd53ca990648ad6dd31b9558036746989",
     "bunLockSha256": "f383097a01585941216c3a1e82ee0bf994f4ed29aa1fb406c25ded503f79bbcb",
     "lockEqualBase": true,
     "sourceSha256": {
-      ".github/workflows/ci.yml": "a8beb5cf7a42618e2be8dfb9e4c49d8929aa7fbea5cabed72043658489c3a4b1",
-      "TODO.md": "a3bc347ce9b1778455e9eeed2d5e52a5692b840377df9aa3bc5e7274c5ef3151",
+      ".github/workflows/ci.yml": "b3637d7897edf9545255b41269b96cb5db8231d138bbc3fa8f5588f75522a015",
+      "TODO.md": "f17d951317dcd4ea3c6b3c6568e92071a668c419002ad87056f852eda4a8760c",
       "docs/todo/external-runtime-output-journal-delivery.md": "5ca35ca0713d564b1a8cc0ca4ecbc7e72173a9356fd92b5190067ea39f448f4a",
       "docs/todo/mobile-external-output-journal-delivery.md": "38dd6ef73a1c89d66daef5362df67f828ddd1188a65583f5ef366ee82a271802",
       "docs/todo/mobile-output-journal-delivery.md": "4b8a4806f2c6819d8284cf594a1a0a8bc03f14ba2cdac10fd6456bb1e07aac1a",
@@ -25,8 +27,8 @@
       "packages/desktop/src/main/external-runtime-state.ts": "0c23df0e3b49872860a569f513cc48939ba27deb9ae6bb7f252d59048ecea1f4",
       "packages/desktop/src/main/index.ts": "9dad9d3e8b3d9884a1459be0c61d4eaee655841eb8acfaa3260f73118a6105c0",
       "packages/desktop/src/main/mobile-remote-orchestrator.ts": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
-      "packages/desktop/src/main/mobile-remote/external-runtime-commands.test.ts": "750052160ddf6b3fac0c87f52ea2b45c524a51ae997c681790f101b943aa9839",
-      "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts": "2435c432ec79028730c22d431e7c1216ae1c9c29110acfd1cda2538d6d591b5a",
+      "packages/desktop/src/main/mobile-remote/external-runtime-commands.test.ts": "b5031f2cf22dd56748b1fac42cb9d4f05c14e73b27f2c3dc8ebf8435ee0e8b43",
+      "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts": "298bbc8ccecc4a87ca09207327e83ba4874ad5858d9b58d79747a8ed0884333c",
       "packages/desktop/src/main/mobile-remote/handle-client-event.test.ts": "fdaf62a7e6376a34505e659d2e9fd6bea491b171e5fda1c61717a1317de87012",
       "packages/desktop/src/main/mobile-remote/handle-client-event.ts": "5fd90faedba3f35989345e63570619758f6b5e47c0d6e87a1db8a12af5d6552f",
       "packages/desktop/src/main/mobile-remote/output-recovery-authority.ts": "9e0af19016596a3a43390aa07a16e77daca1b301fb7e6c8892e60ee3d2fb86ce",
@@ -71,9 +73,9 @@
       "includesWebSPA": true,
       "dependencyCleanBuildAndFullCheckSource": "369342409a1430e6bba8d3627d4f2d042477d91d",
       "dependencyCleanBuildAndFullCheckLog": "typecheck-composed-final.log",
-      "finalNoEmitSource": "e370b2b70270b536044c0e6a60549235c62ef8cb",
-      "finalNoEmitLog": "typecheck-route-complete-final.log",
-      "log": "typecheck-route-complete-final.log"
+      "finalNoEmitSource": "87a724e2e83be8a7798602f21706079905c730b3",
+      "finalNoEmitLog": "typecheck-merged-final.log",
+      "log": "typecheck-merged-final.log"
     },
     "focused": {
       "exitCode": 0,
@@ -81,22 +83,22 @@
       "fail": 0,
       "skip": 0,
       "files": 8,
-      "log": "focused-route-final.log"
+      "log": "focused-merged-final.log"
     },
     "lint": {
       "exitCode": 0,
       "errors": 0,
       "baselineWarnings": 105,
-      "log": "lint-route-final.log"
+      "log": "lint-merged-final.log"
     },
     "format": {
       "exitCode": 0,
       "scope": "all task changed files",
-      "log": "format-route-final.log"
+      "log": "format-merged-final.log"
     },
     "mobileExternalNative": {
       "exitCode": 0,
-      "log": "native-route-final.log",
+      "log": "native-merged-final.log",
       "cases": [
         "initial authenticated >8MiB evicted journal recovery without second execution",
         "owned live stream/cursor gap joins the same durable run once",
@@ -111,25 +113,25 @@
         "129 actual authenticated viewers preserve old external source at capacity and deny same-ID native fallback with zero input/execution",
         "project/device revocation and non-owner window isolation"
       ],
-      "actualPid": 44858,
-      "ppid": 44807,
-      "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+      "actualPid": 49942,
+      "ppid": 49883,
+      "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
       "nodeVersion": "22.16.0",
       "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
       "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
       "syntheticCliOnly": true,
       "actualMobileHook": true,
       "coldMain": {
-        "pid": 45782,
-        "ppid": 44858,
+        "pid": 51009,
+        "ppid": 49942,
         "nodeVersion": "22.16.0",
         "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
         "nodeBinaryHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
-        "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
         "pages": 28,
         "textHash": "012ccf11251bb7d4a0723455cd92e1d624cbce603e97f06d1fe49835d7236b64",
         "run": "completed",
-        "epoch": "af058b41-3bf6-40d8-8ee0-2b8e2f452ee4",
+        "epoch": "0bf9c7c7-2f76-49af-be7f-84c61daafa49",
         "emptyInitialRam": true,
         "runtimeConstructed": false
       },
@@ -162,7 +164,7 @@
       "sourceCheckpoint": "369342409a1430e6bba8d3627d4f2d042477d91d",
       "compiledFixtureByteIdenticalFinal": {
         "actualCoreRegressionSource": "369342409a1430e6bba8d3627d4f2d042477d91d",
-        "finalSource": "e370b2b70270b536044c0e6a60549235c62ef8cb",
+        "finalSource": "87a724e2e83be8a7798602f21706079905c730b3",
         "previousActualFixtureSha256": "b1f8c1a3c6dd86b3e1b81253802957a61685313818334065a1465a85dc112125",
         "finalCompiledFixtureSha256": "b1f8c1a3c6dd86b3e1b81253802957a61685313818334065a1465a85dc112125",
         "byteIdentical": true,
@@ -202,10 +204,10 @@
     "preCoreProcesses": [
       {
         "event": "pre-core",
-        "pid": 44858,
-        "ppid": 44807,
+        "pid": 49942,
+        "ppid": 49883,
         "uid": 501,
-        "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
         "negativeProbes": 4,
         "nodeVersion": "22.16.0",
         "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
@@ -213,10 +215,10 @@
       },
       {
         "event": "pre-core",
-        "pid": 44862,
-        "ppid": 44858,
+        "pid": 49946,
+        "ppid": 49942,
         "uid": 501,
-        "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
         "negativeProbes": 4,
         "nodeVersion": "22.16.0",
         "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
@@ -224,10 +226,10 @@
       },
       {
         "event": "pre-core",
-        "pid": 45782,
-        "ppid": 44858,
+        "pid": 51009,
+        "ppid": 49942,
         "uid": 501,
-        "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
         "negativeProbes": 4,
         "nodeVersion": "22.16.0",
         "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
@@ -235,10 +237,10 @@
       },
       {
         "event": "pre-core",
-        "pid": 45846,
-        "ppid": 44858,
+        "pid": 51067,
+        "ppid": 49942,
         "uid": 501,
-        "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
         "negativeProbes": 4,
         "nodeVersion": "22.16.0",
         "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
@@ -246,10 +248,10 @@
       },
       {
         "event": "pre-core",
-        "pid": 45862,
-        "ppid": 44858,
+        "pid": 51083,
+        "ppid": 49942,
         "uid": 501,
-        "homeHash": "930fe38e01d5977d5b1faa7c7a98d3fa44d944b8ff8d3ae7b8819e4d2cef9d46",
+        "homeHash": "cbd697bf1e468c31ab17e99f9bcd124f3fd19310b3c1aabb208320fa5cbfa493",
         "negativeProbes": 4,
         "nodeVersion": "22.16.0",
         "execPath": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
@@ -270,6 +272,33 @@
     "noVendorCLIOrProviderAccounts": true
   },
   "earlierAttempts": [
+    {
+      "logs": ["evidence-collector-incomplete.log"],
+      "result": "evidence collector assertion failed before writing receipt",
+      "cause": "comparison scoped all Desktop main files and included the known PR101 link-system-browser.test.ts update; corrected assertion pins exactly that test-only difference. No production or test gate failure; incomplete task-owned archive retained separately and not used as final receipt."
+    },
+    {
+      "logs": [
+        "native-frozen-final.log",
+        "focused-frozen-final.log",
+        "typecheck-frozen-final.log",
+        "lint-frozen-final.log",
+        "format-frozen-final.log"
+      ],
+      "result": "passed earlier 9ff7168d checkpoint",
+      "scope": "final freshness correction restricts the native first-input exception to this device minted ID with durable state genuinely absent; existing device-minted state still requires current selection. Latest main PR101 merged cleanly and final combined checks run again."
+    },
+    {
+      "logs": [
+        "native-route-final.log",
+        "focused-route-final.log",
+        "typecheck-route-complete-final.log",
+        "lint-route-final.log",
+        "format-route-final.log"
+      ],
+      "result": "passed earlier e370 checkpoint",
+      "scope": "before final fresh-device existing-state guard; original immutable 99-file evidence archive retained separately as history, SHA256 893537b9b759b6fdf9de80e7763d31de16e73cba174e4a6f8961fe1464c3f92d"
+    },
     {
       "logs": ["capacity-route-before.log", "capacity-route-after.log"],
       "result": "controlled red/green",
@@ -357,11 +386,11 @@
     "Out-of-run/background/CCRoom producers, arbitrary history imports, retention/rotation/repair and multi-user CLI HOME isolation remain separate."
   ],
   "evidence": {
-    "directory": "/tmp/codeshell-mobile-external-output.856i06hv/evidence/raw",
-    "archive": "/tmp/codeshell-mobile-external-output.856i06hv/mobile-external-output-evidence.tar.gz",
-    "archiveSha256": "893537b9b759b6fdf9de80e7763d31de16e73cba174e4a6f8961fe1464c3f92d",
-    "archiveBytes": 60445,
-    "regularFiles": 99,
+    "directory": "/tmp/codeshell-mobile-external-output.856i06hv/evidence-final/raw",
+    "archive": "/tmp/codeshell-mobile-external-output.856i06hv/mobile-external-output-evidence-final.tar.gz",
+    "archiveSha256": "47f7d70f6fa934883dd8533eb2a51c69a56533f7ac2dcb7fd2ab6e66abf97027",
+    "archiveBytes": 65679,
+    "regularFiles": 112,
     "rawFiles": [
       {
         "path": "await-authority-after.log",
@@ -389,9 +418,9 @@
         "sha256": "47530b718a79409badff697bcaff874eacc5ba6e73db70ce0a6aa4f44c2f28ad"
       },
       {
-        "path": "collect-evidence.py",
-        "bytes": 11261,
-        "sha256": "9d84bf270c2c22c4d831f134051d5ca0499d0fd400663e010b672b5aee4f8184"
+        "path": "collect-evidence-final.py",
+        "bytes": 14157,
+        "sha256": "f0983c5eee2f1643e4c89db553c815d1eff1b16c22dd0619b05a4a5c0d3159b7"
       },
       {
         "path": "commands-claims-client.log",
@@ -414,14 +443,24 @@
         "sha256": "459d11ee2ce64fec05c3a389bcd5d56229b0a44a3a1a1265cb5b7d6681326616"
       },
       {
-        "path": "core-runtime-byte-proof.json",
+        "path": "core-byte-merged-final.log",
+        "bytes": 84,
+        "sha256": "b3611216f1e706a54ba1b7dca87212c8c8cceb2057fe22c4ed46b95796622bcc"
+      },
+      {
+        "path": "core-runtime-byte-proof-final.json",
         "bytes": 586,
-        "sha256": "ce74646f90e2fb0f324daa385e69c530251c414fb735d41c9bea6b3f88e95bac"
+        "sha256": "b6dd66b9b52d3a1c3c593271f493a9336d16f6a85fd5007ad0a2f0d78585030c"
       },
       {
         "path": "core-runtime-byte-proof.log",
         "bytes": 87,
         "sha256": "72c89c3b330ae781fd4d2e109c379bdb1e398a91ebf98669b04471319f376615"
+      },
+      {
+        "path": "evidence-collector-incomplete.log",
+        "bytes": 435,
+        "sha256": "cb4f701f02f29b89cddfd23bed51d7e879c28c2582d1c915ea83ca1889b61bf4"
       },
       {
         "path": "external-pr99-guard.jsonl",
@@ -459,9 +498,19 @@
         "sha256": "f49c334d88ca1c217982dc942f23be19095131c542d64c7774927274947f72b4"
       },
       {
+        "path": "focused-frozen-final.log",
+        "bytes": 22304,
+        "sha256": "f9e12286f5de4b2e39cfa38170b7b8567ddebd56a3695823f02df3894533d818"
+      },
+      {
         "path": "focused-initial.log",
         "bytes": 5397,
         "sha256": "0943d997a35e70ff67268cbec3bbc1f2c04a8413e41571226af2987aebf93aaa"
+      },
+      {
+        "path": "focused-merged-final.log",
+        "bytes": 22282,
+        "sha256": "b6a8138b648600111e28d9bb5e56498ba0c8cb2e9ed3acf8a081d42af44a56ed"
       },
       {
         "path": "focused-route-final.log",
@@ -509,9 +558,19 @@
         "sha256": "c42c1d5613aad27c7087fecc85dce518716b00c59c9756100c3d9835b1dda60f"
       },
       {
+        "path": "format-frozen-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
         "path": "format-initial-journal-final.log",
         "bytes": 569,
         "sha256": "e7e25a35218565b004f02df4f8377e897b1ae5ec554b41c9ab40562ab90f63cf"
+      },
+      {
+        "path": "format-merged-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
       },
       {
         "path": "format-native-capacity.log",
@@ -574,6 +633,11 @@
         "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
       },
       {
+        "path": "fresh-native-route-final.log",
+        "bytes": 2210,
+        "sha256": "dbe72ad4dc3df6e59c0aaa591db5bead47a0197fa4d1672634a384575b3e4e9e"
+      },
+      {
         "path": "install.log",
         "bytes": 468,
         "sha256": "e266a13c86a1dcee2be487c8accc081cdb37d3e551a85a337a69a09d0c5a4600"
@@ -594,6 +658,16 @@
         "sha256": "4bdd6b1a562afbb51ba8e54f6eaa4dde077a6c545bb3e21e30b675b12061f07f"
       },
       {
+        "path": "lint-frozen-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
+        "path": "lint-merged-final.log",
+        "bytes": 20939,
+        "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
+      },
+      {
         "path": "lint-route-final.log",
         "bytes": 20939,
         "sha256": "a96d5735fc22587f72532cc76baa4d518a539a4e10288699f39c837d4f184db4"
@@ -611,12 +685,12 @@
       {
         "path": "mobile-external-guard.jsonl",
         "bytes": 176386,
-        "sha256": "7867b580d5ff10870fce529bfbcd43dac5840b24832a1aa2faa588e99b6bba34"
+        "sha256": "e59ac8d61916c4128404a3a23e9263d918340a24d180c85e7a2f53fccbd5866e"
       },
       {
         "path": "mobile-external-requests.jsonl",
         "bytes": 864,
-        "sha256": "f0a2ba97f142f8ffabd9038bdfe41cc769cd078c38abdf91f8eefbd577a70eac"
+        "sha256": "1ce1adaf8964aa970d5afef6bc392963b4efd063a88ed9046114fb258ed2040d"
       },
       {
         "path": "native-combined-final.log",
@@ -679,9 +753,19 @@
         "sha256": "291a0ed58063dab29d6e5d86a920bbd9855d175694bc15795fb01e770cb348e7"
       },
       {
+        "path": "native-frozen-final.log",
+        "bytes": 4452,
+        "sha256": "4a26ed01008cbe7ea1d5a8f1d7dc84b348e8912b4a4047350dbec37fe06b4a88"
+      },
+      {
         "path": "native-initial.log",
         "bytes": 1196,
         "sha256": "b683c020004b98e9421362288323b67e81e91196c96f2ca530ed6331049a44f3"
+      },
+      {
+        "path": "native-merged-final.log",
+        "bytes": 4452,
+        "sha256": "29a8dd2d68b42d5de915d61914d9773e5cfcacb271f3cd01f2bc4450654d2970"
       },
       {
         "path": "native-ninth.log",
@@ -814,6 +898,11 @@
         "sha256": "970d9f58c16503fbdf76ecef6f5e22cb687da4a6c12fffe33a8f677d133403ed"
       },
       {
+        "path": "typecheck-frozen-final.log",
+        "bytes": 725,
+        "sha256": "d188c9a5434930950a63f2f0011c8b497411bd062a578fc257cbbf736ef332b5"
+      },
+      {
         "path": "typecheck-full.log",
         "bytes": 5487,
         "sha256": "202e969ac04bed6011bbcddc565fecaab0d13d4a5f91f29a65a4cfda8c693994"
@@ -822,6 +911,11 @@
         "path": "typecheck-initial.log",
         "bytes": 3881,
         "sha256": "aebb68360c461a59c9554d6bff79e48970dd4856c37913fd6cb9ba9c5328ec83"
+      },
+      {
+        "path": "typecheck-merged-final.log",
+        "bytes": 725,
+        "sha256": "d188c9a5434930950a63f2f0011c8b497411bd062a578fc257cbbf736ef332b5"
       },
       {
         "path": "typecheck-route-complete-final.log",
