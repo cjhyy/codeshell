@@ -316,8 +316,12 @@ export interface ToolContext {
     options?: {
       signal?: AbortSignal;
       assertAuthorized?: () => void;
+      /** Trusted per-call services keyed by private symbols; never model or hook input. */
+      privateServices?: ReadonlyMap<symbol, unknown>;
     },
   ): Promise<ToolResult>;
+  /** Executor-owned services for this bound invocation only; not inherited by nested calls. */
+  boundToolServices?: ReadonlyMap<symbol, unknown>;
   /** Explicit root for project/global memory; portable profile storage stays separate. */
   memoryBaseDir?: string;
   /** Mutate the owning live context cwd. Worktree switching intentionally does not use this. */

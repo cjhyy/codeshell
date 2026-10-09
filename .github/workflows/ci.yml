@@ -238,6 +238,8 @@ jobs:
           package-manager-cache: false
       - name: native Node document and authority smoke
         run: bun run test:upload-documents
+      - name: actual SDK Engine cross-file upload query and cold consumer
+        run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-crossfile-query.mjs
 
   coverage:
     name: builtin integration coverage

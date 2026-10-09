@@ -1,7 +1,61 @@
 import { spawn } from "node:child_process";
-import { isAbsolute } from "node:path";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DOCUMENT_PARSE_TIMEOUT_MS, MAX_DOCUMENT_BYTES, type ParsedDocument } from "./types.js";
+
+/** Private Host diagnostics; never included in document content or tool results. */
+export interface ParserProcessReceipt {
+  pid?: number;
+  ppid: number;
+  executable: string;
+  home: string;
+  runtime?: {
+    pid: number;
+    ppid: number;
+    executable: string;
+    home: string;
+    cwd: string;
+    environment: Record<string, string>;
+    directoryModes: Record<string, number>;
+    networkProbesBeforeImport: number;
+    node: string;
+    bun?: string;
+    electron?: string;
+  };
+  code: number | null;
+  signal: string | null;
+  outcome: "success" | "failed" | "cancelled" | "timeout" | "spawn-error";
+  cleanedUp: boolean;
+}
+
+function createParserEnvironment() {
+  const home = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-document-parser-")));
+  const environment: Record<string, string> = {
+    HOME: home,
+    USERPROFILE: home,
+    XDG_CONFIG_HOME: join(home, "config"),
+    XDG_DATA_HOME: join(home, "data"),
+    XDG_CACHE_HOME: join(home, "cache"),
+    XDG_STATE_HOME: join(home, "state"),
+    XDG_RUNTIME_DIR: join(home, "runtime"),
+    APPDATA: join(home, "appdata"),
+    LOCALAPPDATA: join(home, "localappdata"),
+    CODE_SHELL_HOME: join(home, "host-state"),
+    TMPDIR: join(home, "tmp"),
+    TEMP: join(home, "tmp"),
+    TMP: join(home, "tmp"),
+  };
+  try {
+    for (const directory of new Set(Object.values(environment)))
+      mkdirSync(directory, { recursive: true, mode: 0o700 });
+    return { home, environment };
+  } catch (error) {
+    rmSync(home, { recursive: true, force: true });
+    throw error;
+  }
+}
 
 let activeParsers = 0;
 const pendingParsers: (() => void)[] = [];
@@ -84,6 +138,8 @@ export async function parseDocumentIsolated(
     timeoutMs?: number;
     /** Trusted Host only; used for PDF, never sourced from tool arguments/settings. */
     resolveExecutable?: (signal?: AbortSignal) => Promise<string>;
+    /** Trusted private diagnostics, called after actual close and owned-directory cleanup. */
+    onProcessExit?: (receipt: ParserProcessReceipt) => void;
   } = {},
 ): Promise<ParsedDocument> {
   options.signal?.throwIfAborted();
@@ -116,22 +172,51 @@ export async function parseDocumentIsolated(
       !managedExecutable && process.versions.bun
         ? ["--smol", entry]
         : ["--max-old-space-size=192", entry];
-    const child = spawn(managedExecutable ?? process.execPath, args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
-      shell: false,
-      env: {
-        PATH: process.env.PATH,
-        SystemRoot: process.env.SystemRoot,
-        ...(!managedExecutable && process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
-      },
-    });
-    const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
+    const executable = managedExecutable ?? process.execPath;
+    const { home, environment } = createParserEnvironment();
+    let child: ReturnType<typeof spawn>;
+    try {
+      options.signal?.throwIfAborted();
+      child = spawn(executable, args, {
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+        shell: false,
+        cwd: home,
+        env: {
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot,
+          ...environment,
+          ...(!managedExecutable && process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
+        },
+      });
+    } catch (error) {
+      rmSync(home, { recursive: true, force: true });
+      throw error;
+    }
+    const receipt: ParserProcessReceipt = {
+      pid: child.pid,
+      ppid: process.pid,
+      executable,
+      home,
+      code: null,
+      signal: null,
+      outcome: "failed",
+      cleanedUp: false,
+    };
+    const closed = new Promise<void>((resolve) =>
+      child.once("close", (code, signal) => {
+        receipt.code = code;
+        receipt.signal = signal;
+        resolve();
+      }),
+    );
     try {
       return await new Promise<ParsedDocument>((resolve, reject) => {
         let settled = false;
         let size = 0;
         const output: Buffer[] = [];
+        const header: Buffer[] = [];
+        let headerBytes = 0;
         const finish = (error: unknown, value?: ParsedDocument) => {
           if (settled) return;
           settled = true;
@@ -140,30 +225,74 @@ export async function parseDocumentIsolated(
           if (error) {
             child.kill("SIGKILL");
             reject(error);
-          } else resolve(value!);
+          } else {
+            receipt.outcome = "success";
+            resolve(value!);
+          }
         };
-        const onAbort = () =>
+        const onAbort = () => {
+          receipt.outcome = "cancelled";
           finish(options.signal?.reason ?? new Error("Document parsing was cancelled"));
-        const timer = setTimeout(
-          () =>
-            finish(
-              new Error(
-                "Document parsing exceeded its time limit; use a smaller file or export UTF-8 text",
-              ),
+        };
+        const timer = setTimeout(() => {
+          receipt.outcome = "timeout";
+          finish(
+            new Error(
+              "Document parsing exceeded its time limit; use a smaller file or export UTF-8 text",
             ),
-          options.timeoutMs ?? DOCUMENT_PARSE_TIMEOUT_MS,
-        );
-        child.once("error", (error) => finish(error));
-        child.stdin.on("error", (error) => {
+          );
+        }, options.timeoutMs ?? DOCUMENT_PARSE_TIMEOUT_MS);
+        child.once("error", (error) => {
+          receipt.outcome = "spawn-error";
+          finish(error);
+        });
+        child.stdin!.on("error", (error) => {
           if (!settled) finish(error);
         });
-        child.stdout.on("data", (chunk: Buffer) => {
+        child.stdout!.on("data", (chunk: Buffer) => {
+          if (settled) return;
           size += chunk.length;
           if (size > 8 * 1024 * 1024)
             finish(new Error("Document parser response exceeds its size limit"));
-          else output.push(chunk);
+          else if (receipt.runtime) output.push(chunk);
+          else {
+            const end = chunk.indexOf(10);
+            const part = end < 0 ? chunk : chunk.subarray(0, end);
+            headerBytes += part.length;
+            if (headerBytes > 64 * 1024) {
+              finish(new Error("Document parser runtime receipt exceeds its size limit"));
+              return;
+            }
+            header.push(part);
+            if (end >= 0) {
+              try {
+                const runtime = JSON.parse(Buffer.concat(header).toString("utf8")).runtime;
+                if (
+                  !runtime ||
+                  runtime.pid !== child.pid ||
+                  runtime.ppid !== process.pid ||
+                  runtime.home !== home ||
+                  runtime.cwd !== home ||
+                  realpathSync(runtime.executable) !== realpathSync(executable) ||
+                  runtime.networkProbesBeforeImport !== 17 ||
+                  Object.entries(environment).some(
+                    ([key, value]) =>
+                      runtime.environment?.[key] !== value ||
+                      (process.platform !== "win32" &&
+                        (runtime.directoryModes?.[key] & 0o777) !== 0o700),
+                  )
+                )
+                  throw new Error("Document parser returned an invalid runtime receipt");
+                receipt.runtime = runtime;
+                header.length = 0;
+                output.push(chunk.subarray(end + 1));
+              } catch (error) {
+                finish(error);
+              }
+            }
+          }
         });
-        child.stderr.on("data", () => undefined);
+        child.stderr!.on("data", () => undefined);
         child.once("close", (code) => {
           if (settled) return;
           try {
@@ -171,6 +300,8 @@ export async function parseDocumentIsolated(
               throw new Error(
                 "Document parser exited unexpectedly; try a smaller file or export UTF-8 text",
               );
+            if (!receipt.runtime)
+              throw new Error("Document parser did not verify its private runtime");
             const message = JSON.parse(Buffer.concat(output).toString("utf8"));
             if (message.error) throw new Error(message.error);
             if (!message.result) throw new Error("Document parser returned an invalid result");
@@ -182,13 +313,16 @@ export async function parseDocumentIsolated(
         options.signal?.addEventListener("abort", onAbort, { once: true });
         if (options.signal?.aborted) onAbort();
         if (!settled)
-          child.stdin.end(
+          child.stdin!.end(
             JSON.stringify({ filename, bytes: Buffer.from(bytes).toString("base64") }),
           );
       });
     } finally {
       child.kill("SIGKILL");
       await closed;
+      rmSync(home, { recursive: true, force: true });
+      receipt.cleanedUp = true;
+      options.onProcessExit?.(receipt);
     }
   } finally {
     release();

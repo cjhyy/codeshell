@@ -613,7 +613,18 @@ export class ToolExecutor {
                 // without racing another call's executor state. Authority, rules,
                 // hooks, guards and recording remain the same as the parent call.
                 const nested = new ToolExecutor(this.registry, this.permission, this.hooks);
-                nested.setContext(this.toolCtx);
+                nested.setContext(
+                  this.toolCtx
+                    ? {
+                        ...this.toolCtx,
+                        // JSON arguments and hook updatedInput cannot create these
+                        // symbol keys. Copy the map and do not inherit parent services.
+                        boundToolServices: options?.privateServices
+                          ? new Map(options.privateServices)
+                          : undefined,
+                      }
+                    : undefined,
+                );
                 nested.setInvestigationGuard(this.guard);
                 nested.setTaskGuard(this.taskGuard);
                 nested.setLogger(this.log);
