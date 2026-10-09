@@ -3,13 +3,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
-import type { CloudAccountStatus } from "../../shared/cloud-account.js";
+import {
+  DEFAULT_CLOUD_ACCOUNT_ORIGIN,
+  type CloudAccountStatus,
+} from "../../shared/cloud-account.js";
 
 export function CloudAccountSettings() {
   const { t } = useT();
   const toast = useToast();
   const [status, setStatus] = useState<CloudAccountStatus>({ state: "signed-out" });
-  const [origin, setOrigin] = useState("");
+  const [origin, setOrigin] = useState(DEFAULT_CLOUD_ACCOUNT_ORIGIN);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -81,7 +84,7 @@ export function CloudAccountSettings() {
               value={origin}
               onChange={(event) => setOrigin(event.target.value)}
               maxLength={2048}
-              placeholder="https://account.example.com"
+              placeholder={DEFAULT_CLOUD_ACCOUNT_ORIGIN}
               disabled={pending}
               autoComplete="url"
             />

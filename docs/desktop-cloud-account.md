@@ -3,6 +3,9 @@
 CodeShell opens and runs local projects without an account or an account-server
 connection. Settings → General includes an optional cloud account section with
 password registration/login, GitHub login, explicit GitHub linking, and logout.
+The service address defaults to `https://115.159.45.55` and remains editable for
+self-hosted deployments. Prefilling it does not initiate an account connection;
+the selected server must expose the account API before sign-in is available.
 Registration availability and GitHub OAuth configuration belong to the selected
 Services deployment. Usernames use 3–64 letters, digits, periods, underscores or
 hyphens; passwords require at least 12 characters.
