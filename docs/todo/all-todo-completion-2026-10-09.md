@@ -9,7 +9,7 @@
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Link 统一授权前置批次 | PR60/64 已合入 main；系统浏览器 broker、一次性消费、取消／过期与云端交接已验证                                   | 真实 provider 应用与账号另验收；不以 fixture 代替已登录账号                                                                    |
 | 全部远程 Link         | Host PR61、services PR18/19、Host PR63 已合并；10 provider 的 26 个原动作及 GitHub 新增 3 动作已实现             | 固定可信 adapter、账号／作用域／资源过滤与续期；九家缺少应用配置和真实账号验证，不能公开为可连接                               |
-| Services 公开包兼容   | PR22/23/24 已合入 main，五个公开 Host 包仍为 0.9.27；SDK override 锁为 1.31.0，新双 Docker 候选与 staging 已验收 | 生产 Link 已升级到 ba5363c/schema 3（PR25）；Services 公开发行、Cloud/Hub 与真实业务验收仍须单独完成                           |
+| Services 公开包兼容   | PR27 已通过 6 项 CI 并合入 main，源码五个公开 Host 包已升至 0.9.28，SDK override 仍锁为 1.31.0；本地 263 项、6 条依赖链、21 项浏览器及 3 项 CLI 验收通过 | 生产 Link 仍为 ba5363c/0.9.27/schema 3（PR25），Hub 仍为 0.9.23；独立 Hub 候选与旧 Docker 证据不互换，部署及真实业务另验收 |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                          | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证 |
 | 跨 Session 成本 | PR68 账本已合入；PR88 最终 602f538c 通过全部 12 CI 并合为 b6bfe763，受控实际 Electron 两 Session／known+unknown／partial／取消／刷新已验收 | 真实 provider 账单仍待对照；unknown、估算与自定义 fetch 内部重试限制保留，不代表 macOS OS 钥匙串验收 |
 | Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                     | fetch 锚点不证明远端收到／收费；macOS 真实 OS 钥匙串验收尚未完成                                                               |
@@ -92,8 +92,12 @@ Services [PR24](https://github.com/cjhyy/codeshell-services/pull/24) 已合并�
 `ba5363c929042a21600d76cb89b9a70eddb076fa`：保持五个公开 Host 包为 0.9.27，
 以 override 将 SDK 精确锁为 1.31.0，其他第三方 resolution 不变；修复源码、新双 Docker
 候选与 staging 已通过验收。Host PR83 的 SDK 与 Desktop issuer 修复已随 0.9.28 发行。
-生产 Link 随后完成单独维护，见下一段；Services 的五个公开 Host 依赖仍是 0.9.27，
-不把 Host 0.9.28 发布写成 Services 依赖或 Hub 已升级。
+生产 Link 随后完成单独维护，见下一段。Services 源码现由
+[PR27](https://github.com/cjhyy/codeshell-services/pull/27) 升级五个公开 Host 包至 0.9.28，
+SDK override 保持 1.31.0；本地 263 项、6 条依赖链、21 项浏览器及 3 项 CLI 验收与全部
+6 项 CI 通过，合并为 `d67e62c42ccbf7cf598f067df77cb44595f64f85`，与验收 head
+`09f4c200e915d5838ac1e662ece27dc68e55c36c` 树一致。生产 Link 仍为下述 ba5363c/0.9.27，
+Hub 仍为 0.9.23；独立 Hub 候选不沿用旧 Docker 身份，不把源码合并当成部署。
 
 此前服务器 Link 在 services `82d0e4d` 上完成的验收保留为历史证据：健康检查返回
 schema 3，HTTPS 证书验证通过。
