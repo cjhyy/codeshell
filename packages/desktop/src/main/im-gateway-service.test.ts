@@ -1103,7 +1103,7 @@ describe("ImGatewayService", () => {
     expect(service.listOwnerMessageTargets()).toEqual([]);
   });
 
-  test("starts configured channels automatically at Desktop launch", async () => {
+  test("starts configured channels only after the owning Desktop control plane is ready", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-autostart-"));
     const configPath = join(root, "config.json");
     writeFileSync(
@@ -1129,9 +1129,15 @@ describe("ImGatewayService", () => {
       { mode: 0o600 },
     );
     if (process.platform !== "win32") chmodSync(configPath, 0o600);
+    let controlReady = false;
+    let controlChecks = 0;
     let factoryCalls = 0;
     const service = new ImGatewayService({
       configPath,
+      ensureDesktopControl: async () => {
+        controlChecks++;
+        if (!controlReady) throw new Error("control plane owned by another Desktop");
+      },
       createChannelAdapter: async (config) => {
         factoryCalls += 1;
         return {
@@ -1148,12 +1154,25 @@ describe("ImGatewayService", () => {
     });
 
     try {
+      expect(service.configuredGatewayLockPath()).toBe(join(root, "gateway.lock"));
+      await expect(service.startConfiguredAtLaunch()).rejects.toThrow(
+        "control plane owned by another Desktop",
+      );
+      expect(service.status()).toMatchObject({
+        running: false,
+        error: "Desktop 消息桥接未就绪：control plane owned by another Desktop",
+      });
+      expect(factoryCalls).toBe(0);
+      expect(existsSync(join(root, "gateway.lock"))).toBe(false);
+      expect(existsSync(join(root, "inbox.json"))).toBe(false);
+      controlReady = true;
       expect(await service.startConfiguredAtLaunch()).toMatchObject({
         running: true,
         channels: ["telegram"],
       });
       expect(await service.startConfiguredAtLaunch()).toMatchObject({ running: true });
       expect(factoryCalls).toBe(1);
+      expect(controlChecks).toBe(2);
     } finally {
       await service.dispose();
     }

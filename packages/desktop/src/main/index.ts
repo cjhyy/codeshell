@@ -833,6 +833,10 @@ const panelAppBridge = new PanelAppBridge({
 });
 panelAppBridge.registerIpc();
 const imGatewayService = new ImGatewayService({
+  ensureDesktopControl: async () => {
+    if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
+    await gatewayControlServer.start();
+  },
   emit: (event) => {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
@@ -844,6 +848,9 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
+// The dispatcher exists before its worker and durable stores finish loading.
+// IM delivery shares the same completed initialization boundary as Pet IPC.
+let petRuntimeReady = false;
 let petHostActionReceiptService: PetHostActionReceiptService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
@@ -2721,6 +2728,7 @@ async function createWindow(): Promise<BrowserWindow> {
       ready: petInitialization,
     });
     await petInitialization;
+    petRuntimeReady = petDispatchService !== null;
     markPetIpcReady?.();
     markPetIpcReady = null;
   } else {
@@ -3402,11 +3410,15 @@ app.whenReady().then(async () => {
 
   gatewayControlServer = new GatewayControlServer({
     descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
+    legacyDesktopGatewayLockPath: imGatewayService.configuredGatewayLockPath(),
     open: () => startMobileRemote({ mode: "tunnel" }),
     close: () => stopMobileRemote(),
     status: () => getMobileRemoteGatewayStatus(),
     pairingUrl: () => createMobileRemotePairingUrl(),
     petChat: (request) => dispatchGatewayPetChat(request),
+    isPetChatReady: () => petRuntimeReady && petDispatchService !== null,
+    isSessionRouteReady: () =>
+      petRuntimeReady && petDispatchService !== null && sessionBridge !== undefined,
     routeSession: async (request) =>
       (await petImDecisions?.replyToSession(request)) ??
       (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
@@ -7142,6 +7154,7 @@ app.on("before-quit", (event) => {
     taskInboxService?.dispose();
     for (const dispose of taskInboxDisposers.splice(0)) dispose();
     const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+    petRuntimeReady = false;
     browserRuntime.closeAll();
     bridge?.kill();
     petStateAggregator?.stop();
