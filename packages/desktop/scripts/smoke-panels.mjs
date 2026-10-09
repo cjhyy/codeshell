@@ -8,7 +8,7 @@
  * all temporary. Native safeStorage deliberately accesses the current user's
  * application-specific OS key storage through the ordinary Electron API.
  */
-/* global document, localStorage */
+/* global document, localStorage, window */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { basename, dirname, join, resolve } from "node:path";
@@ -133,14 +133,6 @@ async function writeFixtureConfig() {
   // isolated while exercising the same project selection and authority as users.
   await mkdir(projectPath, { recursive: true });
   execFileSync("git", ["init", "--quiet", "--initial-branch=main", projectPath]);
-  await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
-  await writeFile(
-    join(isolated.codeShellHome, "desktop", "recents.json"),
-    JSON.stringify([
-      { path: projectPath, name: basename(projectPath), lastOpenedAt: Date.now(), pinned: true },
-    ]),
-    { mode: 0o600 },
-  );
   const presets = ["plain-text", "tool-call", "usage-with-cache", "error-then-ok"].map(
     (scenario) => ({
       value: scenario,
@@ -220,6 +212,32 @@ async function dismissTrustDialog(win) {
   if (!opened) return;
   await dialog.getByRole("button", { name: /信任并继续|Trust and continue/i }).click();
   await dialog.waitFor({ state: "hidden" });
+}
+
+async function registerFixtureProject() {
+  // Legacy recents are no longer project authority. Supply only this fixture's
+  // private directory to the ordinary picker IPC, restoring the picker after
+  // one use. This never changes Keychain APIs or any OS authorization dialog.
+  await app.evaluate(({ dialog }, path) => {
+    const original = dialog.showOpenDialog;
+    globalThis.__codeshellSmokeRestorePicker = () => {
+      dialog.showOpenDialog = original;
+      delete globalThis.__codeshellSmokeRestorePicker;
+    };
+    dialog.showOpenDialog = async () => {
+      globalThis.__codeshellSmokeRestorePicker();
+      return { canceled: false, filePaths: [path] };
+    };
+  }, projectPath);
+  try {
+    const project = await win.evaluate(() => window.codeshell.projectRegistry.createFromPicker());
+    assert(
+      project?.roots.some((root) => root.path === projectPath),
+      "The private fixture project was not registered through the production picker IPC",
+    );
+  } finally {
+    await app.evaluate(() => globalThis.__codeshellSmokeRestorePicker?.());
+  }
 }
 
 async function ensureConversation(win) {
@@ -381,7 +399,9 @@ try {
   const rendererErrors = captureRendererErrors(win);
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
   await dismissTrustDialog(win);
+  await registerFixtureProject();
   await win.getByText(basename(projectPath), { exact: true }).click();
+  await dismissTrustDialog(win);
   const storage = await app.evaluate(({ app, safeStorage }) => ({
     available: safeStorage.isEncryptionAvailable(),
     backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null,
