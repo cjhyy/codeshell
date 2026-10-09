@@ -3,6 +3,8 @@
 本增量让已封存回执退出 16 MiB／10,000 条 active 文件，旧 intent 仍不可重放。
 实现、受控验收、合并与正式发行分别记录；没有操作真实用户账本、provider 账号或生产服务。
 它不新增 UI、清空历史、轮换幂等 key，或把 unknown 改成成功。
+POSIX 主机校验私有目录／文件 mode；Windows 的合成 mode 不是 ACL 证据，保留原私有用户
+profile custody，以及 regular／no-symlink／单 link／有界读取与 HMAC，不声称已经审计 Windows ACL。
 
 ## 数据与容量
 
@@ -120,3 +122,18 @@ SDK Engine 验收还要求已 verified 原操作归档后不重发，另一个 u
 
 默认 smoke 的 evidence 位于隔离 HOME，会随 wrapper 清理。需要保留原始 receipt／child 日志时，
 给 `scripts/smoke-operation-retention.mjs` 显式传入由本次验收拥有的 evidence 目录；汇总也输出到 stdout。
+
+以下保留作者独立源码 `7c2c7e54` 的验收记录，描述修复前 verification 窗口，
+不作为本轮两项恢复修复后的最终结论。该矩阵实际 Node v22.16.0，PID 243／PPID 225；canonical active 16,776,392 B，
+实际文件 16,776,704 B。七次桶内容读共 8,992,432 B；full count、byte-full metadata、GC＋lookup＋
+retain＋readback 三路径锁内分别为 198.022／190.691／363.878 ms。父及竞争子进程全部锁内
+最大 1,253.695 ms；崩溃后等待原 10 秒 stale 的时间不算锁内耗时。两组八进程竞争、四个一般
+崩溃点和一个 verified 未提交需修复点均终态通过。实际恢复正文 536,870,912 B／768 槽／384 ID，
+无稀疏文件或正文删除。此实测不代表任意硬件的延迟 SLA。
+
+初版 `235b4245` 的真实 Windows CI 有 112 pass／3 fail：新增 POSIX mode 检查拒绝了
+Windows 合成 mode，导致两项恢复用例提前 blocked 与一项压缩失败。原日志和旧 manifest
+保持不变。修复仅在 POSIX 主机执行 mode 私有校验，Windows 保留原 profile custody、
+regular／单 link／no-symlink／有界 UTF8／HMAC 检查；新平台策略测试也注册至真实 Windows
+shard。修复后新 package、工作区 types、相关测试及实际编译 Node／SDK 矩阵已重新验收；
+真实 Windows 与完整组合 CI 以最终 head 的 PR checks 为准。
