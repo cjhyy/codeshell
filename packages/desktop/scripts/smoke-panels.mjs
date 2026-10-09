@@ -41,6 +41,16 @@ const confinement = await prepareConfinedElectronFixture({
   guardModule,
   ...(macosAcceptance ? { guardReceiptReady: (receipt) => receipt.negativeProbes === 7 } : {}),
 });
+if (macosAcceptance) {
+  const { bindPrivateKeychainContext, readKeychainReference } =
+    await import("./macos-keychain-context.mjs");
+  bindPrivateKeychainContext({
+    home: isolated.home,
+    root: process.env.CODESHELL_MACOS_ACCEPTANCE_ROOT,
+    reference: readKeychainReference(process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE),
+    receiptFile: join(acceptanceEvidence, "Electron-keychain-context.json"),
+  });
+}
 const ownedControl = macosAcceptance
   ? (await import("./owned-electron-control.mjs")).prepareOwnedElectronControl({
       appDir,

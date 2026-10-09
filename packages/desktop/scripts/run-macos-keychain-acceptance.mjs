@@ -6,12 +6,25 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import { rememberOwnedProcesses } from "./process-custody.mjs";
+import { bindPrivateKeychainContext, readKeychainReference } from "./macos-keychain-context.mjs";
 
 if (process.platform !== "darwin" || process.version !== "v22.16.0")
   throw new Error("Run this macOS acceptance with the actual Node 22.16.0 floor runtime");
-const [flag, destination, ...extra] = process.argv.slice(2);
-if (extra.length || (flag && (flag !== "--output" || !destination)))
-  throw new Error("usage: node run-macos-keychain-acceptance.mjs [--output <new-directory>]");
+const options = new Map();
+const args = process.argv.slice(2);
+for (let index = 0; index < args.length; index += 2) {
+  const flag = args[index];
+  const value = args[index + 1];
+  if (!value || !["--output", "--default-keychain-reference"].includes(flag) || options.has(flag))
+    throw new Error(
+      "usage: node run-macos-keychain-acceptance.mjs --default-keychain-reference <private-metadata-file> [--output <new-directory>]",
+    );
+  options.set(flag, value);
+}
+if (!options.has("--default-keychain-reference"))
+  throw new Error("Capture the existing OS default Keychain metadata before entering private HOME");
+const reference = readKeychainReference(options.get("--default-keychain-reference"));
+const destination = options.get("--output");
 let directory;
 if (destination) {
   directory = resolve(destination);
@@ -23,6 +36,14 @@ const temporary = join(directory, "tmp");
 mkdirSync(evidence, { mode: 0o700 });
 mkdirSync(temporary, { mode: 0o700 });
 const environment = createBunTestEnvironment(process.env, directory);
+const privateReference = join(directory, "default-keychain-reference.json");
+writeFileSync(privateReference, `${JSON.stringify(reference)}\n`, { flag: "wx", mode: 0o600 });
+bindPrivateKeychainContext({
+  home: environment.HOME,
+  root: directory,
+  reference,
+  receiptFile: join(evidence, "parent-keychain-context.json"),
+});
 Object.assign(environment, {
   TMPDIR: temporary,
   TMP: temporary,
@@ -30,6 +51,7 @@ Object.assign(environment, {
   CODESHELL_MACOS_KEYCHAIN_ACCEPTANCE: "1",
   CODESHELL_MACOS_ACCEPTANCE_ROOT: directory,
   CODESHELL_MACOS_ACCEPTANCE_EVIDENCE: evidence,
+  CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE: privateReference,
   DEBUG: "pw:browser",
 });
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
