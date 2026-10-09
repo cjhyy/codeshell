@@ -117,6 +117,7 @@ jobs:
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
+              --path-ignore-patterns '**/browser-library/browser-inspector.integration.test.ts'
               --path-ignore-patterns '**/src/main/mcp-oauth-issuer.test.ts'
           - shard: rest
             paths: >-
@@ -148,7 +149,7 @@ jobs:
         working-directory: packages/desktop
         run: |
           node node_modules/playwright/cli.js install --with-deps chromium
-          node -e "const fs = require('node:fs'); const browser = require('playwright').chromium.executablePath(); fs.accessSync(browser, fs.constants.X_OK); fs.appendFileSync(process.env.GITHUB_ENV, 'CHROME_PATH=' + browser + '\n');"
+          node -e "const fs = require('node:fs'); const browser = require('playwright').chromium.executablePath(); fs.accessSync(browser, fs.constants.X_OK); for (const key of ['CHROME_PATH', 'CODESHELL_TEST_CHROMIUM']) fs.appendFileSync(process.env.GITHUB_ENV, key + '=' + browser + '\n');"
       # Windows and other focused jobs still list literal paths. Keep their
       # references checked even though this Linux job now runs the full suite.
       - name: verify workflow test paths exist
@@ -189,6 +190,9 @@ jobs:
       - name: test Puppeteer driver integration
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/browser-library/puppeteer-browser-driver.test.ts
+      - name: test browser inspector integration
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/browser-library/browser-inspector.integration.test.ts
 
   upload-documents:
     name: uploaded documents (Node ${{ matrix.node }})
