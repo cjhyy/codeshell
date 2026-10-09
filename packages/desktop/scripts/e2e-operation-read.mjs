@@ -10,6 +10,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
+import {
+  finiteSettingsHooks,
+  prepareFiniteHookFixture,
+} from "../../../scripts/fixtures/finite-hook-package.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Optional actual constrained Hook backend, selected before native Main starts.
@@ -17,6 +21,8 @@ const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const hookRuntime = process.argv[2]
   ? JSON.parse(await readFile(process.argv[2], "utf8"))
   : undefined;
+const finiteResources = process.argv[3] === "--resources";
+assert.ok(!finiteResources || hookRuntime, "finite resources require the explicit trusted runtime");
 const literalHook = (value) => `printf '%s' '${JSON.stringify(value)}'`;
 const allowHook = literalHook({ decision: "allow" });
 const denyHook = literalHook({ decision: "deny" });
@@ -88,9 +94,10 @@ const fixture = await prepareConfinedElectronFixture({
 if (hookRuntime)
   fixture.env.CODESHELL_OPERATION_HOOK_HOST = JSON.stringify({
     runtime: hookRuntime,
-    inlineCommandSha256: [allowHook, denyHook, fixedInputHook].map((command) =>
-      createHash("sha256").update(command).digest("hex"),
-    ),
+    inlineCommandSha256: (finiteResources
+      ? [denyHook, fixedInputHook]
+      : [allowHook, denyHook, fixedInputHook]
+    ).map((command) => createHash("sha256").update(command).digest("hex")),
   });
 const projectRoot = join(isolated.home, "synthetic-project");
 const sessionId = "operation-read-session";
@@ -111,6 +118,16 @@ const sourcePaths = [
   "packages/core/src/links/operation-reader.ts",
   "packages/core/src/links/operation-hook-host.ts",
   "packages/core/src/links/operation-hooks.ts",
+  "packages/core/src/links/operation-hook-plans.ts",
+  "packages/core/src/links/operation-hook-custody.ts",
+  "packages/core/src/links/operation-hook-credentials.ts",
+  "packages/core/src/settings/hook-provenance.ts",
+  "packages/core/src/settings/manager.ts",
+  "packages/core/src/plugins/installedPluginSnapshot.ts",
+  "packages/core/src/plugins/installedPlugins.ts",
+  "packages/core/src/plugins/loadPluginHooks.ts",
+  "packages/core/src/runtime/constrained-process/layout.ts",
+  "packages/core/src/runtime/constrained-process/types.ts",
   "packages/core/src/runtime/constrained-process/docker.ts",
   "packages/core/src/runtime/constrained-process/resources.ts",
   "packages/core/src/hooks/configured-tool-hooks.ts",
@@ -143,6 +160,7 @@ const harnessPaths = [
   "packages/desktop/scripts/operation-read-cold-review.mjs",
   "packages/desktop/scripts/operation-read-fixture.mjs",
   "packages/desktop/scripts/operation-read-guard.mjs",
+  "scripts/fixtures/finite-hook-package.mjs",
 ];
 const harnessFiles = Object.fromEntries(
   harnessPaths.map((path) => [
@@ -234,6 +252,7 @@ let app,
   stage = "initialize",
   success = false,
   physicalRequests = 0;
+let finiteFixture;
 const observations = [];
 const mainStderr = [];
 let rendererErrors = [];
@@ -306,6 +325,21 @@ try {
       decision: "allow",
     },
   ];
+  const positiveSettingsBytes = JSON.stringify({
+    permissions: {
+      rules: [
+        { tool: "LinkAction", argsPattern: { action: "^get_starred$" }, decision: "ask" },
+        ...readRules,
+      ],
+    },
+    ...(hookRuntime
+      ? {
+          hooks: finiteResources
+            ? finiteSettingsHooks()
+            : toolEvents.map((event) => ({ event, command: allowHook })),
+        }
+      : {}),
+  });
   await writeFile(settingsPath, JSON.stringify({ permissions: { rules: readRules } }));
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await mkdir(evidenceDir, { recursive: true, mode: 0o700 });
@@ -382,6 +416,31 @@ try {
     join(isolated.home, "operation-read-source.json"),
     JSON.stringify(sourceEvidence),
   );
+  if (finiteResources) {
+    // Actual local install/approval under the synthetic HOME, before Main's
+    // startup config is captured. All Core imports occur after this guard.
+    Object.assign(
+      process.env,
+      Object.fromEntries(Object.entries(fixture.env).filter(([, value]) => value !== undefined)),
+    );
+    await import("./operation-read-guard.mjs");
+    finiteFixture = await prepareFiniteHookFixture({
+      coreUrl,
+      home: isolated.home,
+      cwd: projectRoot,
+      settingsScope: "full",
+      settingsBytes: positiveSettingsBytes,
+    });
+    fixture.env.CODESHELL_OPERATION_HOOK_HOST = JSON.stringify({
+      runtime: hookRuntime,
+      inlineCommandSha256: [denyHook, fixedInputHook].map((command) =>
+        createHash("sha256").update(command).digest("hex"),
+      ),
+      resourcePlans: finiteFixture.plans,
+    });
+    assert.ok(Buffer.byteLength(fixture.env.CODESHELL_OPERATION_HOOK_HOST) <= 32768);
+    environment.CODESHELL_OPERATION_HOOK_HOST = fixture.env.CODESHELL_OPERATION_HOOK_HOST;
+  }
   // Playwright's Main VM does not provide a dynamic-import callback. Put only
   // the synthetic custody adapter in the guarded ESM bootstrap, after the
   // production Main import; actual IPC/authority/UI stay production code.
@@ -583,18 +642,7 @@ try {
   assert.equal(calls.length, beforeReview);
   assert.equal(JSON.parse(await readFile(ledgerPath, "utf8")).observations, undefined);
   stage = "native fixed read and current ask permission record independent observation";
-  await writeFile(
-    settingsPath,
-    JSON.stringify({
-      permissions: {
-        rules: [
-          { tool: "LinkAction", argsPattern: { action: "^get_starred$" }, decision: "ask" },
-          ...readRules,
-        ],
-      },
-      ...(hookRuntime ? { hooks: toolEvents.map((event) => ({ event, command: allowHook })) } : {}),
-    }),
-  );
+  await writeFile(settingsPath, positiveSettingsBytes);
   await app.evaluate(() => {
     globalThis.__readDialogs.accept = true;
   });
@@ -610,10 +658,13 @@ try {
     ],
   );
   assert.deepEqual(JSON.parse(await readFile(ledgerPath, "utf8")).records, originalLedger.records);
-  assert.deepEqual(JSON.parse(await readFile(join(pluginsDir, "installed_plugins.json"), "utf8")), {
-    version: 2,
-    plugins: {},
-  });
+  assert.deepEqual(
+    JSON.parse(await readFile(join(pluginsDir, "installed_plugins.json"), "utf8")),
+    finiteFixture?.pluginRegistry ?? {
+      version: 2,
+      plugins: {},
+    },
+  );
   assert.equal(await readFile(join(sessionPath, "state.json"), "utf8"), originalState);
   assert.equal(await readFile(join(sessionPath, "transcript.jsonl"), "utf8"), originalTranscript);
   assert.equal(
@@ -740,6 +791,8 @@ try {
         physicalRequests,
         observations,
         constrainedHookRuntime: hookRuntime ?? null,
+        finiteResourcePlans: finiteFixture?.plans ?? null,
+        actualPluginApproval: finiteFixture?.approval ?? null,
         checks: [
           "actual compiled Engine unknown",
           "actual synthetic HTTP fixed GETs only",
