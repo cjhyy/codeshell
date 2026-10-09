@@ -451,7 +451,10 @@ try {
   await registerFixtureProject();
   await acceptancePhase("after-picker");
   await acceptancePhase("before-project-click");
-  await win.getByText(basename(projectPath), { exact: true }).click();
+  await win
+    .locator("#codeshell-sidebar-navigation")
+    .getByRole("button", { name: basename(projectPath), exact: true })
+    .click();
   await acceptancePhase("after-project-click");
   await acceptancePhase("before-trust");
   await dismissTrustDialog(win);
