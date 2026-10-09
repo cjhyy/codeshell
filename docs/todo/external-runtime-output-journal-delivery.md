@@ -109,5 +109,27 @@ transport/process decisions are recorded. This is a JavaScript fixture guard,
 not an OS sandbox or system-wide proof of zero external I/O. No model/provider
 request, real account or production operation is used.
 
-Final source/check results and raw evidence hashes are recorded separately after
-the combined package-release build, typecheck, native fixture and CI gates.
+Local final source checkpoint: `17df6446d8015824321624ada5f42ac434e3b832`, combined
+with Mobile main `8dd491d0`. The [receipt](external-runtime-output-journal-receipt.json)
+records the exact source/tree/lock and 68 regular raw evidence files. Package
+release passed 9 tarballs, 47 typed entries and 45 runtime imports; all 12
+workspace typechecks plus Web SPA passed. The focused shard passed 163 tests
+with zero skips. Lint remained at 0 errors/105 baseline warnings. Owned files
+passed formatting; the global check retained 416 style warnings in files that
+were byte-identical to main, without formatting unrelated code.
+
+The final external fixture passed all 18 cases under Node 22.16. Both providers
+recovered exactly 9,439,680 UTF-8 bytes in separate cold Main processes. The raw
+guard recorded 23 actual Node pre-import identities, each with four negative
+probes and the same private HOME/interpreter hash; its request/cold-process
+aggregate includes 22 PIDs because one CLI exits before a physical turn request.
+The combined Native Core Mobile fixture also passed authenticated reconnect,
+same-epoch gap, actual AgentServer inputs and frozen append joining. That separate
+regression does not demonstrate a Mobile external CLI adapter.
+
+The earlier PR checkpoint's type error, missing exact internal export entry and
+export-budget failure are retained in the raw evidence. Their explicit fixes and
+26 targeted passing regressions precede the final combined gates. Earlier local
+harness failures also remain separately labelled. Final CI is evaluated on the
+exact final [PR99](https://github.com/cjhyy/codeshell/pull/99) head, separately
+from this local source receipt; no old failed head is treated as acceptance.
