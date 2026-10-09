@@ -49,7 +49,10 @@
 import type { HookContext, HookEventName, HookResult } from "../hooks/events.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { LifetimeScope } from "../composition/lifetime.js";
-import { readInstalledPlugins } from "./installedPlugins.js";
+import { readInstalledPlugins, readInstalledPluginsForHookHost } from "./installedPlugins.js";
+import { pluginSourceIdentity } from "./installedPluginSnapshot.js";
+import { join } from "node:path";
+import { sha256 } from "../runtime/constrained-process/resources.js";
 import { runPluginCommandHook } from "./pluginCommandHook.js";
 import {
   inspectPluginHooks,
@@ -286,28 +289,64 @@ export interface PluginHookEntry {
  */
 export function listPluginHooks(disabledPlugins: string[] = []): PluginHookEntry[] {
   return listPluginHooksForHost(disabledPlugins).map(
-    ({ installPath: _path, timeoutMs: _timeout, ...entry }) => entry,
+    ({ installPath: _path, timeoutMs: _timeout, source: _source, ...entry }) => entry,
   );
 }
 
+export interface PluginHookSource {
+  kind: "plugin";
+  installKey: string;
+  installPath: string;
+  installEntrySha256: string;
+  hooksDigest: string;
+  approval: "approved" | "legacy" | "pending" | "changed" | "none";
+  approvedHookDigest: string | null;
+  rawEvent: string;
+  key: string;
+  /** Same-load source proof; unavailable for tolerant legacy reads. */
+  custody?: { registryIdentity: string; hooksIdentity: string };
+}
+
+type HostPluginHook = PluginHookEntry & {
+  installPath: string;
+  timeoutMs?: number;
+  source: PluginHookSource;
+};
+
 /** Host-only execution metadata. The UI listing deliberately omits native paths. */
-export function listPluginHooksForHost(
-  disabledPlugins: string[] = [],
-): Array<PluginHookEntry & { installPath: string; timeoutMs?: number }> {
-  const data = readInstalledPlugins();
+export function listPluginHooksForHost(disabledPlugins: string[] = []): HostPluginHook[] {
+  const registrySnapshot = readInstalledPluginsForHookHost();
+  const data = registrySnapshot?.data ?? readInstalledPlugins();
   const disabledSet = new Set(disabledPlugins);
-  const out: Array<PluginHookEntry & { installPath: string; timeoutMs?: number }> = [];
+  const out: HostPluginHook[] = [];
   for (const [key, entries] of Object.entries(data.plugins)) {
     const plugin = pluginNameFromKey(key);
     const disabled = disabledSet.has(plugin);
     for (const entry of entries) {
       const installPath = entry.installPath;
       if (!installPath) continue;
+      let hooksIdentity: string | undefined;
+      try {
+        hooksIdentity = pluginSourceIdentity(join(installPath, "hooks", "hooks.json"));
+      } catch {
+        /* Unproven resource origin. */
+      }
       const snapshot = inspectPluginHooks(installPath);
+      try {
+        if (pluginSourceIdentity(join(installPath, "hooks", "hooks.json")) !== hooksIdentity)
+          hooksIdentity = undefined;
+      } catch {
+        hooksIdentity = undefined;
+      }
       const integrity = verifyPluginHookIntegrity(entry, snapshot);
       const approval = pluginHookApprovalState(entry, snapshot);
       if (!snapshot.definition) continue;
       for (const hook of iteratePluginHooks(snapshot.definition)) {
+        const stableKey = pluginHookKey({
+          plugin,
+          rawEvent: hook.rawEvent,
+          command: hook.command.command,
+        });
         out.push({
           installPath,
           timeoutMs: hook.command.timeoutMs,
@@ -320,11 +359,23 @@ export function listPluginHooksForHost(
           disabled,
           integrity,
           approval,
-          key: pluginHookKey({
-            plugin,
+          key: stableKey,
+          source: {
+            kind: "plugin",
+            installKey: key,
+            installPath,
+            installEntrySha256: sha256(JSON.stringify(entry)),
+            hooksDigest: snapshot.digest,
+            approval,
+            approvedHookDigest: entry.approvedHookDigest ?? null,
             rawEvent: hook.rawEvent,
-            command: hook.command.command,
-          }),
+            key: stableKey,
+            ...(registrySnapshot && hooksIdentity
+              ? {
+                  custody: { registryIdentity: registrySnapshot.identity, hooksIdentity },
+                }
+              : {}),
+          },
         });
       }
     }

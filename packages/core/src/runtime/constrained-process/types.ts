@@ -29,8 +29,22 @@ export interface ConstrainedReadableResource {
   path: string;
   /** Relative deterministic path within the private read-only snapshot. */
   name: string;
+  /** Optional Host content pins, checked on the same bounded captured bytes. */
+  expectedBytes?: number;
+  expectedSha256?: string;
   /** Recheck the actual Host file authority, including revocation. */
   assertReadable(): void;
+}
+
+/** Trusted image interpreters only. Arguments follow the mapped script entry. */
+export interface ConstrainedProcessLaunch {
+  interpreter: "node" | "sh";
+  entry: string;
+  argv: readonly string[];
+  /** A declared read-only snapshot directory; "." means snapshot root. */
+  cwd?: string;
+  /** Identity of the Host's complete launch/source/resource plan. */
+  planSha256: string;
 }
 
 export interface ConstrainedProcessReceipt {
@@ -44,6 +58,7 @@ export interface ConstrainedProcessReceipt {
   hostPid: 0;
   removed: true;
   resourcesSha256: string;
+  planSha256?: string;
 }
 
 export interface ConstrainedProcessOutput {
@@ -60,7 +75,10 @@ export interface ConstrainedProcessScope {
 }
 
 export interface ConstrainedProcessHost {
-  capture(resources: readonly ConstrainedReadableResource[]): ConstrainedProcessResources;
+  capture(
+    resources: readonly ConstrainedReadableResource[],
+    layout?: { directories: readonly string[] },
+  ): ConstrainedProcessResources;
   /** Recheck actual resource authority and bytes before publishing an observation. */
   assertResourcesCurrent(resources: ConstrainedProcessResources): void;
   createScope(authority: { signal: AbortSignal; assertAuthorized(): void }): {
@@ -72,6 +90,7 @@ export interface ConstrainedProcessHost {
       event: string;
       resources?: ConstrainedProcessResources;
       plugin?: boolean;
+      launch?: ConstrainedProcessLaunch;
     }): ConstrainedProcessPermit;
   };
   dispose(): Promise<void>;

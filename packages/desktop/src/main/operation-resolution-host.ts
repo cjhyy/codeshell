@@ -1,4 +1,4 @@
-import { dialog, ipcMain, type BrowserWindow } from "electron";
+import { app, dialog, ipcMain, type BrowserWindow } from "electron";
 import { lstatSync } from "node:fs";
 import { join } from "node:path";
 import { codeShellHome, sessionsRoot } from "@cjhyy/code-shell-core";
@@ -9,6 +9,11 @@ import {
 import { registerOperationResolutionIpc } from "./operation-resolution-ipc.js";
 import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import { getTrust, getTrustCachedSync } from "./trust-store.js";
+
+// Capture before later login-shell environment completion. Neither a workspace
+// dotenv nor any renderer/cloud request can replace this startup authority.
+const nativeHookConfiguration = process.env.CODESHELL_OPERATION_HOOK_HOST;
+const nativeHookStateRoot = codeShellHome();
 
 /** Pin registry revisions without exposing or copying their contents into activity records. */
 function authorityRevision(): string {
@@ -30,9 +35,19 @@ export function registerOperationResolutionHost(deps: {
   let hookHost: ReturnType<typeof createOperationHookHost>;
   let disposed = false;
   try {
+    const nativeUserData = app.getPath("userData");
     // Only the native Host's startup environment may choose this reviewed
     // runtime. Project Settings/env, renderer and model arguments cannot.
-    hookHost = createOperationHookHost(process.env.CODESHELL_OPERATION_HOOK_HOST);
+    hookHost = createOperationHookHost(nativeHookConfiguration, {
+      stateRoot: nativeHookStateRoot,
+      assertStateRootCurrent: () => {
+        if (codeShellHome() !== nativeHookStateRoot || app.getPath("userData") !== nativeUserData)
+          throw new Error("Native operation Hook state root changed");
+      },
+      sensitiveRoots: ["cloud-account", "mobile-remote", "Partitions"].map((name) =>
+        join(nativeUserData, name),
+      ),
+    });
   } catch {
     console.warn("Configured operation Hook runtime unavailable; executable Hooks remain blocked");
   }
