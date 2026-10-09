@@ -29,6 +29,10 @@ function same(a: Identity, b: Identity): boolean {
  */
 const reservations = new Set<string>();
 const compromised = new Map<string, unknown>();
+/** Private fixture observation only: membership is separate from sticky admission health. */
+export function isPathReserved(path: string): boolean {
+  return reservations.has(path);
+}
 export function combineFailures(causes: readonly unknown[]): unknown {
   const unique = [...new Set(causes)];
   if (unique.length === 1) return unique[0];

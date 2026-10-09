@@ -38,6 +38,7 @@ import {
 import { createFixtureRoot, EVENT_LIMIT, JOURNAL_LIMIT, RECORD_LIMIT } from "./io.js";
 import { encodeRecord, projection, token, verifyJournal } from "./journal.js";
 import type { FixtureIOHooks } from "./lease-fs.js";
+import * as fixtureReservations from "./lease-fs.js";
 import { FixtureStorage } from "./storage.js";
 import type { Receipt } from "./storage.js";
 
@@ -56,6 +57,79 @@ afterEach(async () => {
 
 const notice = { kind: "host_notice", source: "automation", invocationId: "writer-fixture" };
 const goalScope = { kind: "control", operation: "goal", operationId: "goal-fixture" };
+
+test("readonly reservation observation survives sticky writer failure and disposal", async () => {
+  expect(typeof fixtureReservations.isPathReserved).toBe("function");
+  const f = fixture(),
+    primary = new Error("reservation-stage-fault"),
+    entered = deferred(),
+    gate = deferred();
+  let active = false;
+  const s = await f.writer({
+    afterNative: async (name) => {
+      if (active && name === "writer.stage.append") {
+        entered.resolve();
+        await gate.promise;
+        throw primary;
+      }
+    },
+  });
+  await s.transition();
+  active = true;
+  const work = rejection(s.append("reservation-sticky", notice, { type: "notice" }));
+  try {
+    await entered.promise;
+    expect(fixtureReservations.isPathReserved(f.statePath)).toBe(true);
+    let disposed = false;
+    const disposal = s.dispose().then(() => {
+      disposed = true;
+    });
+    await immediate();
+    expect(disposed).toBe(false);
+    expect(fixtureReservations.isPathReserved(f.statePath)).toBe(true);
+    gate.resolve();
+    const cause = await work;
+    expect(cause).toBeInstanceOf(WriterFailure);
+    expect(leaves(cause)).toContain(primary);
+    await disposal;
+    expect(fixtureReservations.isPathReserved(f.statePath)).toBe(false);
+    let refused: unknown;
+    try {
+      fixtureReservations.reservePath(f.statePath);
+    } catch (cause) {
+      refused = cause;
+    }
+    expect(refused).toBe(primary);
+    expect(fixtureReservations.isPathReserved(f.statePath)).toBe(false);
+  } finally {
+    gate.resolve();
+  }
+});
+
+test("readonly reservation observation keeps DOM cause classification separate from admission", async () => {
+  expect(typeof fixtureReservations.isPathReserved).toBe("function");
+  const f = fixture(),
+    primary = new Error("healthy-admission-non-abort-cause"),
+    abort = Object.assign(new DOMException("fixture", "AbortError"), { cause: primary });
+  let active = false;
+  const s = await f.writer({
+    afterNative: (name) => {
+      if (active && name === "writer.stage.append") throw abort;
+    },
+  });
+  await s.transition();
+  active = true;
+  const cause = await rejection(s.append("reservation-dom-cause", notice, { type: "notice" }));
+  expect(cause).toBeInstanceOf(WriterFailure);
+  expect(leaves(cause)).toContain(abort);
+  await s.dispose();
+  expect(fixtureReservations.isPathReserved(f.statePath)).toBe(false);
+  expect(fixtureReservations.reservePath(f.statePath)).toBe(true);
+  expect(fixtureReservations.isPathReserved(f.statePath)).toBe(true);
+  fixtureReservations.releasePath(f.statePath);
+  expect(fixtureReservations.isPathReserved(f.statePath)).toBe(false);
+});
+
 function fixture() {
   const root = createFixtureRoot(),
     sessionId = "async-writer",
