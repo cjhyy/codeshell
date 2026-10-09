@@ -450,6 +450,9 @@ try {
   await acceptancePhase("before-picker");
   await registerFixtureProject();
   await acceptancePhase("after-picker");
+  await acceptancePhase("before-picker-trust");
+  await dismissTrustDialog(win);
+  await acceptancePhase("after-picker-trust");
   await acceptancePhase("before-project-click");
   await win
     .locator("#codeshell-sidebar-navigation")
