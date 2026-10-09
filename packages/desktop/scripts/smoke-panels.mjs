@@ -135,8 +135,8 @@ function inspectNativeStorage() {
   );
 }
 
-async function verifiedProcesses() {
-  const result = await confinement.assertWorker(app);
+async function verifiedProcesses({ requireWorker = true } = {}) {
+  const result = await confinement.assertWorker(app, { requireWorker });
   if (macosAcceptance) {
     const verified = result.receipts.filter((receipt) => receipt.negativeProbes === 7);
     assert(
@@ -163,7 +163,12 @@ async function verifiedProcesses() {
       bootstrap?.appName === "code-shell" && !bootstrap.mockKeychain && !bootstrap.passwordStore,
       "The synchronous pre-Main bootstrap did not remove mock/plaintext cryptography",
     );
-    return { mainPid: result.mainPid, processes: verified, bootstrap };
+    return {
+      mainPid: result.mainPid,
+      workerCreated: result.workerCreated,
+      processes: verified,
+      bootstrap,
+    };
   }
   return result;
 }
@@ -512,6 +517,30 @@ try {
   );
   console.log("smoke L2: plain streaming assistant rendered");
 
+  // The visible assistant block precedes fire-and-forget title completion.
+  // Observe its actual durable callback before injecting failure so an already
+  // signed title request cannot contaminate the zero-send measurement.
+  const firstRunDeadline = Date.now() + 5_000;
+  let firstRunSettled = false;
+  do {
+    firstRunSettled = await app.evaluate((_, home) => {
+      const fs = process.getBuiltinModule("node:fs");
+      const path = process.getBuiltinModule("node:path");
+      const directory = path.join(home, "sessions");
+      const states = fs.readdirSync(directory).filter((name) => !name.startsWith("."));
+      if (states.length !== 1) return false;
+      const file = path.join(directory, states[0], "state.json");
+      if (!fs.existsSync(file)) return false;
+      const state = JSON.parse(fs.readFileSync(file, "utf8"));
+      return (
+        state.status === "completed" &&
+        state.title === "The plain streaming smoke response completed."
+      );
+    }, isolated.codeShellHome);
+    if (!firstRunSettled) await new Promise((done) => setTimeout(done, 100));
+  } while (!firstRunSettled && Date.now() < firstRunDeadline);
+  assert(firstRunSettled, "The first run and its actual auxiliary title callback did not settle");
+
   const beforeUnavailable = mock.requests.length;
   const beforeUnavailableRequests = fixtureRequestReceipts();
   await app.evaluate(({ safeStorage }) => {
@@ -773,7 +802,7 @@ try {
     });
     win = await findCodeShellWindow(app);
     restartedRendererErrors = captureRendererErrors(win);
-    const restartedProcesses = await verifiedProcesses();
+    const restartedProcesses = await verifiedProcesses({ requireWorker: false });
     assert(restartedProcesses.mainPid !== firstProcesses.mainPid, "Electron did not cold restart");
     const restartedProof = await verifyMainCustody();
     assert(

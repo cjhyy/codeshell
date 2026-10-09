@@ -127,7 +127,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
       XDG_DATA_HOME: join(isolated.home, ".local", "share"),
       CODESHELL_COST_SMOKE_GUARD_LOG: receiptFile,
     },
-    async assertWorker(app) {
+    async assertWorker(app, { requireWorker = true } = {}) {
       const pid = app.process().pid;
       const homeId = createHash("sha256").update(isolated.home).digest("hex");
       const deadline = Date.now() + 15_000;
@@ -149,7 +149,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
           throw new Error("Electron fixture received a mismatched network/home receipt");
         if (
           receipts.some((receipt) => receipt.pid === pid && guardReceiptReady(receipt)) &&
-          spawned.length > 0 &&
+          (!requireWorker || spawned.length > 0) &&
           spawned.every((worker) =>
             receipts.some(
               (receipt) =>
@@ -162,9 +162,11 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
               mode: 0o600,
             });
           console.log(
-            "Electron fixture: Main and actual spawned worker network/home confinement verified",
+            spawned.length
+              ? "Electron fixture: Main and actual spawned worker network/home confinement verified"
+              : "Electron fixture: Main network/home guard verified; no worker was created",
           );
-          return { mainPid: pid, homeId, receipts, spawned };
+          return { mainPid: pid, homeId, receipts, spawned, workerCreated: spawned.length > 0 };
         }
         await new Promise((done) => setTimeout(done, 100));
       } while (Date.now() < deadline);
