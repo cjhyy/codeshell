@@ -20,7 +20,10 @@
  *     will trigger a fresh spawn anyway.
  */
 
-import { publishOwnedExternalStream } from "./owned-external-stream.js";
+import {
+  publishOwnedExternalStream,
+  type OwnedExternalStreamEntry,
+} from "./owned-external-stream.js";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
@@ -263,6 +266,9 @@ export class AgentBridge implements PetStateBridge {
   private readonly outboundTaps = new Set<
     (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string }) => void
   >();
+  // Kept separate from worker taps: native streams, RPC replies and approvals
+  // must not be duplicated or impersonated by an in-Main producer.
+  private readonly ownedExternalTaps = new Set<(entry: OwnedExternalStreamEntry) => void>();
   /**
    * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
    * Used as the default context when a mobile client sends chat without an
@@ -2014,6 +2020,12 @@ export class AgentBridge implements PetStateBridge {
     return () => this.outboundTaps.delete(tap);
   }
 
+  /** Observe the same committed snapshot entry delivered to its Desktop owner. */
+  subscribeOwnedExternalStream(tap: (entry: OwnedExternalStreamEntry) => void): () => void {
+    this.ownedExternalTaps.add(tap);
+    return () => this.ownedExternalTaps.delete(tap);
+  }
+
   /** cwd/sessionId of the most recent run — the default context for a mobile
    *  client that didn't specify one. */
   getLastRunContext(): { cwd?: string; sessionId?: string } {
@@ -2213,13 +2225,22 @@ export class AgentBridge implements PetStateBridge {
 
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
-    publishOwnedExternalStream(
+    const entry = publishOwnedExternalStream(
       this.snapshots,
       this.windows,
       this.panelOwnerWebContentsId(sessionId),
       sessionId,
       annotateBrowserRuntimeStreamEvent(event, "full"),
     );
+    if (entry) {
+      for (const tap of this.ownedExternalTaps) {
+        try {
+          tap(entry);
+        } catch {
+          // Read-only observers cannot turn a committed output into a retry.
+        }
+      }
+    }
   }
 
   /**

@@ -71,6 +71,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22.16.0"
+      - name: Owned external CLI output through authenticated Mobile WS and actual hook
+        run: bun run test:mobile-external-output-journal
       - name: Native Core output journal through authenticated Mobile WS and actual hook
         run: bun run test:mobile-output-journal
 

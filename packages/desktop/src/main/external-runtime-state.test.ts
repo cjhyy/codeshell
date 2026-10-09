@@ -645,3 +645,38 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
     cumulativePromptTokens: 155,
   });
 });
+
+test("trusted mobile attachment projection survives canonical journal recovery without image bytes", async () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "external-mobile-image",
+    "/tmp/project",
+    "codex/test",
+    "codex",
+  );
+  const user = recorder.beginTurn({
+    text: "",
+    displayText: "图片",
+    clientMessageId: "image-only",
+    attachments: [
+      { path: "/tmp/project/.code-shell/attachments/image.png", kind: "image", mime: "image/png" },
+    ],
+    transcriptContent:
+      "<attached-image-paths>\n/tmp/project/.code-shell/attachments/image.png\n</attached-image-paths>",
+  });
+  const { projectOutputUserEvent } = await import("../../../web/src/lib/userMessageDisplay.js");
+  const projected = projectOutputUserEvent(user) as {
+    text: string;
+    attachments: Array<{ name: string; path: string }>;
+  };
+  expect(projected.text).toBe("图片");
+  expect(projected.attachments).toEqual([
+    {
+      name: "image.png",
+      path: "/tmp/project/.code-shell/attachments/image.png",
+      absPath: "/tmp/project/.code-shell/attachments/image.png",
+      size: 0,
+    },
+  ]);
+  expect(JSON.stringify(user)).not.toContain("base64");
+  expect(user.outputCursor).toBeDefined();
+});

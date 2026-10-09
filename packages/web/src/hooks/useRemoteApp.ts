@@ -676,7 +676,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           break;
         case "session.snapshot": {
-          if (outputClient.owns(event.sessionId)) break;
+          if (outputClient.owns(event.sessionId)) {
+            outputClient.advanceSnapshot(event.sessionId, event.outputCursor);
+            break;
+          }
           if (event.sessionId !== boundSessionRef.current || activeRoomIdRef.current) break;
           if (epochHistorySessionRef.current === event.sessionId) break;
           const session = sessionCursor(event.sessionId);

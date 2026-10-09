@@ -6,7 +6,7 @@ import { assertDesktopSessionId } from "../session-validation.js";
 import { getSessionWorkspaceAuthorityForUi } from "../session-workspace-service.js";
 
 /** Re-resolve mounted project authority for every page; no worker or runtime is started. */
-export async function mobileOutputRecoveryAuthority(sessionId: string): Promise<string> {
+export async function mobileSessionCommandAuthority(sessionId: string) {
   assertDesktopSessionId(sessionId);
   const directory = lstatSync(join(sessionsRoot(), sessionId));
   if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error("invalid Session");
@@ -28,7 +28,7 @@ export async function mobileOutputRecoveryAuthority(sessionId: string): Promise<
     throw new Error("Session root is not mounted");
   const root = lstatSync(authority.mainRoot);
   if (!root.isDirectory() || root.isSymbolicLink()) throw new Error("invalid project root");
-  return JSON.stringify([
+  const stamp = JSON.stringify([
     directory.dev,
     directory.ino,
     state.startedAt,
@@ -39,4 +39,14 @@ export async function mobileOutputRecoveryAuthority(sessionId: string): Promise<
     root.ino,
     authority.workspace.root,
   ]);
+  return {
+    stamp,
+    cwd: authority.workspace.root,
+    projectId: authority.projectId,
+    rootId: authority.mainRootId,
+  };
+}
+
+export async function mobileOutputRecoveryAuthority(sessionId: string): Promise<string> {
+  return (await mobileSessionCommandAuthority(sessionId)).stamp;
 }

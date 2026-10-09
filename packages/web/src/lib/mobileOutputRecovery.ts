@@ -15,6 +15,22 @@ export class MobilePendingInput extends Error {
   }
 }
 
+/** Verified pages progressed, but the observed live head kept moving within the bound. */
+export class MobileOutputCatchupPending extends Error {
+  constructor(
+    readonly cursor: string,
+    readonly resume: () => Promise<MobileOutputRecoveryResult>,
+  ) {
+    super("Recovery could not catch up within its bound");
+  }
+}
+
+type MobileOutputRecoveryResult = {
+  chat: ReturnType<typeof initialChatState>;
+  outputCursor: string;
+  snapshot: NonNullable<Reply["snapshot"]>;
+};
+
 /** Build a private candidate, then join its frozen prefix to an actual Main snapshot. */
 export async function recoverMobileOutput(args: {
   read: (options: OutputJournalOptions) => Promise<Reply>;
@@ -40,51 +56,56 @@ export async function recoverMobileOutput(args: {
   chat = { ...chat, run: chat.run === "error" ? "error" : "idle", liveByAgent: {} };
   let recovery: OutputJournalRecovery = { incomplete: false };
   let pages = 0;
-  for (let round = 0; round < 8; round++) {
-    while (true) {
-      if (!args.canContinue() || ++pages > 2048) throw new Error("Recovery cancelled or bounded");
-      const complete = applyOutputJournalPage(recovery, reply.page, (event) => {
-        chat = reduceStream(chat, event);
-      });
-      if (recovery.incomplete) throw new Error("Recovery is incomplete");
-      if (complete) break;
-      reply = await args.read({ after: recovery.cursor, through: recovery.through });
-    }
-    if (!args.canContinue()) throw new Error("Recovery cancelled");
-    const snapshot = reply.snapshot;
-    if (
-      !snapshot ||
-      snapshot.unpaired ||
-      !snapshot.epoch ||
-      !Number.isSafeInteger(snapshot.nextSeq) ||
-      snapshot.nextSeq < 1
-    )
-      throw new Error("Recovery snapshot is unpaired");
-    let target = recovery.cursor!;
-    for (const value of [snapshot.outputCursor, args.latestCursor()]) {
-      if (value === undefined) continue;
-      const order = compareOutputCursors(value, target);
-      if (order === undefined) throw new Error("Recovery identity changed");
-      if (order > 0) target = value;
-    }
-    if (target === recovery.cursor) {
-      const ids = snapshot.inputIds;
+  // A continuation retains the verified private candidate and the same total
+  // page budget. No prefix is published until the eventual frozen join passes.
+  const advance = async (): Promise<MobileOutputRecoveryResult> => {
+    for (let round = 0; round < 8; round++) {
+      while (true) {
+        if (!args.canContinue() || ++pages > 2048) throw new Error("Recovery cancelled or bounded");
+        const complete = applyOutputJournalPage(recovery, reply.page, (event) => {
+          chat = reduceStream(chat, event);
+        });
+        if (recovery.incomplete) throw new Error("Recovery is incomplete");
+        if (complete) break;
+        reply = await args.read({ after: recovery.cursor, through: recovery.through });
+      }
+      if (!args.canContinue()) throw new Error("Recovery cancelled");
+      const snapshot = reply.snapshot;
       if (
-        ids !== undefined &&
-        (!Array.isArray(ids) ||
-          ids.length > 128 ||
-          new Set(ids).size !== ids.length ||
-          ids.some((id) => typeof id !== "string" || !id.trim() || id.length > 512))
+        !snapshot ||
+        snapshot.unpaired ||
+        !snapshot.epoch ||
+        !Number.isSafeInteger(snapshot.nextSeq) ||
+        snapshot.nextSeq < 1
       )
-        throw new Error("Recovery input identity is unpaired");
-      const missing = ids?.filter(
-        (id) => !chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
-      );
-      if (missing?.length) throw new MobilePendingInput(missing);
-      return { chat, outputCursor: recovery.cursor!, snapshot };
+        throw new Error("Recovery snapshot is unpaired");
+      let target = recovery.cursor!;
+      for (const value of [snapshot.outputCursor, args.latestCursor()]) {
+        if (value === undefined) continue;
+        const order = compareOutputCursors(value, target);
+        if (order === undefined) throw new Error("Recovery identity changed");
+        if (order > 0) target = value;
+      }
+      if (target === recovery.cursor) {
+        const ids = snapshot.inputIds;
+        if (
+          ids !== undefined &&
+          (!Array.isArray(ids) ||
+            ids.length > 128 ||
+            new Set(ids).size !== ids.length ||
+            ids.some((id) => typeof id !== "string" || !id.trim() || id.length > 512))
+        )
+          throw new Error("Recovery input identity is unpaired");
+        const missing = ids?.filter(
+          (id) => !chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+        );
+        if (missing?.length) throw new MobilePendingInput(missing);
+        return { chat, outputCursor: recovery.cursor!, snapshot };
+      }
+      recovery = { incomplete: false, cursor: recovery.appliedCursor };
+      reply = await args.read({ after: recovery.cursor, through: target });
     }
-    recovery = { incomplete: false, cursor: recovery.appliedCursor };
-    reply = await args.read({ after: recovery.cursor, through: target });
-  }
-  throw new Error("Recovery could not catch up within its bound");
+    throw new MobileOutputCatchupPending(recovery.cursor!, advance);
+  };
+  return advance();
 }

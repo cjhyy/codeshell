@@ -1531,3 +1531,92 @@ for (const mode of ["interrupt", "stop", "replace"] as const) {
     await svc.stopAll();
   });
 }
+
+test("Mobile final synchronous authority fence runs after async validation and before canonical input/Goal/CLI", async () => {
+  const s = service({ external_agent_runtime: true, external_host_tools: true });
+  await s.start(request);
+  const before = new SessionManager().resume("sess-1").transcript.getEvents().length;
+  let allowed = true,
+    ack = 0;
+  await expect(
+    s.send(
+      "sess-1",
+      { text: "revoked", clientMessageId: "revoked-id", goal: "must not start" },
+      77,
+      undefined,
+      {
+        beforeInput: async () => {
+          await Promise.resolve();
+          allowed = false;
+        },
+        assertInputOwner: () => {
+          if (!allowed) throw new Error("revoked socket");
+        },
+        accepted: () => {
+          ack++;
+        },
+      },
+    ),
+  ).rejects.toThrow("revoked socket");
+  expect(providerInputs).toEqual([]);
+  expect(ack).toBe(0);
+  expect(new SessionManager().resume("sess-1").transcript.getEvents().length).toBe(before);
+  expect(s.getGoal("sess-1", 77).goal).toBeNull();
+  expect(new SessionManager().readSessionState("sess-1")?.outputRecoveryIncomplete).toBeUndefined();
+  const outcome = await s.send("sess-1", { text: "healthy", clientMessageId: "next-id" }, 77);
+  expect(outcome.reason).toBe("completed");
+  expect(providerInputs.length).toBe(1);
+  await s.stopAll();
+});
+
+test("external acceptance observes actual durable input and start before the provider is called", async () => {
+  const s = service({ external_agent_runtime: true });
+  await s.start(request);
+  let acknowledged = false;
+  providerSend = async () => {
+    expect(acknowledged).toBe(true);
+  };
+  await s.send("sess-1", { text: "accepted", clientMessageId: "stable-mobile" }, 77, undefined, {
+    beforeInput: async () => {},
+    assertInputOwner: () => {},
+    accepted: () => {
+      const sm = new SessionManager();
+      expect(sm.readSessionState("sess-1")?.status).toBe("active");
+      expect(sm.resume("sess-1").transcript.hasClientMessageId("stable-mobile")).toBe(true);
+      expect(
+        streamEvents.some((event) => event.type === "session_started" && !!event.outputCursor),
+      ).toBe(true);
+      expect(providerInputs.length).toBe(0);
+      acknowledged = true;
+    },
+  });
+  expect(acknowledged).toBe(true);
+  await s.stopAll();
+});
+
+test("expected external run cancellation cannot borrow the same runtime's later run", async () => {
+  const s = service({ external_agent_runtime: true });
+  await s.start(request);
+  let release!: () => void;
+  providerSend = async () =>
+    new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  const first = s.send("sess-1", { text: "first", clientMessageId: "first-cancel" }, 77);
+  while (!release) await Promise.resolve();
+  const captured = s.captureActiveRun("sess-1", 77)!;
+  release();
+  await first;
+  release = undefined as never;
+  const second = s.send("sess-1", { text: "second", clientMessageId: "second-cancel" }, 77);
+  while (!release) await Promise.resolve();
+  let cancelled = 0;
+  providerInterrupt = async () => {
+    cancelled++;
+  };
+  await expect(s.interrupt("sess-1", 77, captured)).rejects.toThrow("changed before cancellation");
+  expect(cancelled).toBe(0);
+  release();
+  await second;
+  await s.stopAll();
+});

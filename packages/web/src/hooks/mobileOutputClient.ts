@@ -1,5 +1,9 @@
 import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-core";
-import { recoverMobileOutput, MobilePendingInput } from "../lib/mobileOutputRecovery.js";
+import {
+  recoverMobileOutput,
+  MobilePendingInput,
+  MobileOutputCatchupPending,
+} from "../lib/mobileOutputRecovery.js";
 import { compareOutputCursors } from "../lib/outputJournalRecovery.js";
 
 type Page = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
@@ -17,6 +21,9 @@ interface Selection {
   pendingInputIds?: Set<string>;
   pendingInputBytes?: number;
   readyTimer?: ReturnType<typeof setTimeout>;
+  capacityTimer?: ReturnType<typeof setTimeout>;
+  capacityPending?: boolean;
+  capacityCursor?: string;
   waiter?: {
     id: string;
     resolve: (page: Page) => void;
@@ -45,6 +52,7 @@ export class MobileOutputClient {
     const old = this.selection;
     this.selection = undefined;
     if (old?.readyTimer) clearTimeout(old.readyTimer);
+    if (old?.capacityTimer) clearTimeout(old.capacityTimer);
     if (old?.waiter) {
       clearTimeout(old.waiter.timer);
       old.waiter.reject(new Error("Recovery cancelled"));
@@ -92,6 +100,9 @@ export class MobileOutputClient {
   private fail(selection: Selection): void {
     if (!this.current(selection)) return;
     if (selection.readyTimer) clearTimeout(selection.readyTimer);
+    if (selection.capacityTimer) clearTimeout(selection.capacityTimer);
+    selection.capacityTimer = undefined;
+    selection.capacityPending = false;
     selection.readyTimer = undefined;
     selection.recovering = false;
     selection.failed = true;
@@ -116,6 +127,11 @@ export class MobileOutputClient {
     )
       return true;
     if (event.type === "session.recovery.ready") {
+      // A later Main revocation also invalidates an already joined live stream.
+      if (!event.ok) {
+        this.fail(selection);
+        return true;
+      }
       if (selection.started || selection.failed) return true;
       selection.started = true;
       if (selection.readyTimer) clearTimeout(selection.readyTimer);
@@ -131,37 +147,39 @@ export class MobileOutputClient {
     return true;
   }
 
-  private async recover(selection: Selection): Promise<void> {
+  private async recover(selection: Selection, resume?: () => Promise<Result>): Promise<void> {
     try {
-      const result = await recoverMobileOutput({
-        canContinue: () => this.current(selection) && !selection.failed,
-        latestCursor: () => selection.latest,
-        read: (options) =>
-          new Promise<Page>((resolve, reject) => {
-            if (!this.current(selection) || selection.waiter)
-              return reject(new Error("Recovery cancelled"));
-            const id = `page-${this.auth}-${++this.sequence}`;
-            const timer = setTimeout(() => {
-              selection.waiter = undefined;
-              reject(new Error("Recovery timed out"));
-            }, 10_000);
-            selection.waiter = { id, resolve, reject, timer };
-            if (
-              !this.deps.send({
-                type: "session.outputJournal",
-                sessionId: selection.sessionId,
-                recoveryId: selection.id,
-                requestId: id,
-                after: options.after,
-                through: options.through,
-              })
-            ) {
-              clearTimeout(timer);
-              selection.waiter = undefined;
-              reject(new Error("Recovery disconnected"));
-            }
-          }),
-      });
+      const result = await (resume
+        ? resume()
+        : recoverMobileOutput({
+            canContinue: () => this.current(selection) && !selection.failed,
+            latestCursor: () => selection.latest,
+            read: (options) =>
+              new Promise<Page>((resolve, reject) => {
+                if (!this.current(selection) || selection.waiter)
+                  return reject(new Error("Recovery cancelled"));
+                const id = `page-${this.auth}-${++this.sequence}`;
+                const timer = setTimeout(() => {
+                  selection.waiter = undefined;
+                  reject(new Error("Recovery timed out"));
+                }, 10_000);
+                selection.waiter = { id, resolve, reject, timer };
+                if (
+                  !this.deps.send({
+                    type: "session.outputJournal",
+                    sessionId: selection.sessionId,
+                    recoveryId: selection.id,
+                    requestId: id,
+                    after: options.after,
+                    through: options.through,
+                  })
+                ) {
+                  clearTimeout(timer);
+                  selection.waiter = undefined;
+                  reject(new Error("Recovery disconnected"));
+                }
+              }),
+          }));
       if (!this.current(selection)) return;
       if (!result) {
         this.selection = undefined;
@@ -183,6 +201,7 @@ export class MobileOutputClient {
         return;
       }
       selection.recovering = false;
+      selection.capacityPending = false;
       if (selection.readyTimer) clearTimeout(selection.readyTimer);
       selection.readyTimer = undefined;
       selection.pendingInputIds = undefined;
@@ -191,6 +210,31 @@ export class MobileOutputClient {
       selection.latest = result.outputCursor;
       this.deps.commit(selection.sessionId, result);
     } catch (error) {
+      if (error instanceof MobileOutputCatchupPending) {
+        if (!this.current(selection) || selection.failed) return;
+        if (
+          selection.capacityCursor &&
+          compareOutputCursors(error.cursor, selection.capacityCursor) !== 1
+        ) {
+          this.fail(selection);
+          return;
+        }
+        selection.capacityCursor = error.cursor;
+        // Keep the old display behind its barrier. One delayed follow-up also
+        // consumes a terminal/head already observed during the last round; it
+        // never waits forever for an event that has already arrived.
+        selection.recovering = false;
+        selection.capacityPending = true;
+        this.deps.failed(selection.sessionId);
+        selection.capacityTimer = setTimeout(() => {
+          selection.capacityTimer = undefined;
+          if (!this.current(selection) || selection.failed) return;
+          selection.capacityPending = false;
+          selection.recovering = true;
+          void this.recover(selection, error.resume);
+        }, 25);
+        return;
+      }
       if (
         error instanceof MobilePendingInput &&
         error.ids.every((id) => selection.pendingInputIds?.has(id))
@@ -247,7 +291,7 @@ export class MobileOutputClient {
             new TextEncoder().encode(event.clientMessageId).length;
         }
         if (ids.size > 128 || (selection.pendingInputBytes ?? 0) > 32 * 1024) this.fail(selection);
-        if (!selection.failed && !selection.recovering) {
+        if (!selection.failed && !selection.recovering && !selection.capacityPending) {
           const latest = selection.latest;
           this.begin(sessionId);
           if (this.selection) {
@@ -284,7 +328,7 @@ export class MobileOutputClient {
       return "pending";
     }
     if (selection.pendingInputIds?.size) return "pending";
-    if (selection.failed || selection.recovering) return "pending";
+    if (selection.failed || selection.recovering || selection.capacityPending) return "pending";
     if (event?.type === "session_title") return false;
     const order =
       event?.outputCursor && selection.applied
@@ -300,5 +344,24 @@ export class MobileOutputClient {
     const event = raw as { outputCursor?: string } | null;
     if (this.selection?.sessionId === sessionId && typeof event?.outputCursor === "string")
       this.selection.applied = event.outputCursor;
+  }
+
+  /** A coalesced committed head requests pages; it never invents visible output. */
+  advanceSnapshot(sessionId: string, outputCursor: string | undefined): void {
+    const selection = this.selection;
+    if (!selection || selection.sessionId !== sessionId || !outputCursor || selection.failed)
+      return;
+    const previous = selection.latest ?? selection.applied;
+    const order = previous ? compareOutputCursors(outputCursor, previous) : 1;
+    if (order === undefined) {
+      this.fail(selection);
+      return;
+    }
+    if (order <= 0) return;
+    selection.latest = outputCursor;
+    if (!selection.recovering && !selection.capacityPending) {
+      this.begin(sessionId);
+      if (this.selection) this.selection.latest = outputCursor;
+    }
   }
 }

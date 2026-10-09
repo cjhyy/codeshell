@@ -1184,6 +1184,7 @@ const mobileOrchestrator = new MobileRemoteOrchestrator({
   approvalBridge,
   transcriptSubscriptions,
   getBridge: () => bridge,
+  getExternalRuntimeService: () => externalRuntimeService,
   broadcastToWindows: (channel, payload) => {
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send(channel, payload);
@@ -1712,6 +1713,10 @@ async function createWindow(): Promise<BrowserWindow> {
         },
       }),
     );
+
+    bridge.subscribeOwnedExternalStream((entry) => {
+      mobileOrchestrator.mirrorOwnedExternalStream(entry);
+    });
 
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).

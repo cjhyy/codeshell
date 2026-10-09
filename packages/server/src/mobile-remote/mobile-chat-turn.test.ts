@@ -200,4 +200,69 @@ describe("dispatchMobileChatTurn", () => {
     const retried = service.claim("device-1", ticket.uploadId);
     await service.finalize("device-1", ticket.uploadId, retried.claimId);
   });
+
+  for (const accepted of [false, true]) {
+    test(`alternative producer ${accepted ? "committed input survives mark-sent failure" : "ambiguous pre-ack timeout releases claims"} without a native request`, async () => {
+      const root = mkdtempSync(join(tmpdir(), "cs-mobile-alternative-"));
+      roots.push(root);
+      mkdirSync(join(root, "workspace"));
+      const cwd = realpathSync(join(root, "workspace"));
+      const uploads = new MobileUploadService({
+        rootDir: join(root, "spool"),
+        cleanupIntervalMs: 0,
+      });
+      services.push(uploads);
+      const ticket = await uploadedFixture(uploads);
+      let submissions = 0,
+        native = 0;
+      const result = await dispatchMobileChatTurn({
+        deviceId: "device-1",
+        sessionId: "external",
+        fallbackCwd: cwd,
+        text: "",
+        attachments: [
+          {
+            transport: "upload",
+            uploadId: ticket.uploadId,
+            clientId: "image-1",
+            name: "phone.png",
+            mime: "image/png",
+            size: PNG.length,
+          },
+        ],
+        clientMessageId: "stable-mobile-id",
+        runId: "request",
+        uploads,
+        resolveWorkspace: async () => cwd,
+        bridge: {
+          injectWorkerMessage() {
+            native++;
+          },
+          subscribeOutbound() {
+            native++;
+            return () => {};
+          },
+        },
+        meta: { origin: "mobile", producer: "mobile-chat" },
+        submit: async (request) => {
+          submissions++;
+          expect(request.params.clientMessageId).toBe("stable-mobile-id");
+          expect(request.params.attachments).toHaveLength(1);
+          if (!accepted) throw new Error("queue deadline before acceptance");
+          return { ok: true };
+        },
+        markSent: async () => {
+          throw new Error("disk failed after canonical acceptance");
+        },
+      });
+      expect(result.ok).toBe(accepted);
+      expect(submissions).toBe(1);
+      expect(native).toBe(0);
+      if (accepted) expect(() => uploads.claim("device-1", ticket.uploadId)).toThrow();
+      else {
+        const retry = uploads.claim("device-1", ticket.uploadId);
+        await uploads.finalize("device-1", ticket.uploadId, retry.claimId);
+      }
+    });
+  }
 });
