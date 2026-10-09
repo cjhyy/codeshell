@@ -9,6 +9,7 @@ import { OperationLedger, type OperationPlan } from "./ledger.js";
 import { OperationController, createSessionOperationController } from "./controller.js";
 import { createLinkOperationReviewStore } from "../links/operation-review.js";
 import { readOperationSessionOwner } from "./session-owner.js";
+import { OperationReviewStore } from "./review-store.js";
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
@@ -212,6 +213,43 @@ test("an actual failed atomic rename cannot publish a resolution or release its 
   const accepted = readFileSync(path, "utf8");
   f.ledger().settle(original.id, original.attemptId!, "verified");
   expect(readFileSync(path, "utf8")).toBe(accepted);
+});
+
+test("failed observation storage and stale revision preserve the exact unknown receipt and barrier", () => {
+  const f = fixture();
+  const original = f.unknown();
+  const store = new OperationReviewStore(f.root);
+  const review = store.review(f.sessionId);
+  const path = join(f.root, ".operations/ledger.json");
+  const backup = path + ".test-backup";
+  const before = readFileSync(path, "utf8");
+  const observe = (revision: string, assertIdle = () => {}) =>
+    store.observe(
+      f.sessionId,
+      review.owner,
+      original.id,
+      revision,
+      "matches_current",
+      ["github.get_issue"],
+      { identity: 42, current: "open" },
+      assertIdle,
+    );
+  expect(() => observe("0".repeat(64))).toThrow("stale");
+  try {
+    expect(() =>
+      observe(review.records[0].revision, () => {
+        renameSync(path, backup);
+        mkdirSync(path);
+      }),
+    ).toThrow();
+  } finally {
+    rmSync(path, { recursive: true });
+    renameSync(backup, path);
+  }
+  expect(readFileSync(path, "utf8")).toBe(before);
+  expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(true);
+  expect(f.ledger().settle(original.id, original.attemptId!, "verified").state).toBe("unknown");
+  expect(readFileSync(path, "utf8")).toBe(before);
 });
 
 test("unbound callers cannot bypass bound uncertainty or borrow an incarnation's operator decision", () => {

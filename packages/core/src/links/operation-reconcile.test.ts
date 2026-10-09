@@ -462,16 +462,44 @@ test("create body still rejects more than the existing 20,000-character limit", 
 
 test("legacy missing scope cannot borrow a global-only credential", async () => {
   const f = fixture();
-  await f.original("set_starred");
+  const output = await f.original("set_starred");
   const file = join(f.root, ".operations/ledger.json");
   const ledger = JSON.parse(readFileSync(file, "utf8"));
   delete Object.values(ledger.records as Record<string, any>)[0].recovery;
   writeFileSync(file, JSON.stringify(ledger));
+  writeFileSync(
+    join(f.directory, "transcript.jsonl"),
+    [
+      { type: "session_meta", data: { sessionId: f.sessionId, startedAt: f.state.startedAt } },
+      { type: "message", data: { role: "user", clientMessageId: "trusted-original" } },
+      {
+        type: "tool_use",
+        data: {
+          toolName: "LinkAction",
+          toolCallId: "original",
+          args: {
+            provider: "github",
+            action: "set_starred",
+            connectionId: f.credential.id,
+            params: { owner: "acme", repo: "repo", starred: true },
+          },
+        },
+      },
+      {
+        type: "tool_result",
+        data: { toolName: "LinkAction", toolCallId: "original", result: JSON.stringify(output) },
+      },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n"),
+  );
   f.data.globalOnly = true;
+  f.data.scopes.length = 0;
   const count = calls.length;
   expect((await f.reconcile()).result).toBe("unavailable");
   expect(calls.length).toBe(count);
-  expect(f.data.scopes.at(-1)).toBe("project");
+  expect(f.data.scopes.length).toBeGreaterThan(0);
+  expect(f.data.scopes.every((scope) => scope === "project")).toBe(true);
 });
 
 test("Host global deny remains effective when original credential scope is project", async () => {
@@ -593,4 +621,92 @@ test("related configured hooks record a distinct zero-read unavailable observati
   expect(calls.length).toBe(count);
   expect(f.review().records[0].canResolve).toBe(true);
   expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(true);
+});
+
+test.each(["issue", "url"])("changed immutable %s prevents a current-state match", async (kind) => {
+  const f = fixture();
+  await f.original("update_issue");
+  f.data.current = true;
+  if (kind === "issue") f.data.wrongIssue = true;
+  else f.data.wrongUrl = true;
+  const count = calls.length;
+  expect((await f.reconcile()).result).toBe("identity_changed");
+  expect(calls.slice(count).map((call) => call.action)).toEqual(["get_repository", "get_issue"]);
+  expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(true);
+});
+
+test("missing pinned Profile and policy change during HTTP fail closed before publishing", async () => {
+  for (const kind of ["profile", "policy"]) {
+    const f = fixture();
+    await f.original("set_starred");
+    if (kind === "profile") {
+      (f.state as any).workspaceProfile = "missing-pinned-profile";
+      f.save();
+    } else {
+      mkdirSync(join(f.root, ".code-shell"));
+      f.data.onRead = () =>
+        writeFileSync(
+          join(f.root, ".code-shell/settings.json"),
+          JSON.stringify({ permissions: { rules: [{ tool: "LinkAction", decision: "deny" }] } }),
+        );
+    }
+    const count = calls.length;
+    await expect(f.reconcile()).rejects.toThrow();
+    expect(calls.length - count).toBe(kind === "profile" ? 0 : 1);
+    expect(
+      JSON.parse(readFileSync(join(f.root, ".operations/ledger.json"), "utf8")).observations,
+    ).toBeUndefined();
+  }
+});
+
+test("independent observation history is bounded before another provider request", async () => {
+  const f = fixture();
+  await f.original("set_starred");
+  const original = JSON.parse(
+    readFileSync(join(f.root, ".operations/ledger.json"), "utf8"),
+  ).records;
+  for (let index = 0; index < 20; index++) await f.reconcile();
+  const count = calls.length;
+  await expect(f.reconcile()).rejects.toThrow("history is full");
+  expect(calls.length).toBe(count);
+  expect(JSON.parse(readFileSync(join(f.root, ".operations/ledger.json"), "utf8")).records).toEqual(
+    original,
+  );
+  expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(true);
+});
+
+test("concurrent observations serialize without changing the original receipt", async () => {
+  const f = fixture();
+  await f.original("set_starred");
+  const snapshot = f.review();
+  const before = JSON.parse(readFileSync(join(f.root, ".operations/ledger.json"), "utf8"));
+  const observations = await Promise.all([f.reconcile(snapshot), f.reconcile(snapshot)]);
+  expect(new Set(observations.map((observation) => observation.id)).size).toBe(2);
+  const after = JSON.parse(readFileSync(join(f.root, ".operations/ledger.json"), "utf8"));
+  expect(after.records).toEqual(before.records);
+  expect(after.observations[snapshot.records[0].id]).toHaveLength(2);
+  expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(true);
+});
+
+test("manual resolution during HTTP invalidates a late observation without changing its decision", async () => {
+  const f = fixture();
+  await f.original("set_starred");
+  const snapshot = f.review();
+  const record = snapshot.records[0];
+  f.data.onRead = () => {
+    f.data.onRead = () => {};
+    createLinkOperationReviewStore(f.root).resolve(
+      f.sessionId,
+      snapshot.owner,
+      record.id,
+      record.revision,
+      () => {},
+    );
+  };
+  await expect(f.reconcile(snapshot)).rejects.toThrow("stale");
+  const after = JSON.parse(readFileSync(join(f.root, ".operations/ledger.json"), "utf8"));
+  expect(after.observations).toBeUndefined();
+  expect(after.records[record.id].operatorResolution.decision).toBe("accept_uncertainty");
+  expect(after.records[record.id].state).toBe("unknown");
+  expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(false);
 });

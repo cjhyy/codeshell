@@ -11,6 +11,7 @@ import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { PermissionClassifier } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
+import type { HookEventName } from "../hooks/events.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { asRecord } from "./http.js";
@@ -71,7 +72,10 @@ export function createGithubOperationReader(options: {
         (hook) =>
           !hook.disabled &&
           readHookEvents.has(hook.event) &&
-          shellHookMatches(hook, { eventName: hook.event, data: { toolName: "LinkAction" } }),
+          shellHookMatches(hook, {
+            eventName: hook.event as HookEventName,
+            data: { toolName: "LinkAction" },
+          }),
       ),
       ...listPluginHooks(disabledLists.disabledPlugins).filter(
         (hook) =>
