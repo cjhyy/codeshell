@@ -7,17 +7,34 @@ import type {
   ConstrainedProcessPermit,
   ConstrainedProcessResources,
   ConstrainedProcessScope,
+  ConstrainedProcessLaunch,
 } from "../runtime/constrained-process/types.js";
+import type { SettingsScope } from "../settings/manager.js";
+
+export interface OperationHookContext {
+  cwd: string;
+  settingsScope: SettingsScope;
+  profileName: string | null;
+}
 
 /** Actual Host authorization and a complete finite code closure, never renderer data. */
 export interface OperationHookProcesses {
   host: ConstrainedProcessHost;
   /** A missing manifest/authority remains unavailable; there is no inferred file grant. */
-  resolveClosure(hook: Readonly<ConfiguredToolHook>):
+  resolveClosure(
+    hook: Readonly<ConfiguredToolHook>,
+    context: Readonly<OperationHookContext>,
+  ):
     | {
         resources?: ConstrainedProcessResources;
+        launch?: ConstrainedProcessLaunch;
       }
     | undefined;
+  /** Resource-free matching only; safe from current-review base assertions. */
+  assertApplicable?(
+    hooks: readonly ConfiguredToolHook[],
+    context: Readonly<OperationHookContext>,
+  ): void;
 }
 
 function pluginResult(parsed: unknown): HookResult | null {
@@ -56,11 +73,19 @@ export function createOperationHookRegistry(options: {
   processes: OperationHookProcesses;
   signal: AbortSignal;
   assertAuthorized(): void;
+  context?: OperationHookContext;
 }) {
   const planned = options.descriptors.map((hook) => {
-    const closure = options.processes.resolveClosure(Object.freeze({ ...hook }));
+    options.assertAuthorized();
+    const closure = options.processes.resolveClosure(
+      Object.freeze({ ...hook }),
+      Object.freeze({
+        ...(options.context ?? { cwd: "", settingsScope: "isolated", profileName: null }),
+      }),
+    );
     if (!closure) throw new Error("Configured Hook closure is unavailable");
-    return { hook: { ...hook }, resources: closure.resources };
+    options.assertAuthorized();
+    return { hook: { ...hook }, resources: closure.resources, launch: closure.launch };
   });
   const registry = new HookRegistry();
   let owner:
@@ -93,7 +118,7 @@ export function createOperationHookRegistry(options: {
   const latch = (result: "permission_denied" | "hooks_unavailable") => {
     if (failure !== "hooks_unavailable") failure = result;
   };
-  for (const { hook, resources } of planned) {
+  for (const { hook, resources, launch } of planned) {
     registry.register(
       hook.event,
       async (context) => {
@@ -113,6 +138,7 @@ export function createOperationHookRegistry(options: {
               event: hook.event,
               resources,
               plugin: hook.protocol === "plugin",
+              launch,
             });
             permits.set(hook.id, permit);
           }
