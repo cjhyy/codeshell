@@ -6,6 +6,7 @@ import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js"
 import { setApiWorkspace, setApiProject } from "./api-context.js";
 import { PanelHost } from "./PanelHost.js";
 import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
+import { PanelVideoDialog, type PanelVideoRequest } from "./PanelVideoDialog.js";
 
 type Element = React.ReactElement<Record<string, any>>;
 function elements(node: React.ReactNode): Element[] {
@@ -71,9 +72,36 @@ interface Request {
 }
 const originalFetch = globalThis.fetch;
 const unmounts: Array<() => Promise<void>> = [];
+const videoRestores: Array<() => void> = [];
+function supportVideo(screen = true) {
+  const change = (target: object, key: string, value: unknown) => {
+    const previous = Object.getOwnPropertyDescriptor(target, key);
+    Object.defineProperty(target, key, { configurable: true, writable: true, value });
+    videoRestores.push(() =>
+      previous ? Object.defineProperty(target, key, previous) : delete (target as any)[key],
+    );
+  };
+  change(window, "isSecureContext", true);
+  change(globalThis, "MediaRecorder", { isTypeSupported: () => true });
+  change(globalThis, "navigator", {
+    mediaDevices: {
+      getUserMedia() {
+        throw new Error("Discovery must not acquire a device");
+      },
+      ...(screen
+        ? {
+            getDisplayMedia() {
+              throw new Error("Discovery must not acquire a screen");
+            },
+          }
+        : {}),
+    },
+  });
+}
 let previousMatchMedia: PropertyDescriptor | undefined;
 afterEach(async () => {
   for (const unmount of unmounts.splice(0)) await unmount();
+  for (const restore of videoRestores.splice(0).reverse()) restore();
   globalThis.fetch = originalFetch;
   if (previousMatchMedia) Object.defineProperty(window, "matchMedia", previousMatchMedia);
   else delete (window as any).matchMedia;
@@ -288,6 +316,123 @@ test("cancelling the trusted recording chooser completes without creating an upl
   );
   expect(view.dirty).toBe(false);
   expect(view.attach()!.props.inert).toBe(false);
+});
+
+test("video discovery separates camera and screen and never opens the chooser or devices", async () => {
+  const context = {
+    ...prepared.context,
+    availableMethods: [
+      "context.get",
+      "resources.recordVideo",
+      "resources.recordVideo.capabilities",
+    ],
+  };
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.recordVideo.capabilities")
+        return Response.json({
+          effect: "resources.recordVideo.capabilities",
+          maxDurationSeconds: 1200,
+          maxBytes: 200 * 1024 * 1024,
+        });
+      if (request.body?.method === "context.get") return Response.json(context);
+    },
+  });
+  supportVideo(false);
+  await view.call("resources.recordVideo.capabilities", {}, "video-caps");
+  expect(view.replies.find((item) => item.data.requestId === "video-caps")?.data.result).toEqual({
+    camera: true,
+    screen: false,
+    microphone: true,
+    systemAudio: false,
+    maxDurationSeconds: 1200,
+    maxBytes: 200 * 1024 * 1024,
+  });
+  expect(elements(view.tree).some((item) => item.type === PanelVideoDialog)).toBe(false);
+  await view.call("context.get", {}, "video-context");
+  expect(
+    view.replies.find((item) => item.data.requestId === "video-context")?.data.result
+      .availableMethods,
+  ).toContain("resources.recordVideo");
+  (window as any).isSecureContext = false;
+  await view.call("context.get", {}, "insecure-context");
+  expect(
+    view.replies.find((item) => item.data.requestId === "insecure-context")?.data.result
+      .availableMethods,
+  ).not.toContain("resources.recordVideo");
+});
+
+test("video chooser holds its original project, excludes audio concurrency, and closes before an ABA request can save", async () => {
+  setApiProject(projectA);
+  const view = await fixture({
+    intercept(request) {
+      if (["resources.recordVideo", "resources.recordAudio"].includes(request.body?.method))
+        return Response.json(
+          request.body.method === "resources.recordVideo"
+            ? {
+                effect: request.body.method,
+                source: "screen",
+                microphone: true,
+                systemAudio: true,
+                maxDurationSeconds: 60,
+                maxBytes: 2048,
+              }
+            : { effect: request.body.method, maxDurationSeconds: 60, maxBytes: 1024 },
+        );
+    },
+  });
+  supportVideo();
+  await view.call("resources.recordVideo", { source: "screen" }, "video-record");
+  const request = elements(view.tree).find((item) => item.type === PanelVideoDialog)!.props
+    .request as PanelVideoRequest;
+  expect(request.source).toBe("screen");
+  expect(view.dirty).toBe(true);
+  expect(view.attach()!.props.inert).toBe(true);
+  await view.call("resources.recordAudio", {}, "concurrent-audio");
+  expect(
+    view.replies.find((item) => item.data.requestId === "concurrent-audio")?.data.error,
+  ).toContain("先完成");
+  setApiProject(projectB);
+  await request.call("resources.upload.get", { sessionId: "fixture" });
+  expect(view.requests.at(-1)!.url.pathname).toContain(`/p/${projectA}/`);
+  await view.unmount();
+  setApiProject(projectA);
+  const count = view.requests.length;
+  await expect(request.call("resources.upload.finish", { sessionId: "fixture" })).rejects.toThrow();
+  expect(view.requests).toHaveLength(count);
+  expect(request.signal.aborted).toBe(true);
+  expect(view.replies.some((item) => item.data.requestId === "video-record")).toBe(false);
+});
+
+test("video cancellation returns without starting a resource upload", async () => {
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.recordVideo")
+        return Response.json({
+          effect: request.body.method,
+          source: "camera",
+          microphone: false,
+          systemAudio: false,
+          maxDurationSeconds: 60,
+          maxBytes: 2048,
+        });
+    },
+  });
+  supportVideo();
+  await view.call("resources.recordVideo", { source: "camera" }, "video-cancel");
+  const request = elements(view.tree).find((item) => item.type === PanelVideoDialog)!.props
+    .request as PanelVideoRequest;
+  await act(async () => {
+    request.finish({ cancelled: true });
+    await flushMicrotasks();
+  });
+  expect(view.replies.find((item) => item.data.requestId === "video-cancel")?.data.result).toEqual({
+    cancelled: true,
+  });
+  expect(view.requests.some((item) => item.body?.method?.startsWith("resources.upload."))).toBe(
+    false,
+  );
+  expect(view.dirty).toBe(false);
 });
 
 test("iframe remains opaque and prepare alone does not mark it loaded", async () => {

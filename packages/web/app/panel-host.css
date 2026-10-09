@@ -123,6 +123,18 @@
   display: flex;
   gap: 8px;
 }
+.panel-host-video .panel-host-actions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.panel-host-video button,
+.panel-host-video .panel-host-actions a {
+  min-height: 44px;
+}
+.panel-host-video .panel-host-actions a {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 @media (max-width: 640px) {
   .panel-host {
     padding: 12px 10px;

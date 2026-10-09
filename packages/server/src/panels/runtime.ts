@@ -1,3 +1,4 @@
+import { panelVideoLimits, panelVideoOptions } from "./browser-capture.js";
 import { panelExecutionGate, PanelExecutionBusyError } from "./execution-gate.js";
 import { randomBytes, createHash } from "node:crypto";
 import { constants } from "node:fs";
@@ -84,6 +85,8 @@ const METHODS = [
   "resources.open",
   "resources.preview",
   "resources.recordAudio",
+  "resources.recordVideo",
+  "resources.recordVideo.capabilities",
   ...panelToolJobMethods,
   "credentials.connections.list",
   "credentials.cookies.listForTask",
@@ -399,7 +402,7 @@ function bridgeScript(id: string, origin: string): string {
       const requestId = String(++next);
       const timer = setTimeout(() => {
         pending.delete(requestId); reject(new Error("Panel request timed out"));
-      }, ["tasks.start", "tasks.retry", "tasks.queue.set", "resources.recordAudio"].includes(method) ? 30 * 60 * 1000 : 60000);
+      }, ["tasks.start", "tasks.retry", "tasks.queue.set", "resources.recordAudio", "resources.recordVideo"].includes(method) ? 30 * 60 * 1000 : 60000);
       pending.set(requestId, { resolve, reject, timer });
       try {
         parent.postMessage({ type: "codeshell-panel:call", instanceId: id, requestId, method, params }, origin);
@@ -1292,6 +1295,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             ? {
                 methodLimits: {
                   "resources.recordAudio": { timeoutMs: 30 * 60 * 1000 },
+                  "resources.recordVideo": { timeoutMs: 30 * 60 * 1000 },
                   ...(app.permissions.includes("process")
                     ? {
                         "tasks.start": {
@@ -1507,6 +1511,29 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         emit(grant, event, payload),
     };
     if (method.startsWith("resources.")) {
+      if (method === "resources.recordVideo.capabilities") {
+        if (
+          params !== undefined &&
+          (!params ||
+            typeof params !== "object" ||
+            Array.isArray(params) ||
+            Object.keys(params).length)
+        )
+          error(400, "视频录制能力请求无效。");
+        // Device/encoder support belongs to the trusted browser, not this server.
+        return {
+          effect: method,
+          maxDurationSeconds: panelVideoLimits.maxDurationSeconds,
+          maxBytes: panelVideoLimits.maxBytes,
+        };
+      }
+      if (method === "resources.recordVideo") {
+        try {
+          return { effect: method, ...panelVideoOptions(params) };
+        } catch {
+          error(400, "视频录制请求或限制无效。");
+        }
+      }
       if (method === "resources.recordAudio") {
         const value = (params ?? {}) as Record<string, unknown>;
         const maxDurationSeconds = value.maxDurationSeconds ?? 300;

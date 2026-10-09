@@ -297,6 +297,13 @@ real resource service with Chromium's synthetic microphone and real WebM encodin
 lost write/finalize replies, exact downloaded bytes and authorization revocation.
 This does not constitute physical-device or transcription-model acceptance.
 
+Web also offers the optional `resources.recordVideo.capabilities` and
+`resources.recordVideo` trusted chooser for camera/screen capture. It uses the
+same resources permission, original project/grant and explicit start/preview/save
+boundary. Camera and screen are discovered separately; successful receipts include
+the actual captured audio flags. See [browser capture](panel-browser-capture.md)
+for the full contract, limits, platform support and recovery evidence.
+
 Web Panel frames permit browser downloads of generated files, such as a JSON
 backup, using Blob URLs and download anchors. Both the iframe and asset response
 CSP permit `allow-downloads`; the frame retains an opaque origin and cannot access
