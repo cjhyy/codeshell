@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readOutputJournal } from "@cjhyy/code-shell-core/internal";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import {
   ExternalRuntimeSessionRecorder,
@@ -87,7 +96,7 @@ describe("external runtime durable state", () => {
       turnCount: 1,
       turnSeq: 1,
       completedSnapshotVersion: 1,
-      tokenUsage: { promptTokens: 10, completionTokens: 4, totalTokens: 14 },
+      tokenUsage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 },
     });
   });
 
@@ -385,5 +394,254 @@ describe("external runtime tool argument recording", () => {
       )
       .find((b) => b.type === "tool_use");
     expect(block?.input).toEqual({ query: "紫金矿业 2026 半年报" });
+  });
+});
+
+test("one logical Goal run keeps its actual first user anchor and one terminal", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "goal-journal",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  recorder.beginTurn({ text: "original", displayText: "short", clientMessageId: "logical-client" });
+  const manager = new SessionManager();
+  const firstRun = manager.readSessionState("goal-journal")!.runId;
+  recorder.onEvent({ type: "text_delta", text: "first" });
+  recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+  expect(manager.readSessionState("goal-journal")!.status).toBe("active");
+  recorder.beginTurn({ text: "continue", injected: true }, true);
+  recorder.onEvent({ type: "text_delta", text: "second" });
+  recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+  recorder.completeRun("completed");
+  expect(recorder.completeRun("completed")).toBeUndefined();
+  const state = manager.readSessionState("goal-journal")!;
+  const events = manager.resume("goal-journal").transcript.getEvents();
+  expect(state.runId).toBe(firstRun);
+  expect(firstRun).toBe(
+    events.find((event) => event.type === "message" && event.data.role === "user")!.id,
+  );
+  expect(state).toMatchObject({
+    clientMessageId: "logical-client",
+    turnSeq: 1,
+    turnCount: 2,
+    status: "completed",
+  });
+  const page = readOutputJournal(manager.getStorageDir(), "goal-journal");
+  expect(page.status).toBe("ok");
+  const raw = readFileSync(
+    join(manager.getStorageDir(), "goal-journal", "output-journal.jsonl"),
+    "utf8",
+  );
+  expect(raw.match(/"type":"turn_complete"/g)).toHaveLength(1);
+  expect(raw).toContain('"injected":true');
+});
+
+test("superseded and closed recorders cannot append canonical output or replace metadata", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "owner-fence",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  recorder.beginTurn({ text: "first" });
+  const manager = new SessionManager();
+  const bundle = manager.resume("owner-fence");
+  manager.startSessionRun(bundle.state, "new-owner");
+  manager.updateSessionState(
+    "owner-fence",
+    {
+      title: "new title",
+      tokenUsage: { promptTokens: 200, completionTokens: 20, totalTokens: 220 },
+    },
+    "new-owner",
+  );
+  const path = join(manager.getStorageDir(), "owner-fence", "transcript.jsonl");
+  const before = readFileSync(path);
+  expect(() => recorder.onEvent({ type: "text_delta", text: "late old" })).toThrow(/owner/);
+  recorder.failOutput();
+  expect(readFileSync(path).equals(before)).toBe(true);
+  expect(manager.readSessionState("owner-fence")).toMatchObject({
+    runId: "new-owner",
+    title: "new title",
+    status: "active",
+    tokenUsage: { promptTokens: 200 },
+  });
+  const closed = new ExternalRuntimeSessionRecorder(
+    "close-fence",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  closed.beginTurn({ text: "first" });
+  manager.incrementSessionGeneration("close-fence");
+  expect(() => closed.onEvent({ type: "turn_complete", reason: "completed" })).toThrow(/closed/);
+});
+
+test("provider usage merges with latest auxiliary accounting and preserves domain metadata", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "accounting-journal",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  recorder.beginTurn({ text: "first" });
+  recorder.onEvent({ type: "usage_update", promptTokens: 10, completionTokens: 2 });
+  const manager = new SessionManager();
+  manager.recordAuxiliaryUsage(
+    "accounting-journal",
+    { promptTokens: 30, completionTokens: 4, totalTokens: 34 },
+    { marker: "latest" },
+  );
+  manager.updateSessionState("accounting-journal", {
+    title: "retained",
+    summary: "latest summary",
+  });
+  recorder.onEvent({ type: "turn_complete", reason: "completed" });
+  expect(manager.readSessionState("accounting-journal")).toMatchObject({
+    title: "retained",
+    summary: "latest summary",
+    costState: { marker: "latest" },
+    tokenUsage: { promptTokens: 40, completionTokens: 6, totalTokens: 46 },
+    cumulativePromptTokens: 40,
+  });
+});
+
+test("owned run CAS recomputes its delta after an actual competing durable update", () => {
+  const manager = new SessionManager();
+  const other = new SessionManager();
+  const bundle = manager.create("/tmp/project", "fixture", "fixture", "run-cas");
+  manager.startSessionRun(bundle.state, "actual-run");
+  let reads = 0;
+  manager.updateSessionRunState("run-cas", "actual-run", (state) => {
+    if (++reads === 1)
+      other.recordAuxiliaryUsage("run-cas", {
+        promptTokens: 30,
+        completionTokens: 2,
+        totalTokens: 32,
+      });
+    return { cumulativePromptTokens: (state.cumulativePromptTokens ?? 0) + 10 };
+  });
+  expect(reads).toBe(2);
+  expect(manager.readSessionState("run-cas")?.cumulativePromptTokens).toBe(40);
+  expect(() =>
+    manager.updateSessionRunState("run-cas", "old-run", () => ({ title: "stale" })),
+  ).toThrow(/identity conflict/);
+});
+
+test("deleting and reusing a Session id never grants its old recorder the new directory", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "reuse-output",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  recorder.beginTurn({ text: "old" });
+  const manager = new SessionManager();
+  const directory = join(manager.getStorageDir(), "reuse-output");
+  rmSync(directory, { recursive: true });
+  const replacement = manager.create("/tmp/project", "fixture", "fixture", "reuse-output");
+  manager.startSessionRun(replacement.state, "replacement");
+  const before = readFileSync(join(directory, "transcript.jsonl"));
+  expect(() =>
+    recorder.onEvent({
+      type: "tool_result",
+      result: { id: "old-tool", toolName: "Read", result: "late" },
+    }),
+  ).toThrow(/owner/);
+  recorder.failOutput();
+  expect(readFileSync(join(directory, "transcript.jsonl")).equals(before)).toBe(true);
+  expect(manager.readSessionState("reuse-output")?.runId).toBe("replacement");
+  expect(manager.readSessionState("reuse-output")?.outputRecoveryIncomplete).not.toBe(true);
+});
+
+test("first input refuses a replaced state incarnation before canonical append", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "first-input-incarnation",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  const manager = new SessionManager();
+  const directory = join(manager.getStorageDir(), "first-input-incarnation");
+  const statePath = join(directory, "state.json");
+  const replacement = JSON.parse(readFileSync(statePath, "utf8"));
+  replacement.startedAt += 1;
+  replacement.title = "replacement metadata";
+  writeFileSync(statePath, JSON.stringify(replacement));
+  const transcript = readFileSync(join(directory, "transcript.jsonl"));
+  const state = readFileSync(statePath);
+  expect(() =>
+    recorder.beginTurn({ text: "stale first input", clientMessageId: "old-input" }),
+  ).toThrow(/owner/);
+  recorder.failOutput();
+  expect(readFileSync(join(directory, "transcript.jsonl")).equals(transcript)).toBe(true);
+  expect(readFileSync(statePath).equals(state)).toBe(true);
+});
+
+test("cold provider cumulative history never subtracts or recounts auxiliary Session usage", () => {
+  const first = new ExternalRuntimeSessionRecorder(
+    "cold-provider-usage",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  first.beginTurn({ text: "first" });
+  first.onEvent({
+    type: "usage_update",
+    promptTokens: 100,
+    completionTokens: 10,
+    cumulativePromptTokens: 100,
+    cumulativeCompletionTokens: 10,
+  });
+  first.onEvent({ type: "turn_complete", reason: "completed" });
+  const manager = new SessionManager();
+  manager.recordAuxiliaryUsage("cold-provider-usage", {
+    promptTokens: 30,
+    completionTokens: 3,
+    totalTokens: 33,
+  });
+  const resumed = new ExternalRuntimeSessionRecorder(
+    "cold-provider-usage",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  resumed.beginTurn({ text: "resumed" });
+  for (const [
+    promptTokens,
+    cumulativePromptTokens,
+    completionTokens,
+    cumulativeCompletionTokens,
+  ] of [
+    [20, 120, 2, 12],
+    [20, 120, 2, 12],
+    [10, 110, 1, 11],
+  ]) {
+    resumed.onEvent({
+      type: "usage_update",
+      promptTokens,
+      completionTokens,
+      cumulativePromptTokens,
+      cumulativeCompletionTokens,
+    });
+  }
+  resumed.onEvent({ type: "turn_complete", reason: "completed" });
+  expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
+    tokenUsage: { promptTokens: 150, completionTokens: 15, totalTokens: 165 },
+    cumulativePromptTokens: 150,
+  });
+  resumed.beginTurn({ text: "live next" });
+  resumed.onEvent({
+    type: "usage_update",
+    promptTokens: 5,
+    completionTokens: 1,
+    cumulativePromptTokens: 125,
+    cumulativeCompletionTokens: 13,
+  });
+  resumed.onEvent({ type: "turn_complete", reason: "completed" });
+  expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
+    tokenUsage: { promptTokens: 155, completionTokens: 16, totalTokens: 171 },
+    cumulativePromptTokens: 155,
   });
 });

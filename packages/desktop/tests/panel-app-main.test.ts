@@ -2803,6 +2803,62 @@ describeIsolated("PanelAppBridge", () => {
     );
   });
 
+  test("an external output failure frees the Panel submit slot without native fallback or duplicate error", async () => {
+    let calls = 0;
+    let nativeRuns = 0;
+    const ingested: unknown[] = [];
+    const inputs: Array<Record<string, unknown>> = [];
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => {
+            nativeRuns++;
+            return { ok: true };
+          },
+          claimSessionPanelOwner: () => undefined,
+          ingestExternalEvent: (_sessionId: string, event: unknown) => ingested.push(event),
+        }) as any,
+      getExternalRuntimeService: () =>
+        ({
+          isCompatible: () => true,
+          send: async (_sessionId: string, input: Record<string, unknown>) => {
+            inputs.push(input);
+            calls++;
+            return {
+              ok: false,
+              reason: "model_error",
+              streamed: true,
+              text: "Session output recovery is incomplete",
+            };
+          },
+        }) as any,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(129);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(129, { modelKey: "codex/gpt-5.6-sol" });
+    for (let index = 0; index < 2; index++) {
+      const accepted = (await panelGuestHandler()({ sender: guest }, "agent.submitPrompt", {
+        prompt: "actual consumer failure",
+      })) as { accepted: boolean; clientMessageId: string };
+      expect(accepted.accepted).toBe(true);
+      expect(accepted.clientMessageId).toStartWith("panel:demo:");
+      await new Promise((done) => setTimeout(done, 10));
+    }
+    expect(calls).toBe(2);
+    expect(nativeRuns).toBe(0);
+    expect(ingested).toEqual([]);
+    expect(inputs[0]!.clientMessageId).not.toBe(inputs[1]!.clientMessageId);
+  });
+
   test("a Panel turn reuses a compatible live Codex runtime without rebuilding handoff", async () => {
     let ensureCalls = 0;
     let handoffCalls = 0;

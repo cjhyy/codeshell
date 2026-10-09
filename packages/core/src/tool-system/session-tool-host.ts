@@ -148,6 +148,8 @@ export interface CreateSessionToolHostOptions {
   hooks?: HookRegistry;
   /** Extra ToolContext seams the host supplies (panels, browser, askUser, …). */
   contextOverrides?: Partial<ToolContext>;
+  /** Capture a concrete output owner once per tool invocation, before awaits. */
+  getStreamCallback?: () => ToolContext["streamCallback"];
   signal?: AbortSignal;
 }
 
@@ -328,9 +330,12 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
         return failClosed(call.id, call.name, `Tool aborted before execution: ${call.name}`);
       }
 
+      const callContext = options.getStreamCallback
+        ? { ...toolCtx, streamCallback: options.getStreamCallback() }
+        : toolCtx;
       const emit = async (event: import("../types.js").StreamEvent): Promise<void> => {
         try {
-          await toolCtx.streamCallback?.(event);
+          await callContext.streamCallback?.(event);
         } catch {
           // Stream projection is observational; a broken renderer/recorder must
           // not turn an authorized tool execution into an unrelated failure.
@@ -349,7 +354,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       // brings its own signal gets its own executor — cheap (it is a thin wrapper
       // over the shared registry/permission/hooks) and free of shared mutable
       // state. Calls without one use the shared executor unchanged.
-      if (!callSignal) {
+      if (!callSignal && !options.getStreamCallback) {
         // The one authorized path. Everything above only NARROWS what may reach it.
         const result = await executor.executeSingle({
           id: call.id,
@@ -360,8 +365,8 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
         return result;
       }
       const scoped = new ToolExecutor(registry, permission, hooks);
-      scoped.setContext(toolCtx);
-      scoped.setSignal(AbortSignal.any([sessionSignal, callSignal]));
+      scoped.setContext(callContext);
+      scoped.setSignal(callSignal ? AbortSignal.any([sessionSignal, callSignal]) : sessionSignal);
       const result = await scoped.executeSingle({
         id: call.id,
         toolName: call.name,

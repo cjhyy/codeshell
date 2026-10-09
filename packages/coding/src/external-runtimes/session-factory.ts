@@ -19,7 +19,7 @@
  * Teardown reverses it, and unregisters before disposing the host so a late
  * request finds nothing rather than a disposed host (§13.4).
  */
-import type { PermissionRule, ToolDefinition } from "@cjhyy/code-shell-core/extension";
+import type { PermissionRule, StreamEvent, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import {
   createSessionToolHost,
   FIRST_PHASE_EXPOSURE,
@@ -98,7 +98,10 @@ export interface ExternalRuntimeSession {
   readonly runtimeSessionId: string | undefined;
   /** Tools actually exposed, after the allowlist and visibility guards. */
   listTools(): readonly ToolDefinition[];
-  send(input: ExternalRuntimeTurnInput): Promise<{ done: Promise<void> }>;
+  send(
+    input: ExternalRuntimeTurnInput,
+    onEvent?: (event: StreamEvent) => void,
+  ): Promise<{ done: Promise<void> }>;
   interrupt(): Promise<void>;
   /** Reverses the assembly order; safe to call more than once. */
   close(): Promise<void>;
@@ -133,6 +136,7 @@ export async function startExternalRuntimeSession(
   let host: SessionToolHost | undefined;
   let runtime: CodexRuntime | ClaudeCodeRuntime | undefined;
   let closed = false;
+  let turnSink: ((event: StreamEvent) => void) | undefined;
 
   const close = async (): Promise<void> => {
     if (closed) return;
@@ -159,6 +163,9 @@ export async function startExternalRuntimeSession(
       visibility: options.visibility,
       ...(options.approvalBackend ? { approvalBackend: options.approvalBackend } : {}),
       ...(options.contextOverrides ? { contextOverrides: options.contextOverrides } : {}),
+      // Outside a concrete provider call there is no run output owner. Never
+      // capture the lifetime callback and let it borrow a later active turn.
+      getStreamCallback: () => turnSink,
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
     });
 
@@ -229,7 +236,22 @@ export async function startExternalRuntimeSession(
       return activeRuntime.runtimeSessionId;
     },
     listTools: () => activeHost.listTools(),
-    send: (input) => activeRuntime.send(input),
+    send: async (input, onEvent) => {
+      if (turnSink) throw new Error("An external runtime turn is already running");
+      const sink = onEvent ?? options.hooks?.onEvent;
+      turnSink = sink;
+      try {
+        const turn = await activeRuntime.send(input, sink);
+        return {
+          done: turn.done.finally(() => {
+            if (turnSink === sink) turnSink = undefined;
+          }),
+        };
+      } catch (error) {
+        if (turnSink === sink) turnSink = undefined;
+        throw error;
+      }
+    },
     interrupt: () => activeRuntime.interrupt(),
     close,
   };

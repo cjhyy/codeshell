@@ -64,6 +64,8 @@ jobs:
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-model-request-boundaries.mjs
       - name: Durable long output through real SDK, Desktop recovery and Hub restart
         run: bun run test:output-journal
+      - name: Owned external CLI output, disk failure fence and cold Main recovery
+        run: node scripts/run-external-output-journal-smoke.mjs
       - name: Compiled SDK progressive tool discovery and bound source consumer
         run: bun run test:deferred-tools
       - uses: actions/setup-node@v7

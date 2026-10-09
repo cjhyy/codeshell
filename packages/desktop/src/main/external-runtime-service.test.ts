@@ -6,7 +6,7 @@
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type StreamEvent, type ToolRegistry } from "@cjhyy/code-shell-core";
@@ -41,13 +41,19 @@ function fakeSession(args: StartArgs) {
       const names = exposure ? [...(exposure.toolNames ?? [])] : ["Panel"];
       return names.map((name) => ({ name, description: "", inputSchema: {} }));
     },
-    send: async (input: { text: string; injected?: boolean }) => {
+    send: async (
+      input: { text: string; injected?: boolean },
+      onEvent?: (event: StreamEvent) => void,
+    ) => {
       providerInputs.push(input);
       if (failNextSend) {
         failNextSend = false;
         throw new Error("provider process exited");
       }
-      await providerSend?.(args, input);
+      await providerSend?.(
+        onEvent ? { ...args, hooks: { ...(args.hooks as object), onEvent } } : args,
+        input,
+      );
       return { done: Promise.resolve() };
     },
     interrupt: async () => {
@@ -997,25 +1003,39 @@ describe("ExternalRuntimeService", () => {
   test("forwards translated events tagged with the session id", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);
-    const hooks = starts[0]!.hooks as { onEvent: (event: { type: string }) => void };
-    hooks.onEvent({ type: "text_delta" });
-    expect(emitted).toEqual([{ sessionId: "sess-1", type: "text_delta" }]);
+    providerSend = async (args) => {
+      (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent({
+        type: "text_delta",
+        text: "owned",
+      });
+    };
+    await svc.send(request.sessionId, "accepted input");
+    expect(emitted.filter((event) => event.type === "text_delta")).toEqual([
+      { sessionId: "sess-1", type: "text_delta" },
+    ]);
+    expect(streamEvents.find((event) => event.type === "text_delta")?.outputCursor).toBeString();
+    await svc.stopAll();
   });
 
   test("normalizes a provider session_started id to the CodeShell business id", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);
-    const hooks = starts[0]!.hooks as {
-      onEvent: (event: {
-        type: "session_started";
-        sessionId: string;
-        promptTokens: number;
-      }) => void;
+    providerSend = async (args) => {
+      (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent({
+        type: "session_started",
+        sessionId: "provider-thread-id",
+        promptTokens: 0,
+      });
     };
-    hooks.onEvent({ type: "session_started", sessionId: "provider-thread-id", promptTokens: 0 });
-    expect(emitted).toEqual([
-      { sessionId: "sess-1", type: "session_started", eventSessionId: "sess-1" },
-    ]);
+    await svc.send(request.sessionId, "accepted input");
+    const started = streamEvents.filter((event) => event.type === "session_started");
+    expect(started).toHaveLength(2);
+    for (const event of started)
+      expect(event).toMatchObject({
+        sessionId: "sess-1",
+        runId: new SessionManager().readSessionState("sess-1")!.runId,
+      });
+    await svc.stopAll();
   });
 
   test("drops late events from a runtime after the business session is restarted", async () => {
@@ -1024,12 +1044,22 @@ describe("ExternalRuntimeService", () => {
     const oldHooks = starts[0]!.hooks as { onEvent: (event: { type: string }) => void };
 
     await svc.start(request);
-    const currentHooks = starts[1]!.hooks as { onEvent: (event: { type: string }) => void };
+    providerSend = async (args) => {
+      oldHooks.onEvent({ type: "text_delta", text: "stale" } as never);
+      (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent({
+        type: "text_delta",
+        text: "current",
+      });
+    };
     emitted.length = 0;
-    oldHooks.onEvent({ type: "text_delta" });
-    currentHooks.onEvent({ type: "text_delta" });
-
-    expect(emitted).toEqual([{ sessionId: "sess-1", type: "text_delta" }]);
+    await svc.send(request.sessionId, "new accepted input");
+    expect(emitted.filter((event) => event.type === "text_delta")).toEqual([
+      { sessionId: "sess-1", type: "text_delta" },
+    ]);
+    expect(
+      streamEvents.some((event) => event.type === "text_delta" && event.text === "stale"),
+    ).toBe(false);
+    await svc.stopAll();
   });
 
   test("drops provider events emitted while a stopped runtime is closing", async () => {
@@ -1067,7 +1097,10 @@ describe("ExternalRuntimeService", () => {
       reason: "aborted_streaming",
       streamed: true,
     });
-    expect(emitted).toEqual([{ sessionId: "sess-1", type: "turn_complete" }]);
+    expect(emitted).toEqual([
+      { sessionId: "sess-1", type: "session_started", eventSessionId: "sess-1" },
+      { sessionId: "sess-1", type: "turn_complete" },
+    ]);
   });
 
   test("serializes overlapping sends before resetting the shared turn recorder", async () => {
@@ -1192,7 +1225,10 @@ describe("ExternalRuntimeService", () => {
 
     emitted.length = 0;
     const outcome = await svc.send("sess-1", "completed without callback");
-    expect(emitted).toEqual([{ sessionId: "sess-1", type: "turn_complete" }]);
+    expect(emitted).toEqual([
+      { sessionId: "sess-1", type: "session_started", eventSessionId: "sess-1" },
+      { sessionId: "sess-1", type: "turn_complete" },
+    ]);
     emitted.length = 0;
     await svc.stop("sess-1");
 
@@ -1287,3 +1323,211 @@ describe("ExternalRuntimeService", () => {
     expect(claims).toHaveLength(2);
   });
 });
+
+for (const stage of ["input", "delta", "terminal"] as const) {
+  test(`actual disk ${stage} failure is sticky through swallowed producer callbacks and queued sends`, async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const directory = join(testHome, "sessions", request.sessionId);
+    const block = (file: string) => {
+      renameSync(join(directory, file), join(directory, file + ".retained"));
+      mkdirSync(join(directory, file));
+    };
+    if (stage === "input") block("transcript.jsonl");
+    providerSend = async (args) => {
+      const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+      if (stage === "delta") block("output-journal.jsonl");
+      try {
+        emit({ type: "text_delta", text: "must not escape failed journal" });
+      } catch {
+        /* real adapters swallow */
+      }
+      if (stage === "terminal") block("transcript.jsonl");
+      try {
+        emit({ type: "turn_complete", reason: "completed" });
+      } catch {
+        /* real adapters swallow */
+      }
+    };
+    const first = svc.send(request.sessionId, "first");
+    const queued = svc.send(request.sessionId, "queued");
+    expect(await first).toMatchObject({ ok: false, reason: "model_error" });
+    expect(await queued).toMatchObject({ ok: false, reason: "model_error" });
+    expect(providerInputs).toHaveLength(stage === "input" ? 0 : 1);
+    expect(
+      streamEvents.filter(
+        (event) => event.type === "turn_complete" && event.reason === "completed",
+      ),
+    ).toHaveLength(0);
+    expect(streamEvents.filter((event) => event.type === "turn_complete")).toEqual([
+      expect.objectContaining({ reason: "model_error", outputRecovery: "incomplete" }),
+    ]);
+    expect(new SessionManager().readSessionState(request.sessionId)).toMatchObject({
+      status: "model_error",
+      outputRecoveryIncomplete: true,
+    });
+    await svc.stopAll();
+  });
+}
+
+test("a captured old provider sink cannot enter the next run or its journal", async () => {
+  const svc = service({ external_agent_runtime: true, external_host_tools: true });
+  await svc.start(request);
+  let old!: (event: StreamEvent) => void;
+  providerSend = async (args) => {
+    const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+    if (providerInputs.length === 1) {
+      old = emit;
+      emit({ type: "text_delta", text: "first" });
+    } else {
+      old({ type: "text_delta", text: "STALE" });
+      old({ type: "turn_complete", reason: "completed" });
+      emit({ type: "text_delta", text: "second" });
+    }
+    emit({ type: "turn_complete", reason: "completed" });
+  };
+  expect((await svc.send(request.sessionId, "first")).ok).toBe(true);
+  expect((await svc.send(request.sessionId, "second")).ok).toBe(true);
+  const raw = readFileSync(
+    join(testHome, "sessions", request.sessionId, "output-journal.jsonl"),
+    "utf8",
+  );
+  expect(raw).not.toContain("STALE");
+  expect(streamEvents.some((event) => event.type === "text_delta" && event.text === "STALE")).toBe(
+    false,
+  );
+  expect(streamEvents.filter((event) => event.type === "turn_complete")).toHaveLength(2);
+  await svc.stopAll();
+});
+
+test("duplicate and conflicting client IDs reject without poisoning healthy output or blocking a new ID", async () => {
+  const svc = service({ external_agent_runtime: true, external_host_tools: true });
+  await svc.start(request);
+  const first = svc.send(request.sessionId, { text: "original", clientMessageId: "same" });
+  const queuedDuplicate = svc.send(request.sessionId, {
+    text: "original",
+    clientMessageId: "same",
+  });
+  const rejectedDuplicate = expect(queuedDuplicate).rejects.toThrow(/already recorded/);
+  await expect(first).resolves.toMatchObject({ ok: true });
+  const file = join(testHome, "sessions", request.sessionId, "output-journal.jsonl");
+  const before = readFileSync(file);
+  await rejectedDuplicate;
+  await expect(
+    svc.send(request.sessionId, { text: "different payload", clientMessageId: "same" }),
+  ).rejects.toThrow(/already recorded/);
+  expect(readFileSync(file).equals(before)).toBe(true);
+  expect(providerInputs).toHaveLength(1);
+  expect(new SessionManager().readSessionState(request.sessionId)).toMatchObject({
+    status: "completed",
+  });
+  expect(
+    new SessionManager().readSessionState(request.sessionId)?.outputRecoveryIncomplete,
+  ).not.toBe(true);
+  await expect(
+    svc.send(request.sessionId, { text: "new input", clientMessageId: "new" }),
+  ).resolves.toMatchObject({ ok: true });
+  expect(providerInputs).toHaveLength(2);
+  await svc.stopAll();
+});
+
+test("a provider start failure rejects queued reuse without marking a healthy journal incomplete", async () => {
+  const svc = service({ external_agent_runtime: true, external_host_tools: true });
+  await svc.start(request);
+  failNextSend = true;
+  const first = svc.send(request.sessionId, { text: "failed", clientMessageId: "failed" });
+  const queued = svc.send(request.sessionId, { text: "queued", clientMessageId: "queued" });
+  expect((await first).ok).toBe(false);
+  const file = join(testHome, "sessions", request.sessionId, "output-journal.jsonl");
+  const before = readFileSync(file);
+  expect((await queued).ok).toBe(false);
+  expect(providerInputs).toHaveLength(1);
+  expect(readFileSync(file).equals(before)).toBe(true);
+  expect(
+    new SessionManager().readSessionState(request.sessionId)?.outputRecoveryIncomplete,
+  ).not.toBe(true);
+  await svc.ensure(request);
+  expect(
+    (await svc.send(request.sessionId, { text: "replacement", clientMessageId: "fresh" })).ok,
+  ).toBe(true);
+  expect(providerInputs).toHaveLength(2);
+  await svc.stopAll();
+});
+
+test("Goal finalization disk failure overrides an already computed successful provider outcome", async () => {
+  let injected = false;
+  const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+    emit: (_id: string, event: StreamEvent) => {
+      streamEvents.push(event);
+      if (!injected && event.type === "goal_progress" && event.gaps?.includes("目标已暂停")) {
+        const path = join(testHome, "sessions", request.sessionId, "output-journal.jsonl");
+        renameSync(path, path + ".retained");
+        mkdirSync(path);
+        injected = true;
+      }
+    },
+  });
+  await svc.start(request);
+  providerSend = async (args) => {
+    (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent({
+      type: "text_delta",
+      text: "provider succeeded",
+    });
+    (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent({
+      type: "turn_complete",
+      reason: "completed",
+    });
+  };
+  const outcome = await svc.send(request.sessionId, {
+    text: "run",
+    goal: { objective: "unfinished", maxTurns: 1 },
+  });
+  expect(injected).toBe(true);
+  expect(outcome).toMatchObject({ ok: false, reason: "model_error" });
+  expect(providerInputs).toHaveLength(1);
+  expect(
+    streamEvents.filter((event) => event.type === "turn_complete" && event.reason === "completed"),
+  ).toHaveLength(0);
+  expect(new SessionManager().readSessionState(request.sessionId)).toMatchObject({
+    status: "model_error",
+    outputRecoveryIncomplete: true,
+  });
+  await svc.stopAll();
+});
+
+for (const mode of ["interrupt", "stop", "replace"] as const) {
+  test(`Goal ${mode} after provider terminal but before done writes one aborted logical terminal`, async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    let entered!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((done) => {
+      entered = done;
+    });
+    const blocked = new Promise<void>((done) => {
+      release = done;
+    });
+    providerSend = async (args) => {
+      const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+      emit({ type: "text_delta", text: "provider result" });
+      emit({ type: "turn_complete", reason: "completed" });
+      entered();
+      await blocked;
+    };
+    const pending = svc.send(request.sessionId, {
+      text: "Goal",
+      goal: { objective: "unfinished", maxTurns: 2 },
+    });
+    await ready;
+    if (mode === "interrupt") await svc.interrupt(request.sessionId);
+    else if (mode === "stop") await svc.stop(request.sessionId);
+    else await svc.start(request);
+    release();
+    expect(await pending).toMatchObject({ ok: false, reason: "aborted_streaming" });
+    expect(streamEvents.filter((event) => event.type === "turn_complete")).toHaveLength(1);
+    expect(new SessionManager().readSessionState(request.sessionId)?.status).toBe(
+      "aborted_streaming",
+    );
+    await svc.stopAll();
+  });
+}

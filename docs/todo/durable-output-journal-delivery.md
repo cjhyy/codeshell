@@ -110,9 +110,12 @@ Old peers and old in-flight producers without durable cursors retain the legacy
 conservative recovery path. A missing/oversized legacy cutover base keeps the
 barrier closed. Native Core Mobile transport now has a separate
 [authenticated recovery increment](mobile-output-journal-delivery.md); it adds no
-Mobile UI. This change does not adapt paired Panel flows, CC Room transcripts,
-external-runtime output producers, arbitrary historical imports, unlimited
-history, automatic journal retention/rotation, or a damaged-journal repair UI.
+Mobile UI. Desktop owned external `ExternalRuntimeService.send` now has a
+separate [publisher and recovery increment](external-runtime-output-journal-delivery.md),
+including its existing Panel submit route. Paired Mobile external CLI mirroring,
+other paired Panel flows, CC Room transcripts, unowned/background output producers,
+arbitrary historical imports, unlimited history, automatic journal
+retention/rotation and a damaged-journal repair UI remain outside these increments.
 Those limits remain TODOs; the complete long-stream recovery item is not marked
 finished by this slice.
 
