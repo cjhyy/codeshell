@@ -72,6 +72,46 @@ let acceptanceResult;
 let smokePassed = false;
 let restartedRendererErrors = [];
 
+async function acceptancePhase(phase) {
+  if (!macosAcceptance) return;
+  console.log(`macOS acceptance phase: ${phase}`);
+  await writeFile(
+    join(acceptanceEvidence, `phase-${phase}.json`),
+    `${JSON.stringify({ phase, pid: process.pid, timestamp: Date.now() })}\n`,
+    { mode: 0o600, flag: "wx" },
+  );
+}
+
+function inspectNativeStorage() {
+  return app.evaluate(
+    ({ app, safeStorage }, evidence) => {
+      const fs = process.getBuiltinModule("node:fs");
+      const path = process.getBuiltinModule("node:path");
+      const mark = (phase) => {
+        if (!evidence) return;
+        fs.writeFileSync(
+          path.join(evidence, `Main-${process.pid}-${phase}.json`),
+          `${JSON.stringify({ phase, pid: process.pid, ppid: process.ppid, timestamp: Date.now() })}\n`,
+          { mode: 0o600, flag: "wx" },
+        );
+      };
+      mark("before-encryption-available");
+      const available = safeStorage.isEncryptionAvailable();
+      mark("after-encryption-available");
+      return {
+        available,
+        backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null,
+        backendInspection:
+          process.platform === "linux" ? "native API" : "not exposed on this platform",
+        appName: app.getName(),
+        mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+        passwordStore: app.commandLine.getSwitchValue("password-store"),
+      };
+    },
+    macosAcceptance ? acceptanceEvidence : undefined,
+  );
+}
+
 async function verifiedProcesses() {
   const result = await confinement.assertWorker(app);
   if (macosAcceptance) {
@@ -230,7 +270,15 @@ async function registerFixtureProject() {
     };
   }, projectPath);
   try {
-    const project = await win.evaluate(() => window.codeshell.projectRegistry.createFromPicker());
+    await win
+      .getByRole("button", { name: /^(添加项目|Add project)$/ })
+      .first()
+      .click();
+    await acceptancePhase("after-picker-click");
+    const project = await win.evaluate(async (path) => {
+      const projects = await window.codeshell.projectRegistry.list();
+      return projects.find((entry) => entry.roots.some((root) => root.path === path));
+    }, projectPath);
     assert(
       project?.roots.some((root) => root.path === projectPath),
       "The private fixture project was not registered through the production picker IPC",
@@ -399,17 +447,18 @@ try {
   const rendererErrors = captureRendererErrors(win);
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
   await dismissTrustDialog(win);
+  await acceptancePhase("before-picker");
   await registerFixtureProject();
+  await acceptancePhase("after-picker");
+  await acceptancePhase("before-project-click");
   await win.getByText(basename(projectPath), { exact: true }).click();
+  await acceptancePhase("after-project-click");
+  await acceptancePhase("before-trust");
   await dismissTrustDialog(win);
-  const storage = await app.evaluate(({ app, safeStorage }) => ({
-    available: safeStorage.isEncryptionAvailable(),
-    backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null,
-    backendInspection: process.platform === "linux" ? "native API" : "not exposed on this platform",
-    appName: app.getName(),
-    mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
-    passwordStore: app.commandLine.getSwitchValue("password-store"),
-  }));
+  await acceptancePhase("after-trust");
+  await acceptancePhase("before-storage-inspection");
+  const storage = await inspectNativeStorage();
+  await acceptancePhase("after-storage-inspection");
   console.log(`Electron request custody: ${JSON.stringify(storage)}`);
   assert(
     storage.available &&
@@ -680,12 +729,7 @@ try {
       mock.requests.length === beforeRestart,
       "Cold verification made another provider request",
     );
-    const restartedStorage = await app.evaluate(({ app, safeStorage }) => ({
-      available: safeStorage.isEncryptionAvailable(),
-      appName: app.getName(),
-      mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
-      passwordStore: app.commandLine.getSwitchValue("password-store"),
-    }));
+    const restartedStorage = await inspectNativeStorage();
     assert(
       restartedStorage.available &&
         !restartedStorage.mockKeychain &&
