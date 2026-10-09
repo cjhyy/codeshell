@@ -1,9 +1,13 @@
 import { deepStrictEqual, strictEqual, throws } from "node:assert";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
 import { test } from "node:test";
 import http from "node:http";
 import https from "node:https";
 import { once } from "node:events";
 import { syncBuiltinESMExports } from "node:module";
+import { fileURLToPath } from "node:url";
 import { installLocalNetworkGuard } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
 import { ownedControlRequest } from "./owned-electron-control.mjs";
 
@@ -72,6 +76,88 @@ test("an exited owner cannot authorize another request to its former endpoint", 
 });
 
 test("actual HTTP upgrade reaches only the observed endpoint through native loopback TCP", async () => {
+  // Playwright controls Electron from actual Node. Bun's node:http client uses
+  // its fetch shim, which rejects this 101 upgrade; exercise the real consumer
+  // under Node rather than dropping the transport assertion from Bun's shard.
+  if (process.versions.bun) {
+    strictEqual(
+      process.env.CODESHELL_NATIVE_CONTROL_TEST,
+      undefined,
+      "Native control needs real Node",
+    );
+    const child = spawn("node", [fileURLToPath(import.meta.url)], {
+      env: { ...process.env, CODESHELL_NATIVE_CONTROL_TEST: "1" },
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "",
+      stderr = "",
+      spawnError,
+      timedOut = false,
+      oversized = false,
+      observedBytes = 0;
+    const collect = (stream, append) =>
+      stream.on("data", (chunk) => {
+        observedBytes += chunk.length;
+        append(chunk.toString());
+        if (observedBytes > 256 * 1_024) {
+          oversized = true;
+          child.kill("SIGKILL");
+        }
+      });
+    collect(child.stdout, (text) => {
+      stdout = `${stdout}${text}`.slice(-256 * 1_024);
+    });
+    collect(child.stderr, (text) => {
+      stderr = `${stderr}${text}`.slice(-256 * 1_024);
+    });
+    const completion = new Promise((done) => {
+      child.once("error", (error) => {
+        spawnError = error;
+      });
+      child.once("close", (status, signal) => done({ status, signal }));
+    });
+    const deadline = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+    }, 10_000);
+    const killDeadline = setTimeout(() => child.kill("SIGKILL"), 10_500);
+    let result;
+    try {
+      result = await completion;
+    } finally {
+      clearTimeout(deadline);
+      clearTimeout(killDeadline);
+      if (child.exitCode === null && child.signalCode === null && child.pid) {
+        child.kill("SIGKILL");
+        await completion;
+      }
+    }
+    strictEqual(spawnError, undefined, spawnError?.message);
+    strictEqual(timedOut, false, "Native control child exceeded its 10s deadline");
+    strictEqual(oversized, false, "Native control child output exceeded its bound");
+    strictEqual(result.signal, null, `${stdout}\n${stderr}`);
+    strictEqual(result.status, 0, `${stdout}\n${stderr}`);
+    const line = stdout.split("\n").find((entry) => entry.startsWith("native-control-receipt "));
+    const receipt = JSON.parse(line?.slice("native-control-receipt ".length) ?? "null");
+    strictEqual(receipt?.homeHash, createHash("sha256").update(process.env.HOME).digest("hex"));
+    strictEqual(receipt.ppid, process.pid);
+    strictEqual(receipt.pid, child.pid);
+    strictEqual(receipt.executable, realpathSync(receipt.executable));
+    strictEqual(
+      receipt.executableHash,
+      createHash("sha256").update(readFileSync(receipt.executable)).digest("hex"),
+    );
+    strictEqual(receipt.upgrades, 1);
+    console.log(`native-control-receipt ${JSON.stringify(receipt)}`);
+    return;
+  }
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  strictEqual(
+    major > 22 || (major === 22 && minor >= 16),
+    true,
+    "Native control requires Node >=22.16",
+  );
   const direct = http.request;
   const marker = Symbol.for("codeshell.cost-smoke.network-guard");
   const previous = {
@@ -131,6 +217,18 @@ test("actual HTTP upgrade reaches only the observed endpoint through native loop
     );
     strictEqual(customTransportCalled, false);
     strictEqual(upgrades, 1);
+    if (process.env.CODESHELL_NATIVE_CONTROL_TEST === "1")
+      console.log(
+        `native-control-receipt ${JSON.stringify({
+          node: process.version,
+          executable: realpathSync(process.execPath),
+          executableHash: createHash("sha256").update(readFileSync(process.execPath)).digest("hex"),
+          pid: process.pid,
+          ppid: process.ppid,
+          homeHash: createHash("sha256").update(process.env.HOME).digest("hex"),
+          upgrades,
+        })}`,
+      );
   } finally {
     globalThis.fetch = previous.fetch;
     http.request = previous.httpRequest;
