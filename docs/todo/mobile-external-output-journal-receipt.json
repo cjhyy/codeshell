@@ -1,9 +1,9 @@
 {
   "formatVersion": 1,
-  "createdAt": "2026-10-09T05:26:02.191496+00:00",
+  "createdAt": "2026-10-09T05:28:47.251488+00:00",
   "sourceCheckpoint": {
-    "commit": "87a724e2e83be8a7798602f21706079905c730b3",
-    "tree": "c070b748dc27785779a59212419b43d13b488291",
+    "commit": "d460734c18cd1f6811069edfa475927d87f9bde1",
+    "tree": "4f02f82bc722acb362d95963553755ef2882cc79",
     "baseCommit": "c9a55b12251beb0b89445be3f258b164c8f78c4c",
     "initialBaseCommit": "a1fd082c109f739828ca4002e6e62aca3361cb66",
     "containsPR100": true,
@@ -46,7 +46,8 @@
       "scripts/fixtures/mobile-external-output.tsx": "770ca48943e24db2460a5c030b13bf5552692a92adafd963d4e6c4fa0778e914",
       "scripts/mobile-external-output-smoke-isolation.mjs": "21239bd151cde252f73f2781bace825bf35ffda0edc57102b8df1aadfa9c8150",
       "scripts/run-mobile-external-output-smoke.mjs": "63e4fcce11568b9497b6204240eb7efe4eff2b2d36648f7e3e50605da648e38d",
-      "scripts/smoke-mobile-external-output.mjs": "c854d742f8de6e72d5c3543eb8c17cfcbe59527be5210b3e0497d5e20b1008e6"
+      "scripts/smoke-mobile-external-output.mjs": "c854d742f8de6e72d5c3543eb8c17cfcbe59527be5210b3e0497d5e20b1008e6",
+      "tests/architecture-budgets.test.ts": "74540b64ffb677eedc9e9eda80142b78c93b039303a12f5eb812e14e19eb2a54"
     }
   },
   "checks": {
@@ -73,19 +74,21 @@
       "includesWebSPA": true,
       "dependencyCleanBuildAndFullCheckSource": "369342409a1430e6bba8d3627d4f2d042477d91d",
       "dependencyCleanBuildAndFullCheckLog": "typecheck-composed-final.log",
-      "finalNoEmitSource": "87a724e2e83be8a7798602f21706079905c730b3",
-      "finalNoEmitLog": "typecheck-merged-final.log",
-      "log": "typecheck-merged-final.log"
+      "finalNoEmitSource": "d460734c18cd1f6811069edfa475927d87f9bde1",
+      "finalNoEmitLog": "typecheck-contract-final.log",
+      "log": "typecheck-contract-final.log"
     },
     "focused": {
       "exitCode": 0,
-      "pass": 200,
+      "pass": 202,
       "fail": 0,
       "skip": 0,
-      "files": 8,
-      "log": "focused-merged-final.log"
+      "files": 9,
+      "log": "focused-contract-final.log"
     },
     "lint": {
+      "sourceCheckpoint": "87a724e2e83be8a7798602f21706079905c730b3",
+      "runtimeAndAllPackageSourcesByteIdenticalFinal": true,
       "exitCode": 0,
       "errors": 0,
       "baselineWarnings": 105,
@@ -94,9 +97,11 @@
     "format": {
       "exitCode": 0,
       "scope": "all task changed files",
-      "log": "format-merged-final.log"
+      "log": "format-contract-final.log"
     },
     "mobileExternalNative": {
+      "sourceCheckpoint": "87a724e2e83be8a7798602f21706079905c730b3",
+      "runtimeAndFixtureBlobsByteIdenticalFinal": true,
       "exitCode": 0,
       "log": "native-merged-final.log",
       "cases": [
@@ -164,11 +169,13 @@
       "sourceCheckpoint": "369342409a1430e6bba8d3627d4f2d042477d91d",
       "compiledFixtureByteIdenticalFinal": {
         "actualCoreRegressionSource": "369342409a1430e6bba8d3627d4f2d042477d91d",
-        "finalSource": "87a724e2e83be8a7798602f21706079905c730b3",
+        "finalSource": "d460734c18cd1f6811069edfa475927d87f9bde1",
         "previousActualFixtureSha256": "b1f8c1a3c6dd86b3e1b81253802957a61685313818334065a1465a85dc112125",
         "finalCompiledFixtureSha256": "b1f8c1a3c6dd86b3e1b81253802957a61685313818334065a1465a85dc112125",
         "byteIdentical": true,
-        "scope": "Bun source compilation only; no Core/module execution or dist cleaning. Existing Core native fixture does not instantiate external command router; separate final external native exercises that real router."
+        "scope": "Bun source compilation only; no Core/module execution or dist cleaning. Existing Core native fixture does not instantiate external command router; separate final external native exercises that real router.",
+        "compiledAtSource": "87a724e2e83be8a7798602f21706079905c730b3",
+        "compiledConsumerSourcesByteIdenticalToFinal": true
       },
       "exitCode": 0,
       "log": "native-core-mobile-pr98-final.log",
@@ -272,6 +279,29 @@
     "noVendorCLIOrProviderAccounts": true
   },
   "earlierAttempts": [
+    {
+      "logs": ["ci-checkpoint-d189-rest.log"],
+      "result": "old PR103 head d189a772 CI 37888025354 rest shard failed",
+      "counts": {
+        "pass": 4392,
+        "skip": 81,
+        "fail": 1
+      },
+      "cause": "architecture-budgets expected index.ts at most 7196 lines, actual 7201. The five new composition-only lines supply the lazy existing Runtime and subscribe its owned stream; command authority and bounded pump remain extracted, with no new IPC or public exports. Exact baseline 7201 and rationale registered in tests; no future allowance added.",
+      "fixedBy": "d460734c18cd1f6811069edfa475927d87f9bde1",
+      "fixedCheck": "architecture-composition-final.log"
+    },
+    {
+      "logs": [
+        "native-merged-final.log",
+        "focused-merged-final.log",
+        "typecheck-merged-final.log",
+        "lint-merged-final.log",
+        "format-merged-final.log"
+      ],
+      "result": "all passed combined source 87a724e2 before test-contract-only correction",
+      "scope": "native 12 cases, 129 actual authenticated sockets, six physical synthetic CLI turns and zero native worker starts; all package/runtime/fixture source bytes identical in final. Previous immutable 112-raw archive retained, SHA256 47f7d70f6fa934883dd8533eb2a51c69a56533f7ac2dcb7fd2ab6e66abf97027"
+    },
     {
       "logs": ["evidence-collector-incomplete.log"],
       "result": "evidence collector assertion failed before writing receipt",
@@ -386,12 +416,17 @@
     "Out-of-run/background/CCRoom producers, arbitrary history imports, retention/rotation/repair and multi-user CLI HOME isolation remain separate."
   ],
   "evidence": {
-    "directory": "/tmp/codeshell-mobile-external-output.856i06hv/evidence-final/raw",
-    "archive": "/tmp/codeshell-mobile-external-output.856i06hv/mobile-external-output-evidence-final.tar.gz",
-    "archiveSha256": "47f7d70f6fa934883dd8533eb2a51c69a56533f7ac2dcb7fd2ab6e66abf97027",
-    "archiveBytes": 65679,
-    "regularFiles": 112,
+    "directory": "/tmp/codeshell-mobile-external-output.856i06hv/evidence-complete/raw",
+    "archive": "/tmp/codeshell-mobile-external-output.856i06hv/mobile-external-output-evidence-complete.tar.gz",
+    "archiveSha256": "e4876d22b9fa101074b691213af3fba8d0657cf3ec4b367bc3e8ad526b4dda3c",
+    "archiveBytes": 457551,
+    "regularFiles": 120,
     "rawFiles": [
+      {
+        "path": "architecture-composition-final.log",
+        "bytes": 416,
+        "sha256": "6b0a16e9a73517ea686ef45c172e22651bee87be88c5ecae60e45851d503a2d9"
+      },
       {
         "path": "await-authority-after.log",
         "bytes": 1961,
@@ -413,14 +448,24 @@
         "sha256": "fbfed99b751e639d0552171b00e694798f64babe327d0669404aaf9b746a7941"
       },
       {
+        "path": "ci-checkpoint-d189-rest.log",
+        "bytes": 1070012,
+        "sha256": "d0b1e6b10f68c53dc02ac4641faaafd972eadb4b7347c35de6035496709cd53e"
+      },
+      {
+        "path": "ci-checkpoint-d189.json",
+        "bytes": 1325,
+        "sha256": "0985cb410f056e35b00ab6ed07561b6701012da8be3d4e08bd3d511483dc2b4b"
+      },
+      {
         "path": "client-third.log",
         "bytes": 549,
         "sha256": "47530b718a79409badff697bcaff874eacc5ba6e73db70ce0a6aa4f44c2f28ad"
       },
       {
-        "path": "collect-evidence-final.py",
-        "bytes": 14157,
-        "sha256": "f0983c5eee2f1643e4c89db553c815d1eff1b16c22dd0619b05a4a5c0d3159b7"
+        "path": "collect-evidence-complete.py",
+        "bytes": 15708,
+        "sha256": "019849d140c6fdf3220a46945e27760fdb243d17b9b79a9f0928827ea20436d0"
       },
       {
         "path": "commands-claims-client.log",
@@ -448,9 +493,9 @@
         "sha256": "b3611216f1e706a54ba1b7dca87212c8c8cceb2057fe22c4ed46b95796622bcc"
       },
       {
-        "path": "core-runtime-byte-proof-final.json",
-        "bytes": 586,
-        "sha256": "b6dd66b9b52d3a1c3c593271f493a9336d16f6a85fd5007ad0a2f0d78585030c"
+        "path": "core-runtime-byte-proof-complete.json",
+        "bytes": 707,
+        "sha256": "3bcc58bec37e74bd3a2737a13f3ab0824c5d5fcdbe61862ae242332aa7184bf3"
       },
       {
         "path": "core-runtime-byte-proof.log",
@@ -491,6 +536,11 @@
         "path": "focused-composed-final.log",
         "bytes": 21889,
         "sha256": "d867833f9e1c4e004e4b6f9314ec9db30ba7248154daa91bd2cb0e38d6158713"
+      },
+      {
+        "path": "focused-contract-final.log",
+        "bytes": 22517,
+        "sha256": "7d0942ccf20c569c722a56e338586b6ea1eaa3446ed184e5e51b19dfd71c60d0"
       },
       {
         "path": "focused-final.log",
@@ -549,6 +599,16 @@
       },
       {
         "path": "format-composed-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-composition-final.log",
+        "bytes": 66,
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+      },
+      {
+        "path": "format-contract-final.log",
         "bytes": 66,
         "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
       },
@@ -853,6 +913,11 @@
         "sha256": "8c340143270202410c09052f132965a9505a820b70eb55e9bb2d50c4d4e255ba"
       },
       {
+        "path": "root-ci-d189-rest-113682325991.log",
+        "bytes": 1070012,
+        "sha256": "d0b1e6b10f68c53dc02ac4641faaafd972eadb4b7347c35de6035496709cd53e"
+      },
+      {
         "path": "run-clean.sh",
         "bytes": 589,
         "sha256": "cd21b841e43aea25e106107df73fd4d7c579b30b765b6b9bdd0e817a36f7da37"
@@ -886,6 +951,11 @@
         "path": "typecheck-composed-final.log",
         "bytes": 4537,
         "sha256": "e581667bc14e571418a25bf14d12441d09899636ff4d1c01c00162f6129865f7"
+      },
+      {
+        "path": "typecheck-contract-final.log",
+        "bytes": 725,
+        "sha256": "55ab2c8e7017cdcb4e38f30dbc29af061bdbaf46cf8bb913c6335b226e9e8585"
       },
       {
         "path": "typecheck-final.log",
