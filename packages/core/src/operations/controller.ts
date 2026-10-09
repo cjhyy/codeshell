@@ -5,6 +5,28 @@ import {
   type OperationReceipt,
   type OperationReference,
 } from "./ledger.js";
+import { readOperationSessionOwner } from "./session-owner.js";
+import type { UsageLedger } from "../cost-ledger/store.js";
+
+/** Engine-owned binding is captured lazily, after its durable usage owner is checkpointed. */
+export function createSessionOperationController(
+  root: string,
+  sessionId: string,
+  usageLedger: UsageLedger | undefined,
+): OperationController {
+  return new OperationController(
+    new OperationLedger(
+      root,
+      undefined,
+      usageLedger
+        ? {
+            sessionId,
+            read: () => readOperationSessionOwner(root, sessionId, usageLedger),
+          }
+        : undefined,
+    ),
+  );
+}
 
 export class OperationFailure extends Error {
   constructor(readonly category: OperationError) {

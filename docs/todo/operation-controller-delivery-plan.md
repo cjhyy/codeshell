@@ -65,8 +65,11 @@ local PAT、OAuth 和 remote Link 使用这条控制路径。未经所属 Engine
 与已落盘计划冲突。不同 model tool-call ID 不产生新 slot。Session 中存在已发送但未验证
 的操作时，新意图也不能自动再写。单目标 Star 已实现固定布尔 desired state、持久仓库 ID
 和独立 identity/state 回读，详见 [Star 交付边界](github-star-actions-delivery.md)。批量创建的
-Host 固定 slots、`update_issue`、飞书语义适配，以及显式人工 reconcile 界面仍需后续实现；没有 number 的未知结果不会用标题
-搜索冒充验收，也不支持直接修改账本来回滚。只有真实独立验证通过才允许完成。
+Host 固定 slots、其他 provider 写语义及独立 provider 只读复核仍需后续实现。
+`update_issue` 的显式关闭／重开及独立回读已实现，见 [Issue 状态交付](github-issue-state-delivery.md)。
+现有活动记录已提供原生确认的人工接受不确定性入口，详见下节；它不把旧操作或旧 Run
+改成成功。没有 number 的未知结果不会用标题搜索冒充验收，也不支持直接修改账本来回滚。
+只有新操作的真实独立验证通过才允许其 Run 完成。
 
 已支持已知静态读取权限的预检；预检只是预测，不授予后续执行权限。具体新 number 的
 权限、Hook 决策或授权在写后改变时，回查仍经完整授权链，失败留下未验证回执。
@@ -96,6 +99,34 @@ RPC，不保存正文/凭据，也不是针对同用户任意代码的防篡改�
 Host 的纠正消息同时写入 Transcript 和下一回合缓存，恢复历史保留原模型输出及其后的
 未验证说明，不能仅依靠一次性的 error stream event 修正成功措辞。
 
+## 人工接受不确定性
+
+Desktop 的“设置 → 活动记录 → 任务中心”现有 Session／子 Agent 卡片可按需审阅最多
+50 条脱敏回执。用户自行核查 provider 后，经默认取消的原生确认记录独立
+`operatorResolution: accept_uncertainty`。缺 reference 也允许明确接受，但界面和结果始终显示
+“结果仍未知”。这是人工承担不确定性的决定，不是 provider reconcile 或 verified 证据。
+
+原始 state、attempt、reference、updatedAt、幂等 HMAC 和历史 Run 完全保留。旧 intent 永不
+重发；仅当前已证明的 Session incarnation 的已处理记录解除新意图写阻断，其他未处理记录
+继续阻断。新意图仍独立经过权限、审批、账号、scope 和后置验证。late settle 不能改写
+原 unknown 或撤销人工决定。模型工具、worker、Web RPC 不拥有 resolve 入口。
+
+Main 根据原生窗口／主 frame、真实 Session、项目／根、目录 inode、注册表和信任版本
+授予短期一次性 review token。确认期间、确认后及最终同步 CAS 均重新检查；最终持有原
+操作账本锁和 SessionManager 相同的 state.json 锁，确认当前没有 active Session 或 running
+回执，保持 owner binding 未变，并持锁完成原子落盘。锁、存储或 CAS 失败不解除阻断。
+回执不包含正文、账号、目标或 secret；无通用读密钥接口。
+
+incarnation 复用真实 UsageLedger.adoptSession 校验的默认 namespace、Session scope 和
+accountingSessionId，加上 sessionId／startedAt；SDK Engine 使用其真实注入的 UsageLedger，
+不从 state 或 renderer 选择 namespace。Desktop 人工入口仅接受其默认 namespace。
+原 intent HMAC 命名空间不变。已绑定的
+旧 incarnation 不阻断同 ID 重建的新 Session，但旧 intent 仍不可重放。未绑定的历史记录
+仅在至多 8 MiB 的 transcript 中找到相同 session_meta／startedAt、配对的真实 LinkAction
+tool_use／tool_result 及精确 id／owner／fingerprint／attempt 证据时才允许人工处理；Hook
+附加文本、模型正文及无证据的 legacy 记录都不适用，后者继续保守阻断。未绑定调用方
+不能忽略已绑定 unknown，也不能借用另一 incarnation 的人工决定。
+
 ## 实际消费者验收
 
 `node scripts/smoke-verified-link-write.mjs` 使用编译后的公开 Node SDK Engine，固定的纯
@@ -109,3 +140,12 @@ fixture provider 只返回工具调用/合成文本，Link Host 回调实际跨 
 完整 ToolExecutor 链、读权限拒绝、Hook 参数/展示处理、授权变更、重放与验证不符。
 账本测试实际启动八个并发子进程竞争同一 claim。以上证明实现路径，不等于真实 GitHub
 账号验收、完整 Desktop GUI 或其他 provider 已完成迁移。
+
+`bun run --cwd packages/desktop test:e2e:operation-resolution` 使用编译后的真实 Engine、
+生产 Main/preload 和上述活动页：unknown → 原生取消／接受 → 冷 Main 新 PID → 冷 Engine
+旧 intent 零重发／新意图独立回读成功，并验证撤销账号后零发送。开始审阅前等待真实
+main／tool_summary 请求全部完成及 costState 持久化，没有改写 active 状态。Core writer 和
+两次 Main 在导入前安装 deny-all HTTP，并核验私有 HOME、PID 和七项负探针；冷启动的纯
+Playwright 控制器不导入 Core／模型。所有 Link 响应和 LLM 均为合成回调，原生 dialog 的
+取消／接受响应由 harness 控制，未连接真实账号或验证真实 provider。单测另覆盖跨窗口／
+项目、异步确认及最终 CAS 的再启动／撤权、同 ID 重建、真实原子 rename 失败和 late settle。

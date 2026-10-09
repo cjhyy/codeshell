@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDefaultCredentialCipher, type EncryptionCipher } from "../credentials/cipher.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
 import { OperationRecoveryFiles } from "./recovery.js";
+import type { OperationSessionOwner } from "./session-owner.js";
 
 export const operationStates = [
   "planned",
@@ -48,10 +49,31 @@ const recordSchema = z
     error: z.enum(operationErrors).optional(),
     verifiedAt: z.number().int().nonnegative().optional(),
     recovery: z.object({ prepared: digest, identity: digest.optional() }).strict().optional(),
+    ownerIncarnation: digest.optional(),
+    operatorResolution: z
+      .object({
+        id: z.string().uuid(),
+        decision: z.literal("accept_uncertainty"),
+        at: z.number().int().nonnegative(),
+        reviewedRevision: digest,
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type OperationReceipt = z.infer<typeof recordSchema>;
 export type OperationReference = z.infer<typeof reference>;
+export interface OperationReview {
+  id: string;
+  revision: string;
+  service: string;
+  action: string;
+  state: OperationState;
+  createdAt: number;
+  hasReference: boolean;
+  canResolve: boolean;
+  resolvedAt?: number;
+}
 const stateSchema = z
   .object({
     schema: z.literal(1),
@@ -134,10 +156,12 @@ export class OperationLedger {
   private readonly knownOwners = new Map<string, string>();
   private readonly sealedIds = new Set<string>();
   private readonly finalizedSessions = new Set<string>();
+  private capturedIncarnation: string | undefined;
 
   constructor(
     storageRoot: string,
     private readonly cipher: EncryptionCipher = getDefaultCredentialCipher(),
+    private readonly ownerBinding?: { sessionId: string; read(): OperationSessionOwner },
   ) {
     mkdirSync(resolve(storageRoot), { recursive: true, mode: 0o700 });
     // Path aliases must not create independent idempotency identities for the
@@ -152,6 +176,7 @@ export class OperationLedger {
 
   private transact<R>(
     mutation: (state: LedgerState, key: Buffer) => { value?: LedgerState; result: R },
+    guard?: () => () => void,
   ): R {
     const root = lstatSync(this.scope);
     if (
@@ -165,32 +190,45 @@ export class OperationLedger {
     const info = lstatSync(this.directory);
     if (!info.isDirectory() || info.isSymbolicLink())
       throw new Error("Invalid operation directory");
-    const result = mutateJsonFile<LedgerState, R>(this.file, {
-      maxBytes: 16 * 1024 * 1024,
-      mode: 0o600,
-      parse: (raw) => {
-        if (raw === undefined) {
-          if (this.opened) throw new Error("Operation ledger disappeared");
-          return {
-            schema: 1,
-            key: this.cipher.encrypt(randomBytes(32).toString("hex")),
-            records: {},
-          };
-        }
-        const state = stateSchema.parse(JSON.parse(raw));
-        if (Object.keys(state.records).length > 10_000)
-          throw new Error("Operation ledger exceeds bounds");
-        for (const [id, record] of Object.entries(state.records))
-          if (id !== record.id) throw new Error("Operation ledger identity mismatch");
-        return state;
-      },
-      serialize: (state) => JSON.stringify(state),
-      mutation: (state) => {
-        const secret = this.cipher.decrypt(state.key);
-        if (!/^[a-f0-9]{64}$/.test(secret)) throw new Error("Invalid operation key");
-        return mutation(state, Buffer.from(secret, "hex"));
-      },
-    });
+    let releaseGuard: (() => void) | undefined;
+    let result: R | undefined;
+    try {
+      result = mutateJsonFile<LedgerState, R>(this.file, {
+        maxBytes: 16 * 1024 * 1024,
+        mode: 0o600,
+        parse: (raw) => {
+          if (raw === undefined) {
+            if (this.opened) throw new Error("Operation ledger disappeared");
+            return {
+              schema: 1,
+              key: this.cipher.encrypt(randomBytes(32).toString("hex")),
+              records: {},
+            };
+          }
+          const state = stateSchema.parse(JSON.parse(raw));
+          if (Object.keys(state.records).length > 10_000)
+            throw new Error("Operation ledger exceeds bounds");
+          for (const [id, record] of Object.entries(state.records))
+            if (id !== record.id) throw new Error("Operation ledger identity mismatch");
+          return state;
+        },
+        serialize: (state) => JSON.stringify(state),
+        mutation: (state) => {
+          releaseGuard = guard?.();
+          if (
+            this.ownerBinding &&
+            this.capturedIncarnation !== undefined &&
+            this.ownerBinding.read().incarnation !== this.capturedIncarnation
+          )
+            throw new Error("Operation Session incarnation changed");
+          const secret = this.cipher.decrypt(state.key);
+          if (!/^[a-f0-9]{64}$/.test(secret)) throw new Error("Invalid operation key");
+          return mutation(state, Buffer.from(secret, "hex"));
+        },
+      });
+    } finally {
+      releaseGuard?.();
+    }
     this.opened = true;
     return structuredClone(result!);
   }
@@ -275,6 +313,128 @@ export class OperationLedger {
     });
   }
 
+  private incarnation(key: Buffer, sessionId: string): string | undefined {
+    if (!this.ownerBinding) return undefined;
+    if (this.ownerBinding.sessionId !== sessionId) throw new Error("Operation owner mismatch");
+    const current = this.ownerBinding.read().incarnation;
+    if (this.capturedIncarnation !== undefined && current !== this.capturedIncarnation)
+      throw new Error("Operation Session incarnation changed");
+    this.capturedIncarnation = current;
+    return this.hash(key, "incarnation", current);
+  }
+
+  private matchesOwner(receipt: OperationReceipt, owner: string, incarnation?: string): boolean {
+    return (
+      receipt.owner === owner &&
+      (incarnation === undefined ||
+        receipt.ownerIncarnation === undefined ||
+        receipt.ownerIncarnation === incarnation)
+    );
+  }
+
+  private resolvedForOwner(receipt: OperationReceipt, incarnation?: string): boolean {
+    return (
+      !!receipt.operatorResolution &&
+      incarnation !== undefined &&
+      receipt.ownerIncarnation === incarnation
+    );
+  }
+
+  /** Bounded masked Host review. The original receipt and payload never leave the ledger. */
+  reviewSession(
+    sessionId: string,
+    legacyEvidence: ReadonlyMap<string, string>,
+  ): {
+    records: OperationReview[];
+    truncated: boolean;
+  } {
+    if (!existsSync(this.file) && !this.opened) return { records: [], truncated: false };
+    return this.transact((state, key) => {
+      const owner = this.hash(key, "owner", sessionId);
+      const incarnation = this.incarnation(key, sessionId);
+      if (!incarnation) throw new Error("Operation review requires durable Host ownership");
+      const selected = Object.values(state.records)
+        .filter(
+          (entry) =>
+            this.matchesOwner(entry, owner, incarnation) &&
+            entry.attemptId &&
+            entry.state !== "verified",
+        )
+        .sort(
+          (a, b) =>
+            Number(!!a.operatorResolution) - Number(!!b.operatorResolution) ||
+            b.createdAt - a.createdAt ||
+            a.id.localeCompare(b.id),
+        );
+      return {
+        result: {
+          records: selected.slice(0, 50).map((entry) => ({
+            id: entry.id,
+            revision: this.hash(key, "review", entry),
+            service: entry.service,
+            action: entry.action,
+            state: entry.state,
+            createdAt: entry.createdAt,
+            hasReference: !!entry.reference,
+            canResolve:
+              entry.state === "unknown" &&
+              !entry.operatorResolution &&
+              (entry.ownerIncarnation === incarnation ||
+                legacyEvidence.get(entry.id) ===
+                  JSON.stringify([entry.owner, entry.fingerprint, entry.attemptId])),
+            ...(entry.operatorResolution ? { resolvedAt: entry.operatorResolution.at } : {}),
+          })),
+          truncated: selected.length > 50,
+        },
+      };
+    });
+  }
+
+  /** Native Host confirmation only. This records a decision, never provider success. */
+  resolveReview(
+    sessionId: string,
+    id: string,
+    expectedRevision: string,
+    legacyEvidence: ReadonlyMap<string, string>,
+    guard: () => () => void,
+  ): void {
+    this.transact((state, key) => {
+      const owner = this.hash(key, "owner", sessionId);
+      const incarnation = this.incarnation(key, sessionId);
+      if (!incarnation) throw new Error("Operation resolution requires durable Host ownership");
+      const receipt = state.records[digest.parse(id)];
+      if (
+        !receipt ||
+        !this.matchesOwner(receipt, owner, incarnation) ||
+        receipt.state !== "unknown" ||
+        !receipt.attemptId ||
+        receipt.operatorResolution ||
+        this.hash(key, "review", receipt) !== digest.parse(expectedRevision)
+      )
+        throw new Error("Operation review is stale");
+      if (
+        !receipt.ownerIncarnation &&
+        legacyEvidence.get(id) !==
+          JSON.stringify([receipt.owner, receipt.fingerprint, receipt.attemptId])
+      )
+        throw new Error("Legacy operation ownership is unproven");
+      if (
+        Object.values(state.records).some(
+          (entry) => this.matchesOwner(entry, owner, incarnation) && entry.state === "running",
+        )
+      )
+        throw new Error("Operation Session is running");
+      receipt.ownerIncarnation = incarnation;
+      receipt.operatorResolution = {
+        id: randomUUID(),
+        decision: "accept_uncertainty",
+        at: Date.now(),
+        reviewedRevision: expectedRevision,
+      };
+      return { value: state, result: undefined };
+    }, guard);
+  }
+
   prepare(plan: OperationPlan): OperationReceipt {
     if (this.finalizedSessions.has(plan.sessionId)) throw new Error("Operation run has finalized");
     for (const id of [plan.sessionId, plan.intentId])
@@ -283,6 +443,7 @@ export class OperationLedger {
     for (const item of [plan.service, plan.action, plan.channel]) label.parse(item);
     const prepared = this.transact((state, key) => {
       const owner = this.hash(key, "owner", plan.sessionId);
+      const incarnation = this.incarnation(key, plan.sessionId);
       const id = this.hash(key, "intent", [
         plan.sessionId,
         plan.intentId,
@@ -299,7 +460,11 @@ export class OperationLedger {
       ]);
       const existing = state.records[id];
       if (existing) {
-        if (existing.owner !== owner || existing.fingerprint !== fingerprint)
+        if (
+          existing.owner !== owner ||
+          existing.fingerprint !== fingerprint ||
+          (existing.ownerIncarnation !== undefined && existing.ownerIncarnation !== incarnation)
+        )
           throw new Error("Operation intent conflicts with its immutable plan");
         return { result: existing };
       }
@@ -315,6 +480,7 @@ export class OperationLedger {
         state: "planned",
         createdAt: now,
         updatedAt: now,
+        ...(incarnation ? { ownerIncarnation: incarnation } : {}),
       };
       state.records[id] = receipt;
       return { value: state, result: receipt };
@@ -324,9 +490,17 @@ export class OperationLedger {
   }
 
   claim(id: string): { receipt: OperationReceipt; claimed: boolean } {
-    return this.transact<{ receipt: OperationReceipt; claimed: boolean }>((state) => {
+    return this.transact<{ receipt: OperationReceipt; claimed: boolean }>((state, key) => {
       const receipt = state.records[digest.parse(id)];
       if (!receipt) throw new Error("Operation does not exist");
+      // A receipt cannot itself grant ownership to an unbound or different
+      // incarnation caller, even if that caller learned a bound planned id.
+      if (
+        receipt.ownerIncarnation !== undefined &&
+        receipt.ownerIncarnation !==
+          (this.ownerBinding ? this.incarnation(key, this.ownerBinding.sessionId) : undefined)
+      )
+        return { result: { receipt, claimed: false } };
       if (this.sealedIds.has(id) && receipt.state === "planned") {
         receipt.state = "blocked";
         receipt.error = "cancelled";
@@ -340,9 +514,10 @@ export class OperationLedger {
         Object.values(state.records).some(
           (other) =>
             other.id !== id &&
-            other.owner === receipt.owner &&
+            this.matchesOwner(other, receipt.owner, receipt.ownerIncarnation) &&
             !!other.attemptId &&
-            other.state !== "verified",
+            other.state !== "verified" &&
+            !this.resolvedForOwner(other, receipt.ownerIncarnation),
         )
       ) {
         receipt.state = "blocked";
@@ -369,6 +544,7 @@ export class OperationLedger {
     return this.transact((state) => {
       const receipt = state.records[digest.parse(id)];
       if (!receipt || receipt.attemptId !== attemptId) throw new Error("Operation attempt changed");
+      if (receipt.operatorResolution) return { result: receipt };
       if (this.sealedIds.has(id) && receipt.state !== "verified") {
         receipt.state = "unknown";
         receipt.updatedAt = Date.now();
@@ -403,9 +579,14 @@ export class OperationLedger {
     if (!existsSync(this.file) && !this.opened) return false;
     return this.transact((state, key) => {
       const owner = this.hash(key, "owner", sessionId);
+      const incarnation = this.incarnation(key, sessionId);
       return {
         result: Object.values(state.records).some(
-          (entry) => entry.owner === owner && !!entry.attemptId && entry.state !== "verified",
+          (entry) =>
+            this.matchesOwner(entry, owner, incarnation) &&
+            !!entry.attemptId &&
+            entry.state !== "verified" &&
+            !this.resolvedForOwner(entry, incarnation),
         ),
       };
     });
@@ -432,10 +613,16 @@ export class OperationLedger {
     if (!existsSync(this.file) && !this.opened) return false;
     return this.transact((state, key) => {
       const owner = this.hash(key, "owner", sessionId);
+      const incarnation = this.incarnation(key, sessionId);
       let changed = false;
       let unverified = false;
       for (const receipt of Object.values(state.records)) {
-        if (receipt.owner !== owner || receipt.state === "verified") continue;
+        if (
+          !this.matchesOwner(receipt, owner, incarnation) ||
+          receipt.state === "verified" ||
+          this.resolvedForOwner(receipt, incarnation)
+        )
+          continue;
         if (receipt.state === "planned") {
           receipt.state = "blocked";
           receipt.error = "cancelled";
