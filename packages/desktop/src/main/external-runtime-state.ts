@@ -269,7 +269,9 @@ export class ExternalRuntimeSessionRecorder {
     this.transcript = bundle.transcript;
     this.cwd = bundle.state.cwd;
     this.startedAt = bundle.state.startedAt;
-    this.accountingSessionId = bundle.state.costState?.accountingSessionId;
+    const accountingSessionId = bundle.state.costState?.accountingSessionId;
+    this.accountingSessionId =
+      typeof accountingSessionId === "string" ? accountingSessionId : undefined;
     this.manager.registerSessionGeneration(sessionId);
     const directory = lstatSync(join(this.manager.getStorageDir(), sessionId));
     this.directoryIdentity = { dev: directory.dev, ino: directory.ino };

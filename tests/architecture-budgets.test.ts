@@ -329,7 +329,10 @@ describe("architecture growth budgets", () => {
       // +2 Host-only statements expose the pure Profile switch planner and
       // existing direct-override fold; stable SDK and extension exports are unchanged.
       // +1 static export snapshot/type Host seam, with no stable SDK growth.
-      "packages/core/src/index.internal.ts": 96,
+      // +1 existing canonical input projection shared by Core and Desktop's
+      // owned external Runtime journal; avoids divergent input/attachment rules.
+      // It adds no stable public SDK or extension surface or execution authority.
+      "packages/core/src/index.internal.ts": 97,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
