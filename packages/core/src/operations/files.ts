@@ -19,7 +19,14 @@ export function operationDirectory(path: string, create = false): Stats {
     }
   }
   const info = lstatSync(path);
-  if (!info.isDirectory() || info.isSymbolicLink() || (info.mode & 0o077) !== 0)
+  // Windows mode bits do not describe owner/group/other ACL permissions. As for
+  // the existing ledger/credential store, Windows relies on Host storage ACLs;
+  // these helpers neither validate nor repair that ACL boundary.
+  if (
+    !info.isDirectory() ||
+    info.isSymbolicLink() ||
+    (process.platform !== "win32" && (info.mode & 0o077) !== 0)
+  )
     throw new Error("Invalid private operation directory");
   return info;
 }
@@ -31,7 +38,7 @@ export function operationFile(path: string, maxBytes: number): Stats {
     info.isSymbolicLink() ||
     info.nlink !== 1 ||
     info.size > maxBytes ||
-    (info.mode & 0o077) !== 0
+    (process.platform !== "win32" && (info.mode & 0o077) !== 0)
   )
     throw new Error("Invalid private operation file or bounds exceeded");
   return info;

@@ -44,6 +44,12 @@ recovery summary；其余所有 manifest 引用桶只做 regular／私有权限�
 不声称每次重读验证全部 512 MiB 历史。目标桶缺失、损坏、错 key／prefix 时 prepare、claim、
 review、恢复和迟到 settle 均闭锁，不能把坏桶解释为 intent 不存在。
 
+权限位检查只在 POSIX 执行。Windows 沿用 ledger／credentials 的 Host storage ACL 继承策略，
+不会把 `mkdir(0700)`／`write(0600)` 或 `stat.mode` 当作已验证的 ACL，也不新增 ACL 修复或隔离承诺。
+[Node 文件模式说明](https://nodejs.org/download/release/latest-jod/docs/api/fs.html#file-modes)
+明确 Windows 不实现 owner／group／others 的权限区别。所有平台仍检查真实目录、regular file、
+非符号链接／junction、单链接文件、大小及打开前后的设备／inode 身份，读取失败继续闭锁。
+
 下次真实写入才 GC，不从只读路径 GC。最多接受两个 unreferenced immutable 版本、两个 bucket
 stage 和两个 manifest stage。每个孤立 immutable 版本先完整认证；同前缀 current bucket 必须
 原样覆盖其 receipt。active 的证明使用本次事务修改前的 durable 深快照：除原样覆盖外，仅接受

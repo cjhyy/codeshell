@@ -75,7 +75,11 @@ describe("private immutable operation recovery inputs", () => {
     expect(readdirSync(join(root, "recovery", id))).toHaveLength(2);
     const outside = join(root, "outside");
     mkdirSync(outside);
-    symlinkSync(outside, join(root, "recovery", "d".repeat(64)), "dir");
+    symlinkSync(
+      outside,
+      join(root, "recovery", "d".repeat(64)),
+      process.platform === "win32" ? "junction" : "dir",
+    );
     expect(() => files.save(key, "d".repeat(64), "{}")).toThrow("directory");
     expect(readdirSync(outside)).toHaveLength(0);
   });
@@ -91,7 +95,9 @@ describe("private immutable operation recovery inputs", () => {
     rmSync(file);
     const outside = join(root, "outside.json");
     writeFileSync(outside, "{}");
-    symlinkSync(outside, file, "file");
+    const linked = process.platform === "win32" ? join(root, "outside-directory") : outside;
+    if (process.platform === "win32") mkdirSync(linked);
+    symlinkSync(linked, file, process.platform === "win32" ? "junction" : "file");
     expect(() => files.read(key, id, digest)).toThrow();
   });
 
@@ -126,8 +132,11 @@ describe("private immutable operation recovery inputs", () => {
       );
       const outside = join(root, "outside.json");
       writeFileSync(outside, "preserve outside", { mode: 0o600 });
-      if (kind === "symlink") symlinkSync(outside, unsafe);
-      else if (kind === "hardlink") linkSync(outside, unsafe);
+      if (kind === "symlink") {
+        const linked = process.platform === "win32" ? join(root, "outside-directory") : outside;
+        if (process.platform === "win32") mkdirSync(linked);
+        symlinkSync(linked, unsafe, process.platform === "win32" ? "junction" : "file");
+      } else if (kind === "hardlink") linkSync(outside, unsafe);
       else
         writeFileSync(unsafe, kind === "oversized" ? "x".repeat(704 * 1024 + 1) : "unknown", {
           mode: 0o600,

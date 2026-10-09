@@ -4,6 +4,7 @@ import {
   chmodSync,
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -528,9 +529,11 @@ test("target prefix tamper, missing bucket, manifest forgery and symlinks fail c
     } else if (kind === "missing") rmSync(target);
     else if (kind === "symlink") {
       const other = join(f.root, "other.json");
-      writeFileSync(other, readFileSync(target), { mode: 0o600 });
+      if (process.platform === "win32") mkdirSync(other);
+      else writeFileSync(other, readFileSync(target), { mode: 0o600 });
       rmSync(target);
-      symlinkSync(other, target);
+      // Real Windows directory junctions require no file-symlink privilege.
+      symlinkSync(other, target, process.platform === "win32" ? "junction" : "file");
     } else {
       const current = JSON.parse(readFileSync(f.file, "utf8"));
       current.archives.buckets[f.verified.id.slice(0, 2)].count++;

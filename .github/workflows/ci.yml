@@ -336,6 +336,9 @@ jobs:
             packages/core/src/tool-system/sandbox/sandbox-win32.test.ts `
             packages/core/src/utils/exec.test.ts `
             packages/core/src/operations/controller.test.ts `
+            packages/core/src/operations/files.test.ts `
+            packages/core/src/operations/recovery.test.ts `
+            packages/core/src/operations/archive.test.ts `
             packages/core/src/operations/review-store.test.ts `
             packages/core/src/operations/resolver.test.ts `
             packages/desktop/src/main/operation-resolution-ipc.test.ts `
