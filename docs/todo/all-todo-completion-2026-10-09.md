@@ -12,7 +12,7 @@
 | Services 公开包兼容   | PR27 已通过 6 项 CI 并合入 main，源码五个公开 Host 包已升至 0.9.28，SDK override 仍锁为 1.31.0；本地 263 项、6 条依赖链、21 项浏览器及 3 项 CLI 验收通过        | 生产 Link 仍为 ba5363c/0.9.27/schema 3（PR25），Hub 仍为 0.9.23；独立 Hub 候选与旧 Docker 证据不互换，部署及真实业务另验收     |
 | Runtime Phase C       | PR62 已通过全部 9 项 CI 并合入 main；真实资源 ownership／关闭路径已验收                                                                                         | host/engine/session/run scope、逆序幂等释放、部分激活回滚、identity disposer、真实关闭路径、两 Engine 隔离及所有 Host 组合验证 |
 | 跨 Session 成本       | PR68 账本已合入；PR88 最终 602f538c 通过全部 12 CI 并合为 b6bfe763，受控实际 Electron 两 Session／known+unknown／partial／取消／刷新已验收                      | 真实 provider 账单仍待对照；unknown、估算与自定义 fetch 内部重试限制保留，不代表 macOS OS 钥匙串验收                           |
-| Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                                                                    | fetch 锚点不证明远端收到／收费；macOS 原生 API/HMAC/冷重启本机验收已通过，本批待合并，不等同于独立 OS attestation              |
+| Runtime Phase D       | PR73 已合入 main；实际投影、持久请求边界、私有 Host 签名与 Linux 真实 SecretService 验收通过                                                                    | fetch 锚点不证明远端收到／收费；macOS 原生 API/HMAC/冷重启本机验收已通过，不等同于正式发行或独立 OS attestation                |
 | Workspace / Link 只读 | PR65 已合入 main；Profile 求交、十家 provider 固定视图及原生 ToolExecutor 链已验证                                                                              | 不扩大已有连接与 grant；跨文件／语义检索及 OCR 另行推进                                                                        |
 | 上传解析／索引        | PR70/95 已合入 main；有界 Office/PDF 解析、词法分块、原件重验与逐文件权限通过 12 项 CI；派生索引改为仅内存 32 项/8 MiB，不再写入无读者的磁盘副本                | Core PDF 需 Node 22.13+ 和可选 parser；Desktop 使用已验证 managed Node；不是 OCR 或语义索引                                    |
 | Skill 列表预算        | PR72 已合入 main；上下文 1%／最多 2,048 估算 token、排序、按权限搜索与分页通过 12 项 CI                                                                         | 不把估算 token 当作精确 tokenizer 结果                                                                                         |
@@ -40,7 +40,7 @@ Linux Electron 使用私有 GNOME SecretService、移除 Playwright 的明文／
 独立核验 5 logical／6 physical 请求与 1 个加密密钥；强制不可用时新增 provider 请求为零。
 早期 macOS mock-keychain 结果不计为真实 OS 托管证据。新的受控本机验收已通过真实
 SafeStorage、Main 内 wire HMAC 和冷 Electron 重启；保留原失败及私有 HOME 元数据修正，
-见[本机钥匙串验收](macos-keychain-acceptance.md)。本批待合并，不宣称独立 OS attestation
+见[本机钥匙串验收](macos-keychain-acceptance.md)。源码验收不宣称独立 OS attestation
 或已发布。历史完整 CI 见
 [PR73](https://github.com/cjhyy/codeshell/pull/73)、
 [PR71](https://github.com/cjhyy/codeshell/pull/71)及

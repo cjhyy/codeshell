@@ -7,9 +7,21 @@ existing implementation; it is not an independent OS attestation, a signed
 installer acceptance, a real provider bill, or a deployment.
 
 The first successful run used test checkpoint `e6768bed801e232905f2ccfb21c56292eba59a57`
-on source main `8dd491d0`. The task subsequently normally merged main `a1fd082c`;
-the final combined-source gates and native repeat are recorded in the associated
-receipt. No production signing, cipher, transport, or user interface was changed.
+on source main `8dd491d0`. The task subsequently normally merged main `a1fd082c`.
+The final combined native run at `eea6f4848c8d46ef462dfdae93fcdac30792f441` passed in
+42.907 seconds: Main `19647`, worker `20160`, cold Main `21533`, ten local HTTP
+requests, zero unavailable-custody sends and zero cold-restart sends. All local
+package/build/type/helper/signing/lint gates passed. The
+[final acceptance receipt](macos-keychain-acceptance-final-receipt.json) binds 314 frozen raw
+files in two verified copies with manifest SHA256
+`2327c05fe1c13e2e44c204228e191bfb3a8529c6568c70b1c771145ded36d9b0`.
+The [earlier combined receipt](macos-keychain-acceptance-receipt.json) and its
+257-file manifest remain byte-for-byte unchanged. The later change runs the
+Node-owned HTTP control assertion under a bounded real Node child when collected
+by Bun and pins that Desktop CI shard to Node 22.16.0; affected Node/Bun helpers
+and the native acceptance were rerun at the final source checkpoint.
+Subsequent delivery edits are documentation/evidence only. No production
+signing, cipher, transport, or user interface was changed.
 
 ## What the native run proves
 
@@ -84,6 +96,12 @@ Existing preferences and symlinks are refused. Cold restart reuses this same
 private configuration. No `security` setter, unlock, item enumeration, password
 lookup, operator preference write or OS UI automation is used.
 
+Capture the metadata reference immediately before use. A later attempt rejected
+a stale inode before spawning Electron, although the default path and owner were
+unchanged. The cause of that file-identity change was not established; the guard
+was not loosened. A fresh metadata capture and the final run's before/after
+identity checks all passed.
+
 ## Transport and process scope
 
 Before Core imports, parent, Main and each actual worker run seven negative
@@ -102,24 +120,36 @@ processes. Genuine OS authorization is never automatically handled.
 
 ## Preserved failures
 
-| Attempt | Result retained without reinterpretation                                                                                                              |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1       | Launch failed before Main/OS evidence; initial smoke cleanup was not reached.                                                                         |
-| 2       | Parent HTTP guard blocked Playwright's inspector transport; corrected by the exact owned-endpoint exception.                                          |
-| 3       | Legacy recent-project data did not register a project in the current registry.                                                                        |
-| 4       | 180-second deadline after project setup; no precise original blocking phase established.                                                              |
-| 5       | The project name matched three UI elements; narrowed to the actual sidebar button.                                                                    |
-| 6       | The private project's application trust dialog blocked navigation; ordinary trust flow corrected.                                                     |
-| 7       | Actual native availability call blocked with missing private default metadata; owned sample and metadata comparison retained.                         |
-| 8       | Native availability passed, but the zero-total-request assertion failed; no original per-request receipt exists, so its exact cause remains unproven. |
-| 9       | Main/worker, zero-send injection and real HMAC verification passed; cold Main created no worker and the harness incorrectly required one.             |
-| 10      | Full native API, zero-send, wire HMAC, cold restart, persistent identity and existing panel smoke passed; all owned processes exited.                 |
+| Attempt | Result retained without reinterpretation                                                                                                                         |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1       | Launch failed before Main/OS evidence; initial smoke cleanup was not reached.                                                                                    |
+| 2       | Parent HTTP guard blocked Playwright's inspector transport; corrected by the exact owned-endpoint exception.                                                     |
+| 3       | Legacy recent-project data did not register a project in the current registry.                                                                                   |
+| 4       | 180-second deadline after project setup; no precise original blocking phase established.                                                                         |
+| 5       | The project name matched three UI elements; narrowed to the actual sidebar button.                                                                               |
+| 6       | The private project's application trust dialog blocked navigation; ordinary trust flow corrected.                                                                |
+| 7       | Actual native availability call blocked with missing private default metadata; owned sample and metadata comparison retained.                                    |
+| 8       | Native availability passed, but the zero-total-request assertion failed; no original per-request receipt exists, so its exact cause remains unproven.            |
+| 9       | Main/worker, zero-send injection and real HMAC verification passed; cold Main created no worker and the harness incorrectly required one.                        |
+| 10      | Full native API, zero-send, wire HMAC, cold restart, persistent identity and existing panel smoke passed; all owned processes exited.                            |
+| 11      | The normal main merge passed the same full native acceptance and all owned processes exited.                                                                     |
+| 12      | Stale metadata file identity failed preflight before any Electron or worker was spawned; same path/owner, inode change of unproven origin.                       |
+| 13      | Final source including the bounded Node control-test bridge passed full native acceptance and before/after metadata identity checks; all owned processes exited. |
 
 Attempt 8 is not reclassified as a pass. Subsequent instrumentation proved the
 availability wrapper was used and no cached key bypassed its check. Waiting for
 the previous run's actual terminal/title completion removes the demonstrated
 measurement window without weakening the zero-total-send condition. No production
 fail-closed defect was established by that failed attempt.
+
+The first explicit Bun collection probe retained a separate failure: Bun 1.3.11's
+`node:http` client shim rejected the 101 upgrade that actual Node and Electron
+had passed. The test keeps every GET-upgrade and denied-target assertion. Under
+Bun it launches actual Node >=22.16 without a shell or fallback, inherits the
+shard's private environment, and checks the child's real executable/hash,
+version, PID/PPID and HOME hash. Its 10-second deadline sends TERM, then KILL on
+the same child handle and awaits terminal cleanup. Both final Node and Bun
+helper combinations pass thirteen tests with zero failures/skips on macOS.
 
 ## Reproduction
 
