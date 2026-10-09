@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createServer } from "node:http";
 import { createRequire, syncBuiltinESMExports } from "node:module";
+import { performance } from "node:perf_hooks";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createBunTestEnvironment } from "./bun-test-completion.mjs";
